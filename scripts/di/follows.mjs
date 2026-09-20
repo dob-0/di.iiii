@@ -42,13 +42,18 @@ const writeFollows = async (dataDir, follows) => {
     return follows
 }
 
-export const addFollow = async (dataDir, spaceId, { remote, token, label = null }) => {
+export const addFollow = async (dataDir, spaceId, { remote, token, label = null, address = null }) => {
     const follows = readFollows(dataDir)
     follows[spaceId] = {
         remote: String(remote || '').replace(/\/$/, ''),
         token: token || null,
         label,
-        followedAt: new Date().toISOString()
+        followedAt: new Date().toISOString(),
+        // The ADDRESS PIN — "the name stays, the socket goes to this IP". Left
+        // out entirely when there is none, not written as null: a record with
+        // no pin must serialise byte-identically to one from before this
+        // existed (scripts/di/follows.test.js holds that line).
+        ...(address ? { address } : {})
     }
     return writeFollows(dataDir, follows)
 }

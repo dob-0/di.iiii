@@ -100,6 +100,28 @@ describe('machine routes', () => {
         expect(peers.find(peer => peer.peerId === 'on-follower')).toMatchObject({ machineId: 'f1', machineName: 'asuz-follower' })
     })
 
+    it('carries what a follower machine has to the host — its cameras and screens, cleaned', async () => {
+        // The stage machine is the follower, and the desk is on the host: if its
+        // devices stop here, the desk lists a machine with nothing on it and can
+        // never tell whether the wall can show a named input.
+        const { call } = await boot()
+        await call('POST', `/api/spaces/${SPACE}/machines/sync`, {
+            machine: { id: 'f1', name: 'win' },
+            peers: [{ peerId: 'wall', role: 'runner', scripts: true, devices: [
+                { kind: 'camera', id: 'c1', label: 'OBS Virtual Camera', secret: 'dropped' },
+                { kind: 'screen', id: 's1', label: 'Screen', width: 1920, height: 1080 },
+                { kind: 'toaster', id: 't1', label: 'not a device kind' }
+            ] }]
+        })
+        const wall = (await call('GET', `/api/spaces/${SPACE}/machines`)).body.peers.find(peer => peer.peerId === 'wall')
+        expect(wall.machineName).toBe('win')
+        expect(wall.scripts).toBe(true)
+        expect(wall.devices).toEqual([
+            { kind: 'camera', id: 'c1', label: 'OBS Virtual Camera' },
+            { kind: 'screen', id: 's1', label: 'Screen', width: 1920, height: 1080 }
+        ])
+    })
+
     it('says 404 for nobody, 413 for too much, 502 when the host is gone', async () => {
         const { hub, call } = await boot({ forward: async () => ({ status: 0, payload: null }) })
         await call('POST', `/api/spaces/${SPACE}/machines/hello`, { peerId: 'a' })

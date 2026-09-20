@@ -148,6 +148,7 @@ Project flow:
 Project assets (content-addressed):
 
 - `POST /api/projects/:projectId/assets` — sha256-shaped `assetId`s are verified against the file content (400 on mismatch); bytes land once per space in `spaces/<spaceId>/blobs/<sha256>`, the project keeps only an `assets/<sha256>.json` reference. Legacy uuid-style ids stay project-local.
+- `PUT /api/projects/:projectId/assets/:assetId` — replication only (`di follow` carrying files): raw bytes stored **verbatim, without the EXIF scrubber**, and only if they hash to the sha256 `assetId` (422 otherwise). Sync key, internal token, or auth off; an ordinary editor gets 403. Emits no op. See `docs/architecture/SPEC_follow_files.md`.
 - `GET /api/projects/:projectId/assets/:assetId` — serves a legacy project-local binary first, else the space blob (only while the project holds the reference).
 - `GET /api/projects/:projectId/assets/:assetId/meta` — existence + meta probe used by client upload dedupe.
 - `DELETE /api/projects/:projectId/assets/:assetId` — removes the project reference only; orphaned blobs are reclaimed by `scripts/gc-space-blobs.mjs` (dry run by default, `--apply` to delete).

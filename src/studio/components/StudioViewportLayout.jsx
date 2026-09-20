@@ -181,6 +181,7 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
                     showHelp={shared.showHelp}
                     onShowHelp={shared.onShowHelp}
                     onCloseHelp={shared.onCloseHelp}
+                    rigMirror={shared.rigMirror}
                 />
             </div>
         </div>

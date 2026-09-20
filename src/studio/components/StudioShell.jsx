@@ -9,10 +9,12 @@ import StudioQuickInsert from './StudioQuickInsert.jsx'
 import { useStudioPanelState } from '../hooks/useStudioPanelState.js'
 import useAuthSession from '../../hooks/useAuthSession.js'
 import StudioCoachMarks from './StudioCoachMarks.jsx'
+import RigMirrorHint from './RigMirrorHint.jsx'
 import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspaceStorage.js'
 import '../styles/studio-mobile.css'
 import { canPlaceInScene } from '../utils/assetFormats.js'
 import { useViewportLayout } from '../hooks/useViewportLayout.js'
+import { useRigMirrorSwitch } from '../hooks/useRigMirrorSwitch.js'
 import { isJamProject, loadJamAllTools, saveJamAllTools } from '../utils/jamMode.js'
 import { JAM_PRIMITIVES } from '../../project/entityPalette.js'
 import {
@@ -142,6 +144,7 @@ export default function StudioShell({
     onExitXr,
     onBackToHub,
     onOpenNodeEditor,
+    onOpenProjection,
     onCameraViewChange,
     onTransformCommit,
     onToggleSelectEntity,
@@ -166,6 +169,7 @@ export default function StudioShell({
     const [collapsedPanels, setCollapsedPanels] = useState(() => new Set(persistedWorkspace?.collapsed || []))
     const [layoutKey, setLayoutKey] = useState(0)
     const [snapEdges, setSnapEdges] = useState(persistedWorkspace?.snapEdges ?? false)
+    const rigMirror = useRigMirrorSwitch()
 
     // Remember the workspace across sessions — open panels, dragged positions,
     // resized dimensions, collapsed headers, snap preference. Arrange actions
@@ -456,6 +460,7 @@ export default function StudioShell({
         showHelp,
         onShowHelp: () => setShowHelp(true),
         onCloseHelp: () => setShowHelp(false),
+        rigMirror: rigMirror.on,
     }
 
     // One source of truth for each window's content, shared by the desktop
@@ -607,6 +612,7 @@ export default function StudioShell({
                         onHideUI={() => setUiHidden(true)}
                         onBackToHub={onBackToHub}
                         onOpenNodeEditor={onOpenNodeEditor}
+                        onOpenProjection={onOpenProjection}
                         xrState={xrState}
                         syncState={syncState}
                         presence={presence}
@@ -617,6 +623,8 @@ export default function StudioShell({
                         onStackRight={stackRight}
                         onResetLayout={resetLayout}
                         onShowHelp={() => setShowHelp(true)}
+                        rigMirrorOn={rigMirror.on}
+                        onToggleRigMirror={rigMirror.available ? rigMirror.toggle : null}
                         panelKeys={jamMinimal ? ['create'] : null}
                         minimal={jamMinimal}
                         allTools={jamAllTools}
@@ -654,6 +662,17 @@ export default function StudioShell({
                                 title="Open this project in the node editor"
                             >
                                 Nodes
+                            </button>
+                        )}
+                        {!jamMinimal && onOpenProjection && (
+                            <button
+                                type="button"
+                                className="smb-top-btn"
+                                onClick={onOpenProjection}
+                                aria-label="Put this project on a wall"
+                                title="Put this project on a wall"
+                            >
+                                Projection
                             </button>
                         )}
                         <button
@@ -717,6 +736,8 @@ export default function StudioShell({
                     isOpenJam={isJam}
                 />
             )}
+
+            {!uiHidden && !loading && <RigMirrorHint on={rigMirror.on} />}
         </div>
     )
 }

@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import MapStage from './MapStage.jsx'
 import { useMapDocument, useMapChannelListener } from './useMapDocument.js'
+import { mapOutputReason } from './mapOutputReason.js'
 import { toTopNetwork, useTopNetwork } from '../project/tops/useTopNetwork.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
 import RigBlackout from '../rig/RigBlackout.jsx'
+import useScreenWakeLock from '../hooks/useScreenWakeLock.js'
+import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import './mapSurface.css'
 
 // THE SIGNAL.
@@ -41,6 +44,18 @@ export default function MapOutput({ projectId, spaceId }) {
     const drawsPictures = (fallbackMapping?.surfaces || []).some((surface) => surface.enabled !== false && surface.source?.kind === 'network' && surface.source?.ref)
     useTopNetwork({ network: drawsPictures ? NO_NETWORK : network, spaceId })
     useMapChannelListener(projectId, store)
+
+    // A projector output must survive unattended, the same as Raw's (see
+    // src/hooks/useScreenWakeLock.js) — a two-display rig going black 15
+    // minutes in because the OS blanked the screen is the bug this fixes.
+    useScreenWakeLock()
+
+    // Mirrored into the tab title, not the picture: a black wall is
+    // ambiguous from a screenshot alone (nothing mapped? everything
+    // disabled? working as intended, just dark right now?), and the title is
+    // readable over the Chrome DevTools protocol without ever touching what
+    // the audience sees.
+    useDocumentTitle(`out · ${projectId} · ${mapOutputReason({ mapping: fallbackMapping })}`)
 
     const [viewport, setViewport] = useState(() => ({
         width: typeof window === 'undefined' ? 0 : window.innerWidth,

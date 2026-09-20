@@ -13,6 +13,21 @@ as them, and can hold two of them open side by side.
 
 All paths are relative to the repo root.
 
+**Before you start it, look at who already holds `:4000`.** On a machine with a
+local `di` install — the artist's own machine, a stage box — port 4000 is that
+install's LIVE server, serving a wall or a show, and it is started the same way
+this stack starts one. Taking the port from it, or killing what holds it, takes
+down someone's show, silently: the log ends mid-request with no error. Run the
+stack somewhere else instead. The server port follows the API base:
+
+```bash
+VITE_API_BASE_URL=http://localhost:4360/serverXR npm run dev   # server on 4360
+```
+
+`dev-stack.mjs` passes that port to `serverXR` (`PORT`), proxies `/serverXR` to
+it, and never touches 4000. The client stays on 5173 — `VITE_PORT` did NOT move
+it when this was checked, so give Vite `--port` yourself if 5173 is taken too.
+
 There is a second harness already in the repo and it does a different job:
 `npm run verify:surfaces -- --base <url>` sweeps the PUBLIC surfaces of any tier
 for console errors, overflow, occlusion and tap-target sizes, and writes a
@@ -216,6 +231,11 @@ its hard 50-line cap.
   404s while the file plainly registers it. `ss -ltnp | grep :4000`, then
   `pgrep -af "src/index.js"` — the `--watch` parent and its child are two
   processes and killing the parent leaves the child on the port.
+  **`pgrep -af "src/index.js"` also matches an INSTALLED di.iiii's live server**,
+  which looks exactly like a stale dev one and is neither stale nor yours. Check
+  `di status` first: if it says `running` on that port, that is a show. Leave it
+  alone and move your own stack (see the top of this file). This has killed a
+  running rig twice.
 - **`waitUntil: 'networkidle'` never settles.** socket.io holds a connection open
   on every surface with presence in it. Use `domcontentloaded` and wait for the
   element you need. The driver's `open()` already does.

@@ -73,7 +73,13 @@ export const STUDIO_GUIDE_SECTIONS = [
             'Set this project as live',
             'Make the space public',
             'Copy the link and send it'
-        ]
+        ],
+        // The only mention, anywhere in Studio, that this project can leave the
+        // 3D room and land on a wall — the newcomer walk found nothing here
+        // pointed at Projection at all. One line, not a redesign: Display
+        // already carries the button, this just says the word.
+        note: 'A project can also go on a wall. Open Projection, next to Nodes in Display, and read',
+        noteLink: { label: 'Putting a space on a wall', href: '/wiki#projection-mapping' }
     }
 ]
 
