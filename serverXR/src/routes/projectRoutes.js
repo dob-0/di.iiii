@@ -181,7 +181,14 @@ function registerProjectRoutes(router, {
       }
       const existing = await resolveProjectContext(projectId)
       if (existing) {
-        return res.status(409).json({ error: 'Project already exists.' })
+        // Project ids are global across every space (deliberate — see
+        // resolveProjectContext / GET /api/projects/:projectId, which takes
+        // no spaceId), so this collision can be with a project in a space
+        // the caller cannot see, and would name it. "Project already
+        // exists." named nothing and gave nobody anything to act on — a
+        // newcomer who picks an ordinary name twice, weeks apart, in two
+        // different spaces, hit this with no way to tell what happened.
+        return res.status(409).json({ error: 'that name is taken on this di.iiii — try another' })
       }
       const meta = await ensureProject(spacesDir, spaceId, projectId, {
         title: title || 'Untitled Project',

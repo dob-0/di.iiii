@@ -211,8 +211,18 @@ export const defaultMappingSurface = {
     //             in the platform still reaches the wall)
     //   video / image — an asset URL
     //   colour  — a flat fill
-    //   test    — a generated alignment pattern; see mapTestPattern.js
-    source: { kind: 'test', ref: 'grid' },
+    //   test    — a generated pattern; see mapTestPattern.jsx
+    // A NEW surface is born on `card`: a dim warm identification card naming
+    // the surface, not the bright alignment grid. The desk and the wall are
+    // two machines on a rig, so the moment Add is pressed the new surface is
+    // on the projector — and the owner's standing rule is that white never
+    // goes on a projector. `grid` and the rest stay one choice away in the
+    // Pattern picker, at full brightness, for the person on the ladder.
+    // Deliberately a `ref` and not a new `source.kind`: an older build's
+    // MAPPING_SOURCE_KINDS would rewrite an unknown kind back to `test` and
+    // lose the choice for good, while an unknown `ref` is kept verbatim (it
+    // draws the grid on that old build, and comes back as the card here).
+    source: { kind: 'test', ref: 'card' },
     // The unwarped pixel size of the layer before it is pinned. Set it to the
     // source's own aspect and the corner-pin does the rest.
     resolution: [1280, 720],

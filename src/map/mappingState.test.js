@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
     applyProjectOps,
+    defaultMappingSurface,
     invertProjectOps,
     normalizeMappingState,
+    normalizeMappingSurface,
     normalizeProjectDocument
 } from '../shared/projectSchema.js'
 
@@ -268,3 +270,32 @@ describe('motion glow on a surface', () => {
     })
 })
 
+describe('what a new surface is born showing', () => {
+    it('is the dim identification card, not the bright alignment grid', () => {
+        // The rig is two machines. A new surface is on the projector the
+        // instant Add is pressed, and white never goes on a projector.
+        expect(defaultMappingSurface.source).toEqual({ kind: 'test', ref: 'card' })
+    })
+
+    it('is stored as a ref, because an older build would rewrite an unknown KIND', () => {
+        // This is the whole reason the card is a pattern and not a new
+        // `source.kind`. MAPPING_SOURCE_KINDS is a closed list: a build that
+        // predates a new kind replaces it with the default kind and the
+        // surface's source is gone for good. A `ref` is a free string and
+        // comes back byte-identical, so an old build merely draws the grid
+        // for an afternoon and a new one shows the card again.
+        expect(normalizeMappingSurface({ id: 'a', source: { kind: 'card', ref: '' } }).source)
+            .toEqual({ kind: 'test', ref: '' })
+        expect(normalizeMappingSurface({ id: 'a', source: { kind: 'test', ref: 'card' } }).source)
+            .toEqual({ kind: 'test', ref: 'card' })
+        expect(normalizeMappingSurface({ id: 'a', source: { kind: 'test', ref: 'a-later-pattern' } }).source.ref)
+            .toBe('a-later-pattern')
+    })
+
+    it('keeps the grid an explicit choice that round-trips untouched', () => {
+        const document = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createMappingSurface', payload: { surface: { id: 'a', source: { kind: 'test', ref: 'grid' } } } }
+        ])
+        expect(document.mappingState.surfaces[0].source).toEqual({ kind: 'test', ref: 'grid' })
+    })
+})
