@@ -307,6 +307,16 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('topBlend', 'top.blend', { label: 'Blend', col: 9, row: 4, values: { mode: '2' } })
     add('topOut', 'top.out', { label: 'Picture Out', col: 9, row: 5 })
     add('topAnalyze', 'top.analyze', { label: 'Analyze', col: 9, row: 2 })
+
+    // --- column 10: pictures — the generators (2026-09-20) ----------------------
+    // A generator needs no camera: Clouds → Tint is a whole warm, animated
+    // picture on its own; Gradient → Reframe shows a generator feeding an
+    // adjuster. Shape stands alone — one soft-edged mask, nothing upstream.
+    add('topClouds', 'top.noise', { label: 'Clouds', col: 10, row: 0 })
+    add('topTint', 'top.tint', { label: 'Tint', col: 10, row: 1 })
+    add('topGradient', 'top.ramp', { label: 'Gradient', col: 10, row: 2 })
+    add('topReframe', 'top.transform', { label: 'Reframe', col: 10, row: 3 })
+    add('topShape', 'top.shape', { label: 'Shape', col: 10, row: 4 })
     add('monitor', 'stream.monitor', { label: 'Monitor', col: 7, row: 0 })
     add('machinesDesk', 'view.desk', { label: 'Desk', col: 7, row: 1 })
     add('mic', 'source.mic', { label: 'Microphone', col: 6, row: 1 })
@@ -505,6 +515,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('topEdge', 'out', 'topBlend', 'b'),
         wire('topBlend', 'out', 'topOut', 'a'),
         wire('topLevel', 'out', 'topAnalyze', 'a'),
+        wire('topClouds', 'out', 'topTint', 'a'),
+        wire('topGradient', 'out', 'topReframe', 'a'),
         // geom.cube.bounds — likewise documented as dead, in fact a real vec3
         // of the cube's size. Wired to the desk's scale so the marker box grows
         // with the cube it is measuring.

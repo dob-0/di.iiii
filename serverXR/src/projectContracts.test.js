@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { spawn } from 'node:child_process'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
@@ -57,7 +57,7 @@ const waitForHealth = async ({ url, child, getLogs }) => {
     throw new Error(`Server did not become healthy in time.\n${getLogs()}`)
 }
 
-const startServer = async () => {
+const startServer = async ({ extraEnv = {} } = {}) => {
     const sandboxCwd = await mkdtemp(path.join(os.tmpdir(), 'dii-project-server-cwd-'))
     const sandboxDataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-project-server-data-'))
     const port = await getFreePort()
@@ -71,7 +71,8 @@ const startServer = async () => {
             DATA_ROOT: sandboxDataRoot,
             API_TOKEN: 'test-token',
             REQUIRE_AUTH: '',
-            CORS_ORIGINS: '*'
+            CORS_ORIGINS: '*',
+            ...extraEnv
         },
         stdio: ['ignore', 'pipe', 'pipe']
     })
@@ -964,5 +965,178 @@ describe('collections, state and the trash', () => {
         const projects = (await (await fetch(`${server.baseUrl}/api/spaces/main/projects`)).json()).projects
         const seen = projects.filter(p => [a.id, b.id, c.id].includes(p.id)).map(p => p.id)
         expect(seen).toEqual([c.id, a.id, b.id])
+    })
+})
+
+// The hash-pinned PUT: how a followed space's files reach the other machine
+// (docs/architecture/SPEC_follow_files.md). It stores WITHOUT the EXIF
+// scrubber, so every refusal below is a security property, not a nicety.
+describe('verbatim asset PUT (a follow carrying files)', () => {
+    const sha256 = async (bytes) => {
+        const { createHash } = await import('node:crypto')
+        return createHash('sha256').update(bytes).digest('hex')
+    }
+    const makeProject = (server, slug, headers = {}) => fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ title: slug, slug })
+    })
+    const put = (server, slug, id, bytes, { headers = {}, name = 'clip.mp4', mimeType = 'video/mp4' } = {}) =>
+        fetch(`${server.baseUrl}/api/projects/${slug}/assets/${id}?name=${encodeURIComponent(name)}&mimeType=${encodeURIComponent(mimeType)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/octet-stream', ...headers },
+            body: bytes
+        })
+    const leftovers = async (server) => (await readdir(path.join(server.dataRoot, 'uploads')).catch(() => []))
+
+    it('stores bytes that hash to the id, serves them byte-identical, and writes no op', async () => {
+        const server = await startServer()
+        expect((await makeProject(server, 'verbatim')).status).toBe(201)
+        // Binary on purpose, including bytes that are not valid UTF-8: a
+        // transport that round-trips through a string would pass with text.
+        const bytes = Buffer.from(Array.from({ length: 70_000 }, (_, i) => (i * 31 + 7) % 256))
+        const id = await sha256(bytes)
+
+        const stored = await put(server, 'verbatim', id, bytes)
+        expect(stored.status).toBe(200)
+        const body = await stored.json()
+        expect(body.already).toBe(false)
+        expect(body.asset).toMatchObject({ id, name: 'clip.mp4', mimeType: 'video/mp4', size: bytes.length })
+
+        const served = await fetch(`${server.baseUrl}/api/projects/verbatim/assets/${id}`)
+        expect(served.status).toBe(200)
+        expect(served.headers.get('content-type')).toContain('video/mp4')
+        expect(Buffer.from(await served.arrayBuffer()).equals(bytes)).toBe(true)
+        expect((await fetch(`${server.baseUrl}/api/projects/verbatim/assets/${id}/meta`)).status).toBe(200)
+
+        // in the space blob store, like any upload; nothing left in uploads/
+        expect(await readdir(path.join(server.dataRoot, 'spaces', 'main', 'blobs'))).toContain(id)
+        expect(await leftovers(server)).toEqual([])
+        // the upsertAsset already travelled — this route must not write another
+        const ops = await (await fetch(`${server.baseUrl}/api/projects/verbatim/ops`)).json()
+        expect(ops.ops).toEqual([])
+    })
+
+    it('refuses bytes that do not hash to the id, and leaves nothing on disk', async () => {
+        const server = await startServer()
+        await makeProject(server, 'verbatim')
+        const id = await sha256('the real file')
+
+        const forged = await put(server, 'verbatim', id, 'not the real file')
+        expect(forged.status).toBe(422)
+
+        expect((await fetch(`${server.baseUrl}/api/projects/verbatim/assets/${id}`)).status).toBe(404)
+        expect((await fetch(`${server.baseUrl}/api/projects/verbatim/assets/${id}/meta`)).status).toBe(404)
+        expect(await readdir(path.join(server.dataRoot, 'spaces', 'main', 'blobs')).catch(() => [])).toEqual([])
+        expect(await readdir(path.join(server.dataRoot, 'spaces', 'main', 'projects', 'verbatim', 'assets')).catch(() => [])).toEqual([])
+        expect(await leftovers(server)).toEqual([])
+    })
+
+    it('refuses an id that is not a sha256 — a legacy id proves nothing', async () => {
+        const server = await startServer()
+        await makeProject(server, 'verbatim')
+        const legacy = await put(server, 'verbatim', '123e4567-e89b-42d3-a456-426614174000', 'bytes')
+        expect(legacy.status).toBe(400)
+        expect(await leftovers(server)).toEqual([])
+    })
+
+    it('is idempotent: a second PUT answers 200 and rewrites nothing', async () => {
+        const server = await startServer()
+        await makeProject(server, 'verbatim')
+        const bytes = 'the same file twice'
+        const id = await sha256(bytes)
+        expect((await put(server, 'verbatim', id, bytes)).status).toBe(200)
+        const metaPath = path.join(server.dataRoot, 'spaces', 'main', 'projects', 'verbatim', 'assets', `${id}.json`)
+        const before = await readFile(metaPath, 'utf8')
+
+        const again = await put(server, 'verbatim', id, bytes, { name: 'renamed.mp4' })
+        expect(again.status).toBe(200)
+        expect((await again.json()).already).toBe(true)
+        expect(await readFile(metaPath, 'utf8')).toBe(before)
+        expect(await leftovers(server)).toEqual([])
+    })
+
+    it('refuses a file over the upload limit', async () => {
+        const server = await startServer({ extraEnv: { MAX_UPLOAD_MB: '1' } })
+        await makeProject(server, 'verbatim')
+        const bytes = Buffer.alloc(1024 * 1024 + 10, 1)
+        const response = await put(server, 'verbatim', await sha256(bytes), bytes).catch(() => null)
+        // A server may close the door on an oversized body before the client
+        // has finished pushing it; either way nothing was stored.
+        if (response) expect(response.status).toBe(413)
+        expect(await readdir(path.join(server.dataRoot, 'spaces', 'main', 'blobs')).catch(() => [])).toEqual([])
+        expect(await leftovers(server)).toEqual([])
+    })
+
+    // The property the whole trust argument rests on: a key is for ONE space.
+    // The route itself never looks at the space — the blanket editor gate does,
+    // from the project's parent space — so this pins that wiring in place.
+    it('with auth on: a sync key for one space is refused on a project in another, and leaves nothing behind', async () => {
+        const admin = { Authorization: 'Bearer test-token' }
+        const server = await startServer({ extraEnv: { REQUIRE_AUTH: 'true' } })
+        const madeSpace = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...admin },
+            body: JSON.stringify({ slug: 'other-room', label: 'other-room', permanent: true })
+        })
+        expect(madeSpace.status).toBe(201)
+        const madeProject = await fetch(`${server.baseUrl}/api/spaces/other-room/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...admin },
+            body: JSON.stringify({ title: 'theirs', slug: 'theirs' })
+        })
+        expect(madeProject.status).toBe(201)
+        expect((await makeProject(server, 'ours', admin)).status).toBe(201)
+
+        const minted = await fetch(`${server.baseUrl}/api/spaces/main/sync-keys`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...admin },
+            body: JSON.stringify({ label: 'follows main only' })
+        })
+        expect(minted.status).toBe(201)
+        const keyForMain = { Authorization: `Bearer ${(await minted.json()).token}` }
+
+        const bytes = 'bytes that hash perfectly well'
+        const id = await sha256(bytes)
+        // the key works where it was minted — so the refusal below is scope, not a dead key
+        expect((await put(server, 'ours', id, bytes, { headers: keyForMain })).status).toBe(200)
+
+        const refused = await put(server, 'theirs', id, bytes, { headers: keyForMain })
+        expect(refused.status).toBe(403)
+
+        expect((await fetch(`${server.baseUrl}/api/projects/theirs/assets/${id}`, { headers: admin })).status).toBe(404)
+        expect((await fetch(`${server.baseUrl}/api/projects/theirs/assets/${id}/meta`, { headers: admin })).status).toBe(404)
+        expect(await readdir(path.join(server.dataRoot, 'spaces', 'other-room', 'blobs')).catch(() => [])).toEqual([])
+        expect(await readdir(path.join(server.dataRoot, 'spaces', 'other-room', 'projects', 'theirs', 'assets')).catch(() => [])).toEqual([])
+        expect(await leftovers(server)).toEqual([])
+    })
+
+    it('with auth on: a sync key and the internal token may, an ordinary editor may not', async () => {
+        const admin = { Authorization: 'Bearer test-token' }
+        const editor = { Authorization: 'Bearer editor-token' }
+        const server = await startServer({ extraEnv: { REQUIRE_AUTH: 'true', EDITOR_API_TOKEN: 'editor-token' } })
+        expect((await makeProject(server, 'verbatim', admin)).status).toBe(201)
+        const minted = await fetch(`${server.baseUrl}/api/spaces/main/sync-keys`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...admin },
+            body: JSON.stringify({ label: 'follows' })
+        })
+        expect(minted.status).toBe(201)
+        const syncKey = { Authorization: `Bearer ${(await minted.json()).token}` }
+
+        const one = 'carried by the key'
+        const two = 'carried by the server itself'
+        const three = 'a person with a browser'
+
+        expect((await put(server, 'verbatim', await sha256(one), one)).status).toBe(401)
+        expect((await put(server, 'verbatim', await sha256(one), one, { headers: syncKey })).status).toBe(200)
+        expect((await put(server, 'verbatim', await sha256(two), two, { headers: admin })).status).toBe(200)
+
+        // The editor token CAN upload here (same role, same space) — what it may
+        // not do is skip the scrubber.
+        const refused = await put(server, 'verbatim', await sha256(three), three, { headers: editor })
+        expect(refused.status).toBe(403)
+        expect((await fetch(`${server.baseUrl}/api/projects/verbatim/assets/${await sha256(three)}`, { headers: admin })).status).toBe(404)
+        expect(await leftovers(server)).toEqual([])
     })
 })

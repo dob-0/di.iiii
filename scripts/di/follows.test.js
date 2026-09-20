@@ -49,4 +49,43 @@ describe('follows.json', () => {
         expect(readByServer(dir)).toEqual({})
         expect(readByCli(dir)).toEqual({})
     })
+
+    describe('the ADDRESS PIN', () => {
+        it('is carried by the CLI writer and read back by the server, byte for byte', async () => {
+            const dir = await tmpDir()
+            await addFollow(dir, 'jam', { remote: 'https://local.thedi.studio/serverXR', token: 't', address: '100.87.4.12' })
+            expect(readByServer(dir).jam).toMatchObject({ address: '100.87.4.12' })
+            expect(readByCli(dir).jam).toMatchObject({ address: '100.87.4.12' })
+        })
+
+        it('a record written with no pin is byte-identical to one written before the pin existed', async () => {
+            const dir = await tmpDir()
+            await addFollow(dir, 'jam', { remote: 'https://x/serverXR', token: 't' })
+            const withoutPin = await fsp.readFile(path.join(dir, 'follows.json'), 'utf8')
+
+            const dir2 = await tmpDir()
+            await addFollow(dir2, 'jam', { remote: 'https://x/serverXR', token: 't', address: null })
+            const withNullPin = await fsp.readFile(path.join(dir2, 'follows.json'), 'utf8')
+
+            // `followedAt` is never the same twice — strip it out before the
+            // byte comparison, which is what "byte-identical" is really about
+            // here: the SHAPE of the record, not this millisecond's clock.
+            const stripStamp = (text) => text.replace(/"followedAt": "[^"]*"/, '"followedAt": "STAMP"')
+            expect(stripStamp(withNullPin)).toBe(stripStamp(withoutPin))
+            expect(JSON.parse(withoutPin).follows.jam).not.toHaveProperty('address')
+        })
+
+        it('the server-side writer follows the same rule, kept in step by this same test', async () => {
+            const require = createRequire(import.meta.url)
+            const { addFollow: addByServer } = require('../../serverXR/src/follow/followStore.js')
+
+            const dir = await tmpDir()
+            await addByServer(dir, 'jam', { remote: 'https://x/serverXR', token: 't', address: '100.87.4.12' })
+            expect(readByCli(dir).jam).toMatchObject({ address: '100.87.4.12' })
+
+            const dir2 = await tmpDir()
+            await addByServer(dir2, 'jam', { remote: 'https://x/serverXR', token: 't' })
+            expect(readByCli(dir2).jam).not.toHaveProperty('address')
+        })
+    })
 })

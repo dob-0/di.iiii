@@ -3,7 +3,8 @@ const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
 const { hashFileSha256, isSha256AssetId } = require('../assetHash')
 const { UNSCRUBBABLE_IMAGE_ERROR, scrubImageMetadata } = require('../assetScrub')
-const { getSpaceBlobPaths, storeBlobFromFile } = require('../blobStore')
+const { getSpaceBlobPaths, hasBlob, storeBlobFromFile } = require('../blobStore')
+const { receiveBodyToTempFile } = require('../verbatimAsset')
 const { createKeyedLock } = require('../asyncLock')
 const { applyAssetSafetyHeaders } = require('../spaceStore')
 const { findIdlessCreateOp } = require('../opValidation')
@@ -54,6 +55,12 @@ function registerProjectRoutes(router, {
   deleteCollection,
   countProjectsIn,
   upload,
+  // The hash-pinned asset PUT (a follow carrying files). All three are absent
+  // on a router built without them, and the route then refuses everyone.
+  uploadsDir = null,
+  maxUploadBytes = 0,
+  isAllowedUpload = () => true,
+  mayStoreVerbatim = () => false,
   upsertProjectMeta,
   writeJson,
   writeProjectDocument,
@@ -771,6 +778,126 @@ function registerProjectRoutes(router, {
       if (req.file?.path) {
         await fsp.rm(req.file.path, { force: true }).catch(() => {})
       }
+      next(error)
+    }
+  })
+
+  // The same file, on another di.iiii: store these exact bytes under this exact
+  // content address, or store nothing.
+  //
+  // A followed space (serverXR/src/follow) carries its projects' op logs, and
+  // an `upsertAsset` op names a file by the sha256 of its bytes. The op crosses;
+  // until this route existed the bytes never did, and a video placed on one
+  // machine was a dead frame on the other. The follower cannot use the upload
+  // route above to bring them over: that route re-encodes images to strip
+  // EXIF/GPS, so the bytes it stores hash to a DIFFERENT id than the one
+  // already written into the ops on both machines.
+  //
+  // So this route skips the scrubber — and that is only safe because of the
+  // two rules below, which are the whole security argument:
+  //
+  //   1. PROOF. The id must be a 64-hex sha256 and the server hashes what it
+  //      actually received. Anything else is refused (422) and the temp file
+  //      deleted. What is stored is therefore byte-for-byte a file some
+  //      di.iiii already holds under that address — and a file only gets a
+  //      sha256 address on a di.iiii by passing through the upload route, which
+  //      scrubbed it. The content address is the proof of scrubbing.
+  //
+  //   2. CALLER. Proof alone is not enough: anyone can hash an un-scrubbed
+  //      photo and PUT it under its true sha256. So an ordinary signed-in
+  //      editor — a person with a browser — is refused (403) even though the
+  //      upload route would take their file. Only replication may call this:
+  //      a per-space sync key (the credential `di follow` holds; editor on that
+  //      one space, scope already enforced by requireWriteRole), this server's
+  //      own internal token (the follower writing to its own install), or an
+  //      install with auth off entirely (a local machine, where every caller is
+  //      the owner already). A sync key holder could still push a file their
+  //      own install never scrubbed; that is the trust a space owner extends by
+  //      minting the key, the same trust that already lets that key write ops.
+  //
+  // It writes the blob and the project's <hash>.json reference exactly as the
+  // upload would have, and it emits NO op: the upsertAsset that names this file
+  // has already travelled through the op log, which is why we are here.
+  router.put('/api/projects/:projectId/assets/:assetId', async (req, res, next) => {
+    let tempPath = null
+    try {
+      const project = await resolveProjectContext(req.params.projectId)
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found.' })
+      }
+      if (!mayStoreVerbatim(req)) {
+        res.setHeader('Connection', 'close')
+        return res.status(403).json({ error: 'Only a sync key or this server itself may store a file verbatim. Upload it instead.' })
+      }
+      const assetId = String(req.params.assetId || '').trim().toLowerCase()
+      if (!isSha256AssetId(assetId)) {
+        res.setHeader('Connection', 'close')
+        return res.status(400).json({ error: 'A verbatim file is addressed by the sha256 of its bytes.' })
+      }
+      const name = String(req.query.name || '').slice(0, 255) || 'Untitled Asset'
+      const mimeType = String(req.query.mimeType || '').slice(0, 127) || 'application/octet-stream'
+      if (!isAllowedUpload({ mimetype: mimeType, originalname: name })) {
+        res.setHeader('Connection', 'close')
+        return res.status(415).json({ error: 'Unsupported asset type.' })
+      }
+      if (!uploadsDir || !(maxUploadBytes > 0)) {
+        res.setHeader('Connection', 'close')
+        return res.status(501).json({ error: 'This server cannot receive files.' })
+      }
+      // A body some parser already read (sent as JSON, say) is gone: there is
+      // nothing left to hash, and waiting for its end would wait forever.
+      if (req.readableEnded) {
+        return res.status(400).json({ error: 'Send the file as raw bytes (application/octet-stream).' })
+      }
+      const declared = Number(req.get('content-length'))
+      if (Number.isFinite(declared) && declared > maxUploadBytes) {
+        res.setHeader('Connection', 'close')
+        return res.status(413).json({ error: 'File too large.', maxBytes: maxUploadBytes })
+      }
+      await ensureSpaceWritable(project.spaceId)
+      const { assetsDir } = getProjectPaths(spacesDir, project.spaceId, project.projectId)
+      const metaPath = path.join(assetsDir, `${assetId}.json`)
+      const url = `${req.baseUrl || ''}/api/projects/${project.projectId}/assets/${assetId}`
+
+      // Already here: say so and touch nothing. The body is still read to the
+      // end (and thrown away) so the sender's write finishes cleanly.
+      const existingMeta = await readJson(metaPath, null)
+      if (existingMeta && await hasBlob(spacesDir, project.spaceId, assetId)) {
+        await new Promise((resolve) => { req.on('end', resolve); req.on('close', resolve); req.resume() })
+        return res.json({ ok: true, already: true, asset: { ...existingMeta, url } })
+      }
+
+      let received
+      try {
+        received = await receiveBodyToTempFile(req, { dir: uploadsDir, maxBytes: maxUploadBytes })
+      } catch (error) {
+        if (error.code === 'BODY_TOO_LARGE') {
+          res.setHeader('Connection', 'close')
+          return res.status(413).json({ error: 'File too large.', maxBytes: maxUploadBytes })
+        }
+        throw error
+      }
+      tempPath = received.tempPath
+      if (received.sha256 !== assetId) {
+        await fsp.rm(tempPath, { force: true }).catch(() => {})
+        tempPath = null
+        return res.status(422).json({ error: 'These bytes are not the file that id names.', expected: assetId, received: received.sha256 })
+      }
+      await fsp.mkdir(assetsDir, { recursive: true })
+      await storeBlobFromFile(spacesDir, project.spaceId, assetId, tempPath)
+      tempPath = null
+      const assetMeta = buildProjectAssetMeta({
+        assetId,
+        file: { originalname: name, mimetype: mimeType, size: received.size },
+        source: 'server',
+        width: Number(req.query.width) || 0,
+        height: Number(req.query.height) || 0
+      })
+      await writeJson(metaPath, assetMeta)
+      await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, { touch: true })
+      res.json({ ok: true, already: false, asset: { ...assetMeta, url } })
+    } catch (error) {
+      if (tempPath) await fsp.rm(tempPath, { force: true }).catch(() => {})
       next(error)
     }
   })

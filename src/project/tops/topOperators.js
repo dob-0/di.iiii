@@ -14,6 +14,22 @@
 //
 // 8-bit textures and WebGL1 on purpose: this has to run on the oldest GPU that
 // will ever be plugged into a projector.
+//
+// `time` — seconds, float, monotonic from when the engine's canvas was
+// created — reaches every fragment as a plain uniform (topEngine.js declares
+// it in the shared preamble, next to `a`/`b`/`texel`), so a generator never
+// has to ask for it specially. It is passed already wrapped (`mod(t, 3600)`)
+// to keep it small: a raw millisecond clock would lose float precision on an
+// old GPU's mediump path long before a wall runs a show for an hour, and the
+// wrap is invisible to a fragment that only ever reads `sin`/`fract` of it.
+//
+// An operator whose picture depends on `time` sets `animated: true` — it is
+// the only thing that makes ITS OWN redraw depend on the clock rather than on
+// its inputs. Nothing to preserve here: the engine already redraws every
+// operator, animated or not, on every requestAnimationFrame (see topEngine.js
+// — there is no per-operator dirty-tracking to break). The flag is real data
+// even so: it is what a reader (or a future scheduler) checks to know an
+// operator cannot be treated as static just because its inputs are.
 
 const LUMA = 'float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }'
 
@@ -22,6 +38,21 @@ const param = (name, label, value, min, max, step = 0.01) => ({ name, label, val
 // how the inspector draws it.
 const toggle = (name, label, value = 0) => ({ name, label, value, min: 0, max: 1, step: 1, toggle: true })
 const choice = (name, label, options, value = 0) => ({ name, label, value, min: 0, max: options.length - 1, step: 1, options })
+// The smallest honest colour support: a hex string, the same shape the rest
+// of the app already stores a colour in (entityRegistry.js, nodeRegistry.js's
+// `type: 'color'` fields) and the same box the inspector already draws for
+// one. resolveTopParams keeps it as a string; the engine uploads it as a
+// vec3 (hexToRgb01) instead of the float every other parameter becomes.
+const colour = (name, label, value) => ({ name, label, value, colour: true })
+
+/** '#rrggbb' -> [r, g, b] in 0..1. Anything unparsable falls back to black —
+ * never white — so a bad value on a wall reads as "off", not as a flash. */
+export const hexToRgb01 = (hex) => {
+    const match = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim())
+    if (!match) return [0, 0, 0]
+    const n = parseInt(match[1], 16)
+    return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]
+}
 
 export const TOP_OPERATORS = {
     'top.camera': {
@@ -195,6 +226,212 @@ void main() {
 }`
     },
 
+    // --- generators (2026-09-20): the operators a picture network can START
+    // from besides a camera. "Noise" and "Transform" are already taken by
+    // other families' node labels (value.noise, geom.transform) — the
+    // vocabulary contract gives one word one meaning, so these read as
+    // Clouds and Reframe instead; the type ids keep the TouchDesigner names
+    // they were asked for.
+
+    'top.noise': {
+        label: 'Clouds',
+        family: 'in',
+        inputs: [],
+        // Reads `time` — must be redrawn every frame regardless of its params.
+        animated: true,
+        params: [
+            param('scale', 'Scale', 4, 0.5, 20, 0.1),
+            param('speed', 'Speed', 0.06, 0, 2, 0.01),
+            choice('detail', 'Detail', ['1', '2', '3', '4'], 2),
+            param('contrast', 'Contrast', 1.2, 0.2, 4, 0.05),
+            toggle('colour', 'Colour')
+        ],
+        // Value noise (bilinear hash lattice) summed as an fbm, up to 4
+        // octaves picked at runtime by masking rather than a dynamic loop
+        // bound — WebGL1 compilers on old drivers can refuse the latter. 4
+        // taps per octave, 4 octaves: 16 texture-free hashes, well under the
+        // "no loops over 8 iterations" budget per iteration of the outer loop.
+        fragment: `
+uniform float p_scale;
+uniform float p_speed;
+uniform float p_detail;
+uniform float p_contrast;
+uniform float p_colour;
+float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+float valueNoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    float a = hash21(i);
+    float b = hash21(i + vec2(1.0, 0.0));
+    float c = hash21(i + vec2(0.0, 1.0));
+    float d = hash21(i + vec2(1.0, 1.0));
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+}
+// A warm-leaning cosine palette (Inigo Quilez's formula) — cheap, and never
+// passes through literal white the way three independent noise samples could.
+vec3 palette(float t) { return 0.5 + 0.5 * cos(6.28318 * (vec3(0.9, 0.6, 0.35) * t + vec3(0.0, 0.15, 0.35))); }
+void main() {
+    vec2 p = uv * p_scale + vec2(time * p_speed, time * p_speed * 0.7);
+    float octaves = p_detail + 1.0;
+    float amp = 0.5;
+    float freq = 1.0;
+    float n = 0.0;
+    for (int i = 0; i < 4; i += 1) {
+        if (float(i) < octaves) {
+            n += valueNoise(p * freq) * amp;
+            freq *= 2.0;
+            amp *= 0.5;
+        }
+    }
+    n = clamp((n - 0.5) * p_contrast + 0.5, 0.0, 1.0);
+    vec3 c = p_colour > 0.5 ? palette(n) : vec3(n);
+    gl_FragColor = vec4(c, 1.0);
+}`
+    },
+
+    'top.ramp': {
+        label: 'Gradient',
+        family: 'in',
+        inputs: [],
+        params: [
+            choice('type', 'Type', ['Horizontal', 'Vertical', 'Radial', 'Circular sweep']),
+            // Offset is a plain 0..1 wrap — safe for a hand to drag, and just
+            // as safe for a script or a wired number to sweep every frame.
+            param('offset', 'Offset', 0, 0, 1),
+            colour('a', 'Colour A', '#1a0500'),
+            colour('b', 'Colour B', '#a03c00')
+        ],
+        fragment: `
+uniform float p_type;
+uniform float p_offset;
+uniform vec3 p_a;
+uniform vec3 p_b;
+void main() {
+    vec2 c = uv - 0.5;
+    float t;
+    if (p_type < 0.5) t = uv.x;
+    else if (p_type < 1.5) t = uv.y;
+    // sqrt(0.5) normalises the corner-to-corner distance back to ~1.
+    else if (p_type < 2.5) t = length(c) * 1.4142135;
+    else t = atan(c.y, c.x) / 6.28318 + 0.5;
+    t = fract(t + p_offset);
+    gl_FragColor = vec4(mix(p_a, p_b, t), 1.0);
+}`
+    },
+
+    'top.tint': {
+        label: 'Tint',
+        family: 'adjust',
+        inputs: ['a'],
+        // Defaults black -> deep amber: the duotone that makes any picture
+        // club-safe warm with the card untouched.
+        params: [
+            colour('dark', 'Dark', '#000000'),
+            colour('bright', 'Bright', '#ff7a1a'),
+            param('amount', 'Amount', 1, 0, 1)
+        ],
+        fragment: `
+${LUMA}
+uniform vec3 p_dark;
+uniform vec3 p_bright;
+uniform float p_amount;
+void main() {
+    vec3 src = texture2D(a, uv).rgb;
+    vec3 duo = mix(p_dark, p_bright, luma(src));
+    gl_FragColor = vec4(mix(src, duo, p_amount), 1.0);
+}`
+    },
+
+    'top.transform': {
+        label: 'Reframe',
+        family: 'adjust',
+        inputs: ['a'],
+        params: [
+            param('scale', 'Scale', 1, 0.1, 4, 0.01),
+            param('rotate', 'Rotate', 0, -180, 180, 1),
+            param('moveX', 'Move X', 0, -1, 1),
+            param('moveY', 'Move Y', 0, -1, 1),
+            choice('edge', 'Edge', ['Black', 'Repeat', 'Mirror'])
+        ],
+        // Centre-anchored: scale, then rotate, then pan, all in the space
+        // around (0.5, 0.5). Wired into a Feedback loop (the engine reads a
+        // drawn cycle as feedback, not an error — orderNetwork.js), this is
+        // what makes a tunnel: each frame reframes the last.
+        fragment: `
+uniform float p_scale;
+uniform float p_rotate;
+uniform float p_moveX;
+uniform float p_moveY;
+uniform float p_edge;
+void main() {
+    vec2 c = (uv - 0.5) / max(p_scale, 0.0001);
+    float rad = radians(-p_rotate);
+    float s = sin(rad);
+    float co = cos(rad);
+    c = mat2(co, -s, s, co) * c;
+    c -= vec2(p_moveX, p_moveY);
+    vec2 pos = c + 0.5;
+    vec3 col;
+    if (p_edge < 0.5) {
+        bool outside = pos.x < 0.0 || pos.x > 1.0 || pos.y < 0.0 || pos.y > 1.0;
+        col = outside ? vec3(0.0) : texture2D(a, pos).rgb;
+    } else if (p_edge < 1.5) {
+        col = texture2D(a, fract(pos)).rgb;
+    } else {
+        col = texture2D(a, abs(mod(pos, 2.0) - 1.0)).rgb;
+    }
+    gl_FragColor = vec4(col, 1.0);
+}`
+    },
+
+    'top.shape': {
+        label: 'Shape',
+        family: 'in',
+        inputs: [],
+        // Reads `time` for Spin — must be redrawn every frame.
+        animated: true,
+        params: [
+            choice('shape', 'Shape', ['Circle', 'Ring', 'Bar', 'Grid of dots']),
+            param('size', 'Size', 0.4, 0.05, 1.5, 0.01),
+            param('softness', 'Softness', 0.08, 0, 0.5, 0.01),
+            param('count', 'Count', 6, 2, 20, 1),
+            param('spin', 'Spin speed', 0.15, -3, 3, 0.01),
+            // White-on-black would be a fine mask, but a bare Shape is often
+            // the whole picture — dim amber so it is never a flash of white.
+            colour('colour', 'Colour', '#66310a')
+        ],
+        fragment: `
+uniform float p_shape;
+uniform float p_size;
+uniform float p_softness;
+uniform float p_count;
+uniform float p_spin;
+uniform vec3 p_colour;
+float soft(float d, float r, float s) { return 1.0 - smoothstep(r - s, r + s, d); }
+void main() {
+    vec2 c = uv - 0.5;
+    float ang = p_spin * time;
+    float sn = sin(ang);
+    float cs = cos(ang);
+    c = mat2(cs, -sn, sn, cs) * c;
+    float r = max(p_size, 0.001) * 0.5;
+    float sft = max(p_softness, 0.001);
+    float m;
+    if (p_shape < 0.5) {
+        m = soft(length(c), r, sft);
+    } else if (p_shape < 1.5) {
+        m = clamp(soft(length(c), r, sft) - soft(length(c), r * 0.5, sft), 0.0, 1.0);
+    } else if (p_shape < 2.5) {
+        m = soft(abs(c.y), r, sft);
+    } else {
+        vec2 cell = fract(c * max(p_count, 1.0) + 0.5) - 0.5;
+        m = soft(length(cell), r * 0.5, sft);
+    }
+    gl_FragColor = vec4(p_colour * m, 1.0);
+}`
+    },
+
     'top.out': {
         label: 'Picture Out',
         family: 'out',
@@ -276,11 +513,13 @@ export const buildTopNodeTypes = () => Object.fromEntries(Object.entries(TOP_OPE
         ...Object.fromEntries(operator.params.map((p) => [p.name, p.toggle ? Boolean(p.value) : (p.options ? String(p.value) : p.value)]))
     },
     configInputs: [RUNS_ON, ...(operator.pickDevice ? [PICK_CAMERA] : []), ...operator.params.map((p) => (
-        p.toggle
-            ? { id: p.name, type: 'boolean', label: p.label }
-            : p.options
-                ? { id: p.name, type: 'string', label: p.label, options: p.options.map((label, index) => ({ value: String(index), label })) }
-                : { id: p.name, type: 'number', label: p.label, min: p.min, max: p.max, step: p.step }
+        p.colour
+            ? { id: p.name, type: 'color', label: p.label }
+            : p.toggle
+                ? { id: p.name, type: 'boolean', label: p.label }
+                : p.options
+                    ? { id: p.name, type: 'string', label: p.label, options: p.options.map((label, index) => ({ value: String(index), label })) }
+                    : { id: p.name, type: 'number', label: p.label, min: p.min, max: p.max, step: p.step }
     ))],
     // A card with a picture on it; no window, nothing in the room.
     render: 'hidden'
@@ -288,12 +527,22 @@ export const buildTopNodeTypes = () => Object.fromEntries(Object.entries(TOP_OPE
 
 export const isTopType = (typeId) => Object.prototype.hasOwnProperty.call(TOP_OPERATORS, typeId)
 
-/** Parameter values for a node, defaults filled in and clamped to range. */
+const HEX_RE = /^#[0-9a-f]{6}$/i
+
+/** Parameter values for a node, defaults filled in and clamped to range.
+ * A colour parameter stays a '#rrggbb' string — there is no range to clamp
+ * it to — and falls back to its default rather than to black, so a stored
+ * value nobody wrote yet (or a bad one) reads as the operator's own choice. */
 export const resolveTopParams = (typeId, values = {}) => {
     const operator = TOP_OPERATORS[typeId]
     if (!operator) return {}
     const out = {}
     for (const p of operator.params) {
+        if (p.colour) {
+            const raw = values?.[p.name]
+            out[p.name] = typeof raw === 'string' && HEX_RE.test(raw) ? raw : p.value
+            continue
+        }
         const raw = Number(values?.[p.name])
         out[p.name] = Number.isFinite(raw) ? Math.min(p.max, Math.max(p.min, raw)) : p.value
     }

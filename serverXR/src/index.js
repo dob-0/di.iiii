@@ -95,6 +95,7 @@ const { registerDmRoutes } = require('./routes/dmRoutes')
 const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
+const { registerNdiRoutes } = require('./routes/ndiRoutes')
 const { describeListen } = require('./listenInfo')
 const { getMachine } = require('./machineIdentity')
 const { createMachineHub } = require('./machines/hub')
@@ -299,6 +300,11 @@ const upload = multer({
 
 async function initStorage() {
   await Promise.all([ensureDir(SPACES_DIR), ensureDir(UPLOADS_DIR)])
+  // Temp files a killed process left mid-transfer (verbatimAsset.js). Never a
+  // reason not to start.
+  require('./verbatimAsset').sweepStaleTempFiles(UPLOADS_DIR)
+    .then((removed) => { if (removed.length) logger.info(`[uploads] removed ${removed.length} stale temp file(s)`) })
+    .catch(() => {})
   initDb(DB_PATH)
   configStore.init(SPACES_DIR)
   await migrateFromFilesystem(SPACES_DIR)
@@ -461,6 +467,22 @@ const lighting = registerLightingRoutes(app, {
   offline: process.env.ARTNET_OFFLINE === '1',
   listen: describeListenNow
 })
+
+// NDI® in (serverXR/src/ndi) at /ndi — the lighting desk's twin: a local-runtime lane,
+// built on first use, 404 on a hosted server. Nothing native loads here or at boot: the
+// NDI runtime (installed by the person, never shipped) and koffi (an optional
+// dependency) are only ever loaded inside a forked child. See routes/ndiRoutes.js and
+// docs/architecture/NDI.md. Ahead of morgan on purpose — an MJPEG stream is not a request
+// worth a log line per reconnect, and it never has a body to parse.
+const ndi = registerNdiRoutes(app, {
+  mountPaths: [...new Set(['/ndi', `${config.mountPath || ''}/ndi`.replace(/\/+/g, '/')])],
+  log: (line) => logger.info(line)
+})
+// index.js has no shutdown path of its own (a signal simply ends the process), so the
+// lighting desk's close() is not wired anywhere either. The NDI child does not depend
+// on one: it exits by itself when its IPC channel closes — a kill -9 of the server
+// included. This hook only makes an orderly process.exit() prompt about it.
+process.once('exit', () => { try { ndi.close() } catch { /* going down anyway */ } })
 
 app.use(express.json({ limit: '10mb', verify: (req, _res, buf) => { req.rawBody = buf } }))
 app.use(morgan('tiny'))
@@ -2257,7 +2279,27 @@ router.delete('/api/spaces/:spaceId/github-link', async (req, res, next) => {
 router.use('/api/projects/:projectId/assets', (req, res, next) =>
   req.method === 'POST' ? uploadLimiter(req, res, next) : next())
 
+// Who may store a file WITHOUT the EXIF scrubber (the hash-pinned asset PUT —
+// the reasoning lives at the route in routes/projectRoutes.js). Replication
+// only: a per-space sync key, this server's own token, or an install with auth
+// off. The internal token is matched on the header itself rather than on the
+// resolved state, because on a `di up --guests` install a loopback request is
+// already promoted to the local owner before any token is looked at.
+const mayStoreVerbatim = (req) => {
+  if (!config.requireAuth) return true
+  if (req.authState?.authenticated && req.authState.type === 'sync-key') return true
+  const internal = config.internalApiToken || ''
+  if (!internal) return false
+  const presented = Buffer.from(normalizeAuthToken(readAuthToken(req)))
+  const expected = Buffer.from(internal)
+  return presented.length === expected.length && crypto.timingSafeEqual(presented, expected)
+}
+
 registerProjectRoutes(router, {
+  uploadsDir: UPLOADS_DIR,
+  maxUploadBytes: config.maxUploadBytes,
+  isAllowedUpload,
+  mayStoreVerbatim,
   appendProjectOps,
   applyProjectOps,
   blankProjectDocument: BLANK_PROJECT_DOCUMENT,
@@ -2567,6 +2609,10 @@ initStorage()
           basePath: config.basePath || '/serverXR',
           selfToken: config.internalApiToken || null,
           tlsName: tlsFiles ? certificateName(tlsFiles.cert) : null,
+          // The files a follow carries rest beside ordinary uploads on their
+          // way through (same disk as the blob store, never a tmpfs), and are
+          // held to the same size limit an upload is.
+          files: { maxBytes: config.maxUploadBytes, tmpDir: UPLOADS_DIR },
           // A followed space must exist here before anything can land in it.
           // `di follow` makes it when the install is running; a follow written
           // while it was down, or carried in on a backup, arrives without one.
