@@ -6,6 +6,7 @@ import { buildPublicProjectPath } from '../utils/spaceRouting.js'
 import { createPreviewBootQueue } from '../utils/previewBootQueue.js'
 import { PREVIEW_READY_MESSAGE } from '../utils/previewMode.js'
 import { mountRelativeApiUrl } from '../services/assetSources.js'
+import { useRetryingMedia } from './useRetryingMedia.js'
 
 // A brought-in file's ref is recorded exactly as the manifest stores it — a
 // project-relative `/api/projects/.../assets/...` path, written once and read
@@ -79,23 +80,11 @@ export default function MapSourceView({ surface, spaceId = '', live = true, netw
     }
 
     if (kind === 'image') {
-        return <img className="map-source-media" src={resolveMapSourceRef(ref)} alt="" draggable="false" />
+        return <MapImageSource fileRef={ref} />
     }
 
     if (kind === 'video') {
-        // muted is not a style choice: a wall plays several things at once and
-        // autoplay is refused outright for anything with sound.
-        return (
-            <video
-                className="map-source-media"
-                src={resolveMapSourceRef(ref)}
-                autoPlay
-                loop
-                muted
-                playsInline
-                disablePictureInPicture
-            />
-        )
+        return <MapVideoSource fileRef={ref} />
     }
 
     if (kind === 'project' && !ref) {
@@ -124,6 +113,47 @@ export default function MapSourceView({ surface, spaceId = '', live = true, netw
     }
 
     return <MapSourcePlaceholder label={label} detail={kind} width={width} height={height} />
+}
+
+// A brought-in image. `key={attempt}` is what actually retries: the src stays
+// the same content address, so only remounting the element makes the browser
+// ask again. Nothing else changes while it is failing — no placeholder, no
+// text — the element itself is what MapSourceView already shows for a source
+// that has not loaded yet, and a wall must never go white or gain new text.
+function MapImageSource({ fileRef }) {
+    const { attempt, onError, onLoaded } = useRetryingMedia(fileRef)
+    return (
+        <img
+            key={attempt}
+            className="map-source-media"
+            src={resolveMapSourceRef(fileRef)}
+            alt=""
+            draggable="false"
+            onError={onError}
+            onLoad={onLoaded}
+        />
+    )
+}
+
+// A brought-in video. Same retry as the image above. muted is not a style
+// choice: a wall plays several things at once and autoplay is refused
+// outright for anything with sound.
+function MapVideoSource({ fileRef }) {
+    const { attempt, onError, onLoaded } = useRetryingMedia(fileRef)
+    return (
+        <video
+            key={attempt}
+            className="map-source-media"
+            src={resolveMapSourceRef(fileRef)}
+            autoPlay
+            loop
+            muted
+            playsInline
+            disablePictureInPicture
+            onError={onError}
+            onLoadedData={onLoaded}
+        />
+    )
 }
 
 // A camera, on the wall. The room beside the work, or the work being made.
