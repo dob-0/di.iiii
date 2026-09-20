@@ -12,6 +12,7 @@ import ImageObject from '../../objectComponents/ImageObject.jsx'
 import VideoObject from '../../objectComponents/VideoObject.jsx'
 import AudioObject from '../../objectComponents/AudioObject.jsx'
 import ModelObject from '../../objectComponents/ModelObject.jsx'
+import SpotLightObject from '../../objectComponents/SpotLightObject.jsx'
 import PortalObject from './PortalObject.jsx'
 
 // Canonical entity-type -> objectComponent mapping shared across editor surfaces.
@@ -206,7 +207,7 @@ export default function EntityContent({ entity, assetMap }) {
         const l = entity.components?.light || {}
         return (
             <>
-                <spotLight color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} />
+                <SpotLightObject color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} />
                 <mesh>
                     <coneGeometry args={[0.07, 0.2, 8]} />
                     <meshStandardMaterial color={l.color || '#ffffff'} emissive={l.color || '#ffffff'} emissiveIntensity={0.8} />

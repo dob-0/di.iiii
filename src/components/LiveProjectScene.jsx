@@ -30,6 +30,7 @@ import CylinderObject from '../objectComponents/CylinderObject.jsx'
 import ImageObject from '../objectComponents/ImageObject.jsx'
 import VideoObject from '../objectComponents/VideoObject.jsx'
 import ModelObject from '../objectComponents/ModelObject.jsx'
+import SpotLightObject from '../objectComponents/SpotLightObject.jsx'
 import AudioObject from '../objectComponents/AudioObject.jsx'
 import useRoomSound from '../hooks/useRoomSound.js'
 import { roomHasSound } from '../utils/roomSound.js'
@@ -239,7 +240,7 @@ function EntityVisual({ entity, assetMap }) {
     }
     case 'spotLight': {
         const l = entity.components?.light || {}
-        return <spotLight color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} />
+        return <SpotLightObject color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} />
     }
     case 'directionalLight': {
         const l = entity.components?.light || {}
