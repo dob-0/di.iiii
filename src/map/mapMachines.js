@@ -1,31 +1,39 @@
 // What the machines on this desk can show, read for the map.
 //
-// A stream surface names an input ("OBS Virtual Camera") and each machine looks
-// for it among its OWN cameras. So the question the desk has to answer is never
-// "does this machine have it" but "does ANY machine showing this space have it"
-// — and when none does, to say so on the desk, before it is a black rectangle on
-// a wall in another room. The matching rule here must stay the one the wall
-// uses (matchStreamDevice in MapSourceView): exact name first, then "contains".
+// A stream surface names an input ("OBS Virtual Camera") and an NDI® surface
+// names a source ("AYLMO (td_out_windows)"); each machine looks for it among
+// its OWN. So the question the desk has to answer is never "does this machine
+// have it" but "does ANY machine showing this space have it" — and when none
+// does, to say so on the desk, before it is a black rectangle on a wall in
+// another room.
+//
+// The matching rule is src/shared/nameMatch.js — the one the wall itself uses
+// (matchStreamDevice and MapNdiSource in MapSourceView) and the one serverXR
+// uses to resolve a name against the NDI finder's list. One function, so the
+// desk cannot promise a resolution the wall then refuses.
 
-const lower = (value) => String(value || '').trim().toLowerCase()
+import { pickByLabel } from '../shared/nameMatch.js'
 
 const camerasOf = (machine) => (machine?.devices || []).filter((device) => device.kind === 'camera' && device.label)
 
-/** Does this machine have an input the name would resolve to? Returns its label, or ''. */
-export const inputOnMachine = (machine, name) => {
-    const wanted = lower(name)
-    if (!wanted) return ''
-    const cameras = camerasOf(machine)
-    const hit = cameras.find((device) => lower(device.label) === wanted)
-        || cameras.find((device) => lower(device.label).includes(wanted))
-    return hit ? hit.label : ''
-}
+/**
+ * The NDI sources this machine's own serverXR can see. Empty on a machine with
+ * no NDI runtime, and empty is all it ever is — there is no error state here,
+ * because most machines will never have one installed.
+ */
+export const ndiOf = (machine) => (machine?.devices || []).filter((device) => device.kind === 'ndi' && device.label)
 
-/** Every input name any machine offers, each with the machines that have it. */
-export const streamInputOptions = (machines = []) => {
+/** Does this machine have an input the name would resolve to? Returns its label, or ''. */
+export const inputOnMachine = (machine, name) => pickByLabel(camerasOf(machine), name)?.label || ''
+
+/** Does this machine's receiver see an NDI source by that name? Returns its name, or ''. */
+export const ndiOnMachine = (machine, name) => pickByLabel(ndiOf(machine), name)?.label || ''
+
+/** Every name any machine offers of one device kind, each with the machines that have it. */
+const optionsOf = (machines, read) => {
     const byLabel = new Map()
     for (const machine of machines) {
-        for (const device of camerasOf(machine)) {
+        for (const device of read(machine)) {
             if (!byLabel.has(device.label)) byLabel.set(device.label, [])
             const names = byLabel.get(device.label)
             const who = machine.self ? 'this machine' : machine.name
@@ -36,6 +44,12 @@ export const streamInputOptions = (machines = []) => {
         .map(([label, on]) => ({ label, on }))
         .sort((a, b) => a.label.localeCompare(b.label))
 }
+
+/** Every input name any machine offers, each with the machines that have it. */
+export const streamInputOptions = (machines = []) => optionsOf(machines, camerasOf)
+
+/** Every NDI source name any machine can see, each with the machines that see it. */
+export const ndiSourceOptions = (machines = []) => optionsOf(machines, ndiOf)
 
 /**
  * For one stream name: which machines can show it, and which cannot.
@@ -56,7 +70,29 @@ export const streamInputStatus = (machines = [], name = '') => {
     return { found, missing, known }
 }
 
-/** One line per machine for the desk: screens, inputs, and how many pages are open there. */
+/**
+ * For one NDI source name: which machines can see it, and which cannot.
+ *
+ * `known` is false until at least one machine has reported an NDI source at
+ * all. A machine with no NDI runtime reports nothing, which is exactly what a
+ * machine that has simply not answered yet reports — so with nothing in hand
+ * the desk says nothing rather than accusing a name that may be perfectly
+ * right. (The camera list has the same shape of hole, and the same answer.)
+ */
+export const ndiSourceStatus = (machines = [], name = '') => {
+    const found = []
+    const missing = []
+    let known = false
+    for (const machine of machines) {
+        if (ndiOf(machine).length) known = true
+        const who = machine.self ? 'this machine' : machine.name
+        if (ndiOnMachine(machine, name)) found.push(who)
+        else missing.push(who)
+    }
+    return { found, missing, known }
+}
+
+/** One line per machine for the desk: screens, inputs, NDI, and how many pages are open there. */
 export const describeMachine = (machine) => {
     const screens = (machine.devices || []).filter((device) => device.kind === 'screen')
     return {
@@ -64,13 +100,29 @@ export const describeMachine = (machine) => {
         name: machine.self ? `${machine.name} · this machine` : machine.name,
         pages: machine.pages || 0,
         screens: screens.map((screen) => (screen.width ? `${screen.width}×${screen.height}` : screen.label)),
-        inputs: camerasOf(machine).map((device) => device.label)
+        inputs: camerasOf(machine).map((device) => device.label),
+        ndi: ndiOf(machine).map((device) => device.label)
     }
 }
 
-/** Stream surfaces whose name NO machine can resolve — the black rectangles waiting to happen. */
-export const unresolvedStreams = (surfaces = [], machines = []) => surfaces
-    .filter((surface) => surface?.source?.kind === 'stream' && surface.enabled !== false)
-    .map((surface) => ({ surface, status: streamInputStatus(machines, surface.source.ref) }))
+const RESOLVERS = {
+    stream: { status: streamInputStatus, noun: 'an input' },
+    ndi: { status: ndiSourceStatus, noun: 'an NDI source' }
+}
+
+/**
+ * Surfaces whose named input NO machine can resolve — the black rectangles
+ * waiting to happen. Covers both kinds that name a live input rather than
+ * pointing at one: `stream` (a camera by label) and `ndi` (a source by name).
+ * `kind` travels with each row so the desk can say the right noun.
+ */
+export const unresolvedInputs = (surfaces = [], machines = []) => surfaces
+    .filter((surface) => RESOLVERS[surface?.source?.kind] && surface.enabled !== false)
+    .map((surface) => ({ surface, status: RESOLVERS[surface.source.kind].status(machines, surface.source.ref) }))
     .filter(({ surface, status }) => !surface.source.ref || (status.known && status.found.length === 0))
-    .map(({ surface }) => ({ id: surface.id, name: surface.name || surface.id, input: surface.source.ref || '' }))
+    .map(({ surface }) => ({
+        id: surface.id,
+        kind: surface.source.kind,
+        name: surface.name || surface.id,
+        input: surface.source.ref || ''
+    }))
