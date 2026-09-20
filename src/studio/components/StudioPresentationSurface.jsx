@@ -57,6 +57,7 @@ export default function StudioPresentationSurface({
     onShowHelp,
     onCloseHelp,
     overlays,
+    rigMirror = false,
 }) {
     const presentationState = document.presentationState || {}
     const previewMode = presentationState.mode || 'scene'
@@ -161,6 +162,7 @@ export default function StudioPresentationSurface({
             onShowHelp={onShowHelp}
             onCloseHelp={onCloseHelp}
             overlays={overlays}
+            rigMirror={rigMirror}
         />
     )
 }

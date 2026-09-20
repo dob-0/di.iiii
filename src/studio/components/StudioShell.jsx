@@ -13,6 +13,7 @@ import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspa
 import '../styles/studio-mobile.css'
 import { canPlaceInScene } from '../utils/assetFormats.js'
 import { useViewportLayout } from '../hooks/useViewportLayout.js'
+import { useRigMirrorSwitch } from '../hooks/useRigMirrorSwitch.js'
 import { isJamProject, loadJamAllTools, saveJamAllTools } from '../utils/jamMode.js'
 import { JAM_PRIMITIVES } from '../../project/entityPalette.js'
 import {
@@ -166,6 +167,7 @@ export default function StudioShell({
     const [collapsedPanels, setCollapsedPanels] = useState(() => new Set(persistedWorkspace?.collapsed || []))
     const [layoutKey, setLayoutKey] = useState(0)
     const [snapEdges, setSnapEdges] = useState(persistedWorkspace?.snapEdges ?? false)
+    const rigMirror = useRigMirrorSwitch()
 
     // Remember the workspace across sessions — open panels, dragged positions,
     // resized dimensions, collapsed headers, snap preference. Arrange actions
@@ -456,6 +458,7 @@ export default function StudioShell({
         showHelp,
         onShowHelp: () => setShowHelp(true),
         onCloseHelp: () => setShowHelp(false),
+        rigMirror: rigMirror.on,
     }
 
     // One source of truth for each window's content, shared by the desktop
@@ -617,6 +620,8 @@ export default function StudioShell({
                         onStackRight={stackRight}
                         onResetLayout={resetLayout}
                         onShowHelp={() => setShowHelp(true)}
+                        rigMirrorOn={rigMirror.on}
+                        onToggleRigMirror={rigMirror.available ? rigMirror.toggle : null}
                         panelKeys={jamMinimal ? ['create'] : null}
                         minimal={jamMinimal}
                         allTools={jamAllTools}

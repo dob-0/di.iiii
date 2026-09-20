@@ -275,10 +275,11 @@ export const WIKI_ARTICLES = [
             'One rule that matters more than any other: output is OFF until you switch it on, under OUTPUT. Until then the desk runs, the stage view moves, scenes recall — and nothing leaves the machine. A dev server on a shared wifi can never blast a frame at somebody else\'s rig by accident, and a rig only ever lights when a person decided it should.',
             'The rig is yours. Nothing in the desk is patched to any particular room — you name the fixtures, you set the addresses, you save the looks. Its data lives with your di.iiii install, so the show survives a restart and can be carried to the venue on the same laptop.',
             'A graph can play the desk. Drop a DMX Out node into a canvas, leave it on its default rig, and Master, Channel, Value, Blackout and Scene are wired straight into the desk you just patched — an oscillator on a lamp, a scene name recalled by a button, a whole rig blacked out by a wire. See “DMX Out: the graph lights the room”.',
+            'Studio can show the rig in the room. When a lighting desk is running on the machine you are using, Studio\'s Display row grows a Rig button. Switch it on and every patched fixture appears in the 3D view as a small marker glowing in the colour and at the level that fixture is giving out right now — change a colour on the desk and the marker follows; black the rig out and the markers go dim grey, still there. It only looks: nothing in Studio can move a lamp, the markers are not objects, they are never saved with the project and a visitor never sees them. For now the desk\'s plan is simply laid across a ten-metre square of floor, because a fixture does not yet know how high it hangs.',
             'The desk lives on a local di.iiii only — `di up`, or npm run dev. A hosted di-studio.xyz has no /light in it at all, on purpose: a lighting desk is a thing that reaches hardware in a room, and the room is where you are. Asking a hosted address for /light says exactly that, and offers the install — it used to hand back an ordinary di.iiii page with no explanation at all.'
         ],
-        tags: ['light', 'lighting', 'dmx', 'artnet', 'enttec', 'desk', 'scene', 'show', 'stage', 'performance', 'local', 'di up', 'lan', 'phone'],
-        updated: '2026-09-10'
+        tags: ['light', 'lighting', 'dmx', 'artnet', 'enttec', 'desk', 'scene', 'show', 'stage', 'performance', 'local', 'di up', 'lan', 'phone', 'rig', 'fixture', 'marker', 'studio'],
+        updated: '2026-09-20'
     },
     {
         id: 'the-rig',
