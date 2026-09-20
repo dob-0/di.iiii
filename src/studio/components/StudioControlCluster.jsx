@@ -28,6 +28,7 @@ export default function StudioControlCluster({
     onHideUI,
     onBackToHub,
     onOpenNodeEditor,
+    onOpenProjection,
     xrState,
     syncState,
     presence,
@@ -143,8 +144,11 @@ export default function StudioControlCluster({
                                 {!minimal && onOpenNodeEditor && (
                                     <button className="scc-btn" onClick={onOpenNodeEditor} title="Open this project in the node editor">⇄ Nodes</button>
                                 )}
+                                {!minimal && onOpenProjection && (
+                                    <button className="scc-btn" onClick={onOpenProjection} title="Put this project on a wall">Projection</button>
+                                )}
                                 {!minimal && onToggleRigMirror && (
-                                    <button className={`scc-btn ${rigMirrorOn ? 'active' : ''}`} onClick={onToggleRigMirror} aria-pressed={rigMirrorOn} title="Show the real lighting rig in the room">Lights</button>
+                                    <button className={`scc-btn ${rigMirrorOn ? 'active' : ''}`} onClick={onToggleRigMirror} aria-pressed={rigMirrorOn} title="Show the real lighting rig in the room">Rig</button>
                                 )}
                                 {!minimal && canViewLive && (
                                     <button className="scc-btn" onClick={onViewLive} title="Open the public space URL in a new tab">↗ View live</button>

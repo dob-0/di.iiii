@@ -11,6 +11,7 @@ import { transportWarning } from './transportCeiling.js'
 import { lightingDeskPath, probeLightingDesk } from './lightingLink.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
 import { describeMachine, unresolvedStreams } from './mapMachines.js'
+import { buildStudioProjectPath, navigateToStudioPath } from '../studio/utils/studioRouting.js'
 import './mapSurface.css'
 
 // THE MAPPER'S DESK.
@@ -313,10 +314,16 @@ export default function MapSurface({ projectId, spaceId }) {
         <div className="map-desk">
             <header className="map-bar">
                 <div className="map-bar-title">
-                    <span className="map-bar-lane">Mapping</span>
+                    <span className="map-bar-lane">Projection</span>
                     <span className="map-bar-project">{doc?.projectMeta?.title || projectId}</span>
                 </div>
                 <div className="map-bar-controls">
+                    <button
+                        type="button"
+                        className="map-action"
+                        onClick={() => navigateToStudioPath(buildStudioProjectPath(projectId, spaceId))}
+                        title="Back to the room for this project"
+                    >← Studio</button>
                     <label className="map-field map-field-inline">
                         <span>Output</span>
                         <input type="number" min="1" value={output.width}

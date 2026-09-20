@@ -32,6 +32,7 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **place** | A real room in the world: walls, a rig, an audience, a date. A space may be its twin; it can never *be* it. |
 | **production** | A place, a client, a work and a run. What the studio makes. It uses di.iiii; it does not live in it. |
 | **work** | What the public meets: a title, an author, an address. The same object a **project** names backstage. |
+| **Projection** | The tool that puts a project on a wall: drag its surfaces onto the shapes there. Opens at `/{space}/map/{project}` — the route stays `map`, the word a person reads is Projection. |
 
 Two words that are already right and must not drift: **port** (where a wire attaches to a node)
 and **wire** (what runs between two ports). They are the node model's own vocabulary, they are
@@ -296,6 +297,20 @@ Android package id `xyz.distudio.chat.staging` (changing it makes a new app).
 
 The line in "Amended 2026-08-19, same day" — "Stage collided with the deploy tier" — is history and stays as it was said.
 It explains a 2026-08-19 decision; the tier it collided with is now called dev.
+
+## Amended 2026-09-20 — Projection is one name
+
+A newcomer walk found one feature wearing four names: the Tools card said "Projection", the
+mapper's own header said "MAPPING", the URL said `/map/`, and the wiki article was "Putting a
+space on a wall". None of the four shared a word with the other three, so nobody scanning for
+"projector" or "mapper" could find any of them from any of the others.
+
+**Projection is the one name a person reads, everywhere.** The mapper header now says
+PROJECTION, not MAPPING; the Tools card already said Projection; the wiki article keeps its
+sentence title (a real title says more than a category word) but now opens "Projection opens a
+mapping, at …" so the first line ties it to the other two. Routes, ids and CSS classes do not
+move — `/map/`, `MapSurface.jsx`, `mapRouting.js`, `createMappingSurface` and the rest stay
+exactly as they are, the same rule this whole file has followed since 2026-08-19.
 
 ## The rule for anything new
 
