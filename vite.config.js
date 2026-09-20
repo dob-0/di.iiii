@@ -529,14 +529,22 @@ export default {
             },
             // The lighting desk lives on the backend at /light (app-level, no /serverXR
             // prefix) — its interface is plain files the desk serves itself.
-            '/light': {
+            //
+            // BOTH OF THESE ARE ANCHORED REGEXES, not plain prefixes, and that is not
+            // tidiness. A plain '/ndi' key matches by PREFIX, so in dev it also swallowed
+            // every address that merely STARTS with those letters — a space called
+            // `ndi2-test` opened as Express's "Cannot GET /ndi2-test/map/wall" instead of
+            // the mapper's desk, and `/lighthouse` would go the same way. Express does not
+            // behave like this (`app.use('/ndi')` matches /ndi and /ndi/… and nothing
+            // else), so the two tiers disagreed and only dev was wrong. Seen 2026-09-20,
+            // on the first space made to test the NDI® source kind.
+            '^/light(/|$)': {
                 target: DEV_PROXY_API_TARGET,
                 changeOrigin: true
             },
             // NDI® in — the same shape: serverXR answers /ndi itself on a local install
-            // (serverXR/src/routes/ndiRoutes.js). TRAP: this proxy matches by PREFIX, so a
-            // top-level `src/ndi…` folder or module would be swallowed by it in dev.
-            '/ndi': {
+            // (serverXR/src/routes/ndiRoutes.js).
+            '^/ndi(/|$)': {
                 target: DEV_PROXY_API_TARGET,
                 changeOrigin: true
             },

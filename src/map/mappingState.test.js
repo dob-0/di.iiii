@@ -292,6 +292,33 @@ describe('what a new surface is born showing', () => {
             .toBe('a-later-pattern')
     })
 
+    it('keeps an NDI source by name, through a write and back', () => {
+        // The ref is a source NAME and nothing else — no address is ever
+        // stored, because the sender chooses which of its interfaces to
+        // advertise and that choice does not survive the night.
+        const document = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createMappingSurface', payload: { surface: { id: 'n1', source: { kind: 'ndi', ref: 'AYLMO (td_out_windows)' } } } }
+        ])
+        expect(document.mappingState.surfaces[0].source).toEqual({ kind: 'ndi', ref: 'AYLMO (td_out_windows)' })
+        expect(normalizeMappingSurface(document.mappingState.surfaces[0]).source)
+            .toEqual({ kind: 'ndi', ref: 'AYLMO (td_out_windows)' })
+    })
+
+    it('is LOST on a build that predates the kind — the mixed-version trap, stated', () => {
+        // MAPPING_SOURCE_KINDS is closed, and normalizeMappingSurface rewrites
+        // a kind it does not know to the default. So on a rig where the desk
+        // has `ndi` and the wall does not, the first write from the old side
+        // turns the surface back into a test pattern and keeps only the ref —
+        // a name with nothing left to read it. Both machines must be on a
+        // build that has the kind. This asserts the mechanism from the outside,
+        // with a kind no build has, so it goes on being true.
+        //
+        // It is also why the dim identification card was added as a REF and
+        // not a kind (see above): an unknown ref comes back byte-identical.
+        expect(normalizeMappingSurface({ id: 'a', source: { kind: 'ndi-2', ref: 'AYLMO (td_out_windows)' } }).source)
+            .toEqual({ kind: 'test', ref: 'AYLMO (td_out_windows)' })
+    })
+
     it('keeps the grid an explicit choice that round-trips untouched', () => {
         const document = applyProjectOps(normalizeProjectDocument({}), [
             { type: 'createMappingSurface', payload: { surface: { id: 'a', source: { kind: 'test', ref: 'grid' } } } }

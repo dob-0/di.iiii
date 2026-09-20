@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { describeMachine, inputOnMachine, streamInputOptions, streamInputStatus, unresolvedStreams } from './mapMachines.js'
+import {
+    describeMachine,
+    inputOnMachine,
+    ndiOnMachine,
+    ndiSourceOptions,
+    ndiSourceStatus,
+    streamInputOptions,
+    streamInputStatus,
+    unresolvedInputs
+} from './mapMachines.js'
 import { matchStreamDevice } from './MapSourceView.jsx'
 
 const desk = { id: 'm1', name: 'aylmo', self: true, pages: 1, devices: [
@@ -10,7 +19,9 @@ const stage = { id: 'm2', name: 'win', self: false, pages: 2, devices: [
     { kind: 'camera', id: 'b', label: 'Integrated Camera (13d3:56b2)' },
     { kind: 'camera', id: 'c', label: 'OBS Virtual Camera' },
     { kind: 'screen', id: 's', label: 'Screen', width: 1920, height: 1080 },
-    { kind: 'mic', id: 'm', label: 'OBS Virtual Camera' }
+    { kind: 'mic', id: 'm', label: 'OBS Virtual Camera' },
+    { kind: 'ndi', id: 'AYLMO (td_out_windows)', label: 'AYLMO (td_out_windows)' },
+    { kind: 'ndi', id: 'WIN (OBS)', label: 'WIN (OBS)' }
 ] }
 
 describe('inputs across the machines on a desk', () => {
@@ -44,7 +55,7 @@ describe('inputs across the machines on a desk', () => {
     it('does not cry "missing" while no machine has named its cameras yet', () => {
         const blind = { id: 'm3', name: 'kiosk', devices: [{ kind: 'camera', id: 'x', label: 'Camera 1' }] }
         expect(streamInputStatus([blind], 'obs').known).toBe(false)
-        expect(unresolvedStreams([{ id: 's1', enabled: true, source: { kind: 'stream', ref: 'obs' } }], [blind])).toEqual([])
+        expect(unresolvedInputs([{ id: 's1', enabled: true, source: { kind: 'stream', ref: 'obs' } }], [blind])).toEqual([])
     })
 
     it('names the stream surfaces no machine can show', () => {
@@ -55,13 +66,69 @@ describe('inputs across the machines on a desk', () => {
             { id: 's4', name: 'unnamed', enabled: true, source: { kind: 'stream', ref: '' } },
             { id: 's5', name: 'cam', enabled: true, source: { kind: 'camera', ref: '' } }
         ]
-        expect(unresolvedStreams(surfaces, [desk, stage]).map((s) => s.id)).toEqual(['s2', 's4'])
+        expect(unresolvedInputs(surfaces, [desk, stage]).map((s) => s.id)).toEqual(['s2', 's4'])
     })
 
     it('describes a machine in one line the desk can print', () => {
         expect(describeMachine(stage)).toEqual({
             id: 'm2', name: 'win', pages: 2, screens: ['1920×1080'],
-            inputs: ['Integrated Camera (13d3:56b2)', 'OBS Virtual Camera']
+            inputs: ['Integrated Camera (13d3:56b2)', 'OBS Virtual Camera'],
+            ndi: ['AYLMO (td_out_windows)', 'WIN (OBS)']
         })
+    })
+})
+
+describe('NDI sources across the machines on a desk', () => {
+    it('finds a source on the machine whose receiver can see it, by a fragment', () => {
+        expect(ndiOnMachine(stage, 'td_out')).toBe('AYLMO (td_out_windows)')
+        expect(ndiOnMachine(stage, 'AYLMO (td_out_windows)')).toBe('AYLMO (td_out_windows)')
+        // The source is CALLED aylmo and is seen by win — a name says nothing
+        // about which machine is showing it, which is the whole point.
+        expect(ndiOnMachine(desk, 'td_out')).toBe('')
+    })
+
+    it('does not confuse an NDI source with a camera of the same name', () => {
+        // stage has BOTH a camera and an NDI source called "OBS ...". They are
+        // different kinds, resolved on different sides, and the desk must not
+        // promise one when the surface named the other.
+        expect(ndiOnMachine(stage, 'OBS Virtual Camera')).toBe('')
+        expect(inputOnMachine(stage, 'WIN (OBS)')).toBe('')
+    })
+
+    it('lists every source once, with the machines that see it', () => {
+        expect(ndiSourceOptions([desk, stage])).toEqual([
+            { label: 'AYLMO (td_out_windows)', on: ['win'] },
+            { label: 'WIN (OBS)', on: ['win'] }
+        ])
+        // aylmo has no NDI runtime, so it contributes nothing at all.
+        expect(ndiSourceOptions([desk])).toEqual([])
+    })
+
+    it('says which machines can show a source and which cannot', () => {
+        expect(ndiSourceStatus([desk, stage], 'td_out'))
+            .toEqual({ found: ['win'], missing: ['this machine'], known: true })
+    })
+
+    it('does not cry "missing" while no machine has reported any NDI at all', () => {
+        // A machine with no runtime reports nothing, which looks exactly like a
+        // machine that has not answered yet. With nothing in hand the desk says
+        // nothing rather than accusing a name that may be perfectly right.
+        expect(ndiSourceStatus([desk], 'td_out').known).toBe(false)
+        expect(unresolvedInputs([{ id: 'n1', enabled: true, source: { kind: 'ndi', ref: 'td_out' } }], [desk])).toEqual([])
+    })
+
+    it('names the NDI surfaces no machine can show, and says which kind they are', () => {
+        const surfaces = [
+            { id: 'n1', name: 'wall', enabled: true, source: { kind: 'ndi', ref: 'td_out' } },
+            { id: 'n2', name: 'resolume', enabled: true, source: { kind: 'ndi', ref: 'resolume' } },
+            { id: 'n3', name: 'off', enabled: false, source: { kind: 'ndi', ref: 'resolume' } },
+            { id: 'n4', name: 'unnamed', enabled: true, source: { kind: 'ndi', ref: '' } },
+            { id: 's2', name: 'capture', enabled: true, source: { kind: 'stream', ref: 'Cam Link' } }
+        ]
+        expect(unresolvedInputs(surfaces, [desk, stage])).toEqual([
+            { id: 'n2', kind: 'ndi', name: 'resolume', input: 'resolume' },
+            { id: 'n4', kind: 'ndi', name: 'unnamed', input: '' },
+            { id: 's2', kind: 'stream', name: 'capture', input: 'Cam Link' }
+        ])
     })
 })

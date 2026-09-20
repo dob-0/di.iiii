@@ -857,7 +857,19 @@ export const normalizeShowState = (show = {}) => {
 // 'stream' is a live picture named by WHAT it is ("OBS Virtual Camera", "capture"), not by a
 // device id: an id belongs to one browser profile on one machine, so a mapping made on the desk
 // could never name an input on the machine that actually shows it. See MapStreamSource.
-const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test', 'camera', 'network', 'stream']
+//
+// 'ndi' is the same idea one chain shorter: the ref is an NDI® source NAME
+// ("AYLMO (td_out_windows)", or any fragment of it), received by the serverXR on whichever
+// machine draws the surface. An address is never stored, because the SENDER chooses which of
+// its interfaces to advertise. See MapNdiSource and docs/architecture/NDI.md.
+//
+// CLOSED LIST, AND THAT CUTS BOTH WAYS. normalizeMappingSurface rewrites a kind it does not
+// know back to the default, so a mixed-version rig — the desk on this build, the wall on an
+// older one — LOSES an 'ndi' surface the moment the old side writes the document back: it
+// comes back as a test pattern and the ref is kept but meaningless. Both machines have to be
+// on a build that has this list. (An unknown `ref` survives byte-identical, which is why the
+// dim identification card was added as a ref and not a kind; see defaultMappingSurface.)
+const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test', 'camera', 'network', 'stream', 'ndi']
 const MAPPING_BLEND_MODES = ['normal', 'screen', 'multiply', 'lighten', 'add']
 export const MAPPING_EFFECT_KINDS = ['none', 'motion']
 

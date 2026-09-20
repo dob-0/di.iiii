@@ -807,7 +807,9 @@ const normalizeShowState = (show = {}) => {
 // 'stream' is a live picture named by WHAT it is ("OBS Virtual Camera", "capture"), not by a
 // device id: an id belongs to one browser profile on one machine, so a mapping made on the desk
 // could never name an input on the machine that actually shows it. See MapStreamSource.
-const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test', 'camera', 'network', 'stream']
+// Mirrors src/shared/projectSchema.js — read that one for what each kind means and for the
+// mixed-version trap a closed list carries (an unknown kind is rewritten to the default).
+const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test', 'camera', 'network', 'stream', 'ndi']
 const MAPPING_BLEND_MODES = ['normal', 'screen', 'multiply', 'lighten', 'add']
 const MAPPING_EFFECT_KINDS = ['none', 'motion']
 
