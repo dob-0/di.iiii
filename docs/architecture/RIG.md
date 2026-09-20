@@ -47,6 +47,47 @@ the machine can carry. It can always be overridden.
 (a QR code on any member) and act through that member. A crowd of 200 phones
 is not 200 mesh members.
 
+### The Stage appliance — `di stage`
+
+A Stage machine is made one by `di stage join <space> --from <url>`. It writes
+ONE autostart entry (a Windows scheduled task from XML with a logon trigger and
+no elevation, falling back to the Startup folder; a macOS LaunchAgent; a Linux
+systemd user unit, falling back to `~/.config/autostart`) and that entry runs
+ONE supervisor, `di stage run`. The supervisor keeps the server up through the
+same runner `di up` uses, keeps one kiosk browser alive per assigned display,
+holds a wake request for as long as it is itself running, and writes
+`<DI_HOME>/run/stage-status.json` on every reconcile.
+
+Three rules it does not bend:
+
+- **Nothing persistent is changed on the OS.** The wake hold is
+  `SetThreadExecutionState` / `caffeinate -w` / `systemd-inhibit`, all of which
+  the OS drops the moment the process ends. Never `powercfg`, never a settings
+  change — a tool that edits a power plan and then crashes leaves a machine
+  that never sleeps again, and gives `leave` something it might restore wrong.
+- **The browser always opens on a black hold page first**
+  (`<DI_HOME>/stage/hold.html`), never straight at the server. A dead server
+  reached directly is Chrome's light-grey error page, and that lands on a wall
+  in front of an audience. The hold page walks itself to the out page once the
+  server answers; if the server goes, the kiosk is put back on black BEFORE the
+  repair is attempted, not after.
+- **`leave` is exact.** `<DI_HOME>/stage/stage.json` records every file, every
+  directory, the one `di.env` line and the follow that `join` created, plus the
+  commands that take the OS entry away. `leave` replays that list and touches
+  nothing else. `scripts/di/stageAutostart.test.js` holds it: join into a temp
+  HOME, leave, and the directory is byte-identical.
+
+`di stage status` reads the out page's own `document.title`
+(`out · <project> · ok|empty|all-off`) over the kiosk's debugging port and
+repeats the page's reason rather than guessing at one. It exits 1 when any
+screen is not showing, so it can be a health check and not only a look.
+
+**One screen, a static target.** Today the target is the space's single map
+project, or `--project`. Which display shows which project — `output.show` in
+the mapping document, OS display probes, multi-window placement, hotplug — is
+step D of the plan and is not built: the second screen on asuz is still
+hand-made.
+
 ## 2. Jam and show
 
 The mesh never changes shape. The mode changes who may cue and what may change.
@@ -156,7 +197,7 @@ Checked by grep on `origin/dev` and the open branches that day.
 | cues | partial: map cue list only |
 | blackout | partial: lighting desk only |
 | versions | partial: `di update --from`, no downgrade; nothing between members |
-| appliance (boot, restart, health) | hand-made on asuz, not in the product |
+| appliance (boot, restart, health) | in the product: `di stage join/leave/status` — one autostart entry, one supervisor, one screen. What is still hand-made on asuz is the SECOND screen (see below) |
 | holding, lanes/turns, show mode, handover, parts, protocol 1 | missing |
 
 ## 6. Build order
