@@ -78,7 +78,13 @@ const open = (url, { method, headers, timeoutMs, signal, servername }, onRespons
 const httpDownloadToFile = (url, { destPath, headers = {}, maxBytes = Infinity, timeoutMs = 20000, signal = null, servername = null } = {}) =>
   new Promise((resolve, reject) => {
     let out = null
+    let failed = false
+    // The FIRST reason is the reason. Refusing an over-size body destroys the
+    // request, which also fires 'aborted' — and both rejections used to race
+    // through fs.rm, so "too large" sometimes surfaced as "connection lost".
     const fail = (error) => {
+      if (failed) return
+      failed = true
       if (out) out.destroy()
       fs.rm(destPath, { force: true }, () => reject(error))
     }
