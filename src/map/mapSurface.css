@@ -189,7 +189,7 @@
    machines, so whatever an unfinished surface draws is ALREADY on the wall
    while somebody is still deciding what it shows.
 
-   It was `--ui-text-primary`, which resolves to pure #ffffff, and measured
+   It was `--ui-text-primary`, which resolves to pure white, and measured
    21,394 near-white pixels on the real /out page at 1440x900 — every state
    this placeholder has ("no file yet", "no project chosen", "waiting to
    start", "camera unavailable") put the surface's NAME on the projector in
@@ -207,14 +207,14 @@
     align-items: center;
     justify-content: center;
     gap: var(--di-space-1);
-    background: repeating-linear-gradient(45deg, #0a0704 0 18px, #120c06 18px 36px);
-    color: #8f5a17;
+    background: repeating-linear-gradient(45deg, var(--di-card-ground) 0 18px, var(--di-card-ground-2) 18px 36px);
+    color: var(--di-card-ink);
     font-family: var(--di-mono);
     text-align: center;
     padding: var(--di-space-2);
 }
 .map-source-placeholder-label { line-height: 1.1; }
-.map-source-placeholder-detail { color: #5c3a0f; overflow-wrap: anywhere; line-height: 1.3; }
+.map-source-placeholder-detail { color: var(--di-card-frame); overflow-wrap: anywhere; line-height: 1.3; }
 
 /* --- the handles ----------------------------------------------------- */
 

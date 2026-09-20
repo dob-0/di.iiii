@@ -113,6 +113,17 @@ describe('the dim placeholder every unfinished surface draws', () => {
         return css.slice(at, css.indexOf('}', at))
     }
 
+
+    // The spine forbids a hex literal outside base.css, so these blocks name a
+    // token and the value lives one file away. Follow it: an assertion that
+    // reads only this file goes green on a token resolving to #ffffff, which is
+    // exactly the bug this block exists for.
+    const baseCssText = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'styles', 'base.css'), 'utf8')
+    const inksOf = (text) => [...text.matchAll(/var\(\s*(--[\w-]+)\s*\)/g)]
+        .map(([, name]) => (baseCssText.match(new RegExp(name + ':\\s*(#[0-9a-fA-F]{3,8})')) || [])[1])
+        .filter(Boolean)
+        .concat([...text.matchAll(/#[0-9a-f]{6}\b/gi)].map(([hex]) => hex))
+
     it('names its own colours rather than borrowing the interface’s white', () => {
         // A token is the failure mode: `--ui-text-primary` reads as a sensible
         // choice and is #ffffff. The wall's colours are stated here, in hex,
@@ -124,11 +135,11 @@ describe('the dim placeholder every unfinished surface draws', () => {
 
     it('draws nothing above 40% brightness, and nothing near white', () => {
         const hexes = [
-            ...block('.map-source-placeholder').matchAll(/#[0-9a-f]{6}\b/gi),
-            ...block('.map-source-placeholder-label').matchAll(/#[0-9a-f]{6}\b/gi),
-            ...block('.map-source-placeholder-detail').matchAll(/#[0-9a-f]{6}\b/gi)
-        ].map(([hex]) => hex)
-        expect(hexes.length).toBeGreaterThan(2)
+            ...inksOf(block('.map-source-placeholder')),
+            ...inksOf(block('.map-source-placeholder-label')),
+            ...inksOf(block('.map-source-placeholder-detail'))
+        ]
+        expect(hexes.length, 'the placeholder names no colour at all').toBeGreaterThan(2)
         hexes.forEach((hex) => {
             const channels = CHANNELS(hex)
             expect(luma(channels), `${hex} is too bright for a wall`).toBeLessThan(0.4 * 255)
@@ -137,10 +148,38 @@ describe('the dim placeholder every unfinished surface draws', () => {
     })
 
     it('is warm, like the card — more red in every ink than blue', () => {
-        const hexes = [...css.slice(css.indexOf('.map-source-placeholder {')).slice(0, 900).matchAll(/#[0-9a-f]{6}\b/gi)].map(([hex]) => hex)
-        hexes.forEach((hex) => {
+        inksOf(css.slice(css.indexOf('.map-source-placeholder {')).slice(0, 900)).forEach((hex) => {
             const [r, , b] = CHANNELS(hex)
             expect(r, `${hex} is not a warm colour`).toBeGreaterThanOrEqual(b)
         })
+    })
+})
+
+// The same card is drawn from two places that cannot share a value: this module
+// paints it into a canvas, and `.map-source-placeholder` paints it in CSS for
+// the states that say WHY a surface is empty. Since the spine keeps every hex
+// in base.css, nothing but this test stops the canvas and the stylesheet
+// drifting into two different cards on one wall.
+describe('the canvas card and the CSS card', () => {
+    const at = (file) => join(dirname(fileURLToPath(import.meta.url)), file)
+    const baseCss = readFileSync(at('../styles/base.css'), 'utf8')
+    const source = readFileSync(at('mapTestPattern.jsx'), 'utf8')
+    const token = (name) => (baseCss.match(new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{3,8})`)) || [])[1]?.toLowerCase()
+    const constant = (name) => (source.match(new RegExp(`const ${name} = '(#[0-9a-fA-F]{3,8})'`)) || [])[1]?.toLowerCase()
+
+    it('are inked the same', () => {
+        expect(token('di-card-ground')).toBe(constant('CARD_GROUND'))
+        expect(token('di-card-frame')).toBe(constant('CARD_EDGE'))
+        expect(token('di-card-ink')).toBe(constant('CARD_INK'))
+    })
+
+    it('and no ink of either is near white, or cold', () => {
+        for (const name of ['di-card-ground', 'di-card-ground-2', 'di-card-frame', 'di-card-ink']) {
+            const hex = token(name)
+            expect(hex, `--${name} is gone from base.css`).toMatch(/^#[0-9a-f]{6}$/)
+            const [r, g, b] = CHANNELS(hex)
+            expect(Math.min(r, g, b), `--${name} reads as near-white`).toBeLessThan(120)
+            expect(r, `--${name} is not warm`).toBeGreaterThanOrEqual(b)
+        }
     })
 })
