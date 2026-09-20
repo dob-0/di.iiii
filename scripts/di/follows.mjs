@@ -58,6 +58,17 @@ export const addFollow = async (dataDir, spaceId, { remote, token, label = null,
     return writeFollows(dataDir, follows)
 }
 
+/**
+ * Put a follow back EXACTLY as it was — the same keys, in the same order, with
+ * the same `followedAt`. `addFollow` would stamp a new one, and `di stage
+ * leave` promises the file it hands back is the file it found.
+ */
+export const setFollow = async (dataDir, spaceId, entry) => {
+    const follows = readFollows(dataDir)
+    follows[spaceId] = entry
+    return writeFollows(dataDir, follows)
+}
+
 export const removeFollow = async (dataDir, spaceId) => {
     const follows = readFollows(dataDir)
     if (!follows[spaceId]) return { follows, removed: false }

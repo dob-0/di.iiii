@@ -301,6 +301,23 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-16'
     },
     {
+        id: 'the-machine-under-the-projector',
+        category: 'Spaces & access',
+        title: 'The machine under the projector',
+        summary: 'One line turns an old laptop into the box that shows your wall: it starts itself at login, puts the projection back if anything stops, never goes to sleep, and gives the machine back exactly as it was when you are done.',
+        body: [
+            'A venue box is not a laptop you sit at. Nobody is standing there to click a dialog, dismiss a "restore pages?" bar, or start the browser again after a power cut — and everything on the screen is on a wall in front of an audience. di stage is that machine, in one command.',
+            'On the machine by the projector: di stage join <space> --from <address of your laptop\'s di.iiii> --key <the key di invite printed>. It follows the space, writes one entry that runs at login, and starts one supervisor. That supervisor keeps the server up, keeps one full-screen browser alive on the screen, and holds the machine awake for exactly as long as it is running.',
+            'The screen never shows an error. The browser always opens on a black page first, with one dim line in a corner saying what it is waiting for, and moves to the projection only once the server answers. If the server stops mid-show, the wall goes black at once and the repair happens behind it — a browser pointed straight at a dead server shows a light grey error page, and a light grey rectangle is the one thing that must never appear on a projection.',
+            'Nothing on the machine is permanently changed. The "do not sleep" is a request that lasts as long as the process — no power plan is edited, no setting is left behind. Everything else that join writes is recorded in one file, and di stage leave replays that list: the login entry, the follow, the one line it added to the settings, and the folder it made. Nothing it did not write is touched, and the space and your work stay exactly where they were.',
+            'di stage status is the one screen to read from somewhere else: the server, the follow, which kind of autostart is in force, whether the machine is being held awake, and for each screen what it is showing — or, when it is not, the projection page\'s own reason for being black (no surfaces yet; every surface switched off). It exits with an error if any screen is not showing, so it works as a health check and not only as a look. Add --json for something that is not a person.',
+            'What it deliberately does not do: sign the machine in, switch it on after a power cut, replace the desktop, install a browser, OBS or NDI, or make the network between the machines. Those are the venue\'s job, and a tool that pretended otherwise would be lying about what happens at 8pm.',
+            'Today one machine drives one screen, showing the single mapping in the space — or the one you name with --project. Two screens from one box is the next piece of work, and until it lands a second projector is still set up by hand.'
+        ],
+        tags: ['stage', 'projector', 'kiosk', 'venue', 'appliance', 'autostart', 'di stage', 'exhibition', 'installation', 'unattended', 'rig', 'mapping', 'show'],
+        updated: '2026-09-20'
+    },
+    {
         id: 'projection-mapping',
         category: 'Spaces & access',
         title: 'Putting a space on a wall',

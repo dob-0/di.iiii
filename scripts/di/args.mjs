@@ -20,6 +20,11 @@ export const parseArgs = (argv) => {
         if (name === 'key') { args.flags.key = argv[++i]; continue }
         if (name === 'at') { args.flags.at = argv[++i]; continue }
         if (name === 'build') { args.flags.build = argv[++i]; continue }
+        // `di stage join` — which mapping, which Chromium, what this machine
+        // calls itself. Value flags, so a path with spaces in it survives.
+        if (name === 'project') { args.flags.project = argv[++i]; continue }
+        if (name === 'browser') { args.flags.browser = argv[++i]; continue }
+        if (name === 'name') { args.flags.name = argv[++i]; continue }
         args.flags[name] = true
     }
     return args
