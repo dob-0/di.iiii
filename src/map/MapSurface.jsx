@@ -3,6 +3,7 @@ import MapStage from './MapStage.jsx'
 import MapEditorOverlay from './MapEditorOverlay.jsx'
 import MapInspector from './MapInspector.jsx'
 import MapCueList from './MapCueList.jsx'
+import { cueForKey, isCueKey } from './cueFiring.js'
 import { useMapDocument } from './useMapDocument.js'
 import { toTopNetwork } from '../project/tops/useTopNetwork.js'
 import { buildMapOutputPath } from './mapRouting.js'
@@ -232,8 +233,12 @@ export default function MapSurface({ projectId, spaceId }) {
             if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return
             if (event.metaKey || event.ctrlKey) return
 
-            if (/^[1-9]$/.test(event.key)) {
-                const cue = cues.find((entry) => entry.key === event.key)
+            // The binding itself is in src/map/cueFiring.js, because the 3D
+            // scene listens for the same keys on the same cues. A cue key with
+            // nothing bound to it still returns here rather than falling
+            // through — a digit is never a nudge or a mask.
+            if (isCueKey(event.key)) {
+                const cue = cueForKey(cues, event.key)
                 if (cue) { onFireCue(cue); event.preventDefault() }
                 return
             }
