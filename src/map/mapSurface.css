@@ -308,10 +308,43 @@ a.map-action { display: inline-flex; align-items: center; text-decoration: none;
 .map-output.is-idle { cursor: none; }
 
 @media (max-width: 900px) {
-    .map-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto; }
-    .map-panel { max-height: 30vh; }
+    /* Three rows, each sized outright, not "auto" read off its own content.
+       The panels' auto-sized track used to drift past their own max-height —
+       one measured 301px against a 253px cap on a 390×844 phone — which
+       squeezed the canvas row thin enough that its own drag-hint text spilled
+       past its box and overprinted the inspector below, while the panel's own
+       overflow spilled the other way, under the canvas (di.iiii known-fixes:
+       phone mapper overprint). A row fixed to the same size its panel clips
+       to leaves nothing to drift, so nothing can overprint a neighbour;
+       .map-panel's own overflow-y:auto (declared above) makes the excess a
+       normal in-place scroll behind that row's own border, never a spill.
+    */
+    .map-body {
+        grid-template-columns: 1fr;
+        grid-template-rows: 30vh minmax(34vh, 1fr) 30vh;
+        min-height: 0;
+    }
+    .map-panel { min-height: 0; }
     .map-panel-left { border-right: 0; border-bottom: 1px solid var(--ui-divider); }
     .map-panel-right { border-left: 0; border-top: 1px solid var(--ui-divider); }
+    /* The frame keeps the stage centred and letterboxed same as desktop, but
+       on a phone it must also clip its own overflow — the drag-hint sits
+       below the stage in normal flow, and without a hard boundary here it is
+       exactly what spilled into the inspector row before this fix. */
+    .map-frame { overflow: hidden; }
+
+    /* Nothing here is narrower than a finger below this width, so the toolbar
+       stops trying to fit on one line and wraps instead — every control stays
+       reachable with a tap rather than sliding off the right edge. */
+    .map-bar { flex-wrap: wrap; }
+    .map-bar-controls { flex-wrap: wrap; flex-basis: 100%; }
+
+    /* The last panel in the stacked layout sits flush against the viewport
+       bottom, exactly where ModeMark (src/components/modeMark.css) plants its
+       tier chip. Same offset and safe-area variable it uses for its own
+       position, plus its own footprint, so the panel's last line is never
+       under the badge. */
+    .map-panel-right { padding-bottom: calc(var(--di-space-7) + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* The output's only chrome. Present when the pointer moves, gone when it
