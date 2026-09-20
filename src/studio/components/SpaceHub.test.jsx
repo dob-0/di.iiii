@@ -4,6 +4,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SpaceHub from './SpaceHub.jsx'
 import { WORKS } from '../../works/works.js'
 
+// Several tests here render the thirteen-card hub, which mounts thirteen preview
+// iframes and waits for them to report; two of them already ask waitFor for 8s.
+// vitest's own per-test budget is 5s, so on a loaded CI runner the test died
+// before its waits could spend theirs and reported as a broken behaviour — red
+// three times in one day, on three unrelated branches, passing alone every time.
+// The budget belongs to the file, not to one test that happened to lose the race.
+vi.setConfig({ testTimeout: 20000 })
+
+
 const listServerSpaces = vi.fn()
 const getServerConfig = vi.fn()
 const updateServerSpace = vi.fn()
