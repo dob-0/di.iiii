@@ -22,3 +22,39 @@
 - Not checked: a real phone. A pre-existing floating "M" button (unrelated
   to this change, present identically before and after) overlaps the
   bottom hint text at 360x640 — out of scope for this fix, left untouched.
+
+## 2026-09-20 — the stacked phone layout was overprinting itself
+
+- A follow-up newcomer walk (after the fix above) still found two overlaps
+  at 390x844, both inside `src/map/mapSurface.css`'s existing
+  `@media (max-width: 900px)` block: (a) the left panel's last section (Wall
+  photo / Carry) read as cut off mid-line where the canvas began right on
+  top of it; (b) the drag-hint text under the canvas printed over the
+  inspector's `SURFACE N` header / Delete row.
+- Root cause, found by measuring rendered boxes, not guessing from CSS: the
+  layout used `grid-template-rows: auto minmax(0, 1fr) auto` with
+  `.map-panel { max-height: 30vh }` on the two side panels. The "auto" rows
+  did not reliably respect that max-height — measured one panel rendering at
+  301px against its own 253px (30vh of 844) cap — which squeezed the middle
+  `1fr` canvas row thin enough that its own drag-hint (positioned after the
+  stage in normal flow, with no clipping of its own) spilled past the
+  canvas row's box into the inspector row below it. The same drift let the
+  left panel's overflowing content report a layout position past its own
+  clipped box, coinciding with the canvas row's screen position.
+- Fix: gave all three rows explicit, non-"auto" sizes
+  (`grid-template-rows: 30vh minmax(34vh, 1fr) 30vh`) so a panel's rendered
+  box is always exactly the size its own `overflow-y: auto` clips to — one
+  source of truth instead of two numbers (grid track + max-height) that
+  could drift apart — and added `overflow: hidden` to `.map-frame` as the
+  same guarantee for the canvas row, so the drag-hint can never spill into
+  the row after it.
+- Verified with Playwright/Chromium against a throwaway space, 2-surface
+  project, surface 2 selected, at 390x844 and 360x640 (DPR 3), before/after.
+  Confirmed by exact `getBoundingClientRect()` measurement (not just a
+  screenshot) that the three rows now sit flush with no gap and no overlap
+  (e.g. left panel bottom 366.19px == canvas row top 366.19px at 390x844;
+  canvas row bottom 522.59px == right panel top 522.59px at 360x640), and by
+  `elementFromPoint` probing the old overlap coordinates that only one
+  region's content ever paints there. Desktop 1440x900 confirmed
+  pixel-identical before/after (only diff: a test project's own timestamp
+  in its title). No new or changed user-visible strings — layout only.
