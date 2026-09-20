@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import '../styles/studio.css'
 import { CameraControls, Grid, Html, TransformControls } from '@react-three/drei'
+import RigMirror from './RigMirror.jsx'
 import { XR, useXR } from '@react-three/xr'
 import ModalTransform from './ModalTransform.jsx'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
@@ -592,7 +593,8 @@ function StudioSceneContent({
     onTransformCancel,
     onTransformStatus,
     controlsRef,
-    playTimelines = false
+    playTimelines = false,
+    rigMirror = false
 }) {
     const isArMode = useXR((state) => state.mode === 'immersive-ar')
     // Keyed on assets + project id so the map only rebuilds when assets change,
@@ -677,6 +679,13 @@ function StudioSceneContent({
             <TimelinePreviewDriver />
             {playTimelines && document.worldState?.autoLook?.enabled ? (
                 <AutoLookAround controlsRef={controlsRef} config={document.worldState.autoLook} />
+            ) : null}
+            {/* The real lighting rig, mirrored read-only. Editor furniture: outside the
+                objects group, never in a published viewer, never in AR. */}
+            {rigMirror && !playTimelines && !isArMode ? (
+                <Suspense fallback={null}>
+                    <RigMirror />
+                </Suspense>
             ) : null}
             <group position={isArMode ? AR_SCENE_POSITION : DEFAULT_SCENE_POSITION}>
                 {/* drei's Grid takes `cellColor`, not `color`: the prop name was
@@ -904,6 +913,7 @@ export default function StudioViewport({
     onCloseHelp,
     onShowHelp,
     playTimelines = false,
+    rigMirror = false,
 }) {
     const viewportRef = useRef(null)
     const [transformStatus, setTransformStatus] = useState(null)
@@ -984,6 +994,7 @@ export default function StudioViewport({
                         onTransformStatus={setTransformStatus}
                         controlsRef={controlsRef}
                         playTimelines={playTimelines}
+                        rigMirror={rigMirror}
                     />
                 </XR>
             </Canvas>
