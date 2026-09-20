@@ -9,6 +9,7 @@ import StudioQuickInsert from './StudioQuickInsert.jsx'
 import { useStudioPanelState } from '../hooks/useStudioPanelState.js'
 import useAuthSession from '../../hooks/useAuthSession.js'
 import StudioCoachMarks from './StudioCoachMarks.jsx'
+import RigMirrorHint from './RigMirrorHint.jsx'
 import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspaceStorage.js'
 import '../styles/studio-mobile.css'
 import { canPlaceInScene } from '../utils/assetFormats.js'
@@ -722,6 +723,8 @@ export default function StudioShell({
                     isOpenJam={isJam}
                 />
             )}
+
+            {!uiHidden && !loading && <RigMirrorHint on={rigMirror.on} />}
         </div>
     )
 }

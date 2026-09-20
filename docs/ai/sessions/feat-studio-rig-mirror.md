@@ -26,3 +26,32 @@ Step 2 of "one project is one stage" (`di-atlas/decisions/2026-09-20-one-project
   off. NOT verified: a real rig, a phone, split viewports, a desk with hundreds of fixtures.
 - Still open: opening Studio on a local install now makes one request to `/light/api/summary`,
   which builds the (output-off) desk the way the Spaces hub's own probe already does.
+
+## 2026-09-20 — the button was named the same thing as an unrelated feature, and did nothing visible on an empty rig
+
+A newcomer walk found two problems with the button above, both from the same screenshot:
+
+- **Name collision.** Studio's Display row has "Projection" and "Rig" side by side. The
+  wiki's own "The rig: machines in one room find each other" (multi-machine discovery,
+  cues, blackout — a totally different feature) uses the same word for something else, and
+  now sits one click away from the button a newcomer just used successfully. Renamed the
+  button `Rig` → `Lights` (`src/studio/components/StudioControlCluster.jsx`) — the `title`
+  ("Show the real lighting rig in the room") is unchanged, only the visible label moved.
+  Updated `StudioControlCluster.rig.test.jsx` and the "lighting-desk" wiki article's own
+  sentence naming the button (`src/wiki/wikiContent.js`).
+- **No feedback on an empty rig.** Pressing the switch with a desk present but zero fixtures
+  patched draws nothing — `RigMirrorMarkers` returns `null` for an empty fixture list, same
+  as it should once the rig genuinely has nothing lit. From outside that reads as "the switch
+  does nothing." Added `src/studio/components/RigMirrorHint.jsx`: on, desk present, zero
+  fixtures → one line, "no lights patched yet — add them in Light", reusing
+  `StudioCoachMarks`' own pill (`.studio-coach`) rather than inventing a new hint style. Not a
+  dismiss-once tutorial step — no close button, it shows for as long as the state that
+  explains it holds and disappears the moment a fixture is patched.
+- Not solved: `RigMirrorHint` and `StudioCoachMarks` both render at
+  `position: fixed; bottom` center, so if a guest's first-run coach were ever active at the
+  same moment as an empty-rig Lights session, they would stack visually. Judged unlikely
+  enough in practice (a guest turning on Lights during their very first session) not to be
+  worth a coordination mechanism neither component has today — flagged here rather than
+  guessed away.
+- Tests: `RigMirrorHint.test.jsx` (4 cases, using the same `mirror` prop override
+  `RigMirror.test.jsx` already established for testing without the real singleton/network).
