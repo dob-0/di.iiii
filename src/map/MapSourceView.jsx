@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import MapTestPattern from './mapTestPattern.jsx'
+import MapTestPattern, { DEFAULT_TEST_PATTERN } from './mapTestPattern.jsx'
 import { startMotionGlow } from './motionGlow.js'
 import { useTopNetwork } from '../project/tops/useTopNetwork.js'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
@@ -92,8 +92,17 @@ export default function MapSourceView({ surface, spaceId = '', live = true, netw
         return <MapSourcePlaceholder label={label} detail="no file yet" width={width} height={height} />
     }
 
+    // A test source with no pattern named is a surface nobody has finished
+    // yet — the state a brand-new surface is born in. It draws the dim
+    // identification card, NOT the bright grid: on a two-machine rig the
+    // projector is already showing whatever this returns, and the owner's
+    // standing rule is that white never goes on it. The grid is still one
+    // choice away in the Pattern picker, at full brightness, because a person
+    // aiming a projector needs it bright.
+    // `url` with no address keeps the grid on purpose: an empty web address
+    // is still something to align geometry against, same as before.
     if (kind === 'test' || (!ref && kind === 'url')) {
-        return <MapTestPattern pattern={kind === 'test' ? (ref || 'grid') : 'grid'} width={width} height={height} label={label} />
+        return <MapTestPattern pattern={kind === 'test' ? (ref || DEFAULT_TEST_PATTERN) : 'grid'} width={width} height={height} label={label} />
     }
 
     if (kind === 'image') {

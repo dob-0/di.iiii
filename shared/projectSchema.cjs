@@ -194,7 +194,13 @@ const defaultMappingSurface = {
   // Polygon mask in the surface's OWN normalised space. Empty = the whole
   // rectangle.
   mask: [],
-  source: { kind: 'test', ref: 'grid' },
+  // A NEW surface is born on `card`: a dim warm identification card naming the
+  // surface, not the bright alignment grid — the desk and the wall are two
+  // machines, so a new surface is on the projector the moment Add is pressed,
+  // and white never goes on a projector. A `ref` and not a new `source.kind`
+  // on purpose: an older build rewrites an unknown kind and loses the choice,
+  // an unknown ref it keeps. See src/map/mapTestPattern.jsx.
+  source: { kind: 'test', ref: 'card' },
   resolution: [1280, 720],
   opacity: 1,
   brightness: 1,

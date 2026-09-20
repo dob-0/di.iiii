@@ -50,7 +50,7 @@ on a flat wall, a corner-pin is exactly enough.
 | `MapInspector.jsx` | one surface's properties, and copying between surfaces |
 | `MapCueList.jsx` | named states of the show, and playback |
 | `MapOutput.jsx` | the signal, plus its own fullscreen and display picker |
-| `mapTestPattern.jsx` | alignment patterns |
+| `mapTestPattern.jsx` | alignment patterns, and the dim identification card a new surface starts on |
 | `transportCeiling.js` | the HTTP/1.1 ceiling and its warning |
 | `useMapDocument.js` | the document, the op layer, and the BroadcastChannel courier |
 | `lightingLink.js` | the one wire to the lighting desk at `/light` |
@@ -177,6 +177,25 @@ the dev server is exactly where this bites. The desk warns when it applies.
 **Alignment patterns are full white on black and nothing softer.** A projector
 throwing a mid-grey line onto coloured paper in a half-dark room leaves nothing
 for the eye to align to.
+
+**But a new surface is not born on one.** The owner's standing rule — never put
+white on the projector, warm colours only — was set in a club at midnight after
+a white test card hit the wall, and on a two-machine rig the wall is lit from
+the instant somebody presses Add, before anyone has chosen what the surface
+shows. So a new surface starts on `test`/`card`: a dim warm **identification
+card** that names the surface, deep amber on near-black, nothing above ~38% of
+full brightness and no pixel anywhere near white. Measured on the real `/out`
+page at 1440x900: max luminance 96.4/255, zero pixels with min(r,g,b) > 200;
+the same surface switched to the grid on purpose reads 255/255 and 7,574 of
+them. Several fresh surfaces are told apart by the name each one prints, which
+is what somebody aiming three projectors one at a time actually needs.
+
+**The card is a `ref`, not a `source.kind`.** `MAPPING_SOURCE_KINDS` is a closed
+list and `normalizeMappingSurface` replaces any kind it has not heard of with the
+default — so a `card` KIND opened by an older build would be rewritten to `test`
+and the choice lost for good. A `ref` is a free string: an older build keeps it
+byte-identical and merely draws the grid meanwhile. Same reasoning applies to
+anything else added to the source model.
 
 **Projecting onto coloured paper is subtractive.** Orange paper absorbs blue;
 every source is tinted toward the paper's own hue. Either make that the idea
