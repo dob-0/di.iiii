@@ -148,7 +148,7 @@ export default function StudioControlCluster({
                                     <button className="scc-btn" onClick={onOpenProjection} title="Put this project on a wall">Projection</button>
                                 )}
                                 {!minimal && onToggleRigMirror && (
-                                    <button className={`scc-btn ${rigMirrorOn ? 'active' : ''}`} onClick={onToggleRigMirror} aria-pressed={rigMirrorOn} title="Show the real lighting rig in the room">Rig</button>
+                                    <button className={`scc-btn ${rigMirrorOn ? 'active' : ''}`} onClick={onToggleRigMirror} aria-pressed={rigMirrorOn} title="Show the real lighting rig in the room">Lights</button>
                                 )}
                                 {!minimal && canViewLive && (
                                     <button className="scc-btn" onClick={onViewLive} title="Open the public space URL in a new tab">↗ View live</button>

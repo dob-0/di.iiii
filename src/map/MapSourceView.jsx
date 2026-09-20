@@ -79,7 +79,20 @@ export default function MapSourceView({ surface, spaceId = '', live = true, netw
     // quietly swallowed the ordinary camera surface — kind 'camera' with an
     // empty ref IS the default camera, not an unfinished surface — and made
     // that whole branch unreachable.
-    if (kind === 'test' || (!ref && ['url', 'video', 'image'].includes(kind))) {
+    // Video and image are carved out of that fallback on purpose: the test
+    // pattern is a bright grid, meant to be seen and aligned against on a
+    // wall — the opposite of what an unfinished brought-in file should show.
+    // Until a file is chosen they get the same dim placeholder every other
+    // empty source already uses (no Picture Out chosen, no project chosen),
+    // so the wall stays dark instead of lighting up white while someone is
+    // mid-way through picking a file. `url` keeps the test pattern: an empty
+    // web address is still something to align geometry against, same as
+    // before.
+    if (!ref && (kind === 'video' || kind === 'image')) {
+        return <MapSourcePlaceholder label={label} detail="no file yet" width={width} height={height} />
+    }
+
+    if (kind === 'test' || (!ref && kind === 'url')) {
         return <MapTestPattern pattern={kind === 'test' ? (ref || 'grid') : 'grid'} width={width} height={height} label={label} />
     }
 
