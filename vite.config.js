@@ -533,6 +533,13 @@ export default {
                 target: DEV_PROXY_API_TARGET,
                 changeOrigin: true
             },
+            // NDI® in — the same shape: serverXR answers /ndi itself on a local install
+            // (serverXR/src/routes/ndiRoutes.js). TRAP: this proxy matches by PREFIX, so a
+            // top-level `src/ndi…` folder or module would be swallowed by it in dev.
+            '/ndi': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true
+            },
             // Project documents store asset/API URLs as bare `/api/...` (no
             // `/serverXR` prefix) because in production Express serves both
             // frontend and API from one origin, mounted at APP_BASE_PATH. In
