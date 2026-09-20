@@ -1,0 +1,233 @@
+// @vitest-environment node
+
+// The parent's half of the lane, driven against a FAKE child: ref-counting, the linger,
+// the caps, a crash that keeps its subscribers, and close(). No koffi, no NDI runtime —
+// CI has neither, and none of this needs one.
+import { EventEmitter } from 'node:events'
+import { createRequire } from 'node:module'
+import { afterEach, describe, expect, it } from 'vitest'
+
+const require = createRequire(import.meta.url)
+const { createNdiManager, NdiCapError } = require('./manager.js')
+
+// Stands in for a forked worker.js: it records what the parent sent and can be made to
+// answer, to die, and to be killed.
+class FakeChild extends EventEmitter {
+  constructor(pid) {
+    super()
+    this.pid = pid
+    this.connected = true
+    this.sent = []
+    this.killed = false
+  }
+
+  send(message) { this.sent.push(message); return true }
+  kill() { this.killed = true; this.connected = false; this.emit('exit', null, 'SIGTERM') }
+  // What the worker says back.
+  ready(version = 'NDI SDK TEST 6.3.2.0') { this.emit('message', { type: 'ready', version, path: '/fake/libndi.so.6' }) }
+  fatal(reason = 'not-installed', how = 'install libndi, then restart di') { this.emit('message', { type: 'fatal', reason, how }) }
+  sources(list) { this.emit('message', { type: 'sources', sources: list }) }
+  frame(id, jpeg = Buffer.from('jpeg-bytes'), seq = 1) { this.emit('message', { type: 'frame', id, jpeg, width: 320, height: 180, seq }) }
+  die(signal = 'SIGKILL') { this.connected = false; this.emit('exit', null, signal) }
+  opens() { return this.sent.filter((m) => m.type === 'open') }
+  closes() { return this.sent.filter((m) => m.type === 'close') }
+}
+
+const managers = []
+afterEach(() => { while (managers.length) managers.pop().close() })
+
+// Short timings so the real clock can be used — fake timers and a promise-driven
+// manager fight each other, and these waits are what the production code actually does.
+const build = (overrides = {}) => {
+  const children = []
+  const manager = createNdiManager({
+    forkChild: () => { const c = new FakeChild(1000 + children.length); children.push(c); return c },
+    probe: () => ({ ok: true }),
+    lingerMs: 40,
+    idleExitMs: 120,
+    backoffMinMs: 20,
+    killGraceMs: 10,
+    ...overrides
+  })
+  managers.push(manager)
+  return { manager, children, last: () => children[children.length - 1] }
+}
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+describe('the NDI manager and its child', () => {
+  it('forks nothing until something is actually asked of it', async () => {
+    const { manager, children } = build()
+    expect(children).toHaveLength(0)
+    expect(manager.hasChild()).toBe(false)
+    manager.subscribe({ name: 'td', onFrame: () => {} })
+    expect(children).toHaveLength(1)
+  })
+
+  it('opens ONE receiver for many subscribers to the same picture, and fans frames to all', () => {
+    const { manager, last } = build()
+    const seenA = []
+    const seenB = []
+    manager.subscribe({ name: 'td_out', onFrame: (f) => seenA.push(f) })
+    manager.subscribe({ name: 'td_out', onFrame: (f) => seenB.push(f) })
+    const child = last()
+    expect(child.opens()).toHaveLength(1)
+    const id = child.opens()[0].id
+
+    child.frame(id)
+    expect(seenA).toHaveLength(1)
+    expect(seenB).toHaveLength(1)
+    expect(seenA[0].jpeg.toString()).toBe('jpeg-bytes')
+  })
+
+  it('treats a different width or bandwidth as a different receiver', () => {
+    const { manager, last } = build()
+    manager.subscribe({ name: 'td', onFrame: () => {} })
+    manager.subscribe({ name: 'td', maxWidth: 640, onFrame: () => {} })
+    manager.subscribe({ name: 'td', bandwidth: 'lowest', onFrame: () => {} })
+    expect(last().opens()).toHaveLength(3)
+    // …but the same three asked for again reuse what is open.
+    manager.subscribe({ name: 'TD', onFrame: () => {} })
+    manager.subscribe({ name: 'td', maxWidth: 640, onFrame: () => {} })
+    expect(last().opens()).toHaveLength(3)
+  })
+
+  it('lingers 5 s (40 ms here) after the last subscriber leaves, and a return within it costs no reconnect', async () => {
+    const { manager, last } = build()
+    const first = manager.subscribe({ name: 'td', onFrame: () => {} })
+    const child = last()
+    expect(child.opens()).toHaveLength(1)
+
+    first.unsubscribe()
+    expect(child.closes()).toHaveLength(0) // not at once
+
+    await wait(15)
+    const again = manager.subscribe({ name: 'td', onFrame: () => {} }) // back inside the linger
+    await wait(60)
+    expect(child.closes()).toHaveLength(0) // the linger was cancelled
+    expect(child.opens()).toHaveLength(1) // and nothing was re-opened
+
+    again.unsubscribe()
+    await wait(70)
+    expect(child.closes()).toHaveLength(1)
+    expect(child.closes()[0].id).toBe(child.opens()[0].id)
+  })
+
+  it('lets the child go after it has been idle, and forks a fresh one when asked again', async () => {
+    const { manager, children, last } = build()
+    const sub = manager.subscribe({ name: 'td', onFrame: () => {} })
+    sub.unsubscribe()
+    await wait(60) // past the linger: the receiver closes, the child is now idle
+    expect(last().killed).toBe(false)
+    await wait(140) // past idleExitMs
+    expect(children[0].killed).toBe(true)
+    expect(manager.hasChild()).toBe(false)
+
+    manager.subscribe({ name: 'td', onFrame: () => {} })
+    expect(children).toHaveLength(2)
+  })
+
+  it('caps receivers and viewers, and says which cap was hit', () => {
+    const { manager } = build({ maxReceivers: 2, maxSubscribers: 3 })
+    manager.subscribe({ name: 'a', onFrame: () => {} })
+    manager.subscribe({ name: 'b', onFrame: () => {} })
+    expect(() => manager.subscribe({ name: 'c', onFrame: () => {} })).toThrow(NdiCapError)
+    try {
+      manager.subscribe({ name: 'c', onFrame: () => {} })
+    } catch (error) {
+      expect(error.code).toBe('cap-receivers')
+      expect(error.message).toMatch(/already receives 2/)
+    }
+    // A third viewer of an ALREADY OPEN picture is allowed; the fourth is not.
+    manager.subscribe({ name: 'a', onFrame: () => {} })
+    try {
+      manager.subscribe({ name: 'a', onFrame: () => {} })
+      throw new Error('the subscriber cap did not hold')
+    } catch (error) {
+      expect(error.code).toBe('cap-subscribers')
+    }
+  })
+
+  it('survives a child that dies mid-stream: restarts it, re-opens the receiver, keeps the subscriber', async () => {
+    const { manager, children, last } = build()
+    const seen = []
+    const states = []
+    manager.subscribe({ name: 'td_out', onFrame: (f) => seen.push(f), onState: (s) => states.push(s.state) })
+    const first = last()
+    first.ready()
+    first.frame(first.opens()[0].id)
+    expect(seen).toHaveLength(1)
+
+    first.die('SIGKILL')
+    expect(states).toContain('restarting')
+
+    await wait(60) // past the backoff
+    expect(children).toHaveLength(2)
+    const second = last()
+    expect(second).not.toBe(first)
+    // The same picture is asked for again, without the subscriber doing anything.
+    expect(second.opens()).toHaveLength(1)
+    expect(second.opens()[0].name).toBe('td_out')
+
+    second.ready()
+    second.frame(second.opens()[0].id)
+    expect(seen).toHaveLength(2) // the stream resumed for the SAME subscriber
+    expect(manager.stats().restarts).toBe(1)
+  })
+
+  it('does not restart a child that died having said the library is not there', async () => {
+    const { manager, children, last } = build()
+    manager.subscribe({ name: 'td', onFrame: () => {} })
+    last().fatal('not-installed', 'install libndi, then restart di')
+    last().die(0)
+    await wait(60)
+    expect(children).toHaveLength(1) // no pointless restart loop against a missing library
+
+    const summary = await manager.summary({ waitMs: 10 })
+    expect(summary).toMatchObject({ available: false, reason: 'not-installed', how: 'install libndi, then restart di' })
+  })
+
+  it('answers summary and sources from what the child reports', async () => {
+    const { manager, last } = build()
+    const pending = manager.summary({ waitMs: 200 })
+    last().ready('NDI SDK WIN64 6.3.2.0')
+    expect(await pending).toMatchObject({ available: true, version: 'NDI SDK WIN64 6.3.2.0', reason: null })
+
+    const list = manager.getSources({ waitMs: 200 })
+    last().sources([{ name: 'AYLMO (td_out)', address: '10.0.0.2:5961' }])
+    expect(await list).toMatchObject({ available: true, sources: [{ name: 'AYLMO (td_out)', address: '10.0.0.2:5961' }] })
+  })
+
+  it('reports no-koffi from the probe alone, without ever forking', async () => {
+    const { manager, children } = build({ probe: () => ({ ok: false, reason: 'no-koffi', how: 'run "npm install" in serverXR' }) })
+    const summary = await manager.summary({ waitMs: 10 })
+    expect(summary).toMatchObject({ available: false, reason: 'no-koffi' })
+    expect(children).toHaveLength(0)
+  })
+
+  it('hands back a still from the frame that arrives, and times out saying what the receiver is doing', async () => {
+    const { manager, last } = build()
+    const pending = manager.still({ name: 'td', waitMs: 200 })
+    const child = last()
+    child.emit('message', { type: 'state', id: child.opens()[0].id, state: 'waiting', detail: 'no NDI source matching "td" on this network yet' })
+    child.frame(child.opens()[0].id, Buffer.from('a-picture'))
+    const frame = await pending
+    expect(frame.jpeg.toString()).toBe('a-picture')
+
+    const nothing = await manager.still({ name: 'absent', waitMs: 40 })
+    expect(nothing.error).toBe('timeout')
+    expect(nothing.state).toBe('starting')
+  })
+
+  it('close() kills the child at once and refuses to fork another', async () => {
+    const { manager, children, last } = build()
+    manager.subscribe({ name: 'td', onFrame: () => {} })
+    const child = last()
+    manager.close()
+    expect(child.killed).toBe(true)
+    expect(manager.hasChild()).toBe(false)
+    expect(() => manager.subscribe({ name: 'td', onFrame: () => {} })).toThrow(/shut down/)
+    await wait(60)
+    expect(children).toHaveLength(1) // the death of the child it killed does not restart it
+  })
+})
