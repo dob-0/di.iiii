@@ -42,6 +42,8 @@ import {
     readOutTitle, reconcile, statusRows, versionVerdict, wakeCommand
 } from './stagePlan.mjs'
 import { alive, apiBase, installedVersion, publicUrl, readState, resolvePort } from './state.mjs'
+import { probeDisplays } from './displayProbe.mjs'
+import { displayDiff, placementVerdict, planDisplays, toWindowUnits } from './stageDisplays.mjs'
 
 const runnerFor = (home) => (readState(home).mode === 'docker' ? docker : node)
 
@@ -150,7 +152,7 @@ export const readPages = async (debugPort = DEBUG_PORT, { timeoutMs = 1500 } = {
         const list = await response.json()
         return (Array.isArray(list) ? list : [])
             .filter((target) => target?.type === 'page' && !String(target.url || '').startsWith('devtools://'))
-            .map((target) => ({ url: String(target.url || ''), title: String(target.title || '') }))
+            .map((target) => ({ id: String(target.id || ''), url: String(target.url || ''), title: String(target.title || ''), ws: String(target.webSocketDebuggerUrl || '') }))
     } catch {
         return []
     } finally {
@@ -178,27 +180,20 @@ const askJson = async (url, { timeoutMs = 4000, token = null } = {}) => {
 }
 
 /**
- * One screen, a static target: the space's single map project, or `--project`.
+ * The single-kiosk target: the space's one map project, or `--project`.
  *
  * There is no "kind" on a project row and there must not be one (see
  * serverXR/src/routes/projectRoutes.js) — a mapping is an ordinary document
  * with surfaces in it. So the only honest way to find the mapping is to read
- * the documents and count surfaces, which is what this does, and why naming one
- * with `--project` is the fast path.
+ * the documents and count surfaces, which is what readMapProjects does, and
+ * why naming one with `--project` is the fast path. The supervisor itself
+ * goes through planDisplays, which applies this same rule when no mapping
+ * names this machine.
  */
 export const resolveTarget = async ({ home, port, spaceId, project = null }) => {
     if (project) return chooseTarget({ project })
-    const base = apiBase(home, port)
-    const listed = await askJson(`${base}/api/spaces/${encodeURIComponent(spaceId)}/projects`)
-    const rows = listed?.projects || []
-    if (!rows.length) return { projectId: null, error: 'none', ids: [] }
-    const projects = []
-    for (const row of rows) {
-        if (!row?.id) continue
-        const doc = await askJson(`${base}/api/projects/${encodeURIComponent(row.id)}/document`)
-        const surfaces = doc?.document?.mappingState?.surfaces
-        projects.push({ id: row.id, mapSurfaces: Array.isArray(surfaces) ? surfaces.length : 0 })
-    }
+    const projects = await readMapProjects({ home, port, spaceId })
+    if (!projects.length) return { projectId: null, error: 'none', ids: [] }
     return chooseTarget({ projects })
 }
 
@@ -484,16 +479,140 @@ export const leaveStage = async ({ home, keepSpace = false, run = runStep }) => 
 const urlOfFile = (file) => pathToFileURL(file).href
 
 /**
+ * This install's own machine id — the one serverXR mints into
+ * `<data>/machine.json` and hands every page through the machines hub, and
+ * the one a mapping's `output.show.machine` names. Read off the disk rather
+ * than asked over HTTP: the file is beside the server this supervisor runs,
+ * the machine routes need an editor session this process does not have, and
+ * a server that has not started yet still has (or will mint) the same id.
+ */
+export const readMachineId = (home) => {
+    try {
+        const parsed = JSON.parse(fs.readFileSync(path.join(paths(home).data, 'machine.json'), 'utf8'))
+        return parsed?.format === 'di.machine' && typeof parsed.id === 'string' && parsed.id ? parsed.id : null
+    } catch {
+        return null
+    }
+}
+
+/** Every project in the space with how many surfaces it maps and where it asks to be shown. */
+export const readMapProjects = async ({ home, port, spaceId }) => {
+    const base = apiBase(home, port)
+    const listed = await askJson(`${base}/api/spaces/${encodeURIComponent(spaceId)}/projects`)
+    const projects = []
+    for (const row of listed?.projects || []) {
+        if (!row?.id) continue
+        const doc = await askJson(`${base}/api/projects/${encodeURIComponent(row.id)}/document`)
+        const mapping = doc?.document?.mappingState
+        const surfaces = mapping?.surfaces
+        projects.push({
+            id: row.id,
+            mapSurfaces: Array.isArray(surfaces) ? surfaces.length : 0,
+            show: mapping?.output?.show || null
+        })
+    }
+    return projects
+}
+
+// ── asking the kiosk WHERE it is ──────────────────────────────────────────
+//
+// `readPages` is a plain GET on CDP's HTTP side. Window bounds are not: they
+// need the browser's websocket endpoint and two calls on it. Node 22 has a
+// WebSocket of its own, so this stays a CLI with no dependencies — one short
+// round trip, then the socket is closed.
+
+const browserEndpoint = async (debugPort, timeoutMs) => {
+    try {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), timeoutMs)
+        const response = await fetch(`http://127.0.0.1:${debugPort}/json/version`, { signal: controller.signal })
+        clearTimeout(timer)
+        return (await response.json())?.webSocketDebuggerUrl || null
+    } catch {
+        return null
+    }
+}
+
+const cdp = async (endpoint, method, params = {}, { timeoutMs = 2500 } = {}) => {
+    if (typeof WebSocket !== 'function' || !endpoint) return null
+    return new Promise((resolve) => {
+        let socket = null
+        const done = (value) => { try { socket?.close() } catch { /* already */ } resolve(value) }
+        const timer = setTimeout(() => done(null), timeoutMs)
+        try {
+            socket = new WebSocket(endpoint)
+        } catch {
+            clearTimeout(timer)
+            resolve(null)
+            return
+        }
+        socket.onopen = () => socket.send(JSON.stringify({ id: 1, method, params }))
+        socket.onmessage = (event) => {
+            try {
+                const message = JSON.parse(String(event.data))
+                if (message.id !== 1) return
+                clearTimeout(timer)
+                done(message.error ? null : (message.result || {}))
+            } catch { /* not ours */ }
+        }
+        socket.onerror = () => { clearTimeout(timer); done(null) }
+    })
+}
+
+/**
+ * The page's own `devicePixelRatio` — the one number that turns the probe's
+ * device pixels into the CSS pixels Chromium places windows in. Asked of
+ * the page, not guessed from the OS. See toWindowUnits in stageDisplays.mjs.
+ */
+export const pageScale = async (page) => {
+    const answer = await cdp(page?.ws, 'Runtime.evaluate', { expression: 'window.devicePixelRatio', returnByValue: true })
+    const value = Number(answer?.result?.value)
+    return Number.isFinite(value) && value > 0 ? value : null
+}
+
+/** Where the kiosk's window is, as Chromium sees it: `{ left, top, width, height, windowState }` or null. */
+export const windowBounds = async (debugPort, targetId) => {
+    const found = await cdp(await browserEndpoint(debugPort, 2500), 'Browser.getWindowForTarget', { targetId })
+    return found?.bounds || null
+}
+
+/**
+ * Put the window on the bounds it was asked for, in Chromium's units. A
+ * fullscreen window will not move, so it is taken back to normal, moved,
+ * and made fullscreen again — three calls, one correction.
+ */
+export const placeWindow = async (debugPort, targetId, bounds) => {
+    const endpoint = await browserEndpoint(debugPort, 2500)
+    const found = await cdp(endpoint, 'Browser.getWindowForTarget', { targetId })
+    if (!found?.windowId) return false
+    const { windowId } = found
+    if (!await cdp(endpoint, 'Browser.setWindowBounds', { windowId, bounds: { windowState: 'normal' } })) return false
+    if (!await cdp(endpoint, 'Browser.setWindowBounds', { windowId, bounds: { left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height } })) return false
+    await cdp(endpoint, 'Browser.setWindowBounds', { windowId, bounds: { windowState: 'fullscreen' } })
+    return true
+}
+
+/**
  * `di stage run` — what the autostart entry calls, and the only long-lived
  * thing `di stage` starts.
  *
- * It keeps the server up, keeps ONE kiosk alive on the assigned screen, holds
- * the machine awake for as long as it is itself alive, and writes what it found
- * to `<DI_HOME>/run/stage-status.json` on every tick. It never changes a
- * setting on the OS: everything it holds is dropped the moment it exits, so
- * `leave` has nothing to restore and a crash leaves no residue.
+ * It keeps the server up, keeps one kiosk alive per assigned display, holds
+ * the machine awake for as long as it is itself alive, and writes what it
+ * found to `<DI_HOME>/run/stage-status.json` on every tick. It never changes
+ * a setting on the OS: everything it holds is dropped the moment it exits,
+ * so `leave` has nothing to restore and a crash leaves no residue.
+ *
+ * DISPLAYS ARE DATA. Each tick asks the OS what displays there are
+ * (displayProbe.mjs), reads which machine and screen every mapping in the
+ * space asks for (`output.show`), and `planDisplays` turns the two into one
+ * kiosk per assigned display — its own profile, its own debugging port, its
+ * own black hold page. A display that goes away closes its kiosk; one that
+ * appears gets its kiosk; cloned displays are told, never flipped. A mapping
+ * that names a display this machine does not have is one dim line in the
+ * status, not a crash. When no mapping names this machine at all, it is the
+ * one kiosk #513 shipped, unchanged.
  */
-export const runSupervisor = async ({ home, once = false, everyMs = RECONCILE_MS, log = () => {} }) => {
+export const runSupervisor = async ({ home, once = false, everyMs = RECONCILE_MS, log = () => {}, probe = probeDisplays }) => {
     const manifest = readManifest(home)
     if (!manifest) return { ok: false, reason: 'not-joined' }
     const sp = stagePaths(home)
@@ -503,28 +622,36 @@ export const runSupervisor = async ({ home, once = false, everyMs = RECONCILE_MS
     await fsp.mkdir(sp.run, { recursive: true })
     await fsp.writeFile(sp.stagePid, String(process.pid))
 
-    let browser = null
+    // One entry per kiosk, keyed by the plan's window key (a display id, or
+    // 'screen 1' in single mode). `holdShowing` is the target the hold page ON
+    // SCREEN was written with — a loaded page does not notice its file
+    // changing. `verified`/`corrected` are the placement: checked over CDP
+    // once the window answers, corrected once, then reported as found.
+    const kiosks = new Map()
     let wake = null
     let stopping = false
-    let holdContent = null
-    // The target the hold page ON SCREEN was written with. A page already
-    // loaded does not notice its file changing, so this is how the supervisor
-    // knows the black page in front of it is a black page that will move.
-    let holdShowing = null
+    let lastDisplays = null
+    let lastPlan = null
+    let clonedSaid = null
+    // Chromium's unit, learned from the first kiosk that answers: device
+    // pixels from the probe ÷ this = the CSS pixels a window is placed in.
+    let scale = 1
 
     // The kiosk is not necessarily OUR child: a supervisor that was restarted
     // finds a browser it did not start, and a second launch into the same
     // profile would only have opened a tab in it. So it is ended by the pid
     // Chromium itself wrote into the profile, and our own handle is a
     // shortcut, not the truth.
-    const stopBrowser = () => {
-        if (browser && browser.exitCode === null) { try { browser.kill('SIGTERM') } catch { /* gone */ } }
-        const pid = runningBrowserPid(sp.profile)
+    const stopKiosk = (kiosk) => {
+        if (kiosk.browser && kiosk.browser.exitCode === null) { try { kiosk.browser.kill('SIGTERM') } catch { /* gone */ } }
+        const pid = runningBrowserPid(kiosk.profileDir)
         if (pid) stopPid(pid)
-        browser = null
+        kiosk.browser = null
+        kiosk.verified = false
+        kiosk.corrected = false
     }
     const stopChildren = () => {
-        stopBrowser()
+        for (const kiosk of kiosks.values()) stopKiosk(kiosk)
         if (wake && wake.exitCode === null) { try { wake.kill('SIGTERM') } catch { /* gone */ } }
         wake = null
     }
@@ -541,104 +668,210 @@ export const runSupervisor = async ({ home, once = false, everyMs = RECONCILE_MS
         process.on('exit', () => stopChildren())
     }
 
+    const startServer = async () => {
+        log('the server is down — starting it')
+        try {
+            await runner.start({ home, port, host: manifest.lan ? '0.0.0.0' : '127.0.0.1', guests: false })
+        } catch (error) {
+            log(`could not start the server: ${String(error?.message || error)}`)
+        }
+    }
+    const startWake = () => {
+        const command = wakeCommand(process.platform, { pid: process.pid })
+        if (!command) return
+        try {
+            wake = spawn(command.command, command.args, { stdio: 'ignore', windowsHide: true })
+            wake.on('error', () => { wake = null })
+            log(`holding this machine awake with ${command.command}`)
+        } catch { wake = null }
+    }
+
     const tick = async () => {
         const serverAlive = await alive(home, port)
-        const target = serverAlive
-            ? await resolveTarget({ home, port, spaceId: manifest.space, project: manifest.project })
-            : { projectId: null, error: 'server-down' }
-        const targetUrl = target.projectId
-            ? outUrl({ base: publicUrl(home, port), spaceId: manifest.space, projectId: target.projectId })
-            : null
 
-        // The hold page carries the target inside it, so it is rewritten
-        // whenever the target moves — and it is always black either way.
-        const wanted = holdPage({
-            spaceId: manifest.space,
-            waitingFor: target.projectId ? hostOf(publicUrl(home, port)) : (target.error === 'none' ? 'a mapping in this space' : hostOf(String(manifest.from))),
-            targetUrl,
-            healthUrl: targetUrl ? `${publicUrl(home, port)}/serverXR/api/health` : null
-        })
-        if (wanted !== holdContent) {
-            await fsp.writeFile(sp.hold, wanted)
-            holdContent = wanted
+        // The displays, and what changed since last time. Said on the tick it
+        // happens; acted on below, where the plan no longer has the window.
+        const probed = probe()
+        const diff = displayDiff(lastDisplays || [], probed.displays)
+        if (lastDisplays) {
+            for (const display of diff.gone) log(`display ${display.label} went away — closing its kiosk`)
+            for (const display of diff.appeared) log(`display ${display.label} appeared${display.width ? ` (${display.width}×${display.height} at ${display.x},${display.y})` : ''}`)
         }
-        const holdUrl = urlOfFile(sp.hold)
+        lastDisplays = probed.displays
+        if (probed.cloned && clonedSaid !== probed.why) {
+            log(`cloned displays: ${probed.why} — di stage does not change display settings; un-mirror them in the OS to use both`)
+            clonedSaid = probed.why
+        }
+        if (!probed.cloned) clonedSaid = null
 
-        const pages = await readPages(DEBUG_PORT)
-        const page = pages[0] || null
-        // The kiosk is alive when it ANSWERS, not when a child handle says so.
-        // Launching into a profile that already has a browser returns
-        // immediately with exit code 0, which read as "dead" and opened a
-        // fresh tab on every tick until the screen was a stack of them.
-        const browserAlive = pages.length > 0
-        const wakeAlive = Boolean(wake) && wake.exitCode === null
+        const machineId = readMachineId(home)
+        const projects = serverAlive ? await readMapProjects({ home, port, spaceId: manifest.space }) : []
+        // With the server down the plan is whatever it was: the kiosks stay
+        // where they are and go black, rather than being closed and reopened
+        // on the single screen while the server restarts.
+        const plan = serverAlive
+            ? planDisplays({ projects, machineId, displays: probed.displays, project: manifest.project, debugPort: DEBUG_PORT })
+            : (lastPlan || planDisplays({ projects: [], machineId: null, displays: probed.displays, project: manifest.project, debugPort: DEBUG_PORT }))
+        if (serverAlive) lastPlan = plan
+        const target = plan.mode === 'single' ? plan.target : null
+        const targetError = !serverAlive ? 'server-down' : (target?.error || null)
 
-        const { actions } = reconcile({
-            serverAlive, browserAlive, wakeAlive, holdUrl, targetUrl,
-            pageUrl: page?.url || null,
-            holdCarriesTarget: holdShowing === targetUrl
-        })
+        // Kiosks whose display, or whose assignment, is no longer in the plan.
+        for (const [key, kiosk] of kiosks) {
+            if (plan.windows.some((window) => window.key === key)) continue
+            log(`no longer showing on ${kiosk.label} — closing its kiosk`)
+            stopKiosk(kiosk)
+            kiosks.delete(key)
+        }
 
-        for (const action of actions) {
-            if (action.do === 'start-server') {
-                log('the server is down — starting it')
-                try {
-                    await runner.start({ home, port, host: manifest.lan ? '0.0.0.0' : '127.0.0.1', guests: false })
-                } catch (error) {
-                    log(`could not start the server: ${String(error?.message || error)}`)
-                }
+        let serverStarted = false
+        const screens = []
+        for (const window of plan.windows) {
+            const kiosk = kiosks.get(window.key) || {
+                key: window.key, label: window.label, profileDir: path.join(sp.stage, window.profile), holdFile: path.join(sp.stage, window.hold),
+                browser: null, holdContent: null, holdShowing: null, verified: false, corrected: false, placedAt: null, units: null
             }
-            if (action.do === 'start-wake') {
-                const command = wakeCommand(process.platform, { pid: process.pid })
-                if (command) {
+            kiosks.set(window.key, kiosk)
+            const projectId = serverAlive ? window.projectId : (window.projectId || null)
+            const targetUrl = serverAlive && projectId
+                ? outUrl({ base: publicUrl(home, port), spaceId: manifest.space, projectId })
+                : null
+
+            // The hold page carries the target inside it, so it is rewritten
+            // whenever the target moves — and it is always black either way.
+            const wanted = holdPage({
+                spaceId: manifest.space,
+                waitingFor: targetUrl ? hostOf(publicUrl(home, port)) : (targetError === 'none' ? 'a mapping in this space' : hostOf(String(manifest.from))),
+                targetUrl,
+                healthUrl: targetUrl ? `${publicUrl(home, port)}/serverXR/api/health` : null
+            })
+            if (wanted !== kiosk.holdContent) {
+                await fsp.writeFile(kiosk.holdFile, wanted)
+                kiosk.holdContent = wanted
+            }
+            const holdUrl = urlOfFile(kiosk.holdFile)
+
+            const pages = await readPages(window.debugPort)
+            const page = pages[0] || null
+            // The kiosk is alive when it ANSWERS, not when a child handle says
+            // so. Launching into a profile that already has a browser returns
+            // immediately with exit code 0, which read as "dead" and opened a
+            // fresh tab on every tick until the screen was a stack of them.
+            const browserAlive = pages.length > 0
+            const wakeAlive = Boolean(wake) && wake.exitCode === null
+
+            const { actions } = reconcile({
+                serverAlive, browserAlive, wakeAlive, holdUrl, targetUrl,
+                pageUrl: page?.url || null,
+                holdCarriesTarget: kiosk.holdShowing === targetUrl
+            })
+
+            for (const action of actions) {
+                if (action.do === 'start-server' && !serverStarted) { serverStarted = true; await startServer() }
+                if (action.do === 'start-wake' && !(wake && wake.exitCode === null)) startWake()
+                if (action.do === 'start-browser' || action.do === 'restart-browser') {
+                    if (action.do === 'restart-browser') {
+                        log(`putting the kiosk on ${window.label} back on the hold page — ${action.why}`)
+                        stopKiosk(kiosk)
+                        await waitFor(1500)
+                    }
+                    await patchPreferences(kiosk.profileDir)
+                    const args = browserArgs({
+                        profileDir: kiosk.profileDir, url: action.url || holdUrl, debugPort: window.debugPort,
+                        window: window.display ? toWindowUnits(window.display, scale) : null
+                    })
                     try {
-                        wake = spawn(command.command, command.args, { stdio: 'ignore', windowsHide: true })
-                        wake.on('error', () => { wake = null })
-                        log(`holding this machine awake with ${command.command}`)
-                    } catch { wake = null }
+                        kiosk.browser = spawn(manifest.browser, args, { stdio: 'ignore', windowsHide: true })
+                        kiosk.holdShowing = targetUrl
+                        kiosk.verified = false
+                        kiosk.corrected = false
+                        kiosk.placedAt = null
+                        kiosk.browser.on('error', () => { kiosk.browser = null })
+                        log(`kiosk up on ${window.label}${window.display ? ` at ${window.display.x},${window.display.y} ${window.display.width}×${window.display.height}${scale !== 1 ? ` (÷${scale} for Chromium)` : ''}` : ''} — ${action.url || holdUrl}`)
+                    } catch (error) {
+                        log(`could not start the browser: ${String(error?.message || error)}`)
+                        kiosk.browser = null
+                    }
                 }
             }
-            if (action.do === 'start-browser' || action.do === 'restart-browser') {
-                if (action.do === 'restart-browser') {
-                    log(`putting the kiosk back on the hold page — ${action.why}`)
-                    stopBrowser()
-                    await waitFor(1500)
+
+            // Did it land where it was sent? Asked once the window answers,
+            // corrected ONCE, and after that reported rather than fought —
+            // a window that will not sit on its display is a fact for the
+            // status line, not a loop. Bounds are compared in both the
+            // probe's unit and Chromium's (see toWindowUnits), and the one
+            // that matched is written down.
+            let placement = null
+            if (window.display && browserAlive && page?.id) {
+                if (!kiosk.verified) {
+                    const dpr = await pageScale(page)
+                    if (dpr) scale = dpr
+                    const bounds = await windowBounds(window.debugPort, page.id)
+                    const verdict = placementVerdict(bounds, window.display, scale)
+                    if (bounds && verdict.ok) {
+                        kiosk.verified = true
+                        kiosk.placedAt = bounds
+                        kiosk.units = verdict.units
+                        log(`${window.label}: the kiosk sits on ${bounds.left},${bounds.top} ${bounds.width}×${bounds.height} — as asked (${verdict.units})`)
+                    } else if (bounds && !kiosk.corrected) {
+                        kiosk.corrected = true
+                        kiosk.placedAt = bounds
+                        const wanted = toWindowUnits(window.display, scale)
+                        log(`${window.label}: the kiosk is at ${bounds.left},${bounds.top} ${bounds.width}×${bounds.height}, asked for ${wanted.x},${wanted.y} ${wanted.width}×${wanted.height} (CSS pixels at ×${scale}) — moving it once`)
+                        await placeWindow(window.debugPort, page.id, wanted)
+                    } else if (bounds) {
+                        kiosk.placedAt = bounds
+                    }
                 }
-                await patchPreferences(sp.profile)
-                const args = browserArgs({ profileDir: sp.profile, url: action.url || holdUrl, debugPort: DEBUG_PORT })
-                try {
-                    browser = spawn(manifest.browser, args, { stdio: 'ignore', windowsHide: true })
-                    holdShowing = targetUrl
-                    browser.on('error', () => { browser = null })
-                    log(`kiosk up on ${action.url || holdUrl}`)
-                } catch (error) {
-                    log(`could not start the browser: ${String(error?.message || error)}`)
-                    browser = null
-                }
+                placement = kiosk.verified
+                    ? { ok: true, units: kiosk.units || null, scale }
+                    : { ok: false, actual: kiosk.placedAt, scale, why: kiosk.corrected ? 'corrected once, still off' : 'not checked yet' }
             }
+
+            const out = readOutTitle(page?.title)
+            const onTarget = Boolean(targetUrl) && page?.url === targetUrl
+            const misplaced = placement && !placement.ok && kiosk.corrected && kiosk.placedAt
+            screens.push({
+                label: window.label,
+                projectId: projectId || null,
+                debugPort: window.debugPort,
+                display: window.display ? { x: window.display.x, y: window.display.y, width: window.display.width, height: window.display.height } : null,
+                placed: placement,
+                url: page?.url || null,
+                title: page?.title || null,
+                showing: onTarget && out.showing && !misplaced,
+                reason: out.reason,
+                why: !targetUrl
+                    ? (targetError === 'none' ? 'no mapping in this space yet'
+                        : targetError === 'many' ? `more than one mapping — name one with --project, or say which screen shows which on the desk (${(target?.ids || []).join(', ')})`
+                            : 'the server is down')
+                    : misplaced ? `the kiosk is at ${kiosk.placedAt.left},${kiosk.placedAt.top} ${kiosk.placedAt.width}×${kiosk.placedAt.height}, not on ${window.label} — corrected once, still off`
+                        : onTarget ? (out.reason ? `the page says ${out.reason}` : 'the page has not said yet')
+                            : 'holding'
+            })
+        }
+        for (const entry of plan.unplaced) {
+            screens.push({ label: entry.projectId, projectId: entry.projectId, debugPort: null, display: null, placed: null, url: null, title: null, showing: false, reason: null, why: entry.why })
+        }
+        // Nothing to show at all still needs the server and the wake hold.
+        if (!plan.windows.length) {
+            if (!serverAlive && !serverStarted) { serverStarted = true; await startServer() }
+            if (!(wake && wake.exitCode === null)) startWake()
         }
 
-        const out = readOutTitle(page?.title)
         await fsp.writeFile(sp.stageStatus, `${JSON.stringify({
             at: new Date().toISOString(),
             pid: process.pid,
             space: manifest.space,
+            machine: machineId,
             server: { alive: serverAlive, url: publicUrl(home, port) },
-            target: { projectId: target.projectId || null, error: target.error || null, url: targetUrl },
+            target: { projectId: target?.projectId || null, error: targetError, url: target?.projectId ? outUrl({ base: publicUrl(home, port), spaceId: manifest.space, projectId: target.projectId }) : null },
+            displays: { list: probed.displays, cloned: probed.cloned, why: probed.why, assumed: probed.assumed, note: probed.note, mode: plan.mode, scale },
             wake: { held: Boolean(wake) && wake.exitCode === null, how: wakeCommand(process.platform)?.command || null },
-            screens: [{
-                label: 'screen 1',
-                url: page?.url || null,
-                title: page?.title || null,
-                showing: Boolean(targetUrl) && page?.url === targetUrl && out.showing,
-                reason: out.reason,
-                why: !targetUrl ? (target.error === 'none' ? 'no mapping in this space yet' : target.error === 'many' ? `more than one mapping — name one with --project (${(target.ids || []).join(', ')})` : 'the server is down')
-                    : page?.url === targetUrl ? (out.reason ? `the page says ${out.reason}` : 'the page has not said yet')
-                        : 'holding'
-            }]
+            screens
         }, null, 2)}\n`)
 
-        return { serverAlive, targetUrl, actions }
+        return { serverAlive, plan, screens }
     }
 
     if (once) {
@@ -716,18 +949,34 @@ export const stageStatus = async (home) => {
         ? { ...manifest.autostart, present: exists(manifest.autostart.path) }
         : { kind: null, present: false, restartsOnFailure: false }
 
-    const pages = await readPages(DEBUG_PORT)
-    const page = pages[0] || null
-    const out = readOutTitle(page?.title)
-    const targetUrl = file?.target?.url || null
-    const screens = [{
-        label: 'screen 1',
-        url: page?.url || null,
-        title: page?.title || null,
-        showing: Boolean(page) && Boolean(targetUrl) && page.url === targetUrl && out.showing,
-        reason: out.reason,
-        why: !page ? 'no kiosk answering' : file?.screens?.[0]?.why || 'holding'
-    }]
+    // One row per kiosk the supervisor last planned — each on its own
+    // debugging port — asked live, plus the mappings it could not place, as
+    // the supervisor wrote them. A supervisor that never ran leaves the one
+    // screen #513 had, so the report is never empty.
+    const planned = Array.isArray(file?.screens) && file.screens.length
+        ? file.screens
+        : [{ label: 'screen 1', debugPort: DEBUG_PORT, projectId: file?.target?.projectId || null, why: null }]
+    const screens = []
+    for (const entry of planned) {
+        if (!entry.debugPort) {
+            screens.push({ label: entry.label, url: null, title: null, showing: false, reason: null, why: entry.why || 'not placed' })
+            continue
+        }
+        const page = (await readPages(entry.debugPort))[0] || null
+        const out = readOutTitle(page?.title)
+        const targetUrl = entry.projectId
+            ? outUrl({ base: publicUrl(home, port), spaceId: manifest.space, projectId: entry.projectId })
+            : (file?.target?.url || null)
+        const misplaced = entry.placed && entry.placed.ok === false && entry.placed.why === 'corrected once, still off'
+        screens.push({
+            label: entry.label,
+            url: page?.url || null,
+            title: page?.title || null,
+            showing: Boolean(page) && Boolean(targetUrl) && page.url === targetUrl && out.showing && !misplaced,
+            reason: out.reason,
+            why: !page ? 'no kiosk answering' : entry.why || 'holding'
+        })
+    }
 
     const rows = statusRows({
         joined: true,

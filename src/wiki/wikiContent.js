@@ -312,10 +312,10 @@ export const WIKI_ARTICLES = [
             'Nothing on the machine is permanently changed. The "do not sleep" is a request that lasts as long as the process — no power plan is edited, no setting is left behind. Everything else that join writes is recorded in one file, and di stage leave replays that list: the login entry, the follow, the one line it added to the settings, and the folder it made. Nothing it did not write is touched, and the space and your work stay exactly where they were.',
             'di stage status is the one screen to read from somewhere else: the server, the follow, which kind of autostart is in force, whether the machine is being held awake, and for each screen what it is showing — or, when it is not, the projection page\'s own reason for being black (no surfaces yet; every surface switched off). It exits with an error if any screen is not showing, so it works as a health check and not only as a look. Add --json for something that is not a person.',
             'What it deliberately does not do: sign the machine in, switch it on after a power cut, replace the desktop, install a browser, OBS or NDI, or make the network between the machines. Those are the venue\'s job, and a tool that pretended otherwise would be lying about what happens at 8pm.',
-            'Today one machine drives one screen, showing the single mapping in the space — or the one you name with --project. Two screens from one box is the next piece of work, and until it lands a second projector is still set up by hand.'
+            'Two screens from one box is a choice on the desk, not a script on the machine. In the projection desk, beside Output, Show on lists every machine that is in the space and each of its screens; pick one and that mapping opens on that screen, full-screen, on the machine you named — one for the projector, one for the laptop panel. The stage box checks where the window actually landed and puts it right once; a screen it does not have is one honest line in di stage status; unplug a display and its window closes, plug one in and it opens; two displays showing the same picture are reported, never switched. Leave Show on at any screen and the box does what it did before: the one mapping in the space, on the one screen.',
         ],
         tags: ['stage', 'projector', 'kiosk', 'venue', 'appliance', 'autostart', 'di stage', 'exhibition', 'installation', 'unattended', 'rig', 'mapping', 'show'],
-        updated: '2026-09-20'
+        updated: '2026-09-21'
     },
     {
         id: 'projection-mapping',

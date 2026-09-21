@@ -10,7 +10,7 @@ import { listProjects } from '../project/services/projectsApi.js'
 import { transportWarning } from './transportCeiling.js'
 import { lightingDeskPath, probeLightingDesk } from './lightingLink.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
-import { describeMachine, unresolvedInputs } from './mapMachines.js'
+import { describeMachine, showFromValue, showOptions, showValue, unresolvedInputs } from './mapMachines.js'
 import { buildStudioProjectPath, navigateToStudioPath } from '../studio/utils/studioRouting.js'
 import './mapSurface.css'
 
@@ -331,6 +331,16 @@ export default function MapSurface({ projectId, spaceId }) {
                         <span aria-hidden="true">x</span>
                         <input type="number" min="1" value={output.height}
                             onChange={(event) => setOutput({ output: { ...output, height: Number(event.target.value) || 1 } })} />
+                    </label>
+                    <label className="map-field map-field-inline" title="Which machine and screen the stage box puts this mapping on. Any screen: the one kiosk a stage machine already runs.">
+                        <span>Show on</span>
+                        <select value={showValue(output.show)} onChange={(event) => {
+                            const show = showFromValue(event.target.value, machines)
+                            const { show: _dropped, ...rest } = output
+                            setOutput({ output: show ? { ...rest, show } : rest })
+                        }}>
+                            {showOptions(machines, output.show).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        </select>
                     </label>
                     <label className="map-field map-field-inline">
                         <span>Grid</span>

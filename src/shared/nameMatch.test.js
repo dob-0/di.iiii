@@ -21,6 +21,10 @@ import { pickByLabel, pickByName } from './nameMatch.js'
 const require = createRequire(import.meta.url)
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const mirror = require(path.join(ROOT, 'shared/nameMatch.cjs'))
+// And the CLI's copy — `di stage run` matches a screen by the same rule, and
+// scripts/di cannot reach either of the other two from an installed layout
+// (see the note at the top of scripts/di/nameMatch.mjs).
+const cli = await import(path.join(ROOT, 'scripts/di/nameMatch.mjs'))
 
 const SOURCES = [
     { name: 'AYLMO (td_out_windows)', address: '10.10.10.2:5961' },
@@ -85,6 +89,7 @@ describe('the ESM copy and the CJS mirror agree', () => {
                     pickByName(list, name),
                     `pickByName(${JSON.stringify(list)}, ${JSON.stringify(name)})`
                 ).toEqual(mirror.pickByName(list, name))
+                expect(cli.pickByName(list, name), `cli pickByName(${JSON.stringify(list)}, ${JSON.stringify(name)})`).toEqual(pickByName(list, name))
             }
         }
     })
@@ -93,6 +98,7 @@ describe('the ESM copy and the CJS mirror agree', () => {
         const rows = [{ label: 'WIN (OBS)' }, { label: 'td' }]
         for (const name of NAMES) {
             expect(pickByLabel(rows, name)).toEqual(mirror.pickByLabel(rows, name))
+            expect(cli.pickByLabel(rows, name)).toEqual(pickByLabel(rows, name))
             expect(pickByName(rows, name, (row) => row?.label)).toEqual(mirror.pickByName(rows, name, (row) => row && row.label))
         }
     })

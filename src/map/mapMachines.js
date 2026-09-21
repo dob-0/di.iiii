@@ -126,3 +126,74 @@ export const unresolvedInputs = (surfaces = [], machines = []) => surfaces
         name: surface.name || surface.id,
         input: surface.source.ref || ''
     }))
+
+// ── which display shows this mapping ────────────────────────────────────────
+//
+// `output.show` names a machine and one of its screens (or 'all'). The desk
+// offers exactly what the machines hub has reported — each machine's screens
+// by label and size — because a screen the desk cannot see is a screen the
+// stage box will have to hunt for by whatever of label, index and size the
+// document kept. `di stage run` matches with the same order everywhere a
+// live input is named: exact label, contains, size, index (src/shared/nameMatch.js).
+
+const screensOf = (machine) => (machine?.devices || []).filter((device) => device.kind === 'screen')
+
+const ANY = ''
+const showKey = (machineId, screen) => `${machineId}::${screen === 'all' ? 'all' : screen}`
+
+/** The `<select>` value for a stored show, so the desk can show what the document says. */
+export const showValue = (show) => {
+    if (!show?.machine) return ANY
+    if (show.screen === 'all' || !show.screen) return showKey(show.machine, 'all')
+    return showKey(show.machine, Number.isInteger(show.screen.index) ? show.screen.index : (show.screen.label || 'all'))
+}
+
+/**
+ * Every choice the desk can offer: nothing (any screen — today's single
+ * kiosk), then per machine "all its screens" and each screen by name. A
+ * document that names a machine or screen no machine on the desk reports
+ * right now keeps its choice visible, marked, rather than silently snapping
+ * to "any".
+ */
+export const showOptions = (machines = [], show = null) => {
+    const options = [{ value: ANY, label: 'any screen' }]
+    for (const machine of machines) {
+        const who = machine.self ? `${machine.name} · this machine` : machine.name
+        const screens = screensOf(machine)
+        options.push({ value: showKey(machine.id, 'all'), label: `${who} · all screens` })
+        screens.forEach((screen, index) => {
+            const size = screen.width ? ` ${screen.width}×${screen.height}` : ''
+            options.push({ value: showKey(machine.id, index), label: `${who} · ${screen.label || `screen ${index + 1}`}${size}` })
+        })
+    }
+    const current = showValue(show)
+    if (current && !options.some((option) => option.value === current)) {
+        const screenText = show.screen === 'all' ? 'all screens' : (show.screen?.label || (Number.isInteger(show.screen?.index) ? `screen ${show.screen.index + 1}` : 'a screen'))
+        options.push({ value: current, label: `${show.name || show.machine.slice(0, 8)} · ${screenText} — not on the desk now` })
+    }
+    return options
+}
+
+/** The show to write for a chosen value, or null for "any screen". */
+export const showFromValue = (value, machines = []) => {
+    const text = String(value || '')
+    if (!text) return null
+    const at = text.lastIndexOf('::')
+    if (at < 0) return null
+    const machineId = text.slice(0, at)
+    const which = text.slice(at + 2)
+    const machine = machines.find((entry) => entry.id === machineId) || null
+    const base = { machine: machineId, ...(machine?.name ? { name: machine.name } : {}) }
+    if (which === 'all') return { ...base, screen: 'all' }
+    const index = Number(which)
+    const screen = Number.isInteger(index) ? screensOf(machine)[index] : null
+    if (!screen) return { ...base, screen: { label: which, index: null, size: null } }
+    return {
+        ...base,
+        screen: {
+            label: screen.label || '',
+            index,
+            size: screen.width && screen.height ? [screen.width, screen.height] : null
+        }
+    }
+}
