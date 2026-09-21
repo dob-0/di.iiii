@@ -29,7 +29,7 @@ import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { PLACE_DIR, parseArgs, num, say, warn, die, ensureDir, writeJson, run } from './common.mjs'
+import { PLACE_DIR, parseArgs, num, say, warn, die, ensureDir, writeJson, run, fmtBytes } from './common.mjs'
 
 const args = parseArgs()
 
@@ -80,6 +80,34 @@ export const parseStatusLines = (output = '') => output
 
 const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms) })
 
+// The frames go up in pieces.
+//
+// `colab upload` posts through Jupyter's contents API, which carries the file
+// base64'd inside a JSON body. A hall's worth of phone photos is ~100 MB and
+// the far end answers 500 and keeps nothing (seen, 2026-09-21). Split at the
+// door, send the pieces, and let reconstruct.py put them back together.
+export const CHUNK_BYTES = 16 * 1024 * 1024
+
+export const planChunks = (tarBytes, chunkBytes = CHUNK_BYTES) =>
+    Math.max(1, Math.ceil(tarBytes / chunkBytes))
+
+const uploadInPieces = (colabRun, session, tar, work, chunkBytes = CHUNK_BYTES) => {
+    const parts = ensureDir(path.join(work, 'parts'))
+    for (const stale of fs.readdirSync(parts)) fs.rmSync(path.join(parts, stale), { force: true })
+    run('split', ['-b', String(chunkBytes), '-d', '-a', '3', tar, path.join(parts, 'images.tar.')])
+    const names = fs.readdirSync(parts).sort()
+    say(`  ${fmtBytes(fs.statSync(tar).size)} in ${names.length} piece${names.length === 1 ? '' : 's'}`)
+    for (const [index, name] of names.entries()) {
+        const sent = colabRun(['upload', '-s', session, path.join(parts, name), `/content/parts/${name}`], { quiet: true })
+        if (sent.status !== 0) {
+            warn(sent.out.slice(0, 400))
+            return { ok: false, sent: index }
+        }
+        say(`    ${index + 1}/${names.length}`)
+    }
+    return { ok: true, sent: names.length }
+}
+
 // ── the bypass: a mesh already on this disk ───────────────────────────────────
 const useLocalObj = (work, objPath) => {
     const source = path.resolve(objPath)
@@ -124,7 +152,9 @@ const plan = (work, session, gpu) => {
         steps: [
             ['tar', ['-cf', tar, '-C', imagesDir, '.']],
             [COLAB, ['new', '-s', session, '--gpu', gpu]],
-            [COLAB, ['upload', '-s', session, tar, '/content/images.tar']],
+            ['split', ['-b', String(CHUNK_BYTES), '-d', '-a', '3', tar, `${path.join(work, 'parts')}/images.tar.`]],
+            [COLAB, ['upload', '-s', session, `${path.join(work, 'parts')}/images.tar.000`, '/content/parts/images.tar.000']],
+            ['(…one call per piece…)', []],
             [COLAB, ['exec', '-s', session, '-f', path.join(PLACE_DIR, 'reconstruct.py')]],
             ['(then, every --poll seconds)', [COLAB, 'exec', '-s', session, '-f', path.join(PLACE_DIR, 'reconstruct.py')].slice(1)],
             [COLAB, ['download', '-s', session, '/content/place/out/…', path.join(work, 'mesh')]],
@@ -207,8 +237,9 @@ const main = async () => {
     let downloaded = null
     try {
         say('Sending the frames up …')
-        if (colab(['upload', '-s', session, tar, '/content/images.tar']).status !== 0) {
-            throw new Error('The frames did not reach the box.')
+        const sending = uploadInPieces(colab, session, tar, work)
+        if (!sending.ok) {
+            throw new Error(`The frames did not reach the box (${sending.sent} pieces made it).`)
         }
 
         say('Starting Meshroom …')

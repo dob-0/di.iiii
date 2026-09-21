@@ -52,14 +52,29 @@ const extractVideo = (video, outDir, fps) => {
     // loses exactly the edges the matcher is looking for. Decoding stays on
     // the CPU on purpose: NVENC encodes, it does not make a sharper frame,
     // and the GPU is wanted elsewhere.
-    run('ffmpeg', [
+    //
+    // -pix_fmt yuvj420p is not decoration. A phone's HEVC clip is usually
+    // limited-range yuv420p, and ffmpeg 9's mjpeg encoder refuses anything
+    // that is not full range — the extraction fails outright and the video
+    // silently contributes nothing. Saying the pixel format converts it.
+    const base = [
         '-hide_banner', '-loglevel', 'error', '-nostdin',
         '-i', video,
-        '-vf', `fps=${fps}`,
-        '-qscale:v', '2',
+        '-vf', `fps=${fps}`
+    ]
+    const attempt = run('ffmpeg', [
+        ...base, '-pix_fmt', 'yuvj420p', '-qscale:v', '2',
         path.join(outDir, 'frame-%05d.jpg')
-    ])
-    return fs.readdirSync(outDir).filter((name) => name.endsWith('.jpg')).sort()
+    ], { allowFailure: true, stdio: 'pipe' })
+    if (attempt.status !== 0) {
+        // Some codec/range combinations still refuse JPEG. PNG always works;
+        // it costs disk, and disk is cheaper than a lost walk round the hall.
+        warn(`    (JPEG frames refused — writing PNG instead for ${path.basename(video)})`)
+        run('ffmpeg', [...base, path.join(outDir, 'frame-%05d.png')])
+    }
+    return fs.readdirSync(outDir)
+        .filter((name) => name.endsWith('.jpg') || name.endsWith('.png'))
+        .sort()
         .map((name) => path.join(outDir, name))
 }
 

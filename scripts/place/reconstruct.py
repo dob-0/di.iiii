@@ -91,8 +91,32 @@ def tail(path, lines=12):
         return []
 
 
+PARTS_DIR = '/content/parts'
+
+
+def assemble_tar():
+    """Put the uploaded pieces back together.
+
+    The frames arrive split: `colab upload` goes through Jupyter's contents
+    API, which base64s the whole file into one JSON body, and a hall's worth
+    of photos answers 500 (2026-09-21). Each piece is small enough to land.
+    """
+    if os.path.exists(IMAGES_TAR):
+        return
+    if not os.path.isdir(PARTS_DIR):
+        raise SystemExit(f'no {IMAGES_TAR} and no {PARTS_DIR} on this VM')
+    names = sorted(name for name in os.listdir(PARTS_DIR) if 'images.tar.' in name)
+    if not names:
+        raise SystemExit(f'{PARTS_DIR} is empty — nothing to put together')
+    with open(IMAGES_TAR, 'wb') as whole:
+        for name in names:
+            with open(os.path.join(PARTS_DIR, name), 'rb') as piece:
+                shutil.copyfileobj(piece, whole)
+
+
 def unpack_images():
     os.makedirs(IMAGES_DIR, exist_ok=True)
+    assemble_tar()
     if not os.path.exists(IMAGES_TAR):
         raise SystemExit(f'no {IMAGES_TAR} on this VM — upload it first')
     with tarfile.open(IMAGES_TAR) as archive:

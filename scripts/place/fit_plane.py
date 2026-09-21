@@ -191,8 +191,15 @@ def find_floor_plane(points, tolerance_fraction=0.006):
 
 
 def quaternion_from_matrix(matrix):
-    """Rotation matrix (rows = the new axes) → quaternion [x, y, z, w]."""
-    m = np.asarray(matrix, dtype=np.float64).T   # columns = new axes
+    """Rotation matrix → quaternion [x, y, z, w].
+
+    `matrix` is the rotation itself: the one that takes a model point to a
+    room point, v_room = matrix @ v_model. The basis built above has the
+    room's axes as its ROWS, which is exactly that matrix — transposing it
+    here once gave the inverse turn, and the room arrived rotated the wrong
+    way and floating fourteen metres under the floor (2026-09-21).
+    """
+    m = np.asarray(matrix, dtype=np.float64)
     trace = m[0, 0] + m[1, 1] + m[2, 2]
     if trace > 0:
         scale = np.sqrt(trace + 1.0) * 2

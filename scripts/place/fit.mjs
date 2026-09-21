@@ -35,7 +35,7 @@ import path from 'node:path'
 
 import { NodeIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
-import { dequantize } from '@gltf-transform/functions'
+import { dequantize, meshopt } from '@gltf-transform/functions'
 import { MeshoptEncoder, MeshoptDecoder } from 'meshoptimizer'
 
 import { PLACE_DIR, parseArgs, num, say, warn, die, writeJson, findPython, runPythonJson } from './common.mjs'
@@ -82,25 +82,60 @@ export const chooseScale = ({ bounds, door, scaleEdge, edge, doorGuess }) => {
     return { scale: 1, source: 'none', note: 'nobody said how big the room is, so it is in its own units' }
 }
 
-// trimesh cannot read EXT_meshopt_compression, and crush.mjs writes it. So a
-// plain copy is made for the measuring — same vertices, no extension — and
-// thrown away after. The shipped GLB is never touched.
-const plainCopyFor = async (glb, outDir) => {
+// One document, measured and then bent.
+//
+// It has to be ONE. The mesh is read for measuring as a plain, dequantized
+// copy — trimesh cannot read EXT_meshopt_compression, and meshopt stores
+// positions as integers with the room's real size hidden on a node. Undoing
+// that CHANGES the node transforms. Fitting against the plain copy's world
+// and then baking the answer into the compressed file's different node tree
+// put the room fourteen metres under the floor, at an angle (2026-09-21).
+//
+// So: dequantize once, measure that, bend that, write that.
+const openForFitting = async (glb, outDir) => {
     const io = new NodeIO()
         .registerExtensions(ALL_EXTENSIONS)
         .registerDependencies({ 'meshopt.encoder': MeshoptEncoder, 'meshopt.decoder': MeshoptDecoder })
     const document = await io.read(glb)
     const compression = document.getRoot().listExtensionsUsed()
         .find((extension) => extension.extensionName === 'EXT_meshopt_compression')
-    if (!compression) return { file: glb, temporary: false }
-    compression.dispose()
-    // Meshopt packs positions as integers and puts the real size on the node
-    // as a scale. Undo that too: measuring a room whose vertices run 0..65535
-    // gives a doorway 65 thousand units tall (it did, 2026-09-21).
+    if (compression) compression.dispose()
     await document.transform(dequantize())
-    const copy = path.join(outDir, 'fit-input.glb')
-    await io.write(copy, document)
-    return { file: copy, temporary: true }
+    const measurable = path.join(outDir, 'fit-input.glb')
+    await io.write(measurable, document)
+    return { io, document, measurable }
+}
+
+// Bake the fit INTO the model, so the room's own file already stands upright,
+// metric and centred on its floor.
+//
+// The alternative — leaving the numbers on the entity — looked equivalent and
+// was not: di.iiii frames a room's arrival from where its entities ARE, and a
+// model entity carrying a position of (-6.3, -9.8, -2.7) to cancel out the
+// reconstruction's offset aims the opening shot at empty space. A visitor got
+// a black screen with a room somewhere behind them (seen, 2026-09-21). It also
+// means anyone opening this room in Studio sees a model at the origin with
+// scale 1, which is what they would expect.
+const bakeFit = async ({ io, document }, out, fit) => {
+    const root = document.getRoot()
+    const scene = root.getDefaultScene() || root.listScenes()[0]
+    if (!scene) return null
+    const holder = document.createNode('place-fit')
+        .setTranslation(fit.position)
+        .setRotation(fit.quaternion)
+        .setScale([fit.scale, fit.scale, fit.scale])
+    // listChildren() hands back a live view, so take a copy before moving any.
+    for (const child of [...scene.listChildren()]) {
+        scene.removeChild(child)
+        holder.addChild(child)
+    }
+    scene.addChild(holder)
+    // Pack it again on the way out: the room ships compressed, exactly as
+    // crush.mjs left it, with the fit now part of the file.
+    await MeshoptEncoder.ready
+    await document.transform(meshopt({ encoder: MeshoptEncoder, level: 'high' }))
+    await io.write(out, document)
+    return out
 }
 
 const main = async () => {
@@ -113,14 +148,13 @@ const main = async () => {
 
     const python = findPython(['numpy', 'trimesh'])
     say(`Looking for the floor in ${path.basename(glb)} …`)
-    const readable = await plainCopyFor(glb, outDir)
+    const opened = await openForFitting(glb, outDir)
     const found = runPythonJson(python, path.join(PLACE_DIR, 'fit_plane.py'), {
-        glb: readable.file,
+        glb: opened.measurable,
         samples: num(args.samples, 200000),
         iterations: num(args.iterations, 400),
         flip: Boolean(args.flip)
     })
-    if (readable.temporary) fs.rmSync(readable.file, { force: true })
 
     const percent = (found.floor.inlierFraction * 100).toFixed(1)
     say(`  the largest flat surface holds ${percent}% of the mesh`)
@@ -174,6 +208,10 @@ const main = async () => {
         walkable,
         confidence: found.confidence
     })
+    const fitted = await bakeFit(opened, path.join(outDir, 'place-fitted.glb'), fit)
+    fs.rmSync(opened.measurable, { force: true })
+    record.fittedGlb = fitted
+    record.bakedIn = Boolean(fitted)
     const out = path.join(outDir, 'place.json')
     writeJson(out, record)
 
