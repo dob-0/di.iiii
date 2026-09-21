@@ -153,6 +153,7 @@ const COPY_FILES = [
     'src/studio/components/SpaceHub.jsx',
     'src/studio/components/StudioCodeSpaceDirector.jsx',
     'src/studio/components/StudioControlCluster.jsx',
+    'src/studio/components/StudioCueStrip.jsx',
     'src/studio/components/StudioEditor.jsx',
     'src/studio/components/StudioGraphSurface.jsx',
     'src/studio/components/StudioHub.jsx',

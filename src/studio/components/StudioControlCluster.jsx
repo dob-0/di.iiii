@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { usePanelDrag } from '../../hooks/usePanelDrag.js'
+import StudioCueStrip from './StudioCueStrip.jsx'
 
 // Five scene windows, one per job: add things, edit the scene, configure the
 // world, ship it, write code — plus Projects, the space-level window for
@@ -43,6 +44,12 @@ export default function StudioControlCluster({
     // this machine — which is every hosted di.iiii — and then the button is not drawn.
     rigMirrorOn = false,
     onToggleRigMirror = null,
+    // The project's cues, fired from here as well as from the projection tool
+    // — one key, the whole stage. Empty on a project that has none, and then
+    // the section is not drawn at all.
+    cues = [],
+    liveCueId = null,
+    onFireCue = null,
     // Jam mode (communal open-jam project): `panelKeys` narrows the Windows
     // row, `minimal` trims power-user chrome (Arrange, Hub, View live), and
     // `onToggleAllTools` renders the escape hatch between Simple ⇄ All tools.
@@ -164,6 +171,19 @@ export default function StudioControlCluster({
                                 )}
                             </div>
                         </div>
+
+                        {!minimal && onFireCue && cues.length > 0 && (
+                            <div className="scc-section">
+                                <div className="scc-section-label">Cues</div>
+                                <StudioCueStrip
+                                    cues={cues}
+                                    liveCueId={liveCueId}
+                                    onFire={onFireCue}
+                                    className="scc-buttons"
+                                    buttonClassName="scc-btn"
+                                />
+                            </div>
+                        )}
 
                         {(canVr || canAr) && (
                             <div className="scc-section">

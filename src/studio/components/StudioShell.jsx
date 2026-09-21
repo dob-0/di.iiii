@@ -4,6 +4,7 @@ import StudioInspector from './StudioInspector.jsx'
 import StudioViewportLayout from './StudioViewportLayout.jsx'
 import StudioFloatingPanel from './StudioFloatingPanel.jsx'
 import StudioControlCluster from './StudioControlCluster.jsx'
+import StudioCueStrip from './StudioCueStrip.jsx'
 import StudioProjectsPanel from './StudioProjectsPanel.jsx'
 import StudioQuickInsert from './StudioQuickInsert.jsx'
 import { useStudioPanelState } from '../hooks/useStudioPanelState.js'
@@ -154,6 +155,12 @@ export default function StudioShell({
     onTransformCancel,
     editHistory = null,
     onHistoryJump,
+    // mappingState.cues, and the one way to fire one. The same cues the
+    // projection tool lists; firing from here reaches the wall and the
+    // lighting desk by exactly the same path.
+    cues = [],
+    liveCueId = null,
+    onFireCue = null,
 }) {
     const persistedWorkspace = useMemo(() => loadStudioWorkspace(), [])
     const { open, toggle, isOpen } = useStudioPanelState(migratePanelIds(persistedWorkspace?.open))
@@ -625,6 +632,9 @@ export default function StudioShell({
                         onShowHelp={() => setShowHelp(true)}
                         rigMirrorOn={rigMirror.on}
                         onToggleRigMirror={rigMirror.available ? rigMirror.toggle : null}
+                        cues={cues}
+                        liveCueId={liveCueId}
+                        onFireCue={onFireCue}
                         panelKeys={jamMinimal ? ['create'] : null}
                         minimal={jamMinimal}
                         allTools={jamAllTools}
@@ -691,6 +701,19 @@ export default function StudioShell({
                             </div>
                             <div className="smb-sheet-body">{panelBodies[mobileSheet]}</div>
                         </div>
+                    )}
+                    {/* On a phone the control cluster is not drawn at all, so the
+                        strip rides just above the bottom bar — the one band of a
+                        390px screen a thumb reaches without regripping. Hidden
+                        while a sheet is open, which occupies the same band. */}
+                    {!jamMinimal && onFireCue && !mobileSheet && (
+                        <StudioCueStrip
+                            cues={cues}
+                            liveCueId={liveCueId}
+                            onFire={onFireCue}
+                            className="smb-cues"
+                            buttonClassName="smb-top-btn"
+                        />
                     )}
                     <nav className="smb-nav" aria-label="Studio windows">
                         {mobilePanels.map(([id, label]) => (

@@ -20,6 +20,7 @@ import { buildAppSpacePath, buildPublicProjectPath } from '../../utils/spaceRout
 import { buildSpaceProjectsPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { buildRawProjectPath } from '../../raw/utils/rawRouting.js'
 import { buildMapPath } from '../../map/mapRouting.js'
+import { useStudioCues } from '../hooks/useStudioCues.js'
 import { getPointsBoundingSphere } from '../../utils/cameraFraming.js'
 import StudioShell from './StudioShell.jsx'
 import AssetOptimizationDialog from './AssetOptimizationDialog.jsx'
@@ -125,6 +126,15 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     })
     const { requestDelete, deleteConfirm } = useDeleteConfirm()
     const document = state.document
+    // The project's cues, fired from the 3D scene with the projection tool's
+    // own number keys and through its own firing path. Number keys are free in
+    // Studio; see src/studio/hooks/useStudioCues.js for the one thing that
+    // takes them and why it still wins.
+    const { cues, liveCueId, fireCue } = useStudioCues({
+        projectId,
+        document,
+        applyLocalOps
+    })
     const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
     const { assets: spaceAssets, refresh: refreshSpaceAssets } = useSpaceAssets(resolvedSpaceId)
     // useDriveImport counts result.entries, the routes answer with .assets
@@ -1138,6 +1148,9 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onBackToHub={() => navigateToStudioPath(buildSpaceProjectsPath(resolvedSpaceId))}
             onOpenNodeEditor={() => navigateToStudioPath(buildRawProjectPath(projectId, resolvedSpaceId))}
             onOpenProjection={() => navigateToStudioPath(buildMapPath(resolvedSpaceId, projectId))}
+            cues={cues}
+            liveCueId={liveCueId}
+            onFireCue={fireCue}
             onCameraViewChange={handleCameraViewChange}
             onTransformCommit={handleTransformCommit}
             transformOp={transformOp}

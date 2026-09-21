@@ -1586,3 +1586,15 @@
     color: var(--di-text-muted);
     padding: var(--di-space-1) var(--di-space-2);
 }
+
+/* The cue strip's key badge. A cue that is not up is not news, so the number
+   sits dimmer than the name it belongs to and never takes the eye off the
+   scene behind the cluster. The button itself is an ordinary .scc-btn — the
+   strip wears the cluster's chrome rather than inventing a third look. */
+.scue-key {
+    display: inline-block;
+    min-width: 8px;
+    margin-right: var(--di-space-1);
+    color: rgba(255, 255, 255, 0.35);
+    font-variant-numeric: tabular-nums;
+}
