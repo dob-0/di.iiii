@@ -80,6 +80,14 @@ export const parseStatusLines = (output = '') => output
 
 const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms) })
 
+// A poll is one question and one line back, so it gets minutes, not the
+// twenty an upload is allowed. Colab's kernel websocket wedges: a poll was
+// seen hanging for twelve minutes while the reconstruction itself carried on
+// perfectly well beside it (2026-09-21). With the default timeout a single
+// wedged socket eats a fifth of the whole job's budget; with this it costs
+// one poll and the next one reconnects.
+export const POLL_TIMEOUT_MS = 4 * 60_000
+
 // The frames go up in pieces.
 //
 // `colab upload` posts through Jupyter's contents API, which carries the file
@@ -262,9 +270,14 @@ const main = async () => {
         let result = null
         while (Date.now() < deadline) {
             await sleep(pollSeconds * 1000)
-            const poll = colab(['exec', '-s', session, '-f', path.join(PLACE_DIR, 'reconstruct.py')], { quiet: true })
+            const poll = colab(['exec', '-s', session, '-f', path.join(PLACE_DIR, 'reconstruct.py')], {
+                quiet: true,
+                timeout: POLL_TIMEOUT_MS
+            })
             const latest = parseStatusLines(poll.out).pop()
             if (!latest) {
+                // A wedged websocket, not a dead job: the reconstruction runs
+                // detached and does not care that we lost the line to it.
                 warn('  (no answer from the box — asking again)')
                 continue
             }
