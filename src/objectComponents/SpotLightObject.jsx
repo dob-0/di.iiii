@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react'
+import { AdditiveBlending, DoubleSide } from 'three'
 import { spotTargetOffset } from '../project/viewport/spotLightAim.js'
+import { beamIsVisible, spotBeamShape } from './spotBeam.js'
 
 // A spot light that actually points where the entity is turned.
 //
@@ -25,16 +27,29 @@ import { spotTargetOffset } from '../project/viewport/spotLightAim.js'
 // portals) and LiveProjectScene (published rooms, walk mode) keep separate
 // entity switches, and that duplication has shipped drift twice already.
 // The marker mesh is NOT here -- only the editor draws one.
+// `beam` is the entity's `components.beam` -- absent in every room published
+// before this existed, and absent means no cone, so nothing already out there
+// changes. `castShadow` comes from the room's render settings, not from the
+// lamp: shadows are a decision about the whole stage.
 export default function SpotLightObject({
     color = '#ffffff',
     intensity = 2,
     distance = 20,
     angle = 0.52,
     penumbra = 0.2,
-    decay = 2
+    decay = 2,
+    beam = null,
+    castShadow = false,
+    shadowMapSize = 1024
 }) {
     const lightRef = useRef(null)
     const targetRef = useRef(null)
+    const showBeam = beamIsVisible(beam)
+    const throwShape = spotBeamShape({ distance, angle, intensity, haze: beam?.haze })
+    // The shadow camera is the lamp's own throw: anything past its reach is
+    // unlit anyway, and a far plane at the scene's scale wastes the whole depth
+    // buffer on empty air and gives a blocky, self-shadowing mess up close.
+    const shadowFar = Math.max(1, throwShape.length)
 
     useEffect(() => {
         const light = lightRef.current
@@ -60,8 +75,36 @@ export default function SpotLightObject({
                 angle={angle}
                 penumbra={penumbra}
                 decay={decay}
+                castShadow={castShadow}
+                shadow-mapSize-width={shadowMapSize}
+                shadow-mapSize-height={shadowMapSize}
+                shadow-camera-near={0.5}
+                shadow-camera-far={shadowFar}
+                shadow-bias={-0.0008}
+                shadow-normalBias={0.02}
             />
             <object3D ref={targetRef} position={spotTargetOffset()} />
+            {showBeam ? (
+                <mesh
+                    position={throwShape.position}
+                    // Never in the way of a click: the cone is as wide as the
+                    // throw, and a selectable one would swallow every pick in
+                    // the Studio for whatever stands inside the beam.
+                    raycast={() => null}
+                >
+                    <coneGeometry args={[throwShape.radius, throwShape.length, 24, 1, true]} />
+                    <meshBasicMaterial
+                        color={color}
+                        transparent
+                        opacity={throwShape.opacity}
+                        blending={AdditiveBlending}
+                        depthWrite={false}
+                        side={DoubleSide}
+                        toneMapped={false}
+                        fog={false}
+                    />
+                </mesh>
+            ) : null}
         </>
     )
 }

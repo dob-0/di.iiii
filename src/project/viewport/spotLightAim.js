@@ -85,3 +85,79 @@ export const spotAimDirection = (rotation) => {
     const len = Math.hypot(x, y, z) || 1
     return [x / len, y / len, z / len]
 }
+
+// ---------------------------------------------------------------------------
+// PAN AND TILT — the two numbers a lighting person actually aims with.
+//
+// A rig is aimed in the language of the fixture: TILT is how far the lamp has
+// been swung off straight-down (0 = dead down on the deck, 90 = flat along the
+// floor, past 90 = an uplight pointing back up), and PAN is which way round the
+// vertical that swing is pointed (0 = toward -Z, the way the room's default
+// camera looks; positive turns anticlockwise seen from above). Degrees, because
+// nobody on a ladder thinks in radians.
+//
+// Underneath there is only `components.transform.rotation` -- no new field, no
+// new op, nothing for an old document to be missing. This module converts, and
+// it is the ONLY place the conversion is written down.
+//
+// Why pan is not simply rotation.y: under three.js's XYZ euler order the spot's
+// forward vector IS the Y axis, so yaw cannot move the beam at all (pinned in
+// spotLightAim.test.js). Pan therefore has to be spent on rotation.z and tilt
+// shared between rotation.x and rotation.z. Solving
+//   d(pan, tilt) = (-sin t sin p, -cos t, -sin t cos p)
+// against the direction this module already defines for a rotation gives
+//   rotation.z = -asin(sin t sin p)
+//   rotation.x =  atan2(sin t cos p, cos t)
+// which is what rotationFromPanTilt writes, with rotation.y set to 0.
+//
+// The yaw has to go, and that is worth stating because the existing note says
+// yaw is inert. It is inert ONLY while roll is zero: the spot's forward vector
+// starts along Y, so Ry (applied second, after Rz) does nothing to it -- but the
+// moment Rz has tipped the vector off the Y axis, Ry turns it round the vertical
+// like a pan. `spotAimDirection([0,1.2,0.8])` and `spotAimDirection([0,0,0.8])`
+// are two different beams at the same height. So pan/tilt is the canonical
+// spelling of an aim and it spells yaw 0; leaving an authored yaw in place would
+// mean the beam did not land where the pan said.
+export const RAD_TO_DEG = 180 / Math.PI
+export const DEG_TO_RAD = Math.PI / 180
+
+const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n))
+const finite = (n, fallback = 0) => (Number.isFinite(Number(n)) ? Number(n) : fallback)
+// Float noise only: asin/atan2 hand back 44.99999999999999, and a person reading
+// an inspector should see 45. Four places is far finer than any lamp is aimed.
+const tidy = (n) => Math.round(n * 1e4) / 1e4 + 0
+// Radians are what the renderer consumes, so they are only cleaned of the last
+// bits of float dust -- rounding them as hard as the degrees a person reads
+// would show up as a tilt of 90.0002 on the way back.
+const tidyRad = (n) => Math.round(n * 1e9) / 1e9 + 0
+
+/**
+ * Where a spot light is aimed, in the fixture's own language.
+ *
+ * @param {[number, number, number]} [rotation] euler XYZ, radians
+ * @returns {{ pan: number, tilt: number }} degrees; tilt 0..180, pan -180..180
+ */
+export const panTiltFromRotation = (rotation) => {
+    const [x, y, z] = spotAimDirection(rotation)
+    const tilt = Math.acos(clamp(-y, -1, 1))
+    // Straight down (or straight up) has no direction round the vertical to
+    // report -- every pan gives the same beam. 0 rather than a number made up
+    // out of float dust.
+    const flat = Math.sin(tilt)
+    const pan = Math.abs(flat) < 1e-9 ? 0 : Math.atan2(-x, -z)
+    return { pan: tidy(pan * RAD_TO_DEG), tilt: tidy(tilt * RAD_TO_DEG) }
+}
+
+/**
+ * The rotation that aims a spot light at a given pan and tilt.
+ *
+ * @param {{ pan?: number, tilt?: number }} aim degrees
+ * @returns {[number, number, number]} euler XYZ, radians, yaw 0
+ */
+export const rotationFromPanTilt = ({ pan, tilt } = {}) => {
+    const p = finite(pan) * DEG_TO_RAD
+    const t = clamp(finite(tilt), 0, 180) * DEG_TO_RAD
+    const rz = -Math.asin(clamp(Math.sin(t) * Math.sin(p), -1, 1))
+    const rx = Math.atan2(Math.sin(t) * Math.cos(p), Math.cos(t))
+    return [tidyRad(rx), 0, tidyRad(rz)]
+}
