@@ -97,6 +97,13 @@
     --di-card-ground-2: #120c06;
     --di-card-frame: #5c3a0f;
     --di-card-ink: #8f5a17;
+    /* A sentence read UNDER a field rather than on a wall — a licence line, a
+       note saying what a name is for. Warm and dim like the card above, but
+       lit enough to read on a screen, where the card's ink is deliberately
+       too dark. The link is the same warmth with the dimming taken off.
+       Never white: any of these sheets can end up on a projector. */
+    --di-note-ink: rgba(255, 196, 140, 0.62);
+    --di-note-link: rgba(255, 176, 96, 0.95);
     /* The accent's two tints: a line you can see, and a wash you can barely
        see. Written out by hand as rgba(77, 249, 255, …) in five stylesheets. */
     --di-cyan-wash: rgba(77, 249, 255, 0.06);

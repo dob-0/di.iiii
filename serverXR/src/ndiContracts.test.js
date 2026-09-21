@@ -150,6 +150,27 @@ describe('serverXR with no koffi installed', () => {
     expect(mjpg.status).toBe(503)
   })
 
+  it('refuses to SEND a picture without pretending it went anywhere', async () => {
+    // A page may post frames to a di.iiii that has no runtime — it cannot know before it
+    // asks. The refusal has to name the reason, because "install the NDI runtime" is the
+    // whole fix and a bare 503 sends someone hunting through a firewall instead.
+    const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x01])
+    const res = await fetch(`${server.baseUrl}/ndi/out.jpg?name=wall`, {
+      method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: jpeg
+    })
+    expect(res.status).toBe(503)
+    expect((await res.json()).reason).toBe('no-koffi')
+  })
+
+  it('still lists its outputs — an empty list, honestly', async () => {
+    const res = await fetch(`${server.baseUrl}/ndi/api/outputs`)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.available).toBe(false)
+    expect(body.reason).toBe('no-koffi')
+    expect(body.outputs).toEqual([])
+  })
+
   it('leaves the rest of the server exactly as it was — /api/config still answers', async () => {
     const res = await fetch(`${server.baseUrl}/api/config`)
     expect(res.status).toBe(200)

@@ -56,6 +56,10 @@ export default function TopInsidePanel({ node, machines = [], top = 0, onPatchVa
                     <CameraSection node={node} report={report} onPatchValues={onPatchValues} />
                 ) : null}
 
+                {operator.attribution ? (
+                    <SendSection node={node} operator={operator} report={report} where={where} />
+                ) : null}
+
                 <ShaderSection node={node} operator={operator} report={report} onPatchValues={onPatchValues} />
 
                 <ScriptSection node={node} report={report} where={where} scriptsAllowed={scriptsAllowed} onPatchValues={onPatchValues} />
@@ -202,6 +206,37 @@ function JsonEditor({ value, onApply }) {
     )
 }
 
+// --- the network, for a Send Out --------------------------------------------
+
+// What the sender on this operator's machine says (pictureOut.js, over the
+// report channel). A machine with no NDI runtime is the ordinary case, so
+// that reads as a plain sentence in the dim colour, never as an error.
+const SEND_LINES = {
+    starting: () => 'Starting…',
+    sending: (send) => `Sending — ${send.frames} frames so far, ${send.dropped} skipped while a frame was on its way${send.viewers ? `, ${send.viewers} watching` : ''}.`,
+    unavailable: (send) => `${send.how || 'This machine has no NDI runtime, so nothing leaves it yet.'} It is asked again every few seconds.`,
+    busy: (send) => `Not sending: ${send.detail}`,
+    refused: (send) => `Not sending: ${send.detail}`,
+    unreachable: (send) => `No sender on this machine — ${send.detail}. Asked again every few seconds.`
+}
+
+function SendSection({ node, operator, report, where }) {
+    const name = typeof node.values?.name === 'string' ? node.values.name.trim() : ''
+    const send = report.send || null
+    const line = send ? (SEND_LINES[send.state] || SEND_LINES.starting)(send) : `Waiting for ${where} to start sending…`
+    return (
+        <section className="raw-top-inside-section">
+            <h3>On the network <span>{name || 'not named yet'}</span></h3>
+            {name
+                ? <p className="raw-top-inside-dim">{line}</p>
+                : <p className="raw-top-inside-dim">Give it a name in the sheet and it goes out as an NDI source, from {where}.</p>}
+            <p className="raw-top-inside-dim">
+                {operator.attribution.text} <a href={operator.attribution.href} target="_blank" rel="noreferrer">{operator.attribution.label}</a>. {operator.attribution.after}
+            </p>
+        </section>
+    )
+}
+
 // --- the shader ---------------------------------------------------------------
 
 function ShaderSection({ node, operator, report, onPatchValues }) {
@@ -217,7 +252,9 @@ function ShaderSection({ node, operator, report, onPatchValues }) {
         if (error) return
         onPatchValues({ __shader: draft.trim() === operator.fragment.trim() ? '' : draft })
     }
-    const names = ['uv', ...operator.inputs, 'self', 'texel', ...operator.params.map((p) => `p_${p.name}`), ...(operator.history ? ['history', 'shift'] : []), ...(operator.source ? ['source'] : [])]
+    // A text parameter is not a uniform — it never reaches the shader — so it
+    // is not offered as one.
+    const names = ['uv', ...operator.inputs, 'self', 'texel', ...operator.params.filter((p) => !p.text).map((p) => `p_${p.name}`), ...(operator.history ? ['history', 'shift'] : []), ...(operator.source ? ['source'] : [])]
 
     return (
         <section className="raw-top-inside-section">

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createTopEngine } from './topEngine.js'
-import { TOP_OPERATORS, isTopType, runsHere } from './topOperators.js'
+import { TOP_OPERATORS, isTopType, resolveTopParams, runsHere, sendsOut } from './topOperators.js'
 import { topThumbnailTargets } from './topThumbnails.js'
 import { acquireMachineLink, machinesIn, runnerOn } from './machineLink.js'
 import { createPicturePeers } from './picturePeers.js'
+import { createPictureOut } from './pictureOut.js'
 import { readTopReport, reportTop, useInspectedTop } from './topReports.js'
 import { compileTopScript } from './topScripts.js'
 
@@ -93,6 +94,7 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
     const [linkView, setLinkView] = useState({ machine: null, peers: [] })
     const engineRef = useRef(null)
     const peersRef = useRef(null)
+    const outRef = useRef(null)
     const tracksRef = useRef(new Map())
     const numbersRef = useRef({})
     const failedScripts = useRef(new Set())
@@ -188,6 +190,9 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
                 }
             }
             peersRef.current?.pump()
+            // Same task as the thumbnails, before the browser composites: the
+            // sender reads its copy out of the engine canvas's corner too.
+            outRef.current?.pump()
             if (showRef.current) engine.show(showRef.current)
             // Shader compile results, for whoever is looking inside.
             if (count % 30 === 0) {
@@ -233,6 +238,46 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
             peersRef.current = null
         }
     }, [link])
+
+    // --- the pictures this page sends off the machine (Send Out)
+    // Alive as long as the engine is: stop() takes every output off the
+    // network the moment the page stops feeding it. What the sender has to
+    // say goes out as a report, the same channel a camera's or a shader's
+    // state already travels on, so a page looking inside hears it too.
+    useEffect(() => {
+        if (!hasNodes) return undefined
+        const out = createPictureOut({
+            drawNode: (nodeId, context) => {
+                const engine = engineRef.current
+                if (!engine?.has(nodeId)) return false
+                engine.thumbnails(new Map([[nodeId, context]]))
+                return true
+            },
+            size: () => {
+                const engine = engineRef.current
+                if (!engine) return null
+                const target = engine.gl?.canvas
+                return { width: target?.width || engine.width, height: target?.height || engine.height }
+            },
+            onState: (nodeId, state) => reportTop(nodeId, { send: state })
+        })
+        outRef.current = out
+        return () => {
+            out.stop()
+            outRef.current = null
+        }
+    }, [hasNodes])
+    // The names, as the server will see them. Only a Send Out that runs HERE
+    // sends from here; its twin on another machine sends from there.
+    const sendKey = useMemo(
+        () => JSON.stringify(split.local
+            .filter((node) => sendsOut(node.type))
+            .map((node) => [node.id, resolveTopParams(node.type, node.values).name])),
+        [split]
+    )
+    useEffect(() => {
+        outRef.current?.setOutputs(new Map(JSON.parse(sendKey)))
+    }, [sendKey, hasNodes])
 
     // --- what this page needs from each machine's runner
     useEffect(() => {

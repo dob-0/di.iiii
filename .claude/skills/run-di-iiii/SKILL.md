@@ -257,6 +257,14 @@ its hard 50-line cap.
 - **`CLIENT_DIR` in `serverXR/.env.local` breaks `npm run test:server-contracts`**
   with "does not serve an SPA" — the suite's "CLIENT_DIR unset" case starts a
   server that is serving one. Run it as `CLIENT_DIR= npm run test:server-contracts`.
+- **Anything else you put in `serverXR/.env.local` reaches the contract suites too**,
+  and they boot real servers that read it. `DI_LOCAL=1` — the obvious thing to set when
+  running a stack beside a local `di` install — turns 29 of `httpContracts.test.js`'s
+  84 tests red, because it changes the auth and scope rules those tests assert (a read
+  that should be 403 answers 200). `PORT` and `DATA_ROOT` do their own damage. The
+  failures look like a broken branch and are not: they are the file. Measured
+  2026-09-21. Either move `.env.local` aside before a full `npm run test`, or pass the
+  env on the command line for the stack instead of writing it down.
 - **Gated surfaces need the right space, not just an account.** `/chat/main`,
   the editor and Raw all check scope; an account with `spaces: []` gets the same
   door card a guest does.

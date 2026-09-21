@@ -2066,6 +2066,23 @@
     grid-column: 1 / -1;
 }
 
+/* A sentence a field is read with (PropertyInspector's FieldNote). Dim and
+   warm — the first one is a licence line, and it must stay legible without
+   shouting. Never white: this sheet can be on a projector. */
+.raw-property-note {
+    margin: 0;
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    line-height: 1.5;
+    color: var(--di-note-ink);
+}
+
+.raw-property-note a {
+    color: var(--di-note-link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
 .raw-window-stack {
     height: 100%;
     overflow: auto;

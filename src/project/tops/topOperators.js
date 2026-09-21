@@ -44,6 +44,14 @@ const choice = (name, label, options, value = 0) => ({ name, label, value, min: 
 // one. resolveTopParams keeps it as a string; the engine uploads it as a
 // vec3 (hexToRgb01) instead of the float every other parameter becomes.
 const colour = (name, label, value) => ({ name, label, value, colour: true })
+// A short piece of writing — a name on the network, say. It never reaches a
+// shader: resolveTopParams keeps it as a string, and the engine only uploads
+// a parameter whose `p_<name>` uniform the fragment actually declares
+// (topEngine.js: `if (location === null) continue`), so an operator with a
+// text param simply does not declare one. Were a fragment ever to declare it,
+// gl.uniform1f would be handed a string and quietly upload NaN.
+const text = (name, label, value = '') => ({ name, label, value, text: true })
+const TEXT_MAX = 200
 
 /** '#rrggbb' -> [r, g, b] in 0..1. Anything unparsable falls back to black —
  * never white — so a bad value on a wall reads as "off", not as a flash. */
@@ -443,6 +451,36 @@ void main() {
 void main() { gl_FragColor = vec4(texture2D(a, uv).rgb, 1.0); }`
     },
 
+    'top.send': {
+        label: 'Send Out',
+        family: 'out',
+        inputs: ['a'],
+        // The picture leaves the machine that draws it, as a source other stage
+        // software on the LAN can pick up by this name (pictureOut.js posts the
+        // frames; serverXR's /ndi/out.jpg speaks NDI®). No name, no sending —
+        // the empty default is the quiet path, and it costs nothing.
+        //
+        // The operator is called Send Out and not "NDI Out" on purpose: NDI is
+        // what we speak on the wire, not what we are, and naming a feature
+        // after it is the one thing the trademark terms do not allow us
+        // (docs/architecture/NDI.md).
+        params: [text('name', 'Called on the network')],
+        // What must sit beside the box where a person types that name. We never
+        // ship the NDI runtime — the person installs it — and this line plus
+        // the link are the terms on which we may name it at all. A licence
+        // condition, not decoration; the inspector draws it, its test guards it.
+        attribution: {
+            text: 'Sends this picture to the network as an NDI source, from the machine it runs on. That machine needs the NDI runtime from',
+            href: 'https://ndi.video',
+            label: 'ndi.video',
+            after: 'NDI® is a registered trademark of Vizrt NDI AB.'
+        },
+        // The same pass-through as Picture Out: the sender reads this
+        // operator's own slot, so what is wired in is what goes out.
+        fragment: `
+void main() { gl_FragColor = vec4(texture2D(a, uv).rgb, 1.0); }`
+    },
+
     'top.analyze': {
         label: 'Analyze',
         family: 'analyse',
@@ -515,6 +553,10 @@ export const buildTopNodeTypes = () => Object.fromEntries(Object.entries(TOP_OPE
     configInputs: [RUNS_ON, ...(operator.pickDevice ? [PICK_CAMERA] : []), ...operator.params.map((p) => (
         p.colour
             ? { id: p.name, type: 'color', label: p.label }
+            : p.text
+                // A plain box. The attribution rides with the field so it is
+                // drawn beside the box itself, wherever that box ends up.
+                ? { id: p.name, type: 'string', label: p.label, maxLength: TEXT_MAX, ...(operator.attribution ? { note: operator.attribution } : {}) }
             : p.toggle
                 ? { id: p.name, type: 'boolean', label: p.label }
                 : p.options
@@ -527,12 +569,18 @@ export const buildTopNodeTypes = () => Object.fromEntries(Object.entries(TOP_OPE
 
 export const isTopType = (typeId) => Object.prototype.hasOwnProperty.call(TOP_OPERATORS, typeId)
 
+/** Does this operator post its picture to the network (a Send Out)? */
+export const sendsOut = (typeId) => typeId === 'top.send'
+
 const HEX_RE = /^#[0-9a-f]{6}$/i
 
 /** Parameter values for a node, defaults filled in and clamped to range.
  * A colour parameter stays a '#rrggbb' string — there is no range to clamp
  * it to — and falls back to its default rather than to black, so a stored
- * value nobody wrote yet (or a bad one) reads as the operator's own choice. */
+ * value nobody wrote yet (or a bad one) reads as the operator's own choice.
+ * A text parameter stays a string too, trimmed and capped at 200 characters
+ * (the server's own limit on a name); anything that is not a string falls
+ * back to the default rather than becoming the word "undefined" on a network. */
 export const resolveTopParams = (typeId, values = {}) => {
     const operator = TOP_OPERATORS[typeId]
     if (!operator) return {}
@@ -541,6 +589,11 @@ export const resolveTopParams = (typeId, values = {}) => {
         if (p.colour) {
             const raw = values?.[p.name]
             out[p.name] = typeof raw === 'string' && HEX_RE.test(raw) ? raw : p.value
+            continue
+        }
+        if (p.text) {
+            const raw = values?.[p.name]
+            out[p.name] = (typeof raw === 'string' ? raw : p.value).trim().slice(0, TEXT_MAX)
             continue
         }
         const raw = Number(values?.[p.name])

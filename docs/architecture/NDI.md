@@ -1,8 +1,9 @@
 # NDI in di.iiii
 
-**Status: steps 1–3 of the build order.** The server receives (step 1), a surface can
-name an NDI source and the machines on a desk report the ones they can see (steps 2–3).
-Still to come: one WebSocket for many inputs (step 4), and NDI out (steps 6–8).
+**Status: steps 1–3 and 6–8 of the build order.** The server receives (step 1), a
+surface can name an NDI source and the machines on a desk report the ones they can see
+(steps 2–3), and a picture di.iiii drew can be broadcast back out (steps 6–8). Still to
+come: one WebSocket for many inputs (step 4).
 
 Design and build order: `~/work/di-atlas/decisions/2026-09-20-native-ndi.md`.
 
@@ -143,6 +144,111 @@ only the ref. **Both machines have to be on a build that has the kind.** (An unk
 *ref* survives byte-identical, which is why the dim identification card was added as a ref
 and not a kind.) Asserted in `src/map/mappingState.test.js`.
 
+## Out — di.iiii as a source
+
+The receive lane pointed the other way. It is what makes di.iiii a **source for other
+software**: Resolume, OBS, a media server, a second di.iiii, anything on the network
+that speaks NDI can take a picture di.iiii generated.
+
+It is worth being clear about what this is NOT for. On a di.iiii rig the patch itself
+already travels — the document replicates, and the machine at the wall runs the same
+operators and draws them natively, at full quality with no encoding anywhere. NDI out is
+for the machine that CANNOT run the patch, and for the programs that are not di.iiii.
+
+```
+browser (the TOP engine)  --POST one JPEG-->  serverXR (parent)  --IPC-->  forked child
+  a top.send node              /ndi/out.jpg    ndi/sendManager.js         ndi/sendWorker.js
+                                                                          the installed runtime
+```
+
+**The browser is the pacer, and the response is the throttle.** A page holds at most one
+POST in flight per output; while it is unanswered, later frames are dropped rather than
+queued. A machine that cannot keep up therefore sends fewer frames instead of falling
+further and further behind, and no buffer anywhere grows. This is the same "latest frame
+wins" rule the receive lane follows, enforced by the only mechanism a browser reliably
+has.
+
+**An output is born from its first frame and dies when frames stop.** There is no
+ref-counting here and no linger, because there is exactly one publisher and no
+subscribers — and because a page that is closed simply stops posting. No browser has a
+close beacon worth trusting, so silence is the only honest signal, and five seconds of
+it closes the source. The child exits after 60 s with no outputs; a child that crashes is
+restarted with the same 1 s → 30 s backoff, and every live output is re-opened in the new
+child, so a crash is a hiccup for whoever is still posting rather than a source that has
+to be re-made.
+
+`clock_video` is **false** on a sender we create. `devSender.js` sets it true on purpose
+— there the runtime is the pacer and a blocking `sendVideo` is exactly what paces it —
+but here a blocking send would back the IPC pipe up behind a browser that is already
+pacing itself.
+
+### The first frame is answered before the truth is known
+
+`probeNdi()` is deliberately cheap — it resolves koffi and looks for a file — so on a
+machine where koffi is installed and the runtime is not, the probe passes and only the
+forked child discovers the truth. **The first POST is therefore answered `{ ok: true }`
+and the frame goes nowhere.** Every frame after it gets 503 with the reason, within one
+frame (about 30 ms at 30 fps), and the output that was opened optimistically is gone
+from `/ndi/api/outputs` again.
+
+This is a trade, not an oversight: blocking the first request until a forked child has
+loaded a native library would stall the page that is trying to draw. Seeing one `ok`
+followed by refusals is the designed behaviour, and worth knowing before someone spends
+an afternoon on it.
+
+### Who is watching
+
+`NDIlib_send_get_no_connections()` is the send-side twin of the receive lane's
+`recv_get_no_connections`, bound leniently so an older runtime that lacks the symbol
+still works (the count is then `null`, and the sentence simply leaves it out). It is
+polled once a second and travels on a `state` message only when it changes.
+
+**Nothing watching is the ordinary case**, not a fault — a source sits on the network
+until somebody picks it — and the sentence says so in those words rather than reporting
+zero and leaving a person to wonder what they broke.
+
+### A mixed-version rig is safe here, unlike the source kinds
+
+The receive lane has a real trap: `MAPPING_SOURCE_KINDS` is a closed list and a build
+that does not know a kind rewrites the surface back to the default, so a desk ahead of
+its wall can flatten a mapping. **A node TYPE behaves the opposite way.** Checked by
+running it, not by reading: `normalizeProjectNode` keeps an unknown `typeId` and its
+values byte-intact (the schema accepts any typeId without validation, and says so at
+`shared/projectSchema.cjs:8`), and `topEngine` filters a type it does not know out of
+the network rather than failing on it.
+
+So on a rig where one machine has `top.send` and the other does not, the Send Out node
+survives every edit from the older side; it simply draws nothing and sends nothing
+there. Upgrade the sending machine and it starts working, with the name it was given.
+
+### One thing to keep an eye on
+
+`top.send`'s name is the TOP vocabulary's first **text** parameter. It is safe without
+any engine change because `topEngine.js` skips a parameter whose `p_<name>` uniform the
+shader does not declare. That safety lasts exactly as long as no fragment declares
+`uniform float p_name` — a person editing the Send Out shader from inside could add one,
+and `gl.uniform1f` would then upload `NaN`. Harmless today (the fragment is a
+pass-through), but it is the kind of thing that is obvious once and never again.
+
+### Measured, on the stage machine — 2026-09-21
+
+`win` (i7-8565U, NDI 6.3.2.0). The send lane broadcasting 640×360 JPEGs while the same
+machine's installed di.iiii received them back through the real runtime:
+
+| | |
+| --- | --- |
+| discovered by the receiver as | `DESKTOP-MGGLB2C (di picture)` at `10.10.10.2:5961` |
+| frames sent / dropped / decode errors | 631 / 0 / 0 |
+| JPEG decode (sharp, per frame) | 3.23 ms, peak 5.78 ms |
+| `NDIlib_send_send_video_v2` | 0.59 ms, peak 0.77 ms |
+| the picture came back as | 200 `image/jpeg`, 8 691 bytes |
+| viewers, with a receiver attached | 2 — and 0 before and after it |
+
+Reading: **the send itself is free; the JPEG decode is the whole cost**, which is the
+mirror image of the receive lane, where the JPEG encode was. A lane that carried raw
+pixels from the browser instead would skip both — worth doing only if a measurement
+demands it, because raw 1080p is 8 MB a frame and the POST is the pacer.
+
 ## Attribution — a licence condition, not decoration
 
 Wherever a person picks NDI in the product, two things appear beside the picker: a link to
@@ -161,7 +267,10 @@ All under `/ndi` and `{APP_BASE_PATH}/ndi`, all local-runtime only, all `no-stor
 | `GET /ndi/api/sources` | `{ available, sources: [{ name, address }] }` — what the finder can see right now. |
 | `GET /ndi/api/still?name=&w=&bw=` | One JPEG. Waits up to 3 s for a first frame, else 504 with what the receiver is waiting for. |
 | `GET /ndi/in.mjpg?name=&w=&fps=&bw=` | `multipart/x-mixed-replace; boundary=di-ndi-frame`. Point an `<img>` at it. |
-| `GET /ndi/api/stats` | Receivers, subscribers, restarts, and the child's own timings (recv/copy/encode ms, fps, bytes, dropped). |
+| `GET /ndi/api/stats` | Receivers, subscribers, restarts, and the child's own timings (recv/copy/encode ms, fps, bytes, dropped). `out` carries the same for the send lane, and is `null` until a page has actually sent something — asking never forks a sender. |
+| `POST /ndi/out.jpg?name=` | One JPEG, the body. → `{ ok, name, seq, viewers }`. 503 names the missing runtime, 429 means the output cap, 400 means the body is not a JPEG. |
+| `DELETE /ndi/out.jpg?name=` | Stop that output now, rather than waiting out its five seconds of silence. |
+| `GET /ndi/api/outputs` | `{ available, reason, how, outputs: [{ name, state, detail, viewers, frames, dropped, width, height }] }`. |
 
 `name` is any fragment of a source name, ≤200 characters. `w` is 16–4096 (the picture is
 resized before the JPEG — cheaper bytes, more CPU). `fps` is 1–60 (a ceiling, not a
@@ -264,13 +373,39 @@ plain JS strings marshalled by koffi and one built from C memory we allocate and
 behave identically (34 ms vs 34 ms, 300 frames each in 10 s). There is no pointer
 lifetime problem in `recvCreate`.
 
+## Seen, on the rig — 2026-09-21
+
+The receive lane carries a real picture. On `win` (NDI 6.3.2.0), with di.iiii's own
+`devSender.js` as the source and no TouchDesigner and no OBS anywhere:
+
+- the finder resolved it as `DESKTOP-MGGLB2C (di test)` at `10.10.10.2:5961`;
+- `GET /ndi/api/still?name=di test&w=960` answered **200 `image/jpeg`, 41 242 bytes**;
+- `GET /ndi/in.mjpg?name=di test&w=640&fps=15` delivered **77 parts in 6 s**, 866 545
+  bytes, boundaries intact — so the multipart stream repeats, which had never been
+  checked;
+- the receiver reported `state: "live"`, `dropped: 0`, `encodeErrors: 0`, `recvFps: 30`,
+  `encodeMs: 8.4` (peak 11.7), `bytesPerFrame: 11 243` at 640×360 — in line with the
+  720p30 row of the table above.
+
+A **sender that dies with its ssh session** is what made this look like a discovery
+failure for an hour: Win32-OpenSSH tears down the process tree when the session closes,
+so a sender started in one `ssh` call is gone before the next one asks for sources, and
+the finder correctly reports nothing. Start the sender and probe it in the SAME session.
+
 ## Not verified
 
-macOS and Linux library lookup (written from the headers, never run). **A live NDI
-picture in a browser: still nothing.** Steps 2 and 3 were built and seen on aylmo, which
-has no NDI runtime — so what has actually been looked at is every state in the table
-above EXCEPT a frame arriving. The `<img>` path, the frame rate it can hold, and whether
-`load` fires per part on a multipart stream are all unproven in a real browser.
+macOS and Linux library lookup (written from the headers, never run). A live NDI picture
+**in a browser `<img>`** — the wire is proven, the page is not; nothing has confirmed
+that `load` fires per part or what frame rate the element holds.
+
+**aylmo has no NDI runtime**, so nothing native can be sent or received there yet. The
+only NDI binary on that machine is the Windows `Processing.NDI.Lib.x64.dll` that ships
+inside TouchDesigner's Wine prefix, which a native Linux process cannot load. `avahi` is
+installed and running, so the mDNS half is already in place; what is missing is
+`libndi.so.6`, and on Arch that is the AUR package `ndi-sdk` (or `distroav`, which pulls
+it in and gives OBS an NDI plugin at the same time). Both fetch the same official
+binary from `downloads.ndi.tv`. Installing it is the owner's call: it carries Vizrt's
+own EULA, which is exactly why di.iiii never ships it.
 
 **NDI across two machines is still not proven.** On 2026-09-20 di.iiii on `win`
 discovered both of aylmo's TouchDesigner senders across the network (with
@@ -283,7 +418,8 @@ The sender was stopped before the cause could be found, so the cross-machine cas
 never reproduced with the diagnosis in place.
 
 What the next attempt does, in one step: start the sender, ask for a still, then read
-`/ndi/api/stats`. `detail` now says whether the session was ever opened. `no connection
+`/ndi/api/stats`. It no longer needs TouchDesigner at either end — `devSender.js` is a
+sender, and the machine that lacks a runtime is now the one to fix. `detail` now says whether the session was ever opened. `no connection
 …` means the media port is not reachable from that machine even though discovery is
 (check the address in `detail` — the sender chose it — and both firewalls). `connected
 … but no picture` means the link is fine and the sender is not producing video this

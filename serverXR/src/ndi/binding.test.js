@@ -44,7 +44,7 @@ describe.skipIf(!koffi)('the NDI struct layouts', () => {
     })
   })
 
-  it('lays out the source and the two create structs as the headers do', () => {
+  it('lays out the source and the three create structs as the headers do', () => {
     const at = (type) => Object.fromEntries(Object.entries(type.members).map(([k, v]) => [k, v.offset]))
     // The union of p_url_address / p_ip_address is ONE pointer, not two.
     expect(at(types().Source)).toEqual({ p_ndi_name: 0, p_url_address: 8 })
@@ -52,6 +52,10 @@ describe.skipIf(!koffi)('the NDI struct layouts', () => {
     expect(at(types().FindCreate)).toEqual({ show_local_sources: 0, p_groups: 8, p_extra_ips: 16 })
     // The embedded source occupies the first 16 bytes; the two enums are plain ints.
     expect(at(types().RecvCreate)).toEqual({ source_to_connect_to: 0, color_format: 16, bandwidth: 20, allow_video_fields: 24, p_ndi_recv_name: 32 })
+    // Two pointers, then two bools side by side (+6 padding to 24). If clock_video ever
+    // drifted off byte 16 the send lane would be handing the runtime a pacing flag it
+    // never set — and sendVideo would start blocking on a clock nobody asked for.
+    expect(at(types().SendCreate)).toEqual({ p_ndi_name: 0, p_groups: 8, clock_video: 16, clock_audio: 17 })
   })
 
   it('reads a frame struct back out of memory we allocated, and frees it', () => {
@@ -83,6 +87,30 @@ describe.skipIf(!koffi)('the NDI struct layouts', () => {
     const without = bindNdi(koffi, libWithout)
     expect(without.fn.recvNoConnections).toBeNull()
     expect(typeof without.fn.recvCapture).toBe('function')
+  })
+
+  // The send lane's "is anyone receiving this?" — and, like its receive twin, bound
+  // leniently, so a runtime without the symbol still sends and only the count goes.
+  it('declares send_get_no_connections behind { send: true }, and survives a runtime that lacks it', () => {
+    const { bindNdi } = require('./binding.js')
+    const asked = []
+    const libWith = { func: (signature) => { asked.push(signature); return () => 0 } }
+    const withIt = bindNdi(koffi, libWith, { send: true })
+    expect(asked.some((sig) => sig.includes('NDIlib_send_get_no_connections'))).toBe(true)
+    expect(typeof withIt.fn.sendNoConnections).toBe('function')
+    expect(typeof withIt.fn.sendVideo).toBe('function')
+    // Not asked for → not bound: the receive child never loads the send half.
+    expect(bindNdi(koffi, libWith).fn.sendNoConnections).toBeUndefined()
+
+    const libWithout = {
+      func: (signature) => {
+        if (signature.includes('NDIlib_send_get_no_connections')) throw new Error('undefined symbol')
+        return () => 0
+      }
+    }
+    const without = bindNdi(koffi, libWithout, { send: true })
+    expect(without.fn.sendNoConnections).toBeNull()
+    expect(typeof without.fn.sendVideo).toBe('function')
   })
 
   it('spells the FourCC codes the way the header macro does', () => {

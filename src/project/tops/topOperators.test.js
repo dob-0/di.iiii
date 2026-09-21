@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TOP_OPERATORS, TOP_TYPE_IDS, buildTopNodeTypes, hexToRgb01, measurePixels, resolveTopParams, runsHere } from './topOperators.js'
+import { TOP_OPERATORS, TOP_TYPE_IDS, buildTopNodeTypes, hexToRgb01, measurePixels, resolveTopParams, runsHere, sendsOut } from './topOperators.js'
 import { checkShader, orderNetwork } from './topEngine.js'
 import { toTopNetwork } from './useTopNetwork.js'
 import { cardHeight } from '../../raw/utils/cardGeometry.js'
@@ -183,3 +183,50 @@ describe('the generator wave', () => {
     })
 })
 
+describe('Send Out — a picture leaving the machine', () => {
+    it('is an out-family operator with one picture in and one text parameter, the name', () => {
+        const send = TOP_OPERATORS['top.send']
+        expect(send.label).toBe('Send Out')
+        expect(send.family).toBe('out')
+        expect(send.inputs).toEqual(['a'])
+        expect(send.params).toEqual([{ name: 'name', label: 'Called on the network', value: '', text: true }])
+        expect(send.fragment).toBe(TOP_OPERATORS['top.out'].fragment)
+        expect(sendsOut('top.send')).toBe(true)
+        expect(sendsOut('top.out')).toBe(false)
+    })
+
+    it('never puts NDI in its name — NDI is what we speak, not what we are', () => {
+        // The trademark terms (docs/architecture/NDI.md) let us say what the
+        // operator speaks; they do not let us name a feature after it.
+        for (const [id, operator] of Object.entries(TOP_OPERATORS)) {
+            expect(id.toLowerCase(), id).not.toContain('ndi')
+            expect(operator.label.toLowerCase(), id).not.toContain('ndi')
+        }
+    })
+
+    it('keeps a text parameter a string — trimmed, capped at 200, never a number', () => {
+        expect(resolveTopParams('top.send', { name: '  AYLMO (di test)  ' })).toEqual({ name: 'AYLMO (di test)' })
+        expect(resolveTopParams('top.send', {})).toEqual({ name: '' })
+        expect(resolveTopParams('top.send', { name: 42 })).toEqual({ name: '' })
+        expect(resolveTopParams('top.send', { name: 'x'.repeat(300) }).name).toHaveLength(200)
+    })
+
+    it('declares no uniform for its text parameter, so the engine never uploads the string', () => {
+        // topEngine.js uploads a parameter only when gl.getUniformLocation
+        // finds `p_<name>` in the program (`if (location === null) continue`);
+        // a name the fragment never declares is skipped, and a string never
+        // reaches gl.uniform1f. This holds only while the fragment stays quiet.
+        expect(TOP_OPERATORS['top.send'].fragment).not.toContain('p_name')
+    })
+
+    it('becomes a plain text box with the licence line and the link beside it', () => {
+        // Wherever a person picks NDI in the product, the attribution and the
+        // link to ndi.video must appear — a condition of naming it at all.
+        const field = buildTopNodeTypes()['top.send'].configInputs.find((f) => f.id === 'name')
+        expect(field).toMatchObject({ type: 'string', label: 'Called on the network', maxLength: 200 })
+        expect(field.note.href).toBe('https://ndi.video')
+        expect(field.note.label).toBe('ndi.video')
+        expect(`${field.note.text} ${field.note.after}`).toContain('NDI® is a registered trademark of Vizrt NDI AB.')
+        expect(buildTopNodeTypes()['top.send'].defaultValues.name).toBe('')
+    })
+})
