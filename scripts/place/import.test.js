@@ -48,9 +48,10 @@ describe('hallOps', () => {
         expect(world.fog.far).toBeGreaterThan(world.fog.near)
     })
 
-    it('arrives in the room, not in a code page', () => {
+    it('arrives on the shot we authored, not on an auto-frame', () => {
         const presentation = opOf(hallOps({ asset, place, title: 'the hall' }), 'setPresentationState').payload.patch
-        expect(presentation.entryView).toBe('scene')
+        expect(presentation.entryView).toBe('fixed-camera')
+        expect(presentation.fixedCamera.position).toEqual([place.spawn.x, place.spawn.altY, place.spawn.z])
     })
 
     it('registers the model as an asset of the document, or nothing can find it', () => {

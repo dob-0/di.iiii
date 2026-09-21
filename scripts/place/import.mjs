@@ -227,8 +227,15 @@ export const hallOps = ({ asset, place, title }) => {
             type: 'setPresentationState',
             payload: {
                 patch: {
-                    mode: 'scene',
-                    entryView: 'scene',
+                    // 'fixed-camera', not 'scene': the scene entry auto-frames
+                    // from the entities' bounding sphere, and for a room that
+                    // is one big model it puts the visitor's nose against the
+                    // nearest column (seen on the test room, 2026-09-21).
+                    // fixed-camera honours the shot below, and it is just as
+                    // walkable — the Walk gate takes either
+                    // (PublicProjectViewer.jsx:224).
+                    mode: 'fixed-camera',
+                    entryView: 'fixed-camera',
                     fixedCamera: arrivalShot(place)
                 }
             }
