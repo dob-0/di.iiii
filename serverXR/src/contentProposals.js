@@ -187,6 +187,8 @@ function createContentProposals({
   spaceHistory,
   loadSpaceMeta,
   findProjectById,
+  // Trash included — a trashed project must compare as itself, not as new.
+  findProjectByIdAny = null,
   listProjectsInSpace,
   getSpacePaths,
   restoreSpaceProjectDocuments,
@@ -235,7 +237,7 @@ function createContentProposals({
     const inBundle = new Set()
     for (const entry of bundle.projects) {
       inBundle.add(entry.id)
-      const found = await findProjectById(entry.id)
+      const found = await (findProjectByIdAny || findProjectById)(entry.id)
       if (found && found.spaceId !== spaceId) { collisions.push({ id: entry.id, spaceId: found.spaceId }); continue }
       const document = remapSpaceUrls(entry.document, sourceId, spaceId)
       let current = null
@@ -264,6 +266,7 @@ function createContentProposals({
         diverged,
         title: entry.meta.title || found?.meta?.title || entry.document?.projectMeta?.title || entry.id,
         status,
+        inTrash: Boolean(found?.meta?.deletedAt),
         itemsBefore: found ? countDocumentItems(current) : 0,
         itemsAfter: countDocumentItems(document),
         history: counts.ops ? describeCounts(counts) : null
@@ -335,7 +338,7 @@ function createContentProposals({
         const counts = p.status === 'added'
           ? `new, ${plural(p.itemsAfter, 'item')}`
           : `${p.itemsBefore} → ${p.itemsAfter} items`
-        lines.push(`· ${p.title} — ${p.status === 'added' ? 'added' : 'changed'}: ${counts}${p.history ? ` (${p.history})` : ''}`)
+        lines.push(`· ${p.title} — ${p.status === 'added' ? 'added' : 'changed'}: ${counts}${p.history ? ` (${p.history})` : ''}${p.inTrash ? ' — in the trash here' : ''}`)
       }
     } else {
       lines.push('Projects: no project changes')

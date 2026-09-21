@@ -241,6 +241,32 @@ describe('a file for an existing space is a proposal', () => {
         expect((await documentOf(tgt, page)).entities).toHaveLength(4)
     })
 
+    it('a file made here and proposed back here changes nothing — trashed projects included', async () => {
+        // Found by a peer on 2026-09-21: export a space, propose the same file back, and
+        // one project read "added: new (1 whole project replaced)". The lookup the
+        // summary used hid the trash, while export and import both carry it — so a
+        // trashed project compared as brand new and a no-op became a change to approve.
+        const srcRoot = await makeTempDir('dii-proposal-roundtrip-')
+        let src = await startServer(srcRoot)
+        expect((await fetch(`${src.baseUrl}/api/spaces`, json('POST', { slug: 'wcc', label: 'WCC' }))).status).toBe(201)
+        const page = (await (await fetch(`${src.baseUrl}/api/spaces/wcc/projects`, json('POST', { title: 'Page', slug: 'page' }))).json()).project.id
+        const gone = (await (await fetch(`${src.baseUrl}/api/spaces/wcc/projects`, json('POST', { title: 'Gone', slug: 'gone' }))).json()).project.id
+        await putDocument(src, page, ['e1'])
+        await putDocument(src, gone, ['g1'])
+        expect((await fetch(`${src.baseUrl}/api/projects/${gone}`, { method: 'DELETE' })).status).toBe(200)
+        await src.stop()
+        const out = await makeTempDir('dii-proposal-out-')
+        const file = path.join(out, 'roundtrip.diiii')
+        await runBundle(['export', 'wcc', '--out', file], srcRoot)
+        src = await startServer(srcRoot)
+
+        const dry = await propose(src, file, { dryRun: 'true' })
+        expect(dry.status).toBe(200)
+        expect(dry.body.text).not.toContain('added')
+        expect(dry.body.text).not.toContain('changed:')
+        expect(dry.body.text).toContain('2 projects in the file already match')
+    })
+
     it('applies directly for a trusted person, but not over work the file never saw', async () => {
         const srcRoot = await makeTempDir('dii-proposal-src2-')
         let src = await startServer(srcRoot)
