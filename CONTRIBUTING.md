@@ -68,7 +68,7 @@ always takes one; `GET /api/spaces/:id/changes` reads the history in plain words
 When someone who is not the owner finishes a burst, **one signed notice** goes to the
 inner console with the summary, a link and an Undo — that part is off until
 `CONTENT_CHANGE_NOTICES_ENABLED=true` plus the console's `APPROVAL_BOT_URL` /
-`APPROVAL_SHARED_SECRET` are set on the tier (switched on for dev on 2026-09-21).
+`APPROVAL_SHARED_SECRET` are set on the tier.
 
 ## Who decides what, in a space
 
