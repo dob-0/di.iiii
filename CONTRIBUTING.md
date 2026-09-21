@@ -58,11 +58,57 @@ refusal prints the exact command to pull the newer copy down, or the explicit fl
 purpose. If you hit a refusal, read it before reaching for the override — it exists
 because something real changed.
 
-This is the first piece of the safety net, not the whole thing: it stops a routine
-sync from being the thing that erases someone's afternoon. The rest — an author on
-every change, automatic restore points, a way to see recent history and undo it — is
-**coming in later PRs**. Nothing about their shape is promised here; when they land,
-this file gets updated in the same PR.
+This is the first piece of the safety net: it stops a routine sync from being the
+thing that erases someone's afternoon. The rest is in `serverXR/src/spaceHistory.js`
+and is on every tier: **every change has an author** (stamped from the session, never
+from the client), a **restore point** is taken at the first change of each burst — a
+different person, or the same person after a 15-minute pause — and a whole replace
+always takes one; `GET /api/spaces/:id/changes` reads the history in plain words
+("+3 images, 1 object removed, title changed"), and a restore point restores by id.
+When someone who is not the owner finishes a burst, **one signed notice** goes to the
+inner console with the summary, a link and an Undo — that part is off until
+`CONTENT_CHANGE_NOTICES_ENABLED=true` plus the console's `APPROVAL_BOT_URL` /
+`APPROVAL_SHARED_SECRET` are set on the tier (switched on for dev on 2026-09-21).
+
+## Who decides what, in a space
+
+Three zones, and a start check before any of them:
+
+| Zone | Who | What happens to a change |
+| --- | --- | --- |
+| **Mine** — the platform, prod, what goes live | the owner of di.iiii | your hand: the promotion PR, the `production` environment gate |
+| **Theirs** — a space that belongs to a person (`ownerUserId`) | that person, and the people they **trust** (`trustedUserIds`, owner-managed) | applied at once, with author + restore point; the owner is told and can undo |
+| **About them** — their entry on our side (a room in `network`, a page in `main`) | anyone | a **proposal**: a `.diiii` for an existing space is summarized and waits for Apply / Reject in the inner console (`space-bundle.mjs propose`) |
+
+Being the owner or trusted in one space grants nothing anywhere else — it is a
+relationship to one place, not a role. Two things stay with the platform whoever owns
+the space: its `kind` and `permanent` flags, and handing it to someone else.
+
+A space is also the **workshop** for what the program cannot do yet: build it there,
+with your own tools or your own AI, and when it is good the mechanism graduates into
+the platform (`docs/ai/golden_rules.md` → "Platform and works"). A private,
+non-permanent space with a trusted group is the experimental zone; nothing in it
+reaches the front door without a deliberate act by its owner.
+
+## The program line, end to end
+
+```
+1  START     npm run start-check          — LATEST or NOT LATEST, both lines
+2  WORK      a worktree off fresh origin/dev; a fork works the same way
+3  SEE IT    your own install runs it     — npm run di:pack, then di update --from
+4  LAND      PR → dev; two required checks; merge
+5  NOTE      docs/ai/sessions/<branch>.md — folded into CURRENT.md at landing
+6  DEV TIER  push to dev deploys dev.diiii.xyz — look at it, desktop and phone
+7  PROMOTE   one PR dev → main, on the owner's word
+8  PROD      the production environment gate, the owner's hand
+9  TAG       tag-on-promotion → a version an installed di.iiii can update to
+```
+
+Two quiet failures to know by name: the notes in step 5 must be **landed** on `dev`
+before step 7 (`npm run land`, through a PR — CI cannot push its own fold), and
+`CURRENT.md` must stay under 50 lines after the fold, or `docs:ai:check` fails and the
+tier deploy is **skipped while the run looks green**. That is the failure that cost
+ten days in September 2026; `start-check` and the deploy log are the two places it shows.
 
 ## The five doors
 
