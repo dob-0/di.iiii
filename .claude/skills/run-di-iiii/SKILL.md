@@ -123,7 +123,7 @@ node .claude/skills/run-di-iiii/driver.mjs pair /chat --as ann,bob --phone
 | `account <name> [--spaces a,b]` | registers the account (re-running is fine — a taken name is not an error), scopes it to those spaces, prints its id and password |
 | `look <path> [--as <name>]` | opens one page as that person, screenshots it, prints what is on screen and any console/page errors. Exits non-zero if anything threw |
 | `pair <path> --as <a>,<b>` | the same, twice, in two independent browsers — for anything that needs two people |
-| `stop` | kills the whole dev stack, supervisors first, and says what it killed |
+| `stop` | kills THIS checkout's dev stack, supervisors first, and says what it killed — and what it left alone (another checkout's stack, an installed di.iiii). It decides by each process's working directory, never by command line |
 
 Flags: `--phone` (390×844 at DPR 3, which is the phone this platform is actually
 opened on) or the default desktop (1440×900 at DPR 2); `--wait <ms>` before the
@@ -235,7 +235,10 @@ its hard 50-line cap.
   which looks exactly like a stale dev one and is neither stale nor yours. Check
   `di status` first: if it says `running` on that port, that is a show. Leave it
   alone and move your own stack (see the top of this file). This has killed a
-  running rig twice.
+  running rig three times — the third through the driver's own `stop`, which
+  matched by command line until 2026-09-21. It now matches by working
+  directory: only processes started under this checkout die; one whose
+  directory cannot be read is left alone and named in the output.
 - **`waitUntil: 'networkidle'` never settles.** socket.io holds a connection open
   on every surface with presence in it. Use `domcontentloaded` and wait for the
   element you need. The driver's `open()` already does.
