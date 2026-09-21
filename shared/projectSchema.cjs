@@ -953,16 +953,41 @@ const normalizeMappingReference = (reference = {}) => {
   }
 }
 
+// Hand-mirrored from src/shared/projectSchema.js — which display shows this
+// mapping. The output block used to be rebuilt from width and height alone,
+// which stripped `show` on the first write from any machine; both twins keep
+// it now, and serverXR/src/schemaSync.test.js holds the round trip here.
+const normalizeOutputShow = (show) => {
+  if (!show || typeof show !== 'object' || Array.isArray(show)) return null
+  const machine = ensureString(show.machine, '').trim()
+  if (!machine) return null
+  let screen = 'all'
+  if (show.screen && typeof show.screen === 'object' && !Array.isArray(show.screen)) {
+    const label = ensureString(show.screen.label, '').trim()
+    const index = Number.isInteger(show.screen.index) && show.screen.index >= 0 ? show.screen.index : null
+    const size = Array.isArray(show.screen.size) && show.screen.size.length === 2
+      && show.screen.size.every((value) => Number.isFinite(value) && value > 0)
+      ? [Math.round(show.screen.size[0]), Math.round(show.screen.size[1])]
+      : null
+    if (label || index !== null || size) screen = { label, index, size }
+  }
+  const name = ensureString(show.name, '').trim()
+  return { machine, ...(name ? { name } : {}), screen }
+}
+
 const normalizeMappingState = (mapping = {}) => {
   const source = mapping && typeof mapping === 'object' ? mapping : {}
   const output = source.output && typeof source.output === 'object' ? source.output : {}
   const surfaces = Array.isArray(source.surfaces) ? source.surfaces : []
   const seen = new Set()
   const seenCues = new Set()
+  const show = normalizeOutputShow(output.show)
   return {
     output: {
       width: Math.max(1, ensureNumber(output.width, defaultMappingState.output.width)),
-      height: Math.max(1, ensureNumber(output.height, defaultMappingState.output.height))
+      height: Math.max(1, ensureNumber(output.height, defaultMappingState.output.height)),
+      ...(show ? { show } : {}),
+      ...(output.slate === 'off' ? { slate: 'off' } : {})
     },
     background: ensureString(source.background, defaultMappingState.background),
     surfaces: surfaces
@@ -1953,6 +1978,7 @@ module.exports = {
   normalizeMappingSurface,
   normalizeMappingCue,
   normalizeMappingReference,
+  normalizeOutputShow,
   normalizeWindowLayout,
   normalizeWorkspaceState,
   applyProjectOps,

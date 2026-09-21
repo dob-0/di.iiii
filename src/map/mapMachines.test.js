@@ -132,3 +132,48 @@ describe('NDI sources across the machines on a desk', () => {
         ])
     })
 })
+
+describe('which display shows this mapping — the desk picker', () => {
+    const win = { id: 'm2', name: 'win', self: false, pages: 1, devices: [
+        { kind: 'screen', id: 'screen-0', label: 'Built-in screen', width: 1920, height: 1080 },
+        { kind: 'screen', id: 'screen-1', label: 'Optoma', width: 1280, height: 800 }
+    ] }
+
+    it('offers nothing, then every machine\'s screens by name and size', async () => {
+        const { showOptions } = await import('./mapMachines.js')
+        expect(showOptions([desk, win]).map((option) => option.label)).toEqual([
+            'any screen',
+            'aylmo · this machine · all screens',
+            'aylmo · this machine · Screen 2560×1440',
+            'win · all screens',
+            'win · Built-in screen 1920×1080',
+            'win · Optoma 1280×800'
+        ])
+    })
+
+    it('writes the screen with label, index AND size, so the stage box can match by whichever survived', async () => {
+        const { showFromValue, showOptions } = await import('./mapMachines.js')
+        const value = showOptions([desk, win]).find((option) => option.label.endsWith('Optoma 1280×800')).value
+        expect(showFromValue(value, [desk, win])).toEqual({
+            machine: 'm2', name: 'win', screen: { label: 'Optoma', index: 1, size: [1280, 800] }
+        })
+        expect(showFromValue('m2::all', [desk, win])).toEqual({ machine: 'm2', name: 'win', screen: 'all' })
+        expect(showFromValue('', [desk, win])).toBeNull()
+    })
+
+    it('shows what the document says even when that machine is not on the desk right now', async () => {
+        const { showOptions, showValue } = await import('./mapMachines.js')
+        const show = { machine: 'gone-machine-id', name: 'asuz', screen: { label: 'HDMI-1', index: 0, size: [1920, 1080] } }
+        const options = showOptions([desk], show)
+        expect(options.at(-1)).toEqual({ value: showValue(show), label: 'asuz · HDMI-1 — not on the desk now' })
+        // And it round-trips as itself rather than snapping to "any".
+        expect(options.some((option) => option.value === showValue(show))).toBe(true)
+    })
+
+    it('reads a stored show back to the same select value it was chosen from', async () => {
+        const { showFromValue, showOptions, showValue } = await import('./mapMachines.js')
+        for (const option of showOptions([desk, win])) {
+            expect(showValue(showFromValue(option.value, [desk, win]))).toBe(option.value)
+        }
+    })
+})

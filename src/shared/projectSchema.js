@@ -1025,16 +1025,55 @@ export const normalizeMappingReference = (reference = {}) => {
     }
 }
 
+// WHICH DISPLAY SHOWS THIS MAPPING. `output.show` names a machine (its
+// `machine.json` id, the one the machines hub hands every page) and one of its
+// screens — by label, index and size, so a stage box can find "the projector"
+// by whichever of those survived a reboot — or 'all' of them. It travels over
+// the follow like the rest of the document, and `di stage run` reads it on
+// every tick.
+//
+// The trap this normaliser used to be: the output block was rebuilt from width
+// and height ALONE, so the first write from any machine dropped `show` on the
+// floor and the stage went back to guessing. Both twins keep it now, and
+// src/map/mappingState.test.js + serverXR/src/schemaSync.test.js hold a
+// write→read round trip on each.
+//
+// Absent means absent: a document with no `show` and an `auto` slate comes
+// out without those keys at all, so every mapping written before this existed
+// is byte-identical after it.
+export const normalizeOutputShow = (show) => {
+    if (!show || typeof show !== 'object' || Array.isArray(show)) return null
+    const machine = ensureString(show.machine, '').trim()
+    if (!machine) return null
+    let screen = 'all'
+    if (show.screen && typeof show.screen === 'object' && !Array.isArray(show.screen)) {
+        const label = ensureString(show.screen.label, '').trim()
+        const index = Number.isInteger(show.screen.index) && show.screen.index >= 0 ? show.screen.index : null
+        const size = Array.isArray(show.screen.size) && show.screen.size.length === 2
+            && show.screen.size.every((value) => Number.isFinite(value) && value > 0)
+            ? [Math.round(show.screen.size[0]), Math.round(show.screen.size[1])]
+            : null
+        if (label || index !== null || size) screen = { label, index, size }
+    }
+    const name = ensureString(show.name, '').trim()
+    return { machine, ...(name ? { name } : {}), screen }
+}
+
 export const normalizeMappingState = (mapping = {}) => {
     const source = mapping && typeof mapping === 'object' ? mapping : {}
     const output = source.output && typeof source.output === 'object' ? source.output : {}
     const surfaces = Array.isArray(source.surfaces) ? source.surfaces : []
     const seen = new Set()
     const seenCues = new Set()
+    const show = normalizeOutputShow(output.show)
     return {
         output: {
             width: Math.max(1, ensureNumber(output.width, defaultMappingState.output.width)),
-            height: Math.max(1, ensureNumber(output.height, defaultMappingState.output.height))
+            height: Math.max(1, ensureNumber(output.height, defaultMappingState.output.height)),
+            ...(show ? { show } : {}),
+            // 'auto' is the default and is not written; only the authored
+            // black is — the same absent-means-absent rule as `show`.
+            ...(output.slate === 'off' ? { slate: 'off' } : {})
         },
         background: ensureString(source.background, defaultMappingState.background),
         // Order is the paint order — later surfaces are drawn over earlier

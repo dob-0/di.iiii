@@ -326,3 +326,41 @@ describe('what a new surface is born showing', () => {
         expect(document.mappingState.surfaces[0].source).toEqual({ kind: 'test', ref: 'grid' })
     })
 })
+
+describe('which display shows this mapping — output.show', () => {
+    // The trap named in the stage plan: normalizeMappingState rebuilt `output`
+    // from width and height alone, so the first write from ANY machine
+    // stripped `show`, and a stage box that had just been told which screen
+    // to use went straight back to guessing. This is the write→read.
+    const show = { machine: 'b8592c7f-217a-4f95-8c48-07a4e08524d0', name: 'win', screen: { label: 'projector', index: 1, size: [1920, 1080] } }
+
+    it('survives a setMappingState write and a normalize read, on the ESM twin', () => {
+        const written = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'setMappingState', payload: { patch: { output: { width: 1920, height: 1080, show, slate: 'off' } } } }
+        ])
+        const read = normalizeProjectDocument(JSON.parse(JSON.stringify(written)))
+        expect(read.mappingState.output).toEqual({ width: 1920, height: 1080, show, slate: 'off' })
+    })
+
+    it('writes nothing for a mapping that never named a display — older documents stay byte-identical', () => {
+        expect(normalizeMappingState({ output: { width: 1280, height: 800 } }).output).toEqual({ width: 1280, height: 800 })
+        expect(normalizeMappingState({ output: { width: 1280, height: 800, slate: 'auto' } }).output).toEqual({ width: 1280, height: 800 })
+    })
+
+    it('takes "all" for every screen of the machine, and drops a show that names no machine', () => {
+        expect(normalizeMappingState({ output: { show: { machine: 'm1', screen: 'all' } } }).output.show).toEqual({ machine: 'm1', screen: 'all' })
+        expect(normalizeMappingState({ output: { show: { machine: 'm1' } } }).output.show).toEqual({ machine: 'm1', screen: 'all' })
+        expect(normalizeMappingState({ output: { show: { machine: '', screen: { label: 'x' } } } }).output.show).toBeUndefined()
+        expect(normalizeMappingState({ output: { show: 'projector' } }).output.show).toBeUndefined()
+    })
+
+    it('keeps whichever of label, index and size were given, and nothing invented', () => {
+        expect(normalizeMappingState({ output: { show: { machine: 'm1', screen: { label: 'HDMI-1' } } } }).output.show.screen)
+            .toEqual({ label: 'HDMI-1', index: null, size: null })
+        expect(normalizeMappingState({ output: { show: { machine: 'm1', screen: { index: 2, size: [1920.4, 1080] } } } }).output.show.screen)
+            .toEqual({ label: '', index: 2, size: [1920, 1080] })
+        // A screen object with nothing usable in it is every screen, not a
+        // screen called "".
+        expect(normalizeMappingState({ output: { show: { machine: 'm1', screen: { size: [0, 1] } } } }).output.show.screen).toBe('all')
+    })
+})

@@ -182,8 +182,10 @@ const report = async (page, label) => {
 // Only processes started under THIS checkout are touched. The command lines
 // do not say which repo they came from — an installed di.iiii's live server
 // is `node src/index.js` too — so the working directory decides, and one that
-// cannot be read is left alone. Killing by pattern took down the installed
-// di.iiii serving a stage three times before this (2026-09-21).
+// cannot be read is left alone — unless the process sits in the process group
+// of this checkout's own vite, which `npm run dev` starts in one group with
+// the rest (a sibling sandbox can hide /proc/<pid>/cwd). Killing by pattern
+// took down the installed di.iiii serving a stage three times (2026-09-21).
 const cwdOf = (pid) => {
     try { return fs.readlinkSync(`/proc/${pid}/cwd`) } catch { /* not Linux, or gone */ }
     try {
@@ -195,7 +197,7 @@ const cwdOf = (pid) => {
 }
 
 export const stop = () => {
-    const listing = execSync('ps -eo pid=,args=', { encoding: 'utf8' })
+    const listing = execSync('ps -eo pid=,pgid=,args=', { encoding: 'utf8' })
     const { mine, others } = ownedProcesses(listing, REPO, cwdOf, process.pid)
     // Supervisors first, so nothing respawns behind the kill.
     for (const { pid } of mine) { try { process.kill(pid, 'SIGKILL') } catch { /* already gone */ } }
