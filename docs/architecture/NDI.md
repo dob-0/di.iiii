@@ -182,6 +182,20 @@ to be re-made.
 but here a blocking send would back the IPC pipe up behind a browser that is already
 pacing itself.
 
+### The first frame is answered before the truth is known
+
+`probeNdi()` is deliberately cheap — it resolves koffi and looks for a file — so on a
+machine where koffi is installed and the runtime is not, the probe passes and only the
+forked child discovers the truth. **The first POST is therefore answered `{ ok: true }`
+and the frame goes nowhere.** Every frame after it gets 503 with the reason, within one
+frame (about 30 ms at 30 fps), and the output that was opened optimistically is gone
+from `/ndi/api/outputs` again.
+
+This is a trade, not an oversight: blocking the first request until a forked child has
+loaded a native library would stall the page that is trying to draw. Seeing one `ok`
+followed by refusals is the designed behaviour, and worth knowing before someone spends
+an afternoon on it.
+
 ### Who is watching
 
 `NDIlib_send_get_no_connections()` is the send-side twin of the receive lane's
@@ -192,6 +206,15 @@ polled once a second and travels on a `state` message only when it changes.
 **Nothing watching is the ordinary case**, not a fault — a source sits on the network
 until somebody picks it — and the sentence says so in those words rather than reporting
 zero and leaving a person to wonder what they broke.
+
+### One thing to keep an eye on
+
+`top.send`'s name is the TOP vocabulary's first **text** parameter. It is safe without
+any engine change because `topEngine.js` skips a parameter whose `p_<name>` uniform the
+shader does not declare. That safety lasts exactly as long as no fragment declares
+`uniform float p_name` — a person editing the Send Out shader from inside could add one,
+and `gl.uniform1f` would then upload `NaN`. Harmless today (the fragment is a
+pass-through), but it is the kind of thing that is obvious once and never again.
 
 ### Measured, on the stage machine — 2026-09-21
 
