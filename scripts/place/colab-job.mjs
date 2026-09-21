@@ -88,6 +88,16 @@ const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms) })
 // one poll and the next one reconnects.
 export const POLL_TIMEOUT_MS = 4 * 60_000
 
+// Colab prunes a runtime and the CLI then loses the name with it: the session
+// shows up in `colab sessions` as an orphan `[?]` with no local record, and
+// `colab stop -s <name>` can no longer reach it. A driver that reads a lost
+// session as "no answer, ask again" polls an empty sky until its own deadline
+// and then cannot even release the machine (2026-09-21).
+export const readsAsLostSession = (output = '') => /Session .*not found|no such session|prune/i.test(output)
+
+// A wedged websocket is worth retrying; six in a row is not a wedge.
+export const SILENT_POLLS_BEFORE_GIVING_UP = 6
+
 // The frames go up in pieces.
 //
 // `colab upload` posts through Jupyter's contents API, which carries the file
@@ -268,19 +278,31 @@ const main = async () => {
 
         const deadline = Date.now() + timeoutMinutes * 60_000
         let result = null
+        let silent = 0
         while (Date.now() < deadline) {
             await sleep(pollSeconds * 1000)
             const poll = colab(['exec', '-s', session, '-f', path.join(PLACE_DIR, 'reconstruct.py')], {
                 quiet: true,
                 timeout: POLL_TIMEOUT_MS
             })
+            if (readsAsLostSession(poll.out)) {
+                throw new Error(
+                    `Colab lost the session "${session}" while the job was running.`
+                    + '\nIt may still be assigned: check `colab sessions` and stop it from the Colab UI if it lingers.'
+                )
+            }
             const latest = parseStatusLines(poll.out).pop()
             if (!latest) {
                 // A wedged websocket, not a dead job: the reconstruction runs
                 // detached and does not care that we lost the line to it.
-                warn('  (no answer from the box — asking again)')
+                silent += 1
+                if (silent >= SILENT_POLLS_BEFORE_GIVING_UP) {
+                    throw new Error(`The box stopped answering (${silent} polls in a row).`)
+                }
+                warn(`  (no answer from the box — asking again, ${silent}/${SILENT_POLLS_BEFORE_GIVING_UP})`)
                 continue
             }
+            silent = 0
             if (latest.state === 'done') { result = latest; break }
             if (latest.state === 'failed' || latest.state === 'error') {
                 warn('Meshroom stopped without a mesh. The end of its log:')
