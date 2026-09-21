@@ -150,9 +150,24 @@ cd {root}
 touch {root}/beat
 echo "START $(date -u)"
 if [ ! -d {home} ]; then
-  wget -q -O /content/meshroom.tar.gz '{url}' || echo "MESHROOM DOWNLOAD FAILED"
+  # In parallel, and resumable. The tarball is ~9 GB (it carries CUDA), and a
+  # single-stream wget took over an hour on Colab — long enough for the
+  # runtime to be reclaimed out from under the job, which is exactly what
+  # happened on 2026-09-21. aria2c with sixteen connections turns that into
+  # minutes; -c means a retry carries on instead of starting again.
+  if ! command -v aria2c >/dev/null; then
+    apt-get install -y -qq aria2 >/dev/null 2>&1 || true
+  fi
+  if command -v aria2c >/dev/null; then
+    aria2c -x16 -s16 -c --console-log-level=warn --summary-interval=60 \
+      -d /content -o meshroom.tar.gz '{url}' || echo "MESHROOM DOWNLOAD FAILED"
+  else
+    wget -c -q -O /content/meshroom.tar.gz '{url}' || echo "MESHROOM DOWNLOAD FAILED"
+  fi
+  echo "DOWNLOADED $(du -m /content/meshroom.tar.gz | cut -f1) MB at $(date -u)"
   mkdir -p {home}
   tar -xzf /content/meshroom.tar.gz -C {home} --strip-components=1
+  echo "EXTRACTED at $(date -u)"
 fi
 export QT_QPA_PLATFORM=offscreen
 export LD_LIBRARY_PATH={home}/aliceVision/lib:$LD_LIBRARY_PATH
