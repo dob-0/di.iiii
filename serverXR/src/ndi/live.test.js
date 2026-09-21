@@ -119,3 +119,56 @@ describe.runIf(LIVE)('NDI for real (NDI_LIVE=1)', () => {
     console.log('[live] worker stats:', JSON.stringify(stats.worker.receivers))
   }, 30000)
 })
+
+// The lane pointed the other way, and the one test that needs no second machine and no
+// second process: this di.iiii sends a picture and this di.iiii receives it back, both
+// through the real runtime. It is the whole round trip — sharp decodes the JPEG we
+// push, NDI carries the pixels, and the receive lane encodes a JPEG out the far side.
+describe.runIf(LIVE)('sending a picture out, for real (NDI_LIVE=1)', () => {
+  let sender = null
+  afterEach(() => { if (sender) { sender.close(); sender = null } })
+
+  it('puts a named source on the network and reads its own picture back', async () => {
+    const sharp = require('sharp')
+    const { createNdiSendManager } = require('./sendManager.js')
+    const name = `di round trip ${process.pid}`
+    const W = 320
+    const H = 180
+
+    // A warm field, never white: this can end up on a wall by accident and the standing
+    // rule in this studio is that white never goes on a projector.
+    const raw = Buffer.alloc(W * H * 3)
+    for (let y = 0; y < H; y += 1) {
+      for (let x = 0; x < W; x += 1) {
+        const o = (y * W + x) * 3
+        raw[o] = 40 + Math.round((y / H) * 120)
+        raw[o + 1] = 16 + Math.round((y / H) * 48)
+        raw[o + 2] = 10
+      }
+    }
+    const jpeg = await sharp(raw, { raw: { width: W, height: H, channels: 3 } }).jpeg({ quality: 85 }).toBuffer()
+
+    sender = createNdiSendManager()
+    const summary = await sender.summary()
+    expect(summary.available, `the send lane did not load NDI: ${summary.reason} — ${summary.how}`).toBe(true)
+
+    // Keep pushing: an output that stops being fed closes itself after five seconds, and
+    // the finder on the other side needs longer than that to notice a new source at all.
+    const pushing = setInterval(() => { sender.pushFrame({ name, jpeg }) }, 40)
+    try {
+      manager = createNdiManager()
+      const still = await manager.still({ name, maxWidth: W, waitMs: 15000 })
+      expect(still.error, `no picture came back: ${still.detail || still.reason || ''}`).toBeUndefined()
+      expect(still.jpeg.length).toBeGreaterThan(0)
+      expect(still.width).toBe(W)
+
+      // And the sender knows it is being watched — the number that tells a person at the
+      // rig the difference between "nobody has picked it yet" and "it is not working".
+      const mine = sender.outputs().find((o) => o.name === name)
+      expect(mine.state).toBe('sending')
+      expect(mine.dropped).toBe(0)
+    } finally {
+      clearInterval(pushing)
+    }
+  }, 30000)
+})
