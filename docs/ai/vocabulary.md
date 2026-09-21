@@ -59,6 +59,35 @@ used consistently, and every node tool a visitor might arrive from uses one or t
 `raw` in its ordinary English sense (*unparsed, unformatted*) is fine in code, but never in a
 user-visible string where it can be mistaken for the lane — rewrite those.
 
+## The page is not the changelog
+
+A visitor reads what **is**. Our arrangements for getting there are not user-visible copy.
+
+Keep out of any string a person can read:
+
+- A row, tab, rail or feature that does not work yet — "not open yet", "coming", a greyed
+  button. If it does not work, it is not on the page.
+- A count of our own progress: "2 of 5 open", "3 of 7 ready".
+- Which supplier sits behind something, what it charges, and which ones we turned down.
+- Which tier, branch, account or host a thing lives on.
+- Why we picked one arrangement over another. That is a decision record; it lives in `docs/`.
+
+**Why.** It publishes our decision-making to people who came for the work, it dates the page
+the moment anything changes, and it asks a visitor to care about our logistics. It also ages
+badly in public: a row that says "not open yet" is a promise with no date on it.
+
+**Instead:** ship only what works, named by what the person does — *Give once*, *Write to us* —
+never by who processes it. When a new arrangement opens it replaces the link behind that verb;
+it does not arrive as a new row announcing itself.
+
+Found 2026-09-21 on `/support`, which listed five ways to give of which two worked, named every
+payment platform and its fee, and printed "2 of 5 open" in the section heading. Owner: *"why
+public need info what kind of fee and platform are there"*.
+
+**Not this rule:** an honest label on a shipped-but-rough feature. `(dev preview)` on the Studio
+split buttons stays — stripping those was a regression on 2026-08-21. The difference is that a
+label describes what the visitor is about to use; a changelog describes us.
+
 ## `platform` — true, but a third-person word
 
 di.iiii **is** a platform, and the word is correct wherever someone is placing it in a
