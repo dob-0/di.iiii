@@ -28,7 +28,7 @@ import { chromium } from 'playwright'
 import { DatabaseSync } from 'node:sqlite'
 import fs from 'node:fs'
 import path from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execSync } from 'node:child_process'
 
 const REPO = process.cwd()
@@ -178,14 +178,34 @@ const report = async (page, label) => {
 // Done here rather than in a shell line on purpose: every `pgrep -f dev-stack`
 // also matches the shell command containing that string, and killing that is
 // killing your own session (measured — it ends with exit code 144).
+//
+// ONLY THIS CHECKOUT'S STACK. The pattern alone matched every
+// `serverXR/src/index.js` on the machine — including the artist's own
+// installed di.iiii under ~/.di, serving a wall on 443 — and SIGKILLed it,
+// which is the one thing SKILL.md says at the top must never happen
+// (2026-09-21: the live server died mid-request, no log line, no coredump,
+// while an agent stopped its stack). Whose a process is: `npm run dev` puts
+// dev-stack, the watch supervisors, the server and vite in ONE process
+// group, and the vite line names this checkout's node_modules in full. So
+// the groups to stop are the groups of this checkout's vite processes, and
+// nothing outside them is touched — an installed di.iiii has no vite and its
+// own group. (/proc/<pid>/cwd was tried first and is not readable for a
+// sibling sandbox's children on this machine, which would have made the
+// check fail closed and stop nothing.)
+const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 export const stop = () => {
-    const listing = execSync('ps -eo pid=,args=', { encoding: 'utf8' }).split('\n')
-    const mine = listing
-        .map((line) => line.trim())
-        .filter((line) => /dev-stack\.mjs|watch-path=src|node_modules\/\.bin\/vite|[ /]src\/index\.js/.test(line))
-        .filter((line) => !/\bps -eo\b|bash -c/.test(line))
-        .map((line) => Number(line.split(/\s+/)[0]))
-        .filter((pid) => Number.isInteger(pid) && pid !== process.pid)
+    const rows = execSync('ps -eo pid=,pgid=,args=', { encoding: 'utf8' }).split('\n')
+        .map((line) => line.trim()).filter(Boolean)
+        .map((line) => { const [pid, pgid, ...rest] = line.split(/\s+/); return { pid: Number(pid), pgid: Number(pgid), args: rest.join(' ') } })
+        .filter((row) => Number.isInteger(row.pid) && row.pid !== process.pid)
+    const groups = new Set(rows
+        .filter((row) => row.args.includes(`${ROOT_DIR}/node_modules/.bin/vite`))
+        .map((row) => row.pgid))
+    const mine = rows
+        .filter((row) => groups.has(row.pgid))
+        .filter((row) => /dev-stack\.mjs|watch-path=src|node_modules\/\.bin\/vite|[ /]src\/index\.js/.test(row.args))
+        .filter((row) => !/\bps -eo\b|bash -c/.test(row.args))
+        .map((row) => row.pid)
     // Supervisors first, so nothing respawns behind the kill.
     for (const pid of mine) { try { process.kill(pid, 'SIGKILL') } catch { /* already gone */ } }
     return mine
