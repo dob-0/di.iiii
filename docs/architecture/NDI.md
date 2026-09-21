@@ -207,6 +207,20 @@ polled once a second and travels on a `state` message only when it changes.
 until somebody picks it — and the sentence says so in those words rather than reporting
 zero and leaving a person to wonder what they broke.
 
+### A mixed-version rig is safe here, unlike the source kinds
+
+The receive lane has a real trap: `MAPPING_SOURCE_KINDS` is a closed list and a build
+that does not know a kind rewrites the surface back to the default, so a desk ahead of
+its wall can flatten a mapping. **A node TYPE behaves the opposite way.** Checked by
+running it, not by reading: `normalizeProjectNode` keeps an unknown `typeId` and its
+values byte-intact (the schema accepts any typeId without validation, and says so at
+`shared/projectSchema.cjs:8`), and `topEngine` filters a type it does not know out of
+the network rather than failing on it.
+
+So on a rig where one machine has `top.send` and the other does not, the Send Out node
+survives every edit from the older side; it simply draws nothing and sends nothing
+there. Upgrade the sending machine and it starts working, with the name it was given.
+
 ### One thing to keep an eye on
 
 `top.send`'s name is the TOP vocabulary's first **text** parameter. It is safe without
