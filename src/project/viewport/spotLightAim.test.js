@@ -146,6 +146,19 @@ describe('both renderers aim their spot lights', () => {
             .not.toMatch(/scene\.add\(/)
     })
 
+    it('the light sits where the entity is, not a metre up three.js’s own axis', () => {
+        // three.js's SpotLight constructor does
+        // `this.position.copy(Object3D.DEFAULT_UP)`, so an unpositioned one is
+        // a metre along its parent's +Y -- and for a tilted entity that is a
+        // metre backwards along the beam. Pinned against the library itself, so
+        // a three.js release that changed it would be noticed here rather than
+        // in a room.
+        expect(new THREE.SpotLight().position.toArray(), 'three.js no longer offsets a new SpotLight')
+            .toEqual([0, 1, 0])
+        expect(files['SpotLightObject.jsx'], 'the light is not pinned to the entity origin')
+            .toMatch(/position=\{\[0, 0, 0\]\}/)
+    })
+
     it('both renderers pass the same light fields to it', () => {
         const props = (src) => {
             const tag = src.match(/<SpotLightObject\b[^/]*\/>/)?.[0] || ''
@@ -153,6 +166,6 @@ describe('both renderers aim their spot lights', () => {
         }
         expect(props(files['EntityContent.jsx'])).toEqual(props(files['LiveProjectScene.jsx']))
         expect(props(files['EntityContent.jsx']))
-            .toEqual(['angle', 'color', 'decay', 'distance', 'intensity', 'penumbra'])
+            .toEqual(['angle', 'beam', 'color', 'decay', 'distance', 'intensity', 'penumbra'])
     })
 })

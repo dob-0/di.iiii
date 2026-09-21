@@ -3,9 +3,17 @@ import {
     SHADOW_MAP_SIZES,
     defaultShadowCasting,
     dressForShadows,
+    dressLightForShadows,
     resolveShadowCasting,
     shadowRoleOf
 } from './shadowCasting.js'
+
+const spotLight = (distance = 20) => ({
+    isSpotLight: true,
+    distance,
+    children: [],
+    shadow: { mapSize: { width: 512, height: 512 }, camera: { near: 0.1, far: 2000 } }
+})
 
 const mesh = (extra = {}) => ({ isMesh: true, children: [], material: {}, userData: {}, ...extra })
 
@@ -46,7 +54,7 @@ describe('shadows from the room', () => {
                 { isMesh: false, children: [mesh({ name: 'model-part' })] }
             ]
         }
-        expect(dressForShadows(scene)).toBe(3)
+        expect(dressForShadows(scene).meshes).toBe(3)
         const byName = Object.fromEntries(scene.children.map((c) => [c.name || c.type, c]))
         expect(byName.pillar.castShadow).toBe(true)
         expect(byName.pillar.receiveShadow).toBe(true)
@@ -71,9 +79,45 @@ describe('shadows from the room', () => {
         expect(already.castShadow).toBe(true)
     })
 
+    it('makes the lamps throw, with a shadow camera the size of their throw', () => {
+        const lamp = spotLight(14)
+        expect(dressLightForShadows(lamp, 2048)).toBe(true)
+        expect(lamp.castShadow).toBe(true)
+        expect(lamp.shadow.mapSize.width).toBe(2048)
+        expect(lamp.shadow.camera.near).toBe(0.5)
+        expect(lamp.shadow.camera.far).toBe(14)
+        // An unlimited lamp (distance 0 means no limit to three.js) still needs
+        // a far plane.
+        const open = spotLight(0)
+        dressLightForShadows(open, 1024)
+        expect(open.shadow.camera.far).toBe(20)
+    })
+
+    it('throws away a shadow map whose size changed, or the setting does nothing', () => {
+        const lamp = spotLight()
+        let disposed = false
+        lamp.shadow.map = { dispose: () => { disposed = true } }
+        dressLightForShadows(lamp, 2048)
+        expect(disposed).toBe(true)
+        expect(lamp.shadow.map).toBe(null)
+    })
+
+    it('leaves the other kinds of lamp alone', () => {
+        // A directional light needs a frustum sized to the room, not to a
+        // throw: its own change, deliberately not made here.
+        expect(dressLightForShadows({ isDirectionalLight: true, children: [] }, 1024)).toBe(false)
+        expect(dressLightForShadows({ isPointLight: true, children: [] }, 1024)).toBe(false)
+        expect(dressLightForShadows(null, 1024)).toBe(false)
+    })
+
+    it('finds the lamps in the same walk as the scenery', () => {
+        const scene = { children: [mesh(), { isMesh: false, children: [spotLight()] }] }
+        expect(dressForShadows(scene, 1024)).toEqual({ meshes: 1, lights: 1 })
+    })
+
     it('says what to do with nothing at all', () => {
         expect(shadowRoleOf(null)).toBe('skip')
         expect(shadowRoleOf({})).toBe('skip')
-        expect(dressForShadows({})).toBe(0)
+        expect(dressForShadows({})).toEqual({ meshes: 0, lights: 0 })
     })
 })

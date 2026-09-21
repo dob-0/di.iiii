@@ -13,14 +13,14 @@ import { dressForShadows } from './shadowCasting.js'
 // shadow pass itself.
 const REDRESS_EVERY_FRAMES = 30
 
-export default function ShadowCasting({ enabled = false }) {
+export default function ShadowCasting({ enabled = false, mapSize = 1024 }) {
     const scene = useThree((state) => state.scene)
     const frames = useRef(0)
 
     const dress = useCallback(() => {
         if (!enabled || !scene) return
-        dressForShadows(scene)
-    }, [enabled, scene])
+        dressForShadows(scene, mapSize)
+    }, [enabled, mapSize, scene])
 
     useEffect(() => { dress() }, [dress])
 

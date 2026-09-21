@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { cloneValue } from '../../shared/projectSchema.js'
 import { detectAssetMediaKind } from '../../utils/mediaAssetTypes.js'
+import { panTiltFromRotation, rotationFromPanTilt } from '../../project/viewport/spotLightAim.js'
 import ScrubNumberInput from './ScrubNumberInput.jsx'
 
 const setNestedValue = (value, path, nextValue) => {
@@ -133,6 +134,27 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
                     />
                 ))}
             </div>
+        )
+    }
+    if (field.type === 'spotAim') {
+        // Pan and tilt over the entity's rotation — same conversion as the
+        // Studio's, same single source (src/project/viewport/spotLightAim.js),
+        // in Raw's own scrub input. A whole rotation triple goes back, because
+        // aiming a lamp is one move.
+        const aim = panTiltFromRotation(value)
+        const shown = field.axis === 'pan' ? aim.pan : aim.tilt
+        return (
+            <ScrubNumberInput
+                value={Math.round(shown * 10) / 10}
+                fallback={0}
+                min={field.min}
+                max={field.max}
+                step={field.step}
+                disabled={disabled}
+                onChange={(committed) => onChange(rotationFromPanTilt(
+                    field.axis === 'pan' ? { pan: committed, tilt: aim.tilt } : { pan: aim.pan, tilt: committed }
+                ))}
+            />
         )
     }
     if (field.type === 'presets' || field.type === 'modelClips') {

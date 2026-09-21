@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import { cloneValue } from '../../shared/projectSchema.js'
 import { listProjects } from '../../project/services/projectsApi.js'
 import { getModelClips, subscribeModelClips } from '../../project/viewport/modelClipRegistry.js'
+import { panTiltFromRotation, rotationFromPanTilt } from '../../project/viewport/spotLightAim.js'
 import FixtureField from './FixtureField.jsx'
 
 // Clip names only exist once a viewport has loaded the model file, so this
@@ -194,13 +195,16 @@ const groupVectorFields = (fields = []) => {
 }
 
 function InspSlider({ field, value, onChange }) {
-    const num = Number.isFinite(Number(value)) ? Number(value) : field.min
+    // `fallback` is what the RENDERER does with an absent value (haze, say),
+    // so an untouched slider shows the room as it actually looks rather than
+    // parking itself at the minimum and lying about it.
+    const num = Number.isFinite(Number(value)) ? Number(value) : (field.fallback ?? field.min)
     const pct = ((num - field.min) / (field.max - field.min)) * 100
     return (
         <div className="insp-field">
             <div className="insp-slider-header">
                 <label className="insp-label">{field.label}</label>
-                <span className="insp-slider-value">{num}</span>
+                <span className="insp-slider-value">{Math.round(num * 100) / 100}{field.unit || ''}</span>
             </div>
             <input
                 type="range"
@@ -216,9 +220,45 @@ function InspSlider({ field, value, onChange }) {
     )
 }
 
+// AIM — pan and tilt on a spot light, in degrees, over the entity's rotation.
+//
+// The value handed in is the whole `transform.rotation` triple, and what goes
+// back is a whole new triple: aiming is one move, not two independent numbers,
+// and the conversion lives in exactly one place
+// (src/project/viewport/spotLightAim.js). A lamp aimed by dragging the gizmo
+// reads back here, because there is nowhere else for an aim to be stored.
+//
+// The remembered pan is the one piece of state: a lamp hanging dead down has no
+// direction round the vertical — every pan gives the same beam — so the field
+// would otherwise snap back to 0 and a person could not set the pan first and
+// then tilt into it, which is how a rig is actually aimed.
+function SpotAimField({ field, value, onChange }) {
+    const aim = panTiltFromRotation(value)
+    const [rememberedPan, setRememberedPan] = useState(null)
+    const aimable = aim.tilt > 0.001 && aim.tilt < 179.999
+    const pan = aimable ? aim.pan : (rememberedPan ?? aim.pan)
+    const shown = field.axis === 'pan' ? pan : aim.tilt
+    return (
+        <InspSlider
+            field={field}
+            value={Math.round(shown * 10) / 10}
+            onChange={(next) => {
+                if (field.axis === 'pan') setRememberedPan(next)
+                onChange(rotationFromPanTilt(
+                    field.axis === 'pan' ? { pan: next, tilt: aim.tilt } : { pan, tilt: next }
+                ))
+            }}
+        />
+    )
+}
+
 const isBoundedNumber = (field) => field.type === 'number' && Number.isFinite(field.min) && Number.isFinite(field.max)
 
 function InspField({ field, value, assetOptions = [], spaceOptions = [], surfaceOptions = [], siblingSpaceId = null, lightingMirror, onChange }) {
+    if (field.type === 'spotAim') {
+        return <SpotAimField field={field} value={value} onChange={onChange} />
+    }
+
     if (field.type === 'fixture') {
         return <FixtureField label={field.label} value={value} onChange={onChange} mirror={lightingMirror} />
     }

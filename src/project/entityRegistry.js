@@ -38,6 +38,28 @@ const FIXTURE_SECTION = {
     ]
 }
 
+// AIM. A lighting person points a lamp with two numbers — pan, which way round
+// the vertical, and tilt, how far off straight-down — and neither is a raw euler
+// angle. Both fields read and write the SAME `components.transform.rotation` the
+// gizmo writes, converted in one place (src/project/viewport/spotLightAim.js):
+// no new field, no new op, and a lamp aimed by dragging still reads back here.
+// Degrees, because nobody on a ladder thinks in radians.
+const AIM_FIELDS = [
+    { label: 'Pan', component: 'transform', path: ['rotation'], type: 'spotAim', axis: 'pan', min: -180, max: 180, step: 1, unit: '°' },
+    { label: 'Tilt', component: 'transform', path: ['rotation'], type: 'spotAim', axis: 'tilt', min: 0, max: 180, step: 1, unit: '°' }
+]
+
+// THE BEAM. Off unless a room asks for it, so every space published before this
+// existed keeps the air it had. `haze` is how much of the throw hangs visible.
+const BEAM_SECTION = {
+    id: 'beam',
+    label: 'Beam',
+    fields: [
+        { label: 'Beam visible', component: 'beam', path: ['visible'], type: 'checkbox' },
+        { label: 'Haze', component: 'beam', path: ['haze'], type: 'number', min: 0, max: 1, step: 0.05, fallback: 0.4 }
+    ]
+}
+
 const APPEARANCE_FIELDS = [
     { label: 'Colour', component: 'appearance', path: ['color'], type: 'color' },
     { label: 'Opacity', component: 'appearance', path: ['opacity'], type: 'number', min: 0, max: 1, step: 0.05 }
@@ -356,7 +378,10 @@ const DEFINITIONS = {
             { id: 'transform', label: 'Transform', fields: [
                 VECTOR_FIELD('Position X', 'transform', ['position', 0]),
                 VECTOR_FIELD('Position Y', 'transform', ['position', 1]),
-                VECTOR_FIELD('Position Z', 'transform', ['position', 2])
+                VECTOR_FIELD('Position Z', 'transform', ['position', 2]),
+                // Aim, in the fixture's own language. Both write the same
+                // `transform.rotation` the gizmo writes — see AIM_FIELDS.
+                ...AIM_FIELDS
             ]},
             { id: 'light', label: 'Light', fields: [
                 { label: 'Colour', component: 'light', path: ['color'], type: 'color' },
@@ -366,6 +391,7 @@ const DEFINITIONS = {
                 { label: 'Penumbra', component: 'light', path: ['penumbra'], type: 'number', min: 0, max: 1, step: 0.05 },
                 { label: 'Decay', component: 'light', path: ['decay'], type: 'number', min: 0, max: 4, step: 0.1 }
             ]},
+            BEAM_SECTION,
             FIXTURE_SECTION
         ]
     },

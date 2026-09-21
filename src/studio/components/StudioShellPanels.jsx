@@ -919,6 +919,30 @@ export function ProjectPanel({
 
             <CollapsibleSection title="Render" defaultOpen={false}>
                 <ToggleField label="Shadows" checked={render.shadows !== false} onChange={(v) => onRenderSettingsPatch({ shadows: v })} />
+                {/* The switch above allows shadow maps at all and has been on
+                    since the schema was written; this one is what actually puts
+                    the room in them — the lamps throw, the walls and the scenery
+                    catch. Off by default, because a shadow pass over a scanned
+                    venue is not free. */}
+                <ToggleField
+                    label="Lamps throw shadows"
+                    checked={render.shadowCasting?.enabled === true}
+                    onChange={(v) => onRenderSettingsPatch({ shadowCasting: { enabled: v } })}
+                />
+                {render.shadowCasting?.enabled === true ? (
+                    <div className="insp-field">
+                        <label className="insp-label" htmlFor="studio-shadow-detail">Shadow detail</label>
+                        <select
+                            id="studio-shadow-detail"
+                            className="insp-select"
+                            value={String(render.shadowCasting?.mapSize ?? 1024)}
+                            onChange={(event) => onRenderSettingsPatch({ shadowCasting: { mapSize: Number(event.target.value) } })}
+                        >
+                            <option value="1024">Softer (1024)</option>
+                            <option value="2048">Sharper (2048)</option>
+                        </select>
+                    </div>
+                ) : null}
                 <ToggleField label="Antialias" checked={render.antialias !== false} onChange={(v) => onRenderSettingsPatch({ antialias: v })} />
                 <div className="insp-field">
                     <label className="insp-label" htmlFor="studio-tone-mapping">Tone mapping</label>

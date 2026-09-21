@@ -63,28 +63,73 @@ export const shadowRoleOf = (object) => {
     return 'wear'
 }
 
+// Shadow acne on a scanned room is the failure everybody meets first; these two
+// are the usual cure and are kept here rather than on the lamp so every lamp in
+// every surface gets the same treatment.
+const SHADOW_BIAS = -0.0008
+const SHADOW_NORMAL_BIAS = 0.02
+
 /**
- * Turn the scene's solid meshes into shadow casters and catchers.
+ * A lamp that throws a shadow.
+ *
+ * Only spot lights. A spot's shadow camera is a perspective one that already
+ * matches the cone, so its near and far are simply the lamp's own throw --
+ * anything past the reach is unlit anyway, and a far plane at the scene's scale
+ * spends the whole depth buffer on empty air and hands back a blocky,
+ * self-shadowing mess up close. A directional light would need a frustum sized
+ * to the room instead, so it is left alone here on purpose: its own change.
+ */
+export const dressLightForShadows = (light, mapSize) => {
+    if (!light?.isSpotLight) return false
+    light.castShadow = true
+    const shadow = light.shadow
+    if (shadow) {
+        if (shadow.mapSize && shadow.mapSize.width !== mapSize) {
+            shadow.mapSize.width = mapSize
+            shadow.mapSize.height = mapSize
+            // A shadow map already allocated keeps its old size until it is
+            // thrown away, so changing the setting would otherwise do nothing
+            // until the page reloaded.
+            shadow.map?.dispose?.()
+            shadow.map = null
+        }
+        shadow.bias = SHADOW_BIAS
+        shadow.normalBias = SHADOW_NORMAL_BIAS
+        const camera = shadow.camera
+        if (camera) {
+            camera.near = 0.5
+            camera.far = Math.max(1, Number(light.distance) || 20)
+            camera.updateProjectionMatrix?.()
+        }
+    }
+    return true
+}
+
+/**
+ * Turn the scene's lamps into shadow casters and its solid meshes into casters
+ * and catchers.
  *
  * Only ever switches flags ON. With the room's shadows off this is never
  * called, and nothing in an existing room is touched — no lamp casts, so there
  * is nothing to catch either way.
  *
- * @returns {number} how many meshes now wear shadows (for tests)
+ * @returns {{ meshes: number, lights: number }} for tests
  */
-export const dressForShadows = (root) => {
-    let dressed = 0
+export const dressForShadows = (root, mapSize = defaultShadowCasting.mapSize) => {
+    let meshes = 0
+    let lights = 0
     const walk = (object) => {
         const role = shadowRoleOf(object)
         if (role === 'skip-subtree') return
         if (role === 'wear') {
             object.castShadow = true
             object.receiveShadow = true
-            dressed += 1
+            meshes += 1
         }
+        if (dressLightForShadows(object, mapSize)) lights += 1
         const children = object?.children
         if (Array.isArray(children)) children.forEach(walk)
     }
     walk(root)
-    return dressed
+    return { meshes, lights }
 }
