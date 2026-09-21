@@ -26,6 +26,18 @@ const TRANSFORM_FIELDS = [
     VECTOR_FIELD('Scale Z', 'transform', ['scale', 2], { step: 0.05, min: 0.01 })
 ]
 
+// The join to the lighting desk: which patched fixture this lamp IS. One number, the
+// fixture's index on the desk (`3.Back left`); the inspector offers the desk's own
+// list when it is running here, a plain number otherwise. Point, spot and directional
+// only — an ambient light is a level for the whole room, not a lamp on a bar.
+const FIXTURE_SECTION = {
+    id: 'fixture',
+    label: 'Desk',
+    fields: [
+        { label: 'Fixture', component: 'fixture', path: ['index'], type: 'fixture' }
+    ]
+}
+
 const APPEARANCE_FIELDS = [
     { label: 'Colour', component: 'appearance', path: ['color'], type: 'color' },
     { label: 'Opacity', component: 'appearance', path: ['opacity'], type: 'number', min: 0, max: 1, step: 0.05 }
@@ -156,6 +168,15 @@ const DEFINITIONS = {
                 fields: [
                     { label: 'Width', component: 'primitive', path: ['width'], type: 'number', min: 0.05, step: 0.1 },
                     { label: 'Depth', component: 'primitive', path: ['depth'], type: 'number', min: 0.05, step: 0.1 }
+                ]
+            },
+            // A plane can be a screen: pick one of the project's mapping
+            // surfaces and the plane shows its live picture (liveScreen.js).
+            {
+                id: 'surface',
+                label: 'Screen',
+                fields: [
+                    { label: 'Surface', component: 'surface', path: ['surfaceId'], type: 'mappingSurface' }
                 ]
             }
         ]
@@ -325,7 +346,8 @@ const DEFINITIONS = {
                 { label: 'Intensity', component: 'light', path: ['intensity'], type: 'number', min: 0, max: 20, step: 0.1 },
                 { label: 'Distance', component: 'light', path: ['distance'], type: 'number', min: 0, max: 100, step: 0.5 },
                 { label: 'Decay', component: 'light', path: ['decay'], type: 'number', min: 0, max: 4, step: 0.1 }
-            ]}
+            ]},
+            FIXTURE_SECTION
         ]
     },
     spotLight: {
@@ -343,7 +365,8 @@ const DEFINITIONS = {
                 { label: 'Angle (rad)', component: 'light', path: ['angle'], type: 'number', min: 0.01, max: 1.57, step: 0.01 },
                 { label: 'Penumbra', component: 'light', path: ['penumbra'], type: 'number', min: 0, max: 1, step: 0.05 },
                 { label: 'Decay', component: 'light', path: ['decay'], type: 'number', min: 0, max: 4, step: 0.1 }
-            ]}
+            ]},
+            FIXTURE_SECTION
         ]
     },
     directionalLight: {
@@ -357,7 +380,8 @@ const DEFINITIONS = {
             { id: 'light', label: 'Light', fields: [
                 { label: 'Colour', component: 'light', path: ['color'], type: 'color' },
                 { label: 'Intensity', component: 'light', path: ['intensity'], type: 'number', min: 0, max: 20, step: 0.1 }
-            ]}
+            ]},
+            FIXTURE_SECTION
         ]
     },
     ambientLight: {

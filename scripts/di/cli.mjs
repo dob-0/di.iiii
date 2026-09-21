@@ -20,6 +20,7 @@
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
+import { isIP } from 'node:net'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
@@ -48,15 +49,20 @@ import { getKeeper, keeperPaths, keeperStatus, removeKeeper, startKeeper, stopKe
 import * as docker from './runner-docker.mjs'
 import * as node from './runner-node.mjs'
 import {
-    currentVersionDir, dirSize, humanSize, installedVersion, isInstalled,
-    ensureGuestSecrets, lanUrl, localUrl, nameUrl, readCert, readEnv, readState, resolvePort, writeEnv, writeState
+    alive, apiBase, currentVersionDir, dirSize, humanSize, installedVersion, isInstalled,
+    ensureGuestSecrets, lanUrl, localUrl, nameUrl, publicUrl, readCert, readEnv, readState, resolvePort, writeEnv, writeState
 } from './state.mjs'
 import { readLink, writeLink } from './credentialsStore.mjs'
 import { createLedger, ensureInstallId, readLedger, writeLedger } from './ledger.mjs'
 import { buildSyncAudit } from './sync-plan.mjs'
 import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
-import { checkFollowable, createLocalSpace, instanceOf, listInvites, localSpaceExists, mintInvite, resolveBase, revokeInvite } from './share.mjs'
-import { addFollow, readFollows, removeFollow } from './follows.mjs'
+import { listInvites, mintInvite, revokeInvite } from './share.mjs'
+import { readFollows, removeFollow } from './follows.mjs'
+import { followSpace } from './follow.mjs'
+import {
+    isStageMachine, joinPlan, joinStage, leaveStage, readManifest,
+    restartSupervisor, runSupervisor, stageStatus, startSupervisor
+} from './stage.mjs'
 import { parseArgs } from './args.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
 
@@ -97,39 +103,9 @@ const readStdin = async () => {
     return Buffer.concat(chunks).toString('utf8')
 }
 
-/**
- * Is this install answering — asked the way a browser would.
- *
- * With a certificate the server speaks https and only https, and the
- * certificate is for a NAME: probing http://localhost then reported "not
- * running" about a server that was serving the room perfectly. One helper, so
- * every command asks the same correct question.
- */
-const alive = async (home, port) => {
-    const cert = readCert(home)
-    if (cert && await probeHealth(port, cert.name, '/serverXR', 'https')) return true
-    return probeHealth(port)
-}
-
-/**
- * The address to PRINT for this install. The certificate's name when there is
- * one — that is the address the app itself shows, the one on the phones, and
- * the only one with a padlock. Anything that tells a person where their di.iiii
- * is must agree with what their browser shows.
- */
-const publicUrl = (home, port) => {
-    const cert = readCert(home)
-    return cert ? `https://${cert.name}${port === 443 ? '' : `:${port}`}` : localUrl(port)
-}
-
-/**
- * Where this CLI talks to its own server. Not `localUrl(port)`: an install with
- * a certificate answers https on its name and nothing else, and on 443 the
- * loopback URL has no port in it at all — so every request went to :80, which
- * is either nothing ("could not ask this di.iiii") or some other server that
- * answers 200 to anything (`di follow` then believed every space existed).
- */
-const apiBase = (home, port) => `${publicUrl(home, port)}/serverXR`
+// `alive`, `publicUrl` and `apiBase` live in state.mjs — `di stage` asks the
+// same three questions of the same install, and a second copy of them here
+// would be a second chance to get the certificate case wrong.
 
 /** How this install talks to ITSELF: always loopback, never the pretty name. */
 const spaceNames = async (port) => (await spaceSummary(port)).names
@@ -317,6 +293,10 @@ const cmdDown = async () => {
     await stopName(home)
     await stopKeeper(home)
     say(was ? ui.stopped(runner.describe(home).dataDir) : ui.notRunning())
+    // On a stage machine this stop does not last: the supervisor puts the
+    // server back within a tick, which from the room looks like a wall coming
+    // on by itself. Better said than discovered.
+    if (isStageMachine(home)) warn(ui.downOnStage())
 }
 
 const cmdStatus = async () => {
@@ -692,6 +672,14 @@ const cmdRestore = async (args) => {
 const cmdUninstall = async (args) => {
     const home = HOME()
     const p = paths(home)
+    // BEFORE anything is deleted. The autostart entry `di stage join` wrote
+    // lives OUTSIDE DI_HOME — a scheduled task, a LaunchAgent, a systemd user
+    // unit — so removing the install first would leave an entry pointing at a
+    // CLI that no longer exists, waking up at every login forever.
+    if (isStageMachine(home)) {
+        const left = await leaveStage({ home })
+        if (left.ok) say(ui.stageLeft(left.done, false))
+    }
     if (isInstalled(home)) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
 
     // credentials.json holds live editor keys — secrets are not "your work"
@@ -975,21 +963,58 @@ const cmdInvite = async (args) => {
     say(ui.invited(spaceId, from, minted.key))
 }
 
+/** The bare hostname out of whatever a person typed for --from, for a message
+ * that wants the NAME rather than the whole URL. Never throws — a value that
+ * does not parse is printed back exactly as typed. */
+const hostnameOf = (value) => {
+    try { return new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(value) ? value : `https://${value}`).hostname } catch { return value }
+}
+
 /**
- * `di follow <space> --from <url> --key <key>` — join a space that lives on
- * another di.iiii. Both sides keep the whole work; the edits travel.
+ * `di follow <space> --from <url> --key <key> [--at <address>]` — join a space
+ * that lives on another di.iiii. Both sides keep the whole work; the edits
+ * travel.
+ *
+ * `--at` is the ADDRESS PIN: the name in --from keeps doing its job — Host
+ * header, SNI, the certificate check — but the socket goes to this address
+ * instead of whatever the name resolves to here. It exists for the case found
+ * on a real rig: `--from https://local.thedi.studio` resolved, on the
+ * follower, to an address it could not reach — the host was only reachable at
+ * its Tailscale IP — and the only fix without this was a hand edit of the OS
+ * hosts file, which needs admin.
  */
+/**
+ * The key, however it was given: `--key K`, `--key -` from the pipe, or
+ * DI_FOLLOW_KEY. A key on the command line lands in shell history and in `ps`
+ * for every other account on the machine, so the other two exist.
+ */
+const readKeyFlag = async (args) => (args.flags.key === '-' || args.flags.key === true
+    ? (await readStdin()).trim()
+    : (args.flags.key || String(process.env.DI_FOLLOW_KEY || '').trim() || null))
+
+/** `--at`, checked. Returns `false` when it was given and is not an address. */
+const readAtFlag = (args) => {
+    const at = args.flags.at !== undefined ? String(args.flags.at).trim() : null
+    if (at !== null && !isIP(at)) { fail(ui.badAddress(at)); return false }
+    return at
+}
+
+/** The one place a refusal from followSpace becomes words. */
+const sayFollowRefusal = (reason, from, at) => {
+    if (reason === 'merge') fail(ui.followWouldMerge(from.spaceId))
+    else fail(ui.followRefused(reason, reason === 'cert-mismatch' ? hostnameOf(from.url) : from.url, at))
+}
+
 const cmdFollow = async (args) => {
     const home = HOME()
     if (!requireInstalled(home)) return
     const spaceId = args._[1]
     const from = args.flags.from
-    // A key on the command line lands in shell history and in `ps` for every
-    // other account on the machine. `--key -` reads it from the pipe, and
-    // DI_FOLLOW_KEY from the environment; the flag stays for the simple case.
-    const key = args.flags.key === '-' || args.flags.key === true
-        ? (await readStdin()).trim()
-        : (args.flags.key || String(process.env.DI_FOLLOW_KEY || '').trim() || null)
+    const key = await readKeyFlag(args)
+
+    const at = readAtFlag(args)
+    if (at === false) { process.exitCode = 1; return }
+
     if (!spaceId || !from) {
         fail(`which space, and where from? — ${CMD} follow their-space --from https://local.thedi.studio --key dii_sync_…`)
         process.exitCode = 1
@@ -997,41 +1022,15 @@ const cmdFollow = async (args) => {
     }
 
     say(ui.checkingFollow())
-    const base = await resolveBase(from)
-    if (!base) { fail(ui.followRefused('unreachable', from)); process.exitCode = 1; return }
-
-    const check = await checkFollowable({ base, spaceId, key })
-    if (!check.ok) { fail(ui.followRefused(check.reason, from)); process.exitCode = 1; return }
-
-    const port = resolvePort(home)
-    const selfBase = apiBase(home, port)
-    const running = await alive(home, port)
-
-    // Following yourself is a loop with no second person in it: the same server
-    // reading and writing its own log forever.
-    if (running) {
-        const [there, here] = await Promise.all([instanceOf(base), instanceOf(selfBase)])
-        if (there && here && there === here) { fail(ui.followRefused('itself', from)); process.exitCode = 1; return }
-    }
-
-    // A space of that name already here is somebody's work — `main` is the front
-    // room on every install. Wiring a stranger's log into it, and pushing its
-    // contents out to them, must be asked for out loud.
-    if (running && !args.flags.into && await localSpaceExists({ base: selfBase, spaceId, token: readEnv(home).ADMIN_API_TOKEN || null })) {
-        fail(ui.followWouldMerge(spaceId))
+    const result = await followSpace({
+        home, spaceId, from, key, into: args.flags.into, address: at, port: resolvePort(home)
+    })
+    if (!result.ok) {
+        sayFollowRefusal(result.reason, { spaceId, url: from }, at)
         process.exitCode = 1
         return
     }
-
-    // The space has to exist here for the ops to land in. Created through this
-    // install's own route, so it is an ordinary space in every other way.
-    if (running) {
-        const made = await createLocalSpace({ base: selfBase, spaceId, token: readEnv(home).ADMIN_API_TOKEN || null })
-        if (!made.ok) { fail(ui.followRefused('local-space', from)); process.exitCode = 1; return }
-    }
-
-    await addFollow(paths(home).data, spaceId, { remote: base, token: key })
-    say(ui.following(spaceId, base, running))
+    say(ui.following(spaceId, result.base, result.running, at))
 }
 
 /** `di follows` — what this install is following, and whether it is keeping up. */
@@ -1124,10 +1123,109 @@ const progressLine = () => {
     }
 }
 
+/**
+ * `di stage` — this machine becomes the one under the projector.
+ *
+ * Everything it does is in stage.mjs, and everything it DECIDES is in
+ * stagePlan.mjs. This routes, prints, and sets the exit code — the same rule
+ * the rest of this file follows.
+ */
+const cmdStage = async (args) => {
+    const home = HOME()
+    const what = args._[1] || 'status'
+
+    if (what === 'join') {
+        if (!requireInstalled(home)) return
+        const spaceId = args._[2]
+        const from = args.flags.from
+        if (!spaceId || !from) {
+            fail(`which space, and where from? — ${CMD} stage join stage --from https://local.thedi.studio --key dii_sync_…`)
+            process.exitCode = 1
+            return
+        }
+        const at = readAtFlag(args)
+        if (at === false) { process.exitCode = 1; return }
+
+        const plan = {
+            spaceId,
+            from,
+            at,
+            project: typeof args.flags.project === 'string' ? args.flags.project : null,
+            browser: typeof args.flags.browser === 'string' ? args.flags.browser : null,
+            name: typeof args.flags.name === 'string' ? args.flags.name : null
+        }
+        if (args.flags['dry-run']) { say(ui.stagePlanned(joinPlan({ home, ...plan }))); return }
+
+        say(ui.checkingFollow())
+        const result = await joinStage({
+            home, ...plan,
+            key: await readKeyFlag(args),
+            into: args.flags.into,
+            lan: Boolean(args.flags.lan)
+        })
+        if (!result.ok) {
+            if (result.reason === 'no-browser') fail(ui.stageNoBrowser())
+            else sayFollowRefusal(result.why, { spaceId, url: from }, at)
+            process.exitCode = 1
+            return
+        }
+        // The supervisor, detached, is what brings the server up — one path to
+        // a running server, and it outlives the terminal that typed this.
+        startSupervisor(home)
+        say(ui.stageJoined({
+            spaceId,
+            remote: result.base,
+            url: result.url,
+            at,
+            browser: result.browser,
+            autostart: result.autostart,
+            autostartWhy: result.autostartWhy
+        }))
+        return
+    }
+
+    if (what === 'leave') {
+        const keepSpace = Boolean(args.flags['keep-space'])
+        const result = await leaveStage({ home, keepSpace })
+        if (!result.ok) { say(ui.stageNotJoined()); process.exitCode = 1; return }
+        say(ui.stageLeft(result.done, keepSpace))
+        return
+    }
+
+    if (what === 'status') {
+        const status = await stageStatus(home)
+        if (args.flags.json) { say(JSON.stringify(status, null, 2)) } else { say(ui.stageStatus(status)) }
+        if (!status.ok) process.exitCode = 1
+        return
+    }
+
+    // Hidden: this is what the autostart entry calls, and it does not return.
+    if (what === 'run') {
+        const result = await runSupervisor({
+            home,
+            once: Boolean(args.flags.once),
+            log: (line) => say(`${new Date().toISOString()} ${line}`)
+        })
+        if (!result.ok) { fail(ui.stageNotJoined()); process.exitCode = 1 }
+        return
+    }
+
+    if (what === 'restart') {
+        if (!readManifest(home)) { say(ui.stageNotJoined()); process.exitCode = 1; return }
+        const result = await restartSupervisor(home)
+        say(`${result.was ? 'restarted' : 'started'} the stage supervisor — pid ${result.pid}`)
+        return
+    }
+
+    fail(`${CMD} stage join | leave | status | restart`)
+    process.exitCode = 1
+}
+
 const COMMANDS = {
     up: cmdUp,
     invite: cmdInvite,
     follow: cmdFollow,
+    stage: cmdStage,
     follows: cmdFollows,
     unfollow: cmdUnfollow,
     down: cmdDown,

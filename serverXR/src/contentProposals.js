@@ -443,9 +443,9 @@ function createContentProposals({
   // which the intent hash binds: the file by its sha-256, the space, the
   // proposer, and the moment the proposal was made.
   const execute = async (args) => {
-    const spaceId = String(args?.spaceId || '')
-    const sha = String(args?.bundleSha256 || '')
-    if (!/^[a-f0-9]{64}$/.test(sha) || !spaceId) throw new Error('content.apply: malformed proposal')
+    const { spaceId, bundleSha256 } = args || {}
+    const sha = String(bundleSha256 || '')
+    if (!/^[a-f0-9]{64}$/.test(sha) || !spaceId || typeof spaceId !== 'string') throw new Error('content.apply: malformed proposal')
     const file = storedPath(sha)
     if (!fs.existsSync(file)) throw new Error('content.apply: the proposed file is no longer on this server')
     if ((await sha256File(file)) !== sha) throw new Error('content.apply: the stored file does not match the proposal')
@@ -526,7 +526,12 @@ function createContentProposals({
   // authority — but a proposal must not outlive its space or turn into a
   // write on a space that became the Open Space in the meantime.
   const reauthorize = async (args) => {
-    const meta = await loadSpaceMeta(String(args?.spaceId || '')).catch(() => null)
+    // A proposal that names no space is refused outright — never looked up
+    // under '' (check-fallback-patterns: an identifier must fail loudly, not
+    // fall back to a literal).
+    const { spaceId } = args || {}
+    if (!spaceId || typeof spaceId !== 'string') return false
+    const meta = await loadSpaceMeta(spaceId).catch(() => null)
     return Boolean(meta) && meta.kind !== 'global'
   }
 

@@ -21,6 +21,7 @@
 const { httpRequest } = require('../httpClient')
 const { accountedThrough, moreToCarry, unseen, planDirection, planAfterConflict, nextInterval, refusedWholeWork, WHOLE_WORK_OPS } = require('./followPlan')
 const { projectIdsFrom, sceneStream, streamsFor } = require('./streams')
+const { createAssetChase } = require('./assets')
 
 const FLOOR_MS = 700
 // Five seconds, not thirty. A followed space is a room with someone else in
@@ -57,7 +58,7 @@ const rememberSeen = (seen, ops = []) => {
 // parser OOMs under the memory limits of the shared hosting the live site runs
 // on, and that bug class has shipped here twice. httpContracts.test.js keeps it
 // at zero, and this file is no exception for being new.
-const request = async (url, { method = 'GET', token = null, body = null, timeoutMs = TIMEOUT_MS, signal = null, servername = null } = {}) => {
+const request = async (url, { method = 'GET', token = null, body = null, timeoutMs = TIMEOUT_MS, signal = null, servername = null, address = null } = {}) => {
     const payloadBody = body ? JSON.stringify(body) : null
     try {
         const response = await httpRequest(url, {
@@ -65,6 +66,7 @@ const request = async (url, { method = 'GET', token = null, body = null, timeout
             timeoutMs,
             signal,
             servername,
+            address,
             headers: {
                 Accept: 'application/json',
                 ...(payloadBody ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payloadBody) } : {}),
@@ -82,11 +84,14 @@ const request = async (url, { method = 'GET', token = null, body = null, timeout
  * One side of a followed space, addressed the same way whether it is across the
  * room or across the internet: a base URL, a space id, and a token.
  */
-const side = ({ base, spaceId, token = null, servername = null }) => ({
+const side = ({ base, spaceId, token = null, servername = null, address = null }) => ({
     base: String(base || '').replace(/\/$/, ''),
     spaceId,
     token,
     servername,
+    // The ADDRESS PIN, from a follow's `address` field (see followStore.js) —
+    // the name in `base` stays, the socket goes here instead.
+    address,
     url(path) { return `${this.base}${path}` },
     opsUrl(stream, since) {
         const url = this.url(stream.opsPath)
@@ -112,6 +117,7 @@ const readOps = async (from, stream, since, { waitSeconds = 0, signal = null } =
     const answer = await request(url, {
         token: from.token,
         servername: from.servername,
+        address: from.address,
         timeoutMs: (waitSeconds ? waitSeconds * 1000 : 0) + TIMEOUT_MS,
         signal
     })
@@ -132,7 +138,7 @@ const carry = async ({ to, stream, ops, seen, targetVersion }) => {
     const plan = planDirection({ ops, seen, targetVersion })
     if (!plan) return { wrote: 0, targetVersion, moved: false }
 
-    const answer = await request(to.writeUrl(stream), { method: 'POST', token: to.token, servername: to.servername, body: plan })
+    const answer = await request(to.writeUrl(stream), { method: 'POST', token: to.token, servername: to.servername, address: to.address, body: plan })
     if (answer.ok) {
         rememberSeen(seen, plan.ops)
         const newVersion = Number.isFinite(answer.payload?.newVersion) ? answer.payload.newVersion : targetVersion
@@ -171,8 +177,12 @@ const carry = async ({ to, stream, ops, seen, targetVersion }) => {
  * `onState` is called after every tick with a plain object a person could read:
  * this is what `di follows` prints and what the interface will show.
  */
-const startFollowing = ({ local, remote, log = console, onState = () => {} }) => {
+const startFollowing = ({ local, remote, log = console, onState = () => {}, files = {} }) => {
     const seen = new Set()
+    // The files the projects name (follow/assets.js). Its own task, beside the
+    // op loop and never inside it: the loop hands it what it read and walks on,
+    // so ops keep crossing while a two-gigabyte video is still on its way.
+    const chase = createAssetChase({ local, remote, log, ...files })
     let stopped = false
     let interval = FLOOR_MS
     // One cursor pair per stream — the room's own log and every project in it.
@@ -199,8 +209,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
     const refreshStreams = async () => {
         const path = `/api/spaces/${encodeURIComponent(local.spaceId)}/projects`
         const [here, there] = await Promise.all([
-            request(local.url(path), { token: local.token, servername: local.servername }),
-            request(remote.url(path), { token: remote.token, servername: remote.servername })
+            request(local.url(path), { token: local.token, servername: local.servername, address: local.address }),
+            request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address })
         ])
         const localProjects = projectIdsFrom(here.payload)
         const remoteProjects = projectIdsFrom(there.payload)
@@ -212,7 +222,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
         for (const projectId of remoteProjects) {
             if (localProjects.includes(projectId)) continue
             const made = await request(local.url(path), {
-                method: 'POST', token: local.token, servername: local.servername, body: { slug: projectId, title: projectId }
+                method: 'POST', token: local.token, servername: local.servername, address: local.address, body: { slug: projectId, title: projectId }
             })
             if (!made.ok && made.status !== 409) {
                 log.warn?.(`[follow] ${local.spaceId}: could not make room for ${projectId} (${made.status})`)
@@ -249,6 +259,9 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
             if (ours.status === 404) return { moved: false, skipped: true }
             return { moved: false, failed: 'this install is not answering its own op log' }
         }
+
+        // Any file these ops name is chased separately; this only takes a note.
+        if (stream.kind === 'project') chase.noteOps(stream.projectId, [...theirs.ops, ...ours.ops])
 
         const inbound = await carry({ to: local, stream, ops: theirs.ops, seen, targetVersion: ours.latestVersion })
         const outbound = await carry({ to: remote, stream, ops: ours.ops, seen, targetVersion: theirs.latestVersion })
@@ -314,6 +327,12 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
             failed = failed || result.failed
         }
 
+        // Every project's document is read once for the files it already
+        // named before this follow began; after that the ops say what is new.
+        // Kicked, not awaited.
+        chase.noteProjects(streams.filter(stream => stream.kind === 'project').map(stream => stream.projectId))
+        chase.run()
+
         state = {
             status: failed ? 'waiting' : (more ? 'catching up' : 'following'),
             carriedIn: state.carriedIn + carriedIn,
@@ -340,7 +359,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
                 state = { ...state, status: 'waiting', lastError: String(error?.message || error) }
                 log.warn?.(`[follow] ${local.spaceId}: ${state.lastError}`)
             }
-            onState({ spaceId: local.spaceId, remote: remote.base, ...state })
+            onState({ spaceId: local.spaceId, remote: remote.base, ...state, files: chase.files })
             // A tick that PARKED has already done its waiting on the other
             // machine, and came back because something moved there — go round
             // again at once rather than sleeping through the thing we were
@@ -356,7 +375,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
 
     loop()
     return {
-        stop() { stopped = true },
+        stop() { stopped = true; chase.stop() },
         wake() {
             interval = FLOOR_MS
             // Both: end the sleep between ticks, AND abandon a read parked on
@@ -366,7 +385,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {} }) =>
             parking?.abort()
             wakeNow?.()
         },
-        get state() { return { spaceId: local.spaceId, remote: remote.base, ...state } }
+        get state() { return { spaceId: local.spaceId, remote: remote.base, ...state, files: chase.files } }
     }
 }
 

@@ -136,3 +136,11 @@ escalation denied (403) → list (no secret) → revoke → revoked key rejected
 
 Remaining before prod: security-auditor sign-off on the diff, the **UI panel**
 (`preferences-*` design system) + wiki entry, and unit tests in `syncKeyStore.test.js`.
+
+## 12. The key also carries files (2026-09-20)
+
+A sync key held by `di follow` now moves **project asset bytes** as well as ops: it reads
+`GET /api/projects/:pid/assets/:id` on the host and may call the hash-pinned
+`PUT /api/projects/:pid/assets/:sha256`, which stores without the EXIF scrubber **only** when the
+bytes hash to the id. Same scope (editor, that one space); ordinary editors get 403 on that route.
+Reasoning and limits: [SPEC_follow_files.md](SPEC_follow_files.md).

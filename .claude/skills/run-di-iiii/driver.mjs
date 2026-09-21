@@ -30,6 +30,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { execSync } from 'node:child_process'
+import { ownedProcesses } from '../../../scripts/dev-stack-owned.mjs'
 
 const REPO = process.cwd()
 const PASSWORD = 'driver-passphrase-9x'
@@ -178,17 +179,29 @@ const report = async (page, label) => {
 // Done here rather than in a shell line on purpose: every `pgrep -f dev-stack`
 // also matches the shell command containing that string, and killing that is
 // killing your own session (measured — it ends with exit code 144).
+// Only processes started under THIS checkout are touched. The command lines
+// do not say which repo they came from — an installed di.iiii's live server
+// is `node src/index.js` too — so the working directory decides, and one that
+// cannot be read is left alone — unless the process sits in the process group
+// of this checkout's own vite, which `npm run dev` starts in one group with
+// the rest (a sibling sandbox can hide /proc/<pid>/cwd). Killing by pattern
+// took down the installed di.iiii serving a stage three times (2026-09-21).
+const cwdOf = (pid) => {
+    try { return fs.readlinkSync(`/proc/${pid}/cwd`) } catch { /* not Linux, or gone */ }
+    try {
+        const out = execSync(`lsof -a -p ${pid} -d cwd -Fn 2>/dev/null`, { encoding: 'utf8' })
+        const line = out.split('\n').find((l) => l.startsWith('n'))
+        const dir = line ? line.slice(1) : null
+        return dir && dir.startsWith('/') && !dir.startsWith('/proc/') ? dir : null
+    } catch { return null }
+}
+
 export const stop = () => {
-    const listing = execSync('ps -eo pid=,args=', { encoding: 'utf8' }).split('\n')
-    const mine = listing
-        .map((line) => line.trim())
-        .filter((line) => /dev-stack\.mjs|watch-path=src|node_modules\/\.bin\/vite|[ /]src\/index\.js/.test(line))
-        .filter((line) => !/\bps -eo\b|bash -c/.test(line))
-        .map((line) => Number(line.split(/\s+/)[0]))
-        .filter((pid) => Number.isInteger(pid) && pid !== process.pid)
+    const listing = execSync('ps -eo pid=,pgid=,args=', { encoding: 'utf8' })
+    const { mine, others } = ownedProcesses(listing, REPO, cwdOf, process.pid)
     // Supervisors first, so nothing respawns behind the kill.
-    for (const pid of mine) { try { process.kill(pid, 'SIGKILL') } catch { /* already gone */ } }
-    return mine
+    for (const { pid } of mine) { try { process.kill(pid, 'SIGKILL') } catch { /* already gone */ } }
+    return { killed: mine.map((p) => p.pid), left: others }
 }
 
 // ── the three commands ──────────────────────────────────────────────────────
@@ -216,8 +229,9 @@ const [command, target] = positionals
 
 const main = async () => {
     if (command === 'stop') {
-        const killed = stop()
-        console.log(killed.length ? `stopped ${killed.length} process(es): ${killed.join(', ')}` : 'nothing was running')
+        const { killed, left } = stop()
+        console.log(killed.length ? `stopped ${killed.length} process(es): ${killed.join(', ')}` : 'nothing of this checkout was running')
+        if (left.length) console.log(`left alone (not started under ${REPO}): ${left.map((p) => `${p.pid} ${p.cwd ?? '(cwd unreadable)'}`).join(', ')}`)
         return 0
     }
 

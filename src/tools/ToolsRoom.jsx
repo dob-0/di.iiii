@@ -4,7 +4,7 @@ import './toolsRoom.css'
 import SurfaceBar from '../components/SurfaceBar.jsx'
 import { isEmbedRequest } from '../utils/previewMode.js'
 import { DeskMark, LightMark, MapperMark, RawMark, StudioMark } from './toolMarks.jsx'
-import { listProjects } from '../project/services/projectsApi.js'
+import { createProject, listProjects } from '../project/services/projectsApi.js'
 import { listServerSpaces } from '../services/serverSpaces.js'
 
 /**
@@ -36,6 +36,13 @@ export default function ToolsRoom({ isLocalInstall = false }) {
     const [picking, setPicking] = useState(null)   // key of the tool asking for a project
     const [inSpace, setInSpace] = useState(null)   // space chosen inside that dialog
     const [projects, setProjects] = useState({ loading: false, items: null, failed: false })
+    // A space with no projects used to be a dead end here — the picker showed
+    // "has nothing to open yet" with no way onward, so the shortest path from
+    // Tools to a wall was to leave, go make a project in Studio, and come
+    // back. Same create-project call Studio's own hub uses.
+    const [makingProject, setMakingProject] = useState(false)
+    const [newProjectName, setNewProjectName] = useState('')
+    const [creatingProject, setCreatingProject] = useState(false)
 
     useEffect(() => {
         let alive = true
@@ -49,6 +56,9 @@ export default function ToolsRoom({ isLocalInstall = false }) {
         setPicking(null)
         setInSpace(null)
         setProjects({ loading: false, items: null, failed: false })
+        setMakingProject(false)
+        setNewProjectName('')
+        setCreatingProject(false)
     }, [])
 
     useEffect(() => {
@@ -61,6 +71,8 @@ export default function ToolsRoom({ isLocalInstall = false }) {
     const openSpace = useCallback((spaceId) => {
         setInSpace(spaceId)
         setProjects({ loading: true, items: null, failed: false })
+        setMakingProject(false)
+        setNewProjectName('')
         listProjects(spaceId)
             .then((items) => setProjects({ loading: false, items: Array.isArray(items) ? items : [], failed: false }))
             .catch(() => setProjects({ loading: false, items: null, failed: true }))
@@ -109,8 +121,7 @@ export default function ToolsRoom({ isLocalInstall = false }) {
                 {
                     key: 'map',
                     name: 'Projection',
-                    meta: 'needs a project',
-                    muted: true,
+                    meta: 'pick a project',
                     Mark: MapperMark,
                     picker: {
                         say: 'Shape the picture to the wall it is thrown on. Choose what to map.',
@@ -139,6 +150,22 @@ export default function ToolsRoom({ isLocalInstall = false }) {
         () => groups.flatMap((group) => group.tools).find((tool) => tool.key === picking) || null,
         [groups, picking]
     )
+
+    // The smallest honest "New project": same call Studio's own hub makes
+    // (createProject), landing straight on the tool that was asking for one —
+    // never back through Studio first.
+    const submitNewProject = useCallback(async (event) => {
+        event.preventDefault()
+        if (!inSpace || !asking?.picker || creatingProject) return
+        const title = newProjectName.trim() || 'Untitled'
+        setCreatingProject(true)
+        try {
+            const res = await createProject(inSpace, { title, slug: title, source: 'tools-picker' })
+            window.location.href = asking.picker.href(inSpace, res.project.id)
+        } catch {
+            setCreatingProject(false)
+        }
+    }, [inSpace, newProjectName, creatingProject, asking])
 
     return (
         <div className="tr">
@@ -222,7 +249,29 @@ export default function ToolsRoom({ isLocalInstall = false }) {
 
                             {inSpace && projects.loading && <div className="tr-empty">reading {inSpace}…</div>}
                             {inSpace && projects.failed && <div className="tr-empty">{inSpace} did not answer.</div>}
-                            {inSpace && projects.items?.length === 0 && <div className="tr-empty">{inSpace} has nothing to open yet.</div>}
+                            {inSpace && projects.items?.length === 0 && !makingProject && (
+                                <div className="tr-empty">
+                                    {inSpace} has nothing to open yet.{' '}
+                                    <button type="button" className="tr-quiet is-accent" onClick={() => setMakingProject(true)}>+ new project</button>
+                                </div>
+                            )}
+                            {inSpace && makingProject && (
+                                <form className="tr-new-project" onSubmit={submitNewProject}>
+                                    <input
+                                        ref={(el) => el?.focus()}
+                                        className="tr-new-project-input"
+                                        placeholder="Project name"
+                                        value={newProjectName}
+                                        onChange={(event) => setNewProjectName(event.target.value)}
+                                        onKeyDown={(event) => { if (event.key === 'Escape') setMakingProject(false) }}
+                                        disabled={creatingProject}
+                                    />
+                                    <button type="submit" className="tr-quiet is-accent" disabled={creatingProject}>
+                                        {creatingProject ? 'creating…' : 'create'}
+                                    </button>
+                                    <button type="button" className="tr-quiet" onClick={() => setMakingProject(false)} disabled={creatingProject}>cancel</button>
+                                </form>
+                            )}
                             {inSpace && projects.items?.map((project) => (
                                 <a key={project.id} className="tr-row" href={asking.picker.href(inSpace, project.id)}>
                                     <span>{project.title || project.name || project.id}</span>

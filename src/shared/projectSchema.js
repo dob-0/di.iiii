@@ -211,8 +211,18 @@ export const defaultMappingSurface = {
     //             in the platform still reaches the wall)
     //   video / image — an asset URL
     //   colour  — a flat fill
-    //   test    — a generated alignment pattern; see mapTestPattern.js
-    source: { kind: 'test', ref: 'grid' },
+    //   test    — a generated pattern; see mapTestPattern.jsx
+    // A NEW surface is born on `card`: a dim warm identification card naming
+    // the surface, not the bright alignment grid. The desk and the wall are
+    // two machines on a rig, so the moment Add is pressed the new surface is
+    // on the projector — and the owner's standing rule is that white never
+    // goes on a projector. `grid` and the rest stay one choice away in the
+    // Pattern picker, at full brightness, for the person on the ladder.
+    // Deliberately a `ref` and not a new `source.kind`: an older build's
+    // MAPPING_SOURCE_KINDS would rewrite an unknown kind back to `test` and
+    // lose the choice for good, while an unknown `ref` is kept verbatim (it
+    // draws the grid on that old build, and comes back as the card here).
+    source: { kind: 'test', ref: 'card' },
     // The unwarped pixel size of the layer before it is pinned. Set it to the
     // source's own aspect and the corner-pin does the rest.
     resolution: [1280, 720],
@@ -544,6 +554,11 @@ export const normalizeAuthor = (author) => {
     return { subject, label: ensureString(author.label, '') }
 }
 
+export const normalizeFixtureIndex = (fixture) => {
+    const index = Number(fixture?.index)
+    return Number.isInteger(index) && index > 0 ? index : null
+}
+
 export const normalizeEntity = (entity = {}) => {
     const rawType = ensureString(entity.type, 'box')
     const type = ENTITY_TYPE_SET.has(rawType) ? rawType : 'box'
@@ -654,6 +669,27 @@ export const normalizeEntity = (entity = {}) => {
             falloff: Math.max(0.05, falloff),
             min: Math.min(1, Math.max(0, min))
         }
+    }
+    // THE JOIN between a lamp in the room and a lamp on the lighting desk: the
+    // fixture's `index` on the desk (the number a person sees there, `3.Back left`).
+    // A number and nothing else — never universe/address, which belong to the
+    // machine's own show.json and never travel with a project
+    // (di-atlas/decisions/2026-09-20-one-project-one-stage.md). An index that is not
+    // a positive whole number is no join at all, so the component is dropped rather
+    // than stored broken — which is also how the inspector clears it: `{ index: null }`.
+    const fixtureIndex = normalizeFixtureIndex(sourceComponents.fixture)
+    if (fixtureIndex != null) nextComponents.fixture = { index: fixtureIndex }
+    else delete nextComponents.fixture
+    // A screen: a plane that shows one of the project's own mapping surfaces
+    // (document.mappingState.surfaces) as its picture. The join is the surface's
+    // id and nothing else -- the surface keeps its kind, file and resolution, so
+    // the screen follows whatever the Projection tool later puts on it. An empty
+    // or missing id means "no screen", and the component is dropped rather than
+    // kept as a husk, so an entity authored before this is byte-identical.
+    if (sourceComponents.surface) {
+        const surfaceId = ensureString(sourceComponents.surface.surfaceId, '')
+        if (surfaceId) nextComponents.surface = { surfaceId }
+        else delete nextComponents.surface
     }
     if (sourceComponents.timeline) {
         const timeline = normalizeTimeline(sourceComponents.timeline)
@@ -844,7 +880,22 @@ export const normalizeShowState = (show = {}) => {
     }
 }
 
-const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test', 'camera']
+// 'stream' is a live picture named by WHAT it is ("OBS Virtual Camera", "capture"), not by a
+// device id: an id belongs to one browser profile on one machine, so a mapping made on the desk
+// could never name an input on the machine that actually shows it. See MapStreamSource.
+//
+// 'ndi' is the same idea one chain shorter: the ref is an NDI® source NAME
+// ("AYLMO (td_out_windows)", or any fragment of it), received by the serverXR on whichever
+// machine draws the surface. An address is never stored, because the SENDER chooses which of
+// its interfaces to advertise. See MapNdiSource and docs/architecture/NDI.md.
+//
+// CLOSED LIST, AND THAT CUTS BOTH WAYS. normalizeMappingSurface rewrites a kind it does not
+// know back to the default, so a mixed-version rig — the desk on this build, the wall on an
+// older one — LOSES an 'ndi' surface the moment the old side writes the document back: it
+// comes back as a test pattern and the ref is kept but meaningless. Both machines have to be
+// on a build that has this list. (An unknown `ref` survives byte-identical, which is why the
+// dim identification card was added as a ref and not a kind; see defaultMappingSurface.)
+const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test', 'camera', 'network', 'stream', 'ndi']
 const MAPPING_BLEND_MODES = ['normal', 'screen', 'multiply', 'lighten', 'add']
 export const MAPPING_EFFECT_KINDS = ['none', 'motion']
 
@@ -974,16 +1025,55 @@ export const normalizeMappingReference = (reference = {}) => {
     }
 }
 
+// WHICH DISPLAY SHOWS THIS MAPPING. `output.show` names a machine (its
+// `machine.json` id, the one the machines hub hands every page) and one of its
+// screens — by label, index and size, so a stage box can find "the projector"
+// by whichever of those survived a reboot — or 'all' of them. It travels over
+// the follow like the rest of the document, and `di stage run` reads it on
+// every tick.
+//
+// The trap this normaliser used to be: the output block was rebuilt from width
+// and height ALONE, so the first write from any machine dropped `show` on the
+// floor and the stage went back to guessing. Both twins keep it now, and
+// src/map/mappingState.test.js + serverXR/src/schemaSync.test.js hold a
+// write→read round trip on each.
+//
+// Absent means absent: a document with no `show` and an `auto` slate comes
+// out without those keys at all, so every mapping written before this existed
+// is byte-identical after it.
+export const normalizeOutputShow = (show) => {
+    if (!show || typeof show !== 'object' || Array.isArray(show)) return null
+    const machine = ensureString(show.machine, '').trim()
+    if (!machine) return null
+    let screen = 'all'
+    if (show.screen && typeof show.screen === 'object' && !Array.isArray(show.screen)) {
+        const label = ensureString(show.screen.label, '').trim()
+        const index = Number.isInteger(show.screen.index) && show.screen.index >= 0 ? show.screen.index : null
+        const size = Array.isArray(show.screen.size) && show.screen.size.length === 2
+            && show.screen.size.every((value) => Number.isFinite(value) && value > 0)
+            ? [Math.round(show.screen.size[0]), Math.round(show.screen.size[1])]
+            : null
+        if (label || index !== null || size) screen = { label, index, size }
+    }
+    const name = ensureString(show.name, '').trim()
+    return { machine, ...(name ? { name } : {}), screen }
+}
+
 export const normalizeMappingState = (mapping = {}) => {
     const source = mapping && typeof mapping === 'object' ? mapping : {}
     const output = source.output && typeof source.output === 'object' ? source.output : {}
     const surfaces = Array.isArray(source.surfaces) ? source.surfaces : []
     const seen = new Set()
     const seenCues = new Set()
+    const show = normalizeOutputShow(output.show)
     return {
         output: {
             width: Math.max(1, ensureNumber(output.width, defaultMappingState.output.width)),
-            height: Math.max(1, ensureNumber(output.height, defaultMappingState.output.height))
+            height: Math.max(1, ensureNumber(output.height, defaultMappingState.output.height)),
+            ...(show ? { show } : {}),
+            // 'auto' is the default and is not written; only the authored
+            // black is — the same absent-means-absent rule as `show`.
+            ...(output.slate === 'off' ? { slate: 'off' } : {})
         },
         background: ensureString(source.background, defaultMappingState.background),
         // Order is the paint order — later surfaces are drawn over earlier

@@ -1,4 +1,5 @@
 import { generateId } from '../shared/projectSchema.js'
+import { TOP_TYPE_IDS, buildTopNodeTypes } from './tops/topOperators.js'
 
 // --- Port Types ---
 // Every connection wire carries one of these types.
@@ -60,6 +61,7 @@ export const NODE_FAMILIES = [
     { id: 'bring-in', label: 'bring in', color: '#5fa8ff' },
     { id: 'send-out', label: 'send out', color: '#ffb86c' },
     { id: 'agents',   label: 'agents',   color: '#a8ff9e' },
+    { id: 'picture',  label: 'pictures', color: '#50fa7b' },
 ]
 
 export const FAMILY_BY_TYPE = {
@@ -165,6 +167,7 @@ export const FAMILY_BY_TYPE = {
     'view.timeline': 'watch',
     'view.director': 'watch',
     'stream.monitor': 'watch',
+    'view.desk': 'watch',
     // send out — leave the browser: MIDI/OSC out, streams, recordings
     // Publish sits with the things that leave the browser: what this panel
     // changes is what a stranger receives, not what the graph makes.
@@ -182,6 +185,8 @@ export const FAMILY_BY_TYPE = {
     'agent.keeper': 'agents',
     'work.agent': 'agents',
     'work.status': 'agents',
+    // pictures — image operators on the GPU (src/project/tops), TouchDesigner's TOPs
+    ...Object.fromEntries(TOP_TYPE_IDS.map((typeId) => [typeId, 'picture'])),
 }
 
 // What a card says about itself when it has no ports to draw.
@@ -325,6 +330,9 @@ export const getFamilyColorForType = (typeId) => getNodeFamily(typeId)?.color ||
 // gates creation.
 
 export const NODE_TYPES = {
+    // Image operators, built from their own table — see src/project/tops.
+    ...buildTopNodeTypes(),
+
 
     // -----------------------------------------------------------------------
     // SOURCES — produce values, no inputs
@@ -869,6 +877,22 @@ export const NODE_TYPES = {
             { id: 'filePattern', type: 'string', label: 'File Pattern' },
         ],
         render: 'hidden',
+    },
+
+    'view.desk': {
+        id: 'view.desk',
+        label: 'Desk',
+        category: 'view',
+        runtime: 'web',
+        singleton: false,
+        // Every machine linked into this space and what it has — cameras,
+        // microphones, speakers, screens — with a button that places the
+        // operator for a device, already set to run on its machine.
+        keywords: ['desk', 'machines', 'devices', 'cameras', 'screens', 'projector', 'network', 'computers'],
+        inputs: [],
+        outputs: [],
+        defaultValues: {},
+        render: 'panel-2d',
     },
 
     'stream.monitor': {

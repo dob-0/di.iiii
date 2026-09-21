@@ -99,6 +99,15 @@ a priority number, beside the existing Art-Net and ENTTEC drivers.
   `/light/api/looks/add|remove` and `/light/api/layers/add|remove` are the one-object
   verbs an interface wants; `POST /light/api/layer` is the fader move.
 - `POST /light/api/fan {fixtures, role, from, to, style}` — one gesture, N values.
+- `POST /light/api/fixtures/move {moves:[{id, x, y}]}` — a fixture's place on the plan,
+  by id. The desk's own drag uses it, and so does Studio's **Send positions to the desk**
+  (`src/rigMirror/sendPositions.js`) — the ONE write the app makes to the desk.
+- **The join from a room to the rig is a number.** A Studio lamp carries
+  `components.fixture = { index }`, the fixture's `index` on this desk (`3.Back left`);
+  never universe/address, which belong to this machine's `show.json` and never travel
+  with a project. While the desk is here the lamp draws what the fixture emits
+  (`src/rigMirror/liveLight.js`); otherwise its authored light. Design:
+  `di-atlas/decisions/2026-09-20-one-project-one-stage.md`.
 - `GET /light/api/library`, `/library/manufacturer?key=`, `/library/fixture?…` and
   `POST /light/api/library/import {manufacturer, key, mode}` — patch by name.
 

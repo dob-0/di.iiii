@@ -1,9 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
-import MapTestPattern from './mapTestPattern.jsx'
+import MapTestPattern, { DEFAULT_TEST_PATTERN } from './mapTestPattern.jsx'
 import { startMotionGlow } from './motionGlow.js'
+import { useTopNetwork } from '../project/tops/useTopNetwork.js'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
 import { createPreviewBootQueue } from '../utils/previewBootQueue.js'
 import { PREVIEW_READY_MESSAGE } from '../utils/previewMode.js'
+import { mountRelativeApiUrl } from '../services/assetSources.js'
+import { useRetryingMedia } from './useRetryingMedia.js'
+import { pickByLabel } from '../shared/nameMatch.js'
+import { ndiStreamUrl, ndiTrouble } from './ndiLink.js'
+
+// A brought-in file's ref is recorded exactly as the manifest stores it — a
+// project-relative `/api/projects/.../assets/...` path, written once and read
+// on whichever machine opens the mapping next. Each machine mounts it onto
+// its OWN deployed API base at render time; used verbatim, a path written on
+// one host 404s (or hits the SPA fallback) on every other one. A typed web
+// address is already absolute and is returned untouched.
+export const resolveMapSourceRef = (ref = '') => mountRelativeApiUrl(ref) || ref
 
 // One surface's content, unwarped. Everything here draws into a plain
 // width x height box at the surface's own resolution; the corner-pin above it
@@ -38,7 +51,7 @@ const requestSurfaceBoot = createPreviewBootQueue()
 // way; a slow page keeps loading, it just stops blocking its neighbours.
 const BOOT_SLOT_TIMEOUT_MS = 15000
 
-export default function MapSourceView({ surface, spaceId = '', live = true, label = '' }) {
+export default function MapSourceView({ surface, spaceId = '', live = true, network = null, label = '' }) {
     const [width, height] = surface.resolution
     const kind = surface.source?.kind || 'test'
     const ref = surface.source?.ref || ''
@@ -47,8 +60,24 @@ export default function MapSourceView({ surface, spaceId = '', live = true, labe
         return <div className="map-source-fill" style={{ background: ref || '#ffffff' }} />
     }
 
+    if (kind === 'network') {
+        if (!ref) return <MapSourcePlaceholder label={label} detail="no Picture Out chosen" width={width} height={height} />
+        // Off the output, a network runs only when Live is on — the desk and
+        // the wall would otherwise each open the camera and run every operator.
+        if (!live) return <MapSourcePlaceholder label={label} detail="pictures — turn Live on to run them here" width={width} height={height} />
+        return <MapNetworkSource network={network} spaceId={spaceId} outNodeId={ref} label={label} width={width} height={height} />
+    }
+
     if (kind === 'camera') {
         return <MapCameraSource deviceId={ref} effect={surface.effect} label={label} width={width} height={height} />
+    }
+
+    if (kind === 'stream') {
+        return <MapStreamSource name={ref} effect={surface.effect} label={label} width={width} height={height} />
+    }
+
+    if (kind === 'ndi') {
+        return <MapNdiSource name={ref} label={label} width={width} height={height} />
     }
 
     // Only the kinds that are MEANINGLESS without a reference fall back to a
@@ -56,28 +85,38 @@ export default function MapSourceView({ surface, spaceId = '', live = true, labe
     // quietly swallowed the ordinary camera surface — kind 'camera' with an
     // empty ref IS the default camera, not an unfinished surface — and made
     // that whole branch unreachable.
-    if (kind === 'test' || (!ref && ['url', 'video', 'image'].includes(kind))) {
-        return <MapTestPattern pattern={kind === 'test' ? (ref || 'grid') : 'grid'} width={width} height={height} label={label} />
+    // Video and image are carved out of that fallback on purpose: the test
+    // pattern is a bright grid, meant to be seen and aligned against on a
+    // wall — the opposite of what an unfinished brought-in file should show.
+    // Until a file is chosen they get the same dim placeholder every other
+    // empty source already uses (no Picture Out chosen, no project chosen),
+    // so the wall stays dark instead of lighting up white while someone is
+    // mid-way through picking a file. `url` keeps the test pattern: an empty
+    // web address is still something to align geometry against, same as
+    // before.
+    if (!ref && (kind === 'video' || kind === 'image')) {
+        return <MapSourcePlaceholder label={label} detail="no file yet" width={width} height={height} />
+    }
+
+    // A test source with no pattern named is a surface nobody has finished
+    // yet — the state a brand-new surface is born in. It draws the dim
+    // identification card, NOT the bright grid: on a two-machine rig the
+    // projector is already showing whatever this returns, and the owner's
+    // standing rule is that white never goes on it. The grid is still one
+    // choice away in the Pattern picker, at full brightness, because a person
+    // aiming a projector needs it bright.
+    // `url` with no address keeps the grid on purpose: an empty web address
+    // is still something to align geometry against, same as before.
+    if (kind === 'test' || (!ref && kind === 'url')) {
+        return <MapTestPattern pattern={kind === 'test' ? (ref || DEFAULT_TEST_PATTERN) : 'grid'} width={width} height={height} label={label} />
     }
 
     if (kind === 'image') {
-        return <img className="map-source-media" src={ref} alt="" draggable="false" />
+        return <MapImageSource fileRef={ref} />
     }
 
     if (kind === 'video') {
-        // muted is not a style choice: a wall plays several things at once and
-        // autoplay is refused outright for anything with sound.
-        return (
-            <video
-                className="map-source-media"
-                src={ref}
-                autoPlay
-                loop
-                muted
-                playsInline
-                disablePictureInPicture
-            />
-        )
+        return <MapVideoSource fileRef={ref} />
     }
 
     if (kind === 'project' && !ref) {
@@ -106,6 +145,193 @@ export default function MapSourceView({ surface, spaceId = '', live = true, labe
     }
 
     return <MapSourcePlaceholder label={label} detail={kind} width={width} height={height} />
+}
+
+// A live input, found by NAME on the machine that shows it.
+//
+// A camera surface stores a device id, and a device id is minted per browser
+// profile: the id the desk's picker sees is not the id the wall's browser sees,
+// even for the same physical device, and the desk cannot list the wall
+// machine's devices at all. So a mapping made on one machine could never point
+// at an input on another — which is the whole job of a stage machine.
+//
+// A stream surface stores what the input is CALLED instead — "OBS Virtual
+// Camera" for an NDI®/capture/Spout bridge, "Cam Link" for a capture card —
+// and each machine resolves that to its own device when it draws. The match is
+// src/shared/nameMatch.js, shared with the NDI source and with the desk's own
+// warning, so all three agree by construction. Labels are only readable after
+// permission, hence the throwaway stream opened first.
+export const matchStreamDevice = (devices = [], name = '') => pickByLabel(
+    (Array.isArray(devices) ? devices : []).filter((device) => device.kind === 'videoinput'),
+    name
+)
+
+function MapStreamSource({ name, effect = null, label, width, height }) {
+    const [state, setState] = useState({ deviceId: '', problem: '' })
+
+    useEffect(() => {
+        let cancelled = false
+        const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : null
+        if (!name) {
+            setState({ deviceId: '', problem: 'no input named' })
+            return undefined
+        }
+        if (!media?.getUserMedia || !media?.enumerateDevices) {
+            setState({ deviceId: '', problem: 'no camera access in this browser' })
+            return undefined
+        }
+        const resolve = async () => {
+            try {
+                let devices = await media.enumerateDevices()
+                // Before permission every label is '', so nothing can match yet.
+                if (!devices.some((device) => device.kind === 'videoinput' && device.label)) {
+                    const probe = await media.getUserMedia({ video: true, audio: false })
+                    probe.getTracks().forEach((track) => track.stop())
+                    devices = await media.enumerateDevices()
+                }
+                if (cancelled) return
+                const found = matchStreamDevice(devices, name)
+                setState(found
+                    ? { deviceId: found.deviceId, problem: '' }
+                    : { deviceId: '', problem: `no input called "${name}" on this machine` })
+            } catch (error) {
+                if (!cancelled) setState({ deviceId: '', problem: error?.name === 'NotAllowedError' ? 'camera not permitted' : 'inputs unavailable' })
+            }
+        }
+        resolve()
+        // An input that appears later (the bridge starting after the page, a
+        // capture card plugged in mid-show) is picked up without a reload.
+        media.addEventListener?.('devicechange', resolve)
+        return () => {
+            cancelled = true
+            media.removeEventListener?.('devicechange', resolve)
+        }
+    }, [name])
+
+    if (state.problem) return <MapSourcePlaceholder label={label} detail={state.problem} width={width} height={height} />
+    if (!state.deviceId) return <MapSourcePlaceholder label={label} detail={`looking for "${name}"…`} width={width} height={height} />
+    return <MapCameraSource deviceId={state.deviceId} effect={effect} label={label} width={width} height={height} />
+}
+
+// NDI® in, on the machine that draws. The same problem the `stream` surface
+// solves, one chain shorter.
+//
+// A `stream` surface reaches a TouchDesigner output through OBS + DistroAV +
+// "OBS Virtual Camera": four moving parts and a colour conversion in the
+// middle, all of which have to be running before the wall has a picture. An
+// `ndi` surface names the NDI source itself and the machine's own serverXR
+// receives it (serverXR/src/ndi), hands over JPEG frames as
+// multipart/x-mixed-replace, and this draws them in an <img>.
+//
+// The ref is the source's NAME — "AYLMO (td_out_windows)", or any fragment of
+// it — for exactly the reason the stream surface stores a label: the mapping
+// is made on the desk and resolved on the wall's machine, and an address
+// belongs to whichever interface the SENDER decided to advertise that night.
+//
+// WHY THE PROBE. The receiver only exists on a LOCAL di.iiii; every /ndi route
+// is behind requireLocalRuntime. A hosted tier answers its own index.html to
+// anything it does not know, so a 200 is not an answer — ndiLink.js checks the
+// content type, the same guard the lighting desk needed.
+//
+// NOTHING HERE EVER GOES WHITE. Until a frame has painted the surface shows
+// the dim placeholder every other unfinished source shows, and what it says is
+// the server's own sentence: the `how` from /ndi/api/summary when no runtime
+// is installed, and the receiver's own `detail` — which names the address it
+// dialled and whether the session was ever opened — when a source resolved and
+// then stayed silent.
+const NDI_RECHECK_MS = 4000
+
+function MapNdiSource({ name, label, width, height }) {
+    // A source that appears later — the sender started after the page, a
+    // machine rebooted mid-show — comes back without a reload: the <img> is
+    // remounted on the same schedule every brought-in file uses.
+    const { attempt, onError, onLoaded } = useRetryingMedia(`${name}|${width}`)
+    const [painted, setPainted] = useState(false)
+    const [link, setLink] = useState({ ready: false, detail: 'looking for it…' })
+
+    // A different source is a different question: stop claiming the last one's
+    // picture while the new one is still being found.
+    useEffect(() => { setPainted(false) }, [name])
+
+    useEffect(() => {
+        if (!name || painted) return undefined
+        let cancelled = false
+        let timer = null
+        const ask = () => {
+            ndiTrouble({ name })
+                .then((result) => {
+                    if (cancelled) return
+                    setLink({ ready: result.ready, detail: result.detail })
+                    // A hosted di.iiii will never grow a receiver; everything
+                    // else is worth asking again, because a person installing
+                    // the runtime or starting a sender must not have to reload.
+                    if (!result.settled) timer = setTimeout(ask, NDI_RECHECK_MS)
+                })
+                .catch(() => { if (!cancelled) timer = setTimeout(ask, NDI_RECHECK_MS) })
+        }
+        ask()
+        return () => { cancelled = true; clearTimeout(timer) }
+    }, [name, painted])
+
+    if (!name) return <MapSourcePlaceholder label={label} detail="no NDI source named" width={width} height={height} />
+
+    return (
+        <>
+            {link.ready ? (
+                <img
+                    key={attempt}
+                    className={painted ? 'map-source-media' : 'map-source-hidden-video'}
+                    src={ndiStreamUrl({ name, maxWidth: width })}
+                    alt=""
+                    draggable="false"
+                    onError={() => { setPainted(false); onError() }}
+                    onLoad={() => { setPainted(true); onLoaded() }}
+                />
+            ) : null}
+            {painted ? null : <MapSourcePlaceholder label={label} detail={link.detail} width={width} height={height} />}
+        </>
+    )
+}
+
+// A brought-in image. `key={attempt}` is what actually retries: the src stays
+// the same content address, so only remounting the element makes the browser
+// ask again. Nothing else changes while it is failing — no placeholder, no
+// text — the element itself is what MapSourceView already shows for a source
+// that has not loaded yet, and a wall must never go white or gain new text.
+function MapImageSource({ fileRef }) {
+    const { attempt, onError, onLoaded } = useRetryingMedia(fileRef)
+    return (
+        <img
+            key={attempt}
+            className="map-source-media"
+            src={resolveMapSourceRef(fileRef)}
+            alt=""
+            draggable="false"
+            onError={onError}
+            onLoad={onLoaded}
+        />
+    )
+}
+
+// A brought-in video. Same retry as the image above. muted is not a style
+// choice: a wall plays several things at once and autoplay is refused
+// outright for anything with sound.
+function MapVideoSource({ fileRef }) {
+    const { attempt, onError, onLoaded } = useRetryingMedia(fileRef)
+    return (
+        <video
+            key={attempt}
+            className="map-source-media"
+            src={resolveMapSourceRef(fileRef)}
+            autoPlay
+            loop
+            muted
+            playsInline
+            disablePictureInPicture
+            onError={onError}
+            onLoadedData={onLoaded}
+        />
+    )
 }
 
 // A camera, on the wall. The room beside the work, or the work being made.
@@ -193,6 +419,24 @@ function MapCameraSource({ deviceId, effect = null, label, width, height }) {
             ) : null}
         </>
     )
+}
+
+// The project's picture operators, run on this page and drawn from one Picture
+// Out. Processed at up to 640 wide like the camera glow; the corner-pin scales
+// the result onto the wall.
+const NO_NETWORK = { nodes: [], wires: [] }
+
+function MapNetworkSource({ network, spaceId, outNodeId, label, width, height }) {
+    const [canvas, setCanvas] = useState(null)
+    const scale = Math.min(1, 640 / width)
+    const w = Math.max(1, Math.round(width * scale))
+    const h = Math.max(1, Math.round(height * scale))
+    const present = Boolean(network?.nodes?.some((node) => node.id === outNodeId))
+    // Nothing to show → nothing to run; an empty network starts no engine.
+    const { error } = useTopNetwork({ network: present ? network : NO_NETWORK, spaceId, canvas, show: outNodeId, width: w, height: h })
+    if (!present) return <MapSourcePlaceholder label={label} detail="that Picture Out is gone" width={width} height={height} />
+    if (error) return <MapSourcePlaceholder label={label} detail={error} width={width} height={height} />
+    return <canvas className="map-source-media" ref={setCanvas} width={w} height={h} />
 }
 
 // One page surface: waits for a boot slot, then mounts its iframe.

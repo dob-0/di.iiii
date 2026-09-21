@@ -12,6 +12,7 @@ import ImageObject from '../../objectComponents/ImageObject.jsx'
 import VideoObject from '../../objectComponents/VideoObject.jsx'
 import AudioObject from '../../objectComponents/AudioObject.jsx'
 import ModelObject from '../../objectComponents/ModelObject.jsx'
+import SpotLightObject from '../../objectComponents/SpotLightObject.jsx'
 import PortalObject from './PortalObject.jsx'
 
 // Canonical entity-type -> objectComponent mapping shared across editor surfaces.
@@ -19,7 +20,14 @@ import PortalObject from './PortalObject.jsx'
 // light-entity types, and accepts wireframe/opacity appearance props. Surfaces
 // wrap this with their own selection/transform/animation logic; this function
 // is pure (no hooks) and only decides which mesh an entity becomes.
-export default function EntityContent({ entity, assetMap }) {
+//
+// `screens` is optional editor furniture: a Map from a mapping surface's id to
+// what a screen showing it draws right now — `{ texture }` (a live
+// THREE.Texture), `{ colour }` (a flat colour surface) or `{}` (nothing yet).
+// Only the Studio viewport passes it (src/studio/components/LiveScreens.jsx);
+// a plane with `components.surface` and no `screens` draws the dim plate, so
+// a surface that is not running never shows as a white or lit blank.
+export default function EntityContent({ entity, assetMap, screens = null }) {
     const appearance = entity.components?.appearance || {}
     const media = entity.components?.media || {}
     const asset = media.assetId ? assetMap?.get(media.assetId) : null
@@ -77,7 +85,12 @@ export default function EntityContent({ entity, assetMap }) {
                 material={material}
             />
         )
-    case 'plane':
+    case 'plane': {
+        const surfaceId = entity.components?.surface?.surfaceId || ''
+        // A screen: the plane shows a mapping surface. What it shows is looked
+        // up by the surface's id; nothing found (the sources are not mounted,
+        // or the surface is gone) is still a screen — a dim one.
+        const screen = surfaceId ? (screens?.get?.(surfaceId) || {}) : null
         return (
             <PlaneObject
                 color={appearance.color}
@@ -86,8 +99,10 @@ export default function EntityContent({ entity, assetMap }) {
                 wireframe={Boolean(appearance.wireframe)}
                 opacity={appearance.opacity}
                 material={material}
+                screen={screen}
             />
         )
+    }
     case 'torus':
         return (
             <TorusObject
@@ -206,7 +221,7 @@ export default function EntityContent({ entity, assetMap }) {
         const l = entity.components?.light || {}
         return (
             <>
-                <spotLight color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} />
+                <SpotLightObject color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} />
                 <mesh>
                     <coneGeometry args={[0.07, 0.2, 8]} />
                     <meshStandardMaterial color={l.color || '#ffffff'} emissive={l.color || '#ffffff'} emissiveIntensity={0.8} />

@@ -61,6 +61,24 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_project_ops ON project_ops(project_id, version);
 
+  -- A breadcrumb left by scripts/project-move.mjs. Project ids are global and
+  -- the row it moves keeps its id, so /api/projects/:projectId keeps working
+  -- on its own — but the OLD space's bare vanity link
+  -- (/{oldSpace}/{projectSlugOrId}, resolved by /api/resolve/:space/:project in
+  -- index.js) explicitly checks "does this project still live in this space"
+  -- and 404s the moment it doesn't. One row per move lets that one resolver
+  -- answer with a pointer instead of a dead end, without a project carrying
+  -- its own history of every space it ever lived in.
+  CREATE TABLE IF NOT EXISTS project_moves (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id TEXT NOT NULL,
+    from_space TEXT NOT NULL,
+    to_space TEXT NOT NULL,
+    old_slug TEXT,
+    moved_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_project_moves_lookup ON project_moves(from_space, project_id, old_slug);
+
   CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     provider TEXT NOT NULL,

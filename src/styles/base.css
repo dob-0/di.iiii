@@ -85,6 +85,18 @@
     --di-surface-2: #111114;
     --di-surface-3: #17171b;
     --di-surface-4: #1c1c21;
+
+    /* The identification card a surface wears before it has anything to show,
+       and the placeholder that says why it is empty. Deep amber on near-black:
+       a rig is two machines, so whatever an unfinished surface draws is ALREADY
+       on somebody's wall. NEVER WHITE ON A PROJECTOR is the owner's standing
+       rule, set in a club at midnight. Mirrored as CARD_* in
+       src/map/mapTestPattern.jsx, which draws the same card into a canvas and
+       cannot read a CSS variable there; a test pins the two together. */
+    --di-card-ground: #0a0704;
+    --di-card-ground-2: #120c06;
+    --di-card-frame: #5c3a0f;
+    --di-card-ink: #8f5a17;
     /* The accent's two tints: a line you can see, and a wash you can barely
        see. Written out by hand as rgba(77, 249, 255, …) in five stylesheets. */
     --di-cyan-wash: rgba(77, 249, 255, 0.06);
@@ -100,6 +112,9 @@
     --di-danger-rgb: 242, 95, 92;
     --di-success-rgb: 77, 249, 192;
     --di-warning-rgb: 255, 179, 71;
+    /* The spring green the Desk uses to mark "this machine is me" and Raw
+       uses for a picture operator's primary action. */
+    --di-live-rgb: 80, 250, 123;
 
     /* A scrim: the dark veil laid over a live room or a 3D background so text
        on top of it stays readable whatever moves underneath. Two weights, and

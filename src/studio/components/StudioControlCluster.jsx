@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { usePanelDrag } from '../../hooks/usePanelDrag.js'
+import StudioCueStrip from './StudioCueStrip.jsx'
 
 // Five scene windows, one per job: add things, edit the scene, configure the
 // world, ship it, write code — plus Projects, the space-level window for
@@ -28,6 +29,7 @@ export default function StudioControlCluster({
     onHideUI,
     onBackToHub,
     onOpenNodeEditor,
+    onOpenProjection,
     xrState,
     syncState,
     presence,
@@ -38,6 +40,23 @@ export default function StudioControlCluster({
     onStackRight,
     onResetLayout,
     onShowHelp,
+    // The real lighting rig mirrored into the room. Null when there is no lighting on
+    // this machine — which is every hosted di.iiii — and then the button is not drawn.
+    rigMirrorOn = false,
+    onToggleRigMirror = null,
+    // The project's cues, fired from here as well as from the projection tool
+    // — one key, the whole stage. Empty on a project that has none, and then
+    // the section is not drawn at all.
+    cues = [],
+    liveCueId = null,
+    onFireCue = null,
+    // Positions go back to the desk once, on this. Drawn only while Lights is on, so
+    // the room the person is looking at is the room the desk will be told about.
+    onSendRigPositions = null,
+    // What the last send answered ("3 lamps moved", "no desk on this machine"), for a
+    // few seconds. Beside the button, not in the bottom pill: the first-run coach owns
+    // that spot and the two stacked on a newcomer's very first press (seen).
+    rigPositionsNote = '',
     // Jam mode (communal open-jam project): `panelKeys` narrows the Windows
     // row, `minimal` trims power-user chrome (Arrange, Hub, View live), and
     // `onToggleAllTools` renders the escape hatch between Simple ⇄ All tools.
@@ -139,6 +158,18 @@ export default function StudioControlCluster({
                                 {!minimal && onOpenNodeEditor && (
                                     <button className="scc-btn" onClick={onOpenNodeEditor} title="Open this project in the node editor">⇄ Nodes</button>
                                 )}
+                                {!minimal && onOpenProjection && (
+                                    <button className="scc-btn" onClick={onOpenProjection} title="Put this project on a wall">Projection</button>
+                                )}
+                                {!minimal && onToggleRigMirror && (
+                                    <button className={`scc-btn ${rigMirrorOn ? 'active' : ''}`} onClick={onToggleRigMirror} aria-pressed={rigMirrorOn} title="Show the real lighting rig in the room">Lights</button>
+                                )}
+                                {!minimal && onToggleRigMirror && rigMirrorOn && onSendRigPositions && (
+                                    <button className="scc-btn" onClick={onSendRigPositions} title="Move each fixture on the desk's plan to where its lamp stands in this room">Send positions to the desk</button>
+                                )}
+                                {!minimal && rigMirrorOn && rigPositionsNote && (
+                                    <span className="scc-btn" role="status" aria-live="polite">{rigPositionsNote}</span>
+                                )}
                                 {!minimal && canViewLive && (
                                     <button className="scc-btn" onClick={onViewLive} title="Open the public space URL in a new tab">↗ View live</button>
                                 )}
@@ -153,6 +184,19 @@ export default function StudioControlCluster({
                                 )}
                             </div>
                         </div>
+
+                        {!minimal && onFireCue && cues.length > 0 && (
+                            <div className="scc-section">
+                                <div className="scc-section-label">Cues</div>
+                                <StudioCueStrip
+                                    cues={cues}
+                                    liveCueId={liveCueId}
+                                    onFire={onFireCue}
+                                    className="scc-buttons"
+                                    buttonClassName="scc-btn"
+                                />
+                            </div>
+                        )}
 
                         {(canVr || canAr) && (
                             <div className="scc-section">

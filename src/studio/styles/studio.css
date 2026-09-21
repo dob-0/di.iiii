@@ -43,6 +43,26 @@
     inset: 0;
 }
 
+/* The sources behind the room's screens (LiveScreens.jsx): each is a real map
+   source drawn 1px wide and invisible, never display:none — a hidden video
+   stops decoding, and the texture on the plane would freeze with it. */
+.studio-live-screens {
+    pointer-events: none;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+}
+.studio-live-screen-host {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
 /* Blender-style transform readout (header) shown during a modal G/R/S op */
 .studio-transform-hud {
     pointer-events: none;
@@ -1585,4 +1605,16 @@
     font-size: var(--di-text-3);
     color: var(--di-text-muted);
     padding: var(--di-space-1) var(--di-space-2);
+}
+
+/* The cue strip's key badge. A cue that is not up is not news, so the number
+   sits dimmer than the name it belongs to and never takes the eye off the
+   scene behind the cluster. The button itself is an ordinary .scc-btn — the
+   strip wears the cluster's chrome rather than inventing a third look. */
+.scue-key {
+    display: inline-block;
+    min-width: 8px;
+    margin-right: var(--di-space-1);
+    color: rgba(255, 255, 255, 0.35);
+    font-variant-numeric: tabular-nums;
 }

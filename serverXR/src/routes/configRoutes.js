@@ -1,6 +1,6 @@
 const { describeListen } = require('../listenInfo')
 
-function registerConfigRoutes(router, { requireAdminAlways, configStore, onConfigChanged = null, approvalGate = null, requireAuth = false, listen = null }) {
+function registerConfigRoutes(router, { requireAdminAlways, configStore, onConfigChanged = null, approvalGate = null, requireAuth = false, listen = null, machine = null }) {
   // A function, called per request: a hotspot deals the laptop a fresh address
   // mid-evening and the answer has to follow it. index.js passes the real bind;
   // the fallback reads the same variable config.js does.
@@ -18,7 +18,11 @@ function registerConfigRoutes(router, { requireAdminAlways, configStore, onConfi
     requireAuth: Boolean(requireAuth),
     // Read-only. Whether a phone in the room could reach this server at all
     // (`di up --lan`), and on which addresses — addresses only when it can.
-    listen: listenNow()
+    listen: listenNow(),
+    // Which di.iiii answered: a stable id and a name a person recognises, so
+    // two installs sharing a space can tell their tabs apart. null when the
+    // caller has no data dir to keep an id in (unit boots).
+    machine: typeof machine === 'function' ? machine() : null
   })
 
   if (approvalGate) {

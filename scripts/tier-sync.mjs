@@ -37,6 +37,13 @@
  *   --no-assets         Documents only — faster, and leaves images unresolvable
  *   --force             Overwrite documents that already exist at the destination
  *   --dry-run           Print the plan and write nothing
+ *   --rebuild-baseline  Re-record the baseline from what the two tiers agree on
+ *                       TODAY: every project whose normalized content (asset
+ *                       addresses by name) is identical on both, with both
+ *                       tiers' documentVersion/updatedAt. Projects that differ
+ *                       are left out and listed. Replaces this destination's
+ *                       baseline; writes only the baseline file, never a tier.
+ *                       Defaults to --from local --to dev. Honors --dry-run.
  *   --allow-production  Required before anything may be written to di-studio.xyz
  *
  * Tiers: local, dev (dev.diiii.xyz), prod — the same names key TIERS and the baseline.
@@ -125,12 +132,19 @@ export const shouldRefuseOverwrite = ({ isOverwrite, forceStale = false, knownSh
     return Boolean(destinationShape) && destinationShape !== knownShape
 }
 
+/**
+ * A baseline entry is either the bare shape string older runs wrote, or
+ * `{ shape, versions: { <tier>: { documentVersion, updatedAt } } }` — the
+ * versions both tiers were at when the shape was confirmed identical on both.
+ */
+export const baselineShape = (entry) => (typeof entry === 'string' ? entry : entry?.shape)
+
 export const planChanged = ({ audit, baseline = {} }) => {
     const push = audit.missing.map(({ spaceId, projectId }) => ({ spaceId, projectId, why: 'missing' }))
     const refuse = []
     for (const row of audit.differs) {
         const key = `${row.spaceId}/${row.projectId}`
-        const last = baseline[key]
+        const last = baselineShape(baseline[key])
         if (!last) refuse.push({ ...row, why: 'no baseline — cannot tell which side changed' })
         else if (row.destination.shape !== last) refuse.push({ ...row, why: 'both sides changed' })
         else push.push({ spaceId: row.spaceId, projectId: row.projectId, why: 'changed here' })
@@ -144,15 +158,35 @@ export const planChanged = ({ audit, baseline = {} }) => {
  * matching project is known-synced from then on; a later edit on one side
  * reads as "changed here", on both sides as "refused".
  */
-export const baselineFromAgreement = ({ source, destination }) => {
+//
+// Given the two tiers' names, each entry also records both tiers' versions at
+// the moment of agreement, so a later reader (start-check) whose versions
+// still match can call the pair identical without fetching either document.
+const versionOf = (sig) => ({ documentVersion: sig.documentVersion ?? 0, updatedAt: sig.updatedAt ?? 0 })
+export const baselineFromAgreement = ({ source, destination, sourceTier, destinationTier }) => {
     const agreed = {}
     for (const spaceId of Object.keys(source)) {
         for (const [projectId, a] of Object.entries(source[spaceId])) {
             const b = destination[spaceId]?.[projectId]
-            if (b && a.shape === b.shape) agreed[`${spaceId}/${projectId}`] = b.shape
+            if (!b || a.shape !== b.shape) continue
+            agreed[`${spaceId}/${projectId}`] = sourceTier && destinationTier
+                ? { shape: b.shape, versions: { [sourceTier]: versionOf(a), [destinationTier]: versionOf(b) } }
+                : b.shape
         }
     }
     return agreed
+}
+
+/**
+ * `--rebuild-baseline`: the baseline for `destinationTier`, recorded from
+ * nothing but today's agreement. Pure. `agreed` replaces the old entries
+ * wholesale — a stale baseline matching nothing is exactly what this repairs,
+ * so merging into it would keep the rot. `differs` is what was left out.
+ */
+export const planRebuildBaseline = ({ source, destination, sourceTier, destinationTier }) => {
+    const agreed = baselineFromAgreement({ source, destination, sourceTier, destinationTier })
+    const { missing, extra, differs } = planAudit({ source, destination })
+    return { agreed, differs, onlyOneSide: missing.length + extra.length }
 }
 
 // The baseline lives beside the data it describes, keyed by destination so a
@@ -353,7 +387,7 @@ const readEnv = () => {
 }
 
 const parseArgs = (argv) => {
-    const args = { from: null, to: null, space: null, assets: true, force: false, forceStale: false, dryRun: false, allowProduction: false, audit: false, changed: false }
+    const args = { from: null, to: null, space: null, assets: true, force: false, forceStale: false, dryRun: false, allowProduction: false, audit: false, changed: false, rebuildBaseline: false }
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
         if (arg === '--from') args.from = resolveTier(argv[++i])
@@ -368,6 +402,7 @@ const parseArgs = (argv) => {
         else if (arg === '--dry-run') args.dryRun = true
         else if (arg === '--audit') args.audit = true
         else if (arg === '--changed') args.changed = true
+        else if (arg === '--rebuild-baseline') args.rebuildBaseline = true
         else if (arg === '--allow-production') args.allowProduction = true
     }
     return args
@@ -441,11 +476,13 @@ export const readSignatures = async (tier, only) => {
     const inventory = {}
     for (const spaceId of spaces) {
         inventory[spaceId] = {}
-        for (const projectId of await listProjects(tier, spaceId)) {
+        // Versions ride along from the same list response, so a baseline built
+        // from these signatures can record where each tier was when it agreed.
+        for (const { id: projectId, documentVersion, updatedAt } of await listProjectMetas(tier, spaceId)) {
             const res = await call(tier, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
             if (!res.ok) continue
             const body = await res.json()
-            inventory[spaceId][projectId] = documentSignature(body.document || body)
+            inventory[spaceId][projectId] = { ...documentSignature(body.document || body), documentVersion, updatedAt }
         }
     }
     return inventory
@@ -457,8 +494,12 @@ export const readSignatures = async (tier, only) => {
 // write to a tier's baseline — only a real sync run earns that).
 export { readBaseline }
 
-const main = async () => {
+export const main = async () => {
     const args = parseArgs(process.argv.slice(2))
+    if (args.rebuildBaseline) {
+        args.from ||= 'local'
+        args.to ||= 'dev'
+    }
     if (!TIERS[args.from] || !TIERS[args.to] || args.from === args.to) {
         console.error('usage: node scripts/tier-sync.mjs --from <local|dev|prod> --to <local|dev|prod>')
         process.exit(1)
@@ -472,6 +513,34 @@ const main = async () => {
     if (isProductionTarget(to.base) && !args.allowProduction && !args.audit) {
         console.error('refused: production is the destination. Re-run with --allow-production if that is really what you mean.')
         process.exit(1)
+    }
+
+    if (args.rebuildBaseline) {
+        const pair = `${args.from} ↔ ${args.to}`
+        console.log(`tier-sync --rebuild-baseline  ${pair}${args.dryRun ? '  (dry run)' : ''}  (reading every document on both tiers — this takes a minute)`)
+        const [source, destination] = await Promise.all([readSignatures(from, args.space), readSignatures(to, args.space)])
+        const { agreed, differs, onlyOneSide } = planRebuildBaseline({ source, destination, sourceTier: args.from, destinationTier: args.to })
+        const bySpace = {}
+        for (const key of Object.keys(agreed)) { const s = key.split('/')[0]; bySpace[s] = (bySpace[s] || 0) + 1 }
+        const baseline = readBaseline()
+        const old = baseline[args.to] || {}
+        const oldStillTrue = Object.keys(old).filter((k) => baselineShape(old[k]) === baselineShape(agreed[k])).length
+        console.log(`\nwill record ${Object.keys(agreed).length} project(s) identical on both tiers, with both tiers' versions:`)
+        console.log(`   ${Object.entries(bySpace).sort().map(([s, n]) => `${s} ${n}`).join(' · ') || '(none)'}`)
+        if (differs.length) {
+            console.log(`\nleft out — content differs (${differs.length}):`)
+            differs.forEach((r) => console.log(`   ${r.spaceId}/${r.projectId}`))
+        }
+        if (onlyOneSide) console.log(`\nleft out — on one tier only: ${onlyOneSide}`)
+        console.log(`\nreplaces the ${Object.keys(old).length} entr(ies) now under "${args.to}" (${oldStillTrue} of them still true) in ${baselinePath()}`)
+        console.log(`summary: ${Object.keys(agreed).length} identical recorded · ${differs.length} differing left out · ${onlyOneSide} on one tier only`)
+        if (args.dryRun) {
+            console.log('dry-run: baseline not written; nothing is ever written to a tier.')
+            return
+        }
+        writeBaseline({ ...baseline, [args.to]: agreed })
+        console.log('baseline written. nothing was written to any tier.')
+        return
     }
 
     if (args.audit) {
@@ -517,13 +586,14 @@ const main = async () => {
         console.log('reading every document on both tiers to find what differs — this takes a minute')
         const signatures = { source: await readSignatures(from, args.space), destination: await readSignatures(to, args.space) }
         const audit = planAudit(signatures)
-        // What the tiers agree on today is the baseline for tomorrow. Written
-        // even on a dry run: it records an observation, not a change to any
-        // tier, and it is what lets the NEXT run tell "I edited this" from
-        // "we both did".
-        const agreed = baselineFromAgreement(signatures)
+        // What the tiers agree on today is the baseline for tomorrow — it is
+        // what lets the NEXT run tell "I edited this" from "we both did". A
+        // dry run uses it for this plan but never writes it: a dry run writes
+        // nothing, anywhere (it used to write this file, and a rebuilt
+        // baseline could be clobbered by someone "just looking").
+        const agreed = baselineFromAgreement({ ...signatures, sourceTier: args.from, destinationTier: args.to })
         baseline[args.to] = { ...(baseline[args.to] || {}), ...agreed }
-        writeBaseline(baseline)
+        if (!args.dryRun) writeBaseline(baseline)
         const { push, refuse } = planChanged({ audit, baseline: baseline[args.to] })
         if (refuse.length) {
             console.log(`\nREFUSED (${refuse.length}) — will not overwrite work on ${args.to}:`)
@@ -588,12 +658,13 @@ const main = async () => {
                 const key = `${item.spaceId}/${projectId}`
                 const isOverwrite = Boolean(destinationIdsBySpace?.[item.spaceId]?.includes(projectId))
                 let destShape = null
-                if (isOverwrite && !args.forceStale && baseline[args.to]?.[key]) {
+                const knownShape = baselineShape(baseline[args.to]?.[key])
+                if (isOverwrite && !args.forceStale && knownShape) {
                     const destDocRes = await call(to, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
                     const destBody = destDocRes.ok ? await destDocRes.json().catch(() => null) : null
                     destShape = destBody ? documentSignature(destBody.document || destBody).shape : null
                 }
-                if (shouldRefuseOverwrite({ isOverwrite, forceStale: args.forceStale, knownShape: baseline[args.to]?.[key], destinationShape: destShape })) {
+                if (shouldRefuseOverwrite({ isOverwrite, forceStale: args.forceStale, knownShape, destinationShape: destShape })) {
                     failed++
                     console.log(`  ✗ ${key} — REFUSED: ${args.to} changed since the last sync (baseline mismatch).`)
                     console.log(`      look at both, then: --space ${item.spaceId} --force --force-stale to overwrite anyway, or pull ${args.to}'s copy down first.`)
@@ -645,7 +716,7 @@ const main = async () => {
         }
     }
 
-    if (copied) writeBaseline(baseline)
+    if (copied && !args.dryRun) writeBaseline(baseline)
     console.log(`\ncopied ${copied}, failed ${failed}`)
     if (failed) process.exitCode = 1
 }

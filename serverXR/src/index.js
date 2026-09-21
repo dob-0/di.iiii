@@ -96,7 +96,11 @@ const { registerDmRoutes } = require('./routes/dmRoutes')
 const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
+const { registerNdiRoutes } = require('./routes/ndiRoutes')
 const { describeListen } = require('./listenInfo')
+const { getMachine } = require('./machineIdentity')
+const { createMachineHub } = require('./machines/hub')
+const { registerMachineRoutes } = require('./machines/routes')
 const { createApprovalGate, createGatedRequestNet, verifyInboundSignature, GATED_ROUTES } = require('./approvalGate')
 const pendingActionStore = require('./pendingActionStore')
 const configStore = require('./configStore')
@@ -125,6 +129,7 @@ const {
   ensureProject,
   findProjectById,
   findProjectBySlug,
+  findProjectMove,
   getProjectPaths,
   isReservedProjectSlug,
   isValidAssetId: isValidProjectAssetId,
@@ -296,6 +301,11 @@ const upload = multer({
 
 async function initStorage() {
   await Promise.all([ensureDir(SPACES_DIR), ensureDir(UPLOADS_DIR)])
+  // Temp files a killed process left mid-transfer (verbatimAsset.js). Never a
+  // reason not to start.
+  require('./verbatimAsset').sweepStaleTempFiles(UPLOADS_DIR)
+    .then((removed) => { if (removed.length) logger.info(`[uploads] removed ${removed.length} stale temp file(s)`) })
+    .catch(() => {})
   initDb(DB_PATH)
   configStore.init(SPACES_DIR)
   await migrateFromFilesystem(SPACES_DIR)
@@ -459,12 +469,46 @@ const lighting = registerLightingRoutes(app, {
   listen: describeListenNow
 })
 
+// NDI® in (serverXR/src/ndi) at /ndi — the lighting desk's twin: a local-runtime lane,
+// built on first use, 404 on a hosted server. Nothing native loads here or at boot: the
+// NDI runtime (installed by the person, never shipped) and koffi (an optional
+// dependency) are only ever loaded inside a forked child. See routes/ndiRoutes.js and
+// docs/architecture/NDI.md. Ahead of morgan on purpose — an MJPEG stream is not a request
+// worth a log line per reconnect, and it never has a body to parse.
+const ndi = registerNdiRoutes(app, {
+  mountPaths: [...new Set(['/ndi', `${config.mountPath || ''}/ndi`.replace(/\/+/g, '/')])],
+  log: (line) => logger.info(line)
+})
+// index.js has no shutdown path of its own (a signal simply ends the process), so the
+// lighting desk's close() is not wired anywhere either. The NDI child does not depend
+// on one: it exits by itself when its IPC channel closes — a kill -9 of the server
+// included. This hook only makes an orderly process.exit() prompt about it.
+process.once('exit', () => { try { ndi.close() } catch { /* going down anyway */ } })
+
 app.use(express.json({ limit: '10mb', verify: (req, _res, buf) => { req.rawBody = buf } }))
 app.use(morgan('tiny'))
 app.use((req, res, next) => {
   pushEvent('request', { method: req.method, url: req.url })
   next()
 })
+
+// The rig (serverXR/src/rig, docs/architecture/rig/PROTOCOL-1.md): members of a
+// room know each other in any version. After express.json because the room key
+// signs req.rawBody; after lighting because blackout reaches the desk. A rig that
+// fails to load is logged and left out — it must never cost the server its boot.
+try {
+  require('./rig').createRig({
+    app,
+    dataRoot: config.directories.dataDir,
+    port: config.port,
+    base: '/serverXR',
+    mountPaths: [...new Set([config.mountPath, '/serverXR'])],
+    logger,
+    lighting
+  })
+} catch (error) {
+  logger.warn('[rig] not started', error?.message || error)
+}
 
 // A published code page runs in a sandboxed srcdoc iframe with no
 // allow-same-origin, so its origin is the literal string "null". An ES-module
@@ -1832,7 +1876,18 @@ router.get('/api/resolve/:spaceSegment/:projectSegment', async (req, res, next) 
     if (!space) return res.status(404).json({ error: 'Not found.' })
     const project = (await findProjectBySlug(space.id, projectSegment)) ||
       (await loadProjectMeta(SPACES_DIR, space.id, normalizeProjectId(projectSegment) || projectSegment))
-    if (!project || project.spaceId !== space.id) return res.status(404).json({ error: 'Not found.' })
+    if (!project || project.spaceId !== space.id) {
+      // Not here — but was it moved FROM here? scripts/project-move.mjs
+      // (2026-09-18) writes one project_moves row per move; a project id is
+      // global and keeps its own /api/projects/:id and /{space}/p/:id links
+      // working on its own, but this bare vanity form (/{space}/{slugOrId})
+      // is the one place that explicitly checks "still in this space" and
+      // used to just 404 once a project left. One extra lookup turns that
+      // into a pointer instead of a dead link — see CONTRIBUTING.md, "Moving one project".
+      const moved = findProjectMove(space.id, projectSegment)
+      if (moved) return res.json({ movedTo: { spaceId: moved.toSpace, projectId: moved.projectId } })
+      return res.status(404).json({ error: 'Not found.' })
+    }
     res.json({ space, project })
   } catch (error) {
     next(error)
@@ -1962,6 +2017,24 @@ const { replaceSceneAndBroadcast, restoreSnapshotAndBroadcast } = registerSpaceR
   bundleUpload,
   writeJson,
   approvalGate
+})
+
+// Browser tabs on two machines that share a space (serverXR/src/machines):
+// who is here, on which di.iiii, and the signalling messages between them. A
+// tab can only reach its own server, so the servers relay — the follower
+// reaching the host with the follow's own sync key. Editor on the space, GET
+// included; a sync key for the space is exactly that.
+const machineHub = createMachineHub()
+const thisMachine = () => getMachine(config.directories.dataDir)
+registerMachineRoutes(router, {
+  hub: machineHub,
+  machine: thisMachine,
+  requireAuth: () => config.requireAuth,
+  getAuthState: (req) => req.authState || getPublicAuthState(req),
+  hasRequiredAuthRole,
+  canAccessSpace,
+  normalizeSpaceId,
+  spaceExists
 })
 
 // Space sync keys — mint/list/revoke. Management is restricted to the space
@@ -2207,7 +2280,27 @@ router.delete('/api/spaces/:spaceId/github-link', async (req, res, next) => {
 router.use('/api/projects/:projectId/assets', (req, res, next) =>
   req.method === 'POST' ? uploadLimiter(req, res, next) : next())
 
+// Who may store a file WITHOUT the EXIF scrubber (the hash-pinned asset PUT —
+// the reasoning lives at the route in routes/projectRoutes.js). Replication
+// only: a per-space sync key, this server's own token, or an install with auth
+// off. The internal token is matched on the header itself rather than on the
+// resolved state, because on a `di up --guests` install a loopback request is
+// already promoted to the local owner before any token is looked at.
+const mayStoreVerbatim = (req) => {
+  if (!config.requireAuth) return true
+  if (req.authState?.authenticated && req.authState.type === 'sync-key') return true
+  const internal = config.internalApiToken || ''
+  if (!internal) return false
+  const presented = Buffer.from(normalizeAuthToken(readAuthToken(req)))
+  const expected = Buffer.from(internal)
+  return presented.length === expected.length && crypto.timingSafeEqual(presented, expected)
+}
+
 registerProjectRoutes(router, {
+  uploadsDir: UPLOADS_DIR,
+  maxUploadBytes: config.maxUploadBytes,
+  isAllowedUpload,
+  mayStoreVerbatim,
   appendProjectOps,
   applyProjectOps,
   blankProjectDocument: BLANK_PROJECT_DOCUMENT,
@@ -2372,7 +2465,8 @@ registerConfigRoutes(router, {
   onConfigChanged: () => ensureOpenSpace(),
   approvalGate,
   requireAuth: config.requireAuth,
-  listen: describeListenNow
+  listen: describeListenNow,
+  machine: thisMachine
 })
 
 const mountTargets = new Set([config.mountPath])
@@ -2586,6 +2680,10 @@ initStorage()
           basePath: config.basePath || '/serverXR',
           selfToken: config.internalApiToken || null,
           tlsName: tlsFiles ? certificateName(tlsFiles.cert) : null,
+          // The files a follow carries rest beside ordinary uploads on their
+          // way through (same disk as the blob store, never a tmpfs), and are
+          // held to the same size limit an upload is.
+          files: { maxBytes: config.maxUploadBytes, tmpDir: UPLOADS_DIR },
           // A followed space must exist here before anything can land in it.
           // `di follow` makes it when the install is running; a follow written
           // while it was down, or carried in on a backup, arrives without one.
@@ -2600,6 +2698,15 @@ initStorage()
       } catch (error) {
         // A room that cannot be followed is still a room. Never fatal.
         logger.warn(`[follow] not started: ${error.message || error}`)
+      }
+      // The same follows carry the tabs: who is on the other machine, and the
+      // signals addressed to the tabs here. Its own try — a follow that works
+      // must not stop because this did not.
+      try {
+        const { startMachineLinks } = require('./machines/link')
+        startMachineLinks({ dataDir: config.directories.dataDir, hub: machineHub, machine: thisMachine, log: logger })
+      } catch (error) {
+        logger.warn(`[machines] not started: ${error.message || error}`)
       }
     }
 

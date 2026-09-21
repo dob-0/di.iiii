@@ -1,4 +1,4 @@
-# di.iiii — one line, on your own machine. Windows.
+# di.iiii - one line, on your own machine. Windows.
 #
 #   irm https://di-studio.xyz/get.ps1 | iex
 #
@@ -18,7 +18,7 @@ $DiHome = if ($env:DI_HOME) { $env:DI_HOME } else { Join-Path $env:USERPROFILE '
 function Info($message) { Write-Host $message }
 function Die($message) { Write-Host '' ; Write-Error $message ; exit 1 }
 
-# ── what machine is this ─────────────────────────────────────────────────────
+# -- what machine is this -----------------------------------------------------
 
 $Arch = switch ($env:PROCESSOR_ARCHITECTURE) {
     'AMD64' { 'x64' }
@@ -31,12 +31,12 @@ if ($env:DI_INSTALL_DRY -eq '1') {
     Info "  os      windows/$Arch"
     Info "  home    $DiHome"
     $found = (Get-Command node -ErrorAction SilentlyContinue)
-    Info "  node    $(if ($found) { & node -v } else { 'none — would download' })"
+    Info "  node    $(if ($found) { & node -v } else { 'none - would download' })"
     Info "  source  https://github.com/$Repo/releases/latest"
     exit 0
 }
 
-# ── a node to run the CLI with ───────────────────────────────────────────────
+# -- a node to run the CLI with -----------------------------------------------
 
 function Test-NodeOk($exe) {
     if (-not $exe) { return $false }
@@ -45,7 +45,7 @@ function Test-NodeOk($exe) {
     $parts = ($raw -replace '^v', '').Split('.')
     $major = [int]$parts[0]
     $minor = [int]$parts[1]
-    # node:sqlite is only unflagged later in the 22 line — an older 22 boots and
+    # node:sqlite is only unflagged later in the 22 line - an older 22 boots and
     # then dies on an unknown module.
     return ($major -gt 22) -or ($major -eq 22 -and $minor -ge 15)
 }
@@ -57,7 +57,7 @@ if (Test-NodeOk $VendoredNode) {
 } elseif ((Get-Command node -ErrorAction SilentlyContinue) -and (Test-NodeOk 'node')) {
     $DiNode = (Get-Command node).Source
 } else {
-    Info "getting node $NodeVersion…"
+    Info "getting node $NodeVersion..."
     $NodePkg = "node-$NodeVersion-win-$Arch"
     $NodeUrl = "https://nodejs.org/dist/$NodeVersion/$NodePkg.zip"
     $tmpNode = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
@@ -74,7 +74,7 @@ You need one of these. Pick whichever sounds easier:
 
   Docker Desktop   https://docker.com/products/docker-desktop
                    install it, open it once, then run this line again
-  Node.js 22       https://nodejs.org  — the big green LTS button
+  Node.js 22       https://nodejs.org  - the big green LTS button
 
 Nothing was installed.
 "@
@@ -89,7 +89,7 @@ Nothing was installed.
     if (-not (Test-NodeOk $DiNode)) { Die 'the node di.iiii downloaded does not run on this machine.' }
 }
 
-# ── the release ──────────────────────────────────────────────────────────────
+# -- the release --------------------------------------------------------------
 
 $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
 New-Item -ItemType Directory -Path $tmp -Force | Out-Null
@@ -99,16 +99,16 @@ if ($env:DI_INSTALL_ARTIFACT) {
     $Version = if ($env:DI_INSTALL_VERSION) { $env:DI_INSTALL_VERSION } else { '0.0.0-local' }
     $Artifact = "di-runtime-$Version.tar.gz"
     Copy-Item $env:DI_INSTALL_ARTIFACT (Join-Path $tmp $Artifact)
-    Info "installing $Version from disk…"
+    Info "installing $Version from disk..."
 } else {
-    Info 'finding the newest di.iiii…'
+    Info 'finding the newest di.iiii...'
     $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -UseBasicParsing
     $Version = $release.tag_name -replace '^v', ''
-    if (-not $Version) { Die 'could not read the release feed — is github.com reachable?' }
+    if (-not $Version) { Die 'could not read the release feed - is github.com reachable?' }
     $Artifact = "di-runtime-$Version.tar.gz"
     $base = "https://github.com/$Repo/releases/download/v$Version"
 
-    Info "downloading $Version…"
+    Info "downloading $Version..."
     Invoke-WebRequest -Uri "$base/$Artifact" -OutFile (Join-Path $tmp $Artifact) -UseBasicParsing
 
     try {
@@ -117,7 +117,7 @@ if ($env:DI_INSTALL_ARTIFACT) {
             Select-Object -First 1).Line.Split(' ')[0]
         $got = (Get-FileHash -Path (Join-Path $tmp $Artifact) -Algorithm SHA256).Hash.ToLower()
         if ($want -and $got -ne $want) {
-            Die "checksum mismatch — refusing to install.`n  expected $want`n  got      $got"
+            Die "checksum mismatch - refusing to install.`n  expected $want`n  got      $got"
         }
     } catch {
         Info '  (no checksums published for this release)'
@@ -132,7 +132,7 @@ New-Item -ItemType Directory -Path $Staged -Force | Out-Null
 
 # Windows ships bsdtar at System32\tar.exe and it understands `C:\...`. Git for
 # Windows ships GNU tar, which is often first on PATH and reads a leading `C:` as
-# a REMOTE HOST — it fails with "Cannot connect to C: resolve failed", naming
+# a REMOTE HOST - it fails with "Cannot connect to C: resolve failed", naming
 # neither tar nor the drive letter. So call bsdtar by full path, and only fall
 # back to whatever `tar` is with --force-local, which tells GNU tar that a colon
 # is just a colon.
@@ -145,7 +145,7 @@ if (Test-Path $SystemTar) {
 if ($LASTEXITCODE -ne 0) { Die 'could not unpack the download.' }
 Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
 
-# ── hand over ────────────────────────────────────────────────────────────────
+# -- hand over ----------------------------------------------------------------
 
 $env:DI_HOME = $DiHome
 & $DiNode (Join-Path $Staged 'cli\bootstrap.mjs') --staged $Staged --version $Version

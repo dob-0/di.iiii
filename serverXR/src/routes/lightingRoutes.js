@@ -48,6 +48,10 @@ function registerLightingRoutes(app, { dataDir, mountPaths = ['/light'], offline
 
   return {
     getDesk,
+    // Asking never builds one: the rig mirrors a blackout onto a desk that a
+    // browser already opened, without starting the 40 Hz loop on an install
+    // that has no lights.
+    hasDesk: () => desk !== null,
     // Only the desk that was actually built is closed; asking never builds one.
     close: () => { if (desk) { desk.close(); desk = null } }
   }

@@ -4,15 +4,19 @@ import StudioInspector from './StudioInspector.jsx'
 import StudioViewportLayout from './StudioViewportLayout.jsx'
 import StudioFloatingPanel from './StudioFloatingPanel.jsx'
 import StudioControlCluster from './StudioControlCluster.jsx'
+import StudioCueStrip from './StudioCueStrip.jsx'
 import StudioProjectsPanel from './StudioProjectsPanel.jsx'
 import StudioQuickInsert from './StudioQuickInsert.jsx'
 import { useStudioPanelState } from '../hooks/useStudioPanelState.js'
 import useAuthSession from '../../hooks/useAuthSession.js'
 import StudioCoachMarks from './StudioCoachMarks.jsx'
+import RigMirrorHint from './RigMirrorHint.jsx'
 import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspaceStorage.js'
 import '../styles/studio-mobile.css'
 import { canPlaceInScene } from '../utils/assetFormats.js'
 import { useViewportLayout } from '../hooks/useViewportLayout.js'
+import { useRigMirrorSwitch } from '../hooks/useRigMirrorSwitch.js'
+import { useSendRigPositions } from '../hooks/useSendRigPositions.js'
 import { isJamProject, loadJamAllTools, saveJamAllTools } from '../utils/jamMode.js'
 import { JAM_PRIMITIVES } from '../../project/entityPalette.js'
 import {
@@ -95,6 +99,7 @@ export default function StudioShell({
     inspectorValues,
     assetOptions,
     spaceOptions = [],
+    surfaceOptions = [],
     libraryItems = [],
     onDeleteLibraryItem,
     presence,
@@ -142,6 +147,7 @@ export default function StudioShell({
     onExitXr,
     onBackToHub,
     onOpenNodeEditor,
+    onOpenProjection,
     onCameraViewChange,
     onTransformCommit,
     onToggleSelectEntity,
@@ -151,6 +157,12 @@ export default function StudioShell({
     onTransformCancel,
     editHistory = null,
     onHistoryJump,
+    // mappingState.cues, and the one way to fire one. The same cues the
+    // projection tool lists; firing from here reaches the wall and the
+    // lighting desk by exactly the same path.
+    cues = [],
+    liveCueId = null,
+    onFireCue = null,
 }) {
     const persistedWorkspace = useMemo(() => loadStudioWorkspace(), [])
     const { open, toggle, isOpen } = useStudioPanelState(migratePanelIds(persistedWorkspace?.open))
@@ -166,6 +178,8 @@ export default function StudioShell({
     const [collapsedPanels, setCollapsedPanels] = useState(() => new Set(persistedWorkspace?.collapsed || []))
     const [layoutKey, setLayoutKey] = useState(0)
     const [snapEdges, setSnapEdges] = useState(persistedWorkspace?.snapEdges ?? false)
+    const rigMirror = useRigMirrorSwitch()
+    const rigPositions = useSendRigPositions({ entities })
 
     // Remember the workspace across sessions — open panels, dragged positions,
     // resized dimensions, collapsed headers, snap preference. Arrange actions
@@ -456,6 +470,7 @@ export default function StudioShell({
         showHelp,
         onShowHelp: () => setShowHelp(true),
         onCloseHelp: () => setShowHelp(false),
+        rigMirror: rigMirror.on,
     }
 
     // One source of truth for each window's content, shared by the desktop
@@ -500,6 +515,7 @@ export default function StudioShell({
                                     values={inspectorValues}
                                     assetOptions={assetOptions}
                                     spaceOptions={spaceOptions}
+                                    surfaceOptions={surfaceOptions}
                                     onSectionChange={onInspectorChange}
                                     footer={inspectorFooter}
                                 />
@@ -607,6 +623,7 @@ export default function StudioShell({
                         onHideUI={() => setUiHidden(true)}
                         onBackToHub={onBackToHub}
                         onOpenNodeEditor={onOpenNodeEditor}
+                        onOpenProjection={onOpenProjection}
                         xrState={xrState}
                         syncState={syncState}
                         presence={presence}
@@ -617,6 +634,13 @@ export default function StudioShell({
                         onStackRight={stackRight}
                         onResetLayout={resetLayout}
                         onShowHelp={() => setShowHelp(true)}
+                        rigMirrorOn={rigMirror.on}
+                        onToggleRigMirror={rigMirror.available ? rigMirror.toggle : null}
+                        cues={cues}
+                        liveCueId={liveCueId}
+                        onFireCue={onFireCue}
+                        onSendRigPositions={rigPositions.send}
+                        rigPositionsNote={rigPositions.note}
                         panelKeys={jamMinimal ? ['create'] : null}
                         minimal={jamMinimal}
                         allTools={jamAllTools}
@@ -656,6 +680,17 @@ export default function StudioShell({
                                 Nodes
                             </button>
                         )}
+                        {!jamMinimal && onOpenProjection && (
+                            <button
+                                type="button"
+                                className="smb-top-btn"
+                                onClick={onOpenProjection}
+                                aria-label="Put this project on a wall"
+                                title="Put this project on a wall"
+                            >
+                                Projection
+                            </button>
+                        )}
                         <button
                             type="button"
                             className={`smb-top-btn${viewportEditMode === 'edit' ? ' is-active' : ''}`}
@@ -672,6 +707,19 @@ export default function StudioShell({
                             </div>
                             <div className="smb-sheet-body">{panelBodies[mobileSheet]}</div>
                         </div>
+                    )}
+                    {/* On a phone the control cluster is not drawn at all, so the
+                        strip rides just above the bottom bar — the one band of a
+                        390px screen a thumb reaches without regripping. Hidden
+                        while a sheet is open, which occupies the same band. */}
+                    {!jamMinimal && onFireCue && !mobileSheet && (
+                        <StudioCueStrip
+                            cues={cues}
+                            liveCueId={liveCueId}
+                            onFire={onFireCue}
+                            className="smb-cues"
+                            buttonClassName="smb-top-btn"
+                        />
                     )}
                     <nav className="smb-nav" aria-label="Studio windows">
                         {mobilePanels.map(([id, label]) => (
@@ -717,6 +765,8 @@ export default function StudioShell({
                     isOpenJam={isJam}
                 />
             )}
+
+            {!uiHidden && !loading && <RigMirrorHint on={rigMirror.on} />}
         </div>
     )
 }
