@@ -134,7 +134,7 @@ def unpack_images():
 
 # The whole job — fetch, unpack, reconstruct — as one detached shell script.
 #
-# It has to be detached from the very first byte. Meshroom is a ~2.5 GB
+# It has to be detached from the very first byte. Meshroom is an 8 GB
 # download before it is an hour of GPU, and `colab exec` holds the websocket
 # open for as long as the cell runs: doing the fetch inside the exec times the
 # call out and takes the job down with it (learned the hard way, 2026-09-21).

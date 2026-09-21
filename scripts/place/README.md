@@ -114,8 +114,8 @@ life size, which is the mess the fitter exists to undo.
 - **The frames go up in 16 MB pieces.** `colab upload` carries the file
   base64'd inside one JSON body; a hall's worth of photographs answers 500 and
   keeps nothing.
-- **Meshroom is a 4.5 GB download** onto the box before an hour of GPU —
-  measured at 30–45 minutes on Colab, during which `wget -q` prints nothing
+- **Meshroom is an 8 GB download** onto the box before an hour of GPU —
+  measured at 7.3 GB after 40 minutes on Colab, around 3 MB/s, during which `wget -q` prints nothing
   and the log holds one line. The job runs detached and touches a heartbeat
   file every 15 seconds, so silence is not mistaken for death. (Worth doing
   one day: keep the tarball on Drive and mount it instead.)
