@@ -17,6 +17,8 @@
  *   --work <dir>        the pipeline's working folder (needs <work>/images)
  *   --session <name>    Colab session name (default place-<foldername>)
  *   --gpu <kind>        L4 (default) · T4 · A100 · H100
+ *   --max-width <px>    shrink frames to this before sending (default 2400;
+ *                       0 sends them untouched)
  *   --poll <seconds>    how often to ask how it is going (default 60)
  *   --timeout <minutes> give up after this long (default 180)
  *   --keep              leave the Colab session running when done
@@ -105,6 +107,38 @@ export const SILENT_POLLS_BEFORE_GIVING_UP = 6
 // the far end answers 500 and keeps nothing (seen, 2026-09-21). Split at the
 // door, send the pieces, and let reconstruct.py put them back together.
 export const CHUNK_BYTES = 16 * 1024 * 1024
+
+// A phone photograph is 4032 x 2688, and a reconstruction does not want it.
+// Feature extraction on full-size frames is where the first real run died,
+// and the whole set is 98 MB to push through an upload that carries files
+// inside JSON. 2400 px keeps far more detail than a walkable room needs and
+// costs a quarter of the bytes and a fraction of the memory.
+export const DEFAULT_MAX_WIDTH = 2400
+
+// Shrink into a separate folder — <work>/images stays exactly as frames.mjs
+// chose it, so frames.json keeps telling the truth about what was kept.
+const shrinkFrames = async (imagesDir, work, maxWidth) => {
+    if (!maxWidth) return imagesDir
+    const { default: sharp } = await import('sharp')
+    const out = ensureDir(path.join(work, 'upload'))
+    for (const stale of fs.readdirSync(out)) fs.rmSync(path.join(out, stale), { force: true })
+    const names = fs.readdirSync(imagesDir).filter((name) => !name.startsWith('.'))
+    let before = 0
+    let after = 0
+    for (const name of names) {
+        const source = path.join(imagesDir, name)
+        const target = path.join(out, `${path.parse(name).name}.jpg`)
+        before += fs.statSync(source).size
+        await sharp(source)
+            .rotate()                       // honour the phone's orientation tag
+            .resize({ width: maxWidth, withoutEnlargement: true })
+            .jpeg({ quality: 92 })
+            .toFile(target)
+        after += fs.statSync(target).size
+    }
+    say(`  ${names.length} frames shrunk to ${maxWidth}px — ${fmtBytes(before)} → ${fmtBytes(after)}`)
+    return out
+}
 
 export const planChunks = (tarBytes, chunkBytes = CHUNK_BYTES) =>
     Math.max(1, Math.ceil(tarBytes / chunkBytes))
@@ -233,8 +267,10 @@ const main = async () => {
         return
     }
 
+    const maxWidth = num(args['max-width'], DEFAULT_MAX_WIDTH)
     say(`Packing ${fs.readdirSync(imagesDir).length} frames …`)
-    run('tar', ['-cf', tar, '-C', imagesDir, '.'])
+    const sending = await shrinkFrames(imagesDir, work, maxWidth)
+    run('tar', ['-cf', tar, '-C', sending, '.'])
 
     say(`Renting a ${gpu} as "${session}" …`)
     let made = colab(['new', '-s', session, '--gpu', gpu])
@@ -263,9 +299,9 @@ const main = async () => {
     let downloaded = null
     try {
         say('Sending the frames up …')
-        const sending = uploadInPieces(colab, session, tar, work)
-        if (!sending.ok) {
-            throw new Error(`The frames did not reach the box (${sending.sent} pieces made it).`)
+        const sent = uploadInPieces(colab, session, tar, work)
+        if (!sent.ok) {
+            throw new Error(`The frames did not reach the box (${sent.sent} pieces made it).`)
         }
 
         say('Starting Meshroom …')
@@ -305,8 +341,13 @@ const main = async () => {
             silent = 0
             if (latest.state === 'done') { result = latest; break }
             if (latest.state === 'failed' || latest.state === 'error') {
-                warn('Meshroom stopped without a mesh. The end of its log:')
+                warn('Meshroom stopped without a mesh. The end of its own log:')
                 ;(latest.log || []).forEach((line) => warn(`    ${line}`))
+                if (latest.step?.length) {
+                    warn('')
+                    warn(`And the step that actually failed (${latest.stepLog}):`)
+                    ;(latest.step || []).forEach((line) => warn(`    ${line}`))
+                }
                 throw new Error('No mesh came out of that footage.')
             }
             const minutes = Math.round((latest.elapsed || 0) / 60)

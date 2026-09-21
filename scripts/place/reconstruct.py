@@ -83,6 +83,33 @@ def find_result():
     return None
 
 
+# Meshroom writes each step's real error into that step's own log under its
+# cache, not into the batch output — the batch only says which command it ran
+# and, at the end, a bare exit code. Without this a failure reads "MESHROOM
+# EXIT 255" and nothing else, and by the time anyone looks the box is gone
+# (2026-09-21).
+MESHROOM_CACHES = ('/tmp/MeshroomCache', os.path.join(ROOT, 'cache'))
+
+
+def failing_step_log(lines=40):
+    newest = None
+    for base in MESHROOM_CACHES:
+        for current, _dirs, files in os.walk(base):
+            for name in files:
+                if not name.endswith('.log'):
+                    continue
+                full = os.path.join(current, name)
+                try:
+                    stamp = os.path.getmtime(full)
+                except OSError:
+                    continue
+                if newest is None or stamp > newest[0]:
+                    newest = (stamp, full)
+    if not newest:
+        return {'file': None, 'lines': []}
+    return {'file': newest[1], 'lines': tail(newest[1], lines)}
+
+
 def tail(path, lines=12):
     try:
         with open(path, errors='replace') as handle:
@@ -235,8 +262,9 @@ def report():
     elif running:
         status(state='running', elapsed=elapsed, beat=beat, log=tail(LOG, 6))
     else:
+        step = failing_step_log()
         status(state='failed', elapsed=elapsed, beat=beat, finished=finished,
-               log=tail(LOG, 40))
+               log=tail(LOG, 25), stepLog=step['file'], step=step['lines'])
 
 
 def main():
