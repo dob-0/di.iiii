@@ -229,10 +229,14 @@ const loadEnvFile = (filePath) => {
 }
 
 const readEnv = () => ({
-  ...loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env')),
-  ...loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env.local')),
+  // Most specific file wins, so serverXR/.env.local merges LAST. The root .env is a
+  // general-purpose file that on one machine carried LOCAL_API_URL=localhost:4000 while
+  // the install answered on its own name — with root-last, that stale line won and the
+  // content half of this tool reported "not checked" for a week (2026-09-21).
   ...loadEnvFile(path.join(ROOT_DIR, '.env')),
   ...loadEnvFile(path.join(ROOT_DIR, '.env.local')),
+  ...loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env')),
+  ...loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env.local')),
   ...Object.fromEntries(['API_TOKEN', 'LIVE_API_TOKEN', 'LOCAL_API_URL'].filter((k) => process.env[k]).map((k) => [k, process.env[k]]))
 })
 

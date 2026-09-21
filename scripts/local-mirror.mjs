@@ -159,10 +159,14 @@ const SPACE_FIELDS = ['label', 'isPublic', 'openInscriptions', 'allowEdits']
 
 const main = async () => {
     const env = {
-        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env'))),
-        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env.local'))),
+        // Most specific file wins, so serverXR/.env.local merges LAST. The root .env is a
+        // general-purpose file that on one machine carried LOCAL_API_URL=localhost:4000 while
+        // the install answered on its own name — with root-last, that stale line won and the
+        // content half of this tool reported "not checked" for a week (2026-09-21).
         ...(await loadEnvFile(path.join(ROOT_DIR, '.env'))),
         ...(await loadEnvFile(path.join(ROOT_DIR, '.env.local'))),
+        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env'))),
+        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env.local'))),
     }
     const getEnv = (key) => process.env[key] || env[key] || ''
 
