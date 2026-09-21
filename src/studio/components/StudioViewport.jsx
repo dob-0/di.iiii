@@ -5,6 +5,7 @@ import '../styles/studio.css'
 import { CameraControls, Grid, Html, TransformControls } from '@react-three/drei'
 import RigMirror from './RigMirror.jsx'
 import { useLiveLightEntity } from '../../rigMirror/liveLight.js'
+import LiveScreens from './LiveScreens.jsx'
 import { XR, useXR } from '@react-three/xr'
 import ModalTransform from './ModalTransform.jsx'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
@@ -186,7 +187,7 @@ function AutoLookAround({ controlsRef, config }) {
     return null
 }
 
-function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, gizmoMode, gizmoAxis = null, gizmoVisible = true, overrideTransform = null, onSelect, onToggleSelect, onTransformCommit, orbitRef }) {
+function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimary, editMode, gizmoMode, gizmoAxis = null, gizmoVisible = true, overrideTransform = null, onSelect, onToggleSelect, onTransformCommit, orbitRef }) {
     const groupRef = useRef()
     const tcRef = useRef()
     const highlightRef = useRef(null)
@@ -303,7 +304,7 @@ function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, giz
                     else onSelect?.(entity.id)
                 }}
             >
-                <EntityContent entity={shown} assetMap={assetMap} />
+                <EntityContent entity={shown} assetMap={assetMap} screens={screens} />
                 {selected && (
                     <Html position={[0, 1.8, 0]} center zIndexRange={[900, 0]}>
                         <span className="studio-selection-pill">{entity.name}</span>
@@ -326,7 +327,7 @@ function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, giz
     )
 }
 
-function SceneEntityNode({ entity, childMap, assetMap, selectedIdSet, selectedEntityId, editMode, gizmoMode, gizmoAxis, gizmoVisible, overrideById, onSelectEntity, onToggleSelectEntity, onTransformCommit, orbitRef }) {
+function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedIdSet, selectedEntityId, editMode, gizmoMode, gizmoAxis, gizmoVisible, overrideById, onSelectEntity, onToggleSelectEntity, onTransformCommit, orbitRef }) {
     const groupTimelineRef = useRef(null)
     useEntityPose(entity, groupTimelineRef)
     const t = entity.components?.transform || {}
@@ -368,6 +369,7 @@ function SceneEntityNode({ entity, childMap, assetMap, selectedIdSet, selectedEn
                         entity={child}
                         childMap={childMap}
                         assetMap={assetMap}
+                        screens={screens}
                         selectedIdSet={selectedIdSet}
                         selectedEntityId={selectedEntityId}
                         editMode={editMode}
@@ -388,6 +390,7 @@ function SceneEntityNode({ entity, childMap, assetMap, selectedIdSet, selectedEn
         <SelectableEntity
             entity={entity}
             assetMap={assetMap}
+            screens={screens}
             selected={selectedIdSet.has(entity.id)}
             isPrimary={entity.id === selectedEntityId}
             editMode={editMode}
@@ -600,7 +603,8 @@ function StudioSceneContent({
     onTransformStatus,
     controlsRef,
     playTimelines = false,
-    rigMirror = false
+    rigMirror = false,
+    screens = null
 }) {
     const isArMode = useXR((state) => state.mode === 'immersive-ar')
     // Keyed on assets + project id so the map only rebuilds when assets change,
@@ -719,6 +723,7 @@ function StudioSceneContent({
                                 entity={entity}
                                 childMap={childMap}
                                 assetMap={assetMap}
+                                screens={screens}
                                 selectedIdSet={selectedIdSet}
                                 selectedEntityId={selectedEntityId}
                                 editMode={editMode}
@@ -923,6 +928,9 @@ export default function StudioViewport({
 }) {
     const viewportRef = useRef(null)
     const [transformStatus, setTransformStatus] = useState(null)
+    // What each screen in the room draws, by mapping surface id — filled by
+    // LiveScreens (the DOM sources beside the canvas), read by EntityContent.
+    const [screens, setScreens] = useState(null)
     const { canvasKey, contextLost, bindContextGuard, restoreContext } = useWebglContextGuard()
     // Low-power mode (space-card previews): render at full rate while the
     // scene boots and assets stream in, then drop to on-demand frames —
@@ -1001,9 +1009,15 @@ export default function StudioViewport({
                         controlsRef={controlsRef}
                         playTimelines={playTimelines}
                         rigMirror={rigMirror}
+                        screens={screens}
                     />
                 </XR>
             </Canvas>
+
+            {/* The sources behind the room's screens. Not in a low-power preview
+                card: thirteen cards each running a video would be the cost the
+                cards exist to avoid; there a screen draws its dim plate. */}
+            {!lowPower && <LiveScreens document={document} onScreens={setScreens} />}
 
             {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}
 

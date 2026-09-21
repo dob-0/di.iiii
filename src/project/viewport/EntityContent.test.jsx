@@ -125,3 +125,39 @@ describe('a lamp joined to the desk', () => {
         expect(lightOf(el).intensity).toBe(2)
     })
 })
+
+// A plane with `components.surface` is a SCREEN: what it draws is looked up in
+// `screens` by surface id (LiveScreens.jsx fills that map in the Studio). The
+// contract here is that the texture, the colour, and the nothing-yet case all
+// reach PlaneObject as `screen`, and that a plain plane is untouched.
+describe('a plane that is a screen', () => {
+    const screenPlane = (surfaceId) => ({
+        type: 'plane',
+        components: { appearance: { color: '#abc' }, primitive: { width: 3, depth: 2 }, surface: { surfaceId } }
+    })
+
+    it('draws the live texture the room has for its surface', () => {
+        const texture = { isTexture: true, uuid: 't1' }
+        const el = EntityContent({ entity: screenPlane('srf-1'), assetMap: new Map(), screens: new Map([['srf-1', { texture }]]) })
+        expect(el.props.screen.texture).toBe(texture)
+        expect(el.props.planeWidth).toBe(3)
+    })
+
+    it('draws a flat colour for a colour surface', () => {
+        const el = EntityContent({ entity: screenPlane('srf-1'), assetMap: new Map(), screens: new Map([['srf-1', { colour: '#3a1d0a' }]]) })
+        expect(el.props.screen).toEqual({ colour: '#3a1d0a' })
+    })
+
+    it('is still a (dim) screen when nothing is running for it yet — never a lit blank', () => {
+        const noScreens = EntityContent({ entity: screenPlane('srf-1'), assetMap: new Map() })
+        expect(noScreens.props.screen).toEqual({})
+        const unknownSurface = EntityContent({ entity: screenPlane('srf-1'), assetMap: new Map(), screens: new Map() })
+        expect(unknownSurface.props.screen).toEqual({})
+    })
+
+    it('a plane with no surface is the same lit plane it always was', () => {
+        const el = EntityContent({ entity: { type: 'plane', components: { appearance: { color: '#abc' } } }, assetMap: new Map(), screens: new Map([['srf-1', { texture: { isTexture: true } }]]) })
+        expect(el.props.screen).toBeNull()
+        expect(el.props.color).toBe('#abc')
+    })
+})

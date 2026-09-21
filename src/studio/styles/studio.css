@@ -43,6 +43,26 @@
     inset: 0;
 }
 
+/* The sources behind the room's screens (LiveScreens.jsx): each is a real map
+   source drawn 1px wide and invisible, never display:none — a hidden video
+   stops decoding, and the texture on the plane would freeze with it. */
+.studio-live-screens {
+    pointer-events: none;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+}
+.studio-live-screen-host {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
 /* Blender-style transform readout (header) shown during a modal G/R/S op */
 .studio-transform-hud {
     pointer-events: none;

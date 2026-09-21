@@ -1059,6 +1059,12 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         }
     }
 
+    // The project's own mapping surfaces, for a plane that is a screen.
+    const surfaceOptions = useMemo(
+        () => (document.mappingState?.surfaces || []).map((surface) => ({ value: surface.id, label: surface.name || surface.id })),
+        [document.mappingState?.surfaces]
+    )
+
     const inspectorSections = selectedEntity
         ? getInspectorSections(selectedEntity)
         : [
@@ -1103,6 +1109,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             inspectorValues={inspectorValues}
             assetOptions={document.assets || []}
             spaceOptions={spaceOptions}
+            surfaceOptions={surfaceOptions}
             libraryItems={libraryItems}
             onDeleteLibraryItem={handleDeleteLibraryItem}
             presence={presence}
