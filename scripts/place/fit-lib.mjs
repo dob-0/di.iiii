@@ -87,36 +87,54 @@ export const eulerFromQuaternion = (q) => {
 /**
  * Everything the importer needs to place the model.
  *
+ * A di.iiii entity is scaled, then rotated, then translated (the three.js
+ * order), so a point of the mesh lands at  position + scale * (R * v).
+ *
  * @param {object} fit
- *   floorNormal  the floor plane's normal in the model's own frame, already
- *                pointing into the room
+ *   quaternion   the turn that squares the room to the world axes, as the
+ *                fitter found it (floor to horizontal AND walls to the axes).
+ *                Given a bare floorNormal instead, the shortest turn that
+ *                makes the floor horizontal is used and the room keeps
+ *                whatever yaw it arrived with.
  *   bounds       {min,max} of the mesh AFTER the up-rotation, before scaling
+ *   floorY       the floor PLANE's height in that same rotated frame. Not
+ *                the lowest vertex: a scan has noise under the floor and a
+ *                real floor has a slab, and a visitor stands on the surface,
+ *                not on the bottom of the concrete.
  *   scale        metres per model unit
  */
-export const fitTransform = ({ floorNormal, bounds, scale = 1 }) => {
-    const quaternion = quatFromTo(floorNormal, [0, 1, 0])
+export const fitTransform = ({ quaternion: given, floorNormal, bounds, floorY = null, scale = 1 }) => {
+    const quaternion = given && given.length === 4 ? given : quatFromTo(floorNormal, [0, 1, 0])
     const rotation = eulerFromQuaternion(quaternion)
-    const min = bounds.min.map((value) => value * scale)
-    const max = bounds.max.map((value) => value * scale)
-    // Floor onto y=0, and the room's footprint centred on the origin: a
-    // visitor should arrive in a room, not beside one.
+    const floor = floorY === null ? bounds.min[1] : floorY
     const position = [
-        -(min[0] + max[0]) / 2,
-        -min[1],
-        -(min[2] + max[2]) / 2
+        -((bounds.min[0] + bounds.max[0]) / 2) * scale,
+        -floor * scale,
+        -((bounds.min[2] + bounds.max[2]) / 2) * scale
     ]
-    const size = [max[0] - min[0], max[1] - min[1], max[2] - min[2]]
+    const size = [
+        (bounds.max[0] - bounds.min[0]) * scale,
+        (bounds.max[1] - bounds.min[1]) * scale,
+        (bounds.max[2] - bounds.min[2]) * scale
+    ]
     return {
         quaternion,
         rotation,
         scale,
         position,
-        // Where the room ends up once position/rotation/scale are applied.
+        // Where the room ends up once position/rotation/scale are applied:
+        // floor at y=0, footprint centred on the origin.
         placedBounds: {
-            min: [-size[0] / 2, 0, -size[2] / 2],
-            max: [size[0] / 2, size[1], size[2] / 2]
+            min: [-size[0] / 2, (bounds.min[1] - floor) * scale, -size[2] / 2],
+            max: [size[0] / 2, (bounds.max[1] - floor) * scale, size[2] / 2]
         },
-        size
+        size,
+        // A point of the model, in the room's final coordinates.
+        place: (point) => [
+            point[0] * scale + position[0],
+            (point[1] - floor) * scale,
+            point[2] * scale + position[2]
+        ]
     }
 }
 
@@ -163,9 +181,11 @@ export const spawnFrom = ({ placedBounds, door = null, forwardDegrees = null, ey
     const x = stand.x + (toCentreX / distance) * step
     const z = stand.z + (toCentreZ / distance) * step
 
-    // di.iiii's walker reads yaw as a rotation about +Y with 0 looking down -Z.
+    // di.iiii's walker looks along (sin yaw, ·, cos yaw) — yaw 0 faces +Z
+    // (LiveProjectScene.jsx:873). So the yaw that faces a point is
+    // atan2(dx, dz), in that order.
     const yaw = forwardDegrees === null
-        ? Math.atan2(centreX - x, -(centreZ - z))
+        ? Math.atan2(centreX - x, centreZ - z)
         : (Number(forwardDegrees) * Math.PI) / 180
     return { x: round(x), z: round(z), yaw: round(yaw), pitch: 0, altY: eyeHeight }
 }
