@@ -82,11 +82,22 @@ Three rules it does not bend:
 repeats the page's reason rather than guessing at one. It exits 1 when any
 screen is not showing, so it can be a health check and not only a look.
 
-**One screen, a static target.** Today the target is the space's single map
-project, or `--project`. Which display shows which project — `output.show` in
-the mapping document, OS display probes, multi-window placement, hotplug — is
-step D of the plan and is not built: the second screen on asuz is still
-hand-made.
+**Which display shows which mapping is in the document.** Each map project's
+`mappingState.output.show` names a machine (its `machine.json` id, as the machines
+hub reports it) and one of its screens — by label, index and size, or `'all'` —
+chosen on the map desk's `Show on` picker from what the machines report. The
+supervisor reads the displays off the OS on every tick (`xrandr` on X11; PowerShell
+`AllScreens` + `WmiMonitorID` on Windows; NSScreen + `system_profiler` on macOS;
+Wayland says so and assumes one screen), matches exact label → contains → size →
+index, and keeps one kiosk per assigned display — its own profile, debugging port
+and hold page — placed with `--window-position/--window-size` and checked over CDP,
+corrected once, then reported. Chromium places windows in CSS pixels and the probe
+speaks device pixels on Linux; the kiosk's own `devicePixelRatio` converts, and the
+status says which unit matched. A display that goes away closes its kiosk; one that
+appears gets one; cloned displays are told, never flipped; a screen the machine does
+not have is one status row, not a crash. With no mapping naming this machine, it is
+the one kiosk of before: the space's single mapping, or `--project`. Not yet run on
+the real two-display Windows box, nor on mixed DPI.
 
 ## 2. Jam and show
 
@@ -197,7 +208,7 @@ Checked by grep on `origin/dev` and the open branches that day.
 | cues | partial: map cue list only |
 | blackout | partial: lighting desk only |
 | versions | partial: `di update --from`, no downgrade; nothing between members |
-| appliance (boot, restart, health) | in the product: `di stage join/leave/status` — one autostart entry, one supervisor, one screen. What is still hand-made on asuz is the SECOND screen (see below) |
+| appliance (boot, restart, health) | in the product: `di stage join/leave/status` — one autostart entry, one supervisor, one kiosk per display the document names (`output.show`). Not yet proven on the real two-display box |
 | holding, lanes/turns, show mode, handover, parts, protocol 1 | missing |
 
 ## 6. Build order

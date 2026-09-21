@@ -35,6 +35,13 @@ const CARD_GROUND = '#0a0704'
 const CARD_INK = '#8f5a17'
 const CARD_EDGE = '#5c3a0f'
 
+// The same three, for anything that draws the card OUTSIDE the DOM — a screen
+// in the 3D room paints its plate into a canvas and cannot read a stylesheet
+// from there. The values are the `--di-card-*` tokens in src/styles/base.css;
+// a reader that CAN reach the stylesheet should prefer those and keep these as
+// the fallback, so the two never drift into two palettes.
+export const CARD_PALETTE = Object.freeze({ ground: CARD_GROUND, ink: CARD_INK, frame: CARD_EDGE })
+
 // What a surface shows when nobody has said yet what it shows. Read by
 // MapSourceView (an empty `ref` on a test source) and by MapInspector's
 // pattern picker, so all three agree on one answer.

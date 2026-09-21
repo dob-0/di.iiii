@@ -435,10 +435,28 @@ describe('ESM/CJS mirror equivalence', () => {
         { id: 'v1', type: 'video', components: { media: { assetId: 'a', spatial: true, distance: 0, maxDistance: 2 } } },
         { id: 'v2', type: 'video', components: { media: { assetId: 'a' } } },
         // An image's media object must NOT grow spatial fields.
-        { id: 'i1', type: 'image', components: { media: { assetId: 'a' } } }
+        { id: 'i1', type: 'image', components: { media: { assetId: 'a' } } },
+        // The join to the lighting desk: a number survives, anything else is dropped,
+        // and universe/address never reach the document. The server normalizes with
+        // the mirror, so a mirror that dropped `fixture` would lose every join on save.
+        { id: 'f1', type: 'spotLight', components: { fixture: { index: 3, universe: 1, address: 17 } } },
+        { id: 'f2', type: 'pointLight', components: { fixture: { index: '4' } } },
+        { id: 'f3', type: 'pointLight', components: { fixture: { index: 0 } } },
+        { id: 'f4', type: 'directionalLight', components: { fixture: 'nope' } }
       ]
     }
   ]
+
+  it('keeps components.fixture as { index } through the mirror, and drops a broken one', () => {
+    const doc = schema.normalizeProjectDocument({
+      entities: [
+        { id: 'f1', type: 'spotLight', components: { fixture: { index: 3, universe: 1, address: 17 } } },
+        { id: 'f3', type: 'pointLight', components: { fixture: { index: 0 } } }
+      ]
+    })
+    expect(doc.entities[0].components.fixture).toEqual({ index: 3 })
+    expect(doc.entities[1].components.fixture).toBeUndefined()
+  })
 
   // Fresh documents stamp projectMeta with Date.now(); zero the wall-clock
   // fields so the comparison is about shape, not the millisecond it ran.
@@ -592,6 +610,57 @@ describe('sceneSchema ESM/CJS mirror equivalence', () => {
       const fromCjs = sceneSchema.applySceneOps(sceneSchema.cloneSceneValue(fixture), ops)
       const fromEsm = esm.applySceneOps(esm.cloneSceneValue(fixture), ops)
       expect(fromCjs).toEqual(fromEsm)
+    }
+  })
+})
+
+// components.surface — a plane that shows a mapping surface (step 5 of "one
+// project is one stage"). The server mirror must keep the id and drop an
+// empty one exactly as the ESM does, or a screen saved from the Studio would
+// come back from the server as a plain plane.
+describe('components.surface survives both mirrors alike', () => {
+  it('keeps the surface id, drops junk, drops an empty component', async () => {
+    const esm = await import('../../src/shared/projectSchema.js')
+    const input = {
+      entities: [
+        { id: 'scr', type: 'plane', components: { surface: { surfaceId: 'srf-1', junk: 1 } } },
+        { id: 'plain', type: 'plane', components: { surface: { surfaceId: '' } } },
+        { id: 'none', type: 'plane', components: {} }
+      ]
+    }
+    const fromCjs = normalizeProjectDocument(input)
+    const fromEsm = esm.normalizeProjectDocument(input)
+    expect(fromCjs.entities[0].components.surface).toEqual({ surfaceId: 'srf-1' })
+    expect(fromCjs.entities[1].components.surface).toBeUndefined()
+    expect(fromCjs.entities[2].components.surface).toBeUndefined()
+    expect(fromCjs.entities.map((e) => e.components.surface)).toEqual(fromEsm.entities.map((e) => e.components.surface))
+  })
+})
+
+describe('output.show on the CJS twin — the server keeps which display shows a mapping', () => {
+  // serverXR rebuilds every document through this file on every op and every
+  // sync. If only the ESM side kept `show`, the server would strip it on the
+  // next write and the stage box would go back to guessing — the exact trap
+  // the stage plan names. Held here as a write→read on the server's copy.
+  const show = { machine: 'b8592c7f-217a-4f95-8c48-07a4e08524d0', name: 'win', screen: { label: 'projector', index: 1, size: [1920, 1080] } }
+
+  it('survives a setMappingState op and a re-normalize', () => {
+    const written = applyProjectOps(normalizeProjectDocument({}), [
+      { type: 'setMappingState', payload: { patch: { output: { width: 1920, height: 1080, show, slate: 'off' } } } }
+    ])
+    const read = normalizeProjectDocument(JSON.parse(JSON.stringify(written)))
+    expect(read.mappingState.output).toEqual({ width: 1920, height: 1080, show, slate: 'off' })
+  })
+
+  it('writes no show key at all for a mapping that never named a display', () => {
+    expect(normalizeProjectDocument({ mappingState: { output: { width: 1280, height: 800 } } }).mappingState.output)
+      .toEqual({ width: 1280, height: 800 })
+  })
+
+  it('agrees with the ESM twin on every shape', async () => {
+    const esm = await import('../../src/shared/projectSchema.js')
+    for (const input of [show, { machine: 'm1' }, { machine: 'm1', screen: { index: 0 } }, { machine: '' }, 'x', null, { machine: 'm1', screen: { size: [0, 1] } }]) {
+      expect(schema.normalizeOutputShow(input)).toEqual(esm.normalizeOutputShow(input))
     }
   })
 })
