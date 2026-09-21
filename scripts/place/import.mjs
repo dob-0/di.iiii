@@ -117,11 +117,19 @@ const must = (result, what) => {
     return result.body
 }
 
-const uploadAsset = async (client, projectId, file) => {
+const uploadAsset = async (client, projectId, file, options = {}) => {
     const form = new FormData()
     const bytes = fs.readFileSync(file)
     form.append('asset', new Blob([bytes], { type: mimeFor(file) }), path.basename(file))
     const result = await client.post(`/api/projects/${projectId}/assets`, form)
+    // A source file the server will not take (413 too large, 415 an image it
+    // cannot scrub) is one picture missing from a wall, not a reason to throw
+    // away the whole room. The hall itself is never optional, so only the
+    // footage passes `skippable`.
+    if (options.skippable && !result.ok) {
+        warn(`    left out, the server refused it (${result.status}): ${path.basename(file)}`)
+        return null
+    }
     const asset = must(result, `uploading ${path.basename(file)}`).asset
     return {
         id: asset.id,
@@ -331,8 +339,12 @@ const main = async () => {
     const api = String(args.api || DEFAULT_API).replace(/\/$/, '')
     const label = String(args.label || name)
     const title = String(args.title || `${label} — the hall`)
-    const hallProject = String(args.project || 'hall')
-    const sourcesProject = String(args['sources-project'] || 'sources')
+    // Project ids are GLOBAL across every space on a di.iiii, so a bare
+    // `hall` works exactly once and every place imported after the first
+    // answers 409 "that name is taken" (2026-09-22). Name them after the
+    // space; --project still overrides.
+    const hallProject = String(args.project || `${name}-hall`)
+    const sourcesProject = String(args['sources-project'] || `${name}-sources`)
 
     say(`Space "${name}" on ${api}`)
     say(`  the hall: ${fmtBytes(fs.statSync(glb).size)}, ${place.size.map((v) => v.toFixed(1)).join(' x ')} m (${place.scaleSource})`)
@@ -392,7 +404,8 @@ const main = async () => {
                 say(sources.created ? `  created project ${sourcesProject}` : `  project ${sourcesProject} was already there`)
                 say(`  sending ${files.length} source files up …`)
                 for (const file of files) {
-                    carried.push(await uploadAsset(client, sourcesProject, file))
+                    const carriedAsset = await uploadAsset(client, sourcesProject, file, { skippable: true })
+                    if (carriedAsset) carried.push(carriedAsset)
                 }
                 const wall = sourceWall(carried)
                 await sendOps(client, sourcesProject, [
@@ -409,7 +422,8 @@ const main = async () => {
                         }
                     }
                 ])
-                say(`  ${carried.length} files hung on the wall`)
+                const refused = files.length - carried.length
+                say(`  ${carried.length} files hung on the wall${refused ? ` · ${refused} the server would not take` : ''}`)
             }
         }
     }
