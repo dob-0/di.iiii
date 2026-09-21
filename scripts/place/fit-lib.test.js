@@ -183,3 +183,18 @@ describe('place.json', () => {
         expect(readPlaceRecord(null)).toBeNull()
     })
 })
+
+describe('a number said from memory', () => {
+    const bounds = { min: [0, 0, 0], max: [4, 1.5, 3] }
+
+    it('is a GUESS, not a measurement, however confident', () => {
+        const chosen = chooseScale({ bounds, scaleEdge: 24, edge: 'width', stated: true })
+        expect(chosen.source).toBe('guess')
+        expect(chosen.scale).toBe(6)
+        expect(chosen.note).toContain('GUESS')
+    })
+
+    it('and the same number with a tape behind it is measured', () => {
+        expect(chooseScale({ bounds, scaleEdge: 24, edge: 'width' }).source).toBe('measured')
+    })
+})

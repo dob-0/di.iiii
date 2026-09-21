@@ -16,6 +16,9 @@
  *
  * or we read the tallest doorway off the mesh and call it 2.1 m:
  *
+ *     --scale-edge 24 --guess      … or a number said from memory, recorded
+ *                                     as a GUESS rather than a measurement
+ *
  *     --door-guess
  *
  * The first is MEASURED and place.json says so. The second is a GUESS and
@@ -45,7 +48,7 @@ const args = parseArgs()
 
 export const DOOR_HEIGHT_METRES = 2.1
 
-export const chooseScale = ({ bounds, door, scaleEdge, edge, doorGuess }) => {
+export const chooseScale = ({ bounds, door, scaleEdge, edge, doorGuess, stated }) => {
     const size = [
         bounds.max[0] - bounds.min[0],
         bounds.max[1] - bounds.min[1],
@@ -59,11 +62,20 @@ export const chooseScale = ({ bounds, door, scaleEdge, edge, doorGuess }) => {
             longest: Math.max(size[0], size[2])
         }[edge || 'longest']
         if (!pick || pick <= 0) return { scale: 1, source: 'none', note: 'the room has no size along that edge' }
-        return {
-            scale: scaleEdge / pick,
-            source: 'measured',
-            note: `${scaleEdge} m across the room's ${edge || 'longest side'}, measured`
-        }
+        // A number somebody states from memory is a guess, however confident.
+        // Only a tape makes it measured, and the record has to be able to
+        // tell the difference or the whole rule is decoration.
+        return stated
+            ? {
+                scale: scaleEdge / pick,
+                source: 'guess',
+                note: `${scaleEdge} m across the room's ${edge || 'longest side'} — SAID, not measured. A GUESS.`
+            }
+            : {
+                scale: scaleEdge / pick,
+                source: 'measured',
+                note: `${scaleEdge} m across the room's ${edge || 'longest side'}, measured`
+            }
     }
     if (doorGuess) {
         if (!door) {
@@ -170,7 +182,8 @@ const main = async () => {
         door: found.door,
         scaleEdge: args['scale-edge'] === undefined ? null : num(args['scale-edge'], null),
         edge: args.edge ? String(args.edge) : null,
-        doorGuess: Boolean(args['door-guess'])
+        doorGuess: Boolean(args['door-guess']),
+        stated: Boolean(args.guess)
     })
 
     const fit = fitTransform({
