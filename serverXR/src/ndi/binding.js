@@ -1,4 +1,4 @@
-// The NDI® C API, declared for koffi. CHILD PROCESS ONLY — worker.js and devSender.js
+// The NDI® C API, declared for koffi. CHILD PROCESS ONLY — worker.js, sendWorker.js and devSender.js
 // are the only callers; serverXR itself never requires this file's native half.
 //
 // Every layout below is transcribed from the NDI SDK's public headers, which carry an
@@ -108,7 +108,7 @@ function defineNdiTypes(koffi) {
     timestamp: 'int64_t'
   })
 
-  // Processing.NDI.Send.h (devSender.js only):
+  // Processing.NDI.Send.h (sendWorker.js and devSender.js):
   //   typedef struct NDIlib_send_create_t {
   //     const char* p_ndi_name; const char* p_groups; bool clock_video, clock_audio; }
   const SendCreate = koffi.struct('NDIlib_send_create_t', {
@@ -172,6 +172,18 @@ function bindNdi(koffi, lib, { send = false } = {}) {
     fn.sendCreate = lib.func('void *NDIlib_send_create(const NDIlib_send_create_t *p_create_settings)')
     fn.sendDestroy = lib.func('void NDIlib_send_destroy(void *p_instance)')
     fn.sendVideo = lib.func('void NDIlib_send_send_video_v2(void *p_instance, const NDIlib_video_frame_v2_t *p_video_data)')
+    // How many receivers are connected to this sender right now. `timeout_in_ms` is
+    // how long to wait for at least one; 0 answers at once. It is the only way the
+    // send lane can SAY "nothing is receiving this yet" instead of leaving a person to
+    // wonder whether the output is even on the network. Bound leniently, like
+    // recvNoConnections above: a runtime old enough to lack the symbol must still
+    // send, just without the count — every caller treats null as "cannot say".
+    // Tally, metadata, audio and the async send are deliberately NOT bound: nothing
+    // needs them yet, and an unused binding is a layout to keep honest for nothing.
+    fn.sendNoConnections = null
+    try {
+      fn.sendNoConnections = lib.func('int NDIlib_send_get_no_connections(void *p_instance, uint32_t timeout_in_ms)')
+    } catch { fn.sendNoConnections = null }
   }
 
   const sourceSize = koffi.sizeof(types.Source)

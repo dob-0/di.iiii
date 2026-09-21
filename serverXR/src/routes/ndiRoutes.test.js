@@ -11,6 +11,7 @@ const require = createRequire(import.meta.url)
 const express = require('express')
 const { registerNdiRoutes } = require('./ndiRoutes.js')
 const { createNdiManager } = require('../ndi/manager.js')
+const { createNdiSendManager } = require('../ndi/sendManager.js')
 
 const listen = (app) => new Promise((resolve) => {
   const server = app.listen(0, '127.0.0.1', () => resolve({ server, base: `http://127.0.0.1:${server.address().port}` }))
@@ -21,6 +22,7 @@ class FakeChild extends EventEmitter {
   send(message) { this.sent.push(message); return true }
   kill() { this.connected = false; this.emit('exit', null, 'SIGTERM') }
   opens() { return this.sent.filter((m) => m.type === 'open') }
+  frames() { return this.sent.filter((m) => m.type === 'frame') }
 }
 
 const envBefore = { NODE_ENV: process.env.NODE_ENV, DI_LOCAL: process.env.DI_LOCAL, DI_ALLOW_LAN_DEVICES: process.env.DI_ALLOW_LAN_DEVICES }
@@ -34,6 +36,7 @@ afterEach(async () => {
 // request arriving from somewhere other than this machine.
 const boot = async ({ probe = () => ({ ok: true }), clientIp = null } = {}) => {
   const children = []
+  const senders = []
   const app = express()
   if (clientIp) app.use((req, _res, next) => { Object.defineProperty(req, 'ip', { value: clientIp }); next() })
   const lane = registerNdiRoutes(app, {
@@ -46,11 +49,19 @@ const boot = async ({ probe = () => ({ ok: true }), clientIp = null } = {}) => {
       lingerMs: 30,
       idleExitMs: 200,
       killGraceMs: 10
+    }),
+    createSendManager: (options) => createNdiSendManager({
+      ...options,
+      probe,
+      forkChild: () => { const c = new FakeChild(); senders.push(c); return c },
+      idleOutputMs: 200,
+      idleExitMs: 200,
+      killGraceMs: 10
     })
   })
   const { server, base } = await listen(app)
   cleanups.push(() => new Promise((resolve) => { lane.close(); server.close(resolve) }))
-  return { base, lane, children, last: () => children[children.length - 1] }
+  return { base, lane, children, senders, last: () => children[children.length - 1], lastSender: () => senders[senders.length - 1] }
 }
 
 // The child answers as the worker would, as soon as the parent has forked it.
@@ -61,6 +72,20 @@ const readyWhenForked = async (ctx, { sources = [] } = {}) => {
   child.emit('message', { type: 'sources', sources })
   return child
 }
+
+const senderReadyWhenForked = async (ctx) => {
+  for (let i = 0; i < 100 && !ctx.senders.length; i += 1) await new Promise((r) => setTimeout(r, 5))
+  const child = ctx.lastSender()
+  child.emit('message', { type: 'ready', version: 'NDI SDK TEST 6.3.2.0', path: '/fake/libndi.so.6' })
+  return child
+}
+
+// The smallest thing that is unmistakably a JPEG: SOI, then a marker. The routes only
+// look at the first two bytes, and the child that would decode it is fake here.
+const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x01, 0x00])
+const postFrame = (base, name, body = JPEG) => fetch(`${base}/ndi/out.jpg?name=${encodeURIComponent(name)}`, {
+  method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body
+})
 
 describe('/ndi — who may reach it', () => {
   it('does not exist on a hosted server', async () => {
@@ -268,5 +293,106 @@ describe('the lane object index.js holds', () => {
     expect(lane.hasManager()).toBe(false)
     lane.close()
     expect(lane.hasManager()).toBe(false)
+  })
+})
+
+// The lane pointed the other way: a page posts its picture and this machine broadcasts
+// it. The send manager underneath is the real one — only its child is fake.
+describe('/ndi/out.jpg — a page sending a picture out', () => {
+  it('does not exist on a hosted server either', async () => {
+    process.env.NODE_ENV = 'production'
+    delete process.env.DI_LOCAL
+    const { base } = await boot()
+    expect((await postFrame(base, 'wall')).status).toBe(404)
+    expect((await fetch(`${base}/ndi/api/outputs`)).status).toBe(404)
+  })
+
+  it('takes a frame and names the output it opened', async () => {
+    delete process.env.NODE_ENV
+    const ctx = await boot()
+    const pending = postFrame(ctx.base, 'wall')
+    const child = await senderReadyWhenForked(ctx)
+    const res = await pending
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.ok).toBe(true)
+    expect(body.name).toBe('wall')
+    expect(child.opens().map((m) => m.name)).toContain('wall')
+    expect(child.frames()).toHaveLength(1)
+    // The bytes reach the child unchanged — a JPEG must not be re-encoded on the way
+    // through the parent, which is the whole reason the fork uses advanced serialization.
+    expect(Buffer.from(child.frames()[0].jpeg).equals(JPEG)).toBe(true)
+  })
+
+  it('refuses a body that is not a JPEG, and says which part is wrong', async () => {
+    delete process.env.NODE_ENV
+    const ctx = await boot()
+    const notJpeg = await postFrame(ctx.base, 'wall', Buffer.from('<!doctype html>'))
+    expect(notJpeg.status).toBe(400)
+    expect((await notJpeg.json()).detail).toMatch(/JPEG/)
+
+    const empty = await postFrame(ctx.base, 'wall', Buffer.alloc(0))
+    expect(empty.status).toBe(400)
+  })
+
+  it('refuses a missing or impossible name before it forks anything', async () => {
+    delete process.env.NODE_ENV
+    const ctx = await boot()
+    expect((await postFrame(ctx.base, '')).status).toBe(400)
+    expect((await postFrame(ctx.base, 'x'.repeat(201))).status).toBe(400)
+    expect(ctx.senders).toHaveLength(0)
+  })
+
+  it('lists what it is sending, and stops one when asked', async () => {
+    delete process.env.NODE_ENV
+    const ctx = await boot()
+    const pending = postFrame(ctx.base, 'wall')
+    const child = await senderReadyWhenForked(ctx)
+    await pending
+    child.emit('message', { type: 'state', id: child.opens()[0].id, state: 'sending', detail: '', viewers: 2 })
+
+    const listed = await (await fetch(`${ctx.base}/ndi/api/outputs`)).json()
+    expect(listed.available).toBe(true)
+    expect(listed.outputs.map((o) => o.name)).toEqual(['wall'])
+    expect(listed.outputs[0].viewers).toBe(2)
+
+    const stopped = await (await fetch(`${ctx.base}/ndi/out.jpg?name=wall`, { method: 'DELETE' })).json()
+    expect(stopped.stopped).toBe(true)
+    expect(child.sent.some((m) => m.type === 'close')).toBe(true)
+  })
+
+  it('answers a stop for something it never sent, without forking to find out', async () => {
+    delete process.env.NODE_ENV
+    const ctx = await boot()
+    const res = await fetch(`${ctx.base}/ndi/out.jpg?name=never`, { method: 'DELETE' })
+    expect(res.status).toBe(200)
+    expect((await res.json()).stopped).toBe(false)
+    expect(ctx.senders).toHaveLength(0)
+  })
+
+  it('reports the send lane in /api/stats only once a page has actually sent', async () => {
+    delete process.env.NODE_ENV
+    const ctx = await boot()
+    const before = await (await fetch(`${ctx.base}/ndi/api/stats`)).json()
+    expect(before.out).toBe(null)
+
+    const pending = postFrame(ctx.base, 'wall')
+    await senderReadyWhenForked(ctx)
+    await pending
+
+    const after = await (await fetch(`${ctx.base}/ndi/api/stats`)).json()
+    expect(after.out).not.toBe(null)
+    expect(after.out.outputs.map((o) => o.name)).toEqual(['wall'])
+  })
+
+  it('says the runtime is missing rather than swallowing the frame', async () => {
+    delete process.env.NODE_ENV
+    const ctx = await boot({ probe: () => ({ ok: false, reason: 'not-installed', how: 'install libndi, then restart di' }) })
+    const res = await postFrame(ctx.base, 'wall')
+    expect(res.status).toBe(503)
+    const body = await res.json()
+    expect(body.reason).toBe('not-installed')
+    expect(body.how).toMatch(/libndi/)
+    expect(ctx.senders).toHaveLength(0)
   })
 })

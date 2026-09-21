@@ -17,6 +17,17 @@ const { requireLocalRuntime } = require('../localRuntimeGuard')
 //   GET /ndi/in.mjpg?name=&w=&fps=  multipart/x-mixed-replace — point an <img> at it
 //   GET /ndi/api/stats              receivers, subscribers, the child's timings
 //
+// NDI out — serverXR/src/ndi/sendManager.js — is the same lane pointed the other way.
+// di.iiii draws its pictures in a browser, so the frames come UP from a page as ordinary
+// JPEGs and this server broadcasts them; nothing here generates a picture.
+//
+//   POST   /ndi/out.jpg?name=       one JPEG, the body -> { ok, seq, viewers }
+//   DELETE /ndi/out.jpg?name=       stop sending under that name now
+//   GET    /ndi/api/outputs         { available, outputs:[{ name, viewers, frames, ... }] }
+//
+// An output is born from its first frame and lives only while frames keep arriving: a
+// page that is closed simply stops posting, and there is no close beacon worth trusting.
+//
 // docs/architecture/NDI.md has the licence position: the runtime is installed by the
 // person, never shipped. NDI® is a registered trademark of Vizrt NDI AB — https://ndi.video
 const BOUNDARY = 'di-ndi-frame'
@@ -26,6 +37,9 @@ const WIDTH_MAX = 4096
 const FPS_MIN = 1
 const FPS_MAX = 60
 const STILL_WAIT_MS = 3000
+// A 4K JPEG at a generous quality is comfortably under this; anything larger is a mistake
+// upstream, and refusing it is cheaper than decoding it.
+const FRAME_LIMIT = '8mb'
 
 const bad = (res, detail) => res.status(400).json({ error: 'bad request', detail })
 
@@ -54,7 +68,18 @@ const readQuery = (req, res) => {
   return { name, maxWidth, fps, bandwidth: bw === 'lowest' ? 'lowest' : 'highest' }
 }
 
-function registerNdiRoutes(app, { mountPaths = ['/ndi'], log = () => {}, createManager = null } = {}) {
+// The name half of readQuery on its own: an output is named and nothing else. -> name | null
+const readName = (req, res) => {
+  const raw = req.query.name
+  if (typeof raw !== 'string' || !raw.trim()) { bad(res, 'name is required: what this picture is called on the network'); return null }
+  const name = raw.trim()
+  if (name.length > NAME_MAX) { bad(res, `name is longer than ${NAME_MAX} characters`); return null }
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f]/.test(name)) { bad(res, 'name contains control characters'); return null }
+  return name
+}
+
+function registerNdiRoutes(app, { mountPaths = ['/ndi'], log = () => {}, createManager = null, createSendManager = null } = {}) {
   let manager = null
   const getManager = () => {
     if (manager) return manager
@@ -63,11 +88,21 @@ function registerNdiRoutes(app, { mountPaths = ['/ndi'], log = () => {}, createM
     return manager
   }
 
+  // The two lanes are two children and two managers. A machine that only receives never
+  // forks a sender, and a crash in one is not a gap in the other.
+  let sendManager = null
+  const getSendManager = () => {
+    if (sendManager) return sendManager
+    const make = createSendManager || require('../ndi/sendManager').createNdiSendManager
+    sendManager = make({ log })
+    return sendManager
+  }
+
   const router = express.Router()
   const noStore = (res) => res.set('Cache-Control', 'no-store')
 
   const refuse = (res, error) => {
-    if (error && (error.code === 'cap-receivers' || error.code === 'cap-subscribers')) {
+    if (error && (error.code === 'cap-receivers' || error.code === 'cap-subscribers' || error.code === 'cap-outputs')) {
       res.status(429).json({ error: 'busy', detail: error.message })
       return
     }
@@ -83,7 +118,49 @@ function registerNdiRoutes(app, { mountPaths = ['/ndi'], log = () => {}, createM
   })
 
   router.get('/api/stats', (_req, res) => {
-    noStore(res).json(getManager().stats())
+    // Asking for stats must not fork anything. The receive manager is built because it
+    // is what this route has always reported; the sender is reported only if a page has
+    // actually sent a frame, so a machine that never sends stays a machine that never forks.
+    noStore(res).json({ ...getManager().stats(), out: sendManager ? sendManager.stats() : null })
+  })
+
+  router.get('/api/outputs', async (_req, res) => {
+    const m = getSendManager()
+    const status = await m.summary()
+    noStore(res).json({ available: status.available, reason: status.reason, how: status.how, outputs: m.outputs() })
+  })
+
+  // One frame, the body. The browser is the pacer and it self-throttles by not posting
+  // the next frame until this one has answered — which is why there is no queue anywhere
+  // in this lane and why a slow machine simply sends fewer frames instead of falling behind.
+  router.post('/out.jpg', express.raw({ type: ['image/jpeg', 'application/octet-stream'], limit: FRAME_LIMIT }), (req, res) => {
+    const name = readName(req, res)
+    if (!name) return
+    if (!Buffer.isBuffer(req.body) || !req.body.length) { bad(res, 'the body must be a JPEG'); return }
+    // Two bytes are enough to tell a JPEG from a page of HTML posted by mistake, and the
+    // mistake is worth naming here rather than three processes away inside sharp.
+    if (req.body[0] !== 0xff || req.body[1] !== 0xd8) { bad(res, 'the body does not start like a JPEG'); return }
+    let result
+    try {
+      result = getSendManager().pushFrame({ name, jpeg: req.body })
+    } catch (error) { refuse(res, error); return }
+    noStore(res)
+    // pushFrame RETURNS its refusals rather than throwing them, so the cap has to be
+    // mapped here by hand: a page that is told 503 will wait for a runtime that is
+    // already loaded, when what it should do is give up this name and use another.
+    if (result.error === 'cap') { res.status(429).json({ error: 'busy', detail: result.how }); return }
+    if (result.error === 'bad') { bad(res, result.how); return }
+    if (result.error) { res.status(503).json({ error: 'unavailable', reason: result.reason, how: result.how }); return }
+    res.json({ ok: true, name, seq: result.seq, viewers: result.viewers })
+  })
+
+  router.delete('/out.jpg', (req, res) => {
+    const name = readName(req, res)
+    if (!name) return
+    // Nothing is built to stop something that was never started: if no page has ever
+    // sent a frame there is no sender, and saying so is the honest answer.
+    const stopped = sendManager ? sendManager.stopOutput({ name }) : false
+    noStore(res).json({ ok: true, stopped })
   })
 
   router.get('/api/still', async (req, res) => {
@@ -162,9 +239,14 @@ function registerNdiRoutes(app, { mountPaths = ['/ndi'], log = () => {}, createM
 
   return {
     getManager,
+    getSendManager,
     hasManager: () => manager !== null,
+    hasSendManager: () => sendManager !== null,
     // Only a manager that was actually built is closed; asking never builds one.
-    close: () => { if (manager) { manager.close(); manager = null } }
+    close: () => {
+      if (manager) { manager.close(); manager = null }
+      if (sendManager) { sendManager.close(); sendManager = null }
+    }
   }
 }
 
