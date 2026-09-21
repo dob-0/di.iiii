@@ -73,9 +73,21 @@ release that changes it is noticed here rather than in a room.
 
 **Looked at, not asserted.** A harness room (floor, three walls, the red post at the
 origin, a pillar) rendered through the real `EntityContent`, headless on SwiftShader —
-beams off, beams on, shadows on — plus the same room seeded onto a local stack and driven
-through the real Studio on desktop and on a phone, and the same document walked in
-`LiveProjectScene`. Screenshots in `~/Downloads/lights-on-a-place/`.
+beams off, beams on, shadows on, and the photogrammetry scan lit by two lamps — plus the
+same room seeded onto a local stack and driven through the real Studio on desktop and on
+a phone, and the same document walked in `LiveProjectScene`. Screenshots in
+`~/Downloads/lights-on-a-place/`.
+
+The harness is kept this time, in `scripts/lights-harness/` (page, shooter, README), so
+the next lighting change is one command from a picture instead of an afternoon of
+scaffolding. It lives in `scripts/` and not in `src/` because the repo would not have it
+there, and said so out loud: the first version sat at `src/lightsharness/` and turned two
+guards red — `src/works/boundary.test.js` (the harness imported `scan.glb`, which is a
+WORK, and no platform file may) and `useLightingMirror.test.jsx` (no top-level `src/`
+entry may start with "light", or Vite's `/light` dev proxy swallows it). Both guards were
+written for other reasons and both did their job on a stranger. Serve it with
+`npx vite scripts/lights-harness --port 5218` — the root is a positional argument in this
+Vite, not `--root`.
 
 **Parked for the owner.** (1) The default haze is 0.4 and the cone's flat opacity peaks at
 0.28 — both were tuned by looking at a dark room, and a bright space may want them
