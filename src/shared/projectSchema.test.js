@@ -772,3 +772,25 @@ describe('showState — the one show clock', () => {
         expect(applyProjectOps(stamped, inverse).showState.clockEpoch).toBe(0)
     })
 })
+
+// A screen: `components.surface = { surfaceId }` on a plane, the join between
+// a room and the project's own mapping surfaces. The id is all that is kept;
+// an empty one drops the component so a plain plane stays byte-identical.
+describe('components.surface (a plane that is a screen)', () => {
+    it('keeps the surface id through normalize and through the op log', () => {
+        const base = normalizeProjectDocument({})
+        const doc = applyProjectOps(base, [
+            { type: 'createEntity', payload: { entity: { id: 'scr', type: 'plane', components: { surface: { surfaceId: 'srf-1', junk: true } } } } }
+        ])
+        expect(doc.entities[0].components.surface).toEqual({ surfaceId: 'srf-1' })
+        const cleared = applyProjectOps(doc, [
+            { type: 'updateComponent', payload: { entityId: 'scr', component: 'surface', patch: { surfaceId: null } } }
+        ])
+        expect(cleared.entities[0].components.surface).toBeUndefined()
+    })
+
+    it('a plane without a surface has no surface component at all', () => {
+        const doc = normalizeProjectDocument({ entities: [{ id: 'p', type: 'plane', components: {} }] })
+        expect('surface' in doc.entities[0].components).toBe(false)
+    })
+})

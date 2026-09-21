@@ -217,7 +217,7 @@ function InspSlider({ field, value, onChange }) {
 
 const isBoundedNumber = (field) => field.type === 'number' && Number.isFinite(field.min) && Number.isFinite(field.max)
 
-function InspField({ field, value, assetOptions = [], spaceOptions = [], siblingSpaceId = null, onChange }) {
+function InspField({ field, value, assetOptions = [], spaceOptions = [], surfaceOptions = [], siblingSpaceId = null, onChange }) {
     if (field.type === 'checkbox') {
         return (
             <label className="insp-toggle">
@@ -269,6 +269,27 @@ function InspField({ field, value, assetOptions = [], spaceOptions = [], sibling
     if (field.type === 'project') {
         return (
             <ProjectSelectField label={field.label} spaceId={siblingSpaceId} value={value} onChange={onChange} />
+        )
+    }
+
+    // One of this project's mapping surfaces, by name — the same list the
+    // Projection tool edits. A surface that has since been deleted stays
+    // selectable under its id, so the field never silently shows "none" for
+    // a screen that is still pointing somewhere.
+    if (field.type === 'mappingSurface') {
+        return (
+            <div className="insp-field">
+                <label className="insp-label">{field.label}</label>
+                <select className="insp-select" value={value || ''} onChange={(e) => onChange(e.target.value || null)}>
+                    <option value="">— none —</option>
+                    {surfaceOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                    {value && !surfaceOptions.some((opt) => opt.value === value) ? (
+                        <option value={value}>{value}</option>
+                    ) : null}
+                </select>
+            </div>
         )
     }
 
@@ -335,7 +356,7 @@ function InspField({ field, value, assetOptions = [], spaceOptions = [], sibling
     )
 }
 
-function InspSection({ section, sectionValue, assetOptions, spaceOptions, onSectionChange }) {
+function InspSection({ section, sectionValue, assetOptions, spaceOptions, surfaceOptions, onSectionChange }) {
     const [open, setOpen] = useState(true)
     const siblingSpaceId = readNestedValue(sectionValue, ['spaceId']) || null
     return (
@@ -401,6 +422,7 @@ function InspSection({ section, sectionValue, assetOptions, spaceOptions, onSect
                             value={readNestedValue(sectionValue, group.field.path)}
                             assetOptions={assetOptions}
                             spaceOptions={spaceOptions}
+                            surfaceOptions={surfaceOptions}
                             siblingSpaceId={siblingSpaceId}
                             onChange={(nextValue) => {
                                 const next = setNestedValue(sectionValue, group.field.path, nextValue)
@@ -420,6 +442,7 @@ export default function StudioInspector({
     sections = [],
     assetOptions = [],
     spaceOptions = [],
+    surfaceOptions = [],
     values = {},
     onSectionChange,
     footer = null,
@@ -449,6 +472,7 @@ export default function StudioInspector({
                         sectionValue={sectionValue}
                         assetOptions={assetOptions}
                         spaceOptions={spaceOptions}
+                        surfaceOptions={surfaceOptions}
                         onSectionChange={onSectionChange}
                     />
                 )

@@ -595,3 +595,26 @@ describe('sceneSchema ESM/CJS mirror equivalence', () => {
     }
   })
 })
+
+// components.surface — a plane that shows a mapping surface (step 5 of "one
+// project is one stage"). The server mirror must keep the id and drop an
+// empty one exactly as the ESM does, or a screen saved from the Studio would
+// come back from the server as a plain plane.
+describe('components.surface survives both mirrors alike', () => {
+  it('keeps the surface id, drops junk, drops an empty component', async () => {
+    const esm = await import('../../src/shared/projectSchema.js')
+    const input = {
+      entities: [
+        { id: 'scr', type: 'plane', components: { surface: { surfaceId: 'srf-1', junk: 1 } } },
+        { id: 'plain', type: 'plane', components: { surface: { surfaceId: '' } } },
+        { id: 'none', type: 'plane', components: {} }
+      ]
+    }
+    const fromCjs = normalizeProjectDocument(input)
+    const fromEsm = esm.normalizeProjectDocument(input)
+    expect(fromCjs.entities[0].components.surface).toEqual({ surfaceId: 'srf-1' })
+    expect(fromCjs.entities[1].components.surface).toBeUndefined()
+    expect(fromCjs.entities[2].components.surface).toBeUndefined()
+    expect(fromCjs.entities.map((e) => e.components.surface)).toEqual(fromEsm.entities.map((e) => e.components.surface))
+  })
+})

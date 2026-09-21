@@ -1175,3 +1175,37 @@ describe('verbatim asset PUT (a follow carrying files)', () => {
         expect(await leftovers(server)).toEqual([])
     })
 })
+
+// A screen in the room, through the wire: the surface it points at and the
+// plane that points at it are written as ops and read back as a document.
+// The unit tests prove the normaliser; this proves nothing between the Studio
+// and the disk strips the join.
+describe('a plane that is a screen (components.surface)', () => {
+    it('survives a real write→read through serverXR', async () => {
+        const server = await startServer()
+        const project = 'screen-room'
+        const api = `${server.baseUrl}/api/projects/${project}`
+        await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Screen Room', slug: project, source: 'studio-v3' })
+        })
+        const written = await fetch(`${api}/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                baseVersion: 0,
+                ops: [
+                    { type: 'createMappingSurface', payload: { surface: { id: 'srf-wall', name: 'Wall', source: { kind: 'test', ref: 'card' } } } },
+                    { type: 'createEntity', payload: { entity: { id: 'screen-1', type: 'plane', name: 'Screen', components: { surface: { surfaceId: 'srf-wall' } } } } }
+                ]
+            })
+        })
+        expect(written.status).toBe(200)
+
+        const document = (await (await fetch(`${api}/document`)).json()).document
+        expect(document.mappingState.surfaces.map((surface) => surface.id)).toContain('srf-wall')
+        const screen = document.entities.find((entity) => entity.id === 'screen-1')
+        expect(screen.components.surface).toEqual({ surfaceId: 'srf-wall' })
+    })
+})

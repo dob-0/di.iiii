@@ -665,6 +665,17 @@ export const normalizeEntity = (entity = {}) => {
             min: Math.min(1, Math.max(0, min))
         }
     }
+    // A screen: a plane that shows one of the project's own mapping surfaces
+    // (document.mappingState.surfaces) as its picture. The join is the surface's
+    // id and nothing else -- the surface keeps its kind, file and resolution, so
+    // the screen follows whatever the Projection tool later puts on it. An empty
+    // or missing id means "no screen", and the component is dropped rather than
+    // kept as a husk, so an entity authored before this is byte-identical.
+    if (sourceComponents.surface) {
+        const surfaceId = ensureString(sourceComponents.surface.surfaceId, '')
+        if (surfaceId) nextComponents.surface = { surfaceId }
+        else delete nextComponents.surface
+    }
     if (sourceComponents.timeline) {
         const timeline = normalizeTimeline(sourceComponents.timeline)
         if (timeline) nextComponents.timeline = timeline

@@ -157,6 +157,15 @@ const DEFINITIONS = {
                     { label: 'Width', component: 'primitive', path: ['width'], type: 'number', min: 0.05, step: 0.1 },
                     { label: 'Depth', component: 'primitive', path: ['depth'], type: 'number', min: 0.05, step: 0.1 }
                 ]
+            },
+            // A plane can be a screen: pick one of the project's mapping
+            // surfaces and the plane shows its live picture (liveScreen.js).
+            {
+                id: 'surface',
+                label: 'Screen',
+                fields: [
+                    { label: 'Surface', component: 'surface', path: ['surfaceId'], type: 'mappingSurface' }
+                ]
             }
         ]
     },

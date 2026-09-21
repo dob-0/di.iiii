@@ -97,6 +97,7 @@ export default function StudioShell({
     inspectorValues,
     assetOptions,
     spaceOptions = [],
+    surfaceOptions = [],
     libraryItems = [],
     onDeleteLibraryItem,
     presence,
@@ -505,6 +506,7 @@ export default function StudioShell({
                                     values={inspectorValues}
                                     assetOptions={assetOptions}
                                     spaceOptions={spaceOptions}
+                                    surfaceOptions={surfaceOptions}
                                     onSectionChange={onInspectorChange}
                                     footer={inspectorFooter}
                                 />
