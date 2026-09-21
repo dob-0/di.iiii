@@ -306,6 +306,9 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('topEdge', 'top.edge', { label: 'Edge', col: 9, row: 1 })
     add('topBlend', 'top.blend', { label: 'Blend', col: 9, row: 4, values: { mode: '2' } })
     add('topOut', 'top.out', { label: 'Picture Out', col: 9, row: 5 })
+    // Unnamed on purpose: a Send Out with no name sends nothing, so an example
+    // graph never posts a frame to anyone's serverXR.
+    add('topSend', 'top.send', { label: 'Send Out', col: 9, row: 6 })
     add('topAnalyze', 'top.analyze', { label: 'Analyze', col: 9, row: 2 })
 
     // --- column 10: pictures — the generators (2026-09-20) ----------------------
@@ -514,6 +517,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('topFeedback', 'out', 'topBlend', 'a'),
         wire('topEdge', 'out', 'topBlend', 'b'),
         wire('topBlend', 'out', 'topOut', 'a'),
+        wire('topBlend', 'out', 'topSend', 'a'),
         wire('topLevel', 'out', 'topAnalyze', 'a'),
         wire('topClouds', 'out', 'topTint', 'a'),
         wire('topGradient', 'out', 'topReframe', 'a'),

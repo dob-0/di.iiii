@@ -49,4 +49,27 @@ describe('inside a picture operator', () => {
         fireEvent.click(screen.getAllByRole('button', { name: /Apply/ }).at(-1))
         expect(onPatchValues).not.toHaveBeenCalledWith(expect.objectContaining({ __script: expect.anything() }))
     })
+
+    it('says calmly that a machine has no NDI runtime, in the server\'s own words, with the licence line beside it', () => {
+        // No runtime is the ordinary case on most machines: a dim sentence,
+        // never the error colour, never a scolding.
+        const node = { id: 'send-1', typeId: 'top.send', label: 'Send Out', values: { machine: 'pc', name: 'di test' } }
+        const { container } = render(<TopInsidePanel node={node} machines={machines} onPatchValues={vi.fn()} />)
+        expect(screen.getByText('di test')).toBeTruthy()
+        act(() => reportTop('send-1', { send: { state: 'unavailable', reason: 'not-installed', how: 'Install NDI Tools from ndi.video on aylmo.', frames: 0, dropped: 0 } }))
+        expect(screen.getByText(/Install NDI Tools from ndi\.video on aylmo\./).className).toBe('raw-top-inside-dim')
+        expect(container.querySelector('.raw-top-inside-error')).toBeNull()
+        expect(screen.getByText(/NDI® is a registered trademark of Vizrt NDI AB\./)).toBeTruthy()
+        expect(container.querySelector('a[href="https://ndi.video"]').textContent).toBe('ndi.video')
+        act(() => reportTop('send-1', { send: { state: 'sending', frames: 120, dropped: 7, viewers: 1 } }))
+        expect(screen.getByText(/120 frames so far, 7 skipped/)).toBeTruthy()
+    })
+
+    it('tells an unnamed Send Out what a name would do, and offers p_name to no shader', () => {
+        const node = { id: 'send-2', typeId: 'top.send', label: 'Send Out', values: {} }
+        render(<TopInsidePanel node={node} machines={machines} onPatchValues={vi.fn()} />)
+        expect(screen.getByText('not named yet')).toBeTruthy()
+        expect(screen.getByText(/Give it a name in the sheet/)).toBeTruthy()
+        expect(screen.getByText(/You can read:/).textContent).not.toContain('p_name')
+    })
 })

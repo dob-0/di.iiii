@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { cloneValue } from '../../shared/projectSchema.js'
 import { detectAssetMediaKind } from '../../utils/mediaAssetTypes.js'
 import ScrubNumberInput from './ScrubNumberInput.jsx'
@@ -146,7 +146,25 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
             </span>
         )
     }
-    return <input type="text" value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
+    return <input type="text" value={value || ''} maxLength={field.maxLength} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
+}
+
+// A sentence a field must be read with, drawn under the box, with a link
+// where the field carries one. It is the field's data, not the inspector's:
+// this file knows nothing of what the sentence is for. The one so far is a
+// licence condition (a Send Out names an NDI® source; the attribution and the
+// link to ndi.video are the terms on which di.iiii may name NDI at all —
+// docs/architecture/NDI.md), so this must never be dropped to make a
+// layout fit.
+function FieldNote({ note }) {
+    if (!note) return null
+    return (
+        <p className="raw-property-note raw-full-width-field">
+            {note.text}
+            {note.href ? <>{' '}<a href={note.href} target="_blank" rel="noreferrer">{note.label || note.href}</a>.</> : null}
+            {note.after ? <>{' '}{note.after}</> : null}
+        </p>
+    )
 }
 
 // The rename verb. It did not exist anywhere in the UI (audit 08-21: the
@@ -226,27 +244,29 @@ export default function PropertyInspector({
                                     const isFullWidth = field.type === 'textarea' || field.type === 'select' || field.type === 'asset'
                                     const wired = field.wired === true
                                     return (
-                                        <label
-                                            key={`${section.id}-${field.label}`}
-                                            className={`raw-property-field${field.type === 'checkbox' ? ' raw-checkbox-field' : ''}${isFullWidth ? ' raw-full-width-field' : ''}${wired ? ' is-wired' : ''}`}
-                                            title={wired ? 'This port takes its value from the wire into it. Unplug the wire to type one.' : undefined}
-                                        >
-                                            <span>
-                                                {field.label}
-                                                {wired ? <em className="raw-property-wired">wired</em> : null}
-                                            </span>
-                                            <PropertyField
-                                                field={field}
-                                                value={value}
-                                                assetOptions={assetOptions}
-                                                onPickAssetFile={onPickAssetFile}
-                                                disabled={wired}
-                                                onChange={(nextValue) => {
-                                                    const nextSectionValue = setNestedValue(sectionValue, field.path, nextValue)
-                                                    onSectionChange?.(field.component || section.id, nextSectionValue)
-                                                }}
-                                            />
-                                        </label>
+                                        <Fragment key={`${section.id}-${field.label}`}>
+                                            <label
+                                                className={`raw-property-field${field.type === 'checkbox' ? ' raw-checkbox-field' : ''}${isFullWidth ? ' raw-full-width-field' : ''}${wired ? ' is-wired' : ''}`}
+                                                title={wired ? 'This port takes its value from the wire into it. Unplug the wire to type one.' : undefined}
+                                            >
+                                                <span>
+                                                    {field.label}
+                                                    {wired ? <em className="raw-property-wired">wired</em> : null}
+                                                </span>
+                                                <PropertyField
+                                                    field={field}
+                                                    value={value}
+                                                    assetOptions={assetOptions}
+                                                    onPickAssetFile={onPickAssetFile}
+                                                    disabled={wired}
+                                                    onChange={(nextValue) => {
+                                                        const nextSectionValue = setNestedValue(sectionValue, field.path, nextValue)
+                                                        onSectionChange?.(field.component || section.id, nextSectionValue)
+                                                    }}
+                                                />
+                                            </label>
+                                            <FieldNote note={field.note} />
+                                        </Fragment>
                                     )
                                 })}
                             </div>
