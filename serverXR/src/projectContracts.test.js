@@ -805,6 +805,56 @@ describe('project contracts', () => {
     // with a bare "Project already exists.", naming nothing. This proves the
     // 409 still fires across spaces and that the body now names what
     // actually happened.
+    // "A lamp that knows which lamp it is" leans on one field. This is the proof
+    // that the field survives a real save and a real load, through the server's
+    // own normalizer — not the ESM copy the browser runs — and comes back as a
+    // number and nothing else.
+    it('keeps components.fixture = { index } through a real write and read', async () => {
+        const server = await startServer()
+        const create = await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Fixture Join', slug: 'fixture-join', source: 'studio-v3' })
+        })
+        expect(create.status).toBe(201)
+
+        const submit = await fetch(`${server.baseUrl}/api/projects/fixture-join/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                baseVersion: 0,
+                ops: [
+                    { type: 'createEntity', payload: { entity: { id: 'spot', type: 'spotLight', name: 'Back left', components: { fixture: { index: 3, universe: 1, address: 17 } } } } },
+                    { type: 'createEntity', payload: { entity: { id: 'point', type: 'pointLight', name: 'Loose', components: {} } } },
+                    { type: 'updateComponent', payload: { entityId: 'point', component: 'fixture', patch: { index: 5 } } }
+                ]
+            })
+        })
+        expect(submit.status).toBe(200)
+        const { newVersion } = await submit.json()
+
+        const read = await fetch(`${server.baseUrl}/api/projects/fixture-join/document`)
+        expect(read.status).toBe(200)
+        const { document } = await read.json()
+        const byId = Object.fromEntries(document.entities.map((entity) => [entity.id, entity]))
+        expect(byId.spot.components.fixture).toEqual({ index: 3 })
+        expect(byId.point.components.fixture).toEqual({ index: 5 })
+
+        const clear = await fetch(`${server.baseUrl}/api/projects/fixture-join/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                baseVersion: newVersion,
+                ops: [{ type: 'updateComponent', payload: { entityId: 'point', component: 'fixture', patch: { index: null } } }]
+            })
+        })
+        expect(clear.status).toBe(200)
+        const again = await (await fetch(`${server.baseUrl}/api/projects/fixture-join/document`)).json()
+        const cleared = again.document.entities.find((entity) => entity.id === 'point')
+        expect(cleared.components.fixture).toBeUndefined()
+        expect(again.document.entities.find((entity) => entity.id === 'spot').components.fixture).toEqual({ index: 3 })
+    })
+
     it('names the collision when a project title/slug collides with one in a different space', async () => {
         const server = await startServer()
 

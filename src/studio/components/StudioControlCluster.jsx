@@ -43,6 +43,13 @@ export default function StudioControlCluster({
     // this machine — which is every hosted di.iiii — and then the button is not drawn.
     rigMirrorOn = false,
     onToggleRigMirror = null,
+    // Positions go back to the desk once, on this. Drawn only while Lights is on, so
+    // the room the person is looking at is the room the desk will be told about.
+    onSendRigPositions = null,
+    // What the last send answered ("3 lamps moved", "no desk on this machine"), for a
+    // few seconds. Beside the button, not in the bottom pill: the first-run coach owns
+    // that spot and the two stacked on a newcomer's very first press (seen).
+    rigPositionsNote = '',
     // Jam mode (communal open-jam project): `panelKeys` narrows the Windows
     // row, `minimal` trims power-user chrome (Arrange, Hub, View live), and
     // `onToggleAllTools` renders the escape hatch between Simple ⇄ All tools.
@@ -149,6 +156,12 @@ export default function StudioControlCluster({
                                 )}
                                 {!minimal && onToggleRigMirror && (
                                     <button className={`scc-btn ${rigMirrorOn ? 'active' : ''}`} onClick={onToggleRigMirror} aria-pressed={rigMirrorOn} title="Show the real lighting rig in the room">Lights</button>
+                                )}
+                                {!minimal && onToggleRigMirror && rigMirrorOn && onSendRigPositions && (
+                                    <button className="scc-btn" onClick={onSendRigPositions} title="Move each fixture on the desk's plan to where its lamp stands in this room">Send positions to the desk</button>
+                                )}
+                                {!minimal && rigMirrorOn && rigPositionsNote && (
+                                    <span className="scc-btn" role="status" aria-live="polite">{rigPositionsNote}</span>
                                 )}
                                 {!minimal && canViewLive && (
                                     <button className="scc-btn" onClick={onViewLive} title="Open the public space URL in a new tab">↗ View live</button>
