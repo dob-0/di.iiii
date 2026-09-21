@@ -1,9 +1,9 @@
 """Run Meshroom on a Colab GPU and leave the result where it can be fetched.
 
-UNVERIFIED ON A BOX. Written from the Meshroom 2025.1.0 docs; the Colab CLI is
-not signed in on aylmo yet, so no line below has been run against a real GPU.
-The first person with a signed-in `colab` should run `meshroom_batch --help`
-on the box and correct the flags in MESHROOM_ARGS.
+The Meshroom invocation itself is written from the 2025.1.0 documentation and
+has not been proved correct on a box yet. Everything around it has: sign-in,
+session, the chunked upload, the detached start, polling and download all run
+against a real L4.
 
 This file is executed on the Colab VM, repeatedly, by scripts/place/colab-job.mjs:
 
@@ -143,6 +143,12 @@ def unpack_images():
 RUN_SH = """#!/usr/bin/env bash
 set -o pipefail
 cd {root}
+# A heartbeat, because nothing else here is reliable proof of life: the
+# download is quiet for minutes at a time, and a pid can belong to a process
+# that forked and left.
+( while [ ! -f {root}/finished ]; do touch {root}/beat; sleep 15; done ) &
+touch {root}/beat
+echo "START $(date -u)"
 if [ ! -d {home} ]; then
   wget -q -O /content/meshroom.tar.gz '{url}' || echo "MESHROOM DOWNLOAD FAILED"
   mkdir -p {home}
@@ -171,20 +177,38 @@ def start():
                                    images=IMAGES_DIR, out=OUT_DIR, cache=CACHE_DIR))
     os.chmod(script, 0o755)
     log = open(LOG, 'ab')
-    process = subprocess.Popen(['setsid', 'bash', script], stdout=log,
+    # NOT setsid. `start_new_session=True` already detaches the child into its
+    # own session, and setsid on top of it forks and exits — so the pid we
+    # wrote down belonged to a process that was gone within a second, every
+    # poll read "it died", and a reconstruction that was working fine was
+    # killed at 90 seconds with an empty log (2026-09-21).
+    process = subprocess.Popen(['bash', script], stdout=log,
                                stderr=subprocess.STDOUT, cwd=ROOT,
                                start_new_session=True)
     write_state({'pid': process.pid, 'startedAt': time.time(), 'images': count})
     status(state='started', pid=process.pid, images=count)
 
 
+def heartbeat_age():
+    try:
+        return time.time() - os.path.getmtime(os.path.join(ROOT, 'beat'))
+    except OSError:
+        return None
+
+
 def report():
     state = read_state()
     result = find_result()
     elapsed = int(time.time() - state.get('startedAt', time.time()))
-    # The shell script touches `finished` on its way out; until then, a live
-    # pid is the proof it is still working.
-    running = alive(state.get('pid')) and not os.path.exists(os.path.join(ROOT, 'finished'))
+    # Three ways to be sure it is still working, in order of trust: the job
+    # has not touched `finished`, AND either its heartbeat is fresh or its pid
+    # is alive. The heartbeat leads, because a pid is only as good as the
+    # process that holds it.
+    finished = os.path.exists(os.path.join(ROOT, 'finished'))
+    beat = heartbeat_age()
+    warming_up = beat is None and elapsed < 90
+    running = not finished and (
+        (beat is not None and beat < 120) or alive(state.get('pid')) or warming_up)
     if result:
         textures = []
         folder = os.path.dirname(result)
@@ -194,9 +218,10 @@ def report():
         status(state='done', result=result, folder=folder, files=textures,
                elapsed=elapsed, running=running)
     elif running:
-        status(state='running', elapsed=elapsed, log=tail(LOG, 6))
+        status(state='running', elapsed=elapsed, beat=beat, log=tail(LOG, 6))
     else:
-        status(state='failed', elapsed=elapsed, log=tail(LOG, 40))
+        status(state='failed', elapsed=elapsed, beat=beat, finished=finished,
+               log=tail(LOG, 40))
 
 
 def main():
