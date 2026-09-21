@@ -125,18 +125,33 @@ const shrinkFrames = async (imagesDir, work, maxWidth) => {
     const names = fs.readdirSync(imagesDir).filter((name) => !name.startsWith('.'))
     let before = 0
     let after = 0
+    const refused = []
     for (const name of names) {
         const source = path.join(imagesDir, name)
         const target = path.join(out, `${path.parse(name).name}.jpg`)
-        before += fs.statSync(source).size
-        await sharp(source)
-            .rotate()                       // honour the phone's orientation tag
-            .resize({ width: maxWidth, withoutEnlargement: true })
-            .jpeg({ quality: 92 })
-            .toFile(target)
+        const sourceBytes = fs.statSync(source).size
+        try {
+            // failOn: 'none' — a phone's export can carry a malformed JPEG
+            // header ("Invalid SOS parameters for sequential JPEG") that
+            // opencv reads happily and sharp refuses. One bad file must not
+            // end a job (it did, 2026-09-21); decode what is there.
+            await sharp(source, { failOn: 'none' })
+                .rotate()                   // honour the phone's orientation tag
+                .resize({ width: maxWidth, withoutEnlargement: true })
+                .jpeg({ quality: 92 })
+                .toFile(target)
+        } catch (error) {
+            refused.push(`${name} (${String(error.message).split('\n')[0]})`)
+            fs.rmSync(target, { force: true })
+            continue
+        }
+        before += sourceBytes
         after += fs.statSync(target).size
     }
-    say(`  ${names.length} frames shrunk to ${maxWidth}px — ${fmtBytes(before)} → ${fmtBytes(after)}`)
+    const kept = names.length - refused.length
+    say(`  ${kept} frames shrunk to ${maxWidth}px — ${fmtBytes(before)} → ${fmtBytes(after)}`)
+    refused.forEach((entry) => warn(`    left out, unreadable: ${entry}`))
+    if (!kept) die('Not one frame could be read. Nothing was sent and no GPU was rented.')
     return out
 }
 
