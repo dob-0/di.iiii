@@ -1,7 +1,7 @@
 // The human-approval gate for admin-level writes.
 //
 // A gated route does not call its store function directly. It calls
-// gate.gateOrApply({kind, args, actorState, summary, req}) instead. With the
+// gate.gateOrApply({kind, args, actorState, summary, req, applyNow?}) instead. With the
 // gate disabled (the default — APPROVAL_GATE_ENABLED unset) that runs the
 // executor immediately and behaves exactly as before this file existed. With
 // it enabled, the call is stored as a `pending_actions` row and the route
@@ -104,14 +104,20 @@ function createApprovalGate() {
   // Route handlers call this in place of the direct store mutation. Returns
   // {applied:true, result} (gate off — unchanged prior behaviour) or
   // {pending:true, id, expiresAt} (gate on — nothing has run yet).
-  async function gateOrApply({ kind, args, actorState, summary, req }) {
+  // `applyNow`: the route has already decided this actor needs no approval for
+  // this change — meant for a space's own owner changing what their space shows
+  // (owner's decision 2026-09-16: the steward's word is final inside their
+  // space; the spaceRoutes.js side of that is a separate landing). It still passes through here,
+  // so the net sees a gated route behaving, and the decision is made in one
+  // named place rather than by a route quietly answering on its own.
+  async function gateOrApply({ kind, args, actorState, summary, req, applyNow = false }) {
     if (!executors[kind]) throw new Error(`approvalGate: no executor registered for kind "${kind}"`)
     // Marks the request as having gone through the gate at all — the net
     // (createGatedRequestNet) only cares whether this ran, not what it
     // returned. A 202 "pending" response is the gate working correctly, not
     // a bypass; only a route that skipped calling this entirely should trip it.
     if (req) req.gateCleared = true
-    if (!isEnabled()) {
+    if (!isEnabled() || applyNow === true) {
       return { applied: true, result: await executors[kind](args) }
     }
     if (!isConfigured()) {
