@@ -237,10 +237,11 @@ export const WIKI_ARTICLES = [
             'To see them: Spaces → your space → Manage → History. Each row says when, and whose change it was taken before. Restore puts the whole space — scene and projects — back to that moment, after asking. What is there at that moment is kept as a restore point of its own, so a restore is undoable too.',
             'Only the space’s owner or an admin can see a space’s history or restore it.',
             'When someone who does not own a space changes it, the studio’s inner bot can be told once per burst of edits — what changed, by whom, with an Undo button. That notice is off unless the server turns it on.',
-            'A di.iiii file (.diiii) sent for a space that already exists is a proposal, not an import. The server reads it and writes a plain summary — which projects change, how many items before and after, how many new files, and anything in the space that is newer than the file and would be overwritten. The owner, an admin, or someone trusted in that space can apply it at once; from anyone else it waits for Apply or Reject in the inner bot. Either way a restore point is taken first, the space keeps its own settings (owner, address, public or not), and nothing that is only in the space is deleted. From a terminal: node scripts/space-bundle.mjs propose <file> --tier dev (add --dry-run to see the summary only).'
+            'A di.iiii file (.diiii) sent for a space that already exists is a proposal, not an import. The server reads it and writes a plain summary — which projects change, how many items before and after, how many new files, and anything in the space that is newer than the file and would be overwritten. The owner, an admin, or someone trusted in that space can apply it at once; from anyone else it waits for Apply or Reject in the inner bot. Either way a restore point is taken first, the space keeps its own settings (owner, address, public or not), and nothing that is only in the space is deleted. From a terminal: node scripts/space-bundle.mjs propose <file> --tier dev (add --dry-run to see the summary only).',
+            'One command does both halves: `npm run send -- <space>` exports the space from the machine you are on and sends it to the rehearsal tier, then prints the two addresses to look at. It applies at once if you are allowed to, and waits for Apply otherwise — who you are is not a flag you pass. `--dry-run` says what would change and writes nothing; the public site refuses unless the owner has said the word.',
         ],
-        tags: ['history', 'undo', 'restore', 'snapshot', 'author', 'safety', 'proposal', 'bundle'],
-        updated: '2026-09-17'
+        tags: ['history', 'undo', 'restore', 'snapshot', 'author', 'safety', 'proposal', 'bundle', 'send'],
+        updated: '2026-09-21'
     },
     {
         id: 'jam-surface',
