@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { Billboard, Text } from '@react-three/drei'
 import { TROIKA_FONT_URL } from '../../project/viewport/troikaFont.js'
 import { useLightingMirror } from '../../rigMirror/useLightingMirror.js'
+import { RIG_FLOOR, rigFloorPosition } from '../../rigMirror/rigFloor.js'
 
 // THE REAL RIG, MIRRORED INTO THE ROOM. Read-only editor furniture.
 //
@@ -13,32 +14,15 @@ import { useLightingMirror } from '../../rigMirror/useLightingMirror.js'
 // be selected, are never saved, and are never drawn for a visitor — only the Studio
 // editor passes `rigMirror`, and only while its Rig switch is on.
 
-// PROVISIONAL — until fixtures carry real positions. The lighting interface places a
-// fixture on a flat plan with normalised x,y (0..1 across the visible plan; it allows
-// -1..2 so a fixture can sit off the edge). That plan is laid onto a floor rectangle:
-//   plan x 0..1 → world X  -5..+5 m
-//   plan y 0..1 → world Z  -5..+5 m   (top of the plan is the far side, -Z)
-// A fixture has no height, beam or aim yet, so the markers sit just above the floor
-// rather than at a guessed hang height. Every number lives here and nowhere else.
-export const RIG_FLOOR = Object.freeze({
-    minX: -5,
-    maxX: 5,
-    minZ: -5,
-    maxZ: 5,
-    y: 0.1,
-    radius: 0.12
-})
+// Where the plan lies on the floor: src/rigMirror/rigFloor.js, shared with the
+// sender that walks the same mapping back. Re-exported so nothing that reads the
+// markers' constants has to know they moved.
+export { RIG_FLOOR, rigFloorPosition } from '../../rigMirror/rigFloor.js'
 
 // A rig that is dark is still a rig: a dim neutral marker, so blackout reads as
 // "the lamps are here and off", not as "nothing is patched".
 const DARK_COLOUR = '#5c6166'
 const DARK_GLOW = 0.18
-
-export const rigFloorPosition = (fixture) => [
-    RIG_FLOOR.minX + (Number(fixture?.x) || 0) * (RIG_FLOOR.maxX - RIG_FLOOR.minX),
-    RIG_FLOOR.y,
-    RIG_FLOOR.minZ + (Number(fixture?.y) || 0) * (RIG_FLOOR.maxZ - RIG_FLOOR.minZ)
-]
 
 // The marker carries HUE in its colour and BRIGHTNESS in its glow, so a lamp at 10%
 // is a faint amber, not a muddy brown. `colour` arrives already dimmed; divide the

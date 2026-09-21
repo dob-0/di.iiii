@@ -41,3 +41,4 @@ describe('RigMirrorHint', () => {
         expect(screen.getByText('no lights patched yet — add them in Light')).toBeInTheDocument()
     })
 })
+

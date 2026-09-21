@@ -554,6 +554,11 @@ export const normalizeAuthor = (author) => {
     return { subject, label: ensureString(author.label, '') }
 }
 
+export const normalizeFixtureIndex = (fixture) => {
+    const index = Number(fixture?.index)
+    return Number.isInteger(index) && index > 0 ? index : null
+}
+
 export const normalizeEntity = (entity = {}) => {
     const rawType = ensureString(entity.type, 'box')
     const type = ENTITY_TYPE_SET.has(rawType) ? rawType : 'box'
@@ -665,6 +670,16 @@ export const normalizeEntity = (entity = {}) => {
             min: Math.min(1, Math.max(0, min))
         }
     }
+    // THE JOIN between a lamp in the room and a lamp on the lighting desk: the
+    // fixture's `index` on the desk (the number a person sees there, `3.Back left`).
+    // A number and nothing else — never universe/address, which belong to the
+    // machine's own show.json and never travel with a project
+    // (di-atlas/decisions/2026-09-20-one-project-one-stage.md). An index that is not
+    // a positive whole number is no join at all, so the component is dropped rather
+    // than stored broken — which is also how the inspector clears it: `{ index: null }`.
+    const fixtureIndex = normalizeFixtureIndex(sourceComponents.fixture)
+    if (fixtureIndex != null) nextComponents.fixture = { index: fixtureIndex }
+    else delete nextComponents.fixture
     if (sourceComponents.timeline) {
         const timeline = normalizeTimeline(sourceComponents.timeline)
         if (timeline) nextComponents.timeline = timeline

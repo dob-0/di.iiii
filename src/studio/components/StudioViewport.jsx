@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import '../styles/studio.css'
 import { CameraControls, Grid, Html, TransformControls } from '@react-three/drei'
 import RigMirror from './RigMirror.jsx'
+import { useLiveLightEntity } from '../../rigMirror/liveLight.js'
 import { XR, useXR } from '@react-three/xr'
 import ModalTransform from './ModalTransform.jsx'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
@@ -281,6 +282,11 @@ function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, giz
 
     const t = entity.components?.transform || {}
 
+    // A lamp with a fixture number draws what the desk says it is emitting, while the
+    // desk is here; the authored light otherwise (src/rigMirror/liveLight.js). The
+    // document is untouched — only what reaches the renderer changes.
+    const shown = useLiveLightEntity(entity)
+
     if (!isVisible) return null
 
     return (
@@ -297,7 +303,7 @@ function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, giz
                     else onSelect?.(entity.id)
                 }}
             >
-                <EntityContent entity={entity} assetMap={assetMap} />
+                <EntityContent entity={shown} assetMap={assetMap} />
                 {selected && (
                     <Html position={[0, 1.8, 0]} center zIndexRange={[900, 0]}>
                         <span className="studio-selection-pill">{entity.name}</span>

@@ -220,10 +220,14 @@ export function createLightingMirror({ fetchImpl, doc } = {}) {
 }
 
 let sharedMirror = null
-const getSharedMirror = () => {
+// The page's one store. Exported for the two things that read it OUTSIDE React's
+// render — a click handler that needs the fixtures as they are at the click, and a
+// hook that selects one fixture out of the snapshot — never for polling from elsewhere.
+export const getSharedLightingMirror = () => {
     if (!sharedMirror) sharedMirror = createLightingMirror()
     return sharedMirror
 }
+const getSharedMirror = getSharedLightingMirror
 
 // { present, fixtures: [{ id, index, name, x, y, colour:{r,g,b}, level }], master, blackout }
 // `enabled: false` still answers `present` (one probe), but never polls.

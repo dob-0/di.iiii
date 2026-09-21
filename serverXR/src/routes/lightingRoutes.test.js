@@ -74,6 +74,29 @@ describe('the lighting desk at /light', () => {
     expect(show.output.enabled).toBe(false)
   })
 
+  // What "Send positions to the desk" sends, through the mount: the desk's own drag
+  // route, by fixture id, saved to show.json.
+  it('moves fixtures on the plan by id through POST /light/api/fixtures/move', async () => {
+    delete process.env.NODE_ENV
+    const { base, dir, lane } = await boot()
+    const post = (route, body) => fetch(`${base}/light/api/${route}`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
+    })
+    const added = await (await post('fixtures/add', { profile: 'rgb', count: 2, universe: 0 })).json()
+    expect(added.added).toHaveLength(2)
+    const [a, b] = added.added
+    const moved = await post('fixtures/move', { moves: [{ id: a.id, x: 0.25, y: 0.75 }, { id: 'no-such', x: 0, y: 0 }] })
+    expect(moved.status).toBe(200)
+    const state = await (await fetch(`${base}/light/api/state`)).json()
+    const after = Object.fromEntries(state.fixtures.map((f) => [f.id, f]))
+    expect(after[a.id].x).toBe(0.25)
+    expect(after[a.id].y).toBe(0.75)
+    expect(after[b.id].x).toBe(b.x)
+    lane.getDesk().writeShow()
+    const show = JSON.parse(fs.readFileSync(path.join(dir, 'lighting', 'show.json'), 'utf8'))
+    expect(show.fixtures.find((f) => f.id === a.id)).toMatchObject({ x: 0.25, y: 0.75 })
+  })
+
   it('does not exist on a hosted server', async () => {
     process.env.NODE_ENV = 'production'
     delete process.env.DI_LOCAL

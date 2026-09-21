@@ -16,6 +16,7 @@ import '../styles/studio-mobile.css'
 import { canPlaceInScene } from '../utils/assetFormats.js'
 import { useViewportLayout } from '../hooks/useViewportLayout.js'
 import { useRigMirrorSwitch } from '../hooks/useRigMirrorSwitch.js'
+import { useSendRigPositions } from '../hooks/useSendRigPositions.js'
 import { isJamProject, loadJamAllTools, saveJamAllTools } from '../utils/jamMode.js'
 import { JAM_PRIMITIVES } from '../../project/entityPalette.js'
 import {
@@ -177,6 +178,7 @@ export default function StudioShell({
     const [layoutKey, setLayoutKey] = useState(0)
     const [snapEdges, setSnapEdges] = useState(persistedWorkspace?.snapEdges ?? false)
     const rigMirror = useRigMirrorSwitch()
+    const rigPositions = useSendRigPositions({ entities })
 
     // Remember the workspace across sessions — open panels, dragged positions,
     // resized dimensions, collapsed headers, snap preference. Arrange actions
@@ -635,6 +637,8 @@ export default function StudioShell({
                         cues={cues}
                         liveCueId={liveCueId}
                         onFireCue={onFireCue}
+                        onSendRigPositions={rigPositions.send}
+                        rigPositionsNote={rigPositions.note}
                         panelKeys={jamMinimal ? ['create'] : null}
                         minimal={jamMinimal}
                         allTools={jamAllTools}

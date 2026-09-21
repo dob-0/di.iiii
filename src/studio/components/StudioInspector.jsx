@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import { cloneValue } from '../../shared/projectSchema.js'
 import { listProjects } from '../../project/services/projectsApi.js'
 import { getModelClips, subscribeModelClips } from '../../project/viewport/modelClipRegistry.js'
+import FixtureField from './FixtureField.jsx'
 
 // Clip names only exist once a viewport has loaded the model file, so this
 // select re-renders when the registry learns them. Empty value = all clips.
@@ -217,7 +218,11 @@ function InspSlider({ field, value, onChange }) {
 
 const isBoundedNumber = (field) => field.type === 'number' && Number.isFinite(field.min) && Number.isFinite(field.max)
 
-function InspField({ field, value, assetOptions = [], spaceOptions = [], siblingSpaceId = null, onChange }) {
+function InspField({ field, value, assetOptions = [], spaceOptions = [], siblingSpaceId = null, lightingMirror, onChange }) {
+    if (field.type === 'fixture') {
+        return <FixtureField label={field.label} value={value} onChange={onChange} mirror={lightingMirror} />
+    }
+
     if (field.type === 'checkbox') {
         return (
             <label className="insp-toggle">
@@ -335,7 +340,7 @@ function InspField({ field, value, assetOptions = [], spaceOptions = [], sibling
     )
 }
 
-function InspSection({ section, sectionValue, assetOptions, spaceOptions, onSectionChange }) {
+function InspSection({ section, sectionValue, assetOptions, spaceOptions, lightingMirror, onSectionChange }) {
     const [open, setOpen] = useState(true)
     const siblingSpaceId = readNestedValue(sectionValue, ['spaceId']) || null
     return (
@@ -402,6 +407,7 @@ function InspSection({ section, sectionValue, assetOptions, spaceOptions, onSect
                             assetOptions={assetOptions}
                             spaceOptions={spaceOptions}
                             siblingSpaceId={siblingSpaceId}
+                            lightingMirror={lightingMirror}
                             onChange={(nextValue) => {
                                 const next = setNestedValue(sectionValue, group.field.path, nextValue)
                                 onSectionChange?.(group.field.component || section.id, next)
@@ -424,6 +430,8 @@ export default function StudioInspector({
     onSectionChange,
     footer = null,
     emptyMessage = 'Select an object to edit it.',
+    // The lighting-desk store the Fixture field reads; only tests pass one.
+    lightingMirror = undefined,
 }) {
     if (!sections.length) {
         return (
@@ -449,6 +457,7 @@ export default function StudioInspector({
                         sectionValue={sectionValue}
                         assetOptions={assetOptions}
                         spaceOptions={spaceOptions}
+                        lightingMirror={lightingMirror}
                         onSectionChange={onSectionChange}
                     />
                 )

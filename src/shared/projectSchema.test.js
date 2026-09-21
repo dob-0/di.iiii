@@ -772,3 +772,40 @@ describe('showState — the one show clock', () => {
         expect(applyProjectOps(stamped, inverse).showState.clockEpoch).toBe(0)
     })
 })
+
+describe('components.fixture — the join to the lighting desk', () => {
+    const spot = (fixture) => ({ id: 'spot', type: 'spotLight', components: { light: { color: '#ffffff', intensity: 2 }, ...(fixture === undefined ? {} : { fixture }) } })
+
+    it('survives normalization as { index } and nothing else', () => {
+        const doc = normalizeProjectDocument({ entities: [spot({ index: 3, universe: 1, address: 17 })] })
+        expect(doc.entities[0].components.fixture).toEqual({ index: 3 })
+    })
+
+    it('is a positive whole number or it is gone', () => {
+        for (const bad of [{ index: 0 }, { index: -1 }, { index: 2.5 }, { index: 'three' }, { index: null }, {}, 'x', 7]) {
+            const doc = normalizeProjectDocument({ entities: [spot(bad)] })
+            expect(doc.entities[0].components.fixture, JSON.stringify(bad)).toBeUndefined()
+        }
+        expect(normalizeProjectDocument({ entities: [spot({ index: '4' })] }).entities[0].components.fixture).toEqual({ index: 4 })
+        expect(normalizeProjectDocument({ entities: [spot()] }).entities[0].components.fixture).toBeUndefined()
+    })
+
+    it('is set and cleared by the inspector\'s updateComponent op, and inverts', () => {
+        const base = normalizeProjectDocument({ entities: [spot()] })
+        const set = applyProjectOps(cloneValue(base), [
+            { type: 'updateComponent', payload: { entityId: 'spot', component: 'fixture', patch: { index: 3 } } }
+        ])
+        expect(set.entities[0].components.fixture).toEqual({ index: 3 })
+        expect(set.entities[0].components.light).toEqual(base.entities[0].components.light)
+
+        const cleared = applyProjectOps(cloneValue(set), [
+            { type: 'updateComponent', payload: { entityId: 'spot', component: 'fixture', patch: { index: null } } }
+        ])
+        expect(cleared.entities[0].components.fixture).toBeUndefined()
+
+        const undo = invertProjectOps(cloneValue(set), [
+            { type: 'updateComponent', payload: { entityId: 'spot', component: 'fixture', patch: { index: null } } }
+        ])
+        expect(applyProjectOps(cloneValue(cleared), undo).entities[0].components.fixture).toEqual({ index: 3 })
+    })
+})

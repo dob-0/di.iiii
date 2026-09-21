@@ -435,10 +435,28 @@ describe('ESM/CJS mirror equivalence', () => {
         { id: 'v1', type: 'video', components: { media: { assetId: 'a', spatial: true, distance: 0, maxDistance: 2 } } },
         { id: 'v2', type: 'video', components: { media: { assetId: 'a' } } },
         // An image's media object must NOT grow spatial fields.
-        { id: 'i1', type: 'image', components: { media: { assetId: 'a' } } }
+        { id: 'i1', type: 'image', components: { media: { assetId: 'a' } } },
+        // The join to the lighting desk: a number survives, anything else is dropped,
+        // and universe/address never reach the document. The server normalizes with
+        // the mirror, so a mirror that dropped `fixture` would lose every join on save.
+        { id: 'f1', type: 'spotLight', components: { fixture: { index: 3, universe: 1, address: 17 } } },
+        { id: 'f2', type: 'pointLight', components: { fixture: { index: '4' } } },
+        { id: 'f3', type: 'pointLight', components: { fixture: { index: 0 } } },
+        { id: 'f4', type: 'directionalLight', components: { fixture: 'nope' } }
       ]
     }
   ]
+
+  it('keeps components.fixture as { index } through the mirror, and drops a broken one', () => {
+    const doc = schema.normalizeProjectDocument({
+      entities: [
+        { id: 'f1', type: 'spotLight', components: { fixture: { index: 3, universe: 1, address: 17 } } },
+        { id: 'f3', type: 'pointLight', components: { fixture: { index: 0 } } }
+      ]
+    })
+    expect(doc.entities[0].components.fixture).toEqual({ index: 3 })
+    expect(doc.entities[1].components.fixture).toBeUndefined()
+  })
 
   // Fresh documents stamp projectMeta with Date.now(); zero the wall-clock
   // fields so the comparison is about shape, not the millisecond it ran.

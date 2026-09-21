@@ -7,6 +7,7 @@ import Text2DObject from '../../objectComponents/Text2DObject.jsx'
 import Text3DObject from '../../objectComponents/Text3DObject.jsx'
 import ImageObject from '../../objectComponents/ImageObject.jsx'
 import PortalObject from './PortalObject.jsx'
+import { liveLightEntity } from '../../rigMirror/liveLight.js'
 
 // EntityContent is a pure mapping (no hooks), so we can call it directly and
 // inspect the React element it returns instead of rendering a WebGL canvas.
@@ -101,5 +102,26 @@ describe('EntityContent mapping', () => {
         const el = render(entity)
         expect(el.type).toBe(PortalObject)
         expect(el.props.entity).toBe(entity)
+    })
+})
+
+// The rendered lamp: the colour and intensity that reach three.js are the desk's while
+// it is live, and the authored ones when it is not. (Step 3 of one-project-one-stage.)
+describe('a lamp joined to the desk', () => {
+    const spot = { type: 'spotLight', components: { light: { color: '#ffffff', intensity: 2, distance: 20 }, fixture: { index: 3 } } }
+    const amber = { id: 'a', index: 3, name: 'Back left', x: 0, y: 0, colour: { r: 128, g: 60, b: 0 }, level: 0.5 }
+    const lightOf = (el) => el.props.children[0].props
+
+    it('renders the desk\'s hue at full and the level-scaled intensity while the desk is live', () => {
+        const el = render(liveLightEntity(spot, amber))
+        expect(lightOf(el).color).toBe('#ff7800')
+        expect(lightOf(el).intensity).toBeCloseTo(1, 5)
+        expect(lightOf(el).distance).toBe(20)
+    })
+
+    it('renders the authored light when the desk is absent', () => {
+        const el = render(liveLightEntity(spot, null))
+        expect(lightOf(el).color).toBe('#ffffff')
+        expect(lightOf(el).intensity).toBe(2)
     })
 })
