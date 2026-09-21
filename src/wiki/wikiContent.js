@@ -285,6 +285,26 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-21'
     },
     {
+        id: 'lights-on-a-place',
+        category: 'Editing',
+        title: 'Hanging a lamp: aim, beam, shadow',
+        summary: 'A spot light is rigged the way a lamp is rigged — point it with pan and tilt, switch the beam on so you can see the throw, and let the room throw shadows.',
+        body: [
+            'A spot light in a room is a lamp on a bar. It hangs somewhere, it points somewhere, and until now the only way to point it was to drag a rotation gizmo and hope. Select a spot light and its Transform section now has the two numbers a lighting person actually aims with, in degrees.',
+            { list: [
+                'Tilt — how far the lamp is swung off straight down. 0 is dead down on the deck. 90 is flat, across the room. Past 90 is an uplight, pointing back up at the ceiling.',
+                'Pan — which way round the vertical that swing is pointed. 0 sends it the way the room\'s own camera looks; turn it to walk the beam round the walls.'
+            ] },
+            'Set the pan first and then tilt into the room, the way you would on a ladder: a lamp hanging dead down has no direction to keep, so the pan you chose is held until there is a tilt to use it. Nothing new is saved for this — pan and tilt are the lamp\'s own rotation in the fixture\'s language, so a lamp aimed by dragging reads back here as numbers, and a lamp aimed here moves under the gizmo.',
+            'THE BEAM. A lamp\'s Beam section switches on the throw itself: the cone of light in the air between the lamp and what it lands on, the way a beam shows in a hazed room. Haze is how thick that air is. The beam is off in every room until somebody switches it on, and it takes the lamp\'s own colour — so a lamp joined to a fixture on the lighting desk beams in the colour the desk is emitting, live, and goes out when the desk takes it out.',
+            'The cone is drawn as far as the lamp reaches, so set the lamp\'s Distance to roughly where the light actually lands. A lamp with a 15-metre reach hung in a small room draws its cone straight through the floor.',
+            'SHADOWS FROM THE ROOM. Under Project → Render there is Lamps throw shadows. Switch it on and the lamps in the room cast: a pillar standing in a beam puts its shadow on the floor behind it, a person-sized box makes a person-sized shadow, and a scanned venue\'s own walls catch what is thrown at them. Shadow detail chooses how sharp the edge is — Sharper costs more, and a phone will feel it. It is off unless a room asks for it, because a shadow pass over a big scanned room is not free.',
+            'What a visitor sees is what you see: the beam and the shadows are part of the room, so they arrive with it in a published space and in walk mode, not only in the Studio.'
+        ],
+        tags: ['light', 'lamp', 'spot', 'spotlight', 'aim', 'pan', 'tilt', 'beam', 'haze', 'shadow', 'shadows', 'rig', 'stage', 'studio', 'render'],
+        updated: '2026-09-21'
+    },
+    {
         id: 'the-rig',
         category: 'Spaces & access',
         title: 'The rig: machines in one room find each other',
@@ -1431,7 +1451,7 @@ export const WIKI_ARTICLES = [
 
 // Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
 // fails CI if any id does not resolve to an article (otherwise it silently vanishes).
-export const WIKI_HIGHLIGHT_IDS = ['glossary', 'picture-operators-and-the-desk', 'tools-room', 'following-a-space', 'guests-in-the-room', 'build-zones', 'raw-windows-travel-with-the-canvas', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
+export const WIKI_HIGHLIGHT_IDS = ['glossary', 'lights-on-a-place', 'picture-operators-and-the-desk', 'tools-room', 'following-a-space', 'guests-in-the-room', 'build-zones', 'raw-windows-travel-with-the-canvas', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))
