@@ -92,6 +92,13 @@ export const planChunks = (tarBytes, chunkBytes = CHUNK_BYTES) =>
     Math.max(1, Math.ceil(tarBytes / chunkBytes))
 
 const uploadInPieces = (colabRun, session, tar, work, chunkBytes = CHUNK_BYTES) => {
+    // The folder has to exist on the box first: the contents API will not
+    // make a missing parent and answers 500 instead of saying so.
+    const ready = colabRun(['exec', '-s', session, '-f', path.join(PLACE_DIR, 'prepare.py')], { quiet: true })
+    if (!parseStatusLines(ready.out).some((line) => line.state === 'ready')) {
+        warn(ready.out.slice(0, 300))
+        return { ok: false, sent: 0 }
+    }
     const parts = ensureDir(path.join(work, 'parts'))
     for (const stale of fs.readdirSync(parts)) fs.rmSync(path.join(parts, stale), { force: true })
     run('split', ['-b', String(chunkBytes), '-d', '-a', '3', tar, path.join(parts, 'images.tar.')])
@@ -152,6 +159,7 @@ const plan = (work, session, gpu) => {
         steps: [
             ['tar', ['-cf', tar, '-C', imagesDir, '.']],
             [COLAB, ['new', '-s', session, '--gpu', gpu]],
+            [COLAB, ['exec', '-s', session, '-f', path.join(PLACE_DIR, 'prepare.py')]],
             ['split', ['-b', String(CHUNK_BYTES), '-d', '-a', '3', tar, `${path.join(work, 'parts')}/images.tar.`]],
             [COLAB, ['upload', '-s', session, `${path.join(work, 'parts')}/images.tar.000`, '/content/parts/images.tar.000']],
             ['(…one call per piece…)', []],

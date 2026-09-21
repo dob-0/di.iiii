@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { hallOps, sourceWall } from './import.mjs'
+import { hallOps, sourceWall, arrivalShot } from './import.mjs'
 
 const place = {
     bakedIn: true,
@@ -87,5 +87,20 @@ describe('sourceWall', () => {
 
     it('never autoplays a wall of videos at a visitor', () => {
         expect(sourceWall(assets)[3].components.media.autoplay).toBe(false)
+    })
+})
+
+describe('arrivalShot', () => {
+    it('opens from where the visitor stands, at eye height, looking in', () => {
+        const shot = arrivalShot(place)
+        expect(shot.position).toEqual([place.spawn.x, place.spawn.altY, place.spawn.z])
+        expect(shot.target).toEqual([0, place.spawn.altY, 0])
+        expect(shot.far).toBeGreaterThan(place.size[0])
+    })
+
+    it('still gives a shot for a room with no spawn authored', () => {
+        const shot = arrivalShot({ size: [8, 3, 6] })
+        expect(shot.position[1]).toBe(1.6)
+        expect(Number.isFinite(shot.far)).toBe(true)
     })
 })

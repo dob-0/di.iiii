@@ -209,6 +209,11 @@ export const hallOps = ({ asset, place, title }) => {
                         enabled: true
                     },
                     walkableAreas: place.walkableAreas,
+                    // The orbit camera starts on the same shot the walker gets.
+                    savedView: {
+                        mode: 'perspective',
+                        ...arrivalShot(place)
+                    },
                     ambientLight: { color: '#ffffff', intensity: 0.9 },
                     directionalLight: {
                         color: '#fff7ea',
@@ -218,8 +223,39 @@ export const hallOps = ({ asset, place, title }) => {
                 }
             }
         },
-        { type: 'setPresentationState', payload: { patch: { mode: 'scene', entryView: 'scene' } } }
+        {
+            type: 'setPresentationState',
+            payload: {
+                patch: {
+                    mode: 'scene',
+                    entryView: 'scene',
+                    fixedCamera: arrivalShot(place)
+                }
+            }
+        }
     ]
+}
+
+// The opening shot: standing where the visitor will stand, looking into the
+// room. Left to itself di.iiii frames a room from its entities' bounding
+// sphere, and for a single model that is ONE object — the camera ends up with
+// its nose against a column (seen, 2026-09-21). A room is not a sculpture;
+// the shot that says "this is a place" is the one from inside it, at eye
+// height, which is also exactly what pressing Walk gives you.
+export const arrivalShot = (place) => {
+    const spawn = place.spawn || { x: 0, z: 0, altY: 1.6 }
+    const eye = spawn.altY || 1.6
+    const reach = Math.max(place.size?.[0] || 8, place.size?.[2] || 8)
+    return {
+        projection: 'perspective',
+        position: [spawn.x, eye, spawn.z],
+        target: [0, eye, 0],
+        fov: 60,
+        zoom: 1,
+        near: 0.05,
+        far: Math.max(80, reach * 6),
+        locked: false
+    }
 }
 
 // ── the footage ───────────────────────────────────────────────────────────────
