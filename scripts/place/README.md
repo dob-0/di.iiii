@@ -114,8 +114,14 @@ life size, which is the mess the fitter exists to undo.
 - **The frames go up in 16 MB pieces.** `colab upload` carries the file
   base64'd inside one JSON body; a hall's worth of photographs answers 500 and
   keeps nothing.
-- **Meshroom is a 4.5 GB download** onto the box before an hour of GPU. It
-  runs detached, so a dropped connection does not take the job with it.
+- **Meshroom is a 4.5 GB download** onto the box before an hour of GPU —
+  measured at 30–45 minutes on Colab, during which `wget -q` prints nothing
+  and the log holds one line. The job runs detached and touches a heartbeat
+  file every 15 seconds, so silence is not mistaken for death. (Worth doing
+  one day: keep the tarball on Drive and mount it instead.)
+- **Colab's kernel websocket wedges.** A poll was seen hanging for twelve
+  minutes while the reconstruction carried on beside it. Polls give up after
+  four minutes and ask again; the job never notices.
 - **A phone's HEVC clip is limited-range yuv420p** and ffmpeg 9's JPEG encoder
   refuses it, which silently loses the whole video. The extraction names
   `-pix_fmt yuvj420p`, and falls back to PNG.
