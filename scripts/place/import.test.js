@@ -81,6 +81,16 @@ describe('sourceWall', () => {
         expect(Math.min(...rowHeights)).toBe(1.6)
     })
 
+    it('stands them UP — flat on the floor they are invisible from eye height', () => {
+        expect(sourceWall(assets).every((entity) =>
+            Math.abs(entity.components.transform.rotation[0] - Math.PI / 2) < 1e-9)).toBe(true)
+    })
+
+    it('scales them against the built-in height of 3, not a unit plane', () => {
+        const [first] = sourceWall(assets, { tile: 1.2 })
+        expect(first.components.transform.scale[0]).toBeCloseTo(0.4, 6)
+    })
+
     it('pins every one of them still', () => {
         expect(sourceWall(assets).every((entity) => entity.components.animation.mode === 'static')).toBe(true)
     })

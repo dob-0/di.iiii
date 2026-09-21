@@ -263,11 +263,22 @@ export const arrivalShot = (place) => {
 // height and above. Not a gallery — a working wall you can stand in front of.
 export const sourceWall = (assets, options = {}) => {
     const perRow = options.perRow || 8
-    const tile = options.tile || 1.1
-    const gap = options.gap || 0.25
-    const step = tile + gap
+    // An image or video entity in di.iiii is a plane 3 units tall lying FLAT
+    // ON THE GROUND (rotation-x = -PI/2 inside ImageObject/VideoObject), and
+    // its width follows the picture's own shape. So a wall of them needs two
+    // things this got wrong the first time: a quarter turn about X to stand
+    // each one up, and a scale relative to that built-in height of 3. Left
+    // flat they are invisible from standing height — a room with a horizon
+    // and nothing in it.
+    const tile = options.tile || 1.1          // how tall each one hangs, in metres
+    const gap = options.gap || 0.3
+    const scale = tile / 3
+    // Columns are spaced for a landscape photograph, which is what a phone
+    // hands over: wider than it is tall, about 3:2.
+    const columnStep = tile * 1.7 + gap
+    const rowStep = tile + gap
     const rows = Math.ceil(assets.length / perRow)
-    const width = Math.min(assets.length, perRow) * step
+    const width = Math.min(assets.length, perRow) * columnStep
     return assets.map((asset, index) => {
         const row = Math.floor(index / perRow)
         const column = index % perRow
@@ -279,12 +290,12 @@ export const sourceWall = (assets, options = {}) => {
             components: {
                 transform: {
                     position: [
-                        -width / 2 + step / 2 + column * step,
-                        1.6 + (rows - 1 - row) * step,
+                        -width / 2 + columnStep / 2 + column * columnStep,
+                        1.6 + (rows - 1 - row) * rowStep,
                         -(options.distance || 3)
                     ],
-                    rotation: [0, 0, 0],
-                    scale: [tile, tile, 1]
+                    rotation: [Math.PI / 2, 0, 0],
+                    scale: [scale, scale, scale]
                 },
                 media: {
                     assetId: asset.id,
