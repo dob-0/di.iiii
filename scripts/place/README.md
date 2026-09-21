@@ -114,11 +114,13 @@ life size, which is the mess the fitter exists to undo.
 - **The frames go up in 16 MB pieces.** `colab upload` carries the file
   base64'd inside one JSON body; a hall's worth of photographs answers 500 and
   keeps nothing.
-- **Meshroom is an 8 GB download** onto the box before an hour of GPU —
-  measured at 7.3 GB after 40 minutes on Colab, around 3 MB/s, during which `wget -q` prints nothing
-  and the log holds one line. The job runs detached and touches a heartbeat
-  file every 15 seconds, so silence is not mistaken for death. (Worth doing
-  one day: keep the tarball on Drive and mount it instead.)
+- **Meshroom is a 13 GB download** onto the box before any GPU work — it
+  carries CUDA. A single-stream `wget` managed about 3 MB/s and was still
+  going after an hour, long enough for Colab to reclaim the runtime
+  mid-download (that is what ended the first real run). `aria2c -x16` does
+  the same 13 GB at ~48 MB/s: about five minutes. The job runs detached and
+  touches a heartbeat every 15 seconds, so the quiet stretch is never
+  mistaken for death.
 - **Colab's kernel websocket wedges.** A poll was seen hanging for twelve
   minutes while the reconstruction carried on beside it. Polls give up after
   four minutes and ask again; the job never notices.
