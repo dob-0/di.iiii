@@ -1,8 +1,8 @@
-// Single source of truth for the in-app Wiki / Help (/wiki) and the landing teaser.
+// Single source of truth for the in-app Wiki / Help (/wiki).
 //
 // RULE: when you ship a user-facing feature or change user-visible behavior, add or
-// update the matching article here and bump its `updated`. Surface headline items in
-// WIKI_HIGHLIGHTS so the landing page stays current. (See AGENTS.md / golden_rules.)
+// update the matching article here and bump its `updated`. (See AGENTS.md / golden_rules.)
+// The landing page lists no articles: it ends in one link to /wiki (2026-09-23).
 //
 // Article shape: { id, category, title, summary, body, tags, updated }
 //   body: array of blocks — a string is a paragraph; { list: [...] } is a bullet list.
@@ -1475,8 +1475,10 @@ export const WIKI_ARTICLES = [
     }
 ]
 
-// Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
-// fails CI if any id does not resolve to an article (otherwise it silently vanishes).
+// Headline subset. The landing page rendered these as 18 cards until 2026-09-23,
+// when the grid was cut for one "Open the Wiki" link ("no flood"). Nothing renders
+// the list now; it stays because `docs:wiki:check` and the wiki tests still read it.
+// Retire it together with those checks, in its own change.
 export const WIKI_HIGHLIGHT_IDS = ['scan-a-place', 'glossary', 'lights-on-a-place', 'picture-operators-and-the-desk', 'tools-room', 'following-a-space', 'guests-in-the-room', 'build-zones', 'raw-windows-travel-with-the-canvas', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS

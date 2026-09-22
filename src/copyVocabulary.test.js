@@ -48,7 +48,12 @@ const BANNED = [
     // Capital R only: `src/raw/`, `/main/raw` and "raw JSON" are fine, the
     // proper noun is not. `RawEditor` has no word break after Raw, so an
     // identifier written into a string cannot trip this.
-    { word: 'Raw', pattern: /\bRaw\b/, use: 'the node editor, or nothing at all' },
+    //
+    // The node canvas is called Nodes (2026-09-23). The walk of 2026-09-22
+    // found it named "Raw" on /tools and the local home and "Nodes" in the
+    // surface bar — one tool, two names, one screen apart. The routes, the
+    // `raw` keys and `src/raw/` do not move; only the name a person reads.
+    { word: 'Raw', pattern: /\bRaw\b/, use: 'Nodes (the node canvas — its routes stay /raw)' },
     // The studio's signature, not the product's name: a person signs `Name — di.i`,
     // the platform is `di.iiii` (di-brand NAMING.md). Product copy names the
     // product, so `di.i` inside src/ is a slip. `di.iiii` is not a hit — the
@@ -121,6 +126,7 @@ const COPY_FILES = [
     'src/hooks/useSpaceLabel.js',
     'src/hooks/useStatusItems.js',
     'src/landing/LandingPage.jsx',
+    'src/landing/LocalHome.jsx',
     'src/pages/PrivacyPage.jsx',
     'src/pages/TermsPage.jsx',
     'src/project/components/JamSheet.jsx',
@@ -168,6 +174,10 @@ const COPY_FILES = [
     'src/studio/utils/assetFormats.js',
     'src/studio/utils/codeSpaces.js',
     'src/studio/utils/studioGuide.js',
+    // The tools room lists every tool by name. It said "Raw" for the node
+    // canvas until 2026-09-23, beside a surface bar that said Nodes, and was
+    // not on this list, so nothing noticed. Same for LocalHome above.
+    'src/tools/ToolsRoom.jsx',
     'src/utils/presentationTemplates.js'
 ]
 

@@ -32,7 +32,9 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **place** | A real room in the world: walls, a rig, an audience, a date. A space may be its twin; it can never *be* it. |
 | **production** | A place, a client, a work and a run. What the studio makes. It uses di.iiii; it does not live in it. |
 | **work** | What the public meets: a title, an author, an address. The same object a **project** names backstage. |
+| **Nodes** | The node canvas: the tool where a project's nodes are wired together. Opens at `/{space}/raw/projects/{project}` — the route stays `raw`, the word a person reads is Nodes. Added 2026-09-23. |
 | **Projection** | The tool that puts a project on a wall: drag its surfaces onto the shapes there. Opens at `/{space}/map/{project}` — the route stays `map`, the word a person reads is Projection. |
+| **Light** | The lighting desk: patch, scenes, cues, Art-Net out. Runs only on your own machine (a local install), at `/light/`. Added 2026-09-23. The lamp you place in a scene still reads Light too, until the owner settles its own word (Lamp is the recommendation). |
 | **scan** | Collecting a **place** with a camera so a space can be built from it — the walk, the photographs, and the measured wall. Opens at `/{space}/scan`. Added 2026-09-22. |
 
 Two words that are already right and must not drift: **port** (where a wire attaches to a node)
@@ -43,7 +45,7 @@ used consistently, and every node tool a visitor might arrive from uses one or t
 
 | Banned | Because | Use instead |
 | --- | --- | --- |
-| `Raw` (the lane) | A branch name. Never explained. Already absent from the page it names. | *the node editor*, or nothing at all |
+| `Raw` (the lane) | A branch name. Never explained. Already absent from the page it names. | **Nodes** (the node canvas), or nothing at all |
 | `Beta` | The lane was deleted 2026-08-06. `src/beta/` does not exist. | — |
 | `lane` · `surface` · `V1` · `seed` | Names for editor generations. Internal history. | the thing itself |
 | `entity` | ECS jargon, in the sentence the Inspector shows on every selection. | **object** |
@@ -312,6 +314,24 @@ sentence title (a real title says more than a category word) but now opens "Proj
 mapping, at …" so the first line ties it to the other two. Routes, ids and CSS classes do not
 move — `/map/`, `MapSurface.jsx`, `mapRouting.js`, `createMappingSurface` and the rest stay
 exactly as they are, the same rule this whole file has followed since 2026-08-19.
+
+## Amended 2026-09-23 — one name per tool
+
+A stranger's walk (2026-09-22) found the tools wearing two names each, one screen apart: the node
+canvas was "Raw" on `/tools` and the local home but "Nodes" in the surface bar, and Projection's
+Carry panel said "Mapping" and "Paste a mapping". Owner's words: *"connect all things together
+so it's easy to use."*
+
+**The tools are Studio · Nodes · Projection · Light**, everywhere a person picks one. Nodes is
+the node canvas; Light is the lighting desk on a local install. `/tools` and the local home now
+say Nodes, and the Carry panel says "Projection as text", "Paste a projection" and "Replace this
+projection". Routes, keys and folders stay: `/raw`, `/map`, `/light`, `src/raw/`. The guard
+(`src/copyVocabulary.test.js`) now also reads `src/tools/ToolsRoom.jsx` and
+`src/landing/LocalHome.jsx`, so "Raw" as a name there fails the build.
+
+Not settled here: Studio's "Lights" button and the lamp you place still say Light. That word
+waits on the owner (desk keeps Light, the object becomes Lamp, the rig button becomes Rig — the
+recommendation, not yet his yes), and the guard does not police it until then.
 
 ## Amended 2026-09-22 — `scan`, and the one thing it must never say
 

@@ -142,11 +142,11 @@ filter you remember to update.
 
 ### Keep the user-facing Wiki current with every shipped feature
 
-**Rule:** When you ship a user-facing feature or change user-visible behavior, add or update the matching entry in `src/wiki/wikiContent.js` (bump its `updated`) and, if it's headline-worthy, surface it on the landing page. Treat this as part of "done," same tier as updating CURRENT.md — not an optional follow-up.
+**Rule:** When you ship a user-facing feature or change user-visible behavior, add or update the matching entry in `src/wiki/wikiContent.js` (bump its `updated`). Treat this as part of "done," same tier as updating CURRENT.md — not an optional follow-up.
 
 **Why:** Guest/sandbox modes, the unified `/admin` Manage console, and the 3-free-spaces quota all shipped with zero user-facing explanation; the public landing still advertised only the old capabilities. A maintained in-app Wiki (`/wiki`) only stays useful if it is updated in the same change that ships the feature, not "later."
 
-**How:** `src/wiki/wikiContent.js` is the single source of truth — articles render on `/wiki` and `WIKI_HIGHLIGHTS` feeds the landing teaser. Add an article (or edit the closest one), set `updated`, and add to `WIKI_HIGHLIGHTS` if it belongs on the landing. No markdown engine — `body` is an array of strings / `{ list: [...] }`.
+**How:** `src/wiki/wikiContent.js` is the single source of truth — articles render on `/wiki`, and the landing page ends in one link to it (it listed highlight cards until 2026-09-23). Add an article (or edit the closest one) and set `updated`. No markdown engine — `body` is an array of strings / `{ list: [...] }`.
 
 **Files:** `src/wiki/wikiContent.js`, `src/wiki/WikiPage.jsx`, `src/landing/LandingPage.jsx`.
 
