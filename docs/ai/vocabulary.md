@@ -324,7 +324,7 @@ so it's easy to use."*
 
 **The tools are Studio · Nodes · Projection · Light**, everywhere a person picks one. Nodes is
 the node canvas; Light is the lighting desk on a local install. `/tools` and the local home now
-say Nodes, and the Carry panel says "Projection as text", "Paste a projection" and "Replace this
+say Nodes, the local home's desk link says Light (it said "Lights"), and the Carry panel says "Projection as text", "Paste a projection" and "Replace this
 projection". Routes, keys and folders stay: `/raw`, `/map`, `/light`, `src/raw/`. The guard
 (`src/copyVocabulary.test.js`) now also reads `src/tools/ToolsRoom.jsx` and
 `src/landing/LocalHome.jsx`, so "Raw" as a name there fails the build.

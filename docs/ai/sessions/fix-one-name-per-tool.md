@@ -1,7 +1,8 @@
 ## 2026-09-23 — one name per tool, and the front page ends in one link
 
 - `/tools` and the local home call the node canvas **Nodes**, the word the surface bar already
-  used. Keys, routes and folders stay `raw`. Projection's Carry panel says "Projection as text",
+  used. Keys, routes and folders stay `raw`. The local home's desk link says **Light**, as
+  `/tools` and the bar do (it said "Lights"). Projection's Carry panel says "Projection as text",
   "Paste a projection" and "Replace this projection" instead of mapping.
 - The landing's Help & Wiki block keeps its eyebrow, title, one line and the "Open the Wiki →"
   button; the 18-card highlight grid is gone (with its CSS). `LandingPage.test.jsx` turns red if
