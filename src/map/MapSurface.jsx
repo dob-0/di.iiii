@@ -396,8 +396,8 @@ export default function MapSurface({ projectId, spaceId }) {
                                         {surface.enabled ? 'On' : 'Off'}
                                     </button>
                                     <button type="button" className={`map-mini${soloId === surface.id ? ' is-on' : ''}`}
-                                        title="Show this one alone"
-                                        onClick={() => setSoloId(soloId === surface.id ? null : surface.id)}>Solo</button>
+                                        title="Show this one alone on this screen. The projector still shows every surface."
+                                        onClick={() => setSoloId(soloId === surface.id ? null : surface.id)}>Solo · screen</button>
                                     <button type="button" className="map-mini" title="Later in the paint order"
                                         onClick={() => moveSurface(surface.id, 1)} disabled={index === surfaces.length - 1}>Front</button>
                                 </div>
