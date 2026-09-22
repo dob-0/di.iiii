@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
     APP_PAGE_PREFERENCES,
+    APP_PAGE_SCAN,
     APP_PAGE_SPACE_CONTENTS,
+    buildScanPath,
     buildSpaceContentsPath,
     buildPreferencesPath,
     buildPublicProjectPath,
@@ -262,5 +264,43 @@ describe('the sign-in address', () => {
 
     it('is reserved, so no space or project can shadow it', () => {
         expect(isReservedAppSegment('login')).toBe(true)
+    })
+})
+
+// `/{space}/scan` — the phone collecting a place (src/scan/ScanSurface.jsx).
+// One shape, no list, no default space: a scan is always of ONE place, and the
+// place is the space.
+describe('the scan address', () => {
+    const at = (pathname) => new URL(`https://example.com${pathname}`)
+
+    it('parses /{space}/scan as the capture surface for that space', () => {
+        expect(getAppLocationState(at('/moxir/scan'))).toEqual({
+            page: APP_PAGE_SCAN,
+            spaceId: 'moxir'
+        })
+    })
+
+    it('builds the address it parses', () => {
+        expect(buildScanPath('moxir')).toBe('/moxir/scan')
+        expect(getAppLocationState(at(buildScanPath('br_id_ge'))).page).toBe(APP_PAGE_SCAN)
+    })
+
+    // Without the reservation the address parses as a project slug called
+    // "scan" and heals to the published page — the phone would open the work
+    // instead of the camera.
+    it('reserves the word so no space or project can shadow the camera', () => {
+        expect(isReservedAppSegment('scan')).toBe(true)
+        expect(getAppLocationState(at('/moxir/scan')).projectSlugSegment).toBeUndefined()
+    })
+
+    // A lane is not a space, the same rule /{space}/projects lives under.
+    it('never reads a lane word as a space', () => {
+        expect(getAppLocationState(at('/raw/scan')).page).not.toBe(APP_PAGE_SCAN)
+        expect(getAppLocationState(at('/studio/scan')).page).not.toBe(APP_PAGE_SCAN)
+    })
+
+    it('claims the two-segment shape only', () => {
+        expect(getAppLocationState(at('/moxir/scan/extra')).page).not.toBe(APP_PAGE_SCAN)
+        expect(getAppLocationState(at('/scan')).page).not.toBe(APP_PAGE_SCAN)
     })
 })
