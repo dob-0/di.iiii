@@ -34,6 +34,7 @@ import {
     IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, walkFiles, fmtBytes
 } from './common.mjs'
 import { readPlaceRecord } from './fit-lib.mjs'
+import { sourceWall } from '../../src/scan/sourceWall.js'
 
 const args = parseArgs()
 
@@ -274,54 +275,13 @@ export const arrivalShot = (place) => {
 }
 
 // ── the footage ───────────────────────────────────────────────────────────────
-// A plain wall of what the room was made of: rows, left to right, at eye
-// height and above. Not a gallery — a working wall you can stand in front of.
-export const sourceWall = (assets, options = {}) => {
-    const perRow = options.perRow || 8
-    // An image or video entity in di.iiii is a plane 3 units tall lying FLAT
-    // ON THE GROUND (rotation-x = -PI/2 inside ImageObject/VideoObject), and
-    // its width follows the picture's own shape. So a wall of them needs two
-    // things this got wrong the first time: a quarter turn about X to stand
-    // each one up, and a scale relative to that built-in height of 3. Left
-    // flat they are invisible from standing height — a room with a horizon
-    // and nothing in it.
-    const tile = options.tile || 1.1          // how tall each one hangs, in metres
-    const gap = options.gap || 0.3
-    const scale = tile / 3
-    // Columns are spaced for a landscape photograph, which is what a phone
-    // hands over: wider than it is tall, about 3:2.
-    const columnStep = tile * 1.7 + gap
-    const rowStep = tile + gap
-    const rows = Math.ceil(assets.length / perRow)
-    const width = Math.min(assets.length, perRow) * columnStep
-    return assets.map((asset, index) => {
-        const row = Math.floor(index / perRow)
-        const column = index % perRow
-        const isVideo = String(asset.mimeType || '').startsWith('video')
-        return {
-            id: `source-${index + 1}`,
-            type: isVideo ? 'video' : 'image',
-            name: asset.name,
-            components: {
-                transform: {
-                    position: [
-                        -width / 2 + columnStep / 2 + column * columnStep,
-                        1.6 + (rows - 1 - row) * rowStep,
-                        -(options.distance || 3)
-                    ],
-                    rotation: [Math.PI / 2, 0, 0],
-                    scale: [scale, scale, scale]
-                },
-                media: {
-                    assetId: asset.id,
-                    fit: 'contain',
-                    ...(isVideo ? { autoplay: false, loop: true, muted: true, spatial: false } : {})
-                },
-                animation: { mode: 'static', speed: 1, amplitude: 1 }
-            }
-        }
-    })
-}
+// The wall's geometry moved to src/scan/sourceWall.js on 2026-09-22, when a
+// phone at /{space}/scan became the second thing that hangs pictures on it. Two
+// copies would drift, and a wall that hangs one way when this script builds it
+// and another way when a phone does is two rooms. Re-exported here because
+// import.test.js and anything else that already knew this name should keep
+// working.
+export { sourceWall, sourceWallEntity, sourceWallSlot } from '../../src/scan/sourceWall.js'
 
 const main = async () => {
     const work = args.work ? path.resolve(String(args.work)) : null
