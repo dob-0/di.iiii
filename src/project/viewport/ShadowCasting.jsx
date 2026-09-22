@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { dressForShadows } from './shadowCasting.js'
+import { dressForShadows, undressShadows } from './shadowCasting.js'
 
 // The scene-side half of `renderSettings.shadowCasting`, shared by the two
 // surfaces that render the same document — the arrival view (StudioViewport)
@@ -22,7 +22,14 @@ export default function ShadowCasting({ enabled = false, mapSize = 1024 }) {
         dressForShadows(scene, mapSize)
     }, [enabled, mapSize, scene])
 
-    useEffect(() => { dress() }, [dress])
+    // Dress while it is on, and put the scene back the moment it goes off or
+    // this surface goes away. The cleanup is the switch's other half: the flags
+    // outlive the setting otherwise, and shadows kept rendering until a reload.
+    useEffect(() => {
+        if (!enabled || !scene) return undefined
+        dress()
+        return () => { undressShadows(scene) }
+    }, [dress, enabled, scene])
 
     useFrame(() => {
         if (!enabled) return

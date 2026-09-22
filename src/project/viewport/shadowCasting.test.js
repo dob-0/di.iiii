@@ -5,7 +5,8 @@ import {
     dressForShadows,
     dressLightForShadows,
     resolveShadowCasting,
-    shadowRoleOf
+    shadowRoleOf,
+    undressShadows
 } from './shadowCasting.js'
 
 const spotLight = (distance = 20) => ({
@@ -119,5 +120,50 @@ describe('shadows from the room', () => {
         expect(shadowRoleOf(null)).toBe('skip')
         expect(shadowRoleOf({})).toBe('skip')
         expect(dressForShadows({})).toEqual({ meshes: 0, lights: 0 })
+    })
+})
+
+// THE SWITCH GOES BOTH WAYS. Turning "Lamps throw shadows" off used to do
+// nothing until the page reloaded: the flags stayed stamped on, and
+// gl.shadowMap.enabled tracks the older `shadows` field and is true anyway.
+describe('undressing', () => {
+    const aMesh = (castShadow = false) => ({
+        isMesh: true,
+        castShadow,
+        receiveShadow: false,
+        material: { transparent: false, depthWrite: true },
+        userData: {},
+        children: []
+    })
+
+    it('puts a mesh back the way it found it', () => {
+        const mesh = aMesh()
+        const root = { children: [mesh], userData: {} }
+        dressForShadows(root, 1024)
+        expect(mesh.castShadow).toBe(true)
+        undressShadows(root)
+        expect(mesh.castShadow).toBe(false)
+        expect(mesh.receiveShadow).toBe(false)
+    })
+
+    // A model marks its own meshes when the file arrives, and that is not ours
+    // to clear: a room switched on and off must not end up darker than it began.
+    it('leaves a flag somebody else set alone', () => {
+        const mesh = aMesh(true)
+        const root = { children: [mesh], userData: {} }
+        dressForShadows(root, 1024)
+        undressShadows(root)
+        expect(mesh.castShadow, 'the model set this, not us').toBe(true)
+    })
+
+    // Re-dressing runs twice a second; the FIRST answer is the true one.
+    it('does not let re-dressing overwrite what it remembered', () => {
+        const mesh = aMesh(false)
+        const root = { children: [mesh], userData: {} }
+        dressForShadows(root, 1024)
+        dressForShadows(root, 1024)
+        dressForShadows(root, 1024)
+        undressShadows(root)
+        expect(mesh.castShadow).toBe(false)
     })
 })

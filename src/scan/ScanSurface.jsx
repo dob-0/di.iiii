@@ -496,8 +496,14 @@ export default function ScanSurface({ spaceId }) {
             const started = await requestPlaceBuild(placeSpaceId, { scaleEdge: progress.measuredMetres })
             setBuild(started)
         } catch (error) {
-            setNote(error?.status === 404
-                ? 'The copy is built on the studio machine. The footage is safe here; open this space on the machine that runs the pipeline and press this again.'
+            // 404 — this server does not build. 403 — it does, but only for a
+            // browser on the machine itself, which a PHONE never is: the whole
+            // surface is a phone surface, so without this the most likely
+            // refusal of all printed a developer's sentence about loopback.
+            // Both are the same news to the person holding it — the walk is
+            // safe, the room gets made elsewhere — and neither is a fault.
+            setNote(error?.status === 404 || error?.status === 403
+                ? 'The copy is built on the studio machine. The footage is safe here — open this space on the machine that runs the pipeline and press this again.'
                 : `Could not start the build: ${error?.message || 'unknown'}`)
         } finally {
             setBuilding(false)

@@ -114,3 +114,17 @@ describe('aiming a spot by pan and tilt', () => {
         close(spotAimDirection(rotationFromPanTilt({ pan: 0, tilt: -40 })), [0, -1, 0], 'below the deck')
     })
 })
+
+// HALF A TURN READS BACK AS HALF A TURN. rotationFromPanTilt's sin() hands back
+// a negative zero at exactly 180, and atan2(-0, …) is -pi — so the slider jumped
+// from one end of its travel to the other the moment the value was written.
+describe('pan at half a turn', () => {
+    it('reads 180 back as 180, not -180', () => {
+        expect(panTiltFromRotation(rotationFromPanTilt({ pan: 180, tilt: 90 })).pan).toBe(180)
+    })
+
+    it('still reads the two sides of it apart', () => {
+        expect(panTiltFromRotation(rotationFromPanTilt({ pan: 179, tilt: 90 })).pan).toBe(179)
+        expect(panTiltFromRotation(rotationFromPanTilt({ pan: -179, tilt: 90 })).pan).toBe(-179)
+    })
+})

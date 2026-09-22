@@ -7,7 +7,11 @@
 // BASE / OUT / SHOTS come from the environment; SHOTS is [[name, query], ...].
 import { chromium } from 'playwright'
 import { mkdirSync } from 'node:fs'
-const OUT = process.env.OUT || '/home/dob/Downloads/lights-on-a-place'
+import os from 'node:os'
+import path from 'node:path'
+// One person's home directory is not a default. `os.homedir()` is the same
+// path on the machine this was written on and a real one everywhere else.
+const OUT = process.env.OUT || path.join(os.homedir(), 'Downloads', 'lights-on-a-place')
 mkdirSync(OUT, { recursive: true })
 const base = process.env.BASE || 'http://localhost:5217'
 const shots = JSON.parse(process.env.SHOTS)

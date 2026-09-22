@@ -144,7 +144,11 @@ export const panTiltFromRotation = (rotation) => {
     // report -- every pan gives the same beam. 0 rather than a number made up
     // out of float dust.
     const flat = Math.sin(tilt)
-    const pan = Math.abs(flat) < 1e-9 ? 0 : Math.atan2(-x, -z)
+    // atan2 on a NEGATIVE ZERO x returns -pi, so a lamp aimed at pan 180 read
+    // back as -180 and the slider jumped from one end of its travel to the
+    // other after a write. Same beam either way; `+ 0` normalises the -0 that
+    // rotationFromPanTilt's sin() hands back at exactly half a turn.
+    const pan = Math.abs(flat) < 1e-9 ? 0 : Math.atan2(-x + 0, -z)
     return { pan: tidy(pan * RAD_TO_DEG), tilt: tidy(tilt * RAD_TO_DEG) }
 }
 

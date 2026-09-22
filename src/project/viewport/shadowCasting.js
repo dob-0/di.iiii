@@ -69,6 +69,23 @@ export const shadowRoleOf = (object) => {
 const SHADOW_BIAS = -0.0008
 const SHADOW_NORMAL_BIAS = 0.02
 
+// What the object said before this feature touched it. Undressing restores that
+// exact value rather than writing `false`, because `castShadow` is not ours
+// alone: ModelObject marks its own meshes when a file arrives, and a room that
+// had shadows switched on and off again must look like it did before, not
+// darker. Stored once — the first dressing wins, so re-dressing twice a second
+// cannot overwrite the original answer with our own.
+const SHADOW_MEMORY = '__diShadowBefore'
+
+const rememberShadowFlags = (object) => {
+    if (!object || object.userData?.[SHADOW_MEMORY]) return
+    if (!object.userData) object.userData = {}
+    object.userData[SHADOW_MEMORY] = {
+        cast: object.castShadow === true,
+        receive: object.receiveShadow === true
+    }
+}
+
 /**
  * A lamp that throws a shadow.
  *
@@ -81,6 +98,7 @@ const SHADOW_NORMAL_BIAS = 0.02
  */
 export const dressLightForShadows = (light, mapSize) => {
     if (!light?.isSpotLight) return false
+    rememberShadowFlags(light)
     light.castShadow = true
     const shadow = light.shadow
     if (shadow) {
@@ -122,11 +140,44 @@ export const dressForShadows = (root, mapSize = defaultShadowCasting.mapSize) =>
         const role = shadowRoleOf(object)
         if (role === 'skip-subtree') return
         if (role === 'wear') {
+            rememberShadowFlags(object)
             object.castShadow = true
             object.receiveShadow = true
             meshes += 1
         }
         if (dressLightForShadows(object, mapSize)) lights += 1
+        const children = object?.children
+        if (Array.isArray(children)) children.forEach(walk)
+    }
+    walk(root)
+    return { meshes, lights }
+}
+
+/**
+ * Put the scene back the way it was before `dressForShadows` touched it.
+ *
+ * Without this, "Lamps throw shadows" was a switch that only went one way: the
+ * flags stayed stamped on every lamp and mesh, `gl.shadowMap.enabled` tracks the
+ * older `shadows` field and is true anyway, and the shadows went on rendering
+ * until the page was reloaded — which reads as the switch being broken.
+ *
+ * Restores the remembered value rather than writing `false`, so a model that
+ * marked its own meshes keeps its own answer.
+ *
+ * @returns {{ meshes: number, lights: number }} for tests
+ */
+export const undressShadows = (root) => {
+    let meshes = 0
+    let lights = 0
+    const walk = (object) => {
+        const before = object?.userData?.[SHADOW_MEMORY]
+        if (before) {
+            object.castShadow = before.cast
+            object.receiveShadow = before.receive
+            delete object.userData[SHADOW_MEMORY]
+            if (object.isLight) lights += 1
+            else meshes += 1
+        }
         const children = object?.children
         if (Array.isArray(children)) children.forEach(walk)
     }

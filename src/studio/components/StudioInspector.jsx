@@ -194,6 +194,16 @@ const groupVectorFields = (fields = []) => {
     return groups
 }
 
+// A slider prints its value to the precision it can actually be dragged to.
+// A flat two decimals was coarser than the step on the fields with the finest
+// ones — Bevel Thickness and Bevel Size step by 0.005, so dragging 0.005 to
+// 0.010 printed 0.01 both times and 0.025 printed as 0.03. The stored number
+// was always right; only the one a person read was rounded past its own step.
+const readAtStep = (value, step) => {
+    const decimals = String(step ?? 0.1).split('.')[1]?.length ?? 0
+    return Number(value.toFixed(Math.min(decimals, 6)))
+}
+
 function InspSlider({ field, value, onChange }) {
     // `fallback` is what the RENDERER does with an absent value (haze, say),
     // so an untouched slider shows the room as it actually looks rather than
@@ -204,7 +214,7 @@ function InspSlider({ field, value, onChange }) {
         <div className="insp-field">
             <div className="insp-slider-header">
                 <label className="insp-label">{field.label}</label>
-                <span className="insp-slider-value">{Math.round(num * 100) / 100}{field.unit || ''}</span>
+                <span className="insp-slider-value">{readAtStep(num, field.step)}{field.unit || ''}</span>
             </div>
             <input
                 type="range"
@@ -401,7 +411,7 @@ function InspField({ field, value, assetOptions = [], spaceOptions = [], surface
     )
 }
 
-function InspSection({ section, sectionValue, assetOptions, spaceOptions, surfaceOptions, lightingMirror, onSectionChange }) {
+function InspSection({ section, sectionValue, assetOptions, spaceOptions, surfaceOptions, lightingMirror, onSectionChange, identity = '' }) {
     const [open, setOpen] = useState(true)
     const siblingSpaceId = readNestedValue(sectionValue, ['spaceId']) || null
     return (
@@ -433,7 +443,7 @@ function InspSection({ section, sectionValue, assetOptions, spaceOptions, surfac
                         </div>
                     ) : group.field.type === 'modelClips' ? (
                         <ModelClipField
-                            key={`${section.id}-${group.field.label}`}
+                            key={`${identity}-${section.id}-${group.field.label}`}
                             label={group.field.label}
                             assetId={readNestedValue(sectionValue, ['assetId']) || null}
                             value={readNestedValue(sectionValue, group.field.path)}
@@ -462,7 +472,7 @@ function InspSection({ section, sectionValue, assetOptions, spaceOptions, surfac
                         </div>
                     ) : (
                         <InspField
-                            key={`${section.id}-${group.field.label}`}
+                            key={`${identity}-${section.id}-${group.field.label}`}
                             field={group.field}
                             value={readNestedValue(sectionValue, group.field.path)}
                             assetOptions={assetOptions}
@@ -484,6 +494,9 @@ function InspSection({ section, sectionValue, assetOptions, spaceOptions, surfac
 
 export default function StudioInspector({
     title,
+    // The selected entity's id, when there is one. Used only to key fields that
+    // hold state of their own, so that state cannot outlive the selection.
+    identity = '',
     subtitle = '',
     sections = [],
     assetOptions = [],
@@ -515,6 +528,7 @@ export default function StudioInspector({
                 const sectionValue = values[section.id] || values[section.component] || {}
                 return (
                     <InspSection
+                        identity={identity}
                         key={section.id}
                         section={section}
                         sectionValue={sectionValue}

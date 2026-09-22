@@ -316,12 +316,23 @@ function registerPlaceRoutes(router, {
         // absent unless somebody added it.
         return res.status(501).json({ error: 'The place pipeline is not part of this build.' })
       }
+      // WHICH di.iiii THE ROOM COMES BACK TO. Without this, import.mjs falls
+      // back to its own hard-coded DEFAULT_API — https://local.thedi.studio —
+      // and the hour of reconstruction is written into whatever answers that
+      // name, which on a dev checkout on another port is somebody else's tier:
+      // the finished hall lands there, and the PATCH that publishes it can
+      // repoint an existing space's front door at a hall built from footage
+      // that tier never saw. The request itself is the only thing that knows
+      // which server this is, so it is asked. On an install serving TLS on 443
+      // this resolves to exactly the old default, which is why it was invisible.
+      const selfApi = `${req.protocol}://${req.get('host')}/serverXR`
       const args = [
         script,
         '--from', from,
         '--name', spaceId,
         '--work', path.join(dir, 'work'),
         '--gpu', gpu,
+        '--api', selfApi,
         // The footage is ALREADY in the space — the phone hung it there as it
         // walked. Without this the importer would hang a second copy of every
         // picture on the same wall.
@@ -343,7 +354,13 @@ function registerPlaceRoutes(router, {
         // server must not kill an hour of reconstruction.
         detached: true,
         stdio: ['ignore', logFd.fd, logFd.fd],
-        env: { ...process.env }
+        // …and the token that belongs to THIS server, for the same reason the
+        // address does. scripts/place/api.mjs readToken otherwise prefers
+        // ~/.di/di.env — the installed tier's admin token — over the checkout
+        // it is running out of, so a dev checkout would have authenticated as
+        // the install. Named explicitly, it can only ever talk to the server
+        // that started it.
+        env: { ...process.env, DI_API_TOKEN: process.env.ADMIN_API_TOKEN || process.env.DI_API_TOKEN || '' }
       })
       child.unref()
       await logFd.close()

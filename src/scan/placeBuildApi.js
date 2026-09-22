@@ -32,7 +32,12 @@ export const readPlaceBuild = async (spaceId) => {
     try {
         return await apiFetch(`/api/spaces/${spaceId}/place/build`)
     } catch (error) {
-        if (Number(error?.status) === 404) return null
+        // 404: no such route here. 403: the route exists but is loopback-only
+        // (DI_ALLOW_LAN_DEVICES unset), which is the ORDINARY answer for a phone
+        // on the wifi — this surface has no other kind of caller. Both mean "not
+        // this device's job", and neither is worth throwing a poll over.
+        const status = Number(error?.status)
+        if (status === 404 || status === 403) return null
         throw error
     }
 }
