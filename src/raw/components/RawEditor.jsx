@@ -2387,7 +2387,7 @@ export default function RawEditor({
                     di.iiii), and a wordmark that links home is the one exit
                     that adds no furniture. Same resting look, quiet hover. */}
                 <a
-                    className="raw-surface-wordmark"
+                    className={`raw-surface-wordmark${showBar ? ' is-under-sbar' : ''}`}
                     href="/"
                     aria-label="di.iiii — home"
                     onClick={(e) => { e.preventDefault(); navigateToRawPath('/') }}

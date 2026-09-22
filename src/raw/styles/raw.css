@@ -5026,6 +5026,13 @@
         background: var(--di-scrim);
         color: rgba(255, 255, 255, 0.44);
     }
+
+    /* Under the one bar its corner is the bar's own "di.iiii", the same way
+       home. It was never seen there anyway: the topbar (z 1400) covered it
+       until the topbar moved down to make room for the bar. */
+    .raw-surface-wordmark.is-under-sbar {
+        display: none;
+    }
 }
 
 /* Dropping a file in. The veil is the only thing that tells someone mid-drag
