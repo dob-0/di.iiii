@@ -172,7 +172,11 @@ describe('the measured wall', () => {
         const entity = measuredWallEntity(8.3)
         expect(entity.type).toBe('text')
         expect(entity.components.text.value).toBe('wall · 8.30 m')
-        expect(entity.components.text.billboard).toBe(true)
+        // Standing on the wall, the same quarter turn the pictures take — a text
+        // object lies flat on the ground exactly as an image does, and billboard
+        // did not stand it up in the published view.
+        expect(entity.components.transform.rotation).toEqual([Math.PI / 2, 0, 0])
+        expect(entity.components.text.billboard).toBe(false)
         expect(entity.components.transform.position[0]).toBe(sourceWallSlot(0).position[0])
         expect(entity.components.transform.position[1]).toBeLessThan(SOURCE_WALL_DEFAULTS.baseHeight)
         expect(entity.components.transform.position[1]).toBeGreaterThan(0)

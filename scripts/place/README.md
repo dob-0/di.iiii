@@ -113,6 +113,25 @@ What ends up in the working folder:
 | `import.json` | where it went and the addresses to walk |
 | `pulled/` | only with `--from-space`: the footage as it came down off the API |
 
+## Looking at the scanning page
+
+Three defects in `/{space}/scan` were found only by driving it, and none of them
+would have failed a test. So there is a driver:
+
+```bash
+# your own dev stack first — NEVER 4000, 443 or 80
+PORT=5150 DI_LOCAL=1 CLIENT_DIR=./dist DATA_ROOT=/tmp/scan node serverXR/src/index.js
+
+node scripts/place/scan-drive.mjs my-proof --base http://127.0.0.1:5150
+```
+
+It makes a space, opens the camera on it with a synthetic stream that has real
+edges in it, records two pieces, takes three photographs, measures a wall, and
+walks the footage room — at 390x844 and 844x390, `deviceScaleFactor: 3`, both
+orientations — leaving numbered screenshots in `~/Downloads/place-scan/`.
+
+**Open them.** A screenshot nobody looked at is not verification.
+
 ## No footage yet? Make a hall
 
 ```bash

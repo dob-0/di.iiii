@@ -172,10 +172,16 @@ export const measuredWallEntity = (metres, options = {}) => {
         components: {
             transform: {
                 position: [firstSlot.position[0], baseHeight - tile * 0.75, -distance],
-                rotation: [0, 0, 0],
+                // The same quarter turn the pictures take, and for the same
+                // reason: a text object lies FLAT ON THE GROUND like an image
+                // does, and `billboard: true` did not stand it up in the
+                // published view — seen 2026-09-22, the number read as a blue
+                // smear on the floor. A caption on a wall is on the wall anyway;
+                // it should not spin to follow somebody round the room.
+                rotation: [Math.PI / 2, 0, 0],
                 scale: [1, 1, 1]
             },
-            text: { value: label, variant: '2d', billboard: true },
+            text: { value: label, variant: '2d', billboard: false },
             animation: { mode: 'static', speed: 1, amplitude: 1 }
         }
     }
