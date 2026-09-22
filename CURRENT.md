@@ -13,12 +13,12 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- **Stage** — cues fire from Studio, not only from the mapper; `di stage` makes the venue box a command; displays as data (which screen shows which mapping); the real lighting rig mirrored read-only into the Studio room; a lamp that knows which lamp it is.
-- **Projection** — one door and one name; a new surface starts on a dim warm name card, not a white grid; the desk is usable on a phone; a screen in the 3D room shows the surface's real picture.
-- **Sources** — NDI in natively (finder, still, MJPEG, server-side); an NDI source is a surface, and machines say which ones they see; a brought-in video/image retries itself instead of staying dead.
-- **Spaces** — move a project between spaces; the collision is named, not just the 409; a follow carries its projects' files, not only their ops.
-- **Picture** — five generators, and an engine clock.
-- **Fixed** — every spot light was aimed at (0,0,0) and rotation did nothing; the run skill killed the installed di.iiii (third time) and pointed agents at a live install's port; the flake that cried wolf; the rig session's twelve branches landed as one batch.
+- Landing 21 notes so the dev tier can deploy again
+- lights on a place: a lamp you can aim, a beam you can see, a room that throws shadows
+- What landed
+- di.iiii can be a picture source, not only a screen
+- Scanning a place from the phone, into the space itself
+- a lamp can be aimed, and a place can be scanned: #530, #531 and #533 land together
 
 Full detail: `PROGRESS.md`.
 
