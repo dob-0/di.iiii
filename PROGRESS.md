@@ -5,6 +5,369 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## Landing 21 notes so the dev tier can deploy again
+
+The dev deploy had been failing since 2026-09-20 — not on code. `deploy-vps-dev.yml`'s
+`land` job folds the pending session notes in its own workspace, that fold rewrites
+CURRENT.md's "Last session" with one bullet per note, 21 notes pushed the file to 62
+lines against the 50-line limit, `docs:ai:check` failed, and `build-and-push` + `deploy`
+were **skipped**. A skipped job is not a red one, so three runs in a row read as
+"failure" on the test job while the tier quietly served the previous build.
+
+Done here:
+- folded the 21 notes into PROGRESS.md and CURRENT.md (the same
+  `session-land-lib.mjs` functions `npm run land` calls, without its worktree sweep —
+  other sessions hold worktrees in this tree)
+- rewrote "Last session" as six grouped lines instead of 21 bullets: 46 lines, under
+  the limit with room for the next fold
+- fixed three lines that still named `staging.di-studio.xyz`, retired 2026-09-16 —
+  the lanes line, the fold note, and the `git push origin dev` comment now say the
+  dev tier
+
+This unblocks the dev deploy and clears the same docs gate on a dev → main promotion,
+which is what it was opened for.
+
+## 2026-09-21 — lights on a place: a lamp you can aim, a beam you can see, a room that throws shadows
+
+A spot light in di.iiii could be hung and coloured, and that was all. You could not
+point it in the language a lamp is pointed in, you could not see where its light was
+going until you walked to the wall it hit, and nothing in the room ever cast a shadow.
+Three steps, each visible on its own, none of them changing a room that does not ask.
+
+**Aim: pan and tilt.** A lighting person points a lamp with two numbers — tilt, how far
+off straight-down, and pan, which way round the vertical — and neither is a raw euler
+angle. Both now sit in a spot light's Transform section, in degrees, in both inspectors
+(Studio and Raw), and both read and write the SAME `components.transform.rotation` the
+gizmo writes. No new field, no new op, nothing for an old document to be missing; a lamp
+aimed by dragging reads back as numbers and a lamp aimed by the numbers moves under the
+gizmo. The conversion is written once, in `src/project/viewport/spotLightAim.js`, beside
+the −Y forward convention it depends on. The inspector remembers the pan while a lamp
+hangs dead down, where pan has no meaning at all, so an aim can be set the way a rig is
+actually aimed: round first, then tilt into the room.
+
+Found on the way and worth keeping: **rotation.y is inert for a spot ONLY while roll is
+zero.** The note from the 2026-09-20 target fix says yaw cannot move a spot's beam,
+because the forward vector IS the Y axis — true for yaw alone, and false the moment
+`rotation.z` has tipped that vector off the axis, after which Ry pans it round the
+vertical like a real pan wheel (`spotAimDirection([0,1.2,0.8])` and
+`spotAimDirection([0,0,0.8])` are two different beams at the same height). So pan/tilt is
+the canonical spelling of an aim, and it spells yaw 0; an authored yaw left in place
+would put the beam somewhere the pan number does not say.
+
+**The beam.** `components.beam = { visible, haze }` — absent in every room published
+before this, and absent means no beam, so nothing already out there changes. Drawn by the
+shared `SpotLightObject`, so the Studio and a published room cannot drift: a translucent
+cone as long as the lamp's reach and as wide as its angle, additively blended, no depth
+write, no post-processing (the EffectComposer goes black in WebXR, so volumetrics were
+never on the table). It fades along the throw through vertex colours rather than standing
+in the room as one flat plastic shape — the first screenshot of it was exactly that, two
+solid cones, and the opacity came down with the fade going in. The colour is the lamp's,
+which means a lamp joined to a desk fixture beams in the colour the desk is emitting,
+live, without a line of new code: the live value is substituted upstream in
+StudioViewport and the beam only ever reads the colour it is handed.
+
+The cone is drawn as far as the lamp REACHES, so a lamp with a 15-metre reach hung in a
+2-metre room draws its cone through the floor. That is authoring, not a bug — set the
+lamp's Distance to where the light lands — and the wiki says so.
+
+**Shadows from the room.** `renderSettings.shadowCasting = { enabled, mapSize }`, off by
+default, switched under Project → Render where the other render settings already live.
+Deliberately NOT the existing `renderSettings.shadows`: that is the renderer-level switch
+(`gl.shadowMap.enabled`), it has defaulted to TRUE since the schema was written, and
+nothing ever cast into the map it enabled — every surface paid for a shadow map and drew
+a flat stage. Folding the new meaning into it would have meant either changing a shipped
+field's type under every saved document or turning shadows on in every published space at
+once, and a shadow pass over a scanned venue is not free.
+
+Dressing the scene is a WALK (`shadowCasting.js`), not a prop threaded through fifteen
+object components and two entity switches — because the meshes that most need a shadow
+arrive from a file long after React rendered the entity, and only a walk catches those.
+It only ever switches flags on, so a room with shadows off is untouched; it skips the
+reference grid and the gizmo (furniture, not scenery — a grid that cast would drop a
+black square under the whole room) and the beam cone itself (light in the air, not
+matter). Spot lights get `castShadow` and a shadow camera the size of their own throw.
+A directional light needs a frustum sized to the room instead and was left alone: its own
+change.
+
+**Fixed on the way — every spot light emitted from a metre behind where it was hung.**
+three.js's `SpotLight` constructor does `this.position.copy(Object3D.DEFAULT_UP)`, so an
+unpositioned one sits a metre along its parent's local +Y, which for a tilted lamp is a
+metre backwards up its own beam. The aim was never wrong (direction is target minus
+position and both moved together), which is why it survived the target fix; the lamp's
+place, its throw and its falloff were. It surfaced because the editor's marker cone,
+drawn at the TRUE entity position, landed inside the lamp's own shadow frustum and
+printed a black octagon on the wall it was lighting. `SpotLightObject` now pins the light
+at `[0,0,0]`, and `spotLightAim.test.js` holds three.js itself to the quirk so a library
+release that changes it is noticed here rather than in a room.
+
+**Looked at, not asserted.** A harness room (floor, three walls, the red post at the
+origin, a pillar) rendered through the real `EntityContent`, headless on SwiftShader —
+beams off, beams on, shadows on, and the photogrammetry scan lit by two lamps — plus the
+same room seeded onto a local stack and driven through the real Studio on desktop and on
+a phone, and the same document walked in `LiveProjectScene`. Screenshots in
+`~/Downloads/lights-on-a-place/`.
+
+The harness is kept this time, in `scripts/lights-harness/` (page, shooter, README), so
+the next lighting change is one command from a picture instead of an afternoon of
+scaffolding. It lives in `scripts/` and not in `src/` because the repo would not have it
+there, and said so out loud: the first version sat at `src/lightsharness/` and turned two
+guards red — `src/works/boundary.test.js` (the harness imported `scan.glb`, which is a
+WORK, and no platform file may) and `useLightingMirror.test.jsx` (no top-level `src/`
+entry may start with "light", or Vite's `/light` dev proxy swallows it). Both guards were
+written for other reasons and both did their job on a stranger. Serve it with
+`npx vite scripts/lights-harness --port 5218` — the root is a positional argument in this
+Vite, not `--root`.
+
+**Parked for the owner.** (1) The default haze is 0.4 and the cone's flat opacity peaks at
+0.28 — both were tuned by looking at a dark room, and a bright space may want them
+higher. (2) A lamp joined to a desk fixture could take its beam ANGLE from the fixture's
+profile; it cannot today, because the mirror carries only id/index/name/x/y/colour/level
+and the desk's profiles hold no beam angle at all (`src/rigMirror/useLightingMirror.js`,
+`serverXR/src/lighting/`). It would mean carrying the Open Fixture Library physical block
+through the patch — worth doing, not worth guessing at. (3) A beam stops at the lamp's
+reach, not at the surface it hits; clipping it to the room would need either a depth
+trick or a raycast per lamp per frame.
+
+# feat/ndi-get — the NDI runtime, fetched
+
+The NDI lane (#529) works, and every machine that wants it has to find the
+runtime by hand. On Arch that is an AUR package and a root password; on a
+borrowed laptop at a venue it is neither. `di ndi get` fetches it from Vizrt
+into `~/.di/ndi/lib/` and points `DI_NDI_LIB` at it — no admin rights on any
+of the three platforms, because `library.js` already tried that variable first.
+
+Fetched, never bundled: the licence position in `docs/architecture/NDI.md` is
+unchanged. The bytes come from Vizrt; this only does the clicking.
+
+## What landed
+
+- `scripts/di/ndi.mjs` — the fetch, per platform, with a receipt.
+- `scripts/di/ndi.test.js` — 20 tests; the magic-number guard and the careless
+  `remove` were both mutated and watched go red.
+- `di ndi get | status | remove`, a `doctor` line, help, and the runtime added
+  to what `uninstall` removes.
+- `docs/deploy/DI_CLI.md`, `docs/architecture/NDI.md`.
+
+## Seen on real hardware, not inferred
+
+- aylmo, cold: 65.5 s end to end; `libndi.so.6` 27,287,968 bytes; loaded
+  through serverXR's own `library.js` → `NDI SDK LINUX … 6.3.2.0`, send
+  binding present.
+- The real 225 MB macOS `.pkg` unpacked on Linux in 2.3 s → a 29,805,920-byte
+  universal Mach-O, accepted as darwin and correctly refused as linux.
+- The Linux tarball's sha256 matched Arch's `ndi-sdk` PKGBUILD exactly.
+- The Windows `NDI 6 Runtime.exe` is Inno Setup 6.1 (read from the real file).
+
+## The gap, named
+
+The Windows unattended install has NOT been run on Windows — the switches are
+Inno's documented ones, which is not the same as observed. The fallback (an
+already-installed runtime found via `NDI_RUNTIME_DIR_V6`) is tested; the silent
+install is not. Next machine that can run it should.
+
+## 2026-09-21 — di.iiii can be a picture source, not only a screen
+
+The NDI lane received and never sent. The koffi binding had `sendCreate`/`sendVideo`
+from the day it was written, but the only thing that ever called them was
+`devSender.js`, a CLI test pattern — there was no way for a picture di.iiii drew to
+leave the machine. This branch gives it one, from the operator a person patches down
+to the bytes on the wire.
+
+**What it is for, and what it is not for.** On a di.iiii rig the patch already travels:
+the document replicates and the machine at the wall runs the same operators and draws
+them natively, at full quality, with no encoding anywhere. This lane is for the machine
+that *cannot* run the patch, and for the programs that are not di.iiii — Resolume, OBS,
+a media server, somebody else's rig. It makes di.iiii a source in anyone's setup.
+
+- **A "Send Out" operator** (`top.send`) ends a picture chain and names it. No name, no
+  sending — the empty default costs exactly what `top.out` costs. It is called Send Out
+  and not "NDI Out" on purpose: naming a feature after NDI is the one thing the
+  trademark terms do not allow, so the wire protocol is named beside the box instead,
+  with the Vizrt line and the ndi.video link the licence requires.
+- **A text parameter** — the first one in the TOP vocabulary. Every other parameter is a
+  number the shader reads as `p_<name>`; a text one is metadata, and it is safe because
+  `topEngine.js` already skips any parameter the shader does not declare a uniform for.
+- **`pictureOut.js`** posts one JPEG at a time to the machine's own serverXR. At most one
+  request is in flight per output and frames that arrive meanwhile are dropped, so the
+  response is the throttle: a slow machine sends fewer frames rather than drifting
+  further behind. Only a node that runs on THIS machine sends from it, so two machines
+  on a rig never both broadcast the same name.
+- **`sendManager.js` + `sendWorker.js`** mirror the receive lane's manager and child,
+  copied rather than shared — the two lanes drift for good reasons and a common base
+  would make every change to one a risk to the other. The structural difference is that
+  an output has one publisher and no subscribers, so there is no ref-counting: it is born
+  from its first frame and closes after five seconds of silence, because a page that is
+  closed simply stops posting and no browser has a close beacon worth trusting.
+
+### What was measured, not assumed
+
+On `win` (NDI 6.3.2.0), the send lane broadcasting while the same machine's installed
+di.iiii received it back through the real runtime: 631 frames, 0 dropped, 0 decode
+errors, JPEG decode 3.23 ms a frame, `NDIlib_send_send_video_v2` 0.59 ms, the picture
+pulled back as an 8 691-byte JPEG, and the viewer count reading 2 with a receiver
+attached and 0 either side of it. **The send is free; the JPEG decode is the whole
+cost** — the mirror image of the receive lane, where the encode was.
+
+The same session closed two things the NDI doc had carried as never-seen since it was
+written: a live NDI picture through di.iiii at all (200 `image/jpeg`, 41 KB), and
+whether the multipart stream repeats (77 parts in 6 s, boundaries intact).
+
+### Two traps worth keeping
+
+- **`pushFrame` used to answer `ok` on a machine with no runtime**, opening an output and
+  dropping every frame. It is the one failure a page could never see for itself: it would
+  post thirty frames a second believing it was on the network. It now refuses before an
+  output is created, naming the missing runtime. Two guards cover it, both watched red.
+- **A sender started over ssh on Windows dies with the session.** Win32-OpenSSH tears the
+  process tree down, so a source started in one `ssh` call is gone before the next one
+  looks for it — which reads exactly like a discovery failure and cost an hour. Start the
+  sender and probe it in the same session.
+
+### Still open
+
+aylmo has no NDI runtime, so it can neither send nor receive natively yet; the only NDI
+binary on it is the Windows DLL inside TouchDesigner's Wine prefix, which Linux cannot
+load. `avahi` is already running. The runtime is Vizrt's, under its own EULA, and we
+never ship it — on Arch it is the AUR `ndi-sdk`, or `distroav`, which pulls it in and
+gives OBS an NDI plugin too. Until it is installed there, the browser half has been
+proven as far as the POST and its refusal, and the native half has been proven on `win`.
+
+## Scanning a place from the phone, into the space itself
+
+Owner, 2026-09-22: *"create new space and start to scan."* A space IS a place, so
+di.iiii now takes the walk itself — no Polycam, no second application, nothing to
+export and carry across. `/{space}/scan` opens the rear camera, cuts the walk into
+thirty-second pieces and puts each one on the space's own `sources` wall as it
+closes. The 3D copy is built from that by the existing place pipeline
+(`scripts/place/`) and arrives as `hall` in the same space. All three sketches he
+chose are in: the door on New space (A), footage landing on the wall from any
+phone with access (B), and the guided walk (C).
+
+Stacked on `feat/place-pipeline` (PR #531) — the build step calls
+`scripts/place/place.mjs`, which is unmerged.
+
+Done here:
+
+- **`/{space}/scan`** (`src/scan/`), one lazy route beside Map and Make, behind
+  the same gate: the page WRITES, so a camera reachable on terms the document
+  would refuse is a camera pointed into somebody else's space. `scan` reserved on
+  all four claimants; checked on prod, dev and local first — nothing held the word.
+- **The walk, cut so it can be lost cheaply.** `recorder.start(30000)` looks like
+  it cuts a walk into pieces and does not: only the first chunk carries the
+  container's headers. Each piece gets its own recorder. Found before it shipped;
+  it would have hung dead frames on the wall and contributed nothing to
+  `frames.mjs`.
+- **A coach that does not flatter.** Sharpness is the same Laplacian variance
+  `frame-stats.py` runs, and "slower" fires on a drop against this walk's own
+  median, never an absolute number — a dim hall must not be nagged for five
+  minutes. The ring says **directions covered** and the vocabulary now forbids
+  calling it anything else: a person can turn on the spot in a doorway and fill
+  all 36 having seen nothing of the hall.
+- **The lens, not the phone's top edge.** Reading the ring off `alpha` would have
+  swung it a quarter turn when somebody turned the phone sideways and left it
+  still when they walked round a pillar. `deviceAim.js` pushes device −Z through
+  the spec's rotation instead; elevation comes out of gravity alone, so "keep the
+  floor in frame" survives a refused compass.
+- **The measured wall** as a text object in the room (`wall · 8.30 m`) plus the
+  photograph of that wall, so the number can be checked against the thing later —
+  and because `normalizeProjectDocument` returns a fixed set of keys and would
+  have silently dropped an invented field.
+- **`POST/GET /api/spaces/:id/place/build`**, local-install only behind
+  `requireLocalRuntime`: a hosted tier answers 404 and the phone says the copy is
+  built on the studio machine. Status is derived every time off the status file,
+  the pid, the log's own step lines and whether the `hall` project arrived — so a
+  restart mid-build answers correctly, and "exited 0 having built nothing" reads
+  as failed with the real tail of its log.
+- **`--from-space`** in `frames.mjs`/`place.mjs`: the studio machine may not be
+  the machine the space is on. It implies `--no-sources`, which is the one that
+  would have hung every picture twice.
+- One wall layout, not two: the geometry moved out of `import.mjs` into
+  `src/scan/sourceWall.js` and both import it. Given a total it centres (the
+  importer's shape, byte-identical); without one it grows from a fixed corner, so
+  a picture already hung never slides when the next arrives.
+
+Two phones are a supported case, not an edge: the slot a picture hangs in is read
+from the document at that moment and a 409 is the normal outcome, re-read and
+re-slot.
+
+**Not run, and it should be said plainly: the real reconstruction.** Meshroom was
+busy on a Moxir run and llama-server held 5.7 GB of the 8 GB card. The build route
+was driven with `--dry-run` and against a stubbed `place.mjs`; what is proven is
+the route's own behaviour — the guard, what it copies out of the blob store, what
+it spawns, what it writes down, and how it reads a build's state back off disk.
+The first real end-to-end build from a phone walk is still owed.
+
+## 2026-09-22 — a lamp can be aimed, and a place can be scanned: #530, #531 and #533 land together
+
+- Batch branch off `dev`, merging three green PRs in one CI round rather than three:
+  `feat/lights-on-a-place` (#530), `feat/place-pipeline` (#531), `feat/place-scan` (#533).
+  All three were BEHIND `dev`, so landing them one at a time would have invalidated the
+  others in turn.
+- **Why these three now.** Walking the install on 2026-09-22 asking "how do I set the
+  lights here", the answer was: you cannot. A light's TRANSFORM offered Position only, the
+  renderer passed `SpotLightObject` no target so three.js aimed every spot at the world
+  origin, and adding a lamp changed nothing you could see. The fix already existed, tested,
+  in #530 — it had simply never left its branch. #531 and #533 are the lane the same walk
+  found doors missing for: the scan surface works and nothing linked to it.
+- Two conflicts, both "keep both sides", both resolved by hand:
+  - `docs/ai/known-fixes.md` — #530 and #531 each append rows to the same table; kept every
+    row from both.
+  - `src/wiki/wikiContent.js` — `WIKI_HIGHLIGHT_IDS` gained `lights-on-a-place` on one side
+    and `scan-a-place` on the other. Written as the union, both near the front; both ids
+    were checked to resolve to real wiki pages in the merged file.
+- The combined tree is what no CI run had ever seen: each PR was green alone, none of them
+  green together. The suite was run on the batch before it was pushed.
+- Known and deliberately not addressed here: the tools room still has no door to the scan
+  surface, `di stage` or NDI, and its Desk card links to `localhost:4748` with no indication
+  when that is down. Platform chrome is still below every touch-target minimum — the top nav
+  is 27px tall on a phone, the front door's footer links 16px. Both are their own pass.
+
+## What the pre-land review found, and what was done about it
+
+Nine independent reviews (three lenses × three PRs) plus three adversarial
+verifiers per blocking claim. Four claims were raised; three survived 3/3 and one
+was dismissed 0/3. All four were in #533.
+
+**Fixed before landing** (each with a guard test, each checked to fail without the fix):
+
+- The first phone capture into an already-filled footage room hung on top of a
+  picture already there. `hung` was counting only `scan-` ids.
+- A space reached by its slug collected footage into a room the build route
+  could never find.
+- An asset id was joined straight onto a filesystem path with no
+  `isValidAssetId` — the guard every sibling route in `projectRoutes.js` has.
+  The verifiers dismissed this 0/3 **on reachability**, and they were right about
+  the route as it stands: it is behind `requireLocalRuntime`, which is loopback-only.
+  The guard went in anyway, because the moment `DI_ALLOW_LAN_DEVICES=1` is set —
+  which is exactly what scanning from a phone requires — the route is reachable
+  by anyone on the wifi, and `di up --lan` has auth off.
+
+**LANDED AS IT IS, and it is a real trap — say it out loud before anyone scans
+from a dev checkout.** `placeRoutes.js` spawns `place.mjs` with no `--api`, so
+`import.mjs` falls back to its hard-coded `DEFAULT_API` of
+`https://local.thedi.studio/serverXR`, with a token `readToken` prefers out of
+`~/.di/di.env`. On the owner's own install that is the same server and the
+behaviour is correct. From a dev checkout on another port it is not: an hour of
+reconstruction is written into the INSTALLED tier, and `PATCH /api/spaces/<name>`
+can repoint an existing space's published front door at a hall built from another
+tier's footage. Not fixed here because the fix is a decision, not a line: this
+server has no canonical notion of its own address (`OAUTH_CALLBACK_BASE_URL` is
+the closest thing and is not set on a local install), and inventing one inside a
+merge is the wrong place for it.
+
+## Two things that are true of the install, not of the code
+
+- `scripts/place/` is **not packed into a runtime build** — `pack-runtime.mjs`
+  copies an explicit two-script allowlist. A plain install answers 501 on the
+  build route. The owner's box works because `~/.di/di.env` sets `PLACE_SCRIPT`
+  at a checkout; that pointer is load-bearing and needs to survive worktree
+  cleanup.
+- The build route is **loopback-only** unless `DI_ALLOW_LAN_DEVICES=1`. The scan
+  page is a phone page and a phone is not loopback, so without that flag the
+  phone gets 403 and — because `placeBuildApi.js` and `ScanSurface.jsx` only
+  special-case 404 — prints "local runtime is loopback-only" instead of the
+  honest "the copy is built on the studio machine".
+
 ## 2026-09-21 — one key, the whole stage: cues fire from Studio, not only from the mapper
 
 Step 6 of `2026-09-20-one-project-one-stage.md`. `mappingState.cues` belonged to the project all
