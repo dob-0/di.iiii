@@ -664,3 +664,78 @@ describe('output.show on the CJS twin — the server keeps which display shows a
     }
   })
 })
+
+describe('the beam and the room’s shadows survive both mirrors', () => {
+  // Every new field has to be named in BOTH copies of this schema or it is
+  // silently dropped on write AND on read: the normalisers rebuild a document
+  // field by field. These are the write → normalise → read → normalise
+  // round-trips for the two fields "lights on a place" adds.
+
+  it('keeps components.beam through an op and a re-read, on both sides', async () => {
+    const esm = await import('../../src/shared/projectSchema.js')
+    const written = applyProjectOps(normalizeProjectDocument({
+      entities: [{ id: 'lamp', type: 'spotLight', components: {} }]
+    }), [
+      { type: 'updateEntity', payload: { entityId: 'lamp', patch: { components: { beam: { visible: true, haze: 0.6 } } } } }
+    ])
+    const read = normalizeProjectDocument(JSON.parse(JSON.stringify(written)))
+    expect(read.entities[0].components.beam).toEqual({ visible: true, haze: 0.6 })
+    expect(esm.normalizeProjectDocument(JSON.parse(JSON.stringify(written))).entities[0].components.beam)
+      .toEqual(read.entities[0].components.beam)
+  })
+
+  it('leaves a lamp with no beam alone — every room published before this', async () => {
+    const esm = await import('../../src/shared/projectSchema.js')
+    const input = { entities: [{ id: 'old', type: 'spotLight', components: { light: { intensity: 2 } } }] }
+    expect(normalizeProjectDocument(input).entities[0].components.beam).toBeUndefined()
+    expect(esm.normalizeProjectDocument(input).entities[0].components.beam).toBeUndefined()
+  })
+
+  it('clamps a haze and refuses a visible that is not a boolean', () => {
+    const doc = normalizeProjectDocument({
+      entities: [
+        { id: 'a', type: 'spotLight', components: { beam: { visible: true, haze: 9 } } },
+        { id: 'b', type: 'spotLight', components: { beam: { visible: 'yes', haze: -3 } } },
+        { id: 'c', type: 'spotLight', components: { beam: {} } }
+      ]
+    })
+    expect(doc.entities[0].components.beam).toEqual({ visible: true, haze: 1 })
+    expect(doc.entities[1].components.beam).toEqual({ visible: false, haze: 0 })
+    expect(doc.entities[2].components.beam).toEqual({ visible: false, haze: 0.4 })
+  })
+
+  it('keeps renderSettings.shadowCasting through an op and a re-read', async () => {
+    const esm = await import('../../src/shared/projectSchema.js')
+    const written = applyProjectOps(normalizeProjectDocument({}), [
+      { type: 'setRenderSettings', payload: { patch: { shadowCasting: { enabled: true, mapSize: 2048 } } } }
+    ])
+    const read = normalizeProjectDocument(JSON.parse(JSON.stringify(written)))
+    expect(read.renderSettings.shadowCasting).toEqual({ enabled: true, mapSize: 2048 })
+    expect(esm.normalizeProjectDocument(JSON.parse(JSON.stringify(written))).renderSettings.shadowCasting)
+      .toEqual(read.renderSettings.shadowCasting)
+  })
+
+  it('is off, at 1024, in a document that never mentions it', async () => {
+    const esm = await import('../../src/shared/projectSchema.js')
+    // And the older `shadows` switch keeps its own meaning and its own default.
+    for (const normalize of [normalizeProjectDocument, esm.normalizeProjectDocument]) {
+      const settings = normalize({}).renderSettings
+      expect(settings.shadowCasting).toEqual({ enabled: false, mapSize: 1024 })
+      expect(settings.shadows).toBe(true)
+    }
+  })
+
+  it('refuses a map size no renderer here offers', () => {
+    expect(normalizeProjectDocument({ renderSettings: { shadowCasting: { enabled: true, mapSize: 8192 } } })
+      .renderSettings.shadowCasting).toEqual({ enabled: true, mapSize: 1024 })
+  })
+
+  it('a new spot light is born with NO beam component, in both mirrors', async () => {
+    // Deliberate: a default `beam` would be written into every spot light in
+    // every space the next time its document was normalised — a field nobody
+    // asked for, in every op log, to say exactly what its absence already says.
+    const esm = await import('../../src/shared/projectSchema.js')
+    expect(schema.buildDefaultComponentsForType('spotLight').beam).toBeUndefined()
+    expect(esm.buildDefaultComponentsForType('spotLight').beam).toBeUndefined()
+  })
+})

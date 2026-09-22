@@ -39,6 +39,8 @@ import Text3DObject from '../objectComponents/Text3DObject.jsx'
 import PortalObject, { portalHref } from '../project/viewport/PortalObject.jsx'
 import WorldEnvironment from '../project/viewport/WorldEnvironment.jsx'
 import RenderSettingsEffect from '../project/viewport/RenderSettingsEffect.jsx'
+import ShadowCasting from '../project/viewport/ShadowCasting.jsx'
+import { resolveShadowCasting } from '../project/viewport/shadowCasting.js'
 import { animationSeed, resolveAnimation, applyAnimation } from '../project/viewport/entityAnimation.js'
 import { resolveProximity, applyProximity } from '../project/viewport/entityProximity.js'
 import { hasTimelineTracks, sampleTimeline, applyTimelinePose } from '../project/viewport/timelinePlayback.js'
@@ -240,7 +242,7 @@ function EntityVisual({ entity, assetMap }) {
     }
     case 'spotLight': {
         const l = entity.components?.light || {}
-        return <SpotLightObject color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} />
+        return <SpotLightObject color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} beam={entity.components?.beam || null} />
     }
     case 'directionalLight': {
         const l = entity.components?.light || {}
@@ -1766,6 +1768,9 @@ export default function LiveProjectScene({
     // motion, and a phone that renders it at 2x drops frames where the arrival
     // still frame would not.
     const renderSettings = doc?.renderSettings || {}
+    // Shadows from the room: off unless this space asked for them. Walk mode
+    // and the arrival frame read the same switch (shadowCasting.js).
+    const shadowCasting = resolveShadowCasting(renderSettings)
     const ambient = worldState.ambientLight || { color: '#ffffff', intensity: 0.85 }
     const directional = worldState.directionalLight || { color: '#fff7ea', intensity: 1.15, position: [8, 12, 4] }
     const backgroundColor = worldState.backgroundColor || '#0a1118'
@@ -1807,6 +1812,7 @@ export default function LiveProjectScene({
             >
                 <XR store={xr.xrStore}>
                 <RenderSettingsEffect renderSettings={renderSettings} />
+                <ShadowCasting enabled={shadowCasting.enabled} mapSize={shadowCasting.mapSize} />
                 {/* The landing holds its page through a front-page button; this
                     is how the copy of the page gets this room's frame. */}
                 <FrameSource />
@@ -1844,6 +1850,10 @@ export default function LiveProjectScene({
                     in walk mode is fadeDistance's job, not the grid's. */}
                 {worldState.gridVisible !== false && !isArActive && (
                     <Grid
+                        // Furniture, not scenery: a reference grid that joined
+                        // the shadow pass would drop a black square under the
+                        // whole room. shadowCasting.js reads this flag.
+                        userData={{ noShadow: true }}
                         position={[0, -(worldState.gridOffset ?? 0.015), 0]}
                         cellSize={worldState.gridCellSize ?? 0.75}
                         cellThickness={worldState.gridCellThickness ?? 0.3}
