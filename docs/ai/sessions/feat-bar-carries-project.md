@@ -6,8 +6,9 @@ Wave 1 items 1, 2 and 4 of `di-atlas/decisions/2026-09-23-connect-everything.md`
   `di.iiii · space · project` (the project opens its Studio editor) and Studio, Nodes and the
   new Projection destination open THAT project through `studioRouting` / `rawRouting` /
   `mapRouting` builders. Projection is listed only for a project. Order unchanged otherwise.
-- Light is always listed. Local install: `/light/?space=&project=` (plain link — the desk is
-  served by serverXR, not the app). Hosted: `/light`, navigated in-app (`appNavigate`) so it
+- Light is always listed. Local install: `/light/?space=&project=` plus `&label=<title>` when
+  the title says more than the id — the shape #537's `lightingDeskPath()` uses (plain link —
+  the desk is served by serverXR, not the app). Hosted: `/light`, navigated in-app (`appNavigate`) so it
   lands on the existing `ReservedAddressCard('light')`; a ctrl/meta click is left to the
   browser. Checked: a full load of `/light` and `/light/` on dev.diiii.xyz and diiii.xyz
   answers the SPA's index.html, so reload/new tab reach the card there too.

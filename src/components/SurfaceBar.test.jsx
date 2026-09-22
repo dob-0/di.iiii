@@ -103,7 +103,14 @@ describe('SurfaceBar', () => {
         expect(hrefFor('Studio')).toBe('/lab/studio/projects/p1')
         expect(hrefFor('Nodes')).toBe('/lab/raw/projects/p1')
         expect(hrefFor('Projection')).toBe('/lab/map/p1')
-        expect(hrefFor('Light')).toBe('/light/?space=lab&project=p1')
+        expect(hrefFor('Light')).toBe('/light/?space=lab&project=p1&label=First+room')
+    })
+
+    it('tells the desk the project by id, and by title only when the title says more', () => {
+        expect(surfaceDestinations({ isLocalInstall: true, space: 'lab', project: 'p1' }).find(d => d.key === 'light').href)
+            .toBe('/light/?space=lab&project=p1')
+        expect(surfaceDestinations({ isLocalInstall: true, space: 'lab', project: 'p1', projectLabel: ' p1 ' }).find(d => d.key === 'light').href)
+            .toBe('/light/?space=lab&project=p1')
     })
 
     it('reads space · project, and the project leads back to its Studio editor', () => {

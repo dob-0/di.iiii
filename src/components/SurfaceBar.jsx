@@ -47,14 +47,19 @@ const DESTINATIONS = [
 // refuses the address, so the bar gets there without one.
 const HOSTED_LIGHT_PATH = '/light'
 
-const lightHref = ({ isLocalInstall, space, project }) => {
+// Opened from a project, the desk is told which one — ?space=&project=, and the
+// title as &label= when it says more than the id — so it can show the way back.
+// The same shape as the Projection desk's own Light link (lightingDeskPath).
+const lightHref = ({ isLocalInstall, space, project, projectLabel }) => {
     if (!isLocalInstall) return HOSTED_LIGHT_PATH
     if (!space || !project) return '/light/'
     const query = new URLSearchParams({ space, project })
+    const title = typeof projectLabel === 'string' ? projectLabel.trim() : ''
+    if (title && title !== project) query.set('label', title)
     return `/light/?${query.toString()}`
 }
 
-export const surfaceDestinations = ({ isLocalInstall = false, space = null, project = null } = {}) => {
+export const surfaceDestinations = ({ isLocalInstall = false, space = null, project = null, projectLabel = null } = {}) => {
     // A project only means something inside its space; without the space
     // there is no address to build.
     const inProject = Boolean(space && project)
@@ -62,7 +67,7 @@ export const surfaceDestinations = ({ isLocalInstall = false, space = null, proj
         .filter(d => !d.project || inProject)
         .map(d => {
             if (d.key === 'light') {
-                return { ...d, href: lightHref({ isLocalInstall, space, project }), clientSide: !isLocalInstall }
+                return { ...d, href: lightHref({ isLocalInstall, space, project, projectLabel }), clientSide: !isLocalInstall }
             }
             if (d.key === 'map') return { ...d, href: buildMapPath(space, project) }
             if (!space || (d.key !== 'studio' && d.key !== 'raw')) return d
@@ -97,7 +102,7 @@ export default function SurfaceBar({
     children = null,       // one surface-specific control, at most
 }) {
     if (hidden) return null
-    const destinations = surfaceDestinations({ isLocalInstall, space, project })
+    const destinations = surfaceDestinations({ isLocalInstall, space, project, projectLabel })
 
     return (
         <nav className={`sbar${float ? ' sbar--float' : ''}`} aria-label="di.iiii">
