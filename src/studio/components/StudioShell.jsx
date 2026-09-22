@@ -11,6 +11,9 @@ import { useStudioPanelState } from '../hooks/useStudioPanelState.js'
 import useAuthSession from '../../hooks/useAuthSession.js'
 import StudioCoachMarks from './StudioCoachMarks.jsx'
 import RigMirrorHint from './RigMirrorHint.jsx'
+import SurfaceBar from '../../components/SurfaceBar.jsx'
+import useLocalInstall from '../../hooks/useLocalInstall.js'
+import { isEmbedRequest } from '../../utils/previewMode.js'
 import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspaceStorage.js'
 import '../styles/studio-mobile.css'
 import { canPlaceInScene } from '../utils/assetFormats.js'
@@ -264,6 +267,13 @@ export default function StudioShell({
     const mobilePanels = jamMinimal
         ? [...MOBILE_PANELS.filter(([id]) => id === 'create'), ['jamedit', 'Edit']]
         : MOBILE_PANELS
+
+    // The one bar, carrying this project across to Nodes, Projection and Light.
+    // Not in a window (?embed=1), a headset, Hide UI, or the jam's simple mode —
+    // there the tools' own jumps are hidden too, and the bar is only more of them.
+    const localInstall = useLocalInstall()
+    const [isEmbed] = useState(() => isEmbedRequest())
+    const showBar = !uiHidden && !isEmbed && !xrState?.isXrPresenting && !jamMinimal
 
     // Guest first-run guidance is the action-completed coach pill
     // (StudioCoachMarks, rendered below) — the help dialog no longer
@@ -556,7 +566,7 @@ export default function StudioShell({
     }
 
     return (
-        <div className="sfp-root" onDoubleClick={handleViewportDoubleClick} onDragOver={handleViewportDragOver} onDrop={handleViewportDrop} role="application" aria-label="3D viewport">
+        <div className={`sfp-root${showBar ? ' has-sbar' : ''}`} onDoubleClick={handleViewportDoubleClick} onDragOver={handleViewportDragOver} onDrop={handleViewportDrop} role="application" aria-label="3D viewport">
             <StudioViewportLayout
                 layout={vpLayout}
                 onSplit={vpSplit}
@@ -571,6 +581,19 @@ export default function StudioShell({
             {loadError && (
                 <div className="sfp-overlay-card sfp-overlay-card--error">{loadError}</div>
             )}
+
+            {/* Before the sync alert, never between it and the phone's top
+                bar: the alert moves that bar down by being its neighbour. */}
+            <SurfaceBar
+                float
+                here="studio"
+                space={liveProjectState?.spaceId}
+                spaceLabel={liveProjectState?.spaceLabel}
+                project={document?.projectMeta?.id}
+                projectLabel={document?.projectMeta?.title}
+                isLocalInstall={localInstall.isLocal}
+                hidden={!showBar}
+            />
 
             {!uiHidden && !isMobile && (
                 <>

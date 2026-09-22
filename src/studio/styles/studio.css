@@ -68,7 +68,7 @@
     pointer-events: none;
     position: absolute;
     left: 12px;
-    top: 12px;
+    top: calc(12px + var(--svl-top-clear));
     z-index: 20;
     padding: var(--di-space-1) var(--di-space-3);
     border-radius: var(--di-radius);
@@ -1267,6 +1267,16 @@
     display: flex;
 }
 
+/* How far a pane's top-pinned controls sit below its own top edge. Declared
+   at the root so the viewport reads it wherever it is drawn. */
+:root { --svl-top-clear: 0px; }
+
+/* The bar floats over the room (SurfaceBar, float). What a pane pins to its
+   top edge has to clear it — but only a pane that touches the top of the
+   window: the lower half of a top/bottom split already starts below it. */
+.sfp-root.has-sbar .svl-root { --svl-top-clear: var(--sbar-h); }
+.svl-split--v > .svl-slot:last-child { --svl-top-clear: 0px; }
+
 /* Split container */
 .svl-split {
     display: flex;
@@ -1312,7 +1322,7 @@
 /* ── Gizmo (top-right like Blender) ── */
 .svl-gizmo-wrap {
     position: absolute;
-    top: 10px;
+    top: calc(10px + var(--svl-top-clear));
     right: 10px;
     z-index: 10;
     opacity: 0.6;
@@ -1348,7 +1358,7 @@
 /* ── Split / close controls (top-left, appear on hover) ── */
 .svl-pane-controls {
     position: absolute;
-    top: 8px;
+    top: calc(8px + var(--svl-top-clear));
     left: 8px;
     z-index: 10;
     display: flex;
