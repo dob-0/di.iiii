@@ -77,8 +77,8 @@ export const surfaceDestinations = ({ isLocalInstall = false, space = null, proj
 }
 
 // A plain click stays in the app; a click meant for a new tab or window is
-// left to the browser.
-const navigateInApp = (event, href) => {
+// left to the browser. Exported for the other doors to the same card (/tools).
+export const navigateInApp = (event, href) => {
     if (event.defaultPrevented || event.button !== 0) return
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
     event.preventDefault()
