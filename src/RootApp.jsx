@@ -27,7 +27,7 @@ import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
-import { APP_PAGE_EDITOR, APP_PAGE_FOR_APPS, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildPublicProjectPath, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, isSignInPath, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
+import { APP_PAGE_EDITOR, APP_PAGE_FOR_APPS, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SCAN, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildPublicProjectPath, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, isSignInPath, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
 import ReservedAddressCard, { hasReservedAddressCard } from './components/ReservedAddressCard.jsx'
 
 const RawApp = lazy(() => import('./raw/RawApp.jsx'))
@@ -47,6 +47,7 @@ const PrivateChatSurface = lazy(() => import('./chat/PrivateChatSurface.jsx'))
 const ChatHomeSurface = lazy(() => import('./chat/ChatHomeSurface.jsx'))
 const MapSurface = lazy(() => import('./map/MapSurface.jsx'))
 const MapOutput = lazy(() => import('./map/MapOutput.jsx'))
+const ScanSurface = lazy(() => import('./scan/ScanSurface.jsx'))
 const ToolsRoom = lazy(() => import('./tools/ToolsRoom.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 
@@ -529,6 +530,30 @@ function AppRouter() {
                     {mapState.isOutput
                         ? <MapOutput projectId={mapState.projectId} spaceId={mapState.spaceId} />
                         : <MapSurface projectId={mapState.projectId} spaceId={mapState.spaceId} />}
+                </Suspense>
+            </ProtectedSurface>
+        )
+    }
+
+    // `/{space}/scan` — the phone collecting a place (src/scan/ScanSurface.jsx).
+    // Dispatched here with the other lane words, and behind the same gate, for
+    // the same two reasons: the shape is exact and the generic
+    // /{space}/{projectSlug} rule further down would read "scan" as a project;
+    // and the page WRITES — every capture is an op on the space's own footage
+    // room, so a camera that could be opened on terms the document would refuse
+    // is a camera pointed into somebody else's space.
+    //
+    // No account chip: the whole page is a picture with a record button on it,
+    // and a floating button lands on the readings.
+    if (appState.page === APP_PAGE_SCAN && appState.spaceId) {
+        return (
+            <ProtectedSurface
+                requiredSpaceId={appState.spaceId}
+                outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
+                showAccountButton={false}
+            >
+                <Suspense fallback={<RouteSurfaceFallback label="Opening the camera" detail="" />}>
+                    <ScanSurface spaceId={appState.spaceId} />
                 </Suspense>
             </ProtectedSurface>
         )
