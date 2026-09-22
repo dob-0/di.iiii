@@ -16,6 +16,22 @@ node scripts/place/place.mjs \
     --scale-edge 24
 ```
 
+…or, for a walk a phone already collected at `/{space}/scan`:
+
+```bash
+node scripts/place/place.mjs --from-space moxir --name moxir --scale-edge 24
+```
+
+`--from-space` pulls that space's own `sources` room back down over the API and
+implies `--no-sources`: the phone hung those pictures on that wall as it walked,
+and carrying them in again would leave two of every photograph in one room. Use
+it when the space lives somewhere else — a factory walked against the dev tier,
+the copy built at home — and `--api` to say where.
+
+On the studio machine the same thing is one button: **Make the hall**, on the
+scanning page itself. See [`docs/architecture/PLACE.md`](../../docs/architecture/PLACE.md)
+→ *Scanning from the platform*.
+
 `--scale-edge 24` is the only thing the machine cannot work out: **measure one
 wall of the hall with a tape and type the number.** Without it, use
 `--door-guess` and the pipeline calls the tallest doorway 2.1 m — and says, in
@@ -62,6 +78,7 @@ Every step writes into one working folder and can be run again by itself. Use
 ```bash
 # 1 — footage in, usable frames out
 node scripts/place/frames.mjs --from <footage> --work <work>
+node scripts/place/frames.mjs --from-space moxir --work <work>   # a phone's walk, pulled down
 
 # 2 — frames to a rented GPU, mesh back
 node scripts/place/colab-job.mjs --work <work> --gpu L4
@@ -78,6 +95,7 @@ node scripts/place/fit.mjs --work <work> --door-guess --flip
 
 # 5 — the room arrives on di.iiii
 node scripts/place/import.mjs --work <work> --name moxir
+node scripts/place/import.mjs --work <work> --name moxir --no-sources  # footage already there
 ```
 
 What ends up in the working folder:
@@ -93,6 +111,7 @@ What ends up in the working folder:
 | `place.json` | the fit: size, transform, spawn, walkable floor, and how the size was decided |
 | `place-fitted.glb` | the room as it ships, standing upright on its own floor |
 | `import.json` | where it went and the addresses to walk |
+| `pulled/` | only with `--from-space`: the footage as it came down off the API |
 
 ## No footage yet? Make a hall
 
@@ -142,6 +161,15 @@ life size, which is the mess the fitter exists to undo.
   triangle room can take a minute to paint.
 - **The local tier is the owner's live install.** Import into a NEW space;
   never point this at one that already holds work.
+- **A space scanned from a phone already HAS its footage.** `--from-space`
+  passes `--no-sources` to the importer for exactly this reason; passing
+  `--sources` as well would hang a second copy of every picture on the same
+  wall. `scripts/place/place.test.js` is the guard.
+- **serverXR's image carries only `src`, `public` and `shared`.** The build
+  route spawns `scripts/place/place.mjs`, so on a build that did not ship
+  `scripts/` it answers 501 and says so rather than failing inside a spawn a
+  second later. It is a local-only route, so this is a trap rather than a
+  live defect — the same one `scripts/space-bundle.mjs` already paid for.
 
 ## Unverified
 
