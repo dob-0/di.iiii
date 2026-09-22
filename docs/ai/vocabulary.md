@@ -33,6 +33,7 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **production** | A place, a client, a work and a run. What the studio makes. It uses di.iiii; it does not live in it. |
 | **work** | What the public meets: a title, an author, an address. The same object a **project** names backstage. |
 | **Projection** | The tool that puts a project on a wall: drag its surfaces onto the shapes there. Opens at `/{space}/map/{project}` — the route stays `map`, the word a person reads is Projection. |
+| **scan** | Collecting a **place** with a camera so a space can be built from it — the walk, the photographs, and the measured wall. Opens at `/{space}/scan`. Added 2026-09-22. |
 
 Two words that are already right and must not drift: **port** (where a wire attaches to a node)
 and **wire** (what runs between two ports). They are the node model's own vocabulary, they are
@@ -311,6 +312,29 @@ sentence title (a real title says more than a category word) but now opens "Proj
 mapping, at …" so the first line ties it to the other two. Routes, ids and CSS classes do not
 move — `/map/`, `MapSurface.jsx`, `mapRouting.js`, `createMappingSurface` and the rest stay
 exactly as they are, the same rule this whole file has followed since 2026-08-19.
+
+## Amended 2026-09-22 — `scan`, and the one thing it must never say
+
+A new word, admitted under the rule below because no existing one does its job. **place**
+is the real room. **space** is the address. **scan** is the ACT that turns the first into
+the second: the walk, the photographs, the measured wall, and the footage they become.
+Nothing else in the dictionary names an act of collecting, and "capture" and "record"
+already mean smaller things elsewhere in the product.
+
+Owner's words, 2026-09-22: *"create new space and start to scan."*
+
+One thing on that page is forbidden, and it is not a style rule. The ring of 36 marks is
+labelled **directions covered** and must never be called *room covered*, *coverage*, or
+anything else that implies the hall has been seen. It counts which way the lens has
+pointed, and a person can stand still in a doorway, turn on the spot, and fill every mark
+having seen almost nothing. Calling that "the room is covered" would be the product
+telling somebody their walk is finished when it is not — and they will have left the
+building before anyone finds out.
+
+For the same reason the page says a room's size is a **GUESS**, in capitals, until
+somebody measures a wall. That is not new wording; it is the guess/measured rule from
+`docs/architecture/PLACE.md` reaching the one screen where the person who could fix it is
+standing in the room.
 
 ## The rule for anything new
 

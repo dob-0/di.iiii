@@ -64,6 +64,19 @@
 .ssh-btn-create:hover { background: var(--di-ink); }
 .ssh-btn-create:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* The second door out of the new-space form: same creation, opens the camera
+   instead of the hub (src/scan/ScanSurface.jsx). Quiet, because there is one
+   primary action here and it is Create — this is the same act with a different
+   destination, not a second thing to weigh up. */
+.ssh-btn-scan {
+    background: transparent;
+    color: var(--di-cyan);
+    border: 1px solid var(--di-cyan-border);
+    font-weight: 500;
+}
+
+.ssh-btn-scan:hover { background: var(--di-cyan-wash); color: var(--di-ink); }
+
 .ssh-quota {
     font-family: var(--di-mono);
     font-size: 0.72rem;
@@ -97,6 +110,9 @@
 .ssh-new-form {
     display: flex;
     align-items: center;
+    /* Wraps since the second door arrived (2026-09-22): four controls in a row
+       overflowed the card on a phone. */
+    flex-wrap: wrap;
     gap: 6px;
 }
 

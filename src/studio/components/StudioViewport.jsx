@@ -11,6 +11,8 @@ import ModalTransform from './ModalTransform.jsx'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
 import WorldEnvironment from '../../project/viewport/WorldEnvironment.jsx'
 import RenderSettingsEffect from '../../project/viewport/RenderSettingsEffect.jsx'
+import ShadowCasting from '../../project/viewport/ShadowCasting.jsx'
+import { resolveShadowCasting } from '../../project/viewport/shadowCasting.js'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { applyPivotTransform, getSelectionCentroid } from '../utils/multiTransform.js'
 import { hasTimelineTracks, sampleTimeline, applyTimelinePose } from '../../project/viewport/timelinePlayback.js'
@@ -652,6 +654,9 @@ function StudioSceneContent({
     // Same fog semantics as LiveProjectScene: colour falls back to the
     // background, `enabled: false` switches it off.
     const fog = document.worldState?.fog
+    // Shadows from the room: off unless this space asked for them. The arrival
+    // frame and walk mode read the same switch (shadowCasting.js).
+    const shadowCasting = resolveShadowCasting(document.renderSettings)
     const fogAuthored = Boolean(fog) && fog.enabled !== false
     const fogColor = fog?.color || document.worldState?.backgroundColor || '#0a1118'
     const fogNear = fog?.near ?? 8
@@ -660,6 +665,7 @@ function StudioSceneContent({
     return (
         <LiveTimelineContext.Provider value={playTimelines}>
             <RenderSettingsEffect renderSettings={document.renderSettings} />
+            <ShadowCasting enabled={shadowCasting.enabled} mapSize={shadowCasting.mapSize} />
             <color attach="background" args={[document.worldState?.backgroundColor || '#0a1118']} />
             {/* Authored fog reached walk mode only. A room composed with
                 atmosphere therefore had none in the frame a visitor ARRIVES on
@@ -704,6 +710,8 @@ function StudioSceneContent({
                     default black. */}
                 {document.worldState?.gridVisible !== false && !isArMode && (
                     <Grid
+                        // Furniture, not scenery — see LiveProjectScene's grid.
+                        userData={{ noShadow: true }}
                         position={[0, -(document.worldState?.gridOffset ?? 0.015), 0]}
                         args={[document.worldState?.gridSize || 24, document.worldState?.gridSize || 24]}
                         cellSize={document.worldState?.gridCellSize ?? 0.75}

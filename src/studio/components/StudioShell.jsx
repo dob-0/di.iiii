@@ -509,6 +509,11 @@ export default function StudioShell({
                             />
                             {(selectedEntity || selectedEntityIds.length > 0) ? (
                                 <StudioInspector
+                                    // WHICH lamp, not just what it is called. The aim field
+                                    // remembers a pan across drags (a lamp hanging dead down
+                                    // has no pan to read back), and without an identity that
+                                    // memory followed the selection onto the NEXT lamp.
+                                    identity={selectedEntityId || ''}
                                     title={selectedEntityIds.length > 1 ? `${selectedEntityIds.length} selected` : (selectedEntity ? selectedEntity.name : 'Scene')}
                                     subtitle={selectedEntityIds.length > 1 ? `Primary: ${selectedEntity?.name || selectedEntityId}` : (selectedEntity ? selectedEntity.type : 'Project defaults')}
                                     sections={inspectorSections}

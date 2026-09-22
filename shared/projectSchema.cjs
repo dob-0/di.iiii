@@ -133,6 +133,9 @@ const defaultWorldState = {
 
 const defaultRenderSettings = {
   shadows: true,
+  // Whether the room's lamps and scenery join the shadow pass at all. Off:
+  // see normalizeShadowCasting below for why this is not `shadows`.
+  shadowCasting: { enabled: false, mapSize: 1024 },
   antialias: true,
   toneMapping: 'ACESFilmic',
   toneMappingExposure: 1,
@@ -620,6 +623,17 @@ const normalizeEntity = (entity = {}) => {
       min: Math.min(1, Math.max(0, min))
     }
   }
+  // THE BEAM IN THE AIR: the visible cone of a spot light's throw. Absent in
+  // every room published before this existed, and absent MUST keep meaning no
+  // beam -- a cone switched on by a normaliser would change the look of every
+  // lit space at once. `haze` is how thick the air is, 0..1; the renderer
+  // reads an absent haze as 0.4 (src/objectComponents/spotBeam.js).
+  if (sourceComponents.beam) {
+    nextComponents.beam = {
+      visible: ensureBoolean(sourceComponents.beam.visible, false),
+      haze: Math.min(1, Math.max(0, ensureNumber(sourceComponents.beam.haze, 0.4)))
+    }
+  }
   // THE JOIN between a lamp in the room and a lamp on the lighting desk: the
   // fixture's `index` on the desk (the number a person sees there, `3.Back left`).
   // A number and nothing else — never universe/address, which belong to the
@@ -740,6 +754,23 @@ const normalizeWorldState = (world = {}) => {
 
 const RENDER_TONE_MAPPINGS = new Set(['ACESFilmic', 'none'])
 
+// SHADOWS FROM THE ROOM. Deliberately not the older `shadows` field, which is
+// the renderer-level switch (gl.shadowMap.enabled) and has defaulted to true
+// since this schema was written -- nothing ever cast into that map, so it was on
+// and every stage was flat. This one says the lamps and the things in the room
+// actually join the shadow pass, and it is OFF unless a room asks: a shadow pass
+// over a scanned venue is not free, and no published space asked for one.
+const SHADOW_MAP_SIZES = [1024, 2048]
+
+const normalizeShadowCasting = (casting) => {
+  const source = casting && typeof casting === 'object' ? casting : {}
+  const mapSize = Number(source.mapSize)
+  return {
+    enabled: ensureBoolean(source.enabled, defaultRenderSettings.shadowCasting.enabled),
+    mapSize: SHADOW_MAP_SIZES.includes(mapSize) ? mapSize : defaultRenderSettings.shadowCasting.mapSize
+  }
+}
+
 const normalizeRenderSettings = (settings = {}) => {
   const source = settings && typeof settings === 'object' ? settings : {}
   return {
@@ -750,7 +781,8 @@ const normalizeRenderSettings = (settings = {}) => {
     toneMapping: RENDER_TONE_MAPPINGS.has(source.toneMapping) ? source.toneMapping : defaultRenderSettings.toneMapping,
     toneMappingExposure: Math.max(0, ensureNumber(source.toneMappingExposure, defaultRenderSettings.toneMappingExposure)),
     dprMin: Math.max(0.5, ensureNumber(source.dprMin, defaultRenderSettings.dprMin)),
-    dprMax: Math.max(0.5, ensureNumber(source.dprMax, defaultRenderSettings.dprMax))
+    dprMax: Math.max(0.5, ensureNumber(source.dprMax, defaultRenderSettings.dprMax)),
+    shadowCasting: normalizeShadowCasting(source.shadowCasting)
   }
 }
 

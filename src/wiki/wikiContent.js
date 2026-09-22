@@ -286,6 +286,26 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-21'
     },
     {
+        id: 'lights-on-a-place',
+        category: 'Editing',
+        title: 'Hanging a lamp: aim, beam, shadow',
+        summary: 'A spot light is rigged the way a lamp is rigged — point it with pan and tilt, switch the beam on so you can see the throw, and let the room throw shadows.',
+        body: [
+            'A spot light in a room is a lamp on a bar. It hangs somewhere, it points somewhere, and until now the only way to point it was to drag a rotation gizmo and hope. Select a spot light and its Transform section now has the two numbers a lighting person actually aims with, in degrees.',
+            { list: [
+                'Tilt — how far the lamp is swung off straight down. 0 is dead down on the deck. 90 is flat, across the room. Past 90 is an uplight, pointing back up at the ceiling.',
+                'Pan — which way round the vertical that swing is pointed. 0 sends it the way the room\'s own camera looks; turn it to walk the beam round the walls.'
+            ] },
+            'Set the pan first and then tilt into the room, the way you would on a ladder: a lamp hanging dead down has no direction to keep, so the pan you chose is held until there is a tilt to use it. Nothing new is saved for this — pan and tilt are the lamp\'s own rotation in the fixture\'s language, so a lamp aimed by dragging reads back here as numbers, and a lamp aimed here moves under the gizmo.',
+            'THE BEAM. A lamp\'s Beam section switches on the throw itself: the cone of light in the air between the lamp and what it lands on, the way a beam shows in a hazed room. Haze is how thick that air is. The beam is off in every room until somebody switches it on, and it takes the lamp\'s own colour — so a lamp joined to a fixture on the lighting desk beams in the colour the desk is emitting, live, and goes out when the desk takes it out.',
+            'The cone is drawn as far as the lamp reaches, so set the lamp\'s Distance to roughly where the light actually lands. A lamp with a 15-metre reach hung in a small room draws its cone straight through the floor.',
+            'SHADOWS FROM THE ROOM. Under Project → Render there is Lamps throw shadows. Switch it on and the lamps in the room cast: a pillar standing in a beam puts its shadow on the floor behind it, a person-sized box makes a person-sized shadow, and a scanned venue\'s own walls catch what is thrown at them. Shadow detail chooses how sharp the edge is — Sharper costs more, and a phone will feel it. It is off unless a room asks for it, because a shadow pass over a big scanned room is not free.',
+            'What a visitor sees is what you see: the beam and the shadows are part of the room, so they arrive with it in a published space and in walk mode, not only in the Studio.'
+        ],
+        tags: ['light', 'lamp', 'spot', 'spotlight', 'aim', 'pan', 'tilt', 'beam', 'haze', 'shadow', 'shadows', 'rig', 'stage', 'studio', 'render'],
+        updated: '2026-09-21'
+    },
+    {
         id: 'the-rig',
         category: 'Spaces & access',
         title: 'The rig: machines in one room find each other',
@@ -1427,12 +1447,37 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['raw', 'ui', 'colour', 'families', 'windows', 'nodes', 'reading', 'design', 'canvas'],
         updated: '2026-08-19'
+    },
+    {
+        id: 'scan-a-place',
+        category: 'Spaces & access',
+        title: 'Scanning a real place into a space',
+        summary: 'Walk a hall with your phone and di.iiii collects the footage into the space as you go — no second app, nothing to export, and the 3D copy is built from it afterwards.',
+        body: [
+            'A space is a place. If you have a real one — a factory hall, a theatre, a foyer — you can walk it with a phone and have it become a space you can stand in. Press "Scan a place" on the new-space form and the camera opens on the space it just made, at di-studio.xyz/{space}/scan.',
+            'The walk is recorded in thirty-second pieces and each piece goes up the moment it closes, so a lift shaft or a dead bar costs you thirty seconds rather than the whole walk. Photographs go up one at a time. Everything lands on a wall in the space\'s own footage room — open it on a laptop while somebody walks and you will watch it fill. Anyone with editing access to the space can add to the same wall from their own phone, so two people can walk one hall from both ends.',
+            'The camera coaches while you walk, because footage cannot be re-taken once you have left the building:',
+            {
+                list: [
+                    'Walk slowly. Slower than feels right — it says "slower" when the picture starts going soft.',
+                    'Keep the floor in the picture. It is what stands the room up, and the page says so when you have been pointing above the horizon for a couple of seconds.',
+                    'Circle every pillar, all the way round. One viewing angle of a wall is a hole in the copy.',
+                    'Nobody in the shot.'
+                ]
+            },
+            'A ring of 36 marks fills as you turn, and it is labelled "directions covered" because that is honestly all it counts: you could stand still in a doorway and fill every mark having seen nothing of the hall. What it does catch is a walk that never looked back. If the phone will not give a compass the ring says so and everything else works as it was.',
+            'The last step asks you to measure ONE wall with a tape and type the number in metres, and to photograph that wall. Nothing in a reconstruction knows how big a room is — a hall and a model of a hall are the same pile of numbers — so without that number the room walks at a size nobody chose, and the page tells you so in capitals until you give it. The number and the photograph both stay in the footage room, so anyone can check one against the other later.',
+            'Once there is about a minute of walking, or forty photographs, "Make the hall" appears. Building the copy runs a reconstruction on a graphics card for the better part of an hour, so it happens on the studio machine and nowhere else: on di-studio.xyz the button says the copy is built there instead. The footage still collects wherever you walked — that is the point of collecting it into the space rather than into an app on the phone — and the copy can be built from it afterwards.',
+            'When it finishes, the hall arrives as another room in the same space, standing on its floor at the size you measured, with a door you arrive at. The footage stays beside it. A visitor can walk the hall and then walk into what the hall was made of.'
+        ],
+        tags: ['scan', 'scanning', 'place', 'hall', 'venue', 'phone', 'camera', 'photogrammetry', 'walk', 'footage', 'sources', '3d', 'model', 'reconstruction', 'meshroom', 'measure', 'tape', 'theatre', 'factory', 'space', 'room', 'polycam', 'lidar'],
+        updated: '2026-09-22'
     }
 ]
 
 // Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
 // fails CI if any id does not resolve to an article (otherwise it silently vanishes).
-export const WIKI_HIGHLIGHT_IDS = ['glossary', 'picture-operators-and-the-desk', 'tools-room', 'following-a-space', 'guests-in-the-room', 'build-zones', 'raw-windows-travel-with-the-canvas', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
+export const WIKI_HIGHLIGHT_IDS = ['scan-a-place', 'glossary', 'lights-on-a-place', 'picture-operators-and-the-desk', 'tools-room', 'following-a-space', 'guests-in-the-room', 'build-zones', 'raw-windows-travel-with-the-canvas', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))
