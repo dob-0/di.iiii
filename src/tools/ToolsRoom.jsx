@@ -43,6 +43,7 @@ export default function ToolsRoom({ isLocalInstall = false }) {
     const [makingProject, setMakingProject] = useState(false)
     const [newProjectName, setNewProjectName] = useState('')
     const [creatingProject, setCreatingProject] = useState(false)
+    const [createError, setCreateError] = useState(null)   // { spaceId, message }
 
     useEffect(() => {
         let alive = true
@@ -59,6 +60,7 @@ export default function ToolsRoom({ isLocalInstall = false }) {
         setMakingProject(false)
         setNewProjectName('')
         setCreatingProject(false)
+        setCreateError(null)
     }, [])
 
     useEffect(() => {
@@ -159,10 +161,20 @@ export default function ToolsRoom({ isLocalInstall = false }) {
         if (!inSpace || !asking?.picker || creatingProject) return
         const title = newProjectName.trim() || 'Untitled'
         setCreatingProject(true)
+        setCreateError(null)
         try {
             const res = await createProject(inSpace, { title, slug: title, source: 'tools-picker' })
             window.location.href = asking.picker.href(inSpace, res.project.id)
-        } catch {
+        } catch (error) {
+            // This used to swallow the failure: the button came back and
+            // nothing said why. The reason goes where the dialog already
+            // speaks. A signed-out visitor gets a bare 401 "Unauthorized"
+            // from the server, so that one is put in words here; every other
+            // refusal ("Space is read-only.", a taken name) says itself.
+            const reason = Number(error?.status) === 401
+                ? `sign in to add a project to ${inSpace}.`
+                : (error?.message || 'the server did not say why.')
+            setCreateError({ spaceId: inSpace, message: `Not created: ${reason}` })
             setCreatingProject(false)
         }
     }, [inSpace, newProjectName, creatingProject, asking])
@@ -228,7 +240,9 @@ export default function ToolsRoom({ isLocalInstall = false }) {
                     <div className="tr-dialog" role="dialog" aria-label={`Open ${asking.name}`}>
                         <div className="tr-dialog-head">
                             <div className="tr-dialog-title">{asking.name}</div>
-                            <p className="tr-dialog-say">{asking.picker.say}</p>
+                            <p className="tr-dialog-say" aria-live="polite">
+                                {makingProject && createError?.spaceId === inSpace ? createError.message : asking.picker.say}
+                            </p>
                         </div>
 
                         <div className="tr-crumbs">
