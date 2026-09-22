@@ -42,11 +42,30 @@ there".
 
 ### Checked
 
-- `npm run lint` (0 errors), `npx vitest run` on every touched test, `npm run test`.
-- A dev stack on ports 4330/5330 with a throwaway DATA_ROOT, driven with Playwright at
-  1440×900 and 390×844 DPR 3 — screenshots in the worktree's `.verify/` (not committed).
+- `npm run lint` (0 errors), `npm run docs:ai:check`, `npx vitest run` on every touched test,
+  and `npm run test`: all green once `serverXR` had its own `npm ci`. Two server tests
+  (`followIntegration` "byte for byte", `configRoutes` "repeats what index.js says") timed
+  out under full-suite load and pass alone. The `← Projects` guard was run against the old
+  path first and failed.
+- serverXR on 4330 and vite on 5330, with a throwaway DATA_ROOT, walked with Playwright at
+  1440×900 (DPR 2) and 390×844 (DPR 3), 18/18 checks passing:
+  `/lab/studio` and `/lab/raw/projects` list the same cards on the same shelves (Show one:
+  Pulse, Wall study; Not on a shelf: Draft sketch) and differ only in the Nodes ↔ Studio
+  button. Neither page has a First Landing / Build small / Space → project → publish card.
+  A card opens `/lab/raw/projects/draft-sketch` on the canvas. `← Projects` comes back to
+  `/lab/raw/projects` with the DRAFT card showing. New lands on an empty canvas at
+  `/lab/raw/projects/first-…` and shows up on Studio's list with a "Nodes" badge.
+  `/lab/seed/projects` heals to `/lab/raw/projects`. With `LIVE_API_URL` set, the sync row
+  shows under the Nodes list only; the Help dialog no longer has the audience cards.
+  Screenshots are in the worktree's `.verify/`, which is not committed.
 
-### Not done here
+### Seen on the way, not changed here
 
 - Studio's own `← Projects` (`StudioEditor.jsx` `onBackToHub`) still goes to `/{space}/projects`,
-  the visitors' list — same bug class, the Studio side. Not in this item's brief.
+  the visitors' list. It's the same bug class on the Studio side and wasn't in this item's brief.
+- On a phone the Help dialog squeezes its left panel to a ~40px sliver. `raw.css`'s
+  `@media (max-width: 900px) .raw-help-body { grid-template-columns: 1fr }` sits BEFORE the
+  base `.raw-help-body` rule, so the base rule wins at every width. The order is the same on
+  `dev`, so this didn't start here. It's one small move of that rule and wants its own PR.
+- A brand-new project opens zen (no toolbar), so it has no `← Projects` until the palette
+  brings the toolbar back. This is the node editor's existing empty-project behaviour.
