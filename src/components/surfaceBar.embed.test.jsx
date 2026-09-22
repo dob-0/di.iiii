@@ -1,10 +1,15 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import SpaceContentsPage from '../pages/SpaceContentsPage.jsx'
 import ToolsRoom from '../tools/ToolsRoom.jsx'
 import WikiPage from '../wiki/WikiPage.jsx'
 import BlankNodeWorkspaceApp from '../raw/BlankNodeWorkspaceApp.jsx'
 import PublicProjectViewer from '../project/components/PublicProjectViewer.jsx'
+import StudioShell from '../studio/components/StudioShell.jsx'
+import RawEditor from '../raw/components/RawEditor.jsx'
+import RawOutSurface from '../raw/components/RawOutSurface.jsx'
+import MapSurface from '../map/MapSurface.jsx'
+import MapOutput from '../map/MapOutput.jsx'
 
 vi.mock('../project/services/projectsApi.js', () => ({
     DEFAULT_PROJECT_SPACE_ID: 'main',
@@ -66,9 +71,70 @@ vi.mock('../raw/PublicGraphSurface.jsx', () => ({ default: () => <div /> }))
 
 vi.mock('../components/LiveProjectScene.jsx', () => ({ default: () => <div /> }))
 
-vi.mock('../raw/components/RawEditor.jsx', () => ({
-    default: () => <div data-testid="lane-body">node canvas</div>
+// The bare canvas lane is about the bar BlankNodeWorkspaceApp draws, so its
+// editor stays a stub. A project's canvas is the real editor: it draws its own.
+vi.mock('../raw/components/RawEditor.jsx', async (importOriginal) => {
+    const actual = await importOriginal()
+    const RealRawEditor = actual.default
+    return {
+        ...actual,
+        default: (props) => (props.projectId
+            ? <RealRawEditor {...props} />
+            : <div data-testid="lane-body">node canvas</div>)
+    }
+})
+
+// What the three editors stand on, cut down to what decides the bar — the same
+// cuts their own suites make (StudioShell.test, RawEditor.test).
+vi.mock('../studio/components/StudioViewportLayout.jsx', () => ({
+    default: () => <div data-testid="lane-body">studio viewport</div>
 }))
+vi.mock('../studio/components/StudioFloatingPanel.jsx', () => ({ default: ({ children }) => <div>{children}</div> }))
+vi.mock('../studio/components/StudioControlCluster.jsx', () => ({ default: () => null }))
+vi.mock('../studio/components/StudioQuickInsert.jsx', () => ({ default: () => null }))
+vi.mock('../studio/components/StudioInspector.jsx', () => ({ default: () => null }))
+vi.mock('../studio/components/StudioShellPanels.jsx', () => ({
+    AssetsPanel: () => null,
+    FilesPanel: () => null,
+    HistoryPanel: () => null,
+    JamEditPanel: () => null,
+    LibraryPanel: () => null,
+    ProjectPanel: () => null,
+    PublishPanel: () => null,
+    StructurePanel: () => null,
+    TimelinePanel: () => null,
+}))
+vi.mock('../raw/components/RawViewport.jsx', () => ({ default: () => <div data-testid="lane-body">room</div> }))
+vi.mock('../raw/components/RawGraphSurface.jsx', () => ({ default: () => <div data-testid="raw-graph" /> }))
+vi.mock('../project/hooks/useProjectDocumentSync.js', () => ({
+    useProjectDocumentSync: () => ({ applyLocalOps: vi.fn(), replaceDocument: vi.fn(() => Promise.resolve()) })
+}))
+vi.mock('../project/hooks/useProjectPresence.js', () => ({
+    useProjectPresence: () => ({ users: [], cursors: [], emitCursor: vi.fn(), clearCursor: vi.fn(), messages: [], sendChatMessage: vi.fn() })
+}))
+vi.mock('../map/useMapDocument.js', () => {
+    const mapping = { surfaces: [], cues: [], output: { width: 1920, height: 1080 } }
+    const document = { projectMeta: { id: 'p', title: 'A room' }, nodes: [], mappingState: mapping }
+    const noop = () => {}
+    return {
+        mapChannelName: (id) => `map-${id}`,
+        useMapChannelListener: noop,
+        useMapDocument: () => ({
+            document, mapping, surfaces: [], syncState: null, store: {}, applyOps: noop,
+            addSurface: noop, updateSurface: noop, deleteSurface: noop, reorderSurfaces: noop, setOutput: noop,
+            upsertAsset: noop, addCue: noop, updateCue: noop, deleteCue: noop, reorderCues: noop, fireCue: noop
+        })
+    }
+})
+vi.mock('../map/MapStage.jsx', () => ({ default: () => <div data-testid="lane-body">wall</div> }))
+vi.mock('../project/tops/useMachinePresence.js', () => ({
+    useMachinePresence: () => ({ machines: [], machine: null })
+}))
+vi.mock('../map/lightingLink.js', async (importOriginal) => ({
+    ...(await importOriginal()),
+    probeLightingDesk: async () => false
+}))
+vi.mock('../rig/RigBlackout.jsx', () => ({ default: () => null }))
 
 // Every surface that draws the bar, one row each. The row is the contract: a
 // seventh lane added later does not join it by being written, it joins it by
@@ -102,6 +168,21 @@ const LANES = [
         name: 'the published viewer',
         body: () => screen.queryByTestId('lane-body'),
         render: () => render(<PublicProjectViewer spaceId="main" projectId="p" spaceLabel="Main Space" />)
+    },
+    {
+        name: 'the Studio editor',
+        body: () => screen.queryByTestId('lane-body'),
+        render: () => renderStudio()
+    },
+    {
+        name: 'the Nodes project canvas',
+        body: () => document.querySelector('.raw-topbar.is-seeded'),
+        render: () => renderNodes()
+    },
+    {
+        name: 'the Projection desk',
+        body: () => document.querySelector('header.map-bar'),
+        render: () => render(<MapSurface spaceId="main" projectId="p" />)
     }
 ]
 
@@ -109,11 +190,35 @@ const LANES = [
 // on this branch none of them renders a SurfaceBar at all. When one of them
 // grows a bar it owes this table a row.
 
+function renderStudio(overrides = {}) {
+    return render(
+        <StudioShell
+            document={{ projectMeta: { id: 'p', title: 'A room' }, assets: [] }}
+            selectedEntity={null}
+            selectedEntityIds={[]}
+            entities={[]}
+            inspectorSections={[]}
+            inspectorValues={{}}
+            assetOptions={[]}
+            liveProjectState={{ spaceId: 'main', spaceLabel: 'Main Space' }}
+            {...overrides}
+        />
+    )
+}
+
+// An empty project opens in zen, where the bar goes with the rest of the
+// chrome; this is the project someone is working in.
+function renderNodes() {
+    window.localStorage.setItem('dii.raw.zen.p', 'off')
+    return render(<RawEditor projectId="p" spaceId="main" />)
+}
+
 const bars = () => document.querySelectorAll('nav[aria-label="di.iiii"]')
 
 describe('?embed=1 hides navigation chrome on every lane', () => {
     afterEach(() => {
         window.history.replaceState(null, '', '/')
+        window.localStorage.removeItem('dii.raw.zen.p')
     })
 
     for (const lane of LANES) {
@@ -133,4 +238,72 @@ describe('?embed=1 hides navigation chrome on every lane', () => {
             expect(bars()).toHaveLength(0)
         })
     }
+})
+
+// A presentation shows the work, not the tool — the bar's own contract. The
+// three editors each have their own ways of becoming one, and the projector
+// pages never carry a bar at all.
+describe('a presentation draws no bar', () => {
+    afterEach(() => {
+        window.history.replaceState(null, '', '/')
+        window.localStorage.removeItem('dii.raw.zen.p')
+    })
+
+    it('Studio carries the project in its bar, and names Projection for it', async () => {
+        renderStudio()
+        await waitFor(() => expect(bars()).toHaveLength(1))
+        const hrefs = [...bars()[0].querySelectorAll('.sbar-link')].map((a) => a.getAttribute('href'))
+        expect(hrefs).toContain('/main/raw/projects/p')
+        expect(hrefs).toContain('/main/map/p')
+    })
+
+    it('Studio in a headset draws no bar', async () => {
+        renderStudio({ xrState: { isXrPresenting: true } })
+        await waitFor(() => expect(screen.queryByTestId('lane-body')).toBeTruthy())
+        expect(bars()).toHaveLength(0)
+    })
+
+    it('Studio with its UI hidden (H) draws no bar', async () => {
+        renderStudio()
+        await waitFor(() => expect(bars()).toHaveLength(1))
+        fireEvent.keyDown(window, { key: 'h' })
+        expect(bars()).toHaveLength(0)
+    })
+
+    it('the Nodes canvas in zen draws no bar', async () => {
+        window.localStorage.setItem('dii.raw.zen.p', 'on')
+        render(<RawEditor projectId="p" spaceId="main" />)
+        await waitFor(() => expect(screen.queryByTestId('raw-graph')).toBeTruthy())
+        expect(document.querySelector('.raw-topbar.is-seeded')).toBeNull()
+        expect(bars()).toHaveLength(0)
+    })
+
+    it('the Nodes canvas opened full-screen onto its room draws no bar', async () => {
+        renderNodes()
+        await waitFor(() => expect(bars()).toHaveLength(1))
+        fireEvent.click(screen.getByRole('button', { name: /^Scene/ }))
+        await waitFor(() => expect(document.querySelector('.raw-world-fullscreen')).toBeTruthy())
+        expect(bars()).toHaveLength(0)
+    })
+
+    it('the Nodes topbar makes room for the bar only while the bar is there', async () => {
+        renderNodes()
+        await waitFor(() => expect(bars()).toHaveLength(1))
+        expect(document.querySelector('.raw-topbar').classList.contains('is-under-sbar')).toBe(true)
+        fireEvent.click(screen.getByRole('button', { name: /^Scene/ }))
+        await waitFor(() => expect(bars()).toHaveLength(0))
+        expect(document.querySelector('.raw-topbar').classList.contains('is-under-sbar')).toBe(false)
+    })
+
+    it('/{space}/map/{project}/out draws no bar', async () => {
+        render(<MapOutput spaceId="main" projectId="p" />)
+        await waitFor(() => expect(screen.queryByTestId('lane-body')).toBeTruthy())
+        expect(bars()).toHaveLength(0)
+    })
+
+    it('/{space}/raw/projects/{project}/out draws no bar', async () => {
+        render(<RawOutSurface projectId="p" spaceId="main" />)
+        await waitFor(() => expect(screen.queryByTestId('lane-body')).toBeTruthy())
+        expect(bars()).toHaveLength(0)
+    })
 })
