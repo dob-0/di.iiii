@@ -123,7 +123,12 @@ life size, which is the mess the fitter exists to undo.
   tight one, so the frames are shrunk to `--max-width` exactly as for Colab;
   a hall at that size took the L4 25 minutes, expect longer here. The log is
   `<work>/meshroom.log`, the project `<work>/project.mg` (opens in the
-  Meshroom GUI, `~/tools/meshroom/current/Meshroom`).
+  Meshroom GUI, `~/tools/meshroom/current/Meshroom`). Measured 2026-09-22: the 67
+  Moxir frames at 2400 px took **10 min on the RTX 3080** (the L4 took 25) with
+  `llama-server` holding 5.7 GB of the card's 8 GB the whole time. Trap: this
+  release ignores `--cache` when `--save` is given and writes its node cache to
+  `/tmp/MeshroomCache` (≈ 400 MB per hall) — the result finder looks there too,
+  and `/tmp` is where to clean up.
 - **Meshroom is a 13 GB download** onto the box before any GPU work — it
   carries CUDA. A single-stream `wget` managed about 3 MB/s and was still
   going after an hour, long enough for Colab to reclaim the runtime
