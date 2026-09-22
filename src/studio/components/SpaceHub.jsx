@@ -24,7 +24,7 @@ import GithubSyncSection from '../../components/preferences/GithubSyncSection.js
 import SpaceConstellation from './SpaceConstellation.jsx'
 import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { enterFromElement } from '../../components/entryTransition/entryTransition.js'
-import { buildSpaceContentsPath } from '../../utils/spaceRouting.js'
+import { buildScanPath, buildSpaceContentsPath } from '../../utils/spaceRouting.js'
 import { doorTitleForCard, spaceName } from '../utils/spaceNames.js'
 // The card's door. A space whose bare segment a work has taken (`/wcc`) is
 // addressed through its published project instead, so the picture, the frame
@@ -417,17 +417,22 @@ export default function SpaceHub() {
         })
     }
 
-    const submitCreate = async (title) => {
+    // One creation, two doors. `born` decides where the new space OPENS, and
+    // nothing else differs: a space made to be scanned is an ordinary space, and
+    // a space made in the usual way can be scanned later from its own footage
+    // room. The owner's words were "create new space and start to scan" — one
+    // press, and the camera is already looking at the hall.
+    const submitCreate = async (title, born = 'studio') => {
         const name = title.trim()
         if (!name) return
         setCreatingTitle(null)
         setIsBusy(true)
-        setStatus('creating...')
+        setStatus(born === 'scan' ? 'creating, then opening the camera...' : 'creating...')
         try {
             const space = await createServerSpace({ label: name, isPermanent: true })
             announceSessionChanged()
             await loadSpaces()
-            navigateToStudioPath(buildStudioHubPath(space.id))
+            navigateToStudioPath(born === 'scan' ? buildScanPath(space.id) : buildStudioHubPath(space.id))
         } catch (e) {
             setStatus(e.message || 'error creating space')
             setIsBusy(false)
@@ -831,6 +836,12 @@ export default function SpaceHub() {
                                         onKeyDown={e => e.key === 'Escape' && setCreatingTitle(null)}
                                     />
                                     <button className="ssh-btn-create" type="submit">Create</button>
+                                    <button
+                                        className="ssh-btn-create ssh-btn-scan"
+                                        type="button"
+                                        onClick={() => submitCreate(creatingTitle, 'scan')}
+                                        title="Make the space and open the camera, so the place walks straight in"
+                                    >Scan a place</button>
                                     <button className="ssh-btn-cancel" type="button" onClick={() => setCreatingTitle(null)}>✕</button>
                                 </form>
                             )

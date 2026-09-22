@@ -27,88 +27,22 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
-import os from 'node:os'
 
 import {
-    REPO_ROOT, parseArgs, num, say, warn, die, readJson, writeJson,
+    parseArgs, num, say, warn, die, readJson, writeJson,
     IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, walkFiles, fmtBytes
 } from './common.mjs'
+import { DEFAULT_API, makeClient, mimeFor, readToken as readApiToken } from './api.mjs'
 import { readPlaceRecord } from './fit-lib.mjs'
+import { sourceRoomOps, sourceWall } from '../../src/scan/sourceWall.js'
 
 const args = parseArgs()
 
-const DEFAULT_API = 'https://local.thedi.studio/serverXR'
-const TOKEN_KEYS = ['ADMIN_API_TOKEN', 'API_TOKEN', 'DI_API_TOKEN']
-const TOKEN_FILES = () => [
-    args['token-file'] ? String(args['token-file']) : null,
-    path.join(os.homedir(), '.di', 'di.env'),
-    path.join(REPO_ROOT, 'serverXR', '.env.local')
-].filter(Boolean)
-
-// Read from the env file, hand it to fetch, and never log it. Same contract
-// every other script here works under.
-export const readToken = () => {
-    if (process.env.DI_API_TOKEN) return process.env.DI_API_TOKEN.trim()
-    for (const file of TOKEN_FILES()) {
-        let text = ''
-        try {
-            text = fs.readFileSync(file, 'utf8')
-        } catch {
-            continue
-        }
-        for (const key of TOKEN_KEYS) {
-            const line = text.split('\n').find((entry) => entry.startsWith(`${key}=`))
-            const value = line ? line.slice(key.length + 1).trim() : ''
-            if (value) return value
-        }
-    }
-    return null
-}
-
-const mimeFor = (file) => {
-    const ext = path.extname(file).toLowerCase()
-    return {
-        '.glb': 'model/gltf-binary',
-        '.gltf': 'model/gltf+json',
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.png': 'image/png',
-        '.webp': 'image/webp',
-        '.mp4': 'video/mp4',
-        '.mov': 'video/quicktime',
-        '.m4v': 'video/mp4',
-        '.webm': 'video/webm'
-    }[ext] || 'application/octet-stream'
-}
-
-const makeClient = (api, token) => {
-    const auth = token ? { Authorization: `Bearer ${token}` } : {}
-    const call = async (method, route, body, extraHeaders = {}) => {
-        const response = await fetch(`${api}${route}`, {
-            method,
-            headers: {
-                ...auth,
-                ...(body && !(body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
-                ...extraHeaders
-            },
-            body: body instanceof FormData ? body : (body ? JSON.stringify(body) : undefined)
-        })
-        const text = await response.text()
-        let parsed = null
-        try {
-            parsed = text ? JSON.parse(text) : null
-        } catch {
-            parsed = null
-        }
-        return { status: response.status, ok: response.ok, body: parsed, text }
-    }
-    return {
-        get: (route) => call('GET', route),
-        post: (route, body, headers) => call('POST', route, body, headers),
-        patch: (route, body) => call('PATCH', route, body),
-        put: (route, body) => call('PUT', route, body)
-    }
-}
+// The API client, the token reader and the mime table moved to ./api.mjs on
+// 2026-09-22, when frames.mjs needed the same three to pull a hosted space's
+// footage back down (`--from-space`). `readToken` is re-exported because this
+// module already published it.
+export { readToken } from './api.mjs'
 
 const must = (result, what) => {
     if (!result.ok) {
@@ -274,54 +208,13 @@ export const arrivalShot = (place) => {
 }
 
 // ── the footage ───────────────────────────────────────────────────────────────
-// A plain wall of what the room was made of: rows, left to right, at eye
-// height and above. Not a gallery — a working wall you can stand in front of.
-export const sourceWall = (assets, options = {}) => {
-    const perRow = options.perRow || 8
-    // An image or video entity in di.iiii is a plane 3 units tall lying FLAT
-    // ON THE GROUND (rotation-x = -PI/2 inside ImageObject/VideoObject), and
-    // its width follows the picture's own shape. So a wall of them needs two
-    // things this got wrong the first time: a quarter turn about X to stand
-    // each one up, and a scale relative to that built-in height of 3. Left
-    // flat they are invisible from standing height — a room with a horizon
-    // and nothing in it.
-    const tile = options.tile || 1.1          // how tall each one hangs, in metres
-    const gap = options.gap || 0.3
-    const scale = tile / 3
-    // Columns are spaced for a landscape photograph, which is what a phone
-    // hands over: wider than it is tall, about 3:2.
-    const columnStep = tile * 1.7 + gap
-    const rowStep = tile + gap
-    const rows = Math.ceil(assets.length / perRow)
-    const width = Math.min(assets.length, perRow) * columnStep
-    return assets.map((asset, index) => {
-        const row = Math.floor(index / perRow)
-        const column = index % perRow
-        const isVideo = String(asset.mimeType || '').startsWith('video')
-        return {
-            id: `source-${index + 1}`,
-            type: isVideo ? 'video' : 'image',
-            name: asset.name,
-            components: {
-                transform: {
-                    position: [
-                        -width / 2 + columnStep / 2 + column * columnStep,
-                        1.6 + (rows - 1 - row) * rowStep,
-                        -(options.distance || 3)
-                    ],
-                    rotation: [Math.PI / 2, 0, 0],
-                    scale: [scale, scale, scale]
-                },
-                media: {
-                    assetId: asset.id,
-                    fit: 'contain',
-                    ...(isVideo ? { autoplay: false, loop: true, muted: true, spatial: false } : {})
-                },
-                animation: { mode: 'static', speed: 1, amplitude: 1 }
-            }
-        }
-    })
-}
+// The wall's geometry moved to src/scan/sourceWall.js on 2026-09-22, when a
+// phone at /{space}/scan became the second thing that hangs pictures on it. Two
+// copies would drift, and a wall that hangs one way when this script builds it
+// and another way when a phone does is two rooms. Re-exported here because
+// import.test.js and anything else that already knew this name should keep
+// working.
+export { sourceWall, sourceWallEntity, sourceWallSlot, sourceRoomOps } from '../../src/scan/sourceWall.js'
 
 const main = async () => {
     const work = args.work ? path.resolve(String(args.work)) : null
@@ -359,7 +252,7 @@ const main = async () => {
         return
     }
 
-    const token = readToken()
+    const token = readApiToken(args['token-file'] ? String(args['token-file']) : null)
     if (!token) {
         die(
             'No API token found, so nothing was sent.',
@@ -411,16 +304,13 @@ const main = async () => {
                 await sendOps(client, sourcesProject, [
                     ...carried.map((entry) => ({ type: 'upsertAsset', payload: { asset: entry } })),
                     ...wall.map((entity) => ({ type: 'createEntity', payload: { entity } })),
-                    {
-                        type: 'setWorldState',
-                        payload: {
-                            patch: {
-                                backgroundColor: '#0a1118',
-                                gridVisible: false,
-                                spawn: { x: 0, z: 4.5, yaw: Math.PI, pitch: 0, altY: 1.6 }
-                            }
-                        }
-                    }
+                    // The room, not just the wall — one copy, shared with the
+                    // phone (src/scan/sourceWall.js). It also carries the
+                    // arrival SHOT now: left to auto-frame, a wall is one thin
+                    // wide flat thing and the camera lands high above and behind
+                    // it, so six photographs read as a strip on the floor (seen
+                    // 2026-09-22). Same lesson as the hall, four lines up.
+                    ...sourceRoomOps()
                 ])
                 const refused = files.length - carried.length
                 say(`  ${carried.length} files hung on the wall${refused ? ` · ${refused} the server would not take` : ''}`)

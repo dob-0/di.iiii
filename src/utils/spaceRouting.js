@@ -18,6 +18,11 @@ export const APP_PAGE_WIKI = 'wiki'
 // wall. The author's hub keeps its own address, `/{space}/studio`.
 export const APP_PAGE_SPACE_CONTENTS = 'space-contents'
 export const SPACE_CONTENTS_SEGMENT = 'projects'
+// `/{space}/scan` — the phone collecting a place (src/scan/ScanSurface.jsx).
+// A space IS a place, and this is the address where the place walks in: the
+// camera, the walk, the stills, and the wall they land on.
+export const APP_PAGE_SCAN = 'scan'
+export const SCAN_SEGMENT = 'scan'
 export const APP_PAGE_PRIVACY = 'privacy'
 export const APP_PAGE_TERMS = 'terms'
 // The workshop — /tools (src/tools/ToolsRoom.jsx). The one address that leads to
@@ -64,6 +69,14 @@ export const RESERVED_APP_SEGMENTS = [
     // answers 404 on prod and on the dev tier, and a PRIVATE space would answer 401,
     // so nothing holds the word on either tier.
     'chat',
+    // `/{space}/scan` — the phone collecting a place (src/scan/ScanSurface.jsx).
+    // Reserved for the same reason 'make' and 'map' are: without it the address
+    // parses as /{space}/{projectSlug} with "scan" read as the name of a
+    // project, and the page a phone was handed would heal to the published one.
+    // Checked before reserving, 2026-09-22: /serverXR/api/spaces/scan and
+    // /serverXR/api/projects/scan both answer 404 on prod (diiii.xyz), on the
+    // dev tier and on the local install — nothing holds the word anywhere.
+    SCAN_SEGMENT,
     // The sign-in page — /login (SignInSurface in AuthGate.jsx). It was not a
     // route at all: the address a teammate is sent to fell through to the space
     // lookup and answered "Nothing lives at “login”" above a working form.
@@ -177,11 +190,20 @@ export const isTermsPageSegment = (value = '') => (value || '').trim().toLowerCa
 export const isToolsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_TOOLS
 export const isForAppsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_FOR_APPS
 export const isSpaceContentsSegment = (value = '') => (value || '').trim().toLowerCase() === SPACE_CONTENTS_SEGMENT
+export const isScanSegment = (value = '') => (value || '').trim().toLowerCase() === SCAN_SEGMENT
 
 export const buildSpaceContentsPath = (spaceId) => {
     const prefix = getAppBasePrefix()
     if (!spaceId) return prefix ? `${prefix}/` : '/'
     return `${prefix}/${spaceId}/${SPACE_CONTENTS_SEGMENT}`.replace(/\/{2,}/g, '/')
+}
+
+// `/{space}/scan` — one shape and no default space. A scan is always of ONE
+// place, and the place is the space; there is no list and nothing to guess.
+export const buildScanPath = (spaceId) => {
+    const prefix = getAppBasePrefix()
+    if (!spaceId) return prefix ? `${prefix}/` : '/'
+    return `${prefix}/${spaceId}/${SCAN_SEGMENT}`.replace(/\/{2,}/g, '/')
 }
 
 export const buildToolsPath = () => {
@@ -265,6 +287,17 @@ export const getAppLocationState = (locationLike = null) => {
             if (segments.length === 2 && !isReservedAppSegment(segment) && isSpaceContentsSegment(segments[1])) {
                 return {
                     page: APP_PAGE_SPACE_CONTENTS,
+                    spaceId: segment
+                }
+            }
+            // `/{space}/scan`. Claimed here, with the other exact two-segment
+            // shapes, for the same reason: the generic /{space}/{projectSlug}
+            // rule below would otherwise read "scan" as the name of a project.
+            // The first segment has to be a space and not a lane word, so
+            // `/raw/scan` and `/studio/scan` are not somebody's place.
+            if (segments.length === 2 && !isReservedAppSegment(segment) && isScanSegment(segments[1])) {
+                return {
+                    page: APP_PAGE_SCAN,
                     spaceId: segment
                 }
             }

@@ -1447,12 +1447,37 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['raw', 'ui', 'colour', 'families', 'windows', 'nodes', 'reading', 'design', 'canvas'],
         updated: '2026-08-19'
+    },
+    {
+        id: 'scan-a-place',
+        category: 'Spaces & access',
+        title: 'Scanning a real place into a space',
+        summary: 'Walk a hall with your phone and di.iiii collects the footage into the space as you go — no second app, nothing to export, and the 3D copy is built from it afterwards.',
+        body: [
+            'A space is a place. If you have a real one — a factory hall, a theatre, a foyer — you can walk it with a phone and have it become a space you can stand in. Press "Scan a place" on the new-space form and the camera opens on the space it just made, at di-studio.xyz/{space}/scan.',
+            'The walk is recorded in thirty-second pieces and each piece goes up the moment it closes, so a lift shaft or a dead bar costs you thirty seconds rather than the whole walk. Photographs go up one at a time. Everything lands on a wall in the space\'s own footage room — open it on a laptop while somebody walks and you will watch it fill. Anyone with editing access to the space can add to the same wall from their own phone, so two people can walk one hall from both ends.',
+            'The camera coaches while you walk, because footage cannot be re-taken once you have left the building:',
+            {
+                list: [
+                    'Walk slowly. Slower than feels right — it says "slower" when the picture starts going soft.',
+                    'Keep the floor in the picture. It is what stands the room up, and the page says so when you have been pointing above the horizon for a couple of seconds.',
+                    'Circle every pillar, all the way round. One viewing angle of a wall is a hole in the copy.',
+                    'Nobody in the shot.'
+                ]
+            },
+            'A ring of 36 marks fills as you turn, and it is labelled "directions covered" because that is honestly all it counts: you could stand still in a doorway and fill every mark having seen nothing of the hall. What it does catch is a walk that never looked back. If the phone will not give a compass the ring says so and everything else works as it was.',
+            'The last step asks you to measure ONE wall with a tape and type the number in metres, and to photograph that wall. Nothing in a reconstruction knows how big a room is — a hall and a model of a hall are the same pile of numbers — so without that number the room walks at a size nobody chose, and the page tells you so in capitals until you give it. The number and the photograph both stay in the footage room, so anyone can check one against the other later.',
+            'Once there is about a minute of walking, or forty photographs, "Make the hall" appears. Building the copy runs a reconstruction on a graphics card for the better part of an hour, so it happens on the studio machine and nowhere else: on di-studio.xyz the button says the copy is built there instead. The footage still collects wherever you walked — that is the point of collecting it into the space rather than into an app on the phone — and the copy can be built from it afterwards.',
+            'When it finishes, the hall arrives as another room in the same space, standing on its floor at the size you measured, with a door you arrive at. The footage stays beside it. A visitor can walk the hall and then walk into what the hall was made of.'
+        ],
+        tags: ['scan', 'scanning', 'place', 'hall', 'venue', 'phone', 'camera', 'photogrammetry', 'walk', 'footage', 'sources', '3d', 'model', 'reconstruction', 'meshroom', 'measure', 'tape', 'theatre', 'factory', 'space', 'room', 'polycam', 'lidar'],
+        updated: '2026-09-22'
     }
 ]
 
 // Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
 // fails CI if any id does not resolve to an article (otherwise it silently vanishes).
-export const WIKI_HIGHLIGHT_IDS = ['glossary', 'lights-on-a-place', 'picture-operators-and-the-desk', 'tools-room', 'following-a-space', 'guests-in-the-room', 'build-zones', 'raw-windows-travel-with-the-canvas', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
+export const WIKI_HIGHLIGHT_IDS = ['scan-a-place', 'glossary', 'lights-on-a-place', 'picture-operators-and-the-desk', 'tools-room', 'following-a-space', 'guests-in-the-room', 'build-zones', 'raw-windows-travel-with-the-canvas', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))

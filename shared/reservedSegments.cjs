@@ -29,7 +29,10 @@ const APP_SEGMENTS = [
     'admin', 'preferences', 'prefrenaces', 'preferances',
     'wiki', 'privacy', 'terms', 'tools', 'for-apps',
     'beta', 'raw', 'seed', 'open_jam', 'studio', 'make', 'light',
-    'spaces', 'projects', 'chat', 'login'
+    'spaces', 'projects', 'chat', 'login',
+    // `/{space}/scan` — the phone collecting a place. Checked on all three
+    // tiers before reserving (2026-09-22): nothing answers to the word.
+    'scan'
 ]
 
 // Real directories under public/, plus the build's own output prefixes, served

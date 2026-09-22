@@ -16,7 +16,11 @@
  *   5  import    a space on di.iiii, the hall in it, the footage beside it
  *
  * Options:
- *   --from <dir>        the footage (required)
+ *   --from <dir>        the footage (required, unless --from-space)
+ *   --from-space <name> pull the footage a phone already collected into that
+ *                       space's `sources` room instead of reading a folder. The
+ *                       footage is then ALREADY in the space, so the importer is
+ *                       told not to hang a second copy of it.
  *   --name <space>      what the space is called (required)
  *   --work <dir>        where the working files go (default <from>/../place-<name>)
  *   --scale-edge <m>    the room's longest wall, measured with a tape
@@ -28,6 +32,7 @@
  *   --forward <deg>     which way the visitor faces on arrival
  *   --flip              the floor it found was the ceiling
  *   --from-step <n>     start at step n, using what is already in <work>
+ *   --no-sources        do not carry the footage into the space (it is there)
  *   --dry-run           say what would happen, change nothing
  *
  * Each step leaves its work in <work> and can be run again on its own — see
@@ -35,6 +40,7 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import os from 'node:os'
 import { spawnSync } from 'node:child_process'
 
 import { PLACE_DIR, parseArgs, num, say, warn, die, ensureDir } from './common.mjs'
@@ -46,7 +52,11 @@ const step = (name, script, scriptArgs) => ({ name, script, args: scriptArgs })
 export const buildSteps = (options) => {
     const { work, from, name } = options
     const steps = []
-    steps.push(step('frames', 'frames.mjs', ['--from', from, '--work', work]))
+    // Either a folder on this disk, or a space whose `sources` room a phone
+    // already filled. Never both — the caller chose one.
+    steps.push(step('frames', 'frames.mjs', options.fromSpace
+        ? ['--from-space', options.fromSpace, '--work', work, ...(options.api ? ['--api', options.api] : [])]
+        : ['--from', from, '--work', work]))
     steps.push(step('build', 'colab-job.mjs', options.localObj
         ? ['--work', work, '--local-obj', options.localObj]
         : ['--work', work, '--gpu', options.gpu || 'L4']))
@@ -63,7 +73,13 @@ export const buildSteps = (options) => {
     if (options.flip) fitArgs.push('--flip')
     steps.push(step('fit', 'fit.mjs', fitArgs))
 
-    const importArgs = ['--work', work, '--name', name, '--sources', from]
+    // The footage is carried into the space at the end — UNLESS it came out of
+    // that space in the first place. A walk a phone hung on the sources wall as
+    // it happened must not arrive a second time beside itself, so --from-space
+    // implies --no-sources and the flag is there to be said by hand as well.
+    const importArgs = ['--work', work, '--name', name]
+    if (options.noSources || options.fromSpace) importArgs.push('--no-sources')
+    else importArgs.push('--sources', from)
     if (options.api) importArgs.push('--api', options.api)
     if (options.label) importArgs.push('--label', options.label)
     steps.push(step('import', 'import.mjs', importArgs))
@@ -72,22 +88,29 @@ export const buildSteps = (options) => {
 
 const main = () => {
     const from = args.from ? path.resolve(String(args.from)) : null
+    const fromSpace = args['from-space'] ? String(args['from-space']).trim() : null
     const name = args.name ? String(args.name).trim() : null
-    if (!from || !name) {
+    if ((!from && !fromSpace) || !name) {
         die(
-            'place.mjs needs --from <folder of footage> and --name <space>.',
+            'place.mjs needs --name <space>, and either --from <folder of footage> or --from-space <space>.',
             '',
             'For example:',
-            '    node scripts/place/place.mjs --from /mnt/data/footage/moxir-2026-10-17 --name moxir --scale-edge 24'
+            '    node scripts/place/place.mjs --from /mnt/data/footage/moxir-2026-10-17 --name moxir --scale-edge 24',
+            '    node scripts/place/place.mjs --from-space moxir --name moxir --scale-edge 24',
+            '',
+            'The second one is for a walk a phone already collected at /moxir/scan.'
         )
     }
-    if (!fs.existsSync(from)) die(`No such folder: ${from}`)
+    if (from && !fs.existsSync(from)) die(`No such folder: ${from}`)
 
     // Never inside the footage folder: the drop folder is somebody else's, and
     // read-only as far as this pipeline is concerned.
     const work = args.work
         ? path.resolve(String(args.work))
-        : path.join(path.dirname(from), `place-${name}`)
+        : (from
+            ? path.join(path.dirname(from), `place-${name}`)
+            // Nothing local was named, so there is no drop folder to sit beside.
+            : path.join(os.tmpdir(), `place-${name}`))
     ensureDir(work)
 
     const scaleEdge = args['scale-edge'] === undefined ? null : num(args['scale-edge'], null)
@@ -102,6 +125,8 @@ const main = () => {
     const steps = buildSteps({
         work,
         from,
+        fromSpace,
+        noSources: Boolean(args['no-sources']),
         name,
         gpu: args.gpu ? String(args.gpu) : 'L4',
         localObj: args['local-obj'] ? path.resolve(String(args['local-obj'])) : null,
@@ -116,7 +141,7 @@ const main = () => {
 
     const first = Math.max(1, num(args['from-step'], 1))
     say(`A place called "${name}"`)
-    say(`  footage  ${from}`)
+    say(`  footage  ${from || `the ${fromSpace} space's own footage room`}`)
     say(`  working  ${work}`)
     say('')
 

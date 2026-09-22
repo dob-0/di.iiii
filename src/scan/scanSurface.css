@@ -1,0 +1,415 @@
+/* Scanning a place — /{space}/scan.
+ *
+ * A working page held in one hand in a cold building, not a page to read. So:
+ * the picture fills the screen, everything that can be pressed sits at the
+ * bottom edge where a thumb reaches, and every reading is small, mono and off to
+ * one side. Built on the platform's own tokens (src/styles/base.css), and the
+ * two scrims are how text stays legible over a live picture — nothing here
+ * invents a colour.
+ *
+ * `viewport-fit=cover` safe areas are honoured on both edges because a phone
+ * turned sideways puts its notch where the record button would otherwise be, and
+ * the home bar under it. Checked at 390x844 and 844x390.
+ */
+
+.scan {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: var(--di-black);
+    color: var(--di-ink);
+    font-family: var(--di-sans);
+    font-size: var(--di-text-3);
+    /* The safe areas of BOTH orientations, once, so nothing has to know which
+       way up the phone is. */
+    padding:
+        env(safe-area-inset-top)
+        env(safe-area-inset-right)
+        env(safe-area-inset-bottom)
+        env(safe-area-inset-left);
+}
+
+/* The picture. `cover` rather than `contain`: a letterboxed preview on a phone
+   is two black bars where the hall should be, and the walk is framed by what
+   the person sees, so what they see must be what the lens sees. */
+.scan-view {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: var(--di-black);
+}
+
+.scan-hidden { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+/* ── where you are, and the way out ──────────────────────────────────────── */
+.scan-top {
+    position: absolute;
+    top: env(safe-area-inset-top);
+    left: env(safe-area-inset-left);
+    right: env(safe-area-inset-right);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--di-space-3);
+    padding: var(--di-space-3);
+}
+
+.scan-where { display: flex; flex-direction: column; gap: var(--di-space-1); }
+
+.scan-eyebrow {
+    font-family: var(--di-mono);
+    font-size: var(--di-text-1);
+    letter-spacing: var(--di-label-tracking);
+    text-transform: uppercase;
+    color: var(--di-cyan);
+}
+
+.scan-place {
+    font-size: var(--di-text-4);
+    font-weight: 500;
+    text-shadow: 0 1px 3px var(--di-scrim-strong);
+}
+
+/* The way out is a 44px target with a small mark in it, not a small target. */
+.scan-out {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: var(--di-radius-pill);
+    background: var(--di-scrim);
+    color: var(--di-ink);
+    text-decoration: none;
+    font-size: var(--di-text-4);
+}
+
+/* ── turn the phone ──────────────────────────────────────────────────────── */
+.scan-turn {
+    position: absolute;
+    top: 50%;
+    left: var(--di-space-4);
+    right: var(--di-space-4);
+    margin: 0;
+    padding: var(--di-space-3);
+    transform: translateY(-50%);
+    text-align: center;
+    background: var(--di-scrim-strong);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
+    font-size: var(--di-text-4);
+}
+
+/* ── everything a thumb reaches, in ONE column ───────────────────────────── */
+/*
+ * The instructions, the measuring step, a note, the after-the-walk links and the
+ * bar were four absolutely-positioned layers stacked by hand against
+ * `bottom: calc(… + … + …)`. At 390x844 they overlapped: "See the footage room"
+ * landed on top of "Understood" and swallowed its taps, and "Make the hall once
+ * there is 60 more seconds of walking" sat behind the Photograph button. Caught
+ * by driving the page, not by looking at it — Playwright reported the
+ * intercepting element by name.
+ *
+ * One column, bottom-anchored, and nothing can land on anything. It also scrolls
+ * itself if a phone is short enough that the whole of it will not fit, rather
+ * than pushing the record button off the screen.
+ */
+.scan-foot {
+    position: absolute;
+    left: calc(env(safe-area-inset-left) + var(--di-space-3));
+    right: calc(env(safe-area-inset-right) + var(--di-space-3));
+    bottom: calc(env(safe-area-inset-bottom) + var(--di-space-3));
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-3);
+    max-height: calc(100% - var(--di-space-8));
+    overflow-y: auto;
+}
+
+/* ── the standing instructions, before the first walk ────────────────────── */
+.scan-standing {
+    padding: var(--di-space-4);
+    background: var(--di-scrim-strong);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    flex: 0 0 auto;
+}
+
+.scan-standing-head {
+    margin: 0 0 var(--di-space-2);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    letter-spacing: var(--di-label-tracking);
+    text-transform: uppercase;
+    color: var(--di-cyan);
+}
+
+.scan-standing-list {
+    margin: 0 0 var(--di-space-3);
+    padding-left: var(--di-space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-2);
+    font-size: var(--di-text-4);
+}
+
+/* ── the readings ────────────────────────────────────────────────────────── */
+.scan-readings {
+    position: absolute;
+    top: calc(env(safe-area-inset-top) + var(--di-space-8));
+    right: calc(env(safe-area-inset-right) + var(--di-space-3));
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--di-space-2);
+    max-width: 52%;
+    padding: var(--di-space-3);
+    background: var(--di-scrim);
+    border-radius: var(--di-radius);
+    text-align: right;
+}
+
+/* The ring of directions: 36 ticks at the rim, each rotated into its own sector.
+   A ring rather than a bar because the thing being counted is a direction, and a
+   direction wraps.
+
+   Each tick hangs from the TOP of the box and turns about the ring's centre —
+   `transform-origin: 50% <radius>` — so it stays on the rim. Turned about its own
+   end instead, the 36 ticks radiated out of the middle like a sunburst, escaped
+   the circle and printed themselves through the readings beside it. */
+.scan-ring {
+    --scan-ring-size: 76px;
+    --scan-ring-radius: 38px;
+    position: relative;
+    width: var(--scan-ring-size);
+    height: var(--scan-ring-size);
+    flex: 0 0 auto;
+    align-self: center;
+    border-radius: 50%;
+    border: 1px solid var(--di-line);
+}
+
+.scan-ring-mark {
+    position: absolute;
+    top: 0;
+    /* Centred, less half the tick's own width — its geometry, not a trim. */
+    left: calc(50% - 1px);
+    width: 2px;
+    height: 9px;
+    transform-origin: 50% var(--scan-ring-radius);
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.scan-ring-mark.is-covered { background: var(--di-cyan); }
+
+.scan-figures { margin: 0; display: flex; flex-direction: column; gap: var(--di-space-1); }
+.scan-figure { display: flex; align-items: baseline; justify-content: flex-end; gap: var(--di-space-2); }
+
+.scan-figure dt {
+    font-family: var(--di-mono);
+    font-size: var(--di-text-1);
+    letter-spacing: var(--di-label-tracking);
+    text-transform: uppercase;
+    color: var(--di-dim);
+}
+
+ /* While recording, the live counter is the one figure that must be found at a
+    glance — the red frame round the page can be drawn over by the platform's own
+    mode mark, so being sure the camera is running cannot depend on it. */
+.scan-figure.is-live dt,
+.scan-figure.is-live dd { color: var(--di-danger); }
+
+.scan-figure dd {
+    margin: 0;
+    font-family: var(--di-mono);
+    font-size: var(--di-text-4);
+    font-variant-numeric: tabular-nums;
+}
+
+/* One short thing at a time, and loud enough to be read at arm's length while
+   walking. */
+.scan-coach {
+    margin: 0;
+    padding: var(--di-space-2) var(--di-space-3);
+    background: var(--di-cyan);
+    color: var(--di-black);
+    border-radius: var(--di-radius);
+    font-weight: 600;
+    font-size: var(--di-text-4);
+}
+
+.scan-small { margin: 0; font-size: var(--di-text-2); color: var(--di-dim); }
+.scan-small-warn { color: var(--di-warning); }
+
+/* ── the measured wall ───────────────────────────────────────────────────── */
+.scan-measure {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-2);
+    padding: var(--di-space-4);
+    background: var(--di-scrim-strong);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
+}
+
+.scan-measure-label { font-size: var(--di-text-4); }
+
+.scan-measure-input {
+    min-height: 44px;
+    padding: 0 var(--di-space-3);
+    background: var(--di-surface-2);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    color: var(--di-ink);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-6);
+}
+
+.scan-measure-actions { display: flex; flex-wrap: wrap; gap: var(--di-space-2); }
+
+/* ── the bar a thumb reaches ──────────────────────────────────────────────── */
+.scan-bar {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--di-space-3);
+}
+
+.scan-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 var(--di-space-4);
+    background: var(--di-cyan);
+    color: var(--di-black);
+    border: 1px solid var(--di-cyan);
+    border-radius: var(--di-radius);
+    font-family: var(--di-sans);
+    font-size: var(--di-text-3);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.scan-btn-quiet {
+    background: var(--di-scrim);
+    color: var(--di-ink);
+    border-color: var(--di-cyan-border);
+    font-weight: 500;
+}
+
+.scan-btn-wide { flex: 1 1 0; }
+.scan-btn:disabled { opacity: 0.45; cursor: default; }
+
+/* The one control that must never be mistaken for anything else, and the only
+   one that takes `touch-action: none` — pressing it must not scroll the page,
+   and nothing else here may steal a scroll from somebody in gloves. */
+.scan-record {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    padding: 0;
+    background: var(--di-scrim-strong);
+    border: 2px solid var(--di-ink);
+    border-radius: 50%;
+    cursor: pointer;
+    touch-action: none;
+}
+
+.scan-record-mark {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--di-danger);
+    transition: border-radius var(--di-motion-base), width var(--di-motion-base), height var(--di-motion-base);
+}
+
+.scan-record.is-recording .scan-record-mark {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--di-radius);
+}
+
+.scan-record:disabled { opacity: 0.45; cursor: default; }
+
+/* A thin frame while recording: the one state where being wrong about whether
+   the camera is running costs a whole walk. */
+.scan-live::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--di-danger);
+    pointer-events: none;
+}
+
+/* ── what happens after the walk ─────────────────────────────────────────── */
+.scan-after {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--di-space-2);
+}
+
+.scan-note {
+    margin: 0;
+    padding: var(--di-space-3);
+    background: var(--di-scrim-strong);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    font-size: var(--di-text-3);
+}
+
+.scan-note-bad { border-color: var(--di-danger); }
+
+/* ── nothing to show: a camera that never opened ─────────────────────────── */
+.scan-blocked { display: flex; align-items: center; justify-content: center; }
+
+.scan-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-3);
+    max-width: 34rem;
+    margin: var(--di-space-4);
+    padding: var(--di-space-5);
+    background: var(--di-surface);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    text-align: left;
+}
+
+.scan-card-eyebrow {
+    margin: 0;
+    font-family: var(--di-mono);
+    font-size: var(--di-text-1);
+    letter-spacing: var(--di-label-tracking);
+    text-transform: uppercase;
+    color: var(--di-cyan);
+}
+
+.scan-card-line { margin: 0; font-size: var(--di-text-4); }
+
+.scan-compass-ask { align-self: flex-end; }
+
+/* A short landscape screen — 844x390 is 390 tall, and the readings, the
+   instructions and the bar all want room. The readings shrink first: they are
+   the thing you glance at, not the thing you press. */
+@media (max-height: 460px) {
+    .scan-ring { --scan-ring-size: 52px; --scan-ring-radius: 26px; }
+    .scan-ring-mark { height: 7px; }
+    .scan-readings { max-width: 36%; gap: var(--di-space-1); padding: var(--di-space-2); }
+    .scan-standing { padding: var(--di-space-3); }
+    .scan-standing-list { gap: var(--di-space-1); font-size: var(--di-text-3); }
+    .scan-record { width: 56px; height: 56px; }
+    .scan-record-mark { width: 38px; height: 38px; }
+    .scan-record.is-recording .scan-record-mark { width: 22px; height: 22px; }
+    /* The foot owns the whole width on a short screen, so the readings must not
+       reach down into it. */
+    .scan-foot { max-height: calc(100% - var(--di-space-7)); }
+}
