@@ -487,6 +487,78 @@ export const ui = {
         ].join('\n')
     },
 
+    // ── the NDI runtime ─────────────────────────────────────
+    // Said plainly, because the reason di.iiii cannot just include this is a
+    // licence and not a technical excuse, and a person is owed that in one
+    // sentence rather than a link to a page about copyleft.
+    ndiGetting: (download) => [
+        `fetching the NDI runtime — ${(download.bytes / 1e6).toFixed(0)} MB, from Vizrt`,
+        style.dim('di.iiii cannot ship it — the platform is AGPL, the runtime is Vizrt\'s. once,'),
+        style.dim('then it is yours, and no admin password was needed for any of it.')
+    ].join('\n'),
+
+    ndiAlreadyHere: (library) => `the NDI runtime is already here — ${library}`,
+
+    ndiReady: (status, verified) => {
+        const lines = [`NDI is ready — ${(status.bytes / 1e6).toFixed(0)} MB${status.variant ? `, ${status.variant}` : ''}`]
+        if (verified?.checked && verified.ok) lines.push(style.dim(`  ${verified.version}`))
+        else if (verified?.checked) lines.push(style.dim(`  di.iiii could not load it: ${verified.reason || 'unknown'}`))
+        else if (verified?.why) lines.push(style.dim(`  not loaded yet — ${verified.why}`))
+        lines.push(style.dim(`  restart it to pick this up — ${CMD} down && ${CMD} up`))
+        return lines.join('\n')
+    },
+
+    ndiRemoved: () => 'the NDI runtime is gone. your work is untouched.',
+
+    ndiUnsupported: (platform) => [
+        `NDI publishes no runtime for ${platform}.`,
+        style.dim('linux, macOS and windows only.')
+    ].join('\n'),
+
+    ndiStatus: (status) => {
+        if (!status.supported) return ui.ndiUnsupported(status.platform)
+        if (!status.installed) {
+            return [
+                'no NDI runtime on this machine.',
+                style.dim(`${CMD} ndi get   one download from Vizrt, then di.iiii can send and receive on the network`)
+            ].join('\n')
+        }
+        const lines = [
+            `NDI ${status.version}${status.variant ? ` — ${status.variant}` : ''}`,
+            `  ${(status.bytes / 1e6).toFixed(0)} MB${status.fetchedAt ? `, fetched ${String(status.fetchedAt).slice(0, 10)}` : ''}`,
+            `  ${status.wired ? 'di.iiii is pointed at it' : style.dim('di.iiii is pointed somewhere else — check DI_NDI_LIB')}`,
+            style.dim(`  ${status.library}`)
+        ]
+        if (status.sha256) lines.push(style.dim(`  sha256 ${String(status.sha256).slice(0, 16)}…`))
+        // Said, not hidden: this one was not put here by `ndi get`, so the
+        // version is the line we look for and not the version we fetched.
+        else lines.push(style.dim('  put here by hand — no receipt, so the version above is the runtime line, not a reading'))
+        return lines.join('\n')
+    },
+
+    ndiUsage: () => [
+        style.bold(`${CMD} ndi`) + style.dim(' — put di.iiii on the network as a video source'),
+        '',
+        'with this, a picture operator can be sent to any other machine on the wire,',
+        'and another machine\'s source can be taken in as an operator. OBS, Resolume and',
+        'a projector box all see it as a camera.',
+        '',
+        `  ${CMD} ndi get      fetch the runtime (9–225 MB once, depending on the machine)`,
+        `  ${CMD} ndi status   whether it is here, and whether di.iiii can load it`,
+        `  ${CMD} ndi remove   take it off this machine`,
+        '',
+        style.dim('  --force           fetch it again even if it is already here'),
+        style.dim('  --variant NAME    a different linux build (a raspberry pi is not x86_64)'),
+        style.dim('  --sha256 HEX      refuse the download unless it matches'),
+        '',
+        'it is fetched and never bundled, for the same reason the keeper is: di.iiii is',
+        'AGPL-3.0 and this runtime is Vizrt\'s under their own terms. nothing is',
+        'downloaded until you type get. it needs no admin rights — it lands in your',
+        'own di folder, not in the system.',
+        '',
+        style.dim('NDI® is a registered trademark of Vizrt NDI AB — https://ndi.video')
+    ].join('\n'),
+
     keeperUsage: () => [
         style.bold(`${CMD} keeper`) + style.dim(' — the small model that comes with di.iiii'),
         '',
@@ -619,7 +691,7 @@ export const ui = {
         'work, and until it lands a stage machine drives the screen it is given.'
     ].join('\n'),
 
-    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), follow: () => ui.followUsage(), stage: () => ui.stageUsage() })[name]?.() || null,
+    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), ndi: () => ui.ndiUsage(), follow: () => ui.followUsage(), stage: () => ui.stageUsage() })[name]?.() || null,
 
     help: () => [
         style.bold(CMD) + style.dim(' — di.iiii on your own machine'),
@@ -639,6 +711,7 @@ export const ui = {
         '',
         `  ${CMD} mcp           hand this di.iiii to Claude, or any agent that speaks MCP`,
         `  ${CMD} keeper get    a small model on this machine — works with no internet`,
+        `  ${CMD} ndi get       video in and out over the network — OBS, Resolume, a projector`,
         '',
         `  ${CMD} stage join SPACE --from URL   make this machine the one under the projector`,
         `  ${CMD} stage status  what it is showing, and why not · ${CMD} stage leave to undo it`,
