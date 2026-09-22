@@ -137,8 +137,10 @@ function RawSurfaceRoute({ rawState, spaceId }) {
 // A full page load of /light on a local install never gets here — serverXR
 // answers it before index.html exists. A client-side navigation can, and the
 // desk is not a React route, so the only way to reach it is to leave the SPA.
+// The query goes along: ?space=&project= is how the desk knows which project
+// sent the person and draws the way back (serverXR/src/lighting/ui/from.js).
 function LocalLightingDeskHandoff() {
-    useEffect(() => { window.location.assign('/light/') }, [])
+    useEffect(() => { window.location.assign(`/light/${window.location.search}${window.location.hash}`) }, [])
     return <RouteSurfaceFallback label="Opening the lighting desk" detail="" />
 }
 

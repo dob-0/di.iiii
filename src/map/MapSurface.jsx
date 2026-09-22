@@ -362,7 +362,7 @@ export default function MapSurface({ projectId, spaceId }) {
                     {lightingHere ? (
                         <a
                             className="map-action"
-                            href={lightingDeskPath()}
+                            href={lightingDeskPath({ spaceId, projectId, label: doc?.projectMeta?.title })}
                             target="_blank"
                             rel="noreferrer"
                             title="The lighting desk on this machine — a map cue can recall one of its scenes"

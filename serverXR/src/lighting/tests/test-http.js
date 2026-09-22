@@ -848,6 +848,37 @@ check('the static handler will not serve outside public/', async () => {
   }
 });
 
+// ---- the way back to the project that opened the desk ------------------------
+// A project opens the desk as /light/?space=<id>&project=<id>. The query is read by the
+// page (ui/from.js); the server's only job is to serve the same files with or without it,
+// and to keep serving the bare desk exactly as it was.
+
+check('the bare desk still serves, with its one door to /spaces and no way back drawn', async () => {
+  const res = await fetch(base + '/');
+  assert.strictEqual(res.status, 200);
+  const html = await res.text();
+  assert.ok(html.includes('<a class="homelink" href="/spaces"'), 'the door to /spaces is still the first thing');
+  assert.ok(/<a class="homelink" id="fromBack"[^>]*\bhidden\b/.test(html), 'the way back starts hidden');
+  assert.ok(/<nav class="pages" id="fromTools"[^>]*\bhidden\b/.test(html), 'and so do the other tools');
+  const from = html.indexOf('<script src="from.js">');
+  assert.ok(from > -1 && from < html.indexOf('<script src="app.js">'), 'from.js loads, before app.js reads it');
+});
+
+check('opened from a project, the page and its scripts still serve', async () => {
+  for (const route of ['/?space=lab&project=first-piece', '/?space=lab&project=first-piece&label=First%20Piece',
+                       '/index.html?space=lab&project=first-piece', '/?space=..%2F..&project=%5Cevil']) {
+    const res = await fetch(base + route);
+    assert.strictEqual(res.status, 200, route + ' answered ' + res.status);
+    assert.ok((await res.text()).includes('id="fromBack"'), route + ' is the desk');
+  }
+  for (const file of ['from.js', 'app.js', 'style.css']) {
+    const res = await fetch(base + '/' + file + '?space=lab&project=first-piece');
+    assert.strictEqual(res.status, 200, file + ' with a query answered ' + res.status);
+  }
+  const src = await (await fetch(base + '/from.js')).text();
+  assert.ok(src.includes('deskFrom'), 'from.js is the file app.js reads');
+});
+
 check('/api/state publishes what each channel role is', async () => {
   const { body } = await GET('/api/state');
   const k = body.roleKinds;

@@ -25,7 +25,19 @@ const lightingPath = (rest = '') => joinPath(getBasePrefix(), 'light', rest)
 // Directory-shaped on purpose: the desk's own interface uses relative
 // addresses and only resolves under a trailing slash. (/light redirects, but
 // the link should not need the round trip.)
-export const lightingDeskPath = () => lightingPath('/')
+//
+// Opened FROM a project, the link says which one — ?space=&project=, and the
+// project's title as &label= when it has one — so the desk can show the way
+// back (serverXR/src/lighting/ui/from.js reads it). The bar's Light link uses
+// the same shape. Without a project it is the bare desk, exactly as before.
+export const lightingDeskPath = ({ spaceId = null, projectId = null, label = null } = {}) => {
+    const path = lightingPath('/')
+    if (!spaceId || !projectId) return path
+    const query = new URLSearchParams({ space: spaceId, project: projectId })
+    const title = typeof label === 'string' ? label.trim() : ''
+    if (title && title !== projectId) query.set('label', title)
+    return `${path}?${query.toString()}`
+}
 
 export const lightingApiUrl = (rest = '') => {
     const origin = (typeof window !== 'undefined' && window.location?.origin) || ''
