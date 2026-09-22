@@ -148,6 +148,31 @@ describe('status', () => {
         expect(status.wired).toBe(true)
     })
 
+    // Found on the rig: a library put in place by hand has no receipt, and
+    // the status line printed `NDI null` and a blank date at the person. A
+    // runtime that works must never read as broken.
+    it('reports a hand-placed library without printing null at anybody', async () => {
+        const dir = home()
+        const n = ndiPaths(dir)
+        fs.mkdirSync(n.lib, { recursive: true })
+        fs.writeFileSync(n.library, elf())
+        const status = await ndiStatus(dir)
+        expect(status.installed).toBe(true)
+        expect(status.known).toBe(false)
+        expect(status.version).toBe(`v${NDI_MAJOR}`)
+        expect(status.fetchedAt).toBe(null)
+        expect(status.sha256).toBe(null)
+    })
+
+    it('marks a fetched library as one we know the provenance of', async () => {
+        const dir = home()
+        const n = ndiPaths(dir)
+        fs.mkdirSync(n.lib, { recursive: true })
+        fs.writeFileSync(n.library, elf())
+        fs.writeFileSync(n.receipt, JSON.stringify({ version: 'v6', sha256: 'abc', fetchedAt: '2026-09-22T00:00:00.000Z' }))
+        expect((await ndiStatus(dir)).known).toBe(true)
+    })
+
     // A DI_NDI_LIB left over from a moved or a hand-made install points at a
     // file this command did not put there. "installed" and "wired" are
     // different questions and the status line says both.

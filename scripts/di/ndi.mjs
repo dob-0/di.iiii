@@ -395,11 +395,17 @@ export const ndiStatus = async (home) => {
         installed: Boolean(lib),
         library: lib ? n.library : null,
         bytes: lib?.size ?? 0,
+        // A library with no receipt beside it is one somebody put there by
+        // hand, or one whose receipt was lost with a half-deleted ~/.di. It
+        // works — DI_NDI_LIB does not care how it arrived — so this reports
+        // what is knowable and says the provenance is not, rather than
+        // printing `null` at a person as though something were broken.
+        known: Boolean(receipt),
         // di.env points at THIS library, not merely at some library: a stale
         // DI_NDI_LIB from a moved install is worth saying out loud.
         wired: env.DI_NDI_LIB === n.library,
         pointedAt: env.DI_NDI_LIB || null,
-        version: receipt?.version || null,
+        version: receipt?.version || (lib ? `v${NDI_MAJOR}` : null),
         variant: receipt?.variant || null,
         sha256: receipt?.sha256 || null,
         fetchedAt: receipt?.fetchedAt || null,

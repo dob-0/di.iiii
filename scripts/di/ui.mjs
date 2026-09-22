@@ -523,13 +523,17 @@ export const ui = {
                 style.dim(`${CMD} ndi get   one download from Vizrt, then di.iiii can send and receive on the network`)
             ].join('\n')
         }
-        return [
+        const lines = [
             `NDI ${status.version}${status.variant ? ` — ${status.variant}` : ''}`,
-            `  ${(status.bytes / 1e6).toFixed(0)} MB, fetched ${String(status.fetchedAt || '').slice(0, 10)}`,
+            `  ${(status.bytes / 1e6).toFixed(0)} MB${status.fetchedAt ? `, fetched ${String(status.fetchedAt).slice(0, 10)}` : ''}`,
             `  ${status.wired ? 'di.iiii is pointed at it' : style.dim('di.iiii is pointed somewhere else — check DI_NDI_LIB')}`,
-            style.dim(`  ${status.library}`),
-            style.dim(`  sha256 ${String(status.sha256 || '').slice(0, 16)}…`)
-        ].join('\n')
+            style.dim(`  ${status.library}`)
+        ]
+        if (status.sha256) lines.push(style.dim(`  sha256 ${String(status.sha256).slice(0, 16)}…`))
+        // Said, not hidden: this one was not put here by `ndi get`, so the
+        // version is the line we look for and not the version we fetched.
+        else lines.push(style.dim('  put here by hand — no receipt, so the version above is the runtime line, not a reading'))
+        return lines.join('\n')
     },
 
     ndiUsage: () => [
