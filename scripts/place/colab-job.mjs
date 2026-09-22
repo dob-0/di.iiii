@@ -16,7 +16,10 @@
  *
  *   --work <dir>        the pipeline's working folder (needs <work>/images)
  *   --session <name>    Colab session name (default place-<foldername>)
- *   --gpu <kind>        L4 (default) · T4 · A100 · H100
+ *   --gpu <kind>        L4 (default) · T4 · A100 · H100 · local
+ *                       `local` runs Meshroom on THIS machine's GPU from
+ *                       $PLACE_MESHROOM (default ~/tools/meshroom/current);
+ *                       nothing is rented, nothing is uploaded
  *   --max-width <px>    shrink frames to this before sending (default 2400;
  *                       0 sends them untouched)
  *   --poll <seconds>    how often to ask how it is going (default 60)
@@ -216,6 +219,96 @@ const useLocalObj = (work, objPath) => {
     return mesh
 }
 
+// ── the other bypass: Meshroom on this machine ───────────────────────────────
+// The same 2025.1.0 Linux build the Colab job fetches, unpacked once into
+// ~/tools/meshroom (the home rule: heavy tools live in ~/tools). It needs an
+// NVIDIA driver that speaks CUDA 12 and nothing else from the system: the
+// tarball carries its own libraries. On an 8 GB card the depth-map step is
+// the tight one, which is why the frames are shrunk exactly as for Colab.
+export const MESHROOM_HOME = process.env.PLACE_MESHROOM
+    || path.join(process.env.HOME || '', 'tools', 'meshroom', 'current')
+
+export const findMeshroomResult = (base) => {
+    const wanted = ['texturedMesh.obj', 'texturedMesh.glb', 'mesh.obj']
+    const walk = (dir) => {
+        if (!fs.existsSync(dir)) return null
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+            const full = path.join(dir, entry.name)
+            if (entry.isDirectory()) {
+                const found = walk(full)
+                if (found) return found
+            } else if (wanted.includes(entry.name)) {
+                return full
+            }
+        }
+        return null
+    }
+    return walk(base)
+}
+
+const runLocalMeshroom = async (work, maxWidth) => {
+    const batch = path.join(MESHROOM_HOME, 'meshroom_batch')
+    if (!fs.existsSync(batch)) {
+        die(`No Meshroom at ${MESHROOM_HOME} (looked for meshroom_batch).`,
+            'Unpack Meshroom-2025.1.0-Linux there, or point PLACE_MESHROOM at it.')
+    }
+    const imagesDir = path.join(work, 'images')
+    if (!fs.existsSync(imagesDir)) die(`No frames at ${imagesDir}.`, 'Run scripts/place/frames.mjs first.')
+    say(`Shrinking ${fs.readdirSync(imagesDir).length} frames …`)
+    const input = await shrinkFrames(imagesDir, work, maxWidth)
+    const out = ensureDir(path.join(work, 'meshroom-out'))
+    const cache = ensureDir(path.join(work, 'meshroom-cache'))
+    const log = path.join(work, 'meshroom.log')
+    say(`Running Meshroom on this machine (log: ${log}). This takes the better part of an hour.`)
+    const startedAt = Date.now()
+    const logFd = fs.openSync(log, 'a')
+    const result = spawnSync(batch, [
+        '--input', input,
+        '--output', out,
+        '--cache', cache,
+        '--pipeline', 'photogrammetry',
+        '--save', path.join(work, 'project.mg')
+    ], {
+        stdio: ['ignore', logFd, logFd],
+        env: {
+            ...process.env,
+            QT_QPA_PLATFORM: 'offscreen',
+            LD_LIBRARY_PATH: `${path.join(MESHROOM_HOME, 'aliceVision', 'lib')}:${process.env.LD_LIBRARY_PATH || ''}`
+        },
+        maxBuffer: 64 * 1024 * 1024
+    })
+    fs.closeSync(logFd)
+    const elapsedSeconds = Math.round((Date.now() - startedAt) / 1000)
+    const found = findMeshroomResult(out) || findMeshroomResult(cache)
+    if (result.status !== 0 || !found) {
+        warn(`Meshroom exited ${result.status ?? result.signal} without a mesh. The end of its log:`)
+        const tail = fs.readFileSync(log, 'utf8').trim().split('\n').slice(-25)
+        tail.forEach((line) => warn(`    ${line}`))
+        die('No mesh came out of that footage.')
+    }
+    const meshDir = ensureDir(path.join(work, 'mesh'))
+    const folder = path.dirname(found)
+    const carried = []
+    for (const name of fs.readdirSync(folder)) {
+        const full = path.join(folder, name)
+        if (!fs.statSync(full).isFile()) continue
+        fs.copyFileSync(full, path.join(meshDir, name))
+        carried.push(name)
+    }
+    const mesh = path.join(meshDir, path.basename(found))
+    writeJson(path.join(work, 'reconstruct.json'), {
+        tool: 'scripts/place/colab-job.mjs',
+        createdAt: new Date().toISOString(),
+        mode: 'local-meshroom',
+        meshroom: MESHROOM_HOME,
+        elapsedSeconds,
+        mesh,
+        files: carried
+    })
+    say(`Mesh (${Math.round(elapsedSeconds / 60)} min on this machine): ${mesh}`)
+    return mesh
+}
+
 // ── the real thing ────────────────────────────────────────────────────────────
 const plan = (work, session, gpu) => {
     const imagesDir = path.join(work, 'images')
@@ -250,6 +343,15 @@ const main = async () => {
 
     const session = String(args.session || `place-${path.basename(work)}`).slice(0, 40)
     const gpu = String(args.gpu || 'L4')
+    if (gpu === 'local') {
+        if (args['dry-run']) {
+            say('[dry run] Meshroom on this machine:')
+            say(`  ${path.join(MESHROOM_HOME, 'meshroom_batch')} --input ${path.join(work, 'upload')} --output ${path.join(work, 'meshroom-out')} --cache ${path.join(work, 'meshroom-cache')} --pipeline photogrammetry`)
+            return
+        }
+        await runLocalMeshroom(work, num(args['max-width'], DEFAULT_MAX_WIDTH))
+        return
+    }
     const pollSeconds = num(args.poll, 60)
     const timeoutMinutes = num(args.timeout, 180)
     const { imagesDir, tar, steps } = plan(work, session, gpu)

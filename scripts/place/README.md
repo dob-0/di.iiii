@@ -67,6 +67,7 @@ node scripts/place/frames.mjs --from <footage> --work <work>
 node scripts/place/colab-job.mjs --work <work> --gpu L4
 node scripts/place/colab-job.mjs --work <work> --dry-run         # just the commands
 node scripts/place/colab-job.mjs --work <work> --local-obj a.obj # no GPU at all
+node scripts/place/colab-job.mjs --work <work> --gpu local        # Meshroom on THIS machine
 
 # 3 — a reconstruction is not a model
 node scripts/place/crush.mjs --work <work>
@@ -114,6 +115,15 @@ life size, which is the mess the fitter exists to undo.
 - **The frames go up in 16 MB pieces.** `colab upload` carries the file
   base64'd inside one JSON body; a hall's worth of photographs answers 500 and
   keeps nothing.
+- **`--gpu local` runs the same Meshroom here.** The 2025.1.0 Linux build
+  lives unpacked at `~/tools/meshroom/current` (or wherever `PLACE_MESHROOM`
+  points); it carries its own CUDA libraries and needs only the NVIDIA driver.
+  Nothing is uploaded and nothing is rented — the offline route for a venue
+  with power and no internet. On aylmo's 8 GB card the depth-map step is the
+  tight one, so the frames are shrunk to `--max-width` exactly as for Colab;
+  a hall at that size took the L4 25 minutes, expect longer here. The log is
+  `<work>/meshroom.log`, the project `<work>/project.mg` (opens in the
+  Meshroom GUI, `~/tools/meshroom/current/Meshroom`).
 - **Meshroom is a 13 GB download** onto the box before any GPU work — it
   carries CUDA. A single-stream `wget` managed about 3 MB/s and was still
   going after an hour, long enough for Colab to reclaim the runtime

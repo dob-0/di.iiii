@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import {
+    findMeshroomResult,
     readsAsSignedOut, readsAsLostSession, parseStatusLines, planChunks,
     CHUNK_BYTES, SILENT_POLLS_BEFORE_GIVING_UP
 } from './colab-job.mjs'
@@ -56,5 +60,24 @@ describe('planChunks', () => {
         expect(planChunks(1024)).toBe(1)
         expect(planChunks(CHUNK_BYTES)).toBe(1)
         expect(planChunks(CHUNK_BYTES + 1)).toBe(2)
+    })
+})
+
+describe('findMeshroomResult', () => {
+    it('finds the textured mesh wherever Meshroom buried it', () => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'place-mr-'))
+        const deep = path.join(root, 'Texturing', 'abc123')
+        fs.mkdirSync(deep, { recursive: true })
+        fs.writeFileSync(path.join(deep, 'texturedMesh.obj'), '')
+        fs.writeFileSync(path.join(deep, 'texture_1001.png'), '')
+        expect(findMeshroomResult(root)).toBe(path.join(deep, 'texturedMesh.obj'))
+        fs.rmSync(root, { recursive: true, force: true })
+    })
+
+    it('answers null for an empty or missing folder', () => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'place-mr-'))
+        expect(findMeshroomResult(root)).toBeNull()
+        expect(findMeshroomResult(path.join(root, 'nope'))).toBeNull()
+        fs.rmSync(root, { recursive: true, force: true })
     })
 })

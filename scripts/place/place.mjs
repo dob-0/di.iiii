@@ -23,7 +23,7 @@
  *   --edge <which>      which edge that number is: width · depth · height
  *   --door-guess        no tape: call the tallest doorway 2.1 m and GUESS
  *   --local-obj <file>  a mesh you already have; no GPU is rented
- *   --gpu <kind>        L4 (default) · T4 · A100 · H100
+ *   --gpu <kind>        L4 (default) · T4 · A100 · H100 · local (this machine, ~/tools/meshroom)
  *   --api <base>        which di.iiii (default the local one)
  *   --forward <deg>     which way the visitor faces on arrival
  *   --flip              the floor it found was the ceiling
