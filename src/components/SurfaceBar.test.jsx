@@ -1,22 +1,64 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SurfaceBar, { surfaceDestinations } from './SurfaceBar.jsx'
+import { appNavigate } from '../utils/appNavigate.js'
+
+vi.mock('../utils/appNavigate.js', () => ({
+    appNavigate: vi.fn(),
+    setAppNavigate: () => {}
+}))
 
 const links = () => [...document.querySelectorAll('.sbar-link')].map(a => a.textContent)
+// jsdom cannot leave the page; a click the bar leaves to the browser is
+// stopped after the bar has had its say, so the test reads only the bar.
+const clickAsBrowser = (el, init) => {
+    const stay = (event) => event.preventDefault()
+    document.addEventListener('click', stay)
+    fireEvent.click(el, init)
+    document.removeEventListener('click', stay)
+}
 const hrefFor = (label) => [...document.querySelectorAll('.sbar-link')]
     .find(a => a.textContent === label)?.getAttribute('href')
 
 describe('SurfaceBar', () => {
-    it('is the way out of wherever you are — every surface, one list, one order', () => {
-        render(<SurfaceBar here="wiki" />)
-        expect(links()).toEqual(['Spaces', 'Studio', 'Nodes', 'Tools', 'Wiki'])
+    beforeEach(() => {
+        appNavigate.mockClear()
     })
 
-    it('offers the lighting desk only where di.iiii is actually running', () => {
+    it('is the way out of wherever you are — every surface, one list, one order', () => {
+        render(<SurfaceBar here="wiki" />)
+        expect(links()).toEqual(['Spaces', 'Studio', 'Nodes', 'Tools', 'Light', 'Wiki'])
+    })
+
+    it('opens the lighting desk itself where di.iiii is actually running', () => {
         render(<SurfaceBar isLocalInstall />)
         expect(links()).toContain('Light')
         expect(hrefFor('Light')).toBe('/light/')   // the trailing slash is load-bearing
+    })
+
+    it('shows Light on a hosted tier too, and opens the page that says where the desk lives — without a page load', () => {
+        render(<SurfaceBar space="lab" project="p1" />)
+        const light = [...document.querySelectorAll('.sbar-link')].find(a => a.textContent === 'Light')
+        expect(light.getAttribute('href')).toBe('/light')
+        fireEvent.click(light)
+        // A full load of /light can reach a server that refuses the address;
+        // the app's own navigation lands on the card every time.
+        expect(appNavigate).toHaveBeenCalledWith('/light')
+    })
+
+    it('leaves a new-tab click on hosted Light to the browser', () => {
+        render(<SurfaceBar />)
+        const light = [...document.querySelectorAll('.sbar-link')].find(a => a.textContent === 'Light')
+        clickAsBrowser(light, { ctrlKey: true })
+        expect(appNavigate).not.toHaveBeenCalled()
+    })
+
+    it('never takes a local Light click out of the browser\'s hands — the desk is not an app page', () => {
+        render(<SurfaceBar isLocalInstall space="lab" project="p1" />)
+        const light = [...document.querySelectorAll('.sbar-link')].find(a => a.textContent === 'Light')
+        clickAsBrowser(light)
+        expect(appNavigate).not.toHaveBeenCalled()
     })
 
     it('says which surface you are on, and does not offer it as a destination', () => {
@@ -55,10 +97,52 @@ describe('SurfaceBar', () => {
         expect(links().filter(l => /home|back/i.test(l))).toEqual([])
     })
 
+    it('carries the project — every tool opens THE SAME project', () => {
+        render(<SurfaceBar space="lab" spaceLabel="Lab" project="p1" projectLabel="First room" here="studio" isLocalInstall />)
+        expect(links()).toEqual(['Spaces', 'Studio', 'Nodes', 'Projection', 'Tools', 'Light', 'Wiki'])
+        expect(hrefFor('Studio')).toBe('/lab/studio/projects/p1')
+        expect(hrefFor('Nodes')).toBe('/lab/raw/projects/p1')
+        expect(hrefFor('Projection')).toBe('/lab/map/p1')
+        expect(hrefFor('Light')).toBe('/light/?space=lab&project=p1')
+    })
+
+    it('reads space · project, and the project leads back to its Studio editor', () => {
+        render(<SurfaceBar space="lab" spaceLabel="Lab" project="p1" projectLabel="First room" here="raw" />)
+        const [where, what] = document.querySelectorAll('.sbar-where')
+        expect(where.textContent).toBe('Lab')
+        expect(where.getAttribute('href')).toBe('/lab')
+        expect(what.textContent).toBe('First room')
+        expect(what.getAttribute('href')).toBe('/lab/studio/projects/p1')
+        expect(document.querySelectorAll('.sbar-sep')).toHaveLength(2)
+    })
+
+    it('names an untitled project by its id rather than leaving a gap', () => {
+        render(<SurfaceBar space="lab" project="p1" />)
+        expect(document.querySelectorAll('.sbar-where')[1].textContent).toBe('p1')
+    })
+
+    it('marks Projection as where you are on the projection tool', () => {
+        render(<SurfaceBar space="lab" project="p1" here="map" />)
+        const current = document.querySelector('.sbar-link.is-here')
+        expect(current.textContent).toBe('Projection')
+        expect(current.getAttribute('aria-current')).toBe('page')
+    })
+
+    it('offers Projection only for a project — it has no page of its own', () => {
+        render(<SurfaceBar space="lab" />)
+        expect(links()).not.toContain('Projection')
+        expect(document.querySelectorAll('.sbar-where')).toHaveLength(1)
+    })
+
     it('exports the same destinations the bar renders, for surfaces that draw their own', () => {
         expect(surfaceDestinations({ isLocalInstall: true }).map(d => d.key))
             .toEqual(['spaces', 'studio', 'raw', 'tools', 'light', 'wiki'])
         expect(surfaceDestinations({ space: 'main' }).find(d => d.key === 'raw').href)
             .toBe('/main/raw/projects')
+        expect(surfaceDestinations({ space: 'main', project: 'p' }).map(d => d.key))
+            .toEqual(['spaces', 'studio', 'raw', 'map', 'tools', 'light', 'wiki'])
+        // A project with no space has no address to build, so nothing claims one.
+        expect(surfaceDestinations({ project: 'p' }).map(d => d.key))
+            .toEqual(['spaces', 'studio', 'raw', 'tools', 'light', 'wiki'])
     })
 })
