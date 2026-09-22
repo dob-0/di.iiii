@@ -27,89 +27,22 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
-import os from 'node:os'
 
 import {
-    REPO_ROOT, parseArgs, num, say, warn, die, readJson, writeJson,
+    parseArgs, num, say, warn, die, readJson, writeJson,
     IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, walkFiles, fmtBytes
 } from './common.mjs'
+import { DEFAULT_API, makeClient, mimeFor, readToken as readApiToken } from './api.mjs'
 import { readPlaceRecord } from './fit-lib.mjs'
 import { sourceWall } from '../../src/scan/sourceWall.js'
 
 const args = parseArgs()
 
-const DEFAULT_API = 'https://local.thedi.studio/serverXR'
-const TOKEN_KEYS = ['ADMIN_API_TOKEN', 'API_TOKEN', 'DI_API_TOKEN']
-const TOKEN_FILES = () => [
-    args['token-file'] ? String(args['token-file']) : null,
-    path.join(os.homedir(), '.di', 'di.env'),
-    path.join(REPO_ROOT, 'serverXR', '.env.local')
-].filter(Boolean)
-
-// Read from the env file, hand it to fetch, and never log it. Same contract
-// every other script here works under.
-export const readToken = () => {
-    if (process.env.DI_API_TOKEN) return process.env.DI_API_TOKEN.trim()
-    for (const file of TOKEN_FILES()) {
-        let text = ''
-        try {
-            text = fs.readFileSync(file, 'utf8')
-        } catch {
-            continue
-        }
-        for (const key of TOKEN_KEYS) {
-            const line = text.split('\n').find((entry) => entry.startsWith(`${key}=`))
-            const value = line ? line.slice(key.length + 1).trim() : ''
-            if (value) return value
-        }
-    }
-    return null
-}
-
-const mimeFor = (file) => {
-    const ext = path.extname(file).toLowerCase()
-    return {
-        '.glb': 'model/gltf-binary',
-        '.gltf': 'model/gltf+json',
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.png': 'image/png',
-        '.webp': 'image/webp',
-        '.mp4': 'video/mp4',
-        '.mov': 'video/quicktime',
-        '.m4v': 'video/mp4',
-        '.webm': 'video/webm'
-    }[ext] || 'application/octet-stream'
-}
-
-const makeClient = (api, token) => {
-    const auth = token ? { Authorization: `Bearer ${token}` } : {}
-    const call = async (method, route, body, extraHeaders = {}) => {
-        const response = await fetch(`${api}${route}`, {
-            method,
-            headers: {
-                ...auth,
-                ...(body && !(body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
-                ...extraHeaders
-            },
-            body: body instanceof FormData ? body : (body ? JSON.stringify(body) : undefined)
-        })
-        const text = await response.text()
-        let parsed = null
-        try {
-            parsed = text ? JSON.parse(text) : null
-        } catch {
-            parsed = null
-        }
-        return { status: response.status, ok: response.ok, body: parsed, text }
-    }
-    return {
-        get: (route) => call('GET', route),
-        post: (route, body, headers) => call('POST', route, body, headers),
-        patch: (route, body) => call('PATCH', route, body),
-        put: (route, body) => call('PUT', route, body)
-    }
-}
+// The API client, the token reader and the mime table moved to ./api.mjs on
+// 2026-09-22, when frames.mjs needed the same three to pull a hosted space's
+// footage back down (`--from-space`). `readToken` is re-exported because this
+// module already published it.
+export { readToken } from './api.mjs'
 
 const must = (result, what) => {
     if (!result.ok) {
@@ -319,7 +252,7 @@ const main = async () => {
         return
     }
 
-    const token = readToken()
+    const token = readApiToken(args['token-file'] ? String(args['token-file']) : null)
     if (!token) {
         die(
             'No API token found, so nothing was sent.',

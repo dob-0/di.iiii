@@ -96,6 +96,10 @@ const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
 const { registerNdiRoutes } = require('./routes/ndiRoutes')
+const { registerPlaceRoutes } = require('./routes/placeRoutes')
+// The per-space content-addressed blob store: where a sha256 asset's bytes
+// actually are, which is what the place lane has to copy footage out of.
+const { getSpaceBlobPaths } = require('./blobStore')
 const { describeListen } = require('./listenInfo')
 const { getMachine } = require('./machineIdentity')
 const { createMachineHub } = require('./machines/hub')
@@ -2346,6 +2350,23 @@ registerProjectRoutes(router, {
   writeJson,
   writeProjectDocument,
   spaceHistory
+})
+
+// Making the hall out of what a phone collected — routes/placeRoutes.js.
+// Registered on the API router so it inherits the auth and per-space scope gates
+// above, and adds the LOCAL-RUNTIME one of its own: on a hosted tier it answers
+// 404 the way /light does, and the phone says the copy is built on the studio
+// machine. The footage still collects everywhere, which is the point.
+registerPlaceRoutes(router, {
+  spacesDir: SPACES_DIR,
+  dataDir: config.directories.dataDir,
+  spaceExists,
+  normalizeSpaceId,
+  resolveProjectContext,
+  readProjectDocument,
+  getProjectPaths,
+  getSpaceBlobPaths,
+  log: (line) => logger.info(line)
 })
 
 router.use('/api/sync/spaces/:spaceId', syncLimiter)
