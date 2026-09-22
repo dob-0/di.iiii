@@ -112,6 +112,12 @@ describe('sourceWallEntity', () => {
     it('falls back to a name rather than leaving one blank', () => {
         expect(sourceWallEntity({ id: 'a' }, 4).name).toBe('source 5')
     })
+
+    // The name is the only place a capture's own story can live — an object keeps
+    // no field the schema does not already know about.
+    it('lets the caller name the picture', () => {
+        expect(sourceWallEntity(asset('a'), 0, { name: 'walk 1 · 30 s' }).name).toBe('walk 1 · 30 s')
+    })
 })
 
 describe('the measured wall', () => {

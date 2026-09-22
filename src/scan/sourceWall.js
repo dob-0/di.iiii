@@ -91,7 +91,11 @@ export const sourceWallEntity = (asset, index, options = {}) => {
     return {
         id: options.id || `source-${index + 1}`,
         type: isVideo ? 'video' : 'image',
-        name: asset?.name || `source ${index + 1}`,
+        // The name is the only place a capture's own story can live — what kind
+        // it was, how long it ran. An object keeps id/type/name/parentId/
+        // createdBy/components and nothing else (normalizeEntity returns a fixed
+        // literal), so an invented field would be saved and then forgotten.
+        name: options.name || asset?.name || `source ${index + 1}`,
         components: {
             transform: sourceWallSlot(index, options),
             media: {
