@@ -34,7 +34,7 @@ import {
 } from './common.mjs'
 import { DEFAULT_API, makeClient, mimeFor, readToken as readApiToken } from './api.mjs'
 import { readPlaceRecord } from './fit-lib.mjs'
-import { sourceWall } from '../../src/scan/sourceWall.js'
+import { sourceRoomOps, sourceWall } from '../../src/scan/sourceWall.js'
 
 const args = parseArgs()
 
@@ -214,7 +214,7 @@ export const arrivalShot = (place) => {
 // and another way when a phone does is two rooms. Re-exported here because
 // import.test.js and anything else that already knew this name should keep
 // working.
-export { sourceWall, sourceWallEntity, sourceWallSlot } from '../../src/scan/sourceWall.js'
+export { sourceWall, sourceWallEntity, sourceWallSlot, sourceRoomOps } from '../../src/scan/sourceWall.js'
 
 const main = async () => {
     const work = args.work ? path.resolve(String(args.work)) : null
@@ -304,16 +304,13 @@ const main = async () => {
                 await sendOps(client, sourcesProject, [
                     ...carried.map((entry) => ({ type: 'upsertAsset', payload: { asset: entry } })),
                     ...wall.map((entity) => ({ type: 'createEntity', payload: { entity } })),
-                    {
-                        type: 'setWorldState',
-                        payload: {
-                            patch: {
-                                backgroundColor: '#0a1118',
-                                gridVisible: false,
-                                spawn: { x: 0, z: 4.5, yaw: Math.PI, pitch: 0, altY: 1.6 }
-                            }
-                        }
-                    }
+                    // The room, not just the wall — one copy, shared with the
+                    // phone (src/scan/sourceWall.js). It also carries the
+                    // arrival SHOT now: left to auto-frame, a wall is one thin
+                    // wide flat thing and the camera lands high above and behind
+                    // it, so six photographs read as a strip on the floor (seen
+                    // 2026-09-22). Same lesson as the hall, four lines up.
+                    ...sourceRoomOps()
                 ])
                 const refused = files.length - carried.length
                 say(`  ${carried.length} files hung on the wall${refused ? ` · ${refused} the server would not take` : ''}`)

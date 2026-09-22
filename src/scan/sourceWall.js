@@ -174,3 +174,60 @@ export const measuredWallEntity = (metres, options = {}) => {
         }
     }
 }
+
+// THE ROOM THE WALL STANDS IN — set once, when the room is made.
+//
+// Without this the footage room arrives as the default grey grid and the viewer
+// frames it from the objects' own bounding sphere. For a wall — one thin, wide,
+// flat thing — that puts the camera high above and behind it, and six
+// photographs read as a strip on the floor. Seen, 2026-09-22, on the first
+// phone-collected room.
+//
+// It is the same lesson import.mjs learned for the hall and wrote down there:
+// "a room's arrival is framed from where its entities are", and 'scene' entry
+// auto-frames while 'fixed-camera' honours the shot. A wall needs the shot even
+// more than a hall does, because a hall at least surrounds you.
+//
+// Written ONCE, when the room is created, and never again — somebody who has
+// since moved the arrival point keeps their change.
+export const sourceRoomOps = (options = {}) => {
+    const { perRow, tile, gap, distance, baseHeight } = { ...SOURCE_WALL_DEFAULTS, ...options }
+    // Far enough back to see a full row, at eye height, looking at the middle of
+    // the second row up — where the wall's mass is once it has more than eight
+    // pictures on it.
+    const standBack = distance + Math.max(4, perRow * columnStepFor(tile, gap) * 0.45)
+    const lookAt = [0, baseHeight + tile * 0.6, -distance]
+    const shot = {
+        projection: 'perspective',
+        position: [0, baseHeight, standBack - distance],
+        target: lookAt,
+        fov: 60,
+        zoom: 1,
+        near: 0.05,
+        far: 200,
+        locked: false
+    }
+    return [
+        {
+            type: 'setWorldState',
+            payload: {
+                patch: {
+                    backgroundColor: '#0a1118',
+                    gridVisible: false,
+                    spawn: { x: 0, z: standBack - distance, yaw: Math.PI, pitch: 0, altY: baseHeight },
+                    savedView: { mode: 'perspective', ...shot }
+                }
+            }
+        },
+        {
+            type: 'setPresentationState',
+            payload: {
+                patch: {
+                    mode: 'fixed-camera',
+                    entryView: 'fixed-camera',
+                    fixedCamera: shot
+                }
+            }
+        }
+    ]
+}

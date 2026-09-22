@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
     MEASURED_WALL_ENTITY_ID,
+    sourceRoomOps,
     measuredWallEntity,
     measuredWallLabel,
     readMeasuredWallLabel,
@@ -170,5 +171,39 @@ describe('the measured wall', () => {
         expect(entity.components.text.billboard).toBe(true)
         expect(entity.components.transform.position[0]).toBeLessThan(sourceWallSlot(0).position[0])
         expect(entity.components.transform.position[1]).toBe(SOURCE_WALL_DEFAULTS.baseHeight)
+    })
+})
+
+// A wall is one thin, wide, flat thing, and a viewer left to auto-frame from its
+// bounding sphere puts the camera high above and behind it: six photographs read
+// as a strip on the floor. Seen on the first phone-collected room, 2026-09-22.
+describe('the room the wall stands in', () => {
+    const ops = sourceRoomOps()
+    const world = ops.find((op) => op.type === 'setWorldState').payload.patch
+    const presentation = ops.find((op) => op.type === 'setPresentationState').payload.patch
+
+    it('puts the visitor in front of the wall, at eye height, facing it', () => {
+        expect(world.spawn.altY).toBe(SOURCE_WALL_DEFAULTS.baseHeight)
+        // The wall is at negative z; the visitor stands at positive z.
+        expect(world.spawn.z).toBeGreaterThan(0)
+        expect(presentation.fixedCamera.target[2]).toBe(-SOURCE_WALL_DEFAULTS.distance)
+        expect(presentation.fixedCamera.position[2]).toBeGreaterThan(presentation.fixedCamera.target[2])
+    })
+
+    // 'scene' auto-frames; 'fixed-camera' honours the shot and is just as
+    // walkable. The same call import.mjs made for the hall.
+    it('honours the shot rather than auto-framing', () => {
+        expect(presentation.mode).toBe('fixed-camera')
+        expect(presentation.entryView).toBe('fixed-camera')
+    })
+
+    it('stands far enough back to see a full row', () => {
+        const rowWidth = SOURCE_WALL_DEFAULTS.perRow * (SOURCE_WALL_DEFAULTS.tile * 1.7 + SOURCE_WALL_DEFAULTS.gap)
+        expect(world.spawn.z).toBeGreaterThan(rowWidth * 0.4)
+    })
+
+    it('turns the grid off and darkens the ground', () => {
+        expect(world.gridVisible).toBe(false)
+        expect(world.backgroundColor).toBe('#0a1118')
     })
 })

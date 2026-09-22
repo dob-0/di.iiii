@@ -215,6 +215,12 @@
     color: var(--di-dim);
 }
 
+ /* While recording, the live counter is the one figure that must be found at a
+    glance — the red frame round the page can be drawn over by the platform's own
+    mode mark, so being sure the camera is running cannot depend on it. */
+.scan-figure.is-live dt,
+.scan-figure.is-live dd { color: var(--di-danger); }
+
 .scan-figure dd {
     margin: 0;
     font-family: var(--di-mono);

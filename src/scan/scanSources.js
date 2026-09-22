@@ -32,6 +32,7 @@ import {
     MEASURED_WALL_ENTITY_ID,
     measuredWallEntity,
     readMeasuredWallLabel,
+    sourceRoomOps,
     sourceWallEntity
 } from './sourceWall.js'
 
@@ -207,18 +208,9 @@ export const setMeasuredWall = async (projectId, metres) => {
 
 /**
  * The room the wall stands in: dark, no grid, and the visitor arriving facing
- * the footage. Written once, when the room is made — never again, so a person
- * who has since moved the arrival point keeps their change.
+ * the footage rather than looking down at it from above. Written once, when the
+ * room is made — never again, so somebody who has since moved the arrival point
+ * keeps their change. Shared with scripts/place/import.mjs so the room a script
+ * builds and the room a phone builds are one room.
  */
-export const dressSourcesRoom = async (projectId) => writeToSources(projectId, () => ([
-    {
-        type: 'setWorldState',
-        payload: {
-            patch: {
-                backgroundColor: '#0a1118',
-                gridVisible: false,
-                spawn: { x: 0, z: 4.5, yaw: Math.PI, pitch: 0, altY: 1.6 }
-            }
-        }
-    }
-]))
+export const dressSourcesRoom = async (projectId) => writeToSources(projectId, () => sourceRoomOps())

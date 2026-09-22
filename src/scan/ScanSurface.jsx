@@ -38,6 +38,7 @@ import { createUploadQueue } from './uploadQueue.js'
 import { createWalkRecorder, pickRecorderMime } from './walkRecorder.js'
 import {
     buildReadiness,
+    dressSourcesRoom,
     ensureSourcesProject,
     hangCapture,
     scanProgress,
@@ -88,6 +89,11 @@ export default function ScanSurface({ spaceId }) {
     const [setupProblem, setSetupProblem] = useState('')
     const [standing, setStanding] = useState(true)
     const [recording, setRecording] = useState(false)
+    // Seconds since Record was pressed. The `walk` figure is read out of the
+    // ROOM, so it does not move until a piece has landed — which is up to thirty
+    // seconds of a person holding a phone in a hall with nothing telling them
+    // anything is happening. This is the one number that has to be live.
+    const [recordingSeconds, setRecordingSeconds] = useState(0)
     const [ring, setRing] = useState(emptyRing)
     const [compass, setCompass] = useState('unasked')
     const [sharpFrames, setSharpFrames] = useState(0)
@@ -117,9 +123,12 @@ export default function ScanSurface({ spaceId }) {
                 if (!cancelled) setSpaceLabel(spaceId)
             }
             try {
-                const { projectId } = await ensureSourcesProject(spaceId, { label })
+                const { projectId, created } = await ensureSourcesProject(spaceId, { label })
                 if (cancelled) return
                 setSourcesProject(projectId)
+                // Only on the way in. A room dressed on every visit would undo
+                // an arrival point somebody has since moved.
+                if (created) await dressSourcesRoom(projectId)
             } catch (error) {
                 if (!cancelled) {
                     setSetupProblem(error?.status === 403 || error?.status === 401
@@ -311,6 +320,18 @@ export default function ScanSurface({ spaceId }) {
         const timer = window.setInterval(tick, SAMPLE_EVERY_MS)
         return () => window.clearInterval(timer)
     }, [cameraReady])
+
+    useEffect(() => {
+        if (!recording) {
+            setRecordingSeconds(0)
+            return undefined
+        }
+        const startedAt = Date.now()
+        const timer = window.setInterval(() => {
+            setRecordingSeconds(Math.floor((Date.now() - startedAt) / 1000))
+        }, 500)
+        return () => window.clearInterval(timer)
+    }, [recording])
 
     useEffect(() => {
         const onResize = () => setPortrait(isPortrait())
@@ -535,9 +556,9 @@ export default function ScanSurface({ spaceId }) {
                         <dt>sharp frames</dt>
                         <dd>{sharpFrames}</dd>
                     </div>
-                    <div className="scan-figure">
-                        <dt>walk</dt>
-                        <dd>{Math.round(progress.walkSeconds)} s</dd>
+                    <div className={`scan-figure${recording ? ' is-live' : ''}`}>
+                        <dt>{recording ? 'recording' : 'walk'}</dt>
+                        <dd>{recording ? recordingSeconds : Math.round(progress.walkSeconds)} s</dd>
                     </div>
                     <div className="scan-figure">
                         <dt>photographs</dt>
