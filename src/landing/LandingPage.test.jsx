@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../components/GridFloorBackground.jsx', () => ({ default: () => <div data-testid="mock-grid-bg" /> }))
@@ -210,5 +210,28 @@ describe('LandingPage local-install copy', () => {
             // No "live at", no show number, no date.
             expect(button.textContent).not.toMatch(/\blive at\b|#\d|\b20\d\d\b/i)
         }
+    })
+})
+
+// The walk of 2026-09-22 ended in a grid of 18 wiki cards — the page's last
+// screen was a flood, against the owner's "create 1st something and things one
+// by one, no flood". The Help & Wiki block keeps its eyebrow, its title and its
+// one line, and ends in ONE link. A card grid coming back turns this red.
+describe('LandingPage wiki block', () => {
+    it('ends in one link to the Wiki, not a grid of article cards', () => {
+        render(<LandingPage />)
+        const section = document.getElementById('wiki')
+        expect(section).toBeTruthy()
+
+        expect(within(section).getByText('Help & Wiki')).toBeInTheDocument()
+        expect(within(section).getByRole('heading', { name: 'Learn how it works' })).toBeInTheDocument()
+
+        const links = within(section).getAllByRole('link')
+        expect(links).toHaveLength(1)
+        expect(links[0].textContent).toContain('Open the Wiki')
+        expect(links[0].getAttribute('href')).toBe('/wiki')
+
+        expect(section.querySelector('.lp-feature-grid')).toBeNull()
+        expect(within(section).queryAllByRole('heading', { level: 3 })).toHaveLength(0)
     })
 })

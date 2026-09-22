@@ -742,29 +742,6 @@ body.is-landing .account-btn-wrapper {
     padding: var(--di-space-5) var(--di-space-5);
 }
 
-/* The only card in this grid that is also a real link — the plain feature
-   cards beside it do nothing on click, so they get no hover state to imply
-   otherwise. */
-.lp-wiki-card {
-    display: block;
-    color: inherit;
-    text-decoration: none;
-    transition: background 0.1s, border-color 0.1s;
-}
-
-.lp-wiki-card:hover,
-.lp-wiki-card:focus-visible {
-    background: var(--di-cyan-wash);
-}
-
-.lp-wiki-card-more {
-    display: block;
-    margin-top: var(--di-space-3);
-    color: var(--di-cyan);
-    font-size: var(--di-text-3);
-    letter-spacing: 0.02em;
-}
-
 .lp-feature-icon {
     font-size: var(--di-text-6) !important;
     color: var(--di-cyan) !important;

@@ -16,7 +16,7 @@ import { listServerSpaces } from '../services/serverSpaces.js'
  *
  * The tour is not deleted, only moved: /?tour=1 still shows it.
  *
- * No lane is declared primary here. Studio and Raw are both doors on the same
+ * No lane is declared primary here. Studio and Nodes are both doors on the same
  * bar, deliberately — MANIFESTO non-negotiable 6 says not to force that choice
  * before the unification that resolves it has landed.
  */
@@ -48,7 +48,7 @@ export default function LocalHome() {
                 <span className="lh-doors">
                     <a href="/tools">Tools</a>
                     <a href="/studio">Studio</a>
-                    <a href="/raw">Raw</a>
+                    <a href="/raw">Nodes</a>
                     <a href="/wiki">Wiki</a>
                     <a href="/?tour=1">What is di.iiii?</a>
                 </span>
