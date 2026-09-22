@@ -77,6 +77,7 @@ vi.mock('./WebcamSourcePanel.jsx', () => ({
 
 import RawEditor, { WINDOW_DEFAULT_POSITIONS } from './RawEditor.jsx'
 import { getNodeType } from '../../project/nodeRegistry.js'
+import { setAppNavigate } from '../../utils/appNavigate.js'
 
 const OUTLINER_STORAGE_KEY = 'test-outliner-ws'
 const makeWorkspaceDoc = (nodes = []) => JSON.stringify({
@@ -358,6 +359,22 @@ describe('RawEditor delete/reset confirmations', () => {
         fireEvent.click(screen.getByText('⋯'))
         expect(screen.getByText('Open in Studio')).toBeInTheDocument()
         expect(screen.getByText('Copy projector link')).toBeInTheDocument()
+    })
+
+    // One project list per space (2026-09-23). ← Projects went to
+    // /{space}/projects, the visitors' list: a draft is not on it and a card
+    // there opens the viewer, so an author lost the thing they had just left.
+    it('← Projects returns to the Nodes copy of the space list, where drafts show', () => {
+        const navigate = vi.fn()
+        setAppNavigate(navigate)
+        window.localStorage.setItem('dii.raw.zen.p1', 'off')
+        render(<RawEditor projectId="p1" spaceId="gallery" />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Back to projects' }))
+
+        expect(navigate).toHaveBeenCalledWith('/gallery/raw/projects', { replace: false })
+        expect(navigate).not.toHaveBeenCalledWith('/gallery/projects', expect.anything())
+        setAppNavigate(null)
     })
 
     it('clears the canvas via the overflow menu once the user confirms', () => {

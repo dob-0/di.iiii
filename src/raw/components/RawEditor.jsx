@@ -54,7 +54,7 @@ import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/n
 import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
 import { buildSceneExample } from '../../project/graph/examples/sceneExample.js'
 import { STUDIO_TYPE_ID, buildStudioInterior } from '../../project/graph/studioNode.js'
-import { buildSpaceProjectsPath, buildStudioProjectPath, buildSpacesPath } from '../../studio/utils/studioRouting.js'
+import { buildStudioProjectPath, buildSpacesPath } from '../../studio/utils/studioRouting.js'
 import { buildWikiPath } from '../../utils/spaceRouting.js'
 
 const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
@@ -69,7 +69,7 @@ const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
 const isNarrowViewport = () => typeof window !== 'undefined' && window.innerWidth < RAW_NARROW_VIEWPORT
 const panelWindowSpace = (frame, viewport) => (frame?.pinned || isNarrowViewport() || !viewport) ? 'screen' : 'world'
 
-import { buildRawOutPath, buildRawProjectPath, navigateToRawPath } from '../utils/rawRouting.js'
+import { buildRawOutPath, buildRawProjectPath, buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
 import { describeRootEmptyCanvas } from '../utils/emptyCanvasHint.js'
 import { DEFAULT_PROJECT_SPACE_ID, createProject, updateProjectDocument, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
@@ -2056,8 +2056,11 @@ export default function RawEditor({
                 {chromeVisible && (
                     <>
                         <div className="raw-topbar-left">
+                            {/* Back to the space's working list, in Nodes' own copy of it —
+                                not /{space}/projects, the visitors' list, where a draft
+                                does not show and a card opens the viewer, not the canvas. */}
                             <button type="button" className="raw-topbar-back" aria-label="Back to projects" onClick={() => {
-                                navigateToRawPath(buildSpaceProjectsPath(resolvedSpaceId))
+                                navigateToRawPath(buildRawProjectsPath(resolvedSpaceId))
                             }}>
                                 ←<span className="raw-topbar-word"> Projects</span>
                             </button>

@@ -60,8 +60,8 @@ export const WIKI_ARTICLES = [
             { list: [
                 '/<space>/projects — everything in a space, listed, each thing saying whether it is a scene or a page. Open to whoever the space is open to: on a public space no sign-in is needed. This is the one to use — the list belongs to the space, not to whichever tool you are holding.',
                 '/spaces — all of your spaces',
-                '/<space>/studio — the same list, in Studio’s older address',
-                '/<space>/raw/projects — the same projects, in the node editor’s older address',
+                '/<space>/studio — the same projects in Studio, where you make them: New project, drafts, shelves and the trash are here, and a card opens its project in Studio',
+                '/<space>/raw/projects — the same projects, for the node editor: a card opens its project on the node canvas',
                 '/<space>/studio/projects/<id> — the editor for one project',
                 '/<space>/<project>/studio — the same project, open for editing. Add /raw instead for the node editor. This works on any project link: take the address you are looking at and add the word. It is a shortcut, not a second address — the bar heals to the editor’s own link once it opens.',
                 '/<space> — the public viewer for a space’s published project',
@@ -69,7 +69,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['spaces', 'projects', 'basics', 'contents'],
-        updated: '2026-09-10'
+        updated: '2026-09-23'
     },
     {
         id: 'everything-in-a-space',
@@ -1016,7 +1016,7 @@ export const WIKI_ARTICLES = [
         body: [
             'The node editor is the other way to build: a canvas, nodes on it, and wires between them. Its core idea is free-form nesting — no node type is a singleton, and any node can be entered to author a graph inside it.',
             { list: [
-                'A space’s node projects are listed at /<space>/raw/projects (same sign-in rules as Studio). /<space>/raw opens the canvas itself — a scratch surface stored in your browser, not on the server; /open/raw is that canvas addressed to the communal open space.',
+                'A space’s projects are listed at /<space>/raw/projects — the same list as /<space>/studio, with the same drafts, shelves and trash, but a card opens its project here on the node canvas and + New project starts on an empty one (same sign-in rules as Studio). ← Projects at the top of a project comes back to this list. /<space>/raw opens the canvas itself — a scratch surface stored in your browser, not on the server; /open/raw is that canvas addressed to the communal open space.',
                 'A canvas can become a real project: the ⋯ menu’s “Save to <space>” copies what is on it into the space you are in, names it, and opens it as a project — from then on it syncs, opens on another device, and can be shared. The canvas itself is left as it was, so the scratch surface stays yours.',
                 'One project, two editors: the ⋯ menu’s “Open in Studio” swaps the project you are in over to the Studio editor, and Studio’s toolbar “⇄ Nodes” button swaps it back. A project made here shows as “Nodes” in Studio’s project list.',
                 'Crossing from Studio into the node editor shows an empty graph, and that is the truth: a project built in Studio has objects, not nodes. The canvas says so — “Built in Studio — N objects in the room, no nodes yet” — and its “See the room” button opens the 3D view where those objects are standing. Adding a node there adds it to that same room; nothing you built in Studio is lost or hidden by crossing over.',
@@ -1047,8 +1047,8 @@ export const WIKI_ARTICLES = [
                 'A Director node (view.director) is a timeline editor for code-authored pieces, moved out of algovrithm into the node editor on 2026-08-05 and generalised the same day — it takes the piece as input rather than being welded to one, so a future piece is a registration rather than a fork. For algovrithm it can retime and reorder its beats, edit each scene’s colour, fog and lights, and drop assets onto the timeline — the same panel the Director page inside Studio opens embedded in the piece, so this is a second way to reach it, not the only one. “Save to source” writes src/algoVrithm/sequences/index.js in place with its comments intact from either one.'
             ] }
         ],
-        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone', 'work-status', 'agent-run', 'timeline', 'director', 'model', 'glb', 'video', 'sound', 'import', 'containers', 'doorways', 'ports', 'scene', 'example', 'getting-started', 'anatomy', 'made-of', 'crossing'],
-        updated: '2026-08-23'
+        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone', 'work-status', 'agent-run', 'timeline', 'director', 'model', 'glb', 'video', 'sound', 'import', 'containers', 'doorways', 'ports', 'scene', 'example', 'getting-started', 'anatomy', 'made-of', 'crossing', 'projects', 'list'],
+        updated: '2026-09-23'
     },
     {
         id: 'studio-node',
