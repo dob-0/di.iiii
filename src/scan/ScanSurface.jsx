@@ -512,21 +512,6 @@ export default function ScanSurface({ spaceId }) {
 
             {setupProblem && <p className="scan-note scan-note-bad">{setupProblem}</p>}
 
-            {standing && !setupProblem && (
-                <div className="scan-standing">
-                    <p className="scan-standing-head">Before you start</p>
-                    <ul className="scan-standing-list">
-                        <li>Walk slowly. Slower than feels right.</li>
-                        <li>Keep the floor in the picture — it is what stands the room up.</li>
-                        <li>Circle every pillar, all the way round.</li>
-                        <li>Nobody in the shot.</li>
-                    </ul>
-                    <button className="scan-btn scan-btn-quiet" type="button" onClick={() => setStanding(false)}>
-                        Understood
-                    </button>
-                </div>
-            )}
-
             <section className="scan-readings" aria-live="polite">
                 <div className="scan-ring" role="img" aria-label={`${covered} of ${SECTOR_COUNT} directions covered`}>
                     {ring.map((filled, sector) => (
@@ -580,81 +565,106 @@ export default function ScanSurface({ spaceId }) {
                     : <p className="scan-small scan-small-warn">Nobody has measured a wall yet, so the room’s size will be a GUESS.</p>}
             </section>
 
-            {measuring && (
-                <form className="scan-measure" onSubmit={submitMeasurement}>
-                    <label className="scan-measure-label" htmlFor="scan-metres">
-                        One wall, measured with a tape. In metres.
-                    </label>
-                    <input
-                        id="scan-metres"
-                        className="scan-measure-input"
-                        type="number"
-                        inputMode="decimal"
-                        step="0.01"
-                        min="0.1"
-                        placeholder="8.3"
-                        value={metres}
-                        onChange={(event) => setMetres(event.target.value)}
-                    />
-                    <p className="scan-small">
-                        Point the camera at that wall — the photograph goes up with the number, so it can be checked later.
-                    </p>
-                    <div className="scan-measure-actions">
-                        <button className="scan-btn" type="submit">Save and photograph it</button>
-                        <button className="scan-btn scan-btn-quiet" type="button" onClick={() => setMeasuring(false)}>Not now</button>
+            {/* ONE column at the bottom, in reading order. These were five
+                absolutely-positioned layers stacked by hand against
+                `bottom: calc(… + … + …)`, and at 390x844 they overlapped: the
+                footage-room link landed on top of "Understood" and swallowed its
+                taps. Playwright named the intercepting element; looking at the
+                page would not have. */}
+            <div className="scan-foot">
+                {standing && !setupProblem && (
+                    <div className="scan-standing">
+                        <p className="scan-standing-head">Before you start</p>
+                        <ul className="scan-standing-list">
+                            <li>Walk slowly. Slower than feels right.</li>
+                            <li>Keep the floor in the picture — it is what stands the room up.</li>
+                            <li>Circle every pillar, all the way round.</li>
+                            <li>Nobody in the shot.</li>
+                        </ul>
+                        <button className="scan-btn scan-btn-quiet" type="button" onClick={() => setStanding(false)}>
+                            Understood
+                        </button>
                     </div>
-                </form>
-            )}
+                )}
 
-            {note && <p className="scan-note">{note}</p>}
+                {measuring && (
+                    <form className="scan-measure" onSubmit={submitMeasurement}>
+                        <label className="scan-measure-label" htmlFor="scan-metres">
+                            One wall, measured with a tape. In metres.
+                        </label>
+                        <input
+                            id="scan-metres"
+                            className="scan-measure-input"
+                            type="number"
+                            inputMode="decimal"
+                            step="0.01"
+                            min="0.1"
+                            placeholder="8.3"
+                            value={metres}
+                            onChange={(event) => setMetres(event.target.value)}
+                        />
+                        <p className="scan-small">
+                            Point the camera at that wall — the photograph goes up with the number, so it can be checked later.
+                        </p>
+                        <div className="scan-measure-actions">
+                            <button className="scan-btn" type="submit">Save and photograph it</button>
+                            <button className="scan-btn scan-btn-quiet" type="button" onClick={() => setMeasuring(false)}>Not now</button>
+                        </div>
+                    </form>
+                )}
 
-            <footer className="scan-bar">
-                <button
-                    className="scan-btn scan-btn-wide"
-                    type="button"
-                    onClick={takeStill}
-                    disabled={!cameraReady || !sourcesProject}
-                >Photograph</button>
-                <button
-                    className={`scan-record${recording ? ' is-recording' : ''}`}
-                    type="button"
-                    onClick={toggleRecording}
-                    disabled={!cameraReady || !sourcesProject}
-                    aria-label={recording ? 'Stop the walk' : 'Start the walk'}
-                >
-                    <span className="scan-record-mark" />
-                </button>
-                <button
-                    className="scan-btn scan-btn-wide"
-                    type="button"
-                    onClick={() => setMeasuring((open) => !open)}
-                    disabled={!sourcesProject}
-                >Measure a wall</button>
-            </footer>
+                {note && <p className="scan-note">{note}</p>}
 
-            <section className="scan-after">
-                {sourcesHref && (
-                    <a className="scan-btn scan-btn-quiet" href={sourcesHref}>See the footage room</a>
-                )}
-                {build?.status === 'running' && (
-                    <p className="scan-small">Building the hall — {build.step || 'starting'}{Number.isFinite(build.minutes) ? `, ${build.minutes} min so far` : ''}</p>
-                )}
-                {build?.status === 'done' && (
-                    <a className="scan-btn" href={buildPublicProjectPath(spaceId, build.hallProject || `${spaceId}-hall`)}>Walk the hall</a>
-                )}
-                {build?.status === 'failed' && (
-                    <p className="scan-note scan-note-bad">The build stopped: {build.error || 'no reason given'}</p>
-                )}
-                {(!build || build.status === 'idle' || build.status === 'failed') && (
-                    readiness.ready
-                        ? (
-                            <button className="scan-btn" type="button" onClick={makeTheHall} disabled={building}>
-                                {building ? 'Starting…' : 'Make the hall'}
-                            </button>
-                        )
-                        : <p className="scan-small">Make the hall once there is {readiness.missing}.</p>
-                )}
-            </section>
+                <section className="scan-after">
+                    {sourcesHref && (
+                        <a className="scan-btn scan-btn-quiet" href={sourcesHref}>See the footage room</a>
+                    )}
+                    {build?.status === 'running' && (
+                        <p className="scan-small">Building the hall — {build.step || 'starting'}{Number.isFinite(build.minutes) ? `, ${build.minutes} min so far` : ''}</p>
+                    )}
+                    {build?.status === 'done' && (
+                        <a className="scan-btn" href={buildPublicProjectPath(spaceId, build.hallProject || `${spaceId}-hall`)}>Walk the hall</a>
+                    )}
+                    {build?.status === 'failed' && (
+                        <p className="scan-note scan-note-bad">The build stopped: {build.error || 'no reason given'}</p>
+                    )}
+                    {(!build || build.status === 'idle' || build.status === 'failed') && (
+                        readiness.ready
+                            ? (
+                                <button className="scan-btn" type="button" onClick={makeTheHall} disabled={building}>
+                                    {building ? 'Starting…' : 'Make the hall'}
+                                </button>
+                            )
+                            : <p className="scan-small">Make the hall once there is {readiness.missing}.</p>
+                    )}
+                </section>
+
+                {/* The bar is LAST, because it is nearest the thumb. Everything
+                    else in this column reads above it. */}
+                <footer className="scan-bar">
+                    <button
+                        className="scan-btn scan-btn-wide"
+                        type="button"
+                        onClick={takeStill}
+                        disabled={!cameraReady || !sourcesProject}
+                    >Photograph</button>
+                    <button
+                        className={`scan-record${recording ? ' is-recording' : ''}`}
+                        type="button"
+                        onClick={toggleRecording}
+                        disabled={!cameraReady || !sourcesProject}
+                        aria-label={recording ? 'Stop the walk' : 'Start the walk'}
+                    >
+                        <span className="scan-record-mark" />
+                    </button>
+                    <button
+                        className="scan-btn scan-btn-wide"
+                        type="button"
+                        onClick={() => setMeasuring((open) => !open)}
+                        disabled={!sourcesProject}
+                    >Measure a wall</button>
+                </footer>
+            </div>
         </div>
     )
 }
