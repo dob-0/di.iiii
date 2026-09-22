@@ -8,7 +8,8 @@ import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import { listSpaceContents } from '../project/services/projectsApi.js'
 import { getServerSpace } from '../services/serverSpaces.js'
 import { appNavigate } from '../utils/appNavigate.js'
-import { buildAppSpacePath, buildPublicProjectPath, buildVanityProjectPath } from '../utils/spaceRouting.js'
+import { buildAppSpacePath, buildPublicProjectPath, buildScanPath, buildVanityProjectPath } from '../utils/spaceRouting.js'
+import { sourcesProjectId } from '../scan/scanSources.js'
 import { buildStudioHubPath } from '../studio/utils/studioRouting.js'
 import { getCodeSpace } from '../studio/utils/codeSpaces.js'
 import { isSpaceInSessionScope } from '../utils/sessionScope.js'
@@ -129,6 +130,11 @@ export default function SpaceContentsPage({ spaceId }) {
     // project the database calls the door is reachable only at its own address.
     const doorId = codeSpace ? null : (state.space?.publishedProjectId || null)
 
+    // The space holds its own footage, so it is a place being collected rather
+    // than a space that merely has work in it. Read off the list that is already
+    // loaded — no second request, and no claim about a space nobody has scanned.
+    const isBeingScanned = projects.some((project) => project.id === sourcesProjectId(spaceId))
+
     // A space that holds one thing must not grow a page that says less than the
     // thing does. If the only project on show is the space's own door, this list
     // is a screen whose entire content is a link to the room you would already be
@@ -227,6 +233,21 @@ export default function SpaceContentsPage({ spaceId }) {
                     <p className="sc-aside">
                         <a className="sc-aside-link" href={buildStudioHubPath(spaceId)}>Open this space in Studio</a>
                         {' '}— drafts, archived work, shelves and the trash are there.
+                    </p>
+                )}
+
+                {/* A space that already holds its own footage is a PLACE
+                    somebody has been collecting, so the way back to the camera
+                    belongs here and only here: one quiet line beside the other
+                    one, for somebody who could already edit, and nothing at all
+                    on a space that has never been scanned. The published face of
+                    the footage room stays chrome-free — the owner's call of
+                    2026-08-07, and a floating Scan button on a public page would
+                    be exactly the thing it refused. */}
+                {canEdit && isBeingScanned && (
+                    <p className="sc-aside">
+                        <a className="sc-aside-link" href={buildScanPath(spaceId)}>Add to the scan of this place</a>
+                        {' '}— the camera, and the wall it lands on.
                     </p>
                 )}
             </div>
