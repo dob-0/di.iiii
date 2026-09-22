@@ -5,6 +5,7 @@ const path = require('node:path')
 const { spawn } = require('node:child_process')
 
 const { requireLocalRuntime } = require('../localRuntimeGuard')
+const { isValidAssetId } = require('../assetHash')
 
 // MAKING THE HALL — the one step of scanning that does not belong on the internet.
 //
@@ -177,6 +178,18 @@ function registerPlaceRoutes(router, {
     for (const asset of assets) {
       const extension = extensionFor(asset)
       if (!extension) continue
+      // An asset id is about to become a filesystem path, and an id in a stored
+      // document is whatever a client wrote: normalizeAsset only does
+      // ensureString on it, so `../../..` survives an upsertAsset op. Every
+      // other route that turns an id into a path guards it here first
+      // (projectRoutes.js does, three times) — and this is the route that then
+      // hands the bytes to a subprocess and, on the default path, up to a
+      // rented box off this machine. Skipped, not thrown: one malformed id in a
+      // document must not cost the whole walk.
+      if (!isValidAssetId(asset.id)) {
+        missing.push(asset.name || asset.id)
+        continue
+      }
       // A sha256 asset's bytes live once per space in the blob store; a legacy
       // uuid-shaped one is still project-local. Try both, in that order.
       const candidates = [blobPath(asset.id), path.join(assetsDir, asset.id)]

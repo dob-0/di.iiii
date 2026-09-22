@@ -292,6 +292,45 @@ describe('the place build route on a LOCAL di.iiii', () => {
     expect(carried, 'the photograph was copied out of the blob store').not.toBeNull()
   })
 
+  // An asset id in a stored document is whatever a client wrote — normalizeAsset
+  // only does ensureString on it — and this route turns one into a filesystem
+  // path and then hands the bytes to a subprocess, and by default up to a rented
+  // box. A walk collected from a phone on the LAN is enough to write the op.
+  it('will not carry a file an asset id points OUT of the space at', async () => {
+    const { project } = await collectAWalk(local.baseUrl, 'local-escape')
+
+    const secret = path.join(local.dataRoot, 'not-footage.txt')
+    await writeFile(secret, 'this must never reach the pipeline')
+
+    const document = await (await get(local.baseUrl, `/api/projects/${project}/document`)).json()
+    const climb = path.relative(path.join(local.dataRoot, 'spaces', 'local-escape', 'blobs'), secret)
+    const wrote = await post(local.baseUrl, `/api/projects/${project}/ops`, {
+      baseVersion: Number(document.version) || 0,
+      ops: [{
+        type: 'upsertAsset',
+        payload: { asset: { id: climb, name: 'innocent.jpg', mimeType: 'image/jpeg' } }
+      }]
+    })
+    expect(wrote.status, 'the op itself is accepted — the id is only a string to the schema').toBe(200)
+
+    const asked = await post(local.baseUrl, '/api/spaces/local-escape/place/build', { dryRun: true })
+    expect(asked.status).toBe(202)
+    const body = await asked.json()
+    // The real photograph still travels; only the climbing id is dropped.
+    expect(body.carried).toBe(1)
+
+    const logPath = path.join(local.dataRoot, 'place', 'local-escape', 'build.log')
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      const text = await readFile(logPath, 'utf8').catch(() => '')
+      if (text.includes('[')) break
+      await wait(100)
+    }
+    const args = JSON.parse((await readFile(logPath, 'utf8')).split('\n').find((line) => line.startsWith('[')))
+    const footage = args[args.indexOf('--from') + 1]
+    const escaped = await readFile(path.join(footage, '0002.jpg'), 'utf8').catch(() => null)
+    expect(escaped, 'nothing outside the space was copied into the footage').toBeNull()
+  })
+
   it('prefers the number the phone sent over the one in the room', async () => {
     await collectAWalk(local.baseUrl, 'local-number')
     const asked = await post(local.baseUrl, '/api/spaces/local-number/place/build', { scaleEdge: 24, dryRun: true })
