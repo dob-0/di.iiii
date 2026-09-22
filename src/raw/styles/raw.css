@@ -1047,6 +1047,17 @@
     animation: rawTopbarReveal 0.35s ease both;
 }
 
+/* A project's canvas carries the one bar (SurfaceBar, float) at the top edge;
+   the topbar sits under it. The sync alert still wins: it covers the bar, and
+   the topbar sits under the alert. */
+.raw-topbar.is-under-sbar {
+    top: var(--sbar-h);
+}
+
+.raw-sync-alert + .raw-topbar.is-under-sbar {
+    top: 40px;
+}
+
 @keyframes rawTopbarReveal {
     from { opacity: 0; }
     to   { opacity: 1; }
