@@ -425,3 +425,41 @@ sender, and the machine that lacks a runtime is now the one to fix. `detail` now
 … but no picture` means the link is fine and the sender is not producing video this
 receiver can show, which would then point at the sender (TouchDesigner under Wine) or at
 the colour format, and `bw=lowest` / `COLOR_FASTEST` become worth trying.
+
+
+## Getting the runtime — `di ndi get` (2026-09-22)
+
+The licence position above says di.iiii never ships the runtime. It did not say
+how a person gets one, and "install libndi, then restart di" is a sentence that
+assumes a package manager, a root password and a distribution that packages it.
+Two of those are usually missing at a venue.
+
+`scripts/di/ndi.mjs` closes that. It fetches the runtime from Vizrt's own CDN
+into `~/.di/ndi/lib/` and writes `DI_NDI_LIB` — the variable `library.js`
+already tried first — so **no step needs admin rights on any platform**. The
+licence position is unchanged: the bytes come from Vizrt, and the command is
+only doing the clicking.
+
+Measured on the rig, 2026-09-22 (aylmo, Arch, x86_64):
+
+| step | result |
+|---|---|
+| fetch + unpack + install, cold | **65.5 s** |
+| library installed | `libndi.so.6` → 27,287,968 bytes |
+| loaded via `library.js` + `binding.js` | `NDI SDK LINUX 12:51:52 Apr 13 2026 6.3.2.0` |
+| `NDIlib_send_get_no_connections` bound | yes |
+| macOS payload extraction (real 225 MB pkg, on Linux) | **2.3 s** → 29,805,920-byte universal Mach-O |
+
+The Linux archive's sha256 matched Arch's `ndi-sdk` PKGBUILD byte for byte
+(`f0314f24…cc183`) — an independent second source for that one file, though not
+a stable API to check against, which is why nothing is pinned. See
+`docs/deploy/DI_CLI.md` for the per-platform forms and the integrity position.
+
+**What is not proven.** The Windows unattended install has not been run on
+Windows. The installer was identified as Inno Setup 6.1 by inspecting the real
+`NDI 6 Runtime.exe`, and `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR=` are
+Inno's documented switches — but documented is not observed. If it refuses
+(elevation is the likely reason), the error says so and tells the person to run
+the installer themselves; a second `di ndi get` then finds the DLL through
+`NDI_RUNTIME_DIR_V6` and copies it with nothing to download. That fallback path
+IS covered by a test; the silent install is the gap.

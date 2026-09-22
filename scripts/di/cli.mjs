@@ -46,6 +46,7 @@ import { isWindows, paths } from './paths.mjs'
 import { probeAll, probeCanPublishName, probeHealth, probeLanAddresses, probeListen, probePrettyLocalName } from './probe.mjs'
 import { publishName, stopName, updateRoomName } from './name.mjs'
 import { getKeeper, keeperPaths, keeperStatus, removeKeeper, startKeeper, stopKeeper, KEEPER_PORT, LLAMA_BUILD, MODEL } from './keeper.mjs'
+import { getNdi, ndiDownloadFor, ndiPaths, ndiStatus, removeNdi, verifyNdi } from './ndi.mjs'
 import * as docker from './runner-docker.mjs'
 import * as node from './runner-node.mjs'
 import {
@@ -563,6 +564,7 @@ const cmdDoctor = async () => {
     const home = HOME()
     const probes = await probeAll({ home })
     const keeper = await keeperStatus(home)
+    const ndi = await ndiStatus(home)
     const decision = decideMode(probes)
     const tick = (ok) => (ok ? style.cyan('ok  ') : style.dim('--  '))
 
@@ -575,6 +577,7 @@ const cmdDoctor = async () => {
         '',
         `${tick(isInstalled(home))}installed     ${installedVersion(home) || 'no'}`,
         `${tick(keeper.installed)}keeper        ${keeper.installed ? `${MODEL.name}${keeper.running ? ` — answering on ${keeper.port}` : ' — not running'}` : `not fetched — ${CMD} keeper get`}`,
+        `${tick(ndi.installed)}ndi           ${ndi.installed ? `${ndi.version}${ndi.wired ? '' : ' — di.env points elsewhere'}` : (ndi.supported ? `not fetched — ${CMD} ndi get` : `no runtime for ${ndi.platform}`)}`,
         `${tick(true)}home          ${home}`,
         '',
         decision.mode === 'none'
@@ -687,7 +690,7 @@ const cmdUninstall = async (args) => {
     // The keeper goes with it: a fetched model is a component like the node
     // runtime, not the artist's work, and leaving 859 MiB behind after an
     // uninstall is not a kindness.
-    for (const target of [p.versions, p.current, p.previous, p.bin, p.runtime, p.run, p.state, p.env, p.credentials, keeperPaths(home).root]) {
+    for (const target of [p.versions, p.current, p.previous, p.bin, p.runtime, p.run, p.state, p.env, p.credentials, keeperPaths(home).root, ndiPaths(home).root]) {
         await fsp.rm(target, { recursive: true, force: true })
     }
     if (args.flags['with-data']) {
@@ -1108,6 +1111,72 @@ const cmdKeeper = async (args) => {
     process.exitCode = 1
 }
 
+/**
+ * The NDI runtime — the library that lets di.iiii be a video source on the
+ * network, and take one in.
+ *
+ * Fetched, never bundled: di.iiii is AGPL-3.0 and the runtime is Vizrt's under
+ * their own EULA, so the bytes come from Vizrt and this command is the one
+ * doing the clicking. Nothing is downloaded until this is typed — the same
+ * promise keeper get makes, and for the same reason.
+ */
+const cmdNdi = async (args) => {
+    const home = HOME()
+    const what = args._[1] || 'status'
+
+    if (what === 'status') {
+        say(ui.ndiStatus(await ndiStatus(home)))
+        return
+    }
+
+    if (what === 'get') {
+        if (!ndiDownloadFor()) {
+            say(ui.ndiUnsupported(process.platform))
+            process.exitCode = 1
+            return
+        }
+        const before = await ndiStatus(home)
+        if (before.installed && !args.flags.force) {
+            say(ui.ndiAlreadyHere(before.library))
+        } else {
+            say(ui.ndiGetting(ndiDownloadFor()))
+            try {
+                await getNdi(home, {
+                    variant: args.flags.variant ? String(args.flags.variant) : null,
+                    expectSha256: args.flags.sha256 ? String(args.flags.sha256) : null,
+                    force: Boolean(args.flags.force),
+                    onStep: (line) => say(style.dim(`  ${line}`)),
+                    onProgress: progressLine()
+                })
+            } catch (error) {
+                fail(String(error.message || error))
+                process.exitCode = 1
+                return
+            }
+        }
+        // Loaded through serverXR's own loader rather than declared ready on
+        // the strength of a file existing. A library on disk that will not
+        // dlopen is the failure this command exists to prevent, and it costs
+        // one short-lived process to know.
+        const versionDir = isInstalled(home) ? currentVersionDir(home) : null
+        const verified = await verifyNdi(home, {
+            versionDir,
+            nodeBinary: versionDir ? node.nodeBinary(home) : process.execPath
+        })
+        say(ui.ndiReady(await ndiStatus(home), verified))
+        return
+    }
+
+    if (what === 'remove') {
+        await removeNdi(home)
+        say(ui.ndiRemoved())
+        return
+    }
+
+    fail(`${CMD} ndi get | status | remove`)
+    process.exitCode = 1
+}
+
 // One line, rewritten in place, and only when stdout is a terminal — a
 // progress bar redirected into a log file is thousands of useless lines.
 const progressLine = () => {
@@ -1246,6 +1315,7 @@ const COMMANDS = {
     uninstall: cmdUninstall,
     version: cmdVersion,
     keeper: cmdKeeper,
+    ndi: cmdNdi,
     mcp: cmdMcp,
     help: (args) => say(ui.usageFor(args._[1]) || ui.help())
 }
