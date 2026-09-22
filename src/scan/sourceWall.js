@@ -151,21 +151,27 @@ export const readMeasuredWallLabel = (label) => {
 }
 
 /**
- * The label as an object in the room: standing at the left-hand end of the wall,
- * at eye height, facing the visitor.
+ * The label as an object in the room: a caption under the first picture.
+ *
+ * It stood BESIDE the wall at first — one slot beyond the left-hand edge of a
+ * full eight-wide row — and on a wall of six it was metres off the side of the
+ * arrival shot, invisible in both orientations (seen 2026-09-22). The number is
+ * the most valuable thing a walk produces; it has to be where the footage is,
+ * not out in the dark next to where the footage would be if there were more of
+ * it. So it hangs under slot 0, which never moves.
  */
 export const measuredWallEntity = (metres, options = {}) => {
     const label = measuredWallLabel(metres)
     if (!label) return null
-    const { perRow, tile, gap, distance, baseHeight } = { ...SOURCE_WALL_DEFAULTS, ...options }
-    const width = perRow * columnStepFor(tile, gap)
+    const { tile, distance, baseHeight } = { ...SOURCE_WALL_DEFAULTS, ...options }
+    const firstSlot = sourceWallSlot(0, options)
     return {
         id: MEASURED_WALL_ENTITY_ID,
         type: 'text',
         name: label,
         components: {
             transform: {
-                position: [-width / 2 - tile, baseHeight, -distance],
+                position: [firstSlot.position[0], baseHeight - tile * 0.75, -distance],
                 rotation: [0, 0, 0],
                 scale: [1, 1, 1]
             },

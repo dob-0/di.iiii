@@ -164,13 +164,19 @@ describe('the measured wall', () => {
         expect(measuredWallEntity(9).id).toBe(MEASURED_WALL_ENTITY_ID)
     })
 
-    it('stands at the left-hand end of the wall, facing the visitor', () => {
+    // It stood BESIDE the wall at first, one slot past the edge of a full row,
+    // and on a wall of six that put it metres off the side of the arrival shot —
+    // invisible in both orientations. The number is the most valuable thing a
+    // walk produces; it has to be where the footage is.
+    it('hangs as a caption under the first picture, facing the visitor', () => {
         const entity = measuredWallEntity(8.3)
         expect(entity.type).toBe('text')
         expect(entity.components.text.value).toBe('wall · 8.30 m')
         expect(entity.components.text.billboard).toBe(true)
-        expect(entity.components.transform.position[0]).toBeLessThan(sourceWallSlot(0).position[0])
-        expect(entity.components.transform.position[1]).toBe(SOURCE_WALL_DEFAULTS.baseHeight)
+        expect(entity.components.transform.position[0]).toBe(sourceWallSlot(0).position[0])
+        expect(entity.components.transform.position[1]).toBeLessThan(SOURCE_WALL_DEFAULTS.baseHeight)
+        expect(entity.components.transform.position[1]).toBeGreaterThan(0)
+        expect(entity.components.transform.position[2]).toBe(-SOURCE_WALL_DEFAULTS.distance)
     })
 })
 
