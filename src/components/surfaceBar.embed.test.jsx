@@ -105,8 +105,9 @@ const LANES = [
     }
 ]
 
-// StudioHub, RawHub and StudioChatSurface are deliberately NOT in the table:
-// on this branch none of them renders a SurfaceBar at all. When one of them
+// StudioHub (which is also the Nodes project list since 2026-09-23) and
+// StudioChatSurface are deliberately NOT in the table: on this branch neither
+// renders a SurfaceBar at all. When one of them
 // grows a bar it owes this table a row.
 
 const bars = () => document.querySelectorAll('nav[aria-label="di.iiii"]')

@@ -18,7 +18,8 @@ graduating piecemeal.
 
 - the experimental Raw editor lane
 - node-first and research-oriented editor workflows
-- Raw hub/editor routing, local UX, and experimental state/services
+- node editor routing, local UX, and experimental state/services
+- NOT a project list of its own: `/{space}/raw/projects` renders Studio's hub (`StudioHub openIn="nodes"`, from `RawApp.jsx`) — one list per space, the same cards on the same shelves as `/{space}/studio`, each opening in Nodes. The address is kept; don't grow a second list here
 
 ## When To Edit Here
 
@@ -37,7 +38,7 @@ graduating piecemeal.
 
 ## Do Not Assume
 
-- do not treat `Raw` as the main shipped product lane — Studio still is (see `MANIFESTO.md`'s non-negotiable #6). The landing now opens on the node canvas, amended into §6 on 2026-08-22 — that is a front door, not a promotion: production work, bug fixes and default UX still belong to Studio, and experimental Raw behavior must not become Studio's default
+- do not treat `Raw` as the main shipped product lane — Studio still is (see `MANIFESTO.md`'s non-negotiable #6): production work, bug fixes and default UX belong to Studio, and experimental node-editor behavior must not become Studio's default. The front page does not open on the node canvas (it did from 2026-08-21; `src/landing/LandingPage.jsx` now sends its door to the visitor's own space), so nothing about the landing makes this lane the primary one either
 - do not fork shared project logic into Raw unless the behavior is intentionally experimental
 - do not move canonical schema changes into Raw-only state or utilities
 - do not re-add a singleton/scope-restriction mechanism to any node type without checking with the user first (product decision 2026-07-19, see `docs/architecture/RECURSIVE_NODE_CORE.md`)

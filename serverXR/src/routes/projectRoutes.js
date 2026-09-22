@@ -714,7 +714,7 @@ function registerProjectRoutes(router, {
       // A scrubbed file no longer hashes to the id the client computed from the
       // original, so its requested id is dropped and the content address is
       // recomputed below. Callers already remap ids from the response (bundle
-      // import in StudioEditor/RawHub). Un-rewritten files keep the strict check.
+      // import in StudioEditor/StudioHub). Un-rewritten files keep the strict check.
       let assetId = (req.body?.assetId && !scrub.scrubbed) ? String(req.body.assetId).trim() : ''
       if (assetId) {
         if (!isValidAssetId(assetId)) {

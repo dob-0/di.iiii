@@ -3439,23 +3439,6 @@
     line-height: 1.45;
 }
 
-.raw-help-chip-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--di-space-2);
-}
-
-.raw-help-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: var(--di-space-1) var(--di-space-2);
-    border: 1px solid var(--di-cyan-border);
-    color: rgba(255, 255, 255, 0.75);
-    font-size: var(--di-text-2);
-    font-family: var(--di-mono);
-    background: rgba(var(--di-cyan-rgb), 0.04);
-}
-
 .raw-help-footer {
     border-top: 1px solid var(--di-cyan-border);
     border-bottom: 0;
@@ -3482,49 +3465,6 @@
     .raw-help-footer button {
         width: 100%;
     }
-}
-
-.raw-help-audiences {
-    display: grid;
-    gap: var(--di-space-3);
-    margin-top: var(--di-space-4);
-}
-
-.raw-help-audience-card {
-    display: grid;
-    gap: var(--di-space-3);
-    padding: var(--di-space-3);
-    border: 1px solid var(--di-cyan-border);
-    background: rgba(var(--di-cyan-rgb), 0.03);
-}
-
-.raw-help-audience-head {
-    display: flex;
-    align-items: center;
-    gap: var(--di-space-2);
-}
-
-.raw-help-audience-glyph {
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    color: var(--di-cyan);
-    border: 1px solid var(--di-cyan-border);
-    background: rgba(var(--di-cyan-rgb), 0.04);
-}
-
-.raw-help-audience-card h4 {
-    margin: 0;
-    font-size: var(--di-text-5);
-}
-
-.raw-help-audience-steps {
-    margin: 0;
-    padding-left: var(--di-space-4);
-    color: rgba(255, 255, 255, 0.82);
-    line-height: 1.45;
-    font-size: var(--di-text-3);
 }
 
 .raw-op-details {

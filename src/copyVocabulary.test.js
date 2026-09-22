@@ -143,7 +143,6 @@ const COPY_FILES = [
     'src/raw/components/RawEditor.jsx',
     'src/raw/components/RawGraphSurface.jsx',
     'src/raw/components/RawHelpDialog.jsx',
-    'src/raw/components/RawHub.jsx',
     'src/raw/components/RawViewport.jsx',
     'src/raw/components/TextPanelWindow.jsx',
     'src/raw/components/WorkStatusPanel.jsx',

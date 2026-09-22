@@ -333,7 +333,7 @@ export default function RawEditor({
     const scope = useNodeGraphScope({ nodes: authoredNodes })
     const { navStack, currentScopeId, enterNode: scopeEnterNode, navigateToScope: scopeNavigateToScope, reset: scopeReset, goToRoot: scopeGoToRoot } = scope
 
-    // RawHub's "open studio" shortcut hands off a node to land inside via
+    // A shortcut can hand off a node to land inside via
     // sessionStorage (see rawEnterNodeHandoff.js for why this can't live in
     // the synced document). Peeked (non-destructive — StrictMode's dev-mode
     // double-invoke of lazy initializers means a destructive read here would

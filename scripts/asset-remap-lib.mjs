@@ -19,7 +19,7 @@
  * count in the sync report reading "copied, 0 failed".
  *
  * The Studio already handles this: "Callers already remap ids from the
- * response (bundle import in StudioEditor/RawHub)". The scripts never did.
+ * response (bundle import in StudioEditor/StudioHub)". The scripts never did.
  */
 
 /**
