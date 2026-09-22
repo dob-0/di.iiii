@@ -79,9 +79,21 @@ export const scanProgress = (document) => {
         walkSeconds,
         pieces,
         stills,
-        // Every object on the wall, the label included — the slot the next one
-        // hangs in is one past the last picture, and the label is not a picture.
-        hung: mine.filter((entity) => entity.id !== MEASURED_WALL_ENTITY_ID).length,
+        // Every PICTURE on the wall — not just the ones this page hung. A
+        // `{space}-sources` room is also what scripts/place/import.mjs fills,
+        // with `source-1..source-N`, and "Add to the scan of this place" leads a
+        // phone straight into one of those. Counting only `scan-` ids made this
+        // 0 in a room holding 37 pictures, so the first capture was hung in slot
+        // 0 — exactly on top of the batch wall's bottom-left picture, co-planar
+        // and z-fighting.
+        //
+        // Pictures only, by type: the label is not a picture and neither is a
+        // `place-hall` model, and counting either would leave a hole in the
+        // wall. This is the SLOT the next capture takes, which is a different
+        // question from `stills`/`pieces` above — those count this phone's own
+        // work, and must not count somebody else's.
+        hung: entities.filter((entity) => (entity?.type === 'image' || entity?.type === 'video')
+            && entity?.id !== MEASURED_WALL_ENTITY_ID).length,
         measuredMetres: measured ? readMeasuredWallLabel(measured.components?.text?.value || measured.name) : null
     }
 }

@@ -107,23 +107,39 @@ export default function ScanSurface({ spaceId }) {
     const [portrait, setPortrait] = useState(isPortrait)
     const [build, setBuild] = useState(null)
     const [building, setBuilding] = useState(false)
+    // The space's real id, once the server has said what it is. Starts as the
+    // address segment so nothing waits on a round trip; see the resolve below.
+    const [placeSpaceId, setPlaceSpaceId] = useState(spaceId)
 
     // ── the room this walk fills ──────────────────────────────────────────────
     useEffect(() => {
         let cancelled = false
         const open = async () => {
             let label = spaceId
+            // The segment in the address is not always the space's id — a space
+            // can be reached by its slug (`main` answers to `di-iiii`), and both
+            // exist on this machine today. The server stems the footage room off
+            // the REAL id (spaceIdParam rewrites the param before the build route
+            // sees it), so a page that stems it off the segment builds
+            // `di-iiii-sources` and the build route then looks for `main-sources`
+            // and reports that nothing was collected. Resolve once, here, and
+            // stem everything server-facing off the answer.
+            let realId = spaceId
             try {
                 const space = await getServerSpace(spaceId)
                 label = space?.label || spaceId
-                if (!cancelled) setSpaceLabel(label)
+                realId = space?.id || spaceId
+                if (!cancelled) {
+                    setSpaceLabel(label)
+                    setPlaceSpaceId(realId)
+                }
             } catch {
                 // A space that will not load is still a space this person was
                 // sent to; the name is decoration and the walk is not.
                 if (!cancelled) setSpaceLabel(spaceId)
             }
             try {
-                const { projectId, created } = await ensureSourcesProject(spaceId, { label })
+                const { projectId, created } = await ensureSourcesProject(realId, { label })
                 if (cancelled) return
                 setSourcesProject(projectId)
                 // Only on the way in. A room dressed on every visit would undo
@@ -457,7 +473,7 @@ export default function ScanSurface({ spaceId }) {
         let cancelled = false
         const look = async () => {
             try {
-                const state = await readPlaceBuild(spaceId)
+                const state = await readPlaceBuild(placeSpaceId)
                 if (!cancelled) setBuild(state)
             } catch {
                 if (!cancelled) setBuild(null)
@@ -471,13 +487,13 @@ export default function ScanSurface({ spaceId }) {
             return () => { cancelled = true; window.clearInterval(timer) }
         }
         return () => { cancelled = true }
-    }, [spaceId, build?.status]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [placeSpaceId, build?.status]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const makeTheHall = useCallback(async () => {
         setBuilding(true)
         setNote('')
         try {
-            const started = await requestPlaceBuild(spaceId, { scaleEdge: progress.measuredMetres })
+            const started = await requestPlaceBuild(placeSpaceId, { scaleEdge: progress.measuredMetres })
             setBuild(started)
         } catch (error) {
             setNote(error?.status === 404
@@ -486,7 +502,7 @@ export default function ScanSurface({ spaceId }) {
         } finally {
             setBuilding(false)
         }
-    }, [progress.measuredMetres, spaceId])
+    }, [progress.measuredMetres, placeSpaceId])
 
     // ── the screen ────────────────────────────────────────────────────────────
     const covered = coveredCount(ring)
@@ -644,7 +660,7 @@ export default function ScanSurface({ spaceId }) {
                         <p className="scan-small">Building the hall — {build.step || 'starting'}{Number.isFinite(build.minutes) ? `, ${build.minutes} min so far` : ''}</p>
                     )}
                     {build?.status === 'done' && (
-                        <a className="scan-btn" href={buildPublicProjectPath(spaceId, build.hallProject || `${spaceId}-hall`)}>Walk the hall</a>
+                        <a className="scan-btn" href={buildPublicProjectPath(spaceId, build.hallProject || `${placeSpaceId}-hall`)}>Walk the hall</a>
                     )}
                     {build?.status === 'failed' && (
                         <p className="scan-note scan-note-bad">The build stopped: {build.error || 'no reason given'}</p>

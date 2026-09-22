@@ -43,8 +43,10 @@ describe('scanProgress', () => {
     })
 
     // A batch import's own wall (`source-N`) is somebody else's work in the same
-    // room and must not be counted as this phone's walk.
-    it('ignores everything that is not the phone\'s own', () => {
+    // room and must not be counted as this phone's WALK — but it is very much on
+    // the wall, so the next capture hangs past it. Two questions, two answers:
+    // `stills` is this phone's, `hung` is the wall's.
+    it('counts a batch import as the phone\'s neighbour, not as its walk', () => {
         const progress = scanProgress({
             entities: [
                 { id: 'source-1', type: 'image', name: 'frame-00001.jpg' },
@@ -52,8 +54,24 @@ describe('scanProgress', () => {
                 still(1)
             ]
         })
-        expect(progress.stills).toBe(1)
-        expect(progress.hung).toBe(1)
+        expect(progress.stills, 'the import is not this phone\'s work').toBe(1)
+        // 2, not 1: hanging in slot 1 would put this capture exactly on top of
+        // source-1. And not 3 — a hall model does not hang on the wall, and
+        // counting it would leave a hole.
+        expect(progress.hung, 'the slot the next capture takes').toBe(2)
+    })
+
+    // The real room this was found in: moxir-sources, filled by the place
+    // pipeline with 36 photographs and one clip, none of them `scan-` prefixed.
+    it('hangs the first phone capture past a whole batch-imported wall', () => {
+        const imported = Array.from({ length: 37 }, (_, index) => ({
+            id: `source-${index + 1}`,
+            type: index === 36 ? 'video' : 'image',
+            name: `${String(index).padStart(3, '0')}-file.JPG`
+        }))
+        const progress = scanProgress({ entities: imported })
+        expect(progress.stills, 'none of it is this phone\'s').toBe(0)
+        expect(progress.hung, 'the next slot is past all 37').toBe(37)
     })
 
     // The label is not a picture: the slot the next capture hangs in is one past
