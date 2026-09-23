@@ -49,7 +49,7 @@ When the call ends (beyond_form pattern, keep the page's existing design):
 
 ### 4. Deploy
 
-`node scripts/sync-space.mjs --tier staging` (the dev tier; the tier value is still `staging`) from the page repo (token:
+`node scripts/sync-space.mjs --tier dev` (the dev tier) from the page repo (token:
 `LIVE_API_TOKEN` from di.iiii `serverXR/.env.local` via the repo's
 `.env.local` — the script only reads its own repo root). Verify on
 dev.diiii.xyz with real screenshots at device DPR, then `--tier prod`.

@@ -19,6 +19,8 @@ import { deleteServerAsset, getServerSpace, importCommonsAssets, importDriveAsse
 import { buildAppSpacePath, buildPublicProjectPath } from '../../utils/spaceRouting.js'
 import { buildSpaceProjectsPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { buildRawProjectPath } from '../../raw/utils/rawRouting.js'
+import { buildMapPath } from '../../map/mapRouting.js'
+import { useStudioCues } from '../hooks/useStudioCues.js'
 import { getPointsBoundingSphere } from '../../utils/cameraFraming.js'
 import StudioShell from './StudioShell.jsx'
 import AssetOptimizationDialog from './AssetOptimizationDialog.jsx'
@@ -27,6 +29,7 @@ import { canPlaceInScene, isPdfAsset, pdfToImageFiles } from '../utils/assetForm
 import { getSelectionCentroid } from '../utils/multiTransform.js'
 import { buildReparentPatch, cloneSubtree, collectSubtree, topLevelTargets } from '../utils/entityClipboard.js'
 import { isTimelinePreviewPosed, setTimelinePreview } from '../utils/timelinePreview.js'
+import { useProjectLayers } from '../../project/useProjectLayers.js'
 
 const DISPLAY_NAME_KEY = 'dii.studio.displayName'
 
@@ -124,6 +127,19 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     })
     const { requestDelete, deleteConfirm } = useDeleteConfirm()
     const document = state.document
+    // What each layer of this project holds and which are open, once the real
+    // document has arrived (src/project/layers.js): a new project opens bare,
+    // and the bar grows as it fills.
+    const layers = useProjectLayers(document, projectId, state.hasLoaded)
+    // The project's cues, fired from the 3D scene with the projection tool's
+    // own number keys and through its own firing path. Number keys are free in
+    // Studio; see src/studio/hooks/useStudioCues.js for the one thing that
+    // takes them and why it still wins.
+    const { cues, liveCueId, fireCue } = useStudioCues({
+        projectId,
+        document,
+        applyLocalOps
+    })
     const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
     const { assets: spaceAssets, refresh: refreshSpaceAssets } = useSpaceAssets(resolvedSpaceId)
     // useDriveImport counts result.entries, the routes answer with .assets
@@ -745,8 +761,11 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             // supported. The !meta guard matches the sibling Delete/A branches:
             // without it, Ctrl/Cmd+F (find-in-page, preventable in Chrome and
             // Firefox) was swallowed and the camera jumped instead.
+            // With nothing selected it frames the whole room (the visible
+            // entities -- handleFrameSelected's own fallback). A return here on
+            // !selectedEntity used to make that branch unreachable, so F did
+            // nothing at all after Alt+A.
             if (!meta && (event.key === 'f' || event.key === 'F' || event.key === '.')) {
-                if (!selectedEntity) return
                 event.preventDefault()
                 handleFrameSelected()
                 return
@@ -1048,6 +1067,12 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         }
     }
 
+    // The project's own mapping surfaces, for a plane that is a screen.
+    const surfaceOptions = useMemo(
+        () => (document.mappingState?.surfaces || []).map((surface) => ({ value: surface.id, label: surface.name || surface.id })),
+        [document.mappingState?.surfaces]
+    )
+
     const inspectorSections = selectedEntity
         ? getInspectorSections(selectedEntity)
         : [
@@ -1078,6 +1103,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         <>
             <StudioShell
             document={document}
+            layers={layers}
             loading={state.loading}
             loadError={state.loadError}
             editHistory={history()}
@@ -1092,6 +1118,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             inspectorValues={inspectorValues}
             assetOptions={document.assets || []}
             spaceOptions={spaceOptions}
+            surfaceOptions={surfaceOptions}
             libraryItems={libraryItems}
             onDeleteLibraryItem={handleDeleteLibraryItem}
             presence={presence}
@@ -1136,6 +1163,10 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onExitXr={xr.handleExitXrSession}
             onBackToHub={() => navigateToStudioPath(buildSpaceProjectsPath(resolvedSpaceId))}
             onOpenNodeEditor={() => navigateToStudioPath(buildRawProjectPath(projectId, resolvedSpaceId))}
+            onOpenProjection={() => navigateToStudioPath(buildMapPath(resolvedSpaceId, projectId))}
+            cues={cues}
+            liveCueId={liveCueId}
+            onFireCue={fireCue}
             onCameraViewChange={handleCameraViewChange}
             onTransformCommit={handleTransformCommit}
             transformOp={transformOp}

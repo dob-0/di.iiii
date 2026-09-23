@@ -50,6 +50,7 @@ function registerSpaceRoutes(router, {
   loadSpaceMeta,
   listSpaces,
   listProjectsInSpace = null,
+  countProjectsBySpace = null,
   maxOpHistory,
   maxOpAgeMs = 0,
   normalizeIncomingOps,
@@ -162,11 +163,15 @@ function registerSpaceRoutes(router, {
   // isOwner is computed per requester so clients can gate management UI
   // without comparing raw ownerUserId themselves. With auth disabled the
   // whole surface is open, so everything reports owned.
-  const withIsOwner = (state, space) => ({
-    ...space,
-    isOwner: !config.requireAuth ||
+  const withIsOwner = (state, space) => {
+    const isOwner = !config.requireAuth ||
       (state?.type === 'session' && Boolean(space?.ownerUserId) && space.ownerUserId === state.subject)
-  })
+    const mayManage = isOwner || state?.role === 'admin' || Boolean(state?.isUnrestricted)
+    // Who the owner trusts is the owner's business: shown to the owner and to
+    // admins, never listed to a visitor who merely reaches the space.
+    const { trustedUserIds, ...rest } = space || {}
+    return { ...rest, ...(mayManage ? { trustedUserIds: trustedUserIds || [] } : {}), isOwner }
+  }
 
   router.get('/api/spaces', async (req, res, next) => {
     try {
@@ -203,7 +208,26 @@ function registerSpaceRoutes(router, {
       const sandboxSummary = state.isUnrestricted && typeof getSandboxStats === 'function'
         ? getSandboxStats()
         : null
-      const mapped = visible.map((space) => withIsOwner(state, space))
+      // What each space HOLDS: "26 projects · 2 published". A card could only
+      // name the project its door opens on, so a space without one read as
+      // empty (the Open Space most of all). Only for a space this session may
+      // enter — a stranger looking at a public space learns nothing about its
+      // drafts. Optional dependency: a caller that does not supply it gets the
+      // old response shape exactly, and a failed count never fails the list.
+      let projectCounts = null
+      if (typeof countProjectsBySpace === 'function') {
+        try {
+          projectCounts = await countProjectsBySpace()
+        } catch {
+          projectCounts = null
+        }
+      }
+      const mapped = visible.map((space) => {
+        const meta = withIsOwner(state, space)
+        if (!projectCounts || !(state.authenticated && canAccessSpace(state, space.id))) return meta
+        const held = projectCounts[space.id] || { projects: 0, published: 0 }
+        return { ...meta, projectCount: held.projects, publishedCount: held.published }
+      })
 
       // Pagination is opt-in via ?limit= (and optional ?offset=): omitting it
       // preserves the original full-list response so existing callers (the
@@ -302,7 +326,7 @@ function registerSpaceRoutes(router, {
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      const { label, permanent, allowEdits, isPublic, kind, publishedProjectId, previewImageAssetId, openInscriptions, slug, ownerUserId } = req.body || {}
+      const { label, permanent, allowEdits, isPublic, kind, publishedProjectId, previewImageAssetId, openInscriptions, slug, ownerUserId, trustedUserIds } = req.body || {}
       if (kind !== undefined && !['normal', 'global', 'sandbox'].includes(kind)) {
         return res.status(400).json({ error: 'kind must be one of: normal, global, sandbox.' })
       }
@@ -369,6 +393,27 @@ function registerSpaceRoutes(router, {
           nextOwnerUserId = requested
         }
       }
+      // The trusted list (owner's decision 2026-09-16): people who apply content
+      // to THIS space directly, with author + undo, instead of proposing. The
+      // guard above already limits this route to the owner or an admin, so the
+      // only questions are shape and existence: an array of real account ids,
+      // never a guest cookie, never the owner (already trusted by definition).
+      let nextTrustedUserIds
+      if (trustedUserIds !== undefined) {
+        if (trustedUserIds !== null && !Array.isArray(trustedUserIds)) {
+          return res.status(400).json({ error: 'trustedUserIds must be an array of account ids.' })
+        }
+        const requested = Array.from(new Set((trustedUserIds || []).map((v) => String(v || '').trim()).filter(Boolean)))
+        for (const id of requested) {
+          if (isGuestSubject(id)) {
+            return res.status(400).json({ error: 'A guest identity cannot be trusted with a space.' })
+          }
+          if (findUserById && !findUserById(id)) {
+            return res.status(404).json({ error: `Trusted account not found: ${id}` })
+          }
+        }
+        nextTrustedUserIds = requested
+      }
       let nextPublishedProjectId
       if (publishedProjectId !== undefined) {
         if (publishedProjectId === null || publishedProjectId === '') {
@@ -415,7 +460,8 @@ function registerSpaceRoutes(router, {
         ...(previewImageAssetId !== undefined ? { previewImageAssetId: nextPreviewImageAssetId } : {}),
         ...(openInscriptions !== undefined ? { openInscriptions: Boolean(openInscriptions) } : {}),
         ...(slug !== undefined ? { slug: nextSlug } : {}),
-        ...(ownerUserId !== undefined ? { ownerUserId: nextOwnerUserId } : {})
+        ...(ownerUserId !== undefined ? { ownerUserId: nextOwnerUserId } : {}),
+        ...(trustedUserIds !== undefined ? { trustedUserIds: nextTrustedUserIds } : {})
       }
       // An owner who cannot reach the space is not an owner. Scope and
       // ownership were separate grants, so assigning one without the other left
@@ -426,15 +472,19 @@ function registerSpaceRoutes(router, {
       const touchesSensitive = SENSITIVE_SPACE_PATCH_FIELDS.some((f) => Object.prototype.hasOwnProperty.call(req.body || {}, f))
       if (!touchesSensitive || !approvalGate) {
         const meta = await upsertSpaceMeta(spaceId, patch)
-        if (nextOwnerUserId && findUserById && setUserSpaces) {
-          try {
-            const user = findUserById(nextOwnerUserId)
-            if (user && Array.isArray(user.spaces) && !user.spaces.includes(spaceId)) {
-              setUserSpaces(nextOwnerUserId, [...user.spaces, spaceId])
-            }
-          } catch { /* scope is a convenience grant here; ownership already landed */ }
+        // A person who cannot reach the space cannot be its owner or be trusted
+        // with it: ownership and trust carry scope with them.
+        if (findUserById && setUserSpaces) {
+          for (const userId of [nextOwnerUserId, ...(nextTrustedUserIds || [])].filter(Boolean)) {
+            try {
+              const user = findUserById(userId)
+              if (user && Array.isArray(user.spaces) && !user.spaces.includes(spaceId)) {
+                setUserSpaces(userId, [...user.spaces, spaceId])
+              }
+            } catch { /* scope is a convenience grant here; the row already landed */ }
+          }
         }
-        return res.json({ space: meta })
+        return res.json({ space: withIsOwner(req.authState, meta) })
       }
       const changeDesc = Object.keys(patch).map((k) => `${k}→${JSON.stringify(patch[k])}`).join(', ')
       const outcome = await approvalGate.gateOrApply({
@@ -1209,7 +1259,7 @@ function registerSpaceRoutes(router, {
       // A scrubbed file no longer hashes to the id the client computed from the
       // original, so its requested id is moot — the content address is
       // recomputed below and returned. Callers already remap ids from the
-      // response (bundle import in StudioEditor/RawHub does exactly this).
+      // response (bundle import in StudioEditor/StudioHub does exactly this).
       // Anything we did NOT rewrite keeps the strict check unchanged.
       if (req.body?.assetId && !scrub.scrubbed) {
         const requested = String(req.body.assetId).trim()
@@ -1530,7 +1580,7 @@ function registerSpaceRoutes(router, {
       if (!isValidAssetId(assetId)) return res.status(400).json({ error: 'Invalid request.' })
       const row = commonsStore.getAsset(assetId)
       if (!row) return res.status(404).json({ error: 'Not a public asset.' })
-      await serveAsset(row.spaceId, assetId, res)
+      await serveAsset(row.spaceId, assetId, res, { req })
     } catch (error) {
       if (error.code === 'ENOENT') {
         return res.status(404).json({ error: 'Asset not found.' })
@@ -1623,7 +1673,7 @@ function registerSpaceRoutes(router, {
       if (!spaceId || !isValidAssetId(assetId)) {
         return res.status(400).json({ error: 'Invalid request.' })
       }
-      await serveAsset(spaceId, assetId, res, { width: req.query.w })
+      await serveAsset(spaceId, assetId, res, { width: req.query.w, req })
     } catch (error) {
       if (error.code === 'ENOENT') {
         return res.status(404).json({ error: 'Asset not found.' })

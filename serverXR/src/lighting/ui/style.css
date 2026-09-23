@@ -782,6 +782,8 @@ input.pinned { border-color: var(--accent); }
 .blackout.pending { opacity: .55; }
 .title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .statusstrip.bad { color: var(--danger); }
+/* The show note is a row of the top bar, last, full width: it stays in view with the bar. */
+.topbar > .shownote { flex: 1 1 100%; order: 10; border-top: 1px solid var(--line); border-bottom: 0; }
 
 /* ---- stage pan and drag surfaces ---- */
 /* Dragging is these surfaces' whole job: a marquee across the stage or a drag across the

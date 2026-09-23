@@ -39,7 +39,7 @@ const DEFAULT_LOCAL_URL = 'http://localhost:4000/serverXR'
 
 // Production is the one host this script must never reach by inheritance.
 // Matches the live site under both its names (di-studio.xyz, diiii.xyz); the dev
-// tier (dev.diiii.xyz, legacy staging.di-studio.xyz) is a different hostname and
+// tier (dev.diiii.xyz) is a different hostname and
 // is unaffected.
 export const isProductionTarget = (url) => {
     try {
@@ -131,10 +131,14 @@ const main = async () => {
         // serverXR/.env.local is where the tokens actually live; the root pair
         // carries the URLs. Reading only the root pair is why this script could
         // not see LIVE_API_TOKEN at all.
-        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env'))),
-        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env.local'))),
+        // Most specific file wins, so serverXR/.env.local merges LAST. The root .env is a
+        // general-purpose file that on one machine carried LOCAL_API_URL=localhost:4000 while
+        // the install answered on its own name — with root-last, that stale line won and the
+        // content half of this tool reported "not checked" for a week (2026-09-21).
         ...(await loadEnvFile(path.join(ROOT_DIR, '.env'))),
         ...(await loadEnvFile(path.join(ROOT_DIR, '.env.local'))),
+        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env'))),
+        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env.local'))),
     }
     const getEnv = (key) => process.env[key] || localEnv[key] || ''
 

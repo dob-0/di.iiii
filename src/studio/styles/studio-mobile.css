@@ -27,6 +27,16 @@
     top: 40px;
 }
 
+/* Under the one bar (SurfaceBar), which floats at the top edge. The alert
+   still wins: it covers the bar, and the context bar sits under the alert. */
+.sfp-root.has-sbar .smb-topbar {
+    top: var(--sbar-h);
+}
+
+.sfp-root.has-sbar .studio-sync-alert + .smb-topbar {
+    top: 40px;
+}
+
 .smb-topbar {
     position: fixed;
     top: 0;
@@ -34,6 +44,12 @@
     right: 0;
     z-index: 60;
     display: flex;
+    /* Five items (←, title, Nodes, Projection, Edit) no longer all fit a
+       390px phone without crushing the title to a sliver — wrap lets
+       whichever button doesn't fit drop to its own row instead of eating
+       the title's space or squeezing a button's own text. Every button
+       keeps its real size and a clear tap target either way. */
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--di-space-3);
     padding: calc(var(--di-space-2) + env(safe-area-inset-top)) var(--di-space-3) var(--di-space-2);
@@ -47,6 +63,12 @@
 
 .smb-title {
     flex: 1;
+    /* Without a floor, flex-basis:0 (from flex:1) lets this shrink to
+       whatever's left over — as little as 89px once Projection joined the
+       row, truncating almost every real project title. A floor forces the
+       row's own total past the container width first, which is what
+       actually triggers the wrap above. */
+    min-width: 120px;
     text-align: center;
     color: rgba(255, 255, 255, 0.75);
     font-size: var(--di-text-3);
@@ -150,4 +172,35 @@
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     padding-bottom: var(--di-space-2);
+}
+
+/* The cue strip on a phone. The control cluster is not drawn here at all, so
+   the cues ride in the one band of a 390px screen a thumb reaches without
+   regripping: directly above the bottom bar, under the panel sheet's z-index
+   so the sheet is never fought for the same space (the shell also stops
+   drawing the strip while a sheet is open). One row that scrolls sideways,
+   not a wrapping block — a show with nine cues must not eat half the scene. */
+.smb-cues {
+    position: fixed;
+    left: 0;
+    right: 0;
+    /* Clear of BOTH the bottom bar (48px) and the coach pill that sits at
+       64px above it on a phone — measured: the pill covered the second cue
+       outright, so a two-cue show had one reachable cue on a phone. */
+    bottom: calc(112px + env(safe-area-inset-bottom));
+    z-index: 54;
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: var(--di-space-2);
+    padding: var(--di-space-2) var(--di-space-3);
+    pointer-events: none;
+}
+
+.smb-cues > * {
+    pointer-events: auto;
+    flex: none;
+    /* A tap target, not a label: 44px is the floor a finger needs, and the
+       topbar's own button height is short of it. */
+    min-height: 44px;
 }

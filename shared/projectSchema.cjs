@@ -133,6 +133,9 @@ const defaultWorldState = {
 
 const defaultRenderSettings = {
   shadows: true,
+  // Whether the room's lamps and scenery join the shadow pass at all. Off:
+  // see normalizeShadowCasting below for why this is not `shadows`.
+  shadowCasting: { enabled: false, mapSize: 1024 },
   antialias: true,
   toneMapping: 'ACESFilmic',
   toneMappingExposure: 1,
@@ -194,7 +197,13 @@ const defaultMappingSurface = {
   // Polygon mask in the surface's OWN normalised space. Empty = the whole
   // rectangle.
   mask: [],
-  source: { kind: 'test', ref: 'grid' },
+  // A NEW surface is born on `card`: a dim warm identification card naming the
+  // surface, not the bright alignment grid — the desk and the wall are two
+  // machines, so a new surface is on the projector the moment Add is pressed,
+  // and white never goes on a projector. A `ref` and not a new `source.kind`
+  // on purpose: an older build rewrites an unknown kind and loses the choice,
+  // an unknown ref it keeps. See src/map/mapTestPattern.jsx.
+  source: { kind: 'test', ref: 'card' },
   resolution: [1280, 720],
   opacity: 1,
   brightness: 1,
@@ -498,6 +507,11 @@ const normalizeAuthor = (author) => {
   return { subject, label: ensureString(author.label, '') }
 }
 
+const normalizeFixtureIndex = (fixture) => {
+  const index = Number(fixture?.index)
+  return Number.isInteger(index) && index > 0 ? index : null
+}
+
 const normalizeEntity = (entity = {}) => {
   const rawType = ensureString(entity.type, 'box')
   const type = ENTITY_TYPES.has(rawType) ? rawType : 'box'
@@ -609,6 +623,38 @@ const normalizeEntity = (entity = {}) => {
       min: Math.min(1, Math.max(0, min))
     }
   }
+  // THE BEAM IN THE AIR: the visible cone of a spot light's throw. Absent in
+  // every room published before this existed, and absent MUST keep meaning no
+  // beam -- a cone switched on by a normaliser would change the look of every
+  // lit space at once. `haze` is how thick the air is, 0..1; the renderer
+  // reads an absent haze as 0.4 (src/objectComponents/spotBeam.js).
+  if (sourceComponents.beam) {
+    nextComponents.beam = {
+      visible: ensureBoolean(sourceComponents.beam.visible, false),
+      haze: Math.min(1, Math.max(0, ensureNumber(sourceComponents.beam.haze, 0.4)))
+    }
+  }
+  // THE JOIN between a lamp in the room and a lamp on the lighting desk: the
+  // fixture's `index` on the desk (the number a person sees there, `3.Back left`).
+  // A number and nothing else — never universe/address, which belong to the
+  // machine's own show.json and never travel with a project
+  // (di-atlas/decisions/2026-09-20-one-project-one-stage.md). An index that is not
+  // a positive whole number is no join at all, so the component is dropped rather
+  // than stored broken — which is also how the inspector clears it: `{ index: null }`.
+  const fixtureIndex = normalizeFixtureIndex(sourceComponents.fixture)
+  if (fixtureIndex != null) nextComponents.fixture = { index: fixtureIndex }
+  else delete nextComponents.fixture
+  // A screen: a plane that shows one of the project's own mapping surfaces
+  // (document.mappingState.surfaces) as its picture. The join is the surface's
+  // id and nothing else -- the surface keeps its kind, file and resolution, so
+  // the screen follows whatever the Projection tool later puts on it. An empty
+  // or missing id means "no screen", and the component is dropped rather than
+  // kept as a husk, so an entity authored before this is byte-identical.
+  if (sourceComponents.surface) {
+    const surfaceId = ensureString(sourceComponents.surface.surfaceId, '')
+    if (surfaceId) nextComponents.surface = { surfaceId }
+    else delete nextComponents.surface
+  }
   if (sourceComponents.timeline) {
     const timeline = normalizeTimeline(sourceComponents.timeline)
     if (timeline) nextComponents.timeline = timeline
@@ -708,6 +754,23 @@ const normalizeWorldState = (world = {}) => {
 
 const RENDER_TONE_MAPPINGS = new Set(['ACESFilmic', 'none'])
 
+// SHADOWS FROM THE ROOM. Deliberately not the older `shadows` field, which is
+// the renderer-level switch (gl.shadowMap.enabled) and has defaulted to true
+// since this schema was written -- nothing ever cast into that map, so it was on
+// and every stage was flat. This one says the lamps and the things in the room
+// actually join the shadow pass, and it is OFF unless a room asks: a shadow pass
+// over a scanned venue is not free, and no published space asked for one.
+const SHADOW_MAP_SIZES = [1024, 2048]
+
+const normalizeShadowCasting = (casting) => {
+  const source = casting && typeof casting === 'object' ? casting : {}
+  const mapSize = Number(source.mapSize)
+  return {
+    enabled: ensureBoolean(source.enabled, defaultRenderSettings.shadowCasting.enabled),
+    mapSize: SHADOW_MAP_SIZES.includes(mapSize) ? mapSize : defaultRenderSettings.shadowCasting.mapSize
+  }
+}
+
 const normalizeRenderSettings = (settings = {}) => {
   const source = settings && typeof settings === 'object' ? settings : {}
   return {
@@ -718,7 +781,8 @@ const normalizeRenderSettings = (settings = {}) => {
     toneMapping: RENDER_TONE_MAPPINGS.has(source.toneMapping) ? source.toneMapping : defaultRenderSettings.toneMapping,
     toneMappingExposure: Math.max(0, ensureNumber(source.toneMappingExposure, defaultRenderSettings.toneMappingExposure)),
     dprMin: Math.max(0.5, ensureNumber(source.dprMin, defaultRenderSettings.dprMin)),
-    dprMax: Math.max(0.5, ensureNumber(source.dprMax, defaultRenderSettings.dprMax))
+    dprMax: Math.max(0.5, ensureNumber(source.dprMax, defaultRenderSettings.dprMax)),
+    shadowCasting: normalizeShadowCasting(source.shadowCasting)
   }
 }
 
@@ -798,7 +862,12 @@ const normalizeShowState = (show = {}) => {
   }
 }
 
-const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test', 'camera']
+// 'stream' is a live picture named by WHAT it is ("OBS Virtual Camera", "capture"), not by a
+// device id: an id belongs to one browser profile on one machine, so a mapping made on the desk
+// could never name an input on the machine that actually shows it. See MapStreamSource.
+// Mirrors src/shared/projectSchema.js — read that one for what each kind means and for the
+// mixed-version trap a closed list carries (an unknown kind is rewritten to the default).
+const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test', 'camera', 'network', 'stream', 'ndi']
 const MAPPING_BLEND_MODES = ['normal', 'screen', 'multiply', 'lighten', 'add']
 const MAPPING_EFFECT_KINDS = ['none', 'motion']
 
@@ -916,16 +985,41 @@ const normalizeMappingReference = (reference = {}) => {
   }
 }
 
+// Hand-mirrored from src/shared/projectSchema.js — which display shows this
+// mapping. The output block used to be rebuilt from width and height alone,
+// which stripped `show` on the first write from any machine; both twins keep
+// it now, and serverXR/src/schemaSync.test.js holds the round trip here.
+const normalizeOutputShow = (show) => {
+  if (!show || typeof show !== 'object' || Array.isArray(show)) return null
+  const machine = ensureString(show.machine, '').trim()
+  if (!machine) return null
+  let screen = 'all'
+  if (show.screen && typeof show.screen === 'object' && !Array.isArray(show.screen)) {
+    const label = ensureString(show.screen.label, '').trim()
+    const index = Number.isInteger(show.screen.index) && show.screen.index >= 0 ? show.screen.index : null
+    const size = Array.isArray(show.screen.size) && show.screen.size.length === 2
+      && show.screen.size.every((value) => Number.isFinite(value) && value > 0)
+      ? [Math.round(show.screen.size[0]), Math.round(show.screen.size[1])]
+      : null
+    if (label || index !== null || size) screen = { label, index, size }
+  }
+  const name = ensureString(show.name, '').trim()
+  return { machine, ...(name ? { name } : {}), screen }
+}
+
 const normalizeMappingState = (mapping = {}) => {
   const source = mapping && typeof mapping === 'object' ? mapping : {}
   const output = source.output && typeof source.output === 'object' ? source.output : {}
   const surfaces = Array.isArray(source.surfaces) ? source.surfaces : []
   const seen = new Set()
   const seenCues = new Set()
+  const show = normalizeOutputShow(output.show)
   return {
     output: {
       width: Math.max(1, ensureNumber(output.width, defaultMappingState.output.width)),
-      height: Math.max(1, ensureNumber(output.height, defaultMappingState.output.height))
+      height: Math.max(1, ensureNumber(output.height, defaultMappingState.output.height)),
+      ...(show ? { show } : {}),
+      ...(output.slate === 'off' ? { slate: 'off' } : {})
     },
     background: ensureString(source.background, defaultMappingState.background),
     surfaces: surfaces
@@ -1916,6 +2010,7 @@ module.exports = {
   normalizeMappingSurface,
   normalizeMappingCue,
   normalizeMappingReference,
+  normalizeOutputShow,
   normalizeWindowLayout,
   normalizeWorkspaceState,
   applyProjectOps,

@@ -28,7 +28,7 @@ function ArticleBody({ body }) {
 
 export default function WikiPage() {
     const [query, setQuery] = useState('')
-    // Same admin gate as StudioHub/RawHub. While auth resolves, role is null
+    // Same admin gate as StudioHub. While auth resolves, role is null
     // and the link stays hidden — anonymous readers never see a dead end.
     // Trade-off: /api/auth/session issues a guest session to first-time
     // visitors (LandingPage avoids it for exactly that reason) — accepted here

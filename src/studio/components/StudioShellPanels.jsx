@@ -388,7 +388,7 @@ const residencyLabel = (item) => {
     return item.inProject ? 'project' : 'space'
 }
 
-export function AssetsPanel({ libraryItems = [], onAssetFilesSelected, onCreateFromAsset, onDriveImportUrl, onDriveImportSelection, onToggleAssetShared, onCommonsImport, onDeleteLibraryItem }) {
+export function AssetsPanel({ libraryItems = [], onAssetFilesSelected, onCreateFromAsset, onDriveImportUrl, onDriveImportSelection, onToggleAssetShared, onCommonsImport, onDeleteLibraryItem, filesWaitForFirst = false }) {
     const [copied, setCopied] = useState(null)
     const [shareNotice, setShareNotice] = useState('')
     const copyUrl = (asset) => {
@@ -419,84 +419,88 @@ export function AssetsPanel({ libraryItems = [], onAssetFilesSelected, onCreateF
             {Boolean(onCommonsImport) && (
                 <CommonsSection onCommonsImport={onCommonsImport} />
             )}
-            <CollapsibleSection title={`Files (${libraryItems.length})`}>
-                {shareNotice && <p className="spa-drive-notice is-error">{shareNotice}</p>}
-                {libraryItems.length === 0 ? (
-                    <p className="sfp-empty">No files yet — import above, or pull from Drive or the commons.</p>
-                ) : (
-                    <div className="spa-list">
-                        {libraryItems.map((item) => (
-                            // drag is a pointer-only shortcut for the accessible "+ Add" button below
-                            // eslint-disable-next-line jsx-a11y/no-static-element-interactions
-                            <div
-                                key={item.id}
-                                className="spa-item spa-item--space"
-                                draggable={canPlaceInScene(item)}
-                                onDragStart={(e) => {
-                                    e.dataTransfer.setData('application/x-dii-asset', item.id)
-                                    e.dataTransfer.effectAllowed = 'copy'
-                                }}
-                                title={canPlaceInScene(item) ? 'Drag into the viewport to place it' : undefined}
-                            >
-                                {item.mimeType?.startsWith('image/') && (
-                                    <img
-                                        src={assetSrc(item.url)}
-                                        alt=""
-                                        className="spa-thumb"
-                                    />
-                                )}
-                                <span className="spa-name" title={`${item.name} — ${residencyLabel(item)}`}>
-                                    {item.name}
-                                    <span className="spa-badges">
-                                        {item.usedByCount > 0 && <span className="spa-badge">placed ×{item.usedByCount}</span>}
-                                        {item.shared && <span className="spa-badge spa-badge--public">public</span>}
-                                    </span>
-                                </span>
-                                {onCreateFromAsset && (
-                                    <button
-                                        className="spa-copy-btn"
-                                        onClick={() => onCreateFromAsset(item)}
-                                        disabled={!canPlaceInScene(item)}
-                                        title={canPlaceInScene(item)
-                                            ? 'Add to the scene'
-                                            : 'This file type can’t be placed in the room — link to it by URL instead'}
-                                    >
-                                        + Add
-                                    </button>
-                                )}
-                                {onToggleAssetShared && item.inSpace && (
-                                    <button
-                                        className="spa-copy-btn"
-                                        onClick={() => toggleShare(item)}
-                                        title={item.shared ? 'Public in the commons — click to unshare' : 'Share to the public commons'}
-                                    >
-                                        {item.shared ? 'Public' : 'Share'}
-                                    </button>
-                                )}
-                                <button
-                                    className="spa-copy-btn"
-                                    onClick={() => copyUrl(item)}
-                                    title="Copy URL"
+            {/* A new project's Create window: the list of files waits for the
+                first file, the way the Cues section waits for a cue. */}
+            {!(filesWaitForFirst && libraryItems.length === 0) && (
+                <CollapsibleSection title={`Files (${libraryItems.length})`}>
+                    {shareNotice && <p className="spa-drive-notice is-error">{shareNotice}</p>}
+                    {libraryItems.length === 0 ? (
+                        <p className="sfp-empty">No files yet — import above, or pull from Drive or the commons.</p>
+                    ) : (
+                        <div className="spa-list">
+                            {libraryItems.map((item) => (
+                                // drag is a pointer-only shortcut for the accessible "+ Add" button below
+                                // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+                                <div
+                                    key={item.id}
+                                    className="spa-item spa-item--space"
+                                    draggable={canPlaceInScene(item)}
+                                    onDragStart={(e) => {
+                                        e.dataTransfer.setData('application/x-dii-asset', item.id)
+                                        e.dataTransfer.effectAllowed = 'copy'
+                                    }}
+                                    title={canPlaceInScene(item) ? 'Drag into the viewport to place it' : undefined}
                                 >
-                                    {copied === item.id ? '✓' : 'URL'}
-                                </button>
-                                {onDeleteLibraryItem && (
+                                    {item.mimeType?.startsWith('image/') && (
+                                        <img
+                                            src={assetSrc(item.url)}
+                                            alt=""
+                                            className="spa-thumb"
+                                        />
+                                    )}
+                                    <span className="spa-name" title={`${item.name} — ${residencyLabel(item)}`}>
+                                        {item.name}
+                                        <span className="spa-badges">
+                                            {item.usedByCount > 0 && <span className="spa-badge">placed ×{item.usedByCount}</span>}
+                                            {item.shared && <span className="spa-badge spa-badge--public">public</span>}
+                                        </span>
+                                    </span>
+                                    {onCreateFromAsset && (
+                                        <button
+                                            className="spa-copy-btn"
+                                            onClick={() => onCreateFromAsset(item)}
+                                            disabled={!canPlaceInScene(item)}
+                                            title={canPlaceInScene(item)
+                                                ? 'Add to the scene'
+                                                : 'This file type can’t be placed in the room — link to it by URL instead'}
+                                        >
+                                            + Add
+                                        </button>
+                                    )}
+                                    {onToggleAssetShared && item.inSpace && (
+                                        <button
+                                            className="spa-copy-btn"
+                                            onClick={() => toggleShare(item)}
+                                            title={item.shared ? 'Public in the commons — click to unshare' : 'Share to the public commons'}
+                                        >
+                                            {item.shared ? 'Public' : 'Share'}
+                                        </button>
+                                    )}
                                     <button
-                                        className="spa-copy-btn spa-copy-btn--danger"
-                                        onClick={() => onDeleteLibraryItem(item)}
-                                        title="Delete this file"
+                                        className="spa-copy-btn"
+                                        onClick={() => copyUrl(item)}
+                                        title="Copy URL"
                                     >
-                                        ×
+                                        {copied === item.id ? '✓' : 'URL'}
                                     </button>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
-                <p className="sfp-empty">
-                    <a href="/wiki#studio-content-model" target="_blank" rel="noreferrer">How content flows →</a>
-                </p>
-            </CollapsibleSection>
+                                    {onDeleteLibraryItem && (
+                                        <button
+                                            className="spa-copy-btn spa-copy-btn--danger"
+                                            onClick={() => onDeleteLibraryItem(item)}
+                                            title="Delete this file"
+                                        >
+                                            ×
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <p className="sfp-empty">
+                        <a href="/wiki#studio-content-model" target="_blank" rel="noreferrer">How content flows →</a>
+                    </p>
+                </CollapsibleSection>
+            )}
         </>
     )
 }
@@ -919,6 +923,30 @@ export function ProjectPanel({
 
             <CollapsibleSection title="Render" defaultOpen={false}>
                 <ToggleField label="Shadows" checked={render.shadows !== false} onChange={(v) => onRenderSettingsPatch({ shadows: v })} />
+                {/* The switch above allows shadow maps at all and has been on
+                    since the schema was written; this one is what actually puts
+                    the room in them — the lamps throw, the walls and the scenery
+                    catch. Off by default, because a shadow pass over a scanned
+                    venue is not free. */}
+                <ToggleField
+                    label="Lamps throw shadows"
+                    checked={render.shadowCasting?.enabled === true}
+                    onChange={(v) => onRenderSettingsPatch({ shadowCasting: { enabled: v } })}
+                />
+                {render.shadowCasting?.enabled === true ? (
+                    <div className="insp-field">
+                        <label className="insp-label" htmlFor="studio-shadow-detail">Shadow detail</label>
+                        <select
+                            id="studio-shadow-detail"
+                            className="insp-select"
+                            value={String(render.shadowCasting?.mapSize ?? 1024)}
+                            onChange={(event) => onRenderSettingsPatch({ shadowCasting: { mapSize: Number(event.target.value) } })}
+                        >
+                            <option value="1024">Softer (1024)</option>
+                            <option value="2048">Sharper (2048)</option>
+                        </select>
+                    </div>
+                ) : null}
                 <ToggleField label="Antialias" checked={render.antialias !== false} onChange={(v) => onRenderSettingsPatch({ antialias: v })} />
                 <div className="insp-field">
                     <label className="insp-label" htmlFor="studio-tone-mapping">Tone mapping</label>

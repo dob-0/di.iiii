@@ -348,6 +348,22 @@
     font-size: var(--di-text-3);
 }
 
+/* One line, one section (Share) — a project can leave the 3D room for a wall,
+   and this is the only place Studio says so. Same quiet tone as a callout's
+   own paragraph, set off by the hairline the shortcut rows already use. */
+.sh-help-note {
+    margin: var(--di-space-3) 0 0;
+    padding-top: var(--di-space-3);
+    border-top: 1px solid rgba(var(--di-cyan-rgb), 0.15);
+    font-size: var(--di-text-2);
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.sh-help-note a {
+    color: var(--di-cyan);
+}
+
 /* ---- shortcuts mode ---- */
 
 .sh-help-shortcuts {

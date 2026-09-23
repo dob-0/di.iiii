@@ -1,10 +1,10 @@
 // @vitest-environment node
 //
 // Regression guard for audit batch 2, "silent hardcoded fallback" class applied
-// to deploy config: docker-compose.staging.yml never overrode the image, so it
+// to deploy config: docker-compose.dev.yml never overrode the image, so it
 // inherited docker-compose.prod.yml's `${IMAGE_TAG:-latest}`. `:latest` is
-// pushed only by the production workflow, and the staging workflow pins
-// IMAGE_TAG inside its SSH session without ever writing it to the staging
+// pushed only by the production workflow, and the dev-tier workflow pins
+// IMAGE_TAG inside its SSH session without ever writing it to the dev-tier
 // checkout's .env — so any manual compose op in that directory (reboot
 // recovery, restart after an OOM, exactly what the file's header documents)
 // ran production code at staging.di-studio.xyz while everyone believed they
@@ -23,25 +23,25 @@ const imageLines = (source) => source
     .map((line) => line.trim())
     .filter((line) => line.startsWith('image:') && line.includes('dii-'))
 
-describe('staging compose image tags', () => {
-    const staging = read('docker-compose.staging.yml')
+describe('dev-tier compose image tags', () => {
+    const dev = read('docker-compose.dev.yml')
 
     it('overrides both service images so prod\'s :latest default is never inherited', () => {
-        const images = imageLines(staging)
+        const images = imageLines(dev)
         expect(images).toHaveLength(2)
         expect(images.some((line) => line.includes('dii-server'))).toBe(true)
         expect(images.some((line) => line.includes('dii-client'))).toBe(true)
     })
 
-    it('defaults every staging image to :staging, never :latest', () => {
-        for (const line of imageLines(staging)) {
-            expect(line).toContain('${IMAGE_TAG:-staging}')
+    it('defaults every dev-tier image to :dev, never :latest', () => {
+        for (const line of imageLines(dev)) {
+            expect(line).toContain('${IMAGE_TAG:-dev}')
             expect(line).not.toContain('latest')
         }
     })
 
-    it('still pushes the :staging tag it depends on', () => {
-        expect(read('.github/workflows/deploy-vps-staging.yml')).toMatch(/:staging\s*$/m)
+    it('still pushes the :dev tag it depends on', () => {
+        expect(read('.github/workflows/deploy-vps-dev.yml')).toMatch(/:dev\s*$/m)
     })
 
     it('leaves production on :latest', () => {
@@ -54,16 +54,16 @@ describe('staging compose image tags', () => {
 // Regression guards for audit batch 2's deploy-config findings.
 describe('deploy workflow hardening', () => {
     const prod = read('.github/workflows/deploy-vps.yml')
-    const staging = read('.github/workflows/deploy-vps-staging.yml')
+    const dev = read('.github/workflows/deploy-vps-dev.yml')
 
     // Both workflows pushed dii-*:<sha>, but the images differ — DEPLOY_ENV is
     // baked into release.json, which GET /api/health self-reports. On the
     // normal dev→main promote the same sha is rebuilt and the tag overwritten,
     // so a host could run an image claiming the wrong environment.
     it('namespaces the per-commit image tag by environment', () => {
-        expect(staging).toContain(':staging-${{ github.sha }}')
+        expect(dev).toContain(':dev-${{ github.sha }}')
         expect(prod).toContain(':prod-${{ github.sha }}')
-        for (const wf of [prod, staging]) {
+        for (const wf of [prod, dev]) {
             expect(wf).not.toMatch(/dii[^\n]*:\$\{\{ github\.sha \}\}/)
         }
     })
@@ -72,26 +72,26 @@ describe('deploy workflow hardening', () => {
     // (which needs a real commit) must use GIT_SHA instead — otherwise the
     // deploy would try to check out a ref named "prod-<sha>" and fail.
     it('checks out deploy config by commit, not by the image tag', () => {
-        for (const wf of [prod, staging]) {
+        for (const wf of [prod, dev]) {
             expect(wf).toMatch(/GIT_SHA=/)
             expect(wf).toMatch(/git checkout --quiet "\$\{GIT_SHA\}"/)
             expect(wf).not.toMatch(/git checkout --quiet "\$\{IMAGE_TAG\}"/)
         }
     })
 
-    // The compose defaults (`:latest` for prod, `:staging` for staging) only
+    // The compose defaults (`:latest` for prod, `:dev` for the dev tier) only
     // decide what a MANUAL `docker compose up -d` runs -- and they resolve
     // against the host's LOCAL image cache. Each host only ever pulls its
-    // namespaced `prod-<sha>`/`staging-<sha>` tag, so its copy of the floating
+    // namespaced `prod-<sha>`/`dev-<sha>` tag, so its copy of the floating
     // tag is whatever was pulled the last time that tag was used. On
     // 2026-08-04 both hosts' `latest` was two weeks old, and a manual restart
     // silently ran that instead of the deployed build -- production included,
-    // reporting a two-week-old release.json and nothing else amiss. Staging's
-    // `${IMAGE_TAG:-staging}` default didn't save it either: its .env carried
+    // reporting a two-week-old release.json and nothing else amiss. The dev tier's
+    // `${IMAGE_TAG:-dev}` default didn't save it either: its .env carried
     // an explicit `IMAGE_TAG=latest`, which wins over the default.
     // So the deploy must WRITE the tag it ran into the host's .env.
     it('persists the deployed image tag to the host .env', () => {
-        for (const wf of [prod, staging]) {
+        for (const wf of [prod, dev]) {
             expect(wf).toMatch(/sed -i "s\|\^IMAGE_TAG=\.\*\|IMAGE_TAG=\$\{IMAGE_TAG\}\|" \.env/)
             expect(wf).toMatch(/echo "IMAGE_TAG=\$\{IMAGE_TAG\}" >> \.env/)
             // must happen after the containers are actually up, not before
@@ -102,7 +102,7 @@ describe('deploy workflow hardening', () => {
     // ssh-keyscan seconds before connecting made StrictHostKeyChecking=yes
     // decorative: trust-on-first-use, repeated every single deploy.
     it('prefers a pinned host key over ssh-keyscan', () => {
-        for (const wf of [prod, staging]) {
+        for (const wf of [prod, dev]) {
             expect(wf).toContain('VPS_HOST_KEY')
             expect(wf).toMatch(/if \[ -n "\$\{VPS_HOST_KEY:-\}" \]/)
             expect(wf).toContain('StrictHostKeyChecking=yes')
@@ -115,13 +115,13 @@ describe('deploy workflow hardening', () => {
 // `githubApp.isConfigured()` was false on both hosts: one-click repo→space sync
 // reported "not configured" and every push webhook was rejected, for three
 // weeks, with nothing in the logs — the feature is designed to stay quiet when
-// unconfigured. Same silent-fallback class as the staging `:latest` tag above,
+// unconfigured. Same silent-fallback class as the dev-tier `:latest` tag above,
 // applied to a feature's secrets. This derives the required names from the code
 // that reads them, so a NEW env var can't be added to githubApp.js and left out
 // of compose the same way.
 describe('the server container receives the GitHub App secrets', () => {
     const base = read('docker-compose.yml')
-    const staging = read('docker-compose.staging.yml')
+    const dev = read('docker-compose.dev.yml')
 
     // getPrivateKey() accepts any one of these, in this order.
     const PRIVATE_KEY_VARS = [
@@ -139,7 +139,7 @@ describe('the server container receives the GitHub App secrets', () => {
 
     it.each([
         ['docker-compose.yml', base, ''],
-        ['docker-compose.staging.yml', staging, 'STAGING_']
+        ['docker-compose.dev.yml', dev, 'DEV_']
     ])('%s passes the id and the webhook secret', (_name, source, prefix) => {
         for (const key of ['GITHUB_APP_ID', 'GITHUB_APP_WEBHOOK_SECRET']) {
             expect(source).toContain(`${key}: \${${prefix}${key}:-}`)
@@ -148,7 +148,7 @@ describe('the server container receives the GitHub App secrets', () => {
 
     it.each([
         ['docker-compose.yml', base],
-        ['docker-compose.staging.yml', staging]
+        ['docker-compose.dev.yml', dev]
     ])('%s passes exactly one private-key channel', (_name, source) => {
         const passed = PRIVATE_KEY_VARS.filter((key) => source.includes(`${key}:`))
         // More than one is worse than none: getPrivateKey() prefers _PATH, so an
@@ -163,11 +163,11 @@ describe('the server container receives the GitHub App secrets', () => {
         expect(uncovered).toEqual([])
     })
 
-    it('documents all three in .env.example, for prod and staging', () => {
+    it('documents all three in .env.example, for prod and the dev tier', () => {
         const example = read('.env.example')
         for (const key of ['GITHUB_APP_ID', 'GITHUB_APP_PRIVATE_KEY_B64', 'GITHUB_APP_WEBHOOK_SECRET']) {
             expect(example).toContain(`${key}=`)
-            expect(example).toContain(`STAGING_${key}=`)
+            expect(example).toContain(`DEV_${key}=`)
         }
     })
 })
@@ -214,32 +214,32 @@ describe('nginx actually compresses through the Caddy front', () => {
 })
 
 // Regression guard: the base compose publishes the client as `${PORT:-80}:8080`
-// on every interface, and docker-compose.staging.yml used to leave that alone —
-// so http://<vps-ip>:8081/ served the entire staging SPA in cleartext, and
+// on every interface, and docker-compose.dev.yml used to leave that alone —
+// so http://<vps-ip>:8081/ served the entire dev-tier SPA in cleartext, and
 // /serverXR/api/health answered an unauthenticated host fingerprint (node
 // version, kernel, cpu count, uptime). Verified answering live 2026-08-05, and
 // verified refusing after the fix. Caddy still reaches the stack because it
 // proxies to host.docker.internal, which resolves to the same host-gateway
 // address the port is now bound to.
-describe('staging is not published to the public internet', () => {
-    const staging = read('docker-compose.staging.yml')
+describe('the dev tier is not published to the public internet', () => {
+    const dev = read('docker-compose.dev.yml')
     const base = read('docker-compose.yml')
 
     it('replaces the base port publish rather than appending to it', () => {
         // Compose CONCATENATES list-type fields across -f files, so a plain
         // `ports:` here would add a second binding and leave the wide one live.
         // `!reset` cannot carry a replacement value; `!override` can.
-        expect(staging).toMatch(/ports:\s*!override/)
-        expect(staging).not.toMatch(/ports:\s*!reset/)
+        expect(dev).toMatch(/ports:\s*!override/)
+        expect(dev).not.toMatch(/ports:\s*!reset/)
     })
 
     it('binds to a host-gateway address, never to every interface', () => {
-        const publish = staging.match(/ports:\s*!override\s*\n\s*-\s*"([^"]+)"/)
+        const publish = dev.match(/ports:\s*!override\s*\n\s*-\s*"([^"]+)"/)
         expect(publish).not.toBeNull()
         // host_ip:host_port:container_port. Not a segment count — `${VAR:-x}`
         // carries its own colon — so match the shape: a bind address that is a
-        // ${STAGING_BIND_ADDR} default, then a host port, then 8080.
-        expect(publish[1]).toMatch(/^\$\{STAGING_BIND_ADDR:-[\d.]+\}:/)
+        // ${DEV_BIND_ADDR} default, then a host port, then 8080.
+        expect(publish[1]).toMatch(/^\$\{DEV_BIND_ADDR:-[\d.]+\}:/)
         expect(publish[1]).not.toMatch(/^0\.0\.0\.0:/)
         // Compose placeholders carry their own colons, so collapse them before
         // counting. A two-segment publish (`"8081:8080"`) is the wide binding.
@@ -294,7 +294,7 @@ describe('the server container can actually receive the mesh secret', () => {
 
     it.each([
         ['docker-compose.yml', ''],
-        ['docker-compose.staging.yml', 'STAGING_']
+        ['docker-compose.dev.yml', 'DEV_']
     ])('%s passes the mesh vars through to the server', (name, prefix) => {
         const source = read(name)
         for (const key of MESH_VARS) {
@@ -302,11 +302,11 @@ describe('the server container can actually receive the mesh secret', () => {
         }
     })
 
-    it('gives staging its own value, never production\'s', () => {
+    it('gives the dev tier its own value, never production\'s', () => {
         // Same reasoning as AUTH_SESSION_SECRET above: one shared value would
-        // let a staging client claim the keeper id on production.
-        expect(read('docker-compose.staging.yml')).toContain('${STAGING_MESH_ROOM_SECRET:-}')
-        expect(read('docker-compose.staging.yml')).not.toContain('${MESH_ROOM_SECRET:-}')
+        // let a dev-tier client claim the keeper id on production.
+        expect(read('docker-compose.dev.yml')).toContain('${DEV_MESH_ROOM_SECRET:-}')
+        expect(read('docker-compose.dev.yml')).not.toContain('${MESH_ROOM_SECRET:-}')
     })
 
     it('is the env name meshHub.js actually reads', () => {
@@ -328,7 +328,7 @@ describe('the server container can actually receive the tunnel secret', () => {
 
     it.each([
         ['docker-compose.yml', ''],
-        ['docker-compose.staging.yml', 'STAGING_']
+        ['docker-compose.dev.yml', 'DEV_']
     ])('%s passes the tunnel vars through to the server', (name, prefix) => {
         const source = read(name)
         for (const key of TUNNEL_VARS) {
@@ -336,13 +336,13 @@ describe('the server container can actually receive the tunnel secret', () => {
         }
     })
 
-    it('gives staging its own value, never production\'s', () => {
-        // A token minted on staging with production's secret would open a
+    it('gives the dev tier its own value, never production\'s', () => {
+        // A token minted on the dev tier with production's secret would open a
         // crossing on production -- and the bot username decides which bot the
         // link even points at, so both have to differ per tier.
-        const staging = read('docker-compose.staging.yml')
-        expect(staging).toContain('${STAGING_TUNNEL_SHARED_SECRET:-}')
-        expect(staging).not.toContain('${TUNNEL_SHARED_SECRET:-}')
+        const dev = read('docker-compose.dev.yml')
+        expect(dev).toContain('${DEV_TUNNEL_SHARED_SECRET:-}')
+        expect(dev).not.toContain('${TUNNEL_SHARED_SECRET:-}')
     })
 
     it('is the env name serverXR actually reads', () => {

@@ -179,7 +179,7 @@ export default function AdminManageSection({ onStats }) {
     ), [runMutation, loadProjects])
 
     const removeProject = useCallback((spaceId, project) => {
-        if (!window.confirm(`Delete project "${project.title || project.id}"? This cannot be undone.`)) return
+        if (!window.confirm(`Delete project "${project.title || project.id}"? Moves to the trash for 30 days.`)) return
         runMutation(async () => {
             await deleteProject(project.id)
             if (selection.type === 'project' && selection.projectId === project.id) {

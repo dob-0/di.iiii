@@ -27,7 +27,7 @@ import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
-import { APP_PAGE_EDITOR, APP_PAGE_FOR_APPS, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, isSignInPath, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
+import { APP_PAGE_EDITOR, APP_PAGE_FOR_APPS, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_SCAN, APP_PAGE_SPACE_CONTENTS, APP_PAGE_TERMS, APP_PAGE_TOOLS, APP_PAGE_WIKI, buildPublicProjectPath, buildVanityProjectPath, getAppLocationState, getBareReservedSegment, isSignInPath, TOOL_SEGMENT_RAW, TOOL_SEGMENT_STUDIO } from './utils/spaceRouting.js'
 import ReservedAddressCard, { hasReservedAddressCard } from './components/ReservedAddressCard.jsx'
 
 const RawApp = lazy(() => import('./raw/RawApp.jsx'))
@@ -47,6 +47,7 @@ const PrivateChatSurface = lazy(() => import('./chat/PrivateChatSurface.jsx'))
 const ChatHomeSurface = lazy(() => import('./chat/ChatHomeSurface.jsx'))
 const MapSurface = lazy(() => import('./map/MapSurface.jsx'))
 const MapOutput = lazy(() => import('./map/MapOutput.jsx'))
+const ScanSurface = lazy(() => import('./scan/ScanSurface.jsx'))
 const ToolsRoom = lazy(() => import('./tools/ToolsRoom.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 
@@ -136,8 +137,10 @@ function RawSurfaceRoute({ rawState, spaceId }) {
 // A full page load of /light on a local install never gets here — serverXR
 // answers it before index.html exists. A client-side navigation can, and the
 // desk is not a React route, so the only way to reach it is to leave the SPA.
+// The query goes along: ?space=&project= is how the desk knows which project
+// sent the person and draws the way back (serverXR/src/lighting/ui/from.js).
 function LocalLightingDeskHandoff() {
-    useEffect(() => { window.location.assign('/light/') }, [])
+    useEffect(() => { window.location.assign(`/light/${window.location.search}${window.location.hash}`) }, [])
     return <RouteSurfaceFallback label="Opening the lighting desk" detail="" />
 }
 
@@ -205,6 +208,12 @@ function SlugProjectRoute({ appState }) {
     const { result, error } = useResolveSlugProject(appState.spaceId, appState.projectSlugSegment)
     const resolvedSpaceId = result?.space?.id || null
     const resolvedProjectId = result?.project?.id || null
+    // scripts/project-move.mjs moved this project out of appState.spaceId —
+    // the server already checked project_moves (serverXR/src/index.js
+    // /api/resolve/:spaceSegment/:projectSegment) and named where it lives
+    // now. buildPublicProjectPath (the /p/ form), not the vanity slug: a move
+    // doesn't carry the OLD slug into the new space, only the id is certain.
+    const movedTo = result?.movedTo || null
     const tool = appState.toolSegment || null
     const hasUnknownTail = Boolean(appState.hasUnknownTail)
 
@@ -231,7 +240,17 @@ function SlugProjectRoute({ appState }) {
     }, [resolvedSpaceId, resolvedProjectId, tool, hasUnknownTail, search, hash,
         appState.spaceId, appState.projectSlugSegment, rrNavigate])
 
+    useEffect(() => {
+        if (!movedTo?.spaceId || !movedTo?.projectId) return
+        const keep = `${search || ''}${hash || ''}`
+        rrNavigate(`${buildPublicProjectPath(movedTo.spaceId, movedTo.projectId)}${keep}`, { replace: true })
+    }, [movedTo?.spaceId, movedTo?.projectId, search, hash, rrNavigate])
+
     if (result === undefined && !error) {
+        return <RouteSurfaceFallback label="Loading" detail="" />
+    }
+
+    if (movedTo?.spaceId && movedTo?.projectId) {
         return <RouteSurfaceFallback label="Loading" detail="" />
     }
 
@@ -513,6 +532,30 @@ function AppRouter() {
                     {mapState.isOutput
                         ? <MapOutput projectId={mapState.projectId} spaceId={mapState.spaceId} />
                         : <MapSurface projectId={mapState.projectId} spaceId={mapState.spaceId} />}
+                </Suspense>
+            </ProtectedSurface>
+        )
+    }
+
+    // `/{space}/scan` — the phone collecting a place (src/scan/ScanSurface.jsx).
+    // Dispatched here with the other lane words, and behind the same gate, for
+    // the same two reasons: the shape is exact and the generic
+    // /{space}/{projectSlug} rule further down would read "scan" as a project;
+    // and the page WRITES — every capture is an op on the space's own footage
+    // room, so a camera that could be opened on terms the document would refuse
+    // is a camera pointed into somebody else's space.
+    //
+    // No account chip: the whole page is a picture with a record button on it,
+    // and a floating button lands on the readings.
+    if (appState.page === APP_PAGE_SCAN && appState.spaceId) {
+        return (
+            <ProtectedSurface
+                requiredSpaceId={appState.spaceId}
+                outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
+                showAccountButton={false}
+            >
+                <Suspense fallback={<RouteSurfaceFallback label="Opening the camera" detail="" />}>
+                    <ScanSurface spaceId={appState.spaceId} />
                 </Suspense>
             </ProtectedSurface>
         )

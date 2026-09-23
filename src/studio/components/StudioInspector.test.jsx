@@ -41,3 +41,34 @@ describe('StudioInspector material presets', () => {
         expect(patch.emissiveIntensity).toBe(2.5)
     })
 })
+
+// A plane's Screen section: one picker listing the project's mapping surfaces
+// by name. Choosing one writes `components.surface.surfaceId`; "none" clears it
+// (the schema drops the empty component).
+describe('StudioInspector surface picker', () => {
+    const screenSections = [{
+        id: 'surface',
+        label: 'Screen',
+        fields: [{ label: 'Surface', component: 'surface', path: ['surfaceId'], type: 'mappingSurface' }]
+    }]
+    const surfaceOptions = [{ value: 'srf-a', label: 'Wall left' }, { value: 'srf-b', label: 'Floor' }]
+
+    it('lists the project\'s surfaces by name and writes the chosen id', () => {
+        const onSectionChange = vi.fn()
+        const { container } = render(<StudioInspector title="Plane" sections={screenSections} values={{}} surfaceOptions={surfaceOptions} onSectionChange={onSectionChange} />)
+        expect(screen.getByText('Surface')).toBeTruthy()
+        const select = container.querySelector('select.insp-select')
+        expect([...select.options].map((o) => o.textContent)).toEqual(['— none —', 'Wall left', 'Floor'])
+        fireEvent.change(select, { target: { value: 'srf-b' } })
+        expect(onSectionChange).toHaveBeenCalledWith('surface', { surfaceId: 'srf-b' })
+    })
+
+    it('clears with "none" and keeps a since-deleted surface selectable under its id', () => {
+        const onSectionChange = vi.fn()
+        const { container } = render(<StudioInspector title="Plane" sections={screenSections} values={{ surface: { surfaceId: 'srf-gone' } }} surfaceOptions={surfaceOptions} onSectionChange={onSectionChange} />)
+        const select = container.querySelector('select.insp-select')
+        expect(select.value).toBe('srf-gone')
+        fireEvent.change(select, { target: { value: '' } })
+        expect(onSectionChange).toHaveBeenCalledWith('surface', { surfaceId: null })
+    })
+})

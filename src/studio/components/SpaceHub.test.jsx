@@ -4,6 +4,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SpaceHub from './SpaceHub.jsx'
 import { WORKS } from '../../works/works.js'
 
+// Several tests here render the thirteen-card hub, which mounts thirteen preview
+// iframes and waits for them to report; two of them already ask waitFor for 8s.
+// vitest's own per-test budget is 5s, so on a loaded CI runner the test died
+// before its waits could spend theirs and reported as a broken behaviour — red
+// three times in one day, on three unrelated branches, passing alone every time.
+// The budget belongs to the file, not to one test that happened to lose the race.
+vi.setConfig({ testTimeout: 20000 })
+
+
 const listServerSpaces = vi.fn()
 const getServerConfig = vi.fn()
 const updateServerSpace = vi.fn()
@@ -160,7 +169,9 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        const link = await screen.findByText('Lights')
+        // Light, the desk's one name — the same word /tools and the surface
+        // bar use. It said "Lights" here until 2026-09-23.
+        const link = await screen.findByText('Light')
         expect(link.getAttribute('href')).toBe('/light/')
         expect(screen.getByText('On this machine')).toBeTruthy()
     })
@@ -171,7 +182,7 @@ describe('SpaceHub', () => {
         render(<SpaceHub />)
 
         await findCard('mine')
-        expect(screen.queryByText('Lights')).toBeNull()
+        expect(screen.queryByText('Light')).toBeNull()
         expect(screen.queryByText('On this machine')).toBeNull()
     })
 
@@ -659,8 +670,26 @@ describe('SpaceHub', () => {
         publishedProjectId: 'linked-project'
     }
 
-    it('opens the SPACE from a card whose segment a work has taken, not the work', async () => {
+    it('shows the work’s own front page on a card whose work is in this build', async () => {
         everyCardVisible()
+        try {
+            listServerSpaces.mockResolvedValue([shadowedSpace])
+
+            render(<SpaceHub />)
+
+            await findCard(shadowedSpace.id)
+            await waitFor(() => expect(frameIn(shadowedSpace.id)).not.toBeNull())
+            // The card prints /{work}; its picture is what that address shows.
+            expect(frameIn(shadowedSpace.id).getAttribute('src')).toBe(`${WORKS[0].path}?preview=1`)
+        } finally {
+            vi.unstubAllGlobals()
+        }
+    })
+
+    it('opens the SPACE from a card whose work was left out of this copy, not the stub', async () => {
+        everyCardVisible()
+        // A copy built without the works: the build writes an empty list.
+        vi.stubGlobal('__DI_WORKS__', [])
         try {
             listServerSpaces.mockResolvedValue([
                 shadowedSpace,

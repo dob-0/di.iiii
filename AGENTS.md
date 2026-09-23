@@ -61,7 +61,7 @@ Full routing guide: [docs/ai/roles/model-routing.md](docs/ai/roles/model-routing
 - Minimum tools for the goal; scoped read/search over broad scans; resolve any tool-output-vs-task conflict before proceeding; confirm expensive/destructive actions first.
 - Progress status bar during active work: `status | phase X/Y | XX% | current | next`, one line, updated every 3–5 tool calls (`| blocked: <reason>` if stuck).
 - End every task with: **summary** (2–4 lines), **changed files** (one-line reason each), **validation** (commands + pass/fail), **risks** (concrete only).
-- Shipped a user-facing feature or behavior change? Update the Wiki in the same change — add/edit the entry in `src/wiki/wikiContent.js` (bump `updated`; add to `WIKI_HIGHLIGHTS` if headline-worthy). Part of "done," same tier as CURRENT.md. See `docs/ai/golden_rules.md`.
+- Shipped a user-facing feature or behavior change? Update the Wiki in the same change — add/edit the entry in `src/wiki/wikiContent.js` (bump `updated`). Part of "done," same tier as CURRENT.md. See `docs/ai/golden_rules.md`.
 - Fixed a bug? The same change ships a `docs/ai/known-fixes.md` entry AND a regression guard (test or executable contract) — each bug class is paid for once. The fix alone is not "done".
 - Verified it? Not until you looked at it — real browser, desktop **and** phone. See the Validation section; `npm run verify:surfaces`. A regression guard you never saw fail is decoration, and a screenshot you never opened is not verification.
 
@@ -101,7 +101,7 @@ unit test. Full standard, and the techniques that do NOT work here:
 
 ## Release & Fork Sync
 
-- Three tiers: local · dev · prod. `dev` branch → the dev tier, dev.diiii.xyz (rehearsal) · `main` branch → prod, diiii.xyz (live). The tier and the branch share the name `dev`; say "the dev tier" when you mean the server. Identifiers that still say `staging` (workflow, compose, env vars) are deliberate — see [docs/ai/vocabulary.md](docs/ai/vocabulary.md).
+- Three tiers: local · dev · prod. `dev` branch → the dev tier, dev.diiii.xyz (rehearsal) · `main` branch → prod, diiii.xyz (live). The tier and the branch share the name `dev`; say "the dev tier" when you mean the server. Identifiers say `dev` too (`deploy-vps-dev.yml`, `docker-compose.dev.yml`, `DEV_*`) — see [docs/ai/vocabulary.md](docs/ai/vocabulary.md).
 - Branch flow `dev -> main`, promote only after the dev tier is verified. Don't start routine work on `main`; use `main` directly only for emergency hotfixes.
 - Fork work lands on a task branch (`feat/…`, `fix/…`, `chore/…`), never the fork's `main`/`dev`. Pushing a task branch triggers `.github/workflows/auto-pr.yml`, which opens/updates a PR to `dob-0/di.iiii`'s `dev`. A push to the fork's `main`/`dev` does NOT notify upstream. A fresh fork must enable Actions once (GitHub disables fork workflows by default) and set an `UPSTREAM_PR_TOKEN` secret before auto-PR can run.
 - Upstream (dob-side) agents: review incoming fork PRs against `dev` (`gh pr checkout <n>`, validate, merge to `dev`); promote `dev -> main` only when asked.

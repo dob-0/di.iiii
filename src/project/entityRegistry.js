@@ -26,6 +26,40 @@ const TRANSFORM_FIELDS = [
     VECTOR_FIELD('Scale Z', 'transform', ['scale', 2], { step: 0.05, min: 0.01 })
 ]
 
+// The join to the lighting desk: which patched fixture this lamp IS. One number, the
+// fixture's index on the desk (`3.Back left`); the inspector offers the desk's own
+// list when it is running here, a plain number otherwise. Point, spot and directional
+// only — an ambient light is a level for the whole room, not a lamp on a bar.
+const FIXTURE_SECTION = {
+    id: 'fixture',
+    label: 'Desk',
+    fields: [
+        { label: 'Fixture', component: 'fixture', path: ['index'], type: 'fixture' }
+    ]
+}
+
+// AIM. A lighting person points a lamp with two numbers — pan, which way round
+// the vertical, and tilt, how far off straight-down — and neither is a raw euler
+// angle. Both fields read and write the SAME `components.transform.rotation` the
+// gizmo writes, converted in one place (src/project/viewport/spotLightAim.js):
+// no new field, no new op, and a lamp aimed by dragging still reads back here.
+// Degrees, because nobody on a ladder thinks in radians.
+const AIM_FIELDS = [
+    { label: 'Pan', component: 'transform', path: ['rotation'], type: 'spotAim', axis: 'pan', min: -180, max: 180, step: 1, unit: '°' },
+    { label: 'Tilt', component: 'transform', path: ['rotation'], type: 'spotAim', axis: 'tilt', min: 0, max: 180, step: 1, unit: '°' }
+]
+
+// THE BEAM. Off unless a room asks for it, so every space published before this
+// existed keeps the air it had. `haze` is how much of the throw hangs visible.
+const BEAM_SECTION = {
+    id: 'beam',
+    label: 'Beam',
+    fields: [
+        { label: 'Beam visible', component: 'beam', path: ['visible'], type: 'checkbox' },
+        { label: 'Haze', component: 'beam', path: ['haze'], type: 'number', min: 0, max: 1, step: 0.05, fallback: 0.4 }
+    ]
+}
+
 const APPEARANCE_FIELDS = [
     { label: 'Colour', component: 'appearance', path: ['color'], type: 'color' },
     { label: 'Opacity', component: 'appearance', path: ['opacity'], type: 'number', min: 0, max: 1, step: 0.05 }
@@ -156,6 +190,15 @@ const DEFINITIONS = {
                 fields: [
                     { label: 'Width', component: 'primitive', path: ['width'], type: 'number', min: 0.05, step: 0.1 },
                     { label: 'Depth', component: 'primitive', path: ['depth'], type: 'number', min: 0.05, step: 0.1 }
+                ]
+            },
+            // A plane can be a screen: pick one of the project's mapping
+            // surfaces and the plane shows its live picture (liveScreen.js).
+            {
+                id: 'surface',
+                label: 'Screen',
+                fields: [
+                    { label: 'Surface', component: 'surface', path: ['surfaceId'], type: 'mappingSurface' }
                 ]
             }
         ]
@@ -325,7 +368,8 @@ const DEFINITIONS = {
                 { label: 'Intensity', component: 'light', path: ['intensity'], type: 'number', min: 0, max: 20, step: 0.1 },
                 { label: 'Distance', component: 'light', path: ['distance'], type: 'number', min: 0, max: 100, step: 0.5 },
                 { label: 'Decay', component: 'light', path: ['decay'], type: 'number', min: 0, max: 4, step: 0.1 }
-            ]}
+            ]},
+            FIXTURE_SECTION
         ]
     },
     spotLight: {
@@ -334,7 +378,10 @@ const DEFINITIONS = {
             { id: 'transform', label: 'Transform', fields: [
                 VECTOR_FIELD('Position X', 'transform', ['position', 0]),
                 VECTOR_FIELD('Position Y', 'transform', ['position', 1]),
-                VECTOR_FIELD('Position Z', 'transform', ['position', 2])
+                VECTOR_FIELD('Position Z', 'transform', ['position', 2]),
+                // Aim, in the fixture's own language. Both write the same
+                // `transform.rotation` the gizmo writes — see AIM_FIELDS.
+                ...AIM_FIELDS
             ]},
             { id: 'light', label: 'Light', fields: [
                 { label: 'Colour', component: 'light', path: ['color'], type: 'color' },
@@ -343,7 +390,9 @@ const DEFINITIONS = {
                 { label: 'Angle (rad)', component: 'light', path: ['angle'], type: 'number', min: 0.01, max: 1.57, step: 0.01 },
                 { label: 'Penumbra', component: 'light', path: ['penumbra'], type: 'number', min: 0, max: 1, step: 0.05 },
                 { label: 'Decay', component: 'light', path: ['decay'], type: 'number', min: 0, max: 4, step: 0.1 }
-            ]}
+            ]},
+            BEAM_SECTION,
+            FIXTURE_SECTION
         ]
     },
     directionalLight: {
@@ -357,7 +406,8 @@ const DEFINITIONS = {
             { id: 'light', label: 'Light', fields: [
                 { label: 'Colour', component: 'light', path: ['color'], type: 'color' },
                 { label: 'Intensity', component: 'light', path: ['intensity'], type: 'number', min: 0, max: 20, step: 0.1 }
-            ]}
+            ]},
+            FIXTURE_SECTION
         ]
     },
     ambientLight: {

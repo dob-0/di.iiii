@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-    GUIDE_AUDIENCES,
     GUIDE_SECTIONS,
     getGuideSection
 } from '../utils/rawGuide.js'
@@ -123,24 +122,6 @@ export default function RawHelpDialog({
                                     </div>
                                 ))}
                             </div>
-                            {activeSection.id === 'start' ? (
-                                <div className="raw-help-audiences">
-                                    {GUIDE_AUDIENCES.map((audience) => (
-                                        <section key={audience.id} className="raw-help-audience-card">
-                                            <div className="raw-help-audience-head">
-                                                <span className="raw-help-audience-glyph" aria-hidden="true">{audience.glyph}</span>
-                                                <span className="raw-window-kicker">{audience.label}</span>
-                                            </div>
-                                            <h4>{audience.title}</h4>
-                                            <div className="raw-help-chip-row">
-                                                {audience.tags.map((tag) => (
-                                                    <span key={tag} className="raw-help-chip">{tag}</span>
-                                                ))}
-                                            </div>
-                                        </section>
-                                    ))}
-                                </div>
-                            ) : null}
                         </div>
                     ) : (
                         <div className="raw-help-side raw-help-side-controls">

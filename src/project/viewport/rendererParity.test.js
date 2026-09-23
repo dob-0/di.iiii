@@ -35,6 +35,16 @@ describe('editor viewport ↔ public viewer renderer parity', () => {
         expect(gaps).toEqual([])
     })
 
+    // The beam in the air is authored per lamp (`components.beam`) and has to
+    // reach a published room, not just the Studio — the same drift this file
+    // exists to catch, one component later.
+    it('both renderers hand the lamp its beam', () => {
+        for (const [name, src] of [['EntityContent', entityContentSrc], ['LiveProjectScene', liveSceneSrc]]) {
+            expect(src, `${name} never passes components.beam to SpotLightObject`)
+                .toMatch(/beam=\{entity\.components\?\.beam/)
+        }
+    })
+
     it('the public viewer consumes every appearance/media key the editor consumes', () => {
         for (const component of ['appearance', 'media']) {
             const editorKeys = componentKeys(entityContentSrc, component)

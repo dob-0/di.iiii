@@ -37,8 +37,8 @@ await di.run('space.frontDoor', { space: 'library', project: 'di-library' })
 ### Tokens
 
 `DI_TOKEN`, then `DI_TOKEN_LOCAL` / `DI_TOKEN_DEV` / `DI_TOKEN_PROD`, then
-`~/.config/di/credentials.json`. The dev tier (dev.diiii.xyz) also answers to its
-old identifier `staging`, and `DI_TOKEN_STAGING` still works. **Never a repository.** A local install on
+`~/.config/di/credentials.json`. The dev tier (dev.diiii.xyz) is `dev`; the old
+`staging` name is refused. **Never a repository.** A local install on
 loopback needs no token at all, because it runs with auth off; anything
 reachable by another machine must still prove who it is.
 

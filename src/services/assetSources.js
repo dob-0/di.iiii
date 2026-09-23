@@ -1,7 +1,7 @@
 import { apiBaseUrl } from './apiClient.js'
 import { normalizeSpaceId } from '../utils/spaceNames.js'
 import { isHtmlLikeMimeType } from '../utils/assetContentType.js'
-import { isContentAddressedAssetUrl } from '../utils/contentAddressedAsset.js'
+import { assetFetchCacheMode } from '../utils/contentAddressedAsset.js'
 
 const assetSourceMap = new Map()
 const MAX_CONCURRENT_STREAMS = 3
@@ -334,12 +334,9 @@ export function streamRemoteAsset(id) {
         return Promise.reject(new Error(`No remote source registered for asset ${id}`))
     }
 
-    // Content-addressed (sha256) asset ids can never change without
-    // changing the id itself -- safe to let the browser cache trust the
-    // server's own immutable Cache-Control instead of force-bypassing it
-    // (2026-07-17 perf audit). Legacy ids are project-local/mutable and
-    // must keep bypassing the cache.
-    const cache = isContentAddressedAssetUrl(id) ? 'default' : 'no-store'
+    // Immutable for a content-addressed id, revalidated for a legacy one
+    // -- assetFetchCacheMode carries the reasoning.
+    const cache = assetFetchCacheMode(id)
 
     const request = enqueueStream(async () => {
         let lastError = null

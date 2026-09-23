@@ -194,11 +194,12 @@ describe('credentials', () => {
 
     it('knows the three tiers by name and refuses a fourth', () => {
         expect(resolveBase({ tier: 'dev' })).toBe('https://dev.diiii.xyz/serverXR')
-        // `staging` is the dev tier's old identifier and must keep working.
-        expect(resolveBase({ tier: 'staging' })).toBe('https://dev.diiii.xyz/serverXR')
         expect(resolveSite({ tier: 'dev' })).toBe('https://dev.diiii.xyz')
-        expect(resolveToken({ tier: 'dev', env: { DI_TOKEN_STAGING: 's' }, home: '/nonexistent' })).toBe('s')
-        expect(resolveToken({ tier: 'staging', env: { DI_TOKEN_DEV: 'd', DI_TOKEN_STAGING: 's' }, home: '/nonexistent' })).toBe('d')
+        expect(resolveToken({ tier: 'dev', env: { DI_TOKEN_DEV: 'd' }, home: '/nonexistent' })).toBe('d')
+        // `staging` was the dev tier's old identifier; it is refused, not mapped.
+        expect(resolveToken({ tier: 'dev', env: { DI_TOKEN_STAGING: 's' }, home: '/nonexistent' })).toBeNull()
+        expect(() => resolveBase({ tier: 'staging' })).toThrow('"staging" is now "dev"')
+        expect(() => resolveToken({ tier: 'staging', env: { DI_TOKEN: 'x' } })).toThrow('"staging" is now "dev"')
         expect(() => resolveBase({ tier: 'live' })).toThrow(/unknown tier/)
     })
 

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import PropertyInspector from './PropertyInspector.jsx'
+import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 
 describe('PropertyInspector', () => {
     it('renders a color field for a port-driven section and emits a merged values patch', () => {
@@ -209,5 +210,58 @@ describe('the number edit buffer (phone audit, 2026-08-20)', () => {
         fireEvent.change(input, { target: { value: '' } })
         fireEvent.blur(input)
         expect(input.value).toBe('0.5')
+    })
+})
+
+describe('a Send Out\'s sheet (a picture leaving the machine as an NDI® source)', () => {
+    const sendOut = () => ({ id: 'send-1', typeId: 'top.send', values: { machine: '', name: '' } })
+
+    it('draws the name as a plain text box, capped at what the server takes', () => {
+        const onSectionChange = vi.fn()
+        render(
+            <PropertyInspector
+                title="Send Out"
+                sections={deriveNodeInspectorSections(sendOut(), { wiredPortIds: [] })}
+                values={{ values: { name: '' } }}
+                onSectionChange={onSectionChange}
+            />
+        )
+        const box = screen.getByLabelText(/Called on the network/)
+        expect(box.type).toBe('text')
+        expect(box.maxLength).toBe(200)
+        fireEvent.change(box, { target: { value: 'di test' } })
+        expect(onSectionChange).toHaveBeenCalledWith('values', { name: 'di test' })
+    })
+
+    it('carries the trademark line and the link to ndi.video beside the box — a licence condition, not decoration', () => {
+        // di.iiii never ships the NDI runtime: its licence cannot be passed on
+        // under the AGPL, the person installs it themselves, and the
+        // attribution plus the link are the terms on which we may name it.
+        // docs/architecture/NDI.md. Do not delete this test to make a layout fit.
+        const { container } = render(
+            <PropertyInspector
+                title="Send Out"
+                sections={deriveNodeInspectorSections(sendOut(), { wiredPortIds: [] })}
+                values={{ values: { name: '' } }}
+                onSectionChange={() => {}}
+            />
+        )
+        expect(screen.getByText(/NDI® is a registered trademark of Vizrt NDI AB\./)).toBeTruthy()
+        const link = container.querySelector('a[href="https://ndi.video"]')
+        expect(link).toBeTruthy()
+        expect(link.textContent).toBe('ndi.video')
+    })
+
+    it('shows none of it on any other picture operator', () => {
+        const { container } = render(
+            <PropertyInspector
+                title="Picture Out"
+                sections={deriveNodeInspectorSections({ id: 'out-1', typeId: 'top.out', values: {} }, { wiredPortIds: [] })}
+                values={{ values: {} }}
+                onSectionChange={() => {}}
+            />
+        )
+        expect(container.querySelector('a[href="https://ndi.video"]')).toBeNull()
+        expect(container.querySelector('.raw-property-note')).toBeNull()
     })
 })

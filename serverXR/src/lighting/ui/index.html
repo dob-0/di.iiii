@@ -18,6 +18,15 @@
        separate app with its own skin on purpose (dense, square, legible in a
        dark booth), but "its own skin" was never meant to mean "no door". -->
   <a class="homelink" href="/spaces" title="Back to di.iiii — your spaces">di.iiii</a>
+  <!-- The way back to the project that opened the desk, and that project in the other
+       tools. Hidden until app.js knows one (?space=&project=, kept per tab — see
+       from.js); a bare /light/ shows only the door above, as it always did. -->
+  <a class="homelink" id="fromBack" href="/spaces" hidden>←</a>
+  <nav class="pages" id="fromTools" hidden aria-label="This project in the other tools">
+    <a class="homelink" id="fromStudio" href="/spaces">Studio</a>
+    <a class="homelink" id="fromNodes" href="/spaces">Nodes</a>
+    <a class="homelink" id="fromProjection" href="/spaces">Projection</a>
+  </nav>
   <button class="dots" id="menuBtn" title="Status">•••</button>
   <nav class="pages">
     <button class="page-tab is-active" data-page="setup">Setup</button>
@@ -55,6 +64,12 @@
     </select>
     <button id="saveNow" class="savenow" title="Save what is on the wire right now as a scene">Save scene</button>
   </div>
+  <!-- Which show this desk is running, when this page should know: opened for a space
+       while another show is loaded, a space's show on the bare desk, or the one offer a
+       space with no show of its own gets. One sentence, at most one button, hidden when
+       there is nothing to say (show.js). Inside the bar, so a phone that has scrolled
+       the page still sees it. -->
+  <div id="showNote" class="statusstrip shownote" hidden><span id="showNoteText"></span> <button class="sq accent" id="showNoteBtn" hidden></button></div>
 </header>
 
 <div id="statusStrip" class="statusstrip" hidden></div>
@@ -828,6 +843,8 @@
 </div>
 
 <script src="qr.js"></script>
+<script src="from.js"></script>
+<script src="show.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

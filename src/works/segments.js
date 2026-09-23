@@ -1,6 +1,7 @@
+/* global __DI_WORKS__ */
 import { slugifySpaceName } from '../utils/spaceNames.js'
 import { buildAppSpacePath, buildPublicProjectPath } from '../utils/spaceRouting.js'
-import { WORKS } from './works.js'
+import { WORKS, WORK_IDS } from './works.js'
 
 /**
  * Which work, if any, owns this URL segment.
@@ -46,4 +47,29 @@ export const buildSpaceDoorPath = (space) => {
         return buildPublicProjectPath(spaceId, publishedProjectId)
     }
     return buildAppSpacePath(spaceId)
+}
+
+// Which works are compiled into THIS artifact — the build wrote it down
+// (vite.config.js `define`). Undefined under vitest, where every work is in.
+// Read at call time so a test can say "a copy without the works".
+const worksInThisBuild = () => (typeof __DI_WORKS__ === 'undefined' ? WORK_IDS : __DI_WORKS__)
+
+/**
+ * The face a space's card shows — what a visitor meets at the address the
+ * card prints.
+ *
+ * The card prints `/wcc`, and `/wcc` is the exhibition's front page. The
+ * picture above that address was the space's published project instead (the
+ * door path above), so the card showed a bare wireframe room under the name
+ * of an exhibition whose front page is the red one (owner, 2026-09-18).
+ *
+ * Where a work shadows the segment AND is in this build, the face is the
+ * work's own path. A copy that left the work out keeps the door path: there
+ * the front page is HostedPieceStub, and the rows are the only thing to show.
+ */
+export const buildSpaceFacePath = (space, worksInBuild = worksInThisBuild()) => {
+    const spaceId = typeof space === 'string' ? space : space?.id
+    const work = workForSegment(spaceId)
+    if (work && worksInBuild.includes(work.id)) return work.path
+    return buildSpaceDoorPath(space)
 }

@@ -74,7 +74,7 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
     const handleDelete = async (project) => {
         if (!project?.id || busy) return
         if (project.id === currentProjectId) return
-        if (!window.confirm(`Delete "${project.title || project.id}"? Cannot be undone.`)) return
+        if (!window.confirm(`Delete "${project.title || project.id}"? Moves to the trash for 30 days.`)) return
         setBusy(true)
         try {
             const wasPublished = publishedProjectId === project.id

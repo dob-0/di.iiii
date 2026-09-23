@@ -24,12 +24,12 @@ import GithubSyncSection from '../../components/preferences/GithubSyncSection.js
 import SpaceConstellation from './SpaceConstellation.jsx'
 import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { enterFromElement } from '../../components/entryTransition/entryTransition.js'
-import { buildSpaceContentsPath } from '../../utils/spaceRouting.js'
+import { buildScanPath, buildSpaceContentsPath } from '../../utils/spaceRouting.js'
 import { doorTitleForCard, spaceName } from '../utils/spaceNames.js'
 // The card's door. A space whose bare segment a work has taken (`/wcc`) is
 // addressed through its published project instead, so the picture, the frame
 // and the links all open the SPACE and not the code sharing its name.
-import { buildSpaceDoorPath } from '../../works/segments.js'
+import { buildSpaceDoorPath, buildSpaceFacePath } from '../../works/segments.js'
 import { getSpaceShareUrl } from '../../storage/spaceStore.js'
 import { createPreviewBootQueue } from '../../utils/previewBootQueue.js'
 import {
@@ -410,24 +410,29 @@ export default function SpaceHub() {
     // instead of cutting to black.
     const openCard = (space, element = null) => {
         const href = !canEnter(space) && space.isPublic
-            ? buildSpaceDoorPath(space)
+            ? buildSpaceFacePath(space)
             : buildStudioHubPath(space.id)
         enterFromElement(null, href, {
             element: element?.querySelector?.('.ssh-card-preview') || element
         })
     }
 
-    const submitCreate = async (title) => {
+    // One creation, two doors. `born` decides where the new space OPENS, and
+    // nothing else differs: a space made to be scanned is an ordinary space, and
+    // a space made in the usual way can be scanned later from its own footage
+    // room. The owner's words were "create new space and start to scan" — one
+    // press, and the camera is already looking at the hall.
+    const submitCreate = async (title, born = 'studio') => {
         const name = title.trim()
         if (!name) return
         setCreatingTitle(null)
         setIsBusy(true)
-        setStatus('creating...')
+        setStatus(born === 'scan' ? 'creating, then opening the camera...' : 'creating...')
         try {
             const space = await createServerSpace({ label: name, isPermanent: true })
             announceSessionChanged()
             await loadSpaces()
-            navigateToStudioPath(buildStudioHubPath(space.id))
+            navigateToStudioPath(born === 'scan' ? buildScanPath(space.id) : buildStudioHubPath(space.id))
         } catch (e) {
             setStatus(e.message || 'error creating space')
             setIsBusy(false)
@@ -831,6 +836,12 @@ export default function SpaceHub() {
                                         onKeyDown={e => e.key === 'Escape' && setCreatingTitle(null)}
                                     />
                                     <button className="ssh-btn-create" type="submit">Create</button>
+                                    <button
+                                        className="ssh-btn-create ssh-btn-scan"
+                                        type="button"
+                                        onClick={() => submitCreate(creatingTitle, 'scan')}
+                                        title="Make the space and open the camera, so the place walks straight in"
+                                    >Scan a place</button>
                                     <button className="ssh-btn-cancel" type="button" onClick={() => setCreatingTitle(null)}>✕</button>
                                 </form>
                             )
@@ -963,7 +974,11 @@ export default function SpaceHub() {
                             // One name per space (utils/spaceNames.js): the row
                             // names the space once, and says the door's title only
                             // to an account, only where it differs from the name.
-                            const doorTitle = doorTitleForCard({ space, projectTitle: projectTitles[space.publishedProjectId], isVisitor })
+                            // A card whose face is a coded work shows that work's front page, so
+                            // naming the published project under it would caption the wrong thing.
+                            const doorTitle = buildSpaceFacePath(space) !== buildSpaceDoorPath(space)
+                                ? null
+                                : doorTitleForCard({ space, projectTitle: projectTitles[space.publishedProjectId], isVisitor })
                             const stateWord = state === 'open' ? 'open to anyone'
                                 : state === 'nodoor' ? 'no door' : 'only you'
                             return (
@@ -1022,7 +1037,11 @@ export default function SpaceHub() {
                         {items.map((space) => {
                             const isMain = space.id === defaultSpaceId
                             const isLinking = linker?.spaceId === space.id
-                            const doorTitle = doorTitleForCard({ space, projectTitle: projectTitles[space.publishedProjectId], isVisitor })
+                            // A card whose face is a coded work shows that work's front page, so
+                            // naming the published project under it would caption the wrong thing.
+                            const doorTitle = buildSpaceFacePath(space) !== buildSpaceDoorPath(space)
+                                ? null
+                                : doorTitleForCard({ space, projectTitle: projectTitles[space.publishedProjectId], isVisitor })
                             const showViewOnly = space.isPublic && !canEnter(space) && !isVisitor
 
                             return (
@@ -1045,7 +1064,7 @@ export default function SpaceHub() {
                                     {(space.kind === 'sandbox' || isMain || space.isPublic || showViewOnly) && (
                                         <div className="ssh-card-header">
                                             {space.kind === 'sandbox' && <span className="ssh-space-id">sandbox</span>}
-                                            {isMain && <span className="ssh-badge-main">Main</span>}
+                                            {isMain && <span className="ssh-badge-main" title="This space is what opens at the site’s own address">Front door</span>}
                                             {space.isPublic && <span className="ssh-badge-live">Live</span>}
                                             {/* "View live" tells an account which of the spaces on
                                                 its page it cannot edit. On a visitor's page that is
@@ -1095,7 +1114,7 @@ export default function SpaceHub() {
                                             >
                                                 {isLive ? (
                                                     <SpaceCardLive
-                                                        doorPath={buildSpaceDoorPath(space)}
+                                                        doorPath={buildSpaceFacePath(space)}
                                                         label={space.label || space.id}
                                                         onRelease={() => releaseLive(space.id)}
                                                     />
@@ -1114,7 +1133,7 @@ export default function SpaceHub() {
                                                 ) : isEmptySandbox ? (
                                                     <p className="ssh-card-preview-empty-line">nothing in it yet — open it and put something in</p>
                                                 ) : (
-                                                    <SpaceCardPreview doorPath={buildSpaceDoorPath(space)} label={space.label || space.id} />
+                                                    <SpaceCardPreview doorPath={buildSpaceFacePath(space)} label={space.label || space.id} />
                                                 )}
                                             </div>
                                         )
@@ -1135,6 +1154,19 @@ export default function SpaceHub() {
                                         add by naming the piece. */}
                                     {doorTitle && (
                                         <p className="ssh-space-project">Opens on: {doorTitle}</p>
+                                    )}
+                                    {/* What the space HOLDS: "26 projects · 2 published".
+                                        A card named only the project its door opens on,
+                                        so a space with none — the Open Space above all —
+                                        read as empty with everything made in it hidden.
+                                        The server sends the counts only for a space this
+                                        person may enter; zero is an answer too. */}
+                                    {Number.isFinite(space.projectCount) && (
+                                        <p className="ssh-space-project">
+                                            {space.projectCount === 0
+                                                ? 'No projects yet'
+                                                : `${space.projectCount} project${space.projectCount === 1 ? '' : 's'} · ${space.publishedCount > 0 ? `${space.publishedCount} published` : 'none published'}`}
+                                        </p>
                                     )}
                                     {/* A card opens the space's one door. Everything
                                         else the space holds had no address anybody
@@ -1429,7 +1461,7 @@ export default function SpaceHub() {
                     <p className="ssh-tools-line">
                         <span className="ssh-tools-label">On this machine</span>
                         <a className="ssh-tools-link" href={lightingDeskPath()} target="_blank" rel="noreferrer">
-                            Lights
+                            Light
                         </a>
                         <span className="ssh-tools-hint">— the lighting desk, for the rig in the room</span>
                     </p>

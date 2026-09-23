@@ -17,6 +17,20 @@ RUN npm ci --omit=dev
 COPY serverXR/src/ ./src/
 COPY serverXR/public/ ./public/
 
+# The tool behind "save this space to a file" and "open a file" -- the space
+# routes spawn scripts/space-bundle.mjs, so it has to be in the image, beside
+# the server as in an installed runtime. It finds the server at ./src when
+# there is no serverXR/ above it. Without this line both routes answer 500 on
+# every hosted tier (they did, from the day they shipped to 2026-09-17).
+COPY scripts/space-bundle.mjs ./scripts/space-bundle.mjs
+
+# The tool that moves one project into a different space (CONTRIBUTING.md,
+# "Moving one project into a different space"). Nothing spawns it; it is here
+# so a hosted tier can be reorganised with the image it already runs, e.g.
+#   docker run --rm -v <tier>_data:/data <image> node scripts/project-move.mjs <id> --to <space> --data-root /data
+# with the server container stopped.
+COPY scripts/project-move.mjs ./scripts/project-move.mjs
+
 # Bake in shared schema files (sceneSchema.cjs, projectSchema.cjs)
 # sharedRuntime.js resolves these at /shared — no mount needed
 COPY shared/ /shared/

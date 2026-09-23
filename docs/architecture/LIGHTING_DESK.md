@@ -99,8 +99,37 @@ a priority number, beside the existing Art-Net and ENTTEC drivers.
   `/light/api/looks/add|remove` and `/light/api/layers/add|remove` are the one-object
   verbs an interface wants; `POST /light/api/layer` is the fader move.
 - `POST /light/api/fan {fixtures, role, from, to, style}` — one gesture, N values.
+- `POST /light/api/fixtures/move {moves:[{id, x, y}]}` — a fixture's place on the plan,
+  by id. The desk's own drag uses it, and so does Studio's **Send positions to the desk**
+  (`src/rigMirror/sendPositions.js`) — the ONE write the app makes to the desk.
+- **The join from a room to the rig is a number.** A Studio lamp carries
+  `components.fixture = { index }`, the fixture's `index` on this desk (`3.Back left`);
+  never universe/address, which belong to the show the desk runs (the space's or this
+  machine's `show.json`, below) and never travel inside a project document. While the desk is here the lamp draws what the fixture emits
+  (`src/rigMirror/liveLight.js`); otherwise its authored light. Design:
+  `di-atlas/decisions/2026-09-20-one-project-one-stage.md`.
 - `GET /light/api/library`, `/library/manufacturer?key=`, `/library/fixture?…` and
   `POST /light/api/library/import {manufacturer, key, mode}` — patch by name.
 
-Data: `<dataDir>/lighting/show.json`, written whole to a temp file and renamed, with
-`show.prev.json` kept; boot falls back to the temp, then the previous copy.
+Data: one show loaded at a time, like a console's show file.
+
+- **A space's show** — `<spacesDir>/<id>/lighting/show.json`, beside the space's scene.
+  A page opened for a space lives at `/light/space/<id>/` (`/light/?space=<id>` redirects
+  there), so its relative `api/*` calls say which show they mean; the first open loads that
+  show unless output is on. It travels in the space's `.diiii` file
+  (`scripts/space-bundle.mjs`) and goes when the space is deleted.
+- **This machine's own show** — `<dataDir>/lighting/show.json`, where it always was; the
+  standalone club desk has only this one.
+- **The rig stays with the machine.** `output` (driver, port, targets, devices, on/off) is
+  never written into a space's show and never changed by loading one; while a space's show
+  is loaded, a change under OUTPUT is written into the machine's file.
+- `GET /light/api/show` says which show is loaded and where its file is;
+  `POST /light/api/show/open {space | null, live?}` loads one (refused with output on unless
+  `live: true`); `POST /light/api/show/copy-machine` is the one migration — a copy — and
+  `<dataDir>/lighting/desk.json` remembers the loaded show across a restart. A `space/<id>/`
+  request while another show is loaded answers 409 `other-show`. Plain `/light/api/*` (cues,
+  the graph's DMX Out, Studio's rig mirror, the phone) acts on whatever show is loaded.
+
+Every show file is written whole to a temp file and renamed, with `show.prev.json` kept;
+a load falls back to the temp, then the previous copy.
+See `LIGHTING_SHOW_PORTABILITY.md` for what travels and what is still owed.

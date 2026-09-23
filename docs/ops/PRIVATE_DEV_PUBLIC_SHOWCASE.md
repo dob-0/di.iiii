@@ -19,7 +19,7 @@ flowchart LR
 
 - Treat `dob-0/di.iiii` as the only active collaboration lane.
 - Keep deployment automation and release branches in `di.iiii`.
-- Branch flow is `dev → main`. The dev tier (dev.diiii.xyz) is a GitHub Actions deploy environment (still named `staging`), not a source branch.
+- Branch flow is `dev → main`. The dev tier (dev.diiii.xyz) is a GitHub Actions deploy environment (named `dev`), not a source branch.
 
 ## Legacy Note
 

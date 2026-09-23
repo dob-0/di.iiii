@@ -23,6 +23,7 @@ import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import { asColor } from '../../utils/colorValue.js'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
+import { buildEntityTree } from '../../project/entityTree.js'
 
 const isSpatialNode = (node) => getNodeType(node?.typeId)?.render === 'spatial-3d'
 
@@ -42,6 +43,19 @@ const pickAuthoredCameraNode = (nodes, scopeId, activeMap) => {
 
 // A mesh that is drawn but never picked.
 const NO_RAYCAST = () => null
+
+// A thing with a new position, for the drag preview only — never written.
+const withPosition = (entity, position) => ({
+    ...entity,
+    components: {
+        ...entity.components,
+        transform: { ...(entity.components?.transform || {}), position }
+    }
+})
+
+// How deep things may nest under groups before the room stops drawing further.
+// Studio has no cap; this is only a guard against a hand-edited file.
+const MAX_ENTITY_DEPTH = 32
 
 const asFiniteNumber = (value, fallback = 0) => {
     const next = Number(value)
@@ -66,9 +80,17 @@ const asPositiveVec3 = (value, fallback = [1, 1, 1], min = 0.001, max = 100) => 
 }
 
 
-function EntityVisual({ entity, assetMap, selected, onSelect, showSelectionPills = true }) {
+// A thing, and — inside its transform — whatever stands under it. A grouped
+// thing's position is relative to its group (Studio subtracts the group's
+// centre when it groups), so it has to be drawn INSIDE the group's transform,
+// exactly as StudioViewport's SceneEntityNode does; drawn from the room's
+// centre it stood somewhere else in Nodes' room than in Studio (unit 4 of
+// decisions/2026-09-23-layers-what-inside-what.md, seen before it was fixed).
+function EntityVisual({ entity, childrenOf = null, depth = 0, assetMap, selectedEntityId = null, onSelect, showSelectionPills = true, onPointerDown, onPointerMove, onPointerUp }) {
     const transform = entity.components?.transform || {}
     const content = <EntityContent entity={entity} assetMap={assetMap} />
+    const children = childrenOf?.get(entity.id) || []
+    const selected = entity.id === selectedEntityId
 
     return (
         <group
@@ -79,6 +101,9 @@ function EntityVisual({ entity, assetMap, selected, onSelect, showSelectionPills
                 event.stopPropagation()
                 onSelect?.(entity.id)
             }}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
         >
             {content}
             {selected && showSelectionPills && (
@@ -86,6 +111,22 @@ function EntityVisual({ entity, assetMap, selected, onSelect, showSelectionPills
                     <span className="raw-selection-pill">{entity.name}</span>
                 </Html>
             )}
+            {/* Depth-capped like the node hierarchy walk: a tree is read from
+                its roots, so a cycle is never reached, but a hand-edited file
+                can still nest absurdly deep. */}
+            {depth < MAX_ENTITY_DEPTH ? children.map((child) => (
+                <SceneEntityErrorBoundary key={child.id} resetKey={child.id}>
+                    <EntityVisual
+                        entity={child}
+                        childrenOf={childrenOf}
+                        depth={depth + 1}
+                        assetMap={assetMap}
+                        selectedEntityId={selectedEntityId}
+                        onSelect={onSelect}
+                        showSelectionPills={showSelectionPills}
+                    />
+                </SceneEntityErrorBoundary>
+            )) : null}
         </group>
     )
 }
@@ -692,6 +733,10 @@ function SceneContent({
     onClearSelection = null,
     onWorldDoubleClick,
     onMoveNode,
+    // A thing (a Studio object) dragged in this room: called ONCE, on
+    // release, with where it was let go. Optional — a caller that passes
+    // none gets a room where things are clicked, never dragged.
+    onMoveEntity = null,
     nodeScale = 1,
     scopeId,
     worldNode,
@@ -709,6 +754,8 @@ function SceneContent({
     // not on every document identity change from a sync tick.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     const assetMap = useMemo(() => buildAssetMap(document), [document.assets, document.projectMeta?.id])
+    // Things under their groups, read the same way the canvas lists them.
+    const entityTree = useMemo(() => buildEntityTree(document.entities), [document.entities])
     // Rebuilt every frame while a Time node exists — the per-pass outputCache
     // must not survive a tick or the clock would freeze at its first sample.
     const clockNow = useDocumentClock(document)
@@ -810,6 +857,16 @@ function SceneContent({
     )
     const resolvedGrid = gridNode ? evaluateNodeInputs(gridNode, graphContext) : null
     const [draggingNodeId, setDraggingNodeId] = useState(null)
+    // A THING being dragged. Unlike a node — whose drag writes an edit every
+    // animation frame — a thing moves as a local preview and writes ONE edit
+    // when it is let go: one undo step, one line in the project's history, and
+    // a Studio open in another tab sees one move, not sixty.
+    const [draggingEntityId, setDraggingEntityId] = useState(null)
+    const [entityDragPreview, setEntityDragPreview] = useState(null)
+    // { id, start } while a thing is held; cleared by whichever release lands
+    // first (the room's own pointerup or the window's), so it commits once.
+    const entityDragRef = useRef(null)
+    const dragging = Boolean(draggingNodeId || draggingEntityId)
     // Orbit yields while a node is being dragged: the controls listen on the
     // DOM canvas, which R3F stopPropagation never reaches, so without this
     // every drag moved the object AND spun the camera under it (measured —
@@ -817,9 +874,9 @@ function SceneContent({
     const controls = useThree((state) => state.controls)
     useEffect(() => {
         if (!controls) return undefined
-        controls.enabled = !draggingNodeId
+        controls.enabled = !dragging
         return () => { controls.enabled = true }
-    }, [controls, draggingNodeId])
+    }, [controls, dragging])
     const dragNodeYRef = useRef(0)
     // Where on the ground the grab STARTED, relative to the object — subtracted
     // on every move. Without it the raw plane-hit was written straight into
@@ -850,7 +907,7 @@ function SceneContent({
     // the drag survives whichever one receives them (idempotent: same ray,
     // same frame, last write wins in dragPendingRef).
     const handleDragMove = (event) => {
-                    if (!draggingNodeId) return
+                    if (!draggingNodeId && !draggingEntityId) return
                     event.stopPropagation()
                     // Same plane the grab measured on — the object's height —
                     // computed from the ray, not from where the floor mesh was
@@ -898,17 +955,26 @@ function SceneContent({
                     if (dragRafRef.current === null) {
                         dragRafRef.current = requestAnimationFrame(() => {
                             dragRafRef.current = null
-                            if (dragPendingRef.current) onMoveNode?.(draggingNodeId, dragPendingRef.current)
+                            if (!dragPendingRef.current) return
+                            // A node writes as it goes; a thing only shows
+                            // where it would land, and writes on release.
+                            if (draggingNodeId) onMoveNode?.(draggingNodeId, dragPendingRef.current)
+                            else if (draggingEntityId) setEntityDragPreview({ id: draggingEntityId, position: dragPendingRef.current })
                         })
                     }
     }
     const handleDragEnd = (event) => {
-                    if (roomTap.up(event) && !draggingNodeId) {
+                    if (roomTap.up(event) && !dragging) {
                         onWorldDoubleClick?.({
                             point: event.point?.toArray?.() || [0, 0, 0],
                             clientX: event.nativeEvent?.clientX ?? 0,
                             clientY: event.nativeEvent?.clientY ?? 0
                         })
+                        return
+                    }
+                    if (draggingEntityId) {
+                        event.stopPropagation()
+                        finishEntityDrag({ commit: true })
                         return
                     }
                     if (!draggingNodeId) return
@@ -921,6 +987,67 @@ function SceneContent({
                     dragPendingRef.current = null
                     setDraggingNodeId(null)
     }
+
+    // Grab a thing. The same grab maths as a node (above, on NodeVisual): the
+    // plane is at the thing's own height, and the offset between where the ray
+    // meets it and where the thing stands is kept for the whole drag, so hand
+    // and thing move one-to-one. Only a thing standing at the top of the room
+    // is grabbed — pressing any part of a group grabs the group, the way a
+    // press inside a Geo grabs the Geo — and a thing locked in Studio is not.
+    const startEntityDrag = (entity, event) => {
+        if (event.button !== 0) return
+        event.stopPropagation()
+        const position = asVec3(entity.components?.transform?.position, [0, 0, 0])
+        dragNodeYRef.current = position[1]
+        const { origin, direction } = event.ray
+        const t = Math.abs(direction.y) > 1e-6 ? (position[1] - origin.y) / direction.y : 0
+        dragGrabRef.current = {
+            x0: position[0],
+            z0: position[2],
+            ...(t > 0
+                ? { offX: position[0] - (origin.x + direction.x * t), offZ: position[2] - (origin.z + direction.z * t) }
+                : { offX: 0, offZ: 0 })
+        }
+        dragPendingRef.current = null
+        entityDragRef.current = { id: entity.id, start: position }
+        setDraggingEntityId(entity.id)
+    }
+
+    // Let go of a thing: ONE edit, and only if it actually moved (a press
+    // that never travelled is a click, and a click is not an edit). Guarded
+    // by the ref so the room's pointerup and the window's cannot both write.
+    // A cancelled pointer (the browser took the gesture) writes nothing.
+    function finishEntityDrag({ commit }) {
+        const drag = entityDragRef.current
+        if (!drag) return
+        entityDragRef.current = null
+        if (dragRafRef.current !== null) {
+            cancelAnimationFrame(dragRafRef.current)
+            dragRafRef.current = null
+        }
+        const landed = dragPendingRef.current
+        dragPendingRef.current = null
+        setDraggingEntityId(null)
+        setEntityDragPreview(null)
+        if (!commit || !landed) return
+        const moved = landed.some((value, index) => Math.abs(value - drag.start[index]) > 1e-4)
+        if (moved) onMoveEntity?.(drag.id, landed)
+    }
+
+    // A release can land where no mesh is — past the floor, in the sky — and
+    // then the room never hears it. The window always does.
+    useEffect(() => {
+        if (!draggingEntityId) return undefined
+        const release = () => finishEntityDrag({ commit: true })
+        const abandon = () => finishEntityDrag({ commit: false })
+        window.addEventListener('pointerup', release)
+        window.addEventListener('pointercancel', abandon)
+        return () => {
+            window.removeEventListener('pointerup', release)
+            window.removeEventListener('pointercancel', abandon)
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [draggingEntityId])
 
 
     return (
@@ -974,13 +1101,13 @@ function SceneContent({
                 rotation={[-Math.PI / 2, 0, 0]}
                 position={[0, 0, 0]}
                 onClick={interactive ? (event) => {
-                    if (draggingNodeId) return
+                    if (dragging) return
                     if ((event.delta ?? 0) > 4) return
                     onClearSelection?.()
                 } : undefined}
                 onDoubleClick={interactive ? (event) => {
                     event.stopPropagation()
-                    if (draggingNodeId) return
+                    if (dragging) return
                     if (roomTap.justFired()) return
                     onWorldDoubleClick?.({
                         point: event.point?.toArray?.() || [0, 0, 0],
@@ -1002,17 +1129,28 @@ function SceneContent({
                     have no parent concept, so they stand in the top room and
                     only there. They used to render unscoped — every object
                     haunted every interior at every depth. */}
-                {(scopeId ? [] : (document.entities || [])).map((entity) => (
-                    <SceneEntityErrorBoundary key={entity.id} resetKey={entity.id}>
-                        <EntityVisual
-                            entity={entity}
-                            assetMap={assetMap}
-                            selected={entity.id === selectedEntityId}
-                            onSelect={onSelectEntity}
-                            showSelectionPills={showSelectionPills}
-                        />
-                    </SceneEntityErrorBoundary>
-                ))}
+                {(scopeId ? [] : entityTree.roots).map((entity) => {
+                    const canDrag = interactive && Boolean(onMoveEntity)
+                        && entity.components?.runtime?.locked !== true
+                    const shown = entityDragPreview?.id === entity.id
+                        ? withPosition(entity, entityDragPreview.position)
+                        : entity
+                    return (
+                        <SceneEntityErrorBoundary key={entity.id} resetKey={entity.id}>
+                            <EntityVisual
+                                entity={shown}
+                                childrenOf={entityTree.childrenOf}
+                                assetMap={assetMap}
+                                selectedEntityId={selectedEntityId}
+                                onSelect={onSelectEntity}
+                                showSelectionPills={showSelectionPills}
+                                onPointerDown={canDrag ? (event) => startEntityDrag(entity, event) : undefined}
+                                onPointerMove={canDrag ? handleDragMove : undefined}
+                                onPointerUp={canDrag ? handleDragEnd : undefined}
+                            />
+                        </SceneEntityErrorBoundary>
+                    )
+                })}
                 {/* Boundaried like entities are: a node can now load an
                     arbitrary file off someone's disk, and a corrupt mesh must
                     cost that one node, not the whole scene. */}
@@ -1143,6 +1281,7 @@ export default function RawViewport({
     onClearSelection,
     onWorldDoubleClick,
     onMoveNode,
+    onMoveEntity = null,
     cursors = {},
     onCursorMove,
     onCursorLeave,
@@ -1306,6 +1445,7 @@ export default function RawViewport({
                     onClearSelection={onClearSelection}
                     onWorldDoubleClick={onWorldDoubleClick}
                     onMoveNode={onMoveNode}
+                    onMoveEntity={onMoveEntity}
                     nodeScale={nodeScale}
                     scopeId={scopeId}
                     worldNode={worldNode}

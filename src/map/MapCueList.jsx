@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchLightTargets } from './lightingLink.js'
+import { CUE_KEYS } from './cueFiring.js'
 
 // THE CUE LIST.
 //
@@ -185,7 +186,7 @@ function MapCueEditor({ cue, surfaceCount, onUpdate, onCapture, onDelete, onMove
                 <span>Key</span>
                 <select value={cue.key} onChange={(event) => onUpdate?.(cue.id, { key: event.target.value })}>
                     <option value="">none</option>
-                    {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((key) => (
+                    {CUE_KEYS.map((key) => (
                         <option key={key} value={key}>{key}</option>
                     ))}
                 </select>

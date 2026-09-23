@@ -5,6 +5,2804 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-23 — folding the layers batch's four notes by hand
+
+- PR #547 (`land/batch-layers-2026-09-23`) merged; dev's `land` job cannot push its fold
+  (GH006, `reference_dii_land_job_blocked`), so the notes were folded by hand with
+  `session-land-lib.mjs`'s three functions, as the job would: `chore-land-sessions-2026-09-23.md`,
+  `feat-layers-open-bare.md`, `feat-things-are-cards.md`, `land-batch-layers-2026-09-23.md`.
+- CURRENT.md: the aylmo install line now reads `0.4.16-connect.4` (the layers batch, installed and
+  seen on local.thedi.studio at 1440×900 and 390×844). 45 lines.
+- This note is the next leftover, by construction.
+
+## 2026-09-16 — spaces audit: every space across local, dev and live (read-only)
+
+- Read every space, project row and document on the three tiers (local API + read-only
+  sqlite, dev.diiii.xyz, di-studio.xyz), and fingerprinted each document with tier-sync's own
+  `documentSignature`. Checked 1,516 listed assets for 404s. Wrote nothing to any tier.
+- Result in `docs/research/2026-09-16-spaces-audit.md`: 32 spaces. Same 12 · newer on dev 1 ·
+  local ahead 1 · both changed 9 · one tier only 9.
+- Needs attention:
+  - live `network`, `cascade` and `the-light-put-back` are not permanent (about 24 days to the prune).
+  - live `main` still has the 76 stray images.
+  - live `library` has 51 PDFs that return 404.
+  - `tier-sync-baseline.json` matches 0 of 131 projects, so `--changed` refuses everything until it is rebuilt.
+  - `start-check`'s timestamp mode over-reports (94 NOT LATEST, mostly identical content).
+  - `LIVE_API_URL=https://staging.di-studio.xyz` in `serverXR/.env.local` no longer resolves.
+
+## CONTRIBUTING says who decides what in a space, and walks the program line end to end
+
+The two-lines contract already lived in CONTRIBUTING.md — but its safety-net paragraph
+still said "coming in later PRs" a month after spaceHistory landed, and nothing anywhere
+said who may change a space without asking, or what the nine steps from a worktree to a
+tagged release are and where two of them fail silently. Now it does: the landed safety
+net (author, restore points, history, notice + Undo and its switch), the three zones
+(mine / theirs / about them — owner, trusted, proposal), the workshop rule, and the
+program line with the two quiet failures named (unlanded notes; CURRENT.md over 50 lines
+skipping the deploy behind a green run). No code.
+
+## 2026-09-14 — HTTP Range support for asset streaming
+
+- `serveFile`/`serveAsset` in `serverXR/src/spaceStore.js` served every asset (and
+  thumbnail) with a plain `fs.createReadStream().pipe(res)` and no
+  `Accept-Ranges`/`Content-Range` — a `<video>` could load an asset but never seek,
+  loop cleanly, or scrub, which the VJ tool being built on top of this needs.
+- `serveFile` now stats the file, always sends `Accept-Ranges: bytes`, and answers a
+  single `Range` request (`bytes=start-end`, `bytes=start-`, `bytes=-N`) with a 206 +
+  `Content-Range` + `Content-Length`, an out-of-bounds range with 416 +
+  `Content-Range: bytes */size`, and a `HEAD` request with headers only (no body).
+  `Content-Length` is now also sent on a plain 200. Stream error handling and the
+  existing thumbnail/safety-header/immutable-cache behavior are unchanged.
+- Multi-range requests (`bytes=0-10,20-30`) are deliberately answered with the full
+  200 body rather than a `multipart/byteranges` reply — documented in a comment next
+  to `parseByteRange`. A `<video>` element never sends more than one range at a time,
+  so the extra response format wasn't worth building.
+- `serveAsset`/`serveFile` needed the real `req` object to read the `Range` header and
+  method, so it's threaded through from both GET routes in
+  `serverXR/src/routes/spaceRoutes.js` (`/api/spaces/:spaceId/assets/:assetId` and
+  `/api/commons/assets/:assetId`) via the existing options object
+  (`{ width, req }`). `express.static` (client bundle, `/vendor`, `/fonts`, etc.) and
+  `res.sendFile`/`res.download` elsewhere in the server already support Range natively
+  via the `send` library underneath them — nothing else needed a change.
+- New tests: `serverXR/src/spaceStore.range.test.js` (200 full, 206 for all three
+  range forms, 416, HEAD, HEAD+Range, and the exported `parseByteRange` helper
+  directly) and `serverXR/src/routes/spaceRoutes.assetRange.test.js` (regression
+  guard that both GET routes actually forward `req` to `serveAsset`, since the Range
+  logic is silently inert without it). Existing `spaceStore.thumbnail.test.js` passes
+  unchanged — thumbnails still work.
+- `npm run lint`, `npm run test:server-contracts`, and the full `npm run test` all
+  pass (4411 passed / 1 skipped; 2 unrelated full-suite-only timeouts —
+  `socketHandlers.test.js` disk-guard test and `PublicProjectViewer.test.jsx` walk-mode
+  label test — both pass cleanly in isolation, confirmed not touched by this change).
+
+## 2026-09-17 — a file for an existing space is a proposal: summary, Apply/Reject in the inner bot, restore point first
+
+Phase 2 of "Two lines, one safe way in", the bundle door only.
+
+- **`serverXR/src/contentProposals.js` + `POST /api/spaces/:id/proposals`** (multipart `bundle`;
+  fields `mode=auto|propose`, `from`, `dryRun`, `overwriteNewer`). The server reads the `.diiii`
+  itself — the server image ships `src/` only, so `scripts/space-bundle.mjs` is not there to spawn
+  on dev.diiii.xyz or production (the existing "open a file" routes answer "the bundle tool is not
+  part of this build" there today). Tar members with `/` or `..` are refused before unpacking;
+  only regular files with asset-id names are copied.
+- **Summary** per project (changed/added/unchanged, item counts before → after, what the file's own
+  op log did past this space's version, via `spaceHistory.countOp/describeCounts`), projects only
+  in the space ("stay as they are"), scene object counts, new files, and what would be
+  overwritten: ops newer than the file's `exportedAt` (`summarizeChanges`) **and** a fast-forward
+  check — the newest op here must be in the file's history, which catches an edit made after the
+  sender pulled but before they exported. Either refuses (409 `target_newer`) unless
+  `overwriteNewer`.
+- **Trusted** (admin, unrestricted, the owner, own sandbox, or the `isTrustedExtra(state, meta)`
+  seam for the per-space trusted list that does not exist yet) → applied now. Everyone else →
+  `approvalGate.gateOrApply({ kind: 'content.apply', requireApproval: true, ttlMs })`. New gate
+  options: `requireApproval` never takes the "gate off → apply" path (no bot URL/secret = 503,
+  never an apply); `ttlMs` per kind (`CONTENT_PROPOSAL_TTL_MS`, default 3 days). The file is kept
+  at `<data>/proposals/<sha256>.diiii`; the intent hash binds the sha.
+- **Apply** = the restore path, not the import path: `spaceHistory.beforeChange(reason
+  'before-proposal-apply')`, blobs/manifests copied only when missing (nothing removed, so the
+  restore point's images survive), changed projects through `restoreSpaceProjectDocuments`, scene
+  through `replaceSceneAndBroadcast`, live broadcasts. The space row (owner, slug, public, label)
+  and project slugs are untouched; versions only go up; ops carry the proposer. Apply refuses if
+  the space changed after the proposal was made. Nothing is ever deleted by a proposal.
+- **`APPROVAL_CALLBACK_URL`** → `server` on every approval and change notice, so the one console
+  answers the right tier (di-bo side: `lib/proposals.mjs`, `DII_SERVERS` allow-list, PR on
+  `feat/notices-undo-v2`). Compose now passes `CONTENT_CHANGE_NOTICES_ENABLED` (never passed
+  before — setting it in a tier's `.env` did nothing), `APPROVAL_CALLBACK_URL`,
+  `CONTENT_PROPOSAL_TTL_MS` (`DEV_*` on the dev tier).
+- **CLI:** `node scripts/space-bundle.mjs propose <file> --tier dev [--dry-run] [--from Emilya]
+  [--direct] [--overwrite-newer]` (`scripts/space-proposal.mjs`; always a proposal unless
+  `--direct`, since the tier tokens are admin).
+- Tests: `serverXR/src/proposalContracts.test.js` (real servers, a real exported bundle, fake bot,
+  signed decisions: 503 without a bot, dry run + CLI summary, 202 + one bot message with `server`,
+  Apply writes docs/new project/bytes and keeps the label + a `before-proposal-apply` point,
+  stale file 409, moved-after-proposal Apply refuses, Reject writes nothing, fast-forward 409,
+  trusted direct apply, nothing_to_apply). Wiki `space-history` extended.
+
+### Not done
+
+- Nothing is enabled on any tier; the runbook is in the PR body.
+- No Studio UI for proposals (the Spaces page "open a file" still refuses an existing id).
+- Projects only in the space are never removed by a proposal; a project added by an applied
+  proposal is not removed by History → Restore (restore writes documents, it does not delete).
+- The per-space trusted list itself (only the seam).
+
+## A per-space trusted list, and the gate learns "apply now" — the steward's bypass itself waits for the owner's hand
+
+Owner's decisions of 2026-09-16 and 09-21: a space belongs to a person (Emilya — WCC;
+an artist — their own space), and that person should never wait for the owner of the
+platform to change what is theirs.
+
+Landed here:
+- `spaces.trusted_user_ids` (JSON, nullable, no SCHEMA_VERSION bump — an older build
+  ignores it and treats everyone as untrusted, the safe direction). Owner or admin
+  PATCHes `trustedUserIds`; each account must exist and may not be a guest; trust carries
+  scope, as ownership does. The list is shown only to the owner and admins.
+- `isSpaceOwnerState` / `isSpaceTrustedState` in authAccess.js — the one place per-space
+  authority is decided. Sessions only; a token, guest or sync key is never either.
+- `approvalGate.gateOrApply({ …, applyNow })`: a route that has decided this actor needs no
+  approval applies at once while still passing through the gate, so the fail-loud net
+  sees a gated route behaving. Unused in this tree until the next item lands.
+- Wiki: "Your space, your word".
+
+NOT landed — packaged as `~/di-backups/steward-owner-self-serve-2026-09-21.patch` for the
+owner to apply (the agent's edit was refused twice as an authority change, correctly):
+the owner of a space changing `isPublic` / `publishedProjectId` / `slug` /
+`openInscriptions` on their own space applies immediately via `applyNow`; `kind`,
+`permanent`, `ownerUserId` stay gated and admin-only. The patch carries its contract test
+(gate armed, owner → 200 and nothing asked; admin → 202).
+
+Also owed, one line once #486 (proposals) lands:
+`createContentProposals({ …, isTrustedExtra: (state, meta) => isSpaceTrustedState(state, meta) })`.
+
+Tests: authAccess (5), spaceStore.ownership (round-trip), httpContracts (trusted grant →
+scope, list hidden from a visitor, admin still held with the gate armed).
+
+## 2026-09-21 — one command for the content line: `npm run send -- <space>`
+
+The code line has always had one way up: branch, pull request, dev, the owner's word.
+The content line had ten — Studio by hand on each tier, `tier-sync`, `space-sync`,
+`space-push`/`space-pull`, `space-bundle` export/import, `local-mirror`, `project-pull`,
+`promote-space-projects`, `project-move`, Follow, and raw op writes. That asymmetry is
+what makes di.iiii feel hard to manage, and it is the thing this closes.
+
+`scripts/send.mjs` owns no logic of its own. It exports the space from the machine you
+are on (`space-bundle.mjs`) and posts the file to the target tier's proposal endpoint
+(`space-proposal.mjs`, PR #486), then prints the two addresses to go and look at. The
+server decides what happens to it: someone on the space's trusted list has it applied
+after a restore point, anyone else has it held as a `content.apply` approval the inner
+bot shows with Apply and Reject. **Who you are is not a flag you pass** — that is why
+this is one command and not two, and why an artist and an agent type the same thing.
+
+Refusals, all before anything is exported: no space named, a space id that is not one,
+an unknown tier, and the public site unless `--allow-production` is on the line. Tier
+aliases people actually type (`staging`, `rehearsal`, `live`) resolve rather than fail.
+`--dry-run` prints the summary and writes nothing; `--as-proposal` gives up the right to
+apply, for when you would rather be read first.
+
+**Walked for real, not only unit-tested.** A throwaway serverXR on port 4123 over a
+temporary data root seeded with one space: the dry run printed the summary and created
+nothing, and the real send applied with a named restore point. Both printed the address
+to look at. 12 tests, two of which spawn the script itself so a refusal cannot live only
+in a pure function.
+
+This branch is stacked on `feat/bundle-proposal` — it cannot land before #486 does.
+
+Still to do, and deliberately not here: `di send` in the installed CLI (`scripts/di/`),
+which needs the install's own link key rather than a token file, and is the door an
+artist on their own machine would use. The other nine paths stay as they are until this
+one has been used for a while — retiring them is a separate, reversible pass.
+
+## start-check can see the content line again: the server's own env file wins
+
+`npm run start-check` is the one command meant to say LATEST or NOT LATEST on **both**
+lines before anyone works. On the owner's machine it had said `spaces: not checked
+(local tier unreachable http://localhost:4000)` for a week — while the install answered
+on https://local.thedi.studio the whole time. "not checked" read like a skipped nicety;
+it meant the tool was blind to half its job on the machine where that half lives.
+
+Cause: the untracked root `.env` carried a stale `LOCAL_API_URL=http://localhost:4000/serverXR`,
+and five scripts merged it AFTER `serverXR/.env.local`, so the stale line won. The other
+four env-reading scripts already merged the specific file last — two answers to one
+question, in one repo. The earlier empty-value guard could not catch a wrong non-empty value.
+
+Done:
+- `start-check`, `local-mirror`, `project-pull`, `space-push`, `space-pull` now merge
+  `serverXR/.env.local` last — most specific file wins, same as the rest
+- a comment above each block says why, so the order is not "tidied" back
+- `local-mirror.test.js` asserts the order in all five
+- known-fixes row
+
+Proved on the owner's machine with the stale root `.env` left in place: `start-check`
+now prints `code: LATEST` and the full spaces line (13 same · 7 differ · 2 only on dev ·
+8 local-only) with no override.
+
+## 2026-09-21 — the front door pulled 12.84 MB of its 13.04 MB over one 3.2 MB file
+
+Measured on dev.diiii.xyz at real device pixel ratios (1440×900@2, 390×844@3) before
+anything was touched: 74 requests, 13.04 MB, and four of those requests were the same
+STL. Two causes, one code and one data — both fixed, and both measured again after.
+
+**The code half (this branch).** Every asset fetch picked `cache: 'no-store'` when the
+id was not a sha256. The reasoning was right — a legacy id is mutable, so its bytes
+cannot be trusted unchecked — but `no-store` forbids *storing* the response, so there
+is nothing to revalidate against and each mount re-downloads the whole file. The server
+has been sending `etag` and `last-modified` on these all along and answers a conditional
+GET with a 0-byte 304. `assetFetchCacheMode()` now makes the choice in one place:
+`default` for content-addressed, `no-cache` for legacy — stored, and checked with the
+server before every reuse, so a replaced asset still arrives fresh. Five call sites
+(`ModelObject` ×2, `assetSources`, `useAssetRestore`, `useSceneApply`). Proved in
+Chromium against dev: three fetches of the same legacy asset, 9.63 MB → 3.21 MB.
+`contentAddressedAsset.test.js` fails the build if any mode returns `no-store` again.
+
+**The data half (not in this branch — it is room data).** The front room held two
+entities named `model`, at (-6,0,0) and (-2,0,3), each carrying its own copy of
+`Yeva skulpture (heart).stl` — the two assets are byte-identical (same md5, two uuid
+ids from before content addressing), and neither is inside the arrival camera's view.
+The owner said remove both. Applied as `deleteEntity` ops on local (v166 → 168) and on
+staging (v238 → 240), the room looked at on both afterwards: wordmark, line and all
+four doors intact. **dev.diiii.xyz/ is now 0.20 MB / 70 requests on desktop**, from
+13.04 MB. Prod was not touched.
+
+Still open on the front door, untouched by this: the arrival frame still cuts the outer
+two doors on a phone (the hardcoded `0.8,0.45,1` auto-frame), and the two orphaned
+3.2 MB assets are still in the space's storage — loose files nothing references.
+
+## 2026-09-24 — batch landing before the promotion: ten green PRs, one CI round
+
+- Landed together ahead of the dev → main promotion (#524): #521 legacy assets revalidate, #522 the page is not the changelog, #525 the server's own env file wins, #526 who decides what in a space, #527 per-space trusted list + `applyNow`, #528 `di send` carries a space up a tier, #493 project-move ships in the image, #477 spaces audit, #449 HTTP Range for assets, #486 a `.diiii` for an existing space is a proposal.
+- Three conflicts. Two were `known-fixes.md` rows added at the same place (both kept) and the wiki highlight list (`your-space-your-word` kept alongside dev's cut list).
+- The one that mattered: #486 (`requireApproval`) and #527 (`applyNow`) both rewrote `gateOrApply`'s signature and its first branch. Merged so **`requireApproval` wins** — a change that must be asked about is never applied on a route's say-so. Guard: `approvalGate.test.js` "gateOrApply when requireApproval and applyNow are both set", seen red with the precedence reversed.
+- Owed: none of these ten were looked at on dev.diiii.xyz together before this; that look is part of the promotion walk.
+
+## 2026-09-23 — folding nine notes by hand again, PR #542's `land` job hit the same GH006
+
+- After PR #542 (`land/batch-2026-09-23`, merged to `dev` at 288d69c7) the dev deploy's
+  `land` job ran, folded correctly, and could not push — `GH006: Protected branch update
+  failed … 2 of 2 required status checks are expected`, caught, warned, `exit 0`, deploy
+  still GREEN. Exactly [[reference-dii-land-job-blocked]]'s shape, third time running
+  (09-21, 09-22, now).
+- Folded by hand in a fresh worktree off `origin/dev`, `session-land-lib.mjs`'s three
+  functions called directly (`foldNotesIntoProgress`, `buildLastSessionSection`,
+  `replaceLastSessionSection`, notes read as an array of STRINGS), mirroring
+  `scripts/session-land.mjs`'s order exactly — no worktree sweep (out of scope for a
+  fold done from a disposable worktree, not the owner's real checkout). Eight notes:
+  `chore-land-sessions-2026-09-22.md`, `docs-sentences-that-lie.md`,
+  `feat-bar-carries-project.md`, `feat-desk-returns-to-project.md`,
+  `feat-one-project-list.md`, `fix-first-room-traps.md`, `fix-one-name-per-tool.md`,
+  `land-batch-2026-09-23.md`. Note files deleted after folding.
+- A ninth note joined after PR #544 (the light show travels with its space) merged while
+  this PR waited: dev merged into this branch, `feat-show-travels-with-space.md` folded
+  into `PROGRESS.md` and prepended to the Last session list. That made `CURRENT.md` 50
+  lines, at the cap, so the 09-22 fold's own title line was dropped: 49 lines.
+- Fixed the two stale `CURRENT.md` lines the `docs-sentences-that-lie` note flagged as
+  owed (it could not write them itself — `docs:ai:check` refuses a `CURRENT.md` that
+  differs from `origin/dev` on a feature branch): the aylmo install line named
+  `0.4.7-shelves.2`, confirmed stale by `di status` (read-only) at
+  `0.4.16-connect.2`, packed 2026-09-23; and the Follow line said "carries NO assets
+  yet", stale since `serverXR/src/follow/assets.js` shipped 2026-09-20 — replaced with
+  what still isn't carried (space-scene files, legacy uuid-id files) per the note's text.
+- **This note is next leftover, by construction** — the gate demands a session note for
+  the branch that does the folding, so `dev` still sits at exactly one note after this
+  lands, same as every hand-fold before it. The real fix (bypass or PR-based push for the
+  `land` job) is still the owner's call, still not done.
+
+## 2026-09-23 — layers: a project opens bare and the bar grows with it (units 1–3)
+
+Units 1, 2 and 3 of `di-atlas/decisions/2026-09-23-layers-what-inside-what.md`. The owner's
+words that decide them: "make it layer as layer, you create 1st what inside what and next
+next" and "a clear layer-by-layer creating process, not all at once". Question 1 of the
+decision (does the bar grow inside a project) is answered yes by those words. Questions 2
+(a thing inside a Geo) and 3 (which one is the Desk) are not answered; nothing here depends
+on them. Method: progressive disclosure (J. Nielsen, NN/g, 2006), as the decision names it.
+
+### Built
+
+- **`src/project/layers.js`** — the one plain function every later unit reads:
+  `readProjectLayers(document, { loaded })` → counts, what each layer holds, which layers are
+  open, and `empty`. The decision's table and its three riders: a layer that holds something
+  never hides; `loaded: false` answers `open: null` ("not decided") so every caller keeps
+  today's screen; nothing is stored. `describeProjectLayers` writes the card line.
+  `shared/layers.cjs` is the server twin with the 17 standing node kinds and the windows
+  written out; `layers.test.js` runs the decision's 8 fixture projects through both and
+  checks the lists against the registry.
+- **Decisions taken inside the rule, for the owner to see.** (1) A *window* on the Nodes
+  canvas is neither a thing nor a connection: the registry's own `watch` and `agents`
+  families plus `view.library` and `view.publish`. Without this, opening an outliner opened
+  the wall. A mic, webcam, MIDI in are drawn as windows but are sources, so they stay
+  connections. (2) A cue that calls a light scene or look counts as the lamps layer holding
+  something (the decision lists it among the lamps facts; hiding Light from a project that
+  already drives the desk would take a control away from a project that holds something).
+  (3) A project in code mode is never "empty", so a page project never opens bare.
+- **Unit 1.** `GET /api/spaces/:id/projects` carries each project's non-zero counts, read
+  from the document (normalized in memory, never written back) and cached per
+  (space, project, version, updatedAt) like the scene-or-page mode. Each card in the one
+  project list gets one line (`sh-code-blurb`, an existing class): "4 things · 2 nodes ·
+  1 wire · 1 surface · 1 lamp", or "empty". `/api/spaces` carries `projectCount` /
+  `publishedCount` from one grouped query (re-applied from 2efc05c7; nothing else from
+  that branch), only for a space the caller may enter; the card says "11 projects ·
+  11 published" (`ssh-space-project`, existing class). "Published" = on show, the
+  `/contents` rule.
+- **Unit 2.** `useProjectLayers` (the rule plus one page-only memory: what was given on this
+  page is not taken back, so an undo of the first box keeps the tools). A new project in
+  Studio shows the bar, the room, Create (not closable while bare) and the hint. The
+  cluster, the other windows, Drive, Commons, the Files list and the saved layout return
+  with the first thing, no reload. The open jam is untouched; "⚒ All tools" is on every
+  project's cluster (own key `di.studio.allTools`, per browser, live to the bar). The first
+  hint in an empty project is "Add something", then "Tap it", done by the tap itself
+  (placing a thing already selects it); the coach mounts only after the document has
+  loaded and waits behind a phone sheet instead of covering its text. Phone: Create alone,
+  then the full phone bar. `scripts/count-controls.mjs` (`npm run count:controls`) is the
+  sketch's counter, in the repo.
+- **Unit 3.** `SurfaceBar` takes `layers`; inside a project only, Nodes shows when the
+  connections layer is open, Projection the wall, Light the lamps. Never the surface you
+  stand on; nothing before load; every name under All tools. Studio, Nodes (RawEditor: one
+  import, one hook line beside `showBar`, one prop) and Projection pass it.
+- **"Loaded"** is the store's `hasLoaded` — the `projectStore.js` hunk and its test taken
+  verbatim from `feat/things-are-cards` (#545) so both lanes carry one flag — AND the
+  document's id being this editor's project (a switched editor keeps the old document and
+  the flag until the new one lands).
+
+### Numbers (dev stack on 4380/5380, fresh data root, local-install mode)
+
+- **Controls on a new project, Studio, 1440×900 at DPR 1.5** (`count-controls.mjs`):
+  **61** today → **30** after unit 2 → **27** after unit 3 (bar 7, Create 17, room 2,
+  hint 1). The decision's 62 was the sketch's counter on his install; this counter also
+  counts the "Import files" label the sketch's selector missed, and here the room has 2
+  controls, not 3. Phone 390×844: 19 → 11.
+- **Screens that must open as today**, same counter, before/after: the open jam simple
+  25/25 desk, 10/10 phone; jam with all tools 68/68, 19/19; Nodes and Projection on a full
+  project 27/27, 32/32, 23/23, 29/29. A full project in Studio 73 → 74 (the All tools
+  button the decision asks for, nothing removed). An objects-only project loses
+  Projection and Light from its bar (unit 3 by design) and gains All tools.
+- **Project list, 5 × `curl -w '%{time_total}'`**, a 74-project space of 18 MB documents
+  (60 × 50 boxes, 10 × 250, 4 × 4000 — larger than the biggest real space, 74 projects):
+  before 1.60 / 1.05 / 1.12 / 0.82 / 0.92 ms, 19.3 KB; after **192 (first read after the
+  server starts) / 2.16 / 1.34 / 1.26 / 1.21 ms**, 22.0 KB. The 13-project lab: before
+  0.68–1.01 ms, 2.3 KB; after 4.9 cold, then 0.83–1.34 ms, 3.3 KB.
+- **Reload, full project, 10 × each** in Studio desktop, Studio phone, Nodes and
+  Projection, every bar state recorded from first paint by a MutationObserver: **no name
+  went away in 40 loads.** In Studio, Projection arrives 40–70 ms after first paint —
+  measured identical on today's code (the shell learns the space id late); not this change.
+
+### Seen
+
+Every screenshot read: new project desk/phone, the Create sheet on the phone, one box
+placed (the saved Scene window returns at its saved x; its y is clamped to fit by the
+existing panel code), "Tap it" completed by tapping the box, undo keeping the tools and a
+reload of the emptied project opening bare again, Nodes on the project (bar without
+Projection), a node (Projection appears), a wire drawn by drag (Blur's input reads WIRED),
+a lamp (Light appears), /tools, /wiki, a space's contents page and /spaces, the lab list
+and /spaces cards desk and phone. No page scrolls sideways.
+
+### Owed
+
+- **On his install and the S24.** Seen here on a dev stack with the phone emulated at DPR 3.
+  The decision checks each unit on local.thedi.studio after `npm run di:pack` and
+  `di update --from`, and on the S24 in LAN mode. Not done: this session must not touch
+  the install on 443/4000.
+- **The phone bar cuts a word at the right edge** (it scrolls sideways by its own CSS).
+  At 390 px: a full project's bar is 599 px wide, Projection · Tools · Light · Wiki past
+  the edge — the same today. A new project's is 405 px (Wiki only). Unit 3 forbids
+  restyling the bar, so it is left: the fix is a design call (drop the project title on a
+  phone, where every tool repeats it below; or a fade at the edge).
+- **"All tools" is not on a bare screen**, following the decision's "nothing else": it
+  arrives with the first thing, and once set in any project it covers every project.
+  Putting it behind the room's "?" would reach it with no new control — the owner's call.
+- **The window is still titled Create**; the decision calls it Add. A rename is a
+  vocabulary change, not made here.
+- "N projects · N published" will read the same number twice on most spaces (every
+  project is live unless set otherwise).
+- Projection's late arrival on Studio's bar (above) — Studio could hand the bar the
+  route's space id, known at first paint.
+
+## 2026-09-23 — every thing in the room is a card in Nodes (layers units 4, 6, 7)
+
+Units 4, 6 and 7 of di-atlas `decisions/2026-09-23-layers-what-inside-what.md`. Question 2
+(a thing inside a Geo) is open, so unit 8 is not built and no thing's parent ever names a node.
+
+**Built**
+
+- **Unit 4 — grouped things stand where Studio shows them.** Seen first, on a fresh local stack:
+  three Studio boxes, two grouped, the group moved to x 2.5 — Studio showed the pair on the right,
+  Nodes' room showed it in the middle, sunk to the floor. `RawViewport` now draws each thing inside
+  its group's transform, as `StudioViewport`'s `SceneEntityNode` does. The tree is read once in
+  `src/project/entityTree.js` (a thing whose group is gone stands at the top; a cycle is never
+  walked). Same component, so `/out`, `/make` and the published page (once a node exists) follow.
+- **Unit 6 — things are cards in Nodes.** `src/raw/utils/objectCards.js`, re-applied from
+  `8c58c29a` on `worktree-connect-graph-walk` with grouped things KEPT (they stack under their
+  group's card, one step in). Nothing else came from that branch. Every thing is a card and an
+  outliner row (a tree); clicking a card selects the thing and its inspector opens; the count reads
+  "N nodes · M things" (one number under 640px, the breakdown in its aria-label); a project of
+  things opens on its cards with its toolbar. Card positions are worked out each render, never
+  saved. A thing can be dragged in Nodes' room: a local preview while held, ONE `updateComponent`
+  edit on release (Studio's gizmo edit), none if it did not move or the pointer was cancelled;
+  pressing any part of a group moves the group; a thing locked in Studio stays.
+  `emptyCanvasHint.js`, its test and the "See the room" button are retired.
+- **Zen** counts things as well as nodes and decides the derived default only once the project has
+  loaded — the store now says so (`hasLoaded` in `src/project/state/projectStore.js`, set by
+  load-success). A zen somebody chose applies at once.
+- **Unit 7 — add a thing from the Nodes palette.** A "things" group from `entityPalette.js` (the
+  15 Studio's Add offers), right after "make" when browsing, after the nodes when searching; it
+  makes the thing through the existing add path (`handleCreateEntity`). The Cube, Sphere and other
+  shape nodes stay. The status line says where it landed ("Box added to the room." / "… added to
+  the top room — a thing cannot stand inside Geo yet."); Nodes shows no activity list, so it is
+  also the activity message.
+- **Found by looking, fixed here:** placing the first node moved every thing card off-screen (the
+  band was "below the lowest node") — the band now stays at the origin unless a node stands on it,
+  and new palette nodes step aside from it; on a phone the landing line sat under the selection
+  sheet — it now rides the sheet's measured inset.
+
+**Proven** (own stack on 4390/5390, fresh data root; Playwright Chromium at 1440×900 DPR 1.5 and
+390×844 DPR 3 touch; screenshots in the worktree's untracked `.verify/`, every one opened)
+
+- Unit 4: `unit4-before2-*.png` against `unit4-after-*.png`, and `/out` (`unit4-out.png`).
+- Unit 6: three boxes, two grouped → four cards (three boxes and the group, two stepped in), the
+  outliner a tree, "4 things"; phone shows "4" and no sideways scroll. Drag, desktop: 30 pointer
+  moves held → project version 12 → 12; release → 13; Studio in a second tab showed the move with
+  no reload; Ctrl+Z → 14 and the position back exactly. Phone touch drag: 53 → 53 held → 54.
+- Unit 7: box, sphere (its "a thing" row) and lamp each +1 thing and each in Studio's Objects list
+  in the other tab with no reload; a Cube node after them left every card in place; four undos
+  → 7 → 6 → 5 → 4 things. Phone: the palette's things group, a box added by tap.
+- Topbar with both kinds at 1440/900/700/390: no overlap, nothing past the edge, ⋯ whole.
+- Every new guard was seen red on the old code: the grouped-thing drawing, the two zen cases, the
+  same-render load, the chosen zen, the step-aside.
+- `npm run test`, `CLIENT_DIR= npm run test:server-contracts`, `npm run lint` (0 errors),
+  `npm run docs:ai:check` — results in the PR.
+
+**Owed**
+
+- Not yet on his surfaces: nothing was packed onto his install or opened on the S24 (the decision's
+  verify step for every unit). The published page on the S24 (unit 4) and `/make` were not looked at.
+- For the owner: a name that is both (Sphere, Plane, Text) still places the NODE on Enter and the
+  thing is the row below — kept so type-to-place never changes; "lamp" finds the point light.
+  The new word "thing" sits beside `docs/ai/vocabulary.md`'s "object" and Studio's "Objects (4)".
+- The room drag has no unit test: jsdom has no R3F `event.ray`. It is proven by the version counts.
+- A node made by dropping a file or by the examples does not step aside from the thing band; if it
+  lands on it, the band moves below the nodes (no overlap, but a jump).
+- A new thing's card can land outside the view (no re-fit, by the one-fit rule); the line says so.
+- Seen, not mine: the phone count button is 12×13px (the same number-only button as before); the
+  phone SurfaceBar clips "PROJ…"; the inspector prints long floats (-0.37499999999999983).
+- `hasLoaded` is there for the layers agent's "Studio opens bare … once the project has loaded".
+
+## 2026-09-23 — batch landing: layer by layer (units 1–4, 6, 7 of the layers plan)
+
+Two green PRs landed as one batch, per `feedback_batch_land_behind_prs`: they share five
+files, so landing one would have put the other BEHIND. Plan:
+`di-atlas/decisions/2026-09-23-layers-what-inside-what.md`. Each PR's own session note rides
+in this batch; this note is for the batch branch itself.
+
+| PR | Branch | What |
+|---|---|---|
+| #545 | `feat/things-are-cards` | Units 4, 6, 7: grouped things stand where Studio shows them in Nodes' room; every thing in the room is a card on the Nodes canvas and a row in its outliner; one edit on release when dragged in Nodes' room; the palette's "things" group makes the same thing Studio's Add makes; zen counts things and waits for the store's `hasLoaded` |
+| #546 | `feat/layers-open-bare` | Units 1, 2, 3: `src/project/layers.js` (+ `shared/layers.cjs`, kept identical by a test) says what each layer holds; project cards and space cards say what they hold; a new project opens bare (bar, room, Create, hint); the bar grows inside a project (Nodes with the first thing, Projection with the first node or wire, Light with a lamp); "⚒ All tools" on every project; `npm run count:controls` |
+
+Shared files: `projectStore.js` and its test carry ONE `hasLoaded` flag (#546 took #545's
+hunk as written, so git merged them as one); `RawEditor.jsx` and `wikiContent.js` merged by
+themselves. One conflict, `docs/ai/known-fixes.md`: both sides appended table rows; all four
+rows kept.
+
+Still the owner's: questions 2 (a thing inside a Geo) and 3 (which one is "the Desk") of the
+plan; the phone bar cutting off at 390 px (a design call, the bar may not be restyled); the
+word "thing" beside "object"; whether "⚒ All tools" should be reachable on a bare screen.
+
+## 2026-09-23 — The light show travels with its space and inside the .diiii file
+
+- Wave 4 items 2 and 3 of `di-atlas/decisions/2026-09-23-connect-everything.md` (decisions 2 and 3:
+  one show per space, carried in its `.diiii`). The owner's sentence: "what we need can easy work
+  offline and then share the project from one device to other".
+- **The show is keyed by space.** A space's show lives at `<spacesDir>/<id>/lighting/show.json`,
+  beside its scene, so it goes where the space goes and is deleted with it. This machine's own show
+  stays at `<dataDir>/lighting/show.json`. The desk runs one show at a time, the way a console loads
+  one show file (grandMA3 Load Show, Eos File → Open): `serverXR/src/lighting/desk.js` swaps state,
+  engine target and the fixture-type registry in place (`switchShow`), and `desk.json` brings a
+  restart back to the loaded show.
+- **How a page says which show.** `/light/?space=<id>` (what the bar and Projection already send)
+  redirects to `/light/space/<id>/?…` (`routes/lightingRoutes.js`), so every relative `api/*` call
+  the page makes names its show by plain URL resolution: all five tabs, reloads and bookmarks keep it,
+  with no call site changed. This replaces the sessionStorage carry the brief suggested for the show
+  key: the address itself is the carry, and it cannot leak into a bare `/light/` in the same tab.
+  `from.js` (the way back) is unchanged. A `space/<id>/` request while another show is loaded answers
+  `409 other-show` and writes nothing. The first open of a space's page loads its show (once per tab
+  per 15 s, never while output is on) and reloads from the top.
+- **Chosen differently from the brief, on purpose:** a bare `/light/` is "the desk as it is" and
+  runs whatever show is loaded, not always the machine's. The phone's QR (42-byte cap) can only
+  carry the bare address, and a phone remote must drive the show that is running, not swap the
+  laptop's show out from under it. The machine's own show is one press away on the bare desk
+  (**Load this machine's own show**), offered only while output is off. If the owner wants bare
+  `/light/` to always mean the machine's show, that is `show.js`'s `note` plus one auto-open.
+- **The rig stays with the machine.** `output` is never written into a space's show, never carried
+  in a file and never changed by a load; a change under OUTPUT while a space's show is loaded goes
+  into the machine's file (read fresh, rewritten whole). Output stays OFF by default as before; with
+  output ON a load is refused unless the operator presses the button (`live: true`).
+- **The file carries it.** `scripts/space-bundle.mjs` stages the newest complete copy (the desk's own
+  read order) as `space/lighting/show.json` without `output`, names it in `bundle.json`
+  (`lightShow: {fixtures, scenes, looks}`) and in its log line; import writes it the desk's way
+  (tmp, `show.prev.json` kept, rename). A file with a show is bundle version 2 so an older di.iiii
+  refuses it by name; without one it stays version 1. `--force` with a file that carries no show keeps
+  the space's own show (as it keeps projects); `--prune` removes it with the directory. `di save`,
+  `di open`, Save to file / Open a file and every space inside `di backup` carry it with no CLI change.
+- **Migration: one copy, never a move.** A space whose show was never saved, on a machine whose own
+  show has something in it, gets one sentence and one button, *Use this machine's show for <space>*
+  (`POST api/show/copy-machine`). The page then says "Copied. <space> has its own show now; this
+  machine's show is unchanged."
+- **Undo the copy:** `rm -r ~/.di/data/spaces/<id>/lighting` (a dev stack: `<DATA_ROOT>/spaces/<id>/lighting`),
+  while the desk runs another show or di.iiii is stopped — a desk still running that show would write
+  it back at its next save. Opened again, the space is empty and the offer returns (tested).
+- **Seen, on two throwaway stacks** (serverXR alone on 127.0.0.1:4370 and :4371, fresh data roots,
+  `DI_LOCAL=1`, `ARTNET_OFFLINE=1`), Playwright at 1440×900 DPR 2 and 390×844 DPR 3, 14 screenshots
+  read one by one (kept untracked in `.verify/`). On A: the machine show got 3 fixtures; `showtest`
+  opened empty with the offer (phone and desktop); 2 fixtures patched and scene "Warm wash" saved
+  without taking the offer; all five tabs kept `/light/space/showtest/`; the file on disk had
+  2 fixtures, 1 scene, no `output`; the machine show's sha256 (fe1b478dcb2c7391…) was the same before
+  and after the space work and after the copy into `copytest` (3 fixtures copied). Export: 1,479
+  bytes, version 2, `lightShow {2, 1, 0}`. On B: bare `/light/` showed 0 fixtures before; after import
+  `/light/?space=showtest` showed `1.rgb@1.1`, `2.rgb@1.4` and "Warm wash" on Setup, Control and the
+  phone's Touch page; the bare desk then said "This desk is running showtest's show." and its button
+  brought back the machine's show, 0 fixtures; B's machine show file was never written (absent
+  before and after). With output ON a space page did not swap the show, said the lights would change,
+  and loaded it on the press.
+- **Found by looking, fixed:** on the phone the reload after the automatic load restored a 30 px
+  scroll and hid the sentence under the sticky bar. The note is now the bar's own last row, and a
+  show-change reload starts at the top.
+- **Tests:** desk HTTP suite +11 checks (keyed load/save, no leaks between shows' fixture types, rig
+  stays machine's, live refusal, unknown space, keyed write refused, the copy byte-for-byte, the undo,
+  restart, `desk.state` read through), unit suite +5 (the sentences), `lightingRoutes.test.js` (the
+  redirect, a space's file beside the space), `space-bundle.test.js` +7 (round trip, broken show.json
+  falls back, version 1 without a show, `--force` keeps prev, keeps own show, broken show opens
+  nothing, newer file refused). Seen failing against a deliberately broken build: 3 desk checks (the
+  rig written into a space's file, the machine's output file, the copy turned into a move) and 4
+  bundle tests (an export that drops the show); the rest were not broken on purpose.
+- **Owed, not in this unit:**
+  - Studio's `.zip` import refusing its own export (`src/project/import/importLegacyScene.js:121-128`,
+    `src/project/transfer/studioProjectBundle.js`) — Wave 4 item 3's other half, a separate unit.
+  - Not seen on the owner's surface: local.thedi.studio runs the installed package; after this lands
+    it needs the pack + `di update --from` step (Wave 1 item 0), then Light from lab on his screen.
+  - A cue fires on the loaded show; a cue of space A while B's show is loaded finds no such look
+    (the named resolver, `LIGHTING_SHOW_PORTABILITY.md` "Still owed" 3).
+  - Fixture index as identity, and rebinding a travelling show to a venue's patch (owed 1 and 2).
+  - Tier sync (`space-sync`) does not carry the show; hosted tiers run no desk.
+  - Seen and left: a space page's first load logs up to 12 `409` lines in the console before its
+    automatic load and reload; on a phone the running show is named only when the note has something
+    to say — the title that names it is hidden under 1100 px, as before.
+  - `di save`'s one-line summary does not yet say "with its light show" (`--verbose` shows the
+    tool's line); `di status`/`di where` unchanged.
+- The main checkout's `serverXR/.env.local` was not linked into this worktree: it pins `PORT=4000`
+  and the real local tier's `DATA_ROOT`, which the contract suites and a dev stack would both use.
+
+## 2026-09-22 — folding six notes by hand, because dev's protection rejects the job that should do it
+
+- `docs/ai/sessions/` had six notes on `dev` and the docs gate was failing there, which is
+  the state that eventually turns a dev deploy red.
+- **It is not that the job did not run.** `deploy-vps-dev.yml`'s `land` job ran, folded all
+  six correctly, and then could not push: `GH006: Protected branch update failed … 2 of 2
+  required status checks are expected`. The job catches that case and prints a warning
+  telling a person to run `npm run land` by hand — and because the job is
+  `continue-on-error: true` and the deploy itself succeeds (the test job folds in place),
+  the whole run still reads GREEN. So the only trace is a warning inside a passing run, and
+  the notes quietly pile up. `chore-land-sessions-2026-09-21.md` was the same thing a day
+  earlier.
+- Doing it by hand needs two guards stepped around, both deliberately there:
+  `npm run land` refuses a dirty tree (the main checkout carries untracked `.env` backups
+  that are the owner's, not ours) and refuses to run anywhere but `dev` (which cannot be
+  checked out twice). A clean worktree plus `session-land-lib.mjs`'s three functions —
+  `foldNotesIntoProgress`, `buildLastSessionSection`, `replaceLastSessionSection` — does
+  the same work without the guards. Note they take an array of note STRINGS, not objects.
+- `CURRENT.md` came out at 47 lines, under its hard cap of 50. Worth checking every time:
+  a fold of six notes is exactly the shape that overruns it, and then every dev deploy
+  fails until somebody trims it.
+- **The real fix is not this commit.** Either give the `github-actions` app a bypass on
+  dev's ruleset so the `land` job can push its own bookkeeping commit, or make that job
+  open a PR instead of pushing. Until one of those happens this will need doing by hand
+  after every landing, and it will keep looking green while it rots.
+
+## 2026-09-23 — sentences that lie, told true: the install host, Docker, di sync, follow files, the trash, Solo
+
+Wave 2 item 1 of `di-atlas/decisions/2026-09-23-connect-everything.md`. Words only: every
+fix below is a sentence brought into line with what the code and the servers do. Nothing
+was built, no route moved, no server was started.
+
+### The install host — curl results, 2026-09-23
+
+Both hosts answer the installer the same, byte for byte, with no redirect:
+
+```
+curl -sI https://diiii.xyz/get          HTTP/2 200  etag "6aa41127-215d"  content-length 8541  text/plain
+curl -sI https://di-studio.xyz/get      HTTP/2 200  etag "6aa41127-215d"  content-length 8541  text/plain
+curl -sI https://diiii.xyz/get.ps1      HTTP/2 200  etag "6aa41127-1c24"  content-length 7204  text/plain
+curl -sI https://di-studio.xyz/get.ps1  HTTP/2 200  etag "6aa41127-1c24"  content-length 7204  text/plain
+
+sha256  /get      810754beda375e758153bd00067ed3df27692cd56bce8d6fc927b1fbc46a6004  (both hosts)
+sha256  /get.ps1  34531d7e3f083f500fb0275e28b61ceea151260fd33bab28ca50644516bc6a49  (both hosts)
+```
+
+The served `/get` is identical to the repo's `install.sh`, and the scripts fetch the
+release from github.com whichever host served them. The page addresses the wiki names
+(`/open_jam`, `/open_jam/scene`, `/open`, `/wcc`, `/light`, `/{space}/scan`,
+`/main/studio`) answer 200 on both hosts with the same shell. So every `di-studio.xyz` in
+the wiki (21 on 20 lines) became `diiii.xyz`, installer lines included.
+`di-studio.xyz/get` keeps serving and is still never a redirect; nothing on the server
+changed.
+
+### Before → after, with the evidence
+
+**`src/wiki/wikiContent.js`**
+
+- `#di-cli-local`, Docker. Before: "Docker is there too, but only if you ask for it
+  (di install --docker) — a container cannot reach things on your machine, …". After: "It
+  always installs as that ordinary program, never as a container, so the surfaces that
+  talk to your own tools (the agent board, a Claude installed on this computer) can reach
+  them." Evidence: `scripts/di/cli.mjs` `COMMANDS` has no `install`;
+  `scripts/di/bootstrap.mjs` calls `probeAll({ home })` with no `forcedMode`, and nothing
+  in `scripts/di/`, `install.sh` or `install.ps1` reads `DI_MODE`, `--docker` or `--node`;
+  the installer finds or downloads a node before bootstrap runs, so `decideMode`
+  (`scripts/di/detect.mjs`) always returns node. The GHCR image is not pullable anyway:
+  an anonymous token for `dob-0/dii-server` is refused (UNAUTHORIZED, manifest HEAD 403,
+  checked 2026-09-23). aylmo's own `~/.di/state.json` says `mode: node`.
+- `#di-cli-local`, sync. Before: "di sync compares them and moves work in whichever
+  direction is safe — it refuses rather than guess when both sides have changed." After:
+  "di sync compares them — what each side has that the other has not, and whether sending
+  work either way would be safe or refused, as it is when both sides have changed. It only
+  looks: it writes nothing on either side. To carry work between them, use di save and di
+  open, di backup, or Save to file on the Spaces page." Evidence: `cmdSync` in
+  `scripts/di/cli.mjs` ("writes NOTHING … --push/--pull are later PRs"); `ui.syncReport`
+  in `scripts/di/ui.mjs` ends "nothing was written — this command only looks."; Save to
+  file and Open a file are in `SpaceHub.jsx` for any signed-in account.
+- `#spaces-and-projects`. Before: "/<space>/studio — the same list, in Studio’s older
+  address" and "/<space>/raw/projects — the same projects, in the node editor’s older
+  address". After: "/<space>/studio — the same projects in Studio, where you make them:
+  New project, drafts, shelves and the trash are here, and a card opens its project in
+  Studio" and "/<space>/raw/projects — the same projects, for the node editor: a card
+  opens its project on the node canvas". Evidence: neither address is older or retired —
+  `StudioApp.jsx` renders `StudioHub` (New project, the draft state, shelves, the trash,
+  `openProject` → `buildStudioProjectPath`); `RawApp.jsx` renders `RawHub`
+  (`listProjects(spaceId)`, `openProject` → `buildRawProjectPath`). Written so it stays
+  true when Wave 1 item 5 puts StudioHub on `/raw/projects` with cards opening in Nodes.
+- `#algovrithm`. Before: title "a code-authored VR space"; summary "a space whose scene is
+  written in three.js/R3F code"; body "a WebXR experience built the way br_id_ge and WCC
+  are — a real space, routed through the same server-verified public/private check".
+  After: title "a VR piece written in code"; summary "a VR piece written in three.js/R3F
+  code rather than made in Studio"; body "a WebXR piece that lives inside di.iiii’s own
+  code, as WCC does. Who may see it is decided the way it is for any space — the server
+  says whether the algovrithm space is public — but that space holds no projects, and its
+  address never opens one: /algovrithm is always the piece’s front door." Evidence:
+  `CURRENT.md` Open ("public, empty and it can never open … `src/algoVrithm/` owns that
+  url before any space lookup"); `RootApp.jsx` `WorkSurfaceRoute` (`useSpacePublicFlag`,
+  then the work's own surface for `/algovrithm` and `/algovrithm/scene`);
+  `src/works/works.js` (br_id_ge "lives in its own repository and arrives as a space" —
+  so "built the way br_id_ge is" was also stale); `GET /serverXR/api/spaces/algovrithm`
+  on diiii.xyz and dev.diiii.xyz → `isPublic: true, publishedProjectId: null`, and
+  `/contents` → `projects: []`. The piece itself opens: headless Chromium on
+  diiii.xyz/algovrithm and dev.diiii.xyz/algovrithm shows the front door and the
+  statement, and /algovrithm/scene shows the piece. The space still holds the Director's
+  saved timing (`src/timeline/timingOverlay.js`), which is why the words are "holds no
+  projects", not "holds nothing".
+- `#following-a-space`. Before: "What does not travel yet: images and models. A followed
+  scene will show their absence until they do." After: "A project’s files travel too, both
+  ways: an image, a video or a model added to a project on either machine is carried to
+  the other, one file at a time, and checked against its name before it is kept. Two kinds
+  do not travel yet — files placed straight in the space’s own scene rather than in a
+  project, and older files added before files had checkable names. Both stay on the
+  machine where they were added; di follows counts the older ones, and adding one again
+  sends it." Evidence: `serverXR/src/follow/assets.js` (since 2026-09-20, PROGRESS
+  "a follow carries its projects' files"); `docs/architecture/SPEC_follow_files.md` §2;
+  `followFileLines` in `scripts/di/ui.mjs` ("older files are not carried … add them again
+  to send them"). Tags gain files / images / models.
+- 20 lines, `di-studio.xyz` → `diiii.xyz`: Open Jam (short link, `/open_jam/scene`, the
+  bare `/open`, Share's copied link, the editor), the front door, `/light` and the rig on a
+  hosted site, Projection's address and its two hosted notes, the wcc card, the
+  Director's save, `--guests`, the vizzz rig, `/{space}/scan` and "Make the hall", and the
+  two installer lines. Evidence: the curl results above. Share copies
+  `window.location.origin + /open` (`JamSurface.jsx`), so on diiii.xyz it copies
+  diiii.xyz/open.
+
+**Delete dialogs** — `src/studio/components/StudioHub.jsx:260`,
+`src/studio/components/StudioProjectsPanel.jsx:77`, and the same sentence in
+`src/components/preferences/AdminManageSection.jsx:182`. Before: `Delete "…"? Cannot be
+undone.` (admin: `This cannot be undone.`). After: `Delete "…"? Moves to the trash for 30
+days.` Evidence: all three call `projectsApi.deleteProject` → `DELETE /api/projects/:id`,
+which soft-deletes (`serverXR/src/routes/projectRoutes.js`, `trashed: true`;
+`projectStore.js` `TRASH_TTL_MS` = 30 days); the wiki's `#shelves-and-the-trash` and the
+delete button's own title already said 30 days. The admin line was not in the plan; it is
+the same sentence over the same call.
+
+**Projection** — `src/map/MapSurface.jsx:399-400` (only those two lines). Before: `Solo`,
+title "Show this one alone". After: `Solo · screen`, title "Show this one alone on this
+screen. The projector still shows every surface." Evidence: `soloId` is local state passed
+only to this tab's `MapStage` (`soloSurfaceId`); `MapOutput` (`/out`) never receives it.
+
+**`docs/deploy/DI_CLI.md`** — the install block now names `diiii.xyz/get` and
+`/get.ps1`, and says `di-studio.xyz` serves the same bytes forever and must never become a
+redirect. "Node or Docker": step "1. DI_MODE, or --docker / --node → obeyed" is gone, with
+a paragraph saying Docker mode is not reachable today and why (the evidence above); "Docker
+mode is real and kept, but it is the deliberate choice (`--docker` / `DI_MODE=docker`)"
+now says the switch was never wired; "make the packages public and it starts working with
+no new release" now says that would not change it on its own. The plan's `DI_CLI.md:25`
+matched no docker sentence in today's file (line 25 is `di open FILE`); the docker claims
+were at 250 and 261-262.
+
+### Owed to the next land: CURRENT.md (a feature branch may not write it)
+
+`docs:ai:check` refuses a CURRENT.md that differs from origin/dev on a feature branch, so
+these two corrections were reverted here. The next land PR should apply them:
+
+- `:32` — "aylmo runs a branch build (`0.4.7-shelves.2`)" → "aylmo runs `0.4.15-place.1`
+  (packed 2026-09-22 from #534, the place-and-lights landing)". Evidence:
+  `~/.di/state.json` `version: 0.4.15-place.1`, `~/.di/current` → that version,
+  `release.json` `packedAt 2026-09-22T14:42Z`; local.thedi.studio answers 200.
+- `:35` — "Follow … carries NO assets yet — a followed scene shows a grey wall …" →
+  "Follow (one space on two installs) carries a project's files both ways since
+  2026-09-20 (`serverXR/src/follow/assets.js`; loopback proven only). Still NOT carried:
+  files on the space's own scene, and legacy uuid-id files (`di follows` counts them). No
+  warning when op retention drops something uncarried; no real two-machine transfer yet,
+  and the internet case needs a throwaway space — owner's call." (PROGRESS 2026-09-20
+  already wrote this sentence; it never reached CURRENT.md.)
+
+### Left, and why
+
+- `src/raw/AGENTS.md:40` — owned by the one-project-list agent.
+- `src/raw/components/RawHub.jsx:133` says "This cannot be undone" over the same soft
+  delete. RawHub is the one-project-list agent's (Wave 1 item 5 removes it).
+- `install.sh` / `install.ps1` (what `/get` serves): with no node and no nodejs.org, the
+  failure text offers "Docker Desktop — install it, open it once, then run this line
+  again". Rerunning with Docker still fails: the next run needs a node too, and the
+  images are private. Changing it changes the served installer, so it wants its own PR.
+- `scripts/di/detect.mjs` reason "docker stays opt-in (--docker)", printed by `di doctor`
+  only when Docker runs AND the images are pullable (not today), names a flag that does
+  not exist.
+- Still naming `di-studio.xyz` for the installer: `scripts/di/ui.mjs:307` (a CLI hint)
+  and `docs/deploy/SELF_HOST.md:4`. Same evidence; outside this unit's files.
+- Space delete ("Delete space … cannot be undone", `SpaceHub.jsx:520`,
+  `AdminManageSection.jsx:130`) is true: `DELETE /api/spaces/:id` removes the space for
+  real. Left as is.
+
+## 2026-09-23 — the bar carries the project across Studio, Nodes and Projection; Light shown on hosted tiers
+
+Wave 1 items 1, 2 and 4 of `di-atlas/decisions/2026-09-23-connect-everything.md`.
+
+- `SurfaceBar` takes `project` / `projectLabel`. With one, the "where" reads
+  `di.iiii · space · project` (the project opens its Studio editor) and Studio, Nodes and the
+  new Projection destination open THAT project through `studioRouting` / `rawRouting` /
+  `mapRouting` builders. Projection is listed only for a project. Order unchanged otherwise.
+- Light is always listed. Local install: `/light/?space=&project=` plus `&label=<title>` when
+  the title says more than the id — the shape #537's `lightingDeskPath()` uses (plain link —
+  the desk is served by serverXR, not the app). Hosted: `/light`, navigated in-app (`appNavigate`) so it
+  lands on the existing `ReservedAddressCard('light')`; a ctrl/meta click is left to the
+  browser. Checked: a full load of `/light` and `/light/` on dev.diiii.xyz and diiii.xyz
+  answers the SPA's index.html, so reload/new tab reach the card there too.
+- `/tools` shows the Light tile on hosted tiers ("on your own machine", same in-app
+  navigation). Desk stays local-only.
+- The bar is mounted on the three editors: `StudioShell` (desktop and phone, `float`; hidden
+  in Hide UI, XR presenting, `?embed=1` and the jam's simple mode), `RawEditor` (project
+  canvas only; hidden in zen / a chromeless scope, the full-screen room and `?embed=1`; the
+  raw topbar moves to `top: var(--sbar-h)` and its measured inset re-reads when the bar comes
+  and goes), `MapSurface` (a row above `header.map-bar`, which is untouched; `/out` is
+  `MapOutput` and never draws it). The tools' own jump buttons all stay (decision 5).
+- Studio panes clear the floating bar through `--svl-top-clear` (gizmo, split controls,
+  transform HUD) — only panes touching the top edge; the lower half of a V split does not.
+- **`--sbar-h` was wrong.** It said 36px; the bar measured 38px (desktop) / 42px (phone), and
+  40/44px in Studio, which lends a 1.5 line-height. Fixed in `surfaceBar.css`: the bar pins its
+  own `line-height: 1.3`, declares 38px / 42px (phone media query), and `flex-shrink: 0` on the
+  bar and on `.sbar-where`. The last two fix two defects that were already on dev: `/tools` on
+  a phone squeezed the bar to 15px (flex column), and on a phone the space name collapsed to
+  0px ("di.iiii · ·") because the links took every pixel. Desktop Tools / Wiki / projects are
+  unchanged at 38px.
+- On a phone the Nodes corner wordmark (`.raw-surface-wordmark`, top-left, z 1200) is hidden
+  while the bar shows — it sat on the bar's own "di.iiii"; before this the topbar (z 1400)
+  covered it whenever chrome showed.
+- New `src/hooks/useSpaceName.js`: one `getServerSpace` for the space's label on Nodes and
+  Projection (vocabulary.md "One name per space"); falls back to the id.
+- Tests: `SurfaceBar.test.jsx` (hrefs, Light local/hosted, in-app click, new-tab click),
+  new `ToolsRoom.test.jsx`, `surfaceBar.embed.test.jsx` (three editor lanes page vs window,
+  plus headset, Hide UI, zen, full-screen room, both `/out` pages, and the topbar offset).
+  Each of the seven hide guards was seen failing with its rule removed.
+- Verified in a real browser on a throwaway stack (server :4310 loopback, vite :5310, data
+  under the worktree) at 1440×900 and 390×844 DPR 3: Studio → Nodes → Projection → Studio by
+  the bar, zero overlaps measured against the bar, no bar on `/out`, `?embed=1`, Hide UI.
+  With the local flag off, Light from the bar and from /tools lands on the card, no page load.
+- **Open, not done here:** at 390px the bar scrolls sideways (its existing phone rule), so
+  Projection / Tools / Light / Wiki are one swipe away on the first screen. The bare node
+  canvas (`/raw`, BlankNodeWorkspaceApp) still has the old overlaps: its raw topbar (z 1400,
+  top 0) covers the floating bar when chrome shows, and on a phone its wordmark sits on the
+  bar in zen — untouched here, out of this unit's scope. The Studio phone gizmo still sits
+  under the `smb-topbar` buttons, as it did before.
+
+## 2026-09-23 — Light returns to the project that opened it
+
+- Wave 1 item 3 of `di-atlas/decisions/2026-09-23-connect-everything.md`. The stranger's walk
+  found "Light: show forgotten, no way back": the desk's only exit, `a.homelink`, went to `/spaces`.
+- A project now opens the desk as `/light/?space=<id>&project=<id>[&label=<title>]`. The new
+  `serverXR/src/lighting/ui/from.js` reads that once and keeps it per tab in sessionStorage; `app.js`
+  draws `← <project>` beside the di.iiii door (→ the project in Studio) and Studio · Nodes · Projection
+  for the same project, all with the existing `.homelink` / `.pages` classes and no new CSS. The page
+  tabs only change the hash, so the links stand through every switch; the kept copy covers a reload
+  whose address lost its query. A bare `/light/` in a fresh tab is unchanged: one door, to `/spaces`.
+- The three addresses are a hand copy of `buildStudioProjectPath`, `buildRawProjectPath` and
+  `buildMapPath` (the desk is plain script and cannot import). `src/map/lightingLink.test.js`
+  requires `from.js` and holds it to the real builders — seen failing when the copy was made to drift.
+  An id with a slash, dot, backslash or colon draws nothing, so the query cannot aim the link elsewhere.
+- Callers: Projection's Light link passes the query (`lightingDeskPath({ spaceId, projectId, label })`).
+  The SPA's `/light` hand-off (`RootApp.jsx`) now keeps `location.search`, which it used to drop.
+  `/tools`' Light tile knows no project and is unchanged. `SurfaceBar.jsx` is left to
+  `feat/bar-carries-project`, which agreed on the same `?space=&project=` shape.
+- Walked on a throwaway stack (4320/5320) at 1440×900 and 390×844 DPR 3: back link survives Setup →
+  Control → Touch → Fader → MIDI and a reload without the query; it opens `/lab/studio/projects/first-piece`
+  in Studio; Nodes and Projection open their pages; bare `/light/` still leads to `/spaces`.
+- Seen and left: at 1440 the desk's centred title ("Art-Net Desk — <show>"), already clipped before,
+  is squeezed to a few letters while the project links show. On a phone they add one row, and the links
+  are ~25 px tall, the same as the existing di.iiii door.
+
+## 2026-09-23 — one project list per space: Nodes' own front door retired
+
+Wave 1 item 5 of `di-atlas/decisions/2026-09-23-connect-everything.md`. Owner's words:
+the Nodes list "is like a separate line not connected to the system … it would be better
+to start with layers, so you create 1st something and things one by one, not flood things
+there".
+
+- `/{space}/raw/projects` keeps its address (no redirect) and now renders Studio's hub,
+  `StudioHub openIn="nodes"`, from `src/raw/RawApp.jsx`. Same cards, same shelves, same
+  drafts / archived toggle, rename, state, trash, Admin, Import, View live and Spaces as
+  `/{space}/studio`. What differs: a card, Latest and New open the node canvas; New makes a
+  project with source `raw-v2` (its card says "Nodes"); the top-right cross button reads
+  **Studio** (to `/{space}/studio`) where Studio's copy reads **Nodes**; the open space's
+  forward into the jam happens only on Studio's copy.
+- RawEditor's `← Projects` goes to `/{space}/raw/projects`. It went to `/{space}/projects`,
+  the visitors' contents page since 2026-09-10, where drafts do not show and a card opens
+  the viewer.
+- Removed: `src/raw/components/RawHub.jsx`, `RawHub.test.jsx`, `GUIDE_AUDIENCES` in
+  `src/raw/utils/rawGuide.js` (and its test case), the help dialog's two audience cards,
+  and every `.raw-hub*` / `.raw-project-list` / `.raw-help-audience*` / `.raw-help-chip*`
+  rule in `raw.css` that only they used (~350 lines). `rawGuide.js` stays: the help dialog
+  still reads `GUIDE_SECTIONS`.
+- Words made true: `src/raw/AGENTS.md` (the landing does NOT open on the node canvas; the
+  projects page is StudioHub), `wikiContent.js` `spaces-and-projects` (the two "older
+  address" lines — same wording as the parallel `docs/sentences-that-lie` branch, so the
+  two merge without a conflict) and `raw-lane` (the list line), `README.md`'s lists line,
+  and comments that named RawHub (serverXR routes, asset-remap-lib, studioNode, the enter-node
+  handoff, WikiPage, the embed test).
+
+### What RawHub offered that StudioHub lacked — one decision each
+
+| RawHub had | Decision | Why |
+| --- | --- | --- |
+| "First Landing / Choose a path" + "For Visitors · Look first" / "For Creators · Build small" cards | **Gone** | The flood the owner named. StudioHub's empty state already says "A project is one thing you build and publish" with one button. |
+| "Workflow · Space → project → publish" card | **Gone** | Same. |
+| Title box + `new project` | **Gone** — StudioHub's `+ New project` (asks the name, then lands in the node canvas) | One way to make a project, the same on both lists. |
+| `import` | **Kept** — StudioHub's Import, identical handler (source `legacy-import-studio`, card says "Imported"); it now opens the import in the tool of the list you are on | The brief: import of an old scene stays identical. |
+| "open the Studio node" (find-or-create `studio-node-<space>`, land inside the container) | **Gone** | The plan's own "not doing": Studio as a node inside Nodes — the bar makes the two editors one project. An existing `studio-node-*` project stays on the list as an ordinary card; the Studio node is still in the palette. `rawEnterNodeHandoff.js` and RawEditor's reader are left in place with no writer (comments say so) — removing them is a RawEditor edit this PR did not need. |
+| `SpaceSyncPanel` (↓ get latest / ↑ publish to live) | **Kept, Nodes copy only**, passed as `children` from RawApp; draws nothing unless the server has `LIVE_API_URL` configured — exactly as before | Operators use it on local installs and this page was its only home. No new chrome: on an ordinary install both lists are pixel-for-pixel the same. Its row now carries its own top edge and a gap (it used to borrow the old list box's). |
+| Footer `studio` / `public` / `admin` | **Folded into StudioHub's own**: the cross button says Studio; View live is public; Admin (admins only) | Same destinations, no second row. |
+| Import warnings box | StudioHub shows warnings in its status line | Already the case on Studio's list. |
+
+### Checked
+
+- `npm run lint` (0 errors), `npm run docs:ai:check`, `npx vitest run` on every touched test,
+  and `npm run test`: all green once `serverXR` had its own `npm ci`. Two server tests
+  (`followIntegration` "byte for byte", `configRoutes` "repeats what index.js says") timed
+  out under full-suite load and pass alone. The `← Projects` guard was run against the old
+  path first and failed.
+- serverXR on 4330 and vite on 5330, with a throwaway DATA_ROOT, walked with Playwright at
+  1440×900 (DPR 2) and 390×844 (DPR 3), 18/18 checks passing:
+  `/lab/studio` and `/lab/raw/projects` list the same cards on the same shelves (Show one:
+  Pulse, Wall study; Not on a shelf: Draft sketch) and differ only in the Nodes ↔ Studio
+  button. Neither page has a First Landing / Build small / Space → project → publish card.
+  A card opens `/lab/raw/projects/draft-sketch` on the canvas. `← Projects` comes back to
+  `/lab/raw/projects` with the DRAFT card showing. New lands on an empty canvas at
+  `/lab/raw/projects/first-…` and shows up on Studio's list with a "Nodes" badge.
+  `/lab/seed/projects` heals to `/lab/raw/projects`. With `LIVE_API_URL` set, the sync row
+  shows under the Nodes list only; the Help dialog no longer has the audience cards.
+  Screenshots are in the worktree's `.verify/`, which is not committed.
+
+### Seen on the way, not changed here
+
+- Studio's own `← Projects` (`StudioEditor.jsx` `onBackToHub`) still goes to `/{space}/projects`,
+  the visitors' list. It's the same bug class on the Studio side and wasn't in this item's brief.
+- On a phone the Help dialog squeezes its left panel to a ~40px sliver. `raw.css`'s
+  `@media (max-width: 900px) .raw-help-body { grid-template-columns: 1fr }` sits BEFORE the
+  base `.raw-help-body` rule, so the base rule wins at every width. The order is the same on
+  `dev`, so this didn't start here. It's one small move of that rule and wants its own PR.
+- A brand-new project opens zen (no toolbar), so it has no `← Projects` until the palette
+  brings the toolbar back. This is the node editor's existing empty-project behaviour.
+
+## 2026-09-23 — first-room traps: Headset Off means off, no admin chord for strangers, F frames the room, "+ new project" says why
+
+Wave 2 items 2, 3 and 4 of `di-atlas/decisions/2026-09-23-connect-everything.md`.
+
+- **Headset entry → Off** in the Nodes Publish panel wrote `'none'`, which the viewer
+  reads as AR, so Off left Enter AR on the live page. Off now writes `'off'`; a missing or
+  `'none'` value shows as AR, the way the viewer treats it. Only the writer changed. The viewer
+  and the schema default stay as they were, because `'none'` means AR for every older project.
+- **Admin mode** in the old editor (Shift+D Shift+I, or a 4-finger 3-second hold) now turns
+  on only for a signed-in admin session (`useAuthSession`, the same role the admin console
+  gates on). Turning it off never needs anything. The owner at a local install and auth-off
+  both report role `admin`, so they keep the chord.
+- **Studio F** with nothing selected now frames the whole room. An early return had made
+  that branch unreachable. With a selection, F still frames just the selection.
+- **Tools "+ new project"** now says why it failed, in the dialog's own sentence: the
+  server's words, or "sign in to add a project to <space>." for a bare 401.
+- Each has a test beside it, seen failing on the old code, and a known-fixes row.
+
+Checked on a throwaway stack (4360/5360, data root outside the repo), 1440×900 DPR 2 and
+390×844 DPR 3, with a control run of the same walk on the unfixed file for A, B and F:
+- Off stores `"off"`, and the live link in a WebXR-capable browser shows no Enter AR.
+  Switching back to AR brings it back. On old code: `"none"`, and Enter AR stays.
+- Signed out on a read-only space, a paste is still refused after the chord (old code:
+  the chord unlocked it). On the phone, the More sheet shows no Admin section after the hold
+  (old code: Publish to Server and the rest). As admin, both still work.
+- Alt+A then F: all three boxes framed (old code: the camera did not move). A box selected, then F: that box.
+- A guest in a read-only space gets "Not created: Space is read-only.", and signed out the
+  dialog says "Not created: sign in to add a project to traps-ro.", on desktop and phone.
+
+**Not done: "Save current view wins over the auto-frame."** Stopped on purpose.
+`resolveViewerCamera` puts the auto-frame ahead of `worldState.savedView` deliberately
+(commit 731222d0, and the comment above `computeAutoFrameCamera`): a saved view goes stale
+mid-edit and strands a fresh visitor. And `normalizeWorldState` fills `savedView` with
+defaults, so it is always "present". No reading of the document can tell a view someone
+pressed Save on from the default or a stale one. The walk confirmed the trap: orbit below
+the floor → Save current view → the stored view is that shot, but the live page opens on
+the auto-frame. The fix needs his decision, and each option changes more than this PR
+should:
+(a) Save current view also sets `entryView: 'fixed-camera'` with an unlocked `fixedCamera`.
+    The viewer already honours that shot and then hands the camera over. But Enter AR is
+    offered only on `entryView === 'scene'`, so a saved view would also remove AR.
+(b) A marker on the saved view (e.g. `savedView.setAt`) that the viewer prefers over the
+    auto-frame. That is a schema change in both twins (`projectSchema.js` / `.cjs`).
+- The wiki is not updated here (`wikiContent.js` belongs to another agent in this wave).
+  The Studio help list (`studioGuide.js`) now says what F does.
+
+## 2026-09-23 — one name per tool, and the front page ends in one link
+
+- `/tools` and the local home call the node canvas **Nodes**, the word the surface bar already
+  used. Keys, routes and folders stay `raw`. The local home's desk link says **Light**, as
+  `/tools` and the bar do (it said "Lights"). Projection's Carry panel says "Projection as text",
+  "Paste a projection" and "Replace this projection" instead of mapping.
+- The landing's Help & Wiki block keeps its eyebrow, title, one line and the "Open the Wiki →"
+  button; the 18-card highlight grid is gone (with its CSS). `LandingPage.test.jsx` turns red if
+  a grid comes back (checked: 19 links with the old grid).
+- `copyVocabulary.test.js` now also reads `src/tools/ToolsRoom.jsx` and
+  `src/landing/LocalHome.jsx`; "Raw" as a name in either fails it (checked by putting it back).
+  `docs/ai/vocabulary.md` gains the Nodes and Light rows and a 2026-09-23 amendment.
+- Not done, on purpose: Studio's "Lights" button and the placed lamp keep the word Light until
+  the owner settles decision 4. `WIKI_HIGHLIGHT_IDS` / `WIKI_HIGHLIGHTS` stay exported because
+  `docs:wiki:check`, `wiki-sync.test.js` and `WikiPage.test.jsx` still read them; nothing renders
+  them now, and retiring them with those checks is its own small change.
+- Seen in a browser (Playwright, 1440×900 DPR 2 and 390×844 DPR 3, own stack on 4340/5340 with a
+  throwaway data root): local `/tools` reads Studio · Nodes · Light · Projection · Desk, hosted
+  `/tools` reads Studio · Nodes · Projection; the local home's doors read Tools · Studio · Nodes ·
+  Wiki and its desk line says Light; `/?tour=1`'s Help & Wiki block has one link and no grid, and
+  it opens `/wiki`; the Carry panel reads "Paste a projection" / "Projection as text". No console
+  errors, no sideways scroll.
+- Worth knowing: the landing does not literally END at the Wiki block — "API & agents", "What you
+  get" and the footer still follow it. The grid is gone; the order of sections is landing copy and
+  waits on the owner with the rest of the story.
+
+## 2026-09-23 — batch landing: one project across every layer (Wave 1 + the first of Wave 2)
+
+Six green PRs landed as one batch, per `feedback_batch_land_behind_prs`, after both live peer
+sessions (dob-8b, dob-6a) confirmed they held nothing in di.iiii. Plan:
+`di-atlas/decisions/2026-09-23-connect-everything.md`. Each PR's own session note rides in
+this batch; this note is for the batch branch itself.
+
+| PR | Branch | What |
+|---|---|---|
+| #536 | `fix/one-name-per-tool` | Raw → Nodes on /tools, the local home and the landing; Carry panel says Projection; the landing's 18-card wiki grid becomes one "Open the Wiki →" link; `copyVocabulary.test.js` guards "Raw" as a label |
+| #537 | `feat/desk-returns-to-project` | `/light/?space=&project=&label=`: the desk shows `← <project>` plus Studio · Nodes · Projection, kept in sessionStorage across its tabs; `lightingDeskPath({ spaceId, projectId, label })`; Projection's Light link passes the project |
+| #538 | `docs/sentences-that-lie` | wiki host → diiii.xyz (both `/get` files identical, neither redirects); no `di install --docker`; `di sync` writes nothing; follow carries a project's files; algovrithm told true; "Moves to the trash for 30 days"; Solo · screen |
+| #539 | `feat/one-project-list` | `/{space}/raw/projects` keeps its address and renders `StudioHub openIn="nodes"`; RawHub and its cards retired; `← Projects` returns to the Nodes list |
+| #540 | `fix/first-room-traps` | Headset entry Off writes `'off'`; admin-mode chord and 4-finger hold need a signed-in admin; F with nothing selected frames the room; "+ new project" says why it failed |
+| #541 | `feat/bar-carries-project` | SurfaceBar carries `space · project`, names Projection, lists Light on every tier (hosted → the card, client-side); mounted on the Studio editor, the Nodes project canvas and the Projection desk; `--sbar-h` corrected |
+
+Found on the owner's install after packing the batch: an EMPTY Nodes project opens in the zen
+nobody chose (stored `auto-on`), and #541 hid the bar with the rest of the chrome, so a
+newcomer's first Nodes screen was a dead end again. Fixed on the batch: `isAutoZen()` in
+`src/raw/utils/zenMode.js`; `RawEditor` keeps the bar for an automatic zen and still hides
+it for a chosen one (tests in `zenMode.test.js` and `surfaceBar.embed.test.jsx`).
+
+One merge conflict, `src/tools/ToolsRoom.test.jsx` (added by both #540 and #541): the two
+files were combined into one, with a SurfaceBar mock that also exports `navigateInApp`.
+
+Still the owner's: walking the bar on local.thedi.studio and the S24; the nine decisions
+in the plan (old editor, where the light show lives, the one file, Light/Lamp/Rig, retiring
+the tools' own jump buttons, "Lights on" machine, the S24 on the desk, "Save current view"
+vs the auto-framed shot, promotion).
+
+## Landing 21 notes so the dev tier can deploy again
+
+The dev deploy had been failing since 2026-09-20 — not on code. `deploy-vps-dev.yml`'s
+`land` job folds the pending session notes in its own workspace, that fold rewrites
+CURRENT.md's "Last session" with one bullet per note, 21 notes pushed the file to 62
+lines against the 50-line limit, `docs:ai:check` failed, and `build-and-push` + `deploy`
+were **skipped**. A skipped job is not a red one, so three runs in a row read as
+"failure" on the test job while the tier quietly served the previous build.
+
+Done here:
+- folded the 21 notes into PROGRESS.md and CURRENT.md (the same
+  `session-land-lib.mjs` functions `npm run land` calls, without its worktree sweep —
+  other sessions hold worktrees in this tree)
+- rewrote "Last session" as six grouped lines instead of 21 bullets: 46 lines, under
+  the limit with room for the next fold
+- fixed three lines that still named `staging.di-studio.xyz`, retired 2026-09-16 —
+  the lanes line, the fold note, and the `git push origin dev` comment now say the
+  dev tier
+
+This unblocks the dev deploy and clears the same docs gate on a dev → main promotion,
+which is what it was opened for.
+
+## 2026-09-21 — lights on a place: a lamp you can aim, a beam you can see, a room that throws shadows
+
+A spot light in di.iiii could be hung and coloured, and that was all. You could not
+point it in the language a lamp is pointed in, you could not see where its light was
+going until you walked to the wall it hit, and nothing in the room ever cast a shadow.
+Three steps, each visible on its own, none of them changing a room that does not ask.
+
+**Aim: pan and tilt.** A lighting person points a lamp with two numbers — tilt, how far
+off straight-down, and pan, which way round the vertical — and neither is a raw euler
+angle. Both now sit in a spot light's Transform section, in degrees, in both inspectors
+(Studio and Raw), and both read and write the SAME `components.transform.rotation` the
+gizmo writes. No new field, no new op, nothing for an old document to be missing; a lamp
+aimed by dragging reads back as numbers and a lamp aimed by the numbers moves under the
+gizmo. The conversion is written once, in `src/project/viewport/spotLightAim.js`, beside
+the −Y forward convention it depends on. The inspector remembers the pan while a lamp
+hangs dead down, where pan has no meaning at all, so an aim can be set the way a rig is
+actually aimed: round first, then tilt into the room.
+
+Found on the way and worth keeping: **rotation.y is inert for a spot ONLY while roll is
+zero.** The note from the 2026-09-20 target fix says yaw cannot move a spot's beam,
+because the forward vector IS the Y axis — true for yaw alone, and false the moment
+`rotation.z` has tipped that vector off the axis, after which Ry pans it round the
+vertical like a real pan wheel (`spotAimDirection([0,1.2,0.8])` and
+`spotAimDirection([0,0,0.8])` are two different beams at the same height). So pan/tilt is
+the canonical spelling of an aim, and it spells yaw 0; an authored yaw left in place
+would put the beam somewhere the pan number does not say.
+
+**The beam.** `components.beam = { visible, haze }` — absent in every room published
+before this, and absent means no beam, so nothing already out there changes. Drawn by the
+shared `SpotLightObject`, so the Studio and a published room cannot drift: a translucent
+cone as long as the lamp's reach and as wide as its angle, additively blended, no depth
+write, no post-processing (the EffectComposer goes black in WebXR, so volumetrics were
+never on the table). It fades along the throw through vertex colours rather than standing
+in the room as one flat plastic shape — the first screenshot of it was exactly that, two
+solid cones, and the opacity came down with the fade going in. The colour is the lamp's,
+which means a lamp joined to a desk fixture beams in the colour the desk is emitting,
+live, without a line of new code: the live value is substituted upstream in
+StudioViewport and the beam only ever reads the colour it is handed.
+
+The cone is drawn as far as the lamp REACHES, so a lamp with a 15-metre reach hung in a
+2-metre room draws its cone through the floor. That is authoring, not a bug — set the
+lamp's Distance to where the light lands — and the wiki says so.
+
+**Shadows from the room.** `renderSettings.shadowCasting = { enabled, mapSize }`, off by
+default, switched under Project → Render where the other render settings already live.
+Deliberately NOT the existing `renderSettings.shadows`: that is the renderer-level switch
+(`gl.shadowMap.enabled`), it has defaulted to TRUE since the schema was written, and
+nothing ever cast into the map it enabled — every surface paid for a shadow map and drew
+a flat stage. Folding the new meaning into it would have meant either changing a shipped
+field's type under every saved document or turning shadows on in every published space at
+once, and a shadow pass over a scanned venue is not free.
+
+Dressing the scene is a WALK (`shadowCasting.js`), not a prop threaded through fifteen
+object components and two entity switches — because the meshes that most need a shadow
+arrive from a file long after React rendered the entity, and only a walk catches those.
+It only ever switches flags on, so a room with shadows off is untouched; it skips the
+reference grid and the gizmo (furniture, not scenery — a grid that cast would drop a
+black square under the whole room) and the beam cone itself (light in the air, not
+matter). Spot lights get `castShadow` and a shadow camera the size of their own throw.
+A directional light needs a frustum sized to the room instead and was left alone: its own
+change.
+
+**Fixed on the way — every spot light emitted from a metre behind where it was hung.**
+three.js's `SpotLight` constructor does `this.position.copy(Object3D.DEFAULT_UP)`, so an
+unpositioned one sits a metre along its parent's local +Y, which for a tilted lamp is a
+metre backwards up its own beam. The aim was never wrong (direction is target minus
+position and both moved together), which is why it survived the target fix; the lamp's
+place, its throw and its falloff were. It surfaced because the editor's marker cone,
+drawn at the TRUE entity position, landed inside the lamp's own shadow frustum and
+printed a black octagon on the wall it was lighting. `SpotLightObject` now pins the light
+at `[0,0,0]`, and `spotLightAim.test.js` holds three.js itself to the quirk so a library
+release that changes it is noticed here rather than in a room.
+
+**Looked at, not asserted.** A harness room (floor, three walls, the red post at the
+origin, a pillar) rendered through the real `EntityContent`, headless on SwiftShader —
+beams off, beams on, shadows on, and the photogrammetry scan lit by two lamps — plus the
+same room seeded onto a local stack and driven through the real Studio on desktop and on
+a phone, and the same document walked in `LiveProjectScene`. Screenshots in
+`~/Downloads/lights-on-a-place/`.
+
+The harness is kept this time, in `scripts/lights-harness/` (page, shooter, README), so
+the next lighting change is one command from a picture instead of an afternoon of
+scaffolding. It lives in `scripts/` and not in `src/` because the repo would not have it
+there, and said so out loud: the first version sat at `src/lightsharness/` and turned two
+guards red — `src/works/boundary.test.js` (the harness imported `scan.glb`, which is a
+WORK, and no platform file may) and `useLightingMirror.test.jsx` (no top-level `src/`
+entry may start with "light", or Vite's `/light` dev proxy swallows it). Both guards were
+written for other reasons and both did their job on a stranger. Serve it with
+`npx vite scripts/lights-harness --port 5218` — the root is a positional argument in this
+Vite, not `--root`.
+
+**Parked for the owner.** (1) The default haze is 0.4 and the cone's flat opacity peaks at
+0.28 — both were tuned by looking at a dark room, and a bright space may want them
+higher. (2) A lamp joined to a desk fixture could take its beam ANGLE from the fixture's
+profile; it cannot today, because the mirror carries only id/index/name/x/y/colour/level
+and the desk's profiles hold no beam angle at all (`src/rigMirror/useLightingMirror.js`,
+`serverXR/src/lighting/`). It would mean carrying the Open Fixture Library physical block
+through the patch — worth doing, not worth guessing at. (3) A beam stops at the lamp's
+reach, not at the surface it hits; clipping it to the room would need either a depth
+trick or a raycast per lamp per frame.
+
+# feat/ndi-get — the NDI runtime, fetched
+
+The NDI lane (#529) works, and every machine that wants it has to find the
+runtime by hand. On Arch that is an AUR package and a root password; on a
+borrowed laptop at a venue it is neither. `di ndi get` fetches it from Vizrt
+into `~/.di/ndi/lib/` and points `DI_NDI_LIB` at it — no admin rights on any
+of the three platforms, because `library.js` already tried that variable first.
+
+Fetched, never bundled: the licence position in `docs/architecture/NDI.md` is
+unchanged. The bytes come from Vizrt; this only does the clicking.
+
+## What landed
+
+- `scripts/di/ndi.mjs` — the fetch, per platform, with a receipt.
+- `scripts/di/ndi.test.js` — 20 tests; the magic-number guard and the careless
+  `remove` were both mutated and watched go red.
+- `di ndi get | status | remove`, a `doctor` line, help, and the runtime added
+  to what `uninstall` removes.
+- `docs/deploy/DI_CLI.md`, `docs/architecture/NDI.md`.
+
+## Seen on real hardware, not inferred
+
+- aylmo, cold: 65.5 s end to end; `libndi.so.6` 27,287,968 bytes; loaded
+  through serverXR's own `library.js` → `NDI SDK LINUX … 6.3.2.0`, send
+  binding present.
+- The real 225 MB macOS `.pkg` unpacked on Linux in 2.3 s → a 29,805,920-byte
+  universal Mach-O, accepted as darwin and correctly refused as linux.
+- The Linux tarball's sha256 matched Arch's `ndi-sdk` PKGBUILD exactly.
+- The Windows `NDI 6 Runtime.exe` is Inno Setup 6.1 (read from the real file).
+
+## The gap, named
+
+The Windows unattended install has NOT been run on Windows — the switches are
+Inno's documented ones, which is not the same as observed. The fallback (an
+already-installed runtime found via `NDI_RUNTIME_DIR_V6`) is tested; the silent
+install is not. Next machine that can run it should.
+
+## 2026-09-21 — di.iiii can be a picture source, not only a screen
+
+The NDI lane received and never sent. The koffi binding had `sendCreate`/`sendVideo`
+from the day it was written, but the only thing that ever called them was
+`devSender.js`, a CLI test pattern — there was no way for a picture di.iiii drew to
+leave the machine. This branch gives it one, from the operator a person patches down
+to the bytes on the wire.
+
+**What it is for, and what it is not for.** On a di.iiii rig the patch already travels:
+the document replicates and the machine at the wall runs the same operators and draws
+them natively, at full quality, with no encoding anywhere. This lane is for the machine
+that *cannot* run the patch, and for the programs that are not di.iiii — Resolume, OBS,
+a media server, somebody else's rig. It makes di.iiii a source in anyone's setup.
+
+- **A "Send Out" operator** (`top.send`) ends a picture chain and names it. No name, no
+  sending — the empty default costs exactly what `top.out` costs. It is called Send Out
+  and not "NDI Out" on purpose: naming a feature after NDI is the one thing the
+  trademark terms do not allow, so the wire protocol is named beside the box instead,
+  with the Vizrt line and the ndi.video link the licence requires.
+- **A text parameter** — the first one in the TOP vocabulary. Every other parameter is a
+  number the shader reads as `p_<name>`; a text one is metadata, and it is safe because
+  `topEngine.js` already skips any parameter the shader does not declare a uniform for.
+- **`pictureOut.js`** posts one JPEG at a time to the machine's own serverXR. At most one
+  request is in flight per output and frames that arrive meanwhile are dropped, so the
+  response is the throttle: a slow machine sends fewer frames rather than drifting
+  further behind. Only a node that runs on THIS machine sends from it, so two machines
+  on a rig never both broadcast the same name.
+- **`sendManager.js` + `sendWorker.js`** mirror the receive lane's manager and child,
+  copied rather than shared — the two lanes drift for good reasons and a common base
+  would make every change to one a risk to the other. The structural difference is that
+  an output has one publisher and no subscribers, so there is no ref-counting: it is born
+  from its first frame and closes after five seconds of silence, because a page that is
+  closed simply stops posting and no browser has a close beacon worth trusting.
+
+### What was measured, not assumed
+
+On `win` (NDI 6.3.2.0), the send lane broadcasting while the same machine's installed
+di.iiii received it back through the real runtime: 631 frames, 0 dropped, 0 decode
+errors, JPEG decode 3.23 ms a frame, `NDIlib_send_send_video_v2` 0.59 ms, the picture
+pulled back as an 8 691-byte JPEG, and the viewer count reading 2 with a receiver
+attached and 0 either side of it. **The send is free; the JPEG decode is the whole
+cost** — the mirror image of the receive lane, where the encode was.
+
+The same session closed two things the NDI doc had carried as never-seen since it was
+written: a live NDI picture through di.iiii at all (200 `image/jpeg`, 41 KB), and
+whether the multipart stream repeats (77 parts in 6 s, boundaries intact).
+
+### Two traps worth keeping
+
+- **`pushFrame` used to answer `ok` on a machine with no runtime**, opening an output and
+  dropping every frame. It is the one failure a page could never see for itself: it would
+  post thirty frames a second believing it was on the network. It now refuses before an
+  output is created, naming the missing runtime. Two guards cover it, both watched red.
+- **A sender started over ssh on Windows dies with the session.** Win32-OpenSSH tears the
+  process tree down, so a source started in one `ssh` call is gone before the next one
+  looks for it — which reads exactly like a discovery failure and cost an hour. Start the
+  sender and probe it in the same session.
+
+### Still open
+
+aylmo has no NDI runtime, so it can neither send nor receive natively yet; the only NDI
+binary on it is the Windows DLL inside TouchDesigner's Wine prefix, which Linux cannot
+load. `avahi` is already running. The runtime is Vizrt's, under its own EULA, and we
+never ship it — on Arch it is the AUR `ndi-sdk`, or `distroav`, which pulls it in and
+gives OBS an NDI plugin too. Until it is installed there, the browser half has been
+proven as far as the POST and its refusal, and the native half has been proven on `win`.
+
+## Scanning a place from the phone, into the space itself
+
+Owner, 2026-09-22: *"create new space and start to scan."* A space IS a place, so
+di.iiii now takes the walk itself — no Polycam, no second application, nothing to
+export and carry across. `/{space}/scan` opens the rear camera, cuts the walk into
+thirty-second pieces and puts each one on the space's own `sources` wall as it
+closes. The 3D copy is built from that by the existing place pipeline
+(`scripts/place/`) and arrives as `hall` in the same space. All three sketches he
+chose are in: the door on New space (A), footage landing on the wall from any
+phone with access (B), and the guided walk (C).
+
+Stacked on `feat/place-pipeline` (PR #531) — the build step calls
+`scripts/place/place.mjs`, which is unmerged.
+
+Done here:
+
+- **`/{space}/scan`** (`src/scan/`), one lazy route beside Map and Make, behind
+  the same gate: the page WRITES, so a camera reachable on terms the document
+  would refuse is a camera pointed into somebody else's space. `scan` reserved on
+  all four claimants; checked on prod, dev and local first — nothing held the word.
+- **The walk, cut so it can be lost cheaply.** `recorder.start(30000)` looks like
+  it cuts a walk into pieces and does not: only the first chunk carries the
+  container's headers. Each piece gets its own recorder. Found before it shipped;
+  it would have hung dead frames on the wall and contributed nothing to
+  `frames.mjs`.
+- **A coach that does not flatter.** Sharpness is the same Laplacian variance
+  `frame-stats.py` runs, and "slower" fires on a drop against this walk's own
+  median, never an absolute number — a dim hall must not be nagged for five
+  minutes. The ring says **directions covered** and the vocabulary now forbids
+  calling it anything else: a person can turn on the spot in a doorway and fill
+  all 36 having seen nothing of the hall.
+- **The lens, not the phone's top edge.** Reading the ring off `alpha` would have
+  swung it a quarter turn when somebody turned the phone sideways and left it
+  still when they walked round a pillar. `deviceAim.js` pushes device −Z through
+  the spec's rotation instead; elevation comes out of gravity alone, so "keep the
+  floor in frame" survives a refused compass.
+- **The measured wall** as a text object in the room (`wall · 8.30 m`) plus the
+  photograph of that wall, so the number can be checked against the thing later —
+  and because `normalizeProjectDocument` returns a fixed set of keys and would
+  have silently dropped an invented field.
+- **`POST/GET /api/spaces/:id/place/build`**, local-install only behind
+  `requireLocalRuntime`: a hosted tier answers 404 and the phone says the copy is
+  built on the studio machine. Status is derived every time off the status file,
+  the pid, the log's own step lines and whether the `hall` project arrived — so a
+  restart mid-build answers correctly, and "exited 0 having built nothing" reads
+  as failed with the real tail of its log.
+- **`--from-space`** in `frames.mjs`/`place.mjs`: the studio machine may not be
+  the machine the space is on. It implies `--no-sources`, which is the one that
+  would have hung every picture twice.
+- One wall layout, not two: the geometry moved out of `import.mjs` into
+  `src/scan/sourceWall.js` and both import it. Given a total it centres (the
+  importer's shape, byte-identical); without one it grows from a fixed corner, so
+  a picture already hung never slides when the next arrives.
+
+Two phones are a supported case, not an edge: the slot a picture hangs in is read
+from the document at that moment and a 409 is the normal outcome, re-read and
+re-slot.
+
+**Not run, and it should be said plainly: the real reconstruction.** Meshroom was
+busy on a Moxir run and llama-server held 5.7 GB of the 8 GB card. The build route
+was driven with `--dry-run` and against a stubbed `place.mjs`; what is proven is
+the route's own behaviour — the guard, what it copies out of the blob store, what
+it spawns, what it writes down, and how it reads a build's state back off disk.
+The first real end-to-end build from a phone walk is still owed.
+
+## 2026-09-22 — a lamp can be aimed, and a place can be scanned: #530, #531 and #533 land together
+
+- Batch branch off `dev`, merging three green PRs in one CI round rather than three:
+  `feat/lights-on-a-place` (#530), `feat/place-pipeline` (#531), `feat/place-scan` (#533).
+  All three were BEHIND `dev`, so landing them one at a time would have invalidated the
+  others in turn.
+- **Why these three now.** Walking the install on 2026-09-22 asking "how do I set the
+  lights here", the answer was: you cannot. A light's TRANSFORM offered Position only, the
+  renderer passed `SpotLightObject` no target so three.js aimed every spot at the world
+  origin, and adding a lamp changed nothing you could see. The fix already existed, tested,
+  in #530 — it had simply never left its branch. #531 and #533 are the lane the same walk
+  found doors missing for: the scan surface works and nothing linked to it.
+- Two conflicts, both "keep both sides", both resolved by hand:
+  - `docs/ai/known-fixes.md` — #530 and #531 each append rows to the same table; kept every
+    row from both.
+  - `src/wiki/wikiContent.js` — `WIKI_HIGHLIGHT_IDS` gained `lights-on-a-place` on one side
+    and `scan-a-place` on the other. Written as the union, both near the front; both ids
+    were checked to resolve to real wiki pages in the merged file.
+- The combined tree is what no CI run had ever seen: each PR was green alone, none of them
+  green together. The suite was run on the batch before it was pushed.
+- Known and deliberately not addressed here: the tools room still has no door to the scan
+  surface, `di stage` or NDI, and its Desk card links to `localhost:4748` with no indication
+  when that is down. Platform chrome is still below every touch-target minimum — the top nav
+  is 27px tall on a phone, the front door's footer links 16px. Both are their own pass.
+
+## What the pre-land review found, and what was done about it
+
+Nine independent reviews (three lenses × three PRs) plus three adversarial
+verifiers per blocking claim. Four claims were raised; three survived 3/3 and one
+was dismissed 0/3. All four were in #533.
+
+**Fixed before landing** (each with a guard test, each checked to fail without the fix):
+
+- The first phone capture into an already-filled footage room hung on top of a
+  picture already there. `hung` was counting only `scan-` ids.
+- A space reached by its slug collected footage into a room the build route
+  could never find.
+- An asset id was joined straight onto a filesystem path with no
+  `isValidAssetId` — the guard every sibling route in `projectRoutes.js` has.
+  The verifiers dismissed this 0/3 **on reachability**, and they were right about
+  the route as it stands: it is behind `requireLocalRuntime`, which is loopback-only.
+  The guard went in anyway, because the moment `DI_ALLOW_LAN_DEVICES=1` is set —
+  which is exactly what scanning from a phone requires — the route is reachable
+  by anyone on the wifi, and `di up --lan` has auth off.
+
+**LANDED AS IT IS, and it is a real trap — say it out loud before anyone scans
+from a dev checkout.** `placeRoutes.js` spawns `place.mjs` with no `--api`, so
+`import.mjs` falls back to its hard-coded `DEFAULT_API` of
+`https://local.thedi.studio/serverXR`, with a token `readToken` prefers out of
+`~/.di/di.env`. On the owner's own install that is the same server and the
+behaviour is correct. From a dev checkout on another port it is not: an hour of
+reconstruction is written into the INSTALLED tier, and `PATCH /api/spaces/<name>`
+can repoint an existing space's published front door at a hall built from another
+tier's footage. Not fixed here because the fix is a decision, not a line: this
+server has no canonical notion of its own address (`OAUTH_CALLBACK_BASE_URL` is
+the closest thing and is not set on a local install), and inventing one inside a
+merge is the wrong place for it.
+
+## Two things that are true of the install, not of the code
+
+- `scripts/place/` is **not packed into a runtime build** — `pack-runtime.mjs`
+  copies an explicit two-script allowlist. A plain install answers 501 on the
+  build route. The owner's box works because `~/.di/di.env` sets `PLACE_SCRIPT`
+  at a checkout; that pointer is load-bearing and needs to survive worktree
+  cleanup.
+- The build route is **loopback-only** unless `DI_ALLOW_LAN_DEVICES=1`. The scan
+  page is a phone page and a phone is not loopback, so without that flag the
+  phone gets 403 and — because `placeBuildApi.js` and `ScanSurface.jsx` only
+  special-case 404 — prints "local runtime is loopback-only" instead of the
+  honest "the copy is built on the studio machine".
+
+## 2026-09-21 — one key, the whole stage: cues fire from Studio, not only from the mapper
+
+Step 6 of `2026-09-20-one-project-one-stage.md`. `mappingState.cues` belonged to the project all
+along; only the projection tool could press one, so taking a cue meant changing tools mid-show.
+
+- Firing moved out of the map hook into `src/map/cueFiring.js` — `CUE_KEYS`, `isCueKey`,
+  `cueForKey`, `cueOps(cue)` and `fireCue(cue, applyOps)`. `useMapDocument.fireCue` is now one
+  line that calls it; the mapper's keyboard handler and the cue editor's key picker read the same
+  binding rather than each restating `1`–`9`.
+- The BroadcastChannel courier moved to `src/map/mapCourier.js` (`useMapOpCourier`), because the
+  3D scene writes to a mapping now and a cue taken there has to reach the wall as fast as one
+  taken at the mapper's own desk. `mapChannelName` is still exported from `useMapDocument.js`.
+- `src/studio/hooks/useStudioCues.js` listens for `1`–`9` in Studio and fires through that one
+  function. No new binding: Studio claims no digits of its own. The only thing that takes them is
+  a modal transform typing a number into a locked axis, and that listens in the CAPTURE phase and
+  calls `stopImmediatePropagation`, so it keeps winning; this is an ordinary bubble-phase listener
+  and never sees those keystrokes. It also stands down entirely for a project with no cues, so a
+  digit is not quietly swallowed on the way to something else.
+- `StudioCueStrip.jsx` lists the cues by name and fires one on tap. It wears its host's chrome
+  rather than a third look: the control cluster's `.scc-btn` in a new `Cues` section under
+  Display, and the phone shell's pill above the bottom bar. It draws nothing when the project has
+  no cues.
+
+Proven by running it: a project with one surface and two cues, Studio and the map output page open
+side by side in one browser. Tapping `2 Blackout` in Studio took the wall from the surface to
+black (`out · … · ok` → `all-off`); pressing `1` in the 3D scene brought it back. Zero console
+errors on either page. On a 390×844 phone at DPR 3 both cue buttons are 44px tall and tappable.
+
+NOT proven: nothing was fired at a real lighting desk (`/light` is absent on this checkout, so
+`recallCueLighting` is exercised by tests only), and the wall was a second window on this machine
+rather than a second machine on the rig.
+
+Found and fixed on the way: the phone strip was covered by the first-run coach pill — see the new
+row in `docs/ai/known-fixes.md`.
+
+## 2026-09-20 — `di stage` — the venue box is a command now, not a hand-made setup
+
+Step C of `~/work/di-atlas/decisions/2026-09-20-di-stage-plan.md`: one autostart entry,
+one supervisor, one screen. `RIG.md` said the appliance was "hand-made on asuz, not in
+the product"; it now says what is in the product and what is still hand-made.
+
+- `di stage join SPACE --from URL [--key K|-] [--at ADDR] [--lan] [--name N] [--project ID]
+  [--browser P] [--dry-run]`, `di stage leave [--keep-space]`, `di stage status [--json]`,
+  `di stage restart`, and the hidden `di stage run` the autostart entry calls.
+- **Composed, not duplicated.** `cmdFollow`'s body is now `followSpace()` in
+  `scripts/di/follow.mjs`, used by both `di follow` and `di stage join` — so the address
+  pin (`--at`) works on a stage join for free. `alive`/`publicUrl`/`apiBase` moved out of
+  `cli.mjs` into `state.mjs` for the same reason. The server is always started through
+  `runnerFor(home).start`; there is no second spawn path.
+- **The manifest is the contract.** `<DI_HOME>/stage/stage.json` records every file, every
+  directory, the `di.env` lines and the follow that `join` created, plus the commands that
+  remove the OS entry. `leave` replays that list and nothing else.
+  `scripts/di/stageAutostart.test.js` proves a temp HOME and a temp `XDG_CONFIG_HOME` come
+  back byte-identical — including an unrelated follow left untouched, an earlier follow of
+  the same space put back with its original `followedAt`, and a hand-spaced `di.env` line
+  not rewritten. `follows.mjs` gained `setFollow` for exactly that: `addFollow` stamps a
+  new timestamp, and a restore may not.
+- **Everything decided is pure.** `scripts/di/stagePlan.mjs` returns `{kind, path, content,
+  install[], remove[]}` for each autostart entry, the browser args, the reconcile, the
+  status rows, the Preferences patch, the wake command. CI is Linux, so the Windows
+  scheduled task and the macOS LaunchAgent are covered by those snapshots and by an
+  injected command runner — they were NOT run on their own OS, and the PR says so.
+- **Four defects the first real run found, each now a test:**
+  a kiosk that loaded the hold page before the target was known never moved (rewriting the
+  file under a loaded page changes nothing); a relaunch into the same profile hands the URL
+  to the running browser and exits, so child-process liveness read "dead" and stacked a new
+  tab every tick — liveness is now "does CDP answer", and the running kiosk is ended by the
+  pid in the profile's `SingletonLock`; `exit_type: Normal` stops the crash bubble but not
+  the session restore, so the session files come off the profile before each launch; and
+  the black-out on a dead server now happens BEFORE the server restart is attempted, not
+  after a call that can block for thirty seconds.
+- Seen end to end on aylmo against two throwaway installs under the session scratchpad
+  (4420 and 4421; the owner's live di.iiii on 443 was never touched and its pid never
+  changed). Join, the kiosk black then `out · wall · ok`, `di stage status` exit 0, `di down`
+  warning that the supervisor will undo it, the wall going black when the server stopped and
+  coming back by itself, `status` exit 1 with the reason while it was down, and `leave`
+  leaving only the di.iiii server's own `data/` behind. No autostart entry was installed on
+  this machine: `~/.config/systemd/user` and `~/.config/autostart` are byte-identical and
+  systemd has zero `di-stage` units.
+
+**Not in this PR, deliberately:** the plan's step D — displays as data (`output.show`), OS
+display probes, multi-window placement, hotplug reconcile. One screen, a static target: the
+space's single map project or `--project`. A second projector on asuz is still hand-made.
+
+**Open doubt:** the demo seeded the mapping on both sides with a whole-document PUT, which
+produces a `replaceDocument` op — and `serverXR/src/follow/followPlan.js` deliberately never
+carries those. So this run showed `di stage`, not a follow carrying a mapping; the follow
+engine correctly reported "one side replaced a whole scene — that is not carried by a
+follow". A mapping authored through ordinary ops would travel.
+
+## 2026-09-20 — a new projection surface starts on a dim warm name card, not a white grid
+
+The owner's standing rule is absolute: never put white on the projector, warm colours only.
+He set it in a club at midnight after a white test card hit the wall. The last place white
+survived was the first thing a newcomer meets — pressing **Add** in Projection made a surface
+whose source was `test`/`grid`, the bright alignment grid. On the two-machine rig the desk and
+the wall are different machines, so that grid is on the projector from the instant the button
+is pressed, before anyone has chosen what the surface shows. The newcomer walk caught it twice;
+the "no file yet" placeholder that landed the same day fixed the empty video/image case only.
+
+- New pattern `card` in `mapTestPattern.jsx`: the surface's own NAME in deep amber `#8f5a17`
+  on near-black `#0a0704`, a dim frame and amber corner ticks. Nothing it draws goes above
+  ~38% luminance and no ink is anywhere near white. It names itself so somebody aiming three
+  projectors one at a time can tell the surfaces apart, and it needs no tuning.
+- That card is the default for a new surface: `defaultMappingSurface.source` is
+  `{ kind: 'test', ref: 'card' }` (both schema copies), `addSurface` writes it into the
+  document, and a test source with an empty `ref` renders it too — so the HTTP op route, an
+  import and an older desk all land on the card rather than the grid.
+- **A `ref` and not a new `source.kind`, deliberately.** `MAPPING_SOURCE_KINDS` is a closed
+  list and `normalizeMappingSurface` replaces a kind it has not heard of with the default: an
+  older build opening the project would have rewritten a `card` KIND to `test` and destroyed
+  the choice for good. A `ref` is a free string — an old build keeps it byte-identical and
+  merely draws a grid meanwhile.
+- **The grid is untouched.** Same white, same brightness, same place in the Pattern picker,
+  because a person on a ladder tracing geometry onto paper needs it as bright as the projector
+  can make it. Only what a surface is BORN on changed.
+- Seen, not reasoned about: desk right after Add, `/out` with that fresh surface, the same
+  surface switched to the grid on purpose, and two fresh surfaces side by side — 1440x900, in
+  a throwaway space `dim-first-test`, in `~/Downloads/dim-first/`. Sampled by script on the
+  `/out` shot of the fresh surface: **max luminance 96.4/255 (37.8%), 0 pixels with
+  min(r,g,b) > 200**. The same surface on the grid: 255/255 and 7,574 near-white pixels.
+
+Not verified: a real projector in a real dark room. Everything here is a browser at DPR 1 on
+aylmo — the numbers say what the signal carries, not what the wall reflects.
+
+## 2026-09-21 — a lamp that knows which lamp it is, and positions go back once on a button
+
+Steps 3 and 4 of "one project is one stage" (`di-atlas/decisions/2026-09-20-one-project-one-stage.md`),
+on top of step 2's rig mirror (`feat/rig-mirror`).
+
+- **The one schema change.** `components.fixture = { index }` on an entity — the fixture's
+  `index` on the lighting desk (`3.Back left`), a positive whole number and nothing else.
+  Never universe/address: those are the machine's `show.json`. `normalizeEntity` in BOTH
+  `src/shared/projectSchema.js` and `shared/projectSchema.cjs` keeps `{ index }` and drops
+  anything malformed, which is also how the inspector clears it (`{ index: null }` through
+  the ordinary `updateComponent` op). Proven through the wire, not the ESM copy:
+  `serverXR/src/projectContracts.test.js` "keeps components.fixture = { index } through a
+  real write and read" boots a real serverXR, writes a spot with `{ index: 3, universe: 1,
+  address: 17 }`, reads back `{ index: 3 }`, clears, reads back nothing. Parity fixtures added
+  to `schemaSync.test.js`.
+- **One inspector field.** `src/studio/components/FixtureField.jsx`, reached through a `Desk`
+  section on point, spot and directional lights (`src/project/entityRegistry.js`; an ambient
+  light is not a lamp on a bar). A plain number when there is no desk here; the desk's own
+  list, `index.name`, one entry per number, when it is live. A number the desk has not
+  patched stays visible as `7. not patched` rather than silently reading as none.
+- **The lamp draws what the desk says.** `src/rigMirror/liveLight.js`: `useLiveLightEntity`
+  selects ONE fixture out of the mirror store by index (re-renders only when that fixture's
+  colour/level changes, never on every 10 Hz frame of the rig), and hands `EntityContent` a
+  copy of the entity with `light.color` replaced by the desk hue at full and
+  `light.intensity` = authored × level. Desk absent → the authored entity, the same object.
+  Wired in `StudioViewport.jsx`'s `SelectableEntity`; the document is never written. **A
+  decision the owner should look at:** the level MULTIPLIES the authored intensity rather
+  than replacing it, because three.js intensities are reach, not percentages (a spot at 2,
+  a point at 1); and the override follows the desk whenever it is present, whether or not
+  the Lights markers are switched on — the toggle draws markers, the join is the join.
+- **Positions go back once.** `src/rigMirror/sendPositions.js` POSTs the desk's own drag
+  route, `POST /light/api/fixtures/move {moves:[{id,x,y}]}` (it already existed — no server
+  route added), walking `rigFloor.js`'s mapping back exactly (plan→world→plan is the identity,
+  tested). One click on **Send positions to the desk** (control cluster, beside Lights, drawn
+  only while Lights is on), one request, one line as a chip beside the button for six
+  seconds: "3 lamps moved" / "no desk on this machine" / "no lamp has a fixture number yet" /
+  "no patched fixture has those numbers" / "the desk did not take it (403)". The ONLY write
+  the app makes to the desk. The line was first put in the rig's bottom pill and landed ON
+  TOP of the first-run coach ("Open Create and add something") on the very first press —
+  the stacking step 2 judged unlikely — so it moved next to its button, reusing `.scc-btn`,
+  no new CSS. Two fixtures sharing an index both move (the desk does not enforce unique
+  numbers); a lamp inside a group lands where the group's offsets put it (parent rotation
+  and scale are not applied — stated in the code).
+- `RIG_FLOOR`/`rigFloorPosition` moved to `src/rigMirror/rigFloor.js` (re-exported from
+  `RigMirror.jsx`) so the sender does not pull drei/troika into a plain module.
+- The wiki still called the button "Rig" after the rename to "Lights" — fixed, and guarded
+  in `StudioControlCluster.rig.test.jsx`; known-fixes row appended.
+- **Looked at**, headless Chromium (SwiftShader) 1440x900 @2x against the BUILT app served
+  by serverXR on 4372 (`CLIENT_DIR=dist`, `DI_LOCAL=1`) with a throwaway desk (output off):
+  authored white spot → amber the moment fixture 1 is patched amber; the loose lamp stays
+  white; inspector Desk → `Fixture: 1.Back left`; Lights on, one press → "2 lamps moved" and
+  `GET /light/api/state` answers x 0.3 y 0.3 / x 0.7 y 0.6 for lamps at (-2,3,-2) and (2,2,1)
+  — the exact inverse of the floor mapping; blackout → the spot's cone goes grey and its pool
+  disappears. NOT verified: a real rig, a phone, the published viewer (`LiveProjectScene`
+  does not follow the desk — Studio only, on purpose for this step), Raw's viewport.
+- **A trap that cost an hour, for the next worktree.** This worktree's `node_modules/`
+  held a stray `node_modules/node_modules -> ../di.iiii/node_modules` symlink (the leftover
+  of a `ln -s` into an already-existing directory). Vite's optimizer AND the production
+  build then carried TWO React runtimes — every hook threw "Cannot read properties of null
+  (reading 'useState')" on the login page, in dev and in `dist/`, with one `react@18.3.1`
+  in `npm ls`. Diagnostic: `grep -o "ReactCurrentDispatcher:" dist/assets/react-vendor-*.js
+  | wc -l` — 2 means two Reacts. Removing the two stray links fixed dev, build and the suite.
+- **Don't stop a stack with the driver.** `driver.mjs stop` matches every `src/index.js`
+  on the machine; my server on 4372 was killed from outside mid-walk (log ends cleanly on a
+  200). Killed and restarted only by pid.
+
+## 2026-09-20 — a follow carries its projects' files, not just their ops
+
+- `di follow` carried op logs only, so an `upsertAsset` reached the other machine as a name with
+  no bytes behind it: a video placed on the calling machine was a dead frame on the stage machine.
+- New `serverXR/src/follow/assets.js` (the "asset chase"): for every sha256-named file a project
+  names, probe `/meta` on both machines and copy the bytes to whichever lacks them — both
+  directions, one file at a time, disk-to-disk through `httpClient` (new `httpDownloadToFile` /
+  `httpUploadFile`; `httpRequest` untouched), hash checked before it is offered on. Runs beside the
+  op loop, never inside it; `/api/follows` and `di follows` report pending / failed / not carried.
+- New `PUT /api/projects/:projectId/assets/:sha256` — stores raw bytes WITHOUT the EXIF scrubber,
+  only if they hash to the id (422 otherwise), and only for a sync key, the internal token, or an
+  auth-off install (an ordinary editor gets 403). Emits no op. Reasoning at the route and in
+  `docs/architecture/SPEC_follow_files.md`.
+- CURRENT.md's line "Follow carries NO assets yet" becomes: project files are carried (loopback
+  proven only); still NOT carried — files in the space SCENE itself (no scene op carries a
+  manifest) and legacy uuid-id files (`di follows` counts them).
+- NOT verified: a real two-machine transfer (LAN or internet), a genuinely large file, a follow
+  between an auth-on host and a `di up --guests` follower. All tests run on loopback with auth off,
+  except the route's own auth test.
+
+## 2026-09-21 — a screen in the 3D room shows the real picture of a mapping surface
+
+Step 5 of "one project is one stage" (di-atlas/decisions/2026-09-20-one-project-one-stage.md).
+
+**What a person gets.** In Studio, a plane has a new Screen section with one field, Surface —
+a picker listing this project's mapping surfaces by name. Choose one and the plane shows that
+surface's live picture as its face: the picture network (`network`), a video, an image, a
+camera, a stream, an NDI® source, a test pattern, or a flat colour. Same document, no copy: what
+Projection puts on the wall is what the room shows.
+
+**The schema change, the only one.** `components.surface = { surfaceId }` on an entity. Both
+mirrors (`src/shared/projectSchema.js`, `shared/projectSchema.cjs`) keep the id and nothing
+else, and drop the component when the id is empty, so a plane authored before this is
+byte-identical. Proven through the real server in `projectContracts.test.js` ("survives a real
+write→read through serverXR") and in `schemaSync.test.js` for the two mirrors.
+
+**How the picture reaches WebGL.** Nothing in the map lane is written twice. `LiveScreens.jsx`
+(Studio only, outside the Canvas) mounts one real `MapSourceView` per surface a screen points
+at, in a 1px hidden host beside the viewport — so the network runs through `useTopNetwork`, the
+video retries through `useRetryingMedia`, the camera and stream open the way the wall opens
+them. A `MutationObserver` on the host finds the picture element the map lane produced (canvas,
+video, img, the test pattern's svg, or the dim placeholder) and wraps it in a `THREE.Texture`;
+`liveScreen.js` is the pure half (which kinds are textures, which are plates, upload rates,
+which element wins) and is tested on its own. `EntityContent` takes an optional `screens` map
+and hands the plane a `screen`; `PlaneObject` draws it with an UNLIT material (a screen emits
+its own light — a lit material shows the picture only where a lamp falls on it, and a dark room
+is exactly where a screen is wanted). One source per surface, not per plane: two screens on the
+same wall share one decode. A surface nobody shows is not mounted.
+
+**`project` and `url` surfaces are iframes and cannot be textures** (a browser will not hand a
+page's pixels to WebGL). A screen showing one draws a dim named plate — `url · Wall left` /
+`a page, not a picture` — painted with the `--di-card-*` tokens read from the stylesheet, the
+same amber-on-near-black card a new surface is born showing. A surface that is gone, and a
+screen before its source has painted, get the same plate with their own words. Nothing in this
+change puts white in a room.
+
+**Texture upload is rate-capped** (`LIVE_SCREEN_RATES`): the picture network at 15/s, an NDI®
+image at 30/s, a still image and a test pattern once, from one rAF clock. A `<video>` (video,
+camera, stream) is three.js's `VideoTexture`, which uploads once per frame the browser presents
+(`requestVideoFrameCallback`) and never faster than the source — and it is the only texture that
+can read a `<video>` at all: a plain `Texture` sizes its upload from `image.width`, which a
+`<video>` reports as 0, and the GPU logs `glTexStorage2D: dimensions are not positive` and draws
+black. Seen on both SwiftShader and the Intel GPU before the switch; isolated in a bare page.
+
+**Measured** — see the PR body for the frame-time numbers (headless Chromium, software GL).
+
+**Not done, on purpose.** Screens run in Studio only: `LiveProjectScene` (published rooms, walk
+mode) still draws the plane's plain colour, because a visitor's browser would otherwise open
+cameras and run every operator of a room it only walks through. Low-power preview cards skip
+the sources too (a screen there is its dim plate). A `video`/`image` surface whose ref is an
+absolute cross-origin URL without CORS would taint the upload — the map lane's `<video>` sets no
+`crossOrigin`; project assets are same-origin, so the ordinary case is fine, and the typed
+web-address case is untested here.
+
+**Found on the way, not part of the change.** This worktree's `node_modules` was a Sep 6
+install (`@vitejs/plugin-react` 6.0.5 against a lockfile wanting 6.1.1); Vite's pre-bundle
+then produced two `react-dom` chunks and every page threw "Invalid hook call" before a line
+of this branch ran. `npm install` fixed it. `VITE_PORT` does not move Vite (the run skill
+already says so); `npx vite --port 5373 --strictPort` beside a `PORT=4373` serverXR does.
+
+## 2026-09-20 — a brought-in video/image retries itself instead of staying dead
+
+Bug from the real two-machine rig: a file is chosen on machine A (the desk); the
+op naming it reaches machine B (the wall, `/{space}/map/{project}/out`) within a
+second, but the file's BYTES land a few seconds later over a separate transfer.
+The wall's `<video src=…>`/`<img src=…>` requests the file the moment the op
+arrives, gets a 404, and MediaError code 4 (or the image equivalent) is the end
+of it — the element never asks again, and it stays dead until someone reloads
+the whole page. Proven on the rig: reload makes it play; nothing else does. A
+show machine runs unattended for hours, so nobody is there to reload it.
+
+- Added `src/map/useRetryingMedia.js`: a small hook that schedules a retry
+  after an `onError` — 2s, 4s, 8s, then holds at a 15s ceiling for as long as
+  the surface stays mounted with that ref. `onLoaded` cancels the schedule.
+  The ref changing resets it (a different file, not a retry of this one);
+  unmount clears the pending timer.
+- `src/map/MapSourceView.jsx`'s `image`/`video` branches became their own
+  small components (`MapImageSource`/`MapVideoSource`) so the hook has a
+  stable place to live — `MapSourceView` itself returns early for several
+  other `kind`s before reaching them, and a hook can't sit behind a
+  conditional return.
+- The retry re-requests by remounting the element (`key={attempt}`), not by
+  appending a cache-busting query string — the asset route is strict about
+  query params, and the url is the content address, so it has to stay exactly
+  what the manifest recorded.
+- While retrying, nothing new is drawn: no placeholder, no text — just the
+  same `<img>`/`<video>` MapSourceView already renders for a source that
+  hasn't loaded yet. A wall going white, or gaining new text nobody put there,
+  reads as a mapping mistake.
+- Tests in `src/map/MapSourceView.test.jsx` use fake timers and drive it with
+  `fireEvent.error`/`fireEvent.load`/`fireEvent.loadedData`, checking the DOM
+  node's identity changes (or doesn't) at each delay boundary. Confirmed they
+  fail without the fix (6 of the new tests, all the ones that assert a
+  remount actually happens) before adding `useRetryingMedia`.
+- Known-fixes entry added: `docs/ai/known-fixes.md`.
+
+## 2026-09-20 — an empty Video/Image source stopped showing the bright test pattern
+
+A newcomer walk found: switch a surface's Source to Video or Image, and before
+a file is chosen, the surface keeps showing the white/bright test-pattern
+GRID — reads as broken, and puts a bright grid on a projector while someone is
+mid-way through picking a file.
+
+- `MapSourceView.jsx`'s fallback (`kind === 'test' || (!ref && ['url', 'video',
+  'image'].includes(kind))`) treated an empty video/image ref the same as an
+  empty test/url ref and drew the grid pattern. Carved video/image out of
+  that condition: with no ref, they now render the same dim
+  `MapSourcePlaceholder` every other empty source already uses (`no Picture
+  Out chosen`, `no project chosen`) — `label` is the surface's own name
+  (already threaded in from `MapStage.jsx`), `detail` is `no file yet`.
+  `url` keeps the test pattern unchanged — an empty web address is still
+  something to align geometry against, same as before this change.
+- `MapSourcePlaceholder`'s background (`repeating-linear-gradient` of
+  `--di-surface-2`/`--di-surface-4`, both near-black) is dim on the wall,
+  matching the precedent other empty states already set — not a new
+  behaviour, just applied here too.
+- Tests added to `MapSourceView.test.jsx`: empty video and empty image each
+  assert no `.map-source-svg` (the test pattern), a `.map-source-placeholder`
+  is shown, and the `no file yet` text is present.
+
+## 2026-09-20 — NDI comes in natively: finder, still and MJPEG, server-side only
+
+Step 1 of `~/work/di-atlas/decisions/2026-09-20-native-ndi.md`. serverXR can now receive an
+NDI® picture from the network itself, without OBS, DistroAV or a virtual camera in the
+middle. Nothing user-facing ships: no source kind, no picker, no schema change, no wiki
+entry. An `image` surface pointed at `/ndi/in.mjpg?name=<fragment>` by hand is the only
+way to see it, which is enough to prove the native side.
+
+- `serverXR/src/ndi/` — `library.js` finds the runtime the PERSON installed (`DI_NDI_LIB`,
+  Windows `%NDI_RUNTIME_DIR_V6%`/`_V5`, macOS `/usr/local/lib` + the SDK folder, Linux
+  sonames in the loader path and the usual dirs) and says in one plain sentence what to do
+  when it is not there. `binding.js` declares the flat C API for koffi, struct layouts
+  transcribed from the SDK's MIT-licensed headers (mirrored in DistroAV), each block
+  naming its header. `worker.js` is the forked child that does all of it — the library
+  never loads in serverXR's own process. `manager.js` is the parent: ref-counted
+  receivers, 5 s linger, 60 s idle exit, crash restart with backoff that keeps
+  subscribers. `names.js` holds the match rule, the twin of `matchStreamDevice`.
+- `serverXR/src/routes/ndiRoutes.js` — `/ndi/api/summary|sources|still|stats` and
+  `/ndi/in.mjpg`, every one behind `requireLocalRuntime`, mounted beside the lighting
+  desk in `index.js`. A hosted tier answers 404; a machine with no runtime answers 200
+  with `available:false` and how to fix it.
+- `devSender.js` — a ~90-line NDI sender (moving dark-warm field, frame counter, never
+  white). It is how this was verified with no camera or TouchDesigner, and how anyone can
+  test the lane later without hardware.
+- The licence position, written down in `docs/architecture/NDI.md`: the runtime is
+  installed by the person and NEVER shipped, koffi is an `optionalDependency`, and
+  `ndiContracts.test.js` boots a real server with `require('koffi')` rigged to throw to
+  prove the server does not care.
+
+Verified for real on `win` (i7-8565U, NDI 6.3.2.0): koffi loads the DLL, the finder sees
+the sender, a still came back as a JPEG that was opened and looked at, the MJPEG ran
+29.8 fps for 5 s with no gap over 82 ms, and killing the child mid-stream left the parent
+up — the client saw one 1.78 s gap and the stream resumed by itself. 720p30 costs ~1 core
+and holds 30 fps; 1080p30 holds 29 fps at ~2.9 cores; 1080p60 does not fit and delivers
+half its frames. Numbers and the full table are in `docs/architecture/NDI.md` and the PR.
+
+Not verified, and saying so plainly: macOS and Linux lookup (written from the headers,
+never run — this machine has no libndi), NDI between two machines (sender and receiver
+were the same box, so real-network mDNS is untested), TouchDesigner as the source, and
+anything at all in a browser.
+
+## 2026-09-20, later — the two-machine rig: a receiver that never says why
+
+Cross-machine NDI was tried for the first time: TouchDesigner on aylmo (2025, under
+Wine), di.iiii 0.4.14-wstream.8 on `win`. Discovery worked across the network once
+`DI_NDI_EXTRA_IPS=192.168.15.53` was set — without it the finder reported aylmo's
+`10.0.0.122` cable interface, which `win` cannot route to. With it the address was
+reachable (TCP to 5960/5961/5962 succeeded on both the LAN and the tailnet address, and
+node.exe is allowed through the Windows firewall on both profiles) — and
+`/serverXR/ndi/api/still` still answered 504 every time, for both senders, with
+`state: "connecting"`, `detail: ""`, `restarts: 0`.
+
+**The sender was stopped before the cause was found**, so the cross-machine failure is
+not reproduced and no root cause is claimed. What was done instead is the defect that
+made it unfindable: a receiver now says which of the two possible failures it is.
+
+Measured on `win` against the real runtime (NDI 6.3.2.0) while diagnosing, and now in
+docs/architecture/NDI.md:
+
+- **the url is what connects.** A deliberately wrong `p_ndi_name` with the right
+  `p_url_address` gives video in 38 ms; a NULL name with the right url, 30 ms. A wrong
+  or NULL url falls back to resolving the name through the runtime's own discovery and
+  still arrives — at ~4.03 s. So the 5 s threshold, and so a machine name that resolves
+  to an unusable address (MagicDNS pointing `AYLMO` at the tailnet) is not by itself a
+  reason for no picture.
+- **the strings are copied.** A receiver built from koffi-marshalled JS strings and one
+  built from C memory we allocate and hold behave identically (34 ms to first frame,
+  300 frames in 10 s each). There is no pointer-lifetime bug in `recvCreate`.
+- **same-machine still passes** on this build: `devSender` → finder → `recvCreate` →
+  30.1 fps, `no_connections` 1, first frame 53 ms; through the real routes, a 200 JPEG
+  from `/ndi/api/still` and 30 parts in 3 s from `/ndi/in.mjpg?fps=10`.
+- **the unreachable case has a clean signature**: `no_connections` stays 0 and
+  `recv_capture` returns `NDIlib_frame_type_none` for ever. That is exactly what
+  `ndi/diagnose.js` now reports on.
+
+## 2026-09-20 — an NDI source is a surface now, and the machines say which ones they see
+
+Steps 2 and 3 of `~/work/di-atlas/decisions/2026-09-20-native-ndi.md`, on top of the
+server-side lane that landed as `feat/ndi-receive`. This is the part an artist touches: a
+projection surface can name an NDI® source, the desk suggests the ones any machine can
+see and warns about a name none can, and every state says why in the server's own words.
+
+- **A source kind `ndi`, picked by NAME.** `'ndi'` in `MAPPING_SOURCE_KINDS` in both
+  schema mirrors; the ref is the source's name (`AYLMO (td_out_windows)`, or any fragment
+  — `td_out` is enough). No address is ever stored: the SENDER chooses which of its own
+  interfaces to advertise, so an address written on the desk means nothing on the machine
+  that draws. Same model as `stream`, one chain shorter.
+- **One matching rule instead of three.** `src/shared/nameMatch.js` (`pickByName`,
+  `pickByLabel`) is now the rule the wall (`matchStreamDevice`, `MapNdiSource`), the desk
+  (`inputOnMachine`, `ndiOnMachine`) and serverXR (`ndi/names.js`) all use. It is TWO
+  files, not one — `shared/nameMatch.cjs` is the server's twin — because serverXR is CJS
+  and Vite's dev server hands a local `.cjs` to the browser untransformed. Checked, not
+  assumed: `vite build` bundles one correctly, `vite dev` serves `module.exports` raw and
+  the page throws. `src/shared/nameMatch.test.js` runs both copies over one table, plus
+  the server's own `matchSourceName`, so they cannot drift.
+- **`MapNdiSource`** probes `/ndi/api/summary` with the lighting desk's guard (200 AND
+  `content-type: application/json` — a hosted tier answers SPA HTML to anything), then
+  draws `/ndi/in.mjpg` in an `<img>` through `useRetryingMedia`. Five states, all in the
+  dim placeholder, never white: looking for it · this di.iiii cannot receive NDI (and it
+  stops asking) · `NDI is not installed on this machine — <the server's own how>` · no
+  NDI source called “…” on this network · **the receiver's own `detail`**, which step 1
+  taught to name the address it dialled and say whether the session was ever opened. No
+  second vocabulary for any of them; `ndiLink.js` is the only place a refusal becomes a
+  sentence.
+- **Inspector**: kind `NDI (source by name)`, `MapNdiPicker` (a text field with a
+  datalist of every source any machine can see, and a status line), and beside it the
+  licence line — a link to ndi.video and "NDI® is a registered trademark of Vizrt NDI AB".
+  That is a condition of naming NDI at all, given we never ship its runtime;
+  `MapInspector.test.jsx` guards both so a layout pass cannot quietly drop them.
+- **The machines know their NDI.** `readMachineDevices` appends one `ndi` device per
+  source the machine's own serverXR can see, on a 1.5 s leash, swallowing everything — a
+  machine with no runtime reports nothing, and nothing is the ordinary case.
+  `ndiSourceOptions` / `ndiSourceStatus` / `unresolvedInputs` (the old `unresolvedStreams`,
+  extended to both kinds and renamed) put it on the desk.
+- **`MAX_DEVICES` is now per kind** (32 each, 96 in the message). It was one shared
+  ceiling of 32 across all kinds, and a festival LAN advertising thirty NDI sources would
+  have pushed out whatever came after them — which, since `readMachineDevices` appends
+  screens before NDI, is the panel sizes the desk lays a wall out from.
+
+### Two defects found on the way, both fixed
+
+- **A space whose slug starts with `ndi` was unreachable in dev.** Vite's dev proxy
+  matches keys by PREFIX, so `'/ndi'` claimed `/ndi2-test/map/wall` and handed it to
+  serverXR, which answered `Cannot GET`. Express does not behave that way, so only dev was
+  wrong. Now anchored regexes, `'^/ndi(/|$)'` and `'^/light(/|$)'`.
+- **Every unfinished surface printed its name on the projector in pure white.**
+  `MapSourcePlaceholder` is what "no file yet", "no project chosen", "waiting to start"
+  and "camera unavailable" all draw, and its ink was `--ui-text-primary` = `#ffffff`.
+  Measured on the real `/out` page: 21,394 near-white pixels. It now uses the
+  identification card's palette and measures 0, max luminance 96.4/255 — the same number
+  the card fix reported. Found only by measuring the screenshot, not by looking at it.
+  Both rows are in `docs/ai/known-fixes.md`.
+
+### Seen, and not seen
+
+Seen on aylmo at 1440x900 (screenshots in `~/Downloads/ndi-step2/`): the inspector with
+the NDI kind chosen, the picker holding `td_out`, the status line and the licence line;
+the Machines section with this machine's screen and camera and the red warning for a
+surface with no name given; and `/out` showing the true state of this laptop — "NDI is not
+installed on this machine — install libndi, then restart di" — in warm amber on black,
+measured at zero near-white pixels. That "install libndi" sentence is the server's own
+`how` from step 1, shown verbatim on purpose.
+
+**A live NDI picture is still not verified anywhere in a browser.** aylmo has no NDI
+runtime and TouchDesigner was deliberately not started. So the `<img>` path, the frame
+rate it can hold, and whether `load` fires per part on a multipart stream are all
+unproven — every state EXCEPT a frame arriving is what was looked at. The cross-machine
+case from step 1 is still unreproduced too.
+
+## 2026-09-18 — move a project between spaces
+
+Built `scripts/project-move.mjs`: moves one project's DB row (`space_id`,
+clears `collection_id`, position to the end of the target's order) and its
+directory from one space to another, in the same database — a project id is
+global, so `project_ops` never needs copying (space-bundle.mjs's export/import
+does; this doesn't).
+
+- Two asset facts found by reading `projectRoutes.js`/`blobStore.js` closely,
+  not assumed: a content-addressed project asset (sha256 id) stores its
+  BYTES in the space's blob store, not the project directory — moving the
+  directory alone would leave those images 404ing. And a project document can
+  reference the source space's own shared assets by URL
+  (`/api/spaces/<id>/assets/<id>`). Both are copied into the target space
+  (never deleted from the source); the second case also gets its URLs
+  rewritten in `document.json`/`project.json`, same string-replace technique
+  as `space-bundle.mjs`'s `remapSpaceUrls`.
+- Refuses: unknown project, unknown target space, already-in-that-space, and
+  moving a space's currently-published project unless `--unpublish` is passed
+  (then clears `published_project_id` and says so).
+- A project slug is unique only within its space; a collision in the target
+  drops the slug rather than refusing the whole move (logged).
+- `--dry-run` reports counts and writes nothing — verified by a test that
+  checks the DB row and both directories are untouched after it runs.
+
+**Old links** — investigated how a project resolves inside a space. Two of
+the three shapes need no change at all: `/api/projects/:id` and the
+`/{space}/p/{id}` public form both resolve by the project's global id alone
+(`PublicProjectViewer.jsx` calls `getProjectDocument(projectId)`, never
+checks the URL's space segment), so they keep working the moment the row
+moves — confirmed, not assumed, by reading `resolveProjectContext` in
+`serverXR/src/index.js` (sets `req.requiredSpaceId` from the project's real,
+current `spaceId`, not from the URL, so privacy enforcement also stays
+correct after a move). Only the bare vanity form `/{space}/{slugOrId}` broke:
+its resolver, `GET /api/resolve/:spaceSegment/:projectSegment`
+(`serverXR/src/index.js`), explicitly 404s once `project.spaceId !== space.id`.
+
+Shipped the fix rather than deferring it — well under the ~60-line budget:
+
+- `serverXR/src/db.js` — new `project_moves` table (`project_id, from_space,
+  to_space, old_slug, moved_at`), written once per move by the CLI.
+- `serverXR/src/projectStore.js` — `findProjectMove(fromSpaceId, segment)`,
+  matching by either the old id or the old slug.
+- `serverXR/src/index.js` — in the resolver, a project that doesn't resolve
+  in this space now also checks `findProjectMove` before 404ing; on a hit it
+  answers `{ movedTo: { spaceId, projectId } }` instead of a plain 404.
+- `src/services/serverSpaces.js` — `resolveVanityProjectLink` passes
+  `movedTo` through.
+- `src/RootApp.jsx` — `SlugProjectRoute` follows `movedTo` with a `replace`
+  navigation to the id-based `/p/` form (the slug isn't guaranteed to have
+  survived the move, the id always has).
+
+A project moved a second time chains naturally (each hop is its own
+`project_moves` row and its own client-side `replace`), the same way an HTTP
+redirect chain would — no special multi-hop logic was needed.
+
+Not done: `project-move.mjs` isn't copied into `serverXR/Dockerfile` the way
+`space-bundle.mjs` is — nothing server-side spawns it (it's a data-root CLI
+tool, like `space-bundle.mjs` run directly), so there was nothing to wire in.
+If a server route ever needs to trigger a move, that copy step is the same
+one-liner `space-bundle.mjs`'s own Dockerfile entry already is.
+
+Tests: `scripts/project-move.test.js` (8 cases — move, unknown project,
+unknown target, publish gate, space-asset copy + rewrite, project-blob copy,
+dry-run, slug collision), `scripts/space-bundle.test.js` (unaffected, still
+green), `serverXR/src/fallbackContracts.test.js` (covers `/api/resolve`,
+still green), `npm run test:server-contracts` (138 passed), `src/RootApp.test.jsx`
++ `src/utils/spaceRouting.test.js` (60 passed). `npx eslint` on every changed
+file: clean (two pre-existing unrelated warnings in `index.js`).
+
+## 2026-09-20 — one door and one name for Projection
+
+- A newcomer walk (`~/Downloads/newcomer-walk/REPORT.md`) found the projection mapper
+  unreachable from Studio (the room a new project drops you into), reachable only
+  through top-nav Tools, and wearing four names (Tools card "Projection", mapper
+  header "MAPPING", route `/map/`, wiki "Putting a space on a wall").
+- Studio's project panel gets a **Projection** button beside **⇄ Nodes** in DISPLAY
+  (desktop control cluster and the phone topbar), navigating to `/{space}/map/{project}`.
+  The mapper header gets the reverse link, `← Studio`, in the header's existing
+  `map-action` button style. Studio's Help → Share tab gets one line pointing at
+  Projection and linking the wiki article.
+- Tools' Projection card: `meta` text changed from "needs a project" to "pick a
+  project" and the `muted` dimming modifier removed (Desk keeps its own dimming —
+  untouched). The picker's empty-space state ("has nothing to open yet") now offers
+  "+ new project" inline, using the same `createProject` call Studio's own hub uses,
+  landing straight on the mapper for the new project.
+- Naming: mapper header text is now "Projection" (renders as PROJECTION via the
+  existing uppercase CSS). Wiki article `projection-mapping` keeps its sentence
+  title ("Putting a space on a wall") but its first line now opens "Projection opens
+  a mapping, at…" tying the three names together. No route, id or CSS class changed.
+- Verified live (local isolated dev stack, ports 4310/5310, throwaway spaces
+  `entry-test` / `entry-test-ph2` / the pre-existing `entry-test-p`): full walk
+  landing → new space → new project → Studio → Projection → mapper → back, and
+  Tools → Projection → pick space → pick project → mapper, at 1440×900 and
+  390×844 DPR3. Screenshots in `~/Downloads/projection-entry/` (not in-repo).
+  Click count, "project created" → "mapper open": **1** (the new Projection
+  button, right where Studio lands you) — down from the newcomer walk's count
+  of 4 for the same span (leave Studio, click Tools, click the Projection
+  card, pick the space, pick the project), and from a path that required
+  already knowing Tools existed and led there. The Tools → Projection route
+  itself (for someone who arrives via Tools directly, not mid-Studio-session)
+  is unchanged in shape — card → pick space → pick project, 3 clicks — but the
+  card no longer reads as disabled, and now offers "+ new project" when the
+  picked space is empty.
+- Skipped: the create-project dialog/form (`StudioHub.jsx`'s `sh-new-form`,
+  `StudioProjectsPanel.jsx`'s `spp-new-form`) has no existing hint element to add
+  a line to — both are a bare input + Create/✓ button with nothing else in them.
+  Adding one would be inventing a new UI element, which the brief ruled out, so
+  no change was made there.
+
+## 2026-09-21 — `di stage`: displays as data — which screen shows which mapping
+
+Step D of `~/work/di-atlas/decisions/2026-09-20-di-stage-plan.md`, on top of #513. A
+two-display stage box no longer needs a hand-made kiosk script: the document says
+which machine and screen a mapping goes on, the supervisor reads the displays off the
+OS and keeps one kiosk per assigned display.
+
+- **`output.show` in the mapping document.** `{ machine: <machine.json id>, name?,
+  screen: { label, index, size } | 'all' }`, plus `slate: 'off'` when authored. The
+  trap the plan named was real: `normalizeMappingState` rebuilt `output` from width
+  and height alone and stripped it on the first write from any machine. Both twins
+  (`src/shared/projectSchema.js`, `shared/projectSchema.cjs`) keep it now, absent
+  means absent (older documents come out byte-identical), and a write→read round trip
+  is held on each side (`src/map/mappingState.test.js`, `serverXR/src/schemaSync.test.js`).
+- **The desk picker.** One `Show on` select in the map bar beside Output: any screen ·
+  each machine's all screens · each of its screens by label and size, from what the
+  machines hub already reports (#495). It writes label, index AND size so the stage box
+  can match by whichever survived a reboot; a document naming a machine not on the
+  desk right now keeps its choice visible, marked, rather than snapping to "any".
+  Helpers and tests in `src/map/mapMachines.js`.
+- **OS probes as data.** `scripts/di/stageDisplays.mjs` (pure) holds the exact command
+  per OS and the parser; `displayProbe.mjs` runs it. Linux: `xrandr --query`, tested
+  on the REAL capture from this machine (`scripts/di/fixtures/`), Wayland says so and
+  assumes one screen. Windows: PowerShell `AllScreens` + `WmiMonitorID`, no elevation.
+  macOS: NSScreen through `osascript -l JavaScript` for positions (system_profiler has
+  none) + `system_profiler` for mirrors. Windows and macOS were NOT run on their OS —
+  plausible samples of the documented shapes, said in the PR. Screen match order is the
+  rig's one rule — exact label, contains, size, index — through a third twin of
+  `nameMatch` (`scripts/di/nameMatch.mjs`, because the packed CLI sits beside
+  `shared/` and the repo's does not), held equal in `src/shared/nameMatch.test.js`.
+- **One kiosk per display, verified.** `planDisplays` gives each assigned display its
+  own profile, debugging port (9334+) and hold page; no mapping naming this machine =
+  #513's single kiosk, unchanged. The supervisor asks each window over CDP where it
+  is, corrects ONCE, then reports. **Measured, not assumed:** Chromium's
+  `--window-position/--window-size` and its CDP bounds are CSS pixels — this panel at
+  150% (`Xft.dpi 144`) reported the fullscreen kiosk as 1707×960 — while xrandr is
+  device pixels. The kiosk's own `devicePixelRatio` is the conversion; a placement is
+  accepted in either unit and the status names which. Mixed DPI (Windows, a laptop at
+  150% with a projector at 100%) is where one ratio stops being true — NOT run there.
+- **Hotplug and clones.** Re-probed on the existing tick: a display that goes away
+  closes its kiosk with one log line, one that appears gets its kiosk; a mapping naming
+  a screen this machine does not have is one dim status row, exit 1, never a crash.
+  Cloned displays (same geometry; more monitors than screens; a mirrored display) are
+  told and never flipped. Hotplug itself could not be exercised on this one-screen box.
+- **Seen end to end on aylmo** against two throwaway installs under the session
+  scratchpad (4520/4521, real config home untouched — `~/.config/systemd/user` and
+  `~/.config/autostart` byte-identical, zero `di-stage` units). The probe read the real
+  xrandr; the document's `show` travelled as ordinary ops over the follow (closing
+  #513's open doubt); the kiosk sat on `eDP-1` and CDP confirmed `0,0 1707×960` = the
+  panel at ×1.5; `di stage status` exit 0; then a screen called "Optoma" that does not
+  exist gave `not showing — no display "Optoma" 1280×800 #4 on this machine — it has
+  eDP-1 2560×1440`, exit 1, supervisor alive, kiosk closed; `leave` left only `data/`.
+- **Two bugs paid for once** (rows in known-fixes): the normaliser above, and
+  `.claude/skills/run-di-iiii/driver.mjs stop`, whose pattern matched EVERY
+  `serverXR/src/index.js` on the machine and SIGKILLed the artist's live install on
+  443 mid-request while an agent stopped its stack. It now stops only the process
+  groups of this checkout's own vite.
+
+**Needs the real two-display box:** the Windows probe on `win` (names joined to
+bounds only when WMI and AllScreens agree in count), a second kiosk actually landing
+on the projector, mixed-DPI units, and hotplug with a real cable.
+
+## 2026-09-20 — the real lighting rig, mirrored read-only into the Studio room
+
+Step 2 of "one project is one stage" (`di-atlas/decisions/2026-09-20-one-project-one-stage.md`).
+
+- `src/rigMirror/fixtureColour.js` — a pure port of the lighting interface's `liveColor(f)`
+  (that file is a plain browser script, nothing exported). Held to it by
+  `fixtureColour.contract.test.js`, which lifts the ORIGINAL function out of
+  `serverXR/src/lighting/ui/app.js` by text and compares both on every built-in profile.
+  Seen failing on a one-digit change to the warm/cool mix.
+- `src/rigMirror/useLightingMirror.js` — one reference-counted store per page: probe
+  `/light/api/summary` once (real JSON only), then `/light/api/state` every 5 s and
+  `/light/api/dmx` at 10 Hz, only while someone is looking and the tab is visible. A desk that
+  was never there is asked once and never again; one that went away is re-asked every 30 s.
+  GET only — nothing here can move a lamp.
+- `src/studio/components/RigMirror.jsx` — one small emissive sphere + `<index>.<name>` label per
+  fixture. PROVISIONAL mapping, constants in `RIG_FLOOR`: plan x,y 0..1 → world X,Z −5..+5 m,
+  y = 0.1 (a fixture has no height yet). Not objects, no raycast, not in the document, drawn
+  only when Studio passes `rigMirror` and never when `playTimelines` (the published viewer).
+- One button, "Rig", in the control cluster's Display row, drawn only when a desk answered;
+  off by default; remembered under its own localStorage key `dii.studio.rigMirror.v1`.
+- The brief said `src/light/`. That folder cannot exist: Vite's dev proxy sends every address
+  starting with `/light` to the backend, so the module 404'd and the button never drew. Found
+  by driving the page, not by a test; now in known-fixes with a guard.
+- Looked at, headless Chromium + SwiftShader, 1440x900 @2x, against a throwaway desk (output
+  off, scratch data dir): warm markers, colours following a desk change, blackout as dim grey,
+  off. NOT verified: a real rig, a phone, split viewports, a desk with hundreds of fixtures.
+- Still open: opening Studio on a local install now makes one request to `/light/api/summary`,
+  which builds the (output-off) desk the way the Spaces hub's own probe already does.
+
+## 2026-09-20 — the button was named the same thing as an unrelated feature, and did nothing visible on an empty rig
+
+A newcomer walk found two problems with the button above, both from the same screenshot:
+
+- **Name collision.** Studio's Display row has "Projection" and "Rig" side by side. The
+  wiki's own "The rig: machines in one room find each other" (multi-machine discovery,
+  cues, blackout — a totally different feature) uses the same word for something else, and
+  now sits one click away from the button a newcomer just used successfully. Renamed the
+  button `Rig` → `Lights` (`src/studio/components/StudioControlCluster.jsx`) — the `title`
+  ("Show the real lighting rig in the room") is unchanged, only the visible label moved.
+  Updated `StudioControlCluster.rig.test.jsx` and the "lighting-desk" wiki article's own
+  sentence naming the button (`src/wiki/wikiContent.js`).
+- **No feedback on an empty rig.** Pressing the switch with a desk present but zero fixtures
+  patched draws nothing — `RigMirrorMarkers` returns `null` for an empty fixture list, same
+  as it should once the rig genuinely has nothing lit. From outside that reads as "the switch
+  does nothing." Added `src/studio/components/RigMirrorHint.jsx`: on, desk present, zero
+  fixtures → one line, "no lights patched yet — add them in Light", reusing
+  `StudioCoachMarks`' own pill (`.studio-coach`) rather than inventing a new hint style. Not a
+  dismiss-once tutorial step — no close button, it shows for as long as the state that
+  explains it holds and disappears the moment a fixture is patched.
+- Not solved: `RigMirrorHint` and `StudioCoachMarks` both render at
+  `position: fixed; bottom` center, so if a guest's first-run coach were ever active at the
+  same moment as an empty-rig Lights session, they would stack visually. Judged unlikely
+  enough in practice (a guest turning on Lights during their very first session) not to be
+  worth a coordination mechanism neither component has today — flagged here rather than
+  guessed away.
+- Tests: `RigMirrorHint.test.jsx` (4 cases, using the same `mirror` prop override
+  `RigMirror.test.jsx` already established for testing without the real singleton/network).
+
+## 2026-09-20 — five picture generators, and an engine clock
+
+Raw's picture operators (`src/project/tops/`) could only ever START from a
+camera. Added an engine-wide `time` uniform and five generator/adjuster
+operators so a network can start from nothing and land on a projector warm.
+
+- **Engine clock** (`topEngine.js`): `time` (seconds, monotonic from the
+  engine's own creation, wrapped at 3600s — `clockSecondsFor`, exported and
+  pure) reaches every fragment through the shared preamble, declared `highp`
+  behind the standard `GL_FRAGMENT_PRECISION_HIGH` guard so mediump's ~10-bit
+  mantissa (fine everywhere else) doesn't turn a slow drift into a stutter
+  once the clock is up near 3600. The engine already redraws every operator
+  on every `requestAnimationFrame` regardless of content — there is no
+  per-operator dirty-tracking here to preserve or break. `animated: true` is
+  new declared data on an operator (Clouds, Shape) that reads `time`; nothing
+  currently reads the flag to skip a draw, it just documents which operators
+  cannot be treated as static.
+- **Five operators** in `topOperators.js`: `top.noise` "Clouds" (fbm value
+  noise, 4 octaves max via runtime masking not a dynamic loop bound),
+  `top.ramp` "Gradient" (4-way gradient, two colour stops), `top.tint` "Tint"
+  (duotone, black→amber default), `top.transform` "Reframe" (scale/rotate/pan,
+  3 edge modes), `top.shape` "Shape" (Circle/Ring/Bar/Grid of dots, dim amber
+  default, Spin). "Noise" and "Transform" were the TD names asked for but both
+  were already spoken for (`value.noise`, `geom.transform`) — one word, one
+  meaning — so the labels became Clouds and Reframe; type ids kept the TD
+  names.
+- **Colour params**: smallest-honest version — a `colour()` helper storing a
+  `'#rrggbb'` string (same shape every other colour field in this app already
+  uses), a `type: 'color'` configInput so the existing inspector colour box
+  draws it unmodified, and the engine uploads it as `vec3` via a new
+  `hexToRgb01` (pure, tested, falls back to black on a bad value — never
+  white).
+- Everything downstream (`FAMILY_BY_TYPE`, `nodeAnatomy` manifest,
+  `nodeLabelVocabulary` guard, `buildTopNodeTypes`) already derives from
+  `TOP_OPERATORS`/`TOP_TYPE_IDS` generically — no manual updates needed there.
+  `allNodesExample.js` needed the five new nodes added by hand (its own
+  coverage test requires every palette type instantiated) and got a small
+  unwired-generators column plus two demo wires.
+- Verified live: headless Chromium against the real dev stack (throwaway
+  ports 4330/5330, throwaway DATA_ROOT), three project networks (Clouds→Tint,
+  Gradient→Reframe→Feedback, Shape→Blur→Tint) plus a deliberate cyclic-wire
+  probe (Reframe↔Feedback, no generator feeding it). Screenshots and findings
+  are in the PR body. One real finding: Feedback's existing "Keep brightest"
+  mode against a static input converges to a fixed picture within ~2 frames
+  and then two frames a second apart are bit-identical — correct behaviour of
+  code that already existed, not a defect in the new operators.
+- Wiki: `picture-operators-and-the-desk` article got a new paragraph naming
+  all five, `updated` bumped to 2026-09-20.
+
+Tests: `npx vitest run src/project src/raw src/map src/copyVocabulary.test.js
+src/styles scripts/nodeAnatomy.test.js src/nodeLabelVocabulary.test.js` — 129
+files, 1875 tests, all passing. `npm run lint` and `npm run build` clean.
+
+Not verified: a real GPU (this session only had SwiftShader/headless
+Chromium — ~60fps there is a floor, not a claim), a real projector.
+
+## 2026-09-21 — the run skill's `stop` killed the installed di.iiii, third time
+
+Four agents ran dev stacks in parallel worktrees on a machine whose `:4000` is a live
+`di` install serving a two-machine stage. One agent stopped its stack with
+`driver.mjs stop`; the installed server died with it (`di status`: `Not running`, the
+stage machine's follow: `no route`). The skill's own text warned about `pgrep -af
+"src/index.js"` matching the install — and `stop()` did the same match by command line.
+
+- `scripts/dev-stack-owned.mjs` (pure, tested): stack processes are split into ours and
+  others by WORKING DIRECTORY — under the driver's repo (serverXR subdir included) is
+  ours; a sibling checkout with a shared prefix is not; a directory that cannot be read
+  is not. The driver reads it from `/proc/<pid>/cwd` on Linux and `lsof -a -d cwd`
+  elsewhere.
+- `stop` now prints what it left alone and why, so the next agent sees the install.
+- Verified on this machine with the install running: `stop` reported nothing of this
+  checkout running and listed the install's pid with its data directory as left alone;
+  `di status` still `running` afterwards.
+- Not verified: the `lsof` path (macOS).
+
+## 2026-09-20 — projection-mapping desk usable on a phone
+
+- Fixed a real bug reported from a screenshot at 390x844: the map desk's
+  toolbar (`src/map/MapSurface.jsx`, styled by `src/map/mapSurface.css`)
+  never wrapped or scrolled, so everything after GRID (Snap/Mask/Live/Open
+  output/Light) sat off-screen past the viewport edge and was unreachable
+  from a phone.
+- Second defect in the same screenshot: the fixed ModeMark tier badge
+  (`src/components/ModeMark.jsx`/`modeMark.css`, bottom-left) covered the
+  first words of the inspector's empty-state line ("Pick a surface to
+  change what it shows.") in the stacked mobile layout.
+- Fix, layout only, inside the file's existing 900px media query so nothing
+  changes above that width (verified pixel-identical desktop screenshots
+  before/after at 1440x900): `.map-bar`/`.map-bar-controls` wrap instead of
+  overflowing; `.map-panel-right` gets bottom padding sized to ModeMark's
+  own chip footprint, reusing its `env(safe-area-inset-bottom)` pattern.
+- Verified with Playwright/Chromium against a throwaway space
+  (`phone-fix-test`) with a 2-surface project, at 1440x900, 390x844 and
+  360x640 (DPR 3 for the phones), before (origin/dev) and after. A script
+  asserted every toolbar control's bounding box is inside the viewport
+  width at both phone sizes — passed, 8/8 controls in bounds each size.
+- Not checked: a real phone. A pre-existing floating "M" button (unrelated
+  to this change, present identically before and after) overlaps the
+  bottom hint text at 360x640 — out of scope for this fix, left untouched.
+
+## 2026-09-20 — the stacked phone layout was overprinting itself
+
+- A follow-up newcomer walk (after the fix above) still found two overlaps
+  at 390x844, both inside `src/map/mapSurface.css`'s existing
+  `@media (max-width: 900px)` block: (a) the left panel's last section (Wall
+  photo / Carry) read as cut off mid-line where the canvas began right on
+  top of it; (b) the drag-hint text under the canvas printed over the
+  inspector's `SURFACE N` header / Delete row.
+- Root cause, found by measuring rendered boxes, not guessing from CSS: the
+  layout used `grid-template-rows: auto minmax(0, 1fr) auto` with
+  `.map-panel { max-height: 30vh }` on the two side panels. The "auto" rows
+  did not reliably respect that max-height — measured one panel rendering at
+  301px against its own 253px (30vh of 844) cap — which squeezed the middle
+  `1fr` canvas row thin enough that its own drag-hint (positioned after the
+  stage in normal flow, with no clipping of its own) spilled past the
+  canvas row's box into the inspector row below it. The same drift let the
+  left panel's overflowing content report a layout position past its own
+  clipped box, coinciding with the canvas row's screen position.
+- Fix: gave all three rows explicit, non-"auto" sizes
+  (`grid-template-rows: 30vh minmax(34vh, 1fr) 30vh`) so a panel's rendered
+  box is always exactly the size its own `overflow-y: auto` clips to — one
+  source of truth instead of two numbers (grid track + max-height) that
+  could drift apart — and added `overflow: hidden` to `.map-frame` as the
+  same guarantee for the canvas row, so the drag-hint can never spill into
+  the row after it.
+- Verified with Playwright/Chromium against a throwaway space, 2-surface
+  project, surface 2 selected, at 390x844 and 360x640 (DPR 3), before/after.
+  Confirmed by exact `getBoundingClientRect()` measurement (not just a
+  screenshot) that the three rows now sit flush with no gap and no overlap
+  (e.g. left panel bottom 366.19px == canvas row top 366.19px at 390x844;
+  canvas row bottom 522.59px == right panel top 522.59px at 360x640), and by
+  `elementFromPoint` probing the old overlap coordinates that only one
+  region's content ever paints there. Desktop 1440x900 confirmed
+  pixel-identical before/after (only diff: a test project's own timestamp
+  in its title). No new or changed user-visible strings — layout only.
+
+## 2026-09-20 — name the collision, not just the 409, on project create
+
+Project ids are global by design across every space (`resolveProjectContext` /
+`GET /api/projects/:projectId` take no `spaceId`), so `POST
+/api/spaces/:spaceId/projects` can 409 against a project living in a space the
+caller cannot even see — a newcomer who picks an ordinary title twice, weeks
+apart, in two different spaces, hit a bare `Project already exists.` with
+nothing to act on.
+
+- `serverXR/src/routes/projectRoutes.js`'s 409 body now reads `that name is
+  taken on this di.iiii — try another`.
+- Both create forms (`StudioHub.jsx`, `StudioProjectsPanel.jsx`) already
+  surface the server's message verbatim through `apiClient.js`'s
+  `createHttpError()` — traced, not assumed — so no client change was needed.
+- Regression guard: `serverXR/src/projectContracts.test.js` "names the
+  collision when a project title/slug collides with one in a different
+  space" — creates a project in `main`, creates a second space, POSTs the
+  same title/slug there, asserts 409 and the new sentence. Watched it fail
+  against the old message (reverted the one-line fix, ran it, restored),
+  then watched the full file pass (28/28).
+- `docs/ai/known-fixes.md` row added.
+
+## 2026-09-20 — the run skill pointed agents at a live install's port
+
+`run-di-iiii` documents `:4000` as the dev server's port, and its gotcha on a
+stale `node --watch` says to find the holder with `pgrep -af "src/index.js"` and
+kill it. On a machine with a local `di` install — the artist's own machine, a
+stage box — port 4000 is that install's LIVE server, started from that same
+`src/index.js`. Two agents running the stack in parallel worktrees followed the
+recipe and took down a running two-machine rig; both times the server log simply
+ended mid-request with no error, which reads as a crash rather than a kill, so
+the first one was misdiagnosed.
+
+- The skill now opens with who owns 4000 and how to run elsewhere, and the
+  gotcha says outright that `pgrep -af "src/index.js"` matches an installed
+  di.iiii too, with `di status` as the test.
+- The escape was verified rather than reasoned: `VITE_API_BASE_URL=
+  http://localhost:4360/serverXR npm run dev` — `dev-stack.mjs` reads the API
+  base, passes its port to `serverXR` as `PORT` (dev-stack.mjs ~l.220) and
+  proxies `/serverXR` to it. Health answered 200 on 4360 and the install on
+  4000 was still `running` afterwards. `VITE_PORT=5360` did **not** move Vite,
+  which stayed on 5173 — so the skill says to pass `--port` to the client
+  instead of repeating an env var that does not work.
+- Documentation only: no code changed, nothing to regression-test beyond the
+  known-fixes row.
+
+## 2026-09-20 — the flake that cried wolf
+
+`SpaceHub.test.jsx`'s thirteen-card tests went red on three unrelated branches in one
+day (#499, #506, and a local full-suite run) and passed alone every time, so each was
+written off as noise. The cause was arithmetic, not timing luck: two of its waits are
+allowed 8s by `waitFor`, inside a test vitest gives 5s. The inner budget could never be
+reached, so under load the test died and reported the behaviour as broken.
+
+- `vi.setConfig({ testTimeout: 20000 })` once at the top of the file — the cost is the
+  thirteen preview iframes the file mounts, which is a property of the file, not of the
+  one test that lost the race.
+- Watched: four consecutive `npx vitest run src/studio` runs, 262/262 each.
+- The general rule, now in known-fixes: a `waitFor` timeout longer than the test timeout
+  containing it is always a bug.
+
+## 2026-09-20 — every spot light in di.iiii aimed at (0,0,0); rotation did nothing
+
+Found by reading, then proved with a picture before a line was changed.
+
+Both entity renderers mounted `<spotLight …/>` inside the entity's transform group
+with **no target object**. three.js aims a `SpotLight` at `light.target`, and a fresh
+SpotLight's target is a bare `Object3D` at the parent space's origin — so the entity's
+own `components.transform.rotation` was inert and every spot in every room pointed at
+the world origin, wherever it hung.
+
+The proof: a harness room (floor, three walls, a red post marking (0,0,0)) rendered
+through the real `EntityContent`. Two spots, one pitched at the back wall and one
+rolled at the left wall, pooled **on top of each other on the red post** — cyan and
+amber overlapping into white. Screenshots in `~/Downloads/spotlight/` (before-*.png).
+
+**The fix.** A shared `SpotLightObject` (`src/objectComponents/`) renders the light
+plus an `<object3D>` target as its **sibling inside the entity's transform group**.
+That is the whole trick: the target is in the scene graph (three.js will not aim at a
+detached object), the group's own transform carries it so nothing has to recompute on
+a drag or an animation frame, it stays correct for an entity nested under a parent
+group (where `transform` is local and a world-space calculation would be wrong), and
+React unmounts it with the light so no edit can leak an Object3D. Both renderers —
+`EntityContent.jsx` (Studio viewport, Raw, portals) and `LiveProjectScene.jsx`
+(published rooms, walk mode) — now use it.
+
+**The forward axis is -Y, and that is a deliberate departure.** An *entity* in di.iiii
+faces +Z: `vector.aim`'s runtime says so in as many words ("'Face' means the flat +Z
+side, the way a monitor faces you") and `facingViewerYaw` repeats it. But that
+convention is about things with a flat front — it is applied to exactly
+`['text','image','video','plane']` — and a light has no front. A spot has an aperture,
+and this repo already draws it pointing down: the marker mesh beside the light is a
+`coneGeometry`, mouth at -Y. Decisively, -Y is what keeps published rooms lit: today's
+authored spot is a fixture hung at height with rotation `[0,0,0]` aiming at the world
+origin, which for a light above the origin **is** straight down. +Z would swing every
+one of those beams from the floor to the horizon. The before/after screenshots of the
+unrotated case are byte-identical (same md5) — that is the compatibility claim, checked
+rather than asserted.
+
+**Known consequence, stated rather than discovered:** under three.js's XYZ euler order
+the forward vector IS the Y axis, so `rotation.y` (yaw) does not move a spot's beam at
+all. `rotation.x` and `rotation.z` together still reach every direction on the sphere
+— nothing is unaimable — but the gizmo's yaw ring on a spot light is inert. Pinned in
+`spotLightAim.test.js` so a later change of axis has to come and say so. Related and
+unfixed: wiring `vector.aim`'s output into a spot light's rotation aims the beam 90°
+below where the same rotation aims a shape.
+
+**What changes for existing rooms:** a spot hung directly above the origin is
+unchanged. A spot hung off-centre with no rotation now lights the floor beneath itself
+instead of reaching sideways to the origin. A spot with any rotation on it now points
+where it is turned. Rooms in the last two groups will look different, and that is the
+fix working.
+
+**Not done here, on purpose:** `directionalLight` has exactly the same missing-target
+shape (`EntityContent.jsx`, `LiveProjectScene.jsx`) and was left alone — its own change,
+its own before/after. No `target` field was added to the schema; aim comes from
+rotation, which already exists and already travels through the op log.
+
+## 2026-09-20 — landing the rig session's twelve branches as one batch
+
+Twelve green PRs, each BEHIND `dev`, landed together as one merge branch rather than
+one at a time (`feedback-batch-land-behind-prs`): the rig's two-machine work, the
+artist's path into projection, and two new lanes.
+
+- Three files needed a real integration rather than "take one side", because two
+  branches each added something to the same place: `serverXR/src/httpClient.js` (the
+  address pin from `feat/follow-at` had to be threaded through the file-transfer
+  helpers from `feat/follow-files`, or a pinned follow would carry its ops to the
+  pinned address and its FILES wherever DNS pointed), `src/map/MapSourceView.jsx`
+  (the `stream` source and the brought-in-file retry/placeholder), and
+  `src/studio/components/StudioControlCluster.jsx` (Projection and Lights, two
+  branches adding a button to one row).
+- `docs/ai/known-fixes.md` conflicted five times; it is an append-only table, so every
+  conflict keeps both sides in order.
+- The merged tree was checked against `build/rig-all` — the tree packed as
+  0.4.14-wstream.8 and running on both rig machines — and differs only by the NDI
+  receive lane (held back, its branch is still being worked) and by the fixes that
+  landed after that build was packed.
+- `serverXR/src/ndi` and PR #506 are deliberately NOT in this batch.
+
+## 2026-09-17 — the server image ships the bundle tool, so save-to-file and open-a-file work on hosted tiers
+
+Found while moving Emilya's WCC export between installs.
+
+- `GET /api/spaces/:id/bundle` and `POST /api/spaces/bundle` spawn `scripts/space-bundle.mjs`.
+  `serverXR/Dockerfile` copied only `serverXR/src`, `serverXR/public` and `shared/`, so
+  `bundleToolPath()` found nothing and both routes answered 500 *"Could not save this space
+  to a file."* on diiii.xyz AND dev.diiii.xyz — from the day the file menu shipped
+  (2026-08-19) until now. Nothing reported it; the browser just showed the sentence.
+- Now: the Dockerfile copies the script to `/app/scripts/`, and the script finds the
+  server at `./src` when there is no `serverXR/` above it (the image layout), else at
+  `serverXR/src` (a checkout, an installed runtime). `writerStamp()` reads
+  `SCHEMA_VERSION` from the same place, so a file written by a hosted tier carries its
+  schema version instead of `null`.
+- `scripts/space-bundle.test.js` stages the image layout from the real files and runs an
+  export + import through it, and asserts the Dockerfile's COPY line — either half
+  regressing fails the test. Checked the other way too: the pre-fix script in that
+  layout writes `schemaVersion: null` and its import dies on `../serverXR/src/db.js`.
+- Not changed: the import route still never passes `--force`, so a `.diiii` for a space
+  that already exists on the tier is refused with 409. Replacing a live space in place
+  stays a CLI job (or the proposals route from `feat/space-proposals`, PR #486).
+- Emilya's newest WCC export (her fork's release `wcc-space-2026-09-17`) is on PROD since
+  2026-09-17, put there by hand: the fixed tool copied into the running container, then
+  `import --force --force-stale`. It was meant for dev first and landed on prod because a
+  plain `docker compose` inside `/opt/di.iiii-dev` addresses project `dii` (prod) unless
+  `-f docker-compose.dev.yml` is passed. Prod's before-copy is kept off the VPS. Dev still
+  carries the old lineage; the space's label and owner are re-set by PATCH after an import,
+  since a `.diiii` carries neither.
+
+## 2026-09-18 — a forced space replace no longer deletes what the file does not carry
+
+Found while putting Emilya's WCC export on all three tiers.
+
+- `space-bundle.mjs import --force` used `INSERT OR REPLACE INTO spaces`; the REPLACE's delete
+  cascaded to every project of the space, the space dir was removed whole, and label/owner
+  reset to the file's. The local tier lost 8 history projects this way (restored from a hand-made
+  copy of `di.db` + the space dir).
+- Now: upserts, extra projects kept (and listed) unless `--prune`, label/owner survive, and a
+  before-copy lands in `<data-root>/_backups/space-replace/<id>-<time>.diiii` unless `--no-backup`.
+- `--prune` is the old whole-replace, said out loud.
+- Not changed: the HTTP route `POST /api/spaces/bundle` still never passes `--force`.
+- Ops note: `_backups/space-replace/` lives inside the tier's data volume and is not swept by anything.
+- Project `state` / `deleted_at` / `slug` / `position` now travel (3 trashed + 4 archived WCC projects had arrived LIVE on dev and prod).
+- On a hosted tier (`release.json` → `deployEnv`), a forced replace must pass `--tier dev|prod` and it must match — the 09-17 "meant for dev, landed on prod" guard. `DI_TIER_OVERRIDE` exists for the test only.
+
+## 2026-09-16 — dev tier identifiers renamed; staging.di-studio.xyz switched off
+
+- Renamed the dev tier's machine identifiers from `staging` to `dev`: `docker-compose.dev.yml`
+  (project `dii-dev`, container `dii-dev-server-1`, volume `dii-dev_data`),
+  `.github/workflows/deploy-vps-dev.yml` (environment `dev`, tags `dev`/`dev-<sha>`,
+  `deployEnv` `dev`), env `DEV_*` / `VPS_DEV_*`, `/opt/di.iiii-dev`, `DI_TOKEN_DEV`, manifest
+  `tiers.dev`, `sync-space-to-dev.sh`, `cleanup-plans/dev.json`. The `staging` aliases from #471
+  are gone; a CLI handed `staging` fails with `"staging" is now "dev"`. Map in
+  `docs/ai/vocabulary.md` (amendment 2026-09-16).
+- `staging.di-studio.xyz` is switched off (Caddy block removed, DNS record deleted), done after
+  the dev OAuth callbacks moved to `dev.diiii.xyz` and the owner tested Google + GitHub sign-in
+  there. Host matchers no longer accept `staging*`.
+- The VPS migration (checkout dir, data volume copy to `dii-dev_data`, `.env` names, GitHub
+  vars) is done by hand at merge time, to match these names.
+- Prod's `.env` carries both `STAGING_DOMAIN/PORT` and `DEV_DOMAIN/PORT` until the next
+  dev→main promotion updates prod's Caddyfile/compose; then the `STAGING_*` lines are removed.
+- Left for the owner: the legacy cPanel pipeline (dead since 2026-07-15) and the Android
+  package id `xyz.distudio.chat.staging`.
+- Folds PR #476 (`chore/no-staging-host`, another session's pass on the same host retirement): its
+  cPanel-only host defaults and docs come across as files; everything it shared with this branch
+  is superseded by the renames here. #476 closes as superseded.
+- `scripts/space-sync.mjs` (engine v7) reads a manifest's old `tiers.staging` key as `dev`, so
+  br_id_ge, beyond_form, platform_recordar and space-starter keep syncing until their manifests are
+  edited; only the CLI value `--tier staging` is refused. One `npm run space:sync:release` after merge.
+
+## 2026-09-16 — "staging" retired: the tiers are local · dev · prod
+
+- Owner, 2026-09-16: "we have not staging anymore". The second tier is **dev**, addressed
+  `dev.diiii.xyz`; `staging.di-studio.xyz` is the same server under its old name and still
+  answers only for links already handed out. Lexicon amended in `docs/ai/vocabulary.md`
+  (the tier table and the list of identifiers that deliberately keep `staging`).
+- Words and links changed across docs, comments, help text and copy; dated history left as said.
+  `src/copyVocabulary.test.js` now bans `staging` in user-visible strings.
+- The tier mark reads **DEV** at both names (`MODE_STAGING` → `MODE_DEV`).
+- Tier arguments accept `dev` as an alias and keep `staging` working: `deploy.mjs`,
+  `tier-sync`, `space-sync --tier`, `local-mirror`, `data-cleanup`, `asset-refs-audit`,
+  `page-vendor-cdn`, `normalise-page-asset-urls`, the cPanel scripts, and the SDK
+  (`DI_TOKEN_DEV`, falling back to `DI_TOKEN_STAGING`). Space manifests keep the key
+  `tiers.staging`, now pointing at `https://dev.diiii.xyz/serverXR`.
+- Fixed on the way: nginx sent no `noindex` at `dev.diiii.xyz` (the map matched only `^staging\.`);
+  `isProductionTarget` in tier-sync/space-push did not know `diiii.xyz` was production.
+- Kept on purpose (machine identifiers): `STAGING_*` / `VPS_STAGING_*` env vars,
+  `docker-compose.staging.yml`, `deploy-vps-staging.yml` and its name, container
+  `dii-staging-server-1`, `/opt/di.iiii-staging`, GitHub environment `staging`, image tags,
+  `DEPLOY_ENV=staging`, `cpanel-staging`, npm script names, manifest key `tiers.staging`,
+  the Android package id `xyz.distudio.chat.staging`.
+- For the next land, CURRENT.md's wording should follow: `tiers: local · dev → dev.diiii.xyz
+  (rehearsal) · main → diiii.xyz (live)`; "Dev-tier deploys fold their own notes";
+  `git push origin dev # → dev tier`; the owner item reads "dev-tier Google OAuth secret".
+- Still owed: the `space-sync.mjs` alias needs `node scripts/space-sync-vendor.mjs --write` into
+  the vendored copies; `~/di-spaces` tools refuse a `staging` target whose host isn't `staging.`;
+  the URL spec draft still proposes `studio.staging.di-studio.xyz` (owner's call); the chat APK
+  twin is locked to the old host until rebuilt; `sync-space-to-staging.sh` loops `"$@"` so
+  `--force` is read as a space id (pre-existing).
+
+## 2026-09-14 — picture operators in Raw, and one desk across two machines (asuz + aylmo)
+
+Carries the note for the stacked #445 (di two-installs fixes) and #446 (map motion glow),
+which landed through the batch without their own.
+
+- **Two real installs, one space.** Installed the latest di.iiii on asuz (Debian 13, no node,
+  no curl) and followed its space from aylmo (certificate on 443). Five faults only two real
+  machines showed — vendored npm on update, CLI self-requests to :80 on a 443 install, invite
+  printing localhost, the follower speaking http to its own https server, follows only starting
+  at boot, update/restore leaving a padlocked install down. All fixed with guards; rows in
+  `docs/ai/known-fixes.md`.
+- **Projector box.** asuz drives an Optoma 1080P over HDMI through `cage` + `chromium` +
+  `seatd` (hand-started kiosk, no boot unit — autostart is the owner's call). The mode mark was
+  being projected around the work; `/map/…/out` no longer draws it.
+- **Motion glow** on a camera map surface (#446), then generalised: **picture operators** —
+  Camera In, Difference, Level, Blur, Edge, Feedback, Blend, Analyze, Picture Out — one table in
+  `src/project/tops/topOperators.js`, a WebGL1 engine, live pictures on the cards, Analyze →
+  numbers through liveOutputs, map surface source "Pictures".
+- **One desk across machines** (owner: "di is the join of desks"). `serverXR/src/machines`: a
+  lasting machine id/name, a per-space hub of open pages with their devices, signal relay over
+  the follow link. Browser: Runs on per operator; wires crossing machines are WebRTC video,
+  remote cards get JPEG previews, numbers ride a data channel. The Desk panel node lists every
+  machine and its cameras / mics / speakers / screens and places Camera In / Picture Out for a
+  device. Seen end to end: asuz's camera analysed on aylmo, back on asuz's projector.
+- **Still undone:** Send / Receive operators for SEPARATE desks (owner wants both modes);
+  numbers wired into operator settings; sound operators for the listed mics/speakers; a
+  machine only takes part while a page is open on it; two installs restored from one backup
+  share a machine id.
+
+## 2026-09-16 — The rig, step 1: machines on one network find each other, in any version
+
+- Design agreed with the owner step by step: `docs/architecture/RIG.md` (mesh, jam/show, any version with any version, local workflow, 20 cases) and the build contract `docs/architecture/rig/PROTOCOL-1.md`. Compatibility starts with protocol 1 (owner: "from this version can all works"); 0.4.x gets no adapter.
+- Built in five parallel lanes, merged here: `serverXR/src/rig/` — frozen core (hello, card, cue, blackout, picture reserved), per-pair features, tolerant readers, room + HMAC key, identity, machine card probes (screens, audio, cameras, serial, MIDI, net, temp, CPU, mem, Pi throttling, part Studio/Stage/Hands), members + UDP discovery on :47600 (LAN only), sinks (built-in cues, blackout → lighting desk + SSE `/api/rig/events`), `RigBlackout` in the map output; `scripts/rig/` conformance + compat grid, `.github/workflows/rig-compat.yml`.
+- Proven on real machines: aylmo + asuz discovered each other both ways across different releases; conformance 17/17 on each; unsigned cue 403; a signed blackout from aylmo blacked asuz's projector (white 253 → 0 → 253).
+- Also: `registerLightingRoutes` returns `hasDesk()`; wiki entry "The rig".
+- Next (RIG.md build order): land #447/#450/#451 and rehearse the two-artist jam; then jam rules (holding, presence in Raw, certificate), show mode, parts/appliance, drivers.
+
+## 2026-09-16 — the safety net: every change has an author and a way back
+
+Part B of the plan "Two lines, one safe way in" (B1, B2, B3, B5 and the server half of B4).
+Section A (start-check, CONTRIBUTING, write-script checks) is a separate branch.
+
+- **Authors (B1).** `space_ops` and `project_ops` gain `actor`, `actor_type`, `actor_label`
+  (`db.js`, `ensureColumn`). Stamped server-side from `req.authState` via
+  `serverXR/src/opActor.js` on POST ops (space + project), PUT scene, PUT document,
+  inscriptions, restore, bundle import (rows the tool wrote are stamped with the importer).
+  Server-made changes are `server:<reason>` (`server:undo`, `server:daily`,
+  `server:sandbox-archive`). The actor lives in columns, never inside the op JSON, so
+  `GET /ops` is unchanged; a client-sent `actor` never gets past `normalizeIncomingOps`.
+  **SCHEMA_VERSION was NOT bumped**, deliberately: the rule written on `SCHEMA_VERSION` says
+  bump only when an older build would misread the data, and three nullable columns are
+  invisible to it. A bump would make every older `di` refuse the database and every
+  `.diiii` bundle written by this build (space-bundle compares schemaVersion). Owner can
+  overrule — it is a one-line change.
+- **Restore points (B2).** `spaceStore.takeRestorePoint(spaceId, {reason, actor})` replaces the
+  open-space-only snapshot (`snapshotSpaceScene` stays as a wrapper returning the path).
+  Envelope v2 gains `id`, `reason`, `actor` and per-project asset manifests
+  (`assets/<sha>.json`), restored when the blob is still present — otherwise an undone
+  image delete would 404. Taken: before PUT scene / PUT document / sync pull / restore /
+  bundle import onto an existing id, and before the first change of each **burst**
+  (`serverXR/src/spaceHistory.js`: a burst ends when the author changes or pauses longer
+  than `CONTENT_BURST_GAP_MS`, default 15 min; rebuilt from the op log after a restart).
+  Retention: newest 30 + newest per UTC day for 30 days; explicit `keep` (idle sandbox
+  archive) stays a count. Open Space keeps its daily point (`reason: daily`).
+  `scripts/gc-space-blobs.mjs` now keeps every blob a kept snapshot mentions
+  (`--snapshots-dir`, default `<data root>/snapshots`), tested.
+- **API (B3).** `GET /api/spaces/:id/snapshots`, `POST /api/spaces/:id/restore-snapshot
+  {snapshotId?}` (default latest; takes a `before-restore` point first; returns
+  `restorePoint`), `GET /api/spaces/:id/changes?since=<ms|ISO>` — all owner-or-admin.
+  `spaceHistory.summarizeChanges` is the shared helper (counts added/removed/changed,
+  kinds, assets, title changes, whole replaces, projects touched, one plain `text`).
+- **Studio (B5).** Spaces → card → Manage → **History**: rows "when / before X's change" with
+  Restore + confirm, built from the existing `ssh-project-linker` / `ssh-linker-*` classes.
+  Wiki entry `space-history`.
+- **Live check** on a copy of the local tier (own ports 4610/5610): two accounts edited
+  `wcc`, History showed both, Restore removed Emilya's objects and kept the owner's.
+
+### Notice contract for the bot task (B4, di-bo side still to build)
+
+Off unless `CONTENT_CHANGE_NOTICES_ENABLED=true` AND `APPROVAL_BOT_URL` + `APPROVAL_SHARED_SECRET`.
+Sent once per burst, when the burst closes (gap elapsed, or another person starts), only
+when the author is not the owner (no owner → not an admin), never for `sandbox`/`global`
+spaces or server actors. Failures are logged, never block a write. Timers are in memory:
+a restart drops a notice for a burst still open.
+
+```
+POST {APPROVAL_BOT_URL}/content-changed
+X-DII-Timestamp: <ms>
+X-DII-Signature: sha256=<hex HMAC-SHA256(secret, `${timestamp}.${rawBody}`)>   // same as /approvals
+{
+  "kind": "content.changed",
+  "id": "<24 hex, notice id>",
+  "space":  { "id", "label", "slug"|null, "ownerUserId"|null },
+  "actor":  { "subject", "type", "label" },
+  "burst":  { "startedAt": ms, "endedAt": ms },
+  "summary": { "text": "Emilya · WCC (scene, Page) · +3 images, 1 object removed, title changed",
+               "counts": { added, removed, changed, addedKinds:{kind:n}, assetsAdded, assetsRemoved,
+                           titleChanges, sceneReplaced, projectsReplaced, settings, ops },
+               "scene": bool, "projects": [{ "id", "title" }] },
+  "link": "<SITE_ORIGIN>/<slug|id>",
+  "undo": { "snapshotId", "method": "POST", "path": "/api/content-changes/undo",
+            "body": { "spaceId", "snapshotId" } } | null,
+  "sentAt": ms
+}
+```
+
+Undo (bot → di.iiii): `POST /serverXR/api/content-changes/undo` with `undo.body` plus optional
+`decidedBy`, signed the same way (±5 min window, `verifyInboundSignature`). 200 → restore
+result (`restorePoint` = the point taken before the undo, so Undo is undoable); 401 bad
+signature; 404 notices off / space or snapshot gone. Recorded as `server:undo`.
+
+### Not done
+
+- di-bo side: `/content-changed` handler + Undo button under `BOT_ROLE=inner`, and the check
+  that `approvalKb`/`handleApprovalNotify` are served there.
+- No History in the admin Preferences → Manage surface (owners use the Spaces card; admins
+  can too). Snapshots do not follow a space id rename (`moveSpace`).
+
+## 2026-09-16 — the start check: one LATEST/NOT LATEST answer for code and spaces
+
+- Added `scripts/start-check.mjs` (`npm run start-check`, `--strict` exits 1). It
+  fetches `origin` (and `upstream` when this is a fork) with a hard timeout, then
+  reuses `scripts/repo-state.mjs`'s `getState()` for the code half (branch vs
+  `origin/dev`, fork `dev` vs `upstream/dev`, uncommitted work) and
+  `scripts/tier-sync.mjs`'s `listSpaces`/`readSignatures` (built on
+  `documentSignature`) for the space half — compares this box's held spaces (or
+  `--space <id>`) against the dev tier, using `tier-sync-baseline.json` to tell
+  "dev moved" from "I moved" from "no baseline, can't tell". Every network step
+  degrades to "not checked" inside its own budget rather than ever reporting a
+  false LATEST.
+- To make that reuse possible: `repo-state.mjs` now exports `getState` and guards
+  `main()` behind the standard `invokedDirectly` check (previously ran
+  unconditionally at import time). `tier-sync.mjs` hoisted `call`/`listSpaces`/
+  `listProjects`/`readInventory`/`readSignatures` from closures inside `main()` to
+  module-scope exports, and re-exports `readBaseline` (read-only) — no behavior
+  change, same functions, now importable.
+- `.claude/settings.json`'s `SessionStart` hook now runs `start-check.mjs` (wrapped
+  in `timeout 25`, falling back to the old `repo-state.mjs --brief` if that's
+  somehow exceeded) instead of the fetch-less `repo-state.mjs`. `pre-push-gate.sh`
+  runs `start-check --code-only --json` and prints a warning (never blocks) when
+  the branch is behind `origin/dev`.
+- Every write-path script now refuses a stale destination instead of silently
+  overwriting it:
+  - `space-push.mjs` reads the destination's current scene version
+    (`?verbatim=1`) before writing and sends `If-Match` on the `PUT` — the server
+    already understood this precondition (`spaceRoutes.js`), the script just
+    never used it. `--force` overrides.
+  - `space-sync.mjs` re-reads the project document's version immediately before
+    the `PUT` (that route has no server-side precondition to lean on) and
+    refuses if it moved since the read this run started from. `--force` overrides.
+  - `tier-sync.mjs`'s plain (non-`--changed`) `--force` path — the one write path
+    that ignored `tier-sync-baseline.json` entirely — now checks it too before
+    overwriting a project the destination already holds; a mismatch needs the
+    explicit `--force-stale` on top of `--force`. Pure decision logic pulled out
+    as `shouldRefuseOverwrite` for testability.
+  - `space-bundle.mjs import --force` refuses when the target space's own
+    `updated_at` is newer than the bundle's `exportedAt` — someone touched it
+    since this bundle was made. `--force-stale` overrides. This check is opt-in
+    (`checkStale: true`, set only by this file's own CLI dispatch) because
+    `install-bundle.mjs` calls `importSpace()` internally as one step of
+    restoring an entire estate from one point-in-time snapshot, where "target
+    changed moments before its own import" is the expected shape of that
+    restore, not a sign of a concurrent edit about to be lost — confirmed by two
+    `installBundleContracts.test.js` cases that regressed and were the reason
+    this got scoped down to opt-in rather than always-on.
+- New `CONTRIBUTING.md`: "Two lines: code and spaces" — what lives in git vs each
+  tier's database (local / **dev.diiii.xyz** / **diiii.xyz**), the start check, and
+  one short section per door (Studio by hand, a script, an LLM/agent — any tool,
+  not just Claude — Telegram, a fork on Windows). States plainly that
+  `staging.di-studio.xyz` is the old name for the dev tier and still answers, and
+  that the rest of the safety net (author-on-every-change, restore points, undo)
+  is coming in later PRs with no promises yet on shape. `AGENTS.md`'s "Start Here"
+  now points to it as step 0; `ONBOARDING.md` §7 links it. Golden rule added to
+  `docs/ai/golden_rules.md`. Fixed `.claude/commands/branch.md`'s `feature/<slug>`
+  to this repo's real `feat/`/`fix/`/`chore/` prefixes.
+- Tests: `scripts/start-check.test.js` (mocks `repo-state.mjs`/`tier-sync.mjs`/
+  `node:child_process` — up-to-date, behind, fork-behind, dev-ahead-on-a-space,
+  tier-unreachable, local-tier-unreachable, formatting); new stale-destination
+  cases added to `scripts/space-push.test.js`, `scripts/space-sync.test.js`,
+  `scripts/tier-sync.test.js`; new `scripts/space-bundle.test.js` (didn't exist
+  before this branch). All spawn/mock-based — nothing here writes to a real
+  dev/prod tier.
+- Constraint honored: no writes to any remote tier from this branch's own testing;
+  every write-path test uses either a local `node:http` fake tier or a temp SQLite
+  data root created for the test.
+
+Not done here (out of scope for this PR, section B of the plan): actor stamping on
+`space_ops`/`project_ops`, restore points beyond Open Space, the snapshots/history
+API, the inner-bot notice+Undo, Studio's History panel. `CONTRIBUTING.md` names
+these as "coming in later PRs" without promising their shape.
+
+## 2026-09-16 (later) — rebased onto the "staging" retirement; the space check rebuilt after real-box testing
+
+- Rebased onto `origin/dev` after `chore: retire "staging" — the tiers are local ·
+  dev · prod` landed (PR #471) — `TIERS.staging.base` is now `dev.diiii.xyz`,
+  `resolveTier`/`tierLabel` exist, `isProductionTarget` also covers `diiii.xyz`.
+  One textual conflict (an import line in `tier-sync.test.js`); everything else
+  auto-merged clean and was re-verified by hand against the new file shapes.
+- Ran the space check against the owner's real env for the first time
+  (`local.thedi.studio` + `staging.di-studio.xyz`, ~31 held spaces, ~100
+  projects) and it did not hold up:
+  1. `localBase()` in `tier-sync.mjs` appended `/serverXR` unconditionally —
+     `LOCAL_API_URL=http://localhost:4000/serverXR` produced
+     `.../serverXR/serverXR/api/spaces` → 404. Fixed to be idempotent about the
+     suffix. `checkSpaces` also now retries a configured-but-unreachable local
+     tier against plain `http://localhost:4000/serverXR` once (network
+     failures only, never on an auth error) and names every base it tried in
+     the "not checked" reason.
+  2. The original design fetched and hashed every project's full document on
+     both tiers — against ~100 real projects it either blew its own 10s
+     budget or, once, printed ~60 "not checked (time budget exceeded)" lines.
+     Replaced with a cheap comparison: one `GET /api/spaces/:id/projects` per
+     tier per space (documentVersion + updatedAt for every project in that
+     space, no per-project request), compared against what THIS box last saw
+     for that project (`serverXR/data/start-check-cache.json`, resolved the
+     same way `tier-sync-baseline.json` is — DATA_ROOT-relative — but a
+     separate file; tier-sync never reads or writes it). A version bumps on
+     every write (`projectRoutes.js`), so "unchanged since I last looked" is
+     as reliable as a content hash for detecting motion, without reading
+     content. Spaces run `SPACE_CONCURRENCY` (6) at a time.
+  3. Output redesigned to one summary line grouped by SPACE, not project
+     ("19 same · 2 newer on dev: wcc, br-id-ge"), then up to 5 detail lines
+     with the exact pull command, then "+N more — npm run start-check --
+     --spaces-detail" for the rest. `not-checked` rows collapse into one line
+     grouped by reason with a count, never one line each.
+- Verified for real, read-only, against the owner's actual local install and
+  the actual dev tier (`local.thedi.studio` + `staging.di-studio.xyz`, sourced
+  from `di.iiii/serverXR/.env.local`): first run (cold cache) 31 spaces in a
+  few seconds, all reported "new (uncompared)" since nothing was cached yet;
+  second run 2.35s wall clock, correct "same"/"local-only"/"dev-only" split,
+  no drift (nothing changed between the two runs, as expected). The
+  `SessionStart` hook command itself (CURRENT.md print + `timeout 25 node
+  start-check.mjs`) ran in 2.21s total — well inside its 25s/30s budgets.
+  `serverXR/data/start-check-cache.json` now exists for real on this box,
+  alongside the existing `tier-sync-baseline.json`.
+- `classifyProjectDrift`/shape-baseline comparison removed in favor of
+  `classifyVersionDrift`; tests rewritten to match
+  (`scripts/start-check.test.js`, `scripts/tier-sync.test.js` gained
+  `localBase` coverage). `tier-sync.mjs` gained `listProjectMetas` (the cheap
+  list read, exported for reuse — the same reuse-not-copy rule the rest of
+  this file follows).
+
+## 2026-09-16 (later still) — the cache was the bug: real false LATEST, found live on br-id-ge
+
+- The coordinator ran the previous version against the real box and caught a
+  **false LATEST**: br-id-ge's `newww`/`landing`/`br-id-ge-field` had all
+  changed on the dev tier that afternoon, local's copy was behind, and the
+  tool said LATEST anyway. Cause: the version-cache seeded itself FROM
+  whatever state existed on its first run — if drift already existed before
+  that first run, nothing ever looked like it had "moved" relative to a
+  baseline that was itself already wrong. Also flagged: that cache
+  (`start-check-cache.json`) had been written into the owner's shared data
+  tier (`~/.local/share/di.iiii/data/`), which a read-only check must never
+  touch — deleted.
+- Fixed: dropped the cache entirely. Every run now compares the two tiers
+  DIRECTLY: cheap `documentVersion`+`updatedAt` (already fetched, no new
+  request) settle a project as "same" only on an EXACT match; when they
+  differ, `tier-sync-baseline.json` — a real, content-verified reference
+  point written by actual tier-sync runs, never guessed — says who moved,
+  confirmed with one live document-fetch pair (budgeted,
+  `CONFIRM_FETCH_BUDGET = 30`, to keep the whole run bounded); with no
+  baseline, the side with the later `updatedAt` is reported as ahead
+  (unconfirmed, labeled as such), and only "dev is later" flips the headline
+  — a genuine tie with no baseline is surfaced as "differs (undetermined)",
+  never silently called "same".
+- Also fixed: each space now lands in exactly ONE summary bucket
+  (`SUMMARY_PRIORITY`, highest-severity kind wins) — `main`/`what-we-have`
+  previously appeared under BOTH "local-only" and "dev-only" because
+  separate PROJECT rows inside the same shared space picked separate space
+  IDs for each bucket independently. A project missing entirely on one side,
+  inside a space BOTH tiers hold, is now a definitive `dev-ahead`/
+  `local-ahead` (not a neutral "only exists" note); a SPACE missing entirely
+  from one tier is its own one-line, non-drift bucket.
+- Verified for real, read-only, against the owner's actual env
+  (`local.thedi.studio` + `staging.di-studio.xyz`): `--space br-id-ge
+  --strict` → **NOT LATEST**, exit 1, `br-id-ge-field`/`landing`/`newww`
+  confirmed via baseline as "changed on both" — cross-checked against
+  `node scripts/tier-sync.mjs --from local --to staging --space br-id-ge
+  --audit` (the independently-trusted comparison), which reports the exact
+  same 4 projects as "same slug, DIFFERENT work". An unfiltered full-box run
+  (~31 spaces) puts `br-id-ge` under "newer on dev" in the summary line, per
+  the coordinator's literal ask, in 4.4s wall clock. Known remaining
+  imprecision: which LABEL a borderline project gets (confirmed vs.
+  timestamp-heuristic) can vary with the shared `CONFIRM_FETCH_BUDGET`
+  running out earlier in a big unfiltered run than in a `--space`-filtered
+  one — never changes the LATEST/NOT LATEST verdict itself, only which of
+  "changed on both" vs. "newer on dev (by timestamp)" a given project shows.
+
+## 2026-09-16 — start-check compares content; tier-sync can rebuild its baseline
+
+Found by the spaces audit (`docs/research/2026-09-16-spaces-audit.md`, PR from `docs/spaces-audit`).
+
+- **start-check** judged "newer on dev" from `documentVersion`/`updatedAt`. Every tier bumps
+  those on its own and re-addresses assets on arrival, so the owner's box printed ~94 NOT
+  LATEST lines, mostly identical content. It also offered to pull `open/mini`,
+  `open/i-dont-know`, `main/tools-sketch`, `what-we-have/suite-sketch` — all in local's trash.
+  - Now: versions equal (or equal to a content-confirmed baseline entry's versions) → same,
+    no fetch. Otherwise both documents are fetched (8 pairs at once, dev-later first, one
+    15 s budget) and compared by `documentSignature().shape` (volatile fields stripped,
+    assets by name). Content differs → direction from the baseline only; with no
+    baseline entry it is "differs — look before pulling or pushing" (compare + pull
+    commands), never guessed from timestamps and never NOT LATEST by itself.
+    Unread in budget → `not confirmed: N`, never NOT LATEST.
+  - `GET /api/trash` on local: a dev-only project in local's trash is "deleted here on
+    purpose", no detail line, no pull.
+  - Output: summary line, optional `not confirmed` line, ≤5 details (dev-ahead first).
+- **tier-sync `--rebuild-baseline [--dry-run]`** (defaults `--from local --to dev`): reads
+  both tiers, records every project whose shape is identical as
+  `{ shape, versions: { local, dev } }`, lists the differing ones, replaces the
+  destination's key only, writes nothing to a tier. `--changed` now writes the same
+  versioned entries; every reader goes through `baselineShape()` so old bare-string
+  entries still work.
+- Live, owner's box (LOCAL_API_URL=http://localhost:4000, dev.diiii.xyz):
+  - before: `11 newer on dev … 8 local ahead …` — 84 dev-ahead, 112 local-ahead, 2 both rows, 5.2 s.
+  - after: `15 same · 4 newer on dev: main, what-we-have, the-light-put-back, network ·
+    2 changed on both: open, br-id-ge · 3 local ahead … · 4 project(s) deleted here on purpose`
+    — 10 dev-ahead, 2 both, ~11 s, 0 not confirmed.
+  - `--rebuild-baseline --dry-run`: 198 identical · 17 differing · 31 one tier only (24 s).
+    Same 17 as start-check's content-differing rows. Not run for real (owner's data tier).
+- Review round: the timestamp direction called `what-we-have/map` "newer on dev" while
+  local's copy was fuller — removed (bucket `differs`). `--changed --dry-run` used to
+  write the baseline; every `--dry-run` now writes nothing (test drives the real
+  `main()` against fake tiers for `--changed`, `--rebuild-baseline`, plain).
+  - re-run: `15 same · 2 changed on both: open, br-id-ge · 6 differs — look before
+    pulling or pushing · 1 local ahead · 8 local-only · 4 deleted here on purpose`, 12.3 s.
+    The two "changed on both" come from the stale 09-06 baseline; after a real
+    `--rebuild-baseline` they fall into `differs`.
+  - after merging dev's tier rename (#475: TIERS/baseline key `staging` → `dev`):
+    `LATEST · 15 same · 8 differs — look before pulling or pushing · 1 local ahead ·
+    8 local-only · 4 deleted here on purpose`, 10.2 s. The owner's 09-06 baseline is
+    keyed `staging`, so it is no longer read; `--rebuild-baseline` writes under `dev`.
+
+## 2026-09-16 — batch land: space history + start check
+
+- Batched two independent, non-overlapping reviewed PRs onto `dev` in one CI round:
+  `feat/space-history` (#470, every space change gets an author and a way back) and
+  `feat/start-check` (#472, a start-of-session/pre-push check for code and space
+  content lines). No shared files between them.
+- Merged both with `--no-ff` into `land/history-startcheck-2026-09-16`, cut from
+  `origin/dev`. Their own session notes (`feat-space-history.md`, `feat-start-check.md`)
+  are left in place — folding happens on `dev` via `npm run land` (the staging deploy's
+  `land` job runs it automatically after this lands), not on this branch.
+
+## 2026-09-16 — Land the rig (protocol 1) and Raw picture operators together
+
+- Batch of #447 (Raw picture operators; spine-gate colour literals tokenised, dev merged in) and #478 (the rig, step 1: members find each other in any version).
+- One conflict, `src/map/MapOutput.jsx` imports: kept both (`useTopNetwork`/`useMachinePresence` and `RigBlackout`).
+- Combined checks before push: full vitest 4832 passed, eslint 0 errors, local-profile build ok.
+
 ## 2026-09-15 — Facade audit wave 3: the 2D page faults
 
 Five faults from the 2026-09-14 facade audit's "wave 3, DIY look" list — the

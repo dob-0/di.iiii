@@ -29,7 +29,7 @@ The address moved 2026-09-11: the platform is `diiii.xyz`, `thedi.studio` is
 the studio's own address on it, and `di-studio.xyz` keeps serving the same
 square forever — the QR hanging in the room and the `curl .../get | sh` line on
 the workshop handouts both name it, so it is never redirected and never
-repurposed. Second tier: `dev.diiii.xyz` (also `staging.di-studio.xyz`).
+repurposed. Second tier: `dev.diiii.xyz`.
 
 ## Why the walls we hit are actually the architecture
 

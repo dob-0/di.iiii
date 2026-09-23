@@ -24,7 +24,6 @@
  *                     (`dilijan` was, for a month), and mirroring prod alone
  *                     silently leaves it out with nothing reporting a miss.
  *                     Prod always wins for a space both tiers hold.
- *                     `staging` is still accepted and means the dev tier.
  *   --space   <id>    Mirror only this space (repeatable)
  *   --from    <url>   Source API base — overrides --tier
  *   --token   <token> Bearer token for the source (default: the tier's own).
@@ -52,20 +51,22 @@ const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const DEFAULT_LOCAL_URL = 'http://localhost:4000/serverXR'
 
 // The tier map matches spaces/README.md: PROD_API_TOKEN for production,
-// LIVE_API_TOKEN for the dev tier (key still `staging`). Order matters — production is walked first so a
+// LIVE_API_TOKEN for the dev tier. Order matters — production is walked first so a
 // space both tiers hold is taken from production.
 const TIERS = {
     prod: { urlEnv: 'PROD_API_URL', tokenEnv: 'PROD_API_TOKEN', fallbackUrl: 'https://di-studio.xyz/serverXR' },
-    staging: { urlEnv: 'LIVE_API_URL', tokenEnv: 'LIVE_API_TOKEN', fallbackUrl: 'https://dev.diiii.xyz/serverXR' },
+    dev: { urlEnv: 'LIVE_API_URL', tokenEnv: 'LIVE_API_TOKEN', fallbackUrl: 'https://dev.diiii.xyz/serverXR' },
 }
 
 // Sandboxes are per-account scratch space, provisioned lazily on first visit.
 // Copying someone else's sandbox to a dev box means nothing.
 const isSandbox = (spaceId) => /^sandbox-/.test(spaceId)
 
-// `dev` names the dev tier; its TIERS key is still `staging`.
-const resolveTier = (name) => (name === 'dev' ? 'staging' : name)
-const tierLabel = (name) => (name === 'staging' ? 'dev' : name)
+// The dev tier's old key is refused outright, not mapped: one name per tier.
+const resolveTier = (name) => {
+    if (name === 'staging') throw new Error('"staging" is now "dev"')
+    return name
+}
 
 const parseArgs = (argv) => {
     const args = {
@@ -158,10 +159,14 @@ const SPACE_FIELDS = ['label', 'isPublic', 'openInscriptions', 'allowEdits']
 
 const main = async () => {
     const env = {
-        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env'))),
-        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env.local'))),
+        // Most specific file wins, so serverXR/.env.local merges LAST. The root .env is a
+        // general-purpose file that on one machine carried LOCAL_API_URL=localhost:4000 while
+        // the install answered on its own name — with root-last, that stale line won and the
+        // content half of this tool reported "not checked" for a week (2026-09-21).
         ...(await loadEnvFile(path.join(ROOT_DIR, '.env'))),
         ...(await loadEnvFile(path.join(ROOT_DIR, '.env.local'))),
+        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env'))),
+        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env.local'))),
     }
     const getEnv = (key) => process.env[key] || env[key] || ''
 
@@ -177,7 +182,7 @@ const main = async () => {
         : Object.entries(TIERS)
             .filter(([name]) => args.tier === 'all' || args.tier === name)
             .map(([name, tier]) => ({
-                name: tierLabel(name),
+                name,
                 base: (getEnv(tier.urlEnv) || tier.fallbackUrl).replace(/\/+$/, ''),
                 token: args.token || getEnv(tier.tokenEnv) || '',
             }))

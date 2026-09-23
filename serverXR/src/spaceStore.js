@@ -70,6 +70,38 @@ const applyAssetSafetyHeaders = (res, mimeType) => {
   }
 }
 
+// Parses a `Range` header for a single byte range against a known file size.
+// Returns:
+//   - { start, end } (inclusive) for a satisfiable single range
+//   - 'unsatisfiable' when the requested range doesn't fit the file (-> 416)
+//   - null when the header is absent, malformed, a non-"bytes" unit, or a
+//     multi-range request (`bytes=0-10,20-30`) — callers fall back to a full
+//     200 response in every one of those cases. A `<video>` element only ever
+//     asks for one range at a time, so the multipart/byteranges response a
+//     real multi-range reply would need isn't worth building; this is the
+//     documented, deliberate choice the task asked to record.
+const parseByteRange = (header, size) => {
+  const match = /^bytes=([^,]+)$/.exec(header || '')
+  if (!match) return null
+  const spec = match[1]
+
+  const suffixMatch = /^-(\d+)$/.exec(spec)
+  if (suffixMatch) {
+    const suffixLength = Number(suffixMatch[1])
+    if (suffixLength <= 0) return null
+    if (size <= 0) return 'unsatisfiable'
+    const start = Math.max(size - suffixLength, 0)
+    return { start, end: size - 1 }
+  }
+
+  const rangeMatch = /^(\d+)-(\d*)$/.exec(spec)
+  if (!rangeMatch) return null
+  const start = Number(rangeMatch[1])
+  const end = rangeMatch[2] ? Number(rangeMatch[2]) : size - 1
+  if (start >= size || end < start) return 'unsatisfiable'
+  return { start, end: Math.min(end, size - 1) }
+}
+
 const SPACE_KINDS = ['normal', 'global', 'sandbox']
 const normalizeSpaceKind = (value) => SPACE_KINDS.includes(value) ? value : 'normal'
 
@@ -120,6 +152,19 @@ function createSpaceStore({
     }
   }
 
+  // trusted_user_ids: JSON array of account ids. Unreadable → [] rather than a throw.
+  const parseTrusted = (raw) => {
+    if (!raw) return []
+    try {
+      const list = JSON.parse(raw)
+      return Array.isArray(list) ? Array.from(new Set(list.map((v) => String(v || '').trim()).filter(Boolean))) : []
+    } catch { return [] }
+  }
+  const serializeTrusted = (list) => {
+    const clean = Array.isArray(list) ? Array.from(new Set(list.map((v) => String(v || '').trim()).filter(Boolean))) : []
+    return clean.length ? JSON.stringify(clean) : null
+  }
+
   const rowToMeta = (row) => !row ? null : ({
     id: row.id,
     // Public handle for links — independently renameable, unlike id. null
@@ -135,6 +180,7 @@ function createSpaceStore({
     // instead of the live embed. null = default live preview.
     previewImageAssetId: row.preview_image_asset_id || null,
     ownerUserId: row.owner_user_id || null,
+    trustedUserIds: parseTrusted(row.trusted_user_ids),
     // Owner opt-in: anonymous append-only inscriptions (see inscriptionRoutes).
     openInscriptions: Boolean(row.open_inscriptions),
     sceneVersion: row.scene_version || 0,
@@ -156,6 +202,7 @@ function createSpaceStore({
       publishedProjectId: overrides.publishedProjectId || null,
       previewImageAssetId: overrides.previewImageAssetId || null,
       ownerUserId: overrides.ownerUserId || null,
+      trustedUserIds: parseTrusted(serializeTrusted(overrides.trustedUserIds)),
       openInscriptions: Boolean(overrides.openInscriptions),
       createdAt: overrides.createdAt || now,
       updatedAt: now,
@@ -182,9 +229,9 @@ function createSpaceStore({
       countSandboxes: db.prepare("SELECT COUNT(*) as cnt FROM spaces WHERE kind = 'sandbox'"),
       selectIdleAccountSandbox: db.prepare("SELECT id, scene_version FROM spaces WHERE permanent = 1 AND kind = 'sandbox' AND last_touched_at < ?"),
       countProjectsInSpace: db.prepare('SELECT COUNT(*) as cnt FROM projects WHERE space_id = ?'),
-      upsert:        db.prepare('INSERT OR REPLACE INTO spaces (id, slug, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id, open_inscriptions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
-      insert:        db.prepare('INSERT INTO spaces (id, slug, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id, open_inscriptions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
-      update:        db.prepare('UPDATE spaces SET slug=?, label=?, permanent=?, allow_edits=?, is_public=?, kind=?, published_project_id=?, preview_image_asset_id=?, scene_version=?, updated_at=?, last_touched_at=?, owner_user_id=?, open_inscriptions=? WHERE id=?'),
+      upsert:        db.prepare('INSERT OR REPLACE INTO spaces (id, slug, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id, open_inscriptions, trusted_user_ids) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+      insert:        db.prepare('INSERT INTO spaces (id, slug, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id, open_inscriptions, trusted_user_ids) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+      update:        db.prepare('UPDATE spaces SET slug=?, label=?, permanent=?, allow_edits=?, is_public=?, kind=?, published_project_id=?, preview_image_asset_id=?, scene_version=?, updated_at=?, last_touched_at=?, owner_user_id=?, open_inscriptions=?, trusted_user_ids=? WHERE id=?'),
       deleteById:    db.prepare('DELETE FROM spaces WHERE id = ?'),
       opsSelect:     db.prepare('SELECT data FROM space_ops WHERE space_id = ? ORDER BY version ASC, seq ASC'),
       opsSelectSince: db.prepare('SELECT data FROM space_ops WHERE space_id = ? AND version > ? ORDER BY version ASC, seq ASC'),
@@ -215,7 +262,8 @@ function createSpaceStore({
       meta.updatedAt ?? Date.now(),
       meta.lastTouchedAt ?? Date.now(),
       meta.ownerUserId ?? null,
-      meta.openInscriptions ? 1 : 0
+      meta.openInscriptions ? 1 : 0,
+      serializeTrusted(meta.trustedUserIds)
     )
     const { spaceDir } = getSpacePaths(spaceId)
     await ensureDir(spaceDir)
@@ -233,7 +281,7 @@ function createSpaceStore({
       const row = selectById.get(spaceId)
       if (!row) {
         const meta = buildMeta(spaceId, updates)
-        insert.run(spaceId, meta.slug ?? null, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0, meta.isPublic ? 1 : 0, meta.kind, meta.publishedProjectId ?? null, meta.previewImageAssetId ?? null, meta.sceneVersion ?? 0, meta.createdAt, meta.updatedAt, meta.lastTouchedAt, meta.ownerUserId ?? null, meta.openInscriptions ? 1 : 0)
+        insert.run(spaceId, meta.slug ?? null, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0, meta.isPublic ? 1 : 0, meta.kind, meta.publishedProjectId ?? null, meta.previewImageAssetId ?? null, meta.sceneVersion ?? 0, meta.createdAt, meta.updatedAt, meta.lastTouchedAt, meta.ownerUserId ?? null, meta.openInscriptions ? 1 : 0, serializeTrusted(meta.trustedUserIds))
         return meta
       }
       const nextSlug      = 'slug'             in updates ? (updates.slug ?? null)                                                                    : row.slug
@@ -248,8 +296,9 @@ function createSpaceStore({
       const nextTouched   = updates.touch !== false ? now : row.last_touched_at
       const nextOwner     = 'ownerUserId'      in updates ? (updates.ownerUserId ?? null)                                                            : row.owner_user_id
       const nextInscribe  = 'openInscriptions' in updates ? (updates.openInscriptions ? 1 : 0)                                                       : row.open_inscriptions
-      update.run(nextSlug, nextLabel, nextPermanent, nextEdits, nextPublic, nextKind, nextPublished, nextPreview, nextVersion, now, nextTouched, nextOwner, nextInscribe, spaceId)
-      return rowToMeta({ ...row, slug: nextSlug, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner, open_inscriptions: nextInscribe })
+      const nextTrusted   = 'trustedUserIds'   in updates ? serializeTrusted(updates.trustedUserIds)                                                       : (row.trusted_user_ids ?? null)
+      update.run(nextSlug, nextLabel, nextPermanent, nextEdits, nextPublic, nextKind, nextPublished, nextPreview, nextVersion, now, nextTouched, nextOwner, nextInscribe, nextTrusted, spaceId)
+      return rowToMeta({ ...row, slug: nextSlug, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner, open_inscriptions: nextInscribe, trusted_user_ids: nextTrusted })
     })()
   }
 
@@ -323,7 +372,7 @@ function createSpaceStore({
       s().insert.run(toId, meta.slug ?? null, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0,
         meta.isPublic ? 1 : 0, normalizeSpaceKind(meta.kind), meta.publishedProjectId ?? null,
         meta.previewImageAssetId ?? null, meta.sceneVersion ?? 0, row.created_at, now, now,
-        meta.ownerUserId ?? null, meta.openInscriptions ? 1 : 0)
+        meta.ownerUserId ?? null, meta.openInscriptions ? 1 : 0, serializeTrusted(meta.trustedUserIds))
       db.prepare('UPDATE space_ops SET space_id = ? WHERE space_id = ?').run(toId, fromId)
       db.prepare('UPDATE projects SET space_id = ? WHERE space_id = ?').run(toId, fromId)
       commonsStore.updateSpaceId(fromId, toId)
@@ -751,15 +800,73 @@ function createSpaceStore({
     }
   }
 
-  const serveFile = (res, filePath, contentType) => {
+  // `req` is optional (tests exercising thumbnail generation call serveFile
+  // with a bare fake response and never send a Range header) — without it,
+  // this behaves exactly as before: a plain 200 with the full body.
+  const serveFile = (res, filePath, contentType, req) => {
+    let stat
+    try {
+      stat = fs.statSync(filePath)
+    } catch (error) {
+      logger.error(error)
+      res.status(500).end('Failed to read asset')
+      return
+    }
+    const size = stat.size
+    const isHead = req?.method === 'HEAD'
+
     res.setHeader('Content-Type', contentType || 'application/octet-stream')
     applyAssetSafetyHeaders(res, contentType)
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
-    const stream = fs.createReadStream(filePath)
-    stream.on('error', (error) => {
+    // Advertised unconditionally — even a HEAD or a plain 200 response tells
+    // the client range requests are supported, which is how a <video>
+    // element decides whether scrubbing/seeking is possible at all.
+    res.setHeader('Accept-Ranges', 'bytes')
+
+    const range = parseByteRange(req?.headers?.range, size)
+
+    if (range === 'unsatisfiable') {
+      res.status(416)
+      res.setHeader('Content-Range', `bytes */${size}`)
+      res.end()
+      return
+    }
+
+    const streamError = (error) => {
       logger.error(error)
-      res.status(500).end('Failed to read asset')
-    })
+      // Headers (and possibly bytes) may already be on the wire once the
+      // stream has started — a 500 written after that point would either
+      // throw or silently corrupt the response, so just tear the connection
+      // down instead.
+      if (res.headersSent) {
+        res.destroy()
+      } else {
+        res.status(500).end('Failed to read asset')
+      }
+    }
+
+    if (range) {
+      const { start, end } = range
+      res.status(206)
+      res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`)
+      res.setHeader('Content-Length', end - start + 1)
+      if (isHead) {
+        res.end()
+        return
+      }
+      const stream = fs.createReadStream(filePath, { start, end })
+      stream.on('error', streamError)
+      stream.pipe(res)
+      return
+    }
+
+    res.setHeader('Content-Length', size)
+    if (isHead) {
+      res.end()
+      return
+    }
+    const stream = fs.createReadStream(filePath)
+    stream.on('error', streamError)
     stream.pipe(res)
   }
 
@@ -780,7 +887,7 @@ function createSpaceStore({
     )
   }
 
-  const serveAsset = async (spaceId, assetId, res, { width } = {}) => {
+  const serveAsset = async (spaceId, assetId, res, { width, req } = {}) => {
     const { assetsDir } = getSpacePaths(spaceId)
     const filePath = path.join(assetsDir, assetId)
     const meta = await readJson(path.join(assetsDir, `${assetId}.json`), null)
@@ -816,14 +923,14 @@ function createSpaceStore({
       }
       const hasThumb = await fsp.access(thumbPath).then(() => true, () => false)
       if (hasThumb) {
-        return serveFile(res, thumbPath, 'image/webp')
+        return serveFile(res, thumbPath, 'image/webp', req)
       }
       // Fall through to the original on any generation failure (corrupt
       // image, unsupported subformat, etc.) — a slow thumbnail is better
       // than a broken preview.
     }
 
-    serveFile(res, filePath, meta?.mimeType)
+    serveFile(res, filePath, meta?.mimeType, req)
   }
 
   return {
@@ -869,4 +976,4 @@ function createSpaceStore({
   }
 }
 
-module.exports = { createSpaceStore, applyAssetSafetyHeaders }
+module.exports = { createSpaceStore, applyAssetSafetyHeaders, parseByteRange }

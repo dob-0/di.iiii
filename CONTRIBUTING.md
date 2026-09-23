@@ -10,11 +10,9 @@ di.iiii has two lines of work, and they live in different places:
 Almost every real task touches both at once: you change some code AND some content
 while testing it. Treat them as two things you sync separately, not one.
 
-**The addresses today:** `dev.diiii.xyz` is the settled name for the rehearsal tier;
-`staging.di-studio.xyz` is the old name — it still answers, and some scripts in this
-repo (`tier-sync.mjs`, `AGENTS.md`'s own validation commands) still say `staging` or
-`staging.di-studio.xyz` because renaming every reference is its own piece of work, not
-done yet. `diiii.xyz` is the only host for anything you write down as a new link;
+**The addresses today:** `dev.diiii.xyz` is the rehearsal tier, and its only address —
+the old name `staging.di-studio.xyz` was switched off on 2026-09-16, and the scripts say
+`dev` (`--tier dev`). `diiii.xyz` is the only host for anything you write down as a new link;
 `di-studio.xyz` is the old production name and still answers the same way.
 
 ## The start check
@@ -40,6 +38,12 @@ checked" — it never claims LATEST when it doesn't actually know. A `SessionSta
 hook already runs this for you in Claude Code; `pre-push-gate.sh` warns (never blocks)
 when your branch is behind before a push.
 
+A space is "behind" only when its normalized content differs (versions and asset addresses
+drift by themselves); projects this box put in its trash are never offered as a pull, and
+pairs it couldn't read in time are one "not confirmed: N" line.
+If `tier-sync.mjs --changed` refuses everything, rebuild its baseline:
+`node scripts/tier-sync.mjs --rebuild-baseline --dry-run` (then without `--dry-run`).
+
 If it tells you a space is behind, it names the exact pull command. If it can't reach
 a tier (no token configured, or the tier is unreachable), that space is reported as
 "not checked" — not as "in sync". Don't read silence as safety.
@@ -54,11 +58,57 @@ refusal prints the exact command to pull the newer copy down, or the explicit fl
 purpose. If you hit a refusal, read it before reaching for the override — it exists
 because something real changed.
 
-This is the first piece of the safety net, not the whole thing: it stops a routine
-sync from being the thing that erases someone's afternoon. The rest — an author on
-every change, automatic restore points, a way to see recent history and undo it — is
-**coming in later PRs**. Nothing about their shape is promised here; when they land,
-this file gets updated in the same PR.
+This is the first piece of the safety net: it stops a routine sync from being the
+thing that erases someone's afternoon. The rest is in `serverXR/src/spaceHistory.js`
+and is on every tier: **every change has an author** (stamped from the session, never
+from the client), a **restore point** is taken at the first change of each burst — a
+different person, or the same person after a 15-minute pause — and a whole replace
+always takes one; `GET /api/spaces/:id/changes` reads the history in plain words
+("+3 images, 1 object removed, title changed"), and a restore point restores by id.
+When someone who is not the owner finishes a burst, **one signed notice** goes to the
+inner console with the summary, a link and an Undo — that part is off until
+`CONTENT_CHANGE_NOTICES_ENABLED=true` plus the console's `APPROVAL_BOT_URL` /
+`APPROVAL_SHARED_SECRET` are set on the tier.
+
+## Who decides what, in a space
+
+Three zones, and a start check before any of them:
+
+| Zone | Who | What happens to a change |
+| --- | --- | --- |
+| **Mine** — the platform, prod, what goes live | the owner of di.iiii | your hand: the promotion PR, the `production` environment gate |
+| **Theirs** — a space that belongs to a person (`ownerUserId`) | that person, and the people they **trust** (`trustedUserIds`, owner-managed) | applied at once, with author + restore point; the owner is told and can undo |
+| **About them** — their entry on our side (a room in `network`, a page in `main`) | anyone | a **proposal**: a `.diiii` for an existing space is summarized and waits for Apply / Reject in the inner console (`space-bundle.mjs propose`) |
+
+Being the owner or trusted in one space grants nothing anywhere else — it is a
+relationship to one place, not a role. Two things stay with the platform whoever owns
+the space: its `kind` and `permanent` flags, and handing it to someone else.
+
+A space is also the **workshop** for what the program cannot do yet: build it there,
+with your own tools or your own AI, and when it is good the mechanism graduates into
+the platform (`docs/ai/golden_rules.md` → "Platform and works"). A private,
+non-permanent space with a trusted group is the experimental zone; nothing in it
+reaches the front door without a deliberate act by its owner.
+
+## The program line, end to end
+
+```
+1  START     npm run start-check          — LATEST or NOT LATEST, both lines
+2  WORK      a worktree off fresh origin/dev; a fork works the same way
+3  SEE IT    your own install runs it     — npm run di:pack, then di update --from
+4  LAND      PR → dev; two required checks; merge
+5  NOTE      docs/ai/sessions/<branch>.md — folded into CURRENT.md at landing
+6  DEV TIER  push to dev deploys dev.diiii.xyz — look at it, desktop and phone
+7  PROMOTE   one PR dev → main, on the owner's word
+8  PROD      the production environment gate, the owner's hand
+9  TAG       tag-on-promotion → a version an installed di.iiii can update to
+```
+
+Two quiet failures to know by name: the notes in step 5 must be **landed** on `dev`
+before step 7 (`npm run land`, through a PR — CI cannot push its own fold), and
+`CURRENT.md` must stay under 50 lines after the fold, or `docs:ai:check` fails and the
+tier deploy is **skipped while the run looks green**. That is the failure that cost
+ten days in September 2026; `start-check` and the deploy log are the two places it shows.
 
 ## The five doors
 
@@ -102,6 +152,50 @@ covers the platform-specific setup traps. Once you're running, the two-line rule
 above still applies exactly as written — a fork just means your **code** line has an
 extra hop (fork → PR → `dev`) before it's caught up; your **space** line (local tier)
 is unaffected by which fork you're on.
+
+## Carrying a whole space to another tier
+
+A space has **one home tier** while it is being worked on — edit it there, and only
+there. It moves up (collaborator's install → `dev` → `diiii.xyz`) as one file, in this
+order, with a look between every step:
+
+1. **Export** on the home tier: `node scripts/space-bundle.mjs export <space> --out <space>.diiii`
+   (a collaborator on a fork publishes the file as a **release** on the fork — Telegram
+   cannot carry it).
+2. **Dev first.** On the dev server: `space-bundle.mjs import <file> --force --tier dev`.
+   On a hosted tier the tool refuses a replace unless `--tier` is given **and is the tier
+   it is actually running on** — the 2026-09-17 accident was a file meant for dev landing
+   on prod because nothing said where it was. Address the container by **name**
+   (`dii-dev-server-1`, `dii-server-1`), never by `cd` + `docker compose`.
+3. **Look at dev** — desktop and phone, the space's own links — before anything else.
+4. **Prod on the owner's word**, same command with `--tier prod`.
+
+What a replace does and does not do: it keeps the projects the file does not carry
+(`--prune` deletes them, and says which), keeps the space's label and owner, carries each
+project's draft/archived/trash state, and writes a before-copy to
+`<data-root>/_backups/space-replace/` first. It still refuses a target that changed after
+the file was exported unless `--force-stale` — read that refusal as "somebody else worked
+here", not as an obstacle.
+
+## Moving one project into a different space
+
+Folding several one-page spaces into one, or just reorganising, doesn't need a whole
+space export — `node scripts/project-move.mjs <projectId> --to <spaceId> --data-root <dir>`
+moves a single project's row and directory in place, on the SAME tier's data root
+(local, or run it inside a tier's container the same way `space-bundle.mjs` does).
+`--dry-run` first is free, and reports exactly what it would touch. It refuses to
+move a project the source space is currently showing to visitors
+(`published_project_id`) unless you add `--unpublish` — moving a space's front door
+must never happen silently. Any of the project's own asset files, and copies of any
+space-shared assets its document references, move/copy with it; nothing is ever
+deleted from the source space.
+
+Old public links keep answering: `/{space}/p/{projectId}` and `/api/projects/{id}`
+resolve by the project's id alone, unaffected by a move. The short vanity form
+`/{space}/{slugOrId}` is the one address the move tool has to explain itself for — it
+writes a `project_moves` row, and the server's resolver
+(`GET /api/resolve/:spaceSegment/:projectSegment`) answers a project that left with a
+pointer to its new address instead of a 404.
 
 ## Golden rule
 

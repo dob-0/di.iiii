@@ -17,9 +17,7 @@ describe('resolveDeployMode', () => {
         // …but 172.15 and 172.32 are outside the private block and public.
         ['172.15.0.4', MODE_HOSTED],
         ['172.32.0.4', MODE_HOSTED],
-        ['staging.di-studio.xyz', MODE_DEV],
-        ['staging-2.di-studio.xyz', MODE_DEV],
-        // The same tier, reached by the name the addresses settled on.
+        // The dev tier.
         ['dev.diiii.xyz', MODE_DEV],
         ['dev.di-studio.xyz', MODE_DEV],
         // Exact first label only — these are somebody's website.
@@ -28,14 +26,13 @@ describe('resolveDeployMode', () => {
         ['di-studio.xyz', MODE_HOSTED],
         // Only the FIRST label counts, or any domain with the word in it
         // would wear the rehearsal colour.
-        ['my-staging-notes.example.com', MODE_HOSTED],
-        ['notstaging.example.com', MODE_HOSTED]
+        ['my-dev.example.com', MODE_HOSTED]
     ])('reads %s as %s', (hostname, expected) => {
         expect(resolveDeployMode({ hostname })).toBe(expected)
     })
 
     it('is case-insensitive and tolerates bracketed IPv6', () => {
-        expect(resolveDeployMode({ hostname: 'STAGING.di-studio.xyz' })).toBe(MODE_DEV)
+        expect(resolveDeployMode({ hostname: 'DEV.diiii.xyz' })).toBe(MODE_DEV)
         expect(resolveDeployMode({ hostname: '[::1]' })).toBe(MODE_LOCAL)
     })
 
@@ -51,7 +48,7 @@ describe('resolveDeployMode', () => {
     // nobody trusts.
     it('answers from the hostname alone before the server has spoken', () => {
         expect(resolveDeployMode({ hostname: 'localhost', local: null })).toBe(MODE_LOCAL)
-        expect(resolveDeployMode({ hostname: 'staging.di-studio.xyz', local: null })).toBe(MODE_DEV)
+        expect(resolveDeployMode({ hostname: 'dev.diiii.xyz', local: null })).toBe(MODE_DEV)
         expect(resolveDeployMode({})).toBe(MODE_LOCAL)
     })
 
@@ -81,12 +78,9 @@ describe('deployModeMark', () => {
         expect(deployModeMark(MODE_HOSTED)).toBeNull()
     })
 
-    // One tier, two names: the chip reads DEV under either, so the retired
-    // word never reaches the screen.
-    it('prints DEV at dev.diiii.xyz and at the old staging.di-studio.xyz alike', () => {
-        for (const hostname of ['dev.diiii.xyz', 'staging.di-studio.xyz', 'staging-2.di-studio.xyz']) {
-            expect(deployModeMark(resolveDeployMode({ hostname }))).toMatchObject({ label: 'DEV', color: '#ffb347' })
-        }
+    // The chip reads DEV, so the retired word never reaches the screen.
+    it('prints DEV at dev.diiii.xyz', () => {
+        expect(deployModeMark(resolveDeployMode({ hostname: 'dev.diiii.xyz' }))).toMatchObject({ label: 'DEV', color: '#ffb347' })
         expect(Object.values(MODE_MARKS).filter(Boolean).map((m) => `${m.label} ${m.note}`).join(' ')).not.toMatch(/staging/i)
     })
 })

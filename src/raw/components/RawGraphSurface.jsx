@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
 import { CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, cardHeight } from '../utils/cardGeometry.js'
+import { isTopType } from '../../project/tops/topOperators.js'
+import TopThumbnail from './TopThumbnail.jsx'
+import CardPreview from './cardPreview/CardPreview.jsx'
+import { hasCardPreview } from './cardPreview/previewTypes.js'
 import {
     arePortsCompatible,
     getNodeCardSummary,
@@ -137,6 +141,17 @@ export default function RawGraphSurface({
     initialZoom = null,
     nodes = [],
     edges = [],
+    // THE THINGS IN THE ROOM, as cards (src/raw/utils/objectCards.js). A
+    // project holds things (Studio's objects) beside its nodes, and this
+    // surface drew only nodes — so a room of Studio things opened here as an
+    // empty grid. They arrive as their OWN pass rather than mixed into
+    // `nodes`: a thing has no ports, no wires and no inside, so a node's body
+    // would promise connections it cannot make. Positions are worked out by
+    // the caller and never saved. Optional and defaulted: Studio wraps this
+    // surface read-only and passes none.
+    objectCards = [],
+    selectedObjectId = null,
+    onSelectObject = null,
     // How many nodes each node contains, by node id. Optional and defaulted:
     // Studio wraps this component read-only and passes nothing, and must keep
     // rendering exactly as before.
@@ -166,7 +181,6 @@ export default function RawGraphSurface({
     // Builds a worked example on a blank canvas. Optional: Studio wraps this
     // read-only and offers nothing.
     onMakeScene = null,
-    onOpenRoom = null,
     onCreateEdge,
     onDeleteEdge,
     onDeleteNode,
@@ -220,6 +234,14 @@ export default function RawGraphSurface({
     // pinch sits on a threshold.
     const [tier, setTier] = useState(() => lodTierForZoom(initialZoom ?? 1))
     useEffect(() => { setTier((previous) => lodTierForZoom(zoom, previous)) }, [zoom])
+
+    // Everything the view has to hold, both kinds. Only the FIT and the
+    // is-this-canvas-empty question use it — wires and ports stay on `nodes`
+    // alone, because only nodes have any.
+    const cardsInView = useMemo(
+        () => (objectCards.length ? [...nodes, ...objectCards] : nodes),
+        [nodes, objectCards]
+    )
 
     const nodeById = useMemo(() => {
         const map = new Map()
@@ -416,8 +438,8 @@ export default function RawGraphSurface({
      * `force` runs the true overview anyway, at whatever zoom that takes.
      */
     const fitGraph = ({ force = false } = {}) => {
-        if (!nodes.length) return
-        const all = withExtraBounds(boundsOf(nodes))
+        if (!cardsInView.length) return
+        const all = withExtraBounds(boundsOf(cardsInView))
         const overviewZoom = zoomToFitBounds(all, { maxZoom: 1 })
         if (overviewZoom === null) return
 
@@ -457,7 +479,7 @@ export default function RawGraphSurface({
         const box = visibleBox()
         const vp = viewportRef.current
         const shown = box
-            ? nodes.filter((node) => {
+            ? cardsInView.filter((node) => {
                 const x = (node.graphX ?? 0) * vp.zoom + vp.panX
                 const y = (node.graphY ?? 0) * vp.zoom + vp.panY
                 const w = CARD_WIDTH * vp.zoom
@@ -465,7 +487,7 @@ export default function RawGraphSurface({
                 return x + w > 0 && x < box.width && y + h > 0 && y < box.height - Math.max(0, bottomInset)
             }).length
             : 0
-        setFitNotice({ shown, total: nodes.length })
+        setFitNotice({ shown, total: cardsInView.length })
     }
 
     // Zoom to the selected node. Unlike fit-all this is ALLOWED to magnify —
@@ -491,11 +513,11 @@ export default function RawGraphSurface({
     // The key must be the SCOPE, nothing else — a node count or first-node id
     // in here made every create/delete miss the guard and re-fit, which is
     // exactly the yank the comment above forbids.
-    const scopeKey = nodes.length ? `scope:${nodes[0]?.parentId || 'root'}` : ''
+    const scopeKey = cardsInView.length ? `scope:${nodes[0]?.parentId || 'root'}` : ''
     const insetKey = `${contentInsets?.left || 0}:${contentInsets?.right || 0}:${contentInsets?.top || 0}:${contentInsets?.bottom || 0}`
     useEffect(() => {
         if (initialZoom !== null) return
-        if (hasFitRef.current === scopeKey || !containerRef.current || nodes.length === 0) return
+        if (hasFitRef.current === scopeKey || !containerRef.current || cardsInView.length === 0) return
         if (!visibleBox()) return
         fitGraph()
         hasFitRef.current = scopeKey
@@ -1082,6 +1104,9 @@ export default function RawGraphSurface({
         // …and the port menu, or a double-tap on an item opens the create
         // palette over the graph behind it.
         if (event.target?.closest?.('.raw-graph-port-menu')) return
+        // …and a thing's card: a double-tap on it is two selects, not a
+        // request to place a node on top of it.
+        if (event.target?.closest?.('.raw-graph-object-card')) return
         const graphPoint = clientPointToGraphPoint(event.clientX, event.clientY)
         // Keep the whole card — and the door hanging off its left edge — inside
         // the part of the canvas you can SEE. Double-tapping near an edge used
@@ -1223,7 +1248,7 @@ export default function RawGraphSurface({
                     showing {fitNotice.shown} of {fitNotice.total} — ⤢ fit all
                 </button>
             ) : null}
-            {nodes.length === 0 ? (
+            {cardsInView.length === 0 ? (
                 // A blank workspace opens in ZEN, where there is NO topbar — so
                 // the ⋯ menu, and everything in it, does not exist for the
                 // person most likely to need it. The one offer that matters has
@@ -1238,9 +1263,6 @@ export default function RawGraphSurface({
                             component read-only and passes no handlers. */}
                         {onExplainScope ? (
                             <button type="button" onClick={onExplainScope}>What it&apos;s made of</button>
-                        ) : null}
-                        {onOpenRoom ? (
-                            <button type="button" onClick={onOpenRoom}>See the room</button>
                         ) : null}
                         {onMakeScene ? (
                             <button type="button" onClick={onMakeScene}>Build an example</button>
@@ -1451,6 +1473,24 @@ export default function RawGraphSurface({
                                     {showPorts && !inputs.length && !outputs.length && getNodeCardSummary(node) ? (
                                         <span className="raw-graph-node-summary">{getNodeCardSummary(node)}</span>
                                     ) : null}
+                                    {showPorts && isTopType(node.typeId) ? (
+                                        <TopThumbnail
+                                            nodeId={node.id}
+                                            top={Math.max(inputs.length, outputs.length, 1) * PORT_ROW_HEIGHT + 4}
+                                        />
+                                    ) : null}
+                                    {/* The cube itself, on the Cube's card — the same slot and
+                                        size as a picture operator's picture, below the ports, so
+                                        no port or wire moves. Unmounted below the port tier,
+                                        which is what keeps a zoomed-out desk free. */}
+                                    {showPorts && hasCardPreview(node.typeId) ? (
+                                        <CardPreview
+                                            node={node}
+                                            nodes={portScopeNodes || nodes}
+                                            edges={edges}
+                                            top={Math.max(inputs.length, outputs.length, 1) * PORT_ROW_HEIGHT + 4}
+                                        />
+                                    ) : null}
                                     {tier === 'header' ? (
                                         // Too small for ports, but the wires still land here,
                                         // so mark where. Ticks sit at the exact port centres.
@@ -1528,6 +1568,55 @@ export default function RawGraphSurface({
                             </div>
                         )
                     })}
+                    {/* The things. Same stage, so they pan and zoom with the
+                        nodes and read as being in the same place — they ARE
+                        in the same project. The node card's own classes, so a
+                        thing reads as living on this canvas rather than pasted
+                        onto it; what tells the two apart is the hue and the
+                        absence of ports, not a second visual language. */}
+                    {objectCards.map((card) => (
+                        <div
+                            key={card.id}
+                            className={`raw-graph-node-card raw-graph-object-card is-lod-${tier}${card.entityId === selectedObjectId ? ' is-selected' : ''}`}
+                            style={{
+                                position: 'absolute',
+                                left: card.graphX,
+                                top: card.graphY,
+                                width: CARD_WIDTH,
+                                height: cardHeight(card, null),
+                                cursor: onSelectObject ? 'pointer' : 'default',
+                                ...(card.familyColor ? { '--card-family': card.familyColor } : {})
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`${card.label}, a ${card.typeLabel} in the room${card.holds ? `, holds ${card.holds}` : ''}`}
+                            title={`${card.label} — a thing in the room`}
+                            onClick={() => onSelectObject?.(card.entityId)}
+                            onDoubleClick={(event) => event.stopPropagation()}
+                            onKeyDown={(event) => {
+                                if (event.key !== 'Enter' && event.key !== ' ') return
+                                event.preventDefault()
+                                onSelectObject?.(card.entityId)
+                            }}
+                        >
+                            <header className="raw-graph-node-header">
+                                <span className="raw-graph-node-icon" />
+                                {tier !== 'block' ? (
+                                    <span className="raw-graph-node-label">{card.label}</span>
+                                ) : null}
+                                {tier === 'full' ? (
+                                    <span className="raw-graph-node-category" style={{ color: card.familyColor }}>thing</span>
+                                ) : null}
+                            </header>
+                            <div style={{ position: 'relative', height: cardHeight(card, null) - HEADER_HEIGHT }}>
+                                {tier === 'full' || tier === 'compact' ? (
+                                    <span className="raw-graph-node-summary">
+                                        {card.holds ? `${card.typeLabel} · holds ${card.holds}` : card.typeLabel}
+                                    </span>
+                                ) : null}
+                            </div>
+                        </div>
+                    ))}
                 </div>
                 {/* Outside .raw-graph-stage on purpose: the stage carries the
                     pan/zoom transform, and position:fixed inside a transformed

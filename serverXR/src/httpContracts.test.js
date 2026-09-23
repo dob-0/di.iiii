@@ -273,6 +273,38 @@ afterEach(async () => {
 })
 
 describe('server write contracts', () => {
+    // The layers decision, 2026-09-23, unit 1: a space card says what the space
+    // holds — but only to someone who may enter it. A stranger looking at a
+    // public space learns nothing about its drafts.
+    it('the space list counts a space\'s projects only for a caller who may enter it', async () => {
+        const server = await startServer({ nodeEnv: 'production' })
+        const admin = { 'Content-Type': 'application/json', ...withAuth(server.apiToken) }
+        expect((await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST', headers: admin, body: JSON.stringify({ label: 'Counted', slug: 'counted' })
+        })).status).toBe(201)
+        for (const slug of ['one-piece', 'two-piece']) {
+            expect((await fetch(`${server.baseUrl}/api/spaces/counted/projects`, {
+                method: 'POST', headers: admin, body: JSON.stringify({ title: slug, slug })
+            })).status).toBe(201)
+        }
+        expect((await fetch(`${server.baseUrl}/api/projects/two-piece/shelf`, {
+            method: 'PATCH', headers: admin, body: JSON.stringify({ state: 'draft' })
+        })).ok).toBe(true)
+        expect((await fetch(`${server.baseUrl}/api/spaces/counted`, {
+            method: 'PATCH', headers: admin, body: JSON.stringify({ isPublic: true })
+        })).status).toBe(200)
+
+        const asAdmin = (await (await fetch(`${server.baseUrl}/api/spaces`, { headers: admin })).json())
+            .spaces.find((space) => space.id === 'counted')
+        expect(asAdmin).toMatchObject({ projectCount: 2, publishedCount: 1 })
+
+        const asStranger = (await (await fetch(`${server.baseUrl}/api/spaces`)).json())
+            .spaces.find((space) => space.id === 'counted')
+        expect(asStranger).toBeTruthy()
+        expect(asStranger.projectCount).toBeUndefined()
+        expect(asStranger.publishedCount).toBeUndefined()
+    })
+
     it('requires auth by default in production when REQUIRE_AUTH is unset', async () => {
         const server = await startServer({ nodeEnv: 'production' })
 
@@ -1571,7 +1603,7 @@ describe('server write contracts', () => {
 
     it('reports release metadata from the runtime manifest', async () => {
         const releaseManifest = {
-            deployEnv: 'staging',
+            deployEnv: 'dev',
             sourceRef: 'dev',
             gitCommit: 'abcdef1234567890',
             releaseId: 'cpanel-20260412-120000',
@@ -3571,6 +3603,60 @@ describe('space history: authors, restore points, notices', () => {
         expect(res.status).toBe(200)
         return (await res.json()).snapshots
     }
+
+    // ── the steward: the owner's word is final inside their space ───────────
+    const TARON = 'hist-taron'
+    const armedGate = async (bot) => startServer({
+        requireAuth: true,
+        extraEnv: { APPROVAL_GATE_ENABLED: 'true', APPROVAL_BOT_URL: bot.url, APPROVAL_SHARED_SECRET: 'steward-gate-secret' }
+    })
+    const patchSpace = (server, spaceId, headers, body) => fetch(`${server.baseUrl}/api/spaces/${spaceId}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body)
+    })
+
+    it('steward: kind, permanent and the owner itself stay with the platform — 403 for the owner, held for an admin', async () => {
+        const bot = await startFakeBot()
+        try {
+            const server = await armedGate(bot)
+            const { spaceId, owner } = await setupSpace(server)
+            const denied = await patchSpace(server, spaceId, { Cookie: owner }, { permanent: true })
+            expect(denied.status).toBe(403)
+            // An admin's sensitive change is exactly what the gate is for.
+            const held = await patchSpace(server, spaceId, withAuth(server.apiToken), { isPublic: true })
+            expect(held.status).toBe(202)
+            await expect(held.json()).resolves.toMatchObject({ status: 'pending_approval' })
+        } finally { await bot.close() }
+    })
+
+    it('steward: trusting someone carries scope with it, and the list is the owner\'s business', async () => {
+        const server = await startServer({ requireAuth: true })
+        const { spaceId, owner, editor } = await setupSpace(server)
+        seedAccount(server, TARON) // exists, reaches nothing yet
+        expect(readRows(server, 'SELECT spaces FROM users WHERE id = ?', TARON)[0].spaces).toBe('[]')
+
+        // Only the owner (or an admin) manages the list — being in scope is not being the owner.
+        expect((await patchSpace(server, spaceId, { Cookie: editor }, { trustedUserIds: [TARON] })).status).toBe(403)
+        // Shape and existence are checked; a guest cookie is not an account.
+        expect((await patchSpace(server, spaceId, { Cookie: owner }, { trustedUserIds: 'taron' })).status).toBe(400)
+        expect((await patchSpace(server, spaceId, { Cookie: owner }, { trustedUserIds: ['guest:someone'] })).status).toBe(400)
+        expect((await patchSpace(server, spaceId, { Cookie: owner }, { trustedUserIds: ['nobody-here'] })).status).toBe(404)
+
+        const trusted = await patchSpace(server, spaceId, { Cookie: owner }, { trustedUserIds: [TARON, TARON] })
+        expect(trusted.status).toBe(200)
+        await expect(trusted.json()).resolves.toMatchObject({ space: { trustedUserIds: [TARON] } })
+        expect(JSON.parse(readRows(server, 'SELECT spaces FROM users WHERE id = ?', TARON)[0].spaces)).toContain(spaceId)
+
+        // The owner and an admin see the list; a visitor who merely reaches the space does not.
+        const asOwner = await (await fetch(`${server.baseUrl}/api/spaces/${spaceId}`, { headers: { Cookie: owner } })).json()
+        expect(asOwner.space.trustedUserIds).toEqual([TARON])
+        const asAdmin = await (await fetch(`${server.baseUrl}/api/spaces/${spaceId}`, { headers: withAuth(server.apiToken) })).json()
+        expect(asAdmin.space.trustedUserIds).toEqual([TARON])
+        const asVisitor = await (await fetch(`${server.baseUrl}/api/spaces/${spaceId}`, { headers: { Cookie: editor } })).json()
+        expect(asVisitor.space).not.toHaveProperty('trustedUserIds')
+
+        // Clearing it is a plain replace.
+        await expect((await patchSpace(server, spaceId, { Cookie: owner }, { trustedUserIds: [] })).json()).resolves.toMatchObject({ space: { trustedUserIds: [] } })
+    })
 
     it('stamps the author from the session on every write path and ignores one the client sends', async () => {
         const server = await startServer({ requireAuth: true })

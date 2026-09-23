@@ -105,9 +105,9 @@ project folder keep the old `staging` name), signed with the same key. It exists
 because an APK is host-locked: the only way to see the finished thing — no address
 bar, the real room, a real phone — before it reaches the live site is to build the
 same app against the dev tier and run that. The dev tier's address is
-`dev.diiii.xyz`; the twin built so far is locked to its legacy name
-`staging.di-studio.xyz` (same server, still served), so a rebuild should set `host`
-to `dev.diiii.xyz`. Its project is `android-twa-staging/` (git-ignored whole; it is
+`dev.diiii.xyz`. The twin built so far is locked to `staging.di-studio.xyz`, a name
+that no longer answers, so that build is dead: rebuild it with `host` set to
+`dev.diiii.xyz` before using it. Its project is `android-twa-staging/` (git-ignored whole; it is
 the prod manifest with four fields changed). Delete the entry if the twin is ever
 retired.
 

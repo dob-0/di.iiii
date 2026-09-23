@@ -50,14 +50,14 @@ describe('local-mirror', () => {
         // mirror leaves it out and nothing reports the miss — the space simply
         // is not there, which reads as "the tool worked".
         expect(parseArgs([]).tier).toBe('all')
-        expect(Object.keys(TIERS)).toEqual(['prod', 'staging'])
+        expect(Object.keys(TIERS)).toEqual(['prod', 'dev'])
     })
 
-    it('accepts --tier dev for the dev tier and keeps --tier staging working', () => {
-        expect(parseArgs(['--tier', 'dev']).tier).toBe('staging')
-        expect(parseArgs(['--tier', 'staging']).tier).toBe('staging')
+    it('names the dev tier dev and refuses the old staging key', () => {
+        expect(parseArgs(['--tier', 'dev']).tier).toBe('dev')
+        expect(() => parseArgs(['--tier', 'staging'])).toThrow('"staging" is now "dev"')
         expect(parseArgs(['--tier', 'prod']).tier).toBe('prod')
-        expect(TIERS.staging.fallbackUrl).toBe('https://dev.diiii.xyz/serverXR')
+        expect(TIERS.dev.fallbackUrl).toBe('https://dev.diiii.xyz/serverXR')
     })
 
     it('ignores empty env assignments so a placeholder cannot blank a real token', () => {
@@ -98,5 +98,23 @@ describe('project-pull local authentication', () => {
         // own token lives with the server.
         expect(PROJECT_PULL).toMatch(/serverXR', '\.env\.local'/)
         expect(PROJECT_PULL).toMatch(/getEnv\('API_TOKEN'\)/)
+    })
+
+    it('merges serverXR/.env.local LAST in every script that reads the root .env too', () => {
+        // The root .env is general and can go stale: on 2026-09-21 it carried
+        // LOCAL_API_URL=http://localhost:4000/serverXR on a machine whose install
+        // answered on https://local.thedi.studio. Five scripts merged it AFTER
+        // serverXR/.env.local, so the stale line won, and start-check reported the
+        // content line as "not checked" for a week while looking healthy. The
+        // empty-value guard above cannot catch a wrong NON-empty value; only the
+        // order can. Most specific file wins.
+        for (const name of ['start-check', 'local-mirror', 'project-pull', 'space-push', 'space-pull']) {
+            const source = fs.readFileSync(path.join(ROOT_DIR, 'scripts', `${name}.mjs`), 'utf8')
+            const rootEnv = source.indexOf("path.join(ROOT_DIR, '.env')")
+            const serverLocal = source.indexOf("path.join(ROOT_DIR, 'serverXR', '.env.local')")
+            expect(rootEnv, `${name}: root .env read`).toBeGreaterThan(-1)
+            expect(serverLocal, `${name}: serverXR/.env.local read`).toBeGreaterThan(-1)
+            expect(serverLocal, `${name}: serverXR/.env.local must merge after root .env`).toBeGreaterThan(rootEnv)
+        }
     })
 })

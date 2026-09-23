@@ -4,6 +4,7 @@ import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { readLocalWorkspaceDocument } from '../utils/localWorkspaceStorage.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
+import useScreenWakeLock from '../../hooks/useScreenWakeLock.js'
 
 // The projector cable. /out renders ONE thing: a scope's room, seen as the
 // audience sees it — no graph, no topbar, no palette, no cursors, no
@@ -45,30 +46,9 @@ export default function RawOutSurface({ projectId = null, localStorageKey = '', 
     // A show output must survive unattended: ask the screen to stay awake,
     // and re-ask whenever the tab becomes visible again (the lock is released
     // by di.iiii on every hide). Denial is fine — kiosk setups disable
-    // sleep at the OS level anyway.
-    useEffect(() => {
-        if (typeof navigator === 'undefined' || !navigator.wakeLock?.request) return undefined
-        let lock = null
-        let disposed = false
-        const acquire = () => {
-            navigator.wakeLock.request('screen')
-                .then((next) => {
-                    if (disposed) next?.release?.().catch(() => {})
-                    else lock = next
-                })
-                .catch(() => {})
-        }
-        acquire()
-        const onVisibility = () => {
-            if (window.document.visibilityState === 'visible') acquire()
-        }
-        window.document.addEventListener('visibilitychange', onVisibility)
-        return () => {
-            disposed = true
-            window.document.removeEventListener('visibilitychange', onVisibility)
-            lock?.release?.().catch(() => {})
-        }
-    }, [])
+    // sleep at the OS level anyway. Shared with the map output
+    // (src/hooks/useScreenWakeLock.js) — both are unattended projector pages.
+    useScreenWakeLock()
 
     const doc = state.document
     const worldNode = useMemo(

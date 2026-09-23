@@ -1,5 +1,8 @@
-import { describe, it, expect } from 'vitest'
-import { TIERS, baselineFromAgreement, resolveTier, tierLabel, documentSignature, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite } from './tier-sync.mjs'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { TIERS, main, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, documentSignature, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite } from './tier-sync.mjs'
 
 describe('localBase', () => {
     // The documented convention is LOCAL_API_URL with no /serverXR suffix
@@ -31,23 +34,21 @@ describe('isProductionTarget', () => {
         expect(isProductionTarget(TIERS.prod.base)).toBe(true)
         expect(isProductionTarget('https://www.di-studio.xyz/serverXR')).toBe(true)
         expect(isProductionTarget('https://diiii.xyz/serverXR')).toBe(true)
-        expect(isProductionTarget(TIERS.staging.base)).toBe(false)
+        expect(isProductionTarget(TIERS.dev.base)).toBe(false)
         expect(isProductionTarget('https://dev.diiii.xyz/serverXR')).toBe(false)
-        expect(isProductionTarget('https://staging.di-studio.xyz/serverXR')).toBe(false)
         expect(isProductionTarget(TIERS.local.base)).toBe(false)
         expect(isProductionTarget('not a url')).toBe(false)
     })
 })
 
 describe('tier names', () => {
-    // The second tier is called dev now; its key (and every saved baseline) is
-    // still `staging`, so both spellings must land on the same entry.
-    it('accepts dev as the dev tier and keeps staging working', () => {
-        expect(resolveTier('dev')).toBe('staging')
-        expect(resolveTier('staging')).toBe('staging')
+    // The second tier is called dev — its TIERS key and its baseline key.
+    // The old `staging` key is refused with a pointer, never silently mapped.
+    it('names the dev tier dev and refuses staging', () => {
+        expect(resolveTier('dev')).toBe('dev')
         expect(resolveTier('prod')).toBe('prod')
         expect(TIERS[resolveTier('dev')].base).toBe('https://dev.diiii.xyz/serverXR')
-        expect(tierLabel('staging')).toBe('dev')
+        expect(() => resolveTier('staging')).toThrow('"staging" is now "dev"')
     })
 })
 
@@ -299,4 +300,88 @@ describe('baselineFromAgreement', () => {
         const destination = { main: { a: sig(1), b: sig(9) } }
         expect(baselineFromAgreement({ source, destination })).toEqual({ 'main/a': sig(1).shape })
     })
+})
+
+describe('--rebuild-baseline', () => {
+    const doc = (n, assetId = 'aaa') => documentSignature({
+        entities: Array.from({ length: n }, (_, i) => ({ id: `e${i}`, assetRef: assetId })),
+        assets: [{ id: assetId, name: 'photo.jpg', mimeType: 'image/jpeg' }]
+    })
+    const at = (sig, documentVersion, updatedAt) => ({ ...sig, documentVersion, updatedAt })
+
+    it('records only projects identical on both tiers, with both tiers\' versions', () => {
+        const source = { network: { same: at(doc(1), 6, 100), readdressed: at(doc(2, 'local-id'), 3, 10), differs: at(doc(3), 9, 9) }, lab: { only: at(doc(1), 1, 1) } }
+        const destination = { network: { same: at(doc(1), 1, 900), readdressed: at(doc(2, 'dev-id'), 1, 20), differs: at(doc(4), 9, 9) } }
+        const { agreed, differs, onlyOneSide } = planRebuildBaseline({ source, destination, sourceTier: 'local', destinationTier: 'dev' })
+        expect(Object.keys(agreed).sort()).toEqual(['network/readdressed', 'network/same'])
+        expect(agreed['network/same']).toEqual({
+            shape: doc(1).shape,
+            versions: { local: { documentVersion: 6, updatedAt: 100 }, dev: { documentVersion: 1, updatedAt: 900 } }
+        })
+        expect(differs.map((r) => r.projectId)).toEqual(['differs'])
+        expect(onlyOneSide).toBe(1)
+    })
+
+    it('reads both the old bare-shape entries and the new versioned ones', () => {
+        expect(baselineShape('abc')).toBe('abc')
+        expect(baselineShape({ shape: 'abc', versions: {} })).toBe('abc')
+        expect(baselineShape(undefined)).toBeUndefined()
+    })
+
+    it('--changed treats a versioned entry exactly like the bare shape it carries', () => {
+        const row = { spaceId: 'main', projectId: 'p', source: doc(5), destination: doc(1) }
+        const { push, refuse } = planChanged({ audit: { missing: [], differs: [row], readdressed: [] }, baseline: { 'main/p': { shape: doc(1).shape, versions: {} } } })
+        expect(push.map((r) => r.projectId)).toEqual(['p'])
+        expect(refuse).toEqual([])
+    })
+})
+
+// A dry run writes nothing, anywhere. `--changed --dry-run` used to write
+// tier-sync-baseline.json on every run — so "just looking" could clobber a
+// freshly rebuilt baseline. Drives the real main() against two fake tiers.
+describe('--dry-run never writes the baseline', () => {
+    const originalArgv = process.argv
+    const originalDataRoot = process.env.DATA_ROOT
+    afterEach(() => {
+        process.argv = originalArgv
+        if (originalDataRoot === undefined) delete process.env.DATA_ROOT
+        else process.env.DATA_ROOT = originalDataRoot
+        process.exitCode = undefined
+        vi.unstubAllGlobals()
+        vi.restoreAllMocks()
+    })
+
+    const fakeTiers = () => {
+        const writes = []
+        vi.stubGlobal('fetch', vi.fn(async (url, options = {}) => {
+            if (options.method && options.method !== 'GET') writes.push(`${options.method} ${url}`)
+            const onDev = String(url).includes('dev.diiii.xyz')
+            const json = (body) => ({ ok: true, status: 200, json: async () => body })
+            if (/\/api\/spaces$/.test(url)) return json({ spaces: [{ id: 'main' }] })
+            if (/\/api\/spaces\/main\/projects$/.test(url)) {
+                return json({ projects: [{ id: 'same', documentVersion: onDev ? 1 : 6, updatedAt: 5 }, { id: 'edited', documentVersion: 2, updatedAt: 5 }] })
+            }
+            if (url.includes('/api/projects/same/document')) return json({ document: { entities: [{ id: 'e' }] } })
+            if (url.includes('/api/projects/edited/document')) return json({ document: { entities: [{ id: onDev ? 'old' : 'new' }] } })
+            return { ok: false, status: 404, json: async () => ({}) }
+        }))
+        return writes
+    }
+
+    for (const flags of [['--changed', '--dry-run'], ['--rebuild-baseline', '--dry-run'], ['--dry-run']]) {
+        it(`${flags.join(' ')} leaves tier-sync-baseline.json and every tier untouched`, async () => {
+            const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tier-sync-dry-'))
+            const file = path.join(dir, 'tier-sync-baseline.json')
+            const before = JSON.stringify({ dev: { 'main/edited': 'rebuilt-by-hand' } })
+            fs.writeFileSync(file, before)
+            process.env.DATA_ROOT = dir
+            process.argv = ['node', 'tier-sync.mjs', '--from', 'local', '--to', 'dev', ...flags]
+            vi.spyOn(console, 'log').mockImplementation(() => {})
+            const writes = fakeTiers()
+            await main()
+            expect(fs.readFileSync(file, 'utf8')).toBe(before)
+            expect(writes).toEqual([])
+            fs.rmSync(dir, { recursive: true, force: true })
+        })
+    }
 })

@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { spawn } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { mkdtemp, rm } from 'node:fs/promises'
 import net from 'node:net'
 import { createRequire } from 'node:module'
@@ -11,6 +12,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const { side, startFollowing } = require('./follower.js')
+const { httpRequest, httpDownloadToFile, httpUploadFile } = require('../httpClient.js')
 
 // Two real serverXR processes, real HTTP between them, and the real follower
 // running in this process — nothing here is stubbed, because the thing under
@@ -184,6 +186,8 @@ describe('a space that lives on two di.iiii at once', () => {
     let hosting = null   // A — the install that hosts the space
     let following = null // B — the install that follows it
     let follower = null
+    let downloadGate = Promise.resolve()
+    let downloadsStarted = 0
 
     beforeAll(async () => {
         hosting = await startServer()
@@ -198,7 +202,22 @@ describe('a space that lives on two di.iiii at once', () => {
         follower = startFollowing({
             local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
             remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
-            log: { warn: () => {}, info: () => {} }
+            log: { warn: () => {}, info: () => {} },
+            // The real transport, with one door in it: a test can hold a
+            // download shut to stand in for a two-gigabyte video on venue wifi,
+            // which no fixture file can do reliably on loopback.
+            files: {
+                backoffMs: [300, 300, 300],
+                io: {
+                    request: httpRequest,
+                    upload: httpUploadFile,
+                    download: async (...args) => {
+                        downloadsStarted += 1
+                        await downloadGate
+                        return httpDownloadToFile(...args)
+                    }
+                }
+            }
         })
     })
 
@@ -287,6 +306,96 @@ describe('a space that lives on two di.iiii at once', () => {
             readOps(following).then(log => opIds(log).sort())
         ])
         expect(followerIds).toEqual(hostIds)
+    })
+
+    // ── Files ───────────────────────────────────────────────────────────────
+    // An upsertAsset op names a file; until the chase (follow/assets.js) the
+    // bytes stayed where they were uploaded and the other machine showed a
+    // dead frame. These go through the real upload route on one install and
+    // read the real asset route on the other.
+
+    const PROJECT = 'stage-show'
+    // Not text: a transport that passed through a string would survive text.
+    const fileBytes = (seed, length = 300_000) => Buffer.from(Array.from({ length }, (_, i) => (i * seed + 11) % 256))
+
+    /** What the editor does: upload the file, then name it in the project. */
+    const placeFile = async (server, bytes, name) => {
+        const form = new FormData()
+        form.append('asset', new Blob([bytes], { type: 'video/mp4' }), name)
+        const uploaded = await fetch(`${server.baseUrl}/api/projects/${PROJECT}/assets`, {
+            method: 'POST', headers: { Authorization: authHeaders.Authorization }, body: form
+        })
+        expect(uploaded.status).toBe(200)
+        const { asset } = await uploaded.json()
+        expect(asset.id).toBe(createHash('sha256').update(bytes).digest('hex'))
+
+        const log = await (await fetch(`${server.baseUrl}/api/projects/${PROJECT}/ops`, { headers: authHeaders })).json()
+        const named = await fetch(`${server.baseUrl}/api/projects/${PROJECT}/ops`, {
+            method: 'POST',
+            headers: authHeaders,
+            body: JSON.stringify({ baseVersion: log.latestVersion, ops: [{ opId: `op-file-${asset.id.slice(0, 8)}`, type: 'upsertAsset', payload: { asset } }] })
+        })
+        expect(named.status).toBe(200)
+        return asset
+    }
+
+    const servedBytes = (server, id) => async () => {
+        const response = await fetch(`${server.baseUrl}/api/projects/${PROJECT}/assets/${id}`, { headers: authHeaders })
+        if (response.status !== 200) return false
+        return Buffer.from(await response.arrayBuffer())
+    }
+
+    it('carries a file placed on the host to the follower, byte for byte', async () => {
+        const made = await fetch(`${hosting.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: PROJECT, title: PROJECT })
+        })
+        expect(made.status).toBe(201)
+
+        const bytes = fileBytes(31)
+        const asset = await placeFile(hosting, bytes, 'opening.mp4')
+
+        const arrived = await settle('the host file being served by the follower', servedBytes(following, asset.id))
+        expect(arrived.equals(bytes)).toBe(true)
+        // named in the follower's document too — the op and the bytes both crossed
+        const document = await (await fetch(`${following.baseUrl}/api/projects/${PROJECT}/document`, { headers: authHeaders })).json()
+        expect(document.document.assets.map(a => a.id)).toContain(asset.id)
+        await settle('the follower saying so', () => follower.state.files.carried >= 1 && follower.state.files.pending === 0)
+        expect(follower.state.files).toMatchObject({ failed: 0, notCarried: 0 })
+    })
+
+    it('carries a file placed on the follower back to the host, byte for byte', async () => {
+        const bytes = fileBytes(57)
+        const asset = await placeFile(following, bytes, 'from-the-stage.mp4')
+        follower.wake()
+
+        const arrived = await settle('the follower file being served by the host', servedBytes(hosting, asset.id))
+        expect(arrived.equals(bytes)).toBe(true)
+    })
+
+    it('keeps carrying edits while a file is still on its way', async () => {
+        let open = null
+        downloadGate = new Promise(resolve => { open = resolve })
+        const before = downloadsStarted
+        try {
+            const bytes = fileBytes(83)
+            const asset = await placeFile(hosting, bytes, 'the-long-one.mp4')
+            await settle('the transfer having started', () => downloadsStarted > before)
+
+            // The file is stuck. An edit made now must not wait for it.
+            const written = await writeOp(hosting, addObject('spotlight', 'op-host-spotlight'))
+            expect(written.status).toBe(200)
+            await settle('an edit crossing while the file is stuck', hasOp(following, 'op-host-spotlight'))
+            expect(follower.state.files.pending).toBe(1)
+            expect(follower.state.files.bytesPending).toBe(bytes.length)
+            expect(await servedBytes(following, asset.id)()).toBe(false)
+
+            open()
+            const arrived = await settle('the file arriving once it can', servedBytes(following, asset.id))
+            expect(arrived.equals(bytes)).toBe(true)
+        } finally {
+            open?.()
+            downloadGate = Promise.resolve()
+        }
     })
 
     it('survives the other install going down, and delivers what was made meanwhile', async () => {
