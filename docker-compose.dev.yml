@@ -65,6 +65,9 @@ services:
       APPROVAL_GATE_ENABLED: ${DEV_APPROVAL_GATE_ENABLED:-false}
       APPROVAL_BOT_URL: ${DEV_APPROVAL_BOT_URL:-}
       APPROVAL_SHARED_SECRET: ${DEV_APPROVAL_SHARED_SECRET:-}
+      CONTENT_CHANGE_NOTICES_ENABLED: ${DEV_CONTENT_CHANGE_NOTICES_ENABLED:-false}
+      APPROVAL_CALLBACK_URL: ${DEV_APPROVAL_CALLBACK_URL:-}
+      CONTENT_PROPOSAL_TTL_MS: ${DEV_CONTENT_PROPOSAL_TTL_MS:-}
     # Small ceiling: the dev tier only ever serves one person clicking through at
     # a time, it must not be able to meaningfully compete with production
     # for the VPS's 2 vCPU / 3.7GB (confirmed via `nproc`/`free -h` on the

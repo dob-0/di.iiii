@@ -364,6 +364,23 @@ const findProjectById = async (spacesDir, projectId) => {
   }
 }
 
+// The same lookup, trash included. A project in the trash still owns its id and
+// its files; anything that compares a file against what is HERE (a proposal's
+// summary) must see it, or a trashed project reads as brand new on a round-trip.
+// `meta.deletedAt` says which it is.
+const findProjectByIdAny = async (spacesDir, projectId) => {
+  const normalized = normalizeProjectId(projectId)
+  if (!normalized) return null
+  const row = s().selectAnyById.get(normalized)
+  if (!row) return null
+  return {
+    ...getProjectPaths(spacesDir, row.space_id, normalized),
+    spaceId: row.space_id,
+    projectId: normalized,
+    meta: rowToMeta(row)
+  }
+}
+
 // Delete is a promise to forget, not an instruction to shred. The row stays,
 // marked, and the files stay untouched until purgeTrash() passes TRASH_TTL_MS —
 // so "delete" and "gone" are two different days.
@@ -442,6 +459,7 @@ module.exports = {
   deleteProject,
   ensureProject,
   findProjectById,
+  findProjectByIdAny,
   findProjectBySlug,
   findProjectMove,
   getProjectPaths,
