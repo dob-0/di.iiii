@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react'
 import { buildSceneSignature } from '../storage/scenePersistence.js'
 import { defaultScene, SCENE_DATA_VERSION, normalizeObjects } from '../state/sceneStore.js'
 import { mergeAssetsManifest } from '../utils/assetManifest.js'
-import { isContentAddressedAssetUrl } from '../utils/contentAddressedAsset.js'
+import { assetFetchCacheMode } from '../utils/contentAddressedAsset.js'
 
 export function useSceneApply({
     persistSceneDataWithStatus,
@@ -80,12 +80,9 @@ export function useSceneApply({
                 if (remoteUrl && !urlCandidates.includes(remoteUrl)) {
                     urlCandidates.unshift(remoteUrl)
                 }
-                // Content-addressed (sha256) ids can never change without
-                // changing the id -- safe to trust the server's own
-                // immutable Cache-Control there instead of force-bypassing
-                // it (2026-07-17 perf audit). Legacy ids are project-local/
-                // mutable and must keep bypassing the cache.
-                const cache = isContentAddressedAssetUrl(asset.id) ? 'default' : 'no-store'
+                // Immutable for a content-addressed id, revalidated for a
+                // legacy one (see assetFetchCacheMode).
+                const cache = assetFetchCacheMode(asset.id)
                 for (const candidate of urlCandidates) {
                     if (!candidate) continue
                     try {

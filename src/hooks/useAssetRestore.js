@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { saveAssetBlob, dataUrlToBlob, blobToDataUrl, hasAssetStoreQuotaExceeded, resetAssetStoreQuotaExceeded } from '../storage/assetStore.js'
 import { registerAssetSources, clearAssetSources, setAssetSource } from '../services/assetSources.js'
-import { isContentAddressedAssetUrl } from '../utils/contentAddressedAsset.js'
+import { assetFetchCacheMode } from '../utils/contentAddressedAsset.js'
 import { isHtmlLikeMimeType } from '../utils/assetContentType.js'
 
 export function useAssetRestore({
@@ -80,11 +80,9 @@ export function useAssetRestore({
                     blob = await blobLoader(item)
                 } else if (item?.url) {
                     try {
-                        // Content-addressed (sha256) ids can never change
-                        // without changing the id -- safe to trust the
-                        // server's own immutable Cache-Control there instead
-                        // of force-bypassing it (2026-07-17 perf audit).
-                        const cache = isContentAddressedAssetUrl(item.id) ? 'default' : 'no-store'
+                        // Immutable for a content-addressed id, revalidated
+                        // for a legacy one (see assetFetchCacheMode).
+                        const cache = assetFetchCacheMode(item.id)
                         const response = await fetch(item.url, { cache })
                         // A stored server-relative `/api/…` url answers 200
                         // text/html through nginx's SPA fallback on prod;
