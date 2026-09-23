@@ -484,3 +484,56 @@ describe('AuthGate for a brand-new account', () => {
         expect(mockAppNavigate).not.toHaveBeenCalled()
     })
 })
+
+// Regression guard: every gate card sat in a full-height flex frame centred
+// with align-items:center and no overflow, inside a fixed full-viewport
+// parent. A card taller than the window (682px access-restricted card at
+// 882x611) was clipped equally top and bottom with nothing to scroll — the
+// logo and "Continue with Google" were unreachable. The frame must scroll and
+// the card must centre with margin:auto (safe centring), on every card.
+describe('gate cards stay reachable in a short window', () => {
+    afterEach(() => {
+        mockAppNavigate.mockClear()
+    })
+
+    const expectScrollableFrame = () => {
+        const logo = screen.getAllByText((_, el) => el?.tagName === 'H6' && el.textContent.trim() === 'di.iiii')[0]
+        const card = logo.parentElement
+        const frame = card.parentElement
+        const frameStyle = window.getComputedStyle(frame)
+        const cardStyle = window.getComputedStyle(card)
+        expect(frameStyle.overflowY).toBe('auto')
+        expect(frameStyle.display).toBe('flex')
+        // align-items:center is what clipped the card; it must not come back.
+        expect(frameStyle.alignItems).not.toBe('center')
+        expect(cardStyle.marginTop).toBe('auto')
+        expect(cardStyle.marginBottom).toBe('auto')
+    }
+
+    it('the access-restricted card', async () => {
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['main']))
+        render(<AuthGate requiredSpaceId="secret">editor</AuthGate>)
+        await screen.findByText(/Access restricted/)
+        expectScrollableFrame()
+    })
+
+    it('the sign-in-to-edit card', async () => {
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['main']))
+        render(<AuthGate requiredSpaceId="pub" outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}>editor</AuthGate>)
+        await screen.findByText(/Sign in to open the editor/)
+        expectScrollableFrame()
+    })
+
+    it('the signed-out sign-in card', async () => {
+        mockUseAuthSession.mockReturnValue(signedOutSession())
+        render(<AuthGate requiredSpaceId="secret">editor</AuthGate>)
+        await waitFor(() => expect(screen.queryByText('editor')).not.toBeInTheDocument())
+        expectScrollableFrame()
+    })
+
+    it('the /login surface', () => {
+        mockUseAuthSession.mockReturnValue(signedOutSession())
+        render(<SignInSurface />)
+        expectScrollableFrame()
+    })
+})
