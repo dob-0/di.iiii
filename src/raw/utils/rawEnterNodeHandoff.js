@@ -1,7 +1,9 @@
-// One-shot handoff for "open this project and land inside node X" — used by
-// RawHub's "open studio" shortcut, which creates/finds a project holding a
-// Studio container and wants the editor to land inside it rather than at the
-// document root. Scope (useNodeGraphScope's navStack) is deliberately client-
+// One-shot handoff for "open this project and land inside node X". Its one
+// writer was the old Nodes project list's "open the Studio node" button, which
+// created/found a project holding a Studio container and wanted the editor to
+// land inside it rather than at the document root; that list became Studio's
+// hub on 2026-09-23 and the button went with it, so today nothing stashes and
+// RawEditor's reader simply finds nothing. Scope (useNodeGraphScope's navStack) is deliberately client-
 // local, not part of the synced document (no forced root type — product
 // decision 2026-07-17, see RawEditor.jsx), so this can't ride in the document
 // itself; sessionStorage carries it across the one navigation that needs it,

@@ -5,11 +5,14 @@ thing still asks for it: `di up`'s once-a-day newer-version notice — bounded
 at 3 seconds, failure swallowed, never blocking. Everything else is local.)
 
 ```
-macOS / Linux   curl -fsSL https://di-studio.xyz/get | sh
-Windows         irm https://di-studio.xyz/get.ps1 | iex
+macOS / Linux   curl -fsSL https://diiii.xyz/get | sh
+Windows         irm https://diiii.xyz/get.ps1 | iex
 ```
 
-If di-studio.xyz is blocked, the same script is at
+`https://di-studio.xyz/get` and `/get.ps1` serve the same bytes and always
+will — that line is printed on handouts — and must never become a redirect: a
+plain `curl … | sh` does not follow one. If neither host is reachable, the same
+script is at
 `https://raw.githubusercontent.com/dob-0/di.iiii/main/install.sh`.
 
 Then:
@@ -247,26 +250,37 @@ Nothing is written outside `$HOME`. Nothing asks for sudo, on any OS.
 ## Node or Docker — the CLI decides, not the artist
 
 ```
-1. DI_MODE, or --docker / --node   → obeyed, no probing
-2. node >= 22.15 (the system's, or one di downloads)                   → node
-3. `docker info` succeeds AND the GHCR images are anonymously pullable → docker
-4. neither → the two links that fix it; nothing is installed
+1. node >= 22.15 (the system's, or one di downloads)                   → node
+2. `docker info` succeeds AND the GHCR images are anonymously pullable → docker
+3. neither → the two links that fix it; nothing is installed
 ```
+
+**Docker mode is not reachable today.** `decideMode` (`scripts/di/detect.mjs`)
+would obey a forced mode, but nothing passes one: `bootstrap.mjs` and
+`di doctor` both call `probeAll({ home })` with no `forcedMode`, and nothing
+reads `DI_MODE` or a `--docker` / `--node` flag. There is no `di install`
+command either. And by the time `bootstrap.mjs` runs, `install.sh` /
+`install.ps1` has already found or downloaded a node, so step 1 always wins
+and every install records `mode: node`. Docker mode's runner
+(`runner-docker.mjs`) is kept, and the branches below that read
+`mode === 'docker'` stay, for the day a real switch is built.
 
 **Node wins whenever it is viable** (changed 2026-08-10 — it used to be the
 other way around). Docker Desktop merely being open would land an artist in
 the one mode that carries none of the local operator surfaces: no `DI_LOCAL`,
 a non-loopback `remoteAddress` seen by the server, and no way to reach a
 `claude` binary on the host — so the agent board and the local Claude chat
-node 404 there while the wiki promises them. Docker mode is real and kept,
-but it is the deliberate choice (`--docker` / `DI_MODE=docker`), never the
-accident. The recorded mode of an existing install never flips; this decision
-runs at install/doctor time only.
+node 404 there while the wiki promises them. Docker mode was meant to be the
+deliberate choice, never the accident — but the switch that would make it a
+choice was never wired (see above). The recorded mode of an existing install
+never flips; this decision runs at install/doctor time only.
 
 Docker is gated on the image probe, not just on the daemon, so an install can
-never 403 halfway through. **The GHCR packages are private today**, so the
-docker branch skips itself; make `ghcr.io/dob-0/dii-server` and `dii-client`
-public and it starts working with no new release.
+never 403 halfway through. **The GHCR packages are private today** (checked
+2026-09-23: an anonymous pull token for `dob-0/dii-server` is refused), so
+the docker branch skips itself. Making the packages public would not change
+that on its own: an install always has a node by the time the decision is
+made, so step 1 wins.
 
 Docker mode composes **both** files — `docker-compose.yml` *then*
 `docker-compose.di.yml`, the same pairing CI runs. The `.di` file is only an

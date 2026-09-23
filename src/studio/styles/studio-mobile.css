@@ -27,6 +27,16 @@
     top: 40px;
 }
 
+/* Under the one bar (SurfaceBar), which floats at the top edge. The alert
+   still wins: it covers the bar, and the context bar sits under the alert. */
+.sfp-root.has-sbar .smb-topbar {
+    top: var(--sbar-h);
+}
+
+.sfp-root.has-sbar .studio-sync-alert + .smb-topbar {
+    top: 40px;
+}
+
 .smb-topbar {
     position: fixed;
     top: 0;

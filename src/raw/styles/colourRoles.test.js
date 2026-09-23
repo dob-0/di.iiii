@@ -134,8 +134,12 @@ describe('raw colour roles', () => {
         const bare = [...css.matchAll(/var\((--[a-z0-9-]+)\s*\)/gi)].map((m) => m[1])
         // Set inline by a component, which is a definition — just not in a file.
         const setByComponents = new Set(['--card-family', '--window-accent', '--raw-scaffold-top'])
+        // Declared by the one bar's own stylesheet. The only rules here that read
+        // its height apply while the bar is drawn (.is-under-sbar), and drawing it
+        // loads that sheet — so the token is always there when it is read.
+        const bar = readFileSync(join(stylesDir, '../../components/surfaceBar.css'), 'utf8')
         const missing = [...new Set(bare)].filter((token) => (
-            !setByComponents.has(token) && !base.includes(`${token}:`) && !css.includes(`${token}:`)
+            !setByComponents.has(token) && !base.includes(`${token}:`) && !css.includes(`${token}:`) && !bar.includes(`${token}:`)
         ))
         expect(missing, `raw.css uses undefined token(s) with no fallback: ${missing.join(', ')}`).toEqual([])
     })

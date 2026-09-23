@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { defaultZenFor, isPaletteSummons, liftAutoZen, readZenPreference, resolveZenPreference, writeZenPreference } from './zenMode.js'
+import { defaultZenFor, isAutoZen, isPaletteSummons, liftAutoZen, readZenPreference, resolveZenPreference, writeZenPreference } from './zenMode.js'
 
 const fakeStorage = (initial = {}) => {
     const map = new Map(Object.entries(initial))
@@ -143,6 +143,13 @@ describe('auto zen — a derived default is not a choice', () => {
         const storage = fakeStorage({ 'dii.raw.zen.w9': 'auto-on' })
         expect(readZenPreference('w9', { nodeCount: 0, storage })).toBe(true)
         expect(readZenPreference('w9', { nodeCount: 3, storage })).toBe(false)
+    })
+
+    it('isAutoZen tells the derived default from a chosen zen and from nothing', () => {
+        expect(isAutoZen('c', { storage: fakeStorage({ 'dii.raw.zen.c': 'auto-on' }) })).toBe(true)
+        expect(isAutoZen('c', { storage: fakeStorage({ 'dii.raw.zen.c': 'on' }) })).toBe(false)
+        expect(isAutoZen('c', { storage: fakeStorage({ 'dii.raw.zen.c': 'off' }) })).toBe(false)
+        expect(isAutoZen('c', { storage: fakeStorage() })).toBe(false)
     })
 
     it('liftAutoZen lifts only the derived default, never a chosen zen', () => {

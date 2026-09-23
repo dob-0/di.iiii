@@ -4574,6 +4574,32 @@ $('#miSceneGrid').addEventListener('click', (e) => {
 $('#miSceneFilter').addEventListener('input', midiDrawSceneGrid);
 $('#miSceneFilterClear').addEventListener('click', () => { $('#miSceneFilter').value = ''; midiDrawSceneGrid(); });
 
+/* =============== the way back to the project =============== */
+
+// Read once, on load: ?space=&project=[&label=] when a project opened the desk, else what
+// this tab kept (from.js has the rules). The page tabs only ever change the hash, so the
+// links painted here stand through every switch; the kept copy covers a reload or an
+// address that lost its query. Nothing known → nothing shown, and the desk is as it was.
+(function paintFrom() {
+  let kept = null;
+  try { kept = window.sessionStorage; } catch (e) { kept = null; }
+  const noStore = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
+  const from = window.deskFrom ? window.deskFrom.readFrom(location.search, kept || noStore) : null;
+  const links = from && window.deskFrom.projectLinks(from);
+  if (!links) return;
+  const back = $('#fromBack');
+  back.textContent = '← ' + from.label;
+  back.href = links.studio;
+  back.title = 'Back to ' + from.label + ' in Studio';
+  for (const [id, href, tool] of [['#fromStudio', links.studio, 'Studio'],
+    ['#fromNodes', links.nodes, 'Nodes'], ['#fromProjection', links.projection, 'Projection']]) {
+    $(id).href = href;
+    $(id).title = 'Open ' + from.label + ' in ' + tool;
+  }
+  back.hidden = false;
+  $('#fromTools').hidden = false;
+})();
+
 /* =============== wiring =============== */
 
 function showPage(name) {

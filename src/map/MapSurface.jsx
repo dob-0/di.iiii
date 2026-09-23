@@ -13,6 +13,10 @@ import { lightingDeskPath, probeLightingDesk } from './lightingLink.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
 import { describeMachine, showFromValue, showOptions, showValue, unresolvedInputs } from './mapMachines.js'
 import { buildStudioProjectPath, navigateToStudioPath } from '../studio/utils/studioRouting.js'
+import SurfaceBar from '../components/SurfaceBar.jsx'
+import useLocalInstall from '../hooks/useLocalInstall.js'
+import useSpaceName from '../hooks/useSpaceName.js'
+import { isEmbedRequest } from '../utils/previewMode.js'
 import './mapSurface.css'
 
 // THE MAPPER'S DESK.
@@ -86,6 +90,11 @@ export default function MapSurface({ projectId, spaceId }) {
     } = useMapDocument(projectId, { role: 'desk' })
     // Every machine showing this space, and what each one has: the wall is usually another computer.
     const { machines } = useMachinePresence(spaceId)
+    // The one bar, above the desk's own. Never on /out — that is MapOutput,
+    // the wall's picture, and a bar there would be projected with the work.
+    const localInstall = useLocalInstall()
+    const spaceName = useSpaceName(spaceId)
+    const [isEmbed] = useState(() => isEmbedRequest())
 
     const [selectedId, setSelectedId] = useState(null)
     const [soloId, setSoloId] = useState(null)
@@ -317,6 +326,15 @@ export default function MapSurface({ projectId, spaceId }) {
 
     return (
         <div className="map-desk">
+            <SurfaceBar
+                here="map"
+                space={spaceId}
+                spaceLabel={spaceName}
+                project={projectId}
+                projectLabel={doc?.projectMeta?.title}
+                isLocalInstall={localInstall.isLocal}
+                hidden={isEmbed}
+            />
             <header className="map-bar">
                 <div className="map-bar-title">
                     <span className="map-bar-lane">Projection</span>
@@ -362,7 +380,7 @@ export default function MapSurface({ projectId, spaceId }) {
                     {lightingHere ? (
                         <a
                             className="map-action"
-                            href={lightingDeskPath()}
+                            href={lightingDeskPath({ spaceId, projectId, label: doc?.projectMeta?.title })}
                             target="_blank"
                             rel="noreferrer"
                             title="The lighting desk on this machine — a map cue can recall one of its scenes"
@@ -396,8 +414,8 @@ export default function MapSurface({ projectId, spaceId }) {
                                         {surface.enabled ? 'On' : 'Off'}
                                     </button>
                                     <button type="button" className={`map-mini${soloId === surface.id ? ' is-on' : ''}`}
-                                        title="Show this one alone"
-                                        onClick={() => setSoloId(soloId === surface.id ? null : surface.id)}>Solo</button>
+                                        title="Show this one alone on this screen. The projector still shows every surface."
+                                        onClick={() => setSoloId(soloId === surface.id ? null : surface.id)}>Solo · screen</button>
                                     <button type="button" className="map-mini" title="Later in the paint order"
                                         onClick={() => moveSurface(surface.id, 1)} disabled={index === surfaces.length - 1}>Front</button>
                                 </div>
@@ -575,7 +593,7 @@ function MapTransfer({ text, onApply, onClose }) {
         <div className="map-transfer">
             <div className="map-transfer-panel">
                 <div className="map-panel-head">
-                    <h2>{text ? 'Mapping' : 'Paste a mapping'}</h2>
+                    <h2>{text ? 'Projection as text' : 'Paste a projection'}</h2>
                     <button type="button" className="map-mini" onClick={onClose}>Close</button>
                 </div>
                 <textarea
@@ -593,7 +611,7 @@ function MapTransfer({ text, onApply, onClose }) {
                         const message = onApply(value)
                         if (message) setProblem(message)
                         else onClose()
-                    }}>Replace this mapping</button>
+                    }}>Replace this projection</button>
                 </div>
             </div>
         </div>

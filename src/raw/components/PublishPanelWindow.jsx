@@ -24,11 +24,18 @@ const ENTRY_VIEWS = [
     { id: 'code', label: 'Code view', hint: 'visitors get the page this project builds' }
 ]
 
+// 'off' is the only value the viewer reads as "no headset offer"
+// (PublicProjectViewer's canOfferXrEntry). The schema default 'none' is the
+// LEGACY spelling of AR -- every older project carries it -- so the panel
+// shows a missing or 'none' value as AR, the way the viewer treats it, and
+// Off writes 'off'. Writing 'none' for Off left the Enter AR button on.
 const XR_MODES = [
-    { id: 'none', label: 'Off' },
+    { id: 'off', label: 'Off' },
     { id: 'ar', label: 'AR' },
     { id: 'vr', label: 'VR' }
 ]
+
+export const resolvePanelXrMode = (value) => (value === 'off' || value === 'vr' ? value : 'ar')
 
 export default function PublishPanelWindow({
     projectId = null,
@@ -52,7 +59,7 @@ export default function PublishPanelWindow({
     }, [spaceId])
 
     const entryView = presentationState.entryView || 'scene'
-    const xrDefaultMode = publishState.xrDefaultMode || 'none'
+    const xrDefaultMode = resolvePanelXrMode(publishState.xrDefaultMode)
     const deviceAccess = Boolean(presentationState.deviceAccess)
 
     const isLive = Boolean(space && space.publishedProjectId && projectId && space.publishedProjectId === projectId)

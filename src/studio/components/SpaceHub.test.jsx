@@ -169,7 +169,9 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        const link = await screen.findByText('Lights')
+        // Light, the desk's one name — the same word /tools and the surface
+        // bar use. It said "Lights" here until 2026-09-23.
+        const link = await screen.findByText('Light')
         expect(link.getAttribute('href')).toBe('/light/')
         expect(screen.getByText('On this machine')).toBeTruthy()
     })
@@ -180,7 +182,7 @@ describe('SpaceHub', () => {
         render(<SpaceHub />)
 
         await findCard('mine')
-        expect(screen.queryByText('Lights')).toBeNull()
+        expect(screen.queryByText('Light')).toBeNull()
         expect(screen.queryByText('On this machine')).toBeNull()
     })
 

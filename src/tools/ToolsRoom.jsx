@@ -1,7 +1,7 @@
 /* global __APP_VERSION__ */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import './toolsRoom.css'
-import SurfaceBar from '../components/SurfaceBar.jsx'
+import SurfaceBar, { navigateInApp } from '../components/SurfaceBar.jsx'
 import { isEmbedRequest } from '../utils/previewMode.js'
 import { DeskMark, LightMark, MapperMark, RawMark, StudioMark } from './toolMarks.jsx'
 import { createProject, listProjects } from '../project/services/projectsApi.js'
@@ -43,6 +43,7 @@ export default function ToolsRoom({ isLocalInstall = false }) {
     const [makingProject, setMakingProject] = useState(false)
     const [newProjectName, setNewProjectName] = useState('')
     const [creatingProject, setCreatingProject] = useState(false)
+    const [createError, setCreateError] = useState(null)   // { spaceId, message }
 
     useEffect(() => {
         let alive = true
@@ -59,6 +60,7 @@ export default function ToolsRoom({ isLocalInstall = false }) {
         setMakingProject(false)
         setNewProjectName('')
         setCreatingProject(false)
+        setCreateError(null)
     }, [])
 
     useEffect(() => {
@@ -92,8 +94,10 @@ export default function ToolsRoom({ isLocalInstall = false }) {
                     href: '/studio'
                 },
                 {
+                    // The key and the routes stay `raw`; the name a person
+                    // reads is Nodes, the same word the surface bar uses.
                     key: 'raw',
-                    name: 'Raw',
+                    name: 'Nodes',
                     meta: 'node canvas',
                     Mark: RawMark,
                     // A bare /raw is a canvas held in this browser and saved to
@@ -111,12 +115,22 @@ export default function ToolsRoom({ isLocalInstall = false }) {
         {
             label: 'Show',
             tools: [
-                isLocalInstall && {
+                // Shown on every tier. Hosted, it opens the page that says
+                // where the desk lives — in the app, since a full load of
+                // /light can reach a server that refuses the address.
+                isLocalInstall ? {
                     key: 'light',
                     name: 'Light',
                     meta: 'Art-Net · output off',
                     Mark: LightMark,
                     href: '/light/'
+                } : {
+                    key: 'light',
+                    name: 'Light',
+                    meta: 'on your own machine',
+                    Mark: LightMark,
+                    href: '/light',
+                    inApp: true
                 },
                 {
                     key: 'map',
@@ -128,7 +142,7 @@ export default function ToolsRoom({ isLocalInstall = false }) {
                         href: (spaceId, projectId) => `/${spaceId}/map/${projectId}`
                     }
                 }
-            ].filter(Boolean)
+            ]
         },
         isLocalInstall && {
             label: 'This machine',
@@ -159,10 +173,20 @@ export default function ToolsRoom({ isLocalInstall = false }) {
         if (!inSpace || !asking?.picker || creatingProject) return
         const title = newProjectName.trim() || 'Untitled'
         setCreatingProject(true)
+        setCreateError(null)
         try {
             const res = await createProject(inSpace, { title, slug: title, source: 'tools-picker' })
             window.location.href = asking.picker.href(inSpace, res.project.id)
-        } catch {
+        } catch (error) {
+            // This used to swallow the failure: the button came back and
+            // nothing said why. The reason goes where the dialog already
+            // speaks. A signed-out visitor gets a bare 401 "Unauthorized"
+            // from the server, so that one is put in words here; every other
+            // refusal ("Space is read-only.", a taken name) says itself.
+            const reason = Number(error?.status) === 401
+                ? `sign in to add a project to ${inSpace}.`
+                : (error?.message || 'the server did not say why.')
+            setCreateError({ spaceId: inSpace, message: `Not created: ${reason}` })
             setCreatingProject(false)
         }
     }, [inSpace, newProjectName, creatingProject, asking])
@@ -209,6 +233,7 @@ export default function ToolsRoom({ isLocalInstall = false }) {
                                             key={tool.key}
                                             className={className}
                                             href={tool.href}
+                                            onClick={tool.inApp ? (event) => navigateInApp(event, tool.href) : undefined}
                                             {...(tool.external ? { target: '_blank', rel: 'noopener' } : {})}
                                         >
                                             {inside}
@@ -228,7 +253,9 @@ export default function ToolsRoom({ isLocalInstall = false }) {
                     <div className="tr-dialog" role="dialog" aria-label={`Open ${asking.name}`}>
                         <div className="tr-dialog-head">
                             <div className="tr-dialog-title">{asking.name}</div>
-                            <p className="tr-dialog-say">{asking.picker.say}</p>
+                            <p className="tr-dialog-say" aria-live="polite">
+                                {makingProject && createError?.spaceId === inSpace ? createError.message : asking.picker.say}
+                            </p>
                         </div>
 
                         <div className="tr-crumbs">

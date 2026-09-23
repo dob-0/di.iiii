@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Box, Container } from '@mui/material'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { buildAppSpacePath, buildPreferencesPath } from '../../utils/spaceRouting.js'
-import { buildRawProjectsPath } from '../../raw/utils/rawRouting.js'
+import { buildRawProjectPath, buildRawProjectsPath } from '../../raw/utils/rawRouting.js'
 import { importLegacySceneFile } from '../../project/import/importLegacyScene.js'
 import GridFloorBackground from '../../components/GridFloorBackground.jsx'
 import useAuthSession from '../../hooks/useAuthSession.js'
@@ -21,7 +21,7 @@ import {
     uploadProjectAsset
 } from '../../project/services/projectsApi.js'
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
-import { buildStudioProjectPath, buildSpacesPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { buildStudioHubPath, buildStudioProjectPath, buildSpacesPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { getCodeSpace } from '../utils/codeSpaces.js'
 import '../styles/studio-hub.css'
 
@@ -53,7 +53,27 @@ const isArchivedTitle = (title = '') => title.trimStart().startsWith('[archived]
 const projectState = (project) => project?.state || (isArchivedTitle(project?.title) ? 'archived' : 'live')
 const UNSHELVED = '__loose__'
 
-export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
+// A space has one project list. Studio's address and Nodes' address both show
+// it; the only thing that differs is which editor a card opens in, and the one
+// button that crosses to the other tool's copy of the same list. Nodes had a
+// list of its own until 2026-09-23 — onboarding cards, a title box, a flat
+// list with no shelves, drafts or trash — "a separate line not connected to
+// the system", in the owner's words.
+const TOOLS = {
+    studio: {
+        source: 'studio-v3',
+        open: (projectId, spaceId) => navigateToStudioPath(buildStudioProjectPath(projectId, spaceId)),
+        other: { label: 'Nodes', title: 'The node editor', path: buildRawProjectsPath }
+    },
+    nodes: {
+        source: 'raw-v2',
+        open: (projectId, spaceId) => appNavigate(buildRawProjectPath(projectId, spaceId)),
+        other: { label: 'Studio', title: 'Open this space in Studio', path: buildStudioHubPath }
+    }
+}
+
+export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn = 'studio', children = null }) {
+    const tool = TOOLS[openIn] || TOOLS.studio
     const { role, openSpaceId } = useAuthSession()
     const [projects, setProjects] = useState([])
     const [status, setStatus] = useState('loading...')
@@ -179,15 +199,17 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     // The forward REPLACES its history entry — pushing left the door itself in
     // history, so browser Back returned to /open/studio, which immediately
     // re-forwarded: visitors could never get back to where they came from.
+    // Studio's address only: /open/studio is the door that is handed out, and
+    // the Nodes copy of the list is where you go to manage, not to step in.
     useEffect(() => {
+        if (openIn !== 'studio') return
         if (!openSpaceId || spaceId !== openSpaceId) return
         if (new URLSearchParams(window.location.search).has('browse')) return
         const jam = projects.find(p => p.id === 'open-jam') || projects[0]
         if (jam) navigateToStudioPath(buildStudioProjectPath(jam.id, spaceId), { replace: true })
-    }, [projects, spaceId, openSpaceId])
+    }, [projects, spaceId, openSpaceId, openIn])
 
-    const openProject = (projectId) =>
-        navigateToStudioPath(buildStudioProjectPath(projectId, spaceId))
+    const openProject = (projectId) => tool.open(projectId, spaceId)
 
     const handleNew = () => {
         if (isBusy) return
@@ -200,7 +222,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         setIsBusy(true)
         setStatus('creating...')
         try {
-            const res = await createProject(spaceId, { title: name, slug: name, source: 'studio-v3' })
+            const res = await createProject(spaceId, { title: name, slug: name, source: tool.source })
             openProject(res.project.id)
         } catch (e) {
             setStatus(e.message || 'error')
@@ -257,7 +279,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
 
     const handleDelete = async (project) => {
         if (!project?.id) return
-        if (!window.confirm(`Delete "${project.title || project.id}"? Cannot be undone.`)) return
+        if (!window.confirm(`Delete "${project.title || project.id}"? Moves to the trash for 30 days.`)) return
         setIsBusy(true)
         try {
             const spaceMeta = await getServerSpace(spaceId).catch(() => null)
@@ -395,10 +417,10 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                         <div className="sh-top-actions">
                             <button
                                 className="sh-btn-outline"
-                                title="The node editor"
-                                onClick={() => appNavigate(buildRawProjectsPath(spaceId))}
+                                title={tool.other.title}
+                                onClick={() => appNavigate(tool.other.path(spaceId))}
                             >
-                                Nodes
+                                {tool.other.label}
                             </button>
                             <button className="sh-btn-new" onClick={handleNew} disabled={isBusy}>
                                 + New project
@@ -609,6 +631,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     </section>
                 )}
 
+                {children}
             </Container>
         </Box>
     )

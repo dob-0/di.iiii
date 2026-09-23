@@ -3,7 +3,6 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Box, Button, Stack, ThemeProvider, Typography } from '@mui/material'
 import { diFontTheme } from '../styles/muiTheme.js'
 import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
-import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
 import { buildWikiPath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
 import { buildSpacesPath } from '../studio/utils/studioRouting.js'
@@ -675,21 +674,11 @@ function LandingPageInner() {
                         publishing, and the API — and it’s kept up to date as di.iiii grows.
                     </Typography>
 
-                    <Box className="lp-feature-grid">
-                        {WIKI_HIGHLIGHTS.map((a) => (
-                            <Box
-                                key={a.id}
-                                component="a"
-                                href={`${buildWikiPath()}#${a.id}`}
-                                className="lp-feature-card lp-wiki-card"
-                            >
-                                <Typography className="lp-feature-title" component="h3">{a.title}</Typography>
-                                <Typography className="lp-feature-desc">{a.summary}</Typography>
-                                <Typography className="lp-wiki-card-more" component="span">Read →</Typography>
-                            </Box>
-                        ))}
-                    </Box>
-
+                    {/* One door, not a card grid. This block used to lay out 18
+                        wiki highlights, and the walk of 2026-09-22 ended in them:
+                        the page's last screen was a flood, against the owner's
+                        "no flood". The Wiki has its own index; the landing only
+                        has to say it exists and open it. */}
                     <Stack direction="row" spacing={2} sx={{ mt: 3, flexWrap: 'wrap' }}>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href={buildWikiPath()}>
                             Open the Wiki →

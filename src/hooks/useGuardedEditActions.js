@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react'
+import useAuthSession from './useAuthSession.js'
 
 export function useGuardedEditActions({
     canEditScene = true,
@@ -29,15 +30,30 @@ export function useGuardedEditActions({
         [canEditScene, notifyReadOnly]
     )
 
+    // Admin mode unlocks editing on a read-only space (canEditScene is
+    // `!isReadOnly || isAdminMode`) and shows the admin buttons. Both ways in
+    // -- the Shift+D Shift+I chord (useEditorShortcuts) and the 4-finger hold
+    // (useSceneActions) -- call this, and any public space with nothing
+    // published opens this editor for a stranger. So turning it ON needs a
+    // signed-in admin session, the same role the admin console gates on
+    // (PreferencesPage). The server reports role 'admin' for the owner at a
+    // local install and when auth is disabled, so those keep the chord.
+    // Turning it OFF never needs anything.
+    const { authenticated, role } = useAuthSession()
+    const isAdminSession = Boolean(authenticated && role === 'admin')
+
     const toggleAdminMode = useCallback(() => {
         setIsAdminMode?.((prev) => {
             const next = !prev
+            if (next && !isAdminSession) {
+                return prev
+            }
             if (!next) {
                 setIsGizmoVisible?.(false)
             }
             return next
         })
-    }, [setIsAdminMode, setIsGizmoVisible])
+    }, [isAdminSession, setIsAdminMode, setIsGizmoVisible])
 
     return {
         guardEditAction,
