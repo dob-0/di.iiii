@@ -257,7 +257,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
 
     const handleDelete = async (project) => {
         if (!project?.id) return
-        if (!window.confirm(`Delete "${project.title || project.id}"? Cannot be undone.`)) return
+        if (!window.confirm(`Delete "${project.title || project.id}"? Moves to the trash for 30 days.`)) return
         setIsBusy(true)
         try {
             const spaceMeta = await getServerSpace(spaceId).catch(() => null)
