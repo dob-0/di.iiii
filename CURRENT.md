@@ -13,14 +13,10 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- The light show travels with its space and inside the .diiii file
-- sentences that lie, told true: the install host, Docker, di sync, follow files, the trash, Solo
-- the bar carries the project across Studio, Nodes and Projection; Light shown on hosted tiers
-- Light returns to the project that opened it
-- one project list per space: Nodes' own front door retired
-- first-room traps: Headset Off means off, no admin chord for strangers, F frames the room, "+ new project" says why
-- one name per tool, and the front page ends in one link
-- batch landing: one project across every layer (Wave 1 + the first of Wave 2)
+- folding nine notes by hand again, PR #542's `land` job hit the same GH006
+- layers: a project opens bare and the bar grows with it (units 1–3)
+- every thing in the room is a card in Nodes (layers units 4, 6, 7)
+- batch landing: layer by layer (units 1–4, 6, 7 of the layers plan)
 
 Full detail: `PROGRESS.md`.
 
@@ -31,7 +27,7 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 
 ## Open
 
-- **prod carries the 2026-09-10/11 run** — accounts, rolling sessions, the `iiii` room and its tools, private p2p. Promoted on the owner's word, 2026-09-11. aylmo runs `0.4.16-connect.2` (packed 2026-09-23, `di status`) at https://local.thedi.studio; port 443 comes from setcap on the node binary, which a Node upgrade wipes.
+- **prod carries the 2026-09-10/11 run** — accounts, rolling sessions, the `iiii` room and its tools, private p2p. Promoted on the owner's word, 2026-09-11. aylmo runs `0.4.16-connect.4` (the layers batch, packed 2026-09-23, `di status`) at https://local.thedi.studio; port 443 comes from setcap on the node binary, which a Node upgrade wipes.
 - **Five projects reference assets no tier holds** — `open/front-room`, `front-room-light`, `look-signal`, `look-night`, `look-paper`, 76–78 each, uuid ids from before content addressing. Found by `npm run assets:audit`, which now gates this class; nobody had ever been told. Beyond Form's 13 are restored (prod had them whole).
 - **`algovrithm` waits on one word** — public, empty and it can never open (`src/algoVrithm/` owns that url before any space lookup, so the row is unreachable by construction: the row goes, or the work becomes a space). `the-light-put-back` is PUBLIC ON PROD and cut 5.34 MB → 0.67 MB (photographs are project assets now, zero CDN requests); its master lives OUTSIDE the repo at `~/di-backups/laser-scratchpad-2026-09-03/page2/`, which is the standing risk on it.
 - **Follow (one space on two installs) carries a project's files both ways** since 2026-09-20 (`serverXR/src/follow/assets.js`; loopback proven only). Still NOT carried: files on the space's own scene, and legacy uuid-id files (`di follows` counts them). No warning when op retention drops something uncarried; no real two-machine transfer yet, and the internet case needs a throwaway space — owner's call.

@@ -5,6 +5,237 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-23 — folding nine notes by hand again, PR #542's `land` job hit the same GH006
+
+- After PR #542 (`land/batch-2026-09-23`, merged to `dev` at 288d69c7) the dev deploy's
+  `land` job ran, folded correctly, and could not push — `GH006: Protected branch update
+  failed … 2 of 2 required status checks are expected`, caught, warned, `exit 0`, deploy
+  still GREEN. Exactly [[reference-dii-land-job-blocked]]'s shape, third time running
+  (09-21, 09-22, now).
+- Folded by hand in a fresh worktree off `origin/dev`, `session-land-lib.mjs`'s three
+  functions called directly (`foldNotesIntoProgress`, `buildLastSessionSection`,
+  `replaceLastSessionSection`, notes read as an array of STRINGS), mirroring
+  `scripts/session-land.mjs`'s order exactly — no worktree sweep (out of scope for a
+  fold done from a disposable worktree, not the owner's real checkout). Eight notes:
+  `chore-land-sessions-2026-09-22.md`, `docs-sentences-that-lie.md`,
+  `feat-bar-carries-project.md`, `feat-desk-returns-to-project.md`,
+  `feat-one-project-list.md`, `fix-first-room-traps.md`, `fix-one-name-per-tool.md`,
+  `land-batch-2026-09-23.md`. Note files deleted after folding.
+- A ninth note joined after PR #544 (the light show travels with its space) merged while
+  this PR waited: dev merged into this branch, `feat-show-travels-with-space.md` folded
+  into `PROGRESS.md` and prepended to the Last session list. That made `CURRENT.md` 50
+  lines, at the cap, so the 09-22 fold's own title line was dropped: 49 lines.
+- Fixed the two stale `CURRENT.md` lines the `docs-sentences-that-lie` note flagged as
+  owed (it could not write them itself — `docs:ai:check` refuses a `CURRENT.md` that
+  differs from `origin/dev` on a feature branch): the aylmo install line named
+  `0.4.7-shelves.2`, confirmed stale by `di status` (read-only) at
+  `0.4.16-connect.2`, packed 2026-09-23; and the Follow line said "carries NO assets
+  yet", stale since `serverXR/src/follow/assets.js` shipped 2026-09-20 — replaced with
+  what still isn't carried (space-scene files, legacy uuid-id files) per the note's text.
+- **This note is next leftover, by construction** — the gate demands a session note for
+  the branch that does the folding, so `dev` still sits at exactly one note after this
+  lands, same as every hand-fold before it. The real fix (bypass or PR-based push for the
+  `land` job) is still the owner's call, still not done.
+
+## 2026-09-23 — layers: a project opens bare and the bar grows with it (units 1–3)
+
+Units 1, 2 and 3 of `di-atlas/decisions/2026-09-23-layers-what-inside-what.md`. The owner's
+words that decide them: "make it layer as layer, you create 1st what inside what and next
+next" and "a clear layer-by-layer creating process, not all at once". Question 1 of the
+decision (does the bar grow inside a project) is answered yes by those words. Questions 2
+(a thing inside a Geo) and 3 (which one is the Desk) are not answered; nothing here depends
+on them. Method: progressive disclosure (J. Nielsen, NN/g, 2006), as the decision names it.
+
+### Built
+
+- **`src/project/layers.js`** — the one plain function every later unit reads:
+  `readProjectLayers(document, { loaded })` → counts, what each layer holds, which layers are
+  open, and `empty`. The decision's table and its three riders: a layer that holds something
+  never hides; `loaded: false` answers `open: null` ("not decided") so every caller keeps
+  today's screen; nothing is stored. `describeProjectLayers` writes the card line.
+  `shared/layers.cjs` is the server twin with the 17 standing node kinds and the windows
+  written out; `layers.test.js` runs the decision's 8 fixture projects through both and
+  checks the lists against the registry.
+- **Decisions taken inside the rule, for the owner to see.** (1) A *window* on the Nodes
+  canvas is neither a thing nor a connection: the registry's own `watch` and `agents`
+  families plus `view.library` and `view.publish`. Without this, opening an outliner opened
+  the wall. A mic, webcam, MIDI in are drawn as windows but are sources, so they stay
+  connections. (2) A cue that calls a light scene or look counts as the lamps layer holding
+  something (the decision lists it among the lamps facts; hiding Light from a project that
+  already drives the desk would take a control away from a project that holds something).
+  (3) A project in code mode is never "empty", so a page project never opens bare.
+- **Unit 1.** `GET /api/spaces/:id/projects` carries each project's non-zero counts, read
+  from the document (normalized in memory, never written back) and cached per
+  (space, project, version, updatedAt) like the scene-or-page mode. Each card in the one
+  project list gets one line (`sh-code-blurb`, an existing class): "4 things · 2 nodes ·
+  1 wire · 1 surface · 1 lamp", or "empty". `/api/spaces` carries `projectCount` /
+  `publishedCount` from one grouped query (re-applied from 2efc05c7; nothing else from
+  that branch), only for a space the caller may enter; the card says "11 projects ·
+  11 published" (`ssh-space-project`, existing class). "Published" = on show, the
+  `/contents` rule.
+- **Unit 2.** `useProjectLayers` (the rule plus one page-only memory: what was given on this
+  page is not taken back, so an undo of the first box keeps the tools). A new project in
+  Studio shows the bar, the room, Create (not closable while bare) and the hint. The
+  cluster, the other windows, Drive, Commons, the Files list and the saved layout return
+  with the first thing, no reload. The open jam is untouched; "⚒ All tools" is on every
+  project's cluster (own key `di.studio.allTools`, per browser, live to the bar). The first
+  hint in an empty project is "Add something", then "Tap it", done by the tap itself
+  (placing a thing already selects it); the coach mounts only after the document has
+  loaded and waits behind a phone sheet instead of covering its text. Phone: Create alone,
+  then the full phone bar. `scripts/count-controls.mjs` (`npm run count:controls`) is the
+  sketch's counter, in the repo.
+- **Unit 3.** `SurfaceBar` takes `layers`; inside a project only, Nodes shows when the
+  connections layer is open, Projection the wall, Light the lamps. Never the surface you
+  stand on; nothing before load; every name under All tools. Studio, Nodes (RawEditor: one
+  import, one hook line beside `showBar`, one prop) and Projection pass it.
+- **"Loaded"** is the store's `hasLoaded` — the `projectStore.js` hunk and its test taken
+  verbatim from `feat/things-are-cards` (#545) so both lanes carry one flag — AND the
+  document's id being this editor's project (a switched editor keeps the old document and
+  the flag until the new one lands).
+
+### Numbers (dev stack on 4380/5380, fresh data root, local-install mode)
+
+- **Controls on a new project, Studio, 1440×900 at DPR 1.5** (`count-controls.mjs`):
+  **61** today → **30** after unit 2 → **27** after unit 3 (bar 7, Create 17, room 2,
+  hint 1). The decision's 62 was the sketch's counter on his install; this counter also
+  counts the "Import files" label the sketch's selector missed, and here the room has 2
+  controls, not 3. Phone 390×844: 19 → 11.
+- **Screens that must open as today**, same counter, before/after: the open jam simple
+  25/25 desk, 10/10 phone; jam with all tools 68/68, 19/19; Nodes and Projection on a full
+  project 27/27, 32/32, 23/23, 29/29. A full project in Studio 73 → 74 (the All tools
+  button the decision asks for, nothing removed). An objects-only project loses
+  Projection and Light from its bar (unit 3 by design) and gains All tools.
+- **Project list, 5 × `curl -w '%{time_total}'`**, a 74-project space of 18 MB documents
+  (60 × 50 boxes, 10 × 250, 4 × 4000 — larger than the biggest real space, 74 projects):
+  before 1.60 / 1.05 / 1.12 / 0.82 / 0.92 ms, 19.3 KB; after **192 (first read after the
+  server starts) / 2.16 / 1.34 / 1.26 / 1.21 ms**, 22.0 KB. The 13-project lab: before
+  0.68–1.01 ms, 2.3 KB; after 4.9 cold, then 0.83–1.34 ms, 3.3 KB.
+- **Reload, full project, 10 × each** in Studio desktop, Studio phone, Nodes and
+  Projection, every bar state recorded from first paint by a MutationObserver: **no name
+  went away in 40 loads.** In Studio, Projection arrives 40–70 ms after first paint —
+  measured identical on today's code (the shell learns the space id late); not this change.
+
+### Seen
+
+Every screenshot read: new project desk/phone, the Create sheet on the phone, one box
+placed (the saved Scene window returns at its saved x; its y is clamped to fit by the
+existing panel code), "Tap it" completed by tapping the box, undo keeping the tools and a
+reload of the emptied project opening bare again, Nodes on the project (bar without
+Projection), a node (Projection appears), a wire drawn by drag (Blur's input reads WIRED),
+a lamp (Light appears), /tools, /wiki, a space's contents page and /spaces, the lab list
+and /spaces cards desk and phone. No page scrolls sideways.
+
+### Owed
+
+- **On his install and the S24.** Seen here on a dev stack with the phone emulated at DPR 3.
+  The decision checks each unit on local.thedi.studio after `npm run di:pack` and
+  `di update --from`, and on the S24 in LAN mode. Not done: this session must not touch
+  the install on 443/4000.
+- **The phone bar cuts a word at the right edge** (it scrolls sideways by its own CSS).
+  At 390 px: a full project's bar is 599 px wide, Projection · Tools · Light · Wiki past
+  the edge — the same today. A new project's is 405 px (Wiki only). Unit 3 forbids
+  restyling the bar, so it is left: the fix is a design call (drop the project title on a
+  phone, where every tool repeats it below; or a fade at the edge).
+- **"All tools" is not on a bare screen**, following the decision's "nothing else": it
+  arrives with the first thing, and once set in any project it covers every project.
+  Putting it behind the room's "?" would reach it with no new control — the owner's call.
+- **The window is still titled Create**; the decision calls it Add. A rename is a
+  vocabulary change, not made here.
+- "N projects · N published" will read the same number twice on most spaces (every
+  project is live unless set otherwise).
+- Projection's late arrival on Studio's bar (above) — Studio could hand the bar the
+  route's space id, known at first paint.
+
+## 2026-09-23 — every thing in the room is a card in Nodes (layers units 4, 6, 7)
+
+Units 4, 6 and 7 of di-atlas `decisions/2026-09-23-layers-what-inside-what.md`. Question 2
+(a thing inside a Geo) is open, so unit 8 is not built and no thing's parent ever names a node.
+
+**Built**
+
+- **Unit 4 — grouped things stand where Studio shows them.** Seen first, on a fresh local stack:
+  three Studio boxes, two grouped, the group moved to x 2.5 — Studio showed the pair on the right,
+  Nodes' room showed it in the middle, sunk to the floor. `RawViewport` now draws each thing inside
+  its group's transform, as `StudioViewport`'s `SceneEntityNode` does. The tree is read once in
+  `src/project/entityTree.js` (a thing whose group is gone stands at the top; a cycle is never
+  walked). Same component, so `/out`, `/make` and the published page (once a node exists) follow.
+- **Unit 6 — things are cards in Nodes.** `src/raw/utils/objectCards.js`, re-applied from
+  `8c58c29a` on `worktree-connect-graph-walk` with grouped things KEPT (they stack under their
+  group's card, one step in). Nothing else came from that branch. Every thing is a card and an
+  outliner row (a tree); clicking a card selects the thing and its inspector opens; the count reads
+  "N nodes · M things" (one number under 640px, the breakdown in its aria-label); a project of
+  things opens on its cards with its toolbar. Card positions are worked out each render, never
+  saved. A thing can be dragged in Nodes' room: a local preview while held, ONE `updateComponent`
+  edit on release (Studio's gizmo edit), none if it did not move or the pointer was cancelled;
+  pressing any part of a group moves the group; a thing locked in Studio stays.
+  `emptyCanvasHint.js`, its test and the "See the room" button are retired.
+- **Zen** counts things as well as nodes and decides the derived default only once the project has
+  loaded — the store now says so (`hasLoaded` in `src/project/state/projectStore.js`, set by
+  load-success). A zen somebody chose applies at once.
+- **Unit 7 — add a thing from the Nodes palette.** A "things" group from `entityPalette.js` (the
+  15 Studio's Add offers), right after "make" when browsing, after the nodes when searching; it
+  makes the thing through the existing add path (`handleCreateEntity`). The Cube, Sphere and other
+  shape nodes stay. The status line says where it landed ("Box added to the room." / "… added to
+  the top room — a thing cannot stand inside Geo yet."); Nodes shows no activity list, so it is
+  also the activity message.
+- **Found by looking, fixed here:** placing the first node moved every thing card off-screen (the
+  band was "below the lowest node") — the band now stays at the origin unless a node stands on it,
+  and new palette nodes step aside from it; on a phone the landing line sat under the selection
+  sheet — it now rides the sheet's measured inset.
+
+**Proven** (own stack on 4390/5390, fresh data root; Playwright Chromium at 1440×900 DPR 1.5 and
+390×844 DPR 3 touch; screenshots in the worktree's untracked `.verify/`, every one opened)
+
+- Unit 4: `unit4-before2-*.png` against `unit4-after-*.png`, and `/out` (`unit4-out.png`).
+- Unit 6: three boxes, two grouped → four cards (three boxes and the group, two stepped in), the
+  outliner a tree, "4 things"; phone shows "4" and no sideways scroll. Drag, desktop: 30 pointer
+  moves held → project version 12 → 12; release → 13; Studio in a second tab showed the move with
+  no reload; Ctrl+Z → 14 and the position back exactly. Phone touch drag: 53 → 53 held → 54.
+- Unit 7: box, sphere (its "a thing" row) and lamp each +1 thing and each in Studio's Objects list
+  in the other tab with no reload; a Cube node after them left every card in place; four undos
+  → 7 → 6 → 5 → 4 things. Phone: the palette's things group, a box added by tap.
+- Topbar with both kinds at 1440/900/700/390: no overlap, nothing past the edge, ⋯ whole.
+- Every new guard was seen red on the old code: the grouped-thing drawing, the two zen cases, the
+  same-render load, the chosen zen, the step-aside.
+- `npm run test`, `CLIENT_DIR= npm run test:server-contracts`, `npm run lint` (0 errors),
+  `npm run docs:ai:check` — results in the PR.
+
+**Owed**
+
+- Not yet on his surfaces: nothing was packed onto his install or opened on the S24 (the decision's
+  verify step for every unit). The published page on the S24 (unit 4) and `/make` were not looked at.
+- For the owner: a name that is both (Sphere, Plane, Text) still places the NODE on Enter and the
+  thing is the row below — kept so type-to-place never changes; "lamp" finds the point light.
+  The new word "thing" sits beside `docs/ai/vocabulary.md`'s "object" and Studio's "Objects (4)".
+- The room drag has no unit test: jsdom has no R3F `event.ray`. It is proven by the version counts.
+- A node made by dropping a file or by the examples does not step aside from the thing band; if it
+  lands on it, the band moves below the nodes (no overlap, but a jump).
+- A new thing's card can land outside the view (no re-fit, by the one-fit rule); the line says so.
+- Seen, not mine: the phone count button is 12×13px (the same number-only button as before); the
+  phone SurfaceBar clips "PROJ…"; the inspector prints long floats (-0.37499999999999983).
+- `hasLoaded` is there for the layers agent's "Studio opens bare … once the project has loaded".
+
+## 2026-09-23 — batch landing: layer by layer (units 1–4, 6, 7 of the layers plan)
+
+Two green PRs landed as one batch, per `feedback_batch_land_behind_prs`: they share five
+files, so landing one would have put the other BEHIND. Plan:
+`di-atlas/decisions/2026-09-23-layers-what-inside-what.md`. Each PR's own session note rides
+in this batch; this note is for the batch branch itself.
+
+| PR | Branch | What |
+|---|---|---|
+| #545 | `feat/things-are-cards` | Units 4, 6, 7: grouped things stand where Studio shows them in Nodes' room; every thing in the room is a card on the Nodes canvas and a row in its outliner; one edit on release when dragged in Nodes' room; the palette's "things" group makes the same thing Studio's Add makes; zen counts things and waits for the store's `hasLoaded` |
+| #546 | `feat/layers-open-bare` | Units 1, 2, 3: `src/project/layers.js` (+ `shared/layers.cjs`, kept identical by a test) says what each layer holds; project cards and space cards say what they hold; a new project opens bare (bar, room, Create, hint); the bar grows inside a project (Nodes with the first thing, Projection with the first node or wire, Light with a lamp); "⚒ All tools" on every project; `npm run count:controls` |
+
+Shared files: `projectStore.js` and its test carry ONE `hasLoaded` flag (#546 took #545's
+hunk as written, so git merged them as one); `RawEditor.jsx` and `wikiContent.js` merged by
+themselves. One conflict, `docs/ai/known-fixes.md`: both sides appended table rows; all four
+rows kept.
+
+Still the owner's: questions 2 (a thing inside a Geo) and 3 (which one is "the Desk") of the
+plan; the phone bar cutting off at 390 px (a design call, the bar may not be restyled); the
+word "thing" beside "object"; whether "⚒ All tools" should be reachable on a bare screen.
+
 ## 2026-09-23 — The light show travels with its space and inside the .diiii file
 
 - Wave 4 items 2 and 3 of `di-atlas/decisions/2026-09-23-connect-everything.md` (decisions 2 and 3:
