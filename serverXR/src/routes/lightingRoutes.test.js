@@ -59,6 +59,23 @@ describe('the lighting desk at /light', () => {
     expect(css.status).toBe(200)
   })
 
+  // A project opens the desk as /light/?space=&project= (the bar, the Projection desk).
+  // The redirect must carry the query, or the desk forgets who sent the person.
+  it('keeps ?space=&project= through the /light redirect, and serves the desk with it', async () => {
+    delete process.env.NODE_ENV
+    const { base } = await boot()
+    const bare = await fetch(`${base}/light?space=lab&project=first-piece`, { redirect: 'manual' })
+    expect(bare.status).toBe(302)
+    expect(bare.headers.get('location')).toBe('/light/?space=lab&project=first-piece')
+    const page = await fetch(`${base}/light/?space=lab&project=first-piece&label=First%20Piece`)
+    expect(page.status).toBe(200)
+    const html = await page.text()
+    expect(html).toContain('id="fromBack"')
+    expect(html).toContain('<script src="from.js">')
+    const from = await fetch(`${base}/light/from.js`)
+    expect(from.status).toBe(200)
+  })
+
   it('reads its own POST bodies past the parser and writes the show under dataDir/lighting', async () => {
     delete process.env.NODE_ENV
     const { base, dir, lane } = await boot()
