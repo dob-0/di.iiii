@@ -180,6 +180,27 @@ const missingAddressFromUrl = (requiredSpaceId) => {
     }
 }
 
+// The frame every gate card sits in. It fills a fixed, full-viewport parent,
+// so a card taller than the window used to be centred with align-items:center
+// and clipped equally top and bottom with nothing to scroll — measured at
+// 882x611, the access-restricted card (682px) lost 35px each side, logo and
+// "Continue with Google" cut. The frame now scrolls, and the card centres with
+// margin:auto, which is "safe" centring: it centres while it fits and pins to
+// the top edge (scrollable) when it does not. The vertical padding keeps a
+// scrolled card off the window edge; it is symmetric, so a card that fits
+// lands exactly where it did before.
+export const cardFrameSx = {
+    width: '100%',
+    height: '100%',
+    boxSizing: 'border-box',
+    display: 'flex',
+    overflowY: 'auto',
+    overscrollBehavior: 'contain',
+    py: 2,
+    background: 'var(--ui-bg)'
+}
+export const cardSx = { m: 'auto' }
+
 const ClosedDoorCard = ({
     requiredSpaceId,
     exists,
@@ -195,8 +216,8 @@ const ClosedDoorCard = ({
     // must not say "Not found" over content that exists.
     useDocumentTitle(!exists ? 'Not found — di.iiii' : null)
     return (
-    <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ui-bg)' }}>
-        <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
+    <Box sx={cardFrameSx}>
+        <Stack spacing={2} sx={{ ...cardSx, width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
             <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>
                 di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
             </Typography>
@@ -434,8 +455,8 @@ function AuthGateInner({
             // the access-restricted case rather than introducing new chrome.
             if (explainOutOfScope) {
                 return (
-                    <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ui-bg)' }}>
-                        <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
+                    <Box sx={cardFrameSx}>
+                        <Stack spacing={2} sx={{ ...cardSx, width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
                             <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>
                                 di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
                             </Typography>
@@ -497,19 +518,13 @@ function AuthGateInner({
     }
 
     return (
-        <Box sx={{
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'var(--ui-bg)'
-        }}>
+        <Box sx={cardFrameSx}>
             <Stack
                 component="form"
                 onSubmit={handleSubmit}
                 spacing={2}
                 sx={{
+                    ...cardSx,
                     width: '100%',
                     maxWidth: 360,
                     px: 3,
@@ -640,8 +655,8 @@ function SignInSurfaceInner() {
     if (loading) return <LoadingScreen label="Loading" detail="Checking your session" />
 
     return (
-        <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ui-bg)' }}>
-            <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
+        <Box sx={cardFrameSx}>
+            <Stack spacing={2} sx={{ ...cardSx, width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
                 <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>
                     di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
                 </Typography>
