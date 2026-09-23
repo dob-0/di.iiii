@@ -3,10 +3,13 @@
  *
  * A bundle is a tar.gz holding everything a space is made of — DB rows
  * (spaces, space_ops, projects, project_ops, public_assets), scene.json,
- * space-level assets, per-project documents + asset refs, and the CAS blob
- * store — so a space can be moved to another install (or archived) without
- * a running source server. Sync keys and GitHub links are stripped: they
- * carry secrets and host-specific bindings.
+ * space-level assets, per-project documents + asset refs, the CAS blob
+ * store, and the space's light show (lighting/show.json, the lighting desk's
+ * patch, scenes, looks and MIDI map) — so a space can be moved to another
+ * install (or archived) without a running source server. Sync keys and GitHub
+ * links are stripped: they carry secrets and host-specific bindings. So is the
+ * light show's `output` (which wire, which addresses): that is the machine's
+ * rig, and a file opened elsewhere must not send light at this venue's nodes.
  *
  * Usage:
  *   node scripts/space-bundle.mjs export <spaceId> [options]
@@ -64,7 +67,13 @@ const SERVER_SRC = ['serverXR/src', 'src']
     || path.join(ROOT_DIR, 'serverXR', 'src')
 
 const BUNDLE_FORMAT = 'di.space-bundle'
-const BUNDLE_VERSION = 1
+// The newest version this tool reads. Version 2 is a file that carries a light show
+// (space/lighting/show.json). A file without one is still written as 1, so every
+// di.iiii that opens files today still opens it; a file with one is refused BY NAME
+// by an older di.iiii — "newer than this tool" — instead of opening with the show
+// silently left behind, which is the one failure a file format must not have.
+const BUNDLE_VERSION = 2
+const LIGHT_SHOW_VERSION = 2
 
 // The document extension. A space bundle is to di.iiii what a .blend is to
 // Blender — one file holding everything the work is made of, portable to any
@@ -154,6 +163,31 @@ const readJsonl = async (file) => {
 
 const readJson = async (file) => JSON.parse(await fsp.readFile(file, 'utf8'))
 
+// The space's light show, as the lighting desk keeps it beside the space's scene
+// (serverXR/src/lighting/desk.js): the newest complete copy, in the order the desk
+// itself reads — the file, a finished temp file whose rename was interrupted, the
+// previous save. Never the rig (see the header). Null when the space has no show.
+const readLightShow = (spaceDir) => {
+    const dir = path.join(spaceDir, 'lighting')
+    const main = path.join(dir, 'show.json')
+    for (const file of [main, `${main}.tmp`, path.join(dir, 'show.prev.json')]) {
+        if (!fs.existsSync(file)) continue
+        try {
+            const show = JSON.parse(fs.readFileSync(file, 'utf8'))
+            if (!show || typeof show !== 'object' || Array.isArray(show)) continue
+            delete show.output
+            return show
+        } catch { /* an unreadable copy: try the next one, as the desk does */ }
+    }
+    return null
+}
+
+const countOf = (show, key) => (Array.isArray(show?.[key]) ? show[key].length : 0)
+const describeLightShow = (show) => {
+    const n = (count, one) => `${count} ${one}${count === 1 ? '' : 's'}`
+    return `light show: ${n(countOf(show, 'fixtures'), 'fixture')}, ${n(countOf(show, 'scenes'), 'scene')}`
+}
+
 // ---------------------------------------------------------------- export
 
 async function exportSpace(args) {
@@ -189,6 +223,11 @@ async function exportSpace(args) {
         }
         await copyDirIfExists(path.join(spaceDir, 'assets'), path.join(staging, 'space', 'assets'))
         await copyDirIfExists(path.join(spaceDir, 'blobs'), path.join(staging, 'blobs'))
+        const lightShow = readLightShow(spaceDir)
+        if (lightShow) {
+            await fsp.mkdir(path.join(staging, 'space', 'lighting'), { recursive: true })
+            await fsp.writeFile(path.join(staging, 'space', 'lighting', 'show.json'), JSON.stringify(lightShow))
+        }
 
         for (const project of projects) {
             const src = path.join(spaceDir, 'projects', project.id)
@@ -211,7 +250,7 @@ async function exportSpace(args) {
         const stamp = writerStamp()
         const manifest = {
             format: BUNDLE_FORMAT,
-            version: BUNDLE_VERSION,
+            version: lightShow ? LIGHT_SHOW_VERSION : 1,
             spaceId,
             // Which di.iiii wrote this, and what shape its data was in. A file
             // outlives the app that made it; without these an older install
@@ -224,6 +263,10 @@ async function exportSpace(args) {
                 projects: projects.length,
                 commonsAssets: commons.length
             },
+            // What the light show holds, so a reader can say it before opening anything.
+            lightShow: lightShow
+                ? { fixtures: countOf(lightShow, 'fixtures'), scenes: countOf(lightShow, 'scenes'), looks: countOf(lightShow, 'looks') }
+                : null,
             stripped: STRIPPED_TABLES
         }
         await fsp.writeFile(path.join(staging, 'bundle.json'), JSON.stringify(manifest, null, 2))
@@ -231,7 +274,7 @@ async function exportSpace(args) {
         const out = path.resolve(args.out || `${spaceId}${BUNDLE_EXT}`)
         execFileSync('tar', ['-czf', out, '-C', staging, '.'])
         const size = (fs.statSync(out).size / 1024 / 1024).toFixed(2)
-        log(`exported space "${spaceId}" → ${out} (${size} MB, ${projects.length} projects, ${spaceOps.length} space ops)`)
+        log(`exported space "${spaceId}" → ${out} (${size} MB, ${projects.length} projects, ${spaceOps.length} space ops${lightShow ? `, ${describeLightShow(lightShow)}` : ''})`)
         return out
     } finally {
         await fsp.rm(staging, { recursive: true, force: true })
@@ -275,7 +318,25 @@ async function importSpace(args) {
         if (!fs.existsSync(manifestPath)) die('not a space bundle: bundle.json missing')
         const manifest = await readJson(manifestPath)
         if (manifest.format !== BUNDLE_FORMAT) die(`unknown bundle format "${manifest.format}"`)
-        if (manifest.version > BUNDLE_VERSION) die(`bundle version ${manifest.version} is newer than this tool (${BUNDLE_VERSION})`)
+        if (manifest.version > BUNDLE_VERSION) {
+            die(`bundle version ${manifest.version} is newer than this tool (${BUNDLE_VERSION}) — this file was written by a newer di.iiii${manifest.writtenBy ? ` (${manifest.writtenBy})` : ''}.\n`
+                + '  update first:  di update')
+        }
+        // The light show is read before anything is written, so a broken one refuses
+        // the whole file instead of arriving as a space without its show.
+        const lightShowSrc = path.join(staging, 'space', 'lighting', 'show.json')
+        let lightShowText = null
+        if (fs.existsSync(lightShowSrc)) {
+            lightShowText = await fsp.readFile(lightShowSrc, 'utf8')
+            try {
+                const parsed = JSON.parse(lightShowText)
+                if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('not a show')
+                delete parsed.output
+                lightShowText = JSON.stringify(parsed)
+            } catch (error) {
+                die(`this file's light show cannot be read (${error.message}) — nothing was opened`)
+            }
+        }
         // A file from a newer di.iiii. Refused by name rather than imported
         // partially: the rows would go in and mean something slightly different,
         // which is the failure nobody sees until much later.
@@ -474,7 +535,23 @@ async function importSpace(args) {
             await copyDirIfExists(path.join(src, 'assets'), path.join(dst, 'assets'))
         }
 
-        log(`imported "${sourceId}" as "${targetId}" into ${dataRoot} (${projectDirs.length} projects, ${spaceOps.length} space ops)`)
+        // The light show goes where the lighting desk keeps a space's show, written the
+        // way the desk writes it: whole, to a temp file, the previous show kept beside it
+        // as show.prev.json, then renamed into place. A file without a show leaves the
+        // space's own show alone, as it leaves the projects it does not carry.
+        const showDir = path.join(spaceDir, 'lighting')
+        if (lightShowText !== null) {
+            const showFile = path.join(showDir, 'show.json')
+            await fsp.mkdir(showDir, { recursive: true })
+            await fsp.writeFile(`${showFile}.tmp`, lightShowText)
+            if (fs.existsSync(showFile)) await fsp.copyFile(showFile, path.join(showDir, 'show.prev.json'))
+            await fsp.rename(`${showFile}.tmp`, showFile)
+        } else if (existing && fs.existsSync(path.join(showDir, 'show.json'))) {
+            log(`"${targetId}" keeps its own light show — this file carries none`)
+        }
+
+        const carried = lightShowText !== null ? `, ${describeLightShow(JSON.parse(lightShowText))}` : ''
+        log(`imported "${sourceId}" as "${targetId}" into ${dataRoot} (${projectDirs.length} projects, ${spaceOps.length} space ops${carried})`)
         if (space.kind === 'global') log('note: source space was kind=global; imported as kind=normal (set globally via /admin if wanted)')
         if (space.owner_user_id && !args.owner) log(`note: original owner "${space.owner_user_id}" dropped (source-install user); pass --owner to set one`)
         log(`open: /${targetId}  ·  studio: /${targetId}/studio`)
