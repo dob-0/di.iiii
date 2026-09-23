@@ -20,9 +20,44 @@ vi.mock('../../project/nodeRegistry.js', () => ({
 const makeNode = (id, typeId, label = '') => ({ id, typeId, label })
 
 describe('OutlinerPanelWindow', () => {
-    it('renders an empty state when there are no nodes', () => {
+    // "No nodes here yet" was what a room of twelve Studio things was told
+    // about itself. The emptiness it reports is the scope's, not one kind's.
+    it('renders an empty state when nothing stands here', () => {
         render(<OutlinerPanelWindow nodes={[]} selectedNodeId={null} onSelectNode={vi.fn()} />)
-        expect(screen.getByText(/no nodes/i)).toBeTruthy()
+        expect(screen.getByText(/nothing here yet/i)).toBeTruthy()
+    })
+
+    it('lists things beside nodes, and choosing one selects the thing', () => {
+        const onSelectEntity = vi.fn()
+        const items = [
+            { kind: 'node', id: 'n1', node: { id: 'n1', typeId: 'geom.cube', label: 'Corner block' } },
+            { kind: 'object', id: 'e1', depth: 0, label: 'Plinth', typeLabel: 'box', color: '#c8a2ff' }
+        ]
+        render(
+            <OutlinerPanelWindow
+                items={items}
+                selectedNodeId={null}
+                onSelectNode={vi.fn()}
+                selectedEntityId={null}
+                onSelectEntity={onSelectEntity}
+            />
+        )
+        expect(screen.getByText('Corner block')).toBeTruthy()
+        screen.getByText('Plinth').closest('button').click()
+        expect(onSelectEntity).toHaveBeenCalledWith('e1')
+    })
+
+    it('steps a grouped thing in under its group — the list is a tree', () => {
+        const items = [
+            { kind: 'object', id: 'g', depth: 0, label: 'Group', typeLabel: 'group', color: '#c8a2ff' },
+            { kind: 'object', id: 'b', depth: 1, label: 'Inside', typeLabel: 'box', color: '#c8a2ff' }
+        ]
+        render(<OutlinerPanelWindow items={items} selectedNodeId={null} onSelectNode={vi.fn()} selectedEntityId="b" />)
+        const inside = screen.getByText('Inside').closest('button')
+        const group = screen.getByText('Group').closest('button')
+        expect(inside.style.paddingLeft).toBe('22px')
+        expect(group.style.paddingLeft).toBe('')
+        expect(inside.classList.contains('is-selected')).toBe(true)
     })
 
     it('lists nodes with their type label and node label', () => {
