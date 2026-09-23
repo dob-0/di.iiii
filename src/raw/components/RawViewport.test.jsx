@@ -495,6 +495,65 @@ describe('objects stand at root only', () => {
     })
 })
 
+describe('grouped things stand where Studio shows them', () => {
+    // Seen 2026-09-23 before the fix: a Studio group moved to x 2.5, and its two
+    // boxes stayed in the middle of Nodes' room, sunk to the floor — a grouped
+    // thing's position is RELATIVE to its group, and the room drew it from the
+    // room's centre. It must be drawn inside the group's transform, as Studio's
+    // SceneEntityNode draws it.
+    const group = { id: 'g1', type: 'group', name: 'Group', components: { transform: { position: [2.5, 0.75, 0.3] } } }
+    const inside = { id: 'b1', type: 'box', name: 'Box', parentId: 'g1', components: { transform: { position: [-0.2, 0, -0.3] } } }
+    const loose = { id: 'b2', type: 'box', name: 'Box', components: { transform: { position: [-0.4, 0.75, 0.6] } } }
+
+    it('draws a grouped thing inside its group, never from the room centre', () => {
+        const { container } = render(
+            <RawViewport
+                document={{ worldState: {}, nodes: [], edges: [], entities: [group, inside, loose] }}
+                scopeId={null}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        const groups = [...container.querySelectorAll('group')]
+        const groupEl = groups.find((g) => g.getAttribute('position') === '2.5,0.75,0.3')
+        const insideEl = groups.find((g) => g.getAttribute('position') === '-0.2,0,-0.3')
+        const looseEl = groups.find((g) => g.getAttribute('position') === '-0.4,0.75,0.6')
+        expect(groupEl, 'the group stands in the room').toBeTruthy()
+        expect(insideEl, 'the grouped box is drawn').toBeTruthy()
+        expect(groupEl.contains(insideEl), 'the grouped box stands inside its group').toBe(true)
+        expect(groupEl.contains(looseEl), 'a loose box does not').toBe(false)
+        // drawn once — not once in the group and again at the top
+        expect(groups.filter((g) => g.getAttribute('position') === '-0.2,0,-0.3')).toHaveLength(1)
+    })
+
+    it('clicking a grouped thing selects that thing', () => {
+        const onSelectEntity = vi.fn()
+        const { container } = render(
+            <RawViewport
+                document={{ worldState: {}, nodes: [], edges: [], entities: [group, inside] }}
+                scopeId={null}
+                onSelectEntity={onSelectEntity}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        const insideEl = [...container.querySelectorAll('group')].find((g) => g.getAttribute('position') === '-0.2,0,-0.3')
+        fireEvent.click(insideEl)
+        expect(onSelectEntity).toHaveBeenCalledWith('b1')
+        expect(onSelectEntity).not.toHaveBeenCalledWith('g1')
+    })
+
+    it('a thing whose group is gone still stands, at the top', () => {
+        boxObjectSpy.mockClear()
+        render(
+            <RawViewport
+                document={{ worldState: {}, nodes: [], edges: [], entities: [inside] }}
+                scopeId={null}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        expect(boxObjectSpy).toHaveBeenCalled()
+    })
+})
+
 describe('separating geos', () => {
     // "now the same cubes in the 2 geos.. i want to seperate geos" (owner,
     // 2026-08-20): with two geos each holding a cube, the room showed two

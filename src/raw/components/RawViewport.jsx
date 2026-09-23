@@ -23,6 +23,7 @@ import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import { asColor } from '../../utils/colorValue.js'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
+import { buildEntityTree } from '../../project/entityTree.js'
 
 const isSpatialNode = (node) => getNodeType(node?.typeId)?.render === 'spatial-3d'
 
@@ -42,6 +43,10 @@ const pickAuthoredCameraNode = (nodes, scopeId, activeMap) => {
 
 // A mesh that is drawn but never picked.
 const NO_RAYCAST = () => null
+
+// How deep things may nest under groups before the room stops drawing further.
+// Studio has no cap; this is only a guard against a hand-edited file.
+const MAX_ENTITY_DEPTH = 32
 
 const asFiniteNumber = (value, fallback = 0) => {
     const next = Number(value)
@@ -66,9 +71,17 @@ const asPositiveVec3 = (value, fallback = [1, 1, 1], min = 0.001, max = 100) => 
 }
 
 
-function EntityVisual({ entity, assetMap, selected, onSelect, showSelectionPills = true }) {
+// A thing, and — inside its transform — whatever stands under it. A grouped
+// thing's position is relative to its group (Studio subtracts the group's
+// centre when it groups), so it has to be drawn INSIDE the group's transform,
+// exactly as StudioViewport's SceneEntityNode does; drawn from the room's
+// centre it stood somewhere else in Nodes' room than in Studio (unit 4 of
+// decisions/2026-09-23-layers-what-inside-what.md, seen before it was fixed).
+function EntityVisual({ entity, childrenOf = null, depth = 0, assetMap, selectedEntityId = null, onSelect, showSelectionPills = true }) {
     const transform = entity.components?.transform || {}
     const content = <EntityContent entity={entity} assetMap={assetMap} />
+    const children = childrenOf?.get(entity.id) || []
+    const selected = entity.id === selectedEntityId
 
     return (
         <group
@@ -86,6 +99,22 @@ function EntityVisual({ entity, assetMap, selected, onSelect, showSelectionPills
                     <span className="raw-selection-pill">{entity.name}</span>
                 </Html>
             )}
+            {/* Depth-capped like the node hierarchy walk: a tree is read from
+                its roots, so a cycle is never reached, but a hand-edited file
+                can still nest absurdly deep. */}
+            {depth < MAX_ENTITY_DEPTH ? children.map((child) => (
+                <SceneEntityErrorBoundary key={child.id} resetKey={child.id}>
+                    <EntityVisual
+                        entity={child}
+                        childrenOf={childrenOf}
+                        depth={depth + 1}
+                        assetMap={assetMap}
+                        selectedEntityId={selectedEntityId}
+                        onSelect={onSelect}
+                        showSelectionPills={showSelectionPills}
+                    />
+                </SceneEntityErrorBoundary>
+            )) : null}
         </group>
     )
 }
@@ -709,6 +738,8 @@ function SceneContent({
     // not on every document identity change from a sync tick.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     const assetMap = useMemo(() => buildAssetMap(document), [document.assets, document.projectMeta?.id])
+    // Things under their groups, read the same way the canvas lists them.
+    const entityTree = useMemo(() => buildEntityTree(document.entities), [document.entities])
     // Rebuilt every frame while a Time node exists — the per-pass outputCache
     // must not survive a tick or the clock would freeze at its first sample.
     const clockNow = useDocumentClock(document)
@@ -1002,12 +1033,13 @@ function SceneContent({
                     have no parent concept, so they stand in the top room and
                     only there. They used to render unscoped — every object
                     haunted every interior at every depth. */}
-                {(scopeId ? [] : (document.entities || [])).map((entity) => (
+                {(scopeId ? [] : entityTree.roots).map((entity) => (
                     <SceneEntityErrorBoundary key={entity.id} resetKey={entity.id}>
                         <EntityVisual
                             entity={entity}
+                            childrenOf={entityTree.childrenOf}
                             assetMap={assetMap}
-                            selected={entity.id === selectedEntityId}
+                            selectedEntityId={selectedEntityId}
                             onSelect={onSelectEntity}
                             showSelectionPills={showSelectionPills}
                         />
