@@ -31,7 +31,8 @@ release**. There is no adapter for 0.4.x (owner, 2026-09-16). So:
 `requireLocalRuntime` from `serverXR/src/localRuntimeGuard.js`: a hosted
 diiii.xyz answers 404; a local install answers loopback always, and the LAN
 only when `DI_ALLOW_LAN_DEVICES=1` (which `di up --lan` sets). Discovery (UDP)
-runs **only** when the LAN is allowed.
+runs in full **only** when the LAN is allowed; see the 2026-09-24 amendment for
+the listen-only private mode.
 
 ## 2. The frozen core
 
@@ -302,3 +303,44 @@ Verified on real machines 2026-09-16: aylmo (release 0.4.0 checkout) and asuz
 both ways. Conformance passed 17/17 against each. `compat-grid --refs HEAD,HEAD`
 went green. An unsigned cue got 403. A signed blackout from aylmo turned asuz's
 projector output from a white test page (mean 253) to black (0) and back.
+
+### 2026-09-24: visibility, the private beacon (additive only; nothing frozen changed)
+
+Found on a real network: three copies on 192.168.88.x, one of them bound to
+every interface with `DI_ALLOW_LAN_DEVICES` unset. It was invisible by design
+and nothing said so.
+
+1. **`GET /api/rig/visibility`**, behind the same guard, answers
+   `{ rig: 1, visible, reason: "open"|"devices-closed"|"loopback", summary,
+   discovery: "on"|"listening"|"off"|"port-busy", room, members: <count>,
+   nearby: [{ id, name, address, release, open, via, lastSeen }], fix }`.
+   `serverXR/src/rig/visibility.js` is the only place it is worked out; `di
+   status`, the boot log and the Desk repeat it.
+2. **Three discovery modes**, chosen from the bind and the guard:
+   `open` (LAN allowed: §6 as written) · `private` (bound to the network,
+   device routes closed: listen, beacon, never hello, never file a member) ·
+   `off` (loopback bind: no socket on the network at all).
+3. **The private beacon**: `{ "rig": 1, "t": "private", "machine": { "id",
+   "name" }, "release", "sentAt" }`, ≤ 1 KB, same port and targets as `here`,
+   every 5 s. It carries **no top-level `id`**, deliberately: a 0.4.x reader
+   never looked at `t` and would have filed any packet with an `id` as a
+   member and dialled it; without one it counts it malformed (§4 rule 6).
+   Verified 2026-09-24 against aylmo and win on 0.4.16-connect.4: neither
+   listed the beaconing copy. Unsigned (it asks nothing of the receiver, and a
+   private copy need not hold the room key); heard across rooms.
+4. **`t` is read.** A packet whose `t` is neither absent, `here` nor `private`
+   is counted (`unknownKind`) and ignored, never treated as `here` (§4).
+5. **`nearby`** is di.iiii heard but never paired — a private beacon, an open
+   copy heard by a private one, or a peer whose hello answered 403
+   "local runtime is loopback-only". Bounded (64), expires with the member TTL
+   (20 s), and nothing in it is ever dialled. Its `address` is the first one
+   still heard, because one machine broadcasts from every interface.
+6. **Why the private beacon is safe** (owner's standing security reason for
+   the guard: a device route is an outbound socket others could aim): the
+   beacon's content and targets are fixed, and nothing a remote party sends
+   makes a private copy send anything or open any route. It discloses id,
+   name and release — the name is already on the same address's
+   unauthenticated `/api/config`. A loopback copy stays silent: opening a
+   socket there would be the first network footprint of a copy that asked
+   for none (and a firewall prompt on Windows and macOS). Whether a loopback
+   copy should LISTEN (never send) is an owner decision.

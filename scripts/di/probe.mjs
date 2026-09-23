@@ -180,6 +180,27 @@ export const probeListen = async (port, host = '127.0.0.1', basePath = '/serverX
     }
 }, null)
 
+/**
+ * Can the other di.iiii on this network see this one — the server's own answer
+ * (serverXR/src/rig/visibility.js), asked over loopback like everything else
+ * `status` asks. Null when it cannot say: not running, `DI_RIG=0`, or a server
+ * from before the route existed. A 403 means the route exists and refused the
+ * address we asked on — which only a private copy does.
+ */
+export const probeRig = async (port, host = '127.0.0.1', basePath = '/serverXR', scheme = 'http') => quiet(async () => {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 2000)
+    try {
+        const response = await fetch(`${scheme}://${host}:${port}${basePath}/api/rig/visibility`, { signal: controller.signal })
+        if (response.status === 403) return { visible: false, refused: true }
+        if (!response.ok) return null
+        const body = await response.json()
+        return body && typeof body.visible === 'boolean' ? body : null
+    } finally {
+        clearTimeout(timer)
+    }
+}, null)
+
 /** Everything decideMode needs, gathered concurrently. */
 export const probeAll = async ({ home, forcedMode = null } = {}) => {
     const [dockerRunning, imagesPullable, canReachNodeOrg] = await Promise.all([

@@ -231,6 +231,30 @@ export const ui = {
         ? `this network — ${urls.length ? urls.join(', ') : 'no address yet'}`
         : 'this machine only',
 
+    // What `status` says about the rig: can the other di.iiii on this network
+    // see this one. The one question nobody could answer on 2026-09-24, when
+    // three copies sat on one network and one of them was invisible by design
+    // and in silence. `v` is the server's answer (GET /api/rig/visibility).
+    rigVisibility: (v) => {
+        if (!v) return style.dim('rig: no answer — DI_RIG=0, or a server older than this di')
+        const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
+        const nearby = Array.isArray(v.nearby) ? v.nearby : []
+        const privateOnes = nearby.filter((entry) => entry && entry.open === false)
+        const openOnes = nearby.filter((entry) => entry && entry.open === true)
+        const who = (entry) => `${entry.address || 'an unknown address'}${entry.name ? ` (${entry.name})` : ''}`
+        if (v.visible) {
+            return [
+                `rig: visible on this network · discovery ${v.discovery || 'on'} · ${plural(v.members || 0, 'member', 'members')}${style.dim(`  (to make it private: ${CMD} down, then ${CMD} up)`)}`,
+                ...privateOnes.map((entry) => style.yellow(`  a di.iiii at ${who(entry)} is on this network but private — on that machine: ${CMD} down, then ${CMD} up --lan`))
+            ].join('\n')
+        }
+        return [
+            style.yellow(`rig: private — other di.iiii on this network cannot see this one`),
+            v.refused ? null : style.dim(`  discovery ${v.discovery || 'off'}${openOnes.length ? ` · heard ${openOnes.length} other di.iiii on this network: ${openOnes.map(who).join(', ')}` : ''}`),
+            `  to change: ${CMD} down, then ${CMD} up --lan`
+        ].filter(Boolean).join('\n')
+    },
+
     stopped: (dataDir) => `stopped. your work is safe in ${dataDir}`,
     notRunning: () => 'not running.',
 
