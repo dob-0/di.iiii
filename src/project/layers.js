@@ -176,15 +176,18 @@ export function readProjectLayers(document, { loaded = true } = {}) {
 }
 
 /**
- * Has the REAL document of this project arrived? The store starts on a blank
- * stand-in whose projectMeta.id is '' (projectStore.js), and the server stamps
- * every document it sends with its own id (serverXR projectStore
- * coerceProjectDocument). So the id match is true from the first load on, stays
- * true through a later reload, and is false again the moment the editor is
- * switched to another project — without a stored flag.
+ * Has the REAL document of THIS project arrived?
+ *
+ * Two facts, both needed. The store's own `hasLoaded` (projectStore.js, shared
+ * with Nodes' zen) says a document has arrived at all — until then the store
+ * holds a blank stand-in whose every count reads 0. And the id: the server
+ * stamps every document it sends with its own id (serverXR projectStore
+ * coerceProjectDocument), and an editor switched to another project keeps the
+ * old document, and `hasLoaded`, until the new one lands. A store too old to
+ * carry `hasLoaded` (undefined) is judged by the id alone.
  */
-export const isProjectLoaded = (document, projectId) =>
-    Boolean(projectId) && document?.projectMeta?.id === projectId
+export const isProjectLoaded = (document, projectId, hasLoaded) =>
+    Boolean(projectId) && hasLoaded !== false && document?.projectMeta?.id === projectId
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 

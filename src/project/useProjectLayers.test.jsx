@@ -9,9 +9,19 @@ const box = createEntityOfType('box')
 
 describe('useProjectLayers', () => {
     it('decides nothing while the store still holds the blank stand-in', () => {
-        const { result } = renderHook(() => useProjectLayers(doc(''), 'p1'))
+        const { result } = renderHook(() => useProjectLayers(doc(''), 'p1', false))
         expect(result.current.loaded).toBe(false)
         expect(result.current.open).toBeNull()
+        expect(result.current.held).toBe(false)
+    })
+
+    it('decides nothing until the store says the document arrived', () => {
+        const { result, rerender } = renderHook(({ hasLoaded }) => useProjectLayers(doc('p1'), 'p1', hasLoaded), {
+            initialProps: { hasLoaded: false }
+        })
+        expect(result.current.open).toBeNull()
+        rerender({ hasLoaded: true })
+        expect(result.current.open.connections).toBe(false)
         expect(result.current.held).toBe(false)
     })
 

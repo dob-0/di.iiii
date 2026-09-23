@@ -135,11 +135,18 @@ describe('layers — what inside what', () => {
         expect(readProjectLayers({ entities: [null], nodes: [null], mappingState: { cues: [null] } }).counts.things).toBe(1)
     })
 
-    it('knows the real document by its id, not by a stored flag', () => {
+    it('knows the real document by its id — the one project this editor was asked for', () => {
         expect(isProjectLoaded(doc({ projectMeta: { id: '' } }), 'p1')).toBe(false)
         expect(isProjectLoaded(FIXTURES.empty, 'p1')).toBe(true)
         expect(isProjectLoaded(FIXTURES.empty, 'p2')).toBe(false)
         expect(isProjectLoaded(FIXTURES.empty, null)).toBe(false)
+    })
+
+    it('waits for the store\'s own hasLoaded when the store carries it', () => {
+        expect(isProjectLoaded(FIXTURES.empty, 'p1', false)).toBe(false)
+        expect(isProjectLoaded(FIXTURES.empty, 'p1', true)).toBe(true)
+        // Switched to another project: the old document is still there, and so is hasLoaded.
+        expect(isProjectLoaded(FIXTURES.empty, 'p2', true)).toBe(false)
     })
 })
 

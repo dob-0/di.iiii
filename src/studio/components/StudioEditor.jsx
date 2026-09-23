@@ -130,7 +130,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     // What each layer of this project holds and which are open, once the real
     // document has arrived (src/project/layers.js): a new project opens bare,
     // and the bar grows as it fills.
-    const layers = useProjectLayers(document, projectId)
+    const layers = useProjectLayers(document, projectId, state.hasLoaded)
     // The project's cues, fired from the 3D scene with the projection tool's
     // own number keys and through its own firing path. Number keys are free in
     // Studio; see src/studio/hooks/useStudioCues.js for the one thing that

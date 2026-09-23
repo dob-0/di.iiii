@@ -173,6 +173,8 @@ describe('StudioShell — a new project opens bare', () => {
         // The one window cannot be closed into an empty screen.
         expect(document.querySelector('[data-panel="Create"]').dataset.closable).toBe('no')
         expect(assets()).toEqual({ drive: false, commons: false, wait: true })
+        // Unit 3: the bar grows with the project.
+        expect(barLinks()).toEqual(['Spaces', 'Studio', 'Tools', 'Wiki'])
     })
 
     it('decides nothing before the project has loaded — the screen is today\'s', () => {
@@ -202,6 +204,7 @@ describe('StudioShell — a new project opens bare', () => {
         )
         expect(screen.getByTestId('gizmo-mode')).toBeInTheDocument()
         expect(panels()).toEqual(['Create', 'Objects'])
+        expect(barLinks()).toEqual(['Spaces', 'Studio', 'Nodes', 'Tools', 'Wiki'])
     })
 
     it('"All tools" gives a new project everything, bar included', () => {

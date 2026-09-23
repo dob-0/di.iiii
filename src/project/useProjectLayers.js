@@ -16,8 +16,9 @@ import { isProjectLoaded, LAYER_KEYS, readProjectLayers } from './layers.js'
 //   held  — the project has held something at some point on this page
 const sameOpen = (a, b) => Boolean(a && b) && LAYER_KEYS.every((key) => Boolean(a[key]) === Boolean(b[key]))
 
-export function useProjectLayers(document, projectId) {
-    const loaded = isProjectLoaded(document, projectId)
+// `hasLoaded` is the store's own flag (state.hasLoaded); see isProjectLoaded.
+export function useProjectLayers(document, projectId, hasLoaded) {
+    const loaded = isProjectLoaded(document, projectId, hasLoaded)
     const layers = useMemo(() => readProjectLayers(document, { loaded }), [document, loaded])
     const [seen, setSeen] = useState({ projectId: null, open: null, held: false })
     const earlier = seen.projectId === projectId ? seen : null

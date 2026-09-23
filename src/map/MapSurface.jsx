@@ -5,6 +5,7 @@ import MapInspector from './MapInspector.jsx'
 import MapCueList from './MapCueList.jsx'
 import { cueForKey, isCueKey } from './cueFiring.js'
 import { useMapDocument } from './useMapDocument.js'
+import { useProjectLayers } from '../project/useProjectLayers.js'
 import { toTopNetwork } from '../project/tops/useTopNetwork.js'
 import { buildMapOutputPath } from './mapRouting.js'
 import { listProjects } from '../project/services/projectsApi.js'
@@ -84,7 +85,7 @@ const useMeasuredStage = (aspect) => {
 
 export default function MapSurface({ projectId, spaceId }) {
     const {
-        document: doc, mapping, surfaces, syncState, applyOps,
+        store, document: doc, mapping, surfaces, syncState, applyOps,
         addSurface, updateSurface, deleteSurface, reorderSurfaces, setOutput, upsertAsset,
         addCue, updateCue, deleteCue, reorderCues, fireCue
     } = useMapDocument(projectId, { role: 'desk' })
@@ -95,6 +96,9 @@ export default function MapSurface({ projectId, spaceId }) {
     const localInstall = useLocalInstall()
     const spaceName = useSpaceName(spaceId)
     const [isEmbed] = useState(() => isEmbedRequest())
+    // The bar grows with the project (src/project/layers.js); Projection itself
+    // is never taken off the bar while you stand on it.
+    const barLayers = useProjectLayers(doc, projectId, store?.state?.hasLoaded).open
 
     const [selectedId, setSelectedId] = useState(null)
     const [soloId, setSoloId] = useState(null)
@@ -334,6 +338,7 @@ export default function MapSurface({ projectId, spaceId }) {
                 projectLabel={doc?.projectMeta?.title}
                 isLocalInstall={localInstall.isLocal}
                 hidden={isEmbed}
+                layers={barLayers}
             />
             <header className="map-bar">
                 <div className="map-bar-title">

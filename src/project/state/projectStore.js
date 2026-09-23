@@ -23,6 +23,12 @@ export const createProjectStoreState = ({
     selectedEntityId: null,
     selectedEntityIds: [],
     loading: false,
+    // True once the project's own document has arrived (load-success).
+    // Until then `document` is the empty stand-in above and every count in it
+    // reads 0, so anything that decides from what the project holds must wait
+    // for this. `loading` cannot say it: it starts false ("not started"), and
+    // a fast load's load-start and load-success can land in one render.
+    hasLoaded: false,
     loadError: null,
     activity: [],
     presenceState: 'disconnected',
@@ -44,6 +50,7 @@ export function projectStoreReducer(state, action) {
             return {
                 ...state,
                 loading: false,
+                hasLoaded: true,
                 loadError: null,
                 version: Number(action.version) || 0,
                 document: normalizeProjectDocument(action.document || {}),
