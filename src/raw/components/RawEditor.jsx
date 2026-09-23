@@ -74,12 +74,12 @@ const isNarrowViewport = () => typeof window !== 'undefined' && window.innerWidt
 const panelWindowSpace = (frame, viewport) => (frame?.pinned || isNarrowViewport() || !viewport) ? 'screen' : 'world'
 
 import { buildRawOutPath, buildRawProjectPath, buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
-import { describeRootEmptyCanvas } from '../utils/emptyCanvasHint.js'
+import { buildObjectCards, buildScopeItems } from '../utils/objectCards.js'
 import { DEFAULT_PROJECT_SPACE_ID, createProject, updateProjectDocument, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
 import { RAW_ANATOMY_Z, RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getAnatomyDefaultFrame, getBottomReserve, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
-import { getCardBox } from '../utils/cardGeometry.js'
+import { cardHeight, getCardBox } from '../utils/cardGeometry.js'
 import { isPaletteSummons, resolveZenPreference, writeZenPreference, liftAutoZen, isAutoZen } from '../utils/zenMode.js'
 import {
     clearLocalWorkspaceDocument,
@@ -328,7 +328,9 @@ export default function RawEditor({
     const localInstall = useLocalInstall()
     const [isEmbed] = useState(() => isEmbedRequest())
     const spaceName = useSpaceName(isLocalWorkspace ? null : resolvedSpaceId)
-    const entities = document.entities || []
+    // Memoized like `nodes`: the thing cards and the outliner rows are built
+    // from it, and a fresh `[]` every render rebuilt both every render.
+    const entities = useMemo(() => document.entities || [], [document.entities])
     const nodes = useMemo(() => document.nodes || [], [document.nodes])
     const workspaceState = document.workspaceState || {}
     const selectedEntity = entities.find((entity) => entity.id === state.selectedEntityId) || null
@@ -435,9 +437,26 @@ export default function RawEditor({
         const cardIds = new Set(graphCardNodes.map((node) => node.id))
         return (document.edges || []).filter((edge) => cardIds.has(edge.fromNodeId) && cardIds.has(edge.toNodeId))
     }, [document.edges, graphCardNodes])
+    // Every thing in the room, as a card below the nodes and a row in the
+    // outliner — grouped things under their group (objectCards.js). Things
+    // stand in the top room only, so they are drawn and counted there alone.
+    // Positions are worked out here, every render, and never written to the
+    // project: opening a canvas on somebody's room must not edit it.
+    const objectCards = useMemo(
+        () => (currentScopeId ? [] : buildObjectCards(entities, {
+            nodes: graphCardNodes,
+            heightOf: (node) => cardHeight(node, authoredNodes)
+        })),
+        [currentScopeId, entities, graphCardNodes, authoredNodes]
+    )
+    const outlinerItems = useMemo(
+        () => buildScopeItems({ nodes: authoredNodes, entities, scopeId: currentScopeId }),
+        [authoredNodes, entities, currentScopeId]
+    )
     // The topbar counts THIS room; the empty-state logic asks about the whole
     // document (a zen desk inside a full project is not "empty").
     const nodeCount = graphCardNodes.length
+    const thingCount = currentScopeId ? 0 : entities.length
     // "Where did my cube go?" The desk is deliberately clear (owner, 2026-08-20:
     // "i mean clear desk"), so a spatial node you just placed is standing in a
     // room you are not looking at — and the button to that room said the same
@@ -521,15 +540,21 @@ export default function RawEditor({
             ? 'Double-tap'
             : 'Double-click'
     ))
-    const showEmptyHint = !hasGraphNodes && !hasWorldNode
+    // Truly empty only: a canvas holding thing cards is not asking for its
+    // first anything, and "place your first node" above a row of cards read
+    // as if the cards were not there.
+    const showEmptyHint = !hasGraphNodes && !hasWorldNode && entities.length === 0
     const topbarLocationText = showEmptyHint ? `${pointerVerb} to place your first node` : ''
 
+    // Only when the project holds nothing at all: a room of things with no
+    // nodes still has an outliner and a room worth keeping open.
+    const hasAnyWork = hasAnyNodes || entities.length > 0
     useEffect(() => {
-        if (hasAnyNodes) return
+        if (hasAnyWork) return
         setIsWorldFullscreen(false)
         setOutlinerOpen(false)
         scopeReset()
-    }, [hasAnyNodes, scopeReset])
+    }, [hasAnyWork, scopeReset])
 
 
 
@@ -948,16 +973,37 @@ export default function RawEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isWorldFullscreen])
 
-    // Read the zen preference ONCE, and only after the document has loaded —
-    // the default depends on whether this workspace already has work in it, and
-    // on first render it always looks empty.
+    // Has the project's own document arrived? Before it does, the store holds
+    // an empty stand-in (projectStore.js createProjectStoreState), and every
+    // count reads 0 — so anything decided on the first render was decided
+    // about nothing. `!document` was the old guard and is never true: the
+    // stand-in is a real, empty object. A local canvas is read synchronously
+    // from this browser, so it has loaded at mount. A server project has
+    // loaded when a load has started and ended without an error (the sync
+    // hook dispatches load-start in an effect, AFTER the first render — the
+    // initial `loading: false` means "not started", not "done").
+    const [projectLoaded, setProjectLoaded] = useState(!projectId)
+    const loadStartedRef = useRef(false)
     useEffect(() => {
-        if (zenReadRef.current || !document) return
+        if (!projectId || projectLoaded) return
+        if (state.loading) {
+            loadStartedRef.current = true
+            return
+        }
+        if (loadStartedRef.current && !state.loadError) setProjectLoaded(true)
+    }, [projectId, projectLoaded, state.loading, state.loadError])
+
+    // Read the zen preference ONCE, and only after the project has loaded —
+    // the default depends on whether this workspace already has work in it,
+    // and before the load it always looks empty. Work is both kinds: a room of
+    // Studio things with no nodes is not an empty canvas.
+    useEffect(() => {
+        if (zenReadRef.current || !projectLoaded) return
         zenReadRef.current = true
         setZen(resolveZenPreference(zenWorkspaceKey, {
-            nodeCount: (document.nodes || []).length
+            workCount: (document.nodes || []).length + (document.entities || []).length
         }))
-    }, [document, zenWorkspaceKey])
+    }, [document, projectLoaded, zenWorkspaceKey])
 
     const setZenPreference = useCallback((next) => {
         setZen(next)
@@ -969,11 +1015,12 @@ export default function RawEditor({
     // exist the moment there is a scene to look at. An explicit zen choice
     // is never touched (audit 08-21: entering the scene took a 4-step
     // palette incantation because the chrome never came back).
-    const documentNodeCount = (document?.nodes || []).length
+    // Both kinds: a thing added from the palette is work as much as a node.
+    const documentWorkCount = (document?.nodes || []).length + (document?.entities || []).length
     useEffect(() => {
-        if (!zenReadRef.current || documentNodeCount === 0) return
+        if (!zenReadRef.current || documentWorkCount === 0) return
         if (liftAutoZen(zenWorkspaceKey)) setZen(false)
-    }, [documentNodeCount, zenWorkspaceKey])
+    }, [documentWorkCount, zenWorkspaceKey])
 
     // Cmd/Ctrl+K or a bare `/` opens the palette at the middle of the screen.
     // Touch already has this: double-tapping empty canvas opens the same
@@ -1024,8 +1071,15 @@ export default function RawEditor({
         // Crossing from Studio's ⇄ Nodes landed on exactly this screen, which is
         // what made the two editors look unconnected: the door worked, the room
         // it opened onto looked blank.
+        //
+        // A project with things and no nodes never reaches this sentence any
+        // more: its things are cards, so the canvas is not empty. The old
+        // "Built in Studio — N objects in the room, no nodes yet" line
+        // (emptyCanvasHint.js) was retired with unit 6 of the layers decision.
         if (!currentScopeId) {
-            return describeRootEmptyCanvas({ isLocalWorkspace, entityCount: entities.length, pointerVerb })
+            return isLocalWorkspace
+                ? `A canvas in this browser — nothing here is saved to a space yet. ${pointerVerb} to place your first node.`
+                : `${pointerVerb} to place your first node.`
         }
         const label = scopeNode?.label || 'this node'
         // The old sentence for a code-made node — "there is nothing inside it
@@ -1041,7 +1095,7 @@ export default function RawEditor({
                 : `Inside ${label} — code, no room of its own.`
         }
         return `Inside ${label}. ${pointerVerb} to place the first node in it.`
-    }, [currentScopeId, entities.length, isLocalWorkspace, pointerVerb, scopeNode])
+    }, [currentScopeId, isLocalWorkspace, pointerVerb, scopeNode])
 
     // …and the sentence above is only the first half of the answer. It says
     // THAT a Cube has no inside; the sheet says what it has instead. Opening
@@ -1609,6 +1663,7 @@ export default function RawEditor({
                     onClearSelection={clearSelection}
                     onWorldDoubleClick={handleWorldSurfaceDoubleClick}
                     onMoveNode={handleMoveWorldNode}
+                    onMoveEntity={handleMoveWorldEntity}
                     cursors={presence.cursors}
                     onCursorMove={presence.emitCursor}
                     onCursorLeave={presence.clearCursor}
@@ -1776,9 +1831,11 @@ export default function RawEditor({
         if (node.typeId === 'view.outliner') {
             return (
                 <OutlinerPanelWindow
-                    nodes={authoredNodes}
+                    items={outlinerItems}
                     selectedNodeId={workspaceState.selectedNodeId || null}
                     onSelectNode={(nodeId) => selectNode(nodeId)}
+                    selectedEntityId={scopedSelectedEntity?.id || null}
+                    onSelectEntity={selectEntity}
                 />
             )
         }
@@ -1975,6 +2032,18 @@ export default function RawEditor({
         })
     }
 
+    // A thing let go in the room: the SAME edit Studio's gizmo writes
+    // (StudioEditor's handleTransformCommit), once per drag — RawViewport
+    // holds the drag as a preview and calls this on release only.
+    const handleMoveWorldEntity = (entityId, nextPosition) => {
+        const entity = entities.find((candidate) => candidate.id === entityId)
+        if (!entity) return
+        applyLocalOps({
+            type: 'updateComponent',
+            payload: { entityId, component: 'transform', patch: { position: nextPosition } }
+        }, { activityMessage: `Moved ${entity.name || entity.type}.` })
+    }
+
     // Everything the workspace can summon. The Windows menu's job, the help
     // button's job and the chat button's job all arrive here rather than
     // sitting resident on the surface — and any panel node that is currently
@@ -2169,15 +2238,41 @@ export default function RawEditor({
                             <button type="button" className="raw-topbar-help-action" onClick={() => setHelpOpen(true)}>
                                 Help
                             </button>
-                            {nodeCount > 0 && (
+                            {/* Counts BOTH kinds, and appears for either: it
+                                was `nodeCount > 0`, so a project of Studio
+                                things had no outliner button at all — the one
+                                control that lists the work was hidden because
+                                the work was not nodes. "4 nodes · 3 things" on
+                                a desktop. A phone gets ONE number, how many rows
+                                the outliner will list: two numbers and a
+                                separator measured 393px of content in a 390px
+                                bar on the branch this came from (8c58c29a), and
+                                the row's last control is ⋯ — the only way to
+                                Save on a phone. The aria-label keeps the
+                                breakdown for anyone who needs it. */}
+                            {(nodeCount > 0 || thingCount > 0) && (
                                 <button
                                     type="button"
                                     className={`raw-topbar-node-count${outlinerOpen ? ' is-active' : ''}`}
                                     onClick={() => setOutlinerOpen((v) => !v)}
                                     title="Toggle outliner"
-                                    aria-label={`${nodeCount} nodes`}
+                                    aria-label={[
+                                        nodeCount > 0 ? `${nodeCount} ${nodeCount === 1 ? 'node' : 'nodes'}` : '',
+                                        thingCount > 0 ? `${thingCount} ${thingCount === 1 ? 'thing' : 'things'}` : ''
+                                    ].filter(Boolean).join(', ')}
                                 >
-                                    {nodeCount}<span className="raw-topbar-word"> {nodeCount === 1 ? 'node' : 'nodes'}</span>
+                                    <span className="raw-topbar-count-full">
+                                        {nodeCount > 0 ? (
+                                            <>{nodeCount}<span className="raw-topbar-word"> {nodeCount === 1 ? 'node' : 'nodes'}</span></>
+                                        ) : null}
+                                        {nodeCount > 0 && thingCount > 0 ? <span aria-hidden="true"> · </span> : null}
+                                        {thingCount > 0 ? (
+                                            <>{thingCount}<span className="raw-topbar-word"> {thingCount === 1 ? 'thing' : 'things'}</span></>
+                                        ) : null}
+                                    </span>
+                                    <span className="raw-topbar-count-compact" aria-hidden="true">
+                                        {nodeCount + thingCount}
+                                    </span>
                                 </button>
                             )}
                             {/* No Chat button alone in a local canvas: there
@@ -2327,6 +2422,12 @@ export default function RawEditor({
                     bottomInset={graphBottomInset}
                     contentInsets={graphContentInsets}
                     nodes={graphCardNodes}
+                    // The room's things, on the same canvas. Selecting one
+                    // reaches the same selection the room and the inspector
+                    // use, so the inspector that opens already edits it.
+                    objectCards={objectCards}
+                    selectedObjectId={scopedSelectedEntity?.id || null}
+                    onSelectObject={selectEntity}
                     childCounts={childCounts}
                     // EVERY node, not graphCardNodes. A container's doorways
                     // live INSIDE it — a different scope from its own card — so
@@ -2347,12 +2448,6 @@ export default function RawEditor({
                     // injects six nodes, and offering that as the primary action
                     // on somebody's Studio project invites them to bury it.
                     onMakeScene={currentScopeId === null && nodes.length === 0 && entities.length === 0 ? handleCreateSceneExample : null}
-                    // The way to the work that IS here. Without it the crossing
-                    // from Studio ends on a blank grid whose only offer is to
-                    // start over.
-                    onOpenRoom={currentScopeId === null && nodes.length === 0 && entities.length > 0
-                        ? () => setIsWorldFullscreen(true)
-                        : null}
                     // Only inside a CODE-made node: there the empty canvas IS
                     // the question. A container's reading stays one tap away on
                     // the marker's ? — two resident buttons for one answer was
@@ -2653,6 +2748,7 @@ export default function RawEditor({
                         onClearSelection={clearSelection}
                         onWorldDoubleClick={handleWorldSurfaceDoubleClick}
                         onMoveNode={handleMoveWorldNode}
+                        onMoveEntity={handleMoveWorldEntity}
                         cursors={presence.cursors}
                         onCursorMove={presence.emitCursor}
                         onCursorLeave={presence.clearCursor}
@@ -2686,9 +2782,11 @@ export default function RawEditor({
                     onTogglePin={() => setOutlinerFrame((f) => ({ ...f, pinned: !f.pinned }))}
                 >
                     <OutlinerPanelWindow
-                        nodes={authoredNodes}
+                        items={outlinerItems}
                         selectedNodeId={workspaceState.selectedNodeId || null}
                         onSelectNode={(nodeId) => selectNode(nodeId)}
+                        selectedEntityId={scopedSelectedEntity?.id || null}
+                        onSelectEntity={selectEntity}
                     />
                 </DesktopWindow>
             )}

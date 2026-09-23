@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, act, cleanup, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { useEffect as mockUseEffect } from 'react'
 import TextPanelWindow from './TextPanelWindow.jsx'
 
 // Mock 3D deps before importing RawEditor to avoid ResizeObserver errors in jsdom
@@ -10,13 +11,17 @@ vi.mock('./RawViewport.jsx', () => ({
         return <div data-testid="mock-viewport" />
     }
 }))
+const graphMountProps = []
 vi.mock('./RawGraphSurface.jsx', () => ({
-    default: (props) => (
+    default: (props) => {
+        graphMountProps.push(props)
+        return (
         <div data-testid="mock-graph" role="presentation" onDoubleClick={() => props.onDoubleClick?.({})}>
             {/* The real surface renders emptyHint in the middle of the canvas,
-                independent of the chrome. The mock has to as well, or a zen
-                workspace looks hintless here while the real one is not. */}
-            {props.emptyHint && props.nodes?.length === 0 && (
+                independent of the chrome — and only when it holds no card of
+                either kind. The mock has to as well, or a zen workspace looks
+                hintless here while the real one is not. */}
+            {props.emptyHint && props.nodes?.length === 0 && !props.objectCards?.length && (
                 <span data-testid="mock-graph-hint">{props.emptyHint}</span>
             )}
             {props.selectedNodeId && (
@@ -54,13 +59,33 @@ vi.mock('./RawGraphSurface.jsx', () => ({
                     drop-wire
                 </button>
             )}
+            {props.objectCards?.map((card) => (
+                <button key={card.id} type="button" onClick={() => props.onSelectObject?.(card.entityId)}>
+                    {`card:${card.label}`}
+                </button>
+            ))}
         </div>
-    )
+        )
+    }
 }))
 const mockApplyLocalOps = vi.fn()
 const mockReplaceDocument = vi.fn(() => Promise.resolve())
+// Null: the document never arrives (every older test here). A document: the
+// hook loads it the way the real one does — load-start in an effect AFTER the
+// first render, load-success a tick later — so a test can see what the editor
+// decides before its project has loaded.
+let mockLoadOnMount = null
 vi.mock('../../project/hooks/useProjectDocumentSync.js', () => ({
-    useProjectDocumentSync: () => ({ applyLocalOps: mockApplyLocalOps, replaceDocument: mockReplaceDocument })
+    useProjectDocumentSync: ({ store }) => {
+        mockUseEffect(() => {
+            if (!mockLoadOnMount) return
+            const { document, version } = mockLoadOnMount
+            store.dispatch({ type: 'load-start' })
+            Promise.resolve().then(() => store.dispatch({ type: 'load-success', document, version }))
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [])
+        return { applyLocalOps: mockApplyLocalOps, replaceDocument: mockReplaceDocument }
+    }
 }))
 vi.mock('../../project/hooks/useProjectPresence.js', () => ({
     useProjectPresence: () => ({ users: [], cursors: [], emitCursor: vi.fn(), clearCursor: vi.fn(), messages: [], sendChatMessage: vi.fn() })
@@ -123,6 +148,34 @@ describe('RawEditor outliner toggle', () => {
         )
         render(<RawEditor localStorageKey={OUTLINER_STORAGE_KEY} />)
         expect(screen.getByRole('button', { name: /2 nodes/i })).toBeTruthy()
+    })
+
+    // Unit 6 of the layers decision. A project can hold things (Studio's
+    // objects) and nodes, and this button appeared only for nodes — so the one
+    // control that lists what is in the room was hidden BECAUSE the room was
+    // full of things rather than nodes.
+    it('counts things too, and appears for a project that has only things', () => {
+        window.localStorage.setItem(OUTLINER_STORAGE_KEY, JSON.stringify({
+            nodes: [], edges: [], workspaceState: {},
+            entities: [
+                { id: 'e1', type: 'box', name: 'Plinth', components: {} },
+                { id: 'e2', type: 'model', name: 'Beads', components: {} }
+            ]
+        }))
+        render(<RawEditor localStorageKey={OUTLINER_STORAGE_KEY} />)
+        expect(screen.getByRole('button', { name: '2 things' })).toBeTruthy()
+    })
+
+    it('names both kinds when a project has each: "1 node · 1 thing"', () => {
+        window.localStorage.setItem(OUTLINER_STORAGE_KEY, JSON.stringify({
+            nodes: [makeNodeZero()], edges: [], workspaceState: {},
+            entities: [{ id: 'e1', type: 'box', name: 'Plinth', components: {} }]
+        }))
+        render(<RawEditor localStorageKey={OUTLINER_STORAGE_KEY} />)
+        const count = screen.getByRole('button', { name: '1 node, 1 thing' })
+        expect(count.querySelector('.raw-topbar-count-full').textContent).toBe('1 node · 1 thing')
+        // the phone's one number, hidden on a desktop by raw.css
+        expect(count.querySelector('.raw-topbar-count-compact').textContent).toBe('2')
     })
 
     it('opens the outliner dialog when the node count button is clicked', () => {
@@ -714,7 +767,89 @@ describe('RawEditor chrome sweep (plan PR 1.6)', () => {
             workspaceState: {}
         }))
         render(<RawEditor localStorageKey={KEY} />)
-        expect(screen.getByRole('button', { name: '1 nodes' })).toBeTruthy()
+        expect(screen.getByRole('button', { name: '1 node' })).toBeTruthy()
+    })
+})
+
+describe('things are cards in Nodes (layers unit 6)', () => {
+    const KEY = 'test-things-cards'
+    const group = { id: 'g', type: 'group', name: 'Group', components: { transform: { position: [2, 0, 0] } } }
+    const boxes = [
+        { id: 'b1', type: 'box', name: 'Box one', parentId: 'g', components: {} },
+        { id: 'b2', type: 'box', name: 'Box two', parentId: 'g', components: {} },
+        { id: 'b3', type: 'box', name: 'Box three', components: {} }
+    ]
+    afterEach(() => {
+        window.localStorage.removeItem(KEY)
+        mockLoadOnMount = null
+        mockApplyLocalOps.mockClear()
+    })
+
+    it('hands every thing to the canvas as a card, grouped ones under their group', () => {
+        graphMountProps.length = 0
+        mockApplyLocalOps.mockClear()
+        window.localStorage.setItem(KEY, JSON.stringify({ nodes: [], edges: [], workspaceState: {}, entities: [boxes[2], group, boxes[0], boxes[1]] }))
+        render(<RawEditor localStorageKey={KEY} />)
+        const cards = graphMountProps.at(-1).objectCards
+        expect(cards.map((card) => `${card.entityId}:${card.depth}`)).toEqual(['b3:0', 'g:0', 'b1:1', 'b2:1'])
+        // No card position is ever written: opening the canvas is not an edit.
+        expect(mockApplyLocalOps).not.toHaveBeenCalled()
+        // and the canvas is not empty, so no "place your first node" over it
+        expect(screen.queryByTestId('mock-graph-hint')).toBeNull()
+    })
+
+    it('clicking a card selects the thing, and the outliner shows the tree', () => {
+        window.localStorage.setItem(KEY, JSON.stringify({ nodes: [], edges: [], workspaceState: {}, entities: [group, ...boxes] }))
+        render(<RawEditor localStorageKey={KEY} />)
+        fireEvent.click(screen.getByText('card:Box one'))
+        expect(graphMountProps.at(-1).selectedObjectId).toBe('b1')
+        fireEvent.click(screen.getByRole('button', { name: '4 things' }))
+        const dialog = screen.getByRole('dialog', { name: /outliner/i })
+        const rows = within(dialog).getAllByRole('button').filter((b) => b.closest('.raw-outliner'))
+        expect(rows.map((row) => row.textContent)).toEqual(['groupGroup', 'boxBox one', 'boxBox two', 'boxBox three'])
+        expect(rows[1].style.paddingLeft).toBe('22px')
+        expect(rows[1].classList.contains('is-selected')).toBe(true)
+    })
+
+    it('a project of things and no nodes opens with its toolbar, not in zen', () => {
+        window.localStorage.setItem(KEY, JSON.stringify({ nodes: [], edges: [], workspaceState: {}, entities: [boxes[2]] }))
+        render(<RawEditor localStorageKey={KEY} />)
+        expect(window.localStorage.getItem(`dii.raw.zen.${KEY}`)).toBe('off')
+        expect(screen.getByRole('button', { name: '1 thing' })).toBeTruthy()
+    })
+
+    // Before its document arrives, a server project is an empty stand-in, and
+    // zen used to be decided against THAT — every project opened as if empty.
+    it('decides zen only once the project has loaded, counting its things', async () => {
+        mockLoadOnMount = { document: { nodes: [], edges: [], entities: [boxes[2]] }, version: 3 }
+        render(<RawEditor projectId="p-things" spaceId="lab" />)
+        expect(window.localStorage.getItem('dii.raw.zen.p-things')).toBeNull()
+        await waitFor(() => expect(window.localStorage.getItem('dii.raw.zen.p-things')).toBe('off'))
+        expect(screen.getByRole('button', { name: '1 thing' })).toBeTruthy()
+    })
+
+    it('an empty project still opens in automatic zen — once it has loaded', async () => {
+        mockLoadOnMount = { document: { nodes: [], edges: [], entities: [] }, version: 3 }
+        render(<RawEditor projectId="p-empty" spaceId="lab" />)
+        expect(window.localStorage.getItem('dii.raw.zen.p-empty')).toBeNull()
+        await waitFor(() => expect(window.localStorage.getItem('dii.raw.zen.p-empty')).toBe('auto-on'))
+    })
+
+    it('a thing let go in the room is one edit, the same one Studio writes', () => {
+        viewportMountProps.length = 0
+        window.localStorage.setItem(KEY, JSON.stringify({ nodes: [], edges: [], workspaceState: {}, entities: [boxes[2]] }))
+        render(<RawEditor localStorageKey={KEY} />)
+        fireEvent.click(screen.getByRole('button', { name: /^Scene/ }))
+        const viewport = viewportMountProps.at(-1)
+        expect(typeof viewport.onMoveEntity).toBe('function')
+        mockApplyLocalOps.mockClear()
+        act(() => viewport.onMoveEntity('b3', [1, 0, 2]))
+        expect(mockApplyLocalOps).toHaveBeenCalledTimes(1)
+        const ops = [mockApplyLocalOps.mock.calls[0][0]].flat()
+        expect(ops).toEqual([{
+            type: 'updateComponent',
+            payload: { entityId: 'b3', component: 'transform', patch: { position: [1, 0, 2] } }
+        }])
     })
 })
 
@@ -728,11 +863,11 @@ describe('RawEditor hardware Back (mobile finding #3)', () => {
             edges: [], workspaceState: {}
         }))
         render(<RawEditor localStorageKey={KEY} />)
-        expect(screen.getByRole('button', { name: '1 nodes' })).toBeTruthy()
+        expect(screen.getByRole('button', { name: '1 node' })).toBeTruthy()
         act(() => { window.dispatchEvent(new PopStateEvent('popstate')) })
         // the node count survives — the old guard navigated to index -1 and
         // rendered "place your first node" over an intact document
-        expect(screen.getByRole('button', { name: '1 nodes' })).toBeTruthy()
+        expect(screen.getByRole('button', { name: '1 node' })).toBeTruthy()
         expect(screen.queryByText(/place your first node/i)).toBeNull()
     })
 

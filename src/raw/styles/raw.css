@@ -1035,6 +1035,10 @@
     transition: color 0.1s;
 }
 
+.raw-topbar-count-compact {
+    display: none;
+}
+
 .raw-topbar-node-count:hover,
 .raw-topbar-node-count.is-active {
     color: rgba(255, 255, 255, 0.8);
@@ -5640,5 +5644,18 @@
 @media (max-width: 640px) {
     .raw-topbar-word {
         display: none;
+    }
+
+    /* One number, not two, once the count names both kinds (nodes · things):
+       "3 · 12" plus its separator measured 393px of content in this 390px bar
+       (branch worktree-connect-graph-walk, 8c58c29a), which pushed ⋯ — the
+       only way to Save on a phone — off the edge. The aria-label still reads
+       "N nodes, M things". */
+    .raw-topbar-count-full {
+        display: none;
+    }
+
+    .raw-topbar-count-compact {
+        display: inline;
     }
 }
