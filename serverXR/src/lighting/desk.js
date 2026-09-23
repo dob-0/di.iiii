@@ -50,7 +50,6 @@ function createDesk(opts = {}) {
   const LOADED = path.join(DATA, 'desk.json');
   let show = { space: null, label: null, dir: DATA };
   const showFile = () => path.join(show.dir, 'show.json');
-  const prevFile = () => path.join(show.dir, 'show.prev.json');
   // The fixture catalogue, cached beside the machine's show so it survives a night with
   // no wifi. It is a cache of the public library, not part of any show.
   const LIBRARY_DIR = path.join(DATA, 'library');
@@ -474,7 +473,8 @@ function createDesk(opts = {}) {
   // A show as a space keeps it: everything but `output`. A shallow copy of a dozen keys;
   // the non-enumerable live halves (audio levels, identify) were never in it anyway.
   function withoutRig(s) {
-    const { output, ...content } = s;
+    const content = Object.assign({}, s);
+    delete content.output;
     return content;
   }
 
