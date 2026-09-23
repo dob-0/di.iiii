@@ -34,7 +34,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { DatabaseSync } from 'node:sqlite'
-import { exportSpace, importSpace, resolvePaths, SLUG_REGEX } from './space-bundle.mjs'
+import { exportSpace, importSpace, resolvePaths, tarArchiveArgs, SLUG_REGEX } from './space-bundle.mjs'
 
 const BUNDLE_FORMAT = 'di.install-bundle'
 const BUNDLE_VERSION = 1
@@ -140,7 +140,8 @@ async function exportInstall(args) {
         await fsp.writeFile(path.join(staging, 'install.json'), JSON.stringify(manifest, null, 2))
 
         const out = path.resolve(args.out || 'di.install-bundle.tar.gz')
-        execFileSync('tar', ['-czf', out, '-C', staging, '.'])
+        const outTar = tarArchiveArgs(out)
+        execFileSync('tar', ['-czf', outTar.name, '-C', staging, '.'], { cwd: outTar.cwd })
         const size = (fs.statSync(out).size / 1024 / 1024).toFixed(2)
         const inside = [`${spaceIds.length} spaces`, ...describeCarried(carried), hasConfig ? 'instance config' : null].filter(Boolean)
         log(`exported install → ${out} (${size} MB, ${inside.join(', ')})`)
@@ -159,7 +160,8 @@ async function importInstall(args) {
 
     const staging = await fsp.mkdtemp(path.join(os.tmpdir(), 'install-bundle-'))
     try {
-        execFileSync('tar', ['-xzf', bundlePath, '-C', staging])
+        const inTar = tarArchiveArgs(bundlePath)
+        execFileSync('tar', ['-xzf', inTar.name, '-C', staging], { cwd: inTar.cwd })
 
         const manifestPath = path.join(staging, 'install.json')
         if (!fs.existsSync(manifestPath)) die('not an install bundle: install.json missing (single-space bundle? use space:import)')

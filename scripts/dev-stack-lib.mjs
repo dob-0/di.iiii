@@ -113,6 +113,20 @@ export const formatSpaceDriftWarning = (missing) => {
     ]
 }
 
+// A space can be absent here by design: its page was folded into another local space
+// (2026-09: drive-decisions lives in what-we-have, model-arena in lab). Its name is missing,
+// its content is not — mirroring it would make an empty duplicate. `published` maps a remote
+// space id to its published project id; `localProjects` holds the project ids this box has.
+// Returns the ids to drop from the warning, with the project that proves the page is here.
+export const pagesAlreadyHere = (missing, published, localProjects) => {
+    const here = new Map()
+    for (const id of (missing ? missing.keys() : [])) {
+        const pid = published?.get?.(id)
+        if (pid && localProjects?.has?.(pid)) here.set(id, pid)
+    }
+    return here
+}
+
 export const collectMissingSpaces = (localIds, tiers) => {
     const here = new Set((localIds || []).filter((id) => !isSandboxSpaceId(id)))
     const missing = new Map()
