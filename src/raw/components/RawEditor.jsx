@@ -35,6 +35,10 @@ import DmxOutPanelWindow from './DmxOutPanelWindow.jsx'
 import MidiInputPanel from './MidiInputPanel.jsx'
 import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import RawHelpDialog from './RawHelpDialog.jsx'
+import SurfaceBar from '../../components/SurfaceBar.jsx'
+import useLocalInstall from '../../hooks/useLocalInstall.js'
+import useSpaceName from '../../hooks/useSpaceName.js'
+import { isEmbedRequest } from '../../utils/previewMode.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
@@ -319,6 +323,11 @@ export default function RawEditor({
     const document = state.document
     const isLocalWorkspace = !projectId
     const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
+    // The one bar, on a project's canvas (the bare canvas draws its own, in
+    // BlankNodeWorkspaceApp). Read here, drawn below once chrome is known.
+    const localInstall = useLocalInstall()
+    const [isEmbed] = useState(() => isEmbedRequest())
+    const spaceName = useSpaceName(isLocalWorkspace ? null : resolvedSpaceId)
     const entities = document.entities || []
     const nodes = useMemo(() => document.nodes || [], [document.nodes])
     const workspaceState = document.workspaceState || {}
@@ -498,6 +507,9 @@ export default function RawEditor({
         }
         return true
     }, [zen, navStack, authoredNodes])
+    // Zen, a chromeless scope, the fullscreen room and a window are the work
+    // showing, not the tool: the bar goes wherever the rest of the chrome goes.
+    const showBar = !isLocalWorkspace && chromeVisible && !isWorldFullscreen && !isEmbed
     // Computed once: pointer type doesn't change mid-session on the devices this
     // matters for, and re-checking on every render would just be wasted work.
     const [pointerVerb] = useState(() => (
@@ -584,7 +596,8 @@ export default function RawEditor({
         // pendingSyncError, because the sync alert pushes the topbar down 40px and a
         // ResizeObserver never fires for that: the bar MOVES, it does not resize. Without
         // this the workspace keeps the old inset and the scope pill lands on the toolbar.
-    }, [presence.users.length, state.pendingSyncError])
+        // showBar for the same reason: the one bar above moves the topbar by --sbar-h.
+    }, [presence.users.length, state.pendingSyncError, showBar])
 
     const selectNode = (nodeId, patch = {}) => {
         dispatch({ type: 'select-entity', entityId: null })
@@ -2047,12 +2060,24 @@ export default function RawEditor({
                 this lane rendered that state, on any device — so the work vanished with
                 no warning at all. Deliberately OUTSIDE the chromeVisible gate: zen hides
                 the toolbar, and losing an hour of work is not furniture. */}
+            {/* Before the sync alert, never between it and the topbar: the alert
+                moves the topbar down by being its neighbour. */}
+            <SurfaceBar
+                float
+                here="raw"
+                space={resolvedSpaceId}
+                spaceLabel={spaceName}
+                project={projectId}
+                projectLabel={document.projectMeta?.title}
+                isLocalInstall={localInstall.isLocal}
+                hidden={!showBar}
+            />
             {state.pendingSyncError && (
                 <div className="raw-sync-alert" role="alert">
                     {state.pendingSyncError}
                 </div>
             )}
-            <header className={`raw-topbar${chromeVisible ? ' is-seeded' : ''}`} ref={topbarRef}>
+            <header className={`raw-topbar${chromeVisible ? ' is-seeded' : ''}${showBar ? ' is-under-sbar' : ''}`} ref={topbarRef}>
                 {chromeVisible && (
                     <>
                         <div className="raw-topbar-left">
@@ -2365,7 +2390,7 @@ export default function RawEditor({
                     di.iiii), and a wordmark that links home is the one exit
                     that adds no furniture. Same resting look, quiet hover. */}
                 <a
-                    className="raw-surface-wordmark"
+                    className={`raw-surface-wordmark${showBar ? ' is-under-sbar' : ''}`}
                     href="/"
                     aria-label="di.iiii — home"
                     onClick={(e) => { e.preventDefault(); navigateToRawPath('/') }}

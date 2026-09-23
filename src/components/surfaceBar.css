@@ -3,8 +3,12 @@
 
 :root {
     /* What a surface under a floating bar has to clear. Read by the room's own
-       controls; changing the bar's height changes theirs in one place. */
-    --sbar-h: 36px;
+       controls; changing the bar's height changes theirs in one place. It is
+       the bar's real height — padding, one 13px line, the rule under it —
+       measured, not hoped: it said 36px while the bar stood 38px (40px in
+       Studio, which lends everything a 1.5 line), so what sat under it was
+       covered by the difference. The phone's is below, with its padding. */
+    --sbar-h: 38px;
 }
 
 .sbar {
@@ -16,7 +20,13 @@
     background: var(--di-bg);
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
+    /* Its own line, not the surface's: Studio's 1.5 made the bar 2px taller
+       than everywhere else, and taller than what the room below clears. */
+    line-height: 1.3;
     letter-spacing: 0.04em;
+    /* In a column (the Tools page, the Projection desk) the bar is a row of
+       its own and never gives up height to the page below it. */
+    flex-shrink: 0;
     /* Above a canvas, below a modal. The bar must never be the thing a dialog
        has to fight. */
     position: relative;
@@ -40,6 +50,9 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    /* Clipped by its own max-width, never squeezed to nothing: on a phone the
+       links took every pixel and the space's name read as two dots. */
+    flex-shrink: 0;
 }
 
 .sbar-where:hover { text-decoration: underline; }
@@ -83,6 +96,8 @@
 /* A phone: the bar scrolls sideways rather than wrapping into two rows over the
    work, and the touch targets stay a finger wide. */
 @media (max-width: 720px) {
+    :root { --sbar-h: 42px; }
+
     .sbar {
         gap: var(--di-space-2);
         padding: var(--di-space-2) var(--di-space-3);

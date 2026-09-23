@@ -1,7 +1,7 @@
 /* global __APP_VERSION__ */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import './toolsRoom.css'
-import SurfaceBar from '../components/SurfaceBar.jsx'
+import SurfaceBar, { navigateInApp } from '../components/SurfaceBar.jsx'
 import { isEmbedRequest } from '../utils/previewMode.js'
 import { DeskMark, LightMark, MapperMark, RawMark, StudioMark } from './toolMarks.jsx'
 import { createProject, listProjects } from '../project/services/projectsApi.js'
@@ -115,12 +115,22 @@ export default function ToolsRoom({ isLocalInstall = false }) {
         {
             label: 'Show',
             tools: [
-                isLocalInstall && {
+                // Shown on every tier. Hosted, it opens the page that says
+                // where the desk lives — in the app, since a full load of
+                // /light can reach a server that refuses the address.
+                isLocalInstall ? {
                     key: 'light',
                     name: 'Light',
                     meta: 'Art-Net · output off',
                     Mark: LightMark,
                     href: '/light/'
+                } : {
+                    key: 'light',
+                    name: 'Light',
+                    meta: 'on your own machine',
+                    Mark: LightMark,
+                    href: '/light',
+                    inApp: true
                 },
                 {
                     key: 'map',
@@ -132,7 +142,7 @@ export default function ToolsRoom({ isLocalInstall = false }) {
                         href: (spaceId, projectId) => `/${spaceId}/map/${projectId}`
                     }
                 }
-            ].filter(Boolean)
+            ]
         },
         isLocalInstall && {
             label: 'This machine',
@@ -223,6 +233,7 @@ export default function ToolsRoom({ isLocalInstall = false }) {
                                             key={tool.key}
                                             className={className}
                                             href={tool.href}
+                                            onClick={tool.inApp ? (event) => navigateInApp(event, tool.href) : undefined}
                                             {...(tool.external ? { target: '_blank', rel: 'noopener' } : {})}
                                         >
                                             {inside}

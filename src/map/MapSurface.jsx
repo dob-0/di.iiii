@@ -13,6 +13,10 @@ import { lightingDeskPath, probeLightingDesk } from './lightingLink.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
 import { describeMachine, showFromValue, showOptions, showValue, unresolvedInputs } from './mapMachines.js'
 import { buildStudioProjectPath, navigateToStudioPath } from '../studio/utils/studioRouting.js'
+import SurfaceBar from '../components/SurfaceBar.jsx'
+import useLocalInstall from '../hooks/useLocalInstall.js'
+import useSpaceName from '../hooks/useSpaceName.js'
+import { isEmbedRequest } from '../utils/previewMode.js'
 import './mapSurface.css'
 
 // THE MAPPER'S DESK.
@@ -86,6 +90,11 @@ export default function MapSurface({ projectId, spaceId }) {
     } = useMapDocument(projectId, { role: 'desk' })
     // Every machine showing this space, and what each one has: the wall is usually another computer.
     const { machines } = useMachinePresence(spaceId)
+    // The one bar, above the desk's own. Never on /out — that is MapOutput,
+    // the wall's picture, and a bar there would be projected with the work.
+    const localInstall = useLocalInstall()
+    const spaceName = useSpaceName(spaceId)
+    const [isEmbed] = useState(() => isEmbedRequest())
 
     const [selectedId, setSelectedId] = useState(null)
     const [soloId, setSoloId] = useState(null)
@@ -317,6 +326,15 @@ export default function MapSurface({ projectId, spaceId }) {
 
     return (
         <div className="map-desk">
+            <SurfaceBar
+                here="map"
+                space={spaceId}
+                spaceLabel={spaceName}
+                project={projectId}
+                projectLabel={doc?.projectMeta?.title}
+                isLocalInstall={localInstall.isLocal}
+                hidden={isEmbed}
+            />
             <header className="map-bar">
                 <div className="map-bar-title">
                     <span className="map-bar-lane">Projection</span>

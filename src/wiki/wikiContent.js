@@ -169,16 +169,17 @@ export const WIKI_ARTICLES = [
         id: 'the-surface-bar',
         category: 'Getting started',
         title: 'The bar: where you are, and the way out',
-        summary: 'Every surface carries the same strip — Spaces, Studio, Nodes, Tools, Light, Wiki — and says which one you are on.',
+        summary: 'Every surface carries the same strip — Spaces, Studio, Nodes, Projection, Tools, Light, Wiki — says which space and project you are in, and takes the project with you.',
         body: [
-            'Every surface in di.iiii carries one bar along the top. On the left is the di.iiii wordmark, which always leads to Spaces, and — when the surface belongs to a space — the name of that space, which leads to it. On the right are the destinations, always the same six in the same order: Spaces, Studio, Nodes, Tools, Light, Wiki. The one you are on is stated in cyan and is not a link.',
+            'Every surface in di.iiii carries one bar along the top. On the left is the di.iiii wordmark, which always leads to Spaces; when the surface belongs to a space, the name of that space, which leads to it; and when it is one project, that project\'s title, which opens it in Studio. On the right are the destinations, always in the same order: Spaces, Studio, Nodes, Projection, Tools, Light, Wiki. Projection is there only inside a project, because it has no page of its own — it is always one project\'s wall. The one you are on is stated in cyan and is not a link.',
             'Standing inside a space, Studio and Nodes mean THAT space\'s studio and node canvas, not the general hub — so moving between the ways of working never loses the space you were in.',
-            'Light only appears where di.iiii is actually running on the machine you are using, because the lighting desk talks to fixtures on the local network. The lighting desk itself keeps its own denser, squarer look — it is read at arm\'s length in a dark booth — but it now carries a di.iiii link home, which it did not before.',
-            'The bar hides itself in a presentation: an embedded window, a preview thumbnail, and a headset are showing the work, not the tool.',
-            'Add ?embed=1 to any address and that is what you get: /tools, the wiki, a space’s contents list, the node canvas and a published room all drop the bar, because the page you have put them inside already carries the way out. The flag hides that navigation and nothing else — you are signed in exactly as you would be in a tab, edits save the same, and nothing is held back from a window that a tab would be given.'
+            'Standing inside a project — in Studio, on its node canvas, or on its Projection page — Studio, Nodes and Projection open THAT project. The bar reads di.iiii · space · project in all three, so you can go from the room to its nodes to its wall and back without passing through a list.',
+            'Light is always listed. On a di.iiii running on your own machine it opens the lighting desk, and from inside a project the link carries the space and the project with it. Anywhere else it opens a page that says where the desk lives, with the way to run di.iiii on your own machine — the desk talks to fixtures on the local network, and a server on the internet is not in that room. The lighting desk itself keeps its own denser, squarer look — it is read at arm\'s length in a dark booth — and carries a di.iiii link home.',
+            'The bar hides itself in a presentation: an embedded window, a preview thumbnail, a headset, Studio with its UI hidden (H), the node canvas with its toolbar hidden or opened full-screen onto its room, and the projector pages at /out are showing the work, not the tool.',
+            'Add ?embed=1 to any address and that is what you get: /tools, the wiki, a space’s contents list, the node canvas, Studio, the Projection page and a published room all drop the bar, because the page you have put them inside already carries the way out. The flag hides that navigation and nothing else — you are signed in exactly as you would be in a tab, edits save the same, and nothing is held back from a window that a tab would be given.'
         ],
-        tags: ['navigation', 'bar', 'surfaces', 'ui', 'light', 'studio', 'raw', 'embed', 'iframe'],
-        updated: '2026-09-11'
+        tags: ['navigation', 'bar', 'surfaces', 'ui', 'light', 'studio', 'raw', 'nodes', 'projection', 'project', 'embed', 'iframe'],
+        updated: '2026-09-23'
     },
     {
         id: 'spaces-map-view',
