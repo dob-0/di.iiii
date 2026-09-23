@@ -1,4 +1,4 @@
-## 2026-09-23 — folding eight notes by hand again, PR #542's `land` job hit the same GH006
+## 2026-09-23 — folding nine notes by hand again, PR #542's `land` job hit the same GH006
 
 - After PR #542 (`land/batch-2026-09-23`, merged to `dev` at 288d69c7) the dev deploy's
   `land` job ran, folded correctly, and could not push — `GH006: Protected branch update
@@ -14,7 +14,10 @@
   `feat-bar-carries-project.md`, `feat-desk-returns-to-project.md`,
   `feat-one-project-list.md`, `fix-first-room-traps.md`, `fix-one-name-per-tool.md`,
   `land-batch-2026-09-23.md`. Note files deleted after folding.
-- `CURRENT.md` came out at 49 lines, under the 50-line hard cap — no trimming needed.
+- A ninth note joined after PR #544 (the light show travels with its space) merged while
+  this PR waited: dev merged into this branch, `feat-show-travels-with-space.md` folded
+  into `PROGRESS.md` and prepended to the Last session list. That made `CURRENT.md` 50
+  lines, at the cap, so the 09-22 fold's own title line was dropped: 49 lines.
 - Fixed the two stale `CURRENT.md` lines the `docs-sentences-that-lie` note flagged as
   owed (it could not write them itself — `docs:ai:check` refuses a `CURRENT.md` that
   differs from `origin/dev` on a feature branch): the aylmo install line named

@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- folding six notes by hand, because dev's protection rejects the job that should do it
+- The light show travels with its space and inside the .diiii file
 - sentences that lie, told true: the install host, Docker, di sync, follow files, the trash, Solo
 - the bar carries the project across Studio, Nodes and Projection; Light shown on hosted tiers
 - Light returns to the project that opened it
