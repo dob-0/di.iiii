@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
     collectDependencyDrift,
     collectMissingSpaces,
+    pagesAlreadyHere,
     formatDependencyDriftWarning,
     formatFetchAgeNote,
     formatSpaceDriftWarning,
@@ -165,5 +166,25 @@ describe('collectMissingSpaces', () => {
         expect(missing.size).toBe(0)
         expect(isSandboxSpaceId('sandbox-abc')).toBe(true)
         expect(isSandboxSpaceId('main')).toBe(false)
+    })
+})
+
+describe('pagesAlreadyHere', () => {
+    it('drops a missing space whose published page this box already has', () => {
+        const missing = new Map([['decisions', 'prod'], ['the-model-arena', 'dev'], ['azd', 'prod']])
+        const published = new Map([['decisions', 'drive-decisions'], ['the-model-arena', 'model-arena'], ['azd', 'azd-room']])
+        const here = pagesAlreadyHere(missing, published, new Set(['drive-decisions', 'model-arena']))
+        expect([...here]).toEqual([['decisions', 'drive-decisions'], ['the-model-arena', 'model-arena']])
+    })
+
+    it('keeps the warning when the remote space has no published page or it is not here', () => {
+        const missing = new Map([['empty', 'dev'], ['elsewhere', 'prod']])
+        const published = new Map([['elsewhere', 'p1']])
+        expect(pagesAlreadyHere(missing, published, new Set()).size).toBe(0)
+    })
+
+    it('is quiet on missing inputs', () => {
+        expect(pagesAlreadyHere(null, null, null).size).toBe(0)
+        expect(pagesAlreadyHere(new Map([['a', 'dev']]), undefined, undefined).size).toBe(0)
     })
 })
