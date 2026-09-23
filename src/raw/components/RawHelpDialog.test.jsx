@@ -13,6 +13,18 @@ describe('RawHelpDialog', () => {
         expect(screen.queryByRole('tab', { name: 'View' })).toBeNull()
     })
 
+    // The "For Visitors / Look first" and "For Creators / Build small" cards
+    // were the old Nodes project list's door, repeated here. That door went
+    // 2026-09-23; a person reading this help is already inside a project.
+    it('teaches the canvas, and offers no look-or-build door', () => {
+        render(<RawHelpDialog open onClose={() => {}} />)
+
+        for (const gone of ['For Visitors', 'For Creators', 'Look first', 'Build small']) {
+            expect(screen.queryByText(gone)).toBeNull()
+        }
+        expect(screen.getByText('The canvas starts empty.')).toBeTruthy()
+    })
+
     it('switches to the compact controls view', () => {
         render(<RawHelpDialog open onClose={() => {}} />)
 

@@ -3,9 +3,17 @@ import { describe, expect, it, vi } from 'vitest'
 import RawApp from './RawApp.jsx'
 import { RAW_PAGE_CANVAS, RAW_PAGE_OUT, RAW_PAGE_PROJECT, RAW_PAGE_PROJECTS } from './utils/rawRouting.js'
 
-vi.mock('./components/RawHub.jsx', () => ({
-    default: function MockRawHub({ spaceId }) {
-        return <div>hub:{spaceId}</div>
+// The space's one project list, Studio's hub, opened with Nodes as the editor
+// its cards lead to. Rendered here so the assertion reads the props it got.
+vi.mock('../studio/components/StudioHub.jsx', () => ({
+    default: function MockStudioHub({ spaceId, openIn, children }) {
+        return <div>hub:{spaceId}:{openIn}{children}</div>
+    }
+}))
+
+vi.mock('../components/SpaceSyncPanel.jsx', () => ({
+    default: function MockSpaceSyncPanel({ spaceId }) {
+        return <span>:sync:{spaceId}</span>
     }
 }))
 
@@ -34,10 +42,14 @@ describe('RawApp', () => {
         expect(screen.getByText('blank:main')).toBeInTheDocument()
     })
 
-    it('keeps the projects route on the hub surface', () => {
+    // /{space}/raw/projects keeps its address and shows the space's one list —
+    // the same hub /{space}/studio shows — with cards opening in Nodes. The
+    // live-sync row rides along because this page was its only home.
+    it("keeps the projects address and shows the space's one list, opening in Nodes", () => {
         render(<RawApp initialRoute={{ page: RAW_PAGE_PROJECTS, spaceId: 'gallery' }} />)
 
-        expect(screen.getByText('hub:gallery')).toBeInTheDocument()
+        expect(screen.getByText('hub:gallery:nodes', { exact: false })).toBeInTheDocument()
+        expect(screen.getByText(':sync:gallery')).toBeInTheDocument()
     })
 
     it('opens the project editor for project routes', () => {

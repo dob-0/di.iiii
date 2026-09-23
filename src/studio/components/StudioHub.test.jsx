@@ -372,3 +372,123 @@ describe('shelves and the trash', () => {
         await waitFor(() => expect(restoreProject).toHaveBeenCalledWith('gone'))
     })
 })
+
+// ── One project list per space (2026-09-23) ─────────────────────────────────
+// /{space}/raw/projects had a list of its own — "First Landing", "Choose a
+// path", "Build small", "Space → project → publish", a title box and a flat
+// list with no shelves, drafts or trash. The owner: "a separate line not
+// connected to the system". It now renders this hub with openIn="nodes": the
+// same cards on the same shelves, each opening the node canvas.
+describe('the Nodes copy of the list', () => {
+    const navigate = vi.fn()
+
+    beforeEach(() => {
+        navigate.mockReset()
+        setAppNavigate(navigate)
+        createProject.mockReset()
+        listProjects.mockReset()
+        navigateToStudioPath.mockReset()
+        getServerSpace.mockReset()
+        getServerSpace.mockResolvedValue(null)
+        listCollections.mockReset()
+        listCollections.mockResolvedValue([])
+        authState = { role: null, openSpaceId: null }
+    })
+
+    afterEach(() => setAppNavigate(null))
+
+    const titlesByShelf = () => [...document.querySelectorAll('.sh-shelf')].map(shelf => [
+        shelf.querySelector('.sh-shelf-label')?.textContent,
+        [...shelf.querySelectorAll('.sh-project-title')].map(el => el.textContent)
+    ])
+
+    it('shows the same cards on the same shelves as the Studio copy', async () => {
+        listProjects.mockResolvedValue([
+            { id: 'a', title: 'Entry one', collectionId: 'call-2026', state: 'draft', updatedAt: Date.now(), source: 'studio-v3' },
+            { id: 'b', title: 'Something else', collectionId: null, updatedAt: Date.now(), source: 'raw-v2' }
+        ])
+        listCollections.mockResolvedValue([{ id: 'call-2026', label: 'Open call 2026', spaceId: 'lab', position: 0 }])
+
+        const studio = render(<StudioHub spaceId="lab" />)
+        await screen.findByText('Entry one')
+        const inStudio = titlesByShelf()
+        studio.unmount()
+
+        render(<StudioHub spaceId="lab" openIn="nodes" />)
+        await screen.findByText('Entry one')
+
+        expect(titlesByShelf()).toEqual(inStudio)
+        expect(inStudio).toEqual([
+            ['Open call 2026', ['Entry one']],
+            ['Not on a shelf', ['Something else']]
+        ])
+        // A draft is on the list — the whole reason ← Projects comes here.
+        expect(document.querySelector('.sh-state--draft')?.textContent).toBe('draft')
+    })
+
+    it('opens a card in the node canvas, not in Studio', async () => {
+        listProjects.mockResolvedValue([{ id: 'p1', title: 'Alpha', state: 'draft', updatedAt: Date.now(), source: 'studio-v3' }])
+
+        render(<StudioHub spaceId="lab" openIn="nodes" />)
+        fireEvent.click(await screen.findByText('Alpha'))
+
+        expect(navigate).toHaveBeenCalledWith('/lab/raw/projects/p1', { replace: false })
+        expect(navigateToStudioPath).not.toHaveBeenCalled()
+    })
+
+    it('makes a new project as a Nodes project and lands in its canvas', async () => {
+        listProjects.mockResolvedValue([])
+        createProject.mockResolvedValue({ project: { id: 'first-thing' } })
+
+        render(<StudioHub spaceId="lab" openIn="nodes" />)
+        fireEvent.click(await screen.findByRole('button', { name: '+ New project' }))
+        fireEvent.change(screen.getByPlaceholderText('Project name'), { target: { value: 'First thing' } })
+        fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+        await waitFor(() => expect(navigate).toHaveBeenCalledWith('/lab/raw/projects/first-thing', { replace: false }))
+        expect(createProject).toHaveBeenCalledWith('lab', { title: 'First thing', slug: 'First thing', source: 'raw-v2' })
+    })
+
+    it('crosses to the Studio copy of the same list, where Studio crosses back', async () => {
+        listProjects.mockResolvedValue([])
+
+        render(<StudioHub spaceId="lab" openIn="nodes" />)
+        fireEvent.click(await screen.findByRole('button', { name: 'Studio' }))
+
+        expect(navigate).toHaveBeenCalledWith('/lab/studio', { replace: false })
+        expect(screen.queryByRole('button', { name: 'Nodes' })).toBeNull()
+    })
+
+    it('draws no door of its own — no onboarding cards, no title box', async () => {
+        listProjects.mockResolvedValue([])
+
+        render(<StudioHub spaceId="lab" openIn="nodes" />)
+        await screen.findByText('No projects yet')
+
+        for (const gone of ['First Landing', 'Choose a path.', 'Build small', 'Look first', 'Space → project → publish', 'open the Studio node']) {
+            expect(screen.queryByText(gone)).toBeNull()
+        }
+        expect(screen.queryByPlaceholderText('project title')).toBeNull()
+    })
+
+    // /open/studio is the door that is handed out, and it forwards into the
+    // jam. The Nodes copy is where you manage the space, so it stays a list.
+    it('does not forward the open space into the jam', async () => {
+        authState = { role: null, openSpaceId: 'open' }
+        listProjects.mockResolvedValue([{ id: 'open-jam', title: 'Open Jam', updatedAt: Date.now(), source: 'studio-v3' }])
+
+        render(<StudioHub spaceId="open" openIn="nodes" />)
+        await screen.findByText('Open Jam')
+
+        expect(navigateToStudioPath).not.toHaveBeenCalled()
+        expect(navigate).not.toHaveBeenCalled()
+    })
+
+    it('renders what its page hands it under the list', async () => {
+        listProjects.mockResolvedValue([])
+
+        render(<StudioHub spaceId="lab" openIn="nodes"><p>live sync row</p></StudioHub>)
+
+        expect(await screen.findByText('live sync row')).toBeTruthy()
+    })
+})
