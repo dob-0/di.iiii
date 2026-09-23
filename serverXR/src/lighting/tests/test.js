@@ -1385,5 +1385,52 @@ check('an unknown follow value falls back to patch order rather than throwing', 
   assert.ok(v >= 0 && v <= 255);
 });
 
+// ---- the page's word on which show it is ----------------------------------------
+// ui/show.js is plain script the page loads; the sentences a person reads are held here.
+const deskShow = require('../ui/show');
+
+check('a page knows its space from its address, and the phone gets the desk\'s root', () => {
+  assert.strictEqual(deskShow.keyFromPath('/light/space/lab/'), 'lab');
+  assert.strictEqual(deskShow.keyFromPath('/serverXR/light/space/hosq-camp/index.html'), 'hosq-camp');
+  assert.strictEqual(deskShow.keyFromPath('/light/'), null);
+  assert.strictEqual(deskShow.keyFromPath('/'), null, 'the standalone club desk has no space');
+  assert.strictEqual(deskShow.keyFromPath('/light/space/../'), null, 'not a space\'s name');
+  assert.strictEqual(deskShow.keyFromPath('/light/space/A_B/'), null);
+  assert.strictEqual(deskShow.rootPath('/light/space/lab/'), '/light/');
+  assert.strictEqual(deskShow.rootPath('/light/'), '/light/');
+  assert.strictEqual(deskShow.rootPath('/'), '/');
+});
+
+check('the show sentence: nothing to say when the page and the desk agree', () => {
+  assert.strictEqual(deskShow.note({ space: null }, null), null, 'the bare desk on the machine\'s show: as it always was');
+  assert.strictEqual(deskShow.note({ space: 'lab', label: 'Lab', saved: true, machine: null }, 'lab'), null);
+  assert.strictEqual(deskShow.note(null, 'lab'), null);
+});
+
+check('the show sentence: another show loaded names it and offers this one', () => {
+  const n = deskShow.note({ space: 'hosq', label: 'Hosq camp', live: false }, 'lab');
+  assert.strictEqual(n.text, "This desk is running Hosq camp's show.");
+  assert.strictEqual(n.button, "Load lab's show here");
+  assert.strictEqual(n.action, 'open');
+  const live = deskShow.note({ space: null, live: true }, 'lab');
+  assert.match(live.text, /this machine's own show\. Output is on: loading lab's show changes the lights in the room\./);
+});
+
+check('the show sentence: the bare desk never offers a live swap', () => {
+  const calm = deskShow.note({ space: 'lab', label: 'Lab', live: false }, null);
+  assert.strictEqual(calm.text, "This desk is running Lab's show.");
+  assert.strictEqual(calm.action, 'open-machine');
+  const live = deskShow.note({ space: 'lab', label: 'Lab', live: true }, null);
+  assert.strictEqual(live.button, null, 'a phone at the back of the room cannot swap the show mid-set');
+});
+
+check('the show sentence: the migration offer says it is a copy before the press', () => {
+  const n = deskShow.note({ space: 'lab', label: 'Lab', machine: { fixtures: 21, scenes: 588, looks: 1 } }, 'lab');
+  assert.strictEqual(n.text, "Lab has no light show yet. This machine has one (21 fixtures, 588 scenes, 1 look). Using it copies it; this machine's show stays as it is.");
+  assert.strictEqual(n.button, "Use this machine's show for Lab");
+  assert.strictEqual(n.action, 'copy');
+  assert.strictEqual(deskShow.copied({ space: 'lab', label: 'Lab' }), "Copied. Lab has its own show now; this machine's show is unchanged.");
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);

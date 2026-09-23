@@ -67,6 +67,11 @@
 </header>
 
 <div id="statusStrip" class="statusstrip" hidden></div>
+<!-- Which show this desk is running, when this page should know: opened for a space
+     while another show is loaded, a space's show on the bare desk, or the one offer a
+     space with no show of its own gets. One sentence, at most one button, hidden when
+     there is nothing to say. See show.js. -->
+<div id="showNote" class="statusstrip" hidden><span id="showNoteText"></span> <button class="sq accent" id="showNoteBtn" hidden></button></div>
 
 <!-- ===================== SETUP ===================== -->
 <main class="page is-active" data-page="setup">
@@ -838,6 +843,7 @@
 
 <script src="qr.js"></script>
 <script src="from.js"></script>
+<script src="show.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

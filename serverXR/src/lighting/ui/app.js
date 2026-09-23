@@ -183,9 +183,13 @@ function say(text, bad) {
 let pollFails = 0;
 async function pullState() {
   try {
-    const next = await (await fetch('api/state')).json();
+    const reply = await fetch('api/state');
+    const next = await reply.json();
     if (pollFails >= 2) say('back in touch with the desk');
     pollFails = 0;
+    // Opened for one space while the desk runs another show: say which, and keep what is
+    // drawn rather than drawing the other show under this space's name.
+    if (reply.status === 409 && next && next.show) { paintShow(next.show); return; }
     // stageDragging has no timeout on purpose: a careful placement takes longer than
     // the 700ms window, and the guard must last exactly as long as the finger is down.
     const busy = !!S && (stageDragging || Date.now() - touchedAt < 700);
@@ -3073,8 +3077,10 @@ function buildOutput() {
 function buildPhone() {
   const box = $('#phoneList');
   const port = location.port || 80;
-  // Wherever this desk is mounted — '/' alone, '/light/' inside di.iiii.
-  const base = location.pathname.replace(/[^/]*$/, '');
+  // Wherever this desk is mounted — '/' alone, '/light/' inside di.iiii. A page opened
+  // for a space hands the phone the desk's root: it follows whatever show is loaded,
+  // which is that space's, and its address still fits the QR (show.js).
+  const base = window.deskShow ? window.deskShow.rootPath(location.pathname) : location.pathname.replace(/[^/]*$/, '');
   // The host's own word on its bind. A `di up` without --lan listens on loopback
   // only, and the LAN guard refuses phones besides — whatever the interface list
   // says, no phone can open that URL, and a QR for it is worse than none. A desk
@@ -3922,7 +3928,9 @@ function renderAll(busy) {
   const wire = S.output.driver === 'enttec'
     ? `${S.output.serialPort}${st.serial && st.serial.connected ? '' : ' not open'}`
     : `${S.output.mode} · ${st.nodes.length} node${st.nodes.length === 1 ? '' : 's'}`;
-  $('#showName').textContent = `— ${S.fixtures.length} fixtures · ${st.universes.length} universe${st.universes.length === 1 ? '' : 's'} · ${wire}`;
+  const whose = S.show && S.show.space && window.deskShow ? window.deskShow.whose(S.show) + ' · ' : '';
+  $('#showName').textContent = `— ${whose}${S.fixtures.length} fixtures · ${st.universes.length} universe${st.universes.length === 1 ? '' : 's'} · ${wire}`;
+  paintShow(S.show);
 
   // A channel held on the Fader page overrides the fixtures everywhere, so a scene or a
   // colour fader can appear to do nothing. Say so on every page, not just the one that
@@ -4600,6 +4608,70 @@ $('#miSceneFilterClear').addEventListener('click', () => { $('#miSceneFilter').v
   $('#fromTools').hidden = false;
 })();
 
+/* =============== which show this desk is running =============== */
+
+// The desk runs one show at a time. A page opened for a space (space/<id>/, see show.js)
+// asks for that space's show; the bare desk runs whatever is loaded. What to say about it
+// comes from show.js; this paints it and does what its one button says.
+const SHOW_KEY = window.deskShow ? window.deskShow.keyFromPath(location.pathname) : null;
+const SAID_KEY = 'di.light.said';
+let showSig = '';
+let showStuck = null;   // a refusal that stays said (no such space here), not repainted by polls
+function paintShow(show) {
+  const n = showStuck || (window.deskShow ? window.deskShow.note(show, SHOW_KEY) : null);
+  const sig = n ? n.text + '|' + (n.button || '') + '|' + (n.action || '') : '';
+  if (sig === showSig) return;
+  showSig = sig;
+  $('#showNote').hidden = !n;
+  if (!n) return;
+  $('#showNoteText').textContent = n.text;
+  $('#showNoteBtn').hidden = !n.button;
+  $('#showNoteBtn').textContent = n.button || '';
+  $('#showNoteBtn').dataset.action = n.action || '';
+}
+// After a show changes the page starts again from the top, so every panel reads the
+// new show rather than half of the old one. What it should say then is kept for the tab.
+function reloadSaying(text) {
+  try { if (text) sessionStorage.setItem(SAID_KEY, text); } catch (e) { /* the reload still happens */ }
+  location.reload();
+}
+$('#showNoteBtn').addEventListener('click', async () => {
+  const btn = $('#showNoteBtn');
+  const action = btn.dataset.action;
+  btn.disabled = true;
+  const r = action === 'copy'
+    ? await post('api/show/copy-machine', {})
+    // The press is the operator's decision, so it may change a live room.
+    : await post('api/show/open', action === 'open-machine' ? { space: null, live: true } : { live: true });
+  btn.disabled = false;
+  if (!r || r.error) { say((r && r.error) || 'the desk did not answer', true); return; }
+  reloadSaying(action === 'copy' && window.deskShow ? window.deskShow.copied(r.show) : null);
+});
+(function sayAfterReload() {
+  let text = null;
+  try { text = sessionStorage.getItem(SAID_KEY); sessionStorage.removeItem(SAID_KEY); } catch (e) { text = null; }
+  if (text) say(text);
+})();
+// Opened for a space: load its show, once. Never by itself while output is on — then the
+// sentence and its button ask. Once per tab per few seconds, so two tabs opened for two
+// spaces at the same moment cannot take turns reloading each other for ever.
+(async function openThisSpacesShow() {
+  if (!SHOW_KEY) return;
+  let show = null;
+  try { show = await (await fetch('api/show')).json(); } catch (e) { return; }
+  if (!show || show.space === SHOW_KEY) return;
+  const mark = 'di.light.autoOpened.' + SHOW_KEY;
+  let recent = false;
+  try { recent = Date.now() - Number(sessionStorage.getItem(mark) || 0) < 15000; } catch (e) { recent = false; }
+  if (show.live || recent) { paintShow(show); return; }
+  try { sessionStorage.setItem(mark, String(Date.now())); } catch (e) { /* guarded by the server's answer anyway */ }
+  const r = await post('api/show/open', {});
+  if (r && r.ok) { reloadSaying(null); return; }
+  showStuck = { text: (r && r.error) || 'The desk could not load this space\'s show.', button: null, action: null };
+  showSig = '';
+  paintShow(null);
+})();
+
 /* =============== wiring =============== */
 
 function showPage(name) {
@@ -4633,7 +4705,7 @@ function menuText() {
   const wire = S.output.driver === 'enttec'
     ? `${S.output.serialPort} · ${st.serial && st.serial.connected ? st.serial.baud + ' baud' : 'not open'}`
     : `${S.output.mode} → ${(S.output.mode === 'unicast' ? S.output.targets : st.broadcast).join(', ')}`;
-  return `${st.packetsSent.toLocaleString()} frames sent · universes ${st.universes.map((u) => u + 1).join(', ')} · ${wire} · show saved to data/show.json`;
+  return `${st.packetsSent.toLocaleString()} frames sent · universes ${st.universes.map((u) => u + 1).join(', ')} · ${wire} · show saved to ${S.show ? S.show.file : 'data/show.json'}`;
 }
 $('#menuBtn').addEventListener('click', () => {
   const s = $('#statusStrip');
