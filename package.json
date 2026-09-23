@@ -81,7 +81,8 @@
         "check:three-vendor": "node scripts/check-three-vendor.mjs",
         "docs:ai:sync:dry": "node scripts/sync-agent-docs.mjs --dry-run",
         "format": "prettier --write .",
-        "check:responsive": "node scripts/responsive-check.mjs"
+        "check:responsive": "node scripts/responsive-check.mjs",
+        "count:controls": "node scripts/count-controls.mjs"
     },
     "devDependencies": {
         "@testing-library/jest-dom": "^6.9.1",

@@ -29,6 +29,7 @@ import { canPlaceInScene, isPdfAsset, pdfToImageFiles } from '../utils/assetForm
 import { getSelectionCentroid } from '../utils/multiTransform.js'
 import { buildReparentPatch, cloneSubtree, collectSubtree, topLevelTargets } from '../utils/entityClipboard.js'
 import { isTimelinePreviewPosed, setTimelinePreview } from '../utils/timelinePreview.js'
+import { useProjectLayers } from '../../project/useProjectLayers.js'
 
 const DISPLAY_NAME_KEY = 'dii.studio.displayName'
 
@@ -126,6 +127,10 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     })
     const { requestDelete, deleteConfirm } = useDeleteConfirm()
     const document = state.document
+    // What each layer of this project holds and which are open, once the real
+    // document has arrived (src/project/layers.js): a new project opens bare,
+    // and the bar grows as it fills.
+    const layers = useProjectLayers(document, projectId)
     // The project's cues, fired from the 3D scene with the projection tool's
     // own number keys and through its own firing path. Number keys are free in
     // Studio; see src/studio/hooks/useStudioCues.js for the one thing that
@@ -1098,6 +1103,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         <>
             <StudioShell
             document={document}
+            layers={layers}
             loading={state.loading}
             loadError={state.loadError}
             editHistory={history()}
