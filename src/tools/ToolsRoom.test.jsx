@@ -9,11 +9,19 @@ vi.mock('../project/services/projectsApi.js', () => ({
 vi.mock('../services/serverSpaces.js', () => ({
     listServerSpaces: () => Promise.resolve([{ id: 'lab', label: 'lab' }])
 }))
-vi.mock('../components/SurfaceBar.jsx', () => ({ default: () => null }))
 vi.mock('../utils/appNavigate.js', () => ({
     appNavigate: vi.fn(),
     setAppNavigate: () => {}
 }))
+// The bar itself is not under test here; its in-app navigation helper is what the
+// hosted Light tile calls, so the mock keeps that one real move.
+vi.mock('../components/SurfaceBar.jsx', async () => {
+    const { appNavigate } = await import('../utils/appNavigate.js')
+    return {
+        default: () => null,
+        navigateInApp: (event, href) => { event.preventDefault(); appNavigate(href) }
+    }
+})
 
 import ToolsRoom from './ToolsRoom.jsx'
 import { appNavigate } from '../utils/appNavigate.js'
