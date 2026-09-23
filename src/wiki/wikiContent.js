@@ -132,6 +132,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-10'
     },
     {
+        id: 'your-space-your-word',
+        category: 'Spaces & access',
+        title: 'Your space, your word: owners and trusted people',
+        summary: 'The owner of a space decides it — its contents, its settings, what it publishes — without waiting for an approval. An owner can name trusted people who change the space directly; everyone else proposes, and the owner is told what changed and can undo it.',
+        body: [
+            'THE OWNER of a space is its steward. Rename it, make it public or private, choose what it publishes, set its address, open or close inscriptions — applied the moment you save, no approval in between. Two things stay with the platform: what KIND of space it is and whether it is PERMANENT, and handing a space to someone else. Those an admin does.',
+            'TRUSTED PEOPLE. An owner can name accounts that change the space directly, the way the owner does — a co-author, a group running a workshop room. Add them in Manage; they can reach the space at once. Anyone else who sends work for your space is making a proposal: you see a plain summary of what would change and say yes or no.',
+            'EVERY CHANGE HAS AN AUTHOR, AND CAN BE PUT BACK. When someone who is not the owner finishes a run of edits, the owner is told what changed — "+3 images, 1 object removed, title changed" — with an Undo that restores the space to just before. Trust means no gate in the way, not no record.',
+            'ONE SPACE, NOT ALL. Being the owner or trusted in one space grants nothing anywhere else. It is not a role; it is a relationship to one place.',
+        ],
+        tags: ['owner', 'steward', 'trusted', 'permissions', 'approval', 'proposal', 'undo', 'manage', 'space'],
+        updated: '2026-09-21'
+    },
+    {
         id: 'picture-operators-and-the-desk',
         category: 'Editing',
         title: 'Picture operators, and one desk across machines',
@@ -254,10 +268,12 @@ export const WIKI_ARTICLES = [
             'A restore point is kept before each change that matters: the first change someone makes after somebody else (or after a pause of about a quarter of an hour), and every time a whole scene or project is replaced, pulled from another copy, or restored. The newest 30 are kept, plus one per day for the last 30 days. The images a restore point names are kept too, so putting one back never brings back broken pictures.',
             'To see them: Spaces → your space → Manage → History. Each row says when, and whose change it was taken before. Restore puts the whole space — scene and projects — back to that moment, after asking. What is there at that moment is kept as a restore point of its own, so a restore is undoable too.',
             'Only the space’s owner or an admin can see a space’s history or restore it.',
-            'When someone who does not own a space changes it, the studio’s inner bot can be told once per burst of edits — what changed, by whom, with an Undo button. That notice is off unless the server turns it on.'
+            'When someone who does not own a space changes it, the studio’s inner bot can be told once per burst of edits — what changed, by whom, with an Undo button. That notice is off unless the server turns it on.',
+            'A di.iiii file (.diiii) sent for a space that already exists is a proposal, not an import. The server reads it and writes a plain summary — which projects change, how many items before and after, how many new files, and anything in the space that is newer than the file and would be overwritten. The owner, an admin, or someone trusted in that space can apply it at once; from anyone else it waits for Apply or Reject in the inner bot. Either way a restore point is taken first, the space keeps its own settings (owner, address, public or not), and nothing that is only in the space is deleted. From a terminal: node scripts/space-bundle.mjs propose <file> --tier dev (add --dry-run to see the summary only).',
+            'One command does both halves: `npm run send -- <space>` exports the space from the machine you are on and sends it to the rehearsal tier, then prints the two addresses to look at. It applies at once if you are allowed to, and waits for Apply otherwise — who you are is not a flag you pass. `--dry-run` says what would change and writes nothing; the public site refuses unless the owner has said the word.',
         ],
-        tags: ['history', 'undo', 'restore', 'snapshot', 'author', 'safety'],
-        updated: '2026-09-16'
+        tags: ['history', 'undo', 'restore', 'snapshot', 'author', 'safety', 'proposal', 'bundle', 'send'],
+        updated: '2026-09-21'
     },
     {
         id: 'jam-surface',
@@ -1499,7 +1515,7 @@ export const WIKI_ARTICLES = [
 // when the grid was cut for one "Open the Wiki" link ("no flood"). Nothing renders
 // the list now; it stays because `docs:wiki:check` and the wiki tests still read it.
 // Retire it together with those checks, in its own change.
-export const WIKI_HIGHLIGHT_IDS = ['scan-a-place', 'glossary', 'lights-on-a-place', 'picture-operators-and-the-desk', 'tools-room', 'following-a-space', 'guests-in-the-room', 'build-zones', 'raw-windows-travel-with-the-canvas', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
+export const WIKI_HIGHLIGHT_IDS = ['scan-a-place', 'glossary', 'your-space-your-word', 'lights-on-a-place', 'picture-operators-and-the-desk', 'tools-room', 'following-a-space', 'guests-in-the-room', 'build-zones', 'raw-windows-travel-with-the-canvas', 'br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))

@@ -114,6 +114,13 @@ services:
       APPROVAL_GATE_ENABLED: ${APPROVAL_GATE_ENABLED:-false}
       APPROVAL_BOT_URL: ${APPROVAL_BOT_URL:-}
       APPROVAL_SHARED_SECRET: ${APPROVAL_SHARED_SECRET:-}
+      # The same bot's other two jobs, which were never passed through (compose
+      # env is an allow-list — #134): change notices with Undo
+      # (spaceHistory.js) and the public API base the one console answers
+      # approvals to (contentProposals.js — a file for an existing space).
+      CONTENT_CHANGE_NOTICES_ENABLED: ${CONTENT_CHANGE_NOTICES_ENABLED:-false}
+      APPROVAL_CALLBACK_URL: ${APPROVAL_CALLBACK_URL:-}
+      CONTENT_PROPOSAL_TTL_MS: ${CONTENT_PROPOSAL_TTL_MS:-}
     restart: unless-stopped
     healthcheck:
       # 127.0.0.1, not localhost: busybox wget resolves localhost to the

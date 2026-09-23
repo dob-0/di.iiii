@@ -99,4 +99,22 @@ describe('project-pull local authentication', () => {
         expect(PROJECT_PULL).toMatch(/serverXR', '\.env\.local'/)
         expect(PROJECT_PULL).toMatch(/getEnv\('API_TOKEN'\)/)
     })
+
+    it('merges serverXR/.env.local LAST in every script that reads the root .env too', () => {
+        // The root .env is general and can go stale: on 2026-09-21 it carried
+        // LOCAL_API_URL=http://localhost:4000/serverXR on a machine whose install
+        // answered on https://local.thedi.studio. Five scripts merged it AFTER
+        // serverXR/.env.local, so the stale line won, and start-check reported the
+        // content line as "not checked" for a week while looking healthy. The
+        // empty-value guard above cannot catch a wrong NON-empty value; only the
+        // order can. Most specific file wins.
+        for (const name of ['start-check', 'local-mirror', 'project-pull', 'space-push', 'space-pull']) {
+            const source = fs.readFileSync(path.join(ROOT_DIR, 'scripts', `${name}.mjs`), 'utf8')
+            const rootEnv = source.indexOf("path.join(ROOT_DIR, '.env')")
+            const serverLocal = source.indexOf("path.join(ROOT_DIR, 'serverXR', '.env.local')")
+            expect(rootEnv, `${name}: root .env read`).toBeGreaterThan(-1)
+            expect(serverLocal, `${name}: serverXR/.env.local read`).toBeGreaterThan(-1)
+            expect(serverLocal, `${name}: serverXR/.env.local must merge after root .env`).toBeGreaterThan(rootEnv)
+        }
+    })
 })

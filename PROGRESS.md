@@ -5,6 +5,255 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-23 — folding the layers batch's four notes by hand
+
+- PR #547 (`land/batch-layers-2026-09-23`) merged; dev's `land` job cannot push its fold
+  (GH006, `reference_dii_land_job_blocked`), so the notes were folded by hand with
+  `session-land-lib.mjs`'s three functions, as the job would: `chore-land-sessions-2026-09-23.md`,
+  `feat-layers-open-bare.md`, `feat-things-are-cards.md`, `land-batch-layers-2026-09-23.md`.
+- CURRENT.md: the aylmo install line now reads `0.4.16-connect.4` (the layers batch, installed and
+  seen on local.thedi.studio at 1440×900 and 390×844). 45 lines.
+- This note is the next leftover, by construction.
+
+## 2026-09-16 — spaces audit: every space across local, dev and live (read-only)
+
+- Read every space, project row and document on the three tiers (local API + read-only
+  sqlite, dev.diiii.xyz, di-studio.xyz), and fingerprinted each document with tier-sync's own
+  `documentSignature`. Checked 1,516 listed assets for 404s. Wrote nothing to any tier.
+- Result in `docs/research/2026-09-16-spaces-audit.md`: 32 spaces. Same 12 · newer on dev 1 ·
+  local ahead 1 · both changed 9 · one tier only 9.
+- Needs attention:
+  - live `network`, `cascade` and `the-light-put-back` are not permanent (about 24 days to the prune).
+  - live `main` still has the 76 stray images.
+  - live `library` has 51 PDFs that return 404.
+  - `tier-sync-baseline.json` matches 0 of 131 projects, so `--changed` refuses everything until it is rebuilt.
+  - `start-check`'s timestamp mode over-reports (94 NOT LATEST, mostly identical content).
+  - `LIVE_API_URL=https://staging.di-studio.xyz` in `serverXR/.env.local` no longer resolves.
+
+## CONTRIBUTING says who decides what in a space, and walks the program line end to end
+
+The two-lines contract already lived in CONTRIBUTING.md — but its safety-net paragraph
+still said "coming in later PRs" a month after spaceHistory landed, and nothing anywhere
+said who may change a space without asking, or what the nine steps from a worktree to a
+tagged release are and where two of them fail silently. Now it does: the landed safety
+net (author, restore points, history, notice + Undo and its switch), the three zones
+(mine / theirs / about them — owner, trusted, proposal), the workshop rule, and the
+program line with the two quiet failures named (unlanded notes; CURRENT.md over 50 lines
+skipping the deploy behind a green run). No code.
+
+## 2026-09-14 — HTTP Range support for asset streaming
+
+- `serveFile`/`serveAsset` in `serverXR/src/spaceStore.js` served every asset (and
+  thumbnail) with a plain `fs.createReadStream().pipe(res)` and no
+  `Accept-Ranges`/`Content-Range` — a `<video>` could load an asset but never seek,
+  loop cleanly, or scrub, which the VJ tool being built on top of this needs.
+- `serveFile` now stats the file, always sends `Accept-Ranges: bytes`, and answers a
+  single `Range` request (`bytes=start-end`, `bytes=start-`, `bytes=-N`) with a 206 +
+  `Content-Range` + `Content-Length`, an out-of-bounds range with 416 +
+  `Content-Range: bytes */size`, and a `HEAD` request with headers only (no body).
+  `Content-Length` is now also sent on a plain 200. Stream error handling and the
+  existing thumbnail/safety-header/immutable-cache behavior are unchanged.
+- Multi-range requests (`bytes=0-10,20-30`) are deliberately answered with the full
+  200 body rather than a `multipart/byteranges` reply — documented in a comment next
+  to `parseByteRange`. A `<video>` element never sends more than one range at a time,
+  so the extra response format wasn't worth building.
+- `serveAsset`/`serveFile` needed the real `req` object to read the `Range` header and
+  method, so it's threaded through from both GET routes in
+  `serverXR/src/routes/spaceRoutes.js` (`/api/spaces/:spaceId/assets/:assetId` and
+  `/api/commons/assets/:assetId`) via the existing options object
+  (`{ width, req }`). `express.static` (client bundle, `/vendor`, `/fonts`, etc.) and
+  `res.sendFile`/`res.download` elsewhere in the server already support Range natively
+  via the `send` library underneath them — nothing else needed a change.
+- New tests: `serverXR/src/spaceStore.range.test.js` (200 full, 206 for all three
+  range forms, 416, HEAD, HEAD+Range, and the exported `parseByteRange` helper
+  directly) and `serverXR/src/routes/spaceRoutes.assetRange.test.js` (regression
+  guard that both GET routes actually forward `req` to `serveAsset`, since the Range
+  logic is silently inert without it). Existing `spaceStore.thumbnail.test.js` passes
+  unchanged — thumbnails still work.
+- `npm run lint`, `npm run test:server-contracts`, and the full `npm run test` all
+  pass (4411 passed / 1 skipped; 2 unrelated full-suite-only timeouts —
+  `socketHandlers.test.js` disk-guard test and `PublicProjectViewer.test.jsx` walk-mode
+  label test — both pass cleanly in isolation, confirmed not touched by this change).
+
+## 2026-09-17 — a file for an existing space is a proposal: summary, Apply/Reject in the inner bot, restore point first
+
+Phase 2 of "Two lines, one safe way in", the bundle door only.
+
+- **`serverXR/src/contentProposals.js` + `POST /api/spaces/:id/proposals`** (multipart `bundle`;
+  fields `mode=auto|propose`, `from`, `dryRun`, `overwriteNewer`). The server reads the `.diiii`
+  itself — the server image ships `src/` only, so `scripts/space-bundle.mjs` is not there to spawn
+  on dev.diiii.xyz or production (the existing "open a file" routes answer "the bundle tool is not
+  part of this build" there today). Tar members with `/` or `..` are refused before unpacking;
+  only regular files with asset-id names are copied.
+- **Summary** per project (changed/added/unchanged, item counts before → after, what the file's own
+  op log did past this space's version, via `spaceHistory.countOp/describeCounts`), projects only
+  in the space ("stay as they are"), scene object counts, new files, and what would be
+  overwritten: ops newer than the file's `exportedAt` (`summarizeChanges`) **and** a fast-forward
+  check — the newest op here must be in the file's history, which catches an edit made after the
+  sender pulled but before they exported. Either refuses (409 `target_newer`) unless
+  `overwriteNewer`.
+- **Trusted** (admin, unrestricted, the owner, own sandbox, or the `isTrustedExtra(state, meta)`
+  seam for the per-space trusted list that does not exist yet) → applied now. Everyone else →
+  `approvalGate.gateOrApply({ kind: 'content.apply', requireApproval: true, ttlMs })`. New gate
+  options: `requireApproval` never takes the "gate off → apply" path (no bot URL/secret = 503,
+  never an apply); `ttlMs` per kind (`CONTENT_PROPOSAL_TTL_MS`, default 3 days). The file is kept
+  at `<data>/proposals/<sha256>.diiii`; the intent hash binds the sha.
+- **Apply** = the restore path, not the import path: `spaceHistory.beforeChange(reason
+  'before-proposal-apply')`, blobs/manifests copied only when missing (nothing removed, so the
+  restore point's images survive), changed projects through `restoreSpaceProjectDocuments`, scene
+  through `replaceSceneAndBroadcast`, live broadcasts. The space row (owner, slug, public, label)
+  and project slugs are untouched; versions only go up; ops carry the proposer. Apply refuses if
+  the space changed after the proposal was made. Nothing is ever deleted by a proposal.
+- **`APPROVAL_CALLBACK_URL`** → `server` on every approval and change notice, so the one console
+  answers the right tier (di-bo side: `lib/proposals.mjs`, `DII_SERVERS` allow-list, PR on
+  `feat/notices-undo-v2`). Compose now passes `CONTENT_CHANGE_NOTICES_ENABLED` (never passed
+  before — setting it in a tier's `.env` did nothing), `APPROVAL_CALLBACK_URL`,
+  `CONTENT_PROPOSAL_TTL_MS` (`DEV_*` on the dev tier).
+- **CLI:** `node scripts/space-bundle.mjs propose <file> --tier dev [--dry-run] [--from Emilya]
+  [--direct] [--overwrite-newer]` (`scripts/space-proposal.mjs`; always a proposal unless
+  `--direct`, since the tier tokens are admin).
+- Tests: `serverXR/src/proposalContracts.test.js` (real servers, a real exported bundle, fake bot,
+  signed decisions: 503 without a bot, dry run + CLI summary, 202 + one bot message with `server`,
+  Apply writes docs/new project/bytes and keeps the label + a `before-proposal-apply` point,
+  stale file 409, moved-after-proposal Apply refuses, Reject writes nothing, fast-forward 409,
+  trusted direct apply, nothing_to_apply). Wiki `space-history` extended.
+
+### Not done
+
+- Nothing is enabled on any tier; the runbook is in the PR body.
+- No Studio UI for proposals (the Spaces page "open a file" still refuses an existing id).
+- Projects only in the space are never removed by a proposal; a project added by an applied
+  proposal is not removed by History → Restore (restore writes documents, it does not delete).
+- The per-space trusted list itself (only the seam).
+
+## A per-space trusted list, and the gate learns "apply now" — the steward's bypass itself waits for the owner's hand
+
+Owner's decisions of 2026-09-16 and 09-21: a space belongs to a person (Emilya — WCC;
+an artist — their own space), and that person should never wait for the owner of the
+platform to change what is theirs.
+
+Landed here:
+- `spaces.trusted_user_ids` (JSON, nullable, no SCHEMA_VERSION bump — an older build
+  ignores it and treats everyone as untrusted, the safe direction). Owner or admin
+  PATCHes `trustedUserIds`; each account must exist and may not be a guest; trust carries
+  scope, as ownership does. The list is shown only to the owner and admins.
+- `isSpaceOwnerState` / `isSpaceTrustedState` in authAccess.js — the one place per-space
+  authority is decided. Sessions only; a token, guest or sync key is never either.
+- `approvalGate.gateOrApply({ …, applyNow })`: a route that has decided this actor needs no
+  approval applies at once while still passing through the gate, so the fail-loud net
+  sees a gated route behaving. Unused in this tree until the next item lands.
+- Wiki: "Your space, your word".
+
+NOT landed — packaged as `~/di-backups/steward-owner-self-serve-2026-09-21.patch` for the
+owner to apply (the agent's edit was refused twice as an authority change, correctly):
+the owner of a space changing `isPublic` / `publishedProjectId` / `slug` /
+`openInscriptions` on their own space applies immediately via `applyNow`; `kind`,
+`permanent`, `ownerUserId` stay gated and admin-only. The patch carries its contract test
+(gate armed, owner → 200 and nothing asked; admin → 202).
+
+Also owed, one line once #486 (proposals) lands:
+`createContentProposals({ …, isTrustedExtra: (state, meta) => isSpaceTrustedState(state, meta) })`.
+
+Tests: authAccess (5), spaceStore.ownership (round-trip), httpContracts (trusted grant →
+scope, list hidden from a visitor, admin still held with the gate armed).
+
+## 2026-09-21 — one command for the content line: `npm run send -- <space>`
+
+The code line has always had one way up: branch, pull request, dev, the owner's word.
+The content line had ten — Studio by hand on each tier, `tier-sync`, `space-sync`,
+`space-push`/`space-pull`, `space-bundle` export/import, `local-mirror`, `project-pull`,
+`promote-space-projects`, `project-move`, Follow, and raw op writes. That asymmetry is
+what makes di.iiii feel hard to manage, and it is the thing this closes.
+
+`scripts/send.mjs` owns no logic of its own. It exports the space from the machine you
+are on (`space-bundle.mjs`) and posts the file to the target tier's proposal endpoint
+(`space-proposal.mjs`, PR #486), then prints the two addresses to go and look at. The
+server decides what happens to it: someone on the space's trusted list has it applied
+after a restore point, anyone else has it held as a `content.apply` approval the inner
+bot shows with Apply and Reject. **Who you are is not a flag you pass** — that is why
+this is one command and not two, and why an artist and an agent type the same thing.
+
+Refusals, all before anything is exported: no space named, a space id that is not one,
+an unknown tier, and the public site unless `--allow-production` is on the line. Tier
+aliases people actually type (`staging`, `rehearsal`, `live`) resolve rather than fail.
+`--dry-run` prints the summary and writes nothing; `--as-proposal` gives up the right to
+apply, for when you would rather be read first.
+
+**Walked for real, not only unit-tested.** A throwaway serverXR on port 4123 over a
+temporary data root seeded with one space: the dry run printed the summary and created
+nothing, and the real send applied with a named restore point. Both printed the address
+to look at. 12 tests, two of which spawn the script itself so a refusal cannot live only
+in a pure function.
+
+This branch is stacked on `feat/bundle-proposal` — it cannot land before #486 does.
+
+Still to do, and deliberately not here: `di send` in the installed CLI (`scripts/di/`),
+which needs the install's own link key rather than a token file, and is the door an
+artist on their own machine would use. The other nine paths stay as they are until this
+one has been used for a while — retiring them is a separate, reversible pass.
+
+## start-check can see the content line again: the server's own env file wins
+
+`npm run start-check` is the one command meant to say LATEST or NOT LATEST on **both**
+lines before anyone works. On the owner's machine it had said `spaces: not checked
+(local tier unreachable http://localhost:4000)` for a week — while the install answered
+on https://local.thedi.studio the whole time. "not checked" read like a skipped nicety;
+it meant the tool was blind to half its job on the machine where that half lives.
+
+Cause: the untracked root `.env` carried a stale `LOCAL_API_URL=http://localhost:4000/serverXR`,
+and five scripts merged it AFTER `serverXR/.env.local`, so the stale line won. The other
+four env-reading scripts already merged the specific file last — two answers to one
+question, in one repo. The earlier empty-value guard could not catch a wrong non-empty value.
+
+Done:
+- `start-check`, `local-mirror`, `project-pull`, `space-push`, `space-pull` now merge
+  `serverXR/.env.local` last — most specific file wins, same as the rest
+- a comment above each block says why, so the order is not "tidied" back
+- `local-mirror.test.js` asserts the order in all five
+- known-fixes row
+
+Proved on the owner's machine with the stale root `.env` left in place: `start-check`
+now prints `code: LATEST` and the full spaces line (13 same · 7 differ · 2 only on dev ·
+8 local-only) with no override.
+
+## 2026-09-21 — the front door pulled 12.84 MB of its 13.04 MB over one 3.2 MB file
+
+Measured on dev.diiii.xyz at real device pixel ratios (1440×900@2, 390×844@3) before
+anything was touched: 74 requests, 13.04 MB, and four of those requests were the same
+STL. Two causes, one code and one data — both fixed, and both measured again after.
+
+**The code half (this branch).** Every asset fetch picked `cache: 'no-store'` when the
+id was not a sha256. The reasoning was right — a legacy id is mutable, so its bytes
+cannot be trusted unchecked — but `no-store` forbids *storing* the response, so there
+is nothing to revalidate against and each mount re-downloads the whole file. The server
+has been sending `etag` and `last-modified` on these all along and answers a conditional
+GET with a 0-byte 304. `assetFetchCacheMode()` now makes the choice in one place:
+`default` for content-addressed, `no-cache` for legacy — stored, and checked with the
+server before every reuse, so a replaced asset still arrives fresh. Five call sites
+(`ModelObject` ×2, `assetSources`, `useAssetRestore`, `useSceneApply`). Proved in
+Chromium against dev: three fetches of the same legacy asset, 9.63 MB → 3.21 MB.
+`contentAddressedAsset.test.js` fails the build if any mode returns `no-store` again.
+
+**The data half (not in this branch — it is room data).** The front room held two
+entities named `model`, at (-6,0,0) and (-2,0,3), each carrying its own copy of
+`Yeva skulpture (heart).stl` — the two assets are byte-identical (same md5, two uuid
+ids from before content addressing), and neither is inside the arrival camera's view.
+The owner said remove both. Applied as `deleteEntity` ops on local (v166 → 168) and on
+staging (v238 → 240), the room looked at on both afterwards: wordmark, line and all
+four doors intact. **dev.diiii.xyz/ is now 0.20 MB / 70 requests on desktop**, from
+13.04 MB. Prod was not touched.
+
+Still open on the front door, untouched by this: the arrival frame still cuts the outer
+two doors on a phone (the hardcoded `0.8,0.45,1` auto-frame), and the two orphaned
+3.2 MB assets are still in the space's storage — loose files nothing references.
+
+## 2026-09-24 — batch landing before the promotion: ten green PRs, one CI round
+
+- Landed together ahead of the dev → main promotion (#524): #521 legacy assets revalidate, #522 the page is not the changelog, #525 the server's own env file wins, #526 who decides what in a space, #527 per-space trusted list + `applyNow`, #528 `di send` carries a space up a tier, #493 project-move ships in the image, #477 spaces audit, #449 HTTP Range for assets, #486 a `.diiii` for an existing space is a proposal.
+- Three conflicts. Two were `known-fixes.md` rows added at the same place (both kept) and the wiki highlight list (`your-space-your-word` kept alongside dev's cut list).
+- The one that mattered: #486 (`requireApproval`) and #527 (`applyNow`) both rewrote `gateOrApply`'s signature and its first branch. Merged so **`requireApproval` wins** — a change that must be asked about is never applied on a route's say-so. Guard: `approvalGate.test.js` "gateOrApply when requireApproval and applyNow are both set", seen red with the precedence reversed.
+- Owed: none of these ten were looked at on dev.diiii.xyz together before this; that look is part of the promotion walk.
+
 ## 2026-09-23 — folding nine notes by hand again, PR #542's `land` job hit the same GH006
 
 - After PR #542 (`land/batch-2026-09-23`, merged to `dev` at 288d69c7) the dev deploy's
