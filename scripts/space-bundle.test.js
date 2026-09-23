@@ -252,3 +252,153 @@ describe('space-bundle forced replace keeps what the file does not carry', () =>
         expect(read(tierDb, 'SELECT label FROM spaces WHERE id = ?', 'gallery')[0].label).toBe('The Gallery')
     })
 })
+
+// ONE SHOW PER SPACE: the lighting desk keeps a space's light show beside its scene
+// (spaces/<id>/lighting/show.json), and the .diiii file is how it travels to another
+// install. The rig (`output`: which wire, which addresses) never travels — it is the
+// machine's, and a file opened elsewhere must not send light at this venue's nodes.
+describe('space-bundle carries the space\'s light show', () => {
+    const SHOW = {
+        master: 200,
+        fixtures: [
+            { id: 'fx1', index: 1, name: 'Wash L', universe: 0, address: 1, profile: 'drgb', values: { dimmer: 255 } },
+            { id: 'fx2', index: 2, name: 'Wash R', universe: 0, address: 5, profile: 'drgb', values: { dimmer: 128 } }
+        ],
+        scenes: [{ id: 'sc1', name: 'Warm', fadeMs: 1000, fixtures: [{ id: 'fx1', on: true, values: { r: 255 } }], raw: {} }],
+        looks: [],
+        midi: { maps: [{ kind: 'cc', ch: 1, num: 7, target: 'master' }] },
+        output: { driver: 'enttec', serialPort: '/dev/ttyUSB0', targets: ['2.0.0.10'], enabled: true }
+    }
+    const writeShow = (root, spaceId, show, name = 'show.json') => {
+        const dir = path.join(root, 'spaces', spaceId, 'lighting')
+        fs.mkdirSync(dir, { recursive: true })
+        fs.writeFileSync(path.join(dir, name), JSON.stringify(show))
+    }
+    const readShow = (root, spaceId, name = 'show.json') =>
+        JSON.parse(fs.readFileSync(path.join(root, 'spaces', spaceId, 'lighting', name), 'utf8'))
+    const manifestOf = async (file) => {
+        const unpacked = mkTemp('space-bundle-unpacked-')
+        await execFileAsync('tar', ['-xzf', file, '-C', unpacked])
+        return {
+            manifest: JSON.parse(fs.readFileSync(path.join(unpacked, 'bundle.json'), 'utf8')),
+            show: fs.existsSync(path.join(unpacked, 'space', 'lighting', 'show.json'))
+                ? JSON.parse(fs.readFileSync(path.join(unpacked, 'space', 'lighting', 'show.json'), 'utf8'))
+                : null
+        }
+    }
+
+    it('export → import: the same fixtures, scenes and MIDI map arrive, and the rig stays behind', async () => {
+        const a = mkTemp('show-a-')
+        const b = mkTemp('show-b-')
+        const file = path.join(mkTemp('show-out-'), 'showtest.diiii')
+        seedSpace(path.join(a, 'di.db'), { id: 'showtest', updatedAt: 1_000 })
+        writeShow(a, 'showtest', SHOW)
+
+        const { stdout: exported } = await run(['export', 'showtest', '--data-root', a, '--out', file])
+        expect(exported).toContain('light show: 2 fixtures, 1 scene')
+        const { manifest, show } = await manifestOf(file)
+        expect(manifest.version).toBe(2)
+        expect(manifest.lightShow).toEqual({ fixtures: 2, scenes: 1, looks: 0 })
+        expect(show.output).toBeUndefined()
+
+        const { stdout: imported } = await run(['import', file, '--data-root', b])
+        expect(imported).toContain('imported "showtest" as "showtest"')
+        expect(imported).toContain('light show: 2 fixtures, 1 scene')
+        const arrived = readShow(b, 'showtest')
+        expect(arrived.fixtures.map((f) => f.name)).toEqual(['Wash L', 'Wash R'])
+        expect(arrived.scenes.map((s) => s.name)).toEqual(['Warm'])
+        expect(arrived.midi).toEqual(SHOW.midi)
+        expect(arrived.master).toBe(200)
+        expect(arrived.output).toBeUndefined()
+        // Nothing but the space's own directory was written: the machine's show is not touched.
+        expect(fs.existsSync(path.join(b, 'lighting'))).toBe(false)
+    })
+
+    it('reads the newest complete copy the way the desk does, when show.json is broken', async () => {
+        const a = mkTemp('show-a-')
+        const file = path.join(mkTemp('show-out-'), 'showtest.diiii')
+        seedSpace(path.join(a, 'di.db'), { id: 'showtest', updatedAt: 1_000 })
+        writeShow(a, 'showtest', SHOW, 'show.prev.json')
+        fs.writeFileSync(path.join(a, 'spaces', 'showtest', 'lighting', 'show.json'), '{"fixtures": [')
+        await run(['export', 'showtest', '--data-root', a, '--out', file])
+        expect((await manifestOf(file)).show.fixtures).toHaveLength(2)
+    })
+
+    it('a space with no show writes the file every di.iiii already opens (version 1, no show)', async () => {
+        const a = mkTemp('show-a-')
+        const file = path.join(mkTemp('show-out-'), 'plain.diiii')
+        seedSpace(path.join(a, 'di.db'), { id: 'plain', updatedAt: 1_000 })
+        const { stdout } = await run(['export', 'plain', '--data-root', a, '--out', file])
+        expect(stdout).not.toContain('light show')
+        const { manifest, show } = await manifestOf(file)
+        expect(manifest.version).toBe(1)
+        expect(manifest.lightShow).toBeNull()
+        expect(show).toBeNull()
+    })
+
+    it('--force replaces the show the file carries and keeps the old one as show.prev.json', async () => {
+        const a = mkTemp('show-a-')
+        const b = mkTemp('show-b-')
+        const file = path.join(mkTemp('show-out-'), 'showtest.diiii')
+        seedSpace(path.join(a, 'di.db'), { id: 'showtest', updatedAt: 1_000 })
+        writeShow(a, 'showtest', SHOW)
+        await run(['export', 'showtest', '--data-root', a, '--out', file])
+        seedSpace(path.join(b, 'di.db'), { id: 'showtest', updatedAt: 500 })
+        writeShow(b, 'showtest', { fixtures: [], scenes: [{ id: 'old', name: 'Theirs', fixtures: [] }] })
+
+        await run(['import', file, '--data-root', b, '--force'])
+        expect(readShow(b, 'showtest').scenes.map((s) => s.name)).toEqual(['Warm'])
+        expect(readShow(b, 'showtest', 'show.prev.json').scenes.map((s) => s.name)).toEqual(['Theirs'])
+        // and the automatic before-copy carries the show that was replaced
+        const backups = fs.readdirSync(path.join(b, '_backups', 'space-replace'))
+        const before = await manifestOf(path.join(b, '_backups', 'space-replace', backups[0]))
+        expect(before.show.scenes.map((s) => s.name)).toEqual(['Theirs'])
+    })
+
+    it('--force with a file that carries no show keeps the space\'s own show, and says so', async () => {
+        const a = mkTemp('show-a-')
+        const b = mkTemp('show-b-')
+        const file = path.join(mkTemp('show-out-'), 'showtest.diiii')
+        seedSpace(path.join(a, 'di.db'), { id: 'showtest', updatedAt: 1_000 })
+        await run(['export', 'showtest', '--data-root', a, '--out', file])
+        seedSpace(path.join(b, 'di.db'), { id: 'showtest', updatedAt: 500 })
+        writeShow(b, 'showtest', SHOW)
+        const { stdout } = await run(['import', file, '--data-root', b, '--force'])
+        expect(stdout).toContain('keeps its own light show')
+        expect(readShow(b, 'showtest').fixtures).toHaveLength(2)
+    })
+
+    it('a file with a broken light show opens nothing', async () => {
+        const a = mkTemp('show-a-')
+        const b = mkTemp('show-b-')
+        const file = path.join(mkTemp('show-out-'), 'showtest.diiii')
+        seedSpace(path.join(a, 'di.db'), { id: 'showtest', updatedAt: 1_000 })
+        writeShow(a, 'showtest', SHOW)
+        await run(['export', 'showtest', '--data-root', a, '--out', file])
+        // Break the show inside the file, then pack it back up.
+        const unpacked = mkTemp('show-broken-')
+        await execFileAsync('tar', ['-xzf', file, '-C', unpacked])
+        fs.writeFileSync(path.join(unpacked, 'space', 'lighting', 'show.json'), '{"fixtures": [')
+        await execFileAsync('tar', ['-czf', file, '-C', unpacked, '.'])
+        const err = await run(['import', file, '--data-root', b]).catch((e) => e)
+        expect(err.code).toBe(1)
+        expect(err.stderr).toContain('light show cannot be read')
+        expect(fs.existsSync(path.join(b, 'spaces', 'showtest'))).toBe(false)
+    })
+
+    it('a file from a newer di.iiii is refused by name, with the way forward', async () => {
+        const a = mkTemp('show-a-')
+        const file = path.join(mkTemp('show-out-'), 'future.diiii')
+        seedSpace(path.join(a, 'di.db'), { id: 'future', updatedAt: 1_000 })
+        await run(['export', 'future', '--data-root', a, '--out', file])
+        const unpacked = mkTemp('show-future-')
+        await execFileAsync('tar', ['-xzf', file, '-C', unpacked])
+        const manifestPath = path.join(unpacked, 'bundle.json')
+        fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, 'utf8')), version: 99 }))
+        await execFileAsync('tar', ['-czf', file, '-C', unpacked, '.'])
+        const err = await run(['import', file, '--data-root', mkTemp('show-b-')]).catch((e) => e)
+        expect(err.code).toBe(1)
+        expect(err.stderr).toContain('newer than this tool')
+        expect(err.stderr).toContain('di update')
+    })
+})
