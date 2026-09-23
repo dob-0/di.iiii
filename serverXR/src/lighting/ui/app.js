@@ -4633,6 +4633,10 @@ function paintShow(show) {
 // new show rather than half of the old one. What it should say then is kept for the tab.
 function reloadSaying(text) {
   try { if (text) sessionStorage.setItem(SAID_KEY, text); } catch (e) { /* the reload still happens */ }
+  // From the top: a reload restores the scroll it had, and on a phone that hid the page
+  // head under the sticky bar. A new show is a new page.
+  try { history.scrollRestoration = 'manual'; } catch (e) { /* an old browser restores; harmless */ }
+  window.scrollTo(0, 0);
   location.reload();
 }
 $('#showNoteBtn').addEventListener('click', async () => {

@@ -64,14 +64,15 @@
     </select>
     <button id="saveNow" class="savenow" title="Save what is on the wire right now as a scene">Save scene</button>
   </div>
+  <!-- Which show this desk is running, when this page should know: opened for a space
+       while another show is loaded, a space's show on the bare desk, or the one offer a
+       space with no show of its own gets. One sentence, at most one button, hidden when
+       there is nothing to say (show.js). Inside the bar, so a phone that has scrolled
+       the page still sees it. -->
+  <div id="showNote" class="statusstrip shownote" hidden><span id="showNoteText"></span> <button class="sq accent" id="showNoteBtn" hidden></button></div>
 </header>
 
 <div id="statusStrip" class="statusstrip" hidden></div>
-<!-- Which show this desk is running, when this page should know: opened for a space
-     while another show is loaded, a space's show on the bare desk, or the one offer a
-     space with no show of its own gets. One sentence, at most one button, hidden when
-     there is nothing to say. See show.js. -->
-<div id="showNote" class="statusstrip" hidden><span id="showNoteText"></span> <button class="sq accent" id="showNoteBtn" hidden></button></div>
 
 <!-- ===================== SETUP ===================== -->
 <main class="page is-active" data-page="setup">
