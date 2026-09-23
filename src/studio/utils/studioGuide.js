@@ -115,7 +115,7 @@ export const STUDIO_SHORTCUT_SECTIONS = [
             ['Del / Backspace', 'Delete selected'],
             ['Ctrl+G', 'Group selection'],
             ['Ctrl+Shift+G', 'Ungroup'],
-            ['F', 'Frame selection'],
+            ['F', 'Frame selection, or the whole room'],
             ['Ctrl+Z', 'Undo'],
             ['Ctrl+Shift+Z / Ctrl+Y', 'Redo'],
         ]

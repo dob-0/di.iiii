@@ -756,8 +756,11 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             // supported. The !meta guard matches the sibling Delete/A branches:
             // without it, Ctrl/Cmd+F (find-in-page, preventable in Chrome and
             // Firefox) was swallowed and the camera jumped instead.
+            // With nothing selected it frames the whole room (the visible
+            // entities -- handleFrameSelected's own fallback). A return here on
+            // !selectedEntity used to make that branch unreachable, so F did
+            // nothing at all after Alt+A.
             if (!meta && (event.key === 'f' || event.key === 'F' || event.key === '.')) {
-                if (!selectedEntity) return
                 event.preventDefault()
                 handleFrameSelected()
                 return
