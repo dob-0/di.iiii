@@ -793,21 +793,44 @@ export default function RawEditor({
         applyLocalOps({ type: 'setPublishState', payload: { patch } })
     }, [applyLocalOps])
 
-    const handleCreateEntity = useCallback((type) => {
+    // Two doors use it: the Studio node's Create window and the palette's
+    // "things" group (layers unit 7). `position` is the floor point when the
+    // palette was summoned by a double-click in the room.
+    //
+    // WHERE IT LANDS, said out loud. A thing stands in the top room only — it
+    // cannot stand inside a node until question 2 of the layers decision is
+    // answered — so one made while standing inside a Geo or a Studio node lands
+    // outside it, where none of that node's own windows show it. Nodes has no
+    // activity list on screen, so the sentence goes on the status line too.
+    const [thingNotice, setThingNotice] = useState('')
+    useEffect(() => {
+        if (!thingNotice) return undefined
+        const timer = setTimeout(() => setThingNotice(''), 6000)
+        return () => clearTimeout(timer)
+    }, [thingNotice])
+    const handleCreateEntity = useCallback((type, { position = null } = {}) => {
         const count = (state.document.entities || []).length
         const entity = createEntityOfType(type, {
             createdBy: currentAuthor(displayName),
             components: {
-                transform: { position: [((count % 4) - 1.5) * 1.4, 0, Math.floor(count / 4) * -1.8] }
+                transform: { position: position || [((count % 4) - 1.5) * 1.4, 0, Math.floor(count / 4) * -1.8] }
             }
         })
         if (!entity) return
+        const kind = entity.name || entity.type
+        const insideLabel = currentScopeId
+            ? (authoredNodes.find((node) => node.id === currentScopeId)?.label || 'this node')
+            : null
+        const landed = insideLabel
+            ? `${kind} added to the top room — a thing cannot stand inside ${insideLabel} yet.`
+            : `${kind} added to the room.`
         applyLocalOps({
             type: 'createEntity',
             payload: { entity }
-        }, { activityMessage: `Created ${entity.type}.` })
+        }, { activityMessage: landed })
+        setThingNotice(landed)
         dispatch({ type: 'select-entity', entityId: entity.id })
-    }, [applyLocalOps, dispatch, state.document.entities])
+    }, [applyLocalOps, authoredNodes, currentScopeId, dispatch, state.document.entities])
 
     // Nothing is applied until the confirm comes back: a delete is the one
     // edit the person who loses the work cannot undo, because undo history is
@@ -1202,6 +1225,15 @@ export default function RawEditor({
                 ? `Created ${definition.label} with ${interior.length} panels inside.`
                 : `Created ${definition.label}.`
         })
+        setPaletteState({ open: false, placement: null })
+    }
+
+    // The palette's "things" group. The same add path the Studio node's
+    // Create window uses; a double-click on the room's floor hands a point,
+    // and the thing stands there.
+    const handlePaletteCreateThing = ({ type, placement: palettePlace }) => {
+        const point = Array.isArray(palettePlace?.point) ? palettePlace.point : null
+        handleCreateEntity(type, { position: point ? [point[0], 0, point[2]] : null })
         setPaletteState({ open: false, placement: null })
     }
 
@@ -2499,6 +2531,9 @@ export default function RawEditor({
                         <span>drop to bring it in</span>
                     </div>
                 )}
+                {thingNotice ? (
+                    <div className="raw-drop-notice" role="status" aria-live="polite">{thingNotice}</div>
+                ) : null}
                 {(dropState.busy || dropState.notice) && (
                     <div className={`raw-drop-notice${dropState.notice ? ' is-warning' : ''}`} role="status" aria-live="polite">
                         {dropState.busy ? 'Bringing it in…' : dropState.notice}
@@ -2845,6 +2880,7 @@ export default function RawEditor({
                 placement={paletteState.placement}
                 onClose={() => setPaletteState({ open: false, placement: null })}
                 onCreate={handlePaletteCreate}
+                onCreateThing={handlePaletteCreateThing}
                 commands={paletteCommands}
             />
 

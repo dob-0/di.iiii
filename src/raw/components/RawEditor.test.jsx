@@ -82,7 +82,6 @@ vi.mock('../../project/hooks/useProjectDocumentSync.js', () => ({
             const { document, version } = mockLoadOnMount
             store.dispatch({ type: 'load-start' })
             Promise.resolve().then(() => store.dispatch({ type: 'load-success', document, version }))
-        // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [])
         return { applyLocalOps: mockApplyLocalOps, replaceDocument: mockReplaceDocument }
     }
@@ -1294,6 +1293,53 @@ describe('RawEditor world scope entry', () => {
             .flat()
             .find((op) => op.type === 'createNode' && op.payload?.node?.typeId === 'geom.cube')
         expect(createdCube?.payload.node.parentId).toBe('world-1')
+    })
+})
+
+describe('RawEditor — a thing from the palette (layers unit 7)', () => {
+    const KEY = 'test-thing-from-palette'
+    afterEach(() => {
+        window.localStorage.removeItem(KEY)
+        mockApplyLocalOps.mockClear()
+    })
+    const placeFromPalette = (query) => {
+        fireEvent.doubleClick(screen.getByTestId('mock-graph'))
+        const box = screen.getByPlaceholderText('type a node or panel name…')
+        fireEvent.change(box, { target: { value: query } })
+        fireEvent.keyDown(box, { key: 'Enter' })
+    }
+    const createdEntities = () => mockApplyLocalOps.mock.calls
+        .map(([ops, options]) => (Array.isArray(ops) ? ops : [ops]).map((op) => ({ op, options })))
+        .flat()
+        .filter(({ op }) => op.type === 'createEntity')
+
+    it('makes the same thing Studio’s Add makes, through the one createEntity edit', () => {
+        window.localStorage.setItem(KEY, makeWorkspaceDoc([]))
+        render(<RawEditor localStorageKey={KEY} />)
+        mockApplyLocalOps.mockClear()
+        placeFromPalette('box')
+        const made = createdEntities()
+        expect(made).toHaveLength(1)
+        expect(made[0].op.payload.entity.type).toBe('box')
+        expect(made[0].op.payload.entity.parentId ?? null).toBeNull()
+        expect(made[0].options.activityMessage).toBe('Box added to the room.')
+        expect(screen.getByRole('status').textContent).toBe('Box added to the room.')
+    })
+
+    it('inside a node it lands in the top room, and says so', () => {
+        window.localStorage.setItem(KEY, makeWorkspaceDoc([
+            { id: 'geo-1', typeId: 'geom.geo', label: 'Geo', parentId: null, values: {} }
+        ]))
+        render(<RawEditor localStorageKey={KEY} />)
+        fireEvent.click(screen.getByText('enter-first-node'))
+        mockApplyLocalOps.mockClear()
+        placeFromPalette('lamp')
+        const made = createdEntities()
+        expect(made).toHaveLength(1)
+        expect(made[0].op.payload.entity.type).toBe('pointLight')
+        // no parent: a thing cannot stand inside a Geo (question 2 is open)
+        expect(made[0].op.payload.entity.parentId ?? null).toBeNull()
+        expect(made[0].options.activityMessage).toMatch(/added to the top room — a thing cannot stand inside Geo yet\./)
     })
 })
 
