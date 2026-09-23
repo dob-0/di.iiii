@@ -525,6 +525,8 @@ function initDb(dbPath) {
   ensureColumn(db, 'spaces', 'preview_image_asset_id', 'TEXT')
   ensureColumn(db, 'spaces', 'open_inscriptions', 'INTEGER NOT NULL DEFAULT 0')
   ensureColumn(db, 'spaces', 'slug', 'TEXT')
+  // Per-space trusted list: JSON array of account ids (spaceStore.trustedUserIds).
+  ensureColumn(db, 'spaces', 'trusted_user_ids', 'TEXT')
   ensureColumn(db, 'projects', 'slug', 'TEXT')
   // Which shelf it sits on, where on the shelf, and what it IS to a visitor.
   // `state` replaces the only archive the platform had: five titles with

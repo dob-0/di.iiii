@@ -152,6 +152,19 @@ function createSpaceStore({
     }
   }
 
+  // trusted_user_ids: JSON array of account ids. Unreadable → [] rather than a throw.
+  const parseTrusted = (raw) => {
+    if (!raw) return []
+    try {
+      const list = JSON.parse(raw)
+      return Array.isArray(list) ? Array.from(new Set(list.map((v) => String(v || '').trim()).filter(Boolean))) : []
+    } catch { return [] }
+  }
+  const serializeTrusted = (list) => {
+    const clean = Array.isArray(list) ? Array.from(new Set(list.map((v) => String(v || '').trim()).filter(Boolean))) : []
+    return clean.length ? JSON.stringify(clean) : null
+  }
+
   const rowToMeta = (row) => !row ? null : ({
     id: row.id,
     // Public handle for links — independently renameable, unlike id. null
@@ -167,6 +180,7 @@ function createSpaceStore({
     // instead of the live embed. null = default live preview.
     previewImageAssetId: row.preview_image_asset_id || null,
     ownerUserId: row.owner_user_id || null,
+    trustedUserIds: parseTrusted(row.trusted_user_ids),
     // Owner opt-in: anonymous append-only inscriptions (see inscriptionRoutes).
     openInscriptions: Boolean(row.open_inscriptions),
     sceneVersion: row.scene_version || 0,
@@ -188,6 +202,7 @@ function createSpaceStore({
       publishedProjectId: overrides.publishedProjectId || null,
       previewImageAssetId: overrides.previewImageAssetId || null,
       ownerUserId: overrides.ownerUserId || null,
+      trustedUserIds: parseTrusted(serializeTrusted(overrides.trustedUserIds)),
       openInscriptions: Boolean(overrides.openInscriptions),
       createdAt: overrides.createdAt || now,
       updatedAt: now,
@@ -214,9 +229,9 @@ function createSpaceStore({
       countSandboxes: db.prepare("SELECT COUNT(*) as cnt FROM spaces WHERE kind = 'sandbox'"),
       selectIdleAccountSandbox: db.prepare("SELECT id, scene_version FROM spaces WHERE permanent = 1 AND kind = 'sandbox' AND last_touched_at < ?"),
       countProjectsInSpace: db.prepare('SELECT COUNT(*) as cnt FROM projects WHERE space_id = ?'),
-      upsert:        db.prepare('INSERT OR REPLACE INTO spaces (id, slug, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id, open_inscriptions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
-      insert:        db.prepare('INSERT INTO spaces (id, slug, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id, open_inscriptions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
-      update:        db.prepare('UPDATE spaces SET slug=?, label=?, permanent=?, allow_edits=?, is_public=?, kind=?, published_project_id=?, preview_image_asset_id=?, scene_version=?, updated_at=?, last_touched_at=?, owner_user_id=?, open_inscriptions=? WHERE id=?'),
+      upsert:        db.prepare('INSERT OR REPLACE INTO spaces (id, slug, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id, open_inscriptions, trusted_user_ids) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+      insert:        db.prepare('INSERT INTO spaces (id, slug, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id, open_inscriptions, trusted_user_ids) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+      update:        db.prepare('UPDATE spaces SET slug=?, label=?, permanent=?, allow_edits=?, is_public=?, kind=?, published_project_id=?, preview_image_asset_id=?, scene_version=?, updated_at=?, last_touched_at=?, owner_user_id=?, open_inscriptions=?, trusted_user_ids=? WHERE id=?'),
       deleteById:    db.prepare('DELETE FROM spaces WHERE id = ?'),
       opsSelect:     db.prepare('SELECT data FROM space_ops WHERE space_id = ? ORDER BY version ASC, seq ASC'),
       opsSelectSince: db.prepare('SELECT data FROM space_ops WHERE space_id = ? AND version > ? ORDER BY version ASC, seq ASC'),
@@ -247,7 +262,8 @@ function createSpaceStore({
       meta.updatedAt ?? Date.now(),
       meta.lastTouchedAt ?? Date.now(),
       meta.ownerUserId ?? null,
-      meta.openInscriptions ? 1 : 0
+      meta.openInscriptions ? 1 : 0,
+      serializeTrusted(meta.trustedUserIds)
     )
     const { spaceDir } = getSpacePaths(spaceId)
     await ensureDir(spaceDir)
@@ -265,7 +281,7 @@ function createSpaceStore({
       const row = selectById.get(spaceId)
       if (!row) {
         const meta = buildMeta(spaceId, updates)
-        insert.run(spaceId, meta.slug ?? null, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0, meta.isPublic ? 1 : 0, meta.kind, meta.publishedProjectId ?? null, meta.previewImageAssetId ?? null, meta.sceneVersion ?? 0, meta.createdAt, meta.updatedAt, meta.lastTouchedAt, meta.ownerUserId ?? null, meta.openInscriptions ? 1 : 0)
+        insert.run(spaceId, meta.slug ?? null, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0, meta.isPublic ? 1 : 0, meta.kind, meta.publishedProjectId ?? null, meta.previewImageAssetId ?? null, meta.sceneVersion ?? 0, meta.createdAt, meta.updatedAt, meta.lastTouchedAt, meta.ownerUserId ?? null, meta.openInscriptions ? 1 : 0, serializeTrusted(meta.trustedUserIds))
         return meta
       }
       const nextSlug      = 'slug'             in updates ? (updates.slug ?? null)                                                                    : row.slug
@@ -280,8 +296,9 @@ function createSpaceStore({
       const nextTouched   = updates.touch !== false ? now : row.last_touched_at
       const nextOwner     = 'ownerUserId'      in updates ? (updates.ownerUserId ?? null)                                                            : row.owner_user_id
       const nextInscribe  = 'openInscriptions' in updates ? (updates.openInscriptions ? 1 : 0)                                                       : row.open_inscriptions
-      update.run(nextSlug, nextLabel, nextPermanent, nextEdits, nextPublic, nextKind, nextPublished, nextPreview, nextVersion, now, nextTouched, nextOwner, nextInscribe, spaceId)
-      return rowToMeta({ ...row, slug: nextSlug, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner, open_inscriptions: nextInscribe })
+      const nextTrusted   = 'trustedUserIds'   in updates ? serializeTrusted(updates.trustedUserIds)                                                       : (row.trusted_user_ids ?? null)
+      update.run(nextSlug, nextLabel, nextPermanent, nextEdits, nextPublic, nextKind, nextPublished, nextPreview, nextVersion, now, nextTouched, nextOwner, nextInscribe, nextTrusted, spaceId)
+      return rowToMeta({ ...row, slug: nextSlug, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner, open_inscriptions: nextInscribe, trusted_user_ids: nextTrusted })
     })()
   }
 
@@ -355,7 +372,7 @@ function createSpaceStore({
       s().insert.run(toId, meta.slug ?? null, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0,
         meta.isPublic ? 1 : 0, normalizeSpaceKind(meta.kind), meta.publishedProjectId ?? null,
         meta.previewImageAssetId ?? null, meta.sceneVersion ?? 0, row.created_at, now, now,
-        meta.ownerUserId ?? null, meta.openInscriptions ? 1 : 0)
+        meta.ownerUserId ?? null, meta.openInscriptions ? 1 : 0, serializeTrusted(meta.trustedUserIds))
       db.prepare('UPDATE space_ops SET space_id = ? WHERE space_id = ?').run(toId, fromId)
       db.prepare('UPDATE projects SET space_id = ? WHERE space_id = ?').run(toId, fromId)
       commonsStore.updateSpaceId(fromId, toId)

@@ -1,7 +1,7 @@
 // The human-approval gate for admin-level writes.
 //
 // A gated route does not call its store function directly. It calls
-// gate.gateOrApply({kind, args, actorState, summary, req}) instead. With the
+// gate.gateOrApply({kind, args, actorState, summary, req, applyNow?}) instead. With the
 // gate disabled (the default — APPROVAL_GATE_ENABLED unset) that runs the
 // executor immediately and behaves exactly as before this file existed. With
 // it enabled, the call is stored as a `pending_actions` row and the route
@@ -121,7 +121,16 @@ function createApprovalGate() {
   // created and nothing runs until a decision, whatever APPROVAL_GATE_ENABLED
   // says — and with no bot to ask, it is a 503, never an apply. `ttlMs`
   // overrides the default expiry for a kind a person needs longer to read.
-  async function gateOrApply({ kind, args, actorState, summary, req, requireApproval = false, ttlMs = null }) {
+  //
+  // `applyNow`: the route has already decided this actor needs no approval for
+  // this change — meant for a space's own owner changing what their space shows
+  // (owner's decision 2026-09-16: the steward's word is final inside their
+  // space; the spaceRoutes.js side of that is a separate landing). It still passes through here,
+  // so the net sees a gated route behaving, and the decision is made in one
+  // named place rather than by a route quietly answering on its own.
+  // When both are set, `requireApproval` wins: a change that must be asked
+  // about is never applied on the route's say-so.
+  async function gateOrApply({ kind, args, actorState, summary, req, requireApproval = false, applyNow = false, ttlMs = null }) {
     if (!executors[kind]) throw new Error(`approvalGate: no executor registered for kind "${kind}"`)
     // Marks the request as having gone through the gate at all — the net
     // (createGatedRequestNet) only cares whether this ran, not what it
@@ -134,7 +143,7 @@ function createApprovalGate() {
         err.status = 503
         throw err
       }
-    } else if (!isEnabled()) {
+    } else if (!isEnabled() || applyNow === true) {
       return { applied: true, result: await executors[kind](args) }
     } else if (!isConfigured()) {
       const err = new Error('Approval gate is enabled but not configured (APPROVAL_BOT_URL / APPROVAL_SHARED_SECRET missing).')

@@ -68,4 +68,22 @@ describe('spaceStore ownership + quota counting', () => {
         expect((await store.loadSpaceMeta('orphan')).ownerUserId).toBe(null)
         expect(store.countSpacesOwnedBy('u2')).toBe(0)
     })
+
+    it('persists the trusted list, de-duplicated, and reads an empty one as []', async () => {
+        const store = await makeStore()
+        await store.saveSpaceMeta('wcc', store.buildMeta('wcc', { ownerUserId: 'emilya', trustedUserIds: ['taron', 'taron', ' ', 'ani'] }))
+        expect((await store.loadSpaceMeta('wcc')).trustedUserIds).toEqual(['taron', 'ani'])
+
+        // PATCH-style update replaces the list; omitting it keeps it.
+        await store.upsertSpaceMeta('wcc', { trustedUserIds: ['ani'] })
+        expect((await store.loadSpaceMeta('wcc')).trustedUserIds).toEqual(['ani'])
+        await store.upsertSpaceMeta('wcc', { label: 'WCC Exhibition' })
+        expect((await store.loadSpaceMeta('wcc')).trustedUserIds).toEqual(['ani'])
+        await store.upsertSpaceMeta('wcc', { trustedUserIds: [] })
+        expect((await store.loadSpaceMeta('wcc')).trustedUserIds).toEqual([])
+
+        // A space that never had one reads as nobody, not as an error.
+        await store.saveSpaceMeta('plain', store.buildMeta('plain'))
+        expect((await store.loadSpaceMeta('plain')).trustedUserIds).toEqual([])
+    })
 })
