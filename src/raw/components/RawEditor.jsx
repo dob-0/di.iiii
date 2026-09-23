@@ -21,6 +21,7 @@ import TopNetworkFeed from './TopNetworkFeed.jsx'
 import DeskPanelWindow from './DeskPanelWindow.jsx'
 import TopInsidePanel from './topInside/TopInsidePanel.jsx'
 import { isTopType } from '../../project/tops/topOperators.js'
+import { DECK_INPUTS, isPictureType, pictureIdOf } from '../../project/tops/vjDeck.js'
 import { useMachinePresence } from '../../project/tops/useMachinePresence.js'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
 import KeyboardFeed from './KeyboardFeed.jsx'
@@ -937,7 +938,7 @@ export default function RawEditor({
     // A picture operator's Runs on lists the machines this space can see right
     // now; the registry only knows "where the page is open".
     // Presence only on a desk that uses it: picture operators or a Desk panel.
-    const usesDesk = nodes.some((node) => isTopType(node.typeId) || node.typeId === 'view.desk')
+    const usesDesk = nodes.some((node) => isPictureType(node.typeId) || node.typeId === 'view.desk')
     const { machines: knownMachines } = useMachinePresence(usesDesk ? resolvedSpaceId : '')
     const withMachines = (sections) => (isTopType(scopedSelectedNode?.typeId)
         ? sections.map((section) => ({
@@ -1834,6 +1835,14 @@ export default function RawEditor({
                     node={node}
                     placement="window"
                     assets={document.assets || []}
+                    // Which node feeds each input, so a playing input tile can
+                    // show that node's picture. A deck feeding a deck shows its master.
+                    inputSources={Object.fromEntries((document.edges || [])
+                        .filter((edge) => edge?.toNodeId === node.id && DECK_INPUTS.includes(edge.toPort) && edge.fromNodeId)
+                        .map((edge) => {
+                            const from = (document.nodes || []).find((candidate) => candidate.id === edge.fromNodeId)
+                            return [edge.toPort, pictureIdOf(from) || edge.fromNodeId]
+                        }))}
                     onPatchValues={(patch) => applyLocalOps({
                         type: 'updateNode',
                         payload: { nodeId: node.id, patch: { values: { ...node.values, ...patch } } }
@@ -2749,8 +2758,8 @@ export default function RawEditor({
             )}
 
             {/* The picture operators run while any exist — see TopNetworkFeed. */}
-            {nodes.some((node) => isTopType(node.typeId)) ? (
-                <TopNetworkFeed document={document} spaceId={resolvedSpaceId} onLiveOutputChange={handleLiveOutputChange} />
+            {nodes.some((node) => isPictureType(node.typeId)) ? (
+                <TopNetworkFeed document={document} spaceId={resolvedSpaceId} projectId={projectId || null} onLiveOutputChange={handleLiveOutputChange} />
             ) : null}
 
             {/* One invisible feed per playing Video node, so a Frame wire

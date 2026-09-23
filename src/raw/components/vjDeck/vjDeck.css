@@ -16,6 +16,9 @@
     width: 100%;
     height: 100%;
     min-height: 0;
+    /* When the frame is short the grid keeps its rows and the deck scrolls,
+       instead of the grid shrinking to a sliver under the header. */
+    overflow: auto;
     padding: var(--di-space-2);
     background: var(--di-bg);
     color: var(--di-ink);
@@ -400,6 +403,19 @@
     flex: 1 1 0;
 }
 
+.vj-deck-selected {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--di-space-2);
+    min-width: 0;
+}
+
+.vj-deck-selected .vj-deck-clip-name {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 .vj-deck-hint {
     flex: none;
     margin: 0;
@@ -418,6 +434,26 @@
 
     .vj-deck-out {
         margin-left: 0;
+    }
+
+    /* The header gave the grid almost nothing on a phone (walked 09-14):
+       a smaller Out, a tighter bar, and at least two layer rows kept. */
+    .vj-deck-top {
+        gap: var(--di-space-1) var(--di-space-2);
+    }
+
+    .vj-deck .vj-deck-out-picture {
+        width: 96px;
+        height: 54px;
+    }
+
+    .vj-deck-master input {
+        width: 88px;
+    }
+
+    .vj-deck-scroll {
+        flex-shrink: 0;
+        min-height: calc(var(--vj-tile-height) * 2 + var(--vj-control) + var(--di-space-2) * 3);
     }
 
     .vj-deck-pick {

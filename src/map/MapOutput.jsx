@@ -42,7 +42,7 @@ export default function MapOutput({ projectId, spaceId }) {
     // projected at all. When a surface draws Pictures it runs them itself, so
     // this stands down — one engine, one camera open, per page.
     const drawsPictures = (fallbackMapping?.surfaces || []).some((surface) => surface.enabled !== false && surface.source?.kind === 'network' && surface.source?.ref)
-    useTopNetwork({ network: drawsPictures ? NO_NETWORK : network, spaceId })
+    useTopNetwork({ network: drawsPictures ? NO_NETWORK : network, spaceId, assets: doc?.assets || null, projectId })
     useMapChannelListener(projectId, store)
 
     // A projector output must survive unattended, the same as Raw's (see

@@ -13,6 +13,7 @@
 // Nothing here touches React or the DOM.
 
 import { generateId } from '../../shared/projectSchema.js'
+import { isTopType } from './topOperators.js'
 
 export const VJ_DECK_TYPE = 'vj.deck'
 export const DECK_INPUTS = ['in1', 'in2', 'in3', 'in4']
@@ -338,6 +339,44 @@ export const aliasWires = (wires = [], alias = {}) => wires.map((wire) => {
     const from = resolveAlias(wire.from, alias)
     return from === wire.from ? wire : { ...wire, from }
 })
+
+/** A node that makes a picture on the GPU: a picture operator, or a deck. */
+export const isPictureType = (typeId) => isTopType(typeId) || typeId === VJ_DECK_TYPE
+
+/**
+ * The engine id whose picture a node's card shows: an operator's own id, a
+ * deck's master. A card thumbnail registers under this.
+ */
+export const pictureIdOf = (node) => (node?.typeId === VJ_DECK_TYPE || node?.type === VJ_DECK_TYPE
+    ? masterNodeId(node.id)
+    : node?.id)
+
+/**
+ * Every deck of a network, expanded into operators, with the wires out of
+ * each deck rewritten to read its master.
+ *
+ *   nodes  the operators ({ id, type, values }) — decks may be among them
+ *   wires  [{ from, to, port }] — wires INTO a deck carry port in1..in4
+ *
+ * Order matters and is fixed here: EVERY deck expands first, THEN the wires
+ * alias, so a deck wired into a deck reads the upstream deck's master.
+ * Returns { nodes, wires, alias } — no deck and no wire into a deck survive.
+ */
+export const expandDecks = ({ nodes = [], wires = [] } = {}) => {
+    const decks = nodes.filter((node) => node?.type === VJ_DECK_TYPE)
+    if (!decks.length) return { nodes, wires, alias: {} }
+    const deckIds = new Set(decks.map((deck) => deck.id))
+    const expandedNodes = nodes.filter((node) => !deckIds.has(node.id))
+    let expandedWires = wires.filter((wire) => !deckIds.has(wire.to))
+    const alias = {}
+    for (const deck of decks) {
+        const expanded = expandDeck(deck, wires.filter((wire) => wire.to === deck.id))
+        expandedNodes.push(...expanded.nodes)
+        expandedWires = expandedWires.concat(expanded.wires)
+        Object.assign(alias, expanded.alias)
+    }
+    return { nodes: expandedNodes, wires: aliasWires(expandedWires, alias), alias }
+}
 
 // --- the node type ---------------------------------------------------------------
 

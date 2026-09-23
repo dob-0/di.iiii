@@ -119,6 +119,7 @@ describe('VjDeckView', () => {
         const onValues = vi.fn()
         render(<Host onValues={onValues} initialDeck={setClip(createDeck(), 0, 0, { id: 'c1', kind: 'asset', asset: 'asset-dusk' })} />)
         fireEvent.click(screen.getByRole('button', { name: 'Layer 1, slot 1: dusk_01.mp4' }))
+        fireEvent.click(within(screen.getByRole('group', { name: 'Selected clip' })).getByRole('button', { name: 'Settings' }))
         const settings = screen.getByRole('region', { name: 'Clip settings' })
         fireEvent.change(within(settings).getByLabelText('Speed'), { target: { value: '2.5' } })
         expect(lastDeck(onValues).layers[0].clips[0].speed).toBe(2.5)
@@ -131,6 +132,33 @@ describe('VjDeckView', () => {
         fireEvent.click(within(settings).getByRole('button', { name: 'Remove clip' }))
         expect(lastDeck(onValues).layers[0].clips[0]).toBeNull()
         expect(screen.queryByRole('region', { name: 'Clip settings' })).toBeNull()
+    })
+
+    it('a tap only plays: the grid stays in view, settings wait behind one button', () => {
+        // On a phone the settings panel opened on every tap covered the grid,
+        // so each next clip needed a Close first (walked 09-14).
+        render(<Host initialDeck={setClip(createDeck(), 0, 0, { id: 'c1', kind: 'asset', asset: 'asset-dusk' })} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Layer 1, slot 1: dusk_01.mp4' }))
+        expect(screen.queryByRole('region', { name: 'Clip settings' })).toBeNull()
+        const line = screen.getByRole('group', { name: 'Selected clip' })
+        expect(within(line).getByText('dusk_01.mp4')).toBeTruthy()
+        fireEvent.click(within(line).getByRole('button', { name: 'Settings' }))
+        fireEvent.click(within(screen.getByRole('region', { name: 'Clip settings' })).getByRole('button', { name: 'Close' }))
+        expect(screen.queryByRole('region', { name: 'Clip settings' })).toBeNull()
+        expect(screen.getByRole('group', { name: 'Selected clip' })).toBeTruthy()
+    })
+
+    it('a playing input tile shows the picture of the node wired into that input', () => {
+        const deck = trigger(setClip(createDeck(), 0, 0, { id: 'c1', kind: 'input', input: 'in2', label: 'cam' }), 0, 0)
+        render(
+            <VjDeckView
+                node={{ id: 'deck-1', typeId: 'vj.deck', values: { deck } }}
+                assets={assets}
+                inputSources={{ in2: 'clip-node-7' }}
+                onPatchValues={() => {}}
+            />
+        )
+        expect(screen.getByRole('img', { name: 'cam' })).toBeTruthy()
     })
 
     it('an upload lands in the slot it was picked for', async () => {

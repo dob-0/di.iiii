@@ -3,6 +3,7 @@ import { render } from '@testing-library/react'
 import RawGraphSurface from '../RawGraphSurface.jsx'
 import { createEdge, createNode, NODE_TYPES } from '../../../project/nodeRegistry.js'
 import { TOP_TYPE_IDS } from '../../../project/tops/topOperators.js'
+import { isPictureType } from '../../../project/tops/vjDeck.js'
 import {
     CARD_WIDTH,
     HEADER_HEIGHT,
@@ -21,10 +22,11 @@ const makeNode = (typeId, overrides = {}) => ({
 
 // What the card height was before previews existed: header, the port rows, a
 // picture only for picture operators, the foot.
+// A picture card (an operator, or a VJ deck showing its master) carries its picture.
 const legacyHeight = (node) => {
     const type = NODE_TYPES[node.typeId]
     const rows = Math.max(type.inputs.length, type.outputs.length, 1)
-    return HEADER_HEIGHT + rows * PORT_ROW_HEIGHT + (TOP_TYPE_IDS.includes(node.typeId) ? TOP_PICTURE_HEIGHT + 4 : 0) + 8
+    return HEADER_HEIGHT + rows * PORT_ROW_HEIGHT + (isPictureType(node.typeId) ? TOP_PICTURE_HEIGHT + 4 : 0) + 8
 }
 
 describe('which cards carry a preview', () => {

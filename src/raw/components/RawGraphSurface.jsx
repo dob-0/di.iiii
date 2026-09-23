@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
 import { CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, cardHeight } from '../utils/cardGeometry.js'
-import { isTopType } from '../../project/tops/topOperators.js'
+import { isPictureType, pictureIdOf } from '../../project/tops/vjDeck.js'
 import TopThumbnail from './TopThumbnail.jsx'
 import CardPreview from './cardPreview/CardPreview.jsx'
 import { hasCardPreview } from './cardPreview/previewTypes.js'
@@ -1473,9 +1473,9 @@ export default function RawGraphSurface({
                                     {showPorts && !inputs.length && !outputs.length && getNodeCardSummary(node) ? (
                                         <span className="raw-graph-node-summary">{getNodeCardSummary(node)}</span>
                                     ) : null}
-                                    {showPorts && isTopType(node.typeId) ? (
+                                    {showPorts && isPictureType(node.typeId) ? (
                                         <TopThumbnail
-                                            nodeId={node.id}
+                                            nodeId={pictureIdOf(node)}
                                             top={Math.max(inputs.length, outputs.length, 1) * PORT_ROW_HEIGHT + 4}
                                         />
                                     ) : null}
