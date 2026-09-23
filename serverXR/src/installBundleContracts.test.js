@@ -309,13 +309,15 @@ describe('what an install bundle carries beside the spaces', () => {
         // the manifest as the previous tool wrote it: no `dirs` field at all
         const unpacked = path.join(workDir, 'unpacked')
         await mkdir(unpacked)
-        await execFileAsync('tar', ['-xzf', bundlePath, '-C', unpacked])
+        // Bare archive name + cwd: GNU tar reads `C:...` as host:path. Same
+        // reason the scripts do it -- see tarArchiveArgs in scripts/space-bundle.mjs.
+        await execFileAsync('tar', ['-xzf', path.basename(bundlePath), '-C', unpacked], { cwd: path.dirname(bundlePath) })
         const manifest = JSON.parse(await readFile(path.join(unpacked, 'install.json'), 'utf8'))
         expect(manifest.dirs).toEqual([])
         delete manifest.dirs
         await writeFile(path.join(unpacked, 'install.json'), JSON.stringify(manifest))
         const oldBundle = path.join(workDir, 'old.tar.gz')
-        await execFileAsync('tar', ['-czf', oldBundle, '-C', unpacked, '.'])
+        await execFileAsync('tar', ['-czf', path.basename(oldBundle), '-C', unpacked, '.'], { cwd: path.dirname(oldBundle) })
 
         const targetRoot = await makeTempDir('dii-install-show-f-')
         const { stdout } = await runInstallScript(['import', oldBundle], targetRoot)

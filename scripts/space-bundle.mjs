@@ -193,6 +193,17 @@ const describeLightShow = (show) => {
 
 // ---------------------------------------------------------------- export
 
+// GNU tar reads an argument containing a colon as `host:path` and tries to reach
+// a remote machine, so a Windows absolute path -- `C:\Users\me\wcc.diiii` -- fails
+// with "Cannot connect to C: resolve failed". Only the archive name (-f) is
+// parsed that way, so hand tar a bare filename and cd it into the directory
+// instead. `--force-local` would also fix GNU tar and is deliberately not used:
+// macOS ships bsdtar, which has no such flag and would abort on it.
+const tarArchiveArgs = (archivePath) => ({
+    name: path.basename(archivePath),
+    cwd: path.dirname(path.resolve(archivePath))
+})
+
 async function exportSpace(args) {
     const { spacesDir, dbPath } = resolvePaths(args.dataRoot)
     const spaceId = args.target
@@ -275,7 +286,8 @@ async function exportSpace(args) {
         await fsp.writeFile(path.join(staging, 'bundle.json'), JSON.stringify(manifest, null, 2))
 
         const out = path.resolve(args.out || `${spaceId}${BUNDLE_EXT}`)
-        execFileSync('tar', ['-czf', out, '-C', staging, '.'])
+        const outTar = tarArchiveArgs(out)
+        execFileSync('tar', ['-czf', outTar.name, '-C', staging, '.'], { cwd: outTar.cwd })
         const size = (fs.statSync(out).size / 1024 / 1024).toFixed(2)
         log(`exported space "${spaceId}" → ${out} (${size} MB, ${projects.length} projects, ${spaceOps.length} space ops${lightShow ? `, ${describeLightShow(lightShow)}` : ''})`)
         return out
@@ -283,6 +295,7 @@ async function exportSpace(args) {
         await fsp.rm(staging, { recursive: true, force: true })
     }
 }
+
 
 // ---------------------------------------------------------------- import
 
@@ -315,7 +328,8 @@ async function importSpace(args) {
 
     const staging = await fsp.mkdtemp(path.join(os.tmpdir(), 'space-bundle-'))
     try {
-        execFileSync('tar', ['-xzf', bundlePath, '-C', staging])
+        const inTar = tarArchiveArgs(bundlePath)
+        execFileSync('tar', ['-xzf', inTar.name, '-C', staging], { cwd: inTar.cwd })
 
         const manifestPath = path.join(staging, 'bundle.json')
         if (!fs.existsSync(manifestPath)) die('not a space bundle: bundle.json missing')
@@ -564,7 +578,7 @@ async function importSpace(args) {
     }
 }
 
-export { exportSpace, importSpace, resolvePaths, SLUG_REGEX }
+export { exportSpace, importSpace, resolvePaths, tarArchiveArgs, SLUG_REGEX }
 
 // ---------------------------------------------------------------- main
 
