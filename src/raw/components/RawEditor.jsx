@@ -2540,7 +2540,19 @@ export default function RawEditor({
                     </div>
                 )}
                 {thingNotice ? (
-                    <div className="raw-drop-notice" role="status" aria-live="polite">{thingNotice}</div>
+                    // A new thing is selected, and on a phone that raises the
+                    // selection sheet straight over this line (seen at 390x844:
+                    // the sentence was there, under the sheet). Above a docked
+                    // sheet it rides the measured inset, clear of the zoom
+                    // cluster and Delete, which sit on the sheet's edge too.
+                    <div
+                        className="raw-drop-notice"
+                        role="status"
+                        aria-live="polite"
+                        style={graphBottomInset ? { bottom: graphBottomInset + 88 } : undefined}
+                    >
+                        {thingNotice}
+                    </div>
                 ) : null}
                 {(dropState.busy || dropState.notice) && (
                     <div className={`raw-drop-notice${dropState.notice ? ' is-warning' : ''}`} role="status" aria-live="polite">
