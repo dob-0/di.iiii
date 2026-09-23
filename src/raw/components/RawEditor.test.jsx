@@ -79,9 +79,11 @@ vi.mock('../../project/hooks/useProjectDocumentSync.js', () => ({
     useProjectDocumentSync: ({ store }) => {
         mockUseEffect(() => {
             if (!mockLoadOnMount) return
-            const { document, version } = mockLoadOnMount
+            const { document, version, sameTick = false } = mockLoadOnMount
             store.dispatch({ type: 'load-start' })
-            Promise.resolve().then(() => store.dispatch({ type: 'load-success', document, version }))
+            // sameTick: a load so fast its start and success land in one render
+            if (sameTick) store.dispatch({ type: 'load-success', document, version })
+            else Promise.resolve().then(() => store.dispatch({ type: 'load-success', document, version }))
         }, [])
         return { applyLocalOps: mockApplyLocalOps, replaceDocument: mockReplaceDocument }
     }
@@ -827,6 +829,23 @@ describe('things are cards in Nodes (layers unit 6)', () => {
         expect(window.localStorage.getItem('dii.raw.zen.p-things')).toBeNull()
         await waitFor(() => expect(window.localStorage.getItem('dii.raw.zen.p-things')).toBe('off'))
         expect(screen.getByRole('button', { name: '1 thing' })).toBeTruthy()
+    })
+
+    // React batches a load-start and a load-success that land together, so
+    // "loading went true then false" can never be seen. The store says so.
+    it('sees a load whose start and success land in the same render', async () => {
+        mockLoadOnMount = { document: { nodes: [], edges: [], entities: [boxes[2]] }, version: 3, sameTick: true }
+        render(<RawEditor projectId="p-fast" spaceId="lab" />)
+        await waitFor(() => expect(window.localStorage.getItem('dii.raw.zen.p-fast')).toBe('off'))
+    })
+
+    // A zen somebody chose does not depend on what the project holds; waiting
+    // for the load would flash the toolbar under them.
+    it('honours a chosen zen at once, before the project has loaded', () => {
+        window.localStorage.setItem('dii.raw.zen.p-chosen', 'on')
+        render(<RawEditor projectId="p-chosen" spaceId="lab" />)
+        expect(document.querySelector('.raw-topbar.is-seeded')).toBeNull()
+        expect(screen.queryByRole('button', { name: 'Help' })).toBeNull()
     })
 
     it('an empty project still opens in automatic zen — once it has loaded', async () => {

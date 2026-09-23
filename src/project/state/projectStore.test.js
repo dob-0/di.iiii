@@ -35,6 +35,31 @@ describe('projectStore selection', () => {
     })
 })
 
+// Before its document arrives a project is an empty stand-in, and a default
+// decided from it is decided about nothing (Nodes' zen was, until 2026-09-23).
+// `loading` cannot say "arrived": it starts false, and a fast load's
+// load-start and load-success can land in one render.
+describe('projectStore hasLoaded', () => {
+    it('is false for the stand-in, true once the document has arrived', () => {
+        const state = createProjectStoreState()
+        expect(state.hasLoaded).toBe(false)
+        const started = projectStoreReducer(state, { type: 'load-start' })
+        expect(started.hasLoaded).toBe(false)
+        const loaded = projectStoreReducer(started, { type: 'load-success', document: {}, version: 2 })
+        expect(loaded.hasLoaded).toBe(true)
+        // a later reload keeps it: the project did arrive once
+        expect(projectStoreReducer(loaded, { type: 'load-start' }).hasLoaded).toBe(true)
+    })
+
+    it('stays false when the load fails', () => {
+        const failed = projectStoreReducer(
+            projectStoreReducer(createProjectStoreState(), { type: 'load-start' }),
+            { type: 'load-error', error: 'nope' }
+        )
+        expect(failed.hasLoaded).toBe(false)
+    })
+})
+
 describe('projectStoreReducer', () => {
     it('loads project state and applies optimistic ops', () => {
         let state = createProjectStoreState()

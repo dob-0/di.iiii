@@ -48,6 +48,25 @@ export const readZenPreference = (workspaceKey, { workCount = 0, defaultZen, sto
     return defaultZenFor({ workCount })
 }
 
+/**
+ * A zen a person CHOSE on this device ('on' or 'off'), or null when there is
+ * only the derived default (nothing stored, or 'auto-on'). A choice does not
+ * depend on what the project holds, so it can be honoured at once; only the
+ * derived default has to wait for the project to load.
+ */
+export const readChosenZen = (workspaceKey, { storage } = {}) => {
+    const store = storage ?? (typeof window !== 'undefined' ? window.localStorage : null)
+    let stored = null
+    try {
+        stored = store?.getItem(storageKey(workspaceKey)) ?? null
+    } catch {
+        stored = null
+    }
+    if (stored === 'on') return true
+    if (stored === 'off') return false
+    return null
+}
+
 export const writeZenPreference = (workspaceKey, zen, { storage, derived = false } = {}) => {
     const store = storage ?? (typeof window !== 'undefined' ? window.localStorage : null)
     try {

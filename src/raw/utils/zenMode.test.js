@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { defaultZenFor, isAutoZen, isPaletteSummons, liftAutoZen, readZenPreference, resolveZenPreference, writeZenPreference } from './zenMode.js'
+import { defaultZenFor, isAutoZen, isPaletteSummons, liftAutoZen, readChosenZen, readZenPreference, resolveZenPreference, writeZenPreference } from './zenMode.js'
 
 const fakeStorage = (initial = {}) => {
     const map = new Map(Object.entries(initial))
@@ -20,6 +20,17 @@ describe('defaultZenFor', () => {
         // not a default — it is a change to their workspace.
         expect(defaultZenFor({ workCount: 1 })).toBe(false)
         expect(defaultZenFor({ workCount: 12 })).toBe(false)
+    })
+})
+
+describe('readChosenZen', () => {
+    // Only a CHOICE is honoured before the project loads; the derived default
+    // ('auto-on', or nothing stored) waits for what the project holds.
+    it('answers for a choice and stays silent for the derived default', () => {
+        expect(readChosenZen('w', { storage: fakeStorage({ 'dii.raw.zen.w': 'on' }) })).toBe(true)
+        expect(readChosenZen('w', { storage: fakeStorage({ 'dii.raw.zen.w': 'off' }) })).toBe(false)
+        expect(readChosenZen('w', { storage: fakeStorage({ 'dii.raw.zen.w': 'auto-on' }) })).toBeNull()
+        expect(readChosenZen('w', { storage: fakeStorage() })).toBeNull()
     })
 })
 

@@ -80,7 +80,7 @@ import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
 import { RAW_ANATOMY_Z, RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getAnatomyDefaultFrame, getBottomReserve, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import { CARD_WIDTH, cardHeight, getCardBox } from '../utils/cardGeometry.js'
-import { isPaletteSummons, resolveZenPreference, writeZenPreference, liftAutoZen, isAutoZen } from '../utils/zenMode.js'
+import { isPaletteSummons, readChosenZen, resolveZenPreference, writeZenPreference, liftAutoZen, isAutoZen } from '../utils/zenMode.js'
 import {
     clearLocalWorkspaceDocument,
     readLocalWorkspaceDocument,
@@ -997,31 +997,22 @@ export default function RawEditor({
     }, [isWorldFullscreen])
 
     // Has the project's own document arrived? Before it does, the store holds
-    // an empty stand-in (projectStore.js createProjectStoreState), and every
-    // count reads 0 — so anything decided on the first render was decided
-    // about nothing. `!document` was the old guard and is never true: the
-    // stand-in is a real, empty object. A local canvas is read synchronously
-    // from this browser, so it has loaded at mount. A server project has
-    // loaded when a load has started and ended without an error (the sync
-    // hook dispatches load-start in an effect, AFTER the first render — the
-    // initial `loading: false` means "not started", not "done").
-    const [projectLoaded, setProjectLoaded] = useState(!projectId)
-    const loadStartedRef = useRef(false)
-    useEffect(() => {
-        if (!projectId || projectLoaded) return
-        if (state.loading) {
-            loadStartedRef.current = true
-            return
-        }
-        if (loadStartedRef.current && !state.loadError) setProjectLoaded(true)
-    }, [projectId, projectLoaded, state.loading, state.loadError])
+    // an empty stand-in (projectStore.js), and every count reads 0 — so a
+    // default decided on the first render was decided about nothing. `!document`
+    // was the old guard and is never true: the stand-in is a real, empty
+    // object. A local canvas is read synchronously from this browser, so it
+    // has loaded at mount; a server project, when the store says so.
+    const projectLoaded = !projectId || state.hasLoaded
 
-    // Read the zen preference ONCE, and only after the project has loaded —
-    // the default depends on whether this workspace already has work in it,
-    // and before the load it always looks empty. Work is both kinds: a room of
-    // Studio things with no nodes is not an empty canvas.
+    // Read the zen preference ONCE. A zen somebody CHOSE on this device is
+    // honoured at once — it does not depend on what the project holds, and
+    // waiting for the load would flash the toolbar under them. The DERIVED
+    // default waits for the load: it depends on whether the project already
+    // has work in it, and before the load it always looks empty. Work is both
+    // kinds: a room of Studio things with no nodes is not an empty canvas.
     useEffect(() => {
-        if (zenReadRef.current || !projectLoaded) return
+        if (zenReadRef.current) return
+        if (!projectLoaded && readChosenZen(zenWorkspaceKey) === null) return
         zenReadRef.current = true
         setZen(resolveZenPreference(zenWorkspaceKey, {
             workCount: (document.nodes || []).length + (document.entities || []).length
