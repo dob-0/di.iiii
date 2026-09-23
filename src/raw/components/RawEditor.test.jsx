@@ -100,6 +100,8 @@ vi.mock('./WebcamSourcePanel.jsx', () => ({
 }))
 
 import RawEditor, { WINDOW_DEFAULT_POSITIONS } from './RawEditor.jsx'
+import { buildObjectCards, thingBandBounds } from '../utils/objectCards.js'
+import { cardHeight } from '../utils/cardGeometry.js'
 import { getNodeType } from '../../project/nodeRegistry.js'
 import { setAppNavigate } from '../../utils/appNavigate.js'
 
@@ -1324,6 +1326,24 @@ describe('RawEditor — a thing from the palette (layers unit 7)', () => {
         expect(made[0].op.payload.entity.parentId ?? null).toBeNull()
         expect(made[0].options.activityMessage).toBe('Box added to the room.')
         expect(screen.getByRole('status').textContent).toBe('Box added to the room.')
+    })
+
+    // A node landing ON the thing cards would push the whole band below the
+    // nodes (objectCards.js) — every card jumping at once. It steps aside.
+    it('a node placed where the thing cards stand steps aside from them', () => {
+        const things = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => ({ id: `t${i}`, type: 'box', name: `T${i}`, components: {} }))
+        window.localStorage.setItem(KEY, JSON.stringify({ nodes: [], edges: [], workspaceState: {}, entities: things }))
+        render(<RawEditor localStorageKey={KEY} />)
+        const band = thingBandBounds(buildObjectCards(things))
+        mockApplyLocalOps.mockClear()
+        placeFromPalette('Cube')
+        const node = mockApplyLocalOps.mock.calls
+            .map(([ops]) => (Array.isArray(ops) ? ops : [ops])).flat()
+            .find((op) => op.type === 'createNode')?.payload.node
+        expect(node).toBeTruthy()
+        const overlaps = node.graphX < band.maxX && node.graphX + 200 > band.minX
+            && node.graphY < band.maxY && node.graphY + cardHeight(node) > band.minY
+        expect(overlaps).toBe(false)
     })
 
     it('inside a node it lands in the top room, and says so', () => {

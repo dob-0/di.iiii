@@ -74,12 +74,12 @@ const isNarrowViewport = () => typeof window !== 'undefined' && window.innerWidt
 const panelWindowSpace = (frame, viewport) => (frame?.pinned || isNarrowViewport() || !viewport) ? 'screen' : 'world'
 
 import { buildRawOutPath, buildRawProjectPath, buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
-import { buildObjectCards, buildScopeItems } from '../utils/objectCards.js'
+import { buildObjectCards, buildScopeItems, thingBandBounds } from '../utils/objectCards.js'
 import { DEFAULT_PROJECT_SPACE_ID, createProject, updateProjectDocument, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
 import { RAW_ANATOMY_Z, RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getAnatomyDefaultFrame, getBottomReserve, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
-import { cardHeight, getCardBox } from '../utils/cardGeometry.js'
+import { CARD_WIDTH, cardHeight, getCardBox } from '../utils/cardGeometry.js'
 import { isPaletteSummons, resolveZenPreference, writeZenPreference, liftAutoZen, isAutoZen } from '../utils/zenMode.js'
 import {
     clearLocalWorkspaceDocument,
@@ -1188,13 +1188,21 @@ export default function RawEditor({
             cardY = Math.max(20, (place.graphY ?? place.clientY ?? 160) + 90)
         }
         const siblings = authoredNodes.filter((node) => (node.parentId || null) === (currentScopeId || null))
-        const collides = (x, y) => siblings.some((node) =>
+        // …and clear of the thing cards: their band stays where it is only
+        // while no node stands on it (objectCards.js), so a node landing on it
+        // would move every thing card at once.
+        const band = thingBandBounds(objectCards)
+        const newCardHeight = cardHeight({ typeId: definition.id, values }, authoredNodes)
+        const onBand = (x, y) => Boolean(band) && x < band.maxX && x + CARD_WIDTH > band.minX
+            && y < band.maxY && y + newCardHeight > band.minY
+        const collides = (x, y) => onBand(x, y) || siblings.some((node) =>
             Math.abs((node.graphX ?? 0) - x) < ROOT_WORLD_CARD_WIDTH + 16
             && Math.abs((node.graphY ?? 0) - y) < 130)
         for (let step = 0; step < 24 && collides(cardX, cardY); step += 1) {
             cardX += 44
             cardY += 44
         }
+        if (onBand(cardX, cardY)) cardY = band.maxY + 16
         if (values.frame) {
             values.frame = placeFrameForNewNode(values.frame, { typeId: definition.id, graphX: cardX, graphY: cardY, values }, place)
         }

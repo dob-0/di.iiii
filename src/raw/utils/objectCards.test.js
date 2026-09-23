@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { OBJECT_CARD_COLOR, THING_INDENT, buildObjectCards, buildScopeItems } from './objectCards.js'
+import { OBJECT_CARD_COLOR, THING_INDENT, buildObjectCards, buildScopeItems, thingBandBounds } from './objectCards.js'
 
 const thing = (id, type = 'box', extra = {}) => ({ id, type, name: id, ...extra })
 
@@ -72,7 +72,16 @@ describe('every thing is a card', () => {
             expect(JSON.stringify(source)).toBe(before)
         })
 
-        it('sits below the nodes rather than through them, using their real height', () => {
+        // Seen 2026-09-23: with the band always below the lowest node, placing
+        // a first node sent every thing card off-screen. A node that does not
+        // stand on the band leaves it where it is.
+        it('stays where it is when a node is placed clear of it', () => {
+            const before = buildObjectCards([thing('a'), thing('b')])
+            const after = buildObjectCards([thing('a'), thing('b')], { nodes: [{ id: 'n', graphX: -600, graphY: 400 }] })
+            expect(after).toEqual(before)
+        })
+
+        it('moves below the nodes when a node stands on it — a card is never drawn through a node', () => {
             const nodes = [{ id: 'n', graphX: 40, graphY: 0 }]
             const card = buildObjectCards([thing('a')], { nodes, heightOf: () => 300 })[0]
             expect(card.graphY).toBeGreaterThan(300)
@@ -96,6 +105,23 @@ describe('every thing is a card', () => {
             expect(byId.e.graphX).toBe(byId.g.graphX)
             expect(byId.e.graphY).toBeGreaterThan(byId.c2.graphY)
         })
+    })
+})
+
+describe('the band a new node steps aside from', () => {
+    it('covers every card, with a margin', () => {
+        const cards = buildObjectCards([thing('a'), thing('g', 'group'), thing('c', 'box', { parentId: 'g' })])
+        const band = thingBandBounds(cards)
+        for (const card of cards) {
+            expect(card.graphX).toBeGreaterThan(band.minX)
+            expect(card.graphY).toBeGreaterThan(band.minY)
+            expect(card.graphX + 200).toBeLessThan(band.maxX)
+            expect(card.graphY + 74).toBeLessThan(band.maxY)
+        }
+    })
+
+    it('is nothing when there are no things', () => {
+        expect(thingBandBounds([])).toBeNull()
     })
 })
 

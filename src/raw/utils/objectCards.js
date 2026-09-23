@@ -53,23 +53,22 @@ const ROW = THING_CARD_HEIGHT + 18
 const COLUMN_GAP = 40
 
 /**
- * Where the things sit: a band BELOW the lowest node card. Each top-level thing
- * starts a column; what stands in a group stacks under the group's card, one
- * step in per level, so the canvas reads as the same tree the outliner shows.
- * Below rather than beside the nodes: the graph is what this canvas is for, the
- * things are what the room is holding — a contact sheet under the edit.
+ * Where the things sit: a band of cards. Each top-level thing starts a column;
+ * what stands in a group stacks under the group's card, one step in per level,
+ * so the canvas reads as the same tree the outliner shows.
+ *
+ * The band stands at the canvas origin and STAYS there while no node card
+ * overlaps it. The branch this came from always put it below the lowest node,
+ * and seen on 2026-09-23 that moved every thing card off-screen the moment a
+ * first node was placed — a layout worked out from the nodes jumps whenever
+ * the nodes change. Only when a node really stands on the band (an older
+ * project that already had nodes there) does the band move below the nodes,
+ * so a card is never drawn through a node. New nodes step aside from the band
+ * where they are created (RawEditor's handlePaletteCreate).
  */
 export function buildObjectCards(entities = [], { nodes = [], perRow = 4, gap = 140, heightOf = () => 140 } = {}) {
     const walk = walkEntityTree(entities)
     if (!walk.length) return []
-
-    // `heightOf` is the node card's real height (cardGeometry's cardHeight) in
-    // the editor; a picture operator's card is far taller than 140.
-    const nodeBottom = nodes.length
-        ? Math.max(...nodes.map((node) => (node.graphY ?? 0) + heightOf(node)))
-        : 0
-    const originX = nodes.length ? Math.min(...nodes.map((node) => node.graphX ?? 0)) : 0
-    const originY = nodeBottom + (nodes.length ? gap : 0)
 
     // Split the walk into blocks: one top-level thing and everything under it.
     const blocks = []
@@ -85,7 +84,7 @@ export function buildObjectCards(entities = [], { nodes = [], perRow = 4, gap = 
     }
 
     const cards = []
-    let rowTop = originY
+    let rowTop = 0
     for (let start = 0; start < blocks.length; start += perRow) {
         const row = blocks.slice(start, start + perRow)
         row.forEach((block, columnIndex) => {
@@ -103,14 +102,44 @@ export function buildObjectCards(entities = [], { nodes = [], perRow = 4, gap = 
                     typeLabel: thingTypeLabel(entity),
                     holds,
                     familyColor: OBJECT_CARD_COLOR,
-                    graphX: originX + columnIndex * column + depth * THING_INDENT,
+                    graphX: columnIndex * column + depth * THING_INDENT,
                     graphY: rowTop + index * ROW
                 })
             })
         })
         rowTop += Math.max(...row.map((block) => block.length)) * ROW + COLUMN_GAP
     }
-    return cards
+
+    // Does any node stand on the band where it is? `heightOf` is the node
+    // card's real height (cardGeometry's cardHeight) in the editor; a picture
+    // operator's card is far taller than 140.
+    const band = thingBandBounds(cards)
+    const onBand = nodes.some((node) => boxesOverlap(band, {
+        minX: node.graphX ?? 0,
+        minY: node.graphY ?? 0,
+        maxX: (node.graphX ?? 0) + CARD_WIDTH,
+        maxY: (node.graphY ?? 0) + heightOf(node)
+    }))
+    if (!onBand) return cards
+    const offsetX = Math.min(...nodes.map((node) => node.graphX ?? 0))
+    const offsetY = Math.max(...nodes.map((node) => (node.graphY ?? 0) + heightOf(node))) + gap
+    return cards.map((card) => ({ ...card, graphX: card.graphX + offsetX, graphY: card.graphY + offsetY }))
+}
+
+// A margin around the band, so a node that only grazes it still counts.
+const BAND_MARGIN = 24
+
+const boxesOverlap = (a, b) => a.minX < b.maxX && b.minX < a.maxX && a.minY < b.maxY && b.minY < a.maxY
+
+/** The rectangle the thing cards cover, plus a margin — for stepping a new node aside. */
+export function thingBandBounds(cards = []) {
+    if (!cards.length) return null
+    return {
+        minX: Math.min(...cards.map((card) => card.graphX)) - BAND_MARGIN,
+        minY: Math.min(...cards.map((card) => card.graphY)) - BAND_MARGIN,
+        maxX: Math.max(...cards.map((card) => card.graphX + CARD_WIDTH)) + BAND_MARGIN,
+        maxY: Math.max(...cards.map((card) => card.graphY + THING_CARD_HEIGHT)) + BAND_MARGIN
+    }
 }
 
 /**
