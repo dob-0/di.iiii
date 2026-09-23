@@ -467,6 +467,12 @@ const describeListenNow = () => describeListen({ host: config.host })
 
 const lighting = registerLightingRoutes(app, {
   dataDir: config.directories.dataDir,
+  // A space's show lives beside its scene, and only a space that is here has one.
+  spacesDir: SPACES_DIR,
+  findSpace: async (id) => {
+    const meta = await loadSpaceMeta(id)
+    return meta ? { label: meta.label || id } : null
+  },
   mountPaths: [...new Set(['/light', `${config.mountPath || ''}/light`.replace(/\/+/g, '/')])],
   offline: process.env.ARTNET_OFFLINE === '1',
   listen: describeListenNow
