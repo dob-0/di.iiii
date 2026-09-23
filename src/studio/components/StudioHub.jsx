@@ -23,6 +23,7 @@ import {
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildStudioHubPath, buildStudioProjectPath, buildSpacesPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { getCodeSpace } from '../utils/codeSpaces.js'
+import { describeProjectLayers } from '../../project/layers.js'
 import '../styles/studio-hub.css'
 
 const formatRelativeDate = (iso) => {
@@ -345,6 +346,13 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                     >
                         {project.title}
                     </p>
+                )}
+                {/* What the project holds, in one line — "3 things · 2 wires ·
+                    1 surface · 1 lamp", or "empty" — worked out by the server
+                    from the document (src/project/layers.js), never stored. A
+                    server too old to send it leaves the card as it was. */}
+                {project.layers && (
+                    <p className="sh-code-blurb">{describeProjectLayers(project.layers)}</p>
                 )}
                 <div className="sh-project-meta">
                     <span className="sh-meta-tag">{formatRelativeDate(project.updatedAt)}</span>

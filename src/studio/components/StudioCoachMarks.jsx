@@ -10,11 +10,27 @@ import '../styles/studio-coach.css'
 // Guest first-run coach: one hint on screen at a time, each completed by the
 // action it teaches — select something, add something, open Share. No step is
 // dismissed by reading; the pill dies when the action happens.
-const STEPS = [
-    { id: 'touch', label: 'Tap an object to select it' },
-    { id: 'add', label: 'Open Create and add something' },
-    { id: 'share', label: 'Open Share to keep what you made' }
-]
+//
+// Two orders. A project that already holds things starts where it always did,
+// on tapping one. An EMPTY project cannot: it asked a newcomer to "Tap an
+// object" in a room with none (the layers decision, 2026-09-23, unit 2). There
+// the first hint is to add something, and the next is to tap it — done by the
+// tap itself (`selectTicks`), because placing a thing already selects it.
+const STEP_LABELS = {
+    touch: 'Tap an object to select it',
+    add: 'Open Create and add something',
+    share: 'Open Share to keep what you made'
+}
+const EMPTY_STEP_LABELS = {
+    add: 'Add something',
+    touch: 'Tap it',
+    share: STEP_LABELS.share
+}
+const ORDERS = {
+    filled: ['touch', 'add', 'share'],
+    empty: ['add', 'touch', 'share']
+}
+const STEPS = ORDERS.filled
 
 const IDLE = -1
 const DONE = STEPS.length
@@ -73,37 +89,56 @@ function JamCoach({ entityCount }) {
     )
 }
 
-function GuestCoach({ authType, entityCount, hasSelection, shareOpen }) {
+function GuestCoach({ authType, entityCount, hasSelection, selectTicks = 0, shareOpen, covered = false }) {
 
     const [stepIndex, setStepIndex] = useState(IDLE)
+    // Which order this run follows, decided once when the coach arms — the
+    // shell mounts the coach only after the real document has loaded.
+    const [order, setOrder] = useState('filled')
     // Entity count when the add step arms — the document loads objects
     // asynchronously, so a mount-time baseline would complete it falsely.
     const addBaseline = useRef(null)
+    // Picks and selection when the touch step arms.
+    const touchBaseline = useRef(null)
+    const steps = ORDERS[order]
+    const labels = order === 'empty' ? EMPTY_STEP_LABELS : STEP_LABELS
+    const stepId = stepIndex >= 0 && stepIndex < steps.length ? steps[stepIndex] : null
 
     useEffect(() => {
         if (stepIndex !== IDLE) return
-        if (shouldShowStudioCoach(authType)) setStepIndex(0)
-    }, [authType, stepIndex])
-
-    useEffect(() => {
-        if (stepIndex === 0 && hasSelection) {
-            addBaseline.current = entityCount
-            setStepIndex(1)
+        if (shouldShowStudioCoach(authType)) {
+            setOrder(entityCount === 0 ? 'empty' : 'filled')
+            setStepIndex(0)
         }
-    }, [stepIndex, hasSelection, entityCount])
+    }, [authType, stepIndex, entityCount])
+
+    // Arm each step's baseline the moment it becomes the current one.
+    useEffect(() => {
+        if (stepId === 'add') addBaseline.current = entityCount
+        if (stepId === 'touch') touchBaseline.current = { ticks: selectTicks, selected: hasSelection }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [stepId])
 
     useEffect(() => {
-        if (stepIndex === 1 && addBaseline.current !== null && entityCount > addBaseline.current) {
-            setStepIndex(2)
+        if (stepId !== 'touch' || !hasSelection || !touchBaseline.current) return
+        const armed = touchBaseline.current
+        // Nothing was selected when the step armed: any selection is the tap.
+        // Something already was (the thing just placed): only a new pick counts.
+        if (!armed.selected || selectTicks > armed.ticks) setStepIndex((i) => i + 1)
+    }, [stepId, hasSelection, selectTicks])
+
+    useEffect(() => {
+        if (stepId === 'add' && addBaseline.current !== null && entityCount > addBaseline.current) {
+            setStepIndex((i) => i + 1)
         }
-    }, [stepIndex, entityCount])
+    }, [stepId, entityCount])
 
     useEffect(() => {
-        if (stepIndex === 2 && shareOpen) {
+        if (stepId === 'share' && shareOpen) {
             markStudioCoachDone()
             setStepIndex(DONE)
         }
-    }, [stepIndex, shareOpen])
+    }, [stepId, shareOpen])
 
     useEffect(() => {
         if (stepIndex !== DONE) return
@@ -111,7 +146,9 @@ function GuestCoach({ authType, entityCount, hasSelection, shareOpen }) {
         return () => clearTimeout(t)
     }, [stepIndex])
 
-    if (stepIndex === IDLE) return null
+    // A phone sheet takes the band the pill sits in; the pill waits behind it
+    // (still counting) instead of lying over the sheet's own words.
+    if (stepIndex === IDLE || covered) return null
 
     const dismiss = () => {
         markStudioCoachDone()
@@ -125,11 +162,11 @@ function GuestCoach({ authType, entityCount, hasSelection, shareOpen }) {
             ) : (
                 <>
                     <span className="studio-coach-dots" aria-hidden="true">
-                        {STEPS.map((step, i) => (
-                            <span key={step.id} className={`studio-coach-dot${i < stepIndex ? ' is-done' : ''}${i === stepIndex ? ' is-active' : ''}`} />
+                        {steps.map((id, i) => (
+                            <span key={id} className={`studio-coach-dot${i < stepIndex ? ' is-done' : ''}${i === stepIndex ? ' is-active' : ''}`} />
                         ))}
                     </span>
-                    <span className="studio-coach-label">{STEPS[stepIndex].label}</span>
+                    <span className="studio-coach-label">{labels[stepId]}</span>
                 </>
             )}
             <button className="studio-coach-close" onClick={dismiss} aria-label="Dismiss guide">✕</button>

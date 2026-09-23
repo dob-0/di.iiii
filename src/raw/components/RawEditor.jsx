@@ -36,6 +36,7 @@ import MidiInputPanel from './MidiInputPanel.jsx'
 import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import RawHelpDialog from './RawHelpDialog.jsx'
 import SurfaceBar from '../../components/SurfaceBar.jsx'
+import { useProjectLayers } from '../../project/useProjectLayers.js'
 import useLocalInstall from '../../hooks/useLocalInstall.js'
 import useSpaceName from '../../hooks/useSpaceName.js'
 import { isEmbedRequest } from '../../utils/previewMode.js'
@@ -533,6 +534,8 @@ export default function RawEditor({
     // the way to Studio, Projection and Light is never hidden on the first screen.
     const barStaysInZen = zen && isAutoZen(zenWorkspaceKey)
     const showBar = !isLocalWorkspace && (chromeVisible || barStaysInZen) && !isWorldFullscreen && !isEmbed
+    // The bar grows with the project (src/project/layers.js): which layers are open, once it has loaded.
+    const barLayers = useProjectLayers(document, projectId, state.hasLoaded).open
     // Computed once: pointer type doesn't change mid-session on the devices this
     // matters for, and re-checking on every render would just be wasted work.
     const [pointerVerb] = useState(() => (
@@ -2175,6 +2178,7 @@ export default function RawEditor({
                 projectLabel={document.projectMeta?.title}
                 isLocalInstall={localInstall.isLocal}
                 hidden={!showBar}
+                layers={barLayers}
             />
             {state.pendingSyncError && (
                 <div className="raw-sync-alert" role="alert">

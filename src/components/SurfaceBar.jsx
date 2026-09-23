@@ -4,6 +4,7 @@ import { appNavigate } from '../utils/appNavigate.js'
 import { buildStudioHubPath, buildStudioProjectPath } from '../studio/utils/studioRouting.js'
 import { buildRawProjectPath, buildRawProjectsPath } from '../raw/utils/rawRouting.js'
 import { buildMapPath } from '../map/mapRouting.js'
+import { useAllTools } from '../studio/utils/jamMode.js'
 
 /**
  * The one strip that is on every surface.
@@ -59,12 +60,24 @@ const lightHref = ({ isLocalInstall, space, project, projectLabel }) => {
     return `/light/?${query.toString()}`
 }
 
-export const surfaceDestinations = ({ isLocalInstall = false, space = null, project = null, projectLabel = null } = {}) => {
+// Inside a project the bar grows with it (the layers decision, 2026-09-23,
+// unit 3): each of the three later tools is on the bar once the project has
+// reached its layer — Nodes when the room holds a thing, Projection when there
+// is a connection, Light when a lamp stands in the room (src/project/layers.js).
+// Outside a project every name stays, as before: a stranger meets the whole
+// list where strangers meet it, which is why Light stayed on the hosted bar.
+const LAYER_OF = { raw: 'connections', map: 'wall', light: 'lamps' }
+
+export const surfaceDestinations = ({ isLocalInstall = false, space = null, project = null, projectLabel = null, layers = null, here = null } = {}) => {
     // A project only means something inside its space; without the space
     // there is no address to build.
     const inProject = Boolean(space && project)
     return DESTINATIONS
         .filter(d => !d.project || inProject)
+        // `layers` is null until the project has loaded (nothing hides before
+        // that), and null under "All tools". The surface you stand on is never
+        // taken off the bar, whatever the project holds.
+        .filter(d => !(inProject && layers && LAYER_OF[d.key] && d.key !== here && !layers[LAYER_OF[d.key]]))
         .map(d => {
             if (d.key === 'light') {
                 return { ...d, href: lightHref({ isLocalInstall, space, project, projectLabel }), clientSide: !isLocalInstall }
@@ -100,9 +113,12 @@ export default function SurfaceBar({
     hidden = false,        // presentation / embed / XR
     float = false,         // the surface below is a full-bleed canvas
     children = null,       // one surface-specific control, at most
+    layers = null,         // inside a project: which layers are open (src/project/layers.js)
 }) {
+    // "⚒ All tools", kept in this browser, brings every name back.
+    const allTools = useAllTools()
     if (hidden) return null
-    const destinations = surfaceDestinations({ isLocalInstall, space, project, projectLabel })
+    const destinations = surfaceDestinations({ isLocalInstall, space, project, projectLabel, layers: allTools ? null : layers, here })
 
     return (
         <nav className={`sbar${float ? ' sbar--float' : ''}`} aria-label="di.iiii">

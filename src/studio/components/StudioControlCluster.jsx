@@ -64,6 +64,9 @@ export default function StudioControlCluster({
     minimal = false,
     allTools = false,
     onToggleAllTools = null,
+    // Every project has "⚒ All tools" now (the layers decision, 2026-09-23);
+    // outside the jam it says what it does there. Null keeps the jam's words.
+    allToolsHint = null,
 }) {
     const [collapsed, setCollapsed] = useState(false)
 
@@ -177,7 +180,7 @@ export default function StudioControlCluster({
                                     <button
                                         className="scc-btn"
                                         onClick={onToggleAllTools}
-                                        title={allTools ? 'Back to the simple jam view' : 'Show the full editor'}
+                                        title={allToolsHint || (allTools ? 'Back to the simple jam view' : 'Show the full editor')}
                                     >
                                         {allTools ? '◱ Simple' : '⚒ All tools'}
                                     </button>

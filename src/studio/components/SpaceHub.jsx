@@ -1155,6 +1155,19 @@ export default function SpaceHub() {
                                     {doorTitle && (
                                         <p className="ssh-space-project">Opens on: {doorTitle}</p>
                                     )}
+                                    {/* What the space HOLDS: "26 projects · 2 published".
+                                        A card named only the project its door opens on,
+                                        so a space with none — the Open Space above all —
+                                        read as empty with everything made in it hidden.
+                                        The server sends the counts only for a space this
+                                        person may enter; zero is an answer too. */}
+                                    {Number.isFinite(space.projectCount) && (
+                                        <p className="ssh-space-project">
+                                            {space.projectCount === 0
+                                                ? 'No projects yet'
+                                                : `${space.projectCount} project${space.projectCount === 1 ? '' : 's'} · ${space.publishedCount > 0 ? `${space.publishedCount} published` : 'none published'}`}
+                                        </p>
+                                    )}
                                     {/* A card opens the space's one door. Everything
                                         else the space holds had no address anybody
                                         would click — 114 projects on this copy, most
