@@ -13,10 +13,15 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- folding nine notes by hand again, PR #542's `land` job hit the same GH006
-- layers: a project opens bare and the bar grows with it (units 1–3)
-- every thing in the room is a card in Nodes (layers units 4, 6, 7)
-- batch landing: layer by layer (units 1–4, 6, 7 of the layers plan)
+- spaces audit: every space across local, dev and live (read-only)
+- CONTRIBUTING says who decides what in a space, and walks the program line end to end
+- HTTP Range support for asset streaming
+- a file for an existing space is a proposal: summary, Apply/Reject in the inner bot, restore point first
+- A per-space trusted list, and the gate learns "apply now" — the steward's bypass itself waits for the owner's hand
+- one command for the content line: `npm run send -- <space>`
+- start-check can see the content line again: the server's own env file wins
+- the front door pulled 12.84 MB of its 13.04 MB over one 3.2 MB file
+- batch landing before the promotion: ten green PRs, one CI round
 
 Full detail: `PROGRESS.md`.
 
