@@ -66,7 +66,13 @@ describe('the lighting desk at /light', () => {
     const { base } = await boot()
     const bare = await fetch(`${base}/light?space=lab&project=first-piece`, { redirect: 'manual' })
     expect(bare.status).toBe(302)
-    expect(bare.headers.get('location')).toBe('/light/?space=lab&project=first-piece')
+    // A space in the query is that space's page: its relative addresses name its show.
+    expect(bare.headers.get('location')).toBe('/light/space/lab/?space=lab&project=first-piece')
+    const slashed = await fetch(`${base}/light/?space=lab&project=first-piece`, { redirect: 'manual' })
+    expect(slashed.headers.get('location')).toBe('/light/space/lab/?space=lab&project=first-piece')
+    // Not a space's name: the desk as it always was, query and all.
+    const odd = await fetch(`${base}/light?space=..%2Fetc`, { redirect: 'manual' })
+    expect(odd.headers.get('location')).toBe('/light/?space=..%2Fetc')
     const page = await fetch(`${base}/light/?space=lab&project=first-piece&label=First%20Piece`)
     expect(page.status).toBe(200)
     const html = await page.text()
@@ -112,6 +118,34 @@ describe('the lighting desk at /light', () => {
     lane.getDesk().writeShow()
     const show = JSON.parse(fs.readFileSync(path.join(dir, 'lighting', 'show.json'), 'utf8'))
     expect(show.fixtures.find((f) => f.id === a.id)).toMatchObject({ x: 0.25, y: 0.75 })
+  })
+
+  // ONE SHOW PER SPACE: a page opened for a space runs that space's show, written
+  // beside the space's scene; the machine's own show is not touched by it.
+  it('keeps a space\'s show beside the space, and the machine\'s show where it was', async () => {
+    delete process.env.NODE_ENV
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'dii-light-spaces-'))
+    cleanups.push(() => fs.rmSync(root, { recursive: true, force: true }))
+    const spacesDir = path.join(root, 'spaces')
+    const { base, dir, lane } = await boot({ spacesDir, findSpace: async (id) => (id === 'lab' ? { label: 'Lab' } : null) })
+    const post = (route, body) => fetch(`${base}${route}`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body)
+    })
+    await post('/light/api/fixtures/add', { profile: 'rgb', count: 1 })
+    const page = await fetch(`${base}/light/space/lab/`)
+    expect(page.status).toBe(200)
+    expect(await page.text()).toContain('<script src="app.js">')
+    expect((await post('/light/space/lab/api/show/open', {})).status).toBe(200)
+    await post('/light/space/lab/api/fixtures/add', { profile: 'rgb', count: 2 })
+    await post('/light/space/lab/api/scenes/save', { name: 'Warm' })
+    lane.getDesk().writeShow()
+    const lab = JSON.parse(fs.readFileSync(path.join(spacesDir, 'lab', 'lighting', 'show.json'), 'utf8'))
+    expect(lab.fixtures).toHaveLength(2)
+    expect(lab.scenes.map((s) => s.name)).toEqual(['Warm'])
+    expect(lab.output).toBeUndefined()
+    const machine = JSON.parse(fs.readFileSync(path.join(dir, 'lighting', 'show.json'), 'utf8'))
+    expect(machine.fixtures).toHaveLength(1)
+    expect((await post('/light/api/show/open', { space: 'elsewhere' })).status).toBe(404)
   })
 
   it('does not exist on a hosted server', async () => {

@@ -36,9 +36,22 @@ const {
 function createDesk(opts = {}) {
   const DATA = opts.dataDir || path.join(__dirname, 'data');
   const PUBLIC = opts.uiDir || path.join(__dirname, 'ui');
-  const SHOW = path.join(DATA, 'show.json');
-  const SHOW_PREV = path.join(DATA, 'show.prev.json');
-  // The fixture catalogue, cached beside the show so it survives a night with no wifi.
+  // ONE SHOW LOADED AT A TIME, the way a console loads a show file. Inside di.iiii a
+  // space owns its own show (`opts.spaces.dir(id)` says where it lives, beside the
+  // space's scene, so it travels in the space's .diiii); this machine's own show stays
+  // at <dataDir>/show.json, where it has always been. `show` names the one loaded now.
+  // Standing alone (the club desk) there are no spaces, and the desk is exactly the
+  // one-file desk it always was.
+  const spaces = opts.spaces && typeof opts.spaces.dir === 'function' && typeof opts.spaces.find === 'function'
+    ? opts.spaces : null;
+  const MACHINE_SHOW = path.join(DATA, 'show.json');
+  // Which show was loaded, so a restart comes back to it: a rig left transmitting a
+  // space's show must not wake up transmitting a different one.
+  const LOADED = path.join(DATA, 'desk.json');
+  let show = { space: null, label: null, dir: DATA };
+  const showFile = () => path.join(show.dir, 'show.json');
+  // The fixture catalogue, cached beside the machine's show so it survives a night with
+  // no wifi. It is a cache of the public library, not part of any show.
   const LIBRARY_DIR = path.join(DATA, 'library');
   // Offline renders everything and transmits nothing — tests, and a desk with no rig.
   const offline = !!opts.offline;
@@ -50,7 +63,8 @@ function createDesk(opts = {}) {
   const listen = typeof opts.listen === 'function' ? opts.listen : null;
   const log = opts.log || console.log;
   // True when this desk found no show to load. It stays true only until the first write,
-  // and it is what stops an empty desk from silently replacing a real one.
+  // and it is what stops an empty desk from silently replacing a real one. Set again by
+  // every load, because every loaded show is its own file with its own answer.
   let bootedWithNothing = false;
 
   const DEFAULT_STATE = {
@@ -199,13 +213,14 @@ function createDesk(opts = {}) {
   // The show file, or the newest complete copy of it. Order: the file itself; a finished
   // temp file whose rename was interrupted; the previous save. A truncated file is never
   // the reason for an empty desk while a complete one is sitting next to it.
-  function readShow() {
+  function readShow(dir = show.dir) {
+    const main = path.join(dir, 'show.json');
     let firstError = null;
-    for (const file of [SHOW, SHOW + '.tmp', SHOW_PREV]) {
+    for (const file of [main, main + '.tmp', path.join(dir, 'show.prev.json')]) {
       if (!fs.existsSync(file)) continue;
       try {
         const disk = JSON.parse(fs.readFileSync(file, 'utf8'));
-        if (file !== SHOW) log('  show.json was unreadable; loaded ' + path.basename(file) + ' instead');
+        if (file !== main) log('  show.json was unreadable; loaded ' + path.basename(file) + ' instead');
         return disk;
       } catch (e) { if (!firstError) firstError = e; }
     }
@@ -213,7 +228,29 @@ function createDesk(opts = {}) {
     const e = new Error('no show file'); e.code = 'ENOENT'; throw e;
   }
 
-  function loadState() {
+  // THE RIG STAYS WITH THE MACHINE. `output` — which wire the light leaves on (Art-Net,
+  // sACN, a USB widget and its port), where it is sent, whether it is on at all — is a
+  // fact about this machine and the cables plugged into it, not about the show. A
+  // space's show never carries it, and loading one never changes it: a file opened from
+  // someone else's laptop must not start sending light at the addresses of their venue.
+  function normaliseOutput(given) {
+    const out = { ...DEFAULT_STATE.output, ...(given || {}) };
+    // The wire switch. A show file from before it existed takes the desk's default:
+    // ON standing alone (the club desk must come back transmitting after a restart),
+    // OFF inside di.iiii (a dev server must never broadcast on a studio network).
+    out.enabled = given && given.enabled != null ? !!given.enabled : outputEnabledDefault;
+    out.manual = normaliseManual(out.manual);
+    // Every extra device goes back through the same clamps the route uses, so a show
+    // file edited by hand cannot smuggle in a send the live route would have refused.
+    out.extra = (Array.isArray(given && given.extra) ? given.extra : [])
+      .slice(0, 16).map((raw) => sanitizeSend(raw, raw)).filter(Boolean);
+    return out;
+  }
+
+  // `keepOutput`: the live rig, carried across a change of show. Absent only at boot,
+  // when the machine's own show is what says how this machine is wired.
+  function loadState({ keepOutput = null } = {}) {
+    bootedWithNothing = false;
     try {
       const disk = readShow();
       const s = { ...DEFAULT_STATE, ...disk };
@@ -222,16 +259,7 @@ function createDesk(opts = {}) {
       // added to the list would start a chase instantly. An empty chase is never armed.
       if (!Array.isArray(s.chase.sceneIds)) s.chase.sceneIds = [];
       if (s.chase.sceneIds.length === 0) s.chase.enabled = false;
-      s.output = { ...DEFAULT_STATE.output, ...(disk.output || {}) };
-      // The wire switch. A show file from before it existed takes the desk's default:
-      // ON standing alone (the club desk must come back transmitting after a restart),
-      // OFF inside di.iiii (a dev server must never broadcast on a studio network).
-      s.output.enabled = disk.output && disk.output.enabled != null ? !!disk.output.enabled : outputEnabledDefault;
-      s.output.manual = normaliseManual(s.output.manual);
-      // Every extra device goes back through the same clamps the route uses, so a show
-      // file edited by hand cannot smuggle in a send the live route would have refused.
-      s.output.extra = (Array.isArray(disk.output && disk.output.extra) ? disk.output.extra : [])
-        .slice(0, 16).map((raw) => sanitizeSend(raw, raw)).filter(Boolean);
+      s.output = keepOutput || normaliseOutput(disk.output);
       s.fx = { ...DEFAULT_STATE.fx, ...(disk.fx || {}) };
       s.fx.exclude = Array.isArray(s.fx.exclude)
         ? s.fx.exclude.filter((p) => typeof p === 'string' && p).slice(0, 20)
@@ -267,19 +295,23 @@ function createDesk(opts = {}) {
       // Nothing was loaded. Remembered, because an empty desk that then SAVES would
       // write its emptiness over whatever appears at that path afterwards.
       bootedWithNothing = true;
-      if (fs.existsSync(SHOW)) {
-        const aside = SHOW.replace(/.json$/, '-broken-' + Date.now() + '.json');
-        try { fs.copyFileSync(SHOW, aside); } catch (e2) {}
-        log('COULD NOT LOAD ' + SHOW + ': ' + e.message);
+      const file = showFile();
+      if (fs.existsSync(file)) {
+        const aside = file.replace(/.json$/, '-broken-' + Date.now() + '.json');
+        try { fs.copyFileSync(file, aside); } catch (e2) {}
+        log('COULD NOT LOAD ' + file + ': ' + e.message);
         log('Starting with an EMPTY desk; your show is preserved at ' + aside);
       }
       const fresh = JSON.parse(JSON.stringify(DEFAULT_STATE));
       fresh.output.enabled = outputEnabledDefault;
+      if (keepOutput) fresh.output = keepOutput;
       return fresh;
     }
   }
 
-  const state = attachAudio(loadState());
+  // Both are `let`: loading another show replaces the state whole, and the engine is
+  // pointed at it. Everything below reads them at the moment it runs.
+  let state = attachAudio(loadState());
   const engine = new Engine(state);
   const artnet = new ArtNet({
     port: state.output.port,
@@ -427,29 +459,73 @@ function createDesk(opts = {}) {
   // Ctrl+C then threw the whole drag away. Exit flushes whatever is pending.
   let saveTimer = null;
   let dirty = false;
+
+  // One file, written whole: to a temp file, the previous good copy COPIED aside (never
+  // renamed — see writeShow), then renamed over the live path, which is atomic.
+  function writeWhole(file, text) {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const tmp = file + '.tmp';
+    fs.writeFileSync(tmp, text);
+    try { fs.copyFileSync(file, file.replace(/\.json$/, '.prev.json')); } catch (e) { /* first save ever */ }
+    fs.renameSync(tmp, file);
+  }
+
+  // A show as a space keeps it: everything but `output`. A shallow copy of a dozen keys;
+  // the non-enumerable live halves (audio levels, identify) were never in it anyway.
+  function withoutRig(s) {
+    const content = Object.assign({}, s);
+    delete content.output;
+    return content;
+  }
+
+  // The rig as last written into the machine's own show file, so a space's show being
+  // saved rewrites that file only when the rig actually changed.
+  let machineOutputText = JSON.stringify(state.output);
+
+  // While a space's show is loaded, the rig is still the machine's: a change under OUTPUT
+  // goes into the machine's own show file, read fresh and rewritten whole, so the rest of
+  // that show — which is not loaded — is kept exactly as it was.
+  function writeMachineOutput() {
+    const text = JSON.stringify(state.output);
+    if (text === machineOutputText) return;
+    let disk = {};
+    if (fs.existsSync(MACHINE_SHOW)) {
+      try { disk = JSON.parse(fs.readFileSync(MACHINE_SHOW, 'utf8')); }
+      catch (e) {
+        // Never written over: an unreadable machine show is somebody's show.
+        log('the output settings were not saved: ' + MACHINE_SHOW + ' could not be read (' + e.message + ')');
+        return;
+      }
+    }
+    disk.output = state.output;
+    writeWhole(MACHINE_SHOW, JSON.stringify(disk));
+    machineOutputText = text;
+  }
+
   function writeShow() {
     clearTimeout(saveTimer);
     saveTimer = null;
     if (!dirty) return;
     dirty = false;
-    fs.mkdirSync(DATA, { recursive: true });
+    const file = showFile();
+    fs.mkdirSync(show.dir, { recursive: true });
     // A show that appeared after we booted with nothing belongs to somebody else — a
     // second desk on the same folder, a file restored by hand between the boot and now.
     // It is preserved and named rather than overwritten, and said out loud. An empty
     // desk quietly replacing a real one is the worst thing this file could do.
-    if (bootedWithNothing && fs.existsSync(SHOW)) {
-      const aside = SHOW.replace(/\.json$/, '-found-' + Date.now() + '.json');
+    if (bootedWithNothing && fs.existsSync(file)) {
+      const aside = file.replace(/\.json$/, '-found-' + Date.now() + '.json');
       try {
-        fs.copyFileSync(SHOW, aside);
-        log('A show appeared at ' + SHOW + ' after this desk started empty.');
+        fs.copyFileSync(file, aside);
+        log('A show appeared at ' + file + ' after this desk started empty.');
         log('It has NOT been overwritten blindly — it is kept at ' + aside);
       } catch (e) { /* if it cannot be preserved, the write below is still refused */ }
     }
     bootedWithNothing = false;
-    const tmp = SHOW + '.tmp';
     // Compact, not pretty-printed: at 500+ scenes the indented form cost ~29ms to
     // stringify, over the 25ms frame budget at 40Hz. Compact is ~9ms and a third the size.
-    fs.writeFileSync(tmp, JSON.stringify(state));
+    // A space's show is written without the rig (normaliseOutput says why).
+    const text = show.space ? JSON.stringify(withoutRig(state)) : JSON.stringify(state);
     // The previous copy is COPIED aside, never renamed. Renaming the live file away
     // first left a window — microseconds, but real — in which show.json did not exist at
     // all, and a second desk booting into that window found no show, started empty, and
@@ -457,8 +533,9 @@ function createDesk(opts = {}) {
     // stack when a restart overlapped a save, and only show.prev.json still held the rig.
     // A rename onto the live path is atomic, so show.json now goes straight from the old
     // contents to the new and is never absent.
-    try { fs.copyFileSync(SHOW, SHOW_PREV); } catch (e) { /* first save ever */ }
-    fs.renameSync(tmp, SHOW);
+    writeWhole(file, text);
+    if (show.space) writeMachineOutput();
+    else machineOutputText = JSON.stringify(state.output);
   }
   // The layer an outside caller's cue drives, unless it names another.
   const CUE_LAYER = 'cue';
@@ -918,12 +995,73 @@ function createDesk(opts = {}) {
         chaseIndex: engine.chase.index,
       },
       dmx: snapshot(),
+      show: showInfo(),
     });
   }
 
   const routes = {
 
     'GET /api/state': (req, res) => json(res, publicStateJson(), 200, req),
+
+    // Which show this desk is running, where its file is, and whether the one offer a
+    // new space's empty show gets applies. Answered whichever show a page asked for.
+    'GET /api/show': (req, res) => json(res, showInfo()),
+
+    // Load a show: {space: '<id>'} for that space's, {space: null} for this machine's
+    // own. A page opened for a space sends nothing and gets its own. With output ON
+    // this changes the room, so it is refused unless the caller says {live: true} —
+    // the button the operator pressed, never a page opening by itself.
+    'POST /api/show/open': async (req, res, body) => {
+      const want = body && body.space !== undefined ? body.space : req.showKey;
+      let next;
+      if (want === null || want === undefined || want === '') next = { space: null, label: null, dir: DATA };
+      else {
+        if (typeof want !== 'string' || !SPACE_ID.test(want)) return json(res, { error: `"${String(want).slice(0, 60)}" is not the name of a space` }, 400);
+        if (!spaces) return json(res, { error: 'This desk keeps one show of its own; it has no spaces.' }, 404);
+        const found = await spaces.find(want);
+        if (!found) return json(res, { error: `There is no space called "${want}" on this di.iiii.` }, 404);
+        next = { space: want, label: String(found.label || want).slice(0, 80), dir: spaces.dir(want) };
+      }
+      if (next.space === show.space) {
+        if (next.label && next.label !== show.label) { show.label = next.label; rememberLoaded(); }
+        return json(res, { ok: true, show: showInfo() });
+      }
+      if (state.output.enabled && !(body && body.live === true)) {
+        return json(res, {
+          error: 'Output is on: loading another show changes the lights in the room.',
+          code: 'live', show: showInfo(),
+        }, 409);
+      }
+      switchShow(next);
+      json(res, { ok: true, show: showInfo() });
+    },
+
+    // THE ONE MIGRATION, and it is a copy. A space whose show was never saved can take
+    // this machine's own show as its starting point. The machine's file is read, never
+    // moved or changed; the space gets a file of its own, without the rig (which stays
+    // the machine's). Nothing does this by itself — a person presses the button. Undo:
+    // delete the space's show file (docs/architecture/LIGHTING_SHOW_PORTABILITY.md).
+    'POST /api/show/copy-machine': (req, res, body) => {
+      if (!show.space) return json(res, { error: "This desk is running this machine's own show; there is no space to copy it to." }, 400);
+      const target = body && body.space ? body.space : req.showKey;
+      if (target && target !== show.space) {
+        return json(res, { error: `This desk is running ${who()}, not ${target}'s.`, code: 'other-show', show: showInfo() }, 409);
+      }
+      if (fs.existsSync(showFile()) || !isEmptyShow(state)) {
+        return json(res, { error: `${show.label || show.space} already has a light show of its own. Nothing was copied.` }, 409);
+      }
+      let disk;
+      try { disk = readShow(DATA); } catch (e) { return json(res, { error: 'This machine has no show of its own to copy.' }, 404); }
+      // Whatever the empty space show had pending is dropped: the copy is its first save.
+      clearTimeout(saveTimer); saveTimer = null; dirty = false;
+      writeWhole(showFile(), JSON.stringify(withoutRig(disk)));
+      switchShow({ ...show });   // and loaded back from the file just written
+      log('  copied this machine\'s show to ' + showFile() + ' (' + MACHINE_SHOW + ' is unchanged)');
+      json(res, {
+        ok: true, show: showInfo(), from: MACHINE_SHOW, to: showFile(),
+        copied: { fixtures: state.fixtures.length, scenes: state.scenes.length, looks: state.looks.length },
+      });
+    },
 
     // The cheap read: a few hundred bytes for anything that polls fast — the graph's
     // DMX Out node, a phone strip, an AI director. /api/state is the whole library.
@@ -1830,13 +1968,108 @@ function createDesk(opts = {}) {
     },
   };
 
+  // ---- which show is loaded -------------------------------------------------
+  // A space's id as di.iiii makes them (spaceStore's SLUG_REGEX). Anything else is not
+  // a space, and never becomes a path on disk.
+  const SPACE_ID = /^[a-z0-9-]{3,48}$/;
+  // The routes a page opened for one space may use while another show is loaded: the
+  // ones that say which show is loaded, and the ones that change it.
+  const SHOW_ROUTES = new Set(['GET /api/show', 'POST /api/show/open', 'POST /api/show/copy-machine']);
+
+  const who = () => (show.space ? `${show.label || show.space}'s show` : "this machine's own show");
+
+  function isEmptyShow(s) {
+    return !s.fixtures.length && !s.scenes.length && !s.looks.length && !s.groups.length
+      && !s.sets.length && !(s.midi && Array.isArray(s.midi.maps) && s.midi.maps.length);
+  }
+
+  // What this machine's own show holds, read from disk (it is not the one loaded) and
+  // remembered by size and time, because the page asks on every poll.
+  let machineSeen = { key: '', counts: null };
+  function machineCounts() {
+    let st;
+    try { st = fs.statSync(MACHINE_SHOW); } catch (e) { return null; }
+    const key = st.size + ':' + st.mtimeMs;
+    if (machineSeen.key === key) return machineSeen.counts;
+    let counts = null;
+    try {
+      const disk = readShow(DATA);
+      const n = (k) => (Array.isArray(disk[k]) ? disk[k].length : 0);
+      counts = { fixtures: n('fixtures'), scenes: n('scenes'), looks: n('looks') };
+      if (!counts.fixtures && !counts.scenes && !counts.looks) counts = null;
+    } catch (e) { counts = null; }
+    machineSeen = { key, counts };
+    return counts;
+  }
+
+  function showInfo() {
+    const saved = fs.existsSync(showFile());
+    return {
+      space: show.space,
+      label: show.label,
+      file: showFile(),
+      saved,
+      live: !!state.output.enabled,
+      // The offer, and only while it can be taken: this space has no show of its own
+      // yet, and this machine's own show has something in it.
+      machine: show.space && !saved && isEmptyShow(state) ? machineCounts() : null,
+    };
+  }
+
+  function rememberLoaded() {
+    try {
+      fs.mkdirSync(DATA, { recursive: true });
+      fs.writeFileSync(LOADED + '.tmp', JSON.stringify({ space: show.space, label: show.label }));
+      fs.renameSync(LOADED + '.tmp', LOADED);
+    } catch (e) { log('could not remember which show is loaded: ' + e.message); }
+  }
+
+  // Load another show in place of this one. The one being left is saved whole first;
+  // the rig carries over untouched; the profile registry is emptied of the old show's
+  // own fixture types and filled with the new one's (each show carries its own).
+  function switchShow(next) {
+    writeShow();
+    cancelPending();
+    const rig = state.output;
+    for (const p of customProfiles()) removeProfile(p.name);
+    show = next;
+    state = attachAudio(loadState({ keepOutput: rig }));
+    engine.state = state;
+    engine.cancelFade();
+    engine.chase = { running: false, index: 0, nextAt: 0 };
+    stateVersion++;
+    rememberLoaded();
+    log('  loaded ' + who() + ' — ' + showFile());
+    pushFrame();
+  }
+
   async function handle(req, res, pathname) {
     const url = new URL(req.url, 'http://localhost');
     if (pathname == null) pathname = url.pathname;
     if (pathname === '') pathname = '/';
+    // A page opened for one space lives at space/<id>/, so every relative address it
+    // uses (api/state, app.js) says which show it is for without anyone adding it.
+    // Under it is the desk exactly as always, answering on that space's behalf.
+    req.showKey = null;
+    const keyed = /^\/space\/([^/]*)(\/.*)?$/.exec(pathname);
+    if (keyed) {
+      if (!SPACE_ID.test(keyed[1])) return json(res, { error: 'not the name of a space' }, 404);
+      // space/<id> → space/<id>/ : relative addresses only resolve under a directory.
+      if (!keyed[2]) { res.writeHead(302, { location: keyed[1] + '/' + url.search }); return res.end(); }
+      req.showKey = keyed[1];
+      pathname = keyed[2];
+    }
     if (pathname === FAVICON_204) { res.writeHead(204); return res.end(); }
     const key = req.method + ' ' + pathname;
     if (routes[key]) {
+      // Asked for one space's show while another is loaded: said, never answered with
+      // the wrong show — a write meant for one show must not land in another.
+      if (req.showKey && req.showKey !== show.space && !SHOW_ROUTES.has(key)) {
+        return json(res, {
+          error: `This desk is running ${who()}, not ${req.showKey}'s.`,
+          code: 'other-show', show: showInfo(),
+        }, 409);
+      }
       try {
         // Under Express the JSON body has already been parsed (and the stream drained);
         // standing alone the desk reads it itself.
@@ -1882,7 +2115,30 @@ function createDesk(opts = {}) {
     for (const id of [...extraDrivers.keys()]) closeExtra(id);
   }
 
-  return { handle, close, state, engine, writeShow, summary, showFile: SHOW };
+  // A restart comes back to the show it left. Only a space whose show is still on disk
+  // is loaded again; a space deleted since leaves this machine's own show in place.
+  (function comeBack() {
+    if (!spaces) return;
+    let kept = null;
+    try { kept = JSON.parse(fs.readFileSync(LOADED, 'utf8')); } catch (e) { return; }
+    const id = kept && kept.space;
+    if (typeof id !== 'string' || !SPACE_ID.test(id)) return;
+    const dir = spaces.dir(id);
+    if (!['show.json', 'show.json.tmp', 'show.prev.json'].some((f) => fs.existsSync(path.join(dir, f)))) {
+      log('  ' + id + "'s show is not on disk any more; this machine's own show is loaded");
+      return;
+    }
+    switchShow({ space: id, label: typeof kept.label === 'string' && kept.label ? kept.label.slice(0, 80) : id, dir });
+  })();
+
+  // `state` and the show file are read through, because loading another show replaces
+  // them: a caller holding the desk (the rig's blackout mirror) must reach the live one.
+  return {
+    handle, close, engine, writeShow, summary,
+    get state() { return state; },
+    get showFile() { return showFile(); },
+    get show() { return showInfo(); },
+  };
 }
 
 module.exports = { createDesk };
