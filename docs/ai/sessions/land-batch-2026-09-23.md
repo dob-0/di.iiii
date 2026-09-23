@@ -14,6 +14,12 @@ this batch; this note is for the batch branch itself.
 | #540 | `fix/first-room-traps` | Headset entry Off writes `'off'`; admin-mode chord and 4-finger hold need a signed-in admin; F with nothing selected frames the room; "+ new project" says why it failed |
 | #541 | `feat/bar-carries-project` | SurfaceBar carries `space · project`, names Projection, lists Light on every tier (hosted → the card, client-side); mounted on the Studio editor, the Nodes project canvas and the Projection desk; `--sbar-h` corrected |
 
+Found on the owner's install after packing the batch: an EMPTY Nodes project opens in the zen
+nobody chose (stored `auto-on`), and #541 hid the bar with the rest of the chrome, so a
+newcomer's first Nodes screen was a dead end again. Fixed on the batch: `isAutoZen()` in
+`src/raw/utils/zenMode.js`; `RawEditor` keeps the bar for an automatic zen and still hides
+it for a chosen one (tests in `zenMode.test.js` and `surfaceBar.embed.test.jsx`).
+
 One merge conflict, `src/tools/ToolsRoom.test.jsx` (added by both #540 and #541): the two
 files were combined into one, with a SurfaceBar mock that also exports `navigateInApp`.
 

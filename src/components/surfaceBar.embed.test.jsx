@@ -271,12 +271,24 @@ describe('a presentation draws no bar', () => {
         expect(bars()).toHaveLength(0)
     })
 
-    it('the Nodes canvas in zen draws no bar', async () => {
+    it('the Nodes canvas in a chosen zen draws no bar', async () => {
         window.localStorage.setItem('dii.raw.zen.p', 'on')
         render(<RawEditor projectId="p" spaceId="main" />)
         await waitFor(() => expect(screen.queryByTestId('raw-graph')).toBeTruthy())
         expect(document.querySelector('.raw-topbar.is-seeded')).toBeNull()
         expect(bars()).toHaveLength(0)
+    })
+
+    // An empty project opens in zen that nobody chose (stored 'auto-on'). That
+    // is a newcomer's first screen, so the bar stays even though the topbar
+    // does not: the stranger's walk (2026-09-22) found this exact dead end.
+    it('an empty Nodes canvas, in the zen nobody chose, keeps the bar', async () => {
+        window.localStorage.removeItem('dii.raw.zen.p')
+        render(<RawEditor projectId="p" spaceId="main" />)
+        await waitFor(() => expect(screen.queryByTestId('raw-graph')).toBeTruthy())
+        await waitFor(() => expect(window.localStorage.getItem('dii.raw.zen.p')).toBe('auto-on'))
+        expect(document.querySelector('.raw-topbar.is-seeded')).toBeNull()
+        await waitFor(() => expect(bars()).toHaveLength(1))
     })
 
     it('the Nodes canvas opened full-screen onto its room draws no bar', async () => {

@@ -97,6 +97,22 @@ export const liftAutoZen = (workspaceKey, { storage } = {}) => {
 }
 
 /**
+ * Is zen on only because the canvas was empty (stored 'auto-on'), not because
+ * a person chose it? The one bar above the canvas stays for an automatic zen —
+ * an empty project is the first thing a newcomer sees, and a canvas with no
+ * way out is the dead end the stranger's walk found (2026-09-22). A chosen zen
+ * hides the bar with the rest of the chrome.
+ */
+export const isAutoZen = (workspaceKey, { storage } = {}) => {
+    const store = storage ?? (typeof window !== 'undefined' ? window.localStorage : null)
+    try {
+        return (store?.getItem(storageKey(workspaceKey)) ?? null) === 'auto-on'
+    } catch {
+        return false
+    }
+}
+
+/**
  * Does this keystroke mean "open the palette"?
  *
  * Cmd/Ctrl+K, or a bare `/` — but never while the person is typing into

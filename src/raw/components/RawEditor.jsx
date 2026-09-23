@@ -80,7 +80,7 @@ import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
 import { RAW_ANATOMY_Z, RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getAnatomyDefaultFrame, getBottomReserve, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import { getCardBox } from '../utils/cardGeometry.js'
-import { isPaletteSummons, resolveZenPreference, writeZenPreference, liftAutoZen } from '../utils/zenMode.js'
+import { isPaletteSummons, resolveZenPreference, writeZenPreference, liftAutoZen, isAutoZen } from '../utils/zenMode.js'
 import {
     clearLocalWorkspaceDocument,
     readLocalWorkspaceDocument,
@@ -509,7 +509,11 @@ export default function RawEditor({
     }, [zen, navStack, authoredNodes])
     // Zen, a chromeless scope, the fullscreen room and a window are the work
     // showing, not the tool: the bar goes wherever the rest of the chrome goes.
-    const showBar = !isLocalWorkspace && chromeVisible && !isWorldFullscreen && !isEmbed
+    // One exception: the zen an EMPTY canvas opens in was not chosen by anyone,
+    // and a newcomer's first project is exactly that canvas — the bar stays so
+    // the way to Studio, Projection and Light is never hidden on the first screen.
+    const barStaysInZen = zen && isAutoZen(zenWorkspaceKey)
+    const showBar = !isLocalWorkspace && (chromeVisible || barStaysInZen) && !isWorldFullscreen && !isEmbed
     // Computed once: pointer type doesn't change mid-session on the devices this
     // matters for, and re-checking on every render would just be wasted work.
     const [pointerVerb] = useState(() => (
