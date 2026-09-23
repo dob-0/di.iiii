@@ -5,6 +5,442 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-22 — folding six notes by hand, because dev's protection rejects the job that should do it
+
+- `docs/ai/sessions/` had six notes on `dev` and the docs gate was failing there, which is
+  the state that eventually turns a dev deploy red.
+- **It is not that the job did not run.** `deploy-vps-dev.yml`'s `land` job ran, folded all
+  six correctly, and then could not push: `GH006: Protected branch update failed … 2 of 2
+  required status checks are expected`. The job catches that case and prints a warning
+  telling a person to run `npm run land` by hand — and because the job is
+  `continue-on-error: true` and the deploy itself succeeds (the test job folds in place),
+  the whole run still reads GREEN. So the only trace is a warning inside a passing run, and
+  the notes quietly pile up. `chore-land-sessions-2026-09-21.md` was the same thing a day
+  earlier.
+- Doing it by hand needs two guards stepped around, both deliberately there:
+  `npm run land` refuses a dirty tree (the main checkout carries untracked `.env` backups
+  that are the owner's, not ours) and refuses to run anywhere but `dev` (which cannot be
+  checked out twice). A clean worktree plus `session-land-lib.mjs`'s three functions —
+  `foldNotesIntoProgress`, `buildLastSessionSection`, `replaceLastSessionSection` — does
+  the same work without the guards. Note they take an array of note STRINGS, not objects.
+- `CURRENT.md` came out at 47 lines, under its hard cap of 50. Worth checking every time:
+  a fold of six notes is exactly the shape that overruns it, and then every dev deploy
+  fails until somebody trims it.
+- **The real fix is not this commit.** Either give the `github-actions` app a bypass on
+  dev's ruleset so the `land` job can push its own bookkeeping commit, or make that job
+  open a PR instead of pushing. Until one of those happens this will need doing by hand
+  after every landing, and it will keep looking green while it rots.
+
+## 2026-09-23 — sentences that lie, told true: the install host, Docker, di sync, follow files, the trash, Solo
+
+Wave 2 item 1 of `di-atlas/decisions/2026-09-23-connect-everything.md`. Words only: every
+fix below is a sentence brought into line with what the code and the servers do. Nothing
+was built, no route moved, no server was started.
+
+### The install host — curl results, 2026-09-23
+
+Both hosts answer the installer the same, byte for byte, with no redirect:
+
+```
+curl -sI https://diiii.xyz/get          HTTP/2 200  etag "6aa41127-215d"  content-length 8541  text/plain
+curl -sI https://di-studio.xyz/get      HTTP/2 200  etag "6aa41127-215d"  content-length 8541  text/plain
+curl -sI https://diiii.xyz/get.ps1      HTTP/2 200  etag "6aa41127-1c24"  content-length 7204  text/plain
+curl -sI https://di-studio.xyz/get.ps1  HTTP/2 200  etag "6aa41127-1c24"  content-length 7204  text/plain
+
+sha256  /get      810754beda375e758153bd00067ed3df27692cd56bce8d6fc927b1fbc46a6004  (both hosts)
+sha256  /get.ps1  34531d7e3f083f500fb0275e28b61ceea151260fd33bab28ca50644516bc6a49  (both hosts)
+```
+
+The served `/get` is identical to the repo's `install.sh`, and the scripts fetch the
+release from github.com whichever host served them. The page addresses the wiki names
+(`/open_jam`, `/open_jam/scene`, `/open`, `/wcc`, `/light`, `/{space}/scan`,
+`/main/studio`) answer 200 on both hosts with the same shell. So every `di-studio.xyz` in
+the wiki (21 on 20 lines) became `diiii.xyz`, installer lines included.
+`di-studio.xyz/get` keeps serving and is still never a redirect; nothing on the server
+changed.
+
+### Before → after, with the evidence
+
+**`src/wiki/wikiContent.js`**
+
+- `#di-cli-local`, Docker. Before: "Docker is there too, but only if you ask for it
+  (di install --docker) — a container cannot reach things on your machine, …". After: "It
+  always installs as that ordinary program, never as a container, so the surfaces that
+  talk to your own tools (the agent board, a Claude installed on this computer) can reach
+  them." Evidence: `scripts/di/cli.mjs` `COMMANDS` has no `install`;
+  `scripts/di/bootstrap.mjs` calls `probeAll({ home })` with no `forcedMode`, and nothing
+  in `scripts/di/`, `install.sh` or `install.ps1` reads `DI_MODE`, `--docker` or `--node`;
+  the installer finds or downloads a node before bootstrap runs, so `decideMode`
+  (`scripts/di/detect.mjs`) always returns node. The GHCR image is not pullable anyway:
+  an anonymous token for `dob-0/dii-server` is refused (UNAUTHORIZED, manifest HEAD 403,
+  checked 2026-09-23). aylmo's own `~/.di/state.json` says `mode: node`.
+- `#di-cli-local`, sync. Before: "di sync compares them and moves work in whichever
+  direction is safe — it refuses rather than guess when both sides have changed." After:
+  "di sync compares them — what each side has that the other has not, and whether sending
+  work either way would be safe or refused, as it is when both sides have changed. It only
+  looks: it writes nothing on either side. To carry work between them, use di save and di
+  open, di backup, or Save to file on the Spaces page." Evidence: `cmdSync` in
+  `scripts/di/cli.mjs` ("writes NOTHING … --push/--pull are later PRs"); `ui.syncReport`
+  in `scripts/di/ui.mjs` ends "nothing was written — this command only looks."; Save to
+  file and Open a file are in `SpaceHub.jsx` for any signed-in account.
+- `#spaces-and-projects`. Before: "/<space>/studio — the same list, in Studio’s older
+  address" and "/<space>/raw/projects — the same projects, in the node editor’s older
+  address". After: "/<space>/studio — the same projects in Studio, where you make them:
+  New project, drafts, shelves and the trash are here, and a card opens its project in
+  Studio" and "/<space>/raw/projects — the same projects, for the node editor: a card
+  opens its project on the node canvas". Evidence: neither address is older or retired —
+  `StudioApp.jsx` renders `StudioHub` (New project, the draft state, shelves, the trash,
+  `openProject` → `buildStudioProjectPath`); `RawApp.jsx` renders `RawHub`
+  (`listProjects(spaceId)`, `openProject` → `buildRawProjectPath`). Written so it stays
+  true when Wave 1 item 5 puts StudioHub on `/raw/projects` with cards opening in Nodes.
+- `#algovrithm`. Before: title "a code-authored VR space"; summary "a space whose scene is
+  written in three.js/R3F code"; body "a WebXR experience built the way br_id_ge and WCC
+  are — a real space, routed through the same server-verified public/private check".
+  After: title "a VR piece written in code"; summary "a VR piece written in three.js/R3F
+  code rather than made in Studio"; body "a WebXR piece that lives inside di.iiii’s own
+  code, as WCC does. Who may see it is decided the way it is for any space — the server
+  says whether the algovrithm space is public — but that space holds no projects, and its
+  address never opens one: /algovrithm is always the piece’s front door." Evidence:
+  `CURRENT.md` Open ("public, empty and it can never open … `src/algoVrithm/` owns that
+  url before any space lookup"); `RootApp.jsx` `WorkSurfaceRoute` (`useSpacePublicFlag`,
+  then the work's own surface for `/algovrithm` and `/algovrithm/scene`);
+  `src/works/works.js` (br_id_ge "lives in its own repository and arrives as a space" —
+  so "built the way br_id_ge is" was also stale); `GET /serverXR/api/spaces/algovrithm`
+  on diiii.xyz and dev.diiii.xyz → `isPublic: true, publishedProjectId: null`, and
+  `/contents` → `projects: []`. The piece itself opens: headless Chromium on
+  diiii.xyz/algovrithm and dev.diiii.xyz/algovrithm shows the front door and the
+  statement, and /algovrithm/scene shows the piece. The space still holds the Director's
+  saved timing (`src/timeline/timingOverlay.js`), which is why the words are "holds no
+  projects", not "holds nothing".
+- `#following-a-space`. Before: "What does not travel yet: images and models. A followed
+  scene will show their absence until they do." After: "A project’s files travel too, both
+  ways: an image, a video or a model added to a project on either machine is carried to
+  the other, one file at a time, and checked against its name before it is kept. Two kinds
+  do not travel yet — files placed straight in the space’s own scene rather than in a
+  project, and older files added before files had checkable names. Both stay on the
+  machine where they were added; di follows counts the older ones, and adding one again
+  sends it." Evidence: `serverXR/src/follow/assets.js` (since 2026-09-20, PROGRESS
+  "a follow carries its projects' files"); `docs/architecture/SPEC_follow_files.md` §2;
+  `followFileLines` in `scripts/di/ui.mjs` ("older files are not carried … add them again
+  to send them"). Tags gain files / images / models.
+- 20 lines, `di-studio.xyz` → `diiii.xyz`: Open Jam (short link, `/open_jam/scene`, the
+  bare `/open`, Share's copied link, the editor), the front door, `/light` and the rig on a
+  hosted site, Projection's address and its two hosted notes, the wcc card, the
+  Director's save, `--guests`, the vizzz rig, `/{space}/scan` and "Make the hall", and the
+  two installer lines. Evidence: the curl results above. Share copies
+  `window.location.origin + /open` (`JamSurface.jsx`), so on diiii.xyz it copies
+  diiii.xyz/open.
+
+**Delete dialogs** — `src/studio/components/StudioHub.jsx:260`,
+`src/studio/components/StudioProjectsPanel.jsx:77`, and the same sentence in
+`src/components/preferences/AdminManageSection.jsx:182`. Before: `Delete "…"? Cannot be
+undone.` (admin: `This cannot be undone.`). After: `Delete "…"? Moves to the trash for 30
+days.` Evidence: all three call `projectsApi.deleteProject` → `DELETE /api/projects/:id`,
+which soft-deletes (`serverXR/src/routes/projectRoutes.js`, `trashed: true`;
+`projectStore.js` `TRASH_TTL_MS` = 30 days); the wiki's `#shelves-and-the-trash` and the
+delete button's own title already said 30 days. The admin line was not in the plan; it is
+the same sentence over the same call.
+
+**Projection** — `src/map/MapSurface.jsx:399-400` (only those two lines). Before: `Solo`,
+title "Show this one alone". After: `Solo · screen`, title "Show this one alone on this
+screen. The projector still shows every surface." Evidence: `soloId` is local state passed
+only to this tab's `MapStage` (`soloSurfaceId`); `MapOutput` (`/out`) never receives it.
+
+**`docs/deploy/DI_CLI.md`** — the install block now names `diiii.xyz/get` and
+`/get.ps1`, and says `di-studio.xyz` serves the same bytes forever and must never become a
+redirect. "Node or Docker": step "1. DI_MODE, or --docker / --node → obeyed" is gone, with
+a paragraph saying Docker mode is not reachable today and why (the evidence above); "Docker
+mode is real and kept, but it is the deliberate choice (`--docker` / `DI_MODE=docker`)"
+now says the switch was never wired; "make the packages public and it starts working with
+no new release" now says that would not change it on its own. The plan's `DI_CLI.md:25`
+matched no docker sentence in today's file (line 25 is `di open FILE`); the docker claims
+were at 250 and 261-262.
+
+### Owed to the next land: CURRENT.md (a feature branch may not write it)
+
+`docs:ai:check` refuses a CURRENT.md that differs from origin/dev on a feature branch, so
+these two corrections were reverted here. The next land PR should apply them:
+
+- `:32` — "aylmo runs a branch build (`0.4.7-shelves.2`)" → "aylmo runs `0.4.15-place.1`
+  (packed 2026-09-22 from #534, the place-and-lights landing)". Evidence:
+  `~/.di/state.json` `version: 0.4.15-place.1`, `~/.di/current` → that version,
+  `release.json` `packedAt 2026-09-22T14:42Z`; local.thedi.studio answers 200.
+- `:35` — "Follow … carries NO assets yet — a followed scene shows a grey wall …" →
+  "Follow (one space on two installs) carries a project's files both ways since
+  2026-09-20 (`serverXR/src/follow/assets.js`; loopback proven only). Still NOT carried:
+  files on the space's own scene, and legacy uuid-id files (`di follows` counts them). No
+  warning when op retention drops something uncarried; no real two-machine transfer yet,
+  and the internet case needs a throwaway space — owner's call." (PROGRESS 2026-09-20
+  already wrote this sentence; it never reached CURRENT.md.)
+
+### Left, and why
+
+- `src/raw/AGENTS.md:40` — owned by the one-project-list agent.
+- `src/raw/components/RawHub.jsx:133` says "This cannot be undone" over the same soft
+  delete. RawHub is the one-project-list agent's (Wave 1 item 5 removes it).
+- `install.sh` / `install.ps1` (what `/get` serves): with no node and no nodejs.org, the
+  failure text offers "Docker Desktop — install it, open it once, then run this line
+  again". Rerunning with Docker still fails: the next run needs a node too, and the
+  images are private. Changing it changes the served installer, so it wants its own PR.
+- `scripts/di/detect.mjs` reason "docker stays opt-in (--docker)", printed by `di doctor`
+  only when Docker runs AND the images are pullable (not today), names a flag that does
+  not exist.
+- Still naming `di-studio.xyz` for the installer: `scripts/di/ui.mjs:307` (a CLI hint)
+  and `docs/deploy/SELF_HOST.md:4`. Same evidence; outside this unit's files.
+- Space delete ("Delete space … cannot be undone", `SpaceHub.jsx:520`,
+  `AdminManageSection.jsx:130`) is true: `DELETE /api/spaces/:id` removes the space for
+  real. Left as is.
+
+## 2026-09-23 — the bar carries the project across Studio, Nodes and Projection; Light shown on hosted tiers
+
+Wave 1 items 1, 2 and 4 of `di-atlas/decisions/2026-09-23-connect-everything.md`.
+
+- `SurfaceBar` takes `project` / `projectLabel`. With one, the "where" reads
+  `di.iiii · space · project` (the project opens its Studio editor) and Studio, Nodes and the
+  new Projection destination open THAT project through `studioRouting` / `rawRouting` /
+  `mapRouting` builders. Projection is listed only for a project. Order unchanged otherwise.
+- Light is always listed. Local install: `/light/?space=&project=` plus `&label=<title>` when
+  the title says more than the id — the shape #537's `lightingDeskPath()` uses (plain link —
+  the desk is served by serverXR, not the app). Hosted: `/light`, navigated in-app (`appNavigate`) so it
+  lands on the existing `ReservedAddressCard('light')`; a ctrl/meta click is left to the
+  browser. Checked: a full load of `/light` and `/light/` on dev.diiii.xyz and diiii.xyz
+  answers the SPA's index.html, so reload/new tab reach the card there too.
+- `/tools` shows the Light tile on hosted tiers ("on your own machine", same in-app
+  navigation). Desk stays local-only.
+- The bar is mounted on the three editors: `StudioShell` (desktop and phone, `float`; hidden
+  in Hide UI, XR presenting, `?embed=1` and the jam's simple mode), `RawEditor` (project
+  canvas only; hidden in zen / a chromeless scope, the full-screen room and `?embed=1`; the
+  raw topbar moves to `top: var(--sbar-h)` and its measured inset re-reads when the bar comes
+  and goes), `MapSurface` (a row above `header.map-bar`, which is untouched; `/out` is
+  `MapOutput` and never draws it). The tools' own jump buttons all stay (decision 5).
+- Studio panes clear the floating bar through `--svl-top-clear` (gizmo, split controls,
+  transform HUD) — only panes touching the top edge; the lower half of a V split does not.
+- **`--sbar-h` was wrong.** It said 36px; the bar measured 38px (desktop) / 42px (phone), and
+  40/44px in Studio, which lends a 1.5 line-height. Fixed in `surfaceBar.css`: the bar pins its
+  own `line-height: 1.3`, declares 38px / 42px (phone media query), and `flex-shrink: 0` on the
+  bar and on `.sbar-where`. The last two fix two defects that were already on dev: `/tools` on
+  a phone squeezed the bar to 15px (flex column), and on a phone the space name collapsed to
+  0px ("di.iiii · ·") because the links took every pixel. Desktop Tools / Wiki / projects are
+  unchanged at 38px.
+- On a phone the Nodes corner wordmark (`.raw-surface-wordmark`, top-left, z 1200) is hidden
+  while the bar shows — it sat on the bar's own "di.iiii"; before this the topbar (z 1400)
+  covered it whenever chrome showed.
+- New `src/hooks/useSpaceName.js`: one `getServerSpace` for the space's label on Nodes and
+  Projection (vocabulary.md "One name per space"); falls back to the id.
+- Tests: `SurfaceBar.test.jsx` (hrefs, Light local/hosted, in-app click, new-tab click),
+  new `ToolsRoom.test.jsx`, `surfaceBar.embed.test.jsx` (three editor lanes page vs window,
+  plus headset, Hide UI, zen, full-screen room, both `/out` pages, and the topbar offset).
+  Each of the seven hide guards was seen failing with its rule removed.
+- Verified in a real browser on a throwaway stack (server :4310 loopback, vite :5310, data
+  under the worktree) at 1440×900 and 390×844 DPR 3: Studio → Nodes → Projection → Studio by
+  the bar, zero overlaps measured against the bar, no bar on `/out`, `?embed=1`, Hide UI.
+  With the local flag off, Light from the bar and from /tools lands on the card, no page load.
+- **Open, not done here:** at 390px the bar scrolls sideways (its existing phone rule), so
+  Projection / Tools / Light / Wiki are one swipe away on the first screen. The bare node
+  canvas (`/raw`, BlankNodeWorkspaceApp) still has the old overlaps: its raw topbar (z 1400,
+  top 0) covers the floating bar when chrome shows, and on a phone its wordmark sits on the
+  bar in zen — untouched here, out of this unit's scope. The Studio phone gizmo still sits
+  under the `smb-topbar` buttons, as it did before.
+
+## 2026-09-23 — Light returns to the project that opened it
+
+- Wave 1 item 3 of `di-atlas/decisions/2026-09-23-connect-everything.md`. The stranger's walk
+  found "Light: show forgotten, no way back": the desk's only exit, `a.homelink`, went to `/spaces`.
+- A project now opens the desk as `/light/?space=<id>&project=<id>[&label=<title>]`. The new
+  `serverXR/src/lighting/ui/from.js` reads that once and keeps it per tab in sessionStorage; `app.js`
+  draws `← <project>` beside the di.iiii door (→ the project in Studio) and Studio · Nodes · Projection
+  for the same project, all with the existing `.homelink` / `.pages` classes and no new CSS. The page
+  tabs only change the hash, so the links stand through every switch; the kept copy covers a reload
+  whose address lost its query. A bare `/light/` in a fresh tab is unchanged: one door, to `/spaces`.
+- The three addresses are a hand copy of `buildStudioProjectPath`, `buildRawProjectPath` and
+  `buildMapPath` (the desk is plain script and cannot import). `src/map/lightingLink.test.js`
+  requires `from.js` and holds it to the real builders — seen failing when the copy was made to drift.
+  An id with a slash, dot, backslash or colon draws nothing, so the query cannot aim the link elsewhere.
+- Callers: Projection's Light link passes the query (`lightingDeskPath({ spaceId, projectId, label })`).
+  The SPA's `/light` hand-off (`RootApp.jsx`) now keeps `location.search`, which it used to drop.
+  `/tools`' Light tile knows no project and is unchanged. `SurfaceBar.jsx` is left to
+  `feat/bar-carries-project`, which agreed on the same `?space=&project=` shape.
+- Walked on a throwaway stack (4320/5320) at 1440×900 and 390×844 DPR 3: back link survives Setup →
+  Control → Touch → Fader → MIDI and a reload without the query; it opens `/lab/studio/projects/first-piece`
+  in Studio; Nodes and Projection open their pages; bare `/light/` still leads to `/spaces`.
+- Seen and left: at 1440 the desk's centred title ("Art-Net Desk — <show>"), already clipped before,
+  is squeezed to a few letters while the project links show. On a phone they add one row, and the links
+  are ~25 px tall, the same as the existing di.iiii door.
+
+## 2026-09-23 — one project list per space: Nodes' own front door retired
+
+Wave 1 item 5 of `di-atlas/decisions/2026-09-23-connect-everything.md`. Owner's words:
+the Nodes list "is like a separate line not connected to the system … it would be better
+to start with layers, so you create 1st something and things one by one, not flood things
+there".
+
+- `/{space}/raw/projects` keeps its address (no redirect) and now renders Studio's hub,
+  `StudioHub openIn="nodes"`, from `src/raw/RawApp.jsx`. Same cards, same shelves, same
+  drafts / archived toggle, rename, state, trash, Admin, Import, View live and Spaces as
+  `/{space}/studio`. What differs: a card, Latest and New open the node canvas; New makes a
+  project with source `raw-v2` (its card says "Nodes"); the top-right cross button reads
+  **Studio** (to `/{space}/studio`) where Studio's copy reads **Nodes**; the open space's
+  forward into the jam happens only on Studio's copy.
+- RawEditor's `← Projects` goes to `/{space}/raw/projects`. It went to `/{space}/projects`,
+  the visitors' contents page since 2026-09-10, where drafts do not show and a card opens
+  the viewer.
+- Removed: `src/raw/components/RawHub.jsx`, `RawHub.test.jsx`, `GUIDE_AUDIENCES` in
+  `src/raw/utils/rawGuide.js` (and its test case), the help dialog's two audience cards,
+  and every `.raw-hub*` / `.raw-project-list` / `.raw-help-audience*` / `.raw-help-chip*`
+  rule in `raw.css` that only they used (~350 lines). `rawGuide.js` stays: the help dialog
+  still reads `GUIDE_SECTIONS`.
+- Words made true: `src/raw/AGENTS.md` (the landing does NOT open on the node canvas; the
+  projects page is StudioHub), `wikiContent.js` `spaces-and-projects` (the two "older
+  address" lines — same wording as the parallel `docs/sentences-that-lie` branch, so the
+  two merge without a conflict) and `raw-lane` (the list line), `README.md`'s lists line,
+  and comments that named RawHub (serverXR routes, asset-remap-lib, studioNode, the enter-node
+  handoff, WikiPage, the embed test).
+
+### What RawHub offered that StudioHub lacked — one decision each
+
+| RawHub had | Decision | Why |
+| --- | --- | --- |
+| "First Landing / Choose a path" + "For Visitors · Look first" / "For Creators · Build small" cards | **Gone** | The flood the owner named. StudioHub's empty state already says "A project is one thing you build and publish" with one button. |
+| "Workflow · Space → project → publish" card | **Gone** | Same. |
+| Title box + `new project` | **Gone** — StudioHub's `+ New project` (asks the name, then lands in the node canvas) | One way to make a project, the same on both lists. |
+| `import` | **Kept** — StudioHub's Import, identical handler (source `legacy-import-studio`, card says "Imported"); it now opens the import in the tool of the list you are on | The brief: import of an old scene stays identical. |
+| "open the Studio node" (find-or-create `studio-node-<space>`, land inside the container) | **Gone** | The plan's own "not doing": Studio as a node inside Nodes — the bar makes the two editors one project. An existing `studio-node-*` project stays on the list as an ordinary card; the Studio node is still in the palette. `rawEnterNodeHandoff.js` and RawEditor's reader are left in place with no writer (comments say so) — removing them is a RawEditor edit this PR did not need. |
+| `SpaceSyncPanel` (↓ get latest / ↑ publish to live) | **Kept, Nodes copy only**, passed as `children` from RawApp; draws nothing unless the server has `LIVE_API_URL` configured — exactly as before | Operators use it on local installs and this page was its only home. No new chrome: on an ordinary install both lists are pixel-for-pixel the same. Its row now carries its own top edge and a gap (it used to borrow the old list box's). |
+| Footer `studio` / `public` / `admin` | **Folded into StudioHub's own**: the cross button says Studio; View live is public; Admin (admins only) | Same destinations, no second row. |
+| Import warnings box | StudioHub shows warnings in its status line | Already the case on Studio's list. |
+
+### Checked
+
+- `npm run lint` (0 errors), `npm run docs:ai:check`, `npx vitest run` on every touched test,
+  and `npm run test`: all green once `serverXR` had its own `npm ci`. Two server tests
+  (`followIntegration` "byte for byte", `configRoutes` "repeats what index.js says") timed
+  out under full-suite load and pass alone. The `← Projects` guard was run against the old
+  path first and failed.
+- serverXR on 4330 and vite on 5330, with a throwaway DATA_ROOT, walked with Playwright at
+  1440×900 (DPR 2) and 390×844 (DPR 3), 18/18 checks passing:
+  `/lab/studio` and `/lab/raw/projects` list the same cards on the same shelves (Show one:
+  Pulse, Wall study; Not on a shelf: Draft sketch) and differ only in the Nodes ↔ Studio
+  button. Neither page has a First Landing / Build small / Space → project → publish card.
+  A card opens `/lab/raw/projects/draft-sketch` on the canvas. `← Projects` comes back to
+  `/lab/raw/projects` with the DRAFT card showing. New lands on an empty canvas at
+  `/lab/raw/projects/first-…` and shows up on Studio's list with a "Nodes" badge.
+  `/lab/seed/projects` heals to `/lab/raw/projects`. With `LIVE_API_URL` set, the sync row
+  shows under the Nodes list only; the Help dialog no longer has the audience cards.
+  Screenshots are in the worktree's `.verify/`, which is not committed.
+
+### Seen on the way, not changed here
+
+- Studio's own `← Projects` (`StudioEditor.jsx` `onBackToHub`) still goes to `/{space}/projects`,
+  the visitors' list. It's the same bug class on the Studio side and wasn't in this item's brief.
+- On a phone the Help dialog squeezes its left panel to a ~40px sliver. `raw.css`'s
+  `@media (max-width: 900px) .raw-help-body { grid-template-columns: 1fr }` sits BEFORE the
+  base `.raw-help-body` rule, so the base rule wins at every width. The order is the same on
+  `dev`, so this didn't start here. It's one small move of that rule and wants its own PR.
+- A brand-new project opens zen (no toolbar), so it has no `← Projects` until the palette
+  brings the toolbar back. This is the node editor's existing empty-project behaviour.
+
+## 2026-09-23 — first-room traps: Headset Off means off, no admin chord for strangers, F frames the room, "+ new project" says why
+
+Wave 2 items 2, 3 and 4 of `di-atlas/decisions/2026-09-23-connect-everything.md`.
+
+- **Headset entry → Off** in the Nodes Publish panel wrote `'none'`, which the viewer
+  reads as AR, so Off left Enter AR on the live page. Off now writes `'off'`; a missing or
+  `'none'` value shows as AR, the way the viewer treats it. Only the writer changed. The viewer
+  and the schema default stay as they were, because `'none'` means AR for every older project.
+- **Admin mode** in the old editor (Shift+D Shift+I, or a 4-finger 3-second hold) now turns
+  on only for a signed-in admin session (`useAuthSession`, the same role the admin console
+  gates on). Turning it off never needs anything. The owner at a local install and auth-off
+  both report role `admin`, so they keep the chord.
+- **Studio F** with nothing selected now frames the whole room. An early return had made
+  that branch unreachable. With a selection, F still frames just the selection.
+- **Tools "+ new project"** now says why it failed, in the dialog's own sentence: the
+  server's words, or "sign in to add a project to <space>." for a bare 401.
+- Each has a test beside it, seen failing on the old code, and a known-fixes row.
+
+Checked on a throwaway stack (4360/5360, data root outside the repo), 1440×900 DPR 2 and
+390×844 DPR 3, with a control run of the same walk on the unfixed file for A, B and F:
+- Off stores `"off"`, and the live link in a WebXR-capable browser shows no Enter AR.
+  Switching back to AR brings it back. On old code: `"none"`, and Enter AR stays.
+- Signed out on a read-only space, a paste is still refused after the chord (old code:
+  the chord unlocked it). On the phone, the More sheet shows no Admin section after the hold
+  (old code: Publish to Server and the rest). As admin, both still work.
+- Alt+A then F: all three boxes framed (old code: the camera did not move). A box selected, then F: that box.
+- A guest in a read-only space gets "Not created: Space is read-only.", and signed out the
+  dialog says "Not created: sign in to add a project to traps-ro.", on desktop and phone.
+
+**Not done: "Save current view wins over the auto-frame."** Stopped on purpose.
+`resolveViewerCamera` puts the auto-frame ahead of `worldState.savedView` deliberately
+(commit 731222d0, and the comment above `computeAutoFrameCamera`): a saved view goes stale
+mid-edit and strands a fresh visitor. And `normalizeWorldState` fills `savedView` with
+defaults, so it is always "present". No reading of the document can tell a view someone
+pressed Save on from the default or a stale one. The walk confirmed the trap: orbit below
+the floor → Save current view → the stored view is that shot, but the live page opens on
+the auto-frame. The fix needs his decision, and each option changes more than this PR
+should:
+(a) Save current view also sets `entryView: 'fixed-camera'` with an unlocked `fixedCamera`.
+    The viewer already honours that shot and then hands the camera over. But Enter AR is
+    offered only on `entryView === 'scene'`, so a saved view would also remove AR.
+(b) A marker on the saved view (e.g. `savedView.setAt`) that the viewer prefers over the
+    auto-frame. That is a schema change in both twins (`projectSchema.js` / `.cjs`).
+- The wiki is not updated here (`wikiContent.js` belongs to another agent in this wave).
+  The Studio help list (`studioGuide.js`) now says what F does.
+
+## 2026-09-23 — one name per tool, and the front page ends in one link
+
+- `/tools` and the local home call the node canvas **Nodes**, the word the surface bar already
+  used. Keys, routes and folders stay `raw`. The local home's desk link says **Light**, as
+  `/tools` and the bar do (it said "Lights"). Projection's Carry panel says "Projection as text",
+  "Paste a projection" and "Replace this projection" instead of mapping.
+- The landing's Help & Wiki block keeps its eyebrow, title, one line and the "Open the Wiki →"
+  button; the 18-card highlight grid is gone (with its CSS). `LandingPage.test.jsx` turns red if
+  a grid comes back (checked: 19 links with the old grid).
+- `copyVocabulary.test.js` now also reads `src/tools/ToolsRoom.jsx` and
+  `src/landing/LocalHome.jsx`; "Raw" as a name in either fails it (checked by putting it back).
+  `docs/ai/vocabulary.md` gains the Nodes and Light rows and a 2026-09-23 amendment.
+- Not done, on purpose: Studio's "Lights" button and the placed lamp keep the word Light until
+  the owner settles decision 4. `WIKI_HIGHLIGHT_IDS` / `WIKI_HIGHLIGHTS` stay exported because
+  `docs:wiki:check`, `wiki-sync.test.js` and `WikiPage.test.jsx` still read them; nothing renders
+  them now, and retiring them with those checks is its own small change.
+- Seen in a browser (Playwright, 1440×900 DPR 2 and 390×844 DPR 3, own stack on 4340/5340 with a
+  throwaway data root): local `/tools` reads Studio · Nodes · Light · Projection · Desk, hosted
+  `/tools` reads Studio · Nodes · Projection; the local home's doors read Tools · Studio · Nodes ·
+  Wiki and its desk line says Light; `/?tour=1`'s Help & Wiki block has one link and no grid, and
+  it opens `/wiki`; the Carry panel reads "Paste a projection" / "Projection as text". No console
+  errors, no sideways scroll.
+- Worth knowing: the landing does not literally END at the Wiki block — "API & agents", "What you
+  get" and the footer still follow it. The grid is gone; the order of sections is landing copy and
+  waits on the owner with the rest of the story.
+
+## 2026-09-23 — batch landing: one project across every layer (Wave 1 + the first of Wave 2)
+
+Six green PRs landed as one batch, per `feedback_batch_land_behind_prs`, after both live peer
+sessions (dob-8b, dob-6a) confirmed they held nothing in di.iiii. Plan:
+`di-atlas/decisions/2026-09-23-connect-everything.md`. Each PR's own session note rides in
+this batch; this note is for the batch branch itself.
+
+| PR | Branch | What |
+|---|---|---|
+| #536 | `fix/one-name-per-tool` | Raw → Nodes on /tools, the local home and the landing; Carry panel says Projection; the landing's 18-card wiki grid becomes one "Open the Wiki →" link; `copyVocabulary.test.js` guards "Raw" as a label |
+| #537 | `feat/desk-returns-to-project` | `/light/?space=&project=&label=`: the desk shows `← <project>` plus Studio · Nodes · Projection, kept in sessionStorage across its tabs; `lightingDeskPath({ spaceId, projectId, label })`; Projection's Light link passes the project |
+| #538 | `docs/sentences-that-lie` | wiki host → diiii.xyz (both `/get` files identical, neither redirects); no `di install --docker`; `di sync` writes nothing; follow carries a project's files; algovrithm told true; "Moves to the trash for 30 days"; Solo · screen |
+| #539 | `feat/one-project-list` | `/{space}/raw/projects` keeps its address and renders `StudioHub openIn="nodes"`; RawHub and its cards retired; `← Projects` returns to the Nodes list |
+| #540 | `fix/first-room-traps` | Headset entry Off writes `'off'`; admin-mode chord and 4-finger hold need a signed-in admin; F with nothing selected frames the room; "+ new project" says why it failed |
+| #541 | `feat/bar-carries-project` | SurfaceBar carries `space · project`, names Projection, lists Light on every tier (hosted → the card, client-side); mounted on the Studio editor, the Nodes project canvas and the Projection desk; `--sbar-h` corrected |
+
+Found on the owner's install after packing the batch: an EMPTY Nodes project opens in the zen
+nobody chose (stored `auto-on`), and #541 hid the bar with the rest of the chrome, so a
+newcomer's first Nodes screen was a dead end again. Fixed on the batch: `isAutoZen()` in
+`src/raw/utils/zenMode.js`; `RawEditor` keeps the bar for an automatic zen and still hides
+it for a chosen one (tests in `zenMode.test.js` and `surfaceBar.embed.test.jsx`).
+
+One merge conflict, `src/tools/ToolsRoom.test.jsx` (added by both #540 and #541): the two
+files were combined into one, with a SurfaceBar mock that also exports `navigateInApp`.
+
+Still the owner's: walking the bar on local.thedi.studio and the S24; the nine decisions
+in the plan (old editor, where the light show lives, the one file, Light/Lamp/Rig, retiring
+the tools' own jump buttons, "Lights on" machine, the S24 on the desk, "Save current view"
+vs the auto-framed shot, promotion).
+
 ## Landing 21 notes so the dev tier can deploy again
 
 The dev deploy had been failing since 2026-09-20 — not on code. `deploy-vps-dev.yml`'s
