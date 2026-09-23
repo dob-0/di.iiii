@@ -92,8 +92,10 @@ export default function ToolsRoom({ isLocalInstall = false }) {
                     href: '/studio'
                 },
                 {
+                    // The key and the routes stay `raw`; the name a person
+                    // reads is Nodes, the same word the surface bar uses.
                     key: 'raw',
-                    name: 'Raw',
+                    name: 'Nodes',
                     meta: 'node canvas',
                     Mark: RawMark,
                     // A bare /raw is a canvas held in this browser and saved to

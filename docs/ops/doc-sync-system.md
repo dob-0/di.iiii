@@ -16,8 +16,8 @@ pattern. Drift is made *un-mergeable* and *un-ignorable*, not magically fixed.
 
 | Surface | What it is | Who authors | Enforcement |
 | --- | --- | --- | --- |
-| `src/wiki/wikiContent.js` | in-app `/wiki` help **and** landing teaser — single source of truth for user-facing docs | human / agent | `docs:wiki:check` (Tier 1) |
-| `src/landing/LandingPage.jsx` | landing highlights | **derived** from `WIKI_HIGHLIGHT_IDS` | cannot drift (imports the source) |
+| `src/wiki/wikiContent.js` | in-app `/wiki` help — single source of truth for user-facing docs | human / agent | `docs:wiki:check` (Tier 1) |
+| `src/landing/LandingPage.jsx` | one "Open the Wiki" link (no highlight cards since 2026-09-23) | human / agent | `LandingPage.test.jsx` (one link, no grid) |
 | `README.md` | durable repo front door (keeps the Evergreen Rule — no feature dumps) | human / agent | must reference the wiki source |
 | `AGENTS.md` + `docs/ai/**` | AI knowledge base | human / agent | `docs:ai:sync` + `docs:ai:check` |
 | `.github/copilot-instructions.md`, `.github/instructions/**` | GitHub / Copilot guidance | generated bridges | `docs:ai:check` |
@@ -58,9 +58,8 @@ Tiers 1–2 prove out. Adding it later requires no change to Tiers 1–2; it jus
 
 ## Adding or changing a user-facing feature
 
-1. Edit `src/wiki/wikiContent.js`: add/update the article, bump `updated`. Add its id to
-   `WIKI_HIGHLIGHT_IDS` if it belongs on the landing page.
+1. Edit `src/wiki/wikiContent.js`: add/update the article, bump `updated`.
 2. Run `npm run docs:wiki:check` (the hook does this automatically on save).
-3. The landing page and `/wiki` update themselves (they import the source).
+3. `/wiki` updates itself (it imports the source).
 4. README only changes if a *durable* fact changed — keep feature detail in the wiki, per the
    README Evergreen Rule.

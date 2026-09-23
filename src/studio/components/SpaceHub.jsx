@@ -1448,7 +1448,7 @@ export default function SpaceHub() {
                     <p className="ssh-tools-line">
                         <span className="ssh-tools-label">On this machine</span>
                         <a className="ssh-tools-link" href={lightingDeskPath()} target="_blank" rel="noreferrer">
-                            Lights
+                            Light
                         </a>
                         <span className="ssh-tools-hint">— the lighting desk, for the rig in the room</span>
                     </p>

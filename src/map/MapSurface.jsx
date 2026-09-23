@@ -575,7 +575,7 @@ function MapTransfer({ text, onApply, onClose }) {
         <div className="map-transfer">
             <div className="map-transfer-panel">
                 <div className="map-panel-head">
-                    <h2>{text ? 'Mapping' : 'Paste a mapping'}</h2>
+                    <h2>{text ? 'Projection as text' : 'Paste a projection'}</h2>
                     <button type="button" className="map-mini" onClick={onClose}>Close</button>
                 </div>
                 <textarea
@@ -593,7 +593,7 @@ function MapTransfer({ text, onApply, onClose }) {
                         const message = onApply(value)
                         if (message) setProblem(message)
                         else onClose()
-                    }}>Replace this mapping</button>
+                    }}>Replace this projection</button>
                 </div>
             </div>
         </div>
