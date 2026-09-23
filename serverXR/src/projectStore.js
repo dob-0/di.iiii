@@ -139,6 +139,10 @@ const s = () => {
     // project must be absent from it — otherwise its url keeps working after it
     // was deleted, which is the opposite of what delete means.
     selectAllIndex:   db.prepare('SELECT id, space_id FROM projects WHERE deleted_at IS NULL'),
+    // How many projects each space holds, and how many of those are on show —
+    // the /contents rule: state live, and not wearing the pre-2026-09-10
+    // "[archived]" title. Trashed rows are not held by anything.
+    countBySpace:     db.prepare("SELECT space_id, COUNT(*) AS n, SUM(CASE WHEN COALESCE(state, 'live') = 'live' AND ltrim(COALESCE(title, '')) NOT LIKE '[archived]%' THEN 1 ELSE 0 END) AS shown FROM projects WHERE deleted_at IS NULL GROUP BY space_id"),
     insert:           db.prepare('INSERT INTO projects (id, space_id, slug, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
     upsert:           db.prepare('INSERT OR REPLACE INTO projects (id, space_id, slug, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
     update:           db.prepare('UPDATE projects SET slug=?, title=?, document_version=?, source=?, updated_at=?, last_touched_at=? WHERE id=?'),
@@ -158,6 +162,20 @@ const s = () => {
 // kept: projectStore.test.js exercises the projectId→spaceId map contract
 const readProjectIndex = async (spacesDir) =>
   Object.fromEntries(s().selectAllIndex.all().map(r => [r.id, r.space_id]))
+
+// What each space holds, in ONE grouped query: { [spaceId]: { projects, published } }.
+//
+// The space list had no way to say what a space contains: a card named the
+// project its door opens on, or nothing at all, so the Open Space — which has
+// no door project because it is the communal room itself — read as an empty
+// card with everything made in it invisible (first fixed on 2026-08-24,
+// 2efc05c7, on a branch that never landed; re-applied for the layers decision,
+// 2026-09-23). Counted here rather than in the client: the alternative was one
+// project list per space on every load of /spaces, pulling whole lists to
+// learn their length. "Published" is the visitor's word for on show — the
+// same rows GET /api/spaces/:id/contents lists.
+const countProjectsBySpace = async () =>
+  Object.fromEntries(s().countBySpace.all().map((r) => [r.space_id, { projects: Number(r.n) || 0, published: Number(r.shown) || 0 }]))
 
 const loadProjectMeta = async (spacesDir, spaceId, projectId) =>
   rowToMeta(s().selectBySpace.get(projectId, spaceId))
@@ -433,6 +451,7 @@ module.exports = {
   TRASH_TTL_MS,
   isProjectState,
   listProjectsInSpace,
+  countProjectsBySpace,
   listTrashedProjects,
   restoreProject,
   purgeProject,

@@ -273,6 +273,38 @@ afterEach(async () => {
 })
 
 describe('server write contracts', () => {
+    // The layers decision, 2026-09-23, unit 1: a space card says what the space
+    // holds — but only to someone who may enter it. A stranger looking at a
+    // public space learns nothing about its drafts.
+    it('the space list counts a space\'s projects only for a caller who may enter it', async () => {
+        const server = await startServer({ nodeEnv: 'production' })
+        const admin = { 'Content-Type': 'application/json', ...withAuth(server.apiToken) }
+        expect((await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST', headers: admin, body: JSON.stringify({ label: 'Counted', slug: 'counted' })
+        })).status).toBe(201)
+        for (const slug of ['one-piece', 'two-piece']) {
+            expect((await fetch(`${server.baseUrl}/api/spaces/counted/projects`, {
+                method: 'POST', headers: admin, body: JSON.stringify({ title: slug, slug })
+            })).status).toBe(201)
+        }
+        expect((await fetch(`${server.baseUrl}/api/projects/two-piece/shelf`, {
+            method: 'PATCH', headers: admin, body: JSON.stringify({ state: 'draft' })
+        })).ok).toBe(true)
+        expect((await fetch(`${server.baseUrl}/api/spaces/counted`, {
+            method: 'PATCH', headers: admin, body: JSON.stringify({ isPublic: true })
+        })).status).toBe(200)
+
+        const asAdmin = (await (await fetch(`${server.baseUrl}/api/spaces`, { headers: admin })).json())
+            .spaces.find((space) => space.id === 'counted')
+        expect(asAdmin).toMatchObject({ projectCount: 2, publishedCount: 1 })
+
+        const asStranger = (await (await fetch(`${server.baseUrl}/api/spaces`)).json())
+            .spaces.find((space) => space.id === 'counted')
+        expect(asStranger).toBeTruthy()
+        expect(asStranger.projectCount).toBeUndefined()
+        expect(asStranger.publishedCount).toBeUndefined()
+    })
+
     it('requires auth by default in production when REQUIRE_AUTH is unset', async () => {
         const server = await startServer({ nodeEnv: 'production' })
 
