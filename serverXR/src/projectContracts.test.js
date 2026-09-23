@@ -855,6 +855,59 @@ describe('project contracts', () => {
         expect(again.document.entities.find((entity) => entity.id === 'spot').components.fixture).toEqual({ index: 3 })
     })
 
+    // The layers decision, 2026-09-23, unit 1: the space's project list says
+    // what each project holds — read from the document, never stored, and the
+    // list never writes a document back.
+    it('the project list says what each project holds, and writes nothing', async () => {
+        const server = await startServer()
+        for (const [slug, title] of [['bare-one', 'Bare'], ['held-one', 'Held']]) {
+            const created = await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, slug, source: 'studio-v3' })
+            })
+            expect(created.status).toBe(201)
+        }
+        const submit = await fetch(`${server.baseUrl}/api/projects/held-one/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                baseVersion: 0,
+                ops: [
+                    { type: 'createEntity', payload: { entity: { id: 'box-1', type: 'box', name: 'Box' } } },
+                    { type: 'createEntity', payload: { entity: { id: 'lamp-1', type: 'spotLight', name: 'Lamp', components: { fixture: { index: 2 } } } } },
+                    { type: 'createNode', payload: { node: { id: 'n1', typeId: 'top.noise' } } },
+                    { type: 'createNode', payload: { node: { id: 'n2', typeId: 'top.out' } } },
+                    { type: 'createNode', payload: { node: { id: 'w1', typeId: 'view.outliner' } } },
+                    { type: 'createEdge', payload: { edge: { id: 'e1', fromNodeId: 'n1', fromPort: 'out', toNodeId: 'n2', toPort: 'a' } } }
+                ]
+            })
+        })
+        expect(submit.status).toBe(200)
+        const { newVersion } = await submit.json()
+
+        const documentPath = path.join(server.dataRoot, 'spaces', 'main', 'projects', 'held-one', 'document.json')
+        const before = await readFile(documentPath, 'utf8')
+
+        const list = async () => {
+            const response = await fetch(`${server.baseUrl}/api/spaces/main/projects`)
+            expect(response.status).toBe(200)
+            return Object.fromEntries((await response.json()).projects.map((project) => [project.id, project]))
+        }
+        const first = await list()
+        // An empty project answers {} — a zero is the absence of the field.
+        expect(first['bare-one'].layers).toEqual({})
+        // A window (the outliner) is neither a thing nor a connection.
+        expect(first['held-one'].layers).toEqual({
+            objects: 2, things: 2, lamps: 1, joinedLamps: 1, nodes: 2, wires: 1, pictureOuts: 1
+        })
+        // Asked again from the cache: the same answer, and still nothing written.
+        const second = await list()
+        expect(second['held-one'].layers).toEqual(first['held-one'].layers)
+        expect(second['held-one'].documentVersion).toBe(newVersion)
+        expect(await readFile(documentPath, 'utf8')).toBe(before)
+    })
+
     it('names the collision when a project title/slug collides with one in a different space', async () => {
         const server = await startServer()
 

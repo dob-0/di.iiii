@@ -1,8 +1,9 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import SurfaceBar, { surfaceDestinations } from './SurfaceBar.jsx'
 import { appNavigate } from '../utils/appNavigate.js'
+import { ALL_TOOLS_KEY, saveAllTools } from '../studio/utils/jamMode.js'
 
 vi.mock('../utils/appNavigate.js', () => ({
     appNavigate: vi.fn(),
@@ -151,5 +152,57 @@ describe('SurfaceBar', () => {
         // A project with no space has no address to build, so nothing claims one.
         expect(surfaceDestinations({ project: 'p' }).map(d => d.key))
             .toEqual(['spaces', 'studio', 'raw', 'tools', 'light', 'wiki'])
+    })
+
+    // The layers decision, 2026-09-23, unit 3: inside a project the bar grows
+    // with it; outside a project every name stays.
+    describe('grows with the project', () => {
+        const at = (open) => ({ space: true, things: true, connections: false, wall: false, lamps: false, handover: false, ...open })
+        const inLab = { space: 'lab', spaceLabel: 'Lab', project: 'p1', projectLabel: 'first piece', isLocalInstall: true }
+
+        afterEach(() => {
+            window.localStorage.removeItem(ALL_TOOLS_KEY)
+        })
+
+        it('a new project: Spaces · Studio · Tools · Wiki', () => {
+            render(<SurfaceBar {...inLab} here="studio" layers={at({})} />)
+            expect(links()).toEqual(['Spaces', 'Studio', 'Tools', 'Wiki'])
+        })
+
+        it('one thing in the room: Nodes; a connection: Projection; a lamp: Light — at their own places, their own addresses', () => {
+            const { rerender } = render(<SurfaceBar {...inLab} here="studio" layers={at({ connections: true })} />)
+            expect(links()).toEqual(['Spaces', 'Studio', 'Nodes', 'Tools', 'Wiki'])
+            rerender(<SurfaceBar {...inLab} here="studio" layers={at({ connections: true, wall: true })} />)
+            expect(links()).toEqual(['Spaces', 'Studio', 'Nodes', 'Projection', 'Tools', 'Wiki'])
+            rerender(<SurfaceBar {...inLab} here="studio" layers={at({ connections: true, wall: true, lamps: true })} />)
+            expect(links()).toEqual(['Spaces', 'Studio', 'Nodes', 'Projection', 'Tools', 'Light', 'Wiki'])
+            expect(hrefFor('Nodes')).toBe('/lab/raw/projects/p1')
+            expect(hrefFor('Projection')).toBe('/lab/map/p1')
+            expect(hrefFor('Light')).toBe('/light/?space=lab&project=p1&label=first+piece')
+        })
+
+        it('never takes the surface you stand on off the bar', () => {
+            const { rerender } = render(<SurfaceBar {...inLab} here="raw" layers={at({})} />)
+            expect(links()).toContain('Nodes')
+            rerender(<SurfaceBar {...inLab} here="map" layers={at({})} />)
+            expect(links()).toContain('Projection')
+        })
+
+        it('hides nothing before the project has loaded', () => {
+            render(<SurfaceBar {...inLab} here="studio" layers={null} />)
+            expect(links()).toEqual(['Spaces', 'Studio', 'Nodes', 'Projection', 'Tools', 'Light', 'Wiki'])
+        })
+
+        it('outside a project every name stays, whatever it is handed', () => {
+            render(<SurfaceBar space="lab" here="studio" layers={at({})} />)
+            expect(links()).toEqual(['Spaces', 'Studio', 'Nodes', 'Tools', 'Light', 'Wiki'])
+        })
+
+        it('"All tools" brings every name back, and reaches a bar already on screen', () => {
+            render(<SurfaceBar {...inLab} here="studio" layers={at({})} />)
+            expect(links()).toEqual(['Spaces', 'Studio', 'Tools', 'Wiki'])
+            act(() => saveAllTools(true))
+            expect(links()).toEqual(['Spaces', 'Studio', 'Nodes', 'Projection', 'Tools', 'Light', 'Wiki'])
+        })
     })
 })

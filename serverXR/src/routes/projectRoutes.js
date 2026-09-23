@@ -10,6 +10,7 @@ const { applyAssetSafetyHeaders } = require('../spaceStore')
 const { findIdlessCreateOp } = require('../opValidation')
 const { placeOps } = require('../../../shared/placement.cjs')
 const { actorFromAuthState } = require('../opActor')
+const { countProjectLayers } = require('../../../shared/layers.cjs')
 
 const withProjectLock = createKeyedLock()
 
@@ -75,12 +76,56 @@ function registerProjectRoutes(router, {
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      const projects = await listProjectsInSpace(spacesDir, spaceId)
+      const rows = await listProjectsInSpace(spacesDir, spaceId)
+      const projects = []
+      for (const meta of rows) {
+        const layers = await readLayerCounts(spaceId, meta)
+        projects.push(layers ? { ...meta, layers } : meta)
+      }
       res.json({ projects })
     } catch (error) {
       next(error)
     }
   })
+
+  // ── what each project holds, for the card's one line ─────────────────────
+  //
+  // "3 things · 2 wires · 1 surface · 1 lamp", or "empty" (the layers
+  // decision, 2026-09-23, unit 1). Read from the document by the same rule the
+  // editor runs (shared/layers.cjs, the twin of src/project/layers.js), never
+  // stored: the counts are a view of what the project holds, and a stored count
+  // is a claim the data cannot keep — the same reason no "kind" is stored
+  // below.
+  //
+  // Cached on (project, document version, updatedAt) like the scene-or-page
+  // mode: a list of sixty projects parses their documents once and then
+  // answers from memory; any write moves one of those two numbers. The
+  // document is read and normalized in memory only — the list never writes a
+  // document back, as opening one does.
+  const layerCountsCache = new Map()
+  const LAYER_COUNTS_CACHE_MAX = 4000
+  const readLayerCounts = async (spaceId, meta) => {
+    const key = `${spaceId}:${meta.id}:${meta.documentVersion ?? 0}:${meta.updatedAt ?? 0}`
+    if (layerCountsCache.has(key)) return layerCountsCache.get(key)
+    let counts = null
+    try {
+      const { documentPath } = getProjectPaths(spacesDir, spaceId, meta.id)
+      const raw = await readJson(documentPath, null)
+      // Only what the project holds goes on the wire: a zero is the absence of
+      // the field, so an empty project answers {} and the list stays small.
+      counts = Object.fromEntries(
+        Object.entries(countProjectLayers(normalizeProjectDocument(raw || {})))
+          .filter(([, value]) => value)
+      )
+    } catch {
+      // A document that cannot be read says nothing on its card rather than
+      // failing the whole list.
+      counts = null
+    }
+    if (layerCountsCache.size >= LAYER_COUNTS_CACHE_MAX) layerCountsCache.clear()
+    layerCountsCache.set(key, counts)
+    return counts
+  }
 
   // ── what a space holds, for whoever is allowed to look ───────────────────
   //

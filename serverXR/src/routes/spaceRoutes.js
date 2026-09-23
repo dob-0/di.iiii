@@ -50,6 +50,7 @@ function registerSpaceRoutes(router, {
   loadSpaceMeta,
   listSpaces,
   listProjectsInSpace = null,
+  countProjectsBySpace = null,
   maxOpHistory,
   maxOpAgeMs = 0,
   normalizeIncomingOps,
@@ -203,7 +204,26 @@ function registerSpaceRoutes(router, {
       const sandboxSummary = state.isUnrestricted && typeof getSandboxStats === 'function'
         ? getSandboxStats()
         : null
-      const mapped = visible.map((space) => withIsOwner(state, space))
+      // What each space HOLDS: "26 projects · 2 published". A card could only
+      // name the project its door opens on, so a space without one read as
+      // empty (the Open Space most of all). Only for a space this session may
+      // enter — a stranger looking at a public space learns nothing about its
+      // drafts. Optional dependency: a caller that does not supply it gets the
+      // old response shape exactly, and a failed count never fails the list.
+      let projectCounts = null
+      if (typeof countProjectsBySpace === 'function') {
+        try {
+          projectCounts = await countProjectsBySpace()
+        } catch {
+          projectCounts = null
+        }
+      }
+      const mapped = visible.map((space) => {
+        const meta = withIsOwner(state, space)
+        if (!projectCounts || !(state.authenticated && canAccessSpace(state, space.id))) return meta
+        const held = projectCounts[space.id] || { projects: 0, published: 0 }
+        return { ...meta, projectCount: held.projects, publishedCount: held.published }
+      })
 
       // Pagination is opt-in via ?limit= (and optional ?offset=): omitting it
       // preserves the original full-list response so existing callers (the

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { useEffect as mockUseEffect } from 'react'
 import SpaceContentsPage from '../pages/SpaceContentsPage.jsx'
 import ToolsRoom from '../tools/ToolsRoom.jsx'
 import WikiPage from '../wiki/WikiPage.jsx'
@@ -106,8 +107,20 @@ vi.mock('../studio/components/StudioShellPanels.jsx', () => ({
 }))
 vi.mock('../raw/components/RawViewport.jsx', () => ({ default: () => <div data-testid="lane-body">room</div> }))
 vi.mock('../raw/components/RawGraphSurface.jsx', () => ({ default: () => <div data-testid="raw-graph" /> }))
+// Null: the project never loads (every test here but one). A document: it
+// loads the way the real hook does, so Nodes can decide its automatic zen —
+// which, since 2026-09-23, waits for the project instead of judging the empty
+// stand-in the store holds before it arrives.
+let mockLoadOnMount = null
 vi.mock('../project/hooks/useProjectDocumentSync.js', () => ({
-    useProjectDocumentSync: () => ({ applyLocalOps: vi.fn(), replaceDocument: vi.fn(() => Promise.resolve()) })
+    useProjectDocumentSync: ({ store }) => {
+        mockUseEffect(() => {
+            if (!mockLoadOnMount) return
+            store.dispatch({ type: 'load-start' })
+            Promise.resolve().then(() => store.dispatch({ type: 'load-success', document: mockLoadOnMount, version: 1 }))
+        }, [])
+        return { applyLocalOps: vi.fn(), replaceDocument: vi.fn(() => Promise.resolve()) }
+    }
 }))
 vi.mock('../project/hooks/useProjectPresence.js', () => ({
     useProjectPresence: () => ({ users: [], cursors: [], emitCursor: vi.fn(), clearCursor: vi.fn(), messages: [], sendChatMessage: vi.fn() })
@@ -220,6 +233,7 @@ describe('?embed=1 hides navigation chrome on every lane', () => {
     afterEach(() => {
         window.history.replaceState(null, '', '/')
         window.localStorage.removeItem('dii.raw.zen.p')
+        mockLoadOnMount = null
     })
 
     for (const lane of LANES) {
@@ -248,6 +262,7 @@ describe('a presentation draws no bar', () => {
     afterEach(() => {
         window.history.replaceState(null, '', '/')
         window.localStorage.removeItem('dii.raw.zen.p')
+        mockLoadOnMount = null
     })
 
     it('Studio carries the project in its bar, and names Projection for it', async () => {
@@ -284,6 +299,7 @@ describe('a presentation draws no bar', () => {
     // does not: the stranger's walk (2026-09-22) found this exact dead end.
     it('an empty Nodes canvas, in the zen nobody chose, keeps the bar', async () => {
         window.localStorage.removeItem('dii.raw.zen.p')
+        mockLoadOnMount = { projectMeta: { id: 'p', title: 'A room' }, nodes: [], edges: [], entities: [] }
         render(<RawEditor projectId="p" spaceId="main" />)
         await waitFor(() => expect(screen.queryByTestId('raw-graph')).toBeTruthy())
         await waitFor(() => expect(window.localStorage.getItem('dii.raw.zen.p')).toBe('auto-on'))
