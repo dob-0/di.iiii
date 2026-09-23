@@ -172,13 +172,29 @@ export const WIKI_ARTICLES = [
         summary: 'Every surface carries the same strip — Spaces, Studio, Nodes, Projection, Tools, Light, Wiki — says which space and project you are in, and takes the project with you.',
         body: [
             'Every surface in di.iiii carries one bar along the top. On the left is the di.iiii wordmark, which always leads to Spaces; when the surface belongs to a space, the name of that space, which leads to it; and when it is one project, that project\'s title, which opens it in Studio. On the right are the destinations, always in the same order: Spaces, Studio, Nodes, Projection, Tools, Light, Wiki. Projection is there only inside a project, because it has no page of its own — it is always one project\'s wall. The one you are on is stated in cyan and is not a link.',
+            'Inside a project the bar grows with the project. A new project shows Spaces, Studio, Tools and Wiki; Nodes arrives when the room holds its first thing, Projection when the project has its first node or wire, Light when a lamp stands in the room — each in its own place in the order, with no reload. Outside a project — /tools, the wiki, a space\'s pages — every name is always there. The tool you are standing in is never taken off, nothing hides while a project is still loading, and “⚒ All tools” in Studio brings every name back on every project.',
             'Standing inside a space, Studio and Nodes mean THAT space\'s studio and node canvas, not the general hub — so moving between the ways of working never loses the space you were in.',
             'Standing inside a project — in Studio, on its node canvas, or on its Projection page — Studio, Nodes and Projection open THAT project. The bar reads di.iiii · space · project in all three, so you can go from the room to its nodes to its wall and back without passing through a list.',
-            'Light is always listed. On a di.iiii running on your own machine it opens the lighting desk, and from inside a project the link carries the space and the project with it. Anywhere else it opens a page that says where the desk lives, with the way to run di.iiii on your own machine — the desk talks to fixtures on the local network, and a server on the internet is not in that room. The lighting desk itself keeps its own denser, squarer look — it is read at arm\'s length in a dark booth — and carries a di.iiii link home.',
+            'Outside a project, Light is always listed. On a di.iiii running on your own machine it opens the lighting desk, and from inside a project the link carries the space and the project with it. Anywhere else it opens a page that says where the desk lives, with the way to run di.iiii on your own machine — the desk talks to fixtures on the local network, and a server on the internet is not in that room. The lighting desk itself keeps its own denser, squarer look — it is read at arm\'s length in a dark booth — and carries a di.iiii link home.',
             'The bar hides itself in a presentation: an embedded window, a preview thumbnail, a headset, Studio with its UI hidden (H), the node canvas with its toolbar hidden or opened full-screen onto its room, and the projector pages at /out are showing the work, not the tool.',
             'Add ?embed=1 to any address and that is what you get: /tools, the wiki, a space’s contents list, the node canvas, Studio, the Projection page and a published room all drop the bar, because the page you have put them inside already carries the way out. The flag hides that navigation and nothing else — you are signed in exactly as you would be in a tab, edits save the same, and nothing is held back from a window that a tab would be given.'
         ],
         tags: ['navigation', 'bar', 'surfaces', 'ui', 'light', 'studio', 'raw', 'nodes', 'projection', 'project', 'embed', 'iframe'],
+        updated: '2026-09-23'
+    },
+    {
+        id: 'layers-one-at-a-time',
+        category: 'Getting started',
+        title: 'A project grows one layer at a time',
+        summary: 'A new project opens with only what you need to place the first thing; each tool arrives when the project reaches it. “⚒ All tools” shows everything at once.',
+        body: [
+            'A project is built in layers, each inside the one before: the space holds projects; a project holds things in its room; things can be wired (Nodes); the wiring can reach a wall (Projection); lamps in the room can be joined to real fixtures (Light). Each tool appears when the layer before it holds something — the practice designers call progressive disclosure: the few things first, the rest when they are needed.',
+            'A new project in Studio shows the bar, the room, the Create window and one hint: “Add something”. Place one thing and everything returns at once — the toolbar, the Objects, Scene, Share and Code windows, Google Drive and Commons, the Files list, and your own window layout exactly as you left it. On a phone it is the Create tab alone until the first thing, then the full bottom bar.',
+            'Nothing about this is stored. It is read from what the project holds every time it opens, so the same project opens the same way on every device. Taking the last thing away does not take the tools away while you are working; the next time the project opens it reads what is there.',
+            'Every project card in a space\'s project list says what it holds in one line — “3 things · 2 wires · 1 surface · 1 lamp”, or “empty” — and every space card on /spaces says how many projects it holds and how many are published, for the spaces you can enter.',
+            'Want everything from the start? Press “⚒ All tools” in Studio\'s toolbar: every window on every new project, and every name on the bar. “◱ Simple” goes back. The choice is kept in that browser. The Open Jam keeps its own simple mode and its own switch.'
+        ],
+        tags: ['layers', 'first steps', 'studio', 'bar', 'all tools', 'new project', 'projects', 'spaces'],
         updated: '2026-09-23'
     },
     {
@@ -589,7 +605,7 @@ export const WIKI_ARTICLES = [
         title: 'Studio editor basics',
         summary: 'Add objects, arrange them, and tune the scene.',
         body: [
-            'Open the Studio, pick or create a project, and start building.',
+            'Open the Studio, pick or create a project, and start building. A new project opens bare — the bar, the room, Create and a hint — and the rest arrives with the first thing you place (see “A project grows one layer at a time”).',
             { list: [
                 'Five windows, one per job: Create (shapes, lights, and one Files library — imports, Google Drive, Commons), Objects (the object tree, and editing whatever is selected), Scene (settings for the whole 3D scene), Share (publish, export, activity), Code (HTML/CSS/JS files + the 3D↔code viewport toggle).',
                 'A sixth, space-level window — Projects — lists every project in the space: click to switch, ＋ New to create, hover a row to rename or delete (the live project is badged; deleting it clears the published pointer). No more hub round-trips to hop between projects.',
@@ -609,13 +625,13 @@ export const WIKI_ARTICLES = [
                 'Undo / redo with Ctrl+Z / Ctrl+Y — undo reverts only your own last change (a slider drag or a typing burst counts as one step), so working alongside collaborators is safe: their edits are never rolled back by your undo.',
                 'History (Objects window, collapsed at the bottom): a Photoshop-style list of your session’s steps — click any step to jump back or forward to it, or “Session start” to rewind everything. Jumping is just batched undo/redo, so it is equally collaborator-safe.',
                 'Your panel layout is fully remembered — open panels, positions, resized dimensions, and collapsed headers all restore next visit; shrinking the browser window pulls stranded panels back into view. Arrange → Reset returns everything to the default layout.',
-                'Lost? The ? button (or Shift+?) opens the visual help: four illustrated guides — Move, Build, Edit, Share — plus the full keyboard-shortcut reference on its Shortcuts tab. On a guest’s very first visit a small coach pill walks through the three moves that matter — select something, add something, open Share — each hint completing itself the moment you do it.',
+                'Lost? The ? button (or Shift+?) opens the visual help: four illustrated guides — Move, Build, Edit, Share — plus the full keyboard-shortcut reference on its Shortcuts tab. On a guest’s very first visit a small coach pill walks through the three moves that matter — select something, add something, open Share — each hint completing itself the moment you do it. In an empty project it starts with “Add something”, then “Tap it”.',
                 'On a phone, Studio switches to a touch layout: the five windows become a bottom bar, each opening as a swipe-friendly sheet over the full-screen viewport, with back and Edit-mode buttons up top. The desktop floating-panel layout is unchanged.',
                 'If the browser ever drops the 3D graphics context (a GPU hiccup — the scene freezes or goes black), the viewport now recovers on its own; if it can’t, a “Restore 3D view” button appears instead of a dead canvas. The same safety net covers published pages.'
             ] }
         ],
         tags: ['studio', 'editor', 'basics'],
-        updated: '2026-08-19'
+        updated: '2026-09-23'
     },
     {
         id: 'studio-content-model',
