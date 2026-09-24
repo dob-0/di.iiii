@@ -20,3 +20,11 @@
 - Port 4: ENTTEC. On Windows a missing or lost widget is reopened asynchronously (`mode` and the
   open off the event loop, still at most once a second) — each retry used to block the frame
   path ~70ms. Lost/reconnected bookkeeping and `status().state`. POSIX keeps its fast sync open.
+- Port 5: UI for the two pieces that fit di.iiii's desk cleanly — the colour-effect pads (Control
+  under FX + Touch) and follow times (right-click Follow… editor, "→ 3s" badges on scene rows,
+  "Step 1 of 2 · next in …" beside the transport, a pill). Relative `api/…` URLs. Checked in
+  headless Chrome on an offline desk: pads drive the desk, badge, running step, no page errors.
+- Not ported (need di.iiii's UI to grow first — see the report): the objects and labels drawing
+  (studio's per-page `views`/`viewOf`, `snapv`, `.stage-tools` toolbar, poll guards), the Stage
+  page, video pixel-mapping, the Network panel (OSC / sACN-Art-Net in / Art-Net alongside).
+  The server halves of objects and labels ARE in (routes, engine, show file).
