@@ -35,6 +35,17 @@ describe('describeVisibility', () => {
     expect(describeVisibility({ lanBind: false, lanAllowed: true, local: true }).visible).toBe(false)
   })
 
+  it('a loopback bind behind a declared front door is visible, said as proxied', () => {
+    const v = describeVisibility({ lanBind: false, behindProxy: true, lanAllowed: true, local: true, discoveryMode: 'open' })
+    expect(v).toMatchObject({ visible: true, reason: 'proxied', discovery: 'on', fix: null })
+    expect(v.summary).toMatch(/front door/)
+  })
+
+  it('a front door alone does not open the rig: devices closed stays private', () => {
+    const v = describeVisibility({ lanBind: false, behindProxy: true, lanAllowed: false, local: true })
+    expect(v).toMatchObject({ visible: false, reason: 'devices-closed' })
+  })
+
   it('a UDP port that would not bind reads port-busy, not "on"', () => {
     const v = describeVisibility({ lanBind: true, lanAllowed: true, discoveryMode: 'open', discoveryStats: { listening: false, bindError: 1 } })
     expect(v.discovery).toBe('port-busy')

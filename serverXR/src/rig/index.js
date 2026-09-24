@@ -134,6 +134,7 @@ function createRig({
   let discovery = null
   const visibility = () => describeVisibility({
     lanBind,
+    behindProxy: env.DI_BEHIND_PROXY === '1',
     lanAllowed,
     local: env.DI_LOCAL === '1',
     discoveryMode: discovery ? discoveryMode : 'off',
