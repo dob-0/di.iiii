@@ -43,7 +43,7 @@ import {
     stageVersion
 } from './install.mjs'
 import { isWindows, paths } from './paths.mjs'
-import { probeAll, probeCanPublishName, probeHealth, probeLanAddresses, probeListen, probePrettyLocalName } from './probe.mjs'
+import { probeAll, probeCanPublishName, probeHealth, probeLanAddresses, probeListen, probePrettyLocalName, probeRig } from './probe.mjs'
 import { publishName, stopName, updateRoomName } from './name.mjs'
 import { getKeeper, keeperPaths, keeperStatus, removeKeeper, startKeeper, stopKeeper, KEEPER_PORT, LLAMA_BUILD, MODEL } from './keeper.mjs'
 import { getNdi, ndiDownloadFor, ndiPaths, ndiStatus, readNdiScan, removeNdi, verifyNdi, watchNdiScanFeed } from './ndi.mjs'
@@ -321,6 +321,16 @@ const cmdStatus = async () => {
         reach ? reachText(reach, port) : null,
         `data ${info.dataDir}${size ? ` (${size})` : ''}`
     ].filter(Boolean).join(style.dim(' · ')))
+    // Whether the other di.iiii on this network can see this one — asked on
+    // the same terms as the bind above (the certificate's name over https,
+    // else loopback), never inferred from it: a bind to every interface with
+    // the device routes closed is reachable and still invisible to the rig.
+    const cert = readCert(home)
+    // A 403 on the name is still an answer (only a private copy refuses), but
+    // loopback may give the whole one, so it is asked before settling for it.
+    const onName = cert ? await probeRig(port, cert.name, '/serverXR', 'https') : null
+    const rig = (onName && !onName.refused) ? onName : ((await probeRig(port)) || onName)
+    say(ui.rigVisibility(rig))
 }
 
 const cmdOpen = async (args) => {

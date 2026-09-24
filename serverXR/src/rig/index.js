@@ -16,6 +16,8 @@ const { PROTOCOL, readHello, buildHello, sign } = require('./protocol')
 const { LOCAL_FEATURES, agree } = require('./features')
 const { loadIdentity } = require('./identity')
 const { registerRigRoutes } = require('./routes')
+const { isLoopbackBind } = require('../listenInfo')
+const { createNearby, describeVisibility } = require('./visibility')
 
 const DEFAULT_UDP_PORT = 47600
 const EXPIRE_EVERY_MS = 5000
@@ -69,7 +71,12 @@ function createRig({
   // answers wherever /api does. `base` is what we advertise to other members.
   mountPaths = [base],
   logger = console,
-  lighting = null
+  lighting = null,
+  // The HTTP bind (config.host). Defaults to what config.js reads, so a caller
+  // that does not pass it gets the same answer the server listens on.
+  host = String(env.HOST || '').trim() || '0.0.0.0',
+  // Injected by tests; the real one is discovery.js.
+  createDiscovery = null
 } = {}) {
   if (env.DI_RIG === '0') return noop()
   const mounts = [...new Set(mountPaths.map((p) => (p && p !== '/' ? p.replace(/\/+$/, '') : '')))]
@@ -95,6 +102,22 @@ function createRig({
 
   const cardSource = createCardSource({ env })
   const members = createMembers({ selfId: identity.id })
+  const nearby = createNearby()
+  const lanBind = !isLoopbackBind(host)
+  const lanAllowed = isLanAllowed()
+  // Three states, and each one is said at boot, in `di status` and on the desk:
+  //   open     the LAN is allowed — announce, listen, pair (§6 as written)
+  //   private  bound to the network with the device routes closed — listen,
+  //            and send the private beacon so the open ones can say "a
+  //            di.iiii at <addr> is here but private". Nothing is exposed by
+  //            this that the bind does not already expose: the same name is on
+  //            the unauthenticated /api/config of the same address.
+  //   off      loopback only — no socket on the network at all. Opening one
+  //            here would be the first network footprint of a copy that asked
+  //            for none (and a firewall prompt on Windows and macOS), so it
+  //            waits on the owner (docs/architecture/rig/PROTOCOL-1.md,
+  //            amendment 2026-09-24).
+  const discoveryMode = lanAllowed ? 'open' : (lanBind ? 'private' : 'off')
   const sinks = createSinks({ logger })
   registerBuiltinCues(sinks)
   if (lighting) wireLighting(sinks, lighting)
@@ -108,8 +131,20 @@ function createRig({
     .then((card) => { probedPart = card?.part || null })
     .catch((error) => logger.warn?.('[rig] card probe failed', error?.message || error))
 
+  let discovery = null
+  const visibility = () => describeVisibility({
+    lanBind,
+    lanAllowed,
+    local: env.DI_LOCAL === '1',
+    discoveryMode: discovery ? discoveryMode : 'off',
+    discoveryStats: discovery ? discovery.stats() : null,
+    members: members.list(),
+    nearby: nearby.list(),
+    room
+  })
+
   const router = express.Router()
-  registerRigRoutes(router, { identity, release: ownRelease, part, room, key, features, cardSource, members, sinks, port, base })
+  registerRigRoutes(router, { identity, release: ownRelease, part, room, key, features, cardSource, members, sinks, port, base, visibility })
   // the event stream reaches the same outputs a blackout does, so it sits behind
   // the same local-runtime guard as every other /api/rig route
   registerRigEvents(router, sinks, { guard: requireLocalRuntime })
@@ -134,17 +169,25 @@ function createRig({
       method: 'POST', headers, body, timeoutMs: HELLO_TIMEOUT_MS,
       ...(peerScheme === 'https' && reach.tls ? { servername: reach.tls } : {})
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      // A peer that announced itself but refuses our hello as "loopback-only"
+      // is on this network and private — said on our side, not dropped.
+      let body = null
+      try { body = res.json() } catch {}
+      if (res.status === 403 && body?.error === 'local runtime is loopback-only') {
+        nearby.note({ id: reach.id || `${address}:${peerPort}`, name: reach.name, address, open: false, via: 'refused' })
+      }
+      return null
+    }
     const hello = readHello(res.json(), { port: peerPort })
     if (!hello || hello.room !== room || hello.machine.id === identity.id) return null
     members.upsert({ ...hello, agreed: agree(features, hello.features) }, { address, via: 'hello' })
     return hello
   }
 
-  let discovery = null
-  if (isLanAllowed()) {
-    const { createDiscovery } = require('./discovery')
-    discovery = createDiscovery({
+  if (discoveryMode !== 'off') {
+    const makeDiscovery = createDiscovery || require('./discovery').createDiscovery
+    discovery = makeDiscovery({
       identity,
       release: ownRelease,
       room,
@@ -156,17 +199,25 @@ function createRig({
       udpPort: Number(env.DI_RIG_UDP_PORT) || DEFAULT_UDP_PORT,
       members,
       sayHello,
+      mode: discoveryMode,
+      nearby,
       logger
     })
     discovery.start()
   }
 
-  logger.info?.(`[rig] protocol ${PROTOCOL} · ${identity.name} (${identity.id}) · release ${ownRelease} · room ${room || 'open'}${discovery ? ' · discovery on' : ''}`)
+  logger.info?.(`[rig] protocol ${PROTOCOL} · ${identity.name} (${identity.id}) · release ${ownRelease} · room ${room || 'open'} · discovery ${discovery ? (discoveryMode === 'open' ? 'on' : 'listening') : 'off'}`)
+  // The one line a person reading the log needs when the others cannot see
+  // this copy: that it is so, and the command that changes it.
+  const seen = visibility()
+  if (!seen.visible) logger.warn?.(`[rig] ${seen.summary} — to join: ${seen.fix}`)
 
   return {
     identity,
     members,
+    nearby,
     sinks,
+    visibility,
     stop() {
       clearInterval(expireTimer)
       try { discovery?.stop() } catch {}

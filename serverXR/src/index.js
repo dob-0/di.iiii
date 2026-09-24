@@ -519,6 +519,7 @@ try {
     app,
     dataRoot: config.directories.dataDir,
     port: config.port,
+    host: config.host,
     base: '/serverXR',
     mountPaths: [...new Set([config.mountPath, '/serverXR'])],
     logger,

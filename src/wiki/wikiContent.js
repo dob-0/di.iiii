@@ -352,10 +352,12 @@ export const WIKI_ARTICLES = [
             'Blackout works from any machine in the room, always. The machine receiving it turns its projection output black at once, and its lighting desk too if one is running — and it says who called it.',
             'Versions do not have to match. From this release on, two machines meet by agreeing on what they both know and simply not using the rest, so an older stage box still takes a cue and a blackout from a newer laptop. Updating is an offer, never a condition.',
             'A room can have a name and a key. With DI_RIG_ROOM set, machines only pair inside the same room; with DI_RIG_KEY set, every cue and blackout must be signed with that key, so a stranger on the same wifi cannot black out your show. Set DI_RIG=0 to switch the whole thing off.',
+            'A machine started without --lan is private: the others cannot see it, and it cannot see them to pair. That is on purpose — a machine that takes cues from the network is a machine anyone on that network can aim — but it is never a secret. di status says it on its own line (visible or private, discovery on or off, how many machines are in the rig, and the command that changes it), the server says it once in its log when it starts, and the Desk shows a quiet line: this machine is private — other di.iiii on the network can\'t see it · di up --lan.',
+            'A private machine whose pages already answer the network (started some other way than di up, with no HOST set) still listens, and the Desk says how many other di.iiii it can hear. It also tells the others it is there, so a machine that is open shows a di.iiii at <its address> is on this network but private — the answer to the question "why is that one missing?". A machine started with plain di up puts nothing on the network at all.',
             'The rig lives on a local di.iiii only — a hosted diiii.xyz answers none of it. The design, including jam and show modes still to come, is in docs/architecture/RIG.md.'
         ],
-        tags: ['rig', 'lan', 'network', 'machines', 'discovery', 'blackout', 'cue', 'stage', 'projector', 'pi', 'versions', 'local', 'di up', 'show', 'jam'],
-        updated: '2026-09-16'
+        tags: ['rig', 'lan', 'network', 'machines', 'discovery', 'blackout', 'cue', 'stage', 'projector', 'pi', 'versions', 'local', 'di up', 'show', 'jam', 'private', 'visible', 'missing', 'di status'],
+        updated: '2026-09-24'
     },
     {
         id: 'the-machine-under-the-projector',

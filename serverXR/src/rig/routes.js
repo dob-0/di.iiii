@@ -45,7 +45,9 @@ function registerRigRoutes(router, {
   port = null,
   base = '/serverXR',
   now = Date.now,
-  duplicateWindowMs = CUE_DUPLICATE_MS
+  duplicateWindowMs = CUE_DUPLICATE_MS,
+  // () => describeVisibility(...) (visibility.js); index.js owns the state.
+  visibility = null
 } = {}) {
   const getPart = typeof part === 'function' ? part : () => part
   const ownRoom = room || null
@@ -195,6 +197,15 @@ function registerRigRoutes(router, {
   // ── members ──
   router.get('/api/rig/members', (_req, res) => {
     res.json({ rig: PROTOCOL, self: ownHello(), members: members.list() })
+  })
+
+  // ── visibility: can the other di.iiii on this network see this one ──
+  // Behind the same guard as every rig route, so a private copy answers it for
+  // its own machine and refuses the network — and that 403 is itself the
+  // answer a browser on another machine reads (src/rig/rigVisibility.js).
+  router.get('/api/rig/visibility', (_req, res) => {
+    if (typeof visibility !== 'function') return fail(res, 404, 'not-available')
+    res.json(visibility())
   })
 
   return { ownHello }
