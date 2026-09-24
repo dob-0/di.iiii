@@ -1154,9 +1154,12 @@ export default function RawEditor({
     // the bottom or right of the screen the guess opened partly outside it
     // (festival-machine inventory 2026-09-06). Only creation comes through
     // here — a window a person has dragged is never re-placed.
-    const placeFrameForNewNode = useCallback((frame, node, place) => placeNewWindowFrame({
+    const placeFrameForNewNode = useCallback((frame, node, place, obstacles = []) => placeNewWindowFrame({
         frame,
         card: getCardBox(node),
+        // Every other card in the scope, as boxes: a window must not open over
+        // the cards wired to it either (the deck over its Clip In, 2026-09-24).
+        obstacles,
         anchor: place,
         space: panelWindowSpace(frame, graphViewport),
         viewport: graphViewport,
@@ -1198,7 +1201,7 @@ export default function RawEditor({
         let cardY = placed.y
         if (onBand(cardX, cardY)) cardY = band.maxY + 16
         if (values.frame) {
-            values.frame = placeFrameForNewNode(values.frame, { typeId: definition.id, graphX: cardX, graphY: cardY, values }, place)
+            values.frame = placeFrameForNewNode(values.frame, { typeId: definition.id, graphX: cardX, graphY: cardY, values }, place, siblings.map((node) => getCardBox(node, authoredNodes)))
         }
         const nextNode = createNode(definition.id, {
             values,

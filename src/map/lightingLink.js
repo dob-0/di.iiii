@@ -157,3 +157,70 @@ export function recallCueLighting(cue, { fetchImpl } = {}) {
         .then((response) => Boolean(response?.ok))
         .catch(() => false)
 }
+
+// --- the show clock and the master (the Perform line, 2026-09-24) ----------
+//
+// The Light desk's clock leads the show (src/perform/showClock.js). These are
+// the three things a Perform page says to it, through this one wire like
+// everything else, and on the same terms: never throws, and "no desk" is an
+// answer, not an error.
+
+// One reading of the desk's clock, with the local times the request left and
+// the reply arrived — what a clock-offset estimate needs. `now` is injectable
+// so a test does not depend on the wall clock.
+export async function readLightClock({ fetchImpl, signal, now = () => Date.now() } = {}) {
+    const call = resolveFetch(fetchImpl)
+    if (!call) return { up: false, reason: 'no fetch' }
+    const sentAt = now()
+    try {
+        const response = await call(lightingApiUrl('api/clock'), { signal, cache: 'no-store' })
+        const receivedAt = now()
+        if (!response?.ok) return { up: false, reason: `the Light desk answered ${response?.status ?? 'nothing'}`, sentAt, receivedAt }
+        if (!answeredJson(response)) return { up: false, reason: 'no Light desk on this machine', sentAt, receivedAt }
+        const body = await response.json()
+        return {
+            up: body?.up === true,
+            bpm: Number(body?.bpm),
+            epoch: Number(body?.epoch),
+            beatsPerBar: Number(body?.beatsPerBar) || 4,
+            master: Number.isFinite(Number(body?.master)) ? Number(body.master) : null,
+            blackout: body?.blackout === true,
+            show: typeof body?.show === 'string' ? body.show : null,
+            serverNow: Number(body?.now),
+            sentAt,
+            receivedAt,
+            reason: body?.up === true ? '' : 'the Light desk is not open on this machine'
+        }
+    } catch (error) {
+        if (error?.name === 'AbortError') throw error
+        return { up: false, reason: 'no Light desk on this machine', sentAt, receivedAt: now() }
+    }
+}
+
+const postLight = (path, body, { fetchImpl } = {}) => {
+    const call = resolveFetch(fetchImpl)
+    if (!call) return Promise.resolve(false)
+    return Promise.resolve()
+        .then(() => call(lightingApiUrl(path), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        }))
+        .then((response) => Boolean(response?.ok))
+        .catch(() => false)
+}
+
+// A follower proposing a tempo to the leader (Link lets any participant do it).
+// `epoch` is in the DESK's milliseconds: the caller moves its tap by the
+// offset it measured. The desk keeps whole bpm (fx.js sanitizeFxPatch).
+export const proposeLightTempo = ({ bpm, epoch }, options) => postLight('api/fx', {
+    bpm: Math.round(Number(bpm)),
+    ...(Number.isFinite(Number(epoch)) ? { epoch: Math.max(0, Math.round(Number(epoch))) } : {})
+}, options)
+
+export const setLightBlackout = (blackout, options) => postLight('api/master', { blackout: Boolean(blackout) }, options)
+
+// 0..1 here, 0..255 on the desk.
+export const setLightMaster = (level, options) => postLight('api/master', {
+    master: Math.round(Math.max(0, Math.min(1, Number(level) || 0)) * 255)
+}, options)

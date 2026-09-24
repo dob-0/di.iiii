@@ -76,11 +76,36 @@ export default function useWorkspaceLayout({ spaceId = null, projectId = null, v
         })
     }, [schedule])
 
+    // The person's own Perform presets on this device ("mine"), and which one
+    // they had open last — the slot this envelope carried empty since it was
+    // made (2026-09-24, the Perform line). Written straight away, not after
+    // the debounce: saving a preset is one deliberate act, and a reload a
+    // moment later must find it.
+    const setPresets = useCallback((presets) => {
+        setLayout((current) => {
+            const next = { ...current, presets: Array.isArray(presets) ? presets : [] }
+            pending.current = null
+            if (writeTimer.current) { clearTimeout(writeTimer.current); writeTimer.current = null }
+            writeWorkspaceLayout(scopeKey, next)
+            return next
+        })
+    }, [scopeKey])
+
+    const setActivePreset = useCallback((presetId) => {
+        setLayout((current) => {
+            const activePreset = typeof presetId === 'string' && presetId ? presetId : null
+            if (current.activePreset === activePreset) return current
+            const next = { ...current, activePreset }
+            schedule(next)
+            return next
+        })
+    }, [schedule])
+
     const frames = layout.frames
     const frameOf = useCallback((node) => mergeFrame(node?.values?.frame, frames[node?.id]), [frames])
 
     return useMemo(
-        () => ({ scopeKey, frames, frameOf, setLocalFrame, forgetNodes, flush }),
-        [scopeKey, frames, frameOf, setLocalFrame, forgetNodes, flush]
+        () => ({ scopeKey, frames, frameOf, setLocalFrame, forgetNodes, flush, presets: layout.presets, activePreset: layout.activePreset, setPresets, setActivePreset }),
+        [scopeKey, frames, frameOf, setLocalFrame, forgetNodes, flush, layout.presets, layout.activePreset, setPresets, setActivePreset]
     )
 }

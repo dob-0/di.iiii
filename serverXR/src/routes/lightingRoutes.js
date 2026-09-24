@@ -45,6 +45,16 @@ function registerLightingRoutes(app, { dataDir, spacesDir = null, findSpace = nu
   }
 
   const handler = (req, res) => {
+    // The show clock is asked for every second by any Perform page open on
+    // this machine (src/perform/useShowClock.js). Asking must not BUILD the
+    // desk — that would start the 40 Hz loop and bind Art-Net on an install
+    // with no lights because a VJ opened a deck. No desk yet: "not up", with
+    // this machine's time, which is all a follower needs to keep its own.
+    if (!desk && req.method === 'GET' && req.path === '/api/clock') {
+      res.set('Cache-Control', 'no-store')
+      res.json({ up: false, now: Date.now() })
+      return
+    }
     const [bare, query] = req.originalUrl.split('?')
     if (req.path === '/' || req.path === '') {
       // /light/?space=<id> — a space opened the desk (the bar, Projection's Light) — is

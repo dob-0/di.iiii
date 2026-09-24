@@ -195,13 +195,31 @@ describe('tap tempo', () => {
         expect(restarted.bpm).toBeNull()
     })
 
-    it('keeps the last eight taps and clamps the tempo', () => {
+    it('keeps the last eight taps', () => {
         let state = { taps: [] }
-        for (let i = 0; i < 20; i += 1) state = tapTempo(state.taps, i * 100)
+        for (let i = 0; i < 20; i += 1) state = tapTempo(state.taps, i * 250)
         expect(state.taps).toHaveLength(8)
-        expect(state.bpm).toBe(300)
+        expect(state.bpm).toBe(240)
         // A clock that went backwards restarts rather than dividing by nonsense.
         expect(tapTempo([1000], 900).taps).toEqual([900])
+    })
+
+    // The owner's screen, 2026-09-24: the deck read 300.0. Taps closer than a
+    // 300 bpm beat (200 ms) are a double click or a bouncing key; before the
+    // fix they were averaged in and clamped to 300. Now they are ignored.
+    it('never reads 300 from a double click', () => {
+        let state = tapTempo([], 0)
+        state = tapTempo(state.taps, 90)
+        expect(state.bpm).toBeNull()
+        // Every tap a double click, on a 120 bpm beat: still 120.
+        for (const t of [500, 590, 1000, 1090, 1500, 1590]) state = tapTempo(state.taps, t)
+        expect(tapTempo(state.taps, 2000).bpm).toBe(120)
+    })
+
+    it('a stored 300 is kept as the deck’s tempo until reset, and a fresh deck is 120 with no beat anchor', () => {
+        expect(normalizeDeck({ bpm: 300 }).bpm).toBe(300)
+        expect(createDeck()).toMatchObject({ bpm: 120, epoch: 0 })
+        expect(setBpm(normalizeDeck({ bpm: 300 }), 120, 5000)).toMatchObject({ bpm: 120, epoch: 5000 })
     })
 })
 

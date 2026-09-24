@@ -194,6 +194,19 @@ export const defaultShowState = {
     clockEpoch: 0
 }
 
+// The show's own Perform presets (decision 2026-09-24, the Perform line): a
+// preset is a stored VIEW — which windows are open and where they stand, wide
+// and narrow — and never show content. Kept here, in the document, so the
+// crew following the space gets them and they travel in the .diiii file; a
+// person's own presets live on their device (src/raw/utils/workspaceLayoutStorage.js).
+// Added 2026-09-24 as an ADDITIVE key: a document without it normalizes to an
+// empty list, so no version bump and no rewrite of stored documents.
+export const PERFORM_PRESET_LIMIT = 24
+export const PERFORM_PRESET_WINDOW_LIMIT = 16
+export const defaultPerformState = {
+    presets: []
+}
+
 export const defaultMappingSurface = {
     id: '',
     name: '',
@@ -327,6 +340,7 @@ export const defaultProjectDocument = {
     presentationState: defaultPresentationState,
     publishState: defaultPublishState,
     showState: defaultShowState,
+    performState: defaultPerformState,
     mappingState: defaultMappingState,
     windowLayout: defaultWindowLayout,
     assets: []
@@ -912,6 +926,81 @@ export const normalizeShowState = (show = {}) => {
     }
 }
 
+const PERFORM_SLOT_ID = /^[A-Za-z0-9_-]{1,40}$/
+const clampPercent = (value, min, max) => Math.min(max, Math.max(min, value))
+
+export const normalizePerformRect = (rect) => {
+    if (!Array.isArray(rect) || rect.length !== 4) return null
+    const numbers = rect.map(Number)
+    if (!numbers.every(Number.isFinite)) return null
+    const x = clampPercent(numbers[0], 0, 99)
+    const y = clampPercent(numbers[1], 0, 99)
+    const width = clampPercent(numbers[2], 1, 100 - x)
+    const height = clampPercent(numbers[3], 1, 100 - y)
+    return [x, y, width, height].map((n) => Math.round(n * 100) / 100)
+}
+
+const normalizePerformRects = (rects, ids) => {
+    const out = {}
+    if (!rects || typeof rects !== 'object' || Array.isArray(rects)) return out
+    ids.forEach((id) => {
+        const rect = normalizePerformRect(rects[id])
+        if (rect) out[id] = rect
+    })
+    return out
+}
+
+// One preset, structurally: an id, a name, windows [{ id, kind }] and two
+// layouts of percent rectangles. A window KIND this build does not know is
+// kept — a newer di.iiii made it, and dropping it would lose the window the
+// next time this build saves the list back. null for anything that is not one.
+export const normalizePerformPreset = (preset) => {
+    if (!preset || typeof preset !== 'object' || Array.isArray(preset)) return null
+    const id = ensureString(preset.id).trim()
+    if (!id || id.length > 72) return null
+    const name = ensureString(preset.name).trim().slice(0, 60) || 'Untitled'
+    const seen = new Set()
+    const windows = []
+    for (const item of Array.isArray(preset.windows) ? preset.windows : []) {
+        if (!item || typeof item !== 'object') continue
+        const slot = ensureString(item.id)
+        const kind = ensureString(item.kind).slice(0, 32)
+        if (!PERFORM_SLOT_ID.test(slot) || !kind || seen.has(slot)) continue
+        seen.add(slot)
+        windows.push({ id: slot, kind })
+        if (windows.length >= PERFORM_PRESET_WINDOW_LIMIT) break
+    }
+    const ids = windows.map((item) => item.id)
+    const out = {
+        id,
+        name,
+        source: ['builtin', 'mine', 'show'].includes(preset.source) ? preset.source : 'show',
+        windows,
+        wide: normalizePerformRects(preset.wide, ids),
+        narrow: normalizePerformRects(preset.narrow, ids)
+    }
+    const base = ensureString(preset.base)
+    if (base) out.base = base.slice(0, 72)
+    const updatedAt = Number(preset.updatedAt)
+    if (Number.isFinite(updatedAt) && updatedAt >= 0) out.updatedAt = updatedAt
+    return out
+}
+
+export const normalizePerformState = (perform = {}) => {
+    const source = perform && typeof perform === 'object' ? perform : {}
+    const presets = []
+    const seen = new Set()
+    for (const raw of Array.isArray(source.presets) ? source.presets : []) {
+        const preset = normalizePerformPreset(raw)
+        if (!preset || seen.has(preset.id)) continue
+        seen.add(preset.id)
+        // In the document every preset is the show's, whatever it claimed.
+        presets.push({ ...preset, source: 'show' })
+        if (presets.length >= PERFORM_PRESET_LIMIT) break
+    }
+    return { presets }
+}
+
 // 'stream' is a live picture named by WHAT it is ("OBS Virtual Camera", "capture"), not by a
 // device id: an id belongs to one browser profile on one machine, so a mapping made on the desk
 // could never name an input on the machine that actually shows it. See MapStreamSource.
@@ -1357,6 +1446,7 @@ export const normalizeProjectDocument = (document = {}) => {
         presentationState: normalizePresentationState(source.presentationState, worldState),
         publishState: normalizePublishState(source.publishState),
         showState: normalizeShowState(source.showState),
+        performState: normalizePerformState(source.performState),
         mappingState: normalizeMappingState(source.mappingState),
         windowLayout: normalizeWindowLayout(source.windowLayout),
         assets: Array.isArray(source.assets) ? source.assets.map(normalizeAsset) : []
@@ -1590,6 +1680,29 @@ export const applyProjectOps = (document, ops = []) => {
             }
             case 'setShowState': {
                 nextDocument.showState = normalizeShowState(mergePatch(nextDocument.showState, payload.patch || {}))
+                break
+            }
+            // The show's Perform presets, one at a time: two people giving a
+            // preset to the show at once must both land, which a whole-list
+            // replace would not allow.
+            case 'upsertPerformPreset': {
+                const preset = normalizePerformPreset(payload.preset)
+                if (!preset) break
+                const presets = nextDocument.performState.presets.filter((existing) => existing.id !== preset.id)
+                const index = nextDocument.performState.presets.findIndex((existing) => existing.id === preset.id)
+                // A new one goes at `index` when given (undo puts a deleted
+                // preset back where it was), else at the end.
+                const at = Number.isInteger(payload.index) && payload.index >= 0 ? Math.min(payload.index, presets.length) : presets.length
+                presets.splice(index === -1 ? at : index, 0, preset)
+                nextDocument.performState = normalizePerformState({ presets })
+                break
+            }
+            case 'deletePerformPreset': {
+                const presetId = ensureString(payload.presetId)
+                if (!presetId) break
+                nextDocument.performState = normalizePerformState({
+                    presets: nextDocument.performState.presets.filter((existing) => existing.id !== presetId)
+                })
                 break
             }
             // The mapper's four ops. Surfaces are a LIST, not a map, because the
@@ -1963,6 +2076,22 @@ const invertSingleOp = (document, op) => {
         case 'setPresentationState': return patchInverse('setPresentationState', document.presentationState)
         case 'setPublishState': return patchInverse('setPublishState', document.publishState)
         case 'setShowState': return patchInverse('setShowState', document.showState)
+        case 'upsertPerformPreset': {
+            const preset = normalizePerformPreset(payload.preset)
+            if (!preset) break
+            const presets = document.performState?.presets || []
+            const index = presets.findIndex((existing) => existing.id === preset.id)
+            if (index === -1) return [{ type: 'deletePerformPreset', payload: { presetId: preset.id } }]
+            return [{ type: 'upsertPerformPreset', payload: { preset: cloneValue(presets[index]) } }]
+        }
+        case 'deletePerformPreset': {
+            const presetId = ensureString(payload.presetId)
+            const presets = document.performState?.presets || []
+            const index = presets.findIndex((existing) => existing.id === presetId)
+            if (index === -1) break
+            // Back where it was in the list, not at the end: the menu reads in order.
+            return [{ type: 'upsertPerformPreset', payload: { preset: cloneValue(presets[index]), index } }]
+        }
         case 'setMappingState': return patchInverse('setMappingState', document.mappingState)
         case 'reorderMappingSurfaces': {
             const surfaces = document.mappingState?.surfaces || []
