@@ -275,6 +275,7 @@ export const runSteps = async (di, index, { steps = [], confirm = false, allowPu
         if (refusal) return { done: [], refused: { step: i + 1, text: refusal }, notRun: steps.map((s) => s.name) }
     }
     const results = {}
+    const picked = {}
     const done = []
     for (let i = 0; i < steps.length; i++) {
         const key = steps[i].as || `s${i + 1}`
@@ -284,16 +285,41 @@ export const runSteps = async (di, index, { steps = [], confirm = false, allowPu
             if (refusal) return { done, refused: { step: i + 1, text: refusal }, notRun: steps.slice(i).map((s) => s.name) }
             results[key] = await callOne(di, entries[i], call)
             done.push({ step: i + 1, name: steps[i].name, as: key })
+            if (steps[i].pick) picked[key] = pickFrom(results[key], steps[i].pick)
         } catch (error) {
             return {
                 done,
                 failed: { step: i + 1, name: steps[i].name, error: `${error.name || 'Error'}: ${error.message}` },
                 notRun: steps.slice(i + 1).map((s) => s.name),
-                results
+                results: { ...results, ...picked }
             }
         }
     }
-    return { done, results }
+    return { done, results: { ...results, ...picked } }
+}
+
+/* ─────────────────────────── pick ─────────────────────────── */
+
+// Only what was asked for reaches the model. "body.scene.objects[].type" walks
+// into body.scene.objects and, at [], maps the rest of the path over every
+// item — 39 short strings instead of a 60 KB scene. Measured 2026-09-24: the
+// scene questions cost 22–60 calls each without it, re-reading a document
+// larger than the answer cap in pieces.
+const walk = (value, parts) => {
+    if (!parts.length) return value
+    const [head, ...rest] = parts
+    if (head.endsWith('[]')) {
+        const key = head.slice(0, -2)
+        const list = key ? value?.[key] : value
+        return Array.isArray(list) ? list.map((item) => walk(item, rest)) : undefined
+    }
+    return value == null ? undefined : walk(value[head], rest)
+}
+
+export const pickFrom = (value, pick) => {
+    if (!pick) return value
+    const paths = Array.isArray(pick) ? pick : [pick]
+    return Object.fromEntries(paths.map((p) => [p, walk(value, String(p).split('.').filter(Boolean))]))
 }
 
 /* ─────────────────────────── shaping results ─────────────────────────── */
@@ -306,7 +332,7 @@ export const shape = (value) => {
     const keys = value && typeof value === 'object' ? Object.keys(Array.isArray(value) ? {} : value).slice(0, 30) : []
     return {
         text: `${text.slice(0, MAX_TEXT)}\n… TRUNCATED: ${text.length} characters, showing ${MAX_TEXT}. ` +
-            'Ask for less: a query filter or limit (di_describe shows which), or one item instead of the list.',
+            'Ask for less: pick just the fields you need (e.g. pick: "body.scene.objects[].type"), a query filter or limit, or one item instead of the list.',
         structured: { truncated: true, characters: text.length, keys }
     }
 }

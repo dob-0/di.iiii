@@ -34,7 +34,7 @@ import { createRequire } from 'node:module'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 import { connect } from './index.js'
-import { buildIndex, callOne, describe, find, gate, runSteps, shape } from './door.js'
+import { buildIndex, callOne, describe, find, gate, pickFrom, runSteps, shape } from './door.js'
 
 const arg = (name, fallback = null) => {
     const i = process.argv.indexOf(`--${name}`)
@@ -75,7 +75,7 @@ export const loadSdk = async (subpath = '') => {
 const INSTRUCTIONS =
     'di.iiii — spaces, projects, scenes, pages and files on a di.iiii server. ' +
     'Start with di_find (words, or nothing for an overview), then di_describe the name you want, then di_call it. ' +
-    'Chain several calls with di_run instead of calling one by one. Names of kind "move" are shortcuts that carry ' +
+    'Chain several calls with di_run instead of calling one by one, and use pick to take only the fields you need from a big answer. Names of kind "move" are shortcuts that carry ' +
     'known traps (id from label, read-back after write, 202 = queued); prefer them when one fits. ' +
     'Anything that opens a door — making a space public, minting an invite link, deleting — must be put to the ' +
     'person in words before you call it.'
@@ -92,7 +92,12 @@ const CALL_SHAPE = {
     params: { type: 'object', description: 'route path parameters, e.g. { "spaceId": "main" }' },
     query: { type: 'object', description: 'route query parameters' },
     body: { type: 'object', description: 'route JSON body' },
-    args: { type: 'object', description: 'a move\'s arguments (kind "move" only)' }
+    args: { type: 'object', description: 'a move\'s arguments (kind "move" only)' },
+    pick: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'return only these paths of the answer, e.g. ["body.scene.objects[].type"] — [] maps over a list. Use it on anything big.'
+    }
 }
 const CONFIRM = {
     type: 'boolean',
@@ -148,7 +153,7 @@ export const createDoor = ({ tier, base, token, env = process.env, connectImpl =
                 if (!entry) return fail(`no such name "${call.name}" — di_find first; names come from its results`)
                 const refusal = gate({ entry, call, confirm, allowPublic: allowPublic() })
                 if (refusal) return fail(refusal)
-                return ok(await callOne(await client(), entry, call))
+                return ok(pickFrom(await callOne(await client(), entry, call), call.pick))
             } catch (error) { return failWith(error) }
         },
         run: async ({ steps, confirm }) => {

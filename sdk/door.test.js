@@ -5,7 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 import { DiError } from './http.js'
-import { MAX_TEXT, buildIndex, callOne, describe as describeName, find, gate, resolveRefs, routeEntries, runSteps, shape } from './door.js'
+import { MAX_TEXT, buildIndex, callOne, describe as describeName, find, gate, pickFrom, resolveRefs, routeEntries, runSteps, shape } from './door.js'
 import { createDoor } from './mcp.mjs'
 
 const require = createRequire(import.meta.url)
@@ -172,6 +172,34 @@ describe('di_run', () => {
     it('only lets a step use results of steps before it', () => {
         expect(() => resolveRefs('${later.id}', {})).toThrow(/has not run/)
         expect(resolveRefs('space ${a.id}!', { a: { id: 'x' } })).toBe('space x!')
+    })
+})
+
+describe('pick — only what was asked for reaches the model', () => {
+    const answer = { status: 200, body: { scene: { objects: [{ type: 'video', id: 'a' }, { type: 'image', id: 'b' }], backgroundColor: '#000' } } }
+
+    it('maps a path over a list at []', () => {
+        expect(pickFrom(answer, ['body.scene.objects[].type'])).toEqual({ 'body.scene.objects[].type': ['video', 'image'] })
+    })
+
+    it('takes several paths at once and leaves a missing one undefined, not an error', () => {
+        const out = pickFrom(answer, ['body.scene.backgroundColor', 'body.nope.deeper'])
+        expect(out['body.scene.backgroundColor']).toBe('#000')
+        expect(out['body.nope.deeper']).toBeUndefined()
+    })
+
+    it('reports a picked step in a run, while later steps still see the whole answer', async () => {
+        const di = fakeDi(async (method, p) => (p === '/api/spaces'
+            ? { status: 200, body: { spaces: [{ id: 'main', label: 'Main' }] } }
+            : { status: 200, body: { path: p } }))
+        const out = await runSteps(di, index(), {
+            steps: [
+                { name: 'get_spaces', as: 'all', pick: ['body.spaces[].label'] },
+                { name: 'get_spaces_projects', params: { spaceId: '${all.body.spaces.0.id}' } }
+            ]
+        })
+        expect(out.results.all).toEqual({ 'body.spaces[].label': ['Main'] })
+        expect(out.results.s2.body.path).toBe('/api/spaces/main/projects')
     })
 })
 
