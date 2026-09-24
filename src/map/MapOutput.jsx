@@ -27,7 +27,8 @@ export default function MapOutput({ projectId, spaceId }) {
     const network = useMemo(() => toTopNetwork(doc), [doc])
     // This page is its machine on the desk: a kiosk with a camera and a
     // projector is exactly what the other machines need to see.
-    const { machine } = useMachinePresence(spaceId)
+    // 'poll': the wall's connections belong to its pictures — no held-open NDI feed here.
+    const { machine } = useMachinePresence(spaceId, { ndi: 'poll' })
     // Nothing mapped yet, but a Picture Out runs on this machine: the screen
     // shows it, whole. Mapping corners is a refinement, not a precondition.
     const ownOut = useMemo(() => {
@@ -42,7 +43,7 @@ export default function MapOutput({ projectId, spaceId }) {
     // projected at all. When a surface draws Pictures it runs them itself, so
     // this stands down — one engine, one camera open, per page.
     const drawsPictures = (fallbackMapping?.surfaces || []).some((surface) => surface.enabled !== false && surface.source?.kind === 'network' && surface.source?.ref)
-    useTopNetwork({ network: drawsPictures ? NO_NETWORK : network, spaceId })
+    useTopNetwork({ network: drawsPictures ? NO_NETWORK : network, spaceId, assets: doc?.assets || null, projectId })
     useMapChannelListener(projectId, store)
 
     // A projector output must survive unattended, the same as Raw's (see
@@ -99,7 +100,7 @@ export default function MapOutput({ projectId, spaceId }) {
     return (
         <div className={`map-output${idle ? ' is-idle' : ''}`}>
             {stage.width > 0 ? (
-                <MapStage mapping={fallbackMapping} spaceId={spaceId} width={stage.width} height={stage.height} network={network} live />
+                <MapStage mapping={fallbackMapping} spaceId={spaceId} width={stage.width} height={stage.height} network={network} assets={doc?.assets || null} projectId={projectId} live />
             ) : null}
             <MapOutputControls />
             <RigBlackout />

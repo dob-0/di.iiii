@@ -17,6 +17,8 @@ export default function MapStage({
     live = true,
     soloSurfaceId = null,
     network = null,
+    assets = null,
+    projectId = null,
     className = ''
 }) {
     const surfaces = useMemo(() => {
@@ -62,7 +64,7 @@ export default function MapStage({
                             mixBlendMode: surface.blend === 'add' ? 'plus-lighter' : surface.blend
                         }}
                     >
-                        <MapSourceView surface={surface} spaceId={spaceId} live={live} network={network} label={surface.name || surface.id} />
+                        <MapSourceView surface={surface} spaceId={spaceId} live={live} network={network} assets={assets} projectId={projectId} label={surface.name || surface.id} />
                     </div>
                 )
             })}

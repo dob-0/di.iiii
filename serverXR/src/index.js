@@ -96,7 +96,8 @@ const { registerDmRoutes } = require('./routes/dmRoutes')
 const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
-const { registerNdiRoutes } = require('./routes/ndiRoutes')
+const { registerNdiRoutes, scanAtBootFrom } = require('./routes/ndiRoutes')
+const { hasLocalRuntime } = require('./localRuntimeGuard')
 const { registerPlaceRoutes } = require('./routes/placeRoutes')
 // The per-space content-addressed blob store: where a sha256 asset's bytes
 // actually are, which is what the place lane has to copy footage out of.
@@ -495,6 +496,12 @@ const ndi = registerNdiRoutes(app, {
 // on one: it exits by itself when its IPC channel closes — a kill -9 of the server
 // included. This hook only makes an orderly process.exit() prompt about it.
 process.once('exit', () => { try { ndi.close() } catch { /* going down anyway */ } })
+// The NDI autoscan: which sources are on the network right now, known before anyone
+// asks. On a real install only (scanAtBootFrom: DI_LOCAL=1, or DI_NDI_SCAN=1), never on
+// a hosted tier. With no runtime it forks nothing — it records "no-runtime" and says so.
+if (hasLocalRuntime() && scanAtBootFrom()) {
+  try { ndi.startScan() } catch (error) { logger.warn(`[ndi] autoscan did not start: ${error?.message || error}`) }
+}
 
 app.use(express.json({ limit: '10mb', verify: (req, _res, buf) => { req.rawBody = buf } }))
 app.use(morgan('tiny'))
@@ -512,6 +519,7 @@ try {
     app,
     dataRoot: config.directories.dataDir,
     port: config.port,
+    host: config.host,
     base: '/serverXR',
     mountPaths: [...new Set([config.mountPath, '/serverXR'])],
     logger,

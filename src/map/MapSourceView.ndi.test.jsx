@@ -18,7 +18,12 @@ vi.mock('./ndiLink.js', () => ({
     ndiTrouble: vi.fn()
 }))
 
-vi.mock('../services/apiClient.js', () => ({ apiBaseUrl: 'https://di-studio.xyz/serverXR' }))
+// Partial: the Pictures source reaches the project asset URLs (Clip In), which
+// read the rest of apiClient at import time.
+vi.mock('../services/apiClient.js', async (importOriginal) => ({
+    ...(await importOriginal()),
+    apiBaseUrl: 'https://di-studio.xyz/serverXR'
+}))
 
 import MapSourceView from './MapSourceView.jsx'
 import { ndiTrouble } from './ndiLink.js'

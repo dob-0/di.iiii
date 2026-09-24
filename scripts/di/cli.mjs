@@ -43,10 +43,10 @@ import {
     stageVersion
 } from './install.mjs'
 import { isWindows, paths } from './paths.mjs'
-import { probeAll, probeCanPublishName, probeHealth, probeLanAddresses, probeListen, probePrettyLocalName } from './probe.mjs'
+import { probeAll, probeCanPublishName, probeHealth, probeLanAddresses, probeListen, probePrettyLocalName, probeRig } from './probe.mjs'
 import { publishName, stopName, updateRoomName } from './name.mjs'
 import { getKeeper, keeperPaths, keeperStatus, removeKeeper, startKeeper, stopKeeper, KEEPER_PORT, LLAMA_BUILD, MODEL } from './keeper.mjs'
-import { getNdi, ndiDownloadFor, ndiPaths, ndiStatus, removeNdi, verifyNdi } from './ndi.mjs'
+import { getNdi, ndiDownloadFor, ndiPaths, ndiStatus, readNdiScan, removeNdi, verifyNdi, watchNdiScanFeed } from './ndi.mjs'
 import * as docker from './runner-docker.mjs'
 import * as node from './runner-node.mjs'
 import {
@@ -321,6 +321,16 @@ const cmdStatus = async () => {
         reach ? reachText(reach, port) : null,
         `data ${info.dataDir}${size ? ` (${size})` : ''}`
     ].filter(Boolean).join(style.dim(' · ')))
+    // Whether the other di.iiii on this network can see this one — asked on
+    // the same terms as the bind above (the certificate's name over https,
+    // else loopback), never inferred from it: a bind to every interface with
+    // the device routes closed is reachable and still invisible to the rig.
+    const cert = readCert(home)
+    // A 403 on the name is still an answer (only a private copy refuses), but
+    // loopback may give the whole one, so it is asked before settling for it.
+    const onName = cert ? await probeRig(port, cert.name, '/serverXR', 'https') : null
+    const rig = (onName && !onName.refused) ? onName : ((await probeRig(port)) || onName)
+    say(ui.rigVisibility(rig))
 }
 
 const cmdOpen = async (args) => {
@@ -1173,7 +1183,31 @@ const cmdNdi = async (args) => {
         return
     }
 
-    fail(`${CMD} ndi get | status | remove`)
+    if (what === 'scan') {
+        // The running server's autoscan, never a finder of our own. --url reaches a
+        // di.iiii other than this install (a dev server on another port).
+        let base = args.flags.url ? String(args.flags.url).replace(/\/+$/, '') : null
+        if (!base) {
+            if (!requireInstalled(home)) return
+            base = publicUrl(home, resolvePort(home))
+        }
+        const first = await readNdiScan(base)
+        if (!first.ok) { fail(ui.ndiScanFailed(first.why)); process.exitCode = 1; return }
+        say(ui.ndiScan(first.scan))
+        if (!args.flags.watch) return
+        const controller = new AbortController()
+        process.once('SIGINT', () => controller.abort())
+        let skipFirst = true // the feed opens with the snapshot just printed
+        const ended = await watchNdiScanFeed(base, (scan) => {
+            if (skipFirst && !scan.change) { skipFirst = false; return }
+            skipFirst = false
+            say(ui.ndiScanEvent(scan))
+        }, { signal: controller.signal })
+        if (!ended.ok) { fail(ui.ndiScanFailed(ended.why)); process.exitCode = 1 }
+        return
+    }
+
+    fail(`${CMD} ndi get | status | remove | scan [--watch]`)
     process.exitCode = 1
 }
 

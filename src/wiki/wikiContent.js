@@ -165,6 +165,21 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-21'
     },
     {
+        id: 'vj-deck-and-clip-in',
+        category: 'Editing',
+        title: 'The VJ deck, and Clip In',
+        summary: 'Play footage live in Nodes: a Resolume-style grid of clips in layers, with opacity and blend per layer, that outputs one picture you can wire anywhere.',
+        body: [
+            'CLIP IN plays a video from the project\'s files as a picture — the same files a Video node uses. Its settings are Speed, Play (Loop, Bounce or Once), In and Out (where in the clip it starts and stops, 0 to 1) and Playing. Wire its Picture into any picture operator.',
+            'THE VJ DECK is one node with a grid: rows are layers, columns are slots. Tap an empty slot to fill it — with a video from the project (or upload one there), or with In 1 to In 4, whatever picture is wired into the deck\'s inputs. Tap a filled slot to play it; tap it again to restart it. A column number plays that whole column at once. The top row is the top layer.',
+            'EACH LAYER has a blend (Mix, Add, Screen, Multiply, Difference), an opacity slider and Clear. MASTER fades the whole deck. The deck\'s Picture output is the mix — wire it to Picture Out for a screen or a projection surface, into Blur or Feedback first, or into another deck. Its card and its OUT show the mix live.',
+            'SETTINGS for the selected clip (speed, play mode, in and out) open from the line under the grid, never from the tap itself, so a phone can play clip after clip without closing anything.',
+            'NOT YET: the BPM and Tap at the top keep a tempo but nothing follows it yet — clips do not sync to the beat. MIDI control of the grid, and a perform view docked beside the patch, are still to come.'
+        ],
+        tags: ['vj', 'deck', 'resolume', 'clip', 'clips', 'footage', 'video', 'layers', 'blend', 'opacity', 'perform', 'live', 'pictures'],
+        updated: '2026-09-24'
+    },
+    {
         id: 'sound-in-a-room',
         category: 'Spaces & access',
         title: 'Sound in a room, and the switch that starts off',
@@ -352,10 +367,12 @@ export const WIKI_ARTICLES = [
             'Blackout works from any machine in the room, always. The machine receiving it turns its projection output black at once, and its lighting desk too if one is running — and it says who called it.',
             'Versions do not have to match. From this release on, two machines meet by agreeing on what they both know and simply not using the rest, so an older stage box still takes a cue and a blackout from a newer laptop. Updating is an offer, never a condition.',
             'A room can have a name and a key. With DI_RIG_ROOM set, machines only pair inside the same room; with DI_RIG_KEY set, every cue and blackout must be signed with that key, so a stranger on the same wifi cannot black out your show. Set DI_RIG=0 to switch the whole thing off.',
+            'A machine started without --lan is private: the others cannot see it, and it cannot see them to pair. That is on purpose — a machine that takes cues from the network is a machine anyone on that network can aim — but it is never a secret. di status says it on its own line (visible or private, discovery on or off, how many machines are in the rig, and the command that changes it), the server says it once in its log when it starts, and the Desk shows a quiet line: this machine is private — other di.iiii on the network can\'t see it · di up --lan.',
+            'A private machine whose pages already answer the network (started some other way than di up, with no HOST set) still listens, and the Desk says how many other di.iiii it can hear. It also tells the others it is there, so a machine that is open shows a di.iiii at <its address> is on this network but private — the answer to the question "why is that one missing?". A machine started with plain di up puts nothing on the network at all.',
             'The rig lives on a local di.iiii only — a hosted diiii.xyz answers none of it. The design, including jam and show modes still to come, is in docs/architecture/RIG.md.'
         ],
-        tags: ['rig', 'lan', 'network', 'machines', 'discovery', 'blackout', 'cue', 'stage', 'projector', 'pi', 'versions', 'local', 'di up', 'show', 'jam'],
-        updated: '2026-09-16'
+        tags: ['rig', 'lan', 'network', 'machines', 'discovery', 'blackout', 'cue', 'stage', 'projector', 'pi', 'versions', 'local', 'di up', 'show', 'jam', 'private', 'visible', 'missing', 'di status'],
+        updated: '2026-09-24'
     },
     {
         id: 'the-machine-under-the-projector',
@@ -394,12 +411,13 @@ export const WIKI_ARTICLES = [
             'A camera can be a surface, so the room is on the wall beside the work. Surfaces can be duplicated, and one surface\'s shape or look pasted onto another. And a whole mapping can be exported as text and pasted into another machine, which matters because the laptop that drives the projector is usually not the one the mapping was made on.',
             'A surface can also take a picture straight off the network. NDI is how TouchDesigner, OBS, Resolume and most stage software hand each other video, and a surface set to “NDI (source by name)” asks for one by the name it advertises — type “td_out” and it finds “AYLMO (td_out_windows)”. You type a name rather than picking a machine because the picture is received by whichever machine is showing that surface, which is usually not the one you are sitting at. The field suggests every source the machines on this desk can see, and the line under it says which of them can show the name you typed — so a wrong name is read here rather than found as a black rectangle on the wall. The Machines list warns about one you have not fixed.',
             'NDI is not part of di.iiii and never travels with it: it is somebody else\'s software with its own licence, so you install it yourself, from ndi.video, on the machine that shows the surface. Until you do, the surface says so instead of going dark, and it says the same thing on a di.iiii that runs on the web — this only works on a di.iiii running on your own machine, because the picture arrives over your own network. NDI® is a registered trademark of Vizrt NDI AB.',
+            'Nobody has to go looking for sources. A di.iiii on your own machine keeps watching the network, and the names in the picker and under Machines change by themselves the moment a source appears or goes — about a second, measured on one machine. Under Machines, “NDI on the network” says how many there are right now. Where this machine cannot look — no NDI installed — it says “unknown” and why, never 0. From a terminal, `di ndi scan` prints the same list, and `di ndi scan --watch` follows it.',
             'A surface can also be a screen in the room. In Studio, pick a plane, open its Screen section and choose one of this project\'s surfaces: the plane now shows that surface\'s live picture — the picture network, a video, an image, a camera, a stream, an NDI source, a test pattern, a flat colour — as its own face, unlit, the way a real screen glows in a dark room. Same document, so what you put on the wall in Projection is what the 3D room shows, and there is no second thing to keep in step. A surface that is a project or a web page is a whole page running and cannot be painted onto a shape; a screen showing one draws a dim named plate instead, in the same warm card colours a new surface is born with — nothing white in the room. Screens run in Studio only for now; a visitor walking the published room sees the plane\'s plain colour.',
             '“Open output” opens a second window with nothing in it but the surfaces on black — no toolbar, no title, no cursor once it has been still. Drag that window onto the projector and put it full screen. Keep the first window on your laptop: the two stay in step, so you drag a corner while watching the wall.',
             'One caution. A surface showing a project or a page is a whole page running, and over a plain http:// address a browser only allows a handful at once — past about four, the rest never load. On diiii.xyz this does not apply. If you are running from a laptop and the bar warns you about it, use video or image surfaces for some of them.'
         ],
         tags: ['projection', 'mapping', 'projector', 'wall', 'exhibition', 'show', 'surface', 'corner pin', 'mask', 'output', 'cues', 'snapping', 'camera', 'lighting', 'light', 'ndi', 'touchdesigner', 'obs', 'resolume', 'network video', 'studio'],
-        updated: '2026-09-21'
+        updated: '2026-09-24'
     },
     {
         id: 'joining-a-space',

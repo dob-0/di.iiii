@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest'
-import { NDI_NOT_HERE, ndiApiUrl, ndiStreamUrl, ndiTrouble, probeNdi } from './ndiLink.js'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { NDI_NOT_HERE, fetchNdiScan, ndiApiUrl, ndiScanLine, ndiStreamUrl, ndiTrouble, presentNdiSources, probeNdi, watchNdiScan } from './ndiLink.js'
 
 // The one wire to the NDI® receiver on this machine. Nothing here needs a
 // runtime — CI has none and neither does aylmo — so every answer is a fake
@@ -121,5 +121,95 @@ describe('why there is no picture', () => {
             'api/stats': answer({ receivers: [{ name: 'td_out', state: 'connecting', detail }] })
         })
         expect(await ndiTrouble({ name: 'td_out', fetchImpl: call })).toEqual({ ready: true, settled: false, detail })
+    })
+})
+
+// The autoscan, as a page reads it (serverXR keeps the finder; the page only listens).
+describe('the autoscan, from a page', () => {
+    const RUNNING = {
+        state: 'running', count: 1, reason: null, how: null,
+        sources: [
+            { name: 'AYLMO (td_out)', address: '10.0.0.2:5961', present: true, firstSeen: 1, lastSeen: 2, goneSince: null },
+            { name: 'WIN (OBS)', address: '10.0.0.3:5962', present: false, firstSeen: 1, lastSeen: 1, goneSince: 2 }
+        ]
+    }
+
+    // A stand-in EventSource: records every one opened, and can be made to speak.
+    class FakeEventSource {
+        static opened = []
+        constructor(url) { this.url = url; this.readyState = 0; this.handlers = {}; this.closed = false; FakeEventSource.opened.push(this) }
+        addEventListener(type, fn) { this.handlers[type] = fn }
+        close() { this.closed = true; this.readyState = 2 }
+        speak(scan) { this.handlers.scan?.({ data: JSON.stringify(scan) }) }
+    }
+
+    const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
+
+    afterEach(() => { vi.unstubAllGlobals(); FakeEventSource.opened = [] })
+
+    it('fetchNdiScan: null where the server has no /ndi, the snapshot where it does', async () => {
+        expect(await fetchNdiScan({ fetchImpl: route({ 'api/scan': answer('<!doctype html>', { json: false }) }) })).toBe(null)
+        expect(await fetchNdiScan({ fetchImpl: route({ 'api/scan': answer(null, { ok: false, status: 404 }) }) })).toBe(null)
+        expect(await fetchNdiScan({ fetchImpl: route({ 'api/scan': answer(RUNNING) }) })).toEqual(RUNNING)
+    })
+
+    it('presentNdiSources: only what is on the network now', () => {
+        expect(presentNdiSources(RUNNING)).toEqual([{ name: 'AYLMO (td_out)', address: '10.0.0.2:5961' }])
+        expect(presentNdiSources(null)).toEqual([])
+    })
+
+    // The honesty rule: a machine that cannot look never shows "0".
+    it('ndiScanLine: a count only when the server is looking', () => {
+        expect(ndiScanLine(RUNNING)).toBe('NDI on the network: 1')
+        expect(ndiScanLine({ state: 'running', count: 0, sources: [] })).toBe('NDI on the network: 0')
+        expect(ndiScanLine({ state: 'starting', count: null })).toBe('NDI on the network: looking…')
+        const none = ndiScanLine({ state: 'no-runtime', count: null, how: 'di ndi get' })
+        expect(none).toMatch(/unknown/)
+        expect(none).toMatch(/di ndi get/)
+        expect(none).not.toMatch(/: 0/)
+        expect(ndiScanLine({ state: 'error', reason: 'load-failed', count: null })).toMatch(/unknown — load-failed/)
+        expect(ndiScanLine(null)).toBe('')
+        expect(ndiScanLine({ state: 'off' })).toBe('')
+    })
+
+    it('watchNdiScan on a hosted tier: one null, and no feed is ever opened', async () => {
+        vi.stubGlobal('fetch', route({ 'api/scan': answer(null, { ok: false, status: 404 }) }))
+        vi.stubGlobal('EventSource', FakeEventSource)
+        const heard = []
+        const stop = watchNdiScan((scan) => heard.push(scan))
+        await flush(); await flush()
+        expect(FakeEventSource.opened).toHaveLength(0)
+        expect(heard.every((scan) => scan === null)).toBe(true)
+        stop()
+    })
+
+    it('watchNdiScan on a local install: the snapshot, then every pushed change — one feed for many listeners', async () => {
+        vi.stubGlobal('fetch', route({ 'api/scan': answer({ ...RUNNING, count: 0, sources: [] }) }))
+        vi.stubGlobal('EventSource', FakeEventSource)
+        const a = []
+        const b = []
+        const stopA = watchNdiScan((scan) => a.push(scan))
+        const stopB = watchNdiScan((scan) => b.push(scan))
+        await flush(); await flush()
+        expect(FakeEventSource.opened).toHaveLength(1)
+        expect(FakeEventSource.opened[0].url).toBe('http://localhost:3000/ndi/api/scan/events')
+        FakeEventSource.opened[0].speak(RUNNING)
+        expect(a.at(-1)).toEqual(RUNNING)
+        expect(b.at(-1)).toEqual(RUNNING)
+        stopA()
+        expect(FakeEventSource.opened[0].closed).toBe(false)
+        stopB()
+        expect(FakeEventSource.opened[0].closed).toBe(true)
+    })
+
+    it('watchNdiScan in poll mode holds no connection open', async () => {
+        vi.stubGlobal('fetch', route({ 'api/scan': answer(RUNNING) }))
+        vi.stubGlobal('EventSource', FakeEventSource)
+        const heard = []
+        const stop = watchNdiScan((scan) => heard.push(scan), { mode: 'poll' })
+        await flush(); await flush()
+        expect(heard.at(-1)).toEqual(RUNNING)
+        expect(FakeEventSource.opened).toHaveLength(0)
+        stop()
     })
 })

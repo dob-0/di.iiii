@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
 import { CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, cardHeight } from '../utils/cardGeometry.js'
-import { isTopType } from '../../project/tops/topOperators.js'
+import { isPictureType, pictureIdOf } from '../../project/tops/vjDeck.js'
 import TopThumbnail from './TopThumbnail.jsx'
 import CardPreview from './cardPreview/CardPreview.jsx'
 import { hasCardPreview } from './cardPreview/previewTypes.js'
@@ -1142,9 +1142,12 @@ export default function RawGraphSurface({
             // TOP of the last one (3 of 3 on the 08-21 audit). Placement is a
             // suggestion, occupancy is a fact: walk down (then wrap right)
             // until the spot is not already the centre of someone's card.
+            // The point is where the new card's MIDDLE will be (the editor
+            // centres it — cardPlacement.js), so it is compared with each
+            // card's middle, not its top-left corner.
             const occupied = (x, y) => nodes.some((other) =>
-                Math.abs((other.graphX ?? 0) - x) < CARD_WIDTH * 0.6
-                && Math.abs((other.graphY ?? 0) - y) < HEADER_HEIGHT + PORT_ROW_HEIGHT * 2)
+                Math.abs((other.graphX ?? 0) + CARD_WIDTH / 2 - x) < CARD_WIDTH * 0.6
+                && Math.abs((other.graphY ?? 0) + cardHeight(other, portScopeNodes) / 2 - y) < HEADER_HEIGHT + PORT_ROW_HEIGHT * 2)
             let guard = 0
             while (occupied(clamped.x, clamped.y) && guard < 24) {
                 guard += 1
@@ -1473,9 +1476,9 @@ export default function RawGraphSurface({
                                     {showPorts && !inputs.length && !outputs.length && getNodeCardSummary(node) ? (
                                         <span className="raw-graph-node-summary">{getNodeCardSummary(node)}</span>
                                     ) : null}
-                                    {showPorts && isTopType(node.typeId) ? (
+                                    {showPorts && isPictureType(node.typeId) ? (
                                         <TopThumbnail
-                                            nodeId={node.id}
+                                            nodeId={pictureIdOf(node)}
                                             top={Math.max(inputs.length, outputs.length, 1) * PORT_ROW_HEIGHT + 4}
                                         />
                                     ) : null}

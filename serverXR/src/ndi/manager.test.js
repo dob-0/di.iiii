@@ -269,3 +269,133 @@ describe('the NDI manager and its child', () => {
     expect(children).toHaveLength(1) // the death of the child it killed does not restart it
   })
 })
+
+// The AUTOSCAN (2026-09-24, owner: "autoscan ndi mean what there are the ndi signals in
+// net now"). One long-lived child with one finder; the parent folds each list into the
+// registry and tells its listeners what appeared and what left.
+describe('the NDI autoscan', () => {
+  const TD = { name: 'AYLMO (td_out_windows)', address: '192.168.15.53:5961' }
+  const OBS = { name: 'WIN (OBS)', address: '192.168.15.20:5962' }
+
+  const scanBuild = (overrides = {}) => build({ scanSettleMs: 0, ...overrides })
+
+  it('is off until asked, then forks one child and reports running once a list arrives', async () => {
+    const { manager, children, last } = scanBuild()
+    expect(manager.scanSnapshot()).toMatchObject({ state: 'off', count: null })
+    expect(children).toHaveLength(0)
+
+    const states = []
+    manager.onScan((event) => states.push(event.scan.state))
+    expect(manager.startScan().state).toBe('starting')
+    expect(children).toHaveLength(1)
+    last().ready()
+    last().sources([TD])
+    const snap = manager.scanSnapshot()
+    expect(snap).toMatchObject({ state: 'running', count: 1, version: 'NDI SDK TEST 6.3.2.0' })
+    expect(snap.sources[0]).toMatchObject({ ...TD, present: true, goneSince: null })
+    expect(typeof snap.checkedAt).toBe('number')
+    expect(states).toContain('running')
+  })
+
+  it('pushes appeared and gone as the finder reports them', async () => {
+    const { manager, last } = scanBuild()
+    const changes = []
+    manager.onScan((event) => { if (event.change) changes.push(event.change) })
+    manager.startScan()
+    last().ready()
+    last().sources([])
+    last().sources([TD])
+    last().sources([TD, OBS])
+    last().sources([OBS])
+    expect(changes.map((c) => [c.appeared.map((s) => s.name), c.gone.map((s) => s.name)])).toEqual([
+      [[TD.name], []],
+      [[OBS.name], []],
+      [[], [TD.name]]
+    ])
+    const gone = manager.scanSnapshot().sources.find((s) => s.name === TD.name)
+    expect(gone.present).toBe(false)
+    expect(typeof gone.goneSince).toBe('number')
+    expect(manager.scanSnapshot().count).toBe(1)
+  })
+
+  it('keeps the child alive with nothing to receive — no idle exit while scanning', async () => {
+    const { manager, children, last } = scanBuild({ idleExitMs: 30 })
+    manager.startScan()
+    last().ready()
+    await wait(90)
+    expect(last().killed).toBe(false)
+    expect(manager.hasChild()).toBe(true)
+    manager.stopScan()
+    await wait(90)
+    expect(manager.hasChild()).toBe(false)
+    expect(children).toHaveLength(1)
+  })
+
+  it('restarts a crashed child with no receivers, says "restarting", and does not call the sources gone', async () => {
+    const { manager, children, last } = scanBuild({ scanSettleMs: 60 })
+    const changes = []
+    manager.onScan((event) => { if (event.change) changes.push(event.change) })
+    manager.startScan()
+    last().ready()
+    last().sources([TD, OBS])
+    await wait(80) // past the first finder's settle window
+    last().die()
+    expect(manager.scanSnapshot()).toMatchObject({ state: 'restarting', count: null })
+    await wait(40)
+    expect(children).toHaveLength(2)
+    // The new finder's first list is short — the SDK says early lists are incomplete.
+    last().ready()
+    last().sources([OBS])
+    expect(changes.flatMap((c) => c.gone)).toEqual([])
+    expect(manager.scanSnapshot().count).toBe(2)
+    // After the settle window the same short list IS a reading: TD has left.
+    await wait(90)
+    expect(changes.flatMap((c) => c.gone).map((s) => s.name)).toEqual([TD.name])
+  })
+
+  it('with no runtime: never forks, says no-runtime with the how, count null — and re-probes later', async () => {
+    let installed = false
+    const { manager, children, last } = scanBuild({
+      probe: () => (installed ? { ok: true } : { ok: false, reason: 'not-installed', how: 'install libndi, then restart di' }),
+      unavailableTtlMs: 40
+    })
+    const snap = manager.startScan()
+    expect(snap).toMatchObject({ state: 'no-runtime', reason: 'not-installed', count: null, sources: [] })
+    expect(snap.how).toMatch(/libndi/)
+    expect(children).toHaveLength(0)
+    installed = true
+    await wait(80)
+    expect(children).toHaveLength(1)
+    last().ready()
+    last().sources([TD])
+    expect(manager.scanSnapshot()).toMatchObject({ state: 'running', count: 1 })
+  })
+
+  it('a runtime that will not load is an error, not "no runtime"', async () => {
+    const { manager, last } = scanBuild()
+    manager.startScan()
+    last().fatal('load-failed', 'install libndi, then restart di')
+    expect(manager.scanSnapshot()).toMatchObject({ state: 'error', reason: 'load-failed', count: null })
+  })
+
+  it('scan({ waitMs }) waits for the first reading', async () => {
+    const { manager, last } = scanBuild()
+    const pending = manager.scan({ waitMs: 300 })
+    last().ready()
+    setTimeout(() => last().sources([TD]), 20)
+    expect(await pending).toMatchObject({ state: 'running', count: 1 })
+  })
+
+  it('close() stops the scan and its listeners', async () => {
+    const { manager, last } = scanBuild()
+    let heard = 0
+    manager.onScan(() => { heard += 1 })
+    manager.startScan()
+    last().ready()
+    const before = heard
+    manager.close()
+    expect(manager.isScanning()).toBe(false)
+    last().sources([TD])
+    expect(heard).toBe(before)
+  })
+})

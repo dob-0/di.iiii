@@ -21,7 +21,8 @@ Then:
 di up          start it, and open it
 di up --lan    the same, answering on this wifi too — for phones in the room
 di down        stop it
-di status      what is running, where, whether the room can reach it, and how big
+di status      what is running, where, whether the room can reach it, how big,
+               and whether the other di.iiii on the network can see it (the rig line)
 
 di new NAME    start a new space
 di save SPACE  save it as one file you can carry anywhere

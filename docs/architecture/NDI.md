@@ -257,6 +257,88 @@ are the terms on which we may name NDI at all, given that we never ship its runt
 `MapInspector.test.jsx` guards both. Never put "NDI" in the name of a di.iiii feature — it
 describes what we speak, not what we are.
 
+## Autoscan — which sources are on the network right now (2026-09-24)
+
+Owner, 2026-09-24: *"autoscan ndi mean what there are the ndi signals in net now"*. So a
+local di.iiii keeps knowing, without anyone pressing "find".
+
+**Method — the SDK's own continuous discovery, not polling.** NDI SDK Documentation §14
+"NDI-FIND" (SDK 6.3.1.0, read from the SDK's own PDF) and `Processing.NDI.Find.h`: one
+finder made with `NDIlib_find_create_v2` keeps its list current for as long as it lives;
+`NDIlib_find_wait_for_sources(timeout)` "will return true immediately" when a source is
+found or removed; `NDIlib_find_get_current_sources` returns that list. The SDK's advice for
+a UI is exactly this: make the finder when the UI opens and read the current list whenever
+you want to show it. `worker.js` already ran that loop (500 ms wait, publish on change);
+the autoscan keeps that ONE child — and so that one finder — alive, instead of letting it
+exit after 60 s idle, and restarts it with the usual backoff if it dies. No finder is ever
+created per question.
+
+| Piece | Where |
+| --- | --- |
+| Registry: first seen, last seen, gone since; the appear/gone/changed diff | `serverXR/src/ndi/scanner.js` (pure) |
+| Keeps the child up, folds each list, emits changes, re-probes a missing runtime once a minute | `manager.js` → `startScan / scan / onScan` |
+| Snapshot + SSE change feed | `routes/ndiRoutes.js` → `/ndi/api/scan`, `/ndi/api/scan/events` |
+| Starts at boot on a real install | `index.js` + `scanAtBootFrom()` |
+| Page side: one feed per page, `null` on a hosted tier | `src/map/ndiLink.js` → `watchNdiScan`, `ndiScanLine` |
+| Machines' device lists re-read on every change | `useMachinePresence` (desk: SSE; the wall `/out`: 5 s GET, no held connection) |
+| CLI | `di ndi scan [--watch] [--url …]` |
+
+**States.** `off · starting · running · restarting · no-runtime · error`. `count` is a
+number only in `running`; in every other state it is `null`, and every surface says
+"unknown" and why — **a machine that cannot look never says "0"**. `no-runtime` is the
+probe's `not-installed` / `no-koffi`; `error` is a runtime that is there and would not load
+(or a finder the runtime refused to make, which the worker now reports as a fatal instead of
+sitting on "starting").
+
+**Settle window (3 s).** The SDK: "an 'early' return … might not include all the sources on
+the network … It commonly takes a few seconds to discover all sources." So for 3 s after a
+finder starts, a list may ADD names but never remove them; after that the same list is a
+reading. A child restart therefore does not announce every source as gone.
+
+**Departures are remembered** for 10 minutes (`goneSince`), at most 512 names in all.
+
+**When it runs.** At boot when `DI_LOCAL=1` (every `di up`), unless `DI_NDI_SCAN=0`;
+`DI_NDI_SCAN=1` turns it on for a dev server. Either scan route also switches it on, and it
+then stays on — continuous is the point. A hosted tier never builds the lane (404).
+
+**Extra reach — what the SDK offers, and what we pass.**
+
+- `DI_NDI_EXTRA_IPS` → `p_extra_ips`: "a comma separated list of IP addresses that will be
+  queried for NDI sources … need not be on the local network … will correctly observe them
+  coming online and going offline." The escape for a network that drops mDNS.
+- `DI_NDI_GROUPS` → `p_groups` (new): which NDI groups to look in; NULL = the machine's
+  default groups ("Public").
+- An NDI Discovery Server, show-local filtering, adapters and a source-name regex are NOT
+  env vars here: the SDK reads them from `ndi-config.v1.json` (`$HOME/.ndi/` on Linux and
+  macOS, `C:\ProgramData\NDI\` on Windows, or the folder named by `NDI_CONFIG_DIR`),
+  which the runtime loads itself. Documented, not wrapped.
+
+### Measured on aylmo — 2026-09-24
+
+i7-11800H, Arch, libndi 6.3.2.0 (`~/.di/ndi/lib`), a dev serverXR on :4390 with
+`DI_NDI_SCAN=1`. Sender: `devSender.js` at 320×180@5 on the same machine. Harness:
+`node scripts/ndi-autoscan-measure.mjs --base http://127.0.0.1:4390 --runs 10` — wall
+clock in the harness, from the sender's own "created" line (or its SIGTERM/SIGKILL) to the
+SSE event arriving. 20 appearances, 10 of each departure, 0 misses:
+
+| | min | median | p90 | max |
+| --- | --- | --- | --- | --- |
+| appeared, after the sender was created | 793 ms | 891 ms | 1008 ms | 1008 ms |
+| appeared, after the sender process was spawned | 853 ms | 983 ms | 1091 ms | 1115 ms |
+| gone, after SIGTERM (sender destroyed cleanly) | 1004 ms | 1007 ms | 1011 ms | 1011 ms |
+| gone, after SIGKILL (nothing said on the wire) | 1006 ms | 1013 ms | 1014 ms | 1014 ms |
+
+In the browser (Playwright Chromium, the mapper's desk on the vite dev server): the
+"NDI on the network: N" line went 0 → 1 1.15 s after the sender was spawned and back to 0
+1.05 s after SIGTERM, desktop 1600×950@2 and phone 390×844@3. The scanning child idles at
+0.04 s CPU per 60 s (≈0.07 % of one core) and 78 MB RSS.
+
+**What those numbers are not.** Both ends were on ONE machine: the runtime tracks a local
+sender's process directly, which is why a SIGKILL was noticed as fast as a clean stop.
+A sender on ANOTHER machine that dies without a goodbye has to be timed out by mDNS or the
+discovery server, and that number has not been measured. Neither has Windows or macOS, a
+second subnet, a Discovery Server, or `DI_NDI_GROUPS` against a sender in a non-public group.
+
 ## Routes
 
 All under `/ndi` and `{APP_BASE_PATH}/ndi`, all local-runtime only, all `no-store`.
@@ -271,6 +353,8 @@ All under `/ndi` and `{APP_BASE_PATH}/ndi`, all local-runtime only, all `no-stor
 | `POST /ndi/out.jpg?name=` | One JPEG, the body. → `{ ok, name, seq, viewers }`. 503 names the missing runtime, 429 means the output cap, 400 means the body is not a JPEG. |
 | `DELETE /ndi/out.jpg?name=` | Stop that output now, rather than waiting out its five seconds of silence. |
 | `GET /ndi/api/outputs` | `{ available, reason, how, outputs: [{ name, state, detail, viewers, frames, dropped, width, height }] }`. |
+| `GET /ndi/api/scan?wait=ms` | The autoscan: `{ state, reason, how, detail, version, since, checkedAt, count, sources: [{ name, address, present, firstSeen, lastSeen, goneSince }] }`. Switches the scan on; `wait` (≤5000) waits for the first reading. `count` is `null` unless `state` is `running`. |
+| `GET /ndi/api/scan/events` | `text/event-stream`. `event: scan` with that snapshot at once, then on every change with `change: { appeared, gone, changed }` beside it; `: ping` every 20 s. At most 32 open feeds (429). |
 
 `name` is any fragment of a source name, ≤200 characters. `w` is 16–4096 (the picture is
 resized before the JPEG — cheaper bytes, more CPU). `fps` is 1–60 (a ceiling, not a
@@ -283,6 +367,8 @@ Environment:
 - `DI_NDI_EXTRA_IPS` — comma-separated addresses for the finder, for a network (or a
   Windows firewall) where mDNS does not arrive. Operator-set, never from a request.
 - `DI_NDI_ENCODES` — overlapping encodes per receiver, default 2.
+- `DI_NDI_GROUPS` — comma-separated NDI groups the finder looks in (default: the machine's own, "Public").
+- `DI_NDI_SCAN` — `0` keeps the autoscan from starting at boot on a real install; `1` starts it on a dev server.
 
 ## Trying it
 

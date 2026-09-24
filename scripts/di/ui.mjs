@@ -231,6 +231,30 @@ export const ui = {
         ? `this network — ${urls.length ? urls.join(', ') : 'no address yet'}`
         : 'this machine only',
 
+    // What `status` says about the rig: can the other di.iiii on this network
+    // see this one. The one question nobody could answer on 2026-09-24, when
+    // three copies sat on one network and one of them was invisible by design
+    // and in silence. `v` is the server's answer (GET /api/rig/visibility).
+    rigVisibility: (v) => {
+        if (!v) return style.dim('rig: no answer — DI_RIG=0, or a server older than this di')
+        const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
+        const nearby = Array.isArray(v.nearby) ? v.nearby : []
+        const privateOnes = nearby.filter((entry) => entry && entry.open === false)
+        const openOnes = nearby.filter((entry) => entry && entry.open === true)
+        const who = (entry) => `${entry.address || 'an unknown address'}${entry.name ? ` (${entry.name})` : ''}`
+        if (v.visible) {
+            return [
+                `rig: visible on this network · discovery ${v.discovery || 'on'} · ${plural(v.members || 0, 'member', 'members')}${style.dim(`  (to make it private: ${CMD} down, then ${CMD} up)`)}`,
+                ...privateOnes.map((entry) => style.yellow(`  a di.iiii at ${who(entry)} is on this network but private — on that machine: ${CMD} down, then ${CMD} up --lan`))
+            ].join('\n')
+        }
+        return [
+            style.yellow(`rig: private — other di.iiii on this network cannot see this one`),
+            v.refused ? null : style.dim(`  discovery ${v.discovery || 'off'}${openOnes.length ? ` · heard ${openOnes.length} other di.iiii on this network: ${openOnes.map(who).join(', ')}` : ''}`),
+            `  to change: ${CMD} down, then ${CMD} up --lan`
+        ].filter(Boolean).join('\n')
+    },
+
     stopped: (dataDir) => `stopped. your work is safe in ${dataDir}`,
     notRunning: () => 'not running.',
 
@@ -510,6 +534,46 @@ export const ui = {
 
     ndiRemoved: () => 'the NDI runtime is gone. your work is untouched.',
 
+    // `di ndi scan` — the running di.iiii's autoscan. A count is printed only when
+    // the server is actually looking: "no runtime" is never "no sources".
+    ndiScan: (scan, { now = Date.now() } = {}) => {
+        const ago = (at) => (typeof at === 'number' ? `${Math.max(0, Math.round((now - at) / 1000))} s ago` : '')
+        if (scan.state === 'no-runtime') {
+            return [
+                'cannot look — this di.iiii has no NDI runtime.',
+                style.dim(`  ${scan.how || `${CMD} ndi get, then ${CMD} down && ${CMD} up`}`)
+            ].join('\n')
+        }
+        if (scan.state === 'error') return `cannot look — the NDI runtime would not start: ${scan.detail || scan.reason || 'no reason given'}`
+        if (scan.state === 'off') return 'the autoscan is off on this di.iiii.'
+        const present = (scan.sources || []).filter((source) => source.present)
+        const gone = (scan.sources || []).filter((source) => !source.present)
+        const head = scan.state === 'running'
+            ? `NDI on the network: ${scan.count}`
+            : `NDI on the network: unknown — the scan is ${scan.state}${present.length ? ' (the list below is the last reading)' : ''}`
+        const lines = [head]
+        for (const source of present) lines.push(`  ${source.name}${source.address ? style.dim(`  ${source.address}`) : ''}${style.dim(`  seen since ${ago(source.firstSeen)}`)}`)
+        // The most recent departures only: the server remembers ten minutes of them.
+        const recent = [...gone].sort((a, b) => (b.goneSince || 0) - (a.goneSince || 0))
+        for (const source of recent.slice(0, 5)) lines.push(style.dim(`  ${source.name}  gone ${ago(source.goneSince)}`))
+        if (recent.length > 5) lines.push(style.dim(`  … and ${recent.length - 5} more gone in the last ten minutes`))
+        return lines.join('\n')
+    },
+
+    ndiScanEvent: (scan, { now = Date.now() } = {}) => {
+        const at = new Date(now).toTimeString().slice(0, 8)
+        const change = scan.change
+        if (!change) return style.dim(`${at}  ${scan.state === 'running' ? `scanning — ${scan.count} on the network` : `scan ${scan.state}${scan.how ? ` — ${scan.how}` : ''}`}`)
+        const lines = []
+        for (const source of change.appeared || []) lines.push(`${at}  + ${source.name}${source.address ? style.dim(`  ${source.address}`) : ''}`)
+        for (const source of change.gone || []) lines.push(`${at}  - ${source.name}`)
+        for (const source of change.changed || []) lines.push(`${at}  ~ ${source.name}${style.dim(`  now ${source.address}`)}`)
+        lines.push(style.dim(`${at}  ${scan.count ?? '?'} on the network`))
+        return lines.join('\n')
+    },
+
+    ndiScanFailed: (why) => `could not read the NDI scan — ${why}`,
+
     ndiUnsupported: (platform) => [
         `NDI publishes no runtime for ${platform}.`,
         style.dim('linux, macOS and windows only.')
@@ -546,6 +610,7 @@ export const ui = {
         `  ${CMD} ndi get      fetch the runtime (9–225 MB once, depending on the machine)`,
         `  ${CMD} ndi status   whether it is here, and whether di.iiii can load it`,
         `  ${CMD} ndi remove   take it off this machine`,
+        `  ${CMD} ndi scan     every NDI source on the network right now (--watch: follow it live)`,
         '',
         style.dim('  --force           fetch it again even if it is already here'),
         style.dim('  --variant NAME    a different linux build (a raspberry pi is not x86_64)'),
