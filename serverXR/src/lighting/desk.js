@@ -485,6 +485,9 @@ function createDesk(opts = {}) {
   // kept dirty, retried with backoff, and said out loud.
   const saveStatus = { ok: true, pending: false, lastOkAt: null, lastError: null, failures: 0 };
   const LOCKED = new Set(['EPERM', 'EBUSY', 'EACCES']);
+  // The size and time of the last show found on disk after an empty boot and kept aside,
+  // so a save that keeps failing does not make a fresh -found- copy on every retry.
+  let foundKept = null;
 
   // One file, written whole: to a temp file, the previous good copy COPIED aside (never
   // renamed — see writeShow), then renamed over the live path, which is atomic.
@@ -539,7 +542,26 @@ function createDesk(opts = {}) {
   function writeShow() {
     clearTimeout(saveTimer);
     saveTimer = null;
-    if (!dirty) return;
+    // The rig still owed to the machine's own show file while a space's show is loaded.
+    // Kept apart from `dirty`: when the space's show saved and the machine's write then
+    // failed, the retry must still write the rig rather than find nothing dirty and stop.
+    const machineOwed = !!show.space && JSON.stringify(state.output) !== machineOutputText;
+    if (!dirty && !machineOwed) {
+      // Nothing unsaved, so an earlier failure has nothing left to lose (a copy that
+      // replaced a failing space show, say). lastOkAt stays when it was.
+      if (!saveStatus.ok || saveStatus.pending) Object.assign(saveStatus, { ok: true, pending: false, lastError: null, failures: 0 });
+      return;
+    }
+    if (dirty) writeShowFile();
+    if (show.space) writeMachineOutput();
+    else machineOutputText = JSON.stringify(state.output);
+    if (!saveStatus.ok) log('  the show saved again after ' + saveStatus.failures + ' failed attempt(s)');
+    Object.assign(saveStatus, { ok: true, pending: false, lastOkAt: Date.now(), lastError: null, failures: 0 });
+  }
+
+  // The loaded show's own file. Throws when it cannot be written; both flags below are
+  // then left as they were, so the retry does exactly what this attempt meant to.
+  function writeShowFile() {
     const file = showFile();
     fs.mkdirSync(show.dir, { recursive: true });
     // A show that appeared after we booted with nothing belongs to somebody else — a
@@ -547,14 +569,22 @@ function createDesk(opts = {}) {
     // It is preserved and named rather than overwritten, and said out loud. An empty
     // desk quietly replacing a real one is the worst thing this file could do.
     if (bootedWithNothing && fs.existsSync(file)) {
-      const aside = file.replace(/\.json$/, '-found-' + Date.now() + '.json');
-      try {
-        fs.copyFileSync(file, aside);
+      const seen = fs.statSync(file);
+      const sig = seen.size + ':' + seen.mtimeMs;
+      if (sig !== foundKept) {
+        const aside = file.replace(/\.json$/, '-found-' + Date.now() + '.json');
+        try { fs.copyFileSync(file, aside); }
+        catch (e) {
+          // Not kept, so not overwritten: this save fails, and is retried and reported.
+          const err = new Error('a show appeared at ' + file + ' and could not be kept aside: ' + e.message);
+          err.code = e.code;
+          throw err;
+        }
+        foundKept = sig;
         log('A show appeared at ' + file + ' after this desk started empty.');
         log('It has NOT been overwritten blindly — it is kept at ' + aside);
-      } catch (e) { /* if it cannot be preserved, the write below is still refused */ }
+      }
     }
-    bootedWithNothing = false;
     // Compact, not pretty-printed: at 500+ scenes the indented form cost ~29ms to
     // stringify, over the 25ms frame budget at 40Hz. Compact is ~9ms and a third the size.
     // A space's show is written without the rig (normaliseOutput says why).
@@ -567,12 +597,11 @@ function createDesk(opts = {}) {
     // A rename onto the live path is atomic, so show.json now goes straight from the old
     // contents to the new and is never absent.
     writeWhole(file, text, saveStatus.failures >= 3);
-    // Only now is the edit safe: a write that threw above leaves the show dirty.
+    // Only now is the edit safe, and only now has this desk written a show of its own. A
+    // write that threw above leaves both as they were: the show stays dirty, and a show
+    // that turns up before the retry is still kept aside rather than written over.
+    bootedWithNothing = false;
     dirty = false;
-    if (show.space) writeMachineOutput();
-    else machineOutputText = JSON.stringify(state.output);
-    if (!saveStatus.ok) log('  the show saved again after ' + saveStatus.failures + ' failed attempt(s)');
-    Object.assign(saveStatus, { ok: true, pending: false, lastOkAt: Date.now(), lastError: null, failures: 0 });
   }
 
   // The timer's way in: never throws. A failure is kept, retried with a growing wait
@@ -2186,7 +2215,16 @@ function createDesk(opts = {}) {
   // the rig carries over untouched; the profile registry is emptied of the old show's
   // own fixture types and filled with the new one's (each show carries its own).
   function switchShow(next) {
-    writeShow();
+    // The show being left is saved first, through the same path as every other save: a
+    // failure is reported (status.save) and retried. The switch is then refused — loading
+    // the next show replaces `state`, and the edits that could not be written would go
+    // with it.
+    saveSoon();
+    if (!saveStatus.ok) {
+      const e = new Error('The show that is loaded could not be saved (' + saveStatus.lastError + '), so nothing was switched and none of it is lost. Try again once it has saved.');
+      e.status = 409;
+      throw e;
+    }
     cancelPending();
     const rig = state.output;
     for (const p of customProfiles()) removeProfile(p.name);
