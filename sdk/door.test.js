@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -221,5 +221,19 @@ describe('over a real stdio pipe', () => {
         child.kill()
         expect(lines[0].result.protocolVersion).toBe('2025-11-25')
         expect(lines[1].result.tools.map((t) => t.name)).toEqual(['di_find', 'di_describe', 'di_call', 'di_run'])
+    }, 15000)
+
+    // The hand-rolled server echoed whatever version a client asked for; the
+    // spec says a server answers with a version it actually supports.
+    it('never claims a protocol version it does not speak', () => {
+        const entry = path.join(path.dirname(fileURLToPath(import.meta.url)), 'mcp.mjs')
+        const result = spawnSync(process.execPath, [entry, '--base', 'http://127.0.0.1:1/serverXR'], {
+            encoding: 'utf8',
+            timeout: 15000,
+            input: `${JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '1900-01-01', capabilities: {}, clientInfo: { name: 'test', version: '0' } } })}\n`
+        })
+        const answer = JSON.parse(result.stdout.trim().split('\n')[0])
+        expect(answer.result.protocolVersion).not.toBe('1900-01-01')
+        expect(answer.result.protocolVersion).toMatch(/^20\d\d-\d\d-\d\d$/)
     }, 15000)
 })

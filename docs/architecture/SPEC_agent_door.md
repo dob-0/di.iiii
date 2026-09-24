@@ -111,6 +111,40 @@ Before any phase is called done:
 
 ## 9. Owed and open
 
-- The offline artifact grows by the SDK and zod. To be measured and stated at phase 1's end.
-- `di` (the CLI) is still not on the SDK core (`sdk/README.md`, Honest limits). Unchanged here.
+Measured at phase 1 (2026-09-24):
+
+- **Install weight:** the SDK adds 15.8 MB to an installed `serverXR/node_modules`
+  (7.7 MB `@modelcontextprotocol`, 8.1 MB `zod`; 81 MB total). The downloaded
+  artifact does not change — dependencies come from npm at first install, which
+  already needs the registry (`project_di_cli` gap). Much of it is source maps;
+  trimming is possible and not done.
+- **Context before the first question:** 4 tools / 3,303 bytes, against the old
+  server's 17 tools / 7,088 bytes. Token counts need the Anthropic counting
+  endpoint and an API key this machine does not have — bytes are the measure.
+
+Security findings the catalogue review surfaced (not changed on this branch):
+
+1. **`GET /api/trash` answered anyone** — reproduced: anonymous, auth on, 9 trashed
+   projects from 5 spaces. On `main` since 2026-09-10. Fixed on its own branch,
+   `fix/trash-scope`.
+2. **Trusted people change without the gate** — `trustedUserIds` is not in
+   `SENSITIVE_SPACE_PATCH_FIELDS` (`serverXR/src/approvalGate.js`), so granting
+   direct write applies at once while `isPublic`/owner changes wait.
+3. **NDI routes have no identity check** — `/ndi/*` is guarded by
+   `requireLocalRuntime` only; anyone on the LAN (when LAN devices are allowed)
+   can create or kill a stage output.
+4. **DM routes** have no role layer, only per-handler session checks.
+5. **`GET /api/events`** decides admin inside the handler (empty 200 to others),
+   and **`POST /api/integrations/google-drive/disconnect`** no-ops without a user
+   instead of refusing — both lean on shapes that could change underneath them.
+6. **The `/api` read gate only runs for routes with a `:spaceId`/`:projectId`
+   param.** Any route taking a space only as a query parameter skips it — the
+   class finding 1 belongs to.
+
+Still open:
+
+- `di` (the CLI) is still not on the SDK core (`sdk/README.md`, Honest limits).
+- The lighting desk is one opaque handler (`desk.handle`), invisible to the
+  route walk; its API needs its own table before agents can reach it.
+- Reach is per route: `PATCH /api/spaces/:spaceId` is public because it can be.
 - Phase 3's authorisation server is real work, not a switch.

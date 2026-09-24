@@ -34,6 +34,7 @@ const model = arg('model', 'sonnet')
 const label = arg('label', 'run')
 const parallel = Number(arg('parallel', '3'))
 const out = arg('out', `eval-${label}.json`)
+const only = arg('only') ? arg('only').split(',').map(Number) : null
 if (!base) throw new Error('--base is required')
 
 export const parseEvaluation = (xml) => [...xml.matchAll(/<qa_pair>\s*<question>([\s\S]*?)<\/question>\s*<answer>([\s\S]*?)<\/answer>\s*<\/qa_pair>/g)]
@@ -92,7 +93,7 @@ const askOne = (qa) => new Promise((resolve) => {
 })
 
 const main = async () => {
-    const qas = parseEvaluation(readFileSync(path.join(HERE, 'di.xml'), 'utf8'))
+    const qas = parseEvaluation(readFileSync(path.join(HERE, 'di.xml'), 'utf8')).filter((qa) => !only || only.includes(qa.n))
     const results = []
     const queue = [...qas]
     await Promise.all(Array.from({ length: parallel }, async () => {
