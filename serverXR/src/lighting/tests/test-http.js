@@ -1713,13 +1713,17 @@ check('the desk\'s own state is read through: a holder of the desk reaches the l
 
 // Ported from the studio desk (2026-09-24). A show file that cannot be written (OneDrive
 // or an antivirus holding it, a read-only file) used to throw out of the save timer.
+// The failure is made with a DIRECTORY where the save's temp file goes: every platform
+// refuses that write, root included. A read-only show.json would not do — on Linux a rename
+// over a read-only file succeeds, so the test would pass without the failure ever happening.
 check('a show file that cannot be written does not stop the desk, says so, keeps the edit and recovers', async () => {
   const file = path.join(process.env.DATA_DIR, 'show.json');
+  const blocker = file + '.tmp';
   await POST('/api/master', { master: 200 });
   await sleep(700);                                   // the first save lands
   assert.ok(fs.existsSync(file), 'the show file exists');
   try {
-    fs.chmodSync(file, 0o444);                        // read-only: the same EPERM a lock gives
+    fs.mkdirSync(blocker);                            // the next save cannot write its temp file
     await POST('/api/master', { master: 111 });
     await sleep(1500);
     const st = (await GET('/api/state')).body;        // it answers: the desk is alive
@@ -1728,7 +1732,7 @@ check('a show file that cannot be written does not stop the desk, says so, keeps
     assert.ok(st.status.save.failures >= 1);
     assert.strictEqual((await GET('/api/dmx')).body.master, 111, 'the change itself is live');
     assert.strictEqual(JSON.parse(fs.readFileSync(file, 'utf8')).master, 200, 'the old file is intact, not truncated');
-  } finally { fs.chmodSync(file, 0o666); }
+  } finally { fs.rmSync(blocker, { recursive: true, force: true }); }
   for (let i = 0; i < 60 && !(await GET('/api/state')).body.status.save.ok; i++) await sleep(250);
   assert.strictEqual((await GET('/api/state')).body.status.save.ok, true, 'the save recovers on its own');
   assert.strictEqual(JSON.parse(fs.readFileSync(file, 'utf8')).master, 111, 'the retried save wrote the change');
@@ -1765,6 +1769,69 @@ check('stage objects, labels, follow times and the colour effect: set, published
   await POST('/api/markers', { markers: [] });
   await POST('/api/colorfx', { mode: 'none' });
   await POST('/api/scenes/remove', { ids: [a.id, b.id] });
+});
+
+// ---- review fixes (2026-09-24): a failed save never loses the guard, the rig or the show
+
+check('a save that failed after an empty boot still keeps aside a show that turned up before the retry', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'desk-found-retry-'));
+  const show = path.join(dir, 'show.json');
+  const d = await deskOn(dir);                        // boots with nothing
+  try {
+    fs.mkdirSync(show + '.tmp');                      // the first save fails
+    await d.post('/api/master', { master: 100 });
+    await sleep(700);
+    assert.ok(!fs.existsSync(show), 'nothing was written');
+    fs.rmSync(show + '.tmp', { recursive: true, force: true });
+    fs.writeFileSync(show, JSON.stringify({ fixtures: [{ id: 'f1', profile: 'drgb', address: 1 }, { id: 'f2', profile: 'drgb', address: 5 }] }));
+    await sleep(1500);                                // the retry fires
+    const found = fs.readdirSync(dir).filter((f) => f.includes('-found-'));
+    assert.strictEqual(found.length, 1, 'the show that turned up is kept aside: ' + fs.readdirSync(dir).join(', '));
+    assert.strictEqual(JSON.parse(fs.readFileSync(path.join(dir, found[0]), 'utf8')).fixtures.length, 2);
+    assert.strictEqual(JSON.parse(fs.readFileSync(show, 'utf8')).master, 100, 'then the desk saved its own');
+  } finally { d.stop(); fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+check("in a space, a machine-rig write that failed is retried and reported until it lands", async () => {
+  const d = await spaceDesk();
+  try {
+    await d.post('/api/master', { master: 10 });
+    d.desk.writeShow();
+    assert.strictEqual((await d.post('/api/show/open', { space: 'lab' })).status, 200);
+    fs.mkdirSync(d.machineShow + '.tmp');             // the machine's file cannot be written
+    await d.post('/api/output', { refreshHz: 30 });
+    await sleep(1600);
+    let st = (await d.get('/api/state')).body.status.save;
+    assert.strictEqual(st.ok, false, 'the failed rig write is reported');
+    assert.ok(st.failures >= 2, 'and it is retried, not dropped: ' + JSON.stringify(st));
+    fs.rmSync(d.machineShow + '.tmp', { recursive: true, force: true });
+    for (let i = 0; i < 40 && !(await d.get('/api/state')).body.status.save.ok; i++) await sleep(250);
+    st = (await d.get('/api/state')).body.status.save;
+    assert.strictEqual(st.ok, true, 'it recovers');
+    assert.strictEqual(JSON.parse(fs.readFileSync(d.machineShow, 'utf8')).output.refreshHz, 30, 'the rig change reached the machine show');
+  } finally { await d.stop(); }
+});
+
+check('a show switch whose save fails is refused, reported and retried — the show is not replaced', async () => {
+  const d = await spaceDesk();
+  try {
+    await d.post('/api/show/open', { space: 'lab' });
+    const labShow = d.spaceShow('lab');
+    fs.mkdirSync(path.dirname(labShow), { recursive: true });
+    fs.mkdirSync(labShow + '.tmp');                   // the lab show cannot be saved
+    await d.post('/api/fixtures/add', { profile: 'drgb', count: 2 });
+    const r = await d.post('/api/show/open', { space: null });
+    assert.strictEqual(r.status, 409, r.text);
+    assert.match(r.body.error, /nothing was switched/);
+    let st = (await d.get('/api/state')).body;
+    assert.strictEqual(st.show.space, 'lab', 'the lab show is still loaded');
+    assert.strictEqual(st.fixtures.length, 2, 'with its unsaved edits');
+    assert.strictEqual(st.status.save.ok, false, 'status.save says so');
+    fs.rmSync(labShow + '.tmp', { recursive: true, force: true });
+    for (let i = 0; i < 40 && !(await d.get('/api/state')).body.status.save.ok; i++) await sleep(250);
+    assert.strictEqual(JSON.parse(fs.readFileSync(labShow, 'utf8')).fixtures.length, 2, 'the retry saved the lab show');
+    assert.strictEqual((await d.post('/api/show/open', { space: null })).status, 200, 'and now it switches');
+  } finally { await d.stop(); }
 });
 
 async function main() {
