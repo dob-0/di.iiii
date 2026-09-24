@@ -1,0 +1,7 @@
+## 2026-09-24 — the studio deck stands up: the front room becomes a walk through the work
+
+- `scripts/rooms/front-room-gallery.mjs` arranges the 76 deck slides in `main-dii-project`: a studio wall behind the arrival point, six U-shaped bays along a path to the right of the doors (performance · theatre, installations, XR · virtual, light · sound · live, commissions, education · residencies), a closing wall (network · contact). Grouping from the 2026-09-24 deck inventory.
+- Uses only what the public viewer renders today: upright image planes, 2d billboard titles with typewriter reveal, spot lamps with visible beams that wake on approach (`proximity`), doors into `platform-recordar`, `dilijan` and `network`, and a one-shot timeline that raises each bay's slides when the room opens.
+- Never deletes: 8 slides not in the layout (unlabelled photos, the consent-flagged 61, repeats) are hidden with `runtime.visible = false`. Fixed `gallery-*` ids make a re-run update rather than duplicate. Tests: `scripts/rooms/front-room-gallery.test.js` (5), including the orientation maths against three.js.
+- Dry run on dev v316: 68 placed, 8 hidden, 17 gallery entities, 93 ops. Not yet written to any tier; the owner runs it (the classifier holds tier writes for the owner's hand).
+- Owed: look at it on dev (desktop + phone), tune, then prod; the slides themselves update from the Canva master once the edit list is approved; click-to-open slides come with the separate click PR.
