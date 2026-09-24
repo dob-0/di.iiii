@@ -20,6 +20,10 @@ const {
   AUDIO_MODES, sanitizeAudioCfg,
 } = require('./engine');
 const { FX_MODES, FX_SPATIAL, DEFAULT_FX, sanitizeFxPatch, fxActive, beatGrid } = require('./fx');
+const { sanitizeFollow } = require('./cues');
+const { sanitizeColorFx, COLORFX_MODES } = require('./colorfx');
+const { sanitizeObjects, OBJECT_KINDS, MAX_OBJECTS } = require('./ui/objcore');
+const { sanitizeMarkers, MAX_MARKERS } = require('./markers');
 const { sanitizeLfos, LFO_WAVES, isGenericChannels } = require('./lfo');
 const { STYLES: FAN_STYLES, fanValues } = require('./fan');
 const library = require('./library');
@@ -118,6 +122,11 @@ function createDesk(opts = {}) {
     // which is what keeps them out of every JSON.stringify(state) forever.
     audioCfg: { enabled: false, mode: 'level', amount: 255, release: 300, useBeats: true },
     customProfiles: [],
+    // Stage objects (line, radar, ring, spot) that light the fixtures they pass over; stage
+    // labels (names on the stage, no DMX); the live colour effect. From the studio desk.
+    objects: [],
+    markers: [],
+    colorFx: sanitizeColorFx(null, null),
     // Live sets: named, ordered scene playlists for running a planned show from the Touch
     // page. They reference scenes by id and tolerate dead references — the player shows a
     // missing step rather than silently renumbering the operator's set list mid-show.
@@ -201,6 +210,11 @@ function createDesk(opts = {}) {
     if (s.lfos != null) { const l = sanitizeLfos(s.lfos); if (l) out.lfos = l; else delete out.lfos; }
     if (s.audioCfg && typeof s.audioCfg === 'object') out.audioCfg = sanitizeAudioCfg(s.audioCfg);
     else delete out.audioCfg;
+    // Follow times, the colour effect and stage objects, each through its own validator.
+    delete out.followMs; delete out.followId;
+    Object.assign(out, sanitizeFollow(s));
+    if (s.colorFx && typeof s.colorFx === 'object') out.colorFx = sanitizeColorFx(null, s.colorFx); else delete out.colorFx;
+    if (s.objects != null) { const ob = sanitizeObjects(s.objects); if (ob) out.objects = ob; else delete out.objects; }
     return out;
   }
 
@@ -271,6 +285,9 @@ function createDesk(opts = {}) {
       s.midi = sanitizeMidi(disk.midi) || { maps: [] };
       s.looks = sanitizeLooks(disk.looks) || [];
       s.layers = sanitizeLayers(disk.layers) || [];
+      s.objects = sanitizeObjects(disk.objects) || [];
+      s.markers = sanitizeMarkers(disk.markers) || [];
+      s.colorFx = sanitizeColorFx(null, disk.colorFx);
 
       // Custom profiles MUST be registered before the fixtures are built. makeFixture falls
       // back to `rgb` for a profile it does not know, so loading them in the other order
@@ -1000,6 +1017,10 @@ function createDesk(opts = {}) {
         mid: state.audio.mid, high: state.audio.high,
         bpm: state.audio.bpm,
       },
+      cue: engine.cues.status(),          // the running follow sequence: step, total, time left
+      colorFxModes: COLORFX_MODES,
+      objectKinds: OBJECT_KINDS,
+      now: Date.now(),
       status: {
         // Whether the show is safely on disk (see saveSoon): the page says "not saved —
         // retrying" while ok is false.
@@ -1345,7 +1366,56 @@ function createDesk(opts = {}) {
     },
 
     // Just the live DMX buffers — polled fast so the stage view animates smoothly.
-    'GET /api/dmx': (req, res) => json(res, { dmx: snapshot(), master: state.master, blackout: state.blackout }),
+    // `now` is the desk's clock: the stage view animates objects on it.
+    'GET /api/dmx': (req, res) => json(res, { dmx: snapshot(), master: state.master, blackout: state.blackout, now: Date.now() }),
+
+    // Follow times: {id, followMs|null, followId|null} sets or clears a scene's follow.
+    'POST /api/scenes/follow': (req, res, body) => {
+      const sc = state.scenes.find((s) => s.id === (body && body.id));
+      if (!sc) return json(res, { error: 'no such scene' }, 404);
+      delete sc.followMs; delete sc.followId;
+      if (body.followMs != null) {
+        if (body.followId && !state.scenes.some((s) => s.id === body.followId)) {
+          return json(res, { error: 'the scene to follow on to does not exist' }, 400);
+        }
+        if (body.followId === sc.id && !(+body.followMs > 0)) {
+          return json(res, { error: 'a scene that follows on to itself needs a wait above 0' }, 400);
+        }
+        Object.assign(sc, sanitizeFollow({ followMs: body.followMs, followId: body.followId }));
+      }
+      save();
+      json(res, { ok: true, scene: sc, next: engine.cues.nextOf(sc), chain: sc.followMs != null ? engine.cues.chainFrom(sc.id) : null });
+    },
+    // {action: 'go'|'stop'} on a running follow sequence.
+    'POST /api/cue': (req, res, body) => {
+      const action = body && body.action;
+      if (action === 'go') { const ok = engine.cues.go(); pushFrame(); return json(res, { ok, cue: engine.cues.status() }); }
+      if (action === 'stop') { const ok = engine.cues.stop('stopped'); return json(res, { ok, cue: engine.cues.status() }); }
+      json(res, { error: 'action must be go or stop' }, 400);
+    },
+    // The live colour effect, merged over the current one like /api/fx.
+    'POST /api/colorfx': (req, res, body) => {
+      state.colorFx = sanitizeColorFx(state.colorFx, body);
+      state.activeScene = null;
+      save(); pushFrame(); json(res, { ok: true, colorFx: state.colorFx });
+    },
+    // Stage objects, replaced whole (at most MAX_OBJECTS).
+    'POST /api/objects': (req, res, body) => {
+      const objects = sanitizeObjects(body && body.objects);
+      if (!objects) return json(res, { error: 'objects must be an array' }, 400);
+      if (body.objects.length > MAX_OBJECTS) return json(res, { error: `at most ${MAX_OBJECTS} objects on the stage` }, 400);
+      state.objects = objects;
+      state.activeScene = null;
+      save(); pushFrame(); json(res, { ok: true, objects: state.objects });
+    },
+    // Stage labels, replaced whole. No DMX, so no frame to push — only the show to save.
+    'POST /api/markers': (req, res, body) => {
+      const markers = sanitizeMarkers(body && body.markers);
+      if (!markers) return json(res, { error: 'markers must be an array' }, 400);
+      if (body.markers.length > MAX_MARKERS) return json(res, { error: `at most ${MAX_MARKERS} labels on the stage` }, 400);
+      state.markers = markers;
+      save(); json(res, { ok: true, markers: state.markers });
+    },
 
     'POST /api/master': (req, res, body) => {
       if (body.master != null && Number.isFinite(+body.master)) state.master = Math.max(0, Math.min(255, Math.round(+body.master)));
@@ -1704,6 +1774,7 @@ function createDesk(opts = {}) {
         const captured = engine.captureScene(state.scenes[i].name);
         captured.id = state.scenes[i].id;
         captured.fadeMs = state.scenes[i].fadeMs;
+        Object.assign(captured, sanitizeFollow(state.scenes[i]));   // an overwrite keeps its follow
         state.scenes[i] = captured;
       }
       const scene = state.scenes[i];
@@ -1789,7 +1860,7 @@ function createDesk(opts = {}) {
         const at = Date.now() + wait;
         pending.push(setTimeout(() => {
           if (state.chase.enabled) { state.chase.enabled = false; engine.chase.running = false; }
-          engine.recallScene(scene, body.fadeMs);
+          if (engine.recallScene(scene, body.fadeMs)) engine.cues.onManualRecall(scene, body.fadeMs);
           save(); pushFrame();
         }, wait));
         return json(res, { ok: true, quantized: body.quantize, at, inMs: wait });
@@ -1811,6 +1882,9 @@ function createDesk(opts = {}) {
       const rawBefore = Object.keys(state.raw);
       const ok = engine.recallScene(scene, body.fadeMs);
       const out = { ok };
+      // A scene with a follow starts its sequence; any other scene ends a running one.
+      const cue = ok ? engine.cues.onManualRecall(scene, body.fadeMs) : null;
+      if (cue) out.cue = cue;
       if (chasePaused) out.chasePaused = true;
       if (ok) {
         const fxIsOn = fxActive(state.fx);

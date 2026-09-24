@@ -11,3 +11,9 @@
 - Port 2: save safety. `writeShow` from the timer is now `saveSoon`, which never throws — a
   locked/read-only show file used to throw out of the timer (fatal inside serverXR) and lose the
   edit. Retry with backoff, in-place write after 3 failed renames, `status.save` for the page.
+- Port 3: the studio desk's self-contained modules, server/engine half — follow times
+  (`cues.js`; on a desk with no containers a follow goes on to the next scene in the library),
+  colour effects (`colorfx.js`, never green), stage objects (`ui/objcore.js`, shared by engine
+  and page) and stage labels (`markers.js`). Routes are inline in `desk.js` and read the live
+  `state` binding (a space's show replaces `state`; the studio's route factories would have
+  kept editing the old one). Identify beats objects. The studio's own 22 tests came with them.

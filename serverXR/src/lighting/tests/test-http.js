@@ -1734,6 +1734,39 @@ check('a show file that cannot be written does not stop the desk, says so, keeps
   assert.strictEqual(JSON.parse(fs.readFileSync(file, 'utf8')).master, 111, 'the retried save wrote the change');
 });
 
+// Ported from the studio desk (2026-09-24): objects, labels, follow times, colour effects.
+check('stage objects, labels, follow times and the colour effect: set, published, validated', async () => {
+  let r = await POST('/api/objects', { objects: [{ kind: 'radar', x: 0.5, y: 0.5 }] });
+  assert.strictEqual(r.status, 200, r.text);
+  r = await POST('/api/markers', { markers: [{ text: 'DJ', x: 0.46, y: 0.06 }] });
+  assert.strictEqual(r.status, 200, r.text);
+  r = await POST('/api/colorfx', { mode: 'chase', beats: 2 });
+  assert.strictEqual(r.body.colorFx.mode, 'chase');
+  const st = (await GET('/api/state')).body;
+  assert.deepStrictEqual(st.objects.map((x) => x.kind), ['radar']);
+  assert.deepStrictEqual(st.markers.map((m) => m.text), ['DJ']);
+  assert.ok(!st.fixtures.some((f) => f.name === 'DJ'), 'a label is not a fixture');
+  assert.ok(st.cue && st.cue.running === false, 'the follow status is published');
+  assert.strictEqual((await POST('/api/objects', { objects: 'radar' })).status, 400);
+  assert.strictEqual((await POST('/api/markers', { markers: Array.from({ length: 17 }, () => ({ text: 'x' })) })).status, 400);
+  // Follow: two scenes, the first goes on to the second.
+  const a = (await POST('/api/scenes/save', { name: 'Follow A' })).body.scene;
+  const b = (await POST('/api/scenes/save', { name: 'Follow B' })).body.scene;
+  r = await POST('/api/scenes/follow', { id: a.id, followMs: 100, followId: b.id });
+  assert.strictEqual(r.status, 200, r.text);
+  assert.strictEqual(r.body.next, b.id);
+  r = await POST('/api/scenes/recall', { id: a.id, fadeMs: 0 });
+  assert.strictEqual(r.body.cue, 'started');
+  await sleep(400);
+  assert.strictEqual((await GET('/api/state')).body.activeScene, b.id, 'the sequence stepped on by itself');
+  assert.strictEqual((await POST('/api/scenes/follow', { id: a.id, followMs: 1, followId: 'nope' })).status, 400);
+  // tidy: nothing of this test survives into the next
+  await POST('/api/objects', { objects: [] });
+  await POST('/api/markers', { markers: [] });
+  await POST('/api/colorfx', { mode: 'none' });
+  await POST('/api/scenes/remove', { ids: [a.id, b.id] });
+});
+
 async function main() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'artnet-test-'));
   process.env.DATA_DIR = dir;
