@@ -246,6 +246,33 @@ when `slug !== undefined` — keep it that way), `serverXR/src/routes/projectRou
 `docs/architecture/SPEC_space_urls_and_portability.md`, `docs/ai/vocabulary.md`
 (the same scope rule: the contract governs sentences, never identifiers).
 
+### Authored media is never judged debris from a sample — and a carry that removes content says so first
+
+**Rule:** Authored media is never judged debris from a sample: list every file, show
+the owner a contact sheet, the owner decides. A tier carry that removes content says
+what it removes before it runs.
+
+**Why:** 2026-09-16 → 09-18. The front room (`main-dii-project`) held 76 `image`
+entities — the studio's portfolio deck. An audit agent opened ONE of them, called all
+76 "debris" and deleted them on local and dev. Two days later a "pick the good
+version" pass carried dev's copy to prod with `project-pull.mjs --force`, one
+whole-document replace: 76 slides gone from the live site, and the tool printed "ok".
+The owner had approved "carry main front room" — nobody told him it deleted 76 slides.
+
+**How:**
+1. Before calling any authored file unwanted: list EVERY one (not a sample), put them
+   in front of the owner as a contact sheet (thumbnails + names + where each is used),
+   and let him decide. "Looks unused" is a hypothesis, not a finding.
+2. Before any replace between tiers, run it with `--dry-run` and read the loss summary
+   (`shared/documentLoss.cjs` prints it: "REMOVES 76 of 85 items — 76 image (media)").
+   Put that line, word for word, in the question you ask the owner.
+3. `--accept-loss <N>` is the owner's answer to that question, never yours. A refusal
+   is the tool doing its job; do not reach for the number to get past it.
+
+**Files:** `shared/documentLoss.cjs`; the tools that call it — `scripts/project-pull.mjs`,
+`scripts/tier-sync.mjs`, `scripts/space-push.mjs`, `scripts/space-bundle.mjs`,
+`scripts/send.mjs` → `serverXR/src/contentProposals.js`. Row in `known-fixes.md`.
+
 ### Never discard another agent's uncommitted changes
 If `git status` shows unstaged edits you didn't make, assume another agent is mid-task in the same working tree. `git stash push -- <file>` to set them aside if you need a clean tree for an unrelated operation (e.g. a branch merge), then `git stash pop` immediately after to restore them exactly as found. Never `git checkout --` or discard them. See [parallel-agents.md](parallel-agents.md) for the full multi-agent setup (prefer `git worktree` over sharing one tree).
 

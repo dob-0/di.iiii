@@ -51,6 +51,13 @@ describe('send — what it decides before touching anything', () => {
         )
     })
 
+    // The server refuses a file that removes media unless the sender names the
+    // exact count (contentProposals.js, 2026-09-18 incident). send carries it.
+    it('carries --accept-loss through as given, and sends none when it is absent', () => {
+        expect(plan(['wcc', '--accept-loss', '76']).proposeArgv).toEqual(expect.arrayContaining(['--accept-loss', '76']))
+        expect(plan(['wcc']).proposeArgv).not.toContain('--accept-loss')
+    })
+
     it('carries a dry run through and prints no links for it', () => {
         expect(plan(['wcc', '--dry-run']).proposeArgv).toContain('--dry-run')
     })

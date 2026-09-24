@@ -43,6 +43,13 @@ const { isValidAssetId } = require('./assetHash')
 const { getProjectPaths } = require('./projectStore')
 const { countOp, emptyCounts, describeCounts } = require('./spaceHistory')
 const { actorFromAuthState, publicActor } = require('./opActor')
+const { loadSharedModule } = require('./sharedRuntime')
+
+// What a replace removes (shared/documentLoss.cjs — the same count the CLI
+// tools print). 2026-09-18: a whole-document carry removed 76 slides from
+// prod's front room and nothing said so. A file that removes media is refused
+// unless the sender names the exact number, and the approver reads it first.
+const { diffDocumentLoss, describeLoss, lossGate } = loadSharedModule('documentLoss.cjs')
 
 const execFileAsync = promisify(execFile)
 
@@ -261,9 +268,13 @@ function createContentProposals({
       // they exported. (No op id to compare = cannot tell, so not flagged.)
       const latestHere = found ? latestOpId('project', entry.id) : null
       const diverged = Boolean(latestHere) && status !== 'unchanged' && !entry.opIds.has(latestHere)
+      const loss = status === 'changed' ? diffDocumentLoss(current, document) : null
       projects.push({
         id: entry.id,
         diverged,
+        mediaLost: loss ? loss.mediaLost : 0,
+        removed: loss ? loss.removed.length : 0,
+        lossText: loss && (loss.removed.length || loss.assetChanged.length) ? describeLoss(loss, entry.meta.title || found?.meta?.title || entry.id) : null,
         title: entry.meta.title || found?.meta?.title || entry.document?.projectMeta?.title || entry.id,
         status,
         inTrash: Boolean(found?.meta?.deletedAt),
@@ -280,10 +291,14 @@ function createContentProposals({
     const currentScene = await readJsonSafe(scenePath)
     const nextScene = bundle.scene ? remapSpaceUrls(bundle.scene, sourceId, spaceId) : null
     const latestSceneOp = nextScene ? latestOpId('space', spaceId) : null
+    const sceneChanged = Boolean(nextScene) && JSON.stringify(currentScene) !== JSON.stringify(nextScene)
+    const sceneLoss = sceneChanged ? diffDocumentLoss(currentScene, nextScene) : null
     const scene = {
+      mediaLost: sceneLoss ? sceneLoss.mediaLost : 0,
+      lossText: sceneLoss && (sceneLoss.removed.length || sceneLoss.assetChanged.length) ? describeLoss(sceneLoss, 'scene') : null,
       diverged: Boolean(latestSceneOp) && JSON.stringify(currentScene) !== JSON.stringify(nextScene) && !bundle.sceneOpIds.has(latestSceneOp),
       inFile: Boolean(nextScene),
-      changed: Boolean(nextScene) && JSON.stringify(currentScene) !== JSON.stringify(nextScene),
+      changed: sceneChanged,
       objectsBefore: countSceneObjects(currentScene),
       objectsAfter: nextScene ? countSceneObjects(nextScene) : countSceneObjects(currentScene)
     }
@@ -322,6 +337,7 @@ function createContentProposals({
       scene,
       filesAdded: newFiles.size,
       newerHere: newer,
+      mediaLost: projects.reduce((n, p) => n + p.mediaLost, 0) + scene.mediaLost,
       nothingToApply: !scene.changed && projects.every((p) => p.status === 'unchanged')
     }
   }
@@ -331,6 +347,12 @@ function createContentProposals({
     lines.push(`${{ applied: 'Applied', dry: 'Would apply' }[mode] || 'Proposal'}: a file for ${summary.spaceLabel} (${summary.spaceId})`)
     const who = from ? `${from} (sent by ${proposer.label})` : proposer.label
     lines.push(`From: ${who}${summary.exportedAt ? ` · file made ${summary.exportedAt.slice(0, 16).replace('T', ' ')} UTC` : ''}${summary.sourceSpaceId !== summary.spaceId ? ` · exported from "${summary.sourceSpaceId}"` : ''}`)
+    // First, so a long summary is never cut before it: what applying removes.
+    const lossTexts = [...summary.projects.map((p) => p.lossText), summary.scene.lossText].filter(Boolean)
+    if (lossTexts.length) {
+      lines.push(summary.mediaLost ? `⚠ REMOVES ${plural(summary.mediaLost, 'media item')}:` : 'Removes:')
+      for (const text of lossTexts) lines.push(text)
+    }
     const changed = summary.projects.filter((p) => p.status !== 'unchanged')
     if (changed.length) {
       lines.push('Projects:')
@@ -367,12 +389,16 @@ function createContentProposals({
     return true
   }
 
-  const applyBundle = async (spaceId, bundle, actor) => {
+  const applyBundle = async (spaceId, bundle, actor, { acceptLoss = null } = {}) => {
     await ensureSpaceWritable(spaceId)
     const meta = await loadSpaceMeta(spaceId)
     if (!meta) throw proposalError(404, 'That space is not here any more.')
     const summary = await inspect(spaceId, bundle, meta)
     if (summary.collisions.length) throw proposalError(409, 'A project in the file belongs to another space here.', { code: 'project_collision' })
+    // Checked again at the moment of writing: a count given for one summary
+    // never covers another.
+    const gate = lossGate({ mediaLost: summary.mediaLost, acceptLoss })
+    if (!gate.ok) throw proposalError(409, gate.message, { code: 'media_loss' })
     const sourceId = summary.sourceSpaceId
 
     const restorePoint = await spaceHistory.beforeChange(spaceId, actor, { reason: 'before-proposal-apply' })
@@ -462,7 +488,7 @@ function createContentProposals({
     const bundle = await readBundle(file, { schemaVersion })
     try {
       const actor = { actor: args.proposer?.subject || 'unknown', type: args.proposer?.type || null, label: args.proposer?.label || null, role: null }
-      return await applyBundle(spaceId, bundle, actor)
+      return await applyBundle(spaceId, bundle, actor, { acceptLoss: Number.isInteger(args.acceptLoss) ? args.acceptLoss : null })
     } finally {
       await bundle.cleanup()
       await fsp.rm(file, { force: true }).catch(() => {})
@@ -472,7 +498,7 @@ function createContentProposals({
   // The route's one call. `mode`: 'auto' (trusted apply, others propose) or
   // 'propose' (always a proposal — the CLI's default, since an admin token
   // is trusted and the point of `propose` is that a person looks).
-  const submit = async ({ spaceId, uploadPath, authState = {}, mode = 'auto', from = null, overwriteNewer = false, dryRun = false, req = null }) => {
+  const submit = async ({ spaceId, uploadPath, authState = {}, mode = 'auto', from = null, overwriteNewer = false, dryRun = false, acceptLoss = null, req = null }) => {
     const meta = await loadSpaceMeta(spaceId)
     if (!meta) throw proposalError(404, 'Space not found.')
     const bundle = await readBundle(uploadPath, { schemaVersion })
@@ -489,11 +515,15 @@ function createContentProposals({
       }
       if (dryRun) return { status: 'dry_run', ...base }
       if (summary.nothingToApply) return { status: 'nothing_to_apply', ...base }
+      const gate = lossGate({ mediaLost: summary.mediaLost, acceptLoss })
+      if (!gate.ok) {
+        throw proposalError(409, gate.message.replace(/re-run with --accept-loss (\d+)/, 'send it again with --accept-loss $1 (acceptLoss)'), { code: 'media_loss', body: base })
+      }
       if ((summary.newerHere.length || summary.divergedParts.length) && !overwriteNewer) {
         throw proposalError(409, `${summary.spaceLabel} has changes newer than this file. Export a fresh copy, or send again saying overwriteNewer.`, { code: 'target_newer', body: base })
       }
       if (willApply) {
-        const result = await applyBundle(spaceId, bundle, actor)
+        const result = await applyBundle(spaceId, bundle, actor, { acceptLoss })
         return { status: 'applied', result, ...base }
       }
       // Kept by content hash, so the intent hash binds the exact bytes.
@@ -509,7 +539,10 @@ function createContentProposals({
           proposedAt: now(),
           proposer: publicActor(actor),
           from: cleanFrom,
-          overwriteNewer: Boolean(overwriteNewer)
+          overwriteNewer: Boolean(overwriteNewer),
+          // Bound into the intent hash: Apply re-counts, and refuses if the
+          // file now removes a different number than the approver was shown.
+          acceptLoss: summary.mediaLost ? acceptLoss : null
         },
         actorState: authState,
         summary: text,

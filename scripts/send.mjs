@@ -4,6 +4,7 @@
  *   node scripts/send.mjs <space>                 # to the rehearsal tier (dev)
  *   node scripts/send.mjs <space> --dry-run       # say what would change, write nothing
  *   node scripts/send.mjs <space> --as-proposal   # ask for approval even if you may apply
+ *   node scripts/send.mjs <space> --accept-loss N # the change removes N media items, and that is meant
  *
  * It does the two steps that were always done by hand, and nothing else:
  * exports the space from this machine's data root as one `.diiii` file, then
@@ -57,7 +58,8 @@ export const parseSendArgs = (argv) => {
         asProposal: false,
         overwriteNewer: false,
         allowProduction: false,
-        keepFile: false
+        keepFile: false,
+        acceptLoss: null
     }
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i]
@@ -69,6 +71,9 @@ export const parseSendArgs = (argv) => {
         else if (a === '--overwrite-newer') args.overwriteNewer = true
         else if (a === '--allow-production') args.allowProduction = true
         else if (a === '--keep-file') args.keepFile = true
+        // The exact number of media items the change removes, as the summary
+        // printed it — the server refuses a file that removes media without it.
+        else if (a === '--accept-loss') args.acceptLoss = argv[++i] ?? ''
         else if (a && a.startsWith('--')) fail(`unknown option ${a}`)
         else if (!args.space) args.space = a
         else fail(`unexpected argument ${a}`)
@@ -105,6 +110,7 @@ export const planSend = (args) => {
     if (args.dryRun) proposeArgv.push('--dry-run')
     if (args.overwriteNewer) proposeArgv.push('--overwrite-newer')
     if (args.allowProduction) proposeArgv.push('--allow-production')
+    if (args.acceptLoss !== null) proposeArgv.push('--accept-loss', String(args.acceptLoss))
 
     return { space: args.space, tier: resolved, site: SITES[resolved], proposeArgv }
 }

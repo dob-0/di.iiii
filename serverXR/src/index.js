@@ -2456,6 +2456,9 @@ router.post('/api/spaces/:spaceId/proposals', (req, res, next) => bundleUpload.s
       from: req.body?.from || null,
       overwriteNewer: flag(req.body?.overwriteNewer),
       dryRun: flag(req.body?.dryRun),
+      // The exact count of media items the file removes (absent = none
+      // acknowledged; anything but a whole number never matches).
+      acceptLoss: req.body?.acceptLoss === undefined || req.body?.acceptLoss === '' ? null : (/^\d+$/.test(String(req.body.acceptLoss)) ? Number(req.body.acceptLoss) : NaN),
       req
     })
     const status = outcome.status === 'pending_approval' ? 202 : 200

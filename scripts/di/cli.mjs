@@ -478,6 +478,9 @@ const cmdOpenFile = async (args, file) => {
     const toolArgs = ['import', resolved]
     if (args.flags.as) toolArgs.push('--as', args.flags.as)
     if (args.flags.force) toolArgs.push('--force')
+    // A forced replace that removes media is refused by the tool unless it is
+    // told the exact count (it prints the number). Passed through as given.
+    if (args.flags['accept-loss'] !== undefined) toolArgs.push('--accept-loss', String(args.flags['accept-loss']))
     const code = await runBundleTool(home, toolArgs, { verbose: Boolean(args.flags.verbose) })
 
     if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })

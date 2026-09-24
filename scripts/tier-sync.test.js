@@ -385,3 +385,86 @@ describe('--dry-run never writes the baseline', () => {
         })
     }
 })
+
+// 2026-09-18: a tier carry wrote dev's front room over prod's with one
+// whole-document replace and removed 76 authored slides without a word. The
+// run now reads what every overwrite removes before it writes anything, and a
+// run that removes media needs the exact count. Drives the real main() against
+// two fake tiers (fetch is stubbed — nothing leaves this process).
+describe('an overwrite that removes media is counted, and refused without the exact number', () => {
+    const originalArgv = process.argv
+    const originalDataRoot = process.env.DATA_ROOT
+    afterEach(() => {
+        process.argv = originalArgv
+        if (originalDataRoot === undefined) delete process.env.DATA_ROOT
+        else process.env.DATA_ROOT = originalDataRoot
+        process.exitCode = undefined
+        vi.unstubAllGlobals()
+        vi.restoreAllMocks()
+    })
+
+    const PID = 'main-dii-project'
+    const hex = (n) => n.toString(16).padStart(64, '0')
+    const image = (i) => ({ id: `slide-${i}`, type: 'image', name: `Slide ${i}`, components: { media: { assetId: hex(i + 1) } } })
+    const nine = Array.from({ length: 9 }, (_, i) => ({ id: `text-${i}`, type: 'text', name: `Text ${i}`, components: {} }))
+    const FULL = { entities: [...Array.from({ length: 76 }, (_, i) => image(i)), ...nine], assets: [] }
+    const THIN = { entities: nine, assets: [] }
+
+    // local holds the thin copy; dev holds the full deck. --from local --to dev --force.
+    const fakeTiers = () => {
+        const writes = []
+        vi.stubGlobal('fetch', vi.fn(async (url, options = {}) => {
+            if (options.method && options.method !== 'GET') writes.push({ method: options.method, url: String(url), body: options.body })
+            const onDev = String(url).includes('dev.diiii.xyz')
+            const json = (body, status = 200) => ({ ok: status < 400, status, json: async () => body })
+            if (options.method === 'POST' && /\/api\/spaces\/main\/projects$/.test(url)) return json({ error: 'exists' }, 409)
+            if (options.method === 'PUT') return json({ ok: true })
+            if (/\/api\/spaces$/.test(url)) return json({ spaces: [{ id: 'main' }] })
+            if (/\/api\/spaces\/main\/projects$/.test(url)) return json({ projects: [{ id: PID, documentVersion: 3, updatedAt: 5 }] })
+            if (url.includes(`/api/projects/${PID}/document`)) return json({ document: onDev ? FULL : THIN })
+            return json({}, 404)
+        }))
+        return writes
+    }
+    const run = async (flags) => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tier-sync-loss-'))
+        process.env.DATA_ROOT = dir
+        process.argv = ['node', 'tier-sync.mjs', '--from', 'local', '--to', 'dev', '--no-assets', '--force', ...flags]
+        const out = []
+        vi.spyOn(console, 'log').mockImplementation((...a) => out.push(a.join(' ')))
+        const writes = fakeTiers()
+        await main()
+        fs.rmSync(dir, { recursive: true, force: true })
+        return { text: out.join('\n'), writes, exitCode: process.exitCode }
+    }
+    const documentPuts = (writes) => writes.filter((w) => w.method === 'PUT' && w.url.endsWith('/document'))
+
+    it('refuses the incident without --accept-loss, and writes nothing', async () => {
+        const { text, writes, exitCode } = await run([])
+        expect(text).toContain(`dev main/${PID}: this replace REMOVES 76 of 85 items — 76 image (media)`)
+        expect(text).toContain('--accept-loss 76')
+        expect(exitCode).toBe(1)
+        expect(writes).toEqual([])
+    })
+
+    it('refuses a wrong number', async () => {
+        const { text, writes, exitCode } = await run(['--accept-loss', '75'])
+        expect(text).toContain('does not match the 76')
+        expect(exitCode).toBe(1)
+        expect(writes).toEqual([])
+    })
+
+    it('carries it out with the exact number', async () => {
+        const { writes } = await run(['--accept-loss', '76'])
+        const puts = documentPuts(writes)
+        expect(puts).toHaveLength(1)
+        expect(JSON.parse(puts[0].body).entities).toHaveLength(9)
+    })
+
+    it('--dry-run prints the loss and writes nothing', async () => {
+        const { text, writes } = await run(['--dry-run'])
+        expect(text).toContain('REMOVES 76 of 85 items')
+        expect(text).toContain('needs --accept-loss 76')
+        expect(writes).toEqual([])
+    })
+})
