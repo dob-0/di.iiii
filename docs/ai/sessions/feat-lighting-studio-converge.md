@@ -17,3 +17,6 @@
   and page) and stage labels (`markers.js`). Routes are inline in `desk.js` and read the live
   `state` binding (a space's show replaces `state`; the studio's route factories would have
   kept editing the old one). Identify beats objects. The studio's own 22 tests came with them.
+- Port 4: ENTTEC. On Windows a missing or lost widget is reopened asynchronously (`mode` and the
+  open off the event loop, still at most once a second) — each retry used to block the frame
+  path ~70ms. Lost/reconnected bookkeeping and `status().state`. POSIX keeps its fast sync open.
