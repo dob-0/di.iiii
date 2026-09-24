@@ -1956,5 +1956,39 @@ check('colorfx: scenes bring their colour effect; older scenes leave it running'
     { mode: 'none', beats: 1, spread: 0.5, amount: 255, a: '#ff0000', b: '#00ff00' }, 'clamped and defaulted');
 });
 
+// ---- review fixes (2026-09-24): follow timing ----------------------------------------
+check('cues: two scenes following each other with no wait and no fade step at most every 100 ms', () => {
+  const { MIN_STEP_MS } = require('../cues');
+  const lamp = makeFixture({ id: 'L', profile: 'rgb', address: 1, values: { r: 0, g: 0, b: 0 } });
+  const sc = (id, next) => ({ id, name: id, fadeMs: 0, followMs: 0, followId: next, fixtures: [{ id: 'L', on: true, values: { r: 10 } }], raw: {} });
+  const st = { ...baseState([lamp]), scenes: [sc('A', 'B'), sc('B', 'A')] };
+  const e = new Engine(st);
+  e.recallScene(st.scenes[0], 0);
+  assert.strictEqual(e.cues.onManualRecall(st.scenes[0], 0, 0), 'started');
+  let steps = 0, last = null;
+  for (let t = 0; t <= 1000; t += 25) {
+    e.cues.tick(t);
+    if (st.activeScene !== last) { steps++; last = st.activeScene; }
+  }
+  assert.ok(steps <= 11, `${steps} steps in a second — the rig flips every frame`);
+  assert.ok(steps >= 5, 'but it still runs on');
+  assert.ok(MIN_STEP_MS >= 100);
+});
+
+check("cues: a follow waits out the fade the engine actually runs — at most 60 s, none when it is not a number", () => {
+  const { MAX_FADE_MS } = require('../cues');
+  const lamp = makeFixture({ id: 'L', profile: 'rgb', address: 1 });
+  const e = new Engine({ ...baseState([lamp]), scenes: [] });
+  const sc = { id: 'A', fadeMs: 1000, followMs: 2000 };
+  e.startFade(120000);
+  assert.strictEqual(e.fade.ms, 60000, 'the engine clamps a fade to 60 s');
+  e.cancelFade();
+  assert.strictEqual(e.cues.dueAfter(sc, 120000, 0), 60000 + 2000, 'so the follow waits 60 s, not 120');
+  assert.strictEqual(e.cues.dueAfter(sc, 'soon', 0), 2000, 'a fade that is not a number is no fade');
+  assert.strictEqual(e.cues.dueAfter(sc, -5, 0), 2000);
+  assert.strictEqual(e.cues.dueAfter(sc, null, 0), 3000, 'no override: the scene\'s own fade');
+  assert.strictEqual(MAX_FADE_MS, 60000, 'cues.js and engine.startFade agree on the longest fade');
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);

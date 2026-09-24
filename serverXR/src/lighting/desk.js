@@ -218,6 +218,9 @@ function createDesk(opts = {}) {
     return out;
   }
 
+  // The fields a scene is made of, for routes that take scenes from outside.
+  const SCENE_FIELDS = ['id', 'name', 'fixtures', 'raw', 'fx', 'lfos', 'audioCfg', 'followMs', 'followId', 'colorFx', 'objects'];
+
   // sanitizeFxPatch fills a missing exclude from its `current` — for a stored scene that is
   // DEFAULT_FX, i.e. []. Absent stays absent, so recall can tell "no opinion" from "none".
   function withoutExcludeIfAbsent(fx, given) {
@@ -1421,7 +1424,7 @@ function createDesk(opts = {}) {
     'POST /api/scenes/follow': (req, res, body) => {
       const sc = state.scenes.find((s) => s.id === (body && body.id));
       if (!sc) return json(res, { error: 'no such scene' }, 404);
-      delete sc.followMs; delete sc.followId;
+      // Refuse first: a request that is turned down leaves the stored follow as it was.
       if (body.followMs != null) {
         if (body.followId && !state.scenes.some((s) => s.id === body.followId)) {
           return json(res, { error: 'the scene to follow on to does not exist' }, 400);
@@ -1429,8 +1432,9 @@ function createDesk(opts = {}) {
         if (body.followId === sc.id && !(+body.followMs > 0)) {
           return json(res, { error: 'a scene that follows on to itself needs a wait above 0' }, 400);
         }
-        Object.assign(sc, sanitizeFollow({ followMs: body.followMs, followId: body.followId }));
       }
+      delete sc.followMs; delete sc.followId;
+      if (body.followMs != null) Object.assign(sc, sanitizeFollow({ followMs: body.followMs, followId: body.followId }));
       save();
       json(res, { ok: true, scene: sc, next: engine.cues.nextOf(sc), chain: sc.followMs != null ? engine.cues.chainFrom(sc.id) : null });
     },
@@ -1855,27 +1859,16 @@ function createDesk(opts = {}) {
         if (!s || typeof s.id !== 'string' || !Array.isArray(s.fixtures)) {
           return json(res, { error: 'every scene needs an id and a fixtures array' }, 400);
         }
-        const lfos = s.lfos == null ? undefined : sanitizeLfos(s.lfos);
-        if (s.lfos != null && !lfos) return json(res, { error: `scene "${s.name}": bad lfos` }, 400);
-        clean.push({
-          id: s.id.slice(0, 40),
-          name: String(s.name || 'Scene').slice(0, 60),
-          fadeMs: Math.max(0, Math.min(60000, s.fadeMs | 0)),
-          fixtures: s.fixtures.map((sf) => ({
-            id: String(sf.id),
-            on: sf.on !== false,
-            values: Object.fromEntries(Object.entries(sf.values || {})
-              .filter(([k]) => typeof k === 'string' && k.length <= 24)
-              .map(([k, v]) => [k, Math.max(0, Math.min(255, +v | 0))])),
-          })),
-          raw: sanitizeRaw(s.raw),
-          // A scene that names no exclude list must not arrive with an empty one: the empty
-          // list is "effects on everything", and recalling it un-protected the beams. It
-          // is left absent, and recall then keeps whatever the live desk has.
-          fx: s.fx ? withoutExcludeIfAbsent(sanitizeFxPatch({ ...DEFAULT_FX }, s.fx), s.fx) : undefined,
-          lfos,
-          audioCfg: s.audioCfg ? sanitizeAudioCfg(s.audioCfg) : undefined,
-        });
+        if (s.lfos != null && !sanitizeLfos(s.lfos)) return json(res, { error: `scene "${s.name}": bad lfos` }, 400);
+        // Through the same validator as a show loaded from disk, so everything a scene can
+        // carry survives an edit made by replacing the library — follow times, the colour
+        // effect, stage objects, each fixture's own effect — and nothing else rides in.
+        // (A scene naming no exclude list keeps it absent there too: see withoutExcludeIfAbsent.)
+        const given = { fadeMs: Math.max(0, Math.min(60000, s.fadeMs | 0)) };
+        for (const k of SCENE_FIELDS) if (s[k] !== undefined) given[k] = s[k];
+        const scene = sanitizeScene(given);
+        if (!scene) return json(res, { error: 'every scene needs an id and a fixtures array' }, 400);
+        clean.push(scene);
       }
       state.scenes = clean;
       const keep = new Set(clean.map((s) => s.id));
@@ -2233,6 +2226,10 @@ function createDesk(opts = {}) {
     engine.state = state;
     engine.cancelFade();
     engine.chase = { running: false, index: 0, nextAt: 0 };
+    // A follow sequence belongs to the show it was started in. A space copied from this
+    // machine's show has the very same scene ids, so left running it would step on through
+    // the other show's scenes.
+    engine.cues.stop('another show was loaded');
     stateVersion++;
     rememberLoaded();
     log('  loaded ' + who() + ' — ' + showFile());

@@ -1834,6 +1834,68 @@ check('a show switch whose save fails is refused, reported and retried — the s
   } finally { await d.stop(); }
 });
 
+// ---- review fixes (2026-09-24): follow times and scenes -----------------------------
+
+check('a follow the desk turns down leaves the stored follow as it was', async () => {
+  const sc = (await POST('/api/scenes/save', { name: 'Keeps its follow' })).body.scene;
+  await POST('/api/scenes/follow', { id: sc.id, followMs: 1500 });
+  const bad = await POST('/api/scenes/follow', { id: sc.id, followMs: 500, followId: 'no-such-scene' });
+  assert.strictEqual(bad.status, 400, bad.text);
+  const self = await POST('/api/scenes/follow', { id: sc.id, followMs: 0, followId: sc.id });
+  assert.strictEqual(self.status, 400, self.text);
+  const now = (await GET('/api/state')).body.scenes.find((x) => x.id === sc.id);
+  assert.strictEqual(now.followMs, 1500, 'the follow it had is still there');
+  await POST('/api/scenes/remove', { ids: [sc.id] });
+});
+
+check('replacing the scene library keeps follow times, colour effects, objects and each light\'s own effect', async () => {
+  const f = await patch('drgb');
+  await POST('/api/fx', { mode: 'strobe', ids: [f.id] });
+  await POST('/api/colorfx', { mode: 'chase' });
+  await POST('/api/objects', { objects: [{ kind: 'radar', x: 0.5, y: 0.5 }] });
+  const a = (await POST('/api/scenes/save', { name: 'Round trip A' })).body.scene;
+  const b = (await POST('/api/scenes/save', { name: 'Round trip B' })).body.scene;
+  await POST('/api/scenes/follow', { id: a.id, followMs: 500, followId: b.id });
+  try {
+    const lib = (await GET('/api/state')).body.scenes;
+    const r = await POST('/api/scenes/replace', { scenes: lib });
+    assert.strictEqual(r.status, 200, r.text);
+    const back = (await GET('/api/state')).body.scenes.find((s) => s.id === a.id);
+    assert.deepStrictEqual([back.followMs, back.followId], [500, b.id], 'the follow survives');
+    assert.strictEqual(back.colorFx && back.colorFx.mode, 'chase', 'the colour effect survives');
+    assert.deepStrictEqual((back.objects || []).map((o) => o.kind), ['radar'], 'the objects survive');
+    assert.deepStrictEqual(back.fixtures.find((sf) => sf.id === f.id).fx, { mode: 'strobe' }, 'the light\'s own effect survives');
+    const junk = await POST('/api/scenes/replace', { scenes: [{ ...lib[0], id: '' }] });
+    assert.strictEqual(junk.status, 400, 'a scene with no id is still refused');
+  } finally {
+    await POST('/api/scenes/remove', { ids: [a.id, b.id] });
+    await POST('/api/fx', { mode: 'none', all: true });
+    await POST('/api/colorfx', { mode: 'none' });
+    await POST('/api/objects', { objects: [] });
+    await POST('/api/fixtures/remove', { ids: [f.id] });
+  }
+});
+
+check('loading another show stops a follow sequence started in the one that was left', async () => {
+  const d = await spaceDesk();
+  try {
+    await d.post('/api/fixtures/add', { profile: 'drgb', count: 1 });
+    const a = (await d.post('/api/scenes/save', { name: 'A', fadeMs: 0 })).body.scene;
+    const b = (await d.post('/api/scenes/save', { name: 'B', fadeMs: 0 })).body.scene;
+    await d.post('/api/scenes/follow', { id: a.id, followMs: 400, followId: b.id });
+    d.desk.writeShow();
+    // The space starts as a copy of this machine's show: the very same scene ids.
+    await d.post('/api/show/open', { space: 'lab' });
+    assert.strictEqual((await d.post('/api/show/copy-machine', { space: 'lab' })).status, 200);
+    await d.post('/api/show/open', { space: null });
+    assert.strictEqual((await d.post('/api/scenes/recall', { id: a.id, fadeMs: 0 })).body.cue, 'started');
+    await d.post('/api/show/open', { space: 'lab' });
+    assert.strictEqual((await d.get('/api/state')).body.cue.running, false, 'the sequence ended with its show');
+    await sleep(700);
+    assert.notStrictEqual(d.desk.state.activeScene, b.id, 'and did not step on through the lab show');
+  } finally { await d.stop(); }
+});
+
 async function main() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'artnet-test-'));
   process.env.DATA_DIR = dir;
