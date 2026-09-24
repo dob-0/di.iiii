@@ -579,6 +579,27 @@ check('a port that is not there fails with something actionable', () => {
   wire.close();
 });
 
+// From the studio desk (2026-09-24): an unplugged widget made /api/dmx ~35ms median on
+// Windows, because every retry ran `mode` synchronously on the frame path.
+check('a missing widget is retried off the frame path: 200 frames with no widget stay fast', () => {
+  const wire = new Enttec({ port: process.platform === 'win32' ? 'COM98' : '/dev/ttyNOSUCH98' });
+  try {
+    const t0 = Date.now();
+    for (let i = 0; i < 200; i++) wire.send(0, Buffer.alloc(512));
+    const took = Date.now() - t0;
+    assert.ok(took < 150, `200 frames with no widget took ${took}ms`);
+    assert.strictEqual(wire.status().state, 'retrying');
+    assert.strictEqual(wire.connected, false);
+    // The retry itself, once due: on Windows it used to run `mode` twice on this very call
+    // (~70ms). It is asynchronous now, so the frame that triggers it returns at once.
+    wire.nextOpenAt = 0;
+    const t1 = Date.now();
+    wire.send(0, Buffer.alloc(512));
+    const retry = Date.now() - t1;
+    if (process.platform === 'win32') assert.ok(retry < 20, `the frame that triggered a retry took ${retry}ms`);
+  } finally { wire.close(); }
+});
+
 check('describePort says nothing rather than guessing about a port that is not there', () => {
   const info = describePort('COM99');
   assert.strictEqual(info.device, null);
