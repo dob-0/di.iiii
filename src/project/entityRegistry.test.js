@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createEntityOfType } from './entityRegistry.js'
+import { createEntityOfType, getInspectorSections } from './entityRegistry.js'
 
 // createEntityOfType is the single funnel every "add an entity" path goes
 // through — Studio's Create window, quick insert, paste and duplicate — so it
@@ -45,5 +45,27 @@ describe('createEntityOfType', () => {
     it('leaves an entity unowned when the caller has no author to give', () => {
         expect(createEntityOfType('box').createdBy).toBeNull()
         expect(createEntityOfType('box', { createdBy: { label: 'Ani' } }).createdBy).toBeNull()
+    })
+})
+
+describe('the Link section (click an object to open its link)', () => {
+    const ids = (type) => getInspectorSections({ type }).map((s) => s.id)
+
+    it('every drawable object has one, last, with an on/off toggle, an address and a label', () => {
+        for (const type of ['box', 'sphere', 'plane', 'text', 'image', 'video', 'model']) {
+            expect(ids(type).at(-1)).toBe('link')
+        }
+        const link = getInspectorSections({ type: 'image' }).at(-1)
+        expect(link.fields.map((f) => [f.component, f.path.join('.'), f.type])).toEqual([
+            ['link', 'enabled', 'checkbox'],
+            ['link', 'href', 'text'],
+            ['link', 'label', 'text']
+        ])
+    })
+
+    it('a door, a light and a group have none, because a door already has its own click', () => {
+        for (const type of ['portal', 'pointLight', 'spotLight', 'ambientLight', 'group']) {
+            expect(ids(type)).not.toContain('link')
+        }
     })
 })

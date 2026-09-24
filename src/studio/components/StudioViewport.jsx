@@ -9,6 +9,8 @@ import LiveScreens from './LiveScreens.jsx'
 import { XR, useXR } from '@react-three/xr'
 import ModalTransform from './ModalTransform.jsx'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
+import EntityLink from '../../project/viewport/EntityLink.jsx'
+import { EntityLinksContext } from '../../project/viewport/entityLinkContext.js'
 import WorldEnvironment from '../../project/viewport/WorldEnvironment.jsx'
 import RenderSettingsEffect from '../../project/viewport/RenderSettingsEffect.jsx'
 import ShadowCasting from '../../project/viewport/ShadowCasting.jsx'
@@ -306,7 +308,11 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
                     else onSelect?.(entity.id)
                 }}
             >
-                <EntityContent entity={shown} assetMap={assetMap} screens={screens} />
+                {/* Live only where the surface turned links on (a visitor's
+                    view mode) — see entityLinkContext.js. */}
+                <EntityLink entity={entity}>
+                    <EntityContent entity={shown} assetMap={assetMap} screens={screens} />
+                </EntityLink>
                 {selected && (
                     <Html position={[0, 1.8, 0]} center zIndexRange={[900, 0]}>
                         <span className="studio-selection-pill">{entity.name}</span>
@@ -606,7 +612,8 @@ function StudioSceneContent({
     controlsRef,
     playTimelines = false,
     rigMirror = false,
-    screens = null
+    screens = null,
+    followLinks = false
 }) {
     const isArMode = useXR((state) => state.mode === 'immersive-ar')
     // Keyed on assets + project id so the map only rebuilds when assets change,
@@ -664,6 +671,7 @@ function StudioSceneContent({
 
     return (
         <LiveTimelineContext.Provider value={playTimelines}>
+        <EntityLinksContext.Provider value={followLinks}>
             <RenderSettingsEffect renderSettings={document.renderSettings} />
             <ShadowCasting enabled={shadowCasting.enabled} mapSize={shadowCasting.mapSize} />
             <color attach="background" args={[document.worldState?.backgroundColor || '#0a1118']} />
@@ -769,6 +777,7 @@ function StudioSceneContent({
                     onStatus={onTransformStatus}
                 />
             )}
+        </EntityLinksContext.Provider>
         </LiveTimelineContext.Provider>
     )
 }
@@ -933,6 +942,9 @@ export default function StudioViewport({
     onShowHelp,
     playTimelines = false,
     rigMirror = false,
+    // A visitor's view of a published room: an object's link opens on click
+    // (src/project/viewport/EntityLink.jsx). Never in an editor.
+    followLinks = false,
 }) {
     const viewportRef = useRef(null)
     const [transformStatus, setTransformStatus] = useState(null)
@@ -1018,6 +1030,7 @@ export default function StudioViewport({
                         playTimelines={playTimelines}
                         rigMirror={rigMirror}
                         screens={screens}
+                        followLinks={followLinks}
                     />
                 </XR>
             </Canvas>
