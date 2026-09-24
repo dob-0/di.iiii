@@ -165,6 +165,21 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-21'
     },
     {
+        id: 'vj-deck-and-clip-in',
+        category: 'Editing',
+        title: 'The VJ deck, and Clip In',
+        summary: 'Play footage live in Nodes: a Resolume-style grid of clips in layers, with opacity and blend per layer, that outputs one picture you can wire anywhere.',
+        body: [
+            'CLIP IN plays a video from the project\'s files as a picture — the same files a Video node uses. Its settings are Speed, Play (Loop, Bounce or Once), In and Out (where in the clip it starts and stops, 0 to 1) and Playing. Wire its Picture into any picture operator.',
+            'THE VJ DECK is one node with a grid: rows are layers, columns are slots. Tap an empty slot to fill it — with a video from the project (or upload one there), or with In 1 to In 4, whatever picture is wired into the deck\'s inputs. Tap a filled slot to play it; tap it again to restart it. A column number plays that whole column at once. The top row is the top layer.',
+            'EACH LAYER has a blend (Mix, Add, Screen, Multiply, Difference), an opacity slider and Clear. MASTER fades the whole deck. The deck\'s Picture output is the mix — wire it to Picture Out for a screen or a projection surface, into Blur or Feedback first, or into another deck. Its card and its OUT show the mix live.',
+            'SETTINGS for the selected clip (speed, play mode, in and out) open from the line under the grid, never from the tap itself, so a phone can play clip after clip without closing anything.',
+            'NOT YET: the BPM and Tap at the top keep a tempo but nothing follows it yet — clips do not sync to the beat. MIDI control of the grid, and a perform view docked beside the patch, are still to come.'
+        ],
+        tags: ['vj', 'deck', 'resolume', 'clip', 'clips', 'footage', 'video', 'layers', 'blend', 'opacity', 'perform', 'live', 'pictures'],
+        updated: '2026-09-24'
+    },
+    {
         id: 'sound-in-a-room',
         category: 'Spaces & access',
         title: 'Sound in a room, and the switch that starts off',
