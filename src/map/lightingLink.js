@@ -180,6 +180,9 @@ export async function readLightClock({ fetchImpl, signal, now = () => Date.now()
         const body = await response.json()
         return {
             up: body?.up === true,
+            // A di.iiii with a Light desk route answered (a local install),
+            // whether or not the desk is open yet.
+            reachable: true,
             bpm: Number(body?.bpm),
             epoch: Number(body?.epoch),
             beatsPerBar: Number(body?.beatsPerBar) || 4,

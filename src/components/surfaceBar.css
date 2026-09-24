@@ -117,3 +117,12 @@
 
     .sbar-where { max-width: 30vw; }
 }
+
+/* Desk | Perform (src/perform/DeskPerformSwitch.jsx): two of the bar's own
+   words and its separator, held together so the pair never wraps apart. */
+.sbar-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    white-space: nowrap;
+}

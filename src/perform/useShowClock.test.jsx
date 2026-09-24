@@ -11,8 +11,8 @@ afterEach(() => {
 const deskAhead = (state) => async ({ now }) => {
     const sentAt = now()
     const receivedAt = sentAt + 10
-    if (!state.up) return { up: false, serverNow: sentAt + 5 + 4000, sentAt, receivedAt }
-    return { up: true, bpm: state.bpm, epoch: state.epoch, serverNow: sentAt + 5 + 4000, sentAt, receivedAt }
+    if (!state.up) return { up: false, reachable: true, serverNow: sentAt + 5 + 4000, sentAt, receivedAt }
+    return { up: true, reachable: true, bpm: state.bpm, epoch: state.epoch, serverNow: sentAt + 5 + 4000, sentAt, receivedAt }
 }
 
 describe('useShowClock', () => {

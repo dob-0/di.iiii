@@ -32,7 +32,10 @@ const APP_SEGMENTS = [
     'spaces', 'projects', 'chat', 'login',
     // `/{space}/scan` — the phone collecting a place. Checked on all three
     // tiers before reserving (2026-09-22): nothing answers to the word.
-    'scan'
+    'scan',
+    // `/{space}/perform/{project}` — the Perform line. Checked on all three
+    // tiers before reserving (2026-09-24): nothing answers to the word.
+    'perform'
 ]
 
 // Real directories under public/, plus the build's own output prefixes, served

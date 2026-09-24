@@ -24,6 +24,13 @@ import {
 // reported in the decision draft. Hidden tab: no polling at all.
 
 export const POLL_MS = 500
+// Not every page is next to a Light desk. A local install with the desk not
+// open yet is asked every 2 s (it may open any moment); a hosted tier, which
+// has no desk at all and answers with its own page, every 15 s — not twice a
+// second for nothing.
+export const POLL_IDLE_MS = 2000
+export const POLL_ABSENT_MS = 15000
+export const pollDelay = (reading) => (reading?.up ? POLL_MS : reading?.reachable ? POLL_IDLE_MS : POLL_ABSENT_MS)
 const FOLLOW_KEY = 'dii.perform.followLight'
 
 const readFollow = () => {
@@ -64,9 +71,11 @@ export default function useShowClock({ deck = null, onDeckTempo = null, enabled 
     const nowRef = useRef(now)
     const readRef = useRef(readClock)
     const sendRef = useRef(sendTempo)
-    nowRef.current = now
-    readRef.current = readClock
-    sendRef.current = sendTempo
+    useEffect(() => {
+        nowRef.current = now
+        readRef.current = readClock
+        sendRef.current = sendTempo
+    })
 
     useEffect(() => {
         if (!enabled) return undefined
@@ -75,6 +84,7 @@ export default function useShowClock({ deck = null, onDeckTempo = null, enabled 
         const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
         const tick = async () => {
             timer = null
+            let wait = POLL_MS
             const hidden = typeof document !== 'undefined' && document.visibilityState === 'hidden'
             if (!hidden) {
                 try {
@@ -86,11 +96,12 @@ export default function useShowClock({ deck = null, onDeckTempo = null, enabled 
                         setOffset(bestOffset(samplesRef.current))
                     }
                     setLight(reading)
+                    wait = pollDelay(reading)
                 } catch {
                     if (cancelled) return
                 }
             }
-            if (!cancelled) timer = setTimeout(tick, POLL_MS)
+            if (!cancelled) timer = setTimeout(tick, wait)
         }
         tick()
         return () => {

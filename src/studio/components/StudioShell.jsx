@@ -12,6 +12,7 @@ import useAuthSession from '../../hooks/useAuthSession.js'
 import StudioCoachMarks from './StudioCoachMarks.jsx'
 import RigMirrorHint from './RigMirrorHint.jsx'
 import SurfaceBar from '../../components/SurfaceBar.jsx'
+import DeskPerformSwitch from '../../perform/DeskPerformSwitch.jsx'
 import useLocalInstall from '../../hooks/useLocalInstall.js'
 import { isEmbedRequest } from '../../utils/previewMode.js'
 import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspaceStorage.js'
@@ -624,7 +625,11 @@ export default function StudioShell({
                 isLocalInstall={localInstall.isLocal}
                 hidden={!showBar}
                 layers={isJam ? null : layers?.open}
-            />
+            >
+                {isJam ? null : (
+                    <DeskPerformSwitch current="desk" space={liveProjectState?.spaceId} project={document?.projectMeta?.id} from="studio" />
+                )}
+            </SurfaceBar>
 
             {!uiHidden && !isMobile && (
                 <>

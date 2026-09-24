@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { layoutScopeKey, mergeFrame, pruneLayout } from './workspaceLayout.js'
-import { emptyLayout, readWorkspaceLayout, writeWorkspaceLayout } from './workspaceLayoutStorage.js'
+import { readWorkspaceLayout, writeWorkspaceLayout } from './workspaceLayoutStorage.js'
 
 // A drag emits a patch per pointer move. Writing localStorage on each one is
 // a synchronous serialise of the whole layout inside the gesture; trailing by a
@@ -18,7 +18,10 @@ const WRITE_DEBOUNCE_MS = 200
  */
 export default function useWorkspaceLayout({ spaceId = null, projectId = null, viewportWidth = null } = {}) {
     const scopeKey = layoutScopeKey({ spaceId, projectId, viewportWidth })
-    const [layout, setLayout] = useState(emptyLayout)
+    // Read on the first render, not after it: the Perform desk chooses which
+    // preset to open from what is stored here, and a first render that saw an
+    // empty slot opened the wrong preset and said the saved one was missing.
+    const [layout, setLayout] = useState(() => readWorkspaceLayout(scopeKey))
     const writeTimer = useRef(null)
     const pending = useRef(null)
 

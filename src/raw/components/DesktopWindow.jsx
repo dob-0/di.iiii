@@ -57,6 +57,9 @@ export default function DesktopWindow({
     onToggleMinimize,
     onToggleMaximize,
     onTogglePin,
+    // A desk with no canvas (Perform) has nothing to pin a window against:
+    // every window is on the screen, and a pin that does nothing is a lie.
+    pinnable = true,
     onEnter,
     minTop = undefined,
     allowOverflowLeft = false,
@@ -318,15 +321,17 @@ export default function DesktopWindow({
                         symbols. Enter › above keeps its word: it is the one
                         action a first-timer must find. Accessible names carry
                         the words the glyphs dropped. */}
-                    <button
-                        type="button"
-                        className={windowState.pinned ? 'is-active' : ''}
-                        aria-label={windowState.pinned ? 'Unpin' : 'Pin'}
-                        title={windowState.pinned ? 'Unpin: let it travel with the canvas' : 'Pin to the screen'}
-                        onClick={(event) => { event.stopPropagation(); onTogglePin?.() }}
-                    >
-                        ⌖
-                    </button>
+                    {pinnable ? (
+                        <button
+                            type="button"
+                            className={windowState.pinned ? 'is-active' : ''}
+                            aria-label={windowState.pinned ? 'Unpin' : 'Pin'}
+                            title={windowState.pinned ? 'Unpin: let it travel with the canvas' : 'Pin to the screen'}
+                            onClick={(event) => { event.stopPropagation(); onTogglePin?.() }}
+                        >
+                            ⌖
+                        </button>
+                    ) : null}
                     {/* Maximise sits next to Pin because it IS a pin: a
                         window filling the workspace is measured in screen
                         pixels, or a pan would slide "full screen" off the

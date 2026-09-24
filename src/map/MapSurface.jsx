@@ -14,6 +14,7 @@ import { useMachinePresence } from '../project/tops/useMachinePresence.js'
 import { showFromValue, showOptions, showValue } from './mapMachines.js'
 import { buildStudioProjectPath, navigateToStudioPath } from '../studio/utils/studioRouting.js'
 import SurfaceBar from '../components/SurfaceBar.jsx'
+import DeskPerformSwitch from '../perform/DeskPerformSwitch.jsx'
 import useLocalInstall from '../hooks/useLocalInstall.js'
 import useSpaceName from '../hooks/useSpaceName.js'
 import { isEmbedRequest } from '../utils/previewMode.js'
@@ -300,7 +301,9 @@ export default function MapSurface({ projectId, spaceId }) {
                 isLocalInstall={localInstall.isLocal}
                 hidden={isEmbed}
                 layers={barLayers}
-            />
+            >
+                <DeskPerformSwitch current="desk" space={spaceId} project={projectId} from="map" />
+            </SurfaceBar>
             <header className="map-bar">
                 <div className="map-bar-title">
                     <span className="map-bar-lane">Projection</span>
