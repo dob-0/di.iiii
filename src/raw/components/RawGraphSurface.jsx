@@ -1142,9 +1142,12 @@ export default function RawGraphSurface({
             // TOP of the last one (3 of 3 on the 08-21 audit). Placement is a
             // suggestion, occupancy is a fact: walk down (then wrap right)
             // until the spot is not already the centre of someone's card.
+            // The point is where the new card's MIDDLE will be (the editor
+            // centres it — cardPlacement.js), so it is compared with each
+            // card's middle, not its top-left corner.
             const occupied = (x, y) => nodes.some((other) =>
-                Math.abs((other.graphX ?? 0) - x) < CARD_WIDTH * 0.6
-                && Math.abs((other.graphY ?? 0) - y) < HEADER_HEIGHT + PORT_ROW_HEIGHT * 2)
+                Math.abs((other.graphX ?? 0) + CARD_WIDTH / 2 - x) < CARD_WIDTH * 0.6
+                && Math.abs((other.graphY ?? 0) + cardHeight(other, portScopeNodes) / 2 - y) < HEADER_HEIGHT + PORT_ROW_HEIGHT * 2)
             let guard = 0
             while (occupied(clamped.x, clamped.y) && guard < 24) {
                 guard += 1
