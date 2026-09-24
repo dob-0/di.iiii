@@ -4,6 +4,12 @@
 const { FX_MODES, fxActive, fxOrder, fxLevel, fxBounds, beatGrid } = require('./fx');
 const { lfoApply, isGenericChannels } = require('./lfo');
 const { layerValues } = require('./looks');
+// Ported from the studio desk (2026-09-24): scenes that run on by themselves, colour
+// effects, and stage objects. objcore.js lives in ui/ because the page draws objects with
+// the very same geometry the engine lights them with.
+const { CueRunner } = require('./cues');
+const { colorFxFrame, colorFxVal, sanitizeColorFx } = require('./colorfx');
+const { objectsFrame, objectsLevelAt, sanitizeObjects } = require('./ui/objcore');
 
 // Generic profile library, named the way desks like Daslight name them:
 // the letters are the channel order.
@@ -237,6 +243,7 @@ class Engine {
     this.idle = new Map();      // universe -> ticks spent transmitting zeros with nothing patched
     this.fade = null;
     this.chase = { running: false, index: 0, nextAt: 0 };
+    this.cues = new CueRunner(this);   // follow times, ticked beside the chase
     // Audio envelope: attack-instant, release-decay. Lives on the engine, not the state,
     // because it is derived motion — nothing about it belongs in show.json.
     this.audioEnv = { level: 0, low: 0, mid: 0, high: 0, last: 0 };
@@ -320,6 +327,11 @@ class Engine {
     const stack = layerValues(state, state.fixtures, now, state.fx && state.fx.bpm, state.fx && state.fx.epoch);
     const audioOn = this.audioActive(state, now);
     if (audioOn) this.audioTick(state, now);
+    // Stage objects: one pose per object per frame, then a mask per light; colour effects:
+    // who they run on and their order along Follow. Each is null when off, and then
+    // nothing below changes at all.
+    const objFrame = objectsFrame(state.objects, state.fx && state.fx.bpm, now);
+    const cfxFrame = colorFxFrame(state, now, excluded, ownFx, (f) => PROFILES[f.profile] || PROFILES.rgb);
     // IDENTIFY — "which lamp in this room is fixture 7?". It beats the stack, the LFOs
     // and the FX, because the entire point is that it is unmistakable across a dark
     // room; it still rides the master and blackout, so the panic key still reaches it.
@@ -350,11 +362,14 @@ class Engine {
       // What this fixture is being told, in order of who has the last word: the layer
       // stack, then an LFO, then the fixture's own stored value. The stack sits on top
       // because a layer IS the thing an operator raised a fader on.
-      const val = (role) => {
+      const baseVal = (role) => {
         if (sv && sv[role] != null) return sv[role];
         if (lv && lv[role] != null) return lv[role];
         return f.values[role];
       };
+      // A colour effect recolours whatever the stack, the LFOs or the stored look left
+      // there. Order: look → colour FX → brightness FX / objects / audio → master, blackout.
+      const val = colorFxVal(cfxFrame, f, baseVal);
       const flash = ident(f.id);
       const level = flash != null ? flash * 255 : (f.on === false ? 0 : (val('dimmer') ?? 255));
       const dim = mapRange(level, lim.dimMin, lim.dimMax) / 255;
@@ -363,6 +378,9 @@ class Engine {
         lvl *= fxLevel(fxGroup.fx, f, fxGroup.order.get(f.id) ?? 0, fxGroup.n, now, fxGroup.bounds) / 255;
       }
       if (audioOn && !noScale) lvl *= this.audioMult(state, f, profile, now) / 255;
+      // Objects mask the look like an effect does, with the same exemptions, plus a light
+      // held still with its own effect 'none'. Identify beats them, as it beats everything.
+      if (objFrame && !noScale && ownFx(f) !== 'none' && flash == null) lvl *= objectsLevelAt(objFrame, +f.x || 0, +f.y || 0) / 255;
 
       profile.channels.forEach((role, i) => {
         const ch = f.address - 1 + i;
@@ -504,6 +522,7 @@ class Engine {
 
   tick() {
     this.tickChase();
+    this.cues.tick();   // a running follow sequence steps on here (cues.js)
     const target = this.render();
     // A universe that has lost its last fixture has to keep transmitting zeros. Dropping it
     // from the output would leave the node holding its last frame — those lamps stay lit and
@@ -591,6 +610,10 @@ class Engine {
       // unconditionally: a bare state with no audioCfg must not stamp `{}` on the scene,
       // because recall treats any audioCfg object as "replace the live setup".
       audioCfg: this.state.audioCfg ? { ...this.state.audioCfg } : undefined,
+      // Stage objects only when there are some (the LFO rule: a scene saved with none must
+      // not wipe objects placed after it); the colour effect is part of the look.
+      ...((this.state.objects || []).length ? { objects: JSON.parse(JSON.stringify(this.state.objects)) } : {}),
+      ...(this.state.colorFx ? { colorFx: { ...this.state.colorFx } } : {}),
     };
   }
 
@@ -631,6 +654,9 @@ class Engine {
     // route applies, so a hand-edited show.json cannot recall an invalid config; a scene
     // without one leaves the current setting alone.
     if (scene.audioCfg) this.state.audioCfg = sanitizeAudioCfg(scene.audioCfg);
+    // Objects: a scene that carries them replaces the list; one without leaves them running.
+    if (Array.isArray(scene.objects)) this.state.objects = sanitizeObjects(scene.objects) || [];
+    if (scene.colorFx) this.state.colorFx = sanitizeColorFx(this.state.colorFx, scene.colorFx);
     this.state.activeScene = scene.id;
     return true;
   }
