@@ -24,6 +24,10 @@
  *   --overwrite-newer        Propose even though the tier changed after the
  *                            file was exported (the summary lists what).
  *   --allow-production       Required with --tier prod.
+ *   --accept-loss <N>        The file removes N media items (images, videos,
+ *                            models, audio) from the space, and that is meant.
+ *                            The server refuses a file that removes media
+ *                            unless N is exactly the number its summary shows.
  */
 
 import fs from 'node:fs'
@@ -37,7 +41,7 @@ const TIMEOUT_MS = 180000
 const fail = (message) => { const e = new Error(message); e.userFacing = true; throw e }
 
 export const parseProposeArgs = (argv) => {
-    const args = { file: null, tier: 'dev', space: null, from: null, dryRun: false, direct: false, overwriteNewer: false, allowProduction: false }
+    const args = { file: null, tier: 'dev', space: null, from: null, dryRun: false, direct: false, overwriteNewer: false, allowProduction: false, acceptLoss: null }
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i]
         if (a === '--tier') args.tier = resolveTier(argv[++i])
@@ -47,6 +51,7 @@ export const parseProposeArgs = (argv) => {
         else if (a === '--direct') args.direct = true
         else if (a === '--overwrite-newer') args.overwriteNewer = true
         else if (a === '--allow-production') args.allowProduction = true
+        else if (a === '--accept-loss') args.acceptLoss = String(argv[++i] ?? '')
         else if (a.startsWith('--')) fail(`unknown option ${a}`)
         else if (!args.file) args.file = a
         else fail(`unexpected argument ${a}`)
@@ -116,6 +121,7 @@ export async function proposeBundle(argv) {
     if (args.from) form.append('from', args.from)
     if (args.dryRun) form.append('dryRun', 'true')
     if (args.overwriteNewer) form.append('overwriteNewer', 'true')
+    if (args.acceptLoss !== null) form.append('acceptLoss', args.acceptLoss)
     form.append('bundle', new Blob([fs.readFileSync(args.file)]), path.basename(args.file).endsWith('.diiii') ? path.basename(args.file) : `${spaceId}.diiii`)
 
     const url = `${base}/api/spaces/${encodeURIComponent(spaceId)}/proposals`

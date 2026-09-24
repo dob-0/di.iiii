@@ -14,6 +14,11 @@
  *   --force           Push even if the destination changed since this scene's
  *                     own `version` field was last read (see below) — the
  *                     escape hatch, not the default
+ *   --accept-loss <N> Carry out a push that removes N media items (images,
+ *                     videos, models, audio, anything pointing at a file) from
+ *                     the destination's scene. N must be the exact number the
+ *                     summary printed; otherwise such a push is REFUSED. See
+ *                     shared/documentLoss.cjs.
  *
  * Set LIVE_API_TOKEN in .env.local (never commit it):
  *   echo 'LIVE_API_TOKEN=your-editor-token' >> .env.local
@@ -30,8 +35,11 @@
  */
 
 import fs from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+const { diffDocumentLoss, describeLoss, parseAcceptLoss, lossGate } = createRequire(import.meta.url)('../shared/documentLoss.cjs')
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const DEFAULT_LIVE_URL = 'https://di-studio.xyz/serverXR'
@@ -51,7 +59,7 @@ export const isProductionTarget = (url) => {
 }
 
 const parseArgs = (argv) => {
-    const args = { spaceId: null, from: null, to: null, token: null, dryRun: false, allowProduction: false, force: false }
+    const args = { spaceId: null, from: null, to: null, token: null, dryRun: false, allowProduction: false, force: false, acceptLoss: parseAcceptLoss(argv) }
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
         if (!arg.startsWith('--')) {
@@ -64,6 +72,7 @@ const parseArgs = (argv) => {
         if (arg === '--dry-run') { args.dryRun = true; continue }
         if (arg === '--allow-production') { args.allowProduction = true; continue }
         if (arg === '--force') { args.force = true; continue }
+        if (arg === '--accept-loss') { i++; continue }
     }
     return args
 }
@@ -81,11 +90,13 @@ const readDestinationVersion = async (toBase, spaceId, token) => {
     } catch (error) {
         return { version: null, notFound: false, error: error?.message || String(error) }
     }
-    if (response.status === 404) return { version: null, notFound: true, error: null }
-    if (!response.ok) return { version: null, notFound: false, error: `HTTP ${response.status}` }
+    if (response.status === 404) return { version: null, notFound: true, error: null, scene: null }
+    if (!response.ok) return { version: null, notFound: false, error: `HTTP ${response.status}`, scene: null }
     const body = await response.json().catch(() => ({}))
     const version = Number.isInteger(body?.version) ? body.version : null
-    return { version, notFound: false, error: null }
+    // The stored scene rides along: it is what a push would replace, and the
+    // loss summary below compares against it.
+    return { version, notFound: false, error: null, scene: body?.scene || null }
 }
 
 const loadEnvFile = async (filePath) => {
@@ -145,7 +156,7 @@ const main = async () => {
     const args = parseArgs(process.argv.slice(2))
 
     if (!args.spaceId) {
-        console.error('Usage: node scripts/space-push.mjs <spaceId> [--to <url>] [--token <token>] [--dry-run]')
+        console.error('Usage: node scripts/space-push.mjs <spaceId> [--to <url>] [--token <token>] [--accept-loss <N>] [--dry-run]')
         process.exitCode = 1
         return
     }
@@ -230,6 +241,29 @@ const main = async () => {
         console.error('Cannot confirm it is not stale. Re-run with --force if you have verified it by hand.')
         process.exitCode = 1
         return
+    }
+
+    // 1c. What the push removes from the destination's scene — said whether or
+    // not this is a dry run, and refused when it removes media nobody counted
+    // (2026-09-18: a whole replace carried to prod removed 76 slides silently).
+    // A destination that could not be read (pushed with --force above) cannot
+    // be compared; that is said, not guessed.
+    if (destination.error) {
+        console.log(`  cannot say what this push removes: the destination could not be read (${destination.error})`)
+    } else {
+        const loss = diffDocumentLoss(destination.scene, scene)
+        console.log(describeLoss(loss, `${toBase} ${spaceId} scene`))
+        if (dryRun) {
+            if (loss.mediaLost) console.log(`dry-run: a real push needs --accept-loss ${loss.mediaLost}`)
+        } else {
+            const gate = lossGate({ mediaLost: loss.mediaLost, acceptLoss: args.acceptLoss })
+            if (!gate.ok) {
+                console.error(gate.message)
+                process.exitCode = 1
+                return
+            }
+            if (gate.message) console.log(gate.message)
+        }
     }
 
     if (dryRun) {

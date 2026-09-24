@@ -58,6 +58,17 @@ refusal prints the exact command to pull the newer copy down, or the explicit fl
 purpose. If you hit a refusal, read it before reaching for the override — it exists
 because something real changed.
 
+A replace also says what it **removes**, before it writes anything. `project-pull.mjs`,
+`tier-sync.mjs`, `space-push.mjs`, `space-bundle.mjs import --force` and `npm run send`
+(the server's proposal door) compare the target with what is about to replace it and
+print it plainly — `prod main-dii-project: this replace REMOVES 76 of 85 items — 76 image
+(media)`, then each media item by name. When media would go (images, videos, models,
+audio, anything pointing at a file) they refuse unless you pass `--accept-loss <N>` with
+the exact number printed; a stale or guessed number refuses again. Other removals are
+printed, not blocked. `--dry-run` prints the summary and writes nothing. The count is
+not permission — look at every one of those items first, and let the owner decide
+(2026-09-18: a carry removed 76 slides from the front room on prod and printed "ok").
+
 This is the first piece of the safety net: it stops a routine sync from being the
 thing that erases someone's afternoon. The rest is in `serverXR/src/spaceHistory.js`
 and is on every tier: **every change has an author** (stamped from the session, never

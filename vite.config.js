@@ -679,6 +679,7 @@ export default {
             // test file under scripts/ is silently never collected, which is
             // worse than having no test at all: it looks covered and is not.
             '../scripts/**/*.{test,spec}.{js,mjs}',
+            '../shared/**/*.{test,spec}.{js,mjs}',
             '../sdk/**/*.{test,spec}.{js,mjs}',
             '../spaces/**/*.{test,spec}.{js,mjs}'
         ],

@@ -286,9 +286,10 @@ export const WIKI_ARTICLES = [
             'When someone who does not own a space changes it, the studio’s inner bot can be told once per burst of edits — what changed, by whom, with an Undo button. That notice is off unless the server turns it on.',
             'A di.iiii file (.diiii) sent for a space that already exists is a proposal, not an import. The server reads it and writes a plain summary — which projects change, how many items before and after, how many new files, and anything in the space that is newer than the file and would be overwritten. The owner, an admin, or someone trusted in that space can apply it at once; from anyone else it waits for Apply or Reject in the inner bot. Either way a restore point is taken first, the space keeps its own settings (owner, address, public or not), and nothing that is only in the space is deleted. From a terminal: node scripts/space-bundle.mjs propose <file> --tier dev (add --dry-run to see the summary only).',
             'One command does both halves: `npm run send -- <space>` exports the space from the machine you are on and sends it to the rehearsal tier, then prints the two addresses to look at. It applies at once if you are allowed to, and waits for Apply otherwise — who you are is not a flag you pass. `--dry-run` says what would change and writes nothing; the public site refuses unless the owner has said the word.',
+            'Replacing work says what it takes away first. Every tool that replaces a project or a scene with another copy — sending a space, opening a file over one with --force, carrying a project between tiers — prints what the replace removes before it writes: how many items, of which kind, and every picture, video, model or sound by name. If any of those would go, it stops, and goes ahead only when you give the exact number back (--accept-loss 76). A wrong or old number stops it again. Other removals are only reported. Look at what it names before you confirm: pictures are never judged unwanted from a sample.',
         ],
-        tags: ['history', 'undo', 'restore', 'snapshot', 'author', 'safety', 'proposal', 'bundle', 'send'],
-        updated: '2026-09-21'
+        tags: ['history', 'undo', 'restore', 'snapshot', 'author', 'safety', 'proposal', 'bundle', 'send', 'loss'],
+        updated: '2026-09-24'
     },
     {
         id: 'jam-surface',

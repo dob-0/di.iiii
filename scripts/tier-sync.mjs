@@ -36,7 +36,14 @@
  *   --space <id>        Only this space (default: every space the source has)
  *   --no-assets         Documents only — faster, and leaves images unresolvable
  *   --force             Overwrite documents that already exist at the destination
- *   --dry-run           Print the plan and write nothing
+ *   --accept-loss <N>   Carry out a run whose overwrites remove N media items in
+ *                       total (images, videos, models, audio, anything pointing
+ *                       at a file). Every overwrite is compared with what the
+ *                       destination holds BEFORE anything is written; a run
+ *                       that removes media is refused unless N is exactly the
+ *                       number printed. See shared/documentLoss.cjs.
+ *   --dry-run           Print the plan — and what each overwrite would
+ *                       remove — and write nothing
  *   --rebuild-baseline  Re-record the baseline from what the two tiers agree on
  *                       TODAY: every project whose normalized content (asset
  *                       addresses by name) is identical on both, with both
@@ -55,8 +62,11 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { remapAssetIds, remapFromUpload } from './asset-remap-lib.mjs'
+
+const { diffDocumentLoss, combineLoss, describeLoss, parseAcceptLoss, lossGate } = createRequire(import.meta.url)('../shared/documentLoss.cjs')
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const TIMEOUT_MS = 30000
@@ -127,6 +137,24 @@ export const isProductionTarget = (url) => {
  * the write; only fetched by the caller when there IS a baseline to compare
  * it against.
  */
+/**
+ * What a whole run of overwrites removes, and whether it may go ahead.
+ *
+ * `entries` — one per project the run would write: { label, current, incoming }
+ * where `current` is the destination's document now (null when it has none —
+ * a pure create loses nothing). The acknowledgement is for the RUN: N must be
+ * the total media lost across every overwrite, so a plan that grew since the
+ * number was read is refused again. (2026-09-18: a tier carry removed 76
+ * slides from prod's front room and said nothing.)
+ */
+export const planLoss = (entries, acceptLoss = null) => {
+    const combined = combineLoss(entries.map((e) => ({ label: e.label, loss: diffDocumentLoss(e.current, e.incoming) })))
+    const lines = combined.entries
+        .filter((e) => e.loss.removed.length || e.loss.assetChanged.length)
+        .map((e) => describeLoss(e.loss, e.label))
+    return { ...combined, text: lines.join('\n'), gate: lossGate({ mediaLost: combined.mediaLost, acceptLoss }) }
+}
+
 export const shouldRefuseOverwrite = ({ isOverwrite, forceStale = false, knownShape, destinationShape }) => {
     if (!isOverwrite || forceStale || !knownShape) return false
     return Boolean(destinationShape) && destinationShape !== knownShape
@@ -387,7 +415,7 @@ const readEnv = () => {
 }
 
 const parseArgs = (argv) => {
-    const args = { from: null, to: null, space: null, assets: true, force: false, forceStale: false, dryRun: false, allowProduction: false, audit: false, changed: false, rebuildBaseline: false }
+    const args = { from: null, to: null, space: null, assets: true, force: false, forceStale: false, dryRun: false, allowProduction: false, audit: false, changed: false, rebuildBaseline: false, acceptLoss: parseAcceptLoss(argv) }
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
         if (arg === '--from') args.from = resolveTier(argv[++i])
@@ -404,6 +432,7 @@ const parseArgs = (argv) => {
         else if (arg === '--changed') args.changed = true
         else if (arg === '--rebuild-baseline') args.rebuildBaseline = true
         else if (arg === '--allow-production') args.allowProduction = true
+        else if (arg === '--accept-loss') i++
     }
     return args
 }
@@ -632,10 +661,46 @@ export const main = async () => {
         item.projects.forEach((id) => console.log(`   · ${id}`))
     }
     console.log(`\n${plan.length} space(s), ${projectCount} project(s) to copy`)
+
+    // What the overwrites remove, read BEFORE anything is written — dry run
+    // included, since the dry run is where a person decides. The source
+    // documents read here are the ones written below, so what was counted is
+    // what arrives.
+    const sourceDocs = new Map()
+    const lossEntries = []
+    for (const item of plan) {
+        for (const projectId of item.projects) {
+            const docRes = await call(from, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
+            if (!docRes.ok) continue // reported by the write loop, as before
+            const body = await docRes.json()
+            const incoming = body.document || body
+            sourceDocs.set(projectId, incoming)
+            const destRes = await call(to, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
+            if (destRes.status === 404) continue
+            if (!destRes.ok) {
+                console.log(`\ncannot read ${args.to}'s copy of ${item.spaceId}/${projectId} (HTTP ${destRes.status}), so cannot say what overwriting it removes. Nothing was written.`)
+                process.exitCode = 1
+                return
+            }
+            const destBody = await destRes.json()
+            lossEntries.push({ label: `${args.to} ${item.spaceId}/${projectId}`, current: destBody.document || destBody, incoming })
+        }
+    }
+    const loss = planLoss(lossEntries, args.acceptLoss)
+    if (loss.text) console.log(`\n${loss.text}`)
+    else if (lossEntries.length) console.log(`\n${lossEntries.length} overwrite(s), nothing removed.`)
+
     if (args.dryRun) {
+        if (loss.mediaLost) console.log(`\na real run removes ${loss.mediaLost} media item(s) and needs --accept-loss ${loss.mediaLost}`)
         console.log('\ndry-run: nothing was written')
         return
     }
+    if (!loss.gate.ok) {
+        console.log(`\n${loss.gate.message}`)
+        process.exitCode = 1
+        return
+    }
+    if (loss.gate.message) console.log(`\n${loss.gate.message}`)
 
     let copied = 0
     let failed = 0
@@ -671,10 +736,13 @@ export const main = async () => {
                     continue
                 }
 
-                const docRes = await call(from, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
-                if (!docRes.ok) throw new Error(`source document HTTP ${docRes.status}`)
-                const body = await docRes.json()
-                const document = body.document || body
+                let document = sourceDocs.get(projectId)
+                if (!document) {
+                    const docRes = await call(from, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
+                    if (!docRes.ok) throw new Error(`source document HTTP ${docRes.status}`)
+                    const body = await docRes.json()
+                    document = body.document || body
+                }
                 const title = document?.projectMeta?.title || projectId
 
                 const create = await call(to, `/api/spaces/${item.spaceId}/projects`, {
