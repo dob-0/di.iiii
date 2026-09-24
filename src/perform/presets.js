@@ -71,7 +71,7 @@ export const BUILT_IN_PRESETS = [
         who: 'Club and laser nights. The deck is the instrument; the wall only has to be right.',
         windows: [w('deck'), w('out'), w('clock'), w('master')],
         wide: { deck: [1, 2, 66, 95], out: [68, 2, 31, 44], clock: [68, 48, 31, 25], master: [68, 75, 31, 22] },
-        narrow: { out: [0, 0, 100, 26], clock: [0, 26, 100, 16], deck: [0, 42, 100, 58] }
+        narrow: { out: [0, 0, 100, 26], clock: [0, 26, 100, 20], deck: [0, 46, 100, 54] }
     },
     {
         id: 'wall',
@@ -119,7 +119,7 @@ export const BUILT_IN_PRESETS = [
         who: 'The phone at the side of the room. Cues, master, blackout. Nothing to drag.',
         windows: [w('cues'), w('master'), w('clock')],
         wide: { cues: [1, 2, 48, 95], master: [50, 2, 49, 60], clock: [50, 64, 49, 33] },
-        narrow: { cues: [0, 0, 100, 54], master: [0, 54, 100, 30], clock: [0, 84, 100, 16] }
+        narrow: { cues: [0, 0, 100, 50], master: [0, 50, 100, 30], clock: [0, 80, 100, 20] }
     }
 ].map((preset) => ({ ...preset, source: 'builtin' }))
 

@@ -50,6 +50,29 @@ describe('the seven built-in presets', () => {
     })
 })
 
+describe('the built-ins on the real screens', () => {
+    // Seen on the phone walk, 2026-09-24: VJ's Clock at 16% of a 390x844
+    // phone is 98px, under the 120px a window may shrink to, so the window
+    // grew over the deck. Every built-in, laid out and held to the window
+    // floor, must leave no two windows overlapping, on the desk and the phone.
+    const screens = {
+        wide: { left: 12, top: 88, width: 1440 - 24, height: 900 - 88 - 12 - 40 },
+        narrow: { left: 12, top: 96, width: 390 - 24, height: 844 - 96 - 12 - 120 }
+    }
+    const overlap = (a, b) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
+    for (const preset of BUILT_IN_PRESETS) {
+        for (const widthClass of ['wide', 'narrow']) {
+            it(`${preset.name}, ${widthClass}: no two windows overlap`, () => {
+                const frames = Object.values(framesFromRects(preset[widthClass], screens[widthClass]))
+                    .map((frame) => ({ ...frame, width: Math.max(200, frame.width), height: Math.max(120, frame.height) }))
+                for (let i = 0; i < frames.length; i += 1) {
+                    for (let j = i + 1; j < frames.length; j += 1) expect(overlap(frames[i], frames[j])).toBe(false)
+                }
+            })
+        }
+    }
+})
+
 describe('normalizing a stored preset', () => {
     it('keeps a window kind this build does not know, so saving it back does not lose it', () => {
         const preset = normalizePreset({ id: 'show:a', name: 'x', windows: [{ id: 'z', kind: 'hologram' }], wide: { z: [0, 0, 50, 50] } })
