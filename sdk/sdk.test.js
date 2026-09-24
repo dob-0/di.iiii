@@ -1,10 +1,11 @@
-import { describe, expect, it, vi } from 'vitest'
+// @vitest-environment node
+import { describe, expect, it } from 'vitest'
 import { connect } from './index.js'
 import { MOVES } from './moves.js'
 import { ApprovalPending, DiError, createHttp } from './http.js'
 import { PUBLIC, PublicMoveRefused, guard, reachOf } from './reach.js'
 import { resolveBase, resolveSite, resolveToken } from './credentials.js'
-import { createHandler, describeTools, detectVersion, inputSchema, moveName, toolName } from './mcp.mjs'
+import { detectVersion } from './mcp.mjs'
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -209,66 +210,7 @@ describe('credentials', () => {
     })
 })
 
-describe('the agent face', () => {
-    it('offers every move as a tool, with the dots turned into underscores', () => {
-        const tools = describeTools()
-        expect(tools).toHaveLength(Object.keys(MOVES).length)
-        expect(toolName('space.makePublic')).toBe('space_makePublic')
-        expect(moveName('space_makePublic')).toBe('space.makePublic')
-        expect(moveName('space.makePublic')).toBe('space.makePublic')
-    })
-
-    it('tells an agent, in the tool description, what a move would open', () => {
-        const invite = describeTools().find((t) => t.name === 'space_invite')
-        expect(invite.description).toContain('OPENS A DOOR')
-        expect(invite.inputSchema.properties.confirm).toBeTruthy()
-        expect(describeTools().find((t) => t.name === 'space_list').annotations.readOnlyHint).toBe(true)
-    })
-
-    it('asks only for what a move needs', () => {
-        expect(inputSchema(MOVES['space.get'])).toMatchObject({ required: ['space'] })
-        expect(inputSchema(MOVES['space.ensure']).required).toEqual(['space'])
-    })
-
-    // The default is not "ask" — it is no. An unattended agent cannot publish.
-    it('refuses public moves outright unless the person running it opted in', async () => {
-        const handle = await createHandler({ env: {}, connectImpl: async () => ({ run: vi.fn() }) })
-        const out = await handle({ id: 1, method: 'tools/call', params: { name: 'space_makePublic', arguments: { space: 'x', confirm: true } } })
-        expect(out.result.isError).toBe(true)
-        expect(out.result.content[0].text).toContain('REFUSED')
-        expect(out.result.content[0].text).toContain('DI_MCP_ALLOW_PUBLIC=1')
-    })
-
-    it('still requires an explicit confirm once they have', async () => {
-        process.env.DI_MCP_ALLOW_PUBLIC = '1'
-        try {
-            const run = vi.fn().mockResolvedValue({ ok: true })
-            const handle = await createHandler({ connectImpl: async () => ({ run }) })
-            const held = await handle({ id: 1, method: 'tools/call', params: { name: 'space_makePublic', arguments: { space: 'x' } } })
-            expect(held.result.isError).toBe(true)
-            expect(held.result.content[0].text).toContain('NOT DONE')
-            expect(run).not.toHaveBeenCalled()
-
-            const done = await handle({ id: 2, method: 'tools/call', params: { name: 'space_makePublic', arguments: { space: 'x', confirm: true } } })
-            expect(done.result.isError).toBeFalsy()
-            expect(run).toHaveBeenCalledWith('space.makePublic', { space: 'x' })
-        } finally { delete process.env.DI_MCP_ALLOW_PUBLIC }
-    })
-
-    it('answers initialize and ping, and refuses a method it does not know', async () => {
-        const handle = await createHandler({ connectImpl: async () => ({ run: vi.fn() }) })
-        expect((await handle({ id: 1, method: 'initialize', params: {} })).result.serverInfo.name).toBe('di.iiii')
-        expect((await handle({ id: 2, method: 'ping' })).result).toEqual({})
-        expect((await handle({ id: 3, method: 'nope' })).error.code).toBe(-32601)
-    })
-
-    it('reports a server error as an error result, not a dead connection', async () => {
-        const handle = await createHandler({ connectImpl: async () => ({ run: async () => { throw new DiError('boom', { status: 500 }) } }) })
-        const out = await handle({ id: 1, method: 'tools/call', params: { name: 'space_list', arguments: {} } })
-        expect(out.result.isError).toBe(true)
-        expect(out.result.content[0].text).toContain('boom')
-    })
-})
+// The agent face (sdk/mcp.mjs, sdk/door.js) is tested in sdk/door.test.js.
 
 // An install introduced itself to every MCP client as 0.0.0: the version was
 // read from ../package.json, which the packed runtime does not carry. It has
@@ -311,7 +253,7 @@ describe('what the server says it is', () => {
         const result = spawnSync(process.execPath, [entry, '--base', 'http://127.0.0.1:1/serverXR'], {
             encoding: 'utf8',
             timeout: 15000,
-            input: '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}\n'
+            input: '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"0"}}}\n'
         })
         const answer = JSON.parse(result.stdout.trim().split('\n')[0])
         expect(answer.result.serverInfo.version).toBe(expected)
