@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { connect } from './index.js'
 import { MOVES } from './moves.js'
-import { ApprovalPending, DiError, createHttp } from './http.js'
+import { ApprovalPending, createHttp } from './http.js'
 import { PUBLIC, PublicMoveRefused, guard, reachOf } from './reach.js'
 import { resolveBase, resolveSite, resolveToken } from './credentials.js'
 import { detectVersion } from './mcp.mjs'

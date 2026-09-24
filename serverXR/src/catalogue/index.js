@@ -39,13 +39,17 @@ const pathParams = (path) => [...path.matchAll(/:([A-Za-z_][A-Za-z0-9_]*)/g)].ma
 // Tool-safe name: 'GET /api/spaces/:spaceId/projects' → 'get_spaces_projects'.
 // Names are unique by construction (the test checks), stable while the route
 // is, and readable enough that di_find results make sense at a glance.
+// A trailing parameter is kept as `by_<param>` (a wildcard as `any_<name>`), so
+// the list and the one item ('/assets' and '/assets/:assetId') never share a name.
 const nameOf = (route) => {
   const { method, path } = splitRoute(route)
-  const words = path
-    .replace(/^\/api\//, '/')
-    .split('/')
-    .filter((part) => part && !part.startsWith(':') && !part.startsWith('*'))
+  const parts = path.replace(/^\/api\//, '/').split('/').filter(Boolean)
+  const last = parts[parts.length - 1] || ''
+  const words = parts
+    .filter((part) => !part.startsWith(':') && !part.startsWith('*'))
     .map((part) => part.replace(/[^a-z0-9]+/gi, '_').toLowerCase())
+  if (last.startsWith(':')) words.push('by', last.slice(1).toLowerCase())
+  if (last.startsWith('*')) words.push('any', last.slice(1).toLowerCase())
   return [method.toLowerCase(), ...words].join('_').replace(/_+/g, '_')
 }
 

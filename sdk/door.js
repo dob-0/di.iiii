@@ -22,11 +22,10 @@
 
 import { DiError } from './http.js'
 import { MOVES } from './moves.js'
-import { PRIVATE, PUBLIC, READ, reachOf } from './reach.js'
+import { PUBLIC, reachOf } from './reach.js'
 
 export const MAX_TEXT = 24000
 export const MAX_STEPS = 20
-const RANK = { [READ]: 0, [PRIVATE]: 1, [PUBLIC]: 2 }
 
 /* ─────────────────────────── the index ─────────────────────────── */
 

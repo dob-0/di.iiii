@@ -34,7 +34,7 @@ const fakeDi = (answer = async (method, p, o) => ({ status: 200, body: { method,
 describe('the catalogue the server serves is the catalogue the door reads', () => {
     it('turns every operation into an entry with its name, route and reach', () => {
         const routes = routeEntries(DOC)
-        expect(routes.map((r) => r.name).sort()).toEqual(['get_spaces', 'get_spaces_projects', 'patch_spaces', 'post_spaces_publish'])
+        expect(routes.map((r) => r.name).sort()).toEqual(['get_spaces', 'get_spaces_projects', 'patch_spaces_by_spaceid', 'post_spaces_publish'])
         const projects = routes.find((r) => r.name === 'get_spaces_projects')
         expect(projects).toMatchObject({ method: 'GET', path: '/api/spaces/{spaceId}/projects', pathParams: ['spaceId'], reach: 'read' })
         expect(projects.query.properties.limit.type).toBe('number')
@@ -65,10 +65,10 @@ describe('di_find', () => {
 
 describe('di_describe', () => {
     it('gives a route\'s params, inputs, reach and a call ready to fill in', () => {
-        const d = describeName(index(), 'patch_spaces')
+        const d = describeName(index(), 'patch_spaces_by_spaceid')
         expect(d).toMatchObject({ route: 'PATCH /api/spaces/{spaceId}', reach: 'private', params: ['spaceId'] })
         expect(d.body.properties.label.type).toBe('string')
-        expect(d.call).toEqual({ name: 'patch_spaces', params: { spaceId: '<spaceId>' }, body: {} })
+        expect(d.call).toEqual({ name: 'patch_spaces_by_spaceid', params: { spaceId: '<spaceId>' }, body: {} })
     })
 
     it('says what to do when a name does not exist', () => {
@@ -92,7 +92,7 @@ describe('the public gate', () => {
     })
 
     it('never asks about reads or private writes', () => {
-        expect(gate({ entry: index().byName.get('patch_spaces'), call: {}, allowPublic: false })).toBeNull()
+        expect(gate({ entry: index().byName.get('patch_spaces_by_spaceid'), call: {}, allowPublic: false })).toBeNull()
     })
 
     it('reads a move\'s reach from its arguments', () => {
@@ -115,12 +115,12 @@ describe('di_call', () => {
         const di = fakeDi()
         const get = await callOne(di, index().byName.get('get_spaces_projects'), { params: { spaceId: 'a b' }, query: { limit: 5 } })
         expect(get.body).toEqual({ method: 'GET', path: '/api/spaces/a%20b/projects?limit=5', sent: null })
-        const patch = await callOne(di, index().byName.get('patch_spaces'), { params: { spaceId: 'x' }, body: { label: 'X' } })
+        const patch = await callOne(di, index().byName.get('patch_spaces_by_spaceid'), { params: { spaceId: 'x' }, body: { label: 'X' } })
         expect(patch.body.sent).toEqual({ label: 'X' })
     })
 
     it('names the missing param instead of calling a broken URL', async () => {
-        await expect(callOne(fakeDi(), index().byName.get('patch_spaces'), {})).rejects.toThrow(/needs params\.spaceId/)
+        await expect(callOne(fakeDi(), index().byName.get('patch_spaces_by_spaceid'), {})).rejects.toThrow(/needs params\.spaceId/)
     })
 
     it('runs a move through the SDK, where its traps are', async () => {
@@ -153,12 +153,12 @@ describe('di_run', () => {
         const out = await runSteps(di, index(), {
             steps: [
                 { name: 'get_spaces' },
-                { name: 'patch_spaces', params: { spaceId: 'boom' } },
+                { name: 'patch_spaces_by_spaceid', params: { spaceId: 'boom' } },
                 { name: 'get_spaces' }
             ]
         })
         expect(out.done.map((d) => d.step)).toEqual([1])
-        expect(out.failed).toMatchObject({ step: 2, name: 'patch_spaces' })
+        expect(out.failed).toMatchObject({ step: 2, name: 'patch_spaces_by_spaceid' })
         expect(out.notRun).toEqual(['get_spaces'])
     })
 
