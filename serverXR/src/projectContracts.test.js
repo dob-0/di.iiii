@@ -1106,6 +1106,132 @@ describe('collections, state and the trash', () => {
     })
 })
 
+// The trash has no scope check of its own. GET /api/trash takes its space as
+// `?space=`, a query param no route-level gate ever looks at, and
+// POST /api/projects/:projectId/restore looks a project up in the trash
+// directly instead of through the live-project middleware that sets
+// req.requiredSpaceId — so neither ever asked canAccessSpace anything.
+// Reproduced against a real serverXR with REQUIRE_AUTH=true, 2026-09-24:
+// an anonymous GET /api/trash returned 200 with every trashed project in
+// every space. Regression for both routes, under real auth.
+describe('the trash has scope, same as everything else', () => {
+    const withAuth = (token) => ({ Authorization: `Bearer ${token}` })
+    const ADMIN_TOKEN = 'admin-token-for-trash-scope'
+    const EDITOR_TOKEN = 'editor-token-for-trash-scope'
+
+    const startScopedServer = async () => startServer({
+        extraEnv: {
+            REQUIRE_AUTH: 'true',
+            AUTH_SESSION_SECRET: 'trash-scope-session-secret',
+            API_TOKEN: ADMIN_TOKEN,
+            EDITOR_API_TOKEN: EDITOR_TOKEN,
+            EDITOR_ALLOWED_SPACES: 'editors-space'
+        }
+    })
+
+    const createSpace = async (server, id) => {
+        const res = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(ADMIN_TOKEN) },
+            body: JSON.stringify({ id, label: id })
+        })
+        expect(res.status).toBe(201)
+    }
+
+    const createAndTrash = async (server, spaceId, title) => {
+        const created = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(ADMIN_TOKEN) },
+            body: JSON.stringify({ title })
+        })
+        expect(created.status).toBe(201)
+        const project = (await created.json()).project
+        const deleted = await fetch(`${server.baseUrl}/api/projects/${project.id}`, {
+            method: 'DELETE',
+            headers: withAuth(ADMIN_TOKEN)
+        })
+        expect(deleted.status).toBe(200)
+        return project
+    }
+
+    it('never lists a private space trashed project to an anonymous caller', async () => {
+        const server = await startScopedServer()
+        await createSpace(server, 'secret-space')
+        const secret = await createAndTrash(server, 'secret-space', 'Nobody should see this')
+
+        // ?space= on a private space: same 401 GET /api/spaces/:spaceId/projects gives.
+        const scopedAnon = await fetch(`${server.baseUrl}/api/trash?space=secret-space`)
+        expect(scopedAnon.status).toBe(401)
+
+        // No ?space=: the list is narrowed instead of gated, so it comes back
+        // 200 — but empty, not the unfiltered trash across every space.
+        const unscopedAnon = await fetch(`${server.baseUrl}/api/trash`)
+        expect(unscopedAnon.status).toBe(200)
+        const anonBody = await unscopedAnon.json()
+        expect(anonBody.projects.map(p => p.id)).not.toContain(secret.id)
+    })
+
+    it('limits a scoped editor token to its own spaces, in both directions', async () => {
+        const server = await startScopedServer()
+        await createSpace(server, 'secret-space')
+        await createSpace(server, 'editors-space')
+        const secret = await createAndTrash(server, 'secret-space', 'Not the editor\'s space')
+        const own = await createAndTrash(server, 'editors-space', 'The editor\'s own')
+
+        const scopedRead = await fetch(`${server.baseUrl}/api/trash?space=secret-space`, {
+            headers: withAuth(EDITOR_TOKEN)
+        })
+        expect(scopedRead.status).toBe(403)
+        await expect(scopedRead.json()).resolves.toMatchObject({
+            error: 'Space access denied.',
+            requiredSpaceId: 'secret-space',
+            allowedSpaces: ['editors-space']
+        })
+
+        const unscopedRead = await (await fetch(`${server.baseUrl}/api/trash`, {
+            headers: withAuth(EDITOR_TOKEN)
+        })).json()
+        expect(unscopedRead.projects.map(p => p.id)).not.toContain(secret.id)
+        expect(unscopedRead.projects.map(p => p.id)).toContain(own.id)
+
+        // The restore route looks a trashed project up directly (not through
+        // the live-project middleware), so its own space scope has to be
+        // checked separately — an editor scoped to editors-space must not be
+        // able to restore a project trashed in secret-space.
+        const deniedRestore = await fetch(`${server.baseUrl}/api/projects/${secret.id}/restore`, {
+            method: 'POST',
+            headers: withAuth(EDITOR_TOKEN)
+        })
+        expect(deniedRestore.status).toBe(403)
+
+        const stillTrashed = await (await fetch(`${server.baseUrl}/api/trash?space=secret-space`, {
+            headers: withAuth(ADMIN_TOKEN)
+        })).json()
+        expect(stillTrashed.projects.map(p => p.id)).toContain(secret.id)
+
+        const allowedRestore = await fetch(`${server.baseUrl}/api/projects/${own.id}/restore`, {
+            method: 'POST',
+            headers: withAuth(EDITOR_TOKEN)
+        })
+        expect(allowedRestore.status).toBe(200)
+    })
+
+    it('shows an admin every space\'s trash', async () => {
+        const server = await startScopedServer()
+        await createSpace(server, 'secret-space')
+        await createSpace(server, 'editors-space')
+        const secret = await createAndTrash(server, 'secret-space', 'Admin sees this')
+        const own = await createAndTrash(server, 'editors-space', 'And this')
+
+        const asAdmin = await (await fetch(`${server.baseUrl}/api/trash`, {
+            headers: withAuth(ADMIN_TOKEN)
+        })).json()
+        const ids = asAdmin.projects.map(p => p.id)
+        expect(ids).toContain(secret.id)
+        expect(ids).toContain(own.id)
+    })
+})
+
 // The hash-pinned PUT: how a followed space's files reach the other machine
 // (docs/architecture/SPEC_follow_files.md). It stores WITHOUT the EXIF
 // scrubber, so every refusal below is a security property, not a nicety.
