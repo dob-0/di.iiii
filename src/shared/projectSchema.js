@@ -495,6 +495,27 @@ const LABEL_FONT_NAMES = ['default', 'helvetica']
 // authored without this field keeps the ring.
 const PORTAL_STYLES = ['gateway', 'frame']
 
+// components.link — a visitor's click follows this href (the live viewer,
+// src/project/viewport/entityLink.js), and a document is untrusted input, so
+// an unsafe scheme is refused here, where every write and every read passes.
+// Browsers ignore tabs, newlines and leading control characters inside a
+// scheme ("java\tscript:" runs), so those are stripped BEFORE the scheme is
+// read. Only http(s) may carry a scheme; anything without one (a path, or a
+// word being typed in the inspector) is kept and judged again at click time.
+// Mirrored in shared/projectSchema.cjs (serverXR/src/schemaSync.test.js).
+export const LINK_HREF_MAX_LENGTH = 2048
+const LINK_SAFE_SCHEMES = new Set(['http', 'https'])
+// eslint-disable-next-line no-control-regex
+const LINK_IGNORED_CHARS = /[\u0000- \u007f]/g
+export const sanitizeLinkHref = (value) => {
+    if (typeof value !== 'string') return ''
+    const href = value.trim()
+    if (!href || href.length > LINK_HREF_MAX_LENGTH) return ''
+    const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(href.replace(LINK_IGNORED_CHARS, ''))
+    if (scheme && !LINK_SAFE_SCHEMES.has(scheme[1].toLowerCase())) return ''
+    return href
+}
+
 const TEXT_REVEAL_MODES = ['none', 'typewriter']
 
 // A text entity's optional reveal. Absent (or 'none') means the text draws in
@@ -623,7 +644,9 @@ export const normalizeEntity = (entity = {}) => {
     if (sourceComponents.link || defaultComponents.link) {
         nextComponents.link = {
             enabled: ensureBoolean(sourceComponents.link?.enabled, defaultComponents.link?.enabled || false),
-            href: ensureString(sourceComponents.link?.href, defaultComponents.link?.href || '')
+            href: sanitizeLinkHref(ensureString(sourceComponents.link?.href, defaultComponents.link?.href || '')),
+            // What the hover nameplate says; empty = the host or the path.
+            label: ensureString(sourceComponents.link?.label, defaultComponents.link?.label || '').slice(0, 120)
         }
     }
     if (sourceComponents.reference || defaultComponents.reference) {

@@ -739,3 +739,44 @@ describe('the beam and the room’s shadows survive both mirrors', () => {
     expect(esm.buildDefaultComponentsForType('spotLight').beam).toBeUndefined()
   })
 })
+
+describe('components.link: both mirrors keep it, and both drop an unsafe href', () => {
+  // A visitor's click follows this href (src/project/viewport/entityLink.js).
+  // The CJS twin is what the server writes with, so a scheme only the ESM side
+  // refused would still be stored and served.
+  const input = {
+    entities: [
+      { id: 'in', type: 'image', components: { link: { enabled: true, href: '/main/deck', label: ' Deck ' } } },
+      { id: 'out', type: 'image', components: { link: { enabled: true, href: 'https://thedi.studio' } } },
+      { id: 'js', type: 'image', components: { link: { enabled: true, href: 'java\tscript:alert(1)' } } },
+      { id: 'data', type: 'box', components: { link: { enabled: true, href: 'data:text/html,x' } } },
+      { id: 'off', type: 'box', components: { link: { enabled: false, href: '/main' } } },
+      { id: 'none', type: 'box', components: {} }
+    ]
+  }
+
+  it('gives the same answer on both sides', async () => {
+    const esm = await import('../../src/shared/projectSchema.js')
+    const fromCjs = normalizeProjectDocument(input).entities.map((e) => e.components.link)
+    const fromEsm = esm.normalizeProjectDocument(input).entities.map((e) => e.components.link)
+    expect(fromCjs).toEqual(fromEsm)
+    expect(fromCjs).toEqual([
+      { enabled: true, href: '/main/deck', label: 'Deck' },
+      { enabled: true, href: 'https://thedi.studio', label: '' },
+      { enabled: true, href: '', label: '' },
+      { enabled: true, href: '', label: '' },
+      { enabled: false, href: '/main', label: '' },
+      undefined
+    ])
+  })
+
+  it('keeps a link through an updateEntity op and a re-read', () => {
+    const written = applyProjectOps(normalizeProjectDocument({
+      entities: [{ id: 'slide', type: 'image', components: {} }]
+    }), [
+      { type: 'updateEntity', payload: { entityId: 'slide', patch: { components: { link: { enabled: true, href: 'https://thedi.studio' } } } } }
+    ])
+    const read = normalizeProjectDocument(JSON.parse(JSON.stringify(written)))
+    expect(read.entities[0].components.link).toEqual({ enabled: true, href: 'https://thedi.studio', label: '' })
+  })
+})
