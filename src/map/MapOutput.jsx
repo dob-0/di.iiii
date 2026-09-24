@@ -27,7 +27,8 @@ export default function MapOutput({ projectId, spaceId }) {
     const network = useMemo(() => toTopNetwork(doc), [doc])
     // This page is its machine on the desk: a kiosk with a camera and a
     // projector is exactly what the other machines need to see.
-    const { machine } = useMachinePresence(spaceId)
+    // 'poll': the wall's connections belong to its pictures — no held-open NDI feed here.
+    const { machine } = useMachinePresence(spaceId, { ndi: 'poll' })
     // Nothing mapped yet, but a Picture Out runs on this machine: the screen
     // shows it, whole. Mapping corners is a refinement, not a precondition.
     const ownOut = useMemo(() => {

@@ -31,6 +31,8 @@ import {
     ndiDownloadFor,
     ndiPaths,
     ndiStatus,
+    parseScanEvents,
+    readNdiScan,
     removeNdi
 } from './ndi.mjs'
 
@@ -243,5 +245,27 @@ describe('remove', () => {
         await writeEnv(dir, { DI_NDI_LIB: '/usr/lib/libndi.so.6' })
         await removeNdi(dir)
         expect(readEnv(dir).DI_NDI_LIB).toBe('/usr/lib/libndi.so.6')
+    })
+})
+
+// `di ndi scan` reads the running server's autoscan; it never loads a runtime.
+describe('di ndi scan', () => {
+    const json = (body, status = 200) => async () => ({ ok: status < 300, status, json: async () => body, headers: new Headers({ 'content-type': 'application/json' }) })
+
+    it('reads the snapshot, and names what went wrong instead of printing an empty list', async () => {
+        const scan = { state: 'running', count: 1, sources: [{ name: 'A (x)', address: '1.2.3.4:5961', present: true }] }
+        expect(await readNdiScan('http://h', { fetchImpl: json(scan) })).toEqual({ ok: true, scan })
+        expect((await readNdiScan('http://h', { fetchImpl: json(null, 404) })).why).toMatch(/no NDI lane/)
+        expect((await readNdiScan('http://h', { fetchImpl: json(null, 403) })).why).toMatch(/DI_ALLOW_LAN_DEVICES/)
+        expect((await readNdiScan('http://h', { fetchImpl: async () => { throw new Error('ECONNREFUSED') } })).why).toMatch(/could not reach/)
+    })
+
+    it('splits an SSE stream into scan events, keeping a torn tail for the next chunk', () => {
+        const one = { state: 'running', count: 0, change: null }
+        const two = { state: 'running', count: 1, change: { appeared: [{ name: 'A' }], gone: [], changed: [] } }
+        const text = `retry: 3000\n\nevent: scan\ndata: ${JSON.stringify(one)}\n\n: ping\n\nevent: scan\ndata: ${JSON.stringify(two)}\n\nevent: scan\ndata: {"sta`
+        const { events, rest } = parseScanEvents(text)
+        expect(events).toEqual([one, two])
+        expect(rest).toBe('event: scan\ndata: {"sta')
     })
 })

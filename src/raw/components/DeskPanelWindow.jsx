@@ -1,4 +1,5 @@
 import { useMachinePresence } from '../../project/tops/useMachinePresence.js'
+import { ndiScanLine } from '../../map/ndiLink.js'
 
 // The desk: every machine in this space, and what each one has.
 //
@@ -12,13 +13,17 @@ const GROUPS = [
     { kind: 'camera', label: 'Cameras', place: 'top.camera', action: 'Camera In' },
     { kind: 'screen', label: 'Screens', place: 'top.out', action: 'Picture Out' },
     { kind: 'mic', label: 'Microphones' },
-    { kind: 'speaker', label: 'Speakers' }
+    { kind: 'speaker', label: 'Speakers' },
+    // What each machine's own di.iiii can see on the network, kept current by its
+    // autoscan. Not hardware, but the same question: can that machine show it?
+    { kind: 'ndi', label: 'NDI sources' }
 ]
 
 const describe = (device) => (device.kind === 'screen' && device.width ? `${device.label} · ${device.width}×${device.height}` : device.label)
 
 export default function DeskPanelWindow({ spaceId, onPlace }) {
-    const { machine, machines } = useMachinePresence(spaceId)
+    const { machine, machines, ndiScan } = useMachinePresence(spaceId)
+    const ndiLine = ndiScanLine(ndiScan)
 
     if (!machine) {
         return (
@@ -35,6 +40,7 @@ export default function DeskPanelWindow({ spaceId, onPlace }) {
                     Only this machine so far. Another machine joins while a di.iiii page of this space is open on it.
                 </p>
             ) : null}
+            {ndiLine ? <p className="raw-desk-hint" role="status">{ndiLine}</p> : null}
             {machines.map((entry) => (
                 <section key={entry.id} className={`raw-desk-machine${entry.self ? ' is-self' : ''}`}>
                     <header>
