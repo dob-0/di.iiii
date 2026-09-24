@@ -53,3 +53,14 @@ describe('front-room gallery', () => {
         expect(second.ops.filter((o) => o.type === 'updateEntity')).toHaveLength(created.length)
     })
 })
+
+describe('front-room gallery walls', () => {
+    it('backs every slide with a wall a hand-width behind it, never in front', () => {
+        const { ops } = planOps({ assets: [], entities: [] })
+        const walls = ops.filter((o) => o.type === 'createEntity' && o.payload.entity.type === 'box')
+        expect(walls.length).toBe(1 + 6 * 3 + 1)   // studio, three per bay, closing
+        const back = walls.find((o) => o.payload.entity.id === 'gallery-wall-performance-back').payload.entity
+        const bay = bayLayout(GROUPS[0].slides, 22, 'north')
+        expect(back.components.transform.position[2]).toBeLessThan(bay.backZ)   // behind the north bay's back slides, away from the path
+    })
+})

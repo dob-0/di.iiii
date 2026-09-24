@@ -68,7 +68,7 @@ export function bayLayout(slides, x, side) {
             out.push({ n: slides[k], ...place(x + sx * halfW, backZ + s * (j + 1) * PITCH, theta) }); k += 1
         }
     }
-    return { slides: out, backZ, mouthZ, halfW }
+    return { slides: out, backZ, mouthZ, halfW, back, perSide, s }
 }
 
 // Rise once when the room opens: sunk and transparent, then up into place, bay by bay.
@@ -103,6 +103,19 @@ const lamp = (id, name, x, z) => ({
     }
 })
 
+// A wall panel behind the slides, so a slide seen from outside a bay is a wall and not
+// its own picture mirrored (image planes draw both faces). Boxes stand on the floor
+// (BoxObject lifts the mesh by half its height) and are sized by `primitive.size`.
+const WALL = { height: 2.7, depth: 0.08, color: '#0b0b4f' }
+const wall = (id, x, z, length, yaw) => ({
+    id, type: 'box', name: 'gallery wall', parentId: null,
+    components: {
+        transform: { position: [round(x), 0, round(z)], rotation: [0, round(yaw), 0], scale: [1, 1, 1] },
+        appearance: { color: WALL.color, opacity: 1 },
+        primitive: { size: [round(length), WALL.height, WALL.depth] }
+    }
+})
+
 const door = (id, target, x, z, theta) => ({
     id, type: 'portal', name: target.label, parentId: null,
     components: {
@@ -120,16 +133,23 @@ export function buildPlan() {
     // The studio wall stands behind the arrival point and faces it: turn round and it greets you.
     STUDIO.forEach((n, i) => poses.set(n, { ...place((STUDIO.length - 1 - i - 2) * PITCH, 24, Math.PI), delay: 2.4 }))
     extra.push(label('gallery-label-studio', 'the studio', 0, 24, 2.6))
+    extra.push(wall('gallery-wall-studio', 0, 24.12, STUDIO.length * PITCH + 0.4, 0))
     GROUPS.forEach((group, g) => {
         const bay = bayLayout(group.slides, BAY_X[g], BAY_SIDE[g])
         const delay = 2.8 + Math.floor(g / 2) * 0.9
         bay.slides.forEach((p) => poses.set(p.n, { ...p, delay }))
         extra.push(label(`gallery-label-${group.key}`, group.label, BAY_X[g], bay.mouthZ, delay + 0.4))
+        extra.push(wall(`gallery-wall-${group.key}-back`, BAY_X[g], bay.backZ - bay.s * 0.12, bay.back * PITCH + 0.4, 0))
+        const sideMidZ = bay.backZ + bay.s * ((bay.perSide + 1) / 2) * PITCH
+        for (const [side, sx] of [['left', -1], ['right', 1]]) {
+            extra.push(wall(`gallery-wall-${group.key}-${side}`, BAY_X[g] + sx * (bay.halfW + 0.12), sideMidZ, bay.perSide * PITCH + 0.4, Math.PI / 2))
+        }
         extra.push(lamp(`gallery-lamp-${group.key}`, `lamp · ${group.label}`, BAY_X[g], (bay.backZ + bay.mouthZ) / 2))
         if (group.door) extra.push(door(`gallery-door-${group.key}`, group.door, BAY_X[g], bay.mouthZ + (BAY_SIDE[g] === 'north' ? 1.4 : -1.4), BAY_SIDE[g] === 'north' ? Math.PI : 0))
     })
     CLOSING.slides.forEach((n) => poses.set(n, { ...place(58, PATH_Z, -Math.PI / 2), delay: 5.5 }))
     extra.push(label('gallery-label-closing', 'the network · contact', 58, PATH_Z - 2.2, 5.8))
+    extra.push(wall('gallery-wall-closing', 58.12, PATH_Z, PITCH + 0.4, Math.PI / 2))
     extra.push(door('gallery-door-closing', CLOSING.door, 56.5, PATH_Z + 2.2, -Math.PI / 2))
     return { poses, extra }
 }
