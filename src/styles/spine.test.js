@@ -75,6 +75,7 @@ const SPINE_FILES = [
     'pages/spaceContents.css',
     // Born on the spine, 2026-09-22 — the scanning page never carried a literal.
     'scan/scanSurface.css',
+    'raw/components/vjDeck/vjDeck.css',
 ]
 
 // Not yet converted, and honest about it. Each line is a debt, not an

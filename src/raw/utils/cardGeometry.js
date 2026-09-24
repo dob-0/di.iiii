@@ -1,5 +1,5 @@
 import { getNodeInputs, getNodeOutputs } from '../../project/nodeRegistry.js'
-import { isTopType } from '../../project/tops/topOperators.js'
+import { isPictureType } from '../../project/tops/vjDeck.js'
 import { hasCardPreview } from '../components/cardPreview/previewTypes.js'
 
 // A graph card's box, in graph units. Shared between the surface that draws
@@ -18,10 +18,10 @@ export const TOP_PICTURE_HEIGHT = Math.round(TOP_PICTURE_WIDTH * 9 / 16)
 const TOP_PICTURE_GAP = 4
 
 // Whether a card carries a picture under its ports: a picture operator's live
-// output, or the live preview of a node that makes something visible (a cube,
+// output (a VJ deck's is its master), or the live preview of a node that makes something visible (a cube,
 // a light — see cardPreview/previewTypes.js). One size for both, so every
 // picture on the desk lines up; grown BELOW the ports for the same reason.
-export const hasCardPicture = (typeId) => isTopType(typeId) || hasCardPreview(typeId)
+export const hasCardPicture = (typeId) => isPictureType(typeId) || hasCardPreview(typeId)
 
 // scopeNodes is threaded through every geometry helper because a container's
 // ports are DERIVED from the doorway nodes inside it — see getNodeInputs. Miss

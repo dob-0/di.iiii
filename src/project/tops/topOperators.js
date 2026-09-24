@@ -85,6 +85,33 @@ void main() {
 }`
     },
 
+    'top.clip': {
+        label: 'Clip In',
+        family: 'in',
+        inputs: [],
+        // A piece of footage from the project's files, played by clipVideos.js
+        // and fed to the engine exactly like a camera. The same values are what
+        // a VJ deck writes when it triggers a clip.
+        source: 'clip',
+        // The file: chosen from the project's videos in the inspector; an
+        // absolute or relative URL also plays.
+        pickAsset: 'video',
+        // Kept on the node, not a setting: the deck bumps it to restart the clip.
+        state: { trigger: 0 },
+        params: [
+            param('speed', 'Speed', 1, 0, 4, 0.05),
+            choice('mode', 'Play', ['Loop', 'Bounce', 'Once']),
+            param('in', 'In', 0, 0, 1),
+            param('out', 'Out', 1, 0, 1),
+            toggle('playing', 'Playing', 1)
+        ],
+        fragment: `
+uniform sampler2D source;
+void main() {
+    gl_FragColor = vec4(texture2D(source, vec2(uv.x, 1.0 - uv.y)).rgb, 1.0);
+}`
+    },
+
     'top.difference': {
         label: 'Difference',
         family: 'analyse',
@@ -517,6 +544,10 @@ const PICK_CAMERA = {
     options: [{ value: '', label: 'Its default camera' }]
 }
 
+// Already an inspector field (it carries `path`), so the sheet passes it
+// through as the same asset picker a Video node's file uses.
+const PICK_ASSET = (assetKind) => ({ id: 'asset', label: 'Clip', path: ['asset'], type: 'asset', portType: 'string', assetKind })
+
 /** Does THIS machine compute the operator? Unknown machine → only anywhere-operators. */
 export const runsHere = (values, machineId) => {
     const target = values?.machine || RUNS_ON_ANYWHERE
@@ -548,9 +579,11 @@ export const buildTopNodeTypes = () => Object.fromEntries(Object.entries(TOP_OPE
     defaultValues: {
         machine: '',
         ...(operator.pickDevice ? { device: '', deviceLabel: '' } : {}),
+        ...(operator.pickAsset ? { asset: '' } : {}),
+        ...(operator.state || {}),
         ...Object.fromEntries(operator.params.map((p) => [p.name, p.toggle ? Boolean(p.value) : (p.options ? String(p.value) : p.value)]))
     },
-    configInputs: [RUNS_ON, ...(operator.pickDevice ? [PICK_CAMERA] : []), ...operator.params.map((p) => (
+    configInputs: [RUNS_ON, ...(operator.pickDevice ? [PICK_CAMERA] : []), ...(operator.pickAsset ? [PICK_ASSET(operator.pickAsset)] : []), ...operator.params.map((p) => (
         p.colour
             ? { id: p.name, type: 'color', label: p.label }
             : p.text

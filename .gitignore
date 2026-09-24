@@ -75,3 +75,4 @@ spaces/the-light-put-back/code/index.html
 android-twa/*
 !android-twa/twa-manifest.json
 android-twa-staging/
+.verify-vj-deck/

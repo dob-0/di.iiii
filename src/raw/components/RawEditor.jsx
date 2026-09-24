@@ -21,6 +21,7 @@ import TopNetworkFeed from './TopNetworkFeed.jsx'
 import DeskPanelWindow from './DeskPanelWindow.jsx'
 import TopInsidePanel from './topInside/TopInsidePanel.jsx'
 import { isTopType } from '../../project/tops/topOperators.js'
+import { DECK_INPUTS, isPictureType, pictureIdOf } from '../../project/tops/vjDeck.js'
 import { useMachinePresence } from '../../project/tops/useMachinePresence.js'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
 import KeyboardFeed from './KeyboardFeed.jsx'
@@ -34,6 +35,7 @@ import KeeperPanelWindow from './KeeperPanelWindow.jsx'
 import DmxOutPanelWindow from './DmxOutPanelWindow.jsx'
 import MidiInputPanel from './MidiInputPanel.jsx'
 import DirectorPanelWindow from './DirectorPanelWindow.jsx'
+import VjDeckView from './vjDeck/VjDeckView.jsx'
 import RawHelpDialog from './RawHelpDialog.jsx'
 import SurfaceBar from '../../components/SurfaceBar.jsx'
 import { useProjectLayers } from '../../project/useProjectLayers.js'
@@ -81,6 +83,7 @@ import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
 import { RAW_ANATOMY_Z, RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getAnatomyDefaultFrame, getBottomReserve, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import { CARD_WIDTH, cardHeight, getCardBox } from '../utils/cardGeometry.js'
+import { placeNewCard } from '../utils/cardPlacement.js'
 import { isPaletteSummons, readChosenZen, resolveZenPreference, writeZenPreference, liftAutoZen, isAutoZen } from '../utils/zenMode.js'
 import {
     clearLocalWorkspaceDocument,
@@ -936,7 +939,7 @@ export default function RawEditor({
     // A picture operator's Runs on lists the machines this space can see right
     // now; the registry only knows "where the page is open".
     // Presence only on a desk that uses it: picture operators or a Desk panel.
-    const usesDesk = nodes.some((node) => isTopType(node.typeId) || node.typeId === 'view.desk')
+    const usesDesk = nodes.some((node) => isPictureType(node.typeId) || node.typeId === 'view.desk')
     const { machines: knownMachines } = useMachinePresence(usesDesk ? resolvedSpaceId : '')
     const withMachines = (sections) => (isTopType(scopedSelectedNode?.typeId)
         ? sections.map((section) => ({
@@ -1171,16 +1174,9 @@ export default function RawEditor({
         // a Merge bury a Cube's whole header, and a card land over another's
         // door, which left that door silently unclickable forever. Same idea
         // as findFreeSpot in the room, in card coordinates.
-        let cardX = (place.graphX ?? place.clientX ?? 280) - (ROOT_WORLD_CARD_WIDTH / 2)
-        let cardY = Math.max(20, (place.graphY ?? place.clientY ?? 160) - (ROOT_WORLD_CARD_HEIGHT / 2))
-        // A spatial node lands IN THE ROOM at the click — and its card used to
-        // land centred on the very same click, burying the thing it had just
-        // made (the audit watched a cube vanish behind its own card; owner:
-        // "still conflict with backdrop display and geo"). The card steps
-        // below the click instead, so what you placed stays visible above it.
-        if (getNodeType(definition.id)?.render === 'spatial-3d') {
-            cardY = Math.max(20, (place.graphY ?? place.clientY ?? 160) + 90)
-        }
+        // The card is centred on the point, at its real size — cardPlacement.js
+        // (a spatial node's card steps below the click instead, so the thing
+        // it just placed in the room stays visible above it).
         const siblings = authoredNodes.filter((node) => (node.parentId || null) === (currentScopeId || null))
         // …and clear of the thing cards: their band stays where it is only
         // while no node stands on it (objectCards.js), so a node landing on it
@@ -1189,13 +1185,17 @@ export default function RawEditor({
         const newCardHeight = cardHeight({ typeId: definition.id, values }, authoredNodes)
         const onBand = (x, y) => Boolean(band) && x < band.maxX && x + CARD_WIDTH > band.minX
             && y < band.maxY && y + newCardHeight > band.minY
-        const collides = (x, y) => onBand(x, y) || siblings.some((node) =>
-            Math.abs((node.graphX ?? 0) - x) < ROOT_WORLD_CARD_WIDTH + 16
-            && Math.abs((node.graphY ?? 0) - y) < 130)
-        for (let step = 0; step < 24 && collides(cardX, cardY); step += 1) {
-            cardX += 44
-            cardY += 44
-        }
+        const placed = placeNewCard({
+            point: { x: place.graphX ?? place.clientX ?? 280, y: place.graphY ?? place.clientY ?? 160 },
+            height: newCardHeight,
+            below: getNodeType(definition.id)?.render === 'spatial-3d',
+            taken: [
+                ...siblings.map((node) => getCardBox(node, authoredNodes)),
+                ...(band ? [{ x: band.minX, y: band.minY, width: band.maxX - band.minX, height: band.maxY - band.minY }] : [])
+            ]
+        })
+        let cardX = placed.x
+        let cardY = placed.y
         if (onBand(cardX, cardY)) cardY = band.maxY + 16
         if (values.frame) {
             values.frame = placeFrameForNewNode(values.frame, { typeId: definition.id, graphX: cardX, graphY: cardY, values }, place)
@@ -1822,6 +1822,34 @@ export default function RawEditor({
                         type: 'updateNode',
                         payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
                     })}
+                />
+            )
+        }
+        if (node.typeId === 'vj.deck') {
+            // The deck as a window on the patch. Its inside and perform
+            // placements mount the same view; the state is node.values.deck.
+            return (
+                <VjDeckView
+                    node={node}
+                    placement="window"
+                    assets={document.assets || []}
+                    // Which node feeds each input, so a playing input tile can
+                    // show that node's picture. A deck feeding a deck shows its master.
+                    inputSources={Object.fromEntries((document.edges || [])
+                        .filter((edge) => edge?.toNodeId === node.id && DECK_INPUTS.includes(edge.toPort) && edge.fromNodeId)
+                        .map((edge) => {
+                            const from = (document.nodes || []).find((candidate) => candidate.id === edge.fromNodeId)
+                            return [edge.toPort, pictureIdOf(from) || edge.fromNodeId]
+                        }))}
+                    onPatchValues={(patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId: node.id, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                    onUploadFile={async (file) => {
+                        const asset = projectId ? await uploadProjectAsset(projectId, file) : await saveAssetFromFile(file)
+                        if (asset?.id) applyLocalOps({ type: 'upsertAsset', payload: { asset } }, { activityMessage: `Brought in ${file.name}.` })
+                        return asset
+                    }}
                 />
             )
         }
@@ -2728,8 +2756,8 @@ export default function RawEditor({
             )}
 
             {/* The picture operators run while any exist — see TopNetworkFeed. */}
-            {nodes.some((node) => isTopType(node.typeId)) ? (
-                <TopNetworkFeed document={document} spaceId={resolvedSpaceId} onLiveOutputChange={handleLiveOutputChange} />
+            {nodes.some((node) => isPictureType(node.typeId)) ? (
+                <TopNetworkFeed document={document} spaceId={resolvedSpaceId} projectId={projectId || null} onLiveOutputChange={handleLiveOutputChange} />
             ) : null}
 
             {/* One invisible feed per playing Video node, so a Frame wire

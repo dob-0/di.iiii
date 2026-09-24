@@ -1,5 +1,6 @@
 import { TOP_TYPE_IDS } from '../tops/topOperators.js'
 import { computeTopOutput } from '../tops/topRuntime.js'
+import { VJ_DECK_TYPE } from '../tops/vjDeck.js'
 import { computeOutput as colourCombine } from './colour.combine/runtime.js'
 import { computeOutput as colourRamp } from './colour.ramp/runtime.js'
 import { computeOutput as colourSplit } from './colour.split/runtime.js'
@@ -58,6 +59,8 @@ import { computeOutput as vectorSplit } from './vector.split/runtime.js'
 export const NODE_RUNTIMES = new Map([
     // Every picture operator shares one runtime: its picture stays on the GPU.
     ...TOP_TYPE_IDS.map((typeId) => [typeId, computeTopOutput]),
+    // The deck's picture is its expanded operators' — the same null on `out`.
+    [VJ_DECK_TYPE, computeTopOutput],
     ['colour.combine', colourCombine],
     ['colour.ramp', colourRamp],
     ['colour.split', colourSplit],

@@ -524,6 +524,8 @@ export default function MapSurface({ projectId, spaceId }) {
                                 live={live}
                                 soloSurfaceId={soloId}
                                 network={network}
+                                assets={doc?.assets || null}
+                                projectId={projectId}
                             />
                             {reference.visible && referenceUrl ? (
                                 <img className="map-reference" src={referenceUrl} alt="" style={{ opacity: reference.opacity }} />
