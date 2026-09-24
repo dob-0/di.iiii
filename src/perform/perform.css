@@ -269,18 +269,6 @@
     text-transform: uppercase;
 }
 
-/* A pane that answers to its own height (the Out window on a phone). */
-.perform-pane--sized {
-    container-type: size;
-    container-name: performpane;
-}
-
-@container performpane (max-height: 150px) {
-    .perform-out-row {
-        display: none;
-    }
-}
-
 /* The picture of a Picture Out, as big as the window lets it be. */
 .perform-picture {
     display: block;

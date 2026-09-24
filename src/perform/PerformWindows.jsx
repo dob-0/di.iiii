@@ -52,7 +52,23 @@ function PictureCanvas({ nodeId, label }) {
     return <canvas ref={canvasRef} className="perform-picture" width={640} height={360} role="img" aria-label={label} />
 }
 
+// Tall enough for the picture AND the line under it? A phone's Out window
+// is not: there the picture keeps the window (the deck carries its own Out).
+const useTallEnough = (min = 150) => {
+    const ref = useRef(null)
+    const [tall, setTall] = useState(true)
+    useEffect(() => {
+        const el = ref.current
+        if (!el || typeof ResizeObserver === 'undefined') return undefined
+        const observer = new ResizeObserver(([entry]) => setTall(entry.contentRect.height >= min))
+        observer.observe(el)
+        return () => observer.disconnect()
+    }, [min])
+    return [ref, tall]
+}
+
 function OutWindow({ ctx }) {
+    const [paneRef, tall] = useTallEnough()
     const nodes = ctx.document.nodes || []
     const out = firstOfType(nodes, 'top.out')
     const deck = firstOfType(nodes, 'vj.deck')
@@ -67,17 +83,19 @@ function OutWindow({ ctx }) {
     }
     const surfaces = ctx.document.mappingState?.surfaces || []
     return (
-        <div className="perform-pane perform-pane--sized">
+        <div className="perform-pane" ref={paneRef}>
             <PictureCanvas nodeId={pictureIdOf(source)} label={out ? (out.label || 'Picture Out') : 'Deck output'} />
             {/* One line under the picture; a window too short for both keeps the picture. */}
-            <div className="perform-clock perform-out-row">
-                <span className="perform-dim" title="A preview, a few frames a second. The projector’s picture is the output page.">
-                    {out ? (out.label || 'Picture Out') : 'Deck master'} · preview
-                </span>
-                {surfaces.length ? (
-                    <button type="button" className="perform-action" onClick={() => window.open(buildMapOutputPath(ctx.spaceId, ctx.projectId), `di-map-out-${ctx.projectId}`, 'noopener')}>Open output</button>
-                ) : null}
-            </div>
+            {tall ? (
+                <div className="perform-clock">
+                    <span className="perform-dim" title="A preview, a few frames a second. The projector’s picture is the output page.">
+                        {out ? (out.label || 'Picture Out') : 'Deck master'} · preview
+                    </span>
+                    {surfaces.length ? (
+                        <button type="button" className="perform-action" onClick={() => window.open(buildMapOutputPath(ctx.spaceId, ctx.projectId), `di-map-out-${ctx.projectId}`, 'noopener')}>Open output</button>
+                    ) : null}
+                </div>
+            ) : null}
         </div>
     )
 }
