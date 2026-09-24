@@ -63,6 +63,8 @@ export const connect = async ({
 
     return {
         run,
+        /** One raw call against the API base — what the agent door uses for catalogue routes. */
+        request: (method, path, options = {}) => ctx.http.call(method, path, options),
         moves: MOVES,
         site,
         tier,
