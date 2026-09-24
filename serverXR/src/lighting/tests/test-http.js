@@ -1711,6 +1711,29 @@ check('the desk\'s own state is read through: a holder of the desk reaches the l
 
 // ---- harness ----------------------------------------------------------------
 
+// Ported from the studio desk (2026-09-24). A show file that cannot be written (OneDrive
+// or an antivirus holding it, a read-only file) used to throw out of the save timer.
+check('a show file that cannot be written does not stop the desk, says so, keeps the edit and recovers', async () => {
+  const file = path.join(process.env.DATA_DIR, 'show.json');
+  await POST('/api/master', { master: 200 });
+  await sleep(700);                                   // the first save lands
+  assert.ok(fs.existsSync(file), 'the show file exists');
+  try {
+    fs.chmodSync(file, 0o444);                        // read-only: the same EPERM a lock gives
+    await POST('/api/master', { master: 111 });
+    await sleep(1500);
+    const st = (await GET('/api/state')).body;        // it answers: the desk is alive
+    assert.strictEqual(st.status.save.ok, false, 'the save is reported as failing');
+    assert.match(st.status.save.lastError, /still running, retrying/);
+    assert.ok(st.status.save.failures >= 1);
+    assert.strictEqual((await GET('/api/dmx')).body.master, 111, 'the change itself is live');
+    assert.strictEqual(JSON.parse(fs.readFileSync(file, 'utf8')).master, 200, 'the old file is intact, not truncated');
+  } finally { fs.chmodSync(file, 0o666); }
+  for (let i = 0; i < 60 && !(await GET('/api/state')).body.status.save.ok; i++) await sleep(250);
+  assert.strictEqual((await GET('/api/state')).body.status.save.ok, true, 'the save recovers on its own');
+  assert.strictEqual(JSON.parse(fs.readFileSync(file, 'utf8')).master, 111, 'the retried save wrote the change');
+});
+
 async function main() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'artnet-test-'));
   process.env.DATA_DIR = dir;
