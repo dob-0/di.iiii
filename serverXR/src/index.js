@@ -1,6 +1,11 @@
 require('dotenv').config({ path: require('node:path').resolve(__dirname, '../.env.local') })
 require('dotenv').config({ path: require('node:path').resolve(__dirname, '../.env') })
 const express = require('express')
+// Before any router exists: the catalogue walks the live routes, and Express 5
+// only keeps a sub-router's mount path if it is recorded as it is mounted.
+const { installMountRecorder, listRoutes } = require('./catalogue/routeWalk')
+installMountRecorder()
+const catalogue = require('./catalogue')
 const http = require('http')
 const https = require('https')
 const cors = require('cors')
@@ -1872,6 +1877,24 @@ router.use('/api', requireWriteRole('editor'))
 // bare, req.path is the router-relative path (`/api/users/42`) under every
 // mount target (/, /serverXR). Regression: approvalGate.test.js.
 router.use(createGatedRequestNet(GATED_ROUTES))
+
+// ── the catalogue: what this server can do, for an agent ──
+// docs/architecture/SPEC_agent_door.md. The MCP reads this at start, so it
+// always describes the server it is talking to. A caller sees the entries its
+// role can reach and the agent door is open for; an admin can ask for all of
+// them, with how the catalogue compares to the live router.
+router.get('/api/catalogue', (req, res) => {
+  const state = req.authState || {}
+  const all = req.query.all === '1'
+  if (all && !hasRequiredAuthRole(state.role, 'admin') && config.requireAuth) {
+    return sendRoleError(res, 403, 'admin', state.role)
+  }
+  const role = config.requireAuth ? state.role : 'admin'
+  const keep = (entry) => all || (entry.agent && hasRequiredAuthRole(role, entry.role))
+  const body = { ...catalogue.openapi({ keep, version: releaseInfo?.version || '0.0.0' }) }
+  if (all) body['x-di-coverage'] = catalogue.compare(listRoutes(app))
+  res.set('Cache-Control', 'no-store').json(body)
+})
 
 const resolveProjectContext = async (projectId) => {
   const normalized = normalizeProjectId(projectId)
