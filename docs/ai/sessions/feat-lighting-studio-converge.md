@@ -28,3 +28,9 @@
   (studio's per-page `views`/`viewOf`, `snapv`, `.stage-tools` toolbar, poll guards), the Stage
   page, video pixel-mapping, the Network panel (OSC / sACN-Art-Net in / Art-Net alongside).
   The server halves of objects and labels ARE in (routes, engine, show file).
+- Review fixes, save path: the empty-boot guard and `dirty` clear only after the write lands
+  (a show that turns up before a retry is kept aside once, never written over unkept); in a
+  space, a rig change the machine show could not take is retried on its own; `switchShow`
+  saves through `saveSoon` and refuses (409) while the show being left cannot be saved. The
+  save-failure tests block the save with a directory at `show.json.tmp` — platform-neutral,
+  unlike a read-only file (a rename over one succeeds on Linux).
