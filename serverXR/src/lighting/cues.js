@@ -17,6 +17,12 @@
 
 const MAX_FOLLOW_MS = 10 * 60 * 1000;
 const MAX_CHAIN = 200;
+// A step never comes sooner than this after the last one. Two scenes that follow each other
+// with no wait and no fade would otherwise flip the whole rig on every 25 ms frame.
+const MIN_STEP_MS = 100;
+// The longest fade the engine runs: engine.js startFade clamps to the same 60 s, so a follow
+// never waits out a fade that is not happening.
+const MAX_FADE_MS = 60000;
 
 // The follow fields of a scene as the library stores them: both or neither.
 function sanitizeFollow(s) {
@@ -69,10 +75,12 @@ class CueRunner {
     return { chain, loops: !!cur && seen.has(cur), loopTo: cur && seen.has(cur) ? chain.indexOf(cur) : -1 };
   }
 
-  // When a step is due: after the scene's fade, plus its wait.
+  // When a step is due: after the scene's fade, plus its wait. The fade is read the way
+  // startFade reads it — not a number or not above 0 is no fade, and never more than 60 s.
   dueAfter(sc, fadeMs, now) {
-    const fade = Math.max(0, fadeMs != null ? +fadeMs || 0 : +sc.fadeMs || 0);
-    return now + fade + Math.max(0, +sc.followMs || 0);
+    const raw = fadeMs != null ? +fadeMs : +sc.fadeMs;
+    const fade = Number.isFinite(raw) && raw > 0 ? Math.min(MAX_FADE_MS, raw) : 0;
+    return now + Math.max(MIN_STEP_MS, fade + Math.max(0, +sc.followMs || 0));
   }
 
   // A person recalled a scene (the /api/scenes/recall route). Returns what happened, for
@@ -143,12 +151,15 @@ class CueRunner {
 // Routes, handed the server's own helpers (the same pattern as pixelmap.js):
 //   'POST /api/scenes/follow'  {id, followMs|null, followId|null} — set or clear a follow
 //   'POST /api/cue'            {action: 'go'|'stop'}
+// The studio desk mounts these. di.iiii's desk.js does NOT: it replaces `state` whole when
+// a space's show is loaded, and a route holding the object it was handed would go on
+// editing the show that was left. Its routes are inline in desk.js and must match these.
 function cueRoutes({ state, engine, save, pushFrame, json }) {
   return {
     'POST /api/scenes/follow': (req, res, body) => {
       const sc = state.scenes.find((s) => s.id === (body && body.id));
       if (!sc) return json(res, { error: 'no such scene' }, 404);
-      delete sc.followMs; delete sc.followId;
+      // Refuse first: a request that is turned down leaves the stored follow as it was.
       if (body.followMs != null) {
         if (body.followId && !state.scenes.some((s) => s.id === body.followId)) {
           return json(res, { error: 'the scene to follow on to does not exist' }, 400);
@@ -156,8 +167,9 @@ function cueRoutes({ state, engine, save, pushFrame, json }) {
         if (body.followId === sc.id && !(+body.followMs > 0)) {
           return json(res, { error: 'a scene that follows on to itself needs a wait above 0' }, 400);
         }
-        Object.assign(sc, sanitizeFollow({ followMs: body.followMs, followId: body.followId }));
       }
+      delete sc.followMs; delete sc.followId;
+      if (body.followMs != null) Object.assign(sc, sanitizeFollow({ followMs: body.followMs, followId: body.followId }));
       save();
       json(res, { ok: true, scene: sc, next: engine.cues.nextOf(sc), chain: sc.followMs != null ? engine.cues.chainFrom(sc.id) : null });
     },
@@ -177,4 +189,4 @@ function cueRoutes({ state, engine, save, pushFrame, json }) {
   };
 }
 
-module.exports = { CueRunner, sanitizeFollow, cueRoutes, MAX_FOLLOW_MS };
+module.exports = { CueRunner, sanitizeFollow, cueRoutes, MAX_FOLLOW_MS, MIN_STEP_MS, MAX_FADE_MS };

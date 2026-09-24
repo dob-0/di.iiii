@@ -34,3 +34,7 @@
   saves through `saveSoon` and refuses (409) while the show being left cannot be saved. The
   save-failure tests block the save with a directory at `show.json.tmp` — platform-neutral,
   unlike a read-only file (a rename over one succeeds on Linux).
+- Review fixes, follow times and scenes: `/api/scenes/follow` refuses before clearing (desk.js
+  inline route and cues.js `cueRoutes`, = studio adb9e3c); `MIN_STEP_MS` 100 ms between steps;
+  `dueAfter` clamps the fade like `startFade` (60 s, NaN = none); `switchShow` stops the cue
+  runner; `/api/scenes/replace` goes through `sanitizeScene` on the scene fields.
