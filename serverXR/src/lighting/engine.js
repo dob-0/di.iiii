@@ -1,7 +1,7 @@
 'use strict';
 // Fixture library, DMX rendering, fades and chase playback.
 
-const { fxActive, fxOrder, fxLevel, beatGrid } = require('./fx');
+const { FX_MODES, fxActive, fxOrder, fxLevel, fxBounds, beatGrid } = require('./fx');
 const { lfoApply, isGenericChannels } = require('./lfo');
 const { layerValues } = require('./looks');
 
@@ -199,6 +199,8 @@ function makeFixture(f = {}) {
     y: f.y != null ? f.y : 0.5,
     values: { ...values, ...(f.values || {}) },
     limits: { ...DEFAULT_LIMITS, ...(f.limits || {}) },
+    // A fixture's own effect, beating the rig-wide one for it alone (see render).
+    ...(f.fx && FX_MODES.includes(f.fx.mode) ? { fx: { mode: f.fx.mode } } : {}),
   };
 }
 
@@ -267,12 +269,44 @@ class Engine {
     // master is applied — so a fixture with a real dimmer channel gets the effect on that
     // channel and nowhere else, instead of being scaled on its colours as well. Blackout
     // needs no special case: it has already made `master` zero, and zero wins.
-    const fxOn = fxActive(state.fx);
-    const order = fxOn ? fxOrder(state.fixtures) : null;
     // Profiles the effects are told to leave alone: their fixtures render at a flat 255
     // FX/audio multiplier. The master still applies — exclusion is from the EFFECTS, not
     // from the grand fader.
     const excluded = new Set(Array.isArray(state.fx && state.fx.exclude) ? state.fx.exclude : []);
+    // Per-fixture effects (studio desk, 2026-09-18: "when I choose only one, only that one").
+    // A fixture may carry its own `fx: {mode}`, which beats the rig-wide mode for it alone;
+    // {mode:'none'} holds it still while the rest run. Fixtures running the same mode are
+    // one group with its own lane order and its own stage bounds, so a chase given to three
+    // pars travels across those three instead of skipping lanes that belong to others.
+    // Tempo, depth and Follow stay rig-wide. With no fixture carrying its own mode this is
+    // exactly one group of every fixture — the rig-wide effect as it always was.
+    const globalOn = fxActive(state.fx);
+    const ownFx = (f) => (f.fx && FX_MODES.includes(f.fx.mode) ? f.fx.mode : null);
+    const anyOwn = state.fixtures.some(ownFx);
+    const effMode = (f) => ownFx(f) || (globalOn ? state.fx.mode : 'none');
+    const fxGroups = new Map();
+    if (globalOn || anyOwn) {
+      const lists = new Map();
+      for (const f of state.fixtures) {
+        const m = effMode(f);
+        if (m === 'none') continue;
+        // An excluded profile sits out the rig-wide effect, but one given its own effect
+        // was chosen by hand and runs it.
+        if (anyOwn && !ownFx(f) && excluded.has(f.profile)) continue;
+        if (!lists.has(m)) lists.set(m, []);
+        lists.get(m).push(f);
+      }
+      for (const [m, list] of lists) {
+        fxGroups.set(m, {
+          fx: { ...state.fx, mode: m, enabled: true },
+          order: fxOrder(list), n: list.length,
+          // Spatial sweeps run across the fixtures the effect actually moves, not the -1..2
+          // stage world: a compact rig otherwise lands in one chase lane and flashes in
+          // unison. fxBounds also finds the rig's columns/rows so Follow steps evenly.
+          bounds: fxBounds(list.filter((f) => ownFx(f) || !excluded.has(f.profile))),
+        });
+      }
+    }
     // LFO modulation is computed against the scene values and read through `val` below —
     // fixture.values itself is never written, so the saved look survives every oscillation.
     const lfoMap = lfoApply(state.lfos, state.fixtures, state.fx && state.fx.bpm, now,
@@ -309,6 +343,8 @@ class Engine {
       // No FX and no audio ever scale an excluded profile, and never a generic-only one:
       // a laser's channels are mode switches, and scaling a mode switch changes the mode.
       const noScale = generic || excluded.has(f.profile);
+      const fxGroup = fxGroups.size ? fxGroups.get(effMode(f)) : null;
+      const noFx = generic || (excluded.has(f.profile) && !ownFx(f));
       const lv = lfoMap ? lfoMap.get(f.id) : null;
       const sv = stack ? stack.get(f.id) : null;
       // What this fixture is being told, in order of who has the last word: the layer
@@ -323,8 +359,8 @@ class Engine {
       const level = flash != null ? flash * 255 : (f.on === false ? 0 : (val('dimmer') ?? 255));
       const dim = mapRange(level, lim.dimMin, lim.dimMax) / 255;
       let lvl = master;
-      if (fxOn && !noScale) {
-        lvl *= fxLevel(state.fx, f, order.get(f.id) ?? 0, state.fixtures.length, now) / 255;
+      if (fxGroup && !noFx) {
+        lvl *= fxLevel(fxGroup.fx, f, fxGroup.order.get(f.id) ?? 0, fxGroup.n, now, fxGroup.bounds) / 255;
       }
       if (audioOn && !noScale) lvl *= this.audioMult(state, f, profile, now) / 255;
 
@@ -538,12 +574,19 @@ class Engine {
       id: `sc${Date.now().toString(36)}${(nextSceneId++).toString(36)}`,
       name: name || `Scene ${this.state.scenes.length + 1}`,
       fadeMs: 1000,
-      fixtures: this.state.fixtures.map((f) => ({ id: f.id, on: f.on, values: { ...f.values } })),
+      fixtures: this.state.fixtures.map((f) => ({ id: f.id, on: f.on, values: { ...f.values },
+        ...(f.fx ? { fx: { mode: f.fx.mode } } : {}) })),
       raw: { ...this.state.raw },
       // Deep enough copies that editing the live fx/LFOs later can never reach back into
       // a scene that was captured before the edit.
       fx: { ...this.state.fx, exclude: [...((this.state.fx && this.state.fx.exclude) || [])] },
-      lfos: JSON.parse(JSON.stringify(this.state.lfos || [])),
+      // LFOs only when one is actually running. A scene saved with every LFO off used to
+      // store that list anyway, and recall REPLACES the live list — so pressing any such
+      // scene deleted an LFO added later (studio desk, 2026-09-19: a red LFO vanished on
+      // every scene press and every chase step). Without the field, recall leaves the
+      // running LFOs alone, which is what a look that never had motion should do.
+      ...((this.state.lfos || []).some((l) => l && l.enabled)
+        ? { lfos: JSON.parse(JSON.stringify(this.state.lfos)) } : {}),
       // The audio-reactive setup is part of the look too. Guarded rather than spread
       // unconditionally: a bare state with no audioCfg must not stamp `{}` on the scene,
       // because recall treats any audioCfg object as "replace the live setup".
@@ -556,7 +599,13 @@ class Engine {
     this.startFade(fadeMs != null ? fadeMs : scene.fadeMs);
     for (const sf of scene.fixtures) {
       const f = this.state.fixtures.find((x) => x.id === sf.id);
-      if (f) { f.on = sf.on !== false; Object.assign(f.values, sf.values); }
+      if (f) {
+        f.on = sf.on !== false; Object.assign(f.values, sf.values);
+        // Per-fixture effects ride with the look; a scene that knows the fx and gives this
+        // fixture none hands it back to the rig-wide effect.
+        if (sf.fx && FX_MODES.includes(sf.fx.mode)) f.fx = { mode: sf.fx.mode };
+        else if (scene.fx) delete f.fx;
+      }
     }
     this.state.raw = { ...scene.raw };
     // A scene that knows its FX brings it along; an old scene without one leaves the

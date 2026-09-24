@@ -186,7 +186,8 @@ function createDesk(opts = {}) {
     if (!s || typeof s !== 'object' || typeof s.id !== 'string' || !s.id) return null;
     const fixtures = (Array.isArray(s.fixtures) ? s.fixtures : [])
       .filter((sf) => sf && typeof sf === 'object' && sf.id != null)
-      .map((sf) => ({ id: String(sf.id), on: sf.on !== false, values: sanitizeValues(sf.values) }));
+      .map((sf) => ({ id: String(sf.id), on: sf.on !== false, values: sanitizeValues(sf.values),
+        ...(sf.fx && FX_MODES.includes(sf.fx.mode) ? { fx: { mode: sf.fx.mode } } : {}) }));
     const out = {
       ...s,
       id: s.id.slice(0, 40),
@@ -1804,6 +1805,24 @@ function createDesk(opts = {}) {
     // four because they are one control — setting a mode against a depth left at 4% from
     // last time is exactly how an effect looks broken when it is working perfectly.
     'POST /api/fx': (req, res, body) => {
+      // Per-fixture effect: {mode, ids:[...]} gives just those fixtures their own mode and
+      // leaves the rig-wide effect alone ('none' holds them still while the rest run;
+      // 'rig' hands them back to the rig-wide effect).
+      if (Array.isArray(body.ids)) {
+        if (body.mode !== 'rig' && !FX_MODES.includes(body.mode)) {
+          return json(res, { error: `"${body.mode}" is not an effect` }, 400);
+        }
+        const ids = new Set(body.ids);
+        const hit = state.fixtures.filter((f) => ids.has(f.id));
+        if (!hit.length) return json(res, { error: 'none of those fixtures is patched' }, 400);
+        for (const f of hit) {
+          if (body.mode === 'rig') delete f.fx; else f.fx = { mode: body.mode };
+        }
+        state.activeScene = null;
+        save(); pushFrame(); return json(res, { ok: true, fx: state.fx, fixtures: hit.length });
+      }
+      // {all:true}: the effect is for every fixture, so any fixture's own effect gives way.
+      if (body.all) for (const f of state.fixtures) delete f.fx;
       // The clamps live in fx.js (sanitizeFxPatch), shared with scene editing — one answer
       // to what a valid fx config is, whichever route it arrives by.
       state.fx = sanitizeFxPatch(state.fx, body);
