@@ -1432,5 +1432,146 @@ check('the show sentence: the migration offer says it is a copy before the press
   assert.strictEqual(deskShow.copied({ space: 'lab', label: 'Lab' }), "Copied. Lab has its own show now; this machine's show is unchanged.");
 });
 
+
+// ---- ported from the studio desk (2026-09-24): per-fixture effects, rig-extent Follow,
+// even slots, short tail, radar centre, the fade mode, and the LFO-capture fix ----------
+const fxs = require('../fx');
+
+// A fixture's own fx.mode beats the rig-wide one for it alone; the rest keep the rig's.
+const fxRig = () => [0, 1, 2].map((i) => makeFixture({
+  profile: 'drgb', address: 1 + i * 4, universe: 0, x: i * 0.1, y: 0.5, values: { dimmer: 255, r: 255, g: 0, b: 0 },
+}));
+const dimAt = (e, f, t) => e.render(e.state, t).get(0)[f.address - 1];
+const offFx = () => ({ mode: 'none', bpm: 120, depth: 255, enabled: false, spatial: 'patch', exclude: [] });
+
+check('a fixture with its own effect runs it while the others follow the rig', () => {
+  const [a, b, c] = fxRig();
+  a.fx = { mode: 'strobe' };
+  const e = new Engine({ ...baseState([a, b, c]), fx: offFx() });
+  const seenA = new Set(), seenB = new Set();
+  for (let t = 0; t < 1000; t += 25) { seenA.add(dimAt(e, a, t)); seenB.add(dimAt(e, b, t)); }
+  assert.ok(seenA.has(0) && seenA.has(255), 'the strobing fixture flashes');
+  assert.deepStrictEqual([...seenB], [255], 'the rig-wide effect is off, so the others hold still');
+});
+
+check("a fixture set to 'none' holds still while the rig-wide effect runs", () => {
+  const [a, b, c] = fxRig();
+  a.fx = { mode: 'none' };
+  const e = new Engine({ ...baseState([a, b, c]), fx: { mode: 'strobe', bpm: 120, depth: 255, enabled: true, spatial: 'patch', exclude: [] } });
+  const seenA = new Set(), seenB = new Set();
+  for (let t = 0; t < 1000; t += 25) { seenA.add(dimAt(e, a, t)); seenB.add(dimAt(e, b, t)); }
+  assert.deepStrictEqual([...seenA], [255]);
+  assert.ok(seenB.has(0), 'the rest still strobe');
+});
+
+check('with no fixture carrying its own effect the rig renders exactly as before', () => {
+  const fx = { mode: 'chase', bpm: 128, depth: 255, enabled: true, spatial: 'patch', exclude: [] };
+  const fixtures = fxRig();
+  const e = new Engine({ ...baseState(fixtures), fx });
+  const order = fxOrder(fixtures);
+  for (let t = 0; t < 1200; t += 50) {
+    for (const f of fixtures) {
+      assert.strictEqual(dimAt(e, f, t), fxLevel(fx, f, order.get(f.id), fixtures.length, t));
+    }
+  }
+});
+
+check("scenes carry each fixture's own effect, and recall clears ones the scene lacks", () => {
+  const [a, b, c] = fxRig();
+  a.fx = { mode: 'radar' };
+  const e = new Engine({ ...baseState([a, b, c]), fx: offFx() });
+  const withOwn = e.captureScene('own');
+  delete a.fx; b.fx = { mode: 'strobe' };
+  e.recallScene(withOwn, 0);
+  assert.deepStrictEqual(a.fx, { mode: 'radar' });
+  assert.strictEqual(b.fx, undefined, 'a fixture with no effect in the scene goes back to the rig');
+  const back = makeFixture(JSON.parse(JSON.stringify(a)));
+  assert.deepStrictEqual(back.fx, { mode: 'radar' }, 'survives a reload of the show file');
+});
+
+check('a scene saved with no LFO running leaves a later LFO alone on recall', () => {
+  const [a] = fxRig();
+  const e = new Engine({ ...baseState([a]), fx: offFx(),
+    lfos: [{ id: 'old', enabled: false, wave: 'sine', beats: 1, depth: 255, spread: 0, channel: 'r', bipolar: false, targets: { profiles: [], ids: [] } }] });
+  const look = e.captureScene('still');
+  assert.strictEqual(look.lfos, undefined, 'no running LFO, so the scene carries none');
+  e.state.lfos = [{ id: 'red', enabled: true, wave: 'sine', beats: 1, depth: 128, spread: 0, channel: 'r', bipolar: false, targets: { profiles: [], ids: [] } }];
+  e.recallScene(look, 0);
+  assert.deepStrictEqual(e.state.lfos.map((l) => l.id), ['red'], 'the LFO added after the scene survives its recall');
+  e.state.lfos[0].enabled = true;
+  assert.ok(e.captureScene('moving').lfos.length === 1, 'a scene saved WITH a running LFO still carries it');
+});
+
+// A compact rig (the studio's five pars sat within 0.3 of each other) used to land in one
+// chase lane of the -1..2 world and flash in unison. Against its own extent it travels.
+check('a compact rig sweeps across its own extent, not the whole stage world', () => {
+  const rig = [0.10, 0.15, 0.20, 0.25, 0.30].map((x, i) => makeFixture({ profile: 'dimmer', address: 1 + i, x, y: 0.5 }));
+  const fx = { mode: 'chase', spatial: 'x' };
+  const lanesWorld = new Set(rig.map((f, i) => Math.floor(fxPhase(fx, f, i, 5) * 8)));
+  const b = fxs.fxBounds(rig);
+  const lanesRig = new Set(rig.map((f, i) => Math.floor(fxPhase(fx, f, i, 5, b) * 8)));
+  assert.ok(lanesWorld.size <= 2, 'the old maths bunched them: ' + [...lanesWorld]);
+  assert.strictEqual(lanesRig.size, 5, 'against the rig, every par has its own lane: ' + [...lanesRig]);
+});
+
+// The studio rig: two rows of four, hand-placed so the rows wobble a little. Left → right
+// must step column by column, evenly; top → bottom must flip the two rows.
+const twoRows = () => {
+  const xs = [0.59, 0.43, 0.27, 0.08], out = [];
+  xs.forEach((x, c) => out.push(makeFixture({ profile: 'rgb', address: 1 + out.length * 3, x, y: 0.44 + c * 0.003 })));
+  xs.forEach((x, c) => out.push(makeFixture({ profile: 'rgb', address: 1 + out.length * 3, x: x + 0.01, y: 0.245 - c * 0.002 })));
+  return out;
+};
+
+check('Follow steps evenly through the columns and rows of the arrangement', () => {
+  const rig = twoRows();
+  const b = fxs.fxBounds(rig);
+  assert.strictEqual(b.slots.x.centres.length, 4, 'four columns');
+  assert.strictEqual(b.slots.y.centres.length, 2, 'two rows, despite the wobble');
+  const px = rig.map((f, i) => fxPhase({ spatial: 'x' }, f, i, 8, b));
+  const cols = [...new Set(px.map((p) => p.toFixed(3)))].sort();
+  assert.deepStrictEqual(cols, ['0.000', '0.250', '0.500', '0.750'], 'evenly spaced, whatever the gaps');
+  assert.strictEqual(fxs.fxLanes({ spatial: 'x' }, b, 8), 4, 'a chase gets one lane per column');
+  assert.strictEqual(fxs.fxLanes({ spatial: 'y' }, b, 8), 2, 'and one per row');
+  assert.strictEqual(fxs.fxLanes({ spatial: 'patch' }, b, 8), 8, 'patch order keeps its lanes');
+});
+
+check('a chase with few lanes has a short tail, so the step reads', () => {
+  assert.strictEqual(fxs.tailLevel(1, 2), 0, 'two rows: a clean flip');
+  assert.strictEqual(fxs.tailLevel(1, 3), 90);
+  assert.strictEqual(fxs.tailLevel(1, 8), 190, 'eight lanes keep the long tail');
+  assert.strictEqual(fxs.tailLevel(1), 190, 'callers that pass no lane count are unchanged');
+});
+
+check("radar turns round the rig's own centre", () => {
+  const right = makeFixture({ profile: 'dimmer', address: 1, x: 1.8, y: 1.5 });
+  const left = makeFixture({ profile: 'dimmer', address: 2, x: 1.2, y: 1.5 });
+  const b = fxs.fxBounds([right, left]);
+  const fx = { mode: 'radar', bpm: 60, depth: 255, enabled: true, spatial: 'patch' };
+  assert.strictEqual(fxLevel(fx, right, 0, 2, 0, b), 255, 'the beam starts pointing right of the rig centre');
+  assert.strictEqual(fxLevel(fx, left, 1, 2, 0, b), 0, 'the fixture on the other side is dark');
+});
+
+check('the fade effect is one smooth loop that never holds, rolling along Follow', () => {
+  assert.ok(FX_MODES.includes('fade'));
+  const f = makeFixture({ profile: 'dimmer', address: 1, x: 0.2, y: 0.5 });
+  const fx = { mode: 'fade', bpm: 120, depth: 255, enabled: true, spatial: 'patch' };
+  const vals = [];
+  for (let t = 0; t < 6000; t += 50) vals.push(fxLevel(fx, f, 0, 1, t));
+  assert.ok(Math.max(...vals) >= 250 && Math.min(...vals) <= 5, 'it opens fully and closes fully');
+  let flat = 0;
+  for (let i = 2; i < vals.length; i++) if (vals[i] === vals[i - 1] && vals[i - 1] === vals[i - 2] && vals[i] > 5 && vals[i] < 250) flat++;
+  assert.strictEqual(flat, 0, 'no holds in the middle of the loop');
+});
+
+check('the downbeat grid survives the merge: sanitizeFxPatch keeps epoch, beatGrid still answers', () => {
+  const cur = fxs.sanitizeFxPatch(fxs.DEFAULT_FX, { epoch: 1234 });
+  assert.strictEqual(cur.epoch, 1234);
+  assert.strictEqual(fxs.sanitizeFxPatch(cur, { mode: 'chase' }).epoch, 1234, 'a patch without epoch keeps it');
+  const g = fxs.beatGrid({ bpm: 120, epoch: 1000 }, 1500);
+  assert.strictEqual(g.beatMs, 500);
+  assert.strictEqual(g.nextBeatMs, 0, 'exactly on a beat is now');
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);
