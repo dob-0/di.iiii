@@ -101,5 +101,18 @@ check('every DMX frame leaves full length — 512 slots, never trimmed to the pa
   if (!/out\.set\(u, FULL_FRAME\)/.test(fp)) throw new Error('footprints() no longer sets every universe to FULL_FRAME');
 });
 
+// Follow times and colour effects (from the studio desk): their own scripts, their routes.
+check('cueui.js + colorfxui.js: every api call has a route, and the page loads them', () => {
+  const ui = ['cueui.js', 'colorfxui.js'].map((f) => fs.readFileSync(path.join(ROOT, '../ui', f), 'utf8')).join('\n');
+  const routes = new Set([...server.matchAll(/'(?:GET|POST) (\/api\/[^']+)'/g)].map((m) => m[1]));
+  const called = new Set([...ui.matchAll(/(?:post|fetch)\(\s*'(api\/[^'?]+)'/g)].map((m) => '/' + m[1]));
+  if (called.size < 3) throw new Error('the follow/colour scripts make fewer api calls than expected — the pattern is stale');
+  const missing = [...called].filter((r) => !routes.has(r));
+  if (missing.length) throw new Error('no such route: ' + missing.join(', '));
+  for (const f of ['cueui.js', 'colorfxui.js']) if (!html.includes(`src="${f}"`)) throw new Error('index.html does not load ' + f);
+  if (!html.includes('href="cuefx.css"')) throw new Error('index.html does not load cuefx.css');
+  if (/'\/api\//.test(ui)) throw new Error('an absolute /api/ URL — the desk is mounted under /light');
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);
