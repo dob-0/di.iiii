@@ -1,0 +1,53 @@
+<!--
+  Ten read-only questions for the di.iiii agent door (sdk/mcp.mjs).
+  Method: the mcp-builder evaluation guide (independent, read-only, several
+  calls each, one verifiable answer). Run with sdk/evals/run.mjs.
+
+  Every answer was computed on 2026-09-24 from a copy of the local tier
+  (~/.local/share/di.iiii/data, snapshot 05:39 +04, blobs left out), served by
+  this branch's serverXR. They hold for THAT snapshot; against a live tier
+  they drift as the work changes. Only PUBLIC spaces are asked about: this
+  file lives in a public repository.
+-->
+<evaluation>
+  <qa_pair>
+    <question>One public space opens into a project whose id is "welcome". How many projects does that space hold in total?</question>
+    <answer>23</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>In the space labelled "RecordAR", how many objects in the space's own scene are of type "video"?</question>
+    <answer>4</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Of every space this token can see, which space holds the most projects? Give the space id.</question>
+    <answer>br-id-ge</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>What is the background colour of the scene in the space whose id is "main"? Give it exactly as stored.</question>
+    <answer>#0000a0</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Exactly one public space has no front-door project set. What is its id?</question>
+    <answer>algovrithm</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>The space labelled "Drum Rhythms" holds two projects. What is the title of the one that is NOT the project the space opens into?</question>
+    <answer>Electro Lab</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>In the scene of the space labelled "RecordAR", how many objects are text of any kind (2D or 3D text together)?</question>
+    <answer>13</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>How many objects of type "model" are in the scene of the space whose id is "main"?</question>
+    <answer>2</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>In the space labelled "WCC Exhibition", how many projects are on the live shelf, not counting the project the space opens into?</question>
+    <answer>10</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>In the space labelled "Open Space", how many projects are archived?</question>
+    <answer>5</answer>
+  </qa_pair>
+</evaluation>
