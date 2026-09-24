@@ -521,10 +521,16 @@ export default {
         // direct fallback still targets the configured port, which otherwise
         // leaves the browser loading over 5174 while reconnecting to 5173.
         strictPort: true,
+        // xfwd on every entry: this proxy re-originates each request from
+        // loopback, and host: true puts it on the wifi. Without X-Forwarded-For
+        // the backend's "this machine only" guards (agent runs, work status,
+        // device routes) saw every phone as 127.0.0.1. The backend trusts the
+        // header only from loopback (serverXR/src/proxyTrust.js).
         proxy: {
             '/serverXR': {
                 target: DEV_PROXY_API_TARGET,
                 changeOrigin: true,
+                xfwd: true,
                 ws: true
             },
             // The lighting desk lives on the backend at /light (app-level, no /serverXR
@@ -540,13 +546,15 @@ export default {
             // on the first space made to test the NDI® source kind.
             '^/light(/|$)': {
                 target: DEV_PROXY_API_TARGET,
-                changeOrigin: true
+                changeOrigin: true,
+                xfwd: true
             },
             // NDI® in — the same shape: serverXR answers /ndi itself on a local install
             // (serverXR/src/routes/ndiRoutes.js).
             '^/ndi(/|$)': {
                 target: DEV_PROXY_API_TARGET,
-                changeOrigin: true
+                changeOrigin: true,
+                xfwd: true
             },
             // Project documents store asset/API URLs as bare `/api/...` (no
             // `/serverXR` prefix) because in production Express serves both
@@ -560,6 +568,7 @@ export default {
             '/api': {
                 target: DEV_PROXY_API_TARGET,
                 changeOrigin: true,
+                xfwd: true,
                 ws: true,
                 rewrite: (path) => `/serverXR${path}`
             }
