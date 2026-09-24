@@ -12,6 +12,8 @@ import { pictureIdOf, setMaster } from '../project/tops/vjDeck.js'
 import { listProjects } from '../project/services/projectsApi.js'
 import { phaseAt } from '../timeline/showClock.js'
 import { useShowClockContext } from './useShowClock.js'
+// The Projection desk's own stylesheet: its panes look here exactly as they do there.
+import '../map/mapSurface.css'
 import { WINDOW_KINDS, isKnownKind } from './presets.js'
 
 // What each Perform window shows. Every one is a NATIVE window — a React part
@@ -65,14 +67,17 @@ function OutWindow({ ctx }) {
     }
     const surfaces = ctx.document.mappingState?.surfaces || []
     return (
-        <div className="perform-pane">
+        <div className="perform-pane perform-pane--sized">
             <PictureCanvas nodeId={pictureIdOf(source)} label={out ? (out.label || 'Picture Out') : 'Deck output'} />
-            <p className="perform-dim">
-                {out ? (out.label || 'Picture Out') : 'The deck’s master'} · a preview, a few frames a second. The projector’s picture is the output page.
-            </p>
-            {surfaces.length ? (
-                <button type="button" className="perform-action" onClick={() => window.open(buildMapOutputPath(ctx.spaceId, ctx.projectId), `di-map-out-${ctx.projectId}`, 'noopener')}>Open output</button>
-            ) : null}
+            {/* One line under the picture; a window too short for both keeps the picture. */}
+            <div className="perform-clock perform-out-row">
+                <span className="perform-dim" title="A preview, a few frames a second. The projector’s picture is the output page.">
+                    {out ? (out.label || 'Picture Out') : 'Deck master'} · preview
+                </span>
+                {surfaces.length ? (
+                    <button type="button" className="perform-action" onClick={() => window.open(buildMapOutputPath(ctx.spaceId, ctx.projectId), `di-map-out-${ctx.projectId}`, 'noopener')}>Open output</button>
+                ) : null}
+            </div>
         </div>
     )
 }
@@ -115,8 +120,6 @@ function ClockWindow() {
                 <div className="perform-beats" aria-label={`Beat ${beat + 1} of 4`}>
                     {[0, 1, 2, 3].map((n) => <span key={n} className={`perform-beat${n === beat ? ' is-on' : ''}`} />)}
                 </div>
-            </div>
-            <div className="perform-clock">
                 <button type="button" className="perform-action" onClick={() => clock.tap()} disabled={!clock.canTap}>Tap</button>
                 <button type="button" className="perform-action" onClick={() => clock.reset()} disabled={!clock.canTap}>Reset</button>
                 {light?.up ? (

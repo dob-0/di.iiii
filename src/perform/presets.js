@@ -71,7 +71,7 @@ export const BUILT_IN_PRESETS = [
         who: 'Club and laser nights. The deck is the instrument; the wall only has to be right.',
         windows: [w('deck'), w('out'), w('clock'), w('master')],
         wide: { deck: [1, 2, 66, 95], out: [68, 2, 31, 44], clock: [68, 48, 31, 25], master: [68, 75, 31, 22] },
-        narrow: { out: [0, 0, 100, 26], clock: [0, 26, 100, 20], deck: [0, 46, 100, 54] }
+        narrow: { out: [0, 0, 100, 22], clock: [0, 22, 100, 26], deck: [0, 48, 100, 52] }
     },
     {
         id: 'wall',

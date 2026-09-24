@@ -101,8 +101,8 @@ export default function PerformDesk({
     const area = useMemo(() => measureArea(stripBottom), [stripBottom, viewport]) // eslint-disable-line react-hooks/exhaustive-deps
     const widthClass = widthClassOf(viewport.width)
 
-    const mine = layout?.presets || []
-    const show = document?.performState?.presets || []
+    const mine = useMemo(() => layout?.presets || [], [layout?.presets])
+    const show = useMemo(() => document?.performState?.presets || [], [document?.performState?.presets])
 
     // Which preset opens. Chosen once the document has loaded — a show preset
     // asked for by the address is in the document — and again when the
