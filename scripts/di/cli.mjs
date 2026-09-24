@@ -46,7 +46,7 @@ import { isWindows, paths } from './paths.mjs'
 import { probeAll, probeCanPublishName, probeHealth, probeLanAddresses, probeListen, probePrettyLocalName } from './probe.mjs'
 import { publishName, stopName, updateRoomName } from './name.mjs'
 import { getKeeper, keeperPaths, keeperStatus, removeKeeper, startKeeper, stopKeeper, KEEPER_PORT, LLAMA_BUILD, MODEL } from './keeper.mjs'
-import { getNdi, ndiDownloadFor, ndiPaths, ndiStatus, removeNdi, verifyNdi } from './ndi.mjs'
+import { getNdi, ndiDownloadFor, ndiPaths, ndiStatus, readNdiScan, removeNdi, verifyNdi, watchNdiScanFeed } from './ndi.mjs'
 import * as docker from './runner-docker.mjs'
 import * as node from './runner-node.mjs'
 import {
@@ -1173,7 +1173,31 @@ const cmdNdi = async (args) => {
         return
     }
 
-    fail(`${CMD} ndi get | status | remove`)
+    if (what === 'scan') {
+        // The running server's autoscan, never a finder of our own. --url reaches a
+        // di.iiii other than this install (a dev server on another port).
+        let base = args.flags.url ? String(args.flags.url).replace(/\/+$/, '') : null
+        if (!base) {
+            if (!requireInstalled(home)) return
+            base = publicUrl(home, resolvePort(home))
+        }
+        const first = await readNdiScan(base)
+        if (!first.ok) { fail(ui.ndiScanFailed(first.why)); process.exitCode = 1; return }
+        say(ui.ndiScan(first.scan))
+        if (!args.flags.watch) return
+        const controller = new AbortController()
+        process.once('SIGINT', () => controller.abort())
+        let skipFirst = true // the feed opens with the snapshot just printed
+        const ended = await watchNdiScanFeed(base, (scan) => {
+            if (skipFirst && !scan.change) { skipFirst = false; return }
+            skipFirst = false
+            say(ui.ndiScanEvent(scan))
+        }, { signal: controller.signal })
+        if (!ended.ok) { fail(ui.ndiScanFailed(ended.why)); process.exitCode = 1 }
+        return
+    }
+
+    fail(`${CMD} ndi get | status | remove | scan [--watch]`)
     process.exitCode = 1
 }
 

@@ -13,6 +13,7 @@ import { transportWarning } from './transportCeiling.js'
 import { lightingDeskPath, probeLightingDesk } from './lightingLink.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
 import { describeMachine, showFromValue, showOptions, showValue, unresolvedInputs } from './mapMachines.js'
+import { ndiScanLine } from './ndiLink.js'
 import { buildStudioProjectPath, navigateToStudioPath } from '../studio/utils/studioRouting.js'
 import SurfaceBar from '../components/SurfaceBar.jsx'
 import useLocalInstall from '../hooks/useLocalInstall.js'
@@ -90,7 +91,7 @@ export default function MapSurface({ projectId, spaceId }) {
         addCue, updateCue, deleteCue, reorderCues, fireCue
     } = useMapDocument(projectId, { role: 'desk' })
     // Every machine showing this space, and what each one has: the wall is usually another computer.
-    const { machines } = useMachinePresence(spaceId)
+    const { machines, ndiScan } = useMachinePresence(spaceId)
     // The one bar, above the desk's own. Never on /out — that is MapOutput,
     // the wall's picture, and a bar there would be projected with the work.
     const localInstall = useLocalInstall()
@@ -461,6 +462,11 @@ export default function MapSurface({ projectId, spaceId }) {
                         )) : <p className="map-empty">Finding the machines showing this space…</p>}
                         {machines.length === 1 ? (
                             <p className="map-empty">Only this machine so far. Another appears while its output page is open.</p>
+                        ) : null}
+                        {/* This machine's own NDI autoscan: a reading, kept current by the
+                            server — or, where it cannot look, the reason why. */}
+                        {ndiScanLine(ndiScan) ? (
+                            <p className="map-empty" role="status">{ndiScanLine(ndiScan)}</p>
                         ) : null}
                         {unresolvedInputs(surfaces, machines).map((entry) => (
                             <p key={entry.id} className="map-machine is-warning" role="status">

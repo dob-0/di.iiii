@@ -25,6 +25,8 @@ export const parseArgs = (argv) => {
         if (name === 'project') { args.flags.project = argv[++i]; continue }
         if (name === 'browser') { args.flags.browser = argv[++i]; continue }
         if (name === 'name') { args.flags.name = argv[++i]; continue }
+        // `di ndi scan --url http://localhost:4390` — a di.iiii other than this install.
+        if (name === 'url') { args.flags.url = argv[++i]; continue }
         args.flags[name] = true
     }
     return args
