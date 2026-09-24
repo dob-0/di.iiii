@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { layoutScopeKey, mergeFrame, pruneLayout } from './workspaceLayout.js'
-import { emptyLayout, readWorkspaceLayout, writeWorkspaceLayout } from './workspaceLayoutStorage.js'
+import { readWorkspaceLayout, writeWorkspaceLayout } from './workspaceLayoutStorage.js'
 
 // A drag emits a patch per pointer move. Writing localStorage on each one is
 // a synchronous serialise of the whole layout inside the gesture; trailing by a
@@ -18,7 +18,10 @@ const WRITE_DEBOUNCE_MS = 200
  */
 export default function useWorkspaceLayout({ spaceId = null, projectId = null, viewportWidth = null } = {}) {
     const scopeKey = layoutScopeKey({ spaceId, projectId, viewportWidth })
-    const [layout, setLayout] = useState(emptyLayout)
+    // Read on the first render, not after it: the Perform desk chooses which
+    // preset to open from what is stored here, and a first render that saw an
+    // empty slot opened the wrong preset and said the saved one was missing.
+    const [layout, setLayout] = useState(() => readWorkspaceLayout(scopeKey))
     const writeTimer = useRef(null)
     const pending = useRef(null)
 
@@ -76,11 +79,36 @@ export default function useWorkspaceLayout({ spaceId = null, projectId = null, v
         })
     }, [schedule])
 
+    // The person's own Perform presets on this device ("mine"), and which one
+    // they had open last — the slot this envelope carried empty since it was
+    // made (2026-09-24, the Perform line). Written straight away, not after
+    // the debounce: saving a preset is one deliberate act, and a reload a
+    // moment later must find it.
+    const setPresets = useCallback((presets) => {
+        setLayout((current) => {
+            const next = { ...current, presets: Array.isArray(presets) ? presets : [] }
+            pending.current = null
+            if (writeTimer.current) { clearTimeout(writeTimer.current); writeTimer.current = null }
+            writeWorkspaceLayout(scopeKey, next)
+            return next
+        })
+    }, [scopeKey])
+
+    const setActivePreset = useCallback((presetId) => {
+        setLayout((current) => {
+            const activePreset = typeof presetId === 'string' && presetId ? presetId : null
+            if (current.activePreset === activePreset) return current
+            const next = { ...current, activePreset }
+            schedule(next)
+            return next
+        })
+    }, [schedule])
+
     const frames = layout.frames
     const frameOf = useCallback((node) => mergeFrame(node?.values?.frame, frames[node?.id]), [frames])
 
     return useMemo(
-        () => ({ scopeKey, frames, frameOf, setLocalFrame, forgetNodes, flush }),
-        [scopeKey, frames, frameOf, setLocalFrame, forgetNodes, flush]
+        () => ({ scopeKey, frames, frameOf, setLocalFrame, forgetNodes, flush, presets: layout.presets, activePreset: layout.activePreset, setPresets, setActivePreset }),
+        [scopeKey, frames, frameOf, setLocalFrame, forgetNodes, flush, layout.presets, layout.activePreset, setPresets, setActivePreset]
     )
 }

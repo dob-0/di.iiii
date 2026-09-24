@@ -22,6 +22,10 @@ import {
     updateClip
 } from '../../../project/tops/vjDeck.js'
 import { detectAssetMediaKind } from '../../../utils/mediaAssetTypes.js'
+import { resolveClipUrl } from '../../../project/tops/clipVideos.js'
+import { useShowClockContext } from '../../../perform/useShowClock.js'
+import { DEFAULT_BPM } from '../../../timeline/showClock.js'
+import { clipStill } from './clipStills.js'
 import './vjDeck.css'
 
 // The VJ deck: Resolume's clip grid for one vj.deck node.
@@ -52,10 +56,24 @@ function DeckPicture({ nodeId, className, label }) {
     return <canvas ref={canvasRef} className={className} width={160} height={90} aria-label={label} role="img" />
 }
 
+// The at-rest picture of a filled slot: one frame of the clip (clipStills.js).
+// A playing slot shows the engine's live picture instead, drawn over this.
+function ClipStill({ url, inPoint, outPoint, label }) {
+    const [still, setStill] = useState(null)
+    useEffect(() => {
+        let cancelled = false
+        setStill(null)
+        clipStill(url, inPoint, outPoint).then((value) => { if (!cancelled) setStill(value) })
+        return () => { cancelled = true }
+    }, [url, inPoint, outPoint])
+    if (!still) return null
+    return <img className="vj-deck-tile-picture vj-deck-tile-still" src={still} alt="" aria-hidden="true" data-still-of={label} />
+}
+
 const inputLabel = (input) => `In ${DECK_INPUTS.indexOf(input) + 1}`
 const percent = (value) => `${Math.round(value * 100)}`
 
-export default function VjDeckView({ node, onPatchValues = null, assets = [], inputSources = {}, placement = 'window', onUploadFile = null, now = () => Date.now() }) {
+export default function VjDeckView({ node, onPatchValues = null, assets = [], inputSources = {}, placement = 'window', onUploadFile = null, now = () => Date.now(), spaceId = '', projectId = null }) {
     const deck = useMemo(() => normalizeDeck(node?.values?.deck), [node?.values?.deck])
     const deckId = node?.id || ''
     const editable = typeof onPatchValues === 'function'
@@ -85,11 +103,30 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         if (selected && !selectedClip) setSelected(null)
     }, [selected, selectedClip])
 
+    // ONE show clock (src/perform/useShowClock.js), when the page has one: the
+    // Light desk leads it, and this deck shows and taps THAT tempo. Without a
+    // clock on the page the deck keeps its own, as it always did.
+    const clock = useShowClockContext()
+    const followsLight = clock?.leader === 'light'
+    const shownBpm = clock ? clock.timeline.bpm : deck.bpm
     const onTap = () => {
+        if (clock) {
+            clock.tap()
+            return
+        }
         const state = tapTempo(tapsRef.current, now())
         tapsRef.current = state.taps
-        if (state.bpm !== null) write(setBpm(deck, state.bpm))
+        if (state.bpm !== null) write(setBpm(deck, state.bpm, state.epoch))
     }
+    const onResetTempo = () => {
+        if (clock) {
+            clock.reset()
+            return
+        }
+        tapsRef.current = []
+        write(setBpm(deck, DEFAULT_BPM, now()))
+    }
+    const clipUrl = (clip) => (clip?.kind === 'asset' ? resolveClipUrl(clip.asset, spaceId, { assets, projectId }) : '')
 
     const onTile = (layerIndex, column) => {
         const clip = deck.layers[layerIndex].clips[column]
@@ -137,12 +174,21 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     const gridStyle = { '--vj-columns': deck.columns }
 
     return (
-        <div className={`vj-deck vj-deck--${mode}`} data-placement={mode}>
+        <div className={`vj-deck vj-deck--${mode}`} data-placement={mode} data-bpm={shownBpm} data-leader={clock?.leader || 'deck'}>
             <header className="vj-deck-top">
                 <div className="vj-deck-tempo">
                     <span className="vj-deck-label">BPM</span>
-                    <output className="vj-deck-bpm" aria-label="Tempo">{deck.bpm.toFixed(1)}</output>
-                    <button type="button" className="vj-deck-button" onClick={onTap} disabled={!editable}>Tap</button>
+                    <output className="vj-deck-bpm" aria-label="Tempo">{shownBpm.toFixed(1)}</output>
+                    <button type="button" className="vj-deck-button" onClick={onTap} disabled={!editable && !followsLight}>Tap</button>
+                    <button
+                        type="button"
+                        className="vj-deck-button vj-deck-button--quiet"
+                        onClick={onResetTempo}
+                        disabled={!editable && !followsLight}
+                        aria-label={`Reset the tempo to ${DEFAULT_BPM}`}
+                        title={`Back to ${DEFAULT_BPM} bpm, the beat on this instant`}
+                    >Reset</button>
+                    {followsLight ? <span className="vj-deck-dim vj-deck-leader" title="The Light desk on this machine keeps the show’s tempo; the deck follows it.">follows Light</span> : null}
                 </div>
                 <label className="vj-deck-master">
                     <span className="vj-deck-label">Master</span>
@@ -189,26 +235,32 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                     {rows.map(({ layer, index }) => (
                         <div className="vj-deck-row" role="group" aria-label={layer.name} key={layer.id} data-active={layer.active >= 0 ? 'true' : 'false'}>
                             <div className="vj-deck-layer">
-                                <span className="vj-deck-layer-name" title={layer.name}>{layer.name}</span>
+                                {/* The name and Clear share the first line, so the blend
+                                    has a line of its own: beside Clear it had ~70px and
+                                    read "Diff" and "Scre" (the owner's screen, 2026-09-24). */}
                                 <div className="vj-deck-layer-line">
-                                    <select
-                                        className="vj-deck-chip"
-                                        value={layer.blend}
-                                        disabled={!editable}
-                                        aria-label={`${layer.name} blend`}
-                                        onChange={(event) => write(setBlend(deck, index, event.target.value))}
-                                    >
-                                        {BLEND_MODES.map((label, value) => <option key={label} value={String(value)}>{label}</option>)}
-                                    </select>
+                                    <span className="vj-deck-layer-name" title={layer.name}>{layer.name}</span>
                                     <button
                                         type="button"
-                                        className="vj-deck-button"
+                                        className="vj-deck-button vj-deck-layer-clear"
                                         onClick={() => write(clearLayer(deck, index))}
                                         disabled={!editable || layer.active < 0}
                                         aria-label={`Clear ${layer.name}`}
                                     >
                                         Clear
                                     </button>
+                                </div>
+                                <div className="vj-deck-layer-line">
+                                    <select
+                                        className="vj-deck-chip vj-deck-blend"
+                                        value={layer.blend}
+                                        disabled={!editable}
+                                        aria-label={`${layer.name} blend`}
+                                        title={BLEND_MODES[Number(layer.blend)] || ''}
+                                        onChange={(event) => write(setBlend(deck, index, event.target.value))}
+                                    >
+                                        {BLEND_MODES.map((label, value) => <option key={label} value={String(value)}>{label}</option>)}
+                                    </select>
                                 </div>
                                 <div className="vj-deck-layer-line">
                                     <input
@@ -239,8 +291,14 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                         disabled={!clip && !editable}
                                         onClick={() => onTile(index, column)}
                                     >
+                                        {clip && clip.kind === 'asset'
+                                            ? <ClipStill url={clipUrl(clip)} inPoint={clip.in} outPoint={clip.out} label={name} />
+                                            : null}
                                         {playing && clip.kind === 'asset'
                                             ? <DeckPicture nodeId={clipNodeId(deckId, index)} className="vj-deck-tile-picture" label={name} />
+                                            : null}
+                                        {!playing && clip?.kind === 'input' && inputSources?.[clip.input]
+                                            ? <DeckPicture nodeId={inputSources[clip.input]} className="vj-deck-tile-picture" label={name} />
                                             : null}
                                         {playing && clip.kind === 'input' && inputSources?.[clip.input]
                                             ? <DeckPicture nodeId={inputSources[clip.input]} className="vj-deck-tile-picture" label={name} />

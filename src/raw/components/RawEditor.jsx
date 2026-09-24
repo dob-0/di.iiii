@@ -21,7 +21,7 @@ import TopNetworkFeed from './TopNetworkFeed.jsx'
 import DeskPanelWindow from './DeskPanelWindow.jsx'
 import TopInsidePanel from './topInside/TopInsidePanel.jsx'
 import { isTopType } from '../../project/tops/topOperators.js'
-import { DECK_INPUTS, isPictureType, pictureIdOf } from '../../project/tops/vjDeck.js'
+import { DECK_INPUTS, VJ_DECK_TYPE, isPictureType, normalizeDeck, pictureIdOf, setBpm } from '../../project/tops/vjDeck.js'
 import { useMachinePresence } from '../../project/tops/useMachinePresence.js'
 import SoundAnalysisFeed from './SoundAnalysisFeed.jsx'
 import KeyboardFeed from './KeyboardFeed.jsx'
@@ -36,6 +36,9 @@ import DmxOutPanelWindow from './DmxOutPanelWindow.jsx'
 import MidiInputPanel from './MidiInputPanel.jsx'
 import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import VjDeckView from './vjDeck/VjDeckView.jsx'
+import PerformDesk from '../../perform/PerformDesk.jsx'
+import DeskPerformSwitch from '../../perform/DeskPerformSwitch.jsx'
+import useShowClock, { ShowClockContext } from '../../perform/useShowClock.js'
 import RawHelpDialog from './RawHelpDialog.jsx'
 import SurfaceBar from '../../components/SurfaceBar.jsx'
 import { useProjectLayers } from '../../project/useProjectLayers.js'
@@ -189,7 +192,11 @@ export default function RawEditor({
     projectId,
     spaceId = DEFAULT_PROJECT_SPACE_ID,
     localStorageKey = '',
-    seedOnFirstVisit = false
+    seedOnFirstVisit = false,
+    // The Perform line (src/perform/): { preset, from } from the address.
+    // Set, the editor is the Perform desk — the same project, windows and op
+    // log, with the patch canvas taken away and a preset choosing the windows.
+    perform = null
 }) {
     const [displayName] = useState(() => {
         try {
@@ -228,15 +235,12 @@ export default function RawEditor({
     const [readSpaceChatCount, setReadSpaceChatCount] = useState(0)
     // Where the windows are, for this person, on this device. The document
     // keeps the seed; this keeps the arrangement. utils/workspaceLayout.js.
-    const {
-        frameOf,
-        setLocalFrame,
-        forgetNodes: forgetWindowFrames
-    } = useWorkspaceLayout({
+    const workspaceLayout = useWorkspaceLayout({
         spaceId,
         projectId: projectId || localStorageKey || null,
         viewportWidth: typeof window === 'undefined' ? 1280 : window.innerWidth
     })
+    const { frameOf, setLocalFrame, forgetNodes: forgetWindowFrames } = workspaceLayout
     const [isWorldFullscreen, setIsWorldFullscreen] = useState(false)
     // Bumped after inserting a whole graph at once — tells the surface this
     // is the one moment a forced re-fit is a kindness, not a yank.
@@ -1154,9 +1158,12 @@ export default function RawEditor({
     // the bottom or right of the screen the guess opened partly outside it
     // (festival-machine inventory 2026-09-06). Only creation comes through
     // here — a window a person has dragged is never re-placed.
-    const placeFrameForNewNode = useCallback((frame, node, place) => placeNewWindowFrame({
+    const placeFrameForNewNode = useCallback((frame, node, place, obstacles = []) => placeNewWindowFrame({
         frame,
         card: getCardBox(node),
+        // Every other card in the scope, as boxes: a window must not open over
+        // the cards wired to it either (the deck over its Clip In, 2026-09-24).
+        obstacles,
         anchor: place,
         space: panelWindowSpace(frame, graphViewport),
         viewport: graphViewport,
@@ -1198,7 +1205,7 @@ export default function RawEditor({
         let cardY = placed.y
         if (onBand(cardX, cardY)) cardY = band.maxY + 16
         if (values.frame) {
-            values.frame = placeFrameForNewNode(values.frame, { typeId: definition.id, graphX: cardX, graphY: cardY, values }, place)
+            values.frame = placeFrameForNewNode(values.frame, { typeId: definition.id, graphX: cardX, graphY: cardY, values }, place, siblings.map((node) => getCardBox(node, authoredNodes)))
         }
         const nextNode = createNode(definition.id, {
             values,
@@ -1684,7 +1691,7 @@ export default function RawEditor({
         selectNode(nodeId)
     }, [handleNavigateToScope, navStack.length, selectNode])
 
-    const renderViewNodeContent = (node) => {
+    const renderViewNodeContent = (node, options = {}) => {
         const resolvedValues = evaluateNodeInputs(node, graphContext)
         if (node.typeId === 'universe.world') {
             return (
@@ -1831,7 +1838,9 @@ export default function RawEditor({
             return (
                 <VjDeckView
                     node={node}
-                    placement="window"
+                    placement={options.placement || 'window'}
+                    spaceId={resolvedSpaceId}
+                    projectId={projectId || null}
                     assets={document.assets || []}
                     // Which node feeds each input, so a playing input tile can
                     // show that node's picture. A deck feeding a deck shows its master.
@@ -2187,7 +2196,130 @@ export default function RawEditor({
         }
     })
 
-    return (
+    // ONE show clock for the page (src/perform/useShowClock.js). The deck's own
+    // tempo is the fallback; the Light desk on this machine leads when it is
+    // up. Asked only where there is something to keep time for.
+    const firstDeck = useMemo(() => nodes.find((node) => node.typeId === VJ_DECK_TYPE) || null, [nodes])
+    const firstDeckRef = useRef(firstDeck)
+    useEffect(() => { firstDeckRef.current = firstDeck }, [firstDeck])
+    const deckTempo = useMemo(() => (firstDeck ? normalizeDeck(firstDeck.values?.deck) : null), [firstDeck])
+    const handleDeckTempo = useCallback((bpm, epoch) => {
+        const deckNode = firstDeckRef.current
+        if (!deckNode) return
+        applyLocalOps({
+            type: 'updateNode',
+            payload: { nodeId: deckNode.id, patch: { values: { ...deckNode.values, deck: setBpm(deckNode.values?.deck, bpm, epoch) } } }
+        })
+    }, [applyLocalOps])
+    const showClock = useShowClock({
+        deck: deckTempo,
+        onDeckTempo: firstDeck ? handleDeckTempo : null,
+        enabled: Boolean(firstDeck) || Boolean(perform)
+    })
+    // Perform's "Add a VJ deck": a deck at the root of the project, the same
+    // node the palette makes, so Nodes shows it as a card beside the rest.
+    const handleAddDeck = useCallback(() => {
+        const node = createNode(VJ_DECK_TYPE, { graphX: 120, graphY: 120, parentId: null, createdBy: currentAuthor(displayName) })
+        if (!node) return
+        applyLocalOps({ type: 'createNode', payload: { node } }, { activityMessage: 'Added a VJ deck.' })
+    }, [applyLocalOps, displayName])
+
+    // What keeps running whatever is on screen: the picture engine, the video
+    // and sound feeds, the keyboard and MIDI. Shared by the desk and Perform.
+    const runtimeFeeds = (
+        <>
+                {/* The picture operators run while any exist — see TopNetworkFeed. */}
+                {nodes.some((node) => isPictureType(node.typeId)) ? (
+                    <TopNetworkFeed document={document} spaceId={resolvedSpaceId} projectId={projectId || null} onLiveOutputChange={handleLiveOutputChange} />
+                ) : null}
+
+                {/* One invisible feed per playing Video node, so a Frame wire
+                    carries the picture even while the room isn't on screen —
+                    see VideoFrameFeed for why this lives here. */}
+                {nodes
+                    .filter((node) => node.typeId === 'media.video' && node.values?.src && assetMap.has(node.values.src))
+                    .map((node) => (
+                        <VideoFrameFeed
+                            key={node.id}
+                            node={node}
+                            asset={assetMap.get(node.values.src)}
+                            onFrameChange={handleFrameOutputChange}
+                        />
+                    ))}
+                {nodes
+                    .filter((node) => node.typeId === 'media.audio' && node.values?.src && assetMap.has(node.values.src))
+                    .map((node) => (
+                        <SoundAnalysisFeed
+                            key={node.id}
+                            node={node}
+                            asset={assetMap.get(node.values.src)}
+                            onLevelsChange={handleSoundOutputChange}
+                        />
+                    ))}
+                {nodes
+                    .filter((node) => node.typeId === 'device.keyboard')
+                    .map((node) => (
+                        <KeyboardFeed key={node.id} node={node} onKeyState={handleKeyState} />
+                    ))}
+                {nodes
+                    .filter((node) => node.typeId === 'device.midi.out')
+                    .map((node) => (
+                        <MidiOutFeed
+                            key={node.id}
+                            node={node}
+                            inputs={evaluateNodeInputs(node, graphContext)}
+                            onStatus={handleMidiOutStatus}
+                        />
+                    ))}
+        </>
+    )
+
+    const clockTree = (children) => (
+        <ShowClockContext.Provider value={showClock}>{children}</ShowClockContext.Provider>
+    )
+
+    if (perform && projectId) {
+        return clockTree(
+            <main className="raw-editor-shell perform-shell">
+                <SurfaceBar
+                    float
+                    space={resolvedSpaceId}
+                    spaceLabel={spaceName}
+                    project={projectId}
+                    projectLabel={document.projectMeta?.title}
+                    isLocalInstall={localInstall.isLocal}
+                    hidden={isEmbed}
+                    layers={barLayers}
+                >
+                    <DeskPerformSwitch current="perform" space={resolvedSpaceId} project={projectId} from={perform.from || 'raw'} />
+                </SurfaceBar>
+                {state.pendingSyncError && (
+                    <div className="raw-sync-alert" role="alert">
+                        {state.pendingSyncError}
+                    </div>
+                )}
+                {state.loading ? <div className="raw-overlay-message">Loading project…</div> : null}
+                {state.loadError ? <div className="raw-overlay-message is-error">{state.loadError}</div> : null}
+                <PerformDesk
+                    perform={perform}
+                    document={document}
+                    hasLoaded={state.hasLoaded}
+                    spaceId={resolvedSpaceId}
+                    projectId={projectId}
+                    applyLocalOps={applyLocalOps}
+                    renderNode={renderViewNodeContent}
+                    machines={knownMachines}
+                    onAddDeck={handleAddDeck}
+                    isLocalInstall={localInstall.isLocal}
+                    layout={workspaceLayout}
+                />
+                {runtimeFeeds}
+                {deleteConfirm}
+            </main>
+        )
+    }
+
+    return clockTree(
         <main className="raw-editor-shell">
             {/* An expired session stops the sync layer retrying (useProjectDocumentSync's
                 401 branch clearTimeout()s and breaks) while the editor keeps accepting
@@ -2207,7 +2339,9 @@ export default function RawEditor({
                 isLocalInstall={localInstall.isLocal}
                 hidden={!showBar}
                 layers={barLayers}
-            />
+            >
+                <DeskPerformSwitch current="desk" space={resolvedSpaceId} project={projectId} from="raw" />
+            </SurfaceBar>
             {state.pendingSyncError && (
                 <div className="raw-sync-alert" role="alert">
                     {state.pendingSyncError}
@@ -2755,49 +2889,7 @@ export default function RawEditor({
                 </div>
             )}
 
-            {/* The picture operators run while any exist — see TopNetworkFeed. */}
-            {nodes.some((node) => isPictureType(node.typeId)) ? (
-                <TopNetworkFeed document={document} spaceId={resolvedSpaceId} projectId={projectId || null} onLiveOutputChange={handleLiveOutputChange} />
-            ) : null}
-
-            {/* One invisible feed per playing Video node, so a Frame wire
-                carries the picture even while the room isn't on screen —
-                see VideoFrameFeed for why this lives here. */}
-            {nodes
-                .filter((node) => node.typeId === 'media.video' && node.values?.src && assetMap.has(node.values.src))
-                .map((node) => (
-                    <VideoFrameFeed
-                        key={node.id}
-                        node={node}
-                        asset={assetMap.get(node.values.src)}
-                        onFrameChange={handleFrameOutputChange}
-                    />
-                ))}
-            {nodes
-                .filter((node) => node.typeId === 'media.audio' && node.values?.src && assetMap.has(node.values.src))
-                .map((node) => (
-                    <SoundAnalysisFeed
-                        key={node.id}
-                        node={node}
-                        asset={assetMap.get(node.values.src)}
-                        onLevelsChange={handleSoundOutputChange}
-                    />
-                ))}
-            {nodes
-                .filter((node) => node.typeId === 'device.keyboard')
-                .map((node) => (
-                    <KeyboardFeed key={node.id} node={node} onKeyState={handleKeyState} />
-                ))}
-            {nodes
-                .filter((node) => node.typeId === 'device.midi.out')
-                .map((node) => (
-                    <MidiOutFeed
-                        key={node.id}
-                        node={node}
-                        inputs={evaluateNodeInputs(node, graphContext)}
-                        onStatus={handleMidiOutStatus}
-                    />
-                ))}
+            {runtimeFeeds}
 
             {/* Fullscreen room — takes over the full viewport. Any scope,
                 not only Worlds: the room you are standing in IS the thing

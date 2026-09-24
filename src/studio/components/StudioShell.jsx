@@ -12,6 +12,7 @@ import useAuthSession from '../../hooks/useAuthSession.js'
 import StudioCoachMarks from './StudioCoachMarks.jsx'
 import RigMirrorHint from './RigMirrorHint.jsx'
 import SurfaceBar from '../../components/SurfaceBar.jsx'
+import DeskPerformSwitch from '../../perform/DeskPerformSwitch.jsx'
 import useLocalInstall from '../../hooks/useLocalInstall.js'
 import { isEmbedRequest } from '../../utils/previewMode.js'
 import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspaceStorage.js'
@@ -624,7 +625,15 @@ export default function StudioShell({
                 isLocalInstall={localInstall.isLocal}
                 hidden={!showBar}
                 layers={isJam ? null : layers?.open}
-            />
+            >
+                {/* Desk | Perform, once the project has something to perform:
+                    a connection (a deck, a picture) or a wall. A bare project
+                    opens bare (the layers decision, 2026-09-23); "All tools"
+                    and a project still loading show it, as they show every name. */}
+                {!isJam && (allTools || !layers?.open || layers.open.connections || layers.open.wall) ? (
+                    <DeskPerformSwitch current="desk" space={liveProjectState?.spaceId} project={document?.projectMeta?.id} from="studio" />
+                ) : null}
+            </SurfaceBar>
 
             {!uiHidden && !isMobile && (
                 <>
