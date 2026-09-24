@@ -1740,6 +1740,21 @@ router.use('/api/sync/spaces/:spaceId', (req, res, next) => {
   next()
 })
 
+// GET /api/trash takes its space as `?space=`, not a `:spaceId` route param,
+// so it never set req.requiredSpaceId and slipped past every gate below —
+// an anonymous request under REQUIRE_AUTH could list every trashed project
+// in every space (found 2026-09-24, on origin/main since 053c19dc). Setting
+// it here puts a scoped trash request through the exact same
+// requireReadRole/requireWriteRole gate as GET /api/spaces/:spaceId/projects:
+// same 404 for a space that doesn't exist, same 401/403 for one the caller
+// can't see, same isPublic bypass. A request with no `?space=` is narrowed
+// inside the route handler instead (routes/projectRoutes.js), since there is
+// no single space here for this gate to check.
+router.use('/api/trash', (req, res, next) => {
+  req.requiredSpaceId = req.query.space ? (normalizeSpaceId(req.query.space) || null) : null
+  next()
+})
+
 router.use('/api/projects/:projectId', async (req, res, next) => {
   try {
     const project = await resolveProjectContext(req.params.projectId)
@@ -2317,6 +2332,7 @@ const mayStoreVerbatim = (req) => {
 }
 
 registerProjectRoutes(router, {
+  config,
   uploadsDir: UPLOADS_DIR,
   maxUploadBytes: config.maxUploadBytes,
   isAllowedUpload,
