@@ -56,6 +56,7 @@ const { createSessionDbSync } = require('./sessionDbSync')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
 const { registerOgRoutes } = require('./routes/ogRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
+const { TRUST_PROXY } = require('./proxyTrust')
 const { registerWorkStatusRoutes } = require('./routes/workStatusRoutes')
 const { registerAgentRunRoutes } = require('./routes/agentRunRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
@@ -317,6 +318,8 @@ async function initStorage() {
 }
 
 const app = express()
+// req.ip is the real client behind a proxy on this machine — see proxyTrust.js.
+app.set('trust proxy', TRUST_PROXY)
 const startedAt = Date.now()
 const recentEvents = []
 const liveClients = new Map()
