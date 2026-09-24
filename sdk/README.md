@@ -133,10 +133,14 @@ the server set `DI_MCP_ALLOW_PUBLIC=1`, and even then each call must carry
 `confirm: true`; the refusal tells the agent to put it to the person in words.
 An unattended agent cannot publish, mint an access link or delete a space.
 
-**Measured (2026-09-24):** what a client loads before asking anything —
-old server 17 tools / 7,088 bytes covering 17 moves; this one 4 tools /
-3,303 bytes covering 17 moves and 55 routes, and it does not grow with them.
-Evaluation: `sdk/evals/di.xml`, run with `sdk/evals/run.mjs` (see its header).
+**Measured (2026-09-24, `sdk/evals/RESULTS.md`):** before any question, 4 tools /
+3,685 bytes covering 17 moves and 55 routes (the old server: 17 tools / 7,088
+bytes, 17 moves), and it does not grow with the routes. On 10 read-only
+questions: 9/10 correct against the old server's 6/10, 75 tool calls against 89,
+$1.05 against $1.49, half the time. One run each — variance not measured.
+
+**Use `pick` on anything big.** Without it the same questions cost 209 calls:
+the model re-read scene documents past the answer cap in pieces.
 
 ## Honest limits
 
