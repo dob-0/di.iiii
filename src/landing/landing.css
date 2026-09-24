@@ -742,29 +742,6 @@ body.is-landing .account-btn-wrapper {
     padding: var(--di-space-5) var(--di-space-5);
 }
 
-/* The only card in this grid that is also a real link — the plain feature
-   cards beside it do nothing on click, so they get no hover state to imply
-   otherwise. */
-.lp-wiki-card {
-    display: block;
-    color: inherit;
-    text-decoration: none;
-    transition: background 0.1s, border-color 0.1s;
-}
-
-.lp-wiki-card:hover,
-.lp-wiki-card:focus-visible {
-    background: var(--di-cyan-wash);
-}
-
-.lp-wiki-card-more {
-    display: block;
-    margin-top: var(--di-space-3);
-    color: var(--di-cyan);
-    font-size: var(--di-text-3);
-    letter-spacing: 0.02em;
-}
-
 .lp-feature-icon {
     font-size: var(--di-text-6) !important;
     color: var(--di-cyan) !important;
@@ -1137,55 +1114,3 @@ body.is-landing .account-btn-wrapper {
     visibility: hidden;
 }
 
-/* ─── THE CRACK (Spaces route) ───────────────────────────────
-   Step inside glides. This one breaks: the whole screen splits into shards
-   from a random point (crackTransition.js) and flies apart before the real
-   navigation happens. Each shard is `--di-black` — the page's own ground —
-   so at rest (opacity 0, no transform) the overlay is invisible; only the
-   `.is-live` flip reveals that it was ever there. */
-.lp-crack-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 4000;
-    pointer-events: none;
-}
-
-/* A shard the same colour as the ground would be invisible against it —
-   there is nothing to see cracking. Each one is a sliver of cyan light
-   fading to the ground colour, so the break itself is what's on screen:
-   glass catching light as it comes apart, not a black void moving. */
-.lp-crack-shard {
-    position: absolute;
-    inset: 0;
-    /* crackTransition.js sets --shard-deg inline per shard; this declaration is
-       the resting default it overrides, not a second source of the angle. */
-    --shard-deg: 45deg;
-    background: linear-gradient(var(--shard-deg), var(--di-cyan) 0%, var(--di-cyan-line) 38%, var(--di-black) 72%);
-    opacity: 0;
-    transform-origin: var(--ox) var(--oy);
-    /* translate is the OUTER function on purpose — applied after scale, so
-       its vmax distance stays what it says rather than being multiplied by
-       the 2.6x growth (see crackTransition.js's dist comment). */
-    transform: translate(0, 0) rotate(0deg) scale(0.4);
-    transition: transform 640ms cubic-bezier(0.16, 0.9, 0.2, 1), opacity 640ms ease;
-}
-
-.lp-crack-overlay.is-live .lp-crack-shard {
-    opacity: 1;
-    transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(2.6);
-}
-
-.lp-crack-overlay.is-live {
-    animation: lp-crack-fade 640ms ease forwards;
-}
-
-@keyframes lp-crack-fade {
-    0%, 55% { background: transparent; }
-    100% { background: var(--di-black); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .lp-crack-shard {
-        transition: none;
-    }
-}

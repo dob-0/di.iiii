@@ -73,6 +73,8 @@ const SPINE_FILES = [
     'components/confirmDeleteDialog.css',
     'raw/styles/raw.css',
     'pages/spaceContents.css',
+    // Born on the spine, 2026-09-22 — the scanning page never carried a literal.
+    'scan/scanSurface.css',
 ]
 
 // Not yet converted, and honest about it. Each line is a debt, not an

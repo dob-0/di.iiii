@@ -108,12 +108,19 @@ services:
 
       # approvalGate.js — see serverXR/.env.example. Unset (default
       # false/empty) leaves every gated route behaving exactly as before
-      # this feature existed; staging overrides via STAGING_APPROVAL_*
-      # (docker-compose.staging.yml) so the two tiers can be enabled
+      # this feature existed; the dev tier overrides via DEV_APPROVAL_*
+      # (docker-compose.dev.yml) so the two tiers can be enabled
       # independently.
       APPROVAL_GATE_ENABLED: ${APPROVAL_GATE_ENABLED:-false}
       APPROVAL_BOT_URL: ${APPROVAL_BOT_URL:-}
       APPROVAL_SHARED_SECRET: ${APPROVAL_SHARED_SECRET:-}
+      # The same bot's other two jobs, which were never passed through (compose
+      # env is an allow-list — #134): change notices with Undo
+      # (spaceHistory.js) and the public API base the one console answers
+      # approvals to (contentProposals.js — a file for an existing space).
+      CONTENT_CHANGE_NOTICES_ENABLED: ${CONTENT_CHANGE_NOTICES_ENABLED:-false}
+      APPROVAL_CALLBACK_URL: ${APPROVAL_CALLBACK_URL:-}
+      CONTENT_PROPOSAL_TTL_MS: ${CONTENT_PROPOSAL_TTL_MS:-}
     restart: unless-stopped
     healthcheck:
       # 127.0.0.1, not localhost: busybox wget resolves localhost to the
@@ -141,7 +148,7 @@ services:
     # Sized against the real 2 vCPU / 3.7GB Hetzner host (confirmed via `nproc`/`free -h`):
     # all five services summed to 3.1 against 2 actual vCPUs, trimmed proportionally to 1.8
     # (10% host headroom), keeping the same relative priority:
-    # server > client ≈ caddy > staging-server > staging-client. Main workload, most headroom.
+    # server > client ≈ caddy > dev-tier server > dev-tier client (compose project dii-dev). Main workload, most headroom.
     cpus: '0.9'
     mem_limit: 1g
 
@@ -172,7 +179,7 @@ services:
       # this was verified for plain nginx:alpine, this check will fail loud
       # (service never reports healthy) rather than silently proxying to a
       # container that isn't actually serving -- watch this on the very
-      # first staging deploy after this change.
+      # first dev-tier deploy after this change.
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
       interval: 20s
       timeout: 5s
@@ -237,18 +244,18 @@ services:
       SITE_DOMAIN: ${SITE_DOMAIN:?set SITE_DOMAIN in .env to the domain pointing at this host}
       # Default lives here, not in the Caddyfile placeholder: compose's
       # environment: mapping always sets this key inside the container, even
-      # when STAGING_DOMAIN is unset in .env (present-but-empty), and Caddy's
+      # when DEV_DOMAIN is unset in .env (present-but-empty), and Caddy's
       # own {$VAR:default} placeholder only falls back when the var is fully
       # absent -- an empty value produces a keyless second server block,
       # which Caddy refuses to start (only the first block may be keyless).
-      STAGING_DOMAIN: ${STAGING_DOMAIN:-staging.invalid.internal}
-      STAGING_PORT: ${STAGING_PORT:-8081}
+      DEV_DOMAIN: ${DEV_DOMAIN:-dev.invalid.internal}
+      DEV_PORT: ${DEV_PORT:-8081}
       # A second, memorable door onto the SAME prod app and the SAME auth —
       # the map lane already lives behind ProtectedSurface at
       # /{space}/map/{project}; this only gives it its own name to hand out.
-      # Same inert-until-DNS-exists pattern as STAGING_DOMAIN above.
+      # Same inert-until-DNS-exists pattern as DEV_DOMAIN above.
       MAP_DOMAIN: ${MAP_DOMAIN:-map.invalid.internal}
-    # Lets the Caddyfile's staging site block reach the staging Compose
+    # Lets the Caddyfile's dev-tier site block reach the dev tier's Compose
     # project's client container by its host-published port, without
     # joining the two projects to a shared Docker network.
     extra_hosts:
@@ -260,7 +267,7 @@ services:
     healthcheck:
       # Admin API only (loopback, not externally published) -- a liveness
       # check independent of TLS/domain config, so it can't false-negative
-      # on an inert STAGING_DOMAIN block with no DNS yet (see the comment above).
+      # on an inert DEV_DOMAIN block with no DNS yet (see the comment above).
       # 127.0.0.1, not localhost -- see server's healthcheck comment above.
       # Confirmed live (docker exec): Caddy's admin API only binds the IPv4
       # loopback, so `wget http://localhost:2019/` (which tries ::1 first

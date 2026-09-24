@@ -32,7 +32,7 @@ export const ensureInstallId = async (home) => {
     return installId
 }
 
-// One directory per remote so the same space linked to staging and prod can
+// One directory per remote so the same space linked to the dev tier and prod can
 // never share (and corrupt) one cursor file.
 export const remoteSlug = (remote) => String(remote || '')
     .replace(/^[a-z]+:\/\//i, '')

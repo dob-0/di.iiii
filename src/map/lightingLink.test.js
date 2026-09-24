@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { createRequire } from 'node:module'
 import { createElement } from 'react'
+import { buildStudioProjectPath } from '../studio/utils/studioRouting.js'
+import { buildRawProjectPath } from '../raw/utils/rawRouting.js'
+import { buildMapPath } from './mapRouting.js'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import MapCueList from './MapCueList.jsx'
 import {
@@ -26,6 +30,74 @@ describe('the address of the lighting desk', () => {
     it('is app-level /light, on this origin', () => {
         expect(lightingDeskPath()).toBe('/light/')
         expect(lightingApiUrl('api/summary')).toBe(`${window.location.origin}/light/api/summary`)
+    })
+
+    // The shape the bar's Light link uses too (SurfaceBar): the two callers agree by
+    // this address, not by importing each other.
+    it('says which project opened it, and stays bare without one', () => {
+        expect(lightingDeskPath({ spaceId: 'lab', projectId: 'first-piece' }))
+            .toBe('/light/?space=lab&project=first-piece')
+        expect(lightingDeskPath({ spaceId: 'lab', projectId: 'first-piece', label: 'First Piece' }))
+            .toBe('/light/?space=lab&project=first-piece&label=First+Piece')
+        // a title that only repeats the id says nothing new
+        expect(lightingDeskPath({ spaceId: 'lab', projectId: 'first-piece', label: 'first-piece' }))
+            .toBe('/light/?space=lab&project=first-piece')
+        expect(lightingDeskPath({ spaceId: 'lab' })).toBe('/light/')
+        expect(lightingDeskPath({ projectId: 'first-piece' })).toBe('/light/')
+    })
+})
+
+// The desk is plain script served by serverXR and cannot import the app's path
+// builders, so it carries its own copy of the three addresses. This holds the copy
+// to the real thing: if a builder moves, or the copy drifts, the way back from Light
+// would open the wrong page and nothing else would notice.
+describe('the way back from the lighting desk', () => {
+    const deskFrom = createRequire(import.meta.url)('../../serverXR/src/lighting/ui/from.js')
+
+    it('opens the same three addresses the app builds', () => {
+        for (const [spaceId, projectId] of [['lab', 'first-piece'], ['main', 'open-jam'], ['br_id_ge', 'rite-2']]) {
+            const links = deskFrom.projectLinks({ space: spaceId, project: projectId })
+            expect(links.studio).toBe(buildStudioProjectPath(projectId, spaceId))
+            expect(links.nodes).toBe(buildRawProjectPath(projectId, spaceId))
+            expect(links.projection).toBe(buildMapPath(spaceId, projectId))
+        }
+        // and, spelled out, the shapes themselves
+        expect(deskFrom.projectLinks({ space: 'lab', project: 'first-piece' })).toEqual({
+            studio: '/lab/studio/projects/first-piece',
+            nodes: '/lab/raw/projects/first-piece',
+            projection: '/lab/map/first-piece'
+        })
+    })
+
+    it('reads what lightingDeskPath writes', () => {
+        const search = lightingDeskPath({ spaceId: 'lab', projectId: 'first-piece', label: 'First Piece' }).split('?')[1]
+        expect(deskFrom.fromQuery(`?${search}`)).toEqual({ space: 'lab', project: 'first-piece', label: 'First Piece' })
+        expect(deskFrom.fromQuery('?space=lab&project=first-piece')).toEqual({ space: 'lab', project: 'first-piece', label: 'first-piece' })
+        expect(deskFrom.fromQuery('')).toBeUndefined()
+    })
+
+    it('never builds a way back out of an id that is not one', () => {
+        for (const bad of ['', '..', '/evil.example', '\\evil.example', 'a/b', 'a:b', 'javascript:alert(1)', 'a b']) {
+            expect(deskFrom.fromQuery(`?space=${encodeURIComponent(bad)}&project=first-piece`)).toBeNull()
+            expect(deskFrom.fromQuery(`?space=lab&project=${encodeURIComponent(bad)}`)).toBeNull()
+        }
+    })
+
+    it('keeps it for the tab, and a bare address in a fresh tab has nothing', () => {
+        const store = new Map()
+        const storage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: (k) => store.delete(k) }
+        expect(deskFrom.readFrom('', storage)).toBeNull()
+        expect(deskFrom.readFrom('?space=lab&project=first-piece', storage)).toEqual({ space: 'lab', project: 'first-piece', label: 'first-piece' })
+        // the address lost its query — the tab still knows
+        expect(deskFrom.readFrom('', storage)).toEqual({ space: 'lab', project: 'first-piece', label: 'first-piece' })
+        // a new project replaces it; an unusable one clears it
+        expect(deskFrom.readFrom('?space=lab&project=second-piece', storage).project).toBe('second-piece')
+        expect(deskFrom.readFrom('?space=lab', storage)).toBeNull()
+        expect(deskFrom.readFrom('', storage)).toBeNull()
+        // storage that refuses (private mode) costs the memory, not the link
+        const refusing = { getItem: () => { throw new Error('denied') }, setItem: () => { throw new Error('denied') }, removeItem: () => { throw new Error('denied') } }
+        expect(deskFrom.readFrom('?space=lab&project=first-piece', refusing).project).toBe('first-piece')
+        expect(deskFrom.readFrom('', refusing)).toBeNull()
     })
 })
 
@@ -86,7 +158,7 @@ describe('asking the desk what it has', () => {
         await expect(probeLightingDesk({ fetchImpl: async () => notFound() })).resolves.toBe(false)
         await expect(probeLightingDesk({ fetchImpl: async () => { throw new Error('offline') } })).resolves.toBe(false)
         await expect(probeLightingDesk({ fetchImpl: async () => ok({ activeScene: null }) })).resolves.toBe(true)
-        // The staging case: a 200 that is a web page is not a desk, and the map desk
+        // The dev-tier case: a 200 that is a web page is not a desk, and the map desk
         // must not grow a Light link to one.
         await expect(probeLightingDesk({ fetchImpl: async () => htmlPage() })).resolves.toBe(false)
     })

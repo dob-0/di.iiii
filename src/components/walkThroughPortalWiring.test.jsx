@@ -31,7 +31,17 @@ vi.mock('@react-three/drei', () => ({
     Billboard: ({ children }) => <group>{children}</group>,
     Text: ({ children }) => <span>{children}</span>
 }))
-vi.mock('@react-three/fiber', () => ({ useFrame: () => {} }))
+vi.mock('@react-three/fiber', () => ({
+    useFrame: () => {},
+    useThree: () => ({ gl: { domElement: null }, scene: null, camera: null })
+}))
+// A click goes through the entry transition, which navigates once its cover
+// is up (entryTransition.test.js holds that order). Here only the destination
+// matters, so the transition is reduced to where it would go.
+vi.mock('../components/entryTransition/entryTransition.js', () => ({
+    enterDestination: (href) => navigate(href),
+    isEntryInProgress: () => false
+}))
 
 const PortalObject = (await import('../project/viewport/PortalObject.jsx')).default
 
@@ -116,7 +126,7 @@ describe('where walking through is wired', () => {
         // ...and since the approach-reveal pass, arrival carries walk mode
         // across the remount: the one-shot flag must be set BEFORE the route
         // change, or the destination viewer mounts first and never sees it.
-        expect(SCENE).toMatch(/markArriveWalking\(\)\s*\n\s*appNavigate\(href\)/)
+        expect(SCENE).toMatch(/markArriveWalking\(\)[\s\S]{0,120}enterDestination\(href,/)
         expect(SCENE.slice(SCENE.indexOf('handlePortalReached'))).not.toMatch(/window\.location\.assign/)
     })
 
@@ -127,7 +137,7 @@ describe('where walking through is wired', () => {
     })
 
     it('reads the pose above the XR guard, so a headset walks through too', () => {
-        const frame = SCENE.slice(SCENE.indexOf('useFrame((_, delta) => {'))
+        const frame = SCENE.slice(SCENE.indexOf('useFrame((frameState, delta) => {'))
         const check = frame.indexOf('portalWalk.step')
         const xrGuard = frame.indexOf('if (isPresenting) return')
         expect(check).toBeGreaterThan(-1)

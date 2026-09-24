@@ -1,7 +1,7 @@
 /**
  * local-mirror.mjs — make the local dev tier hold every space production has.
  *
- * The local dev box is a tier like staging and prod, but the only one nothing
+ * The local dev box is a tier like dev and prod, but the only one nothing
  * keeps in step: it is declared `governed: false` (spaces/README.md), so
  * `spaces:audit` prints its drift and still exits 0. The result is a dev box
  * that quietly holds a handful of spaces months after production grew past
@@ -17,10 +17,10 @@
  *   node scripts/local-mirror.mjs [options]
  *
  * Options:
- *   --tier <prod|staging|all>
+ *   --tier <prod|dev|all>
  *                     Which tier to mirror. Default `all`: production first,
- *                     then staging for spaces production does not have — a
- *                     space can be built on staging and not yet promoted
+ *                     then the dev tier for spaces production does not have — a
+ *                     space can be built on the dev tier and not yet promoted
  *                     (`dilijan` was, for a month), and mirroring prod alone
  *                     silently leaves it out with nothing reporting a miss.
  *                     Prod always wins for a space both tiers hold.
@@ -51,16 +51,22 @@ const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const DEFAULT_LOCAL_URL = 'http://localhost:4000/serverXR'
 
 // The tier map matches spaces/README.md: PROD_API_TOKEN for production,
-// LIVE_API_TOKEN for staging. Order matters — production is walked first so a
+// LIVE_API_TOKEN for the dev tier. Order matters — production is walked first so a
 // space both tiers hold is taken from production.
 const TIERS = {
     prod: { urlEnv: 'PROD_API_URL', tokenEnv: 'PROD_API_TOKEN', fallbackUrl: 'https://di-studio.xyz/serverXR' },
-    staging: { urlEnv: 'LIVE_API_URL', tokenEnv: 'LIVE_API_TOKEN', fallbackUrl: 'https://staging.di-studio.xyz/serverXR' },
+    dev: { urlEnv: 'LIVE_API_URL', tokenEnv: 'LIVE_API_TOKEN', fallbackUrl: 'https://dev.diiii.xyz/serverXR' },
 }
 
 // Sandboxes are per-account scratch space, provisioned lazily on first visit.
 // Copying someone else's sandbox to a dev box means nothing.
 const isSandbox = (spaceId) => /^sandbox-/.test(spaceId)
+
+// The dev tier's old key is refused outright, not mapped: one name per tier.
+const resolveTier = (name) => {
+    if (name === 'staging') throw new Error('"staging" is now "dev"')
+    return name
+}
 
 const parseArgs = (argv) => {
     const args = {
@@ -76,7 +82,7 @@ const parseArgs = (argv) => {
     }
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
-        if (arg === '--tier') { args.tier = argv[++i]; continue }
+        if (arg === '--tier') { args.tier = resolveTier(argv[++i]); continue }
         if (arg === '--space') { args.spaces.push(argv[++i]); continue }
         if (arg === '--from') { args.from = argv[++i]; continue }
         if (arg === '--token') { args.token = argv[++i]; continue }
@@ -103,7 +109,7 @@ const loadEnvFile = async (filePath) => {
             // An empty assignment is a placeholder, not a value. The root .env
             // carries `LIVE_API_TOKEN=` with nothing after it and is merged
             // last, so keeping it would blank the real token that
-            // serverXR/.env.local holds — and the only symptom is staging
+            // serverXR/.env.local holds — and the only symptom is the dev tier
             // quietly answering with public spaces only.
             if (key && value) env[key] = value
         }
@@ -153,10 +159,14 @@ const SPACE_FIELDS = ['label', 'isPublic', 'openInscriptions', 'allowEdits']
 
 const main = async () => {
     const env = {
-        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env'))),
-        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env.local'))),
+        // Most specific file wins, so serverXR/.env.local merges LAST. The root .env is a
+        // general-purpose file that on one machine carried LOCAL_API_URL=localhost:4000 while
+        // the install answered on its own name — with root-last, that stale line won and the
+        // content half of this tool reported "not checked" for a week (2026-09-21).
         ...(await loadEnvFile(path.join(ROOT_DIR, '.env'))),
         ...(await loadEnvFile(path.join(ROOT_DIR, '.env.local'))),
+        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env'))),
+        ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env.local'))),
     }
     const getEnv = (key) => process.env[key] || env[key] || ''
 
@@ -178,7 +188,7 @@ const main = async () => {
             }))
 
     if (!sources.length) {
-        throw new Error(`Unknown --tier "${args.tier}" — expected one of: prod, staging, all`)
+        throw new Error(`Unknown --tier "${args.tier}" — expected one of: prod, dev, all`)
     }
 
     console.log('[local-mirror]')
@@ -194,7 +204,7 @@ const main = async () => {
     const localById = new Map((local.spaces || []).map((s) => [s.id, s]))
 
     // A space both tiers hold is taken from the first that offers it, and the
-    // tier it came from is printed — a staging-only space is a fact about the
+    // tier it came from is printed — a dev-tier-only space is a fact about the
     // estate (something built and not yet promoted), not a detail to bury.
     const wanted = []
     const seen = new Set()
@@ -340,7 +350,7 @@ const main = async () => {
     if (failed.length) process.exitCode = 1
 }
 
-export { parseArgs, isSandbox, loadEnvFile, SPACE_FIELDS, TIERS }
+export { parseArgs, resolveTier, isSandbox, loadEnvFile, SPACE_FIELDS, TIERS }
 
 // Only run when invoked as a script, so the helpers above can be unit-tested.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

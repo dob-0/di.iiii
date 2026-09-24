@@ -20,7 +20,7 @@ import path from 'node:path'
 import process from 'node:process'
 
 import { decideCommandName, decideMode } from './detect.mjs'
-import { unlinkLink } from './install.mjs'
+import { npmInvocation, shellSafeSpawnArgs, unlinkLink } from './install.mjs'
 import { isWindows, paths, versionLayout } from './paths.mjs'
 import { probeAll, probeForeignDi } from './probe.mjs'
 import { writeEnv, writeState } from './state.mjs'
@@ -32,21 +32,13 @@ const arg = (name, fallback = null) => {
 }
 
 const run = (command, args, options = {}) => {
-    const result = spawnSync(command, args, { stdio: 'inherit', ...options })
+    // See install.mjs `shellSafeSpawnArgs` — with shell:true (Windows) Node
+    // joins command+args with unquoted spaces, so an unquoted path with a
+    // space (the default C:\Program Files\nodejs\npm.cmd) gets split apart.
+    const safe = shellSafeSpawnArgs(command, args, options)
+    const result = spawnSync(safe.command, safe.args, { stdio: 'inherit', ...options })
     if (result.error) throw new Error(`could not run ${command}: ${result.error.message}`)
     if (result.status !== 0) throw new Error(`${command} ${args.join(' ')} failed (exit ${result.status})`)
-}
-
-/**
- * npm lives next to the node running this file, which on a machine where di
- * downloaded its own node is NOT on PATH — that machine may have no npm at all.
- * Resolving it as a sibling is the difference between installing and dying with
- * a spawn ENOENT that names nothing useful.
- */
-const npmCommand = () => {
-    const dir = path.dirname(process.execPath)
-    const sibling = path.join(dir, isWindows ? 'npm.cmd' : 'npm')
-    return fs.existsSync(sibling) ? sibling : (isWindows ? 'npm.cmd' : 'npm')
 }
 
 /**
@@ -159,12 +151,12 @@ const main = async () => {
     // serverXR only, production only. dist/ arrived built — the artist never
     // needs Vite or the root dependency tree.
     say(style.dim('installing dependencies…'))
-    run(npmCommand(), ['ci', '--omit=dev', '--no-audit', '--no-fund'], {
+    const npm = npmInvocation()
+    run(npm.command, ['ci', '--omit=dev', '--no-audit', '--no-fund'], {
         cwd: layout.server,
         shell: isWindows,
         stdio: process.env.DI_VERBOSE ? 'inherit' : 'ignore',
-        // npm is a node script: it needs the node it belongs to on PATH.
-        env: { ...process.env, PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH || ''}` }
+        env: npm.env
     })
 
     // staged is <versions>/<v>.partial — same filesystem, so this rename is

@@ -180,8 +180,8 @@ describe('PreferencesPage', () => {
                 mode: 'development',
                 nodeVersion: 'v22.22.0',
                 release: {
-                    deployEnv: 'staging',
-                    sourceRef: 'staging',
+                    deployEnv: 'dev',
+                    sourceRef: 'dev',
                     gitCommit: 'abcdef1234567890',
                     releaseId: 'cpanel-20260415-150000',
                     generatedAt: '2026-04-15T15:00:00.000Z'

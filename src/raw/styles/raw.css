@@ -13,8 +13,7 @@
     --raw-sheet-inset: 0px;
 }
 
-.raw-editor-shell,
-.raw-hub {
+.raw-editor-shell {
     min-height: 100vh;
     min-height: 100dvh;
     background: var(--di-black);
@@ -435,217 +434,15 @@
     line-height: 1.55;
 }
 
-.raw-hub {
-    min-height: 100vh;
-    min-height: 100dvh;
-    height: 100vh;
-    height: 100dvh;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    overflow-y: auto;
-    padding: var(--di-space-8) var(--di-space-5) var(--di-space-6);
-}
-
-.raw-hub-layout {
-    width: 100%;
-    max-width: 660px;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-}
-
-.raw-hub-header {
-    padding-bottom: var(--di-space-5);
-}
-
-.raw-hub-title {
-    margin: var(--di-space-4) 0 var(--di-space-2);
-    font-size: var(--di-text-7);
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    color: var(--di-text);
-}
-
-.raw-hub-onboarding {
-    display: grid;
-    gap: var(--di-space-4);
-    padding: 0 0 var(--di-space-5);
-}
-
-.raw-hub-onboarding-copy h2 {
-    margin: var(--di-space-2) 0 var(--di-space-2);
-    font-size: var(--di-text-7);
-    line-height: 1.15;
-}
-
-.raw-hub-onboarding-copy p {
-    margin: 0;
-    color: rgba(255, 255, 255, 0.62);
-    line-height: 1.5;
-}
-
-.raw-hub-onboarding-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--di-space-3);
-}
-
-.raw-hub-onboarding-card {
-    display: grid;
-    gap: var(--di-space-3);
-    padding: var(--di-space-4);
-    border: 1px solid var(--di-cyan-border);
-    background: var(--di-surface);
-}
-
-.raw-hub-onboarding-mark {
-    display: grid;
-    place-items: center;
-    width: 34px;
-    height: 34px;
-    border: 1px solid var(--di-cyan-border);
-    color: var(--di-cyan);
-    font-size: var(--di-text-5);
-    background: rgba(var(--di-cyan-rgb), 0.05);
-}
-
-.raw-hub-onboarding-mark span {
-    line-height: 1;
-}
-
-.raw-hub-onboarding-card h3 {
-    margin: 0;
-    font-size: var(--di-text-5);
-    line-height: 1.2;
-}
-
-.raw-hub-onboarding-chip-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--di-space-2);
-}
-
-.raw-hub-onboarding-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: var(--di-space-1) var(--di-space-2);
-    border: 1px solid var(--di-cyan-border);
-    color: rgba(255, 255, 255, 0.75);
-    font-size: var(--di-text-2);
-    font-family: var(--di-mono);
-    background: rgba(var(--di-cyan-rgb), 0.04);
-}
-
-.raw-hub-onboarding-steps {
-    display: grid;
-    gap: var(--di-space-1);
-    margin: 0;
-    padding-left: var(--di-space-4);
-    color: rgba(255, 255, 255, 0.84);
-    line-height: 1.4;
-    font-size: var(--di-text-3);
-}
-
-.raw-hub-onboarding-card button {
-    -webkit-appearance: none;
-    appearance: none;
-    justify-self: start;
-    border: 1px solid var(--di-cyan-border);
-    background: rgba(var(--di-cyan-rgb), 0.08);
-    color: var(--di-text);
-    padding: var(--di-space-3) var(--di-space-3);
-    cursor: pointer;
-}
-
-.raw-hub-onboarding-card button:hover {
-    background: rgba(var(--di-cyan-rgb), 0.16);
-    border-color: var(--di-cyan);
-    color: var(--di-cyan);
-}
-
-.raw-hub-create-row {
-    display: flex;
-    gap: 0;
-    border: 1px solid var(--di-cyan-border);
-    margin-bottom: var(--di-space-1);
-}
-
-.raw-hub-title-input {
-    flex: 1;
-    background: transparent;
-    border: none;
-    outline: none;
-    color: var(--di-text);
-    padding: var(--di-space-3) var(--di-space-3);
-    font-size: var(--di-text-3);
-    font-family: var(--di-mono);
-    letter-spacing: 0.03em;
-    min-width: 0;
-}
-
-.raw-hub-title-input::placeholder {
-    color: var(--di-text-muted);
-}
-
-.raw-hub-create-btn,
-.raw-hub-import-btn {
-    -webkit-appearance: none;
-    appearance: none;
-    border: none;
-    border-left: 1px solid var(--di-cyan-border);
-    background: transparent;
-    color: var(--di-text-muted);
-    padding: var(--di-space-3) var(--di-space-4);
-    font-size: var(--di-text-3);
-    font-family: var(--di-mono);
-    letter-spacing: 0.06em;
-    cursor: pointer;
-    transition: color 0.1s, background 0.1s;
-    white-space: nowrap;
-    display: flex;
-    align-items: center;
-}
-
-.raw-hub-create-btn:hover,
-.raw-hub-import-btn:hover {
-    color: var(--di-cyan);
-    background: var(--di-cyan-dim);
-}
-
-.raw-hub-create-btn:disabled {
-    opacity: 0.35;
-    cursor: default;
-}
-
-.raw-hub-import-btn input {
-    display: none;
-}
-
-.raw-hub-projects {
-    border: 1px solid var(--di-cyan-border);
-    min-height: 180px;
-    max-height: 34vh;
-    overflow: auto;
-    background: var(--di-surface);
-}
-
-.raw-hub-empty {
-    padding: var(--di-space-5) var(--di-space-3);
-    margin: 0;
-    font-size: var(--di-text-3);
-    font-family: var(--di-mono);
-    color: var(--di-text-muted);
-    letter-spacing: 0.04em;
-}
-
-/* Styles src/components/SpaceSyncPanel.jsx (shared, not Raw-only) — it lives
-   here because Raw is currently the only mounted consumer. */
+/* Styles src/components/SpaceSyncPanel.jsx (shared, not Nodes-only) — it lives
+   here because the Nodes copy of a space's project list (RawApp.jsx) is its
+   only mounted consumer. It used to hang off the bottom of the old list box and
+   borrowed that box's edge; under the shared list it stands on its own. */
 .space-sync-row {
     display: flex;
     align-items: center;
+    margin-top: var(--di-space-5);
     border: 1px solid var(--di-cyan-border);
-    border-top: none;
     background: var(--di-surface);
 }
 
@@ -725,51 +522,6 @@
     cursor: default;
 }
 
-.raw-hub-footer {
-    display: flex;
-    gap: 0;
-    border: 1px solid var(--di-cyan-border);
-    border-top: none;
-    background: var(--di-surface);
-}
-
-.raw-hub-footer button {
-    -webkit-appearance: none;
-    appearance: none;
-    border: none;
-    border-right: 1px solid var(--di-cyan-border);
-    background: transparent;
-    color: var(--di-text-muted);
-    padding: var(--di-space-3) var(--di-space-4);
-    font-size: var(--di-text-2);
-    font-family: var(--di-mono);
-    letter-spacing: 0.06em;
-    cursor: pointer;
-    transition: color 0.1s, background 0.1s;
-}
-
-.raw-hub-footer button:last-child {
-    border-right: none;
-}
-
-.raw-hub-footer button:hover {
-    color: var(--di-cyan);
-    background: var(--di-cyan-dim);
-}
-
-.raw-hub-warnings {
-    border: 1px solid rgba(var(--di-danger-rgb), 0.3);
-    border-top: none;
-    padding: var(--di-space-3) var(--di-space-3);
-    font-size: var(--di-text-3);
-    font-family: var(--di-mono);
-    color: var(--di-danger);
-}
-
-.raw-hub-warnings p {
-    margin: 0;
-}
-
 .raw-chip,
 .raw-status-pill,
 .raw-user-pill,
@@ -821,62 +573,12 @@
 }
 
 .raw-inline-list,
-.raw-project-list,
 .raw-outliner {
     list-style: none;
     padding: 0;
     margin: 0;
     display: grid;
     gap: var(--di-space-3);
-}
-
-.raw-project-list li {
-    display: flex;
-    border-bottom: 1px solid var(--di-cyan-border);
-    min-height: 78px;
-}
-
-.raw-project-list li:last-child {
-    border-bottom: none;
-}
-
-.raw-project-list li > button:first-child {
-    flex: 1;
-    text-align: left;
-    background: transparent;
-    border: none;
-    padding: var(--di-space-3) var(--di-space-3);
-    color: var(--di-text);
-    cursor: pointer;
-    transition: background 0.1s;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--di-space-1);
-}
-
-.raw-project-list li > button:first-child:hover {
-    background: var(--di-cyan-dim);
-}
-
-.raw-project-list li > button.danger {
-    -webkit-appearance: none;
-    appearance: none;
-    border: none;
-    border-left: 1px solid var(--di-cyan-border);
-    background: transparent;
-    color: var(--di-text-muted);
-    padding: var(--di-space-3) var(--di-space-4);
-    font-size: var(--di-text-5);
-    line-height: 1;
-    cursor: pointer;
-    transition: color 0.1s, background 0.1s;
-    flex-shrink: 0;
-}
-
-.raw-project-list li > button.danger:hover {
-    color: var(--di-danger);
-    background: rgba(var(--di-danger-rgb), 0.1);
 }
 
 .raw-outliner button,
@@ -1045,6 +747,17 @@
     pointer-events: auto;
     overflow: visible;
     animation: rawTopbarReveal 0.35s ease both;
+}
+
+/* A project's canvas carries the one bar (SurfaceBar, float) at the top edge;
+   the topbar sits under it. The sync alert still wins: it covers the bar, and
+   the topbar sits under the alert. */
+.raw-topbar.is-under-sbar {
+    top: var(--sbar-h);
+}
+
+.raw-sync-alert + .raw-topbar.is-under-sbar {
+    top: 40px;
 }
 
 @keyframes rawTopbarReveal {
@@ -1320,6 +1033,10 @@
     font-family: var(--di-mono);
     letter-spacing: 0.04em;
     transition: color 0.1s;
+}
+
+.raw-topbar-count-compact {
+    display: none;
 }
 
 .raw-topbar-node-count:hover,
@@ -2066,6 +1783,23 @@
     grid-column: 1 / -1;
 }
 
+/* A sentence a field is read with (PropertyInspector's FieldNote). Dim and
+   warm — the first one is a licence line, and it must stay legible without
+   shouting. Never white: this sheet can be on a projector. */
+.raw-property-note {
+    margin: 0;
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    line-height: 1.5;
+    color: var(--di-note-ink);
+}
+
+.raw-property-note a {
+    color: var(--di-note-link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
 .raw-window-stack {
     height: 100%;
     overflow: auto;
@@ -2711,18 +2445,6 @@
 }
 
 @media (max-width: 900px) {
-    .raw-hub {
-        padding: var(--di-space-6) var(--di-space-4) var(--di-space-5);
-    }
-
-    .raw-hub-onboarding-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .raw-hub-projects {
-        max-height: none;
-    }
-
     .raw-surface-workflow {
         flex-direction: column;
     }
@@ -2739,28 +2461,6 @@
         grid-template-columns: 1fr;
         min-height: 0;
     }
-}
-
-.raw-hub-wordmark {
-    display: flex;
-    gap: var(--di-space-1);
-    align-items: center;
-}
-
-.raw-hub-di-sq {
-    display: block;
-    width: 10px;
-    height: 10px;
-    border: 2px solid var(--di-cyan);
-    background: transparent;
-}
-
-.raw-hub-tagline {
-    font-size: var(--di-text-2);
-    color: var(--di-text-muted);
-    font-family: var(--di-mono);
-    margin: 0;
-    letter-spacing: 0.06em;
 }
 
 .raw-topbar h1 {
@@ -3754,23 +3454,6 @@
     line-height: 1.45;
 }
 
-.raw-help-chip-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--di-space-2);
-}
-
-.raw-help-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: var(--di-space-1) var(--di-space-2);
-    border: 1px solid var(--di-cyan-border);
-    color: rgba(255, 255, 255, 0.75);
-    font-size: var(--di-text-2);
-    font-family: var(--di-mono);
-    background: rgba(var(--di-cyan-rgb), 0.04);
-}
-
 .raw-help-footer {
     border-top: 1px solid var(--di-cyan-border);
     border-bottom: 0;
@@ -3797,49 +3480,6 @@
     .raw-help-footer button {
         width: 100%;
     }
-}
-
-.raw-help-audiences {
-    display: grid;
-    gap: var(--di-space-3);
-    margin-top: var(--di-space-4);
-}
-
-.raw-help-audience-card {
-    display: grid;
-    gap: var(--di-space-3);
-    padding: var(--di-space-3);
-    border: 1px solid var(--di-cyan-border);
-    background: rgba(var(--di-cyan-rgb), 0.03);
-}
-
-.raw-help-audience-head {
-    display: flex;
-    align-items: center;
-    gap: var(--di-space-2);
-}
-
-.raw-help-audience-glyph {
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    color: var(--di-cyan);
-    border: 1px solid var(--di-cyan-border);
-    background: rgba(var(--di-cyan-rgb), 0.04);
-}
-
-.raw-help-audience-card h4 {
-    margin: 0;
-    font-size: var(--di-text-5);
-}
-
-.raw-help-audience-steps {
-    margin: 0;
-    padding-left: var(--di-space-4);
-    color: rgba(255, 255, 255, 0.82);
-    line-height: 1.45;
-    font-size: var(--di-text-3);
 }
 
 .raw-op-details {
@@ -4998,6 +4638,13 @@
         background: var(--di-scrim);
         color: rgba(255, 255, 255, 0.44);
     }
+
+    /* Under the one bar its corner is the bar's own "di.iiii", the same way
+       home. It was never seen there anyway: the topbar (z 1400) covered it
+       until the topbar moved down to make room for the bar. */
+    .raw-surface-wordmark.is-under-sbar {
+        display: none;
+    }
 }
 
 /* Dropping a file in. The veil is the only thing that tells someone mid-drag
@@ -5613,6 +5260,102 @@
 
 /* The Monitor: a window that watches a texture wire. The canvas letterboxes
    inside whatever frame the window is dragged to. */
+/* The desk: machines and their devices (DeskPanelWindow). */
+.raw-desk-panel {
+    position: absolute;
+    inset: 0;
+    overflow: auto;
+    padding: var(--di-space-3);
+    display: grid;
+    gap: var(--di-space-3);
+    align-content: start;
+    /* One column that may shrink: a long device name must ellipsise, not
+       widen the grid past its window and push the buttons out of sight. */
+    grid-template-columns: minmax(0, 1fr);
+    background: var(--di-surface);
+    box-sizing: border-box;
+}
+
+.raw-desk-panel.is-empty,
+.raw-desk-hint {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: var(--di-text-3);
+}
+
+.raw-desk-machine {
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: var(--di-space-2) var(--di-space-3);
+}
+
+.raw-desk-machine.is-self {
+    border-color: rgba(var(--di-live-rgb), 0.45);
+}
+
+.raw-desk-machine header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--di-space-2);
+}
+
+.raw-desk-machine header strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.raw-desk-machine header span {
+    flex: 0 0 auto;
+}
+
+.raw-desk-machine header span,
+.raw-desk-group h4 {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: var(--di-text-2);
+    font-weight: normal;
+    margin: 0;
+}
+
+.raw-desk-group {
+    margin-top: var(--di-space-2);
+}
+
+.raw-desk-group ul {
+    list-style: none;
+    margin: var(--di-space-1) 0 0;
+    padding: 0;
+    display: grid;
+    gap: var(--di-space-1);
+}
+
+.raw-desk-group li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--di-space-2);
+    font-size: var(--di-text-3);
+}
+
+.raw-desk-group li span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.raw-desk-group button {
+    flex: 0 0 auto;
+    min-height: 32px;
+    padding: 0 var(--di-space-2);
+    background: transparent;
+    color: inherit;
+    border: 1px solid rgba(var(--di-live-rgb), 0.5);
+    cursor: pointer;
+}
+
 .raw-monitor-panel {
     position: absolute;
     inset: 0;
@@ -5865,6 +5608,16 @@
 /* The one line a portless card can afford. Clipped rather than wrapped: the
    body is a single 22px row and its height is the geometry the wires are
    drawn from, so this must never push it taller. */
+/* A picture operator's live picture, under its port rows (TopThumbnail). */
+.raw-top-picture {
+    position: absolute;
+    left: 8px;
+    box-sizing: border-box;
+    background: var(--di-black);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    pointer-events: none;
+}
+
 .raw-graph-node-summary {
     position: absolute;
     inset: 0 10px auto 10px;
@@ -5891,5 +5644,18 @@
 @media (max-width: 640px) {
     .raw-topbar-word {
         display: none;
+    }
+
+    /* One number, not two, once the count names both kinds (nodes · things):
+       "3 · 12" plus its separator measured 393px of content in this 390px bar
+       (branch worktree-connect-graph-walk, 8c58c29a), which pushed ⋯ — the
+       only way to Save on a phone — off the edge. The aria-label still reads
+       "N nodes, M things". */
+    .raw-topbar-count-full {
+        display: none;
+    }
+
+    .raw-topbar-count-compact {
+        display: inline;
     }
 }

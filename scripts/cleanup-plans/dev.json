@@ -1,0 +1,8 @@
+{
+  "env": "dev",
+  "deleteSpaces": [],
+  "deleteProjects": [
+    { "space": "wcc", "id": "space" },
+    { "space": "wcc", "id": "test" }
+  ]
+}

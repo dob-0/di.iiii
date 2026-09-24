@@ -9,6 +9,7 @@ export default function WorldPanelWindow({
     onClearSelection,
     onWorldDoubleClick,
     onMoveNode,
+    onMoveEntity = null,
     cursors = [],
     onCursorMove,
     onCursorLeave,
@@ -36,6 +37,7 @@ export default function WorldPanelWindow({
                 onClearSelection={onClearSelection}
                 onWorldDoubleClick={onWorldDoubleClick}
                 onMoveNode={onMoveNode}
+                onMoveEntity={onMoveEntity}
                 cursors={cursors}
                 onCursorMove={onCursorMove}
                 onCursorLeave={onCursorLeave}

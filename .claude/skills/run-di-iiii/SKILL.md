@@ -13,6 +13,21 @@ as them, and can hold two of them open side by side.
 
 All paths are relative to the repo root.
 
+**Before you start it, look at who already holds `:4000`.** On a machine with a
+local `di` install — the artist's own machine, a stage box — port 4000 is that
+install's LIVE server, serving a wall or a show, and it is started the same way
+this stack starts one. Taking the port from it, or killing what holds it, takes
+down someone's show, silently: the log ends mid-request with no error. Run the
+stack somewhere else instead. The server port follows the API base:
+
+```bash
+VITE_API_BASE_URL=http://localhost:4360/serverXR npm run dev   # server on 4360
+```
+
+`dev-stack.mjs` passes that port to `serverXR` (`PORT`), proxies `/serverXR` to
+it, and never touches 4000. The client stays on 5173 — `VITE_PORT` did NOT move
+it when this was checked, so give Vite `--port` yourself if 5173 is taken too.
+
 There is a second harness already in the repo and it does a different job:
 `npm run verify:surfaces -- --base <url>` sweeps the PUBLIC surfaces of any tier
 for console errors, overflow, occlusion and tap-target sizes, and writes a
@@ -108,7 +123,7 @@ node .claude/skills/run-di-iiii/driver.mjs pair /chat --as ann,bob --phone
 | `account <name> [--spaces a,b]` | registers the account (re-running is fine — a taken name is not an error), scopes it to those spaces, prints its id and password |
 | `look <path> [--as <name>]` | opens one page as that person, screenshots it, prints what is on screen and any console/page errors. Exits non-zero if anything threw |
 | `pair <path> --as <a>,<b>` | the same, twice, in two independent browsers — for anything that needs two people |
-| `stop` | kills the whole dev stack, supervisors first, and says what it killed |
+| `stop` | kills THIS checkout's dev stack, supervisors first, and says what it killed — and what it left alone (another checkout's stack, an installed di.iiii). It decides by each process's working directory, never by command line |
 
 Flags: `--phone` (390×844 at DPR 3, which is the phone this platform is actually
 opened on) or the default desktop (1440×900 at DPR 2); `--wait <ms>` before the
@@ -119,7 +134,7 @@ same command.
 `--base` points it at any tier, and then no local stack is needed at all:
 
 ```bash
-node .claude/skills/run-di-iiii/driver.mjs look /login --base https://staging.di-studio.xyz
+node .claude/skills/run-di-iiii/driver.mjs look /login --base https://dev.diiii.xyz
 ```
 
 Without `--as` that is a plain signed-out visitor, which is the session worth
@@ -216,6 +231,14 @@ its hard 50-line cap.
   404s while the file plainly registers it. `ss -ltnp | grep :4000`, then
   `pgrep -af "src/index.js"` — the `--watch` parent and its child are two
   processes and killing the parent leaves the child on the port.
+  **`pgrep -af "src/index.js"` also matches an INSTALLED di.iiii's live server**,
+  which looks exactly like a stale dev one and is neither stale nor yours. Check
+  `di status` first: if it says `running` on that port, that is a show. Leave it
+  alone and move your own stack (see the top of this file). This has killed a
+  running rig three times — the third through the driver's own `stop`, which
+  matched by command line until 2026-09-21. It now matches by working
+  directory: only processes started under this checkout die; one whose
+  directory cannot be read is left alone and named in the output.
 - **`waitUntil: 'networkidle'` never settles.** socket.io holds a connection open
   on every surface with presence in it. Use `domcontentloaded` and wait for the
   element you need. The driver's `open()` already does.
@@ -234,6 +257,14 @@ its hard 50-line cap.
 - **`CLIENT_DIR` in `serverXR/.env.local` breaks `npm run test:server-contracts`**
   with "does not serve an SPA" — the suite's "CLIENT_DIR unset" case starts a
   server that is serving one. Run it as `CLIENT_DIR= npm run test:server-contracts`.
+- **Anything else you put in `serverXR/.env.local` reaches the contract suites too**,
+  and they boot real servers that read it. `DI_LOCAL=1` — the obvious thing to set when
+  running a stack beside a local `di` install — turns 29 of `httpContracts.test.js`'s
+  84 tests red, because it changes the auth and scope rules those tests assert (a read
+  that should be 403 answers 200). `PORT` and `DATA_ROOT` do their own damage. The
+  failures look like a broken branch and are not: they are the file. Measured
+  2026-09-21. Either move `.env.local` aside before a full `npm run test`, or pass the
+  env on the command line for the stack instead of writing it down.
 - **Gated surfaces need the right space, not just an account.** `/chat/main`,
   the editor and Raw all check scope; an account with `spaces: []` gets the same
   door card a guest does.

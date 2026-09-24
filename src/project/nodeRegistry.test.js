@@ -402,7 +402,7 @@ describe('node families', () => {
         }
     })
 
-    // A real palette test on staging searched these nine words and every one
+    // A real palette test on the dev tier searched these nine words and every one
     // returned "no match" — the node did not exist. Now it does, and the
     // words a person actually types have to reach it.
     it.each([

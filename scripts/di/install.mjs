@@ -24,8 +24,49 @@ import { currentVersionDir, writeState } from './state.mjs'
 
 const REPO = 'dob-0/di.iiii'
 
+/**
+ * npm lives next to the node running this file, which on a machine where di
+ * downloaded its own node is NOT on PATH — that machine may have no npm at all.
+ * And npm is a node script (`#!/usr/bin/env node`), so the sibling alone still
+ * dies unless its node is on PATH too. The first install always did both, in
+ * bootstrap.mjs; `di update` did neither and failed on exactly the machines
+ * that needed it, with `spawn npm ENOENT`. One helper, so the two cannot drift.
+ */
+export const npmInvocation = ({ execPath = process.execPath, env = process.env } = {}) => {
+    const dir = path.dirname(execPath)
+    const sibling = path.join(dir, isWindows ? 'npm.cmd' : 'npm')
+    return {
+        command: fs.existsSync(sibling) ? sibling : (isWindows ? 'npm.cmd' : 'npm'),
+        env: { ...env, PATH: `${dir}${path.delimiter}${env.PATH || ''}` }
+    }
+}
+
+/**
+ * When Node spawns through a shell it does not build an argv array — it joins
+ * `[command, ...args]` with plain spaces into one string and hands that whole
+ * string to the shell (see lib/child_process.js `normalizeSpawnArguments`).
+ * Nothing in that join is quoted. So the default Windows npm path,
+ * `C:\Program Files\nodejs\npm.cmd`, becomes `C:\Program Files\nodejs\npm.cmd
+ * ci ...` and cmd.exe splits it at the space, tries to run `C:\Program`, and
+ * fails — even though running the same npm.cmd by hand works fine. Quoting is
+ * only needed once a shell is actually going to re-parse that joined string,
+ * so this is a no-op unless `shell` is truthy (in this codebase that means
+ * Windows; on POSIX we never pass `shell: true` for these commands).
+ */
+const quoteForShell = (value) => {
+    if (typeof value !== 'string' || !value.includes(' ')) return value
+    if (value.startsWith('"') && value.endsWith('"')) return value
+    return `"${value}"`
+}
+
+export const shellSafeSpawnArgs = (command, args = [], { shell = false } = {}) => {
+    if (!shell) return { command, args }
+    return { command: quoteForShell(command), args: args.map(quoteForShell) }
+}
+
 const run = (command, args, options = {}) => new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: options.verbose ? 'inherit' : 'ignore', ...options })
+    const safe = shellSafeSpawnArgs(command, args, options)
+    const child = spawn(safe.command, safe.args, { stdio: options.verbose ? 'inherit' : 'ignore', ...options })
     child.on('error', reject)
     child.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(`${command} exited ${code}`))))
 })
@@ -187,10 +228,12 @@ export const stageVersion = async ({ home, release, verbose = false }) => {
         // serverXR only, and production deps only. The artist never needs Vite
         // or the root dependency tree — dist/ arrived already built.
         const layout = versionLayout(partialDir)
-        await run(isWindows ? 'npm.cmd' : 'npm', ['ci', '--omit=dev'], {
+        const npm = npmInvocation()
+        await run(npm.command, ['ci', '--omit=dev'], {
             cwd: layout.server,
             verbose,
-            shell: isWindows
+            shell: isWindows,
+            env: npm.env
         })
     } finally {
         await fsp.rm(tmp, { recursive: true, force: true })

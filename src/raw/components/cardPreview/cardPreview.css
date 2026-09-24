@@ -1,0 +1,11 @@
+/* The preview on a node card. Same box as a picture operator's picture
+   (.raw-top-picture) so every preview on the desk is one size and one frame;
+   kept here rather than borrowed so the two can evolve independently. */
+.raw-card-preview {
+    position: absolute;
+    left: 8px;
+    box-sizing: border-box;
+    background: #000;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    pointer-events: none;
+}

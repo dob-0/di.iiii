@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MODE_HOSTED, MODE_LOCAL, MODE_STAGING, deployModeMark, resolveDeployMode } from './deployMode.js'
+import { MODE_DEV, MODE_HOSTED, MODE_LOCAL, MODE_MARKS, deployModeMark, resolveDeployMode } from './deployMode.js'
 
 describe('resolveDeployMode', () => {
     it.each([
@@ -17,25 +17,22 @@ describe('resolveDeployMode', () => {
         // …but 172.15 and 172.32 are outside the private block and public.
         ['172.15.0.4', MODE_HOSTED],
         ['172.32.0.4', MODE_HOSTED],
-        ['staging.di-studio.xyz', MODE_STAGING],
-        ['staging-2.di-studio.xyz', MODE_STAGING],
-        // The same tier, reached by the name the addresses settled on.
-        ['dev.diiii.xyz', MODE_STAGING],
-        ['dev.di-studio.xyz', MODE_STAGING],
+        // The dev tier.
+        ['dev.diiii.xyz', MODE_DEV],
+        ['dev.di-studio.xyz', MODE_DEV],
         // Exact first label only — these are somebody's website.
         ['developers.example.com', MODE_HOSTED],
         ['dev-notes.example.com', MODE_HOSTED],
         ['di-studio.xyz', MODE_HOSTED],
         // Only the FIRST label counts, or any domain with the word in it
         // would wear the rehearsal colour.
-        ['my-staging-notes.example.com', MODE_HOSTED],
-        ['notstaging.example.com', MODE_HOSTED]
+        ['my-dev.example.com', MODE_HOSTED]
     ])('reads %s as %s', (hostname, expected) => {
         expect(resolveDeployMode({ hostname })).toBe(expected)
     })
 
     it('is case-insensitive and tolerates bracketed IPv6', () => {
-        expect(resolveDeployMode({ hostname: 'STAGING.di-studio.xyz' })).toBe(MODE_STAGING)
+        expect(resolveDeployMode({ hostname: 'DEV.diiii.xyz' })).toBe(MODE_DEV)
         expect(resolveDeployMode({ hostname: '[::1]' })).toBe(MODE_LOCAL)
     })
 
@@ -51,7 +48,7 @@ describe('resolveDeployMode', () => {
     // nobody trusts.
     it('answers from the hostname alone before the server has spoken', () => {
         expect(resolveDeployMode({ hostname: 'localhost', local: null })).toBe(MODE_LOCAL)
-        expect(resolveDeployMode({ hostname: 'staging.di-studio.xyz', local: null })).toBe(MODE_STAGING)
+        expect(resolveDeployMode({ hostname: 'dev.diiii.xyz', local: null })).toBe(MODE_DEV)
         expect(resolveDeployMode({})).toBe(MODE_LOCAL)
     })
 
@@ -74,19 +71,16 @@ describe('resolveDeployMode', () => {
 })
 
 describe('deployModeMark', () => {
-    it('gives local and staging a colour and the live site none', () => {
+    it('gives local and the dev tier a colour and the live site none', () => {
         expect(deployModeMark(MODE_LOCAL)).toMatchObject({ label: 'LOCAL', color: '#4df9c0' })
-        expect(deployModeMark(MODE_STAGING)).toMatchObject({ label: 'STAGING', color: '#ffb347' })
+        expect(deployModeMark(MODE_DEV)).toMatchObject({ label: 'DEV', color: '#ffb347' })
         // The audience must see exactly what it saw before this existed.
         expect(deployModeMark(MODE_HOSTED)).toBeNull()
     })
 
-    // The chip must never argue with the address bar: one second tier, and it
-    // prints whichever of its two names you actually typed.
-    it('prints DEV on the tier\u2019s dev name and STAGING on its old one', () => {
-        expect(deployModeMark(MODE_STAGING, 'dev.diiii.xyz')).toMatchObject({ label: 'DEV', color: '#ffb347' })
-        expect(deployModeMark(MODE_STAGING, 'staging.di-studio.xyz')).toMatchObject({ label: 'STAGING' })
-        expect(deployModeMark(MODE_STAGING)).toMatchObject({ label: 'STAGING' })
-        expect(deployModeMark(MODE_LOCAL, 'dev.diiii.xyz')).toMatchObject({ label: 'LOCAL' })
+    // The chip reads DEV, so the retired word never reaches the screen.
+    it('prints DEV at dev.diiii.xyz', () => {
+        expect(deployModeMark(resolveDeployMode({ hostname: 'dev.diiii.xyz' }))).toMatchObject({ label: 'DEV', color: '#ffb347' })
+        expect(Object.values(MODE_MARKS).filter(Boolean).map((m) => `${m.label} ${m.note}`).join(' ')).not.toMatch(/staging/i)
     })
 })

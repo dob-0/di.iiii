@@ -15,8 +15,8 @@ You sign in, get an address, build a scene in the browser, mark one project live
 - editable document inside a space: `project`
 - live public route for a space: `publishedProjectId`
 - where things run — two lanes, four names, one rule:
-  - `dev` branch → **staging.di-studio.xyz** (rehearsal — work and verify here)
-  - `main` branch → **di-studio.xyz** (live — promote `dev -> main` only after staging is verified)
+  - `dev` branch → **dev.diiii.xyz**, the dev tier (rehearsal — work and verify here)
+  - `main` branch → **diiii.xyz**, prod (live — promote `dev -> main` only after the dev tier is verified)
 - runtime baseline: Node `22.x`, npm `10.x`
 
 Project links:
@@ -40,7 +40,7 @@ This is the shipped, working reality of the repo today.
 - `serverXR` is authoritative for spaces, projects, assets, ops, SSE, presence, and edit enforcement.
 - public routes use `/<space>` for the live published view, with `/<space>/studio`, `/<space>/raw`, and `/admin?space=<space>` for editing and ops
 - any project link opens for editing by appending the tool: `/<space>/<project>/studio`, or `/<space>/<project>/raw`. A shortcut, not a second address — it redirects to the editor's canonical path, so nothing new has to be kept alive forever
-- the lists live at the level they list: `/spaces` for your spaces, `/<space>/projects` for a space's projects. The tool-named forms (`/<space>/studio`, `/<space>/raw/projects`) are the older addresses for the same screens and keep working
+- the lists live at the level they list: `/spaces` for your spaces, `/<space>/projects` for what a space shows its visitors. The tool-named forms (`/<space>/studio`, `/<space>/raw/projects`) are the one working list a space's makers use — drafts, shelves and the trash — the same list at both, a card opening in Studio or in Nodes
 - persistence is still single-host filesystem storage
 - writes are protected by session/token-based auth, not a full multi-user identity and audit model yet
 
@@ -114,7 +114,7 @@ Common mistakes to avoid:
 - do not describe the node editor as the main shipped editor — that is `Studio`
 - do not describe physical sync or hardware-linked workflows as fully productized repo capability
 - do not assume older orchestration files are the right long-term home for new canonical behavior
-- do not push private ops material, raw staging details, `.env` files, or host-specific deployment secrets into the public repo
+- do not push private ops material, raw dev-tier details, `.env` files, or host-specific deployment secrets into the public repo
 
 For AI task assignments, use the task request template in [AGENTS.md](AGENTS.md).
 
@@ -178,14 +178,14 @@ Normal promotion path:
 
 1. work on `dev`
 2. validate locally
-3. promote to `staging`
-4. verify staging
+3. push `dev` — it deploys the dev tier (dev.diiii.xyz)
+4. verify on the dev tier
 5. promote to `main`
 
 Deploys are driven by pushes, via GitHub Actions (GHCR build + SSH to the Hetzner VPS):
 
 ```bash
-git push origin dev    # deploys to VPS staging — see .github/workflows/deploy-vps-staging.yml
+git push origin dev    # deploys the dev tier (dev.diiii.xyz) — see .github/workflows/deploy-vps-dev.yml
 git push origin main   # deploys to VPS production — see .github/workflows/deploy-vps.yml
 ```
 
@@ -213,9 +213,9 @@ flowchart LR
     work["Daily work"] --> dev["dob-0/di.iiii<br/>primary public repo"]
     dev --> branchDev["dev branch"]
     dev --> branchMain["main branch"]
-    branchDev --> ghcrStaging["GHCR build<br/>deploy-vps-staging.yml"]
+    branchDev --> ghcrDev["GHCR build<br/>deploy-vps-dev.yml"]
     branchMain --> ghcrProd["GHCR build<br/>deploy-vps.yml"]
-    ghcrStaging --> vpsStaging["Hetzner VPS<br/>staging Compose project"]
+    ghcrDev --> vpsDev["Hetzner VPS<br/>dev tier Compose project<br/>→ dev.diiii.xyz"]
     ghcrProd --> vpsProd["Hetzner VPS<br/>production Compose project<br/>→ di-studio.xyz"]
     branchMain -.disabled fallback.-> release["cpanel-* release branches"]
     release -.-> hosting["cPanel hosting<br/>(legacy, workflow_dispatch-only)"]

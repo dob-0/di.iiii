@@ -10,7 +10,7 @@ Two different things live here, and they are easy to confuse.
   someone last looked.
 
 A snapshot cannot catch drift, because it has nothing to disagree with. That is
-the whole reason the declarations exist: prod, staging and the dev box each
+the whole reason the declarations exist: prod, the dev tier and the local box each
 called `br_id_ge` something different for months, every sync reported success,
 and the only thing that ever noticed was a person with three browser windows
 open.
@@ -50,14 +50,17 @@ npm run spaces:audit                      # every declared space, all tiers, rea
 npm run spaces:audit -- --space wcc       # just one
 
 # apply a declaration (the only mode that writes)
-node scripts/space-sync.mjs --space spaces/wcc/di-space.space.json --all --tier staging --dry-run
+node scripts/space-sync.mjs --space spaces/wcc/di-space.space.json --all --tier dev --dry-run
 ```
+
+The dev tier (https://dev.diiii.xyz) is declared under the key `dev` in every
+manifest's `tiers` map (engine v7; `--tier staging` is refused).
 
 `--audit` is read-only and safe against production. `--all` writes; run it with
 `--dry-run` first and read what it says it would SET.
 
 Tokens come from the tier's declared `tokenEnv` — `PROD_API_TOKEN`,
-`LIVE_API_TOKEN` (staging), `API_TOKEN` (local) — read from the environment or
+`LIVE_API_TOKEN` (the dev tier), `API_TOKEN` (local) — read from the environment or
 `serverXR/.env.local`. The `local` tier is `governed: false`: shown in the
 table, never enforced, because the dev box holds 70 projects nobody declared.
 

@@ -42,11 +42,39 @@ describe('StudioCoachMarks', () => {
         }
     })
 
-    it('loading the document (entity count growing) never completes the add step by itself', () => {
-        const { rerender } = render(<StudioCoachMarks {...baseProps} entityCount={0} />)
-        // Document objects stream in before the guest touches anything.
+    it('objects arriving (a collaborator adding) never complete the tap step by themselves', () => {
+        // The shell mounts the coach only once the real document has loaded
+        // (StudioShell.test.jsx); a project that holds things starts on tapping one.
+        const { rerender } = render(<StudioCoachMarks {...baseProps} entityCount={3} />)
         rerender(<StudioCoachMarks {...baseProps} entityCount={12} />)
         expect(screen.getByText('Tap an object to select it')).toBeTruthy()
+    })
+
+    // The layers decision, 2026-09-23, unit 2: it asked a newcomer to "Tap an
+    // object" in a room with none.
+    it('an empty project starts on adding something, then asks to tap it — done by the tap, not by the selection a new thing already has', () => {
+        const { rerender } = render(<StudioCoachMarks {...baseProps} entityCount={0} />)
+        expect(screen.getByText('Add something')).toBeTruthy()
+        expect(screen.queryByText(/Tap an object/)).toBeNull()
+
+        // Placing the box selects it at once.
+        rerender(<StudioCoachMarks {...baseProps} entityCount={1} hasSelection />)
+        expect(screen.getByText('Tap it')).toBeTruthy()
+        // Still there while nothing is tapped.
+        rerender(<StudioCoachMarks {...baseProps} entityCount={1} hasSelection selectTicks={0} />)
+        expect(screen.getByText('Tap it')).toBeTruthy()
+
+        // The tap.
+        rerender(<StudioCoachMarks {...baseProps} entityCount={1} hasSelection selectTicks={1} />)
+        expect(screen.getByText('Open Share to keep what you made')).toBeTruthy()
+    })
+
+    it('waits behind a phone sheet without losing its place', () => {
+        const { rerender } = render(<StudioCoachMarks {...baseProps} entityCount={0} covered />)
+        expect(screen.queryByRole('status')).toBeNull()
+        rerender(<StudioCoachMarks {...baseProps} entityCount={1} hasSelection covered />)
+        rerender(<StudioCoachMarks {...baseProps} entityCount={1} hasSelection />)
+        expect(screen.getByText('Tap it')).toBeTruthy()
     })
 
     it('coaches signed-in users too, but never an unresolved session', () => {

@@ -8,16 +8,17 @@
 	reverse_proxy client:8080
 }
 
-# Staging, deployed as a separate low-resource Compose project on this same
-# host (see docker-compose.staging.yml + docs/deploy/VPS_DOCKER_DEPLOY.md).
-# Inert until STAGING_DOMAIN is set in .env and its DNS record exists --
+# The dev tier: a separate low-resource Compose project on this same host
+# (see docker-compose.dev.yml + docs/deploy/VPS_DOCKER_DEPLOY.md). DEV_DOMAIN
+# may list several names, comma-separated -- on the VPS it is `dev.diiii.xyz`.
+# Inert until DEV_DOMAIN is set in .env and its DNS record exists --
 # with no DNS pointing at it, Caddy just logs a harmless cert-issuance
 # failure for this one block; the SITE_DOMAIN block above is unaffected.
 # Default lives in docker-compose.yml's environment: mapping, not here as
 # a Caddyfile {$VAR:default} -- see the comment there for why.
-{$STAGING_DOMAIN} {
+{$DEV_DOMAIN} {
 	header Strict-Transport-Security "max-age=31536000"
-	reverse_proxy host.docker.internal:{$STAGING_PORT:8081}
+	reverse_proxy host.docker.internal:{$DEV_PORT:8081}
 }
 
 # map.di-studio.xyz — a memorable door onto the map lane, not a second app.
@@ -25,7 +26,7 @@
 # every path, asset and API call resolves exactly as it does there — the
 # map lane already sits behind ProtectedSurface (per-space sign-in), so this
 # adds a name, not a hole in the wall. Inert until MAP_DOMAIN is set in .env
-# and its DNS record exists, same as STAGING_DOMAIN above.
+# and its DNS record exists, same as DEV_DOMAIN above.
 {$MAP_DOMAIN} {
 	header Strict-Transport-Security "max-age=31536000"
 	reverse_proxy client:8080

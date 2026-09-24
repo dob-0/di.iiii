@@ -44,8 +44,8 @@ serverXR (port 4000 in dev, /serverXR proxy in prod)
     ↕ file system (serverXR/data/spaces/)
     ↕ op-log (append-only CRDT)
 GitHub Actions → Hetzner VPS (Docker Compose behind Caddy)
-    dev  → staging.di-studio.xyz   (deploy-vps-staging.yml)
-    main → di-studio.xyz           (deploy-vps.yml)
+    dev  → dev.diiii.xyz           (the dev tier; deploy-vps-dev.yml)
+    main → diiii.xyz               (prod; deploy-vps.yml)
 ```
 
 Deploy truth: [docs/deploy/LIVE_DEPLOY.md](deploy/LIVE_DEPLOY.md) (production moved off cPanel to the VPS 2026-07-15).

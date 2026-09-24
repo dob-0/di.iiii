@@ -10,7 +10,7 @@ This document replaces the old "private dev + public mirror" model.
 
 ```mermaid
 flowchart LR
-    dev["dob-0/di.iiii:dev"] --> staging_env["staging.di-studio.xyz"]
+    dev["dob-0/di.iiii:dev"] --> devtier_env["dev.diiii.xyz"]
     dev --> main["dob-0/di.iiii:main"]
     main --> host["di-studio.xyz"]
 ```
@@ -19,7 +19,7 @@ flowchart LR
 
 - Treat `dob-0/di.iiii` as the only active collaboration lane.
 - Keep deployment automation and release branches in `di.iiii`.
-- Branch flow is `dev → main`. Staging is a GitHub Actions deploy environment, not a source branch.
+- Branch flow is `dev → main`. The dev tier (dev.diiii.xyz) is a GitHub Actions deploy environment (named `dev`), not a source branch.
 
 ## Legacy Note
 

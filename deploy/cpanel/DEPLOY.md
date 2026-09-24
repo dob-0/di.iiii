@@ -65,13 +65,16 @@ cPanel environments are sensitive to native Node modules (binary addons).
 
 ## Update Checklist (Staging)
 
+> Retired cPanel fallback. "Staging" here is the cPanel name for the second tier; the live one is
+> the dev tier at `https://dev.diiii.xyz` on the VPS (see docs/deploy/LIVE_DEPLOY.md).
+
 ```bash
 cd ~/repositories/di.iiii-staging
 git fetch --prune origin
 git checkout cpanel-staging
 git pull --ff-only origin cpanel-staging
 bash scripts/cpanel-apply-prebuilt-release.sh staging
-curl -sS -i --max-time 20 https://staging.di-studio.xyz/serverXR/api/health | head -n 30
+curl -sS -i --max-time 20 https://dev.diiii.xyz/serverXR/api/health | head -n 30
 ```
 
 If `cpanel-poll-deploy.sh` reports `already up to date`, it will not apply by default.

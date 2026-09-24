@@ -8,7 +8,7 @@
  * src/utils/presentationPreviewDocument.js) — so a bare
  * `/serverXR/api/projects/<pid>/assets/<sha>` already resolves against
  * whichever tier is actually serving the page. An absolute copy of that same
- * path (`https://staging.di-studio.xyz/serverXR/api/projects/<pid>/assets/<sha>`)
+ * path (`https://dev.diiii.xyz/serverXR/api/projects/<pid>/assets/<sha>`)
  * pins the page to the tier it was written on instead: copy the page to
  * another tier and the image either points back at the wrong tier or 404s
  * because that asset id was never uploaded there.
@@ -19,11 +19,12 @@
  *
  * Usage:
  *   node scripts/normalise-page-asset-urls.mjs --tier local --project main/suite
- *   node scripts/normalise-page-asset-urls.mjs --tier staging --space dilijan --write
+ *   node scripts/normalise-page-asset-urls.mjs --tier dev --space dilijan --write
  *   node scripts/normalise-page-asset-urls.mjs --tier prod --space br_id_ge --i-know --write
  *
  * Options:
- *   --tier <local|staging|prod>  Required. Which tier's documents to read/write.
+ *   --tier <local|dev|prod>      Required. Which tier's documents to read/write.
+ *                                `dev` is dev.diiii.xyz.
  *   --project <spaceId/slug>     One project, repeatable. Either this or --space.
  *   --space <spaceId>            Every project in this space (repeatable).
  *   --compare-tier <tier>        Before touching a project, also fetch it from
@@ -37,7 +38,7 @@
  *   --i-know                     Required in addition to --write when --tier prod.
  *
  * Tokens come from serverXR/.env.local: API_TOKEN (local), LIVE_API_TOKEN
- * (staging), PROD_API_TOKEN (production) — same convention as tier-sync.mjs.
+ * (the dev tier), PROD_API_TOKEN (production) — same convention as tier-sync.mjs.
  * Never printed.
  */
 
@@ -45,13 +46,14 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { stripSameOriginAssetHosts } from '../src/utils/presentationPreviewDocument.js'
+import { resolveTier } from './tier-sync.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const TIMEOUT_MS = 30000
 
 export const TIERS = {
     local: { base: 'http://localhost:4000/serverXR', tokenKey: 'API_TOKEN' },
-    staging: { base: 'https://staging.di-studio.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
+    dev: { base: 'https://dev.diiii.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
     prod: { base: 'https://di-studio.xyz/serverXR', tokenKey: 'PROD_API_TOKEN' }
 }
 
@@ -80,10 +82,10 @@ export const parseArgs = (argv) => {
     const args = { tier: null, projects: [], spaces: [], compareTier: null, write: false, iKnow: false }
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
-        if (arg === '--tier') args.tier = argv[++i]
+        if (arg === '--tier') args.tier = resolveTier(argv[++i])
         else if (arg === '--project') args.projects.push(argv[++i])
         else if (arg === '--space') args.spaces.push(argv[++i])
-        else if (arg === '--compare-tier') args.compareTier = argv[++i]
+        else if (arg === '--compare-tier') args.compareTier = resolveTier(argv[++i])
         else if (arg === '--write') args.write = true
         else if (arg === '--dry-run') args.write = false
         else if (arg === '--i-know') args.iKnow = true
@@ -146,7 +148,7 @@ const resolveProjectList = async ({ call, tier, args }) => {
 const main = async () => {
     const args = parseArgs(process.argv.slice(2))
     if (!TIERS[args.tier]) {
-        console.error('usage: node scripts/normalise-page-asset-urls.mjs --tier <local|staging|prod> (--project <spaceId/slug> | --space <spaceId>) [--compare-tier <tier>] [--write] [--i-know]')
+        console.error('usage: node scripts/normalise-page-asset-urls.mjs --tier <local|dev|prod> (--project <spaceId/slug> | --space <spaceId>) [--compare-tier <tier>] [--write] [--i-know]')
         process.exit(1)
     }
     if (!args.projects.length && !args.spaces.length) {
@@ -242,7 +244,7 @@ const main = async () => {
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 if (isMain) {
     main().catch((err) => {
-        console.error(err)
+        console.error(err?.message || err)
         process.exit(1)
     })
 }

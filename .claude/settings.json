@@ -58,7 +58,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'printf \"\\n  \u25cf di.iiii session started\\n  CURRENT.md:\\n\\n\"; cat CURRENT.md 2>/dev/null || printf \"  (CURRENT.md not found \u2014 run git pull)\\n\"; printf \"\\n\"; node \"${CLAUDE_PROJECT_DIR:-.}/scripts/repo-state.mjs\" 2>/dev/null'"
+            "command": "bash -c 'printf \"\\n  \u25cf di.iiii session started\\n  CURRENT.md:\\n\\n\"; cat CURRENT.md 2>/dev/null || printf \"  (CURRENT.md not found \u2014 run git pull)\\n\"; printf \"\\n\"; timeout 25 node \"${CLAUDE_PROJECT_DIR:-.}/scripts/start-check.mjs\" 2>/dev/null || node \"${CLAUDE_PROJECT_DIR:-.}/scripts/repo-state.mjs\" --brief 2>/dev/null'",
+            "timeout": 30
           }
         ]
       }

@@ -4,10 +4,11 @@ This is the shortest practical runbook for normal future work.
 
 If you only remember one thing, remember this:
 
-- `dev` = active development → deploys to VPS staging
+- `dev` = active development → deploys to the dev tier, `https://dev.diiii.xyz`
 - `main` = production → deploys to the Hetzner VPS (Docker/Caddy)
-- normal promotion path: `dev -> main`
-- there is no `staging` source branch — staging is a deploy target, not a branch
+- normal promotion path: local → dev → prod (`dev -> main`)
+- the dev tier is a deploy target, not a branch: workflow `deploy-vps-dev.yml`,
+  GitHub environment `dev`, `docker-compose.dev.yml`, `/opt/di.iiii-dev`
 
 ## Golden Path (VPS, current)
 
@@ -15,17 +16,17 @@ Production DNS was cut over from cPanel to the Hetzner VPS on 2026-07-15
 (manual deploy); the automated pipeline below was wired up and verified
 end-to-end (both environments, real runs) on 2026-07-16.
 
-- push `dev` → [deploy-vps-staging.yml](../../.github/workflows/deploy-vps-staging.yml)
-  builds images, pushes to GHCR, SSHes into the VPS, restarts the staging
-  Compose project (`docker-compose.staging.yml`) — small, isolated, shares
+- push `dev` → [deploy-vps-dev.yml](../../.github/workflows/deploy-vps-dev.yml)
+  builds images, pushes to GHCR, SSHes into the VPS, restarts the dev-tier
+  Compose project (`docker-compose.dev.yml`) — small, isolated, shares
   the box with production but not its resources or secrets; served at
-  `staging.di-studio.xyz` via production's Caddy. Its first job, `land`, runs
+  `dev.diiii.xyz` via production's Caddy. Its first job, `land`, runs
   `npm run land` on `dev` and pushes the fold commit (`github-actions[bot]`) —
   the merge commit's own deploy used to fail the docs gate on the note every PR
-  brings with it, and staging only moved once someone folded by hand. The
+  brings with it, and the dev tier only moved once someone folded by hand. The
   deployed image is the merge commit (the fold touches docs only), so
   `release.gitCommit` reads one commit behind `dev`'s tip after a merge. If the
-  job warns that branch protection rejected its push, staging deployed anyway;
+  job warns that branch protection rejected its push, the dev tier deployed anyway;
   only the bookkeeping commit is missing — `npm run land` by hand still does it
 - push `main` → [deploy-vps.yml](../../.github/workflows/deploy-vps.yml) does
   the same for the production Compose project
@@ -38,7 +39,7 @@ The build stamps the deployed commit into `/serverXR/api/health`'s
 `release.gitCommit` field — `curl -s <host>/serverXR/api/health` is the
 fastest way to verify exactly what's running (verified live on both
 environments 2026-07-19). `gh run list --workflow=deploy-vps.yml` (or
-`-staging`) remains the cross-check for run status.
+`deploy-vps-dev.yml`) remains the cross-check for run status.
 
 Do not start routine feature work on `main`.
 Use `main` as a starting point only for an emergency production hotfix.
@@ -53,17 +54,17 @@ git pull --ff-only origin dev
 npm run dev
 ```
 
-### To update staging (once the one-time VPS setup is done)
+### To update the dev tier (once the one-time VPS setup is done)
 
 ```bash
 git push origin dev
 ```
 
-Wait for the `Deploy VPS Staging` GitHub Action to finish, then verify:
+Wait for the `Deploy VPS Dev` GitHub Action (the dev tier's workflow) to finish, then verify:
 
 ```bash
-curl -s https://<staging-domain>/serverXR/api/health
-node scripts/smoke-check.mjs --base-url https://<staging-domain>
+curl -s https://dev.diiii.xyz/serverXR/api/health
+node scripts/smoke-check.mjs --base-url https://dev.diiii.xyz
 ```
 
 ### To update production
@@ -126,6 +127,6 @@ Canonical pieces (unchanged, kept for that fallback):
   [CPANEL_PREBUILT_DEPLOY.md](CPANEL_PREBUILT_DEPLOY.md) and
   [legacy/README.md](legacy/README.md)
 
-`npm run deploy:staging` / `deploy:production` (via `scripts/deploy.mjs`)
+`npm run deploy:dev` / `deploy:production` (via `scripts/deploy.mjs`)
 still just push `dev` / merge-and-push `main` — same git operations as
 above, regardless of which workflow is currently wired to that branch.

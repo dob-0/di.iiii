@@ -74,3 +74,39 @@ describe('createGatedRequestNet mounted as in production', () => {
     expect(seen).toEqual([{ path: '/api/spaces/br-id-ge', gateRequired: null }])
   })
 })
+
+// #486 (`requireApproval`, a .diiii proposal) and #527 (`applyNow`, a space
+// owner's own word) met in one signature at the 2026-09-24 batch landing. A
+// change that must be asked about is never applied on a route's say-so.
+describe('gateOrApply when requireApproval and applyNow are both set', () => {
+  const { config } = require('./config.js')
+  const { createApprovalGate } = require('./approvalGate.js')
+
+  it('asks, never applies — with no bot here that is a 503 and the executor never runs', async () => {
+    const saved = { ...config.approval }
+    Object.assign(config.approval, { enabled: false, botUrl: '', secret: '' })
+    try {
+      const gate = createApprovalGate()
+      let ran = 0
+      gate.registerExecutor('test.both', async () => { ran += 1 })
+      await expect(gate.gateOrApply({ kind: 'test.both', args: {}, actorState: {}, summary: 'both', requireApproval: true, applyNow: true }))
+        .rejects.toMatchObject({ status: 503 })
+      expect(ran).toBe(0)
+    } finally {
+      Object.assign(config.approval, saved)
+    }
+  })
+
+  it('applyNow alone still applies at once', async () => {
+    const saved = { ...config.approval }
+    Object.assign(config.approval, { enabled: true, botUrl: 'http://bot.invalid', secret: 's' })
+    try {
+      const gate = createApprovalGate()
+      gate.registerExecutor('test.now', async () => 'done')
+      await expect(gate.gateOrApply({ kind: 'test.now', args: {}, actorState: {}, summary: 'now', applyNow: true }))
+        .resolves.toEqual({ applied: true, result: 'done' })
+    } finally {
+      Object.assign(config.approval, saved)
+    }
+  })
+})

@@ -40,8 +40,8 @@ npm run dev                      # 8
    `.claude/worktrees/` with no `node_modules` of their own silently borrow
    this checkout's, so a branch that adds a dependency runs here and fails in CI.
 5. **`local:mirror:check`** — read-only: which spaces the live tiers have that
-   this box does not. Reads production first, then staging for what production
-   lacks (a space can be built on staging and never promoted — `dilijan` was).
+   this box does not. Reads production first, then the dev tier for what production
+   lacks (a space can be built on the dev tier and never promoted — `dilijan` was).
 6. **`local:mirror`** — creates them and pulls their projects.
 7. **`test:schema-sync`** — the ESM↔CJS mirror is the one drift that 503s the
    server on deploy. Also runs on `git push` via the pre-push gate.
@@ -57,6 +57,9 @@ npm run dev                      # 8
   that already exists unless `--force`, and skip each asset by id even under
   `--force`. A space whose content is six months old produces zero signal from
   any tool, and `local:mirror` will report success over it.
+  `npm run start-check` is the one exception: it compares normalized CONTENT with the dev tier.
+  When `tier-sync --changed` refuses everything, rebuild its baseline from today's agreement:
+  `node scripts/tier-sync.mjs --rebuild-baseline --dry-run` (writes only the baseline file, never a tier; drop `--dry-run` to write).
 - **Spaces with no declaration are audited by nothing.** `spaces:audit` covers
   only the five with a `di-space.space.json`, and the local tier is
   `governed: false` so it exits 0 on local drift by design.
@@ -84,7 +87,7 @@ authenticated view only.
 
 - **`npm run space:push` can write to production.** `space-push.mjs` reads the
   *root* env pair only, where `.env` sets `LIVE_API_URL` to **production** and
-  `.env.local` overrides it to staging. Delete or lose that one override line and
+  `.env.local` overrides it to the dev tier. Delete or lose that one override line and
   a routine push goes live. Always `--dry-run` first and read the host it prints.
 - **The root `.env` carries empty placeholders that mask real values.**
   `LIVE_API_TOKEN=` with nothing after it sits there and is merged last;

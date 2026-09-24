@@ -5,8 +5,9 @@ name: Deploy VPS (GHCR + SSH)
 # (workflow_dispatch-only) and kept only as a documented fallback until its
 # hosting term expires; see docs/deploy/VPS_DOCKER_DEPLOY.md.
 #
-# Only `main` (production) is wired up here. `dev` (staging) deploys via
-# deploy-vps-staging.yml, same VPS, isolated as a separate Compose project.
+# Only `main` (production) is wired up here. `dev` deploys to the dev tier
+# (https://dev.diiii.xyz) via deploy-vps-dev.yml, same VPS, isolated as a
+# separate Compose project.
 
 on:
   push:
@@ -147,7 +148,7 @@ jobs:
           SSH=(ssh -p "${SSH_PORT}" -o StrictHostKeyChecking=yes "${REMOTE}")
 
           # IMAGE_TAG is the ENVIRONMENT-NAMESPACED image tag; GIT_SHA is the
-          # plain commit and is what `git checkout` below needs. See the staging
+          # plain commit and is what `git checkout` below needs. See the dev-tier
           # workflow for why these had to stop being the same value.
           "${SSH[@]}" "REGISTRY_USER=$(printf '%q' "${REGISTRY_USER}") IMAGE_TAG=$(printf '%q' "prod-${GITHUB_SHA}") GIT_SHA=$(printf '%q' "${GITHUB_SHA}") DEPLOY_PATH=$(printf '%q' "${VPS_DEPLOY_PATH}") bash -s" <<'REMOTE_SCRIPT'
           set -euo pipefail

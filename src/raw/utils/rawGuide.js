@@ -3,37 +3,12 @@ const MANUAL_PATH = 'docs/raw/USER_MANUAL.md'
 // The in-product help's DATA, rewritten 2026-08-20 for the product as it
 // stands: canvas + cards + wires, places you walk into, the scene as a
 // window. Words per docs/ai/vocabulary.md — the copy guard reads this file.
-export const GUIDE_AUDIENCES = [
-    {
-        id: 'visitor',
-        label: 'For Visitors',
-        glyph: '◧',
-        title: 'Look first',
-        description: 'Open a page and look around.',
-        tags: ['Look', 'Tap', 'Help'],
-        steps: [
-            'Open a public page',
-            'Drag to look around',
-            'Tap Help'
-        ],
-        actionLabel: 'Open Public Space'
-    },
-    {
-        id: 'creator',
-        label: 'For Creators',
-        glyph: '▣',
-        title: 'Build small',
-        description: 'Make one thing, then connect it.',
-        tags: ['Cube', 'Wire', 'Enter'],
-        steps: [
-            'Create project',
-            'Add one visible node',
-            'Connect one value'
-        ],
-        actionLabel: 'Start Creating'
-    }
-]
-
+//
+// The "For Visitors / For Creators" pair that lived here went 2026-09-23 with
+// the old Nodes project list it was written for: a person reads the help
+// inside a project they are already building, and the space's one list
+// (StudioHub) is where they arrive — neither needs a door choosing between
+// looking and building.
 export const GUIDE_SECTIONS = [
     {
         id: 'start',

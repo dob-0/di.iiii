@@ -48,7 +48,12 @@ const BANNED = [
     // Capital R only: `src/raw/`, `/main/raw` and "raw JSON" are fine, the
     // proper noun is not. `RawEditor` has no word break after Raw, so an
     // identifier written into a string cannot trip this.
-    { word: 'Raw', pattern: /\bRaw\b/, use: 'the node editor, or nothing at all' },
+    //
+    // The node canvas is called Nodes (2026-09-23). The walk of 2026-09-22
+    // found it named "Raw" on /tools and the local home and "Nodes" in the
+    // surface bar — one tool, two names, one screen apart. The routes, the
+    // `raw` keys and `src/raw/` do not move; only the name a person reads.
+    { word: 'Raw', pattern: /\bRaw\b/, use: 'Nodes (the node canvas — its routes stay /raw)' },
     // The studio's signature, not the product's name: a person signs `Name — di.i`,
     // the platform is `di.iiii` (di-brand NAMING.md). Product copy names the
     // product, so `di.i` inside src/ is a slip. `di.iiii` is not a hit — the
@@ -71,7 +76,14 @@ const BANNED = [
     // carried one ("Build rooms, place objects") until it was fixed alongside
     // this. The hole is deliberate — the alternative flags "in your own room",
     // which is right. Read new copy for the sense; the guard catches the noun.
-    { word: 'Room', pattern: /\bRooms?\b/, use: 'Scene (the 3D place) · space (the place that is yours)' }
+    { word: 'Room', pattern: /\bRooms?\b/, use: 'Scene (the 3D place) · space (the place that is yours)' },
+    // Retired 2026-09-16: "we have not staging anymore." The second tier is the
+    // dev tier, at dev.diiii.xyz; its identifiers were renamed `dev` too.
+    // Word-bounded, so `restaging` is not a hit, and a separator-joined token
+    // (`cpanel-staging`) is dropped as code before this runs. An address inside a sentence ("open staging.di-studio.xyz") is a hit, on
+    // purpose: copy names dev.diiii.xyz. A string that is ONLY the address reads
+    // as code and is dropped, like any other dotted token.
+    { word: 'staging', pattern: /\bstaging\b/i, use: 'the dev tier (dev.diiii.xyz)' }
 ]
 
 // Copy-carrying files, read as text. Everything a visitor, a guest or an owner
@@ -114,6 +126,7 @@ const COPY_FILES = [
     'src/hooks/useSpaceLabel.js',
     'src/hooks/useStatusItems.js',
     'src/landing/LandingPage.jsx',
+    'src/landing/LocalHome.jsx',
     'src/pages/PrivacyPage.jsx',
     'src/pages/TermsPage.jsx',
     'src/project/components/JamSheet.jsx',
@@ -126,6 +139,7 @@ const COPY_FILES = [
     'src/project/graph/studioNode.js',
     'src/project/jam/jamPresence.js',
     'src/project/nodeRegistry.js',
+    'src/scan/ScanSurface.jsx',
     'src/raw/components/AgentRunPanel.jsx',
     'src/raw/components/CreatePanelWindow.jsx',
     'src/raw/components/DesktopWindow.jsx',
@@ -135,7 +149,6 @@ const COPY_FILES = [
     'src/raw/components/RawEditor.jsx',
     'src/raw/components/RawGraphSurface.jsx',
     'src/raw/components/RawHelpDialog.jsx',
-    'src/raw/components/RawHub.jsx',
     'src/raw/components/RawViewport.jsx',
     'src/raw/components/TextPanelWindow.jsx',
     'src/raw/components/WorkStatusPanel.jsx',
@@ -146,6 +159,7 @@ const COPY_FILES = [
     'src/studio/components/SpaceHub.jsx',
     'src/studio/components/StudioCodeSpaceDirector.jsx',
     'src/studio/components/StudioControlCluster.jsx',
+    'src/studio/components/StudioCueStrip.jsx',
     'src/studio/components/StudioEditor.jsx',
     'src/studio/components/StudioGraphSurface.jsx',
     'src/studio/components/StudioHub.jsx',
@@ -159,6 +173,10 @@ const COPY_FILES = [
     'src/studio/utils/assetFormats.js',
     'src/studio/utils/codeSpaces.js',
     'src/studio/utils/studioGuide.js',
+    // The tools room lists every tool by name. It said "Raw" for the node
+    // canvas until 2026-09-23, beside a surface bar that said Nodes, and was
+    // not on this list, so nothing noticed. Same for LocalHome above.
+    'src/tools/ToolsRoom.jsx',
     'src/utils/presentationTemplates.js'
 ]
 

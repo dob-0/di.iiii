@@ -144,7 +144,8 @@ const assertValidPublicApiToken = (value) => {
 const inferDeployEnv = ({ explicit = '', sourceRef = '' } = {}) => {
     const normalizedExplicit = normalizeValue(explicit).toLowerCase()
     if (normalizedExplicit) {
-        return normalizedExplicit
+        // `dev` names the dev tier; the deployEnv identifier it emits is still `staging`.
+        return normalizedExplicit === 'dev' ? 'staging' : normalizedExplicit
     }
 
     switch (normalizeValue(sourceRef)) {

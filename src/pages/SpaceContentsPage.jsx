@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import SurfaceBar from '../components/SurfaceBar.jsx'
+import { isEmbedRequest } from '../utils/previewMode.js'
 import RouteSurfaceFallback from '../components/RouteSurfaceFallback.jsx'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useLocalInstall from '../hooks/useLocalInstall.js'
+import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import { listSpaceContents } from '../project/services/projectsApi.js'
 import { getServerSpace } from '../services/serverSpaces.js'
 import { appNavigate } from '../utils/appNavigate.js'
-import { buildAppSpacePath, buildPublicProjectPath, buildVanityProjectPath } from '../utils/spaceRouting.js'
+import { buildAppSpacePath, buildPublicProjectPath, buildScanPath, buildVanityProjectPath } from '../utils/spaceRouting.js'
+import { sourcesProjectId } from '../scan/scanSources.js'
 import { buildStudioHubPath } from '../studio/utils/studioRouting.js'
 import { getCodeSpace } from '../studio/utils/codeSpaces.js'
+import { isSpaceInSessionScope } from '../utils/sessionScope.js'
 import './spaceContents.css'
 
 /**
@@ -74,8 +78,10 @@ export const contentsHref = (spaceId, project) => (project.slug
     : buildPublicProjectPath(spaceId, project.id))
 
 export default function SpaceContentsPage({ spaceId }) {
-    const { role, spaces: sessionScopes, openSpaceId, sandboxSpaceId, requireAuth } = useAuthSession()
+    const session = useAuthSession()
+    const { role, requireAuth } = session
     const localInstall = useLocalInstall()
+    const isEmbed = isEmbedRequest()
     const [state, setState] = useState({ status: 'loading', projects: [], space: null, error: null })
 
     useEffect(() => {
@@ -102,6 +108,13 @@ export default function SpaceContentsPage({ spaceId }) {
     const label = state.space?.label || spaceId
     const projects = state.projects
 
+    // The tab says the space's name, the same one the heading below and the
+    // /{space} tab say (docs/ai/vocabulary.md, "One name per space") — it was
+    // the index.html default on every space's list. 'main' is skipped for the
+    // reason SpaceSurfaceApp skips it: its name is di.iiii, which the default
+    // already says.
+    useDocumentTitle(state.status === 'ready' && spaceId !== 'main' ? `${label} — di.iiii` : null)
+
     // A page that is CODE has no row on any server, so a list built by asking
     // the server what a space holds cannot see it. That is the whole of why the
     // WCC landing page was missing from the WCC space: it is compiled React at
@@ -116,6 +129,11 @@ export default function SpaceContentsPage({ spaceId }) {
     // space route ever sees it (src/RootApp.jsx, workForSegment), so the
     // project the database calls the door is reachable only at its own address.
     const doorId = codeSpace ? null : (state.space?.publishedProjectId || null)
+
+    // The space holds its own footage, so it is a place being collected rather
+    // than a space that merely has work in it. Read off the list that is already
+    // loaded — no second request, and no claim about a space nobody has scanned.
+    const isBeingScanned = projects.some((project) => project.id === sourcesProjectId(spaceId))
 
     // A space that holds one thing must not grow a page that says less than the
     // thing does. If the only project on show is the space's own door, this list
@@ -140,9 +158,10 @@ export default function SpaceContentsPage({ spaceId }) {
     const canEdit = useMemo(() => {
         if (!requireAuth) return true
         if (role === 'admin') return true
-        if (spaceId === openSpaceId || spaceId === sandboxSpaceId) return true
-        return Array.isArray(sessionScopes) && sessionScopes.includes(spaceId)
-    }, [requireAuth, role, spaceId, openSpaceId, sandboxSpaceId, sessionScopes])
+        // Scope alone is not a key — the server checks the session is signed in
+        // before it ever reads scope, and so does this.
+        return Boolean(session.authenticated) && isSpaceInSessionScope(session, spaceId)
+    }, [requireAuth, role, spaceId, session])
 
     if (state.status === 'loading' || isOnlyTheDoor) {
         return <RouteSurfaceFallback label="Loading" detail="" />
@@ -154,6 +173,7 @@ export default function SpaceContentsPage({ spaceId }) {
                 space={spaceId}
                 spaceLabel={label}
                 isLocalInstall={localInstall.isLocal}
+                hidden={isEmbed}
             />
 
             <div className="sc-page">
@@ -213,6 +233,21 @@ export default function SpaceContentsPage({ spaceId }) {
                     <p className="sc-aside">
                         <a className="sc-aside-link" href={buildStudioHubPath(spaceId)}>Open this space in Studio</a>
                         {' '}— drafts, archived work, shelves and the trash are there.
+                    </p>
+                )}
+
+                {/* A space that already holds its own footage is a PLACE
+                    somebody has been collecting, so the way back to the camera
+                    belongs here and only here: one quiet line beside the other
+                    one, for somebody who could already edit, and nothing at all
+                    on a space that has never been scanned. The published face of
+                    the footage room stays chrome-free — the owner's call of
+                    2026-08-07, and a floating Scan button on a public page would
+                    be exactly the thing it refused. */}
+                {canEdit && isBeingScanned && (
+                    <p className="sc-aside">
+                        <a className="sc-aside-link" href={buildScanPath(spaceId)}>Add to the scan of this place</a>
+                        {' '}— the camera, and the wall it lands on.
                     </p>
                 )}
             </div>

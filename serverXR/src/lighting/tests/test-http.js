@@ -848,6 +848,37 @@ check('the static handler will not serve outside public/', async () => {
   }
 });
 
+// ---- the way back to the project that opened the desk ------------------------
+// A project opens the desk as /light/?space=<id>&project=<id>. The query is read by the
+// page (ui/from.js); the server's only job is to serve the same files with or without it,
+// and to keep serving the bare desk exactly as it was.
+
+check('the bare desk still serves, with its one door to /spaces and no way back drawn', async () => {
+  const res = await fetch(base + '/');
+  assert.strictEqual(res.status, 200);
+  const html = await res.text();
+  assert.ok(html.includes('<a class="homelink" href="/spaces"'), 'the door to /spaces is still the first thing');
+  assert.ok(/<a class="homelink" id="fromBack"[^>]*\bhidden\b/.test(html), 'the way back starts hidden');
+  assert.ok(/<nav class="pages" id="fromTools"[^>]*\bhidden\b/.test(html), 'and so do the other tools');
+  const from = html.indexOf('<script src="from.js">');
+  assert.ok(from > -1 && from < html.indexOf('<script src="app.js">'), 'from.js loads, before app.js reads it');
+});
+
+check('opened from a project, the page and its scripts still serve', async () => {
+  for (const route of ['/?space=lab&project=first-piece', '/?space=lab&project=first-piece&label=First%20Piece',
+                       '/index.html?space=lab&project=first-piece', '/?space=..%2F..&project=%5Cevil']) {
+    const res = await fetch(base + route);
+    assert.strictEqual(res.status, 200, route + ' answered ' + res.status);
+    assert.ok((await res.text()).includes('id="fromBack"'), route + ' is the desk');
+  }
+  for (const file of ['from.js', 'app.js', 'style.css']) {
+    const res = await fetch(base + '/' + file + '?space=lab&project=first-piece');
+    assert.strictEqual(res.status, 200, file + ' with a query answered ' + res.status);
+  }
+  const src = await (await fetch(base + '/from.js')).text();
+  assert.ok(src.includes('deskFrom'), 'from.js is the file app.js reads');
+});
+
 check('/api/state publishes what each channel role is', async () => {
   const { body } = await GET('/api/state');
   const k = body.roleKinds;
@@ -1443,6 +1474,239 @@ check('a desk that started empty never quietly replaces a show that turned up', 
   assert.strictEqual(JSON.parse(fs.readFileSync(path.join(dir, found[0]), 'utf8')).fixtures.length, 3);
   second.stop();
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+// ---- one show per space -----------------------------------------------------
+// Inside di.iiii a space owns its own show, beside its scene, and the desk runs one show
+// at a time like a console. The machine's own show stays where it always was.
+
+const spaceDesk = async (known = { lab: 'Lab', hosq: 'Hosq camp' }) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'desk-spaces-'));
+  const data = path.join(root, 'lighting');
+  const spacesDir = path.join(root, 'spaces');
+  const logs = [];
+  const make = () => createDesk({
+    dataDir: data, offline: true, outputEnabledDefault: false, log: (l) => logs.push(l),
+    spaces: {
+      dir: (id) => path.join(spacesDir, id, 'lighting'),
+      find: async (id) => (known[id] ? { label: known[id] } : null),
+    },
+  });
+  const desk = make();
+  const server = http.createServer((q, r) => desk.handle(q, r));
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const at = 'http://127.0.0.1:' + server.address().port;
+  const call = async (method, route, body) => {
+    const r = await fetch(at + route, {
+      method, headers: body ? { 'content-type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined, redirect: 'manual',
+    });
+    const text = await r.text();
+    let json = null; try { json = JSON.parse(text); } catch (e) {}
+    return { status: r.status, body: json, text, location: r.headers.get('location') };
+  };
+  const spaceShow = (id) => path.join(spacesDir, id, 'lighting', 'show.json');
+  return {
+    root, data, spacesDir, logs, desk, make, spaceShow,
+    get: (r) => call('GET', r), post: (r, b) => call('POST', r, b || {}),
+    machineShow: path.join(data, 'show.json'),
+    stop: () => new Promise((r) => { desk.close(); server.close(() => { fs.rmSync(root, { recursive: true, force: true }); r(); }); }),
+  };
+};
+
+check('a bare desk is the machine\'s own show, exactly as before', async () => {
+  const d = await spaceDesk();
+  try {
+    await d.post('/api/fixtures/add', { profile: 'drgb', count: 2 });
+    d.desk.writeShow();
+    const { body } = await d.get('/api/state');
+    assert.strictEqual(body.show.space, null);
+    assert.strictEqual(body.show.file, d.machineShow);
+    assert.strictEqual(JSON.parse(fs.readFileSync(d.machineShow, 'utf8')).fixtures.length, 2);
+    assert.ok(!fs.existsSync(d.spacesDir), 'no space directory is made for a bare desk');
+  } finally { await d.stop(); }
+});
+
+check('a page opened for a space loads that space\'s show, and saves into it', async () => {
+  const d = await spaceDesk();
+  try {
+    await d.post('/api/fixtures/add', { profile: 'drgb', count: 3 });     // the machine's rig
+    // Asked on the space's behalf before it is loaded: said, not answered with the wrong show.
+    const early = await d.get('/space/lab/api/state');
+    assert.strictEqual(early.status, 409);
+    assert.strictEqual(early.body.code, 'other-show');
+    assert.strictEqual(early.body.show.space, null);
+
+    const open = await d.post('/space/lab/api/show/open', {});
+    assert.strictEqual(open.status, 200, open.text);
+    assert.strictEqual(open.body.show.space, 'lab');
+    assert.strictEqual(open.body.show.label, 'Lab');
+    assert.strictEqual(open.body.show.file, d.spaceShow('lab'));
+
+    const fresh = await d.get('/space/lab/api/state');
+    assert.strictEqual(fresh.status, 200);
+    assert.strictEqual(fresh.body.fixtures.length, 0, 'a space starts with a show of its own, empty');
+    await d.post('/space/lab/api/fixtures/add', { profile: 'rgb', count: 2 });
+    await d.post('/space/lab/api/scenes/save', { name: 'Warm' });
+    d.desk.writeShow();
+
+    const lab = JSON.parse(fs.readFileSync(d.spaceShow('lab'), 'utf8'));
+    assert.strictEqual(lab.fixtures.length, 2);
+    assert.strictEqual(lab.scenes.length, 1);
+    assert.strictEqual(lab.scenes[0].name, 'Warm');
+    assert.ok(!('output' in lab), 'a space\'s show never carries the machine\'s rig');
+    // The machine's own show was saved whole on the way out, and is untouched since.
+    assert.strictEqual(JSON.parse(fs.readFileSync(d.machineShow, 'utf8')).fixtures.length, 3);
+  } finally { await d.stop(); }
+});
+
+check('the machine\'s show and a space\'s show do not leak into each other', async () => {
+  const d = await spaceDesk();
+  try {
+    await d.post('/api/profiles/add', { name: 'Machine Wash', channels: ['dimmer', 'r', 'g', 'b'] });
+    await d.post('/api/fixtures/add', { profile: 'Machine Wash', count: 1 });
+    await d.post('/api/show/open', { space: 'lab' });
+    const lab = (await d.get('/api/state')).body;
+    assert.ok(!lab.profiles['Machine Wash'], 'a fixture type the machine made is not in the space\'s show');
+    await d.post('/api/profiles/add', { name: 'Lab Spot', channels: ['dimmer', 'pan', 'tilt'] });
+    await d.post('/api/show/open', { space: null });
+    const back = (await d.get('/api/state')).body;
+    assert.strictEqual(back.show.space, null);
+    assert.strictEqual(back.fixtures.length, 1);
+    assert.strictEqual(back.fixtures[0].profile, 'Machine Wash', 'the machine\'s patch came back on its own fixture type');
+    assert.ok(!back.profiles['Lab Spot'], 'and the space\'s fixture type stayed with the space');
+    d.desk.writeShow();
+    const disk = JSON.parse(fs.readFileSync(d.spaceShow('lab'), 'utf8'));
+    assert.deepStrictEqual(disk.customProfiles.map((p) => p.name), ['Lab Spot']);
+  } finally { await d.stop(); }
+});
+
+check('the rig stays with the machine: output survives a change of show and is saved in the machine\'s file', async () => {
+  const d = await spaceDesk();
+  try {
+    await d.post('/api/show/open', { space: 'lab' });
+    await d.post('/api/output', { mode: 'unicast', targets: ['2.0.0.10'] });
+    d.desk.writeShow();
+    assert.ok(!('output' in JSON.parse(fs.readFileSync(d.spaceShow('lab'), 'utf8'))));
+    const machine = JSON.parse(fs.readFileSync(d.machineShow, 'utf8'));
+    assert.deepStrictEqual(machine.output.targets, ['2.0.0.10'], 'the change under OUTPUT went into the machine\'s own file');
+    await d.post('/api/show/open', { space: 'hosq' });
+    assert.deepStrictEqual((await d.get('/api/state')).body.output.targets, ['2.0.0.10'], 'and loading another show left it alone');
+  } finally { await d.stop(); }
+});
+
+check('with output ON another show loads only when the caller says so', async () => {
+  const d = await spaceDesk();
+  try {
+    await d.post('/api/output', { enabled: true });
+    const refused = await d.post('/space/lab/api/show/open', {});
+    assert.strictEqual(refused.status, 409);
+    assert.strictEqual(refused.body.code, 'live');
+    assert.strictEqual((await d.get('/api/show')).body.space, null, 'nothing changed');
+    const done = await d.post('/space/lab/api/show/open', { live: true });
+    assert.strictEqual(done.status, 200);
+    assert.strictEqual(done.body.show.space, 'lab');
+    assert.strictEqual(done.body.show.live, true, 'and the output is still on — it is the machine\'s');
+  } finally { await d.stop(); }
+});
+
+check('a space that is not here, or a name that is not a space, loads nothing', async () => {
+  const d = await spaceDesk();
+  try {
+    assert.strictEqual((await d.post('/api/show/open', { space: 'nowhere' })).status, 404);
+    assert.strictEqual((await d.post('/api/show/open', { space: '../etc' })).status, 400);
+    assert.strictEqual((await d.get('/space/..%2Fetc/api/state')).status, 404);
+    assert.strictEqual((await d.get('/space/lab')).location, 'lab/', 'space/<id> gains its slash');
+    assert.ok(!fs.existsSync(d.spacesDir), 'and nothing was written for any of them');
+  } finally { await d.stop(); }
+});
+
+check('a keyed page is refused a write while another show is loaded', async () => {
+  const d = await spaceDesk();
+  try {
+    await d.post('/api/show/open', { space: 'hosq' });
+    const w = await d.post('/space/lab/api/fixtures/add', { profile: 'rgb', count: 1 });
+    assert.strictEqual(w.status, 409);
+    assert.strictEqual(w.body.code, 'other-show');
+    assert.match(w.body.error, /Hosq camp's show, not lab's/);
+    assert.strictEqual((await d.get('/api/state')).body.fixtures.length, 0, 'the write landed nowhere');
+  } finally { await d.stop(); }
+});
+
+check('the migration is a copy: the machine\'s show is read, never moved', async () => {
+  const d = await spaceDesk();
+  try {
+    await d.post('/api/fixtures/add', { profile: 'drgb', count: 4 });
+    await d.post('/api/scenes/save', { name: 'House' });
+    await d.post('/api/scenes/save', { name: 'Blue' });
+    await d.post('/api/output', { mode: 'unicast', targets: ['2.0.0.10'] });
+    d.desk.writeShow();
+    const before = fs.readFileSync(d.machineShow, 'utf8');
+
+    await d.post('/space/lab/api/show/open', {});
+    const offer = (await d.get('/space/lab/api/show')).body;
+    assert.deepStrictEqual(offer.machine, { fixtures: 4, scenes: 2, looks: 0 }, 'the offer names what would be copied');
+
+    const copy = await d.post('/space/lab/api/show/copy-machine', {});
+    assert.strictEqual(copy.status, 200, copy.text);
+    assert.deepStrictEqual(copy.body.copied, { fixtures: 4, scenes: 2, looks: 0 });
+    assert.strictEqual(copy.body.show.machine, null, 'and the offer is gone once taken');
+    const lab = JSON.parse(fs.readFileSync(d.spaceShow('lab'), 'utf8'));
+    assert.strictEqual(lab.fixtures.length, 4);
+    assert.ok(!('output' in lab), 'the copy leaves the rig behind');
+    assert.strictEqual(fs.readFileSync(d.machineShow, 'utf8'), before, 'the machine\'s show is byte for byte what it was');
+
+    const again = await d.post('/space/lab/api/show/copy-machine', {});
+    assert.strictEqual(again.status, 409, 'a space with a show is never copied over');
+
+    // The undo is one command: delete the space's file. With the desk on another show,
+    // the space opens empty again and the offer is back.
+    await d.post('/api/show/open', { space: null });
+    fs.rmSync(path.dirname(d.spaceShow('lab')), { recursive: true, force: true });
+    await d.post('/space/lab/api/show/open', {});
+    const undone = (await d.get('/space/lab/api/state')).body;
+    assert.strictEqual(undone.fixtures.length, 0);
+    assert.deepStrictEqual(undone.show.machine, { fixtures: 4, scenes: 2, looks: 0 });
+  } finally { await d.stop(); }
+});
+
+check('no offer when the machine has no show, or the space already has one', async () => {
+  const d = await spaceDesk();
+  try {
+    await d.post('/space/lab/api/show/open', {});
+    assert.strictEqual((await d.get('/api/show')).body.machine, null, 'nothing on the machine to offer');
+    assert.strictEqual((await d.post('/api/show/copy-machine', {})).status, 404);
+  } finally { await d.stop(); }
+});
+
+check('a restart comes back to the show it left', async () => {
+  const d = await spaceDesk();
+  try {
+    await d.post('/space/lab/api/show/open', {});
+    await d.post('/space/lab/api/fixtures/add', { profile: 'rgb', count: 2 });
+    d.desk.close();
+    const again = d.make();
+    assert.strictEqual(again.show.space, 'lab');
+    assert.strictEqual(again.show.label, 'Lab');
+    assert.strictEqual(again.state.fixtures.length, 2);
+    again.close();
+    // A space whose show is gone (deleted since) leaves the machine's own show loaded.
+    fs.rmSync(d.spacesDir, { recursive: true, force: true });
+    const third = d.make();
+    assert.strictEqual(third.show.space, null);
+    third.close();
+  } finally { await d.stop(); }
+});
+
+check('the desk\'s own state is read through: a holder of the desk reaches the loaded show', async () => {
+  const d = await spaceDesk();
+  try {
+    const before = d.desk.state;
+    await d.post('/api/show/open', { space: 'lab' });
+    assert.notStrictEqual(d.desk.state, before);
+    d.desk.state.blackout = true;           // what the rig's blackout mirror does
+    assert.strictEqual((await d.get('/api/state')).body.blackout, true);
+  } finally { await d.stop(); }
 });
 
 // ---- harness ----------------------------------------------------------------

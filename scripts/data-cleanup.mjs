@@ -5,12 +5,13 @@
 //   node scripts/data-cleanup.mjs <plan.json> --apply    # actually delete
 //
 // Targets resolve from serverXR/.env.local: local -> API_TOKEN,
-// staging -> STAGING_API_URL/STAGING_API_TOKEN (LIVE_* accepted as the legacy
-// alias), prod -> PROD_API_URL/PROD_API_TOKEN. Whatever the label says, a base
-// URL that is neither localhost nor staging.* is treated as production.
+// dev (the dev tier, dev.diiii.xyz) ->
+// DEV_API_URL/DEV_API_TOKEN (LIVE_* accepted as the legacy alias),
+// prod -> PROD_API_URL/PROD_API_TOKEN. Whatever the label says, a base URL that
+// is neither localhost nor a dev-tier host is treated as production.
 //
 // Plan shape:
-// { "env": "local|staging|prod",
+// { "env": "local|dev|prod",
 //   "deleteSpaces": ["id", ...],
 //   "deleteProjects": [{ "space": "id", "id": "projId" }, ...],
 //   "pruneOrphanDirs": ["dirname", ...]   // local filesystem dirs with no DB row (local only)
@@ -35,17 +36,18 @@ function loadEnv() {
   return env;
 }
 const env = loadEnv();
-// STAGING_* first: LIVE_* means staging in serverXR/.env.local but PRODUCTION
+// DEV_* first: LIVE_* means the dev tier in serverXR/.env.local but PRODUCTION
 // to scripts/space-code-push.mjs and space-sync.mjs, and this script deletes.
 // LIVE_* stays as the legacy alias so existing .env.local files keep working.
 const TARGETS = {
   local: { base: 'http://localhost:4000/serverXR', token: env.API_TOKEN },
-  staging: {
-    base: env.STAGING_API_URL || env.LIVE_API_URL,
-    token: env.STAGING_API_TOKEN || env.LIVE_API_TOKEN
+  dev: {
+    base: env.DEV_API_URL || env.LIVE_API_URL,
+    token: env.DEV_API_TOKEN || env.LIVE_API_TOKEN
   },
   prod: { base: env.PROD_API_URL, token: env.PROD_API_TOKEN }
 };
+if (plan.env === 'staging') { console.error('"staging" is now "dev"'); process.exit(1); }
 const tgt = TARGETS[plan.env];
 if (!tgt || !tgt.base || !tgt.token) { console.error(`Bad/unknown env "${plan.env}" or missing token.`); process.exit(1); }
 
@@ -54,17 +56,18 @@ try { host = new URL(tgt.base).hostname; }
 catch { console.error(`env "${plan.env}" resolved to an unparseable base URL: ${tgt.base}`); process.exit(1); }
 
 // The confirmation gate keys off the URL that was actually resolved, not the
-// plan's label — a plan saying "staging" reads a key that another script
+// plan's label — a plan saying "dev" reads a key that another script
 // treats as production, so the label alone is not evidence of the target.
-// Anything that is neither localhost nor a staging.* host counts as
-// production and has to be typed for.
+// Anything that is neither localhost nor the dev-tier host (dev.diiii.xyz)
+// counts as production and has to be typed for.
 const isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
-const targetsProduction = !isLocalHost && !host.startsWith('staging.');
+const isDevTierHost = host === 'dev.diiii.xyz';
+const targetsProduction = !isLocalHost && !isDevTierHost;
 
 const mode = apply ? 'APPLY' : 'DRY-RUN';
 console.log(`\n[${mode}] env=${plan.env} base=${tgt.base}\n`);
 if (targetsProduction && plan.env !== 'prod') {
-  console.log(`  !! plan says env="${plan.env}" but ${host} is not a staging/local host — treating it as PRODUCTION.\n`);
+  console.log(`  !! plan says env="${plan.env}" but ${host} is not a dev-tier/local host — treating it as PRODUCTION.\n`);
 }
 
 // A copy-pasted plan with "env": "prod" must not delete production data on

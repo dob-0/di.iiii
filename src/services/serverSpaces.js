@@ -31,10 +31,15 @@ export const getServerSpace = async (spaceId) => {
 // does its own slug-or-id matching; returns null on a 404 rather than
 // throwing, so callers can fall through to a plain space route instead of
 // treating "not a real project slug" as an error.
+//
+// A project that scripts/project-move.mjs moved out of `spaceSegment`
+// answers with `movedTo` instead of a 404 (serverXR/src/index.js) — passed
+// through as-is so the caller (useResolveSlugProject / SlugProjectRoute) can
+// send the visitor on to where the project actually lives now.
 export const resolveVanityProjectLink = async (spaceSegment, projectSegment) => {
     try {
         const data = await apiFetch(`/api/resolve/${encodeURIComponent(spaceSegment)}/${encodeURIComponent(projectSegment)}`)
-        return { space: data.space || null, project: data.project || null }
+        return { space: data.space || null, project: data.project || null, movedTo: data.movedTo || null }
     } catch (error) {
         if (error?.status === 404) return null
         throw error
@@ -121,6 +126,21 @@ export const mintSpaceInvite = async (spaceId, label = 'invite') => {
     })
     return data
 }
+
+// A space's restore points, newest first: { id, takenAt, reason, actor, objects,
+// projects }. Owner-or-admin. See serverXR/src/spaceStore.js.
+export const listSpaceSnapshots = async (spaceId) => {
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/snapshots`)
+    return Array.isArray(data?.snapshots) ? data.snapshots : []
+}
+
+// Put one back. The server takes a restore point of what is there now first,
+// so a restore is itself undoable.
+export const restoreSpaceSnapshot = async (spaceId, snapshotId) =>
+    apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/restore-snapshot`, {
+        method: 'POST',
+        body: { snapshotId }
+    })
 
 export const redeemSpaceInvite = async (token) =>
     apiFetch('/api/invites/redeem', { method: 'POST', body: { token } })

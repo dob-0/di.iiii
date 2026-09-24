@@ -1,5 +1,6 @@
 import useAuthSession from '../hooks/useAuthSession.js'
 import RouteSurfaceFallback from './RouteSurfaceFallback.jsx'
+import { isSpaceInSessionScope } from '../utils/sessionScope.js'
 
 // A bare typed lane URL (/raw, /raw/projects) names no space, so routing
 // falls back to the lane default — 'main', di.iiii's restricted flagship.
@@ -14,12 +15,12 @@ import RouteSurfaceFallback from './RouteSurfaceFallback.jsx'
 // Unrestricted sessions (spaces: null) and local installs (requireAuth off)
 // pass through unchanged.
 export default function LaneDefaultSpace({ state, children }) {
-    const { loading, spaces, openSpaceId } = useAuthSession()
+    const session = useAuthSession()
+    const { loading, openSpaceId } = session
     if (loading) {
         return <RouteSurfaceFallback label="Loading" detail="" />
     }
-    const scoped = Array.isArray(spaces)
-    const fallbackId = scoped && !spaces.includes(state.spaceId) && openSpaceId
+    const fallbackId = !isSpaceInSessionScope(session, state.spaceId) && openSpaceId
         ? openSpaceId
         : state.spaceId
     return children(fallbackId)

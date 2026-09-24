@@ -13,8 +13,8 @@
  * the same guard `space-push.mjs` carries, for the same reason.
  *
  * Usage:
- *   node scripts/tier-sync.mjs --from local --to staging [options]
- *   node scripts/tier-sync.mjs --from local --to staging --audit
+ *   node scripts/tier-sync.mjs --from local --to dev [options]
+ *   node scripts/tier-sync.mjs --from local --to dev --audit
  *
  * Options:
  *   --audit             Compare DOCUMENTS, write nothing, exit 1 on any drift.
@@ -23,24 +23,33 @@
  *                       with different work inside it. That is the drift that
  *                       actually bites: `local-mirror` fills the dev box from
  *                       PRODUCTION first and never refreshes a project it has
- *                       already seen, so a project edited on staging reads
+ *                       already seen, so a project edited on the dev tier reads
  *                       differently on localhost for as long as both exist.
  *   --changed           Push what DIFFERS, not just what is missing — the audit's
  *                       "same slug, different work" list plus the missing ones.
  *                       Refuses any project that changed on BOTH sides since the
  *                       last sync (see the baseline below), and never touches a
  *                       project whose only difference is re-addressed assets.
- *                       This is the "work local, push to staging" flow; without it
+ *                       This is the "work local, push to dev" flow; without it
  *                       the only way to push an EDIT was --force, which overwrites
  *                       every shared project at once.
  *   --space <id>        Only this space (default: every space the source has)
  *   --no-assets         Documents only — faster, and leaves images unresolvable
  *   --force             Overwrite documents that already exist at the destination
  *   --dry-run           Print the plan and write nothing
+ *   --rebuild-baseline  Re-record the baseline from what the two tiers agree on
+ *                       TODAY: every project whose normalized content (asset
+ *                       addresses by name) is identical on both, with both
+ *                       tiers' documentVersion/updatedAt. Projects that differ
+ *                       are left out and listed. Replaces this destination's
+ *                       baseline; writes only the baseline file, never a tier.
+ *                       Defaults to --from local --to dev. Honors --dry-run.
  *   --allow-production  Required before anything may be written to di-studio.xyz
  *
+ * Tiers: local, dev (dev.diiii.xyz), prod — the same names key TIERS and the baseline.
+ *
  * Tokens come from serverXR/.env.local: API_TOKEN (local), LIVE_API_TOKEN
- * (staging), PROD_API_TOKEN (production).
+ * (the dev tier), PROD_API_TOKEN (production).
  */
 
 import crypto from 'node:crypto'
@@ -56,20 +65,34 @@ const TRANSFER_TIMEOUT_MS = 120000
 // The local tier is not always a dev server on 4000: a `di` install serves the same
 // database over https on its own name (LOCAL_API_URL in serverXR/.env.local, or the
 // environment). Without this the script cannot see the machine it is running on.
-export const localBase = (env = {}) =>
-    (process.env.LOCAL_API_URL || env.LOCAL_API_URL || 'http://localhost:4000').replace(/\/+$/, '') + '/serverXR'
+//
+// Idempotent about the `/serverXR` suffix: the documented convention is to set
+// LOCAL_API_URL WITHOUT it (`https://local.thedi.studio`), but a value that
+// already carries it (`http://localhost:4000/serverXR`, e.g. copy-pasted from
+// this function's own output) must not get a second one appended — found live
+// 2026-09-16, `.../serverXR/serverXR/api/spaces` → 404.
+export const localBase = (env = {}) => {
+    const raw = (process.env.LOCAL_API_URL || env.LOCAL_API_URL || 'http://localhost:4000').replace(/\/+$/, '')
+    return /\/serverXR$/i.test(raw) ? raw : `${raw}/serverXR`
+}
 
 export const TIERS = {
     local: { base: localBase(), tokenKey: 'API_TOKEN' },
-    staging: { base: 'https://staging.di-studio.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
+    dev: { base: 'https://dev.diiii.xyz/serverXR', tokenKey: 'LIVE_API_TOKEN' },
     prod: { base: 'https://di-studio.xyz/serverXR', tokenKey: 'PROD_API_TOKEN' }
+}
+
+// The dev tier's old key is refused outright, not mapped: one name per tier.
+export const resolveTier = (name) => {
+    if (name === 'staging') throw new Error('"staging" is now "dev"')
+    return name
 }
 
 // Production is the one host this script must never reach by inheritance.
 export const isProductionTarget = (url) => {
     try {
         const { hostname } = new URL(url)
-        return hostname === 'di-studio.xyz' || hostname === 'www.di-studio.xyz'
+        return ['di-studio.xyz', 'www.di-studio.xyz', 'diiii.xyz', 'www.diiii.xyz'].includes(hostname)
     } catch {
         return false
     }
@@ -88,12 +111,40 @@ export const isProductionTarget = (url) => {
  * script) a difference is treated as one-sided, which is exactly what --force
  * would have done — scoped to the one project instead of all of them.
  */
+/**
+ * Whether the PLAIN (non---changed) `--force` write path should refuse to
+ * overwrite one project. Before this existed, `--force` overwrote every
+ * matching project unconditionally — the one write path in this file that
+ * did not consult `tier-sync-baseline.json` at all.
+ *
+ * `isOverwrite` — false for a project the destination never had (a pure
+ * create; nothing to be stale relative to, always allowed).
+ * `knownShape` — what the baseline recorded the destination as, last time
+ * this script agreed the two tiers matched. Undefined means "never recorded"
+ * (first-ever sync, or a copy that arrived by some other path) — treated as
+ * one-sided, the same call `--changed` makes with no baseline (see above).
+ * `destinationShape` — the destination's CURRENT shape, read moments before
+ * the write; only fetched by the caller when there IS a baseline to compare
+ * it against.
+ */
+export const shouldRefuseOverwrite = ({ isOverwrite, forceStale = false, knownShape, destinationShape }) => {
+    if (!isOverwrite || forceStale || !knownShape) return false
+    return Boolean(destinationShape) && destinationShape !== knownShape
+}
+
+/**
+ * A baseline entry is either the bare shape string older runs wrote, or
+ * `{ shape, versions: { <tier>: { documentVersion, updatedAt } } }` — the
+ * versions both tiers were at when the shape was confirmed identical on both.
+ */
+export const baselineShape = (entry) => (typeof entry === 'string' ? entry : entry?.shape)
+
 export const planChanged = ({ audit, baseline = {} }) => {
     const push = audit.missing.map(({ spaceId, projectId }) => ({ spaceId, projectId, why: 'missing' }))
     const refuse = []
     for (const row of audit.differs) {
         const key = `${row.spaceId}/${row.projectId}`
-        const last = baseline[key]
+        const last = baselineShape(baseline[key])
         if (!last) refuse.push({ ...row, why: 'no baseline — cannot tell which side changed' })
         else if (row.destination.shape !== last) refuse.push({ ...row, why: 'both sides changed' })
         else push.push({ spaceId: row.spaceId, projectId: row.projectId, why: 'changed here' })
@@ -107,19 +158,39 @@ export const planChanged = ({ audit, baseline = {} }) => {
  * matching project is known-synced from then on; a later edit on one side
  * reads as "changed here", on both sides as "refused".
  */
-export const baselineFromAgreement = ({ source, destination }) => {
+//
+// Given the two tiers' names, each entry also records both tiers' versions at
+// the moment of agreement, so a later reader (start-check) whose versions
+// still match can call the pair identical without fetching either document.
+const versionOf = (sig) => ({ documentVersion: sig.documentVersion ?? 0, updatedAt: sig.updatedAt ?? 0 })
+export const baselineFromAgreement = ({ source, destination, sourceTier, destinationTier }) => {
     const agreed = {}
     for (const spaceId of Object.keys(source)) {
         for (const [projectId, a] of Object.entries(source[spaceId])) {
             const b = destination[spaceId]?.[projectId]
-            if (b && a.shape === b.shape) agreed[`${spaceId}/${projectId}`] = b.shape
+            if (!b || a.shape !== b.shape) continue
+            agreed[`${spaceId}/${projectId}`] = sourceTier && destinationTier
+                ? { shape: b.shape, versions: { [sourceTier]: versionOf(a), [destinationTier]: versionOf(b) } }
+                : b.shape
         }
     }
     return agreed
 }
 
+/**
+ * `--rebuild-baseline`: the baseline for `destinationTier`, recorded from
+ * nothing but today's agreement. Pure. `agreed` replaces the old entries
+ * wholesale — a stale baseline matching nothing is exactly what this repairs,
+ * so merging into it would keep the rot. `differs` is what was left out.
+ */
+export const planRebuildBaseline = ({ source, destination, sourceTier, destinationTier }) => {
+    const agreed = baselineFromAgreement({ source, destination, sourceTier, destinationTier })
+    const { missing, extra, differs } = planAudit({ source, destination })
+    return { agreed, differs, onlyOneSide: missing.length + extra.length }
+}
+
 // The baseline lives beside the data it describes, keyed by destination so a
-// box that pushes to staging and to prod keeps them apart.
+// box that pushes to the dev tier and to prod keeps them apart.
 const baselinePath = () => {
     // Same precedence as serverXR itself: the process environment wins over
     // .env.local, so a stack started with DATA_ROOT=… inline and this script
@@ -316,17 +387,22 @@ const readEnv = () => {
 }
 
 const parseArgs = (argv) => {
-    const args = { from: null, to: null, space: null, assets: true, force: false, dryRun: false, allowProduction: false, audit: false, changed: false }
+    const args = { from: null, to: null, space: null, assets: true, force: false, forceStale: false, dryRun: false, allowProduction: false, audit: false, changed: false, rebuildBaseline: false }
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
-        if (arg === '--from') args.from = argv[++i]
-        else if (arg === '--to') args.to = argv[++i]
+        if (arg === '--from') args.from = resolveTier(argv[++i])
+        else if (arg === '--to') args.to = resolveTier(argv[++i])
         else if (arg === '--space') args.space = argv[++i]
         else if (arg === '--no-assets') args.assets = false
         else if (arg === '--force') args.force = true
+        // --force alone still refuses a project the baseline shows the
+        // destination moved on since the last sync (see the write loop below)
+        // — this is the second, explicit word needed to overwrite THAT.
+        else if (arg === '--force-stale') args.forceStale = true
         else if (arg === '--dry-run') args.dryRun = true
         else if (arg === '--audit') args.audit = true
         else if (arg === '--changed') args.changed = true
+        else if (arg === '--rebuild-baseline') args.rebuildBaseline = true
         else if (arg === '--allow-production') args.allowProduction = true
     }
     return args
@@ -334,10 +410,98 @@ const parseArgs = (argv) => {
 
 const destination_has = (inventory, spaceId) => Object.prototype.hasOwnProperty.call(inventory, spaceId)
 
-const main = async () => {
+// A single tier's authenticated fetch — shared by main() below and by any
+// other script that needs to read a tier's spaces/projects/documents without
+// re-typing the auth-header-plus-timeout wiring (start-check.mjs's space
+// check reuses this, via readSignatures, rather than a second copy).
+export const call = async (tier, pathname, options = {}, timeout = TIMEOUT_MS) => fetch(tier.base + pathname, {
+    ...options,
+    headers: {
+        ...(options.body && !(options.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
+        ...(tier.token ? { Authorization: `Bearer ${tier.token}` } : {}),
+        ...(options.headers || {})
+    },
+    signal: AbortSignal.timeout(timeout)
+})
+
+export const listSpaces = async (tier) => {
+    const res = await call(tier, '/api/spaces')
+    if (!res.ok) throw new Error(`${tier.base} /api/spaces → HTTP ${res.status}`)
+    const body = await res.json()
+    return (body.spaces || body || []).map((s) => s.id)
+}
+
+export const listProjects = async (tier, spaceId) => {
+    const res = await call(tier, `/api/spaces/${spaceId}/projects`)
+    if (!res.ok) return []
+    const body = await res.json()
+    return (body.projects || body || []).map((p) => p.id)
+}
+
+// The cheap half of a comparison: `documentVersion`/`updatedAt` from the SAME
+// list response `listProjects` already reads, without a second request per
+// project. A document's PUT/ops routes bump `documentVersion` on every write
+// (serverXR/src/routes/projectRoutes.js), so "the version I last saw here
+// hasn't moved" is proof nothing changed — no need to fetch and hash the
+// document itself to know that. start-check.mjs's space check uses this as
+// its everyday path and only reaches for `readSignatures` (below) when it
+// truly needs to compare content, not just detect motion.
+export const listProjectMetas = async (tier, spaceId) => {
+    const res = await call(tier, `/api/spaces/${spaceId}/projects`)
+    if (!res.ok) return []
+    const body = await res.json()
+    return (body.projects || body || []).map((p) => ({
+        id: p.id,
+        documentVersion: Number.isFinite(Number(p.documentVersion)) ? Number(p.documentVersion) : 0,
+        updatedAt: Number.isFinite(Number(p.updatedAt)) ? Number(p.updatedAt) : 0
+    }))
+}
+
+export const readInventory = async (tier, only) => {
+    const spaces = (await listSpaces(tier)).filter((id) => !only || id === only)
+    const inventory = {}
+    for (const spaceId of spaces) inventory[spaceId] = await listProjects(tier, spaceId)
+    return inventory
+}
+
+// The audit's inventory: every document, reduced to a signature. Far
+// slower than listing ids — one request per project per tier — and the
+// only reading that can see a slug whose contents have diverged.
+//
+// Exported so other tools reuse the SAME comparison instead of copying it —
+// scripts/start-check.mjs's space check calls this directly to compare this
+// box's held spaces against the dev tier.
+export const readSignatures = async (tier, only) => {
+    const spaces = (await listSpaces(tier)).filter((id) => !only || id === only)
+    const inventory = {}
+    for (const spaceId of spaces) {
+        inventory[spaceId] = {}
+        // Versions ride along from the same list response, so a baseline built
+        // from these signatures can record where each tier was when it agreed.
+        for (const { id: projectId, documentVersion, updatedAt } of await listProjectMetas(tier, spaceId)) {
+            const res = await call(tier, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
+            if (!res.ok) continue
+            const body = await res.json()
+            inventory[spaceId][projectId] = { ...documentSignature(body.document || body), documentVersion, updatedAt }
+        }
+    }
+    return inventory
+}
+
+// Exported read-only accessor: start-check.mjs and the write-guard scripts
+// need to read "what did we last know the destination to hold" without
+// duplicating the file layout, but must never call writeBaseline (they never
+// write to a tier's baseline — only a real sync run earns that).
+export { readBaseline }
+
+export const main = async () => {
     const args = parseArgs(process.argv.slice(2))
+    if (args.rebuildBaseline) {
+        args.from ||= 'local'
+        args.to ||= 'dev'
+    }
     if (!TIERS[args.from] || !TIERS[args.to] || args.from === args.to) {
-        console.error('usage: node scripts/tier-sync.mjs --from <local|staging|prod> --to <local|staging|prod>')
+        console.error('usage: node scripts/tier-sync.mjs --from <local|dev|prod> --to <local|dev|prod>')
         process.exit(1)
     }
 
@@ -351,53 +515,32 @@ const main = async () => {
         process.exit(1)
     }
 
-    const call = async (tier, pathname, options = {}, timeout = TIMEOUT_MS) => fetch(tier.base + pathname, {
-        ...options,
-        headers: {
-            ...(options.body && !(options.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
-            ...(tier.token ? { Authorization: `Bearer ${tier.token}` } : {}),
-            ...(options.headers || {})
-        },
-        signal: AbortSignal.timeout(timeout)
-    })
-
-    const listSpaces = async (tier) => {
-        const res = await call(tier, '/api/spaces')
-        if (!res.ok) throw new Error(`${tier.base} /api/spaces → HTTP ${res.status}`)
-        const body = await res.json()
-        return (body.spaces || body || []).map((s) => s.id)
-    }
-
-    const listProjects = async (tier, spaceId) => {
-        const res = await call(tier, `/api/spaces/${spaceId}/projects`)
-        if (!res.ok) return []
-        const body = await res.json()
-        return (body.projects || body || []).map((p) => p.id)
-    }
-
-    const readInventory = async (tier, only) => {
-        const spaces = (await listSpaces(tier)).filter((id) => !only || id === only)
-        const inventory = {}
-        for (const spaceId of spaces) inventory[spaceId] = await listProjects(tier, spaceId)
-        return inventory
-    }
-
-    // The audit's inventory: every document, reduced to a signature. Far
-    // slower than listing ids — one request per project per tier — and the
-    // only reading that can see a slug whose contents have diverged.
-    const readSignatures = async (tier, only) => {
-        const spaces = (await listSpaces(tier)).filter((id) => !only || id === only)
-        const inventory = {}
-        for (const spaceId of spaces) {
-            inventory[spaceId] = {}
-            for (const projectId of await listProjects(tier, spaceId)) {
-                const res = await call(tier, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
-                if (!res.ok) continue
-                const body = await res.json()
-                inventory[spaceId][projectId] = documentSignature(body.document || body)
-            }
+    if (args.rebuildBaseline) {
+        const pair = `${args.from} ↔ ${args.to}`
+        console.log(`tier-sync --rebuild-baseline  ${pair}${args.dryRun ? '  (dry run)' : ''}  (reading every document on both tiers — this takes a minute)`)
+        const [source, destination] = await Promise.all([readSignatures(from, args.space), readSignatures(to, args.space)])
+        const { agreed, differs, onlyOneSide } = planRebuildBaseline({ source, destination, sourceTier: args.from, destinationTier: args.to })
+        const bySpace = {}
+        for (const key of Object.keys(agreed)) { const s = key.split('/')[0]; bySpace[s] = (bySpace[s] || 0) + 1 }
+        const baseline = readBaseline()
+        const old = baseline[args.to] || {}
+        const oldStillTrue = Object.keys(old).filter((k) => baselineShape(old[k]) === baselineShape(agreed[k])).length
+        console.log(`\nwill record ${Object.keys(agreed).length} project(s) identical on both tiers, with both tiers' versions:`)
+        console.log(`   ${Object.entries(bySpace).sort().map(([s, n]) => `${s} ${n}`).join(' · ') || '(none)'}`)
+        if (differs.length) {
+            console.log(`\nleft out — content differs (${differs.length}):`)
+            differs.forEach((r) => console.log(`   ${r.spaceId}/${r.projectId}`))
         }
-        return inventory
+        if (onlyOneSide) console.log(`\nleft out — on one tier only: ${onlyOneSide}`)
+        console.log(`\nreplaces the ${Object.keys(old).length} entr(ies) now under "${args.to}" (${oldStillTrue} of them still true) in ${baselinePath()}`)
+        console.log(`summary: ${Object.keys(agreed).length} identical recorded · ${differs.length} differing left out · ${onlyOneSide} on one tier only`)
+        if (args.dryRun) {
+            console.log('dry-run: baseline not written; nothing is ever written to a tier.')
+            return
+        }
+        writeBaseline({ ...baseline, [args.to]: agreed })
+        console.log('baseline written. nothing was written to any tier.')
+        return
     }
 
     if (args.audit) {
@@ -431,6 +574,11 @@ const main = async () => {
 
     console.log(`tier-sync  ${args.from} → ${args.to}${args.changed ? '  --changed' : ''}${args.dryRun ? '  (dry run)' : ''}`)
     let plan
+    // Only set on the plain (non---changed) path — which project ids the
+    // destination already held, before anything was copied. Used below to
+    // tell "missing" (a pure create, always safe) apart from "--force
+    // overwrite" (the write path that used to ignore the baseline entirely).
+    let destinationIdsBySpace = null
     // Read even on a plain run: every successful copy records a baseline
     // entry, and writing back a file that started empty would erase the rest.
     const baseline = readBaseline()
@@ -438,13 +586,14 @@ const main = async () => {
         console.log('reading every document on both tiers to find what differs — this takes a minute')
         const signatures = { source: await readSignatures(from, args.space), destination: await readSignatures(to, args.space) }
         const audit = planAudit(signatures)
-        // What the tiers agree on today is the baseline for tomorrow. Written
-        // even on a dry run: it records an observation, not a change to any
-        // tier, and it is what lets the NEXT run tell "I edited this" from
-        // "we both did".
-        const agreed = baselineFromAgreement(signatures)
+        // What the tiers agree on today is the baseline for tomorrow — it is
+        // what lets the NEXT run tell "I edited this" from "we both did". A
+        // dry run uses it for this plan but never writes it: a dry run writes
+        // nothing, anywhere (it used to write this file, and a rebuilt
+        // baseline could be clobbered by someone "just looking").
+        const agreed = baselineFromAgreement({ ...signatures, sourceTier: args.from, destinationTier: args.to })
         baseline[args.to] = { ...(baseline[args.to] || {}), ...agreed }
-        writeBaseline(baseline)
+        if (!args.dryRun) writeBaseline(baseline)
         const { push, refuse } = planChanged({ audit, baseline: baseline[args.to] })
         if (refuse.length) {
             console.log(`\nREFUSED (${refuse.length}) — will not overwrite work on ${args.to}:`)
@@ -463,6 +612,7 @@ const main = async () => {
     } else {
         const source = await readInventory(from, args.space)
         const destination = await readInventory(to, args.space)
+        destinationIdsBySpace = destination
         plan = planSync({ source, destination, force: args.force })
     }
 
@@ -500,6 +650,27 @@ const main = async () => {
 
         for (const projectId of item.projects) {
             try {
+                // A plain-run --force overwrite of a project the destination
+                // ALREADY holds is the write path that used to ignore the
+                // baseline entirely. "missing" projects (not in
+                // destinationIdsBySpace) are always a pure create and need no
+                // check — nothing there yet to be stale relative to.
+                const key = `${item.spaceId}/${projectId}`
+                const isOverwrite = Boolean(destinationIdsBySpace?.[item.spaceId]?.includes(projectId))
+                let destShape = null
+                const knownShape = baselineShape(baseline[args.to]?.[key])
+                if (isOverwrite && !args.forceStale && knownShape) {
+                    const destDocRes = await call(to, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
+                    const destBody = destDocRes.ok ? await destDocRes.json().catch(() => null) : null
+                    destShape = destBody ? documentSignature(destBody.document || destBody).shape : null
+                }
+                if (shouldRefuseOverwrite({ isOverwrite, forceStale: args.forceStale, knownShape, destinationShape: destShape })) {
+                    failed++
+                    console.log(`  ✗ ${key} — REFUSED: ${args.to} changed since the last sync (baseline mismatch).`)
+                    console.log(`      look at both, then: --space ${item.spaceId} --force --force-stale to overwrite anyway, or pull ${args.to}'s copy down first.`)
+                    continue
+                }
+
                 const docRes = await call(from, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
                 if (!docRes.ok) throw new Error(`source document HTTP ${docRes.status}`)
                 const body = await docRes.json()
@@ -545,7 +716,7 @@ const main = async () => {
         }
     }
 
-    if (copied) writeBaseline(baseline)
+    if (copied && !args.dryRun) writeBaseline(baseline)
     console.log(`\ncopied ${copied}, failed ${failed}`)
     if (failed) process.exitCode = 1
 }

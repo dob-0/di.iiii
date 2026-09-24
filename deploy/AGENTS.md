@@ -13,10 +13,11 @@ Short routing guide for AI agents working in `deploy/`.
 - [docs/deploy/LIVE_DEPLOY.md](../docs/deploy/LIVE_DEPLOY.md) is the current deploy truth.
   [docs/deploy/VPS_DOCKER_DEPLOY.md](../docs/deploy/VPS_DOCKER_DEPLOY.md) documents the GHCR + SSH
   deploy path: [.github/workflows/deploy-vps.yml](../.github/workflows/deploy-vps.yml) /
-  [deploy-vps-staging.yml](../.github/workflows/deploy-vps-staging.yml) build/push
+  [deploy-vps-dev.yml](../.github/workflows/deploy-vps-dev.yml) build/push
   `dii-server`/`dii-client` images to GHCR on push to `main`/`dev`, then SSH into the VPS to
   `docker compose -f docker-compose.yml -f docker-compose.prod.yml pull && up -d`.
-- Required secrets/variables are configured on both prod and staging as of 2026-07-16 — this is
+- Required secrets/variables are configured on both prod and the dev tier (dev.diiii.xyz; GitHub
+  environment `dev`) as of 2026-07-16 — this is
   the live path, not a future/additive one.
 - cPanel (`publish-cpanel-prebuilt-v2.yml`, `cpanel-staging`/`cpanel-production`) is untouched and
   remains the documented fallback until its hosting term expires.

@@ -21,6 +21,8 @@ const {
     readJson,
     readProjectDocument,
     readProjectIndex,
+    countProjectsBySpace,
+    setProjectState,
     readProjectOps,
     writeJson
 } = require('./projectStore.js')
@@ -65,6 +67,33 @@ describe('projectStore', () => {
 
         await deleteProject(spacesDir, 'main', 'alpha-project')
         expect(await readProjectIndex(spacesDir)).toEqual({})
+    })
+
+    // The space list could not say what a space HOLDS — a card named the
+    // project its door opens on, or nothing, so the Open Space read as empty
+    // (2efc05c7, re-applied for the layers decision, 2026-09-23).
+    it('countProjectsBySpace counts each space, and what is on show, in one query', async () => {
+        const spacesDir = await createSpacesDir()
+
+        expect(await countProjectsBySpace()).toEqual({})
+
+        await ensureProject(spacesDir, 'main', 'alpha-project', { title: 'Alpha' })
+        await ensureProject(spacesDir, 'open', 'open-jam', { title: 'Open Jam' })
+        await ensureProject(spacesDir, 'open', 'scratch', { title: 'Scratch' })
+        await ensureProject(spacesDir, 'open', 'old', { title: '[archived] Old' })
+        await setProjectState('scratch', 'draft')
+
+        expect(await countProjectsBySpace()).toEqual({
+            main: { projects: 1, published: 1 },
+            open: { projects: 3, published: 1 }
+        })
+
+        // Trashed work is held by nothing.
+        await deleteProject(spacesDir, 'open', 'scratch')
+        expect(await countProjectsBySpace()).toEqual({
+            main: { projects: 1, published: 1 },
+            open: { projects: 2, published: 1 }
+        })
     })
 
     it('findProjectById returns null for unknown projects', async () => {

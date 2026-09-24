@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import {
     collectDependencyDrift,
     collectMissingSpaces,
+    pagesAlreadyHere,
     formatDependencyDriftWarning,
     formatFetchAgeNote,
     formatSpaceDriftWarning,
@@ -311,11 +312,13 @@ const noteSpaceDrift = async () => {
             })
             if (!response.ok) return null
             const body = await response.json()
+            for (const s of body?.spaces || []) if (s?.id && s.publishedProjectId) published.set(s.id, s.publishedProjectId)
             return (body?.spaces || []).map((s) => s.id)
         } catch {
             return null
         }
     }
+    const published = new Map()
 
     const local = await listSpaces(parsedApiBase.apiBaseUrl, env.API_TOKEN)
     if (!local) return
@@ -323,11 +326,23 @@ const noteSpaceDrift = async () => {
     const tiers = []
     for (const [tier, base, token] of [
         ['prod', env.PROD_API_URL || 'https://di-studio.xyz/serverXR', env.PROD_API_TOKEN],
-        ['staging', env.LIVE_API_URL || 'https://staging.di-studio.xyz/serverXR', env.LIVE_API_TOKEN],
+        ['dev', env.LIVE_API_URL || 'https://dev.diiii.xyz/serverXR', env.LIVE_API_TOKEN],
     ]) {
         tiers.push({ tier, ids: await listSpaces(base, token) })
     }
     const missing = collectMissingSpaces(local, tiers)
+    // a missing name whose page this box already has (folded into another space) is not stale data
+    const localProjects = new Set()
+    for (const pid of new Set([...missing.keys()].map((id) => published.get(id)).filter(Boolean))) {
+        try {
+            const r = await fetch(`${parsedApiBase.apiBaseUrl.replace(/\/+$/, '')}/api/projects/${encodeURIComponent(pid)}`, {
+                headers: env.API_TOKEN ? { Authorization: `Bearer ${env.API_TOKEN}` } : {},
+                signal: AbortSignal.timeout(5000),
+            })
+            if (r.ok) localProjects.add(pid)
+        } catch { /* offline: keep the warning */ }
+    }
+    for (const id of pagesAlreadyHere(missing, published, localProjects).keys()) missing.delete(id)
 
     // Only record a completed comparison — a failed one should retry next boot,
     // not go quiet for half a day.

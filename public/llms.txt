@@ -1,0 +1,28 @@
+# di.iiii
+
+> di.iiii — public spaces on the open web. Make a space, hand out the address — a link while it runs, a file when it ends. No app, no store, nothing to install; it opens in a browser, or in a headset. Made by the studio di.i (thedi.studio); the code is open, AGPL-3.0.
+
+Apps, scripts and AIs are welcome to read everything di.iiii shows the public, for answering questions and for training alike. Please identify yourself with a User-Agent carrying your program's name, version and a contact:
+
+    User-Agent: YourApp/1.0 (you@example.com)
+    User-Agent: your-bot/0.2 (+https://example.com/bot)
+
+Identified apps and crawlers get 300 API reads a minute per address; anonymous programs (curl, python-requests, no User-Agent…) get 30. Over the limit the answer is 429 with Retry-After. Off-limits: /admin, /preferences, private spaces and anything behind sign-in. Details: https://diiii.xyz/for-apps
+
+## Start here
+
+- [For apps](https://diiii.xyz/for-apps): how to identify, the limits, what is off-limits, how to ask for more
+- [Spaces](https://diiii.xyz/spaces): every public space, one card each
+- [Wiki](https://diiii.xyz/wiki): what di.iiii is and how it works, in plain words
+- [Privacy](https://diiii.xyz/privacy): what di.iiii stores, including about programs
+- [Terms](https://diiii.xyz/terms): licence, content ownership, limits
+
+## Public API
+
+- `GET https://diiii.xyz/serverXR/api/spaces/{space}`: a public space's metadata
+- `GET https://diiii.xyz/serverXR/api/spaces/{space}/scene`: a public space's scene
+
+## Optional
+
+- [Source code](https://github.com/dob-0/di.iiii): the whole platform, AGPL-3.0
+- Contact: info@thedi.studio

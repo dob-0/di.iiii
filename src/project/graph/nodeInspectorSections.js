@@ -48,7 +48,14 @@ const portToInspectorField = (port, node = null) => {
     if (port.type === 'number') return { label, path, type: 'number', min: port.min, max: port.max, step: port.step, portType: 'number', default: port.default }
     if (port.type === 'string') {
         const isMultiline = port.id === 'body' || port.id === 'text' || port.id === 'content'
-        return { label, path, type: isMultiline ? 'textarea' : 'text', portType: 'string' }
+        // `note` is a sentence the field must be read with — the first is a
+        // licence line beside a Send Out's name (topOperators.js); `maxLength`
+        // is the server's own limit, stated at the box rather than after it.
+        return {
+            label, path, type: isMultiline ? 'textarea' : 'text', portType: 'string',
+            ...(port.note ? { note: port.note } : {}),
+            ...(port.maxLength ? { maxLength: port.maxLength } : {})
+        }
     }
     if (port.type === 'vec3') return { label, path, type: 'vec3', portType: 'vec3', default: port.default }
     if (port.type === 'geometry' || port.type === 'texture' || port.type === 'signal') {

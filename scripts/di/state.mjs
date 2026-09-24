@@ -13,6 +13,7 @@ import fsp from 'node:fs/promises'
 import path from 'node:path'
 
 import { paths } from './paths.mjs'
+import { probeHealth } from './probe.mjs'
 
 export const DEFAULT_PORT = 4000
 
@@ -129,6 +130,43 @@ export const readCert = (home) => {
         return null
     }
 }
+
+/**
+ * Is this install answering — asked the way a browser would.
+ *
+ * With a certificate the server speaks https and only https, and the
+ * certificate is for a NAME: probing http://localhost then reported "not
+ * running" about a server that was serving the room perfectly. One helper, so
+ * every command asks the same correct question.
+ *
+ * Here rather than in cli.mjs because `di stage` needs the same three answers
+ * and a second copy of them would be a second chance to get them wrong.
+ */
+export const alive = async (home, port) => {
+    const cert = readCert(home)
+    if (cert && await probeHealth(port, cert.name, '/serverXR', 'https')) return true
+    return probeHealth(port)
+}
+
+/**
+ * The address to PRINT for this install. The certificate's name when there is
+ * one — that is the address the app itself shows, the one on the phones, and
+ * the only one with a padlock. Anything that tells a person where their di.iiii
+ * is must agree with what their browser shows.
+ */
+export const publicUrl = (home, port) => {
+    const cert = readCert(home)
+    return cert ? `https://${cert.name}${port === 443 ? '' : `:${port}`}` : localUrl(port)
+}
+
+/**
+ * Where this CLI talks to its own server. Not `localUrl(port)`: an install with
+ * a certificate answers https on its name and nothing else, and on 443 the
+ * loopback URL has no port in it at all — so every request went to :80, which
+ * is either nothing ("could not ask this di.iiii") or some other server that
+ * answers 200 to anything (`di follow` then believed every space existed).
+ */
+export const apiBase = (home, port) => `${publicUrl(home, port)}/serverXR`
 
 export const localUrl = (port) => `http://localhost${portPart(port)}`
 export const lanUrl = (address, port, scheme = 'http') => `${scheme}://${address}${portPart(port)}`

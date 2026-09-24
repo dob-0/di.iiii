@@ -177,3 +177,90 @@ describe('reached through the shim', () => {
         expect(result.code).toBe(0)
     })
 })
+
+// `di stage` turns this machine into the one under the projector: it writes an
+// autostart entry, a line in di.env and a follow. Every one of those is a thing
+// a typo must NOT do. So routing is held to the same bar as `di keeper get`:
+// nothing but `join` may write anything, and `join` needs a space and a --from
+// before it does.
+describe('the stage command', () => {
+    it('is a command, and has a page of its own reachable both ways', () => {
+        expect(Object.keys(COMMANDS)).toContain('stage')
+        const a = di(emptyHome(), ['stage', '--help'])
+        const b = di(emptyHome(), ['help', 'stage'])
+        expect(a.out).toContain('make this machine the one under the projector')
+        expect(a.out).toContain('--at ADDRESS')
+        expect(b.out).toBe(a.out)
+    })
+
+    it('reports rather than joins when no sub-word is given, and writes nothing', () => {
+        const home = installedHome()
+        const result = di(home, ['stage'])
+        expect(result.code).toBe(1)
+        expect(result.out).toContain('this machine is not a stage')
+        expect(fs.existsSync(path.join(home, 'stage'))).toBe(false)
+        expect(fs.existsSync(path.join(home, 'di.env'))).toBe(false)
+    })
+
+    it('refuses a sub-word it does not know instead of guessing at one', () => {
+        const home = installedHome()
+        const result = di(home, ['stage', 'joinn', 'x', '--from', 'https://nowhere.invalid'])
+        expect(result.code).toBe(1)
+        expect(`${result.out}${result.err}`).toContain('stage join | leave | status | restart')
+        expect(fs.existsSync(path.join(home, 'stage'))).toBe(false)
+    })
+
+    it('asks for the space and the address before it touches anything', () => {
+        const home = installedHome()
+        const result = di(home, ['stage', 'join', 'stage'])
+        expect(result.code).toBe(1)
+        expect(result.err).toContain('which space, and where from?')
+        expect(fs.existsSync(path.join(home, 'stage'))).toBe(false)
+    })
+
+    it('refuses an --at that is not an address, before any network', () => {
+        const result = di(installedHome(), ['stage', 'join', 'stage', '--from', 'https://x.invalid', '--at', 'asuz'])
+        expect(result.code).toBe(1)
+        expect(result.err).toContain('--at wants an IPv4 or IPv6 literal')
+    })
+
+    it('--dry-run prints the plan and changes nothing at all', () => {
+        const home = installedHome()
+        const result = di(home, ['stage', 'join', 'stage', '--from', 'https://local.thedi.studio', '--dry-run'])
+        expect(result.code).toBe(0)
+        expect(result.out).toContain('nothing was changed')
+        expect(result.out).toContain('stage run')
+        expect(result.out).toContain('stage/stage.json')
+        expect(fs.existsSync(path.join(home, 'stage'))).toBe(false)
+        expect(fs.existsSync(path.join(home, 'di.env'))).toBe(false)
+    })
+
+    it('says a machine that never joined is not a stage, rather than removing things', () => {
+        const home = installedHome()
+        const result = di(home, ['stage', 'leave'])
+        expect(result.code).toBe(1)
+        expect(result.out).toContain('this machine is not a stage')
+    })
+
+    it('answers --json with the same object a person is shown', () => {
+        const result = di(installedHome(), ['stage', 'status', '--json'])
+        expect(result.code).toBe(1)
+        const parsed = JSON.parse(result.out)
+        expect(parsed).toEqual({ ok: false, joined: false, rows: [] })
+    })
+
+    it('reads --project, --browser and --name as values, so a path with a space survives', () => {
+        expect(parseArgs(['stage', 'join', 'stage', '--from', 'u', '--project', 'wall',
+            '--browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '--name', 'win'])).toEqual({
+            _: ['stage', 'join', 'stage'],
+            flags: {
+                from: 'u', project: 'wall', name: 'win',
+                browser: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+            }
+        })
+    })
+
+    it('names the stage in the general usage, so nobody has to already know', () => {
+        expect(di(emptyHome(), ['help']).out).toContain('stage join')
+    })
+})

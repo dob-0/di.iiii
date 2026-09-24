@@ -132,6 +132,52 @@ describe('the jam surface', () => {
         expect(within(sheet).getByText('photo')).toBeInTheDocument()
     })
 
+    // A stranger came with their own picture or their own words, not a torus.
+    // photo and text are the first two tiles a thumb reaches, shapes after.
+    it('leads the add sheet with photo and text, shapes after', () => {
+        mount()
+        fireEvent.click(screen.getByRole('button', { name: 'Add something' }))
+        const sheet = screen.getByRole('dialog')
+        const tileLabels = within(sheet).getAllByText(/^(photo|text|box|sphere|cone|torus)$/)
+            .map((node) => node.textContent)
+        expect(tileLabels.slice(0, 2)).toEqual(['photo', 'text'])
+        expect(tileLabels.slice(2)).toEqual(expect.arrayContaining(['box', 'sphere', 'cone', 'torus']))
+    })
+
+    // Gap (b): there was no way to hand this room to anyone. One control,
+    // reachable next to the + at the bottom of the screen, not stranded in
+    // the topbar where a one-handed phone cannot reach it.
+    describe('sharing the jam', () => {
+        const originalShare = navigator.share
+        const originalClipboard = navigator.clipboard
+
+        afterEach(() => {
+            if (originalShare === undefined) delete navigator.share
+            else navigator.share = originalShare
+            Object.defineProperty(navigator, 'clipboard', { value: originalClipboard, configurable: true })
+        })
+
+        it('offers the native share sheet when the device has one', async () => {
+            const share = vi.fn().mockResolvedValue(undefined)
+            navigator.share = share
+            mount()
+            fireEvent.click(screen.getByRole('button', { name: 'Share this jam' }))
+            await Promise.resolve()
+            expect(share).toHaveBeenCalledWith(expect.objectContaining({ url: expect.stringContaining('/open') }))
+        })
+
+        it('falls back to copying the plain /open link when there is no share sheet', async () => {
+            delete navigator.share
+            const writeText = vi.fn().mockResolvedValue(undefined)
+            Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+            mount()
+            fireEvent.click(screen.getByRole('button', { name: 'Share this jam' }))
+            await Promise.resolve()
+            expect(writeText).toHaveBeenCalledWith(expect.stringContaining('/open'))
+            expect(await screen.findByText('Link copied')).toBeInTheDocument()
+        })
+    })
+
     it('puts what you add on the ground in front of you, where you are looking', () => {
         mount()
         fireEvent.click(screen.getByRole('button', { name: 'Add something' }))

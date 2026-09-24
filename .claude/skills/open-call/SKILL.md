@@ -49,10 +49,10 @@ When the call ends (beyond_form pattern, keep the page's existing design):
 
 ### 4. Deploy
 
-`node scripts/sync-space.mjs --tier staging` from the page repo (token:
+`node scripts/sync-space.mjs --tier dev` (the dev tier) from the page repo (token:
 `LIVE_API_TOKEN` from di.iiii `serverXR/.env.local` via the repo's
 `.env.local` — the script only reads its own repo root). Verify on
-staging.di-studio.xyz with real screenshots at device DPR, then `--tier prod`.
+dev.diiii.xyz with real screenshots at device DPR, then `--tier prod`.
 Keep `projectId` stable across the transform — it anchors the published URL.
 
 ## Rules that bit us

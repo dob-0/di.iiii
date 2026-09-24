@@ -11,11 +11,13 @@ const { values } = parseArgs({
     }
 })
 
-const deployEnv = String(values['deploy-env'] || process.env.DEPLOY_ENV || '').trim()
+// `dev` names the dev tier; its deploy-env identifier is still `staging`.
+const rawDeployEnv = String(values['deploy-env'] || process.env.DEPLOY_ENV || '').trim()
+const deployEnv = rawDeployEnv === 'dev' ? 'staging' : rawDeployEnv
 const packagePath = path.resolve(process.cwd(), values['server-package'] || 'serverXR/package.json')
 
 if (!deployEnv) {
-    throw new Error('Missing deploy environment. Pass --deploy-env <staging|production> or set DEPLOY_ENV.')
+    throw new Error('Missing deploy environment. Pass --deploy-env <dev|production> or set DEPLOY_ENV.')
 }
 
 if (!['staging', 'production'].includes(deployEnv)) {

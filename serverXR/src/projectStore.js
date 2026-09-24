@@ -132,10 +132,17 @@ const s = () => {
     setPosition:      db.prepare('UPDATE projects SET position = ?, updated_at = ? WHERE id = ?'),
     setState:         db.prepare('UPDATE projects SET state = ?, updated_at = ? WHERE id = ?'),
     selectBySlug:     db.prepare('SELECT * FROM projects WHERE space_id = ? AND slug = ?'),
+    // scripts/project-move.mjs writes one row per move; the resolver below
+    // reads the latest one for a given (old space, old id-or-slug).
+    selectLatestMove: db.prepare('SELECT * FROM project_moves WHERE from_space = ? AND (project_id = ? OR old_slug = ?) ORDER BY moved_at DESC LIMIT 1'),
     // The index is what resolves a project id to its space, so a trashed
     // project must be absent from it — otherwise its url keeps working after it
     // was deleted, which is the opposite of what delete means.
     selectAllIndex:   db.prepare('SELECT id, space_id FROM projects WHERE deleted_at IS NULL'),
+    // How many projects each space holds, and how many of those are on show —
+    // the /contents rule: state live, and not wearing the pre-2026-09-10
+    // "[archived]" title. Trashed rows are not held by anything.
+    countBySpace:     db.prepare("SELECT space_id, COUNT(*) AS n, SUM(CASE WHEN COALESCE(state, 'live') = 'live' AND ltrim(COALESCE(title, '')) NOT LIKE '[archived]%' THEN 1 ELSE 0 END) AS shown FROM projects WHERE deleted_at IS NULL GROUP BY space_id"),
     insert:           db.prepare('INSERT INTO projects (id, space_id, slug, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
     upsert:           db.prepare('INSERT OR REPLACE INTO projects (id, space_id, slug, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
     update:           db.prepare('UPDATE projects SET slug=?, title=?, document_version=?, source=?, updated_at=?, last_touched_at=? WHERE id=?'),
@@ -143,7 +150,7 @@ const s = () => {
     opsSelect:        db.prepare('SELECT data FROM project_ops WHERE project_id = ? ORDER BY version ASC, seq ASC'),
     opsSelectSince:   db.prepare('SELECT data FROM project_ops WHERE project_id = ? AND version > ? ORDER BY version ASC, seq ASC'),
     opsDeleteAll:     db.prepare('DELETE FROM project_ops WHERE project_id = ?'),
-    opsInsert:        db.prepare('INSERT INTO project_ops (project_id, version, data, created_at) VALUES (?, ?, ?, ?)'),
+    opsInsert:        db.prepare('INSERT INTO project_ops (project_id, version, data, created_at, actor, actor_type, actor_label) VALUES (?, ?, ?, ?, ?, ?, ?)'),
     opsCount:         db.prepare('SELECT COUNT(*) as cnt FROM project_ops WHERE project_id = ?'),
     opsTrim:          db.prepare('DELETE FROM project_ops WHERE project_id = ? AND seq IN (SELECT seq FROM project_ops WHERE project_id = ? ORDER BY seq ASC LIMIT ?)'),
     opsTrimAged:      db.prepare('DELETE FROM project_ops WHERE project_id = ? AND created_at < ?'),
@@ -156,10 +163,33 @@ const s = () => {
 const readProjectIndex = async (spacesDir) =>
   Object.fromEntries(s().selectAllIndex.all().map(r => [r.id, r.space_id]))
 
+// What each space holds, in ONE grouped query: { [spaceId]: { projects, published } }.
+//
+// The space list had no way to say what a space contains: a card named the
+// project its door opens on, or nothing at all, so the Open Space — which has
+// no door project because it is the communal room itself — read as an empty
+// card with everything made in it invisible (first fixed on 2026-08-24,
+// 2efc05c7, on a branch that never landed; re-applied for the layers decision,
+// 2026-09-23). Counted here rather than in the client: the alternative was one
+// project list per space on every load of /spaces, pulling whole lists to
+// learn their length. "Published" is the visitor's word for on show — the
+// same rows GET /api/spaces/:id/contents lists.
+const countProjectsBySpace = async () =>
+  Object.fromEntries(s().countBySpace.all().map((r) => [r.space_id, { projects: Number(r.n) || 0, published: Number(r.shown) || 0 }]))
+
 const loadProjectMeta = async (spacesDir, spaceId, projectId) =>
   rowToMeta(s().selectBySpace.get(projectId, spaceId))
 
 const findProjectBySlug = async (spaceId, slug) => rowToMeta(s().selectBySlug.get(spaceId, slug))
+
+// Was a project that no longer resolves in `fromSpaceId` moved out of it by
+// scripts/project-move.mjs? `segment` is whatever the visitor typed — an id
+// or a slug, either is checked. Returns { projectId, toSpace } or null.
+const findProjectMove = (fromSpaceId, segment) => {
+  if (!fromSpaceId || !segment) return null
+  const row = s().selectLatestMove.get(fromSpaceId, segment, segment)
+  return row ? { projectId: row.project_id, toSpace: row.to_space } : null
+}
 
 const upsertProjectMeta = async (spacesDir, spaceId, projectId, updates = {}) => {
   const db = getDb()
@@ -264,7 +294,7 @@ const writeProjectOps = async (spacesDir, spaceId, projectId, ops) => {
   getDb().transaction(() => {
     opsDeleteAll.run(projectId)
     for (const op of (Array.isArray(ops) ? ops : [])) {
-      opsInsert.run(projectId, op.version ?? 0, JSON.stringify(op), op.timestamp ?? now)
+      opsInsert.run(projectId, op.version ?? 0, JSON.stringify(op), op.timestamp ?? now, null, null, null)
     }
   })()
 }
@@ -284,13 +314,16 @@ const writeProjectOps = async (spacesDir, spaceId, projectId, ops) => {
 // is the retry/idempotency guard in POST .../ops, which matches opIds to spot a
 // resent batch — so the bound has to stay far longer than any retry. Days, not
 // minutes.
-const appendProjectOps = async (spacesDir, spaceId, projectId, ops, maxHistory = 500, maxAgeMs = 0) => {
+//
+// `actor` (opActor.js) is stamped into its own columns, not into the op.
+const appendProjectOps = async (spacesDir, spaceId, projectId, ops, maxHistory = 500, maxAgeMs = 0, actor = null) => {
   if (!Array.isArray(ops) || ops.length === 0) return
   const { opsInsert, opsCount, opsTrim, opsTrimAged } = s()
   const now = Date.now()
   getDb().transaction(() => {
     for (const op of ops) {
-      opsInsert.run(projectId, op.version ?? 0, JSON.stringify(op), op.timestamp ?? now)
+      opsInsert.run(projectId, op.version ?? 0, JSON.stringify(op), op.timestamp ?? now,
+        actor?.actor ?? null, actor?.type ?? null, actor?.label ?? null)
     }
     const { cnt } = opsCount.get(projectId)
     if (cnt > maxHistory) opsTrim.run(projectId, projectId, cnt - maxHistory)
@@ -322,6 +355,23 @@ const findProjectById = async (spacesDir, projectId) => {
   const normalized = normalizeProjectId(projectId)
   if (!normalized) return null
   const row = s().selectById.get(normalized)
+  if (!row) return null
+  return {
+    ...getProjectPaths(spacesDir, row.space_id, normalized),
+    spaceId: row.space_id,
+    projectId: normalized,
+    meta: rowToMeta(row)
+  }
+}
+
+// The same lookup, trash included. A project in the trash still owns its id and
+// its files; anything that compares a file against what is HERE (a proposal's
+// summary) must see it, or a trashed project reads as brand new on a round-trip.
+// `meta.deletedAt` says which it is.
+const findProjectByIdAny = async (spacesDir, projectId) => {
+  const normalized = normalizeProjectId(projectId)
+  if (!normalized) return null
+  const row = s().selectAnyById.get(normalized)
   if (!row) return null
   return {
     ...getProjectPaths(spacesDir, row.space_id, normalized),
@@ -409,7 +459,9 @@ module.exports = {
   deleteProject,
   ensureProject,
   findProjectById,
+  findProjectByIdAny,
   findProjectBySlug,
+  findProjectMove,
   getProjectPaths,
   isReservedProjectSlug,
   isValidAssetId,
@@ -417,6 +469,7 @@ module.exports = {
   TRASH_TTL_MS,
   isProjectState,
   listProjectsInSpace,
+  countProjectsBySpace,
   listTrashedProjects,
   restoreProject,
   purgeProject,

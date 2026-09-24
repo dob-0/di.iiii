@@ -33,8 +33,8 @@ export const isSandboxSpaceId = (id) => /^sandbox-/.test(String(id || ''))
  * Which live spaces this box does not have, and the tier each was first seen on.
  *
  * Tier order is significance order, not alphabetical: a space present on both
- * production and staging is reported as production's, and a staging-only space
- * is named as staging's — that difference is the whole reason the check exists
+ * production and the dev tier is reported as production's, and a dev-only space
+ * is named as dev's — that difference is the whole reason the check exists
  * (`dilijan` was built on staging and never promoted, so a production-only
  * comparison called the box complete while it lacked the space).
  *
@@ -111,6 +111,20 @@ export const formatSpaceDriftWarning = (missing) => {
         `[dev-stack] ${rule}`,
         '',
     ]
+}
+
+// A space can be absent here by design: its page was folded into another local space
+// (2026-09: drive-decisions lives in what-we-have, model-arena in lab). Its name is missing,
+// its content is not — mirroring it would make an empty duplicate. `published` maps a remote
+// space id to its published project id; `localProjects` holds the project ids this box has.
+// Returns the ids to drop from the warning, with the project that proves the page is here.
+export const pagesAlreadyHere = (missing, published, localProjects) => {
+    const here = new Map()
+    for (const id of (missing ? missing.keys() : [])) {
+        const pid = published?.get?.(id)
+        if (pid && localProjects?.has?.(pid)) here.set(id, pid)
+    }
+    return here
 }
 
 export const collectMissingSpaces = (localIds, tiers) => {

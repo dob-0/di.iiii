@@ -41,6 +41,8 @@ Simple product split:
 | `src/routes/spaceRoutes.js` | space CRUD, publish state, scene endpoints, space assets |
 | `src/routes/projectRoutes.js` | project CRUD, project documents, project ops, project assets |
 | `src/routes/statusRoutes.js` | monitor, health, status, and release endpoints |
+| `src/routes/ndiRoutes.js` | NDI video in at `/ndi` — local runtime only, built on first use |
+| `src/ndi/` | the NDI lane: runtime lookup, koffi binding, forked child, ref-counted receivers |
 | `src/config.js` | env loading, directory config, auth identity config, CORS setup |
 | `src/authAccess.js` | auth roles, labels, and space-scope checks |
 | `src/authSession.js` | signed browser session cookies |
@@ -88,6 +90,21 @@ AI chat (signed-in accounts only, uses the user's connected Claude key server-si
 - `DELETE /api/ai/chats/:chatId`
 - `POST /api/ai/chats/:chatId/messages` (SSE response: `accepted` / `delta` / `done` / `error`)
 
+Local runtime lanes (a local install only — `DI_LOCAL=1`, or any non-production server;
+a hosted tier answers 404, and a request from another machine 403 unless
+`DI_ALLOW_LAN_DEVICES=1`). Both are built on the first request, never at boot:
+
+- `GET /light/*` — the lighting desk (`src/lighting`, mounted ahead of the JSON parser
+  so it reads its own bodies); output is OFF until switched on.
+- `GET /ndi/api/summary` · `GET /ndi/api/sources` · `GET /ndi/api/stats`
+- `GET /ndi/api/still?name=&w=` — one JPEG from an NDI source (504 if no frame in 3 s)
+- `GET /ndi/in.mjpg?name=&w=&fps=` — `multipart/x-mixed-replace`, for an `<img>`
+
+  NDI needs a runtime the person installed; di.iiii never ships one, and the server runs
+  the same without it (`summary` then answers 200 with `available:false` and how to fix
+  it). See [../docs/architecture/NDI.md](../docs/architecture/NDI.md).
+  NDI® is a registered trademark of Vizrt NDI AB — <https://ndi.video>
+
 Browser auth session:
 
 - `GET /api/auth/session`
@@ -131,6 +148,7 @@ Project flow:
 Project assets (content-addressed):
 
 - `POST /api/projects/:projectId/assets` — sha256-shaped `assetId`s are verified against the file content (400 on mismatch); bytes land once per space in `spaces/<spaceId>/blobs/<sha256>`, the project keeps only an `assets/<sha256>.json` reference. Legacy uuid-style ids stay project-local.
+- `PUT /api/projects/:projectId/assets/:assetId` — replication only (`di follow` carrying files): raw bytes stored **verbatim, without the EXIF scrubber**, and only if they hash to the sha256 `assetId` (422 otherwise). Sync key, internal token, or auth off; an ordinary editor gets 403. Emits no op. See `docs/architecture/SPEC_follow_files.md`.
 - `GET /api/projects/:projectId/assets/:assetId` — serves a legacy project-local binary first, else the space blob (only while the project holds the reference).
 - `GET /api/projects/:projectId/assets/:assetId/meta` — existence + meta probe used by client upload dedupe.
 - `DELETE /api/projects/:projectId/assets/:assetId` — removes the project reference only; orphaned blobs are reclaimed by `scripts/gc-space-blobs.mjs` (dry run by default, `--apply` to delete).
@@ -192,7 +210,7 @@ Behavior rules:
 | `CORS_ORIGINS` | Comma-separated allowlist of origins. | _none_ |
 | `MAX_UPLOAD_MB` | Max asset upload size in MB. | `100` |
 | `MIN_FREE_DISK_MB` | Free-disk floor below which POST/PUT/PATCH get a `507` instead of writing toward ENOSPC (`0` disables). | `512` |
-| `SHARED_ROOT` | Override for shared schema loading. Use this when staging and production keep separate shared folders outside the repo. | repo-local `shared/` fallback |
+| `SHARED_ROOT` | Override for shared schema loading. Use this when the dev tier and production keep separate shared folders outside the repo. | repo-local `shared/` fallback |
 
 Security notes:
 
@@ -208,10 +226,10 @@ Security notes:
 
 These values matter more than older deploy folklore:
 
-- Docker (production + staging, see Deploy Notes): `DATA_ROOT=/data` (a mounted volume;
+- Docker (production + the dev tier, see Deploy Notes): `DATA_ROOT=/data` (a mounted volume;
   set in `docker-compose.yml`/`Dockerfile`), no `SHARED_ROOT` — `shared/` is baked into
   the image at `/shared` at build time and `sharedRuntime.js` resolves it there by default
-- cPanel fallback only: staging `DATA_ROOT=/home/distudio/serverXR-staging/data` +
+- cPanel fallback only: the dev tier (paths still named `-staging`) `DATA_ROOT=/home/distudio/serverXR-staging/data` +
   `SHARED_ROOT=/home/distudio/shared-staging`; production `DATA_ROOT=/home/distudio/serverXR/data`
   + `SHARED_ROOT=/home/distudio/shared`
 - `API_TOKEN` stays server-only for normal builds; browser editors create an http-only auth session when a protected write needs it
@@ -234,7 +252,7 @@ Primary path — Docker on the VPS, behind Caddy; full detail in
 [docs/deploy/VPS_DOCKER_DEPLOY.md](../docs/deploy/VPS_DOCKER_DEPLOY.md) and
 [docs/deploy/LIVE_DEPLOY.md](../docs/deploy/LIVE_DEPLOY.md):
 
-- `git push origin dev` deploys to VPS staging, `git push origin main` deploys to VPS production
+- `git push origin dev` deploys to the dev tier (https://dev.diiii.xyz), `git push origin main` deploys to VPS production
 - built from `serverXR/Dockerfile` (`node:22-alpine`), run via `docker-compose.yml` + `docker-compose.prod.yml`
 - application root inside the image: `/app`; startup: `node src/index.js`; mount: `/serverXR`
 
@@ -257,7 +275,7 @@ npm install --omit=dev
 cloudlinux-selector restart --json --interpreter nodejs --user "$USER" --app-root serverXR
 ```
 
-For staging, use `~/serverXR-staging` and `--app-root serverXR-staging`.
+For the dev tier, use `~/serverXR-staging` and `--app-root serverXR-staging`.
 
 Canonical deploy path:
 

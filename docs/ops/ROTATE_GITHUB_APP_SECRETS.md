@@ -7,12 +7,12 @@ may have leaked (e.g. passed through chat), or on a routine schedule.
 - **App:** `dii-space-sync` — App ID `4178187` — settings at
   `https://github.com/settings/apps/dii-space-sync`
 - **Source of truth (per environment):** the `.env` next to the compose files on
-  the VPS — `/opt/di.iiii/.env` (production) and `/opt/di.iiii-staging/.env`
-  (staging). Deploy never rewrites `.env`; it only `git checkout`s the tracked
+  the VPS — `/opt/di.iiii/.env` (production) and `/opt/di.iiii-dev/.env`
+  (the dev tier, dev.diiii.xyz). Deploy never rewrites `.env`; it only `git checkout`s the tracked
   compose files, so values set here survive every deploy.
 - **Reaching the container:** `docker-compose.yml` passes `GITHUB_APP_ID`,
   `GITHUB_APP_PRIVATE_KEY_B64` and `GITHUB_APP_WEBHOOK_SECRET` into the `server`
-  service; the staging override reads the `STAGING_`-prefixed twins. A var that
+  service; the dev-tier override (`docker-compose.dev.yml`) reads the `DEV_`-prefixed twins. A var that
   isn't listed there never reaches the process, whatever `.env` says.
 - **Key loading:** `serverXR/src/githubApp.js#getPrivateKey` reads, in order:
   `GITHUB_APP_PRIVATE_KEY_PATH` → `GITHUB_APP_PRIVATE_KEY_B64` → `GITHUB_APP_PRIVATE_KEY`.
@@ -42,7 +42,7 @@ App settings → **Private keys** → **Generate a private key** (downloads a `.
 App settings → **Webhook** → set **Secret** to a fresh random string
 (`openssl rand -hex 32`) → Save. Keep it for step 3.
 
-### 3. Per environment — production first, then staging
+### 3. Per environment — production first, then the dev tier
 Copy the `.pem` to the VPS (`scp <file> dii-vps:~/`), then, on the VPS
 (`ssh dii-vps`):
 
@@ -51,7 +51,7 @@ PEM=~/dii-space-sync.NEW.private-key.pem
 B64=$(base64 -w0 "$PEM")
 
 CFG=/opt/di.iiii/.env ; PREFIX=""                    # production
-# CFG=/opt/di.iiii-staging/.env ; PREFIX="STAGING_"  # staging (second pass)
+# CFG=/opt/di.iiii-dev/.env ; PREFIX="DEV_"          # dev tier (second pass)
 
 set_env () {  # set_env KEY VALUE — replace in place or append
   grep -q "^${PREFIX}$1=" "$CFG" \
@@ -76,9 +76,9 @@ cd /opt/di.iiii          # production
 docker compose --profile https -f docker-compose.yml -f docker-compose.prod.yml \
   -f docker-compose.caddy-hardened.yml up -d server
 
-cd /opt/di.iiii-staging  # staging
+cd /opt/di.iiii-dev      # dev tier
 docker compose -f docker-compose.yml -f docker-compose.prod.yml \
-  -f docker-compose.staging.yml up -d server
+  -f docker-compose.dev.yml up -d server
 ```
 
 A redeploy (`git push origin main` / `dev`) also picks them up — restarting is
@@ -88,7 +88,7 @@ just the fast path.
 ```bash
 # signed in as an admin (the route requires a session):
 curl -s https://di-studio.xyz/serverXR/api/github/app          # -> {"configured": true, …}
-curl -s https://staging.di-studio.xyz/serverXR/api/github/app
+curl -s https://dev.diiii.xyz/serverXR/api/github/app
 ```
 `{"configured": false}` means the id or the key never reached the process —
 re-check that compose lists the vars (guarded by `src/deploy-compose.test.js`)
@@ -124,5 +124,5 @@ The current br_id_ge workflow syncs by script/CI push, not through App links.
 Do **not** verify via `br_id_ge` — its `sync-space.yml` CI sync would race the
 webhook.
 
-> The webhook only reaches **prod** (`di-studio.xyz`). On staging, force a sync
+> The webhook only reaches **prod** (`di-studio.xyz`). On the dev tier, force a sync
 > with Disconnect/Connect in `/admin → Manage → space → GitHub sync`.

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Read-only cross-environment inventory of spaces + projects.
-// Local is read straight from the SQLite DB (truth); staging/prod via the live API.
+// Local is read straight from the SQLite DB (truth); the dev tier and prod via the live API.
 // Usage: node scripts/data-inventory.mjs
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -78,7 +78,7 @@ const local = localInventory();
 printEnv('LOCAL  (serverXR/data/di.db)', local);
 
 for (const [name, urlKey, tokKey] of [
-  ['STAGING (staging.di-studio.xyz)', 'LIVE_API_URL', 'LIVE_API_TOKEN'],
+  ['DEV (dev.diiii.xyz)', 'LIVE_API_URL', 'LIVE_API_TOKEN'],
   ['PRODUCTION (di-studio.xyz)', 'PROD_API_URL', 'PROD_API_TOKEN']
 ]) {
   const base = env[urlKey], token = env[tokKey];

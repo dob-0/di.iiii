@@ -3,11 +3,14 @@ const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
 const { hashFileSha256, isSha256AssetId } = require('../assetHash')
 const { UNSCRUBBABLE_IMAGE_ERROR, scrubImageMetadata } = require('../assetScrub')
-const { getSpaceBlobPaths, storeBlobFromFile } = require('../blobStore')
+const { getSpaceBlobPaths, hasBlob, storeBlobFromFile } = require('../blobStore')
+const { receiveBodyToTempFile } = require('../verbatimAsset')
 const { createKeyedLock } = require('../asyncLock')
 const { applyAssetSafetyHeaders } = require('../spaceStore')
 const { findIdlessCreateOp } = require('../opValidation')
 const { placeOps } = require('../../../shared/placement.cjs')
+const { actorFromAuthState } = require('../opActor')
+const { countProjectLayers } = require('../../../shared/layers.cjs')
 
 const withProjectLock = createKeyedLock()
 
@@ -53,10 +56,18 @@ function registerProjectRoutes(router, {
   deleteCollection,
   countProjectsIn,
   upload,
+  // The hash-pinned asset PUT (a follow carrying files). All three are absent
+  // on a router built without them, and the route then refuses everyone.
+  uploadsDir = null,
+  maxUploadBytes = 0,
+  isAllowedUpload = () => true,
+  mayStoreVerbatim = () => false,
   upsertProjectMeta,
   writeJson,
   writeProjectDocument,
-  blankProjectDocument
+  blankProjectDocument,
+  // spaceHistory.js — restore points before changes. Absent means none.
+  spaceHistory = null
 }) {
   router.get('/api/spaces/:spaceId/projects', async (req, res, next) => {
     try {
@@ -65,12 +76,56 @@ function registerProjectRoutes(router, {
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      const projects = await listProjectsInSpace(spacesDir, spaceId)
+      const rows = await listProjectsInSpace(spacesDir, spaceId)
+      const projects = []
+      for (const meta of rows) {
+        const layers = await readLayerCounts(spaceId, meta)
+        projects.push(layers ? { ...meta, layers } : meta)
+      }
       res.json({ projects })
     } catch (error) {
       next(error)
     }
   })
+
+  // ── what each project holds, for the card's one line ─────────────────────
+  //
+  // "3 things · 2 wires · 1 surface · 1 lamp", or "empty" (the layers
+  // decision, 2026-09-23, unit 1). Read from the document by the same rule the
+  // editor runs (shared/layers.cjs, the twin of src/project/layers.js), never
+  // stored: the counts are a view of what the project holds, and a stored count
+  // is a claim the data cannot keep — the same reason no "kind" is stored
+  // below.
+  //
+  // Cached on (project, document version, updatedAt) like the scene-or-page
+  // mode: a list of sixty projects parses their documents once and then
+  // answers from memory; any write moves one of those two numbers. The
+  // document is read and normalized in memory only — the list never writes a
+  // document back, as opening one does.
+  const layerCountsCache = new Map()
+  const LAYER_COUNTS_CACHE_MAX = 4000
+  const readLayerCounts = async (spaceId, meta) => {
+    const key = `${spaceId}:${meta.id}:${meta.documentVersion ?? 0}:${meta.updatedAt ?? 0}`
+    if (layerCountsCache.has(key)) return layerCountsCache.get(key)
+    let counts = null
+    try {
+      const { documentPath } = getProjectPaths(spacesDir, spaceId, meta.id)
+      const raw = await readJson(documentPath, null)
+      // Only what the project holds goes on the wire: a zero is the absence of
+      // the field, so an empty project answers {} and the list stays small.
+      counts = Object.fromEntries(
+        Object.entries(countProjectLayers(normalizeProjectDocument(raw || {})))
+          .filter(([, value]) => value)
+      )
+    } catch {
+      // A document that cannot be read says nothing on its card rather than
+      // failing the whole list.
+      counts = null
+    }
+    if (layerCountsCache.size >= LAYER_COUNTS_CACHE_MAX) layerCountsCache.clear()
+    layerCountsCache.set(key, counts)
+    return counts
+  }
 
   // ── what a space holds, for whoever is allowed to look ───────────────────
   //
@@ -171,7 +226,14 @@ function registerProjectRoutes(router, {
       }
       const existing = await resolveProjectContext(projectId)
       if (existing) {
-        return res.status(409).json({ error: 'Project already exists.' })
+        // Project ids are global across every space (deliberate — see
+        // resolveProjectContext / GET /api/projects/:projectId, which takes
+        // no spaceId), so this collision can be with a project in a space
+        // the caller cannot see, and would name it. "Project already
+        // exists." named nothing and gave nobody anything to act on — a
+        // newcomer who picks an ordinary name twice, weeks apart, in two
+        // different spaces, hit this with no way to tell what happened.
+        return res.status(409).json({ error: 'that name is taken on this di.iiii — try another' })
       }
       const meta = await ensureProject(spacesDir, spaceId, projectId, {
         title: title || 'Untitled Project',
@@ -426,6 +488,7 @@ function registerProjectRoutes(router, {
         return res.status(404).json({ error: 'Project not found.' })
       }
       await ensureSpaceWritable(project.spaceId)
+      const actor = actorFromAuthState(req.authState)
       // Serialized per project: without this, a full-document PUT racing a
       // concurrent POST /ops (or another PUT) can interleave its read-modify-
       // write with theirs and silently clobber the other's change — the lock
@@ -437,6 +500,8 @@ function registerProjectRoutes(router, {
         // acquired it and may already be stale.
         const fresh = await resolveProjectContext(project.projectId)
         if (!fresh) return null
+        // A whole replace always keeps a way back to what it replaces.
+        if (spaceHistory) await spaceHistory.beforeChange(project.spaceId, actor, { reason: 'before-document-replace' })
         const document = normalizeProjectDocument(req.body || blankProjectDocument)
         const currentVersion = Number(fresh.meta?.documentVersion) || 0
         const nextVersion = currentVersion + 1
@@ -456,7 +521,7 @@ function registerProjectRoutes(router, {
           version: nextVersion,
           timestamp: Date.now()
         }
-        await appendProjectOps(spacesDir, project.spaceId, project.projectId, [resetOp], maxOpHistory, maxOpAgeMs)
+        await appendProjectOps(spacesDir, project.spaceId, project.projectId, [resetOp], maxOpHistory, maxOpAgeMs, actor)
         const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
           title: document.projectMeta.title,
           documentVersion: nextVersion
@@ -552,6 +617,11 @@ function registerProjectRoutes(router, {
         })
       }
 
+      // The author, from the session — never from the ops — and, at the first
+      // change of a new burst in this space, a restore point before it lands.
+      const actor = actorFromAuthState(req.authState)
+      if (spaceHistory) await spaceHistory.beforeChange(project.spaceId, actor)
+
       // Serialized per project: the version check and the read-modify-write
       // it guards must be one atomic step, or two concurrent requests at the
       // same baseVersion both pass the check and both write, one silently
@@ -614,7 +684,7 @@ function registerProjectRoutes(router, {
           updatedAt: Date.now()
         }
         await writeProjectDocument(spacesDir, project.spaceId, project.projectId, nextDocument)
-        await appendProjectOps(spacesDir, project.spaceId, project.projectId, versionedOps, maxOpHistory, maxOpAgeMs)
+        await appendProjectOps(spacesDir, project.spaceId, project.projectId, versionedOps, maxOpHistory, maxOpAgeMs, actor)
         const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
           title: nextDocument.projectMeta.title,
           documentVersion: nextVersion
@@ -689,7 +759,7 @@ function registerProjectRoutes(router, {
       // A scrubbed file no longer hashes to the id the client computed from the
       // original, so its requested id is dropped and the content address is
       // recomputed below. Callers already remap ids from the response (bundle
-      // import in StudioEditor/RawHub). Un-rewritten files keep the strict check.
+      // import in StudioEditor/StudioHub). Un-rewritten files keep the strict check.
       let assetId = (req.body?.assetId && !scrub.scrubbed) ? String(req.body.assetId).trim() : ''
       if (assetId) {
         if (!isValidAssetId(assetId)) {
@@ -753,6 +823,126 @@ function registerProjectRoutes(router, {
       if (req.file?.path) {
         await fsp.rm(req.file.path, { force: true }).catch(() => {})
       }
+      next(error)
+    }
+  })
+
+  // The same file, on another di.iiii: store these exact bytes under this exact
+  // content address, or store nothing.
+  //
+  // A followed space (serverXR/src/follow) carries its projects' op logs, and
+  // an `upsertAsset` op names a file by the sha256 of its bytes. The op crosses;
+  // until this route existed the bytes never did, and a video placed on one
+  // machine was a dead frame on the other. The follower cannot use the upload
+  // route above to bring them over: that route re-encodes images to strip
+  // EXIF/GPS, so the bytes it stores hash to a DIFFERENT id than the one
+  // already written into the ops on both machines.
+  //
+  // So this route skips the scrubber — and that is only safe because of the
+  // two rules below, which are the whole security argument:
+  //
+  //   1. PROOF. The id must be a 64-hex sha256 and the server hashes what it
+  //      actually received. Anything else is refused (422) and the temp file
+  //      deleted. What is stored is therefore byte-for-byte a file some
+  //      di.iiii already holds under that address — and a file only gets a
+  //      sha256 address on a di.iiii by passing through the upload route, which
+  //      scrubbed it. The content address is the proof of scrubbing.
+  //
+  //   2. CALLER. Proof alone is not enough: anyone can hash an un-scrubbed
+  //      photo and PUT it under its true sha256. So an ordinary signed-in
+  //      editor — a person with a browser — is refused (403) even though the
+  //      upload route would take their file. Only replication may call this:
+  //      a per-space sync key (the credential `di follow` holds; editor on that
+  //      one space, scope already enforced by requireWriteRole), this server's
+  //      own internal token (the follower writing to its own install), or an
+  //      install with auth off entirely (a local machine, where every caller is
+  //      the owner already). A sync key holder could still push a file their
+  //      own install never scrubbed; that is the trust a space owner extends by
+  //      minting the key, the same trust that already lets that key write ops.
+  //
+  // It writes the blob and the project's <hash>.json reference exactly as the
+  // upload would have, and it emits NO op: the upsertAsset that names this file
+  // has already travelled through the op log, which is why we are here.
+  router.put('/api/projects/:projectId/assets/:assetId', async (req, res, next) => {
+    let tempPath = null
+    try {
+      const project = await resolveProjectContext(req.params.projectId)
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found.' })
+      }
+      if (!mayStoreVerbatim(req)) {
+        res.setHeader('Connection', 'close')
+        return res.status(403).json({ error: 'Only a sync key or this server itself may store a file verbatim. Upload it instead.' })
+      }
+      const assetId = String(req.params.assetId || '').trim().toLowerCase()
+      if (!isSha256AssetId(assetId)) {
+        res.setHeader('Connection', 'close')
+        return res.status(400).json({ error: 'A verbatim file is addressed by the sha256 of its bytes.' })
+      }
+      const name = String(req.query.name || '').slice(0, 255) || 'Untitled Asset'
+      const mimeType = String(req.query.mimeType || '').slice(0, 127) || 'application/octet-stream'
+      if (!isAllowedUpload({ mimetype: mimeType, originalname: name })) {
+        res.setHeader('Connection', 'close')
+        return res.status(415).json({ error: 'Unsupported asset type.' })
+      }
+      if (!uploadsDir || !(maxUploadBytes > 0)) {
+        res.setHeader('Connection', 'close')
+        return res.status(501).json({ error: 'This server cannot receive files.' })
+      }
+      // A body some parser already read (sent as JSON, say) is gone: there is
+      // nothing left to hash, and waiting for its end would wait forever.
+      if (req.readableEnded) {
+        return res.status(400).json({ error: 'Send the file as raw bytes (application/octet-stream).' })
+      }
+      const declared = Number(req.get('content-length'))
+      if (Number.isFinite(declared) && declared > maxUploadBytes) {
+        res.setHeader('Connection', 'close')
+        return res.status(413).json({ error: 'File too large.', maxBytes: maxUploadBytes })
+      }
+      await ensureSpaceWritable(project.spaceId)
+      const { assetsDir } = getProjectPaths(spacesDir, project.spaceId, project.projectId)
+      const metaPath = path.join(assetsDir, `${assetId}.json`)
+      const url = `${req.baseUrl || ''}/api/projects/${project.projectId}/assets/${assetId}`
+
+      // Already here: say so and touch nothing. The body is still read to the
+      // end (and thrown away) so the sender's write finishes cleanly.
+      const existingMeta = await readJson(metaPath, null)
+      if (existingMeta && await hasBlob(spacesDir, project.spaceId, assetId)) {
+        await new Promise((resolve) => { req.on('end', resolve); req.on('close', resolve); req.resume() })
+        return res.json({ ok: true, already: true, asset: { ...existingMeta, url } })
+      }
+
+      let received
+      try {
+        received = await receiveBodyToTempFile(req, { dir: uploadsDir, maxBytes: maxUploadBytes })
+      } catch (error) {
+        if (error.code === 'BODY_TOO_LARGE') {
+          res.setHeader('Connection', 'close')
+          return res.status(413).json({ error: 'File too large.', maxBytes: maxUploadBytes })
+        }
+        throw error
+      }
+      tempPath = received.tempPath
+      if (received.sha256 !== assetId) {
+        await fsp.rm(tempPath, { force: true }).catch(() => {})
+        tempPath = null
+        return res.status(422).json({ error: 'These bytes are not the file that id names.', expected: assetId, received: received.sha256 })
+      }
+      await fsp.mkdir(assetsDir, { recursive: true })
+      await storeBlobFromFile(spacesDir, project.spaceId, assetId, tempPath)
+      tempPath = null
+      const assetMeta = buildProjectAssetMeta({
+        assetId,
+        file: { originalname: name, mimetype: mimeType, size: received.size },
+        source: 'server',
+        width: Number(req.query.width) || 0,
+        height: Number(req.query.height) || 0
+      })
+      await writeJson(metaPath, assetMeta)
+      await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, { touch: true })
+      res.json({ ok: true, already: false, asset: { ...assetMeta, url } })
+    } catch (error) {
+      if (tempPath) await fsp.rm(tempPath, { force: true }).catch(() => {})
       next(error)
     }
   })

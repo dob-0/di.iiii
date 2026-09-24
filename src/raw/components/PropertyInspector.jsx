@@ -1,41 +1,8 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { cloneValue } from '../../shared/projectSchema.js'
 import { detectAssetMediaKind } from '../../utils/mediaAssetTypes.js'
-
-// A controlled number input with an EDIT BUFFER. Bare live-commit inputs
-// corrupted mid-edit values on the phone (2026-08-20 audit): Number('') is 0,
-// so clearing a field to retype committed 0 under your thumbs. While focused
-// the field shows what you typed; only valid parses commit; blur snaps back
-// to the canonical value; focus selects everything (a fresh number replaces,
-// not appends) and Enter closes the keyboard.
-function NumberField({ value, fallback = 0, min, max, step, onCommit, disabled = false }) {
-    const [draft, setDraft] = useState(null)
-    const canonical = Number.isFinite(Number(value)) ? value : fallback
-    return (
-        <input
-            type="number"
-            value={draft !== null ? draft : canonical}
-            min={min}
-            max={max}
-            step={step}
-            disabled={disabled}
-            style={{ width: '100%', minWidth: 0 }}
-            onFocus={(event) => {
-                setDraft(String(canonical))
-                event.target.select()
-            }}
-            onChange={(event) => {
-                setDraft(event.target.value)
-                const next = Number(event.target.value)
-                if (event.target.value !== '' && Number.isFinite(next)) onCommit(next)
-            }}
-            onBlur={() => setDraft(null)}
-            onKeyDown={(event) => {
-                if (event.key === 'Enter') event.currentTarget.blur()
-            }}
-        />
-    )
-}
+import { panTiltFromRotation, rotationFromPanTilt } from '../../project/viewport/spotLightAim.js'
+import ScrubNumberInput from './ScrubNumberInput.jsx'
 
 const setNestedValue = (value, path, nextValue) => {
     const draft = cloneValue(value)
@@ -125,13 +92,13 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
     }
     if (field.type === 'number') {
         return (
-            <NumberField
+            <ScrubNumberInput
                 value={value}
                 fallback={Number.isFinite(Number(field.default)) ? field.default : 0}
                 min={field.min}
                 max={field.max}
-                step={field.step ?? 0.1}
-                onCommit={onChange}
+                step={field.step}
+                onChange={onChange}
                 disabled={disabled}
             />
         )
@@ -147,13 +114,15 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
         return (
             <div style={{ display: 'flex', gap: 4 }}>
                 {[0, 1, 2].map((axis) => (
-                    <NumberField
+                    <ScrubNumberInput
                         key={axis}
                         value={Number.isFinite(Number(arr[axis])) ? arr[axis] : (fallback[axis] ?? 0)}
                         fallback={fallback[axis] ?? 0}
-                        step={field.step ?? 0.1}
+                        min={field.min}
+                        max={field.max}
+                        step={field.step}
                         disabled={disabled}
-                        onCommit={(committed) => {
+                        onChange={(committed) => {
                             const next = [
                                 Number.isFinite(Number(arr[0])) ? arr[0] : (fallback[0] ?? 0),
                                 Number.isFinite(Number(arr[1])) ? arr[1] : (fallback[1] ?? 0),
@@ -167,6 +136,27 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
             </div>
         )
     }
+    if (field.type === 'spotAim') {
+        // Pan and tilt over the entity's rotation — same conversion as the
+        // Studio's, same single source (src/project/viewport/spotLightAim.js),
+        // in Raw's own scrub input. A whole rotation triple goes back, because
+        // aiming a lamp is one move.
+        const aim = panTiltFromRotation(value)
+        const shown = field.axis === 'pan' ? aim.pan : aim.tilt
+        return (
+            <ScrubNumberInput
+                value={Math.round(shown * 10) / 10}
+                fallback={0}
+                min={field.min}
+                max={field.max}
+                step={field.step}
+                disabled={disabled}
+                onChange={(committed) => onChange(rotationFromPanTilt(
+                    field.axis === 'pan' ? { pan: committed, tilt: aim.tilt } : { pan: aim.pan, tilt: committed }
+                ))}
+            />
+        )
+    }
     if (field.type === 'presets' || field.type === 'modelClips') {
         // Studio-only widgets (multi-key patch / clip registry); Raw skips them
         return null
@@ -178,7 +168,25 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
             </span>
         )
     }
-    return <input type="text" value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
+    return <input type="text" value={value || ''} maxLength={field.maxLength} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
+}
+
+// A sentence a field must be read with, drawn under the box, with a link
+// where the field carries one. It is the field's data, not the inspector's:
+// this file knows nothing of what the sentence is for. The one so far is a
+// licence condition (a Send Out names an NDI® source; the attribution and the
+// link to ndi.video are the terms on which di.iiii may name NDI at all —
+// docs/architecture/NDI.md), so this must never be dropped to make a
+// layout fit.
+function FieldNote({ note }) {
+    if (!note) return null
+    return (
+        <p className="raw-property-note raw-full-width-field">
+            {note.text}
+            {note.href ? <>{' '}<a href={note.href} target="_blank" rel="noreferrer">{note.label || note.href}</a>.</> : null}
+            {note.after ? <>{' '}{note.after}</> : null}
+        </p>
+    )
 }
 
 // The rename verb. It did not exist anywhere in the UI (audit 08-21: the
@@ -186,7 +194,7 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
 // nodes named Number had no way to tell them apart). The inspector title is
 // the one element every selected node already shows its name on, so the name
 // is edited exactly where it is read: click, type, Enter. Same edit-buffer
-// manners as NumberField — Escape abandons, blur commits.
+// manners as ScrubNumberInput's text-edit mode — Escape abandons, blur commits.
 function TitleField({ title, onRename }) {
     const [draft, setDraft] = useState(null)
     if (!onRename) return <h4>{title}</h4>
@@ -258,27 +266,29 @@ export default function PropertyInspector({
                                     const isFullWidth = field.type === 'textarea' || field.type === 'select' || field.type === 'asset'
                                     const wired = field.wired === true
                                     return (
-                                        <label
-                                            key={`${section.id}-${field.label}`}
-                                            className={`raw-property-field${field.type === 'checkbox' ? ' raw-checkbox-field' : ''}${isFullWidth ? ' raw-full-width-field' : ''}${wired ? ' is-wired' : ''}`}
-                                            title={wired ? 'This port takes its value from the wire into it. Unplug the wire to type one.' : undefined}
-                                        >
-                                            <span>
-                                                {field.label}
-                                                {wired ? <em className="raw-property-wired">wired</em> : null}
-                                            </span>
-                                            <PropertyField
-                                                field={field}
-                                                value={value}
-                                                assetOptions={assetOptions}
-                                                onPickAssetFile={onPickAssetFile}
-                                                disabled={wired}
-                                                onChange={(nextValue) => {
-                                                    const nextSectionValue = setNestedValue(sectionValue, field.path, nextValue)
-                                                    onSectionChange?.(field.component || section.id, nextSectionValue)
-                                                }}
-                                            />
-                                        </label>
+                                        <Fragment key={`${section.id}-${field.label}`}>
+                                            <label
+                                                className={`raw-property-field${field.type === 'checkbox' ? ' raw-checkbox-field' : ''}${isFullWidth ? ' raw-full-width-field' : ''}${wired ? ' is-wired' : ''}`}
+                                                title={wired ? 'This port takes its value from the wire into it. Unplug the wire to type one.' : undefined}
+                                            >
+                                                <span>
+                                                    {field.label}
+                                                    {wired ? <em className="raw-property-wired">wired</em> : null}
+                                                </span>
+                                                <PropertyField
+                                                    field={field}
+                                                    value={value}
+                                                    assetOptions={assetOptions}
+                                                    onPickAssetFile={onPickAssetFile}
+                                                    disabled={wired}
+                                                    onChange={(nextValue) => {
+                                                        const nextSectionValue = setNestedValue(sectionValue, field.path, nextValue)
+                                                        onSectionChange?.(field.component || section.id, nextSectionValue)
+                                                    }}
+                                                />
+                                            </label>
+                                            <FieldNote note={field.note} />
+                                        </Fragment>
                                     )
                                 })}
                             </div>

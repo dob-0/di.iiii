@@ -1,5 +1,6 @@
 import { createBasePathHelpers, joinPath } from './laneBasePath.js'
 import { OPEN_JAM_ALIAS_SEGMENT, OPEN_JAM_PROJECT_ID, OPEN_JAM_SPACE_ID } from '../../studio/utils/studioRouting.js'
+import { isPreviewRequest } from '../../utils/previewMode.js'
 
 // The jam surface's address.
 //
@@ -42,9 +43,27 @@ export const buildJamEditorPath = () => joinPath(
 /**
  * Does this location want the jam surface?
  *
- * Exactly one shape, and no defaulting: an address that is not `/open_jam/scene`
- * is somebody else's, and saying so is what keeps this parser out of the way of
- * every other route in RootApp.
+ * Two shapes, not one. `/open_jam/scene` is the alias this file always
+ * answered at. `/open` bare is the OTHER address the same room is handed out
+ * on — the front page's own QR/link, the space card's "Live" button, the one
+ * a stranger is actually given — and until now it fell through to the
+ * generic published-space viewer instead: same document, a read-only Walk/Fly
+ * shell with no presence and no way to add anything. Two components drawing
+ * one room was the bug (see the "/open" row in
+ * docs/ai/known-fixes.md); an address that resolves to a
+ * different EXPERIENCE than its sibling is not a routing nuance, it is the
+ * same room lying about itself.
+ *
+ * `?preview=1` is carved out of the bare match on purpose: that query is the
+ * space card's own thumbnail embed (SpaceHub.jsx's SpaceCardPreview), which
+ * wants the static published view scaled into a card — not a live multiplayer
+ * surface with open presence sockets rendered a hundred pixels wide. The
+ * card's "make it live" button re-embeds the SAME `/open` with no `?preview`,
+ * which now correctly gets the real jam.
+ *
+ * Anything else under `/open` — `/open/studio`, `/open/projects`,
+ * `/open/preferences`, another project's slug — is untouched: only the bare
+ * space address and the alias name the jam.
  */
 export const getJamLocationState = (locationLike = null) => {
     const resolvedLocation = locationLike || (typeof window !== 'undefined' ? window.location : null)
@@ -55,8 +74,14 @@ export const getJamLocationState = (locationLike = null) => {
         .replace(/\/+$/g, '')
     const segments = relative ? relative.split('/') : []
 
-    if (segments.length !== 2) return { isJam: false }
-    if (segments[0] !== OPEN_JAM_ALIAS_SEGMENT || segments[1] !== JAM_SCENE_SEGMENT) return { isJam: false }
+    const isAlias = segments.length === 2
+        && segments[0] === OPEN_JAM_ALIAS_SEGMENT
+        && segments[1] === JAM_SCENE_SEGMENT
+    const isBareSpace = segments.length === 1
+        && segments[0] === OPEN_JAM_SPACE_ID
+        && !isPreviewRequest(resolvedLocation.search)
+
+    if (!isAlias && !isBareSpace) return { isJam: false }
 
     return {
         isJam: true,

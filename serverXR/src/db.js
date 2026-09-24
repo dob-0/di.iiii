@@ -61,6 +61,24 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_project_ops ON project_ops(project_id, version);
 
+  -- A breadcrumb left by scripts/project-move.mjs. Project ids are global and
+  -- the row it moves keeps its id, so /api/projects/:projectId keeps working
+  -- on its own — but the OLD space's bare vanity link
+  -- (/{oldSpace}/{projectSlugOrId}, resolved by /api/resolve/:space/:project in
+  -- index.js) explicitly checks "does this project still live in this space"
+  -- and 404s the moment it doesn't. One row per move lets that one resolver
+  -- answer with a pointer instead of a dead end, without a project carrying
+  -- its own history of every space it ever lived in.
+  CREATE TABLE IF NOT EXISTS project_moves (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id TEXT NOT NULL,
+    from_space TEXT NOT NULL,
+    to_space TEXT NOT NULL,
+    old_slug TEXT,
+    moved_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_project_moves_lookup ON project_moves(from_space, project_id, old_slug);
+
   CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     provider TEXT NOT NULL,
@@ -268,6 +286,31 @@ const SCHEMA = `
     created_at INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_page_events_type_created ON page_events(event_type, created_at);
+
+  -- The guest book: programs that reached the API, as daily aggregates. One row
+  -- per UTC day x agent name x kind (browser | crawler | app | anonymous). No IP,
+  -- no URL, no cookie, no user id. Browsers are a single 'browser' row per day
+  -- with no timestamps. contact is only what an identified app published about
+  -- itself in its own User-Agent. Capped per day, pruned after 90 days — see
+  -- appVisitorStore.js and docs/ai/privacy-data-inventory.md.
+  CREATE TABLE IF NOT EXISTS app_visitor_days (
+    day TEXT NOT NULL,
+    agent TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    requests INTEGER NOT NULL DEFAULT 0,
+    contact TEXT,
+    first_seen INTEGER,
+    last_seen INTEGER,
+    PRIMARY KEY (day, agent, kind)
+  );
+  CREATE INDEX IF NOT EXISTS idx_app_visitor_days_agent ON app_visitor_days(agent, kind, day);
+
+  -- Program names the admin turned away (403 + a pointer to /for-apps). Keyed by
+  -- the normalised name the guest book prints, nothing else.
+  CREATE TABLE IF NOT EXISTS app_visitor_blocks (
+    agent TEXT PRIMARY KEY,
+    blocked_at INTEGER NOT NULL
+  );
 
   -- Telegram sign-in hand-offs. di.bo mints one of these for a person who is
   -- already proven to it (Telegram delivered the message), and the person
@@ -482,6 +525,8 @@ function initDb(dbPath) {
   ensureColumn(db, 'spaces', 'preview_image_asset_id', 'TEXT')
   ensureColumn(db, 'spaces', 'open_inscriptions', 'INTEGER NOT NULL DEFAULT 0')
   ensureColumn(db, 'spaces', 'slug', 'TEXT')
+  // Per-space trusted list: JSON array of account ids (spaceStore.trustedUserIds).
+  ensureColumn(db, 'spaces', 'trusted_user_ids', 'TEXT')
   ensureColumn(db, 'projects', 'slug', 'TEXT')
   // Which shelf it sits on, where on the shelf, and what it IS to a visitor.
   // `state` replaces the only archive the platform had: five titles with
@@ -526,6 +571,20 @@ function initDb(dbPath) {
   ensureColumn(db, 'space_chat_lines', 'reply_to_id', 'TEXT')
   ensureColumn(db, 'space_chat_lines', 'reply_to_name', 'TEXT')
   ensureColumn(db, 'space_chat_lines', 'reply_to_text', 'TEXT')
+  // Who made each change, stamped by the server from the session that sent
+  // it — never read from the op a client sent. `actor` is the subject (or
+  // `server:<reason>` for a change the server made itself), `actor_type` the
+  // kind of identity, `actor_label` the name a person reads. NULL on every
+  // row written before 2026-09-16: that history has no author, and saying so
+  // is more honest than guessing one. No SCHEMA_VERSION bump: three nullable
+  // columns are invisible to an older build (see the note on SCHEMA_VERSION).
+  for (const table of ['space_ops', 'project_ops']) {
+    ensureColumn(db, table, 'actor', 'TEXT')
+    ensureColumn(db, table, 'actor_type', 'TEXT')
+    ensureColumn(db, table, 'actor_label', 'TEXT')
+  }
+  db.exec('CREATE INDEX IF NOT EXISTS idx_space_ops_created ON space_ops(space_id, created_at)')
+  db.exec('CREATE INDEX IF NOT EXISTS idx_project_ops_created ON project_ops(project_id, created_at)')
   backfillUserUnrestricted(db)
   backfillArchivedTitles(db)
   backfillGlobalSpace(db)

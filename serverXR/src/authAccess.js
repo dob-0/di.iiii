@@ -116,6 +116,26 @@ const canAccessSpace = (authState, spaceId) => {
 // AccountButton relies on it too). Guests never count as owning accounts.
 const isGuestSubject = (value) => String(value || '').startsWith('guest:')
 
+// Per-space authority, from the space's own row rather than from a global role.
+// The OWNER (ownerUserId) is the steward of a space: its contents, its settings,
+// what it publishes. TRUSTED people (trustedUserIds, owner-managed) apply content
+// directly with author + undo instead of proposing (contentProposals.isTrusted).
+// Neither reaches past that one space, and neither is a platform role. Sessions
+// only: an API token, a guest cookie or a sync key is never an owner or trusted.
+const isSpaceOwnerState = (authState, meta) => {
+  if (!authState || authState.type !== 'session' || !meta) return false
+  if (isGuestSubject(authState.subject)) return false
+  return Boolean(meta.ownerUserId) && meta.ownerUserId === authState.subject
+}
+
+const isSpaceTrustedState = (authState, meta) => {
+  if (isSpaceOwnerState(authState, meta)) return true
+  if (!authState || authState.type !== 'session' || !meta) return false
+  if (isGuestSubject(authState.subject)) return false
+  const list = Array.isArray(meta.trustedUserIds) ? meta.trustedUserIds : []
+  return list.includes(authState.subject)
+}
+
 const formatAuthScopeLabel = (spaces) => {
   const normalizedSpaces = normalizeAuthScopeSpaces(spaces, null)
   if (normalizedSpaces === null) return 'all spaces'
@@ -136,6 +156,8 @@ module.exports = {
   hasRequiredAuthRole,
   isAuthScopeAllowedForSpace,
   isGuestSubject,
+  isSpaceOwnerState,
+  isSpaceTrustedState,
   normalizeAuthRole,
   normalizeAuthScopeSpaceId,
   normalizeAuthScopeSpaces

@@ -3,15 +3,15 @@
   "spaceId": "azd",
   "label": "azd",
   "isPublic": true,
-  "minEngine": 6,
+  "minEngine": 7,
   "note": "Authored in Studio.",
   "tiers": {
     "prod": {
       "url": "https://di-studio.xyz/serverXR",
       "tokenEnv": "PROD_API_TOKEN"
     },
-    "staging": {
-      "url": "https://staging.di-studio.xyz/serverXR",
+    "dev": {
+      "url": "https://dev.diiii.xyz/serverXR",
       "tokenEnv": "LIVE_API_TOKEN"
     },
     "local": {

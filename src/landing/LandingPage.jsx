@@ -3,13 +3,12 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Box, Button, Stack, ThemeProvider, Typography } from '@mui/material'
 import { diFontTheme } from '../styles/muiTheme.js'
 import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
-import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
 import { buildWikiPath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
 import { buildSpacesPath } from '../studio/utils/studioRouting.js'
 import { flyInside, REST_POSE } from './enterFlight.js'
-import { crackAway } from './crackTransition.js'
 import PageDebris from './PageDebris.jsx'
+import { enterFromElement } from '../components/entryTransition/entryTransition.js'
 import { buildJamScenePath } from '../project/routing/jamRouting.js'
 import { WORK_IDS } from '../works/works.js'
 
@@ -244,6 +243,16 @@ function LandingPageInner() {
     // The page once it has stopped being a page: real meshes in the room's
     // scene, falling. Held in state because the scene has to render them.
     const [pieces, setPieces] = useState([])
+    // Once the visitor is nearly there, the fallen page is struck from the
+    // room (PageDebris fades and sinks it) and then dropped from the scene.
+    const [piecesLeaving, setPiecesLeaving] = useState(false)
+    const dropPieces = useCallback(() => {
+        setPieces((current) => {
+            current.forEach((piece) => piece.texture?.dispose?.())
+            return []
+        })
+        setPiecesLeaving(false)
+    }, [])
     // Walk/fly and the orbiting view are both rendered by the same
     // GridFloorBackground while "entered" -- previously the only way back to
     // the orbit view once you'd moved was a full Exit + Enter Space round
@@ -305,8 +314,8 @@ function LandingPageInner() {
         setRoomSpeaks(false)
         setViewMode(false)
         setEntered(false)
-        setPieces([])
-    }, [])
+        dropPieces()
+    }, [dropPieces])
 
     const openDoor = (event) => {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
@@ -322,6 +331,7 @@ function LandingPageInner() {
                 reducedMotion: typeof window !== 'undefined'
                     && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
                 onPieces: setPieces,
+                onPageLeaves: () => setPiecesLeaving(true),
                 onDone: () => {
                     cancelFlightRef.current = null
                     setEntered(true)
@@ -345,24 +355,14 @@ function LandingPageInner() {
             .catch(() => { window.clearTimeout(timeout); once() })
     }
 
-    // The route below "Step inside": a real page (Spaces is a different
-    // surface, not a camera move within this one), so it gets the inverse
-    // of the glide — a crack, in the eyes, then the real navigation. A
-    // modified click still has to behave like a plain link.
-    const cancelCrackRef = useRef(null)
-    const openSpaces = (event) => {
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
-        event.preventDefault()
-        if (cancelCrackRef.current) return
-        cancelCrackRef.current = crackAway({
-            reducedMotion: typeof window !== 'undefined'
-                && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
-            onDone: () => {
-                cancelCrackRef.current = null
-                window.location.href = studioHref
-            }
-        })
-    }
+    // Every other route off the front page is a real page change, and each
+    // goes through the same entering move as a door in the room: the page
+    // stays on screen, pushing slowly in toward the button pressed, until the
+    // place it opens has drawn its first frame, and that place comes up in
+    // its stead. No black in between, and no effect — the crack that used to
+    // play on The Spaces read as homemade (owner, 2026-09-14). A modified
+    // click still behaves like the link it is.
+    const goThrough = (href) => (event) => enterFromElement(event, href, { holdPage: true })
 
     // The decorative WebGL background is fixed and full-screen; once the hero
     // scrolls out of view it's hidden behind opaque sections anyway. Stop
@@ -431,8 +431,9 @@ function LandingPageInner() {
                                 cameraPoseRef={cameraPoseRef}
                                 hideEntityTypes={roomSpeaks ? null : HERO_ECHO_TYPES}
                                 onArrivalPose={handleArrivalPose}
+                                fitArrivalToDoors
                                 sceneExtras={pieces.length
-                                    ? <PageDebris pieces={pieces} cameraPose={REST_POSE} />
+                                    ? <PageDebris pieces={pieces} cameraPose={REST_POSE} leaving={piecesLeaving} onGone={dropPieces} />
                                     : null}
                             />
                         </Suspense>
@@ -484,11 +485,11 @@ function LandingPageInner() {
                         <Button className="landing-cta-primary" variant="contained" size="large" href={studioHref} onClick={openDoor}>
                             Step inside
                         </Button>
-                        <Button className="landing-cta-spaces" variant="outlined" size="large" href={studioHref} onClick={openSpaces}>
+                        <Button className="landing-cta-spaces" variant="outlined" size="large" href={studioHref} onClick={goThrough(studioHref)}>
                             The Spaces
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={buildJamScenePath()}>
-                            Open Jam
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={buildJamScenePath()} onClick={goThrough(buildJamScenePath())}>
+                            Open Space
                         </Button>
                     </Stack>
 
@@ -507,6 +508,7 @@ function LandingPageInner() {
                                         variant="outlined"
                                         size="small"
                                         href={space.href}
+                                        onClick={goThrough(space.href)}
                                     >
                                         {space.label}
                                     </Button>
@@ -672,21 +674,11 @@ function LandingPageInner() {
                         publishing, and the API — and it’s kept up to date as di.iiii grows.
                     </Typography>
 
-                    <Box className="lp-feature-grid">
-                        {WIKI_HIGHLIGHTS.map((a) => (
-                            <Box
-                                key={a.id}
-                                component="a"
-                                href={`${buildWikiPath()}#${a.id}`}
-                                className="lp-feature-card lp-wiki-card"
-                            >
-                                <Typography className="lp-feature-title" component="h3">{a.title}</Typography>
-                                <Typography className="lp-feature-desc">{a.summary}</Typography>
-                                <Typography className="lp-wiki-card-more" component="span">Read →</Typography>
-                            </Box>
-                        ))}
-                    </Box>
-
+                    {/* One door, not a card grid. This block used to lay out 18
+                        wiki highlights, and the walk of 2026-09-22 ended in them:
+                        the page's last screen was a flood, against the owner's
+                        "no flood". The Wiki has its own index; the landing only
+                        has to say it exists and open it. */}
                     <Stack direction="row" spacing={2} sx={{ mt: 3, flexWrap: 'wrap' }}>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href={buildWikiPath()}>
                             Open the Wiki →
@@ -765,7 +757,7 @@ function LandingPageInner() {
                         that vanishes because a server did.
                     </Typography>
                     <Stack direction="row" sx={{ gap: '16px', flexWrap: 'wrap', justifyContent: 'center', mb: 2, mt: 3 }}>
-                        <Button className="landing-cta-primary" variant="contained" size="large" href={buildJamScenePath()}>
+                        <Button className="landing-cta-primary" variant="contained" size="large" href={buildJamScenePath()} onClick={goThrough(buildJamScenePath())}>
                             walk in and open your own room →
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href={studioHref} onClick={openDoor}>

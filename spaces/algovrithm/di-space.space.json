@@ -3,15 +3,15 @@
   "spaceId": "algovrithm",
   "label": "algovrithm",
   "isPublic": true,
-  "minEngine": 6,
+  "minEngine": 7,
   "note": "A code space: its scene is React in src/algoVrithm/, not a project document, so it holds no projects at all and never will.",
   "tiers": {
     "prod": {
       "url": "https://di-studio.xyz/serverXR",
       "tokenEnv": "PROD_API_TOKEN"
     },
-    "staging": {
-      "url": "https://staging.di-studio.xyz/serverXR",
+    "dev": {
+      "url": "https://dev.diiii.xyz/serverXR",
       "tokenEnv": "LIVE_API_TOKEN"
     },
     "local": {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Box, Container } from '@mui/material'
-import useAuthSession from '../../hooks/useAuthSession.js'
+import useAuthSession, { announceSessionChanged } from '../../hooks/useAuthSession.js'
+import useDocumentTitle from '../../hooks/useDocumentTitle.js'
 import { getApiAuthProviders, getOAuthUrl } from '../../services/apiClient.js'
 import { telegramSignInUrl } from '../../utils/telegramSignIn.js'
 import {
@@ -14,18 +15,21 @@ import {
     getServerSpaceAssetUrl,
     mintSpaceInvite,
     saveSpaceToFile,
-    openSpaceFromFile
+    openSpaceFromFile,
+    listSpaceSnapshots,
+    restoreSpaceSnapshot
 } from '../../services/serverSpaces.js'
 import { listProjects, getProject, updateProject } from '../../project/services/projectsApi.js'
 import GithubSyncSection from '../../components/preferences/GithubSyncSection.jsx'
 import SpaceConstellation from './SpaceConstellation.jsx'
 import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
-import { appNavigate } from '../../utils/appNavigate.js'
-import { buildSpaceContentsPath } from '../../utils/spaceRouting.js'
+import { enterFromElement } from '../../components/entryTransition/entryTransition.js'
+import { buildScanPath, buildSpaceContentsPath } from '../../utils/spaceRouting.js'
+import { doorTitleForCard, spaceName } from '../utils/spaceNames.js'
 // The card's door. A space whose bare segment a work has taken (`/wcc`) is
 // addressed through its published project instead, so the picture, the frame
 // and the links all open the SPACE and not the code sharing its name.
-import { buildSpaceDoorPath } from '../../works/segments.js'
+import { buildSpaceDoorPath, buildSpaceFacePath } from '../../works/segments.js'
 import { getSpaceShareUrl } from '../../storage/spaceStore.js'
 import { createPreviewBootQueue } from '../../utils/previewBootQueue.js'
 import {
@@ -60,6 +64,28 @@ const requestPreviewBoot = createPreviewBootQueue(SPACE_CARD_BOOT_SLOTS)
 // The backstop is what `load` should have been: a card that never reports is
 // eventually let go so a broken page cannot starve everyone behind it.
 const PREVIEW_PAINT_BACKSTOP_MS = 12000
+
+// History rows. A restore point is taken BEFORE somebody's change, so the name
+// on it is whose change it guards against: "before Emilya's change".
+const formatRestorePointTime = (iso) => {
+    const date = iso ? new Date(iso) : null
+    if (!date || Number.isNaN(date.getTime())) return 'at an unknown time'
+    return date.toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+const describeRestorePoint = (point) => {
+    const who = point?.actor?.type === 'server' ? null : (point?.actor?.label || null)
+    switch (point?.reason) {
+        case 'before-change': return who ? `before ${who}'s change` : 'before a change'
+        case 'before-scene-replace': return who ? `before ${who} replaced the scene` : 'before the scene was replaced'
+        case 'before-document-replace': return who ? `before ${who} replaced a project` : 'before a project was replaced'
+        case 'before-restore': return who ? `before ${who} restored an earlier point` : 'before an undo'
+        case 'before-sync-pull': return who ? `before ${who} pulled from another copy` : 'before a pull from another copy'
+        case 'before-bundle-import': return 'before a file was opened over it'
+        case 'daily': return 'daily'
+        default: return who ? `saved (${who})` : 'saved'
+    }
+}
 
 // Preview iframes lay out at this virtual desktop viewport and are scaled
 // down with a CSS transform to fit the card — an iframe laid out at the
@@ -245,6 +271,8 @@ const OPEN_SPACE_HINT = 'everyone builds here, together'
 const SANDBOX_HINT = 'private scratch — only you see it'
 
 export default function SpaceHub() {
+    // /spaces — the reserved address itself, not any one space's name.
+    useDocumentTitle('Spaces — di.iiii')
     const { authenticated, type, role, canCreateSpace, ownedSpaceCount, spaceLimit, spaces: sessionScopes, openSpaceId, sandboxSpaceId } = useAuthSession()
     const [spaces, setSpaces] = useState([])
     const [sandboxSummary, setSandboxSummary] = useState(null)
@@ -262,6 +290,8 @@ export default function SpaceHub() {
     const [github, setGithub] = useState(null)
     // card-preview manager panel state: { spaceId, busy, error }
     const [previewMgr, setPreviewMgr] = useState(null)
+    // History: the space's restore points, opened from Manage.
+    const [history, setHistory] = useState(null)
     const [providers, setProviders] = useState(null) // null until sign-in requested
     const [copiedLiveId, setCopiedLiveId] = useState(null)
     // Spaces whose cover image failed to load — see the card preview below.
@@ -365,9 +395,6 @@ export default function SpaceHub() {
         return () => stop.abort()
     }, [])
 
-    const openSpace = (spaceId) =>
-        navigateToStudioPath(buildStudioHubPath(spaceId))
-
     // A card opens the editor only when the session can actually work there.
     // The Open Space and your own sandbox are always enterable (the server
     // grants them implicitly, outside the cookie scope). Public spaces you
@@ -378,24 +405,34 @@ export default function SpaceHub() {
         || space.kind === 'sandbox'
         || (Array.isArray(sessionScopes) && sessionScopes.includes(space.id))
 
-    const openCard = (space) => {
-        if (!canEnter(space) && space.isPublic) {
-            appNavigate(buildSpaceDoorPath(space))
-            return
-        }
-        openSpace(space.id)
+    // Both routes out of a card go through the entry transition: the page
+    // pushes toward the card, and it holds until the destination has painted
+    // instead of cutting to black.
+    const openCard = (space, element = null) => {
+        const href = !canEnter(space) && space.isPublic
+            ? buildSpaceFacePath(space)
+            : buildStudioHubPath(space.id)
+        enterFromElement(null, href, {
+            element: element?.querySelector?.('.ssh-card-preview') || element
+        })
     }
 
-    const submitCreate = async (title) => {
+    // One creation, two doors. `born` decides where the new space OPENS, and
+    // nothing else differs: a space made to be scanned is an ordinary space, and
+    // a space made in the usual way can be scanned later from its own footage
+    // room. The owner's words were "create new space and start to scan" — one
+    // press, and the camera is already looking at the hall.
+    const submitCreate = async (title, born = 'studio') => {
         const name = title.trim()
         if (!name) return
         setCreatingTitle(null)
         setIsBusy(true)
-        setStatus('creating...')
+        setStatus(born === 'scan' ? 'creating, then opening the camera...' : 'creating...')
         try {
             const space = await createServerSpace({ label: name, isPermanent: true })
+            announceSessionChanged()
             await loadSpaces()
-            navigateToStudioPath(buildStudioHubPath(space.id))
+            navigateToStudioPath(born === 'scan' ? buildScanPath(space.id) : buildStudioHubPath(space.id))
         } catch (e) {
             setStatus(e.message || 'error creating space')
             setIsBusy(false)
@@ -463,6 +500,8 @@ export default function SpaceHub() {
                 if (!as) { setStatus(''); return }
                 result = await openSpaceFromFile(file, { as })
             }
+            // The server just put the opened space in this session's scope.
+            announceSessionChanged()
             await loadSpaces()
             // loadSpaces clears status on success, so this goes after it.
             if (result?.spaceId) setStatus(`opened ${result.spaceId}`)
@@ -594,6 +633,37 @@ export default function SpaceHub() {
         setPreviewMgr(prev => prev?.spaceId === space.id ? null : { spaceId: space.id, busy: false, error: '' })
     }, [])
 
+    const loadHistory = useCallback(async (spaceId) => {
+        setHistory(prev => prev?.spaceId === spaceId ? { ...prev, loading: true, error: '' } : prev)
+        try {
+            const items = await listSpaceSnapshots(spaceId)
+            setHistory(prev => prev?.spaceId === spaceId ? { ...prev, loading: false, items } : prev)
+        } catch (err) {
+            setHistory(prev => prev?.spaceId === spaceId ? { ...prev, loading: false, error: err.message || 'Could not load the history.' } : prev)
+        }
+    }, [])
+
+    const handleToggleHistory = useCallback((space, e) => {
+        e.stopPropagation()
+        if (history?.spaceId === space.id) { setHistory(null); return }
+        setHistory({ spaceId: space.id, loading: true, error: '', items: [], busyId: null, notice: '' })
+        loadHistory(space.id)
+    }, [history, loadHistory])
+
+    const handleRestoreSnapshot = useCallback(async (space, point) => {
+        const when = formatRestorePointTime(point.takenAt)
+        if (!window.confirm(`Put "${space.label || space.id}" back to how it was ${when}?\n\nWhat is there now is kept as a restore point, so this can be undone too.`)) return
+        setHistory(prev => prev ? { ...prev, busyId: point.id, error: '', notice: '' } : prev)
+        try {
+            await restoreSpaceSnapshot(space.id, point.id)
+            setHistory(prev => prev ? { ...prev, busyId: null, notice: `Restored to ${when}.` } : prev)
+            await loadHistory(space.id)
+            await loadSpaces()
+        } catch (err) {
+            setHistory(prev => prev ? { ...prev, busyId: null, error: err.message || 'Could not restore.' } : prev)
+        }
+    }, [loadHistory, loadSpaces])
+
     const handleUseLivePreview = useCallback(async (space) => {
         setPreviewMgr(prev => prev ? { ...prev, busy: true, error: '' } : prev)
         try {
@@ -659,16 +729,27 @@ export default function SpaceHub() {
     // The chips count the whole set, not the filtered one — a count that changed
     // when you clicked it could never tell you what is behind the other chips.
     const stateCounts = countStates(arrangeable)
-    const passesFilter = (space) => filterMode === 'all' || spaceState(space) === filterMode
+    // "Only you" (private) means a visitor meets a login wall — a state about
+    // spaces belonging to an owner. The server only ever lists PUBLIC spaces
+    // to a signed-out visitor (spaceRoutes.js), so that count is always 0 for
+    // them: the chip could never do anything but read "Only you 0", an
+    // owner-only concept surfaced to someone who owns nothing here. Hide the
+    // chip for a visitor, and if their browser kept an old "private" pick from
+    // a session where they were signed in, treat it as "all" rather than
+    // silently filtering their whole page down to a filter that no longer
+    // exists on screen.
+    const visibleFilterModes = isVisitor ? FILTER_MODES.filter(mode => mode.key !== 'private') : FILTER_MODES
+    const activeFilterMode = isVisitor && filterMode === 'private' ? 'all' : filterMode
+    const passesFilter = (space) => activeFilterMode === 'all' || spaceState(space) === activeFilterMode
 
-    const visitorSpaces = applyView(arrangeable, { arrange, filter: filterMode })
-    const arrangedRest = applyView(restSpaces, { arrange, filter: filterMode })
+    const visitorSpaces = applyView(arrangeable, { arrange, filter: activeFilterMode })
+    const arrangedRest = applyView(restSpaces, { arrange, filter: activeFilterMode })
     // The two pinned shelves obey the filter as well: leaving Open Space on
     // screen under "needs a door" would make the filter a suggestion.
     const openShelfCard = openSpaceCard && passesFilter(openSpaceCard) ? openSpaceCard : null
     const sandboxShelfCard = sandboxCard && passesFilter(sandboxCard) ? sandboxCard : null
     // The list is one flat run of rows, in the arranged order, pinned shelves included.
-    const listSpaces = applyView(arrangeable, { arrange, filter: filterMode })
+    const listSpaces = applyView(arrangeable, { arrange, filter: activeFilterMode })
 
     // The two featured shelves are a PAIR — the room everyone shares beside the one
     // that is yours — and only earn their own row when both are there. Alone, a
@@ -755,6 +836,12 @@ export default function SpaceHub() {
                                         onKeyDown={e => e.key === 'Escape' && setCreatingTitle(null)}
                                     />
                                     <button className="ssh-btn-create" type="submit">Create</button>
+                                    <button
+                                        className="ssh-btn-create ssh-btn-scan"
+                                        type="button"
+                                        onClick={() => submitCreate(creatingTitle, 'scan')}
+                                        title="Make the space and open the camera, so the place walks straight in"
+                                    >Scan a place</button>
                                     <button className="ssh-btn-cancel" type="button" onClick={() => setCreatingTitle(null)}>✕</button>
                                 </form>
                             )
@@ -816,12 +903,12 @@ export default function SpaceHub() {
                             ))}
                         </div>
                         <div className="ssh-filter" role="group" aria-label="Show which spaces">
-                            {FILTER_MODES.map(mode => (
+                            {visibleFilterModes.map(mode => (
                                 <button
                                     key={mode.key}
                                     type="button"
-                                    className={filterMode === mode.key ? 'on' : ''}
-                                    aria-pressed={filterMode === mode.key}
+                                    className={activeFilterMode === mode.key ? 'on' : ''}
+                                    aria-pressed={activeFilterMode === mode.key}
                                     disabled={stateCounts[mode.key] === 0 && mode.key !== 'all'}
                                     onClick={() => selectFilter(mode.key)}
                                 >{mode.label}<span className="ssh-filter-count">{stateCounts[mode.key]}</span></button>
@@ -837,9 +924,15 @@ export default function SpaceHub() {
                     </p>
                 )}
 
-                {viewMode === 'map' && spaces.length > 0 && (
+                {/* Same set the grid counts and lists — `arrangeable`, not the
+                    raw `spaces` state. A visitor's own private sandbox is
+                    excluded from the grid ("not one of the spaces to visit",
+                    above); the map drew straight from `spaces` and so held one
+                    more node than the grid showed cards, the same page
+                    reporting two different totals for what should be one set. */}
+                {viewMode === 'map' && arrangeable.length > 0 && (
                     <SpaceConstellation
-                        spaces={spaces}
+                        spaces={arrangeable}
                         defaultSpaceId={defaultSpaceId}
                         openSpaceId={openSpaceId}
                         canManage={canManage}
@@ -878,25 +971,42 @@ export default function SpaceHub() {
                         </div>
                         {listSpaces.map(space => {
                             const state = spaceState(space)
-                            const linkedTitle = space.publishedProjectId
-                                ? (projectTitles[space.publishedProjectId] || space.publishedProjectId)
-                                : null
+                            // One name per space (utils/spaceNames.js): the row
+                            // names the space once, and says the door's title only
+                            // to an account, only where it differs from the name.
+                            // A card whose face is a coded work shows that work's front page, so
+                            // naming the published project under it would caption the wrong thing.
+                            const doorTitle = buildSpaceFacePath(space) !== buildSpaceDoorPath(space)
+                                ? null
+                                : doorTitleForCard({ space, projectTitle: projectTitles[space.publishedProjectId], isVisitor })
                             const stateWord = state === 'open' ? 'open to anyone'
                                 : state === 'nodoor' ? 'no door' : 'only you'
                             return (
                                 <div
                                     key={space.id}
+                                    data-space-id={space.id}
                                     className="ssh-list-row"
                                     role="button"
                                     tabIndex={0}
-                                    onClick={() => openCard(space)}
-                                    onKeyDown={e => e.key === 'Enter' && openCard(space)}
+                                    onClick={(event) => openCard(space, event.currentTarget)}
+                                    onKeyDown={e => e.key === 'Enter' && openCard(space, e.currentTarget)}
                                 >
                                     <span className="ssh-list-name">
-                                        <b>{space.label || space.id}</b>
-                                        <span className="ssh-list-id">{space.kind === 'sandbox' ? 'sandbox' : space.id}</span>
+                                        <b>{spaceName(space)}</b>
+                                        {/* The id was a second copy of the name on
+                                            almost every row ("Drum Rhythms" over
+                                            "drum-rhythms"). The map dropped it first;
+                                            the address is one click away on Live. A
+                                            sandbox keeps its word: that is its kind,
+                                            not its name. */}
+                                        {space.kind === 'sandbox' && <span className="ssh-list-id">sandbox</span>}
                                     </span>
-                                    <span className="ssh-list-project">{linkedTitle || <span className="ssh-list-none">nothing published</span>}</span>
+                                    <span className="ssh-list-project">
+                                        {doorTitle
+                                            || (space.publishedProjectId
+                                                ? <span className="ssh-list-none">the space itself</span>
+                                                : <span className="ssh-list-none">nothing published</span>)}
+                                    </span>
                                     <span className={`ssh-list-state ssh-list-state--${state}`}>{stateWord}</span>
                                     <span className="ssh-list-acts" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
                                         <button type="button" className="ssh-card-btn" onClick={() => openCard(space)}>Open</button>
@@ -927,29 +1037,42 @@ export default function SpaceHub() {
                         {items.map((space) => {
                             const isMain = space.id === defaultSpaceId
                             const isLinking = linker?.spaceId === space.id
-                            const linkedTitle = space.publishedProjectId
-                                ? (projectTitles[space.publishedProjectId] || space.publishedProjectId)
-                                : null
+                            // A card whose face is a coded work shows that work's front page, so
+                            // naming the published project under it would caption the wrong thing.
+                            const doorTitle = buildSpaceFacePath(space) !== buildSpaceDoorPath(space)
+                                ? null
+                                : doorTitleForCard({ space, projectTitle: projectTitles[space.publishedProjectId], isVisitor })
+                            const showViewOnly = space.isPublic && !canEnter(space) && !isVisitor
 
                             return (
                                 <div
                                     key={space.id}
+                                    data-space-id={space.id}
                                     className="ssh-space-card"
-                                    onClick={() => openCard(space)}
+                                    onClick={(event) => openCard(space, event.currentTarget)}
                                     role="button"
                                     tabIndex={0}
-                                    onKeyDown={e => e.key === 'Enter' && openCard(space)}
+                                    onKeyDown={e => e.key === 'Enter' && openCard(space, e.currentTarget)}
                                 >
-                                    <div className="ssh-card-header">
-                                        <span className="ssh-space-id">{space.kind === 'sandbox' ? 'sandbox' : space.id}</span>
-                                        {isMain && <span className="ssh-badge-main">Main</span>}
-                                        {space.isPublic && <span className="ssh-badge-live">Live</span>}
-                                        {/* "View live" tells an account which of the spaces on
-                                            its page it cannot edit. On a visitor's page that is
-                                            every card, so it says nothing and wraps the header
-                                            onto two lines — Live alone carries it there. */}
-                                        {space.isPublic && !canEnter(space) && !isVisitor && <span className="ssh-badge-viewonly">View live</span>}
-                                    </div>
+                                    {/* One name per space (utils/spaceNames.js). The header
+                                        used to open with the id in mono — "drum-rhythms"
+                                        above "Drum Rhythms" above "Project: Drum Rhythms",
+                                        the same words three times on six of thirteen cards.
+                                        The name below is the one name; the address is
+                                        printed, as an address, on the live-link row. A
+                                        sandbox keeps its word, which is a kind, not a name. */}
+                                    {(space.kind === 'sandbox' || isMain || space.isPublic || showViewOnly) && (
+                                        <div className="ssh-card-header">
+                                            {space.kind === 'sandbox' && <span className="ssh-space-id">sandbox</span>}
+                                            {isMain && <span className="ssh-badge-main" title="This space is what opens at the site’s own address">Front door</span>}
+                                            {space.isPublic && <span className="ssh-badge-live">Live</span>}
+                                            {/* "View live" tells an account which of the spaces on
+                                                its page it cannot edit. On a visitor's page that is
+                                                every card, so it says nothing and wraps the header
+                                                onto two lines — Live alone carries it there. */}
+                                            {showViewOnly && <span className="ssh-badge-viewonly">View live</span>}
+                                        </div>
+                                    )}
                                     {(() => {
                                         const isLive = liveSpaceId === space.id
                                         // isPublic alone, NOT isPublic && publishedProjectId.
@@ -991,7 +1114,7 @@ export default function SpaceHub() {
                                             >
                                                 {isLive ? (
                                                     <SpaceCardLive
-                                                        doorPath={buildSpaceDoorPath(space)}
+                                                        doorPath={buildSpaceFacePath(space)}
                                                         label={space.label || space.id}
                                                         onRelease={() => releaseLive(space.id)}
                                                     />
@@ -1010,12 +1133,12 @@ export default function SpaceHub() {
                                                 ) : isEmptySandbox ? (
                                                     <p className="ssh-card-preview-empty-line">nothing in it yet — open it and put something in</p>
                                                 ) : (
-                                                    <SpaceCardPreview doorPath={buildSpaceDoorPath(space)} label={space.label || space.id} />
+                                                    <SpaceCardPreview doorPath={buildSpaceFacePath(space)} label={space.label || space.id} />
                                                 )}
                                             </div>
                                         )
                                     })()}
-                                    <p className="ssh-space-label">{space.label || space.id}</p>
+                                    <p className="ssh-space-label">{spaceName(space)}</p>
                                     {/* In a visitor's single grid the Open Space is one card
                                         among the others, so it carries its own line instead of
                                         a shelf heading above it. */}
@@ -1024,8 +1147,26 @@ export default function SpaceHub() {
                                             {featured ? hint : (space.kind === 'sandbox' ? SANDBOX_HINT : OPEN_SPACE_HINT)}
                                         </p>
                                     ) : null}
-                                    {linkedTitle && (
-                                        <p className="ssh-space-project">Project: {linkedTitle}</p>
+                                    {/* The door's title, to its owner, only where it is
+                                        not the space's name again. A visitor never sees
+                                        it: a card is the way into the SPACE, and a space
+                                        that opens straight into one piece has nothing to
+                                        add by naming the piece. */}
+                                    {doorTitle && (
+                                        <p className="ssh-space-project">Opens on: {doorTitle}</p>
+                                    )}
+                                    {/* What the space HOLDS: "26 projects · 2 published".
+                                        A card named only the project its door opens on,
+                                        so a space with none — the Open Space above all —
+                                        read as empty with everything made in it hidden.
+                                        The server sends the counts only for a space this
+                                        person may enter; zero is an answer too. */}
+                                    {Number.isFinite(space.projectCount) && (
+                                        <p className="ssh-space-project">
+                                            {space.projectCount === 0
+                                                ? 'No projects yet'
+                                                : `${space.projectCount} project${space.projectCount === 1 ? '' : 's'} · ${space.publishedCount > 0 ? `${space.publishedCount} published` : 'none published'}`}
+                                        </p>
                                     )}
                                     {/* A card opens the space's one door. Everything
                                         else the space holds had no address anybody
@@ -1111,6 +1252,13 @@ export default function SpaceHub() {
                                                 GitHub sync
                                             </button>
                                             <button
+                                                className={`ssh-card-btn${history?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
+                                                onClick={e => handleToggleHistory(space, e)}
+                                                title="Restore points: who changed this space, and a way back to before"
+                                            >
+                                                History
+                                            </button>
+                                            <button
                                                 className="ssh-card-btn"
                                                 onClick={e => handleSaveToFile(space, e)}
                                                 title="One file holding this space, its history and its assets — open it on any di.iiii"
@@ -1161,6 +1309,47 @@ export default function SpaceHub() {
                                                     </button>
                                                 )}
                                                 <button className="ssh-card-btn" onClick={() => setPreviewMgr(null)}>
+                                                    Close
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {history?.spaceId === space.id && (
+                                        <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                                            {history.loading && <p className="ssh-linker-status">Loading history…</p>}
+                                            {history.error && <p className="ssh-linker-status ssh-linker-error">{history.error}</p>}
+                                            {history.notice && <p className="ssh-linker-status">{history.notice}</p>}
+                                            {!history.loading && !history.error && history.items.length === 0 && (
+                                                <p className="ssh-linker-status">No restore points yet — one is kept before every change someone makes here.</p>
+                                            )}
+                                            {!history.loading && history.items.length > 0 && (
+                                                <div className="ssh-linker-list">
+                                                    {history.items.map(point => {
+                                                        const when = formatRestorePointTime(point.takenAt)
+                                                        const what = describeRestorePoint(point)
+                                                        // Two lines, not one ellipsis: on a card this narrow a
+                                                        // single line cut off the one thing a row is for — whose.
+                                                        return (
+                                                            <div key={point.id} className="ssh-linker-item">
+                                                                <span className="ssh-linker-select" title={`${when} · ${what}`}>
+                                                                    <span>{when}<br />{what}</span>
+                                                                </span>
+                                                                <button
+                                                                    className="ssh-linker-rename-btn"
+                                                                    disabled={Boolean(history.busyId)}
+                                                                    onClick={() => handleRestoreSnapshot(space, point)}
+                                                                    title="Put the space back to this point"
+                                                                >
+                                                                    {history.busyId === point.id ? 'Restoring…' : 'Restore'}
+                                                                </button>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
+                                            <div className="ssh-linker-footer">
+                                                <button className="ssh-card-btn" onClick={() => setHistory(null)}>
                                                     Close
                                                 </button>
                                             </div>
@@ -1272,7 +1461,7 @@ export default function SpaceHub() {
                     <p className="ssh-tools-line">
                         <span className="ssh-tools-label">On this machine</span>
                         <a className="ssh-tools-link" href={lightingDeskPath()} target="_blank" rel="noreferrer">
-                            Lights
+                            Light
                         </a>
                         <span className="ssh-tools-hint">— the lighting desk, for the rig in the room</span>
                     </p>

@@ -23,11 +23,11 @@ the tags collided and nothing checked.
 2. **Is the running build the one you think?**
    ```
    curl -s https://di-studio.xyz/serverXR/api/health | jq .release
-   curl -s https://staging.di-studio.xyz/serverXR/api/health | jq .release
+   curl -s https://dev.diiii.xyz/serverXR/api/health | jq .release
    ```
    Assert all three: `gitCommit` matches the branch head, `deployEnv` matches
-   the host (`production` for di-studio.xyz, `staging` for staging), and
-   `sourceRef` matches the branch. A prod host reporting `staging` means it is
+   the host (`production` for prod, `dev` for the dev tier), and
+   `sourceRef` matches the branch. A prod host reporting `dev` means it is
    running the wrong image even if the code is right.
 
 3. **Is uptime consistent with a fresh deploy?** A large `uptimeSeconds` right
@@ -38,13 +38,13 @@ the tags collided and nothing checked.
    **look at the screenshots**. See the charter.
 
 5. **Did anything regress against the other tier?** Comparing the same surface
-   on prod and staging is the cheapest way to see whether a change altered
+   on prod and the dev tier is the cheapest way to see whether a change altered
    something you did not intend.
 
 ## Hard constraints
 
 **Never promote `dev` → `main` on your own initiative.** Report readiness; the
-human decides. Verify staging first — that ordering is the project's contract.
+human decides. Verify the dev tier first — that ordering is the project's contract.
 
 **Never report "verified" from the Chrome extension.** Its tab is hidden, so
 `requestAnimationFrame` is frozen and every 3D or animated surface reads as

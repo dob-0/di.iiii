@@ -20,4 +20,24 @@ export const isContentAddressedAssetUrl = (url) => {
     return SHA256_HEX_REGEX.test(lastSegment)
 }
 
+// The `cache` mode an asset fetch should use, given its id or its url.
+//
+// Content-addressed ids are immutable, so the browser may trust the server's
+// own `immutable` Cache-Control outright. Legacy (pre-content-addressing)
+// ids are project-local and mutable — the same id can be overwritten with
+// different bytes — so those must never be served from cache unchecked.
+//
+// `no-cache` is what "mutable" actually asks for: the response IS stored, and
+// the browser revalidates it with the server (If-None-Match / If-Modified-
+// Since) before every reuse, so a replaced asset still arrives fresh while an
+// unchanged one costs a 304 with no body. `no-store` — which every one of
+// these call sites used until 2026-09-21 — forbids storing at all, so each
+// fetch re-downloads the whole file. Measured on the front room that day: two
+// model entities carrying a 3.2 MB legacy asset each, loaded twice apiece,
+// pulled 12.84 MB of the page's 13.04 MB. Revalidation makes three of those
+// four requests a 0-byte 304, at no cost to correctness.
+export const assetFetchCacheMode = (idOrUrl) => (
+    isContentAddressedAssetUrl(idOrUrl) ? 'default' : 'no-cache'
+)
+
 export default isContentAddressedAssetUrl

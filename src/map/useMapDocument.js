@@ -1,22 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useProjectStore } from '../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../project/hooks/useProjectDocumentSync.js'
-import { generateId } from '../shared/projectSchema.js'
-import { recallCueLighting } from './lightingLink.js'
+import { defaultMappingSurface, generateId } from '../shared/projectSchema.js'
+import { fireCue as fireCueShared } from './cueFiring.js'
+import { mapChannelName, useMapOpCourier } from './mapCourier.js'
 
 // Both map routes talk to one project document through the ordinary op layer,
 // so a mapping is a normal di.iiii document with normal history — not a file
 // beside the platform, the way a Resolume composition is a file beside the
 // work it shows.
 //
-// On top of that sits a BroadcastChannel. The op layer already syncs the
-// output window, but it round-trips through the server and coalesces at 50ms,
-// and dragging a corner while watching the wall is the one interaction where
-// that delay is the whole experience. Same-origin windows on one machine get
-// the edit immediately; the op layer still carries it to disk, and to any
-// window that is not on this machine. The channel is a courier, never the
-// record — an output window that never hears it is late, not wrong.
-export const mapChannelName = (projectId) => `di-map-${projectId}`
+// On top of that sits a BroadcastChannel, kept in src/map/mapCourier.js — the
+// 3D scene writes to a mapping too now (it fires cues), and the courier had to
+// stop being private to this hook.
+export { mapChannelName }
 
 export function useMapDocument(projectId, { role = 'desk' } = {}) {
     const store = useProjectStore()
@@ -28,26 +25,10 @@ export function useMapDocument(projectId, { role = 'desk' } = {}) {
         opIdPrefix: `map-${role}-op`
     })
 
-    const channelRef = useRef(null)
-    useEffect(() => {
-        if (!projectId || typeof BroadcastChannel === 'undefined') return undefined
-        const channel = new BroadcastChannel(mapChannelName(projectId))
-        channelRef.current = channel
-        return () => {
-            channelRef.current = null
-            channel.close()
-        }
-    }, [projectId])
-
     const document = state.document
     const mapping = document?.mappingState
 
-    const applyOps = useCallback((ops) => {
-        const list = Array.isArray(ops) ? ops : [ops]
-        if (!list.length) return
-        applyLocalOps(list)
-        channelRef.current?.postMessage({ kind: 'ops', ops: list })
-    }, [applyLocalOps])
+    const applyOps = useMapOpCourier(projectId, applyLocalOps)
 
     const surfaces = useMemo(() => mapping?.surfaces || [], [mapping])
     const surfaceById = useMemo(
@@ -61,9 +42,17 @@ export function useMapDocument(projectId, { role = 'desk' } = {}) {
         // is copying, `id` included — kept the ORIGINAL id, so
         // createMappingSurface saw an id that already existed and dropped the
         // op on the floor. The button did nothing at all, silently.
+        // The source is written out rather than left to the normalizer's
+        // empty `ref`, so what a new surface shows is a fact in the document
+        // every machine reads the same way — the dim identification card, not
+        // the bright alignment grid. Duplicate passes a whole surface and so
+        // overrides it with the original's own source, which is correct.
         addSurface: (patch = {}) => {
             const id = generateId('srf')
-            applyOps({ type: 'createMappingSurface', payload: { surface: { name: '', ...patch, id } } })
+            applyOps({
+                type: 'createMappingSurface',
+                payload: { surface: { name: '', source: { ...defaultMappingSurface.source }, ...patch, id } }
+            })
             return id
         },
         updateSurface: (surfaceId, patch) => {
@@ -76,6 +65,16 @@ export function useMapDocument(projectId, { role = 'desk' } = {}) {
         },
         reorderSurfaces: (surfaceIds) => applyOps({ type: 'reorderMappingSurfaces', payload: { surfaceIds } }),
         setOutput: (patch) => applyOps({ type: 'setMappingState', payload: { patch } }),
+
+        // A video/image surface can point at a file brought in from this
+        // machine. The bytes are uploaded straight to the project (same route
+        // Studio and the node editor use); this only records the manifest
+        // entry, through the same op layer every other change travels
+        // through, so it reaches every other desk and the output window too.
+        upsertAsset: (asset) => {
+            if (!asset?.id) return
+            applyOps({ type: 'upsertAsset', payload: { asset } })
+        },
 
         addCue: (patch = {}) => {
             const id = generateId('cue')
@@ -92,32 +91,11 @@ export function useMapDocument(projectId, { role = 'desk' } = {}) {
         },
         reorderCues: (cueIds) => applyOps({ type: 'reorderMappingCues', payload: { cueIds } }),
 
-        // Firing a cue is ONE op batch, deliberately: the fade and every
-        // surface it touches land in the same document version, so the wall
-        // never shows a half-applied cue and the browser reads the new fade
-        // duration off the same style change that moves the opacity.
-        fireCue: (cue) => {
-            if (!cue) return
-            // The light goes with the wall, and it goes FIRST — before the op
-            // batch rather than after it, so the two desks start their fades
-            // at the same moment instead of the rig waiting on a document
-            // round-trip. This is the single choke point every way of playing
-            // a cue passes through: the number key, Play walking the list, and
-            // the button in the cue list all end up here.
-            //
-            // recallCueLighting never rejects and never blocks: a cue with no
-            // scene touches no network, and a lighting desk that is not
-            // running (every hosted tab: /light answers 404 there) costs the
-            // projection cue nothing at all.
-            recallCueLighting(cue)
-            const ops = [{ type: 'setMappingState', payload: { patch: { fade: cue.fade } } }]
-            Object.entries(cue.surfaces).forEach(([surfaceId, patch]) => {
-                if (patch && Object.keys(patch).length) {
-                    ops.push({ type: 'setMappingSurface', payload: { surfaceId, patch } })
-                }
-            })
-            applyOps(ops)
-        }
+        // Firing a cue is ONE op batch, and the batch is built in
+        // src/map/cueFiring.js — the same call the 3D scene's cue strip makes.
+        // Nothing downstream of that function can tell which tool pressed the
+        // key, which is the whole point of letting two tools press it.
+        fireCue: (cue) => fireCueShared(cue, applyOps)
     }), [applyOps])
 
     return { store, document, mapping, surfaces, surfaceById, syncState, applyOps, ...api }

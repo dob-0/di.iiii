@@ -5,11 +5,14 @@ thing still asks for it: `di up`'s once-a-day newer-version notice — bounded
 at 3 seconds, failure swallowed, never blocking. Everything else is local.)
 
 ```
-macOS / Linux   curl -fsSL https://di-studio.xyz/get | sh
-Windows         irm https://di-studio.xyz/get.ps1 | iex
+macOS / Linux   curl -fsSL https://diiii.xyz/get | sh
+Windows         irm https://diiii.xyz/get.ps1 | iex
 ```
 
-If di-studio.xyz is blocked, the same script is at
+`https://di-studio.xyz/get` and `/get.ps1` serve the same bytes and always
+will — that line is printed on handouts — and must never become a redirect: a
+plain `curl … | sh` does not follow one. If neither host is reachable, the same
+script is at
 `https://raw.githubusercontent.com/dob-0/di.iiii/main/install.sh`.
 
 Then:
@@ -29,8 +32,67 @@ di backup      write your whole di.iiii to one file
 di update      get the newest — never touches your work
 di doctor      what this machine can and cannot do
 di keeper get  a small model on this machine — works with no internet
+di ndi get     video in and out over the network — OBS, Resolume, a projector
 di help        the rest
 ```
+
+## NDI — video in and out over the network
+
+`di ndi get` fetches the **NDI® runtime** and puts it in `~/.di/ndi/lib/`, then
+writes `DI_NDI_LIB` into `di.env`. With it, a Send Out operator puts a picture
+on the network as an NDI source, and another machine's source arrives as an
+operator. OBS, Resolume and most projector boxes see it as a camera.
+`di ndi status` says whether it is there and whether di.iiii can load it;
+`di ndi remove` takes it off.
+
+**It is fetched, never bundled, and that is a licence and not a preference.**
+di.iiii is AGPL-3.0; the runtime is Vizrt's under their own EULA. Shipping the
+binary in the repo or the release artifact would be redistribution. So the
+bytes come from Vizrt and `di ndi get` is the command that does the clicking.
+Nothing is downloaded until somebody types it — the same promise `di keeper
+get` makes.
+
+**No admin rights, on any of the three.** It lands under `~/.di`, which is why
+`DI_NDI_LIB` exists: serverXR's loader tries it before the system paths. An
+artist on a borrowed laptop does not have the machine's password, and
+`sudo pacman -S ndi-sdk` is not an instruction that survives a venue.
+
+| platform | what is fetched | size | form |
+|---|---|---|---|
+| linux | `Install_NDI_SDK_v6_Linux.tar.gz` | 62 MB | tar → a self-extracting `.sh` with a second tar glued on after `__NDI_ARCHIVE_BEGIN__` |
+| macOS | `Install_NDI_SDK_v6_Apple.pkg` | 225 MB | xar → `NDI_SDK_Component.pkg/Payload`, a gzipped cpio |
+| windows | `NDI 6 Runtime.exe` (`ndi.link/NDIRedistV6`) | 9.6 MB | Inno Setup 6.1, installed unattended into `~/.di/ndi/sdk` |
+
+Windows is the redistributable, not the 42 MB SDK: it is the runtime and
+nothing else, which is all we load. If it is already on the machine from NDI's
+own installer, `NDI_RUNTIME_DIR_V6` is read and the file is copied — checked
+*before* the network, so nobody waits for a download they do not need.
+
+The Linux tarball carries seven builds — x86_64, i686, aarch64 and four
+Raspberry Pi ARM variants. `process.arch` picks one; `--variant NAME` overrides
+it, which is the only way to tell a Pi Zero (armv6) from a Pi 3 (armv7), since
+Node calls both `arm`.
+
+**On integrity, plainly.** `keeper get` can check its downloads against a
+checksum published by a different endpoint than the bytes. NDI publishes no
+such thing, and the URLs are version-agnostic — `Install_NDI_SDK_v6_Linux.tar.gz`
+is whatever 6.x is current, so a checksum pinned in the source would be wrong
+the day Vizrt cuts 6.3.3. Instead: TLS to Vizrt's CDN; the archive must contain
+the library at the path expected; the extracted file must be a real shared
+object for *this* platform by magic number, not by extension; and `--sha256 HEX`
+refuses anything else for a person who has a checksum they trust. A receipt
+beside the library records what arrived, so a second machine can be compared
+against the first. That proves the bytes are loadable and came from Vizrt over
+TLS. It does not prove the CDN was not compromised, and no checksum we could
+write would prove that either.
+
+**Verified by loading, not by looking.** After a fetch, `di ndi get` runs
+serverXR's own `library.js` in a short-lived process against the file it just
+installed, and prints what the library says its version is. A file of the right
+shape in the right place proves nothing; the question is whether the process
+that will do the sending can `dlopen` it.
+
+NDI® is a registered trademark of Vizrt NDI AB — https://ndi.video
 
 ## The keeper — a model that comes with it
 
@@ -147,6 +209,7 @@ venue with no wifi runs exactly the same as one at a desk.
   previous -> versions/<v>   what --rollback returns to
   data/                      YOUR WORK — di.db, spaces/, uploads/
   keeper/                    the small model and llama.cpp, if `di keeper get` ran
+  ndi/                       the NDI runtime, if `di ndi get` ran
   di.env  state.json  logs/  run/
 ```
 
@@ -187,26 +250,37 @@ Nothing is written outside `$HOME`. Nothing asks for sudo, on any OS.
 ## Node or Docker — the CLI decides, not the artist
 
 ```
-1. DI_MODE, or --docker / --node   → obeyed, no probing
-2. node >= 22.15 (the system's, or one di downloads)                   → node
-3. `docker info` succeeds AND the GHCR images are anonymously pullable → docker
-4. neither → the two links that fix it; nothing is installed
+1. node >= 22.15 (the system's, or one di downloads)                   → node
+2. `docker info` succeeds AND the GHCR images are anonymously pullable → docker
+3. neither → the two links that fix it; nothing is installed
 ```
+
+**Docker mode is not reachable today.** `decideMode` (`scripts/di/detect.mjs`)
+would obey a forced mode, but nothing passes one: `bootstrap.mjs` and
+`di doctor` both call `probeAll({ home })` with no `forcedMode`, and nothing
+reads `DI_MODE` or a `--docker` / `--node` flag. There is no `di install`
+command either. And by the time `bootstrap.mjs` runs, `install.sh` /
+`install.ps1` has already found or downloaded a node, so step 1 always wins
+and every install records `mode: node`. Docker mode's runner
+(`runner-docker.mjs`) is kept, and the branches below that read
+`mode === 'docker'` stay, for the day a real switch is built.
 
 **Node wins whenever it is viable** (changed 2026-08-10 — it used to be the
 other way around). Docker Desktop merely being open would land an artist in
 the one mode that carries none of the local operator surfaces: no `DI_LOCAL`,
 a non-loopback `remoteAddress` seen by the server, and no way to reach a
 `claude` binary on the host — so the agent board and the local Claude chat
-node 404 there while the wiki promises them. Docker mode is real and kept,
-but it is the deliberate choice (`--docker` / `DI_MODE=docker`), never the
-accident. The recorded mode of an existing install never flips; this decision
-runs at install/doctor time only.
+node 404 there while the wiki promises them. Docker mode was meant to be the
+deliberate choice, never the accident — but the switch that would make it a
+choice was never wired (see above). The recorded mode of an existing install
+never flips; this decision runs at install/doctor time only.
 
 Docker is gated on the image probe, not just on the daemon, so an install can
-never 403 halfway through. **The GHCR packages are private today**, so the
-docker branch skips itself; make `ghcr.io/dob-0/dii-server` and `dii-client`
-public and it starts working with no new release.
+never 403 halfway through. **The GHCR packages are private today** (checked
+2026-09-23: an anonymous pull token for `dob-0/dii-server` is refused), so
+the docker branch skips itself. Making the packages public would not change
+that on its own: an install always has a node by the time the decision is
+made, so step 1 wins.
 
 Docker mode composes **both** files — `docker-compose.yml` *then*
 `docker-compose.di.yml`, the same pairing CI runs. The `.di` file is only an

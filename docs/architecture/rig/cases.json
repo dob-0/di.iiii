@@ -1,0 +1,51 @@
+{
+ "caps": [
+  ["room","room + door","di up --lan, a QR, visitors come in"],
+  ["follow","own install joins","a second di.iiii follows the space"],
+  ["mesh","members see each other","both-way links + finding each other on the network"],
+  ["coedit","live co-editing","a patch edit shows on every screen"],
+  ["presence","who's here","names, colours, who touched what"],
+  ["hold","holding","your hand on it, others pick something else"],
+  ["lanes","lanes / turns","big groups: own part, or wait your turn"],
+  ["https","phone camera + mic","a certificate so the local address is secure"],
+  ["pictures","picture engine","operators + pictures between machines"],
+  ["vj","clips + VJ deck","footage layers, blend, BPM"],
+  ["audio","sound-reactive","BPM, tap, audio analysis in the patch"],
+  ["drivers","device drivers","DMX, MIDI, OSC, robot, projector"],
+  ["cues","cue list · GO","ordered cues, one button"],
+  ["show","show mode","caller, pre-flight, lock, snapshot"],
+  ["blackout","blackout from anyone","safety call, never locked"],
+  ["handover","handover","pass the call on"],
+  ["versions","version check","same release, hand-out, never break silently"],
+  ["parts","light parts","Stage / Hands for weak machines"],
+  ["appliance","appliance","boots into its job, restarts, health"],
+  ["offline","no internet","everything on the room network"],
+  ["share","share + take home","publish, .diiii, backup"],
+  ["relay","over the internet","jam between two cities"]
+ ],
+ "groups": [
+  ["alone","Alone"],["jam","Jam"],["show","Show"],["devices","Devices"],["conditions","When things go wrong"]
+ ],
+ "cases": [
+  {"g":"alone","t":"Build at home","who":"you · aylmo","s":"You make a piece on your own: patch, clips, map. No room, no one else.","m":"jam","n":["pictures","vj","audio","offline","share"]},
+  {"g":"alone","t":"Solo gig with a stage box","who":"you · aylmo + asuz on a projector","s":"You play from the laptop; asuz sits by the projector and shows what you send.","m":"show","n":["follow","pictures","show","blackout","parts","appliance","offline","versions"]},
+  {"g":"jam","t":"Two artists, one room","who":"you + Emilya · two laptops · local network","s":"You both open the same patch. Each plays on your own machine and you mix the result to the wall.","m":"jam","n":["room","follow","mesh","coedit","presence","hold","https","pictures","vj","offline","versions"]},
+  {"g":"jam","t":"Band jam: visuals + light + sound","who":"3–5 people · laptops, vizzz DMX, a sound source","s":"One person plays visuals, one plays lights, one plays sound, and all of it listens to the same beat.","m":"jam","n":["room","follow","mesh","coedit","presence","hold","pictures","vj","audio","drivers","blackout","offline"]},
+  {"g":"jam","t":"Workshop / class","who":"10–30 people · phones and laptops · a teacher","s":"Everyone gets their own lane on the big screen; the teacher approves who joins and can mute.","m":"jam","n":["room","presence","hold","lanes","https","pictures","coedit","blackout","offline","share"]},
+  {"g":"jam","t":"Open crowd / exhibition","who":"visitors on phones · many, unknown","s":"People walk in, scan the QR, and take a turn playing the wall; everyone else watches.","m":"jam","n":["room","lanes","hold","https","presence","parts","appliance","blackout","offline"]},
+  {"g":"jam","t":"Jam between two cities","who":"you in Yerevan + someone far away","s":"Two rooms jam over the internet. Allowed for a jam; the rule stays that a show never depends on the internet.","m":"jam","n":["relay","mesh","coedit","presence","hold","pictures","versions","share"]},
+  {"g":"show","t":"Your show","who":"you calling · asuz + vizzz nodes","s":"Rehearse in jam, run pre-flight, press show: one caller, everything else locked.","m":"show","n":["follow","mesh","pictures","vj","drivers","cues","show","blackout","versions","appliance","offline"]},
+  {"g":"show","t":"Theatre show with a cue list","who":"an operator · lights, projection, sound","s":"The operator presses GO through numbered cues, the way a stage manager calls a play.","m":"show","n":["cues","show","blackout","handover","drivers","pictures","versions","appliance","offline"]},
+  {"g":"show","t":"Festival: many artists, one stage","who":"artist A, then artist B, then C · shared projector + lights","s":"Each set is a handover: A passes the call to B, the room keeps its boxes, nobody reboots between sets.","m":"show","n":["follow","mesh","show","handover","blackout","versions","parts","appliance","offline"]},
+  {"g":"show","t":"Installation for weeks","who":"no one there · boxes in a gallery","s":"It boots into the show every morning, recovers by itself, and you check its health from home.","m":"show","n":["show","appliance","parts","offline","versions","blackout","relay"]},
+  {"g":"devices","t":"Robot as a performer","who":"di.jet · someone holding the arm switch","s":"The robot moves in the patch like any other node; arming stays a human switch on the robot.","m":"both","n":["drivers","hold","blackout","show","presence"]},
+  {"g":"devices","t":"Sensors and buttons trigger cues","who":"r-di Pi with buttons, a door sensor","s":"Pressing a physical button or opening a door fires a cue, with no screen on that box.","m":"both","n":["parts","drivers","cues","mesh","appliance"]},
+  {"g":"devices","t":"Talk to other software","who":"TouchDesigner, Resolume, QLab, Ableton","s":"They keep their software; di.iiii sends and receives OSC, MIDI or a picture.","m":"both","n":["drivers","pictures","audio","cues"]},
+  {"g":"devices","t":"Phones as screens","who":"50 phones held up in a crowd","s":"Every phone is a pixel of one big picture, or shows its own part of it.","m":"show","n":["room","https","parts","lanes","pictures","offline"]},
+  {"g":"conditions","t":"No internet at all","who":"a field, a basement, a festival","s":"Everything above keeps working on the room network alone.","m":"both","n":["offline","mesh","https","versions"]},
+  {"g":"conditions","t":"A machine dies mid-show","who":"the caller's laptop crashes","s":"The wall holds its last picture or goes to black, and the standby machine takes the call.","m":"show","n":["handover","blackout","appliance","show","mesh"]},
+  {"g":"conditions","t":"Someone hasn't updated","who":"Emilya is one release behind","s":"Jam still plays, marked amber; show refuses at pre-flight and offers the update from your machine.","m":"both","n":["versions","mesh","show"]},
+  {"g":"conditions","t":"Old or weak machine","who":"Pi 3, old laptop, the Jetson's old system","s":"The machine takes a light part, or speaks through a driver instead of running di.iiii.","m":"both","n":["parts","appliance","drivers","versions"]},
+  {"g":"conditions","t":"After: keep and share","who":"everyone who played","s":"The jam or the show snapshot is saved, taken home as a file, or published to diiii.xyz.","m":"both","n":["share","versions","offline"]}
+ ]
+}

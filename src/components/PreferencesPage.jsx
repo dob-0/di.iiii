@@ -23,6 +23,7 @@ import AdminManageSection from './preferences/AdminManageSection.jsx'
 import OpenCallSection from './preferences/OpenCallSection.jsx'
 import AgentsSection from './preferences/AgentsSection.jsx'
 import EstateSection from './preferences/EstateSection.jsx'
+import AppVisitorsSection from './preferences/AppVisitorsSection.jsx'
 
 // Two groups: "admin" is real access-control (who can see/publish what),
 // "diagnostics" is live operator/debug telemetry — same nav, visually
@@ -34,6 +35,9 @@ const SECTIONS = [
     { key: 'manage', label: 'Manage', glyph: '▸', group: 'admin' },
     { key: 'opencall', label: 'Open Call', glyph: '✉', group: 'admin' },
     { key: 'agents', label: 'Agents', glyph: '◈', group: 'admin' },
+    // The guest book: which apps, crawlers and scripts called, with a block
+    // toggle — admin, because blocking changes who gets in.
+    { key: 'visitors', label: 'Visitors', glyph: '⌁', group: 'admin' },
     { key: 'overview', label: 'Overview', glyph: '◆', group: 'diagnostics' },
     { key: 'inspect', label: 'Inspect', glyph: '◇', group: 'diagnostics' },
     { key: 'system', label: 'System', glyph: '▥', group: 'diagnostics' },
@@ -46,7 +50,7 @@ const SECTIONS = [
 // Sections where the person is administering, not debugging the scene — the
 // topbar drops the scene-editor telemetry and shows counts that belong to the
 // work at hand instead (fed back by the sections that own the data).
-const ADMIN_SECTION_KEYS = new Set(['manage', 'opencall', 'agents'])
+const ADMIN_SECTION_KEYS = new Set(['manage', 'opencall', 'agents', 'visitors'])
 
 // The 4 management toggles operators flip most often — surfaced on Overview so the
 // full 11-button Command Deck doesn't have to be visible at all times (see Controls).
@@ -473,6 +477,8 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                     {activeSection === 'opencall' && <OpenCallSection />}
 
                     {activeSection === 'agents' && <AgentsSection onBoardStats={setAgentStats} />}
+
+                    {activeSection === 'visitors' && <AppVisitorsSection />}
 
                     {activeSection === 'estate' && <EstateSection />}
 

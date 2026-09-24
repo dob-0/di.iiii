@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
     applyProjectOps,
+    defaultMappingSurface,
     invertProjectOps,
     normalizeMappingState,
+    normalizeMappingSurface,
     normalizeProjectDocument
 } from '../shared/projectSchema.js'
 
@@ -250,5 +252,115 @@ describe('creating a surface from another one', () => {
         const after = applyProjectOps(doc, [{ type: 'createMappingSurface', payload: { surface: { ...copied, id: 'b' } } }])
         expect(after.mappingState.surfaces.map((surface) => surface.id)).toEqual(['a', 'b'])
         expect(after.mappingState.surfaces[1].name).toBe('a copy')
+    })
+})
+
+describe('motion glow on a surface', () => {
+    it('is off on a surface that never asked for it, and survives an edit to one knob', () => {
+        let document = withSurfaces(['cam'])
+        expect(document.mappingState.surfaces[0].effect).toEqual({ kind: 'none', threshold: 0.08, trail: 0.88, gain: 4 })
+        document = applyProjectOps(document, [{ type: 'setMappingSurface', payload: { surfaceId: 'cam', patch: { effect: { kind: 'motion' } } } }])
+        document = applyProjectOps(document, [{ type: 'setMappingSurface', payload: { surfaceId: 'cam', patch: { effect: { trail: 0.5 } } } }])
+        expect(document.mappingState.surfaces[0].effect).toEqual({ kind: 'motion', threshold: 0.08, trail: 0.5, gain: 4 })
+    })
+
+    it('refuses a trail that never fades and an effect it does not know', () => {
+        const state = normalizeMappingState({ surfaces: [{ id: 'cam', effect: { kind: 'sparkles', trail: 1, gain: 99, threshold: -1 } }] })
+        expect(state.surfaces[0].effect).toEqual({ kind: 'none', threshold: 0, trail: 0.99, gain: 20 })
+    })
+})
+
+describe('what a new surface is born showing', () => {
+    it('is the dim identification card, not the bright alignment grid', () => {
+        // The rig is two machines. A new surface is on the projector the
+        // instant Add is pressed, and white never goes on a projector.
+        expect(defaultMappingSurface.source).toEqual({ kind: 'test', ref: 'card' })
+    })
+
+    it('is stored as a ref, because an older build would rewrite an unknown KIND', () => {
+        // This is the whole reason the card is a pattern and not a new
+        // `source.kind`. MAPPING_SOURCE_KINDS is a closed list: a build that
+        // predates a new kind replaces it with the default kind and the
+        // surface's source is gone for good. A `ref` is a free string and
+        // comes back byte-identical, so an old build merely draws the grid
+        // for an afternoon and a new one shows the card again.
+        expect(normalizeMappingSurface({ id: 'a', source: { kind: 'card', ref: '' } }).source)
+            .toEqual({ kind: 'test', ref: '' })
+        expect(normalizeMappingSurface({ id: 'a', source: { kind: 'test', ref: 'card' } }).source)
+            .toEqual({ kind: 'test', ref: 'card' })
+        expect(normalizeMappingSurface({ id: 'a', source: { kind: 'test', ref: 'a-later-pattern' } }).source.ref)
+            .toBe('a-later-pattern')
+    })
+
+    it('keeps an NDI source by name, through a write and back', () => {
+        // The ref is a source NAME and nothing else — no address is ever
+        // stored, because the sender chooses which of its interfaces to
+        // advertise and that choice does not survive the night.
+        const document = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createMappingSurface', payload: { surface: { id: 'n1', source: { kind: 'ndi', ref: 'AYLMO (td_out_windows)' } } } }
+        ])
+        expect(document.mappingState.surfaces[0].source).toEqual({ kind: 'ndi', ref: 'AYLMO (td_out_windows)' })
+        expect(normalizeMappingSurface(document.mappingState.surfaces[0]).source)
+            .toEqual({ kind: 'ndi', ref: 'AYLMO (td_out_windows)' })
+    })
+
+    it('is LOST on a build that predates the kind — the mixed-version trap, stated', () => {
+        // MAPPING_SOURCE_KINDS is closed, and normalizeMappingSurface rewrites
+        // a kind it does not know to the default. So on a rig where the desk
+        // has `ndi` and the wall does not, the first write from the old side
+        // turns the surface back into a test pattern and keeps only the ref —
+        // a name with nothing left to read it. Both machines must be on a
+        // build that has the kind. This asserts the mechanism from the outside,
+        // with a kind no build has, so it goes on being true.
+        //
+        // It is also why the dim identification card was added as a REF and
+        // not a kind (see above): an unknown ref comes back byte-identical.
+        expect(normalizeMappingSurface({ id: 'a', source: { kind: 'ndi-2', ref: 'AYLMO (td_out_windows)' } }).source)
+            .toEqual({ kind: 'test', ref: 'AYLMO (td_out_windows)' })
+    })
+
+    it('keeps the grid an explicit choice that round-trips untouched', () => {
+        const document = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createMappingSurface', payload: { surface: { id: 'a', source: { kind: 'test', ref: 'grid' } } } }
+        ])
+        expect(document.mappingState.surfaces[0].source).toEqual({ kind: 'test', ref: 'grid' })
+    })
+})
+
+describe('which display shows this mapping — output.show', () => {
+    // The trap named in the stage plan: normalizeMappingState rebuilt `output`
+    // from width and height alone, so the first write from ANY machine
+    // stripped `show`, and a stage box that had just been told which screen
+    // to use went straight back to guessing. This is the write→read.
+    const show = { machine: 'b8592c7f-217a-4f95-8c48-07a4e08524d0', name: 'win', screen: { label: 'projector', index: 1, size: [1920, 1080] } }
+
+    it('survives a setMappingState write and a normalize read, on the ESM twin', () => {
+        const written = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'setMappingState', payload: { patch: { output: { width: 1920, height: 1080, show, slate: 'off' } } } }
+        ])
+        const read = normalizeProjectDocument(JSON.parse(JSON.stringify(written)))
+        expect(read.mappingState.output).toEqual({ width: 1920, height: 1080, show, slate: 'off' })
+    })
+
+    it('writes nothing for a mapping that never named a display — older documents stay byte-identical', () => {
+        expect(normalizeMappingState({ output: { width: 1280, height: 800 } }).output).toEqual({ width: 1280, height: 800 })
+        expect(normalizeMappingState({ output: { width: 1280, height: 800, slate: 'auto' } }).output).toEqual({ width: 1280, height: 800 })
+    })
+
+    it('takes "all" for every screen of the machine, and drops a show that names no machine', () => {
+        expect(normalizeMappingState({ output: { show: { machine: 'm1', screen: 'all' } } }).output.show).toEqual({ machine: 'm1', screen: 'all' })
+        expect(normalizeMappingState({ output: { show: { machine: 'm1' } } }).output.show).toEqual({ machine: 'm1', screen: 'all' })
+        expect(normalizeMappingState({ output: { show: { machine: '', screen: { label: 'x' } } } }).output.show).toBeUndefined()
+        expect(normalizeMappingState({ output: { show: 'projector' } }).output.show).toBeUndefined()
+    })
+
+    it('keeps whichever of label, index and size were given, and nothing invented', () => {
+        expect(normalizeMappingState({ output: { show: { machine: 'm1', screen: { label: 'HDMI-1' } } } }).output.show.screen)
+            .toEqual({ label: 'HDMI-1', index: null, size: null })
+        expect(normalizeMappingState({ output: { show: { machine: 'm1', screen: { index: 2, size: [1920.4, 1080] } } } }).output.show.screen)
+            .toEqual({ label: '', index: 2, size: [1920, 1080] })
+        // A screen object with nothing usable in it is every screen, not a
+        // screen called "".
+        expect(normalizeMappingState({ output: { show: { machine: 'm1', screen: { size: [0, 1] } } } }).output.show.screen).toBe('all')
     })
 })

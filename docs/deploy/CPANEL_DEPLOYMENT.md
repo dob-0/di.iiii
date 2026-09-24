@@ -4,6 +4,12 @@
 `docs/deploy/VPS_DOCKER_DEPLOY.md`. This file describes the disabled cPanel model, kept only as
 a documented fallback until its hosting term expires.
 
+> "staging" in this file is the cPanel-era name for the second tier, kept as it was said. Today
+> that tier is the dev tier at `https://dev.diiii.xyz` on the VPS (branch `dev`); the old
+> `staging.di-studio.xyz` name was retired 2026-09-16 and answers nowhere. Addresses below
+> say `dev.diiii.xyz` where the cPanel era said the old name. See
+> [LIVE_DEPLOY.md](LIVE_DEPLOY.md).
+
 ## Fallback Model
 
 - source branches:
@@ -33,7 +39,7 @@ Important:
 In cPanel:
 
 1. Open `Domains`
-2. Create `staging.di-studio.xyz`
+2. Create `dev.diiii.xyz`
 3. note the document root cPanel creates for it
 
 ### 2. Create the Node.js apps
@@ -121,8 +127,8 @@ git push origin dev
 7. Verify staging:
 
 ```bash
-curl -s https://staging.di-studio.xyz/serverXR/api/health
-npm run smoke -- --base-url https://staging.di-studio.xyz
+curl -s https://dev.diiii.xyz/serverXR/api/health
+npm run smoke -- --base-url https://dev.diiii.xyz
 ```
 
 ### Production
@@ -158,10 +164,10 @@ npm run smoke -- --base-url https://di-studio.xyz
 
 ## Expected Checks
 
-- `https://staging.di-studio.xyz/`
-- `https://staging.di-studio.xyz/admin?space=main`
-- `https://staging.di-studio.xyz/studio`
-- `https://staging.di-studio.xyz/serverXR/api/health`
+- `https://dev.diiii.xyz/`
+- `https://dev.diiii.xyz/admin?space=main`
+- `https://dev.diiii.xyz/studio`
+- `https://dev.diiii.xyz/serverXR/api/health`
 - asset upload/readback
 - collaboration routes
 
@@ -209,7 +215,7 @@ Compare the live backend release metadata with the expected source branch:
 
 ```bash
 git rev-parse --short origin/dev
-curl -s https://staging.di-studio.xyz/serverXR/api/health
+curl -s https://dev.diiii.xyz/serverXR/api/health
 ```
 
 If the live `release.gitCommit` is older than `origin/dev`, the missing step is cPanel deploy or Node.js app restart, not source promotion.

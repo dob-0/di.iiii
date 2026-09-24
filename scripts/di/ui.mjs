@@ -41,6 +41,32 @@ export const say = (message = '') => { process.stdout.write(`${message}\n`) }
 export const warn = (message = '') => { process.stderr.write(`${style.yellow(message)}\n`) }
 export const fail = (message = '') => { process.stderr.write(`${style.red(message)}\n`) }
 
+/**
+ * The files a follow carries, in a person's words. Nothing at all when there is
+ * nothing to say — a follow whose files have all arrived is just a follow. An
+ * install too old to report files sends no `files`, and says nothing either.
+ */
+export const followFileLines = (files) => {
+    if (!files || typeof files !== 'object') return []
+    const lines = []
+    const count = (n, one, many) => `${n} ${n === 1 ? one : many}`
+    if (files.pending > 0) {
+        const mb = files.bytesPending > 0 ? ` (${Math.max(1, Math.round(files.bytesPending / 1024 / 1024))} MB)` : ''
+        lines.push(style.dim(`${count(files.pending, 'file', 'files')} still coming${mb}`))
+    }
+    const failures = Array.isArray(files.failures) ? files.failures : []
+    if (files.failed > 0 || failures.length) {
+        const total = files.failed || failures.length
+        const named = failures.slice(0, 3).map(entry => `${entry.name || 'a file'}: ${entry.why || 'no reason given'}`).join('; ')
+        const more = failures.length > 3 ? `; and ${failures.length - 3} more` : ''
+        lines.push(style.yellow(`${count(total, 'file', 'files')} could not be carried${named ? ` — ${named}${more}` : ''}`))
+    }
+    if (files.notCarried > 0) {
+        lines.push(style.dim(`${count(files.notCarried, 'older file is', 'older files are')} not carried — added before files had checkable names; add ${files.notCarried === 1 ? 'it' : 'them'} again to send ${files.notCarried === 1 ? 'it' : 'them'}`))
+    }
+    return lines
+}
+
 export const ui = {
     // What a start prints. It used to be three lines — the address, six space
     // ids and how to stop — and everything else di.iiii can do was a thing you
@@ -137,21 +163,38 @@ export const ui = {
 
     checkingFollow: () => style.dim('looking for that di.iiii…'),
 
-    followRefused: (reason, where) => ({
-        unreachable: `nothing answers at ${where} — check the address, and that both machines are on the same wifi.`,
-        missing: 'that di.iiii has no space by that name.',
-        denied: 'that key was refused — ask for a fresh one: di invite <space> on their machine.',
-        'local-space': 'this install could not make room for it — is di.iiii running here?',
-        itself: 'that address is this di.iiii — a space cannot follow itself.'
-    }[reason] || `could not follow ${where}.`),
+    // `at` is the pin: `--at <address>` was given (or not). Its presence
+    // changes two things here — the "how do I fix this" hint on an ordinary
+    // unreachable, and a whole different sentence when the pinned address DID
+    // answer but under the wrong certificate.
+    followRefused: (reason, where, at = null) => {
+        if (reason === 'cert-mismatch') return `something answers at ${at}, but not as ${where} — wrong machine.`
+        const message = {
+            unreachable: `nothing answers at ${where} — check the address, and that both machines are on the same wifi.`,
+            missing: 'that di.iiii has no space by that name.',
+            denied: 'that key was refused — ask for a fresh one: di invite <space> on their machine.',
+            'local-space': 'this install could not make room for it — is di.iiii running here?',
+            itself: 'that address is this di.iiii — a space cannot follow itself.'
+        }[reason] || `could not follow ${where}.`
+        // Only on a plain, un-pinned "unreachable": the address pin is the fix
+        // for the one failure it fixes, and there is no point suggesting it to
+        // someone who already used it.
+        return reason === 'unreachable' && !at
+            ? `${message}\nif that name points somewhere this machine cannot reach, say where it is: --at <address>`
+            : message
+    },
 
-    following: (spaceId, remote, running) => [
+    badAddress: (value) => `${value} is not an address — --at wants an IPv4 or IPv6 literal, like --at 100.87.4.12`,
+
+    following: (spaceId, remote, running, at = null) => [
         `following ${style.cyan(spaceId)} on ${remote.replace(/\/serverXR$/, '')}.`,
+        at ? style.dim(`the name stays — the socket goes to ${at}.`) : null,
         style.dim('edits travel both ways — the room and every project in it. your copy stays on your disk.'),
-        // Said plainly rather than discovered: images and models are not carried
-        // yet, so a scene that leans on them will show their absence until they
-        // are. Better a sentence now than a grey wall later.
-        style.dim('images and models are not carried yet — they stay where they were added.'),
+        // Said plainly rather than discovered. Files named by a PROJECT are
+        // carried (serverXR/src/follow/assets.js); files placed straight into
+        // the room's own scene are not — that manifest never travels. Better a
+        // sentence now than a grey wall later.
+        style.dim('files in its projects travel too. files placed straight in the room itself are not carried yet — they stay where they were added.'),
         running ? null : style.dim(`start it to begin: ${CMD} up`)
     ].filter(Boolean).join('\n'),
 
@@ -165,7 +208,8 @@ export const ui = {
             const where = String(entry.remote || '').replace(/\/serverXR$/, '')
             if (!state) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim('(not running)')}`
             const moving = `${state.status} · in ${state.carriedIn} · out ${state.carriedOut}${state.streams > 1 ? ` · ${state.streams} logs` : ''}`
-            return `  ${style.cyan(id.padEnd(18))}${where}  ${state.lastError ? style.yellow(state.lastError) : style.dim(moving)}`
+            const line = `  ${style.cyan(id.padEnd(18))}${where}  ${state.lastError ? style.yellow(state.lastError) : style.dim(moving)}`
+            return [line, ...followFileLines(state.files).map(text => `  ${' '.repeat(18)}${text}`)].join('\n')
         }).join('\n')
     },
 
@@ -372,6 +416,24 @@ export const ui = {
         ].filter((line) => line !== null).join('\n')
     },
 
+    // `di follow --help` and `di help follow`.
+    followUsage: () => [
+        style.bold(`${CMD} follow SPACE --from URL --key KEY`) + style.dim(' — join a space that lives on another di.iiii'),
+        '',
+        'both sides keep the whole work; edits travel both ways.',
+        '',
+        '  --from URL      where the other di.iiii answers, e.g. https://local.thedi.studio',
+        `  --key KEY       the per-space sync key, minted on their machine with: ${CMD} invite SPACE`,
+        '  --at ADDRESS    the ADDRESS PIN — the name in --from stays, but the socket goes',
+        '                  to this address instead of whatever it resolves to. For when',
+        '                  --from names a machine this one can only reach somewhere else —',
+        '                  a Tailscale IP, say — and there is no hosts-file edit to make.',
+        `  --into SPACE    merge into a space of that name that already exists here`,
+        '',
+        style.dim(`  ${CMD} follows          what this install is following`),
+        style.dim(`  ${CMD} unfollow SPACE   stop carrying edits`)
+    ].join('\n'),
+
     // `di mcp --help` and `di help mcp`. Printed instead of starting the
     // server, which is what --help used to do — silently, on stdin.
     mcpUsage: () => [
@@ -425,6 +487,78 @@ export const ui = {
         ].join('\n')
     },
 
+    // ── the NDI runtime ─────────────────────────────────────
+    // Said plainly, because the reason di.iiii cannot just include this is a
+    // licence and not a technical excuse, and a person is owed that in one
+    // sentence rather than a link to a page about copyleft.
+    ndiGetting: (download) => [
+        `fetching the NDI runtime — ${(download.bytes / 1e6).toFixed(0)} MB, from Vizrt`,
+        style.dim('di.iiii cannot ship it — the platform is AGPL, the runtime is Vizrt\'s. once,'),
+        style.dim('then it is yours, and no admin password was needed for any of it.')
+    ].join('\n'),
+
+    ndiAlreadyHere: (library) => `the NDI runtime is already here — ${library}`,
+
+    ndiReady: (status, verified) => {
+        const lines = [`NDI is ready — ${(status.bytes / 1e6).toFixed(0)} MB${status.variant ? `, ${status.variant}` : ''}`]
+        if (verified?.checked && verified.ok) lines.push(style.dim(`  ${verified.version}`))
+        else if (verified?.checked) lines.push(style.dim(`  di.iiii could not load it: ${verified.reason || 'unknown'}`))
+        else if (verified?.why) lines.push(style.dim(`  not loaded yet — ${verified.why}`))
+        lines.push(style.dim(`  restart it to pick this up — ${CMD} down && ${CMD} up`))
+        return lines.join('\n')
+    },
+
+    ndiRemoved: () => 'the NDI runtime is gone. your work is untouched.',
+
+    ndiUnsupported: (platform) => [
+        `NDI publishes no runtime for ${platform}.`,
+        style.dim('linux, macOS and windows only.')
+    ].join('\n'),
+
+    ndiStatus: (status) => {
+        if (!status.supported) return ui.ndiUnsupported(status.platform)
+        if (!status.installed) {
+            return [
+                'no NDI runtime on this machine.',
+                style.dim(`${CMD} ndi get   one download from Vizrt, then di.iiii can send and receive on the network`)
+            ].join('\n')
+        }
+        const lines = [
+            `NDI ${status.version}${status.variant ? ` — ${status.variant}` : ''}`,
+            `  ${(status.bytes / 1e6).toFixed(0)} MB${status.fetchedAt ? `, fetched ${String(status.fetchedAt).slice(0, 10)}` : ''}`,
+            `  ${status.wired ? 'di.iiii is pointed at it' : style.dim('di.iiii is pointed somewhere else — check DI_NDI_LIB')}`,
+            style.dim(`  ${status.library}`)
+        ]
+        if (status.sha256) lines.push(style.dim(`  sha256 ${String(status.sha256).slice(0, 16)}…`))
+        // Said, not hidden: this one was not put here by `ndi get`, so the
+        // version is the line we look for and not the version we fetched.
+        else lines.push(style.dim('  put here by hand — no receipt, so the version above is the runtime line, not a reading'))
+        return lines.join('\n')
+    },
+
+    ndiUsage: () => [
+        style.bold(`${CMD} ndi`) + style.dim(' — put di.iiii on the network as a video source'),
+        '',
+        'with this, a picture operator can be sent to any other machine on the wire,',
+        'and another machine\'s source can be taken in as an operator. OBS, Resolume and',
+        'a projector box all see it as a camera.',
+        '',
+        `  ${CMD} ndi get      fetch the runtime (9–225 MB once, depending on the machine)`,
+        `  ${CMD} ndi status   whether it is here, and whether di.iiii can load it`,
+        `  ${CMD} ndi remove   take it off this machine`,
+        '',
+        style.dim('  --force           fetch it again even if it is already here'),
+        style.dim('  --variant NAME    a different linux build (a raspberry pi is not x86_64)'),
+        style.dim('  --sha256 HEX      refuse the download unless it matches'),
+        '',
+        'it is fetched and never bundled, for the same reason the keeper is: di.iiii is',
+        'AGPL-3.0 and this runtime is Vizrt\'s under their own terms. nothing is',
+        'downloaded until you type get. it needs no admin rights — it lands in your',
+        'own di folder, not in the system.',
+        '',
+        style.dim('NDI® is a registered trademark of Vizrt NDI AB — https://ndi.video')
+    ].join('\n'),
+
     keeperUsage: () => [
         style.bold(`${CMD} keeper`) + style.dim(' — the small model that comes with di.iiii'),
         '',
@@ -443,7 +577,121 @@ export const ui = {
         'not the model that writes your show — that is what a Claude key is for.'
     ].join('\n'),
 
-    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage() })[name]?.() || null,
+    // ── the stage machine ───────────────────────────────────────────────
+    // A machine under a projector has nobody standing at it. Every line here
+    // is written for someone reading it over ssh, or once, at the venue, before
+    // they walk away from the box for three weeks.
+
+    // What `join` prints. The §5 list — what this does NOT do — is said here,
+    // once, plainly, because every one of those is a thing a person will
+    // otherwise assume happened.
+    stageJoined: ({ spaceId, remote, url, at = null, browser, autostart, autostartWhy = null }) => [
+        `this machine is a stage — ${style.cyan(spaceId)} on ${remote.replace(/\/serverXR$/, '')}`,
+        at ? style.dim(`  the name stays — the socket goes to ${at}.`) : null,
+        '',
+        `  ${style.cyan('server'.padEnd(10))}${url}${style.dim(' — the supervisor starts it, and starts it again if it stops')}`,
+        `  ${style.cyan('screens'.padEnd(10))}black, then the mapping in that space — one kiosk per screen a mapping names on the desk, and never an error page`,
+        `  ${style.cyan('autostart'.padEnd(10))}${autostart
+            ? `${autostart.kind}${style.dim(` — ${autostart.note}`)}`
+            : style.yellow(`none — ${autostartWhy || 'this machine refused every autostart entry'}`)}`,
+        autostart && !autostart.restartsOnFailure
+            ? style.yellow('             it starts at login and does NOT restart if it dies — di stage status will keep saying so')
+            : null,
+        `  ${style.cyan('awake'.padEnd(10))}held while the supervisor runs${style.dim(' — no power setting on this machine was changed')}`,
+        `  ${style.cyan('browser'.padEnd(10))}${browser}`,
+        '',
+        'it does not:',
+        style.dim('  sign this machine in, or switch it on after a power cut'),
+        style.dim('  replace the desktop, or install a browser, OBS or NDI'),
+        style.dim('  make the network between the machines'),
+        '',
+        style.dim(`  ${CMD} stage status   what each screen is showing, and why not`),
+        style.dim(`  ${CMD} stage leave    put this machine back exactly as it was`)
+    ].filter((line) => line !== null).join('\n'),
+
+    // `--dry-run`: the same join, written down and not done.
+    stagePlanned: (plan) => [
+        `nothing was changed. this is what ${CMD} stage join would do:`,
+        '',
+        `  follow    ${plan.follow.spaceId} from ${plan.follow.from}${plan.follow.at ? ` (socket to ${plan.follow.at})` : ''}`,
+        `  write     ${plan.writes.join('\n            ')}`,
+        `  di.env    ${plan.env.map(([key, value]) => `${key}=${value}`).join(', ')}`,
+        `  autostart ${plan.autostart ? `${plan.autostart.kind}\n            ${plan.autostart.path}` : 'none available on this platform'}`,
+        `  browser   ${plan.browser || style.yellow('none found — name one with --browser')}`,
+        `  run       ${plan.supervisor.join(' ')}`,
+        '',
+        style.dim('  every one of those is written into stage/stage.json, and stage leave removes only those.')
+    ].join('\n'),
+
+    stageNoBrowser: () => [
+        'no Chromium on this machine, and di does not install one.',
+        style.dim(`install Chrome, Chromium or Edge, or name the one you have: ${CMD} stage join … --browser /path/to/chrome`)
+    ].join('\n'),
+
+    stageNotJoined: () => [
+        'this machine is not a stage.',
+        style.dim(`${CMD} stage join <space> --from <url> --key <key>`)
+    ].join('\n'),
+
+    stageLeft: (done, keepSpace) => [
+        'this machine is no longer a stage.',
+        ...done.map((line) => style.dim(`  ${line}`)),
+        style.dim(keepSpace
+            ? '  the space stays, and keeps carrying edits.'
+            : '  your work is where it was — only what join wrote was removed.')
+    ].join('\n'),
+
+    // The one screen an operator reads from somewhere else. Exit code 1 when a
+    // screen is not showing, so it can be a health check rather than a look.
+    stageStatus: (status) => {
+        if (!status.joined) return ui.stageNotJoined()
+        const label = (key) => (key.startsWith('screen:') ? key.slice(7) : key).padEnd(11)
+        return [
+            `${style.bold(status.space)}  ${style.dim(String(status.from || ''))}${status.at ? style.dim(` · ${status.at}`) : ''}`,
+            '',
+            ...status.rows.map((row) => `  ${row.ok ? style.cyan(label(row.key)) : style.yellow(label(row.key))}${row.text}`),
+            status.version && status.version.known && !status.version.same
+                ? `\n${style.yellow('  the version that joined is not the one running now — a mapping edited by an older build loses what that build does not know about.')}`
+                : null
+        ].filter((line) => line !== null).join('\n')
+    },
+
+    // `di down` on a stage machine stops a server the supervisor will put
+    // straight back. Said, rather than left to be discovered by someone
+    // watching a wall come back on by itself.
+    downOnStage: () => [
+        style.yellow('this machine is a stage — the supervisor will start it again within a few seconds.'),
+        style.dim(`to stop for good: ${CMD} stage leave, then ${CMD} down`)
+    ].join('\n'),
+
+    stageUsage: () => [
+        style.bold(`${CMD} stage join SPACE --from URL`) + style.dim(' — make this machine the one under the projector'),
+        '',
+        'one entry at login, one supervisor. it keeps the server up, keeps a black-first',
+        'kiosk on the screen, and holds the machine awake for exactly as long as it runs.',
+        'nothing on this OS is changed permanently, and `stage leave` removes only what',
+        '`stage join` wrote down.',
+        '',
+        `  --from URL      where the other di.iiii answers, e.g. https://local.thedi.studio`,
+        `  --key KEY       the per-space sync key (${CMD} invite SPACE on their machine); --key - reads the pipe`,
+        '  --at ADDRESS    the address pin — the name in --from stays, the socket goes here',
+        '  --project ID    which mapping the one screen shows when no mapping names this machine on the desk',
+        '  --browser PATH  the Chromium to run. di never installs one',
+        '  --name NAME     what this machine calls itself on the rig',
+        '  --lan           answer on this wifi too, for phones in the room',
+        '  --dry-run       print what it would do and change nothing',
+        '',
+        style.dim(`  ${CMD} stage status          the server, the follow, the autostart, each screen and what it shows`),
+        style.dim(`  ${CMD} stage status --json   the same, for something that is not a person`),
+        style.dim(`  ${CMD} stage restart         put the supervisor back`),
+        style.dim(`  ${CMD} stage leave           undo exactly what join did`),
+        style.dim(`  ${CMD} stage leave --keep-space   …but keep following the space`),
+        '',
+        'one screen, one mapping. which display shows which project is the next piece of',
+        'work, and until it lands a stage machine drives the screen it is given.'
+    ].join('\n'),
+
+    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), ndi: () => ui.ndiUsage(), follow: () => ui.followUsage(), stage: () => ui.stageUsage() })[name]?.() || null,
 
     help: () => [
         style.bold(CMD) + style.dim(' — di.iiii on your own machine'),
@@ -463,6 +711,10 @@ export const ui = {
         '',
         `  ${CMD} mcp           hand this di.iiii to Claude, or any agent that speaks MCP`,
         `  ${CMD} keeper get    a small model on this machine — works with no internet`,
+        `  ${CMD} ndi get       video in and out over the network — OBS, Resolume, a projector`,
+        '',
+        `  ${CMD} stage join SPACE --from URL   make this machine the one under the projector`,
+        `  ${CMD} stage status  what it is showing, and why not · ${CMD} stage leave to undo it`,
         '',
         `  ${CMD} link SPACE --remote URL   connect one space to an online di.iiii`,
         `  ${CMD} sync SPACE    compare it with its online copy — writes nothing`,
@@ -474,7 +726,7 @@ export const ui = {
         `  ${CMD} where         the three paths that matter`,
         `  ${CMD} uninstall     remove it, keep your work`,
         `  ${CMD} version       which di.iiii this is (also --version, -v)`,
-        `  ${CMD} help mcp      more on one command (also ${CMD} mcp --help, ${CMD} help keeper)`,
+        `  ${CMD} help mcp      more on one command (also ${CMD} mcp --help, ${CMD} help keeper, ${CMD} help follow)`,
         '',
         style.dim('  --port N     run somewhere other than 4000'),
         style.dim('  --lan        answer on this wifi too, for phones in the room — anyone on it can edit'),

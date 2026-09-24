@@ -116,9 +116,9 @@ export function buildStudioInterior({ studioNodeId, workspaceTop = 64 } = {}) {
 
 /**
  * Build a Studio container node together with its interior, for callers that
- * place one outside the palette flow (e.g. RawHub's "open studio" shortcut,
- * which needs the pair before a RawEditor instance exists to run
- * `handlePaletteCreate`'s inline logic).
+ * place one outside the palette flow — before a RawEditor instance exists to
+ * run `handlePaletteCreate`'s inline logic. Its caller was the old Nodes
+ * project list's "open the Studio node" button, retired 2026-09-23.
  *
  * @param {object} options
  * @param {number} options.graphX

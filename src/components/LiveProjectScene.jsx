@@ -30,6 +30,7 @@ import CylinderObject from '../objectComponents/CylinderObject.jsx'
 import ImageObject from '../objectComponents/ImageObject.jsx'
 import VideoObject from '../objectComponents/VideoObject.jsx'
 import ModelObject from '../objectComponents/ModelObject.jsx'
+import SpotLightObject from '../objectComponents/SpotLightObject.jsx'
 import AudioObject from '../objectComponents/AudioObject.jsx'
 import useRoomSound from '../hooks/useRoomSound.js'
 import { roomHasSound } from '../utils/roomSound.js'
@@ -38,6 +39,8 @@ import Text3DObject from '../objectComponents/Text3DObject.jsx'
 import PortalObject, { portalHref } from '../project/viewport/PortalObject.jsx'
 import WorldEnvironment from '../project/viewport/WorldEnvironment.jsx'
 import RenderSettingsEffect from '../project/viewport/RenderSettingsEffect.jsx'
+import ShadowCasting from '../project/viewport/ShadowCasting.jsx'
+import { resolveShadowCasting } from '../project/viewport/shadowCasting.js'
 import { animationSeed, resolveAnimation, applyAnimation } from '../project/viewport/entityAnimation.js'
 import { resolveProximity, applyProximity } from '../project/viewport/entityProximity.js'
 import { hasTimelineTracks, sampleTimeline, applyTimelinePose } from '../project/viewport/timelinePlayback.js'
@@ -51,7 +54,11 @@ import {
 } from './walkModeConfig.js'
 import { isTypingTarget } from './walkKeyboard.js'
 import { createPortalWalkThrough } from './portalWalkThrough.js'
-import { appNavigate } from '../utils/appNavigate.js'
+import { doorsOf, fitArrivalToDoors as fitArrivalToDoors_ } from './arrivalFraming.js'
+import { getViewportAspect } from '../utils/cameraFraming.js'
+import { enterDestination, isEntryInProgress } from './entryTransition/entryTransition.js'
+import { ENTRY_PENDING_ATTR } from './entryTransition/entryPlan.js'
+import { captureRendererFrame, FrameSource } from './entryTransition/EntryGlide.jsx'
 import { markArriveWalking } from './arriveWalking.js'
 import './liveProjectScene.css'
 
@@ -235,7 +242,7 @@ function EntityVisual({ entity, assetMap }) {
     }
     case 'spotLight': {
         const l = entity.components?.light || {}
-        return <spotLight color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} />
+        return <SpotLightObject color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} beam={entity.components?.beam || null} />
     }
     case 'directionalLight': {
         const l = entity.components?.light || {}
@@ -766,7 +773,7 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
         }
     }, [gl, playerRef, joystickRef, joyVisRef, joyThumbRef, isArActive, arTouchElRef])
 
-    useFrame((_, delta) => {
+    useFrame((frameState, delta) => {
         const player = playerRef.current
 
         // Above the isPresenting return deliberately: this reads the pose and
@@ -775,7 +782,7 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
         // way, which is the only way they can, having no cursor to click it with.
         if (onPortalReachedRef.current) {
             const reached = portalWalk.step(entities, player.x, player.z)
-            if (reached) onPortalReachedRef.current(reached)
+            if (reached) onPortalReachedRef.current(reached, frameState)
         }
 
         // XrLocomotion owns movement + camera during a session.
@@ -1501,7 +1508,12 @@ export default function LiveProjectScene({
     // `sceneExtras`: three.js children rendered inside this component's Canvas,
     // after the project's own objects. The jam draws a marker where each other
     // person is standing, and a marker in the scene has to be IN the scene.
-    sceneExtras = null
+    sceneExtras = null,
+    // `fitArrivalToDoors`: on a portrait screen, step the arrival back along
+    // its own view until the room's doors are in frame (arrivalFraming.js).
+    // The landing's front room opts in; an authored room elsewhere keeps its
+    // spawn exactly as composed.
+    fitArrivalToDoors = false
 }) {
     const fetched = useLiveProjectDocument(providedDocument ? null : projectId)
     const doc = providedDocument || fetched.doc
@@ -1559,6 +1571,10 @@ export default function LiveProjectScene({
         return () => { walkerRef.current = null }
     }, [walkerRef])
 
+    const arrivalFor = useCallback((pose, forDoc) => (fitArrivalToDoors
+        ? fitArrivalToDoors_(pose, doorsOf(forDoc?.entities || []), getViewportAspect(1))
+        : pose), [fitArrivalToDoors])
+
     // Data-driven arrival: a project can author worldState.spawn to place/aim the
     // visitor on entry (otherwise the default above). Applied once per project load.
     const spawnAppliedRef = useRef(null)
@@ -1573,22 +1589,28 @@ export default function LiveProjectScene({
         // the camera's useFrame read the new one, so yaw/pitch changed (visible
         // in ?inputdebug=1) but the view never rotated. WASD still worked
         // because its useFrame reads playerRef.current fresh every frame.
-        Object.assign(playerRef.current, {
+        Object.assign(playerRef.current, arrivalFor({
             x: s.x ?? 0, z: s.z ?? 0, yaw: s.yaw ?? 0,
             pitch: s.pitch ?? 0, altY: s.altY ?? EYE_HEIGHT
-        })
-    }, [doc, projectId])
+        }, doc))
+    }, [doc, projectId, arrivalFor])
 
     // Publish that arrival, spawn or default, in the camera's own terms.
     useEffect(() => {
         if (!onArrivalPose || !doc) return
         const spawn = doc.worldState?.spawn
-        const pose = {
-            x: spawn?.x ?? playerRef.current.x,
-            z: spawn?.z ?? playerRef.current.z,
-            yaw: spawn?.yaw ?? playerRef.current.yaw,
-            pitch: spawn?.pitch ?? 0,
-            altY: spawn?.altY ?? EYE_HEIGHT
+        const pose = spawn ? arrivalFor({
+            x: spawn.x ?? 0,
+            z: spawn.z ?? 0,
+            yaw: spawn.yaw ?? 0,
+            pitch: spawn.pitch ?? 0,
+            altY: spawn.altY ?? EYE_HEIGHT
+        }, doc) : {
+            x: playerRef.current.x,
+            z: playerRef.current.z,
+            yaw: playerRef.current.yaw,
+            pitch: 0,
+            altY: EYE_HEIGHT
         }
         const look = 20
         onArrivalPose({
@@ -1599,7 +1621,7 @@ export default function LiveProjectScene({
                 pose.z + Math.cos(pose.yaw) * Math.cos(pose.pitch) * look
             ]
         })
-    }, [doc, onArrivalPose])
+    }, [doc, onArrivalPose, arrivalFor])
 
     // The library only toggles display:block/none on this element -- it has
     // no inherent size/position, so anything portaled into it (the touch
@@ -1721,13 +1743,21 @@ export default function LiveProjectScene({
     // Walking into a portal goes where clicking it goes: same portalHref, same
     // SPA navigation. Only the verb changes, and only in walk mode -- Walker is
     // the one place this is wired, and Walker only exists when `interactive`.
-    const handlePortalReached = useCallback((entity) => {
+    // It goes through the same entry transition as the click, minus the
+    // glide: the visitor is already standing in the ring, the walk WAS the
+    // approach. The frame they are looking at is what the curtain holds.
+    const handlePortalReached = useCallback((entity, frameState = null) => {
         const reference = entity?.components?.reference || {}
         const href = portalHref(reference.spaceId, reference.projectId)
-        if (href) {
-            markArriveWalking()
-            appNavigate(href)
-        }
+        if (!href || isEntryInProgress()) return
+        markArriveWalking()
+        const three = frameState && frameState.gl ? frameState : null
+        enterDestination(href, {
+            source: {
+                color: entity?.components?.appearance?.color || null,
+                capture: three ? () => captureRendererFrame(three) : null
+            }
+        })
     }, [])
 
     const worldState = doc?.worldState || {}
@@ -1738,6 +1768,9 @@ export default function LiveProjectScene({
     // motion, and a phone that renders it at 2x drops frames where the arrival
     // still frame would not.
     const renderSettings = doc?.renderSettings || {}
+    // Shadows from the room: off unless this space asked for them. Walk mode
+    // and the arrival frame read the same switch (shadowCasting.js).
+    const shadowCasting = resolveShadowCasting(renderSettings)
     const ambient = worldState.ambientLight || { color: '#ffffff', intensity: 0.85 }
     const directional = worldState.directionalLight || { color: '#fff7ea', intensity: 1.15, position: [8, 12, 4] }
     const backgroundColor = worldState.backgroundColor || '#0a1118'
@@ -1766,6 +1799,10 @@ export default function LiveProjectScene({
             <Canvas
                 key={canvasKey}
                 className="live-scene-canvas"
+                // Until the document is here the canvas draws an empty dark
+                // room; a door being gone through must not count that as the
+                // destination's first frame (entryPlan.isDestinationPainted).
+                {...(!doc && !loadError ? { [ENTRY_PENDING_ATTR]: 'document' } : {})}
                 camera={{ position: [0, EYE_HEIGHT, 6], fov: interactive ? 60 : 45, near: 0.1, far: cameraFar }}
                 dpr={[renderSettings.dprMin ?? 1, Math.min(renderSettings.dprMax ?? 2, WALK_DPR_CEILING)]}
                 shadows={renderSettings.shadows !== false}
@@ -1775,6 +1812,10 @@ export default function LiveProjectScene({
             >
                 <XR store={xr.xrStore}>
                 <RenderSettingsEffect renderSettings={renderSettings} />
+                <ShadowCasting enabled={shadowCasting.enabled} mapSize={shadowCasting.mapSize} />
+                {/* The landing holds its page through a front-page button; this
+                    is how the copy of the page gets this room's frame. */}
+                <FrameSource />
                 <color attach="background" args={[backgroundColor]} />
                 {fogEnabled ? <fog attach="fog" args={[fogColor, fogNear, fogFar]} /> : null}
                 {walking && worldState.atmosphereBlend && atmosphereZones.length > 0 ? (
@@ -1809,6 +1850,10 @@ export default function LiveProjectScene({
                     in walk mode is fadeDistance's job, not the grid's. */}
                 {worldState.gridVisible !== false && !isArActive && (
                     <Grid
+                        // Furniture, not scenery: a reference grid that joined
+                        // the shadow pass would drop a black square under the
+                        // whole room. shadowCasting.js reads this flag.
+                        userData={{ noShadow: true }}
                         position={[0, -(worldState.gridOffset ?? 0.015), 0]}
                         cellSize={worldState.gridCellSize ?? 0.75}
                         cellThickness={worldState.gridCellThickness ?? 0.3}

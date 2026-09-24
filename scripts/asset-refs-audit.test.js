@@ -55,12 +55,17 @@ describe('auditProjectDocument', () => {
 describe('parseArgs', () => {
     it('defaults to the dev box and collects repeated filters', () => {
         expect(parseArgs([])).toMatchObject({ tier: 'local', spaces: [], projects: [] })
-        expect(parseArgs(['--tier', 'staging', '--space', 'beyond-form', '--space', 'wcc', '--json']))
-            .toMatchObject({ tier: 'staging', spaces: ['beyond-form', 'wcc'], json: true })
+        expect(parseArgs(['--tier', 'dev', '--space', 'beyond-form', '--space', 'wcc', '--json']))
+            .toMatchObject({ tier: 'dev', spaces: ['beyond-form', 'wcc'], json: true })
+    })
+
+    it('names the dev tier dev and refuses the old staging key', () => {
+        expect(TIERS[parseArgs(['--tier', 'dev']).tier].url).toBe('https://dev.diiii.xyz/serverXR')
+        expect(() => parseArgs(['--tier', 'staging'])).toThrow('"staging" is now "dev"')
     })
 
     it('knows all three tiers and where their tokens come from', () => {
-        expect(Object.keys(TIERS)).toEqual(['local', 'staging', 'prod'])
+        expect(Object.keys(TIERS)).toEqual(['local', 'dev', 'prod'])
         expect(TIERS.prod.tokenEnv).toBe('PROD_API_TOKEN')
     })
 })

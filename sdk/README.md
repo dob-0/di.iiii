@@ -25,7 +25,7 @@ An agent calling the same API knew none of it.
 ```js
 import { connect } from './sdk/index.js'
 
-const di = await connect({ tier: 'local' })      // 'local' | 'staging' | 'prod', or base: 'https://…'
+const di = await connect({ tier: 'local' })      // 'local' | 'dev' | 'prod', or base: 'https://…'
 
 await di.run('space.list')
 await di.run('space.ensure', { space: 'library', label: 'Library' })
@@ -36,8 +36,9 @@ await di.run('space.frontDoor', { space: 'library', project: 'di-library' })
 
 ### Tokens
 
-`DI_TOKEN`, then `DI_TOKEN_LOCAL` / `DI_TOKEN_STAGING` / `DI_TOKEN_PROD`, then
-`~/.config/di/credentials.json`. **Never a repository.** A local install on
+`DI_TOKEN`, then `DI_TOKEN_LOCAL` / `DI_TOKEN_DEV` / `DI_TOKEN_PROD`, then
+`~/.config/di/credentials.json`. The dev tier (dev.diiii.xyz) is `dev`; the old
+`staging` name is refused. **Never a repository.** A local install on
 loopback needs no token at all, because it runs with auth off; anything
 reachable by another machine must still prove who it is.
 
@@ -84,7 +85,7 @@ Each of these cost real damage before it was a line of code.
   you to 404 against the name you asked for.
 - **Asset ids are per-server.** The asset cache key carries the host, and one
   `HEAD` proves a cached run points at files *this* server has. Without it, a
-  prod run reads staging's cache, uploads nothing, and publishes a page that
+  prod run reads the dev tier's cache, uploads nothing, and publishes a page that
   loads perfectly with every PDF dead.
 - **`PUT` is last-write-wins and normalises silently.** `project.writeHtml`
   reads the live document, merges, writes, reads it back, and compares byte for

@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   canAccessSpace,
   getOwnSandboxSpaceId,
+  isSpaceOwnerState,
+  isSpaceTrustedState,
   setCommunalSpaceId
 } from './authAccess.js'
 
@@ -86,5 +88,36 @@ describe('canAccessSpace: null/undefined spaces semantics', () => {
   it('an explicit empty array is NOT the same as null/undefined — denies everywhere', () => {
     const account = { authenticated: true, type: 'session', subject: 'github:99', spaces: [] }
     expect(canAccessSpace(account, 'any-space')).toBe(false)
+  })
+})
+
+describe('per-space authority: owner and trusted', () => {
+  const meta = { id: 'wcc', ownerUserId: 'emilya', trustedUserIds: ['taron'] }
+  const session = (subject) => ({ type: 'session', authenticated: true, subject, role: 'editor', spaces: ['wcc'] })
+
+  it('the owner is the owner, and is trusted', () => {
+    expect(isSpaceOwnerState(session('emilya'), meta)).toBe(true)
+    expect(isSpaceTrustedState(session('emilya'), meta)).toBe(true)
+  })
+
+  it('a trusted person is trusted but not the owner', () => {
+    expect(isSpaceOwnerState(session('taron'), meta)).toBe(false)
+    expect(isSpaceTrustedState(session('taron'), meta)).toBe(true)
+  })
+
+  it('scope alone grants neither — reaching a space is not deciding it', () => {
+    expect(isSpaceOwnerState(session('visitor'), meta)).toBe(false)
+    expect(isSpaceTrustedState(session('visitor'), meta)).toBe(false)
+  })
+
+  it('only a session can hold either: tokens, guests and sync keys never do', () => {
+    expect(isSpaceOwnerState({ type: 'token', subject: 'emilya', role: 'admin' }, meta)).toBe(false)
+    expect(isSpaceTrustedState({ type: 'token', subject: 'taron', role: 'admin' }, meta)).toBe(false)
+    expect(isSpaceTrustedState(session('guest:taron'), { ...meta, trustedUserIds: ['guest:taron'] })).toBe(false)
+  })
+
+  it('a space with no owner and no list trusts nobody', () => {
+    expect(isSpaceTrustedState(session('emilya'), { id: 'orphan' })).toBe(false)
+    expect(isSpaceTrustedState(session('emilya'), null)).toBe(false)
   })
 })

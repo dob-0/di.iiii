@@ -10,12 +10,14 @@ DEPLOY_ENV="${1:-}"
 DRY_RUN="${2:-}"
 
 if [[ -z "${DEPLOY_ENV}" ]]; then
-  echo "[cpanel-poll] Usage: bash scripts/cpanel-poll-deploy.sh <staging|production> [--dry-run]" >&2
+  echo "[cpanel-poll] Usage: bash scripts/cpanel-poll-deploy.sh <dev|production> [--dry-run]  ('staging' still means dev)" >&2
   exit 1
 fi
 
 case "${DEPLOY_ENV}" in
-  staging)
+  dev|staging)
+    # the dev tier; its identifier (and release branch) is still `staging`
+    DEPLOY_ENV="staging"
     TARGET_BRANCH="cpanel-staging"
     ;;
   production)

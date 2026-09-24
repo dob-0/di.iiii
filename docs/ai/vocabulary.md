@@ -29,6 +29,13 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **page** | A published web page (HTML/CSS/JS), never a project. |
 | **Studio** | The one you walk into for the four editing panels. A node, not a lane. |
 | **di.iiii** | The whole thing. Spaces live in it. |
+| **place** | A real room in the world: walls, a rig, an audience, a date. A space may be its twin; it can never *be* it. |
+| **production** | A place, a client, a work and a run. What the studio makes. It uses di.iiii; it does not live in it. |
+| **work** | What the public meets: a title, an author, an address. The same object a **project** names backstage. |
+| **Nodes** | The node canvas: the tool where a project's nodes are wired together. Opens at `/{space}/raw/projects/{project}` — the route stays `raw`, the word a person reads is Nodes. Added 2026-09-23. |
+| **Projection** | The tool that puts a project on a wall: drag its surfaces onto the shapes there. Opens at `/{space}/map/{project}` — the route stays `map`, the word a person reads is Projection. |
+| **Light** | The lighting desk: patch, scenes, cues, Art-Net out. Runs only on your own machine (a local install), at `/light/`. Added 2026-09-23. The lamp you place in a scene still reads Light too, until the owner settles its own word (Lamp is the recommendation). |
+| **scan** | Collecting a **place** with a camera so a space can be built from it — the walk, the photographs, and the measured wall. Opens at `/{space}/scan`. Added 2026-09-22. |
 
 Two words that are already right and must not drift: **port** (where a wire attaches to a node)
 and **wire** (what runs between two ports). They are the node model's own vocabulary, they are
@@ -38,7 +45,7 @@ used consistently, and every node tool a visitor might arrive from uses one or t
 
 | Banned | Because | Use instead |
 | --- | --- | --- |
-| `Raw` (the lane) | A branch name. Never explained. Already absent from the page it names. | *the node editor*, or nothing at all |
+| `Raw` (the lane) | A branch name. Never explained. Already absent from the page it names. | **Nodes** (the node canvas), or nothing at all |
 | `Beta` | The lane was deleted 2026-08-06. `src/beta/` does not exist. | — |
 | `lane` · `surface` · `V1` · `seed` | Names for editor generations. Internal history. | the thing itself |
 | `entity` | ECS jargon, in the sentence the Inspector shows on every selection. | **object** |
@@ -50,10 +57,39 @@ used consistently, and every node tool a visitor might arrive from uses one or t
 | `chrome` (the UI) | Developer jargon. | **toolbar** |
 | `linked space` · `code space` | Implementation notes. A visitor sees a space. | **space** |
 | `Universe` | Promised a world, delivered a toolbar switch. | **Kiosk** (see below) |
-| `di.i` | The retired name. | **di.iiii** |
+| `di.i` *(inside the product)* | The studio's signature, not the product's name. Correct on a byline, a deck, thedi.studio; a slip in product copy, which names the product. | **di.iiii** |
 
 `raw` in its ordinary English sense (*unparsed, unformatted*) is fine in code, but never in a
 user-visible string where it can be mistaken for the lane — rewrite those.
+
+## The page is not the changelog
+
+A visitor reads what **is**. Our arrangements for getting there are not user-visible copy.
+
+Keep out of any string a person can read:
+
+- A row, tab, rail or feature that does not work yet — "not open yet", "coming", a greyed
+  button. If it does not work, it is not on the page.
+- A count of our own progress: "2 of 5 open", "3 of 7 ready".
+- Which supplier sits behind something, what it charges, and which ones we turned down.
+- Which tier, branch, account or host a thing lives on.
+- Why we picked one arrangement over another. That is a decision record; it lives in `docs/`.
+
+**Why.** It publishes our decision-making to people who came for the work, it dates the page
+the moment anything changes, and it asks a visitor to care about our logistics. It also ages
+badly in public: a row that says "not open yet" is a promise with no date on it.
+
+**Instead:** ship only what works, named by what the person does — *Give once*, *Write to us* —
+never by who processes it. When a new arrangement opens it replaces the link behind that verb;
+it does not arrive as a new row announcing itself.
+
+Found 2026-09-21 on `/support`, which listed five ways to give of which two worked, named every
+payment platform and its fee, and printed "2 of 5 open" in the section heading. Owner: *"why
+public need info what kind of fee and platform are there"*.
+
+**Not this rule:** an honest label on a shipped-but-rough feature. `(dev preview)` on the Studio
+split buttons stays — stripping those was a regression on 2026-08-21. The difference is that a
+label describes what the visitor is about to use; a changelog describes us.
 
 ## `platform` — true, but a third-person word
 
@@ -125,6 +161,45 @@ These are architecture, not wording, and each needs its own decision:
 3. `entities[]` and `nodes[]` are two content models in one document that never reference each
    other. Reconciling them is the load-bearing unknown in the URL spec's §7.
 
+## Amended 2026-09-11 — the studio, the place, and the production
+
+Three words were missing and one was doing two jobs. Settled after four audits of what exists
+(every address, every space, every audience, and this project's own written words) and one
+judgement over the top of them.
+
+**The studio signs `di.i`. The platform ships `di.iiii`.** `di-brand/NAMING.md` said so on
+2026-09-02; this file said "retired" and the guard enforced the retirement, so the two documents
+contradicted each other for nine days. This file is the one that was wrong — it governs the
+*product*, and inside the product `di.i` really is a slip. Outside it — a byline, the deck,
+thedi.studio — `di.i` is the correct and only signature. The guard is unchanged, because it only
+ever read `src/`. Applying this file's own rule: an overloaded word is not banned, it is given
+exactly one meaning.
+
+**`place` and `production` are new, and `production` is the important one.** The studio makes
+work for real rooms — proposal, site check, scan, a virtual copy, then connect it to the real
+rig. Nothing in this vocabulary had a noun for that, so the sentence kept being written with
+platform words that do not fit: a production is not a space, not a project and not a work. It
+uses di.iiii the way a show uses a lighting desk.
+
+**`work` and `project` are one object from two sides** — project backstage, work out front. The
+visitor never reads "project"; the operator never needs "work". This also closes the estate's
+open question "what is a part?" (`di-atlas/CONCEPTS.md`): the piece met in the wild is a **work**,
+made of **scenes**. No new noun.
+
+**Studio, the editing surface, gives the word up.** It becomes **Editor** — the word Unity,
+Unreal and Blender all use, and the word MANIFESTO already uses: "the visit is the product; the
+editor is backstage." The reason is the section below: "studio" cannot mean the practice, the
+domain and a surface inside the product at once, and the practice is the one that cannot rename
+itself. Decision recorded here; the UI copy follows in its own change, and `/studio` keeps
+answering forever like any printed link.
+
+**The world is `diiii.xyz`.** MANIFESTO's three distances named thedi.studio as the public
+distance. The public distance is the platform, and the platform's address is now `diiii.xyz`
+(live 2026-09-11). `thedi.studio` is the studio's own address on it — one space, eventually
+served under its own domain. `di-studio.xyz` keeps serving, unchanged and forever: it is the
+name printed on the QR in the room and on the workshop handouts, and its job is never to mean
+anything new again.
+
 ## One open product call
 
 **The creator host must not be named `studio.`** The URL spec (DRAFT, unsigned) proposes
@@ -195,6 +270,120 @@ Reserved names — settle NOW so the build waves don't invent their own:
 Guard: `src/nodeLabelVocabulary.test.js` — labels must carry no banned word, no
 parenthetical, no leading article, and stay within two words. The prose guard
 (`src/copyVocabulary.test.js`) already covers every string a person reads.
+
+## One name per space (owner, 2026-09-14)
+
+A **space's** own name — its label, set with Rename — is the one name a visitor sees for that
+space anywhere in di.iiii's own furniture: the `/spaces` card, the list row, the map star, the
+`/{space}/projects` heading, the surface bar, the browser tab, the link preview, and the room's
+heading for screen readers and crawlers. A **project's** title shows only where the URL names
+that project (`/{space}/p/{project}` or its vanity form). A space that opens straight into one
+piece shows no "Project: …" line on its card; an account's own card says "Opens on: …" only when
+the door's title differs from the space's name.
+
+What this does not reach: a published page's own content is the artist's. The WCC landing's
+"WCC: Women Creating Change" heading and anything inside a page's iframe are the work, not the
+furniture. Where a stored name is simply wrong (a space labelled "di.iiii", a door project titled
+"Main"), the fix is data, not a code carve-out.
+
+Code: `src/studio/utils/spaceNames.js` (the card rule), `src/hooks/useDocumentTitle.js` (tabs),
+`PublicProjectViewer`'s `viewerTitle` (headings). Guards: `spaceNames.test.js`,
+`SpaceHub.test.jsx`, `PublicProjectViewer.test.jsx`.
+
+## Amended 2026-09-16 — the tiers are local · dev · prod
+
+The owner, plainly: "we have not staging anymore." The word leaves our language the same way
+`Beta` did: the thing it named is still there, under its true name.
+
+| Tier | Is | Address |
+| --- | --- | --- |
+| **local** | your machine | `localhost` (the router: `dii.localhost:8088`) |
+| **dev** | the rehearsal server, built from branch `dev` | `https://dev.diiii.xyz` |
+| **prod** | the live site, built from branch `main` | `https://diiii.xyz` |
+
+**`staging` is retired from our own words** — prose, docs, comments, log and CLI messages, help
+text, copy. Say **the dev tier** or **dev.diiii.xyz** wherever a reader could mistake "dev" for the
+branch, `npm run dev`, or a local dev server.
+
+**`staging.di-studio.xyz` is switched off** (2026-09-16: removed from Caddy, DNS record
+deleted). The dev tier answers only at `https://dev.diiii.xyz`. No host matcher or allowlist
+accepts the old name.
+
+**The identifiers were renamed too**, the same day:
+
+| was | is |
+| --- | --- |
+| `docker-compose.staging.yml`, project `dii-staging` | `docker-compose.dev.yml`, `dii-dev` (`dii-dev-server-1`) |
+| `.github/workflows/deploy-vps-staging.yml` | `deploy-vps-dev.yml` |
+| env `STAGING_*`, `VPS_STAGING_*` | `DEV_*`, `VPS_DEV_*` |
+| `/opt/di.iiii-staging` | `/opt/di.iiii-dev` |
+| image tags `staging`, `staging-<sha>` | `dev`, `dev-<sha>` |
+| manifest `tiers.staging`, `deployEnv` `staging`, `--tier staging` | `tiers.dev`, `dev`, `--tier dev` |
+| `DI_TOKEN_STAGING` | `DI_TOKEN_DEV` |
+
+A CLI handed `staging` fails with `"staging" is now "dev"` — no silent alias.
+
+Two survivors, both left for the owner to decide: the legacy cPanel pipeline (dead since
+2026-07-15 — `publish-cpanel-prebuilt-v2.yml`, `scripts/cpanel-*`, branch `cpanel-staging`) and the
+Android package id `xyz.distudio.chat.staging` (changing it makes a new app).
+
+The line in "Amended 2026-08-19, same day" — "Stage collided with the deploy tier" — is history and stays as it was said.
+It explains a 2026-08-19 decision; the tier it collided with is now called dev.
+
+## Amended 2026-09-20 — Projection is one name
+
+A newcomer walk found one feature wearing four names: the Tools card said "Projection", the
+mapper's own header said "MAPPING", the URL said `/map/`, and the wiki article was "Putting a
+space on a wall". None of the four shared a word with the other three, so nobody scanning for
+"projector" or "mapper" could find any of them from any of the others.
+
+**Projection is the one name a person reads, everywhere.** The mapper header now says
+PROJECTION, not MAPPING; the Tools card already said Projection; the wiki article keeps its
+sentence title (a real title says more than a category word) but now opens "Projection opens a
+mapping, at …" so the first line ties it to the other two. Routes, ids and CSS classes do not
+move — `/map/`, `MapSurface.jsx`, `mapRouting.js`, `createMappingSurface` and the rest stay
+exactly as they are, the same rule this whole file has followed since 2026-08-19.
+
+## Amended 2026-09-23 — one name per tool
+
+A stranger's walk (2026-09-22) found the tools wearing two names each, one screen apart: the node
+canvas was "Raw" on `/tools` and the local home but "Nodes" in the surface bar, and Projection's
+Carry panel said "Mapping" and "Paste a mapping". Owner's words: *"connect all things together
+so it's easy to use."*
+
+**The tools are Studio · Nodes · Projection · Light**, everywhere a person picks one. Nodes is
+the node canvas; Light is the lighting desk on a local install. `/tools` and the local home now
+say Nodes, the local home's desk link says Light (it said "Lights"), and the Carry panel says "Projection as text", "Paste a projection" and "Replace this
+projection". Routes, keys and folders stay: `/raw`, `/map`, `/light`, `src/raw/`. The guard
+(`src/copyVocabulary.test.js`) now also reads `src/tools/ToolsRoom.jsx` and
+`src/landing/LocalHome.jsx`, so "Raw" as a name there fails the build.
+
+Not settled here: Studio's "Lights" button and the lamp you place still say Light. That word
+waits on the owner (desk keeps Light, the object becomes Lamp, the rig button becomes Rig — the
+recommendation, not yet his yes), and the guard does not police it until then.
+
+## Amended 2026-09-22 — `scan`, and the one thing it must never say
+
+A new word, admitted under the rule below because no existing one does its job. **place**
+is the real room. **space** is the address. **scan** is the ACT that turns the first into
+the second: the walk, the photographs, the measured wall, and the footage they become.
+Nothing else in the dictionary names an act of collecting, and "capture" and "record"
+already mean smaller things elsewhere in the product.
+
+Owner's words, 2026-09-22: *"create new space and start to scan."*
+
+One thing on that page is forbidden, and it is not a style rule. The ring of 36 marks is
+labelled **directions covered** and must never be called *room covered*, *coverage*, or
+anything else that implies the hall has been seen. It counts which way the lens has
+pointed, and a person can stand still in a doorway, turn on the spot, and fill every mark
+having seen almost nothing. Calling that "the room is covered" would be the product
+telling somebody their walk is finished when it is not — and they will have left the
+building before anyone finds out.
+
+For the same reason the page says a room's size is a **GUESS**, in capitals, until
+somebody measures a wall. That is not new wording; it is the guess/measured rule from
+`docs/architecture/PLACE.md` reaching the one screen where the person who could fix it is
+standing in the room.
 
 ## The rule for anything new
 

@@ -14,5 +14,7 @@ The user will provide a branch name or a description of the feature.
 
 1. If there are uncommitted changes, stop and ask the user what to do first
 2. Switch to `dev` and pull latest
-3. Create and switch to the new branch named `feature/<slug>` (derive slug from the user's input if not provided)
+3. Create and switch to the new branch, named `<type>/<slug>` using this repo's real
+   prefixes — `feat/`, `fix/`, or `chore/` (never `feature/`; derive the slug from the
+   user's input if not provided, and pick the type from what they're describing)
 4. Confirm the new branch is active

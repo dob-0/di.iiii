@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import { cloneValue } from '../../shared/projectSchema.js'
 import { listProjects } from '../../project/services/projectsApi.js'
 import { getModelClips, subscribeModelClips } from '../../project/viewport/modelClipRegistry.js'
+import { panTiltFromRotation, rotationFromPanTilt } from '../../project/viewport/spotLightAim.js'
+import FixtureField from './FixtureField.jsx'
 
 // Clip names only exist once a viewport has loaded the model file, so this
 // select re-renders when the registry learns them. Empty value = all clips.
@@ -192,14 +194,27 @@ const groupVectorFields = (fields = []) => {
     return groups
 }
 
+// A slider prints its value to the precision it can actually be dragged to.
+// A flat two decimals was coarser than the step on the fields with the finest
+// ones — Bevel Thickness and Bevel Size step by 0.005, so dragging 0.005 to
+// 0.010 printed 0.01 both times and 0.025 printed as 0.03. The stored number
+// was always right; only the one a person read was rounded past its own step.
+const readAtStep = (value, step) => {
+    const decimals = String(step ?? 0.1).split('.')[1]?.length ?? 0
+    return Number(value.toFixed(Math.min(decimals, 6)))
+}
+
 function InspSlider({ field, value, onChange }) {
-    const num = Number.isFinite(Number(value)) ? Number(value) : field.min
+    // `fallback` is what the RENDERER does with an absent value (haze, say),
+    // so an untouched slider shows the room as it actually looks rather than
+    // parking itself at the minimum and lying about it.
+    const num = Number.isFinite(Number(value)) ? Number(value) : (field.fallback ?? field.min)
     const pct = ((num - field.min) / (field.max - field.min)) * 100
     return (
         <div className="insp-field">
             <div className="insp-slider-header">
                 <label className="insp-label">{field.label}</label>
-                <span className="insp-slider-value">{num}</span>
+                <span className="insp-slider-value">{readAtStep(num, field.step)}{field.unit || ''}</span>
             </div>
             <input
                 type="range"
@@ -215,9 +230,49 @@ function InspSlider({ field, value, onChange }) {
     )
 }
 
+// AIM — pan and tilt on a spot light, in degrees, over the entity's rotation.
+//
+// The value handed in is the whole `transform.rotation` triple, and what goes
+// back is a whole new triple: aiming is one move, not two independent numbers,
+// and the conversion lives in exactly one place
+// (src/project/viewport/spotLightAim.js). A lamp aimed by dragging the gizmo
+// reads back here, because there is nowhere else for an aim to be stored.
+//
+// The remembered pan is the one piece of state: a lamp hanging dead down has no
+// direction round the vertical — every pan gives the same beam — so the field
+// would otherwise snap back to 0 and a person could not set the pan first and
+// then tilt into it, which is how a rig is actually aimed.
+function SpotAimField({ field, value, onChange }) {
+    const aim = panTiltFromRotation(value)
+    const [rememberedPan, setRememberedPan] = useState(null)
+    const aimable = aim.tilt > 0.001 && aim.tilt < 179.999
+    const pan = aimable ? aim.pan : (rememberedPan ?? aim.pan)
+    const shown = field.axis === 'pan' ? pan : aim.tilt
+    return (
+        <InspSlider
+            field={field}
+            value={Math.round(shown * 10) / 10}
+            onChange={(next) => {
+                if (field.axis === 'pan') setRememberedPan(next)
+                onChange(rotationFromPanTilt(
+                    field.axis === 'pan' ? { pan: next, tilt: aim.tilt } : { pan, tilt: next }
+                ))
+            }}
+        />
+    )
+}
+
 const isBoundedNumber = (field) => field.type === 'number' && Number.isFinite(field.min) && Number.isFinite(field.max)
 
-function InspField({ field, value, assetOptions = [], spaceOptions = [], siblingSpaceId = null, onChange }) {
+function InspField({ field, value, assetOptions = [], spaceOptions = [], surfaceOptions = [], siblingSpaceId = null, lightingMirror, onChange }) {
+    if (field.type === 'spotAim') {
+        return <SpotAimField field={field} value={value} onChange={onChange} />
+    }
+
+    if (field.type === 'fixture') {
+        return <FixtureField label={field.label} value={value} onChange={onChange} mirror={lightingMirror} />
+    }
+
     if (field.type === 'checkbox') {
         return (
             <label className="insp-toggle">
@@ -269,6 +324,27 @@ function InspField({ field, value, assetOptions = [], spaceOptions = [], sibling
     if (field.type === 'project') {
         return (
             <ProjectSelectField label={field.label} spaceId={siblingSpaceId} value={value} onChange={onChange} />
+        )
+    }
+
+    // One of this project's mapping surfaces, by name — the same list the
+    // Projection tool edits. A surface that has since been deleted stays
+    // selectable under its id, so the field never silently shows "none" for
+    // a screen that is still pointing somewhere.
+    if (field.type === 'mappingSurface') {
+        return (
+            <div className="insp-field">
+                <label className="insp-label">{field.label}</label>
+                <select className="insp-select" value={value || ''} onChange={(e) => onChange(e.target.value || null)}>
+                    <option value="">— none —</option>
+                    {surfaceOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                    {value && !surfaceOptions.some((opt) => opt.value === value) ? (
+                        <option value={value}>{value}</option>
+                    ) : null}
+                </select>
+            </div>
         )
     }
 
@@ -335,7 +411,7 @@ function InspField({ field, value, assetOptions = [], spaceOptions = [], sibling
     )
 }
 
-function InspSection({ section, sectionValue, assetOptions, spaceOptions, onSectionChange }) {
+function InspSection({ section, sectionValue, assetOptions, spaceOptions, surfaceOptions, lightingMirror, onSectionChange, identity = '' }) {
     const [open, setOpen] = useState(true)
     const siblingSpaceId = readNestedValue(sectionValue, ['spaceId']) || null
     return (
@@ -367,7 +443,7 @@ function InspSection({ section, sectionValue, assetOptions, spaceOptions, onSect
                         </div>
                     ) : group.field.type === 'modelClips' ? (
                         <ModelClipField
-                            key={`${section.id}-${group.field.label}`}
+                            key={`${identity}-${section.id}-${group.field.label}`}
                             label={group.field.label}
                             assetId={readNestedValue(sectionValue, ['assetId']) || null}
                             value={readNestedValue(sectionValue, group.field.path)}
@@ -396,12 +472,14 @@ function InspSection({ section, sectionValue, assetOptions, spaceOptions, onSect
                         </div>
                     ) : (
                         <InspField
-                            key={`${section.id}-${group.field.label}`}
+                            key={`${identity}-${section.id}-${group.field.label}`}
                             field={group.field}
                             value={readNestedValue(sectionValue, group.field.path)}
                             assetOptions={assetOptions}
                             spaceOptions={spaceOptions}
+                            surfaceOptions={surfaceOptions}
                             siblingSpaceId={siblingSpaceId}
+                            lightingMirror={lightingMirror}
                             onChange={(nextValue) => {
                                 const next = setNestedValue(sectionValue, group.field.path, nextValue)
                                 onSectionChange?.(group.field.component || section.id, next)
@@ -416,14 +494,20 @@ function InspSection({ section, sectionValue, assetOptions, spaceOptions, onSect
 
 export default function StudioInspector({
     title,
+    // The selected entity's id, when there is one. Used only to key fields that
+    // hold state of their own, so that state cannot outlive the selection.
+    identity = '',
     subtitle = '',
     sections = [],
     assetOptions = [],
     spaceOptions = [],
+    surfaceOptions = [],
     values = {},
     onSectionChange,
     footer = null,
     emptyMessage = 'Select an object to edit it.',
+    // The lighting-desk store the Fixture field reads; only tests pass one.
+    lightingMirror = undefined,
 }) {
     if (!sections.length) {
         return (
@@ -444,11 +528,14 @@ export default function StudioInspector({
                 const sectionValue = values[section.id] || values[section.component] || {}
                 return (
                     <InspSection
+                        identity={identity}
                         key={section.id}
                         section={section}
                         sectionValue={sectionValue}
                         assetOptions={assetOptions}
                         spaceOptions={spaceOptions}
+                        lightingMirror={lightingMirror}
+                        surfaceOptions={surfaceOptions}
                         onSectionChange={onSectionChange}
                     />
                 )

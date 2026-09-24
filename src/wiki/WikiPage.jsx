@@ -1,9 +1,11 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
 import useAuthSession from '../hooks/useAuthSession.js'
+import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import { WIKI_ARTICLES, WIKI_CATEGORIES } from './wikiContent.js'
 import './wiki.css'
 import SurfaceBar from '../components/SurfaceBar.jsx'
+import { isEmbedRequest } from '../utils/previewMode.js'
 import useLocalInstall from '../hooks/useLocalInstall.js'
 
 // Lazy, not static — same fix as LandingPage.jsx: a plain import ships the
@@ -26,7 +28,7 @@ function ArticleBody({ body }) {
 
 export default function WikiPage() {
     const [query, setQuery] = useState('')
-    // Same admin gate as StudioHub/RawHub. While auth resolves, role is null
+    // Same admin gate as StudioHub. While auth resolves, role is null
     // and the link stays hidden — anonymous readers never see a dead end.
     // Trade-off: /api/auth/session issues a guest session to first-time
     // visitors (LandingPage avoids it for exactly that reason) — accepted here
@@ -35,6 +37,19 @@ export default function WikiPage() {
     // The lighting desk only exists where di.iiii is actually running, so the
     // bar offers it only there.
     const localInstall = useLocalInstall()
+    const isEmbed = isEmbedRequest()
+
+    // /wiki is one long scroller, not per-article routes, so the article that
+    // opened it — /wiki#the-front-door — is the only "current article" this
+    // page can honestly name. Read once, on arrival, the same way the
+    // deep-link scroll below reads it once — not a scroll-spy that renames
+    // the tab as you read past each section.
+    const openedOnArticle = useMemo(() => {
+        if (typeof window === 'undefined') return null
+        const id = window.location.hash.replace('#', '')
+        return id ? WIKI_ARTICLES.find((a) => a.id === id) || null : null
+    }, [])
+    useDocumentTitle(openedOnArticle ? `${openedOnArticle.title} — Wiki — di.iiii` : 'Wiki — di.iiii')
 
     useEffect(() => {
         document.body.classList.add('is-landing')
@@ -86,7 +101,7 @@ export default function WikiPage() {
                 sections and linked to none of them; its own way home was a
                 fourth name ("← Home") for the screen three other surfaces
                 already called three other things. One bar, one set of names. */}
-            <SurfaceBar here="wiki" isLocalInstall={localInstall.isLocal}>
+            <SurfaceBar here="wiki" isLocalInstall={localInstall.isLocal} hidden={isEmbed}>
                 {role === 'admin' && <a className="sbar-link" href="/admin">Admin</a>}
             </SurfaceBar>
 

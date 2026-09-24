@@ -20,7 +20,8 @@
  *   node scripts/asset-refs-audit.mjs [options]
  *
  * Options:
- *   --tier <local|staging|prod|all>   Which tier to check (default: local)
+ *   --tier <local|dev|prod|all>   Which tier to check (default: local).
+ *                     `dev` is dev.diiii.xyz.
  *   --base  <url>     API base — overrides --tier
  *   --token <token>   Bearer token (default: the tier's own, from the env or
  *                     serverXR/.env.local). Without one only public spaces are
@@ -31,7 +32,7 @@
  *   --quiet           Print only the projects that are missing something
  *
  * Example — the check that would have caught it:
- *   node scripts/asset-refs-audit.mjs --tier staging --space beyond-form
+ *   node scripts/asset-refs-audit.mjs --tier dev --space beyond-form
  */
 
 import fs from 'node:fs/promises'
@@ -43,15 +44,21 @@ const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 
 export const TIERS = {
     local: { url: 'http://localhost:4000/serverXR', tokenEnv: 'API_TOKEN' },
-    staging: { url: 'https://staging.di-studio.xyz/serverXR', tokenEnv: 'LIVE_API_TOKEN' },
+    dev: { url: 'https://dev.diiii.xyz/serverXR', tokenEnv: 'LIVE_API_TOKEN' },
     prod: { url: 'https://di-studio.xyz/serverXR', tokenEnv: 'PROD_API_TOKEN' },
+}
+
+// The dev tier's old key is refused outright, not mapped: one name per tier.
+export const resolveTier = (name) => {
+    if (name === 'staging') throw new Error('"staging" is now "dev"')
+    return name
 }
 
 export const parseArgs = (argv) => {
     const args = { tier: 'local', base: null, token: null, spaces: [], projects: [], json: false, quiet: false }
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
-        if (arg === '--tier') { args.tier = argv[++i]; continue }
+        if (arg === '--tier') { args.tier = resolveTier(argv[++i]); continue }
         if (arg === '--base' || arg === '--to' || arg === '--from') { args.base = argv[++i]; continue }
         if (arg === '--token') { args.token = argv[++i]; continue }
         if (arg === '--space') { args.spaces.push(argv[++i]); continue }
@@ -196,5 +203,5 @@ const main = async () => {
 }
 
 if (process.argv[1] && import.meta.url === `file://${path.resolve(process.argv[1])}`) {
-    main().catch((error) => { console.error(error); process.exit(2) })
+    main().catch((error) => { console.error(error?.message || error); process.exit(2) })
 }

@@ -17,7 +17,7 @@ Keep the project pointed at this shape:
 - `V1` is compatibility and fallback, not the default place for new product investment
 - `src/project/` is the shared project/document center
 - `serverXR` is authoritative for auth, persistence, publish state, realtime catch-up, and presence contracts
-- `dev -> main` is the normal release path (`dev` push deploys to staging, `main` push deploys to production)
+- `dev -> main` is the normal release path (`dev` push deploys the dev tier, dev.diiii.xyz; `main` push deploys production)
 
 ## Framework Goals
 
@@ -93,7 +93,7 @@ Use this loop for feature work and optimization work.
 3. Define the success signal: feature behavior, test coverage, bundle change, latency improvement, file split, or deploy confidence.
 4. Implement the smallest slice that moves the system forward.
 5. Validate locally with the right command set.
-6. Promote through `staging` before `main` when the work affects deploy, auth, persistence, publish state, or shared editor behavior.
+6. Verify on the dev tier before promoting to `main` when the work affects deploy, auth, persistence, publish state, or shared editor behavior.
 7. Record a checkpoint when the work changes project truth, workflow, or architecture direction.
 
 ## Optimization Scorecard
@@ -107,7 +107,7 @@ Use this scorecard to decide whether the repo is getting healthier.
 | Security boundary | fewer browser-held write secrets, stronger server sessions, clearer roles | shared write tokens remain the long-term model |
 | Performance | public viewer stays lean and heavy editor surfaces load on demand | public routes pay for editor-only code by default |
 | Codebase maneuverability | largest orchestration files shrink by responsibility | root shells and control panels keep absorbing more concerns |
-| Release confidence | lint, build, tests, and staging checks stay routine | deploy success depends on tribal memory or manual recovery |
+| Release confidence | lint, build, tests, and dev-tier checks stay routine | deploy success depends on tribal memory or manual recovery |
 
 ## Current Recommended Priority Order
 
@@ -151,7 +151,7 @@ Work is not really done until these are true:
 - shared behavior was not duplicated into multiple editor lanes without a deliberate reason
 - relevant tests or validation commands were run
 - docs were updated if product, workflow, or architecture truth changed
-- staging verification happened for deploy-sensitive or backend-authority changes
+- dev-tier verification happened for deploy-sensitive or backend-authority changes
 - the change makes the system either more capable, simpler, or safer
 
 ## Standard Validation Set

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
     collectDependencyDrift,
     collectMissingSpaces,
+    pagesAlreadyHere,
     formatDependencyDriftWarning,
     formatFetchAgeNote,
     formatSpaceDriftWarning,
@@ -92,9 +93,9 @@ describe('formatSpaceDriftWarning', () => {
     })
 
     it('names each space, its tier, and the command that fixes it', () => {
-        const lines = formatSpaceDriftWarning(new Map([['dilijan', 'staging'], ['azd', 'prod']])).join('\n')
+        const lines = formatSpaceDriftWarning(new Map([['dilijan', 'dev'], ['azd', 'prod']])).join('\n')
         expect(lines).toContain('2 space(s) live but not on this box')
-        expect(lines).toContain('dilijan (staging)')
+        expect(lines).toContain('dilijan (dev)')
         expect(lines).toContain('azd (prod)')
         expect(lines).toContain('npm run local:mirror')
         // The distinction that cost a session: absent data reads as a broken
@@ -107,7 +108,7 @@ describe('collectMissingSpaces', () => {
     // The dev box sat five spaces behind the live tiers with nothing saying so.
     // Each case below is a way that silence could come back.
 
-    it('names a staging-only space', () => {
+    it('names a dev-tier-only space', () => {
         // `dilijan` was built on staging and never promoted. A production-only
         // comparison calls the box complete while it lacks the one space the
         // camp runs on — the miss reads as "the tool worked".
@@ -115,10 +116,10 @@ describe('collectMissingSpaces', () => {
             ['main', 'wcc'],
             [
                 { tier: 'prod', ids: ['main', 'wcc'] },
-                { tier: 'staging', ids: ['main', 'wcc', 'dilijan'] },
+                { tier: 'dev', ids: ['main', 'wcc', 'dilijan'] },
             ]
         )
-        expect([...missing]).toEqual([['dilijan', 'staging']])
+        expect([...missing]).toEqual([['dilijan', 'dev']])
     })
 
     it('attributes a space both tiers hold to production', () => {
@@ -126,7 +127,7 @@ describe('collectMissingSpaces', () => {
             [],
             [
                 { tier: 'prod', ids: ['wcc'] },
-                { tier: 'staging', ids: ['wcc'] },
+                { tier: 'dev', ids: ['wcc'] },
             ]
         )
         expect(missing.get('wcc')).toBe('prod')
@@ -140,10 +141,10 @@ describe('collectMissingSpaces', () => {
             ['main'],
             [
                 { tier: 'prod', ids: null },
-                { tier: 'staging', ids: ['main', 'dilijan'] },
+                { tier: 'dev', ids: ['main', 'dilijan'] },
             ]
         )
-        expect([...missing]).toEqual([['dilijan', 'staging']])
+        expect([...missing]).toEqual([['dilijan', 'dev']])
     })
 
     it('says nothing when the box is current', () => {
@@ -151,7 +152,7 @@ describe('collectMissingSpaces', () => {
             ['main', 'wcc', 'dilijan'],
             [
                 { tier: 'prod', ids: ['main', 'wcc'] },
-                { tier: 'staging', ids: ['dilijan'] },
+                { tier: 'dev', ids: ['dilijan'] },
             ]
         )
         expect(missing.size).toBe(0)
@@ -165,5 +166,25 @@ describe('collectMissingSpaces', () => {
         expect(missing.size).toBe(0)
         expect(isSandboxSpaceId('sandbox-abc')).toBe(true)
         expect(isSandboxSpaceId('main')).toBe(false)
+    })
+})
+
+describe('pagesAlreadyHere', () => {
+    it('drops a missing space whose published page this box already has', () => {
+        const missing = new Map([['decisions', 'prod'], ['the-model-arena', 'dev'], ['azd', 'prod']])
+        const published = new Map([['decisions', 'drive-decisions'], ['the-model-arena', 'model-arena'], ['azd', 'azd-room']])
+        const here = pagesAlreadyHere(missing, published, new Set(['drive-decisions', 'model-arena']))
+        expect([...here]).toEqual([['decisions', 'drive-decisions'], ['the-model-arena', 'model-arena']])
+    })
+
+    it('keeps the warning when the remote space has no published page or it is not here', () => {
+        const missing = new Map([['empty', 'dev'], ['elsewhere', 'prod']])
+        const published = new Map([['elsewhere', 'p1']])
+        expect(pagesAlreadyHere(missing, published, new Set()).size).toBe(0)
+    })
+
+    it('is quiet on missing inputs', () => {
+        expect(pagesAlreadyHere(null, null, null).size).toBe(0)
+        expect(pagesAlreadyHere(new Map([['a', 'dev']]), undefined, undefined).size).toBe(0)
     })
 })

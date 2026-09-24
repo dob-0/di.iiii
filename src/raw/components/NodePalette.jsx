@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
 import { listNodeTypes, NODE_FAMILIES, FAMILY_BY_TYPE } from '../../project/nodeRegistry.js'
+import { LIGHTS, PRIMITIVES } from '../../project/entityPalette.js'
+import { OBJECT_CARD_COLOR } from '../utils/objectCards.js'
 
 const PALETTE_WIDTH = 280
 // Must match .raw-node-palette's max-height in raw.css — they disagreed by
@@ -31,6 +33,28 @@ const toDefinitionShim = (type) => {
 
 const clamp = (min, value, max) => Math.min(Math.max(value, min), max)
 
+// THINGS — the same list Studio's Add offers (src/project/entityPalette.js),
+// so a box made here is the box Studio makes: the same type, made by the same
+// createEntityOfType through the same createEntity edit. They sit beside the
+// Cube and Sphere NODES rather than replacing them: a shape node feeds Array,
+// Merge and a Geo's shape, a thing stands in the room (layers decision,
+// "Not doing"). The row's hint says which is which.
+//
+// `aliases` rank like the label: a person looking for "lamp" means the point
+// light, and none of the thing labels says lamp.
+const capitalize = (text) => (text ? text[0].toUpperCase() + text.slice(1) : text)
+const THING_ENTRIES = [
+    ...PRIMITIVES.map(({ key, label }) => ({ key, label: capitalize(label), aliases: [] })),
+    ...LIGHTS.map(({ key, label }) => ({ key, label: `${label} light`, aliases: key === 'pointLight' ? ['lamp'] : [] }))
+].map((thing) => ({
+    kind: 'thing',
+    id: `thing:${thing.key}`,
+    thingType: thing.key,
+    label: thing.label,
+    hint: 'a thing',
+    aliases: thing.aliases
+}))
+
 function getPalettePosition(clickX, clickY) {
     const vw = window.innerWidth
     const vh = window.innerHeight
@@ -50,6 +74,9 @@ export default function NodePalette({
     placement = null,
     onClose,
     onCreate,
+    // Makes a THING (a Studio object) of the chosen type. Optional: without
+    // it the palette lists no things, exactly as before.
+    onCreateThing = null,
     // Commands make this the workspace's ONE summons rather than a second
     // command system beside it: the same gesture that creates a node also
     // brings back the help, the chat, a hidden panel or the chrome itself.
@@ -75,6 +102,9 @@ export default function NodePalette({
         .map((definition) => ({ kind: 'node', id: definition.id, label: definition.label, hint: definition.id, definition }))
 
     const q = query.trim().toLowerCase()
+    const thingEntries = onCreateThing
+        ? THING_ENTRIES.filter((entry) => !q || `${entry.label} ${entry.thingType} ${entry.aliases.join(' ')} thing`.toLowerCase().includes(q))
+        : []
     const commandEntries = commands
         .filter((command) => !q || `${command.label} ${command.hint || ''}`.toLowerCase().includes(q))
         .map((command) => ({ kind: 'command', id: command.id, label: command.label, hint: command.hint, run: command.run }))
@@ -87,14 +117,23 @@ export default function NodePalette({
     // groups by family, in the declared task order, with a sticky header per
     // family. Any typed character dissolves the grouping into the flat ranked
     // list: type-to-place stays exactly what it was.
+    //
+    // Things come right after "make" when browsing — the scene atoms, both
+    // kinds, side by side — and after every node when searching, so a name
+    // that is both (Sphere, Plane, Text) still places the node it always did
+    // and the thing sits on the row below it.
+    const thingsGroup = thingEntries.length
+        ? [{ kind: 'header', id: 'family:things', label: 'things', count: thingEntries.length, color: OBJECT_CARD_COLOR }, ...thingEntries]
+        : []
     const groupedNodeEntries = q
-        ? nodeEntries
+        ? [...nodeEntries, ...thingEntries]
         : NODE_FAMILIES.flatMap((family) => {
             const members = nodeEntries.filter((entry) => entry.definition.family === family.id)
-            if (!members.length) return []
+            if (!members.length) return family.id === 'make' ? thingsGroup : []
             return [
                 { kind: 'header', id: `family:${family.id}`, label: family.label, count: members.length, color: family.color },
-                ...members
+                ...members,
+                ...(family.id === 'make' ? thingsGroup : [])
             ]
         })
     // EXACT MATCH FIRST, absolutely. Typing "Out" and pressing Enter used to
@@ -109,6 +148,7 @@ export default function NodePalette({
         if (!q) return 1
         const label = (entry.label || '').toLowerCase()
         if (label === q) return 0
+        if (entry.kind === 'thing' && entry.aliases.includes(q)) return 0
         if (label.startsWith(q)) return 1
         return 2
     }
@@ -168,6 +208,10 @@ export default function NodePalette({
             // behind the palette's own backdrop.
             onClose()
             entry.run?.()
+            return
+        }
+        if (entry.kind === 'thing') {
+            onCreateThing?.({ type: entry.thingType, placement })
             return
         }
         onCreate({
@@ -253,7 +297,9 @@ export default function NodePalette({
                                 <button
                                     type="button"
                                     className={`raw-node-palette-item${index === activeIndex ? ' is-active' : ''}${entry.kind === 'node' && entry.definition.authoringOnly ? ' is-shell' : ''}`}
-                                    style={entry.kind === 'node' ? { '--family-color': NODE_FAMILIES.find((f) => f.id === entry.definition.family)?.color || 'transparent' } : undefined}
+                                    style={entry.kind === 'node'
+                                        ? { '--family-color': NODE_FAMILIES.find((f) => f.id === entry.definition.family)?.color || 'transparent' }
+                                        : entry.kind === 'thing' ? { '--family-color': OBJECT_CARD_COLOR } : undefined}
                                     onPointerEnter={(event) => {
                                         // Touch synthesises a pointerenter right
                                         // before the tap; moving the active row

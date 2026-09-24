@@ -39,13 +39,17 @@ const writeFollows = async (dataDir, follows) => {
     return follows
 }
 
-const addFollow = async (dataDir, spaceId, { remote, token, label = null }) => {
+const addFollow = async (dataDir, spaceId, { remote, token, label = null, address = null }) => {
     const follows = readFollows(dataDir)
     follows[spaceId] = {
         remote: String(remote || '').replace(/\/$/, ''),
         token: token || null,
         label,
-        followedAt: new Date().toISOString()
+        followedAt: new Date().toISOString(),
+        // The ADDRESS PIN, kept in step with scripts/di/follows.mjs — absent
+        // entirely rather than null, so a record with no pin serialises
+        // byte-identically to one written before this existed.
+        ...(address ? { address } : {})
     }
     return writeFollows(dataDir, follows)
 }

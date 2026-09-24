@@ -101,6 +101,35 @@
     gap: 0.6rem;
 }
 
+/* Share sits beside the + button, in the same thumb-reach band — not up in
+   the topbar with "Full editor", which a one-handed phone at an event never
+   comfortably reaches. */
+.jam-bottom-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+}
+
+.jam-share {
+    display: inline-flex;
+    align-items: center;
+    height: 2.75rem;
+    padding: 0 var(--di-space-4);
+    border-radius: var(--di-radius-pill);
+    border: 1px solid var(--di-cyan-line);
+    background: var(--di-scrim-strong);
+    color: var(--di-text);
+    font-size: var(--di-text-3);
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.jam-share:active {
+    background: rgba(var(--di-cyan-rgb), 0.16);
+}
+
 .jam-add {
     width: 4rem;
     height: 4rem;
@@ -134,14 +163,22 @@
 
 /* --- the sheet ---------------------------------------------------------- */
 
+/* Solid, not a scrim: --di-scrim-strong (0.9 alpha) let the room's own wall
+   text and photos show through the sheet in the bright spots. Every other
+   surface here is a veil over the live 3D room on purpose; this is the one
+   place a person is reading a form, so it gets the same opaque ground as
+   every other panel (--di-surface, the preferences pages, Studio's own
+   floating panels) — square corners already came from --di-radius, so the
+   only thing missing was actually being behind the text, not in front of a
+   ghost of it. */
 .jam-sheet {
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
     pointer-events: auto;
-    background: var(--di-scrim-strong);
-    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--di-surface);
+    border-top: 1px solid var(--di-cyan-line);
     border-radius: var(--di-radius) var(--di-radius) 0 0;
     padding: var(--di-space-4) var(--di-space-4) calc(env(safe-area-inset-bottom, 0px) + var(--di-space-4));
     box-shadow: 0 -14px 40px rgba(0, 0, 0, 0.55);

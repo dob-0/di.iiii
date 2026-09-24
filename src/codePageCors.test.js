@@ -7,9 +7,9 @@
 // them unless the response says otherwise.
 //
 // Measured on staging 2026-09-03, from a real code page:
-//   Access to script at 'https://staging.di-studio.xyz/vendor/three.module.min.js'
+//   Access to script at 'https://dev.diiii.xyz/vendor/three.module.min.js'
 //   from origin 'null' has been blocked by CORS policy
-//   Access to font at 'https://staging.di-studio.xyz/fonts/inter-regular.woff'
+//   Access to font at 'https://dev.diiii.xyz/fonts/inter-regular.woff'
 //   from origin 'null' has been blocked by CORS policy
 //
 // The font one had been true since code pages existed — every page asking for the
@@ -83,7 +83,7 @@ describe('a code page can read /vendor/ and /fonts/ from its null origin', () =>
     // fetch class as the Draco decoder above. Node-only on purpose — the
     // `local`/offline `di` install is what this session needed fixed, and
     // is what serverXR/src/index.js:CODE_PAGE_READABLE actually governs;
-    // nginx.conf carries the equivalent allowance for staging/prod and does
+    // nginx.conf carries the equivalent allowance for the dev tier and prod and does
     // NOT yet include wcc, so the same gap still applies there until someone
     // adds it (see the session note).
     it('also covers wcc\'s own public assets, on the node path', () => {

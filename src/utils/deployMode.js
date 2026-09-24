@@ -1,8 +1,8 @@
-// Which di.iiii am I looking at — this machine, staging, or the live site?
+// Which di.iiii am I looking at — this machine, the dev tier, or the live site?
 //
 // The address bar has always held the answer and nothing on the page ever did.
 // That gap has cost real work: di-library published a PROD page whose 51 PDFs
-// every one 404'd, because an asset cache written against STAGING looked
+// every one 404'd, because an asset cache written against the dev tier looked
 // identical on screen and asset ids are per-server. Two tiers that render the
 // same are two tiers you will eventually confuse.
 //
@@ -11,7 +11,7 @@
 // cannot trust.
 
 export const MODE_LOCAL = 'local'
-export const MODE_STAGING = 'staging'
+export const MODE_DEV = 'dev'
 export const MODE_HOSTED = 'hosted'
 
 // Reusing the palette that already exists in base.css rather than minting new
@@ -20,7 +20,7 @@ export const MODE_HOSTED = 'hosted'
 // nothing an audience sees changes, and no-frame becomes its own signal.
 export const MODE_MARKS = {
     [MODE_LOCAL]: { label: 'LOCAL', color: '#4df9c0', note: 'this machine' },
-    [MODE_STAGING]: { label: 'STAGING', color: '#ffb347', note: 'rehearsal tier' },
+    [MODE_DEV]: { label: 'DEV', color: '#ffb347', note: 'dev tier' },
     [MODE_HOSTED]: null
 }
 
@@ -51,26 +51,14 @@ export function resolveDeployMode({ hostname = '', local = null } = {}) {
     // told "hosted" would be a lie.
     if (local === true) return MODE_LOCAL
     if (isPrivateHost(host)) return MODE_LOCAL
-    // First label, so staging.di-studio.xyz and staging-2.di-studio.xyz both
-    // count and my-staging-notes.example.com does not.
+    // First label. The dev tier answers at dev.diiii.xyz. `dev` is an exact
+    // match, not a prefix — `developers.example.com` is a website. The tier
+    // once wore no mark at all, and a tier that renders pixel-identical to the
+    // live site is the tier you will eventually confuse with it.
     const first = host.split('.')[0]
-    if (first.startsWith('staging')) return MODE_STAGING
-    // The same second tier answers to dev.diiii.xyz since the addresses were
-    // settled, and that name knew nothing here: the rehearsal tier reached by
-    // its new name wore no mark at all and was pixel-identical to the live
-    // site. Exact match, not a prefix — `developers.example.com` is a website.
-    if (first === 'dev') return MODE_STAGING
+    if (first === 'dev') return MODE_DEV
     return MODE_HOSTED
 }
 
-// One tier, two names, and the chip prints the one you actually typed. Telling
-// a visitor "STAGING" while the address bar says dev.diiii.xyz makes the mark
-// argue with the address, which is the one thing it exists not to do.
-const secondTierLabel = (hostname) =>
-    (String(hostname || '').toLowerCase().replace(/^\[/, '').split('.')[0] === 'dev' ? 'DEV' : 'STAGING')
-
-export const deployModeMark = (mode, hostname = '') => {
-    const mark = MODE_MARKS[mode] || null
-    if (!mark || mode !== MODE_STAGING) return mark
-    return { ...mark, label: secondTierLabel(hostname) }
-}
+// One label per mode; the host beside the label shows the address actually typed.
+export const deployModeMark = (mode) => MODE_MARKS[mode] || null
