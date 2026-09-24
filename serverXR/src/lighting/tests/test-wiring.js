@@ -90,5 +90,16 @@ check('every state field the interface renders is one the server sends', () => {
   }
 });
 
+// Regression guard (docs/ai/known-fixes.md, "lights ignore a small rig's DMX"): every frame
+// the desk sends is a full 512-slot universe. Trimming to the highest used channel sent a
+// 25-channel studio rig 26-slot frames, and its lights ignored them while the UI looked right.
+check('every DMX frame leaves full length — 512 slots, never trimmed to the patch', () => {
+  if (!/const FULL_FRAME = 512;/.test(server)) throw new Error('desk.js no longer defines FULL_FRAME = 512');
+  const trims = [...server.matchAll(/\|\|\s*24\b|Buffer\.alloc\(\s*24\s*\)|Math\.max\(\s*24\s*,/g)].map((m) => m[0]);
+  if (trims.length) throw new Error('short-frame fallbacks are back in desk.js: ' + trims.join(', '));
+  const fp = server.slice(server.indexOf('function footprints()'), server.indexOf('function pushFrame()'));
+  if (!/out\.set\(u, FULL_FRAME\)/.test(fp)) throw new Error('footprints() no longer sets every universe to FULL_FRAME');
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);
