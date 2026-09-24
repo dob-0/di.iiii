@@ -460,15 +460,31 @@ function createDesk(opts = {}) {
   // Ctrl+C then threw the whole drag away. Exit flushes whatever is pending.
   let saveTimer = null;
   let dirty = false;
+  // Whether the show is safely on disk, for the page (status.save). A save runs from a
+  // timer: before this, a locked or read-only show file (OneDrive, an antivirus, a full
+  // disk) threw out of that timer — inside serverXR nothing catches it, so one failed
+  // write took the whole server down — and `dirty` had already been cleared, so the edit
+  // was never tried again even where the process survived. Now a failure is caught,
+  // kept dirty, retried with backoff, and said out loud.
+  const saveStatus = { ok: true, pending: false, lastOkAt: null, lastError: null, failures: 0 };
+  const LOCKED = new Set(['EPERM', 'EBUSY', 'EACCES']);
 
   // One file, written whole: to a temp file, the previous good copy COPIED aside (never
   // renamed — see writeShow), then renamed over the live path, which is atomic.
-  function writeWhole(file, text) {
+  // `inPlace`: after a rename has failed several times in a row (some lockers refuse a
+  // replace but allow a write), write straight over the file instead — the .prev copy
+  // and the temp file still hold the show if that write is interrupted.
+  function writeWhole(file, text, inPlace = false) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     const tmp = file + '.tmp';
     fs.writeFileSync(tmp, text);
     try { fs.copyFileSync(file, file.replace(/\.json$/, '.prev.json')); } catch (e) { /* first save ever */ }
-    fs.renameSync(tmp, file);
+    try { fs.renameSync(tmp, file); }
+    catch (e) {
+      if (!inPlace || !LOCKED.has(e.code)) throw e;
+      fs.writeFileSync(file, text);
+      try { fs.unlinkSync(tmp); } catch (e2) { /* it goes with the next save */ }
+    }
   }
 
   // A show as a space keeps it: everything but `output`. A shallow copy of a dozen keys;
@@ -507,7 +523,6 @@ function createDesk(opts = {}) {
     clearTimeout(saveTimer);
     saveTimer = null;
     if (!dirty) return;
-    dirty = false;
     const file = showFile();
     fs.mkdirSync(show.dir, { recursive: true });
     // A show that appeared after we booted with nothing belongs to somebody else — a
@@ -534,9 +549,34 @@ function createDesk(opts = {}) {
     // stack when a restart overlapped a save, and only show.prev.json still held the rig.
     // A rename onto the live path is atomic, so show.json now goes straight from the old
     // contents to the new and is never absent.
-    writeWhole(file, text);
+    writeWhole(file, text, saveStatus.failures >= 3);
+    // Only now is the edit safe: a write that threw above leaves the show dirty.
+    dirty = false;
     if (show.space) writeMachineOutput();
     else machineOutputText = JSON.stringify(state.output);
+    if (!saveStatus.ok) log('  the show saved again after ' + saveStatus.failures + ' failed attempt(s)');
+    Object.assign(saveStatus, { ok: true, pending: false, lastOkAt: Date.now(), lastError: null, failures: 0 });
+  }
+
+  // The timer's way in: never throws. A failure is kept, retried with a growing wait
+  // (0.5 s doubling, at most 15 s) and reported; the desk and the DMX loop run on.
+  function saveSoon() {
+    try { writeShow(); }
+    catch (e) {
+      saveStatus.ok = false;
+      saveStatus.pending = true;
+      saveStatus.failures++;
+      saveStatus.lastError = LOCKED.has(e.code)
+        ? 'Could not save the show — the file is locked or read-only (OneDrive or an antivirus?) — still running, retrying'
+        : e.code === 'ENOSPC' ? 'Could not save the show — the disk is full — still running, retrying'
+        : `Could not save the show (${e.code || e.message}) — still running, retrying`;
+      const wait = Math.min(15000, 500 * 2 ** Math.min(5, saveStatus.failures - 1));
+      if (saveStatus.failures === 1 || saveStatus.failures % 10 === 0) {
+        log('  COULD NOT SAVE ' + showFile() + ' (' + (e.code || '') + ' ' + e.message + ') — still running, retrying in ' + wait + 'ms');
+      }
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveSoon, wait);
+    }
   }
   // The layer an outside caller's cue drives, unless it names another.
   const CUE_LAYER = 'cue';
@@ -552,8 +592,9 @@ function createDesk(opts = {}) {
   let stateVersion = 0;
   function save() {
     dirty = true;
+    saveStatus.pending = true;
     stateVersion++;
-    if (!saveTimer) saveTimer = setTimeout(writeShow, 400);
+    if (!saveTimer) saveTimer = setTimeout(saveSoon, 400);
   }
 
   // ---- output loop ----------------------------------------------------------
@@ -960,6 +1001,9 @@ function createDesk(opts = {}) {
         bpm: state.audio.bpm,
       },
       status: {
+        // Whether the show is safely on disk (see saveSoon): the page says "not saved —
+        // retrying" while ok is false.
+        save: { ...saveStatus },
         // Which fixtures are flashing to be found. Live-only, like the audio levels
         // above it — the page paints the row so the desk visibly agrees with what the
         // operator asked for while they are turned round looking at the rig.

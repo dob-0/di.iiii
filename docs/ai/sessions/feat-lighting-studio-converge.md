@@ -8,3 +8,6 @@
   effects (a fixture's own `fx.mode` beats the rig-wide one; `none` holds it still), rig bounds
   per effect group, and the LFO-capture fix; `desk.js` `/api/fx` takes `{ids, mode}` / `{all}`
   and scenes keep per-fixture fx. Two known-fixes rows (LFO capture, compact-rig Follow).
+- Port 2: save safety. `writeShow` from the timer is now `saveSoon`, which never throws — a
+  locked/read-only show file used to throw out of the timer (fatal inside serverXR) and lose the
+  edit. Retry with backoff, in-place write after 3 failed renames, `status.save` for the page.
