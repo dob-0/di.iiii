@@ -61,4 +61,4 @@ const isOwnerAtTheMachine = (req, { isLocal = process.env.DI_LOCAL === '1', inte
   return ownAddresses(interfaces).has(address)
 }
 
-module.exports = { isOwnerAtTheMachine, ownAddresses }
+module.exports = { isOwnerAtTheMachine, ownAddresses, cameThroughAProxy }
