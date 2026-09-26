@@ -1,6 +1,7 @@
 const os = require('node:os')
 const { config } = require('../config')
 const { hasRequiredAuthRole } = require('../authAccess')
+const { cameThroughAProxy } = require('../localOwner')
 
 function registerStatusRoutes(router, {
   recentEvents,
@@ -9,10 +10,12 @@ function registerStatusRoutes(router, {
 }) {
   // What this install is following on other di.iiii, and whether the ops are
   // moving. Read-only and loopback-only: it names other machines and is nobody
-  // else's business, least of all a visitor's.
+  // else's business, least of all a visitor's. Loopback alone is not the person
+  // at the machine: a proxy on the same host (nginx, cloudflared, ssh -L)
+  // re-originates every visitor from 127.0.0.1, so its headers forfeit it.
   router.get('/api/follows', (req, res) => {
     const address = req.socket?.remoteAddress || ''
-    if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address)) {
+    if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address) || cameThroughAProxy(req)) {
       res.status(404).json({ error: 'not found' })
       return
     }
