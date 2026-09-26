@@ -51,7 +51,12 @@ if ! gzip -t "$BACKUP_FILE" 2>/dev/null; then
 fi
 # vps-backup.sh writes the member bare (`.backup-snapshot.db`), but a tar built
 # with `-C /data .` stores it as `./.backup-snapshot.db` — accept either.
-if ! tar tzf "$BACKUP_FILE" 2>/dev/null | grep -qx '\(\./\)\?\.backup-snapshot\.db'; then
+# awk reads the WHOLE listing on purpose: `grep -q` quits at the first match,
+# the snapshot is the first member, tar then dies of SIGPIPE, and pipefail
+# turned a valid archive into this refusal (exit 141 on GNU/Linux once the
+# listing outgrows the 64 KiB pipe buffer). Guard: scripts/standby/restore-data.test.js
+if ! tar tzf "$BACKUP_FILE" 2>/dev/null |
+    awk '$0 == ".backup-snapshot.db" || $0 == "./.backup-snapshot.db" { f = 1 } END { exit !f }'; then
   echo "error: archive contains no .backup-snapshot.db member: $BACKUP_FILE" >&2
   echo "       this is not a di.iiii backup produced by deploy/vps-backup.sh." >&2
   exit 1
