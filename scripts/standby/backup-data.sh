@@ -23,7 +23,20 @@
 #      On failure "ok" is false and "error" says why; newest* still describe the last good archive,
 #      so a watcher can say both "it failed" and "the newest copy is N hours old".
 # Exits non-zero on any failure, with the reason on stderr and in status.json. Refuses to start while
-# another run holds <out-dir>/.backup.lock (exit 75, status.json untouched).
+# another run holds <out-dir>/.backup.lock (exit 75, status.json and the marker untouched).
+#
+# The failure marker, exactly vps-backup.sh's: any failure also writes <out-dir>/BACKUP-FAILED, one
+# line "[<ISO-8601 time>] backup <stamp> FAILED: <reason>", and a good run removes it, so every
+# watcher that already knows prod's marker (di-bo's checkBackupFresh reads only its name) sees a
+# standby's failed night the same way. It is written before status.json's "ok":false, so a run that
+# cannot even write status.json still leaves it; the good run removes it just before "ok":true.
+#
+# Modes (umask 027): archives, sidecars, the marker 640; status.json 644, on purpose. It holds only
+# the fields above (names, sizes, times, a checksum, an error line; no data), and the out-dir is
+# meant to stay 750 with no "other" search bit, so 644 opens it to nobody who cannot already enter
+# the directory: the owner, its group, and a user given search on the directory by an ACL (the
+# Mac standby grants its public bot list+search there, so the bot reads health without reading
+# any archive).
 #
 # Space: refuses to start unless the out-dir's filesystem has room for the snapshot and an archive
 # of the uncompressed size, plus 1 GiB, so a backup can never fill the disk a live server writes to.
@@ -74,6 +87,7 @@ json_str() { # a JSON string literal, or null for empty
 }
 
 stage=''
+stamp=''
 tmp_archive=''
 tmp_sidecar=''
 locked=0
@@ -97,8 +111,13 @@ write_status() { # <ok true|false> [error]
   printf '{"ok":%s,"newest":%s,"newestEpoch":%s,"newestBytes":%s,"newestSha256":%s,"held":%s,"keep":%s,"epoch":%s,"durationS":%s,"error":%s}\n' \
     "$ok" "$(json_str "$newest")" "$nep" "$nbytes" "$(json_str "$nsha")" "$held" "$keep" \
     "$now" "$((now - started))" "$(json_str "$err")" > "$tmp"
-  chmod 640 "$tmp"
+  chmod 644 "$tmp"   # readable by whoever may enter the out-dir: see "Modes" above
   mv -f "$tmp" "$out/status.json"
+}
+
+write_marker() { # <reason> — prod's BACKUP-FAILED, same name, same one-line format
+  printf '[%s] backup %s FAILED: %s\n' "$(date -u -Iseconds)" "${stamp:-$(date -u +%F_%H%M)}" "$1" \
+    > "$out/BACKUP-FAILED"
 }
 
 cleanup() {
@@ -112,6 +131,7 @@ fail() {
   trap - ERR
   echo "backup FAILED: $1" >&2
   if [ -d "$out" ] && [ "$status_ok" = 0 ]; then
+    write_marker "$1" || echo "backup: could not write $out/BACKUP-FAILED either" >&2
     write_status false "$1" || echo "backup: could not write $out/status.json either" >&2
   fi
   cleanup
@@ -231,6 +251,7 @@ for f in "$out"/dii-backup-*.tar.gz.sha256; do   # a checksum whose archive is g
   if [ ! -e "${f%.sha256}" ]; then log "removing orphan $(basename "$f")"; rm -f "$f"; fi
 done
 
+rm -f "$out/BACKUP-FAILED"   # this run is good: the last failure's word no longer holds (vps-backup.sh does the same)
 write_status true
 status_ok=1
 set -- "$out"/dii-backup-*.tar.gz
