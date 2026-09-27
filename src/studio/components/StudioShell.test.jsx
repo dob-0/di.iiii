@@ -253,4 +253,29 @@ describe('StudioShell — a new project opens bare', () => {
         expect(nav()).toEqual(['Create', 'Objects', 'Scene', 'Share', 'Code'])
         expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
     })
+
+    // 2026-09-27: the phone header offered Projection from the first thing on, while
+    // the bar held it back until the first wire. Studio's jump buttons ask the bar's
+    // own rule (SurfaceBar layerReached) now.
+    it('on a phone, offers Nodes and Projection only where the bar does', () => {
+        const ONE_THING = { loaded: true, empty: false, held: true, open: { ...OPEN_NEW, connections: true, handover: true } }
+        const WALL = { ...ONE_THING, open: { ...ONE_THING.open, wall: true } }
+        const rest = { selectedEntity: null, selectedEntityIds: [], entities: [], inspectorSections: [], inspectorValues: {}, assetOptions: [] }
+        const nodes = () => screen.queryByLabelText('Open this project in the node editor')
+        const wall = () => screen.queryByLabelText('Put this project on a wall')
+
+        const { rerender } = renderShell({ ...inProject, layers: ONE_THING, isMobile: true })
+        expect(nodes()).not.toBeNull()
+        expect(wall()).toBeNull()
+        expect(barLinks()).not.toContain('Projection')
+
+        rerender(<StudioShell {...inProject} {...rest} isMobile layers={WALL} />)
+        expect(wall()).not.toBeNull()
+        expect(barLinks()).toContain('Projection')
+
+        rerender(<StudioShell {...inProject} {...rest} isMobile layers={ONE_THING} />)
+        expect(wall()).toBeNull()
+        act(() => saveAllTools(true))
+        expect(wall()).not.toBeNull()
+    })
 })
