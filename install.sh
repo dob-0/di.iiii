@@ -1,7 +1,7 @@
 #!/bin/sh
 # di.iiii — one line, on your own machine.
 #
-#   curl -fsSL https://di-studio.xyz/get | sh
+#   curl -fsSL https://diiii.xyz/get | sh
 #
 # This script is deliberately small and permanently stable. It only: works out
 # what machine this is, makes sure there is a node, downloads the current
@@ -34,7 +34,7 @@ case "$uname_s" in
     Linux)  OS="linux" ;;
     Darwin) OS="darwin" ;;
     *)      die "di.iiii does not install on $uname_s yet.
-On Windows, use PowerShell:  irm https://di-studio.xyz/get.ps1 | iex" ;;
+On Windows, use PowerShell:  irm https://diiii.xyz/get.ps1 | iex" ;;
 esac
 
 case "$uname_m" in
@@ -108,16 +108,14 @@ else
     tmp_node=$(mktemp -d)
     trap 'rm -rf "$tmp_node"' EXIT
     if ! curl -fsSL "$NODE_URL" -o "$tmp_node/node.tar.gz"; then
+        # Docker is no way out here: the di command itself runs on node, so
+        # every install needs one, whichever way di.iiii then runs.
         die "di.iiii could not start on this machine.
 
-  docker      not checked — no node to check with
   node.js     not found, and nodejs.org could not be reached
 
-You need one of these. Pick whichever sounds easier:
-
-  Docker Desktop   https://docker.com/products/docker-desktop
-                   install it, open it once, then run this line again
-  Node.js 22       https://nodejs.org  — the big green LTS button
+Install Node.js 22.15 or newer from https://nodejs.org (the LTS button),
+then run this line again.
 
 Nothing was installed."
     fi
