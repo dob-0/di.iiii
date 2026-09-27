@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest'
 
 import { panTiltFromRotation, rotationFromPanTilt, spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
 import {
-    LASER_MIN_HEIGHT_M, RIG_PREFIX, aimAt, beamHitsCrane, buildRig, candelaAt, checkLaser, classPhotometry, columnsFor, lightDistance,
-    pickEven, realIndices, stageFrame, surfaceHit
+    LASER_MIN_HEIGHT_M, RIG_PREFIX, aimAt, beamHitsBox, beamHitsCrane, buildRig, candelaAt, checkLaser, classPhotometry, columnsFor, groupAxis,
+    lightDistance, performerBox, pickEven, realIndices, stageFrame, surfaceHit
 } from './rig-lib.mjs'
 import { readGeometry } from './fixtures-glb.mjs'
 
@@ -17,7 +17,8 @@ const manifest = JSON.parse(fs.readFileSync(path.join(here, 'fixtures', 'fixture
 const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
 
 // The hall.json hall.py wrote for MOXIR on 2026-09-28 (v2: flat space frame,
-// 4 spans, the owner's zones), committed so the test needs no Blender.
+// 4 spans, the owner's zones as revised for the DJ place), committed so the
+// test needs no Blender.
 // Rebuild it with the command in scripts/place/README.md and copy it here.
 const hall = JSON.parse(fs.readFileSync(path.join(here, 'rigs', 'moxir-hall-2026-09-28.hall.json'), 'utf8'))
 const g = hall.geometry
@@ -75,25 +76,66 @@ describe('the flat roof and the machines stop a beam', () => {
     })
 })
 
-describe('the stage the owner marked', () => {
+describe('the DJ place the owner asked for (2026-09-28: small, a bit raised, centred on the metal things)', () => {
     const stage = stageFrame(rig, hall)
-    it('stands in the green zone, facing the entry, with the press behind it', () => {
-        const zone = g.zones.stage.used
+    const press = g.massing.find((m) => m.id === 'press')
+    it('is a small riser of standard 2 x 1 m decks, 1.0-1.4 m high', () => {
+        expect(rig.stage.kind).toBe('booth')
+        expect(stage.width * rig.stage.depth_m).toBeLessThanOrEqual(8)
+        expect((stage.width * rig.stage.depth_m) % 2).toBe(0)
+        expect(stage.deck).toBeGreaterThanOrEqual(1.0)
+        expect(stage.deck).toBeLessThanOrEqual(1.4)
+    })
+
+    it('stands centred on the press, close in front of it, facing the entry and the crowd', () => {
+        expect(stage.axis).toBeCloseTo((press.x_m[0] + press.x_m[1]) / 2, 6)
         expect(stage.into).toBe(1)
-        expect(stage.front).toBe(Math.max(...zone.z_m))
-        expect(stage.back).toBeCloseTo(stage.front - rig.stage.depth_m, 6)
+        expect(stage.wall).toBe(press.z_m[1])
+        expect(stage.back - stage.wall).toBeGreaterThanOrEqual(0.5)
+        expect(stage.back - stage.wall).toBeLessThanOrEqual(1.5)
+        expect(stage.front - stage.back).toBeCloseTo(rig.stage.depth_m, 6)
         expect(stage.backdrop.ids).toContain('press')
-        expect(stage.wall).toBeLessThan(stage.back)
+    })
+
+    it('keeps the machinery the picture behind the DJ: the header is above the press crown', () => {
+        const crown = g.massing.find((m) => m.id === 'press-crown')
+        expect(stage.trussH - stage.trussSection).toBeGreaterThan(crown.y_m[1])
+        expect(stage.trussW).toBeGreaterThan(stage.width)
+        expect(stage.trussW).toBeLessThan(10)
+    })
+
+    it('records the options considered, labelled as the owner\'s intent with estimated metres', () => {
+        expect(rig.stage.options.length).toBeGreaterThanOrEqual(3)
+        expect(rig.stage.options.filter((o) => o.chosen)).toHaveLength(1)
+        expect(rig.stage.intent).toMatch(/owner/)
+        expect(g.zones.stage.label).toBe('DJ place')
         expect(g.zones._label).toMatch(/owner marked 2026-09-28/)
     })
 
-    it('picks the nave columns around the dance floor and the stage, both faces, nearest the stage first', () => {
+    it('puts the dance floor in front of the booth and the backstage beside and behind the press', () => {
+        const front = [g.zones.dance.used, ...(g.zones.dance.extra || [])].map((r) => Math.min(...r.z_m))
+        expect(Math.min(...front)).toBeGreaterThan(stage.front)
+        expect(Math.min(...front) - stage.front).toBeLessThan(2)
+        expect(Math.max(...g.zones.backstage.used.x_m)).toBeLessThanOrEqual(press.x_m[0])
+        expect(Math.min(...g.zones.backstage.used.z_m)).toBeLessThan(stage.wall)
+    })
+
+    it('picks the nave columns around the dance floor and the booth, both faces, nearest the booth first', () => {
         const cols = columnsFor(hall, stage, { zones: ['stage', 'dance'], rows: 'nave', faces: ['inner', 'back'] })
         expect(cols).toHaveLength(32)
         expect(new Set(cols.map((c) => c.z)).size).toBe(8)
         const mid = (stage.front + stage.back) / 2
         expect(Math.abs(cols[0].z - mid)).toBeLessThanOrEqual(Math.abs(cols.at(-1).z - mid))
         for (const c of cols) expect(Math.abs(c.faceX)).toBeGreaterThan(11)
+    })
+
+    it('knows where the DJ stands, and sees a beam through him', () => {
+        const box = performerBox(rig, stage)
+        expect(box.x[0]).toBeCloseTo(stage.axis - 0.9, 6)
+        expect(box.y[0]).toBe(stage.deck)
+        const inside = [stage.axis, stage.deck + 1, (box.z[0] + box.z[1]) / 2]
+        expect(beamHitsBox([inside[0], 0.5, box.z[0] - 0.3], [inside[0], 10, box.z[1] + 0.5], 20, box)).toBe(true)
+        expect(beamHitsBox([stage.axis, 0.5, box.z[0] - 0.3], [stage.axis, 10, box.z[0] - 0.3], 20, box)).toBe(false)
     })
 })
 
@@ -102,10 +144,9 @@ describe('the MOXIR rig', () => {
     const lamps = entities.filter((e) => e.type === 'spotLight')
 
     it('hangs every fixture on the list', () => {
-        expect(summary.byGroup['beam380-stage'].placed).toBe(8)
-        expect(summary.byGroup['beam380-columns'].placed).toBe(10)
-        expect(summary.byGroup['bsw250-truss'].placed).toBe(12)
-        expect(summary.byGroup['beeeye-front'].placed).toBe(8)
+        expect(summary.byGroup['beam380-stage'].placed + summary.byGroup['beam380-flank'].placed + summary.byGroup['beam380-columns'].placed).toBe(18)
+        expect(summary.byGroup['bsw250-truss'].placed + summary.byGroup['bsw250-booms'].placed).toBe(12)
+        expect(summary.byGroup['beeeye-towers'].placed).toBe(8)
         expect(summary.byGroup['par-columns'].placed + summary.byGroup['par-outer'].placed + summary.byGroup['par-press'].placed).toBe(50)
         expect(summary.byGroup['laser-stage'].placed).toBe(2)
         expect(lamps).toHaveLength(90)
@@ -202,18 +243,39 @@ describe('every look is a design, not a scatter', () => {
             expect(summary.unreachable).toEqual([])
         })
 
-        it(`${look}: is mirror-symmetric about the centre line — every lamp has a twin, position and beam mirrored`, () => {
-            const lamps = lampsOf(look).entities.filter((e) => e.type === 'spotLight')
+        it(`${look}: is mirror-symmetric — the booth's lamps about the booth's axis, the columns' about the nave's; every lamp has a twin`, () => {
+            const built = lampsOf(look)
+            const lamps = built.entities.filter((e) => e.type === 'spotLight')
+            const stage = stageFrame(rig, hall)
+            // where a fixture stands (its base), independent of where its head points
+            const baseOf = (e) => {
+                const f = built.fixtures.find((x) => `${RIG_PREFIX}${x.id.replace(/-(\d+)$/, (m, k) => `-${k.padStart(2, '0')}`)}` === e.id)
+                return (f.parts.Base || f.parts.Body).elements.slice(12, 15)
+            }
             const vec = (e) => [...e.components.transform.position, ...spotAimDirection(e.components.transform.rotation)]
-            const mirrored = ([x, y, z, dx, dy, dz]) => [-x, y, z, -dx, dy, dz]
             // A twin within 2 cm and 0.01 of direction: float dust is not asymmetry.
-            const near = (a, b) => a.every((v, i) => Math.abs(v - b[i]) < 0.02)
-            // A group the rig marks `symmetric: false` (the press is off the axis) is left out.
-            const asymmetric = rig.groups.filter((gr) => gr.symmetric === false).map((gr) => `${RIG_PREFIX}${gr.id}-`)
-            const mirroredLamps = lamps.filter((e) => !asymmetric.some((p) => e.id.startsWith(p)))
-            expect(mirroredLamps.length).toBeGreaterThan(80)
-            const orphans = mirroredLamps.filter((e) => !mirroredLamps.some((o) => near(vec(o), mirrored(vec(e))))).map((e) => e.id)
-            expect(orphans).toEqual([])
+            const near = (a, b, n) => a.slice(0, n).every((v, i) => Math.abs(v - b[i]) < 0.02)
+            let checked = 0
+            for (const gr of rig.groups) {
+                // `symmetric: false` (the machine line is off the axis) is left out;
+                // `symmetric: 'positions'` (side light aimed AT the DJ) mirrors its positions only.
+                if (gr.symmetric === false) continue
+                const positionsOnly = gr.symmetric === 'positions'
+                const at = positionsOnly ? baseOf : vec
+                const axis = groupAxis(gr, stage)
+                const mirrored = ([x, y, z, dx, dy, dz]) => [2 * axis - x, y, z, -dx, dy, dz]
+                const own = lamps.filter((e) => e.id.startsWith(`${RIG_PREFIX}${gr.id}-`))
+                const orphans = own.filter((e) => !own.some((o) => near(at(o), mirrored(at(e)), positionsOnly ? 3 : 6))).map((e) => e.id)
+                expect(orphans).toEqual([])
+                checked += own.length
+            }
+            expect(checked).toBeGreaterThan(80)
+        })
+
+        it(`${look}: sends no narrow beam through the DJ and keeps every laser at least ${LASER_MIN_HEIGHT_M} m up`, () => {
+            const { summary, entities } = lampsOf(look)
+            expect(summary.clashes.filter((c) => /DJ/.test(c))).toEqual([])
+            for (const e of entities.filter((x) => x.id.includes('laser'))) expect(e.components.transform.position[1]).toBeGreaterThanOrEqual(LASER_MIN_HEIGHT_M)
         })
     }
 
@@ -272,7 +334,9 @@ describe('the baked washes (the light of the beam-only PARs on the columns and t
         const baked = rig.groups.filter((gr) => gr.bake).reduce((n, gr) => n + gr.count, 0)
         const realInBaked = rig.groups.filter((gr) => gr.bake).reduce((n, gr) => n + built.summary.byGroup[gr.id].real, 0)
         expect(built.washes).toHaveLength(baked - realInBaked)
-        expect(built.washes.filter((w) => w.surface.kind === 'backdrop')).toHaveLength(4)
+        // every press uplight that is not a real lamp lands on the press or the machine line
+        const press = rig.groups.find((gr) => gr.id === 'par-press')
+        expect(built.washes.filter((w) => w.surface.kind === 'backdrop')).toHaveLength(press.count - built.summary.byGroup['par-press'].real)
     })
 
     it('follows the renderer\'s spot model: dark outside the cone, falling off with distance', () => {

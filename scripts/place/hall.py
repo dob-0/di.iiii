@@ -699,8 +699,11 @@ def build(dims):
             continue
         used = zone.get('used') or zone.get('marked')
         mat = f'zone-{name}'
-        if used and mat in MATERIALS:
-            (x0, x1), (z0, z1) = used['x_m'], used['z_m']
+        # `extra`: more rectangles of the same zone (a floor that is not one rectangle)
+        for rect in ([used] if used else []) + list(zone.get('extra') or []):
+            if mat not in MATERIALS:
+                break
+            (x0, x1), (z0, z1) = rect['x_m'], rect['z_m']
             t = 0.15
             y0, y1 = -z1, -z0
             for lo, hi in (((x0, y0), (x1, y0 + t)), ((x0, y1 - t), (x1, y1)),

@@ -79,11 +79,16 @@ export const viewpoints = (hall, rig) => {
         // The middle of the dance floor, looking at the stage.
         mid: { position: [3, eye, (stage.front + g.door.z_m) / 2 - 12], target: [0, 5, stage.front], fov: 60 },
         // In the dance floor zone (the owner's blue), facing the stage and the press behind it.
-        dance: { position: [2, eye, danceZ], target: [0, 4, stage.wall], fov: 60 },
+        dance: { position: [2, eye, danceZ], target: [stage.axis ?? 0, 4, stage.wall], fov: 60 },
         // On the stage deck, downstage, looking out at the room.
-        stage: { position: [0, stage.deck + eye, stage.front - stage.into * 1.5], target: [0, 5, stage.front + stage.into * 40], fov: 60 },
+        stage: { position: [stage.axis ?? 0, stage.deck + eye, stage.front - stage.into * 1.5], target: [0, 5, stage.front + stage.into * 40], fov: 60 },
+        // The crowd's view of a booth: from the dance floor's front third, on the
+        // booth's axis, at eye height — the DJ with the machinery behind.
+        floor: { position: [(stage.axis ?? 0) - 1.5, eye, stage.front + stage.into * 14], target: [stage.axis ?? 0, 3.2, stage.wall], fov: 55 },
+        // The DJ's own view: standing behind the table, looking out at the crowd.
+        booth: { position: [stage.axis ?? 0, stage.deck + 1.7, stage.back + stage.into * 0.6], target: [0, 2.5, stage.front + stage.into * 40], fov: 70 },
         // Upstage behind the deck, looking at the backdrop (the press) and its PARs' wash.
-        backdrop: { position: [-3, eye, stage.back - stage.into * 1.5], target: [3, 2.5, stage.wall], fov: 60 },
+        backdrop: { position: [(stage.axis ?? 0) - 3, eye, stage.back + stage.into * 3], target: [(stage.axis ?? 0) + 1, 2.5, stage.wall], fov: 60 },
         // From the dance floor, looking up into the space frame and a lantern.
         roof: { position: [-5, eye, danceZ - 4], target: [5, g.truss_top_centre_m ?? 13, stage.front - stage.into * 6], fov: 70 },
         // High on the crane runway, three-quarter over the whole rig.
@@ -98,6 +103,7 @@ export const viewpoints = (hall, rig) => {
         const view = { position: cam.position_m, target: cam.position_m.map((v, k) => v + dir[k] * 30), fov: cam.vfov_deg ?? 60, size: cam.image_px }
         views[name] = view
         if (name === 'photo-032') views.crane = view
+        if (name === 'photo-024') views.ground = view
     }
     return views
 }

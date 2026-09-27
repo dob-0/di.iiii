@@ -1,8 +1,8 @@
 {
     "rig": "MOXIR 17.10 — the proposed rig",
-    "version": 3,
+    "version": 4,
     "writtenAt": "2026-09-28",
-    "venue": "MOXIR, Charentsavan factory hall (40.406160, 44.637675)",
+    "venue": "MOXIR, Charentsavan factory hall (owner's pin 40.406524, 44.636560)",
     "space": "moxir",
     "status": "PROPOSAL. Nothing here has been checked against the venue, the rental house's datasheets or a load calculation.",
     "provenance": {
@@ -11,36 +11,139 @@
         "positions": "Placed by rule against the hall's structural grid (scripts/place/hall.py -> hall.json), so they move when the hall is rebuilt with measured dimensions.",
         "hall": "scripts/place/rigs/moxir-hall-dims-2026-09-28.json (flat space-frame roof, 4 spans x 24 m, 18 bays; photos + 2020 satellite) + moxir-hall-features-2026-09-28.json (the owner's zones marked 2026-09-28, the press massing, gates, cranes; sizes estimated).",
         "models": "Fixture bodies are the models in scripts/place/fixtures/glb, built to the datasheet dimensions by scripts/place/fixtures/build_fixtures.py (see the manifest for provenance and licence).",
-        "stage": "The owner marked the zones on three photographs on 2026-09-28 ('red backstage, green stage, blue dance floor'); located in metres by a perspective fit of photo 032 (features file, zones._how)."
+        "stage": "The owner, 2026-09-28, on the first rebuild: \"i mention the dj place i think it will not big how you created you made it so big, so stage is the near the metal thing like dj near a bit top and centre of the metal things\". So the 'stage' is a DJ place: a small riser, a bit raised, centred on the forging press ('the metal things'), close in front of it; the machinery is the picture behind the DJ. Positions from the photographs (photo 032's fitted camera, cross-checked from photo 004 with EXIF intrinsics; scripts/place/photo_meta.py)."
     },
     "assumptions": [
-        "The stage stands in the zone the owner marked (green, 2026-09-28): across the nave, its front edge at the white bulk bags, facing the entry and the crane end; the big forging press stands behind it as the backdrop, the backstage (red) behind the press. The audience stands between the crane end and the stage (blue). Positions are estimated from photographs (+-8% of the distance from the crane).",
-        "The deck is 16 m wide, 12 m deep, 1.2 m high, its front edge on the zone's front edge; the zone runs on 5.3 m further upstage to the press (backline / crew floor). Deck size is a guess — no stage is on the rental list.",
-        "The stage truss is a ground-supported goalpost (two towers standing on the floor either side of the stage + a header) 18 m wide with its header at 6 m, 4 m in from the back of the stage. A guess at a common rental size; no truss is on the list — it is OWED.",
-        "UP-PL5403 x50 is read as 50 in total: 32 on the nave columns around the dance floor and the stage (one on each column's nave face, one on its back face, grid lines s 6-48 m), 12 on the next rows out (one span either side, s 12-42 m) so the room reads deep, and 6 on the floor in front of the press, lighting it as the backdrop. The v2 proposal's 8 on the crane bridge are dropped: the crane now parks over the back of the dance floor.",
-        "Lasers hang at the top of the truss towers (6 m) and are aimed UP into the roof over the audience; the rig script refuses any laser aim that descends, and any that passes under 3 m above the floor. This is a picture of intent, not a laser safety assessment — a qualified laser safety officer and the national rules (e.g. the Maximum Permissible Exposure limits of IEC 60825-1) are OWED before any 40 W laser is switched on in front of people.",
-        "CO2 jets, cold spark and smoke machines are drawn as the machines (their models), standing where they stand; what they emit is not simulated.",
-        "Each LOOK is one static state for previsualisation (a focus palette), not a show: positions are the rig's, aims and colours the look's. Brightness between fixtures follows the datasheets (photometry below); the overall exposure is one chosen number (photometry.sceneScale)."
+        "The DJ place (the owner's green, 2026-09-28) is a riser of stage decks 3 m wide x 2 m deep x 1.2 m high, centred on the forging press (x 1.65 m, the press's centre; +-1.5 m), its back edge 1.0 m in front of the press's face (z 3.2 m, +-1.5 m), facing the entry and the crowd. Three 2 x 1 m decks on 1.2 m legs; the owner's 'a bit top' read as 1.0-1.4 m. Options considered: stage.options.",
+        "The DJ stands behind a 1.8 x 0.8 m DJ table, 0.95 m high, at the riser's front edge; treads up the left side (toward the backstage); a crowd barrier 1.3 m in front of the riser, 9 m long. The crowd (blue) fills the floor from the barrier to under the crane.",
+        "The machinery stays the backdrop: the press (to 5.3 m) and the machine line beside it stand behind and above the DJ as the crowd sees him; the goalpost header is at 7 m, above the press's crown, so it frames the machinery rather than cutting it.",
+        "The truss is a small ground-supported goalpost straddling the riser: two towers 7 m apart standing on the floor either side of the booth, a header at 7 m over the booth's back half. No truss is on the rental list — OWED (a 290 mm box truss goalpost of this size is a stock rental item). The right tower stands where the machine line may reach (photos 004/032 show machines on the SW half of the nave from the press to the white bags): a site check is OWED.",
+        "The rental list's counts are all kept: 8 UP-B380F at the booth (4 on the floor right behind the riser, 2 either side of it) and 10 on the dance floor's column bases; 12 UP-250BSW = 6 under the header + 6 as side light from the bases of the first three column pairs; 8 UP-HK1915 bee-eyes on side arms up the two towers (4 each); 50 UP-PL5403 = 32 on the nave columns (both faces) + 12 on the next rows + 6 uplighting the press and the machine line from their foot. No narrow beam passes through the DJ (a box from the riser's back strip to the table, 2 m tall, checked on every aim).",
+        "Lasers stand on the top plates of the two towers (7.15 m) and are aimed UP into the roof over the audience; the rig script refuses any laser aim that descends, and any that passes under 3 m above the floor. This is a picture of intent, not a laser safety assessment — a qualified laser safety officer and the national rules (e.g. the Maximum Permissible Exposure limits of IEC 60825-1) are OWED before any 40 W laser is switched on in front of people.",
+        "CO2 jets, cold spark and smoke machines are drawn as the machines (their models), standing where they stand; what they emit is not simulated. Cold sparks stand in the pit at the foot of the riser, CO2 jets along the pit, both behind the barrier.",
+        "Each LOOK is one static state for previsualisation (a focus palette), not a show: positions are the rig's, aims and colours the look's. The booth's lamps mirror about the booth's axis (x 1.65 m); the lamps on the building's columns mirror about the nave's (x 0), 1.65 m apart. Brightness between fixtures follows the datasheets (photometry below); the overall exposure is one chosen number (photometry.sceneScale)."
     ],
     "stage": {
-        "zone": "stage",
+        "kind": "booth",
+        "label": "DJ place (the owner's green, 2026-09-28)",
+        "intent": "owner's words 2026-09-28: 'dj place ... not big ... near the metal thing ... a bit top and centre of the metal things'",
+        "centre_on": [
+            "press"
+        ],
         "faces": "entry",
-        "width_m": 16,
-        "depth_m": 12,
+        "width_m": 3,
+        "depth_m": 2,
         "deck_h_m": 1.2,
+        "gap_m": 1.0,
+        "decks": "3 x stage deck 2 x 1 m (e.g. Bütec / Nivtec / Litedeck class) on 1.2 m legs",
         "backdrop": [
             "press",
             "press-crown",
             "machine-line",
             "machine-pipe"
+        ],
+        "table": {
+            "w_m": 1.8,
+            "d_m": 0.8,
+            "h_m": 0.95,
+            "from_front_m": 0.2
+        },
+        "stairs": {
+            "side": "left",
+            "w_m": 1.0,
+            "rise_m": 0.2,
+            "going_m": 0.25
+        },
+        "barrier": {
+            "pit_m": 1.3,
+            "half_width_m": 4.5,
+            "h_m": 1.1
+        },
+        "estimated": {
+            "centre_x_m": {
+                "value": 1.65,
+                "range": [
+                    0.5,
+                    3.5
+                ],
+                "how": "press massing x 0.25..3.05 (photo 032 fit); photo 004 (EXIF f 2688 px, horizon 1399, vanishing point u 2140 from the centred far gate) puts the press 1.7 m right of the axis via the white bags"
+            },
+            "press_face_z_m": {
+                "value": 3.2,
+                "range": [
+                    2.0,
+                    4.5
+                ],
+                "how": "photo 032: D 47 m from the crane camera; photo 004: base at D 43 m from a camera at z 47 -> z 3.7"
+            },
+            "riser_front_z_m": {
+                "value": 6.2,
+                "range": [
+                    5.0,
+                    7.5
+                ]
+            },
+            "deck_h_m": {
+                "value": 1.2,
+                "range": [
+                    1.0,
+                    1.4
+                ],
+                "how": "'a bit top'"
+            }
+        },
+        "options": [
+            {
+                "id": "A-press-centred",
+                "chosen": true,
+                "size_m": [
+                    3,
+                    2
+                ],
+                "deck_h_m": 1.2,
+                "centre_x_m": 1.65,
+                "why": "centred on the press, the tallest of the metal things and the one he drew along (1c3956d1); the machine line reads beside it to the right"
+            },
+            {
+                "id": "B-small",
+                "size_m": [
+                    2,
+                    2
+                ],
+                "deck_h_m": 1.0,
+                "centre_x_m": 1.65,
+                "why": "the smallest booth: 2 decks, room for a DJ and a table only; no space for a second DJ or the booth-top beams"
+            },
+            {
+                "id": "C-machine-centred",
+                "size_m": [
+                    3,
+                    2
+                ],
+                "deck_h_m": 1.2,
+                "centre_x_m": 4.5,
+                "why": "centred on the press AND the rusty machine line beside it (x 0.25..8): the visual middle of 'the metal things' seen from the floor, but the riser would stand in the machinery on the SW half"
+            },
+            {
+                "id": "D-nave-centred",
+                "size_m": [
+                    4,
+                    2
+                ],
+                "deck_h_m": 1.4,
+                "centre_x_m": 0.0,
+                "why": "on the hall's axis, so the whole rig mirrors about one line; the press then stands 1.65 m off-centre behind the DJ, not 'centre of the metal things'"
+            }
         ]
     },
     "truss": {
-        "kind": "ground-supported goalpost",
-        "width_m": 18,
-        "header_h_m": 6.0,
-        "from_stage_back_m": 4.0,
-        "section_m": 0.4
+        "kind": "ground-supported goalpost over the booth",
+        "at": "booth",
+        "width_m": 7,
+        "header_h_m": 7.0,
+        "from_stage_back_m": 0.9,
+        "section_m": 0.3,
+        "note": "towers 7 m apart straddle the 3 m riser; the header runs over the booth's back half, 7 m up (the press crown is 5.3 m), so the DJ is lit from above and the machinery is framed, not cut"
     },
     "classes": {
         "beam380": {
@@ -99,10 +202,27 @@
         {
             "id": "beam380-stage",
             "class": "beam380",
-            "count": 8,
-            "mount": "stage-back",
+            "count": 4,
+            "mount": "booth-back",
             "aim": "fan-into-roof",
-            "note": "8 beams on the stage back line, fanned up into the trusses over the dance floor"
+            "note": "4 beams on the floor right behind the riser (in the 1 m between it and the press), rising behind the DJ through the machinery's silhouette. They stay near vertical: a beam leaning more than ~10 deg would pass through the DJ (checked)",
+            "half_width_m": 1.29,
+            "back_inset_m": -0.25,
+            "on_floor": true
+        },
+        {
+            "id": "beam380-flank",
+            "class": "beam380",
+            "count": 4,
+            "mount": "booth-back",
+            "on_floor": true,
+            "dx_m": [
+                2.2,
+                3.0
+            ],
+            "back_inset_m": -0.25,
+            "aim": "fan-into-roof",
+            "note": "4 beams on the floor either side of the riser (2 each, outside the DJ), in line with the back row; free to lean over the crowd"
         },
         {
             "id": "beam380-columns",
@@ -110,24 +230,48 @@
             "count": 10,
             "mount": "column-bases",
             "aim": "up-into-truss",
-            "note": "10 beams on the floor at the column bases along the dance-floor bays (5 grid lines, both sides), aimed up into the roof"
+            "note": "10 beams on the floor at the column bases along the dance floor (grid lines z 24-48, both sides), aimed up into the roof",
+            "columns": {
+                "z_m": [
+                    21,
+                    51
+                ],
+                "rows": "nave"
+            }
         },
         {
             "id": "bsw250-truss",
             "class": "bsw250",
-            "count": 12,
+            "count": 6,
             "mount": "truss-header",
             "aim": "stage-floor-and-back-wall",
-            "note": "12 on the stage truss header, alternately onto the stage floor and the back wall",
+            "note": "6 under the goalpost header over the booth, alternately onto the DJ and the press behind",
             "orient": "hung"
         },
         {
-            "id": "beeeye-front",
+            "id": "bsw250-booms",
+            "class": "bsw250",
+            "count": 6,
+            "mount": "column-bases",
+            "columns": {
+                "z_m": [
+                    5,
+                    19
+                ],
+                "rows": "nave"
+            },
+            "aim": "booth-key",
+            "symmetric": "positions",
+            "note": "the other 6 as side light from the bases of the first three nave column pairs (z 6, 12, 18): the DJ keyed from both sides. Positions mirror about the nave; their aims all meet at the DJ (on the booth's axis), so only the positions are mirrored"
+        },
+        {
+            "id": "beeeye-towers",
             "class": "beeEye",
             "count": 8,
-            "mount": "stage-front",
+            "mount": "tower-ladder",
             "aim": "out-over-audience",
-            "note": "8 bee-eyes on the stage floor at the front edge, aimed out and up over the audience"
+            "note": "8 bee-eyes on side arms up the two towers (4 each, 1.8-6 m), facing the crowd",
+            "from_h_m": 1.8
         },
         {
             "id": "par-columns",
@@ -173,11 +317,11 @@
             "class": "par",
             "count": 6,
             "mount": "backdrop-floor",
-            "backdrop_gap_m": 3.0,
+            "backdrop_gap_m": 0.35,
             "aim": "backdrop",
             "bake": true,
             "symmetric": false,
-            "note": "6 on the floor 3 m in front of the press and the machine line beside it, washing them as the stage's backdrop; the press is off the axis, so this group is not mirrored"
+            "note": "6 on the floor at the foot of the press and the machine line beside it, uplighting them as the booth's backdrop; the machine line is off the axis, so this group is not mirrored"
         },
         {
             "id": "laser-stage",
@@ -185,7 +329,7 @@
             "count": 2,
             "mount": "truss-towers",
             "aim": "laser-into-roof",
-            "note": "2 lasers at the top of the truss towers, aimed up into the roof — never into the audience plane"
+            "note": "2 lasers on the top plates of the goalpost towers (7.15 m), aimed up into the roof — never into the audience plane"
         }
     ],
     "effects": [
@@ -193,7 +337,9 @@
             "id": "co2",
             "label": "CO2 jet",
             "count": 6,
-            "mount": "stage-front-deck",
+            "mount": "booth-pit",
+            "half_width_m": 4.0,
+            "pit_m": 1.0,
             "colour": "#d8dde2",
             "fixture": "co2"
         },
@@ -201,7 +347,9 @@
             "id": "spark",
             "label": "cold spark machine",
             "count": 4,
-            "mount": "stage-front-floor",
+            "mount": "booth-pit",
+            "half_width_m": 2.4,
+            "pit_m": 0.4,
             "colour": "#ff9a2e",
             "fixture": "spark"
         },
@@ -218,17 +366,15 @@
         "why": "A browser cannot run ~90 real three.js spot lights: each is a term in the shader of every lit pixel and, with shadows on, a shadow render and a texture unit each (WebGL gives 16-32; past that every lit material fails to compile). Every fixture draws its beam cone; only these 8 lamps also light the room (the rest of the PARs' light on the columns and the press is baked, wash-glb.mjs), and shadows are OFF by default (the owner found the first version too laggy, 2026-09-27). Measured — see scripts/place/README.md, 'The rig'.",
         "realLights": {
             "bsw250-truss": 4,
-            "par-press": {
-                "count": 2,
-                "pick": "first"
-            },
+            "bsw250-booms": 2,
             "par-columns": {
                 "count": 2,
                 "pick": "nearest-stage"
             }
         },
         "shadowCasting": false,
-        "shadowMapSize": 1024
+        "shadowMapSize": 1024,
+        "realNote": "2026-09-28 (DJ place): the press's own uplights stand 0.35 m from it, where a real lamp in the renderer blows the face out white; they are baked like the other PARs, and the 4 header spots (6.3 m up, over the DJ and the press) are the real lamps that light the backdrop."
     },
     "night": {
         "backgroundColor": "#040507",
@@ -257,7 +403,7 @@
     "looks": {
         "roof-cathedral": {
             "title": "Roof cathedral",
-            "intent": "The hall's own architecture lit as a nave: every column-base beam rises straight up into the trusses in mirrored pairs, a slight lean in toward the centre line; the stage beams open as an apse fan into the lantern; bee-eyes lift low over the house.",
+            "intent": "The hall's own architecture lit as a nave: every column-base beam rises straight up into the space frame in mirrored pairs, a slight lean in toward the centre line; the booth's beams open as an apse fan into the lantern above the press; the tower bee-eyes lift low over the house; the DJ keyed from both sides.",
             "aims": {
                 "bsw250-truss": {
                     "rule": "stage-wash"
@@ -275,13 +421,8 @@
                 },
                 "beam380-stage": {
                     "rule": "fan",
-                    "spread_deg": 60,
-                    "lean_deg": 6
-                },
-                "beeeye-front": {
-                    "rule": "fan",
-                    "spread_deg": 50,
-                    "lean_deg": 65
+                    "spread_deg": 24,
+                    "lean_deg": 4
                 },
                 "par-outer": {
                     "rule": "up-the-column"
@@ -289,21 +430,37 @@
                 "par-press": {
                     "rule": "backdrop",
                     "h": 0.6
+                },
+                "beeeye-towers": {
+                    "rule": "vertical",
+                    "lean_deg": 62,
+                    "in_deg": -12
+                },
+                "bsw250-booms": {
+                    "rule": "booth-key",
+                    "h": 1.6
+                },
+                "beam380-flank": {
+                    "rule": "fan",
+                    "spread_deg": 60,
+                    "lean_deg": 6
                 }
             },
             "colours": {
                 "beam380-columns": "#eef3ff",
                 "beam380-stage": "#eef3ff",
                 "par-columns": "#2437ff",
-                "beeeye-front": "#ffb347",
                 "bsw250-truss": "#9fb4ff",
                 "par-outer": "#2437ff",
-                "par-press": "#ffb060"
+                "par-press": "#ffb060",
+                "beeeye-towers": "#ffb347",
+                "bsw250-booms": "#9fb4ff",
+                "beam380-flank": "#eef3ff"
             }
         },
         "fan-out": {
             "title": "Fan out",
-            "intent": "The stage beams open in one symmetric fan over the house; the column rows lean back toward the stage so every beam in the room reads from the band outward; bee-eyes fan wide and low.",
+            "intent": "The booth's beams open in one symmetric fan over the house from behind the DJ; the column rows lean back toward the booth so every beam in the room reads from the machinery outward; the tower bee-eyes fan wide and low.",
             "aims": {
                 "bsw250-truss": {
                     "rule": "stage-wash"
@@ -317,17 +474,12 @@
                 },
                 "beam380-stage": {
                     "rule": "fan",
-                    "spread_deg": 110,
-                    "lean_deg": 22
+                    "spread_deg": 40,
+                    "lean_deg": 6
                 },
                 "beam380-columns": {
                     "rule": "parallel",
                     "lean_deg": -18
-                },
-                "beeeye-front": {
-                    "rule": "fan",
-                    "spread_deg": 80,
-                    "lean_deg": 62
                 },
                 "par-outer": {
                     "rule": "up-the-column"
@@ -335,21 +487,37 @@
                 "par-press": {
                     "rule": "backdrop",
                     "h": 0.6
+                },
+                "beeeye-towers": {
+                    "rule": "vertical",
+                    "lean_deg": 55,
+                    "in_deg": -30
+                },
+                "bsw250-booms": {
+                    "rule": "booth-key",
+                    "h": 1.6
+                },
+                "beam380-flank": {
+                    "rule": "fan",
+                    "spread_deg": 110,
+                    "lean_deg": 22
                 }
             },
             "colours": {
                 "beam380-columns": "#7fe7ff",
                 "beam380-stage": "#ffffff",
                 "par-columns": "#00a0ff",
-                "beeeye-front": "#ffffff",
                 "bsw250-truss": "#7fe7ff",
                 "par-outer": "#00a0ff",
-                "par-press": "#ffffff"
+                "par-press": "#ffffff",
+                "beeeye-towers": "#ffffff",
+                "bsw250-booms": "#7fe7ff",
+                "beam380-flank": "#ffffff"
             }
         },
         "crossfire": {
             "title": "Crossfire",
-            "intent": "The two column rows fire across the dance floor at each other and cross over its centre line at about 5 m; the stage beams X-cross above the front of the house.",
+            "intent": "The two column rows fire across the dance floor at each other and cross over the nave's centre line at 9 m; the four beams behind the DJ X-cross 12 m over the booth, the flank beams over the front of the crowd; the tower bee-eyes cross just in front of the barrier.",
             "aims": {
                 "bsw250-truss": {
                     "rule": "stage-wash"
@@ -368,15 +536,9 @@
                 },
                 "beam380-stage": {
                     "rule": "x-cross",
-                    "x": 9,
-                    "y": 13,
-                    "a": 12
-                },
-                "beeeye-front": {
-                    "rule": "x-cross",
-                    "x": 7,
-                    "y": 6,
-                    "a": 9
+                    "x": 2.5,
+                    "y": 12,
+                    "a": -1.2
                 },
                 "par-outer": {
                     "rule": "up-the-column"
@@ -384,21 +546,39 @@
                 "par-press": {
                     "rule": "backdrop",
                     "h": 0.6
+                },
+                "beeeye-towers": {
+                    "rule": "x-cross",
+                    "x": 4,
+                    "y": 6,
+                    "a": 8
+                },
+                "bsw250-booms": {
+                    "rule": "booth-key",
+                    "h": 1.6
+                },
+                "beam380-flank": {
+                    "rule": "x-cross",
+                    "x": 5,
+                    "y": 13,
+                    "a": 12
                 }
             },
             "colours": {
                 "beam380-columns": "#ff2448",
                 "beam380-stage": "#ffffff",
                 "par-columns": "#ff2448",
-                "beeeye-front": "#ffffff",
                 "bsw250-truss": "#ff5a70",
                 "par-outer": "#ff2448",
-                "par-press": "#ff6a3a"
+                "par-press": "#ff6a3a",
+                "beeeye-towers": "#ffffff",
+                "bsw250-booms": "#ff5a70",
+                "beam380-flank": "#ffffff"
             }
         },
         "all-to-centre": {
             "title": "All to centre",
-            "intent": "Every beam in the room meets at one point 9 m above the middle of the crowd, 16 m out from the stage — the 'ballyhoo' focus.",
+            "intent": "The ballyhoo focus, 16 m out from the booth, 9 m up: the flank beams, the bee-eyes and the column rows meet there (the booth's lamps over the booth's axis, the column rows over the nave's, 1.65 m apart — the booth is centred on the press, not on the hall); the four beams behind the DJ meet higher, 13 m straight over the booth, so none crosses the DJ.",
             "aims": {
                 "bsw250-truss": {
                     "rule": "stage-wash"
@@ -419,14 +599,8 @@
                 "beam380-stage": {
                     "rule": "point",
                     "x": 0,
-                    "y": 9,
-                    "a": 16
-                },
-                "beeeye-front": {
-                    "rule": "point",
-                    "x": 0,
-                    "y": 9,
-                    "a": 16
+                    "y": 13,
+                    "a": -1.5
                 },
                 "par-outer": {
                     "rule": "up-the-column"
@@ -434,21 +608,39 @@
                 "par-press": {
                     "rule": "backdrop",
                     "h": 0.6
+                },
+                "beeeye-towers": {
+                    "rule": "point",
+                    "x": 0,
+                    "y": 9,
+                    "a": 16
+                },
+                "bsw250-booms": {
+                    "rule": "booth-key",
+                    "h": 1.6
+                },
+                "beam380-flank": {
+                    "rule": "point",
+                    "x": 0,
+                    "y": 9,
+                    "a": 16
                 }
             },
             "colours": {
                 "beam380-columns": "#ffffff",
                 "beam380-stage": "#ffffff",
                 "par-columns": "#ff7a1a",
-                "beeeye-front": "#ffffff",
                 "bsw250-truss": "#ffd08a",
                 "par-outer": "#ff7a1a",
-                "par-press": "#ffc070"
+                "par-press": "#ffc070",
+                "beeeye-towers": "#ffffff",
+                "bsw250-booms": "#ffd08a",
+                "beam380-flank": "#ffffff"
             }
         },
         "curtain": {
             "title": "Curtain",
-            "intent": "A wall of light at the stage line: the stage beams and the bee-eyes stand straight up in two parallel rows and the truss spots drop straight down between them; the column rows lean back to the stage.",
+            "intent": "A wall of light behind the DJ: the booth's beams stand straight up in front of the machinery, the tower bee-eyes straight up either side, the header spots straight down onto the booth; the column rows lean back to the booth.",
             "aims": {
                 "bsw250-truss": {
                     "rule": "vertical"
@@ -463,9 +655,6 @@
                 "beam380-stage": {
                     "rule": "vertical"
                 },
-                "beeeye-front": {
-                    "rule": "vertical"
-                },
                 "beam380-columns": {
                     "rule": "parallel",
                     "lean_deg": -25
@@ -476,16 +665,28 @@
                 "par-press": {
                     "rule": "backdrop",
                     "h": 0.6
+                },
+                "beeeye-towers": {
+                    "rule": "vertical"
+                },
+                "bsw250-booms": {
+                    "rule": "booth-key",
+                    "h": 1.6
+                },
+                "beam380-flank": {
+                    "rule": "vertical"
                 }
             },
             "colours": {
                 "beam380-columns": "#b388ff",
                 "beam380-stage": "#ffffff",
                 "par-columns": "#6a1bff",
-                "beeeye-front": "#ffffff",
                 "bsw250-truss": "#ffffff",
                 "par-outer": "#6a1bff",
-                "par-press": "#b388ff"
+                "par-press": "#b388ff",
+                "beeeye-towers": "#ffffff",
+                "bsw250-booms": "#ffffff",
+                "beam380-flank": "#ffffff"
             }
         }
     }

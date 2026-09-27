@@ -157,30 +157,34 @@ taped labelled as such, and the rig hung in it by rule.
 B=~/di-backups/moxir-before-<what>-<date>; mkdir -p $B
 node scripts/space-bundle.mjs export moxir --data-root ~/.local/share/di.iiii/data --out $B/moxir.space-bundle.tar.gz
 
+# 0b — what the photographs say (EXIF, GPS, sun): see "What the photographs' own metadata says"
+python3 scripts/place/photo_meta.py --photos /mnt/data/footage/moxir-2026-10-17 \
+    --site scripts/place/rigs/moxir-site-2026-09-28.json --out /mnt/data/footage/place-moxir-hall-v3/photo-meta.json
+
 # 1 — the hall: a parametric Soviet multi-span crane hall, flat space-frame roof (Blender, headless)
-blender -b -P scripts/place/hall.py -- --out /mnt/data/footage/place-moxir-hall-v2 \
+blender -b -P scripts/place/hall.py -- --out /mnt/data/footage/place-moxir-hall-v3 \
     --dims scripts/place/rigs/moxir-hall-dims-2026-09-28.json \
     --dims scripts/place/rigs/moxir-hall-features-2026-09-28.json \
     --preview-camera=-1.7,6.88,50.2,1.65,-10,66     # optional: a Workbench render from photo 032's camera
-cp /mnt/data/footage/place-moxir-hall-v2/hall.json scripts/place/rigs/moxir-hall-2026-09-28.hall.json  # the tests' fixture
+cp /mnt/data/footage/place-moxir-hall-v3/hall.json scripts/place/rigs/moxir-hall-2026-09-28.hall.json  # the tests' fixture
 
 # 2 — it becomes the room of the space (the footage wall is left alone)
-node scripts/place/import.mjs --work /mnt/data/footage/place-moxir-hall-v2 \
+node scripts/place/import.mjs --work /mnt/data/footage/place-moxir-hall-v3 \
     --name moxir --no-sources --replace --title "MOXIR — the hall"
 
 # 3 — the rig, from a rig file, against the hall's grid and the owner's zones
 node scripts/place/rig.mjs --rig scripts/place/rigs/moxir-2026-10-17.json \
-    --hall /mnt/data/footage/place-moxir-hall-v2/hall.json --project moxir-hall
+    --hall /mnt/data/footage/place-moxir-hall-v3/hall.json --project moxir-hall
 
 # 4 — look at it on the GPU (one browser per view, waits for the CPU < 85 °C), count frames
 node scripts/place/rig-look.mjs --gpu --base https://local.thedi.studio \
-    --hall /mnt/data/footage/place-moxir-hall-v2/hall.json \
-    --rig scripts/place/rigs/moxir-2026-10-17.json --out ~/Downloads/moxir-hall --tag arch \
-    --views crane,dance,stage,roof,backdrop   # also door, mid, over, close (one close-up per fixture kind)
+    --hall /mnt/data/footage/place-moxir-hall-v3/hall.json \
+    --rig scripts/place/rigs/moxir-2026-10-17.json --out ~/Downloads/moxir-hall --tag dj \
+    --views crane,ground,floor,booth   # also dance, stage, roof, backdrop, door, mid, over, close
 
 # 5 — the photo-matched shot beside and over the photograph
 python3 scripts/place/compose.py --photo /mnt/data/footage/moxir-2026-10-17/032-file_76.jpg \
-    --render ~/Downloads/moxir-hall/arch-crane.png --out ~/Downloads/moxir-hall/arch-crane-vs-photo032.png
+    --render ~/Downloads/moxir-hall/dj-crane.png --out ~/Downloads/moxir-hall/dj-crane-vs-photo032.png
 ```
 
 Take the rig down again: `node scripts/place/rig.mjs --project moxir-hall --remove`.
@@ -233,10 +237,112 @@ marked pixel then lands on the floor at D = f·h / (v − v_horizon). Hall frame
 | backstage (red) | near edge z −1.4..−0.1, x −12.5..1.2 | x −11..1, z −10..−1 (depth a GUESS) | near edge only |
 | the press (backdrop) | photo 032 u 647–680, base v 343 → x 0.25..3.05, front z 3.2, 4.5 m + crown | massing boxes, with the machine line beside it | ±20 % |
 
+Superseded the same day for the stage and the dance floor: see "The DJ place" below
+(the stage is a 3 × 2 m DJ riser at the press; the dance floor runs up to it).
+
 Cross-check: the ground photos taken beside the press sit 39–46 m from the
 crane camera in the VGGT cloud; the fit puts the press 47 m out. The press
 stands at grid line 9, beside the expansion joint (photo 021, paired columns,
 was taken there).
+
+### What the photographs' own metadata says (`photo_meta.py`, 2026-09-28)
+
+Before placing anything against the photographs, read what they carry:
+
+```bash
+python3 scripts/place/photo_meta.py --photos /mnt/data/footage/moxir-2026-10-17 \
+    --site scripts/place/rigs/moxir-site-2026-09-28.json --out <work>/photo-meta.json \
+    --poses <vggt>/poses_scaled.json --sat <sat_wb37890_z18_stitch.png> --sat-out <plot.png>
+```
+
+Per photo: capture time with its UTC offset, device, lens, 35 mm-equivalent
+focal → **pinhole intrinsics** (fx = f35 / 43.27 mm × the native frame's
+diagonal in pixels — the Exif/CIPA DC-008 diagonal definition; a phone's 1:1 or
+16:9 crop keeps its native equivalent focal); the **GPS** fix → local tangent
+plane (WGS-84 radii) → building frame → hall frame (the site file); the **sun**
+at that moment by the NOAA solar position algorithm (GML solar-calculator
+equations, after Meeus), cross-checked against an independent algorithm
+(Michalsky 1988) — they agree within 0.01° azimuth and 0.09° elevation for
+every photo — and where sunlight through an opening H m up lands on the floor
+(`floor_shift_per_m_drop_hall_xz`). With `--poses` it registers the VGGT
+cameras to the GPS by a 2-D similarity transform (Umeyama 1991) with
+leave-one-out spread. No third-party packages (Pillow, numpy); `pvlib` would be
+the standard library for the sun but its 18.5 MB wheel would not download here
+three times running, so the NOAA equations are written out and cross-checked.
+
+MOXIR (37 photos):
+
+| what | found |
+| --- | --- |
+| iPhone 14 Pro Max, 000–015, 2026-08-24 16:39–17:03 (+04:00) | GPS on all 16; 24 mm-eq (fx 2688 px on 4032) and 77 mm-eq (fx 8624 px); no compass heading, no horizontal-error tag |
+| Galaxy S24, 017–025, 036–038, 2026-09-17 18:03–18:05 | no GPS; 13 mm-eq ultra-wide, 1:1 crop → fx 1498 px on 2992 (EXIF f 2.2 mm / 1.4 µm pixels gives 1571; 5 % apart) |
+| 027–035 (1280 × 720) | EXIF stripped — Telegram "photo" compression. Photo 032's fitted f (555 px) is 15 % longer than an S24 ultra-wide 16:9 frame would have (481 px); unproven which camera took it |
+| videos 016 (.MOV, 1280 × 720, re-encoded 2026-09-01) and 026 (S24, 2026-09-17 14:03Z) | no location atom, no ©xyz |
+| GPS spread (15 fixes; 013 dropped: quantised to 4 decimals, 220 m off) | hall x −9.8…30.7, z 0.1…74.2: the crane shots land 13–25 m NW of where the crane stands, some outside the building; altitude 1662.8–1667.1 m and INVERTED (crane shots lowest) — useless indoors under a steel roof |
+| VGGT ↔ GPS registration | scale 0.92 of the assumed 30.8 m/unit, axis bearing 154.5° (leave-one-out 148.5–163.1°) vs the satellite's 144°, rms 15.9 m: consistent with the satellite within the GPS's indoor error, and no better than it |
+| **sun check (photo 004, 17:00:23, az 257.9°, el 30.5°)** | light falls toward hall −x (NE): 1.55 m across and 0.69 m toward the far end per metre of drop. Through the SW-span lantern's SW glazing (x 30, sill 13.55–14.05 m) the lit band's SW edge lands at x 8.2–8.9; measured on the floor in 004 (EXIF f, horizon from the runway girders, the centred far gate): x 7.8–8.3. Flipped (+x = NE) it would lie at x ≈ −8. **Orientation confirmed; axis 144° good to about ±6°** (0.16 m of edge per degree, ±1 m measured) |
+
+Where the originals of 027–035 may be: only on the phone that took them (the
+sender's gallery, or its Telegram "sent" cache as a FILE). Telegram recompresses
+anything sent as a photo and strips EXIF on its servers, so di.bo's
+`fetch-large.py` would bring back the same stripped copy. The Drive `_inbox/received`
+folder is empty; no MOXIR file exists on the connected Drive. Ask the sender to
+send them again as files (📎 → File), or drop them in Drive.
+
+### The DJ place (the owner, 2026-09-28)
+
+His words on the first rebuild: "i mention the dj place i think it will not big
+how you created you made it so big, so stage is the near the metal thing like dj
+near a bit top and centre of the metal things". So the green is a **DJ place**,
+not a 16 × 12 m stage: a small riser, a bit raised, centred on the forging
+press, close in front of it, the machinery the picture behind the DJ.
+
+`stage.kind: "booth"` (rig-lib.mjs `stageFrame`): a riser `width × depth × deck`
+centred on `centre_on` (massing ids) `gap_m` in front of whatever of the
+backdrop stands behind it. MOXIR, all ESTIMATED (rig file `stage.estimated`):
+
+| | value | range | how |
+| --- | --- | --- | --- |
+| riser | 3 × 2 m (three 2 × 1 m decks), 1.2 m high | 1.0–1.4 m ("a bit top") | standard stage decks; options A–D in `stage.options` |
+| centre | x 1.65 m (the press's centre) | 0.5–3.5 | photo 032 fit; photo 004 via the white bags gives 1.7 |
+| back edge / front | z 4.2 / 6.2 m (1.0 m from the press face at z 3.2) | press face 2.0–4.5 | 032: D 47 m from the crane; 004: D 43 m |
+| DJ table | 1.8 × 0.8 m, 0.95 m high, 0.2 m from the front | | |
+| treads | left side, 6 × 0.2 m rise | | toward the backstage |
+| barrier | 9 m, 1.3 m pit, 1.1 m | | drawn see-through |
+| goalpost | towers 7 m apart straddling the riser, header 7 m up over its back half | | above the press crown (5.3 m) so it frames the machinery; no truss is rented — OWED |
+
+Why the owner's marks sit ~3.4 m left of the axis: the SW half of the nave, from
+the press to the white bags, is machinery (photo 004 with its EXIF intrinsics: a
+hopper at x ≈ 5.7, z ≈ 21.6, the rusty drum and pipes at x 3–8 near the press).
+He marked the open floor. So the dance floor (`zones.dance`) is the open NE side
+from the barrier (z 7.5) to the bags (x −10…3.5) and full width from the bags to
+under the crane (z 22–48; the bags must be cleared). Backstage (red, from
+1c3956d1 = photo 024): left of the press from its front line back 12 m (depth a
+GUESS). `hall.py` draws a zone's `extra` rectangles as the same floor tape.
+
+**The rig at the booth**, every rental count kept: 4 UP-B380F on the floor right
+behind the riser + 2 each side of it, 10 on the dance floor's column bases;
+6 UP-250BSW under the header + 6 as side light from the first three column pairs
+(`booth-key`, aimed at the DJ); 8 bee-eyes on side arms up the towers
+(`tower-ladder`); the 50 PARs as before, the press's six uplighting it from its
+foot; 2 lasers on the tower tops (7.15 m); CO2 and sparks in the pit. Lamps on
+the booth mirror about the booth's axis, lamps on columns about the nave's
+(`groupAxis`); the tests check each group about its own axis. **No narrow beam
+through the DJ**: `performerBox` (the riser's back strip to the table, 2 m tall)
+is checked on every aim of every beam ≤ 6° (B380, bee-eyes, lasers) — seen to
+fail on an all-to-centre aim that leaned the beams behind the DJ 15°, and those
+beams now meet 13 m straight over the booth. The 8 real lamps: 4 header spots,
+2 booms, 2 column PARs; the press's uplights are baked (0.35 m from its face a
+real lamp blows the face out white).
+
+Seen on the RTX 3080 (ANGLE Vulkan, headed, one browser per view, CPU < 85 °C),
+60 fps at the 60 Hz cap on every view (median 16.7 ms, p95 ≤ 16.8 ms), 86–99
+draw calls, 194k triangles: `~/Downloads/moxir-hall/dj-crane-vs-photo032-marks.png`
+(photo 032 with his marks | model | 50/50), `dj-ground-vs-photo024-marks.png`
+(his 1c3956d1; camera APPROXIMATE — a 5-point fixed-height fit left rms ~90 px,
+though the far gate and the press fall within 1–2° of the photo's bearings),
+`dj-floor.png` (the crowd's view: the DJ, the towers, the press behind),
+`dj-booth.png` (the DJ's view out), `dj-gps-on-satellite.png`.
 
 ### The column wash — a baked lightmap (fixes "the room reads dark")
 

@@ -123,7 +123,7 @@
     }
   ],
   "zones": {
-    "_label": "owner marked 2026-09-28 on photos; metres estimated",
+    "_label": "owner marked 2026-09-28 on photos; metres estimated. Revised the same day after his note on the DJ place ('not big ... near the metal thing ... a bit top and centre of the metal things')",
     "_how": "Photo 032 (= the owner's 0387927a, mean pixel difference 1.2 of 255) was taken from the crane parked at the NW end. A level-camera perspective fit of the nine visible columns of the left row (6 m pitch) gives rms 3.0 px, vanishing point u 624, horizon v 262 (from the runway girders), f*h 3821 px*m from two column bases, camera 6.88 m up (VGGT: 7.33), 1.7 m left of the nave axis, 3.8 m in front of the entry grid line (first visible column 14.2 m ahead = grid line s 18; VGGT puts the end wall 1-4 m behind the camera). Each marked pixel is put on the floor: D = f*h/(v - 262), lateral = (u - 624)*h/(v - 262). Cross-check: the ground photos 018-025, taken beside the press, sit 39-46 m from the crane camera in the VGGT cloud (the fit puts the press base 47 m out). Bay count in photo 032: the dance floor spans bays 1-5 from the crane, the stage front is at grid line 5 (s 30), the press stands at grid line 9 (s ~51-54), beside the expansion joint (paired columns, photo 021 taken there).",
     "dance": {
       "colour": "blue",
@@ -145,25 +145,39 @@
           10.0
         ],
         "z_m": [
-          27.5,
+          22.0,
           48.0
         ]
       },
       "range": {
-        "far_edge_z_m": [
-          25.5,
-          30.0
+        "front_edge_z_m": [
+          6.5,
+          9.0
         ],
         "near_edge_z_m": [
           44.0,
           50.0
         ]
       },
-      "why_used_differs": "owner's words: 'from below the crane forward to about the white bags' — so it runs on under the crane (s 6) to the bags; centred on the nave axis and held 1.6 m clear of the column faces (the marks sit ~3.4 m left of the axis; hand-drawn)."
+      "why_used_differs": "the blue mark shows z 27.7..39.7 (the part in the photo). Now in front of the booth: from the barrier (z 7.5) on the open NE side, full width between the column faces (1.6 m clear) from the bags (z 22) to under the crane (z 48).",
+      "extra": [
+        {
+          "x_m": [
+            -10.0,
+            3.5
+          ],
+          "z_m": [
+            7.5,
+            22.0
+          ],
+          "why": "in front of the booth, on the open NE side of the nave; the SW side (x > 3.5) is machinery up to the bags"
+        }
+      ],
+      "clear": "the white bulk bags (x -0.8..2.2, z 22..26.5 in photo 032; seen at the same place in photo 004 on 2026-08-24) stand in the floor and must be moved"
     },
     "stage": {
       "colour": "green",
-      "label": "stage",
+      "label": "DJ place",
       "marked": {
         "x_m": [
           -12.0,
@@ -177,26 +191,26 @@
       },
       "used": {
         "x_m": [
-          -8.0,
-          8.0
+          -2.2,
+          5.5
         ],
         "z_m": [
-          6.2,
-          23.5
+          3.6,
+          7.5
         ]
       },
       "range": {
-        "front_z_m": [
-          21.0,
-          26.0
+        "riser_centre_x_m": [
+          0.5,
+          3.5
         ],
-        "back_z_m": [
+        "press_face_z_m": [
           2.0,
-          10.0
+          4.5
         ]
       },
-      "faces": "the entry (+z, NW): the audience stands between the crane end and the stage",
-      "why_used_differs": "centred on the nave axis so the rig mirrors; 16 m wide as in the rig proposal (marks: 9.4 m at the front, 14.7 m at the back)."
+      "faces": "the entry (+z, NW): the crowd stands between the barrier and the crane end",
+      "why_used_differs": "the owner, 2026-09-28: the stage is a DJ place, small, near the metal thing, a bit raised, centred on the metal things. Used = the booth area: a 3 x 2 m riser centred on the press (x 1.65) 1 m in front of its face, the goalpost towers either side (x -1.85, 5.15), the pit to the crowd barrier (z 7.5). The rest of his green, from the booth to the bags, is floor for the crowd."
     },
     "backstage": {
       "colour": "red",
@@ -215,21 +229,26 @@
       "used": {
         "x_m": [
           -11.0,
-          1.0
+          0.0
         ],
         "z_m": [
-          -10.0,
-          -1.0
+          -9.0,
+          3.2
         ]
       },
       "range": {
         "near_edge_z_m": [
-          -5.0,
-          3.0
+          1.0,
+          4.0
+        ],
+        "far_edge_z_m": [
+          -15.0,
+          -4.0
         ]
       },
-      "why_used_differs": "the depth (9 m) is a GUESS: nothing in the photos shows where the owner's backstage ends."
-    }
+      "why_used_differs": "photo 1c3956d1 (= photo 024, mean pixel difference 5.4/255): the red runs from the press's left edge to the left and back, behind the green line along the press base. Used: left of the press, from its front line (z 3.2) back 12 m; the DJ reaches the booth's treads from it. Depth still a GUESS."
+    },
+    "_revised": "2026-09-28 (DJ place): re-read against every photo's metadata (scripts/place/photo_meta.py -> EXIF time, lens, intrinsics, GPS, sun). The marks sit ~3.4 m left of the nave axis because the SW half of the nave, from the press to the white bags, is taken by machinery (photo 004 with EXIF intrinsics: a hopper at x ~5.7, z ~21.6; the rusty drum and pipes at x 3-8 near the press; photo 032): he marked the open floor. So the dance floor runs up to the booth only on the open (NE) side, and full width from the bags on."
   },
   "confidence": {
     "door_w_m": "GUESS (video 026)",
@@ -239,7 +258,7 @@
     "low_walls": "left row seen; right row GUESS",
     "bracing_bays_from_door_m": "GUESS (bracing seen in 017, 036; the bays are not identified)",
     "massing": "seen; sizes estimated from photo 032 at ~50 m, +-20%",
-    "zones": "owner's marks; positions +-8% of the distance from the crane (fit) plus the marker's hand (+-1.5 m)"
+    "zones": "owner's marks; positions +-8% of the distance from the crane (fit) plus the marker's hand (+-1.5 m); the booth +-1.5 m (press position)"
   },
   "cameras": {
     "photo-032": {
@@ -257,6 +276,22 @@
       ],
       "photo": "032-file_76.jpg (the owner's 0387927a)",
       "note": "hall frame. Fitted on the photo (level camera, horizon v 262, vanishing point u 624, f 555 px): yaw = atan((640-624)/555) to the right, and the off-centre horizon rendered as a 10 deg pitch down — the photo itself is level with its principal point off-centre, so a render's verticals converge slightly where the photo's do not."
+    },
+    "photo-024": {
+      "position_m": [
+        -2.5,
+        1.54,
+        7.0
+      ],
+      "yaw_deg": 19.5,
+      "pitch_deg": 27.0,
+      "vfov_deg": 90.0,
+      "image_px": [
+        1000,
+        1000
+      ],
+      "photo": "024-file_69.jpg (the owner's 1c3956d1), Galaxy S24 ultra-wide, EXIF 13 mm-eq -> f 1498 px on 2992 px",
+      "note": "APPROXIMATE. A fixed-height (1.54 m, VGGT), level-roll fit on 5 points (lantern end corners, the far gate) left rms ~90 px, so this pose is good to a few metres and degrees, not a match; VGGT put the camera at x -7.0, z 7.9, yaw 20.8, pitch 23.7."
     }
   }
 }

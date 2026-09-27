@@ -64,7 +64,38 @@ export const stageFrame = (rig, hall) => {
     let back
     let front
     let backdrop = null
-    if (s.zone) {
+    let axis = 0
+    let trussZ = null
+    const backdropOf = (dir) => {
+        const boxes = (g.massing || []).filter((m) => (s.backdrop || []).includes(m.id))
+        if (!boxes.length) return null
+        const face = dir > 0 ? Math.max(...boxes.map((m) => Math.max(...m.z_m))) : Math.min(...boxes.map((m) => Math.min(...m.z_m)))
+        return {
+            ids: boxes.map((m) => m.id),
+            x: [Math.min(...boxes.map((m) => Math.min(...m.x_m))), Math.max(...boxes.map((m) => Math.max(...m.x_m)))],
+            face,
+            boxes
+        }
+    }
+    if (s.kind === 'booth') {
+        // A DJ booth: a small riser centred on a machine (`centre_on`, massing
+        // ids — or `x_m`), `gap_m` in front of the face of whatever of the
+        // backdrop stands behind the riser, facing the audience. The riser's
+        // own centre line is the axis the booth's lamps mirror about.
+        into = (s.faces || 'entry') === 'far' ? -1 : 1
+        const centre = (g.massing || []).filter((m) => (s.centre_on || []).includes(m.id))
+        if (s.x_m === undefined && !centre.length) throw new Error(`stage.centre_on ${JSON.stringify(s.centre_on)} names no massing in hall.json`)
+        axis = s.x_m ?? (Math.min(...centre.map((m) => m.x_m[0])) + Math.max(...centre.map((m) => m.x_m[1]))) / 2
+        backdrop = backdropOf(into)
+        const half = s.width_m / 2
+        const behind = (backdrop?.boxes || []).filter((m) => m.x_m[1] > axis - half && m.x_m[0] < axis + half)
+        wall = behind.length
+            ? (into > 0 ? Math.max(...behind.map((m) => Math.max(...m.z_m))) : Math.min(...behind.map((m) => Math.min(...m.z_m))))
+            : backdrop?.face ?? 0
+        back = wall + into * (s.gap_m ?? 1)
+        front = back + into * s.depth_m
+        trussZ = back + into * (truss.from_stage_back_m ?? 0)
+    } else if (s.zone) {
         const zone = g.zones?.[s.zone]
         const rect = zone?.used || zone?.marked
         if (!rect) throw new Error(`stage.zone "${s.zone}" is not in hall.json (geometry.zones has: ${Object.keys(g.zones || {}).join(', ') || 'none'})`)
@@ -99,8 +130,10 @@ export const stageFrame = (rig, hall) => {
         front,
         backdrop,
         width: s.width_m,
+        depth: s.depth_m,
         deck: s.deck_h_m,
-        trussZ: back + into * truss.from_stage_back_m,
+        axis,
+        trussZ: trussZ ?? back + into * truss.from_stage_back_m,
         trussW: truss.width_m,
         trussH: truss.header_h_m,
         trussSection: truss.section_m ?? 0.4
@@ -188,16 +221,42 @@ const audienceColumns = (hall, stage) => columnsByStage(hall, stage)
 const toAudience = (ctx) => [0, 0, ctx.stage.into]
 const place = {
     'stage-back': (n, ctx) => spread(n, -ctx.stage.width / 2 + 1, ctx.stage.width / 2 - 1)
-        .map((x) => ({ pos: [x, ctx.stage.deck, ctx.stage.back + ctx.stage.into * 0.6], orient: 'floor', face: toAudience(ctx) })),
+        .map((x) => ({ pos: [ctx.stage.axis + x, ctx.stage.deck, ctx.stage.back + ctx.stage.into * 0.6], orient: 'floor', face: toAudience(ctx) })),
     'stage-front': (n, ctx) => spread(n, -ctx.stage.width / 2 + 1, ctx.stage.width / 2 - 1)
-        .map((x) => ({ pos: [x, ctx.stage.deck, ctx.stage.front - ctx.stage.into * 0.5], orient: 'floor', face: toAudience(ctx) })),
+        .map((x) => ({ pos: [ctx.stage.axis + x, ctx.stage.deck, ctx.stage.front - ctx.stage.into * 0.5], orient: 'floor', face: toAudience(ctx) })),
+    // A row across the back of a booth, `half_width_m` either side of its
+    // axis, `back_inset_m` in from its back edge: on the riser where the
+    // riser is, on the floor beside it.
+    // `dx_m` [a, b, ...]: mirrored pairs at ±a, ±b instead of an even spread.
+    'booth-back': (n, ctx, group) => (group?.dx_m ? [...group.dx_m.map((d) => -d), ...group.dx_m].sort((a, b) => a - b) : spread(n, -(group?.half_width_m ?? 1), group?.half_width_m ?? 1)).map((dx) => ({
+        pos: [ctx.stage.axis + dx, group?.on_floor || Math.abs(dx) > ctx.stage.width / 2 - 0.25 ? 0 : ctx.stage.deck, ctx.stage.back + ctx.stage.into * (group?.back_inset_m ?? 0.35)],
+        orient: 'floor', face: toAudience(ctx)
+    })),
+    // On the floor in the pit between the riser and the crowd barrier.
+    'booth-pit': (n, ctx, group) => spread(n, -(group?.half_width_m ?? 3), group?.half_width_m ?? 3)
+        .map((dx) => ({ pos: [ctx.stage.axis + dx, 0, ctx.stage.front + ctx.stage.into * (group?.pit_m ?? 0.7)], orient: 'floor', face: toAudience(ctx) })),
+    // On side arms up the audience face of each tower, half on each, from
+    // `from_h_m` to a metre under the header.
+    'tower-ladder': (n, ctx, group) => {
+        const per = Math.ceil(n / 2)
+        const hs = spread(per, group?.from_h_m ?? 1.8, ctx.stage.trussH - 1)
+        return [-1, 1].flatMap((side) => hs.map((h) => ({
+            pos: [ctx.stage.axis + side * ctx.stage.trussW / 2, h, ctx.stage.trussZ + ctx.stage.into * (ctx.stage.trussSection / 2 + 0.3)],
+            orient: 'floor', face: toAudience(ctx)
+        }))).slice(0, n)
+    },
     // Clamped under the header's bottom chord, hanging.
     'truss-header': (n, ctx) => spread(n, -ctx.stage.trussW / 2 + 1, ctx.stage.trussW / 2 - 1)
-        .map((x) => ({ pos: [x, ctx.stage.trussH - ctx.stage.trussSection / 2, ctx.stage.trussZ], orient: 'hung', face: toAudience(ctx) })),
+        .map((x) => ({ pos: [ctx.stage.axis + x, ctx.stage.trussH - ctx.stage.trussSection / 2, ctx.stage.trussZ], orient: 'hung', face: toAudience(ctx) })),
     // Standing on the top plate of each tower.
     'truss-towers': (n, ctx) => spread(n, -ctx.stage.trussW / 2, ctx.stage.trussW / 2)
-        .map((x) => ({ pos: [x, ctx.stage.trussH + ctx.stage.trussSection / 2, ctx.stage.trussZ], orient: 'floor', face: toAudience(ctx) })),
-    'column-bases': (n, ctx) => {
+        .map((x) => ({ pos: [ctx.stage.axis + x, ctx.stage.trussH + ctx.stage.trussSection / 2, ctx.stage.trussZ], orient: 'floor', face: toAudience(ctx) })),
+    'column-bases': (n, ctx, group) => {
+        if (group?.columns) {
+            // The columns a spec picks (columnsFor), one lamp at each base.
+            const cols = columnsFor(ctx.hall, ctx.stage, { faces: ['inner'], ...group.columns })
+            return cols.slice(0, n).map((c) => ({ pos: [c.faceX - c.side * 0.7, 0, c.z], orient: 'floor', face: [-c.side, 0, 0], column: c }))
+        }
         // Mirrored pairs: the same columns on both sides, so the rows read as
         // a design and not a scatter.
         // Not the gable columns in the entry's end wall: a lamp there stands in
@@ -267,9 +326,9 @@ const place = {
         })
     },
     'stage-front-deck': (n, ctx) => spread(n, -ctx.stage.width / 2 + 0.8, ctx.stage.width / 2 - 0.8)
-        .map((x) => ({ pos: [x, ctx.stage.deck, ctx.stage.front - ctx.stage.into * 0.35], orient: 'floor', face: toAudience(ctx) })),
+        .map((x) => ({ pos: [ctx.stage.axis + x, ctx.stage.deck, ctx.stage.front - ctx.stage.into * 0.35], orient: 'floor', face: toAudience(ctx) })),
     'stage-front-floor': (n, ctx) => spread(n, -ctx.stage.width / 2 + 1.5, ctx.stage.width / 2 - 1.5)
-        .map((x) => ({ pos: [x, 0, ctx.stage.front + ctx.stage.into * 0.9], orient: 'floor', face: toAudience(ctx) })),
+        .map((x) => ({ pos: [ctx.stage.axis + x, 0, ctx.stage.front + ctx.stage.into * 0.9], orient: 'floor', face: toAudience(ctx) })),
     'nave-columns': (n, ctx) => {
         const cols = audienceColumns(ctx.hall, ctx.stage)
         return pickEven(n, cols.length).map((i) => cols[i])
@@ -292,8 +351,15 @@ const frontBox = (ctx, x) => {
     if (!boxes.length) return null
     return boxes.reduce((a, b) => (ctx.stage.into * (b.z_m[1] - a.z_m[1]) > 0 ? b : a))
 }
-const stagePoint = (ctx, x, y, a) => [x, y, ctx.stage.front + ctx.stage.into * a]
-const sideOf = (slot) => (Math.abs(slot.pos[0]) < 0.05 ? 0 : Math.sign(slot.pos[0]))
+// `ctx.axis` is the line the group mirrors about: the booth's axis for the
+// lamps hung on the booth and its truss, the nave's (x = 0) for the lamps on
+// the building's columns. A look's x is measured from it.
+const axisOf = (ctx) => ctx.axis ?? 0
+const stagePoint = (ctx, x, y, a) => [axisOf(ctx) + x, y, ctx.stage.front + ctx.stage.into * a]
+const sideOf = (slot, ctx) => {
+    const dx = slot.pos[0] - axisOf(ctx)
+    return Math.abs(dx) < 0.05 ? 0 : Math.sign(dx)
+}
 const upOf = (slot) => (slot.orient === 'hung' ? -1 : 1)
 /** A direction leaned `side` degrees across (toward +x) and `lean` degrees toward the audience, from straight up (or down, hung). */
 const leaned = (ctx, slot, sideDeg, leanDeg) => {
@@ -306,7 +372,7 @@ const leaned = (ctx, slot, sideDeg, leanDeg) => {
 export const AIM_RULES = {
     // Straight up (a hung lamp: straight down), optionally leaned toward the
     // audience and in toward the centre line — "pillars of light".
-    vertical: (slot, meta, ctx, p = {}) => ({ dir: leaned(ctx, slot, -sideOf(slot) * (p.in_deg ?? 0), p.lean_deg ?? 0) }),
+    vertical: (slot, meta, ctx, p = {}) => ({ dir: leaned(ctx, slot, -sideOf(slot, ctx) * (p.in_deg ?? 0), p.lean_deg ?? 0) }),
     // All in one direction.
     parallel: (slot, meta, ctx, p = {}) => ({ dir: leaned(ctx, slot, p.side_deg ?? 0, p.lean_deg ?? 0) }),
     // A symmetric fan across the line: the outermost lamps spread_deg/2 out to
@@ -319,14 +385,19 @@ export const AIM_RULES = {
     // Every lamp at one point — the "ballyhoo" focus above the crowd.
     point: (slot, meta, ctx, p = {}) => ({ target: stagePoint(ctx, p.x ?? 0, p.y ?? 8, p.a ?? 15) }),
     // A point mirrored by the lamp's side (x is the distance out on the lamp's OWN side).
-    'mirror-point': (slot, meta, ctx, p = {}) => ({ target: stagePoint(ctx, sideOf(slot) * (p.x ?? 0), p.y ?? 8, p.a ?? 15) }),
+    'mirror-point': (slot, meta, ctx, p = {}) => ({ target: stagePoint(ctx, sideOf(slot, ctx) * (p.x ?? 0), p.y ?? 8, p.a ?? 15) }),
     // Crossfire: each lamp to the OTHER side of the room at `y`, in line with
     // itself along the hall (plus `dz`); the two rows cross over the centre.
     cross: (slot, meta, ctx, p = {}) => ({
-        target: [-sideOf(slot) * (p.x ?? 8), p.y ?? 9, slot.pos[2] + ctx.stage.into * (p.dz ?? 0)]
+        target: [axisOf(ctx) - sideOf(slot, ctx) * (p.x ?? 8), p.y ?? 9, slot.pos[2] + ctx.stage.into * (p.dz ?? 0)]
     }),
     // A line lamp's X-cross: stage-left lamps to stage-right and back, at a point in the air.
-    'x-cross': (slot, meta, ctx, p = {}) => ({ target: stagePoint(ctx, -sideOf(slot) * (p.x ?? 8), p.y ?? 12, p.a ?? 10) }),
+    'x-cross': (slot, meta, ctx, p = {}) => ({ target: stagePoint(ctx, -sideOf(slot, ctx) * (p.x ?? 8), p.y ?? 12, p.a ?? 10) }),
+    // Side light onto the DJ: every lamp at the booth's axis, `h` above the
+    // riser, over the middle of the riser (or `a` metres from its front).
+    'booth-key': (slot, meta, ctx, p = {}) => ({
+        target: [ctx.stage.axis, ctx.stage.deck + (p.h ?? 1.6), p.a === undefined ? (ctx.stage.front + ctx.stage.back) / 2 : ctx.stage.front + ctx.stage.into * p.a]
+    }),
     // A PAR grazing up its own column to the crane runway.
     'up-the-column': (slot, meta, ctx) => ({ target: [slot.column.faceX, ctx.hall.geometry.runway_bottom_m, slot.pos[2]] }),
     // A lamp in front of the backdrop at the backdrop's face, at `h` of the
@@ -340,13 +411,13 @@ export const AIM_RULES = {
     // Truss spots: alternately a downstage area of the deck and the back wall,
     // counted in from both ends so the two halves mirror.
     'stage-wash': (slot, meta, ctx, p = {}) => (Math.min(meta.rank, meta.n - 1 - meta.rank) % 2 === 0
-        ? { target: [slot.pos[0] * 0.8, ctx.stage.deck, ctx.stage.front - ctx.stage.into * (p.deck_a ?? 1.5)] }
-        : { target: [slot.pos[0] * 1.1, p.wall_y ?? (ctx.stage.backdrop ? 3 : 7), ctx.stage.wall] }),
+        ? { target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * 0.8, ctx.stage.deck, ctx.stage.front - ctx.stage.into * (p.deck_a ?? 1.5)] }
+        : { target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * 1.1, p.wall_y ?? (ctx.stage.backdrop ? 3 : 7), ctx.stage.wall] }),
     // Hung lamps straight down onto the floor under the crane, splayed out.
     'down-from-crane': (slot, meta, ctx) => ({ target: [slot.pos[0] * 1.1, 0, slot.pos[2] + slot.girder * 4] }),
     // A laser up into the roof over the house — the only rule a laser may use
     // besides one that rises (checkLaser refuses anything else).
-    'laser-into-roof': (slot, meta, ctx, p = {}) => ({ target: [slot.pos[0] * (p.x_scale ?? 0.3), ctx.hall.geometry.truss_top_centre_m, ctx.stage.front + ctx.stage.into * (p.a ?? 14)] })
+    'laser-into-roof': (slot, meta, ctx, p = {}) => ({ target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * (p.x_scale ?? 0.3), ctx.hall.geometry.truss_top_centre_m, ctx.stage.front + ctx.stage.into * (p.a ?? 14)] })
 }
 
 /**
@@ -432,6 +503,32 @@ export const beamHitsCrane = (from, to, reach, hall) => {
         }
     }
     return null
+}
+
+/**
+ * Where the performer stands on a booth: a box from the riser's back strip to
+ * the DJ table, `half` either side of the axis, head height 2 m over the deck.
+ * A narrow effect beam (a beam fixture, a bee-eye at its tightest, a laser)
+ * must not pass through it — that blinds the DJ; a wash or a spot aimed AT the
+ * DJ is light on him and is not checked.
+ */
+export const performerBox = (rig, stage) => {
+    if (rig.stage?.kind !== 'booth') return null
+    const tb = rig.stage.table || { d_m: 0.8, from_front_m: 0.2 }
+    const tableBack = stage.front - stage.into * ((tb.from_front_m ?? 0.2) + tb.d_m)
+    const z = [stage.back + stage.into * 0.1, tableBack + stage.into * tb.d_m]
+    return { x: [stage.axis - 0.9, stage.axis + 0.9], y: [stage.deck, stage.deck + 2.0], z: [Math.min(...z), Math.max(...z)] }
+}
+export const NARROW_BEAM_DEG = 6
+export const beamHitsBox = (from, to, reach, b) => {
+    if (!b) return false
+    const d = [to[0] - from[0], to[1] - from[1], to[2] - from[2]]
+    const length = Math.hypot(...d) || 1
+    for (let t = 0.3; t <= reach; t += 0.1) {
+        const p = [from[0] + (d[0] * t) / length, from[1] + (d[1] * t) / length, from[2] + (d[2] * t) / length]
+        if (p[0] >= b.x[0] && p[0] <= b.x[1] && p[1] >= b.y[0] && p[1] <= b.y[1] && p[2] >= b.z[0] && p[2] <= b.z[1]) return true
+    }
+    return false
 }
 
 /** Which members of a group get a real light, by the rig's budget and the mode. */
@@ -543,6 +640,14 @@ export const classPhotometry = (rig, manifest) => {
  * @param {object} [options.manifest] fixtures/fixtures.json (photometry)
  * @returns {{ entities: object[], fixtures: object[], summary: object, stage: object }}
  */
+// Mounts on the building's columns mirror about the nave; everything else
+// about the stage's (the booth's) axis. A group may say `axis: 'nave' | 'booth'`.
+const NAVE_MOUNTS = new Set(['column-bases', 'column-uplight', 'nave-columns', 'crane-bridge'])
+export const groupAxis = (group, stage) => {
+    const which = group.axis || (NAVE_MOUNTS.has(group.mount) ? 'nave' : 'booth')
+    return which === 'nave' ? 0 : stage.axis ?? 0
+}
+
 export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry = {}, manifest = null } = {}) => {
     const stage = stageFrame(rig, hall)
     const ctx = { rig, hall, stage }
@@ -558,23 +663,67 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
     summary.look = name
     const optics = classPhotometry(rig, manifest)
     summary.photometry = optics
+    const performer = performerBox(rig, stage)
+    summary.performer = performer
 
     // The stage and its truss: production, not building, so they are the rig's.
     const mid = (stage.back + stage.front) / 2
+    const ax = stage.axis ?? 0
+    const booth = rig.stage.kind === 'booth'
+    const deckName = booth
+        ? `DJ riser ${stage.width} x ${rig.stage.depth_m} m @ ${stage.deck} m (${rig.stage.decks || 'stage decks'}; owner's intent, metres ESTIMATED)`
+        : `Stage deck ${stage.width} x ${rig.stage.depth_m} m @ ${stage.deck} m (ASSUMED)`
     entities.push(box({
-        id: `${RIG_PREFIX}stage-deck`, name: `Stage deck ${stage.width} x ${rig.stage.depth_m} m @ ${stage.deck} m (ASSUMED)`,
-        pos: [0, 0, mid], size: [stage.width, stage.deck, rig.stage.depth_m], colour: '#141416', roughness: 0.9
+        id: `${RIG_PREFIX}stage-deck`, name: deckName,
+        pos: [ax, 0, mid], size: [stage.width, stage.deck, rig.stage.depth_m], colour: '#141416', roughness: 0.9
     }))
+    if (booth) {
+        const tb = rig.stage.table || { w_m: 1.8, d_m: 0.8, h_m: 0.95, from_front_m: 0.2 }
+        const tz = stage.front - stage.into * ((tb.from_front_m ?? 0.2) + tb.d_m / 2)
+        entities.push(box({
+            id: `${RIG_PREFIX}dj-table`, name: `DJ table ${tb.w_m} x ${tb.d_m} m, ${tb.h_m} m high`,
+            pos: [ax, stage.deck, tz], size: [tb.w_m, tb.h_m, tb.d_m], colour: '#1d1d20', roughness: 0.7
+        }))
+        // Treads up the side of the riser nearest the backstage.
+        const st = rig.stage.stairs
+        if (st) {
+            const steps = Math.max(1, Math.round(stage.deck / (st.rise_m ?? 0.2)))
+            const rise = stage.deck / steps
+            const side = st.side === 'right' ? 1 : -1
+            const x = ax + side * (stage.width / 2 + (st.w_m ?? 1) / 2)
+            for (let k = 0; k < steps; k += 1) {
+                const h = rise * (k + 1)
+                // along the riser's side, the lowest tread nearest its front, the top
+                // one landing beside its back half (a solid block per tread)
+                const going = st.going_m ?? 0.25
+                const z = stage.front - stage.into * (0.25 + going * k + going / 2)
+                entities.push(box({
+                    id: `${RIG_PREFIX}dj-stair-${k + 1}`, name: `Booth stair tread ${k + 1}/${steps}`,
+                    pos: [x, 0, z], size: [st.w_m ?? 1, h, st.going_m ?? 0.25], colour: '#1a1a1c', roughness: 0.9
+                }))
+            }
+        }
+        const br = rig.stage.barrier
+        if (br) {
+            entities.push(box({
+                id: `${RIG_PREFIX}crowd-barrier`, name: `Crowd barrier ${2 * br.half_width_m} m, ${br.pit_m} m pit`,
+                pos: [ax, 0, stage.front + stage.into * br.pit_m], size: [2 * br.half_width_m, br.h_m ?? 1.2, 0.08], colour: '#6f7378', metalness: 0.6, roughness: 0.5
+            }))
+            // a steel frame, not a wall: drawn see-through so the riser reads behind it
+            entities.at(-1).components.appearance.opacity = 0.35
+        }
+    }
     const t = stage.trussSection
+    const trussTag = booth ? '(owner\'s intent, size ESTIMATED)' : '(ASSUMED)'
     for (const side of [-1, 1]) {
         entities.push(box({
-            id: `${RIG_PREFIX}truss-tower-${side < 0 ? 'l' : 'r'}`, name: `Truss tower ${side < 0 ? 'left' : 'right'} (ASSUMED)`,
-            pos: [side * stage.trussW / 2, 0, stage.trussZ], size: [t, stage.trussH + t / 2, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
+            id: `${RIG_PREFIX}truss-tower-${side < 0 ? 'l' : 'r'}`, name: `Truss tower ${side < 0 ? 'left' : 'right'} ${trussTag}`,
+            pos: [ax + side * stage.trussW / 2, 0, stage.trussZ], size: [t, stage.trussH + t / 2, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
         }))
     }
     entities.push(box({
-        id: `${RIG_PREFIX}truss-header`, name: `Truss header ${stage.trussW} m @ ${stage.trussH} m (ASSUMED)`,
-        pos: [0, stage.trussH - t / 2, stage.trussZ], size: [stage.trussW + t, t, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
+        id: `${RIG_PREFIX}truss-header`, name: `Truss header ${stage.trussW} m @ ${stage.trussH} m ${trussTag}`,
+        pos: [ax, stage.trussH - t / 2, stage.trussZ], size: [stage.trussW + t, t, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
     }))
 
     for (const group of rig.groups) {
@@ -587,7 +736,8 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
         const spec = look?.aims?.[group.id] || { rule: group.aim }
         const rule = AIM_RULES[spec.rule]
         if (!rule) throw new Error(`group ${group.id}: unknown aim rule "${spec.rule}"`)
-        const slots = placer(group.count, ctx, group)
+        const gctx = { ...ctx, axis: groupAxis(group, stage) }
+        const slots = placer(group.count, gctx, group)
         if (slots.length !== group.count) {
             throw new Error(`group ${group.id}: asked for ${group.count}, the hall has room for ${slots.length} by the rule "${group.mount}"`)
         }
@@ -598,7 +748,7 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
         const half = (op.angleDeg / 2) * DEG
         let groupReal = 0
         slots.forEach((slot, i) => {
-            const aimed = rule(slot, { i, n: slots.length, rank: byX.indexOf(i) }, ctx, spec)
+            const aimed = rule(slot, { i, n: slots.length, rank: byX.indexOf(i) }, gctx, spec)
             const posed = aimFixture(geo, slot, aimed)
             const from = posed.lens
             const dir = posed.dir
@@ -622,6 +772,9 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
                     return
                 }
                 summary.clashes.push(where)
+            }
+            if (performer && op.angleDeg <= NARROW_BEAM_DEG && beamHitsBox(from, to, reach, performer)) {
+                summary.clashes.push(`${label}: a narrow beam passes through the DJ`)
             }
             const { pan, tilt } = aimAt(from, to)
             const isReal = real.has(i)

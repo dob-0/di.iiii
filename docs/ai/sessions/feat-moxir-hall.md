@@ -120,3 +120,34 @@
 - OWED: taped dimensions; crane rail height (disputed; the photo's crane girder sits lower than the model's);
   the press's depth and the backstage depth; a platform `beam.length` separate from `light.distance`; an install
   with `beam.only` (beams still baked on 0.4.16); the owner's look at it; a phone.
+
+## 2026-09-28 — the owner: the stage is a DJ place, small, at the metal things. Booth rebuilt; photos re-read by their metadata
+
+- Owner: "i mention the dj place … you made it so big, so stage is the near the metal thing like dj near a bit top and
+  centre of the metal things … analyze the whole photos and also there gps and othe infos".
+- NEW `scripts/place/photo_meta.py` + `rigs/moxir-site-2026-09-28.json`: EXIF → intrinsics (CIPA diagonal definition),
+  GPS → hall frame, the sun by the NOAA algorithm (cross-checked vs Michalsky 1988: ≤ 0.01° az, ≤ 0.09° el), VGGT↔GPS
+  Umeyama registration, GPS plotted on the Wayback image. `pvlib` would not download (18.5 MB wheel stalled 3×), so the
+  NOAA equations are written out. Findings: 16 iPhone fixes, one coarse (013, 220 m off); indoor spread puts crane shots
+  13–25 m off, altitude inverted (useless); registration bearing 154.5° (LOO 148.5–163.1) vs satellite 144°, rms 15.9 m.
+  **Sun check** on photo 004 (az 257.9°, el 30.5°): the SW-span lantern's lit band edge predicted x 8.2–8.9, measured
+  7.8–8.3 → the NE/SW sides are confirmed, the 144° axis good to ~±6°. 027–035 are Telegram-stripped; videos carry no
+  location. Originals: only on the sender's phone (resend as files).
+- The marks' 3.4 m left offset explained: the SW half of the nave from the press to the bags is machinery (004: hopper at
+  x ≈ 5.7, z ≈ 21.6); he marked the open floor.
+- `stage.kind: "booth"` in rig-lib: 3 × 2 m riser (three 2 × 1 decks) × 1.2 m, centred on the press (x 1.65, range
+  0.5–3.5), back edge 1.0 m off its face (z 4.2–6.2); DJ table, treads, see-through barrier; goalpost 7 m wide, header 7 m
+  (above the 5.3 m crown). Options A–D in the rig file. Per-group mirror axis (`groupAxis`: booth vs nave); new mounts
+  `booth-back`, `booth-pit`, `tower-ladder`, `column-bases` with a column spec; new aim `booth-key`; `performerBox` +
+  `beamHitsBox`: no ≤ 6° beam through the DJ (guard seen red on a 15° lean, then green). Counts kept (90 lamps, 8 real).
+  Zones: DJ area, dance = open NE side from the barrier + full width from the bags, backstage left/behind the press;
+  `hall.py` draws a zone's `extra` rects. 131/131 place tests.
+- Backup `~/di-backups/moxir-before-dj-2026-09-28/` (bundle + hall document v1417, SHA256SUMS, README.txt). Hall v3 at
+  `/mnt/data/footage/place-moxir-hall-v3/` imported `--replace`, rig hung roof-cathedral.
+- SEEN on the RTX 3080 (renderer string checked, one browser at a time, CPU 64–76 °C): 60.1 fps on crane/ground/floor/
+  booth (60 Hz cap, p95 ≤ 16.8 ms), 86–99 calls, 194k tris. `~/Downloads/moxir-hall/dj-crane-vs-photo032-marks.png`,
+  `dj-ground-vs-photo024-marks.png` (camera approximate: fit rms ~90 px), `dj-floor.png`, `dj-booth.png`,
+  `dj-gps-on-satellite.png`.
+- OWED / GUESS: the press's exact x (±1.5 m) and depth; whether the right tower stands clear of the machine line (site
+  check); the press is still a massing box (reads as a lit white block); the 024 camera; the originals of 027–035; truss
+  and decks are not on the rental list; laser LSO; the owner's look.

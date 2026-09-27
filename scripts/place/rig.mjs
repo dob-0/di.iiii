@@ -119,7 +119,9 @@ const main = async () => {
         say(`  ${s.fixtures} lamps: ${s.real} real lights, ${s.beamOnly} beam only · mode ${mode}`)
         for (const [id, g] of Object.entries(s.byGroup)) say(`    ${id.padEnd(16)} ${g.code.padEnd(10)} ${String(g.placed).padStart(3)} placed, ${g.real} real`)
         say(`  effects (machines, not simulated): ${Object.entries(s.effects).map(([k, v]) => `${k} ${v}`).join(', ')}`)
-        say(rig.stage.zone
+        say(rig.stage.kind === 'booth'
+            ? `  stage: DJ booth ${rig.stage.width_m} x ${rig.stage.depth_m} m @ ${rig.stage.deck_h_m} m, centred at x ${built.stage.axis.toFixed(2)} m, front edge z ${built.stage.front.toFixed(1)} m, ${(built.stage.back - built.stage.wall).toFixed(1)} m in front of the backdrop (owner's intent, metres ESTIMATED)`
+            : rig.stage.zone
             ? `  stage: in zone "${rig.stage.zone}" (hall.json), front edge at z ${built.stage.front.toFixed(1)} m, backdrop at z ${built.stage.wall.toFixed(1)} m (owner's marks, metres ESTIMATED)`
             : `  stage: ${rig.stage.end} end, front edge at z ${built.stage.front.toFixed(1)} m (ASSUMED position)`)
         say(`  baked washes: ${built.washes.length} beam-only lamps' light on the surfaces they hit (wash-glb.mjs)`)
