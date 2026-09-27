@@ -312,6 +312,14 @@ describe('SpaceHub', () => {
     const frameIn = (spaceId) => cardOf(spaceId)
         .querySelector('.ssh-card-preview iframe')
 
+    // A card listens for its frame's message in a passive effect, which React
+    // runs AFTER the iframe is already in the DOM. Seeing the frame is not
+    // proof the listener is there: on a loaded runner a message posted in that
+    // gap was lost, the slot never freed, and the wait timed out (CI, 3 times;
+    // 2 in 24 under local load). A real frame posts after booting a whole
+    // app, so only the test could hit the gap. Let the effects run first.
+    const settleEffects = () => act(async () => {})
+
     it('frees a card’s boot slot when the preview says it has PAINTED, not when its html loads', async () => {
         everyCardVisible()
         try {
@@ -333,6 +341,7 @@ describe('SpaceHub', () => {
             expect(frameIn('s12')).toBeNull()
 
             // the embedded app reports pixels; only then does the queue move on
+            await settleEffects()
             fireEvent(window, new MessageEvent('message', {
                 data: { type: 'dii:preview-ready', spaceId: 's0' },
                 origin: window.location.origin,
@@ -355,6 +364,8 @@ describe('SpaceHub', () => {
 
             await findCard('s0')
             await waitFor(() => expect(frameIn('s0')).not.toBeNull())
+            // without this the listener may not exist yet and "ignored" proves nothing
+            await settleEffects()
 
             fireEvent(window, new MessageEvent('message', {
                 data: { type: 'dii:preview-ready', spaceId: 's0' },
@@ -411,6 +422,7 @@ describe('SpaceHub', () => {
             // Under DI_PROFILE=local a work's route (wcc, algovrithm) is a
             // page of text with no canvas, so it never says preview-ready. It
             // says preview-stub instead, from the card's own frame.
+            await settleEffects()
             fireEvent(window, new MessageEvent('message', {
                 data: { type: 'dii:preview-stub', spaceId: 's0' },
                 origin: window.location.origin,
