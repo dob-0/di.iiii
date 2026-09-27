@@ -111,6 +111,10 @@ a priority number, beside the existing Art-Net and ENTTEC drivers.
   address, unit, circuit, position) — the record a crew is handed, as in MVR. The
   show the desk runs is still the RUNNING patch and the one that allocates; auto-patch
   keeps the two equal and flags where they differ. `docs/architecture/RIG_BUILD.md`.
+- `POST /light/api/rig/patch` and `GET /light/api/rig?project=` — AUTO-PATCH: a room's
+  lamps (fixture type + mode) patched here with the desk's own `nextFreeAddress`, keyed
+  `rigKey = "<project>:<entity>"`; conflicts and unknown modes flagged, never resolved.
+  `rigpatch.js`, rules in `RIG_BUILD.md` §4.
 - `GET /light/api/library`, `/library/manufacturer?key=`, `/library/fixture?…` and
   `POST /light/api/library/import {manufacturer, key, mode}` — patch by name.
 

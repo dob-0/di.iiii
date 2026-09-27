@@ -199,6 +199,10 @@ function makeFixture(f = {}) {
     y: f.y != null ? f.y : 0.5,
     values: { ...values, ...(f.values || {}) },
     limits: { ...DEFAULT_LIMITS, ...(f.limits || {}) },
+    // Set only on a fixture auto-patched from a room ("<project>:<entity>",
+    // rigpatch.js); absent on every fixture patched by hand, so a show saved before it
+    // existed reads back byte for byte.
+    ...(typeof f.rigKey === 'string' && f.rigKey && f.rigKey.length <= 300 ? { rigKey: f.rigKey } : {}),
   };
 }
 
