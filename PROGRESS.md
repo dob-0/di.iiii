@@ -5,6 +5,329 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-24 — click an object in a room to open its link
+
+- `components.link = { enabled, href, label }` was stored by the schema and read by nothing: a
+  visitor clicking a linked object got nothing. Now any drawn entity (primitives, text, image,
+  video, audio, model — not portal, lights, group) with an enabled, safe link is clickable in the
+  public viewer, in BOTH of its renderers: a visitor lands in VIEW mode, which is
+  `StudioViewport` (via `PublicProjectSceneSurface`, `followLinks={!isPreview}`), not
+  `LiveProjectScene` — that one is walk mode only. Found by driving it: a first build wired
+  only `LiveProjectScene` and the arrival view did nothing. `EntityLinksContext` keeps links
+  OFF by default so the same `StudioViewport` in Studio / Open Jam / space-card previews is
+  unchanged; `isStudioEditorPath` is a second guard.
+- What a click does (`src/project/viewport/entityLink.js`): a `/path` or a same-origin url goes
+  through `enterDestination` — the doors' own route change, holding the room's last frame; an
+  `http(s)` url elsewhere opens a new tab through a real `<a target=_blank rel="noopener noreferrer">`.
+  Anything else (javascript:, data:, `//host`, a bare word, empty, disabled) does nothing.
+- The normaliser drops non-http(s) schemes after stripping the control chars/whitespace browsers
+  ignore inside a scheme (`java\tscript:`), caps href at 2048 and adds an optional `label` (≤120);
+  both mirrors, held equal by a new case in `serverXR/src/schemaSync.test.js`.
+- Drag vs click: R3F's `event.delta` plus raw movementX/Y summed while pressed, because desktop
+  walk takes pointer lock on press — the cursor freezes, delta stays 0 through a whole look. Slop
+  6 px, the figure Studio's selection uses (`SelectableObject.jsx`). Doors do NOT check this
+  today (a drag that starts and ends on a door enters it) — left alone, noted for the owner.
+- Hover: pointer cursor on body AND canvas (the walker paints crosshair on the canvas, which a body
+  cursor never shows through — doors have this gap too), and a door-style nameplate (dark plate,
+  white type) with one cyan hairline, over the object's top edge, world-sized whatever the
+  entity's scale, drawn over the room (depthTest off, like LiveProjectScene's billboard titles —
+  depth-tested, the plate and hairline dipped behind a slide's angled top edge). No glow. Phones
+  have no hover and R3F only computes hover from pointer MOVES, so a touch press shows the plate
+  until the finger lifts.
+- Seen on a local stack (server :4361, vite :5191, own DATA_ROOT; the live install on :4000
+  untouched), space `linktest`, two image slides: desktop 1440×900@2 view mode and walk mode,
+  phone 390×844@3. Hover → pointer cursor + plate; click internal → `/linktest/second`; click
+  external → new tab at example.org with `window.opener === null`, room stays; a drag starting
+  and ending on a slide → no navigation, no tab; phone tap → navigates, phone swipe → nothing.
+- Studio inspector: a Link section last on every linkable type (Open on click / Address / Label).
+  In the editor a click still selects, as for doors (`isStudioEditorPath`).
+- Wiki: "Click an object to open its link".
+- Not done: links inside a portal's EMBEDDED scene are not clickable (EmbeddedEntity renders
+  EntityContent directly); an external link from inside an immersive XR session opens a tab the
+  headset may not show.
+
+## 2026-09-24 — the agent door: one catalogue of every route, four MCP tools on the official SDK
+
+- Owner's direction: an MCP that grows with the platform, gives full control, saves time and
+  credits, and lets people push the server for what they need without harming it. Spec first:
+  `docs/architecture/SPEC_agent_door.md` (sources, three phases, measurements, owed list).
+- **Catalogue:** `serverXR/src/catalogue/` describes all 166 live routes (summary, reach, least
+  role, agent yes/no, inputs). `routeWalk.js` records sub-router mounts because Express 5 forgets
+  them; `catalogueContracts.test.js` boots a real server and fails on any undeclared route, stale
+  entry or broken rule. `GET /api/catalogue` serves OpenAPI 3.1 filtered to the caller; `?all=1`
+  (admin) adds coverage. 55 routes open to agents after review; account/auth/admin/keys/approvals/
+  webhooks/streams/rig, br_id_ge's inscription rite, the GitHub link, DM identity and Drive-account
+  import stay closed.
+- **MCP:** `sdk/mcp.mjs` rebuilt on `@modelcontextprotocol/server` 2.1.0 (pinned exact, root and
+  serverXR — an install resolves it from `serverXR/node_modules`), serving MCP 2026-07-28 and the
+  2025-era handshake. Four tools (`sdk/door.js`): di_find, di_describe, di_call, di_run; moves and
+  routes share one namespace; `pick` returns only the named fields. The old server echoed any
+  protocol version back — known-fixes row + guard.
+- **Measured** (`sdk/evals/RESULTS.md`, one run each): 9/10 vs the old server's 6/10, 75 tool calls
+  vs 89, $1.05 vs $1.49, half the time. Without `pick` the same questions cost 209 calls — the
+  scene documents are larger than the answer cap.
+- Found by the catalogue review, not changed here: anonymous `GET /api/trash` (fixed separately,
+  PR #566 `fix/trash-scope`), trusted people changing without the approval gate, NDI routes with
+  no identity check, DM routes with no role layer. All in the spec's §9.
+- Next (phase 2, the real protection for other people's agents): per-person agent keys enforced by
+  serverXR — generalise `syncKeyStore.js`, never public, never a root, author on every op.
+
+## 2026-09-24 — NDI autoscan: a local di.iiii always knows which NDI sources are on the network
+
+- Owner: "we need auto scan mode of ndi … what there are the ndi signals in net now".
+- Method is the NDI SDK's own continuous discovery (SDK Documentation §14 NDI-FIND,
+  `Processing.NDI.Find.h`): ONE long-lived finder in the existing forked child; the
+  manager keeps that child alive while scanning and folds each list into a registry
+  (`serverXR/src/ndi/scanner.js`: firstSeen / lastSeen / goneSince, appear/gone/changed diff,
+  3 s settle window so a young finder never announces departures).
+- New routes: `GET /ndi/api/scan` (snapshot, `?wait=`) and `GET /ndi/api/scan/events`
+  (SSE). States `off · starting · running · restarting · no-runtime · error`; `count` is
+  null unless running — no surface ever says "0" when it cannot look.
+- Starts at boot when `DI_LOCAL=1` (`DI_NDI_SCAN=0` off, `=1` on for dev). New
+  `DI_NDI_GROUPS` → `p_groups`. A finder the runtime refuses is now a fatal, and a finder
+  that errors exits the child so it is restarted — never a silently frozen list.
+- Pages: `watchNdiScan` (one feed per page; the wall `/out` polls every 5 s so it holds no
+  connection its pictures need); `useMachinePresence` re-reads devices on every change, so
+  the NDI picker, the map's Machines section and the Raw desk update live. New line
+  "NDI on the network: N" in the map's Machines section and the Raw desk; the Raw desk
+  lists NDI sources per machine (existing classes, no restyle).
+- CLI: `di ndi scan [--watch] [--url …]`.
+- Measured on aylmo (i7-11800H, libndi 6.3.2.0, same-machine sender, 10 runs): appeared
+  793/891/1008 ms (min/median/max after the sender existed); gone after SIGTERM
+  1004/1007/1011 ms, after SIGKILL 1006/1013/1014 ms; browser readout 0→1 in 1.15 s, 1→0
+  in 1.05 s, desktop and phone. Idle child 0.07 % of a core, 78 MB RSS.
+  Harness: `scripts/ndi-autoscan-measure.mjs`. Full table: `docs/architecture/NDI.md` → Autoscan.
+- NOT proven: a sender on another machine (especially one that dies without a goodbye),
+  Windows, macOS, a second subnet, a Discovery Server, `DI_NDI_GROUPS` against a real group.
+  Not seen in the owner's own browser at local.thedi.studio — the running install was not
+  touched (another session owns it); seen in Playwright Chromium against a dev server.
+
+## 2026-09-24 — Perform, phase 1: the show run with only the windows the job needs
+
+- Owner, 2026-09-24: *"we need separate line where there are only the vj and mapping by example
+  with the lights no need to nodes so we need to flexible"*; on own address vs mode: *"yes we need
+  to all versions and for all kind of task and user"*. He was shown the sketch
+  (local.thedi.studio/lab/p/perform-sketch) and answered: way in BOTH (address + switch), preset
+  kept BOTH (this device + the show). Decision draft and method sources: di-atlas
+  `decisions/2026-09-24-perform-line.md` (grandMA3 views and user profiles, ETC Eos snapshots,
+  Ableton Link, Cristian 1989 / RFC 5905 for the clock offset).
+- **Address:** `/{space}/perform/{project}[?preset=][&from=]` (`src/perform/performRouting.js`,
+  dispatched in `RootApp.jsx` beside Projection, behind the same gate). `perform` is reserved in
+  `shared/reservedSegments.cjs` + `spaceRouting.js` — checked first: `/serverXR/api/spaces/perform`
+  and `/projects/perform` 404 on prod, dev and the local install.
+- **Switch:** Desk | Perform in the bar's one-control slot (`src/perform/DeskPerformSwitch.jsx`),
+  on Projection, Studio (only once the project has a connection or a wall, or under All tools —
+  a bare project stays bare) and Nodes. Written with the bar's own classes; one small
+  `.sbar-switch` rule so the pair never wraps apart.
+- **The desk:** `src/perform/PerformDesk.jsx` is RawEditor with `perform` set — same store, op log,
+  node windows and DesktopWindow — the canvas, topbar and palette not drawn. Arrangement kept as
+  percent rectangles (resizes with the window); windows cannot be pinned (no canvas: the pin
+  button is hidden via a new `pinnable` prop, not left doing nothing).
+- **Presets:** seven built-ins as DATA (`src/perform/presets.js`, rectangles from the sketch).
+  Mine = the `presets` slot of `dii.rawLayout.<space>.<project>.<wide|narrow>` (now read on the
+  first render, so a saved preset is found on reload). The show's = new additive document key
+  `performState.presets` with `upsertPerformPreset` / `deletePerformPreset` ops (per preset, so two
+  people saving at once both land), inverses for undo, mirrored in `shared/projectSchema.cjs`;
+  no version bump — an older document normalizes to an empty list. Round-trip through a real
+  `.diiii` export/import is tested (`scripts/space-bundle.test.js`).
+- **Windows, native:** deck (`VjDeckView` placement `perform`), Out (the Picture Out's or the
+  deck master's picture), Clock, Master · Blackout, and the Projection panes — Wall, Wall out,
+  Surfaces, Cues (1–9 fire), Machines, Surface settings — moved into `src/map/MapDeskParts.jsx`
+  without a markup change, driven by `useMapApi` (split out of `useMapDocument`) over RawEditor's
+  op layer, so no second sync of the project. **Honest placeholders:** Scenes, Looks · FX, Audio,
+  Status, Footage, My surface, Now open dim, "Coming in phase 2", saying what they will be. No
+  iframe anywhere.
+- **One clock:** `src/timeline/showClock.js` (Link-style `{ bpm, epoch }`, beat/phase/quantum,
+  tap, Cristian offset with min-RTT filter, `pickLeader` seam: Light leads, deck fallback) +
+  `src/perform/useShowClock.js` (polls `GET /light/api/clock` 500 ms when up, 2 s when the desk is
+  closed, 15 s where there is no desk). The desk route answers `{up:false}` WITHOUT building the
+  desk (`lightingRoutes.js`), so a VJ never starts the 40 Hz loop.
+- **Measured** on a dev stack (SwiftShader, same machine): Light tempo change → deck shows it,
+  n=20: median 375 ms, p95 511 ms, max 523 ms (bounded by the 500 ms poll). Phase agreement,
+  60 samples over 30 s at 128 bpm: |error| median 0.5 ms, p95 2.5 ms, max 4.5 ms; RTT median
+  10 ms. Four deck taps 502/510/504 ms apart → Light desk 119 bpm (it keeps whole bpm), its beat
+  anchor 1 ms after the last tap.
+- **Fixed, owner-seen 09-24:** BPM 300.0 (double-click taps averaged in), dark non-playing slots
+  (stills now), blend names cut, the deck window over its own wired cards. Rows in known-fixes.
+- **Seen:** desktop 1440x900 DPR2 and phone 390x844 DPR3, every preset; walk: /lab/perform/<new>
+  ?preset=vj → add deck → upload two clips → play → save as mine → reload → "friday at MOCT" kept;
+  Projection → Perform → Desk. Phone found two faults the unit tests had not: windows under the
+  120 px floor overlapped (all seven presets now guarded by a test), and the Projection panes had
+  no stylesheet unless the Projection desk had been opened first.
+- **Owed (phase 2):** Light as native windows, the Status line, Guest's footage and surface, cues
+  that fire deck columns, cues on the beat, clips on the beat. `desk` is a banned word in
+  `docs/ai/vocabulary.md` yet the owner's sketch says "Desk | Perform" — kept as he approved it;
+  the word is his to settle.
+
+## 2026-09-24 — the VJ deck lands on dev: Clip In, the deck, its picture on the card, cards land where you click
+
+- Owner: "i can't see the vj part where is that". The deck (09-14) lived only on `feat/vj`,
+  which the 09-14 install (`0.4.14-vj.3`) was packed from; every build since is packed from
+  dev, so it vanished.
+- Why not merge `feat/vj`: it carries the whole Raw fix wave (unified inside view, scripts in
+  a worker, live feeds, inspector, examples — ~20 commits) that never landed on dev and has no
+  PR. Landing that is its own decision. This branch takes only the VJ lanes: #450 (Clip In)
+  and #451 (the deck) cherry-picked with authorship, 81f6b36a (map Pictures surface loads
+  clips from the project) cherry-picked, and the hookup REWRITTEN against dev's
+  `useTopNetwork` (the old one was woven into the wave's LiveFeeds / InsideView).
+- Hookup: `toTopNetwork` keeps `vj.deck` + in1..in4 wires and expands decks
+  (`expandDecks`, deck-into-deck via alias); `useTopNetwork` takes `assets` + `projectId`
+  and runs `useClipVideos`; `topThumbnails` holds several canvases per id (card + window);
+  cards ask `isPictureType` / `pictureIdOf` — the deck card shows its master (was OPEN).
+  `a2e7262d`'s VjDeckView phone layout + input-tile pictures ported; its InsideView part is
+  wave-only and not here.
+- Cards land where you click: `placeNewCard` (`src/raw/utils/cardPlacement.js`). Measured on
+  the dev stack, desktop: before, tap (1000,400) → card middle (1021,432); after (1001,401).
+  The first card on an EMPTY canvas still re-fits the view (it shows in the middle) — owed.
+- "IN rail says nothing on live texture inputs" is the wave's InsideView — not on dev, so not
+  fixable here; dev's inside of a picture operator is `TopInsidePanel`.
+- Walk: `scripts/verify-vj-deck.mjs` (SwiftShader, H.264 plays in Playwright's Chromium).
+  Clip In → deck (made from the palette) → Picture Out, two ffmpeg-generated mp4s; the Picture
+  Out card reads mean 125 / spread 32 on Mix and 102 / 24 on Difference — the blend reaches Out.
+- Still missing vs the 09-14 concept: BPM → clip sync (tempo is kept, nothing follows it), MIDI
+  on the grid, the perform split and the "inside" placement, map handoff beyond Pictures.
+  The deck window opens over its own card and the Picture Out card on desktop (panel-window
+  placement for a 760-wide window) — owed.
+
+## 2026-09-24 — lighting desk sends full 512-slot DMX frames
+
+- Ported from the standalone studio desk (viz.di.formal, branch `studio`): `serverXR/src/lighting/desk.js`
+  no longer trims frames to the highest patched channel. A 25-channel studio rig got 26-slot frames on an
+  ENTTEC DMX USB PRO and its RGB lights ignored them entirely while the desk showed correct values.
+- Every universe now leaves as `FULL_FRAME` (512) — ENTTEC, Art-Net, extra widget sends and the empty-desk
+  refresh. sACN already sent whole universes. Measured on the ENTTEC: 34 frames/s, 4.5 ms average write.
+- Guard: `tests/test-wiring.js` "every DMX frame leaves full length" (seen red with one `|| 24` put back).
+  The desk's three suites (`test.js`, `test-wiring.js`, `test-http.js`) pass with `ARTNET_OFFLINE=1`.
+- Not done here: the studio desk's other work (stage objects, Stage page, video pixel-mapping, even Follow
+  slots) is not ported yet — that is the larger "converge the two desks" job.
+
+## 2026-09-24 — a replace says what it removes, and refuses media loss nobody counted
+
+- The incident (2026-09-16 → 09-18): `main-dii-project` held 76 `image` entities, the
+  studio's portfolio deck. An audit sampled one file, called them debris and deleted them
+  on local+dev. Two days later `project-pull.mjs <pid> --force` carried dev's copy to prod
+  as one whole-document `replaceDocument`: 76 slides gone, the tool printed "ok", and the
+  owner had approved "carry main front room" without being told.
+- `shared/documentLoss.cjs` (pure, CommonJS, read by the server and the scripts): target vs
+  incoming over `entities`, `nodes` and scene `objects`. Names what is REMOVED (by type and
+  name), which of it is media (image/video/audio/model, or anything carrying an asset
+  id/ref/URL), what points at a different file, and a media item that kept its file under a
+  new id (not counted as lost). The pattern is plan-then-confirm (`terraform plan`, `rsync
+  --dry-run --delete`, `git push --force-with-lease`): the acknowledgement is a NUMBER.
+- Guarded, each printing the summary before writing, refusing media loss unless
+  `--accept-loss <N>` equals the exact count (wrong or stale N refuses again), `--dry-run`
+  printing and writing nothing, non-media removals printed and never blocked:
+  `project-pull.mjs` (and `local-mirror.mjs` through it), `tier-sync.mjs` (N is the run's
+  total; every overwrite is read before anything is written, and the documents counted are
+  the ones written), `space-push.mjs` (scene), `space-bundle.mjs import --force` (projects
+  in the file, `--prune` deletions, the scene; `--dry-run` added; `di open --force
+  --accept-loss N` and `sync-space-to-dev.sh --accept-loss N` pass it through), and
+  `npm run send` → `space-proposal.mjs` → the proposal server: the loss sits first in the
+  approver's summary, a file that removes media is 409 `media_loss` without `acceptLoss`,
+  and Apply re-counts (the count is bound into the intent hash).
+- `install-bundle.mjs` (the `di restore --yes` estate restore) prints the loss per space and
+  does not block — it restores a whole point in time the person already confirmed.
+- Not guarded, and why: `space-sync.mjs` is a merge (it spreads the document it read and
+  sets only presentation/publish state — entities pass through), and it is vendored as a
+  single file into three repos, so it must not import a sibling; `project-move.mjs` moves a
+  project whole and replaces nothing.
+- Server, actor: already recorded on every whole replace — `PUT /api/projects/:id/document`
+  (op row actor + restore point, guarded by httpContracts "stamps the author from the
+  session on every write path"), restore, proposal apply, sync pull. What surfaced as
+  "clientId server" was the op JSON; the author lives in the row. The one authorless door
+  was a hand-run `space-bundle.mjs import --force` (and `di open --force`, which stops the
+  server first): it now stamps its op rows `server:space-bundle-import` with the machine
+  account. An unforced import still leaves them for the HTTP route to stamp with the person.
+- Red first, on the unguarded code (each tool swapped back to `HEAD` for the run):
+  `scripts/project-pull.test.js` 5/5 red; tier-sync loss block 3/4 red (the exact-number
+  case passes unguarded, as it should — it writes); space-bundle loss block 4/4 red;
+  space-push loss block 3/3 red; proposal loss contract 1/1 red (`summary.mediaLost`
+  undefined). All green after.
+- Rule added: golden_rules "Authored media is never judged debris from a sample"; row in
+  known-fixes; CONTRIBUTING and the wiki's history entry say it.
+- Owed: the 76 slides themselves are not restored by this branch — that is a data action on
+  prod (restore point or bundle), the owner's call, not done here. No tier was touched.
+
+## 2026-09-24 — the studio deck came back: restore-entities puts back what a project lost
+
+- The front room `main-dii-project` lost its 76 slides (the studio portfolio deck): deleted on local + dev by the 09-16 facade audit as "debris" (one file sampled), then carried to prod on 09-18 by a whole-document replace. The files were never lost, only the entities.
+- `scripts/restore-entities.mjs` reads the tier's current document, takes the entities a saved copy (the nightly backup, `~/work/di-spaces`) holds and the tier does not, checks every media file answers, and appends `createEntity` ops through the ordinary ops route. It never replaces the document. Tests: `scripts/restore-entities.test.js`.
+- Run by the owner on dev 2026-09-24: 76/76 files answer, 76 restored, dev `main-dii-project` v240 → v316; the slides are back where they were (flat on the floor, x 0..57, z 0..54). Prod: not yet.
+- Owed: the room redesign around the deck (updated from the Canva master "in__ di.ii : XR studio_network", 94 pages), and the prod restore.
+
+## 2026-09-24 — a di.iiii the others cannot see now says so, and the others say it is there
+
+- Real case: aylmo (`di up --lan`) and win (`--lan`) paired on 192.168.88.x; `ponyo` at .125:4000
+  did not. Probed read-only: ponyo is not a `di up` start (`/api/config` `local: false`,
+  `listen.lan: true`, health `mode` from an unset NODE_ENV) — bound to every interface with
+  `DI_ALLOW_LAN_DEVICES` unset, so no discovery and a 403 on every `/api/rig/*`, silently.
+- `serverXR/src/rig/visibility.js` works out visible/private once; `GET /api/rig/visibility`;
+  `di status` prints a `rig:` line with the command; one boot warning; the Desk shows a hint row.
+- Private discovery mode for a network-bound copy with device routes closed: listens, and sends
+  a `t:"private"` beacon with no top-level `id` (0.4.x readers drop it — verified live against
+  aylmo and win on 0.4.16-connect.4: no phantom member). Open copies list it as "a di.iiii at
+  <addr> is on this network but private". A loopback `di up` still puts nothing on the network.
+  PROTOCOL-1.md amendment 2026-09-24.
+- Discovery now reads `t`: unknown kinds are counted and ignored instead of treated as `here`.
+- Seen: two dev copies on :4391 (private) and :4395 (open, room `agent-test` so it could not pair
+  with the live rig), the Desk at 1440×900 DPR 2 and 390×844 DPR 3, all three row states.
+- Owed, owner's call: should a loopback copy LISTEN (never send)? ponyo's box needs
+  `di up --lan` (or `DI_ALLOW_LAN_DEVICES=1`) by hand — nothing here changes it remotely.
+- Two identity files per machine, documented not merged: `DATA_ROOT/machine.json`
+  (machines hub, follow, `output.show`) and `DATA_ROOT/rig/machine.json` (PROTOCOL-1 §1).
+
+## 2026-09-24 — a copy behind a front door on its own machine reads as visible, not private
+
+- Real case: aylmo's gateway (di-atlas `machines/aylmo-gateway`) put Caddy on :443 of the wifi,
+  mesh and tailnet addresses and di on 127.0.0.1:443, with `DI_ALLOW_LAN_DEVICES=1` in di.env so
+  discovery keeps running. win paired with it through the door (signed hellos, 200 in the door's
+  log), yet `di status` and `/api/rig/visibility` said "private — loopback": visibility.js judged
+  by the bind alone.
+- `describeVisibility` takes `behindProxy`: a loopback bind is reachable only when the front door
+  DECLARES itself with `DI_BEHIND_PROXY=1` (never guessed — a loopback bind with nothing in front
+  of it would announce a copy nobody can reach, which the existing test still pins). New reason
+  `proxied`, "through the front door on this machine". The desk and the CLI key off `visible`
+  and the server's summary, so they follow with no change.
+- Tests: two new cases in visibility.test.js (proxied is visible; a door with the device routes
+  closed stays private). rig + rigStatus + src/rig: 275 passed; eslint clean on the changed files.
+- Owed: the gateway's `switch` writes `DI_BEHIND_PROXY=1` beside `DI_ALLOW_LAN_DEVICES=1` (and
+  `switch --back` removes it) — told to the gateway session. Still open, separate: the hello's
+  `self.http.scheme` reads "http" on a TLS install (win takes the scheme from the discovery
+  packet, so nothing breaks today).
+
+## 2026-09-24 — one batch lands rig visibility, the VJ deck and the NDI autoscan together (#552 #553 #554)
+
+- Why a batch: the three PRs touch the same 8 files (`docs/ai/known-fixes.md`,
+  `scripts/di/cli.mjs`, `scripts/di/ui.mjs`, `serverXR/src/index.js`, `src/map/MapOutput.jsx`,
+  `src/map/MapSurface.jsx`, `src/raw/components/DeskPanelWindow.jsx`, `src/wiki/wikiContent.js`)
+  and #552 no longer merged into dev (after #550/#551). One branch from dev, `git merge --no-ff`
+  in order #554 → #552 → #553, one CI round. Each PR keeps its own session note.
+- Two conflicts, both from #552 onto #554; each resolved by keeping both sides:
+  - `src/raw/components/DeskPanelWindow.jsx` — imports: both `ndiScanLine` (#554) and
+    `describeRigRows`/`useRigVisibility` (#552); body: `useMachinePresence` keeps `ndiScan`, the
+    NDI line and the rig-visibility rows are both computed. Render order on the Desk: rig rows,
+    "Only this machine so far", the NDI line, then the machine cards (with #554's NDI sources group).
+  - `docs/ai/known-fixes.md` — both new rows kept at the end of the table: the AuthGate card row
+    (from dev, #551) then the rig-visibility row (#552).
+- Auto-merged without conflict and read by hand: `cli.mjs` (`di status` rig line + `di ndi scan`),
+  `ui.mjs` (`rigVisibility`, `ndiScan*`), `serverXR/src/index.js` (autoscan at boot + `host` passed
+  to the rig), `MapOutput.jsx`/`MapSurface.jsx` (NDI poll/readout + #553's `assets`/`projectId` to
+  the stage), `wikiContent.js` (new VJ deck entry, rig entry and NDI entry both bumped to 09-24).
+- Checked on this branch: lint 0 errors (68 warnings), build ok, full vitest 546 files / 6069 tests
+  passed (6 skipped: `serverXR/src/ndi/live.test.js`, needs `NDI_LIVE=1` and a real runtime),
+  `test:server-contracts` 171/171, suites ndi 274 (+6 skipped), rig 273, tops 106, raw 752, map 208.
+- NOT done here: nothing was looked at in a browser on this branch — each PR's own note says what
+  it saw and where. Merge this AFTER #524 (dev → main).
+
+## 2026-09-27 — one batch lands ten green PRs that had gone BEHIND
+
+- Merged together, one CI round: #562 proxy client address, #564 rig visible behind a front door,
+  #565 restore-entities, #566 trash scoped to the caller's spaces, #567 the agent door (MCP catalogue),
+  #568 Perform phase 1, #569 click an object to open its link, #570 full 512-slot DMX frames
+  (Emilya's fork, fetched over https), #571 /api/follows behind a proxy, #515 FUNDING.yml.
+- Only conflicts: appended rows in `docs/ai/known-fixes.md`, resolved as a union (every row kept).
+- #528 (space-send) was already in dev through feat/bundle-proposal; its PR only needs closing.
+
 ## 2026-09-23 — folding the layers batch's four notes by hand
 
 - PR #547 (`land/batch-layers-2026-09-23`) merged; dev's `land` job cannot push its fold
