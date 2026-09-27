@@ -1,0 +1,37 @@
+{
+  "kind": "spark",
+  "code": "UP-YH600F",
+  "glb": "spark.glb",
+  "builtBy": "scripts/place/fixtures/build_fixtures.py",
+  "scriptSha256": "10bb32a3cb78c299fc72112c8d881135a239ba33759992d14eeb02f54b1e9696",
+  "blender": "5.2.1 LTS",
+  "archetype": "spark-machine",
+  "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+  "lensY": 0.314,
+  "motion": "none",
+  "parts": [
+    "Body",
+    "Lens"
+  ],
+  "sizeAtHome_mm": {
+    "width_x": 200,
+    "depth_z": 218,
+    "height_y": 314
+  },
+  "triangles": {
+    "Body": 88,
+    "Lens": 10,
+    "total": 98
+  },
+  "datasheetSize_mm": [
+    200,
+    218,
+    305
+  ],
+  "deviationFromDatasheet_pct": [
+    0.0,
+    0.0,
+    3.0
+  ],
+  "comparedParts": "all"
+}

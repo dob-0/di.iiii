@@ -11,6 +11,7 @@
  * +Z, the far end at -Z, the hall centred on x = 0.
  */
 import { rotationFromPanTilt } from '../../src/project/viewport/spotLightAim.js'
+import { aimFixture } from './fixture-lib.mjs'
 
 export const RIG_PREFIX = 'rig-'
 // A lamp whose laser path dips under this, anywhere over the floor, is refused.
@@ -95,24 +96,40 @@ export const craneNearestStage = (hall, stage) => {
 const audienceColumns = (hall, stage) => columnsByStage(hall, stage)
     .filter((c) => (c.z - stage.front) * stage.into > 1)
 
+// ---------------------------------------------------------------------------
+// WHERE a fixture stands. Each rule returns mountings: `pos` is the fixture's
+// mounting face — the bottom of its base on a floor or a deck, the clamp face
+// under a truss or a crane girder — `orient` is 'floor' or 'hung' (upside
+// down, as clamped), and `face` is the room direction its base's front turns
+// to (fixture-lib.mjs, mountMatrix). The lamp itself is then at the LENS,
+// which depends on the aim.
+// ---------------------------------------------------------------------------
+const toAudience = (ctx) => [0, 0, ctx.stage.into]
 const place = {
     'stage-back': (n, ctx) => spread(n, -ctx.stage.width / 2 + 1, ctx.stage.width / 2 - 1)
-        .map((x) => ({ pos: [x, ctx.stage.deck + 0.4, ctx.stage.back + ctx.stage.into * 0.6] })),
+        .map((x) => ({ pos: [x, ctx.stage.deck, ctx.stage.back + ctx.stage.into * 0.6], orient: 'floor', face: toAudience(ctx) })),
     'stage-front': (n, ctx) => spread(n, -ctx.stage.width / 2 + 1, ctx.stage.width / 2 - 1)
-        .map((x) => ({ pos: [x, ctx.stage.deck + 0.35, ctx.stage.front - ctx.stage.into * 0.5] })),
+        .map((x) => ({ pos: [x, ctx.stage.deck, ctx.stage.front - ctx.stage.into * 0.5], orient: 'floor', face: toAudience(ctx) })),
+    // Clamped under the header's bottom chord, hanging.
     'truss-header': (n, ctx) => spread(n, -ctx.stage.trussW / 2 + 1, ctx.stage.trussW / 2 - 1)
-        .map((x) => ({ pos: [x, ctx.stage.trussH - ctx.stage.trussSection / 2 - 0.35, ctx.stage.trussZ] })),
+        .map((x) => ({ pos: [x, ctx.stage.trussH - ctx.stage.trussSection / 2, ctx.stage.trussZ], orient: 'hung', face: toAudience(ctx) })),
+    // Standing on the top plate of each tower.
     'truss-towers': (n, ctx) => spread(n, -ctx.stage.trussW / 2, ctx.stage.trussW / 2)
-        .map((x) => ({ pos: [x, ctx.stage.trussH + ctx.stage.trussSection / 2 + 0.25, ctx.stage.trussZ] })),
+        .map((x) => ({ pos: [x, ctx.stage.trussH + ctx.stage.trussSection / 2, ctx.stage.trussZ], orient: 'floor', face: toAudience(ctx) })),
     'column-bases': (n, ctx) => {
-        const cols = audienceColumns(ctx.hall, ctx.stage)
+        // Mirrored pairs: the same columns on both sides, so the rows read as
+        // a design and not a scatter.
+        // Not the gable columns in the entry's end wall: a lamp there stands in
+        // the doorway and fires into the crane parked by it.
+        const entry = ctx.hall.geometry.door?.z_m ?? Infinity
+        const cols = audienceColumns(ctx.hall, ctx.stage).filter((c) => Math.abs(c.z - entry) > 3)
         const perSide = { '-1': cols.filter((c) => c.side < 0), 1: cols.filter((c) => c.side > 0) }
         const left = Math.ceil(n / 2)
         const right = n - left
         return [
             ...pickEven(left, perSide['-1'].length).map((i) => perSide['-1'][i]),
             ...pickEven(right, perSide[1].length).map((i) => perSide[1][i])
-        ].map((c) => ({ pos: [c.faceX - c.side * 0.7, 0.3, c.z], column: c }))
+        ].map((c) => ({ pos: [c.faceX - c.side * 0.7, 0, c.z], orient: 'floor', face: [-c.side, 0, 0], column: c }))
     },
     'column-uplight': (n, ctx) => {
         // Every column once, nearest the stage first; then a second on the
@@ -129,7 +146,9 @@ const place = {
         return slots.map((c) => ({
             // The second lamp stands beside the first, a hand's width round
             // the column toward the stage, so the pair reads as a double wash.
-            pos: [c.faceX - c.side * 0.45, 0.2, c.z + (c.second ? -ctx.stage.into * 0.45 : 0)],
+            pos: [c.faceX - c.side * 0.45, 0, c.z + (c.second ? -ctx.stage.into * 0.45 : 0)],
+            orient: 'floor',
+            face: [c.side, 0, 0],
             column: c
         }))
     },
@@ -137,33 +156,111 @@ const place = {
         const g = ctx.hall.geometry
         const crane = craneNearestStage(ctx.hall, ctx.stage)
         const reach = g.crane_rail_x_m - 1.5
-        return spread(n, -reach, reach).map((x, i) => ({
-            pos: [x, crane.girder_bottom_m - 0.25, crane.z_m + (i % 2 ? 1.1 : -1.1)],
-            girder: i % 2 ? 1 : -1
-        }))
+        return spread(n, -reach, reach).map((x, i) => {
+            // Mirrored: lamp i and lamp n-1-i hang on the same girder.
+            const girder = Math.min(i, n - 1 - i) % 2 ? 1 : -1
+            return { pos: [x, crane.girder_bottom_m, crane.z_m + girder * 1.1], orient: 'hung', face: [0, 0, girder], girder }
+        })
     },
     'stage-front-deck': (n, ctx) => spread(n, -ctx.stage.width / 2 + 0.8, ctx.stage.width / 2 - 0.8)
-        .map((x) => ({ pos: [x, ctx.stage.deck, ctx.stage.front - ctx.stage.into * 0.35] })),
+        .map((x) => ({ pos: [x, ctx.stage.deck, ctx.stage.front - ctx.stage.into * 0.35], orient: 'floor', face: toAudience(ctx) })),
     'stage-front-floor': (n, ctx) => spread(n, -ctx.stage.width / 2 + 1.5, ctx.stage.width / 2 - 1.5)
-        .map((x) => ({ pos: [x, 0, ctx.stage.front + ctx.stage.into * 0.9] })),
+        .map((x) => ({ pos: [x, 0, ctx.stage.front + ctx.stage.into * 0.9], orient: 'floor', face: toAudience(ctx) })),
     'nave-columns': (n, ctx) => {
         const cols = audienceColumns(ctx.hall, ctx.stage)
         return pickEven(n, cols.length).map((i) => cols[i])
-            .map((c) => ({ pos: [c.faceX - c.side * 1.0, 0, c.z + ctx.stage.into * 1.2] }))
+            .map((c) => ({ pos: [c.faceX - c.side * 1.0, 0, c.z + ctx.stage.into * 1.2], orient: 'floor', face: [-c.side, 0, 0] }))
     }
 }
 
-const aim = {
-    // Steep enough to clear a crane parked in front of the stage (checked below).
-    'fan-into-roof': (slot, i, ctx) => [slot.pos[0] * 1.8, ctx.hall.geometry.truss_bottom_m, ctx.stage.front + ctx.stage.into * 6],
-    'up-into-truss': (slot, i, ctx) => [slot.pos[0] * 0.55, ctx.hall.geometry.truss_top_centre_m, slot.pos[2] + ctx.stage.into * 2],
-    'stage-floor-and-back-wall': (slot, i, ctx) => (i % 2 === 0
-        ? [slot.pos[0] * 0.8, ctx.stage.deck, ctx.stage.front - ctx.stage.into * 1.5]
-        : [slot.pos[0] * 1.1, 7, ctx.stage.wall]),
-    'out-over-audience': (slot, i, ctx) => [slot.pos[0] * 2, 9, ctx.stage.front + ctx.stage.into * 14],
-    'up-the-column': (slot, i, ctx) => [slot.column.faceX, ctx.hall.geometry.runway_bottom_m, slot.pos[2]],
-    'down-from-crane': (slot, i, ctx) => [slot.pos[0] * 1.1, 0, slot.pos[2] + slot.girder * 4],
-    'laser-into-roof': (slot, i, ctx) => [slot.pos[0] * 0.3, ctx.hall.geometry.truss_top_centre_m, ctx.stage.front + ctx.stage.into * 14]
+// ---------------------------------------------------------------------------
+// WHERE it points. A look (rig.looks[name].aims[groupId]) names one of these
+// rules and its numbers; a group without one in the look keeps its own `aim`.
+// Every rule is written in the STAGE's frame so a look is symmetric by
+// construction: `x` across the stage (+ = stage left seen from the house is
+// NOT assumed — x is the hall's x), `y` up from the floor, `a` metres from the
+// stage front toward the audience.
+// Each returns { target } (a room point) or { dir } (a room direction).
+// ---------------------------------------------------------------------------
+const stagePoint = (ctx, x, y, a) => [x, y, ctx.stage.front + ctx.stage.into * a]
+const sideOf = (slot) => (Math.abs(slot.pos[0]) < 0.05 ? 0 : Math.sign(slot.pos[0]))
+const upOf = (slot) => (slot.orient === 'hung' ? -1 : 1)
+/** A direction leaned `side` degrees across (toward +x) and `lean` degrees toward the audience, from straight up (or down, hung). */
+const leaned = (ctx, slot, sideDeg, leanDeg) => {
+    const s = sideDeg * DEG
+    const l = leanDeg * DEG
+    const up = upOf(slot)
+    return [Math.sin(s), up * Math.cos(s) * Math.cos(l), Math.cos(s) * Math.sin(l) * ctx.stage.into]
+}
+
+export const AIM_RULES = {
+    // Straight up (a hung lamp: straight down), optionally leaned toward the
+    // audience and in toward the centre line — "pillars of light".
+    vertical: (slot, meta, ctx, p = {}) => ({ dir: leaned(ctx, slot, -sideOf(slot) * (p.in_deg ?? 0), p.lean_deg ?? 0) }),
+    // All in one direction.
+    parallel: (slot, meta, ctx, p = {}) => ({ dir: leaned(ctx, slot, p.side_deg ?? 0, p.lean_deg ?? 0) }),
+    // A symmetric fan across the line: the outermost lamps spread_deg/2 out to
+    // each side, the rest evenly between, all leaned lean_deg toward the house.
+    fan: (slot, meta, ctx, p = {}) => {
+        const spreadDeg = p.spread_deg ?? 60
+        const k = meta.n <= 1 ? 0 : meta.rank / (meta.n - 1) - 0.5
+        return { dir: leaned(ctx, slot, k * spreadDeg, p.lean_deg ?? 0) }
+    },
+    // Every lamp at one point — the "ballyhoo" focus above the crowd.
+    point: (slot, meta, ctx, p = {}) => ({ target: stagePoint(ctx, p.x ?? 0, p.y ?? 8, p.a ?? 15) }),
+    // A point mirrored by the lamp's side (x is the distance out on the lamp's OWN side).
+    'mirror-point': (slot, meta, ctx, p = {}) => ({ target: stagePoint(ctx, sideOf(slot) * (p.x ?? 0), p.y ?? 8, p.a ?? 15) }),
+    // Crossfire: each lamp to the OTHER side of the room at `y`, in line with
+    // itself along the hall (plus `dz`); the two rows cross over the centre.
+    cross: (slot, meta, ctx, p = {}) => ({
+        target: [-sideOf(slot) * (p.x ?? 8), p.y ?? 9, slot.pos[2] + ctx.stage.into * (p.dz ?? 0)]
+    }),
+    // A line lamp's X-cross: stage-left lamps to stage-right and back, at a point in the air.
+    'x-cross': (slot, meta, ctx, p = {}) => ({ target: stagePoint(ctx, -sideOf(slot) * (p.x ?? 8), p.y ?? 12, p.a ?? 10) }),
+    // A PAR grazing up its own column to the crane runway.
+    'up-the-column': (slot, meta, ctx) => ({ target: [slot.column.faceX, ctx.hall.geometry.runway_bottom_m, slot.pos[2]] }),
+    // Truss spots: alternately a downstage area of the deck and the back wall,
+    // counted in from both ends so the two halves mirror.
+    'stage-wash': (slot, meta, ctx, p = {}) => (Math.min(meta.rank, meta.n - 1 - meta.rank) % 2 === 0
+        ? { target: [slot.pos[0] * 0.8, ctx.stage.deck, ctx.stage.front - ctx.stage.into * (p.deck_a ?? 1.5)] }
+        : { target: [slot.pos[0] * 1.1, p.wall_y ?? 7, ctx.stage.wall] }),
+    // Hung lamps straight down onto the floor under the crane, splayed out.
+    'down-from-crane': (slot, meta, ctx) => ({ target: [slot.pos[0] * 1.1, 0, slot.pos[2] + slot.girder * 4] }),
+    // A laser up into the roof over the house — the only rule a laser may use
+    // besides one that rises (checkLaser refuses anything else).
+    'laser-into-roof': (slot, meta, ctx, p = {}) => ({ target: [slot.pos[0] * (p.x_scale ?? 0.3), ctx.hall.geometry.truss_top_centre_m, ctx.stage.front + ctx.stage.into * (p.a ?? 14)] })
+}
+
+/**
+ * How far a beam travels before it meets the building: the floor, the roof
+ * (a pitch from the eaves up to the truss tops at the centre, open into the
+ * lantern), the nave walls above the aisle roofs, the aisle walls below them,
+ * or an end wall. Sampled every 0.1 m along the axis. A real beam stops there;
+ * the drawn cone is cut to the same length so it does not pierce the roof.
+ */
+export const surfaceHit = (from, dir, hall, maxReach = 80) => {
+    const g = hall.geometry
+    const eave = g.eave_top_m ?? g.truss_bottom_m ?? 12
+    const top = g.truss_top_centre_m ?? eave
+    const nave = g.nave_wall_x_m ?? g.column_inner_face_x_m ?? 12
+    const outer = g.wall_inner_x_m ?? nave
+    const aisleRoof = g.aisle_roof_m ?? 0
+    const lanternHalf = (g.lantern_w_m ?? 0) / 2
+    const ridge = top + (g.lantern_h_m ?? 0)
+    const ends = [g.far_wall_z_m ?? -1e9, g.door?.z_m ?? 1e9].sort((a, b) => a - b)
+    const len = Math.hypot(...dir) || 1
+    const d = dir.map((c) => c / len)
+    for (let t = 0.3; t <= maxReach; t += 0.1) {
+        const x = from[0] + d[0] * t
+        const y = from[1] + d[1] * t
+        const z = from[2] + d[2] * t
+        const ax = Math.abs(x)
+        const roof = ax < lanternHalf ? ridge : top - (top - eave) * Math.min(1, ax / nave)
+        if (y <= 0 || y >= roof || z <= ends[0] || z >= ends[1]) return round(t, 2)
+        if (ax >= outer) return round(t, 2)
+        if (ax >= nave && y >= aisleRoof) return round(t, 2)
+    }
+    return maxReach
 }
 
 /**
@@ -230,19 +327,93 @@ const box = ({ id, name, pos, size, colour, emissive = '#000000', emissiveIntens
     }
 })
 
+// ---------------------------------------------------------------------------
+// PHOTOMETRY: how bright each lamp is, relative to the others, from its
+// datasheet. Written out in scripts/place/README.md ("Photometry").
+//   - Luminous intensity I (candela) on the beam axis: from an illuminance
+//     the maker measured, I = E * d^2 (inverse-square law, far field); or
+//     from luminous flux, I = F / Omega with Omega = 2*pi*(1 - cos(theta/2))
+//     the solid angle of the beam (a uniform-cone approximation).
+//   - A zoom fixture used at another angle keeps its flux: I scales with
+//     Omega(datasheet angle) / Omega(used angle).
+//   - three.js (r155+) takes a SpotLight's intensity in candela; the rig
+//     multiplies every lamp by ONE `sceneScale` (rig.photometry), so the
+//     ratios between fixtures are the datasheets' and only the exposure is
+//     a choice.
+//   - The cone drawn in the air: the light a beam scatters toward the eye,
+//     per unit length, goes as I * tan(theta/2) (illuminance I/r^2 through a
+//     cross-section 2 r tan(theta/2) wide). It is scaled to the brightest
+//     class in the rig and passed through Stevens' brightness exponent 1/3
+//     (Stevens 1957/1975, brightness of a target in the dark) so the dim ones
+//     read as dim rather than vanish; the result is the entity's `haze`.
+// ---------------------------------------------------------------------------
+const solidAngle = (deg) => 2 * Math.PI * (1 - Math.cos((deg * DEG) / 2))
+
+/** The on-axis candela of a fixture used at `angleDeg`, from its manifest photometry. */
+export const candelaAt = (photometry, angleDeg) => {
+    if (!photometry) return null
+    const ref = photometry.beam_deg
+    let cd = null
+    if (photometry.lux && photometry.at_m) cd = photometry.lux * photometry.at_m ** 2
+    else if (photometry.candela) cd = photometry.candela
+    else if (photometry.flux_lm && ref) cd = photometry.flux_lm / solidAngle(ref)
+    if (cd === null) return null
+    return ref && angleDeg ? cd * solidAngle(ref) / solidAngle(angleDeg) : cd
+}
+
+/** Per class: the angle it is used at, its candela, the scene intensity and the air brightness (haze). */
+export const classPhotometry = (rig, manifest) => {
+    const out = {}
+    const scale = rig.photometry?.sceneScale ?? 1
+    for (const [id, cls] of Object.entries(rig.classes)) {
+        const kind = manifest?.kinds?.[cls.fixture]
+        const angle = cls.angleDeg ?? kind?.photometry?.beam_deg ?? cls.beamAngleDeg
+        const cd = candelaAt(kind?.photometry, angle)
+        out[id] = {
+            angleDeg: angle,
+            candela: cd,
+            intensity: cd === null ? cls.intensity : round(cd * scale, 2),
+            air: cd === null ? null : cd * Math.tan((angle * DEG) / 2)
+        }
+    }
+    // A laser's beam is millimetres wide and not a cone: it is given its air
+    // brightness by hand (`airFixed`) and left out of the scale.
+    const pool = Object.entries(out).filter(([id]) => rig.classes[id].airFixed === undefined).map(([, c]) => c.air || 0)
+    const brightest = Math.max(0, ...pool)
+    for (const [id, c] of Object.entries(out)) {
+        const cls = rig.classes[id]
+        const air = rig.photometry?.air ?? 1
+        c.haze = cls.airFixed !== undefined
+            ? cls.airFixed
+            : c.air && brightest > 0 ? round(air * (c.air / brightest) ** (1 / 3), 3) : cls.haze
+    }
+    return out
+}
+
 /**
- * The whole rig as entities.
+ * The whole rig as entities, plus the posed fixture bodies.
  *
  * @param {object} rig   the rig file
  * @param {object} hall  hall.json from hall.py
- * @param {{ mode?: 'budget'|'all'|'none' }} [options]
- * @returns {{ entities: object[], summary: object }}
+ * @param {object} options
+ * @param {'budget'|'all'|'none'} [options.mode]
+ * @param {string} [options.look]   a name in rig.looks (default rig.defaultLook)
+ * @param {Record<string, object>} options.geometry  the built models' sidecars by kind (fixtures/glb/<kind>.json)
+ * @param {object} [options.manifest] fixtures/fixtures.json (photometry)
+ * @returns {{ entities: object[], fixtures: object[], summary: object, stage: object }}
  */
-export const buildRig = (rig, hall, { mode = 'budget' } = {}) => {
+export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry = {}, manifest = null } = {}) => {
     const stage = stageFrame(rig, hall)
     const ctx = { rig, hall, stage }
     const entities = []
-    const summary = { fixtures: 0, real: 0, beamOnly: 0, byGroup: {}, effects: {}, refused: [], clashes: [] }
+    const fixtures = []
+    const summary = { fixtures: 0, real: 0, beamOnly: 0, byGroup: {}, effects: {}, refused: [], clashes: [], unreachable: [], look: null }
+    const name = lookName || rig.defaultLook || null
+    const look = name ? rig.looks?.[name] : null
+    if (name && !look) throw new Error(`no look "${name}" in the rig (it has: ${Object.keys(rig.looks || {}).join(', ') || 'none'})`)
+    summary.look = name
+    const optics = classPhotometry(rig, manifest)
+    summary.photometry = optics
 
     // The stage and its truss: production, not building, so they are the rig's.
     const mid = (stage.back + stage.front) / 2
@@ -265,82 +436,95 @@ export const buildRig = (rig, hall, { mode = 'budget' } = {}) => {
     for (const group of rig.groups) {
         const cls = rig.classes[group.class]
         if (!cls) throw new Error(`group ${group.id}: no class "${group.class}"`)
+        const geo = geometry[cls.fixture]
+        if (!geo) throw new Error(`group ${group.id}: no built model for fixture "${cls.fixture}" (fixtures/glb/${cls.fixture}.json)`)
         const placer = place[group.mount]
-        const aimer = aim[group.aim]
         if (!placer) throw new Error(`group ${group.id}: unknown mount "${group.mount}"`)
-        if (!aimer) throw new Error(`group ${group.id}: unknown aim "${group.aim}"`)
+        const spec = look?.aims?.[group.id] || { rule: group.aim }
+        const rule = AIM_RULES[spec.rule]
+        if (!rule) throw new Error(`group ${group.id}: unknown aim rule "${spec.rule}"`)
         const slots = placer(group.count, ctx)
         if (slots.length !== group.count) {
             throw new Error(`group ${group.id}: asked for ${group.count}, the hall has room for ${slots.length} by the rule "${group.mount}"`)
         }
+        const byX = slots.map((s, i) => [s.pos[0], i]).sort((a, b) => a[0] - b[0]).map(([, i]) => i)
         const real = realIndices(group, slots.length, rig.budget, mode)
-        const colour = group.colour || cls.colour
-        const half = (cls.beamAngleDeg / 2) * DEG
+        const colour = look?.colours?.[group.id] || group.colour || cls.colour
+        const op = optics[group.class]
+        const half = (op.angleDeg / 2) * DEG
         let groupReal = 0
         slots.forEach((slot, i) => {
-            const target = aimer(slot, i, ctx)
-            if (group.class === 'laser') {
-                const why = checkLaser(slot.pos, target)
+            const aimed = rule(slot, { i, n: slots.length, rank: byX.indexOf(i) }, ctx, spec)
+            const posed = aimFixture(geo, slot, aimed)
+            const from = posed.lens
+            const dir = posed.dir
+            const reach = Math.min(cls.reach_m, surfaceHit(from, dir, hall, cls.reach_m))
+            const to = from.map((v, k) => v + dir[k] * reach)
+            const label = `${group.id} #${i + 1}`
+            if (!posed.reachable) summary.unreachable.push(`${label}: tilt ${posed.tilt} deg is past the head's travel`)
+            if (group.class === 'laser' || cls.fixture === 'laser') {
+                const why = checkLaser(from, to)
                 if (why) {
-                    summary.refused.push(`${group.id} #${i + 1}: ${why}`)
+                    summary.refused.push(`${label}: ${why}`)
                     return
                 }
             }
-            const hit = group.mount === 'crane-bridge' ? null : beamHitsCrane(slot.pos, target, cls.reach_m, hall)
+            const hit = group.mount === 'crane-bridge' ? null : beamHitsCrane(from, to, reach, hall)
             if (hit !== null) {
-                const where = `${group.id} #${i + 1}: beam runs into the crane parked at z ${hit} m`
+                const where = `${label}: beam runs into the crane parked at z ${hit} m`
                 // A laser into a steel girder is a reflection hazard: refused.
-                if (group.class === 'laser') {
+                if (cls.fixture === 'laser') {
                     summary.refused.push(where)
                     return
                 }
                 summary.clashes.push(where)
             }
-            const { pan, tilt } = aimAt(slot.pos, target)
+            const { pan, tilt } = aimAt(from, to)
             const isReal = real.has(i)
             if (isReal) groupReal += 1
+            fixtures.push({ kind: cls.fixture, parts: posed.parts, colour, id: `${group.id}-${i + 1}`, pan: posed.pan, tilt: posed.tilt })
             entities.push({
                 id: `${RIG_PREFIX}${group.id}-${String(i + 1).padStart(2, '0')}`,
                 type: 'spotLight',
                 name: `${cls.code} ${group.id} ${i + 1}${isReal ? '' : ' (beam only)'}`,
                 components: {
-                    transform: { position: slot.pos.map((v) => round(v)), rotation: rotationFromPanTilt({ pan, tilt }), scale: [1, 1, 1] },
+                    transform: { position: from.map((v) => round(v)), rotation: rotationFromPanTilt({ pan, tilt }), scale: [1, 1, 1] },
                     appearance: { color: colour, opacity: 1 },
                     light: {
                         color: colour,
-                        intensity: cls.intensity,
-                        distance: cls.reach_m,
+                        intensity: op.intensity,
+                        distance: round(reach, 2),
                         angle: round(half, 4),
                         penumbra: cls.penumbra,
                         decay: 2
                     },
-                    beam: { visible: true, haze: group.haze ?? cls.haze, ...(isReal ? {} : { only: true }) },
+                    beam: { visible: true, haze: group.haze ?? op.haze ?? cls.haze, ...(isReal ? {} : { only: true }) },
                     animation: staticAnim
                 }
             })
         })
         const placed = entities.filter((e) => e.id.startsWith(`${RIG_PREFIX}${group.id}-`)).length
-        summary.byGroup[group.id] = { code: cls.code, placed, real: groupReal }
+        summary.byGroup[group.id] = { code: cls.code, placed, real: groupReal, rule: spec.rule }
         summary.fixtures += placed
         summary.real += groupReal
     }
     summary.beamOnly = summary.fixtures - summary.real
 
+    // Effects: the machine standing where it stands (its model, no simulation
+    // of what it does).
     for (const fx of rig.effects || []) {
         const placer = place[fx.mount]
         if (!placer) throw new Error(`effect ${fx.id}: unknown mount "${fx.mount}"`)
+        const geo = geometry[fx.fixture]
+        if (!geo) throw new Error(`effect ${fx.id}: no built model for fixture "${fx.fixture}"`)
         const slots = placer(fx.count, ctx)
         slots.forEach((slot, i) => {
-            entities.push(box({
-                id: `${RIG_PREFIX}fx-${fx.id}-${String(i + 1).padStart(2, '0')}`,
-                name: `${fx.label} ${i + 1} (marker, no effect simulated)`,
-                pos: slot.pos, size: fx.size_m, colour: fx.colour,
-                emissive: fx.colour, emissiveIntensity: 0.35
-            }))
+            const posed = aimFixture(geo, slot, { dir: [0, 1, 0] })
+            fixtures.push({ kind: fx.fixture, parts: posed.parts, colour: fx.colour, id: `${fx.id}-${i + 1}` })
         })
         summary.effects[fx.id] = slots.length
     }
-    return { entities, summary, stage }
+    return { entities, fixtures, summary, stage }
 }
 
 // Each shadow-casting spot light takes a texture unit in every lit material's

@@ -17,7 +17,10 @@
  * Usage:
  *   node scripts/place/rig-look.mjs --gpu --base https://local.thedi.studio --space moxir \
  *       --project moxir-hall --hall <work>/hall.json --rig scripts/place/rigs/<rig>.json \
- *       --out ~/Downloads/moxir-hall --tag budget [--views door,mid,stage,over] [--phone]
+ *       --out ~/Downloads/moxir-hall --tag budget [--views door,mid,stage,over,close] [--phone]
+ *
+ *   `close` expands to one close-up per fixture kind (close-beam380, …), worked
+ *   out from the rig with the same look (`--look`) the room was hung with.
  */
 import { execSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -25,9 +28,39 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { parseArgs, readJson, say, die } from './common.mjs'
-import { stageFrame } from './rig-lib.mjs'
+import { buildRig, stageFrame } from './rig-lib.mjs'
+import { FIXTURE_DIR, readGeometry } from './fixtures-glb.mjs'
+import { toTRS } from './fixture-lib.mjs'
 
 const args = parseArgs()
+
+/**
+ * A close-up of one fixture of each kind: the camera a metre or two off the
+ * head, on the audience side, a little below a hung one and a little above a
+ * standing one. `built` is buildRig's result; the fixture picked is the one
+ * nearest the middle of its row, so it is not hidden in a corner.
+ */
+export const closeups = (built, stage) => {
+    const out = {}
+    const seen = new Map()
+    for (const f of built.fixtures) {
+        if (!seen.has(f.kind)) seen.set(f.kind, [])
+        seen.get(f.kind).push(f)
+    }
+    for (const [kind, list] of seen) {
+        const f = [...list].sort((a, b) => Math.abs(toTRS(a.parts.Base || a.parts.Body).t[0]) - Math.abs(toTRS(b.parts.Base || b.parts.Body).t[0]))[0]
+        const base = toTRS(f.parts.Base || f.parts.Body).t
+        const head = toTRS(f.parts.Head || f.parts.Body).t
+        const hung = head[1] < base[1]
+        const size = kind === 'par' || kind === 'co2' || kind === 'spark' || kind === 'smoke' ? 1.3 : 1.9
+        out[`close-${kind}`] = {
+            position: [head[0] + size * 0.55, head[1] + (hung ? -size * 0.45 : size * 0.35), head[2] + stage.into * size],
+            target: [head[0], (head[1] + base[1]) / 2, head[2]],
+            fov: 45
+        }
+    }
+    return out
+}
 
 export const viewpoints = (hall, rig) => {
     const g = hall.geometry
@@ -77,8 +110,14 @@ const main = async () => {
     const tag = String(args.tag || 'look')
     const seconds = Number(args.seconds || 8)
     const settle = Number(args.settle || 20)
-    const all = viewpoints(hall, rig)
-    const names = String(args.views || 'door,mid,stage,over').split(',').filter((n) => all[n])
+    const look = args.look ? String(args.look) : undefined
+    const manifest = readJson(path.join(FIXTURE_DIR, 'fixtures.json'))
+    const kinds = new Set([...Object.values(rig.classes).map((c) => c.fixture), ...(rig.effects || []).map((f) => f.fixture)])
+    const geometry = Object.fromEntries([...kinds].map((k) => [k, readGeometry(k)]))
+    const built = buildRig(rig, hall, { look, geometry, manifest })
+    const all = { ...viewpoints(hall, rig), ...closeups(built, stageFrame(rig, hall)) }
+    const wanted = String(args.views || 'door,mid,stage,over').split(',')
+    const names = wanted.flatMap((n) => (n === 'close' ? Object.keys(all).filter((k) => k.startsWith('close-')) : [n])).filter((n) => all[n])
     const phone = Boolean(args.phone)
 
     const { chromium } = await import('playwright')
@@ -148,6 +187,9 @@ const main = async () => {
             const errors = []
             page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text().slice(0, 240)) })
             page.on('pageerror', (e) => errors.push(`THREW ${e.message.slice(0, 240)}`))
+            // A page that navigates away mid-measurement (a reload after a lost
+            // WebGL context, a redirect) is said, not swallowed.
+            page.on('framenavigated', (frame) => { if (frame === page.mainFrame()) say(`  navigated: ${frame.url()}`) })
             await page.route(`**/api/projects/${project}/document*`, async (route) => {
                 const response = await route.fetch()
                 const body = await response.json()

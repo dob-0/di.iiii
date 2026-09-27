@@ -169,7 +169,8 @@ node scripts/place/rig.mjs --rig scripts/place/rigs/moxir-2026-10-17.json \
 # 4 — look at it on the GPU, and count frames, draw calls and triangles
 node scripts/place/rig-look.mjs --gpu --base https://local.thedi.studio \
     --hall /mnt/data/footage/place-moxir-hall/hall.json \
-    --rig scripts/place/rigs/moxir-2026-10-17.json --out ~/Downloads/moxir-hall --tag look
+    --rig scripts/place/rigs/moxir-2026-10-17.json --out ~/Downloads/moxir-hall --tag look \
+    --views door,mid,stage,close   # close = one close-up per fixture kind
 ```
 
 Take the rig down again: `node scripts/place/rig.mjs --project moxir-hall --remove`.
@@ -201,9 +202,91 @@ must be hung at least 3 m up and must not descend (refused otherwise), and any
 beam whose axis runs into a crane girder is reported — a laser into steel is
 refused. Positions follow the hall, so rebuilding the hall moves the rig.
 
-**The rig file's optics are class estimates.** The rental house's codes
-(UP-B380F …) are its own names, not makers' models; each class carries the
-typical beam angle for that kind of fixture and says the datasheet is owed.
+### The fixtures: identified, modelled, posed
+
+**Who made them.** The rental house's codes UP-B380F, UP-250BSW, UP-HK1915 and
+UP-PL5403 are **UPlight** (Guangzhou) models — the code is printed on the maker's
+own pages (pro-uplight.com, up-light.en.made-in-china.com). UP-LA40WF, UP-Q108S,
+UP-YH600F and UP-YZ31P are not UPlight products anywhere; they are modelled on
+named equivalents until the rental house says what they are.
+`fixtures/fixtures.json` is the manifest: for every fixture every number
+(size, weight, source, beam/zoom, pan/tilt, DMX, IP, power, photometry) is
+`{ value, src, basis }` — `src` a URL in `sources`, `basis` EXACT, EQUIVALENT
+or ASSUMED. `fixtures.test.js` fails on a number with no source.
+
+**The models.** No licensable model exists: GDTF Share (DIN SPEC 15800) needs
+an account and its terms forbid derivative and commercial use; Open Fixture
+Library has DMX modes and dimensions but no geometry. So each fixture is
+built here, headless in Blender, to the datasheet box and the maker's photos:
+
+```bash
+blender -b -P scripts/place/fixtures/build_fixtures.py -- \
+    --manifest scripts/place/fixtures/fixtures.json --out scripts/place/fixtures/glb --preview
+```
+
+Each GLB has separate nodes `Base` / `Yoke` (origin on the pan axis) / `Head`
+(origin on the tilt axis) / `Lens` (the emitting faces), 100–1,100 triangles;
+the sidecar `glb/<kind>.json` records the pivots, the size at home position,
+its deviation from the datasheet (every axis within 10 %), the triangle count
+and the script's hash (a stale GLB fails the test). Licence: the repository's
+(AGPL-3.0). `glb/preview/*.png` is what each looks like.
+
+**Posed.** `fixture-lib.mjs` is the machine: pan turns the yoke, tilt the head,
+the beam leaves the lens; a hung fixture is the same machine upside down. An
+aim is solved from the tilt pivot, so the beam passes exactly through its
+target; the spot light entity is written AT the lens and its cone is cut where
+the beam meets the building (floor, roof pitch, lantern, walls). An aim past
+the head's tilt travel is reported. `fixtures-glb.mjs` writes every part of
+every fixture as one `EXT_mesh_gpu_instancing` node — the whole rig's bodies
+are one 226 KB file and ~45 instanced draws, the lens tinted per lamp. The
+named price: the bodies are posed when rig.mjs runs; re-aiming a lamp by hand
+in the Studio moves its beam, not its head (a fixture component that follows
+the inspector is owed).
+
+### Photometry
+
+No UPlight page publishes lux or lumens, so every figure is a maker's claim
+for a named equivalent (in the manifest, with its source and a cross-check):
+380 W beam 125,500 lx @ 20 m at 1.8° (SHEHDS GalaxyJet; Elation Proteus Hybrid
+agrees within 4 %), 250 W LED spot 14,557 lx @ 5 m at 13° (Chauvet 475ZX),
+19×15 W bee-eye 14,000 lx @ 5 m at 4° (LIRO LR-L1915Z), 54×3 W PAR 11,000 lx @
+1 m at an assumed 25° (Colorful Stage). The method (`rig-lib.mjs`, PHOTOMETRY):
+
+- candela I = E·d² (inverse-square, far field) — or flux / beam solid angle,
+  Ω = 2π(1 − cos θ/2), when only lumens exist;
+- a zoom keeps its flux: I scales with Ω(datasheet angle) / Ω(angle used);
+- three.js (r155+) takes a SpotLight's intensity in candela; the rig multiplies
+  every lamp by ONE `photometry.sceneScale` — the exposure is a choice, the
+  ratios between fixtures are the datasheets';
+- a beam's brightness in haze goes as I·tan(θ/2) (illuminance through its
+  cross-section); a display cannot show that 200:1 range, so it is compressed
+  with exponent 1/3 (Stevens' brightness law, as in Tumblin & Rushmeier's tone
+  reproduction, 1993) — order kept, absolute ratios not — into each lamp's `haze`.
+
+### Looks — focus palettes, not scatter
+
+Positions are the rig's; aims and colours are a **look** (`looks` in the rig
+file), written the way a lighting designer writes focus palettes, in the
+stage's frame and symmetric by construction:
+
+| look | what it is |
+| --- | --- |
+| `roof-cathedral` (default) | column-base beams straight up into the trusses in mirrored pairs, a slight lean to the centre line; stage beams an apse fan into the lantern |
+| `fan-out` | the stage beams one symmetric fan over the house; the column rows lean back to the stage |
+| `crossfire` | the column rows fire across the floor, crossing over its centre at ~5 m; stage beams X-cross |
+| `all-to-centre` | every beam to one point 9 m above the crowd, 16 m out from the stage |
+| `curtain` | stage beams and bee-eyes straight up in two rows, truss spots straight down: a wall of light at the stage line |
+
+```bash
+node scripts/place/rig.mjs --rig scripts/place/rigs/moxir-2026-10-17.json \
+    --hall <work>/hall.json --project moxir-hall --look crossfire   # --look list
+```
+
+Aim rules: `vertical`, `parallel`, `fan`, `point`, `mirror-point`, `cross`,
+`x-cross`, `up-the-column`, `stage-wash`, `down-from-crane`, `laser-into-roof`.
+`rig-lib.test.js` holds every look to: nothing refused, no beam into a crane,
+no head past its travel, and **every lamp has a mirror twin** (position and
+beam) — the test that fails on a scatter.
 
 ### The rig: a real ceiling, measured
 

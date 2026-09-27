@@ -46,3 +46,31 @@
   NVIDIA card only with ANGLE on Vulkan + PRIME variables for GL, EGL and Vulkan.
 - Seen, not fixed: on a phone-shaped viewport the opening shot faces an end wall, not down the nave, and
   the site's top bar overflows at 390 px. No real phone measured.
+
+## 2026-09-28 — the owner: "looks so random … find or create the models of each fixture". Fixtures identified, modelled, posed; designed looks
+
+- IDENTIFIED (manifest `scripts/place/fixtures/fixtures.json`, every number `{value, src, basis}`, accessed 2026-09-28):
+  UP-B380F, UP-250BSW, UP-HK1915, UP-PL5403 are **UPlight** (Guangzhou) models — code printed on pro-uplight.com /
+  up-light.en.made-in-china.com. UP-LA40WF, UP-Q108S, UP-YH600F, UP-YZ31P are NOT UPlight products (absent from the
+  store's 420 listings, the site's 73 products, web search) — modelled on named equivalents (Blue Sea BLLO-RGB40,
+  MagicFX CO2 Jet II, Showven Sparkular, Antari Z-1500 III). The rental house must name them — OWED.
+- MODELS: GDTF Share needs an account (the owner's hand) and its terms forbid derivatives/commercial use; OFL (MIT) has
+  no geometry. So `fixtures/build_fixtures.py` (Blender 5.2, headless) builds each to the datasheet box and the maker's
+  photos — Base / Yoke (pan axis) / Head (tilt axis) / Lens nodes, 98–1,034 tris, every axis within 10 % of the
+  published size (the sidecar measures it). Licence AGPL-3.0 (the repo's). Compared by eye with the maker photos
+  (kept out of the repo): the bee-eye's 19-lens face, the PAR's finned can on its fold-out stand, the B380F's egg
+  housing and nose read; they are low-poly, not CAD.
+- POSED: `fixture-lib.mjs` (pan/tilt kinematics, hung = upside down, aim solved from the tilt pivot);
+  `fixtures-glb.mjs` writes the whole rig's bodies as ONE `EXT_mesh_gpu_instancing` GLB (104 fixtures, 226 KB, 45
+  instanced meshes, lens tinted per lamp). Spot lights now start AT the lens and their cones stop at the building
+  (`surfaceHit`). Effects are machines, not boxes.
+- PHOTOMETRY: no UPlight output figure exists anywhere (0 hits); equivalents' lux@distance → candela → one
+  `sceneScale` (0.006) → three.js candela; air brightness I·tan(θ/2), compressed ^1/3. Method in README "Photometry".
+- LOOKS (`looks` in the rig file, `rig.mjs --look <name>`): roof-cathedral (default), fan-out, crossfire,
+  all-to-centre, curtain. Guards in rig-lib.test.js: nothing refused/clashing/out of travel, every lamp has a mirror
+  twin (seen to FAIL on the old index-alternating stage wash, which was asymmetric).
+- Fixed on the way: crane PARs alternated girders by index (asymmetric); column beams picked the gable column in the
+  entry wall, firing into the door-end crane; cathedral bee-eyes rose into the stage-end crane (lean 55 → 65).
+- Backup before writing: `~/di-backups/moxir-before-fixtures-2026-09-28/` (bundle + hall document v989, SHA256SUMS).
+- OWED: the rental house's real models for the 4 untraced codes and its datasheets; a fixture component so a hand
+  re-aim in the Studio moves the head (bodies are posed at rig.mjs time); DMX modes into the desk; laser MPE / LSO.

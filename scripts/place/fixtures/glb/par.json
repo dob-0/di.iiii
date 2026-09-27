@@ -1,0 +1,43 @@
+{
+  "kind": "par",
+  "code": "UP-PL5403",
+  "glb": "par.glb",
+  "builtBy": "scripts/place/fixtures/build_fixtures.py",
+  "scriptSha256": "10bb32a3cb78c299fc72112c8d881135a239ba33759992d14eeb02f54b1e9696",
+  "blender": "5.2.1 LTS",
+  "archetype": "par",
+  "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+  "panY": 0.0,
+  "tiltY": 0.205,
+  "lensY": 0.31,
+  "motion": "tilt",
+  "parts": [
+    "Base",
+    "Yoke",
+    "Head",
+    "Lens"
+  ],
+  "sizeAtHome_mm": {
+    "width_x": 344,
+    "depth_z": 283,
+    "height_y": 321
+  },
+  "triangles": {
+    "Base": 48,
+    "Yoke": 120,
+    "Head": 452,
+    "Lens": 22,
+    "total": 642
+  },
+  "datasheetSize_mm": [
+    310,
+    310,
+    330
+  ],
+  "deviationFromDatasheet_pct": [
+    -8.7,
+    3.5,
+    4.2
+  ],
+  "comparedParts": "all"
+}

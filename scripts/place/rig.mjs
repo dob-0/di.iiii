@@ -24,17 +24,23 @@
  *   --beams auto|entities|baked  how the beam-only lamps are written (default auto:
  *                         entities where the server keeps beam.only, else baked
  *                         into one mesh — see beams-glb.mjs)
+ *   --look <name>         a named look from the rig file's `looks` (default: its defaultLook);
+ *                         `--look list` prints them and sends nothing
+ *   --fixtures <dir>      the built fixture models (default scripts/place/fixtures/glb)
  *   --remove              only take the rig down (delete every rig- entity)
  *   --out <file>          also write the entities and the summary to a file
+ *   --bodies-out <file>   also write the posed fixture bodies GLB to a file
  *   --dry-run             print the summary, send nothing
  *   --token-file <path>   where the API token is (see api.mjs)
  */
+import fs from 'node:fs'
 import path from 'node:path'
 
 import { parseArgs, say, warn, die, readJson, writeJson } from './common.mjs'
 import { DEFAULT_API, makeClient, readToken } from './api.mjs'
 import { RIG_PREFIX, SHADOW_SAFE_REAL_LIGHTS, buildRig, nightOps } from './rig-lib.mjs'
 import { beamsGlb } from './beams-glb.mjs'
+import { FIXTURE_DIR, fixturesGlb, readGeometry } from './fixtures-glb.mjs'
 
 const args = parseArgs()
 
@@ -96,21 +102,38 @@ const main = async () => {
         if (!hall?.geometry) die(`${args.hall} is not a hall.json from hall.py (no geometry).`)
         const mode = String(args.real || 'budget')
         if (!['budget', 'all', 'none'].includes(mode)) die('--real is budget, all or none.')
-        built = buildRig(rig, hall, { mode })
+        if (args.look === 'list') {
+            for (const [id, look] of Object.entries(rig.looks || {})) say(`${id === rig.defaultLook ? '*' : ' '} ${id.padEnd(16)} ${look.title} — ${look.intent}`)
+            return
+        }
+        const fixtureDir = path.resolve(String(args.fixtures || path.join(FIXTURE_DIR, 'glb')))
+        const manifest = readJson(path.join(FIXTURE_DIR, 'fixtures.json'))
+        const kinds = new Set([...Object.values(rig.classes).map((c) => c.fixture), ...(rig.effects || []).map((f) => f.fixture)])
+        const geometry = Object.fromEntries([...kinds].map((k) => [k, readGeometry(k, fixtureDir)]))
+        built = buildRig(rig, hall, { mode, look: args.look ? String(args.look) : undefined, geometry, manifest })
+        built.fixtureDir = fixtureDir
         const s = built.summary
         say(`${rig.rig}`)
+        say(`  look: ${s.look || '(none — each group\'s own aim)'}${s.look ? ` — ${rig.looks[s.look].title}` : ''}`)
         say(`  ${s.fixtures} lamps: ${s.real} real lights, ${s.beamOnly} beam only · mode ${mode}`)
         for (const [id, g] of Object.entries(s.byGroup)) say(`    ${id.padEnd(16)} ${g.code.padEnd(10)} ${String(g.placed).padStart(3)} placed, ${g.real} real`)
-        say(`  effects (markers): ${Object.entries(s.effects).map(([k, v]) => `${k} ${v}`).join(', ')}`)
+        say(`  effects (machines, not simulated): ${Object.entries(s.effects).map(([k, v]) => `${k} ${v}`).join(', ')}`)
         say(`  stage: ${rig.stage.end} end, front edge at z ${built.stage.front.toFixed(1)} m (ASSUMED position)`)
         if (hall.warning) warn(`  the hall: ${hall.warning}`)
         for (const why of s.refused) warn(`  REFUSED ${why}`)
         for (const why of s.clashes) warn(`  clash: ${why}`)
+        for (const why of s.unreachable) warn(`  out of travel: ${why}`)
         if (args.out) {
             writeJson(path.resolve(String(args.out)), {
                 tool: 'scripts/place/rig.mjs', createdAt: new Date().toISOString(), rig: args.rig, hall: args.hall,
-                mode, summary: s, entities: built.entities
+                mode, look: s.look, summary: s, entities: built.entities,
+                fixtures: built.fixtures.map(({ kind, id, pan, tilt, colour }) => ({ id, kind, pan, tilt, colour }))
             })
+        }
+        if (args['bodies-out']) {
+            const file = path.resolve(String(args['bodies-out']))
+            fs.writeFileSync(file, await fixturesGlb(built.fixtures, { dir: built.fixtureDir }))
+            say(`  fixture bodies written to ${file}`)
         }
     }
     if (args['dry-run']) {
@@ -155,6 +178,22 @@ const main = async () => {
         if (s.real > SHADOW_SAFE_REAL_LIGHTS && (shadows ?? rig.budget?.shadowCasting)) {
             warn(`  ${s.real} real lamps is more than ${SHADOW_SAFE_REAL_LIGHTS}: shadows stay OFF (texture-unit ceiling)`)
         }
+        // The fixture bodies: every part of every kind one instanced node, in
+        // one GLB (fixtures-glb.mjs), posed to this look's aims.
+        const bodies = await fixturesGlb(built.fixtures, { dir: built.fixtureDir })
+        const bodiesAsset = await uploadGlb(client, project, bodies, 'rig-fixtures.glb')
+        ops.push({ type: 'upsertAsset', payload: { asset: bodiesAsset } })
+        entities = [...entities, {
+            id: `${RIG_PREFIX}fixtures`,
+            type: 'model',
+            name: `${built.fixtures.length} fixtures (${s.look || 'no look'}) — posed by rig.mjs; re-run it to re-aim`,
+            components: {
+                transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+                media: { assetId: bodiesAsset.id, playAnimations: false },
+                animation: { mode: 'static', speed: 1, amplitude: 1 }
+            }
+        }]
+        say(`  fixture bodies: ${built.fixtures.length} in one instanced GLB (${(bodies.length / 1024).toFixed(0)} KB)`)
         ops = [...ops, ...entities.map((entity) => ({ type: 'createEntity', payload: { entity } })), ...nightOps(rig, { shadows, realLights: s.real })]
         say(`  real lights in the room: ${s.real} · beams: ${beams}`)
     }

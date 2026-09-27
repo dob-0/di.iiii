@@ -1,0 +1,41 @@
+{
+  "kind": "co2",
+  "code": "UP-Q108S",
+  "glb": "co2.glb",
+  "builtBy": "scripts/place/fixtures/build_fixtures.py",
+  "scriptSha256": "10bb32a3cb78c299fc72112c8d881135a239ba33759992d14eeb02f54b1e9696",
+  "blender": "5.2.1 LTS",
+  "archetype": "co2-jet",
+  "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+  "lensY": 0.349,
+  "motion": "none",
+  "parts": [
+    "Body",
+    "Mount",
+    "Lens"
+  ],
+  "sizeAtHome_mm": {
+    "width_x": 290,
+    "depth_z": 165,
+    "height_y": 350
+  },
+  "triangles": {
+    "Body": 56,
+    "Mount": 132,
+    "Lens": 6,
+    "total": 194
+  },
+  "datasheetSize_mm": [
+    231,
+    200,
+    125
+  ],
+  "deviationFromDatasheet_pct": [
+    3.2,
+    0.0,
+    0.0
+  ],
+  "comparedParts": [
+    "Body"
+  ]
+}

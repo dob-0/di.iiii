@@ -1,0 +1,43 @@
+{
+  "kind": "beam380",
+  "code": "UP-B380F",
+  "glb": "beam380.glb",
+  "builtBy": "scripts/place/fixtures/build_fixtures.py",
+  "scriptSha256": "10bb32a3cb78c299fc72112c8d881135a239ba33759992d14eeb02f54b1e9696",
+  "blender": "5.2.1 LTS",
+  "archetype": "moving-head",
+  "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+  "panY": 0.12,
+  "tiltY": 0.37,
+  "lensY": 0.698,
+  "motion": "pan-tilt",
+  "parts": [
+    "Base",
+    "Yoke",
+    "Head",
+    "Lens"
+  ],
+  "sizeAtHome_mm": {
+    "width_x": 480,
+    "depth_z": 332,
+    "height_y": 708
+  },
+  "triangles": {
+    "Base": 176,
+    "Yoke": 280,
+    "Head": 560,
+    "Lens": 18,
+    "total": 1034
+  },
+  "datasheetSize_mm": [
+    460,
+    310,
+    690
+  ],
+  "deviationFromDatasheet_pct": [
+    7.1,
+    4.3,
+    2.6
+  ],
+  "comparedParts": "all"
+}
