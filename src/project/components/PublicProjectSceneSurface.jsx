@@ -192,6 +192,9 @@ export default function PublicProjectSceneSurface({
                     // avoid. Only the one card a visitor clicked into "live"
                     // (SpaceCardLive, no ?preview=1) gets timelines playing.
                     playTimelines={!isPreview}
+                    // A visitor's click on an object with a link follows it.
+                    // Not on a space-card picture (?preview=1).
+                    followLinks={!isPreview}
                 />
             )}
 

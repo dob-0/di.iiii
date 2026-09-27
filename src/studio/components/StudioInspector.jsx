@@ -405,6 +405,7 @@ function InspField({ field, value, assetOptions = [], spaceOptions = [], surface
                 type="text"
                 className="insp-input"
                 value={value ?? ''}
+                placeholder={field.placeholder}
                 onChange={(e) => onChange(e.target.value)}
             />
         </div>

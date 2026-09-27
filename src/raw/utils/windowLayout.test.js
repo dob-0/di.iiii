@@ -570,4 +570,32 @@ describe('placeNewWindowFrame', () => {
         expect(frame.zIndex).toBe(7)
         expect(frame.visible).toBe(true)
     })
+
+    // The owner's screen, 2026-09-24: the VJ deck window (760x520) opened
+    // below its own card — straight over the Clip In and Picture Out cards
+    // wired to it. A window now dodges every card in the scope, not only its own.
+    it('does not open over the other cards in the scope (the deck over its Clip In)', () => {
+        const deckFrame = { x: 0, y: 0, width: 760, height: 520, zIndex: 7, visible: true }
+        const deckCard = agentCard(400, 100)
+        const clipCard = agentCard(400, 200)
+        const outCard = agentCard(400, 300)
+        const before = placeNewWindowFrame({ frame: deckFrame, card: deckCard, space: 'world', viewport, ...desktop })
+        const beforeRect = onScreen(before, viewport)
+        expect(overlaps(beforeRect, onScreen(clipCard, viewport))).toBe(true) // what he saw, without the obstacles
+
+        const frame = placeNewWindowFrame({ frame: deckFrame, card: deckCard, obstacles: [clipCard, outCard], space: 'world', viewport, ...desktop })
+        const rect = onScreen(frame, viewport)
+        expectInside(rect, desktop)
+        for (const card of [deckCard, clipCard, outCard]) expect(overlaps(rect, onScreen(card, viewport))).toBe(false)
+    })
+
+    it('when every spot covers some card, it takes the one that covers the least', () => {
+        const deckCard = agentCard(600, 250)
+        // A wall of cards around it on a small screen: nothing is fully clear.
+        const others = [agentCard(100, 60), agentCard(100, 400), agentCard(900, 60), agentCard(900, 400)]
+        const frame = placeNewWindowFrame({ frame: agentFrame, card: deckCard, obstacles: others, space: 'world', viewport, ...desktop })
+        const rect = onScreen(frame, viewport)
+        expectInside(rect, desktop)
+        expect(overlaps(rect, onScreen(deckCard, viewport))).toBe(false)
+    })
 })

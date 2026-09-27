@@ -444,6 +444,20 @@ describe('ESM/CJS mirror equivalence', () => {
         { id: 'f3', type: 'pointLight', components: { fixture: { index: 0 } } },
         { id: 'f4', type: 'directionalLight', components: { fixture: 'nope' } }
       ]
+    },
+    // The show's Perform presets (2026-09-24). The server rebuilds documents
+    // through the mirror, so a mirror that dropped performState would erase
+    // every preset given to the show on the next save. Covers a kind this
+    // build does not know (kept), a duplicate slot (dropped) and a rect off
+    // the workspace (clamped).
+    {
+      performState: {
+        presets: [
+          { id: 'show:a', name: 'sunday caller', source: 'mine', base: 'caller', windows: [{ id: 'cues', kind: 'cues' }, { id: 'cues', kind: 'wall' }, { id: 'h', kind: 'hologram' }], wide: { cues: [1, 2, 34, 95], h: [90, 90, 40, 40] }, narrow: { cues: [0, 0, 100, 64] } },
+          { id: 'show:a', name: 'duplicate id', windows: [] },
+          { name: 'no id' }
+        ]
+      }
     }
   ]
 
@@ -502,7 +516,10 @@ describe('ESM/CJS mirror equivalence', () => {
       { type: 'updateEntity', payload: { entityId: 'e9', patch: { components: { transform: { position: [4, 5, 6] } } } } },
       { type: 'setWorldState', payload: { patch: { backgroundColor: '#0f0f0f' } } },
       { type: 'createNode', payload: { node: { id: 'n5', typeId: 'some.type', label: 'N', values: {} } } },
-      { type: 'deleteNode', payload: { nodeId: 'n5' } }
+      { type: 'deleteNode', payload: { nodeId: 'n5' } },
+      { type: 'upsertPerformPreset', payload: { preset: { id: 'show:b', name: 'win projector', windows: [{ id: 'wallout', kind: 'wallout' }], wide: { wallout: [0, 0, 100, 100] } } } },
+      { type: 'upsertPerformPreset', payload: { preset: { id: 'show:c', name: 'first', windows: [] }, index: 0 } },
+      { type: 'deletePerformPreset', payload: { presetId: 'show:a' } }
     ]
     for (const fixture of FIXTURES) {
       const fromCjs = schema.applyProjectOps(schema.cloneValue(fixture), ops)
@@ -538,7 +555,10 @@ describe('ESM/CJS mirror equivalence', () => {
       { type: 'deleteEntity', payload: { entityId: 'e1' } },
       { type: 'setWorldState', payload: { patch: { backgroundColor: '#0f0f0f' } } },
       { type: 'deleteNode', payload: { nodeId: 'n1' } },
-      { type: 'deleteAsset', payload: { assetId: 'abc' } }
+      { type: 'deleteAsset', payload: { assetId: 'abc' } },
+      { type: 'upsertPerformPreset', payload: { preset: { id: 'show:b', name: 'win projector', windows: [] } } },
+      { type: 'upsertPerformPreset', payload: { preset: { id: 'show:a', name: 'renamed', windows: [] } } },
+      { type: 'deletePerformPreset', payload: { presetId: 'show:a' } }
     ]
     const stripDeep = (value) => {
       if (Array.isArray(value)) return value.map(stripDeep)
@@ -737,5 +757,46 @@ describe('the beam and the room’s shadows survive both mirrors', () => {
     const esm = await import('../../src/shared/projectSchema.js')
     expect(schema.buildDefaultComponentsForType('spotLight').beam).toBeUndefined()
     expect(esm.buildDefaultComponentsForType('spotLight').beam).toBeUndefined()
+  })
+})
+
+describe('components.link: both mirrors keep it, and both drop an unsafe href', () => {
+  // A visitor's click follows this href (src/project/viewport/entityLink.js).
+  // The CJS twin is what the server writes with, so a scheme only the ESM side
+  // refused would still be stored and served.
+  const input = {
+    entities: [
+      { id: 'in', type: 'image', components: { link: { enabled: true, href: '/main/deck', label: ' Deck ' } } },
+      { id: 'out', type: 'image', components: { link: { enabled: true, href: 'https://thedi.studio' } } },
+      { id: 'js', type: 'image', components: { link: { enabled: true, href: 'java\tscript:alert(1)' } } },
+      { id: 'data', type: 'box', components: { link: { enabled: true, href: 'data:text/html,x' } } },
+      { id: 'off', type: 'box', components: { link: { enabled: false, href: '/main' } } },
+      { id: 'none', type: 'box', components: {} }
+    ]
+  }
+
+  it('gives the same answer on both sides', async () => {
+    const esm = await import('../../src/shared/projectSchema.js')
+    const fromCjs = normalizeProjectDocument(input).entities.map((e) => e.components.link)
+    const fromEsm = esm.normalizeProjectDocument(input).entities.map((e) => e.components.link)
+    expect(fromCjs).toEqual(fromEsm)
+    expect(fromCjs).toEqual([
+      { enabled: true, href: '/main/deck', label: 'Deck' },
+      { enabled: true, href: 'https://thedi.studio', label: '' },
+      { enabled: true, href: '', label: '' },
+      { enabled: true, href: '', label: '' },
+      { enabled: false, href: '/main', label: '' },
+      undefined
+    ])
+  })
+
+  it('keeps a link through an updateEntity op and a re-read', () => {
+    const written = applyProjectOps(normalizeProjectDocument({
+      entities: [{ id: 'slide', type: 'image', components: {} }]
+    }), [
+      { type: 'updateEntity', payload: { entityId: 'slide', patch: { components: { link: { enabled: true, href: 'https://thedi.studio' } } } } }
+    ])
+    const read = normalizeProjectDocument(JSON.parse(JSON.stringify(written)))
+    expect(read.entities[0].components.link).toEqual({ enabled: true, href: 'https://thedi.studio', label: '' })
   })
 })
