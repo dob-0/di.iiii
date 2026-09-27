@@ -338,7 +338,29 @@ part of this base.
 
 ## 8. What has and has not been validated
 
-Filled in as the work lands. See `PROGRESS.md` for the session record.
+Recorded 2026-09-28 against the MOXIR rig (`scripts/rigbuild/moxir.mjs`, hall.json
+v2 of 09-28 02:15, rig `moxir-2026-10-17.json`). Session record: `PROGRESS.md`.
+
+| check | result |
+|---|---|
+| schema: `components.fixture` / `components.piece` survive both normalisers | `serverXR/src/schemaSync.test.js` (parity + one-field clear) |
+| the same through a real server | the patched MOXIR document written as ops to a throwaway serverXR (port 4360, scratch data) and read back: all fields kept |
+| auto-patch rules | desk suite `tests/test-rigpatch.js` 12/12; room → real desk → room `autoPatch.test.js` |
+| MOXIR patch | **U1 001–468** (B380F ×18, HK1915 ×8, spark ×4, smoke ×4; 44 free), **U2 001–288** (250BSW ×12; 224 free). PAR ×50, CO2 ×6, laser ×2: **mode unknown, not patched** (owed). A third universe is needed for the PARs at any footprint ≥ 5 |
+| lasers | in hall v2 the rig's own crane-clash rule **refuses both lasers** (beam into the crane at z −41 m) → 102 fixtures; hall v1 gives 104 and the same patch |
+| power | 31.4 kW datasheet max (v1: 33.8) on 17 proposed circuits; load alone needs ≥ 11 at 2944 W. PAR watts ASSUMED |
+| patch sheet page | seen in headless Chromium (no WebGL on this page) at 1440×900 DPR 2 and 390×844 DPR 3; sweep: no text cell under 120 px, no page overflow, no console error. A4 print: first printed 1 page of 4 (the app pins html/body/#root) — fixed, 3 pages, opened |
+| MVR XML | `GeneralSceneDescription.xml` **validates** against `mvr.xsd` (MVR 1.6, tools@e199c6ed, sha256 85bc4201…) with xmllint |
+| GDTF XML | all 7 `description.xml` **validate** against `gdtf.xsd` (GDTF 1.2, sha256 13a044d2…) |
+| rules past the XSD | `validate-mvr.mjs`: relative, case-unique paths; every GDTFSpec/Geometry3D file present; every GDTFMode exists; no overlaps; none past 512. Proven to fail on a broken file (an overlap; a non-integer UnitNumber) |
+| reproducible | two exports of the same document: identical sha256 |
+| pymvr 1.0.7 / pygdtf 1.4.5 (the parsers BlenderDMX ships) | parse it: 102 fixtures, 46 addressed, universes 1 and 2, modes and weights read back, models found |
+| **BlenderDMX 2.3.0, Blender 5.2.1, headless** | imports all **102 fixtures** with the right type, mode and U/address (34 in U1, 12 in U2, 56 unpatched); first fixture's root at (−7.0, 52.9, 1.2) m = its mount. **Not right: the beam at home points along +Y instead of up** — changing our GDTF body turn did not move it, so the GDTF/glTF axis convention is **unverified and owed** |
+| a real console (grandMA3, Eos, Onyx…) | **not done** — owed; the file is 1.6, consoles on 1.5 may refuse |
+
+Not validated at all: the channel functions (lists owed), pan/tilt axes, the
+lamp heading (not in the document), truss geometry in a consumer (MOXIR has no
+pieces yet — its goalpost is boxes, exported as scaled cubes).
 
 ## 9. Owed (known gaps, stated)
 

@@ -162,6 +162,9 @@ export const typesFromManifest = (manifest, { manifestFile = 'scripts/place/fixt
                 panY: sidecar?.panY ?? null,
                 tiltY: sidecar?.tiltY ?? null,
                 lensY: sidecar?.lensY ?? null,
+                // The body's own bounding box at home (x width, z depth, y height),
+                // what a GDTF Model's Length/Width/Height must say (gdtf.js).
+                sizeAtHome_mm: sidecar?.sizeAtHome_mm ?? null,
                 licence: manifest?.modelsLicence?.licence || null
             },
             sources: Object.fromEntries([...used].sort().map((key) => [key, sources[key]])),

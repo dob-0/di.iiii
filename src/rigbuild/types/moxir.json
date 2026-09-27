@@ -76,6 +76,11 @@
         "panY": 0.12,
         "tiltY": 0.37,
         "lensY": 0.698,
+        "sizeAtHome_mm": {
+          "width_x": 480,
+          "depth_z": 332,
+          "height_y": 708
+        },
         "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
       },
       "sources": {
@@ -184,6 +189,11 @@
         "panY": 0.13,
         "tiltY": 0.33,
         "lensY": 0.544,
+        "sizeAtHome_mm": {
+          "width_x": 330,
+          "depth_z": 261,
+          "height_y": 542
+        },
         "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
       },
       "sources": {
@@ -314,6 +324,11 @@
         "panY": 0.12,
         "tiltY": 0.36,
         "lensY": 0.496,
+        "sizeAtHome_mm": {
+          "width_x": 370,
+          "depth_z": 250,
+          "height_y": 494
+        },
         "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
       },
       "sources": {
@@ -397,6 +412,11 @@
         "panY": 0,
         "tiltY": 0.205,
         "lensY": 0.31,
+        "sizeAtHome_mm": {
+          "width_x": 344,
+          "depth_z": 283,
+          "height_y": 321
+        },
         "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
       },
       "sources": {
@@ -472,6 +492,11 @@
         "panY": 0,
         "tiltY": 0.33,
         "lensY": 0.6615,
+        "sizeAtHome_mm": {
+          "width_x": 550,
+          "depth_z": 235,
+          "height_y": 661
+        },
         "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
       },
       "sources": {
@@ -538,6 +563,11 @@
         "panY": null,
         "tiltY": null,
         "lensY": 0.349,
+        "sizeAtHome_mm": {
+          "width_x": 290,
+          "depth_z": 165,
+          "height_y": 350
+        },
         "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
       },
       "sources": {
@@ -629,6 +659,11 @@
         "panY": null,
         "tiltY": null,
         "lensY": 0.314,
+        "sizeAtHome_mm": {
+          "width_x": 200,
+          "depth_z": 218,
+          "height_y": 314
+        },
         "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
       },
       "sources": {
@@ -704,6 +739,11 @@
         "panY": null,
         "tiltY": null,
         "lensY": 0.1,
+        "sizeAtHome_mm": {
+          "width_x": 239,
+          "depth_z": 684,
+          "height_y": 281
+        },
         "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
       },
       "sources": {

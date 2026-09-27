@@ -104,6 +104,8 @@ export const pieceMesh = (piece) => {
         const [pw, ph, pd] = piece.plate
         box(mesh, [-pw / 2, 0, -pd / 2], [pw / 2, ph, pd / 2])
         truss(mesh, [0, ph, 0], [0, piece.height, 0], [1, 0, 0])
+    } else if (piece.category === 'cube') {
+        box(mesh, [-0.5, 0, -0.5], [0.5, 1, 0.5])
     } else if (piece.category === 'deck') {
         const [w, h, d] = piece.size
         box(mesh, [-w / 2, h - piece.slab, -d / 2], [w / 2, h, d / 2])
@@ -137,6 +139,10 @@ export const pieceGlb = async (piece) => {
     doc.createScene(piece.kind).addChild(node)
     return Buffer.from(await new NodeIO().writeBinary(doc))
 }
+
+// A unit cube, base-anchored like the room's primitives (x and z centred, y 0..1):
+// what an MVR SceneObject scales to a box the rig drew before pieces existed.
+export const cubeGlb = async () => pieceGlb({ kind: 'cube', category: 'cube', size: [1, 1, 1] })
 
 const main = async () => {
     const check = process.argv.includes('--check')
