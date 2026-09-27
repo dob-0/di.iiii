@@ -218,10 +218,25 @@
 }
 
 .vj-deck-layer-name {
+    flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+}
+
+.vj-deck-layer-clear {
+    flex: none;
+}
+
+/* The blend has its line to itself: the longest name, Difference, must read
+   whole at the narrowest head (128px on a phone). */
+.vj-deck-layer-line .vj-deck-blend {
+    width: 100%;
+}
+
+.vj-deck-leader {
+    font-size: var(--di-text-2);
 }
 
 .vj-deck-tile {

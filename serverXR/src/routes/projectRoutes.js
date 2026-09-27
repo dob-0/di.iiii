@@ -11,10 +11,12 @@ const { findIdlessCreateOp } = require('../opValidation')
 const { placeOps } = require('../../../shared/placement.cjs')
 const { actorFromAuthState } = require('../opActor')
 const { countProjectLayers } = require('../../../shared/layers.cjs')
+const { canAccessSpace, formatAuthScopeLabel } = require('../authAccess')
 
 const withProjectLock = createKeyedLock()
 
 function registerProjectRoutes(router, {
+  config = {},
   appendProjectOps,
   applyProjectOps,
   broadcastProjectLiveEvent,
@@ -332,7 +334,25 @@ function registerProjectRoutes(router, {
   router.get('/api/trash', async (req, res, next) => {
     try {
       const spaceId = req.query.space ? normalizeSpaceId(req.query.space) : null
-      const projects = await listTrashedProjects(spaceId)
+      // A `?space=` scope is already enforced upstream: index.js sets
+      // req.requiredSpaceId for this route from the same query param and runs
+      // it through the same requireReadRole/requireWriteRole gate as GET
+      // /api/spaces/:spaceId/projects, so an inaccessible or nonexistent
+      // space never reaches here.
+      //
+      // With no `?space=`, nothing upstream narrows the list — narrow it
+      // here instead, to trashed projects in spaces this caller can access.
+      // canAccessSpace alone is not a safe filter for an anonymous caller: an
+      // identity with no `spaces` restriction reads as "every space" by
+      // design (authAccess.js normalizeAuthScopeSpaces), which is what an
+      // unauthenticated request's default state looks like too — so
+      // `state.authenticated` is checked first, or an anonymous caller would
+      // see every space's trash again.
+      let projects = await listTrashedProjects(spaceId)
+      if (!spaceId && config.requireAuth) {
+        const state = req.authState || {}
+        projects = projects.filter((project) => state.authenticated && canAccessSpace(state, project.spaceId))
+      }
       res.json({ projects, ttlMs: TRASH_TTL_MS })
     } catch (error) {
       next(error)
@@ -344,6 +364,24 @@ function registerProjectRoutes(router, {
       const projectId = normalizeProjectId(req.params.projectId)
       const trashed = (await listTrashedProjects()).find(p => p.id === projectId)
       if (!trashed) return res.status(404).json({ error: 'Nothing by that name is in the trash.' })
+      // A trashed project no longer resolves through the /api/projects/:projectId
+      // middleware in index.js (it looks up live projects only), so
+      // req.requiredSpaceId stayed null here and requireWriteRole's per-space
+      // scope check never ran — an editor token scoped to one space could
+      // restore a project trashed in another. Checked explicitly instead,
+      // same rule (and same response shape) as everywhere else a write is
+      // scoped to a space.
+      if (config.requireAuth) {
+        const state = req.authState || {}
+        if (!(state.authenticated && canAccessSpace(state, trashed.spaceId))) {
+          return res.status(403).json({
+            error: 'Space access denied.',
+            requiredSpaceId: trashed.spaceId,
+            allowedSpaces: state.spaces,
+            allowedSpaceLabel: formatAuthScopeLabel(state.spaces)
+          })
+        }
+      }
       await ensureSpaceWritable(trashed.spaceId)
       const project = await restoreProject(projectId)
       res.json({ project })

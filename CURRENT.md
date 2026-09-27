@@ -13,15 +13,15 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- spaces audit: every space across local, dev and live (read-only)
-- CONTRIBUTING says who decides what in a space, and walks the program line end to end
-- HTTP Range support for asset streaming
-- a file for an existing space is a proposal: summary, Apply/Reject in the inner bot, restore point first
-- A per-space trusted list, and the gate learns "apply now" — the steward's bypass itself waits for the owner's hand
-- one command for the content line: `npm run send -- <space>`
-- start-check can see the content line again: the server's own env file wins
-- the front door pulled 12.84 MB of its 13.04 MB over one 3.2 MB file
-- batch landing before the promotion: ten green PRs, one CI round
+- click an object in a room to open its link
+- the agent door: one catalogue of every route, four MCP tools on the official SDK
+- NDI autoscan: a local di.iiii always knows which NDI sources are on the network
+- Perform, phase 1: the show run with only the windows the job needs
+- the VJ deck lands on dev: Clip In, the deck, its picture on the card, cards land where you click
+- lighting desk sends full 512-slot DMX frames
+- a replace says what it removes, and refuses media loss nobody counted
+- the studio deck came back: restore-entities puts back what a project lost
+- the rig: a copy the others cannot see says so; one behind its own front door reads visible
 
 Full detail: `PROGRESS.md`.
 

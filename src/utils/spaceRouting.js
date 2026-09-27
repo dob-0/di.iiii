@@ -77,6 +77,11 @@ export const RESERVED_APP_SEGMENTS = [
     // /serverXR/api/projects/scan both answer 404 on prod (diiii.xyz), on the
     // dev tier and on the local install — nothing holds the word anywhere.
     SCAN_SEGMENT,
+    // `/{space}/perform/{projectId}` — the Perform line (src/perform/). Reserved
+    // for the same reason 'make' and 'scan' are. Checked before reserving,
+    // 2026-09-24: /serverXR/api/spaces/perform and /serverXR/api/projects/perform
+    // answer 404 on prod (diiii.xyz), on the dev tier and on the local install.
+    'perform',
     // The sign-in page — /login (SignInSurface in AuthGate.jsx). It was not a
     // route at all: the address a teammate is sent to fell through to the space
     // lookup and answered "Nothing lives at “login”" above a working form.

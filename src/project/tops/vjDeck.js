@@ -14,6 +14,7 @@
 
 import { generateId } from '../../shared/projectSchema.js'
 import { isTopType } from './topOperators.js'
+import { DEFAULT_BPM, TAP_RESET_MS as CLOCK_TAP_RESET_MS, sanitizeEpoch, tapTempo as clockTapTempo } from '../../timeline/showClock.js'
 
 export const VJ_DECK_TYPE = 'vj.deck'
 export const DECK_INPUTS = ['in1', 'in2', 'in3', 'in4']
@@ -75,10 +76,13 @@ export const createLayer = (index = 0, columns = DEFAULT_COLUMNS) => ({
 })
 
 /** A fresh deck. Layer ids are stable per position, so every new deck reads the same. */
-export const createDeck = ({ layers = 3, columns = DEFAULT_COLUMNS, bpm = 120 } = {}) => {
+export const createDeck = ({ layers = 3, columns = DEFAULT_COLUMNS, bpm = DEFAULT_BPM } = {}) => {
     const cols = Math.round(clamp(columns, 1, MAX_COLUMNS, DEFAULT_COLUMNS))
     return {
-        bpm: clamp(bpm, MIN_BPM, MAX_BPM, 120),
+        bpm: clamp(bpm, MIN_BPM, MAX_BPM, DEFAULT_BPM),
+        // Where the deck's own beat is (ms, the tapping machine's clock): the
+        // phase anchor of src/timeline/showClock.js. 0 = never tapped.
+        epoch: 0,
         master: 1,
         columns: cols,
         layers: Array.from({ length: Math.round(clamp(layers, 1, MAX_LAYERS, 3)) }, (_, index) => createLayer(index, cols))
@@ -112,7 +116,8 @@ export const normalizeDeck = (raw) => {
         }
     })
     return {
-        bpm: clamp(raw.bpm, MIN_BPM, MAX_BPM, 120),
+        bpm: clamp(raw.bpm, MIN_BPM, MAX_BPM, DEFAULT_BPM),
+        epoch: sanitizeEpoch(raw.epoch),
         master: clamp(raw.master, 0, 1, 1),
         columns,
         layers: layers.length ? layers : createDeck({ columns }).layers
@@ -216,31 +221,22 @@ export const setMaster = (deck, master) => {
     return next
 }
 
-export const setBpm = (deck, bpm) => {
+/** The deck's own tempo, and (when given) where its beat is. */
+export const setBpm = (deck, bpm, epoch = undefined) => {
     const next = normalizeDeck(deck)
     next.bpm = Math.round(clamp(bpm, MIN_BPM, MAX_BPM, next.bpm) * 10) / 10
+    if (epoch !== undefined) next.epoch = sanitizeEpoch(epoch)
     return next
 }
 
 // --- tap tempo --------------------------------------------------------------
-
-// A pause longer than this starts a new count: nobody taps 20 bpm by hand.
-export const TAP_RESET_MS = 2000
-const TAP_KEEP = 8
-
-/**
- * One tap. Takes the taps so far (timestamps, ms) and now; returns the taps to
- * keep and the tempo they make, or bpm null until there are two taps.
- */
-export const tapTempo = (taps = [], now = 0) => {
-    const last = taps[taps.length - 1]
-    const kept = Number.isFinite(last) && now > last && now - last <= TAP_RESET_MS ? [...taps, now].slice(-TAP_KEEP) : [now]
-    if (kept.length < 2) return { taps: kept, bpm: null }
-    const span = kept[kept.length - 1] - kept[0]
-    const interval = span / (kept.length - 1)
-    const bpm = Math.round(clamp(60000 / interval, MIN_BPM, MAX_BPM, 120) * 10) / 10
-    return { taps: kept, bpm }
-}
+//
+// The show clock's own tap (src/timeline/showClock.js), so the deck and the
+// Clock window count taps by one rule. Until 2026-09-24 the deck had its own,
+// which averaged a double click in: two taps 100 ms apart are 600 bpm,
+// clamped to 300 — the 300.0 the owner saw on his screen.
+export const TAP_RESET_MS = CLOCK_TAP_RESET_MS
+export const tapTempo = (taps = [], now = 0) => clockTapTempo(taps, now)
 
 // --- the macro ----------------------------------------------------------------
 
