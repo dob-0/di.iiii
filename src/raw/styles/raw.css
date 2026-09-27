@@ -2452,15 +2452,6 @@
     .raw-surface-workflow-actions {
         justify-content: flex-start;
     }
-
-    .raw-help-body {
-        grid-template-columns: 1fr;
-    }
-
-    .raw-help-callout-row {
-        grid-template-columns: 1fr;
-        min-height: 0;
-    }
 }
 
 .raw-topbar h1 {
@@ -3465,6 +3456,26 @@
     font-family: var(--di-mono);
     font-size: var(--di-text-3);
     word-break: break-word;
+}
+
+/* The Help dialog on a narrow screen: one column. This block MUST come after
+   the base .raw-help-body / .raw-help-callout-row rules above — it used to sit
+   in the 900px block near .raw-surface-workflow, a thousand lines earlier, and
+   with the same specificity the later base rule won: a 390px phone kept two
+   columns, the diagram and its words squeezed to 34px beside a 260px side
+   column (measured 2026-09-27). Guard: src/raw/styles/rawHelpOrder.test.js.
+   Rows are as tall as what they hold and the body scrolls: the stage clips
+   (overflow: hidden), so an auto row let the grid crush it to a 34px strip. */
+@media (max-width: 900px) {
+    .raw-help-body {
+        grid-template-columns: 1fr;
+        grid-auto-rows: max-content;
+    }
+
+    .raw-help-callout-row {
+        grid-template-columns: 1fr;
+        min-height: 0;
+    }
 }
 
 /* Neither the manual path nor "Jump to <section>" overflows at phone widths,
