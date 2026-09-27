@@ -30,6 +30,7 @@ import { doorTitleForCard, spaceName } from '../utils/spaceNames.js'
 // addressed through its published project instead, so the picture, the frame
 // and the links all open the SPACE and not the code sharing its name.
 import { buildSpaceDoorPath, buildSpaceFacePath } from '../../works/segments.js'
+import { WORKS_HOST } from '../../works/works.js'
 import { getSpaceShareUrl } from '../../storage/spaceStore.js'
 import { createPreviewBootQueue } from '../../utils/previewBootQueue.js'
 import {
@@ -186,7 +187,7 @@ function SpaceCardPreview({ doorPath, label }) {
     return (
         <div ref={hostRef} className={`ssh-card-preview-fill${stub ? ' ssh-card-preview-fill--stub' : ''}`} aria-hidden="true">
             {stub ? (
-                <p className="ssh-card-preview-empty-line">not in this copy — this piece lives on di-studio.xyz</p>
+                <p className="ssh-card-preview-empty-line">not in this copy — this piece lives on {WORKS_HOST}</p>
             ) : visible && booted ? (
                 <iframe
                     ref={frameRef}

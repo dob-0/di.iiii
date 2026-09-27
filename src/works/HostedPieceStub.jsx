@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { workForSegment } from './segments.js'
+import { WORKS_HOST } from './works.js'
 import { buildAppSpacePath, getAppLocationState } from '../utils/spaceRouting.js'
 import { buildStudioHubPath } from '../studio/utils/studioRouting.js'
 import { isPreviewRequest, signalPreviewStub } from '../utils/previewMode.js'
@@ -30,7 +31,7 @@ import { isPreviewRequest, signalPreviewStub } from '../utils/previewMode.js'
  * line rather than a 1024px page of text scaled down to nothing.
  */
 
-const HOSTED_HOST = 'https://di-studio.xyz'
+const HOSTED_HOST = `https://${WORKS_HOST}`
 
 const styles = {
     page: {
@@ -66,9 +67,9 @@ export default function HostedPieceStub() {
             <div style={styles.body}>
                 <h1 style={styles.name}>{label}</h1>
                 <p style={styles.line}>
-                    This piece is part of di-studio.xyz, not of di.iiii itself, so it was left out of this copy.
+                    This piece is an artwork made with di.iiii, not part of di.iiii itself, so it was left out of this copy.
                     Everything else is here.
-                    {id ? <> It lives at <a style={styles.door} href={`${HOSTED_HOST}${work?.path || buildAppSpacePath(id)}`} target="_blank" rel="noreferrer">di-studio.xyz{work?.path || buildAppSpacePath(id)}</a>.</> : null}
+                    {id ? <> It lives at <a style={styles.door} href={`${HOSTED_HOST}${work?.path || buildAppSpacePath(id)}`} target="_blank" rel="noreferrer">{WORKS_HOST}{work?.path || buildAppSpacePath(id)}</a>.</> : null}
                 </p>
                 <ul style={styles.doors}>
                     <li><a style={styles.door} href={buildAppSpacePath('')} target="_top">← the spaces</a></li>

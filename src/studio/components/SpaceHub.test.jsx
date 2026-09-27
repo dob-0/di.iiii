@@ -436,6 +436,8 @@ describe('SpaceHub', () => {
             expect(card.querySelector('.ssh-card-preview iframe')).toBeNull()
             expect(card.querySelector('.ssh-card-preview-fill--stub')).not.toBeNull()
             expect(card.textContent).toContain('not in this copy')
+            // and says where it lives by today's address, not the retired one
+            expect(card.textContent).toContain('lives on diiii.xyz')
             // every other card paints exactly as before
             expect(frameIn('s1')).not.toBeNull()
             expect(cardOf('s1').textContent).not.toContain('not in this copy')

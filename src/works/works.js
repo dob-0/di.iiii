@@ -37,6 +37,10 @@
  * lives next door in routes.jsx.
  */
 
+// Where a copy without the works sends people to open one. di-studio.xyz
+// still serves them for links already printed, but new words name this host.
+export const WORKS_HOST = 'diiii.xyz'
+
 export const WORKS = [
     {
         // "wcc" NAMES TWO DIFFERENT THINGS, and both are correct.
