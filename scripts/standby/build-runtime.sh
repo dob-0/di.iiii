@@ -9,6 +9,7 @@
 #   shared/   = serverXR/Dockerfile's /shared (app/../shared, as in the image)
 #   dist/     = the root Dockerfile's built SPA (served by nginx in prod)
 #   nginx.conf.prod = the repo's nginx.conf at that commit, unmodified
+#   docker-compose.yml, docker-compose.dev.yml = the tiers' variable lists, for server-env.mjs
 # and <out-dir>/node-v<ver>/ with the pinned Node. Nothing is started and nothing outside <out-dir>
 # is touched, so running it twice is safe. Runs ON the standby host: source and packages come over
 # that host's own line.
@@ -74,7 +75,9 @@ log "client: npm ci + build"
 (cd "$src" && npm ci --no-audit --no-fund --loglevel=error && VITE_API_BASE_URL= npm run build)
 cp -R "$src/dist" "$rel.tmp/dist"
 cp "$src/nginx.conf" "$rel.tmp/nginx.conf.prod"
-cp "$src/docker-compose.yml" "$rel.tmp/docker-compose.yml"   # server-env.mjs reads prod's variable list from it
+# server-env.mjs reads each tier's variable list from these: prod = docker-compose.yml, dev = that
+# plus docker-compose.dev.yml
+cp "$src/docker-compose.yml" "$src/docker-compose.dev.yml" "$rel.tmp/"
 
 rm -rf "$rel"; mv "$rel.tmp" "$rel"
 log "done: $rel ($(du -sh "$rel" | cut -f1))"
