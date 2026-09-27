@@ -144,6 +144,108 @@ A room 8 × 6 m and 3 m high with a 2.1 m doorway, a column, a stage and a
 table, at about 400k triangles — then tilted, spun and scaled to nothing like
 life size, which is the mess the fitter exists to undo.
 
+## When the footage cannot make the hall: model it, then hang the rig
+
+A scan needs footage that covers the room. When it does not — MOXIR, 2026-09:
+67 frames gave a smeared roof fragment and the venue could not be walked again —
+the fallback is the one set designers and lighting designers use anyway: a clean
+box model of the room from its structural grid, with every number that was not
+taped labelled as such, and the rig hung in it by rule.
+
+```bash
+# 1 — the hall: a parametric Soviet single-span crane hall (Blender, headless)
+blender -b -P scripts/place/hall.py -- --out /mnt/data/footage/place-moxir-hall \
+    --dims scripts/place/rigs/moxir-hall-dims-2026-09-27.json \
+    --dims scripts/place/rigs/moxir-hall-features-2026-09-27.json --preview
+
+# 2 — it becomes the room of the space (the footage wall is left alone)
+node scripts/place/import.mjs --work /mnt/data/footage/place-moxir-hall \
+    --name moxir --no-sources --replace --title "MOXIR — the hall"
+
+# 3 — the rig, from a rig file, against the hall's grid
+node scripts/place/rig.mjs --rig scripts/place/rigs/moxir-2026-10-17.json \
+    --hall /mnt/data/footage/place-moxir-hall/hall.json --project moxir-hall
+
+# 4 — look at it on the GPU, and count frames, draw calls and triangles
+node scripts/place/rig-look.mjs --gpu --base https://local.thedi.studio \
+    --hall /mnt/data/footage/place-moxir-hall/hall.json \
+    --rig scripts/place/rigs/moxir-2026-10-17.json --out ~/Downloads/moxir-hall --tag look
+```
+
+Take the rig down again: `node scripts/place/rig.mjs --project moxir-hall --remove`.
+Every rig entity's id starts `rig-`; a re-run deletes those first and touches
+nothing else except the night (ambient, fog, background) and the shadow switch.
+
+**`hall.py`** builds, in real metres, grouped into eight meshes by material:
+the floor with rail tracks, two rows of stepped columns with crane consoles,
+runway beams with walkways and handrails, one or more yellow crane bridges,
+a Warren truss per grid line, purlins, a skylight lantern, clerestory bands,
+optional low side aisles, end walls with gates and an entry platform. With no
+`--dims` it uses PLACEHOLDER dimensions and says so; `--dims` files merge in
+order, and `hall.json` records, for every value, the file it came from, its
+range and its confidence. `place.json` only says `measured` when a dims file
+says its source is a tape. Frame: Y up, the entry at +Z, the far end at −Z.
+
+The MOXIR numbers (`rigs/moxir-hall-dims-2026-09-27.json`) were estimated from
+the photographs — VGGT on 55 frames, scale from a perspective fit of the
+column rows, snapped to the GOST 23838-89 grid (24 m span, 6 m pitch). Crane
+rail 7.6 m is disputed (6.6–8.4). The features file (gates, aisles, the two
+cranes) is read off the pictures; its sizes are guesses. Nobody has taped the
+hall.
+
+**`rig.mjs` / `rig-lib.mjs`** place each group by a named rule against the grid
+(`stage-back`, `truss-header`, `column-uplight`, `crane-bridge`, …) and aim it
+at a named target, converting to the same pan/tilt the inspector shows
+(`src/project/viewport/spotLightAim.js`). Two checks run on every aim: a laser
+must be hung at least 3 m up and must not descend (refused otherwise), and any
+beam whose axis runs into a crane girder is reported — a laser into steel is
+refused. Positions follow the hall, so rebuilding the hall moves the rig.
+
+**The rig file's optics are class estimates.** The rental house's codes
+(UP-B380F …) are its own names, not makers' models; each class carries the
+typical beam angle for that kind of fixture and says the datasheet is owed.
+
+### The rig: a real ceiling, measured
+
+A browser cannot run ~90 real three.js spot lights. Each is a term in every lit
+pixel's shader, and with shadows on each needs its own shadow render and a
+texture unit — WebGL gives 16 to 32. So every fixture draws its beam cone, and
+a **budget** of 8 lamps also lights the room; the rest are `beam.only`
+(`components.beam.only`, see `src/objectComponents/spotBeam.js`,
+`beamCastsLight`). Shadows are off by default. The budget lives in the rig file.
+
+**On a server older than `beam.only`** (the installed 0.4.16 on aylmo drops the
+field) `rig.mjs --beams auto` finds out with a probe lamp and **bakes** the
+beam-only lamps into one mesh (`beams-glb.mjs`: all cones, one draw call, the
+lamp's colour and the fade in vertex colours, unlit). That is a named
+workaround: baked beams cannot be re-aimed in the Studio. Once the install
+carries `beam.only`, run `rig.mjs` again and the lamps become editable entities.
+
+Measured 2026-09-27/28 with `rig-look.mjs --gpu` (headed Chromium, ANGLE on
+Vulkan, the **RTX 3080 Laptop GPU** — the renderer string is checked and the
+run stops if it is software), 960×600 at DPR 1, door view, 8 s:
+
+| the room holds | fps | frame median / p95 | draw calls | triangles |
+| --- | --- | --- | --- | --- |
+| 90 real lights, 90 entity beams, no shadows (what the owner found "laggy") | 1.0 | 1004 / 1004 ms | 283 | 126k |
+| 8 real + 82 `beam.only` entities, no shadows (this branch) | 239.6 (one hot run: 53) | 4.2 / 4.2 ms | 283 | 126k |
+| 8 real + 82 `beam.only` entities, shadows on | 239.7 | 4.2 / 4.3 ms | 374 | 212k |
+| 8 real + 82 beams baked, no shadows (the local tier tonight) | 239.7 | 4.2 / 4.3 ms | 51 | 53k |
+
+240 fps is the display's refresh: vsync-capped, so "at least". The same
+"8 real, baked" room in a phone-shaped viewport (390×844, DPR 3) on the same GPU
+also held 239.6 — that is the laptop's GPU, **not a phone**; no phone was
+measured.
+
+Earlier, headless on SwiftShader (software): hall alone 7.6 fps, 90 real lights
+0.1, and 90 real lights + shadows **went black** — every lit material failed
+to compile ("texture image units count exceeds MAX_TEXTURE_IMAGE_UNITS(32)").
+Hence `SHADOW_SAFE_REAL_LIGHTS = 12` in `rig-lib.mjs`, and a read-back after
+every write that switches shadows off past it. **Do not run the hall on
+SwiftShader again**: those runs drove aylmo's CPU to 100 °C. `rig-look.mjs`
+now refuses without `--gpu`, opens one browser per view and waits for the CPU
+package to be under 88 °C before each.
+
 ## Things that have already gone wrong
 
 - **A rented GPU left running bills until somebody notices.** Any failure
