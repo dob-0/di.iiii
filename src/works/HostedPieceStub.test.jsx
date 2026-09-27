@@ -36,7 +36,7 @@ describe('HostedPieceStub', () => {
         expect(studio.getAttribute('target')).toBe('_top')
 
         // where the piece actually lives
-        expect(screen.getByRole('link', { name: 'di-studio.xyz/wcc' }).getAttribute('href')).toBe('https://di-studio.xyz/wcc')
+        expect(screen.getByRole('link', { name: 'diiii.xyz/wcc' }).getAttribute('href')).toBe('https://diiii.xyz/wcc')
     })
 
     it('knows the piece from the route, including its /scene half', () => {
