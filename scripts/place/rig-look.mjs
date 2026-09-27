@@ -197,11 +197,18 @@ const main = async () => {
                 const camera = { projection: 'perspective', zoom: 1, near: 0.05, far: 400, locked: false, ...view }
                 doc.presentationState = { ...(doc.presentationState || {}), mode: 'fixed-camera', entryView: 'fixed-camera', fixedCamera: camera }
                 doc.worldState = { ...(doc.worldState || {}), savedView: { mode: 'perspective', ...camera } }
+                // A close-up is a look at the fixture, as at a get-in: under WORK
+                // LIGHT (the ambient raised in this browser's copy only — nothing is
+                // written to the server). The file name says `worklight`.
+                if (name.startsWith('close-')) doc.worldState.ambientLight = { color: '#ffffff', intensity: 2.2 }
                 await route.fulfill({ response, json: body })
             })
             await page.goto(`${base}/${space}`, { waitUntil: 'domcontentloaded', timeout: 180_000 })
             await page.waitForTimeout(settle * 1000)
-            const measured = await page.evaluate((ms) => new Promise((resolve) => {
+            // The room navigates to itself once more after it opens (seen as a
+            // second `navigated` line); if that lands inside the measurement the
+            // page's context is gone. Measure again, once, after it settles.
+            const measure = (ms) => page.evaluate((ms) => new Promise((resolve) => {
                 let frames = 0
                 let last = null
                 const deltas = []
@@ -227,7 +234,13 @@ const main = async () => {
                     }
                 }
                 requestAnimationFrame(tick)
-            }), seconds * 1000)
+            }), ms)
+            const measured = await measure(seconds * 1000).catch(async (error) => {
+                if (!/context was destroyed/i.test(error.message)) throw error
+                say('  the page navigated during the measurement — waiting and measuring again')
+                await page.waitForTimeout(settle * 1000)
+                return measure(seconds * 1000)
+            })
             const fps = measured.fps
             const gl = await page.evaluate(() => {
                 const canvas = document.querySelector('canvas')
@@ -239,7 +252,7 @@ const main = async () => {
                 await browser.close()
                 die(`The browser got ${gl}, not the GPU. Stopping rather than render the hall on the CPU.`)
             }
-            const file = path.join(out, `${tag}-${name}${phone ? '-phone-dpr3' : ''}.png`)
+            const file = path.join(out, `${tag}-${name}${name.startsWith('close-') ? '-worklight' : ''}${phone ? '-phone-dpr3' : ''}.png`)
             say(`${name.padEnd(6)} ${String(fps).padStart(5)} fps — shooting …`)
             // A heavy rig on SwiftShader can take many seconds per frame, and
             // Playwright waits for a fresh frame before it shoots.

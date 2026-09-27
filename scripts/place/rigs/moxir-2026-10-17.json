@@ -206,7 +206,7 @@
     },
     "photometry": {
         "method": "scripts/place/rig-lib.mjs, 'PHOTOMETRY': candela from the manifest (I = E*d^2 from a measured illuminance, else I = flux / beam solid angle); zoom keeps flux; three.js SpotLight intensity is candela x sceneScale; beam-in-air brightness ~ I*tan(theta/2), scaled to the brightest class, Stevens exponent 1/3, times `air`.",
-        "sceneScale": 0.006,
+        "sceneScale": 0.02,
         "sceneScaleNote": "ONE exposure number for the whole rig, chosen so the room reads in a browser's tone mapping (ACES, exposure 1). The ratios between fixtures are the datasheets'.",
         "air": 0.9,
         "airNote": "how much haze is in the air: the brightest class's beam gets this `haze` (0..1, src/objectComponents/spotBeam.js)."

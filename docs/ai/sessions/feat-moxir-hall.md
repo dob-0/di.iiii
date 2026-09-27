@@ -74,3 +74,15 @@
 - Backup before writing: `~/di-backups/moxir-before-fixtures-2026-09-28/` (bundle + hall document v989, SHA256SUMS).
 - OWED: the rental house's real models for the 4 untraced codes and its datasheets; a fixture component so a hand
   re-aim in the Studio moves the head (bodies are posed at rig.mjs time); DMX modes into the desk; laser MPE / LSO.
+- SEEN on the GPU (RTX 3080, ANGLE Vulkan, headed, one browser at a time, renderer string checked), his local tier,
+  `~/Downloads/moxir-hall/`: cathedral-v2b-door, cathedral-v2-mid, cathedral-v2-stage, cathedral-v2-close-<kind>-worklight
+  (8 kinds; ambient raised IN THE BROWSER ONLY for close-ups, "work light"), crossfire-mid, all-to-centre-b-mid. 60 fps
+  on every view (display at 60 Hz = vsync cap; p95 16.8 ms), 59–83 draw calls, 108–119k tris.
+- Found by looking: metallic body materials render BLACK with no environment map → bodies are dielectric now.
+- OWED: rig-look's camera override is intermittently not applied (3 of ~19 shots showed the space's own camera or an
+  aisle view; a second self-navigation of `/moxir` is logged and the measurement retries, the camera is not yet
+  fixed); the room reads DARK — 8 real lamps light it, the 42 column PARs are beam-only and their beams are faint by
+  datasheet (haze 0.155), so the columns are not washed: a baked column wash or a larger budget is the next choice.
+- THERMAL: peer sessions (verify-surfaces on SwiftShader, full vitest in di.iiii-test-cap / di.iiii-land-*) held the
+  CPU package at 100 C, load 32, for ~15 min; every browser here waited for < 80 C and still peaked at 95–98 C (the
+  cooler). No hall was rendered in software.

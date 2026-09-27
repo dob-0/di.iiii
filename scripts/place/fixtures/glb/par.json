@@ -3,7 +3,7 @@
   "code": "UP-PL5403",
   "glb": "par.glb",
   "builtBy": "scripts/place/fixtures/build_fixtures.py",
-  "scriptSha256": "10bb32a3cb78c299fc72112c8d881135a239ba33759992d14eeb02f54b1e9696",
+  "scriptSha256": "28da3f3192115b1eabd11b1a25497c503e35adcea9849d55d92ce90290a2c693",
   "blender": "5.2.1 LTS",
   "archetype": "par",
   "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",

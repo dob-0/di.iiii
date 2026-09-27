@@ -60,8 +60,10 @@ MM = 0.001
 # ---------------------------------------------------------------------------
 MATERIALS = {
     # name: (base colour sRGB, metallic, roughness)
-    "Body": ((0.085, 0.088, 0.095), 0.3, 0.5),
-    "Metal": ((0.42, 0.43, 0.45), 0.8, 0.35),
+    # Painted steel and moulded plastic are DIELECTRIC: a metallic finish renders
+    # black in a room with no environment map (seen on MOXIR's close-ups).
+    "Body": ((0.11, 0.115, 0.125), 0.0, 0.55),
+    "Metal": ((0.42, 0.43, 0.45), 0.15, 0.45),
     "Trim": ((0.012, 0.012, 0.014), 0.0, 0.8),
     "Glass": ((0.02, 0.025, 0.03), 0.1, 0.08),
     "Lens": ((1.0, 1.0, 1.0), 0.0, 0.2),

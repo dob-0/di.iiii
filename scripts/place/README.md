@@ -315,7 +315,11 @@ run stops if it is software), 960×600 at DPR 1, door view, 8 s:
 | 8 real + 82 `beam.only` entities, shadows on | 239.7 | 4.2 / 4.3 ms | 374 | 212k |
 | 8 real + 82 beams baked, no shadows (the local tier tonight) | 239.7 | 4.2 / 4.3 ms | 51 | 53k |
 
-240 fps is the display's refresh: vsync-capped, so "at least". The same
+| 8 real + 82 beams baked + **104 fixture bodies (one instanced GLB)**, no shadows (2026-09-28, the display at 60 Hz) | 60.0 (all 17 views 56–60) | 16.7 / 16.8 ms | 59–83 | 108–119k |
+
+240 fps is the display's refresh: vsync-capped, so "at least". On 2026-09-28
+the display ran at 60 Hz, so the fixture run is capped at 60: p95 16.8 ms
+means no frame was dropped, not how much headroom there is. The same
 "8 real, baked" room in a phone-shaped viewport (390×844, DPR 3) on the same GPU
 also held 239.6 — that is the laptop's GPU, **not a phone**; no phone was
 measured.
