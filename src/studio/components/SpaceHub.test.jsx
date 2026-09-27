@@ -1,5 +1,5 @@
 import React from 'react'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SpaceHub from './SpaceHub.jsx'
 import { WORKS } from '../../works/works.js'
@@ -49,8 +49,12 @@ vi.mock('../../services/serverSpaces.js', () => ({
     connectSpaceGithub: vi.fn(),
     disconnectSpaceGithub: vi.fn(),
     getGithubAppInfo: () => Promise.resolve({ configured: false }),
-    listGithubRepos: () => Promise.resolve({ repos: [] })
+    listGithubRepos: () => Promise.resolve({ repos: [] }),
+    listSpaceInvites: (...args) => listSpaceInvites(...args),
+    revokeSpaceInvite: (...args) => revokeSpaceInvite(...args)
 }))
+const listSpaceInvites = vi.fn()
+const revokeSpaceInvite = vi.fn()
 
 const probeLightingDesk = vi.fn()
 
@@ -204,6 +208,44 @@ describe('SpaceHub', () => {
         // Someone else's public space: no management at all, only the live-link Copy.
         expect(cardActionsFor('theirs')).toEqual(['Copy'])
         expect(screen.getByText('View live')).toBeTruthy()
+    })
+
+    // 2026-09-28: the server could revoke an invite link; nothing in the app asked it
+    // to, so a link handed out by mistake worked for its whole week.
+    it('lists a space\'s invite links and revokes one', async () => {
+        const HOUR = 3600 * 1000
+        const now = Date.now()
+        const live = { id: 'inv-live', label: 'invite', createdAt: now - HOUR, expiresAt: now + 6 * 24 * HOUR, useCount: 2, lastUsedAt: now }
+        const old = { id: 'inv-old', label: 'invite', createdAt: now - 9 * 24 * HOUR, expiresAt: now - 2 * 24 * HOUR, useCount: 0, lastUsedAt: null }
+        listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+        listSpaceInvites.mockReset().mockResolvedValueOnce([live, old]).mockResolvedValueOnce([old])
+        revokeSpaceInvite.mockReset().mockResolvedValue({ ok: true })
+        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+        try {
+            render(<SpaceHub />)
+            await findCard('mine')
+            openManageFor('mine')
+            fireEvent.click(within(cardOf('mine')).getByRole('button', { name: 'Invite links' }))
+
+            const rows = async () => {
+                await waitFor(() => expect(cardOf('mine').querySelectorAll('.ssh-linker-item').length).toBeGreaterThan(0))
+                return [...cardOf('mine').querySelectorAll('.ssh-linker-item')]
+            }
+            const [first, second] = await rows()
+            expect(first.textContent).toContain('used 2 times')
+            expect(first.textContent).toContain('works until')
+            expect(second.textContent).toContain('expired')
+            // an expired link has nothing to stop
+            expect(within(second).queryByRole('button', { name: 'Revoke' })).toBeNull()
+
+            fireEvent.click(within(first).getByRole('button', { name: 'Revoke' }))
+            await waitFor(() => expect(revokeSpaceInvite).toHaveBeenCalledWith('mine', 'inv-live'))
+            expect(confirmSpy.mock.calls[0][0]).toContain('People who already joined through it keep their access')
+            await waitFor(() => expect(cardOf('mine').textContent).toContain('no longer works'))
+            await waitFor(() => expect(cardOf('mine').querySelectorAll('.ssh-linker-item').length).toBe(1))
+        } finally {
+            confirmSpy.mockRestore()
+        }
     })
 
     it('clicking a public space you cannot enter goes to its live view, scoped spaces open the editor', async () => {
