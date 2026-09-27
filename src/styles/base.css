@@ -157,6 +157,15 @@
        bare literal outside base.css. */
     --di-space-section-break: 44px;
 
+    /* The floating account button (src/components/AccountButton.jsx) sits at a
+       fixed place in the bottom-right corner of most surfaces. Its place is
+       stated once, here, so a page can leave room for it at its end: without
+       that the last thing on a long page — the project list's live-sync row —
+       scrolled up under the button and stopped there (2026-09-27). */
+    --di-account-btn-bottom: 86px;
+    --di-account-btn-size: 30px;
+    --di-account-btn-clear: calc(var(--di-account-btn-bottom) + var(--di-account-btn-size) + var(--di-space-3));
+
     /* The smallest thing a finger is asked to hit: 44px, Apple's Human Interface
        Guidelines minimum (44pt) and WCAG 2.2 SC 2.5.5 "Target Size (Enhanced)".
        Applied under (pointer: coarse), so it follows the finger, not the screen

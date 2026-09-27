@@ -413,7 +413,10 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                 showNodes={false}
                 overlayGradient="radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(0,0,0,0.6) 100%), linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.4) 100%)"
             />
-            <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 }, position: 'relative', zIndex: 1 }}>
+            {/* The end of the list clears the floating account button, so the last
+                row (the live-sync row on /<space>/raw/projects) can scroll out
+                from under it. */}
+            <Container maxWidth="xl" sx={{ pt: { xs: 3, md: 4 }, pb: 'var(--di-account-btn-clear)', position: 'relative', zIndex: 1 }}>
 
                 {/* Top row */}
                 <div className="sh-top-row">
