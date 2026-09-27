@@ -5,6 +5,122 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-27 — the front door links to /support
+
+- `/support` (space `support`, live on prod with Whydonate + Polar) had no way in. One word, "Support",
+  in the landing nav after GitHub, and once in the footer — the nav row is `display:none` under 640px,
+  so the footer is the phone's way to it. Nothing on published works: the owner chose "spaces max
+  minimalistic", so `MadeWithBadge` is untouched.
+- Guard: `LandingPage.test.jsx` "LandingPage support link" — exactly two links, both `/support`,
+  one nav + one footer.
+- Seen in Firefox on this branch: 1440×900 @2x (nav + footer) and 390×844 @3x (footer); clicking
+  either link opens the support page.
+
+## 2026-09-27 — the project list ends clear of the account button
+
+- Reproduced on a local stack (LIVE_API_URL set read-only, no token) at 390x844 DPR3 with 8 projects: at the
+  end of the scroll the fixed account button sat on the live-sync row (button 728–758, row 741–820).
+- The button's place is now three tokens in base.css, read by the button and by the list's end padding.
+  After: the row rests at 637–716, 12px clear. Desktop unaffected. Guard: accountButtonClearance.test.js.
+- Not changed: `src/raw/utils/windowLayout.js` still reasons with the literal 86px/30px in a comment and its
+  own maths — worth pointing at the tokens next time that file is touched.
+
+## 2026-09-27 — a full bar keeps its names off the place names
+
+- A long project title on a phone made the Priority+ bar draw every destination over "di.iiii · Main Space":
+  a room ≤ 0 read as "not measured". Negative now means none beside More; the links row holds a floor
+  (its own control + More) and the place names shrink to it, down to 3em.
+- Seen after on two projects at 390; desktop unchanged. Two new cases in SurfaceBar.test.jsx, red on the old bar.
+
+## 2026-09-27 — the lighting desk names its show at 1440
+
+- Measured with a project's links showing: 1440 title 32px of 258 needed, reading "0 fixt" (centred overflow
+  spills both sides); Blackout stretched over a line of its own.
+- The title keeps a minimum and `safe center`; the bar's Blackout is a normal-width button above 700px.
+  After: title whole at 1280/1440/1920, bar 74px at 1440 (was 91); bare desk and phone unchanged.
+- Guard in the desk's own `tests/test-wiring.js`; all three desk suites pass with ARTNET_OFFLINE=1.
+- Still open from the same walk: the desk's top links are ~25px tall (under 44 on touch).
+
+## 2026-09-27 — the installer's lines tell the truth
+
+- The no-node failure in `install.sh` offered Docker Desktop, which cannot help: the di command itself
+  runs on node. It now names the one way forward, Node.js 22.15 or newer (the floor `node_ok` checks).
+  Run for real with no node on PATH and nodejs.org blocked: the new message prints, exit 1.
+- `detect.mjs` told people "docker stays opt-in (--docker)"; no caller reads such a flag
+  (`probeAll` is never given `forcedMode`). The reason no longer names it; the comment says it is a seam.
+- Every "install it with" line (install.sh, install.ps1, both shims, ui.mjs, SELF_HOST.md) names
+  diiii.xyz. Both hosts serve byte-identical `/get` and `/get.ps1` (sha256 checked 2026-09-27).
+- Guard: `scripts/di/installLines.test.js` (8 cases, all red on the old files).
+- Owed, not here: `docs/deploy/{LIVE_DEPLOY,CPANEL_*,VPS_DOCKER_DEPLOY,STUDIO_CHAT_APK}.md` still name
+  di-studio.xyz as the live host in runbooks.
+
+## 2026-09-27 — naming a new project on a phone keeps the title whole
+
+- `.sh-top-row` wraps: the name form takes its own line under the title on a phone. Before: the space label
+  squeezed to two lines and the form ran to the screen edge. After: one line, form inside the margins;
+  desktop unchanged. Guard: hubTopRow.test.js.
+- Seen on the way, not fixed: the form's ✕ is a small tap target (under 44px).
+
+## 2026-09-27 — a copy without the works points at diiii.xyz
+
+- The space card's "not in this copy" line and the stub page named di-studio.xyz. One constant now,
+  `WORKS_HOST` in `src/works/works.js`; the stub's sentence reworded (the host is di.iiii itself now).
+- Seen on a real slim build at phone and desktop with a public `wcc` space: stub page links
+  https://diiii.xyz/wcc, the /spaces card reads "lives on diiii.xyz". Both guards red on the old code.
+- Not touched, on purpose: `TermsPage.jsx` still says "The hosted service at di-studio.xyz" — legal text,
+  the owner's to change. `public/sitemap.xml` and `src/index.html` mention the old host in comments only.
+
+## 2026-09-27 — the bar fits a phone: what does not fit goes behind More
+
+- Reproduced on a local stack, signed in, 390x844 DPR3: a new project's bar was 430px in 390, WIKI cut at
+  the edge; the phone rule scrolled it sideways with the scrollbar hidden.
+- Priority+ on the bar: names that fit show in order, the rest under More (menu on document.body, 44px rows,
+  closes on choice / outside tap / Escape / resize; More lit when you stand inside it). Desktop unchanged.
+- Seen: phone bare 390/390, phone all tools 390/390, desktop 1440 all seven. Wiki "The bar" updated.
+- Guard: 6 new cases in `SurfaceBar.test.jsx`, all red on the old bar. Known-fixes row added.
+- Seen on the way, not fixed here: the bar's own links are 27px tall on a phone (under 44); the new-project
+  name box squeezes "SPACE: MAIN SPACE" onto two lines at 390.
+
+## 2026-09-27 — Studio's own buttons offer a tool when the bar does
+
+- On a project with one box and no wire the bar held Projection back while Studio's phone header and
+  desktop panel offered it. The bar's rule is exported as `layerReached` and Studio's buttons use it.
+- Seen after, same project: phone `← Nodes Edit`, desktop `⇄ Nodes`, bar unchanged. Wiki "The bar" says so.
+- Guard in StudioShell.test.jsx (red on the old shell). Decision 5 (retire the duplicates) still the owner's.
+
+## 2026-09-27 — Raw's Help reads on a phone
+
+- Reproduced signed in at 390x844 DPR3 in a project's Raw page: Help kept two columns (15.98px + 260px), the
+  diagram and its words a 34px sliver. Cause: the phone rule sat ~700 lines above the base rule it meant to
+  override. Moved after it; rows sized to content (the clipping stage had collapsed to 34px).
+- Seen after: one 298px column, stage 494px, scrolls to the last step; desktop 1440 unchanged.
+- Guard: `rawHelpOrder.test.js` — any max-width rule in raw.css undone by a later base rule fails the build.
+- Seen on the way, not fixed: the Help footer shows as an empty strip on a phone; the bare Raw canvas's own
+  "di.iiii" wordmark sits under the bar's wordmark at 390.
+
+## 2026-09-27 — the SpaceHub flake was a lost message, not a slow runner
+
+- `SpaceHub.test.jsx` failed CI three times (#536, #548, one earlier) at the wait after the stub message.
+  Cause: the card's `message` listener is attached in a passive effect that runs after the iframe is in
+  the DOM; the test posted in that gap on a loaded runner and the message was lost. Timers could not fix it.
+- Fix: `settleEffects()` (`act(async () => {})`) before each posted message, in the three tests that post one.
+- Measured: 48 parallel runs under load — old 42/48, fixed 48/48. Known-fixes row added.
+
+## 2026-09-27 — the bar and the desk's ways out are a finger tall under a finger
+
+- Measured before: bar links 27px on a phone, 13px on a tablet (width-keyed rule); desk top links 25px.
+- `--di-touch-target: 44px` (HIG / WCAG 2.5.5); bar and desk grow their targets under (pointer: coarse);
+  `--sbar-h` follows. After: 44px on phone and tablet, mouse screens unchanged.
+- Found while measuring, NOT caused here, next fix: when only More fits, More + Desk | Perform overflow the
+  links row leftward over the project name (Priority+, #575) — More at x 232 inside a row starting at 235.
+
+## 2026-09-28 — one batch lands five green fixes
+
+- #580 desk title at 1440 · #583 Studio offers tools where the bar does · #584 touch targets 44px ·
+  #585 a full bar keeps its names off the place names · #586 new-project row wraps on a phone.
+- Conflicts: appended known-fixes rows (union), and two new checks at one spot in the desk's
+  `tests/test-wiring.js` (both kept).
+
 ## 2026-09-24 — click an object in a room to open its link
 
 - `components.link = { enabled, href, label }` was stored by the schema and read by nothing: a

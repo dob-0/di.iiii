@@ -101,5 +101,23 @@ check('every DMX frame leaves full length — 512 slots, never trimmed to the pa
   if (!/out\.set\(u, FULL_FRAME\)/.test(fp)) throw new Error('footprints() no longer sets every universe to FULL_FRAME');
 });
 
+// Regression guard (docs/ai/known-fixes.md, "the desk's title squeezed to 32px at 1440"):
+// the title keeps room to name the show, clips from its end rather than both sides, and the
+// bar's Blackout does not take a full line on a screen wider than a phone.
+check('the top bar keeps the show title readable and Blackout in the row', () => {
+  const css = fs.readFileSync(path.join(ROOT, '../ui/style.css'), 'utf8');
+  const title = [...css.matchAll(/\.title\s*\{([^}]*)\}/g)].map((m) => m[1]).join(';');
+  if (!/min-width:\s*min\(20em,\s*100%\)/.test(title)) throw new Error('.title lost its minimum width — it shrinks to nothing when the bar is full');
+  if (!/justify-content:\s*safe center/.test(title)) throw new Error('.title centres without `safe` — an overflowing title spills out of both sides');
+  if (!/@media \(min-width: 701px\) \{ \.topbo \{ width: auto; \} \}/.test(css)) throw new Error('the bar Blackout takes .blackout\'s full width on wide screens again');
+});
+
+// Regression guard: under a finger the desk's ways out are a finger tall (they were 25px).
+check('the desk top links are 44px under a coarse pointer', () => {
+  const css = fs.readFileSync(path.join(ROOT, '../ui/style.css'), 'utf8');
+  const coarse = css.slice(css.indexOf('@media (pointer: coarse)'));
+  if (!/\.homelink \{ min-height: 44px;/.test(coarse)) throw new Error('.homelink lost its 44px touch height in the (pointer: coarse) block');
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);

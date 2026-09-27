@@ -50,9 +50,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    /* Clipped by its own max-width, never squeezed to nothing: on a phone the
-       links took every pixel and the space's name read as two dots. */
-    flex-shrink: 0;
+    /* Clipped by its own max-width, and when the bar is full it gives way to
+       the links row's floor (More and the surface's own control) down to 3em —
+       never squeezed to nothing: on a phone the links once took every pixel and
+       the space's name read as two dots. */
+    flex-shrink: 1;
+    min-width: 3em;
 }
 
 .sbar-where:hover { text-decoration: underline; }
@@ -189,6 +192,25 @@
     }
 
     .sbar-where { max-width: 30vw; }
+}
+
+/* A finger, on any screen: every place on the bar is a full touch target. The
+   text stays the same size; the line is as tall as a finger. Measured 2026-09-27:
+   27px on a phone, 13px on a tablet. The bar's height follows, and so does
+   --sbar-h, which everything under the bar reads to clear it (+1px, its rule). */
+@media (pointer: coarse) {
+    :root { --sbar-h: calc(var(--di-touch-target) + 1px); }
+
+    .sbar { padding-top: 0; padding-bottom: 0; }
+
+    .sbar-home,
+    .sbar-where,
+    .sbar-link {
+        display: inline-block;
+        padding-top: 0;
+        padding-bottom: 0;
+        line-height: var(--di-touch-target);
+    }
 }
 
 /* Desk | Perform (src/perform/DeskPerformSwitch.jsx): two of the bar's own

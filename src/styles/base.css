@@ -166,6 +166,12 @@
     --di-account-btn-size: 30px;
     --di-account-btn-clear: calc(var(--di-account-btn-bottom) + var(--di-account-btn-size) + var(--di-space-3));
 
+    /* The smallest thing a finger is asked to hit: 44px, Apple's Human Interface
+       Guidelines minimum (44pt) and WCAG 2.2 SC 2.5.5 "Target Size (Enhanced)".
+       Applied under (pointer: coarse), so it follows the finger, not the screen
+       width — a tablet had 13px-tall links on the bar (measured 2026-09-27). */
+    --di-touch-target: 44px;
+
     /* Type: two families (above) and one scale, same measurement. 679 literal
        font-sizes across the same stylesheets against 7 uses of the old
        --di-text-label (the only one of the four declared type tokens anyone
