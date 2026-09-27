@@ -37,6 +37,7 @@ import { roomHasSound } from '../utils/roomSound.js'
 import Text2DObject from '../objectComponents/Text2DObject.jsx'
 import Text3DObject from '../objectComponents/Text3DObject.jsx'
 import PortalObject, { portalHref } from '../project/viewport/PortalObject.jsx'
+import EntityLink from '../project/viewport/EntityLink.jsx'
 import WorldEnvironment from '../project/viewport/WorldEnvironment.jsx'
 import RenderSettingsEffect from '../project/viewport/RenderSettingsEffect.jsx'
 import ShadowCasting from '../project/viewport/ShadowCasting.jsx'
@@ -360,9 +361,14 @@ function AnimatedEntity({ entity, assetMap, childMap = null }) {
     const children = childMap?.get(entity.id) || []
     return (
         <group ref={groupRef} position={basePos} rotation={baseRot} scale={baseScale}>
-            <Suspense fallback={null}>
-                <EntityVisual entity={entity} assetMap={assetMap} />
-            </Suspense>
+            {/* An enabled link makes the object itself clickable
+                (src/project/viewport/EntityLink.jsx); without one this
+                renders EntityVisual exactly as before. */}
+            <EntityLink entity={entity} enabled>
+                <Suspense fallback={null}>
+                    <EntityVisual entity={entity} assetMap={assetMap} />
+                </Suspense>
+            </EntityLink>
             {children.map((child) => (
                 <AnimatedEntity key={child.id} entity={child} assetMap={assetMap} childMap={childMap} />
             ))}

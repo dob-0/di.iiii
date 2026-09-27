@@ -195,6 +195,27 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-10'
     },
     {
+        id: 'click-an-object-to-open-its-link',
+        category: 'Editing',
+        title: 'Click an object to open its link',
+        summary: 'Any picture, shape, text or model in a room can lead somewhere: another room here, or another site in a new tab.',
+        body: [
+            'Select the object in Studio and open its Link section, at the bottom of the inspector. Switch on Open on click and give it an Address. Label is optional: it is what the visitor reads when they point at the object.',
+            {
+                list: [
+                    'An address that starts with / is a place on this di.iiii, such as /main or /main/deck. A visitor who clicks goes there the way a door takes them, with no black screen in between.',
+                    'An https:// address on another site opens in a new tab, so the room stays open behind it.',
+                    'Anything else does nothing. javascript: and data: addresses are removed when you type them, and a bare word such as deck is not an address.'
+                ]
+            },
+            'In the room, pointing at a linked object turns the cursor into a hand and shows a small plate over it with the label, or with the site or path when there is no label. On a phone the plate shows while your finger is on the object, and a tap opens it.',
+            'Dragging to look around never opens a link. Only a click where the pointer barely moves counts, the same rule Studio uses when you select something.',
+            'In the Studio editor a click still selects the object, so you can go on moving it. The link only works in the room a visitor sees. Doors, lights and groups have no Link section: a door already has its own click.'
+        ],
+        tags: ['link', 'click', 'url', 'hyperlink', 'gallery', 'inspector', 'visitor'],
+        updated: '2026-09-24'
+    },
+    {
         id: 'the-surface-bar',
         category: 'Getting started',
         title: 'The bar: where you are, and the way out',
