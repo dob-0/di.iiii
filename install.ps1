@@ -1,6 +1,6 @@
 # di.iiii - one line, on your own machine. Windows.
 #
-#   irm https://di-studio.xyz/get.ps1 | iex
+#   irm https://diiii.xyz/get.ps1 | iex
 #
 # Same job and same shape as install.sh: work out the machine, make sure there
 # is a node, download the current release, check it, hand over to bootstrap.mjs.
