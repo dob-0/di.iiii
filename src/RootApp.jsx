@@ -25,6 +25,7 @@ import { getJamLocationState, isJamLocation } from './project/routing/jamRouting
 import { getMakeLocationState, isMakeLocation } from './make/makeRouting.js'
 import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
 import { getPerformLocationState, isPerformLocation } from './perform/performRouting.js'
+import { getPatchSheetLocationState, isPatchSheetLocation } from './rigbuild/patchRouting.js'
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
@@ -50,6 +51,7 @@ const MapSurface = lazy(() => import('./map/MapSurface.jsx'))
 const MapOutput = lazy(() => import('./map/MapOutput.jsx'))
 const PerformApp = lazy(() => import('./perform/PerformApp.jsx'))
 const ScanSurface = lazy(() => import('./scan/ScanSurface.jsx'))
+const PatchSheetSurface = lazy(() => import('./rigbuild/PatchSheetSurface.jsx'))
 const ToolsRoom = lazy(() => import('./tools/ToolsRoom.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 
@@ -352,6 +354,7 @@ function AppRouter() {
     const makeState = getMakeLocationState(location)
     const mapState = getMapLocationState(location)
     const performState = getPerformLocationState(location)
+    const patchSheetState = getPatchSheetLocationState(location)
     const chatState = getChatLocationState(location)
     const privateChatWith = getPrivateChatTarget(location)
     const appState = getAppLocationState(location)
@@ -537,6 +540,19 @@ function AppRouter() {
                         : <MapSurface projectId={mapState.projectId} spaceId={mapState.spaceId} />}
                 </Suspense>
             </ProtectedSurface>
+        )
+    }
+
+    // `/{space}/patch/{projectId}` — the rig's patch sheet (src/rigbuild/): what the
+    // light engineers are handed. Read-only and printable. No gate of its own: it
+    // reads the document through the API with the visitor's own session, so the
+    // server decides who may read it (a private space answers 401 and the page
+    // says so), and a link handed to a crew opens like any public page.
+    if (isPatchSheetLocation(patchSheetState)) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <PatchSheetSurface spaceId={patchSheetState.spaceId} projectId={patchSheetState.projectId} />
+            </Suspense>
         )
     }
 
