@@ -1,0 +1,262 @@
+{
+  "site": "MOXIR hall, Charentsavan (owner's pin 40.406524, 44.636560)",
+  "date": "2026-09-28",
+  "source": "photographs (perspective fit on photo 032) and the owner's marks",
+  "supersedes": "moxir-hall-features-2026-09-27.json (aisles removed: there are none; the second crane moved for the 108 m hall; zones and the press added)",
+  "frame": "HALL FRAME (the one hall.json and rig-lib.mjs use): metres, Y up, x across the nave (+x = right looking from the entry toward the far gate = SW), z along the hall (+z toward the entry = NW), origin on the floor at the grid centre. s = metres from the entry (NW) end grid line = 54 - z.",
+  "door_w_m": 6.0,
+  "door_h_m": 6.0,
+  "entry_platform": true,
+  "far_gate_w_m": 4.8,
+  "far_gate_h_m": 5.4,
+  "aisle_w_m": 0.0,
+  "cranes_from_door_m": [
+    4.0,
+    95.0
+  ],
+  "neighbour_cranes_from_door_m": {
+    "left": 60.0,
+    "right": 30.0
+  },
+  "low_walls": [
+    {
+      "row": "left",
+      "from_door_m": [
+        12.0,
+        42.0
+      ],
+      "h_m": 3.0,
+      "seen": "photo 032 (left row, bays 3-7)"
+    },
+    {
+      "row": "right",
+      "from_door_m": [
+        60.0,
+        84.0
+      ],
+      "h_m": 3.0,
+      "seen": "GUESS (spec: 'in some bays'; which bays on this row is not seen)"
+    }
+  ],
+  "bracing_bays_from_door_m": [
+    [
+      18.0,
+      24.0
+    ],
+    [
+      84.0,
+      90.0
+    ]
+  ],
+  "massing": [
+    {
+      "id": "press",
+      "label": "forging press (body)",
+      "x_m": [
+        0.25,
+        3.05
+      ],
+      "z_m": [
+        0.2,
+        3.2
+      ],
+      "y_m": [
+        0.0,
+        4.5
+      ],
+      "material": "machine",
+      "how": "photo 032: u 647-680 px, base v 343, top v 290 at D 47 m (f 555 px, camera 6.88 m); depth 3 m GUESS"
+    },
+    {
+      "id": "press-crown",
+      "label": "press crown and flywheel",
+      "x_m": [
+        0.55,
+        2.75
+      ],
+      "z_m": [
+        0.8,
+        2.6
+      ],
+      "y_m": [
+        4.5,
+        5.3
+      ],
+      "material": "machine",
+      "how": "photo 032 top v 285-290; flywheel on the crown in photos 024/1c3956d1; size GUESS"
+    },
+    {
+      "id": "machine-line",
+      "label": "machine line beside the press (rusty drum, frame)",
+      "x_m": [
+        3.05,
+        8.0
+      ],
+      "z_m": [
+        -0.5,
+        2.5
+      ],
+      "y_m": [
+        0.0,
+        1.9
+      ],
+      "material": "rust",
+      "how": "photo 032 u 680-737, v 318-338 at D ~50 m; runs to the right of the press as in photos 018, 024, 1c3956d1; depth GUESS"
+    },
+    {
+      "id": "machine-pipe",
+      "label": "long pipe over the machine line",
+      "x_m": [
+        3.05,
+        13.0
+      ],
+      "z_m": [
+        1.0,
+        1.6
+      ],
+      "y_m": [
+        2.5,
+        3.1
+      ],
+      "material": "rust",
+      "how": "photo 032 horizontal pipe at v 305-310 from u 680 to 800 at D ~50 m"
+    }
+  ],
+  "zones": {
+    "_label": "owner marked 2026-09-28 on photos; metres estimated",
+    "_how": "Photo 032 (= the owner's 0387927a, mean pixel difference 1.2 of 255) was taken from the crane parked at the NW end. A level-camera perspective fit of the nine visible columns of the left row (6 m pitch) gives rms 3.0 px, vanishing point u 624, horizon v 262 (from the runway girders), f*h 3821 px*m from two column bases, camera 6.88 m up (VGGT: 7.33), 1.7 m left of the nave axis, 3.8 m in front of the entry grid line (first visible column 14.2 m ahead = grid line s 18; VGGT puts the end wall 1-4 m behind the camera). Each marked pixel is put on the floor: D = f*h/(v - 262), lateral = (u - 624)*h/(v - 262). Cross-check: the ground photos 018-025, taken beside the press, sit 39-46 m from the crane camera in the VGGT cloud (the fit puts the press base 47 m out). Bay count in photo 032: the dance floor spans bays 1-5 from the crane, the stage front is at grid line 5 (s 30), the press stands at grid line 9 (s ~51-54), beside the expansion joint (paired columns, photo 021 taken there).",
+    "dance": {
+      "colour": "blue",
+      "label": "dance floor",
+      "marked": {
+        "x_m": [
+          -8.7,
+          2.0
+        ],
+        "z_m": [
+          27.7,
+          39.7
+        ],
+        "note": "the part visible in 0387927a; the photo's bottom edge (the crane girder) cuts it at D 10.5 m"
+      },
+      "used": {
+        "x_m": [
+          -10.0,
+          10.0
+        ],
+        "z_m": [
+          27.5,
+          48.0
+        ]
+      },
+      "range": {
+        "far_edge_z_m": [
+          25.5,
+          30.0
+        ],
+        "near_edge_z_m": [
+          44.0,
+          50.0
+        ]
+      },
+      "why_used_differs": "owner's words: 'from below the crane forward to about the white bags' — so it runs on under the crane (s 6) to the bags; centred on the nave axis and held 1.6 m clear of the column faces (the marks sit ~3.4 m left of the axis; hand-drawn)."
+    },
+    "stage": {
+      "colour": "green",
+      "label": "stage",
+      "marked": {
+        "x_m": [
+          -12.0,
+          2.7
+        ],
+        "z_m": [
+          6.2,
+          23.5
+        ],
+        "note": "near edge at the white bulk bags (D 26.7 m; the bags stand at z 22-26.5, x -0.8..2.2); the far edge runs along the press (photo 1c3956d1)"
+      },
+      "used": {
+        "x_m": [
+          -8.0,
+          8.0
+        ],
+        "z_m": [
+          6.2,
+          23.5
+        ]
+      },
+      "range": {
+        "front_z_m": [
+          21.0,
+          26.0
+        ],
+        "back_z_m": [
+          2.0,
+          10.0
+        ]
+      },
+      "faces": "the entry (+z, NW): the audience stands between the crane end and the stage",
+      "why_used_differs": "centred on the nave axis so the rig mirrors; 16 m wide as in the rig proposal (marks: 9.4 m at the front, 14.7 m at the back)."
+    },
+    "backstage": {
+      "colour": "red",
+      "label": "backstage",
+      "marked": {
+        "x_m": [
+          -12.5,
+          1.2
+        ],
+        "z_m": [
+          -1.4,
+          -0.1
+        ],
+        "note": "only the near edge is on the floor in 0387927a (D 50-52 m); the rest of the red line is drawn over machines. Photo 1c3956d1: behind the press, to the left"
+      },
+      "used": {
+        "x_m": [
+          -11.0,
+          1.0
+        ],
+        "z_m": [
+          -10.0,
+          -1.0
+        ]
+      },
+      "range": {
+        "near_edge_z_m": [
+          -5.0,
+          3.0
+        ]
+      },
+      "why_used_differs": "the depth (9 m) is a GUESS: nothing in the photos shows where the owner's backstage ends."
+    }
+  },
+  "confidence": {
+    "door_w_m": "GUESS (video 026)",
+    "far_gate_w_m": "low (photo 004)",
+    "cranes_from_door_m": "first seen (the crane photos were taken from it, 3.8 m by the fit); second GUESS",
+    "neighbour_cranes_from_door_m": "seen (photos 036, 017), positions GUESS",
+    "low_walls": "left row seen; right row GUESS",
+    "bracing_bays_from_door_m": "GUESS (bracing seen in 017, 036; the bays are not identified)",
+    "massing": "seen; sizes estimated from photo 032 at ~50 m, +-20%",
+    "zones": "owner's marks; positions +-8% of the distance from the crane (fit) plus the marker's hand (+-1.5 m)"
+  },
+  "cameras": {
+    "photo-032": {
+      "position_m": [
+        -1.7,
+        6.88,
+        50.2
+      ],
+      "yaw_deg": 1.65,
+      "pitch_deg": -10.0,
+      "vfov_deg": 66.0,
+      "image_px": [
+        1280,
+        720
+      ],
+      "photo": "032-file_76.jpg (the owner's 0387927a)",
+      "note": "hall frame. Fitted on the photo (level camera, horizon v 262, vanishing point u 624, f 555 px): yaw = atan((640-624)/555) to the right, and the off-centre horizon rendered as a 10 deg pitch down — the photo itself is level with its principal point off-centre, so a render's verticals converge slightly where the photo's do not."
+    }
+  }
+}

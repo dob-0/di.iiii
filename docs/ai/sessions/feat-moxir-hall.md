@@ -86,3 +86,37 @@
 - THERMAL: peer sessions (verify-surfaces on SwiftShader, full vitest in di.iiii-test-cap / di.iiii-land-*) held the
   CPU package at 100 C, load 32, for ~15 min; every browser here waited for < 80 C and still peaked at 95–98 C (the
   cooler). No hall was rendered in software.
+
+## 2026-09-28 — the architecture corrected (flat space frame, 4 spans) and the rig moved to where the owner marked the stage
+
+- `hall.py` REWRITTEN (v2) from the architecture spec (photos + Esri Wayback 2020-10-30 Maxar image): 4 spans x 24 m
+  under one flat roof, 18 bays (108 m); flat double-layer space frame (3 m module, 11.0/13.5 m chords; full over the
+  nave and its neighbours, bottom chords only on the far span; open triangular prisms, one merged mesh); raised
+  box lanterns 12 m x 3.5 m over spans 2 and 3, two 38.5 m segments each, 14.5 m gap at the joint; Y-headed precast
+  columns (symmetric 45-deg console, girder each side, centred upper column), paired at the joint; grey steel plate
+  crane girders with stiffeners and handrail; outer walls only at the building edge; low block walls, bracing;
+  massing for the press. 14 meshes, 59,688 triangles. v1's trusses/ridge/clerestory/aisles removed (git: e3b843fa).
+  New dims/features files `rigs/moxir-hall-{dims,features}-2026-09-28.json`; build record committed as the tests'
+  fixture `rigs/moxir-hall-2026-09-28.hall.json`.
+- ZONES (owner, 2026-09-28, "red backstage, green stage, blue dance floor"): photo 032 = his 0387927a. Camera fitted
+  from the photo (9 columns at 6 m pitch, rms 3.0 px; camera 6.88 m up, 3.8 m from the entry grid line). Hall frame
+  (x + = SW, z + = entry): dance x -10..10 z 27.5..48; stage x -8..8 z 6.2..23.5 (front at the white bags, back
+  along the press), deck 16 x 12 on the front edge facing the entry; backstage x -11..1 z -10..-1 (depth GUESS);
+  press x 0.25..3.05, front z 3.2 (grid line 9, beside the joint). Marked vs used and ranges: features file `zones`.
+- RIG: stage from the zone with the press as `backdrop`; 50 PARs = 32 on the nave columns around dance floor and
+  stage (inner + back face) + 12 on the next rows out + 6 lighting the press (not mirrored, flagged); crane PARs
+  dropped; 10 column-base beams along the 5 dance-floor grid lines; lasers from the truss towers over the crowd.
+  All 5 looks: nothing refused / into a crane / out of travel; mirror symmetry held (press group excluded by flag).
+- DARK ROOM, two causes: real lamps' `light.distance` = the throw = three.js cutoff = zero light at the target
+  (fixed: 2x, known-fixes entry + guard seen red); 42 column PARs were beam-only. `wash-glb.mjs` bakes the light of
+  46 beam-only PARs on columns and press (analytic spot model, unlit decal, one draw call). Night raised by eye
+  (ambient 0.8, fog 60/250 m). Press albedo 0.07 -> 0.17.
+- Backup `~/di-backups/moxir-before-arch-2026-09-28/` (bundle 41.9 MB + hall document v1289, SHA256SUMS). Imported
+  (`--replace`) and rigged roof-cathedral on the local tier.
+- SEEN on the RTX 3080 (ANGLE Vulkan, headed, one browser per view, waited < 85 C; CPU still peaked 93 C):
+  `~/Downloads/moxir-hall/arch-v2-crane-vs-photo032.png` (photo | model | 50/50, same camera: dance-floor far edge,
+  Y heads and girders fall on the photo's), arch-v2-dance, arch-v2-stage, arch-v2-roof, arch-v3-backdrop. 53-60 fps
+  (60 Hz display; p95 16.8-33.4 ms), 71-91 draw calls, 173-182k triangles.
+- OWED: taped dimensions; crane rail height (disputed; the photo's crane girder sits lower than the model's);
+  the press's depth and the backstage depth; a platform `beam.length` separate from `light.distance`; an install
+  with `beam.only` (beams still baked on 0.4.16); the owner's look at it; a phone.

@@ -41,6 +41,7 @@ import { DEFAULT_API, makeClient, readToken } from './api.mjs'
 import { RIG_PREFIX, SHADOW_SAFE_REAL_LIGHTS, buildRig, nightOps } from './rig-lib.mjs'
 import { beamsGlb } from './beams-glb.mjs'
 import { FIXTURE_DIR, fixturesGlb, readGeometry } from './fixtures-glb.mjs'
+import { washGlb } from './wash-glb.mjs'
 
 const args = parseArgs()
 
@@ -118,7 +119,10 @@ const main = async () => {
         say(`  ${s.fixtures} lamps: ${s.real} real lights, ${s.beamOnly} beam only · mode ${mode}`)
         for (const [id, g] of Object.entries(s.byGroup)) say(`    ${id.padEnd(16)} ${g.code.padEnd(10)} ${String(g.placed).padStart(3)} placed, ${g.real} real`)
         say(`  effects (machines, not simulated): ${Object.entries(s.effects).map(([k, v]) => `${k} ${v}`).join(', ')}`)
-        say(`  stage: ${rig.stage.end} end, front edge at z ${built.stage.front.toFixed(1)} m (ASSUMED position)`)
+        say(rig.stage.zone
+            ? `  stage: in zone "${rig.stage.zone}" (hall.json), front edge at z ${built.stage.front.toFixed(1)} m, backdrop at z ${built.stage.wall.toFixed(1)} m (owner's marks, metres ESTIMATED)`
+            : `  stage: ${rig.stage.end} end, front edge at z ${built.stage.front.toFixed(1)} m (ASSUMED position)`)
+        say(`  baked washes: ${built.washes.length} beam-only lamps' light on the surfaces they hit (wash-glb.mjs)`)
         if (hall.warning) warn(`  the hall: ${hall.warning}`)
         for (const why of s.refused) warn(`  REFUSED ${why}`)
         for (const why of s.clashes) warn(`  clash: ${why}`)
@@ -177,6 +181,24 @@ const main = async () => {
         const shadows = args.shadows === undefined ? undefined : String(args.shadows) !== 'off'
         if (s.real > SHADOW_SAFE_REAL_LIGHTS && (shadows ?? rig.budget?.shadowCasting)) {
             warn(`  ${s.real} real lamps is more than ${SHADOW_SAFE_REAL_LIGHTS}: shadows stay OFF (texture-unit ceiling)`)
+        }
+        // The baked washes: the light of the beam-only PARs on the column faces
+        // and the press, one unlit decal mesh (wash-glb.mjs, the method there).
+        if (built.washes.length) {
+            const bytes = await washGlb(built.washes)
+            const asset = await uploadGlb(client, project, bytes, 'rig-wash.glb')
+            ops.push({ type: 'upsertAsset', payload: { asset } })
+            entities = [...entities, {
+                id: `${RIG_PREFIX}wash`,
+                type: 'model',
+                name: `${built.washes.length} PAR washes, baked (no light) — re-run rig.mjs to change`,
+                components: {
+                    transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+                    media: { assetId: asset.id, playAnimations: false },
+                    animation: { mode: 'static', speed: 1, amplitude: 1 }
+                }
+            }]
+            say(`  baked ${built.washes.length} washes into one mesh (${(bytes.length / 1024).toFixed(0)} KB)`)
         }
         // The fixture bodies: every part of every kind one instanced node, in
         // one GLB (fixtures-glb.mjs), posed to this look's aims.

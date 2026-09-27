@@ -47,21 +47,57 @@ export const pickEven = (n, total) => {
 /**
  * Where the stage is, in the hall's frame, from the rig's stage block.
  * `into` is the direction along Z from the stage toward the audience.
+ *
+ * Two ways to say where: `end: 'far' | 'door'` stands the stage against an
+ * end wall (the v1 rig), and `zone: '<name>'` stands it in a zone of
+ * hall.json (`geometry.zones`, the owner's marks): the deck's front edge on
+ * the zone's audience-side edge, `faces: 'entry'` (default) or `'far'`. A
+ * `backdrop` (ids in `geometry.massing`) is what stands behind the stage —
+ * the "wall" the truss spots wash.
  */
 export const stageFrame = (rig, hall) => {
     const g = hall.geometry
     const s = rig.stage
-    const far = (s.end || 'far') === 'far'
-    const into = far ? 1 : -1
-    const wall = far ? g.far_wall_z_m : g.door.z_m
-    const back = wall + into * (s.back_gap_m ?? 1)
-    const front = back + into * s.depth_m
     const truss = rig.truss
+    let into
+    let wall
+    let back
+    let front
+    let backdrop = null
+    if (s.zone) {
+        const zone = g.zones?.[s.zone]
+        const rect = zone?.used || zone?.marked
+        if (!rect) throw new Error(`stage.zone "${s.zone}" is not in hall.json (geometry.zones has: ${Object.keys(g.zones || {}).join(', ') || 'none'})`)
+        into = (s.faces || 'entry') === 'far' ? -1 : 1
+        front = into > 0 ? Math.max(...rect.z_m) : Math.min(...rect.z_m)
+        back = front - into * s.depth_m
+        const zoneBack = into > 0 ? Math.min(...rect.z_m) : Math.max(...rect.z_m)
+        const boxes = (g.massing || []).filter((m) => (s.backdrop || []).includes(m.id))
+        if (boxes.length) {
+            const face = into > 0 ? Math.max(...boxes.map((m) => Math.max(...m.z_m))) : Math.min(...boxes.map((m) => Math.min(...m.z_m)))
+            backdrop = {
+                ids: boxes.map((m) => m.id),
+                x: [Math.min(...boxes.map((m) => Math.min(...m.x_m))), Math.max(...boxes.map((m) => Math.max(...m.x_m)))],
+                face,
+                boxes
+            }
+            wall = face
+        } else {
+            wall = zoneBack
+        }
+    } else {
+        const far = (s.end || 'far') === 'far'
+        into = far ? 1 : -1
+        wall = far ? g.far_wall_z_m : g.door.z_m
+        back = wall + into * (s.back_gap_m ?? 1)
+        front = back + into * s.depth_m
+    }
     return {
         into,
         wall,
         back,
         front,
+        backdrop,
         width: s.width_m,
         deck: s.deck_h_m,
         trussZ: back + into * truss.from_stage_back_m,
@@ -69,6 +105,47 @@ export const stageFrame = (rig, hall) => {
         trussH: truss.header_h_m,
         trussSection: truss.section_m ?? 0.4
     }
+}
+
+/**
+ * Columns picked for uplighting. `spec`: `rows` 'nave' (the two rows either
+ * side of the nave, default) or 'next' (the rows one span further out),
+ * `zones` (names in geometry.zones: columns from the nearest zone edge minus
+ * half a pitch to the farthest plus half), or `z_m` [a, b]; `faces` 'inner'
+ * (the face toward the nave) and/or 'back' (the face away from it).
+ * Each: { side, z, faceX, toColumn } — toColumn is the +x/-x direction from
+ * the lamp to the face. Ordered nearest the stage first, then left, then right.
+ */
+export const columnsFor = (hall, stage, spec = {}) => {
+    const g = hall.geometry
+    const inner = g.column_inner_face_x_m
+    const [left, right] = g.column_row_x_m || [-inner, inner]
+    const depth = 2 * (right - inner)
+    const pitch = g.column_grid_z_m.length > 1 ? Math.abs(g.column_grid_z_m[0] - g.column_grid_z_m[1]) : 6
+    let range = spec.z_m
+    if (!range && spec.zones) {
+        const rects = spec.zones.map((n) => g.zones?.[n]?.used || g.zones?.[n]?.marked).filter(Boolean)
+        if (!rects.length) throw new Error(`no zones ${spec.zones.join(', ')} in hall.json`)
+        range = [Math.min(...rects.map((r) => Math.min(...r.z_m))) - pitch / 2, Math.max(...rects.map((r) => Math.max(...r.z_m))) + pitch / 2]
+    }
+    const zs = [...new Set(g.column_grid_z_m)].filter((z) => !range || (z >= range[0] - 1e-6 && z <= range[1] + 1e-6))
+    const axes = spec.rows === 'next'
+        ? (g.rows_x_m || []).filter((x) => Math.abs(Math.abs(x) - (Math.abs(left) + (g.spans?.span_m || 24))) < 0.5)
+        : [left, right]
+    const faces = spec.faces || ['inner']
+    const mid = (stage.front + stage.back) / 2
+    const out = []
+    for (const z of zs.sort((a, b) => Math.abs(a - mid) - Math.abs(b - mid) || b - a)) {
+        for (const ax of [...axes].sort((a, b) => a - b)) {
+            const side = Math.sign(ax)
+            for (const face of faces) {
+                // the inner face looks toward x = 0; the back face away from it
+                const faceX = face === 'back' ? ax + side * depth / 2 : ax - side * depth / 2
+                out.push({ side, z, faceX, face, toColumn: face === 'back' ? -side : side })
+            }
+        }
+    }
+    return out
 }
 
 /** The column bases, nearest the stage first, alternating sides. */
@@ -92,9 +169,13 @@ export const craneNearestStage = (hall, stage) => {
     return [...cranes].sort((a, b) => Math.abs(a.z_m - stage.front) - Math.abs(b.z_m - stage.front))[0]
 }
 
-/** Columns standing in the audience: between the stage front and the far end of the room from it. */
+/**
+ * Columns standing in the audience: from the stage front line to the far end
+ * of the room from it. The pair right at the front line (within 1 m either
+ * way) counts as the house's: it flanks the stage lip.
+ */
 const audienceColumns = (hall, stage) => columnsByStage(hall, stage)
-    .filter((c) => (c.z - stage.front) * stage.into > 1)
+    .filter((c) => (c.z - stage.front) * stage.into > -1)
 
 // ---------------------------------------------------------------------------
 // WHERE a fixture stands. Each rule returns mountings: `pos` is the fixture's
@@ -131,11 +212,21 @@ const place = {
             ...pickEven(right, perSide[1].length).map((i) => perSide[1][i])
         ].map((c) => ({ pos: [c.faceX - c.side * 0.7, 0, c.z], orient: 'floor', face: [-c.side, 0, 0], column: c }))
     },
-    'column-uplight': (n, ctx) => {
+    'column-uplight': (n, ctx, group) => {
+        if (group?.columns) {
+            // v2: exactly one lamp per (column, face) the spec picks.
+            const cols = columnsFor(ctx.hall, ctx.stage, group.columns)
+            return cols.slice(0, n).map((c) => ({
+                pos: [c.faceX - c.toColumn * 0.45, 0, c.z],
+                orient: 'floor',
+                face: [c.toColumn, 0, 0],
+                column: c
+            }))
+        }
         // Every column once, nearest the stage first; then a second on the
         // columns nearest the stage until the count is used up. Fewer lamps than
         // columns: spread them evenly instead.
-        const cols = columnsByStage(ctx.hall, ctx.stage)
+        const cols = columnsByStage(ctx.hall, ctx.stage).map((c) => ({ ...c, toColumn: c.side }))
         let slots
         if (n <= cols.length) {
             slots = pickEven(n, cols.length).map((i) => ({ ...cols[i], second: false }))
@@ -150,6 +241,19 @@ const place = {
             orient: 'floor',
             face: [c.side, 0, 0],
             column: c
+        }))
+    },
+    // On the floor in front of the backdrop (the press), spread across it,
+    // `backdrop_gap_m` out from its face, turned to face it.
+    'backdrop-floor': (n, ctx, group) => {
+        const bd = ctx.stage.backdrop
+        if (!bd) throw new Error('mount backdrop-floor needs stage.backdrop (massing ids in hall.json)')
+        const reachX = ctx.hall.geometry.column_inner_face_x_m - 1.5
+        const x0 = Math.max(-reachX, bd.x[0] + 0.3)
+        const x1 = Math.min(reachX, bd.x[1] - 0.3)
+        const gap = group?.backdrop_gap_m ?? 3
+        return spread(n, x0, Math.min(x1, x0 + (group?.backdrop_span_m ?? x1 - x0))).map((x) => ({
+            pos: [x, 0, bd.face + ctx.stage.into * gap], orient: 'floor', face: [0, 0, -ctx.stage.into]
         }))
     },
     'crane-bridge': (n, ctx) => {
@@ -182,6 +286,12 @@ const place = {
 // stage front toward the audience.
 // Each returns { target } (a room point) or { dir } (a room direction).
 // ---------------------------------------------------------------------------
+/** The backdrop box nearest the audience at `x` (the face a lamp standing there sees). */
+const frontBox = (ctx, x) => {
+    const boxes = (ctx.stage.backdrop?.boxes || []).filter((m) => x >= m.x_m[0] - 1e-6 && x <= m.x_m[1] + 1e-6)
+    if (!boxes.length) return null
+    return boxes.reduce((a, b) => (ctx.stage.into * (b.z_m[1] - a.z_m[1]) > 0 ? b : a))
+}
 const stagePoint = (ctx, x, y, a) => [x, y, ctx.stage.front + ctx.stage.into * a]
 const sideOf = (slot) => (Math.abs(slot.pos[0]) < 0.05 ? 0 : Math.sign(slot.pos[0]))
 const upOf = (slot) => (slot.orient === 'hung' ? -1 : 1)
@@ -219,11 +329,19 @@ export const AIM_RULES = {
     'x-cross': (slot, meta, ctx, p = {}) => ({ target: stagePoint(ctx, -sideOf(slot) * (p.x ?? 8), p.y ?? 12, p.a ?? 10) }),
     // A PAR grazing up its own column to the crane runway.
     'up-the-column': (slot, meta, ctx) => ({ target: [slot.column.faceX, ctx.hall.geometry.runway_bottom_m, slot.pos[2]] }),
+    // A lamp in front of the backdrop at the backdrop's face, at `h` of the
+    // height of whatever stands there (the press, the machine line).
+    backdrop: (slot, meta, ctx, p = {}) => {
+        const box = frontBox(ctx, slot.pos[0])
+        if (!box) return { target: [slot.pos[0], 3 * (p.h ?? 0.6), ctx.stage.backdrop.face] }
+        const face = ctx.stage.into > 0 ? box.z_m[1] : box.z_m[0]
+        return { target: [slot.pos[0], box.y_m[0] + (box.y_m[1] - box.y_m[0]) * (p.h ?? 0.6), face] }
+    },
     // Truss spots: alternately a downstage area of the deck and the back wall,
     // counted in from both ends so the two halves mirror.
     'stage-wash': (slot, meta, ctx, p = {}) => (Math.min(meta.rank, meta.n - 1 - meta.rank) % 2 === 0
         ? { target: [slot.pos[0] * 0.8, ctx.stage.deck, ctx.stage.front - ctx.stage.into * (p.deck_a ?? 1.5)] }
-        : { target: [slot.pos[0] * 1.1, p.wall_y ?? 7, ctx.stage.wall] }),
+        : { target: [slot.pos[0] * 1.1, p.wall_y ?? (ctx.stage.backdrop ? 3 : 7), ctx.stage.wall] }),
     // Hung lamps straight down onto the floor under the crane, splayed out.
     'down-from-crane': (slot, meta, ctx) => ({ target: [slot.pos[0] * 1.1, 0, slot.pos[2] + slot.girder * 4] }),
     // A laser up into the roof over the house — the only rule a laser may use
@@ -233,13 +351,36 @@ export const AIM_RULES = {
 
 /**
  * How far a beam travels before it meets the building: the floor, the roof
- * (a pitch from the eaves up to the truss tops at the centre, open into the
- * lantern), the nave walls above the aisle roofs, the aisle walls below them,
- * or an end wall. Sampled every 0.1 m along the axis. A real beam stops there;
+ * (v2, `geometry.roof_flat`: the flat deck, open into the lanterns; v1: a
+ * pitch from the eaves up to the truss tops, the nave and aisle walls), an
+ * outer or end wall, or a machine. Sampled every 0.1 m along the axis. A real beam stops there;
  * the drawn cone is cut to the same length so it does not pierce the roof.
  */
 export const surfaceHit = (from, dir, hall, maxReach = 80) => {
     const g = hall.geometry
+    const len = Math.hypot(...dir) || 1
+    const d = dir.map((c) => c / len)
+    const ends = [g.far_wall_z_m ?? -1e9, g.door?.z_m ?? 1e9].sort((a, b) => a - b)
+    if (g.roof_flat) {
+        // v2: a flat deck on the space frame (a beam passes through the open
+        // frame and lands on the deck), open up into the lanterns; outer walls
+        // only at the building edge; machines (massing) stop a beam too.
+        const deck = g.deck_m ?? g.truss_top_centre_m
+        const lanterns = g.lanterns || []
+        const lanternTop = (g.lantern_top_m ?? deck) - 0.3
+        const [wl, wr] = g.walls_x_m || [-(g.wall_inner_x_m ?? 12), g.wall_inner_x_m ?? 12]
+        const boxes = g.massing || []
+        for (let t = 0.3; t <= maxReach; t += 0.1) {
+            const x = from[0] + d[0] * t
+            const y = from[1] + d[1] * t
+            const z = from[2] + d[2] * t
+            const open = lanterns.some((l) => x >= l.x_m[0] && x <= l.x_m[1] && z >= l.z_m[0] && z <= l.z_m[1])
+            const roof = open ? lanternTop : deck
+            if (y <= 0 || y >= roof || z <= ends[0] || z >= ends[1] || x <= wl || x >= wr) return round(t, 2)
+            if (boxes.some((m) => x >= m.x_m[0] && x <= m.x_m[1] && y >= m.y_m[0] && y <= m.y_m[1] && z >= m.z_m[0] && z <= m.z_m[1])) return round(t, 2)
+        }
+        return maxReach
+    }
     const eave = g.eave_top_m ?? g.truss_bottom_m ?? 12
     const top = g.truss_top_centre_m ?? eave
     const nave = g.nave_wall_x_m ?? g.column_inner_face_x_m ?? 12
@@ -247,9 +388,6 @@ export const surfaceHit = (from, dir, hall, maxReach = 80) => {
     const aisleRoof = g.aisle_roof_m ?? 0
     const lanternHalf = (g.lantern_w_m ?? 0) / 2
     const ridge = top + (g.lantern_h_m ?? 0)
-    const ends = [g.far_wall_z_m ?? -1e9, g.door?.z_m ?? 1e9].sort((a, b) => a - b)
-    const len = Math.hypot(...dir) || 1
-    const d = dir.map((c) => c / len)
     for (let t = 0.3; t <= maxReach; t += 0.1) {
         const x = from[0] + d[0] * t
         const y = from[1] + d[1] * t
@@ -311,6 +449,9 @@ export const realIndices = (group, count, budget, mode) => {
 }
 
 const staticAnim = { mode: 'static', speed: 1, amplitude: 1 }
+
+/** A real lamp's light distance (its cutoff) for a beam that stops at `reach`: see buildRig. */
+export const lightDistance = (reach) => reach * 2
 
 const box = ({ id, name, pos, size, colour, emissive = '#000000', emissiveIntensity = 1, roughness = 0.8, metalness = 0 }) => ({
     id,
@@ -408,6 +549,9 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
     const entities = []
     const fixtures = []
     const summary = { fixtures: 0, real: 0, beamOnly: 0, byGroup: {}, effects: {}, refused: [], clashes: [], unreachable: [], look: null }
+    // Lamps that are not real lights but whose light on a surface is baked
+    // (wash-glb.mjs): each with the surface patch it lands on.
+    const washes = []
     const name = lookName || rig.defaultLook || null
     const look = name ? rig.looks?.[name] : null
     if (name && !look) throw new Error(`no look "${name}" in the rig (it has: ${Object.keys(rig.looks || {}).join(', ') || 'none'})`)
@@ -443,7 +587,7 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
         const spec = look?.aims?.[group.id] || { rule: group.aim }
         const rule = AIM_RULES[spec.rule]
         if (!rule) throw new Error(`group ${group.id}: unknown aim rule "${spec.rule}"`)
-        const slots = placer(group.count, ctx)
+        const slots = placer(group.count, ctx, group)
         if (slots.length !== group.count) {
             throw new Error(`group ${group.id}: asked for ${group.count}, the hall has room for ${slots.length} by the rule "${group.mount}"`)
         }
@@ -482,6 +626,15 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
             const { pan, tilt } = aimAt(from, to)
             const isReal = real.has(i)
             if (isReal) groupReal += 1
+            if (group.bake && !isReal) {
+                const surface = washSurface(slot, aimed, from, to, half, ctx)
+                if (surface) {
+                    washes.push({
+                        id: `${group.id}-${i + 1}`, lens: from.map((v) => round(v)), dir: dir.map((v) => round(v, 6)),
+                        candela: op.candela, intensity: op.intensity, angle: half, penumbra: cls.penumbra, distance: reach, colour, surface
+                    })
+                }
+            }
             fixtures.push({ kind: cls.fixture, parts: posed.parts, colour, id: `${group.id}-${i + 1}`, pan: posed.pan, tilt: posed.tilt })
             entities.push({
                 id: `${RIG_PREFIX}${group.id}-${String(i + 1).padStart(2, '0')}`,
@@ -493,7 +646,14 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
                     light: {
                         color: colour,
                         intensity: op.intensity,
-                        distance: round(reach, 2),
+                        // One field is both the drawn cone's length and the
+                        // light's cutoff (three.js: (1 - (d/cutoff)^4)^2, zero AT
+                        // the cutoff). A real lamp cut at the surface it is aimed at
+                        // would put no light on it, so its cutoff is twice the
+                        // throw (88 % of the light at the surface); the cone runs on
+                        // behind that surface, where the surface hides it. A named
+                        // workaround: a separate beam length is OWED in the platform.
+                        distance: round(isReal ? lightDistance(reach) : reach, 2),
                         angle: round(half, 4),
                         penumbra: cls.penumbra,
                         decay: 2
@@ -517,14 +677,47 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
         if (!placer) throw new Error(`effect ${fx.id}: unknown mount "${fx.mount}"`)
         const geo = geometry[fx.fixture]
         if (!geo) throw new Error(`effect ${fx.id}: no built model for fixture "${fx.fixture}"`)
-        const slots = placer(fx.count, ctx)
+        const slots = placer(fx.count, ctx, fx)
         slots.forEach((slot, i) => {
             const posed = aimFixture(geo, slot, { dir: [0, 1, 0] })
             fixtures.push({ kind: fx.fixture, parts: posed.parts, colour: fx.colour, id: `${fx.id}-${i + 1}` })
         })
         summary.effects[fx.id] = slots.length
     }
-    return { entities, fixtures, summary, stage }
+    summary.washes = washes.length
+    return { entities, fixtures, summary, stage, washes }
+}
+
+/**
+ * The patch of surface a lamp's light lands on, for the bake: a rectangle
+ * { origin, u, v, normal } in room metres (origin a corner, u and v its two
+ * edges), a hair off the surface toward the lamp. A PAR up a column: that
+ * column face from the floor to where the head flares. A lamp on the
+ * backdrop: the machine's front face, as wide as the beam's footprint.
+ */
+export const washSurface = (slot, aimed, from, to, half, ctx) => {
+    const g = ctx.hall.geometry
+    const off = 0.02
+    if (slot.column) {
+        const c = slot.column
+        const w = ctx.hall.dims?.column_w_m ?? 0.5
+        const top = g.column_head?.flare_start_m ?? g.runway_bottom_m ?? 6
+        const x = c.faceX - c.toColumn * off
+        return { origin: [x, 0.02, c.z - w / 2], u: [0, 0, w], v: [0, top - 0.02, 0], normal: [-c.toColumn, 0, 0], kind: 'column' }
+    }
+    if (ctx.stage.backdrop && aimed.target) {
+        const t = aimed.target
+        const box = frontBox(ctx, t[0])
+        if (!box) return null
+        const face = ctx.stage.into > 0 ? box.z_m[1] : box.z_m[0]
+        const dist = Math.hypot(...t.map((v, k) => v - from[k]))
+        const r = dist * Math.tan(half) * 1.6
+        const x0 = Math.max(box.x_m[0], t[0] - r)
+        const x1 = Math.min(box.x_m[1], t[0] + r)
+        const z = face + ctx.stage.into * off
+        return { origin: [x0, box.y_m[0] + 0.02, z], u: [x1 - x0, 0, 0], v: [0, box.y_m[1] - box.y_m[0] - 0.04, 0], normal: [0, 0, ctx.stage.into], kind: 'backdrop' }
+    }
+    return null
 }
 
 // Each shadow-casting spot light takes a texture unit in every lit material's

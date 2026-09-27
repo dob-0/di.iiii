@@ -1,6 +1,6 @@
 {
     "rig": "MOXIR 17.10 — the proposed rig",
-    "version": 2,
+    "version": 3,
     "writtenAt": "2026-09-28",
     "venue": "MOXIR, Charentsavan factory hall (40.406160, 44.637675)",
     "space": "moxir",
@@ -9,24 +9,31 @@
         "fixtureList": "The rental house's list as passed to Claude by the owner on 2026-09-27 (18x UP-B380F, 12x UP-250BSW, 8x UP-HK1915, 50x UP-PL5403, 2x UP-LA40WF, CO2 x6, cold spark x4, smoke x4). The codes are the rental house's internal names, not maker models.",
         "optics": "From the fixtures manifest (scripts/place/fixtures/fixtures.json): each class names a fixture kind whose beam angle and output come from the maker's published page or, where the maker publishes none, a named equivalent — every number carries its source there. The rental house's own datasheets are still OWED to confirm.",
         "positions": "Placed by rule against the hall's structural grid (scripts/place/hall.py -> hall.json), so they move when the hall is rebuilt with measured dimensions.",
-        "hall": "scripts/place/rigs/moxir-hall-dims-2026-09-27.json (grid and heights estimated from photographs with VGGT + perspective, snapped to GOST 23838-89) + moxir-hall-features-2026-09-27.json (gates, aisles, cranes; sizes GUESSES).",
-        "models": "Fixture bodies are the models in scripts/place/fixtures/glb, built to the datasheet dimensions by scripts/place/fixtures/build_fixtures.py (see the manifest for provenance and licence)."
+        "hall": "scripts/place/rigs/moxir-hall-dims-2026-09-28.json (flat space-frame roof, 4 spans x 24 m, 18 bays; photos + 2020 satellite) + moxir-hall-features-2026-09-28.json (the owner's zones marked 2026-09-28, the press massing, gates, cranes; sizes estimated).",
+        "models": "Fixture bodies are the models in scripts/place/fixtures/glb, built to the datasheet dimensions by scripts/place/fixtures/build_fixtures.py (see the manifest for provenance and licence).",
+        "stage": "The owner marked the zones on three photographs on 2026-09-28 ('red backstage, green stage, blue dance floor'); located in metres by a perspective fit of photo 032 (features file, zones._how)."
     },
     "assumptions": [
-        "The stage stands at the FAR end of the nave, in front of the far-end gate; the audience enters by the big gate at the other end. Decided for this model on 2026-09-27, not confirmed with the venue or the production — an ASSUMPTION. Change stage.end and re-run.",
-        "The stage is 16 m wide, 10 m deep, a 1.2 m deck, its back edge 1 m off the end wall. Guesses.",
+        "The stage stands in the zone the owner marked (green, 2026-09-28): across the nave, its front edge at the white bulk bags, facing the entry and the crane end; the big forging press stands behind it as the backdrop, the backstage (red) behind the press. The audience stands between the crane end and the stage (blue). Positions are estimated from photographs (+-8% of the distance from the crane).",
+        "The deck is 16 m wide, 12 m deep, 1.2 m high, its front edge on the zone's front edge; the zone runs on 5.3 m further upstage to the press (backline / crew floor). Deck size is a guess — no stage is on the rental list.",
         "The stage truss is a ground-supported goalpost (two towers standing on the floor either side of the stage + a header) 18 m wide with its header at 6 m, 4 m in from the back of the stage. A guess at a common rental size; no truss is on the list — it is OWED.",
-        "UP-PL5403 x50 is read as 50 in total: 42 uplights (one at the base of every column — 32 in the measured 15-bay hall — and a second on the columns nearest the stage until 42 are used) and 8 on the crane bridge parked nearest the stage. If the 8 on the crane are IN ADDITION to the 50, the total becomes 58.",
+        "UP-PL5403 x50 is read as 50 in total: 32 on the nave columns around the dance floor and the stage (one on each column's nave face, one on its back face, grid lines s 6-48 m), 12 on the next rows out (one span either side, s 12-42 m) so the room reads deep, and 6 on the floor in front of the press, lighting it as the backdrop. The v2 proposal's 8 on the crane bridge are dropped: the crane now parks over the back of the dance floor.",
         "Lasers hang at the top of the truss towers (6 m) and are aimed UP into the roof over the audience; the rig script refuses any laser aim that descends, and any that passes under 3 m above the floor. This is a picture of intent, not a laser safety assessment — a qualified laser safety officer and the national rules (e.g. the Maximum Permissible Exposure limits of IEC 60825-1) are OWED before any 40 W laser is switched on in front of people.",
         "CO2 jets, cold spark and smoke machines are drawn as the machines (their models), standing where they stand; what they emit is not simulated.",
         "Each LOOK is one static state for previsualisation (a focus palette), not a show: positions are the rig's, aims and colours the look's. Brightness between fixtures follows the datasheets (photometry below); the overall exposure is one chosen number (photometry.sceneScale)."
     ],
     "stage": {
-        "end": "far",
+        "zone": "stage",
+        "faces": "entry",
         "width_m": 16,
-        "depth_m": 10,
+        "depth_m": 12,
         "deck_h_m": 1.2,
-        "back_gap_m": 1.0
+        "backdrop": [
+            "press",
+            "press-crown",
+            "machine-line",
+            "machine-pipe"
+        ]
     },
     "truss": {
         "kind": "ground-supported goalpost",
@@ -103,7 +110,7 @@
             "count": 10,
             "mount": "column-bases",
             "aim": "up-into-truss",
-            "note": "10 beams on the floor at column bases down both sides, aimed up into the roof trusses"
+            "note": "10 beams on the floor at the column bases along the dance-floor bays (5 grid lines, both sides), aimed up into the roof"
         },
         {
             "id": "bsw250-truss",
@@ -125,20 +132,52 @@
         {
             "id": "par-columns",
             "class": "par",
-            "count": 42,
+            "count": 32,
             "mount": "column-uplight",
             "aim": "up-the-column",
-            "note": "one at every column base, then a second on the columns nearest the stage, 42 in all"
+            "note": "one on each nave column's inner face and one on its back face, grid lines around the dance floor and the stage; the beam-only ones' light is BAKED (wash-glb.mjs)",
+            "columns": {
+                "zones": [
+                    "stage",
+                    "dance"
+                ],
+                "rows": "nave",
+                "faces": [
+                    "inner",
+                    "back"
+                ]
+            },
+            "bake": true
         },
         {
-            "id": "par-crane",
+            "id": "par-outer",
             "class": "par",
-            "count": 8,
-            "mount": "crane-bridge",
-            "aim": "down-from-crane",
-            "colour": "#ff2fa0",
-            "note": "8 on the yellow crane bridge parked nearest the stage, washing the floor under it",
-            "orient": "hung"
+            "count": 12,
+            "mount": "column-uplight",
+            "columns": {
+                "z_m": [
+                    12,
+                    42
+                ],
+                "rows": "next",
+                "faces": [
+                    "inner"
+                ]
+            },
+            "aim": "up-the-column",
+            "bake": true,
+            "note": "12 on the next column rows out (one span either side, facing the nave), so the room reads deep; light baked"
+        },
+        {
+            "id": "par-press",
+            "class": "par",
+            "count": 6,
+            "mount": "backdrop-floor",
+            "backdrop_gap_m": 3.0,
+            "aim": "backdrop",
+            "bake": true,
+            "symmetric": false,
+            "note": "6 on the floor 3 m in front of the press and the machine line beside it, washing them as the stage's backdrop; the press is off the axis, so this group is not mirrored"
         },
         {
             "id": "laser-stage",
@@ -176,10 +215,13 @@
         }
     ],
     "budget": {
-        "why": "A browser cannot run ~90 real three.js spot lights: each is a term in the shader of every lit pixel and, with shadows on, a shadow render and a texture unit each (WebGL gives 16-32; past that every lit material fails to compile). Every fixture draws its beam cone; only these 8 lamps also light the room, and shadows are OFF by default (the owner found the first version too laggy, 2026-09-27). Measured — see scripts/place/README.md, 'The rig'.",
+        "why": "A browser cannot run ~90 real three.js spot lights: each is a term in the shader of every lit pixel and, with shadows on, a shadow render and a texture unit each (WebGL gives 16-32; past that every lit material fails to compile). Every fixture draws its beam cone; only these 8 lamps also light the room (the rest of the PARs' light on the columns and the press is baked, wash-glb.mjs), and shadows are OFF by default (the owner found the first version too laggy, 2026-09-27). Measured — see scripts/place/README.md, 'The rig'.",
         "realLights": {
             "bsw250-truss": 4,
-            "par-crane": 2,
+            "par-press": {
+                "count": 2,
+                "pick": "first"
+            },
             "par-columns": {
                 "count": 2,
                 "pick": "nearest-stage"
@@ -192,17 +234,17 @@
         "backgroundColor": "#040507",
         "ambient": {
             "color": "#8ea2c8",
-            "intensity": 0.35
+            "intensity": 0.8
         },
         "directional": {
             "color": "#8fa6d8",
-            "intensity": 0.25
+            "intensity": 0.35
         },
         "fog": {
-            "near": 30,
-            "far": 150
+            "near": 60,
+            "far": 250
         },
-        "note": "A dim, cool night: the hall stays readable so the rig can be judged against it. Tuned by eye in the browser, not a photometric night."
+        "note": "A dim, cool night: the hall stays readable so the rig can be judged against it. Tuned by eye in the browser on the RTX 3080 (2026-09-28: ambient 0.35 -> 0.8, directional 0.25 -> 0.35, fog 30/150 -> 60/250 m, because in the 108 m hall the old fog blacked out everything past 30 m and the owner found the room dark). Not a photometric night."
     },
     "photometry": {
         "method": "scripts/place/rig-lib.mjs, 'PHOTOMETRY': candela from the manifest (I = E*d^2 from a measured illuminance, else I = flux / beam solid angle); zoom keeps flux; three.js SpotLight intensity is candela x sceneScale; beam-in-air brightness ~ I*tan(theta/2), scaled to the brightest class, Stevens exponent 1/3, times `air`.",
@@ -223,9 +265,6 @@
                 "par-columns": {
                     "rule": "up-the-column"
                 },
-                "par-crane": {
-                    "rule": "down-from-crane"
-                },
                 "laser-stage": {
                     "rule": "laser-into-roof",
                     "a": 14
@@ -243,15 +282,23 @@
                     "rule": "fan",
                     "spread_deg": 50,
                     "lean_deg": 65
+                },
+                "par-outer": {
+                    "rule": "up-the-column"
+                },
+                "par-press": {
+                    "rule": "backdrop",
+                    "h": 0.6
                 }
             },
             "colours": {
                 "beam380-columns": "#eef3ff",
                 "beam380-stage": "#eef3ff",
                 "par-columns": "#2437ff",
-                "par-crane": "#2437ff",
                 "beeeye-front": "#ffb347",
-                "bsw250-truss": "#9fb4ff"
+                "bsw250-truss": "#9fb4ff",
+                "par-outer": "#2437ff",
+                "par-press": "#ffb060"
             }
         },
         "fan-out": {
@@ -263,9 +310,6 @@
                 },
                 "par-columns": {
                     "rule": "up-the-column"
-                },
-                "par-crane": {
-                    "rule": "down-from-crane"
                 },
                 "laser-stage": {
                     "rule": "laser-into-roof",
@@ -284,15 +328,23 @@
                     "rule": "fan",
                     "spread_deg": 80,
                     "lean_deg": 62
+                },
+                "par-outer": {
+                    "rule": "up-the-column"
+                },
+                "par-press": {
+                    "rule": "backdrop",
+                    "h": 0.6
                 }
             },
             "colours": {
                 "beam380-columns": "#7fe7ff",
                 "beam380-stage": "#ffffff",
                 "par-columns": "#00a0ff",
-                "par-crane": "#00a0ff",
                 "beeeye-front": "#ffffff",
-                "bsw250-truss": "#7fe7ff"
+                "bsw250-truss": "#7fe7ff",
+                "par-outer": "#00a0ff",
+                "par-press": "#ffffff"
             }
         },
         "crossfire": {
@@ -304,9 +356,6 @@
                 },
                 "par-columns": {
                     "rule": "up-the-column"
-                },
-                "par-crane": {
-                    "rule": "down-from-crane"
                 },
                 "laser-stage": {
                     "rule": "laser-into-roof",
@@ -328,15 +377,23 @@
                     "x": 7,
                     "y": 6,
                     "a": 9
+                },
+                "par-outer": {
+                    "rule": "up-the-column"
+                },
+                "par-press": {
+                    "rule": "backdrop",
+                    "h": 0.6
                 }
             },
             "colours": {
                 "beam380-columns": "#ff2448",
                 "beam380-stage": "#ffffff",
                 "par-columns": "#ff2448",
-                "par-crane": "#ff2448",
                 "beeeye-front": "#ffffff",
-                "bsw250-truss": "#ff5a70"
+                "bsw250-truss": "#ff5a70",
+                "par-outer": "#ff2448",
+                "par-press": "#ff6a3a"
             }
         },
         "all-to-centre": {
@@ -348,9 +405,6 @@
                 },
                 "par-columns": {
                     "rule": "up-the-column"
-                },
-                "par-crane": {
-                    "rule": "down-from-crane"
                 },
                 "laser-stage": {
                     "rule": "laser-into-roof",
@@ -373,15 +427,23 @@
                     "x": 0,
                     "y": 9,
                     "a": 16
+                },
+                "par-outer": {
+                    "rule": "up-the-column"
+                },
+                "par-press": {
+                    "rule": "backdrop",
+                    "h": 0.6
                 }
             },
             "colours": {
                 "beam380-columns": "#ffffff",
                 "beam380-stage": "#ffffff",
                 "par-columns": "#ff7a1a",
-                "par-crane": "#ff7a1a",
                 "beeeye-front": "#ffffff",
-                "bsw250-truss": "#ffd08a"
+                "bsw250-truss": "#ffd08a",
+                "par-outer": "#ff7a1a",
+                "par-press": "#ffc070"
             }
         },
         "curtain": {
@@ -393,9 +455,6 @@
                 },
                 "par-columns": {
                     "rule": "up-the-column"
-                },
-                "par-crane": {
-                    "rule": "down-from-crane"
                 },
                 "laser-stage": {
                     "rule": "laser-into-roof",
@@ -410,15 +469,23 @@
                 "beam380-columns": {
                     "rule": "parallel",
                     "lean_deg": -25
+                },
+                "par-outer": {
+                    "rule": "up-the-column"
+                },
+                "par-press": {
+                    "rule": "backdrop",
+                    "h": 0.6
                 }
             },
             "colours": {
                 "beam380-columns": "#b388ff",
                 "beam380-stage": "#ffffff",
                 "par-columns": "#6a1bff",
-                "par-crane": "#6a1bff",
                 "beeeye-front": "#ffffff",
-                "bsw250-truss": "#ffffff"
+                "bsw250-truss": "#ffffff",
+                "par-outer": "#6a1bff",
+                "par-press": "#b388ff"
             }
         }
     }
