@@ -30,6 +30,7 @@ import { getSelectionCentroid } from '../utils/multiTransform.js'
 import { buildReparentPatch, cloneSubtree, collectSubtree, topLevelTargets } from '../utils/entityClipboard.js'
 import { isTimelinePreviewPosed, setTimelinePreview } from '../utils/timelinePreview.js'
 import { useProjectLayers } from '../../project/useProjectLayers.js'
+import { useRigAutoPatch } from '../hooks/useRigAutoPatch.js'
 
 const DISPLAY_NAME_KEY = 'dii.studio.displayName'
 
@@ -140,6 +141,10 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         document,
         applyLocalOps
     })
+    // Lamps with a fixture type are patched on this machine's desk as they are placed,
+    // duplicated or deleted (docs/architecture/RIG_BUILD.md §4); a room without them,
+    // or a machine without a desk, is untouched.
+    useRigAutoPatch({ projectId, entities: document.entities, applyOps: _applyLocalOps })
     const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
     const { assets: spaceAssets, refresh: refreshSpaceAssets } = useSpaceAssets(resolvedSpaceId)
     // useDriveImport counts result.entries, the routes answer with .assets

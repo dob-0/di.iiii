@@ -22,6 +22,7 @@ const {
 const { FX_MODES, FX_SPATIAL, DEFAULT_FX, sanitizeFxPatch, fxActive, beatGrid, BEATS_PER_BAR } = require('./fx');
 const { sanitizeLfos, LFO_WAVES, isGenericChannels } = require('./lfo');
 const { STYLES: FAN_STYLES, fanValues } = require('./fan');
+const { rigPatch, rigList } = require('./rigpatch');
 const library = require('./library');
 const { SACN } = require('./sacn');
 const {
@@ -1425,6 +1426,23 @@ function createDesk(opts = {}) {
       removeProfile(key);
       state.customProfiles = customProfiles();
       save(); json(res, { ok: true });
+    },
+
+    // A room's rig, patched here: {project, lamps:[{key, name, code, type, mode, footprint,
+    // channels?, universe?, address?, index?, group?, move?}], group?, prune?}. The desk
+    // allocates with its own nextFreeAddress; the answer is what the room writes back.
+    // Rules in rigpatch.js (and docs/architecture/RIG_BUILD.md §4 in di.iiii).
+    'POST /api/rig/patch': (req, res, body) => {
+      const out = rigPatch({ state, engine, PROFILES, addProfile, findProfile, makeFixture, customProfiles }, body || {});
+      if (out.status === 200) {
+        state.activeScene = null;
+        engine.cancelFade(); save();
+      }
+      json(res, out.body, out.status);
+    },
+    'GET /api/rig': (req, res) => {
+      const project = new URL(req.url, 'http://desk').searchParams.get('project') || '';
+      json(res, { fixtures: rigList({ state, PROFILES }, project) });
     },
 
     'POST /api/fixtures/add': (req, res, body) => {

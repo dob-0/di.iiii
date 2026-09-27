@@ -31,7 +31,7 @@ published standard or onto the documented practice of the tools the crews use.
 | **USITT RP-2** (2006, graphics for lighting design) | plot symbols, the instrument key, the notation on a plot (unit number, channel, circuit near each symbol) | the plot data (section 5) carries what RP-2 writes next to each symbol; view B draws it |
 | **Lightwright** (City Theatrical / John McKernon Software) — its "instrument schedule" and "channel hookup" reports | the de-facto paperwork of a rig: one row per instrument | the patch sheet's columns and its two sort orders |
 | **ANSI E1.11** (DMX512-A) | 512 slots per universe, addresses 1-512 | the address space and footprints |
-| **ANSI E1.31** (sACN) and **Art-Net 4** (Artistic Licence) | DMX over IP | how a patch universe goes out on the wire (section 4.4) |
+| **ANSI E1.31** (sACN) and **Art-Net 4** (Artistic Licence) | DMX over IP | how a patch universe goes out on the wire (section 4.5) |
 | **Open Fixture Library** (MIT) | community fixture definitions with channel lists | a mode's channel list where OFL has the fixture |
 
 Versions are pinned where they are fetched: the XSDs at
@@ -240,11 +240,13 @@ The lamp↔desk join stays `fixture.index` (the desk's index), so the room mirro
 | a lamp with a `type` + known `mode` appears (placed, duplicated, pasted) | a fixture is created with a profile for (type, mode), at the lamp's own universe/address if it has one **and it is free**, else at the desk's `nextFreeAddress` in the lamp's universe (or the lowest universe with room) | `index`, `universe`, `address` written back as one `updateComponent` op per lamp |
 | a duplicated lamp arrives carrying its original's address | treated as unaddressed: next free address, new index (what consoles do on copy) | new values written back |
 | a lamp's `mode` changes | the fixture's profile changes; if the new footprint collides, it is **flagged**, not moved | unchanged until the flag is resolved |
-| a lamp's universe/address is typed by hand and collides | **refused and flagged** (`overlap with #n`), the desk left as it was | the typed value stays, flagged |
+| a lamp's universe/address is typed by hand (sent with `move`) | moved there if free; if it collides, **refused and flagged** (`overlap`), the desk left as it was | the typed value stays, flagged |
+| the room's address and the desk's differ and nobody typed it (the desk was re-patched by hand, or the room was edited elsewhere) | nothing | nothing — flagged `desk-differs` until someone chooses |
 | a lamp is deleted | its fixture (by `rigKey`) is removed | — |
 | a lamp's type has no known mode | nothing | flagged `mode unknown`; no address is ever invented |
 
-"Patch this group" (the same route with `group: true`) keeps a group
+"Patch this group" (the same route with `group: true, repatch: true` for the
+chosen lamps) lays a group out again and keeps it
 **contiguous in one universe**: the group goes to the lowest universe that has a
 free run of `count × footprint`; if none has, a new universe is started. This is
 the conventional rule (one data line per area, a group re-patchable as a block).
@@ -253,7 +255,21 @@ Profiles: for each (type, mode) the desk gets a custom profile named after the
 type code and mode (`UP-B380F 16ch`), with the mode's channel list as roles when
 known, else `ch1…chN` labelled as owed. The desk's own validation applies.
 
-### 4.3 Where it runs
+### 4.3 The API (for the views)
+
+- desk: `POST /light/api/rig/patch {project, lamps:[{key, name, code, type, mode,
+  footprint, channels?, universe?, address?, index?, group?, move?}], group?, prune?,
+  repatch?}` → `{assignments:[{key, index, universe, address, footprint, profile, how}],
+  flags:[{key, code, message}], removed:[key]}`; `GET /light/api/rig?project=` lists a
+  room's rig fixtures. Code: `serverXR/src/lighting/rigpatch.js`.
+- room: `src/rigbuild/autoPatch.js` — `patchRequest`, `writeBackOps`, `autoPatch`;
+  in the Studio `useRigAutoPatch` (mounted in `StudioEditor`) runs it 400 ms after any
+  lamp change and returns `{flags, message, patchGroup(entityIds)}`.
+- flag codes: `mode-unknown`, `overlap`, `desk-differs`, `off-the-end`, `no-room`,
+  `profile-clash`, `profile-refused`, `group-split`; locally `unknown-type`,
+  `channels-owed`.
+
+### 4.4 Where it runs
 
 The desk exists only on a local install. On a hosted tier auto-patch does
 nothing (lamps keep type/mode, and the sheet says "not patched"); the patch is
@@ -261,7 +277,7 @@ made on the machine with the desk and travels in the document. A CLI,
 `scripts/rigbuild/patch.mjs`, patches a whole project from the terminal
 (MOXIR is patched this way).
 
-### 4.4 On the wire
+### 4.5 On the wire
 
 The desk numbers universes from 0 and shows them +1. So the sheet's **U1** is
 the desk's universe 0, sent on Art-Net as port-address **0 (0:0:0)**. On sACN
@@ -331,5 +347,5 @@ Filled in as the work lands. See `PROGRESS.md` for the session record.
   pages we have) — from the maker's manuals via the rental house.
 - A structural/rigging sign-off; an electrician's distribution plan; a laser
   safety assessment (IEC 60825-1) — none of these is in scope here.
-- sACN universe offset in the desk (section 4.4).
+- sACN universe offset in the desk (section 4.5).
 - The owner's look at the change to the 2026-09-20 decision (section 2.2).
