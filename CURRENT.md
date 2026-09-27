@@ -13,15 +13,15 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- click an object in a room to open its link
-- the agent door: one catalogue of every route, four MCP tools on the official SDK
-- NDI autoscan: a local di.iiii always knows which NDI sources are on the network
-- Perform, phase 1: the show run with only the windows the job needs
-- the VJ deck lands on dev: Clip In, the deck, its picture on the card, cards land where you click
-- lighting desk sends full 512-slot DMX frames
-- a replace says what it removes, and refuses media loss nobody counted
-- the studio deck came back: restore-entities puts back what a project lost
-- the rig: a copy the others cannot see says so; one behind its own front door reads visible
+- the front door links to /support
+- the project list ends clear of the account button
+- the installer's lines tell the truth
+- naming a new project on a phone keeps the title whole
+- a copy without the works points at diiii.xyz
+- the bar fits a phone: what does not fit goes behind More, and a full bar keeps off the place names
+- Raw's Help reads on a phone; the lighting desk names its show at 1440
+- the SpaceHub flake was a lost message, not a slow runner
+- the bar and the desk's ways out are a finger tall under a finger; Studio offers a tool where the bar does
 
 Full detail: `PROGRESS.md`.
 
