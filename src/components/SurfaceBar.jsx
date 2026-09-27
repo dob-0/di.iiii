@@ -69,6 +69,12 @@ const lightHref = ({ isLocalInstall, space, project, projectLabel }) => {
 // list where strangers meet it, which is why Light stayed on the hosted bar.
 const LAYER_OF = { raw: 'connections', map: 'wall', light: 'lamps' }
 
+// Has the project reached the layer that brings this tool? The one rule, read by the
+// bar and by every other door to the same tools (Studio's jump buttons, desktop and
+// phone) so a tool is never offered in one place while the bar still holds it back.
+// `layers` null means "show everything": still loading, the open jam, "All tools".
+export const layerReached = (key, layers) => !layers || !LAYER_OF[key] || Boolean(layers[LAYER_OF[key]])
+
 export const surfaceDestinations = ({ isLocalInstall = false, space = null, project = null, projectLabel = null, layers = null, here = null } = {}) => {
     // A project only means something inside its space; without the space
     // there is no address to build.
@@ -78,7 +84,7 @@ export const surfaceDestinations = ({ isLocalInstall = false, space = null, proj
         // `layers` is null until the project has loaded (nothing hides before
         // that), and null under "All tools". The surface you stand on is never
         // taken off the bar, whatever the project holds.
-        .filter(d => !(inProject && layers && LAYER_OF[d.key] && d.key !== here && !layers[LAYER_OF[d.key]]))
+        .filter(d => !(inProject && d.key !== here && !layerReached(d.key, layers)))
         .map(d => {
             if (d.key === 'light') {
                 return { ...d, href: lightHref({ isLocalInstall, space, project, projectLabel }), clientSide: !isLocalInstall }

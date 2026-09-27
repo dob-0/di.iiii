@@ -11,7 +11,7 @@ import { useStudioPanelState } from '../hooks/useStudioPanelState.js'
 import useAuthSession from '../../hooks/useAuthSession.js'
 import StudioCoachMarks from './StudioCoachMarks.jsx'
 import RigMirrorHint from './RigMirrorHint.jsx'
-import SurfaceBar from '../../components/SurfaceBar.jsx'
+import SurfaceBar, { layerReached } from '../../components/SurfaceBar.jsx'
 import DeskPerformSwitch from '../../perform/DeskPerformSwitch.jsx'
 import useLocalInstall from '../../hooks/useLocalInstall.js'
 import { isEmbedRequest } from '../../utils/previewMode.js'
@@ -287,6 +287,12 @@ export default function StudioShell({
     const allTools = useAllTools()
     const handleToggleAllTools = useCallback(() => saveAllTools(!allTools), [allTools])
     const bare = !isJam && !allTools && Boolean(layers?.loaded) && !layers.held
+    // Studio's own jump buttons to Nodes and Projection (the control cluster, the phone
+    // header) follow the bar: offered once the project has reached that tool's layer,
+    // never before (2026-09-27 — the phone offered Projection before the first wire).
+    const toolLayers = isJam || allTools ? null : layers?.open
+    const offerNodes = layerReached('raw', toolLayers)
+    const offerProjection = layerReached('map', toolLayers)
 
     // Jam phones get Create plus a tiny Edit tab (text/color/remove) — the
     // full Scene sheet stays hidden. A bare project's phone gets Create alone.
@@ -692,8 +698,8 @@ export default function StudioShell({
                         onFullscreen={handleFullscreen}
                         onHideUI={() => setUiHidden(true)}
                         onBackToHub={onBackToHub}
-                        onOpenNodeEditor={onOpenNodeEditor}
-                        onOpenProjection={onOpenProjection}
+                        onOpenNodeEditor={offerNodes ? onOpenNodeEditor : undefined}
+                        onOpenProjection={offerProjection ? onOpenProjection : undefined}
                         xrState={xrState}
                         syncState={syncState}
                         presence={presence}
@@ -742,7 +748,7 @@ export default function StudioShell({
                             "Open in Studio" since the doors audit, but only the desktop
                             control cluster had the return trip — so on a phone the two
                             building tools were connected in one direction only. */}
-                        {!jamMinimal && !bare && onOpenNodeEditor && (
+                        {!jamMinimal && !bare && offerNodes && onOpenNodeEditor && (
                             <button
                                 type="button"
                                 className="smb-top-btn"
@@ -753,7 +759,7 @@ export default function StudioShell({
                                 Nodes
                             </button>
                         )}
-                        {!jamMinimal && !bare && onOpenProjection && (
+                        {!jamMinimal && !bare && offerProjection && onOpenProjection && (
                             <button
                                 type="button"
                                 className="smb-top-btn"
