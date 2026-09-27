@@ -200,6 +200,25 @@ Environment variables:
 - `VPS_DEV_BASE_URL` — base URL to smoke-check (e.g.
   `https://dev.diiii.xyz`); skipped with a warning if unset
 
+### `DEPLOY_TARGET` — a host that pulls its own deploys
+
+Repository variable, `vps` (default; unset means `vps`) or `mac`. It decides only
+what each workflow's `deploy` job does after the tests and image builds:
+
+- `vps` — everything above: SSH to the Compose host, pull, restart, smoke check.
+- `mac` — the job still runs under its environment (`production` keeps its
+  required reviewer; `dev` its own rules), skips every SSH and smoke step, and
+  ends green. That green run is the release: a host running natively
+  (`scripts/standby/`) polls GitHub for the newest **successful** run of the
+  tier's workflow and deploys its `head_sha` itself — only a commit on
+  `origin/main` (production) or `origin/dev` (dev tier), only forward from what
+  it runs, one deploy at a time, with its own health check and automatic
+  rollback. The host's side (its pull-deployer and paths) is host-specific and
+  lives outside this repo.
+
+Any other value fails the job. Switching back is `gh variable delete
+DEPLOY_TARGET` (or `--body vps`).
+
 Image tags are namespaced per environment — the dev tier pushes
 `dii-*:dev-<sha>` (plus the moving `:dev`), production pushes
 `dii-*:prod-<sha>` (plus `:latest`). They used to share a plain `:<sha>` tag,

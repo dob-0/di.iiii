@@ -1,0 +1,104 @@
+name: Uptime (outside check)
+
+# Checks the public site from outside the building that serves it. A watcher
+# on the serving machine goes dark together with that machine or its line, so
+# it can never report that the machine or the line is down. GitHub's runners
+# sit on another network entirely.
+#
+# Alerts only on a change of state (up -> down, down -> up), so a long outage
+# is one message, not one every run. The previous state is the conclusion of
+# this workflow's previous scheduled run. A failed run also sends GitHub's own
+# failure email to whoever last edited the schedule.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check the public addresses
+        id: probe
+        shell: bash
+        run: |
+          set -u
+          # A bare /api path answers the app's HTML with 200 — a false green.
+          # Health must be JSON from /serverXR/api/health.
+          urls=(
+            "https://diiii.xyz/"
+            "https://diiii.xyz/serverXR/api/health"
+            "https://di-studio.xyz/serverXR/api/health"
+          )
+          probe() { # url -> prints "code content-type"
+            curl -sS -o /dev/null -m 20 -w '%{http_code} %{content_type}' "$1" 2>/dev/null || echo "000 -"
+          }
+          down=()
+          for u in "${urls[@]}"; do
+            ok=0
+            # Three tries over ~90 s: the line serving the site blips for
+            # seconds at a time, and a blip is not an outage.
+            for i in 1 2 3; do
+              read -r code type <<<"$(probe "$u")"
+              want_json=0; [[ $u == */api/health ]] && want_json=1
+              if [[ $code == 200 ]] && { (( ! want_json )) || [[ $type == application/json* ]]; }; then ok=1; break; fi
+              sleep 30
+            done
+            if (( ok )); then echo "up   $u"; else echo "DOWN $u ($code $type)"; down+=("$u ($code)"); fi
+          done
+          if (( ${#down[@]} )); then
+            joined=$(printf '%s; ' "${down[@]}"); printf 'down=%s\n' "${joined%; }" >> "$GITHUB_OUTPUT"
+            echo "state=down" >> "$GITHUB_OUTPUT"
+          else
+            echo "state=up" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Previous state
+        id: prev
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          prev=$(gh run list -R "$GITHUB_REPOSITORY" --workflow uptime.yml --event schedule \
+                   --status completed -L 1 --json conclusion -q '.[0].conclusion' 2>/dev/null || true)
+          case "$prev" in failure) echo "state=down" ;; success) echo "state=up" ;; *) echo "state=unknown" ;; esac >> "$GITHUB_OUTPUT"
+
+      - name: Alert on a change
+        if: steps.probe.outputs.state != steps.prev.outputs.state && steps.prev.outputs.state != 'unknown'
+        env:
+          TG_TOKEN: ${{ secrets.UPTIME_TELEGRAM_TOKEN }}
+          TG_CHAT: ${{ secrets.UPTIME_TELEGRAM_CHAT }}
+          STATE: ${{ steps.probe.outputs.state }}
+          DOWN: ${{ steps.probe.outputs.down }}
+        shell: bash
+        run: |
+          if [[ -z ${TG_TOKEN:-} || -z ${TG_CHAT:-} ]]; then
+            echo "::warning::state changed to $STATE but no Telegram secrets are set — GitHub's failure email is the only alert"
+            exit 0
+          fi
+          if [[ $STATE == down ]]; then
+            text="di.iiii is DOWN from outside: $DOWN — checked from GitHub, $(date -u '+%H:%M UTC')"
+          else
+            text="di.iiii is back up from outside — $(date -u '+%H:%M UTC')"
+          fi
+          curl -sS -m 20 -o /dev/null -w 'telegram %{http_code}\n' \
+            --data-urlencode "chat_id=$TG_CHAT" --data-urlencode "text=$text" \
+            "https://api.telegram.org/bot${TG_TOKEN}/sendMessage"
+
+      - name: Fail when down
+        if: steps.probe.outputs.state == 'down'
+        env:
+          DOWN: ${{ steps.probe.outputs.down }}
+        run: |
+          echo "::error::down: $DOWN"
+          exit 1
