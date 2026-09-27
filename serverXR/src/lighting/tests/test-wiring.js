@@ -110,6 +110,11 @@ check('the top bar keeps the show title readable and Blackout in the row', () =>
   if (!/min-width:\s*min\(20em,\s*100%\)/.test(title)) throw new Error('.title lost its minimum width — it shrinks to nothing when the bar is full');
   if (!/justify-content:\s*safe center/.test(title)) throw new Error('.title centres without `safe` — an overflowing title spills out of both sides');
   if (!/@media \(min-width: 701px\) \{ \.topbo \{ width: auto; \} \}/.test(css)) throw new Error('the bar Blackout takes .blackout\'s full width on wide screens again');
+// Regression guard: under a finger the desk's ways out are a finger tall (they were 25px).
+check('the desk top links are 44px under a coarse pointer', () => {
+  const css = fs.readFileSync(path.join(ROOT, '../ui/style.css'), 'utf8');
+  const coarse = css.slice(css.indexOf('@media (pointer: coarse)'));
+  if (!/\.homelink \{ min-height: 44px;/.test(coarse)) throw new Error('.homelink lost its 44px touch height in the (pointer: coarse) block');
 });
 
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');

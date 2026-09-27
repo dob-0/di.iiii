@@ -1009,6 +1009,9 @@ body.space .stage { cursor: grab; }
   /* the release button under every held fader, and the panic buttons in the bars */
   .mf-rel { min-width: 44px; min-height: 44px; }
   #topBlackout, #fBlackout { min-height: 44px; }
+  /* The ways out — di.iiii, back to the project, the project in the other tools — were
+     25px tall on a phone while every control beside them grew to a finger (2026-09-27). */
+  .homelink { min-height: 44px; display: inline-flex; align-items: center; }
   .vwrap input[type=range]::-webkit-slider-thumb { width: 22px; height: 32px; margin-top: -13px; }
   .vwrap input[type=range]::-moz-range-thumb { width: 22px; height: 32px; }
   .vhandle { width: 30px; height: 18px; margin-left: -15px; margin-top: -9px; }

@@ -191,6 +191,25 @@
     .sbar-where { max-width: 30vw; }
 }
 
+/* A finger, on any screen: every place on the bar is a full touch target. The
+   text stays the same size; the line is as tall as a finger. Measured 2026-09-27:
+   27px on a phone, 13px on a tablet. The bar's height follows, and so does
+   --sbar-h, which everything under the bar reads to clear it (+1px, its rule). */
+@media (pointer: coarse) {
+    :root { --sbar-h: calc(var(--di-touch-target) + 1px); }
+
+    .sbar { padding-top: 0; padding-bottom: 0; }
+
+    .sbar-home,
+    .sbar-where,
+    .sbar-link {
+        display: inline-block;
+        padding-top: 0;
+        padding-bottom: 0;
+        line-height: var(--di-touch-target);
+    }
+}
+
 /* Desk | Perform (src/perform/DeskPerformSwitch.jsx): two of the bar's own
    words and its separator, held together so the pair never wraps apart. */
 .sbar-switch {
