@@ -724,6 +724,27 @@ describe('the beam and the room’s shadows survive both mirrors', () => {
     expect(doc.entities[2].components.beam).toEqual({ visible: false, haze: 0.4 })
   })
 
+  it('keeps beam.only (the cone with no light) on both sides, and only when true', async () => {
+    const esm = await import('../../src/shared/projectSchema.js')
+    const written = applyProjectOps(normalizeProjectDocument({
+      entities: [{ id: 'lamp', type: 'spotLight', components: {} }]
+    }), [
+      { type: 'updateEntity', payload: { entityId: 'lamp', patch: { components: { beam: { visible: true, haze: 0.5, only: true } } } } }
+    ])
+    const read = normalizeProjectDocument(JSON.parse(JSON.stringify(written)))
+    expect(read.entities[0].components.beam).toEqual({ visible: true, haze: 0.5, only: true })
+    expect(esm.normalizeProjectDocument(JSON.parse(JSON.stringify(written))).entities[0].components.beam)
+      .toEqual(read.entities[0].components.beam)
+    // false, or anything that is not exactly true, is not stored at all — a
+    // beam saved before `only` existed reads back byte-for-byte the same.
+    for (const only of [false, 'yes', 1]) {
+      const doc = normalizeProjectDocument({ entities: [{ id: 'x', type: 'spotLight', components: { beam: { visible: true, haze: 0.4, only } } }] })
+      expect(doc.entities[0].components.beam).toEqual({ visible: true, haze: 0.4 })
+      expect(esm.normalizeProjectDocument({ entities: [{ id: 'x', type: 'spotLight', components: { beam: { visible: true, haze: 0.4, only } } }] }).entities[0].components.beam)
+        .toEqual({ visible: true, haze: 0.4 })
+    }
+  })
+
   it('keeps renderSettings.shadowCasting through an op and a re-read', async () => {
     const esm = await import('../../src/shared/projectSchema.js')
     const written = applyProjectOps(normalizeProjectDocument({}), [

@@ -1,0 +1,28 @@
+{
+    "site": "MOXIR hall, Charentsavan (40.406160, 44.637675)",
+    "date": "2026-09-27",
+    "source": "read off the photographs and the entry video (see moxir-hall-dims-2026-09-27.json notes); sizes are GUESSES",
+    "what": "Features of the hall that the measured grid does not carry. Every size here is a guess; the feature itself was seen.",
+    "door_w_m": 6.0,
+    "door_h_m": 6.0,
+    "entry_platform": true,
+    "far_gate_w_m": 4.8,
+    "far_gate_h_m": 5.4,
+    "aisle_w_m": 7.5,
+    "aisle_h_m": 8.5,
+    "cranes_from_door_m": [4.0, 70.0],
+    "confidence": {
+        "door_w_m": "GUESS (a large gate seen in video 026; not measured)",
+        "door_h_m": "GUESS",
+        "entry_platform": "seen (video 026 frames 9-12); size GUESS",
+        "far_gate_w_m": "low (155 px at ~88 m in photo 004; snapped to the standard 4.8 x 5.4 m gate)",
+        "far_gate_h_m": "GUESS (standard gate)",
+        "aisle_w_m": "GUESS (cloud shows 6-9 m beyond one row, up to 18 m beyond the other)",
+        "aisle_h_m": "GUESS (cloud shows structure up to ~9 m)",
+        "cranes_from_door_m": "one parked at the entry end (the crane photos were taken from it), one ~70 m down the hall (perspective estimate)"
+    },
+    "ranges": {
+        "aisle_w_m": [6.0, 9.0],
+        "aisle_h_m": [7.5, 9.0]
+    }
+}

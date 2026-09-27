@@ -389,11 +389,12 @@ export const WIKI_ARTICLES = [
             'Set the pan first and then tilt into the room, the way you would on a ladder: a lamp hanging dead down has no direction to keep, so the pan you chose is held until there is a tilt to use it. Nothing new is saved for this — pan and tilt are the lamp\'s own rotation in the fixture\'s language, so a lamp aimed by dragging reads back here as numbers, and a lamp aimed here moves under the gizmo.',
             'THE BEAM. A lamp\'s Beam section switches on the throw itself: the cone of light in the air between the lamp and what it lands on, the way a beam shows in a hazed room. Haze is how thick that air is. The beam is off in every room until somebody switches it on, and it takes the lamp\'s own colour — so a lamp joined to a fixture on the lighting desk beams in the colour the desk is emitting, live, and goes out when the desk takes it out.',
             'The cone is drawn as far as the lamp reaches, so set the lamp\'s Distance to roughly where the light actually lands. A lamp with a 15-metre reach hung in a small room draws its cone straight through the floor.',
+            'BEAM ONLY. A whole rig is too many lamps for a browser: every lamp that really lights the room costs every pixel, and with shadows on a phone refuses past about a dozen. Tick Beam only (no light) and the lamp keeps its cone in the air but lights nothing — so a rig of ninety heads can hang complete, every beam visible, while a chosen dozen actually light the walls and the floor. A lamp with no beam never goes dark this way; the switch only means something while the beam is showing.',
             'SHADOWS FROM THE ROOM. Under Project → Render there is Lamps throw shadows. Switch it on and the lamps in the room cast: a pillar standing in a beam puts its shadow on the floor behind it, a person-sized box makes a person-sized shadow, and a scanned venue\'s own walls catch what is thrown at them. Shadow detail chooses how sharp the edge is — Sharper costs more, and a phone will feel it. It is off unless a room asks for it, because a shadow pass over a big scanned room is not free.',
             'What a visitor sees is what you see: the beam and the shadows are part of the room, so they arrive with it in a published space and in walk mode, not only in the Studio.'
         ],
         tags: ['light', 'lamp', 'spot', 'spotlight', 'aim', 'pan', 'tilt', 'beam', 'haze', 'shadow', 'shadows', 'rig', 'stage', 'studio', 'render'],
-        updated: '2026-09-21'
+        updated: '2026-09-27'
     },
     {
         id: 'the-rig',

@@ -715,10 +715,17 @@ export const normalizeEntity = (entity = {}) => {
     // beam -- a cone switched on by a normaliser would change the look of every
     // lit space at once. `haze` is how thick the air is, 0..1; the renderer
     // reads an absent haze as 0.4 (src/objectComponents/spotBeam.js).
+    // `only` (2026-09-27): draw the cone, cast NO light. A real rig is 90 lamps
+    // and a browser cannot run 90 real spot lights (every one is a term in every
+    // lit pixel's shader, and phones refuse to compile past ~16); a lamp marked
+    // `only` keeps its beam in the air and leaves the room unlit by it, so a rig
+    // can be hung whole and a budget of real lamps chosen. Stored only when
+    // true, so every beam saved before this reads back exactly as it was.
     if (sourceComponents.beam) {
         nextComponents.beam = {
             visible: ensureBoolean(sourceComponents.beam.visible, false),
-            haze: Math.min(1, Math.max(0, ensureNumber(sourceComponents.beam.haze, 0.4)))
+            haze: Math.min(1, Math.max(0, ensureNumber(sourceComponents.beam.haze, 0.4))),
+            ...(sourceComponents.beam.only === true ? { only: true } : {})
         }
     }
     // THE JOIN between a lamp in the room and a lamp on the lighting desk: the

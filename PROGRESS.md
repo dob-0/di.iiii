@@ -5,6 +5,22 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-27 — MOXIR: a modelled hall and a 90-lamp rig in it
+
+- `scripts/place/hall.py` builds a parametric Soviet crane hall from measured-from-photos dims
+  (`scripts/place/rigs/moxir-hall-dims-2026-09-27.json`, every value with range + confidence);
+  `import.mjs --replace` put it into `moxir` on the local tier (backup in
+  `~/di-backups/moxir-before-hall-2026-09-27/`, footage wall untouched).
+- `scripts/place/rig.mjs` hangs `rigs/moxir-2026-10-17.json` by rule against the grid: 90 lamps,
+  stage, truss, effect markers; laser and crane-clash checks. `rig-look.mjs` shoots named views and
+  counts frames without writing to the server.
+- New `components.beam.only`: cone without light. Measured why: 90 real spot lights are 0.1 fps on
+  SwiftShader and black with shadows (texture-unit ceiling); 12 real + 78 beam-only is 0.6.
+  The installed 0.4.16 drops the field — until the install is updated the local tier runs all 90
+  real — the owner found it "too laggy" (measured 1 fps on the RTX 3080). Now 8 real lamps, shadows
+  off, and on servers without `beam.only` the other beams baked into one mesh: 240 fps (vsync cap),
+  51 draw calls. Details: `docs/ai/sessions/feat-moxir-hall.md`, `scripts/place/README.md`.
+
 ## 2026-09-24 — click an object in a room to open its link
 
 - `components.link = { enabled, href, label }` was stored by the schema and read by nothing: a
