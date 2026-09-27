@@ -50,9 +50,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    /* Clipped by its own max-width, never squeezed to nothing: on a phone the
-       links took every pixel and the space's name read as two dots. */
-    flex-shrink: 0;
+    /* Clipped by its own max-width, and when the bar is full it gives way to
+       the links row's floor (More and the surface's own control) down to 3em —
+       never squeezed to nothing: on a phone the links once took every pixel and
+       the space's name read as two dots. */
+    flex-shrink: 1;
+    min-width: 3em;
 }
 
 .sbar-where:hover { text-decoration: underline; }
