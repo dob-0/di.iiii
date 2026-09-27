@@ -1,7 +1,7 @@
 import React from 'react'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import SurfaceBar, { surfaceDestinations } from './SurfaceBar.jsx'
+import SurfaceBar, { fitDestinations, surfaceDestinations } from './SurfaceBar.jsx'
 import { appNavigate } from '../utils/appNavigate.js'
 import { ALL_TOOLS_KEY, saveAllTools } from '../studio/utils/jamMode.js'
 
@@ -203,6 +203,65 @@ describe('SurfaceBar', () => {
             expect(links()).toEqual(['Spaces', 'Studio', 'Tools', 'Wiki'])
             act(() => saveAllTools(true))
             expect(links()).toEqual(['Spaces', 'Studio', 'Nodes', 'Projection', 'Tools', 'Light', 'Wiki'])
+        })
+    })
+})
+
+// Priority+ (2026-09-27): at 390px WIKI was sliced off the right edge and a
+// full project's seven names needed twice the phone. jsdom has no layout, so
+// the rendered cases are given widths: 110px of room, every name and More
+// 30px, and no gap (jsdom reads no stylesheet).
+describe('SurfaceBar on a narrow window', () => {
+    it('shows every name when all of them fit, and no More', () => {
+        expect(fitDestinations({ widths: [30, 30, 30], gap: 10, more: 30, avail: 110 })).toBe(3)
+    })
+
+    it('keeps as many as fit beside More, in their order', () => {
+        expect(fitDestinations({ widths: [30, 30, 30, 30], gap: 10, more: 30, avail: 100 })).toBe(1)
+        expect(fitDestinations({ widths: [30, 30, 30, 30], gap: 10, more: 30, avail: 140 })).toBe(2)
+    })
+
+    it('leaves More alone when not even one name fits beside it', () => {
+        expect(fitDestinations({ widths: [60, 60], gap: 10, more: 30, avail: 70 })).toBe(0)
+    })
+
+    it('hides nothing before there is a width to measure', () => {
+        expect(fitDestinations({ widths: [30, 30], gap: 10, more: 30, avail: 0 })).toBe(2)
+    })
+
+    describe('rendered', () => {
+        let restore = []
+        const stub = (proto, key, get) => {
+            const before = Object.getOwnPropertyDescriptor(proto, key)
+            Object.defineProperty(proto, key, { configurable: true, get })
+            restore.push(() => (before ? Object.defineProperty(proto, key, before) : delete proto[key]))
+        }
+        beforeEach(() => {
+            stub(HTMLElement.prototype, 'offsetWidth', function () { return this.classList.contains('sbar-measure-item') ? 30 : 0 })
+            stub(HTMLElement.prototype, 'clientWidth', function () { return this.classList.contains('sbar-links') ? 110 : 0 })
+        })
+        afterEach(() => {
+            restore.forEach(fn => fn())
+            restore = []
+        })
+
+        const shown = () => [...document.querySelectorAll('.sbar-links > .sbar-link')].map(a => a.textContent)
+
+        it('puts what does not fit behind More, and More opens and closes', () => {
+            render(<SurfaceBar here="spaces" />)
+            // six names, 110px: More (30) + two names (60) = 90; a third makes 120
+            expect(shown()).toEqual(['Spaces', 'Studio', 'More'])
+            const more = screen.getByRole('button', { name: 'More' })
+            expect(more.getAttribute('aria-expanded')).toBe('false')
+            fireEvent.click(more)
+            expect([...document.querySelectorAll('.sbar-menu a')].map(a => a.textContent)).toEqual(['Nodes', 'Tools', 'Light', 'Wiki'])
+            fireEvent.keyDown(window, { key: 'Escape' })
+            expect(document.querySelector('.sbar-menu')).toBeNull()
+        })
+
+        it('lights More when the surface you stand on is behind it', () => {
+            render(<SurfaceBar here="wiki" />)
+            expect(screen.getByRole('button', { name: 'More' }).className).toContain('is-here')
         })
     })
 })
