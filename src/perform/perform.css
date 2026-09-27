@@ -1,0 +1,344 @@
+/* The Perform desk (PerformDesk.jsx): the same windows as Nodes, with no
+   canvas behind them. Born on the spine — tokens from base.css only
+   (src/styles/spine.test.js). Nothing here restyles a window, the deck or
+   the Projection panes: it only lays them out and adds the one strip. */
+
+.perform-shell {
+    position: fixed;
+    inset: 0;
+    background: var(--di-bg);
+    color: var(--di-ink);
+    font-family: var(--di-mono);
+}
+
+/* The one strip under the bar: the preset, and + window. The bar itself is
+   the platform's; this is the only chrome Perform adds. */
+.perform-strip {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: var(--sbar-h);
+    z-index: 55;
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-3);
+    padding: var(--di-space-1) var(--di-space-3);
+    border-bottom: 1px solid var(--di-line);
+    background: var(--di-bg);
+    font-size: var(--di-text-3);
+}
+
+.perform-strip-notice {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--di-dim);
+    font-size: var(--di-text-2);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.perform-menu-anchor {
+    position: relative;
+}
+
+.perform-strip-button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    min-height: 32px;
+    padding: 0 var(--di-space-3);
+    background: transparent;
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    color: var(--di-ink);
+    font-family: inherit;
+    font-size: var(--di-text-3);
+    letter-spacing: 0.04em;
+    cursor: pointer;
+}
+
+.perform-strip-button:hover {
+    border-color: var(--di-ink);
+}
+
+.perform-strip-button .perform-changed {
+    color: var(--di-dim);
+}
+
+.perform-menu {
+    position: absolute;
+    top: calc(100% + var(--di-space-1));
+    left: 0;
+    z-index: 80;
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-3);
+    width: min(320px, calc(100vw - 24px));
+    max-height: calc(100dvh - var(--sbar-h) - 64px);
+    overflow-y: auto;
+    padding: var(--di-space-3);
+    background: var(--di-surface-2);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+}
+
+.perform-menu-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-1);
+}
+
+.perform-menu-label {
+    color: var(--di-dim);
+    font-size: var(--di-text-2);
+    letter-spacing: var(--di-label-tracking);
+    text-transform: uppercase;
+}
+
+.perform-menu-row {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-1);
+}
+
+.perform-menu-item {
+    flex: 1 1 auto;
+    min-height: 36px;
+    padding: 0 var(--di-space-2);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--di-radius);
+    color: var(--di-ink);
+    font-family: inherit;
+    font-size: var(--di-text-3);
+    text-align: left;
+    cursor: pointer;
+}
+
+.perform-menu-item:hover:not(:disabled),
+.perform-menu-item.is-on {
+    border-color: var(--di-ink);
+}
+
+.perform-menu-item:disabled {
+    color: var(--di-faint);
+    cursor: default;
+}
+
+.perform-menu-item .perform-menu-note {
+    margin-left: var(--di-space-2);
+    color: var(--di-dim);
+    font-size: var(--di-text-2);
+}
+
+.perform-menu-remove {
+    min-width: 36px;
+    min-height: 36px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--di-radius);
+    color: var(--di-dim);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.perform-menu-remove:hover {
+    border-color: var(--di-line);
+    color: var(--di-ink);
+}
+
+.perform-menu-empty {
+    margin: 0;
+    color: var(--di-faint);
+    font-size: var(--di-text-2);
+}
+
+.perform-menu-sep {
+    border-top: 1px solid var(--di-line);
+    padding-top: var(--di-space-2);
+}
+
+.perform-save {
+    display: flex;
+    gap: var(--di-space-1);
+}
+
+.perform-save input {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 36px;
+    padding: 0 var(--di-space-2);
+    background: var(--di-bg);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    color: var(--di-ink);
+    font-family: inherit;
+    font-size: var(--di-text-3);
+}
+
+/* --- inside the windows ---------------------------------------------------- */
+
+.perform-pane {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-2);
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    padding: var(--di-space-2);
+    background: var(--di-bg);
+    font-family: var(--di-sans);
+    font-size: var(--di-text-3);
+}
+
+.perform-pane .map-frame {
+    flex: 1 1 auto;
+    height: 100%;
+    padding: var(--di-space-1);
+}
+
+.perform-pane--flush {
+    padding: 0;
+}
+
+.perform-dim {
+    margin: 0;
+    color: var(--di-dim);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+}
+
+.perform-read {
+    margin: 0;
+    color: var(--di-ink);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+}
+
+.perform-action {
+    align-self: flex-start;
+    min-height: 36px;
+    padding: 0 var(--di-space-3);
+    background: transparent;
+    border: 1px solid var(--di-ink);
+    border-radius: var(--di-radius);
+    color: var(--di-ink);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    letter-spacing: 0.04em;
+    cursor: pointer;
+}
+
+.perform-action:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.perform-action.is-on {
+    background: var(--di-ink);
+    color: var(--di-bg);
+}
+
+.perform-action--danger {
+    border-color: var(--di-danger);
+    color: var(--di-danger);
+}
+
+.perform-action--danger.is-on {
+    background: var(--di-danger);
+    color: var(--di-bg);
+}
+
+/* A window that is not native yet: dim, and saying so in words. */
+.perform-coming {
+    justify-content: center;
+    opacity: 0.72;
+    border: 1px dashed var(--di-line);
+}
+
+.perform-coming-tag {
+    align-self: flex-start;
+    padding: var(--di-space-1) var(--di-space-2);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    color: var(--di-dim);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    letter-spacing: var(--di-label-tracking);
+    text-transform: uppercase;
+}
+
+/* The picture of a Picture Out, as big as the window lets it be. */
+.perform-picture {
+    display: block;
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+    object-fit: contain;
+    background: var(--di-black);
+}
+
+/* --- the clock ----------------------------------------------------------- */
+
+.perform-clock {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--di-space-2) var(--di-space-4);
+}
+
+.perform-clock-bpm {
+    font-family: var(--di-mono);
+    font-size: var(--di-text-7);
+    font-variant-numeric: tabular-nums;
+}
+
+.perform-beats {
+    display: flex;
+    gap: var(--di-space-2);
+}
+
+.perform-beat {
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--di-dim);
+    border-radius: 50%;
+}
+
+.perform-beat.is-on {
+    background: var(--di-ink);
+    border-color: var(--di-ink);
+}
+
+.perform-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    color: var(--di-dim);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+}
+
+/* --- the master ---------------------------------------------------------- */
+
+.perform-master-row {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) 4ch;
+    align-items: center;
+    gap: var(--di-space-2);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+}
+
+.perform-master-row input[type='range'] {
+    width: 100%;
+    accent-color: var(--di-ink);
+}
+
+@media (pointer: coarse), (max-width: 600px) {
+    .perform-strip-button,
+    .perform-action {
+        min-height: 44px;
+    }
+}

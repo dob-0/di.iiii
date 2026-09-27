@@ -479,3 +479,52 @@ describe('space-bundle import --force says what it removes, and refuses uncounte
         expect(fs.existsSync(path.join(tier, '_backups'))).toBe(false)
     })
 })
+
+// The show's Perform presets live in the project document (2026-09-24), so a
+// .diiii file carries them without the tool knowing they exist. This proves
+// it end to end: a preset given to the show on one install is a preset of
+// the show on the install that opens the file, read the way the server reads
+// a document (readProjectDocument → the schema mirror).
+describe('space-bundle carries the show\'s Perform presets', () => {
+    it('export → import: the presets arrive, in order, and read back through the server', async () => {
+        const schema = require('../shared/projectSchema.cjs')
+        const presets = [
+            { id: 'show:sunday', name: 'sunday caller', base: 'caller', windows: [{ id: 'cues', kind: 'cues' }, { id: 'wall', kind: 'wall' }], wide: { cues: [1, 2, 34, 95], wall: [36, 2, 63, 95] }, narrow: { cues: [0, 0, 100, 100] } },
+            { id: 'show:win', name: 'win projector', windows: [{ id: 'wallout', kind: 'wallout' }], wide: { wallout: [1, 2, 98, 95] }, narrow: {} }
+        ]
+        const source = mkTemp('bundle-perform-src-')
+        seedSpace(path.join(source, 'di.db'), { id: 'stage', updatedAt: Date.now() - 60_000 })
+        {
+            const { initDb, closeDb } = require('../serverXR/src/db.js')
+            const db = initDb(path.join(source, 'di.db'))
+            const now = Date.now() - 60_000
+            db.prepare('INSERT INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+                .run('show', 'stage', 'show', 1, 'project', now, now, now)
+            closeDb()
+        }
+        const dir = path.join(source, 'spaces', 'stage', 'projects', 'show')
+        fs.mkdirSync(dir, { recursive: true })
+        const document = schema.normalizeProjectDocument({ projectMeta: { id: 'show', spaceId: 'stage', title: 'show' }, performState: { presets } })
+        fs.writeFileSync(path.join(dir, 'document.json'), JSON.stringify(document))
+
+        const file = path.join(mkTemp('bundle-perform-file-'), 'stage.diiii')
+        await run(['export', 'stage', '--data-root', source, '--out', file])
+        const target = mkTemp('bundle-perform-dst-')
+        await run(['import', file, '--data-root', target])
+
+        const { initDb, closeDb } = require('../serverXR/src/db.js')
+        const { readProjectDocument } = require('../serverXR/src/projectStore.js')
+        initDb(path.join(target, 'di.db'))
+        try {
+            const arrived = await readProjectDocument(path.join(target, 'spaces'), 'stage', 'show')
+            expect(arrived.performState.presets.map((p) => [p.id, p.name, p.source])).toEqual([
+                ['show:sunday', 'sunday caller', 'show'],
+                ['show:win', 'win projector', 'show']
+            ])
+            expect(arrived.performState.presets[0].wide).toEqual(presets[0].wide)
+            expect(arrived.performState.presets[0].base).toBe('caller')
+        } finally {
+            closeDb()
+        }
+    })
+})

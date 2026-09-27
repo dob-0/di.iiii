@@ -444,6 +444,20 @@ describe('ESM/CJS mirror equivalence', () => {
         { id: 'f3', type: 'pointLight', components: { fixture: { index: 0 } } },
         { id: 'f4', type: 'directionalLight', components: { fixture: 'nope' } }
       ]
+    },
+    // The show's Perform presets (2026-09-24). The server rebuilds documents
+    // through the mirror, so a mirror that dropped performState would erase
+    // every preset given to the show on the next save. Covers a kind this
+    // build does not know (kept), a duplicate slot (dropped) and a rect off
+    // the workspace (clamped).
+    {
+      performState: {
+        presets: [
+          { id: 'show:a', name: 'sunday caller', source: 'mine', base: 'caller', windows: [{ id: 'cues', kind: 'cues' }, { id: 'cues', kind: 'wall' }, { id: 'h', kind: 'hologram' }], wide: { cues: [1, 2, 34, 95], h: [90, 90, 40, 40] }, narrow: { cues: [0, 0, 100, 64] } },
+          { id: 'show:a', name: 'duplicate id', windows: [] },
+          { name: 'no id' }
+        ]
+      }
     }
   ]
 
@@ -502,7 +516,10 @@ describe('ESM/CJS mirror equivalence', () => {
       { type: 'updateEntity', payload: { entityId: 'e9', patch: { components: { transform: { position: [4, 5, 6] } } } } },
       { type: 'setWorldState', payload: { patch: { backgroundColor: '#0f0f0f' } } },
       { type: 'createNode', payload: { node: { id: 'n5', typeId: 'some.type', label: 'N', values: {} } } },
-      { type: 'deleteNode', payload: { nodeId: 'n5' } }
+      { type: 'deleteNode', payload: { nodeId: 'n5' } },
+      { type: 'upsertPerformPreset', payload: { preset: { id: 'show:b', name: 'win projector', windows: [{ id: 'wallout', kind: 'wallout' }], wide: { wallout: [0, 0, 100, 100] } } } },
+      { type: 'upsertPerformPreset', payload: { preset: { id: 'show:c', name: 'first', windows: [] }, index: 0 } },
+      { type: 'deletePerformPreset', payload: { presetId: 'show:a' } }
     ]
     for (const fixture of FIXTURES) {
       const fromCjs = schema.applyProjectOps(schema.cloneValue(fixture), ops)
@@ -538,7 +555,10 @@ describe('ESM/CJS mirror equivalence', () => {
       { type: 'deleteEntity', payload: { entityId: 'e1' } },
       { type: 'setWorldState', payload: { patch: { backgroundColor: '#0f0f0f' } } },
       { type: 'deleteNode', payload: { nodeId: 'n1' } },
-      { type: 'deleteAsset', payload: { assetId: 'abc' } }
+      { type: 'deleteAsset', payload: { assetId: 'abc' } },
+      { type: 'upsertPerformPreset', payload: { preset: { id: 'show:b', name: 'win projector', windows: [] } } },
+      { type: 'upsertPerformPreset', payload: { preset: { id: 'show:a', name: 'renamed', windows: [] } } },
+      { type: 'deletePerformPreset', payload: { presetId: 'show:a' } }
     ]
     const stripDeep = (value) => {
       if (Array.isArray(value)) return value.map(stripDeep)

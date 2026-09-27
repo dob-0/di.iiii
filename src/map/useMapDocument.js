@@ -28,7 +28,7 @@ export function useMapDocument(projectId, { role = 'desk' } = {}) {
     const document = state.document
     const mapping = document?.mappingState
 
-    const applyOps = useMapOpCourier(projectId, applyLocalOps)
+    const { applyOps, ...api } = useMapApi(projectId, applyLocalOps)
 
     const surfaces = useMemo(() => mapping?.surfaces || [], [mapping])
     const surfaceById = useMemo(
@@ -36,6 +36,16 @@ export function useMapDocument(projectId, { role = 'desk' } = {}) {
         [surfaces]
     )
 
+    return { store, document, mapping, surfaces, surfaceById, syncState, applyOps, ...api }
+}
+
+// What the desk can DO to a mapping, over any document's op layer — the
+// map desk's own (useMapDocument above) or a surface that already holds the
+// project, like the Perform desk's windows (src/perform/), which must not
+// open a second sync of the same project in the same page. The courier comes
+// along, so the output window hears every edit at once whichever surface made it.
+export function useMapApi(projectId, applyLocalOps) {
+    const applyOps = useMapOpCourier(projectId, applyLocalOps)
     const api = useMemo(() => ({
         // The generated id goes LAST and always wins. Spreading the caller's
         // patch over it meant a duplicate — which passes the whole surface it
@@ -98,7 +108,7 @@ export function useMapDocument(projectId, { role = 'desk' } = {}) {
         fireCue: (cue) => fireCueShared(cue, applyOps)
     }), [applyOps])
 
-    return { store, document, mapping, surfaces, surfaceById, syncState, applyOps, ...api }
+    return useMemo(() => ({ applyOps, ...api }), [applyOps, api])
 }
 
 // The output window's side of the courier: apply an edit the moment it is

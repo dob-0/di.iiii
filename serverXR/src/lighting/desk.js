@@ -19,7 +19,7 @@ const {
   addProfile, removeProfile, customProfiles, findProfile,
   AUDIO_MODES, sanitizeAudioCfg,
 } = require('./engine');
-const { FX_MODES, FX_SPATIAL, DEFAULT_FX, sanitizeFxPatch, fxActive, beatGrid } = require('./fx');
+const { FX_MODES, FX_SPATIAL, DEFAULT_FX, sanitizeFxPatch, fxActive, beatGrid, BEATS_PER_BAR } = require('./fx');
 const { sanitizeLfos, LFO_WAVES, isGenericChannels } = require('./lfo');
 const { STYLES: FAN_STYLES, fanValues } = require('./fan');
 const library = require('./library');
@@ -1066,6 +1066,25 @@ function createDesk(opts = {}) {
     // The cheap read: a few hundred bytes for anything that polls fast — the graph's
     // DMX Out node, a phone strip, an AI director. /api/state is the whole library.
     'GET /api/summary': (req, res) => json(res, summary()),
+    // The show clock, as small as it can be, because a follower asks every
+    // second (src/perform/useShowClock.js): tempo and WHERE the beat is
+    // (epoch, this machine's ms), and this machine's time at the moment of the
+    // reply, so the follower can take its own clock's offset from it
+    // (Cristian's method; src/perform/showClock.js). Master and blackout ride
+    // along for the Master window, which would otherwise poll a second route.
+    'GET /api/clock': (req, res) => {
+      const g = beatGrid(state.fx, Date.now());
+      json(res, {
+        up: true,
+        bpm: g.bpm,
+        epoch: g.epoch,
+        beatsPerBar: BEATS_PER_BAR,
+        master: state.master,
+        blackout: !!state.blackout,
+        show: show.space || null,
+        now: Date.now(),
+      });
+    },
 
     // Scene names and health only — what a picker needs, ~50 bytes a scene.
     'GET /api/scenes/summary': (req, res) => {
