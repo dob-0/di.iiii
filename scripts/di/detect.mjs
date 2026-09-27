@@ -43,7 +43,7 @@ export const satisfiesFloor = (version, floor = NODE_FLOOR) => {
  * @param {string|null} probes.vendoredNode version of the Node under DI_HOME
  * @param {boolean} probes.canReachNodeOrg  nodejs.org is reachable, so a
  *   missing/old Node is a download rather than a dead end
- * @param {string} [probes.forcedMode]      DI_MODE, or --docker / --node
+ * @param {string} [probes.forcedMode]      not passed by any caller yet (the seam for a --docker / --node flag)
  *
  * @returns {{mode: 'docker'|'node'|'none', nodeSource: 'system'|'vendored'|'download'|null, reason: string}}
  */
@@ -79,11 +79,12 @@ export const decideMode = (probes = {}) => {
     // remoteAddress and no reachable claude binary — every local operator
     // surface (agent board, local Claude chat) 404s there while the wiki
     // promises it works. The container mode is real and kept, but it is the
-    // deliberate choice (--docker / DI_MODE=docker), never the accident.
+    // deliberate choice, never the accident. No flag sets it yet: `forcedMode` is
+    // the seam for one, and nothing passes it today.
     const source = nodeSource()
     if (source) {
         const why = dockerRunning && imagesPullable
-            ? 'node is available — docker stays opt-in (--docker), local surfaces need the host'
+            ? 'node is available — docker stays opt-in, local surfaces need the host'
             : dockerRunning && !imagesPullable
                 ? 'docker is running but the images are not public yet'
                 : 'no usable docker'

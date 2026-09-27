@@ -18,7 +18,7 @@ fi
 
 if [ -z "$DI_NODE" ]; then
     echo "di.iiii cannot find node on this machine." >&2
-    echo "reinstall it with:  curl -fsSL https://di-studio.xyz/get | sh" >&2
+    echo "reinstall it with:  curl -fsSL https://diiii.xyz/get | sh" >&2
     exit 1
 fi
 
@@ -30,7 +30,7 @@ export DI_COMMAND
 CLI="$DI_HOME/current/cli/cli.mjs"
 if [ ! -f "$CLI" ]; then
     echo "di.iiii is not installed here ($DI_HOME)." >&2
-    echo "install it with:  curl -fsSL https://di-studio.xyz/get | sh" >&2
+    echo "install it with:  curl -fsSL https://diiii.xyz/get | sh" >&2
     exit 1
 fi
 
