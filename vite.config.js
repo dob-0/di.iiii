@@ -694,6 +694,11 @@ export default {
         ],
         environment: 'jsdom',
         setupFiles: './setupTests.js',
-        globals: true
+        globals: true,
+        // Half the cores, not vitest's run-mode default of all-but-one: on the
+        // 16-thread dev laptop two sessions' runs at once put 33 processes on
+        // the CPU (measured 2026-09-28, PR notes). `--maxWorkers` or
+        // VITEST_MAX_WORKERS still override; CI keeps vitest's default.
+        maxWorkers: process.env.CI ? undefined : '50%'
     }
 }

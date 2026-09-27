@@ -24,6 +24,9 @@ npm run docs:ai:check
 - `npm run test`
   - runs the Vitest suite
   - best default regression check for repo work
+  - uses half the machine's cores outside CI (`maxWorkers: '50%'` in `vite.config.js`),
+    so parallel sessions on one laptop don't oversubscribe it; `--maxWorkers=N` or
+    `VITEST_MAX_WORKERS=N` overrides for a single run
 - `npm run test:server-contracts`
   - runs explicit backend contract tests for `serverXR`
   - use when HTTP contract, auth/session flow, or project/space API behavior changes
