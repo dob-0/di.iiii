@@ -709,6 +709,12 @@ const normalizeEntity = (entity = {}) => {
   const fixture = normalizeFixture(sourceComponents.fixture)
   if (fixture) nextComponents.fixture = fixture
   else delete nextComponents.fixture
+  // A build piece — mirror of src/shared/projectSchema.js (RIG_BUILD.md §2.3).
+  if (sourceComponents.piece) {
+    const kind = typeof sourceComponents.piece.kind === 'string' ? sourceComponents.piece.kind.trim().slice(0, 32) : ''
+    if (kind) nextComponents.piece = { kind }
+    else delete nextComponents.piece
+  }
   // A screen: a plane that shows one of the project's own mapping surfaces
   // (document.mappingState.surfaces) as its picture. The join is the surface's
   // id and nothing else -- the surface keeps its kind, file and resolution, so
