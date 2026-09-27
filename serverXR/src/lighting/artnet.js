@@ -111,6 +111,9 @@ class ArtNet {
     this.packetsSent = 0;
     this.lastError = null;
     this.ready = false;
+    // The last frame sent per Port-Address, so DMX input (dmxin-net.js) can recognise our
+    // own broadcast coming back to us and never merge it as a second source.
+    this.lastSent = new Map();
     // Offline never touches the network at all — not even a bind. With reuseAddr a test
     // server bound to 6454 would steal poll replies from a live desk on the same box.
     if (this.offline) { this.socket = null; return; }
@@ -129,6 +132,7 @@ class ArtNet {
   send(target, portAddress, data) {
     if (this.offline || !this.ready) return;
     const pkt = buildDmx(portAddress, this.sequence, data);
+    this.lastSent.set(portAddress, { data: Buffer.from(data), at: Date.now() });
     this.sequence = (this.sequence + 1) % 256;
     if (this.sequence === 0) this.sequence = 1;
     this.socket.send(pkt, 0, pkt.length, this.port, target, (err) => {

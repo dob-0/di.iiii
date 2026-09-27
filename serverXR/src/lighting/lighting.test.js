@@ -18,7 +18,7 @@ const run = (file) => spawnSync(process.execPath, [path.join(here, 'tests', file
 })
 
 describe('the lighting desk', () => {
-  for (const file of ['test.js', 'test-wiring.js', 'test-http.js']) {
+  for (const file of ['test.js', 'test-wiring.js', 'test-http.js', 'test-dmxin.js']) {
     it(`${file} passes`, () => {
       const r = run(file)
       const tail = (r.stdout || '').split('\n').filter((l) => !l.startsWith('  ok')).join('\n')
