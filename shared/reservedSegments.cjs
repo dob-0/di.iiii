@@ -35,7 +35,10 @@ const APP_SEGMENTS = [
     'scan',
     // `/{space}/perform/{project}` — the Perform line. Checked on all three
     // tiers before reserving (2026-09-24): nothing answers to the word.
-    'perform'
+    'perform',
+    // `/{space}/patch/{project}` — the rig's patch sheet. Checked on all three
+    // tiers before reserving (2026-09-28): nothing answers to the word.
+    'patch'
 ]
 
 // Real directories under public/, plus the build's own output prefixes, served
