@@ -225,6 +225,12 @@ describe('SurfaceBar on a narrow window', () => {
         expect(fitDestinations({ widths: [60, 60], gap: 10, more: 30, avail: 70 })).toBe(0)
     })
 
+    it('reads a negative room as "too full even for More", not as "not measured"', () => {
+        // 2026-09-27: -10 used to mean "show everything", so the fullest bar drew
+        // every name over the place names on its left.
+        expect(fitDestinations({ widths: [30, 30], gap: 10, more: 30, avail: -10 })).toBe(0)
+    })
+
     it('hides nothing before there is a width to measure', () => {
         expect(fitDestinations({ widths: [30, 30], gap: 10, more: 30, avail: 0 })).toBe(2)
     })
@@ -257,6 +263,21 @@ describe('SurfaceBar on a narrow window', () => {
             expect([...document.querySelectorAll('.sbar-menu a')].map(a => a.textContent)).toEqual(['Nodes', 'Tools', 'Light', 'Wiki'])
             fireEvent.keyDown(window, { key: 'Escape' })
             expect(document.querySelector('.sbar-menu')).toBeNull()
+        })
+
+        it('when the row is too full even for More, shows More alone and holds the row open for it', () => {
+            // The surface's own control (Desk | Perform) takes 50px of a 40px row.
+            restore.forEach(fn => fn()); restore = []
+            stub(HTMLElement.prototype, 'offsetWidth', function () {
+                if (this.classList.contains('sbar-measure-item')) return 30
+                if (this.classList.contains('sbar-extra')) return 50
+                return 0
+            })
+            stub(HTMLElement.prototype, 'clientWidth', function () { return this.classList.contains('sbar-links') ? 40 : 0 })
+            render(<SurfaceBar here="studio"><span>Desk | Perform</span></SurfaceBar>)
+            expect(shown()).toEqual(['More'])
+            // floor = the control (50) + More (30): the place names give way, not the row
+            expect(document.querySelector('.sbar-links').style.minWidth).toBe('80px')
         })
 
         it('lights More when the surface you stand on is behind it', () => {

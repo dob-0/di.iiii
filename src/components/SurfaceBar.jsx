@@ -109,9 +109,12 @@ export const navigateInApp = (event, href) => {
 // `widths` are each link's natural width, `gap` the space between two, `more`
 // the More button's width, `avail` what the links row has. All of them fit →
 // every one shows and no More. Otherwise as many as fit beside More, and at
-// least none — More alone always stays reachable.
+// least none — More alone always stays reachable. No width at all (0: nothing
+// laid out yet) shows everything; a NEGATIVE room is a real answer — the row is
+// already too full for More — and shows none (2026-09-27: it used to read as
+// "not measured", so the fullest bar drew every name over the place names).
 export const fitDestinations = ({ widths, gap, more, avail }) => {
-    if (!(avail > 0) || !widths.length) return widths.length
+    if (!Number.isFinite(avail) || avail === 0 || !widths.length) return widths.length
     const all = widths.reduce((sum, w) => sum + w, 0) + gap * (widths.length - 1)
     if (all <= avail) return widths.length
     let used = more
@@ -150,6 +153,11 @@ export default function SurfaceBar({
     const childrenRef = useRef(null)
     const moreRef = useRef(null)
     const [shown, setShown] = useState(destinations.length)
+    // What the links row can never give up: More (when anything is behind it)
+    // and the surface's own control. Held as the row's min-width, so when the
+    // bar is full the place names on the left shrink to their ellipsis instead
+    // of the row spilling leftward over them.
+    const [floor, setFloor] = useState(0)
     const [menuOpen, setMenuOpen] = useState(false)
     const [menuTop, setMenuTop] = useState(0)
     const keys = destinations.map(d => d.key).join(' ')
@@ -164,12 +172,16 @@ export default function SurfaceBar({
         const gap = parseFloat(style.columnGap) || 0
         const padding = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0)
         const extra = childrenRef.current ? childrenRef.current.offsetWidth + gap : 0
-        setShown(fitDestinations({
-            widths: items.map(el => el.offsetWidth),
+        const widths = items.map(el => el.offsetWidth)
+        const more = moreEl ? moreEl.offsetWidth : 0
+        const count = fitDestinations({
+            widths,
             gap,
-            more: moreEl ? moreEl.offsetWidth : 0,
-            avail: links.clientWidth - padding - extra,
-        }))
+            more,
+            avail: links.clientWidth ? links.clientWidth - padding - extra : 0,
+        })
+        setShown(count)
+        setFloor(links.clientWidth ? padding + extra + (count < widths.length ? more : 0) : 0)
     }, [])
 
     useLayoutEffect(() => {
@@ -240,7 +252,7 @@ export default function SurfaceBar({
                     <a className="sbar-where sbar-where--project" href={buildStudioProjectPath(project, space)}>{projectLabel || project}</a>
                 </>
             )}
-            <div className="sbar-links" ref={linksRef}>
+            <div className="sbar-links" ref={linksRef} style={floor ? { minWidth: floor } : undefined}>
                 {visible.map(d => linkFor(d))}
                 {overflow.length > 0 && (
                     <button
