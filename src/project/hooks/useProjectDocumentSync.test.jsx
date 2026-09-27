@@ -2,6 +2,7 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useProjectDocumentSync } from './useProjectDocumentSync.js'
 import { useProjectStore } from '../state/projectStore.js'
+import { placeOps as serverPlaceOps } from '../../../shared/placement.cjs'
 
 const connectMock = vi.fn()
 const disconnectMock = vi.fn()
@@ -717,5 +718,39 @@ describe('useProjectDocumentSync', () => {
         })
 
         expect(result.current.store.state.version).toBe(3)
+    })
+
+    // 2026-09-28: in a room with build zones on, the server puts every hangable
+    // thing in a wall slot. Applied as sent, a dropped photo stood where the hand
+    // left it until the server's rewrite came back, then jumped (76ms locally, a
+    // network round trip on the site). The batch is placed before it is shown.
+    it('places a move in a build-zone room before showing it, exactly as the server will', async () => {
+        const doc = {
+            projectMeta: { id: 'wall-project', title: 'Wall' },
+            worldState: { placement: { enabled: true, types: ['image'] } },
+            entities: [{ id: 'photo-a', type: 'image', name: 'photo-a', parentId: null, components: { transform: { position: [0, 1, 0], rotation: [0, 0, 0], scale: [1, 1, 1] } } }]
+        }
+        getProjectDocumentMock.mockResolvedValue({ version: 1, document: doc })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+        submitProjectOpsMock.mockImplementation(async (_projectId, _baseVersion, ops) => ({ newVersion: 2, ops }))
+
+        const { result } = renderHook(() => {
+            const store = useProjectStore()
+            const sync = useProjectDocumentSync({ projectId: 'wall-project', store })
+            return { store, sync }
+        })
+        await waitFor(() => expect(result.current.store.state.document.projectMeta.id).toBe('wall-project'))
+
+        const move = { type: 'updateComponent', payload: { entityId: 'photo-a', component: 'transform', patch: { position: [9, 1, 0] } } }
+        // what the server's own rule makes of the same move, against the room as it stands
+        const expected = serverPlaceOps(result.current.store.state.document, [move])[0].payload.patch.position
+        act(() => { result.current.sync.applyLocalOps(move) })
+        const shown = result.current.store.state.document.entities.find((e) => e.id === 'photo-a').components.transform.position
+        expect(shown).toEqual(expected)
+        expect(shown[0]).not.toBe(9)
+
+        await waitFor(() => expect(submitProjectOpsMock).toHaveBeenCalled())
+        const sent = submitProjectOpsMock.mock.calls[0][2][0]
+        expect(sent.payload.patch.position).toEqual(expected)
     })
 })

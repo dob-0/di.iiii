@@ -127,6 +127,17 @@ export const mintSpaceInvite = async (spaceId, label = 'invite') => {
     return data
 }
 
+// The invite links a space has handed out and not revoked, newest first:
+// { id, label, createdAt, lastUsedAt, expiresAt, useCount } (ms). Owner-or-admin.
+export const listSpaceInvites = async (spaceId) => {
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/invites`)
+    return Array.isArray(data?.invites) ? data.invites : []
+}
+
+// Stops one link working. People who already joined through it keep their access.
+export const revokeSpaceInvite = async (spaceId, inviteId) =>
+    apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/invites/${encodeURIComponent(inviteId)}`, { method: 'DELETE' })
+
 // A space's restore points, newest first: { id, takenAt, reason, actor, objects,
 // projects }. Owner-or-admin. See serverXR/src/spaceStore.js.
 export const listSpaceSnapshots = async (spaceId) => {

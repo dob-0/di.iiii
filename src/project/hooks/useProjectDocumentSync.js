@@ -8,6 +8,7 @@ import {
     updateProjectDocument
 } from '../services/projectsApi.js'
 import { generateId } from '../../shared/projectSchema.js'
+import { placeOps } from '../../shared/placement.js'
 
 const MAX_SEEN_OPS = 2000
 // A failed op batch is retried automatically after this delay rather than
@@ -371,9 +372,19 @@ export function useProjectDocumentSync({
         if (flushThrottleTimerRef.current !== null) clearTimeout(flushThrottleTimerRef.current)
     }, [])
 
+    // Build zones (shared/placement.cjs): the server puts every hangable thing in
+    // a wall slot and sends the rewritten ops back. Applied locally as sent, a
+    // dropped photo stood where the hand left it until that echo arrived, then
+    // jumped (2026-09-28: 76ms on localhost, a network round trip on the site).
+    // Placing the batch HERE with the server's own twin (src/shared/placement.js,
+    // proven to agree in placement.test.js) shows at once what the server will
+    // decide — and a drag, one op per frame, snaps from slot to slot as it goes.
+    const documentRef = useRef(state?.document)
+    useEffect(() => { documentRef.current = state?.document }, [state?.document])
+
     const applyLocalOps = useCallback((ops = [], options = {}) => {
-        const normalizedOps = (Array.isArray(ops) ? ops : [ops])
-            .filter(Boolean)
+        const listed = (Array.isArray(ops) ? ops : [ops]).filter(Boolean)
+        const normalizedOps = placeOps(documentRef.current, listed)
             .map((op) => ({
                 opId: op.opId || generateId(opIdPrefix),
                 clientId: localClientIdRef.current,
