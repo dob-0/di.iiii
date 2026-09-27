@@ -174,9 +174,26 @@ export const WIKI_ARTICLES = [
             'THE VJ DECK is one node with a grid: rows are layers, columns are slots. Tap an empty slot to fill it — with a video from the project (or upload one there), or with In 1 to In 4, whatever picture is wired into the deck\'s inputs. Tap a filled slot to play it; tap it again to restart it. A column number plays that whole column at once. The top row is the top layer.',
             'EACH LAYER has a blend (Mix, Add, Screen, Multiply, Difference), an opacity slider and Clear. MASTER fades the whole deck. The deck\'s Picture output is the mix — wire it to Picture Out for a screen or a projection surface, into Blur or Feedback first, or into another deck. Its card and its OUT show the mix live.',
             'SETTINGS for the selected clip (speed, play mode, in and out) open from the line under the grid, never from the tap itself, so a phone can play clip after clip without closing anything.',
-            'NOT YET: the BPM and Tap at the top keep a tempo but nothing follows it yet — clips do not sync to the beat. MIDI control of the grid, and a perform view docked beside the patch, are still to come.'
+            'EVERY FILLED SLOT SHOWS A STILL of its clip, a frame from a little way into it, so the grid reads at a glance; the playing slot shows the live picture over it.',
+            'THE TEMPO is the show\'s one clock. On your own machine, when the Light page is open, the lights keep the tempo and the deck follows it ("follows Light" beside the BPM); Tap on the deck sets it for both. With no Light page open the deck keeps its own. Reset puts it back to 120 with the beat on that instant. A double click is no longer read as a 300 bpm tap.',
+            'NOT YET: clips do not sync to the beat, and MIDI does not reach the grid.'
         ],
-        tags: ['vj', 'deck', 'resolume', 'clip', 'clips', 'footage', 'video', 'layers', 'blend', 'opacity', 'perform', 'live', 'pictures'],
+        tags: ['vj', 'deck', 'resolume', 'clip', 'clips', 'footage', 'video', 'layers', 'blend', 'opacity', 'perform', 'live', 'pictures', 'bpm', 'tempo', 'tap'],
+        updated: '2026-09-24'
+    },
+    {
+        id: 'perform',
+        category: 'Editing',
+        title: 'Perform: only the windows the show needs',
+        summary: 'Run the show with just the VJ deck, the wall and the lights on screen. Presets for each job, kept on your device or given to the show, one tap from Nodes.',
+        body: [
+            'PERFORM opens a project with the patch put away: only the windows a job needs, on the same project that Nodes, Studio and Projection edit. Its address is /{space}/perform/{project}, and ?preset= in the address opens one preset, so a phone or a guest can be sent exactly that.',
+            'THE WAY IN from a project: Desk | Perform at the right of the bar, on Projection, Studio and Nodes. Desk takes you back where you came from. A project with nothing in it yet shows no switch, as it shows no Nodes.',
+            'A PRESET is which windows are open and where they stand, on a desk and on a phone. Seven come built in: VJ (the deck, its picture, the clock, master and blackout), Wall (surfaces, cues, the wall, what goes out, the machines), Light, Caller, Unattended, Guest and Remote. VJ and Wall work in full. The others open every window they can, and a dim window says which ones are coming next and what they will be.',
+            'MOVE, RESIZE, CLOSE any window; + window brings one back, and Nodes, the whole patch, is the last line of that list. The preset name says "changed" until you keep it: SAVE AS MINE keeps it on this device (a phone keeps its own), SAVE TO THE SHOW gives it to everyone following the space, and it travels in the project\'s .diiii file. COPY LINK copies the address of the open preset; one of yours has to be given to the show first.',
+            'ONE CLOCK: the Clock window shows the tempo and the beat. On your own machine the Light page leads when it is open, and the deck follows; Follow Light lets one device keep its own tempo. MASTER · BLACKOUT fades the deck, and when the Light page is open, the lights too; Blackout takes both dark at once and brings the deck back where it was.'
+        ],
+        tags: ['perform', 'show', 'vj', 'deck', 'wall', 'projection', 'cues', 'presets', 'preset', 'clock', 'tempo', 'bpm', 'blackout', 'master', 'phone', 'link'],
         updated: '2026-09-24'
     },
     {
@@ -195,6 +212,27 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-10'
     },
     {
+        id: 'click-an-object-to-open-its-link',
+        category: 'Editing',
+        title: 'Click an object to open its link',
+        summary: 'Any picture, shape, text or model in a room can lead somewhere: another room here, or another site in a new tab.',
+        body: [
+            'Select the object in Studio and open its Link section, at the bottom of the inspector. Switch on Open on click and give it an Address. Label is optional: it is what the visitor reads when they point at the object.',
+            {
+                list: [
+                    'An address that starts with / is a place on this di.iiii, such as /main or /main/deck. A visitor who clicks goes there the way a door takes them, with no black screen in between.',
+                    'An https:// address on another site opens in a new tab, so the room stays open behind it.',
+                    'Anything else does nothing. javascript: and data: addresses are removed when you type them, and a bare word such as deck is not an address.'
+                ]
+            },
+            'In the room, pointing at a linked object turns the cursor into a hand and shows a small plate over it with the label, or with the site or path when there is no label. On a phone the plate shows while your finger is on the object, and a tap opens it.',
+            'Dragging to look around never opens a link. Only a click where the pointer barely moves counts, the same rule Studio uses when you select something.',
+            'In the Studio editor a click still selects the object, so you can go on moving it. The link only works in the room a visitor sees. Doors, lights and groups have no Link section: a door already has its own click.'
+        ],
+        tags: ['link', 'click', 'url', 'hyperlink', 'gallery', 'inspector', 'visitor'],
+        updated: '2026-09-24'
+    },
+    {
         id: 'the-surface-bar',
         category: 'Getting started',
         title: 'The bar: where you are, and the way out',
@@ -202,6 +240,7 @@ export const WIKI_ARTICLES = [
         body: [
             'Every surface in di.iiii carries one bar along the top. On the left is the di.iiii wordmark, which always leads to Spaces; when the surface belongs to a space, the name of that space, which leads to it; and when it is one project, that project\'s title, which opens it in Studio. On the right are the destinations, always in the same order: Spaces, Studio, Nodes, Projection, Tools, Light, Wiki. Projection is there only inside a project, because it has no page of its own — it is always one project\'s wall. The one you are on is stated in cyan and is not a link.',
             'Inside a project the bar grows with the project. A new project shows Spaces, Studio, Tools and Wiki; Nodes arrives when the room holds its first thing, Projection when the project has its first node or wire, Light when a lamp stands in the room — each in its own place in the order, with no reload. Outside a project — /tools, the wiki, a space\'s pages — every name is always there. The tool you are standing in is never taken off, nothing hides while a project is still loading, and “⚒ All tools” in Studio brings every name back on every project.',
+            'When the window is too narrow for every name — a phone, mostly — the bar shows the names that fit, in their usual order, and puts the rest under More at its right end. Tap More for the others, one under another; tap anywhere else or press Escape to close it. If the surface you are on is one of them, More is lit instead. On a wide screen every name fits and there is no More.',
             'Standing inside a space, Studio and Nodes mean THAT space\'s studio and node canvas, not the general hub — so moving between the ways of working never loses the space you were in.',
             'Standing inside a project — in Studio, on its node canvas, or on its Projection page — Studio, Nodes and Projection open THAT project. The bar reads di.iiii · space · project in all three, so you can go from the room to its nodes to its wall and back without passing through a list.',
             'Outside a project, Light is always listed. On a di.iiii running on your own machine it opens the lighting desk, and from inside a project the link carries the space and the project with it. Anywhere else it opens a page that says where the desk lives, with the way to run di.iiii on your own machine — the desk talks to fixtures on the local network, and a server on the internet is not in that room. The lighting desk itself keeps its own denser, squarer look — it is read at arm\'s length in a dark booth — and carries a di.iiii link home.',
@@ -209,7 +248,7 @@ export const WIKI_ARTICLES = [
             'Add ?embed=1 to any address and that is what you get: /tools, the wiki, a space’s contents list, the node canvas, Studio, the Projection page and a published room all drop the bar, because the page you have put them inside already carries the way out. The flag hides that navigation and nothing else — you are signed in exactly as you would be in a tab, edits save the same, and nothing is held back from a window that a tab would be given.'
         ],
         tags: ['navigation', 'bar', 'surfaces', 'ui', 'light', 'studio', 'raw', 'nodes', 'projection', 'project', 'embed', 'iframe'],
-        updated: '2026-09-23'
+        updated: '2026-09-27'
     },
     {
         id: 'layers-one-at-a-time',

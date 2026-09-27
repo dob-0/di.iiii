@@ -365,9 +365,20 @@ const rectsOverlap = (a, b) => (
     && a.y < b.y + b.height && a.y + a.height > b.y
 )
 
+// The other cards standing in the scope, in graph units. A window that
+// dodged only its OWN card still opened over the cards wired to it — the VJ
+// deck window landed on its Clip In and Picture Out cards on the owner's
+// screen (2026-09-24). Every candidate is now scored against all of them.
+const overlapArea = (a, b) => {
+    const w = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)
+    const h = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y)
+    return w > 0 && h > 0 ? w * h : 0
+}
+
 export function placeNewWindowFrame({
     frame = {},
     card = null,
+    obstacles = [],
     anchor = null,
     space = 'screen',
     viewport = null,
@@ -429,18 +440,42 @@ export function placeNewWindowFrame({
         // zoom is 320 graph units, and the window ended up a screen away from
         // its card once the zoom came back.
         const gap = RAW_NEW_WINDOW_GAP * scale
+        // The other cards, on screen, when the viewport can place them.
+        const others = (vp ? obstacles : [])
+            .filter((box) => box && Number.isFinite(box.x) && Number.isFinite(box.y))
+            .map((box) => ({
+                x: originX + box.x * vp.zoom,
+                y: originY + box.y * vp.zoom,
+                width: (Number(box.width) || 0) * vp.zoom,
+                height: (Number(box.height) || 0) * vp.zoom
+            }))
+        // The whole group, for the two extra spots beyond it.
+        const group = [reference, ...others].reduce((box, item) => ({
+            x: Math.min(box.x, item.x),
+            y: Math.min(box.y, item.y),
+            right: Math.max(box.right, item.x + item.width),
+            bottom: Math.max(box.bottom, item.y + item.height)
+        }), { x: reference.x, y: reference.y, right: reference.x + reference.width, bottom: reference.y + reference.height })
         const candidates = [
             { x: reference.x, y: reference.y + reference.height + gap },
             { x: reference.x, y: reference.y - gap - height },
             { x: reference.x + reference.width + gap, y: reference.y },
-            { x: reference.x - gap - width, y: reference.y }
+            { x: reference.x - gap - width, y: reference.y },
+            { x: group.right + gap, y: group.y },
+            { x: group.x, y: group.bottom + gap },
+            { x: group.x - gap - width, y: group.y }
         ].map((spot) => clampWindowFrame({ ...spot, width, height }, bounds))
         // Clamping can drag a spot back over the card (no room below → the
-        // window slides up onto it); the first spot still clear of the card
-        // wins. When none is — a phone, where a window is wider than the room
-        // beside a card — below-and-clamped is the honest fallback: whole on
-        // screen, and the graph fit already dodges windows.
-        placed = candidates.find((spot) => !rectsOverlap(spot, reference)) || candidates[0]
+        // window slides up onto it). The first spot clear of its own card AND
+        // every other card wins; else the first clear of its own card that
+        // covers the least of the others; else below-and-clamped, the honest
+        // fallback on a phone, where a window is wider than the room beside a
+        // card: whole on screen, and the graph fit already dodges windows.
+        const covered = (spot) => others.reduce((sum, box) => sum + overlapArea(spot, box), 0)
+        const clearOfOwn = candidates.filter((spot) => !rectsOverlap(spot, reference))
+        placed = clearOfOwn.find((spot) => covered(spot) === 0)
+            || clearOfOwn.slice().sort((a, b) => covered(a) - covered(b))[0]
+            || candidates[0]
     }
 
     return {

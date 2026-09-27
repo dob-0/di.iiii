@@ -13,7 +13,7 @@ if not exist "%DI_NODE%" set "DI_NODE=node"
 
 if not exist "%DI_HOME%\current\cli\cli.mjs" (
     echo di.iiii is not installed here ^(%DI_HOME%^). 1>&2
-    echo install it with:  irm https://di-studio.xyz/get.ps1 ^| iex 1>&2
+    echo install it with:  irm https://diiii.xyz/get.ps1 ^| iex 1>&2
     exit /b 1
 )
 

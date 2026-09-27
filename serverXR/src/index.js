@@ -1,6 +1,11 @@
 require('dotenv').config({ path: require('node:path').resolve(__dirname, '../.env.local') })
 require('dotenv').config({ path: require('node:path').resolve(__dirname, '../.env') })
 const express = require('express')
+// Before any router exists: the catalogue walks the live routes, and Express 5
+// only keeps a sub-router's mount path if it is recorded as it is mounted.
+const { installMountRecorder, listRoutes } = require('./catalogue/routeWalk')
+installMountRecorder()
+const catalogue = require('./catalogue')
 const http = require('http')
 const https = require('https')
 const cors = require('cors')
@@ -56,6 +61,7 @@ const { createSessionDbSync } = require('./sessionDbSync')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
 const { registerOgRoutes } = require('./routes/ogRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
+const { TRUST_PROXY } = require('./proxyTrust')
 const { registerWorkStatusRoutes } = require('./routes/workStatusRoutes')
 const { registerAgentRunRoutes } = require('./routes/agentRunRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
@@ -318,6 +324,8 @@ async function initStorage() {
 }
 
 const app = express()
+// req.ip is the real client behind a proxy on this machine — see proxyTrust.js.
+app.set('trust proxy', TRUST_PROXY)
 const startedAt = Date.now()
 const recentEvents = []
 const liveClients = new Map()
@@ -1740,6 +1748,21 @@ router.use('/api/sync/spaces/:spaceId', (req, res, next) => {
   next()
 })
 
+// GET /api/trash takes its space as `?space=`, not a `:spaceId` route param,
+// so it never set req.requiredSpaceId and slipped past every gate below —
+// an anonymous request under REQUIRE_AUTH could list every trashed project
+// in every space (found 2026-09-24, on origin/main since 053c19dc). Setting
+// it here puts a scoped trash request through the exact same
+// requireReadRole/requireWriteRole gate as GET /api/spaces/:spaceId/projects:
+// same 404 for a space that doesn't exist, same 401/403 for one the caller
+// can't see, same isPublic bypass. A request with no `?space=` is narrowed
+// inside the route handler instead (routes/projectRoutes.js), since there is
+// no single space here for this gate to check.
+router.use('/api/trash', (req, res, next) => {
+  req.requiredSpaceId = req.query.space ? (normalizeSpaceId(req.query.space) || null) : null
+  next()
+})
+
 router.use('/api/projects/:projectId', async (req, res, next) => {
   try {
     const project = await resolveProjectContext(req.params.projectId)
@@ -1872,6 +1895,24 @@ router.use('/api', requireWriteRole('editor'))
 // bare, req.path is the router-relative path (`/api/users/42`) under every
 // mount target (/, /serverXR). Regression: approvalGate.test.js.
 router.use(createGatedRequestNet(GATED_ROUTES))
+
+// ── the catalogue: what this server can do, for an agent ──
+// docs/architecture/SPEC_agent_door.md. The MCP reads this at start, so it
+// always describes the server it is talking to. A caller sees the entries its
+// role can reach and the agent door is open for; an admin can ask for all of
+// them, with how the catalogue compares to the live router.
+router.get('/api/catalogue', (req, res) => {
+  const state = req.authState || {}
+  const all = req.query.all === '1'
+  if (all && !hasRequiredAuthRole(state.role, 'admin') && config.requireAuth) {
+    return sendRoleError(res, 403, 'admin', state.role)
+  }
+  const role = config.requireAuth ? state.role : 'admin'
+  const keep = (entry) => all || (entry.agent && hasRequiredAuthRole(role, entry.role))
+  const body = { ...catalogue.openapi({ keep, version: releaseInfo?.version || '0.0.0' }) }
+  if (all) body['x-di-coverage'] = catalogue.compare(listRoutes(app))
+  res.set('Cache-Control', 'no-store').json(body)
+})
 
 const resolveProjectContext = async (projectId) => {
   const normalized = normalizeProjectId(projectId)
@@ -2317,6 +2358,7 @@ const mayStoreVerbatim = (req) => {
 }
 
 registerProjectRoutes(router, {
+  config,
   uploadsDir: UPLOADS_DIR,
   maxUploadBytes: config.maxUploadBytes,
   isAllowedUpload,

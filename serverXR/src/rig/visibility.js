@@ -102,6 +102,8 @@ const fixCommand = ({ lanBind, local }) => {
 /**
  * @param {object} state
  * @param {boolean} state.lanBind      the HTTP server listens on the network, not loopback only
+ * @param {boolean} state.behindProxy  DI_BEHIND_PROXY=1: a loopback bind that a front door on this
+ *                                     machine publishes to the network (declared, never guessed)
  * @param {boolean} state.lanAllowed   DI_ALLOW_LAN_DEVICES=1: /api/rig/* answers the network
  * @param {boolean} state.local        DI_LOCAL=1: a `di` install
  * @param {'open'|'private'|'off'} state.discoveryMode
@@ -112,6 +114,7 @@ const fixCommand = ({ lanBind, local }) => {
  */
 const describeVisibility = ({
   lanBind = false,
+  behindProxy = false,
   lanAllowed = false,
   local = false,
   discoveryMode = 'off',
@@ -120,8 +123,14 @@ const describeVisibility = ({
   nearby = [],
   room = null
 } = {}) => {
-  const visible = Boolean(lanBind && lanAllowed)
-  const reason = visible ? 'open' : (lanBind ? 'devices-closed' : 'loopback')
+  // A loopback bind is reachable when a front door on this machine publishes it
+  // (2026-09-24: aylmo's gateway put Caddy on :443 and di on 127.0.0.1:443, and
+  // this said "private" while win paired with it through the door). The door
+  // has to SAY so — DI_BEHIND_PROXY=1 — because a loopback bind with nothing in
+  // front of it announces a copy nobody can reach.
+  const reachable = lanBind || behindProxy
+  const visible = Boolean(reachable && lanAllowed)
+  const reason = visible ? (lanBind ? 'open' : 'proxied') : (reachable ? 'devices-closed' : 'loopback')
   const portBusy = Boolean(discoveryStats && discoveryStats.bindError > 0 && !discoveryStats.listening)
   const discovery = discoveryMode === 'off' ? 'off' : (portBusy ? 'port-busy' : (discoveryMode === 'open' ? 'on' : 'listening'))
 
@@ -129,6 +138,7 @@ const describeVisibility = ({
   // it rather than each composing their own and drifting apart.
   const why = {
     open: 'other di.iiii on this network can see this one',
+    proxied: 'other di.iiii on this network can see this one, through the front door on this machine',
     'devices-closed': 'this machine is private: its pages answer the network, but other di.iiii cannot see it (DI_ALLOW_LAN_DEVICES is not set)',
     loopback: 'this machine is private: it answers this machine only, and other di.iiii on the network cannot see it'
   }[reason]
@@ -150,7 +160,7 @@ const describeVisibility = ({
       via: entry.via,
       lastSeen: entry.lastSeen
     })),
-    fix: visible ? null : fixCommand({ lanBind, local })
+    fix: visible ? null : fixCommand({ lanBind: reachable, local })
   }
 }
 

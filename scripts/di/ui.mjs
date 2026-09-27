@@ -328,7 +328,7 @@ export const ui = {
 
     notInstalled: () => [
         'di.iiii is not installed here.',
-        style.dim('install it with:  curl -fsSL https://di-studio.xyz/get | sh')
+        style.dim('install it with:  curl -fsSL https://diiii.xyz/get | sh')
     ].join('\n'),
 
     // The one screen an artist is asked to read when something is wrong. It

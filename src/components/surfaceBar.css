@@ -60,11 +60,81 @@
 .sbar-links {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: var(--di-space-5);
-    margin-left: auto;
+    /* Takes what the left side leaves and never more: SurfaceBar measures it
+       and puts whatever does not fit behind More, instead of the row running
+       off the edge (Priority+). The padding keeps the last place name from
+       touching the first destination. */
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-left: var(--di-space-3);
+    position: relative;
 }
 
-.sbar-link {
+/* The hidden row every destination is measured from, visible or not. Its
+   box has no size and clips, so the row inside never widens the bar it
+   measures for (it did: a 390px phone bar scrolled to 461px). */
+.sbar-measure-box {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.sbar-measure {
+    display: flex;
+    width: max-content;
+    gap: var(--di-space-5);
+    white-space: nowrap;
+}
+
+.sbar-link { white-space: nowrap; }
+
+.sbar-extra { display: inline-flex; align-items: center; flex-shrink: 0; }
+
+.sbar-more {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
+.sbar-more[aria-expanded="true"] { color: var(--di-ink); }
+
+/* The rest, one under another, under the bar's right end. Rendered on the
+   page body: the phone bar scrolls and the floating one blurs, and either
+   would clip a menu drawn inside it. */
+.sbar-menu {
+    position: fixed;
+    right: var(--di-space-3);
+    display: flex;
+    flex-direction: column;
+    min-width: 10em;
+    background: var(--di-bg);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    letter-spacing: 0.04em;
+    z-index: 70;
+}
+
+.sbar-menu .sbar-menu-link {
+    display: flex;
+    align-items: center;
+    /* A finger's width, on the one surface that is always touched. */
+    min-height: 44px;
+    padding: 0 var(--di-space-4);
+}
+
+.sbar-menu-link + .sbar-menu-link { border-top: 1px solid var(--di-line); }
+
+.sbar-link,
+.sbar-measure-item {
     color: var(--di-dim);
     text-decoration: none;
     text-transform: uppercase;
@@ -107,9 +177,12 @@
 
     .sbar::-webkit-scrollbar { display: none; }
 
-    .sbar-links { gap: var(--di-space-3); }
+    .sbar-links { gap: var(--di-space-3); padding-left: var(--di-space-2); }
+
+    .sbar-measure { gap: var(--di-space-3); }
 
     .sbar-link,
+    .sbar-measure-item,
     .sbar-home {
         padding: var(--di-space-2) 0;
         white-space: nowrap;
@@ -117,3 +190,15 @@
 
     .sbar-where { max-width: 30vw; }
 }
+
+/* Desk | Perform (src/perform/DeskPerformSwitch.jsx): two of the bar's own
+   words and its separator, held together so the pair never wraps apart. */
+.sbar-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    white-space: nowrap;
+}
+
+/* More stays a button when where you are is inside it. */
+.sbar-more.is-here { cursor: pointer; }

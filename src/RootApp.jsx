@@ -24,6 +24,7 @@ import { buildStudioProjectPath, getStudioLocationState, isStudioLocation } from
 import { getJamLocationState, isJamLocation } from './project/routing/jamRouting.js'
 import { getMakeLocationState, isMakeLocation } from './make/makeRouting.js'
 import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
+import { getPerformLocationState, isPerformLocation } from './perform/performRouting.js'
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
@@ -47,6 +48,7 @@ const PrivateChatSurface = lazy(() => import('./chat/PrivateChatSurface.jsx'))
 const ChatHomeSurface = lazy(() => import('./chat/ChatHomeSurface.jsx'))
 const MapSurface = lazy(() => import('./map/MapSurface.jsx'))
 const MapOutput = lazy(() => import('./map/MapOutput.jsx'))
+const PerformApp = lazy(() => import('./perform/PerformApp.jsx'))
 const ScanSurface = lazy(() => import('./scan/ScanSurface.jsx'))
 const ToolsRoom = lazy(() => import('./tools/ToolsRoom.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
@@ -349,6 +351,7 @@ function AppRouter() {
     const jamState = getJamLocationState(location)
     const makeState = getMakeLocationState(location)
     const mapState = getMapLocationState(location)
+    const performState = getPerformLocationState(location)
     const chatState = getChatLocationState(location)
     const privateChatWith = getPrivateChatTarget(location)
     const appState = getAppLocationState(location)
@@ -532,6 +535,30 @@ function AppRouter() {
                     {mapState.isOutput
                         ? <MapOutput projectId={mapState.projectId} spaceId={mapState.spaceId} />
                         : <MapSurface projectId={mapState.projectId} spaceId={mapState.spaceId} />}
+                </Suspense>
+            </ProtectedSurface>
+        )
+    }
+
+    // `/{space}/perform/{projectId}[?preset=]` — the Perform line (src/perform/):
+    // the show run with only the windows the job needs. Claimed here with the
+    // other lane words for the same reason as Projection — the shape is exact
+    // and the generic /{space}/{projectSlug} rule would read "perform" as a
+    // project — and behind the same gate, because it writes the same document
+    // through the same op layer as Nodes.
+    if (isPerformLocation(performState)) {
+        return (
+            <ProtectedSurface
+                requiredSpaceId={performState.spaceId}
+                outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
+            >
+                <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                    <PerformApp
+                        spaceId={performState.spaceId}
+                        projectId={performState.projectId}
+                        preset={performState.preset}
+                        from={performState.from}
+                    />
                 </Suspense>
             </ProtectedSurface>
         )

@@ -172,7 +172,9 @@ describe('di mcp from an install', () => {
         const result = spawnSync(process.execPath, [path.join(home, 'current', 'cli', 'cli.mjs'), 'mcp'], {
             encoding: 'utf8',
             timeout: 20_000,
-            input: '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}\n',
+            // A real client's handshake: protocolVersion is required by the spec,
+            // and the official SDK refuses an initialize without it.
+            input: '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"0"}}}\n',
             env: { ...process.env, DI_HOME: home, DI_NO_COLOR: '1' }
         })
         const answer = JSON.parse(result.stdout.trim().split('\n')[0])
