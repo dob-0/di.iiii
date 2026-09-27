@@ -235,3 +235,17 @@ describe('LandingPage wiki block', () => {
         expect(within(section).queryAllByRole('heading', { level: 3 })).toHaveLength(0)
     })
 })
+
+// The support page is reached from di.iiii's own front door and nowhere else:
+// the nav for wide screens, the footer for phones (the nav row is hidden under
+// 640px). One word each — no banner, no badge on published works.
+describe('LandingPage support link', () => {
+    it('offers /support once in the nav and once in the footer', () => {
+        render(<LandingPage />)
+        const links = screen.getAllByRole('link', { name: 'Support' })
+        expect(links).toHaveLength(2)
+        for (const link of links) expect(link.getAttribute('href')).toBe('/support')
+        expect(links.filter((l) => l.classList.contains('lp-nav-link'))).toHaveLength(1)
+        expect(links.filter((l) => l.classList.contains('lp-footer-link'))).toHaveLength(1)
+    })
+})
