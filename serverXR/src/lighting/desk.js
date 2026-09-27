@@ -579,11 +579,14 @@ function createDesk(opts = {}) {
     return broadcastAddresses();
   }
 
-  // How much of each universe actually carries anything: the highest patched channel and
-  // the highest manual hold. Frames are trimmed to this, because a 518-byte frame takes
-  // ~21ms of a 25ms tick at 250k baud — one timer hiccup and writes start colliding. Her
-  // rig ends at channel 216: trimming more than halves the wire time and turns the felt
-  // tick-to-light delay with it.
+  // Which universes carry anything: the patched fixtures and the manual holds. Every one
+  // of them goes out as a FULL 512-slot frame. Frames used to be trimmed to the highest
+  // used channel (a 518-byte frame takes ~21ms of a 25ms tick at 250k baud, and the club
+  // rig ended at 216) — until a studio rig ending at channel 25 sent 26-slot frames, which
+  // are legal DMX, and its RGB lights ignored them completely while the desk showed the
+  // right values (2026-09-24). Measured on an ENTTEC DMX USB PRO with full frames: 34
+  // frames/s, 4.5ms average write. See docs/ai/known-fixes.md.
+  const FULL_FRAME = 512;
   function footprints() {
     const out = new Map();
     const bump = (u, ch) => { if (ch > (out.get(u) || 0)) out.set(u, ch); };
@@ -595,8 +598,7 @@ function createDesk(opts = {}) {
       const [u, ch] = k.split(':').map(Number);
       bump(u, ch);
     }
-    // Minimum 24 channels (the widget's floor), rounded up to even.
-    for (const [u, ch] of out) out.set(u, Math.max(24, ch + (ch % 2)));
+    for (const [u] of out) out.set(u, FULL_FRAME);
     return out;
   }
 
@@ -642,16 +644,16 @@ function createDesk(opts = {}) {
       const patched = new Set(state.fixtures.map((f) => f.universe));
       for (const [universe, buf] of frames) {
         if (universe === wire.universe || patched.has(universe)) {
-          wire.send(universe, buf.subarray(0, fp.get(universe) || 24));
+          wire.send(universe, buf.subarray(0, fp.get(universe) || FULL_FRAME));
         }
       }
       // An empty desk still refreshes: fixtures time out into their built-in programs when
       // frames stop, and "no fixtures patched" must not mean "no signal".
-      if (!frames.has(wire.universe)) wire.send(wire.universe, Buffer.alloc(24));
+      if (!frames.has(wire.universe)) wire.send(wire.universe, Buffer.alloc(FULL_FRAME));
     } else {
       const targets = targetsFor();
       for (const [universe, buf] of frames) {
-        for (const t of targets) artnet.send(t, universe, buf.subarray(0, fp.get(universe) || 24));
+        for (const t of targets) artnet.send(t, universe, buf.subarray(0, fp.get(universe) || FULL_FRAME));
       }
     }
     sendExtras(frames, fp);
@@ -672,7 +674,7 @@ function createDesk(opts = {}) {
         if (!send.targets.length) continue;   // an Art-Net send with nowhere to go is not a send
         for (const [universe, buf] of frames) {
           if (wanted && !wanted.has(universe)) continue;
-          for (const t of send.targets) artnet.send(t, universe, buf.subarray(0, fp.get(universe) || 24));
+          for (const t of send.targets) artnet.send(t, universe, buf.subarray(0, fp.get(universe) || FULL_FRAME));
         }
         continue;
       }
@@ -691,7 +693,7 @@ function createDesk(opts = {}) {
       const only = send.universes.length ? send.universes[0] : 0;
       const buf = frames.get(only);
       drv.unreachable.clear();
-      drv.send(only, buf ? buf.subarray(0, fp.get(only) || 24) : Buffer.alloc(24));
+      drv.send(only, buf ? buf.subarray(0, fp.get(only) || FULL_FRAME) : Buffer.alloc(FULL_FRAME));
     }
   }
 
