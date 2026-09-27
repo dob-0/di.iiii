@@ -597,6 +597,42 @@ export const normalizeFixtureIndex = (fixture) => {
     return Number.isInteger(index) && index > 0 ? index : null
 }
 
+// A lamp ON THE RIG (docs/architecture/RIG_BUILD.md §2.2): the desk's index (the
+// join, above) plus the plot's own patch — fixture type and mode, universe (1-based,
+// as MVR and every crew count) and address, unit number along its position, circuit,
+// position name, and whether it hangs. Every field is optional, but the component
+// must name an index or a type or it is no fixture at all and is dropped. A field
+// that is not well formed is left out rather than stored broken, so clearing one in
+// the inspector (`{ address: null }`) removes just that field.
+const fixtureText = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '')
+const fixtureInt = (value, min, max) => {
+    const n = Number(value)
+    return Number.isInteger(n) && n >= min && n <= max ? n : null
+}
+export const normalizeFixture = (fixture) => {
+    if (!fixture || typeof fixture !== 'object') return null
+    const out = {}
+    const index = normalizeFixtureIndex(fixture)
+    if (index != null) out.index = index
+    const type = fixtureText(fixture.type, 64)
+    if (type) out.type = type
+    if (index == null && !type) return null
+    const mode = fixtureText(fixture.mode, 32)
+    if (mode) out.mode = mode
+    const universe = fixtureInt(fixture.universe, 1, 63999)
+    if (universe != null) out.universe = universe
+    const address = fixtureInt(fixture.address, 1, 512)
+    if (address != null) out.address = address
+    const unit = fixtureInt(fixture.unit, 1, 9999)
+    if (unit != null) out.unit = unit
+    const circuit = fixtureText(fixture.circuit, 16)
+    if (circuit) out.circuit = circuit
+    const position = fixtureText(fixture.position, 64)
+    if (position) out.position = position
+    if (fixture.hung === true) out.hung = true
+    return out
+}
+
 export const normalizeEntity = (entity = {}) => {
     const rawType = ensureString(entity.type, 'box')
     const type = ENTITY_TYPE_SET.has(rawType) ? rawType : 'box'
@@ -729,14 +765,14 @@ export const normalizeEntity = (entity = {}) => {
         }
     }
     // THE JOIN between a lamp in the room and a lamp on the lighting desk: the
-    // fixture's `index` on the desk (the number a person sees there, `3.Back left`).
-    // A number and nothing else — never universe/address, which belong to the
-    // machine's own show.json and never travel with a project
-    // (di-atlas/decisions/2026-09-20-one-project-one-stage.md). An index that is not
-    // a positive whole number is no join at all, so the component is dropped rather
-    // than stored broken — which is also how the inspector clears it: `{ index: null }`.
-    const fixtureIndex = normalizeFixtureIndex(sourceComponents.fixture)
-    if (fixtureIndex != null) nextComponents.fixture = { index: fixtureIndex }
+    // fixture's `index` on the desk (the number a person sees there, `3.Back left`),
+    // and since 2026-09-28 the plot's patch beside it (normalizeFixture, above) — the
+    // record handed to a crew, the way an MVR Fixture carries its addresses. The desk's
+    // show.json still holds the RUNNING patch and allocates; auto-patch keeps the two
+    // equal (docs/architecture/RIG_BUILD.md §2.2, §4). A component with neither an
+    // index nor a type is no fixture and is dropped rather than stored broken.
+    const fixture = normalizeFixture(sourceComponents.fixture)
+    if (fixture) nextComponents.fixture = fixture
     else delete nextComponents.fixture
     // A screen: a plane that shows one of the project's own mapping surfaces
     // (document.mappingState.surfaces) as its picture. The join is the surface's

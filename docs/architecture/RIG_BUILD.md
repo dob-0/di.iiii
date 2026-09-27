@@ -65,7 +65,7 @@ and compares). The first library is MOXIR's, from
 
 ```jsonc
 {
-  "id": "uplight.up-b380f",          // stable, lowercase maker.model; the key everything uses
+  "id": "up-b380f",                  // the crew code, lowercased: stable when the real maker is found later
   "code": "UP-B380F",                // what the rental list and the crew call it
   "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
   "model": "UP-B380F",
@@ -81,9 +81,8 @@ and compares). The first library is MOXIR's, from
   "weight_kg":{ "value": 23,  "src": "A", "basis": "EXACT" },
   "size_mm":  { "value": [460, 310, 690], "order": "W x D x H", ... },
   "optics":   { "beam_deg": 1.8, "zoom_deg": null, "lux": 125500, "at_m": 20, "basis": "EQUIVALENT", ... },
-  "model3d":  { "glb": "scripts/place/fixtures/glb/beam380.glb", "sidecar": "…/beam380.json", "licence": "AGPL-3.0 (ours)" },
-  "sources":  { "A": { "url": "…", "what": "…" } },
-  "licence":  { "data": "facts from the cited pages; compiled by di.iiii", "model": "AGPL-3.0" },
+  "model3d":  { "glb": "scripts/place/fixtures/glb/beam380.glb", "sidecar": "…/beam380.json", "licence": "AGPL-3.0-only (ours)" },
+  "sources":  { "A": { "url": "…", "what": "…" } },   // every src key a number uses
   "manifest": { "file": "scripts/place/fixtures/fixtures.json", "kind": "beam380", "writtenAt": "2026-09-28" }
 }
 ```
@@ -101,7 +100,7 @@ carries a fixture component:
 ```jsonc
 "fixture": {
   "index": 36,          // FIXTURE # — the console number; the desk's own index (the existing join, kept)
-  "type": "uplight.up-b380f",
+  "type": "up-b380f",
   "mode": "16ch",
   "universe": 1,        // 1-based, as MVR and every crew count; the desk stores universe - 1
   "address": 273,       // 1..512, the first slot
