@@ -777,10 +777,27 @@ input.pinned { border-color: var(--accent); }
 .sendrow.dead .st { color: var(--danger); }
 .sendrow .sq.small { padding: 1px 7px; font-size: 11px; }
 .topbo { padding: 4px 10px; font-size: 12px; }
+/* The bar's Blackout took .blackout's full width, so wherever the right-hand cluster
+   wrapped, Blackout claimed a line of its own and pushed Go / BPM / Tap to another. On a
+   phone that full-width panic button is kept on purpose; wider than that, it is a button
+   in the row like the others. */
+@media (min-width: 701px) { .topbo { width: auto; } }
 /* A control that has been pressed but not yet answered must not look like a finished one:
    the panic button in particular has to stop claiming success before the desk has agreed. */
 .blackout.pending { opacity: .55; }
-.title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The title says which show is running, so it keeps room to say it. It was the one thing
+   in the bar allowed to shrink: at 1440 with a project's links showing it got 32px of the
+   258 it needed and, being centred, spilled out of BOTH sides — what showed was "0 fixt"
+   from the middle of the line (measured 2026-09-27). Now it holds a minimum, so on a row
+   that cannot fit everything the right-hand cluster wraps to a row of its own (the bar
+   already wraps) instead of the title vanishing; `safe center` centres it only when it
+   fits and otherwise keeps its start, with the ellipsis at the end. */
+.title {
+  min-width: min(20em, 100%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  justify-content: safe center;
+}
+.title > * { flex: none; }
+.title > #showName { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .statusstrip.bad { color: var(--danger); }
 /* The show note is a row of the top bar, last, full width: it stays in view with the bar. */
 .topbar > .shownote { flex: 1 1 100%; order: 10; border-top: 1px solid var(--line); border-bottom: 0; }
