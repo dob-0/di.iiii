@@ -144,6 +144,17 @@ piece's dimensions and its **snap points** as data:
 | `tower` | 0.29 × H × 0.29 on a 0.8 × 0.8 base plate (H default 6 m) | `base` (on the floor grid), `top` (a truss end lands here) |
 | `deck-2x1` | 2 × 0.2 × 1 on legs to height h (default 1.0 m; a common stage-deck size, e.g. Litedeck / Prolyte StageDex 2 × 1 m) | `edge` at every edge midpoint and corner (deck to deck), `top` (a floor lamp stands on it) |
 
+A piece entity is a `model` (its body is `scripts/rigbuild/pieces/<kind>.glb`,
+generated from the same numbers by `scripts/rigbuild/pieces-glb.mjs`) or any
+entity a view draws itself — what makes it a piece is the component. Frames:
+a truss's origin is the centre of its section, length along local +X; a tower's
+and a deck's origin is the centre of the footprint on the floor.
+
+A lamp's entity position is its **lens** (where the room renders light from, and
+where every rig so far put it). Its **mount** — the clamp, or the base on the
+floor — is derived from the type's body heights (`panY`, `tiltY`, `lensY`):
+`src/rigbuild/lampGeometry.js` converts both ways. Snap and MVR use the mount.
+
 A **0.5 m floor grid** underlies all of them. `src/rigbuild/snap.js` is a pure
 function: given a piece, a candidate pose and the pieces already placed, it
 returns the snapped pose and what it snapped to. It changes no UI; the Studio's

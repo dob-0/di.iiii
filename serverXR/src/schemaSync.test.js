@@ -445,7 +445,10 @@ describe('ESM/CJS mirror equivalence', () => {
         { id: 'f4', type: 'directionalLight', components: { fixture: 'nope' } },
         { id: 'f5', type: 'spotLight', components: { fixture: { type: ' up-b380f ', mode: '16ch', universe: 2, address: 273, unit: 5, circuit: 'C4', position: 'column base R', hung: true, extra: 'x' } } },
         { id: 'f6', type: 'spotLight', components: { fixture: { type: 'up-pl5403', universe: 0, address: 513, unit: -1, hung: 'yes' } } },
-        { id: 'f7', type: 'spotLight', components: { fixture: { mode: '16ch', universe: 1, address: 1 } } }
+        { id: 'f7', type: 'spotLight', components: { fixture: { mode: '16ch', universe: 1, address: 1 } } },
+        // Build pieces (RIG_BUILD.md §2.3): a kind survives, trimmed; an empty one is dropped.
+        { id: 'k1', type: 'group', components: { piece: { kind: ' truss-2m ', load: 9 } } },
+        { id: 'k2', type: 'group', components: { piece: { kind: '' } } }
       ]
     },
     // The show's Perform presets (2026-09-24). The server rebuilds documents
@@ -471,7 +474,10 @@ describe('ESM/CJS mirror equivalence', () => {
         { id: 'f3', type: 'pointLight', components: { fixture: { index: 0 } } },
         { id: 'f5', type: 'spotLight', components: { fixture: { type: ' up-b380f ', mode: '16ch', universe: 2, address: 273, unit: 5, circuit: 'C4', position: 'column base R', hung: true, extra: 'x' } } },
         { id: 'f6', type: 'spotLight', components: { fixture: { type: 'up-pl5403', universe: 0, address: 513, unit: -1, hung: 'yes' } } },
-        { id: 'f7', type: 'spotLight', components: { fixture: { mode: '16ch', universe: 1, address: 1 } } }
+        { id: 'f7', type: 'spotLight', components: { fixture: { mode: '16ch', universe: 1, address: 1 } } },
+        // Build pieces (RIG_BUILD.md §2.3): a kind survives, trimmed; an empty one is dropped.
+        { id: 'k1', type: 'group', components: { piece: { kind: ' truss-2m ', load: 9 } } },
+        { id: 'k2', type: 'group', components: { piece: { kind: '' } } }
       ]
     })
     expect(doc.entities[0].components.fixture).toEqual({ index: 3, universe: 1, address: 17 })
@@ -482,6 +488,17 @@ describe('ESM/CJS mirror equivalence', () => {
     expect(doc.entities[3].components.fixture).toEqual({ type: 'up-pl5403' })
     // Neither an index nor a type: no fixture at all.
     expect(doc.entities[4].components.fixture).toBeUndefined()
+  })
+
+  it('keeps components.piece as { kind } through the mirror', () => {
+    const doc = schema.normalizeProjectDocument({
+      entities: [
+        { id: 'k1', type: 'group', components: { piece: { kind: ' truss-2m ', load: 9 } } },
+        { id: 'k2', type: 'group', components: { piece: { kind: '' } } }
+      ]
+    })
+    expect(doc.entities[0].components.piece).toEqual({ kind: 'truss-2m' })
+    expect(doc.entities[1].components.piece).toBeUndefined()
   })
 
   it('clears one fixture field through updateComponent without losing the rest', () => {
