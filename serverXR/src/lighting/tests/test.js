@@ -942,7 +942,7 @@ check('an expired identify stops on its own, without anything having to clear it
 
 // ---- sACN (E1.31) ------------------------------------------------------------
 
-const { buildPacket, multicastAddress, cidFor, SACN } = require('../sacn');
+const { buildPacket, multicastAddress, wireUniverse, cidFor, SACN } = require('../sacn');
 
 check('an E1.31 data packet is laid out the way the spec says', () => {
   const data = Buffer.alloc(512);
@@ -985,9 +985,24 @@ check('the source id is stable across restarts, so a restart is not a second sen
 check('each universe counts its own packets, so a node watching one is never out of order', () => {
   const s = new SACN({ offline: true });
   const buf = Buffer.alloc(512);
-  s.send(1, buf); s.send(2, buf); s.send(1, buf);
+  s.send(0, buf); s.send(1, buf); s.send(0, buf);
   assert.strictEqual(s.lastFrame.get(1)[111], 2, 'universe 1 has sent two');
   assert.strictEqual(s.lastFrame.get(2)[111], 1, 'and universe 2 exactly one');
+  s.close();
+});
+
+check('the desk\'s Universe 1 goes out as sACN universe 1, never the reserved 0', () => {
+  // E1.31-2018 §6.2.7: universe 0 is reserved and receivers discard it. The desk counts
+  // from 0 (index 0 = "Universe 1" = Art-Net 0:0:0), so the wire number is index + 1.
+  assert.strictEqual(wireUniverse(0), 1);
+  assert.strictEqual(wireUniverse(2), 3);
+  const s = new SACN({ offline: true });
+  s.send(0, Buffer.alloc(512));
+  const p = s.lastFrame.get(1);
+  assert.ok(p, 'the frame is keyed by its wire universe');
+  assert.strictEqual(p.readUInt16BE(113), 1, 'the universe field says 1');
+  assert.strictEqual(s.lastFrame.has(0), false, 'nothing was built for universe 0');
+  assert.deepStrictEqual(s.status().universes, [1], 'status reports wire universes');
   s.close();
 });
 

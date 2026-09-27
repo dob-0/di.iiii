@@ -79,7 +79,10 @@ from the Eos vocabulary; the output is static values, recordable like anything e
 `library.js` imports fixtures from the Open Fixture Library by name, cached beside the
 show, and brings each channel's resting value with it — which is what stops an imported
 head coming up dark with a shut shutter. `sacn.js` is E1.31 output: multicast groups and
-a priority number, beside the existing Art-Net and ENTTEC drivers.
+a priority number, beside the existing Art-Net and ENTTEC drivers. The desk counts
+universes from 0 (its "Universe 1" is index 0, Art-Net 0:0:0); E1.31 counts from 1 and
+reserves 0 (§6.2.7), so `sacn.js` puts desk index *n* on the wire as universe *n + 1*.
+Until 2026-09-28 it sent the index as-is, and Universe 1 went out on the reserved 0.
 
 ## Talking to it
 
