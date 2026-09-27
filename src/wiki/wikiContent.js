@@ -653,11 +653,12 @@ export const WIKI_ARTICLES = [
             'Every space card on the Spaces page (/studio) has an Invite button for spaces you own. One click mints a fresh invite link and copies it — send it to whoever you want in the space.',
             'Opening the link grants access on arrival: the recipient lands straight in the space, whether they are signed in or just a guest. Guests keep the access with their guest session (about 30 days); signing in later carries it onto their account along with their sandbox.',
             'An invite grants access to that one space only — it does not make anyone an owner, and invited people cannot mint further invites or manage the space.',
+            'To stop a link before its week is up, open Manage on the space card and choose Invite links: each link says when it was made, how often it has been used and until when it works, and Revoke stops it at once. Revoking closes the door for anyone new; people who already joined through that link keep their access.',
             'Each link is valid for 7 days and works for any number of people until it expires. Minting again gives a new link; the old one keeps working until its own expiry.',
             'Invalid or expired links show a clear message on the access screen — ask the owner for a fresh one.'
         ],
         tags: ['invite', 'sharing', 'collaboration', 'access', 'owner'],
-        updated: '2026-08-19'
+        updated: '2026-09-28'
     },
     {
         id: 'space-ownership',

@@ -14,6 +14,8 @@ import {
     uploadServerAsset,
     getServerSpaceAssetUrl,
     mintSpaceInvite,
+    listSpaceInvites,
+    revokeSpaceInvite,
     saveSpaceToFile,
     openSpaceFromFile,
     listSpaceSnapshots,
@@ -291,6 +293,9 @@ export default function SpaceHub() {
     const [github, setGithub] = useState(null)
     // card-preview manager panel state: { spaceId, busy, error }
     const [previewMgr, setPreviewMgr] = useState(null)
+    // The invite links a space has out: the only way to stop one before its
+    // week is up (2026-09-28 — the server could revoke, nothing here asked it to).
+    const [invites, setInvites] = useState(null)
     // History: the space's restore points, opened from Manage.
     const [history, setHistory] = useState(null)
     const [providers, setProviders] = useState(null) // null until sign-in requested
@@ -643,6 +648,36 @@ export default function SpaceHub() {
             setHistory(prev => prev?.spaceId === spaceId ? { ...prev, loading: false, error: err.message || 'Could not load the history.' } : prev)
         }
     }, [])
+
+    const loadInvites = useCallback(async (spaceId) => {
+        setInvites(prev => prev?.spaceId === spaceId ? { ...prev, loading: true, error: '' } : prev)
+        try {
+            const items = await listSpaceInvites(spaceId)
+            setInvites(prev => prev?.spaceId === spaceId ? { ...prev, loading: false, items } : prev)
+        } catch (err) {
+            setInvites(prev => prev?.spaceId === spaceId ? { ...prev, loading: false, error: err.message || 'Could not load the invite links.' } : prev)
+        }
+    }, [])
+
+    const handleToggleInvites = useCallback((space, e) => {
+        e.stopPropagation()
+        if (invites?.spaceId === space.id) { setInvites(null); return }
+        setInvites({ spaceId: space.id, loading: true, error: '', items: [], busyId: null, notice: '' })
+        loadInvites(space.id)
+    }, [invites, loadInvites])
+
+    const handleRevokeInvite = useCallback(async (space, invite) => {
+        const made = formatRestorePointTime(invite.createdAt)
+        if (!window.confirm(`Stop the invite link made ${made}?\n\nNobody new can join "${space.label || space.id}" with it. People who already joined through it keep their access.`)) return
+        setInvites(prev => prev ? { ...prev, busyId: invite.id, error: '', notice: '' } : prev)
+        try {
+            await revokeSpaceInvite(space.id, invite.id)
+            setInvites(prev => prev ? { ...prev, busyId: null, notice: `The link made ${made} no longer works.` } : prev)
+            await loadInvites(space.id)
+        } catch (err) {
+            setInvites(prev => prev ? { ...prev, busyId: null, error: err.message || 'Could not revoke the link.' } : prev)
+        }
+    }, [loadInvites])
 
     const handleToggleHistory = useCallback((space, e) => {
         e.stopPropagation()
@@ -1235,6 +1270,13 @@ export default function SpaceHub() {
                                                 {copiedInviteId === space.id ? 'Invite copied' : 'Invite'}
                                             </button>
                                             <button
+                                                className={`ssh-card-btn${invites?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
+                                                onClick={e => handleToggleInvites(space, e)}
+                                                title="The invite links this space has handed out, and a way to stop one"
+                                            >
+                                                Invite links
+                                            </button>
+                                            <button
                                                 className={`ssh-card-btn${isLinking ? ' ssh-card-btn--active' : ''}`}
                                                 onClick={e => handleOpenLinker(space, e)}
                                             >
@@ -1310,6 +1352,49 @@ export default function SpaceHub() {
                                                     </button>
                                                 )}
                                                 <button className="ssh-card-btn" onClick={() => setPreviewMgr(null)}>
+                                                    Close
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {invites?.spaceId === space.id && (
+                                        <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                                            {invites.loading && <p className="ssh-linker-status">Loading invite links…</p>}
+                                            {invites.error && <p className="ssh-linker-status ssh-linker-error">{invites.error}</p>}
+                                            {invites.notice && <p className="ssh-linker-status">{invites.notice}</p>}
+                                            {!invites.loading && !invites.error && invites.items.length === 0 && (
+                                                <p className="ssh-linker-status">No invite links out. Invite makes one, good for 7 days.</p>
+                                            )}
+                                            {!invites.loading && invites.items.length > 0 && (
+                                                <div className="ssh-linker-list">
+                                                    {invites.items.map(invite => {
+                                                        const made = formatRestorePointTime(invite.createdAt)
+                                                        const expired = Boolean(invite.expiresAt) && invite.expiresAt < Date.now()
+                                                        const used = invite.useCount === 1 ? 'used once' : invite.useCount > 1 ? `used ${invite.useCount} times` : 'not used yet'
+                                                        const until = expired ? 'expired' : invite.expiresAt ? `works until ${formatRestorePointTime(invite.expiresAt)}` : 'no end date'
+                                                        return (
+                                                            <div key={invite.id} className="ssh-linker-item">
+                                                                <span className="ssh-linker-select" title={`made ${made} · ${used} · ${until}`}>
+                                                                    <span>made {made} · {used}<br />{until}</span>
+                                                                </span>
+                                                                {!expired && (
+                                                                    <button
+                                                                        className="ssh-linker-rename-btn"
+                                                                        disabled={Boolean(invites.busyId)}
+                                                                        onClick={() => handleRevokeInvite(space, invite)}
+                                                                        title="Stop this link working"
+                                                                    >
+                                                                        {invites.busyId === invite.id ? 'Revoking…' : 'Revoke'}
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
+                                            <div className="ssh-linker-footer">
+                                                <button className="ssh-card-btn" onClick={() => setInvites(null)}>
                                                     Close
                                                 </button>
                                             </div>
