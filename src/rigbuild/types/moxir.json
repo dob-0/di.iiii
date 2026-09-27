@@ -73,6 +73,9 @@
         "sidecar": "scripts/place/fixtures/glb/beam380.json",
         "builtBy": "scripts/place/fixtures/build_fixtures.py",
         "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": 0.12,
+        "tiltY": 0.37,
+        "lensY": 0.698,
         "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
       },
       "sources": {
@@ -178,6 +181,9 @@
         "sidecar": "scripts/place/fixtures/glb/bsw250.json",
         "builtBy": "scripts/place/fixtures/build_fixtures.py",
         "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": 0.13,
+        "tiltY": 0.33,
+        "lensY": 0.544,
         "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
       },
       "sources": {
@@ -305,6 +311,9 @@
         "sidecar": "scripts/place/fixtures/glb/beeEye.json",
         "builtBy": "scripts/place/fixtures/build_fixtures.py",
         "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": 0.12,
+        "tiltY": 0.36,
+        "lensY": 0.496,
         "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
       },
       "sources": {
@@ -385,6 +394,9 @@
         "sidecar": "scripts/place/fixtures/glb/par.json",
         "builtBy": "scripts/place/fixtures/build_fixtures.py",
         "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": 0,
+        "tiltY": 0.205,
+        "lensY": 0.31,
         "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
       },
       "sources": {
@@ -457,6 +469,9 @@
         "sidecar": "scripts/place/fixtures/glb/laser.json",
         "builtBy": "scripts/place/fixtures/build_fixtures.py",
         "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": 0,
+        "tiltY": 0.33,
+        "lensY": 0.6615,
         "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
       },
       "sources": {
@@ -520,6 +535,9 @@
         "sidecar": "scripts/place/fixtures/glb/co2.json",
         "builtBy": "scripts/place/fixtures/build_fixtures.py",
         "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": null,
+        "tiltY": null,
+        "lensY": 0.349,
         "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
       },
       "sources": {
@@ -608,6 +626,9 @@
         "sidecar": "scripts/place/fixtures/glb/spark.json",
         "builtBy": "scripts/place/fixtures/build_fixtures.py",
         "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": null,
+        "tiltY": null,
+        "lensY": 0.314,
         "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
       },
       "sources": {
@@ -680,6 +701,9 @@
         "sidecar": "scripts/place/fixtures/glb/smoke.json",
         "builtBy": "scripts/place/fixtures/build_fixtures.py",
         "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": null,
+        "tiltY": null,
+        "lensY": 0.1,
         "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
       },
       "sources": {

@@ -156,6 +156,12 @@ export const typesFromManifest = (manifest, { manifestFile = 'scripts/place/fixt
                 sidecar: `${glbDir}/${kindKey}.json`,
                 builtBy: sidecar?.builtBy || null,
                 frame: sidecar?.frame || null,
+                // Heights in the body's own frame (metres, base on y=0): where the
+                // pan and tilt axes are and where the light leaves. What turns a
+                // lamp's lens position into its mount point (lampGeometry.js).
+                panY: sidecar?.panY ?? null,
+                tiltY: sidecar?.tiltY ?? null,
+                lensY: sidecar?.lensY ?? null,
                 licence: manifest?.modelsLicence?.licence || null
             },
             sources: Object.fromEntries([...used].sort().map((key) => [key, sources[key]])),
