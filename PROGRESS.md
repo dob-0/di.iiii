@@ -5,6 +5,19 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-28 — build the rig: one data base under the three build views (A first person, B plot, C cards)
+
+- Owner chose all three sketches ("i want to a,b,c all"); the shared base went first, method
+  first: `docs/architecture/RIG_BUILD.md` maps the model onto GDTF 1.2, MVR 1.6, USITT RP-2 and
+  a Lightwright-style patch sheet, and says what A/B/C each read and write.
+- `src/rigbuild/`: fixture types generated from `fixtures.json` (modes = published footprints,
+  channel lists only where a source gives one), pieces + pure `snap()`, auto-patch (the desk
+  allocates with its own `nextFreeAddress`, the room records; conflicts and unknown modes
+  flagged, never resolved), the patch/power sheet at `/{space}/patch/{project}` (A4 print,
+  CSV), MVR + GDTF export and a validator against the pinned XSDs.
+- MOXIR patched: U1 001–468, U2 001–288; 56 fixtures mode-owed. MVR/GDTF validate; BlenderDMX
+  imports the patch right, the beam axis in its view is owed. Details: `docs/ai/sessions/feat-rig-base.md`.
+
 ## 2026-09-27 — MOXIR: a modelled hall and a 90-lamp rig in it
 
 - `scripts/place/hall.py` builds a parametric Soviet crane hall from measured-from-photos dims

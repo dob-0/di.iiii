@@ -1567,6 +1567,30 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['scan', 'scanning', 'place', 'hall', 'venue', 'phone', 'camera', 'photogrammetry', 'walk', 'footage', 'sources', '3d', 'model', 'reconstruction', 'meshroom', 'measure', 'tape', 'theatre', 'factory', 'space', 'room', 'polycam', 'lidar'],
         updated: '2026-09-22'
+    },
+    {
+        id: 'patch-sheet',
+        category: 'Spaces & access',
+        title: 'The patch sheet: what the light engineers plug by',
+        summary: 'Every lamp in a room that has a fixture type is on one printable sheet — fixture number, type, mode, position, universe, address, circuit and watts — at diiii.xyz/{space}/patch/{project}.',
+        body: [
+            'A lamp in a room can say which real fixture it is: its type (the code on the rental list), its DMX mode, and where it hangs. On a machine with the lighting desk, such a lamp is patched on the desk the moment it is placed, copied or deleted — the desk picks the next free address in the universe, the way a console does — and the room writes down what the desk decided.',
+            'The sheet reads the room alone, so the link works for anybody who can open the space, on any tier, with no desk. It lists the patch by universe and address, the fixture types, the power by circuit and every flag. Print gives A4 pages; Patch CSV and Power CSV give the same tables for a spreadsheet.',
+            'A flag is a word, never a colour, so it survives a black-and-white printer:',
+            {
+                list: [
+                    'mode unknown — nobody has told us the fixture\'s DMX mode, so it has no address. None is invented.',
+                    'channel list owed — the width of the mode is known, what each channel does is not yet.',
+                    'overlap — two lamps claim the same channels. Nothing is moved for you.',
+                    'desk differs — the room and this machine\'s desk disagree about where a fixture is. Someone has to choose.',
+                    'power assumed — no datasheet gave the watts.'
+                ]
+            },
+            'The power column is the datasheet maximum on 16 A circuits loaded to 80%. It is a planning figure, not an electrical design.',
+            'For the engineers\' console the same rig exports as an MVR file with a GDTF file per fixture type (scripts/rigbuild/export-mvr.mjs).'
+        ],
+        tags: ['patch', 'patch sheet', 'dmx', 'universe', 'address', 'lighting', 'rig', 'fixture', 'mvr', 'gdtf', 'console', 'power', 'circuit', 'print', 'csv', 'light engineer', 'crew'],
+        updated: '2026-09-28'
     }
 ]
 
