@@ -101,5 +101,12 @@ check('every DMX frame leaves full length — 512 slots, never trimmed to the pa
   if (!/out\.set\(u, FULL_FRAME\)/.test(fp)) throw new Error('footprints() no longer sets every universe to FULL_FRAME');
 });
 
+// Regression guard: under a finger the desk's ways out are a finger tall (they were 25px).
+check('the desk top links are 44px under a coarse pointer', () => {
+  const css = fs.readFileSync(path.join(ROOT, '../ui/style.css'), 'utf8');
+  const coarse = css.slice(css.indexOf('@media (pointer: coarse)'));
+  if (!/\.homelink \{ min-height: 44px;/.test(coarse)) throw new Error('.homelink lost its 44px touch height in the (pointer: coarse) block');
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);
