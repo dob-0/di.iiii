@@ -42,7 +42,7 @@ nd="$out/node-v$NODE_VERSION"
 if [[ ! -x $nd/bin/node ]]; then
   tgz="node-v$NODE_VERSION-$plat.tar.gz"
   log "fetching $tgz"
-  curl -fsSL -o "$work/$tgz" "https://nodejs.org/dist/v$NODE_VERSION/$tgz"
+  curl -fsSL --retry 3 --retry-all-errors --connect-timeout 20 --max-time 900 -o "$work/$tgz" "https://nodejs.org/dist/v$NODE_VERSION/$tgz"
   got=$(shasum -a 256 "$work/$tgz" | cut -d' ' -f1)
   [[ $got == "$node_sha256" ]] || { echo "node tarball sha256 $got != pinned $node_sha256" >&2; exit 1; }
   mkdir -p "$nd.tmp" && tar -xzf "$work/$tgz" -C "$nd.tmp" --strip-components 1 && mv "$nd.tmp" "$nd"
@@ -54,7 +54,15 @@ export PATH="$nd/bin:$PATH"
 log "fetching $sha"
 src="$work/src"
 git init -q "$src"
-git -C "$src" fetch -q --depth 1 "$REPO" "$sha"
+# A dead connection must end the fetch, not hang the build: git has no timeout of its own, and a
+# stalled fetch held a deploy for 10+ minutes at 38 MB (2026-09-28). Under 1 KB/s for 60 s aborts
+# the attempt; three attempts, 15 s apart, before the build gives up.
+fetched=0
+for attempt in 1 2 3; do
+  if git -C "$src" -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=60 fetch -q --depth 1 "$REPO" "$sha"; then fetched=1; break; fi
+  log "fetch attempt $attempt failed"; (( attempt < 3 )) && sleep 15
+done
+(( fetched )) || { echo "git fetch of $sha failed 3 times (stalled or unreachable)" >&2; exit 1; }
 git -C "$src" checkout -q FETCH_HEAD
 [[ $(git -C "$src" rev-parse HEAD) == "$sha" ]]
 
