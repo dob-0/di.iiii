@@ -116,7 +116,9 @@ export default function AccountButton({ authState, onLogout }) {
                 onClick={handleOpen}
                 sx={{
                     position: 'fixed',
-                    bottom: '86px',
+                    // --di-account-btn-bottom (base.css): pages read the same
+                    // value to leave room for the button at their end.
+                    bottom: 'var(--di-account-btn-bottom)',
                     right: '14px',
                     zIndex: 9999,
                     cursor: 'pointer'
@@ -129,8 +131,8 @@ export default function AccountButton({ authState, onLogout }) {
                             variant="outlined"
                             sx={{
                                 minWidth: 0,
-                                width: 30,
-                                height: 30,
+                                width: 'var(--di-account-btn-size)',
+                                height: 'var(--di-account-btn-size)',
                                 borderRadius: '6px',
                                 fontSize: 12,
                                 fontWeight: 700,
@@ -153,8 +155,8 @@ export default function AccountButton({ authState, onLogout }) {
                     <Avatar
                         src={authState?.avatarUrl || undefined}
                         sx={{
-                            width: 30,
-                            height: 30,
+                            width: 'var(--di-account-btn-size)',
+                            height: 'var(--di-account-btn-size)',
                             fontSize: 11,
                             fontWeight: 700,
                             borderRadius: '6px',
