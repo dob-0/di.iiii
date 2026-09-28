@@ -27,6 +27,17 @@ The first start downloads SD-Turbo (~2.6 GB) and TAESD into the Hugging Face
 cache; after that it starts offline. RTX 50-series cards need the `cu128`
 (or newer) PyTorch build shown above.
 
+**Strength is the speed dial.** Measured on an RTX 5060 laptop (8 GB), 512×288,
+model time per frame — the wall runs a little under these once the frame's
+round trip is added (0.75 measured 5.3 fps end to end in Chrome):
+
+| strength | steps | ms / frame | looks like |
+|---|---|---|---|
+| 0.25 | 1 | ~71 | almost the camera |
+| 0.5 | 2 | ~117 | reshaped, same scene |
+| 0.75 | 3 | ~169 | the prompt's look, the room's shape |
+| 1.0 | 4 | ~219 | the prompt |
+
 **No model** — proves the whole loop, returns every frame unchanged:
 
 ```bash

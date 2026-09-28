@@ -31,7 +31,17 @@ parser.add_argument("--host", default="127.0.0.1")
 parser.add_argument("--port", type=int, default=7861)
 parser.add_argument("--model", default="stabilityai/sd-turbo")
 parser.add_argument("--vae", default="madebyollin/taesd")
-parser.add_argument("--steps", type=int, default=2)
+# The schedule the strength slides along. With N steps the model can only start
+# from N evenly spaced noise levels, and img2img runs int(N * strength) of them:
+# at N=2 every strength above 0.5 started from the SAME level, so the slider
+# stopped doing anything past halfway — the prompt barely showed (seen
+# 2026-09-28, stained glass at 0.95 looked like 0.5). N=4 makes it a real dial,
+# measured on an RTX 5060 laptop at 512x288:
+#   0.25 → 1 step  ~71 ms   almost the camera
+#   0.5  → 2 steps ~117 ms  reshaped, same scene
+#   0.75 → 3 steps ~169 ms  the prompt's look, the room's shape
+#   1.0  → 4 steps ~219 ms  the prompt
+parser.add_argument("--steps", type=int, default=4)
 args = parser.parse_args()
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -53,7 +63,8 @@ print(f"[liveai] ready on ws://{args.host}:{args.port}/ws", flush=True)
 def restyle(jpeg: bytes, prompt: str, strength: float) -> bytes:
     image = Image.open(io.BytesIO(jpeg)).convert("RGB")
     strength = min(1.0, max(0.05, strength))
-    # img2img runs int(steps * strength) steps; keep at least one.
+    # img2img runs int(steps * strength) steps; below 1/steps that is zero, so
+    # a gentle strength gets a finer schedule instead (still one step).
     steps = max(args.steps, math.ceil(1 / strength))
     generator.manual_seed(42)  # a steady seed: the picture changes with the room, not by chance
     with torch.inference_mode():
@@ -74,6 +85,14 @@ async def serve(socket):
     params = {"prompt": "", "strength": 0.5}
     await socket.send(json.dumps({"type": "status", "state": "ready", "detail": f"{args.model} on {device}"}))
     frames, since = 0, time.monotonic()
+    try:
+        await handle(socket, params, frames, since)
+    except websockets.ConnectionClosed:
+        # A page closed or a surface switched off — normal, not an error.
+        pass
+
+
+async def handle(socket, params, frames, since):
     async for message in socket:
         if isinstance(message, str):
             try:
