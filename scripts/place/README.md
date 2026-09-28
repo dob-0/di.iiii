@@ -192,16 +192,15 @@ Every rig entity's id starts `rig-`; a re-run deletes those first and touches
 nothing else except the night (ambient, fog, background) and the shadow switch.
 Undo the whole hall: import the backup bundle (`space-bundle.mjs import … --force`).
 
-**`hall.py` (v2, 2026-09-28)** builds, in real metres, one mesh per material
-(14 meshes, ~60k triangles for MOXIR, 46k of them the roof): several 24 m spans
+**`hall.py` (v2, 2026-09-28; v3 the same evening — see "The hall fix")** builds, in real metres, one mesh per material
+(17 meshes, ~55k triangles for MOXIR, 41k of them the roof): several 24 m spans
 under ONE flat roof, the nave centred on x = 0 and open to its neighbours;
 precast columns with a solid shaft and a Y head flaring symmetrically across
 the hall (45° chamfers) carrying a grey steel plate girder on each side
 (stiffeners and a handrail on the nave side) and a centred upper column;
 paired columns at the expansion joint; a double-layer space frame
-(square-on-square offset grid, 3 m module, bottom chord 11.0 m, top 13.5 m;
-full over the nave and its neighbours, bottom chords only further out; members
-are open triangular prisms, 6 triangles each, double-sided); the deck with
+(square-on-square offset grid, 6 m module = the column pitch, bottom chord 11.0 m, top 13.5 m,
+star gussets at the bottom nodes, square members, over every span; the lanterns' own 3 m frame); the deck with
 openings under raised flat-top box lanterns (glazed sides and ends); outer walls
 with three window bands only at the building edge; end walls with the gates;
 low block walls, X bracing, yellow cranes; the machines named in the features
@@ -362,6 +361,35 @@ Seen on the RTX 3080 (ANGLE Vulkan, headed): `~/Downloads/moxir-hall/centre-open
 (p95 16.7 ms, 98 calls, 194k tris) — symmetric; `centre-crane-vs-photo032-marks.png` (crane view 40 fps, p95
 49.9 ms, while the CPU sat at 98–100 °C from other load). One 2562 × 1440 shot came out from a camera ~9 m up
 and was retaken: the intermittent camera-override fault already on record, not understood.
+
+### The hall fix (the owner's 50/50 overlay, 2026-09-28 evening)
+
+He laid the model 50/50 over his photos: "so fix all make it right right". Five defects, each fixed in data or
+in `hall.py`, each seen on the RTX 3080 afterwards:
+
+| defect | was | now | how measured / source |
+| --- | --- | --- | --- |
+| roof module | thin 3 m lattice everywhere (7,496 members, 46k tris) | **6 × 6 m square pyramids, 2.5 m deep, star gusset at every bottom node (323), square members 0.24/0.20/0.16 m**; the lantern keeps its own 3 m frame | one bottom node per column: 035 one V per bay along the row, 021 one star node per bay, 1c3956d1 two pyramids across the 12 m lantern; depth = the VGGT chord planes 11.0/13.5 m; member sizes GUESS by eye against the 0.5 m column |
+| the press | a 2.8 × 3 × 4.5 m box (+ crown box) that the baked wash covered in one flat sheet → a glowing block | **`crank_press` model**: two 0.8 m housings with flanges and bolted plates, bed to 1.25 m, ram 2.3–3.5 m, head to 4.2 m, crown 4.2–4.9 m, motor on the crown, flywheel ø1.56 m (top 5.6 m) with belt guard and the shell under it, the tall and the horizontal cylinder, control panel, lubrication tank; the machine line beside it (brick plinth 0.9 m, ribbed steel body to 2.4 m, rail, the drilled beam on the floor) and the pipe with its elbow | proportions from 1c3956d1/018/29b70cf5; heights from the photo-032 fit (top 4.9–5.3 m ±20 %) and the refit 024 camera; depth GUESS; the type (Soviet hot-die crank press, KGShP family) NOT identified |
+| press light | uplights 0.35 m off, aimed 60 % up, baked on a flat sheet | 0.6 m off, aimed 92 % up (grazing up the housings into the crown); the bake lands only on the model's real faces (`faces` in hall.json → `washSurface` parts), at each face's own albedo; the header spots focus at the DJ's chest (`stage-wash` `deck_h` 1.4) instead of the deck floor | `rig.mjs --reaim par-press,bsw250-truss --wash-only` |
+| dance floor | 20 m wide (x −10…10) | **10.7 m, x −5.35…5.35, centred like the booth**; depth kept, z 7.5…48 | his blue mark by the photo-032 fit: x −8.7…2.0 = 10.7 m |
+| skylights | dark glass | **emissive `skylight` material** on the lantern glazing (no light source added, no per-pixel cost) | 017/021/023/035/1c3956d1: the brightest thing in the roof |
+| colours | cold, bluish (neutral greys + a blue fill light) | colours SAMPLED from the photos (`hallfix/sample.py`: concrete #8f836e, floor #4c4135, deck #4b4843, crane #7f673b, girders #545049, press #2d2d2d, machine #67635d, block #968879), linear, ×1.3 so aged concrete lands at 0.29 (Levinson & Akbari 2002); fill light neutral (ambient #8ea2c8 → #a39c92, directional #8fa6d8 → #b7bcc6, same intensities) | the lamps bring the cold white and red |
+
+The photo-024 camera (the owner's 1c3956d1) was REFIT by OpenCV `solvePnP` on 6 points (the nave lantern's four
+deck-opening corners, the far gate's two top corners) with the EXIF intrinsics: rms 37 px on 2992 (was ~90 px);
+the ultra-wide's distortion and a −6° roll are not modelled, so it is still approximate (~1 m, ~2°).
+
+`import.mjs --replace` used to wipe the rig builder's `venuePlan` and reset the rigged night to daylight: it now
+keeps both (known-fixes row). Repair for a hall already hit: `load-plot.mjs --plan-only` and `rig.mjs --night-only`.
+
+Seen on the RTX 3080 (ANGLE Vulkan, headed, one browser at a time under the shared lock), 60 fps on every view
+(p95 ≤ 16.8 ms): crane 285 calls / 188k tris, ground 142 / 132k, press 146 / 132k, roof 58 / 99k, opening 183 / 144k.
+Hall 54,948 triangles in 17 meshes (the frame 41k). Shots: `~/Downloads/moxir-hall/fix-crane-vs-photo032-marks.png`,
+`fix-ground-vs-1c3956d1.png`, `fix-press-vs-1c3956d1.png`, `fix-roof-vs-photo021.png`, `fix-opening.png`.
+Still a guess: the member sizes, the press's depth and type, the flywheel's side, the lantern's own frame, the
+machine line's length. Seen but not fixed: the DJ table reads pale in the booms' haze cones (the booth-key exposure,
+the rig's photometry, not the hall).
 
 ### The column wash — a baked lightmap (fixes "the room reads dark")
 

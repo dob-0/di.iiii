@@ -166,3 +166,29 @@
 - SEEN: `~/Downloads/moxir-hall/centre-opening.png` (2562 × 1440, 60 fps, symmetric), `centre-crane-vs-photo032-marks.png`
   (40 fps, p95 49.9 ms under 98–100 °C CPU from other load). One opening shot came from ~9 m up (override fault, known,
   not understood); retaken. Two runs lost the WebGL context ("blocked") after thermal waits and rendered nothing.
+
+## 2026-09-28 evening — the hall fix: "so fix all make it right right"
+
+- The owner laid the model 50/50 over his photos and named five defects. Backup first:
+  `~/di-backups/moxir-before-hallfix-2026-09-28/` (di save + space bundle + the hall document v1912 + hall-v3 files +
+  the desk; SHA256SUMS, README.txt; a `di save` before each later write: plan, reaim-wash, reaim-truss).
+- ROOF: 6 m module (one bottom node per column: 035/021/1c3956d1), 2.5 m deep, star gussets (323), square members
+  0.24/0.20/0.16 m, every span; the lantern's own 3 m frame. 3,560 members, the frame 41k of the hall's 54,948 tris.
+- PRESS: `hall.py` `crank_press` (housings, bed, ram, head, crown, motor, flywheel ø1.56 m top 5.6 m, belt guard,
+  cylinders, panel) + `machine_line` + `pipe_run`, inside the massing envelopes the rig still aims at; `faces` per item
+  for the bake (`washSurface` parts, own albedo). Press PARs 0.6 m off, aimed 92 % up; header spots focus at the DJ's
+  chest (`stage-wash` `deck_h` 1.4; mirrored in the preview's `src/rigbuild/lookRules.js`, NOT in the installed bundle).
+- DANCE FLOOR: 10.7 m (his blue mark by the 032 fit), x −5.35…5.35, z 7.5…48; the install's venuePlan zones updated.
+- SKYLIGHTS: emissive `skylight` material. COLOURS: sampled from the photos (hallfix/sample.py), neutral fill light.
+- 024 camera refit by solvePnP (rms 37 px, was ~90). New tools: `rig.mjs --reaim <groups>` / `--night-only`,
+  `rig-look.mjs` views `press`, `roofup` and `--hide`, `compose.py --side-only`.
+- Found and fixed: `import.mjs --replace` dropped `venuePlan` and reset the night (known-fixes row, 2 guards).
+- Found on the machine: another session's lock waiter (`while pgrep -f "org.chromium…"` inside `flock`) matched its own
+  command line and held the browser lock 1 h 45 m with no browser open; that one waiter was ended so the queue moved.
+- Install data written: import --replace, load-plot --plan-only, rig.mjs --reaim par-press,bsw250-truss --wash-only,
+  --night-only, looks.mjs. No runtime rebuild.
+- SEEN on the 3080, 60 fps every view: `~/Downloads/moxir-hall/fix-crane-vs-photo032-marks.png`,
+  `fix-ground-vs-1c3956d1.png`, `fix-press-vs-1c3956d1.png`, `fix-roof-vs-photo021.png`, `fix-opening.png`.
+- GUESS / OWED: member sizes, press depth/type/flywheel side, machine-line length; the DJ table reads pale in the
+  booms' haze (rig exposure); the look colours (#2437ff column wash) are the looks', owned by the versions work;
+  `deck_h` reaches the installed app only with the next preview build.

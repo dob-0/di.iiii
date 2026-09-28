@@ -40,8 +40,11 @@ import { KHRMaterialsUnlit } from '@gltf-transform/extensions'
 import { hexToLinear } from './fixtures-glb.mjs'
 import { lightDistance } from './rig-lib.mjs'
 
-// The albedo of the surfaces washed: hall.py's base colours (linear), mean channel.
-export const ALBEDO = { column: (0.40 + 0.37 + 0.32) / 3, backdrop: (0.16 + 0.18 + 0.17) / 3 }
+// The albedo of the surfaces washed: hall.py's base colours (linear), mean
+// channel — v3 (2026-09-28): the colours sampled from the photographs (warm
+// concrete, the press's dark steel). A modelled machine's face carries its own
+// (`part.albedo`, from hall.json geometry.massing[].faces).
+export const ALBEDO = { column: (0.36 + 0.30 + 0.20) / 3, backdrop: (0.045 + 0.041 + 0.036) / 3 }
 
 const smoothstep = (e0, e1, x) => {
     const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)))
@@ -74,25 +77,29 @@ export const washMesh = (washes, { cols = 3, rows = 24 } = {}) => {
         const lin = hexToLinear(wash.colour)
         const top = Math.max(...lin) || 1
         const hue = lin.map((c) => c / top)
-        const nu = s.kind === 'backdrop' ? 24 : cols
-        const nv = s.kind === 'backdrop' ? 24 : rows
-        const base = positions.length / 3
-        for (let j = 0; j <= nv; j += 1) {
-            for (let i = 0; i <= nu; i += 1) {
-                const p = s.origin.map((o, k) => o + s.u[k] * (i / nu) + s.v[k] * (j / nv))
-                const L = washRadiance(wash, p, s.normal, albedo)
-                peak = Math.max(peak, L * top)
-                positions.push(...p)
-                colors.push(hue[0], hue[1], hue[2], Math.min(1, L * top))
+        // One patch, or (a modelled machine) one per real face the beam lands on.
+        for (const part of s.parts || [s]) {
+            const a0 = part.albedo ?? albedo
+            const nu = s.kind === 'backdrop' ? Math.max(4, Math.min(24, Math.round(part.u[0] / 0.12))) : cols
+            const nv = s.kind === 'backdrop' ? 24 : rows
+            const base = positions.length / 3
+            for (let j = 0; j <= nv; j += 1) {
+                for (let i = 0; i <= nu; i += 1) {
+                    const p = part.origin.map((o, k) => o + part.u[k] * (i / nu) + part.v[k] * (j / nv))
+                    const L = washRadiance(wash, p, s.normal, a0)
+                    peak = Math.max(peak, L * top)
+                    positions.push(...p)
+                    colors.push(hue[0], hue[1], hue[2], Math.min(1, L * top))
+                }
             }
-        }
-        for (let j = 0; j < nv; j += 1) {
-            for (let i = 0; i < nu; i += 1) {
-                const a = base + j * (nu + 1) + i
-                const b = a + 1
-                const c = a + nu + 1
-                const d = c + 1
-                indices.push(a, b, d, a, d, c)
+            for (let j = 0; j < nv; j += 1) {
+                for (let i = 0; i < nu; i += 1) {
+                    const a = base + j * (nu + 1) + i
+                    const b = a + 1
+                    const c = a + nu + 1
+                    const d = c + 1
+                    indices.push(a, b, d, a, d, c)
+                }
             }
         }
     }

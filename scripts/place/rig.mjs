@@ -32,6 +32,14 @@
  *                         for a project whose lamps are live, typed entities (load-plot.mjs
  *                         deletes the baked wash with the other baked meshes, and the room
  *                         then reads dark: the beam-only PARs light nothing)
+ *   --reaim <group,…>     re-aim ONLY those groups' lamps already in the project: their
+ *                         transform (position, rotation) and light (distance, angle) are
+ *                         patched in place, every other component (fixture type, unit,
+ *                         circuit — the patch) is kept. Combine with --wash-only to
+ *                         re-bake the wash for the new aims in the same run.
+ *   --night-only          write ONLY the rig's night (ambient, directional, fog) and its
+ *                         opening shot (rig.opening) — for a project whose lamps are
+ *                         live, typed entities
  *   --out <file>          also write the entities and the summary to a file
  *   --bodies-out <file>   also write the posed fixture bodies GLB to a file
  *   --dry-run             print the summary, send nothing
@@ -153,6 +161,33 @@ const main = async () => {
     }
     if (!token) die('No API token found, so nothing was sent.', 'Set DI_API_TOKEN or pass --token-file.')
     const client = makeClient(api, token)
+
+    if (args['night-only']) {
+        const [world] = nightOps(rig)
+        const result = must(await client.post(`/api/projects/${project}/ops`, {
+            baseVersion: Number((must(await client.get(`/api/projects/${project}/document`), 'reading the hall')).version) || 0,
+            ops: [world, ...(built ? openingOps(rig, built.stage) : [])]
+        }), 'writing the night')
+        say(`  the night written (ambient ${world.payload.patch.ambientLight.color} ${world.payload.patch.ambientLight.intensity}); nothing else touched (document version ${result.version ?? '?'})`)
+        return
+    }
+
+    if (args.reaim) {
+        const groups = String(args.reaim).split(',').map((v) => v.trim()).filter(Boolean)
+        const current = must(await client.get(`/api/projects/${project}/document`), 'reading the hall')
+        const have = new Map((current.document?.entities || []).map((entity) => [entity.id, entity]))
+        const ops = []
+        for (const entity of built.entities) {
+            if (!groups.some((gid) => entity.id.startsWith(`${RIG_PREFIX}${gid}-`)) || !have.has(entity.id)) continue
+            const { position, rotation } = entity.components.transform
+            ops.push({ type: 'updateComponent', payload: { entityId: entity.id, component: 'transform', patch: { position, rotation } } })
+            if (entity.components.light) ops.push({ type: 'updateComponent', payload: { entityId: entity.id, component: 'light', patch: entity.components.light } })
+        }
+        if (!ops.length) die(`--reaim ${groups.join(',')}: no such lamps in ${project}.`)
+        const result = must(await client.post(`/api/projects/${project}/ops`, { baseVersion: Number(current.version) || 0, ops }), 'writing the aims')
+        say(`  re-aimed ${ops.filter((o) => o.payload.component === 'transform').length} lamps (${groups.join(', ')}); every other component kept (document version ${result.version ?? '?'})`)
+        if (!args['wash-only']) return
+    }
 
     if (args['wash-only']) {
         if (!built?.washes.length) die('--wash-only: this rig and look bake no washes.')
