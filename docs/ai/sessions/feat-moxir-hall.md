@@ -86,3 +86,83 @@
 - THERMAL: peer sessions (verify-surfaces on SwiftShader, full vitest in di.iiii-test-cap / di.iiii-land-*) held the
   CPU package at 100 C, load 32, for ~15 min; every browser here waited for < 80 C and still peaked at 95–98 C (the
   cooler). No hall was rendered in software.
+
+## 2026-09-28 — the architecture corrected (flat space frame, 4 spans) and the rig moved to where the owner marked the stage
+
+- `hall.py` REWRITTEN (v2) from the architecture spec (photos + Esri Wayback 2020-10-30 Maxar image): 4 spans x 24 m
+  under one flat roof, 18 bays (108 m); flat double-layer space frame (3 m module, 11.0/13.5 m chords; full over the
+  nave and its neighbours, bottom chords only on the far span; open triangular prisms, one merged mesh); raised
+  box lanterns 12 m x 3.5 m over spans 2 and 3, two 38.5 m segments each, 14.5 m gap at the joint; Y-headed precast
+  columns (symmetric 45-deg console, girder each side, centred upper column), paired at the joint; grey steel plate
+  crane girders with stiffeners and handrail; outer walls only at the building edge; low block walls, bracing;
+  massing for the press. 14 meshes, 59,688 triangles. v1's trusses/ridge/clerestory/aisles removed (git: e3b843fa).
+  New dims/features files `rigs/moxir-hall-{dims,features}-2026-09-28.json`; build record committed as the tests'
+  fixture `rigs/moxir-hall-2026-09-28.hall.json`.
+- ZONES (owner, 2026-09-28, "red backstage, green stage, blue dance floor"): photo 032 = his 0387927a. Camera fitted
+  from the photo (9 columns at 6 m pitch, rms 3.0 px; camera 6.88 m up, 3.8 m from the entry grid line). Hall frame
+  (x + = SW, z + = entry): dance x -10..10 z 27.5..48; stage x -8..8 z 6.2..23.5 (front at the white bags, back
+  along the press), deck 16 x 12 on the front edge facing the entry; backstage x -11..1 z -10..-1 (depth GUESS);
+  press x 0.25..3.05, front z 3.2 (grid line 9, beside the joint). Marked vs used and ranges: features file `zones`.
+- RIG: stage from the zone with the press as `backdrop`; 50 PARs = 32 on the nave columns around dance floor and
+  stage (inner + back face) + 12 on the next rows out + 6 lighting the press (not mirrored, flagged); crane PARs
+  dropped; 10 column-base beams along the 5 dance-floor grid lines; lasers from the truss towers over the crowd.
+  All 5 looks: nothing refused / into a crane / out of travel; mirror symmetry held (press group excluded by flag).
+- DARK ROOM, two causes: real lamps' `light.distance` = the throw = three.js cutoff = zero light at the target
+  (fixed: 2x, known-fixes entry + guard seen red); 42 column PARs were beam-only. `wash-glb.mjs` bakes the light of
+  46 beam-only PARs on columns and press (analytic spot model, unlit decal, one draw call). Night raised by eye
+  (ambient 0.8, fog 60/250 m). Press albedo 0.07 -> 0.17.
+- Backup `~/di-backups/moxir-before-arch-2026-09-28/` (bundle 41.9 MB + hall document v1289, SHA256SUMS). Imported
+  (`--replace`) and rigged roof-cathedral on the local tier.
+- SEEN on the RTX 3080 (ANGLE Vulkan, headed, one browser per view, waited < 85 C; CPU still peaked 93 C):
+  `~/Downloads/moxir-hall/arch-v2-crane-vs-photo032.png` (photo | model | 50/50, same camera: dance-floor far edge,
+  Y heads and girders fall on the photo's), arch-v2-dance, arch-v2-stage, arch-v2-roof, arch-v3-backdrop. 53-60 fps
+  (60 Hz display; p95 16.8-33.4 ms), 71-91 draw calls, 173-182k triangles.
+- OWED: taped dimensions; crane rail height (disputed; the photo's crane girder sits lower than the model's);
+  the press's depth and the backstage depth; a platform `beam.length` separate from `light.distance`; an install
+  with `beam.only` (beams still baked on 0.4.16); the owner's look at it; a phone.
+
+## 2026-09-28 — the owner: the stage is a DJ place, small, at the metal things. Booth rebuilt; photos re-read by their metadata
+
+- Owner: "i mention the dj place … you made it so big, so stage is the near the metal thing like dj near a bit top and
+  centre of the metal things … analyze the whole photos and also there gps and othe infos".
+- NEW `scripts/place/photo_meta.py` + `rigs/moxir-site-2026-09-28.json`: EXIF → intrinsics (CIPA diagonal definition),
+  GPS → hall frame, the sun by the NOAA algorithm (cross-checked vs Michalsky 1988: ≤ 0.01° az, ≤ 0.09° el), VGGT↔GPS
+  Umeyama registration, GPS plotted on the Wayback image. `pvlib` would not download (18.5 MB wheel stalled 3×), so the
+  NOAA equations are written out. Findings: 16 iPhone fixes, one coarse (013, 220 m off); indoor spread puts crane shots
+  13–25 m off, altitude inverted (useless); registration bearing 154.5° (LOO 148.5–163.1) vs satellite 144°, rms 15.9 m.
+  **Sun check** on photo 004 (az 257.9°, el 30.5°): the SW-span lantern's lit band edge predicted x 8.2–8.9, measured
+  7.8–8.3 → the NE/SW sides are confirmed, the 144° axis good to ~±6°. 027–035 are Telegram-stripped; videos carry no
+  location. Originals: only on the sender's phone (resend as files).
+- The marks' 3.4 m left offset explained: the SW half of the nave from the press to the bags is machinery (004: hopper at
+  x ≈ 5.7, z ≈ 21.6); he marked the open floor.
+- `stage.kind: "booth"` in rig-lib: 3 × 2 m riser (three 2 × 1 decks) × 1.2 m, centred on the press (x 1.65, range
+  0.5–3.5), back edge 1.0 m off its face (z 4.2–6.2); DJ table, treads, see-through barrier; goalpost 7 m wide, header 7 m
+  (above the 5.3 m crown). Options A–D in the rig file. Per-group mirror axis (`groupAxis`: booth vs nave); new mounts
+  `booth-back`, `booth-pit`, `tower-ladder`, `column-bases` with a column spec; new aim `booth-key`; `performerBox` +
+  `beamHitsBox`: no ≤ 6° beam through the DJ (guard seen red on a 15° lean, then green). Counts kept (90 lamps, 8 real).
+  Zones: DJ area, dance = open NE side from the barrier + full width from the bags, backstage left/behind the press;
+  `hall.py` draws a zone's `extra` rects. 131/131 place tests.
+- Backup `~/di-backups/moxir-before-dj-2026-09-28/` (bundle + hall document v1417, SHA256SUMS, README.txt). Hall v3 at
+  `/mnt/data/footage/place-moxir-hall-v3/` imported `--replace`, rig hung roof-cathedral.
+- SEEN on the RTX 3080 (renderer string checked, one browser at a time, CPU 64–76 °C): 60.1 fps on crane/ground/floor/
+  booth (60 Hz cap, p95 ≤ 16.8 ms), 86–99 calls, 194k tris. `~/Downloads/moxir-hall/dj-crane-vs-photo032-marks.png`,
+  `dj-ground-vs-photo024-marks.png` (camera approximate: fit rms ~90 px), `dj-floor.png`, `dj-booth.png`,
+  `dj-gps-on-satellite.png`.
+- OWED / GUESS: the press's exact x (±1.5 m) and depth; whether the right tower stands clear of the machine line (site
+  check); the press is still a massing box (reads as a lit white block); the 024 camera; the originals of 027–035; truss
+  and decks are not on the rental list; laser LSO; the owner's look.
+
+## 2026-09-28 04:13 — the owner: "make the scene in center". Booth on the nave axis
+
+- Owner (screenshot from the dance floor, the booth left of the view's centre): "make the scene in center it not the
+  center right?", then "dj is in ceneter … the stage size i think is ok". Option D chosen: booth, goalpost and all
+  booth lamps x 1.65 → 0 (−1.65 m); size 3 × 2 × 1.2 m and the 1.0 m gap to the press face kept; towers x ±3.5.
+- Press unmoved (x 0.25–3.05), behind the right half of the riser; its uplights at x 0.55/1.65/2.75 (even on the press)
+  + 4.6/6.3/8.0 (machine line). Dance floor x −10…10, z 7.5…48 (bags + SW loose machinery to clear). Backstage
+  x −6…6, z −10…−1. New `rig.opening` / `openingShot` / `openingOps` (fixed camera + savedView + spawn on the centre
+  line, 18 m out); rig-look view `opening`. Tests 133/133: symmetric zones, axis 0 for every mirrored group, the opening
+  shot on x 0 with the walker's yaw π, press lit evenly; all 5 looks: no refusal, crane clash or DJ-beam clash.
+- Backup `~/di-backups/moxir-before-centre-2026-09-28/` (bundle + hall document v1526). Imported + rigged (doc v1589).
+- SEEN: `~/Downloads/moxir-hall/centre-opening.png` (2562 × 1440, 60 fps, symmetric), `centre-crane-vs-photo032-marks.png`
+  (40 fps, p95 49.9 ms under 98–100 °C CPU from other load). One opening shot came from ~9 m up (override fault, known,
+  not understood); retaken. Two runs lost the WebGL context ("blocked") after thermal waits and rendered nothing.

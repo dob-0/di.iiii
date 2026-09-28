@@ -17,7 +17,11 @@
  * Usage:
  *   node scripts/place/rig-look.mjs --gpu --base https://local.thedi.studio --space moxir \
  *       --project moxir-hall --hall <work>/hall.json --rig scripts/place/rigs/<rig>.json \
- *       --out ~/Downloads/moxir-hall --tag budget [--views door,mid,stage,over,close] [--phone]
+ *       --out ~/Downloads/moxir-hall --tag budget [--views crane,dance,stage,roof,door,mid,over,close] [--phone]
+ *       [--size 1280x720] [--max-cpu-c 85]
+ *
+ *   `crane` is the camera photo 032 was taken from (hall.json geometry.cameras),
+ *   shot at the photo's own size so compose.py can lay the two side by side.
  *
  *   `close` expands to one close-up per fixture kind (close-beam380, …), worked
  *   out from the rig with the same look (`--look`) the room was hung with.
@@ -28,7 +32,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { parseArgs, readJson, say, die } from './common.mjs'
-import { buildRig, stageFrame } from './rig-lib.mjs'
+import { buildRig, openingShot, stageFrame } from './rig-lib.mjs'
 import { FIXTURE_DIR, readGeometry } from './fixtures-glb.mjs'
 import { toTRS } from './fixture-lib.mjs'
 
@@ -67,21 +71,49 @@ export const viewpoints = (hall, rig) => {
     const stage = stageFrame(rig, hall)
     const eye = 1.6
     const doorZ = g.door.z_m - 3
-    return {
+    const dance = g.zones?.dance?.used
+    const danceZ = dance ? (dance.z_m[0] + dance.z_m[1]) / 2 : (stage.front + g.door.z_m) / 2 - 12
+    const views = {
         // Just inside the big door, looking down the nave at the stage.
         door: { position: [0, eye, doorZ], target: [0, 4, stage.front], fov: 60 },
         // The middle of the dance floor, looking at the stage.
         mid: { position: [3, eye, (stage.front + g.door.z_m) / 2 - 12], target: [0, 5, stage.front], fov: 60 },
+        // In the dance floor zone (the owner's blue), facing the stage and the press behind it.
+        dance: { position: [2, eye, danceZ], target: [stage.axis ?? 0, 4, stage.wall], fov: 60 },
         // On the stage deck, downstage, looking out at the room.
-        stage: { position: [0, stage.deck + eye, stage.front - stage.into * 1.5], target: [0, 5, stage.front + stage.into * 40], fov: 60 },
+        stage: { position: [stage.axis ?? 0, stage.deck + eye, stage.front - stage.into * 1.5], target: [0, 5, stage.front + stage.into * 40], fov: 60 },
+        // The crowd's view of a booth: from the dance floor's front third, on the
+        // booth's axis, at eye height — the DJ with the machinery behind.
+        floor: { position: [(stage.axis ?? 0) - 1.5, eye, stage.front + stage.into * 14], target: [stage.axis ?? 0, 3.2, stage.wall], fov: 55 },
+        // The DJ's own view: standing behind the table, looking out at the crowd.
+        booth: { position: [stage.axis ?? 0, stage.deck + 1.7, stage.back + stage.into * 0.6], target: [0, 2.5, stage.front + stage.into * 40], fov: 70 },
+        // Upstage behind the deck, looking at the backdrop (the press) and its PARs' wash.
+        backdrop: { position: [(stage.axis ?? 0) - 3, eye, stage.back + stage.into * 3], target: [(stage.axis ?? 0) + 1, 2.5, stage.wall], fov: 60 },
+        // From the dance floor, looking up into the space frame and a lantern.
+        roof: { position: [-5, eye, danceZ - 4], target: [5, g.truss_top_centre_m ?? 13, stage.front - stage.into * 6], fov: 70 },
         // High on the crane runway, three-quarter over the whole rig.
         over: { position: [-g.crane_rail_x_m + 1, g.crane_rail_x_m ? g.runway_top_m + 2 : 12, stage.front + stage.into * 26], target: [0, 3, stage.back], fov: 60 }
     }
+    // The space's own first screen, as rig.mjs writes it (rig.opening).
+    const opening = openingShot(rig, stage)
+    if (opening) views.opening = opening
+    // A camera a photograph was taken from (hall.json geometry.cameras):
+    // `crane` is photo 032's, the owner's marked picture.
+    for (const [name, cam] of Object.entries(g.cameras || {})) {
+        const yaw = (cam.yaw_deg ?? 0) * Math.PI / 180
+        const pitch = (cam.pitch_deg ?? 0) * Math.PI / 180
+        const dir = [Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch)]
+        const view = { position: cam.position_m, target: cam.position_m.map((v, k) => v + dir[k] * 30), fov: cam.vfov_deg ?? 60, size: cam.image_px }
+        views[name] = view
+        if (name === 'photo-032') views.crane = view
+        if (name === 'photo-024') views.ground = view
+    }
+    return views
 }
 
 // The CPU package on aylmo runs hot (a known cooler problem): before each
-// browser, wait until it is under 88 C. `sensors` missing = no check.
-const waitForCool = (limit = 88) => {
+// browser, wait until it is under 85 C (--max-cpu-c). `sensors` missing = no check.
+const waitForCool = (limit = Number(args['max-cpu-c'] || 85)) => {
     for (let tries = 0; tries < 60; tries += 1) {
         let text = ''
         try {
@@ -119,6 +151,11 @@ const main = async () => {
     const wanted = String(args.views || 'door,mid,stage,over').split(',')
     const names = wanted.flatMap((n) => (n === 'close' ? Object.keys(all).filter((k) => k.startsWith('close-')) : [n])).filter((n) => all[n])
     const phone = Boolean(args.phone)
+    // --size WxH for every view; a photo camera brings its own (to lay the shot over the photo).
+    const size = (view) => {
+        const wanted = args.size ? String(args.size).split('x').map(Number) : view.size
+        return wanted ? { width: wanted[0], height: wanted[1] } : { width: 960, height: 600 }
+    }
 
     const { chromium } = await import('playwright')
     // --gpu: a HEADED Chromium on the NVIDIA card through PRIME render offload
@@ -158,7 +195,7 @@ const main = async () => {
             const view = all[name]
             const context = await browser.newContext(phone
                 ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, ignoreHTTPSErrors: true }
-                : { viewport: { width: 960, height: 600 }, deviceScaleFactor: 1, ignoreHTTPSErrors: true })
+                : { viewport: size(view), deviceScaleFactor: 1, ignoreHTTPSErrors: true })
             const page = await context.newPage()
             // Count what the renderer asks the GPU for, without touching the
             // app: every draw call and the triangles in it, per frame.
@@ -194,7 +231,8 @@ const main = async () => {
                 const response = await route.fetch()
                 const body = await response.json()
                 const doc = body.document || body
-                const camera = { projection: 'perspective', zoom: 1, near: 0.05, far: 400, locked: false, ...view }
+                const { size: _size, ...pose } = view
+                const camera = { projection: 'perspective', zoom: 1, near: 0.05, far: 400, locked: false, ...pose }
                 doc.presentationState = { ...(doc.presentationState || {}), mode: 'fixed-camera', entryView: 'fixed-camera', fixedCamera: camera }
                 doc.worldState = { ...(doc.worldState || {}), savedView: { mode: 'perspective', ...camera } }
                 // A close-up is a look at the fixture, as at a get-in: under WORK
@@ -257,7 +295,7 @@ const main = async () => {
             // A heavy rig on SwiftShader can take many seconds per frame, and
             // Playwright waits for a fresh frame before it shoots.
             await page.screenshot({ path: file, timeout: 300_000 }).catch((error) => errors.push(`screenshot: ${error.message.split('\n')[0]}`))
-            results.push({ view: name, ...measured, renderer: gl, file, errors: errors.slice(0, 5) })
+            results.push({ view: name, ...measured, viewport: phone ? '390x844 @ DPR 3' : `${size(all[name]).width}x${size(all[name]).height} @ DPR 1`, renderer: gl, file, errors: errors.slice(0, 5) })
             say(`${name.padEnd(6)} ${String(fps).padStart(5)} fps  median ${measured.frameMsMedian} ms  p95 ${measured.frameMsP95} ms  ${measured.drawCallsPerFrame} calls  ${measured.trianglesPerFrame} tris  ${file}${errors.length ? `  (${errors.length} console errors)` : ''}`)
             await context.close()
         } finally {
@@ -267,7 +305,7 @@ const main = async () => {
     const record = path.join(out, `${tag}${phone ? '-phone' : ''}-fps.json`)
     fs.writeFileSync(record, JSON.stringify({
         tool: 'scripts/place/rig-look.mjs', at: new Date().toISOString(), base, space, project, tag,
-        viewport: phone ? '390x844 @ DPR 3' : '960x600 @ DPR 1', seconds, settle,
+        viewport: phone ? '390x844 @ DPR 3' : 'per view (results[].viewport)', seconds, settle,
         note: gpu
             ? 'Headed Chromium on the NVIDIA GPU (PRIME offload). fps is capped by vsync at the display refresh.'
             : 'Headless Chromium on SwiftShader (software rendering): a floor, and a comparison between rigs — not a GPU number.',
