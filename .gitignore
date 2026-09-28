@@ -76,3 +76,4 @@ android-twa/*
 !android-twa/twa-manifest.json
 android-twa-staging/
 .verify-vj-deck/
+/.movement-rig/
