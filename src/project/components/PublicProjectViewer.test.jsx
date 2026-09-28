@@ -850,6 +850,27 @@ describe('PublicProjectViewer', () => {
         expect(listProjectOpsMock).toHaveBeenCalledWith('the-yard', 7)
     })
 
+    // Owner, rigbuilder.7: the version switch's "Full" opened a project the space did not
+    // hold and the page said only "Project not found." — no which, no where, no way back.
+    it('says which project is missing from which space, with the way back, on a 404', async () => {
+        const missing = Object.assign(new Error('Project not found.'), { status: 404 })
+        getProjectDocumentMock.mockRejectedValue(missing)
+
+        render(<PublicProjectViewer spaceId="moxir" projectId="moxir-hall-full" spaceLabel="moxir" />)
+
+        expect(await screen.findByText(/There is no project “moxir-hall-full” in moxir\./)).toBeTruthy()
+        expect(screen.getByRole('link', { name: 'Open moxir' }).getAttribute('href')).toBe('/moxir')
+        expect(screen.getByRole('link', { name: 'Everything in moxir' }).getAttribute('href')).toMatch(/^\/moxir\/projects$/)
+        expect(screen.queryByText('Project not found.')).toBe(null)
+    })
+
+    it('keeps the plain message for any other failure', async () => {
+        getProjectDocumentMock.mockRejectedValue(new Error('offline'))
+        render(<PublicProjectViewer spaceId="moxir" projectId="moxir-hall" spaceLabel="moxir" />)
+        expect(await screen.findByText('offline')).toBeTruthy()
+        expect(screen.queryByRole('link', { name: 'Open moxir' })).toBe(null)
+    })
+
     it('retries the snapshot instead of replaying the whole log when the document load failed', async () => {
         getProjectDocumentMock.mockRejectedValue(new Error('offline'))
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 7 })

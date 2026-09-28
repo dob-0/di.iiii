@@ -29,7 +29,7 @@ import {
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
 import { overlayButtonStyle, overlayCardStyle, quietPreviewFallbackStyle } from './publicViewerStyles.js'
 import { consumeArriveWalking } from '../../components/arriveWalking.js'
-import { buildSpaceContentsPath } from '../../utils/spaceRouting.js'
+import { buildAppSpacePath, buildSpaceContentsPath } from '../../utils/spaceRouting.js'
 import { isEmbedRequest } from '../../utils/previewMode.js'
 import { hasRig } from '../../rigbuild/hasRigLamps.js'
 import RigVersionSwitch from '../../rigbuild/RigVersionSwitch.jsx'
@@ -194,7 +194,10 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             setState({
                 status: 'error',
                 document: null,
-                error: error.message || 'Could not load the live project.'
+                error: error.message || 'Could not load the live project.',
+                // 404: the address names a project this space does not hold — the page
+                // says which, and offers the way back (MissingProjectCard below).
+                missing: error?.status === 404
             })
         }
     }, [applyIncomingDocument, projectId])
@@ -651,10 +654,31 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             {state.status === 'error' ? (
                 <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '2rem' }}>
                     <div style={overlayCardStyle}>
-                        <strong>{state.error}</strong>
+                        {state.missing ? (
+                            <MissingProjectCard spaceId={resolvedRouteSpaceId} projectId={projectId} />
+                        ) : (
+                            <strong>{state.error}</strong>
+                        )}
                     </div>
                 </div>
             ) : null}
         </main>
+    )
+}
+
+// A project the address names and the space does not hold (owner, rigbuilder.7: the version
+// switch's "Full" opened /moxir/p/moxir-hall-full → a bare "Project not found."). Which one,
+// where, and the way back: the space as it opens (its published project) and everything in it.
+export function MissingProjectCard({ spaceId, projectId }) {
+    const linkStyle = { color: 'inherit', textDecoration: 'underline', textUnderlineOffset: '3px', display: 'inline-flex', alignItems: 'center', minHeight: '44px', marginRight: '1.25rem' }
+    return (
+        <div role="alert">
+            <strong>There is no project “{projectId}” in {spaceId}.</strong>
+            <p style={{ margin: '0.6rem 0 0.2rem', opacity: 0.8 }}>It may not have been made yet, or it was moved or deleted.</p>
+            <nav aria-label="the way back">
+                <a href={buildAppSpacePath(spaceId)} style={linkStyle}>Open {spaceId}</a>
+                <a href={buildSpaceContentsPath(spaceId)} style={linkStyle}>Everything in {spaceId}</a>
+            </nav>
+        </div>
     )
 }

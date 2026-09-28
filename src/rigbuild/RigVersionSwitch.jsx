@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { listSpaceContents } from '../project/services/projectsApi.js'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
 import { rigVariantOf, versionLinks } from './rigVariant.js'
 
@@ -40,8 +41,27 @@ const linkStyle = (current) => ({
 /** The short word a version is called by in the row: its title up to the dash. */
 const shortTitle = (title) => String(title || '').split(' — ')[0]
 
+// Which projects the space really holds: the same visitor-safe list the space's contents
+// page reads (GET /api/spaces/:id/contents). null until it answers — and null for good if
+// it cannot, so the row then shows only the version you are in, never a dead link.
+function useSpaceProjectIds(spaceId, enabled) {
+    const [ids, setIds] = useState(null)
+    useEffect(() => {
+        if (!enabled || !spaceId) return undefined
+        let live = true
+        setIds(null)
+        listSpaceContents(spaceId)
+            .then((projects) => { if (live) setIds(new Set((projects || []).map((p) => p.id))) })
+            .catch(() => { if (live) setIds(null) })
+        return () => { live = false }
+    }, [spaceId, enabled])
+    return ids
+}
+
 export default function RigVersionSwitch({ spaceId, projectId, entities, top = '1rem' }) {
-    const links = useMemo(() => versionLinks(rigVariantOf(entities), projectId, (id) => buildPublicProjectPath(spaceId, id)), [entities, projectId, spaceId])
+    const variant = useMemo(() => rigVariantOf(entities), [entities])
+    const existing = useSpaceProjectIds(spaceId, Boolean(variant))
+    const links = useMemo(() => versionLinks(variant, projectId, (id) => buildPublicProjectPath(spaceId, id), existing), [variant, projectId, spaceId, existing])
     if (!links) return null
     return (
         <nav aria-label="rig versions" style={{ ...rowStyle, top }}>
