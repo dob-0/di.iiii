@@ -9,6 +9,7 @@ import { plotData, sheetModel } from './sheet.js'
 import { boxesOf, freeEnds, piecesOf, trussRuns } from './plotGeometry.js'
 import { keyRows, symbolTable } from './plotSymbols.js'
 import { venueOf } from './venuePlan.js'
+import { countsByType, rentalCounts, rentalOf } from './rental.js'
 
 // A CONFLICT is something wrong that someone must resolve before the rig is
 // plugged — drawn dashed with a flag. An OWED item (a mode the rental house has not
@@ -65,6 +66,10 @@ export const plotModel = ({ entities = [], library, deskFlags = [], projectId = 
     const types = library?.types || []
     const table = symbolTable(types)
     const runs = trussRuns(pieces)
+    // The rental list, when the project has one (RIG_BUILD.md §11): the key can say
+    // "3 left of 12" beside each type.
+    const rental = rentalCounts({ entities, library, list: rentalOf(entities).list })
+    const byType = countsByType(rental)
     return {
         sheet,
         lamps,
@@ -75,7 +80,8 @@ export const plotModel = ({ entities = [], library, deskFlags = [], projectId = 
         venue: plan,
         venueEntityId: venueEntity?.id || null,
         table,
-        key: keyRows({ rows: sheet.rows, types, table }),
+        key: keyRows({ rows: sheet.rows, types, table }).map((k) => (byType.get(k.type)?.ordered ? { ...k, rental: byType.get(k.type) } : k)),
+        rental,
         conflicts: lamps.filter((l) => l.conflicts.length)
     }
 }

@@ -8,7 +8,7 @@
  *   node scripts/rigbuild/load-plot.mjs --api http://localhost:4371/serverXR \
  *     --project moxir-hall --doc <moxir-rig.document.json> \
  *     --hall <hall.json> [--site <site.json>] [--venue-entity place-hall] \
- *     --token-file serverXR/.env.local [--dry-run] [--plan-only]
+ *     --token-file serverXR/.env.local [--dry-run] [--plan-only] [--pieces-only]
  *
  * What it writes, all through POST /api/projects/<id>/ops at the current version
  * (the op log is upstream of every view):
@@ -21,6 +21,11 @@
  *   3. every lamp and effect of the document (createEntity; an id already there is
  *      replaced), and deletes the old rig lamps and the BAKED beam, wash and body
  *      meshes (`rig-beams`, `rig-wash`, `rig-fixtures`), which the live lamps replace.
+ *
+ * --pieces-only stops after 1 and 2 and REMOVES the rig's lamps and baked meshes without
+ * writing new ones: an empty rig on its truss and decks, for view C to deal the rental
+ * list onto (RIG_BUILD.md §11). --doc may then be the project's own document (the rig
+ * boxes it carries are what become pieces).
  *
  * Point it only at a stack you own: it never defaults to an address, and a token is
  * read from --token-file (never ~/.di/di.env, the installed di.iiii's).
@@ -145,12 +150,15 @@ const main = async () => {
         })
     }
 
-    // The rig: out with the old lamps and the baked meshes, in with the typed ones.
-    const incoming = doc.entities.filter((e) => !replaced.has(e.id))
+    // The rig: out with the old lamps and the baked meshes, in with the typed ones —
+    // or, --pieces-only, none: the cards deal the lamps.
+    const incoming = args['pieces-only'] ? [] : doc.entities.filter((e) => !replaced.has(e.id))
     const incomingIds = new Set(incoming.map((e) => e.id))
     for (const [id, e] of have) {
         const oldRig = id.startsWith('rig-') && !incomingIds.has(id) && !pieces.some((p) => p.id === id)
-        if (BAKED.includes(id) || (oldRig && e.type !== 'model') || replaced.has(id)) ops.push({ type: 'deleteEntity', payload: { entityId: id } })
+        const lamp = e.type === 'spotLight' || Boolean(e.components?.fixture)
+        const drop = args['pieces-only'] ? (BAKED.includes(id) || replaced.has(id) || (oldRig && lamp)) : (BAKED.includes(id) || (oldRig && e.type !== 'model') || replaced.has(id))
+        if (drop) ops.push({ type: 'deleteEntity', payload: { entityId: id } })
     }
     for (const e of incoming) ops.push({ type: 'createEntity', payload: { entity: e } })
 

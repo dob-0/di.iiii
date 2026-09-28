@@ -1,0 +1,88 @@
+{
+  "rentalList": {
+    "name": "MOXIR 17.10 — rental order",
+    "source": "lights_rental_quote_calculator.xlsx (sha256 797fa436926e…, sheet \"Price list\": stock and rate/day) · order: The show's order as the owner passed it to Claude on 2026-09-27, recorded in scripts/place/rigs/moxir-2026-10-17.json (feat/moxir-hall) provenance.fixtureList: \"18x UP-B380F, 12x UP-250BSW, 8x UP-HK1915, 50x UP-PL5403, 2x UP-LA40WF, CO2 x6, cold spark x4, smoke x4\".",
+    "writtenAt": "2026-09-28",
+    "currency": "AMD",
+    "items": [
+      {
+        "code": "UP-B380F",
+        "type": "up-b380f",
+        "ordered": 18,
+        "stock": 18,
+        "rate": 20000,
+        "label": "380W beam moving head (outdoor)",
+        "source": "Price list!A6:E6 · ordered as \"18x UP-B380F\"",
+        "note": "the quote calculator's hidden \"Price data\" sheet says 19000/day"
+      },
+      {
+        "code": "UP-250BSW",
+        "type": "up-250bsw",
+        "ordered": 12,
+        "stock": 12,
+        "rate": 15000,
+        "label": "250W beam / spot / wash",
+        "source": "Price list!A7:E7 · ordered as \"12x UP-250BSW\""
+      },
+      {
+        "code": "UP-HK1915",
+        "type": "up-hk1915",
+        "ordered": 8,
+        "stock": 14,
+        "rate": 13500,
+        "label": "19x15W bee-eye",
+        "source": "Price list!A8:E8 · ordered as \"8x UP-HK1915\""
+      },
+      {
+        "code": "UP-PL5403",
+        "type": "up-pl5403",
+        "ordered": 50,
+        "stock": 50,
+        "rate": 5000,
+        "label": "54x3W LED PAR (outdoor)",
+        "source": "Price list!A13:E13 · ordered as \"50x UP-PL5403\""
+      },
+      {
+        "code": "UP-LA40WF",
+        "type": "up-la40wf",
+        "ordered": 2,
+        "stock": 2,
+        "rate": 83000,
+        "label": "40W full-colour laser",
+        "source": "Price list!A16:E16 · ordered as \"2x UP-LA40WF\""
+      },
+      {
+        "code": "UP-Q108S",
+        "type": "up-q108s",
+        "ordered": 6,
+        "stock": 6,
+        "rate": 7500,
+        "label": "CO2 gas column gun",
+        "source": "Price list!A20:E20 · ordered as \"CO2 x6\""
+      },
+      {
+        "code": "UP-YH600F",
+        "type": "up-yh600f",
+        "ordered": 4,
+        "stock": 4,
+        "rate": 19500,
+        "label": "Cold-spark firework machine",
+        "source": "Price list!A21:E21 · ordered as \"cold spark x4\""
+      },
+      {
+        "code": "UP-YZ31P",
+        "type": "up-yz31p",
+        "ordered": 4,
+        "stock": 4,
+        "rate": 15500,
+        "label": "Smoke machine (multi-angle)",
+        "source": "Price list!A22:E22 · ordered as \"smoke x4\""
+      }
+    ]
+  },
+  "xlsx": {
+    "file": "lights_rental_quote_calculator.xlsx",
+    "sha256": "797fa436926e8d159d6c855fd23342ca2bdc63d680ab1c4292d5e23662e7b849"
+  },
+  "writtenBy": "scripts/rigbuild/rental.mjs"
+}

@@ -27,6 +27,7 @@ import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
 import { getPerformLocationState, isPerformLocation } from './perform/performRouting.js'
 import { getPatchSheetLocationState, isPatchSheetLocation } from './rigbuild/patchRouting.js'
 import { getPlotLocationState, isPlotLocation } from './rigbuild/plotRouting.js'
+import { getCardsLocationState, isCardsLocation } from './rigbuild/cardsRouting.js'
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
@@ -54,6 +55,7 @@ const PerformApp = lazy(() => import('./perform/PerformApp.jsx'))
 const ScanSurface = lazy(() => import('./scan/ScanSurface.jsx'))
 const PatchSheetSurface = lazy(() => import('./rigbuild/PatchSheetSurface.jsx'))
 const PlotSurface = lazy(() => import('./rigbuild/PlotSurface.jsx'))
+const CardsSurface = lazy(() => import('./rigbuild/CardsSurface.jsx'))
 const ToolsRoom = lazy(() => import('./tools/ToolsRoom.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 
@@ -358,6 +360,7 @@ function AppRouter() {
     const performState = getPerformLocationState(location)
     const patchSheetState = getPatchSheetLocationState(location)
     const plotState = getPlotLocationState(location)
+    const cardsState = getCardsLocationState(location)
     const chatState = getChatLocationState(location)
     const privateChatWith = getPrivateChatTarget(location)
     const appState = getAppLocationState(location)
@@ -571,6 +574,23 @@ function AppRouter() {
             >
                 <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
                     <PlotSurface spaceId={plotState.spaceId} projectId={plotState.projectId} />
+                </Suspense>
+            </ProtectedSurface>
+        )
+    }
+
+    // `/{space}/cards/{projectId}` — the cards, view C (src/rigbuild/): the rental list
+    // dealt onto named positions, the patch beside them, the looks on the cue list.
+    // Behind the same gate as the plot, because it writes the same document.
+    if (isCardsLocation(cardsState)) {
+        return (
+            <ProtectedSurface
+                requiredSpaceId={cardsState.spaceId}
+                outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
+                showAccountButton={false}
+            >
+                <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                    <CardsSurface spaceId={cardsState.spaceId} projectId={cardsState.projectId} />
                 </Suspense>
             </ProtectedSurface>
         )
