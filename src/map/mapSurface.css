@@ -12,13 +12,13 @@
     --map-bg: var(--di-surface-2);
     --map-bed: var(--di-surface-3);
     --map-raised: var(--di-surface-4);
-    --map-hover: #24242a;
+    --map-hover: color-mix(in srgb, var(--di-surface-4), white 3.5%);
     --map-line: rgba(255, 255, 255, 0.08);
     --map-line-strong: rgba(255, 255, 255, 0.16);
     --map-ink: rgba(255, 255, 255, 0.86);
     --map-dim: rgba(255, 255, 255, 0.46);
     --map-faint: rgba(255, 255, 255, 0.28);
-    --map-field: #0c0c0f;
+    --map-field: var(--di-surface);
     --map-control-h: 24px;
     --map-panel-left: 232px;
     --map-panel-right: 272px;
@@ -102,11 +102,11 @@
 }
 .map-props > .map-panel-head h2 { color: var(--map-ink); text-transform: none; letter-spacing: 0; font-size: var(--di-text-4); }
 .map-props-count { margin-left: var(--di-space-2); color: var(--ui-accent); font-family: var(--di-mono); font-size: var(--di-text-2); }
-.map-props-unit { color: var(--map-faint); letter-spacing: 0; text-transform: none; margin-left: 2px; }
+.map-props-unit { color: var(--map-faint); letter-spacing: 0; text-transform: none; margin-left: var(--di-space-1); }
 
 /* --- the surface list ------------------------------------------------ */
 
-.map-surface-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.map-surface-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: calc(var(--di-space-1) / 3); }
 .map-surface-row {
     display: grid;
     grid-template-columns: 20px minmax(0, 1fr) 20px;
@@ -153,7 +153,7 @@
     font-size: var(--di-text-2);
     cursor: pointer;
 }
-.map-eye { font-size: 9px; }
+.map-eye { font-size: var(--di-text-2); }
 .map-eye:hover, .map-solo:hover { color: var(--map-ink); background: var(--map-hover); }
 .map-solo.is-on { color: var(--ui-accent); background: var(--di-cyan-wash); }
 
@@ -182,7 +182,7 @@
 }
 .map-section-head:hover { background: var(--map-raised); color: var(--map-ink); }
 .map-section.is-open .map-section-head { color: var(--map-ink); }
-.map-section-head::before { content: '▸'; margin-right: var(--di-space-2); color: var(--map-faint); font-size: 9px; }
+.map-section-head::before { content: '▸'; margin-right: var(--di-space-2); color: var(--map-faint); font-size: var(--di-text-2); }
 .map-section.is-open .map-section-head::before { content: '▾'; }
 .map-section-head > span:first-child { flex: 1 1 auto; }
 .map-section-count { font-family: var(--di-mono); color: var(--map-faint); letter-spacing: 0; text-transform: none; }
@@ -366,7 +366,7 @@
 .map-field input:focus,
 .map-field select:focus,
 .map-xy input:focus { outline: none; border-color: var(--di-cyan-line); }
-.map-field input[type='color'] { padding: 2px; width: 48px; }
+.map-field input[type='color'] { padding: var(--di-space-1); width: 48px; }
 .map-field input[type='number'],
 .map-xy input { font-family: var(--di-mono); font-size: var(--di-text-2); text-align: right; -moz-appearance: textfield; appearance: textfield; }
 .map-field input[type='number']::-webkit-inner-spin-button,
@@ -388,7 +388,7 @@
 .map-xy-head,
 .map-xy { display: grid; grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr); gap: var(--di-space-1); align-items: center; }
 .map-xy-head { color: var(--map-faint); font-family: var(--di-mono); font-size: var(--di-text-1); text-align: right; padding: 0 var(--di-space-2); }
-.map-xy { padding: 1px 0; border-radius: var(--di-radius); }
+.map-xy { padding: calc(var(--di-space-1) / 3) 0; border-radius: var(--di-radius); }
 .map-xy-label {
     color: var(--map-dim);
     font-family: var(--di-mono);
@@ -414,7 +414,7 @@ button.map-xy-label:hover { background: var(--map-raised); color: var(--map-ink)
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: var(--di-space-1);
     background: var(--map-raised);
     border: 1px solid transparent;
     border-radius: var(--di-radius);
@@ -461,7 +461,7 @@ button.map-xy-label:hover { background: var(--map-raised); color: var(--map-ink)
 
 /* --- the cue list ---------------------------------------------------- */
 
-.map-cue-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.map-cue-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: calc(var(--di-space-1) / 3); }
 .map-cue-row {
     display: flex;
     align-items: center;
@@ -494,7 +494,7 @@ button.map-xy-label:hover { background: var(--map-raised); color: var(--map-ink)
 .map-cue-hold { flex: 0 0 auto; font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--map-dim); }
 
 /* Machines on the desk: who is showing this space, and what each one has. */
-.map-machine { margin: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--di-text-2); color: var(--map-dim); }
+.map-machine { margin: 0; display: flex; flex-direction: column; gap: var(--di-space-1); font-size: var(--di-text-2); color: var(--map-dim); }
 .map-machine strong { color: var(--map-ink); font-weight: 500; }
 
 /* Bringing a video/image file in from this machine (MapInspector), and the
@@ -503,7 +503,7 @@ button.map-xy-label:hover { background: var(--map-raised); color: var(--map-ink)
 .map-field-file-input { display: none; }
 .map-field-file-notice { margin: 0; }
 .map-field-file-notice.is-error { color: var(--ui-danger); }
-.map-field-file-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.map-field-file-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: calc(var(--di-space-1) / 3); }
 .map-field-file-list .map-mini { display: flex; width: 100%; justify-content: flex-start; }
 
 /* --- the signal ------------------------------------------------------ */
