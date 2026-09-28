@@ -1,37 +1,76 @@
 /* The mapper. Built on the platform's own tokens (src/styles/base.css) so the
-   desk reads as di.iiii and not as a second application bolted on. */
+   desk reads as di.iiii and not as a second application bolted on.
+
+   The shape is Resolume's Advanced Output, because that shape is in the hands
+   of everyone who has mapped a wall: the list on the left, the picture on a
+   grey bed in the middle, the numbers on the right, one thin bar above. The
+   palette is quiet on purpose — a desk is looked at for hours in a dark room.
+   Grey panels, hairline dividers, and the cyan kept for what is SELECTED, so
+   selection is the only thing on the page that is bright. */
 
 .map-desk {
+    --map-bg: var(--di-surface-2);
+    --map-bed: var(--di-surface-3);
+    --map-raised: var(--di-surface-4);
+    --map-hover: color-mix(in srgb, var(--di-surface-4), white 3.5%);
+    --map-line: rgba(255, 255, 255, 0.08);
+    --map-line-strong: rgba(255, 255, 255, 0.16);
+    --map-ink: rgba(255, 255, 255, 0.86);
+    --map-dim: rgba(255, 255, 255, 0.46);
+    --map-faint: rgba(255, 255, 255, 0.28);
+    --map-field: var(--di-surface);
+    --map-control-h: 24px;
+    --map-panel-left: 232px;
+    --map-panel-right: 272px;
+
     position: fixed;
     inset: 0;
     display: flex;
     flex-direction: column;
-    background: var(--di-black);
-    color: var(--ui-text-primary);
+    background: var(--map-bg);
+    color: var(--map-ink);
     font-family: var(--di-sans);
     font-size: var(--di-text-3);
+    line-height: 1.35;
 }
+
+/* --- the bar --------------------------------------------------------- */
 
 .map-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--di-space-3);
-    padding: var(--di-space-2) var(--di-space-3);
-    border-bottom: 1px solid var(--ui-divider);
-    background: var(--ui-surface);
+    height: 36px;
+    padding: 0 var(--di-space-3);
+    border-bottom: 1px solid var(--map-line);
+    background: var(--map-bg);
     flex: 0 0 auto;
+    /* On a narrow screen the bar slides sideways rather than stacking five
+       rows high and pushing the stage off the bottom. */
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    scrollbar-width: none;
 }
+.map-bar::-webkit-scrollbar { display: none; }
 
-.map-bar-title { display: flex; align-items: baseline; gap: var(--di-space-2); }
-.map-bar-lane { color: var(--ui-accent); font-family: var(--di-mono); text-transform: uppercase; letter-spacing: 0.12em; font-size: var(--di-text-2); }
-.map-bar-project { color: var(--ui-text-primary); font-weight: 500; }
-.map-bar-controls { display: flex; align-items: center; gap: var(--di-space-2); }
+.map-bar-title { display: flex; align-items: center; gap: var(--di-space-2); flex: 0 0 auto; }
+.map-bar-lane { color: var(--map-dim); font-family: var(--di-mono); text-transform: uppercase; letter-spacing: 0.12em; font-size: var(--di-text-2); }
+.map-bar-project { color: var(--map-ink); font-weight: 500; }
+.map-bar-controls { display: flex; align-items: center; gap: var(--di-space-2); flex: 0 0 auto; }
+.map-bar-gap { width: var(--di-space-2); }
+
+/* --- the body: list · picture · numbers ------------------------------ */
 
 .map-body {
     flex: 1 1 auto;
     display: grid;
-    grid-template-columns: 240px minmax(0, 1fr) 250px;
+    grid-template-columns: var(--map-panel-left) minmax(0, 1fr) var(--map-panel-right);
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas:
+        'left frame right'
+        'left status right';
     min-height: 0;
 }
 
@@ -41,61 +80,145 @@
     gap: var(--di-space-2);
     padding: var(--di-space-2);
     overflow-y: auto;
-    background: var(--ui-surface);
+    background: var(--map-bg);
+    scrollbar-width: thin;
+    scrollbar-color: var(--map-line-strong) transparent;
 }
-.map-panel-left { border-right: 1px solid var(--ui-divider); }
-.map-panel-right { border-left: 1px solid var(--ui-divider); }
+.map-panel-left { grid-area: left; border-right: 1px solid var(--map-line); }
+.map-panel-right { grid-area: right; border-left: 1px solid var(--map-line); }
 
-.map-panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--di-space-2); }
-.map-panel-head h2 { margin: 0; font-size: var(--di-text-2); text-transform: uppercase; letter-spacing: 0.1em; color: var(--ui-text-muted); font-weight: 500; }
-.map-panel-actions { display: flex; gap: var(--di-space-2); margin-top: var(--di-space-2); }
+.map-panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--di-space-2); min-height: var(--map-control-h); }
+.map-panel-head h2,
+.map-panel-head h3 {
+    margin: 0;
+    font-size: var(--di-text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--map-dim);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.map-props > .map-panel-head h2 { color: var(--map-ink); text-transform: none; letter-spacing: 0; font-size: var(--di-text-4); }
+.map-props-count { margin-left: var(--di-space-2); color: var(--ui-accent); font-family: var(--di-mono); font-size: var(--di-text-2); }
+.map-props-unit { color: var(--map-faint); letter-spacing: 0; text-transform: none; margin-left: var(--di-space-1); }
 
-.map-surface-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--di-space-1); }
+/* --- the surface list ------------------------------------------------ */
+
+.map-surface-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: calc(var(--di-space-1) / 3); }
 .map-surface-row {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) 20px;
+    align-items: center;
     gap: var(--di-space-1);
-    padding: var(--di-space-1) var(--di-space-2);
-    border: 1px solid transparent;
-    background: var(--ui-surface-raised);
+    height: 26px;
+    padding: 0 var(--di-space-1) 0 0;
+    border-left: 2px solid transparent;
+    border-radius: var(--di-radius);
 }
-.map-surface-row.is-selected { border-color: var(--ui-border-strong); background: var(--ui-surface-highlight); }
+.map-surface-row:hover { background: var(--map-raised); }
+.map-surface-row.is-selected { background: var(--di-cyan-wash); border-left-color: var(--di-cyan-line); }
+.map-surface-row.is-primary { border-left-color: var(--ui-accent); }
+.map-surface-row.is-off .map-surface-name { color: var(--map-faint); }
+
 .map-surface-name {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: var(--di-space-2);
+    min-width: 0;
+    height: 100%;
     background: none;
     border: 0;
-    padding: 0;
-    color: var(--ui-text-primary);
+    padding: 0 var(--di-space-1);
+    color: var(--map-ink);
     font: inherit;
     text-align: left;
     cursor: pointer;
 }
-.map-surface-kind { color: var(--ui-text-muted); font-family: var(--di-mono); font-size: var(--di-text-2); }
-.map-surface-row-actions { display: flex; gap: var(--di-space-1); }
+.map-surface-name > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-surface-kind { flex: 0 0 auto; color: var(--map-faint); font-family: var(--di-mono); font-size: var(--di-text-2); }
 
-.map-empty { color: var(--ui-text-muted); line-height: 1.5; margin: var(--di-space-2) 0 0; }
+.map-eye,
+.map-solo {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: var(--di-radius);
+    color: var(--map-dim);
+    font: inherit;
+    font-size: var(--di-text-2);
+    cursor: pointer;
+}
+.map-eye { font-size: var(--di-text-2); }
+.map-eye:hover, .map-solo:hover { color: var(--map-ink); background: var(--map-hover); }
+.map-solo.is-on { color: var(--ui-accent); background: var(--di-cyan-wash); }
 
-/* --- the frame ------------------------------------------------------- */
+.map-empty { color: var(--map-dim); line-height: 1.45; margin: var(--di-space-1) 0; font-size: var(--di-text-2); }
+
+/* --- folded sections on the left ------------------------------------- */
+
+.map-section { border-top: 1px solid var(--map-line); margin-top: var(--di-space-1); padding-top: var(--di-space-1); }
+.map-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: var(--map-control-h);
+    padding: 0 var(--di-space-1);
+    background: none;
+    border: 0;
+    border-radius: var(--di-radius);
+    color: var(--map-dim);
+    font: inherit;
+    font-size: var(--di-text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    text-align: left;
+    cursor: pointer;
+}
+.map-section-head:hover { background: var(--map-raised); color: var(--map-ink); }
+.map-section.is-open .map-section-head { color: var(--map-ink); }
+.map-section-head::before { content: '▸'; margin-right: var(--di-space-2); color: var(--map-faint); font-size: var(--di-text-2); }
+.map-section.is-open .map-section-head::before { content: '▾'; }
+.map-section-head > span:first-child { flex: 1 1 auto; }
+.map-section-count { font-family: var(--di-mono); color: var(--map-faint); letter-spacing: 0; text-transform: none; }
+.map-section-body { display: flex; flex-direction: column; gap: var(--di-space-2); padding: var(--di-space-1) var(--di-space-1) var(--di-space-2); }
+/* The cue list keeps its own head (Play · Add) inside the fold. */
+.map-section .map-section { border-top: 0; margin-top: 0; padding-top: 0; }
+
+/* --- the picture ----------------------------------------------------- */
 
 .map-frame {
+    grid-area: frame;
     position: relative;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: var(--di-space-2);
     min-width: 0;
     min-height: 0;
-    padding: var(--di-space-3);
-    background: var(--di-surface);
+    padding: var(--di-space-4);
+    background: var(--map-bed);
 }
 
-.map-stage-holder { position: relative; flex: 0 0 auto; }
+.map-stage-holder { position: relative; flex: 0 0 auto; box-shadow: 0 0 0 1px var(--map-line); }
 
-.map-hint { margin: 0; color: var(--ui-text-muted); font-family: var(--di-mono); font-size: var(--di-text-2); text-align: center; }
+.map-status {
+    grid-area: status;
+    margin: 0;
+    padding: var(--di-space-1) var(--di-space-4);
+    border-top: 1px solid var(--map-line);
+    background: var(--map-bed);
+    color: var(--map-dim);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
 /* --- the stage: shared by the desk preview and the output ------------- */
 
@@ -141,39 +264,6 @@
     stroke-dasharray: 6 4;
     pointer-events: none;
 }
-
-.map-cue-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--di-space-1); }
-.map-cue-row {
-    display: flex;
-    align-items: center;
-    gap: var(--di-space-2);
-    padding: var(--di-space-1) var(--di-space-2);
-    background: var(--ui-surface-raised);
-    border: 1px solid transparent;
-}
-.map-cue-row.is-live { border-color: var(--ui-accent); background: var(--ui-surface-highlight); }
-.map-cue-key {
-    flex: 0 0 auto;
-    min-width: 16px;
-    text-align: center;
-    font-family: var(--di-mono);
-    font-size: var(--di-text-2);
-    color: var(--ui-accent);
-}
-.map-cue-fire {
-    flex: 1 1 auto;
-    background: none;
-    border: 0;
-    padding: 0;
-    color: var(--ui-text-primary);
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-}
-.map-cue-hold { flex: 0 0 auto; font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--ui-text-muted); }
-
-.map-section { border-top: 1px solid var(--ui-divider); margin-top: var(--di-space-2); padding-top: var(--di-space-2); }
-.map-row { display: flex; gap: var(--di-space-2); flex-wrap: wrap; }
 
 .map-stage-surface > * { display: block; width: 100%; height: 100%; border: 0; }
 .map-source-fill { width: 100%; height: 100%; }
@@ -222,93 +312,199 @@
 .map-overlay-surface { pointer-events: none; }
 
 .map-overlay-hit { fill: transparent; pointer-events: all; cursor: move; }
-.map-overlay-outline { fill: none; stroke: rgba(255, 255, 255, 0.35); stroke-width: 1; stroke-dasharray: 4 4; pointer-events: none; }
-.map-overlay-surface.is-selected .map-overlay-outline { stroke: var(--ui-accent); stroke-width: 2; stroke-dasharray: none; }
-.map-overlay-surface.is-off .map-overlay-outline { stroke: rgba(255, 255, 255, 0.15); }
+.map-overlay-outline { fill: none; stroke: rgba(255, 255, 255, 0.28); stroke-width: 1; pointer-events: none; }
+.map-overlay-surface.is-selected .map-overlay-outline { stroke: var(--di-cyan-line); stroke-width: 1.5; }
+.map-overlay-surface.is-primary .map-overlay-outline { stroke: var(--ui-accent); }
+.map-overlay-surface.is-off .map-overlay-outline { stroke: rgba(255, 255, 255, 0.12); stroke-dasharray: 3 3; }
 
-.map-overlay-name { fill: rgba(255, 255, 255, 0.7); font-family: var(--di-mono); font-size: var(--di-text-2); pointer-events: none; }
-.map-overlay-surface.is-selected .map-overlay-name { fill: var(--ui-accent); }
+/* The mask as the wall will see it, drawn always — not only while editing —
+   so a cut corner is never a surprise on the output. */
+.map-overlay-mask { fill: none; stroke: var(--ui-warning); stroke-width: 1; stroke-dasharray: 2 3; pointer-events: none; opacity: 0.55; }
+.map-overlay-surface.is-primary .map-overlay-mask { opacity: 1; }
+
+.map-overlay-name { fill: rgba(255, 255, 255, 0.55); font-family: var(--di-mono); font-size: var(--di-text-2); pointer-events: none; }
+.map-overlay-surface.is-primary .map-overlay-name { fill: var(--ui-accent); }
 .map-overlay-warn { fill: var(--ui-danger); font-family: var(--di-mono); font-size: var(--di-text-2); pointer-events: none; }
 
 .map-overlay-handle circle {
-    fill: var(--di-black);
+    fill: var(--map-bg);
     stroke: var(--ui-accent);
-    stroke-width: 2;
+    stroke-width: 1.5;
     pointer-events: all;
     cursor: grab;
 }
 .map-overlay-handle circle:hover { fill: var(--ui-accent); }
-.map-overlay-handle text { fill: var(--ui-accent); font-family: var(--di-mono); font-size: var(--di-text-1); pointer-events: none; }
+.map-overlay-handle text { fill: var(--map-dim); font-family: var(--di-mono); font-size: var(--di-text-1); pointer-events: none; }
 
-.map-overlay-mask-point {
+/* The points: amber, the mask's colour. The held one is hollow, so it reads
+   as "open" — the arrows and the numbers on the right are talking to it. */
+.map-overlay-point {
     fill: var(--ui-warning);
     stroke: var(--di-black);
     stroke-width: 1.5;
     pointer-events: all;
     cursor: grab;
 }
+.map-overlay-point.is-selected { fill: var(--di-black); stroke: var(--ui-warning); stroke-width: 2.5; }
 
 /* --- controls -------------------------------------------------------- */
 
-.map-field { display: flex; flex-direction: column; gap: var(--di-space-1); color: var(--ui-text-muted); }
-.map-field > span { font-size: var(--di-text-2); text-transform: uppercase; letter-spacing: 0.08em; }
+.map-field { display: flex; flex-direction: column; gap: var(--di-space-1); color: var(--map-dim); min-width: 0; }
+.map-field > span { font-size: var(--di-text-2); text-transform: uppercase; letter-spacing: 0.1em; }
 .map-field input,
-.map-field select {
-    background: var(--di-black);
-    border: 1px solid var(--ui-border);
-    color: var(--ui-text-primary);
+.map-field select,
+.map-xy input {
+    background: var(--map-field);
+    border: 1px solid var(--map-line);
+    border-radius: var(--di-radius);
+    color: var(--map-ink);
     font: inherit;
-    padding: var(--di-space-1) var(--di-space-1);
-    height: var(--panel-control-height);
+    padding: 0 var(--di-space-2);
+    height: var(--map-control-h);
     min-width: 0;
 }
-.map-field input[type='color'] { padding: var(--di-space-1); }
+.map-field input:focus,
+.map-field select:focus,
+.map-xy input:focus { outline: none; border-color: var(--di-cyan-line); }
+.map-field input[type='color'] { padding: var(--di-space-1); width: 48px; }
+.map-field input[type='number'],
+.map-xy input { font-family: var(--di-mono); font-size: var(--di-text-2); text-align: right; -moz-appearance: textfield; appearance: textfield; }
+.map-field input[type='number']::-webkit-inner-spin-button,
+.map-xy input::-webkit-inner-spin-button { -webkit-appearance: none; appearance: none; }
 .map-field-inline { flex-direction: row; align-items: center; gap: var(--di-space-1); }
 .map-field-inline > span:first-child { flex: 0 0 auto; }
-.map-field-inline input { width: 68px; }
+.map-field-inline input { width: 58px; }
+.map-field-inline select { flex: 1 1 auto; }
 .map-field-slider { flex-direction: row; align-items: center; gap: var(--di-space-2); }
-.map-field-slider > span { flex: 0 0 66px; }
-.map-field-slider input[type='range'] { flex: 1 1 auto; height: auto; border: 0; padding: 0; accent-color: var(--ui-accent); }
+.map-field-slider > span { flex: 0 0 62px; }
+.map-field-slider input[type='range'] { flex: 1 1 auto; height: auto; border: 0; padding: 0; background: none; accent-color: var(--ui-accent); }
+.map-field-slider .map-field-number { flex: 0 0 52px; width: 52px; }
 /* A sentence standing where a control would be — same muted prose, no lead-in
    gap, because the row is already spaced by the field. */
 .map-field .map-empty { margin: 0; }
-.map-field-slider output { flex: 0 0 34px; font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--ui-text-primary); text-align: right; }
+.map-field-slider output { flex: 0 0 34px; font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--map-ink); text-align: right; }
+
+/* X / Y rows: the numbers a hand types. */
+.map-xy-head,
+.map-xy { display: grid; grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr); gap: var(--di-space-1); align-items: center; }
+.map-xy-head { color: var(--map-faint); font-family: var(--di-mono); font-size: var(--di-text-1); text-align: right; padding: 0 var(--di-space-2); }
+.map-xy { padding: calc(var(--di-space-1) / 3) 0; border-radius: var(--di-radius); }
+.map-xy-label {
+    color: var(--map-dim);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    text-align: center;
+    background: none;
+    border: 0;
+    padding: 0;
+    height: var(--map-control-h);
+    border-radius: var(--di-radius);
+}
+button.map-xy-label { cursor: pointer; }
+button.map-xy-label:hover { background: var(--map-raised); color: var(--map-ink); }
+.map-xy-point.is-selected { background: rgba(var(--di-warning-rgb), 0.1); }
+.map-xy-point.is-selected .map-xy-label { color: var(--ui-warning); }
+
+.map-props { display: flex; flex-direction: column; gap: var(--di-space-2); }
+.map-props-section { display: flex; flex-direction: column; gap: var(--di-space-1); border-top: 1px solid var(--map-line); padding-top: var(--di-space-1); margin-top: var(--di-space-1); }
 
 .map-action,
 .map-toggle,
 .map-mini {
-    background: var(--di-black);
-    border: 1px solid var(--ui-border);
-    color: var(--ui-text-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--di-space-1);
+    background: var(--map-raised);
+    border: 1px solid transparent;
+    border-radius: var(--di-radius);
+    color: var(--map-ink);
     font: inherit;
-    padding: var(--di-space-1) var(--di-space-2);
-    height: var(--panel-control-height);
+    font-size: var(--di-text-2);
+    padding: 0 var(--di-space-2);
+    height: var(--map-control-h);
+    white-space: nowrap;
     cursor: pointer;
+    text-decoration: none;
 }
-/* A link wearing the button's clothes — an anchor ignores the height a button
-   honours, so it is centred explicitly rather than sitting a pixel high. */
-a.map-action { display: inline-flex; align-items: center; text-decoration: none; }
-.map-mini { font-size: var(--di-text-2); padding: var(--di-space-1) var(--di-space-1); height: auto; }
 .map-action:hover,
 .map-toggle:hover,
-.map-mini:hover { border-color: var(--ui-border-strong); }
+.map-mini:hover { background: var(--map-hover); }
+.map-action.is-quiet { background: none; color: var(--map-dim); }
+.map-action.is-quiet:hover { background: var(--map-raised); color: var(--map-ink); }
 .map-toggle.is-on,
-.map-mini.is-on { background: var(--ui-surface-highlight); border-color: var(--ui-accent); color: var(--ui-accent); }
-.map-mini.is-off { color: var(--ui-text-muted); }
-.map-mini.is-danger:hover { border-color: var(--ui-danger); color: var(--ui-danger); }
-.map-mini:disabled { opacity: 0.35; cursor: default; }
+.map-mini.is-on { background: var(--di-cyan-wash); border-color: var(--di-cyan-line); color: var(--ui-accent); }
+.map-mini.is-off { color: var(--map-dim); }
+.map-mini.is-danger { color: var(--map-dim); }
+.map-mini.is-danger:hover { color: var(--ui-danger); }
+.map-mini:disabled,
+.map-action:disabled { opacity: 0.35; cursor: default; }
+.map-mini:disabled:hover { background: var(--map-raised); }
+
+.map-row { display: flex; gap: var(--di-space-1); flex-wrap: wrap; }
 
 .map-warning {
     max-width: 460px;
+    margin: var(--di-space-1) 0;
     color: var(--ui-warning);
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
     line-height: 1.4;
 }
+.map-hint { margin: 0; color: var(--map-dim); font-family: var(--di-mono); font-size: var(--di-text-2); line-height: 1.4; }
+.map-hint a { color: var(--map-ink); }
+.map-machine.is-warning, .map-hint.is-warning { color: var(--ui-danger); }
 
-.map-sync { font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--ui-text-muted); }
+.map-sync { font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--map-dim); }
 .map-sync-error { color: var(--ui-danger); }
 .map-sync-live { color: var(--ui-success); }
+
+/* --- the cue list ---------------------------------------------------- */
+
+.map-cue-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: calc(var(--di-space-1) / 3); }
+.map-cue-row {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    min-height: 26px;
+    padding: 0 var(--di-space-1);
+    border-left: 2px solid transparent;
+    border-radius: var(--di-radius);
+}
+.map-cue-row:hover { background: var(--map-raised); }
+.map-cue-row.is-live { border-left-color: var(--ui-accent); background: var(--di-cyan-wash); }
+.map-cue-key {
+    flex: 0 0 auto;
+    min-width: 16px;
+    text-align: center;
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    color: var(--ui-accent);
+}
+.map-cue-fire {
+    flex: 1 1 auto;
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--map-ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.map-cue-hold { flex: 0 0 auto; font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--map-dim); }
+
+/* Machines on the desk: who is showing this space, and what each one has. */
+.map-machine { margin: 0; display: flex; flex-direction: column; gap: var(--di-space-1); font-size: var(--di-text-2); color: var(--map-dim); }
+.map-machine strong { color: var(--map-ink); font-weight: 500; }
+
+/* Bringing a video/image file in from this machine (MapInspector), and the
+   wall photo on the left. */
+.map-field-file { display: flex; flex-direction: column; gap: var(--di-space-1); }
+.map-field-file-input { display: none; }
+.map-field-file-notice { margin: 0; }
+.map-field-file-notice.is-error { color: var(--ui-danger); }
+.map-field-file-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: calc(var(--di-space-1) / 3); }
+.map-field-file-list .map-mini { display: flex; width: 100%; justify-content: flex-start; }
 
 /* --- the signal ------------------------------------------------------ */
 
@@ -322,26 +518,6 @@ a.map-action { display: inline-flex; align-items: center; text-decoration: none;
     overflow: hidden;
 }
 .map-output.is-idle { cursor: none; }
-
-@media (max-width: 900px) {
-    .map-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto; }
-    .map-panel { max-height: 30vh; }
-    .map-panel-left { border-right: 0; border-bottom: 1px solid var(--ui-divider); }
-    .map-panel-right { border-left: 0; border-top: 1px solid var(--ui-divider); }
-
-    /* Nothing here is narrower than a finger below this width, so the toolbar
-       stops trying to fit on one line and wraps instead — every control stays
-       reachable with a tap rather than sliding off the right edge. */
-    .map-bar { flex-wrap: wrap; }
-    .map-bar-controls { flex-wrap: wrap; flex-basis: 100%; }
-
-    /* The last panel in the stacked layout sits flush against the viewport
-       bottom, exactly where ModeMark (src/components/modeMark.css) plants its
-       tier chip. Same offset and safe-area variable it uses for its own
-       position, plus its own footprint, so the panel's last line is never
-       under the badge. */
-    .map-panel-right { padding-bottom: calc(var(--di-space-7) + env(safe-area-inset-bottom, 0px)); }
-}
 
 /* The output's only chrome. Present when the pointer moves, gone when it
    stops — the same rule the cursor follows, because anything permanently on
@@ -386,15 +562,15 @@ a.map-action { display: inline-flex; align-items: center; text-decoration: none;
     width: min(720px, 90vw);
     max-height: 80vh;
     padding: var(--di-space-3);
-    background: var(--ui-surface);
-    border: 1px solid var(--ui-border);
+    background: var(--map-bg);
+    border: 1px solid var(--map-line-strong);
 }
 .map-transfer-text {
     flex: 1 1 auto;
     min-height: 320px;
-    background: var(--di-black);
-    border: 1px solid var(--ui-border);
-    color: var(--ui-text-primary);
+    background: var(--map-field);
+    border: 1px solid var(--map-line);
+    color: var(--map-ink);
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
     line-height: 1.5;
@@ -402,17 +578,42 @@ a.map-action { display: inline-flex; align-items: center; text-decoration: none;
     resize: vertical;
 }
 
-/* Machines on the desk: who is showing this space, and what each one has. */
-.map-machine { margin: 0 0 var(--di-space-2); display: flex; flex-direction: column; gap: var(--di-space-1); font-size: var(--di-text-2); color: var(--ui-text-muted); }
-.map-machine strong { color: var(--ui-text); font-weight: 500; }
-.map-machine.is-warning, .map-hint.is-warning { color: var(--ui-danger); text-align: left; }
+/* --- a narrow screen ------------------------------------------------- */
 
-/* Bringing a video/image file in from this machine (MapInspector). Appended
-   at the end on purpose — another branch is editing this file's responsive
-   rules above. */
-.map-field-file { display: flex; flex-direction: column; gap: var(--di-space-1); }
-.map-field-file-input { display: none; }
-.map-field-file-notice { margin: 0; }
-.map-field-file-notice.is-error { color: var(--ui-danger); }
-.map-field-file-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--di-space-1); }
-.map-field-file-list .map-mini { display: block; width: 100%; text-align: left; }
+@media (max-width: 900px) {
+    .map-body {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(40vh, 1fr) auto auto;
+        grid-template-areas: 'left' 'frame' 'status' 'right';
+    }
+    /* The picture keeps at least 40vh whatever the panels want: a stage the
+       inspector could squeeze to nothing is a desk with no desk. */
+    .map-panel { max-height: 26vh; }
+    .map-panel-left { border-right: 0; border-bottom: 1px solid var(--map-line); }
+    .map-panel-right { border-left: 0; border-top: 1px solid var(--map-line); }
+    .map-frame { padding: var(--di-space-2); }
+
+    /* The last panel in the stacked layout sits flush against the viewport
+       bottom, exactly where ModeMark (src/components/modeMark.css) plants its
+       tier chip. Same offset and safe-area variable it uses for its own
+       position, plus its own footprint, so the panel's last line is never
+       under the badge. */
+    .map-panel-right { padding-bottom: calc(var(--di-space-7) + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* The cue list (MapCueList.jsx) carries its own head — Play and Add — and its
+   own title. Inside the fold the fold's own head already says "Cues", so the
+   inner title steps aside and Play · Add keep the row. */
+.map-section .map-section .map-panel-head h2 { display: none; }
+.map-section .map-section .map-panel-head { justify-content: flex-end; }
+
+/* --- a surface with points: the bent picture (MapWarpedSurface.jsx) ----- */
+
+/* The canvas covers the whole stage; the source it copies from sits under it
+   at zero opacity, still in the DOM so a video keeps decoding. The look —
+   opacity, filter, blend, fade — is on this wrapper, the same as on the
+   corner-pinned div, so a cue fades both roads at one speed. */
+.map-stage-warp { position: absolute; inset: 0; transition: opacity 0s linear; }
+.map-warp-source { position: absolute; top: 0; left: 0; opacity: 0; pointer-events: none; overflow: hidden; }
+.map-warp-source > * { display: block; width: 100%; height: 100%; border: 0; }
+.map-warp-canvas { position: absolute; top: 0; left: 0; display: block; }

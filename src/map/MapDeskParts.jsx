@@ -46,46 +46,81 @@ export const useMeasuredStage = (aspect) => {
     }
 }
 
-export function MapSurfaceList({ surfaces, selectedId, soloId, onSelect, onAdd, onToggle, onSolo, onFront }) {
+// The desk passes a selection (selectedIds, the last one primary) and takes
+// shift-click; the Perform desk passes its single selectedId and onFront, and
+// gets a paint-order button back, since it has no inspector to reorder from.
+export function MapSurfaceList({
+    surfaces, selectedId = null, selectedIds = null, primaryId = null, soloId,
+    onSelect, onAdd, onToggle, onSolo, onFront = null, note = ''
+}) {
+    const selection = selectedIds || (selectedId ? [selectedId] : [])
+    const primary = primaryId || (selection.length ? selection[selection.length - 1] : null)
     return (
         <>
             <div className="map-panel-head">
                 <h2>Surfaces</h2>
-                <button type="button" className="map-action" onClick={onAdd}>Add</button>
+                <button type="button" className="map-mini" onClick={onAdd}>+ Add</button>
             </div>
             <ul className="map-surface-list">
-                {surfaces.map((surface, index) => (
-                    <li key={surface.id} className={`map-surface-row${surface.id === selectedId ? ' is-selected' : ''}`}>
-                        <button type="button" className="map-surface-name" onClick={() => onSelect(surface.id)}>
-                            {surface.name || surface.id}
-                            <span className="map-surface-kind">{surface.source.kind}</span>
-                        </button>
-                        <div className="map-surface-row-actions">
-                            <button type="button" className={`map-mini${surface.enabled ? '' : ' is-off'}`}
-                                title="Show or hide on the wall"
-                                onClick={() => onToggle(surface)}>
-                                {surface.enabled ? 'On' : 'Off'}
+                {surfaces.map((surface, index) => {
+                    const isSelected = selection.includes(surface.id)
+                    const isPrimary = surface.id === primary
+                    return (
+                        <li
+                            key={surface.id}
+                            className={`map-surface-row${isSelected ? ' is-selected' : ''}${isPrimary ? ' is-primary' : ''}${surface.enabled ? '' : ' is-off'}`}
+                        >
+                            <button
+                                type="button"
+                                className="map-eye"
+                                title={surface.enabled ? 'Shown on the wall — click to hide' : 'Hidden from the wall — click to show'}
+                                aria-pressed={surface.enabled}
+                                onClick={() => onToggle(surface)}
+                            >{surface.enabled ? '●' : '○'}</button>
+                            <button
+                                type="button"
+                                className="map-surface-name"
+                                onClick={(event) => onSelect(surface.id, event.shiftKey)}
+                                title="Click to pick. Shift-click to add to the selection."
+                            >
+                                <span>{surface.name || surface.id}</span>
+                                <span className="map-surface-kind">{surface.source.kind}</span>
                             </button>
-                            <button type="button" className={`map-mini${soloId === surface.id ? ' is-on' : ''}`}
-                                title="Show this one alone on this screen. The projector still shows every surface."
-                                onClick={() => onSolo(soloId === surface.id ? null : surface.id)}>Solo · screen</button>
-                            <button type="button" className="map-mini" title="Later in the paint order"
-                                onClick={() => onFront(surface.id)} disabled={index === surfaces.length - 1}>Front</button>
-                        </div>
-                    </li>
-                ))}
+                            <button
+                                type="button"
+                                className={`map-solo${soloId === surface.id ? ' is-on' : ''}`}
+                                title="Show this one alone on this screen. The wall still shows every surface."
+                                onClick={() => onSolo(soloId === surface.id ? null : surface.id)}
+                            >S</button>
+                            {onFront ? (
+                                <button type="button" className="map-solo" title="Later in the paint order"
+                                    onClick={() => onFront(surface.id)} disabled={index === surfaces.length - 1}>↑</button>
+                            ) : null}
+                        </li>
+                    )
+                })}
             </ul>
             {!surfaces.length ? (
-                <p className="map-empty">No surfaces yet. Add one for each shape on the wall, then drag its corners onto that shape.</p>
+                <p className="map-empty">One surface for each shape on the wall. Add one, then drag its corners onto that shape.</p>
             ) : null}
+            {note ? <p className="map-warning" role="status">{note}</p> : null}
         </>
     )
 }
 
-export function MapMachinesList({ machines, ndiScan, surfaces }) {
+// On the desk it folds like the other sections (open, onToggle); on the
+// Perform desk, a window of its own, it is always open.
+export function MapMachinesList({ machines, ndiScan, surfaces, open = true, onToggle = null }) {
+    const isOpen = onToggle ? open : true
     return (
-        <div className="map-section">
-            <div className="map-panel-head"><h2>Machines</h2></div>
+        <section className={`map-section${isOpen ? ' is-open' : ''}`}>
+            {onToggle ? (
+                <button type="button" className="map-section-head" onClick={onToggle} aria-expanded={isOpen}>
+                    <span>Machines</span><span className="map-section-count">{machines.length || ''}</span>
+                </button>
+            ) : <div className="map-panel-head"><h2>Machines</h2></div>}
+            {isOpen ? (
+                <div className="map-section-body">
             {machines.length ? machines.map(describeMachine).map((entry) => (
                 <p key={entry.id} className="map-machine">
                     <strong>{entry.name}</strong>
@@ -108,6 +143,8 @@ export function MapMachinesList({ machines, ndiScan, surfaces }) {
             {ndiScanLine(ndiScan) ? (
                 <p className="map-empty" role="status">{ndiScanLine(ndiScan)}</p>
             ) : null}
+                </div>
+            ) : null}
             {unresolvedInputs(surfaces, machines).map((entry) => (
                 <p key={entry.id} className="map-machine is-warning" role="status">
                     {entry.kind === 'ndi'
@@ -119,7 +156,7 @@ export function MapMachinesList({ machines, ndiScan, surfaces }) {
                             : `“${entry.name}” is a stream with no input named.`)}
                 </p>
             ))}
-        </div>
+        </section>
     )
 }
 
@@ -130,11 +167,16 @@ export function MapMachinesList({ machines, ndiScan, surfaces }) {
  */
 export function MapWallView({
     mapping, spaceId, network, assets, projectId, live = false, soloSurfaceId = null,
-    editable = true, selectedId = null, maskMode = false, snap = true,
+    editable = true, selectedId = null, selectedIds = null, selectedPointIndex = null, snap = true,
     referenceUrl = '', reference = null,
-    onSelectSurface = () => {}, onCornersChange = () => {}, onMaskChange = () => {},
+    onSelectSurface = () => {}, onSelect = null, onSelectPoint = () => {},
+    onCornersChange = () => {}, onMoveSelection = () => {}, onPointsChange = () => {}, onAddPoint = () => {},
     hint = true
 }) {
+    // The Perform desk holds one surface (selectedId, onSelectSurface); the
+    // Projection desk holds a selection. Either drives the same overlay.
+    const selection = selectedIds || (selectedId ? [selectedId] : [])
+    const select = onSelect || ((surfaceId) => onSelectSurface(surfaceId))
     const output = mapping?.output || { width: 1920, height: 1080 }
     const { frameRef, stage } = useMeasuredStage(output.width / output.height)
     return (
@@ -160,22 +202,23 @@ export function MapWallView({
                             mapping={mapping}
                             width={stage.width}
                             height={stage.height}
-                            selectedSurfaceId={selectedId}
-                            maskMode={maskMode}
+                            selectedIds={selection}
+                            selectedPointIndex={selectedPointIndex}
                             grid={mapping?.grid || 0}
                             snap={snap}
-                            onSelectSurface={onSelectSurface}
+                            onSelect={select}
+                            onSelectPoint={onSelectPoint}
                             onCornersChange={onCornersChange}
-                            onMaskChange={onMaskChange}
+                            onMoveSelection={onMoveSelection}
+                            onPointsChange={onPointsChange}
+                            onAddPoint={onAddPoint}
                         />
                     ) : null}
                 </div>
             ) : null}
             {hint ? (
                 <p className="map-hint">
-                    {maskMode
-                        ? 'Mask: click inside the selected surface to add a point, drag to move it, shift-click to remove. Alt while dragging ignores snapping.'
-                        : 'Drag a corner to pin it. Arrow keys nudge, shift for ten. Alt while dragging ignores the grid and the guides. M masks, S snaps, 1-9 fire cues.'}
+                    Drag a corner to pin it. Double-click an edge to add a point and bend the picture. Arrow keys nudge, shift for ten. Alt while dragging ignores the grid and the guides.
                 </p>
             ) : null}
         </main>
