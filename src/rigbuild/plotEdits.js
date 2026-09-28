@@ -7,6 +7,7 @@ import { catalogueHeightOf, pieceHeightOf, pieceKindOf, pieceOf } from './pieces
 import { layRun, lampTransform, piecesOf, ridersOf } from './plotGeometry.js'
 import { plotData } from './sheet.js'
 import { rotateY } from './snap.js'
+import { EFFECT_CATEGORIES } from './plotSymbols.js'
 
 const r3 = (v) => Math.round(v * 1000) / 1000
 const byIdOf = (entities) => new Map(entities.map((e) => [e.id, e]))
@@ -54,7 +55,7 @@ const lightFor = (entities, type) => {
  * the LENS (lampGeometry.js), derived from the mount the plot placed.
  */
 export const lampEntity = ({ id, type, mount, hung = false, position = '', unit = null, entities = [], mode = null }) => {
-    const effect = !type.optics?.beam_deg && ['co2-jet', 'spark-machine', 'smoke-machine'].includes(type.category)
+    const effect = !type.optics?.beam_deg && EFFECT_CATEGORIES.has(type.category)
     const fixture = { type: type.id, ...(mode || type.defaultMode ? { mode: mode || type.defaultMode } : {}), ...(position ? { position } : {}), ...(unit ? { unit } : {}), ...(hung ? { hung: true } : {}) }
     const transform = lampTransform({ mount, hung, type })
     if (effect) {

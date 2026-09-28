@@ -5,6 +5,29 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-28 — the equipment list as a game inventory (`/{space}/equipment/{project}`, E in build mode)
+
+- Owner: "we will not use all the devices … a place where we can add and delete the devices",
+  then "like minecraft … pick and create … real alternatives … what is what". The rental list
+  (`components.rentalList`) became the show's equipment list: lines from the rental house,
+  own or another supplier; non-DMX items (node, cables, truss); show types from the Open
+  Fixture Library through the desk's import; the whole price list and its terms; rental days
+  costed by the sheet's own rule (day 1 full, +50%/day, held to its 2-day/3-day/week columns).
+- Inventory: tiles per device, grouped; the item card (our Blender render or a Commons photo,
+  what it is, in the show, needs, specs, real alternatives, sources; a looping preview); take /
+  skip / stepper. 30 catalogue entries (all 25 price-list codes + hazer, node, truss, tower,
+  deck), every line sourced or said owed (`items.test.js`). Lowering below what is placed asks:
+  remove the last placed, pick, or keep flagged "over the order" (dashed on plot and tags).
+- E opens it in build mode (lowering moved to Z); drag a tile to the hotbar or "to hotbar".
+  Order tab: totals, CSV, one-page A4 order.
+- MOXIR (own stack :4395/:5395): PARs 50 → 24 (last 26 removed), smoke machines off (desk
+  42 → 38), MDG ATMe ×2 from OFL dealt → U1.489/492, Art-Net node as an item; A/B/C/patch sheet
+  agree (72 fixtures, 40 patched); order 1,057,000 AMD for 17.10. Previews 60 fps on the 3080;
+  one GPU run hit 97 °C and was stopped by the guard.
+- Owed: the owner's pick on his own screen; 12 pictures; UP-236 maker; MDG power 715 vs 1400 W
+  (both shown); a real phone; `projectContracts` fixture test fails since the base (#594).
+  Method: `RIG_BUILD.md` §13; note `docs/ai/sessions/feat-rig-equipment.md`.
+
 ## 2026-09-28 — view A of the rig builder: build it in the room, first person (and the crew link)
 
 - `/{space}/build/{project}`: the walker's own room; B turns walking into building. A hotbar

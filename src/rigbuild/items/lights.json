@@ -1,0 +1,542 @@
+{
+  "items": [
+    {
+      "id": "up-b380f",
+      "codes": ["UP-B380F"],
+      "group": "lights",
+      "name": "Beam moving head (outdoor)",
+      "product": "UPlight UP-B380F, 380 W IP65 beam moving head",
+      "what": "A motorised head on a yoke, standing on a low base, that pans and tilts by remote control. It does not wash a stage with light — its lens throws one very narrow (1.8°), extremely bright shaft, like a searchlight, meant to be seen cutting through haze or smoke rather than lighting a person's face. It uses a discharge lamp, not an LED, so it needs a short warm-up when switched on. The housing is sealed and gasketed (IP65) for outdoor rigs.",
+      "whatSources": ["A", "A2"],
+      "inShow": "Used to draw hard, sword-like beams through haze for concert-style looks, aerial 'beam walls' along a truss, or a single sweeping shaft — a different visual language from an even wash or a projected pattern.",
+      "inShowSources": ["A", "WIKI-IL"],
+      "preview": "beam",
+      "needs": [
+        { "kind": "power", "text": "100-240 V AC mains; draws about 500 W at full output.", "sources": ["A"] },
+        { "kind": "signal", "text": "DMX512 (USITT DMX512-A / ANSI E1.11), 16 channels in its one control mode.", "sources": ["A", "ANSI-E1.11"] },
+        { "kind": "rigging", "text": "Overhead use needs a truss clamp rated for the fixture's weight plus a secondary safety bond/cable, independent of the clamp, so a clamp failure cannot drop it — the standard entertainment-rigging practice (ICOPER, also DGUV Vorschrift 17 in Germany).", "sources": ["ICOPER", "DGUV-17"] },
+        { "kind": "safety", "text": "Uses a discharge lamp (350XL/380, ~2000 h life), not an LED: it needs a warm-up/cool-down cycle, and the lamp is a UV and burst hazard if the housing is opened while hot. Relamping is a technician job, not a swap done mid-show.", "sources": ["A"] }
+      ],
+      "specs": [
+        { "label": "power", "value": "500 W", "sources": ["A"] },
+        { "label": "weight", "value": "23 kg", "sources": ["A"] },
+        { "label": "size (W x D x H)", "value": "460 x 310 x 690 mm", "sources": ["A"] },
+        { "label": "beam angle", "value": "1.8°, fixed (no zoom)", "sources": ["A"] },
+        { "label": "pan / tilt", "value": "540° / 270°", "sources": ["A"] },
+        { "label": "DMX channels", "value": "16", "sources": ["A"] },
+        { "label": "ingress protection", "value": "IP65", "sources": ["A"] }
+      ],
+      "alternatives": [
+        { "maker": "Clay Paky", "model": "Sharpy Plus Aqua", "url": "https://www.claypaky.it/products/sharpy-plus-aqua/", "why": "IP66-rated, fully weatherproof hybrid beam/spot for the same outdoor slot — the benchmark 'Sharpy' beam, at a premium price.", "sources": ["CLAYPAKY-AQUA"] },
+        { "maker": "Robe", "model": "Pointe", "url": "https://www.robe.cz/pointe", "why": "A 280 W hybrid beam/spot/wash in a lighter body (15 kg) with much more versatility; indoor-rated only, no IP65.", "sources": ["ROBE-POINTE"] },
+        { "maker": "ADJ", "model": "Vizi Beam RXONE", "url": "https://www.adj.com/products/vizi-beam-rxone", "why": "A budget compact 100 W discharge beam — far cheaper and lighter, but indoor-only and noticeably less punchy at long throw.", "sources": ["ADJ-RXONE"] }
+      ],
+      "photo": {
+        "file": "public/rigbuild/items/photos/up-b380f.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:MovingYoke.JPG",
+        "author": "Scoreed",
+        "licence": "CC BY 2.5",
+        "licenceUrl": "https://creativecommons.org/licenses/by/2.5",
+        "shows": "Moving-head beam fixtures rigged on truss, firing narrow blue beams through haze — the base/yoke/head class this fixture belongs to. Different maker, not the UP-B380F itself."
+      },
+      "sources": {
+        "A": { "url": "https://up-light.en.made-in-china.com/product/qdrawUbcCMAf/China-IP65-380W-Waterproof-DJ-Light-Beam-Moving-Head-for-Outdoor-Events.html", "what": "UPlight UP-B380F, maker's store page", "accessed": "2026-09-28" },
+        "A2": { "url": "https://up-light.en.made-in-china.com/product/dtgUzuHYYSWP/China-380W-IP65-Moving-Head-Light-3-in-1-Disco-Lights-Moving-Head-for-Stage.html", "what": "UPlight UP-B380F, second store page", "accessed": "2026-09-28" },
+        "WIKI-IL": { "url": "https://en.wikipedia.org/wiki/Intelligent_lighting", "what": "Wikipedia, 'Intelligent lighting' — general vocabulary for moving-head beam/spot/wash fixtures", "accessed": "2026-09-28" },
+        "ANSI-E1.11": { "url": "https://tsp.esta.org/tsp/documents/docs/ANSI-ESTA_E1-11_2008R2018.pdf", "what": "ANSI E1.11 / USITT DMX512-A standard document (ESTA Technical Standards Program)", "accessed": "2026-09-28" },
+        "ICOPER": { "url": "https://www.plasa.org/wp-content/uploads/2017/11/ICOPER_V1.0.pdf", "what": "PLASA/ESTA International Code of Practice for Entertainment Rigging — secondary suspension / safety bond requirement", "accessed": "2026-09-28" },
+        "DGUV-17": { "url": "https://cdn.vbg.de/media/d9616e86b34142149b97fe7c27afad8b/dld:attachment/Veranstaltungs_und_Produktionsstaetten_fuer_szenische_Darstellung_DGUV_Vorschrift_17.pdf", "what": "DGUV Vorschrift 17 (German event-technology accident-prevention regulation) — fall protection and safety-cable rules", "accessed": "2026-09-28" },
+        "CLAYPAKY-AQUA": { "url": "https://www.claypaky.it/products/sharpy-plus-aqua/", "what": "Clay Paky Sharpy Plus Aqua, maker's product page", "accessed": "2026-09-28" },
+        "ROBE-POINTE": { "url": "https://www.robe.cz/pointe", "what": "Robe Pointe, maker's product page", "accessed": "2026-09-28" },
+        "ADJ-RXONE": { "url": "https://www.adj.com/products/vizi-beam-rxone", "what": "ADJ Vizi Beam RXONE, maker's product page (discontinued, replaced by Vizi Beam RX2)", "accessed": "2026-09-28" }
+      }
+    },
+
+    {
+      "id": "up-250bsw",
+      "codes": ["UP-250BSW"],
+      "group": "lights",
+      "name": "Beam / spot / wash moving head",
+      "product": "UPlight UP-250BSW (also written UP-BSW250), 250 W LED beam/spot/wash moving head",
+      "what": "An LED moving head whose lens zooms from a narrow 10° beam out to a soft 30° wash by remote control — one fixture standing in for three. It also carries gobo wheels for projected patterns and a coloured LED ring around the lens. Indoor use only.",
+      "whatSources": ["B"],
+      "inShow": "Chosen when a show needs one fixture that can snap from a tight aerial beam to a soft face/area wash without a re-hang — useful where rig positions or budget are limited.",
+      "inShowSources": ["B", "WIKI-IL"],
+      "preview": "spot",
+      "needs": [
+        { "kind": "power", "text": "100-240 V AC mains, about 280 W.", "sources": ["B"] },
+        { "kind": "signal", "text": "DMX512, 24 or 30-channel mode (some listings give 20/30).", "sources": ["B"] },
+        { "kind": "rigging", "text": "Overhead use needs a truss clamp plus a secondary safety bond, as for any moving head (ICOPER).", "sources": ["ICOPER"] },
+        { "kind": "safety", "text": "IP20 body: indoor only — rain or condensation on the open vents is a shock and fire risk outdoors or in a damp venue.", "sources": ["B"] }
+      ],
+      "specs": [
+        { "label": "power", "value": "280 W", "sources": ["B"] },
+        { "label": "weight", "value": "13.5 kg", "sources": ["B"] },
+        { "label": "size (L x W x H)", "value": "330 x 257 x 536 mm", "sources": ["B"] },
+        { "label": "zoom", "value": "10°-30°", "sources": ["B"] },
+        { "label": "pan / tilt", "value": "540° / 270° (not stated by the maker; typical of the class — owed as a confirmed number)", "sources": [] },
+        { "label": "DMX channels", "value": "24 or 30", "sources": ["B"] },
+        { "label": "ingress protection", "value": "IP20 (indoor)", "sources": ["B"] }
+      ],
+      "alternatives": [
+        { "maker": "Chauvet DJ", "model": "Intimidator Spot 260", "url": "https://www.chauvetdj.com/products/intimidator-spot-260/", "why": "75 W LED spot, much cheaper and lighter, but spot-only — no wash mode and less zoom range.", "sources": ["CHAUVET-260"] },
+        { "maker": "Robe", "model": "Pointe", "url": "https://www.robe.cz/pointe", "why": "A true beam/spot/wash hybrid with a wider zoom range (2.5°-20°) and a much brighter discharge lamp, for a bigger budget.", "sources": ["ROBE-POINTE"] },
+        { "maker": "ADJ", "model": "Focus Spot 4Z", "url": "https://www.adj.com/products/focus-spot-4z", "why": "200 W LED spot with motorised 11°-22° zoom, mid-price; spot only, no beam or wash mode.", "sources": ["ADJ-FS4Z"] }
+      ],
+      "photo": {
+        "file": "public/rigbuild/items/photos/up-250bsw.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:MovingYoke.JPG",
+        "author": "Scoreed",
+        "licence": "CC BY 2.5",
+        "licenceUrl": "https://creativecommons.org/licenses/by/2.5",
+        "shows": "Moving-head fixtures rigged on truss, firing narrow blue beams through haze — the base/yoke/head class this fixture belongs to, shown here in beam mode rather than zoomed to a wash. Different maker, not the UP-250BSW itself."
+      },
+      "sources": {
+        "B": { "url": "https://www.pro-uplight.com/250W-BSW-LED-MOVING-HEAD-pd576927868.html", "what": "UPlight UP-250BSW, maker's site", "accessed": "2026-09-28" },
+        "WIKI-IL": { "url": "https://en.wikipedia.org/wiki/Intelligent_lighting", "what": "Wikipedia, 'Intelligent lighting' — general vocabulary for moving-head beam/spot/wash fixtures", "accessed": "2026-09-28" },
+        "ICOPER": { "url": "https://www.plasa.org/wp-content/uploads/2017/11/ICOPER_V1.0.pdf", "what": "PLASA/ESTA International Code of Practice for Entertainment Rigging", "accessed": "2026-09-28" },
+        "CHAUVET-260": { "url": "https://www.chauvetdj.com/products/intimidator-spot-260/", "what": "Chauvet DJ Intimidator Spot 260, maker's product page", "accessed": "2026-09-28" },
+        "ROBE-POINTE": { "url": "https://www.robe.cz/pointe", "what": "Robe Pointe, maker's product page", "accessed": "2026-09-28" },
+        "ADJ-FS4Z": { "url": "https://www.adj.com/products/focus-spot-4z", "what": "ADJ Focus Spot 4Z, maker's product page", "accessed": "2026-09-28" }
+      }
+    },
+
+    {
+      "id": "up-hk1915",
+      "codes": ["UP-HK1915"],
+      "group": "lights",
+      "name": "Bee-eye matrix moving head",
+      "product": "UPlight UP-HK1915 'Hawk Eye / Bee Eye', 19x15 W RGBW zoom moving head",
+      "what": "A moving head whose face is not one lens but 19 small round lenses set in a honeycomb, giving it the 'insect eye' look it's named for. Each cell can carry its own colour, so the fixture can act as one wide wash, a pixel-mapped grid of separate points, or — zoomed narrow — a cluster of thin beams. Indoor use only.",
+      "whatSources": ["C", "C2"],
+      "inShow": "Used for a textured, cellular wall of light, or chases and pixel patterns across the 19 cells — a different visual language from a single-lens wash or a beam moving head.",
+      "inShowSources": ["C", "WIKI-IL"],
+      "preview": "matrix",
+      "needs": [
+        { "kind": "power", "text": "100-240 V AC mains, about 350 W (one listing gives 300 W).", "sources": ["C"] },
+        { "kind": "signal", "text": "DMX512, five modes from 21 to 97 channels depending on how much per-cell control is used.", "sources": ["C"] },
+        { "kind": "rigging", "text": "Overhead use needs a truss clamp plus a secondary safety bond, as for any moving head (ICOPER).", "sources": ["ICOPER"] },
+        { "kind": "safety", "text": "IP20 body: indoor only.", "sources": ["C"] }
+      ],
+      "specs": [
+        { "label": "power", "value": "350 W (one source: 300 W)", "sources": ["C"] },
+        { "label": "weight", "value": "15 kg (equivalent fixture; the maker's own figures for this model contradict each other: 12.5 / 6.2 / 10.5 kg)", "sources": ["OFL-K10"] },
+        { "label": "size (W x D x H)", "value": "358 x 253 x 494 mm (equivalent fixture; the maker's own 325x188x396 mm is not credible for a 19-lens head)", "sources": ["OFL-K10"] },
+        { "label": "zoom", "value": "4°-60°", "sources": ["C", "C2"] },
+        { "label": "pan / tilt", "value": "540° / 230°", "sources": ["C", "C2"] },
+        { "label": "DMX channels", "value": "21 / 35 / 78 / 92 / 97", "sources": ["C"] },
+        { "label": "ingress protection", "value": "IP20 (indoor)", "sources": ["C"] }
+      ],
+      "alternatives": [
+        { "maker": "Clay Paky", "model": "A.leda B-EYE K20", "url": "https://www.claypaky.it/products/a-leda-b-eye-k20/", "why": "The fixture this honeycomb-lens look descends from (current successor to the original K10); premium build, much higher price.", "sources": ["CLAYPAKY-K20"] },
+        { "maker": "Clay Paky", "model": "Mini-B", "url": "https://www.claypaky.it/products/mini-b/", "why": "A similar centre-plus-ring LED split in a lighter (7 kg) body — a true wash rather than a pixel matrix.", "sources": ["CLAYPAKY-MINIB"] }
+      ],
+      "photo": null,
+      "photoNote": "No freely-licensed photo of a bee-eye/matrix moving head was found on Wikimedia Commons (its Moving heads category and several image searches were checked, 2026-09-28) — owed.",
+      "sources": {
+        "C": { "url": "https://www.pro-uplight.com/19Pcs-15W-Hawk-Eye-pd40799571.html", "what": "UPlight UP-HK1915 'Hawk Eye', maker's site", "accessed": "2026-09-28" },
+        "C2": { "url": "https://up-light.en.made-in-china.com/product/pAzRYkbrgSVy/China-Upliht-19X15W-Zoom-LED-Moving-Head-Light-for-Djs.html", "what": "UPlight UP-HK1915, store page", "accessed": "2026-09-28" },
+        "OFL-K10": { "url": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/master/fixtures/clay-paky/a-leda-b-eye-k10.json", "what": "Clay Paky A.leda B-EYE K10 in Open Fixture Library (MIT licence) — used as a physical-dimensions equivalent", "accessed": "2026-09-26" },
+        "WIKI-IL": { "url": "https://en.wikipedia.org/wiki/Intelligent_lighting", "what": "Wikipedia, 'Intelligent lighting' — general vocabulary", "accessed": "2026-09-28" },
+        "ICOPER": { "url": "https://www.plasa.org/wp-content/uploads/2017/11/ICOPER_V1.0.pdf", "what": "PLASA/ESTA International Code of Practice for Entertainment Rigging", "accessed": "2026-09-28" },
+        "CLAYPAKY-K20": { "url": "https://www.claypaky.it/products/a-leda-b-eye-k20/", "what": "Clay Paky A.leda B-EYE K20, maker's product page", "accessed": "2026-09-28" },
+        "CLAYPAKY-MINIB": { "url": "https://www.claypaky.it/products/mini-b/", "what": "Clay Paky Mini-B, maker's product page", "accessed": "2026-09-28" }
+      }
+    },
+
+    {
+      "id": "up-hk615",
+      "codes": ["UP-HK615"],
+      "group": "lights",
+      "name": "Bee-eye matrix with laser",
+      "product": "Not found on UPlight's own site or store search (0 hits across the maker's listings and product sitemap, checked 2026-09-28). Modelled on the same market class sold by other Chinese stage-light makers as a '6x15 W RGBW bee-eye + laser moving head', e.g. YUER Lights' version of this fixture.",
+      "identified": "NOT FOUND — modelled on an EQUIVALENT",
+      "what": "A small matrix moving head — six lenses instead of nineteen — with a laser module built into the same head, so one small fixture does two jobs: a mini wash/matrix of coloured cells, plus a laser beam or sparkle effect from the same point.",
+      "whatSources": ["EQ-YUER"],
+      "inShow": "Used where rig positions or budget only allow one small unit per spot, but the designer still wants both a coloured matrix look and a laser accent from the same fixture.",
+      "inShowSources": ["EQ-YUER", "WIKI-IL"],
+      "preview": "matrix",
+      "needs": [
+        { "kind": "power", "text": "100-240 V AC mains, about 100 W total (6x15 W LED cells plus the laser module).", "sources": ["EQ-YUER"] },
+        { "kind": "signal", "text": "DMX512, 10 or 15-channel mode.", "sources": ["EQ-YUER"] },
+        { "kind": "rigging", "text": "Overhead use needs a truss clamp plus a secondary safety bond, as for any moving head (ICOPER).", "sources": ["ICOPER"] },
+        { "kind": "safety", "text": "The built-in laser needs the same handling as any laser effect: an IEC 60825-1 hazard classification of the actual unit, and — before it is ever pointed at or over people — the audience-scanning rules and a trained Laser Safety Officer described under UP-LA40WF's safety note. The rental listing gives no class for this laser module; that number is owed.", "sources": ["IEC-60825", "ILDA-BASICS", "ILDA-AUDIENCE"] }
+      ],
+      "specs": [
+        { "label": "LED source", "value": "6 x 15 W RGBW", "sources": ["EQ-YUER"] },
+        { "label": "laser (equivalent unit)", "value": "green, 200 mW, 530 nm", "sources": ["EQ-YUER"] },
+        { "label": "weight", "value": "3.8 kg net (equivalent unit)", "sources": ["EQ-YUER"] },
+        { "label": "zoom / beam angle", "value": "6°-51°", "sources": ["EQ-YUER"] },
+        { "label": "pan / tilt speed", "value": "540° in 1.5 s / 180° in 0.5 s", "sources": ["EQ-YUER"] },
+        { "label": "DMX channels", "value": "10 or 15", "sources": ["EQ-YUER"] },
+        { "label": "size", "value": "owed — not published by this source", "sources": [] }
+      ],
+      "alternatives": [
+        { "maker": "Clay Paky", "model": "Mini-B", "url": "https://www.claypaky.it/products/mini-b/", "why": "The closest real matrix-wash fixture from a known maker — but it has no built-in laser. No major Western maker was found selling a matrix+laser hybrid; that pairing is specific to this Chinese club-fixture category.", "sources": ["CLAYPAKY-MINIB"] },
+        { "maker": "X-Laser", "model": "Mobile Beat Mirage", "url": "https://davlsupply.com/products/x-laser-mobile-beat-mirage-400mw-rgb-animation-laser-with-quickshow-fb3-and-25ft-ilda-cable", "why": "The usual professional route instead of a hybrid: rig a plain matrix wash alongside a separate, purpose-built graphics laser — simpler to service, and the laser's aim can be controlled independently of the wash.", "sources": ["EQ-XLASER-JG400"] }
+      ],
+      "photo": null,
+      "photoNote": "No freely-licensed photo of this fixture class (small bee-eye with an integrated laser) was found on Wikimedia Commons, checked 2026-09-28 — owed.",
+      "sources": {
+        "EQ-YUER": { "url": "https://yuerlights.com/products/new-led-6x15w-rgbw-bee-eye-laser-moving-head-light-dmx512-10-15ch-strobe-dyeing-effect-lighting-dj-disco-stage-party-wedding-bar", "what": "YUER Lights 6x15W RGBW bee-eye + laser moving head — equivalent for UP-HK615 (same market class, not the same maker)", "accessed": "2026-09-28" },
+        "WIKI-IL": { "url": "https://en.wikipedia.org/wiki/Intelligent_lighting", "what": "Wikipedia, 'Intelligent lighting' — general vocabulary", "accessed": "2026-09-28" },
+        "ICOPER": { "url": "https://www.plasa.org/wp-content/uploads/2017/11/ICOPER_V1.0.pdf", "what": "PLASA/ESTA International Code of Practice for Entertainment Rigging", "accessed": "2026-09-28" },
+        "IEC-60825": { "url": "https://webstore.iec.ch/en/publication/3587", "what": "IEC 60825-1:2014, Safety of laser products — Part 1: Equipment classification and requirements (standard, paywalled abstract page)", "accessed": "2026-09-28" },
+        "ILDA-BASICS": { "url": "https://www.ilda.com/safety-basics.htm", "what": "International Laser Display Association, 'Basic Principles of Lasershow Safety'", "accessed": "2026-09-28" },
+        "ILDA-AUDIENCE": { "url": "https://www.ilda.com/audiencescanningsafety.htm", "what": "International Laser Display Association, 'How to do safe audience scanning'", "accessed": "2026-09-28" },
+        "CLAYPAKY-MINIB": { "url": "https://www.claypaky.it/products/mini-b/", "what": "Clay Paky Mini-B, maker's product page", "accessed": "2026-09-28" },
+        "EQ-XLASER-JG400": { "url": "https://davlsupply.com/products/x-laser-mobile-beat-mirage-400mw-rgb-animation-laser-with-quickshow-fb3-and-25ft-ilda-cable", "what": "X-Laser Mobile Beat Mirage, dealer page reproducing the maker's specification sheet", "accessed": "2026-09-28" }
+      }
+    },
+
+    {
+      "id": "up-mh100s",
+      "codes": ["UP-MH100S"],
+      "group": "lights",
+      "name": "Pattern (gobo) moving head, 100 W",
+      "product": "Not found on UPlight's own site or store search (checked 2026-09-28). Modelled on the same 100 W LED gobo-spot class sold by other makers, e.g. SHEHDS's 100 W 6-prism spotlight.",
+      "identified": "NOT FOUND — modelled on an EQUIVALENT",
+      "what": "A compact moving head that shines a single sharp beam through a wheel of metal or glass stencils (gobos) to throw shapes, textures or a logo, plus a colour wheel and a rotating prism to multiply the pattern. Smaller and lighter than a beam or wash fixture.",
+      "whatSources": ["EQ-SHEHDS-SPOT100"],
+      "inShow": "Used for a projected shape or texture — leaf breakup, a logo, a starfield — rather than an even wash or a hard beam; the classic 'gobo spot' role in a rig.",
+      "inShowSources": ["EQ-SHEHDS-SPOT100", "WIKI-IL"],
+      "preview": "spot",
+      "needs": [
+        { "kind": "power", "text": "100-240 V AC mains; 100 W LED source.", "sources": ["EQ-SHEHDS-SPOT100"] },
+        { "kind": "signal", "text": "DMX512 (USITT DMX512-A), 16-channel mode on the equivalent unit.", "sources": ["EQ-SHEHDS-SPOT100", "ANSI-E1.11"] },
+        { "kind": "rigging", "text": "Overhead use needs a truss clamp plus a secondary safety bond, as for any moving head (ICOPER).", "sources": ["ICOPER"] },
+        { "kind": "safety", "text": "IP20 body on the equivalent unit: indoor use.", "sources": ["EQ-SHEHDS-SPOT100"] }
+      ],
+      "specs": [
+        { "label": "power (equivalent unit)", "value": "100 W LED", "sources": ["EQ-SHEHDS-SPOT100"] },
+        { "label": "weight (equivalent unit)", "value": "6.1 kg", "sources": ["EQ-SHEHDS-SPOT100"] },
+        { "label": "size (equivalent unit)", "value": "250 x 200 x 350 mm", "sources": ["EQ-SHEHDS-SPOT100"] },
+        { "label": "beam angle (equivalent unit)", "value": "16°", "sources": ["EQ-SHEHDS-SPOT100"] },
+        { "label": "gobos (equivalent unit)", "value": "7 dynamic + 6 static, plus a 6-facet rotating prism", "sources": ["EQ-SHEHDS-SPOT100"] },
+        { "label": "pan / tilt (equivalent unit)", "value": "540° / 200°", "sources": ["EQ-SHEHDS-SPOT100"] },
+        { "label": "DMX channels (equivalent unit)", "value": "16", "sources": ["EQ-SHEHDS-SPOT100"] }
+      ],
+      "alternatives": [
+        { "maker": "Chauvet DJ", "model": "Intimidator Spot 260", "url": "https://www.chauvetdj.com/products/intimidator-spot-260/", "why": "75 W LED gobo spot from a well-known maker, slightly less bright, similar price bracket.", "sources": ["CHAUVET-260"] },
+        { "maker": "ADJ", "model": "Focus Spot 4Z", "url": "https://www.adj.com/products/focus-spot-4z", "why": "200 W LED spot with motorised zoom — brighter and more flexible, at a higher price and larger size.", "sources": ["ADJ-FS4Z"] }
+      ],
+      "photo": {
+        "file": "public/rigbuild/items/photos/up-mh100s.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:MovingYoke.JPG",
+        "author": "Scoreed",
+        "licence": "CC BY 2.5",
+        "licenceUrl": "https://creativecommons.org/licenses/by/2.5",
+        "shows": "Moving-head fixtures rigged on truss, firing narrow blue beams — the same base/yoke/head class, shown here in beam mode rather than projecting a gobo pattern. Different maker, not the UP-MH100S itself."
+      },
+      "sources": {
+        "EQ-SHEHDS-SPOT100": { "url": "https://shehds.com/products/shehds-6-prism-led-spotlight-100w-gobo-light-with-lcd-display-stage-effect-lighting-dj-disco-stage-moving-head-lights-stage-dj-lighting", "what": "SHEHDS 100W 6-prism LED gobo spotlight — equivalent for UP-MH100S (same market class, not the same maker)", "accessed": "2026-09-28" },
+        "WIKI-IL": { "url": "https://en.wikipedia.org/wiki/Intelligent_lighting", "what": "Wikipedia, 'Intelligent lighting' — general vocabulary", "accessed": "2026-09-28" },
+        "ANSI-E1.11": { "url": "https://tsp.esta.org/tsp/documents/docs/ANSI-ESTA_E1-11_2008R2018.pdf", "what": "ANSI E1.11 / USITT DMX512-A standard document", "accessed": "2026-09-28" },
+        "ICOPER": { "url": "https://www.plasa.org/wp-content/uploads/2017/11/ICOPER_V1.0.pdf", "what": "PLASA/ESTA International Code of Practice for Entertainment Rigging", "accessed": "2026-09-28" },
+        "CHAUVET-260": { "url": "https://www.chauvetdj.com/products/intimidator-spot-260/", "what": "Chauvet DJ Intimidator Spot 260, maker's product page", "accessed": "2026-09-28" },
+        "ADJ-FS4Z": { "url": "https://www.adj.com/products/focus-spot-4z", "what": "ADJ Focus Spot 4Z, maker's product page", "accessed": "2026-09-28" }
+      }
+    },
+
+    {
+      "id": "up-mh8060s",
+      "codes": ["UP-MH8060S"],
+      "group": "lights",
+      "name": "Pattern (gobo) moving head, 80 W",
+      "product": "Not found on UPlight's own site or store search (checked 2026-09-28). Modelled on the same 80 W LED gobo-spot class sold by other makers, e.g. SHEHDS's 80 W 3-prism spotlight.",
+      "identified": "NOT FOUND — modelled on an EQUIVALENT",
+      "what": "The smaller sibling of the 100 W pattern moving head above: the same idea — a single sharp beam through a gobo wheel, a colour wheel and a rotating prism — in a lighter, cheaper body.",
+      "whatSources": ["EQ-SHEHDS-SPOT80"],
+      "inShow": "Used for the same projected-shape role as the 100 W unit, where the smaller size, lower cost or lighter weight matters more than raw output.",
+      "inShowSources": ["EQ-SHEHDS-SPOT80", "WIKI-IL"],
+      "preview": "spot",
+      "needs": [
+        { "kind": "power", "text": "100-240 V AC mains; 80 W LED source.", "sources": ["EQ-SHEHDS-SPOT80"] },
+        { "kind": "signal", "text": "DMX512, 10 or 13-channel mode on the equivalent unit.", "sources": ["EQ-SHEHDS-SPOT80", "ANSI-E1.11"] },
+        { "kind": "rigging", "text": "Overhead use needs a truss clamp plus a secondary safety bond, as for any moving head (ICOPER).", "sources": ["ICOPER"] },
+        { "kind": "safety", "text": "Ingress protection not stated by the equivalent source; treat as indoor-only unless confirmed otherwise — owed.", "sources": [] }
+      ],
+      "specs": [
+        { "label": "power (equivalent unit)", "value": "80 W LED", "sources": ["EQ-SHEHDS-SPOT80"] },
+        { "label": "weight (equivalent unit)", "value": "3.5 kg", "sources": ["EQ-SHEHDS-SPOT80"] },
+        { "label": "size (equivalent unit)", "value": "210 x 165 x 270 mm", "sources": ["EQ-SHEHDS-SPOT80"] },
+        { "label": "beam angle (equivalent unit)", "value": "15°-20° (25° lens variant)", "sources": ["EQ-SHEHDS-SPOT80"] },
+        { "label": "gobos (equivalent unit)", "value": "7 patterns + blank (2 glass), 3-facet rotating prism", "sources": ["EQ-SHEHDS-SPOT80"] },
+        { "label": "pan / tilt (equivalent unit)", "value": "540° / 180°", "sources": ["EQ-SHEHDS-SPOT80"] },
+        { "label": "DMX channels (equivalent unit)", "value": "10 or 13", "sources": ["EQ-SHEHDS-SPOT80"] }
+      ],
+      "alternatives": [
+        { "maker": "Chauvet DJ", "model": "Intimidator Spot 160", "url": "https://www.chauvetdj.com/products/intimidator-spot-160/", "why": "32 W LED gobo spot — smaller and cheaper still, at lower output.", "sources": ["CHAUVET-160"] },
+        { "maker": "Chauvet DJ", "model": "Intimidator Spot 260", "url": "https://www.chauvetdj.com/products/intimidator-spot-260/", "why": "75 W LED gobo spot, the closest published wattage match from a known maker.", "sources": ["CHAUVET-260"] }
+      ],
+      "photo": {
+        "file": "public/rigbuild/items/photos/up-mh8060s.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:MovingYoke.JPG",
+        "author": "Scoreed",
+        "licence": "CC BY 2.5",
+        "licenceUrl": "https://creativecommons.org/licenses/by/2.5",
+        "shows": "Moving-head fixtures rigged on truss, firing narrow blue beams — the same base/yoke/head class, shown here in beam mode rather than projecting a gobo pattern. Different maker, not the UP-MH8060S itself."
+      },
+      "sources": {
+        "EQ-SHEHDS-SPOT80": { "url": "https://shehds.com/products/led-spot-80w-with-threer-prism-gobo-moving-head-light-party-dj-equipment-bar-light-ktv-bar-stage-lighting-effect", "what": "SHEHDS 80W 3-prism LED gobo spotlight — equivalent for UP-MH8060S (same market class, not the same maker)", "accessed": "2026-09-28" },
+        "WIKI-IL": { "url": "https://en.wikipedia.org/wiki/Intelligent_lighting", "what": "Wikipedia, 'Intelligent lighting' — general vocabulary", "accessed": "2026-09-28" },
+        "ANSI-E1.11": { "url": "https://tsp.esta.org/tsp/documents/docs/ANSI-ESTA_E1-11_2008R2018.pdf", "what": "ANSI E1.11 / USITT DMX512-A standard document", "accessed": "2026-09-28" },
+        "ICOPER": { "url": "https://www.plasa.org/wp-content/uploads/2017/11/ICOPER_V1.0.pdf", "what": "PLASA/ESTA International Code of Practice for Entertainment Rigging", "accessed": "2026-09-28" },
+        "CHAUVET-160": { "url": "https://www.chauvetdj.com/products/intimidator-spot-160/", "what": "Chauvet DJ Intimidator Spot 160, maker's product page", "accessed": "2026-09-28" },
+        "CHAUVET-260": { "url": "https://www.chauvetdj.com/products/intimidator-spot-260/", "what": "Chauvet DJ Intimidator Spot 260, maker's product page", "accessed": "2026-09-28" }
+      }
+    },
+
+    {
+      "id": "up-pl5403",
+      "codes": ["UP-PL5403"],
+      "group": "lights",
+      "name": "LED PAR (outdoor)",
+      "product": "UPlight UP-PL5403, IP65 54x3 W RGBW LED PAR",
+      "what": "A round, cast-aluminium can — like a big flashlight — packed with 54 small RGBW LEDs behind a flat lens. It has no moving parts: it washes colour over whatever it's pointed at. Its own U-bracket folds out into a floor stand, or it hangs on a yoke from a bar. Deep cooling fins ring the can.",
+      "whatSources": ["D"],
+      "inShow": "The basic building block for coloured washes, backlight or floor uplight on a cyclorama, set piece or audience — outdoor-rated, so it can live in a garden, a festival stage, or a wet load-in without extra cover.",
+      "inShowSources": ["D", "WIKI-IL"],
+      "preview": "wash",
+      "needs": [
+        { "kind": "power", "text": "AC mains; wattage not published by the maker — about 162 W is a reasonable estimate for 54x3 W of LEDs, but that number is not confirmed (owed).", "sources": [] },
+        { "kind": "signal", "text": "DMX512 assumed (standard for this class); the maker's page does not give a channel count — owed.", "sources": ["ANSI-E1.11"] },
+        { "kind": "rigging", "text": "Floor-standing on its own bracket needs no special rigging; hung overhead it needs a truss clamp plus a secondary safety bond, as for any suspended fixture (ICOPER).", "sources": ["ICOPER"] },
+        { "kind": "safety", "text": "IP65: dust-tight and protected against water jets — check the maker's exact IP65 test conditions before using it submerged or in standing water.", "sources": ["D"] }
+      ],
+      "specs": [
+        { "label": "size", "value": "310 x 310 x 330 mm", "sources": ["D"] },
+        { "label": "weight", "value": "8 kg", "sources": ["D"] },
+        { "label": "light source", "value": "54 x 3 W LEDs (R12 G14 B14 W14), 50,000-100,000 h", "sources": ["D"] },
+        { "label": "beam angle", "value": "15° (8° or 25° lenses optional)", "sources": ["D"] },
+        { "label": "throw distance", "value": "30 m (maker's figure)", "sources": ["D"] },
+        { "label": "ingress protection", "value": "IP65", "sources": ["D"] },
+        { "label": "power", "value": "not published — owed", "sources": [] },
+        { "label": "DMX channels", "value": "not published — owed", "sources": [] }
+      ],
+      "alternatives": [
+        { "maker": "Chauvet Professional", "model": "COLORado 1-Quad Zoom", "url": "https://chauvetprofessional.com/product/colorado-1-quad-zoom/", "why": "7x15 W RGBW, IP65, with a motorised 7°-45° zoom this fixture lacks — more flexible, more expensive.", "sources": ["CHAUVET-COLORADO1QZ"] },
+        { "maker": "Martin", "model": "RUSH PAR 2 RGBW Zoom", "url": "https://www.martin.com/en-US/products/rush-par-2-rgbw-zoom", "why": "12x10 W RGBW zoom PAR, cheaper, but IP20 — indoor only, so it would need a cover or roof outdoors.", "sources": ["MARTIN-RUSHPAR2"] }
+      ],
+      "photo": {
+        "file": "public/rigbuild/items/photos/up-pl5403.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:LED_par.JPG",
+        "author": "vampshow",
+        "licence": "Public domain (self-released, PD-self)",
+        "licenceUrl": "https://en.wikipedia.org/wiki/Public_domain",
+        "shows": "A classic chrome multi-LED PAR can — the same lens-and-can shape as this fixture, from a different, non-IP65 make."
+      },
+      "sources": {
+        "D": { "url": "https://www.pro-uplight.com/Waterproof-Par-Light-UP-PL5403-pd42953371.html", "what": "UPlight UP-PL5403, maker's site", "accessed": "2026-09-28" },
+        "WIKI-IL": { "url": "https://en.wikipedia.org/wiki/Intelligent_lighting", "what": "Wikipedia, 'Intelligent lighting' — general vocabulary", "accessed": "2026-09-28" },
+        "ANSI-E1.11": { "url": "https://tsp.esta.org/tsp/documents/docs/ANSI-ESTA_E1-11_2008R2018.pdf", "what": "ANSI E1.11 / USITT DMX512-A standard document", "accessed": "2026-09-28" },
+        "ICOPER": { "url": "https://www.plasa.org/wp-content/uploads/2017/11/ICOPER_V1.0.pdf", "what": "PLASA/ESTA International Code of Practice for Entertainment Rigging", "accessed": "2026-09-28" },
+        "CHAUVET-COLORADO1QZ": { "url": "https://chauvetprofessional.com/product/colorado-1-quad-zoom/", "what": "Chauvet Professional COLORado 1-Quad Zoom, maker's product page", "accessed": "2026-09-28" },
+        "MARTIN-RUSHPAR2": { "url": "https://www.martin.com/en-US/products/rush-par-2-rgbw-zoom", "what": "Martin RUSH PAR 2 RGBW Zoom, maker's product page", "accessed": "2026-09-28" }
+      }
+    },
+
+    {
+      "id": "up-cob200",
+      "codes": ["UP-COB200"],
+      "group": "lights",
+      "name": "COB PAR (indoor)",
+      "product": "UPlight UP-COB200, 200 W COB PAR",
+      "what": "A round, cast-aluminium can like the RGBW PAR above, but instead of many small LEDs it uses one large COB (chip-on-board) emitter behind its flat lens. That gives one smooth, shadowless beam of warm/cool white rather than 54 speckled points of colour. Indoor use.",
+      "whatSources": ["UP-COB200"],
+      "inShow": "Chosen for an even, TV-studio-style wash or as an audience/blinder light, where a smooth single-source beam matters more than saturated colour-mixing.",
+      "inShowSources": ["UP-COB200", "WIKI-IL"],
+      "preview": "wash",
+      "needs": [
+        { "kind": "power", "text": "AC100-240 V, 50/60 Hz; 200 W light source, 180 W rated draw.", "sources": ["UP-COB200"] },
+        { "kind": "signal", "text": "DMX512, 4 channels; also AUTO, sound-active and master-slave modes.", "sources": ["UP-COB200"] },
+        { "kind": "rigging", "text": "Floor-standing on its own bracket needs no special rigging; hung overhead it needs a truss clamp plus a secondary safety bond (ICOPER).", "sources": ["ICOPER"] },
+        { "kind": "safety", "text": "IP20: indoor use only.", "sources": ["UP-COB200"] }
+      ],
+      "specs": [
+        { "label": "size", "value": "295 x 295 x 350 mm", "sources": ["UP-COB200"] },
+        { "label": "weight", "value": "5.1 kg", "sources": ["UP-COB200"] },
+        { "label": "light source", "value": "200 W COB, 3200-5600 K (warm + cool white), CRI ≥ 90, 50,000 h", "sources": ["UP-COB200"] },
+        { "label": "beam angle", "value": "60° / 45° (selectable lens)", "sources": ["UP-COB200"] },
+        { "label": "ingress protection", "value": "IP20", "sources": ["UP-COB200"] },
+        { "label": "DMX channels", "value": "4", "sources": ["UP-COB200"] },
+        { "label": "strobe", "value": "1-25 flashes/second", "sources": ["UP-COB200"] }
+      ],
+      "alternatives": [
+        { "maker": "ADJ", "model": "COB Cannon Wash DW", "url": "https://www.adj.com/products/cob-cannon-wash-dw", "why": "150 W warm/cool-white COB PAR, the same single-emitter idea; this exact model is discontinued, replaced by the COB Cannon Wash ST DW.", "sources": ["ADJ-COBCANNON"] },
+        { "maker": "Chauvet Professional", "model": "COLORado 1-Quad Zoom", "url": "https://chauvetprofessional.com/product/colorado-1-quad-zoom/", "why": "If colour-mixing RGBW matters more than a smooth single-emitter wash, this multi-LED IP65 PAR is the trade-off — and it can also go outdoors.", "sources": ["CHAUVET-COLORADO1QZ"] }
+      ],
+      "photo": {
+        "file": "public/rigbuild/items/photos/up-cob200.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:LED_par.JPG",
+        "author": "vampshow",
+        "licence": "Public domain (self-released, PD-self)",
+        "licenceUrl": "https://en.wikipedia.org/wiki/Public_domain",
+        "shows": "A classic multi-LED PAR can — the UP-COB200 uses one large COB emitter behind the same style of can rather than many small LEDs; the photo shows the can shape, not the COB chip inside."
+      },
+      "sources": {
+        "UP-COB200": { "url": "https://up-light.en.made-in-china.com/product/bwWGPaldZMfD/China-High-Performance-200W-COB-PAR-Light-for-TV-Studio-Events.html", "what": "UPlight UP-COB200, maker's store page (model code confirmed on the page)", "accessed": "2026-09-28" },
+        "WIKI-IL": { "url": "https://en.wikipedia.org/wiki/Intelligent_lighting", "what": "Wikipedia, 'Intelligent lighting' — general vocabulary", "accessed": "2026-09-28" },
+        "ICOPER": { "url": "https://www.plasa.org/wp-content/uploads/2017/11/ICOPER_V1.0.pdf", "what": "PLASA/ESTA International Code of Practice for Entertainment Rigging", "accessed": "2026-09-28" },
+        "ADJ-COBCANNON": { "url": "https://www.adj.com/products/cob-cannon-wash-dw", "what": "ADJ COB Cannon Wash DW, maker's product page (discontinued)", "accessed": "2026-09-28" },
+        "CHAUVET-COLORADO1QZ": { "url": "https://chauvetprofessional.com/product/colorado-1-quad-zoom/", "what": "Chauvet Professional COLORado 1-Quad Zoom, maker's product page", "accessed": "2026-09-28" }
+      }
+    },
+
+    {
+      "id": "up-la40wf",
+      "codes": ["UP-LA40WF"],
+      "group": "lasers",
+      "name": "Full-colour laser, 40 W",
+      "product": "Not found on UPlight's own site or store (0 hits across 420 store listings and the maker's product sitemap, checked 2026-09-28). Modelled on the same class of 40 W RGB IP65 laser sold by other makers, e.g. Blue Sea's BLLO-RGB40.",
+      "identified": "NOT FOUND — modelled on an EQUIVALENT",
+      "what": "A sealed, waterproof box — not a moving head — that fires a laser beam out through a small window. Inside, a fast-steering mirror (a galvo) sweeps the beam to draw lines, fans, tunnels or full graphics in haze, or across an audience. It mixes red, green and blue diode lasers to draw in full colour.",
+      "whatSources": ["BLUESEA"],
+      "inShow": "Used for beam fans and tunnels over an audience, aerial 'gobos made of light', or fine graphic 'laser writing' — a different visual language from any LED fixture, and one a director may never have specified before.",
+      "inShowSources": ["BLUESEA", "ILDA-BASICS"],
+      "preview": "laser-fan",
+      "needs": [
+        { "kind": "power", "text": "AC mains; about 1200 W drawn (includes cooling and electronics, not just the optical output).", "sources": ["BLUESEA"] },
+        { "kind": "signal", "text": "Controlled by DMX, or by a laser-show interface/software (FB4, Pangolin Beyond).", "sources": ["BLUESEA"] },
+        { "kind": "rigging", "text": "Mounts on a stand or truss clamp; the IP65 body is rated for outdoor or damp use.", "sources": ["BLUESEA"] },
+        { "kind": "safety", "text": "A laser of this power (tens of watts optical) is well above hand-held laser-pointer levels and falls under IEC 60825-1's higher hazard classes (3B/4). Before it is ever pointed at or over an audience it needs: a written laser safety assessment and an IEC 60825-1 classification of the actual unit; in the UK, compliance with the PLASA 'Guidance for the Safety of Display Lasers' that replaced HSE's HS(G)95; in the US, an FDA/CDRH variance from 21 CFR 1040.11(c) for any audience-scanning show. It should be operated only by a trained Laser Safety Officer (LSO), per ILDA's guidance.", "sources": ["IEC-60825", "HSE-INDG224", "PLASA-LASER", "FDA-CDRH", "ILDA-BASICS", "ILDA-AUDIENCE"] },
+        { "kind": "operator", "text": "A trained Laser Safety Officer (LSO) should run pre-show checks and hold responsibility for audience-scanning decisions.", "sources": ["ILDA-BASICS", "ILDA-AUDIENCE"] }
+      ],
+      "specs": [
+        { "label": "size", "value": "555 x 420 x 235 mm (without handle)", "sources": ["BLUESEA"] },
+        { "label": "weight", "value": "35 kg", "sources": ["BLUESEA"] },
+        { "label": "laser source", "value": "RGB diodes: red 10 W, green 14 W, blue 16 W optical", "sources": ["BLUESEA"] },
+        { "label": "divergence", "value": "< 1.3 mrad", "sources": ["BLUESEA"] },
+        { "label": "power draw", "value": "1200 W", "sources": ["BLUESEA"] },
+        { "label": "ingress protection", "value": "IP65", "sources": ["BLUESEA"] },
+        { "label": "control", "value": "DMX / FB4 / Pangolin Beyond", "sources": ["BLUESEA"] }
+      ],
+      "alternatives": [
+        { "maker": "Kvant", "model": "Spectrum 40 IP65", "url": "https://phantomdynamics.com/kvant-spectrum-40-ip65-40w-rgb-outdoor-laser-projector/", "why": "A closely matched 40 W RGB IP65 outdoor laser projector from a specialist laser maker; OPSL diodes give a wider colour gamut, at a professional-grade price.", "sources": ["KVANT-SPECTRUM40"] },
+        { "maker": "Laserworld", "model": "PL-20.000RGB IP65", "url": "https://www.laserworld.com/en/laserworld-pl/laserworld-pl-20-000rgb-ip65", "why": "20 W (half the power), IP65, cheaper — still a purpose-built show laser with DMX/Art-Net control.", "sources": ["LASERWORLD-PL20"] }
+      ],
+      "photo": {
+        "file": "public/rigbuild/items/photos/up-la40wf.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:Kesselhaus_Nightclub_Munich_Laser_Light_Show.jpg",
+        "author": "d26b73",
+        "licence": "CC BY 2.0",
+        "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+        "shows": "A laser fan effect over an audience at a nightclub, from an unnamed laser projector — illustrates the audience-scanning hazard this item's safety note refers to. Not the UP-LA40WF itself."
+      },
+      "sources": {
+        "BLUESEA": { "url": "https://www.bluesealighting.com/waterproof-40w-rgb-animation-laser-light.html", "what": "Blue Sea BLLO-RGB40, 40 W RGB IP65 laser — equivalent for UP-LA40WF", "accessed": "2026-09-26" },
+        "ILDA-BASICS": { "url": "https://www.ilda.com/safety-basics.htm", "what": "International Laser Display Association, 'Basic Principles of Lasershow Safety'", "accessed": "2026-09-28" },
+        "ILDA-AUDIENCE": { "url": "https://www.ilda.com/audiencescanningsafety.htm", "what": "International Laser Display Association, 'How to do safe audience scanning'", "accessed": "2026-09-28" },
+        "IEC-60825": { "url": "https://webstore.iec.ch/en/publication/3587", "what": "IEC 60825-1:2014, Safety of laser products — Part 1: Equipment classification and requirements", "accessed": "2026-09-28" },
+        "HSE-INDG224": { "url": "https://www.hse.gov.uk/pubns/indg224.htm", "what": "UK Health and Safety Executive, 'The safety of laser lighting displays' (now points to the PLASA guidance below)", "accessed": "2026-09-28" },
+        "PLASA-LASER": { "url": "https://www.plasa.org/guidance-for-display-lasers/", "what": "PLASA, 'Guidance for the Safety of Display Lasers' — the current UK industry guidance, endorsed by HSE", "accessed": "2026-09-28" },
+        "FDA-CDRH": { "url": "https://www.fda.gov/radiation-emitting-products/home-business-and-entertainment-products/laser-light-shows", "what": "US FDA/CDRH, 'Laser Light Shows' — variance requirement under 21 CFR 1040.11(c) for audience scanning", "accessed": "2026-09-28" },
+        "KVANT-SPECTRUM40": { "url": "https://phantomdynamics.com/kvant-spectrum-40-ip65-40w-rgb-outdoor-laser-projector/", "what": "Kvant Spectrum 40 IP65, dealer page reproducing the maker's specification sheet", "accessed": "2026-09-28" },
+        "LASERWORLD-PL20": { "url": "https://www.laserworld.com/en/laserworld-pl/laserworld-pl-20-000rgb-ip65", "what": "Laserworld PL-20.000RGB IP65, maker's product page", "accessed": "2026-09-28" }
+      }
+    },
+
+    {
+      "id": "up-by06",
+      "codes": ["UP-BY06"],
+      "group": "lasers",
+      "name": "Swing laser, 6-eye (red)",
+      "product": "Not found on UPlight's own site or store search (checked 2026-09-28). Modelled on the same 6-head, single-colour laser-effect class sold by other makers, e.g. LIRO Lighting's LR-R6.",
+      "identified": "NOT FOUND — modelled on an EQUIVALENT",
+      "what": "A small moving unit with six separate red laser emitters that pan and tilt together, throwing six beams that sweep through haze to build a moving fan or star pattern. A cheaper, single-colour cousin of the RGB laser projector above, sold as a plug-and-play club effect rather than a graphics laser.",
+      "whatSources": ["EQ-LIRO-BY06"],
+      "inShow": "Used for a wide, low-cost sweep of red beams over a dancefloor or audience area — texture and movement rather than drawn graphics. The same audience-safety questions apply the moment it can reach the audience.",
+      "inShowSources": ["EQ-LIRO-BY06", "WIKI-IL"],
+      "preview": "laser-swing",
+      "needs": [
+        { "kind": "power", "text": "AC 110-230 V ±10%, 50-60 Hz; 150 W rated.", "sources": ["EQ-LIRO-BY06"] },
+        { "kind": "signal", "text": "DMX512, 11 or 23-channel mode.", "sources": ["EQ-LIRO-BY06"] },
+        { "kind": "rigging", "text": "Mounts on a stand or truss clamp; the maker's page does not state an ingress-protection rating — treat as indoor until confirmed (owed).", "sources": [] },
+        { "kind": "safety", "text": "Even a single-colour laser effect is subject to the same rules as the RGB laser above: an IEC 60825-1 classification of the actual unit, the audience-scanning safeguards, and a trained Laser Safety Officer. The rental listing gives no class for this unit — that number is owed before it can be used over an audience.", "sources": ["IEC-60825", "ILDA-BASICS", "ILDA-AUDIENCE", "HSE-INDG224", "PLASA-LASER", "FDA-CDRH"] },
+        { "kind": "operator", "text": "A trained Laser Safety Officer (LSO) should run pre-show checks and hold responsibility for audience-scanning decisions.", "sources": ["ILDA-BASICS"] }
+      ],
+      "specs": [
+        { "label": "laser (equivalent unit)", "value": "red, 638 nm, 500 mW per head x 6 heads", "sources": ["EQ-LIRO-BY06"] },
+        { "label": "size (equivalent unit)", "value": "950 x 190 x 300 mm", "sources": ["EQ-LIRO-BY06"] },
+        { "label": "power (equivalent unit)", "value": "150 W rated", "sources": ["EQ-LIRO-BY06"] },
+        { "label": "DMX channels (equivalent unit)", "value": "11 or 23", "sources": ["EQ-LIRO-BY06"] },
+        { "label": "scan range (equivalent unit)", "value": "X 0°-270°, Y 0°-135°", "sources": ["EQ-LIRO-BY06"] }
+      ],
+      "alternatives": [
+        { "maker": "Chauvet DJ", "model": "Scorpion Storm RGBY", "url": "https://www.chauvetdj.com/products/scorpion-storm-rgby/", "why": "A real, currently-sold multi-beam laser effect from a known maker. It builds its 'starfield' with a rotating mirror rather than six swinging heads, and it is multi-colour (RGBY) rather than single red — the closest real match for the effect, not the mechanism.", "sources": ["CHAUVET-SCORPIONSTORM"] }
+      ],
+      "alternativesNote": "No major Western maker was found selling a 6-head swing-arm red laser to compare directly — this is a Chinese club-fixture category. A second, closer alternative is owed.",
+      "photo": {
+        "file": "public/rigbuild/items/photos/up-by06.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:Kesselhaus_Nightclub_Munich_Laser_Light_Show.jpg",
+        "author": "d26b73",
+        "licence": "CC BY 2.0",
+        "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+        "shows": "A generic multi-beam laser fan over an audience at a nightclub — illustrates the class of effect, not a 6-eye swing unit specifically, and not the UP-BY06 itself."
+      },
+      "sources": {
+        "EQ-LIRO-BY06": { "url": "https://lirolighting.en.made-in-china.com/product/vTIpkhUPbWcB/China-6-Eyes-500MW-Red-laser-Light-RGB-DMX-Moving-Laser-Light.html", "what": "LIRO Lighting LR-R6, 6x500mW red laser effect — equivalent for UP-BY06 (same market class, not the same maker)", "accessed": "2026-09-28" },
+        "WIKI-IL": { "url": "https://en.wikipedia.org/wiki/Intelligent_lighting", "what": "Wikipedia, 'Intelligent lighting' — general vocabulary", "accessed": "2026-09-28" },
+        "IEC-60825": { "url": "https://webstore.iec.ch/en/publication/3587", "what": "IEC 60825-1:2014, Safety of laser products — Part 1", "accessed": "2026-09-28" },
+        "ILDA-BASICS": { "url": "https://www.ilda.com/safety-basics.htm", "what": "International Laser Display Association, 'Basic Principles of Lasershow Safety'", "accessed": "2026-09-28" },
+        "ILDA-AUDIENCE": { "url": "https://www.ilda.com/audiencescanningsafety.htm", "what": "International Laser Display Association, 'How to do safe audience scanning'", "accessed": "2026-09-28" },
+        "HSE-INDG224": { "url": "https://www.hse.gov.uk/pubns/indg224.htm", "what": "UK HSE, 'The safety of laser lighting displays'", "accessed": "2026-09-28" },
+        "PLASA-LASER": { "url": "https://www.plasa.org/guidance-for-display-lasers/", "what": "PLASA, 'Guidance for the Safety of Display Lasers'", "accessed": "2026-09-28" },
+        "FDA-CDRH": { "url": "https://www.fda.gov/radiation-emitting-products/home-business-and-entertainment-products/laser-light-shows", "what": "US FDA/CDRH, 'Laser Light Shows'", "accessed": "2026-09-28" },
+        "CHAUVET-SCORPIONSTORM": { "url": "https://www.chauvetdj.com/products/scorpion-storm-rgby/", "what": "Chauvet DJ Scorpion Storm RGBY, maker's product page", "accessed": "2026-09-28" }
+      }
+    },
+
+    {
+      "id": "up-jg400",
+      "codes": ["UP-JG400"],
+      "group": "lasers",
+      "name": "Full-colour laser, 400 mW",
+      "product": "Not found on UPlight's own site or store search (checked 2026-09-28). Modelled on the same entry-level 400 mW RGB graphics-laser class sold by other makers, e.g. X-Laser's Mobile Beat Mirage.",
+      "identified": "NOT FOUND — modelled on an EQUIVALENT",
+      "what": "A compact, sealed laser projector — much smaller than the 40 W unit above — with a mirror-steered RGB beam for drawing lines, graphics or beam effects. Entry-level power for this kind of fixture: sized for a DJ booth or small venue, not a festival stage.",
+      "whatSources": ["EQ-XLASER-JG400"],
+      "inShow": "Used where the rig only needs a small graphics or beam-laser accent — a single point-source aerial or graphic effect — rather than a room-filling laser wash.",
+      "inShowSources": ["EQ-XLASER-JG400"],
+      "preview": "laser-fan",
+      "needs": [
+        { "kind": "power", "text": "Mains via PowerCon; 40 W typical draw, 60 W maximum, on the equivalent unit.", "sources": ["EQ-XLASER-JG400"] },
+        { "kind": "signal", "text": "24-channel DMX, ILDA, or Auto-via-DMX on the equivalent unit.", "sources": ["EQ-XLASER-JG400"] },
+        { "kind": "rigging", "text": "Mounts on a stand or truss clamp; sealed optical deck resists haze, fog and dust, but no IP number is published for the equivalent unit.", "sources": ["EQ-XLASER-JG400"] },
+        { "kind": "safety", "text": "The equivalent unit is independently tested to FDA/IEC hazard Class 3B under IEC 60825-1. The same rules apply as for the other lasers in this catalogue: a written safety assessment, the audience-scanning safeguards, and a trained Laser Safety Officer. The rental listing gives no class for the actual UP-JG400 — that number is owed.", "sources": ["EQ-XLASER-JG400", "IEC-60825", "ILDA-BASICS", "ILDA-AUDIENCE", "HSE-INDG224", "PLASA-LASER", "FDA-CDRH"] },
+        { "kind": "operator", "text": "A trained Laser Safety Officer (LSO) should run pre-show checks and hold responsibility for audience-scanning decisions.", "sources": ["ILDA-BASICS"] }
+      ],
+      "specs": [
+        { "label": "laser power (equivalent unit)", "value": "400 mW raw", "sources": ["EQ-XLASER-JG400"] },
+        { "label": "wavelengths (equivalent unit)", "value": "630 nm red, 532 nm green, 450 nm blue", "sources": ["EQ-XLASER-JG400"] },
+        { "label": "divergence (equivalent unit)", "value": "1.5 mrad", "sources": ["EQ-XLASER-JG400"] },
+        { "label": "size (equivalent unit)", "value": "165 x 216 x 190 mm", "sources": ["EQ-XLASER-JG400"] },
+        { "label": "weight (equivalent unit)", "value": "2.95 kg", "sources": ["EQ-XLASER-JG400"] },
+        { "label": "laser hazard class (equivalent unit)", "value": "3B (IEC 60825-1 / FDA)", "sources": ["EQ-XLASER-JG400", "IEC-60825"] }
+      ],
+      "alternatives": [
+        { "maker": "Laserworld", "model": "PL-5000 MK3", "url": "https://www.simplysoundandlighting.co.uk/products/laserworld-pl-5000-mk3-5000-mw-rgb-laser-unit", "why": "5000 mW — twelve times the power — from a specialist laser maker; scales the same idea up for a larger room.", "sources": ["LASERWORLD-PL5000"] },
+        { "maker": "Kvant", "model": "Spectrum 40 IP65", "url": "https://phantomdynamics.com/kvant-spectrum-40-ip65-40w-rgb-outdoor-laser-projector/", "why": "The professional, weatherproof route if it needs to work outdoors — far more power and price.", "sources": ["KVANT-SPECTRUM40"] }
+      ],
+      "photo": {
+        "file": "public/rigbuild/items/photos/up-jg400.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:Kesselhaus_Nightclub_Munich_Laser_Light_Show.jpg",
+        "author": "d26b73",
+        "licence": "CC BY 2.0",
+        "licenceUrl": "https://creativecommons.org/licenses/by/2.0",
+        "shows": "A laser fan effect over an audience at a nightclub, from an unnamed (larger) laser projector — illustrates the class of effect, not the UP-JG400's actual scale or output."
+      },
+      "sources": {
+        "EQ-XLASER-JG400": { "url": "https://davlsupply.com/products/x-laser-mobile-beat-mirage-400mw-rgb-animation-laser-with-quickshow-fb3-and-25ft-ilda-cable", "what": "X-Laser Mobile Beat Mirage, dealer page reproducing the maker's specification sheet — equivalent for UP-JG400 (400mW RGB, same power class)", "accessed": "2026-09-28" },
+        "IEC-60825": { "url": "https://webstore.iec.ch/en/publication/3587", "what": "IEC 60825-1:2014, Safety of laser products — Part 1", "accessed": "2026-09-28" },
+        "ILDA-BASICS": { "url": "https://www.ilda.com/safety-basics.htm", "what": "International Laser Display Association, 'Basic Principles of Lasershow Safety'", "accessed": "2026-09-28" },
+        "ILDA-AUDIENCE": { "url": "https://www.ilda.com/audiencescanningsafety.htm", "what": "International Laser Display Association, 'How to do safe audience scanning'", "accessed": "2026-09-28" },
+        "HSE-INDG224": { "url": "https://www.hse.gov.uk/pubns/indg224.htm", "what": "UK HSE, 'The safety of laser lighting displays'", "accessed": "2026-09-28" },
+        "PLASA-LASER": { "url": "https://www.plasa.org/guidance-for-display-lasers/", "what": "PLASA, 'Guidance for the Safety of Display Lasers'", "accessed": "2026-09-28" },
+        "FDA-CDRH": { "url": "https://www.fda.gov/radiation-emitting-products/home-business-and-entertainment-products/laser-light-shows", "what": "US FDA/CDRH, 'Laser Light Shows'", "accessed": "2026-09-28" },
+        "LASERWORLD-PL5000": { "url": "https://www.simplysoundandlighting.co.uk/products/laserworld-pl-5000-mk3-5000-mw-rgb-laser-unit", "what": "Laserworld PL-5000 MK3, dealer page reproducing the maker's specification sheet", "accessed": "2026-09-28" },
+        "KVANT-SPECTRUM40": { "url": "https://phantomdynamics.com/kvant-spectrum-40-ip65-40w-rgb-outdoor-laser-projector/", "what": "Kvant Spectrum 40 IP65, dealer page reproducing the maker's specification sheet", "accessed": "2026-09-28" }
+      }
+    }
+  ]
+}

@@ -9,7 +9,8 @@ import { plotData, sheetModel } from './sheet.js'
 import { boxesOf, freeEnds, piecesOf, trussRuns } from './plotGeometry.js'
 import { keyRows, symbolTable } from './plotSymbols.js'
 import { venueOf } from './venuePlan.js'
-import { countsByType, rentalCounts, rentalOf } from './rental.js'
+import { countsByType, libraryWithShow, rentalCounts, rentalOf } from './rental.js'
+import { orderFlags } from './equipment.js'
 
 // A CONFLICT is something wrong that someone must resolve before the rig is
 // plugged — drawn dashed with a flag. An OWED item (a mode the rental house has not
@@ -20,6 +21,13 @@ export const CONFLICT_CODES = new Set([
     'no-room', 'profile-clash', 'profile-refused', 'group-split', 'unknown-type'
 ])
 
+// Against the EQUIPMENT LIST (RIG_BUILD.md §13): a lamp past its line's count (the last
+// placed), or of a type the list does not carry. Drawn like a conflict — someone must
+// resolve it before the rig is plugged, because the lamp will not be there — but it is
+// not a patch fault: the patch bars do not hatch it and offer no "move to next free".
+export const ORDER_CODES = new Set(['over-order', 'not-on-list'])
+const ORDER_WORDS = { 'over-order': 'more placed than the equipment list orders — this is one of the last placed', 'not-on-list': 'its type is not on the equipment list' }
+
 /**
  * @param {object} args
  * @param {object[]} args.entities
@@ -27,7 +35,9 @@ export const CONFLICT_CODES = new Set([
  * @param {{key: string, code: string, message?: string}[]} [args.deskFlags]  auto-patch's flags
  * @param {string} [args.projectId]
  */
-export const plotModel = ({ entities = [], library, deskFlags = [], projectId = '' }) => {
+export const plotModel = ({ entities = [], library: base, deskFlags = [], projectId = '' }) => {
+    const library = libraryWithShow(base, entities)
+    const order = orderFlags(entities)
     const sheet = sheetModel({ entities, library })
     const data = plotData({ entities, library })
     const rowById = new Map(sheet.rows.map((r) => [r.id, r]))
@@ -41,8 +51,9 @@ export const plotModel = ({ entities = [], library, deskFlags = [], projectId = 
     const lamps = data.lamps.map((l) => {
         const row = rowById.get(l.id)
         const desk = flagsByEntity.get(l.id) || []
-        const codes = [...new Set([...(row?.flags || []), ...desk.map((f) => f.code)])]
-        const conflicts = codes.filter((c) => CONFLICT_CODES.has(c))
+        const ordered = order.get(l.id)
+        const codes = [...new Set([...(row?.flags || []), ...desk.map((f) => f.code), ...(ordered ? [ordered] : [])])]
+        const conflicts = codes.filter((c) => CONFLICT_CODES.has(c) || ORDER_CODES.has(c))
         const entity = byId.get(l.id)
         return {
             ...l,
@@ -55,7 +66,7 @@ export const plotModel = ({ entities = [], library, deskFlags = [], projectId = 
             watts: row?.watts ?? null,
             flags: codes,
             conflicts,
-            notes: [...(row?.notes || []), ...desk.map((f) => f.message).filter(Boolean)],
+            notes: [...(row?.notes || []), ...desk.map((f) => f.message).filter(Boolean), ...(ordered ? [ORDER_WORDS[ordered]] : [])],
             colour: entity?.components?.light?.color || null,
             row
         }

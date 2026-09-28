@@ -10,11 +10,11 @@
 // list at all, the hand takes every type in the library, unlimited, and says so.
 
 import { PIECES, pieceKindOf } from './pieces.js'
-import { rentalCounts, rentalOf } from './rental.js'
+import { libraryWithShow, rentalCounts, rentalOf } from './rental.js'
 
 export const PIECE_SLOTS = ['truss-3m', 'truss-2m', 'truss-1m', 'tower', 'deck-2x1']
 
-const EFFECT_CATEGORIES = new Set(['co2-jet', 'spark-machine', 'smoke-machine'])
+import { EFFECT_CATEGORIES } from './plotSymbols.js'
 
 /** Is a type an effect (a box on the floor, no beam)? The plot's own test (plotEdits lampEntity). */
 export const isEffect = (type) => Boolean(type) && !type.optics?.beam_deg && EFFECT_CATEGORIES.has(type.category)
@@ -26,7 +26,10 @@ const shortCode = (code) => String(code || '').replace(/^UP-/, '')
  *   {id, key: '1'..'9' | '0' | null, kind: 'truss-3m' | … | 'lamp', label, type?, effect?,
  *    placed, ordered|null, left|null, full: boolean, words}
  */
-export const hotbarSlots = ({ entities = [], library }) => {
+export const hotbarSlots = ({ entities = [], library: base }) => {
+    // The show's own types (RIG_BUILD.md §13: a hazer from the Open Fixture Library) are
+    // in the hand like the library's.
+    const library = libraryWithShow(base, entities)
     const pieceCounts = new Map()
     for (const e of entities) {
         const k = pieceKindOf(e)

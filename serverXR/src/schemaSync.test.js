@@ -457,6 +457,11 @@ describe('ESM/CJS mirror equivalence', () => {
         // no code or no count is dropped, a list with no item is dropped whole.
         { id: 'r1', type: 'group', components: { rentalList: { name: ' order ', source: 'x.xlsx', currency: 'AMD', items: [{ code: ' UP-B380F ', ordered: 18, stock: 18, rate: 20000, label: 'beam', source: 'Price list!D6' }, { code: 'UP-PL5403', ordered: '50', stock: -1 }, { code: '', ordered: 2 }, { code: 'X', ordered: 1.5 }], extra: 1 } } },
         { id: 'r2', type: 'group', components: { rentalList: { items: [{ code: 'A' }] } } },
+        // The equipment list (RIG_BUILD.md §13): an item line, the day rule, a show type from
+        // OFL with its channels (a mode whose list does not match its footprint loses the
+        // list), the price list and its terms; an emptied list with a name stays a list.
+        { id: 'r3', type: 'group', components: { rentalList: { name: 'show', days: 2, dates: { from: '2026-10-16', to: '2026-10-17' }, rule: { extraDay: 0.5, source: 'Price list!A2' }, items: [{ code: 'Art-Net node', type: 'item-artnet', kind: 'item', ordered: 1, from: 'other', supplier: 'x', category: 'node', watts: 12, note: '4 universes' }, { code: 'MDG ATMe', type: 'ofl-mdg-atme', ordered: 2, from: 'bogus' }], types: [{ id: 'ofl-mdg-atme', code: 'MDG ATMe', category: 'hazer', modes: [{ name: '3ch', footprint: 3, channels: [{ role: 'control', label: 'Unit' }, { role: 'aux1', label: 'Out' }, { role: 'aux2', label: 'Haze' }] }, { name: 'bad', footprint: 2, channels: [{ role: 'x' }] }], power_w: { value: 1400, src: 'OFL' }, sources: { OFL: { url: 'https://open-fixture-library.org/mdg/atme', what: 'OFL', licence: 'MIT' } }, ofl: { manufacturer: 'mdg', key: 'atme' } }, { id: 'Bad Id', code: 'x' }], catalogue: [{ code: 'UP-236', label: 'Mist', stock: 2, rate: 14000, cells: 'Price list!A24:E24' }], terms: [{ text: 'Day 1 full rate', cell: 'Price list!A2' }] } } },
+        { id: 'r4', type: 'group', components: { rentalList: { name: 'emptied', items: [] } } },
         // The rig's looks (RIG_BUILD.md §11.4): numbers only in a rule, a bad key or colour dropped.
         { id: 'l1', type: 'group', components: { rigLooks: { source: 'rig.json', looks: [{ id: 'roof-cathedral', title: 'Roof', aims: { 'column-bases/up-b380f': { rule: 'vertical', in_deg: '8', note: 'x' }, 'bad key': { rule: 'fan' } }, colours: { 'column-bases/up-b380f': '#EEF3FF', 'truss/up-250bsw': 'blue' } }, { id: 'Bad Id' }] } } }
       ]
@@ -544,6 +549,19 @@ describe('ESM/CJS mirror equivalence', () => {
       { code: 'UP-PL5403', type: 'up-pl5403', ordered: 50 }
     ])
     expect(doc.entities[1].components.rentalList).toBeUndefined()
+  })
+
+  it('keeps the equipment list\'s new fields through the mirror (RIG_BUILD.md §13)', () => {
+    const doc = schema.normalizeProjectDocument({ entities: [
+      { id: 'r3', type: 'group', components: { rentalList: { name: 'show', days: 400, rule: { extraDay: 2 }, items: [{ code: 'node', kind: 'item', ordered: 1, from: 'other', category: 'node' }], types: [{ id: 'ofl-mdg-atme', code: 'MDG ATMe', modes: [{ name: '3ch', footprint: 3, channels: [{ role: 'a', label: 'A' }] }] }] } } },
+      { id: 'r4', type: 'group', components: { rentalList: { name: 'emptied', items: [] } } }
+    ] })
+    const list = doc.entities[0].components.rentalList
+    expect(list.items[0]).toEqual({ code: 'node', type: 'node', ordered: 1, kind: 'item', from: 'other', category: 'node' })
+    expect(list.days).toBeUndefined()
+    expect(list.rule).toBeUndefined()
+    expect(list.types[0]).toMatchObject({ id: 'ofl-mdg-atme', modes: [{ name: '3ch', footprint: 3, channels: null }], defaultMode: '3ch', modesOwed: false })
+    expect(doc.entities[1].components.rentalList).toMatchObject({ name: 'emptied', items: [] })
   })
 
   it('keeps components.rigLooks to numbers and short words through the mirror', () => {

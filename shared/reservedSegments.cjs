@@ -49,7 +49,12 @@ const APP_SEGMENTS = [
     // `/{space}/crew/{project}` — the same room, read-only, for the crew. Checked
     // on all three tiers before reserving (2026-09-28): nothing answers to either.
     'build',
-    'crew'
+    'crew',
+    // `/{space}/equipment/{project}` — the show's equipment list: the inventory and the
+    // order (docs/architecture/RIG_BUILD.md §13). Checked on all three tiers before
+    // reserving (2026-09-28): /serverXR/api/spaces/equipment and /projects/equipment
+    // answer 404 on diiii.xyz, dev.diiii.xyz and the local install.
+    'equipment'
 ]
 
 // Real directories under public/, plus the build's own output prefixes, served
@@ -63,6 +68,10 @@ const APP_SEGMENTS = [
 const STATIC_SEGMENTS = [
     'assets', 'basis', 'brand', 'draco', 'fonts', 'get', 'og',
     'serverXR', 'suite', 'unicode-fonts', 'vendor',
+    // The rig builder's inventory pictures (public/rigbuild/items/: our own renders and
+    // licensed photos, docs/architecture/RIG_BUILD.md §13). Checked 2026-09-28: no space
+    // "rigbuild" on diiii.xyz, dev.diiii.xyz or the local install.
+    'rigbuild',
     // The studio chat's manifest and icons. Named `chat-app` and not `chat`
     // ON PURPOSE: a directory that matches the ROUTE shadows it — nginx serves
     // the directory before the SPA fallback and express.static redirects the

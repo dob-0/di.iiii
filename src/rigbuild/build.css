@@ -170,3 +170,10 @@
     .rigbuild.is-phone .rigbuild-totals { max-width: 40vw; }
     .rigbuild.is-phone .rigbuild-sheet.rigplot { inset: 8px 8px 8px auto; width: 320px; max-height: none; }
 }
+
+/* the inventory (E, or the items button) — the equipment list's tiles over the room,
+   the hotbar along its foot (src/rigbuild/Inventory.jsx, RIG_BUILD.md §13) */
+.rigbuild-mode--items { left: auto; right: 16px; top: auto; bottom: 16px; border-color: rgba(255, 255, 255, 0.6); }
+.rigbuild.is-building .rigbuild-mode--items { bottom: 16px; }
+.rigbuild-inventory { position: absolute; inset: 0; z-index: 30; }
+.rigbuild.is-phone .rigbuild-mode--items { top: 58px; left: auto; right: auto; bottom: auto; left: 96px; }

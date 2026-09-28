@@ -3,6 +3,7 @@ import { lightingApiUrl } from '../../map/lightingLink.js'
 import { getSharedLightingMirror } from '../../rigMirror/useLightingMirror.js'
 import { addressMap, autoPatch, lampSignature, rigKeyOf, typedMoves } from '../../rigbuild/autoPatch.js'
 import { TYPE_LIBRARY } from '../../rigbuild/types/index.js'
+import { libraryWithShow } from '../../rigbuild/rental.js'
 
 // AUTO-PATCH in the Studio (docs/architecture/RIG_BUILD.md §4): whenever the room's
 // lamps change — placed, duplicated, pasted, deleted, a mode or an address changed —
@@ -39,7 +40,8 @@ export function useRigAutoPatch({ projectId, entities = [], applyOps, library = 
             if (!(await store.probe())) return { ok: false, message: 'no desk on this machine' }
             const { entities: now, applyOps: apply } = latest.current
             const moved = known.current ? typedMoves(now, known.current) : new Set()
-            const out = await autoPatch({ projectId, entities: now, library, post: postImpl, applyOps: apply, moved, ...options })
+            // The show's own types (RIG_BUILD.md §13) patch like the library's.
+            const out = await autoPatch({ projectId, entities: now, library: libraryWithShow(library, now), post: postImpl, applyOps: apply, moved, ...options })
             if (out.ok && out.result) {
                 const agreed = addressMap(now)
                 for (const a of out.result.assignments || []) {

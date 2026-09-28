@@ -1,0 +1,42 @@
+ITEM CATALOGUE ENTRY — src/rigbuild/items/<group>.json = { "items": [ entry, ... ] }
+
+{
+  "id": "up-q108s",                 // the fixture type id when one exists (the rental code lowercased),
+                                    // else a short slug: "hazer", "artnet-node", "truss", "tower", "deck"
+  "codes": ["UP-Q108S"],            // the rental house codes this item answers to ([] when none)
+  "group": "effects",               // lights | lasers | effects | control | structure | network
+  "name": "CO₂ jet",                // the plain name a theatre director would use
+  "product": "UPlight UP-Q108S CO₂ gas column gun",  // what the rental list calls it
+  "what": "…",                      // WHAT IT IS, plain words, 2–4 short sentences, for someone who has
+                                    // never seen one: what it looks like, what comes out, loud? hot? cold?
+  "whatSources": ["KEY", ...],
+  "inShow": "…",                    // WHAT IT DOES IN THE SHOW, 1–3 sentences: when a designer uses it
+  "inShowSources": ["KEY", ...],
+  "preview": "co2",                 // beam | spot | wash | matrix | laser-fan | laser-swing | co2 | sparks |
+                                    // smoke | haze | lowfog | mist | effect | none   (the tiny looping preview)
+  "needs": [ { "kind": "consumable|safety|operator|power|signal|rigging|other", "text": "…", "sources": ["KEY"] } ],
+  "specs": [ { "label": "power", "value": "…", "sources": ["KEY"] } ],
+                                    // ONLY facts a source states. Unknown = omit it, or value "owed"
+                                    // with a note. Never invent a number. Units in SI.
+  "alternatives": [                 // 2–3 comparable REAL products you can link to
+    { "maker": "MDG", "model": "ATMe", "url": "https://…", "why": "…why choose it over this one…", "sources": ["KEY"] }
+  ],
+  "photo": null | {                 // ONLY a freely licensed photo (Wikimedia Commons: CC0, PD, CC BY, CC BY-SA)
+    "file": "public/rigbuild/items/photos/<id>.jpg",  // downloaded, resized to max 480 px wide, JPEG q80
+    "page": "https://commons.wikimedia.org/wiki/File:…",
+    "author": "…", "licence": "CC BY-SA 4.0", "licenceUrl": "https://creativecommons.org/…",
+    "shows": "what the photo actually shows (e.g. 'a CO2 jet of another make firing at a concert')"
+  },
+  "sources": { "KEY": { "url": "https://…", "what": "…", "accessed": "2026-09-28" } }
+}
+
+RULES
+- Never copy or hotlink UPlight's or any maker's product photos. Link the maker's page as a source.
+- Every sentence of "what", "inShow", "needs" and every spec rests on a source key listed with it.
+  General knowledge of the trade (e.g. what a hazer is) still needs a citable source: the maker's
+  manual/page, a standard (IEC 60825-1 for lasers, EN 12900? etc.), Wikipedia, PLASA/ESTA material.
+- Spec-sheet voice: short, plain, no sales words, no exclamation marks, no emoji.
+- Say when something is uncertain: "the rental house's page does not say; owed".
+- The UPlight code pages: the rental house's list maps each code to UPlight Stage Equipment (Guangzhou)
+  products; their store is up-light.en.made-in-china.com. Use them as the source for the product, text
+  only. Where the exact UPlight model page cannot be found, say so and describe the class of device.
