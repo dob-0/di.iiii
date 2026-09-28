@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { DEFAULT_TEST_PATTERN, TEST_PATTERNS } from './mapTestPattern.jsx'
 import { ndiSourceOptions, ndiSourceStatus, streamInputOptions, streamInputStatus } from './mapMachines.js'
 import { uploadProjectAsset } from '../project/services/projectsApi.js'
+import { cornerFromOutput, cornerToOutput, isWarpable, pointFromOutput, pointToOutput } from './pointEditing.js'
 
 const SOURCE_KINDS = [
     { id: 'test', label: 'Test pattern' },
@@ -17,17 +18,25 @@ const SOURCE_KINDS = [
 ]
 
 const BLEND_MODES = ['normal', 'screen', 'multiply', 'lighten', 'add']
+const CORNER_LABELS = ['TL', 'TR', 'BR', 'BL']
 
-// Everything about one surface. Split out of the desk because the desk was
-// becoming a file nobody could hold in their head at once.
+// THE PROPERTIES of one surface — Resolume's right-hand panel, in the same
+// order a slice's are read: what it is, where it goes, what it looks like.
+// Every number here can be typed. A corner or a point is shown in OUTPUT
+// pixels, the projector's own, because that is the number a person on a
+// ladder reads off the wall; the conversion lives in pointEditing.js.
 export default function MapInspector({
     surface,
+    selectionCount = 0,
+    output = { width: 1920, height: 1080 },
     projectId,
     assets = [],
     projectOptions,
     pictureOutOptions = [],
     machines = [],
     clipboard,
+    selectedPointIndex = null,
+    onSelectPoint,
     onUpdate,
     onUpsertAsset,
     onDelete,
@@ -35,18 +44,36 @@ export default function MapInspector({
     onCopy,
     onPasteShape,
     onPasteLook,
-    onMaskFromOutline,
-    onResetCorners
+    onAddPoint,
+    onClearPoints,
+    onResetCorners,
+    onReorder
 }) {
-    if (!surface) return <p className="map-empty">Pick a surface to change what it shows.</p>
+    if (!surface) return <p className="map-empty">Pick a surface to see its numbers. Ctrl+A picks them all.</p>
 
     const setSource = (kind, ref = '') => onUpdate(surface.id, { source: { kind, ref } })
+    const setCorner = (index, axis, value) => {
+        const current = cornerToOutput(surface.corners[index], output)
+        current[axis] = value
+        onUpdate(surface.id, { corners: surface.corners.map((corner, i) => (i === index ? cornerFromOutput(current, output) : corner)) })
+    }
+    const setPoint = (index, axis, value) => {
+        const current = pointToOutput(surface.points[index], output)
+        current[axis] = value
+        onUpdate(surface.id, { points: pointFromOutput(surface.points, index, output, current) })
+    }
+    const bendable = isWarpable(surface.source?.kind)
+    const points = bendable ? (surface.points || []).map((point) => pointToOutput(point, output)) : []
+    const shaped = Boolean(surface.points?.length || surface.mask?.length)
 
     return (
-        <>
+        <div className="map-props">
             <div className="map-panel-head">
-                <h2>{surface.name || surface.id}</h2>
-                <button type="button" className="map-mini is-danger" onClick={() => onDelete(surface.id)}>Delete</button>
+                <h2>
+                    {surface.name || surface.id}
+                    {selectionCount > 1 ? <span className="map-props-count" title="Delete, Ctrl+C, Ctrl+D and the arrows act on the whole selection">+{selectionCount - 1}</span> : null}
+                </h2>
+                <button type="button" className="map-mini is-danger" onClick={() => onDelete(surface.id)} title="Delete">Delete</button>
             </div>
 
             <label className="map-field">
@@ -147,7 +174,7 @@ export default function MapInspector({
                     value={surface.resolution[0]}
                     onChange={(event) => onUpdate(surface.id, { resolution: [Number(event.target.value) || 1, surface.resolution[1]] })}
                 />
-                <span aria-hidden="true">x</span>
+                <span aria-hidden="true">×</span>
                 <input
                     type="number"
                     min="1"
@@ -156,48 +183,95 @@ export default function MapInspector({
                 />
             </label>
 
-            <MapSlider label="Opacity" value={surface.opacity} min={0} max={1} step={0.01} onChange={(value) => onUpdate(surface.id, { opacity: value })} />
-            <MapSlider label="Brightness" value={surface.brightness} min={0} max={2} step={0.01} onChange={(value) => onUpdate(surface.id, { brightness: value })} />
-            <MapSlider label="Contrast" value={surface.contrast} min={0} max={2} step={0.01} onChange={(value) => onUpdate(surface.id, { contrast: value })} />
-            <MapSlider label="Saturation" value={surface.saturation} min={0} max={3} step={0.01} onChange={(value) => onUpdate(surface.id, { saturation: value })} />
-            <MapSlider label="Hue" value={surface.hue} min={-180} max={180} step={1} onChange={(value) => onUpdate(surface.id, { hue: value })} />
-
-            <label className="map-field">
-                <span>Blend</span>
-                <select value={surface.blend} onChange={(event) => onUpdate(surface.id, { blend: event.target.value })}>
-                    {BLEND_MODES.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
-                </select>
-            </label>
-
-            <div className="map-section">
-                <div className="map-panel-head"><h2>Shape</h2></div>
-                <div className="map-row">
-                    <button
-                        type="button"
-                        className="map-mini"
-                        onClick={() => onMaskFromOutline(surface.id)}
-                        title="Start the mask as the surface's own rectangle, then pull its corners in"
-                    >
-                        Mask from outline
-                    </button>
-                    <button type="button" className="map-mini" onClick={() => onUpdate(surface.id, { mask: [] })} disabled={!surface.mask.length}>
-                        Clear mask
-                    </button>
-                    <button type="button" className="map-mini" onClick={() => onResetCorners(surface.id)}>Reset corners</button>
+            <section className="map-props-section">
+                <div className="map-panel-head">
+                    <h3>Corners <span className="map-props-unit">px</span></h3>
+                    <button type="button" className="map-mini" onClick={() => onResetCorners(surface.id)} title="Put the four corners back on a plain rectangle">Reset</button>
                 </div>
-            </div>
+                <div className="map-xy-head" aria-hidden="true"><span /><span>X</span><span>Y</span></div>
+                {surface.corners.map((corner, index) => {
+                    const [x, y] = cornerToOutput(corner, output)
+                    return (
+                        <div key={index} className="map-xy">
+                            <span className="map-xy-label">{CORNER_LABELS[index]}</span>
+                            <input type="number" step="1" value={Math.round(x)} aria-label={`${CORNER_LABELS[index]} x`}
+                                onChange={(event) => setCorner(index, 0, Number(event.target.value) || 0)} />
+                            <input type="number" step="1" value={Math.round(y)} aria-label={`${CORNER_LABELS[index]} y`}
+                                onChange={(event) => setCorner(index, 1, Number(event.target.value) || 0)} />
+                        </div>
+                    )
+                })}
+            </section>
 
-            <div className="map-section">
-                <div className="map-panel-head"><h2>Copy</h2></div>
+            <section className="map-props-section">
+                <div className="map-panel-head">
+                    <h3>Points <span className="map-props-unit">px</span></h3>
+                    <div className="map-row">
+                        {bendable ? (
+                            <button type="button" className="map-mini" onClick={() => onAddPoint(surface.id)} title="A point on the edge after the held one — or double-click an edge on the stage">+ Point</button>
+                        ) : null}
+                        <button type="button" className="map-mini" onClick={() => onClearPoints(surface.id)} disabled={!shaped} title="Back to the plain four-cornered picture">Clear</button>
+                    </div>
+                </div>
+                {!bendable ? (
+                    <p className="map-empty">A web page or a project is pinned by its four corners and cannot be bent — a page cannot be drawn through a mesh. Bring it in as a video or an image to bend it.</p>
+                ) : points.length ? (
+                    <>
+                        <div className="map-xy-head" aria-hidden="true"><span /><span>X</span><span>Y</span></div>
+                        {points.map((point, index) => (
+                            <div key={index} className={`map-xy map-xy-point${index === selectedPointIndex ? ' is-selected' : ''}`}>
+                                <button type="button" className="map-xy-label" onClick={() => onSelectPoint?.(index === selectedPointIndex ? null : index)} title="Hold this point">
+                                    {index + 1}
+                                </button>
+                                {/* Typing into a point's field holds that point, so the
+                                    stage shows which number is being changed. */}
+                                <input type="number" step="1" value={Math.round(point[0])} aria-label={`point ${index + 1} x`}
+                                    onFocus={() => onSelectPoint?.(index)}
+                                    onChange={(event) => setPoint(index, 0, Number(event.target.value) || 0)} />
+                                <input type="number" step="1" value={Math.round(point[1])} aria-label={`point ${index + 1} y`}
+                                    onFocus={() => onSelectPoint?.(index)}
+                                    onChange={(event) => setPoint(index, 1, Number(event.target.value) || 0)} />
+                            </div>
+                        ))}
+                    </>
+                ) : (
+                    <p className="map-empty">Pinned flat by its corners. Double-click an edge and drag the point to bend the picture round a pillar or a fold.</p>
+                )}
+            </section>
+
+            <section className="map-props-section">
+                <div className="map-panel-head"><h3>Look</h3></div>
+                <MapSlider label="Opacity" value={surface.opacity} min={0} max={1} step={0.01} onChange={(value) => onUpdate(surface.id, { opacity: value })} />
+                <MapSlider label="Brightness" value={surface.brightness} min={0} max={2} step={0.01} onChange={(value) => onUpdate(surface.id, { brightness: value })} />
+                <MapSlider label="Contrast" value={surface.contrast} min={0} max={2} step={0.01} onChange={(value) => onUpdate(surface.id, { contrast: value })} />
+                <MapSlider label="Saturation" value={surface.saturation} min={0} max={3} step={0.01} onChange={(value) => onUpdate(surface.id, { saturation: value })} />
+                <MapSlider label="Hue" value={surface.hue} min={-180} max={180} step={1} onChange={(value) => onUpdate(surface.id, { hue: value })} />
+                <label className="map-field map-field-inline">
+                    <span>Blend</span>
+                    <select value={surface.blend} onChange={(event) => onUpdate(surface.id, { blend: event.target.value })}>
+                        {BLEND_MODES.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
+                    </select>
+                </label>
+            </section>
+
+            <section className="map-props-section">
+                <div className="map-panel-head"><h3>Order</h3></div>
                 <div className="map-row">
-                    <button type="button" className="map-mini" onClick={() => onDuplicate(surface.id)}>Duplicate</button>
-                    <button type="button" className="map-mini" onClick={() => onCopy(surface.id)} title="Hold this surface's shape and look">Copy</button>
+                    <button type="button" className="map-mini" onClick={() => onReorder?.(surface.id, -1)} title="Painted earlier — behind its neighbours">↓ Back</button>
+                    <button type="button" className="map-mini" onClick={() => onReorder?.(surface.id, 1)} title="Painted later — in front of its neighbours">↑ Front</button>
+                </div>
+            </section>
+
+            <section className="map-props-section">
+                <div className="map-row">
+                    <button type="button" className="map-mini" onClick={() => onDuplicate(surface.id)} title="Ctrl+D">Duplicate</button>
+                    <button type="button" className="map-mini" onClick={() => onCopy(surface.id)} title="Ctrl+C — hold this surface's shape and look">Copy</button>
                     <button
                         type="button"
                         className="map-mini"
                         onClick={() => onPasteShape(surface.id)}
                         disabled={!clipboard || clipboard.id === surface.id}
-                        title="Corners and mask from the copied surface"
+                        title="Corners and points from the copied surface"
                     >
                         Paste shape
                     </button>
@@ -212,8 +286,8 @@ export default function MapInspector({
                     </button>
                 </div>
                 {clipboard ? <p className="map-empty">Holding “{clipboard.name || clipboard.id}”.</p> : null}
-            </div>
-        </>
+            </section>
+        </div>
     )
 }
 
@@ -418,12 +492,27 @@ function MapCameraPicker({ value, onChange }) {
     )
 }
 
+// A slider AND a number: drag for the feel, type for the value. The number is
+// the one that goes on a call sheet.
 function MapSlider({ label, value, min, max, step, onChange }) {
+    const digits = step < 1 ? 2 : 0
     return (
         <label className="map-field map-field-slider">
             <span>{label}</span>
             <input type="range" min={min} max={max} step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} />
-            <output>{Number(value).toFixed(step < 1 ? 2 : 0)}</output>
+            <input
+                type="number"
+                className="map-field-number"
+                min={min}
+                max={max}
+                step={step}
+                value={Number(value).toFixed(digits)}
+                aria-label={`${label} value`}
+                onChange={(event) => {
+                    const next = Number(event.target.value)
+                    if (Number.isFinite(next)) onChange(Math.min(max, Math.max(min, next)))
+                }}
+            />
         </label>
     )
 }

@@ -11,7 +11,11 @@ const COALESCE_WINDOW_MS = 800
 const COALESCIBLE_TYPES = new Set([
     'updateEntity', 'updateComponent', 'updateNode', 'updateEdge',
     'setWorldState', 'setRenderSettings', 'setXrState', 'setPresentationState',
-    'setPublishState', 'setShowState', 'setWindowState', 'setWorkspaceState', 'setProjectMeta'
+    'setPublishState', 'setShowState', 'setWindowState', 'setWorkspaceState', 'setProjectMeta',
+    // The projection desk: a corner drag, a mask point drag or a slider scrub
+    // is one op per pointer tick, and one undo step per tick would fill the
+    // whole history with a single afternoon on a ladder.
+    'setMappingSurface', 'setMappingState', 'setMappingCue'
 ])
 
 const entrySignature = (ops) => {
@@ -19,7 +23,7 @@ const entrySignature = (ops) => {
     for (const op of ops) {
         if (!COALESCIBLE_TYPES.has(op?.type)) return null
         const payload = op.payload || {}
-        const target = payload.entityId || payload.nodeId || payload.edgeId || payload.windowId || ''
+        const target = payload.entityId || payload.nodeId || payload.edgeId || payload.windowId || payload.surfaceId || payload.cueId || ''
         let keys = Object.keys(payload.patch || {}).sort().join(',')
         // For node values the top-level patch key is ALWAYS just 'values', so
         // any two edits to one node coalesced — a window move and a chatId
@@ -75,6 +79,15 @@ const describeOp = (doc, op) => {
         case 'deleteEdge': return 'Disconnect nodes'
         case 'upsertAsset': return `Update asset ${payload.asset?.name || ''}`.trim()
         case 'deleteAsset': return 'Delete asset'
+        case 'createMappingSurface': return `Add ${payload.surface?.name || 'surface'}`
+        case 'setMappingSurface': return 'Edit surface'
+        case 'deleteMappingSurface': return 'Delete surface'
+        case 'reorderMappingSurfaces': return 'Reorder surfaces'
+        case 'createMappingCue': return `Add ${payload.cue?.name || 'cue'}`
+        case 'setMappingCue': return 'Edit cue'
+        case 'deleteMappingCue': return 'Delete cue'
+        case 'reorderMappingCues': return 'Reorder cues'
+        case 'setMappingState': return 'Projection settings'
         default: return SETTINGS_OP_LABELS[op?.type] || 'Edit'
     }
 }

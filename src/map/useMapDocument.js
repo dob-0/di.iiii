@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useProjectStore } from '../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../project/hooks/useProjectDocumentSync.js'
+import { useOpHistory } from '../project/hooks/useOpHistory.js'
 import { defaultMappingSurface, generateId } from '../shared/projectSchema.js'
 import { fireCue as fireCueShared } from './cueFiring.js'
 import { mapChannelName, useMapOpCourier } from './mapCourier.js'
@@ -28,7 +29,12 @@ export function useMapDocument(projectId, { role = 'desk' } = {}) {
     const document = state.document
     const mapping = document?.mappingState
 
-    const applyOps = useMapOpCourier(projectId, applyLocalOps)
+    // Courier first, history on top: an undo replays through the same courier
+    // as the edit it undoes, so the wall sees the corner go back the moment
+    // the desk presses the key, not a server round-trip later.
+    const courierOps = useMapOpCourier(projectId, applyLocalOps)
+    const history = useOpHistory({ projectId, document, applyLocalOps: courierOps })
+    const applyOps = history.applyLocalOps
 
     const surfaces = useMemo(() => mapping?.surfaces || [], [mapping])
     const surfaceById = useMemo(
@@ -95,10 +101,19 @@ export function useMapDocument(projectId, { role = 'desk' } = {}) {
         // src/map/cueFiring.js — the same call the 3D scene's cue strip makes.
         // Nothing downstream of that function can tell which tool pressed the
         // key, which is the whole point of letting two tools press it.
-        fireCue: (cue) => fireCueShared(cue, applyOps)
-    }), [applyOps])
+        //
+        // A cue fire goes round the history, not through it. Taking cue 3 is
+        // a show action, not an edit — Ctrl+Z at the desk must step back the
+        // last thing the operator CHANGED, never silently un-take a cue the
+        // room just saw.
+        fireCue: (cue) => fireCueShared(cue, courierOps)
+    }), [applyOps, courierOps])
 
-    return { store, document, mapping, surfaces, surfaceById, syncState, applyOps, ...api }
+    return {
+        store, document, mapping, surfaces, surfaceById, syncState, applyOps,
+        undo: history.undo, redo: history.redo, canUndo: history.canUndo, canRedo: history.canRedo,
+        ...api
+    }
 }
 
 // The output window's side of the courier: apply an edit the moment it is
