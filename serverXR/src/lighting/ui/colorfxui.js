@@ -1,4 +1,5 @@
 'use strict';
+/* global S, post, say, pullState, $, showPage, $$ -- defined by app.js, loaded first */
 // Colour effect pads (from the studio desk, 2026-09-24): Hue, Chase, Swap — beside the FX pads
 // on the Control rail and on Touch's FX strip, plus a top-bar pill while one runs. The
 // engine does the colouring (colorfx.js); these pads post POST /api/colorfx.
