@@ -1714,13 +1714,13 @@ check('objects ride along with scenes only when there are some', () => {
 
 check('the object validator clamps, defaults and caps the list', () => {
   const list = sanitizeObjects([
-    { kind: 'line', x: 9, y: -9, angle: -90, beats: 99, depth: 999, width: 50 },
+    { kind: 'line', x: 9000, y: -9000, angle: -90, beats: 99, depth: 999, width: 50 },
     { kind: 'laser' }, null,
     ...Array.from({ length: 12 }, () => ({ kind: 'spot' })),
   ]);
   assert.strictEqual(list.length, 8, 'at most eight');
   const l = list[0];
-  assert.deepStrictEqual([l.x, l.y, l.angle, l.beats, l.depth, l.width], [2, -1, 270, 64, 255, 1]);
+  assert.deepStrictEqual([l.x, l.y, l.angle, l.beats, l.depth, l.width], [1000, -1000, 270, 64, 255, 1]);   // di.iiii: ±WORLD
   assert.ok(list.slice(1).every((o) => o.kind === 'spot'), 'unknown kinds are dropped');
   assert.strictEqual(new Set(list.map((o) => o.id)).size, 8, 'every object gets its own id');
   assert.strictEqual(sanitizeObjects('nope'), null);
@@ -1731,14 +1731,14 @@ const { sanitizeMarkers, MAX_MARKERS } = require('../markers');
 
 check('labels: the validator clamps, names, dedupes ids and caps the list', () => {
   const list = sanitizeMarkers([
-    { id: 'a', text: '  DJ  ', x: 9, y: -9 },
+    { id: 'a', text: '  DJ  ', x: 9000, y: -9000 },
     { id: 'a', text: '' },                          // duplicate id, blank text
     null, 'nope',
     { text: 'x'.repeat(80), kind: 'rocket' },
     ...Array.from({ length: 30 }, (_, i) => ({ text: 'L' + i })),
   ]);
   assert.strictEqual(list.length, MAX_MARKERS, 'at most ' + MAX_MARKERS);
-  assert.deepStrictEqual(list[0], { id: 'a', kind: 'label', text: 'DJ', x: 2, y: -1 });
+  assert.deepStrictEqual(list[0], { id: 'a', kind: 'label', text: 'DJ', x: 1000, y: -1000 });   // di.iiii: ±WORLD
   assert.notStrictEqual(list[1].id, 'a', 'a repeated id is made unique');
   assert.strictEqual(list[1].text, 'Label', 'a blank label is still visible');
   assert.strictEqual(list[2].text.length, 40, 'long text is cut');
@@ -1988,6 +1988,44 @@ check("cues: a follow waits out the fade the engine actually runs — at most 60
   assert.strictEqual(e.cues.dueAfter(sc, -5, 0), 2000);
   assert.strictEqual(e.cues.dueAfter(sc, null, 0), 3000, 'no override: the scene\'s own fade');
   assert.strictEqual(MAX_FADE_MS, 60000, 'cues.js and engine.startFade agree on the longest fade');
+});
+
+// ---- review fixes (2026-09-24): the page and the server agree on where a follow goes ----
+check('cuecore: a follow goes to its followId, else the next in its container, else the next in the library', () => {
+  const { followNextId } = require('../ui/cuecore');
+  const scenes = ['A', 'B', 'C', 'D'].map((id) => ({ id }));
+  const [A, B, , D] = scenes;
+  assert.strictEqual(followNextId(scenes, undefined, A), 'B', 'no containers (di.iiii): the next in the library');
+  assert.strictEqual(followNextId(scenes, [], B), 'C', 'an empty container list is no containers');
+  assert.strictEqual(followNextId(scenes, undefined, D), null, 'the last scene ends it');
+  const banks = [{ id: 'k', sceneIds: ['A', 'C', 'X'] }];
+  assert.strictEqual(followNextId(scenes, banks, A), 'C', 'with containers: the next in its container');
+  assert.strictEqual(followNextId(scenes, banks, B), null, 'a scene in no container ends it');
+  assert.strictEqual(followNextId(scenes, banks, { id: 'C' }), null, 'a deleted scene after it does not count');
+  assert.strictEqual(followNextId(scenes, undefined, { id: 'A', followId: 'D' }), 'D', 'its own followId wins');
+  assert.strictEqual(followNextId(scenes, undefined, { id: 'A', followId: 'gone' }), null, 'a followId that is gone ends it');
+  assert.strictEqual(followNextId(scenes, undefined, { id: 'A', followId: 'D' }, null), 'B', 'null asks for the default');
+});
+
+check('cues: the server runner steps by the same answer the page draws', () => {
+  const { followNextId } = require('../ui/cuecore');
+  const lamp = makeFixture({ id: 'L', profile: 'rgb', address: 1 });
+  const sc = (id, extra = {}) => ({ id, name: id, fadeMs: 0, followMs: 500, fixtures: [], raw: {}, ...extra });
+  for (const banks of [undefined, [{ id: 'k', sceneIds: ['C', 'A'] }]]) {
+    const st = { ...baseState([lamp]), scenes: [sc('A'), sc('B', { followId: 'A' }), sc('C')], ...(banks ? { banks } : {}) };
+    const e = new Engine(st);
+    for (const s of st.scenes) assert.strictEqual(e.cues.nextOf(s), followNextId(st.scenes, st.banks, s), s.id);
+  }
+});
+
+check('objects and labels may stand anywhere a fixture may (±1000), not only in -1..2', () => {
+  const { sanitizeObjects } = require('../ui/objcore');
+  const { sanitizeMarkers } = require('../markers');
+  const [ob] = sanitizeObjects([{ kind: 'spot', x: 40, y: -12 }]);
+  assert.deepStrictEqual([ob.x, ob.y], [40, -12]);
+  assert.deepStrictEqual(sanitizeObjects([{ kind: 'spot', x: 5000, y: -5000 }]).map((o) => [o.x, o.y]), [[1000, -1000]]);
+  const [mk] = sanitizeMarkers([{ text: 'Bar', x: 40, y: -12 }]);
+  assert.deepStrictEqual([mk.x, mk.y], [40, -12]);
 });
 
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
