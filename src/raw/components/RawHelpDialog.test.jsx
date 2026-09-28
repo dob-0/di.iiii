@@ -25,6 +25,18 @@ describe('RawHelpDialog', () => {
         expect(screen.getByText('The canvas starts empty.')).toBeTruthy()
     })
 
+    // 2026-09-28: the footer's contents were retired and the empty <footer>
+    // stayed, drawn as a bordered 33px strip at the foot of Help on every
+    // screen. The dialog ends with its last section, nothing after it.
+    it('ends with its content, not an empty footer strip', () => {
+        const { container } = render(<RawHelpDialog open onClose={() => {}} />)
+        const dialog = container.querySelector('section')
+        for (const el of dialog.querySelectorAll('footer, .raw-help-footer')) {
+            expect(el.textContent.trim(), 'an empty footer').not.toBe('')
+        }
+        expect(dialog.querySelector('.raw-help-footer')).toBeNull()
+    })
+
     it('switches to the compact controls view', () => {
         render(<RawHelpDialog open onClose={() => {}} />)
 
