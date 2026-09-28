@@ -298,3 +298,12 @@ describe('the notice to the inner bot', () => {
         await expect(history.flushAll()).resolves.toBeUndefined()
     })
 })
+
+// 2026-09-28: "+2 boxs" in the History panel — the plural added an "s" to
+// every kind.
+describe('change summary words', () => {
+  it('writes English plurals for kinds and nouns', () => {
+    const counts = { added: 5, removed: 0, changed: 0, addedKinds: { box: 2, mesh: 2, sphere: 1 }, assetsAdded: 0, assetsRemoved: 0, titleChanges: 0, sceneReplaced: 0, projectsReplaced: 0, settings: 0, ops: 5 }
+    expect(describeCounts(counts)).toBe('+2 boxes, +2 meshes, +1 sphere')
+  })
+})

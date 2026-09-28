@@ -704,6 +704,16 @@
     color: var(--di-text);
 }
 
+/* A "What changed" row is read, not pressed: no pointer, no hover. */
+.ssh-change-item .ssh-linker-select {
+    cursor: default;
+}
+
+.ssh-change-item .ssh-linker-select:hover {
+    background: transparent;
+    color: var(--di-text-muted);
+}
+
 .is-linked .ssh-linker-select {
     color: var(--di-success);
 }

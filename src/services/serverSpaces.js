@@ -145,6 +145,16 @@ export const listSpaceSnapshots = async (spaceId) => {
     return Array.isArray(data?.snapshots) ? data.snapshots : []
 }
 
+// Who changed what in a space: the op log grouped by person and working
+// session, oldest first — { actor: { label, type }, from, to, projects, text }.
+// `since` in ms (default on the server: the last 7 days). Owner-or-admin.
+// See serverXR/src/spaceHistory.js summarizeChanges.
+export const listSpaceChanges = async (spaceId, { since } = {}) => {
+    const query = Number.isFinite(since) ? `?since=${since}` : ''
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/changes${query}`)
+    return Array.isArray(data?.changes) ? data.changes : []
+}
+
 // Put one back. The server takes a restore point of what is there now first,
 // so a restore is itself undoable.
 export const restoreSpaceSnapshot = async (spaceId, snapshotId) =>

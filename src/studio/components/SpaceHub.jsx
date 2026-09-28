@@ -18,6 +18,7 @@ import {
     revokeSpaceInvite,
     saveSpaceToFile,
     openSpaceFromFile,
+    listSpaceChanges,
     listSpaceSnapshots,
     restoreSpaceSnapshot
 } from '../../services/serverSpaces.js'
@@ -88,6 +89,18 @@ const describeRestorePoint = (point) => {
         case 'daily': return 'daily'
         default: return who ? `saved (${who})` : 'saved'
     }
+}
+
+// "What changed" rows. The server words each group "<who> · <space> (<where>)
+// · <what>"; a row on the space's own card needs no space id, so it says who,
+// where and what. The what is always the last part (its items join with commas).
+export const describeChangeGroup = (group) => {
+    const who = group?.actor?.type === 'server' ? 'The server' : (group?.actor?.label || 'Someone')
+    const text = String(group?.text || '')
+    const what = text.includes(' · ') ? text.slice(text.lastIndexOf(' · ') + 3) : text
+    const where = (group?.projects || []).map(p => p.title || p.id).filter(Boolean)
+    if (group?.scene) where.unshift('the scene')
+    return `${who}${where.length ? ` — ${where.join(', ')}` : ''}: ${what || 'no visible change'}`
 }
 
 // Preview iframes lay out at this virtual desktop viewport and are scaled
@@ -642,8 +655,13 @@ export default function SpaceHub() {
     const loadHistory = useCallback(async (spaceId) => {
         setHistory(prev => prev?.spaceId === spaceId ? { ...prev, loading: true, error: '' } : prev)
         try {
-            const items = await listSpaceSnapshots(spaceId)
-            setHistory(prev => prev?.spaceId === spaceId ? { ...prev, loading: false, items } : prev)
+            // The changes list is a reading aid next to the restore points: if it
+            // cannot load, the points still show and can still be used.
+            const [items, changes] = await Promise.all([
+                listSpaceSnapshots(spaceId),
+                listSpaceChanges(spaceId).catch(() => [])
+            ])
+            setHistory(prev => prev?.spaceId === spaceId ? { ...prev, loading: false, items, changes: [...changes].reverse() } : prev)
         } catch (err) {
             setHistory(prev => prev?.spaceId === spaceId ? { ...prev, loading: false, error: err.message || 'Could not load the history.' } : prev)
         }
@@ -682,7 +700,7 @@ export default function SpaceHub() {
     const handleToggleHistory = useCallback((space, e) => {
         e.stopPropagation()
         if (history?.spaceId === space.id) { setHistory(null); return }
-        setHistory({ spaceId: space.id, loading: true, error: '', items: [], busyId: null, notice: '' })
+        setHistory({ spaceId: space.id, loading: true, error: '', items: [], changes: [], busyId: null, notice: '' })
         loadHistory(space.id)
     }, [history, loadHistory])
 
@@ -1406,6 +1424,25 @@ export default function SpaceHub() {
                                             {history.loading && <p className="ssh-linker-status">Loading history…</p>}
                                             {history.error && <p className="ssh-linker-status ssh-linker-error">{history.error}</p>}
                                             {history.notice && <p className="ssh-linker-status">{history.notice}</p>}
+                                            {!history.loading && history.changes?.length > 0 && (
+                                                <>
+                                                    <p className="ssh-linker-status">What changed · last 7 days</p>
+                                                    <div className="ssh-linker-list ssh-changes-list">
+                                                        {history.changes.map(group => {
+                                                            const when = formatRestorePointTime(new Date(group.to).toISOString())
+                                                            const what = describeChangeGroup(group)
+                                                            return (
+                                                                <div key={`${group.actor?.subject || 'unknown'}-${group.from}`} className="ssh-linker-item ssh-change-item">
+                                                                    <span className="ssh-linker-select" title={`${when} · ${what}`}>
+                                                                        <span>{when}<br />{what}</span>
+                                                                    </span>
+                                                                </div>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                    <p className="ssh-linker-status">Restore points</p>
+                                                </>
+                                            )}
                                             {!history.loading && !history.error && history.items.length === 0 && (
                                                 <p className="ssh-linker-status">No restore points yet — one is kept before every change someone makes here.</p>
                                             )}
