@@ -17,16 +17,18 @@ export const SHAPES = ['circle', 'square', 'hexagon', 'bar', 'triangle', 'diamon
 
 const BY_CATEGORY = {
     'moving-head': 'circle', par: 'bar', laser: 'diamond', 'co2-jet': 'triangle',
-    'spark-machine': 'triangle', 'smoke-machine': 'triangle'
+    'spark-machine': 'triangle', 'smoke-machine': 'triangle', hazer: 'triangle', 'fog-machine': 'triangle', effect: 'triangle'
 }
 
 // The MOXIR types as the sketch drew them; everything else by category, then by order.
 const BY_TYPE = { 'up-b380f': 'circle', 'up-250bsw': 'square', 'up-hk1915': 'hexagon', 'up-pl5403': 'bar' }
 
 // Effects share the triangle and are told apart by a letter inside it.
-const LETTER = { 'co2-jet': 'C', 'spark-machine': 'S', 'smoke-machine': 'Z', laser: 'L' }
+const LETTER = { 'co2-jet': 'C', 'spark-machine': 'S', 'smoke-machine': 'Z', hazer: 'H', 'fog-machine': 'F', effect: 'E', laser: 'L' }
 
-export const EFFECT_CATEGORIES = new Set(['co2-jet', 'spark-machine', 'smoke-machine'])
+// A box on the floor with no beam: an effect. One list for the plot, the hand (hotbar)
+// and a new lamp (plotEdits): the hazer (RIG_BUILD.md §13) joined the first three.
+export const EFFECT_CATEGORIES = new Set(['co2-jet', 'spark-machine', 'smoke-machine', 'hazer', 'fog-machine', 'effect'])
 export const isEffectType = (type) => EFFECT_CATEGORIES.has(type?.category)
 
 /**

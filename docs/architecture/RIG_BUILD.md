@@ -781,3 +781,137 @@ Found and fixed on the way:
 - Bodies in the plot's and cards' room panes; a lamp's heading (body yaw) is not in the document.
 - The desk's allocation for a lamp placed at the end of a busy universe: seen only through
   auto-patch's own rules (§4); no crew has plugged by it.
+
+---
+
+## 13. The equipment list and the inventory (`/{space}/equipment/{project}`, E in build mode)
+
+Owner, 2026-09-28: *"i think we will not use the all devices so . also wee need to place where
+we can add and delete the devices"* — then, the same day: *"i want to see it all in ui like
+minecraft where i can pick and create what i want to … i need to real alternatives … i never
+seen co2 jets so it will goo to have fixtures like items and also descriptions of item … how
+in games you have item and can check what is what"*. Code: `src/rigbuild/equipment.js`,
+`inventory.js`, `useEquipment.js`, `Inventory.jsx`, `EffectPreview.jsx`, `EquipmentSurface.jsx`,
+`equipmentRouting.js`, `items/`; scripts `scripts/rigbuild/rental.mjs`, `item-renders.py`.
+
+### 13.1 One data set — the list grew, it did not move
+
+The equipment list IS `components.rentalList` on `rig-show` (§11.1). The component keeps its
+name so every view that already counts against it — A's hotbar, B's key, C's cards, the patch
+bars — follows an edit with no copy of its own. The rental house's spreadsheet is where the
+list STARTS (`rental.mjs`, unchanged in what it reads); from there a line is added, deleted or
+given another quantity, and keeps its source. New fields, normalised in both schema copies
+(`schemaSync.test.js` holds them together):
+
+| field | meaning |
+|---|---|
+| line `from` | `own` · `other` (with `supplier`); omitted = the rental house |
+| line `kind: 'item'` | a non-DMX item (node, splitter, cable, console, truss, tower, deck): counted and costed, never hung, never patched, no card in view C; `category`, `watts`, `piece` (a piece kind it counts) |
+| list `days`, `dates {from,to}` | the billed rental days (dates count inclusively) |
+| list `rule {extraDay, source}` | the quote's own day rule, from the spreadsheet |
+| list `types[]` | fixture types added for this show: from the Open Fixture Library, or a rental code with no library type (its mode OWED) — each with its sources and licence |
+| list `catalogue[]`, `terms[]` | the rental house's whole price list (25 codes with stock, rate and cells) and its printed terms |
+
+A list someone emptied stays a list (the hand then takes nothing); a list with no line and no
+name was never one. `libraryWithShow(library, entities)` (rental.js) merges the show's types
+after the generated library, one stable object per list, and every surface and hook uses it
+(cards, plot, build, patch sheet, auto-patch, the room's looks, the hotbar), so a hazer taken
+from OFL is placed, drawn, patched and counted like a UPlight type.
+
+### 13.2 Cost, power, universes — the quote's own rule
+
+Cost of a line = rate × quantity × billed days, billed days = 1 + (days − 1) × 0.5. The rule is
+the spreadsheet's (`"Price list"!A2` "Day 1 full rate; each additional day 50%.", `"Quote 2"!E7`,
+`"Price data"!H2 = 0.5`); `equipment.test.js` holds `billedDays` to the sheet's own 2-day /
+3-day / 1-week columns (20000 → 30000 / 40000 / 80000; 13500 → 20250 / 27000 / 54000).
+Delivery, rigging and de-rig are "On request" (row 36) — the calculator's default 150000 AMD
+(`"Quote 2"!G38`) is printed as a term, never added to the total. VAT excluded, as the sheet.
+Power = Σ quantity × datasheet max (items with `watts`). Universes = the list's lamps packed in
+list order, a lamp never split across two (ANSI E1.11) — a planning count; owed modes are
+listed, never assumed.
+
+### 13.3 What an edit does to what is placed — asked, never silent
+
+Lowering a line below its placed lamps, or skipping a placed type, opens a question:
+**remove the last N placed** (document order = placement order), **pick which N** (a list of
+the lamps with position, unit, # and address), or **keep them, flagged over the order**. Kept
+lamps carry `over-order` (the last placed past the count) or `not-on-list`
+(`orderFlags`, `plotModel.ORDER_CODES`): drawn dashed with "!" on the plot and as tags in the
+room, said on the cards; they are not a patch fault, so the patch bars neither hatch them nor
+offer "move to next free". Removal is one batch with the list change (one undo); auto-patch
+prunes the removed lamps' desk fixtures by `rigKey` (§4.2).
+
+### 13.4 The inventory and the item card
+
+Tiles (`inventoryTiles`): every list line, every other price-list code (not taken, with stock
+and rate), the rig's pieces, library types, and the catalogue's suggestions no list carries (a
+hazer, an Art-Net node). Groups: Lights · Lasers · Effects · Control & power · Structure ·
+Nodes & cables. A card shows the picture, what it is, what it does in the show (with an
+on-demand looping preview), needs, specs (the type's numbers with their sources, then the
+item's), real alternatives, and the sources; TAKE / SKIP and a stepper; from / supplier / note.
+A price-list code with no type is taken with `owedType` (mode owed — placed, never patched);
+"Control & power" codes are taken as items. The hazer is taken through the OFL import.
+
+**The item catalogue** (`src/rigbuild/items/{lights,effects,control}.json`, schema
+`items/SCHEMA.txt`): 30 entries — all 25 price-list codes, hazer, Art-Net node, truss, tower,
+deck — written from cited sources on 2026-09-28. Every sentence, need, spec and alternative
+names source keys that resolve, or says it is owed (`items.test.js` enforces it). Where
+UPlight lists no page for a code, the entry says so and describes the class on a named
+equivalent. **Pictures**: first our own studio render of our own model
+(`scripts/rigbuild/item-renders.py`, Blender 5.2.1 Workbench, AGPL; `items/renders.json` holds
+model and image sha256), then a Wikimedia Commons photo with author, licence and page. No
+maker's product photo is copied. 12 of 30 have no picture of either kind — owed.
+
+**The preview** (`EffectPreview.jsx`): beam, spot, wash, matrix, laser fan and swing, CO₂,
+sparks, smoke, haze (a beam through clear air beside one through haze), low fog, mist — an
+illustration in its own small canvas, mounted only when asked for, never a simulation.
+
+### 13.5 Adding a new type — the Open Fixture Library through the desk
+
+`+ type from OFL` searches the desk's own import (`GET /light/api/library`, `/manufacturer`,
+`/fixture`; library.js). `describe()` now also returns each mode's channel names, whether it
+holds a matrix insert, the physical data and OFL's last-modified date. `oflType` makes a type:
+id `ofl-<maker>-<key>`, each plain mode with its channels (desk roles + OFL names), a matrix
+mode left out and said owed, power/weight/size marked `src: OFL`, source URL, MIT licence,
+fetched date. The first mode is a planning default — which mode the unit runs is the crew's.
+With no desk (a hosted tier) the sheet says so; an item can still be added by hand.
+
+### 13.6 Where it lives
+
+`/{space}/equipment/{project}` (reserved in both lists; checked 2026-09-28: 404 on diiii.xyz,
+dev.diiii.xyz and the local install), behind the same gate as the plot: **inventory | order**.
+Linked from the plot's title block, the cards' header and build mode's totals. In build mode
+**E** opens the inventory over the room (as in Minecraft; lowering the hand moved from E to
+**Z**), the phone has an **items** button; the room holds still while it is open. The hotbar
+is filled from the inventory: drag a tile onto a slot (mouse) or **to hotbar** on its card
+(one finger); the arrangement is this browser's (`localStorage`, a convenience), unarranged =
+the default order. `public/rigbuild/` is reserved as a static directory.
+
+**Export**: CSV (RFC 4180, the sheet's writer) and a printable A4 "equipment order": the lines
+grouped rental / other supplier / own, quantities, dates, rates, line totals, the total, what
+we need from the rental house (modes, channel lists, stock), and the sheet's terms.
+
+### 13.7 Validated (2026-09-28, MOXIR, own stack :4395/:5395, a copy of the space)
+
+Data: the rigbuild3d baseline bundle (a `space-bundle.mjs export moxir` of the local tier,
+100 lamps placed, 42 patched) imported into a scratch data root; `rental.mjs --api` wrote the
+new list fields as ops. Headless Chromium with 3D off for every 2D surface; the previews on the
+RTX 3080 (ANGLE/Vulkan under PRIME, renderer string checked first).
+
+| check | result |
+|---|---|
+| pure logic | `equipment` 17, `items` 4, `equipmentRouting` 2 tests; desk `describe` 1; schema parity +1 case; rigbuild suite 201 green |
+| PARs 50 → 24 | asked; "pick which 26" lists all 50 with position/unit; **remove the last 26** → 24 placed, cards 24/24 |
+| smoke machines skipped | asked; removed the 4 → desk **42 → 38** fixtures, the four `UP-YZ31P 1ch` gone |
+| hazer from OFL | MDG ATMe, 3ch (Unit control, Haze output, Haze control), 1400 W (OFL), MIT; ×2 dealt on the stage flanks → desk **U1.489, U1.492**, profile `MDG ATMe 3ch` |
+| Art-Net node | item line, other supplier, "4 universes"; no card, no slot, no patch; counted |
+| one data set | A hotbar, B key, C cards: B380F 18/18 · 250BSW 8/12 · PL5403 24/24 · MDG ATMe 2/2; patch sheet 72 fixtures, 40 patched, U1 494 · U2 168 — all agree |
+| order | 1 day (17.10) → 1,057,000 AMD excl. VAT; 77 units; 26.4 kW; 2 universes at known modes; A4: one page |
+| previews | CO₂, sparks, laser fan, haze, beam at 60 fps; the second GPU run hit **97 °C** and the guard stopped it (started at 85 °C) |
+| screens | desktop 1440×900 DPR 2, phone 390×844 DPR 3; no page overflow; no text cell under 120 px; `~/Downloads/rig-equipment/` |
+
+Not validated / owed: the owner's own look and pick for MOXIR; a real phone; the room in build
+mode with the inventory on the GPU (2D only); the rental house confirming the order; photos for
+12 items; the UP-236 mist machine's maker; the MDG ATMe power (MDG's page 715 W vs OFL 1400 W —
+both shown with their sources); `projectContracts` "fixture = { index }" fails on the stack
+since #594 (the patch in the document, §2.2) — owed on the base, not this change.

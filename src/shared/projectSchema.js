@@ -690,15 +690,99 @@ export const normalizeVenuePlan = (plan) => {
   return out
 }
 
-// A RENTAL LIST (RIG_BUILD.md §11, view C): what the show has ON ORDER from the
-// rental house, per fixture type — the cards of view C count "placed n / ordered m"
-// against it, and the plot says "3 left of 12". Written by
+// A RENTAL LIST — since 2026-09-28 the show's EQUIPMENT LIST (RIG_BUILD.md §11, §13):
+// what the show takes, in what quantity, from where. The cards of view C count
+// "placed n / ordered m" against it, the plot says "3 left of 12", the hotbar of view A
+// stops at the order, and /{space}/equipment/{project} edits it. First written by
 // scripts/rigbuild/rental.mjs from the rental house's own spreadsheet and the show's
-// order, with where each number came from. Bounded like the venue plan.
+// order, with where each number came from; lines are then added, deleted and changed
+// by hand, each keeping its source. Bounded like the venue plan.
+//
+// A line: {code, type, ordered, stock?, rate?, label?, source?, note?} as before, plus
+//   kind: 'item'           a non-DMX item (node, splitter, cable, truss, deck) — counted
+//                          and costed, never hung or patched (omitted = a fixture)
+//   from: 'own' | 'other'  where it comes from (omitted = the rental house)
+//   supplier, category, watts, piece (a rig piece kind the line counts, e.g. truss-2m)
+// The list: {name, source, writtenAt, currency, items} as before, plus
+//   days, dates {from, to}  the billed rental days
+//   rule {extraDay, source} the quote's own day rule (day 1 full, each further day × extraDay)
+//   types[]                 fixture types added for this show (Open Fixture Library, or a
+//                           rental code with its mode owed), each with its provenance
+//   catalogue[], terms[]    the rental house's whole price list and its terms, with cells
 const RENTAL_CAP = 200
+const RENTAL_TYPES_CAP = 32
+const RENTAL_MODES_CAP = 24
 const rentalCount = (value) => {
   const n = Number(value)
   return Number.isInteger(n) && n >= 0 && n <= 100000 ? n : null
+}
+const rentalSlug = (value, max = 40) => (typeof value === 'string' && new RegExp(`^[a-z0-9][a-z0-9._-]{0,${max - 1}}$`).test(value.trim()) ? value.trim() : '')
+const rentalDate = (value) => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.trim()) ? value.trim() : '')
+const rentalSourced = (spec, length = 0) => {
+  if (!spec || typeof spec !== 'object') return null
+  const value = length ? planNums(spec.value, length) : planNum(spec.value)
+  if (value == null || (!length && value < 0)) return null
+  const out = { value }
+  for (const k of ['src', 'basis', 'order', 'note']) {
+    const t = planText(spec[k], k === 'note' || k === 'order' ? 120 : 40)
+    if (t) out[k] = t
+  }
+  return out
+}
+const normalizeRentalType = (type) => {
+  const id = rentalSlug(type?.id)
+  const code = planText(type?.code, 40)
+  if (!id || !code) return null
+  const modes = planList(type.modes, (mode) => {
+    const name = planText(mode?.name, 32)
+    const footprint = Number(mode?.footprint)
+    if (!name || !Number.isInteger(footprint) || footprint < 1 || footprint > 512) return null
+    let channels = null
+    if (Array.isArray(mode.channels) && mode.channels.length === footprint) {
+      channels = mode.channels.map((c) => {
+        const role = typeof c?.role === 'string' && /^[A-Za-z0-9_-]{1,24}$/.test(c.role) ? c.role : ''
+        return role ? { role, label: planText(c.label, 40) } : null
+      })
+      if (!channels.every(Boolean)) channels = null
+    }
+    return { name, footprint, channels }
+  }).slice(0, RENTAL_MODES_CAP)
+  const out = {
+    id,
+    code,
+    maker: planText(type.maker, 80) || null,
+    model: planText(type.model, 80) || null,
+    identified: planText(type.identified, 16) || 'OWED',
+    category: rentalSlug(type.category, 24) || 'other',
+    modes,
+    defaultMode: modes.some((m) => m.name === type.defaultMode) ? type.defaultMode : (modes[0]?.name || null),
+    modesOwed: modes.length === 0
+  }
+  const power = rentalSourced(type.power_w)
+  if (power) out.power_w = power
+  const weight = rentalSourced(type.weight_kg)
+  if (weight) out.weight_kg = weight
+  const size = rentalSourced(type.size_mm, 3)
+  if (size) out.size_mm = size
+  const sources = {}
+  for (const [key, s] of Object.entries(type.sources || {}).slice(0, 8)) {
+    if (!/^[A-Za-z0-9_-]{1,24}$/.test(key) || !s || typeof s !== 'object') continue
+    const src = { url: planText(s.url, 300), what: planText(s.what, 160) }
+    const licence = planText(s.licence, 80)
+    if (licence) src.licence = licence
+    const accessed = planText(s.accessed, 32)
+    if (accessed) src.accessed = accessed
+    if (src.url || src.what) sources[key] = src
+  }
+  out.sources = sources
+  if (type.ofl && typeof type.ofl === 'object') {
+    const manufacturer = rentalSlug(type.ofl.manufacturer, 80)
+    const key = rentalSlug(type.ofl.key, 80)
+    if (manufacturer && key) out.ofl = { manufacturer, key, lastModifyDate: planText(type.ofl.lastModifyDate, 32), fetchedAt: planText(type.ofl.fetchedAt, 32) }
+  }
+  const note = planText(type.note, 240)
+  if (note) out.note = note
+  return out
 }
 export const normalizeRentalList = (list) => {
   if (!list || typeof list !== 'object') return null
@@ -707,6 +791,7 @@ export const normalizeRentalList = (list) => {
     const ordered = rentalCount(item?.ordered)
     if (!code || ordered == null) return null
     const out = { code, type: planText(item.type, 40) || code.toLowerCase().replace(/\s+/g, '-'), ordered }
+    if (item.kind === 'item') out.kind = 'item'
     const stock = rentalCount(item.stock)
     if (stock != null) out.stock = stock
     const rate = planNum(item.rate)
@@ -717,16 +802,51 @@ export const normalizeRentalList = (list) => {
     if (source) out.source = source
     const note = planText(item.note, 240)
     if (note) out.note = note
+    if (item.from === 'own' || item.from === 'other') out.from = item.from
+    const supplier = planText(item.supplier, 80)
+    if (supplier) out.supplier = supplier
+    const category = rentalSlug(item.category, 24)
+    if (category) out.category = category
+    const watts = planNum(item.watts)
+    if (watts != null && watts >= 0) out.watts = watts
+    const piece = rentalSlug(item.piece, 24)
+    if (piece) out.piece = piece
     return out
   }).slice(0, RENTAL_CAP)
-  if (!items.length) return null
-  return {
-    name: planText(list.name),
+  const name = planText(list.name)
+  // A list someone emptied is still a list (the hand takes nothing from it); a list
+  // with no line and no name was never one.
+  if (!items.length && !name) return null
+  const out = {
+    name,
     source: planText(list.source, 480),
     writtenAt: planText(list.writtenAt, 32),
     currency: planText(list.currency, 8),
     items
   }
+  const days = Number(list.days)
+  if (Number.isInteger(days) && days >= 1 && days <= 366) out.days = days
+  const from = rentalDate(list.dates?.from)
+  const to = rentalDate(list.dates?.to)
+  if (from || to) out.dates = { from, to }
+  const extraDay = planNum(list.rule?.extraDay)
+  if (extraDay != null && extraDay >= 0 && extraDay <= 1) out.rule = { extraDay, source: planText(list.rule.source, 240) }
+  const types = planList(list.types, normalizeRentalType).slice(0, RENTAL_TYPES_CAP)
+  if (types.length) out.types = types
+  const catalogue = planList(list.catalogue, (c) => {
+    const code = planText(c?.code, 40)
+    if (!code) return null
+    const entry = { code, label: planText(c.label, 120), details: planText(c.details, 120), category: planText(c.category, 40), cells: planText(c.cells, 40) }
+    const stock = rentalCount(c.stock)
+    if (stock != null) entry.stock = stock
+    const rate = planNum(c.rate)
+    if (rate != null && rate >= 0) entry.rate = rate
+    return entry
+  }).slice(0, RENTAL_CAP)
+  if (catalogue.length) out.catalogue = catalogue
+  const terms = planList(list.terms, (t) => (planText(t?.text, 240) ? { text: planText(t.text, 240), cell: planText(t.cell, 40) } : null)).slice(0, 20)
+  if (terms.length) out.terms = terms
+  return out
 }
 
 // THE RIG'S DESIGNED LOOKS (RIG_BUILD.md §11.4, view C): per look, a rule and its

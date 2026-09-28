@@ -106,6 +106,12 @@ export const RESERVED_APP_SEGMENTS = [
     // dev tier and on the local install.
     'build',
     'crew',
+    // `/{space}/equipment/{projectId}` — the show's equipment list, the inventory and the
+    // order (src/rigbuild/EquipmentSurface.jsx, docs/architecture/RIG_BUILD.md §13).
+    // Checked before reserving, 2026-09-28: /serverXR/api/spaces/equipment and
+    // /serverXR/api/projects/equipment answer 404 on prod (diiii.xyz), on the dev tier
+    // and on the local install.
+    'equipment',
     // The sign-in page — /login (SignInSurface in AuthGate.jsx). It was not a
     // route at all: the address a teammate is sent to fell through to the space
     // lookup and answered "Nothing lives at “login”" above a working form.

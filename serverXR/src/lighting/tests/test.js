@@ -1102,6 +1102,35 @@ check('the profile name fits this desk rules, and two of them never collide', ()
   assert.ok(/^[A-Za-z0-9][A-Za-z0-9 _-]{0,23}$/.test(second.name), second.name);
 });
 
+// The rig builder's equipment list (docs/architecture/RIG_BUILD.md §13) turns a described
+// fixture into a type: it needs each mode's own channel names, to know a matrix mode has no
+// plain footprint, and the physical numbers — the MDG ATMe hazer as OFL publishes it.
+const OFL_HAZER = {
+  name: 'ATMe', categories: ['Hazer'], meta: { lastModifyDate: '2026-01-23' },
+  physical: { dimensions: [180, 300, 685], weight: 16.8, power: 1400, DMXconnector: '5-pin' },
+  availableChannels: {
+    'Unit control': { defaultValue: 0, capabilities: [{ dmxRange: [0, 128], type: 'Maintenance' }, { dmxRange: [129, 255], type: 'Maintenance' }] },
+    'Haze output': { capability: { type: 'FogOutput' } },
+    'Haze control': { capabilities: [{ dmxRange: [0, 128], type: 'Fog' }, { dmxRange: [129, 255], type: 'Fog' }] },
+  },
+  modes: [
+    { name: '3-channel', shortName: '3ch', channels: ['Unit control', 'Haze output', 'Haze control'] },
+    { name: 'pixels', channels: ['Unit control', { insert: 'matrixChannels', repeatFor: 'eachPixelABC', channelOrder: 'perPixel', templateChannels: ['Red $pixelKey'] }] },
+  ],
+};
+
+check('describe gives each mode its channel names, flags a matrix mode, and carries the physical data', () => {
+  const d = oflLib.describe(OFL_HAZER);
+  assert.strictEqual(d.lastModifyDate, '2026-01-23');
+  assert.deepStrictEqual(d.physical, { power: 1400, weight: 16.8, dimensions: [180, 300, 685], DMXconnector: '5-pin' });
+  assert.strictEqual(d.modes[0].shortName, '3ch');
+  assert.strictEqual(d.modes[0].matrix, false);
+  assert.deepStrictEqual(d.modes[0].channelNames, ['Unit control', 'Haze output', 'Haze control']);
+  assert.strictEqual(d.modes[0].roles.length, 3);
+  assert.strictEqual(d.modes[1].matrix, true);
+  assert.strictEqual(d.modes[1].channelNames, null);
+});
+
 check('a fixture key that is a path is refused rather than tidied into a valid one', () => {
   assert.throws(() => oflLib.safeKey('../../etc/passwd'));
   assert.throws(() => oflLib.safeKey(''));

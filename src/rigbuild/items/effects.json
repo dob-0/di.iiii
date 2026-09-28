@@ -1,0 +1,910 @@
+{
+  "items": [
+    {
+      "id": "up-q108s",
+      "codes": [
+        "UP-Q108S"
+      ],
+      "group": "effects",
+      "name": "CO₂ jet",
+      "product": "UPlight UP-Q108S \"CO2 gas column gun\" — UPlight's own store and site list no UP-Q108S; not one of their traceable products. Described here as the general class of DMX CO2 jet, modelled on the MagicFX CO2jet II.",
+      "what": "A single vertical blast of white gas straight up out of a nozzle. Liquid CO2 flashes to gas and dry-ice snow the instant it leaves the valve, so the jet looks like a thick white column of smoke — but it is a gas release, not a fog machine. It fires with a loud, sharp hiss and is genuinely cold at the nozzle. Each shot lasts a few seconds and the column reaches roughly 8 m.",
+      "whatSources": [
+        "MAGICFX-MANUAL",
+        "CRYOFX-JET"
+      ],
+      "inShow": "Fired on a single hit or drop for one loud vertical burst, then off — not run continuously. Needs a fresh, correctly plumbed liquid-CO2 bottle for every handful of shots, and clear air space directly above the nozzle.",
+      "inShowSources": [
+        "MAGICFX-MANUAL"
+      ],
+      "preview": "co2",
+      "needs": [
+        {
+          "kind": "consumable",
+          "text": "liquid CO2 in a cylinder with an internal dip tube (siphon tube) — a standard gas cylinder without a dip tube will not feed liquid to the jet.",
+          "sources": [
+            "MAGICFX-MANUAL"
+          ]
+        },
+        {
+          "kind": "safety",
+          "text": "CO2 is about 1.5x denser than air and settles at floor level; in an enclosed or low-ceilinged room repeated firing can build up an asphyxiation hazard that is not obvious to the people breathing it. Ventilate continuously or use a CO2/oxygen monitor for any sustained indoor use, and never fire into a confined space.",
+          "sources": [
+            "CRYOFX-SAFETY",
+            "OSHA-CO2"
+          ]
+        },
+        {
+          "kind": "rigging",
+          "text": "the CO2 cylinder must be secured upright (strapped or caged) and connected with a rated high-pressure CO2 hose and bottle-to-hose connector — never a loose or unsecured bottle.",
+          "sources": [
+            "MAGICFX-MANUAL"
+          ]
+        },
+        {
+          "kind": "power",
+          "text": "standard mains (220-240 Vac); the jet's own power draw is small (20 W), the cold gas comes from the bottle's pressure, not from the machine.",
+          "sources": [
+            "MAGICFX-MANUAL"
+          ]
+        }
+      ],
+      "specs": [
+        {
+          "label": "size",
+          "value": "232 x 196 x 125 mm (equivalent product)",
+          "sources": [
+            "MAGICFX-MANUAL"
+          ]
+        },
+        {
+          "label": "weight",
+          "value": "4.2 kg (equivalent product)",
+          "sources": [
+            "MAGICFX-MANUAL"
+          ]
+        },
+        {
+          "label": "power",
+          "value": "20 W, 220-240 Vac 50-60 Hz (equivalent product)",
+          "sources": [
+            "MAGICFX-MANUAL"
+          ]
+        },
+        {
+          "label": "plume height",
+          "value": "approx. 8 m, depends on humidity (equivalent product)",
+          "sources": [
+            "MAGICFX-MANUAL"
+          ]
+        },
+        {
+          "label": "CO2 consumption",
+          "value": "approx. 0.5 kg per second of firing (equivalent product)",
+          "sources": [
+            "MAGICFX-MANUAL"
+          ]
+        },
+        {
+          "label": "control",
+          "value": "direct on/off or DMX (equivalent product)",
+          "sources": [
+            "MAGICFX-MANUAL"
+          ]
+        }
+      ],
+      "alternatives": [
+        {
+          "maker": "MagicFX",
+          "model": "CO2jet II",
+          "url": "https://magicfx.com/products/co2jet-ii",
+          "why": "the named product this class is modelled on here; full manual and specs published.",
+          "sources": [
+            "MAGICFX-MANUAL"
+          ]
+        },
+        {
+          "maker": "CryoFX",
+          "model": "Basic / High Output CO2 Jet",
+          "url": "https://www.cryofx.com/products/basic-co2-jet.html",
+          "why": "US supplier with a published range from handheld to mounted high-output jets and its own safety literature.",
+          "sources": [
+            "CRYOFX-JET"
+          ]
+        },
+        {
+          "maker": "Chauvet DJ",
+          "model": "Geyser P7",
+          "url": "https://www.chauvetdj.com/products/geyser-p7/",
+          "why": "a CO2-free alternative — an LED-lit pyro-look fog burst with no gas cylinder, no asphyxiation risk and no bottle logistics; the trade-off is it is fog, not a real gas column.",
+          "sources": [
+            "CHAUVET-GEYSERP7"
+          ]
+        }
+      ],
+      "photo": null,
+      "sources": {
+        "MAGICFX-MANUAL": {
+          "url": "https://magicfx.com/data/uploads/documents/MAGICFX_CO2JET%20II_MANUAL.pdf",
+          "what": "MagicFX CO2jet II — maker's product page and manual (specs: size, weight, power, plume, consumption, dip-tube requirement, hose/connector setup)",
+          "accessed": "2026-09-28"
+        },
+        "CRYOFX-JET": {
+          "url": "https://www.cryofx.com/co2-jet-machine",
+          "what": "CryoFX — CO2 jet machine explainer (how it works, plume, tank sizes)",
+          "accessed": "2026-09-28"
+        },
+        "CRYOFX-SAFETY": {
+          "url": "https://info.cryofx.com/safety-tips-and-proper-usage-co2-special-effects-safety/",
+          "what": "CryoFX — CO2 special-effects safety tips (asphyxiation risk, ventilation, confined-space monitoring). Page blocks direct fetch (HTTP 403); quoted via search-engine excerpt.",
+          "accessed": "2026-09-28"
+        },
+        "OSHA-CO2": {
+          "url": "https://www.osha.gov/publications/hib19960605",
+          "what": "OSHA Hazard Information Bulletin — CO2 asphyxiation hazard, gas denser than air, settles in low areas",
+          "accessed": "2026-09-28"
+        },
+        "CHAUVET-GEYSERP7": {
+          "url": "https://www.chauvetdj.com/products/geyser-p7/",
+          "what": "Chauvet DJ Geyser P7 — maker's product page (pyro-look fog burst without CO2 or fire)",
+          "accessed": "2026-09-28"
+        }
+      }
+    },
+    {
+      "id": "up-yh600f",
+      "codes": [
+        "UP-YH600F"
+      ],
+      "group": "effects",
+      "name": "cold-spark machine",
+      "product": "UPlight UP-YH600F \"Cold-spark firework machine\" — UPlight's own store and site list no UP-YH600F; not one of their traceable products. Described here as the general class of DMX cold-spark machine, modelled on the Showven Sparkular.",
+      "what": "A box that heats a metal granule powder and blows it upward as a controlled fountain of bright white sparks — it looks like an indoor firework but the sparks are far cooler by the time they leave the nozzle and are not a flame or combustion effect. It is waterproof-rated. Adjustable spark height is roughly 1.5-5 m, and it is genuinely quieter than a real firework.",
+      "whatSources": [
+        "SHOWVEN-CN",
+        "CRYOFX-SPARKULAR"
+      ],
+      "inShow": "Fired on a cue for a bright, camera-ready burst timed to music or a lighting cue; height and duration are set per cue over DMX.",
+      "inShowSources": [
+        "SHOWVEN-CN"
+      ],
+      "preview": "sparks",
+      "needs": [
+        {
+          "kind": "consumable",
+          "text": "spark granules — a titanium/magnesium/zirconium metal powder, sold and refilled by weight; not reusable.",
+          "sources": [
+            "CRYOFX-SPARKULAR"
+          ]
+        },
+        {
+          "kind": "safety",
+          "text": "even though it needs no fireworks/explosives licence in most jurisdictions, it is still hot particulate ejected under pressure: run a venue fire-safety check before use, and keep audience and any flammable material at least 1.5-2 m from the machine and at least 1 m clear above the set maximum spark height.",
+          "sources": [
+            "CRYOFX-SPARKULAR"
+          ]
+        },
+        {
+          "kind": "operator",
+          "text": "an operator who sets spark height/duration and checks the machine's own tilt and overheat interlocks before firing.",
+          "sources": [
+            "CRYOFX-SPARKULAR"
+          ]
+        }
+      ],
+      "specs": [
+        {
+          "label": "size",
+          "value": "200 x 218 x 305 mm (equivalent product)",
+          "sources": [
+            "SHOWVEN-CN"
+          ]
+        },
+        {
+          "label": "weight",
+          "value": "8.5 kg (equivalent product)",
+          "sources": [
+            "SHOWVEN-CN"
+          ]
+        },
+        {
+          "label": "power",
+          "value": "approx. 500 W (equivalent product)",
+          "sources": [
+            "SHOWVEN-CN"
+          ]
+        },
+        {
+          "label": "spark height",
+          "value": "1.5-5 m, adjustable",
+          "sources": [
+            "SHOWVEN-CN",
+            "CRYOFX-SPARKULAR"
+          ]
+        },
+        {
+          "label": "control",
+          "value": "DMX, 2 channels (equivalent product)",
+          "sources": [
+            "SHOWVEN-CN"
+          ]
+        },
+        {
+          "label": "clearance",
+          "value": "1.5-2 m to audience/flammables, 1 m above max spark height",
+          "sources": [
+            "CRYOFX-SPARKULAR"
+          ]
+        }
+      ],
+      "alternatives": [
+        {
+          "maker": "Showven",
+          "model": "Sparkular",
+          "url": "https://www.showven.cn/product/sparkular/",
+          "why": "the original cold-spark machine and the product this class is modelled on; the most widely rented unit in this class.",
+          "sources": [
+            "SHOWVEN-CN"
+          ]
+        },
+        {
+          "maker": "MagicFX",
+          "model": "Sparxtar II",
+          "url": "https://www.magicfx.eu/data/uploads/documents/MAGICFX_SPARXTAR_MANUAL.pdf",
+          "why": "built-in tilt/overheat/blocked-output safety sensors and an FX warning LED; published manual with clearance distances.",
+          "sources": [
+            "MAGICFX-SPARXTAR"
+          ]
+        },
+        {
+          "maker": "CryoFX",
+          "model": "iSparkFX M2",
+          "url": "https://www.cryofx.com/isparkfx-cold-spark-machine-m2.html",
+          "why": "US supplier's own cold-spark line, sold alongside the Sparkular for the same rental market.",
+          "sources": [
+            "CRYOFX-SPARKULAR"
+          ]
+        }
+      ],
+      "photo": null,
+      "sources": {
+        "SHOWVEN-CN": {
+          "url": "https://www.showven.cn/product/sparkular/",
+          "what": "Showven — Sparkular product page, maker's site",
+          "accessed": "2026-09-28"
+        },
+        "CRYOFX-SPARKULAR": {
+          "url": "https://www.cryofx.com/showven-sparkular",
+          "what": "CryoFX — Showven Sparkular listing and cold-spark safety/clearance guidance, spark-powder composition (Ti/Mg/Zr)",
+          "accessed": "2026-09-28"
+        },
+        "MAGICFX-SPARXTAR": {
+          "url": "https://www.magicfx.eu/data/uploads/documents/MAGICFX_SPARXTAR_MANUAL.pdf",
+          "what": "MagicFX — Sparxtar user and installation manual",
+          "accessed": "2026-09-28"
+        }
+      }
+    },
+    {
+      "id": "up-yz31p",
+      "codes": [
+        "UP-YZ31P"
+      ],
+      "group": "effects",
+      "name": "smoke machine",
+      "product": "UPlight UP-YZ31P \"Smoke machine (multi-angle)\" — UPlight's own store and site list no UP-YZ31P; not one of their traceable products. Described here as the general class of waterproof fog machine, modelled on the Antari Z-1500 III.",
+      "what": "Fog fluid is heated to vapour inside the box and pushed out through an aimable nozzle as a dense, clearly visible white cloud — this is theatrical \"smoke\" in the technical sense: thicker and more opaque than haze, made to fill a space or be lit as its own visible shape, not just to reveal beams. UPlight's \"multi-angle\" nozzle can be aimed; the unit is rated waterproof for outdoor use.",
+      "whatSources": [
+        "ANTARI-Z1500",
+        "WIKI-THEATRICAL-FOG"
+      ],
+      "inShow": "Laid down to build a heavy layer of atmosphere, hide a scene change, or catch a strong light for a visible beam or silhouette; needs several minutes' warm-up and steady fluid feed to sustain output.",
+      "inShowSources": [
+        "ANTARI-Z1500"
+      ],
+      "preview": "smoke",
+      "needs": [
+        {
+          "kind": "consumable",
+          "text": "fog fluid, glycol/glycerine-based.",
+          "sources": [
+            "ANTARI-Z1500"
+          ]
+        },
+        {
+          "kind": "safety",
+          "text": "visible smoke will trigger a ceiling-mounted photoelectric smoke detector; any use in a monitored venue needs the fire alarm system's detectors isolated in advance with the venue's fire marshal or safety officer, a fire watch kept on the isolated zone, and the detectors restored immediately after.",
+          "sources": [
+            "ENTERTAINING-SAFETY"
+          ]
+        }
+      ],
+      "specs": [
+        {
+          "label": "size",
+          "value": "674 x 235 x 278 mm, L x W x H (equivalent product)",
+          "sources": [
+            "ANTARI-Z1500"
+          ]
+        },
+        {
+          "label": "weight",
+          "value": "13.3 kg (equivalent product)",
+          "sources": [
+            "ANTARI-Z1500"
+          ]
+        },
+        {
+          "label": "power",
+          "value": "1500 W (equivalent product)",
+          "sources": [
+            "ANTARI-Z1500"
+          ]
+        },
+        {
+          "label": "fluid tank",
+          "value": "6 L (equivalent product)",
+          "sources": [
+            "ANTARI-Z1500"
+          ]
+        },
+        {
+          "label": "fluid consumption",
+          "value": "approx. 150 ml/min at full output (equivalent product)",
+          "sources": [
+            "ANTARI-Z1500"
+          ]
+        },
+        {
+          "label": "control",
+          "value": "DMX, 1 channel (equivalent product)",
+          "sources": [
+            "ANTARI-Z1500"
+          ]
+        }
+      ],
+      "alternatives": [
+        {
+          "maker": "Antari",
+          "model": "Z-1500 III",
+          "url": "https://antari.com/wp-content/uploads/Z-1500lllC.pdf",
+          "why": "the product this class is modelled on; full published manual and specs.",
+          "sources": [
+            "ANTARI-Z1500"
+          ]
+        },
+        {
+          "maker": "Look Solutions",
+          "model": "Viper NT",
+          "url": "https://www.looksolutions.com/products/viper_nt/8.html",
+          "why": "1300 W, fine-step 0-99% output control and a 5-pin DMX interface, widely used in theatre and touring rigs.",
+          "sources": [
+            "LOOK-VIPERNT"
+          ]
+        },
+        {
+          "maker": "American DJ (ADJ)",
+          "model": "Fog Fury Jett",
+          "url": "https://www.adj.eu/fog-fury-jett",
+          "why": "the fog is lit from inside by 12 RGBA LEDs — a coloured-smoke alternative to a plain white cloud.",
+          "sources": [
+            "ADJ-FOGFURYJETT"
+          ]
+        }
+      ],
+      "photo": {
+        "file": "public/rigbuild/items/photos/up-yz31p.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:SmokeMachineinDJStand.jpg",
+        "author": "Scoreed (Wikimedia Commons)",
+        "licence": "CC BY 2.5",
+        "licenceUrl": "https://creativecommons.org/licenses/by/2.5/",
+        "shows": "a fog machine's nozzle producing smoke, set up inside a DJ booth — a machine of another make, showing the class of device"
+      },
+      "sources": {
+        "ANTARI-Z1500": {
+          "url": "https://antari.com/wp-content/uploads/Z-1500lllC.pdf",
+          "what": "Antari Z-1500 III — maker's user manual",
+          "accessed": "2026-09-28"
+        },
+        "WIKI-THEATRICAL-FOG": {
+          "url": "https://en.wikipedia.org/wiki/Theatrical_smoke_and_fog",
+          "what": "Wikipedia — Theatrical smoke and fog: methods and definitions, ESTA/ANSI E1.5 standard reference",
+          "accessed": "2026-09-28"
+        },
+        "ENTERTAINING-SAFETY": {
+          "url": "https://entertainingsafety.com/knowledge-base/theatrical-fog-and-smoke-detectors-how-to-avoid-setting-off-fire-alarms/",
+          "what": "Entertaining Safety — coordinating fog/haze use with venue fire alarm systems and smoke detectors",
+          "accessed": "2026-09-28"
+        },
+        "LOOK-VIPERNT": {
+          "url": "https://www.looksolutions.com/products/viper_nt/8.html",
+          "what": "Look Solutions — Viper NT product page",
+          "accessed": "2026-09-28"
+        },
+        "ADJ-FOGFURYJETT": {
+          "url": "https://www.adj.eu/fog-fury-jett",
+          "what": "American DJ — Fog Fury Jett product page",
+          "accessed": "2026-09-28"
+        }
+      }
+    },
+    {
+      "id": "up-sw3000b",
+      "codes": [
+        "UP-SW3000B"
+      ],
+      "group": "effects",
+      "name": "low-fog machine",
+      "product": "UPlight UP-SW3000B \"Low-fog machine 3000W\" (double-head ground fog) — UPlight's own store and site list no UP-SW3000B; not one of their traceable products. Described here as the general class of double-output 3000 W low-lying (ground) fog machine.",
+      "what": "A fog machine built to lay fog on the floor rather than fill the room: the fog fluid is heated, then cooled again — either by mixing with dry ice or, in the water-based design used here as the reference, by passing through a chilled, ultrasonic-atomiser chamber — so the fog comes out heavier than the surrounding air and hugs the ground instead of rising. This gives the classic knee-high \"ground mist\" look without needing dry ice on site.",
+      "whatSources": [
+        "SURGEFX-HYDRA"
+      ],
+      "inShow": "Run for a short period before or at the start of a scene to build a still, low layer that performers' legs move through; a 3000 W double-output unit can fill roughly 70 m² in under two minutes but needs the room's air kept still to stay low.",
+      "inShowSources": [
+        "SURGEFX-HYDRA"
+      ],
+      "preview": "lowfog",
+      "needs": [
+        {
+          "kind": "consumable",
+          "text": "water-based low-lying fog fluid specifically (ordinary fog fluid will rise rather than stay grounded), plus distilled water for the cooling/atomiser chamber — tap-water minerals damage the ultrasonic atomisers.",
+          "sources": [
+            "SURGEFX-HYDRA"
+          ]
+        },
+        {
+          "kind": "safety",
+          "text": "ground fog usually sits below ceiling-mounted smoke detectors but this must be tested in the venue beforehand, the same as any fog use.",
+          "sources": [
+            "SURGEFX-HYDRA"
+          ]
+        }
+      ],
+      "specs": [
+        {
+          "label": "power",
+          "value": "3000 W (equivalent product)",
+          "sources": [
+            "SURGEFX-HYDRA"
+          ]
+        },
+        {
+          "label": "coverage",
+          "value": "approx. 70 m² in about 100 seconds (equivalent product)",
+          "sources": [
+            "SURGEFX-HYDRA"
+          ]
+        },
+        {
+          "label": "fluid consumption",
+          "value": "approx. 1 L/hour continuous (equivalent product)",
+          "sources": [
+            "SURGEFX-HYDRA"
+          ]
+        },
+        {
+          "label": "control",
+          "value": "DMX, 2 channels: channel 1 output volume, channel 2 timing/interval (equivalent product)",
+          "sources": [
+            "SURGEFX-HYDRA"
+          ]
+        },
+        {
+          "label": "weight",
+          "value": "54 kg (equivalent product)",
+          "sources": [
+            "SURGEFX-HYDRA"
+          ]
+        }
+      ],
+      "alternatives": [
+        {
+          "maker": "SurgeFX",
+          "model": "Hydra",
+          "url": "https://surgefx.com/products/hydra-low-lying-fog-machine",
+          "why": "the product this class is modelled on; dry-ice-free double-output design with published specs.",
+          "sources": [
+            "SURGEFX-HYDRA"
+          ]
+        },
+        {
+          "maker": "Stairville",
+          "model": "GF-3000 Ground Fog Machine",
+          "url": "https://www.thomannmusic.com/stairville_gf_3000_ground_fog_machine.htm",
+          "why": "the traditional dry-ice route to the same look — a lift mechanism dips dry ice into hot water; a real, well-stocked alternative if dry ice is available on site.",
+          "sources": [
+            "STAIRVILLE-GF3000"
+          ]
+        }
+      ],
+      "photo": null,
+      "sources": {
+        "SURGEFX-HYDRA": {
+          "url": "https://surgefx.com/products/hydra-low-lying-fog-machine",
+          "what": "SurgeFX — Hydra low-lying fog machine product page (how it works, specs, safety notes)",
+          "accessed": "2026-09-28"
+        },
+        "STAIRVILLE-GF3000": {
+          "url": "https://www.thomannmusic.com/stairville_gf_3000_ground_fog_machine.htm",
+          "what": "Thomann — Stairville GF-3000 dry-ice ground fog machine listing",
+          "accessed": "2026-09-28"
+        }
+      }
+    },
+    {
+      "id": "up-236",
+      "codes": [
+        "UP-236"
+      ],
+      "group": "effects",
+      "name": "mist machine",
+      "product": "UPlight UP-236 \"Mist machine 800W\" (double-head) — the rental house's own name for the item; UPlight's own store and site list no UP-236 and no matching product was found under any maker. The exact maker and model are owed.",
+      "what": "The rental house lists it as an 800 W double-head mist machine: a fog-machine-family device that puts out a vapour. That is all the rental house says; the maker, the model and what the vapour is like are owed.",
+      "whatSources": [
+        "QUOTE"
+      ],
+      "inShow": "owed — how it is run (continuous or in bursts, warm-up, coverage) is not stated by the rental house and no page for this code was found.",
+      "inShowSources": [],
+      "preview": "mist",
+      "needs": [
+        {
+          "kind": "consumable",
+          "text": "fog/haze fluid (glycol- or oil-based, machine-dependent) — exact type owed.",
+          "sources": []
+        },
+        {
+          "kind": "other",
+          "text": "the maker, model, and full specifications of this code are owed — no page under this code was found on UPlight's own site or store, and no independent maker listing matched it.",
+          "sources": []
+        }
+      ],
+      "specs": [],
+      "alternatives": [
+        {
+          "maker": "Antari",
+          "model": "Z-800 II",
+          "url": "https://www.zzounds.com/item--ANTZ800II",
+          "why": "an established maker's fog machine at the same 800 W power figure the rental house quotes for UP-236, with a full published spec sheet, where UP-236 itself has none.",
+          "sources": [
+            "ANTARI-Z800II"
+          ]
+        },
+        {
+          "maker": "Antari",
+          "model": "Z-350 Fazer",
+          "url": "https://reverb.com/item/3386811-antari-z-350-fazer-haze-machine-compact-water-based-hazer-with-low-fluid-consumption",
+          "why": "a compact (8.7 kg) close-range haze/mist unit from a named maker, closer in scale and use to a small double-head 'mist' machine than a full fog machine is.",
+          "sources": [
+            "ANTARI-Z350"
+          ]
+        }
+      ],
+      "photo": null,
+      "sources": {
+        "ANTARI-Z800II": {
+          "url": "https://www.zzounds.com/item--ANTZ800II",
+          "what": "Antari Z-800 II fog machine — retailer listing of the maker's specs (800 W, tank, output)",
+          "accessed": "2026-09-28"
+        },
+        "ANTARI-Z350": {
+          "url": "https://reverb.com/item/3386811-antari-z-350-fazer-haze-machine-compact-water-based-hazer-with-low-fluid-consumption",
+          "what": "Antari Z-350 Fazer — retailer listing of the maker's specs (compact water-based hazer)",
+          "accessed": "2026-09-28"
+        },
+        "QUOTE": {
+          "url": "",
+          "what": "lights_rental_quote_calculator.xlsx, \"Price list\"!A24:E24: \"Mist machine 800W\", UP-236, \"Double-head\", 2 available, 14000 AMD/day",
+          "accessed": "2026-09-28"
+        }
+      }
+    },
+    {
+      "id": "up-hd210",
+      "codes": [
+        "UP-HD210"
+      ],
+      "group": "effects",
+      "name": "butterfly effect light",
+      "product": "UPlight UP-HD210 \"3-in-1 butterfly effect\" (multi-effect) — UPlight's own store and site list no UP-HD210; not one of their traceable products. Described here as the general class of compact 3-in-1 party-light fixture, using the AVSL \"Butterfly Effect 3-in-1\" as a named comparable product.",
+      "what": "A single small fixture that combines three separate effects in one box: rotating multi-beam LED patterns (the \"butterfly\" — the same idea as a derby light), a low-power red/green laser that throws a star-field of fine beam lines, and a set of coloured LED PARs / a strobe. It is a one-box party-light solution rather than a precision fixture — sold to cover a small stage or dance floor with moving colour and laser texture from a single unit.",
+      "whatSources": [
+        "AVSL-BUTTERFLY"
+      ],
+      "inShow": "Run as a continuous automatic, sound-activated, or DMX-controlled wash of moving colour and fine laser lines over a crowd or small stage — a texture-filler rather than a fixture aimed at anything specific.",
+      "inShowSources": [
+        "AVSL-BUTTERFLY"
+      ],
+      "preview": "effect",
+      "needs": [
+        {
+          "kind": "safety",
+          "text": "the comparable product's laser is class 3B (per IEC 60825-1's hazard classes): direct or specular viewing of the beam can injure the eye. It needs the same basic laser precautions as any laser fixture in the rig — no aiming into the audience at eye level, and whoever runs the show should know where its beams sweep.",
+          "sources": [
+            "AVSL-BUTTERFLY",
+            "WIKI-LASER-SAFETY"
+          ]
+        }
+      ],
+      "specs": [
+        {
+          "label": "size",
+          "value": "130 x 200 x 240 mm (comparable product)",
+          "sources": [
+            "AVSL-BUTTERFLY"
+          ]
+        },
+        {
+          "label": "weight",
+          "value": "1.18 kg (comparable product)",
+          "sources": [
+            "AVSL-BUTTERFLY"
+          ]
+        },
+        {
+          "label": "power",
+          "value": "38 W, 110-240 Vac 50/60 Hz (comparable product)",
+          "sources": [
+            "AVSL-BUTTERFLY"
+          ]
+        },
+        {
+          "label": "laser",
+          "value": "red 100 mW + green 50 mW, class 3B (comparable product)",
+          "sources": [
+            "AVSL-BUTTERFLY"
+          ]
+        },
+        {
+          "label": "control",
+          "value": "DMX512, 13 channels; also auto, sound-active, master/slave, IR remote (comparable product)",
+          "sources": [
+            "AVSL-BUTTERFLY"
+          ]
+        }
+      ],
+      "alternatives": [
+        {
+          "maker": "AVSL",
+          "model": "Butterfly Effect 3-in-1 (151.744UK)",
+          "url": "https://www.avsl.com/product/151.744UK-butterfly-effect--3in1-led--laser-effect-light",
+          "why": "the named comparable product this class is described from; full published spec sheet.",
+          "sources": [
+            "AVSL-BUTTERFLY"
+          ]
+        },
+        {
+          "maker": "AVE",
+          "model": "Derby-V3",
+          "url": "https://www.avecorp.com.au/product/ave-derby-v3-laser-butterfly-strobe-multi-effect-dmx-lighting/",
+          "why": "the same three-effects-in-one idea (derby + laser + strobe) from a different maker, useful as a cross-check on the class.",
+          "sources": [
+            "AVE-DERBYV3"
+          ]
+        },
+        {
+          "maker": "Chauvet DJ",
+          "model": "Scorpion Storm RGX",
+          "url": "https://www.chauvetdj.com/products/scorpion-storm-rgx/",
+          "why": "the laser element alone, separated out as its own fixture — more control over the laser (114° coverage, red+green) at the cost of losing the derby wash and strobe in the same box.",
+          "sources": [
+            "CHAUVET-SCORPIONSTORM"
+          ]
+        }
+      ],
+      "photo": null,
+      "sources": {
+        "AVSL-BUTTERFLY": {
+          "url": "https://www.avsl.com/product/151.744UK-butterfly-effect--3in1-led--laser-effect-light",
+          "what": "AVSL — Butterfly Effect 3-in-1 LED + laser effect light, product page and specs",
+          "accessed": "2026-09-28"
+        },
+        "AVE-DERBYV3": {
+          "url": "https://www.avecorp.com.au/product/ave-derby-v3-laser-butterfly-strobe-multi-effect-dmx-lighting/",
+          "what": "AVE — Derby-V3 laser butterfly strobe multi-effect, product page",
+          "accessed": "2026-09-28"
+        },
+        "CHAUVET-SCORPIONSTORM": {
+          "url": "https://www.chauvetdj.com/products/scorpion-storm-rgx/",
+          "what": "Chauvet DJ — Scorpion Storm RGX laser effect, product page",
+          "accessed": "2026-09-28"
+        },
+        "WIKI-LASER-SAFETY": {
+          "url": "https://en.wikipedia.org/wiki/Laser_safety",
+          "what": "Wikipedia — Laser safety: IEC 60825-1 hazard classes, class 3B definition",
+          "accessed": "2026-09-28"
+        }
+      }
+    },
+    {
+      "id": "hazer",
+      "codes": [
+        "MDG ATMe"
+      ],
+      "group": "effects",
+      "name": "hazer",
+      "product": "Not on the rental house's list — the rig needs haze to make its beams visible. Reference product: MDG ATMe haze generator.",
+      "what": "Haze is a very fine, even mist — droplets under a micron across, far smaller than fog or smoke — spread through the air so it barely reads as a cloud but makes every beam of light passing through it look like a solid shaft. It is the standard way moving-light and laser beams are made visible in a room without laying down a visible cloud the way a fog or smoke machine does; fog/smoke is thicker, denser, and meant to be seen as its own shape, while haze is meant to stay unnoticed except where a beam cuts through it.",
+      "whatSources": [
+        "WIKI-HAZE-MACHINE",
+        "WIKI-THEATRICAL-FOG"
+      ],
+      "inShow": "Run continuously at a low, steady level through a scene — unlike fog, which is used in short bursts — so every beam, gobo edge and laser line reads clearly to the eye and on camera. Too much haze and the room itself starts to look milky.",
+      "inShowSources": [
+        "WIKI-HAZE-MACHINE"
+      ],
+      "preview": "haze",
+      "needs": [
+        {
+          "kind": "consumable",
+          "text": "haze fluid — a highly refined white mineral oil for the MDG ATMe's own 'Neutral' fluid.",
+          "sources": [
+            "MDG-ATME"
+          ]
+        },
+        {
+          "kind": "consumable",
+          "text": "a CO2 cylinder as the carrier gas (the MDG ATMe design draws on CO2, not just mains air, to atomise the fluid): about 0.18-0.36 kg/hour depending on output pressure.",
+          "sources": [
+            "MDG-ATME"
+          ]
+        },
+        {
+          "kind": "power",
+          "text": "mains, 100-250 Vac; 715 W (MDG ATMe).",
+          "sources": [
+            "MDG-ATME"
+          ]
+        },
+        {
+          "kind": "safety",
+          "text": "haze is a far lower particle dose than fog, but the same basic care applies in a small closed room: don't run it without some air movement, and check with the venue if it shares an HVAC zone with smoke detectors.",
+          "sources": [
+            "ENTERTAINING-SAFETY"
+          ]
+        }
+      ],
+      "specs": [
+        {
+          "label": "size",
+          "value": "685 x 180 x 300 mm, L x W x H",
+          "sources": [
+            "MDG-ATME"
+          ]
+        },
+        {
+          "label": "weight",
+          "value": "16.8 kg",
+          "sources": [
+            "MDG-ATME"
+          ]
+        },
+        {
+          "label": "power",
+          "value": "715 W, 100-250 Vac 50/60 Hz",
+          "sources": [
+            "MDG-ATME"
+          ]
+        },
+        {
+          "label": "fluid consumption",
+          "value": "55 ml/hour at 20 psi, 110 ml/hour at 40 psi",
+          "sources": [
+            "MDG-ATME"
+          ]
+        },
+        {
+          "label": "CO2 consumption",
+          "value": "0.18 kg/hour at 20 psi, 0.36 kg/hour at 40 psi",
+          "sources": [
+            "MDG-ATME"
+          ]
+        },
+        {
+          "label": "reservoir",
+          "value": "2.5 L, up to 23 hours running time at 40 psi with a full tank",
+          "sources": [
+            "MDG-ATME"
+          ]
+        },
+        {
+          "label": "particle size",
+          "value": "0.5-0.7 micron",
+          "sources": [
+            "MDG-ATME"
+          ]
+        },
+        {
+          "label": "control",
+          "value": "3 standard USITT DMX512 channels, RDM compliant",
+          "sources": [
+            "MDG-ATME"
+          ]
+        },
+        {
+          "label": "noise",
+          "value": "45.4 dB at 1 m",
+          "sources": [
+            "MDG-ATME"
+          ]
+        }
+      ],
+      "alternatives": [
+        {
+          "maker": "MDG",
+          "model": "ATMe",
+          "url": "https://www.mdgfog.com/en/atme",
+          "why": "the reference product used for this entry — the industry-standard high-output hazer, also listed in the Open Fixture Library.",
+          "sources": [
+            "MDG-ATME",
+            "OFL-ATME"
+          ]
+        },
+        {
+          "maker": "Antari",
+          "model": "HZ-500",
+          "url": "https://antari.com/products/hz-500/",
+          "why": "a touring-class oil/water hazer with dual nozzles and quieter running (below 70 dB at 10 cm) — a common substitute where MDG's CO2-fed design isn't practical.",
+          "sources": [
+            "ANTARI-HZ500"
+          ]
+        },
+        {
+          "maker": "Look Solutions",
+          "model": "Unique 2.1",
+          "url": "https://www.looksolutions.com/uploads/pdf/en_fr/bed_unique21_1e.pdf",
+          "why": "water-based (no oil, no CO2 cylinder needed), 99-step DMX control of pump and fan separately — the easiest of the three to run without a gas supply.",
+          "sources": [
+            "LOOK-UNIQUE21"
+          ]
+        }
+      ],
+      "photo": {
+        "file": "public/rigbuild/items/photos/hazer.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:Smoke_and_light_beams_(Unsplash).jpg",
+        "author": "Daniel Robert (Unsplash, via Wikimedia Commons)",
+        "licence": "CC0 1.0",
+        "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "shows": "a concert crowd with strong beams of light cutting visibly through haze/smoke in the air — a photo of the effect haze exists to produce, not of any specific hazer"
+      },
+      "sources": {
+        "WIKI-HAZE-MACHINE": {
+          "url": "https://en.wikipedia.org/wiki/Haze_machine",
+          "what": "Wikipedia — Haze machine: particle size, purpose (revealing beams without a visible cloud)",
+          "accessed": "2026-09-28"
+        },
+        "WIKI-THEATRICAL-FOG": {
+          "url": "https://en.wikipedia.org/wiki/Theatrical_smoke_and_fog",
+          "what": "Wikipedia — Theatrical smoke and fog: haze vs. fog/smoke distinction, ESTA/ANSI E1.5 standard reference",
+          "accessed": "2026-09-28"
+        },
+        "MDG-ATME": {
+          "url": "https://www.mdgfog.com/en/atme",
+          "what": "MDG — ATMe haze generator, maker's product page and full specifications",
+          "accessed": "2026-09-28"
+        },
+        "OFL-ATME": {
+          "url": "https://open-fixture-library.org/mdg/atme",
+          "what": "Open Fixture Library — MDG ATMe DMX fixture definition",
+          "accessed": "2026-09-28"
+        },
+        "ANTARI-HZ500": {
+          "url": "https://antari.com/products/hz-500/",
+          "what": "Antari — HZ-500 hazer, maker's product page",
+          "accessed": "2026-09-28"
+        },
+        "LOOK-UNIQUE21": {
+          "url": "https://www.looksolutions.com/uploads/pdf/en_fr/bed_unique21_1e.pdf",
+          "what": "Look Solutions — Unique 2.1 operating manual",
+          "accessed": "2026-09-28"
+        },
+        "ENTERTAINING-SAFETY": {
+          "url": "https://entertainingsafety.com/knowledge-base/theatrical-fog-and-smoke-detectors-how-to-avoid-setting-off-fire-alarms/",
+          "what": "Entertaining Safety — coordinating atmospheric machines with venue fire alarm systems",
+          "accessed": "2026-09-28"
+        }
+      },
+      "codesNote": "MDG ATMe is the type the equipment list takes from the Open Fixture Library (ofl-mdg-atme); the rental house lists no hazer"
+    }
+  ]
+}

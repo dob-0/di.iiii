@@ -22,13 +22,38 @@ export const rentalOf = (entities = []) => {
     return { entity, list: entity ? entity.components.rentalList : null }
 }
 
+const merged = new WeakMap()
+
+/**
+ * The type library with the show's own types (the list's `types`: added from the Open
+ * Fixture Library, or a rental code whose mode is owed — RIG_BUILD.md §13) after the
+ * generated ones. Stable: the same library and the same list give the same object, so
+ * a view can memo on it. A show type never replaces a library type of the same id.
+ * @param {object} library
+ * @param {object[]|object|null} entitiesOrList  the document's entities, or the list
+ */
+export const libraryWithShow = (library, entitiesOrList) => {
+    const list = Array.isArray(entitiesOrList) ? rentalOf(entitiesOrList).list : entitiesOrList
+    const extra = list?.types
+    if (!library || !Array.isArray(extra) || !extra.length) return library
+    let byList = merged.get(library)
+    if (!byList) { byList = new WeakMap(); merged.set(library, byList) }
+    const hit = byList.get(extra)
+    if (hit) return hit
+    const have = new Set((library.types || []).map((t) => t.id))
+    const out = { ...library, types: [...(library.types || []), ...extra.filter((t) => !have.has(t.id))] }
+    byList.set(extra, out)
+    return out
+}
+
 /**
  * Per item on the list: how many are on order, how many are in the rig, how many are
  * left to place (or placed past the order). Types in the rig that are not on the list
  * come after, as `unlisted` — a lamp nobody ordered is worth saying out loud.
  * @returns {{ items: object[], totals: { ordered: number, placed: number, left: number, over: number } }}
  */
-export const rentalCounts = ({ entities = [], library, list = null }) => {
+export const rentalCounts = ({ entities = [], library: base, list = null }) => {
+    const library = libraryWithShow(base, list)
     const placed = new Map()
     for (const e of entities) {
         if (!isLamp(e)) continue
@@ -37,6 +62,16 @@ export const rentalCounts = ({ entities = [], library, list = null }) => {
     }
     const listed = new Set()
     const items = (list?.items || []).map((item) => {
+        // A non-DMX item (a node, a cable — RIG_BUILD.md §13) is counted and costed, never
+        // hung: it has no lamps to count, no mode and no card.
+        if (item.kind === 'item') {
+            return {
+                code: item.code, type: item.type, label: item.label || '', kind: 'item', ordered: item.ordered,
+                stock: item.stock ?? null, rate: item.rate ?? null, source: item.source || '',
+                placed: 0, left: 0, over: 0, known: false, category: item.category || 'other', mode: null, footprint: null,
+                modeOwed: null, watts: item.watts ?? null, unlisted: false, item: true
+            }
+        }
         listed.add(item.type)
         const type = typeById(library, item.type)
         const n = placed.get(item.type) || 0
@@ -58,15 +93,17 @@ export const rentalCounts = ({ entities = [], library, list = null }) => {
             footprint: mode?.footprint ?? null,
             modeOwed: type ? Boolean(type.modesOwed) : null,
             watts: type ? powerOf(type) : null,
-            unlisted: false
+            unlisted: false,
+            item: false
         }
     })
     for (const [t, n] of placed) {
         if (listed.has(t)) continue
         const type = typeById(library, t)
-        items.push({ code: type?.code || t, type: t, label: '', ordered: 0, stock: null, rate: null, source: '', placed: n, left: 0, over: n, known: Boolean(type), category: type?.category || null, mode: type?.defaultMode || null, footprint: null, modeOwed: type ? Boolean(type.modesOwed) : null, watts: type ? powerOf(type) : null, unlisted: true })
+        items.push({ code: type?.code || t, type: t, label: '', ordered: 0, stock: null, rate: null, source: '', placed: n, left: 0, over: n, known: Boolean(type), category: type?.category || null, mode: type?.defaultMode || null, footprint: null, modeOwed: type ? Boolean(type.modesOwed) : null, watts: type ? powerOf(type) : null, unlisted: true, item: false })
     }
-    const totals = items.reduce((s, i) => ({ ordered: s.ordered + i.ordered, placed: s.placed + i.placed, left: s.left + i.left, over: s.over + i.over }), { ordered: 0, placed: 0, left: 0, over: 0 })
+    const lamps = items.filter((i) => !i.item)
+    const totals = lamps.reduce((s, i) => ({ ordered: s.ordered + i.ordered, placed: s.placed + i.placed, left: s.left + i.left, over: s.over + i.over }), { ordered: 0, placed: 0, left: 0, over: 0 })
     return { items, totals }
 }
 

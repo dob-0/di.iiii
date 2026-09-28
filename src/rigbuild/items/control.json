@@ -1,0 +1,1331 @@
+{
+  "items": [
+    {
+      "id": "up-q3l",
+      "codes": [
+        "UP-Q3L"
+      ],
+      "group": "control",
+      "name": "Lighting console",
+      "product": "UPlight UP-Q3L MA lighting console",
+      "what": "A full-size desk with rows of faders, buttons, encoder wheels and a touchscreen, built to store every light cue of a show and play them back on command. The rental house's own listing calls it simply \"MA lighting console\", runs Linux, and is priced and shelved as a full-size control desk. It sits at the mixing position and is wired or networked out to the fixtures.",
+      "whatSources": [
+        "RENTAL",
+        "UPLIGHT-CO"
+      ],
+      "inShow": "The desk the lighting operator runs the whole show from: every cue, fade and blackout is called from here, live or against a pre-set timeline.",
+      "inShowSources": [
+        "RENTAL"
+      ],
+      "preview": "none",
+      "needs": [
+        {
+          "kind": "operator",
+          "text": "a trained lighting programmer/operator — this is not a walk-up device",
+          "sources": [
+            "RENTAL"
+          ]
+        },
+        {
+          "kind": "power",
+          "text": "mains power at the operating position",
+          "sources": [
+            "RENTAL"
+          ]
+        },
+        {
+          "kind": "signal",
+          "text": "a DMX or Art-Net/sACN link out to the fixtures or splitters",
+          "sources": [
+            "ANSI-E111",
+            "ARTNET4"
+          ]
+        }
+      ],
+      "specs": [
+        {
+          "label": "operating system",
+          "value": "Linux",
+          "sources": [
+            "RENTAL"
+          ]
+        },
+        {
+          "label": "size class",
+          "value": "full-size control surface",
+          "sources": [
+            "RENTAL"
+          ]
+        },
+        {
+          "label": "maker",
+          "value": "not confirmed — the rental house's own listing does not say whether this is a genuine MA Lighting grandMA product or a compatible clone running similar software; owed, ask the rental house directly",
+          "sources": [
+            "RENTAL",
+            "UPLIGHT-CO"
+          ]
+        }
+      ],
+      "alternatives": [
+        {
+          "maker": "MA Lighting",
+          "model": "grandMA3 light",
+          "url": "https://www.malighting.com/product/grandma3-light-4010502/",
+          "why": "the genuine article this console's name references — the real MA control language, full manufacturer support and training network",
+          "sources": [
+            "MA-G3L"
+          ]
+        },
+        {
+          "maker": "ETC",
+          "model": "Eos / Ion family",
+          "url": "https://www.etcconnect.com/Products/Consoles/",
+          "why": "the other industry-standard theatre desk family, most widely taught in drama schools and most widely rented",
+          "sources": [
+            "ETC-EOS"
+          ]
+        },
+        {
+          "maker": "ChamSys",
+          "model": "MagicQ (MQ series)",
+          "url": "https://chamsyslighting.com/",
+          "why": "lower entry cost, the same core cue/playback workflow, strong reputation for touring and small venues",
+          "sources": [
+            "CHAMSYS"
+          ]
+        },
+        {
+          "maker": "Avolites",
+          "model": "Titan range (Tiger Touch II etc.)",
+          "url": "https://www.avolites.com/products/",
+          "why": "a third established control language, common in club and touring rigs",
+          "sources": [
+            "AVO"
+          ]
+        }
+      ],
+      "photo": {
+        "file": "public/rigbuild/items/photos/up-q3l.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:MA_Lighting_48-6_Desk.jpg",
+        "author": "Fon sanders jr",
+        "licence": "CC BY-SA 4.0",
+        "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "shows": "a genuine MA Lighting desk (the older \"48/6\" model) — shown to illustrate what a real MA Lighting console looks like; not the rental unit itself, and not evidence that the rental house's UP-Q3L is a genuine MA product (see the maker note above)"
+      },
+      "sources": {
+        "RENTAL": {
+          "url": "file:///home/dob/Downloads/lights_rental_quote_calculator.xlsx",
+          "what": "UPlight Stage Equipment rental price list, sheet \"lighting inventory and day rates\", row for UP-Q3L: \"MA lighting console\", \"Linux OS, full-size control\"",
+          "accessed": "2026-09-28"
+        },
+        "UPLIGHT-CO": {
+          "url": "https://up-light.en.made-in-china.com",
+          "what": "UPlight Stage Equipment (Guangzhou) Co., Ltd. company/product listing on Made-in-China — no UP-Q3L model page found; the listed product range is moving heads, PAR and effects, not control consoles",
+          "accessed": "2026-09-28"
+        },
+        "ANSI-E111": {
+          "url": "https://tsp.esta.org/tsp/documents/docs/ANSI-ESTA_E1-11_2008R2018.pdf",
+          "what": "ANSI E1.11 (DMX512-A) — the USITT/ESTA DMX512 standard",
+          "accessed": "2026-09-28"
+        },
+        "ARTNET4": {
+          "url": "https://art-net.org.uk/",
+          "what": "Art-Net 4 specification, published by Artistic Licence at art-net.org.uk",
+          "accessed": "2026-09-28"
+        },
+        "MA-G3L": {
+          "url": "https://www.malighting.com/product/grandma3-light-4010502/",
+          "what": "MA Lighting grandMA3 light — official product page",
+          "accessed": "2026-09-28"
+        },
+        "ETC-EOS": {
+          "url": "https://www.etcconnect.com/Products/Consoles/",
+          "what": "ETC Eos family consoles — official product page",
+          "accessed": "2026-09-28"
+        },
+        "CHAMSYS": {
+          "url": "https://chamsyslighting.com/",
+          "what": "ChamSys MagicQ consoles — official site",
+          "accessed": "2026-09-28"
+        },
+        "AVO": {
+          "url": "https://www.avolites.com/products/",
+          "what": "Avolites products page (Titan console range) — official site",
+          "accessed": "2026-09-28"
+        }
+      }
+    },
+    {
+      "id": "up-1024",
+      "codes": [
+        "UP-1024"
+      ],
+      "group": "control",
+      "name": "DMX control desk",
+      "product": "UPlight UP-1024 1024 DMX control desk",
+      "what": "A smaller, stand-alone lighting desk with rows of sliding faders, built to output 1024 DMX512 channels — two full DMX universes of 512 channels each — directly, without needing a separate network node. Used where a full console is more than the rig needs.",
+      "whatSources": [
+        "RENTAL",
+        "ANSI-E111"
+      ],
+      "inShow": "The hands-on desk for a simpler rig: press-and-fade control of PARs, washes and basic effects without building a full show file.",
+      "inShowSources": [
+        "RENTAL"
+      ],
+      "preview": "none",
+      "needs": [
+        {
+          "kind": "operator",
+          "text": "someone who can run faders/scenes live",
+          "sources": [
+            "RENTAL"
+          ]
+        },
+        {
+          "kind": "power",
+          "text": "mains power at the desk",
+          "sources": [
+            "RENTAL"
+          ]
+        },
+        {
+          "kind": "signal",
+          "text": "DMX cable out to the fixtures or a splitter",
+          "sources": [
+            "ANSI-E111"
+          ]
+        }
+      ],
+      "specs": [
+        {
+          "label": "channels",
+          "value": "1024 (2 x 512-channel DMX512 universes)",
+          "sources": [
+            "RENTAL",
+            "ANSI-E111"
+          ]
+        }
+      ],
+      "alternatives": [
+        {
+          "maker": "Chauvet DJ",
+          "model": "Obey 70",
+          "url": "https://www.chauvetdj.com/products/obey-70/",
+          "why": "similar compact, fader-and-joystick desk class, 384 channels, common in the same rental tier",
+          "sources": [
+            "CHAUVET-OBEY70"
+          ]
+        },
+        {
+          "maker": "ChamSys",
+          "model": "MagicQ MQ40N",
+          "url": "https://chamsyslighting.com/product/magicq-mq40n-compact-console/",
+          "why": "a step up — 4 universes via direct DMX or network, still a compact standalone desk",
+          "sources": [
+            "CHAMSYS-MQ40N"
+          ]
+        },
+        {
+          "maker": "Thomann/Stairville",
+          "model": "DMX Master I",
+          "url": "https://www.thomann.de/",
+          "why": "a very simple entry-level DMX desk of the same budget tier as UP-1024 — pictured below as the class example",
+          "sources": [
+            "STAIRVILLE"
+          ]
+        }
+      ],
+      "photo": {
+        "file": "public/rigbuild/items/photos/up-1024.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:DMX-Controller_Stairville_DMX_Master_I_-_JD.jpg",
+        "author": "JD (de.wikipedia.org)",
+        "licence": "CC BY-SA 4.0",
+        "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "shows": "a compact stand-alone DMX desk of another make (Stairville DMX Master I) — illustrates the general class of small fader-based DMX control desk; not the rental unit itself"
+      },
+      "sources": {
+        "RENTAL": {
+          "url": "file:///home/dob/Downloads/lights_rental_quote_calculator.xlsx",
+          "what": "UPlight rental price list, row for UP-1024: \"1024 DMX control desk\", \"1024-channel\"",
+          "accessed": "2026-09-28"
+        },
+        "ANSI-E111": {
+          "url": "https://tsp.esta.org/tsp/documents/docs/ANSI-ESTA_E1-11_2008R2018.pdf",
+          "what": "ANSI E1.11 (DMX512-A) — 512 channels ('slots') per universe",
+          "accessed": "2026-09-28"
+        },
+        "CHAUVET-OBEY70": {
+          "url": "https://www.chauvetdj.com/products/obey-70/",
+          "what": "Chauvet DJ Obey 70 — official product page",
+          "accessed": "2026-09-28"
+        },
+        "CHAMSYS-MQ40N": {
+          "url": "https://chamsyslighting.com/product/magicq-mq40n-compact-console/",
+          "what": "ChamSys MagicQ MQ40N Compact Console — official product page",
+          "accessed": "2026-09-28"
+        },
+        "STAIRVILLE": {
+          "url": "https://commons.wikimedia.org/wiki/File:DMX-Controller_Stairville_DMX_Master_I_-_JD.jpg",
+          "what": "Stairville is a Thomann (Germany) house brand; product photographed and described on Wikimedia Commons",
+          "accessed": "2026-09-28"
+        }
+      }
+    },
+    {
+      "id": "up-9800",
+      "codes": [
+        "UP-9800"
+      ],
+      "group": "control",
+      "name": "Central controller",
+      "product": "UPlight UP-9800 FRX-9800 central controller",
+      "what": "The rental house's own listing gives only two words for this unit: \"Central control.\" No public UPlight product page for an \"FRX-9800\" could be found, and UPlight's own catalogue (moving heads, PAR, effects) does not otherwise include control gear, so what this box actually does inside the rig — master a DMX/RDM network, sync several sub-controllers, something else — is not confirmed. Because the function is unconfirmed, no comparable products are named below: calling something an 'alternative' to an unknown device would not be honest. Owed: ask the rental house what it connects to and what it does.",
+      "whatSources": [
+        "RENTAL",
+        "UPLIGHT-CO"
+      ],
+      "inShow": "Listed under the rental house's \"Control & power\" category, alongside the console, desk and splitters, so it sits somewhere in the control or power-distribution chain; its exact role in a show is not documented and is owed.",
+      "inShowSources": [
+        "RENTAL"
+      ],
+      "preview": "none",
+      "needs": [
+        {
+          "kind": "other",
+          "text": "confirm with the rental house exactly what this unit does and what it must be wired to before the design relies on it — owed",
+          "sources": [
+            "RENTAL"
+          ]
+        }
+      ],
+      "specs": [
+        {
+          "label": "rental category",
+          "value": "Control & power",
+          "sources": [
+            "RENTAL"
+          ]
+        },
+        {
+          "label": "function",
+          "value": "not stated beyond \"Central control\"; owed",
+          "sources": [
+            "RENTAL",
+            "UPLIGHT-CO"
+          ]
+        }
+      ],
+      "alternatives": [],
+      "photo": null,
+      "sources": {
+        "RENTAL": {
+          "url": "file:///home/dob/Downloads/lights_rental_quote_calculator.xlsx",
+          "what": "UPlight rental price list, row for UP-9800: \"FRX-9800 central controller\", \"Central control\"",
+          "accessed": "2026-09-28"
+        },
+        "UPLIGHT-CO": {
+          "url": "https://up-light.en.made-in-china.com",
+          "what": "UPlight Stage Equipment (Guangzhou) Co., Ltd. company/product listing — no FRX-9800 page found",
+          "accessed": "2026-09-28"
+        }
+      }
+    },
+    {
+      "id": "up-b01",
+      "codes": [
+        "UP-B01"
+      ],
+      "group": "control",
+      "name": "Control / broadcast unit",
+      "product": "UPlight UP-B01 Light control / broadcast unit",
+      "what": "As with UP-9800, the rental house's own listing gives only \"Control unit\" against the name \"Light control / broadcast unit.\" No independent UPlight product page for the UP-B01 could be found. The name suggests it repeats or distributes a control signal to more than one receiver, but that is an inference, not a confirmed fact — owed: ask the rental house what it does and what it connects to. No comparable products are named below for the same reason as UP-9800: the function is not confirmed.",
+      "whatSources": [
+        "RENTAL",
+        "UPLIGHT-CO"
+      ],
+      "inShow": "Listed under \"Control & power\" alongside the console, desk, splitters and decoder; its exact position in the signal chain is not documented and is owed.",
+      "inShowSources": [
+        "RENTAL"
+      ],
+      "preview": "none",
+      "needs": [
+        {
+          "kind": "other",
+          "text": "confirm with the rental house exactly what this unit does and what it must be wired to before the design relies on it — owed",
+          "sources": [
+            "RENTAL"
+          ]
+        }
+      ],
+      "specs": [
+        {
+          "label": "rental category",
+          "value": "Control & power",
+          "sources": [
+            "RENTAL"
+          ]
+        },
+        {
+          "label": "function",
+          "value": "not stated beyond \"Control unit\"; owed",
+          "sources": [
+            "RENTAL",
+            "UPLIGHT-CO"
+          ]
+        }
+      ],
+      "alternatives": [],
+      "photo": null,
+      "sources": {
+        "RENTAL": {
+          "url": "file:///home/dob/Downloads/lights_rental_quote_calculator.xlsx",
+          "what": "UPlight rental price list, row for UP-B01: \"Light control / broadcast unit\", \"Control unit\"",
+          "accessed": "2026-09-28"
+        },
+        "UPLIGHT-CO": {
+          "url": "https://up-light.en.made-in-china.com",
+          "what": "UPlight Stage Equipment (Guangzhou) Co., Ltd. company/product listing — no UP-B01 page found",
+          "accessed": "2026-09-28"
+        }
+      }
+    },
+    {
+      "id": "up-pdu60b",
+      "codes": [
+        "UP-PDU60B"
+      ],
+      "group": "control",
+      "name": "DMX splitter (outdoor)",
+      "product": "UPlight UP-PDU60B DMX signal amplifier (outdoor)",
+      "what": "A DMX512 line splitter and signal booster in a weatherproof, IP-rated housing. A single DMX line can only drive a limited number of devices before the signal needs repeating; this box takes one incoming DMX universe and re-transmits it as several fresh, electrically isolated outputs, so a rig can branch out to many fixtures — outdoors, in the weather — without the far end of the line dropping out.",
+      "whatSources": [
+        "RENTAL",
+        "ANSI-E111"
+      ],
+      "inShow": "Placed where one console/node output has to feed several outdoor truss runs, or a fixture count near or above the standard's unit-load limit on a single line — splits and re-powers the signal so every branch reads clean, in a housing sealed against weather.",
+      "inShowSources": [
+        "RENTAL",
+        "ANSI-E111"
+      ],
+      "preview": "none",
+      "needs": [
+        {
+          "kind": "power",
+          "text": "mains or DC power to the splitter itself",
+          "sources": [
+            "RENTAL"
+          ]
+        },
+        {
+          "kind": "signal",
+          "text": "one DMX universe in from the console or node",
+          "sources": [
+            "ANSI-E111"
+          ]
+        },
+        {
+          "kind": "other",
+          "text": "outdoor-rated connectors and cable glands kept properly seated and sealed in use — an IP rating is only as good as the connections made on site",
+          "sources": [
+            "RENTAL"
+          ]
+        }
+      ],
+      "specs": [
+        {
+          "label": "DMX unit-load limit",
+          "value": "a DMX512-A line supports a maximum of 32 unit loads (EIA-485); splitters exist to get past that limit and to protect against wiring faults",
+          "sources": [
+            "ANSI-E111"
+          ]
+        },
+        {
+          "label": "IP rating",
+          "value": "described only as \"outdoor\" / \"IP-rated distribution\" by the rental house; exact IP number not stated; owed",
+          "sources": [
+            "RENTAL"
+          ]
+        }
+      ],
+      "alternatives": [
+        {
+          "maker": "Chauvet Professional",
+          "model": "GeNetix GD4IP",
+          "url": "https://chamsyslighting.com/product/genetix-gd4ip/",
+          "why": "compact IP65 4-port DMX splitter built for the same outdoor branching job",
+          "sources": [
+            "CHAUVET-GD4IP"
+          ]
+        },
+        {
+          "maker": "Pathway Connectivity",
+          "model": "PWREP IP65 Opto Splitter",
+          "url": "https://www.acuitybrands.com/products/detail/1990922/pathway/pwrep-ip65-opto-splitter/dmx-rdm-repeater-with-power-in-ip65-enclosure",
+          "why": "opto-isolated DMX/RDM repeater in an IP65 (NEMA 4X) enclosure, purpose-built for outdoor star-wiring",
+          "sources": [
+            "PATHWAY-PWREP"
+          ]
+        },
+        {
+          "maker": "Sundrax",
+          "model": "Splitter Duo Arma",
+          "url": "https://architectural.sundrax.com/products/splitter-duo-arma",
+          "why": "IP65 duralumin splitter supporting DMX/RDM, Art-Net and sACN in one outdoor unit",
+          "sources": [
+            "SUNDRAX"
+          ]
+        }
+      ],
+      "photo": null,
+      "sources": {
+        "RENTAL": {
+          "url": "file:///home/dob/Downloads/lights_rental_quote_calculator.xlsx",
+          "what": "UPlight rental price list, row for UP-PDU60B: \"DMX signal amplifier (outdoor)\", \"IP-rated distribution\"",
+          "accessed": "2026-09-28"
+        },
+        "ANSI-E111": {
+          "url": "https://tsp.esta.org/tsp/documents/docs/ANSI-ESTA_E1-11_2008R2018.pdf",
+          "what": "ANSI E1.11 (DMX512-A) — 32 unit-load maximum per DMX line (EIA-485)",
+          "accessed": "2026-09-28"
+        },
+        "CHAUVET-GD4IP": {
+          "url": "https://chamsyslighting.com/product/genetix-gd4ip/",
+          "what": "Chauvet Professional GeNetix GD4IP — official product page",
+          "accessed": "2026-09-28"
+        },
+        "PATHWAY-PWREP": {
+          "url": "https://www.acuitybrands.com/products/detail/1990922/pathway/pwrep-ip65-opto-splitter/dmx-rdm-repeater-with-power-in-ip65-enclosure",
+          "what": "Pathway Connectivity (Acuity Brands) PWREP IP65 Opto Splitter — official product page",
+          "accessed": "2026-09-28"
+        },
+        "SUNDRAX": {
+          "url": "https://architectural.sundrax.com/products/splitter-duo-arma",
+          "what": "Sundrax Splitter Duo Arma — official product page",
+          "accessed": "2026-09-28"
+        }
+      }
+    },
+    {
+      "id": "up-pdu60a",
+      "codes": [
+        "UP-PDU60A"
+      ],
+      "group": "control",
+      "name": "DMX splitter",
+      "product": "UPlight UP-PDU60A DMX signal amplifier",
+      "what": "The indoor counterpart to UP-PDU60B: a one-input, multi-output DMX512 splitter and repeater, in a non-weatherproof housing. It takes one incoming DMX universe and hands it back out as several electrically isolated, freshly-driven DMX lines, so a rig can branch to many fixtures without overloading a single run.",
+      "whatSources": [
+        "RENTAL",
+        "ANSI-E111"
+      ],
+      "inShow": "Used indoors wherever one console/node output needs to feed more than one DMX run — protects the console from ground loops and wiring faults on any one branch.",
+      "inShowSources": [
+        "RENTAL",
+        "ANSI-E111"
+      ],
+      "preview": "none",
+      "needs": [
+        {
+          "kind": "power",
+          "text": "mains or DC power to the splitter itself",
+          "sources": [
+            "RENTAL"
+          ]
+        },
+        {
+          "kind": "signal",
+          "text": "one DMX universe in from the console or node",
+          "sources": [
+            "ANSI-E111"
+          ]
+        }
+      ],
+      "specs": [
+        {
+          "label": "distribution",
+          "value": "1-way in, multiple isolated DMX512 outputs",
+          "sources": [
+            "RENTAL"
+          ]
+        },
+        {
+          "label": "DMX unit-load limit",
+          "value": "a DMX512-A line supports a maximum of 32 unit loads (EIA-485); splitters exist to get past that limit",
+          "sources": [
+            "ANSI-E111"
+          ]
+        }
+      ],
+      "alternatives": [
+        {
+          "maker": "ENTTEC",
+          "model": "D-Split",
+          "url": "https://www.enttec.com/product/dmx-isolated-splitter-din-rail/d-split-dmx-opto-splitter-isolator/",
+          "why": "opto-isolated 1-in/4-out DMX splitter, the standard small indoor splitter in most touring kits",
+          "sources": [
+            "ENTTEC-DSPLIT"
+          ]
+        },
+        {
+          "maker": "Doug Fleenor Design",
+          "model": "DMX512 Splitter/Isolator range",
+          "url": "https://www.dfd.com/splitters",
+          "why": "a US industry-standard maker of opto-isolated splitters, widely specified where reliability matters",
+          "sources": [
+            "DFD-SPLIT"
+          ]
+        }
+      ],
+      "photo": {
+        "file": "public/rigbuild/items/photos/up-pdu60a.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:Dmx_repeater.jpg",
+        "author": "KeepOnTruckin",
+        "licence": "CC BY 2.5",
+        "licenceUrl": "https://creativecommons.org/licenses/by/2.5",
+        "shows": "a DMX opto-splitter of another make, indoor housing — the general class of device that lets many DMX lines run from one console output; not the rental unit itself"
+      },
+      "sources": {
+        "RENTAL": {
+          "url": "file:///home/dob/Downloads/lights_rental_quote_calculator.xlsx",
+          "what": "UPlight rental price list, row for UP-PDU60A: \"DMX signal amplifier\", \"1-way DMX512 distribution\"",
+          "accessed": "2026-09-28"
+        },
+        "ANSI-E111": {
+          "url": "https://tsp.esta.org/tsp/documents/docs/ANSI-ESTA_E1-11_2008R2018.pdf",
+          "what": "ANSI E1.11 (DMX512-A) — 32 unit-load maximum per DMX line (EIA-485)",
+          "accessed": "2026-09-28"
+        },
+        "ENTTEC-DSPLIT": {
+          "url": "https://www.enttec.com/product/dmx-isolated-splitter-din-rail/d-split-dmx-opto-splitter-isolator/",
+          "what": "ENTTEC D-Split — official product page",
+          "accessed": "2026-09-28"
+        },
+        "DFD-SPLIT": {
+          "url": "https://www.dfd.com/splitters",
+          "what": "Doug Fleenor Design DMX512 Splitters/Isolators — official product page",
+          "accessed": "2026-09-28"
+        }
+      }
+    },
+    {
+      "id": "up-2303",
+      "codes": [
+        "UP-2303"
+      ],
+      "group": "control",
+      "name": "DMX decoder",
+      "product": "UPlight UP-2303 DMX decoder 2303",
+      "what": "A DMX decoder reads DMX512 data addressed to it and converts it into a different kind of output — typically a constant-voltage or constant-current signal for RGB/RGBW LED strip, or a switched relay output — for devices that cannot read DMX directly. The rental house's own listing names it only \"Decoder\" with the code 2303; no independent UPlight product page for this model was found, so its exact output type, channel count and load rating are not confirmed. Owed: ask the rental house what it is meant to drive.",
+      "whatSources": [
+        "RENTAL",
+        "UPLIGHT-CO",
+        "DECODER-GEN"
+      ],
+      "inShow": "Sits at the load end of a DMX line wherever a non-DMX-native fixture — most often LED strip, or a relay-controlled practical — needs to answer to the console.",
+      "inShowSources": [
+        "RENTAL",
+        "DECODER-GEN"
+      ],
+      "preview": "none",
+      "needs": [
+        {
+          "kind": "signal",
+          "text": "a DMX start address set on the decoder, matching the console's patch",
+          "sources": [
+            "DECODER-GEN"
+          ]
+        },
+        {
+          "kind": "power",
+          "text": "its own power feed, separate from the DMX line, to drive whatever load it's decoding for",
+          "sources": [
+            "DECODER-GEN"
+          ]
+        }
+      ],
+      "specs": [
+        {
+          "label": "output type / channel count",
+          "value": "not stated by the rental house; owed",
+          "sources": [
+            "RENTAL"
+          ]
+        }
+      ],
+      "alternatives": [
+        {
+          "maker": "LTECH",
+          "model": "DMX512 decoder range (CV/CC)",
+          "url": "http://www.ltech-led.com/html/en/Control/Decoder/",
+          "why": "the class of budget DMX-to-LED decoder this item most likely belongs to — wide model range by channel count and output type",
+          "sources": [
+            "LTECH"
+          ]
+        },
+        {
+          "maker": "Diode LED",
+          "model": "DMX Decoder Driver",
+          "url": "https://www.diodeled.com/dmx-decoder-driver.html",
+          "why": "a decoder with a built-in LED driver, from a maker that documents its specs in full, unlike UP-2303",
+          "sources": [
+            "DIODELED"
+          ]
+        }
+      ],
+      "photo": null,
+      "sources": {
+        "RENTAL": {
+          "url": "file:///home/dob/Downloads/lights_rental_quote_calculator.xlsx",
+          "what": "UPlight rental price list, row for UP-2303: \"DMX decoder 2303\", \"Decoder\"",
+          "accessed": "2026-09-28"
+        },
+        "UPLIGHT-CO": {
+          "url": "https://up-light.en.made-in-china.com",
+          "what": "UPlight Stage Equipment (Guangzhou) Co., Ltd. company/product listing — no UP-2303 page found",
+          "accessed": "2026-09-28"
+        },
+        "DECODER-GEN": {
+          "url": "https://www.diodeled.com/dmx-decoder-driver.html",
+          "what": "Diode LED — general explanation of what a DMX decoder/driver does",
+          "accessed": "2026-09-28"
+        },
+        "LTECH": {
+          "url": "http://www.ltech-led.com/html/en/Control/Decoder/",
+          "what": "LTECH DMX512 decoder range — official product listing",
+          "accessed": "2026-09-28"
+        },
+        "DIODELED": {
+          "url": "https://www.diodeled.com/dmx-decoder-driver.html",
+          "what": "Diode LED DMX Decoder Driver — official product page",
+          "accessed": "2026-09-28"
+        }
+      }
+    },
+    {
+      "id": "up-power12",
+      "codes": [
+        "UP-POWER12"
+      ],
+      "group": "control",
+      "name": "12-channel dimmer / power distro",
+      "product": "UPlight UP-POWER12 12-way dimmer / power cabinet",
+      "what": "A cabinet of 12 mains power outputs, each independently switchable and/or dimmable by DMX — the traditional way to make non-LED lanterns fade, and also a safe, fused way to break mains power out to many circuits even where nothing is actually being dimmed. The rental house's own listing gives only \"12-channel distro\"; whether the 12 ways are true phase-cut dimmers or simple non-dim relay outputs is not stated. Owed: confirm dimming type and per-channel amperage with the rental house before patching anything that needs real dimming through it.",
+      "whatSources": [
+        "RENTAL"
+      ],
+      "inShow": "Feeds, and where needed fades, mains-powered fixtures that take a raw power feed rather than their own DMX input — classically tungsten Fresnels/PCs, or a plain non-dim breakout for LED fixtures with their own internal power supplies.",
+      "inShowSources": [
+        "RENTAL"
+      ],
+      "preview": "none",
+      "needs": [
+        {
+          "kind": "power",
+          "text": "a qualified electrician to size and connect the incoming mains supply and every outgoing circuit — never self-wired",
+          "sources": [
+            "IEC60364",
+            "NFPA70E"
+          ]
+        },
+        {
+          "kind": "safety",
+          "text": "circuit protection (fuses/breakers) matched to cable and load on every one of the 12 ways",
+          "sources": [
+            "IEC60364"
+          ]
+        },
+        {
+          "kind": "signal",
+          "text": "a DMX address per channel, if the ways are true dimmers, matching the console's patch",
+          "sources": [
+            "RENTAL"
+          ]
+        }
+      ],
+      "specs": [
+        {
+          "label": "channels",
+          "value": "12",
+          "sources": [
+            "RENTAL"
+          ]
+        },
+        {
+          "label": "dimming type",
+          "value": "not stated by the rental house; owed",
+          "sources": [
+            "RENTAL"
+          ]
+        }
+      ],
+      "alternatives": [
+        {
+          "maker": "ETC",
+          "model": "Sensor3 dimming",
+          "url": "https://www.etcconnect.com/Sensor3/",
+          "why": "the professional-theatre benchmark for true phase-dimming racks, in portable/touring and installed versions",
+          "sources": [
+            "ETC-SENSOR3"
+          ]
+        },
+        {
+          "maker": "Avolites",
+          "model": "Art dimmer racks",
+          "url": "https://www.avolites.com/products/",
+          "why": "an established touring dimmer-rack maker, the same trade tier as UP-POWER12's rental slot",
+          "sources": [
+            "AVO-ART"
+          ]
+        },
+        {
+          "maker": "Chauvet DJ",
+          "model": "IRC-6",
+          "url": "https://www.chauvetdj.com/products/irc-6/",
+          "why": "a non-dim relay pack, for when the real need is only safe switched power breakout, not dimming",
+          "sources": [
+            "CHAUVET-IRC6"
+          ]
+        }
+      ],
+      "photo": {
+        "file": "public/rigbuild/items/photos/up-power12.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:Avolites_Art_2000_Dimmer_Rack.JPG",
+        "author": "SheffGruff",
+        "licence": "CC BY-SA 3.0",
+        "licenceUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+        "shows": "an Avolites Art 2000 dimmer rack, another make — illustrates the general class of multi-channel dimmer/power-distribution cabinet; not the rental unit itself, and not evidence of whether UP-POWER12 is a true dimmer"
+      },
+      "sources": {
+        "RENTAL": {
+          "url": "file:///home/dob/Downloads/lights_rental_quote_calculator.xlsx",
+          "what": "UPlight rental price list, row for UP-POWER12: \"12-way dimmer / power cabinet\", \"12-channel distro\"",
+          "accessed": "2026-09-28"
+        },
+        "IEC60364": {
+          "url": "https://en.wikipedia.org/wiki/IEC_60364",
+          "what": "IEC 60364 low-voltage electrical installations standard — section 740 covers temporary installations for structures, amusement devices and booths",
+          "accessed": "2026-09-28"
+        },
+        "NFPA70E": {
+          "url": "https://www.nfpa.org/product/nfpa-70e-standard/p0070ecode",
+          "what": "NFPA 70E, Standard for Electrical Safety in the Workplace — official NFPA page",
+          "accessed": "2026-09-28"
+        },
+        "ETC-SENSOR3": {
+          "url": "https://www.etcconnect.com/Sensor3/",
+          "what": "ETC Sensor3 dimming — official product page",
+          "accessed": "2026-09-28"
+        },
+        "AVO-ART": {
+          "url": "https://www.avolites.com/products/",
+          "what": "Avolites products page",
+          "accessed": "2026-09-28"
+        },
+        "CHAUVET-IRC6": {
+          "url": "https://www.chauvetdj.com/products/irc-6/",
+          "what": "Chauvet DJ IRC-6 relay pack — official product page",
+          "accessed": "2026-09-28"
+        }
+      }
+    },
+    {
+      "id": "artnet-node",
+      "codes": [],
+      "group": "network",
+      "name": "Art-Net / sACN node",
+      "product": "Art-Net / sACN node (Ethernet to DMX) — not on the rental house's list; planned from another supplier for this show",
+      "what": "A small box that sits between the network — a cable from the console or a laptop — and the DMX cables running out to the lamps. It receives Art-Net or sACN data, which is DMX carried over ordinary Ethernet, and turns it back into standard 5-pin DMX512 signal on several physical output ports, each one a separate 'universe' of up to 512 channels. In plain terms: it is the translator between the network cable from the control position and the DMX cable that actually reaches the lights.",
+      "whatSources": [
+        "ARTNET4",
+        "ANSI-E131",
+        "ANSI-E111"
+      ],
+      "inShow": "For this production a node is planned from a supplier other than the rental house, sized for four DMX universes: one network cable in from the desk or laptop, four DMX runs out to the rig, instead of running four separate long DMX cables all the way from the console.",
+      "inShowSources": [],
+      "preview": "none",
+      "needs": [
+        {
+          "kind": "power",
+          "text": "PoE (Power over Ethernet) or a local power feed to the node",
+          "sources": [
+            "ARTNET4"
+          ]
+        },
+        {
+          "kind": "signal",
+          "text": "a wired Ethernet network from the console/laptop, and one DMX cable per output universe out to the rig",
+          "sources": [
+            "ARTNET4",
+            "ANSI-E111"
+          ]
+        },
+        {
+          "kind": "other",
+          "text": "confirm the exact make/model and universe count with the other supplier before the build — the rental house does not carry this item; owed",
+          "sources": []
+        }
+      ],
+      "specs": [
+        {
+          "label": "universes planned",
+          "value": "4 (this production's plan)",
+          "sources": [
+            "SHOW"
+          ]
+        },
+        {
+          "label": "protocols",
+          "value": "Art-Net (versions 1–4) and sACN (ANSI E1.31) are the two standard ways to carry DMX over Ethernet",
+          "sources": [
+            "ARTNET4",
+            "ANSI-E131"
+          ]
+        }
+      ],
+      "alternatives": [
+        {
+          "maker": "DMXking",
+          "model": "eDMX4 PRO",
+          "url": "https://dmxking.com/artnetsacn/edmx4-pro",
+          "why": "4 DMX ports in/out, Art-Net and sACN with merge, PoE — a direct match for a 4-universe plan",
+          "sources": [
+            "DMXKING"
+          ]
+        },
+        {
+          "maker": "Luminex",
+          "model": "LumiNode 4",
+          "url": "https://www.luminex.be/products/luminode/luminode-4/",
+          "why": "4 fully isolated DMX ports, Art-Net/sACN/KiNET, rack- or truss-mountable — built for touring",
+          "sources": [
+            "LUMINEX"
+          ]
+        },
+        {
+          "maker": "ENTTEC",
+          "model": "Storm 8",
+          "url": "https://enttec.com/product/lighting-communication-protocols/dmx512/storm-8-8-universe-ethernet-to-dmx-gateway",
+          "why": "8 universes — headroom above the planned 4, useful if the show grows",
+          "sources": [
+            "ENTTEC-STORM8"
+          ]
+        }
+      ],
+      "photo": {
+        "file": "public/rigbuild/items/photos/artnet-node.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:ACME_Lighting_ArtNet_To_DMX_model_CA-AN28_(DMX_Ethernet_Node)_(2016-01-16_18.58.18_by_chcleung_).jpg",
+        "author": "chcleung",
+        "licence": "CC BY-SA 2.0",
+        "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+        "shows": "an Art-Net-to-DMX node of another make (ACME Lighting CA-AN28) — illustrates the general class of device; not the specific unit this production will use"
+      },
+      "sources": {
+        "ARTNET4": {
+          "url": "https://art-net.org.uk/",
+          "what": "Art-Net 4 specification, Artistic Licence / art-net.org.uk",
+          "accessed": "2026-09-28"
+        },
+        "ANSI-E131": {
+          "url": "https://tsp.esta.org/tsp/documents/docs/E1-31-2016.pdf",
+          "what": "ANSI E1.31 — Streaming ACN (sACN), ESTA Technical Standards Program",
+          "accessed": "2026-09-28"
+        },
+        "ANSI-E111": {
+          "url": "https://tsp.esta.org/tsp/documents/docs/ANSI-ESTA_E1-11_2008R2018.pdf",
+          "what": "ANSI E1.11 (DMX512-A) — the DMX512 standard a node's output ports carry",
+          "accessed": "2026-09-28"
+        },
+        "DMXKING": {
+          "url": "https://dmxking.com/artnetsacn/edmx4-pro",
+          "what": "DMXking eDMX4 PRO — official product page",
+          "accessed": "2026-09-28"
+        },
+        "LUMINEX": {
+          "url": "https://www.luminex.be/products/luminode/luminode-4/",
+          "what": "Luminex LumiNode 4 — official product page",
+          "accessed": "2026-09-28"
+        },
+        "ENTTEC-STORM8": {
+          "url": "https://enttec.com/product/lighting-communication-protocols/dmx512/storm-8-8-universe-ethernet-to-dmx-gateway",
+          "what": "ENTTEC Storm 8 — official product page",
+          "accessed": "2026-09-28"
+        },
+        "SHOW": {
+          "url": "",
+          "what": "the MOXIR show's plan: an Art-Net node from another supplier, \"4 universes\" (the rig-build brief, 2026-09-28)",
+          "accessed": "2026-09-28"
+        }
+      }
+    },
+    {
+      "id": "truss",
+      "codes": [],
+      "group": "structure",
+      "name": "Box truss",
+      "product": "290 mm box truss, 1 / 2 / 3 m lengths — our own rig stock, not on the rental house's price list",
+      "what": "Aluminium tube sections — here, 290 mm box truss, four 50 mm main chords braced diagonally with 20 mm tube — that bolt end to end to build a rigid beam for hanging lights, or stack to build a tower. This is the class of item the rental house's own price list refers to when it notes that trussing 'is included with the fixtures they serve': it is not separately priced rental stock, it is the frame the lights hang from.",
+      "whatSources": [
+        "RENTAL-ROW39",
+        "GT-F34"
+      ],
+      "inShow": "The physical structure the rig hangs from — spans between two towers to carry a row of moving heads or PARs, or a short length caps a tower.",
+      "inShowSources": [
+        "RENTAL-ROW39"
+      ],
+      "preview": "none",
+      "needs": [
+        {
+          "kind": "rigging",
+          "text": "a competent rigger's plan and load calculation before anything is hung — every fixture, cable and accessory's point load has to stay inside the truss maker's published load table for the span in use",
+          "sources": [
+            "PROLYTE-H30V-LOAD",
+            "GT-F34-LOAD"
+          ]
+        },
+        {
+          "kind": "safety",
+          "text": "a secondary safety bond (chain or wire) on every hung fixture and every truss-to-truss connection",
+          "sources": [
+            "ABTT-COP"
+          ]
+        },
+        {
+          "kind": "other",
+          "text": "design and use should follow a recognised truss/rigging code: ANSI E1.2 for design and manufacture, and the UK BS 7905-2 / BS 7906-2 pair (now withdrawn but still commonly referenced) or the ABTT / International Code of Practice for Entertainment Rigging for use",
+          "sources": [
+            "ANSI-E12",
+            "BS7905-2",
+            "BS7906-2",
+            "ABTT-COP"
+          ]
+        }
+      ],
+      "specs": [
+        {
+          "label": "cross-section",
+          "value": "290 mm box (four 50x2 mm main chords, 20 mm diagonal braces) — matches the class of Prolyte H30V / Global Truss F34 / Eurotruss FD34",
+          "sources": [
+            "GT-F34",
+            "EUROTRUSS-FD34"
+          ]
+        },
+        {
+          "label": "lengths stocked",
+          "value": "1 m, 2 m, 3 m",
+          "sources": [
+            "PIECES"
+          ]
+        }
+      ],
+      "alternatives": [
+        {
+          "maker": "Prolyte",
+          "model": "H30V square truss",
+          "url": "https://www.prolyte.com/products/aluminium-truss/square-truss/h30v",
+          "why": "the reference product of this truss class, with published Eurocode load tables for every length",
+          "sources": [
+            "PROLYTE-H30V"
+          ]
+        },
+        {
+          "maker": "Global Truss",
+          "model": "F34 square truss",
+          "url": "https://www.globaltruss.com/trussing/f34-square-truss",
+          "why": "the same 290 mm, TÜV-approved 4-point class, widely stocked worldwide",
+          "sources": [
+            "GT-F34"
+          ]
+        },
+        {
+          "maker": "Eurotruss",
+          "model": "FD34 square truss",
+          "url": "https://www.eurotruss.com/product/fd34/",
+          "why": "a third maker in the identical 290 mm class, TÜV approved, rated for spans to 16 m",
+          "sources": [
+            "EUROTRUSS-FD34"
+          ]
+        }
+      ],
+      "photo": {
+        "file": "public/rigbuild/items/photos/truss.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:Aluminium_box_trussing_at_Hatfield_Broad_Oak,_Essex,_England_1.jpg",
+        "author": "Acabashi",
+        "licence": "CC BY-SA 4.0",
+        "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+        "shows": "aluminium box trussing sections of another make, photographed in a rigging works — the general class of box truss; not our own stock"
+      },
+      "sources": {
+        "RENTAL-ROW39": {
+          "url": "file:///home/dob/Downloads/lights_rental_quote_calculator.xlsx",
+          "what": "UPlight rental price list, sheet 3, row 39: \"Truss, clamps, safety chains and cabling are included with the fixtures they serve.\"",
+          "accessed": "2026-09-28"
+        },
+        "GT-F34": {
+          "url": "https://www.globaltruss.com/trussing/f34-square-truss",
+          "what": "Global Truss F34 square truss — official product page (290 mm / 11.42in box, 50x2mm main tube)",
+          "accessed": "2026-09-28"
+        },
+        "GT-F34-LOAD": {
+          "url": "https://www.globaltruss.com/pub/media/categorycustomlink/pdf/F34_Truss_Load_Span_Tables.pdf",
+          "what": "Global Truss F34 load/span tables — official PDF",
+          "accessed": "2026-09-28"
+        },
+        "PROLYTE-H30V": {
+          "url": "https://www.prolyte.com/products/aluminium-truss/square-truss/h30v",
+          "what": "Prolyte H30V square truss — official product page",
+          "accessed": "2026-09-28"
+        },
+        "PROLYTE-H30V-LOAD": {
+          "url": "https://www.prolyte.com/getmedia/b6bcb893-6107-46d3-884c-b8f8215f10f0/LOADING-TABLE-TRUSS-TYPE-H30V-LENGTHS-EN-20153_1.pdf.aspx",
+          "what": "Prolyte H30V allowable loading table — official PDF",
+          "accessed": "2026-09-28"
+        },
+        "EUROTRUSS-FD34": {
+          "url": "https://www.eurotruss.com/product/fd34/",
+          "what": "Eurotruss FD34 square truss — official product page (290x290mm, TÜV approved)",
+          "accessed": "2026-09-28"
+        },
+        "ANSI-E12": {
+          "url": "https://webstore.ansi.org/standards/esta/ansie12021-2440346",
+          "what": "ANSI E1.2-2021 — Entertainment Technology, Design, Manufacture and Use of Aluminum Trusses and Towers (ESTA/ANSI standard)",
+          "accessed": "2026-09-28"
+        },
+        "BS7905-2": {
+          "url": "https://knowledge.bsigroup.com/products/lifting-equipment-for-performance-broadcast-and-similar-applications-specification-for-design-and-manufacture-of-aluminium-and-steel-trusses-and-towers",
+          "what": "BS 7905-2:2000 — Specification for design and manufacture of aluminium and steel trusses and towers (withdrawn, still commonly referenced in the UK trade)",
+          "accessed": "2026-09-28"
+        },
+        "BS7906-2": {
+          "url": "https://knowledge.bsigroup.com/products/lifting-equipment-for-performance-broadcast-and-similar-applications-code-of-practice-for-use-of-aluminium-and-steel-trusses-and-towers",
+          "what": "BS 7906-2:2000 — Code of practice for use of aluminium and steel trusses and towers (withdrawn, still commonly referenced in the UK trade)",
+          "accessed": "2026-09-28"
+        },
+        "ABTT-COP": {
+          "url": "https://www.abtt.org.uk/product-category/codes-of-practice/",
+          "what": "Association of British Theatre Technicians — Codes of Practice (rigging and technical standards for places of entertainment)",
+          "accessed": "2026-09-28"
+        },
+        "PIECES": {
+          "url": "",
+          "what": "src/rigbuild/pieces.js — the rig builder's piece catalogue (RIG_BUILD.md §2.3): truss 1/2/3 m of a 290 mm box section, tower 6 m default on a 0.8 m plate, deck 2 × 1 m on legs",
+          "accessed": "2026-09-28"
+        }
+      }
+    },
+    {
+      "id": "tower",
+      "codes": [],
+      "group": "structure",
+      "name": "Truss tower",
+      "product": "Truss tower on a base plate, default 6 m — our own rig stock, not on the rental house's price list",
+      "what": "A vertical stack of the same box truss, standing on a weighted or bolted base plate, used to lift a horizontal truss run — or a single fixture — up off the ground without hanging it from the building. Towers carry a maximum height and a maximum load at that height together: taller means less load, and every tower needs its base plate, ballast or outrigger set sized to the specific height and load, per the maker's own tables.",
+      "whatSources": [
+        "PROLYTE-TOWER",
+        "GT-GROUNDSUPPORT"
+      ],
+      "inShow": "Stands a truss run at the wings or over the stage where there is no rigging point above — carries lighting, and sometimes speakers, on a freestanding leg.",
+      "inShowSources": [
+        "PROLYTE-TOWER"
+      ],
+      "preview": "none",
+      "needs": [
+        {
+          "kind": "rigging",
+          "text": "a competent rigger's check of height vs. load vs. base/ballast before use — never eyeballed",
+          "sources": [
+            "ANSI-E12",
+            "BS7906-2"
+          ]
+        },
+        {
+          "kind": "safety",
+          "text": "outriggers, ballast or guying as the maker's table requires for the height in use, and a secondary bond on anything hung from the top",
+          "sources": [
+            "ABTT-COP"
+          ]
+        }
+      ],
+      "specs": [
+        {
+          "label": "default height",
+          "value": "6 m (this rig's own stock default; not a maker-published maximum)",
+          "sources": [
+            "PIECES"
+          ]
+        }
+      ],
+      "alternatives": [
+        {
+          "maker": "Prolyte",
+          "model": "Tower Systems",
+          "url": "https://www.prolyte.com/products/tower-systems",
+          "why": "the maker's own ground-support tower range, matched to its truss and rated in the same published load tables",
+          "sources": [
+            "PROLYTE-TOWER"
+          ]
+        },
+        {
+          "maker": "Global Truss",
+          "model": "Ground Support (GT-44BS-1 base + ST towers)",
+          "url": "https://www.globaltruss.com/ground-support",
+          "why": "a base-plate ground support system built to the F34 truss class, with published unit weight and max load per tower",
+          "sources": [
+            "GT-GROUNDSUPPORT"
+          ]
+        },
+        {
+          "maker": "Doughty Engineering",
+          "model": "Easy Lift Winch Stand",
+          "url": "https://doughty-engineering.co.uk/products/easy-lift-winch-stands/",
+          "why": "a wind-up alternative to a bolted tower — faster to rig for a single light or small truss run, lower load rating (30 kg WLL)",
+          "sources": [
+            "DOUGHTY-WINCH"
+          ]
+        }
+      ],
+      "photo": null,
+      "sources": {
+        "PROLYTE-TOWER": {
+          "url": "https://www.prolyte.com/products/tower-systems",
+          "what": "Prolyte Tower Systems — official product page",
+          "accessed": "2026-09-28"
+        },
+        "GT-GROUNDSUPPORT": {
+          "url": "https://www.globaltruss.com/ground-support",
+          "what": "Global Truss Ground Support range — official product page",
+          "accessed": "2026-09-28"
+        },
+        "DOUGHTY-WINCH": {
+          "url": "https://doughty-engineering.co.uk/products/easy-lift-winch-stands/",
+          "what": "Doughty Engineering Easy Lift Winch Stands — official product page (3.8 m max height, 30 kg WLL)",
+          "accessed": "2026-09-28"
+        },
+        "ANSI-E12": {
+          "url": "https://webstore.ansi.org/standards/esta/ansie12021-2440346",
+          "what": "ANSI E1.2-2021 — Design, Manufacture and Use of Aluminum Trusses and Towers",
+          "accessed": "2026-09-28"
+        },
+        "BS7906-2": {
+          "url": "https://knowledge.bsigroup.com/products/lifting-equipment-for-performance-broadcast-and-similar-applications-code-of-practice-for-use-of-aluminium-and-steel-trusses-and-towers",
+          "what": "BS 7906-2:2000 — Code of practice for use of aluminium and steel trusses and towers (withdrawn, still commonly referenced)",
+          "accessed": "2026-09-28"
+        },
+        "ABTT-COP": {
+          "url": "https://www.abtt.org.uk/product-category/codes-of-practice/",
+          "what": "Association of British Theatre Technicians — Codes of Practice",
+          "accessed": "2026-09-28"
+        },
+        "PIECES": {
+          "url": "",
+          "what": "src/rigbuild/pieces.js — the rig builder's piece catalogue (RIG_BUILD.md §2.3): truss 1/2/3 m of a 290 mm box section, tower 6 m default on a 0.8 m plate, deck 2 × 1 m on legs",
+          "accessed": "2026-09-28"
+        }
+      }
+    },
+    {
+      "id": "deck",
+      "codes": [],
+      "group": "structure",
+      "name": "Stage deck",
+      "product": "2 x 1 m stage deck on legs — our own rig stock, not on the rental house's price list",
+      "what": "A flat rectangular platform, around 2 x 1 m, that sits on removable legs at a set height, used to build a raised stage, riser or platform area. Decks of this kind lock edge-to-edge to build a larger continuous floor, and each maker publishes a maximum uniform load per square metre for its own deck/leg combination.",
+      "whatSources": [
+        "PROLYTE-LITEDECK"
+      ],
+      "inShow": "Builds a raised area — a small performance platform, a DJ/band riser, or extra height for a set piece — out of a kit of decks and legs rather than a fixed-built stage.",
+      "inShowSources": [
+        "PROLYTE-LITEDECK"
+      ],
+      "preview": "none",
+      "needs": [
+        {
+          "kind": "rigging",
+          "text": "legs locked and decks edge-locked per the maker's assembly guide before anyone stands on it",
+          "sources": [
+            "PROLYTE-LITEDECK"
+          ]
+        },
+        {
+          "kind": "safety",
+          "text": "an edge/guard rail, or a clearly marked and taped edge, on any deck run raised above ankle height, and a step or ramp at access points",
+          "sources": [
+            "ABTT-COP"
+          ]
+        }
+      ],
+      "specs": [
+        {
+          "label": "panel size",
+          "value": "2 x 1 m",
+          "sources": [
+            "PIECES"
+          ]
+        },
+        {
+          "label": "uniform load rating (comparable system)",
+          "value": "Prolyte LiteDeck is rated to 5 kN/m² uniformly distributed when assembled per the maker's guidelines; our own deck's own rating is not yet confirmed — owed",
+          "sources": [
+            "PROLYTE-LITEDECK"
+          ]
+        }
+      ],
+      "alternatives": [
+        {
+          "maker": "Prolyte",
+          "model": "LiteDeck",
+          "url": "https://www.prolyte.com/products/portable-stages/litedeck",
+          "why": "the touring-industry benchmark decking system, 5 kN/m² rated, the reference this item's spec is compared against",
+          "sources": [
+            "PROLYTE-LITEDECK"
+          ]
+        },
+        {
+          "maker": "Prolyte",
+          "model": "StageDex",
+          "url": "https://www.prolyte.com/products/portable-stages/stagedex",
+          "why": "an extruded-aluminium-profile deck system from the same maker, a common alternative build",
+          "sources": [
+            "PROLYTE-STAGEDEX"
+          ]
+        },
+        {
+          "maker": "Global Truss",
+          "model": "GT Stage Deck",
+          "url": "https://www.globaltruss.com/staging",
+          "why": "a comparable modular stage-deck-and-leg system from a second major truss/staging maker",
+          "sources": [
+            "GT-STAGE"
+          ]
+        }
+      ],
+      "photo": null,
+      "sources": {
+        "PROLYTE-LITEDECK": {
+          "url": "https://www.prolyte.com/products/portable-stages/litedeck",
+          "what": "Prolyte LiteDeck — official product page (5 kN/m² uniform load rating per assembly guidelines)",
+          "accessed": "2026-09-28"
+        },
+        "PROLYTE-STAGEDEX": {
+          "url": "https://www.prolyte.com/products/portable-stages/stagedex",
+          "what": "Prolyte StageDex — official product page",
+          "accessed": "2026-09-28"
+        },
+        "GT-STAGE": {
+          "url": "https://www.globaltruss.com/staging",
+          "what": "Global Truss Staging range — official product page",
+          "accessed": "2026-09-28"
+        },
+        "ABTT-COP": {
+          "url": "https://www.abtt.org.uk/product-category/codes-of-practice/",
+          "what": "Association of British Theatre Technicians — Codes of Practice",
+          "accessed": "2026-09-28"
+        },
+        "PIECES": {
+          "url": "",
+          "what": "src/rigbuild/pieces.js — the rig builder's piece catalogue (RIG_BUILD.md §2.3): truss 1/2/3 m of a 290 mm box section, tower 6 m default on a 0.8 m plate, deck 2 × 1 m on legs",
+          "accessed": "2026-09-28"
+        }
+      }
+    }
+  ]
+}

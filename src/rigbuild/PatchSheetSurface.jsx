@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { getProjectDocument } from '../project/services/projectsApi.js'
 import { lightingApiUrl, probeLightingDesk } from '../map/lightingLink.js'
 import { TYPE_LIBRARY } from './types/index.js'
+import { libraryWithShow } from './rental.js'
 import { SHEET_CSS, patchCsv, powerCsv, renderSheetBody, sheetModel } from './sheet.js'
 import { buildPlotPath } from './plotRouting.js'
 
@@ -47,7 +48,7 @@ const readDeskRig = async (projectId) => {
     }
 }
 
-export default function PatchSheetSurface({ spaceId, projectId, library = TYPE_LIBRARY, loadDocument = getProjectDocument, loadDesk = readDeskRig }) {
+export default function PatchSheetSurface({ spaceId, projectId, library: baseLibrary = TYPE_LIBRARY, loadDocument = getProjectDocument, loadDesk = readDeskRig }) {
     const [state, setState] = useState({ status: 'loading', document: null, version: null, desk: null, error: '' })
 
     useEffect(() => {
@@ -69,8 +70,8 @@ export default function PatchSheetSurface({ spaceId, projectId, library = TYPE_L
     }, [projectId, loadDocument, loadDesk])
 
     const model = useMemo(() => (state.document
-        ? sheetModel({ entities: state.document.entities || [], library, desk: state.desk, projectId })
-        : null), [state.document, state.desk, library, projectId])
+        ? sheetModel({ entities: state.document.entities || [], library: libraryWithShow(baseLibrary, state.document.entities || []), desk: state.desk, projectId })
+        : null), [state.document, state.desk, baseLibrary, projectId])
 
     useEffect(() => {
         const root = document.documentElement

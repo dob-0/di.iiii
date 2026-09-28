@@ -8,7 +8,8 @@ import { TYPE_LIBRARY } from './types/index.js'
 import { typeById } from './fixtureTypes.js'
 import { buildPatchSheetPath } from './patchRouting.js'
 import { buildPlotPath } from './plotRouting.js'
-import { countWords, rentalCounts, rentalOf } from './rental.js'
+import { buildEquipmentPath } from './equipmentRouting.js'
+import { countWords, libraryWithShow, rentalCounts, rentalOf } from './rental.js'
 import { symbolTable, shapePath } from './plotSymbols.js'
 import { plotData } from './sheet.js'
 import { boxesOf, piecesOf, rigExtent } from './plotGeometry.js'
@@ -251,13 +252,15 @@ function PositionRow({ position, fill, lampById, card, n, onDeal, onSlot, onTake
     )
 }
 
-export default function CardsSurface({ spaceId, projectId, library = TYPE_LIBRARY }) {
+export default function CardsSurface({ spaceId, projectId, library: baseLibrary = TYPE_LIBRARY }) {
     const store = useProjectStore()
     const { state } = store
     const { applyLocalOps: syncOps } = useProjectDocumentSync({ projectId, store, clientIdPrefix: 'cards-client', opIdPrefix: 'cards-op' })
     const { applyLocalOps, undo, redo } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
     const document_ = state.document
     const entities = useMemo(() => document_.entities || [], [document_.entities])
+    // The library with the show's own types (RIG_BUILD.md §13), one object per list.
+    const library = useMemo(() => libraryWithShow(baseLibrary, entities), [baseLibrary, entities])
     const patch = useRigAutoPatch({ projectId, entities, applyOps: syncOps, library })
     const phone = useIsPhone()
 
@@ -422,7 +425,8 @@ export default function CardsSurface({ spaceId, projectId, library = TYPE_LIBRAR
             {!state.hasLoaded ? <p className="rigplot-hint">Reading the rig…</p> : null}
             {state.hasLoaded && !list ? <p className="rigplot-hint">No rental list in this project. It is written from the rental house&apos;s spreadsheet by scripts/rigbuild/rental.mjs.</p> : null}
             <div className="rigcards-cardlist">
-                {counts.items.map((item) => (
+                {/* A non-DMX item (a node, a cable) is on the list but is never dealt: no card. */}
+                {counts.items.filter((item) => !item.item).map((item) => (
                     <Card key={item.type} item={item} shape={table.get(item.type)} selected={cardType === item.type} onSelect={() => { setCardType(cardType === item.type ? null : item.type); setSheetOpen(cardType !== item.type) }} />
                 ))}
             </div>
@@ -509,6 +513,7 @@ export default function CardsSurface({ spaceId, projectId, library = TYPE_LIBRAR
             </div>
             {!phone ? <a href={buildPlotPath(spaceId, projectId)}>plot</a> : null}
             {!phone ? <a href={buildPatchSheetPath(spaceId, projectId)}>patch sheet</a> : null}
+            <a href={buildEquipmentPath(spaceId, projectId)}>equipment</a>
         </nav>
     )
 
