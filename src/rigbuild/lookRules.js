@@ -31,6 +31,14 @@ const leaned = (ctx, slot, sideDeg, leanDeg) => {
     const up = upOf(slot)
     return [Math.sin(s), up * Math.cos(s) * Math.cos(l), Math.cos(s) * Math.sin(l) * ctx.stage.into]
 }
+// The crane bridge over the stage: the rig script's (ctx.stage.crane), the hall's nearest
+// (ctx.hall.geometry.cranes), or the room's plan (lookFrame: ctx.crane).
+const craneOf = (ctx) => {
+    if (ctx.stage?.crane) return ctx.stage.crane
+    if (ctx.crane) return ctx.crane
+    const list = ctx.hall?.geometry?.cranes || []
+    return list.length ? [...list].sort((a, b) => Math.abs(a.z_m - ctx.stage.front) - Math.abs(b.z_m - ctx.stage.front))[0] : null
+}
 const frontBox = (ctx, x) => {
     const boxes = (ctx.stage.backdrop?.boxes || []).filter((m) => x >= m.x_m[0] - 1e-6 && x <= m.x_m[1] + 1e-6)
     if (!boxes.length) return null
@@ -68,6 +76,13 @@ export const AIM_RULES = {
     // Hung under a crane girder, straight down onto the floor, splayed out (no girder on a
     // position of view C: then straight along the lamp's own line).
     'down-from-crane': (slot) => ({ target: [slot.pos[0] * 1.1, 0, slot.pos[2] + (slot.girder || 0) * 4] }),
+    // A PAR on the line hung from the crane grazing the bridge's underside, outward along it
+    // (scripts/place/rig-lib.mjs, 2026-09-28: the bridge as a frame of light over the DJ).
+    'bridge-underside': (slot, meta, ctx, p = {}) => {
+        const crane = craneOf(ctx)
+        if (!crane) return { dir: leaned(ctx, slot, sideOf(slot, ctx) * 70, 0) }
+        return { target: [slot.pos[0] + sideOf(slot, ctx) * (p.out ?? 6), crane.girder_bottom_m, crane.z_m + ctx.stage.into * (p.girder ?? 1.1)] }
+    },
     'laser-into-roof': (slot, meta, ctx, p = {}) => ({ target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * (p.x_scale ?? 0.3), ctx.hall.geometry.truss_top_centre_m, ctx.stage.front + ctx.stage.into * (p.a ?? 14)] })
 }
 

@@ -484,3 +484,23 @@ describe('a solo in a look', () => {
         expect(lit).toHaveLength(1)
     })
 })
+
+// The crane parked over the DJ (2026-09-28 23:1x): the rig hangs BELOW its bridge, so the
+// clash rule must know the bridge's real shape — two box girders with a 1.5 m gap, the
+// trolley on top, the cab at one end — not one 2.9 m block.
+describe('the crane-clash rule knows the bridge the line hangs under', () => {
+    const crane = { z_m: 4.8, girder_bottom_m: 8.15, girder_top_m: 9.65, girders_dz_m: [-1.1, 1.1], girder_w_m: 0.7, trolley: { x_m: [7.6, 10.2], dz_m: [-1.6, 1.6], y_m: [9.65, 10.65] }, cab: { x_m: [-10.35, -8.35], dz_m: [-1, 1], y_m: [5.95, 8.15] } }
+    const h = { geometry: { ...hall.geometry, cranes: [crane] } }
+    it('lets a beam rise straight up through the gap between the girders, from the line under it', () => {
+        expect(beamHitsCrane([0, 6.7, 4.8], [0, 16, 4.8], 12, h)).toBeNull()
+    })
+    it('stops one that rises into a girder, the trolley or the cab', () => {
+        expect(beamHitsCrane([0, 6.7, 5.9], [0, 16, 5.9], 12, h)).toBe(4.8)
+        expect(beamHitsCrane([8.5, 6.7, 4.8], [8.5, 16, 4.8], 12, h)).toBe(4.8)
+        expect(beamHitsCrane([-9, 0.5, 4.8], [-9, 9, 4.8], 12, h)).toBe(4.8)
+    })
+    it('reads an older record (no girders) as one block, as before', () => {
+        const old = { geometry: { ...hall.geometry, cranes: [{ z_m: 4.8, girder_bottom_m: 8.15, girder_top_m: 9.65 }] } }
+        expect(beamHitsCrane([0, 6.7, 4.8], [0, 16, 4.8], 12, old)).toBe(4.8)
+    })
+})

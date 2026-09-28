@@ -271,8 +271,8 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
     const { list } = useMemo(() => rentalOf(entities), [entities])
     const counts = useMemo(() => rentalCounts({ entities, library, list }), [entities, library, list])
     const table = useMemo(() => symbolTable(library.types || []), [library])
-    const positions = useMemo(() => positionsOf(entities), [entities])
     const lamps = useMemo(() => plotData({ entities, library }).lamps, [entities, library])
+    const positions = useMemo(() => positionsOf(entities, lamps), [entities, lamps])
     const fill = useMemo(() => fillOf(positions, lamps), [positions, lamps])
     const lampById = useMemo(() => {
         const byEntity = new Map(entities.map((e) => [e.id, e]))

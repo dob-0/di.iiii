@@ -141,7 +141,7 @@ KEYS_FROM_DIMS = [
     'lantern_module_m', 'lantern_segments_m', 'lantern_spans',
     'neighbour_spans', 'expansion_joint_m', 'paired_columns_at_joint',
     'door_w_m', 'door_h_m', 'entry_platform', 'far_gate_w_m', 'far_gate_h_m', 'aisle_w_m',
-    'track_x_m', 'cranes_from_door_m', 'neighbour_cranes_from_door_m', 'low_walls',
+    'track_x_m', 'cranes_from_door_m', 'crane_trolley_x_m', 'neighbour_cranes_from_door_m', 'low_walls',
     'bracing_bays_from_door_m', 'massing', 'zones', 'cameras',
 ]
 # The grid and heights: a placeholder among these makes the whole room a GUESS.
@@ -616,7 +616,10 @@ def build(dims):
     crane_depth = 1.5
     cranes = []
 
-    def crane(span_index, from_door, record):
+    def crane(span_index, from_door, record, trolley_x=2.0):
+        # `trolley_x`: where the trolley is parked along the bridge (its near edge, x from
+        # the span's centre; "crane_trolley_x_m", one per nave crane). A real trolley
+        # travels the bridge: parked at an end it is out of the beams of a rig hung below.
         cx = S * span_index
         xa, xb = cx - S / 2 + girder_off, cx + S / 2 - girder_off
         cy = -L / 2 + from_door
@@ -624,16 +627,26 @@ def build(dims):
             b.box('crane', (xa, cy + offset - 0.35, girder_bottom), (xb, cy + offset + 0.35, girder_bottom + crane_depth))
         for x in (xa, xb):
             b.box('crane', (x - 0.4, cy - 2.6, rail_h), (x + 0.4, cy + 2.6, girder_bottom + 0.4))
-        b.box('crane', (cx + 2.0, cy - 1.6, girder_bottom + crane_depth), (cx + 4.6, cy + 1.6, girder_bottom + crane_depth + 1.0))
+        tx0 = cx + trolley_x
+        b.box('crane', (tx0, cy - 1.6, girder_bottom + crane_depth), (tx0 + 2.6, cy + 1.6, girder_bottom + crane_depth + 1.0))
         cab_x = xa + 1.0
         b.box('crane', (cab_x, cy - 1.0, girder_bottom - 2.2), (cab_x + 2.0, cy + 1.0, girder_bottom))
         b.box('glass', (cab_x + 1.95, cy - 0.8, girder_bottom - 1.9), (cab_x + 2.02, cy + 0.8, girder_bottom - 0.9))
         if record:
+            # The shape the rig checks beams against (rig-lib.mjs beamHitsCrane): the two
+            # box girders (0.7 m wide, 1.1 m either side of the bridge's centre line, a
+            # 1.5 m gap between them) and the trolley on top; the cab hangs at the left end.
             cranes.append({'z_m': round(-cy, 3), 'from_entry_m': round(from_door, 3),
-                           'girder_bottom_m': round(girder_bottom, 3), 'girder_top_m': round(girder_bottom + crane_depth, 3)})
+                           'girder_bottom_m': round(girder_bottom, 3), 'girder_top_m': round(girder_bottom + crane_depth, 3),
+                           'girders_dz_m': [-1.1, 1.1], 'girder_w_m': 0.7,
+                           'trolley': {'x_m': [round(tx0 - cx, 3), round(tx0 - cx + 2.6, 3)], 'dz_m': [-1.6, 1.6],
+                                       'y_m': [round(girder_bottom + crane_depth, 3), round(girder_bottom + crane_depth + 1.0, 3)]},
+                           'cab': {'x_m': [round(cab_x - cx, 3), round(cab_x - cx + 2.0, 3)], 'dz_m': [-1.0, 1.0],
+                                   'y_m': [round(girder_bottom - 2.2, 3), round(girder_bottom, 3)]}})
 
-    for from_door in dims['cranes_from_door_m']:
-        crane(0, from_door, True)
+    trolleys = list(dims.get('crane_trolley_x_m') or [])
+    for i, from_door in enumerate(dims['cranes_from_door_m']):
+        crane(0, from_door, True, float(trolleys[i]) if i < len(trolleys) and trolleys[i] is not None else 2.0)
     for side, from_door in (dims['neighbour_cranes_from_door_m'] or {}).items():
         k = -1 if side == 'left' else 1
         if (k < 0 and left) or (k > 0 and right):

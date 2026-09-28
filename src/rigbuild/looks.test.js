@@ -44,7 +44,7 @@ const dealt = () => {
 describe('looks — the rig file\'s looks on the dealt lamps', () => {
     it('renames each group to position/type, and refuses a mount it cannot place', () => {
         expect([...groupKeys(rig)]).toEqual([['beams-cols', 'column-bases/up-b380f'], ['spots', 'truss/up-250bsw']])
-        expect(() => groupKeys({ ...rig, groups: [{ id: 'x', class: 'beam', mount: 'crane-bridge' }] })).toThrow(/crane-bridge/)
+        expect(() => groupKeys({ ...rig, groups: [{ id: 'x', class: 'beam', mount: 'stage-front-deck' }] })).toThrow(/stage-front-deck/)
     })
 
     it('poses every lamp of a named group by its rule, mirrored, in the look\'s colour', () => {

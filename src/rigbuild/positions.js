@@ -111,9 +111,11 @@ const slot = (id, pos, { hung = false, side = 0, rank = 0, column = null } = {})
 /**
  * Every position of a document, derived. Order: overhead, towers, the stage, the columns,
  * the backdrop — roughly the order a crew hangs in.
+ * `lamps` (plotData's, optional): with them, a truss run that has lamps standing ON it also
+ * lists its top chord ("… — on top"); without, only the hung clamp points.
  * @returns {{ id, name, kind: 'line'|'rows', order: 'along'|'stage', slots, note }[]}
  */
-export const positionsOf = (entities = []) => {
+export const positionsOf = (entities = [], lamps = null) => {
     const pieces = piecesOf(entities)
     const { plan } = venueOf(entities)
     const out = []
@@ -136,6 +138,25 @@ export const positionsOf = (entities = []) => {
                 return slot(`${k + 1}`, [x, y, run.from[1] + u[1] * s], { hung: true, side: sideOf(x, axis), rank: k })
             })
         })
+    }
+    // …and standing ON each run's top chord at the same points — upright fixtures clamped
+    // through the top chords (a moving-head beam aimed at the sky from a hung line: hung
+    // under it, its tilt cannot reach straight up). Listed only for a run someone stands
+    // lamps on, so a truss rig that never does keeps its rows as they were.
+    for (const [i, run] of trussRuns(pieces).entries()) {
+        const d = [run.to[0] - run.from[0], run.to[1] - run.from[1]]
+        const l = Math.hypot(d[0], d[1]) || 1
+        const u = [d[0] / l, d[1] / l]
+        const y = run.height + TRUSS_SECTION_M / 2
+        const at = range(SLOT_PITCH_M / 2, run.length - SLOT_PITCH_M / 2, SLOT_PITCH_M)
+        const slots = at.map((s, k) => {
+            const x = run.from[0] + u[0] * s
+            return slot(`${k + 1}`, [x, y, run.from[1] + u[1] * s], { side: sideOf(x, axis), rank: k })
+        })
+        const riders = (lamps || []).filter((m) => slots.some((q) => Math.hypot(m.mount[0] - q.pos[0], m.mount[1] - q.pos[1], m.mount[2] - q.pos[2]) <= 0.05))
+        if (!riders.length) continue
+        const name = run.name && run.name !== 'truss' ? run.name : `truss ${i + 1}`
+        out.push({ id: `truss-top:${run.ids[0]}`, name: `${name} — on top`, kind: 'line', order: 'along', note: `standing on the top chord, a clamp every ${SLOT_PITCH_M} m`, slots })
     }
 
     // Towers: side arms up the audience face, and the top plate.

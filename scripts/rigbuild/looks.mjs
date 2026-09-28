@@ -23,6 +23,8 @@ import { RIG_SHOW_ID } from '../../src/rigbuild/rental.js'
 // The rig script's mount rules (scripts/place/rig-lib.mjs `place`) → view C's positions.
 export const MOUNT_POSITION = {
     'truss-header': () => 'truss',
+    'truss-top': () => 'truss-top',
+    'crane-bridge': () => 'crane-bridge',
     'tower-ladder': () => 'tower-ladders',
     'truss-towers': () => 'tower-tops',
     'booth-back': (g) => (g.dx_m ? 'stage-flanks' : 'stage-back'),

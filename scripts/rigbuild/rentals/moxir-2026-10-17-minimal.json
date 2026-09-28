@@ -1,6 +1,6 @@
 {
     "rentalList": {
-        "name": "MOXIR 17.10 — Minimal — one line, one colour",
+        "name": "MOXIR 17.10 — Minimal — one line under the crane, one colour",
         "source": "scripts/rigbuild/rentals/moxir-2026-10-17.json (the rental house's price list, imported by rental.mjs) · lines: scripts/place/rigs/moxir-versions-2026-10-17.json, version \"minimal\"",
         "writtenAt": "2026-09-28",
         "currency": "AMD",
@@ -18,7 +18,7 @@
             {
                 "code": "UP-PL5403",
                 "type": "up-pl5403",
-                "ordered": 11,
+                "ordered": 15,
                 "stock": 50,
                 "rate": 5000,
                 "label": "54x3W LED PAR (outdoor)",
@@ -27,7 +27,7 @@
             {
                 "code": "EXT-STROBE",
                 "type": "ext-strobe",
-                "ordered": 4,
+                "ordered": 6,
                 "label": "LED strobe (other supplier)",
                 "source": "scripts/place/rigs/moxir-versions-2026-10-17.json otherSuppliers.EXT-STROBE",
                 "note": "options: Martin Atomic 3000 LED · GLP JDC2 IP · SGM PALCO Z-FX; rate owed",
