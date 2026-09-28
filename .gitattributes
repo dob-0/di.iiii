@@ -8,3 +8,7 @@
 # to point at. Check these out verbatim on every platform.
 public/wcc/artist-works-land/support.js -text
 public/wcc/artist-works-land/vendor/*.js -text
+
+# Git runs these through sh on every platform; a CRLF checkout breaks the shebang.
+scripts/git-hooks/* text eol=lf
+scripts/*.sh text eol=lf

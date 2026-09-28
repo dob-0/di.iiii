@@ -18,6 +18,8 @@
         "docs:ai:sync": "node scripts/sync-agent-docs.mjs",
         "docs:ai:check": "node scripts/check-agent-docs.mjs && node scripts/check-doc-paths.mjs",
         "docs:paths": "node scripts/check-doc-paths.mjs",
+        "prepare": "node scripts/install-git-hooks.mjs",
+        "unsaved": "node scripts/unsaved.mjs",
         "state": "node scripts/repo-state.mjs",
         "state:brief": "node scripts/repo-state.mjs --brief",
         "send": "node scripts/send.mjs",

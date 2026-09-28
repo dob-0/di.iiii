@@ -20,9 +20,12 @@ name: Auto-open PR to upstream dev
 
 on:
   push:
+    # backup/** and wip/** keep work off one laptop; they are not for review.
     branches-ignore:
       - dev
       - main
+      - 'backup/**'
+      - 'wip/**'
 
 jobs:
   open-pr:

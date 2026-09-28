@@ -15,6 +15,35 @@ the old name `staging.di-studio.xyz` was switched off on 2026-09-16, and the scr
 `dev` (`--tier dev`). `diiii.xyz` is the only host for anything you write down as a new link;
 `di-studio.xyz` is the old production name and still answers the same way.
 
+## Every hand, one flow
+
+Code comes from people typing git, from Claude, from other assistants, from an editor's
+buttons. The rules below don't depend on any of them reading this file — git and GitHub
+enforce them — so they hold for all of them the same way.
+
+| Rule | What enforces it | Who it catches |
+|---|---|---|
+| No commit straight on `dev` or `main` — every change starts on its own branch | `scripts/git-hooks/pre-commit` | anyone committing in a checkout |
+| No push to `dev` or `main` — dev moves by merged PR, main by promotion | `scripts/git-hooks/pre-push`, and branch protection on GitHub (required checks; the repo admin is exempt) | any push, including one from the GitHub web editor |
+| Lint, schema-sync, wiki and AI-docs checks before a push | `scripts/push-checks.sh` (run by the pre-push hook) | any push |
+| Two required checks green before a merge | branch protection on `dev` | every PR |
+| A fork's `dev` stays a byte copy of upstream `dev` | the fork's hourly `sync-upstream.yml` (refuses when it has drifted) | a fork |
+| Nothing lives only on one machine | `npm run start-check` (this checkout) and `npm run unsaved -- <folders>` (every repo under them) | a laptop's unpushed branches, uncommitted files, stashes |
+
+**The hooks switch on by themselves.** `npm install` runs `scripts/install-git-hooks.mjs`,
+which sets `git config core.hooksPath scripts/git-hooks` (skipped in CI and outside a
+git checkout; left alone if you already point hooks elsewhere). Undo with
+`git config --unset core.hooksPath`. Escapes exist for a deliberate exception, never
+as a habit: `DI_ALLOW_FLOW_COMMIT=1`, `DI_ALLOW_FLOW_PUSH=1`, `DI_SKIP_PUSH_GATE=1`.
+
+**Only on this machine.** A branch that was never pushed, a file never committed, a
+stash — each exists on one disk and is gone with it. `npm run unsaved -- ~/dev ~/Desktop`
+lists every such thing in every git repo under those folders (di.iiii or not) with the
+command that saves it, and exits 1 when there is any — so a scheduled task can raise it.
+Push your branch the day you make it, even unfinished; a draft PR is fine. On a fork,
+every pushed branch opens an upstream PR (`auto-pr.yml`) — except `backup/…` and `wip/…`,
+which are for keeping work safe, not for review.
+
 ## The start check
 
 Before you start any task, and before you push:
