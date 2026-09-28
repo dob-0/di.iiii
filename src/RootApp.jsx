@@ -50,7 +50,10 @@ const MapSurface = lazy(() => import('./map/MapSurface.jsx'))
 const MapOutput = lazy(() => import('./map/MapOutput.jsx'))
 const PerformApp = lazy(() => import('./perform/PerformApp.jsx'))
 const ScanSurface = lazy(() => import('./scan/ScanSurface.jsx'))
-const ToolsRoom = lazy(() => import('./tools/ToolsRoom.jsx'))
+// `/tools` — the Kit (src/kit/KitPage.jsx). Its own chunk: a page of cards and
+// stills, which must never pull three.js for a phone that has not asked a card
+// to go live.
+const KitPage = lazy(() => import('./kit/KitPage.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 
 // The space `/` opens. Kept in step with GridFloorBackground's PREFERRED_SPACE_ID
@@ -649,13 +652,13 @@ function AppRouter() {
 
     // Top-level /privacy and /terms for now — may need to move under the /-/
     // namespace once SPEC_url_architecture_and_tree_addressing.md is signed off.
-    // `/tools` — the workshop (src/tools/ToolsRoom.jsx): the room the other
-    // tools are reached from. A plain top-level page like the wiki, and open on
-    // the same terms — it names doors, it opens no space.
+    // `/tools` — the Kit (src/kit/KitPage.jsx): every tool, seen, tried and
+    // read. A plain top-level page like the wiki, and open on the same terms —
+    // it names doors, it opens no space.
     if (appState.page === APP_PAGE_TOOLS) {
         return (
             <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
-                <ToolsRoom isLocalInstall={localInstall.isLocal} />
+                <KitPage isLocalInstall={localInstall.isLocal} />
             </Suspense>
         )
     }

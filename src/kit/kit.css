@@ -1,0 +1,348 @@
+/* /tools — the Kit.
+ *
+ * The house tokens from src/styles/base.css and nothing else: one cyan accent,
+ * Inter for words, JetBrains Mono for addresses, versions and licences, the
+ * four-step surface ladder, the 8-rung space scale. The accent appears only
+ * where something can be acted on. The same bar as every other surface sits on
+ * top; nothing here restyles it. */
+
+.kit, .kit *, .kit *::before, .kit *::after { box-sizing: border-box; }
+
+.kit {
+    --kit-hairline: rgba(255, 255, 255, 0.08);
+    --kit-hairline-strong: rgba(255, 255, 255, 0.14);
+    --kit-text-2: rgba(255, 255, 255, 0.62);
+
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: var(--di-surface);
+    color: var(--di-ink);
+    font-family: var(--di-sans);
+    -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
+}
+
+.kit-page {
+    flex: 1;
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: var(--di-space-7) var(--di-space-5) var(--di-space-8);
+}
+
+/* ── the top ── */
+
+.kit-title { font-size: var(--di-text-6); font-weight: 600; letter-spacing: -0.2px; margin: 0; }
+.kit-lede { margin: var(--di-space-2) 0 0; font-size: var(--di-text-3); line-height: 1.5; color: var(--kit-text-2); max-width: 62ch; }
+
+.kit-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--di-space-2) var(--di-space-3);
+    margin-top: var(--di-space-5);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    letter-spacing: 0.06em;
+}
+
+.kit-nav a {
+    color: var(--di-cyan);
+    text-decoration: none;
+    padding: var(--di-space-1) 0;
+    border-bottom: 1px solid transparent;
+}
+
+.kit-nav a:hover { border-bottom-color: var(--di-cyan-line); }
+
+/* ── a group ── */
+
+.kit-group { margin-top: var(--di-space-8); }
+
+.kit-group-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--di-space-2) var(--di-space-4);
+    margin: 0 0 var(--di-space-4);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--di-ink);
+}
+
+.kit-group-line {
+    font-family: var(--di-sans);
+    font-size: var(--di-text-3);
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--di-dim);
+}
+
+.kit-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--di-space-5);
+    align-items: start;
+}
+
+/* ── a card ── */
+
+.kit-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--di-surface-2);
+    border: 1px solid var(--kit-hairline);
+    border-radius: var(--di-radius);
+    overflow: hidden;
+    transition: border-color var(--di-motion-base) ease, background var(--di-motion-base) ease;
+}
+
+.kit-card:hover, .kit-card:focus-within { background: var(--di-surface-3); border-color: var(--kit-hairline-strong); }
+.kit-card.is-live { border-color: var(--di-cyan-line); }
+
+/* the picture: a 16:9 window laid out at a desk's width and scaled to fit */
+.kit-see {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--di-black);
+    border-bottom: 1px solid var(--kit-hairline);
+}
+
+.kit-frame {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border: 0;
+    transform-origin: top left;
+    /* a picture, not a page: the person presses Try to use the tool */
+    pointer-events: none;
+    background: var(--di-black);
+}
+
+.kit-poster {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: opacity 0.4s ease;
+}
+
+.kit-poster.is-behind { opacity: 0; }
+
+.kit-see--text { display: flex; align-items: flex-start; background: var(--di-surface-3); }
+
+.kit-text {
+    margin: 0;
+    padding: var(--di-space-3) var(--di-space-4);
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    line-height: 1.6;
+    color: var(--kit-text-2);
+    white-space: pre;
+    mask-image: linear-gradient(180deg, var(--di-black) 78%, transparent 100%);
+}
+
+/* the one control on the picture: make this the live card */
+.kit-live-button {
+    position: absolute;
+    right: var(--di-space-3);
+    bottom: var(--di-space-3);
+    min-width: 44px;
+    min-height: 32px;
+    padding: 0 var(--di-space-3);
+    background: var(--di-scrim-strong);
+    border: 1px solid var(--di-cyan-line);
+    border-radius: var(--di-radius-pill);
+    color: var(--di-cyan);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--di-motion-base) ease;
+}
+
+.kit-card:hover .kit-live-button, .kit-live-button:focus-visible, .kit-card:focus-within .kit-live-button { opacity: 1; }
+
+.kit-live-mark {
+    position: absolute;
+    right: var(--di-space-3);
+    bottom: var(--di-space-3);
+    padding: var(--di-space-1) var(--di-space-2);
+    background: var(--di-scrim-strong);
+    border-radius: var(--di-radius-pill);
+    color: var(--di-cyan);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    letter-spacing: 0.1em;
+}
+
+.kit-body { display: flex; flex-direction: column; gap: var(--di-space-3); padding: var(--di-space-4); }
+
+.kit-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--di-space-3); }
+.kit-name { margin: 0; font-size: var(--di-text-4); font-weight: 500; letter-spacing: -0.1px; }
+
+.kit-where {
+    flex-shrink: 0;
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    letter-spacing: 0.06em;
+    color: var(--di-faint);
+    text-align: right;
+}
+
+.kit-where a { color: var(--di-dim); text-decoration: none; border-bottom: 1px solid var(--kit-hairline-strong); }
+.kit-where a:hover { color: var(--di-ink); }
+
+.kit-line { margin: 0; font-size: var(--di-text-3); line-height: 1.5; color: var(--kit-text-2); }
+
+/* Try: the one button. Needs: the plain sentence when there is none. */
+.kit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--di-space-2); }
+
+.kit-try {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 0 var(--di-space-4);
+    border: 1px solid var(--di-cyan-line);
+    border-radius: var(--di-radius-pill);
+    background: var(--di-cyan-wash);
+    color: var(--di-cyan);
+    font-size: var(--di-text-3);
+    font-weight: 500;
+    text-decoration: none;
+    transition: background var(--di-motion-base) ease, border-color var(--di-motion-base) ease;
+}
+
+.kit-try:hover { background: var(--di-cyan-dim); border-color: var(--di-cyan); }
+
+.kit-needs { font-size: var(--di-text-2); line-height: 1.5; color: var(--di-dim); }
+.kit-needs a { color: var(--di-cyan); text-decoration: none; border-bottom: 1px solid var(--di-cyan-line); }
+
+/* the facts: three short rows, mono labels */
+.kit-facts { margin: 0; display: flex; flex-direction: column; gap: var(--di-space-2); padding-top: var(--di-space-2); border-top: 1px solid var(--kit-hairline); }
+
+.kit-fact { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); gap: var(--di-space-2); align-items: baseline; }
+
+.kit-fact dt {
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--di-faint);
+    padding-top: var(--di-space-1);
+}
+
+.kit-fact dd { margin: 0; display: flex; flex-wrap: wrap; gap: var(--di-space-1) var(--di-space-2); min-width: 0; }
+
+.kit-fact dd a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 0 var(--di-space-2);
+    border: 1px solid var(--kit-hairline);
+    border-radius: var(--di-radius-pill);
+    color: var(--kit-text-2);
+    font-size: var(--di-text-2);
+    text-decoration: none;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kit-fact dd a:hover { color: var(--di-ink); border-color: var(--kit-hairline-strong); }
+.kit-sources a { font-family: var(--di-mono); font-size: var(--di-text-2); }
+.kit-sources .kit-wiki-link { color: var(--di-cyan); border-color: var(--di-cyan-line); font-family: var(--di-sans); font-size: var(--di-text-2); }
+
+/* ── what we use ── */
+
+.kit-stack { margin-top: var(--di-space-8); padding-top: var(--di-space-6); border-top: 1px solid var(--kit-hairline); }
+.kit-stack-lede { margin: 0 0 var(--di-space-5); max-width: 72ch; font-size: var(--di-text-3); line-height: 1.55; color: var(--kit-text-2); }
+.kit-stack-group { margin-top: var(--di-space-5); }
+
+.kit-stack-group-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--di-space-2) var(--di-space-4);
+    margin: 0 0 var(--di-space-3);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--di-ink);
+}
+
+.kit-stack-table { width: 100%; border-collapse: collapse; font-size: var(--di-text-2); line-height: 1.45; }
+.kit-stack-table th, .kit-stack-table td { padding: var(--di-space-2) var(--di-space-3) var(--di-space-2) 0; text-align: left; vertical-align: top; border-bottom: 1px solid var(--kit-hairline); }
+.kit-stack-table thead th { font-family: var(--di-mono); font-size: var(--di-text-2); font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--di-faint); }
+.kit-stack-table tbody th { font-weight: 500; white-space: nowrap; }
+.kit-stack-table tbody th a { color: var(--di-ink); text-decoration: none; border-bottom: 1px solid var(--kit-hairline-strong); }
+.kit-stack-table tbody th a:hover { border-bottom-color: var(--di-cyan); }
+.kit-stack-table td { color: var(--kit-text-2); }
+.kit-mono { font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--di-dim); white-space: nowrap; }
+
+.kit-version {
+    margin-top: var(--di-space-7);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.22);
+}
+
+/* ── keyboard: every control shows where it is ── */
+.kit a:focus-visible, .kit button:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: 2px; }
+
+/* ── widths ── */
+
+@media (max-width: 1100px) {
+    .kit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 680px) {
+    .kit-page { padding: var(--di-space-6) var(--di-space-4) var(--di-space-7); }
+    .kit-grid { grid-template-columns: minmax(0, 1fr); gap: var(--di-space-4); }
+    .kit-group { margin-top: var(--di-space-7); }
+    .kit-fact { grid-template-columns: minmax(0, 1fr); gap: var(--di-space-1); }
+    .kit-stack-table thead { display: none; }
+    /* One part per block: name and version on a line, what it does under, the
+       licence last. Baseline-aligned so a version never floats above its name. */
+    .kit-stack-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 var(--di-space-3); align-items: baseline; padding: var(--di-space-2) 0; border-bottom: 1px solid var(--kit-hairline); }
+    .kit-stack-table th, .kit-stack-table td { border: 0; padding: 0; }
+    .kit-stack-table td:nth-child(3) { grid-column: 1 / -1; }
+}
+
+/* ── a finger: every control at least 44px (Apple HIG; WCAG 2.5.5) ── */
+@media (pointer: coarse) {
+    .kit-live-button { opacity: 1; min-height: var(--di-touch-target); min-width: var(--di-touch-target); }
+    .kit-try { min-height: var(--di-touch-target); }
+    .kit-nav { gap: 0 var(--di-space-3); }
+    /* Tall AND wide: a short word like "zod" or "cors" is still a finger's
+       square to press (measured 2026-09-28 on 390×844: 39 links 18–43px wide). */
+    .kit-nav a { display: inline-flex; align-items: center; justify-content: center; min-height: var(--di-touch-target); min-width: var(--di-touch-target); }
+    .kit-fact dd { gap: var(--di-space-2); }
+    .kit-fact dd a { min-height: var(--di-touch-target); min-width: var(--di-touch-target); justify-content: center; padding: 0 var(--di-space-3); }
+    .kit-where a, .kit-needs a { display: inline-flex; align-items: center; justify-content: center; min-height: var(--di-touch-target); min-width: var(--di-touch-target); }
+    .kit-stack-table tbody th a { display: inline-flex; align-items: center; min-height: var(--di-touch-target); min-width: var(--di-touch-target); padding-right: var(--di-space-3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kit { scroll-behavior: auto; }
+    .kit-poster, .kit-card, .kit-try, .kit-live-button { transition: none; }
+}

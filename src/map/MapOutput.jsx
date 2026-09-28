@@ -7,6 +7,7 @@ import { useMachinePresence } from '../project/tops/useMachinePresence.js'
 import RigBlackout from '../rig/RigBlackout.jsx'
 import useScreenWakeLock from '../hooks/useScreenWakeLock.js'
 import useDocumentTitle from '../hooks/useDocumentTitle.js'
+import { isPreviewRequest, signalPreviewReady } from '../utils/previewMode.js'
 import './mapSurface.css'
 
 // THE SIGNAL.
@@ -28,7 +29,15 @@ export default function MapOutput({ projectId, spaceId }) {
     // This page is its machine on the desk: a kiosk with a camera and a
     // projector is exactly what the other machines need to see.
     // 'poll': the wall's connections belong to its pictures — no held-open NDI feed here.
-    const { machine } = useMachinePresence(spaceId, { ndi: 'poll' })
+    //
+    // ?preview=1 — a PICTURE of the wall on another page (a Kit card on
+    // /tools): it draws the surfaces and follows them, but is no machine on
+    // the desk, so it joins no machine link and shows no controls.
+    const [isPreview] = useState(() => isPreviewRequest())
+    const { machine } = useMachinePresence(isPreview ? null : spaceId, { ndi: 'poll' })
+    useEffect(() => {
+        if (isPreview && doc) signalPreviewReady(spaceId)
+    }, [isPreview, doc, spaceId])
     // Nothing mapped yet, but a Picture Out runs on this machine: the screen
     // shows it, whole. Mapping corners is a refinement, not a precondition.
     const ownOut = useMemo(() => {
@@ -102,7 +111,7 @@ export default function MapOutput({ projectId, spaceId }) {
             {stage.width > 0 ? (
                 <MapStage mapping={fallbackMapping} spaceId={spaceId} width={stage.width} height={stage.height} network={network} assets={doc?.assets || null} projectId={projectId} live />
             ) : null}
-            <MapOutputControls />
+            {isPreview ? null : <MapOutputControls />}
             <RigBlackout />
         </div>
     )

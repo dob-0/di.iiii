@@ -1353,16 +1353,17 @@ export const WIKI_ARTICLES = [
     {
         id: 'tools-room',
         category: 'Getting started',
-        title: 'Tools: one screen everything opens from',
-        summary: 'Studio, the node editor, the lighting desk, the projection mapper and the desk, in one place, at /tools.',
+        title: 'Tools: every tool, seen, tried and read',
+        summary: 'At /tools every tool di.iiii has is one card: watch it run, open it without an account, and see what it is made of.',
         body: [
-            'Every tool di.iiii has now has a door in one place. Open /tools and they are all there: Studio, the node editor, the lighting desk, the projection mapper, and — on your own machine — the sessions desk.',
-            'Before this, some of them could only be reached by typing an address. The lighting desk answered at /light and nothing linked to it; the projection mapper lives at /<space>/map/<project>, which needs a project id nothing in the interface would tell you. From the tools screen you pick a space, then a project, and it opens.',
-            'Each tile says what the tool is holding right now — how many spaces, whether the lighting desk\u2019s output is off, whether a mapper has a project to map. What needs a project asks for one instead of failing at an address.',
-            'The node editor opens on a project rather than on the empty browser canvas it used to; the bare canvas is still there, named for what it is — a canvas saved nowhere.'
+            'Open /tools and everything di.iiii does is there, one card each, grouped the way you would look for it: walk, build, nodes, light & projection, carry & share, together, for agents.',
+            'Each card shows the tool itself. Rest on a card (or tap its live button on a phone) and its picture becomes the real thing running \u2014 the scene, the canvas, the desk \u2014 one card at a time, so a page of cards never asks your phone for more than one. Until then you see a real screenshot of it. A tool that has no picture on the web, such as the di command, shows what it prints.',
+            'Try opens the tool ready to use with no account, in the Open Space or in your own sandbox. Where something is needed first \u2014 signing in to publish, a folder and a script for a page \u2014 the card says so plainly, in place of the button.',
+            'Show lists public works made with the tool. Made with names the libraries under it, each at its own site; Source names the files in the public repository; the wiki link opens the article about it. Where says whether it runs on the web or on a di.iiii on your own machine \u2014 the lighting desk, the machine under the projector, the rig and the agent door live there, in the room with the hardware.',
+            'Under the cards, What we use lists every library, runtime, protocol and service the program is built from, with its version, what it does here, its licence and its own link. di.iiii is built like a kit: each part loads only when a piece uses it, and the page prints its own measured weight as the example.'
         ],
-        tags: ['tools', 'studio', 'raw', 'light', 'projection', 'desk', 'local'],
-        updated: '2026-09-09'
+        tags: ['tools', 'kit', 'studio', 'raw', 'nodes', 'light', 'projection', 'perform', 'desk', 'local', 'libraries', 'licences', 'source'],
+        updated: '2026-09-28'
     },
     {
         id: 'guests-in-the-room',

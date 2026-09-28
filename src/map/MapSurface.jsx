@@ -17,7 +17,7 @@ import SurfaceBar from '../components/SurfaceBar.jsx'
 import DeskPerformSwitch from '../perform/DeskPerformSwitch.jsx'
 import useLocalInstall from '../hooks/useLocalInstall.js'
 import useSpaceName from '../hooks/useSpaceName.js'
-import { isEmbedRequest } from '../utils/previewMode.js'
+import { isEmbedRequest, isPreviewRequest, signalPreviewReady } from '../utils/previewMode.js'
 import './mapSurface.css'
 
 // THE MAPPER'S DESK.
@@ -54,12 +54,23 @@ export default function MapSurface({ projectId, spaceId }) {
         undo, redo, canUndo, canRedo
     } = useMapDocument(projectId, { role: 'desk' })
     // Every machine showing this space, and what each one has: the wall is usually another computer.
-    const { machines, ndiScan } = useMachinePresence(spaceId)
+    // ?preview=1 — a PICTURE of this desk on another page (a Kit card on
+    // /tools). It shows the mapping and follows it, but joins no machine
+    // link: a thumbnail is not a machine on the desk, and it must not appear
+    // in the Machines list of whoever is really working here.
+    const [isPreview] = useState(() => isPreviewRequest())
+    const { machines, ndiScan } = useMachinePresence(isPreview ? null : spaceId)
     // The one bar, above the desk's own. Never on /out — that is MapOutput,
     // the wall's picture, and a bar there would be projected with the work.
     const localInstall = useLocalInstall()
     const spaceName = useSpaceName(spaceId)
-    const [isEmbed] = useState(() => isEmbedRequest())
+    const [isEmbed] = useState(() => isEmbedRequest() || isPreviewRequest())
+    // Nothing here draws to a WebGL canvas, so the app-wide paint watcher has
+    // nothing to see; the picture says itself once the mapping has loaded.
+    const hasLoaded = Boolean(store?.state?.hasLoaded)
+    useEffect(() => {
+        if (isPreview && hasLoaded) signalPreviewReady(spaceId)
+    }, [isPreview, hasLoaded, spaceId])
     // The bar grows with the project (src/project/layers.js); Projection itself
     // is never taken off the bar while you stand on it.
     const barLayers = useProjectLayers(doc, projectId, store?.state?.hasLoaded).open

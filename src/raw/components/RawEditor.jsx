@@ -44,7 +44,7 @@ import SurfaceBar from '../../components/SurfaceBar.jsx'
 import { useProjectLayers } from '../../project/useProjectLayers.js'
 import useLocalInstall from '../../hooks/useLocalInstall.js'
 import useSpaceName from '../../hooks/useSpaceName.js'
-import { isEmbedRequest } from '../../utils/previewMode.js'
+import { isEmbedRequest, isPreviewRequest, signalPreviewReady } from '../../utils/previewMode.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
@@ -277,8 +277,14 @@ export default function RawEditor({
     // Only a project that actually lives in a space has a space room. A local
     // canvas has no server document and no neighbours, so it gets no tabs.
     const chatSpaceId = projectId ? (spaceId || DEFAULT_PROJECT_SPACE_ID) : ''
+    // ?preview=1 — this canvas is a PICTURE on somebody else's page (a Kit
+    // card on /tools), not a person at work. It draws the project and follows
+    // its edits, but announces nobody: a presence joined from a thumbnail is a
+    // stranger who is not there, standing in the room for as long as the card
+    // is on screen.
+    const [isPreview] = useState(() => isPreviewRequest())
     const presence = useProjectPresence({
-        projectId,
+        projectId: isPreview ? '' : projectId,
         spaceId: chatSpaceId,
         displayName,
         displayNameStorageKey: DISPLAY_NAME_KEY,
@@ -334,8 +340,15 @@ export default function RawEditor({
     // The one bar, on a project's canvas (the bare canvas draws its own, in
     // BlankNodeWorkspaceApp). Read here, drawn below once chrome is known.
     const localInstall = useLocalInstall()
-    const [isEmbed] = useState(() => isEmbedRequest())
+    // A preview hides the same navigation an embedded window does.
+    const [isEmbed] = useState(() => isEmbedRequest() || isPreviewRequest())
     const spaceName = useSpaceName(isLocalWorkspace ? null : resolvedSpaceId)
+    // The node canvas is cards, not a WebGL canvas, so the app-wide paint
+    // watcher (index.jsx) has nothing to see; the picture says itself when
+    // the project it shows has arrived.
+    useEffect(() => {
+        if (isPreview && state.hasLoaded) signalPreviewReady(resolvedSpaceId)
+    }, [isPreview, state.hasLoaded, resolvedSpaceId])
     // Memoized like `nodes`: the thing cards and the outliner rows are built
     // from it, and a fresh `[]` every render rebuilt both every render.
     const entities = useMemo(() => document.entities || [], [document.entities])
