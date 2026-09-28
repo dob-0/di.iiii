@@ -1,0 +1,425 @@
+{
+    "rig": "MOXIR 17.10 — the proposed rig",
+    "version": 2,
+    "writtenAt": "2026-09-28",
+    "venue": "MOXIR, Charentsavan factory hall (40.406160, 44.637675)",
+    "space": "moxir",
+    "status": "PROPOSAL. Nothing here has been checked against the venue, the rental house's datasheets or a load calculation.",
+    "provenance": {
+        "fixtureList": "The rental house's list as passed to Claude by the owner on 2026-09-27 (18x UP-B380F, 12x UP-250BSW, 8x UP-HK1915, 50x UP-PL5403, 2x UP-LA40WF, CO2 x6, cold spark x4, smoke x4). The codes are the rental house's internal names, not maker models.",
+        "optics": "From the fixtures manifest (scripts/place/fixtures/fixtures.json): each class names a fixture kind whose beam angle and output come from the maker's published page or, where the maker publishes none, a named equivalent — every number carries its source there. The rental house's own datasheets are still OWED to confirm.",
+        "positions": "Placed by rule against the hall's structural grid (scripts/place/hall.py -> hall.json), so they move when the hall is rebuilt with measured dimensions.",
+        "hall": "scripts/place/rigs/moxir-hall-dims-2026-09-27.json (grid and heights estimated from photographs with VGGT + perspective, snapped to GOST 23838-89) + moxir-hall-features-2026-09-27.json (gates, aisles, cranes; sizes GUESSES).",
+        "models": "Fixture bodies are the models in scripts/place/fixtures/glb, built to the datasheet dimensions by scripts/place/fixtures/build_fixtures.py (see the manifest for provenance and licence)."
+    },
+    "assumptions": [
+        "The stage stands at the FAR end of the nave, in front of the far-end gate; the audience enters by the big gate at the other end. Decided for this model on 2026-09-27, not confirmed with the venue or the production — an ASSUMPTION. Change stage.end and re-run.",
+        "The stage is 16 m wide, 10 m deep, a 1.2 m deck, its back edge 1 m off the end wall. Guesses.",
+        "The stage truss is a ground-supported goalpost (two towers standing on the floor either side of the stage + a header) 18 m wide with its header at 6 m, 4 m in from the back of the stage. A guess at a common rental size; no truss is on the list — it is OWED.",
+        "UP-PL5403 x50 is read as 50 in total: 42 uplights (one at the base of every column — 32 in the measured 15-bay hall — and a second on the columns nearest the stage until 42 are used) and 8 on the crane bridge parked nearest the stage. If the 8 on the crane are IN ADDITION to the 50, the total becomes 58.",
+        "Lasers hang at the top of the truss towers (6 m) and are aimed UP into the roof over the audience; the rig script refuses any laser aim that descends, and any that passes under 3 m above the floor. This is a picture of intent, not a laser safety assessment — a qualified laser safety officer and the national rules (e.g. the Maximum Permissible Exposure limits of IEC 60825-1) are OWED before any 40 W laser is switched on in front of people.",
+        "CO2 jets, cold spark and smoke machines are drawn as the machines (their models), standing where they stand; what they emit is not simulated.",
+        "Each LOOK is one static state for previsualisation (a focus palette), not a show: positions are the rig's, aims and colours the look's. Brightness between fixtures follows the datasheets (photometry below); the overall exposure is one chosen number (photometry.sceneScale)."
+    ],
+    "stage": {
+        "end": "far",
+        "width_m": 16,
+        "depth_m": 10,
+        "deck_h_m": 1.2,
+        "back_gap_m": 1.0
+    },
+    "truss": {
+        "kind": "ground-supported goalpost",
+        "width_m": 18,
+        "header_h_m": 6.0,
+        "from_stage_back_m": 4.0,
+        "section_m": 0.4
+    },
+    "classes": {
+        "beam380": {
+            "code": "UP-B380F",
+            "fixture": "beam380",
+            "class": "380 W discharge-lamp moving-head beam",
+            "reach_m": 60,
+            "penumbra": 0.1,
+            "colour": "#e8efff"
+        },
+        "bsw250": {
+            "code": "UP-250BSW",
+            "fixture": "bsw250",
+            "class": "250 W beam/spot/wash hybrid moving head, used here in spot",
+            "angleNote": "used in its spot mode at 15 deg (its zoom is 10-30); candela scaled from the equivalent's 13 deg figure by flux conservation",
+            "reach_m": 25,
+            "penumbra": 0.35,
+            "colour": "#7fd6ff",
+            "angleDeg": 15
+        },
+        "beeEye": {
+            "code": "UP-HK1915",
+            "fixture": "beeEye",
+            "class": "19 x 15 W RGBW bee-eye (K-series style) moving head",
+            "angleNote": "zoom at its tightest, 4 deg, as bee-eyes are used for beam effects",
+            "reach_m": 30,
+            "penumbra": 0.2,
+            "colour": "#ff3a3a",
+            "angleDeg": 4
+        },
+        "par": {
+            "code": "UP-PL5403",
+            "fixture": "par",
+            "class": "54 x 3 W RGBW LED PAR",
+            "reach_m": 12,
+            "penumbra": 0.5,
+            "colour": "#ff8a2a",
+            "angleDeg": 15,
+            "angleNote": "the UP-PL5403's standard 15 deg lens (source D); candela scaled from the equivalent's 25 deg figure"
+        },
+        "laser": {
+            "code": "UP-LA40WF",
+            "fixture": "laser",
+            "class": "40 W (stated) RGB show laser, class 4",
+            "angleDeg": 1.2,
+            "angleNote": "drawn as the narrowest cone di.iiii renders (its cone clamps at 0.57 deg half-angle); a real laser beam is millimetres wide and scanned into shapes, which is not represented",
+            "reach_m": 60,
+            "penumbra": 0.0,
+            "colour": "#27ff4a",
+            "airFixed": 1.0,
+            "intensity": 20,
+            "intensityNote": "no candela for a laser; it is never one of the real lamps (budget), so this is only the entity's value"
+        }
+    },
+    "groups": [
+        {
+            "id": "beam380-stage",
+            "class": "beam380",
+            "count": 8,
+            "mount": "stage-back",
+            "aim": "fan-into-roof",
+            "note": "8 beams on the stage back line, fanned up into the trusses over the dance floor"
+        },
+        {
+            "id": "beam380-columns",
+            "class": "beam380",
+            "count": 10,
+            "mount": "column-bases",
+            "aim": "up-into-truss",
+            "note": "10 beams on the floor at column bases down both sides, aimed up into the roof trusses"
+        },
+        {
+            "id": "bsw250-truss",
+            "class": "bsw250",
+            "count": 12,
+            "mount": "truss-header",
+            "aim": "stage-floor-and-back-wall",
+            "note": "12 on the stage truss header, alternately onto the stage floor and the back wall",
+            "orient": "hung"
+        },
+        {
+            "id": "beeeye-front",
+            "class": "beeEye",
+            "count": 8,
+            "mount": "stage-front",
+            "aim": "out-over-audience",
+            "note": "8 bee-eyes on the stage floor at the front edge, aimed out and up over the audience"
+        },
+        {
+            "id": "par-columns",
+            "class": "par",
+            "count": 42,
+            "mount": "column-uplight",
+            "aim": "up-the-column",
+            "note": "one at every column base, then a second on the columns nearest the stage, 42 in all"
+        },
+        {
+            "id": "par-crane",
+            "class": "par",
+            "count": 8,
+            "mount": "crane-bridge",
+            "aim": "down-from-crane",
+            "colour": "#ff2fa0",
+            "note": "8 on the yellow crane bridge parked nearest the stage, washing the floor under it",
+            "orient": "hung"
+        },
+        {
+            "id": "laser-stage",
+            "class": "laser",
+            "count": 2,
+            "mount": "truss-towers",
+            "aim": "laser-into-roof",
+            "note": "2 lasers at the top of the truss towers, aimed up into the roof — never into the audience plane"
+        }
+    ],
+    "effects": [
+        {
+            "id": "co2",
+            "label": "CO2 jet",
+            "count": 6,
+            "mount": "stage-front-deck",
+            "colour": "#d8dde2",
+            "fixture": "co2"
+        },
+        {
+            "id": "spark",
+            "label": "cold spark machine",
+            "count": 4,
+            "mount": "stage-front-floor",
+            "colour": "#ff9a2e",
+            "fixture": "spark"
+        },
+        {
+            "id": "smoke",
+            "label": "smoke / haze machine",
+            "count": 4,
+            "mount": "nave-columns",
+            "colour": "#8a9096",
+            "fixture": "smoke"
+        }
+    ],
+    "budget": {
+        "why": "A browser cannot run ~90 real three.js spot lights: each is a term in the shader of every lit pixel and, with shadows on, a shadow render and a texture unit each (WebGL gives 16-32; past that every lit material fails to compile). Every fixture draws its beam cone; only these 8 lamps also light the room, and shadows are OFF by default (the owner found the first version too laggy, 2026-09-27). Measured — see scripts/place/README.md, 'The rig'.",
+        "realLights": {
+            "bsw250-truss": 4,
+            "par-crane": 2,
+            "par-columns": {
+                "count": 2,
+                "pick": "nearest-stage"
+            }
+        },
+        "shadowCasting": false,
+        "shadowMapSize": 1024
+    },
+    "night": {
+        "backgroundColor": "#040507",
+        "ambient": {
+            "color": "#8ea2c8",
+            "intensity": 0.35
+        },
+        "directional": {
+            "color": "#8fa6d8",
+            "intensity": 0.25
+        },
+        "fog": {
+            "near": 30,
+            "far": 150
+        },
+        "note": "A dim, cool night: the hall stays readable so the rig can be judged against it. Tuned by eye in the browser, not a photometric night."
+    },
+    "photometry": {
+        "method": "scripts/place/rig-lib.mjs, 'PHOTOMETRY': candela from the manifest (I = E*d^2 from a measured illuminance, else I = flux / beam solid angle); zoom keeps flux; three.js SpotLight intensity is candela x sceneScale; beam-in-air brightness ~ I*tan(theta/2), scaled to the brightest class, Stevens exponent 1/3, times `air`.",
+        "sceneScale": 0.02,
+        "sceneScaleNote": "ONE exposure number for the whole rig, chosen so the room reads in a browser's tone mapping (ACES, exposure 1). The ratios between fixtures are the datasheets'.",
+        "air": 0.9,
+        "airNote": "how much haze is in the air: the brightest class's beam gets this `haze` (0..1, src/objectComponents/spotBeam.js)."
+    },
+    "defaultLook": "roof-cathedral",
+    "looks": {
+        "roof-cathedral": {
+            "title": "Roof cathedral",
+            "intent": "The hall's own architecture lit as a nave: every column-base beam rises straight up into the trusses in mirrored pairs, a slight lean in toward the centre line; the stage beams open as an apse fan into the lantern; bee-eyes lift low over the house.",
+            "aims": {
+                "bsw250-truss": {
+                    "rule": "stage-wash"
+                },
+                "par-columns": {
+                    "rule": "up-the-column"
+                },
+                "par-crane": {
+                    "rule": "down-from-crane"
+                },
+                "laser-stage": {
+                    "rule": "laser-into-roof",
+                    "a": 14
+                },
+                "beam380-columns": {
+                    "rule": "vertical",
+                    "in_deg": 8
+                },
+                "beam380-stage": {
+                    "rule": "fan",
+                    "spread_deg": 60,
+                    "lean_deg": 6
+                },
+                "beeeye-front": {
+                    "rule": "fan",
+                    "spread_deg": 50,
+                    "lean_deg": 65
+                }
+            },
+            "colours": {
+                "beam380-columns": "#eef3ff",
+                "beam380-stage": "#eef3ff",
+                "par-columns": "#2437ff",
+                "par-crane": "#2437ff",
+                "beeeye-front": "#ffb347",
+                "bsw250-truss": "#9fb4ff"
+            }
+        },
+        "fan-out": {
+            "title": "Fan out",
+            "intent": "The stage beams open in one symmetric fan over the house; the column rows lean back toward the stage so every beam in the room reads from the band outward; bee-eyes fan wide and low.",
+            "aims": {
+                "bsw250-truss": {
+                    "rule": "stage-wash"
+                },
+                "par-columns": {
+                    "rule": "up-the-column"
+                },
+                "par-crane": {
+                    "rule": "down-from-crane"
+                },
+                "laser-stage": {
+                    "rule": "laser-into-roof",
+                    "a": 14
+                },
+                "beam380-stage": {
+                    "rule": "fan",
+                    "spread_deg": 110,
+                    "lean_deg": 22
+                },
+                "beam380-columns": {
+                    "rule": "parallel",
+                    "lean_deg": -18
+                },
+                "beeeye-front": {
+                    "rule": "fan",
+                    "spread_deg": 80,
+                    "lean_deg": 62
+                }
+            },
+            "colours": {
+                "beam380-columns": "#7fe7ff",
+                "beam380-stage": "#ffffff",
+                "par-columns": "#00a0ff",
+                "par-crane": "#00a0ff",
+                "beeeye-front": "#ffffff",
+                "bsw250-truss": "#7fe7ff"
+            }
+        },
+        "crossfire": {
+            "title": "Crossfire",
+            "intent": "The two column rows fire across the dance floor at each other and cross over its centre line at about 5 m; the stage beams X-cross above the front of the house.",
+            "aims": {
+                "bsw250-truss": {
+                    "rule": "stage-wash"
+                },
+                "par-columns": {
+                    "rule": "up-the-column"
+                },
+                "par-crane": {
+                    "rule": "down-from-crane"
+                },
+                "laser-stage": {
+                    "rule": "laser-into-roof",
+                    "a": 14
+                },
+                "beam380-columns": {
+                    "rule": "cross",
+                    "x": 8,
+                    "y": 9
+                },
+                "beam380-stage": {
+                    "rule": "x-cross",
+                    "x": 9,
+                    "y": 13,
+                    "a": 12
+                },
+                "beeeye-front": {
+                    "rule": "x-cross",
+                    "x": 7,
+                    "y": 6,
+                    "a": 9
+                }
+            },
+            "colours": {
+                "beam380-columns": "#ff2448",
+                "beam380-stage": "#ffffff",
+                "par-columns": "#ff2448",
+                "par-crane": "#ff2448",
+                "beeeye-front": "#ffffff",
+                "bsw250-truss": "#ff5a70"
+            }
+        },
+        "all-to-centre": {
+            "title": "All to centre",
+            "intent": "Every beam in the room meets at one point 9 m above the middle of the crowd, 16 m out from the stage — the 'ballyhoo' focus.",
+            "aims": {
+                "bsw250-truss": {
+                    "rule": "stage-wash"
+                },
+                "par-columns": {
+                    "rule": "up-the-column"
+                },
+                "par-crane": {
+                    "rule": "down-from-crane"
+                },
+                "laser-stage": {
+                    "rule": "laser-into-roof",
+                    "a": 14
+                },
+                "beam380-columns": {
+                    "rule": "point",
+                    "x": 0,
+                    "y": 9,
+                    "a": 16
+                },
+                "beam380-stage": {
+                    "rule": "point",
+                    "x": 0,
+                    "y": 9,
+                    "a": 16
+                },
+                "beeeye-front": {
+                    "rule": "point",
+                    "x": 0,
+                    "y": 9,
+                    "a": 16
+                }
+            },
+            "colours": {
+                "beam380-columns": "#ffffff",
+                "beam380-stage": "#ffffff",
+                "par-columns": "#ff7a1a",
+                "par-crane": "#ff7a1a",
+                "beeeye-front": "#ffffff",
+                "bsw250-truss": "#ffd08a"
+            }
+        },
+        "curtain": {
+            "title": "Curtain",
+            "intent": "A wall of light at the stage line: the stage beams and the bee-eyes stand straight up in two parallel rows and the truss spots drop straight down between them; the column rows lean back to the stage.",
+            "aims": {
+                "bsw250-truss": {
+                    "rule": "vertical"
+                },
+                "par-columns": {
+                    "rule": "up-the-column"
+                },
+                "par-crane": {
+                    "rule": "down-from-crane"
+                },
+                "laser-stage": {
+                    "rule": "laser-into-roof",
+                    "a": 14
+                },
+                "beam380-stage": {
+                    "rule": "vertical"
+                },
+                "beeeye-front": {
+                    "rule": "vertical"
+                },
+                "beam380-columns": {
+                    "rule": "parallel",
+                    "lean_deg": -25
+                }
+            },
+            "colours": {
+                "beam380-columns": "#b388ff",
+                "beam380-stage": "#ffffff",
+                "par-columns": "#6a1bff",
+                "par-crane": "#6a1bff",
+                "beeeye-front": "#ffffff",
+                "bsw250-truss": "#ffffff"
+            }
+        }
+    }
+}

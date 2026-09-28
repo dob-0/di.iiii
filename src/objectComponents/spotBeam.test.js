@@ -4,6 +4,7 @@ import {
     DEFAULT_HAZE,
     UNLIMITED_THROW,
     beamFadeAt,
+    beamCastsLight,
     beamFadeColors,
     beamIsVisible,
     spotBeamShape
@@ -107,5 +108,17 @@ describe('the beam in the air', () => {
     it('clamps a silly angle instead of drawing an infinite disc', () => {
         expect(spotBeamShape({ angle: 3, distance: 10 }).radius).toBeLessThan(10 * Math.tan(Math.PI / 2 - 0.009))
         expect(spotBeamShape({ angle: -1, distance: 10 }).radius).toBeGreaterThan(0)
+    })
+
+    it('casts real light unless the beam is drawn AND marked only', () => {
+        // Every lamp saved before `only` existed keeps its light.
+        expect(beamCastsLight(null)).toBe(true)
+        expect(beamCastsLight(undefined)).toBe(true)
+        expect(beamCastsLight({ visible: true, haze: 0.4 })).toBe(true)
+        // The cone with no light behind it — a rig bigger than a browser can light.
+        expect(beamCastsLight({ visible: true, only: true })).toBe(false)
+        // A lamp with no beam and no light would be nothing at all.
+        expect(beamCastsLight({ visible: false, only: true })).toBe(true)
+        expect(beamCastsLight({ visible: true, only: 'yes' })).toBe(true)
     })
 })

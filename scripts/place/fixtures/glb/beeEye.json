@@ -1,0 +1,43 @@
+{
+  "kind": "beeEye",
+  "code": "UP-HK1915",
+  "glb": "beeEye.glb",
+  "builtBy": "scripts/place/fixtures/build_fixtures.py",
+  "scriptSha256": "28da3f3192115b1eabd11b1a25497c503e35adcea9849d55d92ce90290a2c693",
+  "blender": "5.2.1 LTS",
+  "archetype": "moving-head",
+  "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+  "panY": 0.12,
+  "tiltY": 0.36,
+  "lensY": 0.496,
+  "motion": "pan-tilt",
+  "parts": [
+    "Base",
+    "Yoke",
+    "Head",
+    "Lens"
+  ],
+  "sizeAtHome_mm": {
+    "width_x": 370,
+    "depth_z": 250,
+    "height_y": 494
+  },
+  "triangles": {
+    "Base": 56,
+    "Yoke": 280,
+    "Head": 120,
+    "Lens": 114,
+    "total": 570
+  },
+  "datasheetSize_mm": [
+    358,
+    253,
+    494
+  ],
+  "deviationFromDatasheet_pct": [
+    -1.2,
+    3.4,
+    0.0
+  ],
+  "comparedParts": "all"
+}

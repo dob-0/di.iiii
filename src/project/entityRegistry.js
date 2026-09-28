@@ -56,7 +56,10 @@ const BEAM_SECTION = {
     label: 'Beam',
     fields: [
         { label: 'Beam visible', component: 'beam', path: ['visible'], type: 'checkbox' },
-        { label: 'Haze', component: 'beam', path: ['haze'], type: 'number', min: 0, max: 1, step: 0.05, fallback: 0.4 }
+        { label: 'Haze', component: 'beam', path: ['haze'], type: 'number', min: 0, max: 1, step: 0.05, fallback: 0.4 },
+        // The cone without the light: for a rig bigger than a browser can light
+        // (src/objectComponents/spotBeam.js, beamCastsLight).
+        { label: 'Beam only (no light)', component: 'beam', path: ['only'], type: 'checkbox' }
     ]
 }
 

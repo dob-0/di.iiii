@@ -43,6 +43,12 @@ export function resolveAnimation(entity) {
     // while its picture rocks the other. Authored `animation.mode` still wins,
     // so a child that is meant to move on its own can still say so.
     if (entity?.parentId) return { mode: 'static', speed: 1, amplitude: 1 }
+    // A lighting rig is hung and stood, never idle: a truss, a tower, a deck
+    // (`components.piece`) or a lamp on the rig (`components.fixture`) is
+    // steel bolted to a building. Left to the fallback, every piece and lamp the
+    // plot and the cards write spun and bobbed in walk mode, and a lamp's beam
+    // swept the room with it (docs/architecture/RIG_BUILD.md §12).
+    if (entity?.components?.piece || entity?.components?.fixture) return { mode: 'static', speed: 1, amplitude: 1 }
     const name = entity?.name || ''
     if (/ground|floor|gate|threshold|entrance/i.test(name)) return { mode: 'static', speed: 1, amplitude: 1 }
     if (/\bfly\b/i.test(name)) return { mode: 'orbit', speed: 1, amplitude: 1 }

@@ -436,13 +436,29 @@ describe('ESM/CJS mirror equivalence', () => {
         { id: 'v2', type: 'video', components: { media: { assetId: 'a' } } },
         // An image's media object must NOT grow spatial fields.
         { id: 'i1', type: 'image', components: { media: { assetId: 'a' } } },
-        // The join to the lighting desk: a number survives, anything else is dropped,
-        // and universe/address never reach the document. The server normalizes with
-        // the mirror, so a mirror that dropped `fixture` would lose every join on save.
+        // The join to the lighting desk and, since 2026-09-28, the plot's patch
+        // (RIG_BUILD.md §2.2). The server normalizes with the mirror, so a mirror
+        // that dropped a field would lose every patch on save.
         { id: 'f1', type: 'spotLight', components: { fixture: { index: 3, universe: 1, address: 17 } } },
         { id: 'f2', type: 'pointLight', components: { fixture: { index: '4' } } },
         { id: 'f3', type: 'pointLight', components: { fixture: { index: 0 } } },
-        { id: 'f4', type: 'directionalLight', components: { fixture: 'nope' } }
+        { id: 'f4', type: 'directionalLight', components: { fixture: 'nope' } },
+        { id: 'f5', type: 'spotLight', components: { fixture: { type: ' up-b380f ', mode: '16ch', universe: 2, address: 273, unit: 5, circuit: 'C4', position: 'column base R', hung: true, extra: 'x' } } },
+        { id: 'f6', type: 'spotLight', components: { fixture: { type: 'up-pl5403', universe: 0, address: 513, unit: -1, hung: 'yes' } } },
+        { id: 'f7', type: 'spotLight', components: { fixture: { mode: '16ch', universe: 1, address: 1 } } },
+        // Build pieces (RIG_BUILD.md §2.3): a kind survives, trimmed; an empty one is dropped.
+        { id: 'k1', type: 'group', components: { piece: { kind: ' truss-2m ', load: 9 } } },
+        { id: 'k2', type: 'group', components: { piece: { kind: '' } } },
+        // A venue plan (RIG_BUILD.md §10): numbers kept to the mm, a broken list item
+        // dropped, a plan with fewer than three outline points dropped whole.
+        { id: 'v1', type: 'model', components: { venuePlan: { name: ' hall ', outline: [[-1, -1], [1, -1], [1, 1.00049], [-1, 1]], columns: [[0, 0, 0.5, 0.8], [1, 'x', 1, 1]], grid: { x: [{ at: 0, label: 'A' }], z: [{ at: 'no' }] }, zones: [{ id: 'dance', label: 'dance floor', rects: [[0, 0, 1, 1]] }, { id: 'none', rects: [] }], solids: [{ id: 'press', rect: [0, 0, 1, 1], top: 4.5 }], overhead: [{ id: 'crane', line: [[0, 0], [1, 0]], bottom: 8 }, { id: 'bad' }], openings: [{ id: 'door', from: [0, 1], to: [1, 1] }], north: [0.6, 0.8], extra: 1 } } },
+        { id: 'v2', type: 'model', components: { venuePlan: { outline: [[0, 0], [1, 1]] } } },
+        // A rental list (RIG_BUILD.md §11): counts are whole and bounded, an item with
+        // no code or no count is dropped, a list with no item is dropped whole.
+        { id: 'r1', type: 'group', components: { rentalList: { name: ' order ', source: 'x.xlsx', currency: 'AMD', items: [{ code: ' UP-B380F ', ordered: 18, stock: 18, rate: 20000, label: 'beam', source: 'Price list!D6' }, { code: 'UP-PL5403', ordered: '50', stock: -1 }, { code: '', ordered: 2 }, { code: 'X', ordered: 1.5 }], extra: 1 } } },
+        { id: 'r2', type: 'group', components: { rentalList: { items: [{ code: 'A' }] } } },
+        // The rig's looks (RIG_BUILD.md §11.4): numbers only in a rule, a bad key or colour dropped.
+        { id: 'l1', type: 'group', components: { rigLooks: { source: 'rig.json', looks: [{ id: 'roof-cathedral', title: 'Roof', aims: { 'column-bases/up-b380f': { rule: 'vertical', in_deg: '8', note: 'x' }, 'bad key': { rule: 'fan' } }, colours: { 'column-bases/up-b380f': '#EEF3FF', 'truss/up-250bsw': 'blue' } }, { id: 'Bad Id' }] } } }
       ]
     },
     // The show's Perform presets (2026-09-24). The server rebuilds documents
@@ -461,15 +477,89 @@ describe('ESM/CJS mirror equivalence', () => {
     }
   ]
 
-  it('keeps components.fixture as { index } through the mirror, and drops a broken one', () => {
+  it('keeps components.fixture with the plot patch through the mirror, and drops a broken one', () => {
     const doc = schema.normalizeProjectDocument({
       entities: [
         { id: 'f1', type: 'spotLight', components: { fixture: { index: 3, universe: 1, address: 17 } } },
-        { id: 'f3', type: 'pointLight', components: { fixture: { index: 0 } } }
+        { id: 'f3', type: 'pointLight', components: { fixture: { index: 0 } } },
+        { id: 'f5', type: 'spotLight', components: { fixture: { type: ' up-b380f ', mode: '16ch', universe: 2, address: 273, unit: 5, circuit: 'C4', position: 'column base R', hung: true, extra: 'x' } } },
+        { id: 'f6', type: 'spotLight', components: { fixture: { type: 'up-pl5403', universe: 0, address: 513, unit: -1, hung: 'yes' } } },
+        { id: 'f7', type: 'spotLight', components: { fixture: { mode: '16ch', universe: 1, address: 1 } } },
+        // Build pieces (RIG_BUILD.md §2.3): a kind survives, trimmed; an empty one is dropped.
+        { id: 'k1', type: 'group', components: { piece: { kind: ' truss-2m ', load: 9 } } },
+        { id: 'k2', type: 'group', components: { piece: { kind: '' } } }
       ]
     })
-    expect(doc.entities[0].components.fixture).toEqual({ index: 3 })
+    expect(doc.entities[0].components.fixture).toEqual({ index: 3, universe: 1, address: 17 })
     expect(doc.entities[1].components.fixture).toBeUndefined()
+    // Every well-formed field kept, trimmed; an unknown field dropped.
+    expect(doc.entities[2].components.fixture).toEqual({ type: 'up-b380f', mode: '16ch', universe: 2, address: 273, unit: 5, circuit: 'C4', position: 'column base R', hung: true })
+    // Out-of-range numbers and a non-boolean hung are left out, the type kept.
+    expect(doc.entities[3].components.fixture).toEqual({ type: 'up-pl5403' })
+    // Neither an index nor a type: no fixture at all.
+    expect(doc.entities[4].components.fixture).toBeUndefined()
+  })
+
+  it('keeps components.piece as { kind } through the mirror', () => {
+    const doc = schema.normalizeProjectDocument({
+      entities: [
+        { id: 'k1', type: 'group', components: { piece: { kind: ' truss-2m ', load: 9 } } },
+        { id: 'k2', type: 'group', components: { piece: { kind: '' } } }
+      ]
+    })
+    expect(doc.entities[0].components.piece).toEqual({ kind: 'truss-2m' })
+    expect(doc.entities[1].components.piece).toBeUndefined()
+  })
+
+  it('keeps components.venuePlan bounded through the mirror, and drops a broken one', () => {
+    const doc = schema.normalizeProjectDocument({
+      entities: [
+        { id: 'v1', type: 'model', components: { venuePlan: { name: ' hall ', outline: [[-1, -1], [1, -1], [1, 1.00049], [-1, 1]], columns: [[0, 0, 0.5, 0.8], [1, 'x', 1, 1]], zones: [{ id: 'none', rects: [] }], overhead: [{ id: 'bad' }], north: [0.6, 0.8] } } },
+        { id: 'v2', type: 'model', components: { venuePlan: { outline: [[0, 0], [1, 1]] } } }
+      ]
+    })
+    const plan = doc.entities[0].components.venuePlan
+    expect(plan.name).toBe('hall')
+    expect(plan.outline[2]).toEqual([1, 1])
+    expect(plan.columns).toEqual([[0, 0, 0.5, 0.8]])
+    expect(plan.zones).toEqual([])
+    expect(plan.overhead).toEqual([])
+    expect(plan.north).toEqual([0.6, 0.8])
+    expect(doc.entities[1].components.venuePlan).toBeUndefined()
+  })
+
+  it('keeps components.rentalList bounded through the mirror, and drops an empty one', () => {
+    const doc = schema.normalizeProjectDocument({
+      entities: [
+        { id: 'r1', type: 'group', components: { rentalList: { name: ' order ', items: [{ code: ' UP-B380F ', ordered: 18, stock: 18, rate: 20000 }, { code: 'UP-PL5403', ordered: '50', stock: -1 }, { code: '', ordered: 2 }, { code: 'X', ordered: 1.5 }] } } },
+        { id: 'r2', type: 'group', components: { rentalList: { items: [{ code: 'A' }] } } },
+        // The rig's looks (RIG_BUILD.md §11.4): numbers only in a rule, a bad key or colour dropped.
+        { id: 'l1', type: 'group', components: { rigLooks: { source: 'rig.json', looks: [{ id: 'roof-cathedral', title: 'Roof', aims: { 'column-bases/up-b380f': { rule: 'vertical', in_deg: '8', note: 'x' }, 'bad key': { rule: 'fan' } }, colours: { 'column-bases/up-b380f': '#EEF3FF', 'truss/up-250bsw': 'blue' } }, { id: 'Bad Id' }] } } }
+      ]
+    })
+    const list = doc.entities[0].components.rentalList
+    expect(list.name).toBe('order')
+    expect(list.items).toEqual([
+      { code: 'UP-B380F', type: 'up-b380f', ordered: 18, stock: 18, rate: 20000 },
+      { code: 'UP-PL5403', type: 'up-pl5403', ordered: 50 }
+    ])
+    expect(doc.entities[1].components.rentalList).toBeUndefined()
+  })
+
+  it('keeps components.rigLooks to numbers and short words through the mirror', () => {
+    const doc = schema.normalizeProjectDocument({
+      entities: [{ id: 'l1', type: 'group', components: { rigLooks: { looks: [{ id: 'roof-cathedral', title: 'Roof', aims: { 'column-bases/up-b380f': { rule: 'vertical', in_deg: '8', note: 'x' }, 'bad key': { rule: 'fan' } }, colours: { 'column-bases/up-b380f': '#EEF3FF', 'truss/up-250bsw': 'blue' } }, { id: 'Bad Id' }] } } }, { id: 'l2', type: 'group', components: { rigLooks: { looks: [] } } }]
+    })
+    expect(doc.entities[0].components.rigLooks.looks).toEqual([{ id: 'roof-cathedral', title: 'Roof', intent: '', aims: { 'column-bases/up-b380f': { rule: 'vertical', in_deg: 8 } }, colours: { 'column-bases/up-b380f': '#eef3ff' } }])
+    expect(doc.entities[1].components.rigLooks).toBeUndefined()
+  })
+
+  it('clears one fixture field through updateComponent without losing the rest', () => {
+    const base = schema.normalizeProjectDocument({
+      entities: [{ id: 'l', type: 'spotLight', components: { fixture: { index: 7, type: 'up-b380f', mode: '16ch', universe: 1, address: 1 } } }]
+    })
+    const next = schema.applyProjectOps(base, [{ type: 'updateComponent', payload: { entityId: 'l', component: 'fixture', patch: { index: null } } }])
+    expect(next.entities[0].components.fixture).toEqual({ type: 'up-b380f', mode: '16ch', universe: 1, address: 1 })
   })
 
   // Fresh documents stamp projectMeta with Date.now(); zero the wall-clock
@@ -722,6 +812,27 @@ describe('the beam and the room’s shadows survive both mirrors', () => {
     expect(doc.entities[0].components.beam).toEqual({ visible: true, haze: 1 })
     expect(doc.entities[1].components.beam).toEqual({ visible: false, haze: 0 })
     expect(doc.entities[2].components.beam).toEqual({ visible: false, haze: 0.4 })
+  })
+
+  it('keeps beam.only (the cone with no light) on both sides, and only when true', async () => {
+    const esm = await import('../../src/shared/projectSchema.js')
+    const written = applyProjectOps(normalizeProjectDocument({
+      entities: [{ id: 'lamp', type: 'spotLight', components: {} }]
+    }), [
+      { type: 'updateEntity', payload: { entityId: 'lamp', patch: { components: { beam: { visible: true, haze: 0.5, only: true } } } } }
+    ])
+    const read = normalizeProjectDocument(JSON.parse(JSON.stringify(written)))
+    expect(read.entities[0].components.beam).toEqual({ visible: true, haze: 0.5, only: true })
+    expect(esm.normalizeProjectDocument(JSON.parse(JSON.stringify(written))).entities[0].components.beam)
+      .toEqual(read.entities[0].components.beam)
+    // false, or anything that is not exactly true, is not stored at all — a
+    // beam saved before `only` existed reads back byte-for-byte the same.
+    for (const only of [false, 'yes', 1]) {
+      const doc = normalizeProjectDocument({ entities: [{ id: 'x', type: 'spotLight', components: { beam: { visible: true, haze: 0.4, only } } }] })
+      expect(doc.entities[0].components.beam).toEqual({ visible: true, haze: 0.4 })
+      expect(esm.normalizeProjectDocument({ entities: [{ id: 'x', type: 'spotLight', components: { beam: { visible: true, haze: 0.4, only } } }] }).entities[0].components.beam)
+        .toEqual({ visible: true, haze: 0.4 })
+    }
   })
 
   it('keeps renderSettings.shadowCasting through an op and a re-read', async () => {

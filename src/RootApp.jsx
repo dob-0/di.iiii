@@ -25,6 +25,10 @@ import { getJamLocationState, isJamLocation } from './project/routing/jamRouting
 import { getMakeLocationState, isMakeLocation } from './make/makeRouting.js'
 import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
 import { getPerformLocationState, isPerformLocation } from './perform/performRouting.js'
+import { getPatchSheetLocationState, isPatchSheetLocation } from './rigbuild/patchRouting.js'
+import { getPlotLocationState, isPlotLocation } from './rigbuild/plotRouting.js'
+import { getCardsLocationState, isCardsLocation } from './rigbuild/cardsRouting.js'
+import { getBuildLocationState, isBuildLocation } from './rigbuild/buildRouting.js'
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
@@ -54,6 +58,10 @@ const ScanSurface = lazy(() => import('./scan/ScanSurface.jsx'))
 // stills, which must never pull three.js for a phone that has not asked a card
 // to go live.
 const KitPage = lazy(() => import('./kit/KitPage.jsx'))
+const PatchSheetSurface = lazy(() => import('./rigbuild/PatchSheetSurface.jsx'))
+const PlotSurface = lazy(() => import('./rigbuild/PlotSurface.jsx'))
+const CardsSurface = lazy(() => import('./rigbuild/CardsSurface.jsx'))
+const BuildSurface = lazy(() => import('./rigbuild/BuildSurface.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 
 // The space `/` opens. Kept in step with GridFloorBackground's PREFERRED_SPACE_ID
@@ -355,6 +363,10 @@ function AppRouter() {
     const makeState = getMakeLocationState(location)
     const mapState = getMapLocationState(location)
     const performState = getPerformLocationState(location)
+    const patchSheetState = getPatchSheetLocationState(location)
+    const plotState = getPlotLocationState(location)
+    const cardsState = getCardsLocationState(location)
+    const buildState = getBuildLocationState(location)
     const chatState = getChatLocationState(location)
     const privateChatWith = getPrivateChatTarget(location)
     const appState = getAppLocationState(location)
@@ -539,6 +551,76 @@ function AppRouter() {
                         ? <MapOutput projectId={mapState.projectId} spaceId={mapState.spaceId} />
                         : <MapSurface projectId={mapState.projectId} spaceId={mapState.spaceId} />}
                 </Suspense>
+            </ProtectedSurface>
+        )
+    }
+
+    // `/{space}/patch/{projectId}` — the rig's patch sheet (src/rigbuild/): what the
+    // light engineers are handed. Read-only and printable. No gate of its own: it
+    // reads the document through the API with the visitor's own session, so the
+    // server decides who may read it (a private space answers 401 and the page
+    // says so), and a link handed to a crew opens like any public page.
+    if (isPatchSheetLocation(patchSheetState)) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <PatchSheetSurface spaceId={patchSheetState.spaceId} projectId={patchSheetState.projectId} />
+            </Suspense>
+        )
+    }
+
+    // `/{space}/plot/{projectId}` — the lighting plot, view B (src/rigbuild/): the rig
+    // drawn from above, the room beside it. Behind the same gate as Perform, because
+    // it writes the same document through the same op layer as the Studio.
+    if (isPlotLocation(plotState)) {
+        return (
+            <ProtectedSurface
+                requiredSpaceId={plotState.spaceId}
+                outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
+                showAccountButton={false}
+            >
+                <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                    <PlotSurface spaceId={plotState.spaceId} projectId={plotState.projectId} />
+                </Suspense>
+            </ProtectedSurface>
+        )
+    }
+
+    // `/{space}/cards/{projectId}` — the cards, view C (src/rigbuild/): the rental list
+    // dealt onto named positions, the patch beside them, the looks on the cue list.
+    // Behind the same gate as the plot, because it writes the same document.
+    if (isCardsLocation(cardsState)) {
+        return (
+            <ProtectedSurface
+                requiredSpaceId={cardsState.spaceId}
+                outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
+                showAccountButton={false}
+            >
+                <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                    <CardsSurface spaceId={cardsState.spaceId} projectId={cardsState.projectId} />
+                </Suspense>
+            </ProtectedSurface>
+        )
+    }
+
+    // `/{space}/build/{projectId}` — view A (src/rigbuild/): the room in first person,
+    // the rig built in it by hand. Behind the same gate as the plot, because it writes
+    // the same document. `/{space}/crew/{projectId}` is the same room read-only for
+    // the light engineers, with no gate of its own — like the patch sheet, it reads
+    // the document with the visitor's own session and the server decides.
+    if (isBuildLocation(buildState)) {
+        const surface = (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <BuildSurface spaceId={buildState.spaceId} projectId={buildState.projectId} crew={buildState.crew} />
+            </Suspense>
+        )
+        if (buildState.crew) return surface
+        return (
+            <ProtectedSurface
+                requiredSpaceId={buildState.spaceId}
+                outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
+                showAccountButton={false}
+            >
+                {surface}
             </ProtectedSurface>
         )
     }

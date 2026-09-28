@@ -35,7 +35,21 @@ const APP_SEGMENTS = [
     'scan',
     // `/{space}/perform/{project}` — the Perform line. Checked on all three
     // tiers before reserving (2026-09-24): nothing answers to the word.
-    'perform'
+    'perform',
+    // `/{space}/patch/{project}` — the rig's patch sheet. Checked on all three
+    // tiers before reserving (2026-09-28): nothing answers to the word.
+    'patch',
+    // `/{space}/plot/{project}` — the rig's lighting plot (view B). Checked on all
+    // three tiers before reserving (2026-09-28): nothing answers to the word.
+    'plot',
+    // `/{space}/cards/{project}` — the rig's cards (view C). Checked on all three
+    // tiers before reserving (2026-09-28): nothing answers to the word.
+    'cards',
+    // `/{space}/build/{project}` — the rig built in first person (view A), and
+    // `/{space}/crew/{project}` — the same room, read-only, for the crew. Checked
+    // on all three tiers before reserving (2026-09-28): nothing answers to either.
+    'build',
+    'crew'
 ]
 
 // Real directories under public/, plus the build's own output prefixes, served

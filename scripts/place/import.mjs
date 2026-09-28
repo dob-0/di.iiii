@@ -18,6 +18,9 @@
  *   --title <text>      what the hall is called in the room
  *   --sources <dir>     the footage folder (default: the one frames.json names)
  *   --no-sources        skip the second project
+ *   --replace           the hall project already holds a room: swap the model
+ *                       and drop the old file's asset from the document (the
+ *                       entity keeps its id, so lamps hung beside it stay)
  *   --max-sources <n>   how many source files to carry (default 60)
  *   --dry-run           say what would happen, change nothing
  *
@@ -274,7 +277,21 @@ const main = async () => {
     say(hall.created ? `  created project ${hallProject}` : `  project ${hallProject} was already there`)
     say('  sending the model up …')
     const asset = await uploadAsset(client, hallProject, glb)
-    const written = await sendOps(client, hallProject, hallOps({ asset, place, title }))
+    const ops = hallOps({ asset, place, title })
+    if (args.replace) {
+        // `createEntity` on an id that exists replaces it (applyProjectOps), so
+        // the room swaps in place. The old file would otherwise stay listed in
+        // the document's assets for ever; the bytes stay on the server (and in
+        // whatever backup was taken first), only the reference goes.
+        const before = must(await client.get(`/api/projects/${hallProject}/document`), 'reading the old hall')
+        const old = (before.document?.entities || []).find((entity) => entity.id === 'place-hall')
+        const oldAsset = old?.components?.media?.assetId
+        if (oldAsset && oldAsset !== asset.id) {
+            ops.push({ type: 'deleteAsset', payload: { assetId: oldAsset } })
+            say(`  replacing the old model (asset ${oldAsset.slice(0, 12)}…)`)
+        }
+    }
+    const written = await sendOps(client, hallProject, ops)
     say(`  the hall stands (document version ${written.version ?? '?'})`)
 
     // ── sources ──

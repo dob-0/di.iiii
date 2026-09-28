@@ -391,11 +391,12 @@ export const WIKI_ARTICLES = [
             'Set the pan first and then tilt into the room, the way you would on a ladder: a lamp hanging dead down has no direction to keep, so the pan you chose is held until there is a tilt to use it. Nothing new is saved for this — pan and tilt are the lamp\'s own rotation in the fixture\'s language, so a lamp aimed by dragging reads back here as numbers, and a lamp aimed here moves under the gizmo.',
             'THE BEAM. A lamp\'s Beam section switches on the throw itself: the cone of light in the air between the lamp and what it lands on, the way a beam shows in a hazed room. Haze is how thick that air is. The beam is off in every room until somebody switches it on, and it takes the lamp\'s own colour — so a lamp joined to a fixture on the lighting desk beams in the colour the desk is emitting, live, and goes out when the desk takes it out.',
             'The cone is drawn as far as the lamp reaches, so set the lamp\'s Distance to roughly where the light actually lands. A lamp with a 15-metre reach hung in a small room draws its cone straight through the floor.',
+            'BEAM ONLY. A whole rig is too many lamps for a browser: every lamp that really lights the room costs every pixel, and with shadows on a phone refuses past about a dozen. Tick Beam only (no light) and the lamp keeps its cone in the air but lights nothing — so a rig of ninety heads can hang complete, every beam visible, while a chosen dozen actually light the walls and the floor. A lamp with no beam never goes dark this way; the switch only means something while the beam is showing.',
             'SHADOWS FROM THE ROOM. Under Project → Render there is Lamps throw shadows. Switch it on and the lamps in the room cast: a pillar standing in a beam puts its shadow on the floor behind it, a person-sized box makes a person-sized shadow, and a scanned venue\'s own walls catch what is thrown at them. Shadow detail chooses how sharp the edge is — Sharper costs more, and a phone will feel it. It is off unless a room asks for it, because a shadow pass over a big scanned room is not free.',
             'What a visitor sees is what you see: the beam and the shadows are part of the room, so they arrive with it in a published space and in walk mode, not only in the Studio.'
         ],
         tags: ['light', 'lamp', 'spot', 'spotlight', 'aim', 'pan', 'tilt', 'beam', 'haze', 'shadow', 'shadows', 'rig', 'stage', 'studio', 'render'],
-        updated: '2026-09-21'
+        updated: '2026-09-27'
     },
     {
         id: 'the-rig',
@@ -1572,6 +1573,77 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['scan', 'scanning', 'place', 'hall', 'venue', 'phone', 'camera', 'photogrammetry', 'walk', 'footage', 'sources', '3d', 'model', 'reconstruction', 'meshroom', 'measure', 'tape', 'theatre', 'factory', 'space', 'room', 'polycam', 'lidar'],
         updated: '2026-09-22'
+    },
+    {
+        id: 'patch-sheet',
+        category: 'Spaces & access',
+        title: 'The patch sheet: what the light engineers plug by',
+        summary: 'Every lamp in a room that has a fixture type is on one printable sheet — fixture number, type, mode, position, universe, address, circuit and watts — at diiii.xyz/{space}/patch/{project}.',
+        body: [
+            'A lamp in a room can say which real fixture it is: its type (the code on the rental list), its DMX mode, and where it hangs. On a machine with the lighting desk, such a lamp is patched on the desk the moment it is placed, copied or deleted — the desk picks the next free address in the universe, the way a console does — and the room writes down what the desk decided.',
+            'The sheet reads the room alone, so the link works for anybody who can open the space, on any tier, with no desk. It lists the patch by universe and address, the fixture types, the power by circuit and every flag. Print gives A4 pages; Patch CSV and Power CSV give the same tables for a spreadsheet.',
+            'A flag is a word, never a colour, so it survives a black-and-white printer:',
+            {
+                list: [
+                    'mode unknown — nobody has told us the fixture\'s DMX mode, so it has no address. None is invented.',
+                    'channel list owed — the width of the mode is known, what each channel does is not yet.',
+                    'overlap — two lamps claim the same channels. Nothing is moved for you.',
+                    'desk differs — the room and this machine\'s desk disagree about where a fixture is. Someone has to choose.',
+                    'power assumed — no datasheet gave the watts.'
+                ]
+            },
+            'The power column is the datasheet maximum on 16 A circuits loaded to 80%. It is a planning figure, not an electrical design.',
+            'For the engineers\' console the same rig exports as an MVR file with a GDTF file per fixture type (scripts/rigbuild/export-mvr.mjs).'
+        ],
+        tags: ['patch', 'patch sheet', 'dmx', 'universe', 'address', 'lighting', 'rig', 'fixture', 'mvr', 'gdtf', 'console', 'power', 'circuit', 'print', 'csv', 'light engineer', 'crew'],
+        updated: '2026-09-28'
+    },
+    {
+        id: 'lighting-plot',
+        category: 'Spaces & access',
+        title: 'The plot: build the rig from above, the room beside it',
+        summary: 'diiii.xyz/{space}/plot/{project} draws the rig from above like a lighting plot — the hall, its columns and zones, the truss, towers, decks and every lamp with its number and address — and you build on it; the 3D room beside it follows.',
+        body: [
+            'The plot is the rig drawn the way a lighting designer draws it: the hall seen from above at its real size, its walls, columns and grid, the dance floor and the DJ place, the machinery on the floor and what hangs over it dashed. Each lamp is a symbol for its type at the point it hangs from, with its unit number inside and its console number and universe.address beside it. The key and the title block say what is there, how many channels each universe uses and how much power the rig draws.',
+            'On the left is a rail: select, truss, tower, deck, fixture, fx and measure. Drag on the plan with truss to draw a run — it is laid in 3, 2 and 1 m pieces end to end. Click with tower near the end of a truss and the tower stands under it, built to the truss\'s height. Click with fixture near a truss and the lamp hangs at the nearest clamp point. Everything snaps: truss end to truss end, tower top, deck edge, a 0.5 m grid. Type exact numbers in the inspector when you want them — length, height, x, z, turn.',
+            'A new lamp is patched on this machine\'s desk as soon as it is placed, like in Studio: the number and the address appear beside it. Select several and press patch this group to lay them out again as one block. Two lamps on the same channels are drawn in a dashed box with a !, and the inspector says what the desk said.',
+            'The room beside the plan is the same room as in Studio, showing what is selected. On a phone the plan fills the screen; plan and room are one tap apart, and the tools and the inspector are in a sheet you pull up.',
+            'Print sheet 1 gives the plot on A3 or A4 at a true scale with a scale bar — the whole rig, or just what is on the screen for a close-up of the stage. Sheets 2 and 3, the patch and the power, are the patch sheet. Print at 100%, not "fit to page".',
+            'The hall comes from the model it was built from, never drawn by hand. The plot makes no load or rigging calculation: a truss end with no tower under it is marked free, and the real hang needs a rigger\'s sign-off.'
+        ],
+        tags: ['plot', 'lighting plot', 'plan', 'cad', 'truss', 'tower', 'deck', 'stage', 'rig', 'fixture', 'lamp', 'dmx', 'patch', 'address', 'print', 'a3', 'scale', 'room', 'build', 'light engineer', 'crew', 'rp-2'],
+        updated: '2026-09-28'
+    },
+    {
+        id: 'rig-cards',
+        category: 'Spaces & access',
+        title: 'The cards: deal the rental list onto the rig, play the looks',
+        summary: 'diiii.xyz/{space}/cards/{project} shows the rental list as cards — placed and ordered for each type — and deals them onto named positions; the patch fills in per universe beside them, and the rig\'s looks sit on a cue list: GO, and the room follows.',
+        body: [
+            'On the left is the rental list: one card per fixture type, with how many are on order and how many are in the rig. A dashed card is a type whose DMX mode the rental house has not sent yet: it can be placed, but it gets no address.',
+            'In the middle are the positions: the truss header, the tower ladders and tops, the line behind the stage, its flanks, the pit, the column bases, the column faces and the backdrop. They come from what the room already has, the truss, towers and decks and the hall\'s own plan; nothing is drawn by hand. Pick a card and press deal here: the lamps land evenly and mirrored, or in pairs from the stage along a row of columns, and the desk patches the card as one block. Tap a free slot to hang just one; take back removes them.',
+            'On the right are the patch bars, one per universe: solid where lamps are, hatched where two claim the same channels (press move to next free), dashed for what is still to place.',
+            'Underneath is the cue list. Put the looks on it and send them to the desk; GO fires the next look on the desk, from here or from /light, and the room tab shows every lamp aimed and coloured by that look. On a phone: tap a card, then tap a slot.',
+            'What it cannot do yet: send the looks as DMX to real fixtures (each fixture\'s channel list is still owed by the rental house), and take GO from the engineers\' own console (that waits for console input).'
+        ],
+        tags: ['cards', 'rental', 'rental list', 'deal', 'position', 'truss', 'column', 'patch', 'universe', 'dmx', 'looks', 'cue', 'cue list', 'go', 'timeline', 'rig', 'fixture', 'light', 'room', 'phone', 'light engineer'],
+        updated: '2026-09-28'
+    },
+    {
+        id: 'rig-build-3d',
+        category: 'Spaces & access',
+        title: 'Build the rig in the room, like Minecraft — and the crew link',
+        summary: 'diiii.xyz/{space}/build/{project} puts you in the room on foot. Press B and a hotbar of truss, towers, decks and the rental list\'s fixtures appears: aim, and a dashed outline shows where the piece will snap; click to place it. Every lamp carries its address in the air. /{space}/crew/{project} is the same room, read only, for the light engineers.',
+        body: [
+            'Walk as in any room: WASD and the mouse (click once to take the mouse, Esc gives it back), F to fly. B turns walking into building. The hotbar holds truss 3, 2 and 1 m, a tower, a 2 × 1 m deck, and every line of the rental list with how many are placed and how many are on order. Pick with 1–9 and 0, or the wheel. When all of a type is placed the slot says none left and the room will not take one more — remove one to hang it elsewhere.',
+            'Aim at what you are building on. A lamp hangs at the nearest clamp point of a truss, or stands on a deck or the floor. A truss aimed at a tower sits on its top; aimed at another truss it continues it from the nearer end; aimed at the floor it hangs at the height Q and E set. A tower aimed under a truss end stands on the floor and is built up to it. A deck joins the edge of the deck you aim at. R turns a piece a quarter (Shift+R 15°). Right-click removes what the crosshair is on, with the lamps hanging on it.',
+            'Placed lamps are patched by the desk on this machine a moment later: the tag above each one says its fixture number and where its channels start, like #36 U2.025. A clash shows on the lamp itself, with a ! and a dashed tag. Click a tag, or aim at a lamp and press I, for its whole patch in a side sheet. For exact numbers, press Esc after placing: the inspector opens on what you placed, and takes x, z, height, turn, a truss run\'s length, a lamp\'s mode and address.',
+            'On a phone: the left half of the screen is the walking stick, a swipe on the right half looks, the crosshair is your hand. The buttons on the right place, remove (del), turn and raise or lower (up, dn); the hotbar scrolls sideways under your thumb.',
+            'The crew link (crew link in the corner) is the same room for the light engineers: tags on, walking only, nothing can be changed, and a clash is tagged from anywhere in the hall. The patch sheet is one tap away. A private space still needs them signed in or invited.',
+            'It is the same rig as the plot and the cards: what you build here shows there, and the other way round. It makes no load or rigging calculation.'
+        ],
+        tags: ['build', 'minecraft', 'first person', 'walk', 'hotbar', 'truss', 'tower', 'deck', 'snap', 'rig', 'fixture', 'lamp', 'patch', 'address', 'tag', 'crew', 'light engineer', 'phone', 'rental list'],
+        updated: '2026-09-28'
     }
 ]
 

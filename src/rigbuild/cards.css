@@ -1,0 +1,136 @@
+/* THE CARDS — view C (src/rigbuild/CardsSurface.jsx). The plot's sheet (plot.css):
+   paper, ink, the house mono, no colour; this file only lays the cards out and
+   draws the few things the plot has no class for (a card, a slot, a patch bar, a
+   cue). Scoped to .rigcards; nothing else changes. */
+
+.rigcards { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+.rigcards-top { gap: 16px; }
+.rigcards-links { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.rigcards-links a, .rigcards-links button, .rigcards-btn {
+    font: 12px var(--di-mono, monospace); color: var(--ink); background: var(--paper); border: 1px solid var(--ink);
+    border-radius: 2px; padding: 6px 10px; min-height: 36px; box-sizing: border-box; display: inline-flex; align-items: center;
+    text-decoration: none; cursor: pointer;
+}
+.rigcards-btn:disabled { color: var(--faint); border-color: var(--rule); cursor: default; }
+.rigcards-btn.is-primary { background: var(--ink); color: var(--paper); }
+.rigcards-main { min-height: 0; overflow: auto; padding: 16px; display: grid; gap: 16px; align-content: start; }
+.rigcards-h { margin: 0 0 8px; font: 700 12px var(--di-mono, monospace); letter-spacing: 0.1em; text-transform: uppercase; }
+.rigcards-foot { margin: 10px 0 0; font-size: 11.5px; color: var(--ink); }
+
+/* a card */
+.rigcards-cardlist { display: grid; gap: 6px; }
+.rigcards-card {
+    display: grid; gap: 3px; text-align: left; width: 100%; box-sizing: border-box; padding: 8px 10px; min-height: 44px;
+    background: var(--paper); color: var(--ink); border: 1px solid var(--ink); border-radius: 2px; cursor: pointer; font: inherit;
+}
+.rigcards-card.is-selected { outline: 2px solid var(--ink); outline-offset: -3px; }
+.rigcards-card.is-owed { border-style: dashed; }
+.rigcards-card__head { display: flex; align-items: center; gap: 8px; }
+.rigcards-card__code { font-weight: 700; font-size: 13px; flex: 1 1 auto; min-width: 0; }
+.rigcards-card__count { font-size: 13px; }
+.rigcards-card__meta { font-size: 11.5px; color: var(--soft); }
+.rigcards-card__bar { display: block; height: 5px; border: 1px solid var(--ink); }
+.rigcards-card__bar span { display: block; height: 100%; background: var(--ink); }
+.rigcards-card.is-owed .rigcards-card__bar { border-style: dashed; }
+.rigcards-card__words { font-size: 11px; color: var(--soft); }
+.rigcards-card.is-over .rigcards-card__words { color: var(--ink); font-weight: 700; }
+
+/* the desk: cards | positions (| patch), the status and the cue list under them */
+.rigcards-grid { grid-template-columns: minmax(260px, 300px) minmax(0, 1fr); grid-template-rows: auto; align-items: start; }
+.rigcards-col { min-width: 0; }
+.rigcards-bottom { grid-column: 1 / -1; min-width: 0; }
+.rigcards-status { border-top: 1px solid var(--rule); }
+
+/* dealing */
+.rigcards-dealbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 10px; margin: 0 0 10px; background: var(--paper); border: 1.5px solid var(--ink); font-size: 12px; }
+.rigcards-dealbar .rigplot-field, .rigcards-dealbar .rigplot-seg { margin: 0; }
+.rigcards-dealbar .rigplot-field input { width: 52px; }
+.rigcards-picked { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; margin: 0 0 10px; padding: 6px 10px; border: 1px dashed var(--ink); background: var(--paper); }
+
+/* a position and its slots */
+.rigcards-positions { display: grid; gap: 8px; }
+.rigcards-pos { background: var(--paper); border: 1px solid var(--ink); padding: 8px 10px; min-width: 0; }
+.rigcards-pos__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rigcards-pos__name { font-weight: 700; font-size: 13px; }
+.rigcards-pos__count { font-size: 12px; color: var(--soft); }
+.rigcards-pos__acts { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.rigcards-pos__note { margin: 2px 0 6px; font-size: 11.5px; color: var(--soft); }
+.rigcards-slots { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; margin: 3px 0; }
+.rigcards-slots__side { width: 14px; font-size: 11px; color: var(--soft); }
+.rigcards-slot {
+    width: 40px; height: 30px; padding: 0; box-sizing: border-box; font: 9px/1 var(--di-mono, monospace); letter-spacing: -0.02em;
+    color: var(--ink); background: var(--paper); border: 1px dashed var(--faint); border-radius: 1px; cursor: pointer; overflow: hidden;
+}
+.rigcards-slot.is-filled { border: 1px solid var(--ink); background: var(--desk); font-weight: 700; }
+.rigcards-slot.is-picked { outline: 2px solid var(--ink); outline-offset: 1px; }
+.rigcards-slot:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+/* the room, as its own tab */
+.rigcards-roompane { position: relative; min-height: 0; padding: 12px; }
+.rigcards-roompane .rigplot-room { height: 100%; background: #0b0b0c; border: 1.5px solid var(--ink); }
+
+/* the phone: the cards, a sheet of positions for the card in hand */
+.rigcards--phone { grid-template-rows: auto minmax(0, 1fr) auto; }
+.rigcards--phone .rigcards-main { padding: 12px; }
+.rigcards--phone .rigcards-top { flex-wrap: wrap; }
+.rigcards--phone .rigcards-slot { width: 44px; height: 40px; font-size: 10px; }
+.rigcards-sheet.is-open { max-height: 78vh; }
+.rigcards--phone .rigcards-dealbar .rigplot-seg button { min-height: 40px; }
+@media (orientation: landscape) and (max-height: 500px) {
+    .rigcards--phone { grid-template-rows: auto minmax(0, 1fr); }
+    .rigcards--phone.has-sheet { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); }
+    .rigcards--phone .rigcards-top { grid-column: 1 / -1; }
+    .rigcards--phone .rigcards-sheet { grid-column: 2; grid-row: 2; max-height: none; border-top: 0; border-left: 1.5px solid var(--ink); overflow-y: auto; }
+    .rigcards--phone .rigcards-roompane { grid-column: 1 / -1; }
+}
+
+/* desktop: each column scrolls on its own, the status stays in view */
+.rigcards:not(.rigcards--phone) .rigcards-grid { overflow: hidden; height: 100%; box-sizing: border-box; grid-template-rows: minmax(0, 1fr) auto; padding-bottom: 0; }
+.rigcards:not(.rigcards--phone) .rigcards-col { overflow-y: auto; height: 100%; padding-right: 4px; }
+.rigcards-card.is-owed .rigcards-card__bar span { background: repeating-linear-gradient(90deg, var(--ink) 0 4px, transparent 4px 6px); }
+
+/* the patch bars */
+.rigcards-grid { grid-template-columns: minmax(250px, 290px) minmax(0, 1fr) minmax(280px, 340px); }
+.rigcards-patch { display: grid; gap: 10px; align-content: start; }
+.rigcards-universe { display: grid; gap: 3px; }
+.rigcards-universe__title { font-size: 12.5px; font-weight: 700; }
+.rigcards-universe__makeup { font-size: 11px; color: var(--soft); }
+.rigcards-bar { display: block; width: 100%; height: 20px; }
+.rigcards-bar--owed { box-sizing: border-box; border: 1px dashed var(--ink); background: var(--paper); }
+.rigcards-conflict { display: grid; gap: 4px; font-size: 12px; padding: 8px 10px; border: 1.5px solid var(--ink); background: var(--paper); }
+.rigcards-conflict__acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.rigcards-power { margin: 4px 0 0; font-size: 12px; border-top: 1px solid var(--ink); padding-top: 8px; }
+.rigcards--phone .rigcards-patch { margin-top: 8px; }
+.rigcards-conflict.is-other { border-width: 1px; border-style: dashed; color: var(--soft); }
+
+/* the looks on the cue list: a band under the three columns, each cue as wide as its hold */
+.rigcards-bottom { display: grid; gap: 8px; padding-bottom: 12px; }
+.rigcards-cues { background: var(--paper); border: 1.5px solid var(--ink); padding: 10px 12px; min-width: 0; }
+.rigcards-cues__head { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.rigcards-cues__head .rigcards-h { margin: 0 8px 0 0; }
+.rigcards-go { min-width: 72px; justify-content: center; font-weight: 700; }
+.rigcards-cues__where { font-size: 12px; }
+.rigcards-cues__acts { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.rigcards-timeline { display: flex; gap: 4px; min-width: 0; overflow-x: auto; }
+.rigcards-cue { flex: 1 1 0; min-width: 170px; display: grid; gap: 4px; border: 1px solid var(--ink); padding: 6px; box-sizing: border-box; background: var(--paper); }
+.rigcards-cue.is-wait { border-style: dashed; }
+.rigcards-cue__fire { display: grid; gap: 2px; text-align: left; font: inherit; color: inherit; background: transparent; border: 0; padding: 2px; cursor: pointer; min-height: 44px; }
+.rigcards-cue__n { font-size: 11px; font-weight: 700; }
+.rigcards-cue__name { font-size: 13px; font-weight: 600; }
+.rigcards-cue__time { font-size: 10.5px; color: var(--soft); }
+.rigcards-cue.is-live { background: var(--ink); color: var(--paper); }
+.rigcards-cue.is-live .rigcards-cue__time, .rigcards-cue.is-live .rigplot-field { color: #cfcdc7; }
+.rigcards-cue__acts { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.rigcards-cue__acts .rigplot-field { margin: 0; font-size: 11px; }
+.rigcards-cue__acts .rigplot-field input { width: 44px; min-height: 28px; padding: 3px 5px; }
+.rigcards-cue__acts .rigcards-btn { min-height: 28px; padding: 3px 7px; font-size: 11px; }
+.rigcards--phone .rigcards-cues { margin-top: 8px; }
+.rigcards--phone .rigcards-timeline { flex-direction: column; overflow: visible; }
+.rigcards--phone .rigcards-cue { min-width: 0; }
+.rigcards--phone .rigcards-cues__acts { margin-left: 0; }
+.rigcards--phone .rigcards-go { min-height: 44px; }
+
+/* the phone sheet's status: one line — the desk's answer shows on the desktop only */
+.rigcards--phone .rigcards-status { flex-wrap: nowrap; overflow: hidden; }
+.rigcards--phone .rigcards-status span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rigcards--phone .rigcards-status .rigplot-status__dim { display: none; }
