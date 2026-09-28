@@ -403,10 +403,10 @@ function SurfaceSettingsWindow({ ctx }) {
                 onCopy={() => {}}
                 onPasteShape={() => {}}
                 onPasteLook={() => {}}
-                onMaskFromOutline={(surfaceId) => ctx.mapApi.updateSurface(surfaceId, { mask: [[0, 0], [1, 0], [1, 1], [0, 1]] })}
+                onClearPoints={(surfaceId) => ctx.mapApi.updateSurface(surfaceId, { points: [], mask: [] })}
                 onResetCorners={(surfaceId) => ctx.mapApi.updateSurface(surfaceId, { corners: nextCorners(surfaces.findIndex((item) => item.id === surfaceId)) })}
             />
-            <a className="perform-dim" href={buildMapPath(ctx.spaceId, ctx.projectId)}>Copy, paste, masks and the wall photo are on the Projection desk.</a>
+            <a className="perform-dim" href={buildMapPath(ctx.spaceId, ctx.projectId)}>Copy, paste, bending points and the wall photo are on the Projection desk.</a>
         </div>
     )
 }

@@ -78,12 +78,12 @@ const describeOp = (doc, op) => {
         case 'deleteEdge': return 'Disconnect nodes'
         case 'upsertAsset': return `Update asset ${payload.asset?.name || ''}`.trim()
         case 'deleteAsset': return 'Delete asset'
-        case 'createMappingSurface': return 'Add surface'
+        case 'createMappingSurface': return `Add ${payload.surface?.name || 'surface'}`
         case 'setMappingSurface': return 'Edit surface'
         case 'deleteMappingSurface': return 'Delete surface'
         case 'reorderMappingSurfaces': return 'Reorder surfaces'
         case 'setMappingState': return 'Projection settings'
-        case 'createMappingCue': return 'Add cue'
+        case 'createMappingCue': return `Add ${payload.cue?.name || 'cue'}`
         case 'setMappingCue': return 'Edit cue'
         case 'deleteMappingCue': return 'Delete cue'
         case 'reorderMappingCues': return 'Reorder cues'

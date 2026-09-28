@@ -221,6 +221,12 @@ export const defaultMappingSurface = {
     // corners, so the mask is traced onto the surface rather than the surface
     // being forced into a rectangle.
     mask: [],
+    // Warp points: where pieces of the four edges land on the output, so the
+    // picture bends round a pillar or a fold instead of being cut. Each is
+    // { side, t, x, y }: the side (0 top, 1 right, 2 bottom, 3 left), the
+    // position along it, and the normalised output point it is pulled to.
+    // See src/map/warpMesh.js. Empty = the plain corner pin.
+    points: [],
     // What is drawn: kind + ref.
     //   project — a di.iiii project id, rendered live
     //   url     — any page, in an iframe (this is how work that never landed
@@ -1083,6 +1089,18 @@ const normalizeMask = (mask) => {
     return mask.map((point) => normalizePoint(point))
 }
 
+const normalizePoints = (points) => {
+    if (!Array.isArray(points)) return []
+    return points
+        .filter((point) => point && typeof point === 'object')
+        .map((point) => ({
+            side: Math.min(3, Math.max(0, Math.round(ensureNumber(point.side, 0)))),
+            t: Math.min(1, Math.max(0, ensureNumber(point.t, 0.5))),
+            x: ensureNumber(point.x, 0),
+            y: ensureNumber(point.y, 0)
+        }))
+}
+
 export const normalizeMappingSurface = (surface = {}) => {
     const source = surface && typeof surface === 'object' ? surface : {}
     const rawSource = source.source && typeof source.source === 'object' ? source.source : {}
@@ -1095,6 +1113,7 @@ export const normalizeMappingSurface = (surface = {}) => {
         enabled: ensureBoolean(source.enabled, defaultMappingSurface.enabled),
         corners: normalizeCorners(source.corners),
         mask: normalizeMask(source.mask),
+        points: normalizePoints(source.points),
         source: {
             kind: MAPPING_SOURCE_KINDS.includes(kind) ? kind : defaultMappingSurface.source.kind,
             ref: ensureString(rawSource.ref, '')
