@@ -633,6 +633,63 @@ export const normalizeFixture = (fixture) => {
     return out
 }
 
+// A VENUE PLAN (RIG_BUILD.md §10): the room's architecture from above — walls,
+// column grid, zones, what stands on the floor and what hangs over it — derived by
+// src/rigbuild/venuePlan.js from the hall the model was built from, and drawn by
+// the plot. Numbers only, bounded: a plan that is not well formed is dropped, and
+// every list is capped so a document cannot carry an unbounded drawing.
+const VENUE_PLAN_CAP = 2000
+const planNum = (value) => {
+  const n = Number(value)
+  return Number.isFinite(n) && Math.abs(n) <= 1e5 ? Math.round(n * 1000) / 1000 : null
+}
+const planNums = (list, length) => {
+  if (!Array.isArray(list) || list.length !== length) return null
+  const out = list.map(planNum)
+  return out.every((n) => n != null) ? out : null
+}
+const planText = (value, max = 120) => (typeof value === 'string' ? value.trim().slice(0, max) : '')
+const planList = (list, each) => (Array.isArray(list) ? list.slice(0, VENUE_PLAN_CAP).map(each).filter(Boolean) : [])
+export const normalizeVenuePlan = (plan) => {
+  if (!plan || typeof plan !== 'object') return null
+  const outline = planList(plan.outline, (p) => planNums(p, 2))
+  if (outline.length < 3) return null
+  const out = {
+    name: planText(plan.name),
+    source: planText(plan.source, 240),
+    warning: planText(plan.warning, 240),
+    outline,
+    columns: planList(plan.columns, (c) => planNums(c, 4)),
+    grid: {
+      x: planList(plan.grid?.x, (g) => (planNum(g?.at) != null ? { at: planNum(g.at), label: planText(g.label, 8) } : null)),
+      z: planList(plan.grid?.z, (g) => (planNum(g?.at) != null ? { at: planNum(g.at), label: planText(g.label, 8) } : null))
+    },
+    zones: planList(plan.zones, (z) => {
+      const rects = planList(z?.rects, (r) => planNums(r, 4))
+      return rects.length ? { id: planText(z.id, 32), label: planText(z.label), rects, note: planText(z.note, 240) } : null
+    }),
+    solids: planList(plan.solids, (s) => {
+      const r = planNums(s?.rect, 4)
+      return r ? { id: planText(s.id, 32), label: planText(s.label), rect: r, top: planNum(s.top) ?? 0 } : null
+    }),
+    overhead: planList(plan.overhead, (o) => {
+      const r = planNums(o?.rect, 4)
+      const line = Array.isArray(o?.line) && o.line.length === 2 ? o.line.map((p) => planNums(p, 2)) : null
+      const lineOk = line && line.every(Boolean)
+      if (!r && !lineOk) return null
+      return { id: planText(o.id, 32), label: planText(o.label), ...(r ? { rect: r } : { line }), bottom: planNum(o.bottom) ?? 0 }
+    }),
+    openings: planList(plan.openings, (o) => {
+      const from = planNums(o?.from, 2)
+      const to = planNums(o?.to, 2)
+      return from && to ? { id: planText(o.id, 32), label: planText(o.label), from, to } : null
+    })
+  }
+  const north = planNums(plan.north, 2)
+  if (north) out.north = north
+  return out
+}
+
 export const normalizeEntity = (entity = {}) => {
     const rawType = ensureString(entity.type, 'box')
     const type = ENTITY_TYPE_SET.has(rawType) ? rawType : 'box'
@@ -782,6 +839,12 @@ export const normalizeEntity = (entity = {}) => {
         const kind = typeof sourceComponents.piece.kind === 'string' ? sourceComponents.piece.kind.trim().slice(0, 32) : ''
         if (kind) nextComponents.piece = { kind }
         else delete nextComponents.piece
+    }
+    // The venue's plan (normalizeVenuePlan, above), on the entity that is the venue.
+    if (sourceComponents.venuePlan) {
+        const plan = normalizeVenuePlan(sourceComponents.venuePlan)
+        if (plan) nextComponents.venuePlan = plan
+        else delete nextComponents.venuePlan
     }
     // A screen: a plane that shows one of the project's own mapping surfaces
     // (document.mappingState.surfaces) as its picture. The join is the surface's

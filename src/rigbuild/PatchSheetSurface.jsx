@@ -3,6 +3,7 @@ import { getProjectDocument } from '../project/services/projectsApi.js'
 import { lightingApiUrl, probeLightingDesk } from '../map/lightingLink.js'
 import { TYPE_LIBRARY } from './types/index.js'
 import { SHEET_CSS, patchCsv, powerCsv, renderSheetBody, sheetModel } from './sheet.js'
+import { buildPlotPath } from './plotRouting.js'
 
 // THE PATCH SHEET PAGE — /{space}/patch/{projectId}. docs/architecture/RIG_BUILD.md §3.
 //
@@ -102,6 +103,7 @@ export default function PatchSheetSurface({ spaceId, projectId, library = TYPE_L
                 {model ? (
                     <>
                         <div className="actions">
+                            <a href={buildPlotPath(spaceId, projectId)}>Sheet 1 · the plot</a>
                             <button type="button" onClick={() => window.print()}>Print</button>
                             <button type="button" onClick={() => download(`${projectId}-patch.csv`, patchCsv(model))}>Patch CSV</button>
                             <button type="button" onClick={() => download(`${projectId}-power.csv`, powerCsv(model))}>Power CSV</button>

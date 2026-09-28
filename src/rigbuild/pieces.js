@@ -104,6 +104,36 @@ export const LAMP_POINT = { id: 'mount', kind: 'mount', pos: [0, 0, 0], normal: 
 
 export const pieceOf = (kind) => PIECES[kind] || null
 
+// A tower or a deck built to a height other than the catalogue's (a 7 m goalpost, a
+// 1.2 m riser). The HEIGHT is the only thing that varies, and in the room it is
+// carried by the entity's `transform.scale[1]` against the catalogue body (the GLB
+// is drawn at the catalogue height), so a piece's height is always
+// `catalogue height x scale.y` — one number, no second copy. A truss has no height
+// of its own: its height is where it hangs (its position's y).
+export const catalogueHeightOf = (kind) => {
+    const piece = PIECES[kind]
+    if (!piece || piece.category === 'truss') return null
+    return piece.category === 'tower' ? piece.height : piece.size[1]
+}
+
+export const pieceWithHeight = (kind, height = null) => {
+    const piece = PIECES[kind]
+    if (!piece || !Number.isFinite(height) || height <= 0 || piece.category === 'truss') return piece || null
+    if (Math.abs(height - catalogueHeightOf(kind)) < 1e-9) return piece
+    if (piece.category === 'tower') return { ...towerPiece(height), kind }
+    const [w, , d] = piece.size
+    return { ...deckPiece(w, d, height), kind }
+}
+
+/** A piece entity's real height (tower, deck): catalogue x scale.y; null for a truss. */
+export const pieceHeightOf = (entity) => {
+    const kind = pieceKindOf(entity)
+    const base = kind ? catalogueHeightOf(kind) : null
+    if (base == null) return null
+    const sy = Number(entity.components?.transform?.scale?.[1])
+    return Math.round(base * (Number.isFinite(sy) && sy > 0 ? sy : 1) * 1e6) / 1e6
+}
+
 export const pieceKindOf = (entity) => {
     const kind = entity?.components?.piece?.kind
     return typeof kind === 'string' && PIECES[kind] ? kind : null

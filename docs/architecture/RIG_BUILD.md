@@ -371,3 +371,139 @@ pieces yet — its goalpost is boxes, exported as scaled cubes).
   safety assessment (IEC 60825-1) — none of these is in scope here.
 - sACN universe offset in the desk (section 4.5).
 - The owner's look at the change to the 2026-09-20 decision (section 2.2).
+
+---
+
+## 10. View B — the plot (`/{space}/plot/{project}`)
+
+Sketch B: *"the plot, a plan view like CAD with the room beside it"*. The owner chose all
+three views and said "start B now" (2026-09-28). Code: `src/rigbuild/Plot*.jsx`,
+`plotGeometry.js`, `plotSymbols.js`, `plotModel.js`, `plotEdits.js`, `venuePlan.js`.
+
+### 10.1 Where it lives
+
+`/{space}/plot/{projectId}` — the same three-segment shape as the patch sheet, the word
+`plot` reserved in both lists (`shared/reservedSegments.cjs`, `src/utils/spaceRouting.js`;
+checked 2026-09-28: `/serverXR/api/spaces/plot` and `/projects/plot` answer 404 on prod, the
+dev tier and the local install). Behind the same gate as Perform, because it writes. The
+patch sheet links to it as sheet 1; the plot's title block links to sheets 2 and 3.
+
+### 10.2 What it draws, and the practice it follows
+
+| element | drawn as | from |
+|---|---|---|
+| walls, openings | heavy continuous line, gaps at doors | `components.venuePlan` (10.3) |
+| structural grid | thin chain line, lettered rows / numbered lines in bubbles at the view's edge | the hall's column grid |
+| columns | solid | the hall |
+| zones (dance floor, DJ place, backstage) | thin chain outline, name and size in capitals | the owner's marks, as the hall JSON carries them |
+| machinery on the floor | hatched, its height written on it | the hall's massing |
+| overhead (crane runways and bridges, roof lanterns) | dashed, "… over · 8.15 m" | the hall |
+| truss | outline with its lacing, one diagonal per 0.5 m bay; a run's length and chord height as a dimension line | pieces (§2.3) |
+| tower / deck | base plate crossed / slab with "h 1.2" | pieces |
+| lamp | one outline per TYPE at the hanging point (the MOUNT, §2.3), unit # inside, `#index` and `universe.address` beside | lamps (§2.2) + the sheet's rows |
+| conflict | dashed box and "!" — overlap, past 512, fixture # twice, desk differs, circuit over, desk refused | `sheetModel` flags + auto-patch's desk flags |
+| free truss end | dashed circle, "free end · point owed" | a run end with no tower top under it |
+
+Symbols: **USITT RP-2 (2006)** practice — a symbol per instrument type at the hanging point,
+the unit number with it, the channel/fixture number and address beside it, an instrument
+key. RP-2 leaves automated fixtures and effects to the designer's key; ours are our own
+drawings (no RP-2 artwork copied), after sketch B: circle = UP-B380F beam, square =
+UP-250BSW spot, hexagon = UP-HK1915 bee-eye, small solid bar = UP-PL5403 PAR, diamond =
+laser, triangle with a letter = effect (C CO₂, S spark, Z smoke). Line types after
+**ISO 128-2** (continuous, dashed = hidden/above, chain = grid and zones).
+
+Ink only. **Colour appears in one place**: a lamp whose own light colour is visibly a colour
+(chroma ≥ 0.2; a near-white tint like #eef3ff is not) gets a swatch — the colour RP-2 notes
+by the lens. A lamp whose type's mode is owed carries no label (it has nothing to say; the
+key says "mode owed" once) until it is selected. Labels are placed greedily below / above /
+right / left, the first place that overlaps nothing; a label that cannot be placed clear is
+left out and the status line says how many ("zoom in, or sheet 2 lists every one").
+
+### 10.3 The venue plan — data, never drawn by hand
+
+`components.venuePlan` on the venue's model entity (normalised and bounded in both schema
+copies, `serverXR/src/schemaSync.test.js` holds them together). It is DERIVED by
+`venuePlanFromHall(hall.json)` from the hall description `scripts/place/hall.py` writes —
+the same numbers the 3D hall is built from — so plan and model cannot disagree. North comes
+from the site file (`…-site-*.json`: u/v bearings, x = −u, z = −v). A room with no plan is
+drawn without a hall, and the plot says so; it never invents walls.
+
+### 10.4 Editing — every write is an op
+
+The rail: select · truss · tower · deck · fixture · fx · measure (keys V T W D F X M).
+Tools are also dragged off the rail onto the plan.
+
+- **snap** — the base's `snap()` with `metric: 'plan'` (x/z distance; a plan cannot say
+  how high the hand is). On the plan a truss slot within reach wins over the deck under it
+  (hang over stand). A tower dropped near a truss end stands **on the floor** and is built
+  to the truss's height (`under` join → height = chord − half a section).
+- **heights** — a tower's or deck's height other than the catalogue's is carried in
+  `transform.scale[1]` against the catalogue body (`pieceHeightOf` = catalogue × scale.y):
+  one number, the GLB body stretches with it. A truss's height is where it hangs (its y).
+- **truss runs** — trusses joined end to end are one RUN (`trussRuns`); clicking one
+  segment selects the run (Alt for one). Drawing a run lays stock 3/2/1 m segments, whole
+  metres, heading snapped to 15°. Typing a length re-lays the run from its first end.
+- **riders** — lamps hung at a piece's slots or standing on its top move, turn, rise and are
+  deleted with it (`ridersOf`, 5 cm tolerance).
+- **inspector** — type the exact x / z / height / turn / length, a lamp's mode, universe,
+  address, unit, position, circuit. A typed address is a typed move (§4.2).
+- **many** — box-select; "patch this group" calls `useRigAutoPatch().patchGroup`.
+- **new lamps** — a spotLight with `components.fixture` (type, default mode, position = the
+  truss's name, next unit), lens from mount (`lampTransform`), aimed straight down hung /
+  up standing (focus is a look's, not the plot's). Light settings are borrowed from a lamp
+  of the same type in the room; past **8 real lights** the new lamp is `beam.only` (§5 of
+  the MOXIR note: 90 real = 1 fps). An effect is a `group` entity with the fixture record.
+- **pieces** — `model` entities whose body is `scripts/rigbuild/pieces/<kind>.glb`, uploaded
+  once per project (content-hashed, `rigbuild-<kind>.glb`).
+- undo/redo through `useOpHistory`; auto-patch writes through the sync path, as in Studio.
+
+### 10.5 The room beside it
+
+`PlotRoom` is the Studio's own `StudioViewport` on the same document (no renderer of our
+own), navigate mode, the plot's selection is its selection (its highlight boxes it), a
+click in the room selects on the plan. It shows the drag's preview while the hand moves.
+The camera opens just inside the audience end of the rig at 6 m (under MOXIR's crane
+girders at 8.15 m), clamped 2 m inside the venue's walls. The room is WebGL and fails
+alone: a browser with no WebGL context gets the plan and a sentence (seen: without the
+boundary the Canvas error took the whole page). Phone: plan full screen, `plan | room`
+one tap apart (the room mounts only when shown), tools and inspector in a bottom sheet.
+
+### 10.6 Print — sheet 1
+
+One SVG in millimetres the size of the sheet (**ISO 216** A3 or A4, landscape; `@page`
+margin 0, so 1 mm in the SVG is 1 mm on paper): a 10 mm border, the drawing at the largest
+**ISO 5455** scale that fits (1:10 … 1:1000, plus 1:25, the ABTT stage-plan scale), the
+key and title block in a right-hand column, a scale bar and north. Frame: the whole rig
+(an overall plot) or **the view on screen** (a detail sheet — the booth at 1:100). The
+title block: show, venue, scale, sheet 1/3, channels by universe, kW and circuits, the
+circuits load alone needs, the desk's output state, console input, revision date and
+document version; the foot names the venue's source and what the sheet is not. Print at
+100%, never "fit to page", or the scale is not 1:N (the print bar says so).
+
+### 10.7 Validated (2026-09-28, on MOXIR, own dev stack :4371/:5371, scratch data)
+
+| check | result |
+|---|---|
+| pure logic | `plotGeometry` 21, `plotEdits` 11, `plotSymbols` 7, `venuePlan` 8, `plotModel` 4, `plotRouting` 2 tests |
+| the MOXIR rig as ops | `scripts/rigbuild/load-plot.mjs`: venue plan (100 columns, 3 zones) + goalpost and riser as 8 pieces + 104 typed lamps, written through `/ops` to a copy of the space |
+| build flow in the UI | truss run 12 m at 6 m drawn, two towers stood under its ends (built to 5.856 m), two UP-250BSW hung at slots → the desk patched them **#47 U1.445, #48 U1.469–492**; a tower moved 2 m (grid snap), its end called "free end" |
+| conflict | #48 typed to U1.450 over #47 → the desk refused, both drawn dashed with "!", the inspector quotes the desk. Found on the way: auto-patch wrote the desk's old address back over the typed one — fixed in `writeBackOps`, guard seen failing without the fix |
+| room | on the RTX 3080 (ANGLE/Vulkan, renderer string checked before loading), desktop 60 fps; the new truss selected on the plan is boxed in the room; phone 390×844 DPR 3 room 60 fps |
+| screens | desktop 1440×900 DPR 2; phone 390×844 DPR 3 portrait and 844×390 landscape; no page overflow; no console error but the no-WebGL one on purpose |
+| print | A3 and A4 landscape, 1 page each; overall 1:500, booth detail 1:100; the scale bar measured on the 150 dpi render: 50 mm bar = 296 px = 50.1 mm |
+
+Not validated: a click in the room selecting on the plan (wired to the Studio's own
+select; not clicked in a test), a real phone, a crew reading the printed sheet, a truss
+made of pieces imported into a console via MVR (§8's open item still stands).
+
+### 10.8 Owed
+
+- A **flown** truss has no rigging point on the plot (motors, bridles) — a free end is only
+  called out. A load/rigging calculation is not made or implied.
+- Fixture BODIES do not follow a moved lamp (MOXIR's bodies are one baked mesh from
+  `rig.mjs`; `load-plot.mjs` removes it) — a body per lamp entity is owed, for A and C too.
+- Label layout is greedy; dense positions (PAR pairs on a column) lose labels at 1:500.
+  Position callouts ("PL5403 ×25 a side", sketch B) are owed.
+- The rental list's counts (`provenance.fixtureList`) are not in the document, so the
+  plot cannot say "3 left of 12" yet.
+- Console input state reads "not on this build" until `feat/dmx-input` lands.

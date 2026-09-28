@@ -19,7 +19,7 @@
 // without landing on the wrong one). The nearest join wins. Nothing is ever joined
 // to itself. Yaw is a turn about Y in radians, three.js's sense (+X turns toward -Z).
 
-import { GRID_M, LAMP_POINT, TRUSS_SECTION_M, pieceOf } from './pieces.js'
+import { GRID_M, LAMP_POINT, TRUSS_SECTION_M, pieceOf, pieceWithHeight } from './pieces.js'
 
 export const SNAP_RADIUS_M = 0.35
 
@@ -44,10 +44,10 @@ export const wrapYaw = (yaw) => {
 }
 export const snapToGrid = (v, grid = GRID_M) => Math.round(v / grid) * grid
 
-const pointsOf = (kind) => (kind === 'lamp' ? [LAMP_POINT] : pieceOf(kind)?.points || [])
+const pointsOf = (kind, height = null) => (kind === 'lamp' ? [LAMP_POINT] : pieceWithHeight(kind, height)?.points || [])
 
-const worldPoints = ({ id, kind, position = [0, 0, 0], yaw = 0 }) =>
-    pointsOf(kind).map((point) => ({
+const worldPoints = ({ id, kind, position = [0, 0, 0], yaw = 0, height = null }) =>
+    pointsOf(kind, height).map((point) => ({
         owner: id,
         ownerKind: kind,
         point,
@@ -70,12 +70,19 @@ const categoryOf = (kind) => (kind === 'lamp' ? 'lamp' : pieceOf(kind)?.category
 
 // How far a moving point is from a target — for a surface, from the surface's
 // patch (and only when above-or-at it, within the radius).
-const reach = (moving, target) => {
-    if (target.point.kind !== 'surface') return dist(moving.pos, target.pos)
+// `plan` measures in x and z only — a view from above (the plot) cannot say how
+// high the hand is, so a truss end finds a tower top, and a lamp a truss slot, by
+// where they are on the floor plan.
+const planDist = (a, b) => Math.hypot(a[0] - b[0], a[2] - b[2])
+// On the plan a deck's top is under the whole deck, so it would always win against
+// a truss hanging over it: there it counts as just inside the radius, and any truss
+// slot actually within reach is preferred (hang over stand).
+const reach = (moving, target, plan = false, radius = SNAP_RADIUS_M) => {
+    if (target.point.kind !== 'surface') return plan ? planDist(moving.pos, target.pos) : dist(moving.pos, target.pos)
     const local = rotateY(sub(moving.pos, target.pos), -target.yaw)
     const [w, d] = target.point.extent
     if (Math.abs(local[0]) > w / 2 + EPS || Math.abs(local[2]) > d / 2 + EPS) return Infinity
-    return Math.abs(local[1])
+    return plan ? radius * 0.999 : Math.abs(local[1])
 }
 
 /**
@@ -87,12 +94,15 @@ const reach = (moving, target) => {
  * @param {{id: string, kind: string, position: number[], yaw?: number}[]} [args.others]
  * @param {number} [args.grid]
  * @param {number} [args.radius]
+ * @param {number} [args.height]   the moving tower's or deck's height, when not the catalogue's
+ * @param {'space'|'plan'} [args.metric] 'plan' joins by x/z distance only (a view from above)
  * @returns {{position: number[], yaw: number, hung?: boolean, to: {id: string, point: string, join: string} | {grid: number}}}
  */
-export const snap = ({ kind, position, yaw = 0, id = null, others = [], grid = GRID_M, radius = SNAP_RADIUS_M }) => {
+export const snap = ({ kind, position, yaw = 0, id = null, others = [], grid = GRID_M, radius = SNAP_RADIUS_M, height = null, metric = 'space' }) => {
     const category = categoryOf(kind)
     if (!category) throw new Error(`nothing to snap: unknown kind "${kind}"`)
-    const moving = worldPoints({ id, kind, position, yaw })
+    const moving = worldPoints({ id, kind, position, yaw, height })
+    const plan = metric === 'plan'
     let best = null
     for (const other of others) {
         if (!other || other.id === id) continue
@@ -105,7 +115,7 @@ export const snap = ({ kind, position, yaw = 0, id = null, others = [], grid = G
                 if (m.point.kind !== join.move[1]) continue
                 for (const t of targets) {
                     if (t.point.kind !== join.to[1]) continue
-                    const d = reach(m, t)
+                    const d = reach(m, t, plan, radius)
                     if (d <= radius && (!best || d < best.d - EPS)) best = { d, join, m, t }
                 }
             }
@@ -154,9 +164,10 @@ const land = ({ join, m, t }, { position, yaw, grid }) => {
 }
 
 /** The pose snap() needs for an entity already in the room. */
-export const snapPoseOf = (entity, kind) => ({
+export const snapPoseOf = (entity, kind, height = null) => ({
     id: entity.id,
     kind,
     position: entity.components?.transform?.position || [0, 0, 0],
-    yaw: entity.components?.transform?.rotation?.[1] || 0
+    yaw: entity.components?.transform?.rotation?.[1] || 0,
+    ...(height != null ? { height } : {})
 })

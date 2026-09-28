@@ -448,7 +448,11 @@ describe('ESM/CJS mirror equivalence', () => {
         { id: 'f7', type: 'spotLight', components: { fixture: { mode: '16ch', universe: 1, address: 1 } } },
         // Build pieces (RIG_BUILD.md §2.3): a kind survives, trimmed; an empty one is dropped.
         { id: 'k1', type: 'group', components: { piece: { kind: ' truss-2m ', load: 9 } } },
-        { id: 'k2', type: 'group', components: { piece: { kind: '' } } }
+        { id: 'k2', type: 'group', components: { piece: { kind: '' } } },
+        // A venue plan (RIG_BUILD.md §10): numbers kept to the mm, a broken list item
+        // dropped, a plan with fewer than three outline points dropped whole.
+        { id: 'v1', type: 'model', components: { venuePlan: { name: ' hall ', outline: [[-1, -1], [1, -1], [1, 1.00049], [-1, 1]], columns: [[0, 0, 0.5, 0.8], [1, 'x', 1, 1]], grid: { x: [{ at: 0, label: 'A' }], z: [{ at: 'no' }] }, zones: [{ id: 'dance', label: 'dance floor', rects: [[0, 0, 1, 1]] }, { id: 'none', rects: [] }], solids: [{ id: 'press', rect: [0, 0, 1, 1], top: 4.5 }], overhead: [{ id: 'crane', line: [[0, 0], [1, 0]], bottom: 8 }, { id: 'bad' }], openings: [{ id: 'door', from: [0, 1], to: [1, 1] }], north: [0.6, 0.8], extra: 1 } } },
+        { id: 'v2', type: 'model', components: { venuePlan: { outline: [[0, 0], [1, 1]] } } }
       ]
     },
     // The show's Perform presets (2026-09-24). The server rebuilds documents
@@ -499,6 +503,23 @@ describe('ESM/CJS mirror equivalence', () => {
     })
     expect(doc.entities[0].components.piece).toEqual({ kind: 'truss-2m' })
     expect(doc.entities[1].components.piece).toBeUndefined()
+  })
+
+  it('keeps components.venuePlan bounded through the mirror, and drops a broken one', () => {
+    const doc = schema.normalizeProjectDocument({
+      entities: [
+        { id: 'v1', type: 'model', components: { venuePlan: { name: ' hall ', outline: [[-1, -1], [1, -1], [1, 1.00049], [-1, 1]], columns: [[0, 0, 0.5, 0.8], [1, 'x', 1, 1]], zones: [{ id: 'none', rects: [] }], overhead: [{ id: 'bad' }], north: [0.6, 0.8] } } },
+        { id: 'v2', type: 'model', components: { venuePlan: { outline: [[0, 0], [1, 1]] } } }
+      ]
+    })
+    const plan = doc.entities[0].components.venuePlan
+    expect(plan.name).toBe('hall')
+    expect(plan.outline[2]).toEqual([1, 1])
+    expect(plan.columns).toEqual([[0, 0, 0.5, 0.8]])
+    expect(plan.zones).toEqual([])
+    expect(plan.overhead).toEqual([])
+    expect(plan.north).toEqual([0.6, 0.8])
+    expect(doc.entities[1].components.venuePlan).toBeUndefined()
   })
 
   it('clears one fixture field through updateComponent without losing the rest', () => {
