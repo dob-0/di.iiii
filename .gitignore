@@ -76,3 +76,6 @@ android-twa/*
 !android-twa/twa-manifest.json
 android-twa-staging/
 .verify-vj-deck/
+
+# The live-AI engine (scripts/liveai/engine.py) is Python; its bytecode cache is not source.
+__pycache__/
