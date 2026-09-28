@@ -25,7 +25,7 @@ const SRC = path.resolve(HERE, '..')
 const SPINE_FILES = [
     'studio/styles/studio-space-hub.css',
     'studio/styles/space-constellation.css',
-    'tools/toolsRoom.css',
+    'kit/kit.css',
     'components/surfaceBar.css',
     'wiki/wiki.css',
     'studio/styles/studio-hub.css',

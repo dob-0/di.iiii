@@ -47,7 +47,7 @@ const APP_SEGMENTS = [
 // block (mirrored in public/.htaccess) to send the bare path to the app. That
 // exception is the cost of the collision — see src/works/works.js.
 const STATIC_SEGMENTS = [
-    'assets', 'basis', 'brand', 'draco', 'fonts', 'get', 'og',
+    'assets', 'basis', 'brand', 'draco', 'fonts', 'get', 'kit', 'og',
     'serverXR', 'suite', 'unicode-fonts', 'vendor',
     // The studio chat's manifest and icons. Named `chat-app` and not `chat`
     // ON PURPOSE: a directory that matches the ROUTE shadows it — nginx serves

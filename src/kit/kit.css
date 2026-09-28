@@ -149,11 +149,11 @@
     height: 100%;
     overflow: hidden;
     font-family: var(--di-mono);
-    font-size: 11px;
-    line-height: 1.55;
+    font-size: var(--di-text-2);
+    line-height: 1.6;
     color: var(--kit-text-2);
     white-space: pre;
-    mask-image: linear-gradient(180deg, #000 78%, transparent 100%);
+    mask-image: linear-gradient(180deg, var(--di-black) 78%, transparent 100%);
 }
 
 /* the one control on the picture: make this the live card */
@@ -182,7 +182,7 @@
     position: absolute;
     right: var(--di-space-3);
     bottom: var(--di-space-3);
-    padding: 2px var(--di-space-2);
+    padding: var(--di-space-1) var(--di-space-2);
     background: var(--di-scrim-strong);
     border-radius: var(--di-radius-pill);
     color: var(--di-cyan);
@@ -244,7 +244,7 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--di-faint);
-    padding-top: 3px;
+    padding-top: var(--di-space-1);
 }
 
 .kit-fact dd { margin: 0; display: flex; flex-wrap: wrap; gap: var(--di-space-1) var(--di-space-2); min-width: 0; }
@@ -321,7 +321,9 @@
     .kit-group { margin-top: var(--di-space-7); }
     .kit-fact { grid-template-columns: minmax(0, 1fr); gap: var(--di-space-1); }
     .kit-stack-table thead { display: none; }
-    .kit-stack-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 var(--di-space-3); padding: var(--di-space-2) 0; border-bottom: 1px solid var(--kit-hairline); }
+    /* One part per block: name and version on a line, what it does under, the
+       licence last. Baseline-aligned so a version never floats above its name. */
+    .kit-stack-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 var(--di-space-3); align-items: baseline; padding: var(--di-space-2) 0; border-bottom: 1px solid var(--kit-hairline); }
     .kit-stack-table th, .kit-stack-table td { border: 0; padding: 0; }
     .kit-stack-table td:nth-child(3) { grid-column: 1 / -1; }
 }
@@ -331,11 +333,13 @@
     .kit-live-button { opacity: 1; min-height: var(--di-touch-target); min-width: var(--di-touch-target); }
     .kit-try { min-height: var(--di-touch-target); }
     .kit-nav { gap: 0 var(--di-space-3); }
-    .kit-nav a { display: inline-flex; align-items: center; min-height: var(--di-touch-target); }
+    /* Tall AND wide: a short word like "zod" or "cors" is still a finger's
+       square to press (measured 2026-09-28 on 390×844: 39 links 18–43px wide). */
+    .kit-nav a { display: inline-flex; align-items: center; justify-content: center; min-height: var(--di-touch-target); min-width: var(--di-touch-target); }
     .kit-fact dd { gap: var(--di-space-2); }
-    .kit-fact dd a { min-height: var(--di-touch-target); padding: 0 var(--di-space-3); }
-    .kit-where a, .kit-needs a { display: inline-flex; align-items: center; min-height: var(--di-touch-target); }
-    .kit-stack-table tbody th a { display: inline-flex; align-items: center; min-height: var(--di-touch-target); }
+    .kit-fact dd a { min-height: var(--di-touch-target); min-width: var(--di-touch-target); justify-content: center; padding: 0 var(--di-space-3); }
+    .kit-where a, .kit-needs a { display: inline-flex; align-items: center; justify-content: center; min-height: var(--di-touch-target); min-width: var(--di-touch-target); }
+    .kit-stack-table tbody th a { display: inline-flex; align-items: center; min-height: var(--di-touch-target); min-width: var(--di-touch-target); padding-right: var(--di-space-3); }
 }
 
 @media (prefers-reduced-motion: reduce) {
