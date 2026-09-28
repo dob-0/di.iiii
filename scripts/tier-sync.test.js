@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { TIERS, main, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, documentSignature, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite } from './tier-sync.mjs'
+import { TIERS, main, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, documentSignature, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite, applySkip } from './tier-sync.mjs'
 
 describe('localBase', () => {
     // The documented convention is LOCAL_API_URL with no /serverXR suffix
@@ -466,5 +466,26 @@ describe('an overwrite that removes media is counted, and refused without the ex
         expect(text).toContain('REMOVES 76 of 85 items')
         expect(text).toContain('needs --accept-loss 76')
         expect(writes).toEqual([])
+    })
+})
+
+describe('applySkip', () => {
+    const plan = [
+        { spaceId: 'br-id-ge', createSpace: false, projects: ['n2-seed', 'ops-board'] },
+        { spaceId: 'dilijan', createSpace: false, projects: ['camp', 'desk'] },
+        { spaceId: 'aaa', createSpace: true, projects: ['name'] }
+    ]
+
+    it('holds back one project and keeps the rest of its space', () => {
+        expect(applySkip(plan, ['br-id-ge/ops-board'])[0]).toEqual({ spaceId: 'br-id-ge', createSpace: false, projects: ['n2-seed'] })
+    })
+
+    it('holds back a whole space, and never creates a space left with nothing', () => {
+        const out = applySkip(plan, ['aaa', 'dilijan/camp', 'dilijan/desk'])
+        expect(out.map((item) => item.spaceId)).toEqual(['br-id-ge'])
+    })
+
+    it('changes nothing without rules', () => {
+        expect(applySkip(plan, [])).toBe(plan)
     })
 })

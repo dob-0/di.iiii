@@ -34,6 +34,9 @@
  *                       the only way to push an EDIT was --force, which overwrites
  *                       every shared project at once.
  *   --space <id>        Only this space (default: every space the source has)
+ *   --skip <s[/p],...>  Never copy these: `space/project`, or a whole `space`.
+ *                       Repeatable, comma-separated. For work that must not
+ *                       land where the destination makes it public.
  *   --no-assets         Documents only — faster, and leaves images unresolvable
  *   --force             Overwrite documents that already exist at the destination
  *   --accept-loss <N>   Carry out a run whose overwrites remove N media items in
@@ -394,6 +397,21 @@ export const planSync = ({ source, destination, force = false }) => {
     return plan
 }
 
+// `--skip`: what a person has decided must NOT move, by `space/project` or a
+// whole `space`. Applied to the finished plan, so every mode honours it the
+// same way, and a space left with nothing to copy is not created either.
+// Written for 2026-09-28: local held ops notes, a funder marked private and the
+// owner's email in projects bound for spaces that are PUBLIC on dev.
+export const applySkip = (plan, skip = []) => {
+    if (!skip.length) return plan
+    const whole = new Set(skip.filter((s) => !s.includes('/')))
+    const one = new Set(skip.filter((s) => s.includes('/')))
+    return plan
+        .filter((item) => !whole.has(item.spaceId))
+        .map((item) => ({ ...item, projects: item.projects.filter((id) => !one.has(`${item.spaceId}/${id}`)) }))
+        .filter((item) => item.projects.length)
+}
+
 // A worktree without its own serverXR/.env.local used to get an empty object here, no
 // token on any request, and one unexplained "fetch failed". The environment is the
 // fallback, and wins where it is set.
@@ -415,12 +433,13 @@ const readEnv = () => {
 }
 
 const parseArgs = (argv) => {
-    const args = { from: null, to: null, space: null, assets: true, force: false, forceStale: false, dryRun: false, allowProduction: false, audit: false, changed: false, rebuildBaseline: false, acceptLoss: parseAcceptLoss(argv) }
+    const args = { from: null, to: null, space: null, skip: [], assets: true, force: false, forceStale: false, dryRun: false, allowProduction: false, audit: false, changed: false, rebuildBaseline: false, acceptLoss: parseAcceptLoss(argv) }
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
         if (arg === '--from') args.from = resolveTier(argv[++i])
         else if (arg === '--to') args.to = resolveTier(argv[++i])
         else if (arg === '--space') args.space = argv[++i]
+        else if (arg === '--skip') args.skip.push(...String(argv[++i] ?? '').split(',').map((v) => v.trim()).filter(Boolean))
         else if (arg === '--no-assets') args.assets = false
         else if (arg === '--force') args.force = true
         // --force alone still refuses a project the baseline shows the
@@ -643,6 +662,13 @@ export const main = async () => {
         const destination = await readInventory(to, args.space)
         destinationIdsBySpace = destination
         plan = planSync({ source, destination, force: args.force })
+    }
+
+    if (args.skip.length) {
+        const before = plan.reduce((n, item) => n + item.projects.length, 0)
+        plan = applySkip(plan, args.skip)
+        const after = plan.reduce((n, item) => n + item.projects.length, 0)
+        console.log(`--skip: ${before - after} project(s) held back (${args.skip.length} rule(s))`)
     }
 
     if (!plan.length) {
