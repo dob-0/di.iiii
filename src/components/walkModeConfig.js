@@ -90,6 +90,10 @@ export const FLY_BODY_RADIUS = 0.3
 // ~0.08 s instead of snapping (a step-smoothed camera, as games do), while a
 // bigger change (leaving fly, dropping off a riser) keeps SETTLE_SMOOTH_TIME.
 export const STEP_SMOOTH_TIME = 0.08
+// The same in VR, as THREE.MathUtils.damp's lambda (1/s): ~1/0.08. A headset
+// eye that snaps up a stair is the classic comfort failure; eased, it reads
+// as a step (Half-Life: Alyx style smoothing).
+export const XR_STEP_DAMPING = 12
 
 // -- Look sensitivity, one per input method --
 // The mouse under pointer lock is the reference, and it is set in the units

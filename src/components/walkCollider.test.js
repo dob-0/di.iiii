@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { entityCollides, buildWalkCollider, groundBelow, resolveWalkBody, resolveFlyBody } from './walkCollider.js'
+import { entityCollides, buildWalkCollider, groundBelow, resolveWalkBody, resolveFlyBody, resolveXrRig } from './walkCollider.js'
 import { createWalkSim, advanceWalkSim } from './walkPhysics.js'
 import { EYE_HEIGHT, WALK_BODY_RADIUS } from './walkModeConfig.js'
 
@@ -106,5 +106,40 @@ describe('walkCollider: flying', () => {
     it('the camera cannot rise through the roof', () => {
         const sim = walk({ from: [0, 5, 0], yaw: 0, seconds: 3, fly: true, vert: 1 })
         expect(sim.body.y).toBeLessThan(8)
+    })
+})
+
+describe('walkCollider: VR rig', () => {
+    // Drive the rig the way XrLocomotion does: stick moves the origin, then resolve.
+    function drive({ rig, head, dx = 0, dz = 0, dy = 0, frames = 180, flying = false }) {
+        for (let i = 0; i < frames; i++) {
+            rig.x += dx; rig.z += dz; rig.y += dy
+            resolveXrRig(collider, rig, head, { flying, stepAlpha: 1 - Math.exp(-12 / 60) })
+        }
+        return rig
+    }
+
+    it('the stick cannot push the rig through a wall', () => {
+        const rig = drive({ rig: { x: 0, y: 0, z: 0 }, head: { x: 0, y: 1.7, z: 0 }, dz: -0.06 })
+        expect(rig.z).toBeGreaterThan(-5 + 0.1)
+    })
+
+    it('the HEAD collides, not the rig centre: a visitor standing 1 m ahead in their room stops a metre earlier', () => {
+        const rig = drive({ rig: { x: 0, y: 0, z: 0 }, head: { x: 0, y: 1.7, z: -1 }, dz: -0.06 })
+        expect(rig.z + -1).toBeGreaterThan(-5 + 0.1)          // the head is outside the wall
+        expect(rig.z).toBeGreaterThan(-5 + 0.1 + 0.9)          // so the rig stops about 1 m short
+    })
+
+    it('stairs ease the rig up; it never sinks under the ground', () => {
+        const rig = drive({ rig: { x: 3, y: 0, z: 0 }, head: { x: 0, y: 1.7, z: 0 }, dx: 0.05, frames: 60 })
+        expect(rig.x).toBeGreaterThan(5.2)
+        expect(rig.y).toBeCloseTo(0.2, 2)
+        drive({ rig, head: { x: 0, y: 1.7, z: 0 }, dy: -0.05, frames: 30 })
+        expect(rig.y).toBeGreaterThanOrEqual(0.2 - 1e-6)
+    })
+
+    it('flown up, the roof stops the head', () => {
+        const rig = drive({ rig: { x: 0, y: 3, z: 0 }, head: { x: 0, y: 1.7, z: 0 }, dy: 0.08, flying: true })
+        expect(rig.y + 1.7).toBeLessThan(8)
     })
 })

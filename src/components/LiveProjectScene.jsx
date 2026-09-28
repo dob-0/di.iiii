@@ -10,7 +10,7 @@ import MadeWithBadge from './MadeWithBadge.jsx'
 import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from './SceneEntityErrorBoundary.jsx'
 import { confineToAreas } from './walkableAreas.js'
-import { entityCollides, buildWalkCollider, collectColliderMeshes, colliderSignature, groundBelow, resolveWalkBody, resolveFlyBody } from './walkCollider.js'
+import { entityCollides, refreshWalkCollider, groundBelow, resolveWalkBody, resolveFlyBody, resolveXrRig } from './walkCollider.js'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
 import {
     buildProjectEventsUrl,
@@ -51,6 +51,7 @@ import { flyVertFromStick, moveFromStick, xrTurnSpeed } from './xrFlyControl.js'
 import {
     WALK_MAX_SPEED, FLY_SPEED, XR_MOVE_SPEED, BOB_AMPLITUDE, BOB_PHASE_PER_M, TURN_SPEED, EYE_HEIGHT,
     DRAG_LOOK_SENSITIVITY, TOUCH_LOOK_SENSITIVITY, TRACKPAD_LOOK_SENSITIVITY,
+    XR_STEP_DAMPING,
     WHEEL_DOLLY_SPEED, WALK_PITCH_LIMIT, FLY_PITCH_LIMIT, JOY_RADIUS, BOUNDS_MARGIN, BOUNDS_MIN_HALF,
     BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_SETTLE_MS, BROKEN_LOCK_SETTLE_SPIKE
 } from './walkModeConfig.js'
@@ -94,6 +95,7 @@ const VIEW_ORBIT_DRIFT_SPEED = 0.35
 const tmpVec = new THREE.Vector3()
 const tmpLook = new THREE.Vector3()
 const tmpDir = new THREE.Vector3()
+const xrHeadOffset = new THREE.Vector3()
 
 const isGateEntity = (entity) => /gate|threshold|entrance/i.test(entity?.name || '')
 
@@ -464,7 +466,7 @@ export const centroidSpawn = (center, bounds) => {
     return { x: center?.x ?? 0, z: (center?.z ?? 0) + back, yaw: Math.PI, pitch: 0 }
 }
 
-function Walker({ playerRef, solidRootRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef }) {
+function Walker({ playerRef, solidRootRef, colliderHolderRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef }) {
     const { camera, gl } = useThree()
     // During an XR session the camera pose is owned by the headset/phone and
     // locomotion is driven through XROrigin (see XrLocomotion). Walker must NOT
@@ -483,8 +485,7 @@ function Walker({ playerRef, solidRootRef, onNearestZone, onPortalReached, entit
     const dollyPendingRef = useRef(0)
     const bobPhaseRef = useRef(0)
     const wheelDollyRef = useRef(0)
-    const colliderRef = useRef(null)
-    const colliderClockRef = useRef(0)
+    const fallbackColliderHolder = useRef({ collider: null, clock: 0 })
     const touchLookRef = useRef(null)
     const touchMoveRef = useRef(null)
     const joyBaseRef = useRef({ x: 0, y: 0 })
@@ -898,13 +899,7 @@ function Walker({ playerRef, solidRootRef, onNearestZone, onPortalReached, entit
         // builds its wish vector from yaw alone, never pitch.
         // The room's matter, rebuilt at most once a second and only when the
         // set of meshes changed (models arrive after the first frame).
-        colliderClockRef.current += delta
-        if (solidRootRef?.current && (colliderRef.current === null || colliderClockRef.current > 1)) {
-            colliderClockRef.current = 0
-            const sig = colliderSignature(collectColliderMeshes(solidRootRef.current))
-            if (colliderRef.current?.signature !== sig) colliderRef.current = buildWalkCollider(solidRootRef.current)
-        }
-        const collider = colliderRef.current
+        const collider = refreshWalkCollider(colliderHolderRef?.current || fallbackColliderHolder.current, solidRootRef?.current, delta)
         const env = {
             confine: (x0, z0, x1, z1) => confineToAreas(
                 walkableAreas, x0, z0,
@@ -1029,7 +1024,7 @@ function RingTour({ playerRef, config }) {
 // pointer. Adds standard smooth thumbstick locomotion (left stick moves,
 // right stick turns) and keeps it in sync with playerRef so position
 // carries over correctly entering and leaving a session.
-function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
+function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef, solidRootRef, colliderHolderRef }) {
     const originRef = useRef(null)
     const hintGroupRef = useRef(null)
     const isPresenting = useXR((state) => state.session != null)
@@ -1075,6 +1070,9 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
         wasPresentingRef.current = isPresenting
 
         if (isPresenting) {
+            // Where the head is relative to the rig, read BEFORE this frame
+            // moves the rig (the camera's matrix still holds last frame's rig).
+            state.camera.getWorldPosition(xrHeadOffset).sub(origin.position)
             // VR left-stick translation: move along the camera's horizontal
             // forward; strafe along its cross-product right (right = forward
             // × up = (-fz, 0, fx)). Deriving right from the hardware-verified
@@ -1130,6 +1128,19 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
 
             if (isVr) {
                 origin.position.y = THREE.MathUtils.clamp(origin.position.y + (touchVert + stickVert) * FLY_SPEED * delta, 0, 58)
+                // Solid rooms in VR (walkCollider.js): the body stands where the
+                // HEAD is, so room-scale steps and leaning collide too. Walls
+                // push the rig back; stairs lift it (smoothed, as VR games do,
+                // to spare the stomach); the roof stops the head. AR is left
+                // alone on purpose: there the room you stand in is real, and
+                // no virtual wall can stop real feet.
+                const collider = refreshWalkCollider(colliderHolderRef?.current || {}, solidRootRef?.current, delta)
+                if (collider?.bvh) {
+                    resolveXrRig(collider, origin.position, xrHeadOffset, {
+                        flying: stickVert !== 0 || touchVert !== 0,
+                        stepAlpha: 1 - Math.exp(-XR_STEP_DAMPING * delta),
+                    })
+                }
             } else if (flyMode) {
                 origin.position.y = THREE.MathUtils.clamp(origin.position.y + (touchVert + stickVert) * FLY_SPEED * delta, 0, 58)
             } else {
@@ -1630,6 +1641,8 @@ export default function LiveProjectScene({
     const isArActive = xr.isArModeActive && xr.isXrPresenting
     const playerRef = useRef({ x: 0, z: 6, yaw: Math.PI, pitch: 0, altY: EYE_HEIGHT })
     const solidRootRef = useRef(null)
+    // One collider for the room, shared by the Walker and XR locomotion.
+    const colliderHolderRef = useRef({ collider: null, clock: 0 })
     const { canvasKey, contextLost, bindContextGuard, restoreContext } = useWebglContextGuard()
     // The two interactive modes. `walking` gates everything that belongs to
     // the walker -- its controls, its chrome, its hints -- so view mode does
@@ -1965,6 +1978,7 @@ export default function LiveProjectScene({
                     <Walker
                         playerRef={playerRef}
                         solidRootRef={solidRootRef}
+                        colliderHolderRef={colliderHolderRef}
                         onNearestZone={setNearestLabel}
                         onPortalReached={handlePortalReached}
                         entities={entities}
@@ -1987,7 +2001,7 @@ export default function LiveProjectScene({
                     <IdleOrbit center={center} />
                 )}
                 {walking && !xr.isXrPresenting && <LookFov />}
-                {walking && <XrLocomotion playerRef={playerRef} joystickRef={joystickRef} flyMode={flyMode} vertTouchRef={vertTouchRef} />}
+                {walking && <XrLocomotion playerRef={playerRef} joystickRef={joystickRef} flyMode={flyMode} vertTouchRef={vertTouchRef} solidRootRef={solidRootRef} colliderHolderRef={colliderHolderRef} />}
                 {walking && worldState.ringTour?.enabled ? (
                     <RingTour playerRef={playerRef} config={worldState.ringTour} />
                 ) : null}

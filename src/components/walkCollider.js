@@ -147,3 +147,50 @@ export function resolveFlyBody(collider, x, y, z, { radius = FLY_BODY_RADIUS } =
     const pushed = pushOut(bvh, _seg, radius, false)
     return { x: _seg.start.x, y: _seg.start.y, z: _seg.start.z, pushed }
 }
+
+/**
+ * Keep a collider current for the meshes under `root`: built on first call,
+ * then re-checked about once a second and rebuilt only if the mesh set
+ * changed (models load after the first frame). `holder` = { collider, clock }.
+ * Shared by the desktop/phone Walker and XR locomotion.
+ */
+export function refreshWalkCollider(holder, root, delta) {
+    if (!root) return holder.collider
+    holder.clock = (holder.clock ?? 0) + delta
+    if (holder.collider == null || holder.clock > 1) {
+        holder.clock = 0
+        const sig = colliderSignature(collectColliderMeshes(root))
+        if (holder.collider?.signature !== sig) holder.collider = buildWalkCollider(root)
+    }
+    return holder.collider
+}
+
+/**
+ * VR rig against the room. `rig` is the XR origin's position (mutated in
+ * place; y = the floor the rig stands on), `head` the headset's offset from
+ * it. The body stands where the HEAD is, so room-scale steps and leaning
+ * collide too. Walls push the rig back; the rig never sinks under the ground;
+ * on the ground and not flying it eases onto stairs (`stepAlpha` = this
+ * frame's share, 1 - e^(-λ·dt)); flown up, the head is a sphere the roof stops.
+ */
+export function resolveXrRig(collider, rig, head, { flying = false, stepAlpha = 1, stepHeight = WALK_STEP_HEIGHT } = {}) {
+    if (!collider?.bvh) return rig
+    const hx = rig.x + head.x
+    const hz = rig.z + head.z
+    const body = resolveWalkBody(collider, hx, rig.y, hz)
+    rig.x += body.x - hx
+    rig.z += body.z - hz
+    const ground = groundBelow(collider, body.x, body.z, rig.y) ?? 0
+    if (rig.y < ground) rig.y = ground
+    else if (!flying && rig.y - ground <= stepHeight) rig.y += (ground - rig.y) * stepAlpha
+    // On the ground the capsule is enough (a head sphere there would lift the
+    // rig when someone crouches); flown up, the roof and trusses stop the head.
+    if (rig.y - ground > stepHeight) {
+        const hy = rig.y + head.y
+        const h = resolveFlyBody(collider, rig.x + head.x, hy, rig.z + head.z)
+        rig.x += h.x - (rig.x + head.x)
+        rig.y += h.y - hy
+        rig.z += h.z - (rig.z + head.z)
+    }
+    return rig
+}

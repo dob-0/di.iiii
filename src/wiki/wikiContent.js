@@ -939,7 +939,7 @@ export const WIKI_ARTICLES = [
                 'WASD — walk when you are inside a scene; click (or drag) to look with the mouse; scroll — step forward/back toward what you face. Walking has weight: you set off over about a step and stop within about a step, and a diagonal is no faster than straight ahead. Rooms are solid: walls, pillars, booths and barriers stop you and you slide along them, stairs and anything up to knee height (45 cm) you walk up onto, and doors between rooms (portals) you walk straight through. Lights, their beams and text never block',
                 'Shift — hold to go faster (walking or flying)',
                 'F — fly mode (Space / Q up, C / E down, as fast as you move across; walls and the roof stop the camera too); while flying the mouse wheel sets the flying speed instead of stepping; on phones, up/down buttons appear while flying',
-                'VR & AR controllers — left stick walks, right stick turns and flies (push the stick up/down); works in passthrough AR too; a hint appears in-headset the first time you enter'
+                'VR & AR controllers — left stick walks, right stick turns and flies (push the stick up/down); works in passthrough AR too; a hint appears in-headset the first time you enter. In VR the room is solid too: walls stop you wherever your head is, stairs lift you gently, and flying stops at the roof. In AR your real room decides'
             ] }
         ],
         tags: ['shortcuts', 'controls', 'vr'],
