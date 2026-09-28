@@ -1185,6 +1185,57 @@ view: frames named by cue, strobe bursts, fps per cue, renderer checked), `show-
 frame-exact: the room in the browser on the GPU with its clock taken over, the desk's answer computed for
 each frame from the desk's own cue list, title card, slow push-in by crop, H.264). The owner's data steps:
 `~/di-backups/preview-rig-builder-2026-09-28/moxir-minimal.sh`.
+
+### 15.7 Hung from the crane — no stage, no towers (2026-09-28, 23:1x)
+
+Owner: *"the yellow thing its move able we will arrange the crane top to the dj … with the metal chain
+conected thr the yellow crane"* — only the DJ stand; the overhead crane parks over it and the truss hangs
+from its bridge. Three shapes were sketched (`~/Downloads/moxir-crane-rig/sketch.html`); the minimal hang,
+one line, was approved ("ok take complimentary").
+
+**The geometry (metres, hall frame; estimates, not a survey).** The nave's entry-end crane is ROLLED along
+its runway (dims overlay `moxir-hall-crane-dj-2026-09-28.json`: `cranes_from_door_m` 4 → 49.2), so its
+bridge's centre line is at z 4.8 — over the DJ (the performer's box on the 3 × 2 m riser at 1.2 m is z
+4.3–6.0). Moved, not duplicated: hall.json still lists two nave cranes. Rail 7.6 m (disputed 6.6–8.4),
+girders 8.15–9.65 m, two 0.7 m box girders at ±1.1 m with a 1.5 m gap; the trolley parked at the right end
+(x 7.6–10.2, `crane_trolley_x_m`) so no beam rises into it; the cab hangs at the left end (x −10.35…−8.35,
+down to 5.95 m). The line: 8 m of 290 mm box truss (3 + 3 + 2 m), parallel to the bridge under its centre
+line, bottom chord 6.0 m, x −4.25…+3.75 (a clamp point every 0.5 m, 0.25 m in from each end, then falls on
+x = 0; every lamp is mirrored about x = 0). Two picks at x ±2.5: a spreader across both girders on beam
+clamps, a chain hoist (500 kg–1 t, D8+) under it, the chain to the top chord, a safety steel beside it.
+The stage deck is the DJ riser only; the goalpost towers are gone.
+
+**What hangs (Minimal).** The line of 7 UP-B380F moved off the floor onto the line, STANDING on its top
+chord at 1 m pitch (x −3…+3): hung under it a 270° tilt cannot reach the sky. The fan rises through the
+gap between the girders. 2 strobes hung under the ends (±3.5); 4 PARs standing between the beams (±1.5,
+±2.5) graze the audience-side girder's underside outward in deep red (rule `bridge-underside`: the bridge
+is its target, so not a clash, and its beam stops there). Unchanged: 6 column-base beams, 8 red column
+uplights, 3 press PARs, 4 pit strobes, 2 hazers. 7 real lights (1 beam, 4 column PARs, 2 bridge PARs); the
+strobes flash through RigFlashes' one shared light (8 in the shader).
+
+**The load (rig JSON `truss.rigging.load`).** Lamps on the line from the type library's weights: 7 × 23 kg
+B380F + 2 × 7.8 kg strobe + 4 × 8 kg PAR = 208.6 kg; truss 48–56 kg (6–7 kg/m, ESTIMATE until the supplier's
+datasheet); clamps, bonds and cable +10 % (21 kg, ESTIMATE) → 278–286 kg on 2 points, ≈ 139–143 kg a point,
+static, before any dynamic factor; the hoists and spreaders (≈ 25–30 kg a point) load the bridge on top.
+Middle 370–378 kg (185–189 a point), Full 409–417 kg (205–209). **Rigging sign-off owed (crane rated load,
+lock-out, hoists + safety steels)** — a structural or rigging engineer approves; this file only draws it.
+
+**Middle and Full.** The goalpost becomes the same hung line; their floor line of 7 moved up onto it too
+(from the floor behind the DJ it now fired straight into the parked bridge); the header spots and strobes
+hang under it; Middle's laser hangs under its centre, Full's two stand on its ends; Full's tower bee-eyes
+and blinders hang on the bridge's audience-side girder (`crane-bridge` with `dx_m`).
+
+**The checks (versions.test.js, every version and look):** symmetry about x = 0; no narrow beam through
+the DJ; lasers ≥ 3 m and rising; no beam into the bridge, trolley or cab (the clash rule now knows the two
+girders and the gap — guard in rig-lib.test.js); head travel; ≤ 8 real lights; the crane moved not copied,
+over the DJ; no towers; the line 8 m at 6.0 m; 2 hoists; the load and the sign-off sentence written down.
+
+**View C and the room.** A truss run lamps stand on lists its top chord ("… — on top", position key
+`truss-top`); the room's look rules know the crane (the plan's overhead line). The opening shot: 14 m out,
+eye height, looking up to 5.2 m, fov 55 — the bridge and the line frame the DJ, the press behind.
+`load-version.mjs` copies the hall only (no build pieces from the source's plot: two hand-placed 3 m
+truss pieces in moxir-hall had come across into the versions and were removed from them; moxir-hall keeps
+its own).
 ## 16. Hosted playback — the show with no desk (`src/rigbuild/showClock.js`)
 
 The light desk (`/light`) runs on a local install only, by design (LIGHTING_DESK.md). On a hosted
