@@ -656,19 +656,21 @@
         },
         "strobe-hit": {
             "title": "Strobe hit",
-            "intent": "The peak: every strobe and blinder at full, white and warm-white, aimed at the crowd from low in the pit and from the booth's height; every beam and PAR out, so the flash lands on black.",
+            "intent": "The peak: every strobe and blinder at full — the pit strobes rake up over the crowd from the floor, the header strobes and the blinders hit the front of the floor; every beam and PAR out, so the flash lands on black.",
             "aims": {
                 "strobe-pit": {
                     "rule": "parallel",
-                    "lean_deg": 70
+                    "lean_deg": 35
                 },
                 "strobe-truss": {
                     "rule": "parallel",
                     "lean_deg": 55
                 },
                 "blinder-pit": {
-                    "rule": "parallel",
-                    "lean_deg": 72
+                    "rule": "point",
+                    "x": 0,
+                    "y": 2.5,
+                    "a": 9
                 },
                 "blinder-towers": {
                     "rule": "point",
