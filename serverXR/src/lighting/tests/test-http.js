@@ -1711,6 +1711,191 @@ check('the desk\'s own state is read through: a holder of the desk reaches the l
 
 // ---- harness ----------------------------------------------------------------
 
+// Ported from the studio desk (2026-09-24). A show file that cannot be written (OneDrive
+// or an antivirus holding it, a read-only file) used to throw out of the save timer.
+// The failure is made with a DIRECTORY where the save's temp file goes: every platform
+// refuses that write, root included. A read-only show.json would not do — on Linux a rename
+// over a read-only file succeeds, so the test would pass without the failure ever happening.
+check('a show file that cannot be written does not stop the desk, says so, keeps the edit and recovers', async () => {
+  const file = path.join(process.env.DATA_DIR, 'show.json');
+  const blocker = file + '.tmp';
+  await POST('/api/master', { master: 200 });
+  await sleep(700);                                   // the first save lands
+  assert.ok(fs.existsSync(file), 'the show file exists');
+  try {
+    fs.mkdirSync(blocker);                            // the next save cannot write its temp file
+    await POST('/api/master', { master: 111 });
+    await sleep(1500);
+    const st = (await GET('/api/state')).body;        // it answers: the desk is alive
+    assert.strictEqual(st.status.save.ok, false, 'the save is reported as failing');
+    assert.match(st.status.save.lastError, /still running, retrying/);
+    assert.ok(st.status.save.failures >= 1);
+    assert.strictEqual((await GET('/api/dmx')).body.master, 111, 'the change itself is live');
+    assert.strictEqual(JSON.parse(fs.readFileSync(file, 'utf8')).master, 200, 'the old file is intact, not truncated');
+  } finally { fs.rmSync(blocker, { recursive: true, force: true }); }
+  for (let i = 0; i < 60 && !(await GET('/api/state')).body.status.save.ok; i++) await sleep(250);
+  assert.strictEqual((await GET('/api/state')).body.status.save.ok, true, 'the save recovers on its own');
+  assert.strictEqual(JSON.parse(fs.readFileSync(file, 'utf8')).master, 111, 'the retried save wrote the change');
+});
+
+// Ported from the studio desk (2026-09-24): objects, labels, follow times, colour effects.
+check('stage objects, labels, follow times and the colour effect: set, published, validated', async () => {
+  let r = await POST('/api/objects', { objects: [{ kind: 'radar', x: 0.5, y: 0.5 }] });
+  assert.strictEqual(r.status, 200, r.text);
+  r = await POST('/api/markers', { markers: [{ text: 'DJ', x: 0.46, y: 0.06 }] });
+  assert.strictEqual(r.status, 200, r.text);
+  r = await POST('/api/colorfx', { mode: 'chase', beats: 2 });
+  assert.strictEqual(r.body.colorFx.mode, 'chase');
+  const st = (await GET('/api/state')).body;
+  assert.deepStrictEqual(st.objects.map((x) => x.kind), ['radar']);
+  assert.deepStrictEqual(st.markers.map((m) => m.text), ['DJ']);
+  assert.ok(!st.fixtures.some((f) => f.name === 'DJ'), 'a label is not a fixture');
+  assert.ok(st.cue && st.cue.running === false, 'the follow status is published');
+  assert.strictEqual((await POST('/api/objects', { objects: 'radar' })).status, 400);
+  assert.strictEqual((await POST('/api/markers', { markers: Array.from({ length: 17 }, () => ({ text: 'x' })) })).status, 400);
+  // Follow: two scenes, the first goes on to the second.
+  const a = (await POST('/api/scenes/save', { name: 'Follow A' })).body.scene;
+  const b = (await POST('/api/scenes/save', { name: 'Follow B' })).body.scene;
+  r = await POST('/api/scenes/follow', { id: a.id, followMs: 100, followId: b.id });
+  assert.strictEqual(r.status, 200, r.text);
+  assert.strictEqual(r.body.next, b.id);
+  r = await POST('/api/scenes/recall', { id: a.id, fadeMs: 0 });
+  assert.strictEqual(r.body.cue, 'started');
+  await sleep(400);
+  assert.strictEqual((await GET('/api/state')).body.activeScene, b.id, 'the sequence stepped on by itself');
+  assert.strictEqual((await POST('/api/scenes/follow', { id: a.id, followMs: 1, followId: 'nope' })).status, 400);
+  // tidy: nothing of this test survives into the next
+  await POST('/api/objects', { objects: [] });
+  await POST('/api/markers', { markers: [] });
+  await POST('/api/colorfx', { mode: 'none' });
+  await POST('/api/scenes/remove', { ids: [a.id, b.id] });
+});
+
+// ---- review fixes (2026-09-24): a failed save never loses the guard, the rig or the show
+
+check('a save that failed after an empty boot still keeps aside a show that turned up before the retry', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'desk-found-retry-'));
+  const show = path.join(dir, 'show.json');
+  const d = await deskOn(dir);                        // boots with nothing
+  try {
+    fs.mkdirSync(show + '.tmp');                      // the first save fails
+    await d.post('/api/master', { master: 100 });
+    await sleep(700);
+    assert.ok(!fs.existsSync(show), 'nothing was written');
+    fs.rmSync(show + '.tmp', { recursive: true, force: true });
+    fs.writeFileSync(show, JSON.stringify({ fixtures: [{ id: 'f1', profile: 'drgb', address: 1 }, { id: 'f2', profile: 'drgb', address: 5 }] }));
+    await sleep(1500);                                // the retry fires
+    const found = fs.readdirSync(dir).filter((f) => f.includes('-found-'));
+    assert.strictEqual(found.length, 1, 'the show that turned up is kept aside: ' + fs.readdirSync(dir).join(', '));
+    assert.strictEqual(JSON.parse(fs.readFileSync(path.join(dir, found[0]), 'utf8')).fixtures.length, 2);
+    assert.strictEqual(JSON.parse(fs.readFileSync(show, 'utf8')).master, 100, 'then the desk saved its own');
+  } finally { d.stop(); fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+check("in a space, a machine-rig write that failed is retried and reported until it lands", async () => {
+  const d = await spaceDesk();
+  try {
+    await d.post('/api/master', { master: 10 });
+    d.desk.writeShow();
+    assert.strictEqual((await d.post('/api/show/open', { space: 'lab' })).status, 200);
+    fs.mkdirSync(d.machineShow + '.tmp');             // the machine's file cannot be written
+    await d.post('/api/output', { refreshHz: 30 });
+    await sleep(1600);
+    let st = (await d.get('/api/state')).body.status.save;
+    assert.strictEqual(st.ok, false, 'the failed rig write is reported');
+    assert.ok(st.failures >= 2, 'and it is retried, not dropped: ' + JSON.stringify(st));
+    fs.rmSync(d.machineShow + '.tmp', { recursive: true, force: true });
+    for (let i = 0; i < 40 && !(await d.get('/api/state')).body.status.save.ok; i++) await sleep(250);
+    st = (await d.get('/api/state')).body.status.save;
+    assert.strictEqual(st.ok, true, 'it recovers');
+    assert.strictEqual(JSON.parse(fs.readFileSync(d.machineShow, 'utf8')).output.refreshHz, 30, 'the rig change reached the machine show');
+  } finally { await d.stop(); }
+});
+
+check('a show switch whose save fails is refused, reported and retried — the show is not replaced', async () => {
+  const d = await spaceDesk();
+  try {
+    await d.post('/api/show/open', { space: 'lab' });
+    const labShow = d.spaceShow('lab');
+    fs.mkdirSync(path.dirname(labShow), { recursive: true });
+    fs.mkdirSync(labShow + '.tmp');                   // the lab show cannot be saved
+    await d.post('/api/fixtures/add', { profile: 'drgb', count: 2 });
+    const r = await d.post('/api/show/open', { space: null });
+    assert.strictEqual(r.status, 409, r.text);
+    assert.match(r.body.error, /nothing was switched/);
+    let st = (await d.get('/api/state')).body;
+    assert.strictEqual(st.show.space, 'lab', 'the lab show is still loaded');
+    assert.strictEqual(st.fixtures.length, 2, 'with its unsaved edits');
+    assert.strictEqual(st.status.save.ok, false, 'status.save says so');
+    fs.rmSync(labShow + '.tmp', { recursive: true, force: true });
+    for (let i = 0; i < 40 && !(await d.get('/api/state')).body.status.save.ok; i++) await sleep(250);
+    assert.strictEqual(JSON.parse(fs.readFileSync(labShow, 'utf8')).fixtures.length, 2, 'the retry saved the lab show');
+    assert.strictEqual((await d.post('/api/show/open', { space: null })).status, 200, 'and now it switches');
+  } finally { await d.stop(); }
+});
+
+// ---- review fixes (2026-09-24): follow times and scenes -----------------------------
+
+check('a follow the desk turns down leaves the stored follow as it was', async () => {
+  const sc = (await POST('/api/scenes/save', { name: 'Keeps its follow' })).body.scene;
+  await POST('/api/scenes/follow', { id: sc.id, followMs: 1500 });
+  const bad = await POST('/api/scenes/follow', { id: sc.id, followMs: 500, followId: 'no-such-scene' });
+  assert.strictEqual(bad.status, 400, bad.text);
+  const self = await POST('/api/scenes/follow', { id: sc.id, followMs: 0, followId: sc.id });
+  assert.strictEqual(self.status, 400, self.text);
+  const now = (await GET('/api/state')).body.scenes.find((x) => x.id === sc.id);
+  assert.strictEqual(now.followMs, 1500, 'the follow it had is still there');
+  await POST('/api/scenes/remove', { ids: [sc.id] });
+});
+
+check('replacing the scene library keeps follow times, colour effects, objects and each light\'s own effect', async () => {
+  const f = await patch('drgb');
+  await POST('/api/fx', { mode: 'strobe', ids: [f.id] });
+  await POST('/api/colorfx', { mode: 'chase' });
+  await POST('/api/objects', { objects: [{ kind: 'radar', x: 0.5, y: 0.5 }] });
+  const a = (await POST('/api/scenes/save', { name: 'Round trip A' })).body.scene;
+  const b = (await POST('/api/scenes/save', { name: 'Round trip B' })).body.scene;
+  await POST('/api/scenes/follow', { id: a.id, followMs: 500, followId: b.id });
+  try {
+    const lib = (await GET('/api/state')).body.scenes;
+    const r = await POST('/api/scenes/replace', { scenes: lib });
+    assert.strictEqual(r.status, 200, r.text);
+    const back = (await GET('/api/state')).body.scenes.find((s) => s.id === a.id);
+    assert.deepStrictEqual([back.followMs, back.followId], [500, b.id], 'the follow survives');
+    assert.strictEqual(back.colorFx && back.colorFx.mode, 'chase', 'the colour effect survives');
+    assert.deepStrictEqual((back.objects || []).map((o) => o.kind), ['radar'], 'the objects survive');
+    assert.deepStrictEqual(back.fixtures.find((sf) => sf.id === f.id).fx, { mode: 'strobe' }, 'the light\'s own effect survives');
+    const junk = await POST('/api/scenes/replace', { scenes: [{ ...lib[0], id: '' }] });
+    assert.strictEqual(junk.status, 400, 'a scene with no id is still refused');
+  } finally {
+    await POST('/api/scenes/remove', { ids: [a.id, b.id] });
+    await POST('/api/fx', { mode: 'none', all: true });
+    await POST('/api/colorfx', { mode: 'none' });
+    await POST('/api/objects', { objects: [] });
+    await POST('/api/fixtures/remove', { ids: [f.id] });
+  }
+});
+
+check('loading another show stops a follow sequence started in the one that was left', async () => {
+  const d = await spaceDesk();
+  try {
+    await d.post('/api/fixtures/add', { profile: 'drgb', count: 1 });
+    const a = (await d.post('/api/scenes/save', { name: 'A', fadeMs: 0 })).body.scene;
+    const b = (await d.post('/api/scenes/save', { name: 'B', fadeMs: 0 })).body.scene;
+    await d.post('/api/scenes/follow', { id: a.id, followMs: 400, followId: b.id });
+    d.desk.writeShow();
+    // The space starts as a copy of this machine's show: the very same scene ids.
+    await d.post('/api/show/open', { space: 'lab' });
+    assert.strictEqual((await d.post('/api/show/copy-machine', { space: 'lab' })).status, 200);
+    await d.post('/api/show/open', { space: null });
+    assert.strictEqual((await d.post('/api/scenes/recall', { id: a.id, fadeMs: 0 })).body.cue, 'started');
+    await d.post('/api/show/open', { space: 'lab' });
+    assert.strictEqual((await d.get('/api/state')).body.cue.running, false, 'the sequence ended with its show');
+    await sleep(700);
+    assert.notStrictEqual(d.desk.state.activeScene, b.id, 'and did not step on through the lab show');
+  } finally { await d.stop(); }
+});
+
 async function main() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'artnet-test-'));
   process.env.DATA_DIR = dir;

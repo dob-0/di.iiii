@@ -7,6 +7,7 @@
 <meta name="color-scheme" content="dark">
 <title>Art-Net Desk</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="cuefx.css"><!-- follow times + colour effects (from the studio desk) -->
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='9' fill='%2335d2dd'/></svg>">
 </head>
 <body>
@@ -44,6 +45,7 @@
   <!-- The pills and the panic button live outside .title because .title is hidden on a
        narrow screen. These are the things you most need on a phone at the desk. -->
   <div class="pills">
+    <button id="savePill" class="wirepill stale" hidden title="The show file could not be saved"></button>
     <button id="fxPill" class="fxpill" hidden title="An effect is running on every fixture — go to the Control page to change or stop it"></button>
     <button id="lfoPill" class="fxpill" hidden title="An LFO is riding channels on top of the look — go to the Control page to change or stop it"></button>
     <button id="heldPill" class="heldpill" hidden title="Manual faders are overriding the fixtures — go to the Fader page to release them"></button>
@@ -846,5 +848,8 @@
 <script src="from.js"></script>
 <script src="show.js"></script>
 <script src="app.js"></script>
+<script src="cuecore.js"></script><!-- where a follow goes on to: shared with the server's cues.js -->
+<script src="cueui.js"></script><!-- follow times: the Follow… editor, badges, the running step -->
+<script src="colorfxui.js"></script><!-- colour effect pads -->
 </body>
 </html>

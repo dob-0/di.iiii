@@ -20,6 +20,10 @@ const {
   AUDIO_MODES, sanitizeAudioCfg,
 } = require('./engine');
 const { FX_MODES, FX_SPATIAL, DEFAULT_FX, sanitizeFxPatch, fxActive, beatGrid, BEATS_PER_BAR } = require('./fx');
+const { sanitizeFollow } = require('./cues');
+const { sanitizeColorFx, COLORFX_MODES } = require('./colorfx');
+const { sanitizeObjects, OBJECT_KINDS, MAX_OBJECTS } = require('./ui/objcore');
+const { sanitizeMarkers, MAX_MARKERS } = require('./markers');
 const { sanitizeLfos, LFO_WAVES, isGenericChannels } = require('./lfo');
 const { STYLES: FAN_STYLES, fanValues } = require('./fan');
 const library = require('./library');
@@ -118,6 +122,11 @@ function createDesk(opts = {}) {
     // which is what keeps them out of every JSON.stringify(state) forever.
     audioCfg: { enabled: false, mode: 'level', amount: 255, release: 300, useBeats: true },
     customProfiles: [],
+    // Stage objects (line, radar, ring, spot) that light the fixtures they pass over; stage
+    // labels (names on the stage, no DMX); the live colour effect. From the studio desk.
+    objects: [],
+    markers: [],
+    colorFx: sanitizeColorFx(null, null),
     // Live sets: named, ordered scene playlists for running a planned show from the Touch
     // page. They reference scenes by id and tolerate dead references — the player shows a
     // missing step rather than silently renumbering the operator's set list mid-show.
@@ -186,7 +195,8 @@ function createDesk(opts = {}) {
     if (!s || typeof s !== 'object' || typeof s.id !== 'string' || !s.id) return null;
     const fixtures = (Array.isArray(s.fixtures) ? s.fixtures : [])
       .filter((sf) => sf && typeof sf === 'object' && sf.id != null)
-      .map((sf) => ({ id: String(sf.id), on: sf.on !== false, values: sanitizeValues(sf.values) }));
+      .map((sf) => ({ id: String(sf.id), on: sf.on !== false, values: sanitizeValues(sf.values),
+        ...(sf.fx && FX_MODES.includes(sf.fx.mode) ? { fx: { mode: sf.fx.mode } } : {}) }));
     const out = {
       ...s,
       id: s.id.slice(0, 40),
@@ -200,8 +210,16 @@ function createDesk(opts = {}) {
     if (s.lfos != null) { const l = sanitizeLfos(s.lfos); if (l) out.lfos = l; else delete out.lfos; }
     if (s.audioCfg && typeof s.audioCfg === 'object') out.audioCfg = sanitizeAudioCfg(s.audioCfg);
     else delete out.audioCfg;
+    // Follow times, the colour effect and stage objects, each through its own validator.
+    delete out.followMs; delete out.followId;
+    Object.assign(out, sanitizeFollow(s));
+    if (s.colorFx && typeof s.colorFx === 'object') out.colorFx = sanitizeColorFx(null, s.colorFx); else delete out.colorFx;
+    if (s.objects != null) { const ob = sanitizeObjects(s.objects); if (ob) out.objects = ob; else delete out.objects; }
     return out;
   }
+
+  // The fields a scene is made of, for routes that take scenes from outside.
+  const SCENE_FIELDS = ['id', 'name', 'fixtures', 'raw', 'fx', 'lfos', 'audioCfg', 'followMs', 'followId', 'colorFx', 'objects'];
 
   // sanitizeFxPatch fills a missing exclude from its `current` — for a stored scene that is
   // DEFAULT_FX, i.e. []. Absent stays absent, so recall can tell "no opinion" from "none".
@@ -270,6 +288,9 @@ function createDesk(opts = {}) {
       s.midi = sanitizeMidi(disk.midi) || { maps: [] };
       s.looks = sanitizeLooks(disk.looks) || [];
       s.layers = sanitizeLayers(disk.layers) || [];
+      s.objects = sanitizeObjects(disk.objects) || [];
+      s.markers = sanitizeMarkers(disk.markers) || [];
+      s.colorFx = sanitizeColorFx(null, disk.colorFx);
 
       // Custom profiles MUST be registered before the fixtures are built. makeFixture falls
       // back to `rgb` for a profile it does not know, so loading them in the other order
@@ -459,15 +480,34 @@ function createDesk(opts = {}) {
   // Ctrl+C then threw the whole drag away. Exit flushes whatever is pending.
   let saveTimer = null;
   let dirty = false;
+  // Whether the show is safely on disk, for the page (status.save). A save runs from a
+  // timer: before this, a locked or read-only show file (OneDrive, an antivirus, a full
+  // disk) threw out of that timer — inside serverXR nothing catches it, so one failed
+  // write took the whole server down — and `dirty` had already been cleared, so the edit
+  // was never tried again even where the process survived. Now a failure is caught,
+  // kept dirty, retried with backoff, and said out loud.
+  const saveStatus = { ok: true, pending: false, lastOkAt: null, lastError: null, failures: 0 };
+  const LOCKED = new Set(['EPERM', 'EBUSY', 'EACCES']);
+  // The size and time of the last show found on disk after an empty boot and kept aside,
+  // so a save that keeps failing does not make a fresh -found- copy on every retry.
+  let foundKept = null;
 
   // One file, written whole: to a temp file, the previous good copy COPIED aside (never
   // renamed — see writeShow), then renamed over the live path, which is atomic.
-  function writeWhole(file, text) {
+  // `inPlace`: after a rename has failed several times in a row (some lockers refuse a
+  // replace but allow a write), write straight over the file instead — the .prev copy
+  // and the temp file still hold the show if that write is interrupted.
+  function writeWhole(file, text, inPlace = false) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     const tmp = file + '.tmp';
     fs.writeFileSync(tmp, text);
     try { fs.copyFileSync(file, file.replace(/\.json$/, '.prev.json')); } catch (e) { /* first save ever */ }
-    fs.renameSync(tmp, file);
+    try { fs.renameSync(tmp, file); }
+    catch (e) {
+      if (!inPlace || !LOCKED.has(e.code)) throw e;
+      fs.writeFileSync(file, text);
+      try { fs.unlinkSync(tmp); } catch (e2) { /* it goes with the next save */ }
+    }
   }
 
   // A show as a space keeps it: everything but `output`. A shallow copy of a dozen keys;
@@ -505,8 +545,26 @@ function createDesk(opts = {}) {
   function writeShow() {
     clearTimeout(saveTimer);
     saveTimer = null;
-    if (!dirty) return;
-    dirty = false;
+    // The rig still owed to the machine's own show file while a space's show is loaded.
+    // Kept apart from `dirty`: when the space's show saved and the machine's write then
+    // failed, the retry must still write the rig rather than find nothing dirty and stop.
+    const machineOwed = !!show.space && JSON.stringify(state.output) !== machineOutputText;
+    if (!dirty && !machineOwed) {
+      // Nothing unsaved, so an earlier failure has nothing left to lose (a copy that
+      // replaced a failing space show, say). lastOkAt stays when it was.
+      if (!saveStatus.ok || saveStatus.pending) Object.assign(saveStatus, { ok: true, pending: false, lastError: null, failures: 0 });
+      return;
+    }
+    if (dirty) writeShowFile();
+    if (show.space) writeMachineOutput();
+    else machineOutputText = JSON.stringify(state.output);
+    if (!saveStatus.ok) log('  the show saved again after ' + saveStatus.failures + ' failed attempt(s)');
+    Object.assign(saveStatus, { ok: true, pending: false, lastOkAt: Date.now(), lastError: null, failures: 0 });
+  }
+
+  // The loaded show's own file. Throws when it cannot be written; both flags below are
+  // then left as they were, so the retry does exactly what this attempt meant to.
+  function writeShowFile() {
     const file = showFile();
     fs.mkdirSync(show.dir, { recursive: true });
     // A show that appeared after we booted with nothing belongs to somebody else — a
@@ -514,14 +572,22 @@ function createDesk(opts = {}) {
     // It is preserved and named rather than overwritten, and said out loud. An empty
     // desk quietly replacing a real one is the worst thing this file could do.
     if (bootedWithNothing && fs.existsSync(file)) {
-      const aside = file.replace(/\.json$/, '-found-' + Date.now() + '.json');
-      try {
-        fs.copyFileSync(file, aside);
+      const seen = fs.statSync(file);
+      const sig = seen.size + ':' + seen.mtimeMs;
+      if (sig !== foundKept) {
+        const aside = file.replace(/\.json$/, '-found-' + Date.now() + '.json');
+        try { fs.copyFileSync(file, aside); }
+        catch (e) {
+          // Not kept, so not overwritten: this save fails, and is retried and reported.
+          const err = new Error('a show appeared at ' + file + ' and could not be kept aside: ' + e.message);
+          err.code = e.code;
+          throw err;
+        }
+        foundKept = sig;
         log('A show appeared at ' + file + ' after this desk started empty.');
         log('It has NOT been overwritten blindly — it is kept at ' + aside);
-      } catch (e) { /* if it cannot be preserved, the write below is still refused */ }
+      }
     }
-    bootedWithNothing = false;
     // Compact, not pretty-printed: at 500+ scenes the indented form cost ~29ms to
     // stringify, over the 25ms frame budget at 40Hz. Compact is ~9ms and a third the size.
     // A space's show is written without the rig (normaliseOutput says why).
@@ -533,9 +599,33 @@ function createDesk(opts = {}) {
     // stack when a restart overlapped a save, and only show.prev.json still held the rig.
     // A rename onto the live path is atomic, so show.json now goes straight from the old
     // contents to the new and is never absent.
-    writeWhole(file, text);
-    if (show.space) writeMachineOutput();
-    else machineOutputText = JSON.stringify(state.output);
+    writeWhole(file, text, saveStatus.failures >= 3);
+    // Only now is the edit safe, and only now has this desk written a show of its own. A
+    // write that threw above leaves both as they were: the show stays dirty, and a show
+    // that turns up before the retry is still kept aside rather than written over.
+    bootedWithNothing = false;
+    dirty = false;
+  }
+
+  // The timer's way in: never throws. A failure is kept, retried with a growing wait
+  // (0.5 s doubling, at most 15 s) and reported; the desk and the DMX loop run on.
+  function saveSoon() {
+    try { writeShow(); }
+    catch (e) {
+      saveStatus.ok = false;
+      saveStatus.pending = true;
+      saveStatus.failures++;
+      saveStatus.lastError = LOCKED.has(e.code)
+        ? 'Could not save the show — the file is locked or read-only (OneDrive or an antivirus?) — still running, retrying'
+        : e.code === 'ENOSPC' ? 'Could not save the show — the disk is full — still running, retrying'
+        : `Could not save the show (${e.code || e.message}) — still running, retrying`;
+      const wait = Math.min(15000, 500 * 2 ** Math.min(5, saveStatus.failures - 1));
+      if (saveStatus.failures === 1 || saveStatus.failures % 10 === 0) {
+        log('  COULD NOT SAVE ' + showFile() + ' (' + (e.code || '') + ' ' + e.message + ') — still running, retrying in ' + wait + 'ms');
+      }
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveSoon, wait);
+    }
   }
   // The layer an outside caller's cue drives, unless it names another.
   const CUE_LAYER = 'cue';
@@ -551,8 +641,9 @@ function createDesk(opts = {}) {
   let stateVersion = 0;
   function save() {
     dirty = true;
+    saveStatus.pending = true;
     stateVersion++;
-    if (!saveTimer) saveTimer = setTimeout(writeShow, 400);
+    if (!saveTimer) saveTimer = setTimeout(saveSoon, 400);
   }
 
   // ---- output loop ----------------------------------------------------------
@@ -958,7 +1049,14 @@ function createDesk(opts = {}) {
         mid: state.audio.mid, high: state.audio.high,
         bpm: state.audio.bpm,
       },
+      cue: engine.cues.status(),          // the running follow sequence: step, total, time left
+      colorFxModes: COLORFX_MODES,
+      objectKinds: OBJECT_KINDS,
+      now: Date.now(),
       status: {
+        // Whether the show is safely on disk (see saveSoon): the page says "not saved —
+        // retrying" while ok is false.
+        save: { ...saveStatus },
         // Which fixtures are flashing to be found. Live-only, like the audio levels
         // above it — the page paints the row so the desk visibly agrees with what the
         // operator asked for while they are turned round looking at the rig.
@@ -1319,7 +1417,57 @@ function createDesk(opts = {}) {
     },
 
     // Just the live DMX buffers — polled fast so the stage view animates smoothly.
-    'GET /api/dmx': (req, res) => json(res, { dmx: snapshot(), master: state.master, blackout: state.blackout }),
+    // `now` is the desk's clock: the stage view animates objects on it.
+    'GET /api/dmx': (req, res) => json(res, { dmx: snapshot(), master: state.master, blackout: state.blackout, now: Date.now() }),
+
+    // Follow times: {id, followMs|null, followId|null} sets or clears a scene's follow.
+    'POST /api/scenes/follow': (req, res, body) => {
+      const sc = state.scenes.find((s) => s.id === (body && body.id));
+      if (!sc) return json(res, { error: 'no such scene' }, 404);
+      // Refuse first: a request that is turned down leaves the stored follow as it was.
+      if (body.followMs != null) {
+        if (body.followId && !state.scenes.some((s) => s.id === body.followId)) {
+          return json(res, { error: 'the scene to follow on to does not exist' }, 400);
+        }
+        if (body.followId === sc.id && !(+body.followMs > 0)) {
+          return json(res, { error: 'a scene that follows on to itself needs a wait above 0' }, 400);
+        }
+      }
+      delete sc.followMs; delete sc.followId;
+      if (body.followMs != null) Object.assign(sc, sanitizeFollow({ followMs: body.followMs, followId: body.followId }));
+      save();
+      json(res, { ok: true, scene: sc, next: engine.cues.nextOf(sc), chain: sc.followMs != null ? engine.cues.chainFrom(sc.id) : null });
+    },
+    // {action: 'go'|'stop'} on a running follow sequence.
+    'POST /api/cue': (req, res, body) => {
+      const action = body && body.action;
+      if (action === 'go') { const ok = engine.cues.go(); pushFrame(); return json(res, { ok, cue: engine.cues.status() }); }
+      if (action === 'stop') { const ok = engine.cues.stop('stopped'); return json(res, { ok, cue: engine.cues.status() }); }
+      json(res, { error: 'action must be go or stop' }, 400);
+    },
+    // The live colour effect, merged over the current one like /api/fx.
+    'POST /api/colorfx': (req, res, body) => {
+      state.colorFx = sanitizeColorFx(state.colorFx, body);
+      state.activeScene = null;
+      save(); pushFrame(); json(res, { ok: true, colorFx: state.colorFx });
+    },
+    // Stage objects, replaced whole (at most MAX_OBJECTS).
+    'POST /api/objects': (req, res, body) => {
+      const objects = sanitizeObjects(body && body.objects);
+      if (!objects) return json(res, { error: 'objects must be an array' }, 400);
+      if (body.objects.length > MAX_OBJECTS) return json(res, { error: `at most ${MAX_OBJECTS} objects on the stage` }, 400);
+      state.objects = objects;
+      state.activeScene = null;
+      save(); pushFrame(); json(res, { ok: true, objects: state.objects });
+    },
+    // Stage labels, replaced whole. No DMX, so no frame to push — only the show to save.
+    'POST /api/markers': (req, res, body) => {
+      const markers = sanitizeMarkers(body && body.markers);
+      if (!markers) return json(res, { error: 'markers must be an array' }, 400);
+      if (body.markers.length > MAX_MARKERS) return json(res, { error: `at most ${MAX_MARKERS} labels on the stage` }, 400);
+      state.markers = markers;
+      save(); json(res, { ok: true, markers: state.markers });
+    },
 
     'POST /api/master': (req, res, body) => {
       if (body.master != null && Number.isFinite(+body.master)) state.master = Math.max(0, Math.min(255, Math.round(+body.master)));
@@ -1678,6 +1826,7 @@ function createDesk(opts = {}) {
         const captured = engine.captureScene(state.scenes[i].name);
         captured.id = state.scenes[i].id;
         captured.fadeMs = state.scenes[i].fadeMs;
+        Object.assign(captured, sanitizeFollow(state.scenes[i]));   // an overwrite keeps its follow
         state.scenes[i] = captured;
       }
       const scene = state.scenes[i];
@@ -1710,27 +1859,16 @@ function createDesk(opts = {}) {
         if (!s || typeof s.id !== 'string' || !Array.isArray(s.fixtures)) {
           return json(res, { error: 'every scene needs an id and a fixtures array' }, 400);
         }
-        const lfos = s.lfos == null ? undefined : sanitizeLfos(s.lfos);
-        if (s.lfos != null && !lfos) return json(res, { error: `scene "${s.name}": bad lfos` }, 400);
-        clean.push({
-          id: s.id.slice(0, 40),
-          name: String(s.name || 'Scene').slice(0, 60),
-          fadeMs: Math.max(0, Math.min(60000, s.fadeMs | 0)),
-          fixtures: s.fixtures.map((sf) => ({
-            id: String(sf.id),
-            on: sf.on !== false,
-            values: Object.fromEntries(Object.entries(sf.values || {})
-              .filter(([k]) => typeof k === 'string' && k.length <= 24)
-              .map(([k, v]) => [k, Math.max(0, Math.min(255, +v | 0))])),
-          })),
-          raw: sanitizeRaw(s.raw),
-          // A scene that names no exclude list must not arrive with an empty one: the empty
-          // list is "effects on everything", and recalling it un-protected the beams. It
-          // is left absent, and recall then keeps whatever the live desk has.
-          fx: s.fx ? withoutExcludeIfAbsent(sanitizeFxPatch({ ...DEFAULT_FX }, s.fx), s.fx) : undefined,
-          lfos,
-          audioCfg: s.audioCfg ? sanitizeAudioCfg(s.audioCfg) : undefined,
-        });
+        if (s.lfos != null && !sanitizeLfos(s.lfos)) return json(res, { error: `scene "${s.name}": bad lfos` }, 400);
+        // Through the same validator as a show loaded from disk, so everything a scene can
+        // carry survives an edit made by replacing the library — follow times, the colour
+        // effect, stage objects, each fixture's own effect — and nothing else rides in.
+        // (A scene naming no exclude list keeps it absent there too: see withoutExcludeIfAbsent.)
+        const given = { fadeMs: Math.max(0, Math.min(60000, s.fadeMs | 0)) };
+        for (const k of SCENE_FIELDS) if (s[k] !== undefined) given[k] = s[k];
+        const scene = sanitizeScene(given);
+        if (!scene) return json(res, { error: 'every scene needs an id and a fixtures array' }, 400);
+        clean.push(scene);
       }
       state.scenes = clean;
       const keep = new Set(clean.map((s) => s.id));
@@ -1763,7 +1901,7 @@ function createDesk(opts = {}) {
         const at = Date.now() + wait;
         pending.push(setTimeout(() => {
           if (state.chase.enabled) { state.chase.enabled = false; engine.chase.running = false; }
-          engine.recallScene(scene, body.fadeMs);
+          if (engine.recallScene(scene, body.fadeMs)) engine.cues.onManualRecall(scene, body.fadeMs);
           save(); pushFrame();
         }, wait));
         return json(res, { ok: true, quantized: body.quantize, at, inMs: wait });
@@ -1785,6 +1923,9 @@ function createDesk(opts = {}) {
       const rawBefore = Object.keys(state.raw);
       const ok = engine.recallScene(scene, body.fadeMs);
       const out = { ok };
+      // A scene with a follow starts its sequence; any other scene ends a running one.
+      const cue = ok ? engine.cues.onManualRecall(scene, body.fadeMs) : null;
+      if (cue) out.cue = cue;
       if (chasePaused) out.chasePaused = true;
       if (ok) {
         const fxIsOn = fxActive(state.fx);
@@ -1823,6 +1964,24 @@ function createDesk(opts = {}) {
     // four because they are one control — setting a mode against a depth left at 4% from
     // last time is exactly how an effect looks broken when it is working perfectly.
     'POST /api/fx': (req, res, body) => {
+      // Per-fixture effect: {mode, ids:[...]} gives just those fixtures their own mode and
+      // leaves the rig-wide effect alone ('none' holds them still while the rest run;
+      // 'rig' hands them back to the rig-wide effect).
+      if (Array.isArray(body.ids)) {
+        if (body.mode !== 'rig' && !FX_MODES.includes(body.mode)) {
+          return json(res, { error: `"${body.mode}" is not an effect` }, 400);
+        }
+        const ids = new Set(body.ids);
+        const hit = state.fixtures.filter((f) => ids.has(f.id));
+        if (!hit.length) return json(res, { error: 'none of those fixtures is patched' }, 400);
+        for (const f of hit) {
+          if (body.mode === 'rig') delete f.fx; else f.fx = { mode: body.mode };
+        }
+        state.activeScene = null;
+        save(); pushFrame(); return json(res, { ok: true, fx: state.fx, fixtures: hit.length });
+      }
+      // {all:true}: the effect is for every fixture, so any fixture's own effect gives way.
+      if (body.all) for (const f of state.fixtures) delete f.fx;
       // The clamps live in fx.js (sanitizeFxPatch), shared with scene editing — one answer
       // to what a valid fx config is, whichever route it arrives by.
       state.fx = sanitizeFxPatch(state.fx, body);
@@ -2049,7 +2208,16 @@ function createDesk(opts = {}) {
   // the rig carries over untouched; the profile registry is emptied of the old show's
   // own fixture types and filled with the new one's (each show carries its own).
   function switchShow(next) {
-    writeShow();
+    // The show being left is saved first, through the same path as every other save: a
+    // failure is reported (status.save) and retried. The switch is then refused — loading
+    // the next show replaces `state`, and the edits that could not be written would go
+    // with it.
+    saveSoon();
+    if (!saveStatus.ok) {
+      const e = new Error('The show that is loaded could not be saved (' + saveStatus.lastError + '), so nothing was switched and none of it is lost. Try again once it has saved.');
+      e.status = 409;
+      throw e;
+    }
     cancelPending();
     const rig = state.output;
     for (const p of customProfiles()) removeProfile(p.name);
@@ -2058,6 +2226,10 @@ function createDesk(opts = {}) {
     engine.state = state;
     engine.cancelFade();
     engine.chase = { running: false, index: 0, nextAt: 0 };
+    // A follow sequence belongs to the show it was started in. A space copied from this
+    // machine's show has the very same scene ids, so left running it would step on through
+    // the other show's scenes.
+    engine.cues.stop('another show was loaded');
     stateVersion++;
     rememberLoaded();
     log('  loaded ' + who() + ' — ' + showFile());

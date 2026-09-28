@@ -579,6 +579,27 @@ check('a port that is not there fails with something actionable', () => {
   wire.close();
 });
 
+// From the studio desk (2026-09-24): an unplugged widget made /api/dmx ~35ms median on
+// Windows, because every retry ran `mode` synchronously on the frame path.
+check('a missing widget is retried off the frame path: 200 frames with no widget stay fast', () => {
+  const wire = new Enttec({ port: process.platform === 'win32' ? 'COM98' : '/dev/ttyNOSUCH98' });
+  try {
+    const t0 = Date.now();
+    for (let i = 0; i < 200; i++) wire.send(0, Buffer.alloc(512));
+    const took = Date.now() - t0;
+    assert.ok(took < 150, `200 frames with no widget took ${took}ms`);
+    assert.strictEqual(wire.status().state, 'retrying');
+    assert.strictEqual(wire.connected, false);
+    // The retry itself, once due: on Windows it used to run `mode` twice on this very call
+    // (~70ms). It is asynchronous now, so the frame that triggers it returns at once.
+    wire.nextOpenAt = 0;
+    const t1 = Date.now();
+    wire.send(0, Buffer.alloc(512));
+    const retry = Date.now() - t1;
+    if (process.platform === 'win32') assert.ok(retry < 20, `the frame that triggered a retry took ${retry}ms`);
+  } finally { wire.close(); }
+});
+
 check('describePort says nothing rather than guessing about a port that is not there', () => {
   const info = describePort('COM99');
   assert.strictEqual(info.device, null);
@@ -1430,6 +1451,581 @@ check('the show sentence: the migration offer says it is a copy before the press
   assert.strictEqual(n.button, "Use this machine's show for Lab");
   assert.strictEqual(n.action, 'copy');
   assert.strictEqual(deskShow.copied({ space: 'lab', label: 'Lab' }), "Copied. Lab has its own show now; this machine's show is unchanged.");
+});
+
+
+// ---- ported from the studio desk (2026-09-24): per-fixture effects, rig-extent Follow,
+// even slots, short tail, radar centre, the fade mode, and the LFO-capture fix ----------
+const fxs = require('../fx');
+
+// A fixture's own fx.mode beats the rig-wide one for it alone; the rest keep the rig's.
+const fxRig = () => [0, 1, 2].map((i) => makeFixture({
+  profile: 'drgb', address: 1 + i * 4, universe: 0, x: i * 0.1, y: 0.5, values: { dimmer: 255, r: 255, g: 0, b: 0 },
+}));
+const dimAt = (e, f, t) => e.render(e.state, t).get(0)[f.address - 1];
+const offFx = () => ({ mode: 'none', bpm: 120, depth: 255, enabled: false, spatial: 'patch', exclude: [] });
+
+check('a fixture with its own effect runs it while the others follow the rig', () => {
+  const [a, b, c] = fxRig();
+  a.fx = { mode: 'strobe' };
+  const e = new Engine({ ...baseState([a, b, c]), fx: offFx() });
+  const seenA = new Set(), seenB = new Set();
+  for (let t = 0; t < 1000; t += 25) { seenA.add(dimAt(e, a, t)); seenB.add(dimAt(e, b, t)); }
+  assert.ok(seenA.has(0) && seenA.has(255), 'the strobing fixture flashes');
+  assert.deepStrictEqual([...seenB], [255], 'the rig-wide effect is off, so the others hold still');
+});
+
+check("a fixture set to 'none' holds still while the rig-wide effect runs", () => {
+  const [a, b, c] = fxRig();
+  a.fx = { mode: 'none' };
+  const e = new Engine({ ...baseState([a, b, c]), fx: { mode: 'strobe', bpm: 120, depth: 255, enabled: true, spatial: 'patch', exclude: [] } });
+  const seenA = new Set(), seenB = new Set();
+  for (let t = 0; t < 1000; t += 25) { seenA.add(dimAt(e, a, t)); seenB.add(dimAt(e, b, t)); }
+  assert.deepStrictEqual([...seenA], [255]);
+  assert.ok(seenB.has(0), 'the rest still strobe');
+});
+
+check('with no fixture carrying its own effect the rig renders exactly as before', () => {
+  const fx = { mode: 'chase', bpm: 128, depth: 255, enabled: true, spatial: 'patch', exclude: [] };
+  const fixtures = fxRig();
+  const e = new Engine({ ...baseState(fixtures), fx });
+  const order = fxOrder(fixtures);
+  for (let t = 0; t < 1200; t += 50) {
+    for (const f of fixtures) {
+      assert.strictEqual(dimAt(e, f, t), fxLevel(fx, f, order.get(f.id), fixtures.length, t));
+    }
+  }
+});
+
+check("scenes carry each fixture's own effect, and recall clears ones the scene lacks", () => {
+  const [a, b, c] = fxRig();
+  a.fx = { mode: 'radar' };
+  const e = new Engine({ ...baseState([a, b, c]), fx: offFx() });
+  const withOwn = e.captureScene('own');
+  delete a.fx; b.fx = { mode: 'strobe' };
+  e.recallScene(withOwn, 0);
+  assert.deepStrictEqual(a.fx, { mode: 'radar' });
+  assert.strictEqual(b.fx, undefined, 'a fixture with no effect in the scene goes back to the rig');
+  const back = makeFixture(JSON.parse(JSON.stringify(a)));
+  assert.deepStrictEqual(back.fx, { mode: 'radar' }, 'survives a reload of the show file');
+});
+
+check('a scene saved with no LFO running leaves a later LFO alone on recall', () => {
+  const [a] = fxRig();
+  const e = new Engine({ ...baseState([a]), fx: offFx(),
+    lfos: [{ id: 'old', enabled: false, wave: 'sine', beats: 1, depth: 255, spread: 0, channel: 'r', bipolar: false, targets: { profiles: [], ids: [] } }] });
+  const look = e.captureScene('still');
+  assert.strictEqual(look.lfos, undefined, 'no running LFO, so the scene carries none');
+  e.state.lfos = [{ id: 'red', enabled: true, wave: 'sine', beats: 1, depth: 128, spread: 0, channel: 'r', bipolar: false, targets: { profiles: [], ids: [] } }];
+  e.recallScene(look, 0);
+  assert.deepStrictEqual(e.state.lfos.map((l) => l.id), ['red'], 'the LFO added after the scene survives its recall');
+  e.state.lfos[0].enabled = true;
+  assert.ok(e.captureScene('moving').lfos.length === 1, 'a scene saved WITH a running LFO still carries it');
+});
+
+// A compact rig (the studio's five pars sat within 0.3 of each other) used to land in one
+// chase lane of the -1..2 world and flash in unison. Against its own extent it travels.
+check('a compact rig sweeps across its own extent, not the whole stage world', () => {
+  const rig = [0.10, 0.15, 0.20, 0.25, 0.30].map((x, i) => makeFixture({ profile: 'dimmer', address: 1 + i, x, y: 0.5 }));
+  const fx = { mode: 'chase', spatial: 'x' };
+  const lanesWorld = new Set(rig.map((f, i) => Math.floor(fxPhase(fx, f, i, 5) * 8)));
+  const b = fxs.fxBounds(rig);
+  const lanesRig = new Set(rig.map((f, i) => Math.floor(fxPhase(fx, f, i, 5, b) * 8)));
+  assert.ok(lanesWorld.size <= 2, 'the old maths bunched them: ' + [...lanesWorld]);
+  assert.strictEqual(lanesRig.size, 5, 'against the rig, every par has its own lane: ' + [...lanesRig]);
+});
+
+// The studio rig: two rows of four, hand-placed so the rows wobble a little. Left → right
+// must step column by column, evenly; top → bottom must flip the two rows.
+const twoRows = () => {
+  const xs = [0.59, 0.43, 0.27, 0.08], out = [];
+  xs.forEach((x, c) => out.push(makeFixture({ profile: 'rgb', address: 1 + out.length * 3, x, y: 0.44 + c * 0.003 })));
+  xs.forEach((x, c) => out.push(makeFixture({ profile: 'rgb', address: 1 + out.length * 3, x: x + 0.01, y: 0.245 - c * 0.002 })));
+  return out;
+};
+
+check('Follow steps evenly through the columns and rows of the arrangement', () => {
+  const rig = twoRows();
+  const b = fxs.fxBounds(rig);
+  assert.strictEqual(b.slots.x.centres.length, 4, 'four columns');
+  assert.strictEqual(b.slots.y.centres.length, 2, 'two rows, despite the wobble');
+  const px = rig.map((f, i) => fxPhase({ spatial: 'x' }, f, i, 8, b));
+  const cols = [...new Set(px.map((p) => p.toFixed(3)))].sort();
+  assert.deepStrictEqual(cols, ['0.000', '0.250', '0.500', '0.750'], 'evenly spaced, whatever the gaps');
+  assert.strictEqual(fxs.fxLanes({ spatial: 'x' }, b, 8), 4, 'a chase gets one lane per column');
+  assert.strictEqual(fxs.fxLanes({ spatial: 'y' }, b, 8), 2, 'and one per row');
+  assert.strictEqual(fxs.fxLanes({ spatial: 'patch' }, b, 8), 8, 'patch order keeps its lanes');
+});
+
+check('a chase with few lanes has a short tail, so the step reads', () => {
+  assert.strictEqual(fxs.tailLevel(1, 2), 0, 'two rows: a clean flip');
+  assert.strictEqual(fxs.tailLevel(1, 3), 90);
+  assert.strictEqual(fxs.tailLevel(1, 8), 190, 'eight lanes keep the long tail');
+  assert.strictEqual(fxs.tailLevel(1), 190, 'callers that pass no lane count are unchanged');
+});
+
+check("radar turns round the rig's own centre", () => {
+  const right = makeFixture({ profile: 'dimmer', address: 1, x: 1.8, y: 1.5 });
+  const left = makeFixture({ profile: 'dimmer', address: 2, x: 1.2, y: 1.5 });
+  const b = fxs.fxBounds([right, left]);
+  const fx = { mode: 'radar', bpm: 60, depth: 255, enabled: true, spatial: 'patch' };
+  assert.strictEqual(fxLevel(fx, right, 0, 2, 0, b), 255, 'the beam starts pointing right of the rig centre');
+  assert.strictEqual(fxLevel(fx, left, 1, 2, 0, b), 0, 'the fixture on the other side is dark');
+});
+
+check('the fade effect is one smooth loop that never holds, rolling along Follow', () => {
+  assert.ok(FX_MODES.includes('fade'));
+  const f = makeFixture({ profile: 'dimmer', address: 1, x: 0.2, y: 0.5 });
+  const fx = { mode: 'fade', bpm: 120, depth: 255, enabled: true, spatial: 'patch' };
+  const vals = [];
+  for (let t = 0; t < 6000; t += 50) vals.push(fxLevel(fx, f, 0, 1, t));
+  assert.ok(Math.max(...vals) >= 250 && Math.min(...vals) <= 5, 'it opens fully and closes fully');
+  let flat = 0;
+  for (let i = 2; i < vals.length; i++) if (vals[i] === vals[i - 1] && vals[i - 1] === vals[i - 2] && vals[i] > 5 && vals[i] < 250) flat++;
+  assert.strictEqual(flat, 0, 'no holds in the middle of the loop');
+});
+
+check('the downbeat grid survives the merge: sanitizeFxPatch keeps epoch, beatGrid still answers', () => {
+  const cur = fxs.sanitizeFxPatch(fxs.DEFAULT_FX, { epoch: 1234 });
+  assert.strictEqual(cur.epoch, 1234);
+  assert.strictEqual(fxs.sanitizeFxPatch(cur, { mode: 'chase' }).epoch, 1234, 'a patch without epoch keeps it');
+  const g = fxs.beatGrid({ bpm: 120, epoch: 1000 }, 1500);
+  assert.strictEqual(g.beatMs, 500);
+  assert.strictEqual(g.nextBeatMs, 0, 'exactly on a beat is now');
+});
+
+// ---- ported from the studio desk (2026-09-24): stage objects, labels, follow times,
+// colour effects — the studio's own tests, paths adjusted --------------------------------
+// ---- stage objects ------------------------------------------------------------
+const { objectsLevelAt, objectsFrame, sanitizeObjects } = require('../ui/objcore');
+
+// White RGB lights in a row along y = 0.5, one every 0.15 from x = 0.2, three channels each.
+function objRig(xs = [0.2, 0.35, 0.5, 0.65, 0.8]) {
+  return xs.map((x, i) => makeFixture({ id: 'o' + i, profile: 'rgb', address: 1 + i * 3, x, y: 0.5,
+    values: { r: 255, g: 255, b: 255, dimmer: 255 } }));
+}
+const objState = (fixtures, objects, extra = {}) => ({
+  ...baseState(fixtures), objects,
+  fx: { mode: 'none', bpm: 60, depth: 255, enabled: false, spatial: 'patch', exclude: [] }, ...extra,
+});
+// red channel of each light = how much of the look it is getting
+const reds = (e, now, n) => { const b = e.render(e.state, now).get(0); return Array.from({ length: n }, (_, i) => b[i * 3]); };
+
+check('no objects leaves every light exactly as it was', () => {
+  const rig = objRig();
+  const plain = new Engine(objState(rig, [])).render(undefined, 1234).get(0);
+  const none = new Engine({ ...objState(rig, []), objects: undefined }).render(undefined, 1234).get(0);
+  const off = new Engine(objState(rig, [{ kind: 'spot', x: 0.2, y: 0.5, on: false }])).render(undefined, 1234).get(0);
+  assert.deepStrictEqual(Array.from(none), Array.from(plain));
+  assert.deepStrictEqual(Array.from(off), Array.from(plain), 'an object switched off is not there');
+  assert.strictEqual(objectsLevelAt(null, 0.5, 0.5), 255);
+  assert.strictEqual(objectsFrame([], 120, 0), null);
+  assert.ok(reds(new Engine(objState(rig, [])), 0, 5).every((v) => v === 255));
+});
+
+check('a still line lights only the lights within its width', () => {
+  // angle 90 = a vertical line, standing on x = 0.35
+  const line = sanitizeObjects([{ kind: 'line', x: 0.35, y: 0.5, angle: 90, width: 0.1, beats: 0 }]);
+  const e = new Engine(objState(objRig(), line));
+  assert.deepStrictEqual(reds(e, 5000, 5), [0, 255, 0, 0, 0]);
+  // softness: a light a little way off the core gets part of the look, not all or none
+  const near = new Engine(objState(objRig([0.35 + 0.075]), line));
+  const v = reds(near, 0, 1)[0];
+  assert.ok(v > 20 && v < 235, 'half way into the soft edge is half lit, got ' + v);
+});
+
+check('a moving line reaches the lights in the order they stand', () => {
+  // 60 bpm, 4 beats: 4s there and back; the first 2s run from x - size to x + size
+  const line = sanitizeObjects([{ kind: 'line', x: 0.5, y: 0.5, angle: 90, size: 0.35, width: 0.08, beats: 4 }]);
+  const e = new Engine(objState(objRig(), line));
+  const first = [null, null, null, null, null];
+  for (let t = 0; t <= 2000; t += 10) {
+    reds(e, t, 5).forEach((v, i) => { if (v >= 200 && first[i] == null) first[i] = t; });
+  }
+  assert.ok(first.every((t) => t != null), 'every light was reached: ' + first);
+  for (let i = 1; i < 5; i++) assert.ok(first[i] > first[i - 1], 'left to right: ' + first.join(' < '));
+  // and on the way back the order reverses
+  const back = [null, null, null, null, null];
+  for (let t = 2000; t <= 4000; t += 10) {
+    reds(e, t, 5).forEach((v, i) => { if (v >= 200 && back[i] == null) back[i] = t; });
+  }
+  for (let i = 1; i < 5; i++) assert.ok(back[i] < back[i - 1], 'right to left on the return: ' + back.join(' > '));
+});
+
+check('a radar lights a light when its beam points at it', () => {
+  const east = makeFixture({ id: 'e', profile: 'rgb', address: 1, x: 0.8, y: 0.5, values: { r: 255, g: 255, b: 255 } });
+  const south = makeFixture({ id: 's', profile: 'rgb', address: 4, x: 0.5, y: 0.8, values: { r: 255, g: 255, b: 255 } });
+  const far = makeFixture({ id: 'f', profile: 'rgb', address: 7, x: 1.9, y: 0.5, values: { r: 255, g: 255, b: 255 } });
+  const at = (angle) => new Engine(objState([east, south, far],
+    sanitizeObjects([{ kind: 'radar', x: 0.5, y: 0.5, size: 0.5, width: 30, angle, beats: 0 }])));
+  // leading edge at 15°: the beam covers -15..15, which is east (0°)
+  assert.deepStrictEqual(reds(at(15), 0, 3), [255, 0, 0], 'beam on east; south dark; out of reach dark');
+  // at 100°: south (90°) is in the beam and east is 100° behind — in the dying tail
+  const r = reds(at(100), 0, 3);
+  assert.strictEqual(r[1], 255, 'south lit');
+  assert.ok(r[0] < 40, 'east has faded to the end of the tail, got ' + r[0]);
+  // turning: 60 bpm, 4 beats a turn — south (90°) lights about a quarter turn in
+  const spin = new Engine(objState([east, south],
+    sanitizeObjects([{ kind: 'radar', x: 0.5, y: 0.5, size: 0.5, width: 20, angle: 0, beats: 4 }])));
+  let firstSouth = null;
+  for (let t = 0; t < 4000 && firstSouth == null; t += 10) if (reds(spin, t, 2)[1] >= 250) firstSouth = t;
+  assert.ok(firstSouth > 900 && firstSouth < 1100, 'south lights near 1000ms, got ' + firstSouth);
+});
+
+check('objects never touch excluded profiles, generic fixtures or a light held still', () => {
+  const dim = makeFixture({ id: 'd', profile: 'dimmer', address: 30, x: 0.9, y: 0.1, values: { dimmer: 255 } });
+  const held = makeFixture({ id: 'h', profile: 'rgb', address: 40, x: 0.9, y: 0.9, values: { r: 255, g: 255, b: 255 } });
+  held.fx = { mode: 'none' };
+  const lit = makeFixture({ id: 'l', profile: 'rgb', address: 50, x: 0.9, y: 0.5, values: { r: 255, g: 255, b: 255 } });
+  const spot = sanitizeObjects([{ kind: 'spot', x: 0.1, y: 0.1, size: 0.05, width: 0 }]);
+  const st = objState([dim, held, lit], spot);
+  st.fx.exclude = ['dimmer'];
+  const b = new Engine(st).render(undefined, 0).get(0);
+  assert.strictEqual(b[29], 255, 'the excluded dimmer marker stays at full');
+  assert.strictEqual(b[39], 255, 'a light held with its own effect "none" stays at full');
+  assert.strictEqual(b[49], 0, 'an ordinary light outside the spot goes dark');
+});
+
+check('depth sets the floor outside an object, and the brightest object wins', () => {
+  const rig = objRig([0.2, 0.8]);
+  const soft = sanitizeObjects([{ kind: 'spot', x: 0.2, y: 0.5, size: 0.05, width: 0, depth: 155 }]);
+  assert.deepStrictEqual(reds(new Engine(objState(rig, soft)), 0, 2), [255, 100], 'outside falls to 255 - depth');
+  const two = sanitizeObjects([
+    { kind: 'spot', x: 0.2, y: 0.5, size: 0.05, width: 0 },
+    { kind: 'spot', x: 0.8, y: 0.5, size: 0.05, width: 0 },
+  ]);
+  assert.deepStrictEqual(reds(new Engine(objState(rig, two)), 0, 2), [255, 255], 'each lit by its own spot');
+});
+
+check('objects ride along with scenes only when there are some', () => {
+  const rig = objRig([0.2]);
+  const e = new Engine(objState(rig, []));
+  const bare = e.captureScene('bare');
+  assert.strictEqual(bare.objects, undefined, 'no objects, so the scene carries none');
+  e.state.objects = sanitizeObjects([{ kind: 'radar', x: 0.5, y: 0.5 }]);
+  const withRadar = e.captureScene('radar');
+  assert.strictEqual(withRadar.objects.length, 1);
+  e.state.objects = sanitizeObjects([{ kind: 'line', x: 0.5, y: 0.5 }]);
+  e.recallScene(bare, 0);
+  assert.deepStrictEqual(e.state.objects.map((o) => o.kind), ['line'], 'a scene without objects leaves them running');
+  e.recallScene(withRadar, 0);
+  assert.deepStrictEqual(e.state.objects.map((o) => o.kind), ['radar'], 'a scene with objects replaces them');
+});
+
+check('the object validator clamps, defaults and caps the list', () => {
+  const list = sanitizeObjects([
+    { kind: 'line', x: 9000, y: -9000, angle: -90, beats: 99, depth: 999, width: 50 },
+    { kind: 'laser' }, null,
+    ...Array.from({ length: 12 }, () => ({ kind: 'spot' })),
+  ]);
+  assert.strictEqual(list.length, 8, 'at most eight');
+  const l = list[0];
+  assert.deepStrictEqual([l.x, l.y, l.angle, l.beats, l.depth, l.width], [1000, -1000, 270, 64, 255, 1]);   // di.iiii: ±WORLD
+  assert.ok(list.slice(1).every((o) => o.kind === 'spot'), 'unknown kinds are dropped');
+  assert.strictEqual(new Set(list.map((o) => o.id)).size, 8, 'every object gets its own id');
+  assert.strictEqual(sanitizeObjects('nope'), null);
+});
+
+// ---- [labels] stage labels ----------------------------------------------------
+const { sanitizeMarkers, MAX_MARKERS } = require('../markers');
+
+check('labels: the validator clamps, names, dedupes ids and caps the list', () => {
+  const list = sanitizeMarkers([
+    { id: 'a', text: '  DJ  ', x: 9000, y: -9000 },
+    { id: 'a', text: '' },                          // duplicate id, blank text
+    null, 'nope',
+    { text: 'x'.repeat(80), kind: 'rocket' },
+    ...Array.from({ length: 30 }, (_, i) => ({ text: 'L' + i })),
+  ]);
+  assert.strictEqual(list.length, MAX_MARKERS, 'at most ' + MAX_MARKERS);
+  assert.deepStrictEqual(list[0], { id: 'a', kind: 'label', text: 'DJ', x: 1000, y: -1000 });   // di.iiii: ±WORLD
+  assert.notStrictEqual(list[1].id, 'a', 'a repeated id is made unique');
+  assert.strictEqual(list[1].text, 'Label', 'a blank label is still visible');
+  assert.strictEqual(list[2].text.length, 40, 'long text is cut');
+  assert.strictEqual(list[2].kind, 'label', 'unknown kinds become labels');
+  assert.strictEqual(sanitizeMarkers('nope'), null);
+  assert.deepStrictEqual(sanitizeMarkers([]), []);
+});
+
+// ---- [cues] follow times ------------------------------------------------------------
+const { sanitizeFollow } = require('../cues');
+// Four scenes in one container. Only the engine's clock-free parts are driven here: the
+// runner is handed `now`, and scene fades are 0 unless a test sets one.
+function cueRig(followMs = 3000) {
+  const lamp = makeFixture({ id: 'L', profile: 'rgb', address: 1, values: { r: 0, g: 0, b: 0 } });
+  const sc = (id, r, extra = {}) => ({ id, name: id, fadeMs: 0, fixtures: [{ id: 'L', on: true, values: { r, g: 0, b: 0, dimmer: 255 } }], raw: {}, ...extra });
+  const st = {
+    ...baseState([lamp]),
+    scenes: [sc('A', 10, { followMs }), sc('B', 20, { followMs }), sc('C', 30), sc('D', 40)],
+    banks: [{ id: 'k', name: 'Steps', color: '#fff', sceneIds: ['A', 'B', 'C', 'D'] }],
+  };
+  const e = new Engine(st);
+  const recall = (id, now, fade) => { const s = st.scenes.find((x) => x.id === id); e.recallScene(s, fade); return e.cues.onManualRecall(s, fade, now); };
+  return { st, e, recall, lamp };
+}
+
+check('cues: a scene with a follow runs on to the next in its container after fade + wait', () => {
+  const { st, e, recall } = cueRig(3000);
+  st.scenes[0].fadeMs = 1000;
+  assert.strictEqual(recall('A', 0), 'started');
+  e.cues.tick(3999);
+  assert.strictEqual(st.activeScene, 'A', 'still on A before fade (1s) + wait (3s)');
+  e.cues.tick(4000);
+  assert.strictEqual(st.activeScene, 'B', 'on to B at 4s');
+  const s = e.cues.status(4000);
+  assert.deepStrictEqual([s.running, s.step, s.total, s.msLeft], [true, 2, 3, 3000], 'step 2 of 3 (C has no follow: the end), 3s to go');
+  e.cues.tick(7000);
+  assert.strictEqual(st.activeScene, 'C');
+  assert.strictEqual(e.cues.status(7000).running, false, 'C has no follow — the sequence ends and C holds');
+  assert.strictEqual(e.cues.status(7000).last.reason, 'finished');
+});
+
+check('cues: a manual recall of another scene ends the sequence; of a follow scene restarts it', () => {
+  const { e, recall } = cueRig(1000);
+  recall('A', 0);
+  assert.strictEqual(recall('D', 500), 'ended');
+  assert.strictEqual(e.cues.status(500).running, false);
+  assert.strictEqual(e.cues.status(500).last.reason, 'another scene was picked');
+  assert.strictEqual(recall('B', 600), 'started');
+  assert.strictEqual(e.cues.status(600).step, 1, 'a new sequence counts from the scene she pressed');
+});
+
+check('cues: followId points anywhere; Stop here (no follow) ends; a loop keeps going', () => {
+  const { st, e, recall } = cueRig(1000);
+  st.scenes[0].followId = 'D';                      // A → D (skipping B, C)
+  st.scenes[3].followMs = 1000; st.scenes[3].followId = 'A';   // D → A: a loop
+  recall('A', 0);
+  e.cues.tick(1000);
+  assert.strictEqual(st.activeScene, 'D');
+  e.cues.tick(2000);
+  assert.strictEqual(st.activeScene, 'A', 'D loops back to A');
+  const s = e.cues.status(2000);
+  assert.ok(s.running && s.loops && s.total === 2 && s.step === 1, JSON.stringify(s));
+});
+
+check('cues: Go jumps now, Stop ends, the chase starting ends it, a deleted next ends it', () => {
+  const { st, e, recall } = cueRig(60000);
+  recall('A', 0);
+  assert.ok(e.cues.go(), 'go with a sequence running');
+  assert.strictEqual(st.activeScene, 'B', 'Go steps without waiting the minute');
+  assert.ok(e.cues.stop('stopped'));
+  assert.strictEqual(e.cues.go(), false, 'nothing to go on');
+  recall('A', 0);
+  st.chase.enabled = true;
+  e.cues.tick(1);
+  assert.strictEqual(e.cues.status().last.reason, 'the chase started');
+  st.chase.enabled = false;
+  recall('A', 0);
+  st.scenes = st.scenes.filter((s) => s.id !== 'B');
+  st.banks[0].sceneIds = ['A', 'C', 'D'];
+  e.cues.tick(60000);
+  assert.strictEqual(st.activeScene, 'C', 'with B gone, A goes on to the next that exists');
+});
+
+check('cues: scenes without a follow change nothing, and the fields are sanitised', () => {
+  const { e, recall } = cueRig(null);
+  assert.strictEqual(recall('A', 0), null, 'no follow: no sequence, no reply field');
+  assert.strictEqual(e.cues.status().running, false);
+  assert.deepStrictEqual(sanitizeFollow({}), {});
+  assert.deepStrictEqual(sanitizeFollow({ followMs: -5, followId: 'X' }), { followMs: 0, followId: 'X' });
+  assert.deepStrictEqual(sanitizeFollow({ followMs: 9e9 }), { followMs: 600000 });
+  assert.deepStrictEqual(sanitizeFollow({ followMs: 'soon' }), {});
+});
+
+// ---- [colorfx] colour effects -------------------------------------------------------
+const { sanitizeColorFx, colorFxRgb, rgbToHsv, inGreen, complementHue, arcHue } = require('../colorfx');
+// Her studio: the DJ-place marker (profile dimmer, excluded), then RGB 1–8 in two rows
+// of four — front row 8 7 6 5, back row 4 3 2 1, left to right.
+function studioRig(look = [255, 0, 0]) {
+  const marker = makeFixture({ id: 'M', profile: 'dimmer', address: 1, x: 0.465, y: 0.063, values: { dimmer: 255 } });
+  const xs = [0.593, 0.431, 0.265, 0.084, 0.601, 0.420, 0.250, 0.088];
+  const ys = [0.437, 0.446, 0.448, 0.448, 0.245, 0.249, 0.241, 0.243];
+  const rgb = xs.map((x, i) => makeFixture({ id: 'R' + (i + 1), profile: 'rgb', address: 2 + i * 3, x, y: ys[i],
+    values: { r: look[0], g: look[1], b: look[2], dimmer: 255 } }));
+  const st = {
+    ...baseState([marker, ...rgb]),
+    fx: { mode: 'none', bpm: 60, depth: 255, enabled: false, spatial: 'x', exclude: ['dimmer'] },
+    colorFx: sanitizeColorFx(null, { mode: 'none' }),
+  };
+  const at = (buf, n) => [buf[2 + (n - 1) * 3 - 1], buf[2 + (n - 1) * 3], buf[2 + (n - 1) * 3 + 1]].map(Math.round);
+  return { st, rgb, marker, e: new Engine(st), at };
+}
+
+check('colorfx: off leaves every channel exactly as it was', () => {
+  const { st, e } = studioRig([200, 40, 120]);
+  const before = [...e.render(st, 12345).get(0)];
+  st.colorFx = sanitizeColorFx(null, { mode: 'hue', amount: 0 });
+  assert.deepStrictEqual([...e.render(st, 12345).get(0)], before, 'amount 0 = off');
+  st.colorFx = sanitizeColorFx(null, { mode: 'none' });
+  assert.deepStrictEqual([...e.render(st, 12345).get(0)], before);
+});
+
+check('colorfx: chase — half the rig each colour, stepping column by column along Follow', () => {
+  const { st, e, at } = studioRig([255, 255, 255]);
+  st.colorFx = sanitizeColorFx(null, { mode: 'chase', beats: 1, a: '#ff0000', b: '#00d2ff' });
+  const red = [255, 0, 0], cyan = [0, 210, 255];
+  const b0 = e.render(st, 0).get(0);
+  // Left → right: columns 8/4, 7/3 are the first half (A), 6/2, 5/1 the second (B).
+  for (const n of [8, 4, 7, 3]) assert.deepStrictEqual(at(b0, n), red, 'RGB ' + n + ' red at the start');
+  for (const n of [6, 2, 5, 1]) assert.deepStrictEqual(at(b0, n), cyan, 'RGB ' + n + ' cyan at the start');
+  const b1 = e.render(st, 1000).get(0);              // one beat at 60 bpm: one step
+  assert.deepStrictEqual(at(b1, 8), cyan, 'the left column has moved on to cyan');
+  assert.deepStrictEqual(at(b1, 7), red, 'and the red has stepped one column right');
+  assert.deepStrictEqual(at(b1, 6), red);
+  assert.deepStrictEqual(at(b1, 8), at(b1, 4), 'front and back row of a column move together');
+});
+
+check('colorfx: chase on Top → bottom flips the front row and the back row', () => {
+  const { st, e, at } = studioRig([255, 255, 255]);
+  st.fx.spatial = 'y';
+  st.colorFx = sanitizeColorFx(null, { mode: 'chase', beats: 1, a: '#0022ff', b: '#ff6400' });
+  const b0 = e.render(st, 0).get(0), b1 = e.render(st, 1000).get(0);
+  assert.deepStrictEqual(at(b0, 8), [0, 34, 255], 'front row blue');
+  assert.deepStrictEqual(at(b0, 4), [255, 100, 0], 'back row amber');
+  assert.deepStrictEqual(at(b1, 8), [255, 100, 0], 'then they swap');
+  assert.deepStrictEqual(at(b1, 4), [0, 34, 255]);
+});
+
+check('colorfx: hue rotate travels the wheel along Follow and never lands in green', () => {
+  const { st, e, at } = studioRig([255, 0, 0]);
+  st.colorFx = sanitizeColorFx(null, { mode: 'hue', beats: 4, spread: 0.5 });
+  const b = e.render(st, 0).get(0);
+  assert.deepStrictEqual(at(b, 8), at(b, 4), 'one column, one colour');
+  assert.notDeepStrictEqual(at(b, 8), at(b, 5), 'left and right columns sit at different places on the wheel');
+  for (let t = 0; t < 4000; t += 50) {
+    const buf = e.render(st, t).get(0);
+    for (let n = 1; n <= 8; n++) {
+      const [r, g, bl] = at(buf, n);
+      const [h, s] = rgbToHsv(r, g, bl);
+      assert.ok(s < 0.2 || h < 70 || h >= 170, `RGB ${n} went green at ${t}ms: ${r},${g},${bl} (hue ${h.toFixed(0)})`);
+    }
+  }
+  for (let a = 0; a < 1; a += 0.01) assert.ok(!inGreen(arcHue(a)), 'the arc skips the green band');
+});
+
+check('colorfx: swap flips to the complement on the beat — her pairs, never green', () => {
+  assert.strictEqual(Math.round(complementHue(0)), 180, 'red ↔ cyan');
+  assert.strictEqual(complementHue(275), 45, 'purple ↔ gold (purple\'s complement is green, so gold)');
+  assert.strictEqual(complementHue(334), 185, 'pink ↔ ice/cyan (not mint)');
+  assert.ok(!inGreen(complementHue(233)), 'blue ↔ amber/yellow');
+  const { st, e, at } = studioRig([255, 0, 0]);
+  st.colorFx = sanitizeColorFx(null, { mode: 'swap', beats: 1 });
+  const mid = e.render(st, 250).get(0);               // a quarter beat in: flipped
+  const flipped = [1, 2, 3, 4, 5, 6, 7, 8].filter((n) => at(mid, n)[0] < 40 && at(mid, n)[2] > 200);
+  const held = [1, 2, 3, 4, 5, 6, 7, 8].filter((n) => at(mid, n)[0] === 255 && at(mid, n)[2] === 0);
+  assert.strictEqual(flipped.length, 4, 'half the rig shows the complement: ' + flipped);
+  assert.strictEqual(held.length, 4, 'the other half still shows the look: ' + held);
+});
+
+check('colorfx: the DJ-place marker and lights held still are left alone', () => {
+  const { st, e, at, rgb } = studioRig([255, 0, 0]);
+  rgb[5].fx = { mode: 'none' }; rgb[6].fx = { mode: 'none' };   // RGB 6 and 7, aimed at the DJ
+  st.colorFx = sanitizeColorFx(null, { mode: 'chase', beats: 1, a: '#0000ff', b: '#0000ff' });
+  const b = e.render(st, 0).get(0);
+  assert.strictEqual(Math.round(b[0]), 255, 'the marker at ch1 is untouched');
+  assert.deepStrictEqual(at(b, 6), [255, 0, 0], 'RGB 6 held on its look');
+  assert.deepStrictEqual(at(b, 7), [255, 0, 0], 'RGB 7 held on its look');
+  assert.deepStrictEqual(at(b, 5), [0, 0, 255], 'the rest take the colour');
+});
+
+check('colorfx: composes — brightness FX, objects and blackout still shape it', () => {
+  const { sanitizeObjects } = require('../ui/objcore');
+  const { st, e, at } = studioRig([255, 255, 255]);
+  st.colorFx = sanitizeColorFx(null, { mode: 'chase', beats: 1, a: '#ff0000', b: '#ff0000' });
+  st.objects = sanitizeObjects([{ kind: 'spot', x: 0.09, y: 0.34, size: 0.15, width: 0 }]);   // over the left column
+  const b = e.render(st, 0).get(0);
+  assert.deepStrictEqual(at(b, 8), [255, 0, 0], 'under the spot: the colour effect shows');
+  assert.deepStrictEqual(at(b, 5), [0, 0, 0], 'outside the spot: the object darkens it');
+  st.objects = [];
+  st.blackout = true;
+  assert.ok([...e.render(st, 0).get(0)].slice(0, 25).every((v) => v === 0), 'blackout wins over everything');
+});
+
+check('colorfx: scenes bring their colour effect; older scenes leave it running', () => {
+  const { st, e } = studioRig([255, 0, 0]);
+  st.scenes = [];
+  st.colorFx = sanitizeColorFx(null, { mode: 'hue', beats: 8 });
+  const withHue = e.captureScene('hue');
+  assert.strictEqual(withHue.colorFx.mode, 'hue');
+  st.colorFx = sanitizeColorFx(null, { mode: 'chase' });
+  e.recallScene({ id: 'old', name: 'old', fadeMs: 0, fixtures: [], raw: {} }, 0);
+  assert.strictEqual(st.colorFx.mode, 'chase', 'a scene without the field leaves it');
+  e.recallScene(withHue, 0);
+  assert.deepStrictEqual([st.colorFx.mode, st.colorFx.beats], ['hue', 8]);
+  assert.deepStrictEqual(sanitizeColorFx(null, { mode: 'rainbow', beats: 0, a: 'red', b: '#0F0' }),
+    { mode: 'none', beats: 1, spread: 0.5, amount: 255, a: '#ff0000', b: '#00ff00' }, 'clamped and defaulted');
+});
+
+// ---- review fixes (2026-09-24): follow timing ----------------------------------------
+check('cues: two scenes following each other with no wait and no fade step at most every 100 ms', () => {
+  const { MIN_STEP_MS } = require('../cues');
+  const lamp = makeFixture({ id: 'L', profile: 'rgb', address: 1, values: { r: 0, g: 0, b: 0 } });
+  const sc = (id, next) => ({ id, name: id, fadeMs: 0, followMs: 0, followId: next, fixtures: [{ id: 'L', on: true, values: { r: 10 } }], raw: {} });
+  const st = { ...baseState([lamp]), scenes: [sc('A', 'B'), sc('B', 'A')] };
+  const e = new Engine(st);
+  e.recallScene(st.scenes[0], 0);
+  assert.strictEqual(e.cues.onManualRecall(st.scenes[0], 0, 0), 'started');
+  let steps = 0, last = null;
+  for (let t = 0; t <= 1000; t += 25) {
+    e.cues.tick(t);
+    if (st.activeScene !== last) { steps++; last = st.activeScene; }
+  }
+  assert.ok(steps <= 11, `${steps} steps in a second — the rig flips every frame`);
+  assert.ok(steps >= 5, 'but it still runs on');
+  assert.ok(MIN_STEP_MS >= 100);
+});
+
+check("cues: a follow waits out the fade the engine actually runs — at most 60 s, none when it is not a number", () => {
+  const { MAX_FADE_MS } = require('../cues');
+  const lamp = makeFixture({ id: 'L', profile: 'rgb', address: 1 });
+  const e = new Engine({ ...baseState([lamp]), scenes: [] });
+  const sc = { id: 'A', fadeMs: 1000, followMs: 2000 };
+  e.startFade(120000);
+  assert.strictEqual(e.fade.ms, 60000, 'the engine clamps a fade to 60 s');
+  e.cancelFade();
+  assert.strictEqual(e.cues.dueAfter(sc, 120000, 0), 60000 + 2000, 'so the follow waits 60 s, not 120');
+  assert.strictEqual(e.cues.dueAfter(sc, 'soon', 0), 2000, 'a fade that is not a number is no fade');
+  assert.strictEqual(e.cues.dueAfter(sc, -5, 0), 2000);
+  assert.strictEqual(e.cues.dueAfter(sc, null, 0), 3000, 'no override: the scene\'s own fade');
+  assert.strictEqual(MAX_FADE_MS, 60000, 'cues.js and engine.startFade agree on the longest fade');
+});
+
+// ---- review fixes (2026-09-24): the page and the server agree on where a follow goes ----
+check('cuecore: a follow goes to its followId, else the next in its container, else the next in the library', () => {
+  const { followNextId } = require('../ui/cuecore');
+  const scenes = ['A', 'B', 'C', 'D'].map((id) => ({ id }));
+  const [A, B, , D] = scenes;
+  assert.strictEqual(followNextId(scenes, undefined, A), 'B', 'no containers (di.iiii): the next in the library');
+  assert.strictEqual(followNextId(scenes, [], B), 'C', 'an empty container list is no containers');
+  assert.strictEqual(followNextId(scenes, undefined, D), null, 'the last scene ends it');
+  const banks = [{ id: 'k', sceneIds: ['A', 'C', 'X'] }];
+  assert.strictEqual(followNextId(scenes, banks, A), 'C', 'with containers: the next in its container');
+  assert.strictEqual(followNextId(scenes, banks, B), null, 'a scene in no container ends it');
+  assert.strictEqual(followNextId(scenes, banks, { id: 'C' }), null, 'a deleted scene after it does not count');
+  assert.strictEqual(followNextId(scenes, undefined, { id: 'A', followId: 'D' }), 'D', 'its own followId wins');
+  assert.strictEqual(followNextId(scenes, undefined, { id: 'A', followId: 'gone' }), null, 'a followId that is gone ends it');
+  assert.strictEqual(followNextId(scenes, undefined, { id: 'A', followId: 'D' }, null), 'B', 'null asks for the default');
+});
+
+check('cues: the server runner steps by the same answer the page draws', () => {
+  const { followNextId } = require('../ui/cuecore');
+  const lamp = makeFixture({ id: 'L', profile: 'rgb', address: 1 });
+  const sc = (id, extra = {}) => ({ id, name: id, fadeMs: 0, followMs: 500, fixtures: [], raw: {}, ...extra });
+  for (const banks of [undefined, [{ id: 'k', sceneIds: ['C', 'A'] }]]) {
+    const st = { ...baseState([lamp]), scenes: [sc('A'), sc('B', { followId: 'A' }), sc('C')], ...(banks ? { banks } : {}) };
+    const e = new Engine(st);
+    for (const s of st.scenes) assert.strictEqual(e.cues.nextOf(s), followNextId(st.scenes, st.banks, s), s.id);
+  }
+});
+
+check('objects and labels may stand anywhere a fixture may (±1000), not only in -1..2', () => {
+  const { sanitizeObjects } = require('../ui/objcore');
+  const { sanitizeMarkers } = require('../markers');
+  const [ob] = sanitizeObjects([{ kind: 'spot', x: 40, y: -12 }]);
+  assert.deepStrictEqual([ob.x, ob.y], [40, -12]);
+  assert.deepStrictEqual(sanitizeObjects([{ kind: 'spot', x: 5000, y: -5000 }]).map((o) => [o.x, o.y]), [[1000, -1000]]);
+  const [mk] = sanitizeMarkers([{ text: 'Bar', x: 40, y: -12 }]);
+  assert.deepStrictEqual([mk.x, mk.y], [40, -12]);
 });
 
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
