@@ -380,6 +380,22 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-28'
     },
     {
+        id: 'ai-restyle-camera',
+        category: 'Editing',
+        title: 'AI restyle: the camera, as a prompt says it should look',
+        summary: 'A camera surface on the projection map can send the room through an image model on your own machine and put what comes back on the wall — live, and with no internet.',
+        body: [
+            'On Projection, a surface whose source is a Camera or a Stream has an Analysis menu. Next to Motion glow it offers AI restyle. Choose it and two things appear: Prompt — what the picture should become, in words, like “oil painting, deep blue and gold” — and Strength, how far the picture may drift from the camera. Low keeps the room recognisable; high keeps mostly the words.',
+            'The picture is made on YOUR machine, not in the cloud. A small program, the live-AI engine, runs next to di.iiii and turns each camera frame into a new one; di.iiii passes the frames to it and draws what comes back. It works in a room with no internet, and nothing you film leaves the machine.',
+            'It keeps up with the room rather than falling behind it: a new frame goes to the engine only when the last one has come back, so the wall is always one step behind what is happening, never a queue of old pictures.',
+            'Change the prompt or the strength while it runs and the wall follows without a blink — and, like every mapping setting, from any desk following the project.',
+            'No engine running? The surface says so, in words, and keeps trying — start the engine and the picture appears without reloading anything. The engine and how to start it are described in scripts/liveai/README.md.',
+            'AI restyle lives on a local di.iiii only — `di up`, or npm run dev — the same as the lighting desk and the NDI® source. A hosted address has no engine and does not offer one.'
+        ],
+        tags: ['ai', 'restyle', 'camera', 'stream', 'projection', 'mapping', 'live', 'prompt', 'stable diffusion', 'sd-turbo', 'local', 'offline', 'effect', 'analysis'],
+        updated: '2026-09-28'
+    },
+    {
         id: 'lights-on-a-place',
         category: 'Editing',
         title: 'Hanging a lamp: aim, beam, shadow',

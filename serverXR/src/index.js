@@ -43,6 +43,7 @@ const { createDiskWriteGuard } = require('./diskGuard')
 const { ensureDir, readJson, writeJson } = require('./jsonStore')
 const { initializeSocket } = require('./socketHandlers')
 const { initializeMesh } = require('./meshHub')
+const { attachLiveAiRelay } = require('./liveAi/relay')
 const { loadReleaseInfo } = require('./releaseInfo')
 const {
   listCollections,
@@ -2750,6 +2751,12 @@ initStorage()
     logger.info('[Socket.IO] Initialized for real-time collaboration')
 
     initializeMesh(httpServer, config)
+    // Live AI: camera frames to the image model on this machine and back
+    // (serverXR/src/liveAi/relay.js). Local installs only, like /ndi.
+    attachLiveAiRelay(httpServer, {
+      paths: [...new Set(['/liveai', `${config.mountPath || ''}/liveai`.replace(/\/+/g, '/')])],
+      log: (line) => logger.info(line)
+    })
 
     // Spaces this install follows on another di.iiii (serverXR/src/follow).
     // Started after listen, never before: a follower reaches this server over

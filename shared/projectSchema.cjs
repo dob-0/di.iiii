@@ -225,7 +225,7 @@ const defaultMappingSurface = {
   hue: 0,
   blend: 'normal',
   // Mirror of src/shared/projectSchema.js — see the comment there.
-  effect: { kind: 'none', threshold: 0.08, trail: 0.88, gain: 4 }
+  effect: { kind: 'none', threshold: 0.08, trail: 0.88, gain: 4, prompt: '', strength: 0.5 }
 }
 
 const defaultMappingCue = {
@@ -1322,7 +1322,8 @@ const normalizePerformState = (perform = {}) => {
 // mixed-version trap a closed list carries (an unknown kind is rewritten to the default).
 const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test', 'camera', 'network', 'stream', 'ndi']
 const MAPPING_BLEND_MODES = ['normal', 'screen', 'multiply', 'lighten', 'add']
-const MAPPING_EFFECT_KINDS = ['none', 'motion']
+const MAPPING_EFFECT_KINDS = ['none', 'motion', 'ai']
+const MAPPING_EFFECT_PROMPT_MAX = 300
 
 const clampNumber = (value, fallback, min, max) => Math.min(max, Math.max(min, ensureNumber(value, fallback)))
 
@@ -1334,7 +1335,12 @@ const normalizeMappingEffect = (effect = {}) => {
     kind: MAPPING_EFFECT_KINDS.includes(kind) ? kind : fallback.kind,
     threshold: clampNumber(source.threshold, fallback.threshold, 0, 1),
     trail: clampNumber(source.trail, fallback.trail, 0, 0.99),
-    gain: clampNumber(source.gain, fallback.gain, 0, 20)
+    gain: clampNumber(source.gain, fallback.gain, 0, 20),
+    // 'ai': what the picture becomes, in words, and how far from the camera
+    // it may drift (0 = the camera, 1 = only the words). Bounded so a pasted
+    // essay cannot ride along in every mapping save.
+    prompt: ensureString(source.prompt, fallback.prompt).slice(0, MAPPING_EFFECT_PROMPT_MAX),
+    strength: clampNumber(source.strength, fallback.strength, 0.05, 1)
   }
 }
 
