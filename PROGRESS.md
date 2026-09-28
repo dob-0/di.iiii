@@ -5,6 +5,217 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-27 — an uptime check from outside the building that serves the site
+
+- New `.github/workflows/uptime.yml`: every 10 min GitHub's runners open the front page and
+  `/serverXR/api/health` on both public names (health must answer JSON — a bare `/api` path answers the
+  app's HTML with 200, a false green). Three tries over ~90 s per address, so a line blip is not an outage.
+- Alerts only on a change of state (previous state = the previous scheduled run's conclusion), to
+  Telegram when `UPTIME_TELEGRAM_TOKEN` + `UPTIME_TELEGRAM_CHAT` secrets are set; a failed run also sends
+  GitHub's own failure email. Without the secrets it warns and relies on the email.
+- Why: the watcher on the serving machine goes dark with that machine or its line and can never report it.
+- Tested locally: the probe step read all three addresses up; pointed at `/api/health` it reported DOWN
+  (200 text/html) and wrote `state=down`. Not yet run on GitHub — first real run after merge.
+
+## 2026-09-28 — vitest capped at half the cores outside CI
+
+- `vite.config.js` `test.maxWorkers: '50%'` when `CI` is unset (vitest 4.1.10 option; default in
+  run mode was cores-1 = 15 on aylmo). CI keeps vitest's default. `--maxWorkers` and vitest's own
+  `VITEST_MAX_WORKERS` env still override. Documented in `docs/ai/testing.md`.
+- Measured on aylmo (i7-11800H, 16 threads) with other agents already loading it (1-min load 17-31
+  before each run): one run 98-115 s uncapped vs 121-127 s capped; two concurrent runs 178-179 s
+  uncapped vs 170 s capped, 33 vs 19 vitest processes, 1-min load after 46 vs 27. All runs
+  569 files / 6302 tests passed except one uncapped solo run: a 5 s timeout in
+  `PublicProjectViewer.test.jsx`. CPU package hit 100 C in every run, capped or not — the cap
+  lowers oversubscription, it does not fix the heat ceiling.
+
+## 2026-09-28 — an admin can see the site's own traffic
+
+- Ops Graph → Manage → Traffic reads GET /api/stats: 30-day views, sign-ups, busiest day (UTC), top pages,
+  referrers. Walked against real page_events on a test stack; numbers match the table.
+
+## 2026-09-28 — an agent's chat comes back on reload, and shows what each answer cost
+
+- Found while adding the token line: an agent node's chat opened empty after every reload (the load was
+  skipped by a guard meant for new chats). Fixed, and made robust to an interrupted load (StrictMode).
+- Each paid answer shows "N in · M out tokens"; a local model's answer shows nothing. Walked on a seeded chat.
+
+## 2026-09-27 — prod and the dev tier run natively on a standby host that pulls its own deploys
+
+- `scripts/standby/` (build-runtime, restore-data, server-env, nginx-conf, backup-data) builds and
+  runs prod's own commit without Docker, laid out like the two prod images, for a warm standby that
+  now serves production. Host-specific parts (paths, service users, tunnel, the pull-deployer) are
+  kept out of this repo.
+- `deploy-vps.yml` / `deploy-vps-dev.yml` read the repository variable `DEPLOY_TARGET` (`vps` |
+  `mac`, default `vps`, so this merge changes nothing by itself). With `mac` the deploy job keeps its
+  environment gate, skips SSH and ends green; the host deploys that green run's commit itself. See
+  `docs/deploy/VPS_DOCKER_DEPLOY.md`.
+- `server-env.mjs` takes `--compose` more than once (Compose merge order) and honours `${VAR:?}`, so
+  the dev tier's env comes from `docker-compose.yml` + `docker-compose.dev.yml` exactly as its
+  container's did. Byte-identical output to the previous generator on all 10 compose versions since
+  2026-07-27; `scripts/standby/server-env.test.js` (4 tests) runs it on the repo's real compose files.
+- Owed: the `/serverXR/api/follows` loopback-trust fix (behind a same-host proxy every caller is
+  loopback); a CI contract test running `backup-data.sh` then `restore-data.sh`.
+
+## 2026-09-28 — the Kit at /tools: every tool seen, tried and read
+
+- `/tools` becomes the Kit (`src/kit/`): 29 cards — the 22 tools the 2026-09-28 audit saw working with
+  no account and the 7 that exist only on a person's own install — grouped walk · build · nodes ·
+  light & projection · carry & share · together · for agents. Each card shows the real route at
+  `?preview=1` (one live frame at a time: hover or focus at a desk, the live button or scrolling into
+  view on a phone, a real screenshot until it paints), a Try button at the audit's path, the public
+  works made with it, the libraries at their own sites, the source files on GitHub and the wiki
+  article. Install-only tools show what they print (`di` help, quoted and test-checked) and say
+  where they run. "What we use" lists the stack: version, use, licence, link — checked against the
+  installed packages by `src/kit/kitCatalogue.test.js`.
+- The sandbox got its door: the card reads the session's own sandbox id and opens
+  `/{sandbox}/studio`, where "+ New project" is; walked as a guest on desk and phone.
+- Found and fixed on the way (known-fixes row): rolldown seated `@babel/runtime/helpers/esm/extends.js`
+  inside `three-vendor`, so the generic `vendor` chunk imported three.js and EVERY route fetched it.
+  `/tools` was 872 KB on the wire (Firefox, gzip), desk and phone alike; with `@babel/runtime` in its
+  own chunk it is 516 KB desk / 448 KB phone with three.js not loaded (posters and MUI are the rest).
+  `scripts/kit-first-load.mjs` measures any route; `scripts/kit-weights.mjs` writes the numbers the
+  page prints.
+- Studio, Nodes, Perform, Projection (desk and output) and Make honour `?preview=1`: no toolbar, no
+  presence or machine link announced, and they post `dii:preview-ready` where nothing draws to WebGL.
+- Verified on a local stack (ports 4382/5382, throwaway data) in Playwright Firefox at 1440×900 DPR 1
+  and 390×844 DPR 3 (`scripts/kit-walk.mjs`): 0 frames on arrival, 1 after hover/tap, 1 after a second
+  card; Try on Nodes, Projection, Perform, Studio opens each; keyboard reaches Try with a 2px cyan
+  outline; no horizontal overflow at 390; 0 page errors. On the local stack the walk card's frame shows
+  "Nothing lives at wcc" because the throwaway database holds no `wcc` space — the route is the one
+  the audit saw render on the rehearsal tier.
+- Still owed: the four bar links (Nodes/Tools/Light/Wiki) are 30–38px wide under a finger — the bar's
+  own rule (known-fixes 2026-09-27) sets height only; the Kit's own controls are 44×44. The Projection
+  desk still prints the server machine's name in Machines (audit gap, not touched here).
+
+## 2026-09-28 — the lighting desk can fan
+
+- Fan (server route since the desk audit) gets its control: attribute panel foot, 2+ fixtures, selection order.
+  Walked: 4 fixtures picked 4-1-3-2, red 0→255 line → 0/85/170/255 in picked order. Wiki "lighting desk" says how.
+- The audit's other desk item, scene-library replace, is reachable by design through eight artnet-desk tools; no
+  button (it would wipe every scene in one click).
+
+## 2026-09-28 — the projection desk has undo
+
+- The mapper now keeps the same op history as Studio and Nodes, laid over its courier so an undo reaches the
+  output window; firing a cue is never recorded. Ctrl/Cmd+Z, Shift+Ctrl/Cmd+Z, Ctrl+Y, Undo/Redo buttons.
+- Walked signed in with an output window open: every step checked against the server document and the output.
+- Second fix from the 2026-09-28 re-check of the audit's broken items.
+
+## 2026-09-28 — the Open Jam's floor layout lays its mosaic
+
+- `compose-open-jam.mjs floor` after `wall` left every photo on the wall: build zones stayed on and the server
+  snaps moves against the room before the batch. The script turns placement off alone first, then moves.
+- Measured on a local stack with real images: floor = all photos at 0.02 m; wall again = hung. Test runs the real
+  script against a recording server. (A picture of the mosaic was not taken: the public viewer opens on the path.)
+
+## 2026-09-28 — a photo lands in its wall slot at once
+
+- In a build-zone room the editor now places its own batch with the server's twin (src/shared/placement.js)
+  before showing or sending it, so nothing stands at the drop point and then jumps. All editors, one hook.
+- Measured under 300ms latency: slot from the first frame (old: drop point, then the jump). Screen = server.
+- Third fix from the 2026-09-28 re-check. "Keep Current World" (V1 editor only) was left for decision 1.
+
+## 2026-09-28 — two public-copy leaks from "the kit" audit: /support's own logistics, and a stranger reading the server's machine name
+
+Source: the 2026-09-28 "kit" catalogue audit (`di-atlas/audits/2026-09-28-kit/AUDIT.md`,
+a sibling repo, not this one) — its "rule breaks" section ("COPY AND RULES on dev today"),
+scoped to two of its findings, both live on `dev.diiii.xyz` today, both seen by a signed-out
+visitor.
+
+### 1. `/support` prints a progress count and names payment platforms + fees — DATA, not code
+
+Checked first: `grep -rn "of 5 open|WAYS TO GIVE|RAILS" src/ serverXR/ scripts/` — no match.
+Confirmed by rendering `https://dev.diiii.xyz/support` with a headless browser: the page is a
+`srcdoc` iframe whose entire HTML (including an inline `<script>` with a `RAILS` array) is
+project content stored in space `support` / project `support` on the tier's own database — not
+a file in this git repo. Per this branch's instructions, that means **no write to any tier**:
+the exact location and the exact text change are reported to the owner directly rather than
+edited here. Summary of what's live and wrong today, for the record:
+
+- The "Ways to give" section header prints `<span id="railCount">3 of 5 open</span>` — a
+  progress count of our own build-out, computed from the `RAILS` array's `live` flags.
+- Two rows are shown as `NOT OPEN YET` (GitHub Sponsors, "From Armenia" / Idram·Telcell) — a
+  row that doesn't work should not be on the page at all.
+- The three working rows are named by supplier, not by verb, and carry fee/processor
+  disclosure: Whydonate's row says "no platform fee" and "paid out to Armenia"; Polar's row
+  says "card or Apple Pay"; GitHub Sponsors' (not-live) row explains that GitHub "covers the
+  card fees, so the whole amount arrives" — all of it publishes our own arrangement, not what
+  the visitor can do.
+- The footer adds "The ways that are not open yet are applied for, and appear here when they
+  open." — a promise with no date, and a sentence about our own process.
+- Open call for the owner: Whydonate (live, 0% fee, EUR/Armenia payout) and Polar (live, one-off
+  + $5/month, USD) both currently do "give once" — the rule says one link per verb, so which
+  processor backs "Give once" (and whether Whydonate is dropped or kept as a second unlabeled
+  channel) is a product decision, not something this session picked silently.
+
+### 2. Projection's "Machines" panel named the serving machine to a stranger
+
+`serverXR/src/machines/routes.js`'s three routes (`POST .../machines/hello`,
+`GET .../machines`, `POST .../machines/sync`) are editor-only on the space, but a signed-out
+visitor to a public space is auto-issued a guest session with editor rights — that is how a
+stranger reaches Nodes/Raw at all, and it is by design. The routes answered any editor,
+guest included, with the real `machine.name` and every peer's `machineName` — the name a
+person picked for their own box.
+
+Fix: redact both to `null` when the caller is a guest (`type === 'guest'` or a `guest:`-prefixed
+subject — the same test used everywhere else in this server for exactly this distinction,
+not invented here). The client already falls back to the honest "this machine" / an id
+fragment when given no name, so nothing on the client needed to change to make the redaction
+land — except one polish in `describeMachine` (`src/map/mapMachines.js`) so a redacted self
+reads "this machine", not "this machine · this machine". A real (non-guest) account and a
+local install with auth off are unaffected on every tier.
+
+Left for the owner: `/api/config`'s public `machine` field carries the same name to anyone
+who queries it directly (the audit's own "does too") — not fixed here, because nothing in the
+web app renders it (a UI-visible leak was the scoped ask) and it needs its own call on whether
+a fully public, unauthenticated endpoint should ever answer a real chosen name at all.
+
+**Guards added:** `serverXR/src/machines/routes.test.js` — "hides the machine name from a
+guest, and shows it to everyone else" (guest by type, guest by subject prefix, real account,
+local install — four cases, red on the old routes). `src/map/mapMachines.test.js` — "names
+itself plainly when it has no chosen name to show — no doubled suffix".
+
+**Validation:** `npm run lint` (0 errors, pre-existing warnings only) · targeted vitest
+(`serverXR/src/machines/`, `src/map/mapMachines.test.js`) 31/31 · `npm run test:server-contracts`
+174/174 · full `npm run test` 6311 passed / 4 failed — the 4 are `sdk/door.test.js`,
+`sdk/sdk.test.js`, `scripts/di/openFile.test.js`, all real-stdio child-process spawns unrelated
+to this change; reproduced the same timeout on a clean `origin/dev` checkout with no edits, so
+pre-existing/environmental, not from this diff.
+
+## 2026-09-28 — an owner can stop an invite link
+
+- The server could list and revoke invites; the app could only mint them. Manage → Invite links now lists each
+  link (made, used, until) with Revoke. Walked on desktop and phone; the revoked token redeems 404, the other 200.
+- First fix from the 2026-09-28 re-check of the 46 audit items marked broken (7 + 8 BUGs, 30 GAPs for the owner).
+
+## 2026-09-28 — the standby build cannot hang on a dead link any more
+
+- The first deploy the standby host pulled by itself hung: the release build's `git fetch` stalled at 38 MB on a
+  dropped link, and neither git nor curl has a timeout of its own, so the build held the deploy lock with nothing said.
+- `scripts/standby/build-runtime.sh`: the source fetch gives up under 1 KB/s for 60 s and is retried three times;
+  the node download is bounded (`--connect-timeout 20 --max-time 900 --retry 3`).
+- Measured against a silent server: bare fetch still hanging at 25 s; bounded fetch ended itself at 10 s.
+- Guard `scripts/standby/build-runtime.test.js`: 3 of 3 red on the old script, green on the new; standby tests 16/16.
+- The host-side half (the deployer retries a failed BUILD up to three times instead of holding the commit) is in the
+  private ops repo.
+
+## 2026-09-28 — batch: five checked fixes land together (#592 #597 #601 #604 #605)
+
+Each PR was green or BEHIND only because every one appends to `docs/ai/known-fixes.md`;
+merged in order onto dev, the only conflicts were that file, resolved as a union (six rows
+added, none lost, no marker left). Each fix keeps its own session note in this batch.
+
+One real catch from putting them together: #592's own CI was red and was reported as green.
+`src/components/surfaceBar.embed.test.jsx` mocks `useMapDocument` without the new
+`undo/redo/canUndo/canRedo`, so the Projection desk threw `canUndo is not a function` in
+two bar tests. The mock now carries them. Gate on the batch: build ok; vitest 6331/6331
+(6 skipped); server contracts 174/174; lighting wiring all passing; docs:ai:check ok.
+
+## 2026-09-28 — batch: the standby host serves both tiers and pulls its own deploys; uptime checked from outside
+
+- Lands #582 (feat/mac-standby) and #581 (chore/outside-uptime) together; each keeps its own note.
+
 ## 2026-09-27 — the front door links to /support
 
 - `/support` (space `support`, live on prod with Whydonate + Polar) had no way in. One word, "Support",
