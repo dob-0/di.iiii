@@ -87,3 +87,17 @@
 .rigcards:not(.rigcards--phone) .rigcards-grid { overflow: hidden; height: 100%; box-sizing: border-box; grid-template-rows: minmax(0, 1fr) auto; padding-bottom: 0; }
 .rigcards:not(.rigcards--phone) .rigcards-col { overflow-y: auto; height: 100%; padding-right: 4px; }
 .rigcards-card.is-owed .rigcards-card__bar span { background: repeating-linear-gradient(90deg, var(--ink) 0 4px, transparent 4px 6px); }
+
+/* the patch bars */
+.rigcards-grid { grid-template-columns: minmax(250px, 290px) minmax(0, 1fr) minmax(280px, 340px); }
+.rigcards-patch { display: grid; gap: 10px; align-content: start; }
+.rigcards-universe { display: grid; gap: 3px; }
+.rigcards-universe__title { font-size: 12.5px; font-weight: 700; }
+.rigcards-universe__makeup { font-size: 11px; color: var(--soft); }
+.rigcards-bar { display: block; width: 100%; height: 20px; }
+.rigcards-bar--owed { box-sizing: border-box; border: 1px dashed var(--ink); background: var(--paper); }
+.rigcards-conflict { display: grid; gap: 4px; font-size: 12px; padding: 8px 10px; border: 1.5px solid var(--ink); background: var(--paper); }
+.rigcards-conflict__acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.rigcards-power { margin: 4px 0 0; font-size: 12px; border-top: 1px solid var(--ink); padding-top: 8px; }
+.rigcards--phone .rigcards-patch { margin-top: 8px; }
+.rigcards-conflict.is-other { border-width: 1px; border-style: dashed; color: var(--soft); }
