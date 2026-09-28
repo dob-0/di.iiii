@@ -23,6 +23,8 @@ import { deskLookId, deskLooks, lookIdOfDesk, lookPoses, restOps, rigLooksOf } f
 import { cueOps, fireCue } from '../map/cueFiring.js'
 import { cueClockWords, cueListSignature, deskCues, nextCueIndex } from './cueRun.js'
 import { lightingApiUrl, lightingDeskPath, probeLightingDesk } from '../map/lightingLink.js'
+import { NO_DESK_SENTENCE, NO_WRITE } from './rigToolAccess.js'
+import ViewOnlyLine from './ViewOnlyLine.jsx'
 import './plot.css'
 import './cards.css'
 
@@ -107,12 +109,12 @@ function Bar({ u }) {
     )
 }
 
-function PatchPart({ bars, totals, onMove, kept, onKeep, desk }) {
+function PatchPart({ bars, totals, onMove, kept, onKeep, desk, readOnly = false }) {
     const open = bars.conflicts.filter((c) => !kept.has(c.id))
     return (
         <section className="rigcards-patch" aria-label="Patch per universe">
             <h2 className="rigcards-h">patch · per universe</h2>
-            {!bars.universes.length ? <p className="rigplot-hint">Nothing patched yet{desk ? '' : ' — the desk runs on a local di.iiii; here the lamps stay unpatched'}.</p> : null}
+            {!bars.universes.length ? <p className="rigplot-hint">{desk ? 'Nothing patched yet.' : `Nothing patched yet. ${NO_DESK_SENTENCE}`}</p> : null}
             {bars.universes.map((u) => (
                 <div key={u.universe} className="rigcards-universe">
                     <div className="rigplot-mono rigcards-universe__title">{barTitle(u)}<span className="rigplot-status__dim"> · {u.free} free</span></div>
@@ -130,7 +132,7 @@ function PatchPart({ bars, totals, onMove, kept, onKeep, desk }) {
             {open.map((c) => (
                 <div key={c.id} className={`rigcards-conflict rigplot-mono${c.move ? '' : ' is-other'}`} role="alert">
                     <b>! {c.index != null ? `#${c.index} ` : ''}{c.at}</b> <span>{c.code} · {c.words}</span>
-                    {c.move ? (
+                    {c.move && !readOnly && desk ? (
                         <span className="rigcards-conflict__acts">
                             <button type="button" className="rigcards-btn is-primary" onClick={() => onMove(c.id)}>move to next free</button>
                             <button type="button" className="rigcards-btn" onClick={() => onKeep(c.id)}>keep</button>
@@ -152,7 +154,7 @@ const WAIT_WIDTH_S = 60 // how wide a cue that waits for GO is drawn on the time
  * desk. Drawn against time by each cue's hold: a cue with a hold moves on by itself, a
  * cue with none waits for GO. A list, not a timeline editor.
  */
-function CuePart({ cues, looks, current, onGo, onBack, onFire, onAddAll, onDesk, onRest, onHold, onDelete, desk, onDeskLooks, loop, onLoop, onStop, running, clock }) {
+function CuePart({ cues, looks, current, onGo, onBack, onFire, onAddAll, onDesk, onRest, onHold, onDelete, desk, onDeskLooks, loop, onLoop, onStop, running, clock, readOnly = false }) {
     const lookOf = (cue) => looks?.looks?.find((l) => l.id === lookIdOfDesk(cue.lightLook)) || null
     // A clock time only while every cue before has a hold; after a cue that waits for
     // GO, when the next one starts is the operator's.
@@ -174,15 +176,15 @@ function CuePart({ cues, looks, current, onGo, onBack, onFire, onAddAll, onDesk,
                 <h2 className="rigcards-h">looks · cue list</h2>
                 <button type="button" className="rigcards-btn is-primary rigcards-go" onClick={onGo} disabled={!cues.length || nextCueIndex(current, cues.length, loop) < 0}>GO{cues.length && nextCueIndex(current, cues.length, loop) >= 0 ? ` ${nextCueIndex(current, cues.length, loop) + 1}` : ''}</button>
                 {/* LOOP: after the last cue, cue 1 again — stored in the document (mappingState.loop), played by the desk when one is here */}
-                <button type="button" className={`rigcards-btn rigcards-loop${loop ? ' is-on' : ''}`} aria-pressed={loop} onClick={onLoop} title="after the last cue, go back to cue 1">loop {loop ? 'on' : 'off'}</button>
+                <button type="button" className={`rigcards-btn rigcards-loop${loop ? ' is-on' : ''}`} aria-pressed={loop} onClick={onLoop} disabled={readOnly} title="after the last cue, go back to cue 1">loop {loop ? 'on' : 'off'}</button>
                 <button type="button" className="rigcards-btn" onClick={onStop} disabled={!running}>stop</button>
                 <button type="button" className="rigcards-btn" onClick={onBack} disabled={current <= 0}>back</button>
                 <span className="rigplot-mono rigcards-cues__where">{current >= 0 && cues[current] ? `on: ${current + 1} ${cues[current].name}` : 'nothing fired'}{clock ? ` · ${clock}` : ''}</span>
-                <span className="rigcards-cues__acts">
+                {readOnly ? null : <span className="rigcards-cues__acts">
                     {missing.length ? <button type="button" className="rigcards-btn" onClick={() => onAddAll(missing)}>put {missing.length} look{missing.length === 1 ? '' : 's'} on the list</button> : null}
-                    {looks ? <button type="button" className="rigcards-btn" onClick={onDeskLooks} disabled={!desk}>{desk ? `send looks to the desk (${onDeskCount}/${looks.looks.length} there)` : 'no desk here'}</button> : null}
+                    {looks && desk ? <button type="button" className="rigcards-btn" onClick={onDeskLooks}>{`send looks to the desk (${onDeskCount}/${looks.looks.length} there)`}</button> : null}
                     {desk ? <a className="rigcards-btn" href={desk}>GO from /light</a> : null}
-                </span>
+                </span>}
             </header>
             {!looks ? <p className="rigplot-hint">No designed looks in this project. They are written from the rig file by scripts/rigbuild/looks.mjs.</p> : null}
             {cues.length ? (
@@ -196,16 +198,17 @@ function CuePart({ cues, looks, current, onGo, onBack, onFire, onAddAll, onDesk,
                                     <span className="rigcards-cue__name">{cue.name || look?.title || cue.lightLook || 'cue'}</span>
                                     <span className="rigplot-mono rigcards-cue__time">{at != null ? `${fmtTime(at)} · ` : 'after GO · '}{cue.hold > 0 ? `holds ${cue.hold} s` : 'waits for GO'} · fade {cue.fade} s</span>
                                 </button>
-                                <span className="rigcards-cue__acts">
+                                {readOnly ? null : <span className="rigcards-cue__acts">
                                     <label className="rigplot-field"><span>hold</span><input inputMode="numeric" defaultValue={cue.hold || ''} placeholder="GO" aria-label={`hold of cue ${i + 1}, seconds`} onBlur={(e) => onHold(cue, Number(e.target.value) || 0)} /></label>
                                     {look ? <button type="button" className="rigcards-btn" onClick={() => onRest(look.id)} title="write this look's aims and colours into the room, so a link with no desk shows it">rest the room here</button> : null}
                                     <button type="button" className="rigcards-btn" onClick={() => onDelete(cue)} aria-label={`remove cue ${i + 1}`}>remove</button>
-                                </span>
+                                </span>}
                             </div>
                         )
                     })}
                 </div>
             ) : looks ? <p className="rigplot-hint">The cue list is empty. Put the looks on it; each cue fires its look on the desk, and the room follows.</p> : null}
+            {!desk ? <p className="rigplot-hint">{NO_DESK_SENTENCE} GO here plays the list in this tab{readOnly ? '' : ' and writes nothing to a desk'}.</p> : null}
             <p className="rigcards-foot rigplot-mono rigplot-status__dim">
                 a cue fires its look on the desk&apos;s cue layer; the room poses every lamp by the look&apos;s rules · the DMX values need each type&apos;s channel list, which is owed — the desk carries the look, not yet its channels · their console drives it once console input lands (#599)
             </p>
@@ -214,7 +217,7 @@ function CuePart({ cues, looks, current, onGo, onBack, onFire, onAddAll, onDesk,
 }
 
 /** A position: its name, its slots filled and free, and — with a card in hand — deal here. */
-function PositionRow({ position, fill, lampById, card, n, onDeal, onSlot, onTakeBack, picked }) {
+function PositionRow({ position, fill, lampById, card, n, onDeal, onSlot, onTakeBack, picked, readOnly = false }) {
     const filled = position.slots.filter((s) => fill.has(`${position.id}/${s.id}`)).length
     const free = position.slots.length - filled
     const mine = card ? position.slots.filter((s) => lampById.get(fill.get(`${position.id}/${s.id}`))?.type === card.type).length : 0
@@ -228,7 +231,7 @@ function PositionRow({ position, fill, lampById, card, n, onDeal, onSlot, onTake
             <header className="rigcards-pos__head">
                 <span className="rigplot-mono rigcards-pos__name">{position.name}</span>
                 <span className="rigplot-mono rigcards-pos__count">{filled}/{position.slots.length}</span>
-                {card ? (
+                {card && !readOnly ? (
                     <span className="rigcards-pos__acts">
                         {deal > 0 ? <button type="button" className="rigcards-btn is-primary" onClick={() => onDeal(position, deal)}>deal {deal} here</button> : null}
                         {mine > 0 ? <button type="button" className="rigcards-btn" onClick={() => onTakeBack(position)}>take back {mine}</button> : null}
@@ -256,16 +259,19 @@ function PositionRow({ position, fill, lampById, card, n, onDeal, onSlot, onTake
     )
 }
 
-export default function CardsSurface({ spaceId, projectId, library: baseLibrary = TYPE_LIBRARY }) {
+export default function CardsSurface({ spaceId, projectId, readOnly = false, library: baseLibrary = TYPE_LIBRARY }) {
     const store = useProjectStore()
     const { state } = store
-    const { applyLocalOps: syncOps } = useProjectDocumentSync({ projectId, store, clientIdPrefix: 'cards-client', opIdPrefix: 'cards-op' })
+    const { applyLocalOps: sentOps } = useProjectDocumentSync({ projectId, store, clientIdPrefix: 'cards-client', opIdPrefix: 'cards-op' })
+    // Read only (a visitor on a public space, rigToolAccess.js): every write in this file
+    // goes through here, so none reaches the document.
+    const syncOps = readOnly ? NO_WRITE : sentOps
     const { applyLocalOps, undo, redo } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
     const document_ = state.document
     const entities = useMemo(() => document_.entities || [], [document_.entities])
     // The library with the show's own types (RIG_BUILD.md §13), one object per list.
     const library = useMemo(() => libraryWithShow(baseLibrary, entities), [baseLibrary, entities])
-    const patch = useRigAutoPatch({ projectId, entities, applyOps: syncOps, library })
+    const patch = useRigAutoPatch({ projectId: readOnly ? null : projectId, entities: readOnly ? [] : entities, applyOps: syncOps, library })
     const phone = useIsPhone()
 
     const { list } = useMemo(() => rentalOf(entities), [entities])
@@ -289,7 +295,7 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
     const moveToFree = useCallback((id) => {
         // The desk lays it out again at its next free address and writes it back (§4.2).
         setStatus('moving it to the next free address…')
-        patch.patchGroup([id])
+        patch.patchGroup([id]).then((out) => { if (!out?.ok) setStatus(out?.message === 'no desk on this machine' ? NO_DESK_SENTENCE : `the desk did not move it: ${out?.message || 'no answer'}`) })
     }, [patch])
 
     const [cardType, setCardType] = useState(null)
@@ -304,10 +310,10 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
     const [sheetOpen, setSheetOpen] = useState(false)
 
     const edit = useCallback((ops, message) => {
-        if (!ops?.length) return
+        if (!ops?.length || readOnly) return
         applyLocalOps(ops)
         if (message) setStatus(message)
-    }, [applyLocalOps])
+    }, [applyLocalOps, readOnly])
 
     // --- looks on the cue list (RIG_BUILD.md §11.4) ---------------------------------
     const looks = useMemo(() => rigLooksOf(entities), [entities])
@@ -317,6 +323,7 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
     const [deskHere, setDeskHere] = useState(false)
     const [onDesk, setOnDesk] = useState(() => new Set())
     const readDesk = useCallback(async () => {
+        if (readOnly) return
         const here = await probeLightingDesk()
         setDeskHere(here)
         if (!here) return
@@ -324,7 +331,7 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
             const body = await (await fetch(lightingApiUrl('api/fireable'))).json()
             setOnDesk(new Set((body.looks || []).map((l) => l.id)))
         } catch { /* the desk went away between the two calls */ }
-    }, [])
+    }, [readOnly])
     useEffect(() => { readDesk() }, [readDesk])
     const sendLooks = useCallback(async () => {
         try {
@@ -366,6 +373,13 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
         if (!cue) return
         setCurrent(i)
         setLocalLook(lookIdOfDesk(cue.lightLook) || '')
+        if (readOnly) {
+            // A visitor's GO is theirs alone: the room in this tab shows the look; nothing
+            // is written and no desk is asked.
+            setLocalRunning(true)
+            setStatus(`GO ${i + 1} · ${cue.name} — shown in this tab only`)
+            return
+        }
         if (deskHere) {
             // The cue's mapping side as ops, as fireCue does; its light by the desk's runner
             // (fireCue's own recall would put the look up a second time, with no fade).
@@ -382,7 +396,7 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
         setLocalRunning(true)
         fireCue(cue, applyLocalOps)
         setStatus(`GO ${i + 1} · ${cue.name} — no desk here: the room shows it`)
-    }, [cues, applyLocalOps, deskHere, onDesk, sendLooks, projectId, loop])
+    }, [cues, applyLocalOps, deskHere, onDesk, sendLooks, projectId, loop, readOnly])
     // No desk: a cue with a hold moves on by itself, as the map desk's show does — and,
     // looping, from the last cue back to cue 1.
     useEffect(() => {
@@ -413,12 +427,13 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
         try { setDeskRun(await deskCues.stop()); setStatus('stopped — the look stays') } catch (error) { setStatus(`the desk did not stop: ${error.message}`) }
     }, [deskHere])
     const toggleLoop = useCallback(async () => {
+        if (readOnly) return
         const next = !loop
         edit([{ type: 'setMappingState', payload: { patch: { loop: next } } }], next ? 'loop on: after the last cue, cue 1' : 'loop off: the list stops after the last cue')
         if (deskRunsThis) {
             try { setDeskRun(await deskCues.loop(next)) } catch { /* the page's next read says where the desk is */ }
         }
-    }, [loop, edit, deskRunsThis])
+    }, [loop, edit, deskRunsThis, readOnly])
     const restOn = useCallback((lookId) => {
         const ops = restOps(entities, lookPoses({ entities, library, lookId, rigLooks: looks }))
         edit(ops, `the room rests on ${lookId}: ${ops.length} writes (undo to take it back)`)
@@ -429,26 +444,26 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
     // contiguous block in one universe (RIG_BUILD.md §4.2, §7).
     const [pendingGroup, setPendingGroup] = useState(null)
     useEffect(() => {
-        if (!pendingGroup) return
+        if (!pendingGroup || !deskHere) return
         const have = new Set(entities.map((e) => e.id))
         if (!pendingGroup.every((id) => have.has(id))) return
         setPendingGroup(null)
         patch.patchGroup(pendingGroup)
-    }, [pendingGroup, entities, patch])
+    }, [pendingGroup, entities, patch, deskHere])
 
     const filledIds = useCallback((position) => new Set(position.slots.filter((s) => fill.has(`${position.id}/${s.id}`)).map((s) => s.id)), [fill])
 
     const deal = useCallback((position, count, onlySlot = null) => {
-        if (!card) return
+        if (!card || readOnly) return
         const type = typeById(library, card.type)
         if (!type) { setStatus(`${card.code}: no fixture type in the library — cannot hang it`); return }
         const pos = onlySlot ? { ...position, slots: [onlySlot] } : position
         const { ops, ids, note } = dealOps({ entities, position: pos, filled: filledIds(pos), type, n: count, mode: mode === 'auto' ? null : mode, newId: () => generateId('entity') })
         if (!ids.length) { setStatus(note || 'nothing free there'); return }
-        edit(ops, `${ids.length} × ${card.code} → ${position.name}${note ? ` · ${note}` : ''}${type.modesOwed ? ' · mode owed: not patched' : ' · patching as one group…'}`)
+        edit(ops, `${ids.length} × ${card.code} → ${position.name}${note ? ` · ${note}` : ''}${type.modesOwed ? ' · mode owed: not patched' : deskHere ? ' · patching as one group…' : ' · the desk on a local di.iiii patches it'}`)
         if (!type.modesOwed) setPendingGroup(ids)
         setN(null)
-    }, [card, library, entities, filledIds, mode, edit])
+    }, [card, library, entities, filledIds, mode, edit, readOnly, deskHere])
 
     const takeBack = useCallback((position) => {
         if (!card) return
@@ -460,10 +475,11 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
         const key = `${position.id}/${s.id}`
         if (lamp) { setPicked(picked === key ? null : key); return }
         setPicked(null)
+        if (readOnly) return
         if (!card) { setStatus('pick a card first, then a free slot'); return }
         if (card.left <= 0) { setStatus(`${card.code}: all ${card.ordered} on order are placed`); return }
         deal(position, 1, s)
-    }, [card, deal, picked])
+    }, [card, deal, picked, readOnly])
 
     const pickedLamp = picked ? lampById.get(fill.get(picked)) : null
 
@@ -471,12 +487,12 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
         const onKey = (event) => {
             const tag = event.target?.tagName
             if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
-            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); if (event.shiftKey) redo(); else undo() }
+            if (!readOnly && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); if (event.shiftKey) redo(); else undo() }
             if (event.key === 'Escape') { setCardType(null); setPicked(null) }
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-    }, [undo, redo])
+    }, [undo, redo, readOnly])
 
     const title = document_.projectMeta?.title || projectId
     const localInstall = useLocalInstall()
@@ -510,7 +526,7 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
         </section>
     )
 
-    const dealBar = card ? (
+    const dealBar = readOnly ? null : card ? (
         <div className="rigcards-dealbar" role="group" aria-label="Deal">
             <span className="rigplot-mono"><b>{card.code}</b> · {card.left} left</span>
             <label className="rigplot-field">
@@ -530,7 +546,7 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
     const pickedBar = pickedLamp ? (
         <div className="rigcards-picked rigplot-mono" role="status">
             <span>{picked.split('/')[1]} · {pickedLamp.code}{pickedLamp.index != null ? ` #${pickedLamp.index}` : ''} {pickedLamp.patch || 'not patched'}</span>
-            <button type="button" className="rigcards-btn" onClick={() => { edit(deleteOps([pickedLamp.id]), `${pickedLamp.code} taken back`); setPicked(null) }}>take back</button>
+            {readOnly ? null : <button type="button" className="rigcards-btn" onClick={() => { edit(deleteOps([pickedLamp.id]), `${pickedLamp.code} taken back`); setPicked(null) }}>take back</button>}
         </div>
     ) : null
 
@@ -541,7 +557,7 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
             {pickedBar}
             {state.hasLoaded && !positions.length ? <p className="rigplot-hint">No positions: this project has no truss, towers, decks or venue plan to hang from. Build them on the plot, or load them (scripts/rigbuild/load-plot.mjs).</p> : null}
             {positions.map((p) => (
-                <PositionRow key={p.id} position={p} fill={fill} lampById={lampById} card={card} n={dealN} onDeal={deal} onSlot={onSlot} onTakeBack={takeBack} picked={picked} />
+                <PositionRow key={p.id} position={p} fill={fill} lampById={lampById} card={card} n={dealN} onDeal={deal} onSlot={onSlot} onTakeBack={takeBack} picked={picked} readOnly={readOnly} />
             ))}
         </section>
     )
@@ -551,13 +567,13 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
             cues={cues} looks={looks} current={shownCurrent} desk={deskHere ? lightingDeskPath({ spaceId, projectId, label: title }) : null} onDesk={onDesk}
             onGo={goNext} onBack={() => fire(Math.max(0, shownCurrent - 1))} onFire={fire}
             loop={loop} onLoop={toggleLoop} onStop={stop} running={running} clock={deskRunsThis ? cueClockWords(deskRun) : (localRunning ? (loop ? 'loop' : '') : '')}
-            onAddAll={addCues} onDeskLooks={sendLooks} onRest={restOn}
+            onAddAll={addCues} onDeskLooks={sendLooks} onRest={restOn} readOnly={readOnly}
             onHold={(cue, hold) => { if (hold !== cue.hold) edit([{ type: 'setMappingCue', payload: { cueId: cue.id, patch: { hold } } }], `cue ${cue.name}: hold ${hold || 'GO'}`) }}
             onDelete={(cue) => edit([{ type: 'deleteMappingCue', payload: { cueId: cue.id } }], `cue ${cue.name} removed`)}
         />
     )
 
-    const patchPart = <PatchPart bars={bars} totals={totals} onMove={moveToFree} kept={kept} onKeep={(id) => setKept((k) => new Set([...k, id]))} desk={patch.message !== 'no desk on this machine'} />
+    const patchPart = <PatchPart bars={bars} totals={totals} onMove={moveToFree} kept={kept} onKeep={(id) => setKept((k) => new Set([...k, id]))} desk={deskHere} readOnly={readOnly} />
 
     const statusLine = (
         <div className="rigplot-status rigplot-mono rigcards-status" role="status" aria-live="polite">
@@ -589,6 +605,7 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
         <header className="rigplot-top rigcards-top">
             <span className="rigplot-mono rigplot-top__title">{title} · cards</span>
             {links}
+            {readOnly ? <ViewOnlyLine /> : null}
         </header>
     )
 

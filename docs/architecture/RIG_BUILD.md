@@ -1222,3 +1222,38 @@ the loop disabled.
 a viewer whose tab is in the background is throttled by the browser and catches up on return
 (it recomputes from the clock, it never drifts); the desk's strobes' DMX pulse is not simulated
 beyond the room's flash.
+
+## 17. Visitors: the tools read only (and a hosted tier with no desk)
+
+Owner, 2026-09-28: share MOXIR with colleagues online — the room, the show, and the tools read
+only; editing stays with signed-in members.
+
+**Who gets what** — `src/rigbuild/rigToolAccess.js` `rigToolAccess`, used by `RigToolRoute` in
+`src/RootApp.jsx` for `/{space}/plot|cards|equipment|build/{project}`:
+
+| who | public space | private space |
+|---|---|---|
+| a member in scope (sessionScope.js, the server's own rule), an admin, any local install | edit (through the gate, as before) | edit |
+| anyone else — signed out, a guest, an account not in scope | **read only**; build → the crew view | the gate, as before |
+
+The patch sheet and the crew link stay ungated. The server refuses a visitor's ops whatever the
+page does; the page only decides what it offers.
+
+**Read only** means: the op path is `NO_WRITE` (nothing reaches the document, the undo keys do
+nothing), auto-patch is never started, no desk is asked anything, and the writing controls are
+not drawn — the plot's rail is select + measure, the inspector is a disabled fieldset, the cards
+have no deal/take back/hold/remove/loop, the equipment page uses `useEquipment({ readOnly })` and
+the inventory's own read-only mode. One line says so (`ViewOnlyLine.jsx`, `VIEW_ONLY_SENTENCE`)
+with a sign-in link. GO on the cards still plays the cue list — in that tab only.
+
+**No desk** (every hosted tier): every desk-dependent line is one sentence, `NO_DESK_SENTENCE` —
+"The light desk runs on a local di.iiii; this page shows the plan without it." — in the plot's
+title block, view A's totals, the cards' patch and cue parts; "patch this group" is disabled with
+the sentence; the printed sheet says `desk: a local di.iiii only`. The makers' kept manuals and
+photos (§13.8) are never requested on a hosted tier (`useLocalInstall`): the card links the
+maker's page with "The maker's file is kept on the studio's own machine; here is the maker's page."
+
+Guards: `src/RootApp.rigTools.test.jsx` (route choice), `src/rigbuild/readOnlySurfaces.test.jsx`
+(no op, no desk call from a visitor's GO/Delete/undo), `src/rigbuild/rigToolAccess.test.js` (the
+rule; no bare no-desk fragment), `src/rigbuild/keptMediaHosted.test.jsx` (no kept-file request) —
+each seen red without its fix. Not verified in a browser in this change (owed with the dev look).

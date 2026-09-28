@@ -5,6 +5,8 @@ import { useProjectStore } from '../project/state/projectStore.js'
 import { applyProjectOps, generateId } from '../shared/projectSchema.js'
 import { useRigAutoPatch } from '../studio/hooks/useRigAutoPatch.js'
 import { useDeskState } from './deskState.js'
+import { NO_DESK_SENTENCE, NO_WRITE } from './rigToolAccess.js'
+import ViewOnlyLine from './ViewOnlyLine.jsx'
 import { TYPE_LIBRARY } from './types/index.js'
 import { modeOf, typeById } from './fixtureTypes.js'
 import { PIECES, pieceOf } from './pieces.js'
@@ -51,6 +53,8 @@ export const TOOLS = [
     { id: 'fx', label: 'fx', key: 'x' },
     { id: 'measure', label: 'measure', key: 'm' }
 ]
+// What a read-only page offers (rigToolAccess.js): look and measure, never place.
+export const VIEW_TOOLS = TOOLS.filter((t) => t.id === 'select' || t.id === 'measure')
 
 const r2 = (v) => Math.round(v * 100) / 100
 const PHONE_QUERY = '(max-width: 760px), (max-height: 500px)'
@@ -142,8 +146,12 @@ function TitleBlock({ title, model, desk, scale, spaceId, projectId, onPrint }) 
                 <span>print 1:{scale} · A3</span><span>sheet 1 / 3</span>
                 <span>{t.channels}</span><span>{t.power}</span>
                 <span>{t.fixtures}</span><span>{t.circuits}</span>
-                <span>desk {desk.here == null ? '…' : desk.here ? `here · ${desk.output || 'output ?'}` : 'none here'}</span>
-                <span>console in: {desk.consoleIn}</span>
+                {desk.here === false ? <span className="rigplot-title__wide">{NO_DESK_SENTENCE}</span> : (
+                    <>
+                        <span>desk {desk.here == null ? '…' : `here · ${desk.output || 'output ?'}`}</span>
+                        <span>console in: {desk.consoleIn}</span>
+                    </>
+                )}
             </div>
             <div className="rigplot-title__links">
                 <a href={patch}>sheet 2 · patch</a>
@@ -192,7 +200,7 @@ function ToolOptions({ tool, options, setOptions, library }) {
     return <div className="rigplot-options"><p className="rigplot-hint">Click a lamp or a truss; Shift adds to the selection; drag on empty floor to box-select. Drag to move — it snaps. R turns 90° (Shift+R 15°), Delete removes, arrows nudge 0.5 m.</p></div>
 }
 
-export function Inspector({ model, selectedIds, entities, library, edit, patchGroup, runOf }) {
+export function Inspector({ model, selectedIds, entities, library, edit, patchGroup, runOf, deskHere = null }) {
     const lamps = model.lamps.filter((l) => selectedIds.includes(l.id))
     const pieces = model.pieces.filter((p) => selectedIds.includes(p.id))
     if (!lamps.length && !pieces.length) return null
@@ -289,9 +297,9 @@ export function Inspector({ model, selectedIds, entities, library, edit, patchGr
             {lamps.length ? (
                 <>
                     <div className="rigplot-actions">
-                        <button type="button" className="is-primary" onClick={() => patchGroup(lampIds)}>patch this group</button>
+                        <button type="button" className="is-primary" onClick={() => patchGroup(lampIds)} disabled={deskHere === false}>patch this group</button>
                     </div>
-                    <p className="rigplot-sub">lays these {lamps.length} out again as one block in one universe (the desk decides where)</p>
+                    <p className="rigplot-sub">{deskHere === false ? `${NO_DESK_SENTENCE} Patching a group is the desk's job.` : `lays these ${lamps.length} out again as one block in one universe (the desk decides where)`}</p>
                     <TextField label="position" value={positions.length === 1 ? positions[0] : ''} placeholder="name them all" onCommit={(v) => v && edit(fixtureOps(lampIds, { position: v }), 'position')} />
                     <TextField label="circuit" value="" placeholder="C1" onCommit={(v) => v && edit(fixtureOps(lampIds, { circuit: v }), 'circuit')} />
                 </>
@@ -305,16 +313,19 @@ export function Inspector({ model, selectedIds, entities, library, edit, patchGr
 
 // ---- the surface -----------------------------------------------------------------
 
-export default function PlotSurface({ spaceId, projectId, library: baseLibrary = TYPE_LIBRARY }) {
+export default function PlotSurface({ spaceId, projectId, readOnly = false, library: baseLibrary = TYPE_LIBRARY }) {
     const store = useProjectStore()
     const { state, dispatch } = store
-    const { applyLocalOps: syncOps } = useProjectDocumentSync({ projectId, store, clientIdPrefix: 'plot-client', opIdPrefix: 'plot-op' })
+    const { applyLocalOps: sentOps } = useProjectDocumentSync({ projectId, store, clientIdPrefix: 'plot-client', opIdPrefix: 'plot-op' })
+    // Read only (a visitor on a public space): every write in this file goes through here,
+    // so none of them reaches the document.
+    const syncOps = readOnly ? NO_WRITE : sentOps
     const { applyLocalOps, undo, redo } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
     const document_ = state.document
     const entities = useMemo(() => document_.entities || [], [document_.entities])
     // The library with the show's own types (RIG_BUILD.md §13), one object per list.
     const library = useMemo(() => libraryWithShow(baseLibrary, entities), [baseLibrary, entities])
-    const patch = useRigAutoPatch({ projectId, entities, applyOps: syncOps, library })
+    const patch = useRigAutoPatch({ projectId: readOnly ? null : projectId, entities: readOnly ? [] : entities, applyOps: syncOps, library })
     const desk = useDeskState()
     const phone = useIsPhone()
 
@@ -341,10 +352,10 @@ export default function PlotSurface({ spaceId, projectId, library: baseLibrary =
     const { assetIdFor, ensureAsset } = usePieceAssets({ projectId, document: document_, applyOps: applyLocalOps })
 
     const edit = useCallback((ops, message) => {
-        if (!ops?.length) return
+        if (!ops?.length || readOnly) return
         applyLocalOps(ops)
         if (message) setStatus(message)
-    }, [applyLocalOps])
+    }, [applyLocalOps, readOnly])
     edit.assetId = assetIdFor
 
     // --- the view --------------------------------------------------------------
@@ -424,7 +435,7 @@ export default function PlotSurface({ spaceId, projectId, library: baseLibrary =
     }, [tool, options, yaw, others])
 
     const place = useCallback(async (pose) => {
-        if (!pose) return
+        if (!pose || readOnly) return
         if (pose.kind === 'lamp') {
             const type = typeById(library, pose.type)
             if (!type) return
@@ -439,7 +450,7 @@ export default function PlotSurface({ spaceId, projectId, library: baseLibrary =
         const piece = pieceEntity({ id: generateId('entity'), kind: pose.kind, position: pose.res.position, yaw: pose.res.yaw, height: pose.height, assetId })
         edit(createOps([piece]), `${pieceOf(pose.kind).label} placed · ${snapWords(pose.res)}`)
         select([piece.id])
-    }, [library, entities, edit, ensureAsset, select]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [library, entities, edit, ensureAsset, select, readOnly]) // eslint-disable-line react-hooks/exhaustive-deps
 
     // --- pointer ---------------------------------------------------------------
     const drag = useRef(null)
@@ -466,7 +477,7 @@ export default function PlotSurface({ spaceId, projectId, library: baseLibrary =
                 if (event.shiftKey) next = ids.every((id) => selectedSet.has(id)) ? selectedIds.filter((id) => !ids.includes(id)) : [...new Set([...selectedIds, ...ids])]
                 else if (!ids.every((id) => selectedSet.has(id))) next = ids
                 select(next)
-                drag.current = { mode: 'move', start: at, primary: hitId, ids: next, moved: false }
+                drag.current = readOnly ? null : { mode: 'move', start: at, primary: hitId, ids: next, moved: false }
                 return
             }
             if (event.pointerType === 'touch' || event.pointerType === 'pen') { drag.current = { mode: 'pan', start: [event.clientX, event.clientY], view: v, tap: at }; return }
@@ -626,6 +637,12 @@ export default function PlotSurface({ spaceId, projectId, library: baseLibrary =
         const onKey = (event) => {
             const tag = event.target?.tagName
             if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
+            if (readOnly) {
+                if (event.key === 'Escape') { setMeasure(null); setTool('select'); select([]) }
+                const t = VIEW_TOOLS.find((x) => x.key === event.key)
+                if (t && !event.ctrlKey && !event.metaKey && !event.altKey) setTool(t.id)
+                return
+            }
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); if (event.shiftKey) redo(); else undo(); return }
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') { event.preventDefault(); redo(); return }
             if (event.key === 'Escape') { setMeasure(null); setGhost(null); setPreview(null); drag.current = null; if (tool !== 'select') setTool('select'); else select([]); return }
@@ -660,7 +677,7 @@ export default function PlotSurface({ spaceId, projectId, library: baseLibrary =
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-    }, [selectedIds, selectedSet, entities, library, model, tool, edit, select, undo, redo])
+    }, [selectedIds, selectedSet, entities, library, model, tool, edit, select, undo, redo, readOnly])
 
     useEffect(() => { setGhost(null); setMeasure((m) => (tool === 'measure' ? m : null)) }, [tool])
     useEffect(() => {
@@ -702,7 +719,7 @@ export default function PlotSurface({ spaceId, projectId, library: baseLibrary =
                 onPointerLeave={() => { if (!drag.current) setGhost(null) }}
                 onWheel={onWheel}
                 onContextMenu={(e) => e.preventDefault()}
-                onDragOver={(e) => { e.preventDefault(); if (dragTool.current) setGhost(placementPose(toPlan(e), dragTool.current)) }}
+                onDragOver={(e) => { e.preventDefault(); if (dragTool.current && !readOnly) setGhost(placementPose(toPlan(e), dragTool.current)) }}
                 onDrop={(e) => { e.preventDefault(); const t = dragTool.current; dragTool.current = null; setGhost(null); if (t) place(placementPose(toPlan(e), t)) }}
             >
                 <rect x={v[0]} y={v[1]} width={v[2]} height={v[3]} fill="#fff" />
@@ -723,10 +740,10 @@ export default function PlotSurface({ spaceId, projectId, library: baseLibrary =
 
     const rail = (
         <nav className="rigplot-rail" aria-label="Tools">
-            {TOOLS.map((t) => (
+            {(readOnly ? VIEW_TOOLS : TOOLS).map((t) => (
                 <button
                     key={t.id} type="button" aria-pressed={tool === t.id} title={`${t.label} (${t.key.toUpperCase()})`}
-                    draggable={['truss', 'tower', 'deck', 'fixture', 'fx'].includes(t.id)}
+                    draggable={!readOnly && ['truss', 'tower', 'deck', 'fixture', 'fx'].includes(t.id)}
                     onDragStart={(e) => { dragTool.current = t.id; e.dataTransfer.setData('text/rigplot-tool', t.id); e.dataTransfer.effectAllowed = 'copy' }}
                     onDragEnd={() => { dragTool.current = null; setGhost(null) }}
                     onClick={() => setTool(t.id)}
@@ -735,10 +752,16 @@ export default function PlotSurface({ spaceId, projectId, library: baseLibrary =
         </nav>
     )
 
+    const patchGroup = (ids) => {
+        setStatus(`patching ${ids.length} as a group…`)
+        patch.patchGroup(ids).then((out) => { if (!out?.ok) setStatus(desk.here === false ? NO_DESK_SENTENCE : `auto-patch · ${out?.message || 'the desk did not answer'}`) })
+    }
     const side = (
         <>
-            <ToolOptions tool={tool} options={options} setOptions={setOptions} library={library} />
-            <Inspector model={model} selectedIds={selectedIds} entities={entities} library={library} edit={edit} patchGroup={(ids) => { setStatus(`patching ${ids.length} as a group…`); patch.patchGroup(ids) }} runOf={runOf} />
+            {readOnly ? <ViewOnlyLine /> : <ToolOptions tool={tool} options={options} setOptions={setOptions} library={library} />}
+            <fieldset className="rigplot-fieldset" disabled={readOnly}>
+                <Inspector model={model} selectedIds={selectedIds} entities={entities} library={library} edit={edit} patchGroup={patchGroup} runOf={runOf} deskHere={desk.here} />
+            </fieldset>
             <KeyBlock model={model} />
             <TitleBlock title={title} model={model} desk={desk} scale={printScale} spaceId={spaceId} projectId={projectId} onPrint={() => setPrinting(true)} />
         </>
@@ -769,12 +792,13 @@ export default function PlotSurface({ spaceId, projectId, library: baseLibrary =
                         <button type="button" aria-pressed={pane === 'plan'} onClick={() => setPane('plan')}>plan</button>
                         <button type="button" aria-pressed={pane === 'room'} onClick={() => setPane('room')}>room</button>
                     </div>
+                    {readOnly ? <ViewOnlyLine /> : null}
                 </header>
                 <div className="rigplot-stage">{pane === 'plan' ? plan : room}</div>
                 <section className={`rigplot-sheet${sheetOpen ? ' is-open' : ''}`} aria-label="Pieces and inspector">
-                    <button type="button" className="rigplot-sheet__handle" aria-expanded={sheetOpen} onClick={() => setSheetOpen((o) => !o)}><span aria-hidden="true" />{sheetOpen ? 'close' : 'place · inspect'}</button>
+                    <button type="button" className="rigplot-sheet__handle" aria-expanded={sheetOpen} onClick={() => setSheetOpen((o) => !o)}><span aria-hidden="true" />{sheetOpen ? 'close' : readOnly ? 'inspect' : 'place · inspect'}</button>
                     <div className="rigplot-sheet__tools">
-                        {TOOLS.map((t) => <button key={t.id} type="button" aria-pressed={tool === t.id} onClick={() => setTool(t.id)}>{t.label}</button>)}
+                        {(readOnly ? VIEW_TOOLS : TOOLS).map((t) => <button key={t.id} type="button" aria-pressed={tool === t.id} onClick={() => setTool(t.id)}>{t.label}</button>)}
                     </div>
                     {statusLine}
                     {sheetOpen ? <div className="rigplot-sheet__body">{side}</div> : null}
