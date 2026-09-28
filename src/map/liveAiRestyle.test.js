@@ -108,6 +108,23 @@ describe('startLiveAiRestyle', () => {
         vi.useRealTimers()
     })
 
+    it('takes its frames from any source, not only a <video> (a picture operator\'s input)', async () => {
+        const draw = vi.fn(() => true)
+        const restyle = startLiveAiRestyle({
+            canvas,
+            source: { size: () => ({ width: 640, height: 360 }), draw },
+            url: 'ws://test/liveai',
+            WebSocketImpl: FakeSocket,
+            createCanvas: fakeCanvas,
+            createBitmap: async () => ({ close: () => {} })
+        })
+        FakeSocket.last.open()
+        await settle()
+        expect(draw).toHaveBeenCalledWith(expect.anything(), 512, 288)
+        expect(frames(FakeSocket.last)).toHaveLength(1)
+        restyle.stop()
+    })
+
     it('stops cleanly: no reconnect after stop()', () => {
         vi.useFakeTimers()
         const restyle = start()

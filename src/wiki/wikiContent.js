@@ -388,9 +388,10 @@ export const WIKI_ARTICLES = [
             'It keeps up with the room rather than falling behind it: a new frame goes to the engine only when the last one has come back, so the wall is always one step behind what is happening, never a queue of old pictures.',
             'Change the prompt or the strength while it runs and the wall follows without a blink — and, like every mapping setting, from any desk following the project.',
             'No engine running? The surface says so, in words, and keeps trying — start the engine and the picture appears without reloading anything. The engine and how to start it are described in scripts/liveai/README.md.',
+            'The same thing is a picture operator, AI Restyle, on the node canvas: wire any picture into it — a Camera In, a Clip In, a whole chain of Blur and Feedback — and its output is that picture as the prompt says it should look, ready to wire on, into a VJ deck or a Picture Out. The model runs beside the network rather than inside it, so every other operator keeps its full frame rate while this one changes picture as often as the model answers (about five times a second at strength 0.75, ten at 0.5, on a laptop GPU). Until the first answer it shows its input unchanged, never black. Look inside it to see what the model is doing.',
             'AI restyle lives on a local di.iiii only — `di up`, or npm run dev — the same as the lighting desk and the NDI® source. A hosted address has no engine and does not offer one.'
         ],
-        tags: ['ai', 'restyle', 'camera', 'stream', 'projection', 'mapping', 'live', 'prompt', 'stable diffusion', 'sd-turbo', 'local', 'offline', 'effect', 'analysis'],
+        tags: ['ai', 'restyle', 'camera', 'stream', 'projection', 'mapping', 'live', 'prompt', 'stable diffusion', 'sd-turbo', 'local', 'offline', 'effect', 'analysis', 'operator', 'nodes', 'tops', 'picture'],
         updated: '2026-09-28'
     },
     {

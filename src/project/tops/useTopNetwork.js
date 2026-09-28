@@ -9,6 +9,7 @@ import { createPicturePeers } from './picturePeers.js'
 import { createPictureOut } from './pictureOut.js'
 import { readTopReport, reportTop, useInspectedTop } from './topReports.js'
 import { compileTopScript } from './topScripts.js'
+import { startAiRestyleNode } from './aiRestyleRunner.js'
 
 // A camera's capabilities hold functions and odd objects on some browsers;
 // what crosses the network is plain numbers, strings and ranges.
@@ -438,6 +439,46 @@ export function useTopNetwork({
             streams.forEach((stream) => stream.getTracks().forEach((track) => track.stop()))
         }
     }, [cameraKey, hasNodes, canvas])
+
+    // --- one image-model link per AI Restyle that runs HERE
+    // The model runs on the machine that runs the operator (scripts/liveai/),
+    // reached through that page's own serverXR. Prompt and strength change in
+    // place; only a new, removed or re-hosted operator restarts a link.
+    const aiParams = useMemo(
+        () => JSON.stringify(split.local
+            .filter((node) => TOP_OPERATORS[node.type].source === 'ai')
+            .map((node) => [node.id, resolveTopParams(node.type, node.values)])),
+        [split]
+    )
+    const aiKey = useMemo(() => JSON.stringify(JSON.parse(aiParams).map(([id]) => id)), [aiParams])
+    const aiParamsRef = useRef(aiParams)
+    useEffect(() => { aiParamsRef.current = aiParams })
+    const aiRunnersRef = useRef(new Map())
+    useEffect(() => {
+        const ids = JSON.parse(aiKey)
+        const engine = engineRef.current
+        if (!ids.length || !engine) return undefined
+        const runners = aiRunnersRef.current
+        const params = new Map(JSON.parse(aiParamsRef.current))
+        for (const id of ids) {
+            try {
+                runners.set(id, startAiRestyleNode({
+                    engine,
+                    nodeId: id,
+                    params: params.get(id) || {},
+                    onStatus: (status) => reportTop(id, { ai: status })
+                }))
+            } catch (caught) {
+                reportTop(id, { ai: { state: 'error', detail: String(caught?.message || caught) } })
+            }
+        }
+        return () => {
+            for (const id of ids) { runners.get(id)?.stop(); runners.delete(id) }
+        }
+    }, [aiKey, hasNodes, canvas, width, height, thumbnails])
+    useEffect(() => {
+        for (const [id, params] of JSON.parse(aiParams)) aiRunnersRef.current.get(id)?.setParams(params)
+    }, [aiParams])
 
     return { error, machine: linkView.machine, peers: linkView.peers }
 }

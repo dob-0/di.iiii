@@ -112,6 +112,33 @@ void main() {
 }`
     },
 
+    'top.aiRestyle': {
+        label: 'AI Restyle',
+        family: 'adjust',
+        inputs: ['a'],
+        // The picture wired in goes to the image model on this machine and what
+        // comes back is this operator's output (tops/aiRestyleRunner.js; the
+        // same engine and relay as the map desk's AI restyle, scripts/liveai/).
+        // The model is far slower than a frame, so it runs beside the network,
+        // never inside it: every other operator keeps its frame rate, and this
+        // one's picture changes as often as the model answers.
+        source: 'ai',
+        params: [
+            text('prompt', 'Prompt'),
+            param('strength', 'Strength', 0.5, 0.05, 1, 0.05)
+        ],
+        // Until the first answer arrives — no engine, still loading — the input
+        // passes straight through, so the wall never goes black waiting.
+        fragment: `
+uniform sampler2D source;
+uniform float sourceReady;
+void main() {
+    gl_FragColor = sourceReady > 0.5
+        ? vec4(texture2D(source, vec2(uv.x, 1.0 - uv.y)).rgb, 1.0)
+        : vec4(texture2D(a, uv).rgb, 1.0);
+}`
+    },
+
     'top.difference': {
         label: 'Difference',
         family: 'analyse',

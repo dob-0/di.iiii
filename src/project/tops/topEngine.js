@@ -245,6 +245,12 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
     // need more keep (camera source texture, difference history).
     const slots = new Map()
     const videos = new Map()
+    // Pictures a source operator gets from outside the GPU chain and not as a
+    // <video> — AI Restyle's answers, drawn into a canvas by its runner. The
+    // runner bumps `version` per new picture; only a new version is uploaded.
+    const images = new Map()
+    // Read-backs of an operator's input, one target per size asked for.
+    const readTargets = new Map()
     const measureTarget = makeTarget(gl, MEASURE_W, MEASURE_H)
     const measurePixelsBuffer = new Uint8Array(MEASURE_W * MEASURE_H * 4)
 
@@ -381,13 +387,22 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
             }
 
             // Camera In and Clip In alike: whatever <video> setVideo gave this node.
+            // AI Restyle: whatever picture setImage gave it, when it is a new one.
             if (operator.source) {
                 const video = videos.get(node.id)
+                const image = images.get(node.id)
                 if (video && video.readyState >= 2 && video.currentTime !== slot.lastVideoTime) {
                     slot.lastVideoTime = video.currentTime
                     gl.bindTexture(gl.TEXTURE_2D, slot.source)
                     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video)
+                } else if (image?.canvas && image.version > 0 && image.version !== slot.lastVideoTime) {
+                    slot.lastVideoTime = image.version
+                    gl.bindTexture(gl.TEXTURE_2D, slot.source)
+                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image.canvas)
                 }
+                // A picture has arrived and is still being fed. An AI Restyle whose
+                // runner stopped goes back to passing its input through.
+                slot.sourceReady = slot.lastVideoTime !== -1 && (videos.has(node.id) || images.has(node.id))
                 bindTexture(compiled, 'source', 3, slot.source)
             }
 
@@ -422,6 +437,8 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
             if (timeLocation !== null) gl.uniform1f(timeLocation, clock)
             const shiftLocation = uniform(gl, compiled, 'shift')
             if (shiftLocation !== null) gl.uniform1f(shiftLocation, shift)
+            const readyLocation = uniform(gl, compiled, 'sourceReady')
+            if (readyLocation !== null) gl.uniform1f(readyLocation, slot.sourceReady ? 1 : 0)
             const colours = colourNamesFor(node.type)
             for (const [name, value] of Object.entries(params)) {
                 const location = uniform(gl, compiled, `p_${name}`)
@@ -481,11 +498,35 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         }
     }
 
+    /**
+     * The picture wired into an operator's input, read back as RGBA bytes at
+     * width x height — rows BOTTOM-UP, as GL keeps them. For work that happens
+     * off the GPU chain (AI Restyle sends it to the image model). Null when
+     * nothing is wired in. Called between frames, never during one.
+     */
+    const readInput = (nodeId, readWidth, readHeight, port = 'a') => {
+        const from = inputsFor.get(nodeId)?.[port]
+        const texture = from ? latest(from) : null
+        if (!texture) return null
+        const key = `${readWidth}x${readHeight}`
+        let read = readTargets.get(key)
+        if (!read) {
+            read = { target: makeTarget(gl, readWidth, readHeight), pixels: new Uint8Array(readWidth * readHeight * 4) }
+            readTargets.set(key, read)
+        }
+        bindTexture(present, 'a', 0, texture)
+        draw(present, read.target)
+        gl.readPixels(0, 0, readWidth, readHeight, gl.RGBA, gl.UNSIGNED_BYTE, read.pixels)
+        return read.pixels
+    }
+
     return {
         gl,
         width,
         height,
         setNetwork,
+        readInput,
+        setImage: (nodeId, picture) => { if (picture) images.set(nodeId, picture); else images.delete(nodeId) },
         setVideo: (nodeId, video) => { if (video) videos.set(nodeId, video); else videos.delete(nodeId) },
         setRemoteVideo: (nodeId, video) => { if (video) remoteVideos.set(nodeId, video); else remoteVideos.delete(nodeId) },
         frame,
@@ -502,6 +543,9 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
                 if (slot.source) gl.deleteTexture(slot.source)
             }
             slots.clear()
+            for (const read of readTargets.values()) freeTarget(gl, read.target)
+            readTargets.clear()
+            images.clear()
             freeTarget(gl, measureTarget)
             for (const compiled of programs.values()) if (compiled.program) gl.deleteProgram(compiled.program)
             gl.getExtension('WEBGL_lose_context')?.loseContext()

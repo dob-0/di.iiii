@@ -49,10 +49,16 @@ const paramsMessage = (params = {}) => JSON.stringify({
  *   connecting · waiting (engine loading) · live · no-engine · closed
  * and `onFrame()` fires on every picture drawn — the surface uses the first
  * one to swap its placeholder for the picture.
+ *
+ * A source other than a <video> — a picture operator's input, say — passes
+ * `source: { size(), draw(context, width, height) }` instead: size() is its
+ * width and height (0 while there is nothing yet), and draw() paints the
+ * current picture into the send canvas, returning false when there is none.
  */
 export const startLiveAiRestyle = ({
     canvas,
     video,
+    source = null,
     params = {},
     onStatus = () => {},
     onFrame = () => {},
@@ -82,19 +88,29 @@ export const startLiveAiRestyle = ({
         onStatus({ state, detail })
     }
 
+    // A <video>, or anything that can say its size and paint itself.
+    const from = source || {
+        size: () => (video && video.readyState >= 2 && video.videoWidth ? { width: video.videoWidth, height: video.videoHeight } : { width: 0, height: 0 }),
+        draw: (context, width, height) => { context.drawImage(video, 0, 0, width, height); return true }
+    }
+
     const sendFrame = () => {
         if (stopped || inFlight || !socket || socket.readyState !== 1) return
-        if (!video || video.readyState < 2 || !video.videoWidth) {
-            // No camera picture yet — look again shortly rather than spin.
+        const natural = from.size()
+        if (!natural.width || !natural.height) {
+            // No picture yet — look again shortly rather than spin.
             inFlightTimer = setTimeout(sendFrame, 100)
             return
         }
-        const size = sendSize(video.videoWidth, video.videoHeight)
+        const size = sendSize(natural.width, natural.height)
         if (grab.width !== size.width || grab.height !== size.height) {
             grab.width = size.width
             grab.height = size.height
         }
-        grabContext.drawImage(video, 0, 0, size.width, size.height)
+        if (!from.draw(grabContext, size.width, size.height)) {
+            inFlightTimer = setTimeout(sendFrame, 100)
+            return
+        }
         inFlight = true
         clearTimeout(inFlightTimer)
         inFlightTimer = setTimeout(() => { inFlight = false; sendFrame() }, FRAME_TIMEOUT_MS)

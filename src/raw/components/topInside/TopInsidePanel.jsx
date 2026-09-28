@@ -56,6 +56,10 @@ export default function TopInsidePanel({ node, machines = [], top = 0, onPatchVa
                     <CameraSection node={node} report={report} onPatchValues={onPatchValues} />
                 ) : null}
 
+                {operator.source === 'ai' ? (
+                    <AiSection report={report} where={where} />
+                ) : null}
+
                 {operator.attribution ? (
                     <SendSection node={node} operator={operator} report={report} where={where} />
                 ) : null}
@@ -203,6 +207,35 @@ function JsonEditor({ value, onApply }) {
                 Apply constraints
             </button>
         </>
+    )
+}
+
+// --- the image model, for an AI Restyle -------------------------------------
+
+// What the link to the image model says (aiRestyleRunner.js, over the report
+// channel), in the machine's own words. No engine is an ordinary state — the
+// picture passes through unchanged meanwhile — so it reads dim, not red.
+const AI_LINES = {
+    live: () => 'Live — each new picture from the model replaces the last.',
+    connecting: (ai) => ai.detail || 'Reaching the image model…',
+    waiting: (ai) => `Model ready: ${ai.detail || 'waiting for the first picture'}.`,
+    'no-engine': (ai) => `${ai.detail} Until then the input passes through unchanged.`,
+    closed: (ai) => ai.detail || 'The model went away — trying again.',
+    error: (ai) => `Could not start: ${ai.detail}`
+}
+
+function AiSection({ report, where }) {
+    const ai = report.ai || null
+    const line = ai ? (AI_LINES[ai.state] || AI_LINES.connecting)(ai) : `Waiting for ${where} to reach its image model…`
+    return (
+        <section className="raw-top-inside-section">
+            <h3>Image model <span>on {where}</span></h3>
+            <p className={ai?.state === 'error' ? 'raw-top-inside-error' : 'raw-top-inside-dim'}>{line}</p>
+            <p className="raw-top-inside-dim">
+                The model runs beside the picture network, on the machine this operator runs on (scripts/liveai/README.md).
+                Strength is also the speed: low is quick and close to the input, high follows the prompt and is slower.
+            </p>
+        </section>
     )
 }
 
