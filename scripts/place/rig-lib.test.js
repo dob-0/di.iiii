@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 import { panTiltFromRotation, rotationFromPanTilt, spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
 import {
     LASER_MIN_HEIGHT_M, RIG_PREFIX, aimAt, beamHitsBox, beamHitsCrane, buildRig, candelaAt, checkLaser, classPhotometry, columnsFor, groupAxis,
-    lightDistance, performerBox, pickEven, realIndices, stageFrame, surfaceHit
+    lightDistance, openingOps, openingShot, performerBox, pickEven, realIndices, stageFrame, surfaceHit
 } from './rig-lib.mjs'
 import { readGeometry } from './fixtures-glb.mjs'
 
@@ -87,13 +87,17 @@ describe('the DJ place the owner asked for (2026-09-28: small, a bit raised, cen
         expect(stage.deck).toBeLessThanOrEqual(1.4)
     })
 
-    it('stands centred on the press, close in front of it, facing the entry and the crowd', () => {
-        expect(stage.axis).toBeCloseTo((press.x_m[0] + press.x_m[1]) / 2, 6)
+    it('stands on the nave centre line (the owner: "make the scene in center"), close in front of the press, facing the crowd', () => {
+        expect(stage.axis).toBe(0)
+        expect(rig.stage.options.find((o) => o.chosen).id).toBe('D-nave-centred')
         expect(stage.into).toBe(1)
         expect(stage.wall).toBe(press.z_m[1])
         expect(stage.back - stage.wall).toBeGreaterThanOrEqual(0.5)
         expect(stage.back - stage.wall).toBeLessThanOrEqual(1.5)
         expect(stage.front - stage.back).toBeCloseTo(rig.stage.depth_m, 6)
+        // the press still stands behind the riser (their x ranges overlap)
+        expect(press.x_m[0]).toBeLessThan(stage.axis + stage.width / 2)
+        expect(press.x_m[1]).toBeGreaterThan(stage.axis - stage.width / 2)
         expect(stage.backdrop.ids).toContain('press')
     })
 
@@ -112,12 +116,37 @@ describe('the DJ place the owner asked for (2026-09-28: small, a bit raised, cen
         expect(g.zones._label).toMatch(/owner marked 2026-09-28/)
     })
 
-    it('puts the dance floor in front of the booth and the backstage beside and behind the press', () => {
-        const front = [g.zones.dance.used, ...(g.zones.dance.extra || [])].map((r) => Math.min(...r.z_m))
-        expect(Math.min(...front)).toBeGreaterThan(stage.front)
-        expect(Math.min(...front) - stage.front).toBeLessThan(2)
-        expect(Math.max(...g.zones.backstage.used.x_m)).toBeLessThanOrEqual(press.x_m[0])
-        expect(Math.min(...g.zones.backstage.used.z_m)).toBeLessThan(stage.wall)
+    it('puts a symmetric dance floor in front of the booth and a centred backstage behind the press', () => {
+        const dance = g.zones.dance.used
+        expect(dance.x_m[0]).toBe(-dance.x_m[1])
+        expect(Math.min(...dance.z_m)).toBeGreaterThan(stage.front)
+        expect(Math.min(...dance.z_m) - stage.front).toBeLessThan(2)
+        expect(g.zones.dance.extra).toBeUndefined()
+        const back = g.zones.backstage.used
+        expect(back.x_m[0]).toBe(-back.x_m[1])
+        expect(Math.max(...back.z_m)).toBeLessThan(press.z_m[0])
+        expect(g.zones.stage.used.x_m[0]).toBe(-g.zones.stage.used.x_m[1])
+    })
+
+    it('opens on the centre line, looking straight at the booth', () => {
+        const shot = openingShot(rig, stage)
+        expect(shot.position[0]).toBe(0)
+        expect(shot.target[0]).toBe(0)
+        expect(shot.position[2]).toBeGreaterThan(stage.front)
+        const ops = openingOps(rig, stage)
+        const spawn = ops[0].payload.patch.spawn
+        // the walker looks along (sin yaw, cos yaw): straight down -z is yaw pi
+        expect(Math.abs(spawn.yaw)).toBeCloseTo(Math.PI, 3)
+        expect(ops[1].payload.patch.fixedCamera.position).toEqual(shot.position)
+    })
+
+    it('lights the press evenly: its uplights stand symmetric about the press\'s own centre', () => {
+        const { entities } = buildRig(rig, hall, { geometry, manifest })
+        const mid = (press.x_m[0] + press.x_m[1]) / 2
+        const on = entities.filter((e) => e.id.startsWith(`${RIG_PREFIX}par-press-`)).map((e) => e.components.transform.position[0] - mid)
+            .filter((dx) => Math.abs(dx) <= (press.x_m[1] - press.x_m[0]) / 2)
+        expect(on.length).toBeGreaterThanOrEqual(3)
+        for (const dx of on) expect(on.some((o) => Math.abs(o + dx) < 0.05)).toBe(true)
     })
 
     it('picks the nave columns around the dance floor and the booth, both faces, nearest the booth first', () => {
@@ -270,6 +299,8 @@ describe('every look is a design, not a scatter', () => {
                 checked += own.length
             }
             expect(checked).toBeGreaterThan(80)
+            // since 04:13 every mirrored group mirrors about the nave centre line, the booth's too
+            for (const gr of rig.groups) if (gr.symmetric !== false) expect(groupAxis(gr, stage)).toBe(0)
         })
 
         it(`${look}: sends no narrow beam through the DJ and keeps every laser at least ${LASER_MIN_HEIGHT_M} m up`, () => {

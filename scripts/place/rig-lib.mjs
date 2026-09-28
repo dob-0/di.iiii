@@ -311,7 +311,9 @@ const place = {
         const x0 = Math.max(-reachX, bd.x[0] + 0.3)
         const x1 = Math.min(reachX, bd.x[1] - 0.3)
         const gap = group?.backdrop_gap_m ?? 3
-        return spread(n, x0, Math.min(x1, x0 + (group?.backdrop_span_m ?? x1 - x0))).map((x) => ({
+        // `x_m` [..]: stand exactly there (e.g. evenly across the press's own face)
+        const xs = group?.x_m ? group.x_m.slice(0, n) : spread(n, x0, Math.min(x1, x0 + (group?.backdrop_span_m ?? x1 - x0)))
+        return xs.map((x) => ({
             pos: [x, 0, bd.face + ctx.stage.into * gap], orient: 'floor', face: [0, 0, -ctx.stage.into]
         }))
     },
@@ -879,6 +881,42 @@ export const washSurface = (slot, aimed, from, to, half, ctx) => {
 // many real lamps shadows are switched off rather than let every surface fail
 // to compile — which turns the whole room black (seen 2026-09-27).
 export const SHADOW_SAFE_REAL_LIGHTS = 12
+
+/**
+ * The first screen: `rig.opening` = { a, h, target_h } — standing `a` metres
+ * out from the stage front ON THE STAGE'S AXIS at eye height `h`, looking
+ * straight at the backdrop face at `target_h`. The orbit view, the fixed
+ * camera and the walker's spawn all start there, so the opening is symmetric.
+ */
+export const openingShot = (rig, stage) => {
+    const o = rig.opening
+    if (!o) return null
+    const x = stage.axis ?? 0
+    const z = stage.front + stage.into * o.a
+    const position = [x, o.h ?? 1.6, z]
+    const target = [x, o.target_h ?? 3.5, stage.wall]
+    return { position, target, fov: o.fov ?? 60 }
+}
+
+export const openingOps = (rig, stage) => {
+    const shot = openingShot(rig, stage)
+    if (!shot) return []
+    const camera = { projection: 'perspective', zoom: 1, near: 0.05, far: 400, locked: false, ...shot }
+    const [dx, , dz] = shot.target.map((v, k) => v - shot.position[k])
+    return [
+        {
+            type: 'setWorldState',
+            payload: {
+                patch: {
+                    savedView: { mode: 'perspective', ...camera },
+                    // the walker looks along (sin yaw, ·, cos yaw) — yaw 0 faces +z (fit-lib.mjs spawnFrom)
+                    spawn: { x: shot.position[0], z: shot.position[2], yaw: Math.round(Math.atan2(dx, dz) * 1000) / 1000, pitch: 0, altY: shot.position[1] }
+                }
+            }
+        },
+        { type: 'setPresentationState', payload: { patch: { mode: 'fixed-camera', entryView: 'fixed-camera', fixedCamera: camera } } }
+    ]
+}
 
 /** The room at night: what rig.mjs writes beside the lamps. */
 export const nightOps = (rig, { shadows, realLights = 0 } = {}) => {

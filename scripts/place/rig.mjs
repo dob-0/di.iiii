@@ -38,7 +38,7 @@ import path from 'node:path'
 
 import { parseArgs, say, warn, die, readJson, writeJson } from './common.mjs'
 import { DEFAULT_API, makeClient, readToken } from './api.mjs'
-import { RIG_PREFIX, SHADOW_SAFE_REAL_LIGHTS, buildRig, nightOps } from './rig-lib.mjs'
+import { RIG_PREFIX, SHADOW_SAFE_REAL_LIGHTS, buildRig, nightOps, openingOps } from './rig-lib.mjs'
 import { beamsGlb } from './beams-glb.mjs'
 import { FIXTURE_DIR, fixturesGlb, readGeometry } from './fixtures-glb.mjs'
 import { washGlb } from './wash-glb.mjs'
@@ -218,7 +218,7 @@ const main = async () => {
             }
         }]
         say(`  fixture bodies: ${built.fixtures.length} in one instanced GLB (${(bodies.length / 1024).toFixed(0)} KB)`)
-        ops = [...ops, ...entities.map((entity) => ({ type: 'createEntity', payload: { entity } })), ...nightOps(rig, { shadows, realLights: s.real })]
+        ops = [...ops, ...entities.map((entity) => ({ type: 'createEntity', payload: { entity } })), ...nightOps(rig, { shadows, realLights: s.real }), ...openingOps(rig, built.stage)]
         say(`  real lights in the room: ${s.real} · beams: ${beams}`)
     }
 

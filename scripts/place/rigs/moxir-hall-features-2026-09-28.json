@@ -145,7 +145,7 @@
           10.0
         ],
         "z_m": [
-          22.0,
+          7.5,
           48.0
         ]
       },
@@ -159,21 +159,8 @@
           50.0
         ]
       },
-      "why_used_differs": "the blue mark shows z 27.7..39.7 (the part in the photo). Now in front of the booth: from the barrier (z 7.5) on the open NE side, full width between the column faces (1.6 m clear) from the bags (z 22) to under the crane (z 48).",
-      "extra": [
-        {
-          "x_m": [
-            -10.0,
-            3.5
-          ],
-          "z_m": [
-            7.5,
-            22.0
-          ],
-          "why": "in front of the booth, on the open NE side of the nave; the SW side (x > 3.5) is machinery up to the bags"
-        }
-      ],
-      "clear": "the white bulk bags (x -0.8..2.2, z 22..26.5 in photo 032; seen at the same place in photo 004 on 2026-08-24) stand in the floor and must be moved"
+      "why_used_differs": "the blue mark shows z 27.7..39.7 (the part in the photo). Now symmetric about the nave axis, 20 m wide (1.6 m clear of the column faces), from the crowd barrier (z 7.5) to under the crane (z 48).",
+      "clear": "to be cleared for a symmetric floor: the white bulk bags (x -0.8..2.2, z 22..26.5) AND the loose machinery on the SW half between the press and the bags (photo 004: a hopper at x ~5.7, z ~21.6; drums, frames and pipe stacks at x 3..10). The press and the fixed machine line at its foot (z < 3) stay."
     },
     "stage": {
       "colour": "green",
@@ -191,8 +178,8 @@
       },
       "used": {
         "x_m": [
-          -2.2,
-          5.5
+          -3.8,
+          3.8
         ],
         "z_m": [
           3.6,
@@ -210,7 +197,7 @@
         ]
       },
       "faces": "the entry (+z, NW): the crowd stands between the barrier and the crane end",
-      "why_used_differs": "the owner, 2026-09-28: the stage is a DJ place, small, near the metal thing, a bit raised, centred on the metal things. Used = the booth area: a 3 x 2 m riser centred on the press (x 1.65) 1 m in front of its face, the goalpost towers either side (x -1.85, 5.15), the pit to the crowd barrier (z 7.5). The rest of his green, from the booth to the bags, is floor for the crowd."
+      "why_used_differs": "the owner, 2026-09-28: the stage is a DJ place, small, a bit raised; then (04:13) 'in center'. Used = the booth area on the nave axis: the 3 x 2 m riser at x -1.5..1.5, 1 m in front of the press face, the goalpost towers at x -3.5 and 3.5, the pit to the crowd barrier (z 7.5)."
     },
     "backstage": {
       "colour": "red",
@@ -228,12 +215,12 @@
       },
       "used": {
         "x_m": [
-          -11.0,
-          0.0
+          -6.0,
+          6.0
         ],
         "z_m": [
-          -9.0,
-          3.2
+          -10.0,
+          -1.0
         ]
       },
       "range": {
@@ -246,9 +233,10 @@
           -4.0
         ]
       },
-      "why_used_differs": "photo 1c3956d1 (= photo 024, mean pixel difference 5.4/255): the red runs from the press's left edge to the left and back, behind the green line along the press base. Used: left of the press, from its front line (z 3.2) back 12 m; the DJ reaches the booth's treads from it. Depth still a GUESS."
+      "why_used_differs": "the owner's red (photo 024 = 1c3956d1) runs behind the press and to its left. Re-centred on the axis behind the press, clear of the machine line's back (z -0.5): x -6..6, z -10..-1; the DJ walks to the treads (x -2) past the press's left side (x < 0.25). Depth still a GUESS; the part of his red further left (x < -6) is not used."
     },
-    "_revised": "2026-09-28 (DJ place): re-read against every photo's metadata (scripts/place/photo_meta.py -> EXIF time, lens, intrinsics, GPS, sun). The marks sit ~3.4 m left of the nave axis because the SW half of the nave, from the press to the white bags, is taken by machinery (photo 004 with EXIF intrinsics: a hopper at x ~5.7, z ~21.6; the rusty drum and pipes at x 3-8 near the press; photo 032): he marked the open floor. So the dance floor runs up to the booth only on the open (NE) side, and full width from the bags on."
+    "_revised": "2026-09-28 (DJ place): re-read against every photo's metadata (scripts/place/photo_meta.py -> EXIF time, lens, intrinsics, GPS, sun). The marks sit ~3.4 m left of the nave axis because the SW half of the nave, from the press to the white bags, is taken by machinery (photo 004 with EXIF intrinsics: a hopper at x ~5.7, z ~21.6; the rusty drum and pipes at x 3-8 near the press; photo 032): he marked the open floor. So the dance floor runs up to the booth only on the open (NE) side, and full width from the bags on.",
+    "_centred": "2026-09-28 04:13, owner: 'make the scene in center'. The booth, the dance floor and the backstage re-centred on the nave axis (x 0). The press and the machine line stay where they stand."
   },
   "confidence": {
     "door_w_m": "GUESS (video 026)",

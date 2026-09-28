@@ -344,6 +344,25 @@ though the far gate and the press fall within 1–2° of the photo's bearings),
 `dj-floor.png` (the crowd's view: the DJ, the towers, the press behind),
 `dj-booth.png` (the DJ's view out), `dj-gps-on-satellite.png`.
 
+### Centred on the nave (the owner, 2026-09-28 04:13)
+
+"make the scene in center it not the center right?" — then "i think dj is in ceneter so make it in center and the
+stage size i think is ok". Option D (`stage.options`): the booth, its goalpost and every lamp on it moved from
+x 1.65 to **x 0** (−1.65 m across), same 3 × 2 × 1.2 m riser, same 1.0 m in front of the press face (z 4.2–6.2).
+Towers now at x ±3.5 (were −1.85 / 5.15). The press stays where it stands (x 0.25–3.05), behind the right half
+of the riser; its six uplights stand at x 0.55 / 1.65 / 2.75 (evenly across the press's own face) and 4.6 / 6.3 /
+8.0 along the machine line (`backdrop-floor` takes `x_m`). Dance floor symmetric, x −10…10, z 7.5…48 — which
+means clearing the bags AND the loose machinery on the SW half between the press and the bags (the owner's marks
+avoided it). Backstage re-centred behind the press, x −6…6, z −10…−1 (the part of his red left of x −6 is not used).
+Every mirrored group now mirrors about x 0 (tests assert it). `rig.opening` → `openingOps`: rig.mjs writes the
+first screen — fixed camera, orbit view and the walker's spawn — 18 m out on the centre line at eye height,
+looking straight at the booth (0, 1.6, 24.2 → 0, 3.5, 3.2). `rig-look.mjs --views opening` shoots it.
+
+Seen on the RTX 3080 (ANGLE Vulkan, headed): `~/Downloads/moxir-hall/centre-opening.png` at 2562 × 1440, 60 fps
+(p95 16.7 ms, 98 calls, 194k tris) — symmetric; `centre-crane-vs-photo032-marks.png` (crane view 40 fps, p95
+49.9 ms, while the CPU sat at 98–100 °C from other load). One 2562 × 1440 shot came out from a camera ~9 m up
+and was retaken: the intermittent camera-override fault already on record, not understood.
+
 ### The column wash — a baked lightmap (fixes "the room reads dark")
 
 Two causes, both measured. (1) Every real lamp's `light.distance` — which is

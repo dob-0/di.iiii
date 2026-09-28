@@ -151,3 +151,18 @@
 - OWED / GUESS: the press's exact x (±1.5 m) and depth; whether the right tower stands clear of the machine line (site
   check); the press is still a massing box (reads as a lit white block); the 024 camera; the originals of 027–035; truss
   and decks are not on the rental list; laser LSO; the owner's look.
+
+## 2026-09-28 04:13 — the owner: "make the scene in center". Booth on the nave axis
+
+- Owner (screenshot from the dance floor, the booth left of the view's centre): "make the scene in center it not the
+  center right?", then "dj is in ceneter … the stage size i think is ok". Option D chosen: booth, goalpost and all
+  booth lamps x 1.65 → 0 (−1.65 m); size 3 × 2 × 1.2 m and the 1.0 m gap to the press face kept; towers x ±3.5.
+- Press unmoved (x 0.25–3.05), behind the right half of the riser; its uplights at x 0.55/1.65/2.75 (even on the press)
+  + 4.6/6.3/8.0 (machine line). Dance floor x −10…10, z 7.5…48 (bags + SW loose machinery to clear). Backstage
+  x −6…6, z −10…−1. New `rig.opening` / `openingShot` / `openingOps` (fixed camera + savedView + spawn on the centre
+  line, 18 m out); rig-look view `opening`. Tests 133/133: symmetric zones, axis 0 for every mirrored group, the opening
+  shot on x 0 with the walker's yaw π, press lit evenly; all 5 looks: no refusal, crane clash or DJ-beam clash.
+- Backup `~/di-backups/moxir-before-centre-2026-09-28/` (bundle + hall document v1526). Imported + rigged (doc v1589).
+- SEEN: `~/Downloads/moxir-hall/centre-opening.png` (2562 × 1440, 60 fps, symmetric), `centre-crane-vs-photo032-marks.png`
+  (40 fps, p95 49.9 ms under 98–100 °C CPU from other load). One opening shot came from ~9 m up (override fault, known,
+  not understood); retaken. Two runs lost the WebGL context ("blocked") after thermal waits and rendered nothing.

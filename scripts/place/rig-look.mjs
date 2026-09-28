@@ -32,7 +32,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { parseArgs, readJson, say, die } from './common.mjs'
-import { buildRig, stageFrame } from './rig-lib.mjs'
+import { buildRig, openingShot, stageFrame } from './rig-lib.mjs'
 import { FIXTURE_DIR, readGeometry } from './fixtures-glb.mjs'
 import { toTRS } from './fixture-lib.mjs'
 
@@ -94,6 +94,9 @@ export const viewpoints = (hall, rig) => {
         // High on the crane runway, three-quarter over the whole rig.
         over: { position: [-g.crane_rail_x_m + 1, g.crane_rail_x_m ? g.runway_top_m + 2 : 12, stage.front + stage.into * 26], target: [0, 3, stage.back], fov: 60 }
     }
+    // The space's own first screen, as rig.mjs writes it (rig.opening).
+    const opening = openingShot(rig, stage)
+    if (opening) views.opening = opening
     // A camera a photograph was taken from (hall.json geometry.cameras):
     // `crane` is photo 032's, the owner's marked picture.
     for (const [name, cam] of Object.entries(g.cameras || {})) {

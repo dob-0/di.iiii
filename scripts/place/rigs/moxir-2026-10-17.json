@@ -14,22 +14,19 @@
         "stage": "The owner, 2026-09-28, on the first rebuild: \"i mention the dj place i think it will not big how you created you made it so big, so stage is the near the metal thing like dj near a bit top and centre of the metal things\". So the 'stage' is a DJ place: a small riser, a bit raised, centred on the forging press ('the metal things'), close in front of it; the machinery is the picture behind the DJ. Positions from the photographs (photo 032's fitted camera, cross-checked from photo 004 with EXIF intrinsics; scripts/place/photo_meta.py)."
     },
     "assumptions": [
-        "The DJ place (the owner's green, 2026-09-28) is a riser of stage decks 3 m wide x 2 m deep x 1.2 m high, centred on the forging press (x 1.65 m, the press's centre; +-1.5 m), its back edge 1.0 m in front of the press's face (z 3.2 m, +-1.5 m), facing the entry and the crowd. Three 2 x 1 m decks on 1.2 m legs; the owner's 'a bit top' read as 1.0-1.4 m. Options considered: stage.options.",
+        "The DJ place (the owner's green, 2026-09-28) is a riser of stage decks 3 m wide x 2 m deep x 1.2 m high ON THE NAVE CENTRE LINE (x 0; the owner, 04:13: 'make the scene in center'), its back edge 1.0 m in front of the press's face (z 3.2 m, +-1.5 m), facing the entry and the crowd. The press stays where it stands, 1.65 m right of the axis (range 0.5-3.5), behind the right half of the riser. Three 2 x 1 m decks on 1.2 m legs; 'a bit top' read as 1.0-1.4 m. Options considered: stage.options (D chosen).",
         "The DJ stands behind a 1.8 x 0.8 m DJ table, 0.95 m high, at the riser's front edge; treads up the left side (toward the backstage); a crowd barrier 1.3 m in front of the riser, 9 m long. The crowd (blue) fills the floor from the barrier to under the crane.",
-        "The machinery stays the backdrop: the press (to 5.3 m) and the machine line beside it stand behind and above the DJ as the crowd sees him; the goalpost header is at 7 m, above the press's crown, so it frames the machinery rather than cutting it.",
+        "The machinery stays the backdrop: the press (to 5.3 m) stands behind the right half of the riser and the machine line beside it further right, so from the floor the DJ is seen against the press; the goalpost header at 7 m is above the press's crown.",
         "The truss is a small ground-supported goalpost straddling the riser: two towers 7 m apart standing on the floor either side of the booth, a header at 7 m over the booth's back half. No truss is on the rental list — OWED (a 290 mm box truss goalpost of this size is a stock rental item). The right tower stands where the machine line may reach (photos 004/032 show machines on the SW half of the nave from the press to the white bags): a site check is OWED.",
         "The rental list's counts are all kept: 8 UP-B380F at the booth (4 on the floor right behind the riser, 2 either side of it) and 10 on the dance floor's column bases; 12 UP-250BSW = 6 under the header + 6 as side light from the bases of the first three column pairs; 8 UP-HK1915 bee-eyes on side arms up the two towers (4 each); 50 UP-PL5403 = 32 on the nave columns (both faces) + 12 on the next rows + 6 uplighting the press and the machine line from their foot. No narrow beam passes through the DJ (a box from the riser's back strip to the table, 2 m tall, checked on every aim).",
         "Lasers stand on the top plates of the two towers (7.15 m) and are aimed UP into the roof over the audience; the rig script refuses any laser aim that descends, and any that passes under 3 m above the floor. This is a picture of intent, not a laser safety assessment — a qualified laser safety officer and the national rules (e.g. the Maximum Permissible Exposure limits of IEC 60825-1) are OWED before any 40 W laser is switched on in front of people.",
         "CO2 jets, cold spark and smoke machines are drawn as the machines (their models), standing where they stand; what they emit is not simulated. Cold sparks stand in the pit at the foot of the riser, CO2 jets along the pit, both behind the barrier.",
-        "Each LOOK is one static state for previsualisation (a focus palette), not a show: positions are the rig's, aims and colours the look's. The booth's lamps mirror about the booth's axis (x 1.65 m); the lamps on the building's columns mirror about the nave's (x 0), 1.65 m apart. Brightness between fixtures follows the datasheets (photometry below); the overall exposure is one chosen number (photometry.sceneScale)."
+        "Each LOOK is one static state for previsualisation (a focus palette), not a show: positions are the rig's, aims and colours the look's. Every lamp but the press's own six mirrors about the nave centre line (x 0), the booth's axis too. Brightness between fixtures follows the datasheets (photometry below); the overall exposure is one chosen number (photometry.sceneScale)."
     ],
     "stage": {
         "kind": "booth",
         "label": "DJ place (the owner's green, 2026-09-28)",
         "intent": "owner's words 2026-09-28: 'dj place ... not big ... near the metal thing ... a bit top and centre of the metal things'",
-        "centre_on": [
-            "press"
-        ],
         "faces": "entry",
         "width_m": 3,
         "depth_m": 2,
@@ -61,12 +58,8 @@
         },
         "estimated": {
             "centre_x_m": {
-                "value": 1.65,
-                "range": [
-                    0.5,
-                    3.5
-                ],
-                "how": "press massing x 0.25..3.05 (photo 032 fit); photo 004 (EXIF f 2688 px, horizon 1399, vanishing point u 2140 from the centred far gate) puts the press 1.7 m right of the axis via the white bags"
+                "value": 0.0,
+                "how": "the nave axis, by the owner's choice; the press behind it is at x 1.65 (range 0.5-3.5), so the riser (x -1.5..1.5) overlaps the press's face from x 0.25 to 1.5"
             },
             "press_face_z_m": {
                 "value": 3.2,
@@ -95,14 +88,14 @@
         "options": [
             {
                 "id": "A-press-centred",
-                "chosen": true,
+                "chosen": false,
                 "size_m": [
                     3,
                     2
                 ],
                 "deck_h_m": 1.2,
                 "centre_x_m": 1.65,
-                "why": "centred on the press, the tallest of the metal things and the one he drew along (1c3956d1); the machine line reads beside it to the right"
+                "why": "centred on the press, the tallest of the metal things and the one he drew along (1c3956d1); the machine line reads beside it to the right — chosen first (01:00-04:00), the owner found the scene off-centre"
             },
             {
                 "id": "B-small",
@@ -112,7 +105,8 @@
                 ],
                 "deck_h_m": 1.0,
                 "centre_x_m": 1.65,
-                "why": "the smallest booth: 2 decks, room for a DJ and a table only; no space for a second DJ or the booth-top beams"
+                "why": "the smallest booth: 2 decks, room for a DJ and a table only; no space for a second DJ or the booth-top beams",
+                "chosen": false
             },
             {
                 "id": "C-machine-centred",
@@ -122,19 +116,23 @@
                 ],
                 "deck_h_m": 1.2,
                 "centre_x_m": 4.5,
-                "why": "centred on the press AND the rusty machine line beside it (x 0.25..8): the visual middle of 'the metal things' seen from the floor, but the riser would stand in the machinery on the SW half"
+                "why": "centred on the press AND the rusty machine line beside it (x 0.25..8): the visual middle of 'the metal things' seen from the floor, but the riser would stand in the machinery on the SW half",
+                "chosen": false
             },
             {
                 "id": "D-nave-centred",
                 "size_m": [
-                    4,
+                    3,
                     2
                 ],
-                "deck_h_m": 1.4,
+                "deck_h_m": 1.2,
                 "centre_x_m": 0.0,
-                "why": "on the hall's axis, so the whole rig mirrors about one line; the press then stands 1.65 m off-centre behind the DJ, not 'centre of the metal things'"
+                "why": "on the hall's axis, so the whole rig and the room's first screen mirror about one line (the owner's call, 04:13: 'make the scene in center'); the press stands 1.65 m right of centre behind the DJ, still overlapping the riser",
+                "chosen": true
             }
-        ]
+        ],
+        "x_m": 0.0,
+        "centred": "on the NAVE centre line (x 0), owner 2026-09-28 04:13: 'make the scene in center it not the center right?' — option D. The press stays where it stands (x 0.25..3.05, centre 1.65), 1.65 m right of the booth's axis behind it."
     },
     "truss": {
         "kind": "ground-supported goalpost over the booth",
@@ -321,7 +319,15 @@
             "aim": "backdrop",
             "bake": true,
             "symmetric": false,
-            "note": "6 on the floor at the foot of the press and the machine line beside it, uplighting them as the booth's backdrop; the machine line is off the axis, so this group is not mirrored"
+            "note": "6 on the floor at the foot of the machinery: 3 evenly across the press's 2.8 m face (x 0.55, 1.65, 2.75 — the press lit evenly on its own centre), 3 along the machine line beside it (x 4.6-8.0). Off the axis by nature, so not mirrored",
+            "x_m": [
+                0.55,
+                1.65,
+                2.75,
+                4.6,
+                6.3,
+                8.0
+            ]
         },
         {
             "id": "laser-stage",
@@ -689,5 +695,12 @@
                 "beam380-flank": "#ffffff"
             }
         }
+    },
+    "opening": {
+        "a": 18,
+        "h": 1.6,
+        "target_h": 3.5,
+        "fov": 60,
+        "note": "the first screen: 18 m out on the dance floor, on the centre line, eye height, looking straight at the booth and the press (owner, 04:13)"
     }
 }
