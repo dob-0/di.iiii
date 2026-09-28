@@ -104,6 +104,21 @@ describe('room -> desk -> room, on a real desk', () => {
         expect((await run()).ops).toEqual([])
     })
 
+    it('keeps a typed address the desk refuses, flagged, instead of writing the old one back', async () => {
+        // Seen in the plot, 2026-09-28: #48 typed to U1.450 over #47 (445-468); the desk
+        // refused (overlap) and answered `kept` at 469, and the write-back put 469 back,
+        // so the conflict the person made vanished instead of being drawn.
+        const { post } = await realDesk()
+        let doc = normalizeProjectDocument({ entities: [lamp('a', 'up-b380f'), lamp('b', 'up-b380f')] })
+        const apply = (ops) => { doc = applyProjectOps(doc, ops) }
+        await autoPatch({ projectId: 'hall', entities: doc.entities, library, post, applyOps: apply })
+        const known = addressMap(doc.entities)
+        apply([{ type: 'updateComponent', payload: { entityId: 'b', component: 'fixture', patch: { address: 10 } } }])
+        const out = await autoPatch({ projectId: 'hall', entities: doc.entities, library, post, applyOps: apply, moved: typedMoves(doc.entities, known) })
+        expect(out.result.flags.map((f) => [f.key, f.code])).toEqual([['hall:b', 'overlap']])
+        expect(doc.entities.find((e) => e.id === 'b').components.fixture.address).toBe(10)
+    })
+
     it('says so when there is no desk', async () => {
         const out = await autoPatch({ projectId: 'p', entities: [lamp('a', 'up-b380f')], library, post: async () => { throw new Error('refused') } })
         expect(out).toMatchObject({ ok: false, message: 'the desk did not answer' })

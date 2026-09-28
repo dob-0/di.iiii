@@ -5,6 +5,21 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-28 — view B of the rig builder: the plot, the room beside it, sheet 1
+
+- `/{space}/plot/{project}`: the rig drawn from above like a lighting plot — the hall from
+  its own model data (`components.venuePlan`), columns, grid, zones, machinery, overhead
+  dashed; truss with lacing and run dimensions, towers, decks; one RP-2-style symbol per
+  fixture type at its mount with unit #, fixture # and universe.address; conflicts dashed
+  with "!"; key and title block from the patch sheet's own totals.
+- Rail tools select/truss/tower/deck/fixture/fx/measure with the base's `snap()` on the plan;
+  inspector for exact numbers; riders move with their truss; every write is an op; auto-patch
+  as in Studio. The Studio viewport beside it, selection shared; phone plan|room toggle and a
+  bottom sheet. Sheet 1 prints A3/A4 landscape at an ISO 5455 scale.
+- MOXIR on an own stack: run drawn, towers stood, two lamps hung and patched (#47 U1.445,
+  #48 U1.469), tower moved, conflict drawn. Fixed a base bug: a refused typed address was
+  written over. Details: `docs/ai/sessions/feat-rig-plot.md`, RIG_BUILD.md §10.
+
 ## 2026-09-28 — build the rig: one data base under the three build views (A first person, B plot, C cards)
 
 - Owner chose all three sketches ("i want to a,b,c all"); the shared base went first, method

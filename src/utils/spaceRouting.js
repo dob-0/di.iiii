@@ -88,6 +88,11 @@ export const RESERVED_APP_SEGMENTS = [
     // /serverXR/api/projects/patch answer 404 on prod (diiii.xyz), on the dev
     // tier and on the local install.
     'patch',
+    // `/{space}/plot/{projectId}` — the lighting plot, view B (src/rigbuild/PlotSurface.jsx,
+    // docs/architecture/RIG_BUILD.md §10). Checked before reserving, 2026-09-28:
+    // /serverXR/api/spaces/plot and /serverXR/api/projects/plot answer 404 on prod
+    // (diiii.xyz), on the dev tier and on the local install.
+    'plot',
     // The sign-in page — /login (SignInSurface in AuthGate.jsx). It was not a
     // route at all: the address a teammate is sent to fell through to the space
     // lookup and answered "Nothing lives at “login”" above a working form.

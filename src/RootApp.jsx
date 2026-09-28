@@ -26,6 +26,7 @@ import { getMakeLocationState, isMakeLocation } from './make/makeRouting.js'
 import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
 import { getPerformLocationState, isPerformLocation } from './perform/performRouting.js'
 import { getPatchSheetLocationState, isPatchSheetLocation } from './rigbuild/patchRouting.js'
+import { getPlotLocationState, isPlotLocation } from './rigbuild/plotRouting.js'
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
@@ -52,6 +53,7 @@ const MapOutput = lazy(() => import('./map/MapOutput.jsx'))
 const PerformApp = lazy(() => import('./perform/PerformApp.jsx'))
 const ScanSurface = lazy(() => import('./scan/ScanSurface.jsx'))
 const PatchSheetSurface = lazy(() => import('./rigbuild/PatchSheetSurface.jsx'))
+const PlotSurface = lazy(() => import('./rigbuild/PlotSurface.jsx'))
 const ToolsRoom = lazy(() => import('./tools/ToolsRoom.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 
@@ -355,6 +357,7 @@ function AppRouter() {
     const mapState = getMapLocationState(location)
     const performState = getPerformLocationState(location)
     const patchSheetState = getPatchSheetLocationState(location)
+    const plotState = getPlotLocationState(location)
     const chatState = getChatLocationState(location)
     const privateChatWith = getPrivateChatTarget(location)
     const appState = getAppLocationState(location)
@@ -553,6 +556,23 @@ function AppRouter() {
             <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
                 <PatchSheetSurface spaceId={patchSheetState.spaceId} projectId={patchSheetState.projectId} />
             </Suspense>
+        )
+    }
+
+    // `/{space}/plot/{projectId}` — the lighting plot, view B (src/rigbuild/): the rig
+    // drawn from above, the room beside it. Behind the same gate as Perform, because
+    // it writes the same document through the same op layer as the Studio.
+    if (isPlotLocation(plotState)) {
+        return (
+            <ProtectedSurface
+                requiredSpaceId={plotState.spaceId}
+                outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
+                showAccountButton={false}
+            >
+                <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                    <PlotSurface spaceId={plotState.spaceId} projectId={plotState.projectId} />
+                </Suspense>
+            </ProtectedSurface>
         )
     }
 

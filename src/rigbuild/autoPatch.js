@@ -66,6 +66,7 @@ export const patchRequest = ({ projectId, entities, library, group = false, prun
 }
 
 const WRITE_BACK = new Set(['created', 'copy', 'moved', 'mode-changed', 'kept'])
+const REFUSED = new Set(['overlap', 'off-the-end'])
 
 /**
  * The ops that make the room record what the desk decided. Nothing is written for a
@@ -76,8 +77,13 @@ const WRITE_BACK = new Set(['created', 'copy', 'moved', 'mode-changed', 'kept'])
 export const writeBackOps = ({ projectId, entities, library, result }) => {
     const byKey = new Map(entities.filter(isLamp).map((entity) => [rigKeyOf(projectId, entity.id), entity]))
     const ops = []
+    // A typed move the desk REFUSED (overlap, past 512) comes back as `kept` at the
+    // desk's old address. Writing that back would erase what the person typed, and
+    // RIG_BUILD.md §4.2 says the typed value stays, flagged, until someone chooses.
+    const refused = new Set((result?.flags || []).filter((f) => REFUSED.has(f.code)).map((f) => f.key))
     for (const a of result?.assignments || []) {
         if (!WRITE_BACK.has(a.how)) continue
+        if (a.how === 'kept' && refused.has(a.key)) continue
         const entity = byKey.get(a.key)
         if (!entity) continue
         const fixture = entity.components.fixture

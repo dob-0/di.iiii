@@ -1591,6 +1591,22 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['patch', 'patch sheet', 'dmx', 'universe', 'address', 'lighting', 'rig', 'fixture', 'mvr', 'gdtf', 'console', 'power', 'circuit', 'print', 'csv', 'light engineer', 'crew'],
         updated: '2026-09-28'
+    },
+    {
+        id: 'lighting-plot',
+        category: 'Spaces & access',
+        title: 'The plot: build the rig from above, the room beside it',
+        summary: 'diiii.xyz/{space}/plot/{project} draws the rig from above like a lighting plot — the hall, its columns and zones, the truss, towers, decks and every lamp with its number and address — and you build on it; the 3D room beside it follows.',
+        body: [
+            'The plot is the rig drawn the way a lighting designer draws it: the hall seen from above at its real size, its walls, columns and grid, the dance floor and the DJ place, the machinery on the floor and what hangs over it dashed. Each lamp is a symbol for its type at the point it hangs from, with its unit number inside and its console number and universe.address beside it. The key and the title block say what is there, how many channels each universe uses and how much power the rig draws.',
+            'On the left is a rail: select, truss, tower, deck, fixture, fx and measure. Drag on the plan with truss to draw a run — it is laid in 3, 2 and 1 m pieces end to end. Click with tower near the end of a truss and the tower stands under it, built to the truss\'s height. Click with fixture near a truss and the lamp hangs at the nearest clamp point. Everything snaps: truss end to truss end, tower top, deck edge, a 0.5 m grid. Type exact numbers in the inspector when you want them — length, height, x, z, turn.',
+            'A new lamp is patched on this machine\'s desk as soon as it is placed, like in Studio: the number and the address appear beside it. Select several and press patch this group to lay them out again as one block. Two lamps on the same channels are drawn in a dashed box with a !, and the inspector says what the desk said.',
+            'The room beside the plan is the same room as in Studio, showing what is selected. On a phone the plan fills the screen; plan and room are one tap apart, and the tools and the inspector are in a sheet you pull up.',
+            'Print sheet 1 gives the plot on A3 or A4 at a true scale with a scale bar — the whole rig, or just what is on the screen for a close-up of the stage. Sheets 2 and 3, the patch and the power, are the patch sheet. Print at 100%, not "fit to page".',
+            'The hall comes from the model it was built from, never drawn by hand. The plot makes no load or rigging calculation: a truss end with no tower under it is marked free, and the real hang needs a rigger\'s sign-off.'
+        ],
+        tags: ['plot', 'lighting plot', 'plan', 'cad', 'truss', 'tower', 'deck', 'stage', 'rig', 'fixture', 'lamp', 'dmx', 'patch', 'address', 'print', 'a3', 'scale', 'room', 'build', 'light engineer', 'crew', 'rp-2'],
+        updated: '2026-09-28'
     }
 ]
 

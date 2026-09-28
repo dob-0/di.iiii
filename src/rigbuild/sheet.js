@@ -394,7 +394,7 @@ ${patchTable(model)}
 <h2>Fixture types</h2>
 <div class="wrap"><table><thead><tr><th>type</th><th>qty</th><th>mode</th><th>maker</th></tr></thead><tbody>${typeRows}</tbody></table></div>
 </section>
-<section class="power">
+<section class="power" id="power">
 <h2>Power — by circuit</h2>
 ${powerTable(model)}
 <p class="note">Datasheet maximum watts, power factor taken as 1 (understates current for discharge lamps and switch-mode supplies). A planning illustration, not an electrical design: an electrician's distribution plan is owed.</p>
