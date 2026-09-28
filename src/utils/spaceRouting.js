@@ -98,6 +98,14 @@ export const RESERVED_APP_SEGMENTS = [
     // /serverXR/api/spaces/cards and /serverXR/api/projects/cards answer 404 on prod
     // (diiii.xyz), on the dev tier and on the local install.
     'cards',
+    // `/{space}/build/{projectId}` — view A, the rig built in the room in first
+    // person, and `/{space}/crew/{projectId}` — the same room read-only for the
+    // light engineers (src/rigbuild/BuildSurface.jsx, docs/architecture/RIG_BUILD.md
+    // §12). Checked before reserving, 2026-09-28: /serverXR/api/spaces/{build,crew}
+    // and /serverXR/api/projects/{build,crew} answer 404 on prod (diiii.xyz), on the
+    // dev tier and on the local install.
+    'build',
+    'crew',
     // The sign-in page — /login (SignInSurface in AuthGate.jsx). It was not a
     // route at all: the address a teammate is sent to fell through to the space
     // lookup and answered "Nothing lives at “login”" above a working form.

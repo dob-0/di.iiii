@@ -2,7 +2,6 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useProjectDocumentSync } from '../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../project/hooks/useOpHistory.js'
 import { useProjectStore } from '../project/state/projectStore.js'
-import { uploadProjectAsset } from '../project/services/projectsApi.js'
 import { applyProjectOps, generateId } from '../shared/projectSchema.js'
 import { useRigAutoPatch } from '../studio/hooks/useRigAutoPatch.js'
 import { lightingApiUrl, probeLightingDesk } from '../map/lightingLink.js'
@@ -25,11 +24,7 @@ import { isEffectType, shapePath } from './plotSymbols.js'
 import { FLAG_WORDS } from './sheet.js'
 import { countWords } from './rental.js'
 import PlotDrawing, { SCREEN_SIZES } from './PlotDrawing.jsx'
-import truss1Url from '../../scripts/rigbuild/pieces/truss-1m.glb?url'
-import truss2Url from '../../scripts/rigbuild/pieces/truss-2m.glb?url'
-import truss3Url from '../../scripts/rigbuild/pieces/truss-3m.glb?url'
-import towerUrl from '../../scripts/rigbuild/pieces/tower.glb?url'
-import deckUrl from '../../scripts/rigbuild/pieces/deck-2x1.glb?url'
+import { usePieceAssets } from './usePieceAssets.js'
 import './plot.css'
 
 // THE PLOT — view B of the rig builder: the rig drawn from above like a lighting
@@ -43,8 +38,6 @@ import './plot.css'
 
 const PlotRoom = lazy(() => import('./PlotRoom.jsx'))
 const PlotPrint = lazy(() => import('./PlotPrint.jsx'))
-
-const PIECE_URLS = { 'truss-1m': truss1Url, 'truss-2m': truss2Url, 'truss-3m': truss3Url, tower: towerUrl, 'deck-2x1': deckUrl }
 
 export const TOOLS = [
     { id: 'select', label: 'select', key: 'v' },
@@ -215,7 +208,7 @@ function ToolOptions({ tool, options, setOptions, library }) {
     return <div className="rigplot-options"><p className="rigplot-hint">Click a lamp or a truss; Shift adds to the selection; drag on empty floor to box-select. Drag to move — it snaps. R turns 90° (Shift+R 15°), Delete removes, arrows nudge 0.5 m.</p></div>
 }
 
-function Inspector({ model, selectedIds, entities, library, edit, patchGroup, runOf }) {
+export function Inspector({ model, selectedIds, entities, library, edit, patchGroup, runOf }) {
     const lamps = model.lamps.filter((l) => selectedIds.includes(l.id))
     const pieces = model.pieces.filter((p) => selectedIds.includes(p.id))
     if (!lamps.length && !pieces.length) return null
@@ -359,20 +352,7 @@ export default function PlotSurface({ spaceId, projectId, library = TYPE_LIBRARY
     const runOf = useCallback((id) => model.runs.find((r) => r.ids.includes(id)) || null, [model.runs])
 
     // --- the asset for a piece's body: uploaded once per project, content-hashed ---
-    const assetIds = useRef({})
-    const assetIdFor = useCallback((kind) => {
-        const name = `rigbuild-${kind}.glb`
-        return assetIds.current[kind] || (document_.assets || []).find((a) => a.name === name)?.id || null
-    }, [document_.assets])
-    const ensureAsset = useCallback(async (kind) => {
-        const known = assetIdFor(kind)
-        if (known) return known
-        const blob = await (await fetch(PIECE_URLS[kind])).blob()
-        const asset = await uploadProjectAsset(projectId, new File([blob], `rigbuild-${kind}.glb`, { type: 'model/gltf-binary' }))
-        assetIds.current[kind] = asset.id
-        applyLocalOps({ type: 'upsertAsset', payload: { asset: { ...asset, name: `rigbuild-${kind}.glb` } } })
-        return asset.id
-    }, [assetIdFor, projectId, applyLocalOps])
+    const { assetIdFor, ensureAsset } = usePieceAssets({ projectId, document: document_, applyOps: applyLocalOps })
 
     const edit = useCallback((ops, message) => {
         if (!ops?.length) return

@@ -28,6 +28,7 @@ import { getPerformLocationState, isPerformLocation } from './perform/performRou
 import { getPatchSheetLocationState, isPatchSheetLocation } from './rigbuild/patchRouting.js'
 import { getPlotLocationState, isPlotLocation } from './rigbuild/plotRouting.js'
 import { getCardsLocationState, isCardsLocation } from './rigbuild/cardsRouting.js'
+import { getBuildLocationState, isBuildLocation } from './rigbuild/buildRouting.js'
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
@@ -56,6 +57,7 @@ const ScanSurface = lazy(() => import('./scan/ScanSurface.jsx'))
 const PatchSheetSurface = lazy(() => import('./rigbuild/PatchSheetSurface.jsx'))
 const PlotSurface = lazy(() => import('./rigbuild/PlotSurface.jsx'))
 const CardsSurface = lazy(() => import('./rigbuild/CardsSurface.jsx'))
+const BuildSurface = lazy(() => import('./rigbuild/BuildSurface.jsx'))
 const ToolsRoom = lazy(() => import('./tools/ToolsRoom.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 
@@ -361,6 +363,7 @@ function AppRouter() {
     const patchSheetState = getPatchSheetLocationState(location)
     const plotState = getPlotLocationState(location)
     const cardsState = getCardsLocationState(location)
+    const buildState = getBuildLocationState(location)
     const chatState = getChatLocationState(location)
     const privateChatWith = getPrivateChatTarget(location)
     const appState = getAppLocationState(location)
@@ -592,6 +595,29 @@ function AppRouter() {
                 <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
                     <CardsSurface spaceId={cardsState.spaceId} projectId={cardsState.projectId} />
                 </Suspense>
+            </ProtectedSurface>
+        )
+    }
+
+    // `/{space}/build/{projectId}` — view A (src/rigbuild/): the room in first person,
+    // the rig built in it by hand. Behind the same gate as the plot, because it writes
+    // the same document. `/{space}/crew/{projectId}` is the same room read-only for
+    // the light engineers, with no gate of its own — like the patch sheet, it reads
+    // the document with the visitor's own session and the server decides.
+    if (isBuildLocation(buildState)) {
+        const surface = (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <BuildSurface spaceId={buildState.spaceId} projectId={buildState.projectId} crew={buildState.crew} />
+            </Suspense>
+        )
+        if (buildState.crew) return surface
+        return (
+            <ProtectedSurface
+                requiredSpaceId={buildState.spaceId}
+                outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
+                showAccountButton={false}
+            >
+                {surface}
             </ProtectedSurface>
         )
     }
