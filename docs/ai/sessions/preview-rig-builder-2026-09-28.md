@@ -80,3 +80,26 @@ worktree against the install's API; the server itself needs none of them (not pa
   --replace` (the new hall), `load-plot.mjs --plan-only` (dance zone 10.7 m, new press envelope), `rig.mjs --reaim
   par-press,bsw250-truss --wash-only`, `rig.mjs --night-only`, `looks.mjs`. Backup
   `~/di-backups/moxir-before-hallfix-2026-09-28/` (`di open` any `.diiii` there to undo). Details: #587's note.
+
+## Step 6 — the rig's steps row, the doors in, the Studio camera: `0.4.16-rigbuilder.6`
+
+- Merged `feat/rig-nav` (`19fce0c6`). Split when the stack lands: the steps row + the doors on #624/#622; the
+  RigBodies Suspense boundary and the fixed-camera Studio fix on #622. Method: RIG_BUILD.md §14.
+- Code only: installing changes no data. Backup `step-6/`; `rollback.sh --to rigbuilder.5` (dry-run exit 0, with and
+  without `--with-data`). Artifact sha256 `1e68222c…`.
+- "when i enter studio can't move": MOXIR's `presentationState.mode` is `fixed-camera` (locked: false), and the Studio
+  turned navigation OFF on the mode alone, so CameraControls never mounted. On rigbuilder.5 in his browser build: 0/6
+  wheel ticks taken, drags moved nothing. On .6: wheel taken, right-drag/left-drag/wheel change 13.8/14.5/13.7 % of the
+  frame. The Studio has no WASD/arrow camera by design. The Suspense isolation was correct but was not the cause.
+- Seen on the install (Flatpak Chromium 152, default flags, iGPU ANGLE Mesa UHD TGL GT1, flock, CPU ≤ 85 °C to start;
+  desktop 1440 DPR 2, phone 390×844 DPR 3): every hop one click, /moxir → equipment → build → plot → cards → patch →
+  crew → light desk → back to crew → room → cards; build legend on the first B; the row hides under the locked pointer
+  and returns on Esc; Q still reaches the hand; phone row targets all ≥ 44 px, no sideways scroll. Shots
+  `~/Downloads/rig-nav/installed-*`.
+- NOT fixed here (data, owed to the hall-fix line): moxir-hall on the install holds 90 spotLights with NO
+  `fixture.type` (0 typed) after the hall fix, so `hasRigLamps` is false and the room draws cone markers, the row says
+  "0 of 104 placed" and the patch sheet is empty. On a copy with `load-plot.mjs` re-run (104 typed), the bodies draw in
+  /moxir view mode and in the Studio, the 8 GLBs load 200 (`~/Downloads/rig-nav/bodies-stack/`). Careful: on that copy
+  load-plot also removed the rental list, so rental.mjs must run after it (migrate-moxir.sh's order).
+- fps on the iGPU measured 3 (rAF) in build and the Studio at 82–96 °C package with other sessions rendering; the same
+  3 with the row display:none, so the row is not the cost. Not the owner's 14–19 fps figure — heat, unverified cold.
