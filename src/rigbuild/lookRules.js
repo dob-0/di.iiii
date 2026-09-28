@@ -62,7 +62,8 @@ export const AIM_RULES = {
         return { target: [slot.pos[0], box.y_m[0] + (box.y_m[1] - box.y_m[0]) * (p.h ?? 0.6), face] }
     },
     'stage-wash': (slot, meta, ctx, p = {}) => (Math.min(meta.rank, meta.n - 1 - meta.rank) % 2 === 0
-        ? { target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * 0.8, ctx.stage.deck, ctx.stage.front - ctx.stage.into * (p.deck_a ?? 1.5)] }
+        // `deck_h`: focus height over the deck (0 = the deck floor); a booth focuses at the DJ's chest (scripts/place/rig-lib.mjs, 2026-09-28)
+        ? { target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * 0.8, ctx.stage.deck + (p.deck_h ?? 0), ctx.stage.front - ctx.stage.into * (p.deck_a ?? 1.5)] }
         : { target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * 1.1, p.wall_y ?? (ctx.stage.backdrop ? 3 : 7), ctx.stage.wall] }),
     // Hung under a crane girder, straight down onto the floor, splayed out (no girder on a
     // position of view C: then straight along the lamp's own line).
