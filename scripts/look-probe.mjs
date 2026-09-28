@@ -12,8 +12,11 @@
 //   kwin_wayland --virtual --xwayland --socket wl-looktest --width 1920 --height 1080 &
 //   WAYLAND_DISPLAY=wl-looktest Xwayland :7 -geometry 1920x1080 -noreset &
 //   echo "Xft.dpi: 144" | DISPLAY=:7 xrdb -merge      # DPR 1.5, as on the owner's screen
-//   DISPLAY=:7 flatpak run org.chromium.Chromium --ozone-platform=x11 \
+//   DISPLAY=:7 flatpak run --env=__NV_PRIME_RENDER_OFFLOAD=1 --env=__GLX_VENDOR_LIBRARY_NAME=nvidia \
+//       org.chromium.Chromium --ozone-platform=x11 --use-angle=gl \
 //       --user-data-dir=<tmp> --remote-debugging-port=9333 --start-maximized about:blank &
+//
+// The probe refuses to measure unless WebGL reports the real GPU.
 //
 // Then, with a dev server up (any port but 4000/443/80):
 //
@@ -48,6 +51,19 @@ url.searchParams.set('inputdebug', '1')
 
 const browser = await chromium.connectOverCDP(cdp)
 const page = browser.contexts()[0].pages()[0]
+// Never measure on a software renderer: SwiftShader/llvmpipe on this
+// machine is what froze it on 2026-09-27. Launch the browser on the GPU
+// (prime-run + flatpak --env, see the header) and this says which it got.
+const renderer = await page.evaluate(() => {
+    const gl = document.createElement('canvas').getContext('webgl')
+    const ext = gl && gl.getExtension('WEBGL_debug_renderer_info')
+    return gl ? String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)) : 'no webgl'
+})
+console.error(`[look-probe] WebGL renderer: ${renderer}`)
+if (/swiftshader|llvmpipe|software|no webgl/i.test(renderer)) {
+    await browser.close().catch(() => {})
+    throw new Error(`refusing to run on a software renderer (${renderer})`)
+}
 if (args.settings) {
     await page.goto(url.origin + '/', { waitUntil: 'domcontentloaded' })
     await page.evaluate((s) => localStorage.setItem('di.iiii.look.v1', s), args.settings)

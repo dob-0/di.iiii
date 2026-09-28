@@ -31,7 +31,9 @@ export const LOOK_DEFAULTS = Object.freeze({
     dpi: DEFAULT_LOOK_DPI,
     fov: DEFAULT_LOOK_FOV,
     invertY: false,
-    headBob: true
+    // Off by default, matching the movement lane (feat/elite-move): walking a
+    // venue reads calmer without it; one tick in the Look panel turns it on.
+    headBob: false
 })
 
 const finiteIn = (value, min, max, fallback) => {

@@ -30,13 +30,20 @@
   applied on arrival; an optional easing was considered and not built — nothing measured says it
   helps, and any easing is added latency.
 - **FOV** is applied by `LookFov.jsx` (mounted beside the Walker while walking, restores the camera's
-  own fov after). **Head bob is NOT wired** — it lives in the Walker's useFrame (movement lane):
-  the integrator changes the bob line to `const bobAmount = (fly || !getHeadBob()) ? 0 : …` with
-  `import { getHeadBob } from './lookSettings.js'`.
+  own fov after). **Head bob** (default OFF, as the movement lane chose) is read by the movement
+  lane's loop through its stub `src/components/walkLookSettings.js` (feat/elite-move); at
+  integration its body becomes
+  `import { getHeadBob } from './lookSettings.js'` +
+  `const ON = Object.freeze({ bob: 1 }), OFF = Object.freeze({ bob: 0 })` +
+  `export function getLookSettings() { return getHeadBob() ? ON : OFF }` — no per-frame allocation;
+  keep its name (lookSettings.js has its own `getLookSettings()` returning the full panel state).
 - **Audit, not changed:** `src/algoVrithm/LookAround.jsx` (drag-a-photo panorama, damped, a work —
   outside the platform boundary) and `src/raw/director/OrbitView.jsx` (orbiting an object) are
   grab controls in CSS px, not first-person mouse aim; a counts model does not apply to them.
 - **Owed / unverified:** raw-input branch on Windows/ChromeOS (spec + Chromium docs, not measured
   here); the owner's own Xorg + real mouse (his OS acceleration profile decides whether cm/360
-  holds — the panel says so); the owner's look on his screen.
+  holds — the panel says so); the owner's look on his screen. The in-app runs above were made before
+  the heat rule and did not log their WebGL renderer (the probe now refuses a software one). NOT run
+  after the heat rule: the headed re-check of the slow-pan fix and `npm run check:input` (its
+  headless 3D is barred on aylmo at 98–100 °C); run both on a cool machine before landing.
 - Probe: `scripts/look-probe.mjs` (header has the private-display recipe).

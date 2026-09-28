@@ -33,13 +33,13 @@ describe('sanitizeLookSettings', () => {
         expect(sanitizeLookSettings(null)).toEqual({ ...LOOK_DEFAULTS })
     })
     it('rejects unknown games, clamps numbers, keeps booleans strict', () => {
-        const s = sanitizeLookSettings({ game: 'quake99', sens: -3, dpi: 999999, fov: 5, invertY: 'yes', headBob: false })
+        const s = sanitizeLookSettings({ game: 'quake99', sens: -3, dpi: 999999, fov: 5, invertY: 'yes', headBob: 'yes' })
         expect(s.game).toBe(LOOK_DEFAULTS.game)
         expect(s.sens).toBe(0.001)
         expect(s.dpi).toBe(32000)
         expect(s.fov).toBe(40)
         expect(s.invertY).toBe(false)
-        expect(s.headBob).toBe(false)
+        expect(s.headBob).toBe(false) // not a boolean → default (off)
     })
     it('accepts numeric strings from inputs', () => {
         expect(sanitizeLookSettings({ sens: '2.5', dpi: '1600' })).toMatchObject({ sens: 2.5, dpi: 1600 })
@@ -61,9 +61,9 @@ describe('storage', () => {
     it('setLookSettings persists, notifies and updates the runtime and getters', () => {
         const seen = []
         subscribeLookSettings((s) => seen.push(s))
-        setLookSettings({ fov: 75, headBob: false, invertY: true })
+        setLookSettings({ fov: 75, headBob: true, invertY: true })
         expect(getLookFov()).toBe(75)
-        expect(getHeadBob()).toBe(false)
+        expect(getHeadBob()).toBe(true)
         expect(getLookRuntime().ySign).toBe(-1)
         expect(seen).toHaveLength(1)
         expect(JSON.parse(window.localStorage.getItem(LOOK_STORAGE_KEY)).fov).toBe(75)
