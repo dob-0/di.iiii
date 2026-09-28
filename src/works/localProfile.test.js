@@ -69,6 +69,10 @@ describe('the works registry decides what a build carries', () => {
         // …and their media comes with them.
         for (const dir of workPublicDirs()) expect(profile.publicInclude).toContain(dir)
     })
+    it('carries every program directory public/ holds that the program reads (the inventory\'s renders too)', () => {
+        const profile = resolveBuildProfile({ DI_PROFILE: 'local', DI_LOCAL_SLIM: '1' })
+        expect(profile.publicInclude).toContain('rigbuild')
+    })
 
     it('keeps the slim option stripping exactly what it used to', () => {
         const profile = resolveBuildProfile({ DI_PROFILE: 'local', DI_LOCAL_SLIM: '1' })
