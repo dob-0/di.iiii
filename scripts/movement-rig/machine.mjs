@@ -56,7 +56,11 @@ export async function acquireLock(file, { say = console.log } = {}) {
     fs.mkdirSync(file.replace(/\/[^/]+$/, ''), { recursive: true })
     const t0 = Date.now()
     // -o: only flock itself holds the lock, so ending its process group frees it.
-    const holder = spawn('flock', ['-o', file, 'sh', '-c', 'echo held; exec sleep 86400'], { stdio: ['ignore', 'pipe', 'inherit'], detached: true })
+    // The holder watches THIS process: if the rig is killed (TaskStop, Ctrl+C,
+    // a crash) the lock frees within 2 s. It used to be `sleep 86400`, which
+    // outlived a killed rig and held every session's browser lock for 40 min.
+    const watch = `echo held; while kill -0 ${process.pid} 2>/dev/null; do sleep 2; done`
+    const holder = spawn('flock', ['-o', file, 'sh', '-c', watch], { stdio: ['ignore', 'pipe', 'inherit'], detached: true })
     let waitingSaid = false
     const timer = setInterval(() => { if (!waitingSaid) { say(`  [lock] waiting for ${file}`); waitingSaid = true } }, 3000)
     await new Promise((resolve, reject) => {

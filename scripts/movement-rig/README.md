@@ -30,7 +30,9 @@ Unit tests for the maths: `npx vitest run ../scripts/movement-rig/metrics.test.j
 
 ## What it builds, and why
 
-1. **A private display.** The rig starts `kwin_wayland --virtual --xwayland`,
+1. **A private display.** The rig starts `dbus-run-session -- kwin_wayland --virtual --xwayland`
+   (its own session bus: on the desktop bus, a nested KWin exiting strips the owner's
+   real KWin of its global keys),
    which gives a nested KWin with its own Xwayland (default 2560×1440, the
    owner's panel). It then re-runs itself inside that display with
    `--exit-with-session`, so the display goes away when the run ends.

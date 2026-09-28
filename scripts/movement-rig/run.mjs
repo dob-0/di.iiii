@@ -94,7 +94,11 @@ if (!process.env.DI_MOVRIG_INNER && arg('display') !== 'host') {
     const env = { ...process.env, XDG_SESSION_TYPE: 'wayland' }
     delete env.DISPLAY; delete env.WAYLAND_DISPLAY
     console.log(`[rig] private display: kwin_wayland --virtual ${W}x${H} (socket ${socket}) → ${outDir}`)
-    const r = spawnSync('kwin_wayland', ['--virtual', '--xwayland', '--socket', socket, '--width', String(W), '--height', String(H),
+    // Its own session bus (dbus-run-session): on the owner's DESKTOP bus a nested
+    // KWin, when it exits, takes the owner's real KWin's global key grabs with it
+    // (72 -> 25, measured 2026-09-28 by the gpu-performance session; Meta+arrows,
+    // Alt+Tab gone). --no-global-shortcuts does not prevent that; a private bus does.
+    const r = spawnSync('dbus-run-session', ['--', 'kwin_wayland', '--virtual', '--xwayland', '--socket', socket, '--width', String(W), '--height', String(H),
         '--no-lockscreen', '--no-global-shortcuts', '--no-kactivities', '--exit-with-session', script],
     { env, stdio: ['ignore', fs.openSync(path.join(outDir, 'kwin.log'), 'w'), fs.openSync(path.join(outDir, 'kwin.log'), 'a')], timeout: 45 * 60 * 1000 })
     if (r.error) { console.error(`[rig] kwin_wayland failed to start: ${r.error.message}`); process.exit(2) }
