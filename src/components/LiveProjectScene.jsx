@@ -51,7 +51,7 @@ import {
     WALK_MAX_SPEED, FLY_SPEED, XR_MOVE_SPEED, BOB_AMPLITUDE, BOB_PHASE_PER_M, TURN_SPEED, EYE_HEIGHT,
     DRAG_LOOK_SENSITIVITY, TOUCH_LOOK_SENSITIVITY, TRACKPAD_LOOK_SENSITIVITY,
     WHEEL_DOLLY_SPEED, WALK_PITCH_LIMIT, FLY_PITCH_LIMIT, JOY_RADIUS, BOUNDS_MARGIN, BOUNDS_MIN_HALF,
-    BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_SETTLE_MS
+    BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_SETTLE_MS, BROKEN_LOCK_SETTLE_SPIKE
 } from './walkModeConfig.js'
 import { isTypingTarget } from './walkKeyboard.js'
 import { createWalkSim, advanceWalkSim, teleportWalkSim, horizontalSpeed, nextFlySpeedScale, bobOffset } from './walkPhysics.js'
@@ -583,9 +583,8 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             // Small-move windows that go nowhere (or repeat one delta) — the
             // broken shapes — versus a slow real pan: brokenLockDetector.js.
             const deadLock = createBrokenLockDetector()
-            // Engage-time garbage (see BROKEN_LOCK_SETTLE_MS): deltas inside
-            // the settle window are counted for the dead-streak but never
-            // applied to the view.
+            // Engage-time garbage (see BROKEN_LOCK_SETTLE_MS): inside the
+            // settle window only spikes are dropped; ordinary moves apply.
             let lockEngagedAt = 0
             // Drag-look never reads e.movementX/movementY: the same broken
             // compositors poison them on unlocked moves too (constant -1,0),
@@ -633,7 +632,8 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
                         lockBroken = true
                         document.exitPointerLock()
                     }
-                    if (performance.now() - lockEngagedAt < BROKEN_LOCK_SETTLE_MS) return
+                    if (performance.now() - lockEngagedAt < BROKEN_LOCK_SETTLE_MS &&
+                        Math.max(Math.abs(e.movementX), Math.abs(e.movementY)) > BROKEN_LOCK_SETTLE_SPIKE) return
                     if (e.movementX === 0 && e.movementY === 0) return
                     // Game-style look: a fixed angle per mouse count (the
                     // viewer's sens × the game's yaw constant), pitch at the

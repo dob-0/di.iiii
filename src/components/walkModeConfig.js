@@ -53,7 +53,9 @@ export const BRAKE_TO_STOP_VELOCITY = 0.1
 // (was 4.5 vertical vs 5.2 horizontal). Base = the old horizontal pace; the
 // wheel scales it while flying (walkPhysics.nextFlySpeedScale).
 export const FLY_MAX_SPEED = 5.2
-export const FLY_MIN_ALT = -2
+// Eye 0.3 m above the floor plane (y = 0): low enough to film the ground, never
+// under it. Was -2: the movement rig flew to -1.14 m, under the floor (2026-09-28).
+export const FLY_MIN_ALT = 0.3
 export const FLY_MAX_ALT = 60
 // Leaving fly: settle back to eye height with a critically damped spring
 // (Unity SmoothDamp / Lowe GPG4), capped so a 60 m drop is a glide, not a fall.
@@ -131,10 +133,13 @@ export const BROKEN_LOCK_MIN_COHERENCE = 0.7
 // The first locked move(s) after an engage carry garbage: one wild spike
 // (-19,-116 in the live capture, ~18ms after engage — railed the pitch) and,
 // in some Chromium builds, a synthetic position-sized event at engage time.
-// Locked deltas inside this window are not APPLIED to the view (dead-streak
-// counting still runs); a count-based "skip the first event" is not enough
-// because the number of engage-time garbage events varies per browser.
+// Inside this window only SPIKES are dropped (either axis above
+// BROKEN_LOCK_SETTLE_SPIKE); ordinary moves apply at once. Dropping every
+// move threw away ~320 ms of real look after each click (movement rig,
+// 2026-09-28). Dead-streak counting runs regardless; a count-based "skip the
+// first event" is not enough because the garbage count varies per browser.
 export const BROKEN_LOCK_SETTLE_MS = 200
+export const BROKEN_LOCK_SETTLE_SPIKE = 60
 
 // -- Wheel / dolly --
 // Metres of forward motion per scroll pixel: one classic wheel notch (~48px

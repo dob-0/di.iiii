@@ -66,3 +66,13 @@ describe('the seams the jam surface uses stay optional', () => {
         expect(guarded.length).toBeGreaterThanOrEqual(2)
     })
 })
+
+// Movement rig 2026-09-28: the settle window after a lock used to drop EVERY
+// move, losing ~320 ms of real look per click. Only spikes may be dropped.
+describe('pointer-lock settle window drops spikes only', () => {
+    it('gates the early return on the spike size, not on time alone', () => {
+        const src = SOURCE
+        expect(src).not.toMatch(/lockEngagedAt < BROKEN_LOCK_SETTLE_MS\) return/)
+        expect(src).toMatch(/lockEngagedAt < BROKEN_LOCK_SETTLE_MS &&\s*\n\s*Math\.max\(Math\.abs\(e\.movementX\), Math\.abs\(e\.movementY\)\) > BROKEN_LOCK_SETTLE_SPIKE\) return/)
+    })
+})

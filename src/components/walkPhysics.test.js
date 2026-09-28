@@ -4,7 +4,7 @@ import {
     teleportWalkSim, nextFlySpeedScale, bobOffset, smoothDamp, FLY_SPEED_SCALE_MAX,
 } from './walkPhysics.js'
 import {
-    WALK_MAX_SPEED, WALK_SPRINT_FACTOR, EYE_HEIGHT, FLY_MAX_SPEED, FLY_MAX_ALT, BOB_AMPLITUDE,
+    WALK_MAX_SPEED, WALK_SPRINT_FACTOR, EYE_HEIGHT, FLY_MAX_SPEED, FLY_MAX_ALT, FLY_MIN_ALT, BOB_AMPLITUDE,
 } from './walkModeConfig.js'
 import { confineToAreas } from './walkableAreas.js'
 
@@ -160,6 +160,12 @@ describe('walkPhysics — fly (free camera, drone rule)', () => {
         run({ sim, fps: 60, seconds: 1, inputAt: () => ({ fly: true, vert: 1 }) })
         expect(sim.body.y).toBe(FLY_MAX_ALT)
         expect(sim.body.vy).toBe(0)
+    })
+
+    it('flying down stops above the floor, never under it (rig: -1.14 m on 2026-09-28)', () => {
+        const { sim } = run({ fps: 60, seconds: 3, inputAt: () => ({ fly: true, vert: -1 }) })
+        expect(FLY_MIN_ALT).toBeGreaterThan(0)
+        expect(sim.body.y).toBeCloseTo(FLY_MIN_ALT, 5)
     })
 
     it('fly speed scale multiplies top speed, keeps the stop TIME', () => {
