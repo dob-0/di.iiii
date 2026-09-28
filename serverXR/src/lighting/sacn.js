@@ -49,6 +49,11 @@ function cidFor(name) {
   return cid;
 }
 
+// The desk's 0-based universe index → the E1.31 universe number on the wire (1..63999).
+function wireUniverse(deskUniverse) {
+  return (Math.max(0, Math.floor(Number(deskUniverse) || 0)) + 1) & 0xffff;
+}
+
 function buildPacket({ cid, sourceName, universe, priority, sequence, data, sync = 0 }) {
   const buf = Buffer.alloc(PACKET);
   // --- root layer
@@ -113,16 +118,22 @@ class SACN {
     });
   }
 
+  // `universe` is the DESK's universe, counted from 0 like every other driver here
+  // (the desk's "Universe 1" is index 0, which is also Art-Net 0:0:0). E1.31 counts from
+  // 1 and reserves 0 (ANSI E1.31-2018 §6.2.7: receivers discard it), so the wire number is
+  // one more. Sending the desk index as-is put Universe 1 on sACN universe 0, where no
+  // receiver that follows the spec would ever see it.
   send(universe, data) {
-    const seq = ((this.sequence.get(universe) || 0) + 1) & 0xff;
-    this.sequence.set(universe, seq);
+    const wire = wireUniverse(universe);
+    const seq = ((this.sequence.get(wire) || 0) + 1) & 0xff;
+    this.sequence.set(wire, seq);
     const packet = buildPacket({
-      cid: this.cid, sourceName: this.sourceName, universe,
+      cid: this.cid, sourceName: this.sourceName, universe: wire,
       priority: this.priority, sequence: seq, data,
     });
-    this.lastFrame.set(universe, packet);
+    this.lastFrame.set(wire, packet);
     if (this.offline || !this.ready) { if (this.offline) this.packetsSent++; return true; }
-    const to = this.targets.length ? this.targets : [multicastAddress(universe)];
+    const to = this.targets.length ? this.targets : [multicastAddress(wire)];
     for (const address of to) {
       this.socket.send(packet, 0, packet.length, PORT, address, (err) => {
         if (err) this.lastError = `${address}: ${err.message}`;
@@ -147,4 +158,4 @@ class SACN {
   close() { try { if (this.socket) this.socket.close(); } catch (e) {} this.ready = false; }
 }
 
-module.exports = { SACN, buildPacket, multicastAddress, cidFor, PORT, PACKET };
+module.exports = { SACN, buildPacket, multicastAddress, wireUniverse, cidFor, PORT, PACKET };
