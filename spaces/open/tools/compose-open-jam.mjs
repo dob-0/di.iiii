@@ -233,7 +233,9 @@ if (layout === 'wall') {
   if (texts.scan) { tf(texts.scan, [-8, 1.4, 0], [0, 0, 0], 0.9); txt(texts.scan, { billboard: true }) }
   if (texts.howto) { tf(texts.howto, [8, 1.4, 0], [0, 0, 0], 0.7); txt(texts.howto, { billboard: true }) }
   camera = { projection: 'perspective', position: [0, 11, 11], target: [0, 0, -1], fov: 55, zoom: 1, near: 0.1, far: 300, locked: false }
-  world = { spawn: { x: 0, z: 7, yaw: 3.14159, pitch: 0, altY: 1.6 } }
+  // Build zones OFF: a mosaic is photos laid where this script puts them, and the
+  // server snaps every hangable move back onto the wall while placement is on.
+  world = { spawn: { x: 0, z: 7, yaw: 3.14159, pitch: 0, altY: 1.6 }, placement: { enabled: false } }
 }
 // every light draws a small helper sphere where it stands (the ambient one sat above the
 // back wall and read as a leftover): keep both high and behind the camera
@@ -244,6 +246,19 @@ ops.push({ type: 'setWorldState', payload: { patch: world } })
 
 console.log(`Open Jam @ ${base} v${project.documentVersion} — layout ${layout}, style ${style}: ${photos.length} photos, qr ${!!qr}, texts ${Object.keys(texts).join(',')}, remove ${remove.length}, ops ${ops.length}`)
 if (!apply) { console.log('dry run'); process.exit(0) }
-const r = await fetch(`${base}/api/projects/open-jam/ops`, { method: 'POST', headers: H, body: JSON.stringify({ baseVersion: project.documentVersion, ops }) })
+// The server places each batch against the room as it stood BEFORE the batch
+// (serverXR/src/routes/projectRoutes.js placeOps), so turning placement off in the
+// same batch as the moves is too late: every move would still be snapped back onto
+// the wall. Off first, alone; then the moves. (2026-09-28: `floor` after `wall` left
+// all photos hanging at 1.15 m.)
+let baseVersion = project.documentVersion
+if (layout !== 'wall' && doc?.worldState?.placement?.enabled) {
+  const off = await fetch(`${base}/api/projects/open-jam/ops`, { method: 'POST', headers: H, body: JSON.stringify({ baseVersion, ops: [{ type: 'setWorldState', payload: { patch: { placement: { enabled: false } } } }] }) })
+  const offBody = await off.json().catch(() => ({}))
+  if (!off.ok) { console.error('could not turn build zones off:', off.status, JSON.stringify(offBody).slice(0, 160)); process.exit(1) }
+  baseVersion = offBody.newVersion
+  console.log('build zones off ->', off.status, baseVersion)
+}
+const r = await fetch(`${base}/api/projects/open-jam/ops`, { method: 'POST', headers: H, body: JSON.stringify({ baseVersion, ops }) })
 const body = await r.json().catch(() => ({}))
 console.log('POST ops ->', r.status, body.newVersion ?? JSON.stringify(body).slice(0, 160))

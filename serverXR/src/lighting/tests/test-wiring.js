@@ -119,5 +119,17 @@ check('the desk top links are 44px under a coarse pointer', () => {
   if (!/\.homelink \{ min-height: 44px;/.test(coarse)) throw new Error('.homelink lost its 44px touch height in the (pointer: coarse) block');
 });
 
+// Regression guard (2026-09-28): the desk had a tested Fan route and no way to reach it.
+// The page offers exactly the server's styles and sends the selection in its ORDER.
+check('the desk reaches Fan, with the server\'s own styles, in selection order', () => {
+  const { STYLES } = require('../fan.js');
+  const m = js.match(/const FAN_STYLES = \[([^\]]*)\]/);
+  if (!m) throw new Error('app.js has no FAN_STYLES list');
+  const ui = m[1].split(',').map((x) => x.trim().replace(/^'|'$/g, '')).filter(Boolean);
+  if (JSON.stringify(ui) !== JSON.stringify(STYLES)) throw new Error(`fan styles differ: ui ${ui.join(',')} vs server ${STYLES.join(',')}`);
+  if (!/post\('api\/fan'/.test(js)) throw new Error('app.js never posts api/fan');
+  if (!/fixtures:\s*\[\.\.\.sel\]/.test(js)) throw new Error('the fan does not send the selection in its order ([...sel])');
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);

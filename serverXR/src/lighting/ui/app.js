@@ -9,6 +9,8 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 let S = null;                  // last full state from the server
 let DMX = {};                  // live buffers, polled fast
+// The fan styles, in the order ../fan.js defines them (tests/test-wiring.js keeps the two equal).
+const FAN_STYLES = ['line', 'reverse', 'centre', 'mirror', 'repeat', 'cluster', 'random'];
 let sel = new Set();           // selected fixture ids, shared by every view
 let page = 'setup';
 let libProfile = 'rgb';
@@ -1473,7 +1475,36 @@ function buildAttr() {
     const h = holderOf(r);
     return fader(r, h.values[r] ?? 0, h.profile);
   }).join('')}</div>`;
+  // Fan: one gesture, N related values across the selection, in the order it was
+  // selected (the server's own route, POST api/fan — tested there, never reachable
+  // from here until 2026-09-28). Two or more fixtures, or there is nothing to fan.
+  if (sel.size >= 2) {
+    html += `<div class="fanrow" title="Spread one value across the selection, in the order you selected the fixtures">
+      <span class="fanlabel">Fan</span>
+      <select id="fanRole" aria-label="Attribute to fan">${active.map((r) => `<option value="${r}">${r}</option>`).join('')}</select>
+      <select id="fanStyle" aria-label="How the values spread">${FAN_STYLES.map((st) => `<option value="${st}">${st}</option>`).join('')}</select>
+      <label>from <input type="number" id="fanFrom" min="0" max="255" value="0"></label>
+      <label>to <input type="number" id="fanTo" min="0" max="255" value="255"></label>
+      <button class="sq" id="fanGo">Fan</button>
+    </div>`;
+  }
   $('#attrPanels').innerHTML = `<div class="apanel">${html}</div>`;
+
+  const fanGo = $('#fanGo');
+  if (fanGo) fanGo.addEventListener('click', async () => {
+    const role = $('#fanRole').value;
+    const style = $('#fanStyle').value;
+    const r = await post('api/fan', {
+      role, style,
+      fixtures: [...sel],   // selection ORDER: a Set keeps the order things were picked in
+      from: clamp(+$('#fanFrom').value || 0, 0, 255),
+      to: clamp(+$('#fanTo').value || 0, 0, 255),
+    });
+    if (r.error) { say(r.error, true); return; }
+    say(`${role} fanned across ${r.fixtures} fixtures (${style})`);
+    touchedAt = 0;   // the fan was the server's write: read it back now, not after the edit guard
+    await pullState();
+  });
 
   // faders
   $$('#attrPanels .fader').forEach((el) => {

@@ -135,7 +135,8 @@ vi.mock('../map/useMapDocument.js', () => {
         useMapDocument: () => ({
             document, mapping, surfaces: [], syncState: null, store: {}, applyOps: noop,
             addSurface: noop, updateSurface: noop, deleteSurface: noop, reorderSurfaces: noop, setOutput: noop,
-            upsertAsset: noop, addCue: noop, updateCue: noop, deleteCue: noop, reorderCues: noop, fireCue: noop
+            upsertAsset: noop, addCue: noop, updateCue: noop, deleteCue: noop, reorderCues: noop, fireCue: noop,
+            undo: noop, redo: noop, canUndo: () => false, canRedo: () => false
         })
     }
 })
