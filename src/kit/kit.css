@@ -85,19 +85,35 @@
     color: var(--di-dim);
 }
 
+/* Symmetry, measured 2026-09-29 on 1440×900: cards in one row stood 423–571px
+ * tall and a group of 4 or 5 left one card hanging at the left. Now:
+ * - every card in a row is the same height, and its picture, name, sentence,
+ *   button and facts sit on the same lines as its neighbours' (CSS Grid 2
+ *   subgrid, the published method for aligned cards: MDN "Subgrid");
+ * - a short last row is centred: the grid has twice the columns, a card spans
+ *   two, and a lone or paired last card starts one column in. */
 .kit-grid {
+    --kit-cols: 3;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--di-space-5);
-    align-items: start;
+    grid-template-columns: repeat(calc(var(--kit-cols) * 2), minmax(0, 1fr));
+    column-gap: var(--di-space-5);
+    row-gap: 0;
 }
+
+.kit-grid > .kit-card { grid-column: span 2; }
+.kit-grid > .kit-card:last-child:nth-child(3n + 1) { grid-column: 3 / span 2; }
+.kit-grid > .kit-card:nth-last-child(2):nth-child(3n + 1) { grid-column: 2 / span 2; }
 
 /* ── a card ── */
 
+/* five rows shared with the row's other cards: picture, name, sentence, button, facts */
 .kit-card {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-row: span 5;
+    grid-template-rows: subgrid;
+    row-gap: 0;
     min-width: 0;
+    margin-bottom: var(--di-space-5);
     background: var(--di-surface-2);
     border: 1px solid var(--kit-hairline);
     border-radius: var(--di-radius);
@@ -191,7 +207,13 @@
     letter-spacing: 0.1em;
 }
 
-.kit-body { display: flex; flex-direction: column; gap: var(--di-space-3); padding: var(--di-space-4); }
+/* the body's parts are the card's rows; each carries its own inset */
+.kit-body { display: contents; }
+.kit-head, .kit-line, .kit-actions, .kit-facts { margin: 0 var(--di-space-4); }
+.kit-head { padding-top: var(--di-space-4); }
+.kit-line, .kit-actions { padding-top: var(--di-space-3); }
+.kit-actions { align-self: start; }
+.kit-facts { align-self: start; margin-top: var(--di-space-3); margin-bottom: var(--di-space-4); }
 
 .kit-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--di-space-3); }
 .kit-name { margin: 0; font-size: var(--di-text-4); font-weight: 500; letter-spacing: -0.1px; }
@@ -208,7 +230,7 @@
 .kit-where a { color: var(--di-dim); text-decoration: none; border-bottom: 1px solid var(--kit-hairline-strong); }
 .kit-where a:hover { color: var(--di-ink); }
 
-.kit-line { margin: 0; font-size: var(--di-text-3); line-height: 1.5; color: var(--kit-text-2); }
+.kit-line { font-size: var(--di-text-3); line-height: 1.5; color: var(--kit-text-2); }
 
 /* Try: the one button. Needs: the plain sentence when there is none. */
 .kit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--di-space-2); }
@@ -234,7 +256,7 @@
 .kit-needs a { color: var(--di-cyan); text-decoration: none; border-bottom: 1px solid var(--di-cyan-line); }
 
 /* the facts: three short rows, mono labels */
-.kit-facts { margin: 0; display: flex; flex-direction: column; gap: var(--di-space-2); padding-top: var(--di-space-2); border-top: 1px solid var(--kit-hairline); }
+.kit-facts { display: flex; flex-direction: column; gap: var(--di-space-2); padding-top: var(--di-space-2); border-top: 1px solid var(--kit-hairline); }
 
 .kit-fact { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); gap: var(--di-space-2); align-items: baseline; }
 
@@ -312,12 +334,18 @@
 /* ── widths ── */
 
 @media (max-width: 1100px) {
-    .kit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .kit-grid { --kit-cols: 2; }
+    .kit-grid > .kit-card:last-child:nth-child(3n + 1),
+    .kit-grid > .kit-card:nth-last-child(2):nth-child(3n + 1) { grid-column: span 2; }
+    .kit-grid > .kit-card:last-child:nth-child(2n + 1) { grid-column: 2 / span 2; }
 }
 
 @media (max-width: 680px) {
     .kit-page { padding: var(--di-space-6) var(--di-space-4) var(--di-space-7); }
-    .kit-grid { grid-template-columns: minmax(0, 1fr); gap: var(--di-space-4); }
+    .kit-grid { --kit-cols: 1; column-gap: 0; }
+    .kit-grid > .kit-card,
+    .kit-grid > .kit-card:last-child:nth-child(2n + 1) { grid-column: span 2; }
+    .kit-card { margin-bottom: var(--di-space-4); }
     .kit-group { margin-top: var(--di-space-7); }
     .kit-fact { grid-template-columns: minmax(0, 1fr); gap: var(--di-space-1); }
     .kit-stack-table thead { display: none; }
