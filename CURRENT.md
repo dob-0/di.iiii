@@ -13,11 +13,13 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- **Hosting:** prod + the dev tier run natively on a standby host that pulls its own green deploys (`DEPLOY_TARGET=mac`); its build can no longer hang on a dead link; uptime is checked from outside.
-- **The Kit at /tools:** every ready tool seen, tried and read; three.js no longer rides every non-3D page.
-- **Desks:** the lighting desk can fan; the projection desk has undo; the Open Jam floor lays its mosaic; a photo lands in its wall slot at once.
-- **People:** an owner can stop an invite link; an admin sees the site's own traffic; an agent's chat returns on reload with its cost; a guest never reads the server's machine name.
-- vitest capped at half the cores outside CI; batches #592 #597 #601 #604 #605 landed together.
+- the rig-builder line on dev: MOXIR hall + crane rig in three versions; rig base (types, snap, auto-patch, patch sheet, MVR + GDTF)
+- the rig views: plot `/{space}/plot/…`, cards `/cards/…`, first person + crew `/build/…` `/crew/…`, equipment `/equipment/…`
+- hosted show playback: a rig's cue list plays by the wall clock with no desk (RIG_BUILD §16); the tools read only for visitors (§17)
+- the lighting desk takes a console's Art-Net and sACN, and loops a cue list itself
+- one flow for every hand (git hooks); History says who changed what; tier-sync `--skip`
+- small: network rooms link WCC by its public address; three debug-list fixes (#632 #633 #634)
+- 18 waiting notes folded; CURRENT.md cut to the cap so dev deploys again
 
 Full detail: `PROGRESS.md`.
 
