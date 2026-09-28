@@ -43,7 +43,12 @@ export const describeRoute = (path) => {
     const app = getAppLocationState(location)
     if (PLAIN_PAGES.has(app.page)) return app.page
     if (!app.spaceId) return 'front-door'
-    if (workForSegment(app.spaceId)) return 'work'
+    // A work owns only its bare segment and `/scene` (RootApp's isWorkSurface);
+    // deeper paths under it — /wcc/alla-virabyan — are the space's projects.
+    const segments = location.pathname.replace(/^\/+/, '').replace(/\/+$/, '').split('/')
+    const isWorkSurface = workForSegment(app.spaceId)
+        && (segments.length === 1 || (segments.length === 2 && segments[1] === 'scene'))
+    if (isWorkSurface) return 'work'
     if (app.projectSlugSegment || app.projectId) return 'project'
     return 'space'
 }

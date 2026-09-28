@@ -104,7 +104,7 @@ export const MCP_TOOL_NAMES = ['di_find', 'di_describe', 'di_call', 'di_run']
 
 // What a saved space unpacks to — the paths inside a .diiii, read from
 // scripts/space-bundle.mjs (the test checks each name appears there).
-export const DIIII_FILE_ENTRIES = ['space.json', 'scene.json', 'projects/', 'assets/', 'lighting/show.json']
+export const DIIII_FILE_ENTRIES = ['space/meta.json', 'space/ops.jsonl', 'space/scene.json', 'space/assets/', 'space/lighting/show.json', 'projects/<id>/document.json', 'projects/<id>/ops.jsonl', 'blobs/']
 
 const preview = {
     // A real route in the app, framed at ?preview=1 once the card is asked for

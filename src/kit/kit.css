@@ -187,7 +187,7 @@
     border-radius: var(--di-radius-pill);
     color: var(--di-cyan);
     font-family: var(--di-mono);
-    font-size: var(--di-text-1);
+    font-size: var(--di-text-2);
     letter-spacing: 0.1em;
 }
 
@@ -199,7 +199,7 @@
 .kit-where {
     flex-shrink: 0;
     font-family: var(--di-mono);
-    font-size: var(--di-text-1);
+    font-size: var(--di-text-2);
     letter-spacing: 0.06em;
     color: var(--di-faint);
     text-align: right;
@@ -240,7 +240,7 @@
 
 .kit-fact dt {
     font-family: var(--di-mono);
-    font-size: var(--di-text-1);
+    font-size: var(--di-text-2);
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--di-faint);
@@ -266,7 +266,7 @@
 }
 
 .kit-fact dd a:hover { color: var(--di-ink); border-color: var(--kit-hairline-strong); }
-.kit-sources a { font-family: var(--di-mono); font-size: var(--di-text-1); }
+.kit-sources a { font-family: var(--di-mono); font-size: var(--di-text-2); }
 .kit-sources .kit-wiki-link { color: var(--di-cyan); border-color: var(--di-cyan-line); font-family: var(--di-sans); font-size: var(--di-text-2); }
 
 /* ── what we use ── */
@@ -291,12 +291,12 @@
 
 .kit-stack-table { width: 100%; border-collapse: collapse; font-size: var(--di-text-2); line-height: 1.45; }
 .kit-stack-table th, .kit-stack-table td { padding: var(--di-space-2) var(--di-space-3) var(--di-space-2) 0; text-align: left; vertical-align: top; border-bottom: 1px solid var(--kit-hairline); }
-.kit-stack-table thead th { font-family: var(--di-mono); font-size: var(--di-text-1); font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--di-faint); }
+.kit-stack-table thead th { font-family: var(--di-mono); font-size: var(--di-text-2); font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--di-faint); }
 .kit-stack-table tbody th { font-weight: 500; white-space: nowrap; }
 .kit-stack-table tbody th a { color: var(--di-ink); text-decoration: none; border-bottom: 1px solid var(--kit-hairline-strong); }
 .kit-stack-table tbody th a:hover { border-bottom-color: var(--di-cyan); }
 .kit-stack-table td { color: var(--kit-text-2); }
-.kit-mono { font-family: var(--di-mono); font-size: var(--di-text-1); color: var(--di-dim); white-space: nowrap; }
+.kit-mono { font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--di-dim); white-space: nowrap; }
 
 .kit-version {
     margin-top: var(--di-space-7);

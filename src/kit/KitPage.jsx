@@ -123,7 +123,7 @@ function KitCard({ tool, live, onAskLive, coarse }) {
                     ) : tool.needs ? (
                         <span className="kit-needs">
                             {tool.needs.text}{' '}
-                            <a href={tool.needs.href} {...(isAppPath(tool.needs.href) ? {} : { target: '_blank', rel: 'noopener' })}>{tool.needs.label}</a>
+                            <a href={tool.needs.href} {...(isAppPath(tool.needs.href) ? {} : { target: '_blank', rel: 'noreferrer' })}>{tool.needs.label}</a>
                         </span>
                     ) : (
                         <span className="kit-needs">
@@ -137,7 +137,7 @@ function KitCard({ tool, live, onAskLive, coarse }) {
                             <dt>Show</dt>
                             <dd>
                                 {tool.show.map((item) => (
-                                    <a key={item.href} href={item.href} {...(isAppPath(item.href) ? {} : { target: '_blank', rel: 'noopener' })}>{item.label}</a>
+                                    <a key={item.href} href={item.href} {...(isAppPath(item.href) ? {} : { target: '_blank', rel: 'noreferrer' })}>{item.label}</a>
                                 ))}
                             </dd>
                         </div>
@@ -147,7 +147,7 @@ function KitCard({ tool, live, onAskLive, coarse }) {
                         <dd>
                             {tool.madeWith.map((key) => {
                                 const lib = KIT_LIBS[key]
-                                return <a key={key} href={lib.url} target="_blank" rel="noopener">{lib.name}</a>
+                                return <a key={key} href={lib.url} target="_blank" rel="noreferrer">{lib.name}</a>
                             })}
                         </dd>
                     </div>
@@ -155,7 +155,7 @@ function KitCard({ tool, live, onAskLive, coarse }) {
                         <dt>Source</dt>
                         <dd className="kit-sources">
                             {tool.sources.map((path) => (
-                                <a key={path} href={sourceUrl(path)} target="_blank" rel="noopener" title={path}>{path.split('/').pop()}</a>
+                                <a key={path} href={sourceUrl(path)} target="_blank" rel="noreferrer" title={path}>{path.split('/').pop()}</a>
                             ))}
                             <a className="kit-wiki-link" href={`${buildWikiPath()}#${tool.wiki}`}>wiki</a>
                         </dd>
@@ -239,7 +239,7 @@ export default function KitPage({ isLocalInstall = false }) {
                                 <tbody>
                                     {group.entries.map((entry) => (
                                         <tr key={entry.name}>
-                                            <th scope="row"><a href={entry.url} target="_blank" rel="noopener">{entry.name}</a></th>
+                                            <th scope="row"><a href={entry.url} target="_blank" rel="noreferrer">{entry.name}</a></th>
                                             <td className="kit-mono">{entry.version || '—'}</td>
                                             <td>{entry.use}</td>
                                             <td className="kit-mono">{entry.licence}</td>
