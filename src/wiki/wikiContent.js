@@ -1622,6 +1622,22 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['cards', 'rental', 'rental list', 'deal', 'position', 'truss', 'column', 'patch', 'universe', 'dmx', 'looks', 'cue', 'cue list', 'go', 'timeline', 'rig', 'fixture', 'light', 'room', 'phone', 'light engineer'],
         updated: '2026-09-28'
+    },
+    {
+        id: 'rig-build-3d',
+        category: 'Spaces & access',
+        title: 'Build the rig in the room, like Minecraft — and the crew link',
+        summary: 'diiii.xyz/{space}/build/{project} puts you in the room on foot. Press B and a hotbar of truss, towers, decks and the rental list\'s fixtures appears: aim, and a dashed outline shows where the piece will snap; click to place it. Every lamp carries its address in the air. /{space}/crew/{project} is the same room, read only, for the light engineers.',
+        body: [
+            'Walk as in any room: WASD and the mouse (click once to take the mouse, Esc gives it back), F to fly. B turns walking into building. The hotbar holds truss 3, 2 and 1 m, a tower, a 2 × 1 m deck, and every line of the rental list with how many are placed and how many are on order. Pick with 1–9 and 0, or the wheel. When all of a type is placed the slot says none left and the room will not take one more — remove one to hang it elsewhere.',
+            'Aim at what you are building on. A lamp hangs at the nearest clamp point of a truss, or stands on a deck or the floor. A truss aimed at a tower sits on its top; aimed at another truss it continues it from the nearer end; aimed at the floor it hangs at the height Q and E set. A tower aimed under a truss end stands on the floor and is built up to it. A deck joins the edge of the deck you aim at. R turns a piece a quarter (Shift+R 15°). Right-click removes what the crosshair is on, with the lamps hanging on it.',
+            'Placed lamps are patched by the desk on this machine a moment later: the tag above each one says its fixture number and where its channels start, like #36 U2.025. A clash shows on the lamp itself, with a ! and a dashed tag. Click a tag, or aim at a lamp and press I, for its whole patch in a side sheet. For exact numbers, press Esc after placing: the inspector opens on what you placed, and takes x, z, height, turn, a truss run\'s length, a lamp\'s mode and address.',
+            'On a phone: the left half of the screen is the walking stick, a swipe on the right half looks, the crosshair is your hand. The buttons on the right place, remove (del), turn and raise or lower (up, dn); the hotbar scrolls sideways under your thumb.',
+            'The crew link (crew link in the corner) is the same room for the light engineers: tags on, walking only, nothing can be changed, and a clash is tagged from anywhere in the hall. The patch sheet is one tap away. A private space still needs them signed in or invited.',
+            'It is the same rig as the plot and the cards: what you build here shows there, and the other way round. It makes no load or rigging calculation.'
+        ],
+        tags: ['build', 'minecraft', 'first person', 'walk', 'hotbar', 'truss', 'tower', 'deck', 'snap', 'rig', 'fixture', 'lamp', 'patch', 'address', 'tag', 'crew', 'light engineer', 'phone', 'rental list'],
+        updated: '2026-09-28'
     }
 ]
 

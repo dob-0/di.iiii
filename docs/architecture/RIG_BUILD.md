@@ -659,3 +659,125 @@ Not validated:
 - Fixture bodies per lamp (§10.8): the room draws the beams, not a body for each dealt lamp.
 - The GDTF/MVR hand-off of the looks themselves: the cue list travels in the document and on the desk, not in the MVR.
 
+
+---
+
+## 12. View A — the room in first person (`/{space}/build/{project}`, `/{space}/crew/{project}`)
+
+Sketch A: *"inside the room — build like minecraft"*. The owner asked for it first (*"mannual
+instal thing there so mean like in minecraft but you can build scene and everything what we
+need to and it easy connect to our light system"*) and chose all three views; B and C were
+built first, A last. Code: `src/rigbuild/Build*.jsx`, `buildAim.js`, `hotbar.js`, `tags.js`,
+`FixtureBodies.jsx`, `usePieceAssets.js`, `buildRouting.js`.
+
+### 12.1 Where it lives
+
+`/{space}/build/{projectId}` — behind the same gate as the plot and the cards, because it
+writes. `/{space}/crew/{projectId}` — the same surface with `crew`: read only, no gate of its
+own, like the patch sheet (the server decides who may read; a private space answers 401 and
+the page says so, it never draws an empty hall). Both words reserved in both lists; checked
+2026-09-28: `/serverXR/api/{spaces,projects}/{build,crew}` answer 404 on prod, the dev tier
+and the local install.
+
+The room is the walker every space already has (`LiveProjectScene`, WASD, mouse look, F fly,
+Esc release), handed the synced document through its `document` seam and our scene through
+`sceneExtras` — the jam surface's pattern. Three new seams, each defaulting to what walk mode
+did before: `altitudeKeys` (fly keeps Space/C; Q/E go to the hand), `wheelDolly` (the wheel
+scrolls the hotbar while building) and `walkHint` (the hint line says the build keys).
+Nothing here is a second copy of the rig: the writes are the plot's ops (`plotEdits.js`),
+counts the rental list's (`rental.js`), addresses the desk's (auto-patch, §4), tags the plot's
+rows (`plotModel`), and the room follows the desk's look (`useRigLookEntities`).
+
+### 12.2 The hand — aim, ghost, place
+
+| step | method |
+|---|---|
+| aim | a ray from the eye through the crosshair (the cursor when the mouse is not locked) is cast against the RIG, not the venue mesh: the floor plane, each piece as its catalogue box (§2.3; a tower by its base plate), each lamp as a 0.35 m sphere at its lens — slab method (Kay & Kajiya 1986). Reach 40 m. Exact for what can be built on and a few hundred operations a frame; the price, stated: the ray passes through the hall's walls and columns |
+| candidate | what the hand is on becomes the pose `snap()` is given (`placement()`): lamp → nearest truss slot / deck top / floor grid; truss → continue the aimed truss from its nearer end, sit end A on an aimed tower's top, or hang at the Q/E height over the floor; tower → stand under an aimed truss end, built up to it (the plot's `under` rule, plan metric); deck → join the aimed deck's nearest edge at its height. Anything else is refused in words, never guessed |
+| ghost | a dashed outline (line segments, no light, no shadow) of the catalogue box or the type's `size_mm`, drawn at the snapped pose; grey with wide gaps when the list is used up. It costs nothing next to the room |
+| place | left click (locked) or the phone's place button. Pieces as `pieceEntity` (body uploaded once per project, now shared with the plot through `usePieceAssets`), lamps as `lampEntity` (lens from mount; beam-only past 8 real lights, §10.4). A truss that continues a truss takes its name — same run, same position |
+| remove | right click / del: the aimed lamp, or the aimed piece with its riders (`ridersOfIds`) |
+| keys | 1–9, 0 and the wheel pick a slot; R a quarter turn, Shift+R 15° (the plot's heading step); Q/E raise and lower by 0.5 m (truss hanging height, tower) or 0.2 m (deck legs); I opens the aimed lamp's patch; Ctrl+Z / Ctrl+Shift+Z undo and redo through `useOpHistory` |
+| exact values | typing 6.00 m in first person is awkward (sketch A). Esc after placing gives the mouse back and opens the plot's own inspector (`Inspector`, exported from `PlotSurface.jsx`) on what was just placed: x, z, height, turn, a run's length, a lamp's mode, universe, address, unit, position, circuit |
+
+The hotbar is the rental list (§11.1): pieces first (counted, unlimited — the truss is not on
+MOXIR's list), then one slot per line with `placed / ordered`. A used-up slot refuses the next
+one ("all 12 UP-250BSW on the order are placed — remove one to hang it elsewhere"). A type not
+on the list gets no slot; with no list at all every library type is offered, unlimited.
+
+### 12.3 Addresses in the air
+
+A DOM tag per lamp — `#36 U2.025`, `! #38 U2.049` dashed for a conflict (plotModel's
+`CONFLICT_CODES`, the desk's flags included), `#— mode owed`. DOM, not 3D text, because a tag
+must stay crisp, clickable and a thumb-sized target, and 3D text in a di.iiii room is an
+unsolved problem (memory: walk-and-xr-entry). Cheap by construction: at most 24 tags (12 on a
+phone), the nearest within 14 m in front of the eye, re-chosen every 150 ms, positioned every
+frame through refs with no React render; plus the aimed and the chosen lamp at any distance,
+and in crew view every conflict at any distance. A lamp whose mode is owed carries a tag only
+when aimed or chosen (§10.2's rule). A tag opens the patch: the inspector while building, a
+read-only sheet in crew view.
+
+### 12.4 The lamps' bodies
+
+`FixtureBodies.jsx` draws a body per lamp from the MOXIR fixture models (Base / Yoke / Head /
+Lens nodes): one InstancedMesh per kind × part × material with a matrix per lamp, the part
+matrices from `scripts/place/fixture-lib.mjs` `aimFixture` — the code the baked MOXIR bodies
+came from — so a head turns where its beam goes and follows a look; a lens takes its lamp's
+colour. About 40 draw calls however many lamps. A view only; the document keeps the lens and
+the aim. This closes §10.8's "bodies per lamp" for view A (the plot's and the cards' room panes
+still draw beams only).
+
+### 12.5 The phone
+
+The walker's own floating stick (left half), swipe to look (right half), the crosshair is the
+hand. place (112 × 72 px), del, turn, up, dn (52 px) on the right; the hotbar scrolls sideways
+(scroll-snap); a tag has a 44 px target; the aimed lamp is a button for its patch; the
+inspector is a bottom sheet (a side sheet sideways). Keyed on `(pointer: coarse)`, so a phone
+turned sideways keeps the thumb layout (known-fixes: width-keyed "phone" breaks sideways).
+The Fly button stands down while building on a phone (its place is the place button's).
+
+### 12.6 Validated (2026-09-28, MOXIR, own dev stack :4391/:5391, a copy of the centred space)
+
+Data: `space-bundle.mjs export moxir` from the local tier (the re-centred DJ hall, spawn
+0, 1.6, 24.2), imported into a scratch data root; `load-plot.mjs --pieces-only` with
+`/mnt/data/footage/place-moxir-hall-v3/hall.json`; `rental.mjs`; `looks.mjs` with the rig file
+at 70dbdd95; the list dealt on the cards page as in §11.5 but for four UP-250BSW (100 of 104).
+
+| check | result |
+|---|---|
+| pure logic | `buildAim` 16, `hotbar` 4, `tags` 6, `buildRouting` 2 tests; `entityAnimation` +1 |
+| a second small truss, by hand | tower on the floor (−3, 0, 14) → truss 3 m aimed at its top: **snap: tower top** → a second 3 m aimed at the first: **snap: truss end** → tower aimed under the far end: **snap: under the truss end**, built to 6.00 m. The plot reads it as "truss · 6.00 m · h 6.15 m" |
+| four lamps from the hotbar | UP-250BSW at truss slots 2, 5, 2, 5: the slot read 9, 10, 11, **12 / 12**; the fifth refused with the list's sentence. Auto-patch: **#43 U2.169, #44 U2.193, #45 U2.217, #46 U2.241**, tags in the air |
+| conflict | #46 typed to U2.180 in the inspector → the desk refused and left it; `! #43`, `! #44`, `! #46` dashed on the lamps, "! 3 conflicts" in the totals, the desk's sentence in the sheet |
+| one data set | the plot shows the new run, #43–#46 and the three dashed conflicts; the cards say UP-250BSW 12/12 |
+| crew view | a second account: tags on, conflicts tagged, B does nothing, no hotbar, a click opens a read-only patch (no inputs), right-click changes nothing; a guest on the private space is told why it cannot open |
+| real lights | 90 spot lights, **8 real**; the four new lamps are `beam.only` |
+| fps (RTX 3080 Laptop, ANGLE/Vulkan under PRIME, renderer string checked first; vsync 60 Hz) | desktop 1440×900 DPR 2: walking 60, building (ghost + bodies + 24 tags) **60**; crew 60; phone 390×844 and 844×390 DPR 3: 60 |
+| screens | `~/Downloads/rig-build3d/`, all opened; no page overflow on the phone; no console error |
+| thermal | package 69–91 °C across the runs; each GPU run started below 80 °C |
+
+Found and fixed on the way:
+
+- **The whole rig floated in walk mode** — every piece and lamp idle-bobbed and turned (the
+  `float` fallback), beams sweeping with them. A rig entity is now static (known-fixes row,
+  guard seen failing).
+- A browser with no WebGL got a blank page; the room now fails alone and points at the patch
+  sheet. A document that could not be read drew an empty hall; it now says why.
+
+### 12.7 Not validated, and owed
+
+- **A harness workaround, named:** ANGLE/Vulkan under PRIME refuses a WebGL2 context asked for
+  with `powerPreference: 'high-performance'` (probed: `'default'` gives one). LiveProjectScene's
+  Canvas asks r3f's default, `'high-performance'`; StudioViewport asks `'default'`. The GPU
+  runs rewrote the hint in the page. Whether the owner's own browser on aylmo hits this is
+  **unverified** — if it does, walk mode is dark there for every space, and the fix is
+  LiveProjectScene asking `'default'` (the Studio's choice).
+- A real phone and a real mouse (pointer lock on his Wayland desktop; the drag-look fallback
+  places at the cursor, untested by hand).
+- The ray ignores the venue mesh (12.2); a floor spot behind a column can be aimed at.
+- MVR and patch-sheet downloads from the crew view: the patch sheet is a link; the MVR is still
+  `scripts/rigbuild/export-mvr.mjs` only.
+- A console driving the room (the HUD's "console in") waits for `feat/dmx-input` (#599).
+- Bodies in the plot's and cards' room panes; a lamp's heading (body yaw) is not in the document.
+- The desk's allocation for a lamp placed at the end of a busy universe: seen only through
+  auto-patch's own rules (§4); no crew has plugged by it.

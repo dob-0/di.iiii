@@ -5,6 +5,26 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-28 — view A of the rig builder: build it in the room, first person (and the crew link)
+
+- `/{space}/build/{project}`: the walker's own room; B turns walking into building. A hotbar
+  (1–0 / wheel) of truss 3/2/1 m, tower, deck and the rental list's fixtures with their
+  counts; a dashed ghost where `snap()` will put the piece; click places, right-click
+  removes, R turns, Q/E raise and lower; stacking by aiming at what you build on. Every write
+  is the plot's ops; auto-patch as in the Studio; tags `#36 U2.025` in the air, `!` dashed on
+  a conflict; the plot's inspector for exact values (opens on Esc after placing). Lamps get
+  instanced bodies posed by `fixture-lib.mjs`. Phone: place / del / turn / up / dn under one
+  thumb, swiped hotbar. `/{space}/crew/{project}`: the same room read only, ungated.
+- MOXIR on an own stack (:4391/:5391, a copy of the centred space): a second 6 m truss built by
+  hand on two towers, four UP-250BSW hung (12/12, the fifth refused), patched #43–#46
+  U2.169–241, a typed clash shown on the lamps, crew view as a second account; the plot and
+  the cards show the same. 60 fps desktop and phone on the RTX 3080; 8 real lights of 90.
+- Fixed: every rig piece and lamp idle-floated in walk mode (known-fixes; guard seen failing).
+- Owed: LiveProjectScene asks WebGL for `high-performance`, which ANGLE/Vulkan under PRIME
+  refuses — the GPU runs rewrote it in the harness; whether his own browser hits it is
+  unverified. A real phone, his Wayland mouse, MVR download from the crew view, console in
+  (#599). Method: `docs/architecture/RIG_BUILD.md` §12; note `docs/ai/sessions/feat-rig-build-3d.md`.
+
 ## 2026-09-28 — view C of the rig builder: the cards (rental list → positions → patch → looks)
 
 - `/{space}/cards/{project}`: the rental list as cards, `placed n / ordered m`. The list is

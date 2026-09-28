@@ -148,7 +148,7 @@ export default function BuildScene({ model, library, slot, yaw, height, aimRef, 
                 if (!l) continue
                 // Just above the lens: under a hung lamp's body the tag would sit in its beam.
                 proj.set(l.lens[0], l.lens[1] + (l.hung ? 0.15 : 0.35), l.lens[2]).project(camera)
-                const visible = proj.z < 1 && Math.abs(proj.x) < 1.1 && Math.abs(proj.y) < 1.1
+                const visible = proj.z < 1 && Math.abs(proj.x) < 0.98 && Math.abs(proj.y) < 0.98
                 if (!visible) { el.style.visibility = 'hidden'; continue }
                 el.style.visibility = 'visible'
                 const x = ((proj.x + 1) / 2) * size.width

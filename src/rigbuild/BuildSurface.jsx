@@ -129,7 +129,9 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
 
     // The room as the desk's look poses it (a view; the document is not touched).
     const look = useRigLookEntities(projectDocument, { library })
-    const shownDocument = useMemo(() => (projectDocument ? { ...projectDocument, entities: look.entities } : null), [projectDocument, look.entities])
+    // The store starts on an empty document: the room is drawn only once the real one
+    // has arrived, so a link that cannot be read never shows an empty hall as the rig.
+    const shownDocument = useMemo(() => (state.hasLoaded && projectDocument ? { ...projectDocument, entities: look.entities } : null), [state.hasLoaded, projectDocument, look.entities])
     const model = useMemo(() => {
         const m = plotModel({ entities: look.entities, library, deskFlags: crew ? [] : patch.flags, projectId })
         m.lampById = new Map(m.lamps.map((l) => [l.id, l]))
@@ -385,7 +387,11 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
                 />
                 </RoomBoundary>
             ) : (
-                <div className="rigbuild-loading" role="status">{state.error ? `could not open this room: ${state.error}` : 'opening the room…'}</div>
+                <div className="rigbuild-loading" role={state.loadError ? 'alert' : 'status'}>
+                    {state.loadError ? (
+                        <p>This room could not be opened ({state.loadError}).<br />A private space needs a sign-in, or an invite to it.</p>
+                    ) : 'opening the room…'}
+                </div>
             )}
 
             {/* the crosshair: what the hand is on */}
@@ -412,7 +418,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
                 })}
             </div>
 
-            <section className="rigbuild-totals rigplot-mono" aria-label="Rig totals">
+            {shownDocument ? (<section className="rigbuild-totals rigplot-mono" aria-label="Rig totals">
                 <div>patch · {totals.fixtures}</div>
                 <div className="rigbuild-dim">{totals.channels}</div>
                 <div>power · {totals.power}</div>
@@ -425,7 +431,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
                 ) : (
                     <div className="rigbuild-links"><a href={buildCrewPath(spaceId, projectId)}>crew link</a></div>
                 )}
-            </section>
+            </section>) : null}
 
             {building && !crew ? (
                 <section className="rigbuild-hand" aria-label="The hand">
