@@ -5,7 +5,7 @@
  *
  *   flock <lock> node scripts/rigbuild/vis-see.mjs --base https://local.thedi.studio \
  *       --space moxir --project moxir-hall-minimal --out ~/Downloads/moxir-visualiser \
- *       [--trials 60] [--artnet] [--frames] [--window 1600x900]
+ *       [--trials 60] [--artnet] [--frames] [--video] [--window 1600x900]
  *
  * What it measures (the latency harness):
  *   API     a DMX channel moved through the desk's own API (POST /light/api/raw — what a
@@ -63,7 +63,7 @@ const browser = await (async () => {
 const report = { base, space, project, when: new Date().toISOString(), window: `${W}x${H}` }
 let inputOn = false
 try {
-    const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 })
+    const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, ...(arg('video') ? { recordVideo: { dir: out, size: { width: W, height: H } } } : {}) })
     await ctx.addInitScript(() => {
         // ANGLE/Vulkan under PRIME refuses powerPreference 'high-performance' (no WebGL2).
         const orig = HTMLCanvasElement.prototype.getContext
@@ -155,6 +155,24 @@ try {
         await page.waitForTimeout(600)
         const strobe = await room.evaluate(() => window.__diVis.driven().filter((d) => d.shutter === 'strobe').map((d) => d.strobeHz))
         report.strobe = strobe
+        // A screenshot takes longer than a flash: the proof is the renderer itself — every
+        // drawn frame for 2 s, the brightest beam cone's opacity (the strobe pulses it).
+        report.strobeTrace = await room.evaluate(() => new Promise((resolve) => {
+            const trace = []
+            const t0 = performance.now()
+            const step = () => {
+                let max = 0
+                window.__diVis.scene.traverse((o) => { if (o.isMesh && o.material?.blending === 2 && o.geometry?.type === 'ConeGeometry') max = Math.max(max, o.material.opacity) })
+                trace.push([Math.round(performance.now() - t0), Math.round(max * 1000) / 1000])
+                if (performance.now() - t0 < 2000) requestAnimationFrame(step); else resolve(trace)
+            }
+            requestAnimationFrame(step)
+        }))
+        {
+            const peaks = report.strobeTrace.filter(([, o], i, a) => i > 0 && o > 0.05 && o > a[i - 1][1] * 1.5).length
+            report.strobePeaksPerSecond = peaks / 2
+            console.log('strobe: desk rate', strobe[0], 'Hz; cone pulses counted', peaks / 2, '/s over 2 s of drawn frames')
+        }
         for (let k = 0; k < 6; k++) { await page.screenshot({ path: path.join(out, `${String(n++).padStart(2, '0')}-strobe-${k}.png`) }); await page.waitForTimeout(37) }
         await desk('/api/raw', { clear: true })
     }
@@ -231,5 +249,5 @@ try {
     report.packageC = pkg()
     fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2))
     console.log(JSON.stringify(report, null, 2))
-    await browser.close()
+    await browser.close() // closes the contexts too, which is what writes a --video file
 }
