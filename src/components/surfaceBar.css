@@ -96,7 +96,8 @@
 
 .sbar-link { white-space: nowrap; }
 
-.sbar-extra { display: inline-flex; align-items: center; flex-shrink: 0; }
+/* The surface's own controls (Desk | Perform, the Studio's Rig): the links' own gap. */
+.sbar-extra { display: inline-flex; align-items: center; flex-shrink: 0; gap: var(--di-space-5); }
 
 .sbar-more {
     background: none;

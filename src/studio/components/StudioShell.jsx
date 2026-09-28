@@ -13,6 +13,8 @@ import StudioCoachMarks from './StudioCoachMarks.jsx'
 import RigMirrorHint from './RigMirrorHint.jsx'
 import SurfaceBar, { layerReached } from '../../components/SurfaceBar.jsx'
 import DeskPerformSwitch from '../../perform/DeskPerformSwitch.jsx'
+import { hasRig } from '../../rigbuild/hasRigLamps.js'
+import { rigEntryPath } from '../../rigbuild/rigTools.js'
 import useLocalInstall from '../../hooks/useLocalInstall.js'
 import { isEmbedRequest, isPreviewRequest } from '../../utils/previewMode.js'
 import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspaceStorage.js'
@@ -265,6 +267,11 @@ export default function StudioShell({
     // project, strip the editor down to the common tools — unless this device
     // opted back into the full editor via the "All tools" toggle.
     const isJam = isJamProject(document?.projectMeta?.id)
+    // The door to the rig's steps from this project (RIG_BUILD.md §14): its plot.
+    const rigSpaceId = liveProjectState?.spaceId
+    const rigProjectId = document?.projectMeta?.id
+    const projectHasRig = useMemo(() => hasRig(document?.entities || []), [document?.entities])
+    const rigHref = projectHasRig && rigSpaceId && rigProjectId ? rigEntryPath(rigSpaceId, rigProjectId, 'plot') : null
     const [jamAllTools, setJamAllTools] = useState(loadJamAllTools)
     const jamMinimal = isJam && !jamAllTools
     const handleToggleJamTools = useCallback(() => {
@@ -640,6 +647,12 @@ export default function StudioShell({
                     and a project still loading show it, as they show every name. */}
                 {!isJam && (allTools || !layers?.open || layers.open.connections || layers.open.wall) ? (
                     <DeskPerformSwitch current="desk" space={liveProjectState?.spaceId} project={document?.projectMeta?.id} from="studio" />
+                ) : null}
+                {/* Rig, when the project holds one (a typed lamp or a rental list): the
+                    plot of this project, and from there every step of the rig
+                    (src/rigbuild/RigSteps.jsx). One of the bar's own words. */}
+                {!isJam && rigHref ? (
+                    <a className="sbar-link studio-rig-link" href={rigHref} title="The rig of this project: equipment, build, plot, cards, patch sheet, crew link">Rig</a>
                 ) : null}
             </SurfaceBar>
 
