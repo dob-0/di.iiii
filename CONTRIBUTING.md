@@ -40,7 +40,9 @@ as a habit: `DI_ALLOW_FLOW_COMMIT=1`, `DI_ALLOW_FLOW_PUSH=1`, `DI_SKIP_PUSH_GATE
 stash — each exists on one disk and is gone with it. `npm run unsaved -- ~/dev ~/Desktop`
 lists every such thing in every git repo under those folders (di.iiii or not) with the
 command that saves it, and exits 1 when there is any — so a scheduled task can raise it.
-Push your branch the day you make it, even unfinished; a draft PR is fine.
+Push your branch the day you make it, even unfinished; a draft PR is fine. On a fork,
+every pushed branch opens an upstream PR (`auto-pr.yml`) — except `backup/…` and `wip/…`,
+which are for keeping work safe, not for review.
 
 ## The start check
 
