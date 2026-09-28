@@ -91,7 +91,11 @@ for (const [label, props] of [
 // -- pointer-lock look --------------------------------------------------------
 {
     await page.mouse.click(cx, cy)
-    await page.waitForTimeout(400)
+    // Up to 2 s, not a fixed 400 ms: the walker first asks for raw input
+    // (unadjustedMovement), which Chromium on Linux rejects, and only then
+    // takes the plain lock — two browser round trips on a fresh profile,
+    // slow under a software renderer (rawPointerLock.js).
+    await page.waitForFunction(() => document.pointerLockElement?.tagName === 'CANVAS', null, { timeout: 2000 }).catch(() => {})
     const locked = await page.evaluate(() => document.pointerLockElement?.tagName === 'CANVAS')
     check('click engages pointer lock', locked)
     const before = await state()
