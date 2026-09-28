@@ -5,6 +5,7 @@ import { castAim, pieceBox, placement } from './buildAim.js'
 import { typeById } from './fixtureTypes.js'
 import { tagsInView } from './tags.js'
 import FixtureBodies from './FixtureBodies.jsx'
+import RigFlashes from './RigFlashes.jsx'
 
 // VIEW A, INSIDE THE CANVAS — what the walker's own room gains when it is built in
 // (docs/architecture/RIG_BUILD.md §12): the hand's aim, the ghost where the piece in
@@ -71,7 +72,7 @@ function Ghost({ box, ghostRef }) {
  * @param {number} props.tagMax
  * @param {Set<string>|null} props.alwaysTag
  */
-export default function BuildScene({ model, library, slot, yaw, height, aimRef, pointerRef, onAim, tagEls, onTags, chosenId, tagMax, alwaysTag = null, taggable }) {
+export default function BuildScene({ model, library, slot, yaw, height, aimRef, pointerRef, onAim, tagEls, onTags, chosenId, tagMax, alwaysTag = null, taggable, flashes = null }) {
     const { camera, size } = useThree()
     const ghostRef = useRef(null)
     const box = useMemo(() => ghostBoxOf(slot, height, library), [slot, height, library])
@@ -163,6 +164,7 @@ export default function BuildScene({ model, library, slot, yaw, height, aimRef, 
             <Suspense fallback={null}>
                 <FixtureBodies lamps={lamps} library={library} />
             </Suspense>
+            {flashes ? <RigFlashes entities={flashes} /> : null}
             <Ghost box={box} ghostRef={ghostRef} />
         </>
     )

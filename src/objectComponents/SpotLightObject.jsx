@@ -44,12 +44,16 @@ export default function SpotLightObject({
 }) {
     const lightRef = useRef(null)
     const targetRef = useRef(null)
-    const showBeam = beamIsVisible(beam)
     // `beam.only`: the cone and no light (spotBeam.js, beamCastsLight). The
     // light is not mounted at all rather than mounted at zero — three.js pays
     // for a light in every shader whatever its intensity.
     const castsLight = beamCastsLight(beam)
     const throwShape = spotBeamShape({ distance, angle, intensity, haze: beam?.haze })
+    // A cone that would draw at opacity 0 (haze 0, or a lamp held at 0) is not
+    // mounted at all: an additive mesh at 0 adds nothing to the picture and
+    // still costs a draw call and fill over the whole throw. It is how a strobe
+    // draws NO cone in the room (looks.js flashEntities, RIG_BUILD.md §15.6).
+    const showBeam = beamIsVisible(beam) && throwShape.opacity > 0
 
     // The cone is built by hand rather than as <coneGeometry> so the fade along
     // the throw can ride on it as vertex colours. Rebuilt only when the lamp's

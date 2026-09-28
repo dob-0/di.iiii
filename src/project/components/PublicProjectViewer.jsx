@@ -45,6 +45,8 @@ const PublicProjectSceneSurface = lazyWithReload(() => import('./PublicProjectSc
 // The rig's steps row in the room (src/rigbuild/RoomRigSteps.jsx): loaded only when the
 // room holds a rig, so a space with none pays nothing for the rig code.
 const RoomRigSteps = lazyWithReload(() => import('../../rigbuild/RoomRigSteps.jsx'), 'room-rig-steps')
+// The room posed by the desk's live look (src/rigbuild/RoomLookFollower.jsx), same rule.
+const RoomLookFollower = lazyWithReload(() => import('../../rigbuild/RoomLookFollower.jsx'), 'room-look-follower')
 
 // di.iiii's one loading screen — black, one spinner, no drawn words
 // (LoadingScreen.jsx). The published face used to show its own lit text pill
@@ -212,6 +214,10 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // What the room's own corner controls clear at the top: the bar, and the steps row.
     const topClear = `calc(1rem${localInstall.isLocal ? ' + var(--sbar-h, 36px)' : ''}${showRigSteps ? ' + var(--sbar-h, 36px)' : ''})`
 
+    // While the desk plays one of the room's looks, the scene draws the lamps as the look
+    // poses them (RoomLookFollower); the document itself is never written.
+    const [lookEntities, setLookEntities] = useState(null)
+    const sceneDocument = useMemo(() => (document && lookEntities ? { ...document, entities: lookEntities } : document), [document, lookEntities])
     // A visitor is standing here, not authoring. Arming the gate is what makes
     // an `audio` entity silent until asked — see src/utils/roomSound.js. The
     // editor never arms it, so an author still hears what they place.
@@ -479,7 +485,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     <PublicProjectSceneSurface
                         projectId={projectId}
                         spaceId={resolvedRouteSpaceId}
-                        document={document}
+                        document={sceneDocument}
                         title={viewerTitle}
                         entryView={entryView}
                         navMode={navMode}
@@ -555,6 +561,12 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 >
                     Walk / Fly
                 </button>
+            ) : null}
+
+            {roomHasRig && document && !showCodeView ? (
+                <Suspense fallback={null}>
+                    <RoomLookFollower document={document} onEntities={setLookEntities} />
+                </Suspense>
             ) : null}
 
             {/* A rig with versions (RIG_BUILD.md §15): a row of links to its siblings. Shown

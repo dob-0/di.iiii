@@ -15,6 +15,19 @@ import { plotData } from './sheet.js'
 
 export { hasRigLamps } from './hasRigLamps.js'
 
+// A lens as lit as its lamp: a look that holds a lamp at 0 leaves its lens dark glass,
+// not a lit dot of its colour (a view note, looks.js posedEntities `rigShown`).
+const DARK_LENS = 0.06
+export const lensColour = (hex, level) => {
+    const l = Number(level)
+    if (!Number.isFinite(l) || l >= 1) return hex
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex))
+    if (!m) return hex
+    const k = DARK_LENS + (1 - DARK_LENS) * Math.max(0, l)
+    const n = parseInt(m[1], 16)
+    return `#${[(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(v * k).toString(16).padStart(2, '0')).join('')}`
+}
+
 /**
  * @param {object[]} entities  the document's entities (look-posed, if a look is showing)
  * @param {object} library     a type library (libraryWithShow(...) for a show's own types)
@@ -31,7 +44,7 @@ export const rigBodyLamps = (entities = [], library) => {
             mount: l.mount,
             hung: l.hung,
             beam: l.beam,
-            colour: e.components?.light?.color || '#ffffff'
+            colour: lensColour(e.components?.light?.color || '#ffffff', e.components?.rigShown?.level)
         }
     })
 }

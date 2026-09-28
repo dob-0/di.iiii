@@ -59,6 +59,23 @@ export const liveLooksOf = (looks) => (Array.isArray(looks) ? looks : [])
     .sort((a, b) => (Number(b.priority) || 0) - (Number(a.priority) || 0))
     .map((l) => l.lookId)
 
+// The fade the top live look arrived with (GET /light/api/dmx `from`, `since`, `fadeMs`,
+// RIG_BUILD.md §15.6): which look it came from and when, as a time on THIS clock — so a
+// room can draw the lamps part-way between the two. `previous` keeps the answer stable
+// while the same firing is reported again (10 Hz), so nothing re-renders for it.
+export const lookFadeOf = (looks, previous = null, now = Date.now()) => {
+    const top = (Array.isArray(looks) ? looks : [])
+        .filter((l) => l && typeof l.lookId === 'string' && Number(l.level) > 0)
+        .sort((a, b) => (Number(b.priority) || 0) - (Number(a.priority) || 0))[0]
+    if (!top || !Number.isFinite(Number(top.since))) return null
+    const firedAt = now - Math.max(0, Number(top.since))
+    const fadeMs = Math.max(0, Number(top.fadeMs) || 0)
+    const from = typeof top.from === 'string' && top.from ? top.from : null
+    if (previous && previous.lookId === top.lookId && previous.from === from && previous.fadeMs === fadeMs
+        && Math.abs(previous.firedAt - firedAt) < 1000) return previous
+    return { lookId: top.lookId, from, fadeMs, firedAt }
+}
+
 export const mirrorFixtures = (patch, dmx) => {
     if (!patch) return []
     return (patch.fixtures || []).map((fixture) => {
@@ -119,7 +136,8 @@ export function createLightingMirror({ fetchImpl, doc } = {}) {
         fixtures: mirrorFixtures(patch, dmxFrame.dmx),
         master: dmxFrame.master,
         blackout: Boolean(dmxFrame.blackout),
-        looks: dmxFrame.looks || []
+        looks: dmxFrame.looks || [],
+        lookFade: dmxFrame.lookFade || null
     })
 
     const stopPolling = () => {
@@ -163,7 +181,7 @@ export function createLightingMirror({ fetchImpl, doc } = {}) {
         try {
             const body = await getJson(call, lightingApiUrl('api/dmx'))
             fails = 0
-            dmxFrame = { dmx: body?.dmx || {}, master: body?.master ?? null, blackout: Boolean(body?.blackout), looks: liveLooksOf(body?.looks) }
+            dmxFrame = { dmx: body?.dmx || {}, master: body?.master ?? null, blackout: Boolean(body?.blackout), looks: liveLooksOf(body?.looks), lookFade: lookFadeOf(body?.looks, dmxFrame.lookFade || null) }
             if (snapshot.present && watchers > 0 && patch) publishLive()
         } catch {
             fails += 1

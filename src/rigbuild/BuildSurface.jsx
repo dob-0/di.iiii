@@ -438,9 +438,9 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
             model={model} library={library} slot={slot} yaw={yaw} height={height}
             aimRef={aimRef} pointerRef={pointerRef} onAim={setAim}
             tagEls={tagEls} onTags={onTags} chosenId={chosenId} tagMax={phone ? TAG_MAX_PHONE : TAG_MAX}
-            alwaysTag={alwaysTag} taggable={taggable}
+            alwaysTag={alwaysTag} taggable={taggable} flashes={look.entities}
         />
-    ), [model, library, slot, yaw, height, onTags, chosenId, phone, alwaysTag, taggable])
+    ), [model, library, slot, yaw, height, onTags, chosenId, phone, alwaysTag, taggable, look.entities])
 
     const runs = useMemo(() => trussRuns(model.pieces), [model.pieces])
     const runOf = useCallback((id) => runs.find((r) => r.ids.includes(id)) || null, [runs])

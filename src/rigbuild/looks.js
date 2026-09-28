@@ -160,10 +160,130 @@ export const posedEntities = (entities, poses) => {
             components: {
                 ...lit,
                 transform: { ...t, position: p.position, rotation: p.rotation },
-                ...atLevel(lit, p.level)
+                ...atLevel(lit, p.level),
+                // A view-only note for the lamp's body (rigBodyLamps): how lit its lens is.
+                rigShown: { level: p.level ?? 1 }
             }
         }
     })
+}
+
+// ---- FADES: the room between two looks (RIG_BUILD.md §15.6) -------------------------
+// A cue fires with a fade; the desk says which look it came from and when (GET
+// /light/api/dmx `from`, `since`, `fadeMs`). The room draws every lamp part-way: its
+// lens position, its aim, its colour, its light and its haze, mixed by t in 0..1. Pure.
+
+const lerp = (a, b, t) => a + (b - a) * t
+const hexRgb = (hex) => {
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''))
+    if (!m) return null
+    const n = parseInt(m[1], 16)
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+const rgbHex = (c) => `#${c.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')}`
+export const mixColour = (a, b, t) => {
+    const x = hexRgb(a)
+    const y = hexRgb(b)
+    if (!x || !y) return t < 0.5 ? a : b
+    return rgbHex(x.map((v, i) => lerp(v, y[i], t)))
+}
+// An angle the short way round, so a head does not spin 350° to turn 10°.
+const lerpAngle = (a, b, t) => {
+    let d = (b - a) % (Math.PI * 2)
+    if (d > Math.PI) d -= Math.PI * 2
+    if (d < -Math.PI) d += Math.PI * 2
+    return a + d * t
+}
+const mixVec = (a, b, t, angle = false) => (Array.isArray(a) && Array.isArray(b) && a.length === b.length
+    ? a.map((v, i) => (typeof v === 'number' && typeof b[i] === 'number' ? (angle ? lerpAngle(v, b[i], t) : lerp(v, b[i], t)) : (t < 0.5 ? v : b[i])))
+    : (t < 0.5 ? a : b))
+const num = (v, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d)
+
+/** Two drawings of the same room (`from`, `to`: entity lists, same order), t of the way from one to the other. */
+export const blendEntities = (from, to, t) => {
+    if (!(t < 1)) return to
+    if (!(t > 0)) return from
+    const byId = new Map(from.map((e) => [e.id, e]))
+    return to.map((b) => {
+        const a = byId.get(b.id)
+        if (!a || a === b || b.type !== 'spotLight') return b
+        const ca = a.components
+        const cb = b.components
+        const out = { ...cb }
+        if (ca.transform && cb.transform) {
+            out.transform = {
+                ...cb.transform,
+                position: mixVec(ca.transform.position, cb.transform.position, t),
+                rotation: mixVec(ca.transform.rotation, cb.transform.rotation, t, true)
+            }
+        }
+        if (ca.light && cb.light) {
+            out.light = { ...cb.light, intensity: lerp(num(ca.light.intensity), num(cb.light.intensity), t), color: mixColour(ca.light.color, cb.light.color, t) }
+        }
+        if (ca.beam && cb.beam) out.beam = { ...cb.beam, haze: lerp(num(ca.beam.haze, HAZE_DEFAULT), num(cb.beam.haze, HAZE_DEFAULT), t) }
+        if (ca.rigShown || cb.rigShown) out.rigShown = { ...(cb.rigShown || {}), level: lerp(num(ca.rigShown?.level, 1), num(cb.rigShown?.level, 1), t) }
+        if (ca.appearance && cb.appearance) out.appearance = { ...cb.appearance, opacity: lerp(num(ca.appearance.opacity, 1), num(cb.appearance.opacity, 1), t) }
+        return { ...b, components: out }
+    })
+}
+
+// ---- THE BAKED WASH follows the look (RIG_BUILD.md §15.6) -----------------------------
+// The PARs that are not real lights put their light on the columns and the press as ONE
+// baked mesh (`rig-wash`, wash-glb.mjs), baked for one look. While a look plays, the
+// room draws that mesh at the look's level for the washing groups (the PARs on the
+// column faces and at the press) — out in a look that has them out, so a dark look does
+// not keep lit columns. The bake's colour is the baked look's: a look that washes in
+// ANOTHER colour would need its own bake (owed; MOXIR's looks wash in red or not at all).
+export const WASH_ENTITY_ID = 'rig-wash'
+const WASH_POSITIONS = new Set(['column-faces', 'outer-columns', 'backdrop', 'dance-columns'])
+export const washLevelOf = (look) => {
+    if (!look) return 1
+    const keys = Object.keys(look.aims || {}).filter((k) => WASH_POSITIONS.has(k.split('/')[0]))
+    if (!keys.length) return 1
+    return Math.max(...keys.map((k) => levelOfKey(look, k)))
+}
+export const withWashLevel = (entities, level) => {
+    if (!(level < 1)) return entities
+    return entities.map((e) => (e.id !== WASH_ENTITY_ID ? e : {
+        ...e,
+        components: {
+            ...e.components,
+            appearance: { ...(e.components.appearance || {}), opacity: Math.max(0, level) },
+            ...(level <= 0 ? { runtime: { ...(e.components.runtime || {}), visible: false } } : {})
+        }
+    }))
+}
+
+// ---- STROBES AND BLINDERS read as a FLASH, not a cone (RIG_BUILD.md §15.6) ------------
+// A strobe is a white flash of a few milliseconds and a blinder a warm face: neither
+// throws a beam you can see standing in the haze. Drawn as the other lamps are, a 60°
+// strobe became a huge flat grey cone and (as a real light at planning candela) a white
+// floor. In the room they draw NO cone and NO light of their own: the beam is kept
+// `only` at haze 0 (spotBeam.js: no light; SpotLightObject: no cone at opacity 0), and
+// RigFlashes.jsx draws the face and the pulse from `rigFlash`. A view; never written.
+export const FLASH_CATEGORIES = new Set(['strobe', 'blinder'])
+export const flashKindOf = (library, typeId) => {
+    const c = typeById(library, typeId)?.category
+    return FLASH_CATEGORIES.has(c) ? c : null
+}
+export const flashEntities = (entities, library) => {
+    let changed = false
+    const out = entities.map((e) => {
+        if (e.type !== 'spotLight') return e
+        const kind = flashKindOf(library, e.components?.fixture?.type)
+        if (!kind) return e
+        changed = true
+        const level = num(e.components.rigShown?.level, 1)
+        return {
+            ...e,
+            components: {
+                ...e.components,
+                beam: { ...(e.components.beam || {}), visible: true, only: true, haze: 0 },
+                rigFlash: { kind, level: num(e.components.light?.intensity) > 0 ? level : 0 }
+            }
+        }
+    })
+    return changed ? out : entities
 }
 
 /** Rest the room on a look: its aims and colours written into the document, as ops. */

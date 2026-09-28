@@ -1,5 +1,6 @@
 import { Suspense, useMemo } from 'react'
 import FixtureBodies from './FixtureBodies.jsx'
+import RigFlashes from './RigFlashes.jsx'
 import { TYPE_LIBRARY } from './types/index.js'
 import { libraryWithShow } from './rental.js'
 import { rigBodyLamps } from './rigBodyLamps.js'
@@ -21,8 +22,12 @@ export default function RigBodies({ entities, library = TYPE_LIBRARY }) {
     const lamps = useMemo(() => rigBodyLamps(entities, shownLibrary), [entities, shownLibrary])
     if (!lamps.length) return null
     return (
-        <Suspense fallback={null}>
-            <FixtureBodies lamps={lamps} library={shownLibrary} />
-        </Suspense>
+        <>
+            <Suspense fallback={null}>
+                <FixtureBodies lamps={lamps} library={shownLibrary} />
+            </Suspense>
+            {/* strobes and blinders: their face and their flash (looks.js flashEntities) */}
+            <RigFlashes entities={entities} />
+        </>
     )
 }
