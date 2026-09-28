@@ -4,7 +4,8 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { findRepos, formatRepo, isClean, parseUnpushedLog, parseWorktrees, scanRepo } from './unsaved-lib.mjs'
+import { findRepos, formatRepo, isClean, oldestChange, olderThan, parseUnpushedLog, parseWorktrees, scanRepo } from './unsaved-lib.mjs'
+import { parseArgs, summaryLine } from './unsaved.mjs'
 
 // Real git in a temp dir, no mocks: the whole point of this lib is to read git
 // exactly as a person's machine holds it, so the test builds that machine.
@@ -82,7 +83,7 @@ describe('scanRepo on a real repo', () => {
     const r = scanRepo(repo)
     expect(r.unpushed.map((u) => [u.branch, u.commits])).toEqual([['feat/lights', 1]])
     expect(r.stashes).toBe(1)
-    expect(r.dirty).toEqual([{ path: repo, branch: 'feat/lights', files: 1 }])
+    expect(r.dirty).toEqual([{ path: repo, branch: 'feat/lights', files: 1, oldestMs: expect.any(Number) }])
     expect(isClean(r)).toBe(false)
 
     const text = formatRepo(r).join('\n')
@@ -151,5 +152,47 @@ describe('git hooks (scripts/git-hooks)', () => {
       expect(pushed.ok).toBe(false)
       expect(pushed.out).toContain('REFUSED')
     }
+  })
+})
+
+describe('the daily watch: only what has sat here a while', () => {
+  const HOUR = 60 * 60 * 1000
+  const now = 1_000 * HOUR
+  const r = {
+    repo: '/r', error: null, noRemote: false, stashes: 0,
+    unpushed: [{ branch: 'old', commits: 2, oldestMs: now - 30 * HOUR }, { branch: 'today', commits: 1, oldestMs: now - 2 * HOUR }],
+    dirty: [{ path: '/r', branch: 'old', files: 3, oldestMs: now - 48 * HOUR }, { path: '/r2', branch: 'x', files: 1, oldestMs: now - HOUR },
+      { path: '/r3', branch: 'y', files: 1, oldestMs: null }]
+  }
+
+  it('drops today\'s work and keeps what is older than the limit', () => {
+    const kept = olderThan(r, 24, now)
+    expect(kept.unpushed.map((u) => u.branch)).toEqual(['old'])
+    expect(kept.dirty.map((d) => d.path)).toEqual(['/r', '/r3']) // unknown age is never hidden
+  })
+
+  it('is a no-op without a limit', () => {
+    expect(olderThan(r, 0, now)).toBe(r)
+  })
+
+  it('reads the age of uncommitted files from the disk, skipping deleted ones', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'age-'))
+    fs.writeFileSync(path.join(dir, 'a b.txt'), 'x')
+    const past = new Date(Date.now() - 5 * HOUR)
+    fs.utimesSync(path.join(dir, 'a b.txt'), past, past)
+    fs.writeFileSync(path.join(dir, 'new.txt'), 'y')
+    const oldest = oldestChange(dir, [' M "a b.txt"', '?? new.txt', ' D gone.txt', 'R  old.txt -> new.txt'])
+    expect(Math.abs(oldest - past.getTime())).toBeLessThan(2000)
+    expect(oldestChange(dir, [' D gone.txt'])).toBeNull()
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('parses the watch flags and folders', () => {
+    expect(parseArgs(['--older-than', '24', '--notify', '--log', '/l', '/a', '/b'])).toEqual({ json: false, notify: true, olderThan: 24, log: '/l', dirs: ['/a', '/b'] })
+  })
+
+  it('says in one line what a notification can hold', () => {
+    expect(summaryLine([{}, {}], [])).toBe('2 repos hold work that exists only on this machine')
+    expect(summaryLine([{}], [{}])).toBe('1 repo holds work that exists only on this machine; 1 repo could not be checked')
   })
 })
