@@ -2109,6 +2109,16 @@
     color: var(--di-cyan);
 }
 
+/* What an answer cost, under it: quieter than the author line, never louder than the words. */
+.raw-chat-message-usage {
+    display: block;
+    margin-top: var(--di-space-1);
+    font-size: var(--di-text-1);
+    letter-spacing: 0.04em;
+    color: var(--di-text-muted);
+    font-family: var(--di-mono);
+}
+
 /* Only ever rendered for an admin, in the space room. Deliberately quiet: it
    is an adult's eraser, not a control the children are invited to press. */
 .raw-chat-message-remove {
