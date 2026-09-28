@@ -106,6 +106,9 @@ const startServer = async ({
         // (CORS, cookie-secure, etc.) don't trip it. Tests that want to
         // exercise the fallback/throw behavior itself unset it via extraEnv.
         AUTH_SESSION_SECRET: 'test-session-secret',
+        // The official sign-in hub is built in (authHub.js); a fixture must not
+        // reach diiii.xyz from /api/auth/providers. Hub tests stand one up.
+        AUTH_HUB_URL: 'off',
         ...(releaseManifest ? { SERVERXR_RELEASE_FILE: releaseFilePath } : {}),
         ...extraEnv
     }

@@ -505,6 +505,24 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-11'
     },
     {
+        id: 'sign-in-anywhere',
+        category: 'Spaces & access',
+        title: 'Sign in with Google or GitHub on any copy of di.iiii',
+        summary: 'Your own install, a laptop on a festival wifi, a test copy: each one offers Google and GitHub through diiii.xyz, with nothing to set up.',
+        body: [
+            'Google and GitHub only send people back to addresses registered with them, so a copy of di.iiii running on your own machine could never offer them. Now every copy asks diiii.xyz, which is registered once, to check who you are, and then signs you in on its own.',
+            { list: [
+                '**Nothing to set up.** A new install, a test copy or a laptop offers the buttons as long as it can reach diiii.xyz.',
+                '**Your account stays where you are.** diiii.xyz only confirms who you are; the copy you are using makes its own account and session for you.',
+                '**Nobody can reuse it.** The confirmation works once, for two minutes, only on the copy that asked, and only in the browser that asked.',
+                '**Offline, the buttons go away.** With no internet there is no Google either, so the page shows what still works: the owner at the machine, your earlier sign-in, a password account, an invite.'
+            ] },
+            'Telegram still signs you in on diiii.xyz only; bringing it to every copy is the next step.'
+        ],
+        tags: ['account', 'sign in', 'google', 'github', 'local', 'offline', 'install'],
+        updated: '2026-09-28'
+    },
+    {
         id: 'public-page-node',
         category: 'Editing',
         title: 'The Public page window',
