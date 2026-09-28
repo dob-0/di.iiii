@@ -1559,3 +1559,113 @@ the atmospheric PSF) — not drawn. Beams are not cut by what stands in them (no
 through the DJ lights the air behind him). Auto-exposure (an eye adapts to the red room; Reinhard et al.
 2002 key value) — the exposure is one fixed camera. A strobe-rate capture. The haze's σs is a choice checked
 against photographs, not a measurement of the hazers the hall will have.
+## 18. The visualiser — the desk and the room side by side, the room drawn from DMX (2026-09-29)
+
+Owner, 2026-09-29: *"our light and scene sync where i can with split screen or with 2 window see
+the virutal version and test the lights"*. Operate the desk (`/light`: faders, fixtures, looks,
+cues, FX — or a console over Art-Net/sACN into it) and watch the MOXIR room answer.
+
+### 18.1 Channel lists to test with — ASSUMED, separate, said (`src/rigbuild/assumedProfiles.js`)
+
+UPlight publishes no chart for any MOXIR code (§13.8), so a DMX value meant nothing to a lamp. Each
+type now carries an extra mode, `<n>ch-assumed`, built from the published chart of the CLOSEST
+DOCUMENTED EQUIVALENT (the stand-in manuals of §13.8), or an Open Fixture Library profile of the same
+class where no stand-in chart exists. Never in place of the real mode: the real `16ch` keeps
+`channels: null` (owed); `defaultMode` is still the maker's; `modesOwed` still means no real mode;
+`assumedMode` names the test mode. When the rental house's chart arrives: fill the real mode, run
+`scripts/rigbuild/assume-modes.mjs --back`, delete the entry. GDTF never carries an assumed mode and MVR
+names the maker's mode of the same footprint (a crew's console must never take a stand-in's chart).
+
+| type | assumed mode | source (the chart used) | what was filled in, and how |
+|---|---|---|---|
+| UP-B380F | 16ch-assumed | UPlus Lighting "380 IP BEAM" manual, PDF p.6–8 (sha256 31712c3a…) | wheel colours numbered, not named → Clay Paky Sharpy wheel order (OFL, MIT); strobe 51–240 = 1–25 Hz (spec p.4); lamp channel ignored |
+| UP-250BSW | 17ch-assumed | Aolait "250W LED 3IN1 BSW" manual, PDF p.13–17 (the kept copy, sha256 251282d3…) | the equivalent's 17ch, NOT UP-250BSW's 24/30ch; wheel colours Sharpy order; strobe rates 1–20 Hz ASSUMED; zoom 10→30° direction ASSUMED |
+| UP-HK1915 | 21ch-assumed | Aolait AL1019WR 19×15 W bee-eye manual, PDF p.8 (kept, sha256 7a0906f7…) | footprint matches the real 21ch, the ORDER is the equivalent's; strobe 1–20 Hz; CTO direction; zoom 4→60° direction ASSUMED |
+| UP-PL5403 | 8ch-assumed, 4ch-assumed | UPlus Lighting "IP PAR-54X3" manual, PDF p.6 (sha256 66619bec…) | strobe rates 1–20 Hz ASSUMED; built-in programs not drawn |
+| EXT-STROBE | 4ch-assumed | Martin Atomic 3000 "4-channel" (OFL) — the Atomic 3000 LED's compatible mode | rate 6–255 = 0.5–25 Hz as OFL gives it; effects drawn as plain strobe |
+| EXT-BLINDER | 3ch-assumed, 1ch-assumed | Chauvet STRIKE 4 DMX chart p.1 | random strobe macros drawn at 8 Hz |
+| EXT-HAZER | 2ch-assumed | Antari HZ-1000 manual, PDF p.7 | haze not drawn |
+| UP-YZ31P | 1ch-assumed | Antari Z-1500 III manual p.8 (kept) | fog not drawn |
+| UP-Q108S | 3ch-assumed | MagicFX PSYCO2JET "Raw" (OFL) — the CO2jet II manual has no DMX table | CO₂ not drawn |
+| UP-LA40WF | 11ch-assumed | Laserworld CS-1000RGB "11-channel" (OFL) | laser not drawn; IEC 60825-1 sign-off separate |
+
+Every mode carries `assumed: "ASSUMED from <equivalent> manual p.N — verify on the rental unit"`,
+printed on the patch sheet (flag `channel list ASSUMED — verify on the rental unit` + the row note), in
+the plot's mode list (the name ends `-assumed`), on the desk (the profile is `UP-B380F 16ch-assumed`,
+each channel named from the chart) and on the visualiser (a line naming every list in use). The desk
+patches a listed channel at its own `default` (a B380F shutter where 0 = CLOSED rests open at 255;
+pan/tilt at 128 = home) — `rigpatch.js`.
+
+### 18.2 What a lamp's DMX means (`src/rigbuild/dmxDecode.js`)
+
+Through the running mode's channel list: dimmer (16-bit with its fine), colour (RGB(W) emitters, else
+the wheel's slot — a half position mixes the two, a spinning wheel is drawn open and noted — and CTO
+toward 3200 K), shutter/strobe (open / closed = dark / strobe at its Hz) or a strobe fixture's rate
+channel, pan/tilt as degrees FROM HOME over the type's published range (DMX centre = home, e.g.
+540°/270° → ±270°/±135°; 16-bit = coarse·256 + fine over 65535), zoom over the type's zoom range.
+Gobo and prism are noted, not drawn yet. `encodeDmx` is the inverse (tests hold the round trip).
+
+### 18.3 The room drawn from it (`src/rigbuild/dmxPose.js`)
+
+The mode is the one the DESK runs (the desk fixture's profile name, rigpatch's rule), joined by the
+lamp's fixture index. A head: the mount is fixed (from the document's lens and aim), the beam is the
+fixture frame's (fixture-lib.mjs: `(sin t sin p, cos t, sin t cos p)`, hung = Rx(π)·Ry(π) with the
+default face — the rig records no base yaw), the lens moves on the tilt arc, the body turns (the same
+plotData the bodies read). Light: colour at full, the authored reach × level, zoom → angle, a beam-only
+cone's haze × level, a strobing shutter → `beam.strobeHz` (SpotLightObject pulses light and cone on the
+wall clock). Strobe and blinder TYPES stay flashes (RigFlashes) at the desk's rate or steady. Each drawn
+lamp carries a view-only `rigDmx` note (never written). The Studio's `liveLight` leaves a lamp with
+`rigDmx` alone — it reads only RGB emitters and called a wheel white (known-fixes).
+
+### 18.4 Precedence (decision)
+
+**While the desk is live and a lamp has a patched profile with a channel list, DMX wins** — attribute by
+attribute, for what the list controls; what it does not (a PAR's aim, set by hand on its clamp) keeps the
+look's pose. A lamp with no list, or not on the desk, is drawn as before. Overall: a page's own GO
+(`explicit`) > DMX > the desk's look (by rule) > the show's clock (only where no desk answers, §16) > the
+document. So a look must reach the room as DMX: `deskLookValues.js` writes each designed look as values
+through each fixture's list (a lamp the look does not name is at 0), and `show-loop.mjs` puts those on the
+desk — the looping show plays through DMX and the room shows exactly what the desk sends.
+
+### 18.5 The stream (`serverXR/src/lighting/dmxstream.js`, LIGHTING_DESK.md "The pushed frame")
+
+`GET /light/api/dmx/stream`: Server-Sent Events from the desk's own loop — a key frame, then only the
+runs of slots that changed, at the desk's rate (40–44 Hz; a fader move is pushed at once, not at the next
+tick), meta (master, blackout, looks, cues) only when it changes. The room's mirror listens where the
+browser has EventSource, publishes once per screen frame, reconnects by itself, and falls back to the
+10 Hz poll when a stream never opens. Through the install's own TLS and through the Caddy front door:
+measured 159 frames in 4 s (≈40/s) from the LAN address, not buffered.
+
+### 18.6 The page (`/{space}/visualise/{project}`, `VisualiserSurface.jsx`)
+
+Both sides are the REAL pages, framed (same origin): the desk (`/light/?space&project&from=visualise`)
+and the room (`/{space}/p/{project}?embed=1&probe=1`). A draggable divider (keyboard: arrows), swap,
+desk only / room only, and "↗" pops either side into its own window — it stays in sync because each side
+reads the desk, not the page. The two-window case needs nothing more: `/light` in one window, `/{space}`
+in another, on this machine or another on the network (through the front door). The rig row's last item
+is "visualiser"; the desk's top bar has "Visualiser" (hidden when the desk is itself framed). To test the
+lights use the desk's own pages: Control (select a fixture — Dimmer, Color, Position, Beam; Looks; FX
+strobe; the Cues strip GO/back/stop/loop), Fader (every channel by its chart name), Touch on a phone.
+
+### 18.7 Measured (2026-09-29, the owner's install 0.4.16-rigbuilder.9, MOXIR Minimal, RTX 3080 via PRIME, ANGLE/Vulkan, 1600×900 DPR 1)
+
+`scripts/rigbuild/vis-see.mjs`: a pan channel moved 60 times, alternating, on one UP-B380F; t1 = the first
+DRAWN frame with the lamp's decoded pan at the target (`visProbe.js`, in useFrame).
+
+| path | n | p50 | p95 | max |
+|---|---|---|---|---|
+| desk API (`POST /light/api/raw`, what a fader does) → drawn lamp, split page | 60 | 33.8 ms | 34.8 ms | 35.0 ms |
+| Art-Net ArtDmx on loopback → desk input → drawn lamp, split page | 60 | 37.8 ms | 39.4 ms | 56 ms |
+| desk page in one window → `/moxir` in another (two windows) | 20 | 30.8 ms | 36.3 ms | 36.7 ms |
+
+Before, the poll alone added up to 100 ms. The room drew 60–61 fps throughout (the 60 Hz cap) with the
+stream at 40 frames/s. Strobe: the desk at 13.57 Hz → 13.5 cone pulses/s counted over 2 s of drawn frames.
+Limits: one machine (sender, desk and browser on aylmo, loopback/LAN address — no wifi between); the
+NVIDIA GPU, not the owner's Flatpak Chromium on the Intel iGPU (14–19 fps in this room, §15/preview note),
+where a frame is 50–70 ms and latency grows by about that. Frames: `~/Downloads/moxir-visualiser/`.
+
+### 18.8 Owed
+
+The real channel lists from the rental house / UPlight (then `assume-modes.mjs --back`); gobo, prism,
+frost and haze drawn; a base yaw per lamp (pan 0's direction is the default face); a wheel's spin drawn;
+the stream on a real console and a real wifi second machine (ponyo, the owner's run); the iGPU numbers.

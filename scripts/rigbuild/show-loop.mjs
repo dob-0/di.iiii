@@ -125,7 +125,7 @@ const main = async () => {
         if (!put.ok) die(`the desk did not take ${look.id}: ${put.status} ${put.text.slice(0, 200)}`)
     }
     const valued = new Set(deskSet.flatMap((l) => Object.keys(l.steps[0]?.values || {})))
-    say(`desk: ${looks.looks.length} looks over ${fixtures.length} patched fixtures — DMX values for ${valued.size} (channel lists, ASSUMED where the type says so), none for ${fixtures.length - valued.size} (lists owed)`)
+    say(`desk: ${looks.looks.length} looks over ${fixtures.length} patched fixtures — DMX values for ${valued.size} (channel lists, ASSUMED where the type says so), none for ${fixtures.length - valued.size} (nothing a look sets on them — hazers — or a list owed)`)
 
     const loaded = await desk.post('/api/cues/load', { project, list: runnerList(cues), loop: show.loop !== false })
     if (!loaded.ok) die(`loading the runner: ${loaded.status} ${loaded.text.slice(0, 200)}`)
