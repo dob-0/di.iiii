@@ -79,6 +79,7 @@ const main = () => {
         ['outdoor pkg', (v) => `205 000 AMD covers ${outdoor(v).perDay === 205000 ? 'all of it' : `part; + ${amd(outdoor(v).perDay - 205000)} à la carte`}; unused: ${outdoor(v).unused.map((u) => `${u.code} ×${u.n}`).join(', ') || 'none'}`],
         ['power', (v) => `${kw(v.power.watts)} datasheet max · ≥ ${v.power.minCircuitsByLoad} × 16 A circuits by load`],
         ['universes', (v) => `${v.universes.length} (${v.universes.map((u) => `U${u.universe} ${u.channels} ch`).join(', ')}) for the ${v.patch.patched} patched; mode owed: ${owedOf(v) || 'none'}`],
+        ['if PARs 8ch', (v) => { const owed = Object.values(v.patch.modeOwed || {}).reduce((a, b) => a + b, 0); const ch = v.patch.channels + owed * 8; return `${Math.ceil(ch / 512)} universes, ${ch} ch — ASSUMED 8 ch per lamp whose mode is owed (${owed}); a planning figure until the rental house gives the modes` }],
         ['elsewhere', (v) => v.lines.filter((l) => l.from === 'other').map((l) => `${l.code} ×${l.ordered}`).join(' · ')],
         ['safety', (v) => v.looks.every((l) => !l.refused.length && !l.clashes.length && !l.unreachable.length) ? `every look: nothing refused, no beam into a crane or through the DJ, lasers ≥ 3 m and rising${v.lasers.length ? ` (${v.lasers.map((l) => `${l.y} m`).join(', ')})` : ''}` : 'SEE THE REPORT — a look failed a check']
     ]
