@@ -14,9 +14,15 @@ name: Auto-open PR to upstream dev
 
 on:
   push:
+    # backup/** and wip/** are for keeping work off one laptop (CONTRIBUTING.md
+    # "Every hand, one flow"), not for review. On 2026-09-28 pushing two backup
+    # branches opened upstream PRs #628/#629 that had to be closed by hand.
+    # A push to the fork's dev/main does not notify upstream.
     branches-ignore:
       - dev
       - main
+      - 'backup/**'
+      - 'wip/**'
 
 # The default GITHUB_TOKEN only needs to check out this repo; PR creation on
 # dob-0/di.iiii goes through the separate UPSTREAM_PR_TOKEN secret above.

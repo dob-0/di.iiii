@@ -9,6 +9,8 @@ Full process contract: **[docs/ai/agent-operating-contract.md](docs/ai/agent-ope
   space content, each with its own copies (git; local/dev.diiii.xyz/diiii.xyz
   databases). Run `npm run start-check` before starting and before pushing — it tells
   you LATEST or NOT LATEST on both lines and names the pull command when you're not.
+  Never commit or push on `dev`/`main` (git hooks refuse it — CONTRIBUTING.md "Every hand,
+  one flow"); push your branch the day you make it, so nothing lives only on one machine.
 - **[CURRENT.md](CURRENT.md)** — read FIRST, every session. ≤50 lines: what works, what's broken, open calls, and a pointer to the known-fixes table ([docs/ai/known-fixes.md](docs/ai/known-fixes.md)) that prevents re-investigating solved problems. No commit SHAs or branch positions — those are derived; run `npm run state`.
 - **[PROGRESS.md](PROGRESS.md)** — full session history. Read only if CURRENT.md isn't enough. Update before stopping.
 - **[MANIFESTO.md](MANIFESTO.md)** — vision and non-negotiables. Read before any architectural/product decision.

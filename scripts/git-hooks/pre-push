@@ -1,0 +1,22 @@
+#!/bin/sh
+# di.iiii — before any push, by anyone or anything:
+#   1. never push to dev or main — they move only by a merged PR (dev) or a
+#      promotion (main). On a fork this also keeps `dev` a clean copy of
+#      upstream, which the fork's sync workflow depends on.
+#   2. run the push checks (scripts/push-checks.sh: lint, schema-sync, wiki, AI docs).
+# Installed by `npm install` (package.json "prepare" sets core.hooksPath).
+# CONTRIBUTING.md "Every hand, one flow".
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/dev|refs/heads/main)
+      [ "${DI_ALLOW_FLOW_PUSH:-}" = 1 ] && continue
+      echo "" >&2
+      echo "  REFUSED — this push would write '${remote_ref#refs/heads/}' on $1." >&2
+      echo "  dev changes only by a merged PR, main only by a promotion. Push your branch" >&2
+      echo "  and open a PR:   git push -u origin <your-branch>" >&2
+      echo "" >&2
+      exit 1
+      ;;
+  esac
+done
+exec bash "$(git rev-parse --show-toplevel)/scripts/push-checks.sh"

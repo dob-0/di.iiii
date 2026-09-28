@@ -1,0 +1,24 @@
+#!/bin/sh
+# di.iiii — work never lands straight on dev or main. Every change starts on its
+# own branch (feat/…, fix/…, docs/…) and reaches dev through a PR; main is only
+# ever a promotion of dev. This runs for every commit in this checkout — by hand,
+# from an editor, from Claude or any other assistant — once `npm install` has set
+# core.hooksPath (package.json "prepare"). CONTRIBUTING.md "Every hand, one flow".
+#
+# A merge made by `git pull` does not come through here (git runs pre-merge-commit
+# for those), so catching dev up with the remote still works.
+branch=$(git symbolic-ref --short -q HEAD)
+case "$branch" in
+  dev|main)
+    [ "${DI_ALLOW_FLOW_COMMIT:-}" = 1 ] && exit 0
+    echo "" >&2
+    echo "  REFUSED — this commit would land straight on '$branch'." >&2
+    echo "  Put it on a branch instead; your changes stay exactly as they are:" >&2
+    echo "      git switch -c feat/<what-it-does>" >&2
+    echo "      git commit ..." >&2
+    echo "  (a deliberate exception: DI_ALLOW_FLOW_COMMIT=1 git commit ...)" >&2
+    echo "" >&2
+    exit 1
+    ;;
+esac
+exit 0
