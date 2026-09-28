@@ -252,7 +252,9 @@ export const defaultMappingSurface = {
     // now. 'motion' keeps only what MOVES: the difference between two frames,
     // above `threshold`, multiplied by `gain`, fading by `trail` each frame —
     // stillness goes black and a moving body leaves a glowing wake.
-    effect: { kind: 'none', threshold: 0.08, trail: 0.88, gain: 4 }
+    // 'ai' sends each frame to the local live-AI engine (serverXR/src/liveAi)
+    // and draws what comes back: the room, restyled by `prompt`.
+    effect: { kind: 'none', threshold: 0.08, trail: 0.88, gain: 4, prompt: '', strength: 0.5 }
 }
 
 export const defaultMappingCue = {
@@ -1041,7 +1043,8 @@ export const normalizePerformState = (perform = {}) => {
 // dim identification card was added as a ref and not a kind; see defaultMappingSurface.)
 const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test', 'camera', 'network', 'stream', 'ndi']
 const MAPPING_BLEND_MODES = ['normal', 'screen', 'multiply', 'lighten', 'add']
-export const MAPPING_EFFECT_KINDS = ['none', 'motion']
+export const MAPPING_EFFECT_KINDS = ['none', 'motion', 'ai']
+export const MAPPING_EFFECT_PROMPT_MAX = 300
 
 const clampNumber = (value, fallback, min, max) => Math.min(max, Math.max(min, ensureNumber(value, fallback)))
 
@@ -1054,7 +1057,12 @@ export const normalizeMappingEffect = (effect = {}) => {
         threshold: clampNumber(source.threshold, fallback.threshold, 0, 1),
         // Below 1 always: a trail of exactly 1 never fades, and the wall fills.
         trail: clampNumber(source.trail, fallback.trail, 0, 0.99),
-        gain: clampNumber(source.gain, fallback.gain, 0, 20)
+        gain: clampNumber(source.gain, fallback.gain, 0, 20),
+        // 'ai': what the picture becomes, in words, and how far from the camera
+        // it may drift (0 = the camera, 1 = only the words). Bounded so a pasted
+        // essay cannot ride along in every mapping save.
+        prompt: ensureString(source.prompt, fallback.prompt).slice(0, MAPPING_EFFECT_PROMPT_MAX),
+        strength: clampNumber(source.strength, fallback.strength, 0.05, 1)
     }
 }
 

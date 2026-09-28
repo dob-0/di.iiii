@@ -800,3 +800,23 @@ describe('components.link: both mirrors keep it, and both drop an unsafe href', 
     expect(read.entities[0].components.link).toEqual({ enabled: true, href: 'https://thedi.studio', label: '' })
   })
 })
+
+describe('the ai camera effect on the CJS twin — the server keeps what the desk set', () => {
+  // Every op and every sync rebuilds the document through this file. If only
+  // the ESM side knew 'ai', the server would turn a live AI surface back into
+  // a plain camera on the next save — on the wall, mid-show.
+  it('survives a setMappingSurface op and a re-normalize, prompt and strength intact', () => {
+    const born = normalizeProjectDocument({ mappingState: { surfaces: [{ id: 'cam', source: { kind: 'camera', ref: '' } }] } })
+    const written = applyProjectOps(born, [
+      { type: 'setMappingSurface', payload: { surfaceId: 'cam', patch: { effect: { kind: 'ai', prompt: 'gold leaf', strength: 0.7 } } } }
+    ])
+    const read = normalizeProjectDocument(JSON.parse(JSON.stringify(written)))
+    expect(read.mappingState.surfaces[0].effect).toMatchObject({ kind: 'ai', prompt: 'gold leaf', strength: 0.7 })
+  })
+
+  it('bounds the prompt and the strength exactly as the ESM does', () => {
+    const read = normalizeProjectDocument({ mappingState: { surfaces: [{ id: 'cam', effect: { kind: 'ai', prompt: 'x'.repeat(900), strength: 3 } }] } })
+    expect(read.mappingState.surfaces[0].effect.prompt).toHaveLength(300)
+    expect(read.mappingState.surfaces[0].effect.strength).toBe(1)
+  })
+})
