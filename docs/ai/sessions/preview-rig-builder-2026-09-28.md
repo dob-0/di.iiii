@@ -71,4 +71,4 @@ worktree against the install's API; the server itself needs none of them (not pa
   `~/di-backups/moxir-before-media-2026-09-28/` (assets dir was empty). Photos are links only.
 - Backup `~/di-backups/preview-rig-builder-2026-09-28/step-4/`; rollback `rollback.sh --to rigbuilder.3|rigbuilder.2|connect.5`
   (`--to rigbuilder.3 --dry-run`, with and without `--with-data`: exit 0, SHA256SUMS ok).
-- Seen: see the shots in `~/Downloads/rig-equipment/media/` (Flatpak Chromium, default flags, iGPU, one browser, flock).
+- Seen (Flatpak Chromium, default flags, iGPU, under the browser lock, package 75–79 °C): inventory; UP-HK1915 card (CONFIRMED badge, 3D model, maker's photos link, manual opens the kept PDF — HEAD 200 application/pdf); UP-MH100S (EQUIVALENT, SHEHDS named); UP-Q108S desktop + phone 390@3 (EQUIVALENT MagicFX CO2jet II, manual kept + Linde CO₂ SDS linked). No page overflow, 0 console errors. Shots `~/Downloads/rig-equipment/media/`.
