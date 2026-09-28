@@ -593,10 +593,11 @@ export const WIKI_ARTICLES = [
             'Open the account menu (bottom-right avatar) while signed in and paste a Claude API key under "Claude API key." It is encrypted at rest and stored per account — no one else, including admins, can read it back once saved.',
             'The panel shows "Connected — ····XXXX" (the last 4 characters, as a hint that it is the right key) once saved, with a Disconnect button to remove it.',
             'Your key powers the Claude agent node (see "Chat with Claude"): the server uses it on your behalf for your own chats; the key itself never reaches the browser or other users.',
+            'An answer paid through your key shows what it cost, in small type under it: how many tokens went in and how many came out. An answer from the model on this machine shows nothing there, because it does not count and does not charge.',
             'Guest sessions cannot connect a key — sign in with GitHub or Google first.'
         ],
         tags: ['ai', 'claude', 'integrations', 'account', 'api key'],
-        updated: '2026-08-19'
+        updated: '2026-09-28'
     },
     {
         id: 'claude-chat-node',
