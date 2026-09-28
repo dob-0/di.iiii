@@ -10,7 +10,8 @@
 // lights it is actually lighting is the "correct code, person can't tell" bug again.
 // That is why it lives in public/ and the engine reaches in for it.
 //
-// Coordinates are the stage world (-1..2, the same x/y as fixtures). The stage view maps
+// Coordinates are the stage world, the same x/y as fixtures (most rigs sit in -1..2; the
+// position is clamped to ±WORLD, the bound desk.js puts on a fixture). The stage view maps
 // both axes with ONE scale, so a circle here is a circle on screen and an angle here is
 // the angle she sees. Angles are degrees, clockwise on screen (y points down).
 //
@@ -19,6 +20,8 @@
 // default depth 255 is fully dark). Several objects: the brightest wins. Colour always
 // comes from the look — a radar over "Sunset" sweeps sunset colours round the room.
 (function (root) {
+  // Where an object may stand: anywhere a fixture may (desk.js WORLD).
+  const WORLD = 1000;
   const OBJECT_KINDS = ['line', 'radar', 'ring', 'spot'];
   const MAX_OBJECTS = 8;
   // How far the radar's afterglow trails its beam, in degrees.
@@ -63,8 +66,8 @@
       const [wlo, whi] = WIDTH_RANGE[o.kind];
       out.push({
         id, kind: o.kind,
-        x: num(o.x, -1, 2, 0.5),
-        y: num(o.y, -1, 2, 0.5),
+        x: num(o.x, -WORLD, WORLD, 0.5),
+        y: num(o.y, -WORLD, WORLD, 0.5),
         angle: wrap360(num(o.angle, -1e6, 1e6, d.angle)),
         size: num(o.size, 0.01, 3, d.size),
         width: num(o.width, wlo, whi, d.width),

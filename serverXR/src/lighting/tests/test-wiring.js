@@ -144,5 +144,31 @@ check('cueui.js + colorfxui.js: every api call has a route, and the page loads t
   if (/'\/api\//.test(ui)) throw new Error('an absolute /api/ URL — the desk is mounted under /light');
 });
 
+// Review fixes (2026-09-24). A light may carry an effect of its own; a rig-wide FX pad,
+// Touch's FX Off and MIDI's FX mode step must send {all: true}, or those lights keep
+// running after "Off". Every api/fx call that sets a mode says it is for the whole rig.
+check('every rig-wide FX mode change from the page is sent with all:true', () => {
+  const calls = [...js.matchAll(/(?:post|midiSend)\(\s*'api\/fx',\s*([^;]*?)\)(?:\.then|;)/g)].map((m) => m[1]);
+  const setsMode = calls.filter((c) => /\bmode\b/.test(c));
+  if (setsMode.length < 3) throw new Error('fewer api/fx mode calls than expected — the pattern is stale: ' + calls.join(' | '));
+  const bare = setsMode.filter((c) => !/all:\s*true/.test(c));
+  if (bare.length) throw new Error('api/fx mode change without all:true: ' + bare.join(' | '));
+  if (!/fxPill\.hidden = !fxAnyRunning\(\)/.test(js)) throw new Error('the FX pill must count lights running their own effect');
+});
+
+// The page's "where does this follow go" is the server's (ui/cuecore.js), loaded first.
+check('cueui.js asks cuecore.js where a follow goes, and the page loads cuecore.js before it', () => {
+  const cueui = fs.readFileSync(path.join(ROOT, '../ui/cueui.js'), 'utf8');
+  if (!/CueCore\.followNextId\(/.test(cueui)) throw new Error('cueui.js does not use CueCore.followNextId');
+  const a = html.indexOf('src="cuecore.js"'), b = html.indexOf('src="cueui.js"');
+  if (a < 0 || b < 0 || a > b) throw new Error('index.html must load cuecore.js before cueui.js');
+});
+
+// The server publishes status.save; a save that keeps failing must show on every page.
+check('the page shows a failing show save (status.save) in the top bar', () => {
+  if (!/id="savePill"/.test(html)) throw new Error('index.html has no #savePill');
+  if (!/\$\('#savePill'\)/.test(js) || !/\bst\.save\b/.test(js)) throw new Error('app.js does not paint #savePill from status.save');
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);

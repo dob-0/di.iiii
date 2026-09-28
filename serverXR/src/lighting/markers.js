@@ -9,6 +9,8 @@
 // Replaced whole by POST /api/markers, like the objects list; saved in show.json; not part
 // of scenes (where the DJ stands does not change with the look).
 
+// Where a label may stand: anywhere a fixture may (desk.js WORLD).
+const WORLD = 1000;
 const MAX_MARKERS = 16;
 const MARKER_KINDS = ['label'];
 const MAX_TEXT = 40;
@@ -34,8 +36,8 @@ function sanitizeMarkers(list) {
       id,
       kind: MARKER_KINDS.includes(m.kind) ? m.kind : 'label',
       text,
-      x: num(m.x, -1, 2, 0.5),
-      y: num(m.y, -1, 2, 0.5),
+      x: num(m.x, -WORLD, WORLD, 0.5),
+      y: num(m.y, -WORLD, WORLD, 0.5),
     });
   }
   return out;
