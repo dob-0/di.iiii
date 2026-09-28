@@ -8,24 +8,30 @@
 //     2.4s" beside the transport and in a top-bar pill on every page
 //   - Go jumps to the next step while a sequence runs; ❚❚ stops it (and the chase, as before)
 // Uses app.js's globals (S, $, $$, esc, post, say, pullState, popScene, popAt,
-// closeBindPop, showPage, isTypingTarget) and objects.js's deskNow() when present.
+// closeBindPop, showPage, isTypingTarget), cuecore.js's CueCore (loaded before this file)
+// and objects.js's deskNow() when present.
 (() => {
-  const nowDesk = () => (typeof deskNow === 'function' ? deskNow() : Date.now());
+  // The desk's clock, not this browser's: the countdown runs to a time the SERVER set, and
+  // a phone's clock can be seconds out. objects.js's deskNow() when it is loaded; otherwise
+  // the `now` stamped on the last /api/state, carried forward from when it arrived.
+  let skewOf = null, skew = 0;
+  const nowDesk = () => {
+    if (typeof deskNow === 'function') return deskNow();
+    if (S && S !== skewOf && Number.isFinite(S.now)) { skewOf = S; skew = S.now - Date.now(); }
+    return Date.now() + skew;
+  };
   const secs = (ms) => {
     const s = ms / 1000;
     return (s < 10 && s % 1 ? s.toFixed(1) : String(Math.round(s))) + 's';
   };
   const sceneById = (id) => (S && S.scenes.find((s) => s.id === id)) || null;
+  const hasBanks = () => !!(S && Array.isArray(S.banks) && S.banks.length);
   const containerOf = (id) => ((S && S.banks) || []).find((b) => b.sceneIds.includes(id)) || null;
-  // Mirrors cues.js nextOf: the scene's followId, else the next live scene in its container.
-  function nextOf(sc, followId = sc && sc.followId) {
-    if (followId) return sceneById(followId);
-    const b = containerOf(sc.id);
-    if (!b) return null;
-    const ids = b.sceneIds.filter((id) => sceneById(id));
-    const i = ids.indexOf(sc.id);
-    return i >= 0 && i + 1 < ids.length ? sceneById(ids[i + 1]) : null;
-  }
+  // Where a follow goes on to — cuecore.js, the very answer the server steps by: the
+  // scene's followId, else the next in its container, or the next in the library on a
+  // desk with no containers.
+  const nextOf = (sc, followId = sc && sc.followId) =>
+    sceneById(CueCore.followNextId(S ? S.scenes : [], S && S.banks, sc, followId));
 
   // ---- the menu item and its editor ----------------------------------------------------
   const fadeItem = $('#miFade');
@@ -55,10 +61,12 @@
 
   function fillNext(sc) {
     const sel = $('#fpNext');
-    const b = containerOf(sc.id);
+    const b = hasBanks() ? containerOf(sc.id) : null;
     const dflt = nextOf(sc, null);
     const pool = b ? b.sceneIds.map(sceneById).filter(Boolean) : S.scenes;
-    sel.innerHTML = `<option value="">${b ? `the next in ${esc(b.name)}${dflt ? ` (${esc(dflt.name)})` : ' — none, it is the last'}` : 'the next — none, it is in no container'}</option>`
+    // With no containers at all, the default is simply the next scene in the library.
+    const where = hasBanks() ? (b ? `the next in ${esc(b.name)}` : null) : 'the next scene';
+    sel.innerHTML = `<option value="">${where ? `${where}${dflt ? ` (${esc(dflt.name)})` : ' — none, it is the last'}` : 'the next — none, it is in no container'}</option>`
       + pool.map((s) => `<option value="${esc(s.id)}">${s.id === sc.id ? esc(s.name) + ' (itself — a loop)' : esc(s.name)}</option>`).join('');
     sel.value = sc.followId && sceneById(sc.followId) ? sc.followId : '';
   }
@@ -69,7 +77,8 @@
     const fade = (+editing.fadeMs || 0) / 1000;
     $('#fpHint').textContent = nxt
       ? `Press "${editing.name}" and "${nxt.name}" starts ${secs((fade + wait) * 1000)} later (its ${secs(fade * 1000)} fade + ${secs(wait * 1000)} wait).`
-      : 'Nothing to go on to — pick a scene, or file this one in a container with a scene after it.';
+      : hasBanks() ? 'Nothing to go on to — pick a scene, or file this one in a container with a scene after it.'
+        : 'Nothing to go on to — it is the last scene; pick one to go on to.';
     $('#fpHint').classList.toggle('bad', !nxt);
     $('#fpSave').disabled = !nxt;
   }

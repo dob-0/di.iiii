@@ -15,6 +15,8 @@
 // the next step now. The chase and the runner never share the rig: starting the chase
 // ends the sequence, and the runner's own steps never pause the chase or start another.
 
+const { followNextId } = require('./ui/cuecore');   // shared with the page (cueui.js)
+
 const MAX_FOLLOW_MS = 10 * 60 * 1000;
 const MAX_CHAIN = 200;
 // A step never comes sooner than this after the last one. Two scenes that follow each other
@@ -45,21 +47,13 @@ class CueRunner {
   scene(id) { return this.state.scenes.find((s) => s.id === id) || null; }
   hasFollow(sc) { return !!sc && sc.followMs != null && Number.isFinite(+sc.followMs); }
 
-  // The container a scene is filed in (the first, if it sits in several).
-  containerOf(id) { return (this.state.banks || []).find((b) => b.sceneIds.includes(id)) || null; }
-
   // Where a scene goes on to: its own followId, else the next live scene in its container
   // — or, on a desk that has no containers at all (di.iiii's), the next in the library.
-  // null = the sequence ends here.
+  // null = the sequence ends here. ui/cuecore.js holds the rule, so the page's badges and
+  // Follow… editor give the answer this runner steps by.
   nextOf(sc) {
     if (!this.hasFollow(sc)) return null;
-    if (sc.followId) return this.scene(sc.followId) ? sc.followId : null;
-    const hasBanks = Array.isArray(this.state.banks) && this.state.banks.length > 0;
-    const b = hasBanks ? this.containerOf(sc.id) : { sceneIds: this.state.scenes.map((s) => s.id) };
-    if (!b) return null;
-    const ids = b.sceneIds.filter((id) => this.scene(id));
-    const i = ids.indexOf(sc.id);
-    return i >= 0 && i + 1 < ids.length ? ids[i + 1] : null;
+    return followNextId(this.state.scenes, this.state.banks, sc);
   }
 
   // The whole sequence from a scene, for "Step 2 of 3": follow the links until one ends
