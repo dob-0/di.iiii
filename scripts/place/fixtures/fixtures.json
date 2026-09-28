@@ -95,6 +95,18 @@
         "COLORFUL-54X3": {
             "url": "https://www.colorfulstagelights.com/products_23/46.html",
             "what": "Colorful Stage Lighting DMX 54x3W IP65 RGBW outdoor PAR — photometric equivalent for UP-PL5403"
+        },
+        "MARTIN-A3K": {
+            "url": "https://www.martin.com/en/products/atomic-3000-led",
+            "what": "Martin (Harman) Atomic 3000 LED, maker's product page (fetched 2026-09-28): 245 L x 425 W x 240 H mm incl. bracket, 7.8 kg, 180,000 lm max, 740 W max / 663 W typical, 3/4/14 DMX channels, IP20, 228 x 10 W white LEDs 5,700 K; no beam angle published on the page"
+        },
+        "CHAUVET-STRIKE4": {
+            "url": "https://www.chauvetprofessional.com/product/strike-4/",
+            "what": "Chauvet Professional STRIKE 4, maker's product page (fetched 2026-09-28): 362 x 163 x 362 mm, 8.7 kg, beam 49 deg / field 79 deg, 999 lux @ 5 m, 286 W @ 230 V, 1/3/4/9 DMX channels, 4 x 100 W warm-white LEDs 3,096 K, IP20"
+        },
+        "ANTARI-HZ1000": {
+            "url": "https://www.antari.com/products/hz-1000/",
+            "what": "Antari HZ-1000 hazer, maker's product page (fetched 2026-09-28): L690 W510 H610 mm, 74.6 kg, 1150 W, 2 DMX channels, 2.2 ml/min at 100 %, 6.4 L tank (40 h at 100 %)"
         }
     },
     "kinds": {
@@ -723,6 +735,213 @@
                         200
                     ],
                     "nozzle_d_mm": 50
+                }
+            }
+        },
+        "strobe": {
+            "code": "EXT-STROBE",
+            "identified": "NOT FOUND — not on the rental house's list (a line from another supplier); a planning type modelled on an EQUIVALENT",
+            "product": "equivalent: Martin Atomic 3000 LED (alternatives on the versions' equipment lines: GLP JDC2 IP, SGM PALCO Z-FX)",
+            "specs": {
+                "size_mm": {
+                    "value": [
+                        425,
+                        245,
+                        240
+                    ],
+                    "order": "W x L x H",
+                    "src": "MARTIN-A3K",
+                    "basis": "EQUIVALENT",
+                    "note": "incl. the mounting bracket"
+                },
+                "weight_kg": {
+                    "value": 7.8,
+                    "src": "MARTIN-A3K",
+                    "basis": "EQUIVALENT"
+                },
+                "power_w": {
+                    "value": 740,
+                    "src": "MARTIN-A3K",
+                    "basis": "EQUIVALENT",
+                    "note": "maximum; 663 W typical"
+                },
+                "dmx_channels": {
+                    "value": [
+                        4,
+                        3,
+                        14
+                    ],
+                    "src": "MARTIN-A3K",
+                    "basis": "EQUIVALENT",
+                    "note": "4ch is the Atomic 3000 (discharge) compatible mode — listed first as the planning default"
+                },
+                "beam_deg": {
+                    "value": 60,
+                    "src": null,
+                    "basis": "ASSUMED",
+                    "note": "Martin publishes no beam angle on the product page; a wide LED plate, 60 deg ASSUMED for the drawing and the candela — OWED from the user manual"
+                },
+                "ip": {
+                    "value": "IP20",
+                    "src": "MARTIN-A3K",
+                    "basis": "EQUIVALENT"
+                }
+            },
+            "look": "A flat black box, a long rectangular window of white LEDs across its face, on a U-bracket of flat steel that is also its floor stand.",
+            "model": {
+                "archetype": "strobe",
+                "params": {
+                    "face_w_mm": 360,
+                    "face_h_mm": 230,
+                    "depth_mm": 150,
+                    "tilt_axis_mm": 140,
+                    "window_mm": [
+                        330,
+                        150
+                    ],
+                    "fins": 6,
+                    "foot_d_mm": 240
+                },
+                "note": "At home the face looks straight up (the builder's frame); the maker measures it facing forward on its bracket, so the comparison with the datasheet is made with the head tilted 90 deg (datasheet_tilt_deg), and the head is exported at home.",
+                "datasheet_tilt_deg": 90
+            },
+            "photometry": {
+                "flux_lm": 180000,
+                "beam_deg": 60,
+                "src": "MARTIN-A3K",
+                "basis": "EQUIVALENT",
+                "note": "flux from the maker; the angle ASSUMED (see specs.beam_deg), so the candela is a planning figure"
+            }
+        },
+        "blinder": {
+            "code": "EXT-BLINDER",
+            "identified": "NOT FOUND — not on the rental house's list (a line from another supplier); a planning type modelled on an EQUIVALENT",
+            "product": "equivalent: Chauvet Professional STRIKE 4 (alternatives on the versions' equipment lines: Elation DTW Blinder 700 IP, Chauvet STRIKE Array 2)",
+            "specs": {
+                "size_mm": {
+                    "value": [
+                        362,
+                        163,
+                        362
+                    ],
+                    "order": "W x D x H",
+                    "src": "CHAUVET-STRIKE4",
+                    "basis": "EQUIVALENT"
+                },
+                "weight_kg": {
+                    "value": 8.7,
+                    "src": "CHAUVET-STRIKE4",
+                    "basis": "EQUIVALENT"
+                },
+                "power_w": {
+                    "value": 286,
+                    "src": "CHAUVET-STRIKE4",
+                    "basis": "EQUIVALENT",
+                    "note": "at 230 V"
+                },
+                "dmx_channels": {
+                    "value": [
+                        1,
+                        3,
+                        4,
+                        9
+                    ],
+                    "src": "CHAUVET-STRIKE4",
+                    "basis": "EQUIVALENT"
+                },
+                "beam_deg": {
+                    "value": 49,
+                    "src": "CHAUVET-STRIKE4",
+                    "basis": "EQUIVALENT",
+                    "note": "field 79 deg"
+                },
+                "ip": {
+                    "value": "IP20",
+                    "src": "CHAUVET-STRIKE4",
+                    "basis": "EQUIVALENT"
+                }
+            },
+            "look": "A square black head with four round warm-white cells in a 2 x 2 grid, on a U-bracket that is its stand — the LED descendant of the 4-lite tungsten audience blinder.",
+            "model": {
+                "archetype": "blinder",
+                "params": {
+                    "face_w_mm": 300,
+                    "face_h_mm": 320,
+                    "depth_mm": 110,
+                    "tilt_axis_mm": 175,
+                    "cells": [
+                        2,
+                        2
+                    ],
+                    "cell_d_mm": 112,
+                    "fins": 5,
+                    "foot_d_mm": 150
+                },
+                "note": "At home the face looks straight up (the builder's frame); the maker measures it facing forward on its bracket, so the comparison with the datasheet is made with the head tilted 90 deg (datasheet_tilt_deg), and the head is exported at home.",
+                "datasheet_tilt_deg": 90
+            },
+            "photometry": {
+                "lux": 999,
+                "at_m": 5,
+                "beam_deg": 49,
+                "src": "CHAUVET-STRIKE4",
+                "basis": "EQUIVALENT"
+            }
+        },
+        "hazer": {
+            "code": "EXT-HAZER",
+            "identified": "NOT FOUND — not on the rental house's list (a line from another supplier); a planning type modelled on an EQUIVALENT",
+            "product": "equivalent: Antari HZ-1000 (alternatives on the versions' equipment lines: Look Solutions Unique 2.1, Smoke Factory Tour-Hazer II)",
+            "specs": {
+                "size_mm": {
+                    "value": [
+                        690,
+                        510,
+                        610
+                    ],
+                    "order": "L x W x H",
+                    "src": "ANTARI-HZ1000",
+                    "basis": "EQUIVALENT"
+                },
+                "weight_kg": {
+                    "value": 74.6,
+                    "src": "ANTARI-HZ1000",
+                    "basis": "EQUIVALENT"
+                },
+                "power_w": {
+                    "value": 1150,
+                    "src": "ANTARI-HZ1000",
+                    "basis": "EQUIVALENT"
+                },
+                "tank_l": {
+                    "value": 6.4,
+                    "src": "ANTARI-HZ1000",
+                    "basis": "EQUIVALENT"
+                },
+                "fluid_ml_per_min": {
+                    "value": 2.2,
+                    "src": "ANTARI-HZ1000",
+                    "basis": "EQUIVALENT",
+                    "note": "at 100 % output"
+                },
+                "dmx_channels": {
+                    "value": [
+                        2
+                    ],
+                    "src": "ANTARI-HZ1000",
+                    "basis": "EQUIVALENT"
+                }
+            },
+            "look": "A large grey box on castors-height feet, a round nozzle in its front, the fluid tank on top.",
+            "model": {
+                "archetype": "hazer",
+                "params": {
+                    "box_mm": [
+                        510,
+                        690,
+                        470
+                    ],
+                    "nozzle_d_mm": 70
                 }
             }
         }

@@ -1054,3 +1054,82 @@ to it (`serverXR/src/lighting/ui/from.js`, a closed list held to `rigTools` by
 Owed: the crew-only row the UX sketch proposed (a crew link opened by an engineer shows every step;
 the editing ones ask for a sign-in on a hosted tier); the row on a hosted tier's room for signed-in
 editors; the UI audit's token and type pass (F05–F10) — see the preview note.
+
+---
+
+## 15. Rig versions — one hall lit three ways (`scripts/place/rigs/moxir-versions-2026-10-17.json`)
+
+Owner, 2026-09-28, on `/moxir`: *"make 3 version with the full, midle, and simple minimalistic and also
+look to moxir mood, set, vibe and its the undegroudn rave thing lights like that not the commercial
+shit"*. Same hall, same DJ booth, same zones; what changes is how much is hung and how it is used.
+
+### 15.1 The data model — a version is a PROJECT (decision)
+
+Each version is a project of the space beside the hall's own: `moxir-hall-minimal`, `-middle`,
+`-full`; the hall's own project (`moxir-hall`, the rig as ordered) is the fourth member of the set.
+Considered and not chosen: a `variant` field on every lamp inside one project. Every view (plot,
+cards, equipment, patch sheet, auto-patch, build, the desk's looks) would have had to learn to filter
+by it, and two versions would have shared one desk patch and one equipment list — the thing a
+version is supposed to change. A project has its own of each already, so every view works on a
+version unchanged. The cost: the hall's model is uploaded once per version (the same bytes; the
+server addresses assets by sha256).
+
+What ties the set together is `components.rigVariant` on the show's entity (`rig-show`), normalised
+in both schema copies: `{ set, id, title, summary, source, siblings: [{ id, projectId, title,
+summary }] }`, siblings in order. A version its own set does not list is dropped.
+
+**The switch** (`src/rigbuild/RigVersionSwitch.jsx`): in the space view (the published viewer, view
+mode), top left, a row of plain links — As ordered · Minimal · Middle · Full — to
+`/{space}/p/{project}`; the current one lit. Shown only when the document carries a rigVariant with
+two or more siblings, so every other room is unchanged. Links, not state: a new tab puts two side
+by side; 44 px targets for a thumb.
+
+### 15.2 Made as data, generated, tested
+
+- **The design** — `moxir-versions-2026-10-17.json`: the brief's rules with the sources that
+  support them (opened 2026-09-28) and those marked *design hypothesis* where no source could be
+  opened; the palette; the groups (some `from` the base rig); the effects; five looks; the
+  other-supplier lines with named products; the rental house's complete systems.
+- **The rigs** — `scripts/rigbuild/versions.mjs` writes `moxir-2026-10-17-{minimal,middle,full}.json`
+  (complete rig files: every tool that reads a rig reads them) and
+  `scripts/rigbuild/rentals/moxir-2026-10-17-*.json` (the equipment lists). Never edited by hand;
+  `versions.test.js` regenerates and compares.
+- **The report** — `versions.mjs --report <dir>` hangs each (rig-lib), types and patches it on a
+  throwaway desk (moxir.mjs), and costs it: `report.json`, patch sheet, patch/power CSV.
+- **Into a space** — `scripts/rigbuild/load-version.mjs` (create the project, copy the hall,
+  load-plot, the equipment list, the looks, the rigVariant, the night, the wash; `--mark` writes only
+  the rigVariant; `--look` shows a look).
+- **The pictures** — `scripts/rigbuild/versions-render.sh` (per version and look: `load-version
+  --look`, then `rig-look.mjs --gpu` from the opening and the crane cameras, under a browser lock,
+  waiting under 85 °C, a view over 95 °C shot again), and `scripts/rigbuild/versions-page.mjs` (one
+  plain HTML page with the images, the numbers and the sources; no WebGL).
+
+### 15.3 What the rig code gained
+
+| where | what |
+|---|---|
+| looks (`rig-lib.mjs`, `looks.js`, both schemas) | `levels` per group, 0..1 (absent = full): a look says where there is NO light. Scales the light, the cone's haze and the bake. A level-0 beam-only lamp keeps `visible` + `only` (a hidden beam-only beam would become a real light, `beamCastsLight`). Resting on a look writes aims and colours only: the document holds no nominal intensity to come back to. `solo` (an aim parameter): only the lamp of that rank keeps the level |
+| mounts (`rig-lib.mjs`) | `truss: { kind: 'none' }` (no goalpost; the truss mounts refuse); `dx_m` on `booth-pit` and `truss-header`; `h_m` on `tower-ladder`; `z_at` on a column spec; `off_m` on `column-bases` (1.2 m where a PAR uplights the same face — at 0.7 m the two bodies stood in each other, which the bodies made visible) |
+| fixtures (`fixtures.json`, `build_fixtures.py`) | strobe, blinder, hazer: `EXT-` planning types modelled on the Martin Atomic 3000 LED, the Chauvet STRIKE 4 and the Antari HZ-1000 (maker pages fetched 2026-09-28). A `panel` archetype; a panel is compared with its datasheet face-forward (`datasheet_tilt_deg`). The strobe's beam angle is not published: 60° ASSUMED |
+| `rig.mjs --wash-only` | a look that bakes no wash takes the old one away (a dark look must not keep lit columns) |
+| `rig-look.mjs` | `--path` (a project other than the space's published one), `--token-file` (a private scratch space), a pause over 95 °C |
+
+### 15.4 The checks (`scripts/rigbuild/versions.test.js`)
+
+For every version and every look: nothing refused, no beam into a crane, no narrow beam (≤ 6°)
+through the DJ, no head past its travel; every laser ≥ 3 m and rising (never into the audience
+plane — a picture of intent; a laser safety officer and IEC 60825-1 are owed before any laser is
+on); at most 8 real lights; mirror-symmetric about the nave centre line (the press's lamps and a
+solo aside). For every version: the palette only; no CO₂, spark or confetti code or class; haze in
+every one; minimal < middle < full; the à-la-carte cost equals Σ rate × quantity, the outdoor
+package undercuts it, two days are 1.5 day-rates.
+
+### 15.5 Owed
+
+The owner's look and choice. Rates for the other-supplier lines (none published). The package
+readings ("laser" = one UP-LA40WF, "12x250W beams" = the UP-250BSW) and whether the day rule applies
+to packages — to be confirmed by the rental house. The UP-PL5403's DMX mode (so the universes count
+only the patched lamps). The strobe's beam angle. Versions on the owner's install (not done here: a
+deploy is scheduled separately). Looks keyed by position/type are posed by the room only for lamps
+on a derived slot (§11.2); the booth-line beams at x ±1 and the header lamps at ±0.75 m do sit on
+slots, the column-base beams at 1.2 m off the face do not.

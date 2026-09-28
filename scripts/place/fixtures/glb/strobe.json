@@ -1,16 +1,16 @@
 {
-  "kind": "beeEye",
-  "code": "UP-HK1915",
-  "glb": "beeEye.glb",
+  "kind": "strobe",
+  "code": "EXT-STROBE",
+  "glb": "strobe.glb",
   "builtBy": "scripts/place/fixtures/build_fixtures.py",
   "scriptSha256": "cc332ec481c5bb2777541e37bf8025360366aa9b98720490aab93b6de4596b44",
   "blender": "5.2.1 LTS",
-  "archetype": "moving-head",
+  "archetype": "strobe",
   "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
-  "panY": 0.12,
-  "tiltY": 0.36,
-  "lensY": 0.496,
-  "motion": "pan-tilt",
+  "panY": 0.0,
+  "tiltY": 0.14,
+  "lensY": 0.225,
+  "motion": "tilt",
   "parts": [
     "Base",
     "Yoke",
@@ -18,26 +18,26 @@
     "Lens"
   ],
   "sizeAtHome_mm": {
-    "width_x": 370,
-    "depth_z": 250,
-    "height_y": 494
+    "width_x": 450,
+    "depth_z": 240,
+    "height_y": 235
   },
   "triangles": {
-    "Base": 56,
-    "Yoke": 280,
-    "Head": 120,
-    "Lens": 114,
-    "total": 570
+    "Base": 36,
+    "Yoke": 96,
+    "Head": 128,
+    "Lens": 12,
+    "total": 272
   },
   "datasheetSize_mm": [
-    358,
-    253,
-    494
+    425,
+    245,
+    240
   ],
   "deviationFromDatasheet_pct": [
-    -1.2,
-    3.4,
-    0.0
+    0.0,
+    8.2,
+    5.9
   ],
   "comparedParts": "all"
 }

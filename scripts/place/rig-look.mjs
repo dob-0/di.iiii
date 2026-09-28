@@ -20,6 +20,11 @@
  *       --out ~/Downloads/moxir-hall --tag budget [--views crane,dance,stage,roof,door,mid,over,close] [--phone]
  *       [--size 1280x720] [--max-cpu-c 85] [--hide <entity ids>]   (--hide: diagnostic, this browser's copy only)
  *
+ *   --path <url path>     open this page instead of /<space> (e.g. /moxir/p/moxir-hall-minimal: a
+ *                         project that is not the space's published one — a rig version)
+ *   --token-file <file>   send the ADMIN_API_TOKEN in it with every request (a private scratch
+ *                         space on your own stack; never the installed di.iiii's token)
+ *
  *   `crane` is the camera photo 032 was taken from (hall.json geometry.cameras),
  *   shot at the photo's own size so compose.py can lay the two side by side.
  *
@@ -119,6 +124,18 @@ export const viewpoints = (hall, rig) => {
 
 // The CPU package on aylmo runs hot (a known cooler problem): before each
 // browser, wait until it is under 85 C (--max-cpu-c). `sensors` missing = no check.
+const cpuC = () => {
+    try {
+        const match = execSync('sensors', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).match(/Package id 0:\s*\+([\d.]+)/)
+        return match ? Number(match[1]) : null
+    } catch {
+        return null
+    }
+}
+// Over this during a view, the browser is closed at once and the view is shot again once
+// the package is back under --max-cpu-c (the owner's rule, 2026-09-28: pause over 95 C).
+const PAUSE_C = Number(args['pause-cpu-c'] || 95)
+
 const waitForCool = (limit = Number(args['max-cpu-c'] || 85)) => {
     for (let tries = 0; tries < 60; tries += 1) {
         let text = ''
@@ -194,14 +211,22 @@ const main = async () => {
             'Use --gpu. --allow-software exists for a small scene on a machine that can take it.')
     }
     const results = []
-    for (const name of names) {
+    const token = args['token-file']
+        ? (fs.readFileSync(path.resolve(String(args['token-file'])), 'utf8').split('\n').find((l) => l.startsWith('ADMIN_API_TOKEN=')) || '').slice('ADMIN_API_TOKEN='.length).trim()
+        : null
+    if (args['token-file'] && !token) die('no ADMIN_API_TOKEN in the token file')
+    const pagePath = args.path ? String(args.path) : `/${space}`
+    const queue = [...names]
+    const retried = new Set()
+    while (queue.length) {
+        const name = queue.shift()
         waitForCool()
         const browser = await launch()
         try {
             const view = all[name]
             const context = await browser.newContext(phone
                 ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, ignoreHTTPSErrors: true }
-                : { viewport: size(view), deviceScaleFactor: 1, ignoreHTTPSErrors: true })
+                : { viewport: size(view), deviceScaleFactor: 1, ignoreHTTPSErrors: true, ...(token ? { extraHTTPHeaders: { Authorization: `Bearer ${token}` } } : {}) })
             const page = await context.newPage()
             // Count what the renderer asks the GPU for, without touching the
             // app: every draw call and the triangles in it, per frame.
@@ -252,8 +277,17 @@ const main = async () => {
                 }
                 await route.fulfill({ response, json: body })
             })
-            await page.goto(`${base}/${space}`, { waitUntil: 'domcontentloaded', timeout: 180_000 })
+            await page.goto(`${base}${pagePath}`, { waitUntil: 'domcontentloaded', timeout: 180_000 })
             await page.waitForTimeout(settle * 1000)
+            const hot = cpuC()
+            if (hot !== null && hot > PAUSE_C) {
+                say(`  CPU package at ${hot} C (over ${PAUSE_C} C) — closing the browser, cooling, and shooting ${name} again`)
+                await browser.close()
+                if (retried.has(name)) die(`${name}: over ${PAUSE_C} C twice; stopping.`)
+                retried.add(name)
+                queue.unshift(name)
+                continue
+            }
             // The room navigates to itself once more after it opens (seen as a
             // second `navigated` line); if that lands inside the measurement the
             // page's context is gone. Measure again, once, after it settles.

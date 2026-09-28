@@ -1,43 +1,35 @@
 {
-  "kind": "beeEye",
-  "code": "UP-HK1915",
-  "glb": "beeEye.glb",
+  "kind": "hazer",
+  "code": "EXT-HAZER",
+  "glb": "hazer.glb",
   "builtBy": "scripts/place/fixtures/build_fixtures.py",
   "scriptSha256": "cc332ec481c5bb2777541e37bf8025360366aa9b98720490aab93b6de4596b44",
   "blender": "5.2.1 LTS",
-  "archetype": "moving-head",
+  "archetype": "hazer",
   "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
-  "panY": 0.12,
-  "tiltY": 0.36,
-  "lensY": 0.496,
-  "motion": "pan-tilt",
+  "lensY": 0.235,
+  "motion": "none",
   "parts": [
-    "Base",
-    "Yoke",
-    "Head",
-    "Lens"
+    "Body"
   ],
   "sizeAtHome_mm": {
-    "width_x": 370,
-    "depth_z": 250,
-    "height_y": 494
+    "width_x": 514,
+    "depth_z": 700,
+    "height_y": 614
   },
   "triangles": {
-    "Base": 56,
-    "Yoke": 280,
-    "Head": 120,
-    "Lens": 114,
-    "total": 570
+    "Body": 264,
+    "total": 264
   },
   "datasheetSize_mm": [
-    358,
-    253,
-    494
+    690,
+    510,
+    610
   ],
   "deviationFromDatasheet_pct": [
-    -1.2,
-    3.4,
-    0.0
+    0.8,
+    0.7,
+    1.4
   ],
   "comparedParts": "all"
 }

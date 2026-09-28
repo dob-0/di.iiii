@@ -754,6 +754,26 @@ const normalizeRentalList = (list) => {
   return out
 }
 
+// A RIG VERSION (RIG_BUILD.md §15): this project is one of several versions of one show's
+// rig in the same hall, each a project of its own. `siblings` is the set, in order, so the
+// space view can offer a switch between them. Short words and ids only; a version with no
+// id, or a set that does not list it, is dropped.
+const RIG_VERSIONS_CAP = 8
+const variantId = (value) => (typeof value === 'string' && /^[a-z0-9][a-z0-9-]{0,47}$/.test(value.trim()) ? value.trim() : '')
+const normalizeRigVariant = (value) => {
+  if (!value || typeof value !== 'object') return null
+  const id = variantId(value.id)
+  const set = variantId(value.set)
+  if (!id || !set) return null
+  const siblings = (Array.isArray(value.siblings) ? value.siblings : []).slice(0, RIG_VERSIONS_CAP).map((s) => {
+    const sid = variantId(s?.id)
+    const projectId = variantId(s?.projectId)
+    return sid && projectId ? { id: sid, projectId, title: planText(s.title, 60) || sid, summary: planText(s.summary, 160) } : null
+  }).filter(Boolean)
+  if (!siblings.some((s) => s.id === id)) return null
+  return { set, id, title: planText(value.title, 60) || id, summary: planText(value.summary, 160), source: planText(value.source, 480), siblings }
+}
+
 // THE RIG'S DESIGNED LOOKS (RIG_BUILD.md §11.4, view C): per look, a rule and its
 // numbers per group of lamps (a group is `${position}/${type}`), and a colour per
 // group. Written by scripts/rigbuild/looks.mjs from the rig file; the cards put them on
@@ -786,7 +806,16 @@ const normalizeRigLooks = (value) => {
       const hex = lookHex(c)
       if (key && hex) colours[key] = hex
     }
-    return { id, title: planText(look.title, 60) || id, intent: planText(look.intent, 480), aims, colours }
+    // A group's level in the look, 0..1 (RIG_BUILD.md §15: 0 = out, the look's darkness).
+    // Absent = full; the field is written only when a look names one, so a look from
+    // before it is unchanged.
+    const levels = {}
+    for (const [k, v] of Object.entries(look.levels || {}).slice(0, RIG_GROUPS_CAP)) {
+      const key = lookKey(k)
+      const n = planNum(v)
+      if (key && n != null) levels[key] = Math.min(1, Math.max(0, n))
+    }
+    return { id, title: planText(look.title, 60) || id, intent: planText(look.intent, 480), aims, colours, ...(Object.keys(levels).length ? { levels } : {}) }
   }).slice(0, RIG_LOOKS_CAP)
   if (!looks.length) return null
   return { source: planText(value.source, 480), writtenAt: planText(value.writtenAt, 32), defaultLook: planText(value.defaultLook, 36), looks }
@@ -986,6 +1015,12 @@ const normalizeEntity = (entity = {}) => {
     const looks = normalizeRigLooks(sourceComponents.rigLooks)
     if (looks) nextComponents.rigLooks = looks
     else delete nextComponents.rigLooks
+  }
+  // Which rig version this project is — mirror of src/shared/projectSchema.js (RIG_BUILD.md §15).
+  if (sourceComponents.rigVariant) {
+    const variant = normalizeRigVariant(sourceComponents.rigVariant)
+    if (variant) nextComponents.rigVariant = variant
+    else delete nextComponents.rigVariant
   }
   // A screen: a plane that shows one of the project's own mapping surfaces
   // (document.mappingState.surfaces) as its picture. The join is the surface's

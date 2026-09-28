@@ -463,7 +463,11 @@ describe('ESM/CJS mirror equivalence', () => {
         { id: 'r3', type: 'group', components: { rentalList: { name: 'show', days: 2, dates: { from: '2026-10-16', to: '2026-10-17' }, rule: { extraDay: 0.5, source: 'Price list!A2' }, items: [{ code: 'Art-Net node', type: 'item-artnet', kind: 'item', ordered: 1, from: 'other', supplier: 'x', category: 'node', watts: 12, note: '4 universes' }, { code: 'MDG ATMe', type: 'ofl-mdg-atme', ordered: 2, from: 'bogus' }], types: [{ id: 'ofl-mdg-atme', code: 'MDG ATMe', category: 'hazer', modes: [{ name: '3ch', footprint: 3, channels: [{ role: 'control', label: 'Unit' }, { role: 'aux1', label: 'Out' }, { role: 'aux2', label: 'Haze' }] }, { name: 'bad', footprint: 2, channels: [{ role: 'x' }] }], power_w: { value: 1400, src: 'OFL' }, sources: { OFL: { url: 'https://open-fixture-library.org/mdg/atme', what: 'OFL', licence: 'MIT' } }, ofl: { manufacturer: 'mdg', key: 'atme' } }, { id: 'Bad Id', code: 'x' }], catalogue: [{ code: 'UP-236', label: 'Mist', stock: 2, rate: 14000, cells: 'Price list!A24:E24' }], terms: [{ text: 'Day 1 full rate', cell: 'Price list!A2' }] } } },
         { id: 'r4', type: 'group', components: { rentalList: { name: 'emptied', items: [] } } },
         // The rig's looks (RIG_BUILD.md §11.4): numbers only in a rule, a bad key or colour dropped.
-        { id: 'l1', type: 'group', components: { rigLooks: { source: 'rig.json', looks: [{ id: 'roof-cathedral', title: 'Roof', aims: { 'column-bases/up-b380f': { rule: 'vertical', in_deg: '8', note: 'x' }, 'bad key': { rule: 'fan' } }, colours: { 'column-bases/up-b380f': '#EEF3FF', 'truss/up-250bsw': 'blue' } }, { id: 'Bad Id' }] } } }
+        { id: 'l1', type: 'group', components: { rigLooks: { source: 'rig.json', looks: [{ id: 'roof-cathedral', title: 'Roof', aims: { 'column-bases/up-b380f': { rule: 'vertical', in_deg: '8', note: 'x' }, 'bad key': { rule: 'fan' } }, colours: { 'column-bases/up-b380f': '#EEF3FF', 'truss/up-250bsw': 'blue' } }, { id: 'Bad Id' }] } } },
+        // A look's levels and a rig version (RIG_BUILD.md §15): 0..1 clamped, a bad key dropped;
+        // a version its own set does not list is dropped whole.
+        { id: 'l3', type: 'group', components: { rigLooks: { looks: [{ id: 'strobe-hit', aims: {}, levels: { 'pit/ext-strobe': 1, 'column-bases/up-b380f': 0, 'truss/up-250bsw': 7, 'bad key': 0.5, 'column-faces/up-pl5403': 'x' } }] }, rigVariant: { set: 'moxir-2026-10-17', id: 'minimal', title: 'Minimal', siblings: [{ id: 'minimal', projectId: 'moxir-hall-minimal', title: 'Minimal' }, { id: 'Bad', projectId: 'x' }, { id: 'full', projectId: 'moxir-hall-full' }] } } },
+        { id: 'l4', type: 'group', components: { rigVariant: { set: 'moxir-2026-10-17', id: 'middle', siblings: [{ id: 'minimal', projectId: 'moxir-hall-minimal' }] } } }
       ]
     },
     // The show's Perform presets (2026-09-24). The server rebuilds documents
@@ -570,6 +574,18 @@ describe('ESM/CJS mirror equivalence', () => {
     })
     expect(doc.entities[0].components.rigLooks.looks).toEqual([{ id: 'roof-cathedral', title: 'Roof', intent: '', aims: { 'column-bases/up-b380f': { rule: 'vertical', in_deg: 8 } }, colours: { 'column-bases/up-b380f': '#eef3ff' } }])
     expect(doc.entities[1].components.rigLooks).toBeUndefined()
+  })
+
+  it('keeps a look\'s levels and a rig version through the mirror (RIG_BUILD.md §15)', () => {
+    const doc = schema.normalizeProjectDocument({
+      entities: [
+        { id: 'l3', type: 'group', components: { rigLooks: { looks: [{ id: 'strobe-hit', aims: {}, levels: { 'pit/ext-strobe': 1, 'column-bases/up-b380f': 0, 'truss/up-250bsw': 7, 'bad key': 0.5 } }] }, rigVariant: { set: 'moxir-2026-10-17', id: 'minimal', title: 'Minimal', siblings: [{ id: 'minimal', projectId: 'moxir-hall-minimal', title: 'Minimal' }, { id: 'Bad', projectId: 'x' }] } } },
+        { id: 'l4', type: 'group', components: { rigVariant: { set: 'moxir-2026-10-17', id: 'middle', siblings: [{ id: 'minimal', projectId: 'moxir-hall-minimal' }] } } }
+      ]
+    })
+    expect(doc.entities[0].components.rigLooks.looks[0].levels).toEqual({ 'pit/ext-strobe': 1, 'column-bases/up-b380f': 0, 'truss/up-250bsw': 1 })
+    expect(doc.entities[0].components.rigVariant).toEqual({ set: 'moxir-2026-10-17', id: 'minimal', title: 'Minimal', summary: '', source: '', siblings: [{ id: 'minimal', projectId: 'moxir-hall-minimal', title: 'Minimal', summary: '' }] })
+    expect(doc.entities[1].components.rigVariant).toBeUndefined()
   })
 
   it('clears one fixture field through updateComponent without losing the rest', () => {

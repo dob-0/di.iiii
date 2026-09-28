@@ -28,7 +28,8 @@
  *                         `--look list` prints them and sends nothing
  *   --fixtures <dir>      the built fixture models (default scripts/place/fixtures/glb)
  *   --remove              only take the rig down (delete every rig- entity)
- *   --wash-only           re-bake ONLY the column wash (`rig-wash`) and touch nothing else —
+ *   --wash-only           re-bake ONLY the column wash (`rig-wash`) and touch nothing else (a look
+ *                         that bakes none takes the old wash away) —
  *                         for a project whose lamps are live, typed entities (load-plot.mjs
  *                         deletes the baked wash with the other baked meshes, and the room
  *                         then reads dark: the beam-only PARs light nothing)
@@ -190,7 +191,22 @@ const main = async () => {
     }
 
     if (args['wash-only']) {
-        if (!built?.washes.length) die('--wash-only: this rig and look bake no washes.')
+        if (!built?.washes.length) {
+            // A look that bakes none (its PARs are out — a level 0): the old wash goes, or
+            // the columns would glow in a look that asked for darkness.
+            const current = must(await client.get(`/api/projects/${project}/document`), 'reading the hall')
+            const was = (current.document?.entities || []).find((entity) => entity.id === `${RIG_PREFIX}wash`)
+            if (!was) { say('  this rig and look bake no washes, and there is none to take away'); return }
+            must(await client.post(`/api/projects/${project}/ops`, {
+                baseVersion: Number(current.version) || 0,
+                ops: [
+                    { type: 'deleteEntity', payload: { entityId: was.id } },
+                    ...(was.components?.media?.assetId ? [{ type: 'deleteAsset', payload: { assetId: was.components.media.assetId } }] : [])
+                ]
+            }), 'removing the wash')
+            say('  this look bakes no washes: the old wash is taken away')
+            return
+        }
         const bytes = await washGlb(built.washes)
         const asset = await uploadGlb(client, project, bytes, 'rig-wash.glb')
         const current = must(await client.get(`/api/projects/${project}/document`), 'reading the hall')

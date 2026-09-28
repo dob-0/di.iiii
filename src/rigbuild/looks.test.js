@@ -78,3 +78,19 @@ describe('looks — the rig file\'s looks on the dealt lamps', () => {
         expect(lookIdOfDesk('lk123')).toBe(null)
     })
 })
+
+describe('a look\'s level in the room (RIG_BUILD.md §15)', () => {
+    it('scales the light and the cone\'s haze, keeps a beam-only lamp beam-only, and leaves the document alone', async () => {
+        const { posedEntities, levelOfKey, restOps } = await import('./looks.js')
+        const e = { id: 'a', type: 'spotLight', components: { transform: { position: [0, 0, 0], rotation: [0, 0, 0] }, light: { color: '#fff', intensity: 10 }, beam: { visible: true, haze: 0.6, only: true } } }
+        const poses = new Map([['a', { position: [0, 1, 0], rotation: [0, 0, 0], color: '#ff0000', level: 0 }]])
+        const [out] = posedEntities([e], poses)
+        expect(out.components.light).toEqual({ color: '#ff0000', intensity: 0 })
+        expect(out.components.beam).toEqual({ visible: true, haze: 0, only: true })
+        expect(e.components.light.intensity).toBe(10)
+        expect(levelOfKey({ levels: { 'pit/x': 0.25 } }, 'pit/x')).toBe(0.25)
+        expect(levelOfKey({}, 'pit/x')).toBe(1)
+        // resting writes aims and colours, never a level (the document has no nominal to return to)
+        expect(restOps([e], poses).some((op) => op.payload.patch?.intensity !== undefined || op.payload.component === 'beam')).toBe(false)
+    })
+})

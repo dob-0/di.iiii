@@ -15,9 +15,11 @@ describe('the MOXIR type library', () => {
         expect(serialise(buildLibrary())).toBe(text)
     })
 
-    it('holds the eight rental codes', () => {
-        expect(committed.types.map((t) => t.code).sort()).toEqual(
+    it('holds the eight rental codes, and the three other-supplier planning types', () => {
+        expect(committed.types.map((t) => t.code).filter((c) => c.startsWith('UP-')).sort()).toEqual(
             ['UP-250BSW', 'UP-B380F', 'UP-HK1915', 'UP-LA40WF', 'UP-PL5403', 'UP-Q108S', 'UP-YH600F', 'UP-YZ31P'])
+        expect(committed.types.map((t) => t.code).filter((c) => !c.startsWith('UP-')).sort()).toEqual(['EXT-BLINDER', 'EXT-HAZER', 'EXT-STROBE'])
+        for (const t of committed.types.filter((x) => x.code.startsWith('EXT-'))) expect(t.identified).toBe('EQUIVALENT')
     })
 
     it('carries the published footprints and invents none', () => {

@@ -32,6 +32,7 @@ import { consumeArriveWalking } from '../../components/arriveWalking.js'
 import { buildSpaceContentsPath } from '../../utils/spaceRouting.js'
 import { isEmbedRequest } from '../../utils/previewMode.js'
 import { hasRig } from '../../rigbuild/hasRigLamps.js'
+import RigVersionSwitch from '../../rigbuild/RigVersionSwitch.jsx'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -554,6 +555,17 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 >
                     Walk / Fly
                 </button>
+            ) : null}
+
+            {/* A rig with versions (RIG_BUILD.md §15): a row of links to its siblings. Shown
+                only on a project that says it is one of a set — every other room is untouched. */}
+            {state.status === 'ready' && navMode === 'orbit' && !isPreview && !isEmbed ? (
+                <RigVersionSwitch
+                    spaceId={resolvedRouteSpaceId}
+                    projectId={projectId}
+                    entities={document?.entities || []}
+                    top={topClear}
+                />
             ) : null}
 
             {/* no route passes showProjectSwitcher since 2026-08-07 (owner call:

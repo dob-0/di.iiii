@@ -3,7 +3,7 @@
   "code": "UP-B380F",
   "glb": "beam380.glb",
   "builtBy": "scripts/place/fixtures/build_fixtures.py",
-  "scriptSha256": "28da3f3192115b1eabd11b1a25497c503e35adcea9849d55d92ce90290a2c693",
+  "scriptSha256": "cc332ec481c5bb2777541e37bf8025360366aa9b98720490aab93b6de4596b44",
   "blender": "5.2.1 LTS",
   "archetype": "moving-head",
   "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",

@@ -12,6 +12,7 @@
  */
 import { rotationFromPanTilt } from '../../src/project/viewport/spotLightAim.js'
 import { aimFixture } from './fixture-lib.mjs'
+import { DEFAULT_HAZE } from '../../src/objectComponents/spotBeam.js'
 
 export const RIG_PREFIX = 'rig-'
 // A lamp whose laser path dips under this, anywhere over the floor, is refused.
@@ -55,10 +56,14 @@ export const pickEven = (n, total) => {
  * `backdrop` (ids in `geometry.massing`) is what stands behind the stage —
  * the "wall" the truss spots wash.
  */
+export const hasTruss = (rig) => Boolean(rig.truss) && rig.truss.kind !== 'none'
+
 export const stageFrame = (rig, hall) => {
     const g = hall.geometry
     const s = rig.stage
-    const truss = rig.truss
+    // `truss: { kind: 'none' }` — a rig with no goalpost (a version that hangs nothing
+    // overhead). The truss mounts then refuse, and no truss boxes are written.
+    const truss = hasTruss(rig) ? rig.truss : { width_m: 0, header_h_m: 0, section_m: 0, from_stage_back_m: 0 }
     let into
     let wall
     let back
@@ -136,7 +141,8 @@ export const stageFrame = (rig, hall) => {
         trussZ: trussZ ?? back + into * truss.from_stage_back_m,
         trussW: truss.width_m,
         trussH: truss.header_h_m,
-        trussSection: truss.section_m ?? 0.4
+        trussSection: truss.section_m ?? 0.4,
+        truss: hasTruss(rig)
     }
 }
 
@@ -161,7 +167,10 @@ export const columnsFor = (hall, stage, spec = {}) => {
         if (!rects.length) throw new Error(`no zones ${spec.zones.join(', ')} in hall.json`)
         range = [Math.min(...rects.map((r) => Math.min(...r.z_m))) - pitch / 2, Math.max(...rects.map((r) => Math.max(...r.z_m))) + pitch / 2]
     }
-    const zs = [...new Set(g.column_grid_z_m)].filter((z) => !range || (z >= range[0] - 1e-6 && z <= range[1] + 1e-6))
+    // `z_at` [..]: exactly these grid lines (alternate columns, say), instead of a range.
+    const zs = [...new Set(g.column_grid_z_m)]
+        .filter((z) => !range || (z >= range[0] - 1e-6 && z <= range[1] + 1e-6))
+        .filter((z) => !spec.z_at || spec.z_at.some((a) => Math.abs(a - z) < 1e-6))
     const axes = spec.rows === 'next'
         ? (g.rows_x_m || []).filter((x) => Math.abs(Math.abs(x) - (Math.abs(left) + (g.spans?.span_m || 24))) < 0.5)
         : [left, right]
@@ -219,6 +228,11 @@ const audienceColumns = (hall, stage) => columnsByStage(hall, stage)
 // which depends on the aim.
 // ---------------------------------------------------------------------------
 const toAudience = (ctx) => [0, 0, ctx.stage.into]
+const needsTruss = (ctx, mount) => {
+    if (!ctx.stage.truss) throw new Error(`mount ${mount} needs a truss, and this rig has none (truss.kind "none")`)
+}
+// `dx_m` [a, b, ...]: mirrored pairs at ±a, ±b from the axis, instead of an even spread.
+const mirroredDx = (dx) => [...dx.map((d) => -d), ...dx].sort((a, b) => a - b)
 const place = {
     'stage-back': (n, ctx) => spread(n, -ctx.stage.width / 2 + 1, ctx.stage.width / 2 - 1)
         .map((x) => ({ pos: [ctx.stage.axis + x, ctx.stage.deck, ctx.stage.back + ctx.stage.into * 0.6], orient: 'floor', face: toAudience(ctx) })),
@@ -228,34 +242,40 @@ const place = {
     // axis, `back_inset_m` in from its back edge: on the riser where the
     // riser is, on the floor beside it.
     // `dx_m` [a, b, ...]: mirrored pairs at ±a, ±b instead of an even spread.
-    'booth-back': (n, ctx, group) => (group?.dx_m ? [...group.dx_m.map((d) => -d), ...group.dx_m].sort((a, b) => a - b) : spread(n, -(group?.half_width_m ?? 1), group?.half_width_m ?? 1)).map((dx) => ({
+    'booth-back': (n, ctx, group) => (group?.dx_m ? mirroredDx(group.dx_m) : spread(n, -(group?.half_width_m ?? 1), group?.half_width_m ?? 1)).map((dx) => ({
         pos: [ctx.stage.axis + dx, group?.on_floor || Math.abs(dx) > ctx.stage.width / 2 - 0.25 ? 0 : ctx.stage.deck, ctx.stage.back + ctx.stage.into * (group?.back_inset_m ?? 0.35)],
         orient: 'floor', face: toAudience(ctx)
     })),
     // On the floor in the pit between the riser and the crowd barrier.
-    'booth-pit': (n, ctx, group) => spread(n, -(group?.half_width_m ?? 3), group?.half_width_m ?? 3)
+    'booth-pit': (n, ctx, group) => (group?.dx_m ? mirroredDx(group.dx_m) : spread(n, -(group?.half_width_m ?? 3), group?.half_width_m ?? 3))
         .map((dx) => ({ pos: [ctx.stage.axis + dx, 0, ctx.stage.front + ctx.stage.into * (group?.pit_m ?? 0.7)], orient: 'floor', face: toAudience(ctx) })),
     // On side arms up the audience face of each tower, half on each, from
     // `from_h_m` to a metre under the header.
+    // `h_m` [..]: the arms' heights, instead of an even spread.
     'tower-ladder': (n, ctx, group) => {
+        needsTruss(ctx, 'tower-ladder')
         const per = Math.ceil(n / 2)
-        const hs = spread(per, group?.from_h_m ?? 1.8, ctx.stage.trussH - 1)
+        const hs = group?.h_m ? group.h_m.slice(0, per) : spread(per, group?.from_h_m ?? 1.8, ctx.stage.trussH - 1)
         return [-1, 1].flatMap((side) => hs.map((h) => ({
             pos: [ctx.stage.axis + side * ctx.stage.trussW / 2, h, ctx.stage.trussZ + ctx.stage.into * (ctx.stage.trussSection / 2 + 0.3)],
             orient: 'floor', face: toAudience(ctx)
         }))).slice(0, n)
     },
     // Clamped under the header's bottom chord, hanging.
-    'truss-header': (n, ctx) => spread(n, -ctx.stage.trussW / 2 + 1, ctx.stage.trussW / 2 - 1)
+    // `dx_m`: mirrored pairs along it (on the header's clamp points), instead of an even spread.
+    'truss-header': (n, ctx, group) => (needsTruss(ctx, 'truss-header'), group?.dx_m ? mirroredDx(group.dx_m) : spread(n, -ctx.stage.trussW / 2 + 1, ctx.stage.trussW / 2 - 1))
         .map((x) => ({ pos: [ctx.stage.axis + x, ctx.stage.trussH - ctx.stage.trussSection / 2, ctx.stage.trussZ], orient: 'hung', face: toAudience(ctx) })),
     // Standing on the top plate of each tower.
-    'truss-towers': (n, ctx) => spread(n, -ctx.stage.trussW / 2, ctx.stage.trussW / 2)
+    'truss-towers': (n, ctx) => (needsTruss(ctx, 'truss-towers'), spread(n, -ctx.stage.trussW / 2, ctx.stage.trussW / 2))
         .map((x) => ({ pos: [ctx.stage.axis + x, ctx.stage.trussH + ctx.stage.trussSection / 2, ctx.stage.trussZ], orient: 'floor', face: toAudience(ctx) })),
     'column-bases': (n, ctx, group) => {
         if (group?.columns) {
             // The columns a spec picks (columnsFor), one lamp at each base.
+            // `off_m`: how far in front of the inner face (default 0.7) — further out where a
+            // PAR uplights the same face, so the two bodies do not stand in each other.
             const cols = columnsFor(ctx.hall, ctx.stage, { faces: ['inner'], ...group.columns })
-            return cols.slice(0, n).map((c) => ({ pos: [c.faceX - c.side * 0.7, 0, c.z], orient: 'floor', face: [-c.side, 0, 0], column: c }))
+            const off = group.off_m ?? 0.7
+            return cols.slice(0, n).map((c) => ({ pos: [c.faceX - c.side * off, 0, c.z], orient: 'floor', face: [-c.side, 0, 0], column: c }))
         }
         // Mirrored pairs: the same columns on both sides, so the rows read as
         // a design and not a scatter.
@@ -537,6 +557,12 @@ export const beamHitsBox = (from, to, reach, b) => {
     return false
 }
 
+/** A look's level for a group, 0..1; a group the look does not name is at full. */
+export const levelOf = (look, groupId) => {
+    const v = Number(look?.levels?.[groupId])
+    return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1
+}
+
 /** Which members of a group get a real light, by the rig's budget and the mode. */
 export const realIndices = (group, count, budget, mode) => {
     if (mode === 'all') return new Set(Array.from({ length: count }, (_, i) => i))
@@ -721,13 +747,13 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
     }
     const t = stage.trussSection
     const trussTag = booth ? '(owner\'s intent, size ESTIMATED)' : '(ASSUMED)'
-    for (const side of [-1, 1]) {
+    for (const side of stage.truss ? [-1, 1] : []) {
         entities.push(box({
             id: `${RIG_PREFIX}truss-tower-${side < 0 ? 'l' : 'r'}`, name: `Truss tower ${side < 0 ? 'left' : 'right'} ${trussTag}`,
             pos: [ax + side * stage.trussW / 2, 0, stage.trussZ], size: [t, stage.trussH + t / 2, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
         }))
     }
-    entities.push(box({
+    if (stage.truss) entities.push(box({
         id: `${RIG_PREFIX}truss-header`, name: `Truss header ${stage.trussW} m @ ${stage.trussH} m ${trussTag}`,
         pos: [ax, stage.trussH - t / 2, stage.trussZ], size: [stage.trussW + t, t, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
     }))
@@ -750,6 +776,10 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
         const byX = slots.map((s, i) => [s.pos[0], i]).sort((a, b) => a[0] - b[0]).map(([, i]) => i)
         const real = realIndices(group, slots.length, rig.budget, mode)
         const colour = look?.colours?.[group.id] || group.colour || cls.colour
+        // A look's LEVEL for the group, 0..1 (absent = full): its intensity on the desk.
+        // 0 is the group out — no light, no beam in the air, nothing baked — which is how
+        // a look says "darkness here" (blackout, a single beam, the strobe hit).
+        const level = levelOf(look, group.id)
         const op = optics[group.class]
         const half = (op.angleDeg / 2) * DEG
         let groupReal = 0
@@ -783,14 +813,17 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
                 summary.clashes.push(`${label}: a narrow beam passes through the DJ`)
             }
             const { pan, tilt } = aimAt(from, to)
+            // `solo` (an aim parameter): only the lamp of that rank — counted from the
+            // left along x, the rank the rules use — keeps the group's level; the rest are out.
+            const lampLevel = Number.isInteger(spec.solo) && byX.indexOf(i) !== spec.solo ? 0 : level
             const isReal = real.has(i)
             if (isReal) groupReal += 1
-            if (group.bake && !isReal) {
+            if (group.bake && !isReal && lampLevel > 0) {
                 const surface = washSurface(slot, aimed, from, to, half, ctx)
                 if (surface) {
                     washes.push({
                         id: `${group.id}-${i + 1}`, lens: from.map((v) => round(v)), dir: dir.map((v) => round(v, 6)),
-                        candela: op.candela, intensity: op.intensity, angle: half, penumbra: cls.penumbra, distance: reach, colour, surface
+                        candela: op.candela === null ? null : op.candela * lampLevel, intensity: round(op.intensity * lampLevel, 2), angle: half, penumbra: cls.penumbra, distance: reach, colour, surface
                     })
                 }
             }
@@ -804,7 +837,7 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
                     appearance: { color: colour, opacity: 1 },
                     light: {
                         color: colour,
-                        intensity: op.intensity,
+                        intensity: round(op.intensity * lampLevel, 2),
                         // One field is both the drawn cone's length and the
                         // light's cutoff (three.js: (1 - (d/cutoff)^4)^2, zero AT
                         // the cutoff). A real lamp cut at the surface it is aimed at
@@ -817,13 +850,15 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
                         penumbra: cls.penumbra,
                         decay: 2
                     },
-                    beam: { visible: true, haze: group.haze ?? op.haze ?? cls.haze, ...(isReal ? {} : { only: true }) },
+                    // Level 0 keeps the cone (at haze 0, unseen) and `only`: a beam-only lamp
+                    // whose beam were switched off would become a REAL light (beamCastsLight).
+                    beam: { visible: true, haze: round((group.haze ?? op.haze ?? cls.haze ?? DEFAULT_HAZE) * lampLevel, 3), ...(isReal ? {} : { only: true }) },
                     animation: staticAnim
                 }
             })
         })
         const placed = entities.filter((e) => e.id.startsWith(`${RIG_PREFIX}${group.id}-`)).length
-        summary.byGroup[group.id] = { code: cls.code, placed, real: groupReal, rule: spec.rule }
+        summary.byGroup[group.id] = { code: cls.code, placed, real: groupReal, rule: spec.rule, level }
         summary.fixtures += placed
         summary.real += groupReal
     }
