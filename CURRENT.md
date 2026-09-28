@@ -13,15 +13,13 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the front door links to /support
-- the project list ends clear of the account button
-- the installer's lines tell the truth
-- naming a new project on a phone keeps the title whole
-- a copy without the works points at diiii.xyz
-- the bar fits a phone: what does not fit goes behind More, and a full bar keeps off the place names
-- Raw's Help reads on a phone; the lighting desk names its show at 1440
-- the SpaceHub flake was a lost message, not a slow runner
-- the bar and the desk's ways out are a finger tall under a finger; Studio offers a tool where the bar does
+- an uptime check from outside the building that serves the site
+- vitest capped at half the cores outside CI
+- prod and the dev tier run natively on a standby host that pulls its own deploys
+- a photo lands in its wall slot at once
+- an owner can stop an invite link
+- the standby build cannot hang on a dead link any more
+- batch: the standby host serves both tiers and pulls its own deploys; uptime checked from outside
 
 Full detail: `PROGRESS.md`.
 

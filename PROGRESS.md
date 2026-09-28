@@ -5,6 +5,75 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-27 — an uptime check from outside the building that serves the site
+
+- New `.github/workflows/uptime.yml`: every 10 min GitHub's runners open the front page and
+  `/serverXR/api/health` on both public names (health must answer JSON — a bare `/api` path answers the
+  app's HTML with 200, a false green). Three tries over ~90 s per address, so a line blip is not an outage.
+- Alerts only on a change of state (previous state = the previous scheduled run's conclusion), to
+  Telegram when `UPTIME_TELEGRAM_TOKEN` + `UPTIME_TELEGRAM_CHAT` secrets are set; a failed run also sends
+  GitHub's own failure email. Without the secrets it warns and relies on the email.
+- Why: the watcher on the serving machine goes dark with that machine or its line and can never report it.
+- Tested locally: the probe step read all three addresses up; pointed at `/api/health` it reported DOWN
+  (200 text/html) and wrote `state=down`. Not yet run on GitHub — first real run after merge.
+
+## 2026-09-28 — vitest capped at half the cores outside CI
+
+- `vite.config.js` `test.maxWorkers: '50%'` when `CI` is unset (vitest 4.1.10 option; default in
+  run mode was cores-1 = 15 on aylmo). CI keeps vitest's default. `--maxWorkers` and vitest's own
+  `VITEST_MAX_WORKERS` env still override. Documented in `docs/ai/testing.md`.
+- Measured on aylmo (i7-11800H, 16 threads) with other agents already loading it (1-min load 17-31
+  before each run): one run 98-115 s uncapped vs 121-127 s capped; two concurrent runs 178-179 s
+  uncapped vs 170 s capped, 33 vs 19 vitest processes, 1-min load after 46 vs 27. All runs
+  569 files / 6302 tests passed except one uncapped solo run: a 5 s timeout in
+  `PublicProjectViewer.test.jsx`. CPU package hit 100 C in every run, capped or not — the cap
+  lowers oversubscription, it does not fix the heat ceiling.
+
+## 2026-09-27 — prod and the dev tier run natively on a standby host that pulls its own deploys
+
+- `scripts/standby/` (build-runtime, restore-data, server-env, nginx-conf, backup-data) builds and
+  runs prod's own commit without Docker, laid out like the two prod images, for a warm standby that
+  now serves production. Host-specific parts (paths, service users, tunnel, the pull-deployer) are
+  kept out of this repo.
+- `deploy-vps.yml` / `deploy-vps-dev.yml` read the repository variable `DEPLOY_TARGET` (`vps` |
+  `mac`, default `vps`, so this merge changes nothing by itself). With `mac` the deploy job keeps its
+  environment gate, skips SSH and ends green; the host deploys that green run's commit itself. See
+  `docs/deploy/VPS_DOCKER_DEPLOY.md`.
+- `server-env.mjs` takes `--compose` more than once (Compose merge order) and honours `${VAR:?}`, so
+  the dev tier's env comes from `docker-compose.yml` + `docker-compose.dev.yml` exactly as its
+  container's did. Byte-identical output to the previous generator on all 10 compose versions since
+  2026-07-27; `scripts/standby/server-env.test.js` (4 tests) runs it on the repo's real compose files.
+- Owed: the `/serverXR/api/follows` loopback-trust fix (behind a same-host proxy every caller is
+  loopback); a CI contract test running `backup-data.sh` then `restore-data.sh`.
+
+## 2026-09-28 — a photo lands in its wall slot at once
+
+- In a build-zone room the editor now places its own batch with the server's twin (src/shared/placement.js)
+  before showing or sending it, so nothing stands at the drop point and then jumps. All editors, one hook.
+- Measured under 300ms latency: slot from the first frame (old: drop point, then the jump). Screen = server.
+- Third fix from the 2026-09-28 re-check. "Keep Current World" (V1 editor only) was left for decision 1.
+
+## 2026-09-28 — an owner can stop an invite link
+
+- The server could list and revoke invites; the app could only mint them. Manage → Invite links now lists each
+  link (made, used, until) with Revoke. Walked on desktop and phone; the revoked token redeems 404, the other 200.
+- First fix from the 2026-09-28 re-check of the 46 audit items marked broken (7 + 8 BUGs, 30 GAPs for the owner).
+
+## 2026-09-28 — the standby build cannot hang on a dead link any more
+
+- The first deploy the standby host pulled by itself hung: the release build's `git fetch` stalled at 38 MB on a
+  dropped link, and neither git nor curl has a timeout of its own, so the build held the deploy lock with nothing said.
+- `scripts/standby/build-runtime.sh`: the source fetch gives up under 1 KB/s for 60 s and is retried three times;
+  the node download is bounded (`--connect-timeout 20 --max-time 900 --retry 3`).
+- Measured against a silent server: bare fetch still hanging at 25 s; bounded fetch ended itself at 10 s.
+- Guard `scripts/standby/build-runtime.test.js`: 3 of 3 red on the old script, green on the new; standby tests 16/16.
+- The host-side half (the deployer retries a failed BUILD up to three times instead of holding the commit) is in the
+  private ops repo.
+
+## 2026-09-28 — batch: the standby host serves both tiers and pulls its own deploys; uptime checked from outside
+
+- Lands #582 (feat/mac-standby) and #581 (chore/outside-uptime) together; each keeps its own note.
+
 ## 2026-09-27 — the front door links to /support
 
 - `/support` (space `support`, live on prod with Whydonate + Polar) had no way in. One word, "Support",
