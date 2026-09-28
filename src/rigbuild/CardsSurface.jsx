@@ -16,6 +16,8 @@ import { planExtent, venueOf } from './venuePlan.js'
 import { fillOf, positionsOf } from './positions.js'
 import { dealOps } from './deal.js'
 import { deleteOps } from './plotEdits.js'
+import { plotModel, titleTotals } from './plotModel.js'
+import { barTitle, patchBars, UNIVERSE_SIZE } from './patchBars.js'
 import './plot.css'
 import './cards.css'
 
@@ -77,6 +79,62 @@ export function Card({ item, shape, selected, onSelect }) {
             <span className="rigcards-card__bar" aria-hidden="true"><span style={{ width: `${Math.round(fill * 100)}%` }} /></span>
             <span className="rigcards-card__words rigplot-mono">{countWords(item)}</span>
         </button>
+    )
+}
+
+/** One universe as a bar: lamps solid, conflicts hatched, what is left to place dashed. */
+function Bar({ u }) {
+    const x = (a) => ((a - 1) / UNIVERSE_SIZE) * 512
+    const w = (a, b) => Math.max(1, ((b - a + 1) / UNIVERSE_SIZE) * 512 - 0.6)
+    return (
+        <svg className="rigcards-bar" viewBox="0 0 512 20" preserveAspectRatio="none" role="img" aria-label={`${barTitle(u)} — ${u.makeup}`}>
+            <defs>
+                <pattern id={`hatch-${u.universe}`} width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2" height="5" fill="#111" /></pattern>
+            </defs>
+            <rect x="0.5" y="0.5" width="511" height="19" fill="#fff" stroke="#111" vectorEffect="non-scaling-stroke" />
+            {u.segments.map((s) => (
+                <rect key={s.id} x={x(s.from)} y="1" width={w(s.from, s.to)} height="18" fill={s.conflict ? `url(#hatch-${u.universe})` : '#111'} stroke={s.conflict ? '#111' : 'none'} vectorEffect="non-scaling-stroke" />
+            ))}
+            {u.toPlace.map((p) => (
+                <rect key={p.code} x={x(p.from)} y="2" width={w(p.from, p.to)} height="16" fill="none" stroke="#111" strokeDasharray="3 2" vectorEffect="non-scaling-stroke" />
+            ))}
+        </svg>
+    )
+}
+
+function PatchPart({ bars, totals, onMove, kept, onKeep, desk }) {
+    const open = bars.conflicts.filter((c) => !kept.has(c.id))
+    return (
+        <section className="rigcards-patch" aria-label="Patch per universe">
+            <h2 className="rigcards-h">patch · per universe</h2>
+            {!bars.universes.length ? <p className="rigplot-hint">Nothing patched yet{desk ? '' : ' — the desk runs on a local di.iiii; here the lamps stay unpatched'}.</p> : null}
+            {bars.universes.map((u) => (
+                <div key={u.universe} className="rigcards-universe">
+                    <div className="rigplot-mono rigcards-universe__title">{barTitle(u)}<span className="rigplot-status__dim"> · {u.free} free</span></div>
+                    <Bar u={u} />
+                    <div className="rigcards-universe__makeup rigplot-mono">{u.makeup}{u.toPlace.map((p) => ` · ${p.code.replace(/^UP-/, '')} ${p.n} to place`).join('')}</div>
+                </div>
+            ))}
+            {bars.owed.map((o) => (
+                <div key={o.type} className="rigcards-universe is-owed">
+                    <div className="rigplot-mono rigcards-universe__title">{o.noRoom ? 'no universe has room' : 'U? · mode owed'}</div>
+                    <div className="rigcards-bar rigcards-bar--owed" aria-hidden="true" />
+                    <div className="rigcards-universe__makeup rigplot-mono">{o.code.replace(/^UP-/, '')} ×{o.placed} of {o.ordered} · {o.noRoom ? `${o.width} channels` : 'DMX mode owed by the rental house — no address until it comes'}</div>
+                </div>
+            ))}
+            {open.map((c) => (
+                <div key={c.id} className={`rigcards-conflict rigplot-mono${c.move ? '' : ' is-other'}`} role="alert">
+                    <b>! {c.index != null ? `#${c.index} ` : ''}{c.at}</b> <span>{c.code} · {c.words}</span>
+                    {c.move ? (
+                        <span className="rigcards-conflict__acts">
+                            <button type="button" className="rigcards-btn is-primary" onClick={() => onMove(c.id)}>move to next free</button>
+                            <button type="button" className="rigcards-btn" onClick={() => onKeep(c.id)}>keep</button>
+                        </span>
+                    ) : null}
+                </div>
+            ))}
+            <p className="rigcards-power rigplot-mono">{totals.power} · {totals.circuits}<br /><span className="rigplot-status__dim">{totals.channels}</span></p>
+        </section>
     )
 }
 
@@ -146,6 +204,16 @@ export default function CardsSurface({ spaceId, projectId, library = TYPE_LIBRAR
             return [l.id, { id: l.id, code: l.code, type: f.type, index: f.index ?? null, patch: f.universe != null && f.address != null ? `U${f.universe}.${String(f.address).padStart(3, '0')}` : '' }]
         }))
     }, [entities, lamps])
+
+    const model = useMemo(() => plotModel({ entities, library, deskFlags: patch.flags, projectId }), [entities, library, patch.flags, projectId])
+    const bars = useMemo(() => patchBars({ model, rental: counts, deskFlags: patch.flags, projectId }), [model, counts])
+    const totals = useMemo(() => titleTotals(model.sheet), [model.sheet])
+    const [kept, setKept] = useState(() => new Set())
+    const moveToFree = useCallback((id) => {
+        // The desk lays it out again at its next free address and writes it back (§4.2).
+        setStatus('moving it to the next free address…')
+        patch.patchGroup([id])
+    }, [patch])
 
     const [cardType, setCardType] = useState(null)
     const card = counts.items.find((i) => i.type === cardType) || null
@@ -281,6 +349,8 @@ export default function CardsSurface({ spaceId, projectId, library = TYPE_LIBRAR
         </section>
     )
 
+    const patchPart = <PatchPart bars={bars} totals={totals} onMove={moveToFree} kept={kept} onKeep={(id) => setKept((k) => new Set([...k, id]))} desk={patch.message !== 'no desk on this machine'} />
+
     const statusLine = (
         <div className="rigplot-status rigplot-mono rigcards-status" role="status" aria-live="polite">
             <span>{status || `${counts.totals.placed} of ${counts.totals.ordered} placed on ${positions.length} positions`}</span>
@@ -323,6 +393,7 @@ export default function CardsSurface({ spaceId, projectId, library = TYPE_LIBRAR
                 {pane === 'room' ? <div className="rigcards-roompane">{room}</div> : (
                     <main className="rigcards-main">
                         {cards}
+                        {patchPart}
                         <p className="rigcards-foot"><a href={buildPlotPath(spaceId, projectId)}>plot</a> · <a href={buildPatchSheetPath(spaceId, projectId)}>patch sheet</a></p>
                     </main>
                 )}
@@ -344,6 +415,7 @@ export default function CardsSurface({ spaceId, projectId, library = TYPE_LIBRAR
                 <main className="rigcards-main rigcards-grid">
                     <div className="rigcards-col rigcards-col--cards">{cards}</div>
                     <div className="rigcards-col rigcards-col--positions">{positionsPart}</div>
+                    <div className="rigcards-col rigcards-col--patch">{patchPart}</div>
                     <div className="rigcards-bottom">{statusLine}</div>
                 </main>
             )}
