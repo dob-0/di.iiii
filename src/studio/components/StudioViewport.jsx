@@ -5,6 +5,7 @@ import '../styles/studio.css'
 import { CameraControls, Grid, Html, TransformControls } from '@react-three/drei'
 import RigMirror from './RigMirror.jsx'
 import { useLiveLightEntity } from '../../rigMirror/liveLight.js'
+import { useRigLookEntities } from '../../rigbuild/useRigLook.js'
 import LiveScreens from './LiveScreens.jsx'
 import { XR, useXR } from '@react-three/xr'
 import ModalTransform from './ModalTransform.jsx'
@@ -613,30 +614,35 @@ function StudioSceneContent({
     playTimelines = false,
     rigMirror = false,
     screens = null,
-    followLinks = false
+    followLinks = false,
+    rigLook = undefined
 }) {
     const isArMode = useXR((state) => state.mode === 'immersive-ar')
     // Keyed on assets + project id so the map only rebuilds when assets change,
     // not on every document identity change from a sync tick.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     const assetMap = useMemo(() => buildAssetMap(document), [document.assets, document.projectMeta?.id])
+    // A room with designed looks draws its lamps posed by the look the desk is playing
+    // (src/rigbuild/useRigLook.js — a view, the document is untouched); any other room
+    // is exactly its document.
+    const { entities: sceneEntities } = useRigLookEntities(document, { explicit: rigLook })
     const childMap = useMemo(() => {
         const map = new Map()
-        for (const entity of (document.entities || [])) {
+        for (const entity of sceneEntities) {
             if (entity.parentId) {
                 if (!map.has(entity.parentId)) map.set(entity.parentId, [])
                 map.get(entity.parentId).push(entity)
             }
         }
         return map
-    }, [document.entities])
-    const rootEntities = useMemo(() => (document.entities || []).filter((e) => !e.parentId), [document.entities])
+    }, [sceneEntities])
+    const rootEntities = useMemo(() => sceneEntities.filter((e) => !e.parentId), [sceneEntities])
     const [previewById, setPreviewById] = useState({})
 
     const selectedIdSet = useMemo(() => new Set(selectedEntityIds), [selectedEntityIds])
     const selectedEntities = useMemo(
-        () => (document.entities || []).filter((entity) => selectedIdSet.has(entity.id)),
-        [document.entities, selectedIdSet]
+        () => sceneEntities.filter((entity) => selectedIdSet.has(entity.id)),
+        [sceneEntities, selectedIdSet]
     )
     const transformableSelectedEntities = useMemo(
         () => selectedEntities.filter((entity) => (
@@ -945,6 +951,9 @@ export default function StudioViewport({
     // A visitor's view of a published room: an object's link opens on click
     // (src/project/viewport/EntityLink.jsx). Never in an editor.
     followLinks = false,
+    // A designed look to pose the room by ('' none), overriding the desk's (view C's GO
+    // with no desk here). Undefined: follow the desk.
+    rigLook = undefined,
 }) {
     const viewportRef = useRef(null)
     const [transformStatus, setTransformStatus] = useState(null)
@@ -1029,6 +1038,7 @@ export default function StudioViewport({
                         controlsRef={controlsRef}
                         playTimelines={playTimelines}
                         rigMirror={rigMirror}
+                        rigLook={rigLook}
                         screens={screens}
                         followLinks={followLinks}
                     />

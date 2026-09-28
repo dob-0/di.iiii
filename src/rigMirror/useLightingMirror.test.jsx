@@ -130,8 +130,8 @@ describe('the lighting mirror', () => {
         expect(result.current.master).toBe(255)
         expect(result.current.blackout).toBe(false)
         expect(result.current.fixtures).toEqual([
-            { id: 'fx_a', index: 1, name: 'Back left', x: 0.2, y: 0.3, colour: { r: 255, g: 120, b: 0 }, level: 1 },
-            { id: 'fx_b', index: 2, name: 'Wash', x: 0.8, y: 0.6, colour: { r: 200, g: 40, b: 0 }, level: 0.784 }
+            { id: 'fx_a', index: 1, known: true, name: 'Back left', x: 0.2, y: 0.3, colour: { r: 255, g: 120, b: 0 }, level: 1 },
+            { id: 'fx_b', index: 2, known: true, name: 'Wash', x: 0.8, y: 0.6, colour: { r: 200, g: 40, b: 0 }, level: 0.784 }
         ])
 
         desk.dmx = [128, 255, 0, 0, 200, 40, 0, 0]
@@ -272,5 +272,19 @@ describe('no source folder sits under the /light dev proxy', () => {
         // vitest's root is src/
         const srcDir = path.resolve(process.cwd(), path.basename(process.cwd()) === 'src' ? '.' : 'src')
         expect(readdirSync(srcDir).filter((name) => name.startsWith('light'))).toEqual([])
+    })
+})
+
+// View C (RIG_BUILD.md §11.4): a rig type whose channel list is owed is patched with a
+// ch1…chN profile — it says nothing about colour, and the room must not draw it white.
+describe('a profile with no known channels, and the looks the desk plays', () => {
+    it('marks the fixture unknown, and the lamp keeps its authored light', async () => {
+        const { mirrorFixtures, liveLooksOf } = await import('./useLightingMirror.js')
+        const { liveLight } = await import('./liveLight.js')
+        const patch = { fixtures: [{ id: 'f', index: 3, universe: 0, address: 1, profile: 'UP-B380F 16ch' }], profiles: { 'UP-B380F 16ch': { channels: ['ch1', 'ch2', 'ch3'] } } }
+        const [f] = mirrorFixtures(patch, { 0: [255, 255, 255] })
+        expect(f.known).toBe(false)
+        expect(liveLight({ color: '#2437ff', intensity: 3 }, f)).toEqual({ color: '#2437ff', intensity: 3 })
+        expect(liveLooksOf([{ lookId: 'a', level: 1, priority: 1 }, { lookId: 'b', level: 0, priority: 9 }, { lookId: 'rig-c', level: 0.5, priority: 5 }])).toEqual(['rig-c', 'a'])
     })
 })

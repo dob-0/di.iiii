@@ -327,7 +327,7 @@ Import into an open tool is attempted where one runs headless (BlenderDMX, GPL,
 | | A — first person | B — plot | C — cards |
 |---|---|---|---|
 | **reads** | pieces (snap points), lamps' `index/universe/address` (the tag `#36 U2.025` in the air), flags | lamps + pieces from above; types (symbols, footprints); sheet totals for the title block | types (the cards and their counts), positions (the slots), lamps per position, patch bars, looks |
-| **writes** | `createEntity` of a piece or lamp at a pose from `snap()`; `deleteEntity` | the same, from a plan pose; `fixture.circuit/unit/position` typed in the inspector; a typed universe/address | `createEntity` lamps along a position line (a card dealt = N lamps), `fixture.position` |
+| **writes** | `createEntity` of a piece or lamp at a pose from `snap()`; `deleteEntity` | the same, from a plan pose; `fixture.circuit/unit/position` typed in the inspector; a typed universe/address | `createEntity` lamps at a position's slots (a card dealt = N lamps, §11.2), `fixture.position`; cues (`mappingState.cues`) naming the desk's looks (§11.4) |
 | **then** | auto-patch runs on the change | auto-patch; "patch this group" | "patch this group" per dealt card |
 | **hands over** | crew view: the sheet link + MVR | the sheet as sheets 2 and 3 of the plot + MVR | the sheet + MVR |
 
@@ -504,6 +504,158 @@ made of pieces imported into a console via MVR (§8's open item still stands).
   `rig.mjs`; `load-plot.mjs` removes it) — a body per lamp entity is owed, for A and C too.
 - Label layout is greedy; dense positions (PAR pairs on a column) lose labels at 1:500.
   Position callouts ("PL5403 ×25 a side", sketch B) are owed.
-- The rental list's counts (`provenance.fixtureList`) are not in the document, so the
-  plot cannot say "3 left of 12" yet.
+- ~~The rental list's counts are not in the document~~ — closed by view C (§11.1): the key
+  says "3 left of 12" when the project carries `components.rentalList`.
 - Console input state reads "not on this build" until `feat/dmx-input` lands.
+
+---
+
+## 11. View C — the cards (`/{space}/cards/{project}`)
+
+Sketch C: *"the cards — rental list dealt onto positions, looks on a timeline"*. The owner
+chose all three views (2026-09-28); B was built first, then C. Code: `src/rigbuild/Cards*.jsx`,
+`rental.js`, `positions.js`, `deal.js`, `patchBars.js`, `lookRules.js`, `looks.js`,
+`useRigLook.js`; scripts `scripts/rigbuild/rental.mjs`, `xlsx.mjs`, `looks.mjs`.
+
+Nothing is placed in space by hand. A card (a fixture type on the rental list) is dealt
+onto a named position, and the lamps land on that position's slots. The patch bars fill in
+beside the positions, and the rig's designed looks sit on the project's cue list below. GO
+fires a look on the desk, and the room follows.
+
+### 11.1 The rental list — data, with its source
+
+`components.rentalList` sits on the show's entity (`rig-show`, a group). It holds a name, a
+source, a currency, and one item per line: `{code, type, ordered, stock?, rate?, label?,
+source?, note?}`. Both schema copies normalise it (whole counts from 0 to 100000, capped
+lists) and `schemaSync.test.js` holds them together.
+
+`scripts/rigbuild/rental.mjs` writes it from two inputs:
+
+- **The rental house's spreadsheet** (`lights_rental_quote_calculator.xlsx`, sha256
+  797fa436…). The visible "Price list" sheet gives each code's stock and its rate per day.
+  The file is read by `scripts/rigbuild/xlsx.mjs`, a cell-value reader for OOXML (ECMA-376
+  Part 1 §18.2–18.4). It reads cached values only and never evaluates a formula.
+- **The show's order** (`scripts/rigbuild/rentals/moxir-order-2026-09-27.json`, taken from
+  the rig file's `provenance.fixtureList`).
+
+Each item carries its sheet cells (`Price list!A6:E6`) and the order's own words. The
+importer refuses a code the sheet does not list. An order above the listed stock is written
+with a note, not refused. The importer also says where the workbook disagrees with itself.
+For MOXIR, the quote calculator's hidden "Price data" sheet has UP-B380F at 19000 AMD a
+day, while the visible list says 20000. The quote sheet itself is blank, so no line of the
+order is confirmed by the rental house.
+
+A card shows `placed n / ordered m` for its type (`rentalCounts`), with its mode, footprint
+and watts. A dashed card means the mode is owed. A card turns bold when more lamps are
+placed than ordered, or when the type is not on the list at all. `plotModel().rental` feeds
+the same counts to view B's key.
+
+### 11.2 Positions — derived, never drawn
+
+`positionsOf(entities)` names the places a card can be dealt onto and lists their slots.
+Each slot is the MOUNT, with `hung`, `side` (left or right of the riser's axis) and `rank`
+(its order from the stage, or along the line):
+
+| position | from | slots |
+|---|---|---|
+| a truss run (`truss header`) | the pieces (`trussRuns`) | the catalogue's clamp points, every 0.5 m under the bottom chord |
+| tower ladders, tower tops | tower pieces | side arms on the audience face, from 1.8 m every 0.6 m; the top plate |
+| stage back line, stage flanks, pit | the riser's decks (its axis, edges, and the side the audience is on, which is the dance zone's side) | floor lines 0.25 m behind it, beside it, and 0.7 m in front |
+| column bases, column faces, dance-floor columns | the venue plan's column rows either side of the axis, along the stage and dance zones, not in a doorway | 0.7 m off the inner face; an uplight 0.45 m off the inner and the back face; 1 m off and 1.2 m toward the audience |
+| outer columns | the next rows out | an uplight 0.45 m off the face toward the nave |
+| backdrop · (the first solid's name) | venue solids standing behind the riser | floor slots 0.35 m off whatever face is nearest |
+
+The offsets are the MOXIR rig script's own placement rules (`rig-lib.mjs` `place`). They are
+stated once, in `positions.js` `OFFSETS`. They are rules of placement, not measurements. A
+room with no decks or plan gets only the positions its pieces give.
+
+**Dealing** (`deal.js`): `pickSlots` spreads n evenly over the free slots and mirrors them
+about the axis (`evenPick`, which puts a slot i and its mirror count-1-i together). On a
+row of columns it can instead fill from the stage in pairs (`from-stage`, the default for
+rows). A two-sided position splits the count between its sides; when the count is odd the
+left side gets one more, and the page says so. Every lamp is the plot's own `lampEntity`,
+with the lens taken from the mount (§2.3). It is named after its position and numbered
+along it, and it is written as an op. A dealt card is then patched as **one group**
+(`patchGroup`, §4.2). A type whose mode is owed is placed and not patched. A slot is
+**filled** when a lamp's mount lies within 5 cm of it (`fillOf`).
+
+### 11.3 Patch bars
+
+`patchBars(plotModel)` draws one bar per universe from the plot's own rows and conflicts:
+
+- **solid**: a lamp's channels;
+- **hatched**: a lamp in `CONFLICT_CODES`, with **move to next free** (the desk patches it
+  again as a group of one) and **keep**. These are offered on the lamp the desk flagged
+  (typed over another, or held elsewhere), not on the lamp it overlaps;
+- **dashed**: what the list still has to place at the type's known footprint, drawn after
+  the channels that type already uses ("3 to place").
+
+A type whose mode is owed is **not** given an assumed footprint (the sketch assumed 8ch for
+the PAR). It is listed as a dashed row, with its count and "no address until it comes".
+Under the bars go the power and the number of circuits the load alone needs, both from the
+sheet.
+
+### 11.4 Looks on the cue list, and the room follows
+
+The **looks** are `components.rigLooks` on `rig-show`, written by `scripts/rigbuild/looks.mjs`
+from the rig file. Each group's rule and colour is renamed to `position/type`
+(`column-bases/up-b380f`) through `MOUNT_POSITION`, the rig script's mount rule mapped to
+view C's position. A mount with no position, or two groups on one key, is refused.
+
+The **rules** are the rig script's `AIM_RULES`, ported to `src/rigbuild/lookRules.js` from
+feat/moxir-hall 70dbdd95. `lookRules.test.js` holds them numerically equal to
+`scripts/place/rig-lib.mjs` on every rule both copies have. The frame the rules need is read
+from the document: the riser, the solids behind it, the crane runway's and the roof's
+heights from the venue plan's overhead items. `lookPoses` gives each lamp its pan, tilt,
+rotation, lens and colour.
+
+A look lands in three places, with one meaning each:
+
+| where | what | how |
+|---|---|---|
+| **the desk** | a look in the desk's own model (`serverXR/src/lighting/looks.js`), id `rig-<look>`, over this room's patched fixtures (`deskLooks`, `POST /light/api/looks/add`) | its per-fixture DMX values need each type's channel list (which channel is pan, tilt, colour). For MOXIR every list is **owed**, so the desk look carries the fixtures and **no values**, and says so |
+| **the cue list** | the project's own cues, `document.mappingState.cues`: the list the map desk, Perform and the Studio already fire through `fireCue`. One cue per look: `{name, fade, hold, lightLook: 'rig-<look>'}` | **GO** fires the next cue. `recallCueLighting` puts the look on the desk's `cue` layer. A cue with a hold moves on by itself; a cue with none waits for GO. The timeline is this list drawn against the holds: **a cue list, not a timeline editor** |
+| **the room** | every lamp of the look posed by its rule and lit in its colour: a view, never written | `GET /light/api/dmx` now carries the looks that are on (`looks: [{lookId, level, priority, layer}]`). The mirror reads them at 10 Hz, and `useRigLookEntities` (in `StudioSceneContent`) poses the scene. So GO from the cards, from `/light`, or from anything else that fires the look moves the room. With no desk, the cards page's own GO poses its room pane |
+
+**Rest the room on a look** writes one look's aims and colours into the document as ops.
+Undo takes it back. This is how a link with no desk (a hosted tier) shows a designed look.
+
+Fixed on the way: a lamp whose desk profile has **unknown channels** (`ch1…chN`, a list
+owed) was drawn white at full by the mirror, which assumed "no colour channel" meant white.
+Such a fixture is now `known: false`, and the lamp keeps its authored light. See the
+known-fixes row and `useLightingMirror.test.jsx`.
+
+### 11.5 Validated (2026-09-28, MOXIR, own dev stack :4383/:5383, a copy of the centred space)
+
+The data came from `space-bundle.mjs export moxir` on the local tier, taken after the
+re-centring (70dbdd95) and imported into a scratch data root. `load-plot.mjs --pieces-only`
+laid the plan and the 8 pieces, with no lamps.
+
+| check | result |
+|---|---|
+| pure logic | `positions` 9, `patchBars` 4, `looks` 4, `lookRules` 13, `rental` 7, `cardsRouting` 2 tests; schema parity for `rentalList` and `rigLooks` |
+| rental list | 8 lines from the spreadsheet and the order, **104 ordered**; stock matches for all but HK1915 (8 of 14) |
+| positions | 11 derived: header 7 m / 14 slots, tower ladders 14, tops 2, back line 7, flanks 8, pit 19, column bases 16 (z 6–48), column faces 32, dance-floor columns 16, outer columns 16, backdrop 21 |
+| deal, in the UI | the whole list in 13 deals → **104 placed / 104 ordered**. BSW 6 on the header and 6 on the first three column pairs, B380F on the back line, the flanks and the next five pairs, and so on, matching the rig file's design |
+| patch | 46 patched by the desk, in groups; after a conflict test, **U1 1–428, U2 1–328**; PL5403 ×50, LA40WF ×2 and Q108S ×6 mode owed, not patched; 33.8 kW (datasheet maximum), ≥ 12 × 16 A |
+| conflict | #3 typed to U1.010 → hatched, with the desk's words; **move to next free** → clean |
+| cues | 5 looks on the cue list and on the desk (5/5); GO ×5 → after each GO the desk's `/api/dmx` reported exactly that look on the `cue` layer |
+| room | RTX 3080 (ANGLE/Vulkan, renderer string checked first). All five looks at **60 fps** on the desktop, 2 on the phone (portrait and landscape): roof cathedral, fan out, crossfire, all to centre, curtain, posed and coloured as designed |
+| screens | 1440×900 DPR 2, 390×844 DPR 3, 844×390 DPR 3; no page overflow, no console error, no text cell under 120 px (sweep) |
+
+Not validated:
+
+- DMX output of a look: no channel lists, so no values; nothing was sent to a real fixture.
+- A real phone.
+- Console input: `feat/dmx-input` (#599) is not merged, so their console cannot fire a look yet.
+- Two projects sharing one desk: the desk ids `rig-<look>` are not per project.
+
+### 11.6 Owed
+
+- The channel list of every UPlight mode (§9). Until it comes, the desk's looks are empty.
+- Per-project desk look ids, before two rigged rooms share one desk.
+- Deal by drag (desktop); today it is a tap or a button.
+- A position built in C: a new truss run is still drawn on the plot (view B), then dealt onto here.
+- Fixture bodies per lamp (§10.8): the room draws the beams, not a body for each dealt lamp.
+- The GDTF/MVR hand-off of the looks themselves: the cue list travels in the document and on the desk, not in the MVR.
+

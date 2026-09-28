@@ -1320,7 +1320,13 @@ function createDesk(opts = {}) {
     },
 
     // Just the live DMX buffers — polled fast so the stage view animates smoothly.
-    'GET /api/dmx': (req, res) => json(res, { dmx: snapshot(), master: state.master, blackout: state.blackout }),
+    // The looks that are ON, riding with the DMX at the mirror's own rate, so a room can
+    // follow a look fired from anywhere (a cue, this desk, a phone) within a frame or two
+    // (src/rigMirror/useLightingMirror.js, RIG_BUILD.md §11.4). Ids, levels and order only.
+    'GET /api/dmx': (req, res) => json(res, {
+      dmx: snapshot(), master: state.master, blackout: state.blackout,
+      looks: state.layers.filter((l) => l.on && l.lookId && l.level > 0).map((l) => ({ lookId: l.lookId, level: l.level, priority: l.priority, layer: l.id })),
+    }),
 
     'POST /api/master': (req, res, body) => {
       if (body.master != null && Number.isFinite(+body.master)) state.master = Math.max(0, Math.min(255, Math.round(+body.master)));

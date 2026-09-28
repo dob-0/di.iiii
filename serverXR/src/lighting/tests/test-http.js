@@ -1397,6 +1397,10 @@ check('an outside caller can fire a look, and it lands on one visible layer', as
   assert.strictEqual(await wire(0, 483), 255, 'blue took its place');
   const { body: layers } = await GET('/api/layers');
   assert.strictEqual(layers.layers.filter((l) => l.id === 'cue').length, 1);
+  // The DMX frame says which look is on, so a room following the desk can pose by it
+  // (RIG_BUILD.md §11.4) at the rate it already reads the channels.
+  const { body: frame } = await GET('/api/dmx');
+  assert.deepStrictEqual(frame.looks.filter((l) => l.layer === 'cue').map((l) => l.lookId), ['cue-blue'], 'the fired look rides with the DMX');
   assert.strictEqual((await POST('/api/looks/fire', { id: 'nope' })).status, 404);
   await POST('/api/layers', { layers: [] });
   await POST('/api/looks', { looks: [] });

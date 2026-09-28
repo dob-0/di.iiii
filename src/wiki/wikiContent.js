@@ -1607,6 +1607,21 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['plot', 'lighting plot', 'plan', 'cad', 'truss', 'tower', 'deck', 'stage', 'rig', 'fixture', 'lamp', 'dmx', 'patch', 'address', 'print', 'a3', 'scale', 'room', 'build', 'light engineer', 'crew', 'rp-2'],
         updated: '2026-09-28'
+    },
+    {
+        id: 'rig-cards',
+        category: 'Spaces & access',
+        title: 'The cards: deal the rental list onto the rig, play the looks',
+        summary: 'diiii.xyz/{space}/cards/{project} shows the rental list as cards — placed and ordered for each type — and deals them onto named positions; the patch fills in per universe beside them, and the rig\'s looks sit on a cue list: GO, and the room follows.',
+        body: [
+            'On the left is the rental list: one card per fixture type, with how many are on order and how many are in the rig. A dashed card is a type whose DMX mode the rental house has not sent yet: it can be placed, but it gets no address.',
+            'In the middle are the positions: the truss header, the tower ladders and tops, the line behind the stage, its flanks, the pit, the column bases, the column faces and the backdrop. They come from what the room already has, the truss, towers and decks and the hall\'s own plan; nothing is drawn by hand. Pick a card and press deal here: the lamps land evenly and mirrored, or in pairs from the stage along a row of columns, and the desk patches the card as one block. Tap a free slot to hang just one; take back removes them.',
+            'On the right are the patch bars, one per universe: solid where lamps are, hatched where two claim the same channels (press move to next free), dashed for what is still to place.',
+            'Underneath is the cue list. Put the looks on it and send them to the desk; GO fires the next look on the desk, from here or from /light, and the room tab shows every lamp aimed and coloured by that look. On a phone: tap a card, then tap a slot.',
+            'What it cannot do yet: send the looks as DMX to real fixtures (each fixture\'s channel list is still owed by the rental house), and take GO from the engineers\' own console (that waits for console input).'
+        ],
+        tags: ['cards', 'rental', 'rental list', 'deal', 'position', 'truss', 'column', 'patch', 'universe', 'dmx', 'looks', 'cue', 'cue list', 'go', 'timeline', 'rig', 'fixture', 'light', 'room', 'phone', 'light engineer'],
+        updated: '2026-09-28'
     }
 ]
 

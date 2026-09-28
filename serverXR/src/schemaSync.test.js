@@ -456,7 +456,9 @@ describe('ESM/CJS mirror equivalence', () => {
         // A rental list (RIG_BUILD.md §11): counts are whole and bounded, an item with
         // no code or no count is dropped, a list with no item is dropped whole.
         { id: 'r1', type: 'group', components: { rentalList: { name: ' order ', source: 'x.xlsx', currency: 'AMD', items: [{ code: ' UP-B380F ', ordered: 18, stock: 18, rate: 20000, label: 'beam', source: 'Price list!D6' }, { code: 'UP-PL5403', ordered: '50', stock: -1 }, { code: '', ordered: 2 }, { code: 'X', ordered: 1.5 }], extra: 1 } } },
-        { id: 'r2', type: 'group', components: { rentalList: { items: [{ code: 'A' }] } } }
+        { id: 'r2', type: 'group', components: { rentalList: { items: [{ code: 'A' }] } } },
+        // The rig's looks (RIG_BUILD.md §11.4): numbers only in a rule, a bad key or colour dropped.
+        { id: 'l1', type: 'group', components: { rigLooks: { source: 'rig.json', looks: [{ id: 'roof-cathedral', title: 'Roof', aims: { 'column-bases/up-b380f': { rule: 'vertical', in_deg: '8', note: 'x' }, 'bad key': { rule: 'fan' } }, colours: { 'column-bases/up-b380f': '#EEF3FF', 'truss/up-250bsw': 'blue' } }, { id: 'Bad Id' }] } } }
       ]
     },
     // The show's Perform presets (2026-09-24). The server rebuilds documents
@@ -530,7 +532,9 @@ describe('ESM/CJS mirror equivalence', () => {
     const doc = schema.normalizeProjectDocument({
       entities: [
         { id: 'r1', type: 'group', components: { rentalList: { name: ' order ', items: [{ code: ' UP-B380F ', ordered: 18, stock: 18, rate: 20000 }, { code: 'UP-PL5403', ordered: '50', stock: -1 }, { code: '', ordered: 2 }, { code: 'X', ordered: 1.5 }] } } },
-        { id: 'r2', type: 'group', components: { rentalList: { items: [{ code: 'A' }] } } }
+        { id: 'r2', type: 'group', components: { rentalList: { items: [{ code: 'A' }] } } },
+        // The rig's looks (RIG_BUILD.md §11.4): numbers only in a rule, a bad key or colour dropped.
+        { id: 'l1', type: 'group', components: { rigLooks: { source: 'rig.json', looks: [{ id: 'roof-cathedral', title: 'Roof', aims: { 'column-bases/up-b380f': { rule: 'vertical', in_deg: '8', note: 'x' }, 'bad key': { rule: 'fan' } }, colours: { 'column-bases/up-b380f': '#EEF3FF', 'truss/up-250bsw': 'blue' } }, { id: 'Bad Id' }] } } }
       ]
     })
     const list = doc.entities[0].components.rentalList
@@ -540,6 +544,14 @@ describe('ESM/CJS mirror equivalence', () => {
       { code: 'UP-PL5403', type: 'up-pl5403', ordered: 50 }
     ])
     expect(doc.entities[1].components.rentalList).toBeUndefined()
+  })
+
+  it('keeps components.rigLooks to numbers and short words through the mirror', () => {
+    const doc = schema.normalizeProjectDocument({
+      entities: [{ id: 'l1', type: 'group', components: { rigLooks: { looks: [{ id: 'roof-cathedral', title: 'Roof', aims: { 'column-bases/up-b380f': { rule: 'vertical', in_deg: '8', note: 'x' }, 'bad key': { rule: 'fan' } }, colours: { 'column-bases/up-b380f': '#EEF3FF', 'truss/up-250bsw': 'blue' } }, { id: 'Bad Id' }] } } }, { id: 'l2', type: 'group', components: { rigLooks: { looks: [] } } }]
+    })
+    expect(doc.entities[0].components.rigLooks.looks).toEqual([{ id: 'roof-cathedral', title: 'Roof', intent: '', aims: { 'column-bases/up-b380f': { rule: 'vertical', in_deg: 8 } }, colours: { 'column-bases/up-b380f': '#eef3ff' } }])
+    expect(doc.entities[1].components.rigLooks).toBeUndefined()
   })
 
   it('clears one fixture field through updateComponent without losing the rest', () => {

@@ -39,7 +39,7 @@ export default function PlotRoom(props) {
     return <RoomBoundary><RoomView {...props} /></RoomBoundary>
 }
 
-function RoomView({ document, selectedIds = [], onSelect, extent, venueExtent = null }) {
+function RoomView({ document, selectedIds = [], onSelect, extent, venueExtent = null, rigLook = undefined }) {
     const controlsRef = useRef(null)
     const xrStore = useMemo(() => createXRStore({ offerSession: false, emulate: false }), [])
     // The first extent frames the room; later edits do not throw the camera around.
@@ -57,6 +57,7 @@ function RoomView({ document, selectedIds = [], onSelect, extent, venueExtent = 
                 xrStore={xrStore}
                 editMode="navigate"
                 showChrome={false}
+                rigLook={rigLook}
             />
             <span className="rigplot-room__label">room · same selection</span>
         </div>
