@@ -1,0 +1,8 @@
+# Live-AI engine (scripts/liveai/engine.py). Install PyTorch first, from the
+# CUDA index that matches the GPU (see README.md), then: pip install -r this.
+diffusers>=0.32
+transformers>=4.45
+accelerate>=1.0
+safetensors
+pillow
+websockets>=13

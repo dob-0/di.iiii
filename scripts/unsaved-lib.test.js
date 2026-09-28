@@ -140,6 +140,32 @@ describe('git hooks (scripts/git-hooks)', () => {
     expect(tryRun(repo, 'commit', '-q', '-m', 'on a branch').ok).toBe(true)
   })
 
+  it('install-git-hooks.mjs covers a checkout whose branch predates the hooks', () => {
+    // 2026-09-29: with core.hooksPath = scripts/git-hooks (relative), the main checkout
+    // parked on an old dev had no hooks and a commit on dev went through.
+    const repo = makeRepoWithRemote('hook-install')          // dev = a commit with no scripts/
+    run(repo, 'switch', '-q', '-c', 'feat/with-hooks')
+    fs.mkdirSync(path.join(repo, 'scripts', 'git-hooks'), { recursive: true })
+    for (const name of ['pre-commit', 'pre-push']) {
+      fs.copyFileSync(path.join(HOOKS_DIR, name), path.join(repo, 'scripts', 'git-hooks', name))
+    }
+    fs.copyFileSync(path.join(HOOKS_DIR, '..', 'install-git-hooks.mjs'), path.join(repo, 'scripts', 'install-git-hooks.mjs'))
+    run(repo, 'add', '.')
+    run(repo, 'commit', '-q', '-m', 'hooks')
+    const env = { ...process.env, CI: '', DI_NO_GIT_HOOKS: '' }
+    delete env.CI
+    execFileSync('node', [path.join(repo, 'scripts', 'install-git-hooks.mjs')], { cwd: repo, env, stdio: 'pipe' })
+    const hooksPath = run(repo, 'config', '--get', 'core.hooksPath')
+    expect(hooksPath.endsWith('/di-hooks')).toBe(true)
+    expect(path.isAbsolute(hooksPath)).toBe(true)
+
+    run(repo, 'switch', '-q', 'dev')                       // this tree has no scripts/ at all
+    expect(fs.existsSync(path.join(repo, 'scripts'))).toBe(false)
+    const onDev = tryRun(repo, 'commit', '-q', '--allow-empty', '-m', 'on dev')
+    expect(onDev.ok).toBe(false)
+    expect(onDev.out).toContain('REFUSED')
+  })
+
   it('refuses a push that would write dev or main on the remote', () => {
     const repo = hooked('hook-push')
     run(repo, 'switch', '-q', '-c', 'fix/y')

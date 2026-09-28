@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import MapTestPattern, { DEFAULT_TEST_PATTERN } from './mapTestPattern.jsx'
 import { startMotionGlow } from './motionGlow.js'
+import { startLiveAiRestyle } from './liveAiRestyle.js'
 import { useTopNetwork } from '../project/tops/useTopNetwork.js'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
 import { createPreviewBootQueue } from '../utils/previewBootQueue.js'
@@ -345,8 +346,14 @@ function MapCameraSource({ deviceId, effect = null, label, width, height }) {
     const videoRef = useRef(null)
     const canvasRef = useRef(null)
     const glowRef = useRef(null)
+    const restyleRef = useRef(null)
     const [problem, setProblem] = useState('')
     const motion = effect?.kind === 'motion'
+    const ai = effect?.kind === 'ai'
+    // The AI picture replaces the placeholder only once a frame has actually
+    // been drawn — until then the surface says what the engine is doing.
+    const [aiPainted, setAiPainted] = useState(false)
+    const [aiStatus, setAiStatus] = useState('reaching the live-AI engine…')
 
     useEffect(() => {
         let stream = null
@@ -399,6 +406,37 @@ function MapCameraSource({ deviceId, effect = null, label, width, height }) {
         glowRef.current?.setParams({ threshold: effect?.threshold, trail: effect?.trail, gain: effect?.gain })
     }, [effect?.threshold, effect?.trail, effect?.gain])
 
+    // Live AI: frames to the image model on this machine and back. Like the
+    // glow, the prompt and strength change in place without a reconnect.
+    useEffect(() => {
+        if (!ai || !canvasRef.current || !videoRef.current) return undefined
+        setAiPainted(false)
+        try {
+            restyleRef.current = startLiveAiRestyle({
+                canvas: canvasRef.current,
+                video: videoRef.current,
+                params: { prompt: effect?.prompt, strength: effect?.strength },
+                onStatus: ({ state, detail }) => {
+                    if (state !== 'live') setAiPainted(false)
+                    if (detail) setAiStatus(detail)
+                },
+                onFrame: () => setAiPainted(true)
+            })
+        } catch (error) {
+            setProblem(String(error?.message || error))
+            return undefined
+        }
+        return () => {
+            restyleRef.current?.stop()
+            restyleRef.current = null
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ai, width, height])
+
+    useEffect(() => {
+        restyleRef.current?.setParams({ prompt: effect?.prompt, strength: effect?.strength })
+    }, [effect?.prompt, effect?.strength])
+
     if (problem) return <MapSourcePlaceholder label={label} detail={problem} width={width} height={height} />
     // One <video> in the same place either way: switching the effect on must
     // not remount it, or it loses the stream the effect above attached. With
@@ -406,17 +444,22 @@ function MapCameraSource({ deviceId, effect = null, label, width, height }) {
     // just not what the wall sees. Processed at up to 640 wide; the corner-pin
     // scales the result, and an old laptop keeps its frame rate.
     const scale = Math.min(1, 640 / width)
+    const processed = motion || ai
     return (
         <>
-            <video className={motion ? 'map-source-hidden-video' : 'map-source-media'} ref={videoRef} autoPlay muted playsInline />
-            {motion ? (
+            <video className={processed ? 'map-source-hidden-video' : 'map-source-media'} ref={videoRef} autoPlay muted playsInline />
+            {processed ? (
                 <canvas
-                    className="map-source-media"
+                    // Keyed by effect: the glow takes a WebGL context and the AI
+                    // picture a 2D one, and a canvas can only ever give one kind.
+                    key={ai ? 'ai' : 'motion'}
+                    className={ai && !aiPainted ? 'map-source-hidden-video' : 'map-source-media'}
                     ref={canvasRef}
                     width={Math.max(1, Math.round(width * scale))}
                     height={Math.max(1, Math.round(height * scale))}
                 />
             ) : null}
+            {ai && !aiPainted ? <MapSourcePlaceholder label={label} detail={aiStatus} width={width} height={height} /> : null}
         </>
     )
 }

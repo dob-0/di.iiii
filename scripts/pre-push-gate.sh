@@ -16,7 +16,8 @@ cd "$(dirname "$0")/.." || exit 0
 # When the git hook is installed it runs the same checks on every push — this
 # hook would only run them twice. (An older branch without scripts/git-hooks gets
 # nothing from git, so it still gets the checks here.)
-[[ "$(git config --get core.hooksPath 2>/dev/null)" == scripts/git-hooks && -x scripts/git-hooks/pre-push ]] && exit 0
+HOOKS_PATH=$(git config --get core.hooksPath 2>/dev/null)
+[[ -n "$HOOKS_PATH" && -x "$HOOKS_PATH/pre-push" ]] && grep -q push-checks "$HOOKS_PATH/pre-push" 2>/dev/null && exit 0
 
 # Claude Code reads exit 2 as "block this tool call"; push-checks.sh says 1.
 bash scripts/push-checks.sh || exit 2
