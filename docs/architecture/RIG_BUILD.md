@@ -860,7 +860,7 @@ UPlight lists no page for a code, the entry says so and describes the class on a
 equivalent. **Pictures**: first our own studio render of our own model
 (`scripts/rigbuild/item-renders.py`, Blender 5.2.1 Workbench, AGPL; `items/renders.json` holds
 model and image sha256), then a Wikimedia Commons photo with author, licence and page. No
-maker's product photo is copied. 12 of 30 have no picture of either kind — owed.
+maker's product photo is copied. 12 of 30 have no picture of either kind — owed. The makers' own photos and papers, and the code verification: §13.8.
 
 **The preview** (`EffectPreview.jsx`): beam, spot, wash, matrix, laser fan and swing, CO₂,
 sparks, smoke, haze (a beam through clear air beside one through haze), low fog, mist — an
@@ -915,3 +915,100 @@ mode with the inventory on the GPU (2D only); the rental house confirming the or
 12 items; the UP-236 mist machine's maker; the MDG ATMe power (MDG's page 715 W vs OFL 1400 W —
 both shown with their sources); `projectContracts` "fixture = { index }" fails on the stack
 since #594 (the patch in the document, §2.2) — owed on the base, not this change.
+
+### 13.8 Verified, and the makers' own photos and papers
+
+Owner, 2026-09-28: *"we need to also real images of each device take it and also you check all
+eq from list right ? and also find the documentation's and attach it"*; then, on copyright:
+*"yes look to keep copyrights just links also ok if there hard with that"*. Code:
+`src/rigbuild/items/media.json` (data), `media.js` / `mediaRules.js` (pure), the card in
+`Inventory.jsx`; script `scripts/rigbuild/fetch-equipment-media.mjs`.
+
+**Verification.** Every item carries a status, with evidence URL and date:
+**confirmed** — the rental code is printed on the maker's own page (Model / Model NO. field,
+title, JSON-LD); **probable** — the same product under another code; **equivalent** — not
+traced, and the card shows a named stand-in (never presented as the rental unit); **unknown** —
+not traced and no stand-in named. Method: UPlight's own site (pro-uplight.com: sitemap,
+products.html — its site search is a dead API), its made-in-china store (listing pages and
+product JSON-LD), Alibaba and web search for the exact code and variants; three research agents
+in parallel, each photo opened and looked at before it was recorded.
+
+**The law, as built.** The makers' photos and manuals are their copyright. A file is **kept**
+(`offer: 'download'`) only where the maker's own page offers that very file for download (a
+manual PDF on a product or support page); everything else — every product photo on a shop page,
+a PDF in an uploads folder no page links, anything with unclear terms — is a **dated link**
+(`offer: 'link'`), never copied. A kept file is internal reference on the studio's LOCAL install
+only: `fetch-equipment-media.mjs --record` fetches it once and writes its sha256/size/date into
+`media.json`; `--upload` re-fetches, checks the sha256 and stores it as an asset of the space
+named in `media.json` (`store.space`, `moxir`) through the install's own
+`POST /api/spaces/:space/assets`. The script refuses a cache inside the repository and any API
+host that is not local (localhost, `*.localhost`, `local.thedi.studio`); a changed file
+(sha256 mismatch) is not stored and the run exits 1 — a person decides. The repository holds
+metadata only (`media.test.js` checks no kept file's bytes are under `public/rigbuild/`). A
+space-level asset is not carried by `tier-sync` (it moves project documents); **`space-bundle.mjs
+export moxir` WOULD carry them — never import that bundle into a hosted tier.**
+
+**The card.** Under the header a badge (solid = confirmed, outlined = probable, dashed =
+equivalent, faint = unknown — no colour, the house style) with what it means, the stand-in
+named and linked, the evidence link and the date. The gallery puts a kept maker's photo first,
+then our render labelled **3D model**, then a Commons photo, with thumbnails; a picture that fails
+to load is dropped, not shown broken. "maker's photos" links the maker's page (linked, not copied,
+checked date). **DOCUMENTS** lists user manual · DMX chart · datasheet · safety: a kept file opens
+the install's copy (© maker — manufacturer's document, internal reference, source, fetched date,
+sha256); a link opens the maker's file. On a tier without the copies (one HEAD probe per page) the
+card says so and links the makers' files. A stand-in's file says "EQUIVALENT product, not the
+rental unit".
+
+**Channel lists.** No UPlight manual or DMX chart was found for any code — pro-uplight.com's
+download page is a dead end and no UPlight PDF surfaced on the web. The stand-ins' manuals do carry
+charts (pages recorded in each document's note), but a stand-in's chart is **not** applied to the
+UPlight types: patching real UPlight units with another maker's channel order would drive them
+wrong. The only chart for the product itself is MDG's ATMe (user guide p.17: unit on/off, haze
+output, haze on/off) — it agrees channel for channel with the OFL profile the hazer is already
+taken with. The UPlight charts stay owed from the rental house / UPlight (drafted requests, not
+sent: `~/Downloads/rig-equipment/permission-request.md`).
+
+| code / item | status | evidence (checked 2026-09-28) | kept on the install | linked only |
+|---|---|---|---|---|
+| UP-B380F | **confirmed** | https://up-light.en.made-in-china.com/product/qdrawUbcCMAf/China-IP65-380W-Waterproof-DJ-Light-Beam-Moving-Head-for-Outdoor-Events.html | — | photo, manual |
+| UP-250BSW | **confirmed** | https://www.pro-uplight.com/250W-BSW-LED-MOVING-HEAD-pd576927868.html | manual | photo |
+| UP-HK1915 | **confirmed** | https://www.pro-uplight.com/19Pcs-15W-Hawk-Eye-pd40799571.html | manual | photo, photo |
+| UP-HK615 | **equivalent** → YUER Lights LED 6X15W RGBW Bee Eye Laser Moving Head Light (DMX512 10/15CH) | https://yuerlights.com/products/new-led-6x15w-rgbw-bee-eye-laser-moving-head-light-dmx512-10-15ch-strobe-dyeing-effect-lighting-dj-disco-stage-party-wedding-bar | manual | photo |
+| UP-MH100S | **equivalent** → SHEHDS 6-Prism LED Spotlight 100W Gobo Light with LCD Display | https://shehds.com/products/shehds-6-prism-led-spotlight-100w-gobo-light-with-lcd-display-stage-effect-lighting-dj-disco-stage-moving-head-lights-stage-dj-lighting | manual | photo |
+| UP-MH8060S | **equivalent** → SHEHDS LED Spot 80W with 3-Prism Gobo Moving Head Light | https://shehds.com/products/led-spot-80w-with-threer-prism-gobo-moving-head-light-party-dj-equipment-bar-light-ktv-bar-stage-lighting-effect | manual | photo |
+| UP-PL5403 | **confirmed** | https://www.pro-uplight.com/Waterproof-Par-Light-UP-PL5403-pd42953371.html | — | photo, manual |
+| UP-COB200 | **confirmed** | https://up-light.en.made-in-china.com/product/bwWGPaldZMfD/China-High-Performance-200W-COB-PAR-Light-for-TV-Studio-Events.html | — | photo, manual |
+| UP-LA40WF | **equivalent** → Blue Sea (Shenzhen Blue Sea Lighting) BLLO-RGB40 | https://www.pro-uplight.com/sitemap.xml | — | photo, safety, safety, safety |
+| UP-BY06 | **equivalent** → LIRO Lighting LR-R6 | https://www.pro-uplight.com/sitemap.xml | — | photo, safety, safety, safety |
+| UP-JG400 | **equivalent** → X-Laser Mobile Beat Mirage | https://www.pro-uplight.com/sitemap.xml | — | photo, safety, safety, safety |
+| UP-Q108S | **equivalent** → MagicFX CO2jet II | https://www.pro-uplight.com/sitemap.xml | manual | photo, safety |
+| UP-YH600F | **equivalent** → Showven Sparkular | https://www.pro-uplight.com/sitemap.xml | manual | photo |
+| UP-YZ31P | **equivalent** → Antari Z-1500 III | https://www.pro-uplight.com/sitemap.xml | manual | photo, safety, safety |
+| UP-SW3000B | **equivalent** → SurgeFX Hydra | https://www.pro-uplight.com/sitemap.xml | — | photo, safety, safety |
+| UP-236 | **equivalent** → Antari Z-800 II | https://www.pro-uplight.com/sitemap.xml | — | photo, safety, safety |
+| UP-HD210 | **equivalent** → AVSL Butterfly Effect 3-in-1 (151.744UK) | https://www.pro-uplight.com/sitemap.xml | — | photo, safety |
+| MDG ATMe | **confirmed** | https://www.mdgfog.com/en/atme | manual, datasheet, safety | photo, safety |
+| UP-Q3L | **equivalent** → MA Lighting grandMA3 light | https://www.pro-uplight.com/sitemap.xml | — | photo, photo |
+| UP-1024 | **equivalent** → Chauvet DJ Obey 70 | https://up-light.en.made-in-china.com | manual | photo, photo |
+| UP-9800 | **unknown** | https://up-light.en.made-in-china.com | — | — |
+| UP-B01 | **unknown** | https://up-light.en.made-in-china.com | — | — |
+| UP-PDU60B | **equivalent** → ChamSys (GeNetix, formerly Chauvet Professional) GeNetix GD4IP | https://up-light.en.made-in-china.com | datasheet, manual | photo, photo |
+| UP-PDU60A | **equivalent** → ENTTEC D-Split | https://up-light.en.made-in-china.com | datasheet | photo |
+| UP-2303 | **equivalent** → LTECH (Shenzhen Robert Green Ltd.) D4 (DMX512 4-channel CV decoder) | https://up-light.en.made-in-china.com | datasheet | photo |
+| UP-POWER12 | **equivalent** → ETC (Electronic Theatre Controls) Sensor3 dimming — SP3 Small Touring Rack | https://up-light.en.made-in-china.com | datasheet | photo |
+| artnet-node | **equivalent** → Luminex LCE LumiNode 4 | https://www.luminex.be/products/luminode/luminode-4/ | datasheet, manual | photo |
+| truss | **equivalent** → Global Truss / Prolyte F34 square truss (290mm) / H30V square truss | https://www.globaltruss.com/trussing/f34-square-truss | datasheet, datasheet, datasheet | photo, photo |
+| tower | **equivalent** → Prolyte Group Tower Systems — DT Tower (photo) / Delay Tower S78-T-18M (manual, same product family) | https://www.prolyte.com/products/tower-systems | manual | photo |
+| deck | **equivalent** → Prolyte Group LiteDeck (photo) / StageDex (manual) | https://www.prolyte.com/products/portable-stages/litedeck | manual | photo |
+
+
+Counts (2026-09-28): 30 items; 6 confirmed (UP-B380F, UP-250BSW, UP-HK1915, UP-PL5403,
+UP-COB200 — new — and the hazer as the MDG ATMe itself), 22 equivalent, 2 unknown (UP-9800,
+UP-B01), 0 probable. 78 media entries: 24 files kept (14 manuals, 9 datasheets, 1 SDS) — all 24
+re-fetched, sha256-checked and stored on the owner's install; 54 dated links (33 photos, 18
+safety pages, 3 manuals with no offering page). No maker's photo is kept: every product photo is
+on a shop page, so all are links. Items with no photo or document of any kind: UP-9800, UP-B01.
+
+Owed: UPlight's own manuals/DMX charts (none published); the exact products behind the 22
+untraced codes (the rental house's labels); the ETC Sensor3 full manual and the LumiNode user
+manual (both offered, both truncated three times from here); UP-236's maker; the owner's look.

@@ -1,0 +1,1798 @@
+{
+  "about": "Verification, makers' photos and documents for the item cards (RIG_BUILD.md §13.8). METADATA ONLY: the files are the makers' copyright, used as internal reference on the studio's local install; they are never in this repository. scripts/rigbuild/fetch-equipment-media.mjs re-fetches each url, checks its sha256 and stores it in the local install's space `store.space` (the id there is `asset`).",
+  "checked": "2026-09-28",
+  "store": {
+    "space": "moxir",
+    "route": "/api/spaces/{space}/assets/{asset}"
+  },
+  "items": {
+    "up-b380f": {
+      "verification": {
+        "status": "confirmed",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://up-light.en.made-in-china.com/product/qdrawUbcCMAf/China-IP65-380W-Waterproof-DJ-Light-Beam-Moving-Head-for-Outdoor-Events.html",
+            "what": "JSON-LD PropertyValue on the page: \"Model NO.\": \"UP-B380F\"",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://up-light.en.made-in-china.com/product/dtgUzuHYYSWP/China-380W-IP65-Moving-Head-Light-3-in-1-Disco-Lights-Moving-Head-for-Stage.html",
+            "what": "second made-in-china store listing for the same UPlight 380W IP65 beam",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Re-checked the made-in-china store page: its embedded JSON-LD prints \"Model NO.\": \"UP-B380F\" verbatim. Also searched pro-uplight.com's own site search (phoenix/admin/prod/search) for \"B380F\" and \"380W beam\" — both returned totalCount 0, so this code is not on UPlight's own pro-uplight.com catalogue, only on its made-in-china store (same maker, per fixtures.json). No UPlight/pro-uplight manual or DMX chart was found anywhere (web search, site search, /download.html — that page's file list loads via a gated phoenix/admin/download endpoint that returned empty to a plain GET). Used an equivalent IP65 380W beam manual from a different maker (UPlus Lighting) for a DMX chart; specs line up closely (2° beam, IP65, 16-channel mode) though the exact wattage figures differ slightly from the catalogue's 500W estimate."
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "UP-B380F product photo, made-in-china store",
+          "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+          "product": "UP-B380F",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://image.made-in-china.com/2f0j00mZplbCBnlvRE/IP65-380W-Waterproof-DJ-Light-Beam-Moving-Head-for-Outdoor-Events.jpg",
+          "page": "https://up-light.en.made-in-china.com/product/qdrawUbcCMAf/China-IP65-380W-Waterproof-DJ-Light-Beam-Moving-Head-for-Outdoor-Events.html",
+          "note": "verified: downloaded to scratch, real JPEG 800x800, shows a black beam moving head on white background with cabling visible at the base; not kept locally (product-page photo, terms unclear).",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "manual",
+          "title": "\"380 IP BEAM\" user manual (equivalent of UP-B380F)",
+          "maker": "UPlus Lighting",
+          "product": "380 IP BEAM (equivalent product, not UPlight)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/380-IP-BAEM.pdf",
+          "page": "https://www.upluslighting.com/wp-content/uploads/2024/01/380-IP-BAEM.pdf",
+          "pages": 10,
+          "note": "Full 16-channel DMX chart on PDF pages 6-8. IP65, 371W Osram lamp, 400W max draw, 2° beam, pan 540°/tilt 270°. Found the PDF directly (maker's own /wp-content/uploads/ manuals folder) via web search; could not locate the specific product page that links to this exact file (the matching IP65 product listing on upluslighting.com now 404s), so the offering page is not independently confirmed — flagged, not rounded up. No maker page offering this file was found, so it is linked, not copied. DMX chart 16ch (16 ch), p.6 — the stand-in's chart, NOT the rental unit's; not applied to the patch.",
+          "checked": "2026-09-28"
+        }
+      ]
+    },
+    "up-250bsw": {
+      "verification": {
+        "status": "confirmed",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://www.pro-uplight.com/250W-BSW-LED-MOVING-HEAD-pd576927868.html",
+            "what": "page's item-specifics list: 'Model: UP-250BSW' / 'Brand: UPLIGHT'",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://up-light.en.made-in-china.com/product/fGuYHBihYvcg/China-250W-3in1-LED-Moving-Head-Light-for-Stage-Events.html",
+            "what": "second, made-in-china store listing for the same fixture",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Re-checked pro-uplight.com product page B today: the item-specifics list reads 'Model: UP-250BSW', 'Brand: UPLIGHT'. The product photo itself shows 'UP-250BSW' printed on the fixture's arm and base, strong physical confirmation. No UPlight manual or DMX chart found (same download.html dead end as UP-B380F). Used an equivalent '250W LED 3-in-1 BSW Moving Head' manual from Aolait (different maker) for a DMX chart — its 17CH/20CH modes are close in kind (pan/tilt/color/gobo/prism/zoom/focus) but not the same channel counts as the catalogue's stated 24/30-channel modes."
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "UP-250BSW product photo, pro-uplight.com (model name printed on fixture)",
+          "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+          "product": "UP-250BSW",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://ijrorwxhmkmplj5m-static.micyjz.com/cloud/ljBpnKonlqSRlknoqjllip/weibiaoti-800-800.jpg",
+          "page": "https://www.pro-uplight.com/250W-BSW-LED-MOVING-HEAD-pd576927868.html",
+          "note": "verified: downloaded to scratch, real JPEG 800x800, three-quarter view of a black moving head with a blue-lit lens and 'UP-250BSW' printed on the arm and base; not kept locally (product-page photo, terms unclear).",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "manual",
+          "title": "'250W LED 3IN1 BSW Moving Head Light' user manual (equivalent of UP-250BSW)",
+          "maker": "Aolait Lighting",
+          "product": "250W BSW 3-in-1 moving head (equivalent product, not UPlight)",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://aolait.com/wp-content/uploads/2020/11/250W-LED-SPOT-Moving-Head-Light-user-manual.pdf",
+          "page": "https://aolait.com/product/250w-led-beam-spot-wash-3-in-1/",
+          "pages": 19,
+          "note": "Product page confirmed to directly link this manual PDF (checked 2026-09-28). Full 17CH/20CH DMX chart on PDF pages 13-17. 250W white LED, 320W max, pan 540°+fine/tilt 270°+fine, 3-facet prism — same beam/spot/wash 3-in-1 class as UP-250BSW but a different maker and channel count. DMX chart 17ch/20ch (20 ch), p.13 — the stand-in's chart, NOT the rental unit's; not applied to the patch.",
+          "sha256": "251282d3b67d69ccf87b43ef92dc302ca1eb87be9d00797b3bd165ff1ffde062",
+          "bytes": 628923,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "251282d3b67d69ccf87b43ef92dc302ca1eb87be9d00797b3bd165ff1ffde062"
+        }
+      ]
+    },
+    "up-hk1915": {
+      "verification": {
+        "status": "confirmed",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://www.pro-uplight.com/19Pcs-15W-Hawk-Eye-pd40799571.html",
+            "what": "page <title>: 'Bee Eye Light UP-HK1915 - Buy Bee Eye Light UP-HK1915 Product on UPLIGHT'; item-specifics 'Model: UP-HK1915'",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://up-light.en.made-in-china.com/product/pAzRYkbrgSVy/China-Upliht-19X15W-Zoom-LED-Moving-Head-Light-for-Djs.html",
+            "what": "made-in-china store listing, same fixture",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Re-checked pro-uplight.com page C today: both the <title> tag and the item-specifics Model field print 'UP-HK1915'. Product photo filenames on the same page are literally 'Bee-Eye-Light-UP-HK1915-800-800.jpg'. No UPlight manual/DMX chart found on the maker's own site. Used an equivalent 19x15W bee-eye manual (Aolait AL1019WR) for a DMX chart — its 21CH/23CH modes fall inside the catalogue's stated 'five modes from 21 to 97 channels' range, a good match."
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "UP-HK1915 product photo (three-quarter), pro-uplight.com",
+          "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+          "product": "UP-HK1915",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://ijrorwxhmkmplj5m-static.micyjz.com/cloud/liBpnKonlqSRjjorkjjqiq/Bee-Eye-Light-UP-HK1915-800-800.jpg",
+          "page": "https://www.pro-uplight.com/19Pcs-15W-Hawk-Eye-pd40799571.html",
+          "note": "verified: downloaded to scratch, real JPEG 799x799, shows the honeycomb bee-eye lens cluster and 'LED MOVING HEAD' badge on the yoke; not kept locally.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "photo",
+          "title": "UP-HK1915 product photo (rear, DMX/power sockets), pro-uplight.com",
+          "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+          "product": "UP-HK1915",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://ijrorwxhmkmplj5m-static.micyjz.com/cloud/ljBpnKonlqSRjjorkjkqiq/Bee-Eye-Light-UP-HK1915-800-800.jpg",
+          "page": "https://www.pro-uplight.com/19Pcs-15W-Hawk-Eye-pd40799571.html",
+          "note": "verified: downloaded to scratch, real JPEG 799x799, rear view showing POWER IN/OUT and DMX IN/OUT XLR sockets; not kept locally.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "manual",
+          "title": "AL1019WR '19x15W Bee-Eye LED Beam Wash Zoom' user manual (equivalent of UP-HK1915)",
+          "maker": "Aolait Lighting",
+          "product": "AL1019WR 19x15W bee-eye moving head (equivalent product, not UPlight)",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://aolait.com/wp-content/uploads/2020/11/19X15W-Led-Bee-Eye-User-Manual.pdf",
+          "page": "https://aolait.com/product/19x15w-led-moving-head-with-lens-rotation/",
+          "pages": 20,
+          "note": "Product page confirmed to directly link this manual PDF (checked 2026-09-28). 21CH chart on PDF page 7, 23CH chart on PDF page 8. AC100-240V, 450W, 19x15W RGBW 4-in-1 LEDs, zoom 4°-60°. Also had to abandon a corrupted download from pro-stagelighting.com (3 failed fetch attempts, recorded as failure) before finding this working source. DMX chart 21ch (21 ch), p.7 — the stand-in's chart, NOT the rental unit's; not applied to the patch. DMX chart 23ch (23 ch), p.8 — the stand-in's chart, NOT the rental unit's; not applied to the patch.",
+          "sha256": "7a0906f76348e49b8fd7833927c7ac30cfc97019cd0b046d2ccf629a6386ef82",
+          "bytes": 696737,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "7a0906f76348e49b8fd7833927c7ac30cfc97019cd0b046d2ccf629a6386ef82"
+        }
+      ]
+    },
+    "up-hk615": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://yuerlights.com/products/new-led-6x15w-rgbw-bee-eye-laser-moving-head-light-dmx512-10-15ch-strobe-dyeing-effect-lighting-dj-disco-stage-party-wedding-bar",
+            "what": "YUER Lights product page for a 6x15W RGBW bee-eye + laser moving head, DMX512 10/15CH",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Re-confirmed the catalogue's earlier finding: UP-HK615 is absent from UPlight's own site and store (0 hits on made-in-china store search, 0 on pro-uplight.com site search for 'HK615' and '6x15W bee eye laser'; also not in the ~73-product pro-uplight.com sitemap). Kept the catalogue's YUER Lights stand-in (a 6-cell bee-eye + laser moving head, same market class). YUER's own manual gives 100W/120W and a 16-channel chart, close to but not identical to the catalogue's 100W/10-15ch estimate.",
+        "equivalentOf": {
+          "maker": "YUER Lights",
+          "model": "LED 6X15W RGBW Bee Eye Laser Moving Head Light (DMX512 10/15CH)",
+          "url": "https://yuerlights.com/products/new-led-6x15w-rgbw-bee-eye-laser-moving-head-light-dmx512-10-15ch-strobe-dyeing-effect-lighting-dj-disco-stage-party-wedding-bar"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "YUER 6x15W bee-eye + laser moving head, four-view product photo",
+          "maker": "YUER Lights",
+          "product": "6x15W RGBW bee-eye + laser moving head (equivalent of UP-HK615)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://yuerlights.com/cdn/shop/files/74b96dbb2d19db9758ba306fc55ad040-d44ce772-ec03-474c-9b64-f69fce16f8b9-_1_1024x1024.jpg?v=1690425378",
+          "page": "https://yuerlights.com/products/new-led-6x15w-rgbw-bee-eye-laser-moving-head-light-dmx512-10-15ch-strobe-dyeing-effect-lighting-dj-disco-stage-party-wedding-bar",
+          "note": "verified: downloaded to scratch, real JPEG 800x800, shows front/back views of the 6-cell bee-eye head plus four laser-beam sample shots; not kept locally.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "manual",
+          "title": "'Six bee-eyes shaking head + laser' user manual",
+          "maker": "YUER Lights",
+          "product": "6x15W RGBW bee-eye + laser moving head (equivalent of UP-HK615)",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://cdn.shopifycdn.net/s/files/1/0768/8775/2982/files/LED_6X15W_RGBW_Bee_Eye_Laser_Moving_Head_Light.pdf",
+          "page": "https://yuerlights.com/products/new-led-6x15w-rgbw-bee-eye-laser-moving-head-light-dmx512-10-15ch-strobe-dyeing-effect-lighting-dj-disco-stage-party-wedding-bar",
+          "pages": 2,
+          "note": "Manual PDF is directly linked from the maker's own product page (confirmed 2026-09-28). Full 16-channel DMX chart on PDF page 2. AC100-240V, 120W total (6 Cree 10W 4-in-1 RGBW + 1x515nm green laser), pan 540°/tilt 180°. The manual gives no laser IEC 60825-1 class — that safety number remains owed, as the catalogue already flags. DMX chart 16ch (16 ch), p.2 — the stand-in's chart, NOT the rental unit's; not applied to the patch.",
+          "sha256": "3c602a2d92e6aa58adce45527ff4b27ecded57a838c2b5ee29b5467da674f814",
+          "bytes": 131968,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "3c602a2d92e6aa58adce45527ff4b27ecded57a838c2b5ee29b5467da674f814"
+        }
+      ]
+    },
+    "up-mh100s": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://shehds.com/products/shehds-6-prism-led-spotlight-100w-gobo-light-with-lcd-display-stage-effect-lighting-dj-disco-stage-moving-head-lights-stage-dj-lighting",
+            "what": "SHEHDS product page for a 100W 6-prism gobo moving head with LCD display",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Re-confirmed the catalogue's earlier finding: UP-MH100S is not a real UPlight code (absent from the maker's own site/store and general web search under both this code and the pinyin-derived explanation the catalogue gives). Kept the catalogue's SHEHDS 100W 6-prism gobo spot as the stand-in and found its manual, directly linked from the SHEHDS product page as a Google Drive file.",
+        "equivalentOf": {
+          "maker": "SHEHDS",
+          "model": "6-Prism LED Spotlight 100W Gobo Light with LCD Display",
+          "url": "https://shehds.com/products/shehds-6-prism-led-spotlight-100w-gobo-light-with-lcd-display-stage-effect-lighting-dj-disco-stage-moving-head-lights-stage-dj-lighting"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "SHEHDS 100W 6-prism gobo spotlight, angled product photo",
+          "maker": "SHEHDS",
+          "product": "100W 6-prism gobo moving head (equivalent of UP-MH100S)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://shehds.com/cdn/shop/files/ae22fa0de2388ad63ef80584fd41a32e.png?v=1748504242",
+          "page": "https://shehds.com/products/shehds-6-prism-led-spotlight-100w-gobo-light-with-lcd-display-stage-effect-lighting-dj-disco-stage-moving-head-lights-stage-dj-lighting",
+          "note": "verified: downloaded to scratch, real PNG 1000x1000, three-quarter view of a black gobo spot moving head with a lit red lens and 'LED PATTERN LIGHT' badge; not kept locally.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "manual",
+          "title": "SHEHDS LED Spot 100W Lighting user manual",
+          "maker": "SHEHDS",
+          "product": "100W 6-prism gobo moving head (equivalent of UP-MH100S)",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://drive.google.com/uc?export=download&id=1m1cFL2Ts4NktH9syV73dVc_ie3FDchqh",
+          "page": "https://shehds.com/products/shehds-6-prism-led-spotlight-100w-gobo-light-with-lcd-display-stage-effect-lighting-dj-disco-stage-moving-head-lights-stage-dj-lighting",
+          "pages": 4,
+          "note": "Manual is directly linked from the product page's own 'download-file-link' section (Google Drive file, confirmed 2026-09-28). Full 14-channel DMX chart on PDF page 4. AC90-275V, 160W consumption, 100W LED bulb — matches the catalogue's equivalent spec exactly. DMX chart 14ch (14 ch), p.4 — the stand-in's chart, NOT the rental unit's; not applied to the patch.",
+          "sha256": "7571b32d02e6b2c719d4e17ba8e8f8f264b0aff1377940f315e16d2fd21dfb62",
+          "bytes": 736836,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "7571b32d02e6b2c719d4e17ba8e8f8f264b0aff1377940f315e16d2fd21dfb62"
+        }
+      ]
+    },
+    "up-mh8060s": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://shehds.com/products/led-spot-80w-with-threer-prism-gobo-moving-head-light-party-dj-equipment-bar-light-ktv-bar-stage-lighting-effect",
+            "what": "SHEHDS product page for an 80W 3-prism gobo moving head",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Re-confirmed the catalogue's earlier finding: UP-MH8060S is not a real UPlight code (same absence pattern as MH100S/HK615). Kept the catalogue's SHEHDS 80W 3-prism gobo spot as the stand-in and found its manual, directly linked from the SHEHDS product page as a Google Drive file, matching the catalogue's stated '10 or 13-channel mode' exactly.",
+        "equivalentOf": {
+          "maker": "SHEHDS",
+          "model": "LED Spot 80W with 3-Prism Gobo Moving Head Light",
+          "url": "https://shehds.com/products/led-spot-80w-with-threer-prism-gobo-moving-head-light-party-dj-equipment-bar-light-ktv-bar-stage-lighting-effect"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "SHEHDS 80W 3-prism gobo spotlight, front product photo",
+          "maker": "SHEHDS",
+          "product": "80W 3-prism gobo moving head (equivalent of UP-MH8060S)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://shehds.com/cdn/shop/files/c055bd0eff1c03a7a93c2adf84b7776d.jpg?v=1748572565",
+          "page": "https://shehds.com/products/led-spot-80w-with-threer-prism-gobo-moving-head-light-party-dj-equipment-bar-light-ktv-bar-stage-lighting-effect",
+          "note": "verified: downloaded to scratch, real JPEG 800x800, front view of the moving head base showing DMX IN/OUT, FUSE, POWER sockets and the SHEHDS logo; not kept locally.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "manual",
+          "title": "SHEHDS LED Spot 80W Lighting user manual",
+          "maker": "SHEHDS",
+          "product": "80W 3-prism gobo moving head (equivalent of UP-MH8060S)",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://drive.google.com/uc?export=download&id=1dnD4vm50w58d0Z9dH-AXFw_JpLoMxIuP",
+          "page": "https://shehds.com/products/led-spot-80w-with-threer-prism-gobo-moving-head-light-party-dj-equipment-bar-light-ktv-bar-stage-lighting-effect",
+          "pages": 7,
+          "note": "Manual is directly linked from the product page's own download-file-link section (Google Drive file, confirmed 2026-09-28). Two DMX chart modes: 13ch on PDF pages 4-5, 10ch on PDF pages 6-7. AC90-275V, 80W consumption, pan 540°/tilt 200°, 3-facet rotatable prism — matches the catalogue's equivalent spec closely. DMX chart 13ch (13 ch), p.4 — the stand-in's chart, NOT the rental unit's; not applied to the patch. DMX chart 10ch (10 ch), p.6 — the stand-in's chart, NOT the rental unit's; not applied to the patch.",
+          "sha256": "03367287098afa2f396637baef6480272bc3480dfa143a5d3ff1f8af1f67f205",
+          "bytes": 1244247,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "03367287098afa2f396637baef6480272bc3480dfa143a5d3ff1f8af1f67f205"
+        }
+      ]
+    },
+    "up-pl5403": {
+      "verification": {
+        "status": "confirmed",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://www.pro-uplight.com/Waterproof-Par-Light-UP-PL5403-pd42953371.html",
+            "what": "page <title>: 'Waterproof Par Light UP-PL5403 - Buy Waterproof Par Light UP-PL5403 Product on UPLIGHT'; item-specifics 'Model: UP-PL5403' / 'Brand: UPLIGHT'",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Re-checked pro-uplight.com product page D today: both the <title> tag and item-specifics Model field print 'UP-PL5403'. Image filenames on the page are 'Waterproof-Par-Light-UP-PL5403-800-800.jpg'. No UPlight manual/DMX chart found on the maker's own site. Found an equivalent manual titled exactly 'IP PAR-54X3' from UPlus Lighting (different maker, same 54x3W IP65 RGBW PAR class) with a full 4CH/8CH DMX chart — the closest specs match of any equivalent found this session."
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "UP-PL5403 product photo, pro-uplight.com",
+          "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+          "product": "UP-PL5403",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://ijrorwxhmkmplj5m-static.micyjz.com/cloud/lkBpnKonlqSRjjqrlnroiq/Waterproof-Par-Light-UP-PL5403-800-800.jpg",
+          "page": "https://www.pro-uplight.com/Waterproof-Par-Light-UP-PL5403-pd42953371.html",
+          "note": "verified: downloaded to scratch, real JPEG 799x799, shows a round cast-aluminium PAR can with cooling fins and folding U-bracket; not kept locally.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "manual",
+          "title": "'IP PAR-54X3' user manual (equivalent of UP-PL5403)",
+          "maker": "UPlus Lighting",
+          "product": "IP PAR-54X3 (equivalent product, not UPlight)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/IP-PAR-54X3.pdf",
+          "page": "https://www.upluslighting.com/wp-content/uploads/2024/01/IP-PAR-54X3.pdf",
+          "pages": 7,
+          "note": "Full 4-channel and 8-channel DMX charts on PDF page 6. 54x3W RGBW LED, 180W consumption, IP65, 25° beam, DMX512/Auto/Master-Slave/Sound — answers the catalogue's two 'owed' specs (wattage ≈162W estimate vs this equivalent's exact 180W; channel count, previously unstated, now given as 4CH or 8CH). Could not locate the exact upluslighting.com product page that links this file (product search on their own site returned no results and the matching sitemap product listing wasn't found); the PDF itself is hosted directly on the maker's own domain. No maker page offering this file was found, so it is linked, not copied. DMX chart 4ch (4 ch), p.6 — the stand-in's chart, NOT the rental unit's; not applied to the patch. DMX chart 8ch (8 ch), p.6 — the stand-in's chart, NOT the rental unit's; not applied to the patch.",
+          "checked": "2026-09-28"
+        }
+      ]
+    },
+    "up-cob200": {
+      "verification": {
+        "status": "confirmed",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://up-light.en.made-in-china.com/product/bwWGPaldZMfD/China-High-Performance-200W-COB-PAR-Light-for-TV-Studio-Events.html",
+            "what": "og:description meta tag: 'Model NO.: UP-COB200 Light Source: COB Emitting Color: Warm...'",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Re-checked the made-in-china store page today: the og:description meta tag prints 'Model NO.: UP-COB200' verbatim. The product photo is a real factory floor shot (blue COB PAR cans on a production line, workers visible, UPlight-branded wall signage), not a banner. No UPlight manual/DMX chart found anywhere for this code. Used an equivalent 'FOS PAR COB 200W LED TW' manual (FOS Technologies, different maker) — it is a warm/cool-white COB PAR like UP-COB200 and its 4-channel mode matches the catalogue's stated 'DMX512, 4 channels'."
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "UP-COB200 factory production-line photo, made-in-china store",
+          "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+          "product": "UP-COB200",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://image.made-in-china.com/2f0j00lsChmKtMMBRe/High-Performance-200W-COB-PAR-Light-for-TV-Studio-Events.jpg",
+          "page": "https://up-light.en.made-in-china.com/product/bwWGPaldZMfD/China-High-Performance-200W-COB-PAR-Light-for-TV-Studio-Events.html",
+          "note": "verified: downloaded to scratch, real JPEG 1440x1080, factory floor with rows of blue COB PAR cans on a production/test line and UPlight-branded wall signage; not kept locally.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "manual",
+          "title": "FOS PAR COB 200W LED TW user manual (equivalent of UP-COB200)",
+          "maker": "FOS Technologies",
+          "product": "PAR COB 200W LED TW (equivalent product, not UPlight)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://www.fos-lighting.eu/uploads/products_1_2_1_61.pdf",
+          "page": "https://www.fos-lighting.eu/uploads/products_1_2_1_61.pdf",
+          "pages": 7,
+          "note": "6 DMX channel-mode chart (2CH/4CH/6CH, two variants each) on PDF page 5; used the 'a4CH' 4-channel mode as the closest match to the catalogue's stated 4-channel UP-COB200 spec. 90-250V, 260W, COB LED 200W cool+warm white, Ra≥90, Auto/Music/DMX512/Master-Slave control — matches the catalogue's tunable-white description closely. Could not locate the specific fos-lighting.eu product page that links this exact file (the page suggested by web search, fos-par-cob-200w-led-tw-p-61.html, loaded with HTTP 200 but contained no manual/download/pdf reference at all when checked); the PDF is hosted directly on the maker's own domain. No maker page offering this file was found, so it is linked, not copied. DMX chart 4ch (a4CH) (4 ch), p.5 — the stand-in's chart, NOT the rental unit's; not applied to the patch.",
+          "checked": "2026-09-28"
+        }
+      ]
+    },
+    "up-la40wf": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://www.pro-uplight.com/sitemap.xml",
+            "what": "Full site sitemap: 149 URLs / 73 product pages. No product title or URL contains 'laser', 'co2', 'smoke', 'spark', 'fog', 'mist', 'butterfly' or 'haz' anywhere on the site.",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://up-light.en.made-in-china.com/product-list-1.html",
+            "what": "Store's full product list (26 items): 3 laser-titled listings, all three the SAME Model NO. 'UP-LA3' (a 3 W moving-head laser fixture) — not a 40 W sealed waterproof box.",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://www.bluesealighting.com/waterproof-40w-rgb-animation-laser-light.html",
+            "what": "Blue Sea BLLO-RGB40, 40 W RGB IP65 laser — equivalent used by the catalogue entry.",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Re-checked pro-uplight.com (full sitemap, no laser/effects category at all — this maker only sells LED moving heads/spots/PARs) and the made-in-china store (all 3 of its laser listings share Model NO. UP-LA3, a 3 W moving-head fixture, a different mechanism and two power classes below the 40 W sealed galvo box UP-LA40WF names). WebSearch for the exact code returned no hits. Confirms earlier finding: not traceable to UPlight; kept as equivalent (Blue Sea BLLO-RGB40).",
+        "equivalentOf": {
+          "maker": "Blue Sea (Shenzhen Blue Sea Lighting)",
+          "model": "BLLO-RGB40",
+          "url": "https://www.bluesealighting.com/waterproof-40w-rgb-animation-laser-light.html"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "Blue Sea BLLO-RGB40 product photo",
+          "maker": "Blue Sea (Shenzhen Blue Sea Lighting)",
+          "product": "Blue Sea BLLO-RGB40 (equivalent for UP-LA40WF)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://5014585045798901-1708572687496.cdn.site.joinf.com/5014585045798901/GRkRa4jp7d.jpg?imageMogr2/thumbnail/1040x1040/strip/pad/1/color/I0ZGRkZGRg==/sharpen/100/format/webp/ignore-error/1/auto-orient",
+          "page": "https://www.bluesealighting.com/waterproof-40w-rgb-animation-laser-light.html",
+          "note": "Viewed 1040x1040 webp: sealed black box, laser-warning triangle sticker, raised output housing, U-bracket handle — matches the 555x420x235mm description. Not retained locally (shop-page product photo, no explicit download offer); verified via one-time view only, per copyright policy.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "safety",
+          "title": "Basic Principles of Lasershow Safety",
+          "maker": "International Laser Display Association (ILDA)",
+          "product": "up-la40wf / up-by06 / up-jg400 (all laser items)",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://www.ilda.com/safety-basics.htm",
+          "page": "https://www.ilda.com/safety-basics.htm",
+          "note": "Industry-body laser show safety fundamentals; applies to all three laser items in this list.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "safety",
+          "title": "How to do safe audience scanning",
+          "maker": "International Laser Display Association (ILDA)",
+          "product": "up-la40wf / up-by06 / up-jg400 (all laser items)",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://www.ilda.com/audiencescanningsafety.htm",
+          "page": "https://www.ilda.com/audiencescanningsafety.htm",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "safety",
+          "title": "Laser Light Shows (variance requirement under 21 CFR 1040.11(c))",
+          "maker": "US FDA / Center for Devices and Radiological Health (CDRH)",
+          "product": "up-la40wf / up-by06 / up-jg400 (all laser items)",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://www.fda.gov/radiation-emitting-products/home-business-and-entertainment-products/laser-light-shows",
+          "page": "https://www.fda.gov/radiation-emitting-products/home-business-and-entertainment-products/laser-light-shows",
+          "checked": "2026-09-28"
+        }
+      ]
+    },
+    "up-by06": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://www.pro-uplight.com/sitemap.xml",
+            "what": "Same full-site sitemap check as UP-LA40WF — no laser/effects category.",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://up-light.en.made-in-china.com/product-list-1.html",
+            "what": "UPlight's store list has no multi-eye swing-laser product; its only laser is the single-head UP-LA3.",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://lirolighting.en.made-in-china.com/product/vTIpkhUPbWcB/China-6-Eyes-500MW-Red-laser-Light-RGB-DMX-Moving-Laser-Light.html",
+            "what": "LIRO Lighting LR-R6, 6x500mW red laser effect — equivalent used by the catalogue entry.",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Re-checked pro-uplight.com and the made-in-china store; neither carries a 6-eye swing-arm laser under any code. WebSearch for the exact code returned no hits. Confirms earlier finding: kept as equivalent (LIRO LR-R6), a different maker in the same low-cost Chinese club-fixture category.",
+        "equivalentOf": {
+          "maker": "LIRO Lighting",
+          "model": "LR-R6",
+          "url": "https://lirolighting.en.made-in-china.com/product/vTIpkhUPbWcB/China-6-Eyes-500MW-Red-laser-Light-RGB-DMX-Moving-Laser-Light.html"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "LIRO LR-R6 6-eye red laser photo",
+          "maker": "LIRO Lighting",
+          "product": "LIRO LR-R6 (equivalent for UP-BY06)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://image.made-in-china.com/2f0j00VQNvEogdnwca/6-Eyes-500MW-Red-laser-Light-RGB-DMX-Moving-Laser-Light.jpg",
+          "page": "https://lirolighting.en.made-in-china.com/product/vTIpkhUPbWcB/China-6-Eyes-500MW-Red-laser-Light-RGB-DMX-Moving-Laser-Light.html",
+          "note": "Viewed 205x180 JPEG: black bar fixture with 6 emitter heads in a row, firing a red beam fan through haze — matches the 6-eye swing description. Not retained locally (shop-page product photo, no explicit download offer).",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "safety",
+          "title": "Basic Principles of Lasershow Safety",
+          "maker": "International Laser Display Association (ILDA)",
+          "product": "up-la40wf / up-by06 / up-jg400 (all laser items)",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://www.ilda.com/safety-basics.htm",
+          "page": "https://www.ilda.com/safety-basics.htm",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "safety",
+          "title": "How to do safe audience scanning",
+          "maker": "International Laser Display Association (ILDA)",
+          "product": "up-la40wf / up-by06 / up-jg400 (all laser items)",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://www.ilda.com/audiencescanningsafety.htm",
+          "page": "https://www.ilda.com/audiencescanningsafety.htm",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "safety",
+          "title": "Laser Light Shows (FDA/CDRH audience-scanning variance)",
+          "maker": "US FDA / CDRH",
+          "product": "up-la40wf / up-by06 / up-jg400 (all laser items)",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://www.fda.gov/radiation-emitting-products/home-business-and-entertainment-products/laser-light-shows",
+          "page": "https://www.fda.gov/radiation-emitting-products/home-business-and-entertainment-products/laser-light-shows",
+          "checked": "2026-09-28"
+        }
+      ]
+    },
+    "up-jg400": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://www.pro-uplight.com/sitemap.xml",
+            "what": "Same full-site sitemap check — no laser/effects category.",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://up-light.en.made-in-china.com/product/sFUTtDzygefQ/China-Moving-Head-RGB-3W-Fullcolor-Animation-Laser-for-Stage-Events.html",
+            "what": "Model NO. field reads 'UP-LA3' (checked exact page text) — a 3 W moving-head laser, not the 400 mW sealed graphics-laser box UP-JG400 names.",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://www.gearclubdirect.com/x-laser-mobile-beat-mirage-400mw-rgb-entry-level-graphics-laser/",
+            "what": "X-Laser Mobile Beat Mirage, 400 mW RGB entry-level graphics laser — equivalent used by the catalogue entry.",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Re-checked pro-uplight.com and the made-in-china store; UPlight's only laser SKU anywhere in either storefront is UP-LA3 (a moving-head fixture, wrong mechanism and wrong power class). WebSearch for the exact code returned no hits. Confirms earlier finding: kept as equivalent (X-Laser Mobile Beat Mirage).",
+        "equivalentOf": {
+          "maker": "X-Laser",
+          "model": "Mobile Beat Mirage",
+          "url": "https://www.gearclubdirect.com/x-laser-mobile-beat-mirage-400mw-rgb-entry-level-graphics-laser/"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "X-Laser Mobile Beat Mirage product photo",
+          "maker": "X-Laser",
+          "product": "X-Laser Mobile Beat Mirage (equivalent for UP-JG400)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://cdn11.bigcommerce.com/s-e6kwfh/images/stencil/608x608/products/30807/78530/Mobile_Beat_Mirage_1400x__72813.1561394440.jpg?c=2",
+          "page": "https://www.gearclubdirect.com/x-laser-mobile-beat-mirage-400mw-rgb-entry-level-graphics-laser/",
+          "note": "Viewed: compact black laser projector box labelled MOBILE BEAT MIRAGE, shown with an RGB laser fan/tunnel effect. Reseller-hosted maker marketing photo; original davlsupply.com listing the catalogue cites has since 404'd. Not retained locally, shop-page photo with no explicit download offer.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "safety",
+          "title": "Basic Principles of Lasershow Safety",
+          "maker": "International Laser Display Association (ILDA)",
+          "product": "up-la40wf / up-by06 / up-jg400 (all laser items)",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://www.ilda.com/safety-basics.htm",
+          "page": "https://www.ilda.com/safety-basics.htm",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "safety",
+          "title": "How to do safe audience scanning",
+          "maker": "International Laser Display Association (ILDA)",
+          "product": "up-la40wf / up-by06 / up-jg400 (all laser items)",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://www.ilda.com/audiencescanningsafety.htm",
+          "page": "https://www.ilda.com/audiencescanningsafety.htm",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "safety",
+          "title": "Laser Light Shows (FDA/CDRH audience-scanning variance)",
+          "maker": "US FDA / CDRH",
+          "product": "up-la40wf / up-by06 / up-jg400 (all laser items)",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://www.fda.gov/radiation-emitting-products/home-business-and-entertainment-products/laser-light-shows",
+          "page": "https://www.fda.gov/radiation-emitting-products/home-business-and-entertainment-products/laser-light-shows",
+          "checked": "2026-09-28"
+        }
+      ]
+    },
+    "up-q108s": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://www.pro-uplight.com/sitemap.xml",
+            "what": "Full sitemap has no 'co2' or effects product at all.",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://magicfx.com/products/co2jet-ii",
+            "what": "MagicFX CO2jet II product page — equivalent used by the catalogue entry.",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "UPlight (pro-uplight.com, made-in-china store) sells only LED moving-head/spot/wash/strobe fixtures — no CO2/pyro-effects category exists on either storefront. WebSearch for the exact code found nothing. Confirms earlier finding: kept as equivalent (MagicFX CO2jet II), whose manual and specs are fully published.",
+        "equivalentOf": {
+          "maker": "MagicFX",
+          "model": "CO2jet II",
+          "url": "https://magicfx.com/products/co2jet-ii"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "MagicFX CO2jet II product photo",
+          "maker": "MagicFX",
+          "product": "MagicFX CO2jet II (equivalent for UP-Q108S)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://magicfx.com/cdn/shop/files/CO2JETII-01.jpg?v=1773148408&width=800",
+          "page": "https://magicfx.com/products/co2jet-ii",
+          "note": "Viewed 800x800 JPEG: compact black jet body on an L-bracket with a round nozzle collar and side hose inlet — matches the 232x196x125mm description. Not retained locally, shop-page product photo with no explicit download offer.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "manual",
+          "title": "MagicFX CO2 Jet II — User and Installation Manual",
+          "maker": "MagicFX",
+          "product": "MagicFX CO2jet II (equivalent for UP-Q108S)",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://magicfx.com/cdn/shop/files/CO2jet_II_manual.pdf?v=5588412156141481997",
+          "page": "https://magicfx.com/products/co2jet-ii",
+          "pages": 24,
+          "note": "The URL given in the spec (magicfx.com/data/uploads/documents/...) now 503s; this is the current manual link pulled live from the product page's own Manual download button. Safety section (General safety rules, CO2 monitoring-device guidance) is pp. 8-9. No DMX-channel table in this manual — it is direct on/off or a single DMX trigger, not a multi-channel device.",
+          "sha256": "a4c7e069136b950ae23b1e35d70c39f21baceb9a9fddd29abc3c8342af83f25b",
+          "bytes": 5003274,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "a4c7e069136b950ae23b1e35d70c39f21baceb9a9fddd29abc3c8342af83f25b"
+        },
+        {
+          "kind": "safety",
+          "title": "Safety Data Sheet — Liquid Carbon Dioxide",
+          "maker": "Linde (Hong Kong)",
+          "product": "up-q108s (the CO2 the jet fires)",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://static.prd.echannel.linde.com/wcsstore/HK_RGC_Industrial_Ntl_Store/pdf/product/en_HK/Carbon%20dioxide_liquid.pdf",
+          "page": "https://static.prd.echannel.linde.com/wcsstore/HK_RGC_Industrial_Ntl_Store/pdf/product/en_HK/Carbon%20dioxide_liquid.pdf",
+          "pages": 12,
+          "note": "SDS No. HKO-004L, covers asphyxiation, cold-burn/frostbite and pressurised-cylinder hazards for the liquid CO2 this jet consumes. No maker page offering this file was found, so it is linked, not copied.",
+          "checked": "2026-09-28"
+        }
+      ]
+    },
+    "up-yh600f": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://www.pro-uplight.com/sitemap.xml",
+            "what": "Full sitemap has no cold-spark/pyro-look product.",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://www.showven.cn/product/sparkular/",
+            "what": "Showven Sparkular product page — the named equivalent (cold-spark machine class originator).",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "No cold-spark product exists on either UPlight storefront. WebSearch for the exact code returned nothing beyond an unrelated heat-gun model. Confirms earlier finding: kept as equivalent (Showven Sparkular), with MagicFX Sparxtar's published manual used for a DMX chart and safety/clearance guidance since Sparkular's own manual is not publicly hosted as a PDF.",
+        "equivalentOf": {
+          "maker": "Showven",
+          "model": "Sparkular",
+          "url": "https://www.showven.cn/product/sparkular/"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "Showven Sparkular product photo (rear/control panel)",
+          "maker": "Showven",
+          "product": "Showven Sparkular (equivalent for UP-YH600F)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://www.showven.cn/wp-content/uploads/2019/11/EImO7RWMTOOJ83YXBlcB8Q.png_640xa.png",
+          "page": "https://www.showven.cn/product/sparkular/",
+          "note": "Viewed 640x640 PNG: upright black box, rear panel with fan grille, model label, DMX/power connectors — matches the 200x218x305mm upright-box description. Not retained locally, shop-page product photo with no explicit download offer.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "manual",
+          "title": "MAGICFX Sparxtar — User and Installation Manual",
+          "maker": "MagicFX",
+          "product": "MagicFX Sparxtar (equivalent's equivalent — nearest published cold-spark manual, NOT the Showven Sparkular's own manual)",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://magicfx.com/cdn/shop/files/SPARXTAR_User_and_Installation_Manual_EN_v01-01_LR.pdf?v=18377049764478548453",
+          "page": "https://magicfx.com/pages/downloads",
+          "pages": 33,
+          "note": "Sparkular has no publicly hosted manual PDF found; this is the closest published cold-spark machine manual in the same product class, used here for DMX addressing and safety/clearance guidance only. Safety/clearance sections pp. 13-14 and 17 (2 m clearance from the set effect height, keep audience/flammables clear). DMX chart 3-address (1 safety + 2 operational) (3 ch), p.7 — the stand-in's chart, NOT the rental unit's; not applied to the patch.",
+          "sha256": "8c21a6b7b1ad0f98b71d1a1cd446963bfc89ada37f2e5522090f8d0b56ca73ac",
+          "bytes": 3651041,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "8c21a6b7b1ad0f98b71d1a1cd446963bfc89ada37f2e5522090f8d0b56ca73ac"
+        }
+      ]
+    },
+    "up-yz31p": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://www.pro-uplight.com/sitemap.xml",
+            "what": "Full sitemap has no fog/smoke product.",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://antari.com/products/z-1500iii/",
+            "what": "Antari Z-1500 III product page — equivalent used by the catalogue entry.",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "No fog/smoke product exists on either UPlight storefront. WebSearch for the exact code returned nothing. Confirms earlier finding: kept as equivalent (Antari Z-1500 III), full manual published with a 1-channel DMX chart.",
+        "equivalentOf": {
+          "maker": "Antari",
+          "model": "Z-1500 III",
+          "url": "https://antari.com/products/z-1500iii/"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "Antari Z-1500 III product photo",
+          "maker": "Antari Lighting and Effects",
+          "product": "Antari Z-1500 III (equivalent for UP-YZ31P)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://antari.com/wp-content/uploads/Z-1500III_01.jpg",
+          "page": "https://antari.com/products/z-1500iii/",
+          "note": "Viewed 1004x1004 JPEG: long grey/black box, embossed Antari logo, round front nozzle, carry handles, white fluid tank with hose on top — matches the 674x235x278mm description exactly. Not retained locally, shop-page product photo with no explicit download offer.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "manual",
+          "title": "Z-1500 III / Z-3000 III Stage Fog Machine — User Manual",
+          "maker": "Antari Lighting and Effects",
+          "product": "Antari Z-1500 III (equivalent for UP-YZ31P)",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://antari.com/wp-content/uploads/Z-1500lllC.pdf",
+          "page": "https://antari.com/products/z-1500iii/",
+          "pages": 24,
+          "note": "Confirmed the exact URL given in the spec still resolves. DMX chart p.8. DMX chart 1ch (1 ch), p.8 — the stand-in's chart, NOT the rental unit's; not applied to the patch.",
+          "sha256": "3df177a72b7a6d1f98d42dc882671f00b74d9dbdf335bbc45ee1f7e79819aa17",
+          "bytes": 2140422,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "3df177a72b7a6d1f98d42dc882671f00b74d9dbdf335bbc45ee1f7e79819aa17"
+        },
+        {
+          "kind": "safety",
+          "title": "Safety Data Sheet — Antari Fog Fluid (FLG/FLP/FLY/FLW/FLM/SFL series)",
+          "maker": "Antari Lighting and Effects",
+          "product": "up-yz31p (the fog fluid it burns)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://www.antari.com/SDS/FLY/FLY.pdf",
+          "page": "https://www.antari.com/SDS/FLY/FLY.pdf",
+          "note": "Maker's own glycol/glycerine fog-fluid SDS, covering the whole Antari fluid range including the water-based fluid Z-1500 III uses. No maker page offering this file was found, so it is linked, not copied.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "safety",
+          "title": "Theatrical fog and smoke detectors: how to avoid setting off fire alarms",
+          "maker": "Entertaining Safety (industry knowledge base)",
+          "product": "up-yz31p (venue fire-alarm coordination)",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://entertainingsafety.com/knowledge-base/theatrical-fog-and-smoke-detectors-how-to-avoid-setting-off-fire-alarms/",
+          "page": "https://entertainingsafety.com/knowledge-base/theatrical-fog-and-smoke-detectors-how-to-avoid-setting-off-fire-alarms/",
+          "checked": "2026-09-28"
+        }
+      ]
+    },
+    "up-sw3000b": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://www.pro-uplight.com/sitemap.xml",
+            "what": "Full sitemap has no fog/low-fog product.",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://surgefx.com/products/hydra-low-lying-fog-machine",
+            "what": "SurgeFX Hydra low-lying fog machine product page — equivalent used by the catalogue entry.",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "No low-fog product exists on either UPlight storefront. WebSearch for the exact code returned nothing. Confirms earlier finding: kept as equivalent (SurgeFX Hydra), a dry-ice-free double-output ground-fog machine matching the 3000 W double-head description.",
+        "equivalentOf": {
+          "maker": "SurgeFX",
+          "model": "Hydra",
+          "url": "https://surgefx.com/products/hydra-low-lying-fog-machine"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "SurgeFX Hydra product photo",
+          "maker": "SurgeFX",
+          "product": "SurgeFX Hydra (equivalent for UP-SW3000B)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://surgefx.com/cdn/shop/files/surgefx-hydra-low-lying-fog-machine-01-hero.webp?v=1784049939&width=1445",
+          "page": "https://surgefx.com/products/hydra-low-lying-fog-machine",
+          "note": "Viewed 1254x1254 webp: black flight-case-style unit on castors with two corrugated hoses running to two low flared ground-fog nozzles — matches the double-output description. Not retained locally, shop-page product photo with no explicit download offer.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "safety",
+          "title": "Material Safety Data Sheet — MDG Low Fog Fluid",
+          "maker": "MDG (Martin DesignGroup / mdgfog.com)",
+          "product": "up-sw3000b (ground/low-fog fluid class)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://mdgfog.s3.amazonaws.com/uploads/docs/MSDS_Low_Fog_Fluid.pdf",
+          "page": "https://mdgfog.s3.amazonaws.com/uploads/docs/MSDS_Low_Fog_Fluid.pdf",
+          "note": "No SurgeFX-specific fluid SDS was found published; this is a citable maker SDS for the same water-based low-lying fog fluid class the spec names as an acceptable stand-in. No maker page offering this file was found, so it is linked, not copied.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "safety",
+          "title": "Theatrical fog and smoke detectors: how to avoid setting off fire alarms",
+          "maker": "Entertaining Safety (industry knowledge base)",
+          "product": "up-sw3000b (venue fire-alarm coordination)",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://entertainingsafety.com/knowledge-base/theatrical-fog-and-smoke-detectors-how-to-avoid-setting-off-fire-alarms/",
+          "page": "https://entertainingsafety.com/knowledge-base/theatrical-fog-and-smoke-detectors-how-to-avoid-setting-off-fire-alarms/",
+          "checked": "2026-09-28"
+        }
+      ]
+    },
+    "up-236": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://www.pro-uplight.com/sitemap.xml",
+            "what": "Full sitemap has no mist/fog product.",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://phantomdynamics.com/antari-z-800-ii-mobile-pro-fog-machine/",
+            "what": "Dealer page reproducing Antari's own Z-800 II product photos and spec sheet — equivalent used by the catalogue entry.",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "UP-236 remains the weakest-traced item: no page under this code exists on either UPlight storefront, and the rental house's own quote spreadsheet (already logged in the catalogue as source QUOTE) is the only place the code appears at all. WebSearch found nothing. Antari's own site now only sells the newer Z-800 III (Z-800 II is discontinued there, and antari.com/products/z-800ii/ 404s), and the zzounds listing the catalogue cites blocks direct fetch (HTTP 403); used a dealer mirror (phantomdynamics.com) for a verifiable photo instead. Maker, model and full specs of UP-236 remain owed.",
+        "equivalentOf": {
+          "maker": "Antari",
+          "model": "Z-800 II",
+          "url": "https://www.zzounds.com/item--ANTZ800II"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "Antari Z-800 II product photo",
+          "maker": "Antari Lighting and Effects",
+          "product": "Antari Z-800 II (equivalent for UP-236)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://cdn11.bigcommerce.com/s-if8arfen/images/stencil/500x659/products/8969/16501/z-800ii-large1_2__92575.1486407802.jpg?c=2",
+          "page": "https://phantomdynamics.com/antari-z-800-ii-mobile-pro-fog-machine/",
+          "note": "Viewed 500x500 JPEG: small grey/black handheld-style fog machine, embossed Antari logo, top-mounted control knob and toggle-switch remote — matches an 800 W compact double-head-class fogger. zzounds.com (the catalogue's own source) returned HTTP 403 on direct fetch; antari.com no longer lists Z-800 II (superseded by Z-800 III). Not retained locally, dealer-page product photo with no explicit download offer.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "safety",
+          "title": "Safety Data Sheet — Antari Fog Fluid (FLG/FLP/FLY/FLW/FLM/SFL series)",
+          "maker": "Antari Lighting and Effects",
+          "product": "up-236 (fog/haze fluid class)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://www.antari.com/SDS/FLY/FLY.pdf",
+          "page": "https://www.antari.com/SDS/FLY/FLY.pdf",
+          "note": "No maker page offering this file was found, so it is linked, not copied.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "safety",
+          "title": "Theatrical fog and smoke detectors: how to avoid setting off fire alarms",
+          "maker": "Entertaining Safety (industry knowledge base)",
+          "product": "up-236 (venue fire-alarm coordination)",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://entertainingsafety.com/knowledge-base/theatrical-fog-and-smoke-detectors-how-to-avoid-setting-off-fire-alarms/",
+          "page": "https://entertainingsafety.com/knowledge-base/theatrical-fog-and-smoke-detectors-how-to-avoid-setting-off-fire-alarms/",
+          "checked": "2026-09-28"
+        }
+      ]
+    },
+    "up-hd210": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://www.pro-uplight.com/sitemap.xml",
+            "what": "Full sitemap has no multi-effect/butterfly/laser-combo product.",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://www.avsl.com/product/151.744UK-butterfly-effect--3in1-led--laser-effect-light",
+            "what": "AVSL Butterfly Effect 3-in-1 (151.744UK) — equivalent used by the catalogue entry.",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "No 3-in-1 butterfly/laser/strobe combo fixture exists on either UPlight storefront. WebSearch for the exact code returned nothing. Confirms earlier finding: kept as equivalent (AVSL Butterfly Effect 3-in-1).",
+        "equivalentOf": {
+          "maker": "AVSL",
+          "model": "Butterfly Effect 3-in-1 (151.744UK)",
+          "url": "https://www.avsl.com/product/151.744UK-butterfly-effect--3in1-led--laser-effect-light"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "AVSL Butterfly Effect 3-in-1 product photo",
+          "maker": "AVSL",
+          "product": "AVSL Butterfly Effect 3-in-1 (equivalent for UP-HD210)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://www.avsl.com/assets/images/1/5/151744UK_CO1.jpg",
+          "page": "https://www.avsl.com/product/151.744UK-butterfly-effect--3in1-led--laser-effect-light",
+          "note": "Viewed 1442x1500 JPEG: black derby-style housing with a bank of red and white beam lenses on the front face and a top-mounted carry bracket — matches the 3-in-1 derby/laser/strobe description. Not retained locally, shop-page product photo with no explicit download offer.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "safety",
+          "title": "Basic Principles of Lasershow Safety (applies to this fixture's built-in class 3B laser)",
+          "maker": "International Laser Display Association (ILDA)",
+          "product": "up-hd210 (its built-in laser element)",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://www.ilda.com/safety-basics.htm",
+          "page": "https://www.ilda.com/safety-basics.htm",
+          "checked": "2026-09-28"
+        }
+      ]
+    },
+    "hazer": {
+      "verification": {
+        "status": "confirmed",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://www.mdgfog.com/en/atme",
+            "what": "MDG ATMe product page — the reference product this item is modelled on (not a rented UPlight item).",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Not on the rental list: the hazer is taken as the MDG ATMe itself (through the Open Fixture Library), so the product shown is the product planned. Not a UPlight code (no rental-house code applies); this is the rig's own reference product, per the spec. Confirmed the MDG ATMe product page and downloaded its manual, datasheet and fluid SDS directly from MDG's own S3-hosted downloads."
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "MDG ATMe product photo (rear vent/fan detail)",
+          "maker": "MDG (Martin DesignGroup)",
+          "product": "MDG ATMe",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://mdgfog.s3.amazonaws.com/uploads/img/atme-7.png",
+          "page": "https://www.mdgfog.com/en/atme",
+          "note": "Viewed 960x680 PNG: distinctive purple casing, U-bracket handle, rear cooling-fan grille — a second angle (atme-a) was also confirmed real but not separately listed. Not retained locally, shop-page product photo with no explicit download offer.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "manual",
+          "title": "MDG ATMe — User Guide, Rev Ce",
+          "maker": "MDG (Martin DesignGroup)",
+          "product": "MDG ATMe",
+          "equivalent": false,
+          "offer": "download",
+          "url": "https://mdgfog.s3.ca-central-1.amazonaws.com/uploads/docs/ATMe%2C%20User%20Guide%2C%20Rev%20Ce.pdf",
+          "page": "https://www.mdgfog.com/en/atme",
+          "pages": 33,
+          "note": "DMX chart p.17. DMX chart 3ch (3 ch), p.17 — from the manual, verify on the unit: ch1 unit on/off, ch2 haze output 0–100 %, ch3 haze on/off (on above 128); the same three channels, in the same order, as the Open Fixture Library profile the hazer is taken with (Unit control, Haze output, Haze control).",
+          "sha256": "bf6fc6c4eed7b0055871a7443637649bb2f82d3e34820bd12367d45ed2db02b8",
+          "bytes": 3119891,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "bf6fc6c4eed7b0055871a7443637649bb2f82d3e34820bd12367d45ed2db02b8"
+        },
+        {
+          "kind": "datasheet",
+          "title": "Product data sheet — ATMOSPHERE APS / ATMe",
+          "maker": "MDG (Martin DesignGroup)",
+          "product": "MDG ATMe",
+          "equivalent": false,
+          "offer": "download",
+          "url": "https://mdgfog.s3.ca-central-1.amazonaws.com/uploads/docs/Product%20data%20sheet_ATMOSPHERE_ATMe.pdf",
+          "page": "https://www.mdgfog.com/en/atme",
+          "pages": 53,
+          "sha256": "f5a96c0eeb56889e75798480561c40571e27fd2a845420ecfa9d7bff54593dbf",
+          "bytes": 428709,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "f5a96c0eeb56889e75798480561c40571e27fd2a845420ecfa9d7bff54593dbf"
+        },
+        {
+          "kind": "safety",
+          "title": "Safety Data Sheet — MDG Neutral Fluid",
+          "maker": "MDG (Martin DesignGroup)",
+          "product": "MDG ATMe (haze fluid)",
+          "equivalent": false,
+          "offer": "download",
+          "url": "https://mdgfog.s3.ca-central-1.amazonaws.com/uploads/docs/MDG%20Neutral%20Fluid%20-%20US%20EN%20v1.0.pdf",
+          "page": "https://www.mdgfog.com/en/atme",
+          "note": "Highly refined white mineral oil base — the fluid ATMe atomises.",
+          "sha256": "fab3111f5207844df476f39c6053add52cebe577f7fec1c5f895b0f8ddcf250c",
+          "bytes": 316873,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "fab3111f5207844df476f39c6053add52cebe577f7fec1c5f895b0f8ddcf250c"
+        },
+        {
+          "kind": "safety",
+          "title": "Safety Data Sheet — Liquid Carbon Dioxide",
+          "maker": "Linde (Hong Kong)",
+          "product": "MDG ATMe (CO2 carrier gas)",
+          "equivalent": false,
+          "offer": "link",
+          "url": "https://static.prd.echannel.linde.com/wcsstore/HK_RGC_Industrial_Ntl_Store/pdf/product/en_HK/Carbon%20dioxide_liquid.pdf",
+          "page": "https://static.prd.echannel.linde.com/wcsstore/HK_RGC_Industrial_Ntl_Store/pdf/product/en_HK/Carbon%20dioxide_liquid.pdf",
+          "pages": 12,
+          "note": "Same SDS as up-q108s — the ATMe design draws on a CO2 cylinder as its atomising carrier gas per the catalogue's own MDG-ATME source. No maker page offering this file was found, so it is linked, not copied.",
+          "checked": "2026-09-28"
+        }
+      ]
+    },
+    "up-q3l": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://www.pro-uplight.com/sitemap.xml",
+            "what": "pro-uplight.com sitemap lists only fixture categories (moving heads, PAR, profile, follow spot, LED panel, waterproof) — no console/controller category; confirms no UP-Q3L page exists on the maker's own site",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://www.pro-uplight.com/products.html",
+            "what": "full products.html link list — same result, no control-desk products",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://up-light.en.made-in-china.com",
+            "what": "UPlight Made-in-China store — 35 pages / ~420 listings, all fixtures; no 'UP-Q3L' or console product found (matches existing catalogue note)",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "web search \"UP-Q3L\" UPlight console",
+            "what": "no results for the exact code anywhere on the web",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Searched pro-uplight.com (sitemap + products.html + site search endpoint, which 404s — site has no working search), the made-in-china store, and the general web for 'UP-Q3L' and variants. UPlight's own catalogue sells only moving heads/PAR/profile/effects, never consoles — confirms the existing catalogue's finding that this rental-house code does not trace to a maker page. Kept the catalogue's already-chosen equivalent (MA Lighting grandMA3 light, the real console this rental unit's OS/branding evokes) and pulled genuine maker photos for it.",
+        "equivalentOf": {
+          "maker": "MA Lighting",
+          "model": "grandMA3 light",
+          "url": "https://www.malighting.com/product/grandma3-light-4010502/"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "grandMA3 light — main product shot (3/4 angle)",
+          "maker": "MA Lighting International GmbH",
+          "product": "grandMA3 light console",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://xom.malighting.com/xom-rest/assets/f6635636-7287-43cb-b068-51a2e4378c53/preview",
+          "page": "https://www.malighting.com/product/grandma3-light-4010502/",
+          "note": "Verified by eye (downloaded to a temp scratch file, viewed, then deleted per the link-only policy): genuine grandMA3 console hardware shot, 'grandMA3' visible on the desk. The first image URL found on the page (csm_6697...jpg) was a lifestyle/venue banner, not the product — discarded.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "photo",
+          "title": "grandMA3 light — Mode2 view",
+          "maker": "MA Lighting International GmbH",
+          "product": "grandMA3 light console",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://xom.malighting.com/xom-rest/assets/99b45860-4b3e-4eb4-904b-70dfec155824/preview",
+          "page": "https://www.malighting.com/product/grandma3-light-4010502/",
+          "note": "Confirmed real image (HEAD: image/png, 24.6 MB) from the same verified product gallery; not individually opened.",
+          "checked": "2026-09-28"
+        }
+      ]
+    },
+    "up-1024": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://up-light.en.made-in-china.com",
+            "what": "no '1024' or console model on the maker's store",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "web search \"UP-1024\" UPlight DMX",
+            "what": "no hits for the exact code; only generic 'DMX 1024 controller' class results from unrelated brands (Mingwang, Robe DMX Control 1024, uKing)",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Same dead end as up-q3l: not on pro-uplight.com or the made-in-china store, no web hits for the code. Existing catalogue already lists three alternatives (Chauvet Obey 70, ChamSys MQ40N, Stairville DMX Master I); used Chauvet Obey 70 as primary since chauvetdj.com's own asset URLs were reachable (chamsyslighting.com blocked the request with a Cloudflare challenge page). Obey 70 is 384ch, not 1024ch — noted as an imperfect match on channel count; it is the closest accessible, well-documented example of the 'compact DMX control desk' class the rental listing describes.",
+        "equivalentOf": {
+          "maker": "Chauvet DJ",
+          "model": "Obey 70",
+          "url": "https://www.chauvetdj.com/products/obey-70/"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "Obey 70 — front view",
+          "maker": "Chauvet DJ (Chauvet Lighting)",
+          "product": "Obey 70 DMX controller",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://www.chauvetdj.com/wp-content/uploads/2015/12/Obey-70-FRONT.jpg",
+          "page": "https://www.chauvetdj.com/products/obey-70/",
+          "note": "Verified by eye: genuine Obey 70 fader/joystick desk, 'Chauvet DJ' and 'Obey 70' branding visible.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "photo",
+          "title": "Obey 70 — back view",
+          "maker": "Chauvet DJ (Chauvet Lighting)",
+          "product": "Obey 70 DMX controller",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://www.chauvetdj.com/wp-content/uploads/2015/12/Obey-70-BACK.jpg",
+          "page": "https://www.chauvetdj.com/products/obey-70/",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "manual",
+          "title": "Obey 70 User Manual (Rev 7)",
+          "maker": "Chauvet DJ (Chauvet Lighting)",
+          "product": "Obey 70 DMX controller",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://www.chauvetdj.com/wp-content/uploads/2015/12/Obey-70_Rev7_UM_ML5.pdf",
+          "page": "https://www.chauvetdj.com/products/obey-70/",
+          "pages": 69,
+          "note": "Console operating manual (fader assignment, MIDI, DMX I/O spec table p.~17 of the PDF). No fixed per-channel DMX 'chart' — a console has none; it outputs 384ch it lets the operator assign.",
+          "sha256": "6745473792d078e6f08482ce9e95ea2389dac4f40eca91b8762c6d564a0a7721",
+          "bytes": 1317443,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "6745473792d078e6f08482ce9e95ea2389dac4f40eca91b8762c6d564a0a7721"
+        }
+      ]
+    },
+    "up-9800": {
+      "verification": {
+        "status": "unknown",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://up-light.en.made-in-china.com",
+            "what": "no 'FRX-9800' or '9800' product on the maker's store",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "web search \"UP-9800\" OR \"FRX-9800\" lighting controller",
+            "what": "no relevant hits — only unrelated Cisco Catalyst 9800 wireless network controllers and a Lightsky 9800-lumen Fresnel fixture",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "No trace of 'UP-9800' or 'FRX-9800' anywhere: not on pro-uplight.com, not on the made-in-china store, no web hits. The existing catalogue already carries this item with an empty alternatives list and no photo — my search confirms there is no sensible stand-in to name; 'FRX-9800 central controller' gives too little to identify a product class (it could be a DMX master/slave distribution hub, a relay controller, or something else). Leaving as unknown per spec rather than guessing."
+      },
+      "media": []
+    },
+    "up-b01": {
+      "verification": {
+        "status": "unknown",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://up-light.en.made-in-china.com",
+            "what": "no 'UP-B01' or 'B01' product on the maker's store",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "web search \"UP-B01\" UPlight stage",
+            "what": "no relevant hits",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "web search \"B01\" wireless DMX transmitter receiver stage lighting China",
+            "what": "many generic Chinese wireless-DMX transceivers exist as a class, but none carry the code 'B01' or trace to UPlight",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Tried the code directly and, since the rental name is 'light control / broadcast unit', tried the hypothesis that 'broadcast' means a wireless DMX transmitter/receiver — found only generic unrelated Chinese wireless-DMX products, none coded B01 or attributable to UPlight. Existing catalogue also lists this with no alternatives and no photo. Left unknown rather than naming a guessed stand-in with no real basis."
+      },
+      "media": []
+    },
+    "up-pdu60b": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://up-light.en.made-in-china.com",
+            "what": "no PDU60/splitter/amplifier product on the maker's store",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "web search \"UP-PDU60\" DMX amplifier splitter",
+            "what": "no hits for the exact code",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://chamsyslighting.com/product/genetix-gd4ip/",
+            "what": "Chauvet-family GeNetix line moved to ChamSys ownership/branding; page confirms exact model name 'GeNetix GD4IP', an IP65-rated 4-port DMX splitter — this is what the existing catalogue's 'CHAUVET-GD4IP' source pointed at (Chauvet Professional's own genetix-node pages now 404/redirect; GeNetix is now sold under chamsyslighting.com)",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Not traceable to UPlight. Kept the catalogue's GeNetix GD4IP equivalent, confirmed its current home is chamsyslighting.com (chauvetprofessional.com's own GeNetix pages redirect/404 — the line moved to ChamSys branding), and pulled maker photos + the two documents the product page explicitly offers for download (cut sheet, quick start guide).",
+        "equivalentOf": {
+          "maker": "ChamSys (GeNetix, formerly Chauvet Professional)",
+          "model": "GeNetix GD4IP",
+          "url": "https://chamsyslighting.com/product/genetix-gd4ip/"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "GeNetix GD4IP — front panel",
+          "maker": "ChamSys Ltd. (GeNetix)",
+          "product": "GeNetix GD4IP DMX splitter",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://chamsyslighting.com/wp-content/uploads/2024/08/GENETIX-GD4IP-FRONT-1.png",
+          "page": "https://chamsyslighting.com/product/genetix-gd4ip/",
+          "note": "Verified by eye: genuine unit, 'GeNetix' and 'GD4IP' silkscreened on the case, 4 Seetronic DMX outs + IN + AC IN.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "photo",
+          "title": "GeNetix GD4IP — 3/4 view",
+          "maker": "ChamSys Ltd. (GeNetix)",
+          "product": "GeNetix GD4IP DMX splitter",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://chamsyslighting.com/wp-content/uploads/2024/08/GENETIX-GD4IP-RIGHT.png",
+          "page": "https://chamsyslighting.com/product/genetix-gd4ip/",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "datasheet",
+          "title": "GD4IP Cut Sheet",
+          "maker": "ChamSys Ltd. (GeNetix)",
+          "product": "GeNetix GD4IP DMX splitter",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://secure.chamsys.co.uk/bugtracker/download_file.php?file_id=292&type=doc",
+          "page": "https://chamsyslighting.com/product/genetix-gd4ip/",
+          "pages": 1,
+          "note": "Hardware/software spec sheet: 4x DMX out, 1x DMX in, RDM E1.20 compliant, IP65, PowerCon True1, 274x76x68mm, 1.4kg. No per-channel table (it's a passive splitter, nothing to address).",
+          "sha256": "77bbbac74a53cbda3f907da0fc0730c5ca09fced908c6e1e309824f29d2086a9",
+          "bytes": 815253,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "77bbbac74a53cbda3f907da0fc0730c5ca09fced908c6e1e309824f29d2086a9"
+        },
+        {
+          "kind": "manual",
+          "title": "GD4IP Quick Start Guide",
+          "maker": "ChamSys Ltd. (GeNetix)",
+          "product": "GeNetix GD4IP DMX splitter",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://secure.chamsys.co.uk/bugtracker/download_file.php?file_id=282&type=doc",
+          "page": "https://chamsyslighting.com/product/genetix-gd4ip/",
+          "pages": 2,
+          "sha256": "e94d2bea2b0d1ceb3eb6e5a28f3771a7a90a5d1a45684a4427e38e6638b11802",
+          "bytes": 1488677,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "e94d2bea2b0d1ceb3eb6e5a28f3771a7a90a5d1a45684a4427e38e6638b11802"
+        }
+      ]
+    },
+    "up-pdu60a": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://up-light.en.made-in-china.com",
+            "what": "no PDU60/splitter product on the maker's store",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "web search \"UP-PDU60\" DMX amplifier splitter",
+            "what": "no hits for the exact code",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Not traceable to UPlight. Kept the catalogue's ENTTEC D-Split equivalent and pulled the maker's own product photo and datasheet (both directly offered for download on enttec.com).",
+        "equivalentOf": {
+          "maker": "ENTTEC",
+          "model": "D-Split",
+          "url": "https://www.enttec.com/product/dmx-isolated-splitter-din-rail/d-split-dmx-opto-splitter-isolator/"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "D-Split — product shot",
+          "maker": "ENTTEC Pty Ltd",
+          "product": "D-Split DMX opto-splitter/isolator",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://cdn.enttec.com/website/products/70574-d-split/70574-d-split-banner.jpg",
+          "page": "https://www.enttec.com/product/dmx-isolated-splitter-din-rail/d-split-dmx-opto-splitter-isolator/",
+          "note": "Verified by eye: genuine unit, 'ENTTEC D-SPLIT' engraved on the housing, 5-pin XLR DMX in/out ports visible. (A second candidate image on the same page, 'image-85.png', turned out to be an unrelated architectural-lighting banner photo — discarded.)",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "datasheet",
+          "title": "D-Split Datasheet",
+          "maker": "ENTTEC Pty Ltd",
+          "product": "D-Split DMX opto-splitter/isolator (SKUs 70574/70578/70579)",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://cdn.enttec.com/pdf/assets/70574_70578_70579/70574_70578_70579_D-SPLIT_DATASHEET.pdf",
+          "page": "https://www.enttec.com/product/dmx-isolated-splitter-din-rail/d-split-dmx-opto-splitter-isolator/",
+          "pages": 2,
+          "note": "1-in/4-out opto-isolated splitter spec sheet. No DMX address/channel table (pass-through device).",
+          "sha256": "1eb13c74c54e8ba92c07d9251a8b6bd789f19efbf9a697f8376d1dd13e345045",
+          "bytes": 346854,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "1eb13c74c54e8ba92c07d9251a8b6bd789f19efbf9a697f8376d1dd13e345045"
+        }
+      ]
+    },
+    "up-2303": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://up-light.en.made-in-china.com",
+            "what": "no '2303' or decoder product on the maker's store",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "web search \"UP-2303\" DMX decoder",
+            "what": "no hits for the exact code; only generic DMX decoder results from unrelated brands",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "http://www.ltech-led.com/html/en/Control/Decoder/DMX-PWM-CV-type/D4.html",
+            "what": "LTECH D4 — 4-channel constant-voltage DMX512 decoder product page and datasheet",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Not traceable to UPlight; no code match anywhere. Kept the catalogue's LTECH decoder-range equivalent, picked the LTECH D4 (4-channel CV decoder, the closest single model to 'DMX decoder 2303') as a concrete class example, and pulled its real product photo + full datasheet, which includes the DMX address/channel assignment table.",
+        "equivalentOf": {
+          "maker": "LTECH (Shenzhen Robert Green Ltd.)",
+          "model": "D4 (DMX512 4-channel CV decoder)",
+          "url": "http://www.ltech-led.com/html/en/Control/Decoder/DMX-PWM-CV-type/D4.html"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "LTECH D4 — product shot",
+          "maker": "LTECH (Shenzhen Robert Green Lighting Co., Ltd.)",
+          "product": "D4 DMX512 4-channel decoder",
+          "equivalent": true,
+          "offer": "link",
+          "url": "http://www.ltech-led.com/uploads/allimg/pro-images/D4.jpg",
+          "page": "http://www.ltech-led.com/html/en/Control/Decoder/DMX-PWM-CV-type/D4.html",
+          "note": "Verified by eye: genuine unit, 'D4 DMX512 DECODER' silkscreened on the case, XLR DMX in/out, RJ45 ports, 4-channel terminal block. The first image tried from the page's 'economyDecoder' folder was a marketing banner showing the whole product range, not this unit — discarded.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "datasheet",
+          "title": "D4 Datasheet",
+          "maker": "LTECH (Shenzhen Robert Green Lighting Co., Ltd.)",
+          "product": "D4 DMX512 4-channel decoder",
+          "equivalent": true,
+          "offer": "download",
+          "url": "http://www.ltech-led.com/uploads/pdf/en/LED-Controller/D4.pdf",
+          "page": "http://www.ltech-led.com/html/en/Control/Decoder/DMX-PWM-CV-type/D4.html",
+          "pages": 13,
+          "note": "Contains the DMX 'Address setting table' (PDF page 10) extracted into the channels field below. DMX chart 8bit / DIM (1 ch), p.10 — the stand-in's chart, NOT the rental unit's; not applied to the patch. DMX chart 8bit / CT or CT2 (colour temperature, 2 outputs) (2 ch), p.10 — the stand-in's chart, NOT the rental unit's; not applied to the patch. DMX chart 8bit / RGB (3 outputs) (3 ch), p.10 — the stand-in's chart, NOT the rental unit's; not applied to the patch. DMX chart 8bit / RGBW (4 outputs) (4 ch), p.10 — the stand-in's chart, NOT the rental unit's; not applied to the patch. DMX chart 16bit / RGBW (8 DMX slots, fine+coarse per output) (8 ch), p.10 — the stand-in's chart, NOT the rental unit's; not applied to the patch.",
+          "sha256": "6185459ed496ce5bb6f50f2327b1ac8b041239dd53ab07e9e06ab75b2bb58506",
+          "bytes": 1097275,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "6185459ed496ce5bb6f50f2327b1ac8b041239dd53ab07e9e06ab75b2bb58506"
+        }
+      ]
+    },
+    "up-power12": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://up-light.en.made-in-china.com",
+            "what": "no dimmer/power-cabinet product on the maker's store",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "web search \"UP-POWER12\" dimmer power cabinet",
+            "what": "no hits for the exact code",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Not traceable to UPlight. Kept the catalogue's ETC Sensor3 equivalent. Downloaded the Sensor3 (SP3) Small Touring Rack datasheet (a genuine rental/touring-tier dimmer rack in the same product line, closest in class to a 12-way portable dimmer cabinet). The full Sensor3 (SR3/HSR3) installed-rack manual is also offered for download on ETC's documentation page but etcconnect.com serves it (9 MB) too slowly/unreliably for this environment — three attempts (up to 280s each) all returned truncated files; recorded as a miss rather than kept as a corrupt file.",
+        "equivalentOf": {
+          "maker": "ETC (Electronic Theatre Controls)",
+          "model": "Sensor3 dimming — SP3 Small Touring Rack",
+          "url": "https://www.etcconnect.com/Sensor3/"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "Sensor3 — rack nameplate detail",
+          "maker": "Electronic Theatre Controls, Inc. (ETC)",
+          "product": "Sensor3 dimming rack",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://www.etcconnect.com/uploadedImages/Main_Site/Images/Products/Dimming_Switching/Sensor3_Overview_Image.jpg",
+          "page": "https://www.etcconnect.com/Sensor3/",
+          "note": "Verified by eye: genuine close-up, 'Sensor 3 / Power Control System' badge visible on the rack door.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "datasheet",
+          "title": "Sensor3 (SP3) Small Touring Rack Datasheet",
+          "maker": "Electronic Theatre Controls, Inc. (ETC)",
+          "product": "Sensor3 SP3 Small Touring Rack",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://www.etcconnect.com/WorkArea/DownloadAsset.aspx?id=10737460024",
+          "page": "https://www.etcconnect.com/Products/Power-Controls/Racks-and-Panels/Sensor3/Documentation.aspx",
+          "pages": 4,
+          "sha256": "f2a8418315ba5cea37f14a5861428f8eafb4850dd53e32489b4a421145640925",
+          "bytes": 999619,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "f2a8418315ba5cea37f14a5861428f8eafb4850dd53e32489b4a421145640925"
+        }
+      ]
+    },
+    "artnet-node": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://www.luminex.be/products/luminode/luminode-4/",
+            "what": "Luminex LumiNode 4 — official product page, alive and documented; this is the catalogue's other already-listed alternative for this item",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://dmxking.com/artnetsacn/edmx4-pro",
+            "what": "SPEC's named reference (DMXking eDMX4 PRO) — this URL now 301-redirects to the dmxking.com homepage; both curl and WebFetch confirm the product page no longer resolves (line appears superseded by the eDMX4 MAX/PRO ISODIN/PRO DIN family)",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "This item is explicitly 'equivalent' per the brief (not a traced rental unit). The exact reference SPEC named, DMXking eDMX4 PRO, has a dead product page (redirects to home) as of today — noted as a miss. Substituted the Luminex LumiNode 4, the other alternative the catalogue already lists, which is live, well-photographed and fully documented (4-port Art-Net/sACN Ethernet-to-DMX node, matches the show's planned 4-universe node).",
+        "equivalentOf": {
+          "maker": "Luminex LCE",
+          "model": "LumiNode 4",
+          "url": "https://www.luminex.be/products/luminode/luminode-4/"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "LumiNode 4 — front/ISO view",
+          "maker": "Luminex LCE nv",
+          "product": "LumiNode 4 Art-Net/sACN-to-DMX node",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://www.luminex.be/wp-content/uploads/2025/02/LumiNode-4-Front-Cam-ISO.png",
+          "page": "https://www.luminex.be/products/luminode/luminode-4/",
+          "note": "Verified by eye: genuine unit, 'LumiNode 4' and 'Luminex' silkscreened, 4x 5-pin XLR + 1x RJ45 (ETH1) visible.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "datasheet",
+          "title": "LumiNode 4 Product Specification Sheet (v1.0.6)",
+          "maker": "Luminex LCE nv",
+          "product": "LumiNode 4 Art-Net/sACN-to-DMX node",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://www.luminex.be/wp-content/uploads/doccenter/Product-specification-sheet-LumiNode-4-v1.0.6.pdf",
+          "page": "https://www.luminex.be/support-2/product-downloads/?product_id=10521",
+          "pages": 7,
+          "sha256": "917b589e0b79636788eb0a7b772662fcffb1fc0e4d3b9e223e06a3a4a92cd819",
+          "bytes": 948267,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "917b589e0b79636788eb0a7b772662fcffb1fc0e4d3b9e223e06a3a4a92cd819"
+        },
+        {
+          "kind": "manual",
+          "title": "LumiNode Quick Start Guide (v1.0)",
+          "maker": "Luminex LCE nv",
+          "product": "LumiNode 4 Art-Net/sACN-to-DMX node",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://www.luminex.be/wp-content/uploads/doccenter/WEB_QSG_Luminode_booklet-A6-3.pdf",
+          "page": "https://www.luminex.be/support-2/product-downloads/?product_id=10521",
+          "pages": 12,
+          "note": "The full User Manual (rev 2.4.1, 4.2 MB) is also offered for download at the same page but luminex.be served it too slowly/unreliably (3 attempts up to 300s all truncated); dropped in favour of the spec sheet + quick start guide, both fully downloaded and page-verified.",
+          "sha256": "ff767a75e9b920265e93f6758c36df089165a72bce327be4aa2694a47334d6ba",
+          "bytes": 688586,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "ff767a75e9b920265e93f6758c36df089165a72bce327be4aa2694a47334d6ba"
+        }
+      ]
+    },
+    "truss": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://www.globaltruss.com/trussing/f34-square-truss",
+            "what": "Global Truss F34 square truss — official product page, 290mm box, TÜV SÜD certified, 50x2mm main tube",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://www.prolyte.com/products/aluminium-truss/square-truss/h30v-l100-square-30-length-100-cm",
+            "what": "Prolyte H30V square truss length page — official product page",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Explicitly 'equivalent' per the brief (own stock, not a rental-house item). Confirmed both reference makers' pages, pulled a genuine product photo from each, and downloaded both makers' load-table PDFs plus Prolyte's combined product data sheet, all directly offered for download on the makers' own domains.",
+        "equivalentOf": {
+          "maker": "Global Truss / Prolyte",
+          "model": "F34 square truss (290mm) / H30V square truss",
+          "url": "https://www.globaltruss.com/trussing/f34-square-truss"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "F34 square truss — TÜV SÜD certified segment",
+          "maker": "Global Truss (a Vari-Lite/Genesis Group brand / Milos)",
+          "product": "F34 square truss, 290mm box section",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://www.globaltruss.com/media/catalog/category/17/800x600-20f34-20tuv.jpg",
+          "page": "https://www.globaltruss.com/trussing/f34-square-truss/straight-segments-2",
+          "note": "Verified by eye: genuine truss segment photo with TÜV SÜD 'safety tested / production monitored' badge overlaid.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "photo",
+          "title": "H30V square truss segment",
+          "maker": "Prolyte Group",
+          "product": "H30V square truss, 290mm box section",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://www.prolyte.com/Prolyte/media/static-media/67a58480-49f1-4902-9c1b-177af9de30d6@product-list.png",
+          "page": "https://www.prolyte.com/products/aluminium-truss/square-truss/h30v-l100-square-30-length-100-cm",
+          "note": "Verified by eye: genuine 4-point square truss segment, same class as F34.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "datasheet",
+          "title": "F34 Truss Load/Span Tables",
+          "maker": "Global Truss",
+          "product": "F34 square truss",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://www.globaltruss.com/pub/media/categorycustomlink/pdf/F34_Truss_Load_Span_Tables.pdf",
+          "page": "https://www.globaltruss.com/trussing/f34-square-truss",
+          "pages": 1,
+          "sha256": "ca72ff242073f415f03b4d3e09c3ce79f6547717dbbbb883dea621d7111f4a8d",
+          "bytes": 428484,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "ca72ff242073f415f03b4d3e09c3ce79f6547717dbbbb883dea621d7111f4a8d"
+        },
+        {
+          "kind": "datasheet",
+          "title": "H30V Truss Loading Table (all lengths)",
+          "maker": "Prolyte Group",
+          "product": "H30V square truss",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://www.prolyte.com/getmedia/b6bcb893-6107-46d3-884c-b8f8215f10f0/LOADING-TABLE-TRUSS-TYPE-H30V-LENGTHS-EN-20153_1.pdf.aspx",
+          "page": "https://www.prolyte.com/products/aluminium-truss/square-truss/h30v",
+          "pages": 1,
+          "sha256": "23506331705c2e2b805f75cd4e51d8f74f277889d6773d60db71f20586a0eaff",
+          "bytes": 133075,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "23506331705c2e2b805f75cd4e51d8f74f277889d6773d60db71f20586a0eaff"
+        },
+        {
+          "kind": "datasheet",
+          "title": "H30V Square Serie Truss — Product Data Sheet",
+          "maker": "Prolyte Group",
+          "product": "H30V square truss",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://www.prolyte.com/getmedia/d41813c5-e5c5-46cf-982f-76c17ddea6fb/Product-Data-Sheet-H30V.pdf.aspx",
+          "page": "https://www.prolyte.com/products/aluminium-truss/square-truss/h30v",
+          "pages": 2,
+          "note": "Dimensions (48.3x3mm main tube, 16x2mm diagonal), weight/m, CCS6 coupling, alongside the separate loading table.",
+          "sha256": "f89854f3cb9d42e16623a4efc64f8f24740d64973f43c423281793bae22e7dcd",
+          "bytes": 389974,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "f89854f3cb9d42e16623a4efc64f8f24740d64973f43c423281793bae22e7dcd"
+        }
+      ]
+    },
+    "tower": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://www.prolyte.com/products/tower-systems",
+            "what": "Prolyte Tower Systems overview — MPT/DT/HT/ST/CT ground-support towers plus H30V/S36V/S52SV/B100RV rigging towers and delay towers",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://www.prolyte.com/support/manuals",
+            "what": "Prolyte's public manuals list — no separate manual is published for the basic DT/HT/ST/CT ground-support towers; the only Prolyte tower product with a downloadable manual is the Delay Tower S78-T-18M",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Explicitly 'equivalent' per the brief. The photo used ('DT Tower' as labelled on Prolyte's tower-systems page) turned out on inspection to show a Prolyte-branded truss-boom tower on a wheeled base plate with guy chains — the same delay-tower family as the S78-T-18M manual, not a plain straight ground-support mast, so photo and manual are genuinely the same Prolyte tower product line even though the rigbuild item itself is a plain tower (base plate + straight mast). Prolyte does not publish a public manual for its basic DT/HT/ST/CT towers, so the Delay Tower manual is the only real Prolyte tower rigging/safety document available — used here for genuine base-plate, guying and load-path procedure, flagged as a different specific model within the family.",
+        "equivalentOf": {
+          "maker": "Prolyte Group",
+          "model": "Tower Systems — DT Tower (photo) / Delay Tower S78-T-18M (manual, same product family)",
+          "url": "https://www.prolyte.com/products/tower-systems"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "Prolyte DT Tower — on base plate",
+          "maker": "Prolyte Group",
+          "product": "Prolyte tower on wheeled base plate (delay-tower-family boom head)",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://www.prolyte.com/Prolyte/media/static-media/0d956eee-c8fa-4109-8538-683ea69b05f1@product-list.jpg",
+          "page": "https://www.prolyte.com/products/tower-systems",
+          "note": "Verified by eye: genuine Prolyte-branded tower render, base plate with outriggers/feet, truss mast, guy chains, cantilevered boom — matches the Delay Tower manual's product family, not a plain straight mast.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "manual",
+          "title": "Delay Tower S78-T-18M User Manual",
+          "maker": "Prolyte Group",
+          "product": "Prolyte Delay Tower S78-T-18M",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://www.prolyte.com/getmedia/c41c22fb-821b-4ffc-9287-50a1b4753889/PROLYTE_Delay_Tower_S78T-18M_User_manual_Issue1_1.pdf.aspx",
+          "page": "https://www.prolyte.com/support/manuals",
+          "pages": 16,
+          "note": "Assembly, base-plate/outrigger, guying and safe-working-load procedure for a Prolyte tower system — the only publicly downloadable Prolyte tower manual; this specific model (S78-T-18M) differs from the rigbuild item's plain 6m tower, kept as the closest real safety-procedure reference in the same product family.",
+          "sha256": "e9e349ad36c117758a8300577d486537d262585951d6b2841333f6cace92cf41",
+          "bytes": 1392708,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "e9e349ad36c117758a8300577d486537d262585951d6b2841333f6cace92cf41"
+        }
+      ]
+    },
+    "deck": {
+      "verification": {
+        "status": "equivalent",
+        "checked": "2026-09-28",
+        "evidence": [
+          {
+            "url": "https://www.prolyte.com/products/portable-stages/litedeck",
+            "what": "Prolyte LiteDeck — official product page",
+            "accessed": "2026-09-28"
+          },
+          {
+            "url": "https://www.prolyte.com/support/manuals",
+            "what": "Prolyte's manuals list carries a StageDex user manual (not a separate LiteDeck manual)",
+            "accessed": "2026-09-28"
+          }
+        ],
+        "note": "Explicitly 'equivalent' per the brief. Used LiteDeck for the photo (the catalogue's primary reference, matching the rigbuild item's plain deck-on-legs shape) and StageDex for the manual, since that is the deck-system manual Prolyte actually publishes; both are Prolyte portable-stage products already listed together as alternatives in the existing catalogue.",
+        "equivalentOf": {
+          "maker": "Prolyte Group",
+          "model": "LiteDeck (photo) / StageDex (manual)",
+          "url": "https://www.prolyte.com/products/portable-stages/litedeck"
+        }
+      },
+      "media": [
+        {
+          "kind": "photo",
+          "title": "LiteDeck — assembled deck panel on legs",
+          "maker": "Prolyte Group",
+          "product": "LiteDeck portable stage deck",
+          "equivalent": true,
+          "offer": "link",
+          "url": "https://www.prolyte.com/Prolyte/media/static-media/7d28e87b-67e0-42dd-8431-4cc56e2df7ba@product-list.jpg",
+          "page": "https://www.prolyte.com/products/portable-stages/litedeck",
+          "note": "Verified by eye: genuine deck panel on 4 legs, truss-frame edge construction, matches a '2x1m deck on legs' shape.",
+          "checked": "2026-09-28"
+        },
+        {
+          "kind": "manual",
+          "title": "StageDex User Manual",
+          "maker": "Prolyte Group",
+          "product": "Prolyte StageDex portable stage system",
+          "equivalent": true,
+          "offer": "download",
+          "url": "https://www.prolyte.com/getmedia/4362259d-4ed2-4c5d-b9a6-26bbd06e0a7a/PROLYTE_StageDex_User_manual_issue1_1.pdf.aspx",
+          "page": "https://www.prolyte.com/support/manuals",
+          "pages": 26,
+          "note": "A different specific Prolyte deck system (extruded-profile StageDex, not LiteDeck) — the only deck-system manual Prolyte publishes; used for genuine leg/coupling/load-rating assembly-safety procedure, flagged as equivalent to a different named model.",
+          "sha256": "1e6e93f47f324da78f4ea3d9a4dab876b035068018cc5d98b938d00d5a37c5ae",
+          "bytes": 1359928,
+          "mime": "application/pdf",
+          "fetched": "2026-09-28",
+          "asset": "1e6e93f47f324da78f4ea3d9a4dab876b035068018cc5d98b938d00d5a37c5ae"
+        }
+      ]
+    }
+  }
+}

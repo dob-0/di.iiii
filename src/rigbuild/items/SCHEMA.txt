@@ -31,7 +31,9 @@ ITEM CATALOGUE ENTRY — src/rigbuild/items/<group>.json = { "items": [ entry, .
 }
 
 RULES
-- Never copy or hotlink UPlight's or any maker's product photos. Link the maker's page as a source.
+- Never copy or hotlink UPlight's or any maker's product photos into this file or public/. The makers'
+  photos and documents, the code verification and their provenance live in media.json (metadata only;
+  RIG_BUILD.md §13.8): a file is kept, on the local install only, where the maker offers it for download.
 - Every sentence of "what", "inShow", "needs" and every spec rests on a source key listed with it.
   General knowledge of the trade (e.g. what a hazer is) still needs a citable source: the maker's
   manual/page, a standard (IEC 60825-1 for lasers, EN 12900? etc.), Wikipedia, PLASA/ESTA material.
