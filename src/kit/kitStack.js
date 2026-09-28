@@ -75,7 +75,7 @@ export const KIT_STACK = [
     // ── build ────────────────────────────────────────────────────────────
     { group: 'build', name: 'Vite', npm: 'vite', version: '8.2.1', licence: 'MIT', url: 'https://vite.dev', use: 'Builds the site into the parts a browser loads one by one.' },
     { group: 'build', name: 'esbuild', npm: 'esbuild', version: '0.28.2', licence: 'MIT', url: 'https://esbuild.github.io', use: 'The fast transform under the build.' },
-    { group: 'build', name: 'Vitest', npm: 'vitest', version: '4.1.10', licence: 'MIT', url: 'https://vitest.dev', use: 'Runs the unit tests, this page’s among them.' },
+    { group: 'build', name: 'Vitest', npm: 'vitest', version: '5.0.2', licence: 'MIT', url: 'https://vitest.dev', use: 'Runs the unit tests, this page’s among them.' },
     { group: 'build', name: 'Testing Library', npm: '@testing-library/react', version: '16.3.3', licence: 'MIT', url: 'https://testing-library.com', use: 'Tests a page the way a person uses it.' },
     { group: 'build', name: 'jsdom', npm: 'jsdom', version: '30.0.1', licence: 'MIT', url: 'https://github.com/jsdom/jsdom', use: 'A browser’s document, for tests without a browser.' },
     { group: 'build', name: 'Playwright', npm: 'playwright', version: '1.62.1', licence: 'Apache-2.0', url: 'https://playwright.dev', use: 'Drives real browsers to look at every surface, desk and phone.' },
