@@ -48,12 +48,14 @@ import { hasTimelineTracks, sampleTimeline, applyTimelinePose } from '../project
 import { ringTourYaw } from '../project/viewport/ringTour.js'
 import { flyVertFromStick, moveFromStick, xrTurnSpeed } from './xrFlyControl.js'
 import {
-    WALK_MAX_SPEED, FLY_SPEED, WALK_ACCEL, WALK_FRICTION, TURN_SPEED, EYE_HEIGHT,
+    WALK_MAX_SPEED, FLY_SPEED, XR_MOVE_SPEED, BOB_AMPLITUDE, BOB_PHASE_PER_M, TURN_SPEED, EYE_HEIGHT,
     POINTER_LOCK_SENSITIVITY, DRAG_LOOK_SENSITIVITY, TOUCH_LOOK_SENSITIVITY, TRACKPAD_LOOK_SENSITIVITY,
     WHEEL_DOLLY_SPEED, WALK_PITCH_LIMIT, FLY_PITCH_LIMIT, JOY_RADIUS, BOUNDS_MARGIN, BOUNDS_MIN_HALF,
     BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_DEAD_DELTA_MAX, BROKEN_LOCK_SETTLE_MS
 } from './walkModeConfig.js'
 import { isTypingTarget } from './walkKeyboard.js'
+import { createWalkSim, advanceWalkSim, teleportWalkSim, horizontalSpeed, nextFlySpeedScale, bobOffset } from './walkPhysics.js'
+import { getLookSettings } from './walkLookSettings.js'
 import { createPortalWalkThrough } from './portalWalkThrough.js'
 import { doorsOf, fitArrivalToDoors as fitArrivalToDoors_ } from './arrivalFraming.js'
 import { getViewportAspect } from '../utils/cameraFraming.js'
@@ -464,8 +466,14 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
     // defeating XROrigin movement entirely.
     const isPresenting = useXR((state) => state.session != null)
     const keysRef = useRef(new Set())
-    const speedRef = useRef(0)
-    const strafeSpeedRef = useRef(0)
+    // Movement physics (walkPhysics.js): world-space velocity on a fixed tick.
+    // simRef holds the body; lastPoseRef is the pose we last WROTE to
+    // playerRef, so a write from anyone else (spawn, portal arrival, XR exit)
+    // is seen and adopted as a teleport instead of being overwritten.
+    const simRef = useRef(null)
+    const lastPoseRef = useRef(null)
+    const flySpeedScaleRef = useRef(1)
+    const dollyPendingRef = useRef(0)
     const bobPhaseRef = useRef(0)
     const wheelDollyRef = useRef(0)
     const touchLookRef = useRef(null)
@@ -483,7 +491,8 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
 
     useEffect(() => {
         const keys = keysRef.current
-        const moveKeys = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'q', 'e', 'c']
+        // 'shift' = sprint (walk and fly). No other walk-mode key uses Shift.
+        const moveKeys = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'q', 'e', 'c', 'shift']
         const onKeyDown = (e) => {
             if (isTypingTarget(e.target)) return
             const key = e.key.toLowerCase()
@@ -492,11 +501,16 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             keys.add(key)
         }
         const onKeyUp = (e) => keys.delete(e.key.toLowerCase())
+        // A key released while the window is not focused (alt-tab mid-stride)
+        // never sends keyup — without this the walker runs on by itself.
+        const onBlur = () => keys.clear()
         window.addEventListener('keydown', onKeyDown)
         window.addEventListener('keyup', onKeyUp)
+        window.addEventListener('blur', onBlur)
         return () => {
             window.removeEventListener('keydown', onKeyDown)
             window.removeEventListener('keyup', onKeyUp)
+            window.removeEventListener('blur', onBlur)
             keys.clear()
         }
     }, [])
@@ -824,59 +838,78 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             vert += vertTouchRef?.current || 0
         }
 
-        const targetSpeed = forward * WALK_MAX_SPEED
-        const accel = forward !== 0 ? WALK_ACCEL : WALK_FRICTION
-        speedRef.current += THREE.MathUtils.clamp(targetSpeed - speedRef.current, -accel * delta, accel * delta)
-        if (Math.abs(speedRef.current) < 0.001) speedRef.current = 0
-
-        const targetStrafeSpeed = strafe * WALK_MAX_SPEED
-        const strafeAccel = strafe !== 0 ? WALK_ACCEL : WALK_FRICTION
-        strafeSpeedRef.current += THREE.MathUtils.clamp(targetStrafeSpeed - strafeSpeedRef.current, -strafeAccel * delta, strafeAccel * delta)
-        if (Math.abs(strafeSpeedRef.current) < 0.001) strafeSpeedRef.current = 0
-
-        if (speedRef.current !== 0 || strafeSpeedRef.current !== 0) {
-            // Forward/strafe always move on the horizontal plane, even while
-            // flying -- like a drone, not a jet. Looking down to film the
-            // ground below shouldn't also make you descend; altitude is only
-            // ever changed explicitly, via Space/Q (up) and C/E (down).
-            const forwardX = Math.sin(player.yaw) * speedRef.current
-            const forwardZ = Math.cos(player.yaw) * speedRef.current
-            const rightX = -Math.cos(player.yaw) * strafeSpeedRef.current
-            const rightZ = Math.sin(player.yaw) * strafeSpeedRef.current
-            const nextX = player.x + (forwardX + rightX) * delta
-            const nextZ = player.z + (forwardZ + rightZ) * delta
-            const moved = confineToAreas(
-                walkableAreas,
-                player.x, player.z,
-                THREE.MathUtils.clamp(nextX, bounds.minX, bounds.maxX),
-                THREE.MathUtils.clamp(nextZ, bounds.minZ, bounds.maxZ)
-            )
-            player.x = moved.x
-            player.z = moved.z
-            bobPhaseRef.current += delta * Math.hypot(speedRef.current, strafeSpeedRef.current) * (fly ? 0 : 1.8)
+        // Adopt any pose someone else wrote since our last frame (spawn,
+        // portal arrival, leaving XR) as a teleport.
+        const last = lastPoseRef.current
+        if (!simRef.current) {
+            simRef.current = createWalkSim(player.x, player.altY, player.z)
+        } else if (!last || last.x !== player.x || last.z !== player.z || last.y !== player.altY) {
+            teleportWalkSim(simRef.current, player.x, player.altY, player.z)
         }
-        // Scroll dolly steps along the horizontal facing direction, like
-        // forward/back movement — never along pitch, so it can't change altitude.
+        const sim = simRef.current
+
+        // Wheel: in FLY it sets the camera speed (Unreal Editor viewport fly /
+        // Blender Walk-Fly convention), one ~50 px notch = x1.25; in WALK it
+        // still dollies along the horizontal facing, now eased over ~0.1 s
+        // instead of a one-frame jump. The handler itself (above) is unchanged.
         if (wheelDollyRef.current !== 0) {
             const dolly = wheelDollyRef.current
             wheelDollyRef.current = 0
-            const dollied = confineToAreas(
-                walkableAreas,
-                player.x, player.z,
-                THREE.MathUtils.clamp(player.x + Math.sin(player.yaw) * dolly, bounds.minX, bounds.maxX),
-                THREE.MathUtils.clamp(player.z + Math.cos(player.yaw) * dolly, bounds.minZ, bounds.maxZ)
-            )
-            player.x = dollied.x
-            player.z = dollied.z
+            // At most one notch per frame: a trackpad fling or a slow frame
+            // must not spin the speed from slowest to fastest at once.
+            if (fly) flySpeedScaleRef.current = nextFlySpeedScale(flySpeedScaleRef.current, THREE.MathUtils.clamp(dolly / 0.5, -1, 1))
+            else dollyPendingRef.current += dolly
         }
-        if (fly && vert !== 0) {
-            player.altY = THREE.MathUtils.clamp(player.altY + vert * FLY_SPEED * delta, -2, 60)
+        if (fly) dollyPendingRef.current = 0
+        player.flySpeedScale = flySpeedScaleRef.current
+
+        // Forward/strafe always move on the horizontal plane, even while
+        // flying -- like a drone, not a jet. Looking down to film the ground
+        // below shouldn't also make you descend; altitude is only ever
+        // changed explicitly, via Space/Q (up) and C/E (down). walkPhysics
+        // builds its wish vector from yaw alone, never pitch.
+        const env = {
+            confine: (x0, z0, x1, z1) => confineToAreas(
+                walkableAreas, x0, z0,
+                THREE.MathUtils.clamp(x1, bounds.minX, bounds.maxX),
+                THREE.MathUtils.clamp(z1, bounds.minZ, bounds.maxZ)
+            ),
         }
-        if (!fly) {
-            player.altY = THREE.MathUtils.lerp(player.altY, EYE_HEIGHT, Math.min(1, delta * 3))
+        const pose = advanceWalkSim(sim, {
+            forward, strafe, vert, fly,
+            yaw: player.yaw,
+            sprint: keys.has('shift'),
+            flySpeedScale: flySpeedScaleRef.current,
+        }, delta, env)
+
+        if (dollyPendingRef.current !== 0) {
+            const pending = dollyPendingRef.current
+            const step = Math.abs(pending) < 0.005 ? pending : pending * (1 - Math.exp(-delta / 0.05))
+            dollyPendingRef.current = pending - step
+            const b = sim.body
+            const moved = env.confine(b.x, b.z, b.x + Math.sin(player.yaw) * step, b.z + Math.cos(player.yaw) * step)
+            const dx = moved.x - b.x
+            const dz = moved.z - b.z
+            teleportWalkSim(sim, moved.x, b.y, moved.z, { keepVelocity: true })
+            pose.x += dx
+            pose.z += dz
         }
 
-        const bobAmount = fly ? 0 : Math.sin(bobPhaseRef.current) * 0.05 * Math.min(1, Math.hypot(speedRef.current, strafeSpeedRef.current) / WALK_MAX_SPEED)
+        player.x = pose.x
+        player.z = pose.z
+        player.altY = pose.y
+        lastPoseRef.current = { x: player.x, z: player.z, y: player.altY }
+        // Measurement hook: a harness that sets `window.__walkProbe = []` before
+        // load gets one sample per rendered frame (no cost when unset).
+        const probe = window.__walkProbe
+        if (Array.isArray(probe) && probe.length < 200000) {
+            probe.push({ t: performance.now(), dt: delta, x: player.x, y: player.altY, z: player.z, yaw: player.yaw, vx: sim.body.vx, vy: sim.body.vy, vz: sim.body.vz, fly })
+        }
+
+        const speed = horizontalSpeed(sim.body)
+        if (!fly) bobPhaseRef.current += delta * speed * BOB_PHASE_PER_M
+        // Off unless the viewer's look settings turn it on (was always 5 cm).
+        const bobAmount = fly ? 0 : bobOffset(getLookSettings()?.bob, bobPhaseRef.current, speed / WALK_MAX_SPEED, BOB_AMPLITUDE)
         const lookDir = tmpVec.set(
             Math.sin(player.yaw) * Math.cos(player.pitch),
             Math.sin(player.pitch),
@@ -1011,7 +1044,7 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
                 tmpDir.y = 0
                 if (tmpDir.lengthSq() > 1e-6) {
                     tmpDir.normalize()
-                    const step = WALK_MAX_SPEED * delta
+                    const step = XR_MOVE_SPEED * delta
                     origin.position.x += (tmpDir.x * lFwd + -tmpDir.z * lStrafe) * step
                     origin.position.z += (tmpDir.z * lFwd + tmpDir.x * lStrafe) * step
                 }
@@ -1029,7 +1062,7 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
                 // reconstruction: the XR camera looks down the rig's local -Z,
                 // the OPPOSITE of +(sin,cos), so deriving forward from
                 // origin.rotation.y inverted/mirrored the joystick.
-                const fwd = -joy.y * WALK_MAX_SPEED * delta
+                const fwd = -joy.y * XR_MOVE_SPEED * delta
                 state.camera.getWorldDirection(tmpDir)
                 tmpDir.y = 0
                 if (tmpDir.lengthSq() > 1e-6) {

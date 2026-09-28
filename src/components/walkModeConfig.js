@@ -4,10 +4,74 @@
 // inside LiveProjectScene.jsx, so this is the one place to tune it).
 
 // -- Movement --
-export const WALK_MAX_SPEED = 5.2
+// Target: a person walking a venue (the MOXIR hall), with game traversal feel —
+// responsive, with weight, no ice, no snap. NOT shooter mechanics (owner,
+// 2026-09-28: "feelings from the game move and sense not the shooter").
+// The model is Unreal Engine's CharacterMovementComponent (see walkPhysics.js).
+// UE's own defaults, for reference (CharacterMovementComponent constructor,
+// UE 4.26-5.x): MaxWalkSpeed 600 cm/s, MaxAcceleration 2048 cm/s²,
+// BrakingDecelerationWalking 2048 cm/s², GroundFriction 8,
+// BrakingFrictionFactor 2 — tuned for a snappy character (stop from 6 m/s in
+// ~0.11 s). We keep UE's MODEL and its turn friction, and choose slower,
+// heavier values for walking a hall; the values below marked TUNED are ours,
+// set by eye in the hall, not taken from a publication.
+//
+// Physics tick. Fixed so movement is identical at any render frame rate; the
+// Walker interpolates between ticks (Fiedler, "Fix Your Timestep!", 2004).
+export const WALK_TICK_HZ = 128
+// A render frame longer than this (tab switch, GC stall) is clamped, so a
+// stall is not replayed as a burst of movement. 0.25 s, not the usual 0.1:
+// the owner's own browser renders the MOXIR hall on the Intel iGPU at 4-18 fps
+// (measured 2026-09-28: median frame 224 ms while a game shared the machine),
+// and a 0.1 s clamp would slow walking to half speed there. Collision is
+// resolved per tick, so a long frame cannot tunnel through a wall.
+export const WALK_MAX_FRAME_DELTA = 0.25
+// Top walking speed. Half-Life 2's normal move speed (hl2_normspeed 190
+// units/s at Valve's 1 unit = 1.905 cm => 3.62 m/s) — a game-traversal pace
+// through built spaces, brisker than a real 1.4 m/s stroll, which reads as
+// crawling on a flat screen. Was 5.2 per axis (7.35 m/s on a diagonal).
+export const WALK_MAX_SPEED = 190 * 0.01905 // 3.62 m/s
+// Shift = a gentle sprint (TUNED). HL2's sprint is 320/190 = 1.68x; 1.5x keeps
+// the old 5.2 m/s pace one key away without a run feeling like a dash.
+export const WALK_SPRINT_FACTOR = 1.5 // 5.43 m/s
+// TUNED: 8 m/s² => 0 to 3.62 m/s in 0.45 s, about one step: steady walking
+// speed is reached within the first step of gait initiation (Brenière & Do,
+// J. Biomech. 19(12), 1986).
+export const WALK_MAX_ACCEL = 8
+// UE default GroundFriction: how fast velocity swings to a new direction
+// (time constant 1/8 s) — this is what takes the ice out of a turn.
+export const WALK_TURN_FRICTION = 8
+// TUNED braking: friction 6/s (soft tail) + 2 m/s² (ends it) => from 3.62 m/s
+// a stop in 0.41 s over 0.46 m — about one step length, the way a person
+// stops walking within a step (Jaeger & Vanitchatchavan, J. Biomech. 25(9),
+// 1992, termination of gait).
+export const WALK_BRAKING_FRICTION = 6
+export const WALK_BRAKING_DECEL = 2
+// UE BRAKE_TO_STOP_VELOCITY = 10 cm/s.
+export const BRAKE_TO_STOP_VELOCITY = 0.1
+// Fly (free camera): the same model in 3D, vertical as fast as horizontal
+// (was 4.5 vertical vs 5.2 horizontal). Base = the old horizontal pace; the
+// wheel scales it while flying (walkPhysics.nextFlySpeedScale).
+export const FLY_MAX_SPEED = 5.2
+export const FLY_MIN_ALT = -2
+export const FLY_MAX_ALT = 60
+// Leaving fly: settle back to eye height with a critically damped spring
+// (Unity SmoothDamp / Lowe GPG4), capped so a 60 m drop is a glide, not a fall.
+export const SETTLE_SMOOTH_TIME = 0.35
+export const SETTLE_MAX_SPEED = 8
+// XR thumbstick locomotion keeps constant, instant velocity on purpose: Meta's
+// VR locomotion comfort guidance (Meta Developer docs, "Locomotion" best
+// practices) names acceleration as the main vection/sickness trigger, so a
+// headset does NOT inherit the desktop model. Values unchanged from before
+// (XR used WALK_MAX_SPEED 5.2 and FLY_SPEED 4.5) so hardware-verified XR feel
+// stays exactly as it was.
+export const XR_MOVE_SPEED = 5.2
 export const FLY_SPEED = 4.5
-export const WALK_ACCEL = 14
-export const WALK_FRICTION = 10
+// Head bob: off unless the viewer's look settings ask for it (bobOffset in
+// walkPhysics.js). Amplitude at full setting, metres (was an always-on 5 cm).
+export const BOB_AMPLITUDE = 0.015
+// Radians of bob phase per metre walked (the old stride).
+export const BOB_PHASE_PER_M = 1.8
 export const TURN_SPEED = 1.6
 export const EYE_HEIGHT = 1.6
 

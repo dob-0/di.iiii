@@ -21,6 +21,20 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## Walk mode: diagonal ran at 7.35 m/s, a mouse flick swung momentum, stop was icy
+
+The Walker kept forward and strafe speed as two view-frame scalars, each clamped to
+`WALK_MAX_SPEED` 5.2 on its own axis: W+D ran at 5.2·√2 = 7.35 m/s, and because the
+velocity was re-projected through the current yaw every frame, a flick while moving
+turned the whole momentum with the view instantly (world velocity after a 180° flick:
+-97 % of before). Braking was a linear 10 m/s² (0.52 s, 1.36 m to stop from full speed).
+Fix (2026-09-28, `feat/elite-move`): `src/components/walkPhysics.js` — world-space
+velocity, Unreal `CharacterMovementComponent::CalcVelocity` / `ApplyVelocityBraking`
+model (input clamped to length 1, turn friction, friction + constant braking), on a fixed
+128 Hz tick with render interpolation (Fiedler, "Fix Your Timestep!"). Guard:
+`src/components/walkPhysics.test.js` (diagonal, flick, stop, 30/60/144/240 fps).
+XR locomotion deliberately stays constant-velocity (`XR_MOVE_SPEED`, comfort).
+
 ## "Could not save this space to a file." on a hosted tier — the image had no bundle tool
 
 `GET /api/spaces/:id/bundle` and `POST /api/spaces/bundle` spawn `scripts/space-bundle.mjs`

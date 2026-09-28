@@ -922,13 +922,14 @@ export const WIKI_ARTICLES = [
                 'While moving/rotating/scaling: Enter, Space or click — confirm · Esc — cancel and put everything back',
                 'A — select all · Alt+A — deselect all',
                 'Mouse wheel — zoom (always; it never rotates the view)',
-                'WASD — walk when you are inside a scene; click (or drag) to look with the mouse; scroll — step forward/back toward what you face',
-                'F — fly mode (Space / Q up, C / E down); on phones, up/down buttons appear while flying',
+                'WASD — walk when you are inside a scene; click (or drag) to look with the mouse; scroll — step forward/back toward what you face. Walking has weight: you set off over about a step and stop within about a step, and a diagonal is no faster than straight ahead',
+                'Shift — hold to go faster (walking or flying)',
+                'F — fly mode (Space / Q up, C / E down, as fast as you move across); while flying the mouse wheel sets the flying speed instead of stepping; on phones, up/down buttons appear while flying',
                 'VR & AR controllers — left stick walks, right stick turns and flies (push the stick up/down); works in passthrough AR too; a hint appears in-headset the first time you enter'
             ] }
         ],
         tags: ['shortcuts', 'controls', 'vr'],
-        updated: '2026-08-19'
+        updated: '2026-09-28'
     },
     {
         id: 'api-and-agents',
