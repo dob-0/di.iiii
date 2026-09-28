@@ -32,7 +32,7 @@ export const deskLookId = (lookId) => `${DESK_LOOK_PREFIX}${lookId}`.slice(0, 40
 export const lookIdOfDesk = (deskId) => (typeof deskId === 'string' && deskId.startsWith(DESK_LOOK_PREFIX) ? deskId.slice(DESK_LOOK_PREFIX.length) : null)
 
 /** A position's key in a look: truss runs are all "truss"; the rest by their id. */
-export const positionKey = (positionId) => (String(positionId).startsWith('truss:') ? 'truss' : String(positionId))
+export const positionKey = (positionId) => (String(positionId).startsWith('truss:') ? 'truss' : String(positionId).startsWith('truss-top:') ? 'truss-top' : String(positionId))
 
 export const rigLooksOf = (entities = []) => {
     const entity = entities.find((e) => Array.isArray(e?.components?.rigLooks?.looks)) || null
@@ -56,8 +56,14 @@ export const lookFrame = (entities = []) => {
     const wall = under.length ? (stage.into > 0 ? Math.max(...under.map((b) => b.z_m[1])) : Math.min(...under.map((b) => b.z_m[0]))) : (face ?? stage.back - stage.into)
     const runway = (plan?.overhead || []).find((o) => /runway/.test(o.id))?.bottom
     const roof = (plan?.overhead || []).find((o) => /lantern/.test(o.id))?.bottom
+    // The crane bridge nearest the stage (the plan's overhead `crane-*` lines): the rule
+    // 'bridge-underside' grazes it.
+    const cranes = (plan?.overhead || []).filter((o) => /^crane-/.test(o.id) && Array.isArray(o.line))
+        .map((o) => ({ z_m: o.line[0][1], girder_bottom_m: o.bottom }))
+    const crane = cranes.length ? cranes.sort((a, b) => Math.abs(a.z_m - stage.front) - Math.abs(b.z_m - stage.front))[0] : null
     return {
         axis: stage.axis,
+        crane,
         stage: { ...stage, wall, backdrop: boxes.length ? { face, boxes } : null },
         hall: { geometry: { runway_bottom_m: runway || 6, truss_top_centre_m: roof || 12 } }
     }
@@ -82,8 +88,8 @@ export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) =
     const ctx = lookFrame(entities)
     const out = new Map()
     if (!look || !ctx) return out
-    const positions = positionsOf(entities)
     const lamps = plotData({ entities, library }).lamps
+    const positions = positionsOf(entities, lamps)
     const fill = fillOf(positions, lamps)
     const byEntity = new Map(entities.map((e) => [e.id, e]))
     const lampById = new Map(lamps.map((l) => [l.id, l]))

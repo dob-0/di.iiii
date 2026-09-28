@@ -98,6 +98,16 @@ export const piecesFromRigBoxes = (entities) => {
             out.push({ id: `rig-header-${i + 1}`, name: 'truss header', kind: seg.kind, position: seg.position, yaw: seg.yaw, height: null, replaces: i === 0 ? header.id : null })
         })
     }
+    // A line hung from the crane bridge (rig-lib `truss.kind: 'crane-hung'`): no towers, the
+    // header box IS the line — laid as stock segments end to end at its chord height.
+    if (header && towers.length === 0) {
+        const t = header.components.transform
+        const chord = r3(t.position[1] + (t.scale[1] || TRUSS_SECTION_M) / 2)
+        const half = t.scale[0] / 2
+        layRun({ from: [r3(t.position[0] - half), t.position[2]], to: [r3(t.position[0] + half), t.position[2]], y: chord }).forEach((seg, i) => {
+            out.push({ id: `rig-line-${i + 1}`, name: 'truss line (hung from the crane bridge)', kind: seg.kind, position: seg.position, yaw: seg.yaw, height: null, replaces: i === 0 ? header.id : null })
+        })
+    }
     const riser = byId.get('rig-stage-deck')
     if (riser) {
         const t = riser.components.transform

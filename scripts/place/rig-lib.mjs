@@ -57,13 +57,23 @@ export const pickEven = (n, total) => {
  * the "wall" the truss spots wash.
  */
 export const hasTruss = (rig) => Boolean(rig.truss) && rig.truss.kind !== 'none'
+// `truss: { kind: 'crane-hung' }` — no towers: ONE line of box truss hangs on chain hoists
+// from the bridge of the overhead crane parked over the DJ (owner, 2026-09-28 23:1x: "the
+// yellow thing its move able … the metal chain conected thr the yellow crane"). The line
+// runs parallel to the bridge, under its centre line, its bottom chord at `trim_m`.
+// `x_offset_m` slides the line along itself so a clamp point (every 0.5 m, 0.25 m in from
+// each end — src/rigbuild/pieces.js) falls on the centre line; the lamps stay mirrored.
+export const isCraneHung = (rig) => rig?.truss?.kind === 'crane-hung'
 
 export const stageFrame = (rig, hall) => {
     const g = hall.geometry
     const s = rig.stage
     // `truss: { kind: 'none' }` — a rig with no goalpost (a version that hangs nothing
     // overhead). The truss mounts then refuse, and no truss boxes are written.
-    const truss = hasTruss(rig) ? rig.truss : { width_m: 0, header_h_m: 0, section_m: 0, from_stage_back_m: 0 }
+    const truss = !hasTruss(rig) ? { width_m: 0, header_h_m: 0, section_m: 0, from_stage_back_m: 0 }
+        // crane-hung: the header is the hung line — its top at trim + section
+        : isCraneHung(rig) ? { ...rig.truss, header_h_m: rig.truss.trim_m + (rig.truss.section_m ?? 0.29) / 2 }
+            : rig.truss
     let into
     let wall
     let back
@@ -128,7 +138,18 @@ export const stageFrame = (rig, hall) => {
         back = wall + into * (s.back_gap_m ?? 1)
         front = back + into * s.depth_m
     }
+    // crane-hung: the line hangs under the bridge of the crane parked over the DJ — its z is
+    // the bridge's centre line; a crane more than 1 m from the performer is refused (move it).
+    let crane = null
+    if (isCraneHung(rig)) {
+        crane = craneNearestStage(hall, { front: s.kind === 'booth' ? back + into * (s.depth_m / 2) : front })
+        const dj = s.kind === 'booth' ? back + into * (s.depth_m / 2 - 0.2) : (back + front) / 2
+        if (!crane || Math.abs(crane.z_m - dj) > 1) throw new Error(`truss "crane-hung": no crane bridge within 1 m of the DJ (z ${dj.toFixed(2)}); the nearest is at z ${crane?.z_m} — park it over the DJ in the hall's dims (cranes_from_door_m)`)
+        trussZ = crane.z_m
+    }
     return {
+        crane,
+        trussX: isCraneHung(rig) ? (rig.truss.x_offset_m ?? 0) : 0,
         into,
         wall,
         back,
@@ -232,7 +253,8 @@ const needsTruss = (ctx, mount) => {
     if (!ctx.stage.truss) throw new Error(`mount ${mount} needs a truss, and this rig has none (truss.kind "none")`)
 }
 // `dx_m` [a, b, ...]: mirrored pairs at ±a, ±b from the axis, instead of an even spread.
-const mirroredDx = (dx) => [...dx.map((d) => -d), ...dx].sort((a, b) => a - b)
+// A 0 in the list is ONE lamp on the axis, not two (-0 and 0).
+const mirroredDx = (dx) => [...new Set([...dx.map((d) => (d === 0 ? 0 : -d)), ...dx])].sort((a, b) => a - b)
 const place = {
     'stage-back': (n, ctx) => spread(n, -ctx.stage.width / 2 + 1, ctx.stage.width / 2 - 1)
         .map((x) => ({ pos: [ctx.stage.axis + x, ctx.stage.deck, ctx.stage.back + ctx.stage.into * 0.6], orient: 'floor', face: toAudience(ctx) })),
@@ -254,6 +276,7 @@ const place = {
     // `h_m` [..]: the arms' heights, instead of an even spread.
     'tower-ladder': (n, ctx, group) => {
         needsTruss(ctx, 'tower-ladder')
+        if (ctx.stage.crane) throw new Error('mount tower-ladder: a crane-hung line has no towers')
         const per = Math.ceil(n / 2)
         const hs = group?.h_m ? group.h_m.slice(0, per) : spread(per, group?.from_h_m ?? 1.8, ctx.stage.trussH - 1)
         return [-1, 1].flatMap((side) => hs.map((h) => ({
@@ -265,8 +288,16 @@ const place = {
     // `dx_m`: mirrored pairs along it (on the header's clamp points), instead of an even spread.
     'truss-header': (n, ctx, group) => (needsTruss(ctx, 'truss-header'), group?.dx_m ? mirroredDx(group.dx_m) : spread(n, -ctx.stage.trussW / 2 + 1, ctx.stage.trussW / 2 - 1))
         .map((x) => ({ pos: [ctx.stage.axis + x, ctx.stage.trussH - ctx.stage.trussSection / 2, ctx.stage.trussZ], orient: 'hung', face: toAudience(ctx) })),
-    // Standing on the top plate of each tower.
-    'truss-towers': (n, ctx) => (needsTruss(ctx, 'truss-towers'), spread(n, -ctx.stage.trussW / 2, ctx.stage.trussW / 2))
+    // Standing ON the truss's top chord (upright, clamped through the top chords), at `dx_m`
+    // mirrored or spread along the line — how a moving-head beam is rigged to point at the
+    // sky: hung under the truss its 270° tilt cannot reach straight up. View C's "truss top".
+    'truss-top': (n, ctx, group) => (needsTruss(ctx, 'truss-top'), group?.dx_m ? mirroredDx(group.dx_m).slice(0, n) : spread(n, -ctx.stage.trussW / 2 + 0.75, ctx.stage.trussW / 2 - 0.75))
+        .map((x) => ({ pos: [ctx.stage.axis + x, ctx.stage.trussH + ctx.stage.trussSection / 2, ctx.stage.trussZ], orient: 'floor', face: toAudience(ctx) })),
+    // Standing on the top plate of each tower — or, on a crane-hung line (no towers), standing
+    // on its top chord 0.4 m in from each end.
+    'truss-towers': (n, ctx) => (needsTruss(ctx, 'truss-towers'), ctx.stage.crane
+        ? spread(n, -ctx.stage.trussW / 2 + 0.4, ctx.stage.trussW / 2 - 0.4)
+        : spread(n, -ctx.stage.trussW / 2, ctx.stage.trussW / 2))
         .map((x) => ({ pos: [ctx.stage.axis + x, ctx.stage.trussH + ctx.stage.trussSection / 2, ctx.stage.trussZ], orient: 'floor', face: toAudience(ctx) })),
     'column-bases': (n, ctx, group) => {
         if (group?.columns) {
@@ -337,10 +368,15 @@ const place = {
             pos: [x, 0, bd.face + ctx.stage.into * gap], orient: 'floor', face: [0, 0, -ctx.stage.into]
         }))
     },
-    'crane-bridge': (n, ctx) => {
+    'crane-bridge': (n, ctx, group) => {
         const g = ctx.hall.geometry
         const crane = craneNearestStage(ctx.hall, ctx.stage)
         const reach = g.crane_rail_x_m - 1.5
+        // `dx_m`: mirrored pairs, every lamp on the audience-side girder (two groups on one
+        // bridge must not share an even spread's end points).
+        if (group?.dx_m) {
+            return mirroredDx(group.dx_m).slice(0, n).map((x) => ({ pos: [ctx.stage.axis + x, crane.girder_bottom_m, crane.z_m + ctx.stage.into * 1.1], orient: 'hung', face: [0, 0, ctx.stage.into], girder: ctx.stage.into }))
+        }
         return spread(n, -reach, reach).map((x, i) => {
             // Mirrored: lamp i and lamp n-1-i hang on the same girder.
             const girder = Math.min(i, n - 1 - i) % 2 ? 1 : -1
@@ -439,6 +475,13 @@ export const AIM_RULES = {
         // into the DJ table top — at 0 it blew the black table out white (2026-09-28).
         ? { target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * 0.8, ctx.stage.deck + (p.deck_h ?? 0), ctx.stage.front - ctx.stage.into * (p.deck_a ?? 1.5)] }
         : { target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * 1.1, p.wall_y ?? (ctx.stage.backdrop ? 3 : 7), ctx.stage.wall] }),
+    // A PAR on the hung line grazing the underside of the crane bridge above it, outward along
+    // the bridge: the bridge drawn as a frame of light over the DJ. `out` metres past the lamp
+    // along x on its own side, on the audience-side girder's bottom flange (`girder` 1.1 m).
+    'bridge-underside': (slot, meta, ctx, p = {}) => {
+        const crane = ctx.stage.crane || craneNearestStage(ctx.hall, ctx.stage)
+        return { target: [slot.pos[0] + sideOf(slot, ctx) * (p.out ?? 6), crane.girder_bottom_m, crane.z_m + ctx.stage.into * (p.girder ?? 1.1)] }
+    },
     // Hung lamps straight down onto the floor under the crane, splayed out.
     'down-from-crane': (slot, meta, ctx) => ({ target: [slot.pos[0] * 1.1, 0, slot.pos[2] + slot.girder * 4] }),
     // A laser up into the roof over the house — the only rule a laser may use
@@ -516,16 +559,30 @@ export const checkLaser = (from, to) => {
  * would stop there and light the crane; the drawn cone passes through it.
  * Returns the crane's position along the hall, or null.
  */
+export const craneSolids = (crane, g) => {
+    // hall.py v3.1+ records the crane's real shape: two box girders with a gap between them,
+    // the trolley on top, the cab hanging at one end. Older records: one block 2.9 m deep.
+    if (!Array.isArray(crane.girders_dz_m)) {
+        return [{ x: [-g.crane_rail_x_m, g.crane_rail_x_m], z: [crane.z_m - 1.45, crane.z_m + 1.45], y: [crane.girder_bottom_m, crane.girder_top_m] }]
+    }
+    const w = (crane.girder_w_m ?? 0.7) / 2
+    const out = crane.girders_dz_m.map((dz) => ({ x: [-g.crane_rail_x_m, g.crane_rail_x_m], z: [crane.z_m + dz - w, crane.z_m + dz + w], y: [crane.girder_bottom_m, crane.girder_top_m] }))
+    for (const part of [crane.trolley, crane.cab]) {
+        if (part) out.push({ x: part.x_m, z: [crane.z_m + part.dz_m[0], crane.z_m + part.dz_m[1]], y: part.y_m })
+    }
+    return out
+}
 export const beamHitsCrane = (from, to, reach, hall) => {
     const g = hall.geometry
     const cranes = Array.isArray(g.cranes) ? g.cranes : []
+    const solids = cranes.map((c) => ({ z: c.z_m, parts: craneSolids(c, g) }))
     const d = [to[0] - from[0], to[1] - from[1], to[2] - from[2]]
     const length = Math.hypot(...d) || 1
-    for (let t = 0.5; t <= reach; t += 0.25) {
+    const inside = (p, b) => p[0] >= b.x[0] && p[0] <= b.x[1] && p[1] >= b.y[0] && p[1] <= b.y[1] && p[2] >= b.z[0] && p[2] <= b.z[1]
+    for (let t = 0.5; t <= reach; t += 0.1) {
         const p = [from[0] + (d[0] * t) / length, from[1] + (d[1] * t) / length, from[2] + (d[2] * t) / length]
-        for (const crane of cranes) {
-            if (Math.abs(p[0]) <= g.crane_rail_x_m && Math.abs(p[2] - crane.z_m) <= 1.45 &&
-                p[1] >= crane.girder_bottom_m && p[1] <= crane.girder_top_m) return crane.z_m
+        for (const crane of solids) {
+            if (crane.parts.some((b) => inside(p, b))) return crane.z
         }
     }
     return null
@@ -747,17 +804,41 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
     }
     const t = stage.trussSection
     const trussTag = booth ? '(owner\'s intent, size ESTIMATED)' : '(ASSUMED)'
-    for (const side of stage.truss ? [-1, 1] : []) {
+    if (stage.crane) {
+        // The line hung from the crane bridge: the truss, and at each pick point a spreader
+        // across both girders, a chain hoist under it, its chain down to the top chord and a
+        // safety steel beside it. Drawn so the hang can be read; NOT an engineered design —
+        // rigging sign-off owed (the crane's rated load, lock-out, hoists + safety steels).
+        const r = rig.truss.rigging || {}
+        const lineX = ax + stage.trussX
+        const trim = stage.trussH - t / 2
+        const gb = stage.crane.girder_bottom_m
+        entities.push(box({
+            id: `${RIG_PREFIX}truss-header`, name: `Truss line ${stage.trussW} m (${(rig.truss.pieces_m || []).join(' + ')} m, 290 mm box) hung from the crane bridge, bottom chord ${round(trim, 2)} m — rigging sign-off owed`,
+            pos: [lineX, trim, stage.trussZ], size: [stage.trussW, t, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
+        }))
+        const hoistDx = r.hoist_dx_m ?? [stage.trussW / 2 - 1.25]
+        const picks = mirroredDx(hoistDx)
+        picks.forEach((dx, i) => {
+            const x = ax + dx
+            const tag = `pick ${i + 1}/${picks.length}`
+            entities.push(box({ id: `${RIG_PREFIX}hoist-${i + 1}-spreader`, name: `Spreader across both crane girders, ${tag} (rigging: beam clamps on the bottom flanges — sign-off owed)`, pos: [x, gb - 0.15, stage.trussZ], size: [0.15, 0.15, 2.9], colour: '#2a2b2e', metalness: 0.7, roughness: 0.5 }))
+            entities.push(box({ id: `${RIG_PREFIX}hoist-${i + 1}`, name: `Chain hoist ${r.hoist || '500 kg–1 t, D8+'}, ${tag} (rigging)`, pos: [x, gb - 0.15 - 0.45, stage.trussZ], size: [0.3, 0.45, 0.25], colour: '#1b1c1f', metalness: 0.4, roughness: 0.6 }))
+            const chainLen = gb - 0.6 - (trim + t)
+            entities.push(box({ id: `${RIG_PREFIX}hoist-${i + 1}-chain`, name: `Hoist chain, ${tag} (rigging)`, pos: [x, trim + t, stage.trussZ], size: [0.03, round(chainLen, 3), 0.03], colour: '#4a4c50', metalness: 0.9, roughness: 0.35 }))
+            entities.push(box({ id: `${RIG_PREFIX}hoist-${i + 1}-steel`, name: `Safety steel, ${tag} (rigging: secondary, to the spreader)`, pos: [x + 0.12, trim + t, stage.trussZ], size: [0.012, round(gb - 0.15 - (trim + t), 3), 0.012], colour: '#8a8d92', metalness: 0.9, roughness: 0.3 }))
+        })
+    }
+    for (const side of stage.truss && !stage.crane ? [-1, 1] : []) {
         entities.push(box({
             id: `${RIG_PREFIX}truss-tower-${side < 0 ? 'l' : 'r'}`, name: `Truss tower ${side < 0 ? 'left' : 'right'} ${trussTag}`,
             pos: [ax + side * stage.trussW / 2, 0, stage.trussZ], size: [t, stage.trussH + t / 2, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
         }))
     }
-    if (stage.truss) entities.push(box({
+    if (stage.truss && !stage.crane) entities.push(box({
         id: `${RIG_PREFIX}truss-header`, name: `Truss header ${stage.trussW} m @ ${stage.trussH} m ${trussTag}`,
         pos: [ax, stage.trussH - t / 2, stage.trussZ], size: [stage.trussW + t, t, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
     }))
-
     for (const group of rig.groups) {
         const cls = rig.classes[group.class]
         if (!cls) throw new Error(`group ${group.id}: no class "${group.class}"`)
@@ -788,7 +869,9 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
             const posed = aimFixture(geo, slot, aimed)
             const from = posed.lens
             const dir = posed.dir
-            const reach = Math.min(cls.reach_m, surfaceHit(from, dir, hall, cls.reach_m))
+            let reach = Math.min(cls.reach_m, surfaceHit(from, dir, hall, cls.reach_m))
+            // A PAR grazing the bridge stops ON the bridge (surfaceHit knows the building, not the crane).
+            if (spec.rule === 'bridge-underside' && aimed.target) reach = Math.min(reach, Math.hypot(...aimed.target.map((v, k) => v - from[k])))
             const to = from.map((v, k) => v + dir[k] * reach)
             const label = `${group.id} #${i + 1}`
             if (!posed.reachable) summary.unreachable.push(`${label}: tilt ${posed.tilt} deg is past the head's travel`)
@@ -799,7 +882,8 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
                     return
                 }
             }
-            const hit = group.mount === 'crane-bridge' ? null : beamHitsCrane(from, to, reach, hall)
+            // The bridge is the TARGET of a PAR grazing it (and the mount of a lamp hung on it): not a clash.
+            const hit = group.mount === 'crane-bridge' || spec.rule === 'bridge-underside' ? null : beamHitsCrane(from, to, reach, hall)
             if (hit !== null) {
                 const where = `${label}: beam runs into the crane parked at z ${hit} m`
                 // A laser into a steel girder is a reflection hazard: refused.

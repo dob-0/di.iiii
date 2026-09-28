@@ -22,7 +22,9 @@ const params = { spread_deg: 40, lean_deg: 6, in_deg: 8, x: 3, y: 9, a: 12, side
 // shape: the press behind the booth. With no backdrop at all only the port answers (below).
 const press = { id: 'press', x_m: [-2, 3.5], y_m: [0, 3.2], z_m: [0, 3.2] }
 const ctxWithBackdrop = { ...ctx, stage: { ...ctx.stage, backdrop: { ids: ['press'], x: [-2, 3.5], face: 3.2, boxes: [press] } } }
-const ctxFor = (name) => (name === 'backdrop' ? ctxWithBackdrop : ctx)
+// 'bridge-underside' grazes the crane bridge over the stage: both copies read it from ctx.stage.crane.
+const ctxWithCrane = { ...ctx, stage: { ...ctx.stage, crane: { z_m: 4.8, girder_bottom_m: 8.15 } } }
+const ctxFor = (name) => (name === 'backdrop' ? ctxWithBackdrop : name === 'bridge-underside' ? ctxWithCrane : ctx)
 
 describe('look rules — the rig script\'s, ported', () => {
     const shared = Object.keys(SCRIPT_RULES).filter((k) => AIM_RULES[k])

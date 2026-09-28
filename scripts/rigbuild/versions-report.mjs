@@ -23,7 +23,7 @@ export const DEFAULT_HALL = 'scripts/place/rigs/moxir-hall-2026-09-28.hall.json'
 
 export const report = async ({ out, hallFile = null }) => {
     const spec = readJson(path.join(REPO_ROOT, VERSIONS_FILE))
-    const hall = readJson(hallFile || path.join(REPO_ROOT, DEFAULT_HALL))
+    const hall = readJson(hallFile || path.join(REPO_ROOT, spec.hall || DEFAULT_HALL))
     const manifest = readJson(path.join(FIXTURE_DIR, 'fixtures.json'))
     const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
     const baseLibrary = loadLibrary()

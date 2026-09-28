@@ -6,7 +6,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { REPO_ROOT } from '../place/common.mjs'
-import { LASER_MIN_HEIGHT_M, RIG_PREFIX, buildRig, groupAxis, stageFrame } from '../place/rig-lib.mjs'
+import { LASER_MIN_HEIGHT_M, RIG_PREFIX, buildRig, groupAxis, performerBox, stageFrame } from '../place/rig-lib.mjs'
 import { readGeometry } from '../place/fixtures-glb.mjs'
 import { spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
 import { costing, generated, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
@@ -14,8 +14,10 @@ import { rigLooksFrom } from './looks.mjs'
 
 const read = (f) => JSON.parse(fs.readFileSync(path.join(REPO_ROOT, f), 'utf8'))
 const spec = read(VERSIONS_FILE)
-const hall = read('scripts/place/rigs/moxir-hall-2026-09-28.hall.json')
+// the hall the versions are hung in: the crane parked over the DJ (versions file `hall`)
+const hall = read(spec.hall)
 const manifest = read('scripts/place/fixtures/fixtures.json')
+const performerBoxZ = (rig, stage) => performerBox(rig, stage).z
 const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
 const rigs = Object.fromEntries(spec.versions.map((v) => [v.id, read(rigFileOf(spec.set, v.id))]))
 const lists = Object.fromEntries(spec.versions.map((v) => [v.id, read(rentalFileOf(spec.set, v.id)).rentalList]))
@@ -34,7 +36,7 @@ describe('the version files', () => {
         const base = read(`scripts/place/rigs/${spec.base}`)
         for (const rig of Object.values(rigs)) {
             expect(rig.stage).toEqual(base.stage)
-            expect(rig.opening).toEqual(base.opening)
+            expect(rig.opening).toEqual(spec.craneOpening) // one camera for the set: the crane rig's (all three hang from the crane)
             expect(rig.variant.set).toBe(spec.set)
         }
     })
@@ -48,7 +50,40 @@ describe('the version files', () => {
             expect(rig.groups.some((g) => rig.classes[g.class].fixture === 'strobe'), id).toBe(true)
         }
         expect(rigs.full.groups.some((g) => rigs.full.classes[g.class].fixture === 'blinder')).toBe(true)
-        expect(rigs.minimal.truss.kind).toBe('none')
+    })
+
+    // Owner, 2026-09-28 23:1x: no stage, no towers — only the DJ stand; the crane parked over
+    // the DJ carries the truss on chains ("ok take complimentary": one line).
+    it('hang from the crane parked over the DJ: no towers, one line, its load and the sign-off owed written down', () => {
+        const crane = hall.geometry.cranes.find((c) => Math.abs(c.z_m - 4.8) < 0.01)
+        expect(crane, 'the entry-end crane rolled over the DJ').toBeTruthy()
+        expect(hall.geometry.cranes).toHaveLength(2) // moved, not duplicated
+        for (const [id, rig] of Object.entries(rigs)) {
+            expect(rig.truss.kind, id).toBe('crane-hung')
+            expect(rig.groups.some((g) => /tower/.test(g.mount)), id).toBe(false)
+            const stage = stageFrame(rig, hall)
+            expect(stage.trussZ, id).toBe(crane.z_m)
+            const dj = performerBoxZ(rig, stage)
+            expect(crane.z_m, id).toBeGreaterThanOrEqual(dj[0])
+            expect(crane.z_m, id).toBeLessThanOrEqual(dj[1])
+            const built = buildRig(rig, hall, { geometry, manifest })
+            expect(built.entities.some((e) => /truss-tower/.test(e.id)), id).toBe(false)
+            const line = built.entities.find((e) => e.id === `${RIG_PREFIX}truss-header`)
+            expect(line.components.transform.position[1], id).toBeCloseTo(rig.truss.trim_m, 6)
+            expect(line.components.transform.scale[0], id).toBe(8)
+            expect(rig.truss.pieces_m.reduce((a, b) => a + b, 0), id).toBe(8)
+            expect(built.entities.filter((e) => /hoist-\d+$/.test(e.id)), id).toHaveLength(2)
+            const load = rig.truss.rigging.load
+            expect(load.points, id).toBe(2)
+            expect(load.total_kg[0], id).toBeGreaterThan(load.lamps_kg)
+            expect(rig.truss.rigging.signoff, id).toMatch(/rigging sign-off owed \(crane rated load, lock-out, hoists \+ safety steels\)/)
+        }
+        // Minimal: 7 B380F + 2 strobes (+ the 4 PARs grazing the bridge) on the line ≈ 250–300 kg on 2 points
+        const m = rigs.minimal.truss.rigging.load
+        expect(m.lamps.find((l) => l.code === 'UP-B380F').n).toBe(7)
+        expect(m.lamps.find((l) => l.code === 'EXT-STROBE').n).toBe(2)
+        expect(m.total_kg[0]).toBeGreaterThanOrEqual(250)
+        expect(m.total_kg[1]).toBeLessThanOrEqual(300)
     })
 
     it('paint with the palette only — cold white, deep red, amber, the blinders\' warm white', () => {

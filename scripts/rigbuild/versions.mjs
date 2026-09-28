@@ -61,6 +61,43 @@ const restAim = (spec, group) => {
     throw new Error(`group ${group.id}: its aim "${group.aim}" is not in aimRules`)
 }
 
+// A version hung from the crane (versions file `craneTruss`): the line, and what it carries.
+// The load is estimated from the type library's weights (the makers' datasheets, or the
+// equivalent's for a planning type) and a truss weight that is itself an ESTIMATE until the
+// supplier's datasheet is in hand. Pure.
+const TYPE_FILE = 'src/rigbuild/types/moxir.json'
+const TRUSS_KG_PER_M = [6, 7] // 290 mm box class; ESTIMATE — the supplier's datasheet is owed
+const ON_LINE = new Set(['truss-header', 'truss-top'])
+export const craneTruss = (spec, groups, classes) => {
+    const t = clone(spec.craneTruss)
+    const types = readJson(path.join(REPO_ROOT, TYPE_FILE)).types
+    const kgOf = (code) => types.find((x) => x.code === code)?.weight_kg?.value ?? null
+    const lamps = groups.filter((g) => ON_LINE.has(g.mount)).map((g) => {
+        const code = classes[g.class].code
+        const each = kgOf(code)
+        if (each == null) throw new Error(`craneTruss: no weight for ${code} in ${TYPE_FILE}`)
+        return { group: g.id, code, n: g.count, each_kg: each, kg: Math.round(each * g.count * 10) / 10 }
+    })
+    const lampsKg = Math.round(lamps.reduce((a, l) => a + l.kg, 0) * 10) / 10
+    const trussKg = TRUSS_KG_PER_M.map((k) => k * t.width_m)
+    // clamps, safety bonds, the cable loom along the line: +10 % of the lamps (ESTIMATE)
+    const extras = Math.round(lampsKg * 0.1)
+    const total = trussKg.map((k) => Math.round(lampsKg + k + extras))
+    t.rigging.load = {
+        lamps,
+        lamps_kg: lampsKg,
+        truss_kg: trussKg,
+        truss_basis: `${TRUSS_KG_PER_M.join('–')} kg/m for a 290 mm box truss — ESTIMATE, the supplier's datasheet is owed`,
+        extras_kg: extras,
+        extras_basis: 'clamps, safety bonds and the cable loom: +10 % of the lamps — ESTIMATE',
+        total_kg: total,
+        points: t.rigging.hoists,
+        per_point_kg: total.map((k) => Math.round(k / t.rigging.hoists)),
+        note: 'static load on the line, before any dynamic factor; the hoists, chains and spreaders (≈ 25–30 kg a point) load the crane bridge on top of it. rigging sign-off owed (crane rated load, lock-out, hoists + safety steels).'
+    }
+    return t
+}
+
 /**
  * One version as a complete rig file. Pure.
  * Every look names every group: a group a look leaves out rests on its own aim.
@@ -83,7 +120,8 @@ export const versionRig = ({ spec, base, id }) => {
     }))
     const truss = v.truss === 'none'
         ? { kind: 'none', note: 'this version hangs nothing overhead: no goalpost, the floor line is the rig' }
-        : clone(base.truss)
+        : v.truss === 'crane' ? craneTruss(spec, groups, classes)
+            : clone(base.truss)
     const hasLaser = groups.some((g) => classes[g.class]?.fixture === 'laser')
     return {
         rig: `${base.rig.replace(/ — .*$/, '')} — ${v.title}`,
@@ -97,7 +135,9 @@ export const versionRig = ({ spec, base, id }) => {
         provenance: { ...clone(base.provenance), versions: `${VERSIONS_FILE}: ${spec.owner}` },
         assumptions: [
             ...base.assumptions.slice(0, 3),
-            ...(truss.kind === 'none' ? ['No truss: this version stands every fixture on the floor (the booth line, the pit, the column bases, the press).'] : [base.assumptions[3]]),
+            ...(truss.kind === 'none' ? ['No truss: this version stands every fixture on the floor (the booth line, the pit, the column bases, the press).']
+                : truss.kind === 'crane-hung' ? [`No stage deck, no towers: the DJ stand alone. One ${truss.width_m} m line of ${truss.section_class} hangs from the bridge of the overhead crane parked over the DJ, bottom chord ${truss.trim_m} m, on ${truss.rigging.hoists} chain hoists with safety steels; load on the line ≈ ${truss.rigging.load.total_kg[0]}–${truss.rigging.load.total_kg[1]} kg, ≈ ${truss.rigging.load.per_point_kg[0]}–${truss.rigging.load.per_point_kg[1]} kg a point. ${truss.rigging.signoff.split(':')[0]}.`]
+                    : [base.assumptions[3]]),
             ...(hasLaser ? [base.assumptions[5]] : []),
             'Strobes, blinders and hazers are other-supplier lines (the rental house lists none): each is a planning type modelled on a named product (scripts/place/fixtures/fixtures.json, EXT- codes). No CO2 jet, cold spark or confetti — the underground brief (versions file, method).',
             base.assumptions[7]
@@ -112,7 +152,8 @@ export const versionRig = ({ spec, base, id }) => {
         photometry: { ...clone(base.photometry), ...(spec.photometry?.air ? { air: spec.photometry.air, airWhy: spec.photometry.why } : {}) },
         defaultLook: spec.defaultLook,
         looks,
-        opening: clone(base.opening)
+        opening: clone(truss.kind === 'crane-hung' && spec.craneOpening ? spec.craneOpening : base.opening),
+        ...(spec.hall ? { hall: spec.hall } : {})
     }
 }
 
