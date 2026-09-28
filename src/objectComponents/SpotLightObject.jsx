@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
 import { AdditiveBlending, BufferAttribute, ConeGeometry, DoubleSide } from 'three'
 import { spotTargetOffset } from '../project/viewport/spotLightAim.js'
 import { beamCastsLight, beamFadeColors, beamIsVisible, spotBeamShape } from './spotBeam.js'
+import { strobeEnvelope } from '../rigbuild/rigFlash.js'
 
 // A spot light that actually points where the entity is turned.
 //
@@ -44,6 +46,11 @@ export default function SpotLightObject({
 }) {
     const lightRef = useRef(null)
     const targetRef = useRef(null)
+    const coneRef = useRef(null)
+    // A shutter strobing (`beam.strobeHz`, set only while a lighting desk drives the lamp —
+    // src/rigbuild/dmxPose.js): the light and the cone flash at that rate on the wall
+    // clock, so every screen flashes together. No strobe: nothing runs per frame.
+    const strobeHz = Number(beam?.strobeHz) > 0 ? Number(beam.strobeHz) : 0
     // `beam.only`: the cone and no light (spotBeam.js, beamCastsLight). The
     // light is not mounted at all rather than mounted at zero — three.js pays
     // for a light in every shader whatever its intensity.
@@ -83,6 +90,7 @@ export default function SpotLightObject({
 
     return (
         <>
+            {strobeHz > 0 ? <StrobeDriver hz={strobeHz} lightRef={lightRef} coneRef={coneRef} intensity={intensity} opacity={throwShape.opacity} /> : null}
             {castsLight ? (
                 <>
                     <spotLight
@@ -112,6 +120,7 @@ export default function SpotLightObject({
             ) : null}
             {showBeam && beamGeometry ? (
                 <mesh
+                    ref={coneRef}
                     geometry={beamGeometry}
                     position={throwShape.position}
                     // Never in the way of a click: the cone is as wide as the
@@ -134,4 +143,20 @@ export default function SpotLightObject({
             ) : null}
         </>
     )
+}
+
+// The per-frame half of a strobing shutter, mounted only while one strobes.
+function StrobeDriver({ hz, lightRef, coneRef, intensity, opacity }) {
+    useFrame(() => {
+        const env = strobeEnvelope(Date.now() / 1000, hz)
+        if (lightRef.current) lightRef.current.intensity = intensity * env
+        const mat = coneRef.current?.material
+        if (mat) mat.opacity = opacity * env
+    })
+    useEffect(() => () => {
+        // Back to steady when the strobe stops (React re-applies the props on the next render).
+        if (lightRef.current) lightRef.current.intensity = intensity
+        if (coneRef.current?.material) coneRef.current.material.opacity = opacity
+    }, [lightRef, coneRef, intensity, opacity])
+    return null
 }

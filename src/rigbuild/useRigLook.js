@@ -4,6 +4,8 @@ import { TYPE_LIBRARY } from './types/index.js'
 import { libraryWithShow } from './rental.js'
 import { blendEntities, flashEntities, lookIdOfDesk, lookPoses, posedEntities, rigLooksOf, washLevelOf, withWashLevel } from './looks.js'
 import { clockFadeOf, showDriver, showOf, showStateAt } from './showClock.js'
+import { dmxEntities } from './dmxPose.js'
+import { isAssumedMode, typeById } from './fixtureTypes.js'
 import { getServerOffset } from './serverClock.js'
 
 // THE ROOM FOLLOWS THE LOOK (docs/architecture/RIG_BUILD.md §11.4). While the desk plays
@@ -26,6 +28,20 @@ import { getServerOffset } from './serverClock.js'
 
 const NONE = ''
 const FADE_FRAME_MS = 33
+const NO_FIXTURES = Object.freeze([])
+const NO_DRIVEN = new Map()
+
+/** Does the room hold a lamp a desk could drive — joined to a fixture, of a type with a channel list? */
+export const hasDmxLamps = (entities = [], library) => entities.some((e) => {
+    const f = e?.components?.fixture
+    if (e?.type !== 'spotLight' || !f?.type || !Number.isInteger(Number(f.index))) return false
+    const type = typeById(library, f.type)
+    return Boolean(type?.modes?.some((m) => Array.isArray(m.channels) && m.channels.length))
+})
+
+// Is a lamp's DMX drawn from an ASSUMED list (the words the visualiser shows)?
+export const assumedDriven = (driven) => [...(driven?.values?.() || [])].some((d) => d.assumed)
+export { isAssumedMode }
 
 const deskLookOf = (s) => (s.present ? (s.looks || []).map(lookIdOfDesk).find(Boolean) || NONE : NONE)
 
@@ -56,17 +72,23 @@ export function useRigLookEntities(document, { explicit, mirror, library: baseLi
         return s.present ? s.lookFade || null : null
     }
     const readPresent = () => Boolean(store.getSnapshot().present)
+    const readFixtures = () => {
+        const s = store.getSnapshot()
+        return s.present ? s.fixtures || NO_FIXTURES : NO_FIXTURES
+    }
+    const dmxLamps = useMemo(() => hasDmxLamps(entities, library), [entities, library])
     const deskLook = useSyncExternalStore(store.subscribe, read, read)
     const deskFade = useSyncExternalStore(store.subscribe, readFade, readFade)
     const deskPresent = useSyncExternalStore(store.subscribe, readPresent, readPresent)
+    const deskFixtures = useSyncExternalStore(store.subscribe, readFixtures, readFixtures)
     const [deskChecked, setDeskChecked] = useState(false)
     useEffect(() => {
-        if (!looks || explicit !== undefined) return undefined
+        if ((!looks && !dmxLamps) || explicit !== undefined) return undefined
         let alive = true
         Promise.resolve(store.probe()).then(() => { if (alive) setDeskChecked(true) }, () => { if (alive) setDeskChecked(true) })
         const release = store.watch()
         return () => { alive = false; release() }
-    }, [looks, explicit, store])
+    }, [looks, dmxLamps, explicit, store])
 
     const mapping = document?.mappingState
     const show = useMemo(() => (looks ? showOf({ mappingState: mapping }) : null), [looks, mapping])
@@ -104,10 +126,19 @@ export function useRigLookEntities(document, { explicit, mirror, library: baseLi
     const t = useMemo(() => (shownFrom ? fadeProgress(fade) : 1), [shownFrom, fade, tick])
 
     const blended = useMemo(() => (shownFrom && t < 1 ? blendEntities(shownFrom, shownTo, t) : shownTo), [shownFrom, shownTo, t])
-    const shown = useMemo(() => flashEntities(blended, library), [blended, library])
+    const flashed = useMemo(() => flashEntities(blended, library), [blended, library])
+    // DMX WINS (RIG_BUILD.md §18.4): while the desk is live, every lamp joined to a patched
+    // fixture with a known channel list is drawn from what the desk sends, attribute by
+    // attribute. A page's own GO (`explicit`) means no desk is being followed.
+    const dmxOn = explicit === undefined && deskPresent && dmxLamps && deskFixtures.length > 0
+    const dmx = useMemo(() => (dmxOn
+        ? dmxEntities({ shown: flashed, document: entities, fixtures: deskFixtures, library })
+        : { entities: flashed, driven: NO_DRIVEN }), [dmxOn, flashed, entities, deskFixtures, library])
+    const shown = dmx.entities
     const lit = Boolean(looks && lookId && looks.looks.some((l) => l.id === lookId))
     return {
         entities: shown,
+        driven: dmx.driven,
         lookId: lit ? lookId : NONE,
         fromDesk: driver === 'desk' && Boolean(deskLook),
         fading: Boolean(shownFrom && t < 1),

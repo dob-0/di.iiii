@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { buildLibrary, serialise } from '../../scripts/rigbuild/types.mjs'
 import { footprintOf, modeOf, powerOf, typeById, typeFlags, typeIdOf, typesFromManifest } from './fixtureTypes.js'
+import { isAssumedMode } from './assumedProfiles.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const committed = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/rigbuild/types/moxir.json'), 'utf8'))
@@ -24,12 +25,16 @@ describe('the MOXIR type library', () => {
 
     it('carries the published footprints and invents none', () => {
         expect(footprintOf(typeById(committed, 'UP-B380F'))).toBe(16)
-        expect(typeById(committed, 'up-250bsw').modes.map((m) => m.footprint)).toEqual([24, 30])
-        expect(typeById(committed, 'up-hk1915').modes.map((m) => m.footprint)).toEqual([21, 35, 78, 92, 97])
+        // The maker's (or the named equivalent's) published modes, unchanged; the ASSUMED
+        // test modes (assumedProfiles.js) sit beside them, each marked, never in their place.
+        const real = (t) => t.modes.filter((m) => !isAssumedMode(m))
+        expect(real(typeById(committed, 'up-250bsw')).map((m) => m.footprint)).toEqual([24, 30])
+        expect(real(typeById(committed, 'up-hk1915')).map((m) => m.footprint)).toEqual([21, 35, 78, 92, 97])
         for (const code of ['UP-PL5403', 'UP-LA40WF', 'UP-Q108S']) {
             const type = typeById(committed, code)
             expect(type.modesOwed).toBe(true)
-            expect(type.modes).toEqual([])
+            expect(real(type)).toEqual([])
+            expect(type.modes.every((m) => m.basis === 'ASSUMED' && /-assumed$/.test(m.name))).toBe(true)
             expect(type.defaultMode).toBe(null)
         }
     })
