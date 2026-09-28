@@ -17,6 +17,7 @@
  *                         working tree may hold another agent's unsaved edits)
  *   --lock <file|none>    the machine-wide browser lock (see README "Heat")
  *   --max-temp <C>        wait until the CPU package is at or below this (85)
+ *   --max-wait-min <n>    give up (loudly) after this long above it (30)
  *   --out <dir>           results folder (default: <this repo>/.movement-rig/<date>-<branch>)
  *   --label <text>        a name for this run in the report (default: the branch)
  *   --rooms a,b           synthetic,moxir (default both)
@@ -145,7 +146,7 @@ const BROWSER_ARGS = ['--ozone-platform=x11', '--force-device-scale-factor=1.5',
     '--ignore-gpu-blocklist', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows']
 /** One short browser session: cool enough → hold the machine lock → launch → fn → close → release. */
 async function session(name, fn) {
-    const cool = await waitCool(maxTemp, { say })
+    const cool = await waitCool(maxTemp, { say, maxWaitMs: Number(arg('max-wait-min', 30)) * 60000 })
     const release = await acquireLock(lockFile, { say })
     const before = snapshot()
     let browser = null
