@@ -8,10 +8,38 @@
  * editing it. A per-space sync key is an editor on exactly that space, so the
  * follower's own credential is what opens these on the host. With auth off (a
  * local install) the check passes, as it does everywhere else.
+ *
+ * "Editor on the space" still includes a GUEST — an unauthenticated visitor to
+ * a public space is auto-issued a guest session with editor rights (that is
+ * how a stranger gets to try Nodes/Raw at all). So being let through this gate
+ * is not the same as being the owner: a machine's chosen NAME (whatever the
+ * person at that desk called their own box) is answered to every editor,
+ * guest included, unless it is redacted per response. See `redactForGuest`
+ * below.
  */
 
 const { httpRequest } = require('../httpClient')
 const { viaFollower, isPeerId, serverKey } = require('./hub')
+const { isGuestSubject } = require('../authAccess')
+
+// Same test the rest of the server uses to tell a stranger from an owner or a
+// trusted collaborator (see authAccess.js, index.js) — never invented fresh
+// here. `type: 'guest'` covers a session not yet re-read from the cookie;
+// `isGuestSubject` covers one that has been (its subject carries the
+// `guest:` prefix either way). Auth off (a local install: `type: 'disabled'`,
+// or the default `{}` a test/boot with no auth passes) is never a guest — the
+// only person who could be at a local install's keyboard is its owner.
+const isGuestActor = (authState) => Boolean(authState) && (authState.type === 'guest' || isGuestSubject(authState.subject))
+
+// What a guest gets back instead of a chosen name: `null` for "this machine"
+// (the client already reads `self.name || 'this machine'`) and `null` for a
+// peer's name (the client already reads `peer.machineName || peer.machineId.slice(0, 8)`,
+// its existing fallback for "no name was ever given" — a guest sees that same
+// honest shrug, never the name a person picked).
+const redactForGuest = ({ machine, peers }) => ({
+    machine: machine ? { ...machine, name: null } : machine,
+    peers: (peers || []).map((peer) => ({ ...peer, machineName: null }))
+})
 
 const MAX_WAIT_SECONDS = 25
 const FORWARD_TIMEOUT_MS = 8000
@@ -115,11 +143,13 @@ function registerMachineRoutes(router, {
         const { peerId, role = null, devices = [] } = req.body || {}
         const result = hub.hello(spaceId, { peerId, role, devices, machine: me })
         if (result.error) return res.status(result.status).json({ error: result.error })
-        res.json({ machine: me, peers: hub.listPeers(spaceId) })
+        const payload = { machine: me, peers: hub.listPeers(spaceId) }
+        res.json(isGuestActor(getAuthState(req)) ? redactForGuest(payload) : payload)
     })
 
     router.get('/api/spaces/:spaceId/machines', requireSpaceEditor, (req, res) => {
-        res.json({ machine: machine(), peers: hub.listPeers(req.machineSpaceId) })
+        const payload = { machine: machine(), peers: hub.listPeers(req.machineSpaceId) }
+        res.json(isGuestActor(getAuthState(req)) ? redactForGuest(payload) : payload)
     })
 
     router.post('/api/spaces/:spaceId/machines/sync', requireSpaceEditor, (req, res) => {
@@ -146,7 +176,8 @@ function registerMachineRoutes(router, {
         }))
         hub.noteServer(spaceId, caller.id)
         hub.recordRemotePeers(spaceId, via, peers)
-        res.json({ machine: me, peers: hub.listPeers(spaceId, { excludeVia: via, excludeMachineId: caller.id }) })
+        const payload = { machine: me, peers: hub.listPeers(spaceId, { excludeVia: via, excludeMachineId: caller.id }) }
+        res.json(isGuestActor(getAuthState(req)) ? redactForGuest(payload) : payload)
     })
 
     router.post('/api/spaces/:spaceId/signal', requireSpaceEditor, async (req, res, next) => {
