@@ -118,7 +118,8 @@ export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) =
                 position: lensFromMount({ mount: lamp.mount, hung, beam: dir, type }).map((v) => Math.round(v * 1000) / 1000),
                 rotation: rotationFromPanTilt({ pan, tilt }),
                 color: look.colours?.[key] || null,
-                level: levelOfKey(look, key),
+                // `solo`: only the lamp of that rank keeps the level (rig-lib.mjs, the same rank).
+                level: Number.isInteger(aim.solo) && rank !== aim.solo ? 0 : levelOfKey(look, key),
                 pan: Math.round(pan * 10) / 10,
                 tilt: Math.round(tilt * 10) / 10,
                 rule: aim.rule

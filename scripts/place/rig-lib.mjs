@@ -803,14 +803,17 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
                 summary.clashes.push(`${label}: a narrow beam passes through the DJ`)
             }
             const { pan, tilt } = aimAt(from, to)
+            // `solo` (an aim parameter): only the lamp of that rank — counted from the
+            // left along x, the rank the rules use — keeps the group's level; the rest are out.
+            const lampLevel = Number.isInteger(spec.solo) && byX.indexOf(i) !== spec.solo ? 0 : level
             const isReal = real.has(i)
             if (isReal) groupReal += 1
-            if (group.bake && !isReal && level > 0) {
+            if (group.bake && !isReal && lampLevel > 0) {
                 const surface = washSurface(slot, aimed, from, to, half, ctx)
                 if (surface) {
                     washes.push({
                         id: `${group.id}-${i + 1}`, lens: from.map((v) => round(v)), dir: dir.map((v) => round(v, 6)),
-                        candela: op.candela === null ? null : op.candela * level, intensity: round(op.intensity * level, 2), angle: half, penumbra: cls.penumbra, distance: reach, colour, surface
+                        candela: op.candela === null ? null : op.candela * lampLevel, intensity: round(op.intensity * lampLevel, 2), angle: half, penumbra: cls.penumbra, distance: reach, colour, surface
                     })
                 }
             }
@@ -824,7 +827,7 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
                     appearance: { color: colour, opacity: 1 },
                     light: {
                         color: colour,
-                        intensity: round(op.intensity * level, 2),
+                        intensity: round(op.intensity * lampLevel, 2),
                         // One field is both the drawn cone's length and the
                         // light's cutoff (three.js: (1 - (d/cutoff)^4)^2, zero AT
                         // the cutoff). A real lamp cut at the surface it is aimed at
@@ -839,7 +842,7 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
                     },
                     // Level 0 keeps the cone (at haze 0, unseen) and `only`: a beam-only lamp
                     // whose beam were switched off would become a REAL light (beamCastsLight).
-                    beam: { visible: true, haze: round((group.haze ?? op.haze ?? cls.haze ?? DEFAULT_HAZE) * level, 3), ...(isReal ? {} : { only: true }) },
+                    beam: { visible: true, haze: round((group.haze ?? op.haze ?? cls.haze ?? DEFAULT_HAZE) * lampLevel, 3), ...(isReal ? {} : { only: true }) },
                     animation: staticAnim
                 }
             })

@@ -425,3 +425,12 @@ describe('a look\'s levels (RIG_BUILD.md §14: darkness is part of a look)', () 
         expect(() => buildRig({ ...bare, groups: rig.groups }, hall, { geometry, manifest })).toThrow(/needs a truss/)
     })
 })
+
+describe('a solo in a look', () => {
+    it('keeps only the lamp of that rank lit; its twins go out', () => {
+        const solo = { ...rig, looks: { one: { ...rig.looks[rig.defaultLook], aims: { ...rig.looks[rig.defaultLook].aims, 'beam380-stage': { rule: 'vertical', solo: 1 } } } } }
+        const built = buildRig(solo, hall, { geometry, manifest, look: 'one' })
+        const lit = built.entities.filter((e) => e.id.startsWith('rig-beam380-stage-') && e.components.light.intensity > 0)
+        expect(lit).toHaveLength(1)
+    })
+})
