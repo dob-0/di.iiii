@@ -109,7 +109,7 @@ export const versionRig = ({ spec, base, id }) => {
         effects,
         budget: { ...clone(base.budget), realLights: clone(v.realLights) },
         night: clone(spec.night || base.night),
-        photometry: clone(base.photometry),
+        photometry: { ...clone(base.photometry), ...(spec.photometry?.air ? { air: spec.photometry.air, airWhy: spec.photometry.why } : {}) },
         defaultLook: spec.defaultLook,
         looks,
         opening: clone(base.opening)

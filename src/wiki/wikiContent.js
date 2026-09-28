@@ -1660,6 +1660,20 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['equipment', 'inventory', 'rental', 'rental list', 'order', 'quote', 'cost', 'item', 'card', 'co2', 'haze', 'hazer', 'laser', 'alternatives', 'open fixture library', 'ofl', 'node', 'art-net', 'hotbar', 'minecraft', 'phone', 'csv', 'print'],
         updated: '2026-09-28'
+    },
+    {
+        id: 'rig-versions',
+        category: 'Spaces & access',
+        title: 'Rig versions — the same hall lit three ways, a switch to compare',
+        summary: 'A rig can come in versions — for MOXIR: minimal, middle and full — each its own project in the space, beside the rig as ordered. On any of them a row of links at the top left of the room (As ordered · Minimal · Middle · Full) opens the others from the same camera, so you choose by looking.',
+        body: [
+            'Each version is a whole rig: its own lamps, equipment list, patch, looks and plot. The plot, the cards, the equipment page, the patch sheet and the build view all work on a version exactly as on the rig as ordered. Nothing is shared between them but the hall.',
+            'The switch shows only on a project that is one of a set, and only in the view (not while walking). The one you are on is lit. They are plain links: open one in a new tab to put two side by side.',
+            'A version\'s looks can say where there is NO light: a look sets each group of lamps to a level, and 0 is out — the beam gone from the air, nothing on the columns. That is how a look like "blackout + one beam" or "strobe hit" is written. Resting the room on a look writes its aims and colours only; the levels are played by the desk.',
+            'Strobes, blinders and hazers are not on the rental house\'s list; a version lists them as lines from another supplier, each with two or three real products to choose from, and no price until one is quoted.'
+        ],
+        tags: ['versions', 'rig', 'minimal', 'full', 'compare', 'switch', 'looks', 'level', 'blackout', 'strobe', 'blinder', 'hazer', 'haze', 'underground', 'moxir', 'equipment'],
+        updated: '2026-09-28'
     }
 ]
 

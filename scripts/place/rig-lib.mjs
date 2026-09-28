@@ -167,7 +167,10 @@ export const columnsFor = (hall, stage, spec = {}) => {
         if (!rects.length) throw new Error(`no zones ${spec.zones.join(', ')} in hall.json`)
         range = [Math.min(...rects.map((r) => Math.min(...r.z_m))) - pitch / 2, Math.max(...rects.map((r) => Math.max(...r.z_m))) + pitch / 2]
     }
-    const zs = [...new Set(g.column_grid_z_m)].filter((z) => !range || (z >= range[0] - 1e-6 && z <= range[1] + 1e-6))
+    // `z_at` [..]: exactly these grid lines (alternate columns, say), instead of a range.
+    const zs = [...new Set(g.column_grid_z_m)]
+        .filter((z) => !range || (z >= range[0] - 1e-6 && z <= range[1] + 1e-6))
+        .filter((z) => !spec.z_at || spec.z_at.some((a) => Math.abs(a - z) < 1e-6))
     const axes = spec.rows === 'next'
         ? (g.rows_x_m || []).filter((x) => Math.abs(Math.abs(x) - (Math.abs(left) + (g.spans?.span_m || 24))) < 0.5)
         : [left, right]
@@ -268,8 +271,11 @@ const place = {
     'column-bases': (n, ctx, group) => {
         if (group?.columns) {
             // The columns a spec picks (columnsFor), one lamp at each base.
+            // `off_m`: how far in front of the inner face (default 0.7) — further out where a
+            // PAR uplights the same face, so the two bodies do not stand in each other.
             const cols = columnsFor(ctx.hall, ctx.stage, { faces: ['inner'], ...group.columns })
-            return cols.slice(0, n).map((c) => ({ pos: [c.faceX - c.side * 0.7, 0, c.z], orient: 'floor', face: [-c.side, 0, 0], column: c }))
+            const off = group.off_m ?? 0.7
+            return cols.slice(0, n).map((c) => ({ pos: [c.faceX - c.side * off, 0, c.z], orient: 'floor', face: [-c.side, 0, 0], column: c }))
         }
         // Mirrored pairs: the same columns on both sides, so the rows read as
         // a design and not a scatter.

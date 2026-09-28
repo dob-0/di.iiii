@@ -146,17 +146,20 @@
             "count": 6,
             "mount": "column-bases",
             "columns": {
-                "z_m": [
-                    27,
-                    45
+                "z_at": [
+                    12,
+                    24,
+                    36
                 ],
                 "rows": "nave"
             },
             "aim": "up-into-truss",
-            "note": "6 beams at the bases of three nave column pairs over the dance floor (z 30, 36, 42), up into the space frame"
+            "note": "6 beams at the bases of every other nave column pair (z 12, 24, 36), up into the space frame"
         },
         "beam380-columns": {
-            "from": "beam380-columns"
+            "from": "beam380-columns",
+            "off_m": 1.2,
+            "note": "10 beams at the column bases along the dance floor (z 24-48), 1.2 m off the inner face so the face's own PAR stands clear of them"
         },
         "bsw250-truss": {
             "class": "bsw250",
@@ -192,9 +195,11 @@
             "count": 8,
             "mount": "column-uplight",
             "columns": {
-                "z_m": [
-                    5,
-                    25
+                "z_at": [
+                    6,
+                    18,
+                    30,
+                    42
                 ],
                 "rows": "nave",
                 "faces": [
@@ -203,7 +208,7 @@
             },
             "aim": "up-the-column",
             "bake": true,
-            "note": "8 PARs up the inner faces of the four column pairs nearest the booth (z 6-24): the structure revealed in pieces"
+            "note": "8 PARs up the inner faces of the OTHER column pairs (z 6, 18, 30, 42): beam, red column, beam, red column down the nave — the structure revealed in pieces"
         },
         "par-columns": {
             "from": "par-columns"
@@ -829,5 +834,30 @@
                 "UP-B380F": 1
             }
         }
-    ]
+    ],
+    "ordered": {
+        "id": "ordered",
+        "title": "As ordered — the rig of the 27.09 order",
+        "summary": "The base rig in the hall's own project: every head on the order, the CO2, sparks and smoke included — kept as it is, to compare."
+    },
+    "photometry": {
+        "air": 1.5,
+        "why": "Heavy haze (rule 4; 2-6 hazers in every version where the base had 4 smoke machines): every cone's air brightness at 1.5 where the base rig draws 0.9. A drawing choice, not photometry — the ratios between the fixtures stay the datasheets'."
+    },
+    "night": {
+        "backgroundColor": "#030304",
+        "ambient": {
+            "color": "#8ea2c8",
+            "intensity": 0.5
+        },
+        "directional": {
+            "color": "#8fa6d8",
+            "intensity": 0.22
+        },
+        "fog": {
+            "near": 60,
+            "far": 250
+        },
+        "note": "Darker than the base's readable night (ambient 0.8 -> 0.5, directional 0.35 -> 0.22): darkness is part of the design here (rule 1); the hall must still read in a render. Tuned by eye on the RTX 3080, 2026-09-28."
+    }
 }

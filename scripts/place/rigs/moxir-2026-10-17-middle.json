@@ -235,14 +235,15 @@
             "count": 10,
             "mount": "column-bases",
             "aim": "up-into-truss",
-            "note": "10 beams on the floor at the column bases along the dance floor (grid lines z 24-48, both sides), aimed up into the roof",
+            "note": "10 beams at the column bases along the dance floor (z 24-48), 1.2 m off the inner face so the face's own PAR stands clear of them",
             "columns": {
                 "z_m": [
                     21,
                     51
                 ],
                 "rows": "nave"
-            }
+            },
+            "off_m": 1.2
         },
         {
             "class": "bsw250",
@@ -384,27 +385,28 @@
         "realNote": "2026-09-28 (DJ place): the press's own uplights stand 0.35 m from it, where a real lamp in the renderer blows the face out white; they are baked like the other PARs, and the 4 header spots (6.3 m up, over the DJ and the press) are the real lamps that light the backdrop."
     },
     "night": {
-        "backgroundColor": "#040507",
+        "backgroundColor": "#030304",
         "ambient": {
             "color": "#8ea2c8",
-            "intensity": 0.8
+            "intensity": 0.5
         },
         "directional": {
             "color": "#8fa6d8",
-            "intensity": 0.35
+            "intensity": 0.22
         },
         "fog": {
             "near": 60,
             "far": 250
         },
-        "note": "A dim, cool night: the hall stays readable so the rig can be judged against it. Tuned by eye in the browser on the RTX 3080 (2026-09-28: ambient 0.35 -> 0.8, directional 0.25 -> 0.35, fog 30/150 -> 60/250 m, because in the 108 m hall the old fog blacked out everything past 30 m and the owner found the room dark). Not a photometric night."
+        "note": "Darker than the base's readable night (ambient 0.8 -> 0.5, directional 0.35 -> 0.22): darkness is part of the design here (rule 1); the hall must still read in a render. Tuned by eye on the RTX 3080, 2026-09-28."
     },
     "photometry": {
         "method": "scripts/place/rig-lib.mjs, 'PHOTOMETRY': candela from the manifest (I = E*d^2 from a measured illuminance, else I = flux / beam solid angle); zoom keeps flux; three.js SpotLight intensity is candela x sceneScale; beam-in-air brightness ~ I*tan(theta/2), scaled to the brightest class, Stevens exponent 1/3, times `air`.",
         "sceneScale": 0.02,
         "sceneScaleNote": "ONE exposure number for the whole rig, chosen so the room reads in a browser's tone mapping (ACES, exposure 1). The ratios between fixtures are the datasheets'.",
-        "air": 0.9,
-        "airNote": "how much haze is in the air: the brightest class's beam gets this `haze` (0..1, src/objectComponents/spotBeam.js)."
+        "air": 1.5,
+        "airNote": "how much haze is in the air: the brightest class's beam gets this `haze` (0..1, src/objectComponents/spotBeam.js).",
+        "airWhy": "Heavy haze (rule 4; 2-6 hazers in every version where the base had 4 smoke machines): every cone's air brightness at 1.5 where the base rig draws 0.9. A drawing choice, not photometry — the ratios between the fixtures stay the datasheets'."
     },
     "defaultLook": "white-cathedral",
     "looks": {
