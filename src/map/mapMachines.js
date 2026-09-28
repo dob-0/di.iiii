@@ -95,9 +95,16 @@ export const ndiSourceStatus = (machines = [], name = '') => {
 /** One line per machine for the desk: screens, inputs, NDI, and how many pages are open there. */
 export const describeMachine = (machine) => {
     const screens = (machine.devices || []).filter((device) => device.kind === 'screen')
+    // A stranger is handed no name at all (server redaction — see
+    // serverXR/src/machines/routes.js), and `machinesIn` already turns that
+    // into the plain fallback 'this machine'. Appending the suffix ANYWAY
+    // would print "this machine · this machine" — harmless, but not the
+    // clean neutral label a visitor should read. Only append it to an actual
+    // chosen name.
+    const selfName = machine.name && machine.name !== 'this machine' ? `${machine.name} · this machine` : 'this machine'
     return {
         id: machine.id,
-        name: machine.self ? `${machine.name} · this machine` : machine.name,
+        name: machine.self ? selfName : machine.name,
         pages: machine.pages || 0,
         screens: screens.map((screen) => (screen.width ? `${screen.width}×${screen.height}` : screen.label)),
         inputs: camerasOf(machine).map((device) => device.label),

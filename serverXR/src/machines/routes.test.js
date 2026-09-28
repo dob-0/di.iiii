@@ -157,6 +157,41 @@ describe('machine routes', () => {
         const syncKey = await boot({ auth: { authenticated: true, role: 'editor', spaces: [SPACE] } })
         expect((await syncKey.call('POST', `/api/spaces/${SPACE}/machines/hello`, { peerId: 'a' })).status).toBe(200)
     })
+
+    // Audit 2026-09-28 ("the kit"): a signed-out stranger reached a public
+    // space's Projection desk and read the serving machine's own chosen name
+    // off the Machines panel. A visitor without an account is auto-issued a
+    // guest session with editor rights on a public space — that grant is by
+    // design (it is how a stranger gets to try the tools at all) — but the
+    // name a person picked for their own machine is not part of what a guest
+    // needs to see. An owner, or any other real (non-guest) editor, still
+    // reads the name unchanged.
+    it('hides the machine name from a guest, and shows it to everyone else', async () => {
+        const guest = await boot({ auth: { authenticated: true, type: 'guest', role: 'editor', spaces: [SPACE] } })
+        guest.hub.recordRemotePeers(SPACE, viaLink('http://host'), [{ peerId: 'peer-tab', machineId: 'peer-1', machineName: 'peer-box' }])
+
+        const helloAsGuest = await guest.call('POST', `/api/spaces/${SPACE}/machines/hello`, { peerId: 'tab' })
+        expect(helloAsGuest.body.machine).toEqual({ ...HERE, name: null })
+        expect(helloAsGuest.body.peers.map(peer => [peer.peerId, peer.machineName]).sort()).toEqual([
+            ['peer-tab', null],
+            ['tab', null]
+        ])
+        const listAsGuest = await guest.call('GET', `/api/spaces/${SPACE}/machines`)
+        expect(listAsGuest.body.machine.name).toBeNull()
+        expect(listAsGuest.body.peers.every(peer => peer.machineName === null)).toBe(true)
+
+        // A guest identified only by a 'guest:' subject prefix (a returning
+        // guest whose session was re-read from the cookie as type 'session')
+        // is redacted the same way — the prefix is the tell, not the type.
+        const guestSubject = await boot({ auth: { authenticated: true, type: 'session', subject: 'guest:abc123', role: 'editor', spaces: [SPACE] } })
+        expect((await guestSubject.call('GET', `/api/spaces/${SPACE}/machines`)).body.machine.name).toBeNull()
+
+        // A real account, and a local install with auth off, both keep the name.
+        const owner = await boot({ auth: { authenticated: true, type: 'session', subject: 'account-1', role: 'editor', spaces: [SPACE] } })
+        expect((await owner.call('POST', `/api/spaces/${SPACE}/machines/hello`, { peerId: 'tab' })).body.machine.name).toBe(HERE.name)
+        const localInstall = await boot()
+        expect((await localInstall.call('POST', `/api/spaces/${SPACE}/machines/hello`, { peerId: 'tab' })).body.machine.name).toBe(HERE.name)
+    })
 })
 
 describe('machine identity', () => {
