@@ -19,6 +19,7 @@ import { usePieceAssets } from './usePieceAssets.js'
 import { useRigLookEntities } from './useRigLook.js'
 import { buildPatchSheetPath } from './patchRouting.js'
 import { buildCrewPath } from './buildRouting.js'
+import { useDeskState } from './deskState.js'
 import { Inspector } from './PlotSurface.jsx'
 import BuildScene from './BuildScene.jsx'
 import './plot.css'
@@ -116,6 +117,7 @@ function FragmentRow({ k, v }) {
 }
 
 export default function BuildSurface({ spaceId, projectId, crew = false, library = TYPE_LIBRARY }) {
+    const { consoleIn } = useDeskState({ ask: !crew })
     const store = useProjectStore()
     const { state, dispatch } = store
     const { applyLocalOps: syncOps } = useProjectDocumentSync({ projectId, store, clientIdPrefix: crew ? 'crew-client' : 'build-client', opIdPrefix: crew ? 'crew-op' : 'build-op' })
@@ -423,7 +425,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
                 <div className="rigbuild-dim">{totals.channels}</div>
                 <div>power · {totals.power}</div>
                 <div className="rigbuild-dim">{totals.circuits}</div>
-                <div className="rigbuild-dim">console in · not on this build</div>
+                {consoleIn ? <div className="rigbuild-dim">console in · {consoleIn}</div> : null}
                 {look.lookId ? <div>look · {look.lookId}{look.fromDesk ? ' (desk)' : ''}</div> : null}
                 {model.conflicts.length ? <div className="rigbuild-warn">! {model.conflicts.length} conflict{model.conflicts.length === 1 ? '' : 's'}</div> : null}
                 {crew ? (
