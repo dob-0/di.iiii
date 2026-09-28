@@ -425,6 +425,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
                     spaceId={spaceId}
                     document={shownDocument}
                     sceneExtras={sceneExtras}
+                    rigBodies={false}
                     interactive
                     showChrome
                     showModeControls={!(phone && building)}

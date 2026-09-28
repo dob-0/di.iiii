@@ -19,10 +19,14 @@
  *      2 x 1 m decks at its height — the bodies from scripts/rigbuild/pieces/*.glb,
  *      uploaded as project assets;
  *   3. every lamp and effect of the document (createEntity; an id already there is
- *      replaced), and deletes the old rig lamps and the BAKED beam, wash and body
- *      meshes (`rig-beams`, `rig-wash`, `rig-fixtures`), which the live lamps replace.
+ *      replaced), and deletes the old rig lamps and the BAKED beam and body meshes
+ *      (`rig-beams`, `rig-fixtures`), which the live lamps and the rooms' own bodies
+ *      (src/rigbuild/RigBodies.jsx) replace. The baked column WASH (`rig-wash`) is KEPT:
+ *      no live lamp replaces its light — the beam-only PARs light nothing, and the room
+ *      read dark without it (preview 2026-09-28; re-bake with rig.mjs --wash-only).
  *
- * --pieces-only stops after 1 and 2 and REMOVES the rig's lamps and baked meshes without
+ * --pieces-only stops after 1 and 2 and REMOVES the rig's lamps and baked meshes (the wash
+ * too: with no lamps there is nothing for it to be the light of) without
  * writing new ones: an empty rig on its truss and decks, for view C to deal the rental
  * list onto (RIG_BUILD.md §11). --doc may then be the project's own document (the rig
  * boxes it carries are what become pieces).
@@ -40,13 +44,35 @@ import { layRun } from '../../src/rigbuild/plotGeometry.js'
 import { PIECES, TRUSS_SECTION_M, catalogueHeightOf } from '../../src/rigbuild/pieces.js'
 
 const args = parseArgs()
-const BAKED = ['rig-beams', 'rig-wash', 'rig-fixtures']
+// Baked meshes the live rig replaces, and the one it does not (see 3. above).
+export const BAKED_REPLACED = ['rig-beams', 'rig-fixtures']
+export const BAKED_KEPT = ['rig-wash']
+const BAKED = [...BAKED_REPLACED, ...BAKED_KEPT]
 const r3 = (v) => Math.round(v * 1000) / 1000
 
 const readTokenFile = (file) => {
     const text = fs.readFileSync(file, 'utf8')
     const line = text.split('\n').find((l) => l.startsWith('ADMIN_API_TOKEN='))
     return line ? line.slice('ADMIN_API_TOKEN='.length).trim() : null
+}
+
+/**
+ * Which of the project's entities go (step 3): the baked beams and bodies, the old rig
+ * lamps and boxes the incoming document does not carry, and the boxes that became
+ * pieces. The baked wash stays unless --pieces-only (then no lamp is left for it to be
+ * the light of). Pure, so the rule is tested (rigBodies.test.js).
+ */
+export const deletions = ({ have, incomingIds, pieceIds, replaced, piecesOnly }) => {
+    const out = []
+    for (const [id, e] of have) {
+        const oldRig = id.startsWith('rig-') && !incomingIds.has(id) && !pieceIds.has(id)
+        const lamp = e.type === 'spotLight' || Boolean(e.components?.fixture)
+        const drop = piecesOnly
+            ? (BAKED.includes(id) || replaced.has(id) || (oldRig && lamp))
+            : (BAKED_REPLACED.includes(id) || (oldRig && e.type !== 'model' && !BAKED_KEPT.includes(id)) || replaced.has(id))
+        if (drop) out.push(id)
+    }
+    return out
 }
 
 /**
@@ -154,11 +180,8 @@ const main = async () => {
     // or, --pieces-only, none: the cards deal the lamps.
     const incoming = args['pieces-only'] ? [] : doc.entities.filter((e) => !replaced.has(e.id))
     const incomingIds = new Set(incoming.map((e) => e.id))
-    for (const [id, e] of have) {
-        const oldRig = id.startsWith('rig-') && !incomingIds.has(id) && !pieces.some((p) => p.id === id)
-        const lamp = e.type === 'spotLight' || Boolean(e.components?.fixture)
-        const drop = args['pieces-only'] ? (BAKED.includes(id) || replaced.has(id) || (oldRig && lamp)) : (BAKED.includes(id) || (oldRig && e.type !== 'model') || replaced.has(id))
-        if (drop) ops.push({ type: 'deleteEntity', payload: { entityId: id } })
+    for (const id of deletions({ have, incomingIds, pieceIds: new Set(pieces.map((p) => p.id)), replaced, piecesOnly: Boolean(args['pieces-only']) })) {
+        ops.push({ type: 'deleteEntity', payload: { entityId: id } })
     }
     for (const e of incoming) ops.push({ type: 'createEntity', payload: { entity: e } })
 

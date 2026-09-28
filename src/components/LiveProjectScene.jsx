@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, OrbitControls, Text, Billboard } from '@react-three/drei'
@@ -54,6 +54,7 @@ import {
     BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_DEAD_DELTA_MAX, BROKEN_LOCK_SETTLE_MS
 } from './walkModeConfig.js'
 import { isTypingTarget } from './walkKeyboard.js'
+import { hasRigLamps } from '../rigbuild/hasRigLamps.js'
 import { createPortalWalkThrough } from './portalWalkThrough.js'
 import { doorsOf, fitArrivalToDoors as fitArrivalToDoors_ } from './arrivalFraming.js'
 import { getViewportAspect } from '../utils/cameraFraming.js'
@@ -62,6 +63,9 @@ import { ENTRY_PENDING_ATTR } from './entryTransition/entryPlan.js'
 import { captureRendererFrame, FrameSource } from './entryTransition/EntryGlide.jsx'
 import { markArriveWalking } from './arriveWalking.js'
 import './liveProjectScene.css'
+
+// The lamps' bodies (src/rigbuild/RigBodies.jsx): loaded only by a room that has a rig.
+const RigBodies = lazy(() => import('../rigbuild/RigBodies.jsx'))
 
 // Walk mode has always capped device pixel ratio at 1.8, and an authored
 // renderSettings.dprMax does not lift that: a still arrival frame can afford
@@ -1524,6 +1528,9 @@ export default function LiveProjectScene({
     // after the project's own objects. The jam draws a marker where each other
     // person is standing, and a marker in the scene has to be IN the scene.
     sceneExtras = null,
+    // `rigBodies`: draw a body (the fixture's model, posed to its beam) at every typed
+    // lamp (RIG_BUILD.md §12.4). View A draws its own through sceneExtras and says false.
+    rigBodies = true,
     // `fitArrivalToDoors`: on a portrait screen, step the arrival back along
     // its own view until the room's doors are in frame (arrivalFraming.js).
     // The landing's front room opts in; an authored room elsewhere keeps its
@@ -1677,6 +1684,7 @@ export default function LiveProjectScene({
     // any public/live viewer (landing page, WCC, etc.), not just Studio.
     const assetMap = useMemo(() => buildAssetMap(doc, projectId), [doc, projectId])
     const gateEntity = useMemo(() => entities.find(isGateEntity) || null, [entities])
+    const hasRig = useMemo(() => hasRigLamps(entities), [entities])
     const hasSound = useMemo(() => roomHasSound(entities), [entities])
     const { soundOn: sceneSoundOn, locked: soundLocked, toggleSound: toggleSceneSound } = useRoomSound()
 
@@ -1900,6 +1908,11 @@ export default function LiveProjectScene({
                     </SceneEntityErrorBoundary>
                 ))}
                 {showEntities && gateEntity ? <GateGlow entity={gateEntity} /> : null}
+                {showEntities && rigBodies && hasRig ? (
+                    <Suspense fallback={null}>
+                        <RigBodies entities={entities} />
+                    </Suspense>
+                ) : null}
                 {sceneExtras}
                 {walking ? (
                     <Walker
