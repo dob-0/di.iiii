@@ -28,6 +28,15 @@ describe('resolveAnimation', () => {
     // the other way, leaving the picture hanging outside the TV. The editor's
     // viewport never applied the fallback, so the scene looked correct there and
     // broken only once you walked into it.
+    it('keeps a lighting rig still — pieces and lamps are bolted to the building, never idle', () => {
+        const truss = { id: 't', type: 'model', name: 'truss', components: { piece: { kind: 'truss-3m' } } }
+        const lamp = { id: 'l', type: 'spotLight', name: 'UP-250BSW truss 1', components: { fixture: { type: 'up-250bsw' } } }
+        const fx = { id: 'f', type: 'group', name: 'UP-YZ31P pit 1', components: { fixture: { type: 'up-yz31p' } } }
+        for (const e of [truss, lamp, fx]) expect(resolveAnimation(e).mode).toBe('static')
+        // An authored mode still wins: a lamp someone asked to move, moves.
+        expect(resolveAnimation({ ...lamp, components: { ...lamp.components, animation: { mode: 'orbit' } } }).mode).toBe('orbit')
+    })
+
     it('leaves parented entities alone so a group moves as one object', () => {
         expect(resolveAnimation(entity({ parentId: 'tv-1' })).mode).toBe('static')
         expect(resolveAnimation(entity({ type: 'video', parentId: 'tv-1' })).mode).toBe('static')
