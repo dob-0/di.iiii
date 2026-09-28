@@ -413,7 +413,11 @@ export const AIM_RULES = {
     // Truss spots: alternately a downstage area of the deck and the back wall,
     // counted in from both ends so the two halves mirror.
     'stage-wash': (slot, meta, ctx, p = {}) => (Math.min(meta.rank, meta.n - 1 - meta.rank) % 2 === 0
-        ? { target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * 0.8, ctx.stage.deck, ctx.stage.front - ctx.stage.into * (p.deck_a ?? 1.5)] }
+        // `deck_h`: focus height over the deck. 0 (the default) focuses on the deck
+        // floor; a DJ booth focuses at the performer's chest (lighting practice: a
+        // key is focused on the face, not the floor) so the beam does not pour
+        // into the DJ table top — at 0 it blew the black table out white (2026-09-28).
+        ? { target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * 0.8, ctx.stage.deck + (p.deck_h ?? 0), ctx.stage.front - ctx.stage.into * (p.deck_a ?? 1.5)] }
         : { target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * 1.1, p.wall_y ?? (ctx.stage.backdrop ? 3 : 7), ctx.stage.wall] }),
     // Hung lamps straight down onto the floor under the crane, splayed out.
     'down-from-crane': (slot, meta, ctx) => ({ target: [slot.pos[0] * 1.1, 0, slot.pos[2] + slot.girder * 4] }),
@@ -870,7 +874,31 @@ export const washSurface = (slot, aimed, from, to, half, ctx) => {
         const x0 = Math.max(box.x_m[0], t[0] - r)
         const x1 = Math.min(box.x_m[1], t[0] + r)
         const z = face + ctx.stage.into * off
-        return { origin: [x0, box.y_m[0] + 0.02, z], u: [x1 - x0, 0, 0], v: [0, box.y_m[1] - box.y_m[0] - 0.04, 0], normal: [0, 0, ctx.stage.into], kind: 'backdrop' }
+        const patch = { origin: [x0, box.y_m[0] + 0.02, z], u: [x1 - x0, 0, 0], v: [0, box.y_m[1] - box.y_m[0] - 0.04, 0], normal: [0, 0, ctx.stage.into], kind: 'backdrop' }
+        // A MODELLED machine (hall.py v3 `faces`): the light lands on its real
+        // front faces — the press's housings, bed, ram and crown, each at its
+        // own depth — clipped to the beam's footprint; never on one flat sheet
+        // over the whole envelope (that read as a glowing block, 2026-09-28).
+        if (Array.isArray(box.faces)) {
+            const parts = (ctx.stage.backdrop.boxes || []).flatMap((m) => m.faces || [])
+                .filter((f) => f.x_m[1] > x0 && f.x_m[0] < x1)
+                .map((f) => {
+                    const a = Math.max(f.x_m[0], x0)
+                    const b = Math.min(f.x_m[1], x1)
+                    return { origin: [a, f.y_m[0] + 0.02, f.z_m + ctx.stage.into * off], u: [b - a, 0, 0], v: [0, f.y_m[1] - f.y_m[0] - 0.04, 0], albedo: f.albedo }
+                })
+                .filter((f) => f.u[0] > 0.02)
+            // the same face listed by two envelope items (the crown) is baked once
+            const seen = new Set()
+            const unique = parts.filter((f) => {
+                const key = f.origin.concat(f.u, f.v).map((v) => v.toFixed(3)).join(',')
+                if (seen.has(key)) return false
+                seen.add(key)
+                return true
+            })
+            return unique.length ? { ...patch, parts: unique } : null
+        }
+        return patch
     }
     return null
 }

@@ -18,7 +18,7 @@
  *   node scripts/place/rig-look.mjs --gpu --base https://local.thedi.studio --space moxir \
  *       --project moxir-hall --hall <work>/hall.json --rig scripts/place/rigs/<rig>.json \
  *       --out ~/Downloads/moxir-hall --tag budget [--views crane,dance,stage,roof,door,mid,over,close] [--phone]
- *       [--size 1280x720] [--max-cpu-c 85]
+ *       [--size 1280x720] [--max-cpu-c 85] [--hide <entity ids>]   (--hide: diagnostic, this browser's copy only)
  *
  *   `crane` is the camera photo 032 was taken from (hall.json geometry.cameras),
  *   shot at the photo's own size so compose.py can lay the two side by side.
@@ -92,7 +92,13 @@ export const viewpoints = (hall, rig) => {
         // From the dance floor, looking up into the space frame and a lantern.
         roof: { position: [-5, eye, danceZ - 4], target: [5, g.truss_top_centre_m ?? 13, stage.front - stage.into * 6], fov: 70 },
         // High on the crane runway, three-quarter over the whole rig.
-        over: { position: [-g.crane_rail_x_m + 1, g.crane_rail_x_m ? g.runway_top_m + 2 : 12, stage.front + stage.into * 26], target: [0, 3, stage.back], fov: 60 }
+        over: { position: [-g.crane_rail_x_m + 1, g.crane_rail_x_m ? g.runway_top_m + 2 : 12, stage.front + stage.into * 26], target: [0, 3, stage.back], fov: 60 },
+        // The backdrop machine close, from the floor front-left, as the owner's
+        // ground photo sees it (1c3956d1): square, to sit beside a crop of it.
+        press: { position: [(stage.axis ?? 0) - 3.2, eye, stage.wall + stage.into * 7.5], target: [(stage.axis ?? 0) + 1.7, 3.0, stage.wall - stage.into * 1.2], fov: 60, size: [1000, 1000] },
+        // Up into the space frame beside a column row, like photo 021 (S24
+        // ultra-wide, 90 deg square): the module, the star nodes, a lantern.
+        roofup: { position: [-(g.column_row_x_m?.[1] ?? 12) + 5, 1.5, 3], target: [-(g.column_row_x_m?.[1] ?? 12) - 2, 11.5, -7], fov: 90, size: [1000, 1000] }
     }
     // The space's own first screen, as rig.mjs writes it (rig.opening).
     const opening = openingShot(rig, stage)
@@ -239,6 +245,11 @@ const main = async () => {
                 // LIGHT (the ambient raised in this browser's copy only — nothing is
                 // written to the server). The file name says `worklight`.
                 if (name.startsWith('close-')) doc.worldState.ambientLight = { color: '#ffffff', intensity: 2.2 }
+                // --hide id,id: a diagnostic — leave those entities out of this browser's copy only.
+                if (args.hide) {
+                    const hide = new Set(String(args.hide).split(','))
+                    doc.entities = (doc.entities || []).filter((entity) => !hide.has(entity.id))
+                }
                 await route.fulfill({ response, json: body })
             })
             await page.goto(`${base}/${space}`, { waitUntil: 'domcontentloaded', timeout: 180_000 })

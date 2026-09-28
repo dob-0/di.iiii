@@ -385,6 +385,24 @@ describe('the baked washes (the light of the beam-only PARs on the columns and t
         expect(ratio).toBeLessThan(0.26)
     })
 
+    it('lands the press uplights on the MODELLED press\'s real faces, not on one sheet over its envelope', () => {
+        const onPress = built.washes.filter((w) => w.surface.kind === 'backdrop')
+        const faces = g.massing.flatMap((m) => m.faces || [])
+        expect(faces.length).toBeGreaterThan(3)
+        for (const w of onPress) {
+            expect(w.surface.parts?.length).toBeGreaterThan(0)
+            for (const part of w.surface.parts) {
+                // each part lies in the plane of one real face (2 cm toward the audience), inside its x range
+                const face = faces.find((f) => Math.abs(f.z_m + 0.02 - part.origin[2]) < 1e-6 && part.origin[0] >= f.x_m[0] - 1e-6 && part.origin[0] + part.u[0] <= f.x_m[1] + 1e-6)
+                expect(face, JSON.stringify(part)).toBeTruthy()
+                expect(part.albedo).toBe(face.albedo)
+            }
+        }
+        // the press is dark steel: its albedo is the sampled photo colour, far below the concrete's
+        expect(g.albedo.press).toBeLessThan(0.06)
+        expect(g.albedo.column).toBeGreaterThan(0.25)
+    })
+
     it('writes one alpha in 0..1 per vertex and a GLB', async () => {
         const mesh = washMesh(built.washes)
         expect(mesh.positions.length / 3).toBe(mesh.colors.length / 4)
@@ -394,5 +412,37 @@ describe('the baked washes (the light of the beam-only PARs on the columns and t
         }
         const bytes = await washGlb(built.washes)
         expect(Buffer.from(bytes.slice(0, 4)).toString()).toBe('glTF')
+    })
+})
+
+describe('the hall fix of 2026-09-28 (the owner\'s 50/50 overlay: "so fix all make it right right")', () => {
+    it('draws the space frame at the column pitch — 6 m pyramids, star nodes, heavy members', () => {
+        expect(g.space_frame.module_m).toEqual([6, 6])
+        expect(g.space_frame.nodes).toBeGreaterThan(300)
+        expect(g.space_frame.member_m.bottom).toBeGreaterThanOrEqual(0.2)
+        expect(g.space_frame.lantern_module_m).toBe(3)
+    })
+
+    it('keeps the dance floor to the owner\'s blue mark\'s width (10.7 m), centred on the nave like the booth', () => {
+        const d = g.zones.dance.used
+        expect(d.x_m[1] - d.x_m[0]).toBeCloseTo(10.7, 5)
+        expect(d.x_m[0] + d.x_m[1]).toBeCloseTo(0, 6)
+        const booth = stageFrame(rig, hall)
+        expect(booth.axis).toBeCloseTo((d.x_m[0] + d.x_m[1]) / 2, 6)
+        // depth kept: the crowd barrier to under the crane
+        expect(d.z_m).toEqual([7.5, 48])
+    })
+
+    it('models the press as a machine (a crown with a flywheel over it), and keeps its envelope for the rig', () => {
+        const press = g.massing.find((m) => m.id === 'press')
+        const crown = g.massing.find((m) => m.id === 'press-crown')
+        expect(press.model).toBe('crank_press')
+        expect(crown.drawn_by).toBe('press')
+        expect(crown.y_m[1]).toBeGreaterThan(press.y_m[1])
+        expect(hall.meshes['hall-press']).toBeGreaterThan(200)
+    })
+
+    it('draws the lantern glazing as light (an emissive material), the brightest thing in the roof', () => {
+        expect(hall.meshes['hall-skylight']).toBeGreaterThan(0)
     })
 })

@@ -315,11 +315,11 @@
             "class": "par",
             "count": 6,
             "mount": "backdrop-floor",
-            "backdrop_gap_m": 0.35,
+            "backdrop_gap_m": 0.6,
             "aim": "backdrop",
             "bake": true,
             "symmetric": false,
-            "note": "6 on the floor at the foot of the machinery: 3 evenly across the press's 2.8 m face (x 0.55, 1.65, 2.75 — the press lit evenly on its own centre), 3 along the machine line beside it (x 4.6-8.0). Off the axis by nature, so not mirrored",
+            "note": "6 on the floor at the foot of the machinery: 3 evenly across the press's 2.8 m face (x 0.55, 1.65, 2.75 — the press lit evenly on its own centre), 3 along the machine line beside it (x 4.6-8.0). Off the axis by nature, so not mirrored. 2026-09-28 hall fix: 0.6 m off the face (was 0.35) and aimed at 92 % of the housing height (was 60 %), so each beam grazes UP a housing's flanges and bolted plates into the crown — the press now a modelled machine, the light reads as texture on dark steel; the bake lands on its real faces only (rig-lib washSurface parts), not on a sheet over the envelope.",
             "x_m": [
                 0.55,
                 1.65,
@@ -385,18 +385,18 @@
     "night": {
         "backgroundColor": "#040507",
         "ambient": {
-            "color": "#8ea2c8",
+            "color": "#a39c92",
             "intensity": 0.8
         },
         "directional": {
-            "color": "#8fa6d8",
+            "color": "#b7bcc6",
             "intensity": 0.35
         },
         "fog": {
             "near": 60,
             "far": 250
         },
-        "note": "A dim, cool night: the hall stays readable so the rig can be judged against it. Tuned by eye in the browser on the RTX 3080 (2026-09-28: ambient 0.35 -> 0.8, directional 0.25 -> 0.35, fog 30/150 -> 60/250 m, because in the 108 m hall the old fog blacked out everything past 30 m and the owner found the room dark). Not a photometric night."
+        "note": "A dim, cool night: the hall stays readable so the rig can be judged against it. Tuned by eye in the browser on the RTX 3080 (2026-09-28: ambient 0.35 -> 0.8, directional 0.25 -> 0.35, fog 30/150 -> 60/250 m, because in the 108 m hall the old fog blacked out everything past 30 m and the owner found the room dark). Not a photometric night. 2026-09-28 hall fix (owner: 'cold and bluish; the real hall is warm'): the fill light made NEUTRAL (ambient #8ea2c8 -> #a39c92, directional #8fa6d8 -> #b7bcc6, same intensities), so the hall shows its own sampled colours (rust, dust, yellowed concrete, dark steel) and the cold white and red come from the lamps. Tuned by eye on the 3080."
     },
     "photometry": {
         "method": "scripts/place/rig-lib.mjs, 'PHOTOMETRY': candela from the manifest (I = E*d^2 from a measured illuminance, else I = flux / beam solid angle); zoom keeps flux; three.js SpotLight intensity is candela x sceneScale; beam-in-air brightness ~ I*tan(theta/2), scaled to the brightest class, Stevens exponent 1/3, times `air`.",
@@ -412,7 +412,8 @@
             "intent": "The hall's own architecture lit as a nave: every column-base beam rises straight up into the space frame in mirrored pairs, a slight lean in toward the centre line; the booth's beams open as an apse fan into the lantern above the press; the tower bee-eyes lift low over the house; the DJ keyed from both sides.",
             "aims": {
                 "bsw250-truss": {
-                    "rule": "stage-wash"
+                    "rule": "stage-wash",
+                    "deck_h": 1.4
                 },
                 "par-columns": {
                     "rule": "up-the-column"
@@ -435,7 +436,7 @@
                 },
                 "par-press": {
                     "rule": "backdrop",
-                    "h": 0.6
+                    "h": 0.92
                 },
                 "beeeye-towers": {
                     "rule": "vertical",
@@ -469,7 +470,8 @@
             "intent": "The booth's beams open in one symmetric fan over the house from behind the DJ; the column rows lean back toward the booth so every beam in the room reads from the machinery outward; the tower bee-eyes fan wide and low.",
             "aims": {
                 "bsw250-truss": {
-                    "rule": "stage-wash"
+                    "rule": "stage-wash",
+                    "deck_h": 1.4
                 },
                 "par-columns": {
                     "rule": "up-the-column"
@@ -492,7 +494,7 @@
                 },
                 "par-press": {
                     "rule": "backdrop",
-                    "h": 0.6
+                    "h": 0.92
                 },
                 "beeeye-towers": {
                     "rule": "vertical",
@@ -526,7 +528,8 @@
             "intent": "The two column rows fire across the dance floor at each other and cross over the nave's centre line at 9 m; the four beams behind the DJ X-cross 12 m over the booth, the flank beams over the front of the crowd; the tower bee-eyes cross just in front of the barrier.",
             "aims": {
                 "bsw250-truss": {
-                    "rule": "stage-wash"
+                    "rule": "stage-wash",
+                    "deck_h": 1.4
                 },
                 "par-columns": {
                     "rule": "up-the-column"
@@ -551,7 +554,7 @@
                 },
                 "par-press": {
                     "rule": "backdrop",
-                    "h": 0.6
+                    "h": 0.92
                 },
                 "beeeye-towers": {
                     "rule": "x-cross",
@@ -587,7 +590,8 @@
             "intent": "The ballyhoo focus, 16 m out from the booth, 9 m up: the flank beams, the bee-eyes and the column rows meet there (the booth's lamps over the booth's axis, the column rows over the nave's, 1.65 m apart — the booth is centred on the press, not on the hall); the four beams behind the DJ meet higher, 13 m straight over the booth, so none crosses the DJ.",
             "aims": {
                 "bsw250-truss": {
-                    "rule": "stage-wash"
+                    "rule": "stage-wash",
+                    "deck_h": 1.4
                 },
                 "par-columns": {
                     "rule": "up-the-column"
@@ -613,7 +617,7 @@
                 },
                 "par-press": {
                     "rule": "backdrop",
-                    "h": 0.6
+                    "h": 0.92
                 },
                 "beeeye-towers": {
                     "rule": "point",
@@ -670,7 +674,7 @@
                 },
                 "par-press": {
                     "rule": "backdrop",
-                    "h": 0.6
+                    "h": 0.92
                 },
                 "beeeye-towers": {
                     "rule": "vertical"

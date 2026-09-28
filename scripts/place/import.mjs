@@ -18,7 +18,9 @@
  *   --title <text>      what the hall is called in the room
  *   --sources <dir>     the footage folder (default: the one frames.json names)
  *   --no-sources        skip the second project
- *   --replace           the hall project already holds a room: swap the model
+ *   --replace           the hall project already holds a room: swap the model (its other
+ *                       components, the night, fog, spawn and opening shot are KEPT —
+ *                       they belong to the rig; add --reset-view to write the defaults)
  *                       and drop the old file's asset from the document (the
  *                       entity keeps its id, so lamps hung beside it stay)
  *   --max-sources <n>   how many source files to carry (default 60)
@@ -109,6 +111,38 @@ const sendOps = async (client, projectId, ops) => {
 }
 
 // ── the hall ──────────────────────────────────────────────────────────────────
+/**
+ * `--replace` swaps the room by re-creating `place-hall`, which would drop every
+ * component other scripts wrote on it — the rig builder's `venuePlan` went
+ * (seen 2026-09-28: the plot lost its venue until load-plot --plan-only ran).
+ * Carry the old entity's components the new one does not write; the new ones
+ * (transform, media, …) win. Mutates the createEntity op; returns what it kept.
+ */
+export const carryComponents = (ops, old) => {
+    const op = ops.find((o) => o.type === 'createEntity' && o.payload?.entity?.id === 'place-hall')
+    if (!op || !old?.components) return []
+    const fresh = op.payload.entity.components || {}
+    const kept = Object.keys(old.components).filter((key) => !(key in fresh))
+    op.payload.entity.components = { ...Object.fromEntries(kept.map((key) => [key, old.components[key]])), ...fresh }
+    return kept
+}
+
+/**
+ * `--replace` on a rigged hall: the lights, fog, spawn and opening shot were
+ * written by rig.mjs (the night, `rig.opening`), not by the room. Re-importing
+ * the model must not reset them to the arrival daylight (seen 2026-09-28: the
+ * hall fix's re-import lit the rig's night room white until --night-only ran).
+ * Keeps only the walkable floor, which IS the room's; drops the presentation op.
+ */
+export const keepRoomState = (ops) => {
+    for (let i = ops.length - 1; i >= 0; i -= 1) {
+        const op = ops[i]
+        if (op.type === 'setPresentationState') ops.splice(i, 1)
+        else if (op.type === 'setWorldState') op.payload.patch = { walkableAreas: op.payload.patch.walkableAreas }
+    }
+    return ops
+}
+
 export const hallOps = ({ asset, place, title }) => {
     // With the fit baked into the file, the entity is exactly where the room
     // is: at the origin, unturned, unscaled. di.iiii frames a room's arrival
@@ -289,6 +323,12 @@ const main = async () => {
         if (oldAsset && oldAsset !== asset.id) {
             ops.push({ type: 'deleteAsset', payload: { assetId: oldAsset } })
             say(`  replacing the old model (asset ${oldAsset.slice(0, 12)}…)`)
+        }
+        const kept = carryComponents(ops, old)
+        if (kept.length) say(`  kept on the hall: ${kept.join(', ')}`)
+        if (!args['reset-view']) {
+            keepRoomState(ops)
+            say('  kept the room\'s night, fog, spawn and opening shot (--reset-view to write the arrival defaults)')
         }
     }
     const written = await sendOps(client, hallProject, ops)

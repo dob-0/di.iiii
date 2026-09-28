@@ -106,6 +106,11 @@ PLACEHOLDER = {
     'roof_type': 'space_frame_flat',
     'space_frame_module_m': 3.0,
     'space_frame_depth_m': 2.5,
+    # v3 (2026-09-28): member sections (square, metres) and the star gusset's
+    # span; the lantern's own finer frame module.
+    'space_frame_member_m': {'bottom': 0.24, 'top': 0.20, 'diagonal': 0.16, 'lantern': 0.12},
+    'space_frame_node_m': 0.9,
+    'lantern_module_m': 3.0,
     'lantern_segments_m': [[-45.75, -7.25], [7.25, 45.75]],
     'lantern_spans': [0],
     'neighbour_spans': {'left': 0, 'right': 0},
@@ -132,7 +137,8 @@ KEYS_FROM_DIMS = [
     'span_m', 'pitch_m', 'bays', 'length_m', 'crane_rail_h_m', 'truss_bottom_h_m',
     'ridge_h_m', 'lantern_w_m', 'column_w_m', 'column_d_m', 'upper_column_d_m', 'truss_top_h_m',
     'lantern_h_m', 'column_head', 'column_head_width_m', 'crane_girders_each_row', 'crane_girder_depth_m',
-    'roof_type', 'space_frame_module_m', 'space_frame_depth_m', 'lantern_segments_m', 'lantern_spans',
+    'roof_type', 'space_frame_module_m', 'space_frame_depth_m', 'space_frame_member_m', 'space_frame_node_m',
+    'lantern_module_m', 'lantern_segments_m', 'lantern_spans',
     'neighbour_spans', 'expansion_joint_m', 'paired_columns_at_joint',
     'door_w_m', 'door_h_m', 'entry_platform', 'far_gate_w_m', 'far_gate_h_m', 'aisle_w_m',
     'track_x_m', 'cranes_from_door_m', 'neighbour_cranes_from_door_m', 'low_walls',
@@ -149,27 +155,42 @@ CLI_TO_KEY = {
 }
 
 # Colours (linear sRGB as Blender takes them), roughness, metallic, emissive.
-# Read off the daylight photographs: pale precast concrete, light grey steel,
-# a dark brown-grey corrugated deck, grey-blue crane girders.
+# v3 (2026-09-28, the owner: "cold and bluish; the real hall is warm"): SAMPLED
+# from his photographs (session scratchpad hallfix/sample.py: mean colour of
+# named regions — concrete columns 004/021/038, floor 004/035/1c3956d1, deck
+# underside 021/038/1c3956d1, crane 004, runway girders 021/038, the press
+# 1c3956d1/018, machine line 018/1c3956d1, block wall 004), converted to linear
+# and scaled x1.3 so weathered concrete lands at ~0.29 mean reflectance
+# (aged Portland-cement concrete 0.25-0.35, Levinson & Akbari 2002, Cement and
+# Concrete Research 32(11)). The photos are daylight exposures, so the hues are
+# measured and the absolute level is that one anchor. Frame/steel/rust: the
+# members are too thin to sample cleanly; set by eye against 021/1c3956d1.
 MATERIALS = {
-    'concrete':  ((0.40, 0.37, 0.32), 0.92, 0.0, None),
-    'floor':     ((0.15, 0.14, 0.13), 0.95, 0.0, None),
-    'block':     ((0.36, 0.34, 0.30), 0.95, 0.0, None),
-    'glass':     ((0.05, 0.075, 0.09), 0.25, 0.0, None),
-    'frame':     ((0.34, 0.34, 0.33), 0.6, 0.0, None),   # the space frame
-    'steel':     ((0.30, 0.30, 0.29), 0.6, 0.0, None),   # mullions, handrails, lantern frame
-    'girder':    ((0.22, 0.25, 0.27), 0.6, 0.0, None),   # crane girders, grey plate
-    'rust':      ((0.20, 0.085, 0.035), 0.85, 0.0, None),
-    'crane':     ((0.72, 0.46, 0.02), 0.6, 0.0, None),
-    'deck':      ((0.09, 0.08, 0.07), 0.9, 0.0, None),
-    'machine':   ((0.16, 0.18, 0.17), 0.7, 0.0, None),   # old dark-grey machine steel
+    'concrete':  ((0.36, 0.30, 0.20), 0.92, 0.0, None),    # photo #8f836e
+    'floor':     ((0.094, 0.069, 0.046), 0.95, 0.0, None), # photo #4c4135, dust on concrete
+    'block':     ((0.40, 0.32, 0.25), 0.95, 0.0, None),    # photo #968879
+    'glass':     ((0.05, 0.06, 0.065), 0.25, 0.0, None),   # the outer ribbon windows (night: dark)
+    'frame':     ((0.23, 0.20, 0.16), 0.6, 0.0, None),     # the space frame: dusty steel, lit tan in 021
+    'steel':     ((0.20, 0.18, 0.15), 0.6, 0.0, None),     # mullions, handrails, lantern frame
+    'girder':    ((0.15, 0.14, 0.12), 0.6, 0.0, None),     # crane girders, photo #545049
+    'rust':      ((0.16, 0.075, 0.035), 0.85, 0.0, None),  # rails, bracing, guards
+    'crane':     ((0.27, 0.18, 0.057), 0.6, 0.0, None),    # photo #7f673b, dusty ochre
+    'deck':      ((0.09, 0.084, 0.073), 0.9, 0.0, None),   # photo #4b4843, corrugated sheet underside
+    'machine':   ((0.175, 0.16, 0.14), 0.7, 0.0, None),    # photo #67635d, grey-brown machine steel
+    'press':     ((0.045, 0.041, 0.036), 0.45, 0.3, None), # photo #2d2d2d, the forging press: dark oily steel
+    'brick':     ((0.30, 0.16, 0.09), 0.95, 0.0, None),    # the machine line's brick plinth (018)
+    # The lantern glazing: the brightest thing in the real roof (017, 021, 023,
+    # 035, 1c3956d1). Emissive, so it reads as light at no per-pixel lighting
+    # cost (no light source is added). Strength tuned on the GPU against 1c3956d1.
+    'skylight':  ((0.70, 0.76, 0.82), 0.3, 0.0, (0.70, 0.76, 0.82)),
     'zone-dance':     ((0.02, 0.08, 1.0), 0.9, 0.0, (0.02, 0.08, 1.0)),
     'zone-stage':     ((0.02, 0.8, 0.08), 0.9, 0.0, (0.02, 0.8, 0.08)),
     'zone-backstage': ((1.0, 0.06, 0.03), 0.9, 0.0, (1.0, 0.06, 0.03)),
 }
+EMISSION_STRENGTH = {'skylight': 1.0}
 # Open surfaces (the frame's prisms, glass planes): drawn from both sides and
 # never run through the "make normals consistent" pass meant for closed boxes.
-DOUBLE_SIDED = {'frame', 'glass'}
+DOUBLE_SIDED = {'frame', 'glass', 'skylight'}
 
 
 def parse_cli():
@@ -244,7 +265,7 @@ def resolve_dims(opts):
         origin['length_m'] = f"bays x pitch ({origin['bays']}, {origin['pitch_m']})"
     for key in ('span_m', 'pitch_m', 'crane_rail_h_m', 'truss_bottom_h_m', 'truss_top_h_m', 'ridge_h_m',
                 'lantern_w_m', 'lantern_h_m', 'column_w_m', 'column_d_m', 'upper_column_d_m', 'column_head_width_m',
-                'crane_girder_depth_m', 'space_frame_module_m', 'door_w_m', 'door_h_m', 'far_gate_w_m', 'far_gate_h_m'):
+                'crane_girder_depth_m', 'space_frame_module_m', 'space_frame_node_m', 'lantern_module_m', 'door_w_m', 'door_h_m', 'far_gate_w_m', 'far_gate_h_m'):
         dims[key] = float(dims[key])
     L = dims['length_m']
     dims['cranes_from_door_m'] = [min(L - 3, max(3.0, float(v))) for v in dims['cranes_from_door_m']]
@@ -341,6 +362,65 @@ class Builder:
             j = (i + 1) % count
             faces.append((base + i, base + j, base + count + j, base + count + i))
 
+    def tube4(self, material, p0, p1, width, depth=None):
+        """An open square-section bar from p0 to p1: 4 quads, 8 triangles.
+
+        The space frame's chords and diagonals (v3): the real members are heavy
+        tubes and angles that read as chunky from the floor (1c3956d1, 021), so
+        they get a flat-faced section, not v2's thin triangle; the ends are
+        never seen.
+        """
+        depth = width if depth is None else depth
+        d = [p1[i] - p0[i] for i in range(3)]
+        length = norm(d) or 1.0
+        d = [c / length for c in d]
+        helper = (0.0, 0.0, 1.0) if abs(d[2]) < 0.9 else (1.0, 0.0, 0.0)
+        u = cross(d, helper)
+        u = scale(u, 1.0 / (norm(u) or 1.0))
+        v = cross(d, u)
+        hw, hd = width / 2, depth / 2
+        ring = [add(scale(u, sa * hw), scale(v, sb * hd)) for sa, sb in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+        verts, faces = self.parts[material]
+        base = len(verts)
+        verts.extend(add(p0, r) for r in ring)
+        verts.extend(add(p1, r) for r in ring)
+        for k in range(4):
+            j = (k + 1) % 4
+            faces.append((base + k, base + j, base + 4 + j, base + 4 + k))
+
+    def cylinder(self, material, p0, p1, radius, sides=12):
+        """A closed cylinder from p0 to p1 (caps as n-gons)."""
+        d = [p1[i] - p0[i] for i in range(3)]
+        length = norm(d) or 1.0
+        d = [c / length for c in d]
+        helper = (0.0, 0.0, 1.0) if abs(d[2]) < 0.9 else (1.0, 0.0, 0.0)
+        u = cross(d, helper)
+        u = scale(u, 1.0 / (norm(u) or 1.0))
+        v = cross(d, u)
+        ring = [add(scale(u, radius * math.cos(2 * math.pi * k / sides)), scale(v, radius * math.sin(2 * math.pi * k / sides)))
+                for k in range(sides)]
+        verts, faces = self.parts[material]
+        base = len(verts)
+        verts.extend(add(p0, r) for r in ring)
+        verts.extend(add(p1, r) for r in ring)
+        faces.append(tuple(base + k for k in reversed(range(sides))))
+        faces.append(tuple(base + sides + k for k in range(sides)))
+        for k in range(sides):
+            j = (k + 1) % sides
+            faces.append((base + k, base + j, base + sides + j, base + sides + k))
+
+    # HALL-frame helpers (x across, y up, z along with + toward the entry) ->
+    # Blender (x, -z, y). The machines are written in the hall frame, as the
+    # features file gives them.
+    def hbox(self, material, xr, yr, zr):
+        self.box(material, (xr[0], -zr[1], yr[0]), (xr[1], -zr[0], yr[1]))
+
+    def hcyl(self, material, a, c, radius, sides=12):
+        self.cylinder(material, (a[0], -a[2], a[1]), (c[0], -c[2], c[1]), radius, sides)
+
+    def hbar(self, material, a, c, width, depth=None):
+        self.tube4(material, (a[0], -a[2], a[1]), (c[0], -c[2], c[1]), width, depth)
+
     def to_objects(self):
         objects = []
         for name, (verts, faces) in self.parts.items():
@@ -391,7 +471,7 @@ def material(name):
     bsdf.inputs['Metallic'].default_value = metallic
     if emissive:
         bsdf.inputs['Emission Color'].default_value = (*emissive, 1.0)
-        bsdf.inputs['Emission Strength'].default_value = 0.6
+        bsdf.inputs['Emission Strength'].default_value = EMISSION_STRENGTH.get(name, 0.6)
     mat.use_backface_culling = name not in DOUBLE_SIDED
     return mat
 
@@ -453,7 +533,8 @@ def build(dims):
     def span_of(x):
         return int(math.floor((x + S / 2) / S)) if x_left <= x <= x_right else None
 
-    detail_spans = {-1, 0, 1}
+    # v3: the 6 m module costs a quarter of v2's 3 m, so every span gets the full frame.
+    detail_spans = set(range(-int(dims['neighbour_spans'].get('left', 0)), int(dims['neighbour_spans'].get('right', 0)) + 1))
 
     # Floor: the slab under every span, rail tracks in the nave.
     b.box('floor', (wall_out[0], -end_out, -0.3), (wall_out[1], end_out, 0.0))
@@ -558,28 +639,41 @@ def build(dims):
         if (k < 0 and left) or (k > 0 and right):
             crane(k, float(from_door), False)
 
-    # The space frame. Bottom nodes on the module grid from the left row,
-    # top nodes over the centre of each module; four diagonals per top node.
+    # The space frame (v3). Square-on-square offset grid: bottom nodes on the
+    # module grid from the left row — at a 6 m module one bottom node stands
+    # over every column — top nodes over the centre of each module, four
+    # diagonals per top node (the square pyramids). Every bottom node carries a
+    # star gusset: two crossed vertical plates where the four chords and four
+    # diagonals meet (the "star-shaped nodes" of 017/021/1c3956d1).
     nx = int(round((x_right - x_left) / module))
     ny = int(round(L / module))
     mx = (x_right - x_left) / nx
     my = L / ny
-    rb, rt, rd = 0.07, 0.06, 0.045
+    sec = dims['space_frame_member_m']
+    wb, wt, wd = float(sec['bottom']), float(sec['top']), float(sec['diagonal'])
+    gusset = float(dims['space_frame_node_m'])
 
     def full(x):
         s = span_of(min(x_right - 1e-6, x))
         return s in detail_spans
 
     members = 0
+    nodes = 0
     for j in range(ny + 1):
         y = -L / 2 + j * my
         for i in range(nx):
             x0, x1 = x_left + i * mx, x_left + (i + 1) * mx
-            b.bar('frame', (x0, y, bottom), (x1, y, bottom), rb); members += 1
+            b.tube4('frame', (x0, y, bottom), (x1, y, bottom), wb); members += 1
     for i in range(nx + 1):
         x = x_left + i * mx
         for j in range(ny):
-            b.bar('frame', (x, -L / 2 + j * my, bottom), (x, -L / 2 + (j + 1) * my, bottom), rb); members += 1
+            b.tube4('frame', (x, -L / 2 + j * my, bottom), (x, -L / 2 + (j + 1) * my, bottom), wb); members += 1
+        for j in range(ny + 1):
+            y = -L / 2 + j * my
+            g = gusset / 2
+            b.box('frame', (x - g, y - 0.02, bottom - 0.25), (x + g, y + 0.02, bottom + g * 0.9))
+            b.box('frame', (x - 0.02, y - g, bottom - 0.25), (x + 0.02, y + g, bottom + g * 0.9))
+            nodes += 1
     for i in range(nx):
         xc = x_left + (i + 0.5) * mx
         if not full(xc):
@@ -587,11 +681,12 @@ def build(dims):
         for j in range(ny):
             yc = -L / 2 + (j + 0.5) * my
             for dx, dy in ((-0.5, -0.5), (0.5, -0.5), (0.5, 0.5), (-0.5, 0.5)):
-                b.bar('frame', (xc, yc, top), (xc + dx * mx, yc + dy * my, bottom), rd); members += 1
+                b.tube4('frame', (xc, yc, top), (xc + dx * mx, yc + dy * my, bottom), wd); members += 1
+            b.box('frame', (xc - 0.2, yc - 0.2, top - 0.2), (xc + 0.2, yc + 0.2, top + 0.05))
             if i + 1 < nx and full(xc + mx):
-                b.bar('frame', (xc, yc, top), (xc + mx, yc, top), rt); members += 1
+                b.tube4('frame', (xc, yc, top), (xc + mx, yc, top), wt); members += 1
             if j + 1 < ny:
-                b.bar('frame', (xc, yc, top), (xc, yc + my, top), rt); members += 1
+                b.tube4('frame', (xc, yc, top), (xc, yc + my, top), wt); members += 1
 
     # Lanterns (hall frame x across, Blender y along).
     lh = dims['lantern_h_m']
@@ -607,18 +702,43 @@ def build(dims):
             lanterns.append((cx - lw / 2, cx + lw / 2, y0, y1))
     deck_z = top + 0.05
     lantern_top = deck_z + deck_t + lh
+    lm = float(dims['lantern_module_m'])
+    lw_member = float(dims['space_frame_member_m'].get('lantern', 0.12))
     for x0, x1, y0, y1 in lanterns:
         z0 = deck_z + deck_t
+        # The lantern's own lighter frame, a finer module (035/023: four panels
+        # across the 12 m opening): a double layer from the deck line up to
+        # under the lantern roof, pyramids on the finer grid.
+        lz0, lz1 = top, lantern_top - 0.45
+        kx = max(1, int(round((x1 - x0) / lm)))
+        ky = max(1, int(round((y1 - y0) / lm)))
+        ax_, ay_ = (x1 - x0) / kx, (y1 - y0) / ky
+        for jj in range(ky + 1):
+            yy = y0 + jj * ay_
+            b.tube4('frame', (x0, yy, lz0), (x1, yy, lz0), lw_member); members += 1
+        for ii in range(kx + 1):
+            xx = x0 + ii * ax_
+            b.tube4('frame', (xx, y0, lz0), (xx, y1, lz0), lw_member); members += 1
+        for ii in range(kx):
+            xc = x0 + (ii + 0.5) * ax_
+            for jj in range(ky):
+                yc = y0 + (jj + 0.5) * ay_
+                for dx, dy in ((-0.5, -0.5), (0.5, -0.5), (0.5, 0.5), (-0.5, 0.5)):
+                    b.tube4('frame', (xc, yc, lz1), (xc + dx * ax_, yc + dy * ay_, lz0), lw_member * 0.8); members += 1
+                if ii + 1 < kx:
+                    b.tube4('frame', (xc, yc, lz1), (xc + ax_, yc, lz1), lw_member); members += 1
+                if jj + 1 < ky:
+                    b.tube4('frame', (xc, yc, lz1), (xc, yc + ay_, lz1), lw_member); members += 1
         for x in (x0, x1):
             b.box('deck', (x - 0.1, y0, z0), (x + 0.1, y1, z0 + 0.5))
-            b.box('glass', (x - 0.02, y0, z0 + 0.5), (x + 0.02, y1, lantern_top - 0.3))
+            b.box('skylight', (x - 0.02, y0, z0 + 0.5), (x + 0.02, y1, lantern_top - 0.3))
             n = max(1, int(round((y1 - y0) / module)))
             for m in range(n + 1):
                 my_ = y0 + m * (y1 - y0) / n
                 b.box('steel', (x - 0.06, my_ - 0.05, z0 + 0.5), (x + 0.06, my_ + 0.05, lantern_top - 0.3))
         for y in (y0, y1):
             b.box('deck', (x0, y - 0.1, z0), (x1, y + 0.1, z0 + 0.5))
-            b.box('glass', (x0, y - 0.02, z0 + 0.5), (x1, y + 0.02, lantern_top - 0.3))
+            b.box('skylight', (x0, y - 0.02, z0 + 0.5), (x1, y + 0.02, lantern_top - 0.3))
             for m in range(5):
                 mx_ = x0 + m * (x1 - x0) / 4
                 b.box('steel', (mx_ - 0.05, y - 0.06, z0 + 0.5), (mx_ + 0.05, y + 0.06, lantern_top - 0.3))
@@ -684,13 +804,34 @@ def build(dims):
             sx = px0 + 7.0 + 0.3 * (12 - k - 1)
             b.box('concrete', (sx, py0, 0.0), (sx + 0.3, py0 + 1.2, rise))
 
-    # Machines: massing boxes in the hall frame (x, z) -> Blender (x, -z).
+    # Machines, in the hall frame (x, z) -> Blender (x, -z). An item is an
+    # ENVELOPE box (the rig aims at it, beams stop in it); `model` names the
+    # detailed body drawn inside it (MACHINE_MODELS), 'none' draws nothing (a
+    # part another item's model already draws), no model a plain box. Each
+    # item gets `faces`: the front-facing rectangles the baked wash may land on.
     massing = []
+    by_id = {item.get('id'): item for item in dims['massing']}
     for item in dims['massing']:
         (x0, x1), (z0, z1), (h0, h1) = item['x_m'], item['z_m'], item.get('y_m', [0.0, 2.0])
-        mat = item.get('material', 'machine')
-        b.box(mat if mat in MATERIALS else 'machine', (x0, -z1, h0), (x1, -z0, h1))
+        model = item.get('model')
+        item = dict(item)
+        if model in MACHINE_MODELS:
+            item['faces'] = MACHINE_MODELS[model](b, item, by_id)
+        elif model == 'none':
+            item['faces'] = item.get('faces') or []
+        else:
+            mat = item.get('material', 'machine')
+            b.box(mat if mat in MATERIALS else 'machine', (x0, -z1, h0), (x1, -z0, h1))
+            item['faces'] = [{'x_m': [x0, x1], 'y_m': [h0, h1], 'z_m': z1, 'albedo': albedo(mat if mat in MATERIALS else 'machine')}]
         massing.append(item)
+    # A part drawn by another's model ('none') takes that model's faces inside its own box.
+    for item in massing:
+        if item.get('model') == 'none' and not item['faces']:
+            owner = next((m for m in massing if m.get('id') == item.get('drawn_by')), None)
+            if owner:
+                (y0, y1) = item['y_m']
+                item['faces'] = [f for f in owner['faces'] if f['y_m'][1] > y0 and f['y_m'][0] < y1
+                                 and f['x_m'][1] > item['x_m'][0] and f['x_m'][0] < item['x_m'][1]]
 
     # Zones: floor tape along the outline of each used rectangle.
     zones = {}
@@ -726,14 +867,16 @@ def build(dims):
         'runway_bottom_m': round(head_top, 3),
         'crane_rail_x_m': round(nave_rail, 3),
         'cranes': cranes,
+        'albedo': {'column': albedo('concrete'), 'press': albedo('press'), 'machine': albedo('machine')},
         'column_head': {'flare_start_m': round(flare_start, 3), 'head_top_m': round(head_top, 3),
                         'head_w_m': round(2 * hw, 3), 'girder_offset_m': round(girder_off, 3), 'upper_d_m': round(ud, 3)},
         'truss_bottom_m': round(bottom, 3),
         'truss_top_centre_m': round(top, 3),
         'eave_top_m': round(top, 3),
         'deck_m': round(deck_z, 3),
-        'space_frame': {'module_m': [round(mx, 3), round(my, 3)], 'members': members,
-                        'detail_spans': sorted(detail_spans)},
+        'space_frame': {'module_m': [round(mx, 3), round(my, 3)], 'members': members, 'nodes': nodes,
+                        'member_m': dims['space_frame_member_m'], 'node_m': dims['space_frame_node_m'],
+                        'lantern_module_m': dims['lantern_module_m'], 'detail_spans': sorted(detail_spans)},
         'lantern_h_m': round(lantern_top - deck_z, 3),
         'lantern_w_m': round(lw, 3),
         'lantern_top_m': round(lantern_top, 3),
@@ -752,6 +895,137 @@ def build(dims):
         'cameras': dims['cameras'] or {},
     }
     return b, geometry
+
+
+# ── machines modelled from the photographs ─────────────────────────────────────
+# Each draws a detailed body inside its envelope item (hall frame: x across, y
+# up, z along, the machine's FRONT facing +z, the audience) and returns the
+# front-facing rectangles the baked wash may land on. Proportions are read off
+# the owner's photographs (1c3956d1 = photo 024, the panorama 29b70cf5, 004,
+# 018, 038); absolute sizes come from the envelope, which the perspective fit of
+# photo 032 gives (features file, `how`). All ESTIMATED; hall.json says so.
+
+def crank_press(b, item, by_id):
+    """A hot-die forging crank press (the Soviet KGShP family is the likely
+    one; the model is NOT identified — no plate was readable). From 1c3956d1:
+    two tall side housings, a bed and bolster between them, the ram in the
+    window, a heavy crown, a motor on the crown with a V-belt guard sweeping
+    down to a big flywheel at the top right, a control panel on the left
+    housing, lubrication pipes. The crown item (`crown`) sets the crown's top;
+    the flywheel rises above it."""
+    (x0, x1), (z0, z1), (_, H) = item['x_m'], item['z_m'], item['y_m']
+    crown = by_id.get(item.get('crown'))
+    Hc = crown['y_m'][0] + 0.7 if crown else H + 0.7          # crown top
+    W = x1 - x0
+    uw = min(0.8, W * 0.29)                                   # a housing's width
+    faces = []
+    m = 'press'
+    b.hbox('concrete', (x0 - 0.35, x1 + 0.35), (0.0, 0.12), (z0 - 0.3, z1 + 0.3))     # foundation
+    for hx0, hx1 in ((x0, x0 + uw), (x1 - uw, x1)):
+        b.hbox(m, (hx0, hx1), (0.0, H), (z0 + 0.3, z1))
+        faces.append({'x_m': [hx0, hx1], 'y_m': [0.0, H], 'z_m': z1, 'albedo': albedo(m)})
+        for rx in (hx0 + 0.04, hx1 - 0.16):                   # front flanges
+            b.hbox(m, (rx, rx + 0.12), (0.25, H - 0.25), (z1, z1 + 0.12))
+        for yy in (0.9, 2.0, 3.1):                            # bolted cross plates
+            b.hbox('rust', (hx0 + 0.1, hx1 - 0.1), (yy, yy + 0.16), (z1, z1 + 0.06))
+    bx0, bx1 = x0 + uw, x1 - uw
+    b.hbox(m, (bx0, bx1), (0.0, 1.25), (z0 + 0.5, z1 - 0.15))                          # bed
+    faces.append({'x_m': [bx0, bx1], 'y_m': [0.0, 1.25], 'z_m': z1 - 0.15, 'albedo': albedo(m)})
+    b.hbox('rust', (bx0 + 0.1, bx1 - 0.1), (1.25, 1.55), (z0 + 0.8, z1 - 0.35))       # bolster + die
+    b.hbox(m, (bx0 + 0.05, bx1 - 0.05), (2.3, 3.5), (z0 + 0.7, z1 - 0.25))             # ram
+    faces.append({'x_m': [bx0 + 0.05, bx1 - 0.05], 'y_m': [2.3, 3.5], 'z_m': z1 - 0.25, 'albedo': albedo(m)})
+    b.hbox('rust', (bx0 + 0.25, bx1 - 0.25), (1.85, 2.3), (z0 + 1.0, z1 - 0.45))      # upper die
+    b.hbox(m, (bx0, bx1), (3.5, H), (z0 + 0.5, z1 - 0.1))                              # the window's head
+    b.hbox(m, (x0 - 0.12, x1 + 0.12), (H, Hc), (z0 + 0.15, z1 + 0.08))                # crown
+    faces.append({'x_m': [x0 - 0.12, x1 + 0.12], 'y_m': [H, Hc], 'z_m': z1 + 0.08, 'albedo': albedo(m)})
+    for nx_ in (x0 + uw / 2, x1 - uw / 2):                    # tie-rod nuts on the crown
+        for nz in (z0 + 0.5, z1 - 0.35):
+            b.hcyl('rust', (nx_, Hc, nz), (nx_, Hc + 0.25, nz), 0.17, 8)
+    # the motor on the crown, left, its axis across
+    my_ = Hc + 0.45
+    b.hbox(m, (x0 + 0.2, x0 + 1.4), (Hc, Hc + 0.15), (z0 + 0.5, z0 + 1.6))
+    b.hcyl(m, (x0 + 0.25, my_, z0 + 1.05), (x0 + 1.35, my_, z0 + 1.05), 0.38, 12)
+    # the flywheel: top right, its face to the audience, overhanging the right housing
+    fr = 0.78
+    fc = (x1 - 0.15, Hc + 0.02, z1 - 0.55)
+    ring = 16
+    for k in range(ring):
+        a0, a1 = 2 * math.pi * k / ring, 2 * math.pi * (k + 1) / ring
+        p0 = (fc[0] + fr * math.cos(a0), fc[1] + fr * math.sin(a0), fc[2])
+        p1 = (fc[0] + fr * math.cos(a1), fc[1] + fr * math.sin(a1), fc[2])
+        b.hbar(m, p0, p1, 0.2, 0.34)
+    for k in range(4):
+        a = math.pi / 4 + k * math.pi / 2
+        b.hbar(m, fc, (fc[0] + fr * math.cos(a), fc[1] + fr * math.sin(a), fc[2]), 0.1, 0.12)
+    b.hcyl(m, (fc[0], fc[1], fc[2] - 0.45), (fc[0], fc[1], fc[2] + 0.3), 0.2, 10)     # hub + shaft
+    # the V-belt guard: a sheet from the motor pulley down to the flywheel, then a scoop under it
+    gz = fc[2] - 0.35
+    b.hbar('rust', (x0 + 0.6, my_ + 0.25, gz), (fc[0] - 0.2, fc[1] + 0.35, gz), 0.75, 0.08)
+    # the curved shell under the flywheel, reaching out right past it (1c3956d1)
+    b.hbar('press', (fc[0] - 0.9, fc[1] - 0.75, gz + 0.3), (fc[0] + 0.5, fc[1] - 0.7, gz + 0.3), 0.8, 0.07)
+    b.hbar('press', (fc[0] + 0.5, fc[1] - 0.7, gz + 0.3), (fc[0] + 1.05, fc[1] - 0.25, gz + 0.3), 0.8, 0.07)
+    # 1c3956d1: a tall rounded cylinder up the left housing's front (the
+    # counterbalance / brake cylinder), and a horizontal one sticking out left
+    # at the crown's underside
+    b.hcyl(m, (x0 + 0.2, 1.7, z1 + 0.3), (x0 + 0.2, 3.6, z1 + 0.3), 0.24, 12)
+    b.hcyl(m, (x0 - 0.9, H - 0.35, z1 - 0.3), (x0 + uw, H - 0.35, z1 - 0.3), 0.2, 10)
+    # bolted plates low on the front (the bolt grid seen on the left housing)
+    for yy in (0.35, 0.65):
+        for xx in (x0 + 0.15, x0 + 0.35, x0 + 0.55):
+            b.hbox('rust', (xx, xx + 0.08), (yy, yy + 0.08), (z1 + 0.12, z1 + 0.18))
+    # the control panel on the left housing's face; pipes up the left side
+    b.hbox('machine', (x0 + 0.1, x0 + uw - 0.1), (1.2, 2.3), (z1 + 0.12, z1 + 0.34))
+    for k, pz in enumerate((z1 - 0.4, z0 + 0.9)):
+        b.hcyl('rust', (x0 - 0.12, 0.0, pz), (x0 - 0.12, Hc - 0.2, pz), 0.07 + 0.02 * k, 8)
+    b.hbox('machine', (x0 - 0.7, x0 - 0.05), (0.0, 1.1), (z0 + 0.5, z0 + 1.7))        # lubrication tank
+    return faces
+
+
+def machine_line(b, item, by_id):
+    """The long machine line beside the press (018, 29b70cf5, 1c3956d1): a
+    brick plinth, a long steel body with ribs, posts and a rail along its top,
+    and the heavy drilled beam lying along its front on the floor."""
+    (x0, x1), (z0, z1), (_, H) = item['x_m'], item['z_m'], item['y_m']
+    faces = []
+    pl = min(0.9, H * 0.4)
+    b.hbox('brick', (x0, x1), (0.0, pl), (z0, z1))
+    b.hbox('machine', (x0 + 0.1, x1 - 0.1), (pl, H - 0.3), (z0 + 0.2, z1 - 0.2))
+    faces.append({'x_m': [x0 + 0.1, x1 - 0.1], 'y_m': [pl, H - 0.3], 'z_m': z1 - 0.2, 'albedo': albedo('machine')})
+    n = max(1, int((x1 - x0) / 0.9))
+    for k in range(n + 1):
+        rx = x0 + 0.1 + k * (x1 - x0 - 0.3) / n
+        b.hbox('rust', (rx, rx + 0.1), (pl, H - 0.2), (z1 - 0.2, z1 - 0.06))
+        if k % 2 == 0:
+            b.hbox('rust', (rx, rx + 0.08), (H - 0.3, H), (z1 - 0.5, z1 - 0.42))
+    b.hbox('rust', (x0 + 0.1, x1 - 0.1), (H - 0.06, H), (z1 - 0.55, z1 - 0.37))
+    b.hbox('machine', (x0 - 0.4, x1), (0.0, 0.08), (z1 + 0.3, z1 + 0.8))                 # the drilled beam
+    b.hbox('machine', (x0 - 0.4, x1), (0.08, 0.62), (z1 + 0.52, z1 + 0.58))
+    b.hbox('machine', (x0 - 0.4, x1), (0.62, 0.7), (z1 + 0.3, z1 + 0.8))
+    return faces
+
+
+def pipe_run(b, item, by_id):
+    """A pipe along x inside its envelope, on posts, rising in an elbow at its
+    near (press) end (1c3956d1: the big pipe arching up beside the press)."""
+    (x0, x1), (z0, z1), (y0, y1) = item['x_m'], item['z_m'], item['y_m']
+    r = min(y1 - y0, z1 - z0) / 2
+    yc, zc = (y0 + y1) / 2, (z0 + z1) / 2
+    b.hcyl('rust', (x0 + 0.6, yc, zc), (x1, yc, zc), r, 12)
+    b.hcyl('rust', (x0 + 0.6, yc, zc), (x0 + 0.6, yc + 1.4, zc), r, 12)
+    b.hcyl('rust', (x0 + 0.6, yc + 1.4, zc), (x0 - 0.3, yc + 1.4, zc), r, 12)
+    for k in range(int((x1 - x0) / 3) + 1):
+        px = x0 + 1.5 + 3 * k
+        if px < x1:
+            b.hbox('rust', (px - 0.05, px + 0.05), (0.0, yc - r), (zc - 0.05, zc + 0.05))
+    return []
+
+
+def albedo(material):
+    """Mean linear base colour: the reflectance the wash bake uses for a face."""
+    return round(sum(MATERIALS[material][0]) / 3, 4)
+
+
+MACHINE_MODELS = {'crank_press': crank_press, 'machine_line': machine_line, 'pipe_run': pipe_run}
 
 
 def export(objects, glb_path):
