@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useProjectDocumentSync } from '../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../project/hooks/useOpHistory.js'
 import { useProjectStore } from '../project/state/projectStore.js'
@@ -40,6 +40,7 @@ import './plot.css'
 // base's snap() measured on the plan; lamps take their type's symbol; the title
 // block's totals are the patch sheet's.
 
+const PlotRoom = lazy(() => import('./PlotRoom.jsx'))
 
 const PIECE_URLS = { 'truss-1m': truss1Url, 'truss-2m': truss2Url, 'truss-3m': truss3Url, tower: towerUrl, 'deck-2x1': deckUrl }
 
@@ -346,6 +347,7 @@ export default function PlotSurface({ spaceId, projectId, library = TYPE_LIBRARY
     const [ghost, setGhost] = useState(null)
     const [measure, setMeasure] = useState(null)
     const [marquee, setMarquee] = useState(null)
+    const [pane, setPane] = useState('plan') // phone: plan | room
     const [sheetOpen, setSheetOpen] = useState(false)
 
     const shown = useMemo(() => (preview?.ops?.length ? applyProjectOps(document_, preview.ops).entities : entities), [preview, document_, entities])
@@ -388,7 +390,7 @@ export default function PlotSurface({ spaceId, projectId, library = TYPE_LIBRARY
         })
         ro.observe(el)
         return () => ro.disconnect()
-    }, [phone])
+    }, [pane, phone])
     const extent = useMemo(() => rigExtent({ lamps: model.lamps, pieces: model.pieces, boxes: model.boxes }, planExtent(model.venue)) || [-10, -10, 10, 10], [model.lamps, model.pieces, model.boxes, model.venue])
     const fitted = useRef(false)
     useEffect(() => {
@@ -647,7 +649,7 @@ export default function PlotSurface({ spaceId, projectId, library = TYPE_LIBRARY
         const stop = (e) => e.preventDefault()
         el.addEventListener('wheel', stop, { passive: false })
         return () => el.removeEventListener('wheel', stop)
-    }, [phone])
+    }, [pane, phone])
 
     // --- keys ------------------------------------------------------------------
     useEffect(() => {
@@ -769,13 +771,23 @@ export default function PlotSurface({ spaceId, projectId, library = TYPE_LIBRARY
         </div>
     )
 
+    const room = (
+        <Suspense fallback={<div className="rigplot-room rigplot-room--empty">room…</div>}>
+            <PlotRoom document={shownDocument(document_, shown)} selectedIds={selectedIds} onSelect={(id, add) => (id ? (add ? select([...new Set([...selectedIds, id])]) : select([id])) : select([]))} extent={extent} venueExtent={planExtent(model.venue)} />
+        </Suspense>
+    )
+
     if (phone) {
         return (
             <div className="rigplot rigplot--phone">
                 <header className="rigplot-top">
                     <span className="rigplot-mono rigplot-top__title">{title}</span>
+                    <div className="rigplot-toggle" role="group" aria-label="View">
+                        <button type="button" aria-pressed={pane === 'plan'} onClick={() => setPane('plan')}>plan</button>
+                        <button type="button" aria-pressed={pane === 'room'} onClick={() => setPane('room')}>room</button>
+                    </div>
                 </header>
-                <div className="rigplot-stage">{plan}</div>
+                <div className="rigplot-stage">{pane === 'plan' ? plan : room}</div>
                 <section className={`rigplot-sheet${sheetOpen ? ' is-open' : ''}`} aria-label="Pieces and inspector">
                     <button type="button" className="rigplot-sheet__handle" aria-expanded={sheetOpen} onClick={() => setSheetOpen((o) => !o)}><span aria-hidden="true" />{sheetOpen ? 'close' : 'place · inspect'}</button>
                     <div className="rigplot-sheet__tools">
@@ -796,6 +808,7 @@ export default function PlotSurface({ spaceId, projectId, library = TYPE_LIBRARY
                 {statusLine}
             </main>
             <aside className="rigplot-side">
+                <div className="rigplot-roombox">{room}</div>
                 {side}
             </aside>
         </div>
@@ -804,6 +817,9 @@ export default function PlotSurface({ spaceId, projectId, library = TYPE_LIBRARY
 
 const snapHint = (tool) => ({ truss: 'drag a run; ends snap', tower: 'click; under a truss end it builds to its height', deck: 'click; edges join', fixture: 'click near a truss to hang', fx: 'click to stand', measure: 'drag to measure' }[tool] || '')
 
+// The room pane shows the same entities the plan shows — a drag's preview included —
+// so the room follows while the hand is still moving.
+const shownDocument = (doc, entities) => (entities === doc.entities ? doc : { ...doc, entities })
 
 function Ghost({ ghost, u, model, options }) {
     const { res } = ghost
