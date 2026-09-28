@@ -118,12 +118,31 @@ export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) =
                 position: lensFromMount({ mount: lamp.mount, hung, beam: dir, type }).map((v) => Math.round(v * 1000) / 1000),
                 rotation: rotationFromPanTilt({ pan, tilt }),
                 color: look.colours?.[key] || null,
+                level: levelOfKey(look, key),
                 pan: Math.round(pan * 10) / 10,
                 tilt: Math.round(tilt * 10) / 10,
                 rule: aim.rule
             })
         })
     }
+    return out
+}
+
+/** A look's level for a group key, 0..1 (RIG_BUILD.md §14); a group it does not name is at full. */
+export const levelOfKey = (look, key) => {
+    const v = Number(look?.levels?.[key])
+    return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1
+}
+
+// A lamp at a look's level: its light and the haze of its cone scaled. The cone is kept
+// (at haze 0 it is unseen): a beam-only lamp whose beam were hidden would become a REAL
+// light (spotBeam.js beamCastsLight).
+const HAZE_DEFAULT = 0.4 // spotBeam.js DEFAULT_HAZE — what an unset haze draws as
+const atLevel = (components, level) => {
+    if (level === 1 || level == null) return {}
+    const out = {}
+    if (components.light) out.light = { ...components.light, intensity: Math.round((Number(components.light.intensity) || 0) * level * 100) / 100 }
+    if (components.beam) out.beam = { ...components.beam, haze: Math.round((Number.isFinite(components.beam.haze) ? components.beam.haze : HAZE_DEFAULT) * level * 1000) / 1000 }
     return out
 }
 
@@ -134,12 +153,13 @@ export const posedEntities = (entities, poses) => {
         const p = poses.get(e.id)
         if (!p || e.type !== 'spotLight') return e
         const t = e.components.transform || {}
+        const lit = p.color && e.components.light ? { ...e.components, light: { ...e.components.light, color: p.color } } : e.components
         return {
             ...e,
             components: {
-                ...e.components,
+                ...lit,
                 transform: { ...t, position: p.position, rotation: p.rotation },
-                ...(p.color && e.components.light ? { light: { ...e.components.light, color: p.color } } : {})
+                ...atLevel(lit, p.level)
             }
         }
     })
@@ -152,6 +172,9 @@ export const restOps = (entities, poses) => {
         const p = poses.get(e.id)
         if (!p || e.type !== 'spotLight') continue
         ops.push({ type: 'updateComponent', payload: { entityId: e.id, component: 'transform', patch: { position: p.position, rotation: p.rotation } } })
+        // Aims and colours only. A look's LEVEL is not rested: the document holds no lamp's
+        // nominal intensity to come back to, so writing 0 would be a one-way door (the desk
+        // holds levels; the room shows them while the look plays).
         if (p.color && e.components.light) ops.push({ type: 'updateComponent', payload: { entityId: e.id, component: 'light', patch: { color: p.color } } })
     }
     return ops

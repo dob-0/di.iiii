@@ -396,3 +396,32 @@ describe('the baked washes (the light of the beam-only PARs on the columns and t
         expect(Buffer.from(bytes.slice(0, 4)).toString()).toBe('glTF')
     })
 })
+
+describe('a look\'s levels (RIG_BUILD.md §14: darkness is part of a look)', () => {
+    const withLevels = { ...rig, looks: { ...rig.looks, dark: { ...rig.looks[rig.defaultLook], levels: { 'beam380-columns': 0, 'par-columns': 0, 'bsw250-truss': 0.5 } } } }
+    const built = buildRig(withLevels, hall, { geometry, manifest, look: 'dark' })
+    const full = buildRig(rig, hall, { geometry, manifest })
+    const lamp = (b, id) => b.entities.find((e) => e.id === id)
+
+    it('puts a group at 0 out: no light, an unseen cone, still beam-only, nothing baked', () => {
+        const e = lamp(built, 'rig-beam380-columns-01')
+        expect(e.components.light.intensity).toBe(0)
+        expect(e.components.beam).toEqual({ visible: true, haze: 0, only: true })
+        expect(built.washes.some((w) => w.id.startsWith('par-columns-'))).toBe(false)
+        expect(full.washes.some((w) => w.id.startsWith('par-columns-'))).toBe(true)
+    })
+
+    it('scales a group at 0.5 and leaves the groups it does not name at full', () => {
+        const half = lamp(built, 'rig-bsw250-truss-01')
+        expect(half.components.light.intensity).toBeCloseTo(lamp(full, 'rig-bsw250-truss-01').components.light.intensity / 2, 1)
+        expect(lamp(built, 'rig-beam380-stage-01').components.light.intensity).toBe(lamp(full, 'rig-beam380-stage-01').components.light.intensity)
+        expect(built.summary.byGroup['beam380-columns'].level).toBe(0)
+    })
+
+    it('a rig with no truss hangs nothing overhead and writes no truss', () => {
+        const bare = { ...rig, truss: { kind: 'none' }, groups: rig.groups.filter((g) => !/truss|tower/.test(g.mount)) }
+        const out = buildRig(bare, hall, { geometry, manifest })
+        expect(out.entities.some((e) => /truss/.test(e.id))).toBe(false)
+        expect(() => buildRig({ ...bare, groups: rig.groups }, hall, { geometry, manifest })).toThrow(/needs a truss/)
+    })
+})

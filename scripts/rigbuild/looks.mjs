@@ -60,7 +60,7 @@ export const rigLooksFrom = (rig, file) => {
         source: `${path.basename(file)} (${rig.rig || 'rig'}, ${rig.writtenAt || 'undated'}) · groups renamed to position/type by scripts/rigbuild/looks.mjs`,
         writtenAt: rig.writtenAt || '',
         defaultLook: rig.defaultLook || '',
-        looks: Object.entries(rig.looks || {}).map(([id, l]) => ({ id, title: l.title, intent: l.intent, aims: rename(l.aims), colours: rename(l.colours) }))
+        looks: Object.entries(rig.looks || {}).map(([id, l]) => ({ id, title: l.title, intent: l.intent, aims: rename(l.aims), colours: rename(l.colours), ...(l.levels ? { levels: rename(l.levels) } : {}) }))
     }
     const out = normalizeRigLooks(value)
     if (!out || out.looks.length !== Object.keys(rig.looks || {}).length) throw new Error('the looks did not survive the schema — see normalizeRigLooks')
