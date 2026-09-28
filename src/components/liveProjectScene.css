@@ -77,6 +77,100 @@
     background: var(--di-cyan-wash);
 }
 
+/* The Look switch's panel: the viewer's own mouse sensitivity, FOV, invert Y
+   and head bob. Same glass, line, mono label and pill as the Sound switch
+   beside it; no colour of its own (white on dark, like the rest of the
+   chrome). Bottom-left corner, level with the Fly switch on the right — the
+   header row can sit under the site's own top bar — and the panel opens
+   upward from it. Hidden while the pointer is locked (nothing to click). */
+.live-scene-look {
+    position: absolute;
+    bottom: 40px;
+    left: 40px;
+    z-index: 11;
+}
+
+.live-scene-look-panel {
+    position: absolute;
+    bottom: calc(100% + var(--di-space-2));
+    left: 0;
+    width: min(280px, calc(100vw - 32px));
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-2);
+    padding: var(--di-space-3);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: var(--di-radius);
+    background: rgba(0, 0, 0, 0.72);
+    color: rgba(255, 255, 255, 0.72);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    letter-spacing: var(--di-label-tracking);
+    text-transform: uppercase;
+    accent-color: var(--di-text);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    z-index: 12;
+}
+
+.live-scene-look-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--di-space-2);
+}
+
+.live-scene-look-row--check {
+    justify-content: flex-start;
+    cursor: pointer;
+}
+
+.live-scene-look-row select,
+.live-scene-look-row input[type="number"] {
+    width: 9.5em;
+    min-height: 28px;
+    padding: 2px var(--di-space-2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: var(--di-radius);
+    background: rgba(0, 0, 0, 0.35);
+    color: var(--di-text);
+    font: inherit;
+    text-transform: none;
+}
+
+.live-scene-look-row select option {
+    background: #000;
+    color: #fff;
+}
+
+.live-scene-look-row input[type="range"] {
+    flex: 1;
+    min-width: 0;
+}
+
+.live-scene-look-row output {
+    white-space: nowrap;
+    color: var(--di-text);
+}
+
+.live-scene-look-readout {
+    margin: 0;
+    color: var(--di-text);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.live-scene-look-note {
+    margin: 0;
+    opacity: 0.6;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.live-scene-look-panel > .live-scene-sound {
+    align-self: flex-end;
+}
+
 .live-scene-title {
     font-size: var(--di-text-3);
     letter-spacing: 0.28em;

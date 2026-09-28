@@ -49,13 +49,19 @@ import { ringTourYaw } from '../project/viewport/ringTour.js'
 import { flyVertFromStick, moveFromStick, xrTurnSpeed } from './xrFlyControl.js'
 import {
     WALK_MAX_SPEED, FLY_SPEED, XR_MOVE_SPEED, BOB_AMPLITUDE, BOB_PHASE_PER_M, TURN_SPEED, EYE_HEIGHT,
-    POINTER_LOCK_SENSITIVITY, DRAG_LOOK_SENSITIVITY, TOUCH_LOOK_SENSITIVITY, TRACKPAD_LOOK_SENSITIVITY,
+    DRAG_LOOK_SENSITIVITY, TOUCH_LOOK_SENSITIVITY, TRACKPAD_LOOK_SENSITIVITY,
     WHEEL_DOLLY_SPEED, WALK_PITCH_LIMIT, FLY_PITCH_LIMIT, JOY_RADIUS, BOUNDS_MARGIN, BOUNDS_MIN_HALF,
-    BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_DEAD_DELTA_MAX, BROKEN_LOCK_SETTLE_MS
+    BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_SETTLE_MS
 } from './walkModeConfig.js'
 import { isTypingTarget } from './walkKeyboard.js'
 import { createWalkSim, advanceWalkSim, teleportWalkSim, horizontalSpeed, nextFlySpeedScale, bobOffset } from './walkPhysics.js'
 import { getLookSettings } from './walkLookSettings.js'
+import { countsPerMovementUnit } from './lookSensitivity.js'
+import { getLookRuntime } from './lookSettings.js'
+import { requestRawPointerLock } from './rawPointerLock.js'
+import { createBrokenLockDetector } from './brokenLockDetector.js'
+import LookSettingsPanel from './LookSettingsPanel.jsx'
+import LookFov from './LookFov.jsx'
 import { createPortalWalkThrough } from './portalWalkThrough.js'
 import { doorsOf, fitArrivalToDoors as fitArrivalToDoors_ } from './arrivalFraming.js'
 import { getViewportAspect } from '../utils/cameraFraming.js'
@@ -527,7 +533,7 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
         if (!isTouch) {
             // Desktop: pointer lock
             const onLockChange = () => {
-                // deadLockMoves/lockEngagedAt reset lives in onMouseMove now
+                // deadLock/lockEngagedAt reset lives in onMouseMove now
                 // (see sawLocked) — this event lags document.pointerLockElement
                 // by a task, so resetting the dead-streak state here too could
                 // wipe out progress onMouseMove already made on real events.
@@ -551,14 +557,15 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             let dbgMoves = 0
             const dbg = (e) => {
                 if (!debugHud) return
-                dbgMoves++
+                if (e) dbgMoves++
                 const under = e ? document.elementFromPoint(e.clientX, e.clientY) : null
                 debugHud.textContent =
                     `lock: ${document.pointerLockElement ? document.pointerLockElement.tagName : 'none'}${lockBroken ? ' (marked broken)' : ''}\n` +
                     `moves: ${dbgMoves}  last mv: ${e ? `${e.movementX},${e.movementY}` : '-'}  client: ${e ? `${e.clientX},${e.clientY}` : '-'}  buttons: ${e ? e.buttons : '-'}\n` +
-                    `dead-streak: ${deadLockMoves}/${BROKEN_LOCK_DEAD_MOVES}  dragging: ${draggingCanvas}\n` +
+                    `dead-streak: ${deadLock.streak}/${BROKEN_LOCK_DEAD_MOVES}  dragging: ${draggingCanvas}\n` +
                     `under cursor: ${under ? `${under.tagName}${under.className ? '.' + String(under.className).split(' ')[0] : ''}` : '(locked/none)'}\n` +
-                    `yaw: ${player.yaw.toFixed(2)}  pitch: ${player.pitch.toFixed(2)}`
+                    `yaw: ${player.yaw.toFixed(4)} rad (${THREE.MathUtils.radToDeg(player.yaw).toFixed(3)}°)  pitch: ${player.pitch.toFixed(2)}\n` +
+                    `raw input: ${lockRaw ? 'yes' : 'no'} (${lockReason})  dpr: ${window.devicePixelRatio}  Σ locked mvX: ${sumLockedX}`
             }
             // Pointer lock can be denied outright (Wayland browsers, iframe
             // policies, Chrome's cooldown after an Esc release) — dragging on
@@ -573,7 +580,9 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             // consecutive dead locked moves; past the threshold, abandon the
             // lock (and never re-request it) so drag-look takes over.
             let lockBroken = false
-            let deadLockMoves = 0
+            // Small-move windows that go nowhere (or repeat one delta) — the
+            // broken shapes — versus a slow real pan: brokenLockDetector.js.
+            const deadLock = createBrokenLockDetector()
             // Engage-time garbage (see BROKEN_LOCK_SETTLE_MS): deltas inside
             // the settle window are counted for the dead-streak but never
             // applied to the view.
@@ -589,6 +598,12 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             // onMouseMove itself (see below) rather than only in
             // onLockChange, so the just-engaged transition is never missed.
             let sawLocked = false
+            // Whether the current lock delivers raw device counts (Pointer
+            // Lock 2.0 unadjustedMovement) — decides how many mouse counts
+            // one movementX unit is (lookSensitivity.js, measured there).
+            let lockRaw = false
+            let lockReason = 'not requested'
+            let sumLockedX = 0
             const onMouseMove = (e) => {
                 if (debugHud) dbg(e)
                 const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
@@ -603,31 +618,34 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
                 // threshold before running out of replayed events.
                 const isLocked = document.pointerLockElement === el
                 // Same lag applies to onLockChange's lockEngagedAt/
-                // deadLockMoves reset: the settle window must start counting
+                // deadLock reset: the settle window must start counting
                 // from the first mousemove that actually observes the lock,
                 // not from whenever the pointerlockchange task happens to
                 // run (which can be after that first move, letting the
                 // engage-time spike straight through the settle check).
                 if (isLocked && !sawLocked) {
-                    deadLockMoves = 0
+                    deadLock.reset()
                     lockEngagedAt = performance.now()
                 }
                 sawLocked = isLocked
                 if (isLocked) {
-                    if (Math.abs(e.movementX) <= BROKEN_LOCK_DEAD_DELTA_MAX &&
-                        Math.abs(e.movementY) <= BROKEN_LOCK_DEAD_DELTA_MAX) {
-                        if (!lockBroken && ++deadLockMoves >= BROKEN_LOCK_DEAD_MOVES) {
-                            lockBroken = true
-                            document.exitPointerLock()
-                        }
-                    } else {
-                        deadLockMoves = 0
+                    if (deadLock.push(e.movementX, e.movementY).broken && !lockBroken) {
+                        lockBroken = true
+                        document.exitPointerLock()
                     }
                     if (performance.now() - lockEngagedAt < BROKEN_LOCK_SETTLE_MS) return
                     if (e.movementX === 0 && e.movementY === 0) return
-                    player.yaw -= e.movementX * POINTER_LOCK_SENSITIVITY
+                    // Game-style look: a fixed angle per mouse count (the
+                    // viewer's sens × the game's yaw constant), pitch at the
+                    // same rate as yaw (Source's m_pitch = m_yaw), applied
+                    // the moment the event arrives — no smoothing, no
+                    // acceleration of our own.
+                    const look = getLookRuntime()
+                    const perUnit = look.radPerCount * countsPerMovementUnit({ raw: lockRaw, dpr: window.devicePixelRatio })
+                    sumLockedX += e.movementX
+                    player.yaw -= e.movementX * perUnit
                     player.pitch = THREE.MathUtils.clamp(
-                        player.pitch - e.movementY * POINTER_LOCK_SENSITIVITY,
+                        player.pitch - e.movementY * perUnit * look.ySign,
                         -pitchLimit,
                         pitchLimit
                     )
@@ -655,9 +673,11 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
                         dragLastX = e.clientX
                         dragLastY = e.clientY
                     }
-                    player.yaw -= dx * DRAG_LOOK_SENSITIVITY
+                    const look = getLookRuntime()
+                    const k = DRAG_LOOK_SENSITIVITY * look.feelScale
+                    player.yaw -= dx * k
                     player.pitch = THREE.MathUtils.clamp(
-                        player.pitch - dy * DRAG_LOOK_SENSITIVITY,
+                        player.pitch - dy * k * look.ySign,
                         -pitchLimit,
                         pitchLimit
                     )
@@ -672,7 +692,7 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             const onWheel = (e) => {
                 if (e.ctrlKey) return
                 const scale = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1
-                player.yaw -= e.deltaX * scale * TRACKPAD_LOOK_SENSITIVITY
+                player.yaw -= e.deltaX * scale * TRACKPAD_LOOK_SENSITIVITY * getLookRuntime().feelScale
                 wheelDollyRef.current -= e.deltaY * scale * WHEEL_DOLLY_SPEED
             }
             // Drag state comes from our own down/up pair, not mousemove's
@@ -691,10 +711,14 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
                     dragLastY = e.clientY
                 }
                 if (document.pointerLockElement === el || lockBroken) return
-                const req = el.requestPointerLock()
-                if (req && typeof req.catch === 'function') {
-                    req.catch(() => { /* denied — drag-look fallback takes over */ })
-                }
+                // Raw input first, plain lock if the platform says
+                // NotSupported; a denied lock resolves locked:false and the
+                // drag-look fallback takes over, as before.
+                requestRawPointerLock(el).then((res) => {
+                    lockRaw = res.raw
+                    lockReason = res.reason
+                    if (debugHud) dbg(null)
+                })
             }
             const onPointerUp = () => { draggingCanvas = false }
             el.style.cursor = 'crosshair'
@@ -763,9 +787,10 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
                         updateJoy(t.clientX, t.clientY)
                     } else if (touchLookRef.current?.id === t.identifier) {
                         const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
-                        player.yaw -= (t.clientX - touchLookRef.current.lastX) * TOUCH_LOOK_SENSITIVITY
+                        const k = TOUCH_LOOK_SENSITIVITY * getLookRuntime().feelScale
+                        player.yaw -= (t.clientX - touchLookRef.current.lastX) * k
                         player.pitch = THREE.MathUtils.clamp(
-                            player.pitch - (t.clientY - touchLookRef.current.lastY) * TOUCH_LOOK_SENSITIVITY,
+                            player.pitch - (t.clientY - touchLookRef.current.lastY) * k,
                             -pitchLimit,
                             pitchLimit
                         )
@@ -1937,6 +1962,7 @@ export default function LiveProjectScene({
                 ) : (
                     <IdleOrbit center={center} />
                 )}
+                {walking && !xr.isXrPresenting && <LookFov />}
                 {walking && <XrLocomotion playerRef={playerRef} joystickRef={joystickRef} flyMode={flyMode} vertTouchRef={vertTouchRef} />}
                 {walking && worldState.ringTour?.enabled ? (
                     <RingTour playerRef={playerRef} config={worldState.ringTour} />
@@ -1959,6 +1985,9 @@ export default function LiveProjectScene({
                         )}
                         {walking && isMobile && flyMode && showModeControls && (
                             <VerticalTouchControls vertTouchRef={vertTouchRef} />
+                        )}
+                        {walking && showModeControls && !isMobile && !isLocked && !xr.isXrPresenting && (
+                            <LookSettingsPanel />
                         )}
                         {walking && showModeControls && (
                             <button

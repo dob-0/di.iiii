@@ -76,18 +76,39 @@ export const TURN_SPEED = 1.6
 export const EYE_HEIGHT = 1.6
 
 // -- Look sensitivity, one per input method --
-// Pointer-lock is the reference; every other method below is defined
-// relative to it, so bumping this one value re-scales the whole family
-// instead of drifting out of sync one input method at a time.
-// 0.018 until 2026-08-24; owner asked for 35% less after walking the Dilijan
-// hub on a desktop — at 0.018 a small sweep spun the room. Drag-look and its
-// broken-lock fallback scale from this on purpose, so they calm down with it.
-export const POINTER_LOCK_SENSITIVITY = 0.0117
+// The mouse under pointer lock is the reference, and it is set in the units
+// a player already knows: an in-game sensitivity for a named game, plus the
+// mouse's DPI, which together fix the cm of travel per 360° turn (the model
+// and its sources live in lookSensitivity.js; each viewer can change all
+// three in the Look panel, stored by lookSettings.js).
+//
+// Until 2026-09-28 this was one bare number, 0.0117 rad per movementX unit
+// (0.67°; about 2.5 cm/360 at 800 DPI on the owner's DPR 1.5 screen) — ten to
+// twenty times faster than players set their games. The default below is for
+// walking a hall, not flick aiming: ~42 cm/360 at 800 DPI (eDPI 1000). The
+// published pro median for CS2 is ~830 eDPI ≈ 50 cm/360 (ProSettings.net's
+// tracked-player table, 2026); 1000 eDPI is the top of the "600–1000 eDPI"
+// range the same guides call sensible, a little quicker than the pros because
+// looking around a room turns farther and more often than holding an angle.
+export const DEFAULT_LOOK_GAME = 'cs2'
+export const DEFAULT_LOOK_SENS = 1.25
+export const DEFAULT_LOOK_DPI = 800
+// Vertical field of view in degrees (THREE.PerspectiveCamera.fov). 60 is
+// what the walker has always used (≈ 91.5° horizontal at 16:9).
+export const DEFAULT_LOOK_FOV = 60
+export const LOOK_FOV_MIN = 40
+export const LOOK_FOV_MAX = 100
+// Every other method below is tuned in its OWN unit at the default feel and
+// multiplied by lookFeelScale() (lookSettings.js) at run time, so a viewer who
+// slows the mouse down slows the whole family with it instead of drifting out
+// of sync one input method at a time. The numbers are unchanged from before
+// 2026-09-28, so touch, trackpad and drag feel exactly as they did.
 // Drag-look is the fallback used exactly when pointer lock is silently
 // denied (Wayland and some other Linux browsers) — user-tuned live down
-// from matching pointer-lock (too sensitive) through 0.75x and 0.5x
-// (still too sensitive each time) to 0.35x.
-export const DRAG_LOOK_SENSITIVITY = POINTER_LOCK_SENSITIVITY * 0.35
+// from matching the old pointer-lock number (too sensitive) through 0.75x and
+// 0.5x (still too sensitive each time) to 0.35x of 0.0117. Radians per CSS
+// pixel of cursor travel.
+export const DRAG_LOOK_SENSITIVITY = 0.0117 * 0.35
 export const TOUCH_LOOK_SENSITIVITY = 0.005
 export const TRACKPAD_LOOK_SENSITIVITY = 0.004
 // Some Wayland setups GRANT pointer lock but then deliver useless movement
@@ -102,6 +123,11 @@ export const TRACKPAD_LOOK_SENSITIVITY = 0.004
 // slow look can trip this too — acceptable: drag-look remains fully usable.
 export const BROKEN_LOCK_DEAD_DELTA_MAX = 4
 export const BROKEN_LOCK_DEAD_MOVES = 30
+// A window of that many small moves is broken only if it goes nowhere
+// (|Σv| / Σ|v| under this) or repeats one identical delta — so a slow, real
+// pan (coherent, ≈ 0.8–1) keeps its lock. The captured Wayland noise stream
+// scores ≈ 0.4. Why and how: brokenLockDetector.js (2026-09-28).
+export const BROKEN_LOCK_MIN_COHERENCE = 0.7
 // The first locked move(s) after an engage carry garbage: one wild spike
 // (-19,-116 in the live capture, ~18ms after engage — railed the pitch) and,
 // in some Chromium builds, a synthetic position-sized event at engage time.
@@ -116,11 +142,13 @@ export const BROKEN_LOCK_SETTLE_MS = 200
 export const WHEEL_DOLLY_SPEED = 0.01
 
 // -- Pitch limits --
-// Just shy of straight up/down (PI/2) to avoid the camera flipping at the pole.
-export const WALK_PITCH_LIMIT = 1.45
-// Flying has no horizon to stay oriented against, so allow (almost) the full
-// vertical range — straight up/down — rather than walking's smaller cap.
-export const FLY_PITCH_LIMIT = 1.55
+// 89°, the Source/CS2 limit (cl_pitchup / cl_pitchdown default 89): straight
+// down at your feet and up at the ceiling, one degree shy of the pole where
+// lookAt's up-vector degenerates and the view flips. Was 1.45 rad (83°).
+export const WALK_PITCH_LIMIT = (89 * Math.PI) / 180
+// Flying has no horizon to stay oriented against, so allow a little more of
+// the vertical range than walking — 89.5°, still never the pole itself.
+export const FLY_PITCH_LIMIT = (89.5 * Math.PI) / 180
 
 // -- Mobile joystick / world bounds --
 export const JOY_RADIUS = 45
