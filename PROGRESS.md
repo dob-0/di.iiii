@@ -5,6 +5,541 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-28 — all 15 waiting notes folded; CURRENT.md cut to 46 lines so dev deploys again
+
+- The fold pushed CURRENT.md to 56 lines (limit 50) and every dev deploy since 00:38 failed at the docs gate. Supersedes #606.
+
+## 2026-09-28 — the lighting desk takes a console's Art-Net and sACN
+
+- The desk at `/light` could only send. It now RECEIVES: Art-Net 4 (ArtDmx on UDP 6454, ArtPoll
+  answered with a spec ArtPollReply as a Style StVisual node) and sACN / ANSI E1.31-2018 (multicast
+  239.255.hi.lo joined per universe, and unicast, on UDP 5568). Specs by version are named in
+  `serverXR/src/lighting/dmxin.js` and in `docs/architecture/LIGHTING_DESK.md` → "Input".
+- `dmxin.js` is pure (parsers/builders, §6.7.2 sequence rule, merge); `dmxin-net.js` binds only the
+  ticked interfaces and drops sources outside their subnets. Config lives at `output.input` in the
+  machine's show (never a space's), OFF by default. Setup → Input panel + `in:` pill on every page.
+- Merge: priority first (Art-Net = 100), then HTP or LTP per universe; Art-Net max 2 sources, sACN 8;
+  loss 2.5 s sACN / 10 s Art-Net, then release (desk takes back) or hold. Per universe "follow the
+  console" (replaces desk) or "HTP with the desk". Blackout beats input. An input universe is never
+  re-sent on the protocol it arrived on (no loops); own CID / own Art-Net bytes are dropped.
+- Tests: `tests/test-dmxin.js` (39 checks incl. real loopback UDP), wired into `lighting.test.js`;
+  `test-http.js` got the `/api/input` route check. All four desk suites green.
+- Measured on aylmo with `tests/bench-input.js` (sender `tests/dmx-send.js`): in-process packet→state
+  p50 0.04 ms; through HTTP it equals one GET (~1.5 ms); 44 Hz × 3 universes × 60 s: sACN multicast
+  7923/7923, Art-Net 7920/7920, 0 lost, 0 late, 1–2 % of one core. Lamp colour proven through
+  `mirrorFixtures` + `liveLightEntity` against the running desk; desk UI seen in Chrome at 1707 and
+  in a 390 px frame. No 3D screenshot (no GPU render was run).
+- Owed: a real console (grandMA3 onPC is the free test), sACN OUTPUT sends Universe 1 as sACN 0
+  (reserved by E1.31 §6.2.7 — one-line fix in sacn.js, not made), input waits for the desk's first
+  request after a restart.
+- My dev server on :4371 was killed from outside once mid-session with nothing in its log (the known
+  pattern-kill footgun, feedback_agent_dev_stacks_ports); restarted, nothing lost.
+
+## 2026-09-28 — one flow for every hand: git hooks and an "only on this machine" check
+
+- Why: a collaborator's laptop (Emilya's, `ponyo`) held 22 commits and ~60 changed files on no remote,
+  the oldest 25 days old, and work in progress sat uncommitted on `dev`. Nothing flagged it — start-check
+  answers "am I behind?", not "is my work anywhere but here?". Rules written only for Claude also don't
+  reach someone typing git by hand or using another assistant.
+- New `scripts/git-hooks/pre-commit` (refuses a commit on `dev`/`main`) and `pre-push` (refuses a push
+  that writes `dev`/`main`, then runs the push checks). They're switched on by `npm install` via the
+  `prepare` script `scripts/install-git-hooks.mjs`, which skips CI (deploy-vps-dev.yml pushes to dev by
+  design), non-git trees (Docker), `DI_NO_GIT_HOOKS=1`, and an existing custom hooksPath.
+- The push checks moved from `pre-push-gate.sh` into `scripts/push-checks.sh`, so there is one copy.
+  The Claude Code hook now defers to the git hook when it's installed AND present on the branch (older
+  branches without `scripts/git-hooks` still get the checks from the Claude hook).
+- New `scripts/unsaved-lib.mjs` + `npm run unsaved -- <folders>`: every git repo under the folders, with
+  its unpushed branches (with age), uncommitted files per worktree, stashes and no-remote repos; exits 1
+  when anything is only here. `npm run start-check` gained an "only on this machine" section (this
+  checkout only, outside the LATEST verdict).
+- Tests: `scripts/unsaved-lib.test.js` runs real git in a temp dir (no mocks) and covers the hooks'
+  refusals; start-check's existing tests still pass (49/49 across both files).
+- Measured on aylmo at the time of writing: 11 local branches with commits on no remote (oldest 25 days)
+  and several worktrees with an untracked `.verify/` scratch folder, which the check reports as-is.
+- Owed: a Windows scheduled task on a collaborator's machine that runs `npm run unsaved` daily and raises
+  a non-zero exit; not built in this branch.
+
+## 2026-09-27 — MOXIR rebuilt as a clean hall model, with the proposed rig hung in it
+
+- The Meshroom mesh of MOXIR was a smeared roof fragment and the venue cannot be revisited, so the
+  space's room is now a parametric model: `scripts/place/hall.py` (Blender, headless) builds a Soviet
+  single-span crane hall from a structural grid — stepped columns with consoles, runway beams with
+  walkways, crane bridges, Warren trusses, lantern, clerestory bands, side aisles, gates — in eight
+  meshes by material (~10.7k triangles). Dimensions come from `--dims` files and every value records
+  its source, range and confidence in `hall.json`.
+- MOXIR's numbers: `scripts/place/rigs/moxir-hall-dims-2026-09-27.json` (VGGT on 55 frames + a
+  perspective fit, snapped to GOST 23838-89: 24 m span, 6 m pitch, 15 bays, crane rail 7.6 m disputed,
+  truss 11.0/13.6 m, ridge 15.5 m, lantern 12 m) + `moxir-hall-features-2026-09-27.json` (gates, aisles,
+  two cranes; sizes GUESSED). Nothing is taped.
+- Imported into `moxir` on the owner's local tier through `import.mjs --replace` (new flag: swaps the
+  model, drops the old asset reference; `moxir-sources`, the footage wall, untouched). Backup first:
+  `~/di-backups/moxir-before-hall-2026-09-27/` (space bundle + the hall document at v510).
+- The rig: `scripts/place/rigs/moxir-2026-10-17.json` (fixture classes with class-estimate optics,
+  groups, placement rules, budget, night, assumptions) → `rig.mjs` / `rig-lib.mjs` → 90 spot lights +
+  stage deck, goalpost truss and 14 effect markers, all `rig-*`, all `animation: static`. Laser rule
+  (≥3 m, never descending) and a beam-into-crane check run on every aim; the first fan aim did run the
+  stage beams through the crane parked in front of the stage and was re-aimed.
+- Platform: `components.beam.only` — the cone without the light (`beamCastsLight` in spotBeam.js,
+  SpotLightObject does not mount the SpotLight; both schema mirrors, stored only when true; inspector
+  checkbox "Beam only (no light)"; wiki entry). Guards: spotBeam.test.js, schemaSync.test.js,
+  rig-lib.test.js.
+- Measured (SwiftShader, 1280x800, door view): hall 7.6 fps · 90 beams/0 real 2.5 · 12 real 0.9 ·
+  12 real + shadows 0.6 · 90 real 0.1 · 90 real + shadows = every lit material fails to compile
+  (MAX_TEXTURE_IMAGE_UNITS 32), the room goes black. So: shadows off past 12 real lamps, and rig.mjs
+  reads back — the installed 0.4.16 DROPS `beam.only`, so on the owner's local tier tonight all 90 are
+  real lights with shadows off (it warns and switches shadows off itself). The budgeted rig was seen on
+  a throwaway stack of this branch (server :4331, vite :5331, scratch DATA_ROOT).
+- OWED: a GPU fps number (his Chrome runs on the Intel UHD iGPU; a background tab gives 0 frames); an
+  install carrying `beam.only` (then re-run rig.mjs); a taped dimension; the rental house's datasheets;
+  the stage position (assumed: far end, in front of the far gate); laser safety sign-off; the Studio
+  inspector's new checkbox not looked at on a screen.
+
+## 2026-09-28 — the owner: "too laggy". Fixed on his tier, measured on the GPU
+
+- Cause: the installed 0.4.16 drops `beam.only`, so the first rig on his tier was 90 real spot lights:
+  1.0 fps / 1004 ms frames on the RTX 3080 (headed Chromium, ANGLE Vulkan), 283 calls, 126k tris.
+- Fix: budget cut to 8 real lamps, shadows off by default; `rig.mjs --beams auto` probes the server and,
+  where `beam.only` is dropped, bakes the other 82 beams into one mesh (`beams-glb.mjs`, a named
+  workaround — not editable in the Studio). His tier now: 239.7 fps (vsync cap) median 4.2 ms p95 4.3 ms,
+  51 calls, 53k tris, door/mid/stage/over; the branch's editable `beam.only` version measured the same.
+- SwiftShader runs of the full hall overheated aylmo (CPU 100 °C, load 23) — `rig-look.mjs` now refuses
+  software rendering, runs one browser per view, waits for the CPU to cool. Headed Chromium reached the
+  NVIDIA card only with ANGLE on Vulkan + PRIME variables for GL, EGL and Vulkan.
+- Seen, not fixed: on a phone-shaped viewport the opening shot faces an end wall, not down the nave, and
+  the site's top bar overflows at 390 px. No real phone measured.
+
+## 2026-09-28 — the owner: "looks so random … find or create the models of each fixture". Fixtures identified, modelled, posed; designed looks
+
+- IDENTIFIED (manifest `scripts/place/fixtures/fixtures.json`, every number `{value, src, basis}`, accessed 2026-09-28):
+  UP-B380F, UP-250BSW, UP-HK1915, UP-PL5403 are **UPlight** (Guangzhou) models — code printed on pro-uplight.com /
+  up-light.en.made-in-china.com. UP-LA40WF, UP-Q108S, UP-YH600F, UP-YZ31P are NOT UPlight products (absent from the
+  store's 420 listings, the site's 73 products, web search) — modelled on named equivalents (Blue Sea BLLO-RGB40,
+  MagicFX CO2 Jet II, Showven Sparkular, Antari Z-1500 III). The rental house must name them — OWED.
+- MODELS: GDTF Share needs an account (the owner's hand) and its terms forbid derivatives/commercial use; OFL (MIT) has
+  no geometry. So `fixtures/build_fixtures.py` (Blender 5.2, headless) builds each to the datasheet box and the maker's
+  photos — Base / Yoke (pan axis) / Head (tilt axis) / Lens nodes, 98–1,034 tris, every axis within 10 % of the
+  published size (the sidecar measures it). Licence AGPL-3.0 (the repo's). Compared by eye with the maker photos
+  (kept out of the repo): the bee-eye's 19-lens face, the PAR's finned can on its fold-out stand, the B380F's egg
+  housing and nose read; they are low-poly, not CAD.
+- POSED: `fixture-lib.mjs` (pan/tilt kinematics, hung = upside down, aim solved from the tilt pivot);
+  `fixtures-glb.mjs` writes the whole rig's bodies as ONE `EXT_mesh_gpu_instancing` GLB (104 fixtures, 226 KB, 45
+  instanced meshes, lens tinted per lamp). Spot lights now start AT the lens and their cones stop at the building
+  (`surfaceHit`). Effects are machines, not boxes.
+- PHOTOMETRY: no UPlight output figure exists anywhere (0 hits); equivalents' lux@distance → candela → one
+  `sceneScale` (0.006) → three.js candela; air brightness I·tan(θ/2), compressed ^1/3. Method in README "Photometry".
+- LOOKS (`looks` in the rig file, `rig.mjs --look <name>`): roof-cathedral (default), fan-out, crossfire,
+  all-to-centre, curtain. Guards in rig-lib.test.js: nothing refused/clashing/out of travel, every lamp has a mirror
+  twin (seen to FAIL on the old index-alternating stage wash, which was asymmetric).
+- Fixed on the way: crane PARs alternated girders by index (asymmetric); column beams picked the gable column in the
+  entry wall, firing into the door-end crane; cathedral bee-eyes rose into the stage-end crane (lean 55 → 65).
+- Backup before writing: `~/di-backups/moxir-before-fixtures-2026-09-28/` (bundle + hall document v989, SHA256SUMS).
+- OWED: the rental house's real models for the 4 untraced codes and its datasheets; a fixture component so a hand
+  re-aim in the Studio moves the head (bodies are posed at rig.mjs time); DMX modes into the desk; laser MPE / LSO.
+- SEEN on the GPU (RTX 3080, ANGLE Vulkan, headed, one browser at a time, renderer string checked), his local tier,
+  `~/Downloads/moxir-hall/`: cathedral-v2b-door, cathedral-v2-mid, cathedral-v2-stage, cathedral-v2-close-<kind>-worklight
+  (8 kinds; ambient raised IN THE BROWSER ONLY for close-ups, "work light"), crossfire-mid, all-to-centre-b-mid. 60 fps
+  on every view (display at 60 Hz = vsync cap; p95 16.8 ms), 59–83 draw calls, 108–119k tris.
+- Found by looking: metallic body materials render BLACK with no environment map → bodies are dielectric now.
+- OWED: rig-look's camera override is intermittently not applied (3 of ~19 shots showed the space's own camera or an
+  aisle view; a second self-navigation of `/moxir` is logged and the measurement retries, the camera is not yet
+  fixed); the room reads DARK — 8 real lamps light it, the 42 column PARs are beam-only and their beams are faint by
+  datasheet (haze 0.155), so the columns are not washed: a baked column wash or a larger budget is the next choice.
+- THERMAL: peer sessions (verify-surfaces on SwiftShader, full vitest in di.iiii-test-cap / di.iiii-land-*) held the
+  CPU package at 100 C, load 32, for ~15 min; every browser here waited for < 80 C and still peaked at 95–98 C (the
+  cooler). No hall was rendered in software.
+
+## 2026-09-28 — the architecture corrected (flat space frame, 4 spans) and the rig moved to where the owner marked the stage
+
+- `hall.py` REWRITTEN (v2) from the architecture spec (photos + Esri Wayback 2020-10-30 Maxar image): 4 spans x 24 m
+  under one flat roof, 18 bays (108 m); flat double-layer space frame (3 m module, 11.0/13.5 m chords; full over the
+  nave and its neighbours, bottom chords only on the far span; open triangular prisms, one merged mesh); raised
+  box lanterns 12 m x 3.5 m over spans 2 and 3, two 38.5 m segments each, 14.5 m gap at the joint; Y-headed precast
+  columns (symmetric 45-deg console, girder each side, centred upper column), paired at the joint; grey steel plate
+  crane girders with stiffeners and handrail; outer walls only at the building edge; low block walls, bracing;
+  massing for the press. 14 meshes, 59,688 triangles. v1's trusses/ridge/clerestory/aisles removed (git: e3b843fa).
+  New dims/features files `rigs/moxir-hall-{dims,features}-2026-09-28.json`; build record committed as the tests'
+  fixture `rigs/moxir-hall-2026-09-28.hall.json`.
+- ZONES (owner, 2026-09-28, "red backstage, green stage, blue dance floor"): photo 032 = his 0387927a. Camera fitted
+  from the photo (9 columns at 6 m pitch, rms 3.0 px; camera 6.88 m up, 3.8 m from the entry grid line). Hall frame
+  (x + = SW, z + = entry): dance x -10..10 z 27.5..48; stage x -8..8 z 6.2..23.5 (front at the white bags, back
+  along the press), deck 16 x 12 on the front edge facing the entry; backstage x -11..1 z -10..-1 (depth GUESS);
+  press x 0.25..3.05, front z 3.2 (grid line 9, beside the joint). Marked vs used and ranges: features file `zones`.
+- RIG: stage from the zone with the press as `backdrop`; 50 PARs = 32 on the nave columns around dance floor and
+  stage (inner + back face) + 12 on the next rows out + 6 lighting the press (not mirrored, flagged); crane PARs
+  dropped; 10 column-base beams along the 5 dance-floor grid lines; lasers from the truss towers over the crowd.
+  All 5 looks: nothing refused / into a crane / out of travel; mirror symmetry held (press group excluded by flag).
+- DARK ROOM, two causes: real lamps' `light.distance` = the throw = three.js cutoff = zero light at the target
+  (fixed: 2x, known-fixes entry + guard seen red); 42 column PARs were beam-only. `wash-glb.mjs` bakes the light of
+  46 beam-only PARs on columns and press (analytic spot model, unlit decal, one draw call). Night raised by eye
+  (ambient 0.8, fog 60/250 m). Press albedo 0.07 -> 0.17.
+- Backup `~/di-backups/moxir-before-arch-2026-09-28/` (bundle 41.9 MB + hall document v1289, SHA256SUMS). Imported
+  (`--replace`) and rigged roof-cathedral on the local tier.
+- SEEN on the RTX 3080 (ANGLE Vulkan, headed, one browser per view, waited < 85 C; CPU still peaked 93 C):
+  `~/Downloads/moxir-hall/arch-v2-crane-vs-photo032.png` (photo | model | 50/50, same camera: dance-floor far edge,
+  Y heads and girders fall on the photo's), arch-v2-dance, arch-v2-stage, arch-v2-roof, arch-v3-backdrop. 53-60 fps
+  (60 Hz display; p95 16.8-33.4 ms), 71-91 draw calls, 173-182k triangles.
+- OWED: taped dimensions; crane rail height (disputed; the photo's crane girder sits lower than the model's);
+  the press's depth and the backstage depth; a platform `beam.length` separate from `light.distance`; an install
+  with `beam.only` (beams still baked on 0.4.16); the owner's look at it; a phone.
+
+## 2026-09-28 — the owner: the stage is a DJ place, small, at the metal things. Booth rebuilt; photos re-read by their metadata
+
+- Owner: "i mention the dj place … you made it so big, so stage is the near the metal thing like dj near a bit top and
+  centre of the metal things … analyze the whole photos and also there gps and othe infos".
+- NEW `scripts/place/photo_meta.py` + `rigs/moxir-site-2026-09-28.json`: EXIF → intrinsics (CIPA diagonal definition),
+  GPS → hall frame, the sun by the NOAA algorithm (cross-checked vs Michalsky 1988: ≤ 0.01° az, ≤ 0.09° el), VGGT↔GPS
+  Umeyama registration, GPS plotted on the Wayback image. `pvlib` would not download (18.5 MB wheel stalled 3×), so the
+  NOAA equations are written out. Findings: 16 iPhone fixes, one coarse (013, 220 m off); indoor spread puts crane shots
+  13–25 m off, altitude inverted (useless); registration bearing 154.5° (LOO 148.5–163.1) vs satellite 144°, rms 15.9 m.
+  **Sun check** on photo 004 (az 257.9°, el 30.5°): the SW-span lantern's lit band edge predicted x 8.2–8.9, measured
+  7.8–8.3 → the NE/SW sides are confirmed, the 144° axis good to ~±6°. 027–035 are Telegram-stripped; videos carry no
+  location. Originals: only on the sender's phone (resend as files).
+- The marks' 3.4 m left offset explained: the SW half of the nave from the press to the bags is machinery (004: hopper at
+  x ≈ 5.7, z ≈ 21.6); he marked the open floor.
+- `stage.kind: "booth"` in rig-lib: 3 × 2 m riser (three 2 × 1 decks) × 1.2 m, centred on the press (x 1.65, range
+  0.5–3.5), back edge 1.0 m off its face (z 4.2–6.2); DJ table, treads, see-through barrier; goalpost 7 m wide, header 7 m
+  (above the 5.3 m crown). Options A–D in the rig file. Per-group mirror axis (`groupAxis`: booth vs nave); new mounts
+  `booth-back`, `booth-pit`, `tower-ladder`, `column-bases` with a column spec; new aim `booth-key`; `performerBox` +
+  `beamHitsBox`: no ≤ 6° beam through the DJ (guard seen red on a 15° lean, then green). Counts kept (90 lamps, 8 real).
+  Zones: DJ area, dance = open NE side from the barrier + full width from the bags, backstage left/behind the press;
+  `hall.py` draws a zone's `extra` rects. 131/131 place tests.
+- Backup `~/di-backups/moxir-before-dj-2026-09-28/` (bundle + hall document v1417, SHA256SUMS, README.txt). Hall v3 at
+  `/mnt/data/footage/place-moxir-hall-v3/` imported `--replace`, rig hung roof-cathedral.
+- SEEN on the RTX 3080 (renderer string checked, one browser at a time, CPU 64–76 °C): 60.1 fps on crane/ground/floor/
+  booth (60 Hz cap, p95 ≤ 16.8 ms), 86–99 calls, 194k tris. `~/Downloads/moxir-hall/dj-crane-vs-photo032-marks.png`,
+  `dj-ground-vs-photo024-marks.png` (camera approximate: fit rms ~90 px), `dj-floor.png`, `dj-booth.png`,
+  `dj-gps-on-satellite.png`.
+- OWED / GUESS: the press's exact x (±1.5 m) and depth; whether the right tower stands clear of the machine line (site
+  check); the press is still a massing box (reads as a lit white block); the 024 camera; the originals of 027–035; truss
+  and decks are not on the rental list; laser LSO; the owner's look.
+
+## 2026-09-28 04:13 — the owner: "make the scene in center". Booth on the nave axis
+
+- Owner (screenshot from the dance floor, the booth left of the view's centre): "make the scene in center it not the
+  center right?", then "dj is in ceneter … the stage size i think is ok". Option D chosen: booth, goalpost and all
+  booth lamps x 1.65 → 0 (−1.65 m); size 3 × 2 × 1.2 m and the 1.0 m gap to the press face kept; towers x ±3.5.
+- Press unmoved (x 0.25–3.05), behind the right half of the riser; its uplights at x 0.55/1.65/2.75 (even on the press)
+  + 4.6/6.3/8.0 (machine line). Dance floor x −10…10, z 7.5…48 (bags + SW loose machinery to clear). Backstage
+  x −6…6, z −10…−1. New `rig.opening` / `openingShot` / `openingOps` (fixed camera + savedView + spawn on the centre
+  line, 18 m out); rig-look view `opening`. Tests 133/133: symmetric zones, axis 0 for every mirrored group, the opening
+  shot on x 0 with the walker's yaw π, press lit evenly; all 5 looks: no refusal, crane clash or DJ-beam clash.
+- Backup `~/di-backups/moxir-before-centre-2026-09-28/` (bundle + hall document v1526). Imported + rigged (doc v1589).
+- SEEN: `~/Downloads/moxir-hall/centre-opening.png` (2562 × 1440, 60 fps, symmetric), `centre-crane-vs-photo032-marks.png`
+  (40 fps, p95 49.9 ms under 98–100 °C CPU from other load). One opening shot came from ~9 m up (override fault, known,
+  not understood); retaken. Two runs lost the WebGL context ("blocked") after thermal waits and rendered nothing.
+
+## 2026-09-28 evening — the hall fix: "so fix all make it right right"
+
+- The owner laid the model 50/50 over his photos and named five defects. Backup first:
+  `~/di-backups/moxir-before-hallfix-2026-09-28/` (di save + space bundle + the hall document v1912 + hall-v3 files +
+  the desk; SHA256SUMS, README.txt; a `di save` before each later write: plan, reaim-wash, reaim-truss).
+- ROOF: 6 m module (one bottom node per column: 035/021/1c3956d1), 2.5 m deep, star gussets (323), square members
+  0.24/0.20/0.16 m, every span; the lantern's own 3 m frame. 3,560 members, the frame 41k of the hall's 54,948 tris.
+- PRESS: `hall.py` `crank_press` (housings, bed, ram, head, crown, motor, flywheel ø1.56 m top 5.6 m, belt guard,
+  cylinders, panel) + `machine_line` + `pipe_run`, inside the massing envelopes the rig still aims at; `faces` per item
+  for the bake (`washSurface` parts, own albedo). Press PARs 0.6 m off, aimed 92 % up; header spots focus at the DJ's
+  chest (`stage-wash` `deck_h` 1.4; mirrored in the preview's `src/rigbuild/lookRules.js`, NOT in the installed bundle).
+- DANCE FLOOR: 10.7 m (his blue mark by the 032 fit), x −5.35…5.35, z 7.5…48; the install's venuePlan zones updated.
+- SKYLIGHTS: emissive `skylight` material. COLOURS: sampled from the photos (hallfix/sample.py), neutral fill light.
+- 024 camera refit by solvePnP (rms 37 px, was ~90). New tools: `rig.mjs --reaim <groups>` / `--night-only`,
+  `rig-look.mjs` views `press`, `roofup` and `--hide`, `compose.py --side-only`.
+- Found and fixed: `import.mjs --replace` dropped `venuePlan` and reset the night (known-fixes row, 2 guards).
+- Found on the machine: another session's lock waiter (`while pgrep -f "org.chromium…"` inside `flock`) matched its own
+  command line and held the browser lock 1 h 45 m with no browser open; that one waiter was ended so the queue moved.
+- Install data written: import --replace, load-plot --plan-only, rig.mjs --reaim par-press,bsw250-truss --wash-only,
+  --night-only, looks.mjs. No runtime rebuild.
+- SEEN on the 3080, 60 fps every view: `~/Downloads/moxir-hall/fix-crane-vs-photo032-marks.png`,
+  `fix-ground-vs-1c3956d1.png`, `fix-press-vs-1c3956d1.png`, `fix-roof-vs-photo021.png`, `fix-opening.png`.
+- GUESS / OWED: member sizes, press depth/type/flywheel side, machine-line length; the DJ table reads pale in the
+  booms' haze (rig exposure); the look colours (#2437ff column wash) are the looks', owned by the versions work;
+  `deck_h` reaches the installed app only with the next preview build.
+
+## 2026-09-28 — MOXIR in three rig versions (minimal · middle · full), and the lamps' bodies in every room
+
+Branch `feat/moxir-versions`, from `preview/rig-builder-2026-09-28` (ff216556). Not deployed: the
+owner's install was left alone (another agent was installing rigbuilder.4); a deploy is scheduled
+by the coordinator. Split for landing:
+
+| commit | belongs on |
+|---|---|
+| fix(rigbuild): every room draws the lamps' bodies; load-plot keeps the baked wash | #622 (bodies) / #607 (load-plot) |
+| feat(place): strobe, blinder and hazer planning types, with bodies | #624 |
+| feat(rig): a look's levels, truss-less rigs, mirrored offsets | #587 (rig-lib) / #624 (looks, schema) |
+| feat(rigbuild): MOXIR in three versions | #587 / #624 |
+| feat(rigbuild): versions live as projects of the space, with a switch | #587 (rig-lib, rig.mjs, rig-look) / #624 (switch, schema) |
+
+**Bodies.** The owner on `/moxir` (rigbuilder.3): lamps showed as bare cones — load-plot had
+deleted the baked body mesh and only view A drew bodies. `RigBodies.jsx` (lazy) now draws the same
+instanced `FixtureBodies` in the space view (LiveProjectScene), the Studio and the plot/cards rooms
+(StudioViewport). `load-plot.mjs` keeps `rig-wash`. Guard `src/rigbuild/rigBodies.test.js`, seen red
+both ways; known-fixes row.
+
+**Versions.** Method and decisions: `docs/architecture/RIG_BUILD.md` §15. A version is a project;
+`components.rigVariant` ties the set; a switch in the space view. Design file
+`scripts/place/rigs/moxir-versions-2026-10-17.json` (sources for the brief: Atmosfera Mag,
+Mixmag 2018 — Printworks' Simeon Aldred, Dazed 2016, Wikipedia Berghain/Bassiani/Tresor; four rules
+marked design hypothesis — web search budget exhausted; RA/Vice pieces confirmed to exist, owed).
+
+Own stack: server :4411, vite :5411 (not 4000/443/80/4371/5371/4383/5383/4391/5391/4395/5395),
+data a `di save moxir` copy imported as space `mxver-moxir` into the session scratchpad. GPU renders
+through `scripts/rigbuild/versions-render.sh` under the shared browser lock; renderer string checked
+(ANGLE/Vulkan, RTX 3080 Laptop). Comparison page `~/Downloads/moxir-versions/versions.html`.
+
+Tests run (targeted, 2 workers): src/rigbuild, scripts/place, scripts/rigbuild, schemaSync,
+PublicProjectViewer, wiki — 42 files / 523; viewport + live scene 21 files / 201. Lint: 0 errors.
+
+Owed: see RIG_BUILD.md §15.5.
+
+## 2026-09-28 — the rig-build base: fixture types, snap pieces, auto-patch, patch sheet, MVR + GDTF
+
+- Stack of five draft PRs on `feat/moxir-hall` (#587): #594 `feat/rig-base` (method doc
+  `docs/architecture/RIG_BUILD.md`, fixture types, `components.fixture` carries the plot's
+  patch), #595 `feat/rig-snap` (pieces + snap), #596 `feat/rig-autopatch` (desk
+  `POST /light/api/rig/patch`, Studio `useRigAutoPatch`), #600 `feat/rig-sheet`
+  (`/{space}/patch/{project}`), `feat/rig-mvr` (MVR 1.6 + authored GDTF 1.2, validator).
+  This note covers all five; the branches merge in order.
+- Decision that needs the owner's look: the 2026-09-20 rule "never universe/address in the
+  document" changes — the document holds the PLOT's patch, the desk's show.json the RUNNING
+  patch; auto-patch keeps them equal and flags differences (RIG_BUILD.md §2.2).
+- MOXIR: U1 001–468, U2 001–288; PAR ×50 / CO2 ×6 / laser ×2 mode owed, unpatched; in hall v2
+  the lasers are refused by the rig's crane-clash rule. MVR + 7 GDTF validate against the
+  pinned XSDs; pymvr/pygdtf parse it; BlenderDMX 2.3.0 imports all 102 fixtures with the
+  right patch but draws the beam at home along +Y — axis convention owed.
+- Found, not fixed (desk output): sACN sends the desk's U1 as universe 0, which E1.31
+  reserves — an sACN node set to 1 will not see it.
+- Trap: the app pins html/body/#root (`position: fixed`), so a document page printed only
+  its first page; the sheet page lets them flow via a class on <html>.
+
+## 2026-09-28 — view A, the room in first person: `/{space}/build/{project}` and `/{space}/crew/{project}`
+
+- The owner asked for A first ("like in minecraft … easy connect to our light system") and
+  chose all three views; B and C were built first. Sketch A at
+  `~/Downloads/moxir-build-sketches/sketches.html`. Method and checks: `RIG_BUILD.md` §12.
+- Stacked on #616 as draft PRs: `feat/rig-build-3d` (base: aim, hotbar, tags, walk seams,
+  the float fix) → `feat/rig-build-3d-room` (the surface, desktop) → `feat/rig-build-3d-phone`
+  → `feat/rig-build-3d-crew` (crew view, docs).
+- Reused, not rebuilt: `LiveProjectScene` (three optional seams), `snap()`, `plotEdits`,
+  `rental.js`, `plotModel`/`CONFLICT_CODES`, `useRigAutoPatch`, `useRigLookEntities`, the
+  plot's `Inspector` (now exported), `fixture-lib.mjs aimFixture` for the bodies. The piece
+  upload moved into `usePieceAssets` and the plot uses it too.
+- Own stack: server :4391, vite :5391 (never 4000/443/80/4371/5371/4383/5383), data a copy
+  exported from the local tier into the session scratchpad (`rigbuild3d/`), baseline bundle
+  `rigbuild3d-baseline.tar.gz` there. Scripts: `rigbuild3d-gpu.mjs` + `steps-*.mjs`.
+- Thermal: GPU browser only (PRIME env + ANGLE/Vulkan, renderer string refused unless NVIDIA),
+  one at a time, each run started below 80 °C; the package peaked at 91 °C after the crew run.
+  2D checks headless with `--disable-3d-apis`.
+- Trap: the first GPU page got NO WebGL2 — ANGLE/Vulkan under PRIME refuses
+  `powerPreference: 'high-performance'`, which is what LiveProjectScene's Canvas asks (the
+  Studio asks `'default'`). The harness rewrites the hint; the product question is owed.
+- Owed: see §12.7.
+
+## 2026-09-28 — view C, the cards: `/{space}/cards/{project}`
+
+- The owner chose all three build views. B was done first; C is sketch C in
+  `~/Downloads/moxir-build-sketches/sketches.html`. Method and what was checked are in
+  `docs/architecture/RIG_BUILD.md` §11.
+- Stacked on #609 as four draft PRs: `feat/rig-cards` (the rental list and the cards),
+  `feat/rig-cards-deal` (positions and the deal), `feat/rig-cards-patch` (the patch bars),
+  `feat/rig-cards-cues` (the looks on the cue list, the room follows).
+- New data in the document, both schema copies with parity tests:
+  - `components.rentalList`, from `scripts/rigbuild/rental.mjs`;
+  - `components.rigLooks`, from `scripts/rigbuild/looks.mjs`.
+  Both live on the `rig-show` group entity.
+- The cue model is the project's own: `mappingState.cues` fired through `fireCue`. A cue
+  names the desk look `rig-<look>`. No parallel cue model.
+- The desk: `GET /light/api/dmx` now carries the looks that are on. The room poses by
+  them (`useRigLookEntities`, used in `StudioSceneContent`), which is a view only.
+- Fixed on the way: the mirror drew owed-channel lamps white. Known-fixes row added;
+  the guard was seen failing without the fix.
+- The MOXIR test ran on an own stack:
+
+  | item | value |
+  |---|---|
+  | server / vite | :4383 / :5383 |
+  | data | a copy exported from the local tier after the re-centring (70dbdd95), in the session scratchpad |
+  | setup | `load-plot.mjs --pieces-only`, the rental list, the looks |
+
+  Results:
+  - The whole list was dealt in the UI: 104/104 placed.
+  - 46 fixtures patched in U1 and U2; three types have their mode owed.
+  - A test conflict was resolved from its bar.
+  - GO ×5: the desk reported each look in turn.
+  - On the RTX 3080 the room followed all five looks at 60 fps. The phone was checked in
+    portrait and landscape.
+- Thermal:
+  - 2D shots were taken headless with `--disable-3d-apis`.
+  - The room was shot only in a headed Chromium, `PRIME` + `ANGLE`/Vulkan, with the
+    renderer string checked first.
+  - The first GPU attempt, with ANGLE flags and no PRIME env, got **no WebGL** and stopped
+    itself. The PRIME env plus `--use-gl=angle` from `rig-look.mjs` is what works.
+  - The package reached **97 °C** after two back-to-back phone GPU runs (83 °C before the
+    second). GPU work stopped there; wait longer between runs.
+- Shots: `~/Downloads/rig-cards/`.
+- Owed:
+  - the channel lists (so the desk looks are empty of DMX values);
+  - per-project desk look ids;
+  - console GO once #599 lands;
+  - dealing by drag;
+  - bodies per lamp.
+
+# feat/rig-equipment-media — verified codes, the makers' photos and papers on the item cards (2026-09-28)
+
+Stacked on `feat/rig-equipment` (#624). Owner: "we need to also real images of each device …
+you check all eq from list right ? and also find the documentation's and attach it"; on
+copyright: "yes look to keep copyrights just links also ok if there hard with that".
+
+- **Data**: `src/rigbuild/items/media.json` — per item a verification (confirmed / probable /
+  equivalent / unknown, evidence URL + date, the stand-in) and media entries (photo, manual,
+  dmx-chart, datasheet, safety) with maker, URL, page, `offer` (`download` kept / `link` only),
+  sha256, size, date and the local asset id. Metadata only. Rules: `mediaRules.js`; tests
+  `media.test.js`.
+- **Script**: `scripts/rigbuild/fetch-equipment-media.mjs` (`--record` first fetch, default verify,
+  `--upload` to the local install's space). Refuses in-repo caches and non-local hosts; a sha256
+  change is not stored. Tests `fetch-equipment-media.test.js`.
+- **Card**: badge + evidence, gallery (kept maker's photo → our render "3D model" → Commons),
+  "maker's photos" links, DOCUMENTS. `Inventory.jsx`, `equipment.css`. Wiki entry updated.
+- **Research**: three agents (lights / fx / control), each photo looked at before recording.
+  Result: 6 confirmed (incl. UP-COB200, new), 22 equivalent, 2 unknown. 24 files kept and stored
+  on the owner's install (space `moxir`), 54 links. No UPlight manual/DMX chart exists online;
+  stand-ins' charts recorded by page but NOT applied to the UPlight types (would drive real units
+  wrong). MDG ATMe chart p.17 agrees with the OFL profile in use.
+- **Where the bytes are**: cache `~/.local/share/di.iiii/equipment-media/<item>/<sha256>.pdf`;
+  the install's `spaces/moxir/assets/` (backup before: `~/di-backups/moxir-before-media-2026-09-28/`).
+  To undo the store: delete those 24 assets (`DELETE /api/spaces/moxir/assets/<id>`, ids in
+  media.json) or restore the backup.
+- Method + verification table: RIG_BUILD.md §13.8.
+- Owed: UPlight's charts (drafted requests, not sent: `~/Downloads/rig-equipment/permission-request.md`),
+  the real products behind 22 codes, ETC Sensor3 + LumiNode full manuals (truncated ×3), a real phone.
+
+## 2026-09-28 — the equipment list and the inventory: `/{space}/equipment/{project}`, E in build mode
+
+- Asked: a place to add and delete devices (not everything on the quote is used), then — the
+  same day — a Minecraft-style inventory with item cards ("what is what", real alternatives).
+  Method and checks: `docs/architecture/RIG_BUILD.md` §13.
+- One draft PR on #622 (`feat/rig-equipment`). The list keeps its component name
+  (`rentalList`) so A, B and C follow with no copy; new fields in both schema copies.
+- Content: `src/rigbuild/items/*.json`, written by three research agents from cited sources
+  (maker pages, manuals, ILDA/HSE/FDA for lasers, OSHA for CO₂, ANSI E1.11/E1.31, Art-Net 4);
+  checked by `items.test.js`. Renders: `blender -b --factory-startup -P
+  scripts/rigbuild/item-renders.py` (Workbench, CPU, seconds). Photos: Wikimedia Commons only.
+- Own stack: server :4395, vite :5395 (never 4000/443/80 or the other agents' ports); data the
+  rigbuild3d baseline bundle imported into the session scratchpad (`rigequip/data`), desk show
+  from the same baseline. Harness: `rigequip/shot.mjs` (headless, 3D off, DPR 2 / DPR 3, a
+  narrow-text sweep) and `rigequip/gpu.mjs` (PRIME + ANGLE/Vulkan, renderer string checked,
+  95 °C guard). Shots: `~/Downloads/rig-equipment/`.
+- Thermal: 2D headless throughout; the renders on the CPU in Workbench (≤ 78 °C); the first GPU
+  run peaked 79 °C; the second started at 85 °C and hit 97 °C — the guard closed it. Wait below
+  80 °C before a GPU run.
+- Changed: E is the inventory in build mode, as in Minecraft; lowering the hand is Z (was E).
+- Owed: see RIG_BUILD.md §13.7.
+
+## 2026-09-28 — view B, the plot: `/{space}/plot/{project}`, the room beside it, sheet 1
+
+- Owner chose all three build views; "start B now". Sketch B at
+  `~/Downloads/moxir-build-sketches/sketches.html`. Method and what was checked:
+  `docs/architecture/RIG_BUILD.md` §10. Stacked on #602 (`feat/rig-mvr`) as three PRs:
+  `feat/rig-plot` (the plot editor), `feat/rig-plot-room` (the room pane, phone toggle),
+  `feat/rig-plot-print` (sheet 1).
+- New data: `components.venuePlan` (both schema copies, parity test) — derived from the hall
+  JSON by `venuePlanFromHall`, never drawn. `snap()` gained `metric: 'plan'` and piece
+  heights (`pieceWithHeight`, height = catalogue × scale.y).
+- MOXIR test on an own stack (server :4371, vite :5371, data = a COPY of the space exported
+  from the local tier into the session scratchpad): `scripts/rigbuild/load-plot.mjs` wrote
+  the v2 + DJ hall's plan, the goalpost and riser as 8 pieces, and 104 typed lamps as ops.
+  In the UI: a 12 m run drawn, two towers under it, two BSW hung → the desk patched them
+  #47 U1.445 and #48 U1.469; a tower moved; an overlapping address drawn dashed with "!".
+- Fixed on the way (base, #596): a refused typed address was overwritten by the desk's old
+  one (`writeBackOps`); known-fixes row + guard seen failing.
+- Found on the way: the room's Canvas threw without WebGL and took the page with it — the
+  room now fails alone behind a boundary. The first room camera sat outside the end wall
+  on a phone — now clamped inside the walls at 6 m.
+- Thermal: plan shots headless with `--disable-3d-apis` (no software GL at all); the room
+  only in a headed Chromium on the RTX 3080 via PRIME, renderer string checked on a blank
+  page first. One browser at a time; waited below 85 °C (it touched 100 °C once, idle load
+  1.6 — a spike). Shots: `~/Downloads/rig-plot/`.
+- Trap: a server started with `nohup … &` from a tool call died silently within minutes (no
+  error in its log) — run it under the tool's own background runner.
+- Owed: a click in the room → plan selection not driven in a test; bodies per lamp;
+  position callouts; rental-list counts in the document; flown-truss rigging points.
+
+## 2026-09-28 — the rig tools read only for visitors; a hosted tier says where the desk is
+
+- `/{space}/plot|cards|equipment|build/{project}` on a PUBLIC space: a visitor who is not a member
+  gets the page read only (build → crew view) instead of the sign-in card; members edit as before;
+  private spaces keep the gate. `src/rigbuild/rigToolAccess.js`, `RigToolRoute` in `src/RootApp.jsx`.
+- Read only = `NO_WRITE` op path, no auto-patch, no desk calls, no writing controls, one
+  "View only — sign in …" line (`ViewOnlyLine.jsx`).
+- Hosted (no desk): one sentence instead of "none here"/"no desk here" fragments; "patch this group"
+  disabled with it (it used to say "patching…" and never answer); the cards' patch hint read a
+  message that is never set, so it never said the lamps stay unpatched (fixed: it reads the probe).
+- Item cards never request the makers' kept files on a hosted tier (they 404); they link the maker.
+- Tests: RootApp.rigTools, readOnlySurfaces, rigToolAccess, keptMediaHosted — all seen red first.
+- Owed: a browser look on dev (desktop + phone) once the integration lands.
+
+## 2026-09-28 — History says who changed what
+
+`GET /api/spaces/:spaceId/changes` (owner-or-admin) grouped a space's op log by person and burst and nothing in
+the app called it. History (Spaces → a space → Manage → History) now opens with "What changed · last 7 days",
+newest first, then "Restore points" as before; both load together and a failing changes call leaves the points
+usable. The walk on a test stack (ann edits, bob removes) showed "+2 boxs" — the server's plural; fixed with
+-es for s/x/z/ch/sh. Tests red on the old code: 1 SpaceHub, 1 spaceHistory. Wiki "space-history" updated.
+
+## 2026-09-28 — tier-sync can hold projects back (`--skip`)
+
+The owner asked for local's new work on dev "but not publish things that don't need to be seen by
+everyone". tier-sync could narrow to one `--space` but never leave a project out, so a space holding
+one internal page had to be copied whole or not at all. `--skip space/project` or `--skip space`
+(repeatable, comma-separated) now drops them from the finished plan in every mode, and a space left
+with nothing is not created. Guard: `applySkip` in `scripts/tier-sync.test.js` (3 tests, red on the
+old script: `applySkip is not a function`).
+
+First use (2026-09-28): 114 of local's 137 dev-missing projects copied; 23 held back — ops notes with
+security to-dos, a funder and fellowship marked private, the owner's email, the Dilijan camp, internal
+brand work, a support sketch, five Open Space looks whose images no tier holds, three test leftovers,
+and `drive-decisions` (the same id lives in `decisions` on dev; a plain copy would have overwritten
+it silently). Spaces the script creates start private (`isPublic` unset) and are labelled by slug.
+
+## 2026-09-28 — the network rooms link the WCC exhibition by its public address
+
+Found while comparing local with dev one project at a time: six CVs differed by exactly one link, and neither
+copy was right — dev said `di-studio.xyz/wcc` (the old name, as the repo did) and local `local.thedi.studio/wcc`
+(opens on one machine only). `people.json` now says `https://diiii.xyz/wcc`; `build.mjs` rewrites only those six
+rooms. New guard in `network-pages.test.js`, red on the old data. After merge the space's sync publishes the six
+rooms to each tier (prod on the owner's word).
+
+## 2026-09-28 — three small things from the debug list, and the deploy page told the truth
+
+Walked on a test stack, phone 390x844 DPR3 + desktop 1440x900 DPR2 (Help reached the way a person does: the palette —
+double-tap on a phone, `/` on a keyboard — then "help").
+- Raw Help ended in an empty bordered 33px strip on every screen: `<footer className="raw-help-footer" />` outlived its
+  contents. Removed with its three CSS rules and its phone block. Guard in `RawHelpDialog.test.jsx`, red on the old dialog.
+- The new-project ✕ was 24x21 on a phone. `.sh-btn-cancel`, `.sh-rename-save/-cancel`, `.ssh-btn-cancel` take
+  `--di-touch-target` (44px) under `(pointer: coarse)`; measured 44x44 after, mouse sizes unchanged. Guard
+  `src/studio/styles/hubTouch.test.js`, red on the old CSS.
+- "Wordmark overlapping the empty Raw canvas": not reproducible — the empty canvas now shows the first-node card only. Stale.
+- `docs/deploy/LIVE_DEPLOY.md` named `di-studio.xyz` for everything and described only the SSH deploy. `DEPLOY_TARGET`
+  is `mac` since 2026-09-27 (the host pulls a green run itself); the page now says so, names `diiii.xyz`, and keeps
+  `di-studio.xyz` as the sign-in callback name. `legacy/` and the cPanel pages were left as the records they are.
+
+## 2026-09-28 — batch: network link, History's "what changed", small UI (#632 #633 #634)
+
+Three green-or-pending PRs that only collided on `docs/ai/known-fixes.md` (four rows, union, no markers). Each keeps
+its own session note. Gate on the merged tree is in the PR body.
+
+## 2026-09-28 — the rig-builder line lands on dev, with hosted show playback
+
+- Owner, 2026-09-28: "yes, merge to dev and make MOXIR public on dev". One integration PR carries
+  the whole preview line (#587, #594–#630, #599, #603, feat/rig-nav, feat/moxir-versions, the
+  desk's cue loop) squashed onto current dev, minus the preview-only session note.
+- NEW — hosted playback (RIG_BUILD.md §16): with no desk, a room plays its cue list by the wall
+  clock, `t = (now − mappingState.showEpoch) mod passLength`, the server's time measured per tab
+  by Cristian's method. Precedence: page GO > desk > clock > the saved room. A SHOW chip names
+  the look and, opened, the loop. `scripts/rigbuild/show-clock.mjs` starts it as one op.
+- Tests: showClock.test.js (timing, wrap, before-epoch, hold 0, skewed viewers agree),
+  useRigLook.clock.test.jsx (precedence via the real hook, the chip), schema round-trips,
+  show-clock.test.js. Guards seen red: precedence swapped, loop disabled.
+- Owed: see the PR body and OPEN_THREADS (prod only on the owner's word).
+
 ## 2026-09-27 — an uptime check from outside the building that serves the site
 
 - New `.github/workflows/uptime.yml`: every 10 min GitHub's runners open the front page and
