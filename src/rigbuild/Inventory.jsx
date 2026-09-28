@@ -1,5 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { GROUPS, picturesOf } from './items/index.js'
+import { DOC_WORDS, STATUS_WORDS, assetUrl, documentsOf, photosOf, verificationOf } from './items/media.js'
+import { apiBaseUrl } from '../services/apiClient.js'
 import { byGroup, matchTile, tileWords } from './inventory.js'
 import { FLAG_WORDS, FROM_WORDS, ITEM_CATEGORIES } from './equipment.js'
 import { typeById, modeOf, powerOf } from './fixtureTypes.js'
@@ -44,23 +46,129 @@ export function Stepper({ value, onChange, min = 0, max = 999, label = 'quantity
     )
 }
 
+// A picture that fails to load (a maker's file on a tier that does not hold it, a render not
+// built) is dropped, not shown broken — the next one takes its place.
 function Picture({ tile, size = 'tile' }) {
-    const pics = useMemo(() => picturesOf({ id: tile.typeId || tile.item?.id, piece: tile.piece, item: tile.item }), [tile])
+    const all = useMemo(() => picturesOf({ id: tile.typeId || tile.item?.id, piece: tile.piece, item: tile.item, apiBase: apiBaseUrl }), [tile])
+    const [failed, setFailed] = useState(() => new Set())
+    // On a tile, a stand-in's photo never stands for the rental unit: our model comes first there.
+    const pics = useMemo(() => {
+        const ok = all.filter((p) => !failed.has(p.src))
+        return size === 'tile' ? [...ok.filter((p) => !(p.kind === 'maker' && p.equivalent)), ...ok.filter((p) => p.kind === 'maker' && p.equivalent)] : ok
+    }, [all, failed, size])
     const [i, setI] = useState(0)
-    const pic = pics[i] || null
+    const pic = pics[Math.min(i, pics.length - 1)] || null
+    const drop = (p) => setFailed((f) => new Set(f).add(p.src))
     if (!pic) {
         return <div className={`rigequip-pic rigequip-pic--${size} is-none`} aria-hidden={size === 'tile'}><span className="rigplot-mono">{size === 'tile' ? String(tile.code).replace(/^UP-/, '') : 'no picture yet — owed'}</span></div>
     }
+    const at = pics.indexOf(pic)
+    const imgSrc = pic.absolute ? pic.src : src(pic.src)
+    const alt = size === 'tile' ? '' : `${tile.name}: ${pic.kind === 'render' ? '3D model — a render of our model' : pic.kind === 'maker' ? `${pic.equivalent ? 'equivalent product, not the rental unit — ' : ''}${pic.shows || 'the maker\'s photo'}` : pic.shows || 'a photo'}`
     return (
-        <figure className={`rigequip-pic rigequip-pic--${size}`}>
-            <img src={src(pic.src)} alt={size === 'tile' ? '' : `${tile.name}: ${pic.kind === 'render' ? 'a render of our model' : pic.shows || 'a photo'}`} loading="lazy" draggable="false" />
+        <figure className={`rigequip-pic rigequip-pic--${size}${pic.kind === 'maker' ? ' is-maker' : ''}`}>
+            <img key={imgSrc} src={imgSrc} alt={alt} loading="lazy" draggable="false" onError={() => drop(pic)} referrerPolicy="no-referrer" />
             {size !== 'tile' ? (
                 <figcaption className="rigplot-mono">
-                    {pic.kind === 'render' ? <>our model, rendered · {pic.licence}</> : <>photo: {pic.credit} · {pic.licenceUrl ? <a href={pic.licenceUrl} target="_blank" rel="noreferrer">{pic.licence}</a> : pic.licence}{pic.page ? <> · <a href={pic.page} target="_blank" rel="noreferrer">source</a></> : null}{pic.shows ? <> · {pic.shows}</> : null}</>}
-                    {pics.length > 1 ? <button type="button" className="rigequip-link" onClick={() => setI((i + 1) % pics.length)}>{pics[(i + 1) % pics.length].kind === 'render' ? 'our render' : 'a photo'} →</button> : null}
+                    <span className="rigequip-pic__kind">{pic.kind === 'render' ? '3D model' : pic.kind === 'maker' ? (pic.equivalent ? 'maker\'s photo · EQUIVALENT product, not the rental unit' : 'maker\'s photo') : 'photo'}</span>
+                    {' · '}
+                    {pic.kind === 'render' ? <>our model, rendered · {pic.licence}</>
+                        : pic.kind === 'maker' ? <>© {pic.credit} — manufacturer’s image, internal reference · <a href={pic.page} target="_blank" rel="noreferrer">source</a> · fetched {pic.fetched}</>
+                            : <>{pic.credit} · {pic.licenceUrl ? <a href={pic.licenceUrl} target="_blank" rel="noreferrer">{pic.licence}</a> : pic.licence}{pic.page ? <> · <a href={pic.page} target="_blank" rel="noreferrer">source</a></> : null}{pic.shows ? <> · {pic.shows}</> : null}</>}
                 </figcaption>
             ) : null}
+            {size !== 'tile' && pics.length > 1 ? (
+                <div className="rigequip-gallery" role="group" aria-label="pictures">
+                    {pics.map((p, k) => (
+                        <button key={p.src} type="button" className={`rigequip-gallery__dot${k === at ? ' is-on' : ''}`} aria-pressed={k === at} onClick={() => setI(k)}
+                            aria-label={`${k + 1} of ${pics.length}: ${p.kind === 'render' ? '3D model' : p.kind === 'maker' ? 'maker\'s photo' : 'photo'}`}>
+                            <img src={p.absolute ? p.src : src(p.src)} alt="" loading="lazy" draggable="false" onError={() => drop(p)} referrerPolicy="no-referrer" />
+                        </button>
+                    ))}
+                </div>
+            ) : null}
         </figure>
+    )
+}
+
+/** The verification badge: is this the rental unit's maker's product, and the evidence. */
+function Verified({ id }) {
+    const v = verificationOf(id)
+    if (!v) return null
+    const words = STATUS_WORDS[v.status] || STATUS_WORDS.unknown
+    const ev = (v.evidence || [])[0]
+    return (
+        <p className={`rigequip-verified is-${v.status}`}>
+            <span className="rigequip-verified__badge rigplot-mono">{words.badge}</span>
+            <span className="rigequip-verified__means">{words.means}{v.status === 'equivalent' && v.equivalentOf ? <> — shown: {v.equivalentOf.url ? <a href={v.equivalentOf.url} target="_blank" rel="noreferrer"><b>{v.equivalentOf.maker} {v.equivalentOf.model}</b></a> : <b>{v.equivalentOf.maker} {v.equivalentOf.model}</b>}</> : null}.</span>
+            <span className="rigplot-mono rigequip-verified__ev">
+                {ev ? <><a href={ev.url} target="_blank" rel="noreferrer">evidence</a> · checked {ev.accessed || v.checked}</> : <>checked {v.checked}</>}
+            </span>
+            {v.note ? <span className="rigequip-verified__note">{v.note}</span> : null}
+        </p>
+    )
+}
+
+// Whether this install holds the makers' files at all (a hosted tier never does). One probe
+// per page, on the first document or photo asked for.
+let storeProbe = null
+const probeStore = (url) => {
+    if (!storeProbe) storeProbe = fetch(url, { method: 'HEAD' }).then((r) => r.ok).catch(() => false)
+    return storeProbe
+}
+
+/** The documents: manual, DMX chart, datasheet, safety. A file the maker offers for download
+ * opens the copy this install keeps; anything else links the maker's page, never copied. */
+function Documents({ id }) {
+    const docs = documentsOf(id)
+    const first = docs.map((d) => assetUrl(apiBaseUrl, d)).find(Boolean)
+    const [here, setHere] = useState(null)
+    useEffect(() => {
+        let live = true
+        if (first) probeStore(first).then((ok) => { if (live) setHere(ok) })
+        else setHere(false)
+        return () => { live = false }
+    }, [first])
+    if (!docs.length) return null
+    return (
+        <section className="rigequip-card__part rigequip-docs"><h3>documents</h3>
+            {first && here === false ? <p className="rigplot-hint">The kept copies stay on the studio’s own install (the makers’ copyright, internal reference) — here each line links the maker’s file.</p> : null}
+            <ul>
+                {docs.map((d) => {
+                    const local = here ? assetUrl(apiBaseUrl, d) : null
+                    return (
+                        <li key={d.url}>
+                            <span className="rigplot-mono rigequip-kind">{DOC_WORDS[d.kind] || d.kind}</span>{' '}
+                            <a href={local || d.url} target="_blank" rel="noreferrer"><b>{d.title}</b></a>
+                            {d.pages ? <span className="rigplot-mono"> · {d.pages} p.</span> : null}
+                            {d.equivalent ? <span className="rigequip-flag rigplot-mono"> · EQUIVALENT product, not the rental unit</span> : null}
+                            {d.note ? <span> — {d.note}</span> : null}
+                            <span className="rigequip-docs__rights rigplot-mono">
+                                {d.offer === 'link'
+                                    ? <>© {d.maker} — on the maker’s page, linked, not copied · checked {d.checked}</>
+                                    : <>© {d.maker} — manufacturer’s document, internal reference · <a href={d.page || d.url} target="_blank" rel="noreferrer">source</a> · fetched {d.fetched || 'not yet'}{d.sha256 ? <> · sha256 {d.sha256.slice(0, 12)}…</> : null}{local ? ' · the copy kept here' : ''}</>}
+                            </span>
+                        </li>
+                    )
+                })}
+            </ul>
+        </section>
+    )
+}
+
+/** The maker's photos that are only linked (a shop page's pictures are theirs to show, not ours to copy). */
+function PhotoLinks({ id }) {
+    const links = photosOf(id).filter((m) => m.offer === 'link')
+    if (!links.length) return null
+    const pages = [...new Map(links.map((m) => [m.page || m.url, m])).values()]
+    return (
+        <p className="rigequip-photolinks rigplot-mono">
+            <span className="rigequip-pic__kind">maker’s photos</span>{' '}
+            {pages.map((m, k) => (
+                <span key={m.page || m.url}>{k ? ' · ' : ''}<a href={m.page || m.url} target="_blank" rel="noreferrer">{m.equivalent ? `${m.product} (equivalent, not the rental unit)` : m.product || m.maker}</a></span>
+            ))}
+            <span className="rigequip-docs__rights">© {[...new Set(pages.map((m) => m.maker))].join(', ')} — on the maker’s page, linked, not copied · checked {pages[0].checked}</span>
+        </p>
     )
 }
 
@@ -146,7 +254,9 @@ export function ItemCard({ tile, eq, library, readOnly, phone, onClose, onToHotb
                 <button type="button" className="rigequip-close" onClick={onClose} aria-label="Close the card">×</button>
             </header>
             <Picture tile={tile} size="card" />
+            {item ? <PhotoLinks id={item.id} /> : null}
             {item?.product ? <p className="rigequip-card__product">{item.product}</p> : null}
+            {item ? <Verified id={item.id} /> : null}
 
             {/* take it or skip it, and how many */}
             {!readOnly ? (
@@ -229,6 +339,8 @@ export function ItemCard({ tile, eq, library, readOnly, phone, onClose, onToHotb
                     </ul>
                 </section>
             ) : null}
+
+            {item ? <Documents id={item.id} /> : null}
 
             {Object.keys(sources).length ? (
                 <section className="rigequip-card__part rigequip-sources"><h3>sources</h3>
