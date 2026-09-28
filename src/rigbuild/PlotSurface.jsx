@@ -41,6 +41,7 @@ import './plot.css'
 // block's totals are the patch sheet's.
 
 const PlotRoom = lazy(() => import('./PlotRoom.jsx'))
+const PlotPrint = lazy(() => import('./PlotPrint.jsx'))
 
 const PIECE_URLS = { 'truss-1m': truss1Url, 'truss-2m': truss2Url, 'truss-3m': truss3Url, tower: towerUrl, 'deck-2x1': deckUrl }
 
@@ -152,7 +153,7 @@ function KeyBlock({ model }) {
     )
 }
 
-function TitleBlock({ title, model, desk, scale, spaceId, projectId }) {
+function TitleBlock({ title, model, desk, scale, spaceId, projectId, onPrint }) {
     const t = titleTotals(model.sheet)
     const patch = buildPatchSheetPath(spaceId, projectId)
     return (
@@ -169,6 +170,7 @@ function TitleBlock({ title, model, desk, scale, spaceId, projectId }) {
             <div className="rigplot-title__links">
                 <a href={patch}>sheet 2 · patch</a>
                 <a href={`${patch}#power`}>sheet 3 · power</a>
+                <button type="button" onClick={onPrint}>print sheet 1</button>
             </div>
         </section>
     )
@@ -349,6 +351,7 @@ export default function PlotSurface({ spaceId, projectId, library = TYPE_LIBRARY
     const [marquee, setMarquee] = useState(null)
     const [pane, setPane] = useState('plan') // phone: plan | room
     const [sheetOpen, setSheetOpen] = useState(false)
+    const [printing, setPrinting] = useState(false)
 
     const shown = useMemo(() => (preview?.ops?.length ? applyProjectOps(document_, preview.ops).entities : entities), [preview, document_, entities])
     const model = useMemo(() => plotModel({ entities: shown, library, deskFlags: patch.flags, projectId }), [shown, library, patch.flags, projectId])
@@ -705,6 +708,14 @@ export default function PlotSurface({ spaceId, projectId, library = TYPE_LIBRARY
     const [hidden, setHidden] = useState(0)
     const dragTool = useRef(null)
 
+    if (printing) {
+        return (
+            <Suspense fallback={<p className="rigplot-loading">Preparing the sheet…</p>}>
+                <PlotPrint model={model} title={title} spaceId={spaceId} projectId={projectId} extent={extent} viewExtent={[v[0], v[1], v[0] + v[2], v[1] + v[3]]} desk={desk} onClose={() => setPrinting(false)} version={state.version} />
+            </Suspense>
+        )
+    }
+
     const ghostModel = ghost?.res || ghost?.run ? ghost : null
     const plan = (
         <div className={`rigplot-plan${tool !== 'select' ? ' is-placing' : ''}`}>
@@ -759,7 +770,7 @@ export default function PlotSurface({ spaceId, projectId, library = TYPE_LIBRARY
             <ToolOptions tool={tool} options={options} setOptions={setOptions} library={library} />
             <Inspector model={model} selectedIds={selectedIds} entities={entities} library={library} edit={edit} patchGroup={(ids) => { setStatus(`patching ${ids.length} as a group…`); patch.patchGroup(ids) }} runOf={runOf} />
             <KeyBlock model={model} />
-            <TitleBlock title={title} model={model} desk={desk} scale={printScale} spaceId={spaceId} projectId={projectId} />
+            <TitleBlock title={title} model={model} desk={desk} scale={printScale} spaceId={spaceId} projectId={projectId} onPrint={() => setPrinting(true)} />
         </>
     )
 
