@@ -1,0 +1,16 @@
+{
+  "show": "MOXIR 17.10",
+  "writtenAt": "2026-09-28",
+  "source": "The show's order as the owner passed it to Claude on 2026-09-27, recorded in scripts/place/rigs/moxir-2026-10-17.json (feat/moxir-hall) provenance.fixtureList: \"18x UP-B380F, 12x UP-250BSW, 8x UP-HK1915, 50x UP-PL5403, 2x UP-LA40WF, CO2 x6, cold spark x4, smoke x4\".",
+  "howToRead": "One line per item on order. `code` is the rental house's own code as its spreadsheet prints it; `said` is the order's own words for the line. CO2, cold spark and smoke were ordered by kind: the rental house's spreadsheet lists exactly one item of each (UP-Q108S, UP-YH600F, UP-YZ31P), so those codes are its. Nothing here is confirmed by the rental house: the quote sheet in the spreadsheet is blank.",
+  "items": [
+    { "code": "UP-B380F", "ordered": 18, "said": "18x UP-B380F" },
+    { "code": "UP-250BSW", "ordered": 12, "said": "12x UP-250BSW" },
+    { "code": "UP-HK1915", "ordered": 8, "said": "8x UP-HK1915" },
+    { "code": "UP-PL5403", "ordered": 50, "said": "50x UP-PL5403" },
+    { "code": "UP-LA40WF", "ordered": 2, "said": "2x UP-LA40WF" },
+    { "code": "UP-Q108S", "ordered": 6, "said": "CO2 x6" },
+    { "code": "UP-YH600F", "ordered": 4, "said": "cold spark x4" },
+    { "code": "UP-YZ31P", "ordered": 4, "said": "smoke x4" }
+  ]
+}

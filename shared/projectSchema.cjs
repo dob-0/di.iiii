@@ -595,6 +595,45 @@ const normalizeVenuePlan = (plan) => {
   return out
 }
 
+// A RENTAL LIST (RIG_BUILD.md §11, view C): what the show has ON ORDER from the
+// rental house, per fixture type — the cards of view C count "placed n / ordered m"
+// against it, and the plot says "3 left of 12". Written by
+// scripts/rigbuild/rental.mjs from the rental house's own spreadsheet and the show's
+// order, with where each number came from. Bounded like the venue plan.
+const RENTAL_CAP = 200
+const rentalCount = (value) => {
+  const n = Number(value)
+  return Number.isInteger(n) && n >= 0 && n <= 100000 ? n : null
+}
+const normalizeRentalList = (list) => {
+  if (!list || typeof list !== 'object') return null
+  const items = planList(list.items, (item) => {
+    const code = planText(item?.code, 40)
+    const ordered = rentalCount(item?.ordered)
+    if (!code || ordered == null) return null
+    const out = { code, type: planText(item.type, 40) || code.toLowerCase().replace(/\s+/g, '-'), ordered }
+    const stock = rentalCount(item.stock)
+    if (stock != null) out.stock = stock
+    const rate = planNum(item.rate)
+    if (rate != null && rate >= 0) out.rate = rate
+    const label = planText(item.label, 120)
+    if (label) out.label = label
+    const source = planText(item.source, 240)
+    if (source) out.source = source
+    const note = planText(item.note, 240)
+    if (note) out.note = note
+    return out
+  }).slice(0, RENTAL_CAP)
+  if (!items.length) return null
+  return {
+    name: planText(list.name),
+    source: planText(list.source, 480),
+    writtenAt: planText(list.writtenAt, 32),
+    currency: planText(list.currency, 8),
+    items
+  }
+}
+
 const normalizeFixtureIndex = (fixture) => {
   const index = Number(fixture?.index)
   return Number.isInteger(index) && index > 0 ? index : null
@@ -777,6 +816,12 @@ const normalizeEntity = (entity = {}) => {
     const plan = normalizeVenuePlan(sourceComponents.venuePlan)
     if (plan) nextComponents.venuePlan = plan
     else delete nextComponents.venuePlan
+  }
+  // The show's rental list — mirror of src/shared/projectSchema.js (RIG_BUILD.md §11).
+  if (sourceComponents.rentalList) {
+    const list = normalizeRentalList(sourceComponents.rentalList)
+    if (list) nextComponents.rentalList = list
+    else delete nextComponents.rentalList
   }
   // A screen: a plane that shows one of the project's own mapping surfaces
   // (document.mappingState.surfaces) as its picture. The join is the surface's

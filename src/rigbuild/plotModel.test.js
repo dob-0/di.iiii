@@ -35,4 +35,11 @@ describe('plotModel', () => {
         expect(t.channels).toBe('U1 33')
         expect(t.fixtures).toBe('3 fixtures · 2 patched')
     })
+
+    it('says how many of each type are left to place when the project has a rental list (view C, §11)', () => {
+        const withList = [...entities, { id: 'rig-show', type: 'group', components: { rentalList: { items: [{ code: 'UP-250BSW', type: 'up-250bsw', ordered: 12 }] } } }]
+        const m = plotModel({ entities: withList, library: TYPE_LIBRARY })
+        expect(m.key.find((k) => k.type === 'up-250bsw').rental).toMatchObject({ placed: 2, ordered: 12, left: 10 })
+        expect(m.key.find((k) => k.type === 'up-pl5403').rental).toBeUndefined()
+    })
 })

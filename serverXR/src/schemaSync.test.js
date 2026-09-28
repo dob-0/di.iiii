@@ -452,7 +452,11 @@ describe('ESM/CJS mirror equivalence', () => {
         // A venue plan (RIG_BUILD.md §10): numbers kept to the mm, a broken list item
         // dropped, a plan with fewer than three outline points dropped whole.
         { id: 'v1', type: 'model', components: { venuePlan: { name: ' hall ', outline: [[-1, -1], [1, -1], [1, 1.00049], [-1, 1]], columns: [[0, 0, 0.5, 0.8], [1, 'x', 1, 1]], grid: { x: [{ at: 0, label: 'A' }], z: [{ at: 'no' }] }, zones: [{ id: 'dance', label: 'dance floor', rects: [[0, 0, 1, 1]] }, { id: 'none', rects: [] }], solids: [{ id: 'press', rect: [0, 0, 1, 1], top: 4.5 }], overhead: [{ id: 'crane', line: [[0, 0], [1, 0]], bottom: 8 }, { id: 'bad' }], openings: [{ id: 'door', from: [0, 1], to: [1, 1] }], north: [0.6, 0.8], extra: 1 } } },
-        { id: 'v2', type: 'model', components: { venuePlan: { outline: [[0, 0], [1, 1]] } } }
+        { id: 'v2', type: 'model', components: { venuePlan: { outline: [[0, 0], [1, 1]] } } },
+        // A rental list (RIG_BUILD.md §11): counts are whole and bounded, an item with
+        // no code or no count is dropped, a list with no item is dropped whole.
+        { id: 'r1', type: 'group', components: { rentalList: { name: ' order ', source: 'x.xlsx', currency: 'AMD', items: [{ code: ' UP-B380F ', ordered: 18, stock: 18, rate: 20000, label: 'beam', source: 'Price list!D6' }, { code: 'UP-PL5403', ordered: '50', stock: -1 }, { code: '', ordered: 2 }, { code: 'X', ordered: 1.5 }], extra: 1 } } },
+        { id: 'r2', type: 'group', components: { rentalList: { items: [{ code: 'A' }] } } }
       ]
     },
     // The show's Perform presets (2026-09-24). The server rebuilds documents
@@ -520,6 +524,22 @@ describe('ESM/CJS mirror equivalence', () => {
     expect(plan.overhead).toEqual([])
     expect(plan.north).toEqual([0.6, 0.8])
     expect(doc.entities[1].components.venuePlan).toBeUndefined()
+  })
+
+  it('keeps components.rentalList bounded through the mirror, and drops an empty one', () => {
+    const doc = schema.normalizeProjectDocument({
+      entities: [
+        { id: 'r1', type: 'group', components: { rentalList: { name: ' order ', items: [{ code: ' UP-B380F ', ordered: 18, stock: 18, rate: 20000 }, { code: 'UP-PL5403', ordered: '50', stock: -1 }, { code: '', ordered: 2 }, { code: 'X', ordered: 1.5 }] } } },
+        { id: 'r2', type: 'group', components: { rentalList: { items: [{ code: 'A' }] } } }
+      ]
+    })
+    const list = doc.entities[0].components.rentalList
+    expect(list.name).toBe('order')
+    expect(list.items).toEqual([
+      { code: 'UP-B380F', type: 'up-b380f', ordered: 18, stock: 18, rate: 20000 },
+      { code: 'UP-PL5403', type: 'up-pl5403', ordered: 50 }
+    ])
+    expect(doc.entities[1].components.rentalList).toBeUndefined()
   })
 
   it('clears one fixture field through updateComponent without losing the rest', () => {

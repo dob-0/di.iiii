@@ -23,6 +23,7 @@ import {
 } from './plotEdits.js'
 import { isEffectType, shapePath } from './plotSymbols.js'
 import { FLAG_WORDS } from './sheet.js'
+import { countWords } from './rental.js'
 import PlotDrawing, { SCREEN_SIZES } from './PlotDrawing.jsx'
 import truss1Url from '../../scripts/rigbuild/pieces/truss-1m.glb?url'
 import truss2Url from '../../scripts/rigbuild/pieces/truss-2m.glb?url'
@@ -145,7 +146,7 @@ function KeyBlock({ model }) {
             <h2>key</h2>
             <ul>
                 {model.key.map((k) => (
-                    <li key={k.type}><Symbol shape={k.shape} letter={k.letter} /><span className="rigplot-mono">{k.code} ×{k.n} · {k.mode}</span></li>
+                    <li key={k.type}><Symbol shape={k.shape} letter={k.letter} /><span className="rigplot-mono">{k.code} ×{k.n} · {k.mode}{k.rental ? ` · ${countWords(k.rental)}` : ''}</span></li>
                 ))}
                 <li><svg width="16" height="16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" fill="none" stroke="#111" strokeDasharray="3 2" /></svg><span className="rigplot-mono">! conflict — see the inspector</span></li>
             </ul>

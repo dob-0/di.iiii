@@ -41,7 +41,10 @@ const APP_SEGMENTS = [
     'patch',
     // `/{space}/plot/{project}` — the rig's lighting plot (view B). Checked on all
     // three tiers before reserving (2026-09-28): nothing answers to the word.
-    'plot'
+    'plot',
+    // `/{space}/cards/{project}` — the rig's cards (view C). Checked on all three
+    // tiers before reserving (2026-09-28): nothing answers to the word.
+    'cards'
 ]
 
 // Real directories under public/, plus the build's own output prefixes, served
