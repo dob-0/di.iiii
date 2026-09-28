@@ -3017,8 +3017,7 @@
 .raw-op-create-footer button,
 .raw-op-create-header button,
 .raw-op-list button,
-.raw-help-header button,
-.raw-help-footer button {
+.raw-help-header button {
     -webkit-appearance: none;
     appearance: none;
     border: none;
@@ -3095,8 +3094,7 @@
     border: 1px solid var(--di-cyan-border);
 }
 
-.raw-help-header,
-.raw-help-footer {
+.raw-help-header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
@@ -3455,18 +3453,6 @@
     line-height: 1.45;
 }
 
-.raw-help-footer {
-    border-top: 1px solid var(--di-cyan-border);
-    border-bottom: 0;
-    align-items: center;
-}
-
-.raw-help-footer span {
-    color: rgba(255, 255, 255, 0.56);
-    font-family: var(--di-mono);
-    font-size: var(--di-text-3);
-    word-break: break-word;
-}
 
 /* The Help dialog on a narrow screen: one column. This block MUST come after
    the base .raw-help-body / .raw-help-callout-row rules above — it used to sit
@@ -3485,21 +3471,6 @@
     .raw-help-callout-row {
         grid-template-columns: 1fr;
         min-height: 0;
-    }
-}
-
-/* Neither the manual path nor "Jump to <section>" overflows at phone widths,
-   but side-by-side both end up wrapped to 2-3 lines in ~130px each — legible
-   in the sense of "not broken", not in the sense of "readable". Stack them. */
-@media (max-width: 480px) {
-    .raw-help-footer {
-        flex-direction: column;
-        align-items: stretch;
-        gap: var(--di-space-3);
-    }
-
-    .raw-help-footer button {
-        width: 100%;
     }
 }
 

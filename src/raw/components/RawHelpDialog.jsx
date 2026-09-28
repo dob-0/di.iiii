@@ -142,7 +142,6 @@ export default function RawHelpDialog({
                     )}
                 </div>
 
-                <footer className="raw-help-footer" />
             </section>
         </div>
     )

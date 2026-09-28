@@ -142,6 +142,13 @@
 
 .ssh-btn-cancel:hover { opacity: 1; }
 
+@media (pointer: coarse) {
+    .ssh-btn-cancel {
+        min-width: var(--di-touch-target);
+        min-height: var(--di-touch-target);
+    }
+}
+
 /* ─── STATUS ────────────────────────────────────────────────── */
 .ssh-status {
     font-size: 0.82rem;
