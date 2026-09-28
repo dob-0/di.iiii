@@ -385,7 +385,7 @@ export const renderSheetBody = (model, meta = {}) => {
   <dt>channels</dt><dd>${model.totals.channels}</dd>
   <dt>power</dt><dd>${(p.totalW / 1000).toFixed(1)} kW datasheet max · ${p.circuits.length} circuits · load alone needs ≥ ${p.minCircuitsByLoad}</dd>
   <dt>circuit</dt><dd>${p.circuit.amps} A × ${p.circuit.volts} V × ${Math.round(p.circuit.margin * 100)}% = ${p.circuit.limitW} W limit</dd>
-  <dt>on the wire</dt><dd>U1 = Art-Net port-address 0 (0:0:0); on sACN this desk sends U1 as universe 0, which E1.31 reserves — owed</dd>
+  <dt>on the wire</dt><dd>U1 = Art-Net port-address 0 (0:0:0) = sACN (E1.31) universe 1; each Un is Art-Net n−1 and sACN n</dd>
 </dl>
 <section>
 <h2>Patch — by universe and address</h2>

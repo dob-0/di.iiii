@@ -88,6 +88,9 @@ describe('CSV and HTML', () => {
         expect(html).toMatch(/&lt;img/)
         expect(renderSheetHtml(model)).toMatch(/^<!doctype html>/)
         expect(renderSheetHtml(model)).toMatch(/@page \{ size: A4 portrait/)
+        // #603: the desk sends Universe 1 as sACN 1, not the reserved 0 — the sheet says so.
+        expect(renderSheetHtml(model)).toMatch(/sACN \(E1\.31\) universe 1/)
+        expect(renderSheetHtml(model)).not.toMatch(/E1\.31 reserves/)
     })
 })
 

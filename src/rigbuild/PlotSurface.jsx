@@ -4,7 +4,7 @@ import { useOpHistory } from '../project/hooks/useOpHistory.js'
 import { useProjectStore } from '../project/state/projectStore.js'
 import { applyProjectOps, generateId } from '../shared/projectSchema.js'
 import { useRigAutoPatch } from '../studio/hooks/useRigAutoPatch.js'
-import { lightingApiUrl, probeLightingDesk } from '../map/lightingLink.js'
+import { useDeskState } from './deskState.js'
 import { TYPE_LIBRARY } from './types/index.js'
 import { modeOf, typeById } from './fixtureTypes.js'
 import { PIECES, pieceOf } from './pieces.js'
@@ -65,25 +65,6 @@ const useIsPhone = () => {
     return phone
 }
 
-const useDeskState = () => {
-    const [desk, setDesk] = useState({ here: null, output: null })
-    useEffect(() => {
-        let alive = true
-        ;(async () => {
-            const here = await probeLightingDesk()
-            let output = null
-            if (here) {
-                try {
-                    const s = await (await fetch(lightingApiUrl('api/summary'))).json()
-                    output = s?.output ? `${String(s.output.driver || 'out')} ${s.output.enabled ? 'ON' : 'OFF'}` : null
-                } catch { output = null }
-            }
-            if (alive) setDesk({ here, output })
-        })()
-        return () => { alive = false }
-    }, [])
-    return desk
-}
 
 // ---- small inputs, the house's field style ---------------------------------------
 
@@ -160,7 +141,7 @@ function TitleBlock({ title, model, desk, scale, spaceId, projectId, onPrint }) 
                 <span>{t.channels}</span><span>{t.power}</span>
                 <span>{t.fixtures}</span><span>{t.circuits}</span>
                 <span>desk {desk.here == null ? '…' : desk.here ? `here · ${desk.output || 'output ?'}` : 'none here'}</span>
-                <span>console in: not on this build</span>
+                <span>console in: {desk.consoleIn}</span>
             </div>
             <div className="rigplot-title__links">
                 <a href={patch}>sheet 2 · patch</a>
