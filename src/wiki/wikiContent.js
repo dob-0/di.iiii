@@ -380,6 +380,22 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-28'
     },
     {
+        id: 'ai-restyle-camera',
+        category: 'Editing',
+        title: 'AI restyle: the camera, as a prompt says it should look',
+        summary: 'A camera surface on the projection map can send the room through an image model on your own machine and put what comes back on the wall — live, and with no internet.',
+        body: [
+            'On Projection, a surface whose source is a Camera or a Stream has an Analysis menu. Next to Motion glow it offers AI restyle. Choose it and two things appear: Prompt — what the picture should become, in words, like “oil painting, deep blue and gold” — and Strength, how far the picture may drift from the camera. Low keeps the room recognisable; high keeps mostly the words.',
+            'The picture is made on YOUR machine, not in the cloud. A small program, the live-AI engine, runs next to di.iiii and turns each camera frame into a new one; di.iiii passes the frames to it and draws what comes back. It works in a room with no internet, and nothing you film leaves the machine.',
+            'It keeps up with the room rather than falling behind it: a new frame goes to the engine only when the last one has come back, so the wall is always one step behind what is happening, never a queue of old pictures.',
+            'Change the prompt or the strength while it runs and the wall follows without a blink — and, like every mapping setting, from any desk following the project.',
+            'No engine running? The surface says so, in words, and keeps trying — start the engine and the picture appears without reloading anything. The engine and how to start it are described in scripts/liveai/README.md.',
+            'AI restyle lives on a local di.iiii only — `di up`, or npm run dev — the same as the lighting desk and the NDI® source. A hosted address has no engine and does not offer one.'
+        ],
+        tags: ['ai', 'restyle', 'camera', 'stream', 'projection', 'mapping', 'live', 'prompt', 'stable diffusion', 'sd-turbo', 'local', 'offline', 'effect', 'analysis'],
+        updated: '2026-09-28'
+    },
+    {
         id: 'lights-on-a-place',
         category: 'Editing',
         title: 'Hanging a lamp: aim, beam, shadow',
@@ -505,6 +521,24 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['account', 'sign in', 'register', 'password', 'email', 'offline', 'camp'],
         updated: '2026-09-11'
+    },
+    {
+        id: 'sign-in-anywhere',
+        category: 'Spaces & access',
+        title: 'Sign in with Google or GitHub on any copy of di.iiii',
+        summary: 'Your own install, a laptop on a festival wifi, a test copy: each one offers Google and GitHub through diiii.xyz, with nothing to set up.',
+        body: [
+            'Google and GitHub only send people back to addresses registered with them, so a copy of di.iiii running on your own machine could never offer them. Now every copy asks diiii.xyz, which is registered once, to check who you are, and then signs you in on its own.',
+            { list: [
+                '**Nothing to set up.** A new install, a test copy or a laptop offers the buttons as long as it can reach diiii.xyz.',
+                '**Your account stays where you are.** diiii.xyz only confirms who you are; the copy you are using makes its own account and session for you.',
+                '**Nobody can reuse it.** The confirmation works once, for two minutes, only on the copy that asked, and only in the browser that asked.',
+                '**Offline, the buttons go away.** With no internet there is no Google either, so the page shows what still works: the owner at the machine, your earlier sign-in, a password account, an invite.'
+            ] },
+            'Telegram still signs you in on diiii.xyz only; bringing it to every copy is the next step.'
+        ],
+        tags: ['account', 'sign in', 'google', 'github', 'local', 'offline', 'install'],
+        updated: '2026-09-28'
     },
     {
         id: 'public-page-node',

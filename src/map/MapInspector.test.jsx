@@ -199,3 +199,28 @@ describe('picking an NDI source by name', () => {
         expect(container.querySelector('a[href="https://ndi.video"]')).toBeNull()
     })
 })
+
+describe('AI restyle on a camera surface', () => {
+    const cameraWith = (effect) => normalizeMappingSurface({ id: 's1', name: 'Wall', resolution: [640, 360], source: { kind: 'camera', ref: '' }, effect })
+
+    it('is offered next to motion glow', () => {
+        render(<MapInspector surface={cameraWith({ kind: 'none' })} {...baseProps()} />)
+        expect(screen.getByRole('option', { name: /AI restyle/ })).toBeTruthy()
+    })
+
+    it('shows a prompt and a strength once chosen, and stores what is typed', () => {
+        const props = baseProps()
+        render(<MapInspector surface={cameraWith({ kind: 'ai', prompt: 'gold leaf', strength: 0.5 })} {...props} />)
+        const prompt = screen.getByPlaceholderText(/oil painting/)
+        expect(prompt.value).toBe('gold leaf')
+        expect(prompt.maxLength).toBe(300)
+        expect(screen.getByText('Strength')).toBeTruthy()
+        fireEvent.change(prompt, { target: { value: 'deep blue' } })
+        expect(props.onUpdate).toHaveBeenCalledWith('s1', { effect: expect.objectContaining({ kind: 'ai', prompt: 'deep blue' }) })
+    })
+
+    it('shows no prompt for motion glow', () => {
+        render(<MapInspector surface={cameraWith({ kind: 'motion' })} {...baseProps()} />)
+        expect(screen.queryByPlaceholderText(/oil painting/)).toBeNull()
+    })
+})
