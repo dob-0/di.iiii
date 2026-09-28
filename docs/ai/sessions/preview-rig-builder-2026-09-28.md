@@ -53,7 +53,7 @@ worktree against the install's API; the server itself needs none of them (not pa
 - Found on install and fixed on #624 (`d773b0d8`): `public/rigbuild/` was not in the local profile's
   public include-list, so every `di` install showed the item cards with no pictures. The guard fails without
   the line; known-fixes row added.
-- `rig.mjs --wash-only` (preview `248f…` and cherry-picked to #587 as `248f2cfb`) re-bakes ONLY `rig-wash`. Owed on
+- `rig.mjs --wash-only` (preview `b58f1031`, cherry-picked to #587 as `248f2cfb`) re-bakes ONLY `rig-wash`. Owed on
   #607: `load-plot.mjs` should keep `rig-wash`, because no live lamp replaces its light.
 - MOXIR: `rental.mjs --api` from the full order (104; 8 lines, catalogue 25, terms 6, day rule). None of
   the equipment agent's test edits applied. The wash was re-baked (48 washes). The 4 B380F are still unpatched.
