@@ -32,11 +32,35 @@ describe('the rig version switch', () => {
         expect(renderToStaticMarkup(createElement(RigVersionSwitch, { spaceId: 'moxir', projectId: 'p', entities: [] }))).toBe('')
     })
 
-    it('renders plain links with the short names, the current one aria-current', () => {
+    it('before it knows what the space holds, shows only the version you are in — no link that could be dead', () => {
+        // a static render runs no effect: the space's list is still unknown
         const html = renderToStaticMarkup(createElement(RigVersionSwitch, { spaceId: 'moxir', projectId: 'moxir-hall-minimal', entities }))
         expect(html).toMatch(/aria-label="rig versions"/)
-        expect(html).toMatch(/href="\/moxir\/p\/moxir-hall-full"[^>]*>Full<\/a>/)
         expect(html).toMatch(/aria-current="page"[^>]*>Minimal<\/a>/)
         expect(html).toMatch(/min-height:44px/)
+        expect(html).not.toMatch(/moxir-hall-full/)
+        expect(versionLinks(variant, 'moxir-hall-minimal', (p) => `/moxir/p/${p}`, null).map((l) => l.id)).toEqual(['minimal'])
+    })
+})
+
+// Owner, rigbuilder.7 (2026-09-28): clicked Full → /moxir/p/moxir-hall-full → "Project not
+// found." The set named four versions; the space held two. The switch links only what exists.
+describe('the switch links only projects the space holds', () => {
+    const href = (p) => `/moxir/p/${p}`
+    it('drops a version whose project is missing, keeps the order and the current one', () => {
+        const links = versionLinks(variant, 'moxir-hall-minimal', href, new Set(['moxir-hall', 'moxir-hall-minimal']))
+        expect(links.map((l) => [l.id, l.current])).toEqual([['ordered', false], ['minimal', true]])
+        expect(links.some((l) => l.href.endsWith('moxir-hall-full'))).toBe(false)
+    })
+
+    it('never links a project not in the list, whatever the set says', () => {
+        const have = ['moxir-hall', 'moxir-hall-minimal', 'moxir-hall-full']
+        const links = versionLinks(variant, 'moxir-hall', href, have)
+        for (const l of links) expect(have.some((p) => l.href === href(p))).toBe(true)
+        expect(links).toHaveLength(3)
+    })
+
+    it('has no row when fewer than two versions really exist', () => {
+        expect(versionLinks(variant, 'moxir-hall-minimal', href, new Set(['moxir-hall-minimal']))).toBe(null)
     })
 })
