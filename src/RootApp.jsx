@@ -30,6 +30,7 @@ import { getMakeLocationState, isMakeLocation } from './make/makeRouting.js'
 import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
 import { getPerformLocationState, isPerformLocation } from './perform/performRouting.js'
 import { getPatchSheetLocationState, isPatchSheetLocation } from './rigbuild/patchRouting.js'
+import { getVisualiseLocationState, isVisualiseLocation } from './rigbuild/visualiseRouting.js'
 import { getPlotLocationState, isPlotLocation } from './rigbuild/plotRouting.js'
 import { getCardsLocationState, isCardsLocation } from './rigbuild/cardsRouting.js'
 import { getEquipmentLocationState, isEquipmentLocation } from './rigbuild/equipmentRouting.js'
@@ -64,6 +65,7 @@ const ScanSurface = lazy(() => import('./scan/ScanSurface.jsx'))
 // to go live.
 const KitPage = lazy(() => import('./kit/KitPage.jsx'))
 const PatchSheetSurface = lazy(() => import('./rigbuild/PatchSheetSurface.jsx'))
+const VisualiserSurface = lazy(() => import('./rigbuild/VisualiserSurface.jsx'))
 const PlotSurface = lazy(() => import('./rigbuild/PlotSurface.jsx'))
 const CardsSurface = lazy(() => import('./rigbuild/CardsSurface.jsx'))
 const EquipmentSurface = lazy(() => import('./rigbuild/EquipmentSurface.jsx'))
@@ -396,6 +398,7 @@ function AppRouter() {
     const mapState = getMapLocationState(location)
     const performState = getPerformLocationState(location)
     const patchSheetState = getPatchSheetLocationState(location)
+    const visualiseState = getVisualiseLocationState(location)
     const plotState = getPlotLocationState(location)
     const cardsState = getCardsLocationState(location)
     const equipmentState = getEquipmentLocationState(location)
@@ -597,6 +600,18 @@ function AppRouter() {
         return (
             <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
                 <PatchSheetSurface spaceId={patchSheetState.spaceId} projectId={patchSheetState.projectId} />
+            </Suspense>
+        )
+    }
+
+    // `/{space}/visualise/{projectId}` — the visualiser (src/rigbuild/, RIG_BUILD.md §18):
+    // the light desk and the room side by side, the room drawn from the desk's DMX. No
+    // gate of its own, like the patch sheet: both sides are the real pages, framed, and
+    // each enforces its own rules (the desk is local-only; the room is /{space}/p/{id}).
+    if (isVisualiseLocation(visualiseState)) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <VisualiserSurface spaceId={visualiseState.spaceId} projectId={visualiseState.projectId} />
             </Suspense>
         )
     }

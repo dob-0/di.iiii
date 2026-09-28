@@ -38,6 +38,7 @@
     cards: 'cards & looks',
     patch: 'patch sheet',
     crew: 'crew link',
+    visualise: 'visualiser',
   };
 
   function clean(from) {
@@ -82,6 +83,8 @@
       studio: '/' + f.space + '/studio/projects/' + f.project,
       nodes: '/' + f.space + '/raw/projects/' + f.project,
       projection: '/' + f.space + '/map/' + f.project,
+      // The desk beside the room it drives (src/rigbuild/visualiseRouting.js).
+      visualise: '/' + f.space + '/visualise/' + f.project,
     };
     // Came from a rig page: the way back is that page (mirrors the rig's path builders).
     if (f.from) {

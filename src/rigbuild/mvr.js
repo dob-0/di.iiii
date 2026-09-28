@@ -31,6 +31,7 @@ import { lensFromMount, mountFromLens } from './lampGeometry.js'
 import { modeOf, typeById } from './fixtureTypes.js'
 import { pieceKindOf, pieceOf } from './pieces.js'
 import { spotAimDirection } from '../project/viewport/spotLightAim.js'
+import { isAssumedMode } from './assumedProfiles.js'
 
 export const MVR_VERSION = { major: 1, minor: 6 }
 
@@ -89,7 +90,12 @@ export const mvrScene = ({ entities = [], library, meta = {} }) => {
         const type = typeById(library, f.type)
         if (!type) { skipped.push(`${e.id}: type "${f.type}" is not in the library`); continue }
         usedTypes.set(type.id, type)
-        const mode = modeOf(type, f.mode || type.defaultMode)
+        const chosen = modeOf(type, f.mode || type.defaultMode)
+        // An ASSUMED test mode is not in the GDTF (gdtf.js leaves it out): the file names the
+        // maker's mode of the same footprint when there is one, else no mode — never the test's.
+        const mode = chosen && isAssumedMode(chosen)
+            ? (type.modes || []).find((m) => !isAssumedMode(m) && m.footprint === chosen.footprint) || null
+            : chosen
         const beam = e.type === 'spotLight' ? spotAimDirection(e.components.transform?.rotation || [0, 0, 0]) : [0, f.hung ? -1 : 1, 0]
         const lens = e.components.transform?.position || [0, 0, 0]
         const mount = mountFromLens({ lens, hung: f.hung === true, beam, type })
