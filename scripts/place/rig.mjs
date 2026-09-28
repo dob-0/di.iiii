@@ -28,6 +28,10 @@
  *                         `--look list` prints them and sends nothing
  *   --fixtures <dir>      the built fixture models (default scripts/place/fixtures/glb)
  *   --remove              only take the rig down (delete every rig- entity)
+ *   --wash-only           re-bake ONLY the column wash (`rig-wash`) and touch nothing else —
+ *                         for a project whose lamps are live, typed entities (load-plot.mjs
+ *                         deletes the baked wash with the other baked meshes, and the room
+ *                         then reads dark: the beam-only PARs light nothing)
  *   --out <file>          also write the entities and the summary to a file
  *   --bodies-out <file>   also write the posed fixture bodies GLB to a file
  *   --dry-run             print the summary, send nothing
@@ -143,11 +147,41 @@ const main = async () => {
         }
     }
     if (args['dry-run']) {
+        if (args['wash-only']) { say(`[dry run] would replace only ${RIG_PREFIX}wash in ${project} on ${api} (${built?.washes.length || 0} washes).`); return }
         say(`[dry run] would replace the ${RIG_PREFIX}* entities in ${project} on ${api}${built ? ` with ${built.entities.length}` : ''}.`)
         return
     }
     if (!token) die('No API token found, so nothing was sent.', 'Set DI_API_TOKEN or pass --token-file.')
     const client = makeClient(api, token)
+
+    if (args['wash-only']) {
+        if (!built?.washes.length) die('--wash-only: this rig and look bake no washes.')
+        const bytes = await washGlb(built.washes)
+        const asset = await uploadGlb(client, project, bytes, 'rig-wash.glb')
+        const current = must(await client.get(`/api/projects/${project}/document`), 'reading the hall')
+        const was = (current.document?.entities || []).find((entity) => entity.id === `${RIG_PREFIX}wash`)
+        const wash = {
+            id: `${RIG_PREFIX}wash`,
+            type: 'model',
+            name: `${built.washes.length} PAR washes, baked (no light) — re-run rig.mjs --wash-only to change`,
+            components: {
+                transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+                media: { assetId: asset.id, playAnimations: false },
+                animation: { mode: 'static', speed: 1, amplitude: 1 }
+            }
+        }
+        const result = must(await client.post(`/api/projects/${project}/ops`, {
+            baseVersion: Number(current.version) || 0,
+            ops: [
+                ...(was ? [{ type: 'deleteEntity', payload: { entityId: was.id } }] : []),
+                ...(was?.components?.media?.assetId ? [{ type: 'deleteAsset', payload: { assetId: was.components.media.assetId } }] : []),
+                { type: 'upsertAsset', payload: { asset } },
+                { type: 'createEntity', payload: { entity: wash } }
+            ]
+        }), 'writing the wash')
+        say(`  baked ${built.washes.length} washes into one mesh (${(bytes.length / 1024).toFixed(0)} KB); nothing else touched (document version ${result.version ?? '?'})`)
+        return
+    }
 
     let entities = []
     let ops = []
