@@ -155,7 +155,9 @@ const main = async () => {
     const src = await client.get(`/api/projects/${from}/document`)
     if (!src.ok) die(`reading ${from}: ${src.status}`)
     const source = src.body.document
-    const hallEntities = source.entities.filter((e) => !e.id.startsWith('rig-'))
+    // The hall only: not the rig (rig-*) and not a build piece someone placed in the source's
+    // plot (a truss or deck carries components.piece) — those are that project's rig, not the venue.
+    const hallEntities = source.entities.filter((e) => !e.id.startsWith('rig-') && !e.components?.piece)
     const wanted = new Set(hallEntities.map((e) => e.components?.media?.assetId).filter(Boolean))
     const assets = []
     for (const a of source.assets.filter((x) => wanted.has(x.id))) {

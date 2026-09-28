@@ -124,3 +124,21 @@ Owner, 2026-09-28 night: *"minimal, make the underground show loop"*.
 - The show (`show-loop.mjs`, loop ON, desk runner started, OUTPUT OFF): Blackout + one beam (cut, 12 s) →
   Slow sweep (fade 4, 16 s) → Red room (fade 5, 16 s) → White cathedral (fade 2, 12 s) → Strobe hit (cut,
   4 s) → back to one beam. One loop = 60 s.
+- Installed `0.4.16-rigbuilder.7` (sha256 406409e7…): backup `step-7/`, `rollback.sh --to rigbuilder.6` (dry-run
+  exit 0, with and without `--with-data`). Seen on it (RTX 3080, ANGLE/Vulkan, under the lock): the loop ran
+  in order and wrapped, 60 fps in every cue — and two data faults, fixed in data at once: the strobe hit
+  showed nothing (the rest had written level-0 lamps as intensity 0 → `--nominal`), and the room lost its
+  hall for minutes (the show hall's asset was not in the document's list → `upsertAsset`).
+
+## Step 8 — the switch lists what exists, the crane rig: `0.4.16-rigbuilder.8`
+
+- `2e4066e5` (fork): the version switch links only projects that exist; a missing project says where and
+  links back; `scripts/rigbuild/rig-links.mjs` walks every rig link in the owner's Flatpak Chromium (96 pages,
+  0 broken on the dev server). The owner had hit "Project not found" on Full (Middle/Full not yet loaded).
+- `8adac162`: the crane rig — RIG_BUILD.md §15.7 (geometry, load, the checks). Middle and Full loaded too.
+- Installed `0.4.16-rigbuilder.8` (sha256 d75a051e…): backup `step-8/`, `rollback.sh --to rigbuilder.7`
+  (dry-run exit 0, both). The desk resumed the loop by itself across the restart.
+- Data (a `di save moxir` before each): the three versions reloaded on the crane hall
+  (`/mnt/data/footage/place-moxir-hall-v3-crane-dj/`), re-patched (Minimal 21 of 36, the PL5403s and the
+  hazers flagged mode-owed), the show hall, the crane opening, Minimal rested on the red room at nominal,
+  the show re-programmed and running. Stray pieces from moxir-hall removed from the versions only.
