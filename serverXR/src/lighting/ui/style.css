@@ -381,15 +381,15 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .pane-head.foldable h2::before { content: '▾ '; color: var(--muted); font-size: 9px; }
 .pane-head.foldable.folded h2::before { content: '▸ '; }
 .railfold { display: none !important; }
-.outdetails summary {
+.outdetails summary, .indetails summary {
   display: flex; align-items: center; gap: 10px; padding: 10px 12px;
   border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
   cursor: pointer; list-style: none;
 }
-.outdetails summary::-webkit-details-marker { display: none; }
-.outdetails summary::before { content: '▸'; color: var(--muted); font-size: 10px; }
-.outdetails[open] summary::before { content: '▾'; }
-.outdetails summary span { font-size: 11px; }
+.outdetails summary::-webkit-details-marker, .indetails summary::-webkit-details-marker { display: none; }
+.outdetails summary::before, .indetails summary::before { content: '▸'; color: var(--muted); font-size: 10px; }
+.outdetails[open] summary::before, .indetails[open] summary::before { content: '▾'; }
+.outdetails summary span, .indetails summary span { font-size: 11px; }
 .blackout { background: none; border: 1px solid var(--danger); color: var(--danger); border-radius: 0; padding: 9px 14px; font-weight: 700; width: 100%; }
 .blackout.on { background: var(--danger); color: #041012; }   /* dark-on-fill, like text on the accent — white sat under 4.5:1 */
 .blackout.big { font-size: 18px; padding: 20px; }
@@ -1314,3 +1314,34 @@ body.space .stage { cursor: grab; }
   .mitable td { padding: 6px; }
   .midibody select { min-height: 44px; }
 }
+
+/* ---- Setup → Input: a console driving the desk (dmxin.js) ---- */
+/* A strip at the head of Setup: one line when folded — the lamp and the sentence say
+   whether a console is reaching us — and the settings only when opened. It is capped so
+   the patch and the stage below keep their room. */
+.indetails { flex: none; background: var(--pane); border-bottom: 1px solid var(--line); }
+.indetails summary { border-top: 0; padding: 7px 12px; min-width: 0; }
+.indetails summary h2 { flex: none; }
+.indetails summary #inSummary { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inlamp { flex: none; width: 10px; height: 10px; border: 1px solid var(--muted); display: inline-block; }
+.inlamp.live { background: var(--accent); border-color: var(--accent); }
+.inlamp.warn { border-color: var(--text); }
+.inlamp.error { background: var(--danger); border-color: var(--danger); }
+.inbox { max-height: 42vh; overflow: auto; }
+#inEnable { border-color: var(--muted); color: var(--muted); }
+#inEnable.on { border-color: var(--accent); color: var(--accent); }
+.inlines { display: grid; gap: 6px; padding: 0 12px 8px; }
+.inline-uni { background: var(--field); padding: 8px; display: grid; gap: 6px; font-size: 11px; }
+.inline-uni .head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.inline-uni .head b { color: var(--text); }
+.inline-uni .state { color: var(--muted); }
+.inline-uni .state.live { color: var(--accent); }
+.inline-uni .state.lost { color: var(--danger); }
+.insrc { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) repeat(4, minmax(0, .6fr)); gap: 6px; align-items: baseline; font-family: var(--mono); }
+.insrc.hd { color: var(--muted); font-family: inherit; }
+.insrc .win { color: var(--accent); }
+.insrc .gone { color: var(--muted); text-decoration: line-through; }
+.insrc span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 700px) { .insrc { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, .45fr) minmax(0, .45fr); } .insrc .wide { display: none; } }
+.inbox > .pad { padding: 4px 12px; }
+.inbox > .pad:empty { display: none; }

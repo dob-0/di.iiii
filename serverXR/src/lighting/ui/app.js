@@ -4002,6 +4002,17 @@ function renderAll(busy) {
   // to its built-in auto programs and runs a show nobody asked for, and until now the only
   // symptom was a frame total two clicks deep inside a collapsed panel. A rate that has
   // gone quiet is the signal, so this shows a rate and turns red when it stalls.
+  // Input: a console driving the desk. Hidden while input is off; otherwise it says who
+  // the room is following, or since when nothing has arrived — never silent.
+  const inSum = st.input && st.input.summary;
+  const ip = $('#inPill');
+  ip.hidden = !(inSum && inSum.enabled);
+  if (!ip.hidden) {
+    ip.textContent = 'in: ' + (inSum.live ? inSum.text.replace(/^Following /, '').replace(/ on \d+ of \d+ universes?$/, '') : inSum.level === 'error' ? 'error' : 'no signal');
+    ip.title = inSum.text;
+    ip.classList.toggle('stale', !inSum.live);
+  }
+  if (page === 'setup' && !IN && st.input) { IN = st.input; paintInput(); }
   const wp = $('#wirePill');
   if (!S.output.enabled) {
     // The loudest thing this pill can say. A desk that is patched, cued and running
@@ -5788,6 +5799,138 @@ function buildSetPanel() {
 }
 
 wireLimits();
+/* =============== INPUT: a console driving the desk (dmxin.js) =============== */
+// Polled on its own, once a second, only while Setup is the page and the tab is up: the
+// ages and rates are the whole point of this panel and the 1.5 s state poll is too slow
+// and too heavy for them. The pill in the top bar reads the slow poll's summary instead.
+let IN = null;
+async function pullInput() {
+  if (document.hidden || page !== 'setup') return;
+  try { IN = await (await fetch('api/input')).json(); paintInput(); } catch (e) { /* the slow poll reports it */ }
+}
+async function postInput(patch) {
+  const r = await post('api/input', patch);
+  if (r && !r.error) { IN = r; paintInput(); } else say('input: ' + ((r && r.error) || 'not saved'), true);
+}
+const ageWords = (ms) => ms == null ? 'never' : ms < 1500 ? 'now' : ms < 60000 ? Math.round(ms / 1000) + 's ago' : Math.round(ms / 60000) + 'm ago';
+
+function paintInput() {
+  if (!IN || !IN.config) return;
+  const c = IN.config;
+  const sum = IN.summary || { text: 'Input off' };
+  $('#inSummary').textContent = sum.text;
+  const lamp = $('#inLamp');
+  lamp.className = 'inlamp' + (!sum.enabled ? '' : sum.level === 'error' ? ' error' : sum.live ? ' live' : ' warn');
+  const btn = $('#inEnable');
+  btn.textContent = c.enabled ? 'Input is ON' : 'Input is OFF';
+  btn.classList.toggle('on', c.enabled);
+  $('#inArtnet').checked = c.artnet;
+  $('#inSacn').checked = c.sacn;
+  $('#inLoss').value = c.loss;
+  $('#inRelease').hidden = !(IN.lines || []).some((l) => l.state === 'held');
+  if (document.activeElement !== $('#inName')) $('#inName').value = c.name;
+  // Interfaces: loopback is where a console on THIS machine (onPC) arrives; the LAN is
+  // where the console's network is. Without --lan only loopback can be ticked.
+  const ifSig = JSON.stringify([IN.interfaces, c.interfaces, IN.lanAllowed]);
+  if ($('#inIfaces').dataset.sig !== ifSig) {
+    $('#inIfaces').dataset.sig = ifSig;
+    $('#inIfaces').innerHTML = IN.interfaces.map((i) => {
+      const blocked = !IN.lanAllowed && !i.internal;
+      return `<label title="${blocked ? 'LAN devices are not allowed on this start — di up --lan' : esc(i.address + '/' + i.netmask)}">`
+        + `<input type="checkbox" data-in-iface="${esc(i.address)}"${c.interfaces.includes(i.address) ? ' checked' : ''}${blocked ? ' disabled' : ''}> `
+        + `${esc(i.iface)} <span class="mono">${esc(i.address)}</span></label>`;
+    }).join('');
+  }
+  const lines = IN.lines || [];
+  $('#inLines').innerHTML = lines.length ? lines.map((l) => {
+    const stateText = l.state === 'live' ? 'receiving'
+      : l.state === 'held' ? 'no signal — holding the last look'
+      : l.state === 'lost' ? `no signal since ${new Date(Date.now() - l.ageMs).toLocaleTimeString()}`
+      : 'waiting — nothing yet';
+    const src = l.sources.length ? `<div class="insrc hd"><span>source</span><span>address</span><span>prio</span><span>fps</span><span class="wide">age</span><span class="wide">late</span></div>`
+      + l.sources.map((s) => `<div class="insrc"><span class="${s.lost ? 'gone' : s.winning ? 'win' : ''}" title="${esc(s.key)}">${s.winning ? '▸ ' : ''}${esc(s.name || s.ip)} <span class="muted">${s.protocol === 'sacn' ? 'sACN' : 'Art-Net'}</span></span>`
+        + `<span>${esc(s.ip)}</span><span>${s.priority}</span><span>${s.lost ? (s.lostWhy === 'terminated' ? 'ended' : 'lost') : s.fps}</span>`
+        + `<span class="wide">${ageWords(s.ageMs)}</span><span class="wide" title="packets dropped as out of sequence">${s.outOfSequence}</span></div>`).join('')
+      : '';
+    const ex = l.exceeded ? `<div class="err">Too many sources: ${esc(l.exceeded.name)} is being ignored (Art-Net merges two, sACN eight).</div>` : '';
+    return `<div class="inline-uni"><div class="head">
+      <b>Universe ${l.universe + 1}</b><span class="muted mono">Art-Net ${l.artnet} · sACN ${l.sacn}</span>
+      <label class="muted" title="Between two or more sources at the same priority">sources
+        <select data-in-merge="${l.universe}"><option value="htp"${l.merge === 'htp' ? ' selected' : ''}>HTP</option><option value="ltp"${l.merge === 'ltp' ? ' selected' : ''}>LTP</option></select></label>
+      <label class="muted" title="What the console does to the desk's own playback on this universe">with the desk
+        <select data-in-desk="${l.universe}"><option value="follow"${l.desk === 'follow' ? ' selected' : ''}>follow the console</option><option value="htp"${l.desk === 'htp' ? ' selected' : ''}>HTP with the desk</option></select></label>
+      <span class="state ${l.state}">${stateText}</span>
+      <button class="sq small" data-in-drop="${l.universe}" title="Stop listening to this universe">✕</button>
+    </div>${src}${ex}</div>`;
+  }).join('') : '<div class="muted">No universe yet — type the desk universe the console sends and press Listen.</div>';
+  $('#inUnlistened').textContent = (IN.unlistened || []).length
+    ? 'Also arriving, not listened to: ' + IN.unlistened.map((u) => `Universe ${u.universe + 1} from ${u.name || u.from} (${u.protocol === 'sacn' ? 'sACN' : 'Art-Net'})`).join(', ')
+    : '';
+  const problems = [...(IN.problems || [])];
+  for (const w of IN.listening || []) if (w.error) problems.push(`${w.protocol} ${w.address}:${w.port} — ${w.error}`);
+  $('#inProblems').textContent = problems.join(' · ');
+  const art = (IN.listening || []).filter((w) => w.protocol === 'artnet');
+  const sac = (IN.listening || []).find((w) => w.protocol === 'sacn');
+  const st = IN.stats || {};
+  $('#inWire').innerHTML = !c.enabled ? 'Not listening. Nothing is bound until Input is ON.'
+    : [
+      art.length ? 'Art-Net: ' + art.map((w) => `${esc(w.address)}:${w.port}${w.ok ? '' : ' (not bound)'}`).join(', ') : c.artnet ? 'Art-Net: no interface ticked' : '',
+      sac ? `sACN: *:${sac.port}${sac.ok ? '' : ' (not bound)'}, groups ${sac.groups.length ? esc(sac.groups.join(', ')) : 'none'}${sac.groupErrors && sac.groupErrors.length ? ' — could not join ' + esc(sac.groupErrors.join(', ')) : ''}` : '',
+      `packets ${st.accepted || 0} taken · ${st.outOfSequence || 0} out of sequence · ${st.refused || 0} malformed · ${IN.foreign || 0} from outside the chosen networks · ${st.self || 0} our own`,
+      IN.polls && IN.polls.last ? `ArtPoll from ${esc(IN.polls.last.ip)} ${ageWords(IN.polls.last.ageMs)} — ${IN.polls.repliesSent} replies sent` : (c.artnet ? 'No ArtPoll heard yet' : ''),
+    ].filter(Boolean).join('<br>');
+}
+
+$('#inEnable').addEventListener('click', () => {
+  if (!IN) return;
+  const on = !IN.config.enabled;
+  // Switching on with nothing chosen would listen on nothing: take loopback, which can
+  // hear a console on this same machine and nothing else, as the safe first answer.
+  const patch = { enabled: on };
+  if (on && !IN.config.interfaces.length) patch.interfaces = IN.interfaces.filter((i) => i.internal).map((i) => i.address);
+  postInput(patch);
+});
+$('#inArtnet').addEventListener('change', (e) => postInput({ artnet: e.target.checked }));
+$('#inSacn').addEventListener('change', (e) => postInput({ sacn: e.target.checked }));
+$('#inLoss').addEventListener('change', (e) => postInput({ loss: e.target.value }));
+$('#inName').addEventListener('change', (e) => postInput({ name: e.target.value }));
+$('#inRelease').addEventListener('click', async () => { await post('api/input/release', {}); pullInput(); });
+$('#inIfaces').addEventListener('change', (e) => {
+  const box = e.target.closest('[data-in-iface]');
+  if (!box || !IN) return;
+  const set = new Set(IN.config.interfaces);
+  if (box.checked) set.add(box.dataset.inIface); else set.delete(box.dataset.inIface);
+  postInput({ interfaces: [...set] });
+});
+function inLinesWith(fn) { return IN.config.universes.map((l) => ({ ...l })).map(fn).filter(Boolean); }
+$('#inAdd').addEventListener('click', () => {
+  if (!IN) return;
+  const n = Math.round(+$('#inAddUni').value);
+  if (!(n >= 1 && n <= 32768)) { say('a universe is 1 … 32768', true); return; }
+  if (IN.config.universes.some((l) => l.universe === n - 1)) { say(`already listening to Universe ${n}`); return; }
+  postInput({ universes: [...IN.config.universes, { universe: n - 1, merge: 'htp', desk: 'follow' }] });
+  $('#inAddUni').value = '';
+});
+$('#inLines').addEventListener('change', (e) => {
+  const m = e.target.closest('[data-in-merge]');
+  const d = e.target.closest('[data-in-desk]');
+  if (!IN || (!m && !d)) return;
+  const u = +(m || d).dataset[m ? 'inMerge' : 'inDesk'];
+  postInput({ universes: inLinesWith((l) => (l.universe === u ? { ...l, [m ? 'merge' : 'desk']: e.target.value } : l)) });
+});
+$('#inLines').addEventListener('click', (e) => {
+  const x = e.target.closest('[data-in-drop]');
+  if (!x || !IN) return;
+  const u = +x.dataset.inDrop;
+  postInput({ universes: inLinesWith((l) => (l.universe === u ? null : l)) });
+});
+$('#inPill').addEventListener('click', () => {
+  location.hash = 'setup'; showPage('setup');
+  $('#inDetails').open = true; pullInput();
+});
+$('#inDetails').addEventListener('toggle', () => { if ($('#inDetails').open) pullInput(); });
+setInterval(pullInput, 1000);
+
 showPage(location.hash.slice(1));
 // The slow poll reschedules itself after each answer instead of firing on a fixed
 // interval: on a slow wifi the interval stacked requests behind each other, and the

@@ -215,6 +215,18 @@ two bar tests. The mock now carries them. Gate on the batch: build ok; vitest 63
 ## 2026-09-28 — batch: the standby host serves both tiers and pulls its own deploys; uptime checked from outside
 
 - Lands #582 (feat/mac-standby) and #581 (chore/outside-uptime) together; each keeps its own note.
+## 2026-09-28 — the lighting desk takes a console's Art-Net and sACN
+
+- `/light` now receives Art-Net 4 (ArtDmx, ArtPoll → ArtPollReply as StVisual) and sACN E1.31-2018
+  (multicast + unicast, priority, §6.7.2 sequence, stream-terminated, 2.5 s loss). HTP/LTP per
+  universe, follow-the-console or HTP with the desk, hold/release on loss, blackout wins, no echo on
+  the arriving protocol. Off by default; binds only the ticked interfaces. Setup → Input + `in:` pill.
+- Files: `serverXR/src/lighting/dmxin.js` (pure), `dmxin-net.js` (sockets), `desk.js` (wiring, routes
+  `/api/input`, `/api/input/release`), `engine.js` (`applyInput`), `artnet.js` (last frame sent, for
+  self-detection), UI in `ui/`. Tests `tests/test-dmxin.js`; bench `tests/bench-input.js`; sender
+  `tests/dmx-send.js`. Docs: LIGHTING_DESK.md → "Input" (ports, merge rules, grandMA3 steps, numbers).
+- Measured: 44 Hz × 3 universes × 60 s, 0 lost either protocol; packet→state p50 0.04 ms in process.
+  Untested against a real console; sACN OUTPUT universe-0 bug noted as owed.
 
 ## 2026-09-27 — the front door links to /support
 
