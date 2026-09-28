@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useOpHistory } from './useOpHistory.js'
+import { describeOps, useOpHistory } from './useOpHistory.js'
 import { normalizeProjectDocument } from '../../shared/projectSchema.js'
 
 const baseDoc = () => normalizeProjectDocument({
@@ -162,5 +162,41 @@ describe('useOpHistory', () => {
         })
         expect(apply).toHaveBeenCalledTimes(1)
         expect(result.current.canUndo()).toBe(false)
+    })
+
+    // The projection desk (2026-09-28): a corner-pin drag is one setMappingSurface
+    // per frame. Uncoalesced it filled the 50-step history in one gesture.
+    describe('the projection desk', () => {
+        const mapDoc = () => normalizeProjectDocument({
+            mappingState: {
+                surfaces: [
+                    { id: 'srf-a', corners: [[0, 0], [1, 0], [1, 1], [0, 1]] },
+                    { id: 'srf-b', corners: [[0, 0], [1, 0], [1, 1], [0, 1]] }
+                ]
+            }
+        })
+        const pin = (surfaceId, x) => ({ type: 'setMappingSurface', payload: { surfaceId, patch: { corners: [[x, 0], [1, 0], [1, 1], [0, 1]] } } })
+
+        it('makes one undo step of a drag on one surface, and keeps two surfaces apart', () => {
+            const { result } = renderHook(() => useOpHistory({ projectId: 'p1', document: mapDoc(), applyLocalOps: apply }))
+            act(() => {
+                result.current.applyLocalOps(pin('srf-a', 0.1))
+                vi.advanceTimersByTime(50)
+                result.current.applyLocalOps(pin('srf-a', 0.2))
+                vi.advanceTimersByTime(50)
+                result.current.applyLocalOps(pin('srf-a', 0.3))
+                result.current.applyLocalOps(pin('srf-b', 0.5))
+            })
+            act(() => { result.current.undo() })
+            expect(applied.at(-1)[0].payload.surfaceId).toBe('srf-b')
+            act(() => { result.current.undo() })
+            expect(applied.at(-1)[0].payload.patch.corners[0]).toEqual([0, 0])
+            expect(result.current.canUndo()).toBe(false)
+        })
+
+        it('names a mapping step in words', () => {
+            expect(describeOps(mapDoc(), [pin('srf-a', 0.1)])).toBe('Edit surface')
+            expect(describeOps(mapDoc(), [{ type: 'deleteMappingCue', payload: { cueId: 'c' } }])).toBe('Delete cue')
+        })
     })
 })

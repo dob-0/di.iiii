@@ -17,7 +17,7 @@ import SurfaceBar from '../components/SurfaceBar.jsx'
 import DeskPerformSwitch from '../perform/DeskPerformSwitch.jsx'
 import useLocalInstall from '../hooks/useLocalInstall.js'
 import useSpaceName from '../hooks/useSpaceName.js'
-import { isEmbedRequest } from '../utils/previewMode.js'
+import { isEmbedRequest, isPreviewRequest, signalPreviewReady } from '../utils/previewMode.js'
 import './mapSurface.css'
 
 // THE MAPPER'S DESK.
@@ -50,15 +50,27 @@ export default function MapSurface({ projectId, spaceId }) {
     const {
         store, document: doc, mapping, surfaces, syncState, applyOps,
         addSurface, updateSurface, deleteSurface, reorderSurfaces, setOutput, upsertAsset,
-        addCue, updateCue, deleteCue, reorderCues, fireCue
+        addCue, updateCue, deleteCue, reorderCues, fireCue,
+        undo, redo, canUndo, canRedo
     } = useMapDocument(projectId, { role: 'desk' })
     // Every machine showing this space, and what each one has: the wall is usually another computer.
-    const { machines, ndiScan } = useMachinePresence(spaceId)
+    // ?preview=1 — a PICTURE of this desk on another page (a Kit card on
+    // /tools). It shows the mapping and follows it, but joins no machine
+    // link: a thumbnail is not a machine on the desk, and it must not appear
+    // in the Machines list of whoever is really working here.
+    const [isPreview] = useState(() => isPreviewRequest())
+    const { machines, ndiScan } = useMachinePresence(isPreview ? null : spaceId)
     // The one bar, above the desk's own. Never on /out — that is MapOutput,
     // the wall's picture, and a bar there would be projected with the work.
     const localInstall = useLocalInstall()
     const spaceName = useSpaceName(spaceId)
-    const [isEmbed] = useState(() => isEmbedRequest())
+    const [isEmbed] = useState(() => isEmbedRequest() || isPreviewRequest())
+    // Nothing here draws to a WebGL canvas, so the app-wide paint watcher has
+    // nothing to see; the picture says itself once the mapping has loaded.
+    const hasLoaded = Boolean(store?.state?.hasLoaded)
+    useEffect(() => {
+        if (isPreview && hasLoaded) signalPreviewReady(spaceId)
+    }, [isPreview, hasLoaded, spaceId])
     // The bar grows with the project (src/project/layers.js); Projection itself
     // is never taken off the bar while you stand on it.
     const barLayers = useProjectLayers(doc, projectId, store?.state?.hasLoaded).open
@@ -206,7 +218,14 @@ export default function MapSurface({ projectId, spaceId }) {
         const onKeyDown = (event) => {
             const target = event.target
             if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return
-            if (event.metaKey || event.ctrlKey) return
+            // Undo / redo, the keys every editor here answers to: Ctrl/Cmd+Z,
+            // Shift+Ctrl/Cmd+Z and Ctrl+Y. Any other chord stays the browser's.
+            if (event.metaKey || event.ctrlKey) {
+                const key = event.key.toLowerCase()
+                if (key === 'z' && !event.shiftKey) { undo(); event.preventDefault() }
+                else if ((key === 'z' && event.shiftKey) || key === 'y') { redo(); event.preventDefault() }
+                return
+            }
 
             // The binding itself is in src/map/cueFiring.js, because the 3D
             // scene listens for the same keys on the same cues. A cue key with
@@ -232,7 +251,7 @@ export default function MapSurface({ projectId, spaceId }) {
         }
         window.addEventListener('keydown', onKeyDown)
         return () => window.removeEventListener('keydown', onKeyDown)
-    }, [nudge, cues, onFireCue])
+    }, [nudge, cues, onFireCue, undo, redo])
 
     // --- carrying a mapping between machines ----------------------------
 
@@ -316,6 +335,12 @@ export default function MapSurface({ projectId, spaceId }) {
                         onClick={() => navigateToStudioPath(buildStudioProjectPath(projectId, spaceId))}
                         title="Back to the room for this project"
                     >← Studio</button>
+                    {/* The same undo as the keys, for a finger on a tablet at the desk.
+                        Firing a cue is not undone: it is a performance, not an edit. */}
+                    <button type="button" className="map-action" onClick={undo} disabled={!canUndo()}
+                        title="Undo the last change to the mapping (Ctrl/Cmd+Z)">Undo</button>
+                    <button type="button" className="map-action" onClick={redo} disabled={!canRedo()}
+                        title="Redo (Shift+Ctrl/Cmd+Z)">Redo</button>
                     <label className="map-field map-field-inline">
                         <span>Output</span>
                         <input type="number" min="1" value={output.width}

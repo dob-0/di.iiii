@@ -76,6 +76,19 @@ describe('inputs across the machines on a desk', () => {
             ndi: ['AYLMO (td_out_windows)', 'WIN (OBS)']
         })
     })
+
+    // A signed-out visitor is handed no machine name at all (the server
+    // redacts it — serverXR/src/machines/routes.js); machinesIn's own
+    // fallback then reads that as the plain 'this machine'. Appending the
+    // usual "· this machine" suffix on top of that would print "this
+    // machine · this machine" — still no name leaked, but not the clean
+    // neutral label a stranger should read.
+    it('names itself plainly when it has no chosen name to show — no doubled suffix', () => {
+        const anonymousSelf = { id: 'm1', name: 'this machine', self: true, pages: 1, devices: [] }
+        const namedSelf = { id: 'm3', name: 'studio-box', self: true, pages: 1, devices: [] }
+        expect(describeMachine(anonymousSelf).name).toBe('this machine')
+        expect(describeMachine(namedSelf).name).toBe('studio-box · this machine')
+    })
 })
 
 describe('NDI sources across the machines on a desk', () => {

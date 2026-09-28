@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useEffect as mockUseEffect } from 'react'
 import SpaceContentsPage from '../pages/SpaceContentsPage.jsx'
-import ToolsRoom from '../tools/ToolsRoom.jsx'
+import KitPage from '../kit/KitPage.jsx'
 import WikiPage from '../wiki/WikiPage.jsx'
 import BlankNodeWorkspaceApp from '../raw/BlankNodeWorkspaceApp.jsx'
 import PublicProjectViewer from '../project/components/PublicProjectViewer.jsx'
@@ -135,7 +135,8 @@ vi.mock('../map/useMapDocument.js', () => {
         useMapDocument: () => ({
             document, mapping, surfaces: [], syncState: null, store: {}, applyOps: noop,
             addSurface: noop, updateSurface: noop, deleteSurface: noop, reorderSurfaces: noop, setOutput: noop,
-            upsertAsset: noop, addCue: noop, updateCue: noop, deleteCue: noop, reorderCues: noop, fireCue: noop
+            upsertAsset: noop, addCue: noop, updateCue: noop, deleteCue: noop, reorderCues: noop, fireCue: noop,
+            undo: noop, redo: noop, canUndo: () => false, canRedo: () => false
         })
     }
 })
@@ -159,8 +160,8 @@ vi.mock('../rig/RigBlackout.jsx', () => ({ default: () => null }))
 const LANES = [
     {
         name: '/tools',
-        body: () => document.querySelector('.tr-page'),
-        render: () => render(<ToolsRoom isLocalInstall />)
+        body: () => document.querySelector('.kit-page'),
+        render: () => render(<KitPage isLocalInstall />)
     },
     {
         name: '/wiki',

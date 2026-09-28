@@ -304,13 +304,14 @@ export const WIKI_ARTICLES = [
             'There are two ways in, and they are the same jam. diiii.xyz/open_jam/scene puts you inside the scene — you stand in it, walk around, and add things where you are looking; it is the one to put on a flyer or a QR code for a phone. So does the bare diiii.xyz/open, which used to open a different, read-only picture of the same room — the two addresses now always land in the identical live scene. See "Standing in the jam" for what it does.',
             'The Open Jam opens in a simple mode: one Create window with file upload and a few basic shapes — the full editor’s other windows and import options stay out of the way. Tapping an object opens a small Edit window (change your text, pick a colour, or remove it). Anyone who wants the complete toolset can press “⚒ All tools” in the toolbar (and “◱ Simple” switches back); the choice is remembered on that device.',
             'For admins: Ops Graph → Manage can repoint the communal space (the guest entry), and the Open Space can be restored from its latest daily snapshot if someone wrecks it.',
+            'Ops Graph → Manage also shows the site’s own traffic for the last 30 days under Traffic: page views, sign-ups, the busiest day, the most viewed pages and the sites visitors came from. These are counted here, one per page load, with no cookie and no third party — the same counting the privacy page describes.',
             'A room carries its own text for anything that reads instead of looking. A space drawn on a canvas used to be an empty page to a screen reader, a search engine, or a browser whose 3D failed; every published room now also carries its name, its lines and its doors as ordinary links, out of sight but reachable — tab through a room and each door becomes a visible link you can follow without a mouse.',
             'The front door IS the room. Opening diiii.xyz no longer shows a page about the space with the space drawn behind it — it opens the space: the name and the one line stand inside it as things you can walk past, and the doors to the works are the real links. The room has one address and it is the bare domain: an old /main link still resolves, it just heals to / so you are never shown a room called “main”. The addresses inside that space — /main/studio, /main/raw, a project deep-link — keep their names. The old landing page is moved rather than deleted: it is at /?tour=1.',
             'The landing page has one door. It used to offer three side by side — “Step inside”, “Open Studio” and “Enter Space” — which asked a first-time visitor to choose between them before they knew what any of them were. Studio is not a rival to the door now: step inside, and Studio is there to walk into. The quiet “Already have spaces? Open Studio →” line under the button is the return path for people who already have work of their own.',
             'The “Set as main” switch under Ops Graph → Manage → a space no longer puts its own button on the landing page. Where no Main space is set at all, the landing offers “Look around” instead — a decorative walkable preview of its own hero, not a real space.'
         ],
         tags: ['guest', 'sandbox', 'open space', 'access', 'jam', 'qr', 'telegram', 'sign in'],
-        updated: '2026-09-14'
+        updated: '2026-09-28'
     },
     {
         id: 'space-history',
@@ -366,6 +367,7 @@ export const WIKI_ARTICLES = [
             'Opened from a project — Projection\'s Light button, for one — the lighting desk knows which project sent you. Its top left reads ← and the project\'s name, and one press takes you back to that project in Studio; beside it, Studio, Nodes and Projection open the same project in each tool. It keeps that for as long as the tab is open, whichever of its five pages you are on. Opened on its own, at /light, it has only the one door home, to your spaces.',
             'One rule that matters more than any other: output is OFF until you switch it on, under OUTPUT. Until then the desk runs, the stage view moves, scenes recall — and nothing leaves the machine. A dev server on a shared wifi can never blast a frame at somebody else\'s rig by accident, and a rig only ever lights when a person decided it should.',
             'The rig is yours. Nothing in the desk is patched to any particular room — you name the fixtures, you set the addresses, you save the looks.',
+            'Fan spreads one value across several fixtures in a single gesture. Select the fixtures in the order the values should run — click them one after another — and at the foot of the attribute panel choose the attribute, a style (line, reverse, centre, mirror, repeat, cluster, random) and the two ends, then press Fan. A line from 0 to 255 over four fixtures sets them 0, 85, 170 and 255 in the order you picked them. The result is ordinary values on the fixtures, so it records into a look like anything else; nothing keeps running afterwards.',
             'Each space has its own light show. Open the desk from a space — the bar, or Projection\'s Light button — and it runs that space\'s show: its patch, scenes, looks and MIDI map, kept beside the space\'s rooms, so it goes wherever the space goes, in its file too. Opened on its own, at /light, the desk runs whatever show it has loaded, the way a lighting console has one show loaded at a time; a phone that scans the desk\'s QR drives the same one. Your machine keeps its own show as well, where it always was. A space that has no show yet, on a machine that has one, offers it once: Use this machine\'s show for the space copies it, and the machine\'s show stays as it is. Where the light leaves the machine — Art-Net, the USB widget, the addresses under OUTPUT — belongs to the machine and never travels in a show.',
             'A graph can play the desk. Drop a DMX Out node into a canvas, leave it on its default rig, and Master, Channel, Value, Blackout and Scene are wired straight into the desk you just patched — an oscillator on a lamp, a scene name recalled by a button, a whole rig blacked out by a wire. See “DMX Out: the graph lights the room”.',
             'Studio can show the rig in the room. When a lighting desk is running on the machine you are using, Studio\'s Display row grows a Lights button. Switch it on and every patched fixture appears in the 3D view as a small marker glowing in the colour and at the level that fixture is giving out right now — change a colour on the desk and the marker follows; black the rig out and the markers go dim grey, still there. It only looks: nothing in Studio can move a lamp, the markers are not objects, they are never saved with the project and a visitor never sees them. For now the desk\'s plan is simply laid across a ten-metre square of floor, because a fixture does not yet know how high it hangs.',
@@ -373,7 +375,7 @@ export const WIKI_ARTICLES = [
             'The desk lives on a local di.iiii only — `di up`, or npm run dev. A hosted diiii.xyz has no /light in it at all, on purpose: a lighting desk is a thing that reaches hardware in a room, and the room is where you are. Asking a hosted address for /light says exactly that, and offers the install — it used to hand back an ordinary di.iiii page with no explanation at all.'
         ],
         tags: ['light', 'lighting', 'dmx', 'artnet', 'enttec', 'desk', 'scene', 'show', 'stage', 'performance', 'local', 'di up', 'lan', 'phone', 'rig', 'fixture', 'marker', 'studio', 'index', 'positions', 'back', 'project', 'nodes', 'projection'],
-        updated: '2026-09-23'
+        updated: '2026-09-28'
     },
     {
         id: 'lights-on-a-place',
@@ -444,6 +446,7 @@ export const WIKI_ARTICLES = [
             'A surface can show a project from this space, any web page by its address, a video, an image, or a flat colour. The address is the important one: work that was never a di.iiii project — a page somebody made somewhere else — still goes on the wall, live, next to work that was.',
             'Each surface has its own opacity, brightness, contrast, saturation and hue, and a blend mode for where two of them overlap. Projected light is not paint: on coloured paper, some of the colour is simply absorbed, and these are how you claw back what the paper takes.',
             'Corners snap — to the other surfaces\' corners, and to the frame\'s edges and middle — and the line they agreed with is drawn while you drag, so you can see what just happened. There is a grid too if you want one. Hold alt while dragging and nothing snaps at all, for the surface that genuinely sits a hair off its neighbour.',
+            'Every change to the mapping can be taken back. Ctrl+Z (Cmd+Z on a Mac) undoes the last one and Shift+Ctrl+Z or Ctrl+Y does it again; the Undo and Redo buttons in the toolbar do the same for a finger on a tablet. A whole drag of a corner is one step, not one per pixel, and the output window follows an undo at once. Firing a cue is not undone — it is part of the show, not an edit — so Ctrl+Z after a cue takes back the last change you made, not the cue.',
             'Put a photograph of the wall behind the surfaces while you work: choose a file, set how strongly it shows through, and trace each paper edge over it. It is never projected — it is there to draw against. Do not expect the traced corners to be final, though. A photo is taken from where you stood, and the projector stands somewhere else; the shapes will still want a pass on site.',
             'Cues are how a wall gets performed instead of operated. Set the wall the way you want it, add a cue, and it keeps that state under a number key — press the key and the wall goes there, over the fade you gave it. Give a cue a hold time and Play walks through them on its own; a hold of zero means the show waits for you. A cue remembers what each surface is showing and how bright it is, and deliberately nothing about where it is: no keystroke should ever be able to move an alignment you spent an afternoon on.',
             'A cue can carry the light as well as the wall. If the lighting desk is running on this machine, a Light button appears in the toolbar and each cue gets a picker holding everything the desk can fire — its looks and its scenes. Choose a look and firing the cue puts it on the desk’s cue layer, where it stays until another cue replaces it; choose a scene and the cue recalls it, fading over the cue’s own fade time. Either way the room and the projection change together. The lighting desk is local only — on diiii.xyz there is no desk to talk to, the picker says so, and a cue that names a scene simply keeps the name until you are back at the venue.',
@@ -457,7 +460,7 @@ export const WIKI_ARTICLES = [
             'One caution. A surface showing a project or a page is a whole page running, and over a plain http:// address a browser only allows a handful at once — past about four, the rest never load. On diiii.xyz this does not apply. If you are running from a laptop and the bar warns you about it, use video or image surfaces for some of them.'
         ],
         tags: ['projection', 'mapping', 'projector', 'wall', 'exhibition', 'show', 'surface', 'corner pin', 'mask', 'output', 'cues', 'snapping', 'camera', 'lighting', 'light', 'ndi', 'touchdesigner', 'obs', 'resolume', 'network video', 'studio'],
-        updated: '2026-09-24'
+        updated: '2026-09-28'
     },
     {
         id: 'joining-a-space',
@@ -593,10 +596,11 @@ export const WIKI_ARTICLES = [
             'Open the account menu (bottom-right avatar) while signed in and paste a Claude API key under "Claude API key." It is encrypted at rest and stored per account — no one else, including admins, can read it back once saved.',
             'The panel shows "Connected — ····XXXX" (the last 4 characters, as a hint that it is the right key) once saved, with a Disconnect button to remove it.',
             'Your key powers the Claude agent node (see "Chat with Claude"): the server uses it on your behalf for your own chats; the key itself never reaches the browser or other users.',
+            'An answer paid through your key shows what it cost, in small type under it: how many tokens went in and how many came out. An answer from the model on this machine shows nothing there, because it does not count and does not charge.',
             'Guest sessions cannot connect a key — sign in with GitHub or Google first.'
         ],
         tags: ['ai', 'claude', 'integrations', 'account', 'api key'],
-        updated: '2026-08-19'
+        updated: '2026-09-28'
     },
     {
         id: 'claude-chat-node',
@@ -1349,16 +1353,17 @@ export const WIKI_ARTICLES = [
     {
         id: 'tools-room',
         category: 'Getting started',
-        title: 'Tools: one screen everything opens from',
-        summary: 'Studio, the node editor, the lighting desk, the projection mapper and the desk, in one place, at /tools.',
+        title: 'Tools: every tool, seen, tried and read',
+        summary: 'At /tools every tool di.iiii has is one card: watch it run, open it without an account, and see what it is made of.',
         body: [
-            'Every tool di.iiii has now has a door in one place. Open /tools and they are all there: Studio, the node editor, the lighting desk, the projection mapper, and — on your own machine — the sessions desk.',
-            'Before this, some of them could only be reached by typing an address. The lighting desk answered at /light and nothing linked to it; the projection mapper lives at /<space>/map/<project>, which needs a project id nothing in the interface would tell you. From the tools screen you pick a space, then a project, and it opens.',
-            'Each tile says what the tool is holding right now — how many spaces, whether the lighting desk\u2019s output is off, whether a mapper has a project to map. What needs a project asks for one instead of failing at an address.',
-            'The node editor opens on a project rather than on the empty browser canvas it used to; the bare canvas is still there, named for what it is — a canvas saved nowhere.'
+            'Open /tools and everything di.iiii does is there, one card each, grouped the way you would look for it: walk, build, nodes, light & projection, carry & share, together, for agents.',
+            'Each card shows the tool itself. Rest on a card (or tap its live button on a phone) and its picture becomes the real thing running \u2014 the scene, the canvas, the desk \u2014 one card at a time, so a page of cards never asks your phone for more than one. Until then you see a real screenshot of it. A tool that has no picture on the web, such as the di command, shows what it prints.',
+            'Try opens the tool ready to use with no account, in the Open Space or in your own sandbox. Where something is needed first \u2014 signing in to publish, a folder and a script for a page \u2014 the card says so plainly, in place of the button.',
+            'Show lists public works made with the tool. Made with names the libraries under it, each at its own site; Source names the files in the public repository; the wiki link opens the article about it. Where says whether it runs on the web or on a di.iiii on your own machine \u2014 the lighting desk, the machine under the projector, the rig and the agent door live there, in the room with the hardware.',
+            'Under the cards, What we use lists every library, runtime, protocol and service the program is built from, with its version, what it does here, its licence and its own link. di.iiii is built like a kit: each part loads only when a piece uses it, and the page prints its own measured weight as the example.'
         ],
-        tags: ['tools', 'studio', 'raw', 'light', 'projection', 'desk', 'local'],
-        updated: '2026-09-09'
+        tags: ['tools', 'kit', 'studio', 'raw', 'nodes', 'light', 'projection', 'perform', 'desk', 'local', 'libraries', 'licences', 'source'],
+        updated: '2026-09-28'
     },
     {
         id: 'guests-in-the-room',

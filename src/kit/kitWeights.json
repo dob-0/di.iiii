@@ -1,0 +1,11 @@
+{
+  "measured": "2026-09-28",
+  "method": "scripts/kit-weights.mjs: gzip -9 of the built chunks; first load from scripts/kit-first-load.mjs in Playwright Firefox (1440×900 @1, 390×844 @3), static dist, no server",
+  "kitPageKB": 13.4,
+  "coreKB": 81.8,
+  "threeKB": 451.9,
+  "firstLoadKB": 516.1,
+  "firstLoadPhoneKB": 447.7,
+  "firstLoadFiles": 36,
+  "threeOnFirstLoad": false
+}

@@ -14,7 +14,7 @@ import RigMirrorHint from './RigMirrorHint.jsx'
 import SurfaceBar, { layerReached } from '../../components/SurfaceBar.jsx'
 import DeskPerformSwitch from '../../perform/DeskPerformSwitch.jsx'
 import useLocalInstall from '../../hooks/useLocalInstall.js'
-import { isEmbedRequest } from '../../utils/previewMode.js'
+import { isEmbedRequest, isPreviewRequest } from '../../utils/previewMode.js'
 import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspaceStorage.js'
 import '../styles/studio-mobile.css'
 import { canPlaceInScene } from '../utils/assetFormats.js'
@@ -306,7 +306,9 @@ export default function StudioShell({
     // Not in a window (?embed=1), a headset, Hide UI, or the jam's simple mode —
     // there the tools' own jumps are hidden too, and the bar is only more of them.
     const localInstall = useLocalInstall()
-    const [isEmbed] = useState(() => isEmbedRequest())
+    // A preview (?preview=1, a Kit card's picture of Studio) hides the same
+    // navigation an embedded window does.
+    const [isEmbed] = useState(() => isEmbedRequest() || isPreviewRequest())
     const showBar = !uiHidden && !isEmbed && !xrState?.isXrPresenting && !jamMinimal
 
     // Guest first-run guidance is the action-completed coach pill
