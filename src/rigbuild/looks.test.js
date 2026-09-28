@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { TYPE_LIBRARY } from './types/index.js'
 import { typeById } from './fixtureTypes.js'
 import { pieceEntity } from './plotEdits.js'
@@ -92,5 +92,38 @@ describe('a look\'s level in the room (RIG_BUILD.md §15)', () => {
         expect(levelOfKey({}, 'pit/x')).toBe(1)
         // resting writes aims and colours, never a level (the document has no nominal to return to)
         expect(restOps([e], poses).some((op) => op.payload.patch?.intensity !== undefined || op.payload.component === 'beam')).toBe(false)
+    })
+})
+
+// RIG_BUILD.md §15.6 — a cue's fade in the room. The room hands its drawing up to its parent
+// (RoomLookFollower → PublicProjectViewer), which re-renders on it: if a re-render alone made
+// a new drawing, the two fed each other forever ("Maximum update depth exceeded", seen in dev
+// 2026-09-28 — the fade's t was read from the clock in render).
+describe('the room between two looks (useRigLookEntities)', () => {
+    const mirrorOf = (snapshot) => ({ getSnapshot: () => snapshot, subscribe: () => () => {}, probe: () => Promise.resolve(true), watch: () => () => {} })
+
+    it('draws a fade part-way, and a re-render without the clock\'s tick is the same drawing', async () => {
+        const { renderHook, act } = await import('@testing-library/react')
+        const { useRigLookEntities } = await import('./useRigLook.js')
+        vi.useFakeTimers({ now: 100_000 })
+        try {
+            const doc = dealt()
+            const snapshot = { present: true, fixtures: [], looks: [deskLookId('cross')], lookFade: { lookId: deskLookId('cross'), from: deskLookId('up'), fadeMs: 4000, firedAt: 99_000 } }
+            const { result, rerender } = renderHook(({ d }) => useRigLookEntities(d, { mirror: mirrorOf(snapshot) }), { initialProps: { d: doc } })
+            const first = result.current.entities
+            expect(result.current.fading).toBe(true)
+            vi.setSystemTime(100_050) // the clock moves; the fade's own tick has not fired
+            rerender({ d: doc })
+            expect(result.current.entities).toBe(first) // no tick, no new drawing
+            await act(async () => { vi.advanceTimersByTime(200) })
+            expect(result.current.entities).not.toBe(first) // the tick moves it on
+            await act(async () => { vi.advanceTimersByTime(5000) })
+            expect(result.current.fading).toBe(false)
+            const landed = result.current.entities
+            rerender({ d: doc })
+            expect(result.current.entities).toBe(landed)
+        } finally {
+            vi.useRealTimers()
+        }
     })
 })

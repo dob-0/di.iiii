@@ -20,7 +20,8 @@ import { flashLamps, flashRig, strobeEnvelope, FLASH } from './rigFlash.js'
 //     all — at 0 when nothing is lit — so the shader's light count never changes mid-show
 //     (a change recompiles every lit material: a visible hitch).
 // The lamp entities themselves draw no cone and no light (looks.js flashEntities).
-// Time is R3F's clock, so a recording on a controlled clock flashes on its own frames.
+// Time is the wall clock (Date.now), so screens flash together and a recording on a
+// controlled clock flashes on its own frames.
 
 const glareTexture = (() => {
     let tex = null
@@ -104,7 +105,9 @@ export default function RigFlashes({ entities }) {
     const lit = useMemo(() => all.filter((l) => l.level > 0), [all])
     const strobeEnv = useRef(0)
     const steadyEnv = useRef(1)
-    useFrame((state) => { strobeEnv.current = strobeEnvelope(state.clock.elapsedTime) })
+    // The wall clock, not the scene's own: every screen watching the show flashes on the
+    // same beat, and a recording on a controlled clock lands its flashes on its frames.
+    useFrame(() => { strobeEnv.current = strobeEnvelope(Date.now() / 1000) })
     if (!all.length) return null
     const envOf = (kind) => (kind === 'strobe' ? strobeEnv : steadyEnv)
     return (

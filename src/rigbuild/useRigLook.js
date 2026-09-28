@@ -87,9 +87,11 @@ export function useRigLookEntities(document, { explicit, mirror, library: baseLi
     const shownTo = useMemo(() => roomInLook({ entities, library, looks, lookId }), [entities, library, looks, lookId])
     const shownFrom = useMemo(() => (fade && fromId !== lookId ? roomInLook({ entities, library, looks, lookId: fromId }) : null), [fade, fromId, lookId, entities, library, looks])
 
-    // The fade clock: re-renders only while a fade is under way; t is read from the clock
-    // in render, so the first frame of a new fade is already the look it comes FROM.
-    const [, setTick] = useState(0)
+    // The fade clock: t moves ONLY on its own tick (~30 Hz while a fade is under way, never
+    // otherwise), never on a render — a room that hands these entities up to its parent
+    // (RoomLookFollower) re-renders on them, and a t read from the clock in render made
+    // every render a new drawing: an update loop (seen in dev, 2026-09-28).
+    const [tick, setTick] = useState(0)
     useEffect(() => {
         if (!shownFrom || fadeProgress(fade) >= 1) return undefined
         const timer = setInterval(() => {
@@ -98,7 +100,8 @@ export function useRigLookEntities(document, { explicit, mirror, library: baseLi
         }, FADE_FRAME_MS)
         return () => clearInterval(timer)
     }, [fade, shownFrom])
-    const t = shownFrom ? fadeProgress(fade) : 1
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `tick` is the clock's beat
+    const t = useMemo(() => (shownFrom ? fadeProgress(fade) : 1), [shownFrom, fade, tick])
 
     const blended = useMemo(() => (shownFrom && t < 1 ? blendEntities(shownFrom, shownTo, t) : shownTo), [shownFrom, shownTo, t])
     const shown = useMemo(() => flashEntities(blended, library), [blended, library])
