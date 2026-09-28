@@ -10,6 +10,7 @@ import MadeWithBadge from './MadeWithBadge.jsx'
 import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from './SceneEntityErrorBoundary.jsx'
 import { confineToAreas } from './walkableAreas.js'
+import { entityCollides, buildWalkCollider, collectColliderMeshes, colliderSignature, groundBelow, resolveWalkBody, resolveFlyBody } from './walkCollider.js'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
 import {
     buildProjectEventsUrl,
@@ -368,7 +369,7 @@ function AnimatedEntity({ entity, assetMap, childMap = null }) {
 
     const children = childMap?.get(entity.id) || []
     return (
-        <group ref={groupRef} position={basePos} rotation={baseRot} scale={baseScale}>
+        <group ref={groupRef} position={basePos} rotation={baseRot} scale={baseScale} userData={{ walkCollide: entityCollides(entity) }}>
             {/* An enabled link makes the object itself clickable
                 (src/project/viewport/EntityLink.jsx); without one this
                 renders EntityVisual exactly as before. */}
@@ -463,7 +464,7 @@ export const centroidSpawn = (center, bounds) => {
     return { x: center?.x ?? 0, z: (center?.z ?? 0) + back, yaw: Math.PI, pitch: 0 }
 }
 
-function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef }) {
+function Walker({ playerRef, solidRootRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef }) {
     const { camera, gl } = useThree()
     // During an XR session the camera pose is owned by the headset/phone and
     // locomotion is driven through XROrigin (see XrLocomotion). Walker must NOT
@@ -482,6 +483,8 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
     const dollyPendingRef = useRef(0)
     const bobPhaseRef = useRef(0)
     const wheelDollyRef = useRef(0)
+    const colliderRef = useRef(null)
+    const colliderClockRef = useRef(0)
     const touchLookRef = useRef(null)
     const touchMoveRef = useRef(null)
     const joyBaseRef = useRef({ x: 0, y: 0 })
@@ -893,12 +896,26 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
         // below shouldn't also make you descend; altitude is only ever
         // changed explicitly, via Space/Q (up) and C/E (down). walkPhysics
         // builds its wish vector from yaw alone, never pitch.
+        // The room's matter, rebuilt at most once a second and only when the
+        // set of meshes changed (models arrive after the first frame).
+        colliderClockRef.current += delta
+        if (solidRootRef?.current && (colliderRef.current === null || colliderClockRef.current > 1)) {
+            colliderClockRef.current = 0
+            const sig = colliderSignature(collectColliderMeshes(solidRootRef.current))
+            if (colliderRef.current?.signature !== sig) colliderRef.current = buildWalkCollider(solidRootRef.current)
+        }
+        const collider = colliderRef.current
         const env = {
             confine: (x0, z0, x1, z1) => confineToAreas(
                 walkableAreas, x0, z0,
                 THREE.MathUtils.clamp(x1, bounds.minX, bounds.maxX),
                 THREE.MathUtils.clamp(z1, bounds.minZ, bounds.maxZ)
             ),
+            solid: collider?.bvh ? {
+                ground: (x, z, feetY) => groundBelow(collider, x, z, feetY),
+                walk: (x, feetY, z) => resolveWalkBody(collider, x, feetY, z),
+                fly: (x, y, z) => resolveFlyBody(collider, x, y, z),
+            } : undefined,
         }
         const pose = advanceWalkSim(sim, {
             forward, strafe, vert, fly,
@@ -912,7 +929,8 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             const step = Math.abs(pending) < 0.005 ? pending : pending * (1 - Math.exp(-delta / 0.05))
             dollyPendingRef.current = pending - step
             const b = sim.body
-            const moved = env.confine(b.x, b.z, b.x + Math.sin(player.yaw) * step, b.z + Math.cos(player.yaw) * step)
+            let moved = env.confine(b.x, b.z, b.x + Math.sin(player.yaw) * step, b.z + Math.cos(player.yaw) * step)
+            if (env.solid) moved = env.solid.walk(moved.x, b.y - EYE_HEIGHT, moved.z)
             const dx = moved.x - b.x
             const dz = moved.z - b.z
             teleportWalkSim(sim, moved.x, b.y, moved.z, { keepVelocity: true })
@@ -1611,6 +1629,7 @@ export default function LiveProjectScene({
     const arTouchElRef = useRef(null)
     const isArActive = xr.isArModeActive && xr.isXrPresenting
     const playerRef = useRef({ x: 0, z: 6, yaw: Math.PI, pitch: 0, altY: EYE_HEIGHT })
+    const solidRootRef = useRef(null)
     const { canvasKey, contextLost, bindContextGuard, restoreContext } = useWebglContextGuard()
     // The two interactive modes. `walking` gates everything that belongs to
     // the walker -- its controls, its chrome, its hints -- so view mode does
@@ -1931,16 +1950,21 @@ export default function LiveProjectScene({
                     />
                 )}
                 <AmbientField center={center} />
-                {showEntities && rootEntities.map((entity) => (
-                    <SceneEntityErrorBoundary key={entity.id} resetKey={entity.id}>
-                        <AnimatedEntity entity={entity} assetMap={assetMap} childMap={entityChildMap} />
-                    </SceneEntityErrorBoundary>
-                ))}
+                {/* One root for the room's entities: the walker's collider is
+                    built from what renders under it (walkCollider.js). */}
+                <group ref={solidRootRef}>
+                    {showEntities && rootEntities.map((entity) => (
+                        <SceneEntityErrorBoundary key={entity.id} resetKey={entity.id}>
+                            <AnimatedEntity entity={entity} assetMap={assetMap} childMap={entityChildMap} />
+                        </SceneEntityErrorBoundary>
+                    ))}
+                </group>
                 {showEntities && gateEntity ? <GateGlow entity={gateEntity} /> : null}
                 {sceneExtras}
                 {walking ? (
                     <Walker
                         playerRef={playerRef}
+                        solidRootRef={solidRootRef}
                         onNearestZone={setNearestLabel}
                         onPortalReached={handlePortalReached}
                         entities={entities}

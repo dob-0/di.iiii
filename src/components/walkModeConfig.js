@@ -77,6 +77,20 @@ export const BOB_PHASE_PER_M = 1.8
 export const TURN_SPEED = 1.6
 export const EYE_HEIGHT = 1.6
 
+// -- Solid rooms (walkCollider.js) --
+// The walking body is a capsule, the flying camera a sphere. Reference: Unreal
+// ACharacter's default capsule (radius 34 cm, half-height 88 cm) and
+// UCharacterMovementComponent::MaxStepHeight = 45 cm. TUNED: radius 30 cm so a
+// 70 cm gap between two pillars stays passable; body 1.75 m (eye 1.6 + head).
+export const WALK_BODY_RADIUS = 0.3
+export const WALK_BODY_HEIGHT = 1.75
+export const WALK_STEP_HEIGHT = 0.45
+export const FLY_BODY_RADIUS = 0.3
+// Stepping up/down a stair or riser edge: the eye follows the new ground over
+// ~0.08 s instead of snapping (a step-smoothed camera, as games do), while a
+// bigger change (leaving fly, dropping off a riser) keeps SETTLE_SMOOTH_TIME.
+export const STEP_SMOOTH_TIME = 0.08
+
 // -- Look sensitivity, one per input method --
 // The mouse under pointer lock is the reference, and it is set in the units
 // a player already knows: an in-game sensitivity for a named game, plus the

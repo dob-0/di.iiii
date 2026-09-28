@@ -48,7 +48,7 @@ import {
     WALK_MAX_SPEED, WALK_SPRINT_FACTOR, WALK_MAX_ACCEL, WALK_TURN_FRICTION,
     WALK_BRAKING_FRICTION, WALK_BRAKING_DECEL, BRAKE_TO_STOP_VELOCITY,
     FLY_MAX_SPEED, FLY_MIN_ALT, FLY_MAX_ALT,
-    SETTLE_SMOOTH_TIME, SETTLE_MAX_SPEED,
+    SETTLE_SMOOTH_TIME, SETTLE_MAX_SPEED, STEP_SMOOTH_TIME, WALK_STEP_HEIGHT,
 } from './walkModeConfig.js'
 
 const EPS = 1e-6
@@ -142,10 +142,20 @@ export function smoothDamp(current, target, velocity, smoothTime, maxSpeed, dt) 
 /**
  * Advance the body by ONE fixed tick.
  * input: { forward, strafe, vert, yaw, fly, sprint, flySpeedScale }
- * env:   { confine?(x0, z0, x1, z1) -> {x, z}, eyeHeight? }
+ * env:   { confine?(x0, z0, x1, z1) -> {x, z}, eyeHeight?, solid? }
+ * solid: the room's matter (walkCollider.js), all optional —
+ *   ground(x, z, feetY) -> y | null   highest walkable ground under the feet
+ *   walk(x, feetY, z)   -> {x, z}     body pushed out of walls
+ *   fly(x, y, z)        -> {x, y, z}  camera pushed out of everything
  */
 export function stepWalk(body, input, dt, env = {}) {
-    const eye = env.eyeHeight ?? EYE_HEIGHT
+    const standing = env.eyeHeight ?? EYE_HEIGHT
+    const solid = env.solid
+    let eye = standing
+    if (solid?.ground && !input.fly) {
+        const g = solid.ground(body.x, body.z, body.y - standing)
+        eye = (g ?? 0) + standing
+    }
     const v = { x: body.vx, y: input.fly ? body.vy : 0, z: body.vz }
     const wish = wishFromInput(input)
 
@@ -167,7 +177,8 @@ export function stepWalk(body, input, dt, env = {}) {
         calcVelocity(v, flat, max, WALK_MAX_ACCEL, dt)
         v.y = 0
         if (Math.abs(body.y - eye) > 1e-4 || Math.abs(body.settleV) > 1e-4) {
-            const [ny, nv] = smoothDamp(body.y, eye, body.settleV, SETTLE_SMOOTH_TIME, SETTLE_MAX_SPEED, dt)
+            const smooth = Math.abs(body.y - eye) <= WALK_STEP_HEIGHT + 0.05 ? STEP_SMOOTH_TIME : SETTLE_SMOOTH_TIME
+            const [ny, nv] = smoothDamp(body.y, eye, body.settleV, smooth, SETTLE_MAX_SPEED, dt)
             body.y = ny
             body.settleV = nv
         } else {
@@ -187,6 +198,28 @@ export function stepWalk(body, input, dt, env = {}) {
     if (Math.abs(moved.z - tz) > EPS) v.z = 0
     body.x = moved.x
     body.z = moved.z
+
+    // Solid matter: push the body out, then clip the velocity against the push
+    // direction (UE SlideAlongSurface) so pressing into a wall stores no speed
+    // and moving along it keeps the parallel part.
+    if (solid) {
+        let n = null
+        if (input.fly && solid.fly) {
+            const r = solid.fly(body.x, body.y, body.z)
+            n = { x: r.x - body.x, y: r.y - body.y, z: r.z - body.z }
+            body.x = r.x; body.y = r.y; body.z = r.z
+        } else if (!input.fly && solid.walk) {
+            const r = solid.walk(body.x, body.y - standing, body.z)
+            n = { x: r.x - body.x, y: 0, z: r.z - body.z }
+            body.x = r.x; body.z = r.z
+        }
+        const len = n ? Math.hypot(n.x, n.y, n.z) : 0
+        if (len > EPS) {
+            const nx = n.x / len, ny = n.y / len, nz = n.z / len
+            const into = v.x * nx + v.y * ny + v.z * nz
+            if (into < 0) { v.x -= nx * into; v.y -= ny * into; v.z -= nz * into }
+        }
+    }
     body.vx = v.x; body.vy = v.y; body.vz = v.z
     return body
 }

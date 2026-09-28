@@ -157,3 +157,16 @@ stays on even-LTS.
 
 **Re-check when:** Node 26 enters Active LTS (Oct 2026) — then take both PRs
 together (root + serverXR images must move in the same deploy).
+
+---
+
+## three-mesh-bvh 0.7.8 — made a direct dependency (2026-09-28)
+
+The walker's solid rooms (`src/components/walkCollider.js`) collide a capsule
+against the room's real triangles, which needs a BVH. `three-mesh-bvh`
+(gkjohnson, MIT) is the standard one for three.js, and its `characterMovement`
+example is the method used. It was already installed as drei's dependency at
+0.7.8, so it is pinned at exactly that version: no new download, and one copy
+in the bundle. Upstream is at 0.9.15 (peer `three >= 0.159`).
+
+**Re-check when:** drei moves to 0.9.x, then move both together.
