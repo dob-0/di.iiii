@@ -60,3 +60,15 @@ worktree against the install's API; the server itself needs none of them (not pa
 - Seen (Flatpak Chromium, iGPU, default flags): equipment inventory, CO₂ jet and 40 W laser cards (desktop + phone),
   build + E inventory, /moxir with the wash. fps: build 19, /moxir view 14 (DPR 2 desktop); 2D pages 60+.
 - Backup `~/di-backups/preview-rig-builder-2026-09-28/step-3/`; rollback `rollback.sh --to rigbuilder.2|connect.5`.
+
+## Step 4 (same day) — verified codes, the makers' papers: `0.4.16-rigbuilder.4`
+
+- Merged `feat/rig-equipment-media` (#630, stacked on #624). Targeted tests on the preview: src/rigbuild +
+  scripts/rigbuild + src/wiki 31 files / 231 tests green. Packed `npm run di:pack -- --version=0.4.16-rigbuilder.4`
+  (sha256 fa4f8317…, no PDF or maker file in the artifact — checked), `di update --from`.
+- The 24 makers' files (manuals/datasheets the makers offer for download) were stored BEFORE the install as assets of the
+  local `moxir` space by `scripts/rigbuild/fetch-equipment-media.mjs --upload` (sha256-checked). Before-state:
+  `~/di-backups/moxir-before-media-2026-09-28/` (assets dir was empty). Photos are links only.
+- Backup `~/di-backups/preview-rig-builder-2026-09-28/step-4/`; rollback `rollback.sh --to rigbuilder.3|rigbuilder.2|connect.5`
+  (`--to rigbuilder.3 --dry-run`, with and without `--with-data`: exit 0, SHA256SUMS ok).
+- Seen: see the shots in `~/Downloads/rig-equipment/media/` (Flatpak Chromium, default flags, iGPU, one browser, flock).
