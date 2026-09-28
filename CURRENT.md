@@ -13,22 +13,18 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the front door links to /support
-- the project list ends clear of the account button
-- the installer's lines tell the truth
-- naming a new project on a phone keeps the title whole
-- a copy without the works points at diiii.xyz
-- the bar fits a phone: what does not fit goes behind More, and a full bar keeps off the place names
-- Raw's Help reads on a phone; the lighting desk names its show at 1440
-- the SpaceHub flake was a lost message, not a slow runner
-- the bar and the desk's ways out are a finger tall under a finger; Studio offers a tool where the bar does
+- **Hosting:** prod + the dev tier run natively on a standby host that pulls its own green deploys (`DEPLOY_TARGET=mac`); its build can no longer hang on a dead link; uptime is checked from outside.
+- **The Kit at /tools:** every ready tool seen, tried and read; three.js no longer rides every non-3D page.
+- **Desks:** the lighting desk can fan; the projection desk has undo; the Open Jam floor lays its mosaic; a photo lands in its wall slot at once.
+- **People:** an owner can stop an invite link; an admin sees the site's own traffic; an agent's chat returns on reload with its cost; a guest never reads the server's machine name.
+- vitest capped at half the cores outside CI; batches #592 #597 #601 #604 #605 landed together.
 
 Full detail: `PROGRESS.md`.
 
 ## What works
 
 Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAuth-first)
-+ open-space/sandbox grants; Open Jam and vanity links; deploy by push; nightly VPS backups.
++ open-space/sandbox grants; Open Jam and vanity links; deploy by push (the host pulls green runs); nightly backups on the serving host, pulled to a second machine.
 
 ## Open
 
