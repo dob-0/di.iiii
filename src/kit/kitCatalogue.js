@@ -15,6 +15,8 @@
 // Words: docs/ai/vocabulary.md. The tools are Studio · Nodes · Projection ·
 // Light; the node canvas is never "Raw" in a sentence a person reads.
 
+import { RIG_LIGHT, RIG_ROOM, RIG_STEPS } from '../rigbuild/rigTools.js'
+
 // Where a source link goes: the public repo, on the branch the dev tier runs.
 export const KIT_SOURCE_BASE = 'https://github.com/dob-0/di.iiii/blob/dev/'
 
@@ -98,6 +100,11 @@ export const INSTALL_LINES = [
     'macOS and Linux — curl -fsSL https://diiii.xyz/get | sh',
     'Windows (PowerShell) — irm https://diiii.xyz/get.ps1 | iex'
 ]
+
+// The rig's steps, one line each, as the bar on every rig page lists them
+// (src/rigbuild/rigTools.js is the one list; kitCatalogue.test.js holds the two together).
+export const RIG_KIT_LINES = [RIG_ROOM, ...RIG_STEPS, RIG_LIGHT]
+    .map((s) => `${`${s.n ? `${s.n} ` : ''}${s.label}`.padEnd(16)}${s.short}`)
 
 // The four tools the agent door registers (sdk/mcp.mjs).
 export const MCP_TOOL_NAMES = ['di_find', 'di_describe', 'di_call', 'di_run']
@@ -312,6 +319,21 @@ export const KIT_TOOLS = [
         madeWith: ['artnet', 'sacn', 'enttec', 'nodeDgram'],
         sources: ['serverXR/src/routes/lightingRoutes.js', 'serverXR/src/lighting/desk.js', 'serverXR/src/lighting/artnet.js', 'serverXR/src/lighting/sacn.js', 'serverXR/src/lighting/enttec.js'],
         wiki: 'lighting-desk'
+    },
+    {
+        // One card for the seven rig pages, one line each (src/rigbuild/rigTools.js
+        // holds the same list, in the same order, for the bar on every rig page).
+        id: 'rig-builder',
+        group: 'light',
+        name: 'Rig builder',
+        line: 'Light a real room step by step, on one project: pick the equipment, build it in the room, check the plot, deal cards and looks, print the patch sheet, send the crew link — then run it on the light desk.',
+        where: install,
+        try: null,
+        preview: preview.text(RIG_KIT_LINES),
+        show: [],
+        madeWith: ['three', 'r3f', 'artnet', 'sacn'],
+        sources: ['src/rigbuild/rigTools.js', 'src/rigbuild/RigSteps.jsx', 'src/rigbuild/EquipmentSurface.jsx', 'src/rigbuild/BuildSurface.jsx', 'src/rigbuild/PlotSurface.jsx', 'src/rigbuild/CardsSurface.jsx', 'src/rigbuild/PatchSheetSurface.jsx', 'docs/architecture/RIG_BUILD.md'],
+        wiki: 'rig-build-3d'
     },
     {
         id: 'stage-machine',

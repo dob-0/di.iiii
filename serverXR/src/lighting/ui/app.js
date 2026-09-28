@@ -4638,9 +4638,11 @@ $('#miSceneFilterClear').addEventListener('click', () => { $('#miSceneFilter').v
   const links = from && window.deskFrom.projectLinks(from);
   if (!links) return;
   const back = $('#fromBack');
-  back.textContent = '← ' + from.label;
-  back.href = links.studio;
-  back.title = 'Back to ' + from.label + ' in Studio';
+  // Opened from a rig page (&from=, from.js): the way back is that page — the rig's
+  // steps row is there, one click to every other step. Otherwise the Studio, as before.
+  back.textContent = '← ' + from.label + (links.rig ? ' · ' + links.rigLabel : '');
+  back.href = links.rig || links.studio;
+  back.title = links.rig ? 'Back to the ' + links.rigLabel + ' of ' + from.label : 'Back to ' + from.label + ' in Studio';
   for (const [id, href, tool] of [['#fromStudio', links.studio, 'Studio'],
     ['#fromNodes', links.nodes, 'Nodes'], ['#fromProjection', links.projection, 'Projection']]) {
     $(id).href = href;

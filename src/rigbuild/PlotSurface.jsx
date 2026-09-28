@@ -23,7 +23,9 @@ import {
 import { isEffectType, shapePath } from './plotSymbols.js'
 import { FLAG_WORDS } from './sheet.js'
 import { countWords, libraryWithShow } from './rental.js'
-import { buildEquipmentPath } from './equipmentRouting.js'
+import { rigProgress } from './rigProgress.js'
+import RigBar from './RigSteps.jsx'
+import useLocalInstall from '../hooks/useLocalInstall.js'
 import PlotDrawing, { SCREEN_SIZES } from './PlotDrawing.jsx'
 import { usePieceAssets } from './usePieceAssets.js'
 import './plot.css'
@@ -146,7 +148,6 @@ function TitleBlock({ title, model, desk, scale, spaceId, projectId, onPrint }) 
             <div className="rigplot-title__links">
                 <a href={patch}>sheet 2 · patch</a>
                 <a href={`${patch}#power`}>sheet 3 · power</a>
-                <a href={buildEquipmentPath(spaceId, projectId)}>equipment</a>
                 <button type="button" onClick={onPrint}>print sheet 1</button>
             </div>
         </section>
@@ -673,6 +674,9 @@ export default function PlotSurface({ spaceId, projectId, library: baseLibrary =
     // How many labels the drawing left out where they would collide (it reports it).
     const [hidden, setHidden] = useState(0)
     const dragTool = useRef(null)
+    const localInstall = useLocalInstall()
+    const progress = useMemo(() => rigProgress({ entities, library, deskFlags: patch.flags, projectId }), [entities, library, patch.flags, projectId])
+    const rigBar = <RigBar spaceId={spaceId} projectId={projectId} projectLabel={title} here="plot" progress={progress} isLocalInstall={localInstall.isLocal} />
 
     if (printing) {
         return (
@@ -756,7 +760,9 @@ export default function PlotSurface({ spaceId, projectId, library: baseLibrary =
 
     if (phone) {
         return (
-            <div className="rigplot rigplot--phone">
+            <>
+            {rigBar}
+            <div className="rigplot rigplot--phone has-rigbar">
                 <header className="rigplot-top">
                     <span className="rigplot-mono rigplot-top__title">{title}</span>
                     <div className="rigplot-toggle" role="group" aria-label="View">
@@ -774,11 +780,14 @@ export default function PlotSurface({ spaceId, projectId, library: baseLibrary =
                     {sheetOpen ? <div className="rigplot-sheet__body">{side}</div> : null}
                 </section>
             </div>
+            </>
         )
     }
 
     return (
-        <div className="rigplot">
+        <>
+        {rigBar}
+        <div className="rigplot has-rigbar">
             {rail}
             <main className="rigplot-main">
                 {plan}
@@ -789,6 +798,7 @@ export default function PlotSurface({ spaceId, projectId, library: baseLibrary =
                 {side}
             </aside>
         </div>
+        </>
     )
 }
 

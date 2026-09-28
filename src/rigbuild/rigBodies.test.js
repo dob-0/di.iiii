@@ -63,6 +63,21 @@ describe('the rooms draw them', () => {
         expect(read('src/studio/components/StudioViewport.jsx')).toMatch(/<RigBodies entities=\{sceneEntities\} \/>/)
     })
 
+    // known-fixes "Studio blanks while the lamps' bodies load": RigBodies is lazy, and it
+    // sat inside the SAME <Suspense> as every root entity and the multi-selection gizmo,
+    // so its chunk (and anything under it that suspends) hid or remounted that whole
+    // group. Each room gives it a boundary of its own, holding nothing else.
+    it('each room gives RigBodies a Suspense boundary of its own', () => {
+        const own = (name) => new RegExp(`<Suspense fallback=\\{null\\}>\\s*<RigBodies entities=\\{${name}\\} \\/>\\s*<\\/Suspense>`)
+        expect(read('src/studio/components/StudioViewport.jsx')).toMatch(own('sceneEntities'))
+        expect(read('src/components/LiveProjectScene.jsx')).toMatch(own('entities'))
+        // and the entities' boundary no longer holds it
+        const studio = read('src/studio/components/StudioViewport.jsx')
+        const entitiesBoundary = studio.slice(studio.indexOf('{rootEntities.map((entity) => ('), studio.indexOf('<MultiSelectionGizmo'))
+        expect(entitiesBoundary.match(/<RigBodies/g)).toHaveLength(1)
+        expect(entitiesBoundary).toMatch(/<Suspense fallback=\{null\}>\s*<RigBodies/)
+    })
+
     it('view A draws its own and turns the room\'s off (no double bodies)', () => {
         expect(read('src/rigbuild/BuildSurface.jsx')).toMatch(/rigBodies=\{false\}/)
         expect(read('src/rigbuild/BuildScene.jsx')).toMatch(/<FixtureBodies /)

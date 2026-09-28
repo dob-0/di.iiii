@@ -2,7 +2,10 @@
   "audit": {
     "made": "2026-09-28",
     "code": "origin/dev b1f1ba1d",
-    "seenOn": "https://dev.diiii.xyz"
+    "seenOn": "https://dev.diiii.xyz",
+    "later": {
+      "rig-builder": "not in that audit (the rig tools were not on dev): seen on the owner's own install, preview 0.4.16-rigbuilder.6, 2026-09-28 — install-only until the stack lands"
+    }
   },
   "labels": {
     "landing": "live",
@@ -24,6 +27,7 @@
     "stage-machine": "install (honest label)",
     "rig": "install (honest label)",
     "light": "install (honest label)",
+    "rig-builder": "install (honest label)",
     "lamps": "live",
     "scan": "not ready",
     "pdf-import": "not ready",

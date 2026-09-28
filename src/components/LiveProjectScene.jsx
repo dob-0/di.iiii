@@ -2051,9 +2051,13 @@ export default function LiveProjectScene({
                     </div>
 
                     <header className="live-scene-chrome">
-                        <button type="button" className="live-scene-exit" onClick={onExit}>
-                            {exitLabel}
-                        </button>
+                        {/* exitLabel={null}: the surface gives the way out itself (the rig's
+                            bar over view A), so the room does not draw a second one. */}
+                        {exitLabel ? (
+                            <button type="button" className="live-scene-exit" onClick={onExit}>
+                                {exitLabel}
+                            </button>
+                        ) : <span />}
                         <span className="live-scene-title">
                             {title}
                             {/* The nearest door is WAYFINDING, not part of the

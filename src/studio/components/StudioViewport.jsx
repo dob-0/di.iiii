@@ -765,7 +765,14 @@ function StudioSceneContent({
                             />
                         </SceneEntityErrorBoundary>
                     ))}
-                    {hasRig ? <RigBodies entities={sceneEntities} /> : null}
+                    {/* Its own boundary: the lazy chunk (and its models) suspending here
+                        must never hide or remount every root entity and the gizmo with it
+                        — the whole room blanked while the lamps' bodies loaded. */}
+                    {hasRig ? (
+                        <Suspense fallback={null}>
+                            <RigBodies entities={sceneEntities} />
+                        </Suspense>
+                    ) : null}
                     <MultiSelectionGizmo
                         entities={transformableSelectedEntities}
                         editMode={editMode}

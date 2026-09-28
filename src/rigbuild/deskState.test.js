@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 import { consoleInWords } from './deskState.js'
 
 const ROOT = process.cwd().endsWith('/src') ? path.resolve(process.cwd(), '..') : process.cwd()
