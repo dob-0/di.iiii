@@ -1,4 +1,5 @@
 'use strict';
+/* global deskNow, S, CueCore, $, esc, popScene, popAt, closeBindPop, post, say, pullState, showPage, $$ -- defined by app.js, loaded first */
 // [cues] Follow times on the page (studio, 2026-09-24). The server runs the sequence
 // (cues.js); this file only edits a scene's follow and shows what is running:
 //   - "Follow…" in the scene's right-click menu: wait N s after the fade, then go on to
