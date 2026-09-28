@@ -356,7 +356,10 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
     const runOf = useCallback((id) => runs.find((r) => r.ids.includes(id)) || null, [runs])
     const chosenLamp = chosenId ? model.lampById.get(chosenId) : null
     const aimedLamp = aim.lampId ? model.lampById.get(aim.lampId) : null
-    const title = `${projectDocument?.projectMeta?.title || projectId} · ${crew ? 'crew' : building ? 'build' : 'walk'}`
+    // A phone has no room for the project's name beside the exit (at 844 × 390 it wrapped
+    // the exit button under the build switch): the mode alone.
+    const mode = crew ? 'crew' : building ? 'build' : 'walk'
+    const title = phone ? mode : `${projectDocument?.projectMeta?.title || projectId} · ${mode}`
     const hint = building && !crew
         ? <>WASD · move &nbsp;·&nbsp; mouse · aim &nbsp;·&nbsp; click · place &nbsp;·&nbsp; right-click · remove &nbsp;·&nbsp; 1–0 / wheel · pieces &nbsp;·&nbsp; R · turn &nbsp;·&nbsp; Q/E · up/down &nbsp;·&nbsp; B · walk &nbsp;·&nbsp; ESC · release</>
         : <>WASD · move &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; click / I · the patch of a lamp &nbsp;·&nbsp; {crew ? '' : <>B · build &nbsp;·&nbsp; </>}F · fly &nbsp;·&nbsp; ESC · release</>
@@ -464,7 +467,24 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
             ) : null}
 
             {!building && aimedLamp && !sheetOpen ? (
-                <p className="rigbuild-aimed rigplot-mono">{tagOf(aimedLamp).text} · {aimedLamp.code} · I · the patch</p>
+                phone ? (
+                    <button type="button" className="rigbuild-aimed rigbuild-aimed--tap rigplot-mono" onClick={() => choose(aimedLamp.id)}>{tagOf(aimedLamp).text} · the patch</button>
+                ) : (
+                    <p className="rigbuild-aimed rigplot-mono">{tagOf(aimedLamp).text} · {aimedLamp.code} · I · the patch</p>
+                )
+            ) : null}
+
+            {/* The phone: the walker's own floating stick on the left half moves, a swipe on
+                the right half looks, the crosshair is the hand; these place, remove, turn and
+                raise — every one a single tap of one thumb (sketch A, phone). */}
+            {phone && building && !crew ? (
+                <div className="rigbuild-thumbs" aria-label="Build controls">
+                    <button type="button" className="rigbuild-thumb" onClick={() => raise(1)} disabled={!category} aria-label="Raise">up</button>
+                    <button type="button" className="rigbuild-thumb" onClick={() => raise(-1)} disabled={!category} aria-label="Lower">dn</button>
+                    <button type="button" className="rigbuild-thumb" onClick={() => rotate({})} disabled={!slot || slot.kind === 'lamp'} aria-label="Turn">turn</button>
+                    <button type="button" className="rigbuild-thumb" onClick={remove} aria-label="Remove what the crosshair is on">del</button>
+                    <button type="button" className={`rigbuild-thumb rigbuild-thumb--place${aim.place?.ok && !slot?.full ? '' : ' is-off'}`} onClick={place} aria-label="Place">place</button>
+                </div>
             ) : null}
 
             {sheetOpen && crew && chosenLamp ? (

@@ -98,7 +98,7 @@
 .rigbuild-slot.is-full { border-style: dashed; color: rgba(255, 255, 255, 0.55); }
 .rigbuild-slot.is-owed .rigbuild-slot__label::after { content: " ?"; }
 .rigbuild-slot__key { position: absolute; top: 3px; left: 5px; font: 10px var(--di-mono, monospace); color: rgba(255, 255, 255, 0.6); }
-.rigbuild-slot__label { font-size: 12px; font-weight: 700; }
+.rigbuild-slot__label { font-size: 12px; font-weight: 700; white-space: nowrap; }
 .rigbuild-slot__count { font-size: 11px; color: rgba(255, 255, 255, 0.72); }
 
 /* what is under the crosshair, while walking */
@@ -130,4 +130,43 @@
 .rigbuild.is-crew .rigbuild-cross { opacity: 0.6; }
 
 /* ---- the phone ---------------------------------------------------------------- */
-/* The phone controls land with the phone step (see BuildSurface's phone block). */
+/* Keyed on the pointer, not the width: a phone turned sideways is 844 wide and still
+   has no mouse. One thumb reaches everything; every target is at least 44 px. */
+.rigbuild-aimed--tap { pointer-events: auto; min-height: 44px; border: 1px solid rgba(255, 255, 255, 0.5); color: #fff; cursor: pointer; }
+.rigbuild-thumbs {
+    position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 150px; z-index: 9;
+    display: grid; grid-template-columns: 52px 52px; gap: 8px;
+}
+.rigbuild-thumb {
+    min-width: 52px; min-height: 52px; border-radius: 50%;
+    font: 700 11px var(--di-mono, monospace); letter-spacing: 0.06em; text-transform: uppercase;
+    color: #fff; background: rgba(0, 0, 0, 0.5); border: 1.5px solid rgba(255, 255, 255, 0.45); cursor: pointer;
+    touch-action: manipulation;
+}
+.rigbuild-thumb:disabled { opacity: 0.35; }
+.rigbuild-thumb--place {
+    grid-column: 1 / span 2; width: 112px; height: 72px; border-radius: 36px; justify-self: center;
+    font-size: 14px; background: rgba(var(--di-danger-rgb, 255, 80, 80), 0.35); border-color: var(--di-danger, #f55);
+}
+.rigbuild-thumb--place.is-off { background: rgba(0, 0, 0, 0.5); border-style: dashed; border-color: rgba(255, 255, 255, 0.45); }
+.rigbuild-thumb:active { background: rgba(255, 255, 255, 0.25); }
+
+.rigbuild.is-phone .rigbuild-hand { left: 0; right: 0; transform: none; bottom: max(8px, env(safe-area-inset-bottom)); padding: 0 8px; max-width: none; align-items: stretch; }
+.rigbuild.is-phone .rigbuild-status, .rigbuild.is-phone .rigbuild-said { align-self: flex-start; max-width: calc(100% - 132px); font-size: 11px; }
+.rigbuild.is-phone .rigbuild-hotbar { max-width: 100%; }
+.rigbuild.is-phone .rigbuild-slot { width: 76px; min-height: 56px; }
+.rigbuild.is-phone .rigbuild-slot__label { font-size: 11px; }
+.rigbuild.is-phone .rigbuild-totals { top: 58px; right: 8px; font-size: 10px; padding: 5px 7px; max-width: 58vw; }
+.rigbuild.is-phone .rigbuild-totals .rigbuild-dim { display: none; }
+.rigbuild.is-phone .rigbuild-mode { top: 58px; left: 8px; }
+/* a tag is small type with a thumb-sized target around it */
+.rigbuild.is-phone .rigbuild-tag { font-size: 10px; }
+.rigbuild.is-phone .rigbuild-tag::after { content: ""; position: absolute; inset: -14px -6px; }
+.rigbuild.is-phone .rigbuild-sheet.rigplot { inset: auto 0 0 0; width: auto; max-height: 62vh; padding: 0 8px 8px; }
+@media (orientation: landscape) and (max-height: 500px) {
+    .rigbuild.is-phone .rigbuild-thumbs { bottom: 96px; grid-template-columns: repeat(4, 52px) 72px; }
+    .rigbuild.is-phone .rigbuild-thumb--place { grid-column: auto; width: 72px; height: 52px; }
+    .rigbuild.is-phone .rigbuild-hand { right: 8px; }
+    .rigbuild.is-phone .rigbuild-totals { max-width: 40vw; }
+    .rigbuild.is-phone .rigbuild-sheet.rigplot { inset: 8px 8px 8px auto; width: 320px; max-height: none; }
+}
