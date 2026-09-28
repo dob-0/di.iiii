@@ -32,6 +32,7 @@ const {
   KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, SPATIAL: LOOK_SPATIAL, kindAllows,
 } = require('./looks');
 const { createCueRunner, sanitizeCues } = require('./cuerun');
+const { createDmxStream } = require('./dmxstream');
 
 // The desk as a module. `createDesk` builds one lighting desk — state, engine, the 40 Hz
 // output loop, the HTTP routes and the interface files — and hands back `handle`, which
@@ -623,6 +624,23 @@ function createDesk(opts = {}) {
     if (!saveTimer) saveTimer = setTimeout(writeShow, 400);
   }
 
+  // ---- the pushed frame (dmxstream.js): every rendered frame to every room listening ----
+  const dmxStream = createDmxStream();
+  // What GET /api/dmx carries besides the buffers, in the stream's form: `firedAt` on the
+  // desk's clock instead of `since`, so the meta only changes when a look does.
+  function streamMeta() {
+    return {
+      master: state.master, blackout: !!state.blackout,
+      looks: state.layers.filter((l) => l.on && l.lookId && l.level > 0).map((l) => ({
+        lookId: l.lookId, level: l.level, priority: l.priority, layer: l.id,
+        fadeMs: Number.isFinite(l.fadeMs) ? l.fadeMs : 0,
+        firedAt: Number.isFinite(l.firedAt) ? l.firedAt : null,
+        from: l.fromLookId || null,
+      })),
+      cues: cueRunner.brief(),
+    };
+  }
+
   // ---- output loop ----------------------------------------------------------
   let timer = null;
   const stats = { ticks: 0, lastSend: 0 };
@@ -677,6 +695,8 @@ function createDesk(opts = {}) {
   function pushFrame() {
     const frames = engine.tick();
     stats.ticks++;
+    // The room sees every frame, output on or off: a visualiser is the point of output OFF.
+    dmxStream.frame(frames, streamMeta);
     // Output off: the engine still renders (the stage view is live, scenes still work),
     // nothing leaves the machine and the serial port is left alone for other programs.
     if (!state.output.enabled) {
@@ -1422,6 +1442,13 @@ function createDesk(opts = {}) {
     // The looks that are ON, riding with the DMX at the mirror's own rate, so a room can
     // follow a look fired from anywhere (a cue, this desk, a phone) within a frame or two
     // (src/rigMirror/useLightingMirror.js, RIG_BUILD.md §11.4). Ids, levels and order only.
+    // The same frame PUSHED at the desk's rate (dmxstream.js): Server-Sent Events,
+    // key frame then deltas, `?u=0,5` for only those universes (desk numbering).
+    'GET /api/dmx/stream': (req, res) => {
+      dmxStream.subscribe(req, res, new URL(req.url, 'http://localhost').searchParams);
+      pushFrame();
+    },
+
     'GET /api/dmx': (req, res) => json(res, {
       dmx: snapshot(), master: state.master, blackout: state.blackout,
       // fadeMs / since / from: the crossfade a following room draws (the look replaced
@@ -2293,6 +2320,7 @@ function createDesk(opts = {}) {
   }
 
   function close() {
+    dmxStream.close();
     clearInterval(timer);
     clearInterval(pollTimer);
     clearTimeout(firstPoll);

@@ -26,6 +26,7 @@ export const FLAG_WORDS = {
     'unknown-type': 'type unknown',
     'mode-unknown': 'mode unknown',
     'channels-owed': 'channel list owed',
+    'channels-assumed': 'channel list ASSUMED — verify on the rental unit',
     'not-patched': 'not patched',
     overlap: 'overlap',
     'off-the-end': 'past 512',
@@ -83,7 +84,8 @@ export const sheetModel = ({ entities = [], library, circuit = DEFAULT_CIRCUIT, 
             wattsBasis: type?.power_w?.basis || null,
             hung: f.hung === true,
             flags,
-            notes: []
+            // An ASSUMED test mode names its source on the row (assumedProfiles.js).
+            notes: mode?.assumed ? [mode.assumed] : []
         }
     })
 
