@@ -34,7 +34,9 @@ export const useDeskState = ({ ask = true } = {}) => {
                     input = r.ok ? await r.json() : null
                 } catch { input = null }
             }
-            if (alive) setDesk({ here, output, consoleIn: here ? consoleInWords(input) : 'no desk here' })
+            // No desk (every hosted tier): nothing to say about console input; the views say
+            // NO_DESK_SENTENCE once instead of a bare fragment on each line.
+            if (alive) setDesk({ here, output, consoleIn: here ? consoleInWords(input) : null })
         })()
         return () => { alive = false }
     }, [ask])

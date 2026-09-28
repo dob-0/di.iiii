@@ -1236,3 +1236,117 @@ eye height, looking up to 5.2 m, fov 55 — the bridge and the line frame the DJ
 `load-version.mjs` copies the hall only (no build pieces from the source's plot: two hand-placed 3 m
 truss pieces in moxir-hall had come across into the versions and were removed from them; moxir-hall keeps
 its own).
+## 16. Hosted playback — the show with no desk (`src/rigbuild/showClock.js`)
+
+The light desk (`/light`) runs on a local install only, by design (LIGHTING_DESK.md). On a hosted
+tier nothing would fire the cues, so a show could not play there. Hosted playback makes the
+**document** the show's score and the **wall clock** its conductor: every viewer computes the cue
+that is on from the time alone, so viewers anywhere see the same moment, with no desk, no account
+and no server-side timer.
+
+**The data** (both schema twins, written only when set, so older documents stay byte-identical):
+
+| field | meaning |
+|---|---|
+| `mappingState.cues` | the cue list, unchanged: `{name, lightLook: 'rig-<look>', fade, hold}` in seconds |
+| `mappingState.loop` | from the last cue back to cue 1 (the desk's own flag) |
+| `mappingState.showEpoch` | NEW: the moment the list started, ms since 1970 UTC |
+
+**The timing** is the desk's cue runner's (`serverXR/src/lighting/cuerun.js`), so a hosted room
+and a desk-driven room agree: a cue fires its look and fades in over `fade` from the moment it
+fires; `hold` counts from the same moment; then the next cue fires. One pass = the sum of the
+holds, and at time `now` the show is at
+
+    t = (now − showEpoch) mod passLength
+
+(a true modulo, so a clock set before the epoch lands on the same grid). A cue with `hold 0`
+"waits for GO" on the desk; nobody presses GO on a hosted page, so the timeline ENDS there and
+that look stays up. Without `loop` the last cue holds for good. `showStateAt` also returns the
+look the fade comes FROM (the previous cue; at the wrap, the last cue), and the room draws the
+fade through the same code as a desk fade (`clockFadeOf` gives the desk's fade shape).
+
+**The clock** each viewer uses is the server's, not its own: `serverClock.js` measures the tab's
+offset once with Cristian's method (F. Cristian, *Probabilistic clock synchronization*,
+Distributed Computing 3(3), 1989) against `/serverXR/api/health`'s `timestamp` — four round trips,
+keep the one with the shortest round trip (NTP's clock-filter idea): `offset = T + rtt/2 − t1`,
+error ≤ rtt/2. A phone whose clock is 7 s off shows the same cue as a laptop that is right
+(`showClock.test.js`). If the server does not answer, the local clock is used; nothing throws.
+Two viewers on the same server therefore agree to within the sum of their two error bounds
+(half a round trip each, typically tens of ms over the internet), plus a frame.
+
+**Precedence** — who drives the room, highest first (`showDriver`):
+
+1. **explicit** — a page's own GO (the cards page with no desk: a per-tab preview);
+2. **desk** — a light desk answers here (a local install). The desk is the driver, even when it
+   is dark or stopped: the clock never runs beside a desk, so the room never shows two shows;
+3. **clock** — no desk, and the document carries a show (cues with rig looks AND a
+   `showEpoch`);
+4. **document** — none of those: the room as saved.
+
+While the desk probe has not answered, the room waits (`pending`) instead of starting the clock
+and snapping to the desk a moment later. On a local install with the desk running, set the
+epoch or not — the desk drives; on the dev and prod tiers, the clock drives.
+
+**The room** (`useRigLookEntities` → `RoomLookFollower` in `PublicProjectViewer`): re-computed
+only at each cue's boundary (one timeout, no per-frame loop); a fade redraws at ~30 Hz for its
+length and stops. The real-light count never changes mid-show (the ≤ 8 real SpotLights stay
+the same eight; strobes and blinders are flashes, §15.6). Visitors walk and look while it keeps
+time — navigation and the clock are independent.
+
+**The show chip** — the one piece of chrome, top-left under the version row: a red dot, SHOW,
+"3 / 5 · Red room · next in 10 s · loop". Tapped, it lists the looks of the loop with their holds
+and says that everyone watching sees the same moment. Shown only while the clock drives (not on
+a local install with a desk, not in a thumbnail or an embed). 44 px tall.
+
+**Starting a show on a tier** — as an op, never a bare document write (the op log is what
+viewers replay): `node scripts/rigbuild/show-clock.mjs --api https://dev.diiii.xyz/serverXR
+--project <id> --epoch now` (`--check` reads where it is, `--off` clears it; production is
+refused without `--allow-production`). Program the cue list first (`show-loop.mjs` or the cards
+page).
+
+**Tests:** `src/rigbuild/showClock.test.js` (timing math, the loop wrap, before the epoch, hold 0,
+Cristian's offset, two skewed viewers agreeing), `src/rigbuild/useRigLook.clock.test.jsx`
+(precedence through the real hook, the cue moving on by itself, the chip), schema round-trips
+in `serverXR/src/schemaSync.test.js` and `src/map/mappingState.test.js`,
+`scripts/rigbuild/show-clock.test.js`. Guards seen red: precedence swapped (desk below clock) and
+the loop disabled.
+
+**Limits, stated:** the clock is as good as the server's own time (the Mac, NTP-synced by macOS);
+a viewer whose tab is in the background is throttled by the browser and catches up on return
+(it recomputes from the clock, it never drifts); the desk's strobes' DMX pulse is not simulated
+beyond the room's flash.
+
+## 17. Visitors: the tools read only (and a hosted tier with no desk)
+
+Owner, 2026-09-28: share MOXIR with colleagues online — the room, the show, and the tools read
+only; editing stays with signed-in members.
+
+**Who gets what** — `src/rigbuild/rigToolAccess.js` `rigToolAccess`, used by `RigToolRoute` in
+`src/RootApp.jsx` for `/{space}/plot|cards|equipment|build/{project}`:
+
+| who | public space | private space |
+|---|---|---|
+| a member in scope (sessionScope.js, the server's own rule), an admin, any local install | edit (through the gate, as before) | edit |
+| anyone else — signed out, a guest, an account not in scope | **read only**; build → the crew view | the gate, as before |
+
+The patch sheet and the crew link stay ungated. The server refuses a visitor's ops whatever the
+page does; the page only decides what it offers.
+
+**Read only** means: the op path is `NO_WRITE` (nothing reaches the document, the undo keys do
+nothing), auto-patch is never started, no desk is asked anything, and the writing controls are
+not drawn — the plot's rail is select + measure, the inspector is a disabled fieldset, the cards
+have no deal/take back/hold/remove/loop, the equipment page uses `useEquipment({ readOnly })` and
+the inventory's own read-only mode. One line says so (`ViewOnlyLine.jsx`, `VIEW_ONLY_SENTENCE`)
+with a sign-in link. GO on the cards still plays the cue list — in that tab only.
+
+**No desk** (every hosted tier): every desk-dependent line is one sentence, `NO_DESK_SENTENCE` —
+"The light desk runs on a local di.iiii; this page shows the plan without it." — in the plot's
+title block, view A's totals, the cards' patch and cue parts; "patch this group" is disabled with
+the sentence; the printed sheet says `desk: a local di.iiii only`. The makers' kept manuals and
+photos (§13.8) are never requested on a hosted tier (`useLocalInstall`): the card links the
+maker's page with "The maker's file is kept on the studio's own machine; here is the maker's page."
+
+Guards: `src/RootApp.rigTools.test.jsx` (route choice), `src/rigbuild/readOnlySurfaces.test.jsx`
+(no op, no desk call from a visitor's GO/Delete/undo), `src/rigbuild/rigToolAccess.test.js` (the
+rule; no bare no-desk fragment), `src/rigbuild/keptMediaHosted.test.jsx` (no kept-file request) —
+each seen red without its fix. Not verified in a browser in this change (owed with the dev look).

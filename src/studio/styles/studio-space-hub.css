@@ -142,6 +142,13 @@
 
 .ssh-btn-cancel:hover { opacity: 1; }
 
+@media (pointer: coarse) {
+    .ssh-btn-cancel {
+        min-width: var(--di-touch-target);
+        min-height: var(--di-touch-target);
+    }
+}
+
 /* ─── STATUS ────────────────────────────────────────────────── */
 .ssh-status {
     font-size: 0.82rem;
@@ -702,6 +709,16 @@
 .ssh-linker-select:hover {
     background: color-mix(in srgb, var(--di-cyan) 5%, transparent);
     color: var(--di-text);
+}
+
+/* A "What changed" row is read, not pressed: no pointer, no hover. */
+.ssh-change-item .ssh-linker-select {
+    cursor: default;
+}
+
+.ssh-change-item .ssh-linker-select:hover {
+    background: transparent;
+    color: var(--di-text-muted);
 }
 
 .is-linked .ssh-linker-select {

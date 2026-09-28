@@ -321,6 +321,7 @@ export const WIKI_ARTICLES = [
         body: [
             'Every change that reaches a space — from Studio, a script, an agent, a phone — is recorded with the name of the account that made it. The name comes from the sign-in the server checked, never from what the sender claims, so it cannot be faked.',
             'A restore point is kept before each change that matters: the first change someone makes after somebody else (or after a pause of about a quarter of an hour), and every time a whole scene or project is replaced, pulled from another copy, or restored. The newest 30 are kept, plus one per day for the last 30 days. The images a restore point names are kept too, so putting one back never brings back broken pictures.',
+            'What changed: the top of History lists the last 7 days of changes, newest first — who made them, in which project, and what, in plain words ("ann — The hall: +2 boxes, 1 changed, title changed"). One row is one person\'s working session: a pause of about a quarter of an hour starts a new row. Read it to find the change you want to undo, then use the restore point below it.',
             'To see them: Spaces → your space → Manage → History. Each row says when, and whose change it was taken before. Restore puts the whole space — scene and projects — back to that moment, after asking. What is there at that moment is kept as a restore point of its own, so a restore is undoable too.',
             'Only the space’s owner or an admin can see a space’s history or restore it.',
             'When someone who does not own a space changes it, the studio’s inner bot can be told once per burst of edits — what changed, by whom, with an Undo button. That notice is off unless the server turns it on.',
@@ -329,7 +330,7 @@ export const WIKI_ARTICLES = [
             'Replacing work says what it takes away first. Every tool that replaces a project or a scene with another copy — sending a space, opening a file over one with --force, carrying a project between tiers — prints what the replace removes before it writes: how many items, of which kind, and every picture, video, model or sound by name. If any of those would go, it stops, and goes ahead only when you give the exact number back (--accept-loss 76). A wrong or old number stops it again. Other removals are only reported. Look at what it names before you confirm: pictures are never judged unwanted from a sample.',
         ],
         tags: ['history', 'undo', 'restore', 'snapshot', 'author', 'safety', 'proposal', 'bundle', 'send', 'loss'],
-        updated: '2026-09-24'
+        updated: '2026-09-28'
     },
     {
         id: 'jam-surface',
@@ -1642,7 +1643,9 @@ export const WIKI_ARTICLES = [
             'On a phone: the left half of the screen is the walking stick, a swipe on the right half looks, the crosshair is your hand. The buttons on the right place, remove (del), turn and raise or lower (up, dn); the hotbar scrolls sideways under your thumb.',
             'Every rig page carries the same row under the bar, in the order a show is made: room · 1 equipment · 2 build · 3 plot · 4 cards & looks · 5 patch sheet · 6 crew link · light desk. Beside each step it says what the project holds (104 on order, 46 of 104 addressed · ! 4); the step before and the next step sit at its two ends. On a phone the row folds to back · the step you are on · next, and a tap on the step lists all eight. In a room, on a di.iiii on your own machine, the same row sits under the bar, and its next is the step the show is waiting on; the Studio has Rig on its bar, and the light desk, opened from a rig page, leads back to it. The row hides while the mouse is taken for walking or building, and comes back with Esc. The first time you press B, the keys are listed once; H brings the list back.',
             'The crew link (the crew link step) is the same room for the light engineers: tags on, walking only, nothing can be changed, and a clash is tagged from anywhere in the hall. The patch sheet is one tap away. A private space still needs them signed in or invited.',
-            'It is the same rig as the plot and the cards: what you build here shows there, and the other way round. It makes no load or rigging calculation.'
+            'It is the same rig as the plot and the cards: what you build here shows there, and the other way round. It makes no load or rigging calculation.',
+            'Hand the link to a colleague. On a PUBLIC space, somebody who is not a member of it (signed out, or a guest) opens the plot, the cards and the equipment list read only, with one line at the top: “View only — sign in as a member of this space to change the rig.” They can look, select, measure, open every item card and play the cue list in their own tab; nothing they press is written. The build link hands them the crew view. A PRIVATE space still asks them to sign in. Members change the rig exactly as before.',
+            'On diiii.xyz and dev.diiii.xyz there is no light desk (it runs on a di.iiii on your own machine), so the rig pages say so in one sentence where the desk would be: “The light desk runs on a local di.iiii; this page shows the plan without it.” The makers’ manuals kept on the studio’s own machine are not on the website either: each item card links the maker’s page instead.'
         ],
         tags: ['build', 'minecraft', 'first person', 'walk', 'hotbar', 'truss', 'tower', 'deck', 'snap', 'rig', 'fixture', 'lamp', 'patch', 'address', 'tag', 'crew', 'light engineer', 'phone', 'rental list', 'steps', 'workflow', 'next', 'rig tools', 'navigation'],
         updated: '2026-09-28'
@@ -1686,9 +1689,10 @@ export const WIKI_ARTICLES = [
             'The cue list lives on the cards page (cards & looks). GO sends the list to the desk and starts it; the desk runs the timer, so two open pages never fire twice and the show keeps going when every tab is closed. STOP stops the timer and leaves the look up. The LOOP switch beside GO is saved with the project. /light shows the same list with GO, back, stop and loop.',
             'The room (/{space}, the Studio, the build view) draws the lamps as the desk\'s look poses them and fades between two looks over the cue\'s fade. The column wash that is baked in follows the look: out in a dark look.',
             'Strobes and blinders draw as a flash, not a cone: the face blows out white (a blinder warm) and one shared light puts the flash on what they face, ten times a second while the look has them on. Every screen flashes on the same beat.',
-            'Nothing here sends DMX. The desk\'s OUTPUT stays off until you switch it on; the looks carry the fixtures, and their DMX values wait for each type\'s channel list.'
+            'Nothing here sends DMX. The desk\'s OUTPUT stays off until you switch it on; the looks carry the fixtures, and their DMX values wait for each type\'s channel list.',
+            'Online, with no desk (dev.diiii.xyz, diiii.xyz): the show plays by the clock. The project keeps the moment the list started, and every visitor\'s room works out which cue is on from the time — so everyone watching, anywhere, sees the same look at the same moment, with no account. A small SHOW chip in the corner names the look; tap it for the whole loop. On your own machine with the desk running, the desk leads instead. To start a show online: node scripts/rigbuild/show-clock.mjs --api <tier>/serverXR --project <id> --epoch now.'
         ],
-        tags: ['show', 'loop', 'cue', 'cues', 'go', 'stop', 'fade', 'hold', 'strobe', 'blinder', 'flash', 'desk', 'light', 'rig', 'moxir', 'underground'],
+        tags: ['show', 'loop', 'cue', 'cues', 'go', 'stop', 'fade', 'hold', 'strobe', 'blinder', 'flash', 'desk', 'light', 'rig', 'moxir', 'underground', 'clock', 'online', 'hosted', 'sync'],
         updated: '2026-09-28'
     }
 ]

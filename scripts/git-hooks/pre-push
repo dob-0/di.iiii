@@ -1,0 +1,27 @@
+#!/bin/sh
+# di.iiii — before any push, by anyone or anything:
+#   1. never push to dev or main — they move only by a merged PR (dev) or a
+#      promotion (main). On a fork this also keeps `dev` a clean copy of
+#      upstream, which the fork's sync workflow depends on.
+#   2. run the push checks (scripts/push-checks.sh: lint, schema-sync, wiki, AI docs).
+# Installed for every worktree by `npm install` (scripts/install-git-hooks.mjs).
+# CONTRIBUTING.md "Every hand, one flow".
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/dev|refs/heads/main)
+      [ "${DI_ALLOW_FLOW_PUSH:-}" = 1 ] && continue
+      echo "" >&2
+      echo "  REFUSED — this push would write '${remote_ref#refs/heads/}' on $1." >&2
+      echo "  dev changes only by a merged PR, main only by a promotion. Push your branch" >&2
+      echo "  and open a PR:   git push -u origin <your-branch>" >&2
+      echo "" >&2
+      exit 1
+      ;;
+  esac
+done
+# The hooks are shared by every worktree (install-git-hooks.mjs), so this can run
+# on a branch cut before push-checks.sh existed. Such a branch still has the older
+# Claude Code gate with the checks inline; git itself has nothing more to run.
+checks="$(git rev-parse --show-toplevel)/scripts/push-checks.sh"
+[ -f "$checks" ] || { echo "  (this branch predates scripts/push-checks.sh — dev/main guard ran, checks skipped)" >&2; exit 0; }
+exec bash "$checks"

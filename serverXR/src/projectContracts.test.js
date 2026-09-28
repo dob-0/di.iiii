@@ -809,7 +809,7 @@ describe('project contracts', () => {
     // that the field survives a real save and a real load, through the server's
     // own normalizer — not the ESM copy the browser runs — and comes back as a
     // number and nothing else.
-    it('keeps components.fixture = { index } through a real write and read', async () => {
+    it('keeps components.fixture = { index, universe, address } through a real write and read', async () => {
         const server = await startServer()
         const create = await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
             method: 'POST',
@@ -837,7 +837,9 @@ describe('project contracts', () => {
         expect(read.status).toBe(200)
         const { document } = await read.json()
         const byId = Object.fromEntries(document.entities.map((entity) => [entity.id, entity]))
-        expect(byId.spot.components.fixture).toEqual({ index: 3 })
+        // Since the rig base (RIG_BUILD.md §2), a lamp also carries the plot's patch — universe
+        // and address travel with the fixture component through a real write and read.
+        expect(byId.spot.components.fixture).toEqual({ index: 3, universe: 1, address: 17 })
         expect(byId.point.components.fixture).toEqual({ index: 5 })
 
         const clear = await fetch(`${server.baseUrl}/api/projects/fixture-join/ops`, {
@@ -852,7 +854,7 @@ describe('project contracts', () => {
         const again = await (await fetch(`${server.baseUrl}/api/projects/fixture-join/document`)).json()
         const cleared = again.document.entities.find((entity) => entity.id === 'point')
         expect(cleared.components.fixture).toBeUndefined()
-        expect(again.document.entities.find((entity) => entity.id === 'spot').components.fixture).toEqual({ index: 3 })
+        expect(again.document.entities.find((entity) => entity.id === 'spot').components.fixture).toEqual({ index: 3, universe: 1, address: 17 })
     })
 
     // The layers decision, 2026-09-23, unit 1: the space's project list says

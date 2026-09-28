@@ -375,3 +375,15 @@ describe('the cue list\'s loop — mappingState.loop', () => {
         expect('loop' in normalizeMappingState({ loop: 1 })).toBe(false)
     })
 })
+
+describe('the show\'s clock — mappingState.showEpoch', () => {
+    it('round-trips on the ESM twin, and writes nothing when unset — older documents stay byte-identical', () => {
+        const epoch = Date.UTC(2026, 8, 28, 20, 0, 0)
+        const written = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'setMappingState', payload: { patch: { showEpoch: epoch } } }
+        ])
+        expect(normalizeProjectDocument(JSON.parse(JSON.stringify(written))).mappingState.showEpoch).toBe(epoch)
+        expect('showEpoch' in normalizeMappingState({})).toBe(false)
+        expect('showEpoch' in normalizeMappingState({ showEpoch: -5 })).toBe(false)
+    })
+})

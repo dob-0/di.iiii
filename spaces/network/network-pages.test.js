@@ -159,3 +159,15 @@ describe('visitor copy', () => {
         expect(team).toBe(5)   // the owner's line: the team is five
     })
 })
+
+// 2026-09-28: six rooms sent visitors to `di-studio.xyz/wcc`, the old address,
+// and a copy that had passed through a local install carried
+// `local.thedi.studio/wcc`, which opens only on that one machine. New links
+// name `diiii.xyz`; a machine's own address is never a link.
+describe('every link a visitor can follow names the public address', () => {
+    const hrefs = people.flatMap((p) => (p.sources || []).map((s) => s.href).filter(Boolean))
+    it('no source links to the old name or to a machine', () => {
+        const stale = hrefs.filter((h) => /\/\/(di-studio\.xyz|[\w.-]*thedi\.studio|localhost)/.test(h))
+        expect(stale).toEqual([])
+    })
+})

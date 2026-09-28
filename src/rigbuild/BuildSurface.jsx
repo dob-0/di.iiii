@@ -28,6 +28,7 @@ import { BUILD_KEYS } from './buildKeys.js'
 import RigBar, { usePointerLocked } from './RigSteps.jsx'
 import useLocalInstall from '../hooks/useLocalInstall.js'
 import { useDeskState } from './deskState.js'
+import { NO_DESK_SENTENCE } from './rigToolAccess.js'
 import { Inspector } from './PlotSurface.jsx'
 import BuildScene from './BuildScene.jsx'
 import './plot.css'
@@ -140,7 +141,7 @@ function FragmentRow({ k, v }) {
 }
 
 export default function BuildSurface({ spaceId, projectId, crew = false, library: baseLibrary = TYPE_LIBRARY }) {
-    const { consoleIn } = useDeskState({ ask: !crew })
+    const { consoleIn, here: deskHere } = useDeskState({ ask: !crew })
     const store = useProjectStore()
     const { state, dispatch } = store
     const { applyLocalOps: syncOps } = useProjectDocumentSync({ projectId, store, clientIdPrefix: crew ? 'crew-client' : 'build-client', opIdPrefix: crew ? 'crew-op' : 'build-op' })
@@ -518,6 +519,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
                 <div>power · {totals.power}</div>
                 <div className="rigbuild-dim">{totals.circuits}</div>
                 {consoleIn ? <div className="rigbuild-dim">console in · {consoleIn}</div> : null}
+                {!crew && deskHere === false ? <div className="rigbuild-dim">{NO_DESK_SENTENCE}</div> : null}
                 {look.lookId ? <div>look · {look.lookId}{look.fromDesk ? ' (desk)' : ''}</div> : null}
                 {model.conflicts.length ? <div className="rigbuild-warn">! {model.conflicts.length} conflict{model.conflicts.length === 1 ? '' : 's'}</div> : null}
             </section>) : null}
@@ -604,7 +606,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
                     <button type="button" className="rigbuild-sheet__close rigbuild-sheet__close--float" onClick={() => setSheetOpen(false)} aria-label="Close the inspector">×</button>
                     <Inspector
                         model={model} selectedIds={selectedIds} entities={entities} library={library} edit={edit}
-                        patchGroup={(ids) => patch.patchGroup(ids)} runOf={runOf}
+                        patchGroup={(ids) => patch.patchGroup(ids)} runOf={runOf} deskHere={deskHere}
                     />
                     <div className="rigbuild-sheet__foot rigplot-mono"><a href={buildPatchSheetPath(spaceId, projectId)}>the whole patch sheet</a></div>
                 </aside>

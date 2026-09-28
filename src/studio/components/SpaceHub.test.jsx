@@ -51,8 +51,13 @@ vi.mock('../../services/serverSpaces.js', () => ({
     getGithubAppInfo: () => Promise.resolve({ configured: false }),
     listGithubRepos: () => Promise.resolve({ repos: [] }),
     listSpaceInvites: (...args) => listSpaceInvites(...args),
-    revokeSpaceInvite: (...args) => revokeSpaceInvite(...args)
+    revokeSpaceInvite: (...args) => revokeSpaceInvite(...args),
+    listSpaceSnapshots: (...args) => listSpaceSnapshots(...args),
+    listSpaceChanges: (...args) => listSpaceChanges(...args),
+    restoreSpaceSnapshot: vi.fn()
 }))
+const listSpaceSnapshots = vi.fn()
+const listSpaceChanges = vi.fn()
 const listSpaceInvites = vi.fn()
 const revokeSpaceInvite = vi.fn()
 
@@ -246,6 +251,45 @@ describe('SpaceHub', () => {
         } finally {
             confirmSpy.mockRestore()
         }
+    })
+
+    // 2026-09-28: the server kept who changed what in a space (GET /changes) and
+    // nothing in the app ever asked for it; an owner saw restore points, never
+    // what the change had been or whose it was.
+    it('History says who changed what, newest first, above the restore points', async () => {
+        const HOUR = 3600 * 1000
+        const t = Date.now() - 5 * HOUR
+        listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+        listSpaceSnapshots.mockReset().mockResolvedValue([{ id: 'p1', takenAt: new Date(t).toISOString(), reason: 'before-change', actor: { label: 'ann' } }])
+        listSpaceChanges.mockReset().mockResolvedValue([
+            { actor: { subject: 'u-ann', label: 'ann', type: 'session' }, from: t, to: t + 60000, scene: false, projects: [{ id: 'hall', title: 'Hall' }], text: 'ann · mine (Hall) · +3 images, 2 changed' },
+            { actor: { subject: 'u-bob', label: 'bob', type: 'session' }, from: t + HOUR, to: t + HOUR, scene: true, projects: [], text: 'bob · mine (scene) · 1 object removed' }
+        ])
+        render(<SpaceHub />)
+        await findCard('mine')
+        openManageFor('mine')
+        fireEvent.click(within(cardOf('mine')).getByRole('button', { name: 'History' }))
+
+        await waitFor(() => expect(cardOf('mine').querySelectorAll('.ssh-change-item').length).toBe(2))
+        const [newest, older] = [...cardOf('mine').querySelectorAll('.ssh-change-item')]
+        expect(newest.textContent).toContain('bob — the scene: 1 object removed')
+        expect(older.textContent).toContain('ann — Hall: +3 images, 2 changed')
+        expect(listSpaceChanges).toHaveBeenCalledWith('mine')
+        // the restore points are still there, under their own heading
+        expect(cardOf('mine').textContent).toContain('Restore points')
+        expect(cardOf('mine').textContent).toContain("before ann's change")
+    })
+
+    it('History still shows its restore points when the changes cannot load', async () => {
+        listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+        listSpaceSnapshots.mockReset().mockResolvedValue([{ id: 'p1', takenAt: new Date().toISOString(), reason: 'daily', actor: null }])
+        listSpaceChanges.mockReset().mockRejectedValue(new Error('403'))
+        render(<SpaceHub />)
+        await findCard('mine')
+        openManageFor('mine')
+        fireEvent.click(within(cardOf('mine')).getByRole('button', { name: 'History' }))
+        await waitFor(() => expect(cardOf('mine').textContent).toContain('daily'))
+        expect(cardOf('mine').querySelectorAll('.ssh-change-item').length).toBe(0)
     })
 
     it('clicking a public space you cannot enter goes to its live view, scoped spaces open the editor', async () => {

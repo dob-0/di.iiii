@@ -269,6 +269,17 @@
 }
 
 .sh-rename-save:hover { color: var(--di-text); border-color: rgba(var(--di-cyan-rgb), 0.4); }
+
+/* A finger's size for the ✕ and the save/cancel beside a name field: the ✕ on
+   the new-project form measured 24x21 on a phone (2026-09-28). */
+@media (pointer: coarse) {
+    .sh-btn-cancel,
+    .sh-rename-save,
+    .sh-rename-cancel {
+        min-width: var(--di-touch-target);
+        min-height: var(--di-touch-target);
+    }
+}
 .sh-rename-cancel:hover { color: var(--di-danger); border-color: rgba(var(--di-danger-rgb), 0.4); }
 
 .sh-btn-delete {

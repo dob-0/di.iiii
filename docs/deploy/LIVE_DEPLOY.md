@@ -75,11 +75,15 @@ Merge the verified `dev` into `main` and push:
 git checkout main && git merge dev --no-edit && git push origin main && git checkout dev
 ```
 
-Wait for the `Deploy VPS (GHCR + SSH)` GitHub Action to finish, then verify:
+Wait for the `Deploy VPS (GHCR + SSH)` GitHub Action to finish. Where it goes from there
+depends on the repository variable `DEPLOY_TARGET` (`gh variable list`): since
+2026-09-27 it is `mac` — the run ends green without SSH and the standby host pulls that
+commit itself (see `VPS_DOCKER_DEPLOY.md` → "`DEPLOY_TARGET`"); `vps` is the SSH route.
+Either way, verify that the live tier reports the commit you merged:
 
 ```bash
-curl -s https://di-studio.xyz/serverXR/api/health
-node scripts/smoke-check.mjs --base-url https://di-studio.xyz
+curl -s https://diiii.xyz/serverXR/api/health     # release.sourceRef = the main commit
+node scripts/smoke-check.mjs --base-url https://diiii.xyz
 ```
 
 Resolve any merge conflicts between `dev` and `main` before shipping.
@@ -91,21 +95,25 @@ commit back into `dev` so the branches do not drift apart.
 
 ## Public Surfaces
 
-- public app: `https://di-studio.xyz/`
-- public/main route: `https://di-studio.xyz/main`
-- public/space route: `https://di-studio.xyz/<space>`
-- admin: `https://di-studio.xyz/admin?space=main`
-- Studio: `https://di-studio.xyz/main/studio`
-- Beta: `https://di-studio.xyz/main/beta`
-- backend health: `https://di-studio.xyz/serverXR/api/health`
+- public app: `https://diiii.xyz/`
+- public/main route: `https://diiii.xyz/main`
+- public/space route: `https://diiii.xyz/<space>`
+- admin: `https://diiii.xyz/admin?space=main`
+- Studio: `https://diiii.xyz/main/studio`
+- backend health: `https://diiii.xyz/serverXR/api/health`
+
+`di-studio.xyz` (and `www.`, `vps.`) still serve the same tier: Google and GitHub sign-in
+call back on `https://di-studio.xyz/serverXR`, so that name stays routed. New links name
+`diiii.xyz`.
 
 ## First Checks If Something Breaks
 
-1. `https://di-studio.xyz/serverXR/api/health`
-2. `docker compose ps` / `docker compose logs server` on the VPS
-3. the VPS checkout's `.env`
-4. `docker compose logs caddy` if TLS/routing looks wrong
-5. browser console and network panel
+1. `https://diiii.xyz/serverXR/api/health` — `release.deployEnv` says which host answered
+   (`standby` = the Mac, `production` = the VPS)
+2. `DEPLOY_TARGET=mac`: the host's own deployer log (host-side, outside this repo)
+3. `DEPLOY_TARGET=vps`: `docker compose ps` / `docker compose logs server` on the VPS,
+   the VPS checkout's `.env`, and `docker compose logs caddy` if TLS/routing looks wrong
+4. browser console and network panel
 
 ## cPanel Fallback (legacy)
 

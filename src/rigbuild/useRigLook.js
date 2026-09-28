@@ -3,6 +3,8 @@ import { getSharedLightingMirror } from '../rigMirror/useLightingMirror.js'
 import { TYPE_LIBRARY } from './types/index.js'
 import { libraryWithShow } from './rental.js'
 import { blendEntities, flashEntities, lookIdOfDesk, lookPoses, posedEntities, rigLooksOf, washLevelOf, withWashLevel } from './looks.js'
+import { clockFadeOf, showDriver, showOf, showStateAt } from './showClock.js'
+import { getServerOffset } from './serverClock.js'
 
 // THE ROOM FOLLOWS THE LOOK (docs/architecture/RIG_BUILD.md §11.4). While the desk plays
 // one of the room's designed looks on a layer — fired by a cue, by the desk itself, or by
@@ -16,6 +18,11 @@ import { blendEntities, flashEntities, lookIdOfDesk, lookPoses, posedEntities, r
 // way between the two, re-drawn about 30 times a second and not at all once it lands.
 // The baked column wash follows the look's level, and strobes and blinders draw as a
 // flash (RigFlashes.jsx), never as a cone.
+//
+// Hosted playback (§16, showClock.js): where no desk answers, a document that carries a
+// show (cues with rig looks + mappingState.showEpoch) is played by the WALL CLOCK —
+// every viewer computes the same cue at the same instant, with no desk and no account.
+// Precedence: a page's own GO > the desk > the show's clock > the room as saved.
 
 const NONE = ''
 const FADE_FRAME_MS = 33
@@ -48,15 +55,33 @@ export function useRigLookEntities(document, { explicit, mirror, library: baseLi
         const s = store.getSnapshot()
         return s.present ? s.lookFade || null : null
     }
+    const readPresent = () => Boolean(store.getSnapshot().present)
     const deskLook = useSyncExternalStore(store.subscribe, read, read)
     const deskFade = useSyncExternalStore(store.subscribe, readFade, readFade)
+    const deskPresent = useSyncExternalStore(store.subscribe, readPresent, readPresent)
+    const [deskChecked, setDeskChecked] = useState(false)
     useEffect(() => {
         if (!looks || explicit !== undefined) return undefined
-        store.probe()
-        return store.watch()
+        let alive = true
+        Promise.resolve(store.probe()).then(() => { if (alive) setDeskChecked(true) }, () => { if (alive) setDeskChecked(true) })
+        const release = store.watch()
+        return () => { alive = false; release() }
     }, [looks, explicit, store])
-    const lookId = explicit !== undefined ? explicit : deskLook
-    const fade = explicit === undefined && deskFade && deskFade.lookId === lookIdToDesk(lookId, deskFade) ? deskFade : null
+
+    const mapping = document?.mappingState
+    const show = useMemo(() => (looks ? showOf({ mappingState: mapping }) : null), [looks, mapping])
+    const driver = showDriver({ explicit, deskChecked, deskPresent, show })
+    const clock = useShowClockState(show, driver === 'clock')
+
+    const lookId = explicit !== undefined
+        ? explicit
+        : driver === 'desk' ? deskLook
+            : driver === 'clock' && clock.state ? clock.state.lookId : NONE
+    const fade = explicit !== undefined
+        ? null
+        : driver === 'desk'
+            ? (deskFade && deskFade.lookId === lookIdToDesk(lookId, deskFade) ? deskFade : null)
+            : driver === 'clock' ? clock.fade : null
     const fromId = fade?.from ? lookIdOfDesk(fade.from) || NONE : NONE
 
     const shownTo = useMemo(() => roomInLook({ entities, library, looks, lookId }), [entities, library, looks, lookId])
@@ -81,7 +106,53 @@ export function useRigLookEntities(document, { explicit, mirror, library: baseLi
     const blended = useMemo(() => (shownFrom && t < 1 ? blendEntities(shownFrom, shownTo, t) : shownTo), [shownFrom, shownTo, t])
     const shown = useMemo(() => flashEntities(blended, library), [blended, library])
     const lit = Boolean(looks && lookId && looks.looks.some((l) => l.id === lookId))
-    return { entities: shown, lookId: lit ? lookId : NONE, fromDesk: explicit === undefined && Boolean(deskLook), fading: Boolean(shownFrom && t < 1) }
+    return {
+        entities: shown,
+        lookId: lit ? lookId : NONE,
+        fromDesk: driver === 'desk' && Boolean(deskLook),
+        fading: Boolean(shownFrom && t < 1),
+        driver,
+        show: driver === 'clock' ? show : null,
+        clock: driver === 'clock' ? clock.state : null,
+        clockOffset: clock.offset
+    }
+}
+
+// THE CLOCK, RUNNING: the show's state now, re-computed at each cue's boundary (one
+// timer, never a per-frame loop), on the server's time as measured once for the page
+// (serverClock.js). `fade` carries `firedAt` back on THIS tab's clock, which is the one
+// fadeProgress reads.
+export function useShowClockState(show, running, { now = () => Date.now(), offsetSource = getServerOffset } = {}) {
+    const [offset, setOffset] = useState({ offset: 0, error: null, measured: false })
+    const [, setTick] = useState(0)
+    useEffect(() => {
+        if (!running) return undefined
+        let alive = true
+        Promise.resolve(offsetSource()).then((o) => { if (alive && o) setOffset(o) }, () => {})
+        return () => { alive = false }
+    }, [running, offsetSource])
+    const serverNow = now() + offset.offset
+    const state = running && show ? showStateAt(show, serverNow) : null
+    const nextInMs = state?.nextInMs
+    const index = state?.index
+    const cycle = state?.cycle
+    useEffect(() => {
+        if (!running || nextInMs == null) return undefined
+        const timer = setTimeout(() => setTick((n) => n + 1), Math.max(20, nextInMs + 15))
+        return () => clearTimeout(timer)
+    }, [running, nextInMs, index, cycle])
+    // One fade object per firing (a new cue, or the same cue on the next pass), so the
+    // room's memos see a change only when the show moves on.
+    const firedAt = state?.firedAt
+    const lookId = state?.lookId
+    const fromLookId = state?.fromLookId
+    const fadeMs = state?.fadeMs
+    const fade = useMemo(() => {
+        if (lookId == null) return null
+        const f = clockFadeOf({ lookId, fromLookId, fadeMs, firedAt })
+        return { ...f, firedAt: f.firedAt - offset.offset }
+    }, [lookId, fromLookId, fadeMs, firedAt, offset.offset])
+    return { state, fade, offset }
 }
 
 // The desk's id for the look the room shows, in the form the fade record carries it.

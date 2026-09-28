@@ -958,3 +958,18 @@ describe('the cue list\'s loop (mappingState.loop, the desk\'s cue runner)', () 
     expect('loop' in normalizeProjectDocument({ mappingState: { loop: 'yes' } }).mappingState).toBe(false)
   })
 })
+
+describe('the show\'s clock (mappingState.showEpoch, hosted playback)', () => {
+  it('survives a setMappingState op and a re-normalize on the server\'s copy; absent when unset or not a number', () => {
+    const epoch = Date.UTC(2026, 8, 28, 20, 0, 0)
+    const written = applyProjectOps(normalizeProjectDocument({}), [
+      { type: 'setMappingState', payload: { patch: { showEpoch: epoch, loop: true } } }
+    ])
+    const read = normalizeProjectDocument(JSON.parse(JSON.stringify(written)))
+    expect(read.mappingState.showEpoch).toBe(epoch)
+    const cleared = applyProjectOps(read, [{ type: 'setMappingState', payload: { patch: { showEpoch: null } } }])
+    expect('showEpoch' in cleared.mappingState).toBe(false)
+    expect('showEpoch' in normalizeProjectDocument({ mappingState: { showEpoch: '1790000000000' } }).mappingState).toBe(false)
+    expect('showEpoch' in normalizeProjectDocument({}).mappingState).toBe(false)
+  })
+})

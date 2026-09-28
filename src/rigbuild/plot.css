@@ -125,3 +125,12 @@
     .rigplot--phone .rigplot-sheet { grid-column: 2; grid-row: 2; max-height: none; border-top: 0; border-left: 1.5px solid var(--ink); overflow-y: auto; }
     .rigplot--phone .rigplot-sheet__tools { flex-wrap: wrap; }
 }
+
+/* A read-only rig page's one line (ViewOnlyLine.jsx, rigToolAccess.js). */
+.rigplot-viewonly { margin: 0; padding: 6px 12px; font-size: 12px; color: var(--ink); background: var(--paper); border-bottom: 1px dashed var(--ink); }
+.rigplot-viewonly a { color: inherit; text-decoration: underline; }
+.rigplot-title__grid .rigplot-title__wide { grid-column: 1 / -1; border-right: 0; }
+.rigplot-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+/* In a page's header the line takes a row of its own under the title. */
+.rigplot-top:has(.rigplot-viewonly) { flex-wrap: wrap; }
+.rigplot-top .rigplot-viewonly { flex: 1 0 100%; padding: 2px 0 0; border: 0; background: transparent; }

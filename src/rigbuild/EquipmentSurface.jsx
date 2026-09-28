@@ -13,6 +13,8 @@ import { plotModel, titleTotals } from './plotModel.js'
 import { rigProgress } from './rigProgress.js'
 import RigBar from './RigSteps.jsx'
 import useLocalInstall from '../hooks/useLocalInstall.js'
+import { NO_WRITE } from './rigToolAccess.js'
+import ViewOnlyLine from './ViewOnlyLine.jsx'
 import './plot.css'
 import './cards.css'
 import './equipment.css'
@@ -147,19 +149,21 @@ export function OrderPart({ eq, title, venue, readOnly, sheetTotals }) {
     )
 }
 
-export default function EquipmentSurface({ spaceId, projectId, library: baseLibrary = TYPE_LIBRARY }) {
+export default function EquipmentSurface({ spaceId, projectId, readOnly = false, library: baseLibrary = TYPE_LIBRARY }) {
     const store = useProjectStore()
     const { state } = store
-    const { applyLocalOps: syncOps } = useProjectDocumentSync({ projectId, store, clientIdPrefix: 'equipment-client', opIdPrefix: 'equipment-op' })
+    const { applyLocalOps: sentOps } = useProjectDocumentSync({ projectId, store, clientIdPrefix: 'equipment-client', opIdPrefix: 'equipment-op' })
+    // Read only (a visitor on a public space, rigToolAccess.js): nothing reaches the document.
+    const syncOps = readOnly ? NO_WRITE : sentOps
     const { applyLocalOps, undo, redo } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
     const document_ = state.document
     const entities = useMemo(() => document_.entities || [], [document_.entities])
     const library = useMemo(() => libraryWithShow(baseLibrary, entities), [baseLibrary, entities])
     // Removed lamps leave the desk too: auto-patch prunes a deleted lamp's fixture (§4.2).
-    const patch = useRigAutoPatch({ projectId, entities, applyOps: syncOps, library })
+    const patch = useRigAutoPatch({ projectId: readOnly ? null : projectId, entities: readOnly ? [] : entities, applyOps: syncOps, library })
     const phone = useIsPhone()
     const apply = useCallback((ops) => applyLocalOps(ops), [applyLocalOps])
-    const eq = useEquipment({ entities, library, apply })
+    const eq = useEquipment({ entities, library, apply, readOnly })
     const sheetTotals = useMemo(() => titleTotals(plotModel({ entities, library, deskFlags: patch.flags, projectId }).sheet), [entities, library, patch.flags, projectId])
     const localInstall = useLocalInstall()
     const progress = useMemo(() => rigProgress({ entities, library, deskFlags: patch.flags, projectId }), [entities, library, patch.flags, projectId])
@@ -169,11 +173,11 @@ export default function EquipmentSurface({ spaceId, projectId, library: baseLibr
         const onKey = (event) => {
             const tag = event.target?.tagName
             if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
-            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); if (event.shiftKey) redo(); else undo() }
+            if (!readOnly && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); if (event.shiftKey) redo(); else undo() }
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-    }, [undo, redo])
+    }, [undo, redo, readOnly])
 
     const title = document_.projectMeta?.title || projectId
     useEffect(() => {
@@ -201,6 +205,7 @@ export default function EquipmentSurface({ spaceId, projectId, library: baseLibr
                 {pane === 'order' ? <button type="button" onClick={() => download(`${projectId}-equipment.csv`, equipmentCsv(eq.model))}>CSV</button> : null}
                 {pane === 'order' ? <button type="button" onClick={print}>print A4</button> : null}
             </nav>
+            {readOnly ? <ViewOnlyLine /> : null}
         </header>
     )
 
@@ -212,12 +217,12 @@ export default function EquipmentSurface({ spaceId, projectId, library: baseLibr
             <main className="rigequip-page__main">
                 {!state.hasLoaded ? <p className="rigplot-hint" style={{ padding: 16 }}>Reading the rig…</p> : null}
                 {state.hasLoaded && pane === 'inventory' ? (
-                    <InventoryPanel eq={eq} library={library} phone={phone} orderHref={`${buildEquipmentPath(spaceId, projectId)}?view=order`} />
+                    <InventoryPanel eq={eq} library={library} phone={phone} readOnly={readOnly} orderHref={`${buildEquipmentPath(spaceId, projectId)}?view=order`} />
                 ) : null}
                 {state.hasLoaded && pane === 'order' ? (
                     <>
-                        <OrderPart eq={eq} title={title} venue={venue} sheetTotals={sheetTotals} />
-                        {eq.pending ? <ReduceDialog pending={eq.pending} onAnswer={eq.answer} /> : null}
+                        <OrderPart eq={eq} title={title} venue={venue} sheetTotals={sheetTotals} readOnly={readOnly} />
+                        {eq.pending && !readOnly ? <ReduceDialog pending={eq.pending} onAnswer={eq.answer} /> : null}
                     </>
                 ) : null}
             </main>
