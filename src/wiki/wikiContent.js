@@ -321,6 +321,7 @@ export const WIKI_ARTICLES = [
         body: [
             'Every change that reaches a space — from Studio, a script, an agent, a phone — is recorded with the name of the account that made it. The name comes from the sign-in the server checked, never from what the sender claims, so it cannot be faked.',
             'A restore point is kept before each change that matters: the first change someone makes after somebody else (or after a pause of about a quarter of an hour), and every time a whole scene or project is replaced, pulled from another copy, or restored. The newest 30 are kept, plus one per day for the last 30 days. The images a restore point names are kept too, so putting one back never brings back broken pictures.',
+            'What changed: the top of History lists the last 7 days of changes, newest first — who made them, in which project, and what, in plain words ("ann — The hall: +2 boxes, 1 changed, title changed"). One row is one person\'s working session: a pause of about a quarter of an hour starts a new row. Read it to find the change you want to undo, then use the restore point below it.',
             'To see them: Spaces → your space → Manage → History. Each row says when, and whose change it was taken before. Restore puts the whole space — scene and projects — back to that moment, after asking. What is there at that moment is kept as a restore point of its own, so a restore is undoable too.',
             'Only the space’s owner or an admin can see a space’s history or restore it.',
             'When someone who does not own a space changes it, the studio’s inner bot can be told once per burst of edits — what changed, by whom, with an Undo button. That notice is off unless the server turns it on.',
@@ -329,7 +330,7 @@ export const WIKI_ARTICLES = [
             'Replacing work says what it takes away first. Every tool that replaces a project or a scene with another copy — sending a space, opening a file over one with --force, carrying a project between tiers — prints what the replace removes before it writes: how many items, of which kind, and every picture, video, model or sound by name. If any of those would go, it stops, and goes ahead only when you give the exact number back (--accept-loss 76). A wrong or old number stops it again. Other removals are only reported. Look at what it names before you confirm: pictures are never judged unwanted from a sample.',
         ],
         tags: ['history', 'undo', 'restore', 'snapshot', 'author', 'safety', 'proposal', 'bundle', 'send', 'loss'],
-        updated: '2026-09-24'
+        updated: '2026-09-28'
     },
     {
         id: 'jam-surface',

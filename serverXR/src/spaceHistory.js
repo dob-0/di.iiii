@@ -46,7 +46,11 @@ const kindOf = (op) => {
   return typeof kind === 'string' && kind ? kind.slice(0, 40) : null
 }
 
-const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
+// English plurals for the words that reach here — fixed nouns and entity kinds
+// ("box", "mesh", "sphere"): "+2 boxs" printed in the History panel until
+// 2026-09-28.
+const pluralOf = (one) => (/(s|x|z|ch|sh)$/.test(one) ? `${one}es` : `${one}s`)
+const plural = (n, one, many = pluralOf(one)) => `${n} ${n === 1 ? one : many}`
 
 const emptyCounts = () => ({
   added: 0,
