@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { TYPE_LIBRARY } from './types/index.js'
 import { hasRigLamps, rigBodyLamps } from './rigBodyLamps.js'
-import { bodyPoses } from './FixtureBodies.jsx'
+import { bodyKindOf, bodyPoses } from './FixtureBodies.jsx'
 import { deletions } from '../../scripts/rigbuild/load-plot.mjs'
 
 // The lamps' bodies in every room (RIG_BUILD.md §12.4; owner 2026-09-28 on /moxir:
@@ -54,6 +54,13 @@ describe('rigBodyLamps — which lamps a room draws a body for', () => {
         const kinds = bodyPoses(rigBodyLamps([lamp('a'), lamp('b', { fixture: { type: 'up-pl5403' } })], TYPE_LIBRARY), TYPE_LIBRARY)
         expect([...kinds.keys()].sort()).toEqual(['beam380', 'par'])
         for (const poses of kinds.values()) expect(Object.keys(poses[0].parts).length).toBeGreaterThan(0)
+    })
+})
+
+describe('every type in the library has a body', () => {
+    it('each type\'s model3d names a kind FixtureBodies draws', () => {
+        const missing = TYPE_LIBRARY.types.filter((t) => !bodyKindOf(t)).map((t) => t.id)
+        expect(missing).toEqual([])
     })
 })
 

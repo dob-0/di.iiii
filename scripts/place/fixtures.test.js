@@ -17,7 +17,10 @@ const builder = fs.readFileSync(path.join(dir, 'build_fixtures.py'))
 describe('the fixtures manifest', () => {
     it('gives every number a source it lists, or says it is an assumption', () => {
         for (const [kind, entry] of Object.entries(manifest.kinds)) {
-            expect(entry.code, kind).toMatch(/^UP-/)
+            // UP- is the rental house's own code; EXT- a planning type for a line from another
+            // supplier (strobe, blinder, hazer: the rental list has none — RIG_BUILD.md §14).
+            expect(entry.code, kind).toMatch(/^(UP|EXT)-/)
+            if (entry.code.startsWith('EXT-')) expect(entry.identified, kind).toMatch(/another supplier/)
             for (const [field, spec] of Object.entries(entry.specs)) {
                 expect(['EXACT', 'EQUIVALENT', 'ASSUMED'], `${kind}.${field}`).toContain(spec.basis)
                 if (spec.basis === 'ASSUMED') continue

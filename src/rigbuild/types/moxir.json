@@ -758,6 +758,298 @@
         "writtenAt": "2026-09-28",
         "accessed": "2026-09-28"
       }
+    },
+    {
+      "id": "ext-strobe",
+      "code": "EXT-STROBE",
+      "identified": "EQUIVALENT",
+      "identifiedNote": "NOT FOUND — not on the rental house's list (a line from another supplier); a planning type modelled on an EQUIVALENT",
+      "maker": null,
+      "model": null,
+      "modelledOn": "Martin Atomic 3000 LED (alternatives on the versions' equipment lines: GLP JDC2 IP, SGM PALCO Z-FX)",
+      "product": "equivalent: Martin Atomic 3000 LED (alternatives on the versions' equipment lines: GLP JDC2 IP, SGM PALCO Z-FX)",
+      "category": "strobe",
+      "modes": [
+        {
+          "name": "4ch",
+          "footprint": 4,
+          "channels": null,
+          "channelsSource": null,
+          "src": "MARTIN-A3K",
+          "basis": "EQUIVALENT"
+        },
+        {
+          "name": "3ch",
+          "footprint": 3,
+          "channels": null,
+          "channelsSource": null,
+          "src": "MARTIN-A3K",
+          "basis": "EQUIVALENT"
+        },
+        {
+          "name": "14ch",
+          "footprint": 14,
+          "channels": null,
+          "channelsSource": null,
+          "src": "MARTIN-A3K",
+          "basis": "EQUIVALENT"
+        }
+      ],
+      "defaultMode": "4ch",
+      "modesOwed": false,
+      "power_w": {
+        "value": 740,
+        "src": "MARTIN-A3K",
+        "basis": "EQUIVALENT",
+        "note": "maximum; 663 W typical"
+      },
+      "weight_kg": {
+        "value": 7.8,
+        "src": "MARTIN-A3K",
+        "basis": "EQUIVALENT"
+      },
+      "size_mm": {
+        "value": [
+          425,
+          245,
+          240
+        ],
+        "src": "MARTIN-A3K",
+        "basis": "EQUIVALENT",
+        "order": "W x L x H",
+        "note": "incl. the mounting bracket"
+      },
+      "pan_tilt_deg": null,
+      "ip": {
+        "value": "IP20",
+        "src": "MARTIN-A3K",
+        "basis": "EQUIVALENT"
+      },
+      "optics": {
+        "beam_deg": 60,
+        "zoom_deg": null,
+        "lux": null,
+        "at_m": null,
+        "photometrySrc": "MARTIN-A3K",
+        "photometryBasis": "EQUIVALENT",
+        "note": "flux from the maker; the angle ASSUMED (see specs.beam_deg), so the candela is a planning figure"
+      },
+      "model3d": {
+        "glb": "scripts/place/fixtures/glb/strobe.glb",
+        "sidecar": "scripts/place/fixtures/glb/strobe.json",
+        "builtBy": "scripts/place/fixtures/build_fixtures.py",
+        "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": 0,
+        "tiltY": 0.14,
+        "lensY": 0.225,
+        "sizeAtHome_mm": {
+          "width_x": 450,
+          "depth_z": 240,
+          "height_y": 235
+        },
+        "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+      },
+      "sources": {
+        "MARTIN-A3K": {
+          "url": "https://www.martin.com/en/products/atomic-3000-led",
+          "what": "Martin (Harman) Atomic 3000 LED, maker's product page (fetched 2026-09-28): 245 L x 425 W x 240 H mm incl. bracket, 7.8 kg, 180,000 lm max, 740 W max / 663 W typical, 3/4/14 DMX channels, IP20, 228 x 10 W white LEDs 5,700 K; no beam angle published on the page"
+        }
+      },
+      "manifest": {
+        "file": "scripts/place/fixtures/fixtures.json",
+        "kind": "strobe",
+        "writtenAt": "2026-09-28",
+        "accessed": "2026-09-28"
+      }
+    },
+    {
+      "id": "ext-blinder",
+      "code": "EXT-BLINDER",
+      "identified": "EQUIVALENT",
+      "identifiedNote": "NOT FOUND — not on the rental house's list (a line from another supplier); a planning type modelled on an EQUIVALENT",
+      "maker": null,
+      "model": null,
+      "modelledOn": "Chauvet Professional STRIKE 4 (alternatives on the versions' equipment lines: Elation DTW Blinder 700 IP, Chauvet STRIKE Array 2)",
+      "product": "equivalent: Chauvet Professional STRIKE 4 (alternatives on the versions' equipment lines: Elation DTW Blinder 700 IP, Chauvet STRIKE Array 2)",
+      "category": "blinder",
+      "modes": [
+        {
+          "name": "1ch",
+          "footprint": 1,
+          "channels": null,
+          "channelsSource": null,
+          "src": "CHAUVET-STRIKE4",
+          "basis": "EQUIVALENT"
+        },
+        {
+          "name": "3ch",
+          "footprint": 3,
+          "channels": null,
+          "channelsSource": null,
+          "src": "CHAUVET-STRIKE4",
+          "basis": "EQUIVALENT"
+        },
+        {
+          "name": "4ch",
+          "footprint": 4,
+          "channels": null,
+          "channelsSource": null,
+          "src": "CHAUVET-STRIKE4",
+          "basis": "EQUIVALENT"
+        },
+        {
+          "name": "9ch",
+          "footprint": 9,
+          "channels": null,
+          "channelsSource": null,
+          "src": "CHAUVET-STRIKE4",
+          "basis": "EQUIVALENT"
+        }
+      ],
+      "defaultMode": "1ch",
+      "modesOwed": false,
+      "power_w": {
+        "value": 286,
+        "src": "CHAUVET-STRIKE4",
+        "basis": "EQUIVALENT",
+        "note": "at 230 V"
+      },
+      "weight_kg": {
+        "value": 8.7,
+        "src": "CHAUVET-STRIKE4",
+        "basis": "EQUIVALENT"
+      },
+      "size_mm": {
+        "value": [
+          362,
+          163,
+          362
+        ],
+        "src": "CHAUVET-STRIKE4",
+        "basis": "EQUIVALENT",
+        "order": "W x D x H"
+      },
+      "pan_tilt_deg": null,
+      "ip": {
+        "value": "IP20",
+        "src": "CHAUVET-STRIKE4",
+        "basis": "EQUIVALENT"
+      },
+      "optics": {
+        "beam_deg": 49,
+        "zoom_deg": null,
+        "lux": 999,
+        "at_m": 5,
+        "photometrySrc": "CHAUVET-STRIKE4",
+        "photometryBasis": "EQUIVALENT"
+      },
+      "model3d": {
+        "glb": "scripts/place/fixtures/glb/blinder.glb",
+        "sidecar": "scripts/place/fixtures/glb/blinder.json",
+        "builtBy": "scripts/place/fixtures/build_fixtures.py",
+        "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": 0,
+        "tiltY": 0.175,
+        "lensY": 0.249,
+        "sizeAtHome_mm": {
+          "width_x": 390,
+          "depth_z": 320,
+          "height_y": 259
+        },
+        "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+      },
+      "sources": {
+        "CHAUVET-STRIKE4": {
+          "url": "https://www.chauvetprofessional.com/product/strike-4/",
+          "what": "Chauvet Professional STRIKE 4, maker's product page (fetched 2026-09-28): 362 x 163 x 362 mm, 8.7 kg, beam 49 deg / field 79 deg, 999 lux @ 5 m, 286 W @ 230 V, 1/3/4/9 DMX channels, 4 x 100 W warm-white LEDs 3,096 K, IP20"
+        }
+      },
+      "manifest": {
+        "file": "scripts/place/fixtures/fixtures.json",
+        "kind": "blinder",
+        "writtenAt": "2026-09-28",
+        "accessed": "2026-09-28"
+      }
+    },
+    {
+      "id": "ext-hazer",
+      "code": "EXT-HAZER",
+      "identified": "EQUIVALENT",
+      "identifiedNote": "NOT FOUND — not on the rental house's list (a line from another supplier); a planning type modelled on an EQUIVALENT",
+      "maker": null,
+      "model": null,
+      "modelledOn": "Antari HZ-1000 (alternatives on the versions' equipment lines: Look Solutions Unique 2.1, Smoke Factory Tour-Hazer II)",
+      "product": "equivalent: Antari HZ-1000 (alternatives on the versions' equipment lines: Look Solutions Unique 2.1, Smoke Factory Tour-Hazer II)",
+      "category": "hazer",
+      "modes": [
+        {
+          "name": "2ch",
+          "footprint": 2,
+          "channels": null,
+          "channelsSource": null,
+          "src": "ANTARI-HZ1000",
+          "basis": "EQUIVALENT"
+        }
+      ],
+      "defaultMode": "2ch",
+      "modesOwed": false,
+      "power_w": {
+        "value": 1150,
+        "src": "ANTARI-HZ1000",
+        "basis": "EQUIVALENT"
+      },
+      "weight_kg": {
+        "value": 74.6,
+        "src": "ANTARI-HZ1000",
+        "basis": "EQUIVALENT"
+      },
+      "size_mm": {
+        "value": [
+          690,
+          510,
+          610
+        ],
+        "src": "ANTARI-HZ1000",
+        "basis": "EQUIVALENT",
+        "order": "L x W x H"
+      },
+      "pan_tilt_deg": null,
+      "ip": null,
+      "optics": {
+        "beam_deg": null,
+        "zoom_deg": null,
+        "lux": null,
+        "at_m": null,
+        "photometrySrc": null,
+        "photometryBasis": null
+      },
+      "model3d": {
+        "glb": "scripts/place/fixtures/glb/hazer.glb",
+        "sidecar": "scripts/place/fixtures/glb/hazer.json",
+        "builtBy": "scripts/place/fixtures/build_fixtures.py",
+        "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": null,
+        "tiltY": null,
+        "lensY": 0.235,
+        "sizeAtHome_mm": {
+          "width_x": 514,
+          "depth_z": 700,
+          "height_y": 614
+        },
+        "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+      },
+      "sources": {
+        "ANTARI-HZ1000": {
+          "url": "https://www.antari.com/products/hz-1000/",
+          "what": "Antari HZ-1000 hazer, maker's product page (fetched 2026-09-28): L690 W510 H610 mm, 74.6 kg, 1150 W, 2 DMX channels, 2.2 ml/min at 100 %, 6.4 L tank (40 h at 100 %)"
+        }
+      },
+      "manifest": {
+        "file": "scripts/place/fixtures/fixtures.json",
+        "kind": "hazer",
+        "writtenAt": "2026-09-28",
+        "accessed": "2026-09-28"
+      }
     }
   ]
 }

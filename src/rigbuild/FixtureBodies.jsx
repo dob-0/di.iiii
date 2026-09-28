@@ -11,6 +11,9 @@ import laserUrl from '../../scripts/place/fixtures/glb/laser.glb?url'
 import parUrl from '../../scripts/place/fixtures/glb/par.glb?url'
 import smokeUrl from '../../scripts/place/fixtures/glb/smoke.glb?url'
 import sparkUrl from '../../scripts/place/fixtures/glb/spark.glb?url'
+import strobeUrl from '../../scripts/place/fixtures/glb/strobe.glb?url'
+import blinderUrl from '../../scripts/place/fixtures/glb/blinder.glb?url'
+import hazerUrl from '../../scripts/place/fixtures/glb/hazer.glb?url'
 import beam380 from '../../scripts/place/fixtures/glb/beam380.json'
 import beeEye from '../../scripts/place/fixtures/glb/beeEye.json'
 import bsw250 from '../../scripts/place/fixtures/glb/bsw250.json'
@@ -19,6 +22,9 @@ import laser from '../../scripts/place/fixtures/glb/laser.json'
 import par from '../../scripts/place/fixtures/glb/par.json'
 import smoke from '../../scripts/place/fixtures/glb/smoke.json'
 import spark from '../../scripts/place/fixtures/glb/spark.json'
+import strobe from '../../scripts/place/fixtures/glb/strobe.json'
+import blinder from '../../scripts/place/fixtures/glb/blinder.json'
+import hazer from '../../scripts/place/fixtures/glb/hazer.json'
 
 // THE LAMPS' BODIES in the room — one body per lamp entity, posed where its beam goes
 // (docs/architecture/RIG_BUILD.md §12; the owed item of §10.8 for view A).
@@ -43,7 +49,10 @@ const KINDS = {
     laser: { url: laserUrl, geo: laser },
     par: { url: parUrl, geo: par },
     smoke: { url: smokeUrl, geo: smoke },
-    spark: { url: sparkUrl, geo: spark }
+    spark: { url: sparkUrl, geo: spark },
+    strobe: { url: strobeUrl, geo: strobe },
+    blinder: { url: blinderUrl, geo: blinder },
+    hazer: { url: hazerUrl, geo: hazer }
 }
 
 /** The body kind of a type: the basename of its model3d.glb ("…/bsw250.glb" → "bsw250"). */

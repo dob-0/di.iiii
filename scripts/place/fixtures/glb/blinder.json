@@ -1,16 +1,16 @@
 {
-  "kind": "beeEye",
-  "code": "UP-HK1915",
-  "glb": "beeEye.glb",
+  "kind": "blinder",
+  "code": "EXT-BLINDER",
+  "glb": "blinder.glb",
   "builtBy": "scripts/place/fixtures/build_fixtures.py",
   "scriptSha256": "cc332ec481c5bb2777541e37bf8025360366aa9b98720490aab93b6de4596b44",
   "blender": "5.2.1 LTS",
-  "archetype": "moving-head",
+  "archetype": "blinder",
   "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
-  "panY": 0.12,
-  "tiltY": 0.36,
-  "lensY": 0.496,
-  "motion": "pan-tilt",
+  "panY": 0.0,
+  "tiltY": 0.175,
+  "lensY": 0.249,
+  "motion": "tilt",
   "parts": [
     "Base",
     "Yoke",
@@ -18,26 +18,26 @@
     "Lens"
   ],
   "sizeAtHome_mm": {
-    "width_x": 370,
-    "depth_z": 250,
-    "height_y": 494
+    "width_x": 390,
+    "depth_z": 320,
+    "height_y": 259
   },
   "triangles": {
-    "Base": 56,
-    "Yoke": 280,
-    "Head": 120,
-    "Lens": 114,
-    "total": 570
+    "Base": 36,
+    "Yoke": 96,
+    "Head": 420,
+    "Lens": 72,
+    "total": 624
   },
   "datasheetSize_mm": [
-    358,
-    253,
-    494
+    362,
+    163,
+    362
   ],
   "deviationFromDatasheet_pct": [
-    -1.2,
-    3.4,
-    0.0
+    -8.0,
+    -4.7,
+    7.7
   ],
   "comparedParts": "all"
 }

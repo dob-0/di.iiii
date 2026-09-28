@@ -418,8 +418,60 @@ def smoke_machine(p):
     return {"lensY": h * 0.5, "motion": "none", "parts": ["Body"], "objects": [body_o]}
 
 
+def panel(p):
+    """A flat-faced head on a U-bracket that is also its floor stand: an LED strobe
+    (one long emitting window) or a blinder (a grid of round cells). Tilt only; at
+    tilt 0 the face looks straight up (+Z here, +Y in glTF), like every head here."""
+    fw = p["face_w_mm"] * MM   # across (X)
+    fh = p["face_h_mm"] * MM   # the face's other side (Y, the bracket's depth)
+    dp = p["depth_mm"] * MM    # along the beam (Z at home)
+    tilt_y = p["tilt_axis_mm"] * MM
+    bar = 0.01
+    base = Part("Base")  # the bracket's foot: a flat bar under the head, wider than it
+    base.box((0, 0, bar / 2), (fw + 0.06, 0.06, bar), "Body")
+    for sx in (-1, 1):
+        base.box((sx * (fw / 2 + 0.02), 0, bar / 2), (0.05, p.get("foot_d_mm", fh * 900) * MM, bar), "Body")
+    base_o = base.build((0, 0, 0))
+    yoke = Part("Yoke")  # the U's two arms, up to the pivots, a knob on each
+    for sx in (-1, 1):
+        x = sx * (fw / 2 + 0.012)
+        yoke.box((x, 0, tilt_y / 2 + 0.005), (bar, 0.045, tilt_y + 0.03), "Body")
+        yoke.cyl((sx * (fw / 2 + 0.025), 0, tilt_y), 0.022, 0.016, "X", 10, "Trim")
+    yoke_o = yoke.build((0, 0, 0), parent=base_o)
+    hd = Part("Head")
+    lens = Part("Lens")
+    z0 = tilt_y - dp * 0.5
+    z1 = tilt_y + dp * 0.5
+    hd.box((0, 0, (z0 + z1) / 2), (fw, fh, dp), "Body", bevel=0.006)
+    for k in range(p.get("fins", 6)):  # the cooling ribs on the back
+        y = -fh / 2 + fh * (k + 0.5) / p.get("fins", 6)
+        hd.box((0, y, z0 - 0.006), (fw * 0.86, 0.008, 0.012), "Trim")
+    hd.box((0, 0, z1 + 0.003), (fw - 0.02, fh - 0.02, 0.006), "Trim")  # the front frame
+    cells = p.get("cells")
+    if cells:  # a grid of round cells (a blinder)
+        nx, ny = cells
+        r = p["cell_d_mm"] * MM / 2
+        for i in range(nx):
+            for j in range(ny):
+                cx = -fw / 2 + fw * (i + 0.5) / nx
+                cy = -fh / 2 + fh * (j + 0.5) / ny
+                hd.cyl((cx, cy, z1 + 0.012), r + 0.008, 0.012, "Z", 20, "Metal")
+                lens.disc((cx, cy, z1 + 0.019), r, "Z", 20, "Lens")
+    else:  # one emitting window (a strobe's LED plate)
+        ww, wh = p["window_mm"][0] * MM, p["window_mm"][1] * MM
+        lens.box((0, 0, z1 + 0.008), (ww, wh, 0.004), "Lens")
+    head_o = hd.build((0, 0, tilt_y), parent=yoke_o)
+    lens_o = lens.build((0, 0, tilt_y), parent=head_o)
+    top = z1 + (0.019 if cells else 0.01)
+    return {"panY": 0.0, "tiltY": tilt_y, "lensY": top, "motion": "tilt",
+            "parts": ["Base", "Yoke", "Head", "Lens"], "objects": [base_o, yoke_o, head_o, lens_o]}
+
+
 ARCHETYPES = {"moving-head": moving_head, "par": par_can, "laser": laser_box,
-              "co2-jet": co2_jet, "spark-machine": spark_machine, "smoke-machine": smoke_machine}
+              "co2-jet": co2_jet, "spark-machine": spark_machine, "smoke-machine": smoke_machine,
+              # a hazer is drawn as the same kind of box (it is one: pump, heater, fan, nozzle);
+              # its own archetype name keeps its plot symbol (plotSymbols.js: H, not Z)
+              "hazer": smoke_machine, "strobe": panel, "blinder": panel}
 
 
 # ---------------------------------------------------------------------------
@@ -464,7 +516,17 @@ def main():
         # `compare` names the parts when the published size leaves some out
         # (a laser's "without the handle").
         compare = model.get("compare")
-        clo, chi = world_bbox([o for o in objects if o.name in compare]) if compare else (lo, hi)
+        # `datasheet_tilt_deg`: the maker measures the fixture in another pose than
+        # home (a blinder or a strobe on its bracket, face forward, not face up). The
+        # head is tilted to that pose for the comparison only, and back before export.
+        head = bpy.data.objects.get("Head")
+        pose = model.get("datasheet_tilt_deg")
+        if pose and head is not None:
+            head.rotation_euler.x = math.radians(pose)
+        clo, chi = world_bbox([o for o in objects if o.name in compare] if compare else objects)
+        if pose and head is not None:
+            head.rotation_euler.x = 0.0
+            bpy.context.view_layer.update()
         # Blender (x, y, z) -> glTF (x, z, -y): width X, depth along glTF Z, height Y.
         size_mm = [round((hi.x - lo.x) * 1000), round((hi.y - lo.y) * 1000), round((hi.z - lo.z) * 1000)]
         glb = os.path.join(OUT, f"{kind}.glb")
