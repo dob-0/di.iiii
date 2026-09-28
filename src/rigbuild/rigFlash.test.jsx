@@ -42,7 +42,8 @@ const mounted = (e) => renderToStaticMarkup(createElement(SpotLightObject, {
 }))
 
 describe('a strobe draws no cone (the guard: "no strobe cone mesh")', () => {
-    const doc = [lamp('rig-strobe-pit-01', 'ext-strobe'), lamp('rig-blinder-01', 'ext-blinder'), lamp('rig-beam380-back-01', 'up-b380f')]
+    const inLook = { rigShown: { level: 1 } }
+    const doc = [lamp('rig-strobe-pit-01', 'ext-strobe', inLook), lamp('rig-blinder-01', 'ext-blinder', inLook), lamp('rig-beam380-back-01', 'up-b380f')]
     const shown = flashEntities(doc, TYPE_LIBRARY)
     const byId = new Map(shown.map((e) => [e.id, e]))
 
@@ -68,6 +69,10 @@ describe('a strobe draws no cone (the guard: "no strobe cone mesh")', () => {
         expect(mounted(byId.get('rig-beam380-back-01'))).toMatch(/<mesh/)
     })
 
+    it('a strobe at rest (no look playing) does not fire', () => {
+        expect(flashEntities([lamp('s', 'ext-strobe')], TYPE_LIBRARY)[0].components.rigFlash.level).toBe(0)
+    })
+
     it('a strobe at level 0 in the look is out: no flash', () => {
         const out = flashEntities([lamp('s', 'ext-strobe', { rigShown: { level: 0 } })].map((e) => ({ ...e, components: { ...e.components, light: { ...e.components.light, intensity: 0 } } })), TYPE_LIBRARY)
         expect(out[0].components.rigFlash.level).toBe(0)
@@ -89,10 +94,8 @@ describe('the flash itself', () => {
     })
 
     it('one shared light per kind, at the lit lamps\' centre along their mean aim', () => {
-        const lamps = flashLamps(flashEntities([
-            { ...lamp('a', 'ext-strobe'), components: { ...lamp('a', 'ext-strobe').components, transform: { position: [-1, 0.3, 7], rotation: [0.6, 0, 0] } } },
-            { ...lamp('b', 'ext-strobe'), components: { ...lamp('b', 'ext-strobe').components, transform: { position: [3, 0.3, 7], rotation: [0.6, 0, 0] } } }
-        ], TYPE_LIBRARY))
+        const at = (id, x) => ({ ...lamp(id, 'ext-strobe', { rigShown: { level: 1 } }), components: { ...lamp(id, 'ext-strobe', { rigShown: { level: 1 } }).components, transform: { position: [x, 0.3, 7], rotation: [0.6, 0, 0] } } })
+        const lamps = flashLamps(flashEntities([at('a', -1), at('b', 3)], TYPE_LIBRARY))
         const rig = flashRig(lamps)
         expect(rig.lens).toEqual([1, 0.3, 7])
         expect(Math.hypot(...rig.dir)).toBeCloseTo(1, 6)

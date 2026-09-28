@@ -273,7 +273,9 @@ export const flashEntities = (entities, library) => {
         const kind = flashKindOf(library, e.components?.fixture?.type)
         if (!kind) return e
         changed = true
-        const level = num(e.components.rigShown?.level, 1)
+        // A strobe fires only when a LOOK puts it on (posedEntities' rigShown): at rest —
+        // no look playing — it is dark, as a real one is until the desk says otherwise.
+        const level = e.components.rigShown ? num(e.components.rigShown.level, 1) : 0
         return {
             ...e,
             components: {

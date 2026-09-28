@@ -7,6 +7,10 @@
  *     --from moxir-hall --version minimal --report <dir from versions.mjs --report> \
  *     --hall <hall.json> --token-file serverXR/.env.local
  *   … --version minimal --look red-room      # show a look (aims, colours, levels) and re-bake its wash
+ *   … --version minimal --look red-room --nominal   # the look's aims and colours, every lamp at its NOMINAL
+ *                                            # light (levels not written): the rest for a room that follows
+ *                                            # the desk — a look's level scales the document's light, so a
+ *                                            # lamp rested at 0 could never come back up in another look
  *   … --version minimal --mark               # write only which version this project (and the hall's own) is
  *
  * A version is a PROJECT (moxir-hall-minimal, -middle, -full), not a field inside one:
@@ -127,12 +131,14 @@ const main = async () => {
         const hall = readJson(hallFile)
         const manifest = readJson(path.join(FIXTURE_DIR, 'fixtures.json'))
         const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
-        const built = buildRig(rig, hall, { geometry, manifest, look })
+        // --nominal: the look without its levels, so every lamp keeps its full light
+        const shown = args.nominal ? { ...rig, looks: { ...rig.looks, [look]: { ...rig.looks[look], levels: undefined } } } : rig
+        const built = buildRig(shown, hall, { geometry, manifest, look })
         const doc = await client.get(`/api/projects/${project}/document`)
         if (!doc.ok) die(`reading ${project}: ${doc.status}`)
         const ops = lookOps(doc.body.document.entities, built)
         const v = await send(ops, 'the look')
-        say(`${project}: look "${look}" shown (${ops.length / 3} lamps); version ${v}`)
+        say(`${project}: look "${look}" shown${args.nominal ? ' at nominal light' : ''} (${ops.length / 3} lamps); version ${v}`)
         washFor(look)
         return
     }
