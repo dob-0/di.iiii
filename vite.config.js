@@ -673,6 +673,17 @@ export default {
                     // route actually mounts (2026-07-17 perf audit).
                     if (pkg === 'gsap') return 'gsap-vendor'
 
+                    // One helper file, @babel/runtime/helpers/esm/extends.js, is
+                    // shared by drei (three-vendor) and MUI (vendor). Left to the
+                    // catch-all, rolldown seated it inside three-vendor, so the
+                    // generic vendor chunk imported three-vendor and EVERY route
+                    // — /tools, /wiki, /login, /terms — fetched three.js (452 KB
+                    // gzip) to render a page with no 3D on it. Measured on
+                    // 2026-09-28 with scripts/kit-first-load.mjs: /tools 872 KB
+                    // on the wire with three.js, 420 KB without. Its own chunk
+                    // is a few hundred bytes and belongs to neither side.
+                    if (pkg === '@babel/runtime') return 'babel-runtime'
+
                     return 'vendor'
                 }
             }

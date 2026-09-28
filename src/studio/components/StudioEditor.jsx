@@ -7,6 +7,7 @@ import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
+import { isPreviewRequest } from '../../utils/previewMode.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { DEFAULT_PROJECT_SPACE_ID, buildProjectAssetUrl, deleteProjectAsset, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { mountRelativeApiUrl } from '../../services/assetSources.js'
@@ -115,8 +116,12 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         document: state.document,
         applyLocalOps: _applyLocalOps
     })
+    // ?preview=1 — a PICTURE of Studio on another page (a Kit card on /tools).
+    // It draws the project and follows its edits, but announces nobody: a
+    // presence joined from a thumbnail is a stranger who is not there.
+    const [isPreview] = useState(() => isPreviewRequest())
     const presence = useProjectPresence({
-        projectId,
+        projectId: isPreview ? '' : projectId,
         displayName,
         displayNameStorageKey: DISPLAY_NAME_KEY,
         userIdStorageKey: 'dii.studio.userId',
