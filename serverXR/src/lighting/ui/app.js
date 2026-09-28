@@ -5945,3 +5945,36 @@ showPage(location.hash.slice(1));
 })();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) pullState(); });
 setInterval(pullDmx, 100);
+
+/* =============== the cue list the desk plays (cuerun.js) =============== */
+// Any page may drive it; the desk alone keeps the time. This strip is one more driver:
+// GO, back, stop and the loop switch go to the same routes the cards page uses.
+let CUES = null;
+function paintCues() {
+  const strip = $('#cueStrip');
+  strip.hidden = !CUES || !CUES.n;
+  if (strip.hidden) return;
+  const cue = CUES.index >= 0 ? (CUES.index + 1) + '/' + CUES.n + ' ' + (CUES.name || '') : 'nothing fired · ' + CUES.n + ' cues';
+  const clock = CUES.running ? (CUES.nextInMs != null ? 'next in ' + Math.ceil(CUES.nextInMs / 1000) + ' s' : 'waits for GO') : 'stopped';
+  const missing = CUES.missing && CUES.missing.length ? ' · ' + CUES.missing.length + ' not on the desk' : '';
+  $('#cueWhere').textContent = cue + ' · ' + clock + missing;
+  $('#cueLoop').setAttribute('aria-pressed', CUES.loop ? 'true' : 'false');
+  $('#cueLoop').textContent = CUES.loop ? 'loop on' : 'loop off';
+  $('#cueLoop').classList.toggle('accent', !!CUES.loop);
+  $('#cueStop').disabled = !CUES.running;
+  $('#cueBack').disabled = CUES.index <= 0;
+}
+async function pullCues() {
+  if (document.hidden) return;
+  try { CUES = (await (await fetch('api/cues')).json()).cues; paintCues(); } catch (e) { /* the slow poll reports it */ }
+}
+async function cueAct(route, body) {
+  const r = await post(route, body);
+  if (r && r.cues) { CUES = r.cues; paintCues(); }
+}
+$('#cueGo').addEventListener('click', () => cueAct('api/cues/go', {}));
+$('#cueBack').addEventListener('click', () => cueAct('api/cues/back', {}));
+$('#cueStop').addEventListener('click', () => cueAct('api/cues/stop', {}));
+$('#cueLoop').addEventListener('click', () => cueAct('api/cues/loop', { loop: !(CUES && CUES.loop) }));
+pullCues();
+setInterval(pullCues, 1000);

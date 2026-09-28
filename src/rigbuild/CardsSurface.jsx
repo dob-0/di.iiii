@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useProjectDocumentSync } from '../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../project/hooks/useOpHistory.js'
 import { useProjectStore } from '../project/state/projectStore.js'
@@ -20,7 +20,8 @@ import { deleteOps } from './plotEdits.js'
 import { plotModel, titleTotals } from './plotModel.js'
 import { barTitle, patchBars, UNIVERSE_SIZE } from './patchBars.js'
 import { deskLookId, deskLooks, lookIdOfDesk, lookPoses, restOps, rigLooksOf } from './looks.js'
-import { fireCue } from '../map/cueFiring.js'
+import { cueOps, fireCue } from '../map/cueFiring.js'
+import { cueClockWords, cueListSignature, deskCues, nextCueIndex } from './cueRun.js'
 import { lightingApiUrl, lightingDeskPath, probeLightingDesk } from '../map/lightingLink.js'
 import './plot.css'
 import './cards.css'
@@ -151,7 +152,7 @@ const WAIT_WIDTH_S = 60 // how wide a cue that waits for GO is drawn on the time
  * desk. Drawn against time by each cue's hold: a cue with a hold moves on by itself, a
  * cue with none waits for GO. A list, not a timeline editor.
  */
-function CuePart({ cues, looks, current, onGo, onBack, onFire, onAddAll, onDesk, onRest, onHold, onDelete, desk, onDeskLooks }) {
+function CuePart({ cues, looks, current, onGo, onBack, onFire, onAddAll, onDesk, onRest, onHold, onDelete, desk, onDeskLooks, loop, onLoop, onStop, running, clock }) {
     const lookOf = (cue) => looks?.looks?.find((l) => l.id === lookIdOfDesk(cue.lightLook)) || null
     // A clock time only while every cue before has a hold; after a cue that waits for
     // GO, when the next one starts is the operator's.
@@ -171,9 +172,12 @@ function CuePart({ cues, looks, current, onGo, onBack, onFire, onAddAll, onDesk,
         <section className="rigcards-cues" aria-label="Looks on the cue list">
             <header className="rigcards-cues__head">
                 <h2 className="rigcards-h">looks · cue list</h2>
-                <button type="button" className="rigcards-btn is-primary rigcards-go" onClick={onGo} disabled={!cues.length}>GO{cues.length ? ` ${Math.min(cues.length, current + 2)}` : ''}</button>
+                <button type="button" className="rigcards-btn is-primary rigcards-go" onClick={onGo} disabled={!cues.length || nextCueIndex(current, cues.length, loop) < 0}>GO{cues.length && nextCueIndex(current, cues.length, loop) >= 0 ? ` ${nextCueIndex(current, cues.length, loop) + 1}` : ''}</button>
+                {/* LOOP: after the last cue, cue 1 again — stored in the document (mappingState.loop), played by the desk when one is here */}
+                <button type="button" className={`rigcards-btn rigcards-loop${loop ? ' is-on' : ''}`} aria-pressed={loop} onClick={onLoop} title="after the last cue, go back to cue 1">loop {loop ? 'on' : 'off'}</button>
+                <button type="button" className="rigcards-btn" onClick={onStop} disabled={!running}>stop</button>
                 <button type="button" className="rigcards-btn" onClick={onBack} disabled={current <= 0}>back</button>
-                <span className="rigplot-mono rigcards-cues__where">{current >= 0 && cues[current] ? `on: ${current + 1} ${cues[current].name}` : 'nothing fired'}</span>
+                <span className="rigplot-mono rigcards-cues__where">{current >= 0 && cues[current] ? `on: ${current + 1} ${cues[current].name}` : 'nothing fired'}{clock ? ` · ${clock}` : ''}</span>
                 <span className="rigcards-cues__acts">
                     {missing.length ? <button type="button" className="rigcards-btn" onClick={() => onAddAll(missing)}>put {missing.length} look{missing.length === 1 ? '' : 's'} on the list</button> : null}
                     {looks ? <button type="button" className="rigcards-btn" onClick={onDeskLooks} disabled={!desk}>{desk ? `send looks to the desk (${onDeskCount}/${looks.looks.length} there)` : 'no desk here'}</button> : null}
@@ -322,21 +326,6 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
         } catch { /* the desk went away between the two calls */ }
     }, [])
     useEffect(() => { readDesk() }, [readDesk])
-    const fire = useCallback((i) => {
-        const cue = cues[i]
-        if (!cue) return
-        setCurrent(i)
-        fireCue(cue, applyLocalOps)
-        setLocalLook(lookIdOfDesk(cue.lightLook) || '')
-        setStatus(`GO ${i + 1} · ${cue.name}${deskHere ? (onDesk.has(cue.lightLook) ? ' — fired on the desk' : ' — not on the desk yet: send the looks') : ' — no desk here: the room shows it'}`)
-    }, [cues, applyLocalOps, deskHere, onDesk])
-    // A cue with a hold moves on by itself, as the map desk's show does.
-    useEffect(() => {
-        const cue = cues[current]
-        if (!cue || !(cue.hold > 0) || current + 1 >= cues.length) return undefined
-        const timer = setTimeout(() => fire(current + 1), cue.hold * 1000)
-        return () => clearTimeout(timer)
-    }, [current, cues, fire])
     const sendLooks = useCallback(async () => {
         try {
             const rig = await (await fetch(lightingApiUrl(`api/rig?project=${encodeURIComponent(projectId)}`))).json()
@@ -352,6 +341,84 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
         const ops = list.map((l) => ({ type: 'createMappingCue', payload: { cue: { id: `cue-${deskLookId(l.id)}`, name: l.title, fade: 2, hold: 0, lightLook: deskLookId(l.id) } } }))
         edit(ops, `${list.length} looks on the cue list`)
     }, [edit])
+    // THE CUE LIST PLAYS ON THE DESK when one is here (src/rigbuild/cueRun.js,
+    // serverXR/src/lighting/cuerun.js): the desk keeps the one clock, this page asks it to
+    // go, stop or loop and reads back where it is (1 Hz). No desk (a hosted page): the
+    // page plays the list itself as a per-tab preview — the room shows it, nothing shared
+    // is fired.
+    const loop = document_.mappingState?.loop === true
+    const [deskRun, setDeskRun] = useState(null)
+    const [localRunning, setLocalRunning] = useState(false)
+    const deskRunsThis = deskHere && deskRun?.project === projectId && deskRun.n > 0
+    const shownCurrent = deskRunsThis ? deskRun.index : current
+    const running = deskRunsThis ? deskRun.running : (!deskHere && localRunning)
+    useEffect(() => {
+        if (!deskHere) return undefined
+        let gone = false
+        const tick = async () => { try { const c = await deskCues.read(); if (!gone) setDeskRun(c) } catch { /* the desk went away between reads */ } }
+        tick()
+        const timer = setInterval(tick, 1000)
+        return () => { gone = true; clearInterval(timer) }
+    }, [deskHere])
+    const sentSig = useRef(null)
+    const fire = useCallback(async (i) => {
+        const cue = cues[i]
+        if (!cue) return
+        setCurrent(i)
+        setLocalLook(lookIdOfDesk(cue.lightLook) || '')
+        if (deskHere) {
+            // The cue's mapping side as ops, as fireCue does; its light by the desk's runner
+            // (fireCue's own recall would put the look up a second time, with no fade).
+            applyLocalOps(cueOps(cue))
+            try {
+                if (cues.some((c) => c.lightLook && !onDesk.has(c.lightLook))) await sendLooks()
+                await deskCues.load(projectId, cues, loop)
+                sentSig.current = cueListSignature(cues)
+                setDeskRun(await deskCues.go(i))
+                setStatus(`GO ${i + 1} · ${cue.name} — the desk plays the list${loop ? ' and loops it' : ''}; it keeps going with this page closed`)
+            } catch (error) { setStatus(`the desk did not take the cue: ${error.message}`) }
+            return
+        }
+        setLocalRunning(true)
+        fireCue(cue, applyLocalOps)
+        setStatus(`GO ${i + 1} · ${cue.name} — no desk here: the room shows it`)
+    }, [cues, applyLocalOps, deskHere, onDesk, sendLooks, projectId, loop])
+    // No desk: a cue with a hold moves on by itself, as the map desk's show does — and,
+    // looping, from the last cue back to cue 1.
+    useEffect(() => {
+        if (deskHere || !localRunning) return undefined
+        const cue = cues[current]
+        if (!cue || !(cue.hold > 0)) return undefined
+        const next = nextCueIndex(current, cues.length, loop)
+        const timer = setTimeout(() => (next < 0 ? setLocalRunning(false) : fire(next)), cue.hold * 1000)
+        return () => clearTimeout(timer)
+    }, [deskHere, localRunning, current, cues, loop, fire])
+    // A hold edited (or a cue added or removed) while the desk plays THIS list: the desk
+    // takes the new list and stays on the cue it is on.
+    useEffect(() => {
+        if (!deskRunsThis || !deskRun?.running) return
+        const sig = cueListSignature(cues)
+        if (sentSig.current === null) { sentSig.current = sig; return }
+        if (sig === sentSig.current) return
+        sentSig.current = sig
+        deskCues.load(projectId, cues, loop, true).then(setDeskRun).catch(() => {})
+    }, [cues, deskRunsThis, deskRun?.running, projectId, loop])
+    const goNext = useCallback(() => {
+        const next = nextCueIndex(shownCurrent, cues.length, loop)
+        if (next >= 0) fire(next)
+    }, [shownCurrent, cues.length, loop, fire])
+    const stop = useCallback(async () => {
+        setLocalRunning(false)
+        if (!deskHere) { setStatus('stopped — the look stays'); return }
+        try { setDeskRun(await deskCues.stop()); setStatus('stopped — the look stays') } catch (error) { setStatus(`the desk did not stop: ${error.message}`) }
+    }, [deskHere])
+    const toggleLoop = useCallback(async () => {
+        const next = !loop
+        edit([{ type: 'setMappingState', payload: { patch: { loop: next } } }], next ? 'loop on: after the last cue, cue 1' : 'loop off: the list stops after the last cue')
+        if (deskRunsThis) {
+            try { setDeskRun(await deskCues.loop(next)) } catch { /* the page's next read says where the desk is */ }
+        }
+    }, [loop, edit, deskRunsThis])
     const restOn = useCallback((lookId) => {
         const ops = restOps(entities, lookPoses({ entities, library, lookId, rigLooks: looks }))
         edit(ops, `the room rests on ${lookId}: ${ops.length} writes (undo to take it back)`)
@@ -481,8 +548,9 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
 
     const cuePart = (
         <CuePart
-            cues={cues} looks={looks} current={current} desk={deskHere ? lightingDeskPath({ spaceId, projectId, label: title }) : null} onDesk={onDesk}
-            onGo={() => fire(Math.min(cues.length - 1, current + 1))} onBack={() => fire(Math.max(0, current - 1))} onFire={fire}
+            cues={cues} looks={looks} current={shownCurrent} desk={deskHere ? lightingDeskPath({ spaceId, projectId, label: title }) : null} onDesk={onDesk}
+            onGo={goNext} onBack={() => fire(Math.max(0, shownCurrent - 1))} onFire={fire}
+            loop={loop} onLoop={toggleLoop} onStop={stop} running={running} clock={deskRunsThis ? cueClockWords(deskRun) : (localRunning ? (loop ? 'loop' : '') : '')}
             onAddAll={addCues} onDeskLooks={sendLooks} onRest={restOn}
             onHold={(cue, hold) => { if (hold !== cue.hold) edit([{ type: 'setMappingCue', payload: { cueId: cue.id, patch: { hold } } }], `cue ${cue.name}: hold ${hold || 'GO'}`) }}
             onDelete={(cue) => edit([{ type: 'deleteMappingCue', payload: { cueId: cue.id } }], `cue ${cue.name} removed`)}

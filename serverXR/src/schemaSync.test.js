@@ -945,3 +945,16 @@ describe('components.link: both mirrors keep it, and both drop an unsafe href', 
     expect(read.entities[0].components.link).toEqual({ enabled: true, href: 'https://thedi.studio', label: '' })
   })
 })
+
+describe('the cue list\'s loop (mappingState.loop, the desk\'s cue runner)', () => {
+  it('survives a setMappingState op and a re-normalize on the server\'s copy, and is absent when off', () => {
+    const written = applyProjectOps(normalizeProjectDocument({}), [
+      { type: 'setMappingState', payload: { patch: { loop: true } } }
+    ])
+    const read = normalizeProjectDocument(JSON.parse(JSON.stringify(written)))
+    expect(read.mappingState.loop).toBe(true)
+    const off = applyProjectOps(read, [{ type: 'setMappingState', payload: { patch: { loop: false } } }])
+    expect('loop' in off.mappingState).toBe(false)
+    expect('loop' in normalizeProjectDocument({ mappingState: { loop: 'yes' } }).mappingState).toBe(false)
+  })
+})

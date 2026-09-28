@@ -255,6 +255,17 @@
   <section class="ctl-top">
     <!-- scene bank -->
     <div class="pane bankpane">
+      <!-- The cue list the desk plays (cuerun.js) — a project's looks on their holds, one
+           clock for every page. Shown only while the desk holds a list. -->
+      <div class="cuestrip" id="cueStrip" hidden>
+        <div class="pane-head"><h2>Cues</h2><span class="muted cuewhere" id="cueWhere"></span></div>
+        <div class="transport">
+          <button class="sq accent" id="cueGo" title="Fire the next cue">GO</button>
+          <button class="sq" id="cueBack" title="Fire the cue before">back</button>
+          <button class="sq" id="cueStop" title="Stop the list — the look stays">stop</button>
+          <button class="sq" id="cueLoop" aria-pressed="false" title="After the last cue, cue 1 again">loop off</button>
+        </div>
+      </div>
       <div class="pane-head"><h2>Scenes</h2></div>
       <div class="transport">
         <button class="sq" id="chasePause" title="Stop the chase">❚❚</button>

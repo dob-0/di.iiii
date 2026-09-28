@@ -1491,7 +1491,11 @@ const normalizeMappingState = (mapping = {}) => {
       }),
     reference: normalizeMappingReference(source.reference),
     grid: Math.max(0, Math.min(200, Math.round(ensureNumber(source.grid, defaultMappingState.grid)))),
-    fade: Math.max(0, Math.min(30, ensureNumber(source.fade, defaultMappingState.fade)))
+    fade: Math.max(0, Math.min(30, ensureNumber(source.fade, defaultMappingState.fade))),
+    // The cue list goes from its last cue back to cue 1 while this is on — the
+    // desk's cue runner plays it (serverXR/src/lighting/cuerun.js). Written only
+    // when on: absent means absent, so every older document is byte-identical.
+    ...(source.loop === true ? { loop: true } : {})
   }
 }
 

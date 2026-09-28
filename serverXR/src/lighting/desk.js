@@ -31,6 +31,7 @@ const {
   sanitizeLook, sanitizeLooks, sanitizeLayer, sanitizeLayers,
   KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, SPATIAL: LOOK_SPATIAL, kindAllows,
 } = require('./looks');
+const { createCueRunner, sanitizeCues } = require('./cuerun');
 
 // The desk as a module. `createDesk` builds one lighting desk — state, engine, the 40 Hz
 // output loop, the HTTP routes and the interface files — and hands back `handle`, which
@@ -129,6 +130,9 @@ function createDesk(opts = {}) {
     // page. They reference scenes by id and tolerate dead references — the player shows a
     // missing step rather than silently renumbering the operator's set list mid-show.
     sets: [],
+    // A project's cue list, played by the desk (cuerun.js): the list, where it is, and
+    // whether it runs and loops — saved with the show, so a restart carries on.
+    cues: sanitizeCues(null),
   };
 
   function sanitizeSets(list) {
@@ -278,6 +282,7 @@ function createDesk(opts = {}) {
       s.midi = sanitizeMidi(disk.midi) || { maps: [] };
       s.looks = sanitizeLooks(disk.looks) || [];
       s.layers = sanitizeLayers(disk.layers) || [];
+      s.cues = sanitizeCues(disk.cues);
 
       // Custom profiles MUST be registered before the fixtures are built. makeFixture falls
       // back to `rgb` for a profile it does not know, so loading them in the other order
@@ -423,6 +428,13 @@ function createDesk(opts = {}) {
       });
       state.layers.push(layer);
     }
+    // What a room following the desk crossfades by (GET /api/dmx): when this look was
+    // put here, over how long, and what it replaced. Not part of a layer's saved shape
+    // (sanitizeLayer drops them): a fade in progress does not survive a restart.
+    const before = layer.lookId;
+    layer.fromLookId = before && before !== look.id ? before : (before === look.id ? layer.fromLookId || null : null);
+    layer.fadeMs = body.fadeMs != null && Number.isFinite(+body.fadeMs) ? Math.max(0, Math.min(60000, Math.round(+body.fadeMs))) : 0;
+    layer.firedAt = Date.now();
     layer.lookId = look.id;
     layer.on = true;
     layer.level = body.level != null && Number.isFinite(+body.level)
@@ -430,6 +442,22 @@ function createDesk(opts = {}) {
     save(); pushFrame();
     return layer;
   }
+
+  // THE CUE RUNNER (cuerun.js): the one clock a project's cue list plays by.
+  const cueRunner = createCueRunner({
+    cues: () => state.cues || (state.cues = sanitizeCues(null)),
+    setCues: (c) => { state.cues = c; },
+    fire: (cue) => {
+      const look = state.looks.find((l) => l.id === cue.lookId);
+      if (!look) return false;
+      fireLook(look, { layerId: CUE_LAYER, fadeMs: cue.fade * 1000 });
+      return true;
+    },
+    save: () => save(),
+    log: (line) => log(line),
+  });
+  // Set once a show load has resumed the cue list, so boot does not resume it twice.
+  let resumed = false;
 
   // ---- more than one device at once -----------------------------------------
   // Each extra send owns a driver instance of its own, keyed by the send's id. They are
@@ -922,6 +950,7 @@ function createDesk(opts = {}) {
       scenes: state.scenes.length,
       looks: state.looks.length,
       layers: state.layers.map((l) => ({ id: l.id, name: l.name, on: l.on, level: l.level, lookId: l.lookId })),
+      cues: cueRunner.brief(),
       universes: engine.universes(),
       // Which fixtures are flashing to be found, right now. The page paints them so the
       // operator can tell the desk is doing what they asked while they look at the rig.
@@ -1395,15 +1424,42 @@ function createDesk(opts = {}) {
     // (src/rigMirror/useLightingMirror.js, RIG_BUILD.md §11.4). Ids, levels and order only.
     'GET /api/dmx': (req, res) => json(res, {
       dmx: snapshot(), master: state.master, blackout: state.blackout,
-      looks: state.layers.filter((l) => l.on && l.lookId && l.level > 0).map((l) => ({ lookId: l.lookId, level: l.level, priority: l.priority, layer: l.id })),
+      // fadeMs / since / from: the crossfade a following room draws (the look replaced
+      // `since` ms ago, over `fadeMs`); `cues`: where the desk's cue list is.
+      looks: state.layers.filter((l) => l.on && l.lookId && l.level > 0).map((l) => ({
+        lookId: l.lookId, level: l.level, priority: l.priority, layer: l.id,
+        fadeMs: Number.isFinite(l.fadeMs) ? l.fadeMs : 0,
+        since: Number.isFinite(l.firedAt) ? Math.max(0, Date.now() - l.firedAt) : null,
+        from: l.fromLookId || null,
+      })),
+      cues: cueRunner.brief(),
     }),
+
+    // THE CUE LIST the desk plays (cuerun.js). Any page may drive it; the desk alone
+    // keeps the time, so two pages never fire a cue twice and none needs to stay open.
+    'GET /api/cues': (req, res) => json(res, { cues: cueRunner.full() }),
+    'POST /api/cues/load': (req, res, body) => {
+      if (!Array.isArray(body.list)) return json(res, { error: 'list must be a list of cues' }, 400);
+      json(res, { ...cueRunner.load(body), cues: cueRunner.full() });
+    },
+    'POST /api/cues/go': (req, res, body) => {
+      const r = cueRunner.go(body.index != null ? Number(body.index) : undefined);
+      json(res, { ...r, cues: cueRunner.full() }, r.error ? 400 : 200);
+    },
+    'POST /api/cues/back': (req, res) => {
+      const r = cueRunner.back();
+      json(res, { ...r, cues: cueRunner.full() }, r.error ? 400 : 200);
+    },
+    'POST /api/cues/stop': (req, res) => json(res, { ...cueRunner.stop(), cues: cueRunner.full() }),
+    'POST /api/cues/loop': (req, res, body) => json(res, { ...cueRunner.setLoop(body.loop === true), cues: cueRunner.full() }),
 
     'POST /api/master': (req, res, body) => {
       if (body.master != null && Number.isFinite(+body.master)) state.master = Math.max(0, Math.min(255, Math.round(+body.master)));
       if (body.blackout != null) {
         state.blackout = !!body.blackout;
         // A panic key that leaves a strobe still due to land in 400ms is not a panic key.
-        if (state.blackout) cancelPending();
+        // Nor one that lets the cue list fire the next look 12 s later.
+        if (state.blackout) { cancelPending(); cueRunner.stop(); }
       }
       engine.cancelFade(); save(); pushFrame(); json(res, { ok: true });
     },
@@ -2161,6 +2217,7 @@ function createDesk(opts = {}) {
   function switchShow(next) {
     writeShow();
     cancelPending();
+    cueRunner.close();
     const rig = state.output;
     for (const p of customProfiles()) removeProfile(p.name);
     show = next;
@@ -2173,6 +2230,8 @@ function createDesk(opts = {}) {
     rememberLoaded();
     log('  loaded ' + who() + ' — ' + showFile());
     pushFrame();
+    cueRunner.resume();
+    resumed = true;
   }
 
   async function handle(req, res, pathname) {
@@ -2240,6 +2299,7 @@ function createDesk(opts = {}) {
     // Anything waiting for the next beat is dropped rather than left to fire into a
     // process that has gone, and every extra device is let go of like the main two.
     cancelPending();
+    cueRunner.close();
     try { writeShow(); } catch (e) { log('could not save the show on close: ' + e.message); }
     artnet.close();
     input.close();
@@ -2263,6 +2323,8 @@ function createDesk(opts = {}) {
     }
     switchShow({ space: id, label: typeof kept.label === 'string' && kept.label ? kept.label.slice(0, 80) : id, dir });
   })();
+  // The machine's own show, loaded at boot, carries on its cue list too.
+  if (!resumed) cueRunner.resume();
 
   // `state` and the show file are read through, because loading another show replaces
   // them: a caller holding the desk (the rig's blackout mirror) must reach the live one.

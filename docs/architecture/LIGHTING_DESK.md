@@ -86,6 +86,41 @@ universes from 0 (its "Universe 1" is index 0, Art-Net 0:0:0); E1.31 counts from
 reserves 0 (§6.2.7), so `sacn.js` puts desk index *n* on the wire as universe *n + 1*.
 Until 2026-09-28 it sent the index as-is, and Universe 1 went out on the reserved 0.
 
+### The cue runner — a project's cue list, played by the desk (`cuerun.js`)
+
+Added 2026-09-28 for MOXIR's looping underground show (owner: "minimal, make the underground
+show loop"). A project's cue list (`document.mappingState.cues`, one cue per look with a
+`hold` and a `fade`) used to be played by the browser tab that pressed GO: a `setTimeout`
+per hold on the cards page. The show stopped when that tab closed, and two open tabs each
+ran a clock and fired every cue twice.
+
+**Decision: the clock lives in the desk.** The desk is the one process that is always up
+while the lights are, so it is the only driver: one timer handle, cleared before every
+reschedule; pages (the cards page, the Cues strip on /light's Control page, a phone) only
+ask it to go, stop or loop and read the same answer back. It keeps playing with every page
+closed. The list, the cue it is on, `running` and `loop` are saved with the show, so a desk
+restarted mid-show comes back on its cue and runs on (one log line says so). Blackout ON
+stops it (the panic key). Considered and not chosen: a leader-elected tab (a
+BroadcastChannel lock) — it still dies with the last tab and cannot cross browsers.
+
+A cue fires a look the desk already holds, on the `cue` layer, by the same path as
+`POST /api/looks/fire`. A cue whose look is not on the desk is listed in `missing` and its
+hold still runs — one absent look must not stall a looping show.
+
+| route | does |
+|---|---|
+| `GET /api/cues` | `{ cues: { project, list, loop, index, running, nextAt, missing, n, name, nextInMs } }` |
+| `POST /api/cues/load` `{ project, list: [{ id, name, lookId, hold, fade }], loop, keepIndex? }` | replace the list (≤ 200 cues; hold 0..3600 s, 0 = waits for GO; fade 0..60 s). `keepIndex` on the same project keeps the running cue and its remaining hold |
+| `POST /api/cues/go` `{ index? }` | fire that cue, or the next; past the last: cue 1 while looping, else stop |
+| `POST /api/cues/back` · `/stop` · `/loop { loop }` | the cue before · stop the clock (the look stays) · the loop switch |
+
+What a room reads: `GET /api/dmx` `looks[]` entries carry `fadeMs` (the cue's fade), `since`
+(ms since that layer's look was put there; null after a restart) and `from` (the look it
+replaced), so a following room can crossfade; top-level `cues` (also on `/api/summary`) is
+`{ project, index, n, name, loop, running, nextInMs, missing }` or null. The document's
+`mappingState.loop` (written only when on) is where the switch is kept; the page hands it
+to the desk with the list. Tests: `tests/test-cues.js` (in `lighting.test.js`).
+
 ## Talking to it
 
 - `GET /light/api/summary` — a few hundred bytes: master, blackout, active scene, fx,

@@ -1345,3 +1345,9 @@ body.space .stage { cursor: grab; }
 @media (max-width: 700px) { .insrc { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, .45fr) minmax(0, .45fr); } .insrc .wide { display: none; } }
 .inbox > .pad { padding: 4px 12px; }
 .inbox > .pad:empty { display: none; }
+
+/* the cue list the desk plays: one quiet strip over the scene bank */
+.cuestrip { flex: none; border-bottom: 1px solid var(--line); }
+.cuestrip .pane-head { display: flex; align-items: baseline; gap: 8px; }
+.cuewhere { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.cuestrip[hidden] { display: none; }

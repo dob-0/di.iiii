@@ -364,3 +364,14 @@ describe('which display shows this mapping — output.show', () => {
         expect(normalizeMappingState({ output: { show: { machine: 'm1', screen: { size: [0, 1] } } } }).output.show.screen).toBe('all')
     })
 })
+
+describe('the cue list\'s loop — mappingState.loop', () => {
+    it('round-trips on the ESM twin, and writes nothing when off — older documents stay byte-identical', () => {
+        const written = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'setMappingState', payload: { patch: { loop: true } } }
+        ])
+        expect(normalizeProjectDocument(JSON.parse(JSON.stringify(written))).mappingState.loop).toBe(true)
+        expect('loop' in normalizeMappingState({})).toBe(false)
+        expect('loop' in normalizeMappingState({ loop: 1 })).toBe(false)
+    })
+})

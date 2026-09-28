@@ -134,3 +134,6 @@
 .rigcards--phone .rigcards-status { flex-wrap: nowrap; overflow: hidden; }
 .rigcards--phone .rigcards-status span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rigcards--phone .rigcards-status .rigplot-status__dim { display: none; }
+/* the cue list's LOOP switch: lit while on (mappingState.loop); every header button a thumb's 44 px on a phone */
+.rigcards-loop.is-on { background: var(--ink); color: var(--paper); }
+.rigcards--phone .rigcards-cues__head .rigcards-btn { min-height: 44px; }

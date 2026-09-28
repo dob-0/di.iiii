@@ -617,6 +617,15 @@ A look lands in three places, with one meaning each:
 | **the cue list** | the project's own cues, `document.mappingState.cues`: the list the map desk, Perform and the Studio already fire through `fireCue`. One cue per look: `{name, fade, hold, lightLook: 'rig-<look>'}` | **GO** fires the next cue. `recallCueLighting` puts the look on the desk's `cue` layer. A cue with a hold moves on by itself; a cue with none waits for GO. The timeline is this list drawn against the holds: **a cue list, not a timeline editor** |
 | **the room** | every lamp of the look posed by its rule and lit in its colour: a view, never written | `GET /light/api/dmx` now carries the looks that are on (`looks: [{lookId, level, priority, layer}]`). The mirror reads them at 10 Hz, and `useRigLookEntities` (in `StudioSceneContent`) poses the scene. So GO from the cards, from `/light`, or from anything else that fires the look moves the room. With no desk, the cards page's own GO poses its room pane |
 
+**The list plays on the desk, and loops** (2026-09-28). Where a desk is here, GO on the cards
+page hands the desk the document's cues and asks its cue runner to go
+(`serverXR/src/lighting/cuerun.js`, `src/rigbuild/cueRun.js`); the desk keeps the one clock, so
+the show keeps going with every page closed and two open pages never fire a cue twice. A
+**loop** switch beside GO (`mappingState.loop`) takes the list from its last cue back to cue 1;
+**stop** stops the clock and leaves the look up. /light's Control page has the same GO, back,
+stop and loop. With no desk (a hosted page) the page plays the list itself as a per-tab
+preview. Method and routes: `docs/architecture/LIGHTING_DESK.md` "The cue runner".
+
 **Rest the room on a look** writes one look's aims and colours into the document as ops.
 Undo takes it back. This is how a link with no desk (a hosted tier) shows a designed look.
 
