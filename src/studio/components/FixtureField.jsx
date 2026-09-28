@@ -1,8 +1,10 @@
 import { useLightingMirror } from '../../rigMirror/useLightingMirror.js'
 
-// THE ONE INSPECTOR FIELD of "a lamp that knows which lamp it is": the fixture's
-// index on the lighting desk, and nothing else (never universe/address — those are
-// the machine's, see docs/architecture/LIGHTING_DESK.md).
+// THE INSPECTOR FIELD of "a lamp that knows which lamp it is": the fixture's index
+// on the lighting desk. The same component also carries the plot's patch (type,
+// mode, universe, address, …) since 2026-09-28 — docs/architecture/RIG_BUILD.md
+// §2.2 — which auto-patch writes; this field edits only the index, and the op it
+// sends is a merge, so the rest of the component is left as it was.
 //
 // When the desk is running on this machine the field is its own list, `3.Back left`,
 // so nobody types a number they have to go and look up. When it is not — every hosted

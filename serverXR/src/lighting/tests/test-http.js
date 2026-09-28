@@ -61,6 +61,28 @@ check('GET /api/state carries the whole desk', async () => {
   assert.ok(Array.isArray(body.status.interfaces), 'status carries the local interfaces');
 });
 
+check('DMX input: off by default, settings sanitised, status says so in words', async () => {
+  const off = await GET('/api/input');
+  assert.strictEqual(off.status, 200);
+  assert.strictEqual(off.body.config.enabled, false, 'input is OFF until switched on');
+  assert.deepStrictEqual(off.body.listening, [], 'nothing bound while off');
+  assert.strictEqual(off.body.summary.text, 'Input off');
+  const on = await POST('/api/input', { enabled: true, interfaces: ['127.0.0.1', 'bogus'], universes: [{ universe: 0, merge: 'ltp' }, { universe: -3 }], loss: 'hold' });
+  assert.strictEqual(on.status, 200);
+  assert.deepStrictEqual(on.body.config.interfaces, ['127.0.0.1']);
+  assert.deepStrictEqual(on.body.config.universes, [{ universe: 0, merge: 'ltp', desk: 'follow' }]);
+  assert.strictEqual(on.body.config.loss, 'hold');
+  assert.ok(on.body.summary.text.length > 0, 'never a blank status');
+  const sum = await GET('/api/summary');
+  assert.strictEqual(sum.body.input.enabled, true);
+  const st = await GET('/api/state');
+  assert.strictEqual(st.body.output.input.enabled, true, 'saved with the rig, under output');
+  assert.ok(st.body.status.input && st.body.status.input.summary, 'the page gets the input status');
+  const back = await POST('/api/input', { enabled: false, universes: [] });
+  assert.strictEqual(back.body.config.enabled, false);
+  assert.strictEqual((await POST('/api/input/release', {})).status, 200);
+});
+
 check('GET /api/dmx is {dmx, master, blackout} with 512 channels a universe', async () => {
   await patch('rgb', { universe: 0, address: 1 });
   await settle();
@@ -1397,6 +1419,10 @@ check('an outside caller can fire a look, and it lands on one visible layer', as
   assert.strictEqual(await wire(0, 483), 255, 'blue took its place');
   const { body: layers } = await GET('/api/layers');
   assert.strictEqual(layers.layers.filter((l) => l.id === 'cue').length, 1);
+  // The DMX frame says which look is on, so a room following the desk can pose by it
+  // (RIG_BUILD.md §11.4) at the rate it already reads the channels.
+  const { body: frame } = await GET('/api/dmx');
+  assert.deepStrictEqual(frame.looks.filter((l) => l.layer === 'cue').map((l) => l.lookId), ['cue-blue'], 'the fired look rides with the DMX');
   assert.strictEqual((await POST('/api/looks/fire', { id: 'nope' })).status, 404);
   await POST('/api/layers', { layers: [] });
   await POST('/api/looks', { looks: [] });

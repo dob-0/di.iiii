@@ -1,0 +1,126 @@
+/* The steps row (RigSteps.jsx) — a second row of the SurfaceBar, in its own words and
+   tokens: .sbar gives the ground, the mono, the size and the rule under it; .sbar-link
+   the dim names and the cyan "you are here". Every value here is a token from base.css. */
+
+:root {
+    /* The bar and the steps row together: what a rig page clears at its top. Both rows
+       are .sbar, so each is --sbar-h tall (38px, a finger's 45px under a coarse pointer). */
+    --rigbar-h: calc(2 * var(--sbar-h));
+}
+
+.rigsteps { gap: var(--di-space-4); }
+
+.rigsteps-title {
+    color: var(--di-faint);
+    text-transform: uppercase;
+    letter-spacing: var(--di-label-tracking);
+    flex-shrink: 0;
+}
+
+.rigsteps-list {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-5);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.rigsteps-step { display: inline-flex; align-items: baseline; gap: var(--di-space-2); }
+
+/* The step's number, and what the document says about it: quieter than the name. */
+.rigsteps-n { color: var(--di-faint); }
+.rigsteps-step.is-here .rigsteps-n { color: inherit; }
+.rigsteps-said {
+    color: var(--di-dim);
+    text-transform: none;
+    letter-spacing: 0.02em;
+}
+.rigsteps-step.is-warn .rigsteps-said { color: var(--di-warning); }
+
+.rigsteps-back,
+.rigsteps-next { flex-shrink: 0; white-space: nowrap; }
+.rigsteps-next { color: var(--di-ink); margin-left: auto; }
+
+/* The folded row's one control: which step you are on, and the whole list. */
+.rigsteps-pick {
+    display: none;
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+    gap: var(--di-space-2);
+    align-items: center;
+    min-width: 0;
+}
+.rigsteps-pick.is-here { cursor: pointer; }
+
+.rigsteps-menu { min-width: 16em; }
+.rigsteps-menu .rigsteps-step { gap: var(--di-space-3); }
+
+/* The whole row shown, "back" is only its arrow: the step it names is right beside it. */
+@media (min-width: 1181px) {
+    .rigsteps-back .rigsteps-wide { display: none; }
+}
+
+/* The whole row fits a laptop; below that it folds to back · the step ▾ · next. */
+@media (max-width: 1180px) {
+    .rigsteps-list { display: none; }
+    .rigsteps-pick { display: inline-flex; margin: 0 auto; }
+    .rigsteps-next { margin-left: 0; }
+}
+@media (max-width: 560px) {
+    .rigsteps-wide { display: none; }
+    .rigsteps-title { display: none; }
+}
+
+/* A finger on the folded row: back, the step and next are each a full target. */
+@media (pointer: coarse) {
+    .rigsteps-back,
+    .rigsteps-next,
+    .rigsteps-pick {
+        min-width: var(--di-touch-target);
+        min-height: var(--di-touch-target);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
+    .rigsteps-list .rigsteps-step { line-height: var(--di-touch-target); }
+}
+
+/* The two rows at the top of a rig page. */
+.rigbar { left: 0; right: 0; top: 0; z-index: 60; }
+.rigbar--fixed { position: fixed; }
+.rigbar--flow { position: sticky; }
+
+/* Over a room: the bar's floating ground under both rows, so they read over anything. */
+.rigbar--float {
+    background: color-mix(in srgb, var(--di-bg) 82%, transparent);
+    backdrop-filter: blur(8px);
+}
+.rigbar--float .sbar { background: transparent; }
+
+/* Under a floating SurfaceBar (the room, /{space}): the same float, one row lower. */
+.rigsteps--under {
+    position: fixed;
+    top: var(--sbar-h);
+    left: 0;
+    right: 0;
+    background: color-mix(in srgb, var(--di-bg) 82%, transparent);
+    backdrop-filter: blur(8px);
+    z-index: 60;
+}
+.rigsteps--top { top: 0; }
+
+/* Paper is for paper: neither row prints. */
+@media print {
+    .rigbar, .rigsteps { display: none !important; }
+}
+
+/* The paper pages (plot, cards, equipment) are fixed to the window: they start below
+   the two rows instead of behind them. */
+.rigplot.has-rigbar { top: var(--rigbar-h); }

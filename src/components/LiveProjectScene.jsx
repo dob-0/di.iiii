@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, OrbitControls, Text, Billboard } from '@react-three/drei'
@@ -54,6 +54,7 @@ import {
     BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_DEAD_DELTA_MAX, BROKEN_LOCK_SETTLE_MS
 } from './walkModeConfig.js'
 import { isTypingTarget } from './walkKeyboard.js'
+import { hasRigLamps } from '../rigbuild/hasRigLamps.js'
 import { createPortalWalkThrough } from './portalWalkThrough.js'
 import { doorsOf, fitArrivalToDoors as fitArrivalToDoors_ } from './arrivalFraming.js'
 import { getViewportAspect } from '../utils/cameraFraming.js'
@@ -62,6 +63,9 @@ import { ENTRY_PENDING_ATTR } from './entryTransition/entryPlan.js'
 import { captureRendererFrame, FrameSource } from './entryTransition/EntryGlide.jsx'
 import { markArriveWalking } from './arriveWalking.js'
 import './liveProjectScene.css'
+
+// The lamps' bodies (src/rigbuild/RigBodies.jsx): loaded only by a room that has a rig.
+const RigBodies = lazy(() => import('../rigbuild/RigBodies.jsx'))
 
 // Walk mode has always capped device pixel ratio at 1.8, and an authored
 // renderSettings.dprMax does not lift that: a still arrival frame can afford
@@ -85,6 +89,10 @@ const VIEW_ORBIT_DRIFT_SPEED = 0.35
 const tmpVec = new THREE.Vector3()
 const tmpLook = new THREE.Vector3()
 const tmpDir = new THREE.Vector3()
+
+// Fly mode's altitude keys. A caller that needs Q and E for something else (the
+// rig builder's hand raises and lowers with them) passes its own set.
+const DEFAULT_ALTITUDE_KEYS = Object.freeze({ up: [' ', 'q'], down: ['e', 'c'] })
 
 const isGateEntity = (entity) => /gate|threshold|entrance/i.test(entity?.name || '')
 
@@ -455,7 +463,7 @@ export const centroidSpawn = (center, bounds) => {
     return { x: center?.x ?? 0, z: (center?.z ?? 0) + back, yaw: Math.PI, pitch: 0 }
 }
 
-function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef }) {
+function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef, altitudeKeys = DEFAULT_ALTITUDE_KEYS, wheelDolly = true }) {
     const { camera, gl } = useThree()
     // During an XR session the camera pose is owned by the headset/phone and
     // locomotion is driven through XROrigin (see XrLocomotion). Walker must NOT
@@ -477,6 +485,10 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
     onPortalReachedRef.current = onPortalReached
     const flyRef = useRef(flyMode)
     flyRef.current = flyMode
+    const altitudeRef = useRef(altitudeKeys)
+    altitudeRef.current = altitudeKeys
+    const wheelDollyRef_ = useRef(wheelDolly)
+    wheelDollyRef_.current = wheelDolly
     // One latch for the lifetime of the walker, not one per frame — see
     // portalWalkThrough.js for what it remembers and why.
     const [portalWalk] = useState(createPortalWalkThrough)
@@ -659,7 +671,7 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
                 if (e.ctrlKey) return
                 const scale = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1
                 player.yaw -= e.deltaX * scale * TRACKPAD_LOOK_SENSITIVITY
-                wheelDollyRef.current -= e.deltaY * scale * WHEEL_DOLLY_SPEED
+                if (wheelDollyRef_.current) wheelDollyRef.current -= e.deltaY * scale * WHEEL_DOLLY_SPEED
             }
             // Drag state comes from our own down/up pair, not mousemove's
             // e.buttons — the same broken compositors report buttons: 0 mid-
@@ -819,8 +831,9 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
 
         let vert = 0
         if (fly) {
-            if (keys.has(' ') || keys.has('q')) vert += 1
-            if (keys.has('e') || keys.has('c')) vert -= 1
+            const alt = altitudeRef.current
+            if (alt.up.some((k) => keys.has(k))) vert += 1
+            if (alt.down.some((k) => keys.has(k))) vert -= 1
             vert += vertTouchRef?.current || 0
         }
 
@@ -1515,11 +1528,26 @@ export default function LiveProjectScene({
     // after the project's own objects. The jam draws a marker where each other
     // person is standing, and a marker in the scene has to be IN the scene.
     sceneExtras = null,
+    // `rigBodies`: draw a body (the fixture's model, posed to its beam) at every typed
+    // lamp (RIG_BUILD.md §12.4). View A draws its own through sceneExtras and says false.
+    rigBodies = true,
     // `fitArrivalToDoors`: on a portrait screen, step the arrival back along
     // its own view until the room's doors are in frame (arrivalFraming.js).
     // The landing's front room opts in; an authored room elsewhere keeps its
     // spawn exactly as composed.
-    fitArrivalToDoors = false
+    fitArrivalToDoors = false,
+    // --- Three more seams, for the rig builder's first-person view
+    // (src/rigbuild/BuildSurface.jsx). Each defaults to what walk mode did before.
+    //
+    // `altitudeKeys`: fly mode's up/down keys ({ up: [...], down: [...] }, lower
+    // case `KeyboardEvent.key`); the builder keeps Space/C and gives Q/E to the hand.
+    altitudeKeys = DEFAULT_ALTITUDE_KEYS,
+    // `wheelDolly`: the scroll wheel dollies the walker. The builder's wheel scrolls
+    // its hotbar instead, so a wheel turn must not also walk the builder forward.
+    wheelDolly = true,
+    // `walkHint`: the locked-walk hint line's words, replacing "WASD · move …" — a
+    // surface that adds keys has to be able to say them in the same place.
+    walkHint = null
 }) {
     const fetched = useLiveProjectDocument(providedDocument ? null : projectId)
     const doc = providedDocument || fetched.doc
@@ -1656,6 +1684,7 @@ export default function LiveProjectScene({
     // any public/live viewer (landing page, WCC, etc.), not just Studio.
     const assetMap = useMemo(() => buildAssetMap(doc, projectId), [doc, projectId])
     const gateEntity = useMemo(() => entities.find(isGateEntity) || null, [entities])
+    const hasRig = useMemo(() => hasRigLamps(entities), [entities])
     const hasSound = useMemo(() => roomHasSound(entities), [entities])
     const { soundOn: sceneSoundOn, locked: soundLocked, toggleSound: toggleSceneSound } = useRoomSound()
 
@@ -1879,6 +1908,11 @@ export default function LiveProjectScene({
                     </SceneEntityErrorBoundary>
                 ))}
                 {showEntities && gateEntity ? <GateGlow entity={gateEntity} /> : null}
+                {showEntities && rigBodies && hasRig ? (
+                    <Suspense fallback={null}>
+                        <RigBodies entities={entities} />
+                    </Suspense>
+                ) : null}
                 {sceneExtras}
                 {walking ? (
                     <Walker
@@ -1896,6 +1930,8 @@ export default function LiveProjectScene({
                         flyMode={flyMode}
                         isArActive={isArActive}
                         arTouchElRef={arTouchElRef}
+                        altitudeKeys={altitudeKeys}
+                        wheelDolly={wheelDolly}
                     />
                 ) : viewing ? (
                     <ViewOrbit center={center} />
@@ -2015,9 +2051,13 @@ export default function LiveProjectScene({
                     </div>
 
                     <header className="live-scene-chrome">
-                        <button type="button" className="live-scene-exit" onClick={onExit}>
-                            {exitLabel}
-                        </button>
+                        {/* exitLabel={null}: the surface gives the way out itself (the rig's
+                            bar over view A), so the room does not draw a second one. */}
+                        {exitLabel ? (
+                            <button type="button" className="live-scene-exit" onClick={onExit}>
+                                {exitLabel}
+                            </button>
+                        ) : <span />}
                         <span className="live-scene-title">
                             {title}
                             {/* The nearest door is WAYFINDING, not part of the
@@ -2051,7 +2091,10 @@ export default function LiveProjectScene({
                             Click to explore &nbsp;·&nbsp; walk &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; F · fly
                         </p>
                     )}
-                    {walking && !isMobile && isLocked && (
+                    {walking && !isMobile && isLocked && walkHint ? (
+                        <p className="live-scene-hint">{walkHint}</p>
+                    ) : null}
+                    {walking && !isMobile && isLocked && !walkHint && (
                         <p className="live-scene-hint">
                             WASD · move &nbsp;·&nbsp; Mouse · look &nbsp;·&nbsp; F · {flyMode ? 'walk' : 'fly'}
                             {flyMode ? <>&nbsp;·&nbsp; Space/Q · up &nbsp;·&nbsp; C/E · down</> : null}

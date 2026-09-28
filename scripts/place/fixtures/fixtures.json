@@ -1,0 +1,955 @@
+{
+    "manifest": "MOXIR rig fixtures — identity, datasheet numbers, photometry and the 3D model of each, with a source for every number",
+    "writtenAt": "2026-09-28",
+    "accessed": "2026-09-28",
+    "howToRead": "Every spec is { value, src, basis }. `src` names an entry in `sources`. `basis` is EXACT (the maker's own page for this very model code), EQUIVALENT (a named fixture of the same class, because the maker publishes nothing for this field or the code could not be traced), or ASSUMED (no source; a stated guess). Nothing here was measured by us.",
+    "identification": {
+        "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd. — own site pro-uplight.com, store up-light.en.made-in-china.com",
+        "confirmed": "UP-B380F, UP-250BSW, UP-HK1915, UP-PL5403: the model code is printed as 'Model' / 'Model NO.' on the maker's page (sources A, A2, B, B2, C, C2, C3, D).",
+        "notFound": "UP-LA40WF, UP-Q108S, UP-YH600F, UP-YZ31P: not UPlight products — absent from all 420 listings of the maker's made-in-china store, the 73 products in the pro-uplight.com sitemap, and web searches for each code. The letters read as pinyin (YZ yanwu = smoke, YH yanhua = firework, Q qizhu = gas column): probably the rental house's own labels. The real maker/model is OWED from the rental house; until then each is modelled on a named equivalent.",
+        "photos": "Maker photos were used to shape the models (compared by eye); they are the makers' copyright and are NOT stored in this repository."
+    },
+    "search": {
+        "gdtf": "GDTF Share (gdtf-share.com), the DIN SPEC 15800 fixture library: downloading needs an account (its public API answers {\"result\":false,\"error\":\"Unauthorized.\"}; https://www.gdtf.eu/gdtf/share_api/share-api/ : 'A GDTF Share account is required'), and its terms (https://gdtf-share.com/landing/pages/termsAndConditions.php §9) forbid commercial use and derivative works without a licence. Whether UPlight or the equivalents are listed could not be checked without logging in — the login is the owner's hand. No GDTF geometry is used.",
+        "openFixtureLibrary": "Open Fixture Library (MIT, https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/master/LICENSE, checked at commit 4992b86, 2026-09-26): no UPlight fixtures; used only as a source of physical dimensions for named equivalents (below). OFL has no 3D geometry.",
+        "blenderDmx": "BlenderDMX (GPL-3.0, https://blenderdmx.eu/docs/gdtffixture/) builds a Base > Yoke(pan) > Head(tilt) chain from GDTF files — the same node structure used here, but it needs GDTF files, so it is not used.",
+        "decision": "No licensable 3D model of any of these fixtures exists, so each is BUILT here (fixtures/build_fixtures.py, Blender, headless) to the datasheet's outer dimensions and the maker's photos: Base / Yoke / Head / Lens nodes pivoting at the real pan and tilt axes."
+    },
+    "sources": {
+        "A": {
+            "url": "https://up-light.en.made-in-china.com/product/qdrawUbcCMAf/China-IP65-380W-Waterproof-DJ-Light-Beam-Moving-Head-for-Outdoor-Events.html",
+            "what": "UPlight UP-B380F, maker's store page"
+        },
+        "A2": {
+            "url": "https://up-light.en.made-in-china.com/product/dtgUzuHYYSWP/China-380W-IP65-Moving-Head-Light-3-in-1-Disco-Lights-Moving-Head-for-Stage.html",
+            "what": "UPlight UP-B380F, second store page"
+        },
+        "B": {
+            "url": "https://www.pro-uplight.com/250W-BSW-LED-MOVING-HEAD-pd576927868.html",
+            "what": "UPlight UP-250BSW, maker's site"
+        },
+        "B2": {
+            "url": "https://up-light.en.made-in-china.com/product/fGuYHBihYvcg/China-250W-3in1-LED-Moving-Head-Light-for-Stage-Events.html",
+            "what": "UPlight UP-250BSW, maker's store page"
+        },
+        "C": {
+            "url": "https://www.pro-uplight.com/19Pcs-15W-Hawk-Eye-pd40799571.html",
+            "what": "UPlight UP-HK1915 'Hawk Eye', maker's site"
+        },
+        "C2": {
+            "url": "https://up-light.en.made-in-china.com/product/pAzRYkbrgSVy/China-Upliht-19X15W-Zoom-LED-Moving-Head-Light-for-Djs.html",
+            "what": "UPlight UP-HK1915, store page"
+        },
+        "C3": {
+            "url": "https://up-light.en.made-in-china.com/product/pwSAdRBJAcGs/China-LED-Moving-Head-LED-Wash-19PCS-15W-Bee-Eye.html",
+            "what": "UPlight UP-HK1915, second store page"
+        },
+        "D": {
+            "url": "https://www.pro-uplight.com/Waterproof-Par-Light-UP-PL5403-pd42953371.html",
+            "what": "UPlight UP-PL5403, maker's site"
+        },
+        "OFL-K10": {
+            "url": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/master/fixtures/clay-paky/a-leda-b-eye-k10.json",
+            "what": "Clay Paky A.leda B-EYE K10 in Open Fixture Library (MIT); physical.dimensions are W x H x D"
+        },
+        "BLUESEA": {
+            "url": "https://www.bluesealighting.com/waterproof-40w-rgb-animation-laser-light.html",
+            "what": "Blue Sea BLLO-RGB40, 40 W RGB IP65 laser — equivalent for UP-LA40WF"
+        },
+        "MAGICFX": {
+            "url": "https://www.sfxsupplies.co.uk/products/magicfx-co2-jet-ii",
+            "what": "MagicFX CO2 Jet II — equivalent for UP-Q108S"
+        },
+        "SHOWVEN": {
+            "url": "https://www.showven.cn/product/sparkular/",
+            "what": "Showven Sparkular (the original cold-spark machine) — equivalent for UP-YH600F"
+        },
+        "OFL-SPARKULAR": {
+            "url": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/master/fixtures/showven/sparkular.json",
+            "what": "Showven Sparkular in Open Fixture Library"
+        },
+        "ANTARI": {
+            "url": "https://antari.com/wp-content/uploads/Z-1500lllC.pdf",
+            "what": "Antari Z-1500 III user manual — equivalent for UP-YZ31P"
+        },
+        "SHEHDS-GALAXYJET": {
+            "url": "https://shehds.com/products/galaxyjet-beam-380w-19r-moving-head-lights-display-stage-effect-lighting-for-dj-disco-stage-performance-stage-concert-wedding",
+            "what": "SHEHDS GalaxyJet 380 W 19R IP65 beam — photometric equivalent for UP-B380F (same class, IP65, 1.8 deg, 160 mm lens)"
+        },
+        "ELATION-PROTEUS-HYBRID": {
+            "url": "https://www.elationlighting.com/products/proteus-hybrid",
+            "what": "Elation Proteus Hybrid (IP65, 470 W 21R) — brand cross-check for the 380 W beam class"
+        },
+        "CHAUVET-475ZX": {
+            "url": "https://www.chauvetdj.com/products/intimidator-spot-475zx/",
+            "what": "Chauvet DJ Intimidator Spot 475ZX (250 W cool-white LED, 13-28 deg zoom) — photometric equivalent for UP-250BSW"
+        },
+        "LIRO-L1915Z": {
+            "url": "https://lirolighting.en.made-in-china.com/product/qAnRKpNGOMkT/China-19X15W-RGBW-Clay-Paky-Bee-Eye-K10-LED-Moving-Head-Light.html",
+            "what": "LIRO LR-L1915Z, 19 x 15 W RGBW bee-eye (the same Chinese class as UP-HK1915) — photometric equivalent"
+        },
+        "PROLIGHTING-K10": {
+            "url": "https://www.prolighting.de/en/lighting-effects/movinglights/movinglight-special/claypaky-a-leda-b-eye-k10.html",
+            "what": "dealer copy of the Clay Paky B-EYE K10 datasheet (5,500 lm) — cross-check"
+        },
+        "COLORFUL-54X3": {
+            "url": "https://www.colorfulstagelights.com/products_23/46.html",
+            "what": "Colorful Stage Lighting DMX 54x3W IP65 RGBW outdoor PAR — photometric equivalent for UP-PL5403"
+        },
+        "MARTIN-A3K": {
+            "url": "https://www.martin.com/en/products/atomic-3000-led",
+            "what": "Martin (Harman) Atomic 3000 LED, maker's product page (fetched 2026-09-28): 245 L x 425 W x 240 H mm incl. bracket, 7.8 kg, 180,000 lm max, 740 W max / 663 W typical, 3/4/14 DMX channels, IP20, 228 x 10 W white LEDs 5,700 K; no beam angle published on the page"
+        },
+        "CHAUVET-STRIKE4": {
+            "url": "https://www.chauvetprofessional.com/product/strike-4/",
+            "what": "Chauvet Professional STRIKE 4, maker's product page (fetched 2026-09-28): 362 x 163 x 362 mm, 8.7 kg, beam 49 deg / field 79 deg, 999 lux @ 5 m, 286 W @ 230 V, 1/3/4/9 DMX channels, 4 x 100 W warm-white LEDs 3,096 K, IP20"
+        },
+        "ANTARI-HZ1000": {
+            "url": "https://www.antari.com/products/hz-1000/",
+            "what": "Antari HZ-1000 hazer, maker's product page (fetched 2026-09-28): L690 W510 H610 mm, 74.6 kg, 1150 W, 2 DMX channels, 2.2 ml/min at 100 %, 6.4 L tank (40 h at 100 %)"
+        }
+    },
+    "kinds": {
+        "beam380": {
+            "code": "UP-B380F",
+            "identified": "EXACT",
+            "product": "UPlight UP-B380F, IP65 380 W beam moving head (outdoor)",
+            "specs": {
+                "size_mm": {
+                    "value": [
+                        460,
+                        310,
+                        690
+                    ],
+                    "order": "W x D x H (690 = height, read from the photo)",
+                    "src": "A",
+                    "basis": "EXACT",
+                    "note": "A2 also gives 450 x 310 x 690"
+                },
+                "weight_kg": {
+                    "value": 23,
+                    "src": "A",
+                    "basis": "EXACT"
+                },
+                "source": {
+                    "value": "350XL/380 discharge lamp, 2000 h, CRI 80",
+                    "src": "A",
+                    "basis": "EXACT"
+                },
+                "power_w": {
+                    "value": 500,
+                    "src": "A",
+                    "basis": "EXACT"
+                },
+                "beam_deg": {
+                    "value": 1.8,
+                    "src": "A",
+                    "basis": "EXACT",
+                    "note": "fixed, no zoom"
+                },
+                "pan_tilt_deg": {
+                    "value": [
+                        540,
+                        270
+                    ],
+                    "src": "A",
+                    "basis": "EXACT"
+                },
+                "dmx_channels": {
+                    "value": [
+                        16
+                    ],
+                    "src": "A",
+                    "basis": "EXACT"
+                },
+                "ip": {
+                    "value": "IP65",
+                    "src": "A",
+                    "basis": "EXACT"
+                },
+                "effects": {
+                    "value": "1 colour wheel (14), fixed gobo wheel (13+open), rotating gobo wheel, 16-facet + honeycomb prism, frost",
+                    "src": "A, A2",
+                    "basis": "EXACT"
+                }
+            },
+            "look": "Low black base box with tubular grab bars at the ends and four round connectors on the front; tall flat-sided yoke arms with chevron vents; head = a round rear drum across the tilt axis (lamp, vent-hole ring) and a long cylindrical nose to the lens.",
+            "model": {
+                "archetype": "moving-head",
+                "params": {
+                    "base_mm": [
+                        380,
+                        290,
+                        120
+                    ],
+                    "feet": true,
+                    "arm_t_mm": 60,
+                    "arm_w_mm": 260,
+                    "arm_gap_mm": 10,
+                    "tilt_axis_mm": 370,
+                    "head": {
+                        "shape": "snout",
+                        "width_mm": 320,
+                        "drum_mm": 320,
+                        "below_axis_mm": 170,
+                        "above_axis_mm": 320,
+                        "barrel_mm": 190,
+                        "barrel_taper": 0.96,
+                        "lens_mm": 160
+                    }
+                }
+            },
+            "photometry": {
+                "lux": 125500,
+                "at_m": 20,
+                "beam_deg": 1.8,
+                "src": "SHEHDS-GALAXYJET",
+                "basis": "EQUIVALENT",
+                "centre": "centre of beam, fixed 1.8 deg",
+                "crossCheck": "ELATION-PROTEUS-HYBRID: 233,000 lux @ 15 m in its 2.0 deg beam = 52.4 Mcd, vs 50.2 Mcd here (4 % apart). The GalaxyJet's own 475,000 lux @ 10 m = 47.5 Mcd agrees with its 20 m figure under the inverse-square law.",
+                "note": "maker's claim, not an independent measurement"
+            }
+        },
+        "bsw250": {
+            "code": "UP-250BSW",
+            "identified": "EXACT",
+            "product": "UPlight UP-250BSW (also written UP-BSW250), 250 W LED beam/spot/wash moving head",
+            "specs": {
+                "size_mm": {
+                    "value": [
+                        330,
+                        257,
+                        536
+                    ],
+                    "order": "L x W x H as published",
+                    "src": "B",
+                    "basis": "EXACT"
+                },
+                "weight_kg": {
+                    "value": 13.5,
+                    "src": "B",
+                    "basis": "EXACT"
+                },
+                "source": {
+                    "value": "200 W white LED, 8300 K, 50,000 h",
+                    "src": "B",
+                    "basis": "EXACT"
+                },
+                "power_w": {
+                    "value": 280,
+                    "src": "B",
+                    "basis": "EXACT"
+                },
+                "zoom_deg": {
+                    "value": [
+                        10,
+                        30
+                    ],
+                    "src": "B",
+                    "basis": "EXACT",
+                    "note": "linear zoom, electronic focus"
+                },
+                "pan_tilt_deg": {
+                    "value": [
+                        540,
+                        270
+                    ],
+                    "src": null,
+                    "basis": "ASSUMED",
+                    "note": "not stated by the maker; typical of the class"
+                },
+                "dmx_channels": {
+                    "value": [
+                        24,
+                        30
+                    ],
+                    "src": "B",
+                    "basis": "EXACT",
+                    "note": "B2 attributes also say 20/30"
+                },
+                "ip": {
+                    "value": "IP20",
+                    "src": "B",
+                    "basis": "EXACT",
+                    "note": "INDOOR fixture — note for an outdoor or damp venue"
+                },
+                "effects": {
+                    "value": "colour wheel (7 + CRI), fixed gobo wheel, rotating gobo wheel (7+open), 3-facet prism, frost, RGB LED ring round the lens",
+                    "src": "B",
+                    "basis": "EXACT"
+                }
+            },
+            "look": "Black base with rounded ends and a colour TFT screen; rounded-top yoke arms; a cylindrical head barrel with side vent slats and a big front lens (~75% of the barrel) circled by an LED ring.",
+            "model": {
+                "archetype": "moving-head",
+                "params": {
+                    "base_mm": [
+                        330,
+                        257,
+                        130
+                    ],
+                    "handles": false,
+                    "arm_t_mm": 40,
+                    "arm_w_mm": 150,
+                    "arm_gap_mm": 15,
+                    "tilt_axis_mm": 330,
+                    "head": {
+                        "shape": "barrel",
+                        "width_mm": 200,
+                        "barrel_mm": 200,
+                        "below_axis_mm": 110,
+                        "above_axis_mm": 206,
+                        "lens_mm": 150
+                    }
+                }
+            },
+            "photometry": {
+                "lux": 14557,
+                "at_m": 5,
+                "beam_deg": 13,
+                "src": "CHAUVET-475ZX",
+                "basis": "EQUIVALENT",
+                "centre": "centre, at its narrowest zoom (13 deg)",
+                "crossCheck": "same sheet at 28 deg: 3,930 lux @ 5 m = 98 kcd; flux conservation from 13 deg predicts 79 kcd (within 20 %). Flux 10,710 lm.",
+                "note": "a 250 W LED spot, not a beam/spot/wash hybrid; the UP-250BSW zooms 10-30 deg"
+            }
+        },
+        "beeEye": {
+            "code": "UP-HK1915",
+            "identified": "EXACT (size and weight from an EQUIVALENT)",
+            "product": "UPlight UP-HK1915 'Hawk Eye / Bee Eye', 19 x 15 W RGBW zoom moving head",
+            "specs": {
+                "size_mm": {
+                    "value": [
+                        358,
+                        253,
+                        494
+                    ],
+                    "order": "W x D x H",
+                    "src": "OFL-K10",
+                    "basis": "EQUIVALENT",
+                    "note": "Clay Paky A.leda B-EYE K10. The maker's own 325 x 188 x 396 mm (C2, C3) is implausible for a 19-lens head and is not used."
+                },
+                "weight_kg": {
+                    "value": 15,
+                    "src": "OFL-K10",
+                    "basis": "EQUIVALENT",
+                    "note": "maker listings contradict themselves (12.5 / 6.2 / 10.5 kg)"
+                },
+                "source": {
+                    "value": "19 x 15 W RGBW 4-in-1 LEDs, 50,000 h",
+                    "src": "C, C2",
+                    "basis": "EXACT"
+                },
+                "power_w": {
+                    "value": 350,
+                    "src": "C",
+                    "basis": "EXACT",
+                    "note": "C3 says 300 W"
+                },
+                "zoom_deg": {
+                    "value": [
+                        4,
+                        60
+                    ],
+                    "src": "C, C2",
+                    "basis": "EXACT"
+                },
+                "pan_tilt_deg": {
+                    "value": [
+                        540,
+                        230
+                    ],
+                    "src": "C, C2",
+                    "basis": "EXACT"
+                },
+                "dmx_channels": {
+                    "value": [
+                        21,
+                        35,
+                        78,
+                        92,
+                        97
+                    ],
+                    "src": "C",
+                    "basis": "EXACT"
+                },
+                "ip": {
+                    "value": "IP20",
+                    "src": "C",
+                    "basis": "EXACT",
+                    "note": "INDOOR fixture"
+                }
+            },
+            "look": "Base with an LCD and a round 4-button keypad; broad flat yoke arms; a rounded-square head whose round front bezel holds 19 cup lenses in a hex (1 + 6 + 12), ~90% of the head's width.",
+            "model": {
+                "archetype": "moving-head",
+                "params": {
+                    "base_mm": [
+                        320,
+                        240,
+                        120
+                    ],
+                    "handles": false,
+                    "arm_t_mm": 25,
+                    "arm_w_mm": 120,
+                    "arm_gap_mm": 10,
+                    "tilt_axis_mm": 360,
+                    "head": {
+                        "shape": "box",
+                        "round": 0.22,
+                        "width_mm": 280,
+                        "depth_mm": 250,
+                        "below_axis_mm": 90,
+                        "above_axis_mm": 128,
+                        "lens_mm": 50,
+                        "lens_layout": "hex19",
+                        "lens_pitch_mm": 56
+                    }
+                }
+            },
+            "photometry": {
+                "lux": 14000,
+                "at_m": 5,
+                "beam_deg": 4,
+                "src": "LIRO-L1915Z",
+                "basis": "EQUIVALENT",
+                "centre": "centre, at its minimum angle (4 deg)",
+                "crossCheck": "PROLIGHTING-K10 gives the Clay Paky K10 5,500 lm (no lux); a uniform 4 deg cone of 5,500 lm would be 1.4 Mcd, four times this — the 19 separate cells do not add up on one axis, so the measured lux is used.",
+                "note": "reseller claim, likely all colours at full"
+            }
+        },
+        "par": {
+            "code": "UP-PL5403",
+            "identified": "EXACT (power and DMX not published)",
+            "product": "UPlight UP-PL5403, IP65 54 x 3 W RGBW LED PAR",
+            "specs": {
+                "size_mm": {
+                    "value": [
+                        310,
+                        310,
+                        330
+                    ],
+                    "src": "D",
+                    "basis": "EXACT"
+                },
+                "weight_kg": {
+                    "value": 8,
+                    "src": "D",
+                    "basis": "EXACT"
+                },
+                "source": {
+                    "value": "54 x 3 W LEDs (R12 G14 B14 W14), 50,000-100,000 h",
+                    "src": "D",
+                    "basis": "EXACT"
+                },
+                "beam_deg": {
+                    "value": 15,
+                    "src": "D",
+                    "basis": "EXACT",
+                    "note": "8 or 25 deg lenses optional"
+                },
+                "throw_m": {
+                    "value": 30,
+                    "src": "D",
+                    "basis": "EXACT",
+                    "note": "the maker's 'projection distance'"
+                },
+                "ip": {
+                    "value": "IP65",
+                    "src": "D",
+                    "basis": "EXACT"
+                },
+                "power_w": {
+                    "value": 162,
+                    "src": null,
+                    "basis": "ASSUMED",
+                    "note": "not published; 54 x 3 W of LEDs"
+                },
+                "dmx_channels": {
+                    "value": null,
+                    "src": null,
+                    "basis": "ASSUMED",
+                    "note": "not published — OWED"
+                }
+            },
+            "look": "A round cast-aluminium can with deep radial cooling fins, a flat front bezel of 54 LEDs (~75% of the can), on a U-bracket of flat steel bar that folds into its own floor stand, two big black knobs at the pivots.",
+            "model": {
+                "archetype": "par",
+                "params": {
+                    "can_d_mm": 280,
+                    "can_l_mm": 220,
+                    "tilt_axis_mm": 205,
+                    "width_mm": 300,
+                    "foot_d_mm": 200,
+                    "window_mm": 210,
+                    "fins": 16
+                }
+            },
+            "photometry": {
+                "lux": 11000,
+                "at_m": 1,
+                "beam_deg": 25,
+                "src": "COLORFUL-54X3",
+                "basis": "EQUIVALENT",
+                "centre": "full white; the page does not tie the lux to an angle — 25 deg (its standard lens) ASSUMED",
+                "caveat": "1 m is barely far-field for a ~200 mm LED array, so candela from it is an upper estimate",
+                "note": "no brand datasheet with lux for a 54 x 3 W PAR found (3 searches)"
+            }
+        },
+        "laser": {
+            "code": "UP-LA40WF",
+            "identified": "NOT FOUND — modelled on an EQUIVALENT",
+            "product": "equivalent: Blue Sea BLLO-RGB40, 40 W RGB animation laser, IP65",
+            "specs": {
+                "size_mm": {
+                    "value": [
+                        420,
+                        555,
+                        235
+                    ],
+                    "order": "front W x length x front H (published 555 x 420 x 235 without handle)",
+                    "src": "BLUESEA",
+                    "basis": "EQUIVALENT"
+                },
+                "weight_kg": {
+                    "value": 35,
+                    "src": "BLUESEA",
+                    "basis": "EQUIVALENT"
+                },
+                "source": {
+                    "value": "RGB diodes: R 10 W, G 14 W, B 16 W optical",
+                    "src": "BLUESEA",
+                    "basis": "EQUIVALENT"
+                },
+                "divergence_mrad": {
+                    "value": 1.3,
+                    "src": "BLUESEA",
+                    "basis": "EQUIVALENT",
+                    "note": "'< 1.3 mrad'"
+                },
+                "power_w": {
+                    "value": 1200,
+                    "src": "BLUESEA",
+                    "basis": "EQUIVALENT"
+                },
+                "ip": {
+                    "value": "IP65",
+                    "src": "BLUESEA",
+                    "basis": "EQUIVALENT"
+                },
+                "control": {
+                    "value": "DMX / FB4 / Beyond",
+                    "src": "BLUESEA",
+                    "basis": "EQUIVALENT"
+                }
+            },
+            "look": "A black box, wider than tall, a raised hood at the top centre of the front face with a small output window, a vent grille across the front, in a U-bracket with side locking knobs.",
+            "model": {
+                "archetype": "laser",
+                "compare": [
+                    "Head"
+                ],
+                "params": {
+                    "box_mm": [
+                        420,
+                        235,
+                        555
+                    ],
+                    "tilt_axis_mm": 330,
+                    "bracket_gap_mm": 30,
+                    "hood_mm": [
+                        110,
+                        90
+                    ],
+                    "window_mm": [
+                        60,
+                        50
+                    ]
+                }
+            },
+            "photometry": {
+                "note": "a laser is not a lamp with a candela figure: 40 W optical from a 6-10 mm aperture, divergence < 1.3 mrad (BLUESEA). Its drawn beam's air brightness is set by hand (the rig's airFixed).",
+                "src": "BLUESEA",
+                "basis": "EQUIVALENT"
+            }
+        },
+        "co2": {
+            "code": "UP-Q108S",
+            "identified": "NOT FOUND — modelled on an EQUIVALENT",
+            "product": "equivalent: MagicFX CO2 Jet II",
+            "specs": {
+                "size_mm": {
+                    "value": [
+                        231,
+                        200,
+                        125
+                    ],
+                    "src": "MAGICFX",
+                    "basis": "EQUIVALENT",
+                    "note": "axis order not stated; modelled standing, 200 W x 125 D x 231 H"
+                },
+                "weight_kg": {
+                    "value": 4.2,
+                    "src": "MAGICFX",
+                    "basis": "EQUIVALENT"
+                },
+                "power_w": {
+                    "value": 20,
+                    "src": "MAGICFX",
+                    "basis": "EQUIVALENT"
+                },
+                "plume_m": {
+                    "value": 8,
+                    "src": "MAGICFX",
+                    "basis": "EQUIVALENT"
+                },
+                "co2_kg_per_s": {
+                    "value": 0.5,
+                    "src": "MAGICFX",
+                    "basis": "EQUIVALENT"
+                }
+            },
+            "look": "A compact box on an L-bracket, a round nozzle pipe standing out of a collar, a hose inlet on the side.",
+            "model": {
+                "archetype": "co2-jet",
+                "compare": [
+                    "Body"
+                ],
+                "compareNote": "the published size is the jet body; the model adds its L-bracket and nozzle (part Mount)",
+                "params": {
+                    "box_mm": [
+                        200,
+                        125,
+                        231
+                    ]
+                }
+            }
+        },
+        "spark": {
+            "code": "UP-YH600F",
+            "identified": "NOT FOUND — modelled on an EQUIVALENT",
+            "product": "equivalent: Showven Sparkular (cold spark machine)",
+            "specs": {
+                "size_mm": {
+                    "value": [
+                        200,
+                        218,
+                        305
+                    ],
+                    "order": "W x D x H",
+                    "src": "SHOWVEN",
+                    "basis": "EQUIVALENT",
+                    "note": "OFL-SPARKULAR gives 200 x 215 x 285 (W x H x D)"
+                },
+                "weight_kg": {
+                    "value": 8.5,
+                    "src": "SHOWVEN",
+                    "basis": "EQUIVALENT"
+                },
+                "power_w": {
+                    "value": 500,
+                    "src": "SHOWVEN",
+                    "basis": "EQUIVALENT",
+                    "note": "the code's '600' suggests a 600 W generic unit"
+                },
+                "spark_height_m": {
+                    "value": [
+                        1.5,
+                        5
+                    ],
+                    "src": "SHOWVEN",
+                    "basis": "EQUIVALENT"
+                },
+                "dmx_channels": {
+                    "value": [
+                        2
+                    ],
+                    "src": "SHOWVEN",
+                    "basis": "EQUIVALENT"
+                }
+            },
+            "look": "An upright black box with softly rounded vertical edges, the spark outlet on its top face.",
+            "model": {
+                "archetype": "spark-machine",
+                "params": {
+                    "box_mm": [
+                        200,
+                        218,
+                        305
+                    ],
+                    "nozzle_d_mm": 40
+                }
+            }
+        },
+        "smoke": {
+            "code": "UP-YZ31P",
+            "identified": "NOT FOUND — modelled on an EQUIVALENT (wattage unknown)",
+            "product": "equivalent: Antari Z-1500 III fog machine",
+            "specs": {
+                "size_mm": {
+                    "value": [
+                        674,
+                        235,
+                        278
+                    ],
+                    "order": "L x W x H",
+                    "src": "ANTARI",
+                    "basis": "EQUIVALENT"
+                },
+                "weight_kg": {
+                    "value": 13.3,
+                    "src": "ANTARI",
+                    "basis": "EQUIVALENT"
+                },
+                "power_w": {
+                    "value": 1500,
+                    "src": "ANTARI",
+                    "basis": "EQUIVALENT"
+                },
+                "tank_l": {
+                    "value": 6,
+                    "src": "ANTARI",
+                    "basis": "EQUIVALENT"
+                },
+                "fluid_ml_per_min": {
+                    "value": 150,
+                    "src": "ANTARI",
+                    "basis": "EQUIVALENT"
+                },
+                "dmx_channels": {
+                    "value": [
+                        1
+                    ],
+                    "src": "ANTARI",
+                    "basis": "EQUIVALENT"
+                }
+            },
+            "look": "A long grey box with a black front cap and a round nozzle in it, a white fluid tank and two carry handles on top.",
+            "model": {
+                "archetype": "smoke-machine",
+                "params": {
+                    "box_mm": [
+                        235,
+                        674,
+                        200
+                    ],
+                    "nozzle_d_mm": 50
+                }
+            }
+        },
+        "strobe": {
+            "code": "EXT-STROBE",
+            "identified": "NOT FOUND — not on the rental house's list (a line from another supplier); a planning type modelled on an EQUIVALENT",
+            "product": "equivalent: Martin Atomic 3000 LED (alternatives on the versions' equipment lines: GLP JDC2 IP, SGM PALCO Z-FX)",
+            "specs": {
+                "size_mm": {
+                    "value": [
+                        425,
+                        245,
+                        240
+                    ],
+                    "order": "W x L x H",
+                    "src": "MARTIN-A3K",
+                    "basis": "EQUIVALENT",
+                    "note": "incl. the mounting bracket"
+                },
+                "weight_kg": {
+                    "value": 7.8,
+                    "src": "MARTIN-A3K",
+                    "basis": "EQUIVALENT"
+                },
+                "power_w": {
+                    "value": 740,
+                    "src": "MARTIN-A3K",
+                    "basis": "EQUIVALENT",
+                    "note": "maximum; 663 W typical"
+                },
+                "dmx_channels": {
+                    "value": [
+                        4,
+                        3,
+                        14
+                    ],
+                    "src": "MARTIN-A3K",
+                    "basis": "EQUIVALENT",
+                    "note": "4ch is the Atomic 3000 (discharge) compatible mode — listed first as the planning default"
+                },
+                "beam_deg": {
+                    "value": 60,
+                    "src": null,
+                    "basis": "ASSUMED",
+                    "note": "Martin publishes no beam angle on the product page; a wide LED plate, 60 deg ASSUMED for the drawing and the candela — OWED from the user manual"
+                },
+                "ip": {
+                    "value": "IP20",
+                    "src": "MARTIN-A3K",
+                    "basis": "EQUIVALENT"
+                }
+            },
+            "look": "A flat black box, a long rectangular window of white LEDs across its face, on a U-bracket of flat steel that is also its floor stand.",
+            "model": {
+                "archetype": "strobe",
+                "params": {
+                    "face_w_mm": 360,
+                    "face_h_mm": 230,
+                    "depth_mm": 150,
+                    "tilt_axis_mm": 140,
+                    "window_mm": [
+                        330,
+                        150
+                    ],
+                    "fins": 6,
+                    "foot_d_mm": 240
+                },
+                "note": "At home the face looks straight up (the builder's frame); the maker measures it facing forward on its bracket, so the comparison with the datasheet is made with the head tilted 90 deg (datasheet_tilt_deg), and the head is exported at home.",
+                "datasheet_tilt_deg": 90
+            },
+            "photometry": {
+                "flux_lm": 180000,
+                "beam_deg": 60,
+                "src": "MARTIN-A3K",
+                "basis": "EQUIVALENT",
+                "note": "flux from the maker; the angle ASSUMED (see specs.beam_deg), so the candela is a planning figure"
+            }
+        },
+        "blinder": {
+            "code": "EXT-BLINDER",
+            "identified": "NOT FOUND — not on the rental house's list (a line from another supplier); a planning type modelled on an EQUIVALENT",
+            "product": "equivalent: Chauvet Professional STRIKE 4 (alternatives on the versions' equipment lines: Elation DTW Blinder 700 IP, Chauvet STRIKE Array 2)",
+            "specs": {
+                "size_mm": {
+                    "value": [
+                        362,
+                        163,
+                        362
+                    ],
+                    "order": "W x D x H",
+                    "src": "CHAUVET-STRIKE4",
+                    "basis": "EQUIVALENT"
+                },
+                "weight_kg": {
+                    "value": 8.7,
+                    "src": "CHAUVET-STRIKE4",
+                    "basis": "EQUIVALENT"
+                },
+                "power_w": {
+                    "value": 286,
+                    "src": "CHAUVET-STRIKE4",
+                    "basis": "EQUIVALENT",
+                    "note": "at 230 V"
+                },
+                "dmx_channels": {
+                    "value": [
+                        1,
+                        3,
+                        4,
+                        9
+                    ],
+                    "src": "CHAUVET-STRIKE4",
+                    "basis": "EQUIVALENT"
+                },
+                "beam_deg": {
+                    "value": 49,
+                    "src": "CHAUVET-STRIKE4",
+                    "basis": "EQUIVALENT",
+                    "note": "field 79 deg"
+                },
+                "ip": {
+                    "value": "IP20",
+                    "src": "CHAUVET-STRIKE4",
+                    "basis": "EQUIVALENT"
+                }
+            },
+            "look": "A square black head with four round warm-white cells in a 2 x 2 grid, on a U-bracket that is its stand — the LED descendant of the 4-lite tungsten audience blinder.",
+            "model": {
+                "archetype": "blinder",
+                "params": {
+                    "face_w_mm": 300,
+                    "face_h_mm": 320,
+                    "depth_mm": 110,
+                    "tilt_axis_mm": 175,
+                    "cells": [
+                        2,
+                        2
+                    ],
+                    "cell_d_mm": 112,
+                    "fins": 5,
+                    "foot_d_mm": 150
+                },
+                "note": "At home the face looks straight up (the builder's frame); the maker measures it facing forward on its bracket, so the comparison with the datasheet is made with the head tilted 90 deg (datasheet_tilt_deg), and the head is exported at home.",
+                "datasheet_tilt_deg": 90
+            },
+            "photometry": {
+                "lux": 999,
+                "at_m": 5,
+                "beam_deg": 49,
+                "src": "CHAUVET-STRIKE4",
+                "basis": "EQUIVALENT"
+            }
+        },
+        "hazer": {
+            "code": "EXT-HAZER",
+            "identified": "NOT FOUND — not on the rental house's list (a line from another supplier); a planning type modelled on an EQUIVALENT",
+            "product": "equivalent: Antari HZ-1000 (alternatives on the versions' equipment lines: Look Solutions Unique 2.1, Smoke Factory Tour-Hazer II)",
+            "specs": {
+                "size_mm": {
+                    "value": [
+                        690,
+                        510,
+                        610
+                    ],
+                    "order": "L x W x H",
+                    "src": "ANTARI-HZ1000",
+                    "basis": "EQUIVALENT"
+                },
+                "weight_kg": {
+                    "value": 74.6,
+                    "src": "ANTARI-HZ1000",
+                    "basis": "EQUIVALENT"
+                },
+                "power_w": {
+                    "value": 1150,
+                    "src": "ANTARI-HZ1000",
+                    "basis": "EQUIVALENT"
+                },
+                "tank_l": {
+                    "value": 6.4,
+                    "src": "ANTARI-HZ1000",
+                    "basis": "EQUIVALENT"
+                },
+                "fluid_ml_per_min": {
+                    "value": 2.2,
+                    "src": "ANTARI-HZ1000",
+                    "basis": "EQUIVALENT",
+                    "note": "at 100 % output"
+                },
+                "dmx_channels": {
+                    "value": [
+                        2
+                    ],
+                    "src": "ANTARI-HZ1000",
+                    "basis": "EQUIVALENT"
+                }
+            },
+            "look": "A large grey box on castors-height feet, a round nozzle in its front, the fluid tank on top.",
+            "model": {
+                "archetype": "hazer",
+                "params": {
+                    "box_mm": [
+                        510,
+                        690,
+                        470
+                    ],
+                    "nozzle_d_mm": 70
+                }
+            }
+        }
+    },
+    "modelsLicence": {
+        "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)",
+        "author": "built by Claude (Anthropic) for di.iiii, 2026-09-28, from the datasheet dimensions and the makers' photos",
+        "note": "Our own geometry, not the makers' CAD, not GDTF and not derived from any 3D file; the makers' names and model codes are used only to identify what is modelled."
+    },
+    "photometryMethod": "Every value is a maker's claim for an EQUIVALENT fixture (no UPlight page publishes lux or lumens: 0 occurrences across 38 store listings and every pro-uplight.com page, checked 2026-09-28). A lux figure is the centre of the beam at the stated distance and angle; candela = lux x distance^2. How the rig uses these: scripts/place/rig-lib.mjs 'PHOTOMETRY' and scripts/place/README.md 'Photometry'."
+}

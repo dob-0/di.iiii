@@ -1,0 +1,146 @@
+{
+  "site": "MOXIR hall, Charentsavan. Owner's pin 40.406524, 44.636560 (inside span 3).",
+  "date": "2026-09-28",
+  "frame": "x along hall, y across, z up from floor; metres. hall.py builds the nave (span 3) centred on x = 0 with the entry (NW) end at +Z.",
+  "supersedes": "moxir-hall-dims-2026-09-27.json (pitched Warren trusses, a ridge lantern, 15 bays, side aisles: all wrong against the photographs and the 2020 satellite image)",
+  "span_m": 24.0,
+  "pitch_m": 6.0,
+  "bays": 18,
+  "length_m": 108.0,
+  "crane_rail_h_m": 7.6,
+  "truss_bottom_h_m": 11.0,
+  "truss_top_h_m": 13.5,
+  "ridge_h_m": 17.0,
+  "lantern_w_m": 12.0,
+  "column_w_m": 0.5,
+  "column_d_m": 0.8,
+  "upper_column_d_m": 0.45,
+  "roof_type": "space_frame_flat",
+  "space_frame_module_m": 6.0,
+  "space_frame_depth_m": 2.5,
+  "lantern_h_m": 3.5,
+  "lantern_segments_m": [
+    [
+      -45.75,
+      -7.25
+    ],
+    [
+      7.25,
+      45.75
+    ]
+  ],
+  "lantern_spans": [
+    0,
+    1
+  ],
+  "neighbour_spans": {
+    "left": 1,
+    "right": 2
+  },
+  "column_head": "two_sided_console",
+  "column_head_width_m": 1.9,
+  "crane_girders_each_row": 2,
+  "crane_girder_depth_m": 0.9,
+  "expansion_joint_m": 0.0,
+  "paired_columns_at_joint": true,
+  "ranges": {
+    "bays": [
+      17,
+      18
+    ],
+    "length_m": [
+      105,
+      109
+    ],
+    "crane_rail_h_m": [
+      6.6,
+      8.4
+    ],
+    "truss_bottom_h_m": [
+      10.2,
+      11.8
+    ],
+    "truss_top_h_m": [
+      13.1,
+      14.0
+    ],
+    "ridge_h_m": [
+      15.5,
+      18.0
+    ],
+    "lantern_w_m": [
+      9.5,
+      12.5
+    ],
+    "lantern_h_m": [
+      2.5,
+      4.0
+    ],
+    "space_frame_module_m": [
+      6.0,
+      6.0
+    ],
+    "space_frame_depth_m": [
+      2.1,
+      3.0
+    ],
+    "column_head_width_m": [
+      1.6,
+      2.2
+    ],
+    "column_w_m": [
+      0.4,
+      0.6
+    ],
+    "column_d_m": [
+      0.5,
+      0.8
+    ],
+    "crane_girder_depth_m": [
+      0.8,
+      1.2
+    ]
+  },
+  "confidence": {
+    "span_m": "high (satellite: 4 spans of 24 m; photos: span/pitch 3.96)",
+    "pitch_m": "medium-high",
+    "bays": "medium (satellite roof 106.5 m, grid-snapped to 18 x 6)",
+    "length_m": "medium",
+    "crane_rail_h_m": "low-medium (disputed)",
+    "truss_bottom_h_m": "medium (bottom chord of the space frame)",
+    "truss_top_h_m": "medium (top chord = deck)",
+    "ridge_h_m": "low-medium (lantern top; shadow ratio)",
+    "lantern_w_m": "medium (satellite)",
+    "lantern_segments_m": "medium (satellite; centred on the joint, see notes)",
+    "space_frame_module_m": "medium-high (2026-09-28 hall fix): one bottom-chord node per column, 6 m = the pitch — 035 one V of diagonals per bay along the row; 021 one star node per bay; 1c3956d1 two pyramids across the 12 m lantern opening. The 3 m grid the v2 model drew is the LANTERN's own lighter frame (035/023: four panels across 12 m), now drawn only there (lantern_module_m).",
+    "space_frame_depth_m": "medium",
+    "column_head_width_m": "GUESS (form seen, size not measured)",
+    "column_w_m": "GUESS",
+    "column_d_m": "GUESS",
+    "crane_girder_depth_m": "GUESS",
+    "space_frame_member_m": "GUESS by eye against the column (0.5 m) in 021/1c3956d1: chords ~0.2-0.25 m, diagonals ~0.15 m, star gussets ~0.9 m; not measured"
+  },
+  "notes": [
+    "Roof: a flat steel double-layer space frame (square-on-square offset grid of pyramids, star gusset nodes, corrugated deck on the top chords), photos 017, 020, 021, 023, 024, 034, 035. Bottom chord 11.0 m, top chord 13.5 m. The 'Kislovodsk' (TsNIISK) 3 x 3 m block at 2.12 m depth is a likely family — a GUESS to verify.",
+    "Lanterns: raised flat-top box lanterns 12 m wide, ~3.5 m above the deck, over spans 2 and 3 only, each line split in two ~38.5 m segments with a ~14.5 m gap at the expansion joint (Esri Wayback 37890, Maxar WV-3 2020-10-30). The satellite put the gap centre at v = -2 m from the roof centre; the roof edge and the 108 m grid disagree by 1.5 m, so the joint is taken on the grid centre line (paired columns, Soviet practice: each 500 mm off the line) and the segments are centred on it: setback 8.25 m from the end grid lines (satellite 7-8.5).",
+    "Columns: precast concrete, a solid lower shaft; at crane level the head flares SYMMETRICALLY across the hall with 45-deg chamfers (Y / goblet), one steel crane girder on each side, a centred upper column to the space frame. Not flared along the row (photo 038).",
+    "Crane runway: grey steel plate girders with web stiffeners (photo 004 right), two per inner row, a handrail along the nave-side girder.",
+    "Walls: no nave wall, no clerestory, no aisles — the four spans share one flat roof. Outer long walls only at the building edge (concrete panels, 3 ribbon window bands). Low block walls ~3 m in some bays.",
+    "Heights and the span/pitch ratio: carried over from moxir-hall-dims-2026-09-27.json (VGGT + perspective); the camera height fitted on photo 032 on 2026-09-28 (6.9 m, see the features file) agrees with VGGT's 7.3 m within 6%.",
+    "2026-09-28 hall fix (owner: 'so fix all make it right right'): the space frame is BIG — 6 x 6 m square pyramids 2.5 m deep (the chord planes 11.0/13.5 m, VGGT), star gusset nodes at every bottom node, heavy chords; the lantern keeps its own 3 m frame. v2 drew a thin 3 m lattice everywhere (wrong: the photos' module is the column pitch)."
+  ],
+  "sources": {
+    "spec": "the architecture correction of 2026-09-28 (session scratchpad hall-arch/spec.json: satellite profiles, photo evidence crops ev_*.jpg)",
+    "imagery": "Esri World Imagery Wayback release 37890 (WB_2023_R03), Maxar WorldView-3, 2020-10-30 — Esri, Maxar, Earthstar Geographics; internal measurement only",
+    "grid": "GOST 23838-89 (spans 18/24/30 m, pitch 6/12 m): https://www.vashdom.ru/gost/23838-89/",
+    "model": "VGGT (Wang et al., CVPR 2025), weights facebook/VGGT-1B @ 860abec7 (CC BY-NC 4.0)"
+  },
+  "space_frame_member_m": {
+    "bottom": 0.24,
+    "top": 0.2,
+    "diagonal": 0.16,
+    "lantern": 0.12
+  },
+  "space_frame_node_m": 0.9,
+  "lantern_module_m": 3.0
+}

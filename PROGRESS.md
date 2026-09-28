@@ -215,6 +215,18 @@ two bar tests. The mock now carries them. Gate on the batch: build ok; vitest 63
 ## 2026-09-28 — batch: the standby host serves both tiers and pulls its own deploys; uptime checked from outside
 
 - Lands #582 (feat/mac-standby) and #581 (chore/outside-uptime) together; each keeps its own note.
+## 2026-09-28 — the lighting desk takes a console's Art-Net and sACN
+
+- `/light` now receives Art-Net 4 (ArtDmx, ArtPoll → ArtPollReply as StVisual) and sACN E1.31-2018
+  (multicast + unicast, priority, §6.7.2 sequence, stream-terminated, 2.5 s loss). HTP/LTP per
+  universe, follow-the-console or HTP with the desk, hold/release on loss, blackout wins, no echo on
+  the arriving protocol. Off by default; binds only the ticked interfaces. Setup → Input + `in:` pill.
+- Files: `serverXR/src/lighting/dmxin.js` (pure), `dmxin-net.js` (sockets), `desk.js` (wiring, routes
+  `/api/input`, `/api/input/release`), `engine.js` (`applyInput`), `artnet.js` (last frame sent, for
+  self-detection), UI in `ui/`. Tests `tests/test-dmxin.js`; bench `tests/bench-input.js`; sender
+  `tests/dmx-send.js`. Docs: LIGHTING_DESK.md → "Input" (ports, merge rules, grandMA3 steps, numbers).
+- Measured: 44 Hz × 3 universes × 60 s, 0 lost either protocol; packet→state p50 0.04 ms in process.
+  Untested against a real console; sACN OUTPUT universe-0 bug noted as owed.
 
 ## 2026-09-27 — the front door links to /support
 
@@ -331,6 +343,114 @@ two bar tests. The mock now carries them. Gate on the batch: build ok; vitest 63
   #585 a full bar keeps its names off the place names · #586 new-project row wraps on a phone.
 - Conflicts: appended known-fixes rows (union), and two new checks at one spot in the desk's
   `tests/test-wiring.js` (both kept).
+## 2026-09-28 — the equipment list as a game inventory (`/{space}/equipment/{project}`, E in build mode)
+
+- Owner: "we will not use all the devices … a place where we can add and delete the devices",
+  then "like minecraft … pick and create … real alternatives … what is what". The rental list
+  (`components.rentalList`) became the show's equipment list: lines from the rental house,
+  own or another supplier; non-DMX items (node, cables, truss); show types from the Open
+  Fixture Library through the desk's import; the whole price list and its terms; rental days
+  costed by the sheet's own rule (day 1 full, +50%/day, held to its 2-day/3-day/week columns).
+- Inventory: tiles per device, grouped; the item card (our Blender render or a Commons photo,
+  what it is, in the show, needs, specs, real alternatives, sources; a looping preview); take /
+  skip / stepper. 30 catalogue entries (all 25 price-list codes + hazer, node, truss, tower,
+  deck), every line sourced or said owed (`items.test.js`). Lowering below what is placed asks:
+  remove the last placed, pick, or keep flagged "over the order" (dashed on plot and tags).
+- E opens it in build mode (lowering moved to Z); drag a tile to the hotbar or "to hotbar".
+  Order tab: totals, CSV, one-page A4 order.
+- MOXIR (own stack :4395/:5395): PARs 50 → 24 (last 26 removed), smoke machines off (desk
+  42 → 38), MDG ATMe ×2 from OFL dealt → U1.489/492, Art-Net node as an item; A/B/C/patch sheet
+  agree (72 fixtures, 40 patched); order 1,057,000 AMD for 17.10. Previews 60 fps on the 3080;
+  one GPU run hit 97 °C and was stopped by the guard.
+- Owed: the owner's pick on his own screen; 12 pictures; UP-236 maker; MDG power 715 vs 1400 W
+  (both shown); a real phone; `projectContracts` fixture test fails since the base (#594).
+  Method: `RIG_BUILD.md` §13; note `docs/ai/sessions/feat-rig-equipment.md`.
+
+## 2026-09-28 — view A of the rig builder: build it in the room, first person (and the crew link)
+
+- `/{space}/build/{project}`: the walker's own room; B turns walking into building. A hotbar
+  (1–0 / wheel) of truss 3/2/1 m, tower, deck and the rental list's fixtures with their
+  counts; a dashed ghost where `snap()` will put the piece; click places, right-click
+  removes, R turns, Q/E raise and lower; stacking by aiming at what you build on. Every write
+  is the plot's ops; auto-patch as in the Studio; tags `#36 U2.025` in the air, `!` dashed on
+  a conflict; the plot's inspector for exact values (opens on Esc after placing). Lamps get
+  instanced bodies posed by `fixture-lib.mjs`. Phone: place / del / turn / up / dn under one
+  thumb, swiped hotbar. `/{space}/crew/{project}`: the same room read only, ungated.
+- MOXIR on an own stack (:4391/:5391, a copy of the centred space): a second 6 m truss built by
+  hand on two towers, four UP-250BSW hung (12/12, the fifth refused), patched #43–#46
+  U2.169–241, a typed clash shown on the lamps, crew view as a second account; the plot and
+  the cards show the same. 60 fps desktop and phone on the RTX 3080; 8 real lights of 90.
+- Fixed: every rig piece and lamp idle-floated in walk mode (known-fixes; guard seen failing).
+- Owed: LiveProjectScene asks WebGL for `high-performance`, which ANGLE/Vulkan under PRIME
+  refuses — the GPU runs rewrote it in the harness; whether his own browser hits it is
+  unverified. A real phone, his Wayland mouse, MVR download from the crew view, console in
+  (#599). Method: `docs/architecture/RIG_BUILD.md` §12; note `docs/ai/sessions/feat-rig-build-3d.md`.
+
+## 2026-09-28 — view C of the rig builder: the cards (rental list → positions → patch → looks)
+
+- `/{space}/cards/{project}`: the rental list as cards, `placed n / ordered m`. The list is
+  written from the rental house's spreadsheet and the show's order, with provenance, by
+  `scripts/rigbuild/rental.mjs`. The plot's key now says "3 left of 12" too.
+- Positions are derived from the pieces, the zones and the venue plan: truss, tower
+  ladders and tops, stage back line, flanks and pit, column bases, faces and outer columns,
+  dance-floor columns, backdrop. A card is dealt evenly and symmetrically, or in pairs from
+  the stage, as the plot's own lamps written as ops, then patched as one group. On a phone:
+  tap a card, tap a slot.
+- Patch bars, one per universe:
+  - hatched conflicts with "move to next free";
+  - dashed "to place";
+  - owed modes listed, never given an assumed footprint.
+- The rig's five looks sit on the project's own cue list (`mappingState.cues`, `fireCue`)
+  and on the desk as `rig-<look>`. GO puts a look on the desk's cue layer. The room poses
+  every lamp by the look's rules, a port of `rig-lib.mjs` `AIM_RULES` held equal to it by
+  test.
+- MOXIR on an own stack: 104/104 dealt; 46 patched; GO ×5 followed by the room on the RTX
+  3080 at 60 fps. The DMX values of a look are owed (no channel lists). Console GO waits for
+  #599. Details: `docs/ai/sessions/feat-rig-cards-cues.md`, RIG_BUILD.md §11.
+
+## 2026-09-28 — view B of the rig builder: the plot, the room beside it, sheet 1
+
+- `/{space}/plot/{project}`: the rig drawn from above like a lighting plot — the hall from
+  its own model data (`components.venuePlan`), columns, grid, zones, machinery, overhead
+  dashed; truss with lacing and run dimensions, towers, decks; one RP-2-style symbol per
+  fixture type at its mount with unit #, fixture # and universe.address; conflicts dashed
+  with "!"; key and title block from the patch sheet's own totals.
+- Rail tools select/truss/tower/deck/fixture/fx/measure with the base's `snap()` on the plan;
+  inspector for exact numbers; riders move with their truss; every write is an op; auto-patch
+  as in Studio. The Studio viewport beside it, selection shared; phone plan|room toggle and a
+  bottom sheet. Sheet 1 prints A3/A4 landscape at an ISO 5455 scale.
+- MOXIR on an own stack: run drawn, towers stood, two lamps hung and patched (#47 U1.445,
+  #48 U1.469), tower moved, conflict drawn. Fixed a base bug: a refused typed address was
+  written over. Details: `docs/ai/sessions/feat-rig-plot.md`, RIG_BUILD.md §10.
+
+## 2026-09-28 — build the rig: one data base under the three build views (A first person, B plot, C cards)
+
+- Owner chose all three sketches ("i want to a,b,c all"); the shared base went first, method
+  first: `docs/architecture/RIG_BUILD.md` maps the model onto GDTF 1.2, MVR 1.6, USITT RP-2 and
+  a Lightwright-style patch sheet, and says what A/B/C each read and write.
+- `src/rigbuild/`: fixture types generated from `fixtures.json` (modes = published footprints,
+  channel lists only where a source gives one), pieces + pure `snap()`, auto-patch (the desk
+  allocates with its own `nextFreeAddress`, the room records; conflicts and unknown modes
+  flagged, never resolved), the patch/power sheet at `/{space}/patch/{project}` (A4 print,
+  CSV), MVR + GDTF export and a validator against the pinned XSDs.
+- MOXIR patched: U1 001–468, U2 001–288; 56 fixtures mode-owed. MVR/GDTF validate; BlenderDMX
+  imports the patch right, the beam axis in its view is owed. Details: `docs/ai/sessions/feat-rig-base.md`.
+
+## 2026-09-27 — MOXIR: a modelled hall and a 90-lamp rig in it
+
+- `scripts/place/hall.py` builds a parametric Soviet crane hall from measured-from-photos dims
+  (`scripts/place/rigs/moxir-hall-dims-2026-09-27.json`, every value with range + confidence);
+  `import.mjs --replace` put it into `moxir` on the local tier (backup in
+  `~/di-backups/moxir-before-hall-2026-09-27/`, footage wall untouched).
+- `scripts/place/rig.mjs` hangs `rigs/moxir-2026-10-17.json` by rule against the grid: 90 lamps,
+  stage, truss, effect markers; laser and crane-clash checks. `rig-look.mjs` shoots named views and
+  counts frames without writing to the server.
+- New `components.beam.only`: cone without light. Measured why: 90 real spot lights are 0.1 fps on
+  SwiftShader and black with shadows (texture-unit ceiling); 12 real + 78 beam-only is 0.6.
+  The installed 0.4.16 drops the field — until the install is updated the local tier runs all 90
+  real — the owner found it "too laggy" (measured 1 fps on the RTX 3080). Now 8 real lamps, shadows
+  off, and on servers without `beam.only` the other beams baked into one mesh: 240 fps (vsync cap),
+  51 draw calls. Details: `docs/ai/sessions/feat-moxir-hall.md`, `scripts/place/README.md`.
 
 ## 2026-09-24 — click an object in a room to open its link
 

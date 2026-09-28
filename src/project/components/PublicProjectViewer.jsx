@@ -31,6 +31,8 @@ import { overlayButtonStyle, overlayCardStyle, quietPreviewFallbackStyle } from 
 import { consumeArriveWalking } from '../../components/arriveWalking.js'
 import { buildSpaceContentsPath } from '../../utils/spaceRouting.js'
 import { isEmbedRequest } from '../../utils/previewMode.js'
+import { hasRig } from '../../rigbuild/hasRigLamps.js'
+import RigVersionSwitch from '../../rigbuild/RigVersionSwitch.jsx'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -39,6 +41,12 @@ import { isEmbedRequest } from '../../utils/previewMode.js'
 // -- makes the code-mode page fetch and evaluate the whole three/fiber/drei/xr
 // chunk (~1.6MB raw, measured against first paint on /br_id_ge).
 const PublicProjectSceneSurface = lazyWithReload(() => import('./PublicProjectSceneSurface.jsx'), 'public-scene-surface')
+
+// The rig's steps row in the room (src/rigbuild/RoomRigSteps.jsx): loaded only when the
+// room holds a rig, so a space with none pays nothing for the rig code.
+const RoomRigSteps = lazyWithReload(() => import('../../rigbuild/RoomRigSteps.jsx'), 'room-rig-steps')
+// The room posed by the desk's live look (src/rigbuild/RoomLookFollower.jsx), same rule.
+const RoomLookFollower = lazyWithReload(() => import('../../rigbuild/RoomLookFollower.jsx'), 'room-look-follower')
 
 // di.iiii's one loading screen — black, one spinner, no drawn words
 // (LoadingScreen.jsx). The published face used to show its own lit text pill
@@ -196,7 +204,20 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     }, [reloadDocument])
 
     const document = state.document
+    // A room with a rig carries the rig's steps under the bar (owner, 2026-09-28: "make
+    // buttons in space that we can easy move in the workflow"). Where the bar is — a
+    // di.iiii on your own machine, where the rig is made and the desk runs — never on a
+    // published page a stranger opens (the owner's 2026-08-07 call: tool chrome clashed
+    // with published designs), a thumbnail or somebody else's page.
+    const roomHasRig = useMemo(() => hasRig(document?.entities || []), [document?.entities])
+    const showRigSteps = state.status === 'ready' && roomHasRig && localInstall.isLocal && !isPreview && !isEmbed
+    // What the room's own corner controls clear at the top: the bar, and the steps row.
+    const topClear = `calc(1rem${localInstall.isLocal ? ' + var(--sbar-h, 36px)' : ''}${showRigSteps ? ' + var(--sbar-h, 36px)' : ''})`
 
+    // While the desk plays one of the room's looks, the scene draws the lamps as the look
+    // poses them (RoomLookFollower); the document itself is never written.
+    const [lookEntities, setLookEntities] = useState(null)
+    const sceneDocument = useMemo(() => (document && lookEntities ? { ...document, entities: lookEntities } : document), [document, lookEntities])
     // A visitor is standing here, not authoring. Arming the gate is what makes
     // an `audio` entity silent until asked — see src/utils/roomSound.js. The
     // editor never arms it, so an author still hears what they place.
@@ -464,7 +485,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     <PublicProjectSceneSurface
                         projectId={projectId}
                         spaceId={resolvedRouteSpaceId}
-                        document={document}
+                        document={sceneDocument}
                         title={viewerTitle}
                         entryView={entryView}
                         navMode={navMode}
@@ -511,7 +532,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     style={{
                         ...overlayButtonStyle,
                         position: 'absolute',
-                        top: localInstall.isLocal ? 'calc(1rem + var(--sbar-h, 36px))' : '1rem',
+                        top: topClear,
                         right: navMode === 'orbit' && walkGateOpen ? '9.5rem' : '1rem',
                         zIndex: 20,
                         color: soundOn ? 'var(--di-cyan)' : undefined,
@@ -531,8 +552,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         position: 'absolute',
                         // Clears the surface bar when one is present — a control
                         // half under the platform's own chrome is worse than no
-                        // chrome at all.
-                        top: localInstall.isLocal ? 'calc(1rem + var(--sbar-h, 36px))' : '1rem',
+                        // chrome at all. The rig's steps row, when there is one, too.
+                        top: topClear,
                         right: '1rem',
                         zIndex: 20,
                     }}
@@ -540,6 +561,23 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 >
                     Walk / Fly
                 </button>
+            ) : null}
+
+            {roomHasRig && document && !showCodeView ? (
+                <Suspense fallback={null}>
+                    <RoomLookFollower document={document} onEntities={setLookEntities} />
+                </Suspense>
+            ) : null}
+
+            {/* A rig with versions (RIG_BUILD.md §15): a row of links to its siblings. Shown
+                only on a project that says it is one of a set — every other room is untouched. */}
+            {state.status === 'ready' && navMode === 'orbit' && !isPreview && !isEmbed ? (
+                <RigVersionSwitch
+                    spaceId={resolvedRouteSpaceId}
+                    projectId={projectId}
+                    entities={document?.entities || []}
+                    top={topClear}
+                />
             ) : null}
 
             {/* no route passes showProjectSwitcher since 2026-08-07 (owner call:
@@ -589,6 +627,19 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     spaceLabel={spaceLabel && spaceLabel !== 'di.iiii' ? spaceLabel : resolvedRouteSpaceId}
                     isLocalInstall
                 />
+            ) : null}
+
+            {showRigSteps ? (
+                <Suspense fallback={null}>
+                    <RoomRigSteps
+                        document={document}
+                        spaceId={resolvedRouteSpaceId}
+                        projectId={projectId}
+                        projectLabel={document?.projectMeta?.title || null}
+                        isLocalInstall={localInstall.isLocal}
+                        underBar={localInstall.isLocal}
+                    />
+                </Suspense>
             ) : null}
 
             {/* the loading screen is deliberately black and full-bleed, which is

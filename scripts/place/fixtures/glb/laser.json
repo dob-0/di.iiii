@@ -1,0 +1,46 @@
+{
+  "kind": "laser",
+  "code": "UP-LA40WF",
+  "glb": "laser.glb",
+  "builtBy": "scripts/place/fixtures/build_fixtures.py",
+  "scriptSha256": "cc332ec481c5bb2777541e37bf8025360366aa9b98720490aab93b6de4596b44",
+  "blender": "5.2.1 LTS",
+  "archetype": "laser",
+  "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+  "panY": 0.0,
+  "tiltY": 0.33,
+  "lensY": 0.6615,
+  "lensOffsetFront_m": 0.0525,
+  "motion": "tilt",
+  "parts": [
+    "Base",
+    "Yoke",
+    "Head",
+    "Lens"
+  ],
+  "sizeAtHome_mm": {
+    "width_x": 550,
+    "depth_z": 235,
+    "height_y": 661
+  },
+  "triangles": {
+    "Base": 12,
+    "Yoke": 108,
+    "Head": 188,
+    "Lens": 12,
+    "total": 320
+  },
+  "datasheetSize_mm": [
+    420,
+    555,
+    235
+  ],
+  "deviationFromDatasheet_pct": [
+    0.0,
+    0.0,
+    9.0
+  ],
+  "comparedParts": [
+    "Head"
+  ]
+}

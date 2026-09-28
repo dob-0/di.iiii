@@ -27,6 +27,8 @@ const SPINE_FILES = [
     'studio/styles/space-constellation.css',
     'kit/kit.css',
     'components/surfaceBar.css',
+    // The rig's steps row: a second row of the bar, written in the spine from its first line.
+    'rigbuild/rigSteps.css',
     'wiki/wiki.css',
     'studio/styles/studio-hub.css',
     'landing/landing.css',

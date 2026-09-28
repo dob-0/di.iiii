@@ -50,6 +50,32 @@ const getJson = async (call, url) => {
 const round = (n) => Math.round(Number(n) || 0)
 
 // The mirrored fixtures, from a patch (fixtures + profiles + roleKinds) and a DMX frame.
+const KNOWN_LIGHT_ROLES = new Set(['dimmer', 'r', 'g', 'b', 'w', 'a', 'uv', 'lime', 'y', 'warm', 'cool'])
+
+// The look the desk is playing on a layer (GET /light/api/dmx `looks`), highest priority
+// first: what a room following the desk poses by (src/rigbuild/looks.js).
+export const liveLooksOf = (looks) => (Array.isArray(looks) ? looks : [])
+    .filter((l) => l && typeof l.lookId === 'string' && Number(l.level) > 0)
+    .sort((a, b) => (Number(b.priority) || 0) - (Number(a.priority) || 0))
+    .map((l) => l.lookId)
+
+// The fade the top live look arrived with (GET /light/api/dmx `from`, `since`, `fadeMs`,
+// RIG_BUILD.md §15.6): which look it came from and when, as a time on THIS clock — so a
+// room can draw the lamps part-way between the two. `previous` keeps the answer stable
+// while the same firing is reported again (10 Hz), so nothing re-renders for it.
+export const lookFadeOf = (looks, previous = null, now = Date.now()) => {
+    const top = (Array.isArray(looks) ? looks : [])
+        .filter((l) => l && typeof l.lookId === 'string' && Number(l.level) > 0)
+        .sort((a, b) => (Number(b.priority) || 0) - (Number(a.priority) || 0))[0]
+    if (!top || !Number.isFinite(Number(top.since))) return null
+    const firedAt = now - Math.max(0, Number(top.since))
+    const fadeMs = Math.max(0, Number(top.fadeMs) || 0)
+    const from = typeof top.from === 'string' && top.from ? top.from : null
+    if (previous && previous.lookId === top.lookId && previous.from === from && previous.fadeMs === fadeMs
+        && Math.abs(previous.firedAt - firedAt) < 1000) return previous
+    return { lookId: top.lookId, from, fadeMs, firedAt }
+}
+
 export const mirrorFixtures = (patch, dmx) => {
     if (!patch) return []
     return (patch.fixtures || []).map((fixture) => {
@@ -59,9 +85,15 @@ export const mirrorFixtures = (patch, dmx) => {
             dmx,
             emitters: patch.roleKinds?.emitter
         })
+        // A profile whose channels are not known (a rig type whose channel list is owed:
+        // ch1…chN, RIG_BUILD.md §4.2) says nothing about colour or level — the room keeps
+        // what the document says rather than drawing it white at full.
+        const roles = patch.profiles?.[fixture.profile]?.channels || []
+        const known = roles.some((role) => KNOWN_LIGHT_ROLES.has(role) || (patch.roleKinds?.emitter || []).includes(role))
         return {
             id: fixture.id,
             index: fixture.index,
+            known,
             name: fixture.name,
             x: Number(fixture.x) || 0,
             y: Number(fixture.y) || 0,
@@ -103,7 +135,9 @@ export function createLightingMirror({ fetchImpl, doc } = {}) {
         present: true,
         fixtures: mirrorFixtures(patch, dmxFrame.dmx),
         master: dmxFrame.master,
-        blackout: Boolean(dmxFrame.blackout)
+        blackout: Boolean(dmxFrame.blackout),
+        looks: dmxFrame.looks || [],
+        lookFade: dmxFrame.lookFade || null
     })
 
     const stopPolling = () => {
@@ -147,7 +181,7 @@ export function createLightingMirror({ fetchImpl, doc } = {}) {
         try {
             const body = await getJson(call, lightingApiUrl('api/dmx'))
             fails = 0
-            dmxFrame = { dmx: body?.dmx || {}, master: body?.master ?? null, blackout: Boolean(body?.blackout) }
+            dmxFrame = { dmx: body?.dmx || {}, master: body?.master ?? null, blackout: Boolean(body?.blackout), looks: liveLooksOf(body?.looks), lookFade: lookFadeOf(body?.looks, dmxFrame.lookFade || null) }
             if (snapshot.present && watchers > 0 && patch) publishLive()
         } catch {
             fails += 1

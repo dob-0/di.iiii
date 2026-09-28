@@ -98,3 +98,19 @@ export const beamFadeColors = (positions, length) => {
  * room published before this existed keeps the air it had.
  */
 export const beamIsVisible = (beam) => beam?.visible === true
+
+/**
+ * Does this lamp put real light into the room? Yes, unless its beam is drawn
+ * AND marked `only` — the cone in the air with no three.js light behind it.
+ *
+ * Why it exists: every real SpotLight is a term in the shader of every lit
+ * pixel, and on top of that a shadow map each when shadows are on. A rig of
+ * 90 heads cannot run as 90 real lights (measured on MOXIR, 2026-09-27 —
+ * scripts/place/README.md, "The rig"), and a phone's WebGL refuses to compile
+ * a shader with that many at all. `only` lets a whole rig hang, every beam
+ * visible, while a chosen budget of lamps actually lights the room.
+ *
+ * An invisible beam marked `only` still casts: `only` is a statement about
+ * the beam, and a lamp with no beam and no light would be nothing at all.
+ */
+export const beamCastsLight = (beam) => !(beamIsVisible(beam) && beam?.only === true)

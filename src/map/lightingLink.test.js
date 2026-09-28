@@ -6,6 +6,7 @@ import { buildRawProjectPath } from '../raw/utils/rawRouting.js'
 import { buildMapPath } from './mapRouting.js'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import MapCueList from './MapCueList.jsx'
+import { RIG_STEPS, rigLightPath, rigStepPath } from '../rigbuild/rigTools.js'
 import {
     cueFadeMs,
     fetchLightScenes,
@@ -74,6 +75,26 @@ describe('the way back from the lighting desk', () => {
         expect(deskFrom.fromQuery(`?${search}`)).toEqual({ space: 'lab', project: 'first-piece', label: 'First Piece' })
         expect(deskFrom.fromQuery('?space=lab&project=first-piece')).toEqual({ space: 'lab', project: 'first-piece', label: 'first-piece' })
         expect(deskFrom.fromQuery('')).toBeUndefined()
+    })
+
+    // Opened from a rig page (the steps row's "light desk", &from=<step>), the way back is
+    // that page. The desk's copy of the steps is held to rigTools: same keys, same words,
+    // and each address the one the app's own builder makes.
+    it('leads back to the rig page that opened it', () => {
+        for (const step of RIG_STEPS) {
+            const search = rigLightPath({ spaceId: 'moxir', projectId: 'moxir-hall', label: 'MOXIR', from: step.key }).split('?')[1]
+            const from = deskFrom.fromQuery(`?${search}`)
+            expect(from.from).toBe(step.key)
+            const links = deskFrom.projectLinks(from)
+            expect(links.rig).toBe(rigStepPath(step.key, 'moxir', 'moxir-hall'))
+            expect(links.rigLabel).toBe(step.label)
+        }
+        expect(Object.keys(deskFrom.RIG_STEPS)).toEqual(RIG_STEPS.map((s) => s.key))
+        // anything else is ignored: the way back stays the Studio's
+        const odd = deskFrom.fromQuery('?space=moxir&project=moxir-hall&from=..%2Fevil')
+        expect(odd.from).toBeUndefined()
+        expect(deskFrom.projectLinks(odd).rig).toBeUndefined()
+        expect(deskFrom.fromQuery('?space=moxir&project=moxir-hall&from=studio').from).toBeUndefined()
     })
 
     it('never builds a way back out of an id that is not one', () => {
