@@ -248,3 +248,28 @@
 @media print { html.rigequip-print .rigequip-order { max-width: 180mm; box-sizing: border-box; } }
 .rigequip-card { overflow-wrap: anywhere; } .rigequip-card__part { min-width: 0; }
 .rigequip-pic figcaption a, .rigequip-card a { color: var(--ink); }
+
+/* The makers' photos, the gallery, the verification badge, the documents (§13.8). No colour:
+   the badge says its status by its drawing — solid for confirmed, outlined for probable,
+   dashed for an equivalent, faint for unknown. */
+.rigequip-pic__kind { font-weight: 700; color: var(--ink); }
+.rigequip-pic figcaption a { color: var(--soft); overflow-wrap: anywhere; }
+.rigequip-gallery { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 8px; }
+.rigequip-gallery__dot { width: 52px; height: 52px; min-width: 44px; min-height: 44px; padding: 2px; border: 1px solid var(--rule); background: var(--paper); border-radius: 2px; cursor: pointer; }
+.rigequip-gallery__dot.is-on { border: 2px solid var(--ink); }
+.rigequip-gallery__dot img { width: 100%; height: 100%; object-fit: contain; aspect-ratio: auto; }
+.rigequip-verified { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0; padding: 8px 16px; border-bottom: 1px solid var(--rule); font-size: 12px; }
+.rigequip-verified__badge { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 1px 6px; border: 1.5px solid var(--ink); }
+.rigequip-verified.is-confirmed .rigequip-verified__badge { background: var(--ink); color: var(--paper); }
+.rigequip-verified.is-equivalent .rigequip-verified__badge { border-style: dashed; }
+.rigequip-verified.is-unknown .rigequip-verified__badge { border-style: dashed; border-color: var(--faint); color: var(--soft); }
+.rigequip-verified__ev { font-size: 11px; color: var(--soft); }
+.rigequip-verified__ev a { color: var(--ink); }
+.rigequip-verified__note { flex: 1 1 100%; color: var(--soft); font-size: 11.5px; }
+.rigequip-docs ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.rigequip-docs a { color: var(--ink); }
+.rigequip-docs li > a { display: inline-block; min-height: 24px; }
+.rigequip-docs__rights { display: block; font-size: 10.5px; color: var(--soft); overflow-wrap: anywhere; }
+.rigequip-docs__rights a { color: var(--soft); }
+.rigequip-photolinks { margin: 0; padding: 6px 16px 8px; border-bottom: 1px solid var(--rule); font-size: 11.5px; }
+.rigequip-photolinks a { color: var(--ink); overflow-wrap: anywhere; display: inline-block; min-height: 24px; }
