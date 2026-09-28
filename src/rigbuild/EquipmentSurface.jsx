@@ -8,12 +8,11 @@ import { libraryWithShow } from './rental.js'
 import { equipmentCsv, FLAG_WORDS, FROM_WORDS } from './equipment.js'
 import { useEquipment } from './useEquipment.js'
 import { InventoryPanel, ReduceDialog, Stepper } from './Inventory.jsx'
-import { buildPatchSheetPath } from './patchRouting.js'
-import { buildPlotPath } from './plotRouting.js'
-import { buildCardsPath } from './cardsRouting.js'
-import { buildBuildPath } from './buildRouting.js'
 import { buildEquipmentPath } from './equipmentRouting.js'
 import { plotModel, titleTotals } from './plotModel.js'
+import { rigProgress } from './rigProgress.js'
+import RigBar from './RigSteps.jsx'
+import useLocalInstall from '../hooks/useLocalInstall.js'
 import './plot.css'
 import './cards.css'
 import './equipment.css'
@@ -162,6 +161,8 @@ export default function EquipmentSurface({ spaceId, projectId, library: baseLibr
     const apply = useCallback((ops) => applyLocalOps(ops), [applyLocalOps])
     const eq = useEquipment({ entities, library, apply })
     const sheetTotals = useMemo(() => titleTotals(plotModel({ entities, library, deskFlags: patch.flags, projectId }).sheet), [entities, library, patch.flags, projectId])
+    const localInstall = useLocalInstall()
+    const progress = useMemo(() => rigProgress({ entities, library, deskFlags: patch.flags, projectId }), [entities, library, patch.flags, projectId])
     const [pane, setPane] = useState(() => (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('view') === 'order' ? 'order' : 'inventory'))
 
     useEffect(() => {
@@ -199,16 +200,14 @@ export default function EquipmentSurface({ spaceId, projectId, library: baseLibr
                 </div>
                 {pane === 'order' ? <button type="button" onClick={() => download(`${projectId}-equipment.csv`, equipmentCsv(eq.model))}>CSV</button> : null}
                 {pane === 'order' ? <button type="button" onClick={print}>print A4</button> : null}
-                {!phone ? <a href={buildBuildPath(spaceId, projectId)}>build</a> : null}
-                {!phone ? <a href={buildPlotPath(spaceId, projectId)}>plot</a> : null}
-                {!phone ? <a href={buildCardsPath(spaceId, projectId)}>cards</a> : null}
-                {!phone ? <a href={buildPatchSheetPath(spaceId, projectId)}>patch sheet</a> : null}
             </nav>
         </header>
     )
 
     return (
-        <div className="rigplot rigequip-page">
+        <>
+        <RigBar spaceId={spaceId} projectId={projectId} projectLabel={title} here="equipment" progress={progress} isLocalInstall={localInstall.isLocal} />
+        <div className="rigplot rigequip-page has-rigbar">
             {header}
             <main className="rigequip-page__main">
                 {!state.hasLoaded ? <p className="rigplot-hint" style={{ padding: 16 }}>Reading the rig…</p> : null}
@@ -219,7 +218,6 @@ export default function EquipmentSurface({ spaceId, projectId, library: baseLibr
                     <>
                         <OrderPart eq={eq} title={title} venue={venue} sheetTotals={sheetTotals} />
                         {eq.pending ? <ReduceDialog pending={eq.pending} onAnswer={eq.answer} /> : null}
-                        {phone ? <p className="rigequip-foot rigequip-noprint" style={{ padding: '0 16px 24px' }}><a href={buildBuildPath(spaceId, projectId)}>build</a> · <a href={buildPlotPath(spaceId, projectId)}>plot</a> · <a href={buildCardsPath(spaceId, projectId)}>cards</a> · <a href={buildPatchSheetPath(spaceId, projectId)}>patch sheet</a></p> : null}
                     </>
                 ) : null}
             </main>
@@ -228,5 +226,6 @@ export default function EquipmentSurface({ spaceId, projectId, library: baseLibr
                 {patch.message ? <span className="rigplot-status__dim">desk · {patch.message}</span> : null}
             </div>
         </div>
+        </>
     )
 }

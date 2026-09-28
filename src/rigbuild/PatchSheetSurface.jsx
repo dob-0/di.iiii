@@ -5,6 +5,9 @@ import { TYPE_LIBRARY } from './types/index.js'
 import { libraryWithShow } from './rental.js'
 import { SHEET_CSS, patchCsv, powerCsv, renderSheetBody, sheetModel } from './sheet.js'
 import { buildPlotPath } from './plotRouting.js'
+import { rigProgress } from './rigProgress.js'
+import RigBar from './RigSteps.jsx'
+import useLocalInstall from '../hooks/useLocalInstall.js'
 
 // THE PATCH SHEET PAGE — /{space}/patch/{projectId}. docs/architecture/RIG_BUILD.md §3.
 //
@@ -80,6 +83,11 @@ export default function PatchSheetSurface({ spaceId, projectId, library: baseLib
     }, [])
 
     const title = state.document?.projectMeta?.title || projectId
+    const localInstall = useLocalInstall()
+    const progress = useMemo(() => {
+        const entities = state.document?.entities
+        return entities ? rigProgress({ entities, library: libraryWithShow(baseLibrary, entities), projectId }) : null
+    }, [state.document, baseLibrary, projectId])
     useEffect(() => {
         const previous = document.title
         document.title = `Patch sheet — ${title}`
@@ -98,6 +106,7 @@ export default function PatchSheetSurface({ spaceId, projectId, library: baseLib
     return (
         <div style={{ minHeight: '100vh', background: '#fff' }}>
             <style>{PAGE_CSS + SHEET_CSS}</style>
+            <RigBar spaceId={spaceId} projectId={projectId} projectLabel={title} here="patch" progress={progress} isLocalInstall={localInstall.isLocal} layout="flow" />
             <main className="rigsheet" aria-busy={state.status === 'loading'}>
                 {state.status === 'loading' ? <p>Reading the rig…</p> : null}
                 {state.status === 'error' ? <p role="alert">{state.error}</p> : null}

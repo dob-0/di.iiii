@@ -6,9 +6,9 @@ import { generateId } from '../shared/projectSchema.js'
 import { useRigAutoPatch } from '../studio/hooks/useRigAutoPatch.js'
 import { TYPE_LIBRARY } from './types/index.js'
 import { typeById } from './fixtureTypes.js'
-import { buildPatchSheetPath } from './patchRouting.js'
-import { buildPlotPath } from './plotRouting.js'
-import { buildEquipmentPath } from './equipmentRouting.js'
+import { rigProgress } from './rigProgress.js'
+import RigBar from './RigSteps.jsx'
+import useLocalInstall from '../hooks/useLocalInstall.js'
 import { countWords, libraryWithShow, rentalCounts, rentalOf } from './rental.js'
 import { symbolTable, shapePath } from './plotSymbols.js'
 import { plotData } from './sheet.js'
@@ -412,6 +412,9 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
     }, [undo, redo])
 
     const title = document_.projectMeta?.title || projectId
+    const localInstall = useLocalInstall()
+    const progress = useMemo(() => rigProgress({ entities, library, deskFlags: patch.flags, projectId }), [entities, library, patch.flags, projectId])
+    const rigBar = <RigBar spaceId={spaceId} projectId={projectId} projectLabel={title} here="cards" progress={progress} isLocalInstall={localInstall.isLocal} />
     useEffect(() => {
         const prev = document.title
         document.title = `Cards — ${title}`
@@ -511,9 +514,6 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
                 <button type="button" aria-pressed={pane === 'cards'} onClick={() => setPane('cards')}>cards</button>
                 <button type="button" aria-pressed={pane === 'room'} onClick={() => setPane('room')}>room</button>
             </div>
-            {!phone ? <a href={buildPlotPath(spaceId, projectId)}>plot</a> : null}
-            {!phone ? <a href={buildPatchSheetPath(spaceId, projectId)}>patch sheet</a> : null}
-            <a href={buildEquipmentPath(spaceId, projectId)}>equipment</a>
         </nav>
     )
 
@@ -526,14 +526,15 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
 
     if (phone) {
         return (
-            <div className={`rigplot rigcards rigcards--phone${pane === 'cards' && card ? ' has-sheet' : ''}`}>
+            <>
+            {rigBar}
+            <div className={`rigplot rigcards rigcards--phone has-rigbar${pane === 'cards' && card ? ' has-sheet' : ''}`}>
                 {header}
                 {pane === 'room' ? <div className="rigcards-roompane">{room}</div> : (
                     <main className="rigcards-main">
                         {cards}
                         {patchPart}
                         {cuePart}
-                        <p className="rigcards-foot"><a href={buildPlotPath(spaceId, projectId)}>plot</a> · <a href={buildPatchSheetPath(spaceId, projectId)}>patch sheet</a></p>
                     </main>
                 )}
                 {pane === 'cards' && card ? (
@@ -544,11 +545,14 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
                     </section>
                 ) : null}
             </div>
+            </>
         )
     }
 
     return (
-        <div className="rigplot rigcards">
+        <>
+        {rigBar}
+        <div className="rigplot rigcards has-rigbar">
             {header}
             {pane === 'room' ? <div className="rigcards-roompane">{room}</div> : (
                 <main className="rigcards-main rigcards-grid">
@@ -559,5 +563,6 @@ export default function CardsSurface({ spaceId, projectId, library: baseLibrary 
                 </main>
             )}
         </div>
+        </>
     )
 }
