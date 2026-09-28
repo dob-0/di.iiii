@@ -55,7 +55,22 @@ export const inventoryOf = (workbook) => {
     const hidden = workbook.sheets.find((s) => s.name === PRICE_DATA)
     const lookup = new Map()
     for (const r of rowsOf(hidden)) if (typeof r.E === 'string') lookup.set(r.E.trim(), { rate: r.D, stock: r.C, row: r.row })
-    return { items: out, lookup }
+    // The terms the sheet prints around the prices, each with its cell: the day rule
+    // (A2), delivery (row "Delivery, rigging & de-rig"), and the bulleted notes.
+    const terms = []
+    let extraDay = null
+    for (const r of rowsOf(sheet)) {
+        const a = typeof r.A === 'string' ? r.A.trim() : ''
+        if (!a) continue
+        if (/day 1 full rate/i.test(a) || a.startsWith('•')) terms.push({ text: a.replace(/^•\s*/, ''), cell: `${PRICE_LIST}!A${r.row}` })
+        else if (/^delivery/i.test(a)) terms.push({ text: `${a}: ${[r.C, r.E].filter((v) => typeof v === 'string' && v.trim()).join(' — ')}`, cell: `${PRICE_LIST}!A${r.row}:E${r.row}` })
+    }
+    for (const r of rowsOf(hidden)) if (r.row === 2 && Number.isFinite(r.H)) extraDay = r.H
+    const quote = workbook.sheets.find((s) => /^Quote\b/.test(s.name))
+    for (const r of rowsOf(quote)) {
+        if (typeof r.E === 'string' && /^delivery/i.test(r.E) && Number.isFinite(r.G)) terms.push({ text: `the quote calculator's delivery, rigging & de-rig default: ${r.G} (${r.H || 'one-off'})`, cell: `${quote.name}!G${r.row}` })
+    }
+    return { items: out, lookup, terms, extraDay }
 }
 
 /**
@@ -63,7 +78,7 @@ export const inventoryOf = (workbook) => {
  * @param {{ workbook, order, file: string, sha256: string }} args
  */
 export const rentalListFrom = ({ workbook, order, file, sha256 }) => {
-    const { items, lookup } = inventoryOf(workbook)
+    const { items, lookup, terms, extraDay } = inventoryOf(workbook)
     const missing = order.items.filter((line) => !items.has(line.code))
     if (missing.length) throw new Error(`not in the spreadsheet's "${PRICE_LIST}": ${missing.map((l) => l.code).join(', ')}`)
     const list = {
@@ -88,7 +103,17 @@ export const rentalListFrom = ({ workbook, order, file, sha256 }) => {
                 source: `${PRICE_LIST}!A${inv.row}:E${inv.row} · ordered as "${line.said}"`,
                 ...(notes.length ? { note: notes.join('; ') } : {})
             }
-        })
+        }),
+        // Since the equipment list (RIG_BUILD.md §13): the day rule, the whole price list
+        // (what else the house holds, with stock and rate — "add a line" offers it) and
+        // the sheet's terms, each with its cells.
+        rule: { extraDay: extraDay ?? 0.5, source: `${PRICE_LIST}!A2 "Day 1 full rate; each additional day 50%." · "${PRICE_DATA}"!H2 = ${extraDay ?? '?'}` },
+        catalogue: [...items.values()].map((inv) => ({
+            code: inv.code, label: inv.label, details: inv.details, category: inv.category,
+            ...(inv.stock != null ? { stock: inv.stock } : {}), ...(inv.rate != null ? { rate: inv.rate } : {}),
+            cells: `${PRICE_LIST}!A${inv.row}:E${inv.row}`
+        })),
+        terms
     }
     const normal = normalizeRentalList(list)
     if (!normal || normal.items.length !== order.items.length) throw new Error('the list did not survive the schema — see normalizeRentalList')

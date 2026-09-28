@@ -81,6 +81,9 @@ export const patchBars = ({ model, rental = null, deskFlags = [], projectId = ''
     // A lamp the desk refused may not be in any universe at all: list it too.
     for (const l of model.conflicts) {
         if (conflicts.some((c) => c.id === l.id)) continue
+        // Over the equipment list is not a patch fault (plotModel ORDER_CODES): the cards
+        // say it on the card, not here with a "move to next free".
+        if (!l.conflicts.some((c) => CONFLICT_CODES.has(c))) continue
         conflicts.push({ id: l.id, index: l.index, code: l.code, at: l.universe != null ? `U${l.universe}.${pad3(l.address)}` : 'not patched', words: l.notes.join(' · ') || l.conflicts.join(', ') })
     }
     // Which to move: the lamps the desk flagged (typed over another, or held elsewhere);

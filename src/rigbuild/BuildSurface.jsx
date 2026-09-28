@@ -7,6 +7,7 @@ import { useProjectStore } from '../project/state/projectStore.js'
 import { generateId } from '../shared/projectSchema.js'
 import { useRigAutoPatch } from '../studio/hooks/useRigAutoPatch.js'
 import { TYPE_LIBRARY } from './types/index.js'
+import { libraryWithShow } from './rental.js'
 import { typeById } from './fixtureTypes.js'
 import { pieceOf } from './pieces.js'
 import { plotModel, titleTotals } from './plotModel.js'
@@ -14,6 +15,10 @@ import { nextUnit, trussRuns } from './plotGeometry.js'
 import { createOps, deleteOps, lampEntity, pieceEntity, ridersOfIds } from './plotEdits.js'
 import { HEIGHT_STEPS, snapWords, stepHeight, turn } from './buildAim.js'
 import { cycleSlot, fullWords, hotbarSlots, slotOfKey } from './hotbar.js'
+import { arrangeSlots, pinAt } from './inventory.js'
+import { useEquipment } from './useEquipment.js'
+import { InventoryPanel } from './Inventory.jsx'
+import { buildEquipmentPath } from './equipmentRouting.js'
 import { TAG_MAX, TAG_MAX_PHONE, flagLines, patchLines, tagOf } from './tags.js'
 import { usePieceAssets } from './usePieceAssets.js'
 import { useRigLookEntities } from './useRigLook.js'
@@ -115,13 +120,15 @@ function FragmentRow({ k, v }) {
     return (<><dt>{k}</dt><dd>{v}</dd></>)
 }
 
-export default function BuildSurface({ spaceId, projectId, crew = false, library = TYPE_LIBRARY }) {
+export default function BuildSurface({ spaceId, projectId, crew = false, library: baseLibrary = TYPE_LIBRARY }) {
     const store = useProjectStore()
     const { state, dispatch } = store
     const { applyLocalOps: syncOps } = useProjectDocumentSync({ projectId, store, clientIdPrefix: crew ? 'crew-client' : 'build-client', opIdPrefix: crew ? 'crew-op' : 'build-op' })
     const { applyLocalOps, undo, redo } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
     const projectDocument = state.document
     const entities = useMemo(() => projectDocument?.entities || [], [projectDocument?.entities])
+    // The library with the show's own types (RIG_BUILD.md §13), one object per list.
+    const library = useMemo(() => libraryWithShow(baseLibrary, entities), [baseLibrary, entities])
     // Crew view asks the desk nothing and writes nothing: no auto-patch.
     const patch = useRigAutoPatch({ projectId: crew ? null : projectId, entities: crew ? [] : entities, applyOps: syncOps, library })
     const phone = useIsPhone()
@@ -141,7 +148,14 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
 
     // --- the hand ---------------------------------------------------------------
     const [building, setBuilding] = useState(false)
-    const { slots } = useMemo(() => hotbarSlots({ entities, library }), [entities, library])
+    // The hotbar is filled FROM the inventory (RIG_BUILD.md §13): a tile dragged onto a
+    // slot, or "to hotbar" on its card. The arrangement is this person's, kept in this
+    // browser (a convenience, not the show's data); unarranged, the default order.
+    const pinKey = `rigbuild.hotbar.${projectId}`
+    const [pinned, setPinned] = useState(() => { try { return JSON.parse(window.localStorage.getItem(pinKey) || '[]') } catch { return [] } })
+    const { slots: allSlots } = useMemo(() => hotbarSlots({ entities, library }), [entities, library])
+    const slots = useMemo(() => arrangeSlots(allSlots, pinned), [allSlots, pinned])
+    const [inventory, setInventory] = useState(false)
     const [slotIndex, setSlotIndex] = useState(0)
     const slot = building && !crew ? slots[Math.min(slotIndex, slots.length - 1)] || null : null
     const [yaw, setYaw] = useState(0)
@@ -235,6 +249,38 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
 
     const rotate = useCallback((opts = {}) => setYaw((y) => turn(y, opts)), [])
 
+    // --- the inventory (E, as in Minecraft; a button on the phone) --------------------
+    const eq = useEquipment({ entities, library, apply: edit, readOnly: crew })
+    const openInventory = useCallback((open) => {
+        setInventory((was) => {
+            const next = typeof open === 'boolean' ? open : !was
+            if (next && document.pointerLockElement) document.exitPointerLock?.()
+            return next
+        })
+    }, [])
+    // While the inventory is open the room holds still: its keys go to the inventory (E and
+    // Esc close it), never to the walker — caught on the way down, before the walker's own.
+    useEffect(() => {
+        if (!inventory) return undefined
+        const hold = (e) => {
+            if (isTypingTarget(e.target)) return
+            const k = e.key.toLowerCase()
+            if (k === 'e' || k === 'escape') { e.preventDefault(); openInventory(false) }
+            if (!(e.ctrlKey || e.metaKey)) e.stopPropagation()
+        }
+        window.addEventListener('keydown', hold, true)
+        return () => window.removeEventListener('keydown', hold, true)
+    }, [inventory, openInventory])
+    const pinToHotbar = useCallback((tile, at) => {
+        if (!tile.hotbarId) return
+        const next = pinAt(pinned, tile.hotbarId, at ?? (slotIndex < slots.length ? slotIndex : null), allSlots.map((x) => x.id))
+        setPinned(next)
+        try { window.localStorage.setItem(pinKey, JSON.stringify(next)) } catch { /* a private window keeps it for the visit */ }
+        const i = next.indexOf(tile.hotbarId)
+        if (i >= 0) setSlotIndex(i)
+        setStatus(`${tile.code} in the hotbar, key ${i === 9 ? 0 : i + 1}`)
+    }, [pinned, slotIndex, slots.length, allSlots, pinKey])
+
     // --- keys and the mouse ---------------------------------------------------------
     const wrapRef = useRef(null)
     useEffect(() => {
@@ -244,6 +290,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
             if ((e.ctrlKey || e.metaKey) && k === 'z' && !crew) { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return }
             if ((e.ctrlKey || e.metaKey) && k === 'y' && !crew) { e.preventDefault(); redo(); return }
             if (e.ctrlKey || e.metaKey || e.altKey) return
+            if (k === 'e') { openInventory(true); return }
             if (k === 'b' && !crew) { setBuilding((b) => !b); return }
             if (k === 'i') { inspectAimed(); return }
             if (k === 'escape' && sheetOpen && !document.pointerLockElement) { setSheetOpen(false); return }
@@ -251,12 +298,13 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
             const i = slotOfKey(e.key, slots.length)
             if (i >= 0) { setSlotIndex(i); return }
             if (k === 'r') { rotate({ fine: e.shiftKey }); return }
+            // Q raises; Z lowers — E opens the inventory, as in Minecraft (RIG_BUILD.md §13).
             if (k === 'q') { raise(1); return }
-            if (k === 'e') { raise(-1) }
+            if (k === 'z') { raise(-1) }
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-    }, [building, crew, slots.length, rotate, raise, undo, redo, inspectAimed, sheetOpen])
+    }, [building, crew, slots.length, rotate, raise, undo, redo, inspectAimed, sheetOpen, inventory, openInventory])
 
     useEffect(() => {
         const el = wrapRef.current
@@ -363,8 +411,8 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
     const mode = crew ? 'crew' : building ? 'build' : 'walk'
     const title = phone ? mode : `${projectDocument?.projectMeta?.title || projectId} · ${mode}`
     const hint = building && !crew
-        ? <>WASD · move &nbsp;·&nbsp; mouse · aim &nbsp;·&nbsp; click · place &nbsp;·&nbsp; right-click · remove &nbsp;·&nbsp; 1–0 / wheel · pieces &nbsp;·&nbsp; R · turn &nbsp;·&nbsp; Q/E · up/down &nbsp;·&nbsp; B · walk &nbsp;·&nbsp; ESC · release</>
-        : <>WASD · move &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; click / I · the patch of a lamp &nbsp;·&nbsp; {crew ? '' : <>B · build &nbsp;·&nbsp; </>}F · fly &nbsp;·&nbsp; ESC · release</>
+        ? <>WASD · move &nbsp;·&nbsp; mouse · aim &nbsp;·&nbsp; click · place &nbsp;·&nbsp; right-click · remove &nbsp;·&nbsp; 1–0 / wheel · pieces &nbsp;·&nbsp; R · turn &nbsp;·&nbsp; Q/Z · up/down &nbsp;·&nbsp; E · inventory &nbsp;·&nbsp; B · walk &nbsp;·&nbsp; ESC · release</>
+        : <>WASD · move &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; click / I · the patch of a lamp &nbsp;·&nbsp; E · inventory &nbsp;·&nbsp; {crew ? '' : <>B · build &nbsp;·&nbsp; </>}F · fly &nbsp;·&nbsp; ESC · release</>
 
     return (
         <main className={`rigbuild${phone ? ' is-phone' : ''}${building ? ' is-building' : ''}${crew ? ' is-crew' : ''}`} ref={wrapRef} data-space-id={spaceId || ''}>
@@ -429,7 +477,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
                 {crew ? (
                     <div className="rigbuild-links"><a href={buildPatchSheetPath(spaceId, projectId)}>patch sheet</a></div>
                 ) : (
-                    <div className="rigbuild-links"><a href={buildCrewPath(spaceId, projectId)}>crew link</a></div>
+                    <div className="rigbuild-links"><a href={buildCrewPath(spaceId, projectId)}>crew link</a> · <a href={buildEquipmentPath(spaceId, projectId)}>equipment</a></div>
                 )}
             </section>) : null}
 
@@ -466,6 +514,18 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
                 </section>
             ) : null}
 
+            <button type="button" className="rigbuild-mode rigbuild-mode--items" onClick={() => openInventory(true)} aria-label="Open the inventory (E)">items</button>
+            {inventory ? (
+                <div className="rigbuild-inventory">
+                    <InventoryPanel
+                        eq={eq} library={library} readOnly={crew} phone={phone}
+                        hotbar={crew ? null : { slots, onPin: pinToHotbar }}
+                        onClose={() => openInventory(false)}
+                        orderHref={`${buildEquipmentPath(spaceId, projectId)}?view=order`}
+                        header={<h2 className="rigcards-h">inventory · E</h2>}
+                    />
+                </div>
+            ) : null}
             {!crew ? (
                 <button type="button" className={`rigbuild-mode${building ? ' is-on' : ''}`} onClick={() => setBuilding((b) => !b)} aria-pressed={building}>
                     {building ? 'walk' : 'build'}

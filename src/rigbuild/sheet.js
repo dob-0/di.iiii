@@ -34,7 +34,9 @@ export const FLAG_WORDS = {
     'circuit-over': 'circuit over limit',
     'power-assumed': 'power assumed',
     'desk-differs': 'desk differs',
-    'not-on-desk': 'not on the desk'
+    'not-on-desk': 'not on the desk',
+    'over-order': 'over the equipment list',
+    'not-on-list': 'not on the equipment list'
 }
 
 /**

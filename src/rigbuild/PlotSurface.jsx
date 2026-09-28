@@ -22,7 +22,8 @@ import {
 } from './plotEdits.js'
 import { isEffectType, shapePath } from './plotSymbols.js'
 import { FLAG_WORDS } from './sheet.js'
-import { countWords } from './rental.js'
+import { countWords, libraryWithShow } from './rental.js'
+import { buildEquipmentPath } from './equipmentRouting.js'
 import PlotDrawing, { SCREEN_SIZES } from './PlotDrawing.jsx'
 import { usePieceAssets } from './usePieceAssets.js'
 import './plot.css'
@@ -164,6 +165,7 @@ function TitleBlock({ title, model, desk, scale, spaceId, projectId, onPrint }) 
             <div className="rigplot-title__links">
                 <a href={patch}>sheet 2 · patch</a>
                 <a href={`${patch}#power`}>sheet 3 · power</a>
+                <a href={buildEquipmentPath(spaceId, projectId)}>equipment</a>
                 <button type="button" onClick={onPrint}>print sheet 1</button>
             </div>
         </section>
@@ -321,13 +323,15 @@ export function Inspector({ model, selectedIds, entities, library, edit, patchGr
 
 // ---- the surface -----------------------------------------------------------------
 
-export default function PlotSurface({ spaceId, projectId, library = TYPE_LIBRARY }) {
+export default function PlotSurface({ spaceId, projectId, library: baseLibrary = TYPE_LIBRARY }) {
     const store = useProjectStore()
     const { state, dispatch } = store
     const { applyLocalOps: syncOps } = useProjectDocumentSync({ projectId, store, clientIdPrefix: 'plot-client', opIdPrefix: 'plot-op' })
     const { applyLocalOps, undo, redo } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
     const document_ = state.document
     const entities = useMemo(() => document_.entities || [], [document_.entities])
+    // The library with the show's own types (RIG_BUILD.md §13), one object per list.
+    const library = useMemo(() => libraryWithShow(baseLibrary, entities), [baseLibrary, entities])
     const patch = useRigAutoPatch({ projectId, entities, applyOps: syncOps, library })
     const desk = useDeskState()
     const phone = useIsPhone()

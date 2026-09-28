@@ -28,6 +28,7 @@ import { getPerformLocationState, isPerformLocation } from './perform/performRou
 import { getPatchSheetLocationState, isPatchSheetLocation } from './rigbuild/patchRouting.js'
 import { getPlotLocationState, isPlotLocation } from './rigbuild/plotRouting.js'
 import { getCardsLocationState, isCardsLocation } from './rigbuild/cardsRouting.js'
+import { getEquipmentLocationState, isEquipmentLocation } from './rigbuild/equipmentRouting.js'
 import { getBuildLocationState, isBuildLocation } from './rigbuild/buildRouting.js'
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
 import { workSurface } from './works/routes.jsx'
@@ -57,6 +58,7 @@ const ScanSurface = lazy(() => import('./scan/ScanSurface.jsx'))
 const PatchSheetSurface = lazy(() => import('./rigbuild/PatchSheetSurface.jsx'))
 const PlotSurface = lazy(() => import('./rigbuild/PlotSurface.jsx'))
 const CardsSurface = lazy(() => import('./rigbuild/CardsSurface.jsx'))
+const EquipmentSurface = lazy(() => import('./rigbuild/EquipmentSurface.jsx'))
 const BuildSurface = lazy(() => import('./rigbuild/BuildSurface.jsx'))
 const ToolsRoom = lazy(() => import('./tools/ToolsRoom.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
@@ -363,6 +365,7 @@ function AppRouter() {
     const patchSheetState = getPatchSheetLocationState(location)
     const plotState = getPlotLocationState(location)
     const cardsState = getCardsLocationState(location)
+    const equipmentState = getEquipmentLocationState(location)
     const buildState = getBuildLocationState(location)
     const chatState = getChatLocationState(location)
     const privateChatWith = getPrivateChatTarget(location)
@@ -594,6 +597,23 @@ function AppRouter() {
             >
                 <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
                     <CardsSurface spaceId={cardsState.spaceId} projectId={cardsState.projectId} />
+                </Suspense>
+            </ProtectedSurface>
+        )
+    }
+
+    // `/{space}/equipment/{projectId}` — the show's equipment list (src/rigbuild/): the
+    // inventory of devices with their item cards, take or skip, and the order with its cost.
+    // Behind the same gate as the plot, because it writes the same document.
+    if (isEquipmentLocation(equipmentState)) {
+        return (
+            <ProtectedSurface
+                requiredSpaceId={equipmentState.spaceId}
+                outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
+                showAccountButton={false}
+            >
+                <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                    <EquipmentSurface spaceId={equipmentState.spaceId} projectId={equipmentState.projectId} />
                 </Suspense>
             </ProtectedSurface>
         )
