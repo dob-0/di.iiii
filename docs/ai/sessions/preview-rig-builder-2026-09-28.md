@@ -72,3 +72,11 @@ worktree against the install's API; the server itself needs none of them (not pa
 - Backup `~/di-backups/preview-rig-builder-2026-09-28/step-4/`; rollback `rollback.sh --to rigbuilder.3|rigbuilder.2|connect.5`
   (`--to rigbuilder.3 --dry-run`, with and without `--with-data`: exit 0, SHA256SUMS ok).
 - Seen (Flatpak Chromium, default flags, iGPU, under the browser lock, package 75–79 °C): inventory; UP-HK1915 card (CONFIRMED badge, 3D model, maker's photos link, manual opens the kept PDF — HEAD 200 application/pdf); UP-MH100S (EQUIVALENT, SHEHDS named); UP-Q108S desktop + phone 390@3 (EQUIVALENT MagicFX CO2jet II, manual kept + Linde CO₂ SDS linked). No page overflow, 0 console errors. Shots `~/Downloads/rig-equipment/media/`.
+
+## The hall fix (2026-09-28 evening, data only — still `0.4.16-rigbuilder.5`)
+
+- #587 `432ffab6` cherry-picked here (`cb0dfe69`) + `9c2bdeb9` (`lookRules` `deck_h`, parity; reaches the installed
+  bundle only with the next preview build). MOXIR rewritten on the install with no runtime rebuild: `import.mjs
+  --replace` (the new hall), `load-plot.mjs --plan-only` (dance zone 10.7 m, new press envelope), `rig.mjs --reaim
+  par-press,bsw250-truss --wash-only`, `rig.mjs --night-only`, `looks.mjs`. Backup
+  `~/di-backups/moxir-before-hallfix-2026-09-28/` (`di open` any `.diiii` there to undo). Details: #587's note.
