@@ -1676,6 +1676,20 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['versions', 'rig', 'minimal', 'full', 'compare', 'switch', 'looks', 'level', 'blackout', 'strobe', 'blinder', 'hazer', 'haze', 'underground', 'moxir', 'equipment'],
         updated: '2026-09-28'
+    },
+    {
+        id: 'rig-show-loop',
+        category: 'Spaces & access',
+        title: 'A show that loops — the cue list played by the desk, the room following it',
+        summary: 'A rig\'s looks on its cue list, each with a fade and a hold, played by the lighting desk on its own clock. Switch LOOP on and after the last cue it goes back to the first — with no page open. The room follows: every lamp posed and lit by the look the desk is playing, faded between cues, strobes as flashes.',
+        body: [
+            'The cue list lives on the cards page (cards & looks). GO sends the list to the desk and starts it; the desk runs the timer, so two open pages never fire twice and the show keeps going when every tab is closed. STOP stops the timer and leaves the look up. The LOOP switch beside GO is saved with the project. /light shows the same list with GO, back, stop and loop.',
+            'The room (/{space}, the Studio, the build view) draws the lamps as the desk\'s look poses them and fades between two looks over the cue\'s fade. The column wash that is baked in follows the look: out in a dark look.',
+            'Strobes and blinders draw as a flash, not a cone: the face blows out white (a blinder warm) and one shared light puts the flash on what they face, ten times a second while the look has them on. Every screen flashes on the same beat.',
+            'Nothing here sends DMX. The desk\'s OUTPUT stays off until you switch it on; the looks carry the fixtures, and their DMX values wait for each type\'s channel list.'
+        ],
+        tags: ['show', 'loop', 'cue', 'cues', 'go', 'stop', 'fade', 'hold', 'strobe', 'blinder', 'flash', 'desk', 'light', 'rig', 'moxir', 'underground'],
+        updated: '2026-09-28'
     }
 ]
 

@@ -5,7 +5,7 @@
  *
  *   flock <lock> node scripts/rigbuild/show-video.mjs --gpu --base https://local.thedi.studio --path /moxir \
  *       --out ~/Downloads/moxir-show/moxir-minimal-loop.mp4 [--title "MOXIR · 17.10 · Charentsavan"] \
- *       [--fps 30] [--push 1.1] [--crf 20] [--work <scratch dir>]
+ *       [--fps 30] [--push 1.1] [--crf 20] [--work <scratch dir>] [--frames N (a test)] [--from S (start S s into the loop)]
  *
  * METHOD. A screen capture of the live room drops and doubles frames and aliases the
  * strobe. Instead the room is opened in a real browser on the GPU exactly as a visitor
@@ -55,8 +55,11 @@ const main = async () => {
     const pagePath = String(args.path || die('needs --path'))
     const out = path.resolve(String(args.out || die('needs --out <file.mp4>')))
     const fps = Number(args.fps || 30)
-    const push = Number(args.push || 1.1)
+    const push = Number(args.push || 1.12)
+    // the push runs from Z0 (a hair in, so the page's 2 px frame and its corner button never show) to `push`
+    const Z0 = 1.04
     const crf = Number(args.crf || 20)
+    const from = Number(args.from || 0) // seconds into the loop the render starts at (a test)
     const title = String(args.title || 'MOXIR · 17.10 · Charentsavan')
     const W = 1920
     const H = 1080
@@ -71,7 +74,8 @@ const main = async () => {
     const list = runner.cues?.list || die('the desk holds no cue list — start the show first (show-loop.mjs)')
     if (!list.length) die('the desk\'s cue list is empty')
     const total = list.reduce((a, c) => a + c.hold, 0)
-    const count = Math.round(total * fps)
+    // --frames N: a short test render (the pipeline end to end), not the loop
+    const count = args.frames ? Math.min(Number(args.frames), Math.round(total * fps)) : Math.round(total * fps)
     say(`the show: ${list.map((c) => `${c.name} ${c.hold}s`).join(' → ')} = ${total} s → ${count} frames at ${fps} fps, rendered ${RW}x${RH}, push ${push}`)
 
     const { chromium } = await import('playwright')
@@ -101,7 +105,7 @@ const main = async () => {
         let start = null // the page time at which the loop starts (cue 0, since 0)
         await page.route('**/light/api/dmx', async (route) => {
             if (start === null) return route.continue()
-            const s = (now - start) / 1000
+            const s = (now - start) / 1000 + from
             const at = showAt(list, s)
             await route.fulfill({
                 json: {
@@ -137,7 +141,7 @@ const main = async () => {
             await page.screenshot({ path: path.join(frames, `f${String(i).padStart(5, '0')}.jpg`), type: 'jpeg', quality: 93 })
             if (i % 150 === 0) {
                 const c = cpuC()
-                say(`  frame ${i}/${count} (${showAt(list, (target - start) / 1000).cue.name}) CPU ${c} C`)
+                say(`  frame ${i}/${count} (${showAt(list, (target - start) / 1000 + from).cue.name}) CPU ${c} C`)
                 if (c !== null && c > 95) {
                     say('  over 95 C — pausing 60 s (the clock is held; nothing is lost)')
                     await new Promise((r) => setTimeout(r, 60_000))
@@ -155,7 +159,7 @@ const main = async () => {
     const loopMp4 = path.join(work, 'loop.mp4')
     const x264 = ['-c:v', 'libx264', '-preset', 'slow', '-crf', String(crf), '-pix_fmt', 'yuv420p', '-r', String(fps)]
     execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-loop', '1', '-t', '2', '-i', path.join(work, 'title.png'), '-vf', `scale=${W}:${H},fps=${fps}`, ...x264, titleMp4])
-    const z = `zoompan=z='${push}-(${push}-1)*(1-on/${count})':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${W}x${H}:fps=${fps}`
+    const z = `zoompan=z='${Z0}+(${push}-${Z0})*on/${count}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${W}x${H}:fps=${fps}`
     // zoompan steps in whole pixels; a 2x upscale first halves the step (no visible creep)
     execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(fps), '-i', path.join(frames, 'f%05d.jpg'), '-vf', `scale=${RW * 2}:${RH * 2}:flags=lanczos,${z}`, ...x264, loopMp4])
     fs.writeFileSync(path.join(work, 'concat.txt'), `file '${titleMp4}'\nfile '${loopMp4}'\n`)

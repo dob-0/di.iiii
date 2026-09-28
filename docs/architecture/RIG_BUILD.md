@@ -1142,3 +1142,46 @@ only the patched lamps). The strobe's beam angle. Versions on the owner's instal
 deploy is scheduled separately). Looks keyed by position/type are posed by the room only for lamps
 on a derived slot (§11.2); the booth-line beams at x ±1 and the header lamps at ±0.75 m do sit on
 slots, the column-base beams at 1.2 m off the face do not.
+
+### 15.6 The show in the room — a looping cue list, fades, strobes as a flash (2026-09-28 night)
+
+Owner, on the three versions: *"minimal, make the underground show loop"*. Shipped in the preview as
+`0.4.16-rigbuilder.7` (+ `.8`, fixes found by looking).
+
+**The loop runs in the desk (decision).** The cards page's cue list moved on by each cue's `hold` with a
+`setTimeout` in the tab: two open pages fired twice, and closing the tab stopped the show. The timer is now
+the desk's (`serverXR/src/lighting/cuerun.js`, LIGHTING_DESK.md "The cue runner"): one timer handle, the
+list, the position and `loop` saved with the desk's show, resumed after a desk restart, stopped by
+blackout. Pages only ask it to load / go / back / stop / loop. `mappingState.loop` keeps the switch in the
+document. Considered and not chosen: a leader election between tabs (still needs a tab open).
+
+**The room follows the look.** `/{space}` drew the document as saved; only view A and the Studio posed the
+lamps by the desk's look. `RoomLookFollower` (lazy, rig rooms only) hands the space view the same drawing
+(`useRigLookEntities`). A cue's fade is drawn: the desk reports `from`, `since`, `fadeMs` on
+`GET /light/api/dmx`, the mirror turns them into a time on the page's clock (`lookFadeOf`), and the room
+blends lens position, aim (short way round), colour, light and haze (`blendEntities`) on a ~30 Hz tick
+that stops when the fade lands. The baked column wash is drawn at the look's PAR level (`washLevelOf`) —
+one bake, in the baked look's colour (a look that washes in another colour needs its own bake: owed).
+
+**Strobes and blinders are a flash, not a cone.** Drawn like the other lamps, a 60° strobe was a huge flat
+grey cone and, as a real light at planning candela, a white floor. In the room they draw no cone and no
+light (`flashEntities`: beam-only at haze 0; `SpotLightObject` mounts no cone at opacity 0), and
+`RigFlashes` draws each lit one's face and a glare sprite, plus ONE shared real light per kind — strobes
+pulsed at 10 Hz with a 22 ms decay, blinders steady warm — mounted at 0 when nothing is lit so the shader's
+light count never changes mid-show. The phase is the wall clock: every screen flashes together. A strobe
+is dark unless a look puts it on. Guard: `rigFlash.test.jsx` "mounts NO cone mesh" (seen red).
+
+**Two data traps found by looking.** (1) Resting a document on a look with its levels
+(`load-version --look`) writes a lamp at 0 as intensity 0, and a look's level only SCALES the document's
+light — so that lamp never came back (the strobe hit showed nothing, the white cathedral lost its column
+beams). Rest with `--nominal`. (2) The show hall: `hall-show.mjs` drops the planning floor tape
+(`hall-zone-*`, the owner's blue dance-floor mark glowed through the set) and registers the asset in the
+document (`upsertAsset`: an uploaded model the list does not name draws nothing — the room went hall-less
+for a few minutes on the install).
+
+**The scripts.** `show-loop.mjs` (the cue list + loop in the document, the looks on the desk, the runner
+loaded and started; it never touches OUTPUT), `show-record.mjs` (watch the running show from the opening
+view: frames named by cue, strobe bursts, fps per cue, renderer checked), `show-video.mjs` (one loop,
+frame-exact: the room in the browser on the GPU with its clock taken over, the desk's answer computed for
+each frame from the desk's own cue list, title card, slow push-in by crop, H.264). The owner's data steps:
+`~/di-backups/preview-rig-builder-2026-09-28/moxir-minimal.sh`.

@@ -9,7 +9,7 @@ import { spotAimDirection } from '../project/viewport/spotLightAim.js'
 // three.js candela in this room's scale, set by eye on the RTX 3080 against the rig's
 // own real lamps (2026-09-28); a planning figure, like the strobe's 60° (ASSUMED).
 export const FLASH = {
-    strobe: { face: [0.40, 0.16], glare: 2.6, glareOpacity: 0.9, colour: '#f4f7ff', lightIntensity: 900, lightDistance: 45, lightAngle: 0.62 },
+    strobe: { face: [0.40, 0.16], glare: 3.2, glareOpacity: 0.95, colour: '#f4f7ff', lightIntensity: 2600, lightDistance: 45, lightAngle: 0.62 },
     blinder: { face: [0.45, 0.45], glare: 1.8, glareOpacity: 0.55, colour: '#ffb46a', lightIntensity: 260, lightDistance: 30, lightAngle: 0.55 }
 }
 

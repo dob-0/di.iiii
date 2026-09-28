@@ -103,3 +103,24 @@ worktree against the install's API; the server itself needs none of them (not pa
   load-plot also removed the rental list, so rental.mjs must run after it (migrate-moxir.sh's order).
 - fps on the iGPU measured 3 (rAF) in build and the Studio at 82–96 °C package with other sessions rendering; the same
   3 with the row display:none, so the row is not the cost. Not the owner's 14–19 fps figure — heat, unverified cold.
+
+## Step 7 — the versions merged, the show loops: `0.4.16-rigbuilder.7` (+ `.8`, the fixes seen by looking)
+
+Owner, 2026-09-28 night: *"minimal, make the underground show loop"*.
+
+- Merged `feat/moxir-versions` (`8af7f75c`): eeeb4e40 was already here (962bbc63) — the rig-nav side kept
+  (RigBodies' own Suspense, `hasRig`); hall-fix and levels tests both kept; the versions section is
+  RIG_BUILD.md §15 (§14 is the steps row); the switch clears the steps row; the version rigs regenerated from
+  the hall-fixed base rig. Pre-existing red, not from this merge: `projectContracts.test.js` "keeps
+  components.fixture = { index }" (fails on rigbuilder.6 too — the patch writes universe/address now).
+- The desk plays the cue list and loops it (`32a8f63e`, LIGHTING_DESK.md "The cue runner"); the room follows
+  the look, fades, strobes flash (`dcb734e8`, `4626e2a9`); RIG_BUILD.md §15.6 has the decisions.
+- Data on the install (a `di save moxir` before every write, `steps/moxir-before-*`; the script is
+  `moxir-minimal.sh`): moxir-hall-minimal / -middle / -full loaded on the CURRENT hall (the report's hall is
+  byte-identical to place-moxir-hall-v3, sha add66131…), typed, re-patched on the installed desk
+  (`REPATCH=1`: the report's throwaway-desk addresses overlapped moxir-hall's), UP-PL5403 flagged mode-owed
+  (not invented); the show copy of the hall (no floor tape); Minimal rested on the red room at NOMINAL
+  light; `/moxir` opens on Minimal (`publishedProjectId`); moxir-hall untouched but its rigVariant mark.
+- The show (`show-loop.mjs`, loop ON, desk runner started, OUTPUT OFF): Blackout + one beam (cut, 12 s) →
+  Slow sweep (fade 4, 16 s) → Red room (fade 5, 16 s) → White cathedral (fade 2, 12 s) → Strobe hit (cut,
+  4 s) → back to one beam. One loop = 60 s.
