@@ -1,11 +1,21 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { useProjectDocumentSync } from '../project/hooks/useProjectDocumentSync.js'
+import { useOpHistory } from '../project/hooks/useOpHistory.js'
 import { useProjectStore } from '../project/state/projectStore.js'
+import { generateId } from '../shared/projectSchema.js'
+import { useRigAutoPatch } from '../studio/hooks/useRigAutoPatch.js'
 import { TYPE_LIBRARY } from './types/index.js'
+import { typeById } from './fixtureTypes.js'
 import { buildPatchSheetPath } from './patchRouting.js'
 import { buildPlotPath } from './plotRouting.js'
 import { countWords, rentalCounts, rentalOf } from './rental.js'
 import { symbolTable, shapePath } from './plotSymbols.js'
+import { plotData } from './sheet.js'
+import { boxesOf, piecesOf, rigExtent } from './plotGeometry.js'
+import { planExtent, venueOf } from './venuePlan.js'
+import { fillOf, positionsOf } from './positions.js'
+import { dealOps } from './deal.js'
+import { deleteOps } from './plotEdits.js'
 import './plot.css'
 import './cards.css'
 
@@ -15,7 +25,11 @@ import './cards.css'
 //
 // Everything is read from, and written to, the project document through the op log
 // (the Studio's own path), so the plot, the patch sheet and the room see the same rig.
-// The look is the plot's: paper, ink, the house mono — the same classes.
+// Nothing is placed in space by hand: a card dealt onto a position becomes lamps at
+// that position's slots (positions.js, deal.js), and the desk patches the card as one
+// group. The look is the plot's: paper, ink, the house mono — the same classes.
+
+const PlotRoom = lazy(() => import('./PlotRoom.jsx'))
 
 const PHONE_QUERY = '(max-width: 760px), (max-height: 500px)'
 
@@ -30,6 +44,8 @@ const useIsPhone = () => {
     }, [])
     return phone
 }
+
+const shortCode = (code) => String(code || '').replace(/^UP-/, '')
 
 export function Symbol({ shape, letter, size = 16 }) {
     const r = size * 0.36
@@ -64,18 +80,142 @@ export function Card({ item, shape, selected, onSelect }) {
     )
 }
 
+/** A position: its name, its slots filled and free, and — with a card in hand — deal here. */
+function PositionRow({ position, fill, lampById, card, n, onDeal, onSlot, onTakeBack, picked }) {
+    const filled = position.slots.filter((s) => fill.has(`${position.id}/${s.id}`)).length
+    const free = position.slots.length - filled
+    const mine = card ? position.slots.filter((s) => lampById.get(fill.get(`${position.id}/${s.id}`))?.type === card.type).length : 0
+    const deal = card ? Math.min(n, free) : 0
+    // Two-sided rows read as two lines, left above right; a line reads across.
+    const groups = position.kind === 'rows' && position.slots.some((s) => s.side < 0) && position.slots.some((s) => s.side > 0)
+        ? [['L', position.slots.filter((s) => s.side < 0)], ['R', position.slots.filter((s) => s.side > 0)]]
+        : [['', [...position.slots].sort((a, b) => a.pos[0] - b.pos[0] || a.rank - b.rank)]]
+    return (
+        <section className="rigcards-pos" aria-label={position.name}>
+            <header className="rigcards-pos__head">
+                <span className="rigplot-mono rigcards-pos__name">{position.name}</span>
+                <span className="rigplot-mono rigcards-pos__count">{filled}/{position.slots.length}</span>
+                {card ? (
+                    <span className="rigcards-pos__acts">
+                        {deal > 0 ? <button type="button" className="rigcards-btn is-primary" onClick={() => onDeal(position, deal)}>deal {deal} here</button> : null}
+                        {mine > 0 ? <button type="button" className="rigcards-btn" onClick={() => onTakeBack(position)}>take back {mine}</button> : null}
+                    </span>
+                ) : null}
+            </header>
+            <p className="rigcards-pos__note">{position.note}</p>
+            {groups.map(([label, slots]) => (
+                <div key={label || 'line'} className="rigcards-slots" role="group" aria-label={label ? `${position.name} ${label === 'L' ? 'left' : 'right'}` : position.name}>
+                    {label ? <span className="rigcards-slots__side rigplot-mono" aria-hidden="true">{label}</span> : null}
+                    {slots.map((s) => {
+                        const key = `${position.id}/${s.id}`
+                        const lamp = lampById.get(fill.get(key))
+                        const cls = `rigcards-slot${lamp ? ' is-filled' : ''}${picked === key ? ' is-picked' : ''}${lamp?.conflict ? ' is-conflict' : ''}`
+                        const label2 = lamp ? `${s.id}: ${lamp.code}${lamp.index != null ? ` #${lamp.index}` : ''}${lamp.patch ? ` ${lamp.patch}` : ''}` : `${s.id}: free${card ? ` — tap to hang one ${card.code}` : ''}`
+                        return (
+                            <button key={s.id} type="button" className={cls} title={label2} aria-label={label2} onClick={() => onSlot(position, s, lamp)}>
+                                {lamp ? shortCode(lamp.code) : ''}
+                            </button>
+                        )
+                    })}
+                </div>
+            ))}
+        </section>
+    )
+}
+
 export default function CardsSurface({ spaceId, projectId, library = TYPE_LIBRARY }) {
     const store = useProjectStore()
     const { state } = store
-    useProjectDocumentSync({ projectId, store, clientIdPrefix: 'cards-client', opIdPrefix: 'cards-op' })
+    const { applyLocalOps: syncOps } = useProjectDocumentSync({ projectId, store, clientIdPrefix: 'cards-client', opIdPrefix: 'cards-op' })
+    const { applyLocalOps, undo, redo } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
     const document_ = state.document
     const entities = useMemo(() => document_.entities || [], [document_.entities])
+    const patch = useRigAutoPatch({ projectId, entities, applyOps: syncOps, library })
     const phone = useIsPhone()
 
     const { list } = useMemo(() => rentalOf(entities), [entities])
     const counts = useMemo(() => rentalCounts({ entities, library, list }), [entities, library, list])
     const table = useMemo(() => symbolTable(library.types || []), [library])
-    const [card, setCard] = useState(null)
+    const positions = useMemo(() => positionsOf(entities), [entities])
+    const lamps = useMemo(() => plotData({ entities, library }).lamps, [entities, library])
+    const fill = useMemo(() => fillOf(positions, lamps), [positions, lamps])
+    const lampById = useMemo(() => {
+        const byEntity = new Map(entities.map((e) => [e.id, e]))
+        return new Map(lamps.map((l) => {
+            const f = byEntity.get(l.id)?.components?.fixture || {}
+            return [l.id, { id: l.id, code: l.code, type: f.type, index: f.index ?? null, patch: f.universe != null && f.address != null ? `U${f.universe}.${String(f.address).padStart(3, '0')}` : '' }]
+        }))
+    }, [entities, lamps])
+
+    const [cardType, setCardType] = useState(null)
+    const card = counts.items.find((i) => i.type === cardType) || null
+    const [n, setN] = useState(null)
+    const dealN = card ? Math.max(0, n ?? card.left) : 0
+    useEffect(() => { setN(null) }, [cardType])
+    const [mode, setMode] = useState('auto') // auto | spread | from-stage
+    const [status, setStatus] = useState('')
+    const [picked, setPicked] = useState(null) // a filled slot, `${position}/${slot}`
+    const [pane, setPane] = useState('cards') // cards | room
+    const [sheetOpen, setSheetOpen] = useState(false)
+
+    const edit = useCallback((ops, message) => {
+        if (!ops?.length) return
+        applyLocalOps(ops)
+        if (message) setStatus(message)
+    }, [applyLocalOps])
+
+    // "Patch this group" once the dealt lamps are in the document: the card lands as one
+    // contiguous block in one universe (RIG_BUILD.md §4.2, §7).
+    const [pendingGroup, setPendingGroup] = useState(null)
+    useEffect(() => {
+        if (!pendingGroup) return
+        const have = new Set(entities.map((e) => e.id))
+        if (!pendingGroup.every((id) => have.has(id))) return
+        setPendingGroup(null)
+        patch.patchGroup(pendingGroup)
+    }, [pendingGroup, entities, patch])
+
+    const filledIds = useCallback((position) => new Set(position.slots.filter((s) => fill.has(`${position.id}/${s.id}`)).map((s) => s.id)), [fill])
+
+    const deal = useCallback((position, count, onlySlot = null) => {
+        if (!card) return
+        const type = typeById(library, card.type)
+        if (!type) { setStatus(`${card.code}: no fixture type in the library — cannot hang it`); return }
+        const pos = onlySlot ? { ...position, slots: [onlySlot] } : position
+        const { ops, ids, note } = dealOps({ entities, position: pos, filled: filledIds(pos), type, n: count, mode: mode === 'auto' ? null : mode, newId: () => generateId('entity') })
+        if (!ids.length) { setStatus(note || 'nothing free there'); return }
+        edit(ops, `${ids.length} × ${card.code} → ${position.name}${note ? ` · ${note}` : ''}${type.modesOwed ? ' · mode owed: not patched' : ' · patching as one group…'}`)
+        if (!type.modesOwed) setPendingGroup(ids)
+        setN(null)
+    }, [card, library, entities, filledIds, mode, edit])
+
+    const takeBack = useCallback((position) => {
+        if (!card) return
+        const ids = position.slots.map((s) => fill.get(`${position.id}/${s.id}`)).filter((id) => id && lampById.get(id)?.type === card.type)
+        edit(deleteOps(ids), `${ids.length} × ${card.code} taken back from ${position.name}`)
+    }, [card, fill, lampById, edit])
+
+    const onSlot = useCallback((position, s, lamp) => {
+        const key = `${position.id}/${s.id}`
+        if (lamp) { setPicked(picked === key ? null : key); return }
+        setPicked(null)
+        if (!card) { setStatus('pick a card first, then a free slot'); return }
+        if (card.left <= 0) { setStatus(`${card.code}: all ${card.ordered} on order are placed`); return }
+        deal(position, 1, s)
+    }, [card, deal, picked])
+
+    const pickedLamp = picked ? lampById.get(fill.get(picked)) : null
+
+    useEffect(() => {
+        const onKey = (event) => {
+            const tag = event.target?.tagName
+            if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); if (event.shiftKey) redo(); else undo() }
+            if (event.key === 'Escape') { setCardType(null); setPicked(null) }
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [undo, redo])
 
     const title = document_.projectMeta?.title || projectId
     useEffect(() => {
@@ -84,6 +224,7 @@ export default function CardsSurface({ spaceId, projectId, library = TYPE_LIBRAR
         return () => { document.title = prev }
     }, [title])
 
+    // --- the parts ---------------------------------------------------------------
     const cards = (
         <section className="rigcards-cards" aria-label="Rental list">
             <h2 className="rigcards-h">rental list</h2>
@@ -91,7 +232,7 @@ export default function CardsSurface({ spaceId, projectId, library = TYPE_LIBRAR
             {state.hasLoaded && !list ? <p className="rigplot-hint">No rental list in this project. It is written from the rental house&apos;s spreadsheet by scripts/rigbuild/rental.mjs.</p> : null}
             <div className="rigcards-cardlist">
                 {counts.items.map((item) => (
-                    <Card key={item.type} item={item} shape={table.get(item.type)} selected={card === item.type} onSelect={() => setCard(card === item.type ? null : item.type)} />
+                    <Card key={item.type} item={item} shape={table.get(item.type)} selected={cardType === item.type} onSelect={() => { setCardType(cardType === item.type ? null : item.type); setSheetOpen(cardType !== item.type) }} />
                 ))}
             </div>
             {list ? (
@@ -104,22 +245,108 @@ export default function CardsSurface({ spaceId, projectId, library = TYPE_LIBRAR
         </section>
     )
 
+    const dealBar = card ? (
+        <div className="rigcards-dealbar" role="group" aria-label="Deal">
+            <span className="rigplot-mono"><b>{card.code}</b> · {card.left} left</span>
+            <label className="rigplot-field">
+                <span>deal</span>
+                <input inputMode="numeric" value={dealN} onChange={(e) => setN(Math.max(0, Math.min(999, Number(e.target.value.replace(/\D/g, '')) || 0)))} aria-label="how many to deal" />
+            </label>
+            <div className="rigplot-seg" role="group" aria-label="how">
+                {[['auto', 'as the row'], ['spread', 'spread'], ['from-stage', 'from the stage']].map(([id, label]) => (
+                    <button key={id} type="button" aria-pressed={mode === id} onClick={() => setMode(id)}>{label}</button>
+                ))}
+            </div>
+        </div>
+    ) : (
+        <p className="rigplot-hint">Pick a card, then deal it onto a position — or tap a free slot to hang one.</p>
+    )
+
+    const pickedBar = pickedLamp ? (
+        <div className="rigcards-picked rigplot-mono" role="status">
+            <span>{picked.split('/')[1]} · {pickedLamp.code}{pickedLamp.index != null ? ` #${pickedLamp.index}` : ''} {pickedLamp.patch || 'not patched'}</span>
+            <button type="button" className="rigcards-btn" onClick={() => { edit(deleteOps([pickedLamp.id]), `${pickedLamp.code} taken back`); setPicked(null) }}>take back</button>
+        </div>
+    ) : null
+
+    const positionsPart = (
+        <section className="rigcards-positions" aria-label="Positions">
+            <h2 className="rigcards-h">positions</h2>
+            {dealBar}
+            {pickedBar}
+            {state.hasLoaded && !positions.length ? <p className="rigplot-hint">No positions: this project has no truss, towers, decks or venue plan to hang from. Build them on the plot, or load them (scripts/rigbuild/load-plot.mjs).</p> : null}
+            {positions.map((p) => (
+                <PositionRow key={p.id} position={p} fill={fill} lampById={lampById} card={card} n={dealN} onDeal={deal} onSlot={onSlot} onTakeBack={takeBack} picked={picked} />
+            ))}
+        </section>
+    )
+
+    const statusLine = (
+        <div className="rigplot-status rigplot-mono rigcards-status" role="status" aria-live="polite">
+            <span>{status || `${counts.totals.placed} of ${counts.totals.ordered} placed on ${positions.length} positions`}</span>
+            {patch.message ? <span className="rigplot-status__dim">desk · {patch.message}</span> : null}
+        </div>
+    )
+
+    const extent = useMemo(() => {
+        const plan = venueOf(entities).plan
+        return rigExtent({ lamps: lamps.map((l) => ({ at: [l.mount[0], l.mount[2]] })), pieces: piecesOf(entities), boxes: boxesOf(entities) }, planExtent(plan)) || [-10, -10, 10, 10]
+    }, [entities, lamps])
+    const room = pane === 'room' ? (
+        <Suspense fallback={<div className="rigplot-room rigplot-room--empty">room…</div>}>
+            <PlotRoom document={document_} selectedIds={[]} onSelect={() => {}} extent={extent} venueExtent={planExtent(venueOf(entities).plan)} />
+        </Suspense>
+    ) : null
+
     const links = (
         <nav className="rigcards-links" aria-label="Sheets">
-            <a href={buildPlotPath(spaceId, projectId)}>plot</a>
-            <a href={buildPatchSheetPath(spaceId, projectId)}>patch sheet</a>
+            <div className="rigplot-toggle" role="group" aria-label="View">
+                <button type="button" aria-pressed={pane === 'cards'} onClick={() => setPane('cards')}>cards</button>
+                <button type="button" aria-pressed={pane === 'room'} onClick={() => setPane('room')}>room</button>
+            </div>
+            {!phone ? <a href={buildPlotPath(spaceId, projectId)}>plot</a> : null}
+            {!phone ? <a href={buildPatchSheetPath(spaceId, projectId)}>patch sheet</a> : null}
         </nav>
     )
 
+    const header = (
+        <header className="rigplot-top rigcards-top">
+            <span className="rigplot-mono rigplot-top__title">{title} · cards</span>
+            {links}
+        </header>
+    )
+
+    if (phone) {
+        return (
+            <div className="rigplot rigcards rigcards--phone">
+                {header}
+                {pane === 'room' ? <div className="rigcards-roompane">{room}</div> : (
+                    <main className="rigcards-main">
+                        {cards}
+                        <p className="rigcards-foot"><a href={buildPlotPath(spaceId, projectId)}>plot</a> · <a href={buildPatchSheetPath(spaceId, projectId)}>patch sheet</a></p>
+                    </main>
+                )}
+                {pane === 'cards' && card ? (
+                    <section className={`rigplot-sheet rigcards-sheet${sheetOpen ? ' is-open' : ''}`} aria-label="Deal onto a position">
+                        <button type="button" className="rigplot-sheet__handle" aria-expanded={sheetOpen} onClick={() => setSheetOpen((o) => !o)}><span aria-hidden="true" />{sheetOpen ? 'close' : `${card.code} · ${card.left} left — positions`}</button>
+                        {statusLine}
+                        {sheetOpen ? <div className="rigplot-sheet__body">{positionsPart}</div> : null}
+                    </section>
+                ) : null}
+            </div>
+        )
+    }
+
     return (
-        <div className={`rigplot rigcards${phone ? ' rigcards--phone' : ''}`}>
-            <header className="rigplot-top rigcards-top">
-                <span className="rigplot-mono rigplot-top__title">{title} · cards</span>
-                {links}
-            </header>
-            <main className="rigcards-main">
-                {cards}
-            </main>
+        <div className="rigplot rigcards">
+            {header}
+            {pane === 'room' ? <div className="rigcards-roompane">{room}</div> : (
+                <main className="rigcards-main rigcards-grid">
+                    <div className="rigcards-col rigcards-col--cards">{cards}</div>
+                    <div className="rigcards-col rigcards-col--positions">{positionsPart}</div>
+                    <div className="rigcards-bottom">{statusLine}</div>
+                </main>
+            )}
         </div>
     )
 }
