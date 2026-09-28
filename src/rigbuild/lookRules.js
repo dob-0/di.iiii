@@ -1,8 +1,9 @@
 // THE AIM RULES a designed look is written in — ported from the rig script that
 // designed MOXIR's looks: scripts/place/rig-lib.mjs `AIM_RULES` on feat/moxir-hall at
-// 70dbdd95 (2026-09-28, "the DJ booth on the nave centre line"). The older copy on this
-// branch lacks `booth-key` and `backdrop`; src/rigbuild/lookRules.test.js holds the two
-// equal on every rule they share. docs/architecture/RIG_BUILD.md §11.4.
+// 70dbdd95 (2026-09-28, "the DJ booth on the nave centre line"). Once that commit is
+// merged below this one both copies carry every rule; src/rigbuild/lookRules.test.js holds
+// the two equal on every rule they share (`backdrop` against a stage with a backdrop, the
+// only way the script calls it — the port alone also answers with none). docs/architecture/RIG_BUILD.md §11.4.
 //
 // A look is DESIGNED, never ad-hoc (the owner, 2026-09-27: ad-hoc aims are "randome"):
 // each group of lamps gets one rule and its numbers, and the rule turns a lamp's place

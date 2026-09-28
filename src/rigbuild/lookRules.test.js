@@ -4,7 +4,7 @@ import { AIM_RULES as SCRIPT_RULES } from '../../scripts/place/rig-lib.mjs'
 import { rotationFromPanTilt, spotAimDirection } from '../project/viewport/spotLightAim.js'
 
 // The rules are the rig script's (scripts/place/rig-lib.mjs). Held equal on every rule
-// both copies have, on the nave axis (the script's copy on this branch predates `axis`).
+// both copies have, on the nave axis.
 const ctx = {
     axis: 0,
     stage: { axis: 0, into: 1, front: 6.2, back: 4.2, deck: 1.2, wall: 3.2, backdrop: null },
@@ -16,6 +16,13 @@ const slots = [
     { pos: [0, 0, 3.95], orient: 'floor' }
 ]
 const params = { spread_deg: 40, lean_deg: 6, in_deg: 8, x: 3, y: 9, a: 12, side_deg: 5 }
+// `backdrop` needs something standing behind the stage. The script only ever calls it with
+// one (its stage builder sets `stage.backdrop` from hall.json's massing ids, and its
+// `backdrop-floor` mount throws without it), so the two copies are compared against MOXIR's
+// shape: the press behind the booth. With no backdrop at all only the port answers (below).
+const press = { id: 'press', x_m: [-2, 3.5], y_m: [0, 3.2], z_m: [0, 3.2] }
+const ctxWithBackdrop = { ...ctx, stage: { ...ctx.stage, backdrop: { ids: ['press'], x: [-2, 3.5], face: 3.2, boxes: [press] } } }
+const ctxFor = (name) => (name === 'backdrop' ? ctxWithBackdrop : ctx)
 
 describe('look rules — the rig script\'s, ported', () => {
     const shared = Object.keys(SCRIPT_RULES).filter((k) => AIM_RULES[k])
@@ -28,14 +35,18 @@ describe('look rules — the rig script\'s, ported', () => {
             for (const [i, slot] of slots.entries()) {
                 if (name === 'up-the-column' && !slot.column) continue // the script needs a column there
                 const meta = { rank: i, n: 3 }
-                const ours = AIM_RULES[name]({ ...slot, girder: 1 }, meta, ctx, params)
-                const theirs = SCRIPT_RULES[name]({ ...slot, girder: 1 }, meta, ctx, params)
+                const ours = AIM_RULES[name]({ ...slot, girder: 1 }, meta, ctxFor(name), params)
+                const theirs = SCRIPT_RULES[name]({ ...slot, girder: 1 }, meta, ctxFor(name), params)
                 const [k] = Object.keys(theirs)
                 expect(Object.keys(ours)).toEqual([k])
                 ours[k].forEach((v, j) => expect(v).toBeCloseTo(theirs[k][j], 9))
             }
         })
     }
+    it('backdrop with nothing behind the stage aims at the stage wall (the port only; the script never asks)', () => {
+        const { target } = AIM_RULES.backdrop({ pos: [0, 0, 5], orient: 'floor' }, { rank: 0, n: 1 }, ctx, {})
+        expect(target).toEqual([0, 3 * 0.6, ctx.stage.wall])
+    })
     it('turns a direction into pan/tilt the spot understands, round the circle', () => {
         for (const d of [[0, 1, 0], [0, -1, 0], [0.3, 0.8, -0.5], [-0.6, -0.2, 0.7]]) {
             const l = Math.hypot(...d)
