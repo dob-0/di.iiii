@@ -142,3 +142,18 @@ Owner, 2026-09-28 night: *"minimal, make the underground show loop"*.
   (`/mnt/data/footage/place-moxir-hall-v3-crane-dj/`), re-patched (Minimal 21 of 36, the PL5403s and the
   hazers flagged mode-owed), the show hall, the crane opening, Minimal rested on the red room at nominal,
   the show re-programmed and running. Stray pieces from moxir-hall removed from the versions only.
+
+## Step 9 — the visualiser: `0.4.16-rigbuilder.9` (2026-09-29)
+
+- The preview is now dev at 3c7e79b8 (#637 the preview line as landed, #638, #639: + hosted show playback,
+  the tools read-only for visitors, the hooks) with dev's tree taken, + `feat/light-visualiser` (#644).
+  Installed code = 6e68f01f (artifact sha256 2b9e9795…); the wiki entry and doc commits after it are not in it.
+- Backup `step-9/` (runtime rigbuilder.8 artifact d75a051e…, di.env, di.db VACUUM INTO, spaces/moxir, desk);
+  `rollback.sh --to rigbuilder.8 [--with-data]` — dry-run exit 0 both ways.
+- Data (a `di save moxir` + desk tar in `steps/` first, `*-before-assumed-012640*`): Minimal's 36 lamps on
+  their ASSUMED modes (`assume-modes.mjs`), patched without moving the existing addresses (`patch.mjs
+  --group`: B380F U6.1–97 + U3.1–81, strobes U1.445/449 + U2.425–437, hazers U1.453/455, the 15 PARs
+  new at U2.313–401 + 441–457), the looks put back WITH DMX (`show-loop.mjs`), the loop restarted.
+  Output OFF throughout; input ON only during the Art-Net test (loopback), OFF after.
+- Seen and measured (RIG_BUILD §18.7): split page, pan/colour/strobe, Art-Net sweep, two windows; frames and
+  a video in `~/Downloads/moxir-visualiser/`.
