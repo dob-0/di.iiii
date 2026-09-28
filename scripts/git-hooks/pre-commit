@@ -2,8 +2,8 @@
 # di.iiii — work never lands straight on dev or main. Every change starts on its
 # own branch (feat/…, fix/…, docs/…) and reaches dev through a PR; main is only
 # ever a promotion of dev. This runs for every commit in this checkout — by hand,
-# from an editor, from Claude or any other assistant — once `npm install` has set
-# core.hooksPath (package.json "prepare"). CONTRIBUTING.md "Every hand, one flow".
+# from an editor, from Claude or any other assistant, in every worktree whatever its
+# branch — once `npm install` has run scripts/install-git-hooks.mjs. CONTRIBUTING.md "Every hand, one flow".
 #
 # A merge made by `git pull` does not come through here (git runs pre-merge-commit
 # for those), so catching dev up with the remote still works.
