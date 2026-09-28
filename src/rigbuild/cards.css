@@ -77,7 +77,8 @@
 .rigcards-sheet.is-open { max-height: 78vh; }
 .rigcards--phone .rigcards-dealbar .rigplot-seg button { min-height: 40px; }
 @media (orientation: landscape) and (max-height: 500px) {
-    .rigcards--phone { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); grid-template-rows: auto minmax(0, 1fr); }
+    .rigcards--phone { grid-template-rows: auto minmax(0, 1fr); }
+    .rigcards--phone.has-sheet { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); }
     .rigcards--phone .rigcards-top { grid-column: 1 / -1; }
     .rigcards--phone .rigcards-sheet { grid-column: 2; grid-row: 2; max-height: none; border-top: 0; border-left: 1.5px solid var(--ink); overflow-y: auto; }
     .rigcards--phone .rigcards-roompane { grid-column: 1 / -1; }
@@ -101,3 +102,35 @@
 .rigcards-power { margin: 4px 0 0; font-size: 12px; border-top: 1px solid var(--ink); padding-top: 8px; }
 .rigcards--phone .rigcards-patch { margin-top: 8px; }
 .rigcards-conflict.is-other { border-width: 1px; border-style: dashed; color: var(--soft); }
+
+/* the looks on the cue list: a band under the three columns, each cue as wide as its hold */
+.rigcards-bottom { display: grid; gap: 8px; padding-bottom: 12px; }
+.rigcards-cues { background: var(--paper); border: 1.5px solid var(--ink); padding: 10px 12px; min-width: 0; }
+.rigcards-cues__head { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.rigcards-cues__head .rigcards-h { margin: 0 8px 0 0; }
+.rigcards-go { min-width: 72px; justify-content: center; font-weight: 700; }
+.rigcards-cues__where { font-size: 12px; }
+.rigcards-cues__acts { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.rigcards-timeline { display: flex; gap: 4px; min-width: 0; overflow-x: auto; }
+.rigcards-cue { flex: 1 1 0; min-width: 170px; display: grid; gap: 4px; border: 1px solid var(--ink); padding: 6px; box-sizing: border-box; background: var(--paper); }
+.rigcards-cue.is-wait { border-style: dashed; }
+.rigcards-cue__fire { display: grid; gap: 2px; text-align: left; font: inherit; color: inherit; background: transparent; border: 0; padding: 2px; cursor: pointer; min-height: 44px; }
+.rigcards-cue__n { font-size: 11px; font-weight: 700; }
+.rigcards-cue__name { font-size: 13px; font-weight: 600; }
+.rigcards-cue__time { font-size: 10.5px; color: var(--soft); }
+.rigcards-cue.is-live { background: var(--ink); color: var(--paper); }
+.rigcards-cue.is-live .rigcards-cue__time, .rigcards-cue.is-live .rigplot-field { color: #cfcdc7; }
+.rigcards-cue__acts { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.rigcards-cue__acts .rigplot-field { margin: 0; font-size: 11px; }
+.rigcards-cue__acts .rigplot-field input { width: 44px; min-height: 28px; padding: 3px 5px; }
+.rigcards-cue__acts .rigcards-btn { min-height: 28px; padding: 3px 7px; font-size: 11px; }
+.rigcards--phone .rigcards-cues { margin-top: 8px; }
+.rigcards--phone .rigcards-timeline { flex-direction: column; overflow: visible; }
+.rigcards--phone .rigcards-cue { min-width: 0; }
+.rigcards--phone .rigcards-cues__acts { margin-left: 0; }
+.rigcards--phone .rigcards-go { min-height: 44px; }
+
+/* the phone sheet's status: one line — the desk's answer shows on the desktop only */
+.rigcards--phone .rigcards-status { flex-wrap: nowrap; overflow: hidden; }
+.rigcards--phone .rigcards-status span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rigcards--phone .rigcards-status .rigplot-status__dim { display: none; }

@@ -634,6 +634,44 @@ const normalizeRentalList = (list) => {
   }
 }
 
+// THE RIG'S DESIGNED LOOKS (RIG_BUILD.md §11.4, view C): per look, a rule and its
+// numbers per group of lamps (a group is `${position}/${type}`), and a colour per
+// group. Written by scripts/rigbuild/looks.mjs from the rig file; the cards put them on
+// the desk and the cue list, the room poses by them. Bounded, numbers and short words.
+const RIG_LOOKS_CAP = 50
+const RIG_GROUPS_CAP = 100
+const lookKey = (value) => (typeof value === 'string' && /^[\w:.-]{1,40}\/[\w.-]{1,40}$/.test(value.trim()) ? value.trim() : '')
+const lookHex = (value) => (typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.trim()) ? value.trim().toLowerCase() : '')
+const normalizeRigLooks = (value) => {
+  if (!value || typeof value !== 'object') return null
+  const looks = planList(value.looks, (look) => {
+    const id = typeof look?.id === 'string' && /^[a-z0-9][a-z0-9-]{0,35}$/.test(look.id.trim()) ? look.id.trim() : ''
+    if (!id) return null
+    const aims = {}
+    for (const [k, aim] of Object.entries(look.aims || {}).slice(0, RIG_GROUPS_CAP)) {
+      const key = lookKey(k)
+      const rule = planText(aim?.rule, 32)
+      if (!key || !rule) continue
+      const params = { rule }
+      for (const [p, n] of Object.entries(aim)) {
+        if (p === 'rule' || !/^[a-z_]{1,16}$/.test(p)) continue
+        const num = planNum(n)
+        if (num != null) params[p] = num
+      }
+      aims[key] = params
+    }
+    const colours = {}
+    for (const [k, c] of Object.entries(look.colours || {}).slice(0, RIG_GROUPS_CAP)) {
+      const key = lookKey(k)
+      const hex = lookHex(c)
+      if (key && hex) colours[key] = hex
+    }
+    return { id, title: planText(look.title, 60) || id, intent: planText(look.intent, 480), aims, colours }
+  }).slice(0, RIG_LOOKS_CAP)
+  if (!looks.length) return null
+  return { source: planText(value.source, 480), writtenAt: planText(value.writtenAt, 32), defaultLook: planText(value.defaultLook, 36), looks }
+}
+
 const normalizeFixtureIndex = (fixture) => {
   const index = Number(fixture?.index)
   return Number.isInteger(index) && index > 0 ? index : null
@@ -822,6 +860,12 @@ const normalizeEntity = (entity = {}) => {
     const list = normalizeRentalList(sourceComponents.rentalList)
     if (list) nextComponents.rentalList = list
     else delete nextComponents.rentalList
+  }
+  // The rig's designed looks — mirror of src/shared/projectSchema.js (RIG_BUILD.md §11.4).
+  if (sourceComponents.rigLooks) {
+    const looks = normalizeRigLooks(sourceComponents.rigLooks)
+    if (looks) nextComponents.rigLooks = looks
+    else delete nextComponents.rigLooks
   }
   // A screen: a plane that shows one of the project's own mapping surfaces
   // (document.mappingState.surfaces) as its picture. The join is the surface's

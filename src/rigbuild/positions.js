@@ -189,20 +189,20 @@ export const positionsOf = (entities = []) => {
             out.push({
                 id: 'column-bases', name: 'column bases', kind: 'rows', order: 'stage',
                 note: `the nave columns, ${OFFSETS.columnBase} m in front of the inner face`,
-                slots: nave.map((c) => slot(`${lr(c)}${c.rank + 1}`, [inner(c) - c.side * OFFSETS.columnBase, 0, c.z], { side: c.side, rank: c.rank, column: [c.x, c.z] }))
+                slots: nave.map((c) => slot(`${lr(c)}${c.rank + 1}`, [inner(c) - c.side * OFFSETS.columnBase, 0, c.z], { side: c.side, rank: c.rank, column: [c.x, c.z, c.w] }))
             })
             out.push({
                 id: 'column-faces', name: 'column faces', kind: 'rows', order: 'stage',
                 note: `an uplight on the inner and the back face of each nave column, ${OFFSETS.columnFace} m off`,
                 slots: nave.flatMap((c) => [
-                    slot(`${lr(c)}${c.rank + 1}i`, [inner(c) - c.side * OFFSETS.columnFace, 0, c.z], { side: c.side, rank: c.rank * 2, column: [c.x, c.z] }),
-                    slot(`${lr(c)}${c.rank + 1}b`, [outer(c) + c.side * OFFSETS.columnFace, 0, c.z], { side: c.side, rank: c.rank * 2 + 1, column: [c.x, c.z] })
+                    slot(`${lr(c)}${c.rank + 1}i`, [inner(c) - c.side * OFFSETS.columnFace, 0, c.z], { side: c.side, rank: c.rank * 2, column: [c.x, c.z, c.w] }),
+                    slot(`${lr(c)}${c.rank + 1}b`, [outer(c) + c.side * OFFSETS.columnFace, 0, c.z], { side: c.side, rank: c.rank * 2 + 1, column: [c.x, c.z, c.w] })
                 ])
             })
             out.push({
                 id: 'dance-columns', name: 'dance-floor columns', kind: 'rows', order: 'stage',
                 note: `on the floor ${OFFSETS.danceColumn} m off a nave column, ${OFFSETS.danceColumnAlong} m toward the audience`,
-                slots: nave.map((c) => slot(`${lr(c)}${c.rank + 1}`, [inner(c) - c.side * OFFSETS.danceColumn, 0, c.z + stage.into * OFFSETS.danceColumnAlong], { side: c.side, rank: c.rank, column: [c.x, c.z] }))
+                slots: nave.map((c) => slot(`${lr(c)}${c.rank + 1}`, [inner(c) - c.side * OFFSETS.danceColumn, 0, c.z + stage.into * OFFSETS.danceColumnAlong], { side: c.side, rank: c.rank, column: [c.x, c.z, c.w] }))
             })
         }
         if (rows[1]) {
@@ -210,7 +210,7 @@ export const positionsOf = (entities = []) => {
             out.push({
                 id: 'outer-columns', name: 'outer columns', kind: 'rows', order: 'stage',
                 note: `the next rows out, an uplight on the face toward the nave, ${OFFSETS.columnFace} m off`,
-                slots: next.map((c) => slot(`${c.side < 0 ? 'L' : 'R'}${c.rank + 1}`, [c.x - c.side * (c.w / 2) - c.side * OFFSETS.columnFace, 0, c.z], { side: c.side, rank: c.rank, column: [c.x, c.z] }))
+                slots: next.map((c) => slot(`${c.side < 0 ? 'L' : 'R'}${c.rank + 1}`, [c.x - c.side * (c.w / 2) - c.side * OFFSETS.columnFace, 0, c.z], { side: c.side, rank: c.rank, column: [c.x, c.z, c.w] }))
             })
         }
         // The backdrop: what stands on the floor behind the riser, within the show's width.

@@ -18,6 +18,9 @@ import { dealOps } from './deal.js'
 import { deleteOps } from './plotEdits.js'
 import { plotModel, titleTotals } from './plotModel.js'
 import { barTitle, patchBars, UNIVERSE_SIZE } from './patchBars.js'
+import { deskLookId, deskLooks, lookIdOfDesk, lookPoses, restOps, rigLooksOf } from './looks.js'
+import { fireCue } from '../map/cueFiring.js'
+import { lightingApiUrl, lightingDeskPath, probeLightingDesk } from '../map/lightingLink.js'
 import './plot.css'
 import './cards.css'
 
@@ -138,6 +141,73 @@ function PatchPart({ bars, totals, onMove, kept, onKeep, desk }) {
     )
 }
 
+const fmtTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.round(s % 60)).padStart(2, '0')}`
+const WAIT_WIDTH_S = 60 // how wide a cue that waits for GO is drawn on the timeline
+
+/**
+ * THE CUE LIST — the project's own cues (document.mappingState.cues, the same list the
+ * map desk, Perform and the Studio fire through fireCue), each naming a look on the
+ * desk. Drawn against time by each cue's hold: a cue with a hold moves on by itself, a
+ * cue with none waits for GO. A list, not a timeline editor.
+ */
+function CuePart({ cues, looks, current, onGo, onBack, onFire, onAddAll, onDesk, onRest, onHold, onDelete, desk, onDeskLooks }) {
+    const lookOf = (cue) => looks?.looks?.find((l) => l.id === lookIdOfDesk(cue.lightLook)) || null
+    // A clock time only while every cue before has a hold; after a cue that waits for
+    // GO, when the next one starts is the operator's.
+    let t = 0
+    let timed = true
+    const blocks = cues.map((cue, i) => {
+        const w = cue.hold > 0 ? cue.hold : WAIT_WIDTH_S
+        const b = { cue, i, at: timed ? t : null, w }
+        t += w
+        if (!(cue.hold > 0)) timed = false
+        return b
+    })
+    const total = Math.max(t, 1)
+    const missing = (looks?.looks || []).filter((l) => !cues.some((c) => c.lightLook === deskLookId(l.id)))
+    const onDeskCount = (looks?.looks || []).filter((l) => onDesk.has(deskLookId(l.id))).length
+    return (
+        <section className="rigcards-cues" aria-label="Looks on the cue list">
+            <header className="rigcards-cues__head">
+                <h2 className="rigcards-h">looks · cue list</h2>
+                <button type="button" className="rigcards-btn is-primary rigcards-go" onClick={onGo} disabled={!cues.length}>GO{cues.length ? ` ${Math.min(cues.length, current + 2)}` : ''}</button>
+                <button type="button" className="rigcards-btn" onClick={onBack} disabled={current <= 0}>back</button>
+                <span className="rigplot-mono rigcards-cues__where">{current >= 0 && cues[current] ? `on: ${current + 1} ${cues[current].name}` : 'nothing fired'}</span>
+                <span className="rigcards-cues__acts">
+                    {missing.length ? <button type="button" className="rigcards-btn" onClick={() => onAddAll(missing)}>put {missing.length} look{missing.length === 1 ? '' : 's'} on the list</button> : null}
+                    {looks ? <button type="button" className="rigcards-btn" onClick={onDeskLooks} disabled={!desk}>{desk ? `send looks to the desk (${onDeskCount}/${looks.looks.length} there)` : 'no desk here'}</button> : null}
+                    {desk ? <a className="rigcards-btn" href={desk}>GO from /light</a> : null}
+                </span>
+            </header>
+            {!looks ? <p className="rigplot-hint">No designed looks in this project. They are written from the rig file by scripts/rigbuild/looks.mjs.</p> : null}
+            {cues.length ? (
+                <div className="rigcards-timeline" role="list">
+                    {blocks.map(({ cue, i, at, w }) => {
+                        const look = lookOf(cue)
+                        return (
+                            <div key={cue.id} role="listitem" className={`rigcards-cue${i === current ? ' is-live' : ''}${cue.hold > 0 ? '' : ' is-wait'}`} style={{ flexGrow: w / total }}>
+                                <button type="button" className="rigcards-cue__fire" onClick={() => onFire(i)} title={look?.intent || ''}>
+                                    <span className="rigplot-mono rigcards-cue__n">{i + 1}</span>
+                                    <span className="rigcards-cue__name">{cue.name || look?.title || cue.lightLook || 'cue'}</span>
+                                    <span className="rigplot-mono rigcards-cue__time">{at != null ? `${fmtTime(at)} · ` : 'after GO · '}{cue.hold > 0 ? `holds ${cue.hold} s` : 'waits for GO'} · fade {cue.fade} s</span>
+                                </button>
+                                <span className="rigcards-cue__acts">
+                                    <label className="rigplot-field"><span>hold</span><input inputMode="numeric" defaultValue={cue.hold || ''} placeholder="GO" aria-label={`hold of cue ${i + 1}, seconds`} onBlur={(e) => onHold(cue, Number(e.target.value) || 0)} /></label>
+                                    {look ? <button type="button" className="rigcards-btn" onClick={() => onRest(look.id)} title="write this look's aims and colours into the room, so a link with no desk shows it">rest the room here</button> : null}
+                                    <button type="button" className="rigcards-btn" onClick={() => onDelete(cue)} aria-label={`remove cue ${i + 1}`}>remove</button>
+                                </span>
+                            </div>
+                        )
+                    })}
+                </div>
+            ) : looks ? <p className="rigplot-hint">The cue list is empty. Put the looks on it; each cue fires its look on the desk, and the room follows.</p> : null}
+            <p className="rigcards-foot rigplot-mono rigplot-status__dim">
+                a cue fires its look on the desk&apos;s cue layer; the room poses every lamp by the look&apos;s rules · the DMX values need each type&apos;s channel list, which is owed — the desk carries the look, not yet its channels · their console drives it once console input lands (#599)
+            </p>
+        </section>
+    )
+}
+
 /** A position: its name, its slots filled and free, and — with a card in hand — deal here. */
 function PositionRow({ position, fill, lampById, card, n, onDeal, onSlot, onTakeBack, picked }) {
     const filled = position.slots.filter((s) => fill.has(`${position.id}/${s.id}`)).length
@@ -206,7 +276,7 @@ export default function CardsSurface({ spaceId, projectId, library = TYPE_LIBRAR
     }, [entities, lamps])
 
     const model = useMemo(() => plotModel({ entities, library, deskFlags: patch.flags, projectId }), [entities, library, patch.flags, projectId])
-    const bars = useMemo(() => patchBars({ model, rental: counts, deskFlags: patch.flags, projectId }), [model, counts])
+    const bars = useMemo(() => patchBars({ model, rental: counts, deskFlags: patch.flags, projectId }), [model, counts, patch.flags, projectId])
     const totals = useMemo(() => titleTotals(model.sheet), [model.sheet])
     const [kept, setKept] = useState(() => new Set())
     const moveToFree = useCallback((id) => {
@@ -231,6 +301,59 @@ export default function CardsSurface({ spaceId, projectId, library = TYPE_LIBRAR
         applyLocalOps(ops)
         if (message) setStatus(message)
     }, [applyLocalOps])
+
+    // --- looks on the cue list (RIG_BUILD.md §11.4) ---------------------------------
+    const looks = useMemo(() => rigLooksOf(entities), [entities])
+    const cues = useMemo(() => document_.mappingState?.cues || [], [document_.mappingState])
+    const [current, setCurrent] = useState(-1)
+    const [localLook, setLocalLook] = useState('')
+    const [deskHere, setDeskHere] = useState(false)
+    const [onDesk, setOnDesk] = useState(() => new Set())
+    const readDesk = useCallback(async () => {
+        const here = await probeLightingDesk()
+        setDeskHere(here)
+        if (!here) return
+        try {
+            const body = await (await fetch(lightingApiUrl('api/fireable'))).json()
+            setOnDesk(new Set((body.looks || []).map((l) => l.id)))
+        } catch { /* the desk went away between the two calls */ }
+    }, [])
+    useEffect(() => { readDesk() }, [readDesk])
+    const fire = useCallback((i) => {
+        const cue = cues[i]
+        if (!cue) return
+        setCurrent(i)
+        fireCue(cue, applyLocalOps)
+        setLocalLook(lookIdOfDesk(cue.lightLook) || '')
+        setStatus(`GO ${i + 1} · ${cue.name}${deskHere ? (onDesk.has(cue.lightLook) ? ' — fired on the desk' : ' — not on the desk yet: send the looks') : ' — no desk here: the room shows it'}`)
+    }, [cues, applyLocalOps, deskHere, onDesk])
+    // A cue with a hold moves on by itself, as the map desk's show does.
+    useEffect(() => {
+        const cue = cues[current]
+        if (!cue || !(cue.hold > 0) || current + 1 >= cues.length) return undefined
+        const timer = setTimeout(() => fire(current + 1), cue.hold * 1000)
+        return () => clearTimeout(timer)
+    }, [current, cues, fire])
+    const sendLooks = useCallback(async () => {
+        try {
+            const rig = await (await fetch(lightingApiUrl(`api/rig?project=${encodeURIComponent(projectId)}`))).json()
+            const list = deskLooks(looks, rig.fixtures || [])
+            for (const look of list) {
+                await fetch(lightingApiUrl('api/looks/add'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ look }) })
+            }
+            setStatus(`${list.length} looks on the desk, over ${(rig.fixtures || []).length} patched fixtures — their DMX values are owed (no channel lists)`)
+            readDesk()
+        } catch (error) { setStatus(`the desk did not take the looks: ${error.message}`) }
+    }, [looks, projectId, readDesk])
+    const addCues = useCallback((list) => {
+        const ops = list.map((l) => ({ type: 'createMappingCue', payload: { cue: { id: `cue-${deskLookId(l.id)}`, name: l.title, fade: 2, hold: 0, lightLook: deskLookId(l.id) } } }))
+        edit(ops, `${list.length} looks on the cue list`)
+    }, [edit])
+    const restOn = useCallback((lookId) => {
+        const ops = restOps(entities, lookPoses({ entities, library, lookId, rigLooks: looks }))
+        edit(ops, `the room rests on ${lookId}: ${ops.length} writes (undo to take it back)`)
+    }, [entities, library, looks, edit])
+
 
     // "Patch this group" once the dealt lamps are in the document: the card lands as one
     // contiguous block in one universe (RIG_BUILD.md §4.2, §7).
@@ -349,6 +472,16 @@ export default function CardsSurface({ spaceId, projectId, library = TYPE_LIBRAR
         </section>
     )
 
+    const cuePart = (
+        <CuePart
+            cues={cues} looks={looks} current={current} desk={deskHere ? lightingDeskPath({ spaceId, projectId, label: title }) : null} onDesk={onDesk}
+            onGo={() => fire(Math.min(cues.length - 1, current + 1))} onBack={() => fire(Math.max(0, current - 1))} onFire={fire}
+            onAddAll={addCues} onDeskLooks={sendLooks} onRest={restOn}
+            onHold={(cue, hold) => { if (hold !== cue.hold) edit([{ type: 'setMappingCue', payload: { cueId: cue.id, patch: { hold } } }], `cue ${cue.name}: hold ${hold || 'GO'}`) }}
+            onDelete={(cue) => edit([{ type: 'deleteMappingCue', payload: { cueId: cue.id } }], `cue ${cue.name} removed`)}
+        />
+    )
+
     const patchPart = <PatchPart bars={bars} totals={totals} onMove={moveToFree} kept={kept} onKeep={(id) => setKept((k) => new Set([...k, id]))} desk={patch.message !== 'no desk on this machine'} />
 
     const statusLine = (
@@ -364,7 +497,7 @@ export default function CardsSurface({ spaceId, projectId, library = TYPE_LIBRAR
     }, [entities, lamps])
     const room = pane === 'room' ? (
         <Suspense fallback={<div className="rigplot-room rigplot-room--empty">room…</div>}>
-            <PlotRoom document={document_} selectedIds={[]} onSelect={() => {}} extent={extent} venueExtent={planExtent(venueOf(entities).plan)} />
+            <PlotRoom document={document_} selectedIds={[]} onSelect={() => {}} extent={extent} venueExtent={planExtent(venueOf(entities).plan)} rigLook={deskHere ? undefined : localLook} />
         </Suspense>
     ) : null
 
@@ -388,12 +521,13 @@ export default function CardsSurface({ spaceId, projectId, library = TYPE_LIBRAR
 
     if (phone) {
         return (
-            <div className="rigplot rigcards rigcards--phone">
+            <div className={`rigplot rigcards rigcards--phone${pane === 'cards' && card ? ' has-sheet' : ''}`}>
                 {header}
                 {pane === 'room' ? <div className="rigcards-roompane">{room}</div> : (
                     <main className="rigcards-main">
                         {cards}
                         {patchPart}
+                        {cuePart}
                         <p className="rigcards-foot"><a href={buildPlotPath(spaceId, projectId)}>plot</a> · <a href={buildPatchSheetPath(spaceId, projectId)}>patch sheet</a></p>
                     </main>
                 )}
@@ -416,7 +550,7 @@ export default function CardsSurface({ spaceId, projectId, library = TYPE_LIBRAR
                     <div className="rigcards-col rigcards-col--cards">{cards}</div>
                     <div className="rigcards-col rigcards-col--positions">{positionsPart}</div>
                     <div className="rigcards-col rigcards-col--patch">{patchPart}</div>
-                    <div className="rigcards-bottom">{statusLine}</div>
+                    <div className="rigcards-bottom">{statusLine}{cuePart}</div>
                 </main>
             )}
         </div>

@@ -5,6 +5,28 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-28 — view C of the rig builder: the cards (rental list → positions → patch → looks)
+
+- `/{space}/cards/{project}`: the rental list as cards, `placed n / ordered m`. The list is
+  written from the rental house's spreadsheet and the show's order, with provenance, by
+  `scripts/rigbuild/rental.mjs`. The plot's key now says "3 left of 12" too.
+- Positions are derived from the pieces, the zones and the venue plan: truss, tower
+  ladders and tops, stage back line, flanks and pit, column bases, faces and outer columns,
+  dance-floor columns, backdrop. A card is dealt evenly and symmetrically, or in pairs from
+  the stage, as the plot's own lamps written as ops, then patched as one group. On a phone:
+  tap a card, tap a slot.
+- Patch bars, one per universe:
+  - hatched conflicts with "move to next free";
+  - dashed "to place";
+  - owed modes listed, never given an assumed footprint.
+- The rig's five looks sit on the project's own cue list (`mappingState.cues`, `fireCue`)
+  and on the desk as `rig-<look>`. GO puts a look on the desk's cue layer. The room poses
+  every lamp by the look's rules, a port of `rig-lib.mjs` `AIM_RULES` held equal to it by
+  test.
+- MOXIR on an own stack: 104/104 dealt; 46 patched; GO ×5 followed by the room on the RTX
+  3080 at 60 fps. The DMX values of a look are owed (no channel lists). Console GO waits for
+  #599. Details: `docs/ai/sessions/feat-rig-cards-cues.md`, RIG_BUILD.md §11.
+
 ## 2026-09-28 — view B of the rig builder: the plot, the room beside it, sheet 1
 
 - `/{space}/plot/{project}`: the rig drawn from above like a lighting plot — the hall from
