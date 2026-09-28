@@ -16,6 +16,18 @@ const STREAM_ID = 'streaming-reply'
 // machine — then its own name, so a festival reply is never labelled Claude.
 const authorLabel = (model) => (model && !/claude/i.test(model) ? model : 'Claude')
 
+// What a turn cost, when the model said: an answer through your own API key is paid
+// per token, and the server has stored both counts on every turn since the chat was
+// built — nothing showed them until 2026-09-28. A model with no counts (a local one)
+// says nothing rather than "0".
+const tokenCount = (n) => (Number.isFinite(n) ? n.toLocaleString('en-US') : null)
+export const turnUsage = (message) => {
+    const input = tokenCount(message?.input_tokens)
+    const output = tokenCount(message?.output_tokens)
+    if (!input && !output) return null
+    return `${input ?? '—'} in · ${output ?? '—'} out tokens`
+}
+
 export default function AgentChatPanelWindow({ chatId, onPersistChatId }) {
     const [messages, setMessages] = useState([])
     const [draft, setDraft] = useState('')
@@ -30,7 +42,12 @@ export default function AgentChatPanelWindow({ chatId, onPersistChatId }) {
     const [localModel, setLocalModel] = useState(null)
     const [localOnly, setLocalOnly] = useState(false)
     const listRef = useRef(null)
-    const chatIdRef = useRef(chatId || null)
+    // Which chat this window has already loaded or made. It starts EMPTY: starting it at
+    // the chatId prop made the load effect below skip the very first load, so a node that
+    // already had a conversation opened empty after every reload (2026-09-28). The one
+    // skip the effect wants — a chat this window just created — is recorded where the
+    // chat is created.
+    const chatIdRef = useRef(null)
 
     useEffect(() => {
         let cancelled = false
@@ -84,11 +101,14 @@ export default function AgentChatPanelWindow({ chatId, onPersistChatId }) {
         // and wipe the message the user just sent.
         if (chatIdRef.current === chatId) return undefined
         chatIdRef.current = chatId
+        let settled = false
         getAiChat(chatId)
             .then(({ messages: loaded }) => {
+                settled = true
                 if (!cancelled) setMessages(loaded || [])
             })
             .catch((e) => {
+                settled = true
                 if (cancelled) return
                 if (e.status === 404) {
                     // another user's chat (shared project) or a deleted one —
@@ -99,7 +119,12 @@ export default function AgentChatPanelWindow({ chatId, onPersistChatId }) {
                     setNotice(e.status === 403 ? 'Sign in with an account to chat.' : 'Could not load this chat.')
                 }
             })
-        return () => { cancelled = true }
+        // Interrupted before the chat arrived (a remount, React's development double
+        // run): forget it, so the next run loads it instead of believing it already did.
+        return () => {
+            cancelled = true
+            if (!settled && chatIdRef.current === chatId) chatIdRef.current = null
+        }
     }, [chatId])
 
     const lastText = streamText ?? messages.at(-1)?.content
@@ -186,6 +211,9 @@ export default function AgentChatPanelWindow({ chatId, onPersistChatId }) {
                     <div key={message.id} className={`raw-chat-message${message.role === 'user' ? ' is-self' : ''}`}>
                         <span className="raw-chat-message-author">{message.role === 'user' ? 'You' : authorLabel(message.model)}</span>
                         <p className="raw-chat-message-text">{message.content}</p>
+                        {message.role !== 'user' && turnUsage(message) && (
+                            <span className="raw-chat-message-usage">{turnUsage(message)}</span>
+                        )}
                     </div>
                 ))}
                 {streamText !== null && (

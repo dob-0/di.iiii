@@ -50,7 +50,8 @@ export default function MapSurface({ projectId, spaceId }) {
     const {
         store, document: doc, mapping, surfaces, syncState, applyOps,
         addSurface, updateSurface, deleteSurface, reorderSurfaces, setOutput, upsertAsset,
-        addCue, updateCue, deleteCue, reorderCues, fireCue
+        addCue, updateCue, deleteCue, reorderCues, fireCue,
+        undo, redo, canUndo, canRedo
     } = useMapDocument(projectId, { role: 'desk' })
     // Every machine showing this space, and what each one has: the wall is usually another computer.
     const { machines, ndiScan } = useMachinePresence(spaceId)
@@ -206,7 +207,14 @@ export default function MapSurface({ projectId, spaceId }) {
         const onKeyDown = (event) => {
             const target = event.target
             if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return
-            if (event.metaKey || event.ctrlKey) return
+            // Undo / redo, the keys every editor here answers to: Ctrl/Cmd+Z,
+            // Shift+Ctrl/Cmd+Z and Ctrl+Y. Any other chord stays the browser's.
+            if (event.metaKey || event.ctrlKey) {
+                const key = event.key.toLowerCase()
+                if (key === 'z' && !event.shiftKey) { undo(); event.preventDefault() }
+                else if ((key === 'z' && event.shiftKey) || key === 'y') { redo(); event.preventDefault() }
+                return
+            }
 
             // The binding itself is in src/map/cueFiring.js, because the 3D
             // scene listens for the same keys on the same cues. A cue key with
@@ -232,7 +240,7 @@ export default function MapSurface({ projectId, spaceId }) {
         }
         window.addEventListener('keydown', onKeyDown)
         return () => window.removeEventListener('keydown', onKeyDown)
-    }, [nudge, cues, onFireCue])
+    }, [nudge, cues, onFireCue, undo, redo])
 
     // --- carrying a mapping between machines ----------------------------
 
@@ -316,6 +324,12 @@ export default function MapSurface({ projectId, spaceId }) {
                         onClick={() => navigateToStudioPath(buildStudioProjectPath(projectId, spaceId))}
                         title="Back to the room for this project"
                     >← Studio</button>
+                    {/* The same undo as the keys, for a finger on a tablet at the desk.
+                        Firing a cue is not undone: it is a performance, not an edit. */}
+                    <button type="button" className="map-action" onClick={undo} disabled={!canUndo()}
+                        title="Undo the last change to the mapping (Ctrl/Cmd+Z)">Undo</button>
+                    <button type="button" className="map-action" onClick={redo} disabled={!canRedo()}
+                        title="Redo (Shift+Ctrl/Cmd+Z)">Redo</button>
                     <label className="map-field map-field-inline">
                         <span>Output</span>
                         <input type="number" min="1" value={output.width}
