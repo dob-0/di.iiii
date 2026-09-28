@@ -12,6 +12,11 @@
  *
  * Options
  *   --worktree <dir>      the di.iiii checkout to measure (default: this repo)
+ *   --ref <branch|sha>    measure a committed ref instead: a clean detached
+ *                         checkout under .movement-rig/trees/ (preferred — a
+ *                         working tree may hold another agent's unsaved edits)
+ *   --lock <file|none>    the machine-wide browser lock (see README "Heat")
+ *   --max-temp <C>        wait until the CPU package is at or below this (85)
  *   --out <dir>           results folder (default: <this repo>/.movement-rig/<date>-<branch>)
  *   --label <text>        a name for this run in the report (default: the branch)
  *   --rooms a,b           synthetic,moxir (default both)
@@ -42,8 +47,29 @@ const arg = (name, fallback = null) => {
 }
 const expand = (p) => (p && p.startsWith('~') ? path.join(os.homedir(), p.slice(1)) : p)
 
+// --ref <branch|sha>: measure a COMMITTED state, not somebody's working tree.
+// A detached checkout under .movement-rig/trees/<sha>; node_modules are linked
+// from this repo when the lockfiles match byte for byte, else `npm ci` there.
+function checkoutRef(ref) {
+    const sha = execFileSync('git', ['-C', RIG_REPO, 'rev-parse', '--short', ref], { encoding: 'utf8' }).trim()
+    const dir = path.join(RIG_REPO, '.movement-rig', 'trees', sha)
+    if (!fs.existsSync(path.join(dir, '.git'))) {
+        fs.mkdirSync(path.dirname(dir), { recursive: true })
+        execFileSync('git', ['-C', RIG_REPO, 'worktree', 'add', '--detach', dir, sha], { stdio: 'inherit' })
+    }
+    for (const sub of ['', 'serverXR']) {
+        const lockA = path.join(RIG_REPO, sub, 'package-lock.json'), lockB = path.join(dir, sub, 'package-lock.json')
+        const nm = path.join(dir, sub, 'node_modules')
+        if (fs.existsSync(nm)) continue
+        if (fs.readFileSync(lockA, 'utf8') === fs.readFileSync(lockB, 'utf8')) fs.symlinkSync(path.join(RIG_REPO, sub, 'node_modules'), nm)
+        else execFileSync('npm', ['--prefix', path.join(dir, sub), 'ci', '--no-audit', '--no-fund'], { stdio: 'inherit' })
+    }
+    return { dir, label: `${ref}@${sha}` }
+}
+const refCheckout = arg('ref') && !process.env.DI_MOVRIG_INNER ? checkoutRef(String(arg('ref'))) : null
+if (refCheckout) { argv.push('--worktree', refCheckout.dir); if (!arg('label')) argv.push('--label', refCheckout.label) }
 const worktree = path.resolve(expand(arg('worktree', RIG_REPO)))
-const branch = (() => { try { return execFileSync('git', ['-C', worktree, 'rev-parse', '--abbrev-ref', 'HEAD'], { encoding: 'utf8' }).trim() } catch { return 'unknown' } })()
+const branch = arg('ref') ? String(arg('ref')).replace(/^origin\//, '') : (() => { try { return execFileSync('git', ['-C', worktree, 'rev-parse', '--abbrev-ref', 'HEAD'], { encoding: 'utf8' }).trim() } catch { return 'unknown' } })()
 const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')
 const outDir = path.resolve(expand(arg('out', path.join(RIG_REPO, '.movement-rig', `${stamp}-${branch.replace(/[^\w.-]+/g, '_')}`))))
 const size = String(arg('size', '2560x1440'))
