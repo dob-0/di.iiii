@@ -160,7 +160,9 @@ export default function PlotPrint({ model, title, spaceId, projectId, extent: ri
                         [`scale 1:${n} · ${sheet.id}`, 'sheet 1 / 3 · plot'],
                         [t.channels.slice(0, 26), t.power],
                         [t.fixtures, t.circuits],
-                        [`desk ${desk?.here ? (desk.output || 'here') : 'none here'}`, `console in: ${desk?.consoleIn || 'no desk here'}`],
+                        // A title block is fields; with no desk (every hosted tier) they say where the
+                        // desk lives rather than a bare "none" (rigToolAccess.js NO_DESK_SENTENCE).
+                        desk?.here ? [`desk ${desk.output || 'here'}`, `console in: ${desk.consoleIn || '…'}`] : ['desk: a local di.iiii only', 'console in: at that desk'],
                         [`rev · ${date}`, `doc v${version ?? '?'}`]
                     ].map(([a, b], i) => (
                         <g key={i} fontSize="2">

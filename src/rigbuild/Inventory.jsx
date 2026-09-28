@@ -6,6 +6,7 @@ import { byGroup, matchTile, tileWords } from './inventory.js'
 import { FLAG_WORDS, FROM_WORDS, ITEM_CATEGORIES } from './equipment.js'
 import { typeById, modeOf, powerOf } from './fixtureTypes.js'
 import { lightingApiUrl, probeLightingDesk } from '../map/lightingLink.js'
+import useLocalInstall from '../hooks/useLocalInstall.js'
 import './plot.css'
 import './cards.css'
 import './equipment.css'
@@ -46,10 +47,16 @@ export function Stepper({ value, onChange, min = 0, max = 999, label = 'quantity
     )
 }
 
-// A picture that fails to load (a maker's file on a tier that does not hold it, a render not
-// built) is dropped, not shown broken — the next one takes its place.
-function Picture({ tile, size = 'tile' }) {
-    const all = useMemo(() => picturesOf({ id: tile.typeId || tile.item?.id, piece: tile.piece, item: tile.item, apiBase: apiBaseUrl }), [tile])
+// The makers' kept files live on the studio's own install and nowhere else (items/media.js):
+// on a hosted tier the card never asks for one — no request that can only 404 — and links
+// the maker's page instead.
+export const KEPT_ELSEWHERE_SENTENCE = 'The maker\u2019s file is kept on the studio\u2019s own machine; here is the maker\u2019s page.'
+
+// A picture that fails to load (a render not built, a kept file this install lacks) is
+// dropped, not shown broken — the next one takes its place.
+export function Picture({ tile, size = 'tile' }) {
+    const { isLocal } = useLocalInstall()
+    const all = useMemo(() => picturesOf({ id: tile.typeId || tile.item?.id, piece: tile.piece, item: tile.item, apiBase: isLocal ? apiBaseUrl : null }), [tile, isLocal])
     const [failed, setFailed] = useState(() => new Set())
     // On a tile, a stand-in's photo never stands for the rental unit: our model comes first there.
     const pics = useMemo(() => {
@@ -119,20 +126,22 @@ const probeStore = (url) => {
 
 /** The documents: manual, DMX chart, datasheet, safety. A file the maker offers for download
  * opens the copy this install keeps; anything else links the maker's page, never copied. */
-function Documents({ id }) {
+export function Documents({ id }) {
+    const { isLocal } = useLocalInstall()
     const docs = documentsOf(id)
     const first = docs.map((d) => assetUrl(apiBaseUrl, d)).find(Boolean)
     const [here, setHere] = useState(null)
     useEffect(() => {
         let live = true
-        if (first) probeStore(first).then((ok) => { if (live) setHere(ok) })
+        // Only a local install can hold the kept copies: a hosted tier is not even asked.
+        if (first && isLocal) probeStore(first).then((ok) => { if (live) setHere(ok) })
         else setHere(false)
         return () => { live = false }
-    }, [first])
+    }, [first, isLocal])
     if (!docs.length) return null
     return (
         <section className="rigequip-card__part rigequip-docs"><h3>documents</h3>
-            {first && here === false ? <p className="rigplot-hint">The kept copies stay on the studio’s own install (the makers’ copyright, internal reference) — here each line links the maker’s file.</p> : null}
+            {first && here === false ? <p className="rigplot-hint">{KEPT_ELSEWHERE_SENTENCE}</p> : null}
             <ul>
                 {docs.map((d) => {
                     const local = here ? assetUrl(apiBaseUrl, d) : null
@@ -146,7 +155,8 @@ function Documents({ id }) {
                             <span className="rigequip-docs__rights rigplot-mono">
                                 {d.offer === 'link'
                                     ? <>© {d.maker} — on the maker’s page, linked, not copied · checked {d.checked}</>
-                                    : <>© {d.maker} — manufacturer’s document, internal reference · <a href={d.page || d.url} target="_blank" rel="noreferrer">source</a> · fetched {d.fetched || 'not yet'}{d.sha256 ? <> · sha256 {d.sha256.slice(0, 12)}…</> : null}{local ? ' · the copy kept here' : ''}</>}
+                                    : local ? <>© {d.maker} — manufacturer’s document, internal reference · <a href={d.page || d.url} target="_blank" rel="noreferrer">source</a> · fetched {d.fetched || 'not yet'}{d.sha256 ? <> · sha256 {d.sha256.slice(0, 12)}…</> : null} · the copy kept here</>
+                                        : <>© {d.maker} — on the maker’s page, linked · <a href={d.page || d.url} target="_blank" rel="noreferrer">the maker’s page</a></>}
                             </span>
                         </li>
                     )
