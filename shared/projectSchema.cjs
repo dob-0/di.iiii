@@ -1495,7 +1495,14 @@ const normalizeMappingState = (mapping = {}) => {
     // The cue list goes from its last cue back to cue 1 while this is on — the
     // desk's cue runner plays it (serverXR/src/lighting/cuerun.js). Written only
     // when on: absent means absent, so every older document is byte-identical.
-    ...(source.loop === true ? { loop: true } : {})
+    ...(source.loop === true ? { loop: true } : {}),
+    // The show's clock (RIG_BUILD.md §16, hosted playback): the moment, in ms since
+    // 1970 UTC, the cue list started. With no desk, every viewer computes the cue on
+    // screen from it — t = (now - showEpoch) mod the loop's length — so viewers
+    // anywhere see the same moment. Written only when set, like `loop`.
+    ...(typeof source.showEpoch === 'number' && Number.isFinite(source.showEpoch) && source.showEpoch > 0
+        ? { showEpoch: Math.round(source.showEpoch) }
+        : {})
   }
 }
 
