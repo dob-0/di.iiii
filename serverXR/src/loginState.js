@@ -19,18 +19,23 @@ function sanitizeReturnTo(returnTo) {
   return returnTo
 }
 
-function signLoginState(secret, { returnTo = null } = {}) {
+// `hub` ({ ret, nonce }) marks a round trip made for ANOTHER server through the
+// sign-in hub (authHub.js): the callback mints a pass for `ret` instead of a
+// session here. Callers validate ret/nonce before signing; the MAC keeps them.
+function signLoginState(secret, { returnTo = null, hub = null } = {}) {
   const safeReturnTo = sanitizeReturnTo(returnTo)
   const payload = Buffer.from(JSON.stringify({
     n: crypto.randomBytes(8).toString('hex'),
     t: Date.now(),
-    ...(safeReturnTo ? { r: safeReturnTo } : {})
+    ...(safeReturnTo ? { r: safeReturnTo } : {}),
+    ...(hub && hub.ret && hub.nonce ? { h: { ret: String(hub.ret), nonce: String(hub.nonce) } } : {}),
+    ...(hub && !hub.ret && hub.nonce ? { h: { nonce: String(hub.nonce) } } : {})
   })).toString('base64url')
   const mac = crypto.createHmac('sha256', secret).update(payload).digest('base64url')
   return `${payload}.${mac}`
 }
 
-// Returns the verified payload ({ n, t, r? }) or null — verifyLoginState
+// Returns the verified payload ({ n, t, r?, h? }) or null — verifyLoginState
 // keeps its boolean shape on top of this for existing callers.
 function readLoginState(secret, state) {
   if (!state || typeof state !== 'string' || !state.includes('.')) return null

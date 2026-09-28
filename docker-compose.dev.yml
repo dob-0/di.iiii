@@ -41,6 +41,13 @@ services:
       OAUTH_CALLBACK_BASE_URL: ${DEV_OAUTH_CALLBACK_BASE_URL:-}
       GITHUB_CLIENT_ID: ${DEV_GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${DEV_GITHUB_CLIENT_SECRET:-}
+      # The sign-in hub (docs/architecture/AUTH_HUB.md). The dev tier signs with
+      # its OWN key pair, never the official one; a copy rehearsing against dev
+      # sets AUTH_HUB_URL=https://dev.diiii.xyz/serverXR and dev's public key.
+      AUTH_HUB_SIGNING_KEY: ${DEV_AUTH_HUB_SIGNING_KEY:-}
+      AUTH_HUB_ALLOWED_RETURNS: ${DEV_AUTH_HUB_ALLOWED_RETURNS:-}
+      AUTH_HUB_URL: ${DEV_AUTH_HUB_URL:-}
+      AUTH_HUB_PUBLIC_KEY: ${DEV_AUTH_HUB_PUBLIC_KEY:-}
       # Sign in with Telegram — a DIFFERENT bot and secret than production,
       # or a link minted here would sign someone in on the wrong tier.
       TELEGRAM_LOGIN_SECRET: ${DEV_TELEGRAM_LOGIN_SECRET:-}

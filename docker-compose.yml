@@ -55,6 +55,12 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       OAUTH_CALLBACK_BASE_URL: ${OAUTH_CALLBACK_BASE_URL:-}
+      # The sign-in hub (docs/architecture/AUTH_HUB.md): only THE hub sets the
+      # signing key; every other server needs nothing (the official hub is built in).
+      AUTH_HUB_SIGNING_KEY: ${AUTH_HUB_SIGNING_KEY:-}
+      AUTH_HUB_ALLOWED_RETURNS: ${AUTH_HUB_ALLOWED_RETURNS:-}
+      AUTH_HUB_URL: ${AUTH_HUB_URL:-}
+      AUTH_HUB_PUBLIC_KEY: ${AUTH_HUB_PUBLIC_KEY:-}
 
       # GitHub sign-in (optional): create an OAuth App at
       # https://github.com/settings/developers
