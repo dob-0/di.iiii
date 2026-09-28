@@ -724,8 +724,13 @@ Lens nodes): one InstancedMesh per kind × part × material with a matrix per la
 matrices from `scripts/place/fixture-lib.mjs` `aimFixture` — the code the baked MOXIR bodies
 came from — so a head turns where its beam goes and follows a look; a lens takes its lamp's
 colour. About 40 draw calls however many lamps. A view only; the document keeps the lens and
-the aim. This closes §10.8's "bodies per lamp" for view A (the plot's and the cards' room panes
-still draw beams only).
+the aim. This closed §10.8's "bodies per lamp" for view A. Since 2026-09-28 (owner on `/moxir`:
+*"i can't see the models of the lights now"*) every room draws them: `RigBodies.jsx` (lazy,
+mounted only when the document has a typed lamp) feeds the same `FixtureBodies` from the document
+(`rigBodyLamps.js`: plotData's mount and beam, the light's colour) in the space view
+(`LiveProjectScene`, prop `rigBodies`, off in view A which draws its own) and in `StudioViewport`
+— the Studio and the plot's and cards' room panes. `load-plot.mjs` no longer deletes the baked
+column wash (`rig-wash`): no live lamp replaces its light.
 
 ### 12.5 The phone
 
@@ -778,7 +783,7 @@ Found and fixed on the way:
 - MVR and patch-sheet downloads from the crew view: the patch sheet is a link; the MVR is still
   `scripts/rigbuild/export-mvr.mjs` only.
 - A console driving the room (the HUD's "console in") waits for `feat/dmx-input` (#599).
-- Bodies in the plot's and cards' room panes; a lamp's heading (body yaw) is not in the document.
+- A lamp's heading (body yaw) is not in the document. (Bodies in the plot's and cards' room panes: done 2026-09-28, §12.4.)
 - The desk's allocation for a lamp placed at the end of a busy universe: seen only through
   auto-patch's own rules (§4); no crew has plugged by it.
 

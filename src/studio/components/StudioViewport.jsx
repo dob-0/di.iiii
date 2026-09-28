@@ -1,4 +1,4 @@
-import { Suspense, createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, createContext, lazy, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import '../styles/studio.css'
@@ -6,6 +6,7 @@ import { CameraControls, Grid, Html, TransformControls } from '@react-three/drei
 import RigMirror from './RigMirror.jsx'
 import { useLiveLightEntity } from '../../rigMirror/liveLight.js'
 import { useRigLookEntities } from '../../rigbuild/useRigLook.js'
+import { hasRigLamps } from '../../rigbuild/hasRigLamps.js'
 import LiveScreens from './LiveScreens.jsx'
 import { XR, useXR } from '@react-three/xr'
 import ModalTransform from './ModalTransform.jsx'
@@ -30,6 +31,9 @@ import {
 import StudioHelpDialog from './StudioHelpDialog.jsx'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
+
+// The lamps' bodies (src/rigbuild/RigBodies.jsx): loaded only by a room that has a rig.
+const RigBodies = lazy(() => import('../../rigbuild/RigBodies.jsx'))
 
 const AR_SCENE_POSITION = [0, 0, -1.2]
 const DEFAULT_SCENE_POSITION = [0, 0, 0]
@@ -637,6 +641,7 @@ function StudioSceneContent({
         return map
     }, [sceneEntities])
     const rootEntities = useMemo(() => sceneEntities.filter((e) => !e.parentId), [sceneEntities])
+    const hasRig = useMemo(() => hasRigLamps(sceneEntities), [sceneEntities])
     const [previewById, setPreviewById] = useState({})
 
     const selectedIdSet = useMemo(() => new Set(selectedEntityIds), [selectedEntityIds])
@@ -760,6 +765,7 @@ function StudioSceneContent({
                             />
                         </SceneEntityErrorBoundary>
                     ))}
+                    {hasRig ? <RigBodies entities={sceneEntities} /> : null}
                     <MultiSelectionGizmo
                         entities={transformableSelectedEntities}
                         editMode={editMode}
