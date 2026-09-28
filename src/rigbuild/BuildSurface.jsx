@@ -23,7 +23,10 @@ import { TAG_MAX, TAG_MAX_PHONE, flagLines, patchLines, tagOf } from './tags.js'
 import { usePieceAssets } from './usePieceAssets.js'
 import { useRigLookEntities } from './useRigLook.js'
 import { buildPatchSheetPath } from './patchRouting.js'
-import { buildCrewPath } from './buildRouting.js'
+import { rigProgress } from './rigProgress.js'
+import { BUILD_KEYS } from './buildKeys.js'
+import RigBar, { usePointerLocked } from './RigSteps.jsx'
+import useLocalInstall from '../hooks/useLocalInstall.js'
 import { useDeskState } from './deskState.js'
 import { Inspector } from './PlotSurface.jsx'
 import BuildScene from './BuildScene.jsx'
@@ -46,6 +49,21 @@ import './build.css'
 // tap away. It writes nothing and asks the desk nothing.
 
 const PHONE_QUERY = '(pointer: coarse)'
+const LEGEND_KEY = 'rigbuild.legend.seen'
+
+function KeyLegend({ onClose }) {
+    return (
+        <aside className="rigbuild-legend rigplot-mono" aria-label="Build keys">
+            <div className="rigbuild-legend__head">
+                <b>build · keys</b>
+                <button type="button" className="rigbuild-legend__close" onClick={onClose} aria-label="Close the keys">×</button>
+            </div>
+            <dl>
+                {BUILD_KEYS.map(([k, v]) => <FragmentRow key={k} k={k} v={v} />)}
+            </dl>
+        </aside>
+    )
+}
 const r2 = (v) => Math.round(v * 100) / 100
 
 const useIsPhone = () => {
@@ -147,9 +165,28 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
         return m
     }, [look.entities, library, patch.flags, projectId, crew])
     const totals = useMemo(() => titleTotals(model.sheet), [model.sheet])
+    // The steps row: what the document says about each step (the document's own lamps,
+    // never the look's poses — a look moves beams, it does not place anything).
+    const progress = useMemo(() => rigProgress({ entities, library, deskFlags: crew ? [] : patch.flags, projectId }), [entities, library, patch.flags, projectId, crew])
+    const localInstall = useLocalInstall()
+    // The bar hides while the room has the pointer and comes back with Esc.
+    const locked = usePointerLocked()
 
     // --- the hand ---------------------------------------------------------------
     const [building, setBuilding] = useState(false)
+    // The keys, said once: the first time this browser enters build mode (a convenience
+    // kept in this browser; H brings it back). The phone has its own buttons instead.
+    const [legend, setLegend] = useState(false)
+    useEffect(() => {
+        if (!building || crew || phone) return
+        let seen = false
+        try { seen = window.localStorage.getItem(LEGEND_KEY) === '1' } catch { /* a private window shows it each visit */ }
+        if (!seen) setLegend(true)
+    }, [building, crew, phone])
+    const closeLegend = useCallback(() => {
+        setLegend(false)
+        try { window.localStorage.setItem(LEGEND_KEY, '1') } catch { /* kept for the visit */ }
+    }, [])
     // The hotbar is filled FROM the inventory (RIG_BUILD.md §13): a tile dragged onto a
     // slot, or "to hotbar" on its card. The arrangement is this person's, kept in this
     // browser (a convenience, not the show's data); unarranged, the default order.
@@ -292,6 +329,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
             if ((e.ctrlKey || e.metaKey) && k === 'z' && !crew) { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return }
             if ((e.ctrlKey || e.metaKey) && k === 'y' && !crew) { e.preventDefault(); redo(); return }
             if (e.ctrlKey || e.metaKey || e.altKey) return
+            if (k === 'h' && !crew) { if (legend) closeLegend(); else setLegend(true); return }
             if (k === 'e') { openInventory(true); return }
             if (k === 'b' && !crew) { setBuilding((b) => !b); return }
             if (k === 'i') { inspectAimed(); return }
@@ -306,7 +344,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-    }, [building, crew, slots.length, rotate, raise, undo, redo, inspectAimed, sheetOpen, inventory, openInventory])
+    }, [building, crew, slots.length, rotate, raise, undo, redo, inspectAimed, sheetOpen, inventory, openInventory, legend, closeLegend])
 
     useEffect(() => {
         const el = wrapRef.current
@@ -417,7 +455,12 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
         : <>WASD · move &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; click / I · the patch of a lamp &nbsp;·&nbsp; E · inventory &nbsp;·&nbsp; {crew ? '' : <>B · build &nbsp;·&nbsp; </>}F · fly &nbsp;·&nbsp; ESC · release</>
 
     return (
-        <main className={`rigbuild${phone ? ' is-phone' : ''}${building ? ' is-building' : ''}${crew ? ' is-crew' : ''}`} ref={wrapRef} data-space-id={spaceId || ''}>
+        <main className={`rigbuild has-rigbar${phone ? ' is-phone' : ''}${building ? ' is-building' : ''}${crew ? ' is-crew' : ''}`} ref={wrapRef} data-space-id={spaceId || ''}>
+            <RigBar
+                spaceId={spaceId} projectId={projectId} projectLabel={projectDocument?.projectMeta?.title || projectId}
+                here={crew ? 'crew' : 'build'} progress={shownDocument ? progress : null}
+                isLocalInstall={localInstall.isLocal} hidden={locked} float
+            />
             {shownDocument ? (
                 <RoomBoundary patchHref={buildPatchSheetPath(spaceId, projectId)}>
                 <LiveProjectScene
@@ -430,8 +473,8 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
                     showChrome
                     showModeControls={!(phone && building)}
                     title={title}
-                    exitLabel="← Space"
-                    onExit={() => { window.location.href = `/${spaceId}` }}
+                    // The way out is the bar above (room, and every other step).
+                    exitLabel={null}
                     altitudeKeys={{ up: [' '], down: ['c'] }}
                     wheelDolly={!building}
                     walkHint={hint}
@@ -477,12 +520,9 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
                 {consoleIn ? <div className="rigbuild-dim">console in · {consoleIn}</div> : null}
                 {look.lookId ? <div>look · {look.lookId}{look.fromDesk ? ' (desk)' : ''}</div> : null}
                 {model.conflicts.length ? <div className="rigbuild-warn">! {model.conflicts.length} conflict{model.conflicts.length === 1 ? '' : 's'}</div> : null}
-                {crew ? (
-                    <div className="rigbuild-links"><a href={buildPatchSheetPath(spaceId, projectId)}>patch sheet</a></div>
-                ) : (
-                    <div className="rigbuild-links"><a href={buildCrewPath(spaceId, projectId)}>crew link</a> · <a href={buildEquipmentPath(spaceId, projectId)}>equipment</a></div>
-                )}
             </section>) : null}
+
+            {legend && building && !crew && !phone ? <KeyLegend onClose={closeLegend} /> : null}
 
             {building && !crew ? (
                 <section className="rigbuild-hand" aria-label="The hand">

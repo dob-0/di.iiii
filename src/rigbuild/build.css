@@ -177,3 +177,34 @@
 .rigbuild.is-building .rigbuild-mode--items { bottom: 16px; }
 .rigbuild-inventory { position: absolute; inset: 0; z-index: 30; }
 .rigbuild.is-phone .rigbuild-mode--items { top: 58px; left: auto; right: auto; bottom: auto; left: 96px; }
+
+/* The two rows of the rig's bar sit over the room (RigSteps.jsx, rigbar--float): the
+   room's own header and everything that hung under it move down by the bar's height,
+   and stay there while the bar hides under the locked pointer (no jump on Esc). */
+.rigbuild.has-rigbar .live-scene-chrome { top: var(--rigbar-h); }
+.rigbuild.has-rigbar .rigbuild-totals,
+.rigbuild.has-rigbar .rigbuild-mode:not(.rigbuild-mode--items) { top: calc(var(--rigbar-h) + 64px); }
+.rigbuild.has-rigbar .rigbuild-sheet.rigplot { top: calc(var(--rigbar-h) + 64px); }
+.rigbuild.has-rigbar.is-phone .rigbuild-totals,
+.rigbuild.has-rigbar.is-phone .rigbuild-mode { top: calc(var(--rigbar-h) + 58px); }
+.rigbuild.has-rigbar.is-phone .rigbuild-mode--items { top: calc(var(--rigbar-h) + 58px); bottom: auto; }
+.rigbuild.has-rigbar.is-phone .rigbuild-sheet.rigplot { top: auto; }
+
+/* The keys, said once on the first entry to build mode (H brings them back). The HUD's
+   own ground and words (the UI audit's HUD spec: the strong scrim, --di-dim for the
+   second column, the mono), under the totals on the right, never over the hotbar. */
+.rigbuild-legend {
+    position: absolute; left: var(--di-space-4); top: calc(var(--rigbar-h) + 64px + 56px); z-index: 9;
+    background: var(--di-scrim-strong); border: 1px solid var(--di-cyan-line); border-radius: var(--di-radius);
+    padding: var(--di-space-3) var(--di-space-4); font-size: var(--di-text-3); color: var(--di-ink);
+    max-width: 340px;
+}
+.rigbuild-legend__head { display: flex; align-items: center; justify-content: space-between; gap: var(--di-space-3); margin-bottom: var(--di-space-2); }
+.rigbuild-legend__head b { text-transform: uppercase; letter-spacing: var(--di-label-tracking); font-size: var(--di-text-2); }
+.rigbuild-legend__close {
+    font: var(--di-text-4) var(--di-mono); line-height: 1; color: var(--di-ink); background: transparent;
+    border: 1px solid var(--di-cyan-line); border-radius: var(--di-radius); width: 32px; height: 32px; cursor: pointer;
+}
+.rigbuild-legend dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--di-space-1) var(--di-space-3); margin: 0; }
+.rigbuild-legend dt { color: var(--di-ink); font-weight: 700; }
+.rigbuild-legend dd { margin: 0; color: var(--di-dim); }
