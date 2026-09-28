@@ -23,17 +23,17 @@ import { buildPatchSheetPath } from './patchRouting.js'
 // desk's from.js relies on.
 
 export const RIG_STEPS = Object.freeze([
-    { key: 'equipment', n: 1, label: 'equipment', hint: 'pick what we take — the rental list, each item’s card, the order' },
-    { key: 'build', n: 2, label: 'build', hint: 'place it in the room, first person: B builds, E opens the inventory' },
-    { key: 'plot', n: 3, label: 'plot', hint: 'check it from above, the drawing; print sheet 1' },
-    { key: 'cards', n: 4, label: 'cards & looks', hint: 'positions, looks on the cue list, GO' },
-    { key: 'patch', n: 5, label: 'patch sheet', hint: 'the addresses the crew plugs by, and the power' },
-    { key: 'crew', n: 6, label: 'crew link', hint: 'the room for the crew, read only — the link to send them' }
+    { key: 'equipment', n: 1, label: 'equipment', short: 'pick what we take', hint: 'pick what we take — the rental list, each item’s card, the order' },
+    { key: 'build', n: 2, label: 'build', short: 'place it in the room', hint: 'place it in the room, first person: B builds, E opens the inventory' },
+    { key: 'plot', n: 3, label: 'plot', short: 'check it from above, print', hint: 'check it from above, the drawing; print sheet 1' },
+    { key: 'cards', n: 4, label: 'cards & looks', short: 'positions, looks, GO', hint: 'positions, looks on the cue list, GO' },
+    { key: 'patch', n: 5, label: 'patch sheet', short: 'addresses and power', hint: 'the addresses the crew plugs by, and the power' },
+    { key: 'crew', n: 6, label: 'crew link', short: 'hand it to the crew', hint: 'the room for the crew, read only — the link to send them' }
 ])
 
 // Before the steps, the room as a visitor sees it; after them, the desk that runs it.
-export const RIG_ROOM = Object.freeze({ key: 'room', label: 'room', hint: 'the room as a visitor sees it' })
-export const RIG_LIGHT = Object.freeze({ key: 'light', label: 'light desk', hint: 'run the show: patch, looks, faders — on this machine' })
+export const RIG_ROOM = Object.freeze({ key: 'room', label: 'room', short: 'as a visitor sees it', hint: 'the room as a visitor sees it' })
+export const RIG_LIGHT = Object.freeze({ key: 'light', label: 'light desk', short: 'run the show', hint: 'run the show: patch, looks, faders — on this machine' })
 
 export const RIG_STEP_KEYS = RIG_STEPS.map((s) => s.key)
 export const isRigStep = (key) => RIG_STEP_KEYS.includes(key)

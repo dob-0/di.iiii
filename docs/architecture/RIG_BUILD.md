@@ -1017,3 +1017,40 @@ on a shop page, so all are links. Items with no photo or document of any kind: U
 Owed: UPlight's own manuals/DMX charts (none published); the exact products behind the 22
 untraced codes (the rental house's labels); the ETC Sensor3 full manual and the LumiNode user
 manual (both offered, both truncated three times from here); UP-236's maker; the owner's look.
+
+## 14. Moving between the tools — the steps row
+
+Owner, 2026-09-28: *"look to UI/UX fix tha gaps that we can easy go from one place to other i mean
+cards tools lights and so on"* and *"also make buttons in space that we can easy move in the
+workflow"*. The UX audit found five navigation schemes across six pages and no door in from the
+space, the Studio or the Kit (`~/Downloads/rig-ux/where-everything-is.md`); the UI audit (F04)
+asked for the platform bar on every rig page and one shared row under it.
+
+**One list** — `src/rigbuild/rigTools.js`, in the order a show is made:
+room · 1 equipment · 2 build · 3 plot · 4 cards & looks · 5 patch sheet · 6 crew link · light desk.
+"Plot" and "patch sheet" are the theatre's words (USITT RP-2 calls the drawing the light plot); the
+address segment of each step equals its key. Every address comes from the routing helpers.
+
+**One row** — `RigSteps.jsx` / `rigSteps.css`: a second `.sbar` row under the SurfaceBar, in its
+tokens (the file is on the spine list). The current step is `aria-current` and cyan; beside each step
+`rigProgress.js` says what the document holds (units on order, lamps placed of ordered, looks,
+addressed of typed lamps and conflicts) — from the document only, never a claim it does not hold.
+Back and next sit at the two ends; below 1180 px the row folds to `‹ · n/6 step ▾ · next ›`, the
+list in the bar's own menu, every row ≥ 44 px under a coarse pointer.
+
+**Where it is** — on the equipment, plot, cards and patch pages (a fixed row; the pages start below
+it, and it never prints); floating over the room in build and crew, hidden while the pointer is locked
+and back on Esc (it takes no key); under the bar on `/{space}` when the room has a rig (`hasRig`: a
+typed lamp or a rental list) on a di.iiii on your own machine only — a published page a stranger
+opens carries no tool chrome (owner's 2026-08-07 call). There its "next" is `rigProgress.suggested`,
+the step the show waits on. The Studio's bar has **Rig** (the project's plot); the Kit has one
+**Rig builder** card listing the steps; the desk, opened from a step (`&from=<step>`), leads back
+to it (`serverXR/src/lighting/ui/from.js`, a closed list held to `rigTools` by
+`lightingLink.test.js`).
+
+**Build keys** — the first entry to build mode lists the keys as the handler reads them
+(`buildKeys.js`; Q up, Z down — E is the inventory), once per browser; H brings it back.
+
+Owed: the crew-only row the UX sketch proposed (a crew link opened by an engineer shows every step;
+the editing ones ask for a sign-in on a hosted tier); the row on a hosted tier's room for signed-in
+editors; the UI audit's token and type pass (F05–F10) — see the preview note.

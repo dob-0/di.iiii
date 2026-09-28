@@ -61,6 +61,11 @@
 .rigsteps-menu { min-width: 16em; }
 .rigsteps-menu .rigsteps-step { gap: var(--di-space-3); }
 
+/* The whole row shown, "back" is only its arrow: the step it names is right beside it. */
+@media (min-width: 1181px) {
+    .rigsteps-back .rigsteps-wide { display: none; }
+}
+
 /* The whole row fits a laptop; below that it folds to back · the step ▾ · next. */
 @media (max-width: 1180px) {
     .rigsteps-list { display: none; }

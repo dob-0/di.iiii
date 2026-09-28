@@ -15,7 +15,7 @@
 // Words: docs/ai/vocabulary.md. The tools are Studio · Nodes · Projection ·
 // Light; the node canvas is never "Raw" in a sentence a person reads.
 
-import { RIG_LIGHT, RIG_STEPS } from '../rigbuild/rigTools.js'
+import { RIG_LIGHT, RIG_ROOM, RIG_STEPS } from '../rigbuild/rigTools.js'
 
 // Where a source link goes: the public repo, on the branch the dev tier runs.
 export const KIT_SOURCE_BASE = 'https://github.com/dob-0/di.iiii/blob/dev/'
@@ -103,11 +103,8 @@ export const INSTALL_LINES = [
 
 // The rig's steps, one line each, as the bar on every rig page lists them
 // (src/rigbuild/rigTools.js is the one list; kitCatalogue.test.js holds the two together).
-export const RIG_KIT_LINES = [
-    'room             /{space}  — the room as a visitor sees it',
-    ...RIG_STEPS.map((s) => `${`${s.n} ${s.label}`.padEnd(17)}/{space}/${s.key}/{project}  — ${s.hint}`),
-    `${RIG_LIGHT.label.padEnd(17)}/light  — ${RIG_LIGHT.hint}`
-]
+export const RIG_KIT_LINES = [RIG_ROOM, ...RIG_STEPS, RIG_LIGHT]
+    .map((s) => `${`${s.n ? `${s.n} ` : ''}${s.label}`.padEnd(16)}${s.short}`)
 
 // The four tools the agent door registers (sdk/mcp.mjs).
 export const MCP_TOOL_NAMES = ['di_find', 'di_describe', 'di_call', 'di_run']
