@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { AdditiveBlending, BufferAttribute, ConeGeometry, DoubleSide } from 'three'
 import { spotTargetOffset } from '../project/viewport/spotLightAim.js'
-import { beamFadeColors, beamIsVisible, spotBeamShape } from './spotBeam.js'
+import { beamCastsLight, beamFadeColors, beamIsVisible, spotBeamShape } from './spotBeam.js'
 
 // A spot light that actually points where the entity is turned.
 //
@@ -44,8 +44,16 @@ export default function SpotLightObject({
 }) {
     const lightRef = useRef(null)
     const targetRef = useRef(null)
-    const showBeam = beamIsVisible(beam)
+    // `beam.only`: the cone and no light (spotBeam.js, beamCastsLight). The
+    // light is not mounted at all rather than mounted at zero — three.js pays
+    // for a light in every shader whatever its intensity.
+    const castsLight = beamCastsLight(beam)
     const throwShape = spotBeamShape({ distance, angle, intensity, haze: beam?.haze })
+    // A cone that would draw at opacity 0 (haze 0, or a lamp held at 0) is not
+    // mounted at all: an additive mesh at 0 adds nothing to the picture and
+    // still costs a draw call and fill over the whole throw. It is how a strobe
+    // draws NO cone in the room (looks.js flashEntities, RIG_BUILD.md §15.6).
+    const showBeam = beamIsVisible(beam) && throwShape.opacity > 0
 
     // The cone is built by hand rather than as <coneGeometry> so the fade along
     // the throw can ride on it as vertex colours. Rebuilt only when the lamp's
@@ -71,33 +79,37 @@ export default function SpotLightObject({
         return () => {
             light.target = previous
         }
-    }, [])
+    }, [castsLight])
 
     return (
         <>
-            <spotLight
-                ref={lightRef}
-                // A three.js SpotLight is NOT born at its own origin: the
-                // constructor does `this.position.copy(Object3D.DEFAULT_UP)`,
-                // so an unpositioned one sits a metre up its own local +Y --
-                // which, for an entity that has been tilted, is a metre
-                // BACKWARDS along its beam. Every spot light in di.iiii was
-                // therefore emitting from a metre behind where the author hung
-                // it (found 2026-09-21: the editor's little marker cone, drawn
-                // at the true entity position, was landing inside the lamp's
-                // own shadow frustum and printing an octagon on the wall). The
-                // aim was never wrong -- direction is target minus position and
-                // both moved together -- but the lamp's place, its throw and
-                // its falloff all were.
-                position={[0, 0, 0]}
-                color={color}
-                intensity={intensity}
-                distance={distance}
-                angle={angle}
-                penumbra={penumbra}
-                decay={decay}
-            />
-            <object3D ref={targetRef} position={spotTargetOffset()} />
+            {castsLight ? (
+                <>
+                    <spotLight
+                        ref={lightRef}
+                        // A three.js SpotLight is NOT born at its own origin: the
+                        // constructor does `this.position.copy(Object3D.DEFAULT_UP)`,
+                        // so an unpositioned one sits a metre up its own local +Y --
+                        // which, for an entity that has been tilted, is a metre
+                        // BACKWARDS along its beam. Every spot light in di.iiii was
+                        // therefore emitting from a metre behind where the author hung
+                        // it (found 2026-09-21: the editor's little marker cone, drawn
+                        // at the true entity position, was landing inside the lamp's
+                        // own shadow frustum and printing an octagon on the wall). The
+                        // aim was never wrong -- direction is target minus position and
+                        // both moved together -- but the lamp's place, its throw and
+                        // its falloff all were.
+                        position={[0, 0, 0]}
+                        color={color}
+                        intensity={intensity}
+                        distance={distance}
+                        angle={angle}
+                        penumbra={penumbra}
+                        decay={decay}
+                    />
+                    <object3D ref={targetRef} position={spotTargetOffset()} />
+                </>
+            ) : null}
             {showBeam && beamGeometry ? (
                 <mesh
                     geometry={beamGeometry}

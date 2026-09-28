@@ -62,6 +62,12 @@ export default function StudioPresentationSurface({
     const presentationState = document.presentationState || {}
     const previewMode = presentationState.mode || 'scene'
     const isFixedCamera = previewMode === 'fixed-camera'
+    // The composed shot is where the camera STARTS; it holds the camera still only when
+    // the author locked it (`fixedCamera.locked === true`) — the published viewer's own
+    // rule (PublicProjectSceneSurface). It used to lock on the mode alone, so a room
+    // whose opening shot was set by a script (MOXIR, locked: false) opened a Studio in
+    // which nothing moved the camera: the owner's "when i enter studio can't move".
+    const isLockedCamera = isFixedCamera && presentationState.fixedCamera?.locked === true
     const showCodeView = previewMode === 'code'
     const resolvedCamera = isFixedCamera
         ? (presentationState.fixedCamera || resolveStudioPreviewCamera(document, cameraView))
@@ -157,7 +163,7 @@ export default function StudioPresentationSurface({
             onTransformCommit={onTransformCommit}
             onTransformCommitMany={onTransformCommitMany}
             onTransformCancel={onTransformCancel}
-            enableNavigation={isFixedCamera ? false : undefined}
+            enableNavigation={isLockedCamera ? false : undefined}
             showHelp={showHelp}
             onShowHelp={onShowHelp}
             onCloseHelp={onCloseHelp}

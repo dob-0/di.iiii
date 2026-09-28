@@ -19,12 +19,21 @@ import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
 import useDocumentTitle from './hooks/useDocumentTitle.js'
 import useLocalInstall from './hooks/useLocalInstall.js'
 import useSpacePublicFlag from './hooks/useSpacePublicFlag.js'
+import useAuthSession from './hooks/useAuthSession.js'
+import { hasServerApi } from './services/apiClient.js'
+import { isSpaceInSessionScope } from './utils/sessionScope.js'
+import { rigToolAccess } from './rigbuild/rigToolAccess.js'
 import useResolveSlugProject from './hooks/useResolveSlugProject.js'
 import { buildStudioProjectPath, getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
 import { getJamLocationState, isJamLocation } from './project/routing/jamRouting.js'
 import { getMakeLocationState, isMakeLocation } from './make/makeRouting.js'
 import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
 import { getPerformLocationState, isPerformLocation } from './perform/performRouting.js'
+import { getPatchSheetLocationState, isPatchSheetLocation } from './rigbuild/patchRouting.js'
+import { getPlotLocationState, isPlotLocation } from './rigbuild/plotRouting.js'
+import { getCardsLocationState, isCardsLocation } from './rigbuild/cardsRouting.js'
+import { getEquipmentLocationState, isEquipmentLocation } from './rigbuild/equipmentRouting.js'
+import { getBuildLocationState, isBuildLocation } from './rigbuild/buildRouting.js'
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
 import { workSurface } from './works/routes.jsx'
 import { workForSegment } from './works/segments.js'
@@ -54,6 +63,11 @@ const ScanSurface = lazy(() => import('./scan/ScanSurface.jsx'))
 // stills, which must never pull three.js for a phone that has not asked a card
 // to go live.
 const KitPage = lazy(() => import('./kit/KitPage.jsx'))
+const PatchSheetSurface = lazy(() => import('./rigbuild/PatchSheetSurface.jsx'))
+const PlotSurface = lazy(() => import('./rigbuild/PlotSurface.jsx'))
+const CardsSurface = lazy(() => import('./rigbuild/CardsSurface.jsx'))
+const EquipmentSurface = lazy(() => import('./rigbuild/EquipmentSurface.jsx'))
+const BuildSurface = lazy(() => import('./rigbuild/BuildSurface.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 
 // The space `/` opens. Kept in step with GridFloorBackground's PREFERRED_SPACE_ID
@@ -147,6 +161,32 @@ function RawSurfaceRoute({ rawState, spaceId }) {
 function LocalLightingDeskHandoff() {
     useEffect(() => { window.location.assign(`/light/${window.location.search}${window.location.hash}`) }, [])
     return <RouteSurfaceFallback label="Opening the lighting desk" detail="" />
+}
+
+// The rig tools — plot, cards, equipment, build (src/rigbuild/rigToolAccess.js). A member
+// in scope, an admin, or a local install gets the tool through the gate as before; anyone
+// else on a PUBLIC space gets the same page read only instead of a sign-in card (the
+// build room as the crew view); a private space stays behind the gate. Same session and
+// scope reading as AuthGate (sessionScope.js) — both already in this chunk through
+// LaneDefaultSpace — so nothing of the gate's own chunk is pulled in here.
+function RigToolRoute({ spaceId, surface }) {
+    const session = useAuthSession()
+    const inScope = Boolean(session.authenticated) && isSpaceInSessionScope(session, spaceId)
+    const member = !session.loading && (!session.requireAuth || session.local || (session.authenticated && (session.role === 'admin' || inScope)))
+    const { isPublic, loading: publicLoading } = useSpacePublicFlag(hasServerApi && !session.loading && !member ? spaceId : null)
+    const access = rigToolAccess({ hasServerApi, session, sessionLoading: session.loading, inScope, isPublic, publicLoading })
+    const fallback = <RouteSurfaceFallback label="Loading" detail="" />
+    if (access === 'loading') return fallback
+    if (access === 'view') return <Suspense fallback={fallback}>{surface(true)}</Suspense>
+    return (
+        <ProtectedSurface
+            requiredSpaceId={spaceId}
+            outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}
+            showAccountButton={false}
+        >
+            <Suspense fallback={fallback}>{surface(false)}</Suspense>
+        </ProtectedSurface>
+    )
 }
 
 function SpaceSurfaceRoute({ appState }) {
@@ -355,6 +395,11 @@ function AppRouter() {
     const makeState = getMakeLocationState(location)
     const mapState = getMapLocationState(location)
     const performState = getPerformLocationState(location)
+    const patchSheetState = getPatchSheetLocationState(location)
+    const plotState = getPlotLocationState(location)
+    const cardsState = getCardsLocationState(location)
+    const equipmentState = getEquipmentLocationState(location)
+    const buildState = getBuildLocationState(location)
     const chatState = getChatLocationState(location)
     const privateChatWith = getPrivateChatTarget(location)
     const appState = getAppLocationState(location)
@@ -541,6 +586,58 @@ function AppRouter() {
                 </Suspense>
             </ProtectedSurface>
         )
+    }
+
+    // `/{space}/patch/{projectId}` — the rig's patch sheet (src/rigbuild/): what the
+    // light engineers are handed. Read-only and printable. No gate of its own: it
+    // reads the document through the API with the visitor's own session, so the
+    // server decides who may read it (a private space answers 401 and the page
+    // says so), and a link handed to a crew opens like any public page.
+    if (isPatchSheetLocation(patchSheetState)) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <PatchSheetSurface spaceId={patchSheetState.spaceId} projectId={patchSheetState.projectId} />
+            </Suspense>
+        )
+    }
+
+    // `/{space}/plot/{projectId}` — the lighting plot, view B (src/rigbuild/): the rig
+    // drawn from above, the room beside it. Members edit it behind the same gate as
+    // Perform (it writes the same document through the same op layer as the Studio);
+    // anyone else on a PUBLIC space reads it (RigToolRoute, rigToolAccess.js).
+    if (isPlotLocation(plotState)) {
+        return <RigToolRoute spaceId={plotState.spaceId} surface={(readOnly) => <PlotSurface spaceId={plotState.spaceId} projectId={plotState.projectId} readOnly={readOnly} />} />
+    }
+
+    // `/{space}/cards/{projectId}` — the cards, view C (src/rigbuild/): the rental list
+    // dealt onto named positions, the patch beside them, the looks on the cue list.
+    // Members edit it, a visitor to a public space reads it — the plot's rule (RigToolRoute).
+    if (isCardsLocation(cardsState)) {
+        return <RigToolRoute spaceId={cardsState.spaceId} surface={(readOnly) => <CardsSurface spaceId={cardsState.spaceId} projectId={cardsState.projectId} readOnly={readOnly} />} />
+    }
+
+    // `/{space}/equipment/{projectId}` — the show's equipment list (src/rigbuild/): the
+    // inventory of devices with their item cards, take or skip, and the order with its cost.
+    // Members edit it, a visitor to a public space reads it — the plot's rule (RigToolRoute).
+    if (isEquipmentLocation(equipmentState)) {
+        return <RigToolRoute spaceId={equipmentState.spaceId} surface={(readOnly) => <EquipmentSurface spaceId={equipmentState.spaceId} projectId={equipmentState.projectId} readOnly={readOnly} />} />
+    }
+
+    // `/{space}/build/{projectId}` — view A (src/rigbuild/): the room in first person,
+    // the rig built in it by hand. Members build behind the gate; a visitor to a public
+    // space is handed the crew view (RigToolRoute). `/{space}/crew/{projectId}` is the same room read-only for
+    // the light engineers, with no gate of its own — like the patch sheet, it reads
+    // the document with the visitor's own session and the server decides.
+    if (isBuildLocation(buildState)) {
+        if (buildState.crew) {
+            return (
+                <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                    <BuildSurface spaceId={buildState.spaceId} projectId={buildState.projectId} crew />
+                </Suspense>
+            )
+        }
+        // A visitor who may not build is handed the same room as the crew view.
+        return <RigToolRoute spaceId={buildState.spaceId} surface={(readOnly) => <BuildSurface spaceId={buildState.spaceId} projectId={buildState.projectId} crew={readOnly} />} />
     }
 
     // `/{space}/perform/{projectId}[?preset=]` — the Perform line (src/perform/):

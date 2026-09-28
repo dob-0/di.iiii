@@ -115,3 +115,26 @@ describe('arrivalShot', () => {
         expect(Number.isFinite(shot.far)).toBe(true)
     })
 })
+
+describe('import --replace keeps what other scripts wrote on the hall', async () => {
+    const { carryComponents } = await import('./import.mjs')
+    it('carries venuePlan (and any component the new hall does not write) onto the new place-hall', () => {
+        const ops = hallOps({ asset: { ...asset, id: 'new' }, place, title: 'T' })
+        const old = { id: 'place-hall', components: { media: { assetId: 'old' }, venuePlan: { zones: [{ id: 'dance' }] } } }
+        expect(carryComponents(ops, old)).toEqual(['venuePlan'])
+        const entity = ops.find((o) => o.type === 'createEntity').payload.entity
+        expect(entity.components.venuePlan.zones[0].id).toBe('dance')
+        expect(entity.components.media.assetId).toBe('new')
+    })
+})
+
+describe('import --replace keeps the rig\'s night and opening shot', async () => {
+    const { keepRoomState } = await import('./import.mjs')
+    it('writes only the walkable floor to the world, and no presentation', () => {
+        const ops = keepRoomState(hallOps({ asset, place, title: 'T' }))
+        expect(ops.some((o) => o.type === 'setPresentationState')).toBe(false)
+        const world = ops.find((o) => o.type === 'setWorldState').payload.patch
+        expect(Object.keys(world)).toEqual(['walkableAreas'])
+        expect(ops.some((o) => o.type === 'createEntity')).toBe(true)
+    })
+})

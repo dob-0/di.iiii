@@ -1,0 +1,210 @@
+/* View A — the room in first person (docs/architecture/RIG_BUILD.md §12).
+   The HUD speaks the walk mode's own language (liveProjectScene.css: dark glass,
+   the house mono, the red accent for what is live); the side sheet is the plot's
+   paper (plot.css), because it IS the paperwork. A conflict is a "!" and a dashed
+   line, never a colour alone. */
+
+.rigbuild {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: var(--di-surface, #0a1118);
+    color: #fff;
+    touch-action: none;
+}
+
+.rigbuild-loading {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font: var(--di-text-3, 14px) var(--di-mono, monospace); color: rgba(255, 255, 255, 0.7);
+}
+
+.rigbuild-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* the crosshair — the hand */
+.rigbuild-cross {
+    position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px;
+    pointer-events: none; z-index: 6; opacity: 0.85;
+}
+.rigbuild-cross::before, .rigbuild-cross::after {
+    content: ""; position: absolute; background: #fff; box-shadow: 0 0 2px rgba(0, 0, 0, 0.9);
+}
+.rigbuild-cross::before { left: 8px; top: 0; width: 2px; height: 18px; }
+.rigbuild-cross::after { top: 8px; left: 0; height: 2px; width: 18px; }
+.rigbuild-cross.is-lamp { transform: rotate(45deg); }
+
+/* the tags in the air */
+.rigbuild-tags { position: absolute; inset: 0; pointer-events: none; z-index: 7; }
+.rigbuild-tag {
+    position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer;
+    font-size: 11px; line-height: 1; letter-spacing: 0.02em; white-space: nowrap;
+    color: #fff; background: rgba(0, 0, 0, 0.62); border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 2px; padding: 3px 5px; min-height: 0;
+    will-change: transform;
+}
+.rigbuild-tag.is-conflict { border: 1.5px dashed #fff; font-weight: 700; background: rgba(0, 0, 0, 0.8); }
+.rigbuild-tag.is-aimed, .rigbuild-tag.is-chosen { background: #fff; color: #000; border-color: #fff; }
+.rigbuild-tag.is-conflict.is-aimed, .rigbuild-tag.is-conflict.is-chosen { border-color: #000; outline: 1.5px dashed #fff; }
+
+/* the running totals, top right under the room's header */
+.rigbuild-totals {
+    position: absolute; top: 64px; right: 16px; z-index: 8;
+    display: grid; gap: 2px; font-size: 11px; line-height: 1.35; text-align: right;
+    background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 4px;
+    padding: 8px 10px; max-width: 280px;
+}
+.rigbuild-dim { color: rgba(255, 255, 255, 0.62); }
+.rigbuild-warn { font-weight: 700; }
+.rigbuild-links a { color: #fff; }
+
+/* build / walk */
+.rigbuild-mode {
+    position: absolute; top: 64px; left: 16px; z-index: 8;
+    font: 700 12px var(--di-mono, monospace); letter-spacing: 0.12em; text-transform: uppercase;
+    color: #fff; background: rgba(0, 0, 0, 0.45); border: 1.5px solid rgba(var(--di-danger-rgb, 255, 80, 80), 0.6);
+    border-radius: var(--di-radius-pill, 999px); padding: 0 16px; min-height: 44px; cursor: pointer;
+}
+.rigbuild-mode.is-on { background: rgba(var(--di-danger-rgb, 255, 80, 80), 0.22); border-color: var(--di-danger, #f55); }
+
+/* the hand: status line + hotbar, bottom centre (above the walk hint line) */
+.rigbuild-hand {
+    position: absolute; left: 50%; bottom: 56px; transform: translateX(-50%); z-index: 8;
+    display: flex; flex-direction: column; align-items: center; gap: 6px; max-width: calc(100vw - 32px);
+}
+.rigbuild-status, .rigbuild-said {
+    margin: 0; font-size: 12px; background: rgba(0, 0, 0, 0.55); border-radius: 3px; padding: 4px 10px;
+    max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rigbuild-status b { letter-spacing: 0.12em; margin-right: 6px; }
+.rigbuild-said { color: rgba(255, 255, 255, 0.8); display: flex; gap: 8px; align-items: center; }
+.rigbuild-exact {
+    font: 11px var(--di-mono, monospace); color: #fff; background: transparent; border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 2px; padding: 2px 6px; cursor: pointer;
+}
+.rigbuild-hotbar {
+    list-style: none; margin: 0; padding: 4px; display: flex; gap: 4px;
+    background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 4px;
+    max-width: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+    touch-action: pan-x;
+}
+.rigbuild-hotbar::-webkit-scrollbar { display: none; }
+.rigbuild-hotbar li { scroll-snap-align: start; flex: 0 0 auto; }
+.rigbuild-slot {
+    position: relative; width: 78px; min-height: 58px; padding: 16px 4px 5px;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;
+    color: #fff; background: rgba(255, 255, 255, 0.06); border: 1.5px solid rgba(255, 255, 255, 0.22);
+    border-radius: 3px; cursor: pointer; font: inherit;
+}
+.rigbuild-slot.is-on { border-color: #fff; background: rgba(255, 255, 255, 0.2); box-shadow: 0 0 0 1px #fff inset; }
+.rigbuild-slot.is-full { border-style: dashed; color: rgba(255, 255, 255, 0.55); }
+.rigbuild-slot.is-owed .rigbuild-slot__label::after { content: " ?"; }
+.rigbuild-slot__key { position: absolute; top: 3px; left: 5px; font: 10px var(--di-mono, monospace); color: rgba(255, 255, 255, 0.6); }
+.rigbuild-slot__label { font-size: 12px; font-weight: 700; white-space: nowrap; }
+.rigbuild-slot__count { font-size: 11px; color: rgba(255, 255, 255, 0.72); }
+
+/* what is under the crosshair, while walking */
+.rigbuild-aimed {
+    position: absolute; left: 50%; top: calc(50% + 22px); transform: translateX(-50%); z-index: 8;
+    margin: 0; font-size: 12px; background: rgba(0, 0, 0, 0.6); padding: 3px 8px; border-radius: 3px; white-space: nowrap;
+    pointer-events: none;
+}
+
+/* the side sheet: the plot's paper */
+/* `.rigplot` (plot.css) is the plot's whole page — fixed, full-bleed, a grid — and
+   is used here only for its paper tokens: undo its box. */
+.rigbuild .rigbuild-sheet.rigplot {
+    position: absolute; inset: 64px 16px 16px auto; z-index: 12; width: 320px;
+    overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+    background: transparent; color: var(--ink, #111);
+}
+.rigbuild-sheet .rigplot-block { position: relative; }
+.rigbuild-sheet__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.rigbuild-sheet__close {
+    font: 18px var(--di-mono, monospace); line-height: 1; color: var(--ink, #111); background: var(--paper, #fff);
+    border: 1px solid var(--ink, #111); border-radius: 2px; width: 44px; height: 44px; cursor: pointer; flex: 0 0 auto;
+}
+.rigbuild-sheet__close--float { align-self: flex-end; }
+.rigbuild-sheet__foot { background: var(--paper, #fff); border: 1.5px solid var(--ink, #111); padding: 8px 12px; font-size: 12px; }
+.rigbuild-sheet a, .rigbuild-link { color: var(--ink, #111); }
+
+/* Crew view has nothing to build: the totals and the sheet are the tools. */
+.rigbuild.is-crew .rigbuild-cross { opacity: 0.6; }
+
+/* ---- the phone ---------------------------------------------------------------- */
+/* Keyed on the pointer, not the width: a phone turned sideways is 844 wide and still
+   has no mouse. One thumb reaches everything; every target is at least 44 px. */
+.rigbuild-aimed--tap { pointer-events: auto; min-height: 44px; border: 1px solid rgba(255, 255, 255, 0.5); color: #fff; cursor: pointer; }
+.rigbuild-thumbs {
+    position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 150px; z-index: 9;
+    display: grid; grid-template-columns: 52px 52px; gap: 8px;
+}
+.rigbuild-thumb {
+    min-width: 52px; min-height: 52px; border-radius: 50%;
+    font: 700 11px var(--di-mono, monospace); letter-spacing: 0.06em; text-transform: uppercase;
+    color: #fff; background: rgba(0, 0, 0, 0.5); border: 1.5px solid rgba(255, 255, 255, 0.45); cursor: pointer;
+    touch-action: manipulation;
+}
+.rigbuild-thumb:disabled { opacity: 0.35; }
+.rigbuild-thumb--place {
+    grid-column: 1 / span 2; width: 112px; height: 72px; border-radius: 36px; justify-self: center;
+    font-size: 14px; background: rgba(var(--di-danger-rgb, 255, 80, 80), 0.35); border-color: var(--di-danger, #f55);
+}
+.rigbuild-thumb--place.is-off { background: rgba(0, 0, 0, 0.5); border-style: dashed; border-color: rgba(255, 255, 255, 0.45); }
+.rigbuild-thumb:active { background: rgba(255, 255, 255, 0.25); }
+
+.rigbuild.is-phone .rigbuild-hand { left: 0; right: 0; transform: none; bottom: max(8px, env(safe-area-inset-bottom)); padding: 0 8px; max-width: none; align-items: stretch; }
+.rigbuild.is-phone .rigbuild-status, .rigbuild.is-phone .rigbuild-said { align-self: flex-start; max-width: calc(100% - 132px); font-size: 11px; }
+.rigbuild.is-phone .rigbuild-hotbar { max-width: 100%; }
+.rigbuild.is-phone .rigbuild-slot { width: 76px; min-height: 56px; }
+.rigbuild.is-phone .rigbuild-slot__label { font-size: 11px; }
+.rigbuild.is-phone .rigbuild-totals { top: 58px; right: 8px; font-size: 10px; padding: 5px 7px; max-width: 58vw; }
+.rigbuild.is-phone .rigbuild-totals .rigbuild-dim { display: none; }
+.rigbuild.is-phone .rigbuild-mode { top: 58px; left: 8px; }
+/* a tag is small type with a thumb-sized target around it */
+.rigbuild.is-phone .rigbuild-tag { font-size: 10px; }
+.rigbuild.is-phone .rigbuild-tag::after { content: ""; position: absolute; inset: -14px -6px; }
+.rigbuild.is-phone .rigbuild-sheet.rigplot { inset: auto 0 0 0; width: auto; max-height: 62vh; padding: 0 8px 8px; }
+@media (orientation: landscape) and (max-height: 500px) {
+    .rigbuild.is-phone .rigbuild-thumbs { bottom: 96px; grid-template-columns: repeat(4, 52px) 72px; }
+    .rigbuild.is-phone .rigbuild-thumb--place { grid-column: auto; width: 72px; height: 52px; }
+    .rigbuild.is-phone .rigbuild-hand { right: 8px; }
+    .rigbuild.is-phone .rigbuild-totals { max-width: 40vw; }
+    .rigbuild.is-phone .rigbuild-sheet.rigplot { inset: 8px 8px 8px auto; width: 320px; max-height: none; }
+}
+
+/* the inventory (E, or the items button) — the equipment list's tiles over the room,
+   the hotbar along its foot (src/rigbuild/Inventory.jsx, RIG_BUILD.md §13) */
+.rigbuild-mode--items { left: auto; right: 16px; top: auto; bottom: 16px; border-color: rgba(255, 255, 255, 0.6); }
+.rigbuild.is-building .rigbuild-mode--items { bottom: 16px; }
+.rigbuild-inventory { position: absolute; inset: 0; z-index: 30; }
+.rigbuild.is-phone .rigbuild-mode--items { top: 58px; left: auto; right: auto; bottom: auto; left: 96px; }
+
+/* The two rows of the rig's bar sit over the room (RigSteps.jsx, rigbar--float): the
+   room's own header and everything that hung under it move down by the bar's height,
+   and stay there while the bar hides under the locked pointer (no jump on Esc). */
+.rigbuild.has-rigbar .live-scene-chrome { top: var(--rigbar-h); }
+.rigbuild.has-rigbar .rigbuild-totals,
+.rigbuild.has-rigbar .rigbuild-mode:not(.rigbuild-mode--items) { top: calc(var(--rigbar-h) + 64px); }
+.rigbuild.has-rigbar .rigbuild-sheet.rigplot { top: calc(var(--rigbar-h) + 64px); }
+.rigbuild.has-rigbar.is-phone .rigbuild-totals,
+.rigbuild.has-rigbar.is-phone .rigbuild-mode { top: calc(var(--rigbar-h) + 58px); }
+.rigbuild.has-rigbar.is-phone .rigbuild-mode--items { top: calc(var(--rigbar-h) + 58px); bottom: auto; }
+.rigbuild.has-rigbar.is-phone .rigbuild-sheet.rigplot { top: auto; }
+
+/* The keys, said once on the first entry to build mode (H brings them back). The HUD's
+   own ground and words (the UI audit's HUD spec: the strong scrim, --di-dim for the
+   second column, the mono), under the totals on the right, never over the hotbar. */
+.rigbuild-legend {
+    position: absolute; left: var(--di-space-4); top: calc(var(--rigbar-h) + 64px + 56px); z-index: 9;
+    background: var(--di-scrim-strong); border: 1px solid var(--di-cyan-line); border-radius: var(--di-radius);
+    padding: var(--di-space-3) var(--di-space-4); font-size: var(--di-text-3); color: var(--di-ink);
+    max-width: 340px;
+}
+.rigbuild-legend__head { display: flex; align-items: center; justify-content: space-between; gap: var(--di-space-3); margin-bottom: var(--di-space-2); }
+.rigbuild-legend__head b { text-transform: uppercase; letter-spacing: var(--di-label-tracking); font-size: var(--di-text-2); }
+.rigbuild-legend__close {
+    font: var(--di-text-4) var(--di-mono); line-height: 1; color: var(--di-ink); background: transparent;
+    border: 1px solid var(--di-cyan-line); border-radius: var(--di-radius); width: 32px; height: 32px; cursor: pointer;
+}
+.rigbuild-legend dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--di-space-1) var(--di-space-3); margin: 0; }
+.rigbuild-legend dt { color: var(--di-ink); font-weight: 700; }
+.rigbuild-legend dd { margin: 0; color: var(--di-dim); }

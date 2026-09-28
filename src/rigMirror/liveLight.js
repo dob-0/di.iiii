@@ -43,6 +43,9 @@ const toHex = (n) => Math.round(Math.max(0, Math.min(255, n))).toString(16).padS
 export const liveLight = (light, fixture) => {
     const authored = light && typeof light === 'object' ? light : {}
     if (!fixture) return authored
+    // The desk cannot say what this fixture emits (its channel list is owed): keep the
+    // authored light — the look's colour when a look poses the room.
+    if (fixture.known === false) return authored
     const level = Math.max(0, Math.min(1, Number(fixture.level) || 0))
     const { r = 0, g = 0, b = 0 } = fixture.colour || {}
     const peak = Math.max(r, g, b)

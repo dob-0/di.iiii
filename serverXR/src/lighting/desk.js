@@ -22,12 +22,16 @@ const {
 const { FX_MODES, FX_SPATIAL, DEFAULT_FX, sanitizeFxPatch, fxActive, beatGrid, BEATS_PER_BAR } = require('./fx');
 const { sanitizeLfos, LFO_WAVES, isGenericChannels } = require('./lfo');
 const { STYLES: FAN_STYLES, fanValues } = require('./fan');
+const { rigPatch, rigList } = require('./rigpatch');
 const library = require('./library');
-const { SACN } = require('./sacn');
+const { SACN, cidFor } = require('./sacn');
+const { DmxInput } = require('./dmxin-net');
+const { sanitizeInputConfig, artNetFromDesk, sacnFromDesk, cidString } = require('./dmxin');
 const {
   sanitizeLook, sanitizeLooks, sanitizeLayer, sanitizeLayers,
   KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, SPATIAL: LOOK_SPATIAL, kindAllows,
 } = require('./looks');
+const { createCueRunner, sanitizeCues } = require('./cuerun');
 
 // The desk as a module. `createDesk` builds one lighting desk — state, engine, the 40 Hz
 // output loop, the HTTP routes and the interface files — and hands back `handle`, which
@@ -106,7 +110,11 @@ function createDesk(opts = {}) {
       // two universes actually looks like when the venue has one Art-Net node and you
       // brought a USB widget — or two widgets, one per universe, because a widget is one
       // DMX line and always will be. Empty `universes` means "everything this desk has".
-      extra: [] },
+      extra: [],
+      // DMX INPUT — a console driving this desk (dmxin.js). Machine-level like the rest of
+      // `output`: which network a console is on belongs to this machine, never to a
+      // space's show. OFF by default; sanitizeInputConfig says what each field is.
+      input: sanitizeInputConfig({}) },
     // The effects engine. The defaults live in fx.js next to the maths that reads them, so
     // there is one answer to "what is depth when nobody has set it" rather than two.
     fx: { ...DEFAULT_FX },
@@ -122,6 +130,9 @@ function createDesk(opts = {}) {
     // page. They reference scenes by id and tolerate dead references — the player shows a
     // missing step rather than silently renumbering the operator's set list mid-show.
     sets: [],
+    // A project's cue list, played by the desk (cuerun.js): the list, where it is, and
+    // whether it runs and loops — saved with the show, so a restart carries on.
+    cues: sanitizeCues(null),
   };
 
   function sanitizeSets(list) {
@@ -240,6 +251,7 @@ function createDesk(opts = {}) {
     // OFF inside di.iiii (a dev server must never broadcast on a studio network).
     out.enabled = given && given.enabled != null ? !!given.enabled : outputEnabledDefault;
     out.manual = normaliseManual(out.manual);
+    out.input = sanitizeInputConfig(given && given.input);
     // Every extra device goes back through the same clamps the route uses, so a show
     // file edited by hand cannot smuggle in a send the live route would have refused.
     out.extra = (Array.isArray(given && given.extra) ? given.extra : [])
@@ -270,6 +282,7 @@ function createDesk(opts = {}) {
       s.midi = sanitizeMidi(disk.midi) || { maps: [] };
       s.looks = sanitizeLooks(disk.looks) || [];
       s.layers = sanitizeLayers(disk.layers) || [];
+      s.cues = sanitizeCues(disk.cues);
 
       // Custom profiles MUST be registered before the fixtures are built. makeFixture falls
       // back to `rgb` for a profile it does not know, so loading them in the other order
@@ -320,6 +333,38 @@ function createDesk(opts = {}) {
     // ARTNET_OFFLINE=1 keeps a test run off the wire entirely.
     offline: offline,
   });
+
+  // ---- DMX input ------------------------------------------------------------
+  // The desk as a receiver (dmxin.js / dmxin-net.js). Built with the desk, listening only
+  // once switched on in Setup → Input, only on the interfaces chosen there.
+  const OWN_CID = cidString(cidFor('di.iiii lighting desk'));
+  const LOCAL_IPS = () => require('./dmxin-net').inputInterfaces().map((i) => i.address);
+  const input = new DmxInput({
+    offline: opts.inputOffline != null ? !!opts.inputOffline : offline,
+    log,
+    artnetPort: opts.inputArtnetPort || undefined,
+    sacnPort: opts.inputSacnPort || undefined,
+    // Our own Art-Net output heard back (a broadcast reaches our own listener): the same
+    // bytes we sent on that Port-Address in the last second, from one of our addresses.
+    isSelfArtNet: (ip, pa, data) => {
+      const sent = artnet.lastSent.get(pa);
+      return !!(sent && Date.now() - sent.at < 1000 && LOCAL_IPS().includes(ip) && sent.data.equals(data));
+    },
+    selfCids: () => [OWN_CID],
+  });
+  input.configure(state.output.input, { lanAllowed });
+  engine.input = {
+    universes: () => input.merger.config.enabled ? input.merger.config.universes.map((l) => l.universe) : [],
+    frame: (u) => input.merger.frame(u, Date.now()),
+  };
+  // NO LOOPS: a universe the console feeds us over a protocol is never sent back out on
+  // that same protocol — our re-broadcast would reach the console's own nodes as a second
+  // source and come back to us as one. It still goes out of any OTHER wire (a DMX USB
+  // PRO, or the other protocol), which is how a console's universe reaches this rig.
+  function echoBlocked(protocol, universe) {
+    const cfg = input.merger.config;
+    return !!(cfg.enabled && cfg[protocol] && input.merger.lines.has(universe));
+  }
 
   // The serial widget is only opened while it is the selected driver: holding COM3 open
   // would lock TouchDesigner, Daslight or ENTTEC EMU out of it for no reason whenever the
@@ -383,6 +428,13 @@ function createDesk(opts = {}) {
       });
       state.layers.push(layer);
     }
+    // What a room following the desk crossfades by (GET /api/dmx): when this look was
+    // put here, over how long, and what it replaced. Not part of a layer's saved shape
+    // (sanitizeLayer drops them): a fade in progress does not survive a restart.
+    const before = layer.lookId;
+    layer.fromLookId = before && before !== look.id ? before : (before === look.id ? layer.fromLookId || null : null);
+    layer.fadeMs = body.fadeMs != null && Number.isFinite(+body.fadeMs) ? Math.max(0, Math.min(60000, Math.round(+body.fadeMs))) : 0;
+    layer.firedAt = Date.now();
     layer.lookId = look.id;
     layer.on = true;
     layer.level = body.level != null && Number.isFinite(+body.level)
@@ -390,6 +442,22 @@ function createDesk(opts = {}) {
     save(); pushFrame();
     return layer;
   }
+
+  // THE CUE RUNNER (cuerun.js): the one clock a project's cue list plays by.
+  const cueRunner = createCueRunner({
+    cues: () => state.cues || (state.cues = sanitizeCues(null)),
+    setCues: (c) => { state.cues = c; },
+    fire: (cue) => {
+      const look = state.looks.find((l) => l.id === cue.lookId);
+      if (!look) return false;
+      fireLook(look, { layerId: CUE_LAYER, fadeMs: cue.fade * 1000 });
+      return true;
+    },
+    save: () => save(),
+    log: (line) => log(line),
+  });
+  // Set once a show load has resumed the cue list, so boot does not resume it twice.
+  let resumed = false;
 
   // ---- more than one device at once -----------------------------------------
   // Each extra send owns a driver instance of its own, keyed by the send's id. They are
@@ -625,7 +693,7 @@ function createDesk(opts = {}) {
       // is no footprint to trim and no empty-desk special case — the universe goes out,
       // zeros and all, which is what stops a node's own timeout firing and its fixtures
       // falling into their built-in programs.
-      for (const [universe, buf] of frames) stream.send(universe, buf);
+      for (const [universe, buf] of frames) if (!echoBlocked('sacn', universe)) stream.send(universe, buf);
       if (!frames.size) stream.send(0, Buffer.alloc(512));
       sendExtras(frames, fp);
       stats.lastSend = Date.now();
@@ -653,6 +721,7 @@ function createDesk(opts = {}) {
     } else {
       const targets = targetsFor();
       for (const [universe, buf] of frames) {
+        if (echoBlocked('artnet', universe)) continue;
         for (const t of targets) artnet.send(t, universe, buf.subarray(0, fp.get(universe) || FULL_FRAME));
       }
     }
@@ -674,6 +743,7 @@ function createDesk(opts = {}) {
         if (!send.targets.length) continue;   // an Art-Net send with nowhere to go is not a send
         for (const [universe, buf] of frames) {
           if (wanted && !wanted.has(universe)) continue;
+          if (echoBlocked('artnet', universe)) continue;
           for (const t of send.targets) artnet.send(t, universe, buf.subarray(0, fp.get(universe) || FULL_FRAME));
         }
         continue;
@@ -683,6 +753,7 @@ function createDesk(opts = {}) {
       if (send.driver === 'sacn') {
         for (const [universe, buf] of frames) {
           if (wanted && !wanted.has(universe)) continue;
+          if (echoBlocked('sacn', universe)) continue;
           drv.send(universe, buf);
         }
         continue;
@@ -879,6 +950,7 @@ function createDesk(opts = {}) {
       scenes: state.scenes.length,
       looks: state.looks.length,
       layers: state.layers.map((l) => ({ id: l.id, name: l.name, on: l.on, level: l.level, lookId: l.lookId })),
+      cues: cueRunner.brief(),
       universes: engine.universes(),
       // Which fixtures are flashing to be found, right now. The page paints them so the
       // operator can tell the desk is doing what they asked while they look at the rig.
@@ -892,7 +964,34 @@ function createDesk(opts = {}) {
         lastError: enttec ? enttec.lastError : sacn ? sacn.lastError : artnet.lastError,
         lanAllowed,
       },
+      input: inputSummary(),
     };
+  }
+
+  // One line anybody can read: what the input is doing, or why it is not.
+  function inputSummary() {
+    const cfg = input.merger.config;
+    if (!cfg.enabled) return { enabled: false, text: 'Input off' };
+    const st = input.status();
+    const live = st.lines.filter((l) => l.state === 'live');
+    const held = st.lines.filter((l) => l.state === 'held');
+    const names = [...new Set(live.flatMap((l) => l.sources.filter((s) => s.winning).map((s) => s.name || s.ip)))];
+    const broken = st.listening.filter((l) => !l.ok && l.error);
+    let text;
+    let level = 'ok';
+    if (!st.listening.length) { text = 'Input on, but listening on nothing — choose an interface'; level = 'warn'; }
+    else if (broken.length) { text = 'Input cannot listen: ' + broken.map((b) => `${b.address}:${b.port} ${b.error}`).join('; '); level = 'error'; }
+    else if (live.length) text = 'Following ' + names.join(', ') + ` on ${live.length} of ${st.lines.length} universe${st.lines.length === 1 ? '' : 's'}`;
+    else {
+      const last = Math.max(0, ...st.lines.map((l) => l.lastAt || 0));
+      text = held.length ? 'No signal — holding the last look since ' + new Date(last).toLocaleTimeString()
+        : last ? 'No signal since ' + new Date(last).toLocaleTimeString() + ' — the desk has the rig'
+          : 'Listening — no signal yet';
+      level = 'warn';
+    }
+    if (!cfg.universes.length) { text = 'Input on, but no universe chosen to listen to'; level = 'warn'; }
+    if (st.unlistened.length) text += ' · also arriving, not listened to: ' + st.unlistened.map((u) => 'Universe ' + (u.universe + 1)).join(', ');
+    return { enabled: true, text, level, live: live.length, universes: cfg.universes.length };
   }
 
   // {maps: [...]} of flat objects — strings, finite numbers, booleans — nothing nested,
@@ -975,6 +1074,7 @@ function createDesk(opts = {}) {
         lanAllowed,
         listen: listen ? listen() : null,
         serial: enttec ? enttec.status() : null,
+        input: Object.assign(input.status(), { summary: inputSummary(), lanAllowed }),
         // Every other device, and whether it is actually connected. A second widget that
         // will not open has to be visible as a dead line here, not as a dark half of the
         // rig nobody can explain.
@@ -1319,14 +1419,47 @@ function createDesk(opts = {}) {
     },
 
     // Just the live DMX buffers — polled fast so the stage view animates smoothly.
-    'GET /api/dmx': (req, res) => json(res, { dmx: snapshot(), master: state.master, blackout: state.blackout }),
+    // The looks that are ON, riding with the DMX at the mirror's own rate, so a room can
+    // follow a look fired from anywhere (a cue, this desk, a phone) within a frame or two
+    // (src/rigMirror/useLightingMirror.js, RIG_BUILD.md §11.4). Ids, levels and order only.
+    'GET /api/dmx': (req, res) => json(res, {
+      dmx: snapshot(), master: state.master, blackout: state.blackout,
+      // fadeMs / since / from: the crossfade a following room draws (the look replaced
+      // `since` ms ago, over `fadeMs`); `cues`: where the desk's cue list is.
+      looks: state.layers.filter((l) => l.on && l.lookId && l.level > 0).map((l) => ({
+        lookId: l.lookId, level: l.level, priority: l.priority, layer: l.id,
+        fadeMs: Number.isFinite(l.fadeMs) ? l.fadeMs : 0,
+        since: Number.isFinite(l.firedAt) ? Math.max(0, Date.now() - l.firedAt) : null,
+        from: l.fromLookId || null,
+      })),
+      cues: cueRunner.brief(),
+    }),
+
+    // THE CUE LIST the desk plays (cuerun.js). Any page may drive it; the desk alone
+    // keeps the time, so two pages never fire a cue twice and none needs to stay open.
+    'GET /api/cues': (req, res) => json(res, { cues: cueRunner.full() }),
+    'POST /api/cues/load': (req, res, body) => {
+      if (!Array.isArray(body.list)) return json(res, { error: 'list must be a list of cues' }, 400);
+      json(res, { ...cueRunner.load(body), cues: cueRunner.full() });
+    },
+    'POST /api/cues/go': (req, res, body) => {
+      const r = cueRunner.go(body.index != null ? Number(body.index) : undefined);
+      json(res, { ...r, cues: cueRunner.full() }, r.error ? 400 : 200);
+    },
+    'POST /api/cues/back': (req, res) => {
+      const r = cueRunner.back();
+      json(res, { ...r, cues: cueRunner.full() }, r.error ? 400 : 200);
+    },
+    'POST /api/cues/stop': (req, res) => json(res, { ...cueRunner.stop(), cues: cueRunner.full() }),
+    'POST /api/cues/loop': (req, res, body) => json(res, { ...cueRunner.setLoop(body.loop === true), cues: cueRunner.full() }),
 
     'POST /api/master': (req, res, body) => {
       if (body.master != null && Number.isFinite(+body.master)) state.master = Math.max(0, Math.min(255, Math.round(+body.master)));
       if (body.blackout != null) {
         state.blackout = !!body.blackout;
         // A panic key that leaves a strobe still due to land in 400ms is not a panic key.
-        if (state.blackout) cancelPending();
+        // Nor one that lets the cue list fire the next look 12 s later.
+        if (state.blackout) { cancelPending(); cueRunner.stop(); }
       }
       engine.cancelFade(); save(); pushFrame(); json(res, { ok: true });
     },
@@ -1425,6 +1558,23 @@ function createDesk(opts = {}) {
       removeProfile(key);
       state.customProfiles = customProfiles();
       save(); json(res, { ok: true });
+    },
+
+    // A room's rig, patched here: {project, lamps:[{key, name, code, type, mode, footprint,
+    // channels?, universe?, address?, index?, group?, move?}], group?, prune?}. The desk
+    // allocates with its own nextFreeAddress; the answer is what the room writes back.
+    // Rules in rigpatch.js (and docs/architecture/RIG_BUILD.md §4 in di.iiii).
+    'POST /api/rig/patch': (req, res, body) => {
+      const out = rigPatch({ state, engine, PROFILES, addProfile, findProfile, makeFixture, customProfiles }, body || {});
+      if (out.status === 200) {
+        state.activeScene = null;
+        engine.cancelFade(); save();
+      }
+      json(res, out.body, out.status);
+    },
+    'GET /api/rig': (req, res) => {
+      const project = new URL(req.url, 'http://desk').searchParams.get('project') || '';
+      json(res, { fixtures: rigList({ state, PROFILES }, project) });
     },
 
     'POST /api/fixtures/add': (req, res, body) => {
@@ -1878,6 +2028,22 @@ function createDesk(opts = {}) {
       json(res, { ok: !!result.ok, port, ...result, ports: listPorts(), device: describePort(port) });
     },
 
+    // DMX input: its whole status (sources, ages, rates, what is listening where), and its
+    // settings. The settings are machine-level and saved with the rig (see `output`).
+    'GET /api/input': (req, res) => json(res, Object.assign(input.status(), { summary: inputSummary(), lanAllowed })),
+    'POST /api/input': async (req, res, body) => {
+      const cur = state.output.input;
+      const next = { ...cur };
+      for (const k of ['enabled', 'artnet', 'sacn', 'interfaces', 'universes', 'loss', 'name']) if (body[k] !== undefined) next[k] = body[k];
+      state.output.input = sanitizeInputConfig(next);
+      // Answered after the sockets have bound (or failed): the reply says what is true.
+      await input.configure(state.output.input, { lanAllowed });
+      save(); pushFrame();
+      json(res, Object.assign(input.status(), { summary: inputSummary(), lanAllowed }));
+    },
+    // A held look (loss = hold) let go of: the desk has the rig again until signal returns.
+    'POST /api/input/release': (req, res) => { input.merger.release(); pushFrame(); json(res, { ok: true }); },
+
     'POST /api/output': (req, res, body) => {
       if (body.mode) state.output.mode = body.mode === 'unicast' ? 'unicast' : 'broadcast';
       if (Array.isArray(body.targets)) state.output.targets = body.targets.map(validIp).filter(Boolean);
@@ -2051,17 +2217,21 @@ function createDesk(opts = {}) {
   function switchShow(next) {
     writeShow();
     cancelPending();
+    cueRunner.close();
     const rig = state.output;
     for (const p of customProfiles()) removeProfile(p.name);
     show = next;
     state = attachAudio(loadState({ keepOutput: rig }));
     engine.state = state;
+    input.configure(state.output.input, { lanAllowed });
     engine.cancelFade();
     engine.chase = { running: false, index: 0, nextAt: 0 };
     stateVersion++;
     rememberLoaded();
     log('  loaded ' + who() + ' — ' + showFile());
     pushFrame();
+    cueRunner.resume();
+    resumed = true;
   }
 
   async function handle(req, res, pathname) {
@@ -2129,8 +2299,10 @@ function createDesk(opts = {}) {
     // Anything waiting for the next beat is dropped rather than left to fire into a
     // process that has gone, and every extra device is let go of like the main two.
     cancelPending();
+    cueRunner.close();
     try { writeShow(); } catch (e) { log('could not save the show on close: ' + e.message); }
     artnet.close();
+    input.close();
     if (enttec) enttec.close();
     if (sacn) sacn.close();
     for (const id of [...extraDrivers.keys()]) closeExtra(id);
@@ -2151,11 +2323,13 @@ function createDesk(opts = {}) {
     }
     switchShow({ space: id, label: typeof kept.label === 'string' && kept.label ? kept.label.slice(0, 80) : id, dir });
   })();
+  // The machine's own show, loaded at boot, carries on its cue list too.
+  if (!resumed) cueRunner.resume();
 
   // `state` and the show file are read through, because loading another show replaces
   // them: a caller holding the desk (the rig's blackout mirror) must reach the live one.
   return {
-    handle, close, engine, writeShow, summary,
+    handle, close, engine, writeShow, summary, input,
     get state() { return state; },
     get showFile() { return showFile(); },
     get show() { return showInfo(); },

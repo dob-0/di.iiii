@@ -81,10 +81,35 @@ describe('StudioPresentationSurface', () => {
         expect(viewportPropsSpy).not.toHaveBeenCalled()
     })
 
-    it('locks camera navigation when Studio preview mode is fixed camera', () => {
+    // known-fixes "Studio would not move on MOXIR": the mode alone locked the editor's
+    // camera. A composed shot is where the camera starts; only locked: true holds it.
+    it('starts at the fixed camera but lets it move when the shot is not locked', () => {
         render(
             <StudioPresentationSurface
-                document={buildDocument({ mode: 'fixed-camera' })}
+                document={buildDocument({ mode: 'fixed-camera', fixedCamera: { position: [3, 4, 5], target: [0, 1, 0], projection: 'perspective', fov: 60, locked: false } })}
+                selectedEntityId={null}
+                onSelectEntity={vi.fn()}
+                cursors={{}}
+                onCursorMove={vi.fn()}
+                onCursorLeave={vi.fn()}
+                cameraView={{ position: [0, 2, 5], target: [0, 0, 0] }}
+                controlsRef={{ current: null }}
+                xrStore={{}}
+                onCameraChange={vi.fn()}
+            />
+        )
+
+        expect(screen.getByText('studio-viewport:free')).toBeInTheDocument()
+        expect(viewportPropsSpy).toHaveBeenCalledWith(expect.objectContaining({
+            enableNavigation: undefined,
+            cameraView: expect.objectContaining({ position: [3, 4, 5], target: [0, 1, 0] })
+        }))
+    })
+
+    it('locks camera navigation when the fixed camera is locked', () => {
+        render(
+            <StudioPresentationSurface
+                document={buildDocument({ mode: 'fixed-camera', fixedCamera: { position: [3, 4, 5], target: [0, 1, 0], projection: 'orthographic', fov: 35, zoom: 1.5, near: 0.1, far: 120, locked: true } })}
                 selectedEntityId={null}
                 onSelectEntity={vi.fn()}
                 cursors={{}}

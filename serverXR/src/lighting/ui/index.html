@@ -48,6 +48,9 @@
     <button id="lfoPill" class="fxpill" hidden title="An LFO is riding channels on top of the look — go to the Control page to change or stop it"></button>
     <button id="heldPill" class="heldpill" hidden title="Manual faders are overriding the fixtures — go to the Fader page to release them"></button>
     <button id="wirePill" class="wirepill" hidden title="Output"></button>
+    <!-- DMX input: is a console driving this desk right now? Said on every page, like
+         the wire pill, because "the room follows the console" is invisible otherwise. -->
+    <button id="inPill" class="wirepill" hidden title="Input — a console driving this desk"></button>
   </div>
   <div class="topright">
     <button id="topBlackout" class="blackout topbo" title="Blackout (B) — reaches every page">Blackout</button>
@@ -76,6 +79,39 @@
 
 <!-- ===================== SETUP ===================== -->
 <main class="page is-active" data-page="setup">
+
+  <!-- INPUT — a console (grandMA3, Eos, onPC …) driving this desk over Art-Net or sACN,
+       so the space's lamps draw what the console is doing. Off until switched on, and
+       then listening only on the interfaces ticked here (dmxin-net.js says how). The
+       summary line is the answer to "is the console reaching us?" and is never blank. -->
+  <details class="indetails" id="inDetails">
+    <summary><h2>Input</h2><i class="inlamp" id="inLamp"></i><span id="inSummary">Input off</span></summary>
+    <div class="inbox">
+      <div class="inline pad">
+        <button class="sq" id="inEnable">Input is OFF</button>
+        <label title="Art-Net 4 — ArtDmx on UDP 6454; this desk answers ArtPoll so a console lists it as a node"><input type="checkbox" id="inArtnet"> Art-Net <span class="mono">UDP 6454</span></label>
+        <label title="sACN, ANSI E1.31-2018 — multicast 239.255.x.y or unicast, UDP 5568"><input type="checkbox" id="inSacn"> sACN <span class="mono">UDP 5568</span></label>
+        <label>when the signal stops
+          <select id="inLoss">
+            <option value="release">hand the rig back to the desk</option>
+            <option value="hold">hold the console's last look</option>
+          </select></label>
+        <button class="sq" id="inRelease" hidden title="Let go of the held look — the desk has the rig until the console comes back">Release held look</button>
+      </div>
+      <div class="inline pad"><span class="muted">Listen on</span> <span id="inIfaces" class="inline"></span></div>
+      <div class="inline pad">
+        <span class="muted">Universes</span>
+        <input type="number" id="inAddUni" min="1" max="32768" placeholder="1" style="width:5em" title="The desk's universe number, as the patch shows it">
+        <button class="sq" id="inAdd">Listen</button>
+        <span class="muted">Universe 1 = Art-Net 0:0:0 = sACN 1</span>
+        <label class="muted" title="The name a console shows for this desk in its node list">name <input type="text" id="inName" maxlength="17" style="width:11em"></label>
+      </div>
+      <div id="inLines" class="inlines"></div>
+      <div id="inUnlistened" class="pad muted"></div>
+      <div id="inProblems" class="err pad"></div>
+      <div id="inWire" class="mono muted pad"></div>
+    </div>
+  </details>
 
   <section class="top-split">
     <div class="pane library">
@@ -219,6 +255,17 @@
   <section class="ctl-top">
     <!-- scene bank -->
     <div class="pane bankpane">
+      <!-- The cue list the desk plays (cuerun.js) — a project's looks on their holds, one
+           clock for every page. Shown only while the desk holds a list. -->
+      <div class="cuestrip" id="cueStrip" hidden>
+        <div class="pane-head"><h2>Cues</h2><span class="muted cuewhere" id="cueWhere"></span></div>
+        <div class="transport">
+          <button class="sq accent" id="cueGo" title="Fire the next cue">GO</button>
+          <button class="sq" id="cueBack" title="Fire the cue before">back</button>
+          <button class="sq" id="cueStop" title="Stop the list — the look stays">stop</button>
+          <button class="sq" id="cueLoop" aria-pressed="false" title="After the last cue, cue 1 again">loop off</button>
+        </div>
+      </div>
       <div class="pane-head"><h2>Scenes</h2></div>
       <div class="transport">
         <button class="sq" id="chasePause" title="Stop the chase">❚❚</button>

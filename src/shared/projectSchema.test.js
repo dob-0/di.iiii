@@ -776,9 +776,11 @@ describe('showState — the one show clock', () => {
 describe('components.fixture — the join to the lighting desk', () => {
     const spot = (fixture) => ({ id: 'spot', type: 'spotLight', components: { light: { color: '#ffffff', intensity: 2 }, ...(fixture === undefined ? {} : { fixture }) } })
 
-    it('survives normalization as { index } and nothing else', () => {
-        const doc = normalizeProjectDocument({ entities: [spot({ index: 3, universe: 1, address: 17 })] })
-        expect(doc.entities[0].components.fixture).toEqual({ index: 3 })
+    // Since 2026-09-28 the plot's patch travels beside the index (RIG_BUILD.md §2.2);
+    // before, universe/address were dropped here. Unknown fields still are.
+    it('survives normalization as the index plus the plot patch, and nothing else', () => {
+        const doc = normalizeProjectDocument({ entities: [spot({ index: 3, universe: 1, address: 17, colour: 'red' })] })
+        expect(doc.entities[0].components.fixture).toEqual({ index: 3, universe: 1, address: 17 })
     })
 
     it('is a positive whole number or it is gone', () => {

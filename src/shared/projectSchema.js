@@ -597,6 +597,325 @@ export const normalizeFixtureIndex = (fixture) => {
     return Number.isInteger(index) && index > 0 ? index : null
 }
 
+// A lamp ON THE RIG (docs/architecture/RIG_BUILD.md §2.2): the desk's index (the
+// join, above) plus the plot's own patch — fixture type and mode, universe (1-based,
+// as MVR and every crew count) and address, unit number along its position, circuit,
+// position name, and whether it hangs. Every field is optional, but the component
+// must name an index or a type or it is no fixture at all and is dropped. A field
+// that is not well formed is left out rather than stored broken, so clearing one in
+// the inspector (`{ address: null }`) removes just that field.
+const fixtureText = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '')
+const fixtureInt = (value, min, max) => {
+    const n = Number(value)
+    return Number.isInteger(n) && n >= min && n <= max ? n : null
+}
+export const normalizeFixture = (fixture) => {
+    if (!fixture || typeof fixture !== 'object') return null
+    const out = {}
+    const index = normalizeFixtureIndex(fixture)
+    if (index != null) out.index = index
+    const type = fixtureText(fixture.type, 64)
+    if (type) out.type = type
+    if (index == null && !type) return null
+    const mode = fixtureText(fixture.mode, 32)
+    if (mode) out.mode = mode
+    const universe = fixtureInt(fixture.universe, 1, 63999)
+    if (universe != null) out.universe = universe
+    const address = fixtureInt(fixture.address, 1, 512)
+    if (address != null) out.address = address
+    const unit = fixtureInt(fixture.unit, 1, 9999)
+    if (unit != null) out.unit = unit
+    const circuit = fixtureText(fixture.circuit, 16)
+    if (circuit) out.circuit = circuit
+    const position = fixtureText(fixture.position, 64)
+    if (position) out.position = position
+    if (fixture.hung === true) out.hung = true
+    return out
+}
+
+// A VENUE PLAN (RIG_BUILD.md §10): the room's architecture from above — walls,
+// column grid, zones, what stands on the floor and what hangs over it — derived by
+// src/rigbuild/venuePlan.js from the hall the model was built from, and drawn by
+// the plot. Numbers only, bounded: a plan that is not well formed is dropped, and
+// every list is capped so a document cannot carry an unbounded drawing.
+const VENUE_PLAN_CAP = 2000
+const planNum = (value) => {
+  const n = Number(value)
+  return Number.isFinite(n) && Math.abs(n) <= 1e5 ? Math.round(n * 1000) / 1000 : null
+}
+const planNums = (list, length) => {
+  if (!Array.isArray(list) || list.length !== length) return null
+  const out = list.map(planNum)
+  return out.every((n) => n != null) ? out : null
+}
+const planText = (value, max = 120) => (typeof value === 'string' ? value.trim().slice(0, max) : '')
+const planList = (list, each) => (Array.isArray(list) ? list.slice(0, VENUE_PLAN_CAP).map(each).filter(Boolean) : [])
+export const normalizeVenuePlan = (plan) => {
+  if (!plan || typeof plan !== 'object') return null
+  const outline = planList(plan.outline, (p) => planNums(p, 2))
+  if (outline.length < 3) return null
+  const out = {
+    name: planText(plan.name),
+    source: planText(plan.source, 240),
+    warning: planText(plan.warning, 240),
+    outline,
+    columns: planList(plan.columns, (c) => planNums(c, 4)),
+    grid: {
+      x: planList(plan.grid?.x, (g) => (planNum(g?.at) != null ? { at: planNum(g.at), label: planText(g.label, 8) } : null)),
+      z: planList(plan.grid?.z, (g) => (planNum(g?.at) != null ? { at: planNum(g.at), label: planText(g.label, 8) } : null))
+    },
+    zones: planList(plan.zones, (z) => {
+      const rects = planList(z?.rects, (r) => planNums(r, 4))
+      return rects.length ? { id: planText(z.id, 32), label: planText(z.label), rects, note: planText(z.note, 240) } : null
+    }),
+    solids: planList(plan.solids, (s) => {
+      const r = planNums(s?.rect, 4)
+      return r ? { id: planText(s.id, 32), label: planText(s.label), rect: r, top: planNum(s.top) ?? 0 } : null
+    }),
+    overhead: planList(plan.overhead, (o) => {
+      const r = planNums(o?.rect, 4)
+      const line = Array.isArray(o?.line) && o.line.length === 2 ? o.line.map((p) => planNums(p, 2)) : null
+      const lineOk = line && line.every(Boolean)
+      if (!r && !lineOk) return null
+      return { id: planText(o.id, 32), label: planText(o.label), ...(r ? { rect: r } : { line }), bottom: planNum(o.bottom) ?? 0 }
+    }),
+    openings: planList(plan.openings, (o) => {
+      const from = planNums(o?.from, 2)
+      const to = planNums(o?.to, 2)
+      return from && to ? { id: planText(o.id, 32), label: planText(o.label), from, to } : null
+    })
+  }
+  const north = planNums(plan.north, 2)
+  if (north) out.north = north
+  return out
+}
+
+// A RENTAL LIST — since 2026-09-28 the show's EQUIPMENT LIST (RIG_BUILD.md §11, §13):
+// what the show takes, in what quantity, from where. The cards of view C count
+// "placed n / ordered m" against it, the plot says "3 left of 12", the hotbar of view A
+// stops at the order, and /{space}/equipment/{project} edits it. First written by
+// scripts/rigbuild/rental.mjs from the rental house's own spreadsheet and the show's
+// order, with where each number came from; lines are then added, deleted and changed
+// by hand, each keeping its source. Bounded like the venue plan.
+//
+// A line: {code, type, ordered, stock?, rate?, label?, source?, note?} as before, plus
+//   kind: 'item'           a non-DMX item (node, splitter, cable, truss, deck) — counted
+//                          and costed, never hung or patched (omitted = a fixture)
+//   from: 'own' | 'other'  where it comes from (omitted = the rental house)
+//   supplier, category, watts, piece (a rig piece kind the line counts, e.g. truss-2m)
+// The list: {name, source, writtenAt, currency, items} as before, plus
+//   days, dates {from, to}  the billed rental days
+//   rule {extraDay, source} the quote's own day rule (day 1 full, each further day × extraDay)
+//   types[]                 fixture types added for this show (Open Fixture Library, or a
+//                           rental code with its mode owed), each with its provenance
+//   catalogue[], terms[]    the rental house's whole price list and its terms, with cells
+const RENTAL_CAP = 200
+const RENTAL_TYPES_CAP = 32
+const RENTAL_MODES_CAP = 24
+const rentalCount = (value) => {
+  const n = Number(value)
+  return Number.isInteger(n) && n >= 0 && n <= 100000 ? n : null
+}
+const rentalSlug = (value, max = 40) => (typeof value === 'string' && new RegExp(`^[a-z0-9][a-z0-9._-]{0,${max - 1}}$`).test(value.trim()) ? value.trim() : '')
+const rentalDate = (value) => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.trim()) ? value.trim() : '')
+const rentalSourced = (spec, length = 0) => {
+  if (!spec || typeof spec !== 'object') return null
+  const value = length ? planNums(spec.value, length) : planNum(spec.value)
+  if (value == null || (!length && value < 0)) return null
+  const out = { value }
+  for (const k of ['src', 'basis', 'order', 'note']) {
+    const t = planText(spec[k], k === 'note' || k === 'order' ? 120 : 40)
+    if (t) out[k] = t
+  }
+  return out
+}
+const normalizeRentalType = (type) => {
+  const id = rentalSlug(type?.id)
+  const code = planText(type?.code, 40)
+  if (!id || !code) return null
+  const modes = planList(type.modes, (mode) => {
+    const name = planText(mode?.name, 32)
+    const footprint = Number(mode?.footprint)
+    if (!name || !Number.isInteger(footprint) || footprint < 1 || footprint > 512) return null
+    let channels = null
+    if (Array.isArray(mode.channels) && mode.channels.length === footprint) {
+      channels = mode.channels.map((c) => {
+        const role = typeof c?.role === 'string' && /^[A-Za-z0-9_-]{1,24}$/.test(c.role) ? c.role : ''
+        return role ? { role, label: planText(c.label, 40) } : null
+      })
+      if (!channels.every(Boolean)) channels = null
+    }
+    return { name, footprint, channels }
+  }).slice(0, RENTAL_MODES_CAP)
+  const out = {
+    id,
+    code,
+    maker: planText(type.maker, 80) || null,
+    model: planText(type.model, 80) || null,
+    identified: planText(type.identified, 16) || 'OWED',
+    category: rentalSlug(type.category, 24) || 'other',
+    modes,
+    defaultMode: modes.some((m) => m.name === type.defaultMode) ? type.defaultMode : (modes[0]?.name || null),
+    modesOwed: modes.length === 0
+  }
+  const power = rentalSourced(type.power_w)
+  if (power) out.power_w = power
+  const weight = rentalSourced(type.weight_kg)
+  if (weight) out.weight_kg = weight
+  const size = rentalSourced(type.size_mm, 3)
+  if (size) out.size_mm = size
+  const sources = {}
+  for (const [key, s] of Object.entries(type.sources || {}).slice(0, 8)) {
+    if (!/^[A-Za-z0-9_-]{1,24}$/.test(key) || !s || typeof s !== 'object') continue
+    const src = { url: planText(s.url, 300), what: planText(s.what, 160) }
+    const licence = planText(s.licence, 80)
+    if (licence) src.licence = licence
+    const accessed = planText(s.accessed, 32)
+    if (accessed) src.accessed = accessed
+    if (src.url || src.what) sources[key] = src
+  }
+  out.sources = sources
+  if (type.ofl && typeof type.ofl === 'object') {
+    const manufacturer = rentalSlug(type.ofl.manufacturer, 80)
+    const key = rentalSlug(type.ofl.key, 80)
+    if (manufacturer && key) out.ofl = { manufacturer, key, lastModifyDate: planText(type.ofl.lastModifyDate, 32), fetchedAt: planText(type.ofl.fetchedAt, 32) }
+  }
+  const note = planText(type.note, 240)
+  if (note) out.note = note
+  return out
+}
+export const normalizeRentalList = (list) => {
+  if (!list || typeof list !== 'object') return null
+  const items = planList(list.items, (item) => {
+    const code = planText(item?.code, 40)
+    const ordered = rentalCount(item?.ordered)
+    if (!code || ordered == null) return null
+    const out = { code, type: planText(item.type, 40) || code.toLowerCase().replace(/\s+/g, '-'), ordered }
+    if (item.kind === 'item') out.kind = 'item'
+    const stock = rentalCount(item.stock)
+    if (stock != null) out.stock = stock
+    const rate = planNum(item.rate)
+    if (rate != null && rate >= 0) out.rate = rate
+    const label = planText(item.label, 120)
+    if (label) out.label = label
+    const source = planText(item.source, 240)
+    if (source) out.source = source
+    const note = planText(item.note, 240)
+    if (note) out.note = note
+    if (item.from === 'own' || item.from === 'other') out.from = item.from
+    const supplier = planText(item.supplier, 80)
+    if (supplier) out.supplier = supplier
+    const category = rentalSlug(item.category, 24)
+    if (category) out.category = category
+    const watts = planNum(item.watts)
+    if (watts != null && watts >= 0) out.watts = watts
+    const piece = rentalSlug(item.piece, 24)
+    if (piece) out.piece = piece
+    return out
+  }).slice(0, RENTAL_CAP)
+  const name = planText(list.name)
+  // A list someone emptied is still a list (the hand takes nothing from it); a list
+  // with no line and no name was never one.
+  if (!items.length && !name) return null
+  const out = {
+    name,
+    source: planText(list.source, 480),
+    writtenAt: planText(list.writtenAt, 32),
+    currency: planText(list.currency, 8),
+    items
+  }
+  const days = Number(list.days)
+  if (Number.isInteger(days) && days >= 1 && days <= 366) out.days = days
+  const from = rentalDate(list.dates?.from)
+  const to = rentalDate(list.dates?.to)
+  if (from || to) out.dates = { from, to }
+  const extraDay = planNum(list.rule?.extraDay)
+  if (extraDay != null && extraDay >= 0 && extraDay <= 1) out.rule = { extraDay, source: planText(list.rule.source, 240) }
+  const types = planList(list.types, normalizeRentalType).slice(0, RENTAL_TYPES_CAP)
+  if (types.length) out.types = types
+  const catalogue = planList(list.catalogue, (c) => {
+    const code = planText(c?.code, 40)
+    if (!code) return null
+    const entry = { code, label: planText(c.label, 120), details: planText(c.details, 120), category: planText(c.category, 40), cells: planText(c.cells, 40) }
+    const stock = rentalCount(c.stock)
+    if (stock != null) entry.stock = stock
+    const rate = planNum(c.rate)
+    if (rate != null && rate >= 0) entry.rate = rate
+    return entry
+  }).slice(0, RENTAL_CAP)
+  if (catalogue.length) out.catalogue = catalogue
+  const terms = planList(list.terms, (t) => (planText(t?.text, 240) ? { text: planText(t.text, 240), cell: planText(t.cell, 40) } : null)).slice(0, 20)
+  if (terms.length) out.terms = terms
+  return out
+}
+
+// A RIG VERSION (RIG_BUILD.md §15): this project is one of several versions of one show's
+// rig in the same hall, each a project of its own. `siblings` is the set, in order, so the
+// space view can offer a switch between them. Short words and ids only; a version with no
+// id, or a set that does not list it, is dropped.
+const RIG_VERSIONS_CAP = 8
+const variantId = (value) => (typeof value === 'string' && /^[a-z0-9][a-z0-9-]{0,47}$/.test(value.trim()) ? value.trim() : '')
+export const normalizeRigVariant = (value) => {
+  if (!value || typeof value !== 'object') return null
+  const id = variantId(value.id)
+  const set = variantId(value.set)
+  if (!id || !set) return null
+  const siblings = (Array.isArray(value.siblings) ? value.siblings : []).slice(0, RIG_VERSIONS_CAP).map((s) => {
+    const sid = variantId(s?.id)
+    const projectId = variantId(s?.projectId)
+    return sid && projectId ? { id: sid, projectId, title: planText(s.title, 60) || sid, summary: planText(s.summary, 160) } : null
+  }).filter(Boolean)
+  if (!siblings.some((s) => s.id === id)) return null
+  return { set, id, title: planText(value.title, 60) || id, summary: planText(value.summary, 160), source: planText(value.source, 480), siblings }
+}
+
+// THE RIG'S DESIGNED LOOKS (RIG_BUILD.md §11.4, view C): per look, a rule and its
+// numbers per group of lamps (a group is `${position}/${type}`), and a colour per
+// group. Written by scripts/rigbuild/looks.mjs from the rig file; the cards put them on
+// the desk and the cue list, the room poses by them. Bounded, numbers and short words.
+const RIG_LOOKS_CAP = 50
+const RIG_GROUPS_CAP = 100
+const lookKey = (value) => (typeof value === 'string' && /^[\w:.-]{1,40}\/[\w.-]{1,40}$/.test(value.trim()) ? value.trim() : '')
+const lookHex = (value) => (typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.trim()) ? value.trim().toLowerCase() : '')
+export const normalizeRigLooks = (value) => {
+  if (!value || typeof value !== 'object') return null
+  const looks = planList(value.looks, (look) => {
+    const id = typeof look?.id === 'string' && /^[a-z0-9][a-z0-9-]{0,35}$/.test(look.id.trim()) ? look.id.trim() : ''
+    if (!id) return null
+    const aims = {}
+    for (const [k, aim] of Object.entries(look.aims || {}).slice(0, RIG_GROUPS_CAP)) {
+      const key = lookKey(k)
+      const rule = planText(aim?.rule, 32)
+      if (!key || !rule) continue
+      const params = { rule }
+      for (const [p, n] of Object.entries(aim)) {
+        if (p === 'rule' || !/^[a-z_]{1,16}$/.test(p)) continue
+        const num = planNum(n)
+        if (num != null) params[p] = num
+      }
+      aims[key] = params
+    }
+    const colours = {}
+    for (const [k, c] of Object.entries(look.colours || {}).slice(0, RIG_GROUPS_CAP)) {
+      const key = lookKey(k)
+      const hex = lookHex(c)
+      if (key && hex) colours[key] = hex
+    }
+    // A group's level in the look, 0..1 (RIG_BUILD.md §15: 0 = out, the look's darkness).
+    // Absent = full; the field is written only when a look names one, so a look from
+    // before it is unchanged.
+    const levels = {}
+    for (const [k, v] of Object.entries(look.levels || {}).slice(0, RIG_GROUPS_CAP)) {
+      const key = lookKey(k)
+      const n = planNum(v)
+      if (key && n != null) levels[key] = Math.min(1, Math.max(0, n))
+    }
+    return { id, title: planText(look.title, 60) || id, intent: planText(look.intent, 480), aims, colours, ...(Object.keys(levels).length ? { levels } : {}) }
+  }).slice(0, RIG_LOOKS_CAP)
+  if (!looks.length) return null
+  return { source: planText(value.source, 480), writtenAt: planText(value.writtenAt, 32), defaultLook: planText(value.defaultLook, 36), looks }
+}
+
 export const normalizeEntity = (entity = {}) => {
     const rawType = ensureString(entity.type, 'box')
     const type = ENTITY_TYPE_SET.has(rawType) ? rawType : 'box'
@@ -715,22 +1034,62 @@ export const normalizeEntity = (entity = {}) => {
     // beam -- a cone switched on by a normaliser would change the look of every
     // lit space at once. `haze` is how thick the air is, 0..1; the renderer
     // reads an absent haze as 0.4 (src/objectComponents/spotBeam.js).
+    // `only` (2026-09-27): draw the cone, cast NO light. A real rig is 90 lamps
+    // and a browser cannot run 90 real spot lights (every one is a term in every
+    // lit pixel's shader, and phones refuse to compile past ~16); a lamp marked
+    // `only` keeps its beam in the air and leaves the room unlit by it, so a rig
+    // can be hung whole and a budget of real lamps chosen. Stored only when
+    // true, so every beam saved before this reads back exactly as it was.
     if (sourceComponents.beam) {
         nextComponents.beam = {
             visible: ensureBoolean(sourceComponents.beam.visible, false),
-            haze: Math.min(1, Math.max(0, ensureNumber(sourceComponents.beam.haze, 0.4)))
+            haze: Math.min(1, Math.max(0, ensureNumber(sourceComponents.beam.haze, 0.4))),
+            ...(sourceComponents.beam.only === true ? { only: true } : {})
         }
     }
     // THE JOIN between a lamp in the room and a lamp on the lighting desk: the
-    // fixture's `index` on the desk (the number a person sees there, `3.Back left`).
-    // A number and nothing else — never universe/address, which belong to the
-    // machine's own show.json and never travel with a project
-    // (di-atlas/decisions/2026-09-20-one-project-one-stage.md). An index that is not
-    // a positive whole number is no join at all, so the component is dropped rather
-    // than stored broken — which is also how the inspector clears it: `{ index: null }`.
-    const fixtureIndex = normalizeFixtureIndex(sourceComponents.fixture)
-    if (fixtureIndex != null) nextComponents.fixture = { index: fixtureIndex }
+    // fixture's `index` on the desk (the number a person sees there, `3.Back left`),
+    // and since 2026-09-28 the plot's patch beside it (normalizeFixture, above) — the
+    // record handed to a crew, the way an MVR Fixture carries its addresses. The desk's
+    // show.json still holds the RUNNING patch and allocates; auto-patch keeps the two
+    // equal (docs/architecture/RIG_BUILD.md §2.2, §4). A component with neither an
+    // index nor a type is no fixture and is dropped rather than stored broken.
+    const fixture = normalizeFixture(sourceComponents.fixture)
+    if (fixture) nextComponents.fixture = fixture
     else delete nextComponents.fixture
+    // A BUILD PIECE (truss, tower, stage deck): which record in the piece catalogue
+    // this entity is (src/rigbuild/pieces.js; RIG_BUILD.md §2.3). A name and nothing
+    // else — the size and the snap points live in the catalogue. An empty kind is no
+    // piece, and the component is dropped.
+    if (sourceComponents.piece) {
+        const kind = typeof sourceComponents.piece.kind === 'string' ? sourceComponents.piece.kind.trim().slice(0, 32) : ''
+        if (kind) nextComponents.piece = { kind }
+        else delete nextComponents.piece
+    }
+    // The venue's plan (normalizeVenuePlan, above), on the entity that is the venue.
+    if (sourceComponents.venuePlan) {
+        const plan = normalizeVenuePlan(sourceComponents.venuePlan)
+        if (plan) nextComponents.venuePlan = plan
+        else delete nextComponents.venuePlan
+    }
+    // The show's rental list (normalizeRentalList, above) — view C's cards.
+    if (sourceComponents.rentalList) {
+        const list = normalizeRentalList(sourceComponents.rentalList)
+        if (list) nextComponents.rentalList = list
+        else delete nextComponents.rentalList
+    }
+    // The rig's designed looks (normalizeRigLooks, above) — view C's cue list.
+    if (sourceComponents.rigLooks) {
+        const looks = normalizeRigLooks(sourceComponents.rigLooks)
+        if (looks) nextComponents.rigLooks = looks
+        else delete nextComponents.rigLooks
+    }
+    // Which rig version this project is, and its siblings (normalizeRigVariant, above).
+    if (sourceComponents.rigVariant) {
+        const variant = normalizeRigVariant(sourceComponents.rigVariant)
+        if (variant) nextComponents.rigVariant = variant
+        else delete nextComponents.rigVariant
+    }
     // A screen: a plane that shows one of the project's own mapping surfaces
     // (document.mappingState.surfaces) as its picture. The join is the surface's
     // id and nothing else -- the surface keeps its kind, file and resolution, so
@@ -1239,7 +1598,18 @@ export const normalizeMappingState = (mapping = {}) => {
             }),
         reference: normalizeMappingReference(source.reference),
         grid: Math.max(0, Math.min(200, Math.round(ensureNumber(source.grid, defaultMappingState.grid)))),
-        fade: Math.max(0, Math.min(30, ensureNumber(source.fade, defaultMappingState.fade)))
+        fade: Math.max(0, Math.min(30, ensureNumber(source.fade, defaultMappingState.fade))),
+        // The cue list goes from its last cue back to cue 1 while this is on — the
+        // desk's cue runner plays it (serverXR/src/lighting/cuerun.js). Written only
+        // when on: absent means absent, so every older document is byte-identical.
+        ...(source.loop === true ? { loop: true } : {}),
+        // The show's clock (RIG_BUILD.md §16, hosted playback): the moment, in ms since
+        // 1970 UTC, the cue list started. With no desk, every viewer computes the cue on
+        // screen from it — t = (now - showEpoch) mod the loop's length — so viewers
+        // anywhere see the same moment. Written only when set, like `loop`.
+        ...(typeof source.showEpoch === 'number' && Number.isFinite(source.showEpoch) && source.showEpoch > 0
+            ? { showEpoch: Math.round(source.showEpoch) }
+            : {})
     }
 }
 

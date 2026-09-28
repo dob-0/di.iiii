@@ -31,6 +31,8 @@ serverXR/src/lighting/
   engine.js       profiles, fixtures, rendering, limits, fades, chase, scene recall
   fx.js / lfo.js  effects as pure maths over (fixture, time, bpm, depth); LFO motion
   artnet.js       ArtDmx / ArtPoll packets, discovery
+  dmxin.js        DMX INPUT, pure: ArtDmx/ArtPoll/ArtPollReply + E1.31 parse/build, the merge
+  dmxin-net.js    DMX INPUT, the sockets: bind per interface, source filter, ArtPollReply
   enttec.js       the serial widget (mode on Windows, stty on the open fd elsewhere)
   ui/             the interface — plain files, RELATIVE addresses (api/…, style.css)
   tests/          the desk's own suites, plain node; wrapped by lighting.test.js
@@ -79,7 +81,45 @@ from the Eos vocabulary; the output is static values, recordable like anything e
 `library.js` imports fixtures from the Open Fixture Library by name, cached beside the
 show, and brings each channel's resting value with it — which is what stops an imported
 head coming up dark with a shut shutter. `sacn.js` is E1.31 output: multicast groups and
-a priority number, beside the existing Art-Net and ENTTEC drivers.
+a priority number, beside the existing Art-Net and ENTTEC drivers. The desk counts
+universes from 0 (its "Universe 1" is index 0, Art-Net 0:0:0); E1.31 counts from 1 and
+reserves 0 (§6.2.7), so `sacn.js` puts desk index *n* on the wire as universe *n + 1*.
+Until 2026-09-28 it sent the index as-is, and Universe 1 went out on the reserved 0.
+
+### The cue runner — a project's cue list, played by the desk (`cuerun.js`)
+
+Added 2026-09-28 for MOXIR's looping underground show (owner: "minimal, make the underground
+show loop"). A project's cue list (`document.mappingState.cues`, one cue per look with a
+`hold` and a `fade`) used to be played by the browser tab that pressed GO: a `setTimeout`
+per hold on the cards page. The show stopped when that tab closed, and two open tabs each
+ran a clock and fired every cue twice.
+
+**Decision: the clock lives in the desk.** The desk is the one process that is always up
+while the lights are, so it is the only driver: one timer handle, cleared before every
+reschedule; pages (the cards page, the Cues strip on /light's Control page, a phone) only
+ask it to go, stop or loop and read the same answer back. It keeps playing with every page
+closed. The list, the cue it is on, `running` and `loop` are saved with the show, so a desk
+restarted mid-show comes back on its cue and runs on (one log line says so). Blackout ON
+stops it (the panic key). Considered and not chosen: a leader-elected tab (a
+BroadcastChannel lock) — it still dies with the last tab and cannot cross browsers.
+
+A cue fires a look the desk already holds, on the `cue` layer, by the same path as
+`POST /api/looks/fire`. A cue whose look is not on the desk is listed in `missing` and its
+hold still runs — one absent look must not stall a looping show.
+
+| route | does |
+|---|---|
+| `GET /api/cues` | `{ cues: { project, list, loop, index, running, nextAt, missing, n, name, nextInMs } }` |
+| `POST /api/cues/load` `{ project, list: [{ id, name, lookId, hold, fade }], loop, keepIndex? }` | replace the list (≤ 200 cues; hold 0..3600 s, 0 = waits for GO; fade 0..60 s). `keepIndex` on the same project keeps the running cue and its remaining hold |
+| `POST /api/cues/go` `{ index? }` | fire that cue, or the next; past the last: cue 1 while looping, else stop |
+| `POST /api/cues/back` · `/stop` · `/loop { loop }` | the cue before · stop the clock (the look stays) · the loop switch |
+
+What a room reads: `GET /api/dmx` `looks[]` entries carry `fadeMs` (the cue's fade), `since`
+(ms since that layer's look was put there; null after a restart) and `from` (the look it
+replaced), so a following room can crossfade; top-level `cues` (also on `/api/summary`) is
+`{ project, index, n, name, loop, running, nextInMs, missing }` or null. The document's
+`mappingState.loop` (written only when on) is where the switch is kept; the page hands it
+to the desk with the list. Tests: `tests/test-cues.js` (in `lighting.test.js`).
 
 ## Talking to it
 
@@ -103,11 +143,18 @@ a priority number, beside the existing Art-Net and ENTTEC drivers.
   by id. The desk's own drag uses it, and so does Studio's **Send positions to the desk**
   (`src/rigMirror/sendPositions.js`) — the ONE write the app makes to the desk.
 - **The join from a room to the rig is a number.** A Studio lamp carries
-  `components.fixture = { index }`, the fixture's `index` on this desk (`3.Back left`);
-  never universe/address, which belong to the show the desk runs (the space's or this
-  machine's `show.json`, below) and never travel inside a project document. While the desk is here the lamp draws what the fixture emits
+  `components.fixture = { index }`, the fixture's `index` on this desk (`3.Back left`).
+  While the desk is here the lamp draws what the fixture emits
   (`src/rigMirror/liveLight.js`); otherwise its authored light. Design:
-  `di-atlas/decisions/2026-09-20-one-project-one-stage.md`.
+  `di-atlas/decisions/2026-09-20-one-project-one-stage.md`. **Changed 2026-09-28:**
+  the same component now also carries the PLOT's patch (type, mode, universe,
+  address, unit, circuit, position) — the record a crew is handed, as in MVR. The
+  show the desk runs is still the RUNNING patch and the one that allocates; auto-patch
+  keeps the two equal and flags where they differ. `docs/architecture/RIG_BUILD.md`.
+- `POST /light/api/rig/patch` and `GET /light/api/rig?project=` — AUTO-PATCH: a room's
+  lamps (fixture type + mode) patched here with the desk's own `nextFreeAddress`, keyed
+  `rigKey = "<project>:<entity>"`; conflicts and unknown modes flagged, never resolved.
+  `rigpatch.js`, rules in `RIG_BUILD.md` §4.
 - `GET /light/api/library`, `/library/manufacturer?key=`, `/library/fixture?…` and
   `POST /light/api/library/import {manufacturer, key, mode}` — patch by name.
 
@@ -133,3 +180,210 @@ Data: one show loaded at a time, like a console's show file.
 Every show file is written whole to a temp file and renamed, with `show.prev.json` kept;
 a load falls back to the temp, then the previous copy.
 See `LIGHTING_SHOW_PORTABILITY.md` for what travels and what is still owed.
+
+## Input — a console drives the desk
+
+Added 2026-09-28 (branch `feat/dmx-input`). A lighting console — grandMA3 (desk or onPC),
+Eos, MagicQ, anything that speaks Art-Net or sACN — sends its universes at this machine,
+the desk's frame follows, and every lamp in a space joined to a fixture
+(`components.fixture`, `src/rigMirror/liveLight.js`) draws what the console is doing. The
+room is a visualiser. If output is on, the real rig follows too (see "no loops").
+
+**Specs built to, by version** — both named in the code:
+
+- **Art-Net 4**, Artistic Licence, *Art-Net 4 Protocol Release V1.4*, document revision
+  1.4dp, 23/10/2025 (art-net.org.uk/downloads/art-net.pdf). ArtDmx (OpOutput 0x5000),
+  ArtPoll (0x2000, accepted from 14 bytes, Targeted Mode honoured), ArtPollReply (0x2100,
+  239 bytes, unicast to the poller after a random delay ≤ 1 s, as the spec asks). We reply
+  as Style `StVisual` (0x06) with PortTypes "output from Art-Net", SwOut = our universes,
+  4 ports per reply and one reply per Net:Sub-Net, BindIndex 1..n.
+- **sACN — ANSI E1.31-2018** (ESTA). Every "receivers shall discard" rule of §5–§7
+  (preamble, ACN PID, root/framing/DMP vectors, universe 1–63999, 0xa1, first address 0,
+  increment 1, count ≤ 513); multicast 239.255.hi.lo (§9.3.1, IGMP by the OS); priority
+  0–200, values over 200 clamped (§6.2.3); sequence per source per universe, a packet with
+  `B − A` in (−20, 0] discarded (§6.7.2); Stream_Terminated drops the source at once and
+  its data is ignored (§6.2.6); Preview_Data never drives output (§6.2.6); network data
+  loss after 2.5 s (§6.7.1). Only NULL START Code (0x00) data is levels; other start codes
+  (e.g. 0xDD per-slot priority) are counted and ignored. Synchronization and Universe
+  Discovery packets are recognised and not acted on — §6.2.4.1/§6.5 allow a receiver
+  without synchronization to process data as it comes.
+
+### Ports — what to open on a firewall
+
+| Protocol | Port | Direction | Notes |
+| --- | --- | --- | --- |
+| Art-Net | **UDP 6454** | in (ArtDmx, ArtPoll) and out (ArtPollReply, unicast) | The desk's Art-Net OUTPUT also uses 6454. |
+| sACN | **UDP 5568** | in | Multicast 239.255.0.1 … (one group per universe) and unicast. The switch must pass IGMP (or flood multicast). |
+
+`ufw` example for a show network 192.168.1.0/24: `ufw allow from 192.168.1.0/24 to any port 6454 proto udp`
+and the same for 5568. Nothing else is needed; the web page stays where `di up` put it.
+
+### Security
+
+Off by default, and saved with the rig (`output.input` in the machine's own show file —
+never in a space's show, never in a `.diiii`). Switched on, it listens only on the
+interfaces ticked in Setup → Input:
+
+- Art-Net: one socket bound to each ticked interface's own address, plus one bound to its
+  directed-broadcast address (Linux/macOS deliver broadcast only there; Windows delivers it
+  to the address-bound socket). Never the wildcard: the output socket already holds
+  `0.0.0.0:6454`.
+- sACN: multicast needs the wildcard, so one socket on `0.0.0.0:5568` joins the universe
+  groups on the ticked interfaces only.
+- Every packet on both is then checked: its source must lie in a ticked interface's subnet
+  (`127.0.0.0/8` for loopback). Anything else is dropped and counted ("from outside the
+  chosen networks"). A Tailscale peer or a routed stranger cannot drive the rig.
+- Inside di.iiii without `--lan` (`DI_ALLOW_LAN_DEVICES` unset) only loopback can be ticked
+  — the same rule as the Phone box and OSC.
+- The desk is still dormant until the first request to `/light`: after a restart, input
+  comes back as soon as anything asks the desk — the Light page, or a room with a joined
+  lamp (its mirror polls `/light/api/dmx`). A machine that must listen with no browser open
+  should run the standalone desk (`standalone.js`) or be asked once at boot; owed, below.
+
+### Numbering — one rule
+
+The desk counts universes from 1 on screen (0 internally). **Universe 1 = Art-Net 0:0:0
+(Port-Address 0) = sACN universe 1.** Every input line on the page shows both numbers.
+That is the convention most consoles default to; if a console is set differently, change
+the console's number to what the line shows.
+
+### Merge — declared, as E1.31 §6.2.3.4–5 requires
+
+Per listened universe:
+
+1. **Arbitration by priority.** Only the sources at the highest priority present decide the
+   universe. sACN carries its own priority; Art-Net has none and stands at 100 (sACN's
+   default).
+2. **Merge at that priority**, chosen per universe: **HTP** (highest value per slot) or
+   **LTP** (per slot, whichever source changed it last; a source's first packet writes all
+   its slots; when the winning set changes the newest winner's whole frame is the start).
+3. **How many:** Art-Net merges at most **two** sources per universe — Art-Net 4: "any
+   additional sources will be ignored". sACN merges up to **eight**.
+4. **Sources exceeded:** the extra source is refused, never swapped for one already
+   merging (§6.2.3.3 warns against order-dependent picks). The line says so in red, naming
+   the ignored source.
+5. **Loss.** sACN: 2.5 s or Stream_Terminated. Art-Net: 10 s — the spec's hold for a failed
+   merge source, and longer than Art-Net's allowed 4 s keep-alive, so a console holding a
+   look is never dropped. When no source is left: **release** (default) hands the universe
+   back to the desk; **hold** keeps the console's last look until the signal returns or
+   "Release held look" is pressed.
+
+**Input vs the desk's own playback**, per universe:
+
+- **follow the console** (default) — while there is signal the console's frame replaces the
+  desk's on that universe. With no signal the desk's own frame is what goes out: the desk is
+  the fallback.
+- **HTP with the desk** — the higher of the desk and the console, slot by slot.
+
+Input is laid over the desk AFTER its fades, master and FX — the console has its own. The
+desk's **Blackout still wins**: while it is on, input is not applied at all and the desk's
+blacked-out frame (moving heads holding position) goes out.
+
+### No loops
+
+A universe the console feeds over a protocol is **never sent back out on that same
+protocol** — neither the main output nor a "More devices" line. It still goes out of any
+other wire (a DMX USB PRO, or the other protocol): that is the explicit route from a
+console to this rig. On top of that, our own sACN is recognised by its CID and our own
+Art-Net by being the bytes we sent on that Port-Address in the last second from one of our
+addresses; both are dropped and counted ("our own").
+
+### Status — never silent
+
+Setup → Input's folded line and the `in:` pill in the top bar (every page) say one of:
+"Following <console> on N of M universes", "No signal since 21:03 — the desk has the rig",
+"No signal — holding the last look since …", "Listening — no signal yet", "Input cannot
+listen: 192.168.1.5:6454 EADDRINUSE", or that no interface/universe is chosen. Opened, each
+line shows its sources (name, address, priority, fps, last-packet age, late packets), and
+below: what is bound where, packet counts (taken / out of sequence / malformed / foreign /
+our own), universes arriving that nobody listens to, and the last ArtPoll heard.
+
+API: `GET /light/api/input` (the whole status), `POST /light/api/input {enabled, artnet,
+sacn, interfaces[], universes[{universe, merge, desk}], loss, name}` (answers after the
+sockets have bound), `POST /light/api/input/release`. `GET /light/api/summary` carries
+`input: {enabled, text, level, live}`.
+
+### Pointing a grandMA3 at us — step by step
+
+Menu names as in grandMA3 v2.x; check them on the console you have.
+
+1. Put the console (or the onPC laptop) on the same network as this machine, e.g. both on
+   192.168.1.x/24. Note this machine's address (Setup → Input lists the interfaces).
+2. Here: `di up --lan` (a console on another machine needs LAN), open `/light`, Setup →
+   **Input**: press **Input is OFF** to turn it on, tick the interface on the console's
+   network, tick Art-Net and/or sACN, type the universe (e.g. `1`) and press **Listen**.
+   The line shows `Art-Net 0:0:0 · sACN 1`.
+3. On the console: **Menu → DMX Protocols**.
+   - **sACN** (preferred): enable it on the network interface of step 1; add a line with
+     Mode *Output*, Local Universe = the MA universe you patched, sACN Universe = the
+     number our line shows (1), Destination *Multicast* (or Unicast to this machine's IP),
+     Priority 100.
+   - **Art-Net**: enable it on that interface; add a line with Mode *Output*, Local
+     Universe = the MA universe, Art-Net Universe = the Port-Address our line shows
+     (0:0:0 for Universe 1), Destination *Unicast* to this machine's IP (Art-Net 4 wants
+     unicast; broadcast also works).
+4. On the console's Art-Net node list this machine appears as **di.iiii visual** (the name
+   is editable in Setup → Input), Style *Visualiser*, with the listened universes as its
+   output ports.
+5. Here the folded line turns cyan: **Following <console name> on 1 of 1 universe**. Patch
+   fixtures on this desk at the same universe/addresses as on the console, join each room
+   lamp to its fixture number, and the room follows the console.
+6. If nothing arrives: the line says "Listening — no signal yet". Check the console's
+   interface/IP, the universe number shown on our line, the firewall (ports above), and
+   "also arriving, not listened to" — it names universes that reach us but are not ticked.
+
+### Tested, and measured
+
+Tests (`node serverXR/src/lighting/tests/test-dmxin.js`, also run by `lighting.test.js`):
+byte layouts of ArtDmx, ArtPoll (min length, targeted mode), ArtPollReply (every field at
+its offset, pages/BindIndex), E1.31 root/framing/DMP layers and each discard rule; the
+§6.7.2 sequence window including wrap; priority, HTP, LTP, stream-terminated, preview,
+2.5 s / 10 s loss, hold/release, Art-Net's two-source limit; the desk overlay (follow, HTP,
+blackout wins, input-only universe appears); then real UDP on loopback on private ports
+(ArtDmx, E1.31 unicast, our own CID refused, ArtPoll answered, foreign source dropped).
+
+End to end on aylmo (2026-09-28, serverXR on :4371, Linux, wlp0s20f3 192.168.88.231),
+with `tests/dmx-send.js` as the console:
+
+- Received and applied: sACN unicast on loopback; sACN multicast on the LAN
+  (239.255.0.x joined on the LAN interface); Art-Net unicast on the LAN, loopback, and
+  directed broadcast 192.168.88.255. ArtPoll answered with a 239-byte ArtPollReply.
+- A lamp joined to fixture 1 (drgb, Universe 1 @1), computed by the room's own code
+  (`mirrorFixtures` + `liveLightEntity`) from the running desk: desk alone `#ffffff` at 2;
+  console sACN red → `#ff0000` at 2; plus an Art-Net source with blue → HTP `#ff00ff`;
+  sACN stream-terminated → Art-Net only `#0000ff` at 1.004.
+- No echo: with output ON (unicast to 127.0.0.3, nothing left the machine) and input on
+  Universes 1–3, our Art-Net output carried only Universe 4 (40 packets/s) — none of the
+  input universes.
+- **Latency, packet in → desk state** (`tests/bench-input.js`, 200 trials each): in-process
+  (UDP loopback → parse → merge → frame) p50 0.04 ms / p95 0.14 ms (sACN), 0.03 / 0.06 ms
+  (Art-Net). Through HTTP (send, then GET `api/dmx` until the value shows): p50 1.47 ms /
+  p95 1.65 ms (sACN), 1.52 / 1.69 ms (Art-Net) — the same as one GET on its own (p50
+  1.55 ms, p95 1.89 ms): the value is always there by the first answer. On the wire out it
+  then waits for the next output tick (≤ 25 ms at 40 Hz). A room lamp polls `api/dmx` every
+  100 ms (`DMX_POLL_MS`), which is the visualiser's own latency.
+- **Sustained, 44 Hz × 3 universes, 60 s each**: sACN multicast over the LAN — 7923 sent,
+  7923 accepted, 0 lost, 0 out of sequence, desk reports 44 fps on each universe, sampled
+  state 0 frames behind the sender (118 samples), desk process 1.2 % of one core. Art-Net
+  unicast — 7920 / 7920, 0 lost, 0 out of sequence, 0 frames behind, 2.0 % of one core
+  (44 fps per universe read from the status in a separate run).
+
+Limits of those numbers: one machine, sender and receiver on the same host (loopback and
+the LAN address of the same card — no real switch, no wifi between); a simulated console,
+not a real one.
+
+### Not done — owed
+
+- **A real console.** Not tested against grandMA3, Eos or onPC hardware/software. grandMA3
+  onPC is a free download and outputs Art-Net/sACN — the owner can run steps 1–6 above on a
+  second laptop; that is the test that closes this.
+- **Output sACN universe 0.** The desk's own sACN OUTPUT (`sacn.js`, unchanged here) sends
+  desk Universe 1 as sACN universe 0, which E1.31 §6.2.7 reserves — receivers discard it.
+  Input uses Universe 1 = sACN 1. Output should send `u + 1`; a one-line fix, not made here
+  because it changes what existing sACN nodes receive.
+- **Boot without a browser**: inside di.iiii the desk (and so input) starts on first request.
+- Universe synchronization (E1.31 §11 / ArtSync) is not implemented; data is applied as
+  it arrives, which the specs permit.
+- Preview data is always ignored; a visualiser-only "accept preview" switch could come.
+- ArtAddress (remote merge-mode / name programming), ArtPollReply on change (Flags bit 1),
+  E1.31 Universe Discovery, per-slot priority (0xDD), IPv6: not implemented.

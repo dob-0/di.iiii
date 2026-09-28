@@ -1,0 +1,136 @@
+/* THE PLOT — view B (src/rigbuild/PlotSurface.jsx). A drawing sheet, like its
+   sheets 2 and 3 (the patch sheet): paper white, ink, the house mono for every
+   value, no colour except a lamp's own. Scoped to .rigplot; nothing else changes. */
+
+.rigplot {
+    --ink: #111;
+    --soft: #5f5f5f;
+    --faint: #8a8a8a;
+    --rule: #cfcdc7;
+    --paper: #fff;
+    --desk: #f2f1ee;
+    position: fixed;
+    inset: 0;
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr) 380px;
+    background: var(--desk);
+    color: var(--ink);
+    font: 13px/1.35 var(--di-sans, system-ui, sans-serif);
+    overflow: hidden;
+}
+.rigplot-mono, .rigplot .rigplot-mono { font-family: var(--di-mono, ui-monospace, monospace); }
+.rigplot-caps { text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* the rail */
+.rigplot-rail { display: flex; flex-direction: column; gap: 2px; padding: 16px 8px; border-right: 1px solid var(--rule); background: var(--desk); }
+.rigplot-rail button {
+    font: 12px var(--di-mono, monospace); color: var(--soft); background: transparent; border: 1.5px solid transparent;
+    border-radius: 2px; text-align: left; padding: 10px 6px; min-height: 40px; cursor: pointer;
+}
+.rigplot-rail button:hover { color: var(--ink); }
+.rigplot-rail button[aria-pressed='true'] { color: var(--ink); border-color: var(--ink); background: var(--paper); font-weight: 700; }
+.rigplot-rail button:focus-visible, .rigplot button:focus-visible, .rigplot input:focus-visible, .rigplot select:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+/* the plan */
+.rigplot-main { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; padding: 16px 16px 0; }
+.rigplot-plan { position: relative; min-height: 0; background: var(--paper); border: 1.5px solid var(--ink); }
+.rigplot-svg { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; cursor: default; }
+.rigplot-plan.is-placing .rigplot-svg { cursor: crosshair; }
+.rigplot-lamp { cursor: pointer; }
+.rigplot-loading, .rigplot-banner { position: absolute; left: 12px; top: 10px; margin: 0; font: 12px var(--di-mono, monospace); color: var(--soft); background: var(--paper); padding: 4px 6px; max-width: calc(100% - 24px); }
+.rigplot-banner { border: 1px dashed var(--ink); color: var(--ink); }
+.rigplot-scalebar { position: absolute; right: 12px; bottom: 10px; display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink); background: rgba(255, 255, 255, 0.86); padding: 2px 4px; pointer-events: none; }
+.rigplot-scalebar span { display: inline-block; height: 5px; border: 1.5px solid var(--ink); border-top: 0; }
+.rigplot-status { display: flex; gap: 16px; flex-wrap: wrap; align-items: baseline; min-height: 34px; padding: 8px 2px; font-size: 12px; color: var(--ink); }
+.rigplot-status__dim { color: var(--soft); }
+
+/* the side column */
+.rigplot-side { overflow-y: auto; padding: 16px 16px 24px 0; display: flex; flex-direction: column; gap: 14px; }
+.rigplot-roombox { flex: 0 0 auto; height: 250px; border: 1.5px solid var(--ink); background: #0b0b0c; position: relative; }
+.rigplot-room { position: relative; width: 100%; height: 100%; }
+.rigplot-room .studio-viewport-shell { position: absolute; inset: 0; }
+.rigplot-room--empty { box-sizing: border-box; display: grid; place-items: center; color: #9a9a9a; font: 12px var(--di-mono, monospace); padding: 16px; text-align: center; }
+.rigplot-room__label { position: absolute; left: 8px; top: 6px; font: 11px var(--di-mono, monospace); color: #b8b8b8; letter-spacing: 0.04em; pointer-events: none; text-transform: uppercase; }
+
+.rigplot-block { background: var(--paper); border: 1.5px solid var(--ink); padding: 10px 12px; }
+.rigplot-block h2 { margin: 0 0 6px; font: 700 12px var(--di-mono, monospace); letter-spacing: 0.1em; text-transform: uppercase; }
+.rigplot-inspector h2 { text-transform: none; letter-spacing: 0; font-size: 15px; }
+.rigplot-sub { margin: 0 0 8px; color: var(--soft); font-size: 12px; }
+.rigplot-hint { margin: 0 0 8px; color: var(--soft); font-size: 12px; }
+.rigplot-options { padding: 0 2px; }
+.rigplot-dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 0 0 10px; font-size: 12px; }
+.rigplot-dl dt { color: var(--soft); }
+.rigplot-dl dd { margin: 0; }
+.rigplot-fields { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 6px; }
+.rigplot-field { display: inline-flex; align-items: center; gap: 4px; font: 12px var(--di-mono, monospace); color: var(--soft); margin: 0 0 6px; }
+.rigplot-field input, .rigplot-field select {
+    width: 66px; font: 13px var(--di-mono, monospace); color: var(--ink); background: var(--paper);
+    border: 1px solid var(--ink); border-radius: 2px; padding: 5px 6px; min-height: 32px;
+}
+.rigplot-field em { font-style: normal; color: var(--faint); }
+.rigplot-field--text { display: flex; }
+.rigplot-field--text span { width: 64px; flex: 0 0 auto; }
+.rigplot-field--text input, .rigplot-field--text select { flex: 1 1 auto; width: auto; min-width: 0; }
+.rigplot-seg { display: inline-flex; margin: 0 8px 8px 0; }
+.rigplot-seg button, .rigplot-actions button, .rigplot-title__links a, .rigplot-title__links button, .rigplot-typelist button {
+    font: 12px var(--di-mono, monospace); color: var(--ink); background: var(--paper); border: 1px solid var(--ink);
+    border-radius: 2px; padding: 6px 10px; min-height: 36px; cursor: pointer; text-decoration: none;
+}
+.rigplot-seg button + button { border-left: 0; }
+.rigplot-seg button[aria-pressed='true'], .rigplot-actions .is-primary, .rigplot-typelist button[aria-selected='true'] { background: var(--ink); color: var(--paper); }
+.rigplot-typelist { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.rigplot-typelist button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
+.rigplot-typelist em { font-style: normal; font-size: 11px; opacity: 0.7; }
+.rigplot-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 2px; }
+.rigplot-flags { list-style: none; margin: 6px 0; padding: 0; font: 12px var(--di-mono, monospace); color: var(--soft); }
+.rigplot-flags .is-conflict { color: var(--ink); font-weight: 700; }
+
+.rigplot-key ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 12px; }
+.rigplot-key li { display: flex; align-items: center; gap: 8px; }
+.rigplot-symbol { flex: 0 0 auto; }
+
+.rigplot-title { padding: 0; }
+.rigplot-title__head { padding: 8px 10px; font-weight: 700; font-size: 13px; border-bottom: 1px solid var(--ink); text-transform: uppercase; letter-spacing: 0.04em; }
+.rigplot-title__row { padding: 6px 10px; border-bottom: 1px solid var(--ink); font-size: 12px; }
+.rigplot-title__grid { display: grid; grid-template-columns: 1fr 1fr; font-size: 11.5px; }
+.rigplot-title__grid span { padding: 6px 10px; border-bottom: 1px solid var(--rule); color: var(--soft); }
+.rigplot-title__grid span:nth-child(odd) { border-right: 1px solid var(--rule); }
+.rigplot-title__links { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 10px; }
+
+/* the phone: the plan full screen, plan | room one tap apart, pieces in a sheet */
+.rigplot--phone { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
+.rigplot--phone > * { min-width: 0; }
+.rigplot-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: max(8px, env(safe-area-inset-top)) 12px 8px; border-bottom: 1px solid var(--rule); }
+.rigplot-top__title { font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.rigplot-toggle { display: inline-flex; flex: 0 0 auto; }
+.rigplot-toggle button { font: 13px var(--di-mono, monospace); min-width: 64px; min-height: 40px; border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink); border-radius: 2px; }
+.rigplot-toggle button + button { border-left: 0; }
+.rigplot-toggle button[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
+.rigplot-stage { position: relative; min-height: 0; padding: 8px 8px 0; }
+.rigplot--phone .rigplot-plan { height: 100%; }
+.rigplot--phone .rigplot-room { height: 100%; background: #0b0b0c; }
+.rigplot-sheet { background: var(--desk); border-top: 1.5px solid var(--ink); padding: 0 12px max(8px, env(safe-area-inset-bottom)); max-height: 72vh; display: flex; flex-direction: column; }
+.rigplot-sheet__handle, .rigplot-sheet__tools, .rigplot--phone .rigplot-status { flex-shrink: 0; }
+.rigplot-sheet__handle { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; background: transparent; border: 0; padding: 6px 0 4px; min-height: 40px; font: 12px var(--di-mono, monospace); color: var(--soft); }
+.rigplot-sheet__handle span { width: 40px; height: 3px; background: var(--ink); border-radius: 2px; }
+.rigplot-sheet__tools { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.rigplot-sheet__tools button { flex: 0 0 auto; font: 13px var(--di-mono, monospace); min-height: 44px; min-width: 64px; padding: 0 10px; border: 1.5px solid var(--rule); background: var(--paper); color: var(--ink); border-radius: 2px; }
+.rigplot-sheet__tools button[aria-pressed='true'] { border-color: var(--ink); font-weight: 700; }
+.rigplot-sheet__body { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
+.rigplot--phone .rigplot-status { min-height: 0; padding: 4px 0; font-size: 11px; }
+
+@media (orientation: landscape) and (max-height: 500px) {
+    .rigplot--phone { grid-template-columns: minmax(0, 1fr) 280px; grid-template-rows: auto minmax(0, 1fr); }
+    .rigplot--phone .rigplot-top { grid-column: 1 / -1; padding-top: 4px; padding-bottom: 4px; }
+    .rigplot--phone .rigplot-sheet { grid-column: 2; grid-row: 2; max-height: none; border-top: 0; border-left: 1.5px solid var(--ink); overflow-y: auto; }
+    .rigplot--phone .rigplot-sheet__tools { flex-wrap: wrap; }
+}
+
+/* A read-only rig page's one line (ViewOnlyLine.jsx, rigToolAccess.js). */
+.rigplot-viewonly { margin: 0; padding: 6px 12px; font-size: 12px; color: var(--ink); background: var(--paper); border-bottom: 1px dashed var(--ink); }
+.rigplot-viewonly a { color: inherit; text-decoration: underline; }
+.rigplot-title__grid .rigplot-title__wide { grid-column: 1 / -1; border-right: 0; }
+.rigplot-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+/* In a page's header the line takes a row of its own under the title. */
+.rigplot-top:has(.rigplot-viewonly) { flex-wrap: wrap; }
+.rigplot-top .rigplot-viewonly { flex: 1 0 100%; padding: 2px 0 0; border: 0; background: transparent; }

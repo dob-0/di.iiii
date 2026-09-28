@@ -241,16 +241,36 @@ function toProfile(oflFixture, modeIndex, { taken, spares = 16 } = {}) {
 }
 
 // What the interface offers before an import: the modes, and what each one would become.
+// The rig builder's equipment list (docs/architecture/RIG_BUILD.md §13) also takes each
+// mode's OFL channel names, whether it holds a matrix insert (then its footprint is not a
+// plain count and the list says it is owed), the fixture's physical data and OFL's own
+// last-modified date — its provenance.
 function describe(oflFixture) {
+  const physical = oflFixture.physical || {};
+  const num = (v) => (Number.isFinite(+v) && v !== null && v !== '' ? +v : null);
   return {
     name: oflFixture.name,
     categories: oflFixture.categories || [],
-    modes: (oflFixture.modes || []).map((mode, i) => ({
-      index: i,
-      name: mode.name,
-      channels: mode.channels.length,
-      roles: (() => { try { return toProfile(oflFixture, i).channels; } catch (e) { return null; } })(),
-    })),
+    lastModifyDate: (oflFixture.meta && oflFixture.meta.lastModifyDate) || '',
+    links: oflFixture.links || {},
+    physical: {
+      power: num(physical.power),
+      weight: num(physical.weight),
+      dimensions: Array.isArray(physical.dimensions) && physical.dimensions.length === 3 ? physical.dimensions.map(num) : null,
+      DMXconnector: physical.DMXconnector || null,
+    },
+    modes: (oflFixture.modes || []).map((mode, i) => {
+      const matrix = (mode.channels || []).some((c) => c && typeof c === 'object');
+      return {
+        index: i,
+        name: mode.name,
+        shortName: mode.shortName || '',
+        channels: mode.channels.length,
+        matrix,
+        channelNames: matrix ? null : mode.channels.map((c) => (typeof c === 'string' ? c : null)),
+        roles: (() => { try { return toProfile(oflFixture, i).channels; } catch (e) { return null; } })(),
+      };
+    }),
   };
 }
 

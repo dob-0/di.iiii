@@ -1,0 +1,640 @@
+{
+    "rig": "MOXIR 17.10 — Minimal — one line under the crane, one colour",
+    "version": 4,
+    "writtenAt": "2026-09-28",
+    "generated": "scripts/rigbuild/versions.mjs from scripts/place/rigs/moxir-versions-2026-10-17.json (version \"minimal\") and scripts/place/rigs/moxir-2026-10-17.json — never edit by hand",
+    "venue": "MOXIR, Charentsavan factory hall (owner's pin 40.406524, 44.636560)",
+    "space": "moxir",
+    "status": "PROPOSAL for the owner's look. Same hall, same DJ booth, same zones as the base rig; what changes is how much is hung and how it is used. Nothing here is checked against the venue, a load calculation or the rental house.",
+    "variant": {
+        "set": "moxir-2026-10-17",
+        "id": "minimal",
+        "title": "Minimal — one line under the crane, one colour",
+        "summary": "No stage, no towers: the DJ stand alone, the crane parked over it. One 8 m line hung from the bridge on 2 chain hoists carries 7 beams standing on it and 2 strobes under it, with 4 red PARs grazing the bridge; 6 column-base beams into the roof, 11 PARs red on the columns and the press, 4 strobes in the pit, 2 hazers.",
+        "order": 1
+    },
+    "provenance": {
+        "fixtureList": "The rental house's list as passed to Claude by the owner on 2026-09-27 (18x UP-B380F, 12x UP-250BSW, 8x UP-HK1915, 50x UP-PL5403, 2x UP-LA40WF, CO2 x6, cold spark x4, smoke x4). The codes are the rental house's internal names, not maker models.",
+        "optics": "From the fixtures manifest (scripts/place/fixtures/fixtures.json): each class names a fixture kind whose beam angle and output come from the maker's published page or, where the maker publishes none, a named equivalent — every number carries its source there. The rental house's own datasheets are still OWED to confirm.",
+        "positions": "Placed by rule against the hall's structural grid (scripts/place/hall.py -> hall.json), so they move when the hall is rebuilt with measured dimensions.",
+        "hall": "scripts/place/rigs/moxir-hall-dims-2026-09-28.json (flat space-frame roof, 4 spans x 24 m, 18 bays; photos + 2020 satellite) + moxir-hall-features-2026-09-28.json (the owner's zones marked 2026-09-28, the press massing, gates, cranes; sizes estimated).",
+        "models": "Fixture bodies are the models in scripts/place/fixtures/glb, built to the datasheet dimensions by scripts/place/fixtures/build_fixtures.py (see the manifest for provenance and licence).",
+        "stage": "The owner, 2026-09-28, on the first rebuild: \"i mention the dj place i think it will not big how you created you made it so big, so stage is the near the metal thing like dj near a bit top and centre of the metal things\". So the 'stage' is a DJ place: a small riser, a bit raised, centred on the forging press ('the metal things'), close in front of it; the machinery is the picture behind the DJ. Positions from the photographs (photo 032's fitted camera, cross-checked from photo 004 with EXIF intrinsics; scripts/place/photo_meta.py).",
+        "versions": "scripts/place/rigs/moxir-versions-2026-10-17.json: 2026-09-28, on /moxir: \"make 3 version with the full, midle, and simple minimalistic and also look to moxir mood, set, vibe and its the undegroudn rave thing lights like that not the commercial shit\""
+    },
+    "assumptions": [
+        "The DJ place (the owner's green, 2026-09-28) is a riser of stage decks 3 m wide x 2 m deep x 1.2 m high ON THE NAVE CENTRE LINE (x 0; the owner, 04:13: 'make the scene in center'), its back edge 1.0 m in front of the press's face (z 3.2 m, +-1.5 m), facing the entry and the crowd. The press stays where it stands, 1.65 m right of the axis (range 0.5-3.5), behind the right half of the riser. Three 2 x 1 m decks on 1.2 m legs; 'a bit top' read as 1.0-1.4 m. Options considered: stage.options (D chosen).",
+        "The DJ stands behind a 1.8 x 0.8 m DJ table, 0.95 m high, at the riser's front edge; treads up the left side (toward the backstage); a crowd barrier 1.3 m in front of the riser, 9 m long. The crowd (blue) fills the floor from the barrier to under the crane.",
+        "The machinery stays the backdrop: the press (to 5.3 m) stands behind the right half of the riser and the machine line beside it further right, so from the floor the DJ is seen against the press; the goalpost header at 7 m is above the press's crown.",
+        "No stage deck, no towers: the DJ stand alone. One 8 m line of 290 mm square box truss (Prolyte H30V / Global Truss F34 class — src/rigbuild/pieces.js) hangs from the bridge of the overhead crane parked over the DJ, bottom chord 6 m, on 2 chain hoists with safety steels; load on the line ≈ 278–286 kg, ≈ 139–143 kg a point. rigging sign-off owed (crane rated load, lock-out, hoists + safety steels).",
+        "Strobes, blinders and hazers are other-supplier lines (the rental house lists none): each is a planning type modelled on a named product (scripts/place/fixtures/fixtures.json, EXT- codes). No CO2 jet, cold spark or confetti — the underground brief (versions file, method).",
+        "Each LOOK is one static state for previsualisation (a focus palette), not a show: positions are the rig's, aims and colours the look's. Every lamp but the press's own six mirrors about the nave centre line (x 0), the booth's axis too. Brightness between fixtures follows the datasheets (photometry below); the overall exposure is one chosen number (photometry.sceneScale)."
+    ],
+    "stage": {
+        "kind": "booth",
+        "label": "DJ place (the owner's green, 2026-09-28)",
+        "intent": "owner's words 2026-09-28: 'dj place ... not big ... near the metal thing ... a bit top and centre of the metal things'",
+        "faces": "entry",
+        "width_m": 3,
+        "depth_m": 2,
+        "deck_h_m": 1.2,
+        "gap_m": 1,
+        "decks": "3 x stage deck 2 x 1 m (e.g. Bütec / Nivtec / Litedeck class) on 1.2 m legs",
+        "backdrop": [
+            "press",
+            "press-crown",
+            "machine-line",
+            "machine-pipe"
+        ],
+        "table": {
+            "w_m": 1.8,
+            "d_m": 0.8,
+            "h_m": 0.95,
+            "from_front_m": 0.2
+        },
+        "stairs": {
+            "side": "left",
+            "w_m": 1,
+            "rise_m": 0.2,
+            "going_m": 0.25
+        },
+        "barrier": {
+            "pit_m": 1.3,
+            "half_width_m": 4.5,
+            "h_m": 1.1
+        },
+        "estimated": {
+            "centre_x_m": {
+                "value": 0,
+                "how": "the nave axis, by the owner's choice; the press behind it is at x 1.65 (range 0.5-3.5), so the riser (x -1.5..1.5) overlaps the press's face from x 0.25 to 1.5"
+            },
+            "press_face_z_m": {
+                "value": 3.2,
+                "range": [
+                    2,
+                    4.5
+                ],
+                "how": "photo 032: D 47 m from the crane camera; photo 004: base at D 43 m from a camera at z 47 -> z 3.7"
+            },
+            "riser_front_z_m": {
+                "value": 6.2,
+                "range": [
+                    5,
+                    7.5
+                ]
+            },
+            "deck_h_m": {
+                "value": 1.2,
+                "range": [
+                    1,
+                    1.4
+                ],
+                "how": "'a bit top'"
+            }
+        },
+        "options": [
+            {
+                "id": "A-press-centred",
+                "chosen": false,
+                "size_m": [
+                    3,
+                    2
+                ],
+                "deck_h_m": 1.2,
+                "centre_x_m": 1.65,
+                "why": "centred on the press, the tallest of the metal things and the one he drew along (1c3956d1); the machine line reads beside it to the right — chosen first (01:00-04:00), the owner found the scene off-centre"
+            },
+            {
+                "id": "B-small",
+                "size_m": [
+                    2,
+                    2
+                ],
+                "deck_h_m": 1,
+                "centre_x_m": 1.65,
+                "why": "the smallest booth: 2 decks, room for a DJ and a table only; no space for a second DJ or the booth-top beams",
+                "chosen": false
+            },
+            {
+                "id": "C-machine-centred",
+                "size_m": [
+                    3,
+                    2
+                ],
+                "deck_h_m": 1.2,
+                "centre_x_m": 4.5,
+                "why": "centred on the press AND the rusty machine line beside it (x 0.25..8): the visual middle of 'the metal things' seen from the floor, but the riser would stand in the machinery on the SW half",
+                "chosen": false
+            },
+            {
+                "id": "D-nave-centred",
+                "size_m": [
+                    3,
+                    2
+                ],
+                "deck_h_m": 1.2,
+                "centre_x_m": 0,
+                "why": "on the hall's axis, so the whole rig and the room's first screen mirror about one line (the owner's call, 04:13: 'make the scene in center'); the press stands 1.65 m right of centre behind the DJ, still overlapping the riser",
+                "chosen": true
+            }
+        ],
+        "x_m": 0,
+        "centred": "on the NAVE centre line (x 0), owner 2026-09-28 04:13: 'make the scene in center it not the center right?' — option D. The press stays where it stands (x 0.25..3.05, centre 1.65), 1.65 m right of the booth's axis behind it."
+    },
+    "truss": {
+        "kind": "crane-hung",
+        "why": "Owner, 2026-09-28 23:1x: no stage, no towers — only the DJ stand; the yellow overhead crane is movable and parks over the DJ, and the truss hangs from its bridge on chains (\"the metal chain conected thr the yellow crane\"). The minimal hang, approved: ONE line (\"ok take complimentary\"). The crane is moved in the hall's dims (moxir-hall-crane-dj-2026-09-28.json: bridge centre over the DJ, z 4.8 m; trolley parked at the right end), not duplicated.",
+        "width_m": 8,
+        "pieces_m": [
+            3,
+            3,
+            2
+        ],
+        "section_m": 0.29,
+        "section_class": "290 mm square box truss (Prolyte H30V / Global Truss F34 class — src/rigbuild/pieces.js)",
+        "trim_m": 6,
+        "x_offset_m": -0.25,
+        "x_offset_why": "the line runs x -4.25..+3.75: a clamp point every 0.5 m set in 0.25 m from each end (pieces.js) then falls on the centre line, so the centre beam hangs on the axis; every lamp is mirrored about x = 0",
+        "rigging": {
+            "hoists": 2,
+            "hoist_dx_m": [
+                2.5
+            ],
+            "hoist": "chain hoist 500 kg–1 t, D8+ (e.g. CM Lodestar / Columbus McKinnon class)",
+            "per_point": "a spreader across both bridge girders on beam clamps, the hoist under it, a secondary safety steel to the spreader",
+            "crane": "the nave's entry-end bridge crane, rolled along its runway to park over the DJ; rail height 7.6 m (disputed 6.6–8.4), girder bottom 8.15 m",
+            "signoff": "rigging sign-off owed (crane rated load, lock-out, hoists + safety steels): the crane's rated load and a check of the old runway, rails and brakes; the crane locked in place and its power isolated for the whole event; a rigger's plan with point loads, signed by a structural or rigging engineer. This file draws it; they approve it.",
+            "load": {
+                "lamps": [
+                    {
+                        "group": "beam380-line",
+                        "code": "UP-B380F",
+                        "n": 7,
+                        "each_kg": 23,
+                        "kg": 161
+                    },
+                    {
+                        "group": "par-bridge",
+                        "code": "UP-PL5403",
+                        "n": 4,
+                        "each_kg": 8,
+                        "kg": 32
+                    },
+                    {
+                        "group": "strobe-line",
+                        "code": "EXT-STROBE",
+                        "n": 2,
+                        "each_kg": 7.8,
+                        "kg": 15.6
+                    }
+                ],
+                "lamps_kg": 208.6,
+                "truss_kg": [
+                    48,
+                    56
+                ],
+                "truss_basis": "6–7 kg/m for a 290 mm box truss — ESTIMATE, the supplier's datasheet is owed",
+                "extras_kg": 21,
+                "extras_basis": "clamps, safety bonds and the cable loom: +10 % of the lamps — ESTIMATE",
+                "total_kg": [
+                    278,
+                    286
+                ],
+                "points": 2,
+                "per_point_kg": [
+                    139,
+                    143
+                ],
+                "note": "static load on the line, before any dynamic factor; the hoists, chains and spreaders (≈ 25–30 kg a point) load the crane bridge on top of it. rigging sign-off owed (crane rated load, lock-out, hoists + safety steels)."
+            }
+        }
+    },
+    "classes": {
+        "beam380": {
+            "code": "UP-B380F",
+            "fixture": "beam380",
+            "class": "380 W discharge-lamp moving-head beam",
+            "reach_m": 60,
+            "penumbra": 0.1,
+            "colour": "#e8efff"
+        },
+        "par": {
+            "code": "UP-PL5403",
+            "fixture": "par",
+            "class": "54 x 3 W RGBW LED PAR",
+            "reach_m": 12,
+            "penumbra": 0.5,
+            "colour": "#ff8a2a",
+            "angleDeg": 15,
+            "angleNote": "the UP-PL5403's standard 15 deg lens (source D); candela scaled from the equivalent's 25 deg figure"
+        },
+        "strobe": {
+            "code": "EXT-STROBE",
+            "fixture": "strobe",
+            "class": "LED strobe / blinder hybrid (other supplier; planning type modelled on the Martin Atomic 3000 LED)",
+            "reach_m": 22,
+            "penumbra": 0.6,
+            "colour": "#f4f7ff",
+            "angleNote": "60 deg ASSUMED (the maker publishes none) — fixtures.json"
+        }
+    },
+    "groups": [
+        {
+            "class": "beam380",
+            "count": 7,
+            "mount": "truss-top",
+            "dx_m": [
+                0,
+                1,
+                2,
+                3
+            ],
+            "aim": "fan-into-roof",
+            "note": "the line of 7 moved OFF the floor behind the DJ onto the hung line: standing on its top chord (a 380 W beam's 270° tilt cannot reach straight up hung under it), 1 m pitch, x -3..+3 — the fan rises from right above the DJ, up through the 1.5 m gap between the bridge's two girders",
+            "id": "beam380-line"
+        },
+        {
+            "class": "beam380",
+            "count": 6,
+            "mount": "column-bases",
+            "columns": {
+                "z_at": [
+                    12,
+                    24,
+                    36
+                ],
+                "rows": "nave"
+            },
+            "aim": "up-into-truss",
+            "note": "6 beams at the bases of every other nave column pair (z 12, 24, 36), up into the space frame",
+            "id": "beam380-columns-6"
+        },
+        {
+            "class": "par",
+            "count": 8,
+            "mount": "column-uplight",
+            "columns": {
+                "z_at": [
+                    6,
+                    18,
+                    30,
+                    42
+                ],
+                "rows": "nave",
+                "faces": [
+                    "inner"
+                ]
+            },
+            "aim": "up-the-column",
+            "bake": true,
+            "note": "8 PARs up the inner faces of the OTHER column pairs (z 6, 18, 30, 42): beam, red column, beam, red column down the nave — the structure revealed in pieces",
+            "id": "par-columns-8"
+        },
+        {
+            "class": "par",
+            "count": 4,
+            "mount": "truss-top",
+            "dx_m": [
+                1.5,
+                2.5
+            ],
+            "aim": "bridge-underside",
+            "note": "4 PARs standing on the line between the beams (x ±1.5, ±2.5), each grazing the underside of the bridge's audience-side girder outward along it in deep red: the crane bridge drawn as a dark red frame over the DJ",
+            "id": "par-bridge"
+        },
+        {
+            "class": "par",
+            "count": 3,
+            "mount": "backdrop-floor",
+            "backdrop_gap_m": 0.35,
+            "aim": "backdrop",
+            "bake": true,
+            "symmetric": false,
+            "x_m": [
+                0.55,
+                1.65,
+                2.75
+            ],
+            "note": "3 on the floor at the press's foot, evenly across its face (off the axis by nature)",
+            "id": "par-press-3"
+        },
+        {
+            "class": "strobe",
+            "count": 2,
+            "mount": "truss-header",
+            "dx_m": [
+                3.5
+            ],
+            "orient": "hung",
+            "aim": "at-the-crowd-high",
+            "note": "2 strobes hung under the line's ends (x ±3.5), facing the crowd",
+            "id": "strobe-line"
+        },
+        {
+            "class": "strobe",
+            "count": 4,
+            "mount": "booth-pit",
+            "dx_m": [
+                1,
+                3
+            ],
+            "pit_m": 0.7,
+            "aim": "at-the-crowd-low",
+            "note": "4 strobes on the floor in the pit (x ±1, ±3), low, facing the crowd",
+            "id": "strobe-pit"
+        }
+    ],
+    "effects": [
+        {
+            "id": "hazer-back",
+            "label": "hazer",
+            "count": 2,
+            "mount": "booth-back",
+            "dx_m": [
+                4.5
+            ],
+            "back_inset_m": -0.25,
+            "on_floor": true,
+            "colour": "#8a9096",
+            "fixture": "hazer",
+            "note": "2 hazers on the floor behind the line, either side of the booth: the haze rolls from behind the DJ over the floor"
+        }
+    ],
+    "budget": {
+        "why": "A browser cannot run ~90 real three.js spot lights: each is a term in the shader of every lit pixel and, with shadows on, a shadow render and a texture unit each (WebGL gives 16-32; past that every lit material fails to compile). Every fixture draws its beam cone; only these 8 lamps also light the room (the rest of the PARs' light on the columns and the press is baked, wash-glb.mjs), and shadows are OFF by default (the owner found the first version too laggy, 2026-09-27). Measured — see scripts/place/README.md, 'The rig'.",
+        "realLights": {
+            "beam380-line": 1,
+            "par-columns-8": {
+                "count": 4,
+                "pick": "nearest-stage"
+            },
+            "par-bridge": 2
+        },
+        "shadowCasting": false,
+        "shadowMapSize": 1024,
+        "realNote": "2026-09-28 (DJ place): the press's own uplights stand 0.35 m from it, where a real lamp in the renderer blows the face out white; they are baked like the other PARs, and the 4 header spots (6.3 m up, over the DJ and the press) are the real lamps that light the backdrop."
+    },
+    "night": {
+        "backgroundColor": "#030304",
+        "ambient": {
+            "color": "#8ea2c8",
+            "intensity": 0.5
+        },
+        "directional": {
+            "color": "#8fa6d8",
+            "intensity": 0.22
+        },
+        "fog": {
+            "near": 60,
+            "far": 250
+        },
+        "note": "Darker than the base's readable night (ambient 0.8 -> 0.5, directional 0.35 -> 0.22): darkness is part of the design here (rule 1); the hall must still read in a render. Tuned by eye on the RTX 3080, 2026-09-28."
+    },
+    "photometry": {
+        "method": "scripts/place/rig-lib.mjs, 'PHOTOMETRY': candela from the manifest (I = E*d^2 from a measured illuminance, else I = flux / beam solid angle); zoom keeps flux; three.js SpotLight intensity is candela x sceneScale; beam-in-air brightness ~ I*tan(theta/2), scaled to the brightest class, Stevens exponent 1/3, times `air`.",
+        "sceneScale": 0.02,
+        "sceneScaleNote": "ONE exposure number for the whole rig, chosen so the room reads in a browser's tone mapping (ACES, exposure 1). The ratios between fixtures are the datasheets'.",
+        "air": 1.5,
+        "airNote": "how much haze is in the air: the brightest class's beam gets this `haze` (0..1, src/objectComponents/spotBeam.js).",
+        "airWhy": "Heavy haze (rule 4; 2-6 hazers in every version where the base had 4 smoke machines): every cone's air brightness at 1.5 where the base rig draws 0.9. A drawing choice, not photometry — the ratios between the fixtures stay the datasheets'."
+    },
+    "defaultLook": "white-cathedral",
+    "looks": {
+        "white-cathedral": {
+            "title": "White cathedral",
+            "intent": "The roof frame and the columns as a nave of cold white: the column beams stand straight up in mirrored pairs, the booth's line opens a narrow apse fan behind the DJ. Everything else is dark — no PAR, no spot, no strobe.",
+            "aims": {
+                "beam380-columns-6": {
+                    "rule": "vertical",
+                    "in_deg": 4
+                },
+                "beam380-line": {
+                    "rule": "fan",
+                    "spread_deg": 24,
+                    "lean_deg": 3
+                },
+                "par-columns-8": {
+                    "rule": "up-the-column"
+                },
+                "par-bridge": {
+                    "rule": "bridge-underside",
+                    "out": 6
+                },
+                "par-press-3": {
+                    "rule": "backdrop",
+                    "h": 0.6
+                },
+                "strobe-line": {
+                    "rule": "point",
+                    "x": 0,
+                    "y": 1.8,
+                    "a": 12
+                },
+                "strobe-pit": {
+                    "rule": "parallel",
+                    "lean_deg": 70
+                }
+            },
+            "colours": {
+                "beam380-columns-6": "#eef3ff",
+                "beam380-line": "#eef3ff"
+            },
+            "levels": {
+                "par-columns-8": 0,
+                "par-press-3": 0,
+                "strobe-pit": 0,
+                "par-bridge": 0,
+                "strobe-line": 0
+            }
+        },
+        "red-room": {
+            "title": "Red room",
+            "intent": "Deep red only, and low: the columns and the press glow from their feet, the booth's beams stand still and dim in red, the DJ a dark shape against the red press. The column beams are out: the roof stays black.",
+            "aims": {
+                "par-columns-8": {
+                    "rule": "up-the-column"
+                },
+                "par-press-3": {
+                    "rule": "backdrop",
+                    "h": 0.6
+                },
+                "beam380-line": {
+                    "rule": "vertical"
+                },
+                "par-bridge": {
+                    "rule": "bridge-underside",
+                    "out": 6
+                },
+                "beam380-columns-6": {
+                    "rule": "vertical"
+                },
+                "strobe-line": {
+                    "rule": "point",
+                    "x": 0,
+                    "y": 1.8,
+                    "a": 12
+                },
+                "strobe-pit": {
+                    "rule": "parallel",
+                    "lean_deg": 70
+                }
+            },
+            "colours": {
+                "par-columns-8": "#ff1408",
+                "par-press-3": "#ff1408",
+                "beam380-line": "#ff1408",
+                "par-bridge": "#ff1408"
+            },
+            "levels": {
+                "beam380-columns-6": 0,
+                "strobe-pit": 0,
+                "beam380-line": 0.45,
+                "strobe-line": 0
+            }
+        },
+        "strobe-hit": {
+            "title": "Strobe hit",
+            "intent": "The peak: every strobe and blinder at full — the pit strobes rake up over the crowd from the floor, the header strobes and the blinders hit the front of the floor; every beam and PAR out, so the flash lands on black.",
+            "aims": {
+                "strobe-pit": {
+                    "rule": "parallel",
+                    "lean_deg": 35
+                },
+                "strobe-line": {
+                    "rule": "parallel",
+                    "lean_deg": 55
+                },
+                "beam380-line": {
+                    "rule": "vertical"
+                },
+                "beam380-columns-6": {
+                    "rule": "vertical"
+                },
+                "par-columns-8": {
+                    "rule": "up-the-column"
+                },
+                "par-bridge": {
+                    "rule": "bridge-underside",
+                    "out": 6
+                },
+                "par-press-3": {
+                    "rule": "backdrop",
+                    "h": 0.6
+                }
+            },
+            "colours": {
+                "strobe-pit": "#f4f7ff",
+                "strobe-line": "#f4f7ff"
+            },
+            "levels": {
+                "beam380-columns-6": 0,
+                "par-columns-8": 0,
+                "par-press-3": 0,
+                "beam380-line": 0,
+                "par-bridge": 0
+            }
+        },
+        "one-beam": {
+            "title": "Blackout + one beam",
+            "intent": "Everything out but one: the beam on the floor right behind the DJ, straight up into the roof — the DJ a silhouette cut out of it.",
+            "aims": {
+                "beam380-line": {
+                    "rule": "vertical",
+                    "solo": 3
+                },
+                "beam380-columns-6": {
+                    "rule": "vertical"
+                },
+                "par-columns-8": {
+                    "rule": "up-the-column"
+                },
+                "par-bridge": {
+                    "rule": "bridge-underside",
+                    "out": 6
+                },
+                "par-press-3": {
+                    "rule": "backdrop",
+                    "h": 0.6
+                },
+                "strobe-line": {
+                    "rule": "point",
+                    "x": 0,
+                    "y": 1.8,
+                    "a": 12
+                },
+                "strobe-pit": {
+                    "rule": "parallel",
+                    "lean_deg": 70
+                }
+            },
+            "colours": {
+                "beam380-line": "#eef3ff"
+            },
+            "levels": {
+                "beam380-columns-6": 0,
+                "par-columns-8": 0,
+                "par-press-3": 0,
+                "strobe-pit": 0,
+                "par-bridge": 0,
+                "strobe-line": 0
+            }
+        },
+        "slow-sweep": {
+            "title": "Slow sweep",
+            "intent": "A held frame of a slow mirrored sweep: the column beams lean out toward the walls in pairs, the booth's line fans wide; the columns glow a low red underneath. Nothing flashes.",
+            "aims": {
+                "beam380-columns-6": {
+                    "rule": "vertical",
+                    "in_deg": -22
+                },
+                "par-columns-8": {
+                    "rule": "up-the-column"
+                },
+                "beam380-line": {
+                    "rule": "fan",
+                    "spread_deg": 70,
+                    "lean_deg": 6
+                },
+                "par-bridge": {
+                    "rule": "bridge-underside",
+                    "out": 6
+                },
+                "par-press-3": {
+                    "rule": "backdrop",
+                    "h": 0.6
+                },
+                "strobe-line": {
+                    "rule": "point",
+                    "x": 0,
+                    "y": 1.8,
+                    "a": 12
+                },
+                "strobe-pit": {
+                    "rule": "parallel",
+                    "lean_deg": 70
+                }
+            },
+            "colours": {
+                "beam380-columns-6": "#eef3ff",
+                "par-columns-8": "#ff1408",
+                "beam380-line": "#eef3ff",
+                "par-bridge": "#ff1408"
+            },
+            "levels": {
+                "par-columns-8": 0.3,
+                "par-press-3": 0,
+                "strobe-pit": 0,
+                "par-bridge": 0.4,
+                "strobe-line": 0
+            }
+        }
+    },
+    "opening": {
+        "a": 14,
+        "h": 1.6,
+        "target_h": 5.2,
+        "fov": 55,
+        "note": "the first screen of the crane rig: 14 m out on the dance floor, on the centre line, eye height, looking up to 5.2 m so the crane bridge and the line hung under it frame the DJ, the press glowing behind (tuned by looking, 2026-09-28 night: at 20 m / 4.6 m the bridge read small over an empty floor)"
+    },
+    "hall": "scripts/place/rigs/moxir-hall-2026-09-28-crane-dj.hall.json"
+}

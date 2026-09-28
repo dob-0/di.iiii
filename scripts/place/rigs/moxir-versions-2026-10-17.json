@@ -1,0 +1,990 @@
+{
+  "set": "moxir-2026-10-17",
+  "title": "MOXIR 17.10 — three versions of the rig: minimal, middle, full",
+  "writtenAt": "2026-09-28",
+  "base": "moxir-2026-10-17.json",
+  "status": "PROPOSAL for the owner's look. Same hall, same DJ booth, same zones as the base rig; what changes is how much is hung and how it is used. Nothing here is checked against the venue, a load calculation or the rental house.",
+  "owner": "2026-09-28, on /moxir: \"make 3 version with the full, midle, and simple minimalistic and also look to moxir mood, set, vibe and its the undegroudn rave thing lights like that not the commercial shit\"",
+  "method": {
+    "what": "Each version is a complete rig file generated from the base (scripts/place/rigs/moxir-2026-10-17.json) by scripts/rigbuild/versions.mjs: the base's stage, truss, night, photometry and opening, this file's groups, effects, budget and looks. The three files are committed beside the base and checked current by a test.",
+    "practice": "The underground rules below are the design brief. Where a source was opened and says it, it is cited (sources); where no citable source was found in this session they are marked 'design hypothesis' — scene practice widely repeated but not documented by a source we could open (web search budget exhausted 2026-09-28; owed: RA In Residence: Bassiani 2017-02-01, RA 'Tbilisi and the politics of raving' 2016-08-15, Vice 'Is This Georgian Club the New Berghain?' 2017-06-16 — confirmed to exist, not read).",
+    "rules": [
+      {
+        "rule": "Darkness is a material: most of the room is unlit most of the time; a look says where light is NOT (levels 0).",
+        "support": [
+          "ATMOSFERA",
+          "DAZED-2016"
+        ]
+      },
+      {
+        "rule": "The building is the set: its structure revealed in pieces (a column, the press, the roof frame), never floodlit or decorated.",
+        "support": [
+          "MIXMAG-2018",
+          "WIKI-BERGHAIN",
+          "WIKI-BASSIANI",
+          "WIKI-TRESOR"
+        ]
+      },
+      {
+        "rule": "Strobes are the peak: violent white hits against the industrial fabric, then dark again.",
+        "support": [
+          "ATMOSFERA"
+        ]
+      },
+      {
+        "rule": "Heavy haze, so a beam reads as a column of the architecture rather than a spot on the floor.",
+        "support": [],
+        "status": "design hypothesis"
+      },
+      {
+        "rule": "One colour at a time, and few of them: cold white, deep red, a warm amber (the blinders' tungsten-like white); never rainbow chases.",
+        "support": [],
+        "status": "design hypothesis"
+      },
+      {
+        "rule": "Light from low and from behind: the DJ in silhouette, not in a key light.",
+        "support": [],
+        "status": "design hypothesis"
+      },
+      {
+        "rule": "Stillness and slow sweeps, then a hit: the looks are held states, the movement is between them.",
+        "support": [],
+        "status": "design hypothesis"
+      },
+      {
+        "rule": "None of the commercial vocabulary: no CO2 jets, cold sparks, confetti or butterfly effects.",
+        "support": [],
+        "status": "design hypothesis — the owner's own words ('not the commercial shit') are the brief"
+      }
+    ]
+  },
+  "sources": {
+    "ATMOSFERA": {
+      "url": "https://www.atmosferamag.it/light-design-nightclub-history/",
+      "what": "Pietro Leonardi, 'The role of light design in Nightclubs', Atmosfera Mag (undated; opened 2026-09-28): \"The Berghain floor remains mostly dark, mirroring the intense and relentless techno played within\"; on warehouse raves, \"strobe lights creating intense visual contrasts against the industrial backdrops\""
+    },
+    "MIXMAG-2018": {
+      "url": "https://www.mixmag.net/feature/the-art-of-club-design",
+      "what": "Duncan Dick, 'The art of club design', Mixmag, 31 Aug 2018 (opened 2026-09-28). Simeon Aldred (Printworks London): \"The key to a 'found' space is not to change it drastically, but to amplify what is already there.\" \"Make it safe for the audience, but then leave it alone.\""
+    },
+    "DAZED-2016": {
+      "url": "https://www.dazeddigital.com/artsandculture/article/32611/1/",
+      "what": "Dazed, 'Lightning strikes Berghain but party rages on', 30-31 Aug 2016 (opened by the research agent 2026-09-28): the emergency lights coming on described as 'blinding bright' — bright light as the exception"
+    },
+    "WIKI-BERGHAIN": {
+      "url": "https://en.wikipedia.org/wiki/Berghain",
+      "what": "Wikipedia, 'Berghain' (opened 2026-09-28): \"a cavernous main room with 18-meter ceilings and is dominated by steel and concrete\"; no photographs inside"
+    },
+    "WIKI-BASSIANI": {
+      "url": "https://en.wikipedia.org/wiki/Bassiani",
+      "what": "Wikipedia, 'Bassiani' (opened 2026-09-28): \"utilizes a disused swimming pool as the main dance floor\" in the Dinamo Arena; photography banned"
+    },
+    "WIKI-TRESOR": {
+      "url": "https://en.wikipedia.org/wiki/Tresor_(club)",
+      "what": "Wikipedia, 'Tresor (club)' (opened by the research agent 2026-09-28): the vaults of a former department store, since 2007 the decommissioned Heizkraftwerk Berlin-Mitte"
+    },
+    "IEC-60825-1": {
+      "url": "https://webstore.iec.ch/en/publication/3587",
+      "what": "IEC 60825-1, safety of laser products — the MPE limits a laser safety officer works to (named, not applied here)"
+    }
+  },
+  "palette": {
+    "why": "One colour at a time, and few of them (rule 5). Every look colour must be one of these; a test holds it.",
+    "colours": {
+      "#eef3ff": "cold white (a discharge beam's open white)",
+      "#f4f7ff": "strobe white (5,700 K LEDs)",
+      "#ff1408": "deep red",
+      "#ffb45e": "amber",
+      "#ffc58f": "blinder warm white (3,096 K)"
+    }
+  },
+  "classes": {
+    "strobe": {
+      "code": "EXT-STROBE",
+      "fixture": "strobe",
+      "class": "LED strobe / blinder hybrid (other supplier; planning type modelled on the Martin Atomic 3000 LED)",
+      "reach_m": 22,
+      "penumbra": 0.6,
+      "colour": "#f4f7ff",
+      "angleNote": "60 deg ASSUMED (the maker publishes none) — fixtures.json"
+    },
+    "blinder": {
+      "code": "EXT-BLINDER",
+      "fixture": "blinder",
+      "class": "4-cell warm-white LED audience blinder (other supplier; planning type modelled on the Chauvet STRIKE 4)",
+      "reach_m": 18,
+      "penumbra": 0.6,
+      "colour": "#ffc58f"
+    }
+  },
+  "groups": {
+    "beam380-back": {
+      "class": "beam380",
+      "count": 3,
+      "mount": "booth-back",
+      "half_width_m": 1,
+      "back_inset_m": -0.25,
+      "on_floor": true,
+      "aim": "fan-into-roof",
+      "note": "3 beams on the floor right behind the riser, at the DJ's back (x -1, 0, +1): the centre one is the single beam over the DJ's head"
+    },
+    "beam380-flank": {
+      "class": "beam380",
+      "count": 4,
+      "mount": "booth-back",
+      "dx_m": [
+        2,
+        3
+      ],
+      "back_inset_m": -0.25,
+      "on_floor": true,
+      "aim": "fan-into-roof",
+      "note": "4 beams continuing the line either side of the riser: with the 3 behind it, ONE line of 7 at a 1 m pitch across the booth"
+    },
+    "beam380-columns-6": {
+      "class": "beam380",
+      "count": 6,
+      "mount": "column-bases",
+      "columns": {
+        "z_at": [
+          12,
+          24,
+          36
+        ],
+        "rows": "nave"
+      },
+      "aim": "up-into-truss",
+      "note": "6 beams at the bases of every other nave column pair (z 12, 24, 36), up into the space frame"
+    },
+    "beam380-columns": {
+      "from": "beam380-columns",
+      "off_m": 1.2,
+      "note": "10 beams at the column bases along the dance floor (z 24-48), 1.2 m off the inner face so the face's own PAR stands clear of them"
+    },
+    "bsw250-truss": {
+      "class": "bsw250",
+      "count": 6,
+      "mount": "truss-header",
+      "dx_m": [
+        1,
+        2,
+        3
+      ],
+      "aim": "stage-floor-and-back-wall",
+      "orient": "hung",
+      "note": "6 hung under the line from the crane, on its clamp points (x ±1, ±2, ±3)"
+    },
+    "bsw250-booms": {
+      "from": "bsw250-booms"
+    },
+    "beeeye-towers": {
+      "class": "beeEye",
+      "count": 8,
+      "mount": "crane-bridge",
+      "aim": "out-over-audience",
+      "note": "8 bee-eyes hung under the crane bridge's audience-side girder (x ±5, ±6.5, ±8, ±9.5), out over the crowd — the towers they were on are gone",
+      "dx_m": [
+        5,
+        6.5,
+        8,
+        9.5
+      ]
+    },
+    "par-columns-8": {
+      "class": "par",
+      "count": 8,
+      "mount": "column-uplight",
+      "columns": {
+        "z_at": [
+          6,
+          18,
+          30,
+          42
+        ],
+        "rows": "nave",
+        "faces": [
+          "inner"
+        ]
+      },
+      "aim": "up-the-column",
+      "bake": true,
+      "note": "8 PARs up the inner faces of the OTHER column pairs (z 6, 18, 30, 42): beam, red column, beam, red column down the nave — the structure revealed in pieces"
+    },
+    "par-columns": {
+      "from": "par-columns"
+    },
+    "par-outer": {
+      "from": "par-outer"
+    },
+    "par-press-3": {
+      "class": "par",
+      "count": 3,
+      "mount": "backdrop-floor",
+      "backdrop_gap_m": 0.35,
+      "aim": "backdrop",
+      "bake": true,
+      "symmetric": false,
+      "x_m": [
+        0.55,
+        1.65,
+        2.75
+      ],
+      "note": "3 on the floor at the press's foot, evenly across its face (off the axis by nature)"
+    },
+    "par-press": {
+      "from": "par-press"
+    },
+    "laser-centre": {
+      "class": "laser",
+      "count": 1,
+      "mount": "truss-header",
+      "orient": "hung",
+      "aim": "laser-into-roof",
+      "note": "1 laser hung under the centre of the line from the crane (5.9 m), aimed forward and up into the roof over the house — never into the audience plane; the line of beams stands on the top chord above it"
+    },
+    "laser-stage": {
+      "from": "laser-stage",
+      "mount": "truss-top",
+      "dx_m": [
+        3.75
+      ],
+      "note": "2 lasers standing on the ends of the hung line's top chord (x ±3.75), into the roof over the house"
+    },
+    "strobe-pit": {
+      "class": "strobe",
+      "count": 4,
+      "mount": "booth-pit",
+      "dx_m": [
+        1,
+        3
+      ],
+      "pit_m": 0.7,
+      "aim": "at-the-crowd-low",
+      "note": "4 strobes on the floor in the pit (x ±1, ±3), low, facing the crowd"
+    },
+    "strobe-truss": {
+      "class": "strobe",
+      "count": 2,
+      "mount": "truss-header",
+      "dx_m": [
+        3.5
+      ],
+      "orient": "hung",
+      "aim": "at-the-crowd-high",
+      "note": "2 strobes hung under the line's ends (x ±3.5)"
+    },
+    "blinder-pit": {
+      "class": "blinder",
+      "count": 4,
+      "mount": "booth-pit",
+      "dx_m": [
+        2,
+        4
+      ],
+      "pit_m": 0.7,
+      "aim": "at-the-crowd-low",
+      "note": "4 blinders in the pit between the strobes (x ±2, ±4), low, facing the crowd"
+    },
+    "blinder-towers": {
+      "class": "blinder",
+      "count": 4,
+      "mount": "crane-bridge",
+      "aim": "at-the-crowd-high",
+      "note": "4 blinders hung under the bridge's audience-side girder either side of the line (x ±3.75, ±4.5), facing the crowd",
+      "dx_m": [
+        3.75,
+        4.5
+      ]
+    },
+    "beam380-line": {
+      "class": "beam380",
+      "count": 7,
+      "mount": "truss-top",
+      "dx_m": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "aim": "fan-into-roof",
+      "note": "the line of 7 moved OFF the floor behind the DJ onto the hung line: standing on its top chord (a 380 W beam's 270° tilt cannot reach straight up hung under it), 1 m pitch, x -3..+3 — the fan rises from right above the DJ, up through the 1.5 m gap between the bridge's two girders"
+    },
+    "strobe-line": {
+      "class": "strobe",
+      "count": 2,
+      "mount": "truss-header",
+      "dx_m": [
+        3.5
+      ],
+      "orient": "hung",
+      "aim": "at-the-crowd-high",
+      "note": "2 strobes hung under the line's ends (x ±3.5), facing the crowd"
+    },
+    "par-bridge": {
+      "class": "par",
+      "count": 4,
+      "mount": "truss-top",
+      "dx_m": [
+        1.5,
+        2.5
+      ],
+      "aim": "bridge-underside",
+      "note": "4 PARs standing on the line between the beams (x ±1.5, ±2.5), each grazing the underside of the bridge's audience-side girder outward along it in deep red: the crane bridge drawn as a dark red frame over the DJ"
+    }
+  },
+  "effects": {
+    "hazer-back": {
+      "id": "hazer-back",
+      "label": "hazer",
+      "count": 2,
+      "mount": "booth-back",
+      "dx_m": [
+        4.5
+      ],
+      "back_inset_m": -0.25,
+      "on_floor": true,
+      "colour": "#8a9096",
+      "fixture": "hazer",
+      "note": "2 hazers on the floor behind the line, either side of the booth: the haze rolls from behind the DJ over the floor"
+    },
+    "hazer-hall": {
+      "id": "hazer-hall",
+      "label": "hazer",
+      "count": 2,
+      "mount": "nave-columns",
+      "colour": "#8a9096",
+      "fixture": "hazer",
+      "note": "hazers along the nave columns, so the far half of the hall holds haze too"
+    }
+  },
+  "looks": {
+    "white-cathedral": {
+      "title": "White cathedral",
+      "intent": "The roof frame and the columns as a nave of cold white: the column beams stand straight up in mirrored pairs, the booth's line opens a narrow apse fan behind the DJ. Everything else is dark — no PAR, no spot, no strobe.",
+      "aims": {
+        "beam380-back": {
+          "rule": "fan",
+          "spread_deg": 8,
+          "lean_deg": 0
+        },
+        "beam380-flank": {
+          "rule": "fan",
+          "spread_deg": 24,
+          "lean_deg": 3
+        },
+        "beam380-columns-6": {
+          "rule": "vertical",
+          "in_deg": 4
+        },
+        "beam380-columns": {
+          "rule": "vertical",
+          "in_deg": 4
+        },
+        "beeeye-towers": {
+          "rule": "vertical",
+          "in_deg": -6
+        },
+        "laser-centre": {
+          "rule": "laser-into-roof",
+          "a": 14
+        },
+        "laser-stage": {
+          "rule": "laser-into-roof",
+          "a": 14
+        },
+        "beam380-line": {
+          "rule": "fan",
+          "spread_deg": 24,
+          "lean_deg": 3
+        }
+      },
+      "colours": {
+        "beam380-back": "#eef3ff",
+        "beam380-flank": "#eef3ff",
+        "beam380-columns-6": "#eef3ff",
+        "beam380-columns": "#eef3ff",
+        "beeeye-towers": "#eef3ff",
+        "beam380-line": "#eef3ff"
+      },
+      "levels": {
+        "bsw250-truss": 0,
+        "bsw250-booms": 0,
+        "par-columns-8": 0,
+        "par-columns": 0,
+        "par-outer": 0,
+        "par-press-3": 0,
+        "par-press": 0,
+        "laser-centre": 0,
+        "laser-stage": 0,
+        "strobe-pit": 0,
+        "strobe-truss": 0,
+        "blinder-pit": 0,
+        "blinder-towers": 0,
+        "beeeye-towers": 0.6,
+        "par-bridge": 0,
+        "strobe-line": 0
+      }
+    },
+    "red-room": {
+      "title": "Red room",
+      "intent": "Deep red only, and low: the columns and the press glow from their feet, the booth's beams stand still and dim in red, the DJ a dark shape against the red press. The column beams are out: the roof stays black.",
+      "aims": {
+        "beam380-back": {
+          "rule": "vertical"
+        },
+        "beam380-flank": {
+          "rule": "vertical"
+        },
+        "bsw250-truss": {
+          "rule": "vertical"
+        },
+        "bsw250-booms": {
+          "rule": "booth-key",
+          "h": 1.6
+        },
+        "beeeye-towers": {
+          "rule": "vertical",
+          "lean_deg": 55,
+          "in_deg": -20
+        },
+        "par-columns-8": {
+          "rule": "up-the-column"
+        },
+        "par-columns": {
+          "rule": "up-the-column"
+        },
+        "par-outer": {
+          "rule": "up-the-column"
+        },
+        "par-press-3": {
+          "rule": "backdrop",
+          "h": 0.6
+        },
+        "par-press": {
+          "rule": "backdrop",
+          "h": 0.6
+        },
+        "laser-centre": {
+          "rule": "laser-into-roof",
+          "a": 12
+        },
+        "laser-stage": {
+          "rule": "laser-into-roof",
+          "a": 12
+        },
+        "beam380-line": {
+          "rule": "vertical"
+        },
+        "par-bridge": {
+          "rule": "bridge-underside",
+          "out": 6
+        }
+      },
+      "colours": {
+        "beam380-back": "#ff1408",
+        "beam380-flank": "#ff1408",
+        "bsw250-truss": "#ff1408",
+        "bsw250-booms": "#ff1408",
+        "beeeye-towers": "#ff1408",
+        "par-columns-8": "#ff1408",
+        "par-columns": "#ff1408",
+        "par-outer": "#ff1408",
+        "par-press-3": "#ff1408",
+        "par-press": "#ff1408",
+        "laser-centre": "#ff1408",
+        "laser-stage": "#ff1408",
+        "beam380-line": "#ff1408",
+        "par-bridge": "#ff1408"
+      },
+      "levels": {
+        "beam380-back": 0.45,
+        "beam380-flank": 0.45,
+        "beam380-columns-6": 0,
+        "beam380-columns": 0,
+        "bsw250-truss": 0.35,
+        "bsw250-booms": 0.25,
+        "beeeye-towers": 0.4,
+        "strobe-pit": 0,
+        "strobe-truss": 0,
+        "blinder-pit": 0,
+        "blinder-towers": 0,
+        "beam380-line": 0.45,
+        "strobe-line": 0
+      }
+    },
+    "strobe-hit": {
+      "title": "Strobe hit",
+      "intent": "The peak: every strobe and blinder at full — the pit strobes rake up over the crowd from the floor, the header strobes and the blinders hit the front of the floor; every beam and PAR out, so the flash lands on black.",
+      "aims": {
+        "strobe-pit": {
+          "rule": "parallel",
+          "lean_deg": 35
+        },
+        "strobe-truss": {
+          "rule": "parallel",
+          "lean_deg": 55
+        },
+        "blinder-pit": {
+          "rule": "point",
+          "x": 0,
+          "y": 2.5,
+          "a": 9
+        },
+        "blinder-towers": {
+          "rule": "point",
+          "x": 0,
+          "y": 1.8,
+          "a": 12
+        },
+        "strobe-line": {
+          "rule": "parallel",
+          "lean_deg": 55
+        }
+      },
+      "colours": {
+        "strobe-pit": "#f4f7ff",
+        "strobe-truss": "#f4f7ff",
+        "blinder-pit": "#ffc58f",
+        "blinder-towers": "#ffc58f",
+        "strobe-line": "#f4f7ff"
+      },
+      "levels": {
+        "beam380-back": 0,
+        "beam380-flank": 0,
+        "beam380-columns-6": 0,
+        "beam380-columns": 0,
+        "bsw250-truss": 0,
+        "bsw250-booms": 0,
+        "beeeye-towers": 0,
+        "par-columns-8": 0,
+        "par-columns": 0,
+        "par-outer": 0,
+        "par-press-3": 0,
+        "par-press": 0,
+        "laser-centre": 0,
+        "laser-stage": 0,
+        "beam380-line": 0,
+        "par-bridge": 0
+      }
+    },
+    "one-beam": {
+      "title": "Blackout + one beam",
+      "intent": "Everything out but one: the beam on the floor right behind the DJ, straight up into the roof — the DJ a silhouette cut out of it.",
+      "aims": {
+        "beam380-back": {
+          "rule": "vertical",
+          "solo": 1
+        },
+        "beam380-line": {
+          "rule": "vertical",
+          "solo": 3
+        }
+      },
+      "colours": {
+        "beam380-back": "#eef3ff",
+        "beam380-line": "#eef3ff"
+      },
+      "levels": {
+        "beam380-flank": 0,
+        "beam380-columns-6": 0,
+        "beam380-columns": 0,
+        "bsw250-truss": 0,
+        "bsw250-booms": 0,
+        "beeeye-towers": 0,
+        "par-columns-8": 0,
+        "par-columns": 0,
+        "par-outer": 0,
+        "par-press-3": 0,
+        "par-press": 0,
+        "laser-centre": 0,
+        "laser-stage": 0,
+        "strobe-pit": 0,
+        "strobe-truss": 0,
+        "blinder-pit": 0,
+        "blinder-towers": 0,
+        "par-bridge": 0,
+        "strobe-line": 0
+      }
+    },
+    "slow-sweep": {
+      "title": "Slow sweep",
+      "intent": "A held frame of a slow mirrored sweep: the column beams lean out toward the walls in pairs, the booth's line fans wide; the columns glow a low red underneath. Nothing flashes.",
+      "aims": {
+        "beam380-back": {
+          "rule": "fan",
+          "spread_deg": 16,
+          "lean_deg": 2
+        },
+        "beam380-flank": {
+          "rule": "fan",
+          "spread_deg": 70,
+          "lean_deg": 10
+        },
+        "beam380-columns-6": {
+          "rule": "vertical",
+          "in_deg": -22
+        },
+        "beam380-columns": {
+          "rule": "vertical",
+          "in_deg": -22
+        },
+        "beeeye-towers": {
+          "rule": "vertical",
+          "lean_deg": 40,
+          "in_deg": 25
+        },
+        "par-columns-8": {
+          "rule": "up-the-column"
+        },
+        "par-columns": {
+          "rule": "up-the-column"
+        },
+        "par-outer": {
+          "rule": "up-the-column"
+        },
+        "laser-centre": {
+          "rule": "laser-into-roof",
+          "a": 18
+        },
+        "laser-stage": {
+          "rule": "laser-into-roof",
+          "a": 18
+        },
+        "beam380-line": {
+          "rule": "fan",
+          "spread_deg": 70,
+          "lean_deg": 6
+        },
+        "par-bridge": {
+          "rule": "bridge-underside",
+          "out": 6
+        }
+      },
+      "colours": {
+        "beam380-back": "#eef3ff",
+        "beam380-flank": "#eef3ff",
+        "beam380-columns-6": "#eef3ff",
+        "beam380-columns": "#eef3ff",
+        "beeeye-towers": "#eef3ff",
+        "par-columns-8": "#ff1408",
+        "par-columns": "#ff1408",
+        "par-outer": "#ff1408",
+        "laser-centre": "#ff1408",
+        "laser-stage": "#ff1408",
+        "beam380-line": "#eef3ff",
+        "par-bridge": "#ff1408"
+      },
+      "levels": {
+        "par-columns-8": 0.3,
+        "par-columns": 0.3,
+        "par-outer": 0.3,
+        "par-press-3": 0,
+        "par-press": 0,
+        "bsw250-truss": 0,
+        "bsw250-booms": 0,
+        "beeeye-towers": 0.5,
+        "strobe-pit": 0,
+        "strobe-truss": 0,
+        "blinder-pit": 0,
+        "blinder-towers": 0,
+        "par-bridge": 0.4,
+        "strobe-line": 0
+      }
+    }
+  },
+  "defaultLook": "white-cathedral",
+  "aimRules": {
+    "why": "A group's resting aim (its `aim`), as a rule of scripts/place/rig-lib.mjs AIM_RULES: used where a look does not name the group — which, in these looks, is where the group is out (level 0) or unchanged.",
+    "fan-into-roof": {
+      "rule": "vertical"
+    },
+    "up-into-truss": {
+      "rule": "vertical"
+    },
+    "stage-floor-and-back-wall": {
+      "rule": "stage-wash"
+    },
+    "out-over-audience": {
+      "rule": "vertical",
+      "lean_deg": 55
+    },
+    "booth-key": {
+      "rule": "booth-key",
+      "h": 1.6
+    },
+    "up-the-column": {
+      "rule": "up-the-column"
+    },
+    "backdrop": {
+      "rule": "backdrop",
+      "h": 0.6
+    },
+    "laser-into-roof": {
+      "rule": "laser-into-roof",
+      "a": 14
+    },
+    "at-the-crowd-low": {
+      "rule": "parallel",
+      "lean_deg": 70
+    },
+    "at-the-crowd-high": {
+      "rule": "point",
+      "x": 0,
+      "y": 1.8,
+      "a": 12
+    },
+    "bridge-underside": {
+      "rule": "bridge-underside",
+      "out": 6
+    }
+  },
+  "otherSuppliers": {
+    "why": "The rental house's price list (lights_rental_quote_calculator.xlsx, sheet \"Price list\", 25 codes) has no strobe, no blinder and no hazer. Each line below is a planning type (EXT- code) with 2-3 real, currently sold products a supplier could provide; rates are OWED (no maker publishes a rental price).",
+    "EXT-STROBE": {
+      "label": "LED strobe (other supplier)",
+      "options": [
+        {
+          "name": "Martin Atomic 3000 LED",
+          "url": "https://www.martin.com/en/products/atomic-3000-led",
+          "facts": "740 W max, 180,000 lm, 3/4/14 DMX ch, IP20, 7.8 kg — the planning type is modelled on it"
+        },
+        {
+          "name": "GLP JDC2 IP",
+          "url": "https://glp.de/en/products/entertainment-lighting/strobes/jdc2-ip-en",
+          "facts": "1500 W max @ 230 V, 5 DMX modes (18-141 ch), 47,000 lm beam + 20,000 lm plate, IP65"
+        },
+        {
+          "name": "SGM PALCO Z-FX",
+          "url": "https://sgmlight.com/products/palco-z-fx",
+          "facts": "1300 W max, 21,000 lm; SGM's P-10/Q-7 are listed as discontinued"
+        }
+      ]
+    },
+    "EXT-BLINDER": {
+      "label": "LED audience blinder (other supplier)",
+      "options": [
+        {
+          "name": "Chauvet Professional STRIKE 4",
+          "url": "https://www.chauvetprofessional.com/product/strike-4/",
+          "facts": "286 W @ 230 V, 999 lux @ 5 m, 49 deg, 1/3/4/9 DMX ch, 3,096 K — the planning type is modelled on it"
+        },
+        {
+          "name": "Elation DTW Blinder 700 IP",
+          "url": "https://www.elationlighting.com/products/dtw-blinder-700-ip",
+          "facts": "680 W max, 9 DMX modes, 1,104 lux @ 3 m open (67 deg), IP rated"
+        },
+        {
+          "name": "Chauvet Professional STRIKE Array 2",
+          "url": "https://www.chauvetprofessional.com/product/strike-array-2/",
+          "facts": "~130 W, 360 lux @ 5 m, 60 deg, 1-9 DMX ch, 2,700 K"
+        }
+      ]
+    },
+    "EXT-HAZER": {
+      "label": "Hazer (other supplier)",
+      "options": [
+        {
+          "name": "Antari HZ-1000",
+          "url": "https://www.antari.com/products/hz-1000/",
+          "facts": "1150 W, 2 DMX ch, 2.2 ml/min at 100 %, 6.4 L (40 h) — the planning type is modelled on it"
+        },
+        {
+          "name": "Look Solutions Unique 2.1",
+          "url": "https://www.looksolutions.com/products/unique_2_1/8.html",
+          "facts": "1500 W, DMX + 0-10 V, 99 density steps, ~50 h from 2 L"
+        },
+        {
+          "name": "Smoke Factory Tour-Hazer II",
+          "url": "https://www.tourhazer.de",
+          "facts": "2 DMX ch (fan and haze), 1 ml/min at 40 %, 5 L (~83 h)"
+        }
+      ]
+    }
+  },
+  "packages": {
+    "why": "The rental house's quote calculator holds three complete systems on its hidden \"Price data\" sheet (not on the visible price list). The day rule is assumed to apply to them too — to be confirmed.",
+    "items": [
+      {
+        "id": "outdoor-full",
+        "label": "Outdoor system — full rig",
+        "rate": 205000,
+        "cells": "Price data!A27:F27",
+        "contents": "50 PARs, 18x380W beams, laser, MA console, CO2 x6, cold-spark x4, smoke x4",
+        "covers": {
+          "UP-PL5403": 50,
+          "UP-B380F": 18,
+          "UP-LA40WF": 1,
+          "UP-Q3L": 1,
+          "UP-Q108S": 6,
+          "UP-YH600F": 4,
+          "UP-YZ31P": 4
+        },
+        "reading": "'laser' read as ONE UP-LA40WF and 'MA console' as the UP-Q3L — both to be confirmed"
+      },
+      {
+        "id": "indoor-stage",
+        "label": "Indoor 8x3.5 m stage — full rig",
+        "rate": 96000,
+        "cells": "Price data!A28:F28",
+        "contents": "12x250W beams, 14 bee-eyes, 8 COB PARs, low-fog, desk, distro",
+        "covers": {
+          "UP-250BSW": 12,
+          "UP-HK1915": 14,
+          "UP-COB200": 8,
+          "UP-SW3000B": 1,
+          "UP-1024": 1,
+          "UP-POWER12": 1
+        },
+        "reading": "'12x250W beams' read as the 12 UP-250BSW and '14 bee-eyes' as the 14 UP-HK1915 the house stocks; 'desk' as the UP-1024 — to be confirmed"
+      }
+    ]
+  },
+  "versions": [
+    {
+      "id": "minimal",
+      "title": "Minimal — one line under the crane, one colour",
+      "summary": "No stage, no towers: the DJ stand alone, the crane parked over it. One 8 m line hung from the bridge on 2 chain hoists carries 7 beams standing on it and 2 strobes under it, with 4 red PARs grazing the bridge; 6 column-base beams into the roof, 11 PARs red on the columns and the press, 4 strobes in the pit, 2 hazers.",
+      "truss": "crane",
+      "groups": [
+        "beam380-line",
+        "beam380-columns-6",
+        "par-columns-8",
+        "par-bridge",
+        "par-press-3",
+        "strobe-line",
+        "strobe-pit"
+      ],
+      "effects": [
+        "hazer-back"
+      ],
+      "realLights": {
+        "beam380-line": 1,
+        "par-columns-8": {
+          "count": 4,
+          "pick": "nearest-stage"
+        },
+        "par-bridge": 2
+      }
+    },
+    {
+      "id": "middle",
+      "title": "Middle — the line, the roof, one laser",
+      "summary": "The line of 7 plus 10 column-base beams in the roof, the 12 x 250 W heads (header and side booms), 1 laser in one colour, 38 PARs on the nave columns and the press, 6 strobes, 4 hazers.",
+      "groups": [
+        "beam380-line",
+        "beam380-columns",
+        "bsw250-truss",
+        "bsw250-booms",
+        "laser-centre",
+        "par-columns",
+        "par-press",
+        "strobe-pit",
+        "strobe-truss"
+      ],
+      "effects": [
+        "hazer-back",
+        "hazer-hall"
+      ],
+      "realLights": {
+        "bsw250-truss": 4,
+        "bsw250-booms": 2,
+        "strobe-truss": 2
+      },
+      "truss": "crane"
+    },
+    {
+      "id": "full",
+      "title": "Full — the whole list, used darkly",
+      "summary": "Every rental head: 17 beams hung (+1 spare), 12 x 250 W, 8 bee-eyes, 50 PARs, 2 lasers in single colours; 6 strobes and 8 blinders; 6 hazers. Still no CO2, no sparks.",
+      "groups": [
+        "beam380-line",
+        "beam380-columns",
+        "bsw250-truss",
+        "bsw250-booms",
+        "beeeye-towers",
+        "laser-stage",
+        "par-columns",
+        "par-outer",
+        "par-press",
+        "strobe-pit",
+        "strobe-truss",
+        "blinder-pit",
+        "blinder-towers"
+      ],
+      "effects": [
+        "hazer-back",
+        {
+          "from": "hazer-hall",
+          "count": 4
+        }
+      ],
+      "realLights": {
+        "bsw250-truss": 4,
+        "strobe-truss": 2,
+        "blinder-pit": 2
+      },
+      "spares": {
+        "UP-B380F": 1
+      },
+      "truss": "crane"
+    }
+  ],
+  "ordered": {
+    "id": "ordered",
+    "title": "As ordered — the rig of the 27.09 order",
+    "summary": "The base rig in the hall's own project: every head on the order, the CO2, sparks and smoke included — kept as it is, to compare."
+  },
+  "photometry": {
+    "air": 1.5,
+    "why": "Heavy haze (rule 4; 2-6 hazers in every version where the base had 4 smoke machines): every cone's air brightness at 1.5 where the base rig draws 0.9. A drawing choice, not photometry — the ratios between the fixtures stay the datasheets'."
+  },
+  "night": {
+    "backgroundColor": "#030304",
+    "ambient": {
+      "color": "#8ea2c8",
+      "intensity": 0.5
+    },
+    "directional": {
+      "color": "#8fa6d8",
+      "intensity": 0.22
+    },
+    "fog": {
+      "near": 60,
+      "far": 250
+    },
+    "note": "Darker than the base's readable night (ambient 0.8 -> 0.5, directional 0.35 -> 0.22): darkness is part of the design here (rule 1); the hall must still read in a render. Tuned by eye on the RTX 3080, 2026-09-28."
+  },
+  "hall": "scripts/place/rigs/moxir-hall-2026-09-28-crane-dj.hall.json",
+  "craneTruss": {
+    "kind": "crane-hung",
+    "why": "Owner, 2026-09-28 23:1x: no stage, no towers — only the DJ stand; the yellow overhead crane is movable and parks over the DJ, and the truss hangs from its bridge on chains (\"the metal chain conected thr the yellow crane\"). The minimal hang, approved: ONE line (\"ok take complimentary\"). The crane is moved in the hall's dims (moxir-hall-crane-dj-2026-09-28.json: bridge centre over the DJ, z 4.8 m; trolley parked at the right end), not duplicated.",
+    "width_m": 8,
+    "pieces_m": [
+      3,
+      3,
+      2
+    ],
+    "section_m": 0.29,
+    "section_class": "290 mm square box truss (Prolyte H30V / Global Truss F34 class — src/rigbuild/pieces.js)",
+    "trim_m": 6.0,
+    "x_offset_m": -0.25,
+    "x_offset_why": "the line runs x -4.25..+3.75: a clamp point every 0.5 m set in 0.25 m from each end (pieces.js) then falls on the centre line, so the centre beam hangs on the axis; every lamp is mirrored about x = 0",
+    "rigging": {
+      "hoists": 2,
+      "hoist_dx_m": [
+        2.5
+      ],
+      "hoist": "chain hoist 500 kg–1 t, D8+ (e.g. CM Lodestar / Columbus McKinnon class)",
+      "per_point": "a spreader across both bridge girders on beam clamps, the hoist under it, a secondary safety steel to the spreader",
+      "crane": "the nave's entry-end bridge crane, rolled along its runway to park over the DJ; rail height 7.6 m (disputed 6.6–8.4), girder bottom 8.15 m",
+      "signoff": "rigging sign-off owed (crane rated load, lock-out, hoists + safety steels): the crane's rated load and a check of the old runway, rails and brakes; the crane locked in place and its power isolated for the whole event; a rigger's plan with point loads, signed by a structural or rigging engineer. This file draws it; they approve it."
+    }
+  },
+  "craneOpening": {
+    "a": 14,
+    "h": 1.6,
+    "target_h": 5.2,
+    "fov": 55,
+    "note": "the first screen of the crane rig: 14 m out on the dance floor, on the centre line, eye height, looking up to 5.2 m so the crane bridge and the line hung under it frame the DJ, the press glowing behind (tuned by looking, 2026-09-28 night: at 20 m / 4.6 m the bridge read small over an empty floor)"
+  }
+}

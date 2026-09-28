@@ -40,11 +40,13 @@ import { WORK_IDS, workAssetDirs, workEntries, workPublicDirs } from './works.js
  *   es-module-shims that published pages load from /vendor/ instead of a CDN
  *   (public/vendor/VENDOR.md) — without it an install 404s every one of them
  *   and the pages rewritten to use them go black offline AND online.
+ * rigbuild: the inventory's item renders and photos (public/rigbuild/items/,
+ *   RIG_BUILD.md §13) — without it every item card on an install is blank.
  *
  * A work's own public directory is NOT listed here. It is added by the
  * registry, so a new work brings its media without anyone editing this line.
  */
-export const PROGRAM_PUBLIC_DIRS = ['fonts', 'draco', 'basis', 'suite', 'unicode-fonts', 'vendor']
+export const PROGRAM_PUBLIC_DIRS = ['fonts', 'draco', 'basis', 'suite', 'unicode-fonts', 'vendor', 'rigbuild']
 
 /**
  * @param {Record<string, string|undefined>} env  usually process.env
