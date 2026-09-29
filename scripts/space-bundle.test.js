@@ -593,3 +593,47 @@ describe('space-bundle carries project visibility', () => {
         expect(entries).toContain(`blobs/${PRIVATE_HASH}`)
     })
 })
+
+// Security audit 2026-09-29, C1: a bundle that carried `space/assets/<id>` as a
+// symlink to a file outside the data root was imported link and all, and the
+// asset route then served that file. A bundle holds regular files and
+// directories only; anything else is refused before a byte is written.
+describe('space-bundle import refuses links', () => {
+    const craft = (build) => {
+        const src = mkTemp('bundle-craft-')
+        fs.mkdirSync(path.join(src, 'space', 'assets'), { recursive: true })
+        fs.writeFileSync(path.join(src, 'bundle.json'), JSON.stringify({ format: 'di.space-bundle' }))
+        build(src)
+        const out = path.join(mkTemp('bundle-out-'), 'crafted.diiii')
+        return execFileAsync('tar', ['-czf', out, '-C', src, '.']).then(() => out)
+    }
+
+    const importInto = async (bundle) => {
+        const dataRoot = mkTemp('bundle-root-')
+        const result = await run(['import', bundle, '--data-root', dataRoot]).then(
+            (ok) => ({ code: 0, stderr: ok.stderr }),
+            (error) => ({ code: error.code, stderr: String(error.stderr) })
+        )
+        return { ...result, dataRoot }
+    }
+
+    it('refuses a symlink member and writes nothing', async () => {
+        const secret = path.join(mkTemp('bundle-secret-'), 'secret.env')
+        fs.writeFileSync(secret, 'SECRET=canary\n')
+        const bundle = await craft((src) => fs.symlinkSync(secret, path.join(src, 'space', 'assets', 'aaaaaaaa11111111')))
+        const { code, stderr, dataRoot } = await importInto(bundle)
+        expect(code).not.toBe(0)
+        expect(stderr).toMatch(/refusing bundle: it holds a symbolic link/)
+        expect(fs.existsSync(path.join(dataRoot, 'spaces'))).toBe(false)
+    })
+
+    it('refuses a hard link member', async () => {
+        const bundle = await craft((src) => {
+            fs.writeFileSync(path.join(src, 'space', 'assets', 'bbbbbbbb22222222'), 'x')
+            fs.linkSync(path.join(src, 'space', 'assets', 'bbbbbbbb22222222'), path.join(src, 'space', 'assets', 'cccccccc33333333'))
+        })
+        const { code, stderr } = await importInto(bundle)
+        expect(code).not.toBe(0)
+        expect(stderr).toMatch(/refusing bundle: .*hard link/)
+    })
+})

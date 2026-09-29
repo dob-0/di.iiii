@@ -807,10 +807,22 @@ function createSpaceStore({
   // `req` is optional (tests exercising thumbnail generation call serveFile
   // with a bare fake response and never send a Range header) — without it,
   // this behaves exactly as before: a plain 200 with the full body.
+  // An asset is a regular file this server wrote. Anything else — above all a
+  // symlink a bundle smuggled in — answers as missing (ENOENT → 404), and
+  // sharp never opens it for a thumbnail either.
+  const assertRegularFile = async (filePath) => {
+    const stat = await fsp.lstat(filePath)
+    if (!stat.isFile()) throw Object.assign(new Error(`not a regular file: ${path.basename(filePath)}`), { code: 'ENOENT' })
+    return stat
+  }
+
   const serveFile = (res, filePath, contentType, req) => {
     let stat
     try {
-      stat = fs.statSync(filePath)
+      // lstat, never stat: a symlink under the data root was not written by
+      // this server and must not be followed (security audit 2026-09-29, C1).
+      stat = fs.lstatSync(filePath)
+      if (!stat.isFile()) throw Object.assign(new Error(`not a regular file: ${path.basename(filePath)}`), { code: 'ENOENT' })
     } catch (error) {
       logger.error(error)
       res.status(500).end('Failed to read asset')
@@ -895,7 +907,7 @@ function createSpaceStore({
     const { assetsDir } = getSpacePaths(spaceId)
     const filePath = path.join(assetsDir, assetId)
     const meta = await readJson(path.join(assetsDir, `${assetId}.json`), null)
-    await fsp.access(filePath)
+    await assertRegularFile(filePath)
 
     const requestedWidth = Math.trunc(Number(width))
     if (requestedWidth > 0 && isThumbnailableImage(meta?.mimeType)) {
