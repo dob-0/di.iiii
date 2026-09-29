@@ -7,6 +7,9 @@ FROM node:24-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a5
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+# npm ci runs package.json's "prepare" (the git hooks installer). It must be in the
+# image before npm ci; with no git checkout here it exits 0 without doing anything.
+COPY scripts/install-git-hooks.mjs ./scripts/install-git-hooks.mjs
 RUN npm ci
 
 COPY . .
