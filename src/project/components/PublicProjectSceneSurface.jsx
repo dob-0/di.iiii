@@ -4,6 +4,7 @@ import { computeFramingCamera, fitCameraToAspect, getPointsBoundingSphere, getVi
 import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
 import { XR_READY, xrAvailability } from '../../xr/xrAvailability.js'
 import lazyWithReload from '../../utils/lazyWithReload.js'
+import { isEmbedRequest } from '../../utils/previewMode.js'
 
 // Everything in this module -- the XR store, the camera framing math, the two
 // renderers -- reaches three.js. It is loaded only from PublicProjectViewer's
@@ -147,6 +148,21 @@ export default function PublicProjectSceneSurface({
     // everything this document holds — and only RawViewport shows both.
     const hasGraph = (document.nodes || []).length > 0
 
+    // The smart view (docs/architecture/SMART_VIEW.md) for a visitor: the camera kept out
+    // of the floor and near the building, the cutaway from outside, the occlusion fade,
+    // the view row and #view-… links. Not on a caged (locked) composition, and not on a
+    // thumbnail. Inside somebody else's page (?embed=1) the row stays off — embed is
+    // glass — unless the host asks for it with &views=1 (the visualiser's split).
+    const [smartView] = useState(() => {
+        const embed = isEmbedRequest()
+        const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+        return {
+            bar: embed && params?.get('views') !== '1' ? false : 'visitor',
+            constraints: true,
+            deepLink: !embed
+        }
+    })
+
     return (
         <>
             {navMode === 'walk' ? (
@@ -197,6 +213,7 @@ export default function PublicProjectSceneSurface({
                     // A visitor's click on an object with a link follows it.
                     // Not on a space-card picture (?preview=1).
                     followLinks={!isPreview}
+                    smartView={!caged && !isPreview ? smartView : null}
                 />
             )}
 

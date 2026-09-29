@@ -1731,6 +1731,27 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-28'
     },
     {
+        id: 'smart-view',
+        category: 'Spaces & access',
+        title: 'Smart view — see into a building from anywhere',
+        summary: 'In a room that has a building in it (a place, like MOXIR\'s hall), the view keeps the room in sight: what stands between you and what you look at fades, from outside the roof and the near walls are cut away, and six views take you straight to the dance floor, the DJ, the plan, a section, the rig or a crane shot. X-ray ghosts the building and leaves the rig solid.',
+        body: [
+            'It turns on by itself wherever a room holds a building: a place made by the place pipeline, or a model big enough to hold the rest of the room. Every other room is exactly as before.',
+            { list: [
+                'In the way: when a wall, a column or a machine stands between the camera and what it looks at, the part of it in front of that point fades (about 85 % gone, as fine dots), and comes back when the view is clear. Only the building fades — never a lamp, a beam or the rig.',
+                'From outside: step the camera out of the building and the roof and the walls facing you are cut away, like a model with its lid off; the haze stands back as far as you are outside, so the inside stays lit. Step back in and it closes again.',
+                'The six views, keys 1–6 or the row at the bottom: Floor (eye height in the crowd), DJ (from the riser, up at the rig), Top (the plan, straight down), Side (the room cut along its length through the rig), Rig (the lamps close), Crane (high over the crowd). They come from the room and the rig; a project can carry its own under presentationState.viewPresets.',
+                'X-ray (the button, or Alt+Z): the building drawn as a faint ghost with its edges, the rig at full strength — for checking what hangs where and where it points.',
+                'A link can open on a view: add #view-top (or floor, dj, side, rig, crane) to the room\'s address.',
+                'For a visitor, the camera never goes under the floor and never wanders off into the dark: it stays within reach of the building, and the point it circles stays inside it.'
+            ] },
+            'In Studio the same views and X-ray sit at the top of the viewport and the keys act on the pane under the pointer; a number a cue already uses stays the cue\'s. Studio keeps no camera limits, so you can still look up from under a thing.',
+            'Walking and flying, the fixed opening shot and headset entry are unchanged.'
+        ],
+        tags: ['view', 'views', 'camera', 'smart view', 'cutaway', 'section', 'x-ray', 'xray', 'transparent', 'occlusion', 'fade', 'walls', 'roof', 'outside', 'top', 'plan', 'dj', 'crane', 'rig', 'presets', 'moxir', 'hall', 'place'],
+        updated: '2026-09-29'
+    },
+    {
         id: 'rig-show-loop',
         category: 'Spaces & access',
         title: 'A show that loops — the cue list played by the desk, the room following it',
