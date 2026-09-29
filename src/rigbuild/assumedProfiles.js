@@ -81,6 +81,8 @@ const aux = (n, label) => ({ role: `aux${n}`, label })
 export const ASSUMED_PROFILES = {
     'UP-B380F': {
         equivalent: 'UPlus Lighting "380 IP BEAM" (IP65, 371 W Osram lamp, 2°, pan 540° / tilt 270° 16-bit)',
+        grade: 'STILL ASSUMED',
+        gradeWhy: 'searched 2026-09-29 (maker sites pro-uplight.com + uplight.com.cn, 2 made-in-china listings and their 10 description images, OFL, QLC+): no chart for UP-B380F anywhere. The UPlus body differs (finned head vs smooth drum, display on the arm vs the base, 424×367×725 mm 27 kg vs 460×310×690 mm 23 kg, 400 vs 450/500 W) — only the 16-channel count and 540°/270° match. The maker lists ONE mode, 16ch (uplight.com.cn pd45714311)',
         manual: { title: '"380 IP BEAM" user manual', url: 'https://www.upluslighting.com/wp-content/uploads/2024/01/380-IP-BAEM.pdf', pages: '6–8', sha256: '31712c3ae62a1dec0ed39601dd720e90df0eedb75b2ae178dfcce231dccf974a', accessed: '2026-09-29' },
         assumed: 'ASSUMED from UPlus 380 IP BEAM manual p.6–8 — verify on the rental unit',
         fill: [
@@ -113,6 +115,8 @@ export const ASSUMED_PROFILES = {
     },
     'UP-250BSW': {
         equivalent: 'Aolait "250W LED 3IN1 BSW Moving Head Light" (250 W white LED, pan 540° / tilt 270° + fine, 3-facet prism)',
+        grade: 'STILL ASSUMED',
+        gradeWhy: 'searched 2026-09-29 (all 11 UP-250BSW listings, 125 description images, both maker sites, QLC+, OFL, Google): no 24ch or 30ch chart anywhere. The Aolait unit is a DIFFERENT fixture (no LED ring, other base and yoke, 17/20ch) — kept only so the desk can test; never patch the rental unit by it',
         manual: { title: '250W LED SPOT moving head user manual', url: 'https://aolait.com/wp-content/uploads/2020/11/250W-LED-SPOT-Moving-Head-Light-user-manual.pdf', pages: '13–17', sha256: '251282d3b67d69ccf87b43ef92dc302ca1eb87be9d00797b3bd165ff1ffde062', accessed: '2026-09-28' },
         assumed: 'ASSUMED from Aolait 250W LED BSW manual p.13–17 (its 17ch mode — UP-250BSW publishes 24/30ch) — verify on the rental unit',
         fill: [
@@ -147,6 +151,8 @@ export const ASSUMED_PROFILES = {
     },
     'UP-HK1915': {
         equivalent: 'Aolait AL1019WR "19x15W Bee-Eye LED Beam Wash Zoom" (19 × 15 W RGBW, zoom 4°–60°)',
+        grade: 'EQUIVALENT',
+        gradeWhy: 'same OEM body (the Clay Paky B-EYE K10 clone): the Aolait manual lists exactly the 21/23/35/78/92/97/99 modes UPlight\'s own listings give, calls the fixture "HAWKEYE II" (UPlight sells "Hawk Eye"), and its drawings match UPlight\'s photos (19 hex lenses, cross of 4 keys on a mono LCD, powerCON in/out, 3-pin DMX). Differs: tilt 270° vs UPlight\'s 230°, 450 vs 350 W. Researched 2026-09-29',
         manual: { title: '19X15W LED Bee-Eye user manual', url: 'https://aolait.com/wp-content/uploads/2020/11/19X15W-Led-Bee-Eye-User-Manual.pdf', pages: '8 (printed 8/20)', sha256: '7a0906f76348e49b8fd7833927c7ac30cfc97019cd0b046d2ccf629a6386ef82', accessed: '2026-09-28' },
         assumed: 'ASSUMED from Aolait AL1019WR bee-eye manual p.8 — verify on the rental unit',
         fill: [
@@ -181,6 +187,8 @@ export const ASSUMED_PROFILES = {
     },
     'UP-PL5403': {
         equivalent: 'UPlus Lighting "IP PAR-54X3" (54 × 3 W RGBW, 25°, IP65)',
+        grade: 'STILL ASSUMED',
+        gradeWhy: 'searched 2026-09-29: the maker lists ONE mode, 8 channels (uplight.com.cn pd48298011, "8通道模式"), and publishes no order. The UPlus body differs (298×282×157 mm 5 kg vs 290×230×260 mm 5.9 kg / 310×310×330 mm 8 kg) — a generic RGBW-PAR stand-in only',
         manual: { title: '"IP PAR-54X3" user manual', url: 'https://www.upluslighting.com/wp-content/uploads/2024/01/IP-PAR-54X3.pdf', pages: '6', sha256: '66619bec1668b4424b2338520db23e7543ae5bccfcc537cebda0beb4be7243a6', accessed: '2026-09-29' },
         assumed: 'ASSUMED from UPlus IP PAR-54X3 manual p.6 — verify on the rental unit',
         fill: [
@@ -204,6 +212,8 @@ export const ASSUMED_PROFILES = {
     },
     'EXT-STROBE': {
         equivalent: 'Martin Atomic 3000 (its 4-channel mode is the Atomic 3000 LED\'s "Atomic 3000 compatible" mode)',
+        grade: 'STILL ASSUMED',
+        gradeWhy: 'no strobe is chosen yet (another supplier), and no Yerevan rental lists one (checked 2026-09-29): a planning type',
         manual: { title: 'Open Fixture Library: Martin Atomic 3000, "4-channel"', url: `https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/${OFL_COMMIT}/fixtures/martin/atomic-3000.json`, pages: 'mode "4-channel"', accessed: '2026-09-29', licence: 'MIT (Open Fixture Library)' },
         assumed: 'ASSUMED from Martin Atomic 3000 4-channel (Open Fixture Library) — verify on the rental unit',
         fill: ['flash rate 6–255 = 0.5–25 Hz and 0–5 = single flash, as OFL gives them; effects (ramps, random) drawn as a plain strobe'],
@@ -219,6 +229,8 @@ export const ASSUMED_PROFILES = {
     },
     'EXT-BLINDER': {
         equivalent: 'Chauvet Professional STRIKE 4',
+        grade: 'STILL ASSUMED',
+        gradeWhy: 'no blinder is chosen yet (another supplier), and no Yerevan rental lists one (checked 2026-09-29): a planning type',
         manual: { title: 'STRIKE 4 DMX chart', url: 'https://chauvetprofessional.com/wp-content/uploads/2015/07/Strike_4_DMX_EN_Rev1_WO.pdf', pages: '1', accessed: '2026-09-29' },
         assumed: 'ASSUMED from Chauvet STRIKE 4 DMX chart p.1 — verify on the rental unit',
         fill: ['strobe 11–132 "0–20 Hz (all pods)" drawn 1–20 Hz; 133–255 random macros drawn at 8 Hz'],
@@ -236,6 +248,8 @@ export const ASSUMED_PROFILES = {
     },
     'EXT-HAZER': {
         equivalent: 'Antari HZ-1000',
+        grade: 'STILL ASSUMED',
+        gradeWhy: 'no hazer is chosen yet (another supplier), and no Yerevan rental lists one (checked 2026-09-29): a planning type',
         manual: { title: 'HZ-1000 user manual', url: 'https://www.antari.com/usermanual/HZ/HZ-1000/HZ-1000.pdf', pages: '7 (printed 5)', accessed: '2026-09-29' },
         assumed: 'ASSUMED from Antari HZ-1000 manual p.7 — verify on the rental unit',
         fill: ['haze is not drawn in the room yet; the channels are patched so the desk can drive a real unit'],
@@ -249,6 +263,8 @@ export const ASSUMED_PROFILES = {
     },
     'UP-YZ31P': {
         equivalent: 'Antari Z-1500 III fog machine',
+        grade: 'STILL ASSUMED',
+        gradeWhy: 'UP-YZ31P is on neither maker site (2026-09-29); UPlight\'s own multi-angle smoke machines (UP-F1500D … 3000DL) are 2ch — candidates for the rental house to confirm, not an identification',
         manual: { title: 'Z-1500 III / Z-3000 III user manual', url: 'https://antari.com/wp-content/uploads/Z-1500lllC.pdf', pages: '8', sha256: '3df177a72b7a6d1f98d42dc882671f00b74d9dbdf335bbc45ee1f7e79819aa17', accessed: '2026-09-28' },
         assumed: 'ASSUMED from Antari Z-1500 III manual p.8 — verify on the rental unit',
         fill: ['fog is not drawn in the room'],
@@ -256,6 +272,8 @@ export const ASSUMED_PROFILES = {
     },
     'UP-Q108S': {
         equivalent: 'MagicFX PSYCO2JET (the collected MagicFX CO2jet II manual has no DMX table; same maker, same class)',
+        grade: 'STILL ASSUMED',
+        gradeWhy: 'UP-Q108S is on neither maker site (2026-09-29); UPlight\'s DMX CO2 column machines are UP-QZ150Y/QZ250Y/QZ12L/QZ18L (no channel count printed)',
         manual: { title: 'Open Fixture Library: MagicFX PSYCO2JET, "Raw"', url: `https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/${OFL_COMMIT}/fixtures/magicfx/psyco2jet.json`, pages: 'mode "Raw"', accessed: '2026-09-29', licence: 'MIT (Open Fixture Library)' },
         assumed: 'ASSUMED from MagicFX PSYCO2JET "Raw" (Open Fixture Library) — verify on the rental unit',
         fill: ['CO₂ is not drawn in the room; a static CO2jet II ignores the angle channel'],
@@ -263,6 +281,8 @@ export const ASSUMED_PROFILES = {
     },
     'UP-LA40WF': {
         equivalent: 'Laserworld CS-1000RGB (an RGB animation laser; the Blue Sea BLLO-RGB40 publishes no chart)',
+        grade: 'STILL ASSUMED',
+        gradeWhy: 'the unit is identified — UPlight\'s own page (uplight.com.cn pd48855201) names UP-LA40WF, DMX512/ILDA — but publishes no DMX mode or chart (checked 2026-09-29)',
         manual: { title: 'Open Fixture Library: Laserworld CS-1000RGB, "11-channel"', url: `https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/${OFL_COMMIT}/fixtures/laserworld/cs-1000rgb.json`, pages: 'mode "11-channel"', accessed: '2026-09-29', licence: 'MIT (Open Fixture Library)' },
         assumed: 'ASSUMED from Laserworld CS-1000RGB 11-channel (Open Fixture Library) — verify on the rental unit',
         fill: ['the laser is not drawn in the room; laser safety (IEC 60825-1, audience scanning) is a separate sign-off'],
@@ -287,6 +307,8 @@ export const assumedModesOf = (code) => {
         channels: m.channels.map((c) => ({ ...c })),
         channelsSource: {
             basis: 'ASSUMED',
+            grade: entry.grade || 'STILL ASSUMED',
+            gradeWhy: entry.gradeWhy || null,
             fixture: entry.equivalent,
             url: entry.manual.url,
             title: entry.manual.title,

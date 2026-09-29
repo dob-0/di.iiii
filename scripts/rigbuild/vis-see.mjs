@@ -5,7 +5,7 @@
  *
  *   flock <lock> node scripts/rigbuild/vis-see.mjs --base https://local.thedi.studio \
  *       --space moxir --project moxir-hall-minimal --out ~/Downloads/moxir-visualiser \
- *       [--trials 60] [--artnet] [--frames] [--video] [--window 1600x900]
+ *       [--trials 60] [--artnet] [--frames] [--cues] [--video] [--window 1600x900]
  *
  * What it measures (the latency harness):
  *   API     a DMX channel moved through the desk's own API (POST /light/api/raw — what a
@@ -18,11 +18,16 @@
  *           the packet is handed to the OS, t1 = the drawn frame on the epoch clock
  *           (performance.timeOrigin + now) — same machine, same clock. Input is switched
  *           OFF again at the end, even on failure.
+ * --cues (RIG_BUILD.md §19): the show's own cues fired one by one on the desk (the runner
+ * stopped first, restarted from cue 1 at the end); after each fade, what the room DRAWS from
+ * the desk's DMX (every driven lamp's fixture #, level, colour, strobe) is written to the
+ * report and the split page is shot — the proof that a re-patch still plays the show.
+ * `--trials 0` skips the latency trials.
  * Both alternate a pan channel between two values so each trial is a change. p50/p95 are
  * nearest-rank over the trials. Frames: pan sweep, colour wheel, strobe, (Art-Net sweep).
  *
  * Refuses to run on anything but the NVIDIA GPU (SwiftShader froze this machine), waits
- * while the CPU package is over 85 °C. Output of the desk is never touched.
+ * while the CPU package is over 84 °C. Output of the desk is never touched.
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -43,7 +48,7 @@ const [W, H] = String(arg('window', '1600x900')).split('x').map(Number)
 fs.mkdirSync(out, { recursive: true })
 
 const pkg = () => { try { const m = execSync('sensors').toString().match(/Package id 0:\s+\+([\d.]+)/); return m ? Number(m[1]) : 0 } catch { return 0 } }
-const cool = async () => { for (;;) { const c = pkg(); if (c <= 85) return c; console.log(`  waiting: package ${c} °C`); await new Promise((r) => setTimeout(r, 10000)) } }
+const cool = async () => { for (;;) { const c = pkg(); if (c <= 84) return c; console.log(`  waiting: package ${c} °C`); await new Promise((r) => setTimeout(r, 10000)) } }
 const pct = (list, p) => { const s = [...list].sort((a, b) => a - b); return s.length ? s[Math.min(s.length - 1, Math.ceil((p / 100) * s.length) - 1)] : null }
 const round1 = (v) => Math.round(v * 10) / 10
 const desk = async (route, body) => {
@@ -175,6 +180,30 @@ try {
         }
         for (let k = 0; k < 6; k++) { await page.screenshot({ path: path.join(out, `${String(n++).padStart(2, '0')}-strobe-${k}.png`) }); await page.waitForTimeout(37) }
         await desk('/api/raw', { clear: true })
+    }
+
+    // ---- the show's cues through the patch -----------------------------------------
+    if (arg('cues')) {
+        const list = (await desk('/api/cues')).cues?.list || []
+        await desk('/api/raw', { clear: true })
+        await desk('/api/cues/stop', {})
+        report.showStopped = true
+        report.cues = []
+        for (let i = 0; i < list.length; i++) {
+            const cue = list[i]
+            await desk('/api/cues/go', { index: i })
+            await page.waitForTimeout(Math.round((Number(cue.fade) || 0) * 1000) + 1500)
+            const drawn = await room.evaluate(() => window.__diVis.driven())
+            const lit = drawn.filter((d) => (d.level ?? 0) > 0.01)
+            const row = {
+                cue: cue.name, look: cue.lookId, driven: drawn.length, lit: lit.length,
+                byType: lit.reduce((m, d) => { m[d.type] = (m[d.type] || 0) + 1; return m }, {}),
+                sample: lit.slice(0, 40).map((d) => `#${d.index} ${d.type} L${Math.round((d.level ?? 0) * 100)}${d.colour ? ` ${d.colour}` : ''}${d.strobeHz ? ` ${d.strobeHz}Hz` : ''}`)
+            }
+            report.cues.push(row)
+            console.log(`cue ${i + 1} ${cue.name}: ${row.driven} lamps drawn from DMX, ${row.lit} lit`, row.byType)
+            await page.screenshot({ path: path.join(out, `cue-${String(i + 1).padStart(2, '0')}-${String(cue.lookId || i).replace(/[^a-z0-9-]/gi, '')}.png`) })
+        }
     }
 
     // ---- Art-Net in: a console on loopback ----------------------------------------

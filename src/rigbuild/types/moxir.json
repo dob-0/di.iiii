@@ -345,6 +345,8 @@
           ],
           "channelsSource": {
             "basis": "ASSUMED",
+            "grade": "STILL ASSUMED",
+            "gradeWhy": "searched 2026-09-29 (maker sites pro-uplight.com + uplight.com.cn, 2 made-in-china listings and their 10 description images, OFL, QLC+): no chart for UP-B380F anywhere. The UPlus body differs (finned head vs smooth drum, display on the arm vs the base, 424×367×725 mm 27 kg vs 460×310×690 mm 23 kg, 400 vs 450/500 W) — only the 16-channel count and 540°/270° match. The maker lists ONE mode, 16ch (uplight.com.cn pd45714311)",
             "fixture": "UPlus Lighting \"380 IP BEAM\" (IP65, 371 W Osram lamp, 2°, pan 540° / tilt 270° 16-bit)",
             "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/380-IP-BAEM.pdf",
             "title": "\"380 IP BEAM\" user manual",
@@ -369,7 +371,8 @@
       "power_w": {
         "value": 500,
         "src": "A",
-        "basis": "EXACT"
+        "basis": "EXACT",
+        "note": "A-CN gives rated 450 W; the higher figure (A) is kept for power planning"
       },
       "weight_kg": {
         "value": 23,
@@ -428,6 +431,10 @@
         "A": {
           "url": "https://up-light.en.made-in-china.com/product/qdrawUbcCMAf/China-IP65-380W-Waterproof-DJ-Light-Beam-Moving-Head-for-Outdoor-Events.html",
           "what": "UPlight UP-B380F, maker's store page"
+        },
+        "A-CN": {
+          "url": "https://www.uplight.com.cn/pd45714311.html",
+          "what": "UPlight UP-B380F on the maker's Chinese site (广州灯王舞台设备有限公司, brand UPLIGHT; linked from pro-uplight.com's language menu) — specs text, no DMX chart; checked 2026-09-29"
         },
         "A2": {
           "url": "https://up-light.en.made-in-china.com/product/dtgUzuHYYSWP/China-380W-IP65-Moving-Head-Light-3-in-1-Disco-Lights-Moving-Head-for-Stage.html",
@@ -751,6 +758,8 @@
           ],
           "channelsSource": {
             "basis": "ASSUMED",
+            "grade": "STILL ASSUMED",
+            "gradeWhy": "searched 2026-09-29 (all 11 UP-250BSW listings, 125 description images, both maker sites, QLC+, OFL, Google): no 24ch or 30ch chart anywhere. The Aolait unit is a DIFFERENT fixture (no LED ring, other base and yoke, 17/20ch) — kept only so the desk can test; never patch the rental unit by it",
             "fixture": "Aolait \"250W LED 3IN1 BSW Moving Head Light\" (250 W white LED, pan 540° / tilt 270° + fine, 3-facet prism)",
             "url": "https://aolait.com/wp-content/uploads/2020/11/250W-LED-SPOT-Moving-Head-Light-user-manual.pdf",
             "title": "250W LED SPOT moving head user manual",
@@ -1039,6 +1048,8 @@
           ],
           "channelsSource": {
             "basis": "ASSUMED",
+            "grade": "EQUIVALENT",
+            "gradeWhy": "same OEM body (the Clay Paky B-EYE K10 clone): the Aolait manual lists exactly the 21/23/35/78/92/97/99 modes UPlight's own listings give, calls the fixture \"HAWKEYE II\" (UPlight sells \"Hawk Eye\"), and its drawings match UPlight's photos (19 hex lenses, cross of 4 keys on a mono LCD, powerCON in/out, 3-pin DMX). Differs: tilt 270° vs UPlight's 230°, 450 vs 350 W. Researched 2026-09-29",
             "fixture": "Aolait AL1019WR \"19x15W Bee-Eye LED Beam Wash Zoom\" (19 × 15 W RGBW, zoom 4°–60°)",
             "url": "https://aolait.com/wp-content/uploads/2020/11/19X15W-Led-Bee-Eye-User-Manual.pdf",
             "title": "19X15W LED Bee-Eye user manual",
@@ -1154,13 +1165,21 @@
       "id": "up-pl5403",
       "code": "UP-PL5403",
       "identified": "EXACT",
-      "identifiedNote": "EXACT (power and DMX not published)",
+      "identifiedNote": "EXACT",
       "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
       "model": "UP-PL5403",
       "modelledOn": null,
       "product": "UPlight UP-PL5403, IP65 54 x 3 W RGBW LED PAR",
       "category": "par",
       "modes": [
+        {
+          "name": "8ch",
+          "footprint": 8,
+          "channels": null,
+          "channelsSource": null,
+          "src": "D-CN",
+          "basis": "EXACT"
+        },
         {
           "name": "8ch-assumed",
           "footprint": 8,
@@ -1219,6 +1238,8 @@
           ],
           "channelsSource": {
             "basis": "ASSUMED",
+            "grade": "STILL ASSUMED",
+            "gradeWhy": "searched 2026-09-29: the maker lists ONE mode, 8 channels (uplight.com.cn pd48298011, \"8通道模式\"), and publishes no order. The UPlus body differs (298×282×157 mm 5 kg vs 290×230×260 mm 5.9 kg / 310×310×330 mm 8 kg) — a generic RGBW-PAR stand-in only",
             "fixture": "UPlus Lighting \"IP PAR-54X3\" (54 × 3 W RGBW, 25°, IP65)",
             "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/IP-PAR-54X3.pdf",
             "title": "\"IP PAR-54X3\" user manual",
@@ -1258,6 +1279,8 @@
           ],
           "channelsSource": {
             "basis": "ASSUMED",
+            "grade": "STILL ASSUMED",
+            "gradeWhy": "searched 2026-09-29: the maker lists ONE mode, 8 channels (uplight.com.cn pd48298011, \"8通道模式\"), and publishes no order. The UPlus body differs (298×282×157 mm 5 kg vs 290×230×260 mm 5.9 kg / 310×310×330 mm 8 kg) — a generic RGBW-PAR stand-in only",
             "fixture": "UPlus Lighting \"IP PAR-54X3\" (54 × 3 W RGBW, 25°, IP65)",
             "url": "https://www.upluslighting.com/wp-content/uploads/2024/01/IP-PAR-54X3.pdf",
             "title": "\"IP PAR-54X3\" user manual",
@@ -1274,14 +1297,14 @@
           "basis": "ASSUMED"
         }
       ],
-      "defaultMode": null,
-      "modesOwed": true,
+      "defaultMode": "8ch",
+      "modesOwed": false,
       "assumedMode": "8ch-assumed",
       "power_w": {
         "value": 162,
-        "src": null,
-        "basis": "ASSUMED",
-        "note": "not published; 54 x 3 W of LEDs"
+        "src": "D-CN",
+        "basis": "EXACT",
+        "note": "rated 162 W; supply power 200 W; switch-mode supply with PFC, PF > 0.99"
       },
       "weight_kg": {
         "value": 8,
@@ -1295,13 +1318,15 @@
           330
         ],
         "src": "D",
-        "basis": "EXACT"
+        "basis": "EXACT",
+        "note": "D-CN gives 290 x 230 x 260 mm, 5.9 kg (the English page 310 x 310 x 330, 8 kg) — the rental unit decides"
       },
       "pan_tilt_deg": null,
       "ip": {
         "value": "IP65",
         "src": "D",
-        "basis": "EXACT"
+        "basis": "EXACT",
+        "note": "D-CN also IP65"
       },
       "optics": {
         "beam_deg": 15,
@@ -1335,6 +1360,10 @@
         "D": {
           "url": "https://www.pro-uplight.com/Waterproof-Par-Light-UP-PL5403-pd42953371.html",
           "what": "UPlight UP-PL5403, maker's site"
+        },
+        "D-CN": {
+          "url": "https://www.uplight.com.cn/pd48298011.html",
+          "what": "UPlight UP-PL5403 on the maker's Chinese site — specs text, no DMX chart; checked 2026-09-29"
         }
       },
       "manifest": {
@@ -1347,12 +1376,12 @@
     {
       "id": "up-la40wf",
       "code": "UP-LA40WF",
-      "identified": "EQUIVALENT",
-      "identifiedNote": "NOT FOUND — modelled on an EQUIVALENT",
-      "maker": null,
-      "model": null,
-      "modelledOn": "Blue Sea BLLO-RGB40, 40 W RGB animation laser, IP65",
-      "product": "equivalent: Blue Sea BLLO-RGB40, 40 W RGB animation laser, IP65",
+      "identified": "EXACT",
+      "identifiedNote": "EXACT (identity and optics from the maker's page LA-CN; body size/weight and DMX from an EQUIVALENT)",
+      "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+      "model": "UP-LA40WF",
+      "modelledOn": null,
+      "product": "UPlight UP-LA40WF, 40 W full-colour laser (R 10 W 638 nm, G 15 W 520 nm, B 16 W 445 nm, Nichia; ILDA, DMX512, SD card)",
       "category": "laser",
       "modes": [
         {
@@ -1406,6 +1435,8 @@
           ],
           "channelsSource": {
             "basis": "ASSUMED",
+            "grade": "STILL ASSUMED",
+            "gradeWhy": "the unit is identified — UPlight's own page (uplight.com.cn pd48855201) names UP-LA40WF, DMX512/ILDA — but publishes no DMX mode or chart (checked 2026-09-29)",
             "fixture": "Laserworld CS-1000RGB (an RGB animation laser; the Blue Sea BLLO-RGB40 publishes no chart)",
             "url": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/4992b86027ee3cba19644bc7417435a68c8cdcb5/fixtures/laserworld/cs-1000rgb.json",
             "title": "Open Fixture Library: Laserworld CS-1000RGB, \"11-channel\"",
@@ -1478,6 +1509,10 @@
         "BLUESEA": {
           "url": "https://www.bluesealighting.com/waterproof-40w-rgb-animation-laser-light.html",
           "what": "Blue Sea BLLO-RGB40, 40 W RGB IP65 laser — equivalent for UP-LA40WF"
+        },
+        "LA-CN": {
+          "url": "https://www.uplight.com.cn/pd48855201.html",
+          "what": "UPlight UP-LA40WF '40瓦防水全彩激光灯' on the maker's Chinese site — model field UP-LA40WF; specs text, no DMX chart; checked 2026-09-29"
         }
       },
       "manifest": {
@@ -1518,6 +1553,8 @@
           ],
           "channelsSource": {
             "basis": "ASSUMED",
+            "grade": "STILL ASSUMED",
+            "gradeWhy": "UP-Q108S is on neither maker site (2026-09-29); UPlight's DMX CO2 column machines are UP-QZ150Y/QZ250Y/QZ12L/QZ18L (no channel count printed)",
             "fixture": "MagicFX PSYCO2JET (the collected MagicFX CO2jet II manual has no DMX table; same maker, same class)",
             "url": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/4992b86027ee3cba19644bc7417435a68c8cdcb5/fixtures/magicfx/psyco2jet.json",
             "title": "Open Fixture Library: MagicFX PSYCO2JET, \"Raw\"",
@@ -1724,6 +1761,8 @@
           ],
           "channelsSource": {
             "basis": "ASSUMED",
+            "grade": "STILL ASSUMED",
+            "gradeWhy": "UP-YZ31P is on neither maker site (2026-09-29); UPlight's own multi-angle smoke machines (UP-F1500D … 3000DL) are 2ch — candidates for the rental house to confirm, not an identification",
             "fixture": "Antari Z-1500 III fog machine",
             "url": "https://antari.com/wp-content/uploads/Z-1500lllC.pdf",
             "title": "Z-1500 III / Z-3000 III user manual",
@@ -1875,6 +1914,8 @@
           ],
           "channelsSource": {
             "basis": "ASSUMED",
+            "grade": "STILL ASSUMED",
+            "gradeWhy": "no strobe is chosen yet (another supplier), and no Yerevan rental lists one (checked 2026-09-29): a planning type",
             "fixture": "Martin Atomic 3000 (its 4-channel mode is the Atomic 3000 LED's \"Atomic 3000 compatible\" mode)",
             "url": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/4992b86027ee3cba19644bc7417435a68c8cdcb5/fixtures/martin/atomic-3000.json",
             "title": "Open Fixture Library: Martin Atomic 3000, \"4-channel\"",
@@ -2047,6 +2088,8 @@
           ],
           "channelsSource": {
             "basis": "ASSUMED",
+            "grade": "STILL ASSUMED",
+            "gradeWhy": "no blinder is chosen yet (another supplier), and no Yerevan rental lists one (checked 2026-09-29): a planning type",
             "fixture": "Chauvet Professional STRIKE 4",
             "url": "https://chauvetprofessional.com/wp-content/uploads/2015/07/Strike_4_DMX_EN_Rev1_WO.pdf",
             "title": "STRIKE 4 DMX chart",
@@ -2071,6 +2114,8 @@
           ],
           "channelsSource": {
             "basis": "ASSUMED",
+            "grade": "STILL ASSUMED",
+            "gradeWhy": "no blinder is chosen yet (another supplier), and no Yerevan rental lists one (checked 2026-09-29): a planning type",
             "fixture": "Chauvet Professional STRIKE 4",
             "url": "https://chauvetprofessional.com/wp-content/uploads/2015/07/Strike_4_DMX_EN_Rev1_WO.pdf",
             "title": "STRIKE 4 DMX chart",
@@ -2188,6 +2233,8 @@
           ],
           "channelsSource": {
             "basis": "ASSUMED",
+            "grade": "STILL ASSUMED",
+            "gradeWhy": "no hazer is chosen yet (another supplier), and no Yerevan rental lists one (checked 2026-09-29): a planning type",
             "fixture": "Antari HZ-1000",
             "url": "https://www.antari.com/usermanual/HZ/HZ-1000/HZ-1000.pdf",
             "title": "HZ-1000 user manual",
