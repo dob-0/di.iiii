@@ -28,8 +28,9 @@ export const report = async ({ out, hallFile = null, only = null }) => {
     const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
     const baseLibrary = loadLibrary()
     const all = []
-    // `only`: the version ids to report (a comparison variant alone, say); default the set's three
-    for (const v of allVersions(spec).filter((x) => (only ? only.includes(x.id) : spec.versions.includes(x)))) {
+    // `only`: the version ids to report (a comparison variant alone, say); default every version,
+    // variant and candidate (the halo's report used --only; the X's report took them all)
+    for (const v of allVersions(spec).filter((x) => (only ? only.includes(x.id) : true))) {
         const rig = readJson(path.join(REPO_ROOT, rigFileOf(spec.set, v.id)))
         const { rentalList: list } = readJson(path.join(REPO_ROOT, rentalFileOf(spec.set, v.id)))
         const library = libraryWithShow(baseLibrary, list)

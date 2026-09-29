@@ -107,10 +107,10 @@ describe('the version files', () => {
     })
 })
 
-// the set's three AND its comparison variants (§15.8) pass the same safety tests
+// the set's own, its comparison variants (§15.9) and its candidates (§15.10) pass the same safety tests
 for (const v of allVersions(spec)) {
     describe(`${v.id}: the safety tests, in every look`, () => {
-        const rig = read(rigFileOf(spec.set, v.id))
+        const rig = rigs[v.id] || read(rigFileOf(spec.set, v.id))
         const stage = stageFrame(rig, hall)
         for (const look of Object.keys(rig.looks)) {
             const built = buildRig(rig, hall, { geometry, manifest, look })

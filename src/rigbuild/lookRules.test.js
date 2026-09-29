@@ -15,7 +15,7 @@ const slots = [
     { pos: [2.5, 6.8, 5.1], orient: 'hung' },
     { pos: [0, 0, 3.95], orient: 'floor' }
 ]
-const params = { spread_deg: 40, lean_deg: 6, in_deg: 8, x: 3, y: 9, a: 12, side_deg: 5, r: 1.3, h: 3.1, elev_deg: -24, to_audience: 0.55 }
+const params = { spread_deg: 40, lean_deg: 6, in_deg: 8, x: 3, y: 9, a: 12, side_deg: 5, r: 1.3, h: 3.1, elev_deg: -24, to_audience: 0.55, rise_deg: 40, inner_rise_deg: 12, x_rise_deg: -10 }
 // `backdrop` needs something standing behind the stage. The script only ever calls it with
 // one (its stage builder sets `stage.backdrop` from hall.json's massing ids, and its
 // `backdrop-floor` mount throws without it), so the two copies are compared against MOXIR's
@@ -24,8 +24,8 @@ const press = { id: 'press', x_m: [-2, 3.5], y_m: [0, 3.2], z_m: [0, 3.2] }
 const ctxWithBackdrop = { ...ctx, stage: { ...ctx.stage, backdrop: { ids: ['press'], x: [-2, 3.5], face: 3.2, boxes: [press] } } }
 // 'bridge-underside' grazes the crane bridge over the stage: both copies read it from ctx.stage.crane.
 const ctxWithCrane = { ...ctx, stage: { ...ctx.stage, crane: { z_m: 4.8, girder_bottom_m: 8.15 } } }
-// the halo's 'radial' reads the bridge too (the halo's centre is under it); 'ring' and 'dj-point' the stage alone
-const ctxFor = (name) => (name === 'backdrop' ? ctxWithBackdrop : ['bridge-underside', 'radial'].includes(name) ? ctxWithCrane : ctx)
+// the halo's 'radial' and the X's 'along-arm' read the bridge too; 'ring' and 'dj-point' the stage alone
+const ctxFor = (name) => (name === 'backdrop' ? ctxWithBackdrop : ['bridge-underside', 'radial', 'along-arm'].includes(name) ? ctxWithCrane : ctx)
 
 describe('look rules — the rig script\'s, ported', () => {
     const shared = Object.keys(SCRIPT_RULES).filter((k) => AIM_RULES[k])
@@ -46,6 +46,20 @@ describe('look rules — the rig script\'s, ported', () => {
             }
         })
     }
+    it('along-arm: the X lying down — each end out along its own arm, the crossing straight up', () => {
+        const at = (pos) => AIM_RULES['along-arm']({ pos, orient: 'floor' }, { rank: 0, n: 1 }, ctxWithCrane, { rise_deg: 30, inner_rise_deg: 60, x_rise_deg: -10 })
+        const crowd = at([0, 6.6, 4.8 + 2.25]).dir
+        expect(crowd[0]).toBeCloseTo(0, 9)
+        expect(crowd[1]).toBeCloseTo(Math.sin(30 * Math.PI / 180), 9) // an end rises rise_deg
+        expect(crowd[2]).toBeGreaterThan(0) // out over the crowd
+        const back = at([0, 6.6, 4.8 - 2.25]).dir
+        expect(back[2]).toBeLessThan(0)
+        expect(at([0, 6.6, 4.8 + 1.25]).dir[1]).toBeCloseTo(Math.sin(60 * Math.PI / 180), 9) // inner
+        const left = at([-2.25, 6.6, 4.8]).dir
+        expect(left[0]).toBeLessThan(0)
+        expect(left[1]).toBeCloseTo(Math.sin(-10 * Math.PI / 180), 9) // the bridge arm's own
+        expect(at([0, 6.6, 4.8]).dir).toEqual([0, 1, 0]) // on the crossing: straight up
+    })
     it('backdrop with nothing behind the stage aims at the stage wall (the port only; the script never asks)', () => {
         const { target } = AIM_RULES.backdrop({ pos: [0, 0, 5], orient: 'floor' }, { rank: 0, n: 1 }, ctx, {})
         expect(target).toEqual([0, 3 * 0.6, ctx.stage.wall])

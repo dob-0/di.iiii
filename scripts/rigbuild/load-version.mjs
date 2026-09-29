@@ -14,7 +14,8 @@
  *   … --version minimal --mark               # write only which version this project (and the hall's own) is
  *   … --version minimal-halo --hall-from moxir-hall-minimal   # a comparison VARIANT (versions file `variants`):
  *                                            # the hall copied (read only) from the project named; no other
- *                                            # project is written (§15.8)
+ *                                            # project is written (§15.9)
+ *   … --version minimal-xflat --no-mark-from # a CANDIDATE (versions file `candidates`), the hall's project untouched
  *
  * A version is a PROJECT (moxir-hall-minimal, -middle, -full), not a field inside one:
  * each has its own lamps, equipment list, patch, looks and desk, so the plot, the cards,
@@ -58,16 +59,21 @@ const readTokenFile = (file) => {
 /** The set as the switch reads it: every version, in order, with the project it lives in. */
 export const variantOf = (spec, id, hallProject) => {
     const v = id === spec.ordered?.id ? spec.ordered : findVersion(spec, id)
+    if (!v) throw new Error(`no version, variant or candidate "${id}" in ${VERSIONS_FILE}`)
     const variant = (spec.variants || []).some((x) => x.id === id)
+    // A candidate (versions file `candidates`) lists the set AND the candidates of its own version
+    // after it, so its switch reaches what it is compared with; the three versions' own marks
+    // are unchanged (they list the set only).
+    const cands = v.candidateOf ? (spec.candidates || []).filter((c) => c.candidateOf === v.candidateOf) : []
     return {
         set: spec.set, id, title: v.title, summary: v.summary,
         source: `${VERSIONS_FILE} — scripts/rigbuild/load-version.mjs`,
         siblings: [
             // the hall's own project, the rig as ordered, first: what the versions are compared to
             ...(spec.ordered ? [{ id: spec.ordered.id, projectId: hallProject, title: spec.ordered.title, summary: spec.ordered.summary }] : []),
-            ...spec.versions.map((s) => ({ id: s.id, projectId: projectOf(hallProject, s.id), title: s.title, summary: s.summary })),
+            ...[...spec.versions, ...cands].map((s) => ({ id: s.id, projectId: projectOf(hallProject, s.id), title: s.title, summary: s.summary })),
             // a comparison variant lists itself after the set; the set's own projects are not
-            // rewritten to list it (RIG_BUILD.md §15.8 — a variant never writes its siblings)
+            // rewritten to list it (RIG_BUILD.md §15.9 — a variant never writes its siblings)
             ...(variant ? [{ id, projectId: projectOf(hallProject, id), title: v.title, summary: v.summary }] : [])
         ]
     }
@@ -141,7 +147,7 @@ const main = async () => {
         if (!doc.ok) die(`reading ${project}: ${doc.status}`)
         await send(variantOps(doc.body.document.entities, variantOf(spec, id, from)), 'the version mark')
         say(`${project}: marked "${id}" in the set`)
-        if (!isVariant(spec, id)) await markFrom()
+        if (!isVariant(spec, id) && !args['no-mark-from']) await markFrom()
         return
     }
 
@@ -236,9 +242,10 @@ const main = async () => {
     washFor(rig.defaultLook)
 
     // 6. the hall's own project joins the set as "as ordered", so the switch shows on it too —
-    // not for a comparison variant, which writes no project but its own
+    // not for a comparison variant, which writes no project but its own, nor with --no-mark-from
+    // (a candidate built beside the set leaves the hall's project untouched)
     if (isVariant(spec, id)) say(`${project}: a comparison variant — ${from} and the set's projects are left as they are`)
-    else await markFrom()
+    else if (!args['no-mark-from']) await markFrom()
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {

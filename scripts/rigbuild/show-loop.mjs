@@ -12,6 +12,9 @@
  *       # and, when the show says `source: 'clock'`, mappingState.showSource 'clock' — no call to
  *       # the desk at all (a comparison version the desk does not carry, RIG_BUILD.md §15.8).
  *       # Start its clock with show-clock.mjs --epoch now.
+ *   node scripts/rigbuild/show-loop.mjs … --show <file> --doc-only   # step 1 only: the document's cue list
+ *                                                    # and loop, the desk never asked — a project whose show
+ *                                                    # plays by the document's clock (RIG_BUILD §16)
  *
  * What it does, in order — the same things the cards page does by hand:
  *   1. the document: the project's cue list (mappingState.cues) replaced by the show's cues
@@ -114,6 +117,13 @@ const main = async () => {
     const missing = show.cues.filter((c) => !looks.looks.some((l) => l.id === c.look)).map((c) => c.look)
     if (missing.length) die(`${project} has no look ${missing.join(', ')}`)
 
+    if (args['doc-only']) {
+        const cues = showCues(show)
+        const wrote = await client.post(`/api/projects/${project}/ops`, { baseVersion: doc.body.version, ops: cueOps(document, cues, show.loop !== false).map((op, i) => ({ ...op, opId: `show-loop-${Date.now()}-${i}`, clientId: 'show-loop' })) })
+        if (!wrote.ok) die(`writing the cue list: ${wrote.status} ${wrote.text.slice(0, 300)}`)
+        say(`${project}: ${cues.length} cues, loop ${show.loop !== false ? 'on' : 'off'}, one loop ${cues.reduce((s, c) => s + c.hold, 0)} s — document only (version ${wrote.body.newVersion}); the desk was not asked`)
+        return
+    }
     if (!documentOnly) {
         const where = await desk.get('/api/show')
         const space = document.projectMeta?.spaceId

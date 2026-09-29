@@ -1384,6 +1384,101 @@ publishes none: drawn with a hand-set intensity, labelled ASSUMED) and channel o
 (0.4.16-rigbuilder.9) predates `showSource`, the named halo positions and the COB body — until a preview with
 this change is installed, the halo rooms there show the look written into the document (no clock) and the
 COBs have no body.
+### 15.10 Candidates — the X lying down, simple and with heads (2026-09-29)
+
+Owner, on the sketches "ten truss versions" (`~/Downloads/moxir-crane-rig/ten-truss.html`), option 2:
+two 5 m arms of truss crossing FLAT under the crane bridge over the DJ, one arm out over the crowd.
+Then: *the first version of each design is simple — no moving heads, only the rental house's fixed
+lights* (UP-PL5403 stock 50, UP-COB200 stock 8; the house has no strobes). Both are built beside
+Minimal for him to compare, as **candidates**.
+
+**A candidate is not a version (decision).** The versions file gains `candidates`: a variant of one
+version (`candidateOf`), with its own groups, truss and look overrides (title, intent, per-group
+aims/colours/levels on top of the set's looks). `versions.mjs` generates its rig file and equipment
+list like a version's; `versions.test.js`'s safety tests run on it (nothing refused, no beam into the
+crane or through the DJ, head travel, ≤ 8 real lights, mirror symmetry); the set's own tests (three
+versions, minimal < middle < full, the palette, the cost) do not. Its project is `moxir-hall-<id>`;
+`load-version.mjs --no-mark-from` leaves the hall's own project alone; its rigVariant lists the set
+and the candidates of its version, so its switch reaches what it is compared with, while the three
+versions' marks stay as they were. Considered and not chosen: a fourth version (the set's switch and
+tests are about three, and every candidate would have touched every version's project).
+
+| candidate | project | what hangs on the X |
+|---|---|---|
+| `minimal-xflat` "Minimal · X lying down" — the simple one | `moxir-hall-minimal-xflat` | 12 UP-PL5403 under the arms (3 a half-arm), focused down and 20° out along their arm: in haze, four blades; 4 UP-COB200 under the ends, 35° under the horizon out along their arm: the hits; Minimal's 4 red PARs grazing the bridge. Floor: Minimal's column and press PARs; its column-base beams and pit strobes are not in the simple one. |
+| `minimal-xflat-heads` "… · heads" | `moxir-hall-minimal-xflat-heads` | 7 UP-B380F standing on the arms (the 4 ends, x ±1.25, z +1.75), 2 strobes under the bridge arm's ends, the 4 red PARs. Floor as Minimal. |
+
+**The truss (`truss.kind: 'crane-x'`, rig-lib).** Two arms of `arm_m` crossing at a 4-way flat
+junction under the bridge's centre line (z 4.8) on the axis: one along the bridge (x), one across it
+(z), its crowd end 1.05 m past the audience girder's outer face. Each arm = 2 m + the junction's 1 m +
+2 m (Global Truss F34: 4 × SQ-4112 2.0 m at 13.17 kg, 1 × SQ-4133 4-way cross junction at 10.44 kg —
+maker's pages fetched 2026-09-29; the junction's leg length is not published, 0.5 m ESTIMATE). One
+system for the whole X: H30V is the same class and does not couple to F34. Mounts `x-top`/`x-under`
+put lamps at `at_m` [[dx, dz]] from the crossing, on the half-arms' clamp points, so view C's derived
+slots find them (MOUNT_POSITION: truss-top / truss). load-plot lays the four half-arms as stock runs;
+the junction stays the rig's box.
+
+**How it hangs — nothing away from the bridge.** The crowd arm crosses under BOTH girders, so it is
+picked right under each (a two-leg bridle along that girder, legs 1.5 m apart); its ends cantilever
+1.4 m. The bridge arm runs in the 1.5 m gap between the girders and is picked at x ±1.5 by a bridle
+whose legs reach one girder each (2.2 m apart); its ends cantilever 1.0 m. Every bridle has 90°
+between its legs. Four climbing D8+ chain hoists (Chainmaster D8Plus 500 kg class: ≈ 20 kg with its
+suspension plate and hook tackle, chain 0.59 kg/m — maker's datasheet) sit on the top chord, their
+chains up to the bridles' apexes; a safety steel each. So the 45° rotation the brief allowed for was
+not needed: the arm over the crowd is reachable from the bridge.
+
+**The trim is the shortest drop the rigging allows.** Girder bottom 8.15 m (the model's; rail 7.6 m,
+disputed 6.6–8.4) − the wide bridle's apex 1.1 m − the hoist's hook-to-plate minimum ≈ 0.50 m (read
+from the Chainmaster dimension sheet) − 0.10 m of shackles = top chord 6.45 m → bottom chord
+**6.15 m**. At the low rail estimate every height drops by 1.0 m: bottom chord ≈ 5.15 m, under the
+press crown (5.6 m), 0.1 m clear of it in plan — the girder bottom must be measured before the trim
+is set.
+
+**Sway (the owner's concern: moving heads may swing a chain-hung truss).** Hung on plain chains the
+X is a pendulum: L 1.5–1.9 m from the girder flange to the hung mass's centre, T = 2π√(L/g) =
+**2.5–2.8 s**. The bridles make each pick a V: the bridge arm's Vs span z, the crowd arm's span x, so
+the rigid X cannot translate either way without stretching a leg. Two restraint steels at every arm
+end, up to the girders and spread in plan, stop it turning (to the crane, not the floor: the crowd end
+hangs over people). What is left is the give of wire and slings. The rig file's `truss.motion` rules,
+for the heads candidate: no full-range pan/tilt faster than 4 s; no periodic movement with a period
+of 1.7–4 s (0.7× to 1.5× the pendulum's); cue fades that move heads ≥ 4 s (its show file); the crane
+locked out. The simple candidate has no moving heads, so nothing on it pushes.
+
+**Loads (static, before dynamic factors; the rig file's `truss.rigging.load`).** Simple: lamps
+16 × 8 kg + 4 × 5.1 kg = 148.4 kg, truss 63.1 kg, +10 % of the lamps for clamps/bonds/cable (ESTIMATE)
+→ 227 kg on the X; + 4 hoists 80 kg, chain 23.6 kg (10 m a hoist, ESTIMATE), hardware 6 kg a point
+(ESTIMATE) → **355 kg on the crane**; 89 kg a point if even, **178 kg a point design case** (a stiff X
+on 4 points is statically indeterminate until load cells level it: any point may take half), a bridle
+leg 126 kg. Heads: lamps 208.6 kg → 293 kg on the X, 421 kg on the crane, 211 kg a point design case,
+149 kg a leg. The cantilevers (1.0 / 1.4 m) are outside what the maker's span tables cover.
+**Rigging sign-off owed (crane rated load, lock-out, hoists + safety steels).**
+
+**Looks.** The same five cue ids as Minimal, so a desk that plays Minimal's loop names the same moment
+in each room. Simple (fixed focus: a test holds every lamp's pose equal in all five looks; colour and
+level only): One blade (only the crowd arm's blade) · The sign (blades 60 %, the bridge a red frame,
+columns and press low red) · Red room · Four blades · Hit (the 4 COBs; their own 1–25 Hz strobe on
+the desk). Heads: Blackout + the cross (the bridge arm's two end beams cross at 4.8 m, 1.6 m over the
+DJ's head, landing in the pit — never through the DJ) · The sign (all seven lie along the arms: the
+bridge arm's at −10°, under the crane's cab, the crowd arm's +8°) · Red room · Four rays (the 4 ends
+at 40°) · Strobe hit. New aim rule `along-arm` (both copies, `lookRules.test.js` holds them equal)
+and aim parameters `solo_mask` (bit r = rank r lit) and `rest_up` — numbers, because the document's
+schema keeps only numeric aim parameters. The shows (`scripts/rigbuild/shows/moxir-xflat*.json`) go
+into the document only (`show-loop.mjs --doc-only`) with a show clock (§16): the desk is never asked.
+
+**The UP-COB200** joins the fixture manifest (kind `cob`, the PAR archetype drawn to the maker's
+295 × 295 × 350 mm, 5.1 kg, 45° lens). UPlight publishes no photometry: 9,000 lm is a PLANNING figure
+(≈ 50 lm/W of its 180 W), marked ASSUMED; a lux reading from the house's unit is owed.
+
+**On the installed preview (0.4.16-rigbuilder.9).** The data loads and the room draws each look
+written into the document (`moxir-xflat.sh look <L>`). The installed client does not know
+`along-arm`, `solo_mask`, `rest_up` or the COB's body — they arrive with the next preview build
+(this branch); until then, a room following a desk look poses only the lamps whose rules it knows.
+
+**The scripts.** `scripts/rigbuild/moxir-xflat.sh <step> [fixed|heads]` — report, version, hallshow,
+opening, show, clock, look, render, all, undo; a `di save moxir` before every write; `undo` DELETEs
+only the candidate's project (a whole-space `di open` would also roll back other sessions' work).
+`rig-look.mjs --cameras <file> --no-desk` shoots named cameras with the desk and the clock kept out
+of that browser. Tests: `scripts/rigbuild/versions-xflat.test.js`.
 
 ## 16. Hosted playback — the show with no desk (`src/rigbuild/showClock.js`)
 

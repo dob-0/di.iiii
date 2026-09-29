@@ -135,6 +135,10 @@
         "FOS-COB200": {
             "url": "https://www.fos-lighting.eu/uploads/products_1_2_1_61.pdf",
             "what": "FOS Technologies PAR COB 200W LED TW user manual — an EQUIVALENT (tunable-white 200 W COB PAR, 60°, 290 × 260 × 305 mm, 4.9 kg); no photometric figure published either"
+        },
+        "UP-COB200": {
+            "url": "https://up-light.en.made-in-china.com/product/bwWGPaldZMfD/China-High-Performance-200W-COB-PAR-Light-for-TV-Studio-Events.html",
+            "what": "UPlight UP-COB200, the maker's store page (model code on the page; fetched 2026-09-29: 200 W / 180 W rated, 60°/45° optional, 295 x 295 x 350 mm, 5.1 kg, 3200-5600 K, IP20, DMX 4 ch; no photometry published)"
         }
     },
     "kinds": {
