@@ -80,6 +80,9 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
     const [status, setStatus] = useState('loading...')
     const [isBusy, setIsBusy] = useState(false)
     const [spaceLabel, setSpaceLabel] = useState(spaceId)
+    // The space's steward (owner or admin) decides who sees each project —
+    // the same person who decides whether the space itself is public.
+    const [spaceMeta, setSpaceMeta] = useState(null)
     const [creatingTitle, setCreatingTitle] = useState(null)
     const [renamingId, setRenamingId] = useState(null)
     const [renameValue, setRenameValue] = useState('')
@@ -122,8 +125,10 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
 
     useEffect(() => {
         setSpaceLabel(spaceId)
+        setSpaceMeta(null)
         getServerSpace(spaceId).then((space) => {
             if (space?.label) setSpaceLabel(space.label)
+            setSpaceMeta(space || null)
         }).catch(() => {})
     }, [spaceId])
 
@@ -182,6 +187,18 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
             await loadProjects()
         } catch (e) {
             setStatus(e.message || 'could not change that')
+        }
+    }, [loadProjects])
+
+    // Private: only the space's members see it; to a visitor of a public space
+    // it is not there at all (serverXR/src/projectVisibility.js).
+    const canSetVisibility = role === 'admin' || Boolean(spaceMeta?.isOwner)
+    const handleVisibility = useCallback(async (project, visibility) => {
+        try {
+            await updateProject(project.id, { visibility })
+            await loadProjects()
+        } catch (e) {
+            setStatus(e.message || 'could not change who sees that')
         }
     }, [loadProjects])
 
@@ -360,6 +377,15 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                     {projectState(project) !== 'live' && (
                         <span className={`sh-state sh-state--${projectState(project)}`}>{projectState(project)}</span>
                     )}
+                    {project.visibility === 'private' && (
+                        <span className="sh-state sh-state--private" title="Private — only members of this space see it">
+                            <svg className="sh-lock" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+                                <rect x="2" y="5.5" width="8" height="5.5" rx="1" />
+                                <path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" />
+                            </svg>
+                            private
+                        </span>
+                    )}
                 </div>
                 {!isRenaming && (
                     <>
@@ -399,6 +425,18 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                                 <option value="live">live</option>
                                 <option value="archived">archived</option>
                             </select>
+                            {canSetVisibility && (
+                                <select
+                                    className="sh-select"
+                                    aria-label="Who sees it"
+                                    title="Private — only members see it"
+                                    value={project.visibility === 'private' ? 'private' : 'public'}
+                                    onChange={e => handleVisibility(project, e.target.value)}
+                                >
+                                    <option value="public">public</option>
+                                    <option value="private">private — members only</option>
+                                </select>
+                            )}
                         </div>
                     </>
                 )}

@@ -534,6 +534,13 @@ function initDb(dbPath) {
   ensureColumn(db, 'projects', 'collection_id', 'TEXT')
   ensureColumn(db, 'projects', 'position', 'INTEGER NOT NULL DEFAULT 0')
   ensureColumn(db, 'projects', 'state', "TEXT NOT NULL DEFAULT 'live'")
+  // Per-project visibility inside its space ('public' | 'private') —
+  // projectStore.js PROJECT_VISIBILITIES. Defaults to 'public' so every
+  // existing project keeps exactly the visibility its space gave it. No
+  // SCHEMA_VERSION bump: an older build ignores the column (and so would
+  // show a private project to a visitor of a public space) — a rollback
+  // past this landing must re-check private work; the spec says so.
+  ensureColumn(db, 'projects', 'visibility', "TEXT NOT NULL DEFAULT 'public'")
   // The trash. Delete used to remove the row and rm -rf the directory in the
   // same breath, with no undo of any kind — the single most frightening thing
   // in the product. Deleted work now waits out TRASH_TTL_MS before anything

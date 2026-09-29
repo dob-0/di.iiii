@@ -697,7 +697,11 @@ function createSpaceStore({
       await ensureProject(spacesDir, spaceId, projectId, {
         slug: meta.slug ?? null,
         title: meta.title,
-        source: meta.source
+        source: meta.source,
+        // Only lands on a project created here (ensureProject never rewrites
+        // an existing row's visibility) — a private project restored from a
+        // snapshot or arriving from a file must come back private.
+        ...(meta.visibility === 'private' ? { visibility: 'private' } : {})
       })
       const current = await loadProjectMeta(spacesDir, spaceId, projectId)
       const version = (Number(current?.documentVersion) || 0) + 1

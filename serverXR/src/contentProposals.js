@@ -432,7 +432,9 @@ function createContentProposals({
       const slug = existing ? existing.slug : (entry.meta.slug && !slugsHere.has(entry.meta.slug) ? entry.meta.slug : null)
       toApply.push({
         id: entry.id,
-        meta: { slug, title: entry.meta.title || existing?.title, source: existing ? existing.source : entry.meta.source || undefined },
+        // visibility only matters for a project new to this space: an
+        // existing row keeps what the space decided (restoreSpaceProjectDocuments).
+        meta: { slug, title: entry.meta.title || existing?.title, source: existing ? existing.source : entry.meta.source || undefined, visibility: existing ? undefined : entry.meta.visibility },
         document: remapSpaceUrls(entry.document, sourceId, spaceId),
         assets: entry.assets
       })

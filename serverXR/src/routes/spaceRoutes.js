@@ -14,8 +14,11 @@ const logger = require('../logger')
 const { createKeyedLock } = require('../asyncLock')
 const { SENSITIVE_SPACE_PATCH_FIELDS } = require('../approvalGate')
 const { actorFromAuthState } = require('../opActor')
+const { isSpaceMember } = require('../projectVisibility')
 
 const defaultWithSpaceOpsLock = createKeyedLock()
+
+const PRIVATE_PUBLISH_ERROR = 'That project is private, so it cannot be the space\'s published front door. Make it public first (project settings), then publish it.'
 
 function registerSpaceRoutes(router, {
   appendOpsHistory,
@@ -97,6 +100,14 @@ function registerSpaceRoutes(router, {
 
   if (approvalGate) {
     approvalGate.registerExecutor('spaces.patch', async ({ spaceId, patch, nextOwnerUserId }) => {
+      // Re-checked at execution: an approval can wait an hour, and the project
+      // may have been made private in the meantime.
+      if (patch?.publishedProjectId) {
+        const project = await findProjectById(spacesDir, patch.publishedProjectId)
+        if (project?.meta?.visibility === 'private') {
+          throw Object.assign(new Error(PRIVATE_PUBLISH_ERROR), { status: 409 })
+        }
+      }
       const meta = await upsertSpaceMeta(spaceId, patch)
       if (nextOwnerUserId && findUserById && setUserSpaces) {
         try {
@@ -427,6 +438,11 @@ function registerSpaceRoutes(router, {
           if (!project || project.spaceId !== spaceId) {
             return res.status(404).json({ error: 'Published project not found in this space.' })
           }
+          // The published project is the space's front door — what every
+          // visitor is sent to. A private one would be a door that 404s.
+          if (project.meta?.visibility === 'private') {
+            return res.status(409).json({ error: PRIVATE_PUBLISH_ERROR, code: 'published_project_private' })
+          }
         }
       }
       // Card-preview image override: must be an asset that exists in this
@@ -552,7 +568,10 @@ function registerSpaceRoutes(router, {
 
       workDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'di-bundle-'))
       const file = path.join(workDir, `${spaceId}.diiii`)
-      const { code, output } = await runBundleTool(['export', spaceId, '--out', file])
+      // A visitor who reached a public space is not one of its members: their
+      // file leaves out every private project and the blobs only those name.
+      const member = isSpaceMember(req.authState || getPublicAuthState(req), spaceId, { requireAuth: Boolean(config.requireAuth) })
+      const { code, output } = await runBundleTool(['export', spaceId, '--out', file, ...(member ? [] : ['--public-only'])])
       if (code !== 0 || !fs.existsSync(file)) {
         logger.warn(`[bundle] export of ${spaceId} failed: ${output}`)
         return res.status(500).json({ error: 'Could not save this space to a file.' })

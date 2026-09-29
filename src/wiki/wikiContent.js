@@ -146,6 +146,22 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-21'
     },
     {
+        id: 'private-projects',
+        category: 'Spaces & access',
+        title: 'Private work inside a public space',
+        summary: 'A single project can be private: only the space’s members see it, while the space itself stays public. No second space needed.',
+        body: [
+            'A public space used to show everything in it. To keep one thing back — source photographs, a rehearsal take, anything without permission to be public — you had to make a second space for it. Now each project has its own setting: public (as visible as its space) or private (members only).',
+            'MAKE ONE PRIVATE. In Studio, open the space’s project list (/<space>/studio). On each card, the owner of the space — or an admin — has a third control beside the shelf and the state: public, or private — members only. A private card carries a small lock and the word private.',
+            'WHAT A VISITOR SEES. Nothing. A private project is left out of the space’s contents and project lists, its link answers “not found” exactly as a project that never existed would, its pictures and files do not load, a link preview shows the space instead, and a space saved to a file by a visitor leaves it — and every picture only it uses — out.',
+            'WHO IS A MEMBER. Anyone who could open the space if the space itself were private: the owner, admins, people and keys the space is shared with. Everyone else is a visitor.',
+            'THE FRONT DOOR STAYS PUBLIC. The project a space opens on cannot be private — publish another one first. Both directions are refused with a sentence that says so.',
+            'IT TRAVELS. Copying a project between this copy of di.iiii and another (tier-sync, project-pull, a saved file) keeps it private. A copy never makes something public that was private.'
+        ],
+        tags: ['private', 'public', 'visibility', 'members', 'projects', 'space', 'lock', 'consent', 'visitors'],
+        updated: '2026-09-29'
+    },
+    {
         id: 'picture-operators-and-the-desk',
         category: 'Editing',
         title: 'Picture operators, and one desk across machines',

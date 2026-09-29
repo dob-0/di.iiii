@@ -68,6 +68,7 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { remapAssetIds, remapFromUpload } from './asset-remap-lib.mjs'
+import { ensureDestinationVisibility, visibilityCreateFields } from './project-visibility-lib.mjs'
 
 const { diffDocumentLoss, combineLoss, describeLoss, parseAcceptLoss, lossGate } = createRequire(import.meta.url)('../shared/documentLoss.cjs')
 
@@ -693,6 +694,10 @@ export const main = async () => {
     // documents read here are the ones written below, so what was counted is
     // what arrives.
     const sourceDocs = new Map()
+    // The source's project meta rides on the same document response
+    // (GET …/document answers { document, version, project }) — it is what
+    // says whether the project is private (project-visibility-lib.mjs).
+    const sourceMetas = new Map()
     const lossEntries = []
     for (const item of plan) {
         for (const projectId of item.projects) {
@@ -701,6 +706,7 @@ export const main = async () => {
             const body = await docRes.json()
             const incoming = body.document || body
             sourceDocs.set(projectId, incoming)
+            if (body.project) sourceMetas.set(projectId, body.project)
             const destRes = await call(to, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
             if (destRes.status === 404) continue
             if (!destRes.ok) {
@@ -768,14 +774,32 @@ export const main = async () => {
                     if (!docRes.ok) throw new Error(`source document HTTP ${docRes.status}`)
                     const body = await docRes.json()
                     document = body.document || body
+                    if (body.project) sourceMetas.set(projectId, body.project)
                 }
                 const title = document?.projectMeta?.title || projectId
 
+                // Who may see it travels too — a private project must not land
+                // public (scripts/project-visibility-lib.mjs). A source whose
+                // document response carries no project meta predates the field,
+                // and so holds no private projects.
+                const sourceMeta = sourceMetas.get(projectId) || null
+
                 const create = await call(to, `/api/spaces/${item.spaceId}/projects`, {
                     method: 'POST',
-                    body: JSON.stringify({ slug: projectId, title })
+                    body: JSON.stringify({ slug: projectId, title, ...visibilityCreateFields(sourceMeta) })
                 })
                 if (!create.ok && create.status !== 409) throw new Error(`create HTTP ${create.status}`)
+                const created = create.ok ? ((await create.json().catch(() => null))?.project || null) : null
+                const kept = await ensureDestinationVisibility({
+                    projectId,
+                    sourceMeta,
+                    destMeta: created,
+                    request: async (method, pathname, body) => {
+                        const res = await call(to, pathname, { method, ...(body ? { body: JSON.stringify(body) } : {}) })
+                        return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
+                    }
+                })
+                if (!kept.ok) throw new Error(kept.error)
 
                 const put = await call(to, `/api/projects/${projectId}/document`, {
                     method: 'PUT',
@@ -799,7 +823,7 @@ export const main = async () => {
                     }
                 }
                 copied++
-                console.log(`  ✓ ${item.spaceId}/${projectId}${assetNote}`)
+                console.log(`  ✓ ${item.spaceId}/${projectId}${assetNote}${kept.note ? ` (${kept.note})` : ''}`)
                 // What the destination now holds, by shape, so the next
                 // --changed can tell "only I edited this" from "we both did".
                 ;((baseline[args.to] ||= {})[`${item.spaceId}/${projectId}`] = documentSignature(document).shape)

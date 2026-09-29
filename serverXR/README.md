@@ -185,6 +185,7 @@ Behavior rules:
 - `admin` is required for space creation, publishing, settings changes, and destructive admin actions
 - tokens and sessions can be limited to specific spaces
 - if a space has `allowEdits=false`, mutation routes reject writes with `403`
+- a space's `isPublic` lets anyone read it; a project's own `visibility: 'private'` then keeps that one project to the space's members — to anyone else every `/api/projects/:projectId…` route, the space's lists, `/api/resolve`, `/og` previews and a saved bundle behave as if it did not exist (404). Set by the space owner or an admin (`PATCH /api/projects/:projectId {"visibility":"private"}`); the published project cannot be private. See [../docs/architecture/SPEC_project_visibility.md](../docs/architecture/SPEC_project_visibility.md)
 
 ## Environment Variables
 

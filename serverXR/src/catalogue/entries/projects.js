@@ -11,14 +11,15 @@ module.exports = [
   },
   {
     route: "GET /api/projects/:projectId",
-    summary: "a project's metadata (title, slug, timestamps) — not its content",
+    summary: "a project's metadata (title, slug, visibility, timestamps) — not its content",
     reach: "read",
     role: "viewer",
-    agent: true
+    agent: true,
+    note: "a PRIVATE project (visibility 'private') answers 404 to anyone who is not a member of its space — on this route and every other /api/projects/:projectId route — exactly as if it did not exist."
   },
   {
     route: "PATCH /api/projects/:projectId",
-    summary: "rename a project or change its public slug",
+    summary: "rename a project, change its public slug, or make it private/public inside its space",
     reach: "private",
     role: "editor",
     agent: true,
@@ -27,11 +28,12 @@ module.exports = [
         type: "object",
         properties: {
           title: { type: "string", description: "new display title" },
-          slug: { type: "string", description: "new public handle, lowercase letters/numbers/dashes, min 3 chars, or null to clear it; must be unique within the space" }
+          slug: { type: "string", description: "new public handle, lowercase letters/numbers/dashes, min 3 chars, or null to clear it; must be unique within the space" },
+          visibility: { type: "string", enum: ["public", "private"], description: "'private' = only the space's members see it (visitors get 404); 'public' = as visible as its space" }
         }
       }
     },
-    note: "slug is independent of id and unique only within the owning space; a reserved word or a slug already taken there is refused (400/409)."
+    note: "slug is independent of id and unique only within the owning space; a reserved word or a slug already taken there is refused (400/409). Changing visibility needs the space owner or an admin (403 otherwise); the space's published project cannot be made private (409 published_project_private)."
   },
   {
     route: "POST /api/projects/:projectId/assets",

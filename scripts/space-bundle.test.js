@@ -528,3 +528,68 @@ describe('space-bundle carries the show\'s Perform presets', () => {
         }
     })
 })
+
+// docs/architecture/SPEC_project_visibility.md — a private project must not
+// arrive on the next tier as a public one, and the file a visitor saves must
+// not carry it (or the bytes only it names) at all.
+describe('space-bundle carries project visibility', () => {
+    const PRIVATE_HASH = 'a'.repeat(64)
+    const SHARED_HASH = 'b'.repeat(64)
+    const seedShow = (root) => {
+        seedSpace(path.join(root, 'di.db'), { id: 'show', updatedAt: 1_000 })
+        const { initDb, closeDb } = require('../serverXR/src/db.js')
+        const db = initDb(path.join(root, 'di.db'))
+        const insert = db.prepare('INSERT INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at, visibility) VALUES (?, ?, ?, 0, ?, 1, 1, 1, ?)')
+        insert.run('door', 'show', 'The Door', 'project', 'public')
+        insert.run('sources', 'show', 'Venue Sources', 'project', 'private')
+        closeDb()
+        const spaceDir = path.join(root, 'spaces', 'show')
+        fs.mkdirSync(path.join(spaceDir, 'blobs'), { recursive: true })
+        fs.writeFileSync(path.join(spaceDir, 'blobs', PRIVATE_HASH), 'private photo')
+        fs.writeFileSync(path.join(spaceDir, 'blobs', SHARED_HASH), 'photo both use')
+        for (const [id, hashes] of [['door', [SHARED_HASH]], ['sources', [PRIVATE_HASH, SHARED_HASH]]]) {
+            const assets = path.join(spaceDir, 'projects', id, 'assets')
+            fs.mkdirSync(assets, { recursive: true })
+            fs.writeFileSync(path.join(spaceDir, 'projects', id, 'document.json'), JSON.stringify({ projectMeta: { id }, assets: hashes.map((h) => ({ id: h })) }))
+            for (const hash of hashes) fs.writeFileSync(path.join(assets, `${hash}.json`), JSON.stringify({ id: hash }))
+        }
+    }
+    const listTar = async (file) => (await execFileAsync('tar', ['-tzf', file])).stdout
+
+    it('export → import: a private project arrives private', async () => {
+        const sourceRoot = mkTemp('space-bundle-vis-src-')
+        const targetRoot = mkTemp('space-bundle-vis-dst-')
+        const bundlePath = path.join(mkTemp('space-bundle-vis-out-'), 'show.diiii')
+        seedShow(sourceRoot)
+        await run(['export', 'show', '--data-root', sourceRoot, '--out', bundlePath])
+        await run(['import', bundlePath, '--data-root', targetRoot])
+        const { initDb, closeDb } = require('../serverXR/src/db.js')
+        const db = initDb(path.join(targetRoot, 'di.db'))
+        const rows = db.prepare("SELECT id, visibility FROM projects WHERE space_id = 'show' ORDER BY id").all()
+        closeDb()
+        expect(rows.map((r) => ({ ...r }))).toEqual([{ id: 'door', visibility: 'public' }, { id: 'sources', visibility: 'private' }])
+    })
+
+    it('--public-only leaves the private project out, and every blob only it names — but keeps a blob a public project also uses', async () => {
+        const sourceRoot = mkTemp('space-bundle-vis-src-')
+        const bundlePath = path.join(mkTemp('space-bundle-vis-out-'), 'show.diiii')
+        seedShow(sourceRoot)
+        const { stdout } = await run(['export', 'show', '--data-root', sourceRoot, '--out', bundlePath, '--public-only'])
+        expect(stdout).toContain('1 private left out')
+        const entries = await listTar(bundlePath)
+        expect(entries).toContain('projects/door/')
+        expect(entries).not.toContain('projects/sources')
+        expect(entries).not.toContain(PRIVATE_HASH)
+        expect(entries).toContain(`blobs/${SHARED_HASH}`)
+    })
+
+    it('a plain export (a member\'s file) still carries everything', async () => {
+        const sourceRoot = mkTemp('space-bundle-vis-src-')
+        const bundlePath = path.join(mkTemp('space-bundle-vis-out-'), 'show.diiii')
+        seedShow(sourceRoot)
+        await run(['export', 'show', '--data-root', sourceRoot, '--out', bundlePath])
+        const entries = await listTar(bundlePath)
+        expect(entries).toContain('projects/sources/')
+        expect(entries).toContain(`blobs/${PRIVATE_HASH}`)
+    })
+})

@@ -81,6 +81,17 @@ describe('a space\'s contents page', () => {
         expect(document.title).toBe(before)
     })
 
+    // The server sends a private row to a member only (serverXR/src/projectVisibility.js);
+    // the member is told that this one is not what a visitor sees.
+    it('marks a private row as private, and no other', async () => {
+        listSpaceContentsMock.mockResolvedValue([...contents, { id: 'sources', slug: null, title: 'Venue sources', mode: 'scene', updatedAt: Date.now(), visibility: 'private' }])
+        render(<SpaceContentsPage spaceId="br_id_ge" />)
+
+        const row = await screen.findByRole('link', { name: /Venue sources/ })
+        expect(row.textContent).toContain('private')
+        expect(screen.getByRole('link', { name: /The camp page/ }).textContent).not.toContain('private')
+    })
+
     it('names the one project the space opens on', async () => {
         listSpaceContentsMock.mockResolvedValue(contents)
         render(<SpaceContentsPage spaceId="br_id_ge" />)
