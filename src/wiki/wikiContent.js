@@ -427,10 +427,11 @@ export const WIKI_ARTICLES = [
             'The cone is drawn as far as the lamp reaches, so set the lamp\'s Distance to roughly where the light actually lands. A lamp with a 15-metre reach hung in a small room draws its cone straight through the floor.',
             'BEAM ONLY. A whole rig is too many lamps for a browser: every lamp that really lights the room costs every pixel, and with shadows on a phone refuses past about a dozen. Tick Beam only (no light) and the lamp keeps its cone in the air but lights nothing — so a rig of ninety heads can hang complete, every beam visible, while a chosen dozen actually light the walls and the floor. A lamp with no beam never goes dark this way; the switch only means something while the beam is showing.',
             'SHADOWS FROM THE ROOM. Under Project → Render there is Lamps throw shadows. Switch it on and the lamps in the room cast: a pillar standing in a beam puts its shadow on the floor behind it, a person-sized box makes a person-sized shadow, and a scanned venue\'s own walls catch what is thrown at them. Shadow detail chooses how sharp the edge is — Sharper costs more, and a phone will feel it. It is off unless a room asks for it, because a shadow pass over a big scanned room is not free.',
-            'What a visitor sees is what you see: the beam and the shadows are part of the room, so they arrive with it in a published space and in walk mode, not only in the Studio.'
+            'What a visitor sees is what you see: the beam and the shadows are part of the room, so they arrive with it in a published space and in walk mode, not only in the Studio.',
+            'THE ROOM\'S AIR. A room can say how hazy its air is (renderSettings.atmosphere). When it does, every beam is drawn as the light the haze really scatters toward you: as bright as the lamp is, brightest looking back up toward the lamp, fading with distance, ending on whatever it hits, with the soft veil an eye sees around a very bright light. The beam and the wall it lands on then answer to the same exposure, like one photograph. A room that says nothing about its air keeps the plain cones. MOXIR is the first room with air: its night is black, and the little light the hall has comes back off what the rig lights — red in the red room.'
         ],
-        tags: ['light', 'lamp', 'spot', 'spotlight', 'aim', 'pan', 'tilt', 'beam', 'haze', 'shadow', 'shadows', 'rig', 'stage', 'studio', 'render'],
-        updated: '2026-09-27'
+        tags: ['light', 'lamp', 'spot', 'spotlight', 'aim', 'pan', 'tilt', 'beam', 'haze', 'air', 'exposure', 'shadow', 'shadows', 'rig', 'stage', 'studio', 'render'],
+        updated: '2026-09-29'
     },
     {
         id: 'the-rig',
