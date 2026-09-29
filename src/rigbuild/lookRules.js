@@ -83,6 +83,20 @@ export const AIM_RULES = {
         if (!crane) return { dir: leaned(ctx, slot, sideOf(slot, ctx) * 70, 0) }
         return { target: [slot.pos[0] + sideOf(slot, ctx) * (p.out ?? 6), crane.girder_bottom_m, crane.z_m + ctx.stage.into * (p.girder ?? 1.1)] }
     },
+    // The X lying down (crane-x, scripts/place/rig-lib.mjs, 2026-09-29): out along the lamp's own
+    // arm, away from the crossing (the crane bridge's centre line on the axis), rising `rise_deg`;
+    // lamps nearer than `end_m` use `inner_rise_deg`, the bridge arm's `x_rise_deg`.
+    'along-arm': (slot, meta, ctx, p = {}) => {
+        const crane = craneOf(ctx)
+        const h = [slot.pos[0] - axisOf(ctx), slot.pos[2] - (crane ? crane.z_m : slot.pos[2])]
+        const d = Math.hypot(h[0], h[1])
+        const up = upOf(slot)
+        const end = d >= (p.end_m ?? 2)
+        if (d < 0.05 || (!end && p.inner === 'vertical')) return { dir: [0, up, 0] }
+        const onX = Math.abs(h[1]) < 0.05
+        const r = (onX && p.x_rise_deg !== undefined ? p.x_rise_deg : end ? (p.rise_deg ?? 45) : (p.inner_rise_deg ?? p.rise_deg ?? 45)) * DEG
+        return { dir: [(h[0] / d) * Math.cos(r), up * Math.sin(r), (h[1] / d) * Math.cos(r)] }
+    },
     'laser-into-roof': (slot, meta, ctx, p = {}) => ({ target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * (p.x_scale ?? 0.3), ctx.hall.geometry.truss_top_centre_m, ctx.stage.front + ctx.stage.into * (p.a ?? 14)] })
 }
 

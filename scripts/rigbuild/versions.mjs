@@ -33,6 +33,13 @@ export const RENTALS_DIR = 'scripts/rigbuild/rentals'
 export const BASE_RENTAL = 'scripts/rigbuild/rentals/moxir-2026-10-17.json'
 
 const clone = (v) => JSON.parse(JSON.stringify(v))
+/**
+ * A version of the set, or a CANDIDATE: a variant of one version built beside it for the owner to
+ * compare (versions file `candidates`, e.g. "Minimal · X lying down"), with its own project, never
+ * one of the three the set's switch and tests are about.
+ */
+export const findVersion = (spec, id) => spec.versions.find((x) => x.id === id) || (spec.candidates || []).find((x) => x.id === id) || null
+export const allVersions = (spec) => [...spec.versions, ...(spec.candidates || [])]
 export const rigFileOf = (set, id) => `${RIGS_DIR}/${set}-${id}.json`
 export const rentalFileOf = (set, id) => `${RENTALS_DIR}/${set}-${id}.json`
 /** The project a version lives in, beside the hall's own (moxir-hall → moxir-hall-minimal). */
@@ -67,9 +74,10 @@ const restAim = (spec, group) => {
 // supplier's datasheet is in hand. Pure.
 const TYPE_FILE = 'src/rigbuild/types/moxir.json'
 const TRUSS_KG_PER_M = [6, 7] // 290 mm box class; ESTIMATE — the supplier's datasheet is owed
-const ON_LINE = new Set(['truss-header', 'truss-top'])
-export const craneTruss = (spec, groups, classes) => {
-    const t = clone(spec.craneTruss)
+const ON_LINE = new Set(['truss-header', 'truss-top', 'x-top', 'x-under'])
+export const craneTruss = (spec, groups, classes, key = 'craneTruss') => {
+    const t = clone(spec[key])
+    if (!t) throw new Error(`no ${key} in the versions file`)
     const types = readJson(path.join(REPO_ROOT, TYPE_FILE)).types
     const kgOf = (code) => types.find((x) => x.code === code)?.weight_kg?.value ?? null
     const lamps = groups.filter((g) => ON_LINE.has(g.mount)).map((g) => {
@@ -79,7 +87,10 @@ export const craneTruss = (spec, groups, classes) => {
         return { group: g.id, code, n: g.count, each_kg: each, kg: Math.round(each * g.count * 10) / 10 }
     })
     const lampsKg = Math.round(lamps.reduce((a, l) => a + l.kg, 0) * 10) / 10
-    const trussKg = TRUSS_KG_PER_M.map((k) => k * t.width_m)
+    // the truss: the makers' published piece weights where the file lists them (crane-x), else
+    // a kg/m band for the class (ESTIMATE)
+    const listed = Array.isArray(t.truss_pieces) ? Math.round(t.truss_pieces.reduce((a, q) => a + q.n * q.each_kg, 0) * 10) / 10 : null
+    const trussKg = listed != null ? [listed, listed] : TRUSS_KG_PER_M.map((k) => k * t.width_m)
     // clamps, safety bonds, the cable loom along the line: +10 % of the lamps (ESTIMATE)
     const extras = Math.round(lampsKg * 0.1)
     const total = trussKg.map((k) => Math.round(lampsKg + k + extras))
@@ -87,13 +98,48 @@ export const craneTruss = (spec, groups, classes) => {
         lamps,
         lamps_kg: lampsKg,
         truss_kg: trussKg,
-        truss_basis: `${TRUSS_KG_PER_M.join('–')} kg/m for a 290 mm box truss — ESTIMATE, the supplier's datasheet is owed`,
+        truss_basis: listed != null
+            ? t.truss_pieces.map((q) => `${q.n} × ${q.code} ${q.each_kg} kg (${q.source})`).join(' + ')
+            : `${TRUSS_KG_PER_M.join('–')} kg/m for a 290 mm box truss — ESTIMATE, the supplier's datasheet is owed`,
         extras_kg: extras,
         extras_basis: 'clamps, safety bonds and the cable loom: +10 % of the lamps — ESTIMATE',
         total_kg: total,
         points: t.rigging.hoists,
         per_point_kg: total.map((k) => Math.round(k / t.rigging.hoists)),
         note: 'static load on the line, before any dynamic factor; the hoists, chains and spreaders (≈ 25–30 kg a point) load the crane bridge on top of it. rigging sign-off owed (crane rated load, lock-out, hoists + safety steels).'
+    }
+    if (t.kind === 'crane-x') {
+        // what the crane carries on top of the truss load: the climbing hoists ride on the truss,
+        // and the bridles, clamps and steels at each point (makers' figures where given, else ESTIMATE)
+        const r = t.rigging
+        const points = r.picks.length * 2
+        const hoistKg = r.hoist_kg * points
+        const chainKg = Math.round(r.chain_kg_per_m * r.chain_m * points * 10) / 10
+        const hardware = r.hardware_kg_per_point * points
+        const onCrane = total.map((k) => Math.round(k + hoistKg + chainKg + hardware))
+        const even = onCrane.map((k) => Math.round(k / points))
+        // a stiff X on 4 points is statically indeterminate: an un-levelled hoist can shed its share
+        // onto its neighbours. Design case: any point carries half the total (a common planning
+        // assumption until load cells level the hang — ESTIMATE, the rigger's calculation governs).
+        const design = onCrane.map((k) => Math.round(k / 2))
+        // a two-leg bridle at 90° between its legs: each leg carries load / (2 cos 45°)
+        const leg = design.map((k) => Math.round(k / (2 * Math.cos(Math.PI / 4))))
+        t.rigging.load = {
+            ...t.rigging.load,
+            points,
+            per_point_kg: total.map((k) => Math.round(k / points)),
+            hoists_kg: hoistKg,
+            hoists_basis: r.hoist_kg_source,
+            chain_kg: chainKg,
+            chain_basis: `${r.chain_kg_per_m} kg/m × ${r.chain_m} m a hoist (chain length ESTIMATE) — ${r.hoist_kg_source}`,
+            hardware_kg: hardware,
+            hardware_basis: `${r.hardware_kg_per_point} kg a point: 2 beam clamps, 2 bridle legs, shackles, a safety steel, 2 restraint steels — ESTIMATE`,
+            on_crane_kg: onCrane,
+            per_point_even_kg: even,
+            per_point_design_kg: design,
+            per_bridle_leg_kg: leg,
+            note: `static loads before any dynamic factor. ${points} points: even share ${even[0]}–${even[1]} kg; design each point for ${design[0]}–${design[1]} kg (a 4-point hang on a stiff X is statically indeterminate until load cells level it), a bridle leg at 90° then ${leg[0]}–${leg[1]} kg. rigging sign-off owed (crane rated load, lock-out, hoists + safety steels).`
+        }
     }
     return t
 }
@@ -103,8 +149,8 @@ export const craneTruss = (spec, groups, classes) => {
  * Every look names every group: a group a look leaves out rests on its own aim.
  */
 export const versionRig = ({ spec, base, id }) => {
-    const v = spec.versions.find((x) => x.id === id)
-    if (!v) throw new Error(`no version "${id}" (have: ${spec.versions.map((x) => x.id).join(', ')})`)
+    const v = findVersion(spec, id)
+    if (!v) throw new Error(`no version "${id}" (have: ${allVersions(spec).map((x) => x.id).join(', ')})`)
     const groups = v.groups.map((g) => resolveGroup(spec, base, g))
     const effects = (v.effects || []).map((f) => resolveEffect(spec, f))
     const classIds = new Set(groups.map((g) => g.class))
@@ -112,7 +158,10 @@ export const versionRig = ({ spec, base, id }) => {
     for (const c of classIds) if (!classes[c]) throw new Error(`version ${id}: no class "${c}"`)
     const ids = new Set(groups.map((g) => g.id))
     const pick = (byGroup) => Object.fromEntries(Object.entries(byGroup || {}).filter(([g]) => ids.has(g)))
-    const looks = Object.fromEntries(Object.entries(spec.looks).map(([lookId, l]) => {
+    const looks = Object.fromEntries(Object.entries(spec.looks).map(([lookId, base]) => {
+        // a candidate may re-aim a look: its title, intent, and per-group aims/colours/levels win
+        const o = v.looks?.[lookId] || {}
+        const l = { ...base, ...o, aims: { ...base.aims, ...o.aims }, colours: { ...base.colours, ...o.colours }, levels: { ...base.levels, ...o.levels } }
         const aims = pick(l.aims)
         for (const g of groups) if (!aims[g.id]) aims[g.id] = restAim(spec, g)
         const levels = pick(l.levels)
@@ -121,7 +170,8 @@ export const versionRig = ({ spec, base, id }) => {
     const truss = v.truss === 'none'
         ? { kind: 'none', note: 'this version hangs nothing overhead: no goalpost, the floor line is the rig' }
         : v.truss === 'crane' ? craneTruss(spec, groups, classes)
-            : clone(base.truss)
+            : v.truss === 'crane-x' ? craneTruss(spec, groups, classes, 'craneX')
+                : clone(base.truss)
     const hasLaser = groups.some((g) => classes[g.class]?.fixture === 'laser')
     return {
         rig: `${base.rig.replace(/ — .*$/, '')} — ${v.title}`,
@@ -131,13 +181,14 @@ export const versionRig = ({ spec, base, id }) => {
         venue: base.venue,
         space: base.space,
         status: spec.status,
-        variant: { set: spec.set, id, title: v.title, summary: v.summary, order: spec.versions.findIndex((x) => x.id === id) + 1 },
+        variant: { set: spec.set, id, title: v.title, summary: v.summary, order: allVersions(spec).findIndex((x) => x.id === id) + 1, ...(v.candidateOf ? { candidateOf: v.candidateOf } : {}) },
         provenance: { ...clone(base.provenance), versions: `${VERSIONS_FILE}: ${spec.owner}` },
         assumptions: [
             ...base.assumptions.slice(0, 3),
             ...(truss.kind === 'none' ? ['No truss: this version stands every fixture on the floor (the booth line, the pit, the column bases, the press).']
                 : truss.kind === 'crane-hung' ? [`No stage deck, no towers: the DJ stand alone. One ${truss.width_m} m line of ${truss.section_class} hangs from the bridge of the overhead crane parked over the DJ, bottom chord ${truss.trim_m} m, on ${truss.rigging.hoists} chain hoists with safety steels; load on the line ≈ ${truss.rigging.load.total_kg[0]}–${truss.rigging.load.total_kg[1]} kg, ≈ ${truss.rigging.load.per_point_kg[0]}–${truss.rigging.load.per_point_kg[1]} kg a point. ${truss.rigging.signoff.split(':')[0]}.`]
-                    : [base.assumptions[3]]),
+                    : truss.kind === 'crane-x' ? [`No stage deck, no towers: the DJ stand alone. Two ${truss.arm_m} m arms of ${truss.section_class} cross FLAT at a 4-way junction (${truss.junction.code}) under the bridge of the overhead crane parked over the DJ, one arm along the bridge, one across it pointing out over the crowd; bottom chord ${truss.trim_m} m, on ${truss.rigging.load.points} climbing chain hoists, each on a two-leg bridle from the girders, a safety steel each, and two restraint steels at every arm end; load on the X ≈ ${truss.rigging.load.total_kg[0]} kg, on the crane ≈ ${truss.rigging.load.on_crane_kg[0]} kg. ${truss.rigging.signoff.split(':')[0]}.`]
+                        : [base.assumptions[3]]),
             ...(hasLaser ? [base.assumptions[5]] : []),
             'Strobes, blinders and hazers are other-supplier lines (the rental house lists none): each is a planning type modelled on a named product (scripts/place/fixtures/fixtures.json, EXT- codes). No CO2 jet, cold spark or confetti — the underground brief (versions file, method).',
             base.assumptions[7]
@@ -152,7 +203,7 @@ export const versionRig = ({ spec, base, id }) => {
         photometry: { ...clone(base.photometry), ...(spec.photometry?.air ? { air: spec.photometry.air, airWhy: spec.photometry.why } : {}) },
         defaultLook: spec.defaultLook,
         looks,
-        opening: clone(truss.kind === 'crane-hung' && spec.craneOpening ? spec.craneOpening : base.opening),
+        opening: clone((truss.kind === 'crane-hung' || truss.kind === 'crane-x') && spec.craneOpening ? spec.craneOpening : base.opening),
         ...(spec.hall ? { hall: spec.hall } : {})
     }
 }
@@ -171,7 +222,7 @@ export const countsOf = (rig, manifest) => {
  * the committed quote import, the spares, and the other-supplier lines. Pure.
  */
 export const versionList = ({ spec, rig, manifest, baseList, id }) => {
-    const v = spec.versions.find((x) => x.id === id)
+    const v = findVersion(spec, id)
     const counts = countsOf(rig, manifest)
     for (const [code, n] of Object.entries(v.spares || {})) counts.set(code, (counts.get(code) || 0) + n)
     const items = []
@@ -284,7 +335,7 @@ export const generated = () => {
     const manifest = readJson(path.join(REPO_ROOT, 'scripts/place/fixtures/fixtures.json'))
     const baseList = readJson(path.join(REPO_ROOT, BASE_RENTAL)).rentalList
     const out = {}
-    for (const v of spec.versions) {
+    for (const v of allVersions(spec)) {
         const rig = versionRig({ spec, base, id: v.id })
         out[rigFileOf(spec.set, v.id)] = serialise(rig)
         out[rentalFileOf(spec.set, v.id)] = serialise({ rentalList: versionList({ spec, rig, manifest, baseList, id: v.id }), writtenBy: 'scripts/rigbuild/versions.mjs' })

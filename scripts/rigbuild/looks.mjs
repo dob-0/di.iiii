@@ -24,6 +24,9 @@ import { RIG_SHOW_ID } from '../../src/rigbuild/rental.js'
 export const MOUNT_POSITION = {
     'truss-header': () => 'truss',
     'truss-top': () => 'truss-top',
+    // crane-x: the X's arms are truss runs like any other — the room finds these lamps on them
+    'x-top': () => 'truss-top',
+    'x-under': () => 'truss',
     'crane-bridge': () => 'crane-bridge',
     'tower-ladder': () => 'tower-ladders',
     'truss-towers': () => 'tower-tops',

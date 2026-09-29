@@ -107,6 +107,10 @@
         "ANTARI-HZ1000": {
             "url": "https://www.antari.com/products/hz-1000/",
             "what": "Antari HZ-1000 hazer, maker's product page (fetched 2026-09-28): L690 W510 H610 mm, 74.6 kg, 1150 W, 2 DMX channels, 2.2 ml/min at 100 %, 6.4 L tank (40 h at 100 %)"
+        },
+        "UP-COB200": {
+            "url": "https://up-light.en.made-in-china.com/product/bwWGPaldZMfD/China-High-Performance-200W-COB-PAR-Light-for-TV-Studio-Events.html",
+            "what": "UPlight UP-COB200, the maker's store page (model code on the page; fetched 2026-09-29: 200 W / 180 W rated, 60°/45° optional, 295 x 295 x 350 mm, 5.1 kg, 3200-5600 K, IP20, DMX 4 ch; no photometry published)"
         }
     },
     "kinds": {
@@ -943,6 +947,78 @@
                     ],
                     "nozzle_d_mm": 70
                 }
+            }
+        },
+        "cob": {
+            "code": "UP-COB200",
+            "identified": "EXACT (photometry and the DMX chart not published)",
+            "product": "UPlight UP-COB200, 200 W COB PAR (indoor), warm + cool white",
+            "specs": {
+                "size_mm": {
+                    "value": [
+                        295,
+                        295,
+                        350
+                    ],
+                    "src": "UP-COB200",
+                    "basis": "EXACT"
+                },
+                "weight_kg": {
+                    "value": 5.1,
+                    "src": "UP-COB200",
+                    "basis": "EXACT"
+                },
+                "source": {
+                    "value": "one 200 W COB, 3200-5600 K, CRI >= 90, 50,000 h",
+                    "src": "UP-COB200",
+                    "basis": "EXACT"
+                },
+                "beam_deg": {
+                    "value": 45,
+                    "src": "UP-COB200",
+                    "basis": "EXACT",
+                    "note": "60 or 45 deg, optional lens: 45 chosen for a hit that reaches the floor"
+                },
+                "ip": {
+                    "value": "IP20",
+                    "src": "UP-COB200",
+                    "basis": "EXACT"
+                },
+                "power_w": {
+                    "value": 180,
+                    "src": "UP-COB200",
+                    "basis": "EXACT",
+                    "note": "rated; 200 W source"
+                },
+                "dmx_channels": {
+                    "value": [
+                        4
+                    ],
+                    "src": "UP-COB200",
+                    "basis": "EXACT",
+                    "note": "the channel ORDER is not published — OWED"
+                }
+            },
+            "look": "A round cast-aluminium can like the LED PAR's, one large yellow COB chip behind a flat lens, on a U-bracket that folds into its floor stand.",
+            "model": {
+                "archetype": "par",
+                "params": {
+                    "can_d_mm": 232,
+                    "can_l_mm": 250,
+                    "tilt_axis_mm": 215,
+                    "width_mm": 240,
+                    "foot_d_mm": 240,
+                    "window_mm": 170,
+                    "fins": 12
+                },
+                "note": "the PAR archetype drawn to the COB's published box; one emitter, so the lens is one disc"
+            },
+            "photometry": {
+                "flux_lm": 9000,
+                "beam_deg": 45,
+                "src": null,
+                "basis": "ASSUMED",
+                "note": "UPlight publishes no photometry for the UP-COB200. 9,000 lm is a PLANNING figure: ~50 lm/W of its 180 W rated draw, the order of white COB PAR fixtures' output (the COB chip's own efficacy is higher; optics and the can lose some). OWED: a lux reading from the rental house's unit."
             }
         }
     },

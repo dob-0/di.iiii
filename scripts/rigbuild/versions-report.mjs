@@ -17,7 +17,7 @@ import { moxirDocument, patchMoxir } from './moxir.mjs'
 import { loadLibrary } from './library.mjs'
 import { patchCsv, powerCsv, renderSheetHtml, sheetModel } from '../../src/rigbuild/sheet.js'
 import { libraryWithShow, RIG_SHOW_ID } from '../../src/rigbuild/rental.js'
-import { costing, powerOfList, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
+import { allVersions, costing, powerOfList, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
 
 export const DEFAULT_HALL = 'scripts/place/rigs/moxir-hall-2026-09-28.hall.json'
 
@@ -28,7 +28,7 @@ export const report = async ({ out, hallFile = null }) => {
     const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
     const baseLibrary = loadLibrary()
     const all = []
-    for (const v of spec.versions) {
+    for (const v of allVersions(spec)) {
         const rig = readJson(path.join(REPO_ROOT, rigFileOf(spec.set, v.id)))
         const { rentalList: list } = readJson(path.join(REPO_ROOT, rentalFileOf(spec.set, v.id)))
         const library = libraryWithShow(baseLibrary, list)

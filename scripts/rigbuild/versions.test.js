@@ -102,9 +102,10 @@ describe('the version files', () => {
     })
 })
 
-for (const v of spec.versions) {
+// the versions and the candidates built beside them (versions file `candidates`) alike
+for (const v of [...spec.versions, ...(spec.candidates || [])]) {
     describe(`${v.id}: the safety tests, in every look`, () => {
-        const rig = rigs[v.id]
+        const rig = rigs[v.id] || read(rigFileOf(spec.set, v.id))
         const stage = stageFrame(rig, hall)
         for (const look of Object.keys(rig.looks)) {
             const built = buildRig(rig, hall, { geometry, manifest, look })

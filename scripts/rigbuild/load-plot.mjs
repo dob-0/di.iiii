@@ -100,7 +100,30 @@ export const piecesFromRigBoxes = (entities) => {
     }
     // A line hung from the crane bridge (rig-lib `truss.kind: 'crane-hung'`): no towers, the
     // header box IS the line — laid as stock segments end to end at its chord height.
-    if (header && towers.length === 0) {
+    // The X lying down (rig-lib `truss.kind: 'crane-x'`): two arms crossing at a 4-way junction.
+    // Each arm is laid as its two straights either side of the junction — four runs of stock
+    // segments, so the room derives a clamp slot every 0.5 m along each half-arm. The junction
+    // (no piece of that kind in the catalogue) stays the rig's own box.
+    const zArm = byId.get('rig-truss-z-arm')
+    const junction = byId.get('rig-truss-junction')
+    if (header && towers.length === 0 && zArm) {
+        const t = header.components.transform
+        const chord = r3(t.position[1] + (t.scale[1] || TRUSS_SECTION_M) / 2)
+        const [cx, , cz] = t.position
+        const half = t.scale[0] / 2
+        const j = junction ? junction.components.transform.scale[0] / 2 : 0
+        const runs = [
+            [[cx - j, cz], [cx - half, cz], 'x-left'], [[cx + j, cz], [cx + half, cz], 'x-right'],
+            [[cx, cz - j], [cx, cz - half], 'z-back'], [[cx, cz + j], [cx, cz + half], 'z-crowd']
+        ]
+        let k = 0
+        for (const [from, to, name] of runs) {
+            layRun({ from: from.map(r3), to: to.map(r3), y: chord }).forEach((seg) => {
+                k += 1
+                out.push({ id: `rig-x-${k}`, name: `X arm, ${name} half (hung from the crane bridge)`, kind: seg.kind, position: seg.position, yaw: seg.yaw, height: null, replaces: k === 1 ? header.id : k === 2 ? zArm.id : null })
+            })
+        }
+    } else if (header && towers.length === 0) {
         const t = header.components.transform
         const chord = r3(t.position[1] + (t.scale[1] || TRUSS_SECTION_M) / 2)
         const half = t.scale[0] / 2
@@ -167,7 +190,7 @@ const main = async () => {
         ops.push({ type: 'upsertAsset', payload: { asset } })
     }
     const replaced = new Set(pieces.map((p) => p.replaces).filter(Boolean))
-    for (const id of ['rig-truss-tower-l', 'rig-truss-tower-r', 'rig-truss-header', 'rig-stage-deck']) if (doc.entities.some((e) => e.id === id)) replaced.add(id)
+    for (const id of ['rig-truss-tower-l', 'rig-truss-tower-r', 'rig-truss-header', 'rig-truss-z-arm', 'rig-stage-deck']) if (doc.entities.some((e) => e.id === id)) replaced.add(id)
     for (const p of pieces) {
         const base = catalogueHeightOf(p.kind)
         ops.push({

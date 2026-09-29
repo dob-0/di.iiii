@@ -12,6 +12,7 @@
  *                                            # the desk — a look's level scales the document's light, so a
  *                                            # lamp rested at 0 could never come back up in another look
  *   … --version minimal --mark               # write only which version this project (and the hall's own) is
+ *   … --version minimal-xflat --no-mark-from # a CANDIDATE (versions file `candidates`), the hall's project untouched
  *
  * A version is a PROJECT (moxir-hall-minimal, -middle, -full), not a field inside one:
  * each has its own lamps, equipment list, patch, looks and desk, so the plot, the cards,
@@ -43,7 +44,7 @@ import { makeClient } from '../place/api.mjs'
 import { buildRig, nightOps } from '../place/rig-lib.mjs'
 import { FIXTURE_DIR, readGeometry } from '../place/fixtures-glb.mjs'
 import { RIG_SHOW_ID } from '../../src/rigbuild/rental.js'
-import { projectOf, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
+import { findVersion, projectOf, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
 import { rigLooksFrom } from './looks.mjs'
 
 const args = parseArgs()
@@ -54,14 +55,19 @@ const readTokenFile = (file) => {
 
 /** The set as the switch reads it: every version, in order, with the project it lives in. */
 export const variantOf = (spec, id, hallProject) => {
-    const v = id === spec.ordered?.id ? spec.ordered : spec.versions.find((x) => x.id === id)
+    const v = id === spec.ordered?.id ? spec.ordered : findVersion(spec, id)
+    if (!v) throw new Error(`no version or candidate "${id}" in ${VERSIONS_FILE}`)
+    // A candidate (versions file `candidates`) lists the set AND the candidates of its own version
+    // after it, so its switch reaches what it is compared with; the three versions' own marks
+    // are unchanged (they list the set only).
+    const cands = v.candidateOf ? (spec.candidates || []).filter((c) => c.candidateOf === v.candidateOf) : []
     return {
         set: spec.set, id, title: v.title, summary: v.summary,
         source: `${VERSIONS_FILE} — scripts/rigbuild/load-version.mjs`,
         siblings: [
             // the hall's own project, the rig as ordered, first: what the versions are compared to
             ...(spec.ordered ? [{ id: spec.ordered.id, projectId: hallProject, title: spec.ordered.title, summary: spec.ordered.summary }] : []),
-            ...spec.versions.map((s) => ({ id: s.id, projectId: projectOf(hallProject, s.id), title: s.title, summary: s.summary }))
+            ...[...spec.versions, ...cands].map((s) => ({ id: s.id, projectId: projectOf(hallProject, s.id), title: s.title, summary: s.summary }))
         ]
     }
 }
@@ -122,7 +128,7 @@ const main = async () => {
         if (!doc.ok) die(`reading ${project}: ${doc.status}`)
         await send(variantOps(doc.body.document.entities, variantOf(spec, id, from)), 'the version mark')
         say(`${project}: marked "${id}" in the set`)
-        await markFrom()
+        if (!args['no-mark-from']) await markFrom()
         return
     }
 
@@ -203,7 +209,8 @@ const main = async () => {
     washFor(rig.defaultLook)
 
     // 6. the hall's own project joins the set as "as ordered", so the switch shows on it too
-    await markFrom()
+    // (--no-mark-from: leave the hall's project untouched — a candidate built beside the set)
+    if (!args['no-mark-from']) await markFrom()
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {

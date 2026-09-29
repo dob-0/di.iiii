@@ -63,7 +63,12 @@ export const hasTruss = (rig) => Boolean(rig.truss) && rig.truss.kind !== 'none'
 // runs parallel to the bridge, under its centre line, its bottom chord at `trim_m`.
 // `x_offset_m` slides the line along itself so a clamp point (every 0.5 m, 0.25 m in from
 // each end — src/rigbuild/pieces.js) falls on the centre line; the lamps stay mirrored.
-export const isCraneHung = (rig) => rig?.truss?.kind === 'crane-hung'
+export const isCraneHung = (rig) => rig?.truss?.kind === 'crane-hung' || rig?.truss?.kind === 'crane-x'
+// `truss: { kind: 'crane-x' }` — the X lying down (owner's sketch "ten truss versions", option 2,
+// 2026-09-29): two arms of `arm_m` crossing FLAT at a 4-way junction under the bridge's centre
+// line, one arm along the bridge (x), one across it (z), the second pointing out over the crowd.
+// Hung like the line (bottom chord at `trim_m`), on `rigging.picks`; RIG_BUILD.md §15.8.
+export const isCraneX = (rig) => rig?.truss?.kind === 'crane-x'
 
 export const stageFrame = (rig, hall) => {
     const g = hall.geometry
@@ -72,7 +77,7 @@ export const stageFrame = (rig, hall) => {
     // overhead). The truss mounts then refuse, and no truss boxes are written.
     const truss = !hasTruss(rig) ? { width_m: 0, header_h_m: 0, section_m: 0, from_stage_back_m: 0 }
         // crane-hung: the header is the hung line — its top at trim + section
-        : isCraneHung(rig) ? { ...rig.truss, header_h_m: rig.truss.trim_m + (rig.truss.section_m ?? 0.29) / 2 }
+        : isCraneHung(rig) ? { ...rig.truss, ...(isCraneX(rig) ? { width_m: rig.truss.arm_m } : {}), header_h_m: rig.truss.trim_m + (rig.truss.section_m ?? 0.29) / 2 }
             : rig.truss
     let into
     let wall
@@ -150,6 +155,8 @@ export const stageFrame = (rig, hall) => {
     return {
         crane,
         trussX: isCraneHung(rig) ? (rig.truss.x_offset_m ?? 0) : 0,
+        // crane-x: the length of each arm and the junction's size across (null for a line)
+        xArm: isCraneX(rig) ? { arm: rig.truss.arm_m, junction: rig.truss.junction?.across_m ?? 0 } : null,
         into,
         wall,
         back,
@@ -255,6 +262,20 @@ const needsTruss = (ctx, mount) => {
 // `dx_m` [a, b, ...]: mirrored pairs at ±a, ±b from the axis, instead of an even spread.
 // A 0 in the list is ONE lamp on the axis, not two (-0 and 0).
 const mirroredDx = (dx) => [...new Set([...dx.map((d) => (d === 0 ? 0 : -d)), ...dx])].sort((a, b) => a - b)
+const xArmSlots = (n, ctx, group, mount) => {
+    if (!ctx.stage.xArm) throw new Error(`mount ${mount} needs a truss of kind "crane-x"`)
+    const at = []
+    for (const [dx, dz] of group?.at_m || []) {
+        if (dx !== 0 && dz !== 0) throw new Error(`mount ${mount}: [${dx}, ${dz}] is on neither arm`)
+        if (Math.max(Math.abs(dx), Math.abs(dz)) > ctx.stage.xArm.arm / 2) throw new Error(`mount ${mount}: [${dx}, ${dz}] is past the arm's end`)
+        for (const x of dx === 0 ? [0] : [-dx, dx]) at.push([x, dz])
+    }
+    const hung = mount === 'x-under' || group?.orient === 'hung'
+    return at.sort((a, b) => a[0] - b[0] || a[1] - b[1]).slice(0, n).map(([dx, dz]) => ({
+        pos: [ctx.stage.axis + dx, hung ? ctx.stage.trussH - ctx.stage.trussSection / 2 : ctx.stage.trussH + ctx.stage.trussSection / 2, ctx.stage.trussZ + dz],
+        orient: hung ? 'hung' : 'floor', face: toAudience(ctx)
+    }))
+}
 const place = {
     'stage-back': (n, ctx) => spread(n, -ctx.stage.width / 2 + 1, ctx.stage.width / 2 - 1)
         .map((x) => ({ pos: [ctx.stage.axis + x, ctx.stage.deck, ctx.stage.back + ctx.stage.into * 0.6], orient: 'floor', face: toAudience(ctx) })),
@@ -293,6 +314,12 @@ const place = {
     // sky: hung under the truss its 270° tilt cannot reach straight up. View C's "truss top".
     'truss-top': (n, ctx, group) => (needsTruss(ctx, 'truss-top'), group?.dx_m ? mirroredDx(group.dx_m).slice(0, n) : spread(n, -ctx.stage.trussW / 2 + 0.75, ctx.stage.trussW / 2 - 0.75))
         .map((x) => ({ pos: [ctx.stage.axis + x, ctx.stage.trussH + ctx.stage.trussSection / 2, ctx.stage.trussZ], orient: 'floor', face: toAudience(ctx) })),
+    // crane-x: standing ON (or `orient: 'hung'`, under) either arm of the X, at `at_m`
+    // [[dx, dz], …] from the crossing — dx along the bridge (mirrored: ±dx), dz across it (+ = toward
+    // the audience; on the axis, so never mirrored). Each point must be a clamp point of a half-arm
+    // (every 0.5 m from 0.25 m in: pieces.js) so the room's derived slots find the lamp.
+    'x-top': (n, ctx, group) => xArmSlots(n, ctx, group, 'x-top'),
+    'x-under': (n, ctx, group) => xArmSlots(n, ctx, group, 'x-under'),
     // Standing on the top plate of each tower — or, on a crane-hung line (no towers), standing
     // on its top chord 0.4 m in from each end.
     'truss-towers': (n, ctx) => (needsTruss(ctx, 'truss-towers'), ctx.stage.crane
@@ -482,6 +509,22 @@ export const AIM_RULES = {
         const crane = ctx.stage.crane || craneNearestStage(ctx.hall, ctx.stage)
         return { target: [slot.pos[0] + sideOf(slot, ctx) * (p.out ?? 6), crane.girder_bottom_m, crane.z_m + ctx.stage.into * (p.girder ?? 1.1)] }
     },
+    // crane-x: out along the lamp's own arm, away from the crossing, rising `rise_deg` over the
+    // horizon (a hung lamp: under it). The crossing is the bridge's centre line on the axis. A lamp
+    // `end_m` or more from the crossing is an END; the others use `inner_rise_deg`, or stand
+    // straight up with `inner: 'vertical'`. The 4 ends at 30–60°: four rays; at ~10°: the X traced.
+    'along-arm': (slot, meta, ctx, p = {}) => {
+        const crane = ctx.stage.crane || craneNearestStage(ctx.hall, ctx.stage)
+        const h = [slot.pos[0] - axisOf(ctx), slot.pos[2] - crane.z_m]
+        const d = Math.hypot(h[0], h[1])
+        const up = upOf(slot)
+        const end = d >= (p.end_m ?? 2)
+        if (d < 0.05 || (!end && p.inner === 'vertical')) return { dir: [0, up, 0] }
+        // `x_rise_deg`: the bridge arm's own (its rays run under the crane's cab and trolley)
+        const onX = Math.abs(h[1]) < 0.05
+        const r = (onX && p.x_rise_deg !== undefined ? p.x_rise_deg : end ? (p.rise_deg ?? 45) : (p.inner_rise_deg ?? p.rise_deg ?? 45)) * DEG
+        return { dir: [(h[0] / d) * Math.cos(r), up * Math.sin(r), (h[1] / d) * Math.cos(r)] }
+    },
     // Hung lamps straight down onto the floor under the crane, splayed out.
     'down-from-crane': (slot, meta, ctx) => ({ target: [slot.pos[0] * 1.1, 0, slot.pos[2] + slot.girder * 4] }),
     // A laser up into the roof over the house — the only rule a laser may use
@@ -615,6 +658,18 @@ export const beamHitsBox = (from, to, reach, b) => {
 }
 
 /** A look's level for a group, 0..1; a group the look does not name is at full. */
+/**
+ * Does the lamp of this rank keep its group's level in this aim? `solo` (an integer): only that
+ * rank; `solo_mask` (an integer, bit r = rank r): several — crane-x's four ends are 85 (ranks 0, 2,
+ * 4, 6), its crossing pair 65 (0 and 6). A number, because the document's schema keeps only
+ * numeric aim parameters (projectSchema normalizeRigLooks). Neither: every lamp keeps it.
+ */
+export const soloKeeps = (aim, rank) => {
+    if (Number.isInteger(aim?.solo_mask)) return rank >= 0 && rank < 31 && ((aim.solo_mask >> rank) & 1) === 1
+    if (Number.isInteger(aim?.solo)) return rank === aim.solo
+    return true
+}
+
 export const levelOf = (look, groupId) => {
     const v = Number(look?.levels?.[groupId])
     return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1
@@ -804,7 +859,9 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
     }
     const t = stage.trussSection
     const trussTag = booth ? '(owner\'s intent, size ESTIMATED)' : '(ASSUMED)'
-    if (stage.crane) {
+    if (stage.crane && stage.xArm) {
+        entities.push(...craneXEntities(rig, stage))
+    } else if (stage.crane) {
         // The line hung from the crane bridge: the truss, and at each pick point a spreader
         // across both girders, a chain hoist under it, its chain down to the top chord and a
         // safety steel beside it. Drawn so the hang can be read; NOT an engineered design —
@@ -854,7 +911,9 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
         if (slots.length !== group.count) {
             throw new Error(`group ${group.id}: asked for ${group.count}, the hall has room for ${slots.length} by the rule "${group.mount}"`)
         }
-        const byX = slots.map((s, i) => [s.pos[0], i]).sort((a, b) => a[0] - b[0]).map(([, i]) => i)
+        // rank along x, then z, then y — the room's own order (src/rigbuild/looks.js lookPoses), so a
+        // `solo` names the same lamp in both (lamps on the X's z arm share x = 0)
+        const byX = slots.map((s, i) => [s.pos, i]).sort((a, b) => a[0][0] - b[0][0] || a[0][2] - b[0][2] || a[0][1] - b[0][1]).map(([, i]) => i)
         const real = realIndices(group, slots.length, rig.budget, mode)
         const colour = look?.colours?.[group.id] || group.colour || cls.colour
         // A look's LEVEL for the group, 0..1 (absent = full): its intensity on the desk.
@@ -865,7 +924,10 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
         const half = (op.angleDeg / 2) * DEG
         let groupReal = 0
         slots.forEach((slot, i) => {
-            const aimed = rule(slot, { i, n: slots.length, rank: byX.indexOf(i) }, gctx, spec)
+            // `rest_up: 1` with a solo: the lamps left dark stand straight up (a rested head) instead
+            // of taking the rule — a dark head asked to aim past its travel is no use to anyone
+            const resting = spec.rest_up === 1 && !soloKeeps(spec, byX.indexOf(i))
+            const aimed = resting ? { dir: [0, slot.orient === 'hung' ? -1 : 1, 0] } : rule(slot, { i, n: slots.length, rank: byX.indexOf(i) }, gctx, spec)
             const posed = aimFixture(geo, slot, aimed)
             const from = posed.lens
             const dir = posed.dir
@@ -899,7 +961,7 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
             const { pan, tilt } = aimAt(from, to)
             // `solo` (an aim parameter): only the lamp of that rank — counted from the
             // left along x, the rank the rules use — keeps the group's level; the rest are out.
-            const lampLevel = Number.isInteger(spec.solo) && byX.indexOf(i) !== spec.solo ? 0 : level
+            const lampLevel = soloKeeps(spec, byX.indexOf(i)) ? level : 0
             const isReal = real.has(i)
             if (isReal) groupReal += 1
             if (group.bake && !isReal && lampLevel > 0) {
@@ -964,6 +1026,79 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
     }
     summary.washes = washes.length
     return { entities, fixtures, summary, stage, washes }
+}
+
+/** A thin box from `a` up to `b` (a steel, a chain, a bridle leg): base-anchored at `a`, turned so its +Y runs to `b`. */
+const strut = ({ id, name, a, b, w = 0.012, colour = '#8a8d92' }) => {
+    const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]
+    const len = Math.hypot(...d) || 1
+    const u = d.map((v) => v / len)
+    // three.js Euler XYZ with y-rotation 0 turns +Y to (-sin z, cos z cos x, cos z sin x)
+    const rz = -Math.asin(Math.max(-1, Math.min(1, u[0])))
+    const rx = Math.atan2(u[2], u[1])
+    const e = box({ id, name, pos: a, size: [w, len, w], colour, metalness: 0.9, roughness: 0.35 })
+    e.components.transform.rotation = [round(rx, 6), 0, round(rz, 6)]
+    return e
+}
+
+/**
+ * crane-x — the X lying down, as it would be rigged (RIG_BUILD.md §15.8). Drawn so the hang can be
+ * read; NOT an engineered design — rigging sign-off owed. The arms, the 4-way junction, and at each
+ * pick a two-leg bridle (a V, 90° between the legs) from beam clamps on the girder flanges down to
+ * the hook of a climbing chain hoist whose body sits on the top chord, a safety steel, and at each
+ * arm end two restraint steels up to the girders (a V in plan) against the X turning or swinging.
+ * Pure.
+ */
+export const craneXEntities = (rig, stage) => {
+    const out = []
+    const r = rig.truss.rigging || {}
+    const t = stage.trussSection
+    const ax = stage.axis ?? 0
+    const z0 = stage.trussZ
+    const trim = stage.trussH - t / 2
+    const top = trim + t
+    const arm = stage.xArm.arm
+    const j = stage.xArm.junction
+    const crane = stage.crane
+    const gb = crane.girder_bottom_m
+    const gdz = crane.girders_dz_m || [-1.1, 1.1]
+    const steel = '#9aa0a6'
+    const pieces = (rig.truss.pieces_m || []).join(' + ')
+    out.push(box({ id: `${RIG_PREFIX}truss-header`, name: `X arm along the bridge ${arm} m (${pieces} m, 290 mm box) hung from the crane bridge, bottom chord ${round(trim, 2)} m — rigging sign-off owed`, pos: [ax, trim, z0], size: [arm, t, t], colour: steel, metalness: 0.8, roughness: 0.4 }))
+    out.push(box({ id: `${RIG_PREFIX}truss-z-arm`, name: `X arm across the bridge, out over the crowd, ${arm} m (${pieces} m, 290 mm box), bottom chord ${round(trim, 2)} m — rigging sign-off owed`, pos: [ax, trim, z0], size: [t, t, arm], colour: steel, metalness: 0.8, roughness: 0.4 }))
+    if (j) out.push(box({ id: `${RIG_PREFIX}truss-junction`, name: `4-way flat cross junction ${rig.truss.junction?.code || ''} (${j} m across)`.replace('  ', ' '), pos: [ax, trim - 0.005, z0], size: [j, t + 0.01, j], colour: '#80868c', metalness: 0.8, roughness: 0.45 }))
+    const picks = []
+    for (const pk of r.picks || []) for (const s of [-1, 1]) picks.push({ ...pk, s })
+    picks.forEach((pk, i) => {
+        const n = i + 1
+        const tag = `pick ${n}/${picks.length}`
+        const P = pk.arm === 'x' ? [ax + pk.s * pk.d_m, top, z0] : [ax, top, z0 + pk.s * pk.d_m]
+        // the bridle's two anchors on the girders' bottom flanges, and its apex (90° between the legs)
+        const anchors = pk.arm === 'x'
+            ? gdz.map((dz) => [P[0], gb, z0 + dz])
+            : [-1, 1].map((k) => [P[0] + k * (pk.legs_dx_m ?? 0.75), gb, P[2]])
+        const half = Math.hypot(anchors[1][0] - anchors[0][0], anchors[1][2] - anchors[0][2]) / 2
+        const apex = [P[0], gb - half, P[2]]
+        for (const [k, A] of anchors.entries()) {
+            out.push(box({ id: `${RIG_PREFIX}xpick-${n}-clamp-${k + 1}`, name: `Beam clamp on the girder flange, ${tag} (rigging)`, pos: [A[0], gb - 0.08, A[2]], size: [0.18, 0.08, 0.18], colour: '#2a2b2e', metalness: 0.7, roughness: 0.5 }))
+            out.push(strut({ id: `${RIG_PREFIX}xpick-${n}-leg-${k + 1}`, name: `Bridle leg ${k + 1}/2 (steel wire rope, 90° between the legs), ${tag} (rigging)`, a: apex, b: A, w: 0.016 }))
+        }
+        // the climbing hoist: its body on the top chord, its chain up to the bridle's apex
+        out.push(box({ id: `${RIG_PREFIX}xpick-${n}-hoist`, name: `Climbing chain hoist ${r.hoist || 'D8+ 500 kg'}, ${tag} (rigging)`, pos: [P[0], top + 0.08, P[2]], size: [0.2, 0.34, 0.2], colour: '#1b1c1f', metalness: 0.4, roughness: 0.6 }))
+        out.push(strut({ id: `${RIG_PREFIX}xpick-${n}-chain`, name: `Hoist chain to the bridle, ${tag} (rigging)`, a: [P[0], top + 0.42, P[2]], b: apex, w: 0.03, colour: '#4a4c50' }))
+        out.push(strut({ id: `${RIG_PREFIX}xpick-${n}-steel`, name: `Safety steel, ${tag} (rigging: secondary, truss to the girder)`, a: [P[0] + 0.1, top, P[2] + 0.1], b: anchors[0].map((v, k) => (k === 1 ? v : v + 0.1)) }))
+    })
+    // restraints: at each arm end two steels up to the girders, spread in plan, so the X can neither
+    // turn about its pick points nor swing along either axis (the owner's concern, 2026-09-29)
+    const ends = [[ax - arm / 2 + 0.1, z0, 'x'], [ax + arm / 2 - 0.1, z0, 'x'], [ax, z0 - arm / 2 + 0.1, 'z'], [ax, z0 + arm / 2 - 0.1, 'z']]
+    const tieDx = r.tieoffs?.dx_m ?? 1.5
+    ends.forEach(([x, z, a], i) => {
+        const to = a === 'x'
+            ? gdz.map((dz) => [x, gb, z0 + dz])
+            : [-1, 1].map((k) => [x + k * tieDx, gb, z0 + (z > z0 ? Math.max(...gdz) : Math.min(...gdz))])
+        to.forEach((b, k) => out.push(strut({ id: `${RIG_PREFIX}xtie-${i + 1}-${k + 1}`, name: `Restraint steel ${k + 1}/2 at the ${a === 'x' ? (x < ax ? 'left' : 'right') : (z > z0 ? 'crowd' : 'back')} end, to the crane girder (against sway and turning; rigging)`, a: [x, top, z], b, w: 0.01, colour: '#b8bcc2' })))
+    })
+    return out
 }
 
 /**

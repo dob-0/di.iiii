@@ -1050,6 +1050,91 @@
         "writtenAt": "2026-09-28",
         "accessed": "2026-09-28"
       }
+    },
+    {
+      "id": "up-cob200",
+      "code": "UP-COB200",
+      "identified": "EXACT",
+      "identifiedNote": "EXACT (photometry and the DMX chart not published)",
+      "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+      "model": "UP-COB200",
+      "modelledOn": null,
+      "product": "UPlight UP-COB200, 200 W COB PAR (indoor), warm + cool white",
+      "category": "par",
+      "modes": [
+        {
+          "name": "4ch",
+          "footprint": 4,
+          "channels": null,
+          "channelsSource": null,
+          "src": "UP-COB200",
+          "basis": "EXACT"
+        }
+      ],
+      "defaultMode": "4ch",
+      "modesOwed": false,
+      "power_w": {
+        "value": 180,
+        "src": "UP-COB200",
+        "basis": "EXACT",
+        "note": "rated; 200 W source"
+      },
+      "weight_kg": {
+        "value": 5.1,
+        "src": "UP-COB200",
+        "basis": "EXACT"
+      },
+      "size_mm": {
+        "value": [
+          295,
+          295,
+          350
+        ],
+        "src": "UP-COB200",
+        "basis": "EXACT"
+      },
+      "pan_tilt_deg": null,
+      "ip": {
+        "value": "IP20",
+        "src": "UP-COB200",
+        "basis": "EXACT"
+      },
+      "optics": {
+        "beam_deg": 45,
+        "zoom_deg": null,
+        "lux": null,
+        "at_m": null,
+        "photometrySrc": null,
+        "photometryBasis": "ASSUMED",
+        "note": "UPlight publishes no photometry for the UP-COB200. 9,000 lm is a PLANNING figure: ~50 lm/W of its 180 W rated draw, the order of white COB PAR fixtures' output (the COB chip's own efficacy is higher; optics and the can lose some). OWED: a lux reading from the rental house's unit."
+      },
+      "model3d": {
+        "glb": "scripts/place/fixtures/glb/cob.glb",
+        "sidecar": "scripts/place/fixtures/glb/cob.json",
+        "builtBy": "scripts/place/fixtures/build_fixtures.py",
+        "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": 0,
+        "tiltY": 0.215,
+        "lensY": 0.3335,
+        "sizeAtHome_mm": {
+          "width_x": 296,
+          "depth_z": 270,
+          "height_y": 344
+        },
+        "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+      },
+      "sources": {
+        "UP-COB200": {
+          "url": "https://up-light.en.made-in-china.com/product/bwWGPaldZMfD/China-High-Performance-200W-COB-PAR-Light-for-TV-Studio-Events.html",
+          "what": "UPlight UP-COB200, the maker's store page (model code on the page; fetched 2026-09-29: 200 W / 180 W rated, 60°/45° optional, 295 x 295 x 350 mm, 5.1 kg, 3200-5600 K, IP20, DMX 4 ch; no photometry published)"
+        }
+      },
+      "manifest": {
+        "file": "scripts/place/fixtures/fixtures.json",
+        "kind": "cob",
+        "writtenAt": "2026-09-28",
+        "accessed": "2026-09-28"
+      }
     }
   ]
 }

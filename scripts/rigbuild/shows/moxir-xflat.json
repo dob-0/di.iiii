@@ -1,0 +1,12 @@
+{
+    "about": "MOXIR 17.10, Minimal · X lying down (fixed lights only): the Minimal show's five cues re-made for a rig that never moves — colour and level only. For show-loop.mjs --show <this> --doc-only. RIG_BUILD.md §15.8.",
+    "project": "moxir-hall-minimal-xflat",
+    "loop": true,
+    "cues": [
+        { "look": "one-beam", "name": "One blade", "fade": 0, "hold": 12 },
+        { "look": "slow-sweep", "name": "The sign", "fade": 4, "hold": 16 },
+        { "look": "red-room", "name": "Red room", "fade": 5, "hold": 16 },
+        { "look": "white-cathedral", "name": "Four blades", "fade": 2, "hold": 12 },
+        { "look": "strobe-hit", "name": "Hit", "fade": 0, "hold": 4 }
+    ]
+}

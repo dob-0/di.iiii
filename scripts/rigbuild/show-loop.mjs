@@ -6,6 +6,9 @@
  *   node scripts/rigbuild/show-loop.mjs --api https://local.thedi.studio/serverXR --project moxir-hall-minimal \
  *       --token-file ~/.di/di.env [--show <show.json>] [--no-start] [--dry-run]
  *   node scripts/rigbuild/show-loop.mjs … --stop        # stop the desk's runner (the look stays up)
+ *   node scripts/rigbuild/show-loop.mjs … --show <file> --doc-only   # step 1 only: the document's cue list
+ *                                                    # and loop, the desk never asked — a project whose show
+ *                                                    # plays by the document's clock (RIG_BUILD §16)
  *
  * What it does, in order — the same things the cards page does by hand:
  *   1. the document: the project's cue list (mappingState.cues) replaced by the show's cues
@@ -94,6 +97,13 @@ const main = async () => {
     const missing = show.cues.filter((c) => !looks.looks.some((l) => l.id === c.look)).map((c) => c.look)
     if (missing.length) die(`${project} has no look ${missing.join(', ')}`)
 
+    if (args['doc-only']) {
+        const cues = showCues(show)
+        const wrote = await client.post(`/api/projects/${project}/ops`, { baseVersion: doc.body.version, ops: cueOps(document, cues, show.loop !== false).map((op, i) => ({ ...op, opId: `show-loop-${Date.now()}-${i}`, clientId: 'show-loop' })) })
+        if (!wrote.ok) die(`writing the cue list: ${wrote.status} ${wrote.text.slice(0, 300)}`)
+        say(`${project}: ${cues.length} cues, loop ${show.loop !== false ? 'on' : 'off'}, one loop ${cues.reduce((s, c) => s + c.hold, 0)} s — document only (version ${wrote.body.newVersion}); the desk was not asked`)
+        return
+    }
     const where = await desk.get('/api/show')
     const space = document.projectMeta?.spaceId
     if (!where.ok) die(`no desk at ${light} (${where.status})`)

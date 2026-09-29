@@ -115,6 +115,16 @@
       "reach_m": 18,
       "penumbra": 0.6,
       "colour": "#ffc58f"
+    },
+    "cob": {
+      "code": "UP-COB200",
+      "fixture": "cob",
+      "class": "200 W COB PAR, warm + cool white (the rental house's own, stock 8)",
+      "reach_m": 20,
+      "penumbra": 0.5,
+      "colour": "#eef3ff",
+      "angleDeg": 45,
+      "angleNote": "the 45 deg lens of the two the maker offers (60/45); photometry ASSUMED — fixtures.json"
     }
   },
   "groups": {
@@ -330,6 +340,123 @@
       ],
       "aim": "bridge-underside",
       "note": "4 PARs standing on the line between the beams (x ±1.5, ±2.5), each grazing the underside of the bridge's audience-side girder outward along it in deep red: the crane bridge drawn as a dark red frame over the DJ"
+    },
+    "beam380-x": {
+      "class": "beam380",
+      "count": 7,
+      "mount": "x-top",
+      "at_m": [
+        [
+          2.25,
+          0
+        ],
+        [
+          1.25,
+          0
+        ],
+        [
+          0,
+          -2.25
+        ],
+        [
+          0,
+          1.75
+        ],
+        [
+          0,
+          2.25
+        ]
+      ],
+      "aim": "fan-into-roof",
+      "note": "the 7 beams standing on the X's top chords: one at each of the 4 arm ends (x ±2.25; z −2.25 behind the DJ, z +2.25 out over the crowd), a pair on the bridge arm at x ±1.25, and one on the crowd arm at z +1.75 (in front of the audience-side girder, so it can fire straight up past it). Every point is a clamp point of a 2 m half-arm, so the room's derived slots find each lamp. Ranks (x, then z): 0 left end, 1 left inner, 2 back end, 3 crowd inner, 4 crowd end, 5 right inner, 6 right end."
+    },
+    "par-x-bridge": {
+      "class": "par",
+      "count": 4,
+      "mount": "truss-top",
+      "dx_m": [
+        0.75,
+        1.75
+      ],
+      "aim": "bridge-underside",
+      "note": "the 4 red PARs of Minimal's line kept: standing on the bridge arm (x ±0.75, ±1.75), grazing the underside of the audience-side girder outward along it in deep red"
+    },
+    "strobe-x": {
+      "class": "strobe",
+      "count": 2,
+      "mount": "truss-header",
+      "dx_m": [
+        2.25
+      ],
+      "orient": "hung",
+      "aim": "at-the-crowd-high",
+      "note": "2 strobes hung under the bridge arm's ends (x ±2.25), under the end beams, facing the crowd"
+    },
+    "par-x-blades": {
+      "class": "par",
+      "count": 12,
+      "mount": "x-under",
+      "at_m": [
+        [
+          0.75,
+          0
+        ],
+        [
+          1.25,
+          0
+        ],
+        [
+          1.75,
+          0
+        ],
+        [
+          0,
+          -1.75
+        ],
+        [
+          0,
+          -1.25
+        ],
+        [
+          0,
+          -0.75
+        ],
+        [
+          0,
+          0.75
+        ],
+        [
+          0,
+          1.25
+        ],
+        [
+          0,
+          1.75
+        ]
+      ],
+      "aim": "blade-down",
+      "note": "12 LED PARs hung under the X's arms, 3 on each half-arm (0.75, 1.25, 1.75 m from the crossing), focused down and splayed 20° outward along their arm — FIXED at the get-in, never moved: in haze each arm hangs a blade (a curtain) of light, the X drawn in the air from the floor up. Ranks (x, then z): 0–2 left, 3–5 back, 6–8 crowd, 9–11 right."
+    },
+    "cob-x-ends": {
+      "class": "cob",
+      "count": 4,
+      "mount": "x-under",
+      "at_m": [
+        [
+          2.25,
+          0
+        ],
+        [
+          0,
+          -2.25
+        ],
+        [
+          0,
+          2.25
+        ]
+      ],
+      "aim": "cob-out",
+      "note": "the 4 COBs hung under the arm ends, focused out along their arm 35° under the horizon: the hits — the crowd arm's lands on the front of the floor, the side arms' on the floor either side, the back arm's on the press. Fixed focus."
     }
   },
   "effects": {
@@ -736,6 +863,14 @@
     "bridge-underside": {
       "rule": "bridge-underside",
       "out": 6
+    },
+    "blade-down": {
+      "rule": "along-arm",
+      "rise_deg": 70
+    },
+    "cob-out": {
+      "rule": "along-arm",
+      "rise_deg": 35
     }
   },
   "otherSuppliers": {
@@ -986,5 +1121,427 @@
     "target_h": 5.2,
     "fov": 55,
     "note": "the first screen of the crane rig: 14 m out on the dance floor, on the centre line, eye height, looking up to 5.2 m so the crane bridge and the line hung under it frame the DJ, the press glowing behind (tuned by looking, 2026-09-28 night: at 20 m / 4.6 m the bridge read small over an empty floor)"
-  }
+  },
+  "craneX": {
+    "kind": "crane-x",
+    "why": "Owner's sketch 'ten truss versions' (~/Downloads/moxir-crane-rig/ten-truss.html), option 2 'the X lying down', built 2026-09-29 as a candidate beside Minimal: two 5 m arms crossing FLAT under the crane bridge over the DJ, one arm pointing out over the crowd; beams on all 4 ends fire 4 ways, so in haze it reads as 4 rays and the X itself only from above.",
+    "arm_m": 5,
+    "pieces_m": [
+      2,
+      1,
+      2
+    ],
+    "pieces_why": "each arm = a 2 m straight + the junction's 1 m + a 2 m straight: 4 straights and one 4-way flat cross junction for the whole X",
+    "junction": {
+      "code": "Global Truss F34 SQ-4133 '4-way cross junction'",
+      "across_m": 1.0,
+      "across_basis": "legs 0.5 m from the centre — ESTIMATE: the maker's page gives the weight, not the leg length; the rental house's own junction may differ (then the straights change, not the X)",
+      "source": "https://www.globaltruss.com/sq-4133 (fetched 2026-09-29: 10.44 kg)"
+    },
+    "section_m": 0.29,
+    "section_class": "290 mm square box truss (Global Truss F34 — src/rigbuild/pieces.js; Prolyte H30V is the same class but does not couple to F34: one system for the whole X)",
+    "truss_pieces": [
+      {
+        "code": "F34 SQ-4112 2.0 m",
+        "n": 4,
+        "each_kg": 13.17,
+        "source": "https://www.globaltruss.com/trussing/f34-square-truss/straight-segments-2 (fetched 2026-09-29)"
+      },
+      {
+        "code": "F34 SQ-4133 4-way cross junction",
+        "n": 1,
+        "each_kg": 10.44,
+        "source": "https://www.globaltruss.com/sq-4133 (fetched 2026-09-29)"
+      }
+    ],
+    "trim_m": 6.15,
+    "trim_why": "the shortest drop the rigging allows at the girder bottom the hall model carries (8.15 m, rail 7.6 m): a 90° bridle's apex hangs half its span under the flange — 1.1 m for the bridge-arm picks whose legs reach both girders (2.2 m apart) — then the climbing hoist's hook-to-suspension-plate minimum (≈0.50 m, read from the Chainmaster D8Plus 500 kg dimension sheet, p. 6) and ≈0.10 m of shackles: top chord 8.15 − 1.1 − 0.5 − 0.1 = 6.45 m, bottom chord 6.16 → 6.15 m. The crane rail is DISPUTED (6.6–8.4 m): at the low end every height here drops by 1.0 m (bottom chord ≈5.15 m, under the press crown 5.6 m, 0.1 m clear of it in plan) — measure the girder bottom on site before the trim is set.",
+    "motion": {
+      "pendulum_L_m": [
+        1.5,
+        1.9
+      ],
+      "pendulum_L_basis": "from the bridle anchors on the girder flange (8.15 m) to the hung mass's centre (the truss, 6.15–6.44 m, plus lamps standing 0.2–0.6 m above the top chord): 1.5–1.9 m. T = 2π√(L/g), g 9.81 m/s².",
+      "pendulum_T_s": [
+        2.46,
+        2.77
+      ],
+      "restraint": "each pick is a two-leg V bridle (the bridge-arm picks' V spans across the bridge, z; the crowd-arm picks' V spans along it, x), so the rigid X cannot translate either way without stretching a leg; two restraint steels at every arm end, up to the girders and spread in plan, stop it turning. What is left is the give of wire and slings: small, not zero.",
+      "rules": [
+        "no pan or tilt move over the full range faster than 4 s (the heads' reaction torque is what pushes a hung truss)",
+        "no periodic movement (a chase, a sweep back and forth) with a period between 1.7 and 4 s — 0.7× to 1.5× the pendulum's 2.5–2.8 s — the band where a small push each cycle builds up",
+        "cue fades that move heads on the X are at least 4 s in the show's cue list",
+        "the crane locked out and isolated for the whole event (it is the rig's structure)"
+      ]
+    },
+    "rigging": {
+      "hoists": 4,
+      "picks": [
+        {
+          "arm": "x",
+          "d_m": 1.5,
+          "bridle": "two legs, one to a beam clamp on each girder's bottom flange (2.2 m apart), 90° between the legs, apex 1.1 m under the flange"
+        },
+        {
+          "arm": "z",
+          "d_m": 1.1,
+          "legs_dx_m": 0.75,
+          "bridle": "right under a girder: two legs to beam clamps on that girder's flange 1.5 m apart along it, 90° between the legs, apex 0.75 m under the flange"
+        }
+      ],
+      "tieoffs": {
+        "dx_m": 1.5,
+        "what": "at every arm end, two restraint steels up to beam clamps on the girders, spread in plan: the bridge arm's ends to both girders (a V across the bridge), the crowd and back ends to their own girder 1.5 m either side (a V along it). To the crane, not the floor: the crowd end hangs over people, where a floor anchor is a trip and crush point; the nave columns (≈11 m off) are the fallback for the bridge arm's ends."
+      },
+      "hoist": "climbing chain hoist 500 kg, D8Plus (e.g. Chainmaster D8Plus 500 kg 4 m/min, SK030/76U)",
+      "hoist_kg": 20,
+      "hoist_kg_source": "Chainmaster D8Plus 500 kg datasheet DS_CH_D8PLUS_SK_030-76U (rev. 1.1, 2024-10-18): approx. 20 kg without chain incl. suspension plate and hook tackle; chain 0.59 kg/m — https://chainmaster.de/wp-content/uploads/2024/10/DS_CH_D8PLUS_SK_030-76U_500kg_4m_1f-400V-50Hz_DC.pdf",
+      "chain_kg_per_m": 0.59,
+      "chain_m": 10,
+      "hardware_kg_per_point": 6,
+      "per_point": "a two-leg bridle (steel wire rope legs, beam clamps on the girders' bottom flanges), a climbing chain hoist whose body rides on the top chord, a secondary safety steel from the truss to the girder",
+      "crane": "the nave's entry-end bridge crane, rolled along its runway to park over the DJ; rail height 7.6 m (disputed 6.6–8.4), girder bottom 8.15 m",
+      "signoff": "rigging sign-off owed (crane rated load, lock-out, hoists + safety steels): the crane's rated load and a check of the old runway, rails and brakes; the crane locked in place and its power isolated for the whole event; the bridles' leg angles and the cantilevers (1.0 m on the bridge arm, 1.4 m on the crowd arm, beyond what the maker's span tables cover) calculated; a rigger's plan with point loads, signed by a structural or rigging engineer. This file draws it; they approve it."
+    }
+  },
+  "candidates": [
+    {
+      "id": "minimal-xflat",
+      "candidateOf": "minimal",
+      "title": "Minimal · X lying down",
+      "summary": "The simple version: fixed lights only, the rental house's own (no moving heads, no strobes). Two 5 m arms of truss cross FLAT at 6.15 m under the crane bridge over the DJ, one arm out over the crowd, on 4 bridled hoists; 12 LED PARs hang under the arms focused down, so in haze the X is four blades of light; 4 COBs at the arm ends for the hits; the 4 red PARs grazing the bridge kept; the columns and the press in red as in Minimal.",
+      "truss": "crane-x",
+      "fixedOnly": true,
+      "groups": [
+        "par-x-blades",
+        "cob-x-ends",
+        "par-x-bridge",
+        "par-columns-8",
+        "par-press-3"
+      ],
+      "effects": [
+        "hazer-back"
+      ],
+      "realLights": {
+        "par-columns-8": {
+          "count": 4,
+          "pick": "nearest-stage"
+        },
+        "par-x-bridge": 2,
+        "cob-x-ends": 2
+      },
+      "looks": {
+        "white-cathedral": {
+          "title": "Four blades",
+          "intent": "The X alone: the 12 PARs under the arms at full cold white — in haze four blades of light hang from the truss to the floor, the DJ standing in the one along the bridge. Everything else dark.",
+          "aims": {
+            "par-x-blades": {
+              "rule": "along-arm",
+              "rise_deg": 70
+            },
+            "cob-x-ends": {
+              "rule": "along-arm",
+              "rise_deg": 35
+            },
+            "par-x-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            }
+          },
+          "colours": {
+            "par-x-blades": "#eef3ff"
+          },
+          "levels": {
+            "par-x-bridge": 0,
+            "cob-x-ends": 0,
+            "par-columns-8": 0,
+            "par-press-3": 0
+          }
+        },
+        "red-room": {
+          "title": "Red room",
+          "intent": "Deep red and low: the columns and the press glow from their feet, the bridge a red frame, the blades a dim red veil.",
+          "aims": {
+            "par-x-blades": {
+              "rule": "along-arm",
+              "rise_deg": 70
+            },
+            "cob-x-ends": {
+              "rule": "along-arm",
+              "rise_deg": 35
+            },
+            "par-x-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            }
+          },
+          "colours": {
+            "par-x-blades": "#ff1408",
+            "par-x-bridge": "#ff1408",
+            "par-columns-8": "#ff1408",
+            "par-press-3": "#ff1408"
+          },
+          "levels": {
+            "par-x-blades": 0.35,
+            "cob-x-ends": 0
+          }
+        },
+        "strobe-hit": {
+          "title": "Hit",
+          "intent": "The peak: the 4 COBs at full, out along their arms onto the floor, the crowd and the press (their own 1–25 Hz strobe channel on the desk); every PAR out, so the hit lands on black.",
+          "aims": {
+            "par-x-blades": {
+              "rule": "along-arm",
+              "rise_deg": 70
+            },
+            "cob-x-ends": {
+              "rule": "along-arm",
+              "rise_deg": 35
+            },
+            "par-x-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            }
+          },
+          "colours": {
+            "cob-x-ends": "#eef3ff"
+          },
+          "levels": {
+            "par-x-blades": 0,
+            "par-x-bridge": 0,
+            "par-columns-8": 0,
+            "par-press-3": 0
+          }
+        },
+        "one-beam": {
+          "title": "One blade",
+          "intent": "Blackout, and only the crowd arm's blade: a single curtain of cold white reaching out from the DJ over the front of the floor.",
+          "aims": {
+            "par-x-blades": {
+              "rule": "along-arm",
+              "rise_deg": 70,
+              "solo_mask": 448
+            },
+            "cob-x-ends": {
+              "rule": "along-arm",
+              "rise_deg": 35
+            },
+            "par-x-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            }
+          },
+          "colours": {
+            "par-x-blades": "#eef3ff"
+          },
+          "levels": {
+            "par-x-bridge": 0,
+            "cob-x-ends": 0,
+            "par-columns-8": 0,
+            "par-press-3": 0
+          }
+        },
+        "slow-sweep": {
+          "title": "The sign",
+          "intent": "The X inside its frame: the four blades in cold white at 60 %, the bridge a dim red frame over them, the columns and the press a low red.",
+          "aims": {
+            "par-x-blades": {
+              "rule": "along-arm",
+              "rise_deg": 70
+            },
+            "cob-x-ends": {
+              "rule": "along-arm",
+              "rise_deg": 35
+            },
+            "par-x-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            }
+          },
+          "colours": {
+            "par-x-blades": "#eef3ff",
+            "par-x-bridge": "#ff1408",
+            "par-columns-8": "#ff1408",
+            "par-press-3": "#ff1408"
+          },
+          "levels": {
+            "par-x-blades": 0.6,
+            "par-x-bridge": 0.5,
+            "par-columns-8": 0.3,
+            "par-press-3": 0.4,
+            "cob-x-ends": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "minimal-xflat-heads",
+      "candidateOf": "minimal",
+      "title": "Minimal · X lying down · heads",
+      "summary": "Minimal's floor and columns as they are; over the DJ, instead of the line, two 5 m arms of truss cross FLAT at 6.15 m under the crane bridge, one arm out over the crowd, on 4 bridled hoists. 7 beams stand on it (the 4 ends fire 4 ways: in haze, 4 rays; the X itself reads from above), 2 strobes under the bridge arm's ends, the 4 red PARs grazing the bridge kept.",
+      "truss": "crane-x",
+      "groups": [
+        "beam380-x",
+        "beam380-columns-6",
+        "par-columns-8",
+        "par-x-bridge",
+        "par-press-3",
+        "strobe-x",
+        "strobe-pit"
+      ],
+      "effects": [
+        "hazer-back"
+      ],
+      "realLights": {
+        "beam380-x": 1,
+        "par-columns-8": {
+          "count": 4,
+          "pick": "nearest-stage"
+        },
+        "par-x-bridge": 2
+      },
+      "looks": {
+        "white-cathedral": {
+          "title": "Four rays",
+          "intent": "The four arm ends fire out along their arms, rising 40° — in haze, four rays leaving the DJ in four directions, the crowd ray coming at you; the column beams stand as the nave in cold white. The three inner beams out.",
+          "aims": {
+            "beam380-x": {
+              "rule": "along-arm",
+              "rise_deg": 40,
+              "solo_mask": 85,
+              "rest_up": 1
+            },
+            "par-x-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            },
+            "strobe-x": {
+              "rule": "point",
+              "x": 0,
+              "y": 1.8,
+              "a": 12
+            }
+          },
+          "colours": {
+            "beam380-x": "#eef3ff"
+          },
+          "levels": {
+            "par-x-bridge": 0,
+            "strobe-x": 0
+          }
+        },
+        "red-room": {
+          "intent": "Deep red only, and low: the columns and the press glow from their feet, the seven beams on the X stand still and dim in red, the DJ a dark shape against the red press.",
+          "aims": {
+            "beam380-x": {
+              "rule": "vertical"
+            },
+            "par-x-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            },
+            "strobe-x": {
+              "rule": "point",
+              "x": 0,
+              "y": 1.8,
+              "a": 12
+            }
+          },
+          "colours": {
+            "beam380-x": "#ff1408",
+            "par-x-bridge": "#ff1408"
+          },
+          "levels": {
+            "beam380-x": 0.45,
+            "strobe-x": 0
+          }
+        },
+        "strobe-hit": {
+          "intent": "The peak: the pit strobes rake up over the crowd from the floor, the two under the X hit the front of the floor; every beam and PAR out.",
+          "aims": {
+            "beam380-x": {
+              "rule": "vertical"
+            },
+            "par-x-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            },
+            "strobe-x": {
+              "rule": "parallel",
+              "lean_deg": 55
+            }
+          },
+          "colours": {
+            "strobe-x": "#f4f7ff"
+          },
+          "levels": {
+            "beam380-x": 0,
+            "par-x-bridge": 0
+          }
+        },
+        "one-beam": {
+          "title": "Blackout + the cross",
+          "intent": "Everything out but the bridge arm's two end beams, crossing in an X 1.6 m over the DJ's head and landing in the pit either side: the DJ framed by the cross, no beam through him.",
+          "aims": {
+            "beam380-x": {
+              "rule": "point",
+              "x": 0,
+              "y": 4.8,
+              "a": -1.0,
+              "solo_mask": 65,
+              "rest_up": 1
+            },
+            "par-x-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            },
+            "strobe-x": {
+              "rule": "point",
+              "x": 0,
+              "y": 1.8,
+              "a": 12
+            }
+          },
+          "colours": {
+            "beam380-x": "#eef3ff"
+          },
+          "levels": {
+            "par-x-bridge": 0,
+            "strobe-x": 0
+          }
+        },
+        "slow-sweep": {
+          "title": "The sign",
+          "intent": "All seven beams lie down along the arms: the bridge arm's four just under the horizon (under the crane's cab and trolley), the crowd arm's rising 8° over the heads, the back one over the press — in haze the X is drawn in the air, out past the truss toward the walls; the column beams out, the columns a low red, the bridge a dim red frame. Held, not swept (the X is hung: no fast or periodic head moves).",
+          "aims": {
+            "beam380-x": {
+              "rule": "along-arm",
+              "rise_deg": 8,
+              "inner_rise_deg": 8,
+              "x_rise_deg": -10
+            },
+            "par-x-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            },
+            "strobe-x": {
+              "rule": "point",
+              "x": 0,
+              "y": 1.8,
+              "a": 12
+            }
+          },
+          "colours": {
+            "beam380-x": "#eef3ff",
+            "par-x-bridge": "#ff1408"
+          },
+          "levels": {
+            "beam380-columns-6": 0,
+            "par-x-bridge": 0.4,
+            "strobe-x": 0
+          }
+        }
+      }
+    }
+  ]
 }

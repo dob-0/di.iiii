@@ -116,7 +116,10 @@ export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) =
             const hung = lamp.hung
             const tiltY = Number(type?.model3d?.tiltY) || 0
             const from = [lamp.mount[0], lamp.mount[1] + (hung ? -tiltY : tiltY), lamp.mount[2]]
-            const answer = rule({ pos: lamp.mount, orient: hung ? 'hung' : 'floor', column: { faceX: nearestFace(slot) } }, { rank, n: members.length }, ctx, aim)
+            // `rest_up: 1` with a solo: the dark lamps stand straight up (rig-lib.mjs, the same)
+            const answer = aim.rest_up === 1 && !soloKeeps(aim, rank)
+                ? { dir: [0, hung ? -1 : 1, 0] }
+                : rule({ pos: lamp.mount, orient: hung ? 'hung' : 'floor', column: { faceX: nearestFace(slot) } }, { rank, n: members.length }, ctx, aim)
             const dir = aimDirection(answer, from)
             if (!dir) return
             const { pan, tilt } = panTiltOfDirection(dir)
@@ -125,7 +128,7 @@ export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) =
                 rotation: rotationFromPanTilt({ pan, tilt }),
                 color: look.colours?.[key] || null,
                 // `solo`: only the lamp of that rank keeps the level (rig-lib.mjs, the same rank).
-                level: Number.isInteger(aim.solo) && rank !== aim.solo ? 0 : levelOfKey(look, key),
+                level: soloKeeps(aim, rank) ? levelOfKey(look, key) : 0,
                 pan: Math.round(pan * 10) / 10,
                 tilt: Math.round(tilt * 10) / 10,
                 rule: aim.rule
@@ -133,6 +136,17 @@ export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) =
         })
     }
     return out
+}
+
+/**
+ * Does the lamp of this rank keep its group's level in this aim (rig-lib.mjs `soloKeeps`, the same
+ * rule): `solo` one rank, `solo_mask` several (bit r = rank r — a number, since the schema keeps only
+ * numeric aim parameters), neither every lamp.
+ */
+export const soloKeeps = (aim, rank) => {
+    if (Number.isInteger(aim?.solo_mask)) return rank >= 0 && rank < 31 && ((aim.solo_mask >> rank) & 1) === 1
+    if (Number.isInteger(aim?.solo)) return rank === aim.solo
+    return true
 }
 
 /** A look's level for a group key, 0..1 (RIG_BUILD.md §15); a group it does not name is at full. */
