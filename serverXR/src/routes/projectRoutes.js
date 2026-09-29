@@ -176,25 +176,47 @@ function registerProjectRoutes(router, {
   // Cached on (project, document version, updatedAt) so a space of sixty
   // projects parses its documents once and then answers out of memory; any
   // write moves one of those two numbers, so a stale label is not reachable.
+  //
+  // The same read also lifts a rig version's mark (components.rigVariant on the show
+  // entity, RIG_BUILD.md §15) so the space view's version switch can list the space's
+  // LIVE versions from this one visitor-safe list instead of from a sibling list frozen
+  // into each document at build time (2026-09-30: Minimal listed 2 of 8 live versions).
   const presentationModeCache = new Map()
   const PRESENTATION_MODE_CACHE_MAX = 4000
-  const readPresentationMode = async (spaceId, meta) => {
+  const str = (v) => (typeof v === 'string' ? v : '')
+  const rigVariantSummary = (document) => {
+    const v = (Array.isArray(document?.entities) ? document.entities : [])
+      .map((e) => e?.components?.rigVariant)
+      .find((m) => m && typeof m === 'object' && str(m.id))
+    if (!v) return null
+    const copyLabel = str(v.copyOf?.label)
+    return {
+      set: str(v.set),
+      id: str(v.id),
+      title: str(v.title),
+      summary: str(v.summary),
+      ...(v.copyOf && typeof v.copyOf === 'object' ? { copyOf: { projectId: str(v.copyOf.projectId), ...(copyLabel ? { label: copyLabel } : {}) } } : {})
+    }
+  }
+  const readRowFacts = async (spaceId, meta) => {
     const key = `${meta.id}:${meta.documentVersion ?? 0}:${meta.updatedAt ?? 0}`
     if (presentationModeCache.has(key)) return presentationModeCache.get(key)
-    let mode = 'scene'
+    let facts = { mode: 'scene', rigVariant: null }
     try {
       const document = await readProjectDocument(spacesDir, spaceId, meta.id)
       const raw = document?.presentationState?.mode
-      if (raw === 'scene' || raw === 'fixed-camera' || raw === 'code') mode = raw
+      facts = {
+        mode: raw === 'scene' || raw === 'fixed-camera' || raw === 'code' ? raw : 'scene',
+        rigVariant: rigVariantSummary(document)
+      }
     } catch {
       // A document that cannot be read is still a project that exists; call it
       // a scene (the schema default) rather than dropping the row and hiding
       // the very thing this route was built to make findable.
-      mode = 'scene'
     }
     if (presentationModeCache.size >= PRESENTATION_MODE_CACHE_MAX) presentationModeCache.clear()
-    presentationModeCache.set(key, mode)
-    return mode
+    presentationModeCache.set(key, facts)
+    return facts
   }
 
   router.get('/api/spaces/:spaceId/contents', async (req, res, next) => {
@@ -208,12 +230,14 @@ function registerProjectRoutes(router, {
         .filter((meta) => (meta.state || 'live') === 'live' && !isLegacyArchivedTitle(meta.title))
       const projects = []
       for (const meta of onShow) {
+        const facts = await readRowFacts(spaceId, meta)
         projects.push({
           id: meta.id,
           slug: meta.slug || null,
           title: meta.title,
-          mode: await readPresentationMode(spaceId, meta),
+          mode: facts.mode,
           updatedAt: meta.updatedAt,
+          ...(facts.rigVariant ? { rigVariant: facts.rigVariant } : {}),
           // Said only on a private row — which only a member is ever sent.
           ...(meta.visibility === 'private' ? { visibility: 'private' } : {})
         })

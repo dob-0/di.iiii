@@ -588,6 +588,13 @@ describe('ESM/CJS mirror equivalence', () => {
     expect(doc.entities[1].components.rigVariant).toBeUndefined()
   })
 
+  it('keeps the mark of a labelled copy of a rig version, so the switch can keep it apart (RIG_BUILD.md §15.11)', () => {
+    const doc = schema.normalizeProjectDocument({
+      entities: [{ id: 'l3', type: 'group', components: { rigVariant: { set: 'moxir-2026-10-17', id: 'minimal-oldhall-0929', title: 'Minimal · old hall 09-29', siblings: [{ id: 'minimal-oldhall-0929', projectId: 'moxir-hall-minimal-oldhall-0929' }], copyOf: { projectId: 'moxir-hall-minimal', id: 'minimal', label: 'old hall 09-29', junk: 1 } } } }]
+    })
+    expect(doc.entities[0].components.rigVariant.copyOf).toEqual({ projectId: 'moxir-hall-minimal', id: 'minimal', label: 'old hall 09-29' })
+  })
+
   it('clears one fixture field through updateComponent without losing the rest', () => {
     const base = schema.normalizeProjectDocument({
       entities: [{ id: 'l', type: 'spotLight', components: { fixture: { index: 7, type: 'up-b380f', mode: '16ch', universe: 1, address: 1 } } }]

@@ -1093,6 +1093,14 @@ mode), top left, a row of plain links — As ordered · Minimal · Middle · Ful
 two or more siblings, so every other room is unchanged. Links, not state: a new tab puts two side
 by side; 44 px targets for a thumb.
 
+**The switch reads the space, not a frozen list (2026-09-30).** A version's stored `siblings` is the
+fallback only. The row is derived at view time from `GET /api/spaces/:id/contents`: every live row
+whose document's mark names the same `set` (each row carries `rigVariant` { set, id, title, summary,
+copyOf? }, lifted by the server from the cached document read). So archived, draft or private versions
+never appear for a viewer who may not see them, a version made later is on every older version's row,
+and the row is the same from each. Order: by project id; labelled copies (`copyOf`) after the live
+versions, behind a divider. A mark with no `siblings` still works. Pure part: `src/rigbuild/rigVariant.js`.
+
 ### 15.2 Made as data, generated, tested
 
 - **The design** — `moxir-versions-2026-10-17.json`: the brief's rules with the sources that

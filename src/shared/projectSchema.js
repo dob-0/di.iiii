@@ -868,7 +868,11 @@ export const normalizeRigVariant = (value) => {
     return sid && projectId ? { id: sid, projectId, title: planText(s.title, 60) || sid, summary: planText(s.summary, 160) } : null
   }).filter(Boolean)
   if (!siblings.some((s) => s.id === id)) return null
-  return { set, id, title: planText(value.title, 60) || id, summary: planText(value.summary, 160), source: planText(value.source, 480), siblings }
+  // A labelled COPY of a version (copy-version.mjs, RIG_BUILD.md §15.11) says what it is a copy of, so
+  // the switch keeps it apart from the live versions; kept through every normalisation pass.
+  const copyId = variantId(value.copyOf?.projectId)
+  const copyOf = copyId ? { projectId: copyId, id: variantId(value.copyOf.id), label: planText(value.copyOf.label, 60) } : null
+  return { set, id, title: planText(value.title, 60) || id, summary: planText(value.summary, 160), source: planText(value.source, 480), siblings, ...(copyOf ? { copyOf } : {}) }
 }
 
 // THE RIG'S DESIGNED LOOKS (RIG_BUILD.md §11.4, view C): per look, a rule and its
