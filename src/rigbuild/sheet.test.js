@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import library from './types/moxir.json'
-import { assignCircuits, circuitLimitW, patchCsv, plotData, powerCsv, renderSheetBody, renderSheetHtml, sheetModel, toCsv } from './sheet.js'
+import { assignCircuits, circuitLimitW, groupFlags, patchCsv, plotData, powerCsv, renderSheetBody, renderSheetHtml, sheetModel, toCsv } from './sheet.js'
 import { applyProjectOps, normalizeProjectDocument } from '../shared/projectSchema.js'
 
 const lamp = (id, fixture, extra = {}) => ({ id, type: 'spotLight', name: id, components: { transform: { position: [0, 6, 0], rotation: [0, 0, 0] }, fixture, ...extra } })
@@ -113,5 +113,40 @@ describe('plot data', () => {
         expect(plot.pieces).toEqual([{ id: 't', kind: 'truss-2m', category: 'truss', size: [2, 0.29, 0.29], position: [0, 6, 0], yaw: 0 }])
         expect(plot.lamps[0].hung).toBe(true)
         plot.lamps[0].mount.forEach((v, i) => expect(v).toBeCloseTo([0, 6, 0][i], 3))
+    })
+})
+
+describe('the sheet says what each warning is, by cause', () => {
+    const at = (id, extra) => lamp(id, { type: 'up-b380f', mode: '16ch', position: 'booth', ...extra })
+    const model = sheetModel({ entities: [at('a', { index: 1, universe: 1, address: 1 }), at('b', { index: 2, universe: 1, address: 10 }), at('c', { index: 3 })], library })
+
+    it('groups the flags: to decide, not addressed, owed — each with one line of what to do', () => {
+        const groups = groupFlags(model.flagCounts)
+        const of = (id) => groups.find((g) => g.id === id)
+        expect(of('decide').items.map((i) => [i.code, i.n])).toEqual([['overlap', 2]])
+        expect(of('decide').items[0].todo).toMatch(/next free address.*separate desk/)
+        expect(of('unaddressed').items[0]).toMatchObject({ code: 'not-patched', n: 1 })
+        expect(of('owed').items[0].code).toBe('channels-owed')
+        expect(groups.map((g) => g.id).indexOf('decide')).toBeLessThan(groups.map((g) => g.id).indexOf('owed'))
+    })
+    it('prints the groups on the sheet', () => {
+        const html = renderSheetBody(model, {})
+        expect(html).toMatch(/id="flags-decide">To decide/)
+        expect(html).toMatch(/overlap<\/span> — 2 fixtures\. two fixtures claim the same channels/)
+        expect(html).toMatch(/id="flags-unaddressed">Not addressed yet/)
+    })
+    it('never lets a desk code through as a bare code', () => {
+        const [g] = groupFlags({ 'no-room': 1, 'made-up': 2 })
+        expect(g.items[0].word).toBe('no universe had room')
+        expect(groupFlags({ 'made-up': 2 }).at(-1)).toMatchObject({ id: 'other', n: 2 })
+    })
+    it('labels an assumed channel list as assumed in the patch table and the type table', () => {
+        const assumed = library.types.flatMap((t) => (t.modes || []).filter((m) => m.assumed || m.basis === 'ASSUMED').map((m) => ({ type: t.id, mode: m.name })))[0]
+        expect(assumed).toBeTruthy()
+        const m = sheetModel({ entities: [lamp('x', { type: assumed.type, mode: assumed.mode, index: 1, universe: 1, address: 1, position: 'p' })], library })
+        expect(m.rows[0].modeAssumed).toBe(true)
+        const html = renderSheetBody(m, {})
+        const shown = assumed.mode.toLowerCase().includes('assumed') ? assumed.mode : `${assumed.mode} (assumed)`
+        expect(html.split(shown).length - 1).toBeGreaterThanOrEqual(2)
     })
 })

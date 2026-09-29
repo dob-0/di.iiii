@@ -109,7 +109,7 @@ describe('rigProgress — what the document says about each step', () => {
 
 describe('RigSteps — the row', () => {
     it('marks where you are, numbers the steps, and says what each holds', () => {
-        const progress = { said: { equipment: '104 on order', patch: '46 of 104 addressed · ! 4' }, warn: { patch: true }, suggested: 'patch' }
+        const progress = { said: { equipment: '104 on order', patch: '46 of 104 addressed · 4 to decide' }, hints: { patch: '4 to decide (4 overlap) — the sheet lists them' }, warn: { patch: true }, suggested: 'patch' }
         render(<RigSteps spaceId="moxir" projectId="moxir-hall" here="plot" progress={progress} />)
         const nav = screen.getByRole('navigation', { name: 'The rig, step by step' })
         const list = within(nav).getByRole('list')
@@ -124,6 +124,8 @@ describe('RigSteps — the row', () => {
         expect(here.textContent).toMatch(/3\s*plot/)
         expect(items[1].textContent).toContain('104 on order')
         expect(items[5].className).toContain('is-warn')
+        expect(items[5].getAttribute('title')).toContain('4 to decide (4 overlap)')
+        expect(items[5].textContent).toContain('4 to decide')
         // the step before and the step after, at the two ends
         expect(within(nav).getByRole('link', { name: 'back to build' }).getAttribute('href')).toBe('/moxir/build/moxir-hall')
         expect(within(nav).getAllByRole('link').find((a) => /next/.test(a.textContent)).getAttribute('href')).toBe('/moxir/cards/moxir-hall')

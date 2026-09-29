@@ -9,7 +9,7 @@
 // Columns after Lightwright's instrument schedule / channel hookup. A flag is a word
 // and a mark, never a colour, so the sheet survives a black-and-white printer.
 
-import { modeOf, powerOf, typeById, typeFlags } from './fixtureTypes.js'
+import { isAssumedMode, modeOf, powerOf, typeById, typeFlags } from './fixtureTypes.js'
 import { mountFromLens } from './lampGeometry.js'
 import { pieceKindOf, pieceOf } from './pieces.js'
 import { spotAimDirection } from '../project/viewport/spotLightAim.js'
@@ -37,7 +37,62 @@ export const FLAG_WORDS = {
     'desk-differs': 'desk differs',
     'not-on-desk': 'not on the desk',
     'over-order': 'over the equipment list',
-    'not-on-list': 'not on the equipment list'
+    'not-on-list': 'not on the equipment list',
+    // the desk's own refusals (serverXR/src/lighting/rigpatch.js) — said in words, not as codes
+    'no-room': 'no universe had room',
+    'profile-clash': 'channel list clashes with the desk',
+    'profile-refused': 'desk refused the channel list',
+    'group-split': 'group split across universes'
+}
+
+// WHAT EACH FLAG NEEDS, in causes. The steps row's "N to decide" and the sheet's Flags
+// list use the same groups, so the number on the row is a list on the sheet. Nothing
+// here moves an address: every "do" is a decision for a person (RIG_BUILD.md §4.2, §19).
+export const FLAG_GROUPS = [
+    { id: 'decide', title: 'To decide — someone must choose before the rig is plugged', codes: {
+        overlap: 'two fixtures claim the same channels — move one to the next free address, or put it on a separate desk or universe',
+        'off-the-end': 'runs past channel 512 — move it to another universe',
+        'index-duplicate': 'two fixtures share a fixture number — renumber one',
+        'desk-differs': 'the desk holds a different address — choose which is right, then make the other agree',
+        'circuit-over': 'the circuit carries more than its limit — move a fixture to another circuit',
+        'no-room': 'the desk found no universe with room — free a universe or add one',
+        'profile-clash': 'the desk holds another channel list for this mode — choose which stays',
+        'profile-refused': 'the desk refused this channel list — check the mode against the rental unit',
+        'group-split': 'a group was split over universes — repatch the group',
+        'unknown-type': 'the type is not in the library — pick a type',
+        'over-order': 'more placed than ordered — order more or remove one',
+        'not-on-list': 'its type is not on the equipment list — add the line or remove the lamp'
+    } },
+    { id: 'unaddressed', title: 'Not addressed yet', codes: {
+        'not-patched': 'no universe or address — run the patch (the desk on this machine, or the show patch plan)',
+        'not-on-desk': 'addressed here but not on the desk — patch it on the desk'
+    } },
+    { id: 'assumed', title: 'Assumed — labelled, not confirmed', codes: {
+        'channels-assumed': 'the channel list is a stand-in — verify on the rental unit before the desk drives it',
+        'power-assumed': 'the wattage is a stand-in — no datasheet figure yet'
+    } },
+    { id: 'owed', title: 'Owed by the rental house', codes: {
+        'channels-owed': 'the channel list is not published — ask the rental house',
+        'mode-unknown': 'the DMX mode is not known — ask the rental house'
+    } },
+    { id: 'housekeeping', title: 'Housekeeping', codes: {
+        'no-circuit': 'no circuit assigned — assign circuits'
+    } }
+]
+
+/** The flag counts of a sheet (or any {code: n}), grouped by cause, in FLAG_GROUPS order. Pure. */
+export const groupFlags = (flagCounts = {}) => {
+    const known = new Set()
+    const groups = FLAG_GROUPS.map((g) => {
+        const items = Object.entries(g.codes).filter(([code]) => flagCounts[code]).map(([code, todo]) => {
+            known.add(code)
+            return { code, word: FLAG_WORDS[code] || code, n: flagCounts[code], todo }
+        })
+        return { id: g.id, title: g.title, items, n: items.reduce((sum, i) => sum + i.n, 0) }
+    }).filter((g) => g.items.length)
+    const rest = Object.entries(flagCounts).filter(([code]) => !known.has(code))
+    if (rest.length) groups.push({ id: 'other', title: 'Other', items: rest.map(([code, n]) => ({ code, word: FLAG_WORDS[code] || code, n, todo: '' })), n: rest.reduce((sum, [, n]) => sum + n, 0) })
+    return groups
 }
 
 /**
@@ -73,6 +128,7 @@ export const sheetModel = ({ entities = [], library, circuit = DEFAULT_CIRCUIT, 
             model: type?.model || null,
             modelledOn: type?.modelledOn || null,
             mode: mode ? mode.name : (modeName || null),
+            modeAssumed: isAssumedMode(mode),
             footprint,
             position: f.position || '',
             unit: f.unit ?? null,
@@ -303,6 +359,7 @@ export const SHEET_CSS = `
   font: 13px/1.35 system-ui, -apple-system, 'Segoe UI', sans-serif; max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
 .rigsheet .mono, .rigsheet td, .rigsheet th { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace; }
 .rigsheet h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: .02em; }
+.rigsheet h3 { font-size: 11px; margin: 12px 0 2px; }
 .rigsheet h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; margin: 28px 0 6px; padding-bottom: 3px; border-bottom: 1.5px solid var(--rule); }
 .rigsheet .sub { color: var(--soft); margin: 0 0 12px; }
 .rigsheet dl.block { display: grid; grid-template-columns: max-content 1fr; gap: 2px 16px; margin: 12px 0; }
@@ -333,6 +390,9 @@ export const SHEET_CSS = `
 }
 `
 
+// A mode whose channel list is ASSUMED says so wherever it is printed (once, not twice).
+const modeLabel = (r) => `${r.mode ? `${r.mode}` : '?'}${r.modeAssumed && !/assumed/i.test(r.mode || '') ? ' (assumed)' : ''}`
+
 const patchTable = (model) => {
     const head = '<tr><th>#</th><th>type</th><th>mode</th><th>position</th><th>unit</th><th>univ</th><th>address</th><th>ch</th><th>circuit</th><th>W</th><th>flags</th></tr>'
     const body = []
@@ -348,7 +408,7 @@ const patchTable = (model) => {
         const cls = [r.flags.length ? 'flagged' : '', r.flags.includes('overlap') ? 'overlap' : ''].filter(Boolean).join(' ')
         const addr = r.address == null ? '—' : (r.footprint > 1 ? `${pad3(r.address)}–${pad3(r.last)}` : pad3(r.address))
         const flags = [...r.flags.map((f) => FLAG_WORDS[f] || f), ...r.notes].join('; ')
-        body.push(`<tr${cls ? ` class="${cls}"` : ''}><td class="n">${esc(r.index ?? '—')}</td><td>${esc(r.code)}</td><td>${esc(r.mode ? `${r.mode}` : '?')}</td><td>${esc(r.position || '—')}</td><td class="n">${esc(r.unit ?? '')}</td><td class="n">${esc(r.universe ?? '—')}</td><td>${addr}</td><td class="n">${esc(r.footprint ?? '?')}</td><td>${esc(r.circuit || '—')}</td><td class="n">${esc(r.watts ?? '?')}${r.wattsBasis === 'ASSUMED' ? '*' : ''}</td><td class="flags">${esc(flags)}</td></tr>`)
+        body.push(`<tr${cls ? ` class="${cls}"` : ''}><td class="n">${esc(r.index ?? '—')}</td><td>${esc(r.code)}</td><td>${esc(modeLabel(r))}</td><td>${esc(r.position || '—')}</td><td class="n">${esc(r.unit ?? '')}</td><td class="n">${esc(r.universe ?? '—')}</td><td>${addr}</td><td class="n">${esc(r.footprint ?? '?')}</td><td>${esc(r.circuit || '—')}</td><td class="n">${esc(r.watts ?? '?')}${r.wattsBasis === 'ASSUMED' ? '*' : ''}</td><td class="flags">${esc(flags)}</td></tr>`)
     }
     return `<div class="wrap"><table><thead>${head}</thead><tbody>${body.join('')}</tbody></table></div>`
 }
@@ -368,14 +428,13 @@ const powerTable = (model) => {
  */
 export const renderSheetBody = (model, meta = {}) => {
     const p = model.power
-    const flagLines = Object.entries(model.flagCounts).sort((a, b) => b[1] - a[1])
-        .map(([code, n]) => `<li><span class="mono">${esc(FLAG_WORDS[code] || code)}</span> — ${n} fixture${n === 1 ? '' : 's'}</li>`).join('')
+    const flagLines = groupFlags(model.flagCounts).map((g) => `<h3 id="flags-${g.id}">${esc(g.title)} — ${g.n}</h3><ul>${g.items.map((i) => `<li><span class="mono">${esc(i.word)}</span> — ${i.n} fixture${i.n === 1 ? '' : 's'}${i.todo ? `. ${esc(i.todo)}` : ''}</li>`).join('')}</ul>`).join('')
     const types = new Map()
     for (const r of model.rows) {
         if (!types.has(r.code)) types.set(r.code, { code: r.code, maker: r.maker, modelledOn: r.modelledOn, n: 0, modes: new Set() })
         const t = types.get(r.code)
         t.n += 1
-        if (r.mode) t.modes.add(r.mode)
+        if (r.mode) t.modes.add(modeLabel(r))
     }
     const typeRows = [...types.values()].map((t) => `<tr><td>${esc(t.code)}</td><td class="n">${t.n}</td><td>${esc([...t.modes].join(', ') || '?')}</td><td style="white-space:normal">${esc(t.maker || (t.modelledOn ? `not identified — modelled on ${t.modelledOn}` : '—'))}</td></tr>`).join('')
     return `
@@ -404,8 +463,8 @@ ${powerTable(model)}
 <p class="note">Datasheet maximum watts, power factor taken as 1 (understates current for discharge lamps and switch-mode supplies). A planning illustration, not an electrical design: an electrician's distribution plan is owed.</p>
 </section>
 <section>
-<h2>Flags</h2>
-${flagLines ? `<ul>${flagLines}</ul>` : '<p>none</p>'}
+<h2 id="flags">Flags</h2>
+${flagLines || '<p>none</p>'}
 </section>
 <p class="foot">From the project document${meta.version != null ? ` at version ${esc(meta.version)}` : ''}${meta.generatedAt ? ` · ${esc(meta.generatedAt)}` : ''}. Types: src/rigbuild/types (sources in each type). Method: docs/architecture/RIG_BUILD.md. Not validated against a console; modes marked owed come from the rental house.${meta.source ? ` ${esc(meta.source)}` : ''}</p>
 `
