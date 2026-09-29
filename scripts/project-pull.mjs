@@ -44,6 +44,7 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { remapAssetIds, remapFromUpload } from './asset-remap-lib.mjs'
 import { collectProjectAssetRefs } from './document-asset-refs.mjs'
+import { ensureDestinationVisibility, visibilityCreateFields } from './project-visibility-lib.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const { diffDocumentLoss, describeLoss, parseAcceptLoss, lossGate } = createRequire(import.meta.url)('../shared/documentLoss.cjs')
@@ -265,13 +266,20 @@ const main = async () => {
     // 3. Create the project shell. `slug` is what the server normalizes into
     //    the project id, so passing the source id keeps every asset URL inside
     //    the document (/api/projects/<id>/assets/<assetId>) valid as-is.
+    //    A private project is created private, and the target has to say so
+    //    before anything is written into it (project-visibility-lib.mjs).
+    //    The source's meta rides on the document response; a source too old
+    //    to have the field has no private projects.
+    const sourceMeta = remote?.project || null
     console.log(`\nCreating project "${projectId}" in space "${spaceId}"`)
+    let created = null
     try {
-        await apiFetch(`${toBase}/api/spaces/${spaceId}/projects`, {
+        const made = await apiFetch(`${toBase}/api/spaces/${spaceId}/projects`, {
             method: 'POST',
             headers: localHeaders(),
-            body: JSON.stringify({ slug: projectId, title }),
+            body: JSON.stringify({ slug: projectId, title, ...visibilityCreateFields(sourceMeta) }),
         })
+        created = made?.project || null
         console.log('  created')
     } catch (error) {
         if (error.status !== 409) throw error
@@ -280,6 +288,17 @@ const main = async () => {
         }
         console.log('  already exists — overwriting (--force)')
     }
+    const kept = await ensureDestinationVisibility({
+        projectId,
+        sourceMeta,
+        destMeta: created,
+        request: async (method, pathname, body) => {
+            const res = await fetchWithRetry(`${toBase}${pathname}`, { method, headers: localHeaders(), ...(body ? { body: JSON.stringify(body) } : {}) })
+            return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
+        }
+    })
+    if (!kept.ok) throw new Error(kept.error)
+    if (kept.note) console.log(`  visibility: ${kept.note}`)
 
     // 4. Load the document.
     console.log(`Writing document (${entityCount} objects)`)

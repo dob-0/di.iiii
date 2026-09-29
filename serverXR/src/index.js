@@ -31,6 +31,7 @@ const {
   normalizeAuthScopeSpaces,
   setCommunalSpaceId
 } = require('./authAccess')
+const { PROJECT_NOT_FOUND, canSeeProject } = require('./projectVisibility')
 const {
   createAuthSessionValue,
   readCookie,
@@ -137,6 +138,7 @@ const {
   reorderProjects,
   setProjectShelf,
   setProjectState,
+  setProjectVisibility,
   TRASH_TTL_MS,
   ensureProject,
   findProjectById, findProjectByIdAny,
@@ -405,7 +407,16 @@ const broadcastProjectLiveEvent = async (projectId, eventName, payload, excludeI
   const entry = await getProjectLiveBucket(projectId)
   if (!entry) return
   const data = `event: ${eventName}\ndata: ${JSON.stringify(payload)}\n\n`
+  // A project made private while a visitor's stream was open: that visitor
+  // is no longer someone it exists for. Their stream ends here, before this
+  // event (or any later one) is written to it.
+  const privateNow = entry.project?.meta?.visibility === 'private'
   entry.bucket.forEach((client, clientId) => {
+    if (privateNow && !canSeeProject(client.authState, entry.project.meta, { requireAuth: config.requireAuth })) {
+      try { client.res.end() } catch { /* already gone */ }
+      entry.bucket.delete(clientId)
+      return
+    }
     if (excludeId && clientId === excludeId) return
     try {
       client.res.write(data)
@@ -1767,6 +1778,17 @@ router.use('/api/trash', (req, res, next) => {
 router.use('/api/projects/:projectId', async (req, res, next) => {
   try {
     const project = await resolveProjectContext(req.params.projectId)
+    // A private project is not there for anyone outside its space: every
+    // route under /api/projects/:projectId (meta, document, ops, assets, asset
+    // meta, events, shelf, …) answers exactly what it answers for an id that
+    // was never created. One gate here, ahead of every route and every write
+    // gate, so a route added later cannot forget it — and 404, not 401/403,
+    // so the answer does not confirm the project exists.
+    // docs/architecture/SPEC_project_visibility.md.
+    if (project && !canSeeProject(req.authState, project.meta, { requireAuth: config.requireAuth })) {
+      return res.status(404).json(PROJECT_NOT_FOUND)
+    }
+    req.projectContext = project || null
     req.requiredSpaceId = project?.spaceId || null
     if (req.method === 'DELETE' && (req.path === '/' || req.path === '')) {
       // Deleting a project is owner-or-admin, like managing its space: keep
@@ -1856,6 +1878,9 @@ registerOgRoutes(router, {
     const project = (await findProjectBySlug(spaceId, projectSegment)) ||
       (await loadProjectMeta(SPACES_DIR, spaceId, normalizeProjectId(projectSegment) || projectSegment))
     if (!project || project.spaceId !== spaceId || project.state !== 'live' || project.deletedAt) return null
+    // A crawler is never a member: a private project previews as nothing,
+    // and the card falls back to the space's own.
+    if (project.visibility === 'private') return null
     return project
   },
   siteOrigin: process.env.SITE_ORIGIN || '',
@@ -1946,7 +1971,17 @@ router.get('/api/resolve/:spaceSegment/:projectSegment', async (req, res, next) 
       // used to just 404 once a project left. One extra lookup turns that
       // into a pointer instead of a dead link — see CONTRIBUTING.md, "Moving one project".
       const moved = findProjectMove(space.id, projectSegment)
-      if (moved) return res.json({ movedTo: { spaceId: moved.toSpace, projectId: moved.projectId } })
+      if (moved) {
+        // A pointer names the project's id and new space — for a private
+        // project that is exactly what a visitor must not learn.
+        const target = await findProjectById(SPACES_DIR, moved.projectId)
+        if (!target || canSeeProject(req.authState, target.meta, { requireAuth: config.requireAuth })) {
+          return res.json({ movedTo: { spaceId: moved.toSpace, projectId: moved.projectId } })
+        }
+      }
+      return res.status(404).json({ error: 'Not found.' })
+    }
+    if (!canSeeProject(req.authState, project, { requireAuth: config.requireAuth })) {
       return res.status(404).json({ error: 'Not found.' })
     }
     res.json({ space, project })
@@ -2383,6 +2418,9 @@ registerProjectRoutes(router, {
   reorderProjects,
   setProjectShelf,
   setProjectState,
+  setProjectVisibility,
+  loadSpaceMeta,
+  isSpaceOwnerOrAdminState,
   TRASH_TTL_MS,
   listCollections,
   getCollection,

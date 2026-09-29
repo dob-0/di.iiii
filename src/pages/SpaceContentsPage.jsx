@@ -216,6 +216,11 @@ export default function SpaceContentsPage({ spaceId }) {
                                             {project.id === doorId && (
                                                 <span className="sc-row-door" title="What this space opens on">the way in</span>
                                             )}
+                                            {/* Only a member is ever sent a private row, so the
+                                                mark is for them: this one visitors do not see. */}
+                                            {project.visibility === 'private' && (
+                                                <span className="sc-row-door" title="Private — only members of this space see it">private</span>
+                                            )}
                                         </span>
                                         <span className="sc-row-kind">
                                             {kind.label}
