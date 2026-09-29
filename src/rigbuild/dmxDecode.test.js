@@ -169,3 +169,22 @@ describe('the assumed profiles', () => {
         expect(type('UP-Q108S').modesOwed).toBe(true)
     })
 })
+
+describe('tunable white (UP-COB200, the cut 2026-09-29)', () => {
+    const cob = [{ role: 'dimmer' }, { role: 'warm' }, { role: 'cool' }, { role: 'strobe', cap: { shutter: [{ from: 0, to: 4, open: true }, { from: 5, to: 255, strobe: [1, 25] }] } }]
+    it('puts cold white all on the cold emitter and blinder warm white mostly on the warm one', () => {
+        expect(encodeDmx(cob, { level: 1, colour: '#eef3ff' })).toMatchObject({ dimmer: 255, warm: 0, cool: 255 })
+        const warm = encodeDmx(cob, { level: 0.5, colour: '#ffc58f' })
+        expect(warm.dimmer).toBe(128)
+        expect(warm.warm).toBe(255)
+        expect(warm.cool).toBeLessThan(128)
+    })
+    it('reads a warm/cool mix back as a white between 3200 K and 5600 K at the dimmer\'s level', () => {
+        const d = decodeDmx(cob, [255, 0, 255, 0])
+        expect(d.colour).toBe('#ffeee3')
+        expect(d.level).toBe(1)
+        const w = decodeDmx(cob, [128, 255, 0, 0])
+        expect(w.colour).toBe('#ffb46b')
+        expect(w.level).toBeCloseTo(128 / 255, 3)
+    })
+})

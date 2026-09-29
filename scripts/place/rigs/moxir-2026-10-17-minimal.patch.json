@@ -1,6 +1,6 @@
 {
   "patch": "moxir-2026-10-17-minimal",
-  "title": "MOXIR 17.10 — Minimal — the show patch",
+  "title": "MOXIR 17.10 — Minimal, the cut (simple: fixed lights) — the show patch",
   "project": "moxir-hall-minimal",
   "writtenAt": "2026-09-29",
   "howToRead": "docs/architecture/RIG_BUILD.md §20. The LD's patch plan as data: which universe each position runs on, where each block starts, the fixture numbers and the DMX mode per type. scripts/rigbuild/patch-plan.mjs applies it to the project document (the single truth); patch.mjs --exact makes the desk agree; patch-sheet.mjs prints the crew's sheet. Never edit addresses in the document or on the desk by hand — change this file and run the three again.",
@@ -45,44 +45,54 @@
     "ext-hazer": {
       "crew": "2ch",
       "why": "not chosen yet (another supplier). Planned on a 2-channel hazer (haze output, fan) — both needed."
+    },
+    "up-cob200": {
+      "crew": "4ch",
+      "why": "the maker lists 4 channels (its made-in-china store, 'Channel 4CH') and no order: the desk runs the ASSUMED 4ch list of the FOS PAR COB 200W LED TW (a4CH: master dimmer, warm, cold, strobe — RIG_BUILD §18.1) until the rental unit's chart is read."
     }
   },
   "universes": [
     {
       "universe": 1,
       "port": "A",
-      "label": "The crane rig (air)",
-      "run": "node port A → up the crane on a hoist line → every truss piece hung from the bridge, house left to house right",
+      "label": "The cut (air)",
+      "run": "node port A → up the crane on a hoist line → along the 12 m cut, house left (low) to house right (high)",
       "blocks": [
         {
           "select": {
-            "type": "up-b380f",
+            "type": "up-cob200",
             "y": ">3"
           },
           "start": 1,
           "fixture": 101,
           "order": "x-asc",
-          "what": "the UP-B380F heads in the air (on the crane truss)"
-        },
-        {
-          "select": {
-            "type": "ext-strobe",
-            "y": ">3"
-          },
-          "start": 201,
-          "fixture": 111,
-          "order": "x-asc",
-          "what": "the strobes in the air"
+          "what": "the curtain: UP-COB200 hung under the middle of the cut, straight down"
         },
         {
           "select": {
             "type": "up-pl5403",
-            "y": ">3"
+            "y": ">3",
+            "position": [
+              "truss header"
+            ]
           },
-          "start": 301,
+          "start": 101,
+          "fixture": 111,
+          "order": "x-asc",
+          "what": "the X: UP-PL5403 hung under the ends, focused over the DJ"
+        },
+        {
+          "select": {
+            "type": "up-pl5403",
+            "y": ">3",
+            "position": [
+              "truss top"
+            ]
+          },
+          "start": 201,
           "fixture": 121,
           "order": "x-asc",
-          "what": "the UP-PL5403 in the air, grazing the crane bridge"
+          "what": "UP-PL5403 standing on the cut, grazing the crane bridge in red"
         }
       ]
     },
@@ -94,22 +104,30 @@
       "blocks": [
         {
           "select": {
-            "type": "up-b380f",
+            "type": "up-pl5403",
             "y": "<3",
-            "xAbs": ">8"
+            "xAbs": ">8",
+            "position": [
+              "column bases",
+              "column bases HL"
+            ]
           },
           "side": "HL",
           "start": 1,
           "fixture": 201,
           "order": "z-asc",
           "position": "column bases HL",
-          "what": "UP-B380F on the floor at the column bases, into the roof"
+          "what": "UP-PL5403 pillars at the column bases, straight up into the roof"
         },
         {
           "select": {
             "type": "up-pl5403",
             "y": "<3",
-            "xAbs": ">8"
+            "xAbs": ">8",
+            "position": [
+              "column uplight",
+              "column uplight HL"
+            ]
           },
           "side": "HL",
           "start": 101,
@@ -128,22 +146,30 @@
       "blocks": [
         {
           "select": {
-            "type": "up-b380f",
+            "type": "up-pl5403",
             "y": "<3",
-            "xAbs": ">8"
+            "xAbs": ">8",
+            "position": [
+              "column bases",
+              "column bases HR"
+            ]
           },
           "side": "HR",
           "start": 1,
           "fixture": 301,
           "order": "z-asc",
           "position": "column bases HR",
-          "what": "UP-B380F on the floor at the column bases, into the roof"
+          "what": "UP-PL5403 pillars at the column bases, straight up into the roof"
         },
         {
           "select": {
             "type": "up-pl5403",
             "y": "<3",
-            "xAbs": ">8"
+            "xAbs": ">8",
+            "position": [
+              "column uplight",
+              "column uplight HR"
+            ]
           },
           "side": "HR",
           "start": 101,
@@ -157,8 +183,8 @@
     {
       "universe": 4,
       "port": "D",
-      "label": "Booth (DJ, press, pit, haze)",
-      "run": "node port D → the press uplights → the pit strobes in front of the booth → the hazers behind it",
+      "label": "Booth (press, haze)",
+      "run": "node port D → the press uplights → the hazers behind the booth",
       "blocks": [
         {
           "select": {
@@ -170,16 +196,6 @@
           "fixture": 401,
           "order": "x-asc",
           "what": "UP-PL5403 on the floor by the booth, uplighting the press"
-        },
-        {
-          "select": {
-            "type": "ext-strobe",
-            "y": "<3"
-          },
-          "start": 101,
-          "fixture": 411,
-          "order": "x-asc",
-          "what": "strobes on the floor of the pit"
         },
         {
           "select": {
@@ -212,6 +228,12 @@
     "ext-hazer": {
       "method": null,
       "menu": "OWED — the supplier and model are not chosen"
+    },
+    "up-cob200": {
+      "method": "display",
+      "seen": "LED display (the maker's listing: 'Display LED')",
+      "menu": "OWED — the menu wording is in no published UPlight document"
     }
-  }
+  },
+  "cut": "2026-09-29: Minimal became THE CUT, simple (RIG_BUILD §15.8): the rental house's non-moving lights only — no UP-B380F, no strobes. The plan before it is in git (this file at ab793391)."
 }
