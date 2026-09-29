@@ -45,6 +45,16 @@ const frontBox = (ctx, x) => {
     return boxes.reduce((a, b) => (ctx.stage.into * (b.z_m[1] - a.z_m[1]) > 0 ? b : a))
 }
 
+const unit2 = (v, fallback) => {
+    const l = Math.hypot(v[0], v[1])
+    return l < 1e-6 ? fallback : [v[0] / l, v[1] / l]
+}
+// The DJ in plan: the middle of the performer's box — the rig script's `djCentre`, from the stage alone.
+const djCentre = (ctx) => {
+    const s = ctx.stage
+    return [s.axis ?? axisOf(ctx), (s.back + s.into * 0.1 + s.front - s.into * 0.2) / 2]
+}
+
 export const AIM_RULES = {
     vertical: (slot, meta, ctx, p = {}) => ({ dir: leaned(ctx, slot, -sideOf(slot, ctx) * (p.in_deg ?? 0), p.lean_deg ?? 0) }),
     parallel: (slot, meta, ctx, p = {}) => ({ dir: leaned(ctx, slot, p.side_deg ?? 0, p.lean_deg ?? 0) }),
@@ -82,6 +92,30 @@ export const AIM_RULES = {
         const crane = craneOf(ctx)
         if (!crane) return { dir: leaned(ctx, slot, sideOf(slot, ctx) * 70, 0) }
         return { target: [slot.pos[0] + sideOf(slot, ctx) * (p.out ?? 6), crane.girder_bottom_m, crane.z_m + ctx.stage.into * (p.girder ?? 1.1)] }
+    },
+    // THE HALO'S RULES (a flat triangle hung from the crane over the DJ; RIG_BUILD.md §15.8):
+    // `ring` — to a circle of radius r round the DJ at height y (default the deck), on the
+    // lamp's own bearing; `dj-point` — one point h over the deck above the DJ (two lamps from
+    // opposite corners cross there: the X); `radial` — out from the halo's centre (the axis
+    // under the bridge), elev_deg above/below the horizon, bent to_audience toward the house.
+    ring: (slot, meta, ctx, p = {}) => {
+        const [cx, cz] = djCentre(ctx)
+        const u = unit2([slot.pos[0] - cx, slot.pos[2] - cz], [0, ctx.stage.into])
+        const r = p.r ?? 1.2
+        return { target: [cx + u[0] * r, p.y ?? ctx.stage.deck, cz + u[1] * r] }
+    },
+    'dj-point': (slot, meta, ctx, p = {}) => {
+        const [cx, cz] = djCentre(ctx)
+        return { target: [cx + (p.x ?? 0), ctx.stage.deck + (p.h ?? 2.8), cz + ctx.stage.into * (p.dz ?? 0)] }
+    },
+    radial: (slot, meta, ctx, p = {}) => {
+        const crane = craneOf(ctx)
+        const c = [axisOf(ctx), crane ? crane.z_m : (ctx.stage.back + ctx.stage.front) / 2]
+        const out = unit2([slot.pos[0] - c[0], slot.pos[2] - c[1]], [0, ctx.stage.into])
+        const k = p.to_audience ?? 0
+        const u = unit2([out[0] * (1 - k), out[1] * (1 - k) + ctx.stage.into * k], [0, ctx.stage.into])
+        const e = (p.elev_deg ?? -20) * DEG
+        return { dir: [u[0] * Math.cos(e), Math.sin(e), u[1] * Math.cos(e)] }
     },
     'laser-into-roof': (slot, meta, ctx, p = {}) => ({ target: [axisOf(ctx) + (slot.pos[0] - axisOf(ctx)) * (p.x_scale ?? 0.3), ctx.hall.geometry.truss_top_centre_m, ctx.stage.front + ctx.stage.into * (p.a ?? 14)] })
 }

@@ -6,6 +6,12 @@
  *   node scripts/rigbuild/show-loop.mjs --api https://local.thedi.studio/serverXR --project moxir-hall-minimal \
  *       --token-file ~/.di/di.env [--show <show.json>] [--no-start] [--dry-run]
  *   node scripts/rigbuild/show-loop.mjs … --stop        # stop the desk's runner (the look stays up)
+ *   node scripts/rigbuild/show-loop.mjs --api … --project moxir-hall-minimal-halo --token-file … \
+ *       --rig scripts/place/rigs/moxir-2026-10-17-minimal-halo.json --document-only
+ *       # the rig file's own show (`show`), written into the document ONLY: the cue list, the loop
+ *       # and, when the show says `source: 'clock'`, mappingState.showSource 'clock' — no call to
+ *       # the desk at all (a comparison version the desk does not carry, RIG_BUILD.md §15.8).
+ *       # Start its clock with show-clock.mjs --epoch now.
  *
  * What it does, in order — the same things the cards page does by hand:
  *   1. the document: the project's cue list (mappingState.cues) replaced by the show's cues
@@ -63,11 +69,17 @@ export const showCues = (show) => show.cues.map((c, i) => ({
 export const runnerList = (cues) => cues.map((c) => ({ id: c.id, name: c.name, lookId: c.lightLook, hold: c.hold, fade: c.fade }))
 
 /** Ops that replace a document's cue list with `cues` and set the loop. Pure. */
-export const cueOps = (document, cues, loop) => [
+export const cueOps = (document, cues, loop, { source } = {}) => [
     ...(document.mappingState?.cues || []).map((c) => ({ type: 'deleteMappingCue', payload: { cueId: c.id } })),
     ...cues.map((cue) => ({ type: 'createMappingCue', payload: { cue } })),
-    { type: 'setMappingState', payload: { patch: { loop: Boolean(loop) } } }
+    { type: 'setMappingState', payload: { patch: { loop: Boolean(loop), ...(source === 'clock' ? { showSource: 'clock' } : {}) } } }
 ]
+
+/** A rig file's own show (`rig.show`, versions.mjs) in this script's show shape. Pure. */
+export const showOfRig = (rig, project) => {
+    if (!rig?.show?.cues?.length) throw new Error('the rig file carries no show (rig.show.cues)')
+    return { project, loop: rig.show.loop !== false, source: rig.show.source, cues: rig.show.cues.map((c) => ({ look: c.look, name: c.name, fade: c.fade, hold: c.hold })) }
+}
 
 const readTokenFile = (file) => {
     const line = fs.readFileSync(file, 'utf8').split('\n').find((l) => l.startsWith('ADMIN_API_TOKEN='))
@@ -80,8 +92,11 @@ const main = async () => {
     const token = readTokenFile(path.resolve(String(args['token-file'] || die('needs --token-file')))) || die('no ADMIN_API_TOKEN in the token file')
     const client = makeClient(api, token)
     const desk = makeClient(light, null)
-    const show = args.show ? readJson(path.resolve(String(args.show))) : MOXIR_MINIMAL_SHOW
+    const show = args.rig
+        ? showOfRig(readJson(path.resolve(String(args.rig))), String(args.project || die('--rig needs --project')))
+        : args.show ? readJson(path.resolve(String(args.show))) : MOXIR_MINIMAL_SHOW
     const project = String(args.project || show.project)
+    const documentOnly = Boolean(args['document-only'])
     const dry = Boolean(args['dry-run'])
 
     if (args.stop) {
@@ -99,13 +114,15 @@ const main = async () => {
     const missing = show.cues.filter((c) => !looks.looks.some((l) => l.id === c.look)).map((c) => c.look)
     if (missing.length) die(`${project} has no look ${missing.join(', ')}`)
 
-    const where = await desk.get('/api/show')
-    const space = document.projectMeta?.spaceId
-    if (!where.ok) die(`no desk at ${light} (${where.status})`)
-    if (space && where.body.space !== space) die(`the desk is running ${where.body.space || "this machine's own"} show, not ${space}'s — open ${space}'s show on the desk first`)
+    if (!documentOnly) {
+        const where = await desk.get('/api/show')
+        const space = document.projectMeta?.spaceId
+        if (!where.ok) die(`no desk at ${light} (${where.status})`)
+        if (space && where.body.space !== space) die(`the desk is running ${where.body.space || "this machine's own"} show, not ${space}'s — open ${space}'s show on the desk first`)
+    }
 
     const cues = showCues(show)
-    const ops = cueOps(document, cues, show.loop !== false)
+    const ops = cueOps(document, cues, show.loop !== false, { source: show.source })
     say(`${project}: ${cues.length} cues, loop ${show.loop !== false ? 'on' : 'off'} — ${cues.map((c) => `${c.name} (fade ${c.fade} s, hold ${c.hold} s)`).join(' → ')}`)
     const loopSeconds = cues.reduce((s, c) => s + c.hold, 0)
     say(`one loop = ${loopSeconds} s`)
@@ -113,7 +130,8 @@ const main = async () => {
 
     const wrote = await client.post(`/api/projects/${project}/ops`, { baseVersion: doc.body.version, ops: ops.map((op, i) => ({ ...op, opId: `show-loop-${Date.now()}-${i}`, clientId: 'show-loop' })) })
     if (!wrote.ok) die(`writing the cue list: ${wrote.status} ${wrote.text.slice(0, 300)}`)
-    say(`document: cue list + loop written (version ${wrote.body.newVersion})`)
+    say(`document: cue list + loop${show.source === 'clock' ? ' + showSource clock' : ''} written (version ${wrote.body.newVersion})`)
+    if (documentOnly) { say('--document-only: the desk was not asked anything'); return }
 
     const rig = await desk.get(`/api/rig?project=${encodeURIComponent(project)}`)
     if (!rig.ok) die(`the desk's rig for ${project}: ${rig.status}`)

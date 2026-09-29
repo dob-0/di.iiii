@@ -12,6 +12,9 @@
  *                                            # the desk — a look's level scales the document's light, so a
  *                                            # lamp rested at 0 could never come back up in another look
  *   … --version minimal --mark               # write only which version this project (and the hall's own) is
+ *   … --version minimal-halo --hall-from moxir-hall-minimal   # a comparison VARIANT (versions file `variants`):
+ *                                            # the hall copied (read only) from the project named; no other
+ *                                            # project is written (§15.8)
  *
  * A version is a PROJECT (moxir-hall-minimal, -middle, -full), not a field inside one:
  * each has its own lamps, equipment list, patch, looks and desk, so the plot, the cards,
@@ -43,7 +46,7 @@ import { makeClient } from '../place/api.mjs'
 import { buildRig, nightOps } from '../place/rig-lib.mjs'
 import { FIXTURE_DIR, readGeometry } from '../place/fixtures-glb.mjs'
 import { RIG_SHOW_ID } from '../../src/rigbuild/rental.js'
-import { projectOf, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
+import { findVersion, projectOf, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
 import { rigLooksFrom } from './looks.mjs'
 
 const args = parseArgs()
@@ -54,17 +57,33 @@ const readTokenFile = (file) => {
 
 /** The set as the switch reads it: every version, in order, with the project it lives in. */
 export const variantOf = (spec, id, hallProject) => {
-    const v = id === spec.ordered?.id ? spec.ordered : spec.versions.find((x) => x.id === id)
+    const v = id === spec.ordered?.id ? spec.ordered : findVersion(spec, id)
+    const variant = (spec.variants || []).some((x) => x.id === id)
     return {
         set: spec.set, id, title: v.title, summary: v.summary,
         source: `${VERSIONS_FILE} — scripts/rigbuild/load-version.mjs`,
         siblings: [
             // the hall's own project, the rig as ordered, first: what the versions are compared to
             ...(spec.ordered ? [{ id: spec.ordered.id, projectId: hallProject, title: spec.ordered.title, summary: spec.ordered.summary }] : []),
-            ...spec.versions.map((s) => ({ id: s.id, projectId: projectOf(hallProject, s.id), title: s.title, summary: s.summary }))
+            ...spec.versions.map((s) => ({ id: s.id, projectId: projectOf(hallProject, s.id), title: s.title, summary: s.summary })),
+            // a comparison variant lists itself after the set; the set's own projects are not
+            // rewritten to list it (RIG_BUILD.md §15.8 — a variant never writes its siblings)
+            ...(variant ? [{ id, projectId: projectOf(hallProject, id), title: v.title, summary: v.summary }] : [])
         ]
     }
 }
+export const isVariant = (spec, id) => (spec.variants || []).some((x) => x.id === id)
+
+/** A typed document with every lamp's desk patch taken off (index, universe, address). Pure. */
+export const unpatched = (doc) => ({
+    ...doc,
+    entities: doc.entities.map((e) => {
+        const f = e.components?.fixture
+        if (!f) return e
+        const { index, universe, address, ...rest } = f
+        return { ...e, components: { ...e.components, fixture: rest } }
+    })
+})
 
 /** The op that marks a project as one of the set (on its show entity, created when missing). */
 export const variantOps = (entities, variant) => (entities.some((e) => e.id === RIG_SHOW_ID)
@@ -122,7 +141,7 @@ const main = async () => {
         if (!doc.ok) die(`reading ${project}: ${doc.status}`)
         await send(variantOps(doc.body.document.entities, variantOf(spec, id, from)), 'the version mark')
         say(`${project}: marked "${id}" in the set`)
-        await markFrom()
+        if (!isVariant(spec, id)) await markFrom()
         return
     }
 
@@ -151,9 +170,12 @@ const main = async () => {
         say(`${project}: created in ${space}`)
     } else if (!args.force) die(`${project} exists — pass --force to load over it`)
 
-    // 2. the hall
-    const src = await client.get(`/api/projects/${from}/document`)
-    if (!src.ok) die(`reading ${from}: ${src.status}`)
+    // 2. the hall — from the hall's own project, or (`--hall-from`) from another version's, read
+    // only: a comparison variant starts from the room its original is in NOW (its night, its
+    // render settings, its show hall without the floor tape)
+    const hallFrom = String(args['hall-from'] || from)
+    const src = await client.get(`/api/projects/${hallFrom}/document`)
+    if (!src.ok) die(`reading ${hallFrom}: ${src.status}`)
     const source = src.body.document
     // The hall only: not the rig (rig-*) and not a build piece someone placed in the source's
     // plot (a truss or deck carries components.piece) — those are that project's rig, not the venue.
@@ -161,7 +183,7 @@ const main = async () => {
     const wanted = new Set(hallEntities.map((e) => e.components?.media?.assetId).filter(Boolean))
     const assets = []
     for (const a of source.assets.filter((x) => wanted.has(x.id))) {
-        const got = await client.bytes(`/api/projects/${from}/assets/${a.id}`)
+        const got = await client.bytes(`/api/projects/${hallFrom}/assets/${a.id}`)
         if (!got.ok) die(`downloading ${a.name}: ${got.status}`)
         const form = new FormData()
         form.append('asset', new Blob([got.buffer], { type: a.mimeType }), a.name)
@@ -181,8 +203,18 @@ const main = async () => {
 
     // 3. the rig: pieces, lamps, effects — the typed and patched document versions-report.mjs wrote
     const reportDir = path.resolve(String(args.report || die('needs --report <the dir versions.mjs --report wrote>')))
-    const docFile = path.join(reportDir, id, `${id}.document.json`)
+    let docFile = path.join(reportDir, id, `${id}.document.json`)
     if (!fs.existsSync(docFile)) die(`no ${docFile} — run: node scripts/rigbuild/versions.mjs --report ${reportDir}`)
+    // A comparison variant is not on the desk (the desk holds the set's show): its lamps go in
+    // UNPATCHED — no desk index, universe or address — so no desk fixture's DMX can ever be
+    // joined to them (useRigLook: DMX wins where a lamp's index is on the desk, §18.4).
+    if (isVariant(spec, id)) {
+        const doc = readJson(docFile)
+        const stripped = unpatched(doc)
+        docFile = path.join(reportDir, id, `${id}.unpatched.document.json`)
+        fs.writeFileSync(docFile, JSON.stringify(stripped, null, 2))
+        say(`${project}: a comparison variant — its lamps load unpatched (${stripped.entities.filter((e) => e.components?.fixture).length} typed, none on the desk)`)
+    }
     execFileSync(process.execPath, [path.join(REPO_ROOT, 'scripts/rigbuild/load-plot.mjs'), '--api', api, '--project', project, '--doc', docFile, '--hall', hallFile, '--token-file', tokenFile, '--name', 'MOXIR · Charentsavan factory hall'], { stdio: 'inherit' })
 
     // 4. the show: equipment list, looks, which version this is
@@ -195,15 +227,18 @@ const main = async () => {
     const ops = hasShow
         ? Object.entries(components).map(([component, patch]) => ({ type: 'updateComponent', payload: { entityId: RIG_SHOW_ID, component, patch } }))
         : [{ type: 'createEntity', payload: { entity: { id: RIG_SHOW_ID, type: 'group', name: 'the show — equipment list, looks, version', components: { transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }, ...components } } } }]
-    // the version's night (darker than the base's), as rig.mjs writes it
-    const v = await send([...ops, ...nightOps(rig, { realLights: real })], 'the show')
+    // the version's night (darker than the base's), as rig.mjs writes it — not when the room was
+    // copied from another version (`--hall-from`): its night and render settings come with it
+    const v = await send([...ops, ...(args['hall-from'] ? [] : nightOps(rig, { realLights: real }))], 'the show')
     say(`${project}: equipment list (${rentalList.items.length} lines), ${looks.looks.length} looks, version "${id}" of ${spec.set}; version ${v}`)
 
     // 5. the wash of the default look
     washFor(rig.defaultLook)
 
-    // 6. the hall's own project joins the set as "as ordered", so the switch shows on it too
-    await markFrom()
+    // 6. the hall's own project joins the set as "as ordered", so the switch shows on it too —
+    // not for a comparison variant, which writes no project but its own
+    if (isVariant(spec, id)) say(`${project}: a comparison variant — ${from} and the set's projects are left as they are`)
+    else await markFrom()
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {

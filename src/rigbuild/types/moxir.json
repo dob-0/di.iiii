@@ -2320,9 +2320,68 @@
       "modelledOn": null,
       "product": "UPlight UP-COB200, 200 W COB PAR, warm + cool white, indoor",
       "category": "par",
-      "modes": [],
+      "modes": [
+        {
+          "name": "4ch-assumed",
+          "footprint": 4,
+          "channels": [
+            {
+              "role": "dimmer",
+              "label": "Master dimmer"
+            },
+            {
+              "role": "warm",
+              "label": "Warm white"
+            },
+            {
+              "role": "cool",
+              "label": "Cold white"
+            },
+            {
+              "role": "strobe",
+              "label": "Strobe",
+              "default": 0,
+              "cap": {
+                "shutter": [
+                  {
+                    "from": 0,
+                    "to": 4,
+                    "open": true
+                  },
+                  {
+                    "from": 5,
+                    "to": 255,
+                    "strobe": [
+                      1,
+                      25
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "channelsSource": {
+            "basis": "ASSUMED",
+            "grade": "STILL ASSUMED",
+            "gradeWhy": "the maker lists 4 channels (its made-in-china store, \"Channel 4CH\", read 2026-09-29) and publishes no order; the FOS unit is the same class (tunable-white 200 W COB PAR, 290 × 260 × 305 mm, 4.9 kg vs 295 × 295 × 350 mm, 5.1 kg) — a stand-in only",
+            "fixture": "FOS Technologies \"PAR COB 200W LED TW\" (200 W warm + cool white COB, 60°)",
+            "url": "https://www.fos-lighting.eu/uploads/products_1_2_1_61.pdf",
+            "title": "\"PAR COB 200W LED TW\" user manual",
+            "pages": "5",
+            "sha256": "d50487773376424a313b68f4ad67044e852ab5b5484543bf0df9c81cbf6d2a92",
+            "accessed": "2026-09-29",
+            "fill": [
+              "strobe \"gradual from slow to fast\" rates are not printed: 5–255 drawn as 1–25 Hz (the UPlight listing's \"1~25 flashes/second\"), 0–4 = open"
+            ]
+          },
+          "assumed": "ASSUMED from FOS PAR COB 200W LED TW manual p.5 (mode a4CH) — verify on the rental unit",
+          "src": null,
+          "basis": "ASSUMED"
+        }
+      ],
       "defaultMode": null,
       "modesOwed": true,
+      "assumedMode": "4ch-assumed",
       "power_w": {
         "value": 180,
         "src": "E",

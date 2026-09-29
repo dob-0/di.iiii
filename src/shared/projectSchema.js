@@ -1617,7 +1617,11 @@ export const normalizeMappingState = (mapping = {}) => {
         // anywhere see the same moment. Written only when set, like `loop`.
         ...(typeof source.showEpoch === 'number' && Number.isFinite(source.showEpoch) && source.showEpoch > 0
             ? { showEpoch: Math.round(source.showEpoch) }
-            : {})
+            : {}),
+        // Who plays the show where a desk also answers (RIG_BUILD.md §15.8): 'clock' — the
+        // document's own clock, even on a local install whose desk holds another project's
+        // show (a comparison version the desk does not carry). Absent = the desk first (§16).
+        ...(source.showSource === 'clock' ? { showSource: 'clock' } : {})
     }
 }
 

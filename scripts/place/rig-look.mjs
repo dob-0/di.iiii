@@ -19,6 +19,7 @@
  *       --project moxir-hall --hall <work>/hall.json --rig scripts/place/rigs/<rig>.json \
  *       --out ~/Downloads/moxir-hall --tag budget [--views crane,dance,stage,roof,door,mid,over,close] [--phone]
  *       [--size 1280x720] [--max-cpu-c 85] [--hide <entity ids>]   (--hide: diagnostic, this browser's copy only)
+ *       [--cameras <cameras.json>]   extra named views: { cameras: [{ name, position, target, fov }] }
  *
  *   --path <url path>     open this page instead of /<space> (e.g. /moxir/p/moxir-hall-minimal: a
  *                         project that is not the space's published one — a rig version)
@@ -170,7 +171,10 @@ const main = async () => {
     const kinds = new Set([...Object.values(rig.classes).map((c) => c.fixture), ...(rig.effects || []).map((f) => f.fixture)])
     const geometry = Object.fromEntries([...kinds].map((k) => [k, readGeometry(k)]))
     const built = buildRig(rig, hall, { look, geometry, manifest })
-    const all = { ...viewpoints(hall, rig), ...closeups(built, stageFrame(rig, hall)) }
+    // --cameras <file>: extra named views ({ cameras: [{ name, position, target, fov }] }) — one camera
+    // list shared by two versions, so their pictures compare side by side (RIG_BUILD.md §15.8)
+    const extra = args.cameras ? Object.fromEntries(readJson(path.resolve(String(args.cameras))).cameras.map((c) => [c.name, { position: c.position, target: c.target, fov: c.fov ?? 60 }])) : {}
+    const all = { ...viewpoints(hall, rig), ...closeups(built, stageFrame(rig, hall)), ...extra }
     const wanted = String(args.views || 'door,mid,stage,over').split(',')
     const names = wanted.flatMap((n) => (n === 'close' ? Object.keys(all).filter((k) => k.startsWith('close-')) : [n])).filter((n) => all[n])
     const phone = Boolean(args.phone)

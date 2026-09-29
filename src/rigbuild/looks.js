@@ -82,6 +82,13 @@ const nearestFace = (slot) => {
  * pan, tilt, rule }). Lamps not on a position, or on a group the look does not name,
  * are left out (they keep their own).
  */
+// The positions a rig names for itself (scripts/rigbuild/moxir.mjs writes "halo <group id in
+// words>"; looks.mjs keys the same group "halo-<group id>").
+export const namedPositionKey = (fixture) => {
+    const p = typeof fixture?.position === 'string' ? fixture.position.trim() : ''
+    return /^halo /.test(p) ? p.replace(/\s+/g, '-') : null
+}
+
 export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) => {
     const looks = rigLooks || rigLooksOf(entities)
     const look = looks?.looks?.find((l) => l.id === lookId)
@@ -94,10 +101,23 @@ export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) =
     const byEntity = new Map(entities.map((e) => [e.id, e]))
     const lampById = new Map(lamps.map((l) => [l.id, l]))
     const groups = new Map()
+    // A lamp the rig NAMED a position for (`fixture.position` "halo <group>", RIG_BUILD.md §15.8:
+    // the halo's corners and sides are no derived slot) is grouped by that name, wherever the
+    // derived positions would put it.
+    const named = new Set()
+    for (const l of lamps) {
+        const e = byEntity.get(l.id)
+        const key = namedPositionKey(e?.components?.fixture)
+        if (!key) continue
+        named.add(l.id)
+        const k = `${key}/${e.components.fixture.type}`
+        if (!groups.has(k)) groups.set(k, [])
+        groups.get(k).push({ id: l.id, slot: { pos: l.mount } })
+    }
     for (const p of positions) {
         for (const s of p.slots) {
             const id = fill.get(`${p.id}/${s.id}`)
-            if (!id) continue
+            if (!id || named.has(id)) continue
             const type = byEntity.get(id)?.components?.fixture?.type
             const key = `${positionKey(p.id)}/${type}`
             if (!groups.has(key)) groups.set(key, [])
