@@ -183,10 +183,10 @@ describe('the halo\'s show: the document\'s own clock, Minimal\'s five cues, and
 describe('a comparison variant writes only its own project', () => {
     it('lists the set and itself in its switch — "Minimal · halo" — and is its own project id', () => {
         const v = variantOf(spec, 'minimal-halo', 'moxir-hall')
-        expect(v.siblings.map((s) => s.projectId)).toEqual(['moxir-hall', 'moxir-hall-minimal', 'moxir-hall-middle', 'moxir-hall-full', 'moxir-hall-minimal-halo'])
+        expect(v.siblings.map((s) => s.projectId)).toEqual(['moxir-hall', 'moxir-hall-minimal', 'moxir-hall-minimal-cut-movers', 'moxir-hall-middle', 'moxir-hall-full', 'moxir-hall-minimal-halo'])
         expect(v.title).toBe('Minimal · halo')
         // the set's own versions do not list the variants (their projects are not rewritten)
-        expect(variantOf(spec, 'minimal', 'moxir-hall').siblings.map((s) => s.id)).toEqual(['ordered', 'minimal', 'middle', 'full'])
+        expect(variantOf(spec, 'minimal', 'moxir-hall').siblings.map((s) => s.id)).toEqual(['ordered', 'minimal', 'minimal-cut-movers', 'middle', 'full'])
         expect(minimal.variant.id).toBe('minimal')
     })
 })

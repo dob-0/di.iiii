@@ -94,14 +94,15 @@ describe.skipIf(!hasPython)('crane_height.py on photo 007', () => {
     })
 })
 
-// The 2026-09-29 hall under the minimal rig (the one line hung from the crane over the DJ):
+// The 2026-09-29 hall under the flat line hung from the crane over the DJ (Minimal's line when
+// this was written; since the cut, #664, Minimal is a sloped line and the flat 8 m line is Middle's):
 // the measured bridge is 0.2 m lower than the v2 guess. The rig's trim (bottom chord 6 m) is
 // an absolute height, so the truss stays; the hoists, spreaders and chains follow the bridge.
-describe('the minimal rig under the measured crane (moxir-hall-2026-09-29-crane-dj.hall.json)', () => {
+describe('the flat crane line (middle) under the measured crane (moxir-hall-2026-09-29-crane-dj.hall.json)', () => {
     const read = (f) => JSON.parse(fs.readFileSync(path.join(rigs, f), 'utf8'))
     const manifest = JSON.parse(fs.readFileSync(path.join(here, 'fixtures', 'fixtures.json'), 'utf8'))
     const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
-    const rig = read('moxir-2026-10-17-minimal.json')
+    const rig = read('moxir-2026-10-17-middle.json')
     const hall = read('moxir-hall-2026-09-29-crane-dj.hall.json')
     const { entities } = buildRig(rig, hall, { geometry, manifest })
     const byId = (id) => entities.find((e) => e.id === id).components.transform

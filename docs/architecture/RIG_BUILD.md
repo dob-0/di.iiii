@@ -1480,6 +1480,30 @@ only the candidate's project (a whole-space `di open` would also roll back other
 `rig-look.mjs --cameras <file> --no-desk` shoots named cameras with the desk and the clock kept out
 of that browser. Tests: `scripts/rigbuild/versions-xflat.test.js`.
 
+### 15.11 Old versions kept as copies (`scripts/rigbuild/copy-version.mjs`, 2026-09-30)
+
+Owner, 2026-09-30, before the measured hall (v4, the crane's underside 7.95 m, was 8.15) was
+swapped into every version: "we will not have the old versions?" and then "keep the old ones as
+copies". A backup and the op log are not enough; he opens old and new side by side.
+
+- **A copy is a project.** It sits in the same space, with its own id (`<project>-oldhall-0929`).
+  Ids are global: the script checks that the id is free, and the server refuses a taken one with 409.
+  It holds the source's document as it is (every entity, the night, the opening, the cue list and
+  clock, the lamps' desk patch) and every asset, re-uploaded as bytes. Content-addressed ids that
+  come back different are remapped (`asset-remap-lib.mjs`). URLs naming the source project are
+  pointed at the copy (`repointProjectUrls`).
+- **Only the copy's version mark changes.** Its `rigVariant` gets id `<id>-oldhall-0929`, and its
+  title carries the label before its dash (`labelled`), so the switch button reads
+  "Minimal · old hall 09-29". It also gets `copyOf` and the version buttons it lists (`--siblings`).
+  The source is only read.
+- **It plays as the original did.** The patch is kept, so a copy of a desk-driven version is drawn
+  from the same desk fixtures (the room joins DMX by fixture index, §18.3). A version that plays by
+  its own clock (the halo, the X) keeps its clock. Consequence: the Studio's auto-patch sees the
+  copy's lamps at addresses another project holds and flags them as overlaps. It moves nothing.
+- **Undo**: `copy-version.mjs --undo --to <copy>`. It deletes only a project whose mark says `copyOf`,
+  soft, into the trash.
+- Guard: `copy-version.test.js` (the label, the URLs, the mark alone changes).
+
 ## 16. Hosted playback — the show with no desk (`src/rigbuild/showClock.js`)
 
 The light desk (`/light`) runs on a local install only, by design (LIGHTING_DESK.md). On a hosted

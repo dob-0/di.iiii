@@ -10,7 +10,7 @@ import { REPO_ROOT } from '../place/common.mjs'
 import { RIG_PREFIX, buildRig, soloKeeps, stageFrame } from '../place/rig-lib.mjs'
 import { readGeometry } from '../place/fixtures-glb.mjs'
 import { spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
-import { findVersion, rigFileOf, VERSIONS_FILE } from './versions.mjs'
+import { findVersion, rigFileOf, RIGS_DIR, versionRig, VERSIONS_FILE } from './versions.mjs'
 import { piecesFromRigBoxes } from './load-plot.mjs'
 import { groupKeys } from './looks.mjs'
 
@@ -21,7 +21,13 @@ const manifest = read('scripts/place/fixtures/fixtures.json')
 const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
 const rig = read(rigFileOf(spec.set, 'minimal-xflat-heads'))
 const fixed = read(rigFileOf(spec.set, 'minimal-xflat'))
-const minimal = read(rigFileOf(spec.set, 'minimal'))
+// The X was designed on Minimal as it was BEFORE the cut (2026-09-29, #664 made Minimal the cut's
+// fixed lights); the versions file keeps that Minimal in cutHistory, and it is what the X keeps.
+const minimal = versionRig({
+    spec: { ...spec, versions: [spec.cutHistory['minimal-before-the-cut'], ...spec.versions.filter((v) => v.id !== 'minimal')] },
+    base: read(path.join(RIGS_DIR, spec.base)),
+    id: 'minimal'
+})
 const stage = stageFrame(rig, hall)
 const crane = stage.crane
 const built = (look) => buildRig(rig, hall, { geometry, manifest, look })
@@ -29,12 +35,13 @@ const lampsOf = (b, group) => b.entities.filter((e) => e.id.startsWith(`${RIG_PR
 
 describe('Minimal · X lying down · heads (the moving-head variant)', () => {
     it('is a candidate of Minimal, not one of the three the set compares', () => {
-        expect(spec.versions.map((v) => v.id)).toEqual(['minimal', 'middle', 'full'])
+        expect(spec.versions.map((v) => v.id)).toEqual(['minimal', 'minimal-cut-movers', 'middle', 'full'])
+        expect((spec.candidates || []).map((v) => v.id)).toContain('minimal-xflat-heads')
         expect(findVersion(spec, 'minimal-xflat-heads').candidateOf).toBe('minimal')
         expect(rig.variant.title).toBe('Minimal · X lying down · heads')
     })
 
-    it('keeps Minimal\'s floor and columns as they are; only what hangs changes', () => {
+    it('keeps Minimal\'s floor and columns as they were when it was drawn (before the cut); only what hangs changes', () => {
         const floor = (r) => r.groups.filter((g) => !['truss-top', 'truss-header', 'x-top', 'x-under'].includes(g.mount))
         expect(floor(rig)).toEqual(floor(minimal))
         // 7 B380F + 2 strobes on the X, the 4 red PARs grazing the bridge kept

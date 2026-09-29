@@ -106,6 +106,7 @@ export const makeClient = (api, token) => {
         post: (route, body, headers) => call('POST', route, body, headers),
         patch: (route, body) => call('PATCH', route, body),
         put: (route, body) => call('PUT', route, body),
+        del: (route) => call('DELETE', route),
         /** The bytes, not the JSON — for pulling footage back down. */
         bytes: async (route) => {
             const response = await fetch(`${api}${route}`, { headers: auth })
