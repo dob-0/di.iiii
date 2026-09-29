@@ -15,7 +15,8 @@
       5.8
     ],
     "confidence": "medium",
-    "how": "photo 007, the dark opening at the far wall's depth (crane_height.py wall_objects): 5.60 x 7.18 m; was 4.8 x 5.4 GUESS"
+    "how": "photo 007, the dark opening at the far wall's depth (crane_height.py wall_objects): 5.60 x 7.18 m; was 4.8 x 5.4 GUESS",
+    "source": "photo 007-file_90.JPG (owner, private) via crane_height.py wall_objects"
   },
   "far_gate_h_m": {
     "value": 7.2,
@@ -24,7 +25,8 @@
       7.5
     ],
     "confidence": "medium",
-    "how": "photo 007 (the sill is hidden; floor from the steel door beside it)"
+    "how": "photo 007 (the sill is hidden; floor from the steel door beside it)",
+    "source": "photo 007-file_90.JPG (owner, private) via crane_height.py wall_objects"
   },
   "massing": [
     {
@@ -43,9 +45,11 @@
         4.2
       ],
       "material": "press",
-      "how": "photo 032: u 647-680 px, base v 343, top v 290 at D 47 m (f 555 px, camera 6.88 m); depth 3 m GUESS. 2026-09-28 hall fix: MODELLED (hall.py crank_press) from 1c3956d1/018/29b70cf5: two side housings 0.8 m, bed to 1.25 m, ram 2.3-3.5 m, head to 4.2 m, crown 4.2-4.9 m, motor on the crown, flywheel \u00f81.56 m at the top right (top 5.6 m), belt guard, control panel. Heights: photo 032 fit (top 4.9-5.3 m at D 47 m, f 555 px, camera 6.88 m) and 1c3956d1 (APPROXIMATE camera: flywheel top ~4.5-4.9 m); widths from the 032 fit (2.8 m \u00b120 %); depth 3 m GUESS. Family: Soviet hot-die forging crank press (KGShP type) \u2014 NOT identified.",
+      "how": "photo 032: u 647-680 px, base v 343, top v 290 at D 47 m (f 555 px, camera 6.88 m); depth 3 m GUESS. 2026-09-28 hall fix: MODELLED (hall.py crank_press) from 1c3956d1/018/29b70cf5: two side housings 0.8 m, bed to 1.25 m, ram 2.3-3.5 m, head to 4.2 m, crown 4.2-4.9 m, motor on the crown, flywheel ø1.56 m at the top right (top 5.6 m), belt guard, control panel. Heights: photo 032 fit (top 4.9-5.3 m at D 47 m, f 555 px, camera 6.88 m) and 1c3956d1 (APPROXIMATE camera: flywheel top ~4.5-4.9 m); widths from the 032 fit (2.8 m ±20 %); depth 3 m GUESS. Family: Soviet hot-die forging crank press (KGShP type) — NOT identified.",
       "model": "crank_press",
-      "crown": "press-crown"
+      "crown": "press-crown",
+      "source": "moxir-hall-features-2026-09-28.json (carried unchanged)",
+      "confidence": "medium (heights +-20 % from photo 032; depth GUESS)"
     },
     {
       "id": "press-crown",
@@ -63,9 +67,11 @@
         5.6
       ],
       "material": "machine",
-      "how": "envelope of the crown (4.2-4.9 m), the motor on it and the flywheel (\u00f81.56 m, top 5.6 m) that crank_press draws; photo 032 top v 285-290 -> 4.9-5.1 m +-20 %, flywheel above it GUESS from 1c3956d1",
+      "how": "envelope of the crown (4.2-4.9 m), the motor on it and the flywheel (ø1.56 m, top 5.6 m) that crank_press draws; photo 032 top v 285-290 -> 4.9-5.1 m +-20 %, flywheel above it GUESS from 1c3956d1",
       "model": "none",
-      "drawn_by": "press"
+      "drawn_by": "press",
+      "source": "moxir-hall-features-2026-09-28.json (carried unchanged)",
+      "confidence": "low-medium (flywheel top GUESS from 1c3956d1)"
     },
     {
       "id": "machine-line",
@@ -84,7 +90,9 @@
       ],
       "material": "machine",
       "how": "photo 032 u 680-737, v 318-338 at D ~50 m; runs to the right of the press as in photos 018, 024, 1c3956d1; depth GUESS. 2026-09-28 hall fix: MODELLED (hall.py machine_line) from 018 and 29b70cf5 (brick plinth ~0.9 m, ribbed steel body, rail along its top ~2.4 m, a drilled beam on the floor along its front, 1c3956d1); run to x 12 by 018, length GUESS",
-      "model": "machine_line"
+      "model": "machine_line",
+      "source": "moxir-hall-features-2026-09-28.json (carried unchanged)",
+      "confidence": "low-medium (extent from photo 032; depth GUESS)"
     },
     {
       "id": "machine-pipe",
@@ -103,7 +111,9 @@
       ],
       "material": "rust",
       "how": "photo 032 horizontal pipe at v 305-310 from u 680 to 800 at D ~50 m; 2026-09-28: drawn as a 0.5 m pipe on posts with an elbow up at the press end (1c3956d1)",
-      "model": "pipe_run"
+      "model": "pipe_run",
+      "source": "moxir-hall-features-2026-09-28.json (carried unchanged)",
+      "confidence": "low (by eye, photo 032)"
     },
     {
       "id": "machine-tool-backstage",
@@ -122,7 +132,9 @@
       ],
       "material": "machine",
       "model": "box",
-      "how": "photo 856 (X-T5, 2026-09-26 16:23): camera fitted by VGGT 2026-09-29 (facebook/VGGT-1B, CC BY-NC, internal measurement only) on 36 old + 12 new photos, registered to the 09-27 run by 32 shared cameras (Umeyama similarity, median residual 1.2 m) and to the hall frame; positions +-3 m, sizes by eye against the 6 m column pitch; the press stands behind it on the camera's bearing (checks the registration). ESTIMATE +-3 m. Inside the backstage 'used' rectangle (x -6..6, z -10..-1): to clear or to plan around."
+      "how": "photo 856 (X-T5, 2026-09-26 16:23): camera fitted by VGGT 2026-09-29 (facebook/VGGT-1B, CC BY-NC, internal measurement only) on 36 old + 12 new photos, registered to the 09-27 run by 32 shared cameras (Umeyama similarity, median residual 1.2 m) and to the hall frame; positions +-3 m, sizes by eye against the 6 m column pitch; the press stands behind it on the camera's bearing (checks the registration). ESTIMATE +-3 m. Inside the backstage 'used' rectangle (x -6..6, z -10..-1): to clear or to plan around.",
+      "source": "photo 856-FXT51167.JPG (owner, private) + VGGT 2026-09-29 pose",
+      "confidence": "low (position +-3 m, size by eye)"
     },
     {
       "id": "machine-tool-backstage-head",
@@ -141,7 +153,9 @@
       ],
       "material": "machine",
       "model": "box",
-      "how": "photo 856; same estimate"
+      "how": "photo 856; same estimate",
+      "source": "photo 856-FXT51167.JPG (owner, private) + VGGT 2026-09-29 pose",
+      "confidence": "low (position +-3 m, size by eye)"
     },
     {
       "id": "block-pallet-backstage",
@@ -160,7 +174,9 @@
       ],
       "material": "block",
       "model": "box",
-      "how": "photo 856; ESTIMATE +-3 m"
+      "how": "photo 856; ESTIMATE +-3 m",
+      "source": "photo 856-FXT51167.JPG (owner, private) + VGGT 2026-09-29 pose",
+      "confidence": "low (position +-3 m, size by eye)"
     }
   ],
   "cameras": {
@@ -178,7 +194,9 @@
         720
       ],
       "photo": "032-file_76.jpg (the owner's 0387927a)",
-      "note": "hall frame. Fitted on the photo (level camera, horizon v 262, vanishing point u 624, f 555 px): yaw = atan((640-624)/555) to the right, and the off-centre horizon rendered as a 10 deg pitch down \u2014 the photo itself is level with its principal point off-centre, so a render's verticals converge slightly where the photo's do not."
+      "note": "hall frame. Fitted on the photo (level camera, horizon v 262, vanishing point u 624, f 555 px): yaw = atan((640-624)/555) to the right, and the off-centre horizon rendered as a 10 deg pitch down — the photo itself is level with its principal point off-centre, so a render's verticals converge slightly where the photo's do not.",
+      "source": "032-file_76.jpg (the owner's 0387927a)",
+      "confidence": "medium (fit on the photo, ~1 m / ~2 deg)"
     },
     "photo-024": {
       "position_m": [
@@ -194,7 +212,9 @@
         1000
       ],
       "photo": "024-file_69.jpg (the owner's 1c3956d1), Galaxy S24 ultra-wide, EXIF 13 mm-eq -> f 1498 px on 2992 px",
-      "note": "REFIT 2026-09-28 (hall fix): OpenCV solvePnP (SQPnP then iterative LM) on 6 picked points \u2014 the nave lantern's near and far deck-opening corners (x \u00b16, y 13.7, z -7.25 / -45.75) and the far gate's top corners (x \u00b12.4, y 5.4, z -54.5) \u2014 with the EXIF intrinsics (f 1498 px, centred principal point, no distortion term). rms 37 px on 2992 (was ~90 px from the 5-point fixed-height fit). Height came out 1.0 m (VGGT 1.54): a low hand or the ultra-wide's uncorrected distortion; roll ~ -6 deg is not modelled by the renderer's camera. Script: session scratchpad hallfix/fit024.py. Still APPROXIMATE: good to ~1 m and ~2 deg."
+      "note": "REFIT 2026-09-28 (hall fix): OpenCV solvePnP (SQPnP then iterative LM) on 6 picked points — the nave lantern's near and far deck-opening corners (x ±6, y 13.7, z -7.25 / -45.75) and the far gate's top corners (x ±2.4, y 5.4, z -54.5) — with the EXIF intrinsics (f 1498 px, centred principal point, no distortion term). rms 37 px on 2992 (was ~90 px from the 5-point fixed-height fit). Height came out 1.0 m (VGGT 1.54): a low hand or the ultra-wide's uncorrected distortion; roll ~ -6 deg is not modelled by the renderer's camera. Script: session scratchpad hallfix/fit024.py. Still APPROXIMATE: good to ~1 m and ~2 deg.",
+      "source": "024-file_69.jpg (the owner's 1c3956d1), Galaxy S24 ultra-wide, EXIF 13 mm-eq -> f 1498 px on 2992 px",
+      "confidence": "medium-low (solvePnP rms 37 px; ~1 m / ~2 deg)"
     },
     "photo-007": {
       "position_m": [
@@ -210,7 +230,9 @@
         896
       ],
       "photo": "007-file_90.JPG (iPhone 14 Pro Max 3x, f 8969 px on 4032 x 2688)",
-      "note": "the crane camera (x of photo 032, z 3.3 m further along by VGGT, height 6.9 m); horizon from the far-wall floor and the camera height (v 1473 of 2688 -> 0.8 deg up); roll -0.96 deg not modelled. APPROXIMATE."
+      "note": "the crane camera (x of photo 032, z 3.3 m further along by VGGT, height 6.9 m); horizon from the far-wall floor and the camera height (v 1473 of 2688 -> 0.8 deg up); roll -0.96 deg not modelled. APPROXIMATE.",
+      "source": "007-file_90.JPG (iPhone 14 Pro Max 3x, f 8969 px on 4032 x 2688)",
+      "confidence": "medium-low (position from 032 + VGGT offset; roll not modelled)"
     },
     "photo-856": {
       "position_m": [
@@ -226,19 +248,21 @@
         896
       ],
       "photo": "856-FXT51167.JPG (FUJIFILM X-T5, XF23mm)",
-      "note": "VGGT pose only (registered, median camera residual 1.2 m); eye height ASSUMED 1.55 m; APPROXIMATE"
+      "note": "VGGT pose only (registered, median camera residual 1.2 m); eye height ASSUMED 1.55 m; APPROXIMATE",
+      "source": "856-FXT51167.JPG (FUJIFILM X-T5, XF23mm)",
+      "confidence": "low (VGGT pose only, median camera residual 1.2 m; eye height assumed)"
     }
   },
   "seen_not_modelled": [
-    "856/864/867: many loose items on the floor (gas cylinders, a 5-6 m pressure vessel lying down, a ribbed transformer, crates, skips, scrap piles) \u2014 loose, not drawn",
-    "861: a ZIL-130 truck (blue cab) and 862: a rusty wheeled forklift-crane with a jib \u2014 vehicles, movable, not drawn",
-    "865/866: a chain-driven roller conveyor (roller table). VGGT puts both close-ups near x -5..-6, z 3..14 \u2014 the dance floor's LEFT EDGE \u2014 but close-ups register badly (+-5 m or worse): TO VERIFY on site before the floor plan is final",
-    "863: a heat-exchanger/piping skid (coil banks in a red frame, ~2.5 m) \u2014 not placed",
-    "photo 007 (far crane): its hook block hangs to 3.7 m (3.5-4.0) as parked on 2026-08-24 \u2014 raise it or keep that crane out of the crowd",
+    "856/864/867: many loose items on the floor (gas cylinders, a 5-6 m pressure vessel lying down, a ribbed transformer, crates, skips, scrap piles) — loose, not drawn",
+    "861: a ZIL-130 truck (blue cab) and 862: a rusty wheeled forklift-crane with a jib — vehicles, movable, not drawn",
+    "865/866: a chain-driven roller conveyor (roller table). VGGT puts both close-ups near x -5..-6, z 3..14 — the dance floor's LEFT EDGE — but close-ups register badly (+-5 m or worse): TO VERIFY on site before the floor plan is final",
+    "863: a heat-exchanger/piping skid (coil banks in a red frame, ~2.5 m) — not placed",
+    "photo 007 (far crane): its hook block hangs to 3.7 m (3.5-4.0) as parked on 2026-08-24 — raise it or keep that crane out of the crowd",
     "photo-847 = photo 032 (the owner's zone-marked picture; mean pixel difference 0.4/255): no new information",
-    "red centrifugal blower with its duct loop (left neighbour span): VGGT/bearing estimate x [-18.0, -15.0] z [-14.0, -11.0] \u2014 NOT drawn: the photo-match render (2026-09-29) put it visibly in the wrong place; outside the dance floor either way",
-    "big blue fan housing on a base, green electrical cabinets beside it (left neighbour span): VGGT/bearing estimate x [-23.0, -19.5] z [5.0, 8.5] \u2014 NOT drawn: the photo-match render (2026-09-29) put it visibly in the wrong place; outside the dance floor either way",
-    "fallen steel lattice sections (crane/truss parts) against the row x -12: VGGT/bearing estimate x [-19.0, -13.0] z [0.0, 8.0] \u2014 NOT drawn: the photo-match render (2026-09-29) put it visibly in the wrong place; outside the dance floor either way"
+    "red centrifugal blower with its duct loop (left neighbour span): VGGT/bearing estimate x [-18.0, -15.0] z [-14.0, -11.0] — NOT drawn: the photo-match render (2026-09-29) put it visibly in the wrong place; outside the dance floor either way",
+    "big blue fan housing on a base, green electrical cabinets beside it (left neighbour span): VGGT/bearing estimate x [-23.0, -19.5] z [5.0, 8.5] — NOT drawn: the photo-match render (2026-09-29) put it visibly in the wrong place; outside the dance floor either way",
+    "fallen steel lattice sections (crane/truss parts) against the row x -12: VGGT/bearing estimate x [-19.0, -13.0] z [0.0, 8.0] — NOT drawn: the photo-match render (2026-09-29) put it visibly in the wrong place; outside the dance floor either way"
   ],
   "confidence": {
     "cranes_from_door_m": "entry crane: first seen (the crane photos were taken from it); far crane: MEASURED photo 007, z -22.2 (-26.0..-18.4) = 76.2 m from the entry grid line (was 95 GUESS)",
@@ -246,5 +270,14 @@
     "far_gate_w_m": "medium (photo 007)",
     "far_gate_h_m": "medium (photo 007)"
   },
-  "pose_fits_rejected": "858 (bearings on the NE-wall pilasters, rms 14 px) and 867 (4 columns of row x -12, rms 11 px) fitted well in plan, but their renders disagree with the photos (which column is which / which wall is ambiguous): not used as viewpoints; owed: a full PnP with identified columns"
+  "pose_fits_rejected": "858 (bearings on the NE-wall pilasters, rms 14 px) and 867 (4 columns of row x -12, rms 11 px) fitted well in plan, but their renders disagree with the photos (which column is which / which wall is ambiguous): not used as viewpoints; owed: a full PnP with identified columns",
+  "cranes_from_door_m_source": {
+    "value": [
+      4.0,
+      76.2
+    ],
+    "source": "entry crane: moxir-hall-features-2026-09-28.json (the crane photos 004/010/012/032 were taken from it); far crane: photo 007 via crane_height.py (moxir-crane-picks-2026-09-29.json)",
+    "how": "far crane depth D_c = f * rail span / rail-to-rail px = 69.1 m (67.1-71.1) from the camera at z 46.9 -> z -22.2 = 76.2 m from the entry grid line",
+    "confidence": "entry: high (seen); far: medium (5-95 % z -26.0..-18.4)"
+  }
 }
