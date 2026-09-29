@@ -30,7 +30,7 @@ function hallCranes(dimsFiles) {
         'b, g = hall.build(dims)',
         "print(json.dumps({'cranes': g['cranes'], 'dims': dims, 'origin': origin}))",
     ].join('\n')
-    const run = spawnSync('python3', ['-c', code], { encoding: 'utf8' })
+    const run = spawnSync('python3', ['-c', code], { encoding: 'utf8', env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' } })
     fs.rmSync(stub, { recursive: true, force: true })
     if (run.status !== 0) throw new Error(run.stderr)
     const lines = run.stdout.trim().split('\n')

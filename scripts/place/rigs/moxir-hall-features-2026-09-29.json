@@ -222,7 +222,7 @@
         6.9,
         46.9
       ],
-      "yaw_deg": 1.0,
+      "yaw_deg": -1.0,
       "pitch_deg": 0.8,
       "vfov_deg": 17.05,
       "image_px": [
@@ -230,7 +230,7 @@
         896
       ],
       "photo": "007-file_90.JPG (iPhone 14 Pro Max 3x, f 8969 px on 4032 x 2688)",
-      "note": "the crane camera (x of photo 032, z 3.3 m further along by VGGT, height 6.9 m); horizon from the far-wall floor and the camera height (v 1473 of 2688 -> 0.8 deg up); roll -0.96 deg not modelled. APPROXIMATE.",
+      "note": "the crane camera (x of photo 032, z 3.3 m further along by VGGT, height 6.9 m); horizon from the far-wall floor and the camera height (v 1473 of 2688 -> 0.8 deg up); roll -0.96 deg not modelled. APPROXIMATE. Yaw -1.0 (+ = right): set 2026-09-29 so the far gate and the end wall's door line up in the 50/50 overlay; the bridge then sits ~60 px (of 1344) right of the photo's, i.e. the camera's x or the gate's x is ~1-2 m off. NOT an independent check of the crane height: the same photo measured it.",
       "source": "007-file_90.JPG (iPhone 14 Pro Max 3x, f 8969 px on 4032 x 2688)",
       "confidence": "medium-low (position from 032 + VGGT offset; roll not modelled)"
     },
