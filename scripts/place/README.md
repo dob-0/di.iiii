@@ -215,8 +215,33 @@ The MOXIR numbers: `rigs/moxir-hall-dims-2026-09-28.json` (the architecture
 correction of 2026-09-28: photographs, the Esri Wayback 2020-10-30 Maxar image
 for the four spans, the lanterns and the expansion joint, VGGT and perspective
 for heights) and `rigs/moxir-hall-features-2026-09-28.json` (gates, cranes,
-low walls, the press, **the owner's zones**, the photo-032 camera). Crane rail
-7.6 m is still disputed (6.6–8.4). Nobody has taped the hall.
+low walls, the press, **the owner's zones**, the photo-032 camera). Nobody has taped the hall.
+
+**2026-09-29 layer (the crane measured).** Two more overlays go on top, in this order:
+`rigs/moxir-hall-dims-2026-09-29.json` (crane heights) and
+`rigs/moxir-hall-features-2026-09-29.json` (far crane place, far gate, three
+backstage objects from the owner's 12 X-T5 photos, the photo-007/856 cameras);
+for the versions add `rigs/moxir-hall-crane-dj-2026-09-29.json` LAST. Every value
+there carries `value`/`range`/`confidence`/`how`/`source`; hall.py writes the
+confidence and range into hall.json. The crane heights come from
+`crane_height.py` — single-view metrology (Criminisi, Reid & Zisserman 2000) on
+the pixel readings in `rigs/moxir-crane-picks-2026-09-29.json` (photo 007, the
+far crane seen from the entry crane with the 3x lens): the crane's own rail span
+(GOST 534-78, 22–23 m) sets its depth, the floor at the end wall is the
+reference, the horizon cancels; Monte Carlo over every input. Result: rail top
+8.08 m (5–95 % 7.81–8.36), bridge underside 7.96 m (7.69–8.24), girders 0.8 m
+deep, cab bottom 5.85 m; scale check: the end wall's steel door reads 2.01 × 2.39 m.
+
+```bash
+python3 scripts/place/crane_height.py --picks scripts/place/rigs/moxir-crane-picks-2026-09-29.json
+R=scripts/place/rigs; D="--dims $R/moxir-hall-dims-2026-09-28.json --dims $R/moxir-hall-features-2026-09-28.json \
+  --dims $R/moxir-hall-dims-2026-09-29.json --dims $R/moxir-hall-features-2026-09-29.json"
+blender -b -P scripts/place/hall.py -- --out /mnt/data/footage/place-moxir-hall-v4-0929 $D
+blender -b -P scripts/place/hall.py -- --out /mnt/data/footage/place-moxir-hall-v4-0929-crane-dj $D \
+  --dims $R/moxir-hall-crane-dj-2026-09-29.json
+cp /mnt/data/footage/place-moxir-hall-v4-0929/hall.json $R/moxir-hall-2026-09-29.hall.json
+cp /mnt/data/footage/place-moxir-hall-v4-0929-crane-dj/hall.json $R/moxir-hall-2026-09-29-crane-dj.hall.json
+```
 
 ### The zones the owner marked (2026-09-28)
 
