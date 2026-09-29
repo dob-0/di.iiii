@@ -158,6 +158,27 @@ to the desk with the list. Tests: `tests/test-cues.js` (in `lighting.test.js`).
 - `GET /light/api/library`, `/library/manufacturer?key=`, `/library/fixture?…` and
   `POST /light/api/library/import {manufacturer, key, mode}` — patch by name.
 
+### The pushed frame — `GET /api/dmx/stream` (`dmxstream.js`, 2026-09-29)
+
+The live DMX as Server-Sent Events (WHATWG HTML §9.2), for a room visualising the rig
+(RIG_BUILD.md §18). SSE, not a WebSocket: one direction, plain HTTP through TLS and a reverse
+proxy, the browser's own reconnect, no dependency. Every frame the loop renders (40–44 Hz, and at
+once on every mutating route) goes to every listener — output ON or OFF:
+
+- `retry: 1000`, then `event: frame` / `data: {s, t, k, d, m?}` — `s` sequence per listener, `t` the
+  desk's clock, `k` 1 on a KEY frame (every listened universe whole, sent first and after a slow
+  listener drains), `d` `[[universe, start, [values…]], …]` (desk numbering, 0-based start), only the
+  runs that changed (gaps < 6 slots joined), `m` `{master, blackout, looks, cues}` only when it
+  changed (`looks[].firedAt` on the desk's clock instead of `since`).
+- nothing changed → nothing sent; `: ka` every 15 s; `?u=0,5` listens to those universes only;
+  at most 32 listeners (503 after); a listener over 256 KB behind is skipped and re-keyed.
+- Headers `text/event-stream`, `no-store, no-transform`, `x-accel-buffering: no`. Caddy streams it
+  as it comes (measured through the aylmo front door: ≈40 frames/s, not buffered).
+
+Tests: `tests/test-stream.js` (delta runs, key + meta on connect, a fader move is one delta within
+the POST, silence when idle, `?u`, meta once per change, a reconnect starts from a key frame, 40
+changes a second arrive as ≥ 38 frames).
+
 Data: one show loaded at a time, like a console's show file.
 
 - **A space's show** — `<spacesDir>/<id>/lighting/show.json`, beside the space's scene.
@@ -360,8 +381,10 @@ with `tests/dmx-send.js` as the console:
   (Art-Net). Through HTTP (send, then GET `api/dmx` until the value shows): p50 1.47 ms /
   p95 1.65 ms (sACN), 1.52 / 1.69 ms (Art-Net) — the same as one GET on its own (p50
   1.55 ms, p95 1.89 ms): the value is always there by the first answer. On the wire out it
-  then waits for the next output tick (≤ 25 ms at 40 Hz). A room lamp polls `api/dmx` every
-  100 ms (`DMX_POLL_MS`), which is the visualiser's own latency.
+  then waits for the next output tick (≤ 25 ms at 40 Hz). A room lamp polled `api/dmx` every
+  100 ms (`DMX_POLL_MS`), which was the visualiser's own latency — since 2026-09-29 the frame is
+  PUSHED ("The pushed frame", above): Art-Net packet → the room's drawn lamp p50 37.8 ms / p95
+  39.4 ms (RIG_BUILD.md §18.7).
 - **Sustained, 44 Hz × 3 universes, 60 s each**: sACN multicast over the LAN — 7923 sent,
   7923 accepted, 0 lost, 0 out of sequence, desk reports 44 fps on each universe, sampled
   state 0 frames behind the sender (118 samples), desk process 1.2 % of one core. Art-Net

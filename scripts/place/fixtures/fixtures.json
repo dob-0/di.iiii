@@ -5,8 +5,8 @@
     "howToRead": "Every spec is { value, src, basis }. `src` names an entry in `sources`. `basis` is EXACT (the maker's own page for this very model code), EQUIVALENT (a named fixture of the same class, because the maker publishes nothing for this field or the code could not be traced), or ASSUMED (no source; a stated guess). Nothing here was measured by us.",
     "identification": {
         "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd. — own site pro-uplight.com, store up-light.en.made-in-china.com",
-        "confirmed": "UP-B380F, UP-250BSW, UP-HK1915, UP-PL5403: the model code is printed as 'Model' / 'Model NO.' on the maker's page (sources A, A2, B, B2, C, C2, C3, D).",
-        "notFound": "UP-LA40WF, UP-Q108S, UP-YH600F, UP-YZ31P: not UPlight products — absent from all 420 listings of the maker's made-in-china store, the 73 products in the pro-uplight.com sitemap, and web searches for each code. The letters read as pinyin (YZ yanwu = smoke, YH yanhua = firework, Q qizhu = gas column): probably the rental house's own labels. The real maker/model is OWED from the rental house; until then each is modelled on a named equivalent.",
+        "confirmed": "UP-B380F, UP-250BSW, UP-HK1915, UP-PL5403: the model code is printed as 'Model' / 'Model NO.' on the maker's page (sources A, A2, B, B2, C, C2, C3, D). 2026-09-29: the maker's Chinese site uplight.com.cn (same company, same contact) prints model fields for UP-LA40WF too, and gives each MOXIR type's mode list (B380F 16; PL5403 8; 250BSW 24/30; HK1915 21/35/78/92/97) — still no channel ORDER for any (sources A-CN … LA-CN).",
+        "notFound": "UP-Q108S, UP-YH600F, UP-YZ31P: not UPlight products — absent from all 420 listings of the maker's made-in-china store, the 73 products in the pro-uplight.com sitemap, and web searches for each code. The letters read as pinyin (YZ yanwu = smoke, YH yanhua = firework, Q qizhu = gas column): probably the rental house's own labels. The real maker/model is OWED from the rental house; until then each is modelled on a named equivalent.",
         "photos": "Maker photos were used to shape the models (compared by eye); they are the makers' copyright and are NOT stored in this repository."
     },
     "search": {
@@ -107,6 +107,26 @@
         "ANTARI-HZ1000": {
             "url": "https://www.antari.com/products/hz-1000/",
             "what": "Antari HZ-1000 hazer, maker's product page (fetched 2026-09-28): L690 W510 H610 mm, 74.6 kg, 1150 W, 2 DMX channels, 2.2 ml/min at 100 %, 6.4 L tank (40 h at 100 %)"
+        },
+        "A-CN": {
+            "url": "https://www.uplight.com.cn/pd45714311.html",
+            "what": "UPlight UP-B380F on the maker's Chinese site (广州灯王舞台设备有限公司, brand UPLIGHT; linked from pro-uplight.com's language menu) — specs text, no DMX chart; checked 2026-09-29"
+        },
+        "B-CN": {
+            "url": "https://www.uplight.com.cn/pd152457438.html",
+            "what": "UPlight UP-250BSW on the maker's Chinese site — specs text, no DMX chart; checked 2026-09-29"
+        },
+        "C-CN": {
+            "url": "https://www.uplight.com.cn/pd49267011.html",
+            "what": "UPlight UP-HK1915 on the maker's Chinese site — specs text, no DMX chart; checked 2026-09-29"
+        },
+        "D-CN": {
+            "url": "https://www.uplight.com.cn/pd48298011.html",
+            "what": "UPlight UP-PL5403 on the maker's Chinese site — specs text, no DMX chart; checked 2026-09-29"
+        },
+        "LA-CN": {
+            "url": "https://www.uplight.com.cn/pd48855201.html",
+            "what": "UPlight UP-LA40WF '40瓦防水全彩激光灯' on the maker's Chinese site — model field UP-LA40WF; specs text, no DMX chart; checked 2026-09-29"
         }
     },
     "kinds": {
@@ -139,7 +159,8 @@
                 "power_w": {
                     "value": 500,
                     "src": "A",
-                    "basis": "EXACT"
+                    "basis": "EXACT",
+                    "note": "A-CN gives rated 450 W; the higher figure (A) is kept for power planning"
                 },
                 "beam_deg": {
                     "value": 1.8,
@@ -160,7 +181,8 @@
                         16
                     ],
                     "src": "A",
-                    "basis": "EXACT"
+                    "basis": "EXACT",
+                    "note": "A-CN: '通道模式：16通道模式' — one mode, 16 ch; DMX + RDM; 8/16-bit pan/tilt. The channel ORDER is published nowhere (owed)"
                 },
                 "ip": {
                     "value": "IP65",
@@ -170,6 +192,12 @@
                 "effects": {
                     "value": "1 colour wheel (14), fixed gobo wheel (13+open), rotating gobo wheel, 16-facet + honeycomb prism, frost",
                     "src": "A, A2",
+                    "basis": "EXACT",
+                    "note": "A-CN lists ONE fixed gobo wheel (13 + open) and no rotating wheel; the English listings (A, A2) add a rotating wheel — the maker contradicts itself (owed from the rental unit). Strobe: A-CN 1–12 Hz, A spec table 1–25 Hz, A2 text 0.5–14 Hz"
+                },
+                "connectors": {
+                    "value": "power in/out: '专用防水音响插' (dedicated waterproof connector); DMX in/out: 3-pin waterproof",
+                    "src": "A-CN",
                     "basis": "EXACT"
                 }
             },
@@ -421,7 +449,7 @@
         },
         "par": {
             "code": "UP-PL5403",
-            "identified": "EXACT (power and DMX not published)",
+            "identified": "EXACT",
             "product": "UPlight UP-PL5403, IP65 54 x 3 W RGBW LED PAR",
             "specs": {
                 "size_mm": {
@@ -431,7 +459,8 @@
                         330
                     ],
                     "src": "D",
-                    "basis": "EXACT"
+                    "basis": "EXACT",
+                    "note": "D-CN gives 290 x 230 x 260 mm, 5.9 kg (the English page 310 x 310 x 330, 8 kg) — the rental unit decides"
                 },
                 "weight_kg": {
                     "value": 8,
@@ -458,19 +487,22 @@
                 "ip": {
                     "value": "IP65",
                     "src": "D",
-                    "basis": "EXACT"
+                    "basis": "EXACT",
+                    "note": "D-CN also IP65"
                 },
                 "power_w": {
                     "value": 162,
-                    "src": null,
-                    "basis": "ASSUMED",
-                    "note": "not published; 54 x 3 W of LEDs"
+                    "src": "D-CN",
+                    "basis": "EXACT",
+                    "note": "rated 162 W; supply power 200 W; switch-mode supply with PFC, PF > 0.99"
                 },
                 "dmx_channels": {
-                    "value": null,
-                    "src": null,
-                    "basis": "ASSUMED",
-                    "note": "not published — OWED"
+                    "value": [
+                        8
+                    ],
+                    "src": "D-CN",
+                    "basis": "EXACT",
+                    "note": "'通道模式：8通道模式' — the maker lists ONE mode, 8 channels; its channel ORDER is published nowhere (owed). Control: DMX512 / master-slave / sound"
                 }
             },
             "look": "A round cast-aluminium can with deep radial cooling fins, a flat front bezel of 54 LEDs (~75% of the can), on a U-bracket of flat steel bar that folds into its own floor stand, two big black knobs at the pivots.",
@@ -499,8 +531,8 @@
         },
         "laser": {
             "code": "UP-LA40WF",
-            "identified": "NOT FOUND — modelled on an EQUIVALENT",
-            "product": "equivalent: Blue Sea BLLO-RGB40, 40 W RGB animation laser, IP65",
+            "identified": "EXACT (identity and optics from the maker's page LA-CN; body size/weight and DMX from an EQUIVALENT)",
+            "product": "UPlight UP-LA40WF, 40 W full-colour laser (R 10 W 638 nm, G 15 W 520 nm, B 16 W 445 nm, Nichia; ILDA, DMX512, SD card)",
             "specs": {
                 "size_mm": {
                     "value": [
@@ -518,9 +550,9 @@
                     "basis": "EQUIVALENT"
                 },
                 "source": {
-                    "value": "RGB diodes: R 10 W, G 14 W, B 16 W optical",
-                    "src": "BLUESEA",
-                    "basis": "EQUIVALENT"
+                    "value": "R 10 W 638 nm, G 15 W 520 nm, B 16 W 445 nm (Nichia), 100 kHz analog/TTL",
+                    "src": "LA-CN",
+                    "basis": "EXACT"
                 },
                 "divergence_mrad": {
                     "value": 1.3,
@@ -539,9 +571,10 @@
                     "basis": "EQUIVALENT"
                 },
                 "control": {
-                    "value": "DMX / FB4 / Beyond",
-                    "src": "BLUESEA",
-                    "basis": "EQUIVALENT"
+                    "value": "ILDA DB-25, DMX512, master/slave, SD card, sound, auto",
+                    "src": "LA-CN",
+                    "basis": "EXACT",
+                    "note": "no DMX mode or channel count published"
                 }
             },
             "look": "A black box, wider than tall, a raised hood at the top centre of the front face with a small output window, a vent grille across the front, in a U-bracket with side locking knobs.",

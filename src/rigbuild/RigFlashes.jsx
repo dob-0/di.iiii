@@ -54,7 +54,9 @@ function Face({ lamp, envRef }) {
         return { position: p, quaternion: q }
     }, [lamp.lens, lamp.dir])
     useFrame(() => {
-        const e = envRef.current * lamp.level
+        // A desk-driven lamp flashes at its own rate, or burns steady (dmxPose.js).
+        const env = lamp.hz > 0 ? strobeEnvelope(Date.now() / 1000, lamp.hz) : lamp.steady ? 1 : envRef.current
+        const e = env * lamp.level
         if (face.current) {
             face.current.material.opacity = Math.min(1, e)
             face.current.visible = e > 0.004
@@ -77,7 +79,7 @@ function Face({ lamp, envRef }) {
     )
 }
 
-function SharedLight({ kind, rig, envRef }) {
+function SharedLight({ kind, rig, envRef, hz = 0, steady = false }) {
     const light = useRef(null)
     const target = useRef(null)
     const spec = FLASH[kind]
@@ -87,7 +89,8 @@ function SharedLight({ kind, rig, envRef }) {
     useFrame(() => {
         const l = light.current
         if (!l) return
-        l.intensity = rig ? spec.lightIntensity * rig.level * envRef.current : 0
+        const env = hz > 0 ? strobeEnvelope(Date.now() / 1000, hz) : steady ? 1 : envRef.current
+        l.intensity = rig ? spec.lightIntensity * rig.level * env : 0
     })
     const at = rig?.lens || [0, -1000, 0]
     const to = rig ? rig.lens.map((v, i) => v + rig.dir[i] * 10) : [0, -1001, 0]
@@ -113,7 +116,12 @@ export default function RigFlashes({ entities }) {
     return (
         <group name="rig-flashes">
             {lit.map((l) => <Face key={l.id} lamp={l} envRef={envOf(l.kind)} />)}
-            {kinds.map((k) => <SharedLight key={k} kind={k} rig={flashRig(lit.filter((l) => l.kind === k))} envRef={envOf(k)} />)}
+            {kinds.map((k) => {
+                const mine = lit.filter((l) => l.kind === k)
+                // One light per kind: at the fastest desk rate among its lit lamps.
+                const hz = Math.max(0, ...mine.map((l) => l.hz || 0))
+                return <SharedLight key={k} kind={k} rig={flashRig(mine)} envRef={envOf(k)} hz={hz} steady={!hz && mine.length > 0 && mine.every((l) => l.steady)} />
+            })}
         </group>
     )
 }

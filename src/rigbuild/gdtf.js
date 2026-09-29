@@ -20,6 +20,8 @@
 // Not modelled (owed, stated in the file's Description): pan and tilt as separate
 // Axis geometries, wheels, emitters, the real channel functions.
 
+import { isAssumedMode } from './assumedProfiles.js'
+
 export const GDTF_DATA_VERSION = '1.2'
 
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c]))
@@ -65,7 +67,9 @@ const attributesOfMode = (mode) => {
  * @param {object} type  a record of src/rigbuild/types/*.json
  */
 export const gdtfDescription = (type) => {
-    const modes = type.modes || []
+    // Never an ASSUMED test mode (assumedProfiles.js): a GDTF file goes to a crew's console
+    // as THE fixture, and a stand-in's chart must never be taken for the maker's.
+    const modes = (type.modes || []).filter((m) => !isAssumedMode(m))
     const attributes = new Map()
     for (const mode of modes) for (const a of attributesOfMode(mode)) if (!attributes.has(a.name)) attributes.set(a.name, a)
     const size = type.model3d?.sizeAtHome_mm || null

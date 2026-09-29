@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { buildLibrary, serialise } from '../../scripts/rigbuild/types.mjs'
 import { footprintOf, modeOf, powerOf, typeById, typeFlags, typeIdOf, typesFromManifest } from './fixtureTypes.js'
+import { isAssumedMode } from './assumedProfiles.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const committed = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/rigbuild/types/moxir.json'), 'utf8'))
@@ -24,12 +25,18 @@ describe('the MOXIR type library', () => {
 
     it('carries the published footprints and invents none', () => {
         expect(footprintOf(typeById(committed, 'UP-B380F'))).toBe(16)
-        expect(typeById(committed, 'up-250bsw').modes.map((m) => m.footprint)).toEqual([24, 30])
-        expect(typeById(committed, 'up-hk1915').modes.map((m) => m.footprint)).toEqual([21, 35, 78, 92, 97])
-        for (const code of ['UP-PL5403', 'UP-LA40WF', 'UP-Q108S']) {
+        // The maker's (or the named equivalent's) published modes, unchanged; the ASSUMED
+        // test modes (assumedProfiles.js) sit beside them, each marked, never in their place.
+        const real = (t) => t.modes.filter((m) => !isAssumedMode(m))
+        expect(real(typeById(committed, 'up-250bsw')).map((m) => m.footprint)).toEqual([24, 30])
+        expect(real(typeById(committed, 'up-hk1915')).map((m) => m.footprint)).toEqual([21, 35, 78, 92, 97])
+        // UP-PL5403 has ONE published mode, 8ch (uplight.com.cn, 2026-09-29); its list is owed.
+        expect(real(typeById(committed, 'up-pl5403')).map((m) => [m.name, m.channels])).toEqual([['8ch', null]])
+        for (const code of ['UP-LA40WF', 'UP-Q108S']) {
             const type = typeById(committed, code)
             expect(type.modesOwed).toBe(true)
-            expect(type.modes).toEqual([])
+            expect(real(type)).toEqual([])
+            expect(type.modes.every((m) => m.basis === 'ASSUMED' && /-assumed$/.test(m.name))).toBe(true)
             expect(type.defaultMode).toBe(null)
         }
     })
@@ -44,14 +51,16 @@ describe('the MOXIR type library', () => {
 
     it('keeps the source and basis of every number, and an unidentified maker stays unknown', () => {
         const beam = typeById(committed, 'UP-B380F')
-        expect(beam.power_w).toEqual({ value: 500, src: 'A', basis: 'EXACT' })
+        expect(beam.power_w).toMatchObject({ value: 500, src: 'A', basis: 'EXACT' })
         expect(beam.sources.A.url).toMatch(/^https:\/\//)
-        const laser = typeById(committed, 'UP-LA40WF')
-        expect(laser.identified).toBe('EQUIVALENT')
-        expect(laser.maker).toBe(null)
-        expect(laser.modelledOn).toMatch(/Blue Sea/)
+        // UP-LA40WF is on the maker's Chinese site under its own code (2026-09-29): identified.
+        expect(typeById(committed, 'UP-LA40WF').identified).toBe('EXACT')
+        const co2 = typeById(committed, 'UP-Q108S')
+        expect(co2.identified).toBe('EQUIVALENT')
+        expect(co2.maker).toBe(null)
+        expect(co2.modelledOn).toMatch(/MagicFX/)
         expect(powerOf(typeById(committed, 'UP-PL5403'))).toBe(162)
-        expect(typeById(committed, 'UP-PL5403').power_w.basis).toBe('ASSUMED')
+        expect(typeById(committed, 'UP-PL5403').power_w).toMatchObject({ basis: 'EXACT', src: 'D-CN' })
     })
 })
 
@@ -59,7 +68,7 @@ describe('typeFlags', () => {
     it('names what is wrong in words, and nothing when nothing is', () => {
         expect(typeFlags({ type: 'up-yh600f', mode: '2ch' }, committed)).toEqual([])
         expect(typeFlags({ type: 'up-b380f' }, committed).map((f) => f.code)).toEqual(['channels-owed'])
-        expect(typeFlags({ type: 'up-pl5403' }, committed).map((f) => f.code)).toEqual(['mode-unknown'])
+        expect(typeFlags({ type: 'up-q108s' }, committed).map((f) => f.code)).toEqual(['mode-unknown'])
         expect(typeFlags({ type: 'up-b380f', mode: '12ch' }, committed).map((f) => f.code)).toEqual(['mode-unknown'])
         expect(typeFlags({ type: 'nope' }, committed).map((f) => f.code)).toEqual(['unknown-type'])
         expect(typeFlags({ index: 3 }, committed)).toEqual([])
