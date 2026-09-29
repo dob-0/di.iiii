@@ -1,0 +1,6 @@
+{
+  "_what": "The crane over the DJ, re-layered for 2026-09-29: the same plan as moxir-hall-crane-dj-2026-09-28.json (the entry-end crane rolled to z 4.8 over the DJ, trolley parked at the right end), with the FAR crane at its measured place (76.2 m from the entry grid line, photo 007) instead of the 95 m GUESS. Layer it LAST (after the 09-29 dims and features), or the features' as-seen crane positions win.",
+  "_source": "owner's direction 2026-09-28 23:1x (see the 09-28 file); far crane: moxir-hall-features-2026-09-29.json",
+  "cranes_from_door_m": [49.2, 76.2],
+  "crane_trolley_x_m": [7.6, null]
+}

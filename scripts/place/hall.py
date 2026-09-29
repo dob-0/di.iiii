@@ -42,7 +42,7 @@ Usage:
     blender -b -P scripts/place/hall.py -- --out <dir> [--dims dims.json ...]
         [--span 24] [--pitch 6] [--bays 18] [--crane-rail 7.6]
         [--truss-bottom 11] [--ridge 17] [--lantern 12]
-        [--column-w 0.5] [--column-d 0.8] [--preview] [--preview-camera x,y,z,yaw,pitch,vfov]
+        [--column-w 0.5] [--column-d 0.8] [--preview] [--preview-camera x,y,z,yaw,pitch,vfov[,width,height]]
 
 Writes into <dir>:
     hall.glb     the room, Y-up, floor at y = 0, the nave centred on x = 0,
@@ -103,6 +103,13 @@ PLACEHOLDER = {
     'column_head_width_m': 1.9,
     'crane_girders_each_row': 2,
     'crane_girder_depth_m': 0.9,
+    # The bridge cranes (v3.1, 2026-09-29). None = the v2 assumption: the bridge
+    # girders' underside 0.55 m ABOVE the rail. Measured on MOXIR's far crane
+    # (photo 007, crane_height.py): the underside at mid-span sits ~0.1 m BELOW
+    # the rail head, the girders 0.8 m deep, the cab ~2.1 m under them.
+    'crane_bridge_bottom_h_m': None,  # floor to the bridge girders' underside at mid-span
+    'crane_bridge_depth_m': 1.5,      # the bridge girders' depth at mid-span
+    'crane_cab_h_m': 2.2,             # the operator's cab, hung under the left end
     'roof_type': 'space_frame_flat',
     'space_frame_module_m': 3.0,
     'space_frame_depth_m': 2.5,
@@ -137,6 +144,7 @@ KEYS_FROM_DIMS = [
     'span_m', 'pitch_m', 'bays', 'length_m', 'crane_rail_h_m', 'truss_bottom_h_m',
     'ridge_h_m', 'lantern_w_m', 'column_w_m', 'column_d_m', 'upper_column_d_m', 'truss_top_h_m',
     'lantern_h_m', 'column_head', 'column_head_width_m', 'crane_girders_each_row', 'crane_girder_depth_m',
+    'crane_bridge_bottom_h_m', 'crane_bridge_depth_m', 'crane_cab_h_m',
     'roof_type', 'space_frame_module_m', 'space_frame_depth_m', 'space_frame_member_m', 'space_frame_node_m',
     'lantern_module_m', 'lantern_segments_m', 'lantern_spans',
     'neighbour_spans', 'expansion_joint_m', 'paired_columns_at_joint',
@@ -240,14 +248,17 @@ def resolve_dims(opts):
             if key not in given or given[key] is None:
                 continue
             value = given[key]
-            if isinstance(value, dict) and 'value' in value:
-                value = value['value']
+            entry = value if isinstance(value, dict) and 'value' in value else {}
+            if entry:
+                value = entry['value']
             dims[key] = value
-            conf = confidence.get(key)
+            conf = confidence.get(key) or entry.get('confidence')
             origin[key] = base_tag if base_tag == 'measured' else \
                 f"{base_tag} ({os.path.basename(dims_path)}{'; confidence ' + str(conf) if conf else ''})"
-            if base_tag != 'measured' and isinstance(given.get('ranges'), dict) and key in given['ranges']:
-                origin[key] += f" range {given['ranges'][key]}"
+            rng = (given.get('ranges') or {}).get(key) if isinstance(given.get('ranges'), dict) else None
+            rng = rng if rng is not None else entry.get('range')
+            if base_tag != 'measured' and rng is not None:
+                origin[key] += f" range {rng}"
     for key, value in opts['overrides'].items():
         dims[key] = value
         origin[key] = 'command line (unmeasured)'
@@ -265,7 +276,7 @@ def resolve_dims(opts):
         origin['length_m'] = f"bays x pitch ({origin['bays']}, {origin['pitch_m']})"
     for key in ('span_m', 'pitch_m', 'crane_rail_h_m', 'truss_bottom_h_m', 'truss_top_h_m', 'ridge_h_m',
                 'lantern_w_m', 'lantern_h_m', 'column_w_m', 'column_d_m', 'upper_column_d_m', 'column_head_width_m',
-                'crane_girder_depth_m', 'space_frame_module_m', 'space_frame_node_m', 'lantern_module_m', 'door_w_m', 'door_h_m', 'far_gate_w_m', 'far_gate_h_m'):
+                'crane_girder_depth_m', 'crane_bridge_depth_m', 'crane_cab_h_m', 'space_frame_module_m', 'space_frame_node_m', 'lantern_module_m', 'door_w_m', 'door_h_m', 'far_gate_w_m', 'far_gate_h_m'):
         dims[key] = float(dims[key])
     L = dims['length_m']
     dims['cranes_from_door_m'] = [min(L - 3, max(3.0, float(v))) for v in dims['cranes_from_door_m']]
@@ -281,6 +292,15 @@ def resolve_dims(opts):
     if stated_depth and abs(float(stated_depth) - depth) > 0.3:
         raise SystemExit(f'hall.py: space_frame_depth_m {stated_depth} disagrees with top - bottom chord {depth:.2f}')
     dims['space_frame_depth_m'] = depth
+    if dims.get('crane_bridge_bottom_h_m') is None:
+        dims['crane_bridge_bottom_h_m'] = dims['crane_rail_h_m'] + 0.55
+        origin['crane_bridge_bottom_h_m'] = 'derived: crane rail + 0.55 m (the v2 assumption, unmeasured)'
+    dims['crane_bridge_bottom_h_m'] = float(dims['crane_bridge_bottom_h_m'])
+    crane_top = dims['crane_bridge_bottom_h_m'] + dims['crane_bridge_depth_m'] + 1.0     # + the trolley
+    if crane_top > dims['truss_bottom_h_m'] - 0.1:
+        # GOST 534-78 / PB 10-382-00: at least 100 mm from the crane's top to the roof structure
+        print(f"[hall] WARNING: the crane's top {crane_top:.2f} m is within 0.1 m of the bottom chord "
+              f"{dims['truss_bottom_h_m']:.2f} m — check the crane dims")
     return dims, origin, dims_source, dims_notes
 
 
@@ -612,8 +632,9 @@ def build(dims):
     # Cranes: in the nave from cranes_from_door_m, in neighbour spans from
     # neighbour_cranes_from_door_m. Two box girders rail to rail, end trucks,
     # a trolley and a cab.
-    girder_bottom = rail_h + 0.55
-    crane_depth = 1.5
+    girder_bottom = dims['crane_bridge_bottom_h_m']
+    crane_depth = dims['crane_bridge_depth_m']
+    cab_h = dims['crane_cab_h_m']
     cranes = []
 
     def crane(span_index, from_door, record, trolley_x=2.0):
@@ -626,12 +647,13 @@ def build(dims):
         for offset in (-1.1, 1.1):
             b.box('crane', (xa, cy + offset - 0.35, girder_bottom), (xb, cy + offset + 0.35, girder_bottom + crane_depth))
         for x in (xa, xb):
-            b.box('crane', (x - 0.4, cy - 2.6, rail_h), (x + 0.4, cy + 2.6, girder_bottom + 0.4))
+            # the end trucks: wheels on the rail, the girders' ends framed into them
+            b.box('crane', (x - 0.4, cy - 2.6, rail_h), (x + 0.4, cy + 2.6, max(rail_h + 0.8, girder_bottom + 0.4)))
         tx0 = cx + trolley_x
         b.box('crane', (tx0, cy - 1.6, girder_bottom + crane_depth), (tx0 + 2.6, cy + 1.6, girder_bottom + crane_depth + 1.0))
         cab_x = xa + 1.0
-        b.box('crane', (cab_x, cy - 1.0, girder_bottom - 2.2), (cab_x + 2.0, cy + 1.0, girder_bottom))
-        b.box('glass', (cab_x + 1.95, cy - 0.8, girder_bottom - 1.9), (cab_x + 2.02, cy + 0.8, girder_bottom - 0.9))
+        b.box('crane', (cab_x, cy - 1.0, girder_bottom - cab_h), (cab_x + 2.0, cy + 1.0, girder_bottom))
+        b.box('glass', (cab_x + 1.95, cy - 0.8, girder_bottom - cab_h + 0.3), (cab_x + 2.02, cy + 0.8, girder_bottom - 0.9))
         if record:
             # The shape the rig checks beams against (rig-lib.mjs beamHitsCrane): the two
             # box girders (0.7 m wide, 1.1 m either side of the bridge's centre line, a
@@ -642,7 +664,7 @@ def build(dims):
                            'trolley': {'x_m': [round(tx0 - cx, 3), round(tx0 - cx + 2.6, 3)], 'dz_m': [-1.6, 1.6],
                                        'y_m': [round(girder_bottom + crane_depth, 3), round(girder_bottom + crane_depth + 1.0, 3)]},
                            'cab': {'x_m': [round(cab_x - cx, 3), round(cab_x - cx + 2.0, 3)], 'dz_m': [-1.0, 1.0],
-                                   'y_m': [round(girder_bottom - 2.2, 3), round(girder_bottom, 3)]}})
+                                   'y_m': [round(girder_bottom - cab_h, 3), round(girder_bottom, 3)]}})
 
     trolleys = list(dims.get('crane_trolley_x_m') or [])
     for i, from_door in enumerate(dims['cranes_from_door_m']):
@@ -1058,8 +1080,9 @@ def preview(path, dims, camera=None):
     scene.display.shading.light = 'STUDIO'
     scene.display.shading.color_type = 'MATERIAL'
     scene.display.shading.show_cavity = True
-    scene.render.resolution_x = 1280
-    scene.render.resolution_y = 720
+    size = (camera[6:8] if camera and len(camera) >= 8 else None) or (1280, 720)
+    scene.render.resolution_x = int(size[0])
+    scene.render.resolution_y = int(size[1])
     cam_data = bpy.data.cameras.new('preview')
     cam_data.lens_unit = 'FOV'
     cam_data.sensor_fit = 'VERTICAL'
@@ -1067,7 +1090,7 @@ def preview(path, dims, camera=None):
     cam = bpy.data.objects.new('preview', cam_data)
     bpy.context.collection.objects.link(cam)
     L = dims['length_m']
-    x, y, z, yaw, pitch, vfov = camera or (0.0, 1.7, L / 2 - 2.0, 0.0, 5.0, 60.0)
+    x, y, z, yaw, pitch, vfov = (camera or (0.0, 1.7, L / 2 - 2.0, 0.0, 5.0, 60.0))[:6]
     cam_data.angle = math.radians(vfov)
     # Hall (x, y up, z) -> Blender (x, -z, y). Blender camera looks down -Z
     # local; rotation X 90 deg looks along +Y (toward the far end).

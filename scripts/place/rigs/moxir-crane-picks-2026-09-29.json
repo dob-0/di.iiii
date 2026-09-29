@@ -1,0 +1,36 @@
+{
+  "_what": "Pixel readings for crane_height.py: the nave's FAR overhead crane in photo 007 (iPhone 14 Pro Max, 3x telephoto, 77 mm-eq, 4032 x 2688, 2026-08-24 17:00:15 +04, taken from the entry-end crane 8 s before photo 004). The photograph is the owner's and stays private; these are only numbers read off it.",
+  "photo": "007-file_90.JPG (/mnt/data/footage/moxir-2026-10-17/, private)",
+  "image_px": [4032, 2688],
+  "how_read": "2026-09-29, by eye on full-resolution crops with a 20-50 px grid (session scratchpad hall0929/cropg.py), and for the girder's top and bottom edges by the yellow-minus-blue edge profile of 21-px-wide columns (the strongest rise/fall). Full-resolution pixel coordinates, (x, v), v down.",
+  "pixel_sd": {"edge": 6, "rail_x": 15},
+  "priors": {
+    "fx_px": {"value": 8969, "sd": 90, "how": "EXIF FocalLengthIn35mmFilm 77 on the phone's native 4:3 frame (diagonal 5040 px): 77 / 43.27 * 5040 = 8969; the tele's 9.0 mm on 1.0 um pixels = 9000. +-1 %."},
+    "camera_z_m": {"value": 46.9, "sd": 2.0, "how": "the crane camera: photo 032's fit puts it at z 50.2 (moxir-hall-features-2026-09-28.json); VGGT (2026-09-27 run) puts 004 3.3 m further along the hall than 032, and 007 was taken 8 s from 004 at the same place."},
+    "wall_inner_z_m": {"value": -54.5, "sd": 1.0, "how": "the far end wall's inside face: 18 x 6 m grid (OSM way 289841504, 108.4 m) + 0.5 m, as hall.py draws it"},
+    "camera_h_m": {"value": 6.9, "sd": 0.35, "how": "photo 032 fit 6.88 m; VGGT 7.1 m for 004 (VGGT ran ~6 % high against the 032 fit); the photographer stood under the crane girders (004: both girders overhead), so 6.5-7.4 m"},
+    "rail_span_m": {"min": 22.0, "max": 23.0, "how": "GOST 534-78 / 25711-83 overhead cranes: rail span L_k = building span 24 m - 2*lambda, lambda 0.5-1.0 m (0.75 m usual up to 50 t -> 22.5 m)"}
+  },
+  "level_edge": [[1100, 1248], [1750, 1237], [3000, 1216]],
+  "_level_edge": "the bridge girder's top edge (edge profile at x 1100, 1750, 3000): a level line in the world, slope -0.0168 = 0.96 deg roll",
+  "rail_x_px": [680, 3600],
+  "_rail_x_px": "the end trucks' wheels on the rails: left truck wheels x 640-720 (centre 680), right truck x 3580-3625 (centre 3600)",
+  "floor_at_wall": [[1700, 2085], [1580, 2088]],
+  "_floor_at_wall": "the floor line at the foot of the far end wall: the sill of the steel double door (x 1809-1987) and the wall base left of it",
+  "points": {
+    "rail_top": {"px": [[680, 1330], [3600, 1298]], "what": "top of the crane rail = where the end trucks' wheels sit on the runway girders, both ends"},
+    "bridge_bottom_mid": {"px": [[1750, 1337], [2250, 1327]], "what": "underside of the bridge girder at mid-span (edge profile, x 1750 and 2250)"},
+    "bridge_top_mid": {"px": [[1750, 1237], [2250, 1228]], "what": "top of the bridge girder at mid-span"},
+    "bridge_bottom_end": {"px": [[900, 1300]], "what": "underside of the girder near the left end truck (the girder is shallower at its ends)"},
+    "cab_bottom": {"px": [[3250, 1585]], "what": "bottom of the operator's cab (yellow-black striped), hung under the right end"},
+    "hook_block_top": {"px": [[2075, 1480]], "what": "the hoist's hook block under the trolley (trolley at x 1850-2150 on top of the bridge)"},
+    "hook_low": {"px": [[2075, 1880]], "what": "the lowest point of the hook and its chain as parked on 2026-08-24"}
+  },
+  "wall_points": {
+    "wall_top_under_roof": {"px": [[2000, 1085]], "what": "where the far end wall's light plaster ends under the roof structure (a check of the space frame's bottom chord, NOT a clean edge)"}
+  },
+  "wall_objects": {
+    "far_gate": {"x": [2118, 2613], "v": [1450, 2085], "what": "the dark gate opening in the far end wall (its sill is hidden; the floor line is taken from the door)"},
+    "steel_door": {"x": [1809, 1987], "v": [1869, 2080], "what": "the grey steel double door left of the gate"}
+  }
+}

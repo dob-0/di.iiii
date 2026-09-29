@@ -1,0 +1,49 @@
+{
+  "site": "MOXIR hall, Charentsavan (owner's pin 40.406524, 44.636560)",
+  "date": "2026-09-29",
+  "layer": "AFTER moxir-hall-dims-2026-09-28.json and moxir-hall-features-2026-09-28.json; changes only the crane heights. History is kept: nothing in the 09-28 files is edited.",
+  "frame": "hall frame: metres, y up from the floor",
+  "source": "photographs: photo 007 (iPhone 14 Pro Max 3x tele, EXIF intrinsics) measured with scripts/place/crane_height.py on the picks in moxir-crane-picks-2026-09-29.json",
+  "crane_rail_h_m": {
+    "value": 8.1, "range": [7.8, 8.4], "confidence": "medium-high",
+    "how": "top of rail where the far crane's end trucks sit, photo 007: fronto-parallel two-depth metrology (Criminisi et al. 2000) — the crane's own rail span (GOST 534-78: 24 m - 2*lambda = 22.0-23.0 m) gives its depth (69 m), the floor at the far end wall is the reference, the horizon cancels; Monte Carlo over focal, camera place/height, wall position, rail span and +-6 px reading: median 8.08, 5-95 % 7.81-8.36. Agrees with the 2026-09-27 perspective estimate (runway top 8.2 m) and with the Soviet unified crane-rail level 8.15 m for 24 m spans; the VGGT cloud's 6.6-7.4 is rejected (VGGT compresses telephoto/far depth). Scale check in the same photo: the end wall's steel double door reads 2.01 x 2.39 m (a standard 2.0 x 2.4 m industrial door)."
+  },
+  "crane_bridge_bottom_h_m": {
+    "value": 7.95, "range": [7.7, 8.25], "confidence": "medium",
+    "how": "underside of the bridge girders at mid-span, photo 007 (edge profile at x 1750/2250): 7.96 m, 5-95 % 7.69-8.24; 0.12 m (0.05-0.20) BELOW the rail head — the box girders hang between the end trucks and are shallower at their ends (end underside rail +0.27). Measured on the FAR crane; the entry-end crane (the one to park over the DJ) is ASSUMED the same type: same runway, same yellow double-girder bridge with the same slotted side plates (photos 004/010/012/032 from under it); its own underside is not measured."
+  },
+  "crane_bridge_depth_m": {
+    "value": 0.8, "range": [0.7, 0.9], "confidence": "medium",
+    "how": "bridge girder side plate at mid-span, photo 007: top 8.73 m - underside 7.96 m = 0.77 m (was 1.5 m GUESS)"
+  },
+  "crane_cab_h_m": {
+    "value": 2.1, "range": [2.0, 2.3], "confidence": "medium",
+    "how": "operator's cab (yellow-black stripes) under the far crane's right end, photo 007: its bottom 5.85 m (5.56-6.15) = 2.1 m under the girders"
+  },
+  "truss_bottom_h_m_check": {
+    "value": 11.26, "range": [10.79, 11.73], "confidence": "low (not a clean edge)",
+    "how": "where the far end wall's plaster ends under the roof, photo 007 at the wall's depth; consistent with the 11.0 m bottom chord in use — NOT changed"
+  },
+  "confidence": {
+    "crane_rail_h_m": "medium-high (photo 007 metrology; agrees with the 09-27 perspective and the unified 8.15 m)",
+    "crane_bridge_bottom_h_m": "medium (far crane measured; DJ crane assumed identical)",
+    "crane_bridge_depth_m": "medium",
+    "crane_cab_h_m": "medium"
+  },
+  "ranges": {
+    "crane_rail_h_m": [7.8, 8.4],
+    "crane_bridge_bottom_h_m": [7.7, 8.25],
+    "crane_bridge_depth_m": [0.7, 0.9],
+    "crane_cab_h_m": [2.0, 2.3]
+  },
+  "notes": [
+    "2026-09-29: crane rail 7.6 (disputed 6.6-8.4) -> 8.1 m measured; the bridge underside was DRAWN at rail + 0.55 = 8.15 m, it is measured at 7.95 m (0.2 m lower than drawn). Column heads follow the rail (head top = rail - 0.14 - 0.9 = 7.06 m, was 6.56).",
+    "What is still owed: a tape or laser distance to the crane's underside on site (one number settles it), and the entry-end crane's own underside and hook height."
+  ],
+  "sources": {
+    "method": "A. Criminisi, I. Reid, A. Zisserman, 'Single View Metrology', IJCV 40(2):123-148, 2000",
+    "crane_span": "GOST 534-78 / GOST 25711-83 (overhead electric bridge cranes: L_k = L - 2*lambda)",
+    "unified_rail_level": "Soviet unified gabarit schemes for one-storey industrial buildings (rail 8.15 m with 24 m spans); cited as a check only",
+    "photo": "007-file_90.JPG, the owner's, 2026-08-24 17:00:15 +04 — private, not in the repo"
+  }
+}
