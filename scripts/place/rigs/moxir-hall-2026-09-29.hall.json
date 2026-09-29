@@ -1,7 +1,7 @@
 {
   "tool": "scripts/place/hall.py",
   "version": 2,
-  "createdAt": "2026-09-29T19:35:42.051184+00:00",
+  "createdAt": "2026-09-29T19:51:56.104440+00:00",
   "what": "A clean parametric model of a Soviet multi-span crane hall with a flat space-frame roof (MOXIR, Charentsavan). Not a scan. Frame: Y up, metres, the entry end at +Z, the far end at -Z, the nave centred on x = 0, +x to the right looking from the entry.",
   "dims": {
     "span_m": 24.0,
@@ -190,69 +190,6 @@
         "model": "pipe_run",
         "source": "moxir-hall-features-2026-09-28.json (carried unchanged)",
         "confidence": "low (by eye, photo 032)"
-      },
-      {
-        "id": "machine-tool-backstage",
-        "label": "long machine tool under plastic sheeting (bed ~5 x 1.5 m, ~1.3 m high), in the backstage area",
-        "x_m": [
-          -6.5,
-          -1.5
-        ],
-        "z_m": [
-          -9.0,
-          -7.0
-        ],
-        "y_m": [
-          0.0,
-          1.4
-        ],
-        "material": "machine",
-        "model": "box",
-        "how": "photo 856 (X-T5, 2026-09-26 16:23): camera fitted by VGGT 2026-09-29 (facebook/VGGT-1B, CC BY-NC, internal measurement only) on 36 old + 12 new photos, registered to the 09-27 run by 32 shared cameras (Umeyama similarity, median residual 1.2 m) and to the hall frame; positions +-3 m, sizes by eye against the 6 m column pitch; the press stands behind it on the camera's bearing (checks the registration). ESTIMATE +-3 m. Inside the backstage 'used' rectangle (x -6..6, z -10..-1): to clear or to plan around.",
-        "source": "photo 856-FXT51167.JPG (owner, private) + VGGT 2026-09-29 pose",
-        "confidence": "low (position +-3 m, size by eye)"
-      },
-      {
-        "id": "machine-tool-backstage-head",
-        "label": "its column head with the blue fan and duct",
-        "x_m": [
-          -3.6,
-          -2.4
-        ],
-        "z_m": [
-          -8.8,
-          -7.4
-        ],
-        "y_m": [
-          1.4,
-          3.6
-        ],
-        "material": "machine",
-        "model": "box",
-        "how": "photo 856; same estimate",
-        "source": "photo 856-FXT51167.JPG (owner, private) + VGGT 2026-09-29 pose",
-        "confidence": "low (position +-3 m, size by eye)"
-      },
-      {
-        "id": "block-pallet-backstage",
-        "label": "pallet of white aerated-concrete blocks",
-        "x_m": [
-          -1.0,
-          0.4
-        ],
-        "z_m": [
-          -5.5,
-          -4.3
-        ],
-        "y_m": [
-          0.0,
-          1.3
-        ],
-        "material": "block",
-        "model": "box",
-        "how": "photo 856; ESTIMATE +-3 m",
-        "source": "photo 856-FXT51167.JPG (owner, private) + VGGT 2026-09-29 pose",
-        "confidence": "low (position +-3 m, size by eye)"
       }
     ],
     "zones": {
@@ -422,7 +359,7 @@
           6.9,
           46.9
         ],
-        "yaw_deg": 1.0,
+        "yaw_deg": -1.0,
         "pitch_deg": 0.8,
         "vfov_deg": 17.05,
         "image_px": [
@@ -430,7 +367,7 @@
           896
         ],
         "photo": "007-file_90.JPG (iPhone 14 Pro Max 3x, f 8969 px on 4032 x 2688)",
-        "note": "the crane camera (x of photo 032, z 3.3 m further along by VGGT, height 6.9 m); horizon from the far-wall floor and the camera height (v 1473 of 2688 -> 0.8 deg up); roll -0.96 deg not modelled. APPROXIMATE.",
+        "note": "the crane camera (x of photo 032, z 3.3 m further along by VGGT, height 6.9 m); horizon from the far-wall floor and the camera height (v 1473 of 2688 -> 0.8 deg up); roll -0.96 deg not modelled. APPROXIMATE. Yaw -1.0 (+ = right): set 2026-09-29 so the far gate and the end wall's door line up in the 50/50 overlay; the bridge then sits ~60 px (of 1344) right of the photo's, i.e. the camera's x or the gate's x is ~1-2 m off. NOT an independent check of the crane height: the same photo measured it.",
         "source": "007-file_90.JPG (iPhone 14 Pro Max 3x, f 8969 px on 4032 x 2688)",
         "confidence": "medium-low (position from 032 + VGGT offset; roll not modelled)"
       },
@@ -450,7 +387,7 @@
         "photo": "856-FXT51167.JPG (FUJIFILM X-T5, XF23mm)",
         "note": "VGGT pose only (registered, median camera residual 1.2 m); eye height ASSUMED 1.55 m; APPROXIMATE",
         "source": "856-FXT51167.JPG (FUJIFILM X-T5, XF23mm)",
-        "confidence": "low (VGGT pose only, median camera residual 1.2 m; eye height assumed)"
+        "confidence": "REJECTED as a photo-match viewpoint (its render disagrees with the photo); kept for the record"
       }
     }
   },
@@ -498,7 +435,7 @@
     "neighbour_cranes_from_door_m": "estimate (moxir-hall-features-2026-09-28.json; confidence seen (photos 036, 017), positions GUESS)",
     "low_walls": "estimate (moxir-hall-features-2026-09-28.json; confidence left row seen; right row GUESS)",
     "bracing_bays_from_door_m": "estimate (moxir-hall-features-2026-09-28.json; confidence GUESS (bracing seen in 017, 036; the bays are not identified))",
-    "massing": "estimate (moxir-hall-features-2026-09-29.json; confidence 09-28 items unchanged; 09-29 items ESTIMATED +-3 m from VGGT/bearing fits and sized by eye)",
+    "massing": "estimate (moxir-hall-features-2026-09-29.json; confidence 09-28 items unchanged; no 09-29 item is drawn (every VGGT/bearing placement failed its photo-match check))",
     "zones": "estimate (moxir-hall-features-2026-09-28.json; confidence owner's marks; positions +-8% of the distance from the crane (fit) plus the marker's hand (+-1.5 m); the booth +-1.5 m (press position))",
     "cameras": "estimate (moxir-hall-features-2026-09-29.json)"
   },
@@ -956,111 +893,6 @@
         "source": "moxir-hall-features-2026-09-28.json (carried unchanged)",
         "confidence": "low (by eye, photo 032)",
         "faces": []
-      },
-      {
-        "id": "machine-tool-backstage",
-        "label": "long machine tool under plastic sheeting (bed ~5 x 1.5 m, ~1.3 m high), in the backstage area",
-        "x_m": [
-          -6.5,
-          -1.5
-        ],
-        "z_m": [
-          -9.0,
-          -7.0
-        ],
-        "y_m": [
-          0.0,
-          1.4
-        ],
-        "material": "machine",
-        "model": "box",
-        "how": "photo 856 (X-T5, 2026-09-26 16:23): camera fitted by VGGT 2026-09-29 (facebook/VGGT-1B, CC BY-NC, internal measurement only) on 36 old + 12 new photos, registered to the 09-27 run by 32 shared cameras (Umeyama similarity, median residual 1.2 m) and to the hall frame; positions +-3 m, sizes by eye against the 6 m column pitch; the press stands behind it on the camera's bearing (checks the registration). ESTIMATE +-3 m. Inside the backstage 'used' rectangle (x -6..6, z -10..-1): to clear or to plan around.",
-        "source": "photo 856-FXT51167.JPG (owner, private) + VGGT 2026-09-29 pose",
-        "confidence": "low (position +-3 m, size by eye)",
-        "faces": [
-          {
-            "x_m": [
-              -6.5,
-              -1.5
-            ],
-            "y_m": [
-              0.0,
-              1.4
-            ],
-            "z_m": -7.0,
-            "albedo": 0.1583
-          }
-        ]
-      },
-      {
-        "id": "machine-tool-backstage-head",
-        "label": "its column head with the blue fan and duct",
-        "x_m": [
-          -3.6,
-          -2.4
-        ],
-        "z_m": [
-          -8.8,
-          -7.4
-        ],
-        "y_m": [
-          1.4,
-          3.6
-        ],
-        "material": "machine",
-        "model": "box",
-        "how": "photo 856; same estimate",
-        "source": "photo 856-FXT51167.JPG (owner, private) + VGGT 2026-09-29 pose",
-        "confidence": "low (position +-3 m, size by eye)",
-        "faces": [
-          {
-            "x_m": [
-              -3.6,
-              -2.4
-            ],
-            "y_m": [
-              1.4,
-              3.6
-            ],
-            "z_m": -7.4,
-            "albedo": 0.1583
-          }
-        ]
-      },
-      {
-        "id": "block-pallet-backstage",
-        "label": "pallet of white aerated-concrete blocks",
-        "x_m": [
-          -1.0,
-          0.4
-        ],
-        "z_m": [
-          -5.5,
-          -4.3
-        ],
-        "y_m": [
-          0.0,
-          1.3
-        ],
-        "material": "block",
-        "model": "box",
-        "how": "photo 856; ESTIMATE +-3 m",
-        "source": "photo 856-FXT51167.JPG (owner, private) + VGGT 2026-09-29 pose",
-        "confidence": "low (position +-3 m, size by eye)",
-        "faces": [
-          {
-            "x_m": [
-              -1.0,
-              0.4
-            ],
-            "y_m": [
-              0.0,
-              1.3
-            ],
-            "z_m": -4.3,
-            "albedo": 0.3233
-          }
-        ]
       }
     ],
     "zones": {
@@ -1227,7 +1059,7 @@
           6.9,
           46.9
         ],
-        "yaw_deg": 1.0,
+        "yaw_deg": -1.0,
         "pitch_deg": 0.8,
         "vfov_deg": 17.05,
         "image_px": [
@@ -1235,7 +1067,7 @@
           896
         ],
         "photo": "007-file_90.JPG (iPhone 14 Pro Max 3x, f 8969 px on 4032 x 2688)",
-        "note": "the crane camera (x of photo 032, z 3.3 m further along by VGGT, height 6.9 m); horizon from the far-wall floor and the camera height (v 1473 of 2688 -> 0.8 deg up); roll -0.96 deg not modelled. APPROXIMATE.",
+        "note": "the crane camera (x of photo 032, z 3.3 m further along by VGGT, height 6.9 m); horizon from the far-wall floor and the camera height (v 1473 of 2688 -> 0.8 deg up); roll -0.96 deg not modelled. APPROXIMATE. Yaw -1.0 (+ = right): set 2026-09-29 so the far gate and the end wall's door line up in the 50/50 overlay; the bridge then sits ~60 px (of 1344) right of the photo's, i.e. the camera's x or the gate's x is ~1-2 m off. NOT an independent check of the crane height: the same photo measured it.",
         "source": "007-file_90.JPG (iPhone 14 Pro Max 3x, f 8969 px on 4032 x 2688)",
         "confidence": "medium-low (position from 032 + VGGT offset; roll not modelled)"
       },
@@ -1255,15 +1087,15 @@
         "photo": "856-FXT51167.JPG (FUJIFILM X-T5, XF23mm)",
         "note": "VGGT pose only (registered, median camera residual 1.2 m); eye height ASSUMED 1.55 m; APPROXIMATE",
         "source": "856-FXT51167.JPG (FUJIFILM X-T5, XF23mm)",
-        "confidence": "low (VGGT pose only, median camera residual 1.2 m; eye height assumed)"
+        "confidence": "REJECTED as a photo-match viewpoint (its render disagrees with the photo); kept for the record"
       }
     }
   },
-  "triangles": 54984,
+  "triangles": 54948,
   "meshes": {
     "hall-concrete": 4248,
     "hall-floor": 12,
-    "hall-block": 204,
+    "hall-block": 192,
     "hall-glass": 120,
     "hall-frame": 40948,
     "hall-steel": 4836,
@@ -1271,7 +1103,7 @@
     "hall-rust": 1028,
     "hall-crane": 288,
     "hall-deck": 348,
-    "hall-machine": 96,
+    "hall-machine": 72,
     "hall-press": 468,
     "hall-brick": 12,
     "hall-skylight": 192,

@@ -1099,6 +1099,15 @@ def preview(path, dims, camera=None):
     scene.camera = cam
     scene.render.filepath = path
     bpy.ops.render.render(write_still=True)
+    # Say which GPU drew it (the Workbench render runs on OpenGL): a software rasteriser
+    # (llvmpipe, SwiftShader) is not a render to judge the room by.
+    try:
+        import gpu.platform as gp
+        renderer = f'{gp.vendor_get()} | {gp.renderer_get()}'
+    except Exception as error:  # noqa: BLE001 — informational only
+        renderer = f'unknown ({error})'
+    soft = any(s in renderer.lower() for s in ('llvmpipe', 'swiftshader', 'softpipe'))
+    print(f"[hall] preview renderer: {renderer}{'  WARNING: software rendering' if soft else ''}")
 
 
 def main():

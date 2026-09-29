@@ -114,69 +114,6 @@
       "model": "pipe_run",
       "source": "moxir-hall-features-2026-09-28.json (carried unchanged)",
       "confidence": "low (by eye, photo 032)"
-    },
-    {
-      "id": "machine-tool-backstage",
-      "label": "long machine tool under plastic sheeting (bed ~5 x 1.5 m, ~1.3 m high), in the backstage area",
-      "x_m": [
-        -6.5,
-        -1.5
-      ],
-      "z_m": [
-        -9.0,
-        -7.0
-      ],
-      "y_m": [
-        0.0,
-        1.4
-      ],
-      "material": "machine",
-      "model": "box",
-      "how": "photo 856 (X-T5, 2026-09-26 16:23): camera fitted by VGGT 2026-09-29 (facebook/VGGT-1B, CC BY-NC, internal measurement only) on 36 old + 12 new photos, registered to the 09-27 run by 32 shared cameras (Umeyama similarity, median residual 1.2 m) and to the hall frame; positions +-3 m, sizes by eye against the 6 m column pitch; the press stands behind it on the camera's bearing (checks the registration). ESTIMATE +-3 m. Inside the backstage 'used' rectangle (x -6..6, z -10..-1): to clear or to plan around.",
-      "source": "photo 856-FXT51167.JPG (owner, private) + VGGT 2026-09-29 pose",
-      "confidence": "low (position +-3 m, size by eye)"
-    },
-    {
-      "id": "machine-tool-backstage-head",
-      "label": "its column head with the blue fan and duct",
-      "x_m": [
-        -3.6,
-        -2.4
-      ],
-      "z_m": [
-        -8.8,
-        -7.4
-      ],
-      "y_m": [
-        1.4,
-        3.6
-      ],
-      "material": "machine",
-      "model": "box",
-      "how": "photo 856; same estimate",
-      "source": "photo 856-FXT51167.JPG (owner, private) + VGGT 2026-09-29 pose",
-      "confidence": "low (position +-3 m, size by eye)"
-    },
-    {
-      "id": "block-pallet-backstage",
-      "label": "pallet of white aerated-concrete blocks",
-      "x_m": [
-        -1.0,
-        0.4
-      ],
-      "z_m": [
-        -5.5,
-        -4.3
-      ],
-      "y_m": [
-        0.0,
-        1.3
-      ],
-      "material": "block",
-      "model": "box",
-      "how": "photo 856; ESTIMATE +-3 m",
-      "source": "photo 856-FXT51167.JPG (owner, private) + VGGT 2026-09-29 pose",
-      "confidence": "low (position +-3 m, size by eye)"
     }
   ],
   "cameras": {
@@ -250,7 +187,7 @@
       "photo": "856-FXT51167.JPG (FUJIFILM X-T5, XF23mm)",
       "note": "VGGT pose only (registered, median camera residual 1.2 m); eye height ASSUMED 1.55 m; APPROXIMATE",
       "source": "856-FXT51167.JPG (FUJIFILM X-T5, XF23mm)",
-      "confidence": "low (VGGT pose only, median camera residual 1.2 m; eye height assumed)"
+      "confidence": "REJECTED as a photo-match viewpoint (its render disagrees with the photo); kept for the record"
     }
   },
   "seen_not_modelled": [
@@ -262,11 +199,14 @@
     "photo-847 = photo 032 (the owner's zone-marked picture; mean pixel difference 0.4/255): no new information",
     "red centrifugal blower with its duct loop (left neighbour span): VGGT/bearing estimate x [-18.0, -15.0] z [-14.0, -11.0] — NOT drawn: the photo-match render (2026-09-29) put it visibly in the wrong place; outside the dance floor either way",
     "big blue fan housing on a base, green electrical cabinets beside it (left neighbour span): VGGT/bearing estimate x [-23.0, -19.5] z [5.0, 8.5] — NOT drawn: the photo-match render (2026-09-29) put it visibly in the wrong place; outside the dance floor either way",
-    "fallen steel lattice sections (crane/truss parts) against the row x -12: VGGT/bearing estimate x [-19.0, -13.0] z [0.0, 8.0] — NOT drawn: the photo-match render (2026-09-29) put it visibly in the wrong place; outside the dance floor either way"
+    "fallen steel lattice sections (crane/truss parts) against the row x -12: VGGT/bearing estimate x [-19.0, -13.0] z [0.0, 8.0] — NOT drawn: the photo-match render (2026-09-29) put it visibly in the wrong place; outside the dance floor either way",
+    "long machine tool under plastic sheeting (bed ~5 x 1.5 m, ~1.3 m high), in the backstage area (photo 856): VGGT-pose estimate x [-6.5, -1.5] z [-9.0, -7.0] — NOT drawn: the photo-match render from the same VGGT pose (2026-09-29 23:4x) showed the machine fronto-parallel and ~2x too close where the photo shows it running diagonally away; the pose is not good enough to place it. In or near the backstage rectangle (x -6..6, z -10..-1): to clear or plan around; placing it is owed (a PnP of 856 on identified columns, or a tape on site)",
+    "its column head with the blue fan and duct (photo 856): VGGT-pose estimate x [-3.6, -2.4] z [-8.8, -7.4] — NOT drawn: the photo-match render from the same VGGT pose (2026-09-29 23:4x) showed the machine fronto-parallel and ~2x too close where the photo shows it running diagonally away; the pose is not good enough to place it. In or near the backstage rectangle (x -6..6, z -10..-1): to clear or plan around; placing it is owed (a PnP of 856 on identified columns, or a tape on site)",
+    "pallet of white aerated-concrete blocks (photo 856): VGGT-pose estimate x [-1.0, 0.4] z [-5.5, -4.3] — NOT drawn: the photo-match render from the same VGGT pose (2026-09-29 23:4x) showed the machine fronto-parallel and ~2x too close where the photo shows it running diagonally away; the pose is not good enough to place it. In or near the backstage rectangle (x -6..6, z -10..-1): to clear or plan around; placing it is owed (a PnP of 856 on identified columns, or a tape on site)"
   ],
   "confidence": {
     "cranes_from_door_m": "entry crane: first seen (the crane photos were taken from it); far crane: MEASURED photo 007, z -22.2 (-26.0..-18.4) = 76.2 m from the entry grid line (was 95 GUESS)",
-    "massing": "09-28 items unchanged; 09-29 items ESTIMATED +-3 m from VGGT/bearing fits and sized by eye",
+    "massing": "09-28 items unchanged; no 09-29 item is drawn (every VGGT/bearing placement failed its photo-match check)",
     "far_gate_w_m": "medium (photo 007)",
     "far_gate_h_m": "medium (photo 007)"
   },
