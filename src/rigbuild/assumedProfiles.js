@@ -210,6 +210,23 @@ export const ASSUMED_PROFILES = {
             channels: [{ role: 'r', label: 'Red' }, { role: 'g', label: 'Green' }, { role: 'b', label: 'Blue' }, { role: 'w', label: 'White', default: 0 }]
         }]
     },
+    'UP-COB200': {
+        equivalent: 'FOS Technologies "PAR COB 200W LED TW" (200 W warm + cool white COB, 60°)',
+        grade: 'STILL ASSUMED',
+        gradeWhy: 'the maker lists 4 channels (its made-in-china store, "Channel 4CH", read 2026-09-29) and publishes no order; the FOS unit is the same class (tunable-white 200 W COB PAR, 290 × 260 × 305 mm, 4.9 kg vs 295 × 295 × 350 mm, 5.1 kg) — a stand-in only',
+        manual: { title: '"PAR COB 200W LED TW" user manual', url: 'https://www.fos-lighting.eu/uploads/products_1_2_1_61.pdf', pages: '5', sha256: 'd50487773376424a313b68f4ad67044e852ab5b5484543bf0df9c81cbf6d2a92', accessed: '2026-09-29' },
+        assumed: 'ASSUMED from FOS PAR COB 200W LED TW manual p.5 (mode a4CH) — verify on the rental unit',
+        fill: ['strobe "gradual from slow to fast" rates are not printed: 5–255 drawn as 1–25 Hz (the UPlight listing\'s "1~25 flashes/second"), 0–4 = open'],
+        modes: [{
+            name: '4ch-assumed',
+            channels: [
+                { role: 'dimmer', label: 'Master dimmer' },
+                { role: 'warm', label: 'Warm white' },
+                { role: 'cool', label: 'Cold white' },
+                { role: 'strobe', label: 'Strobe', default: 0, cap: { shutter: [{ from: 0, to: 4, open: true }, { from: 5, to: 255, strobe: [1, 25] }] } }
+            ]
+        }]
+    },
     'EXT-STROBE': {
         equivalent: 'Martin Atomic 3000 (its 4-channel mode is the Atomic 3000 LED\'s "Atomic 3000 compatible" mode)',
         grade: 'STILL ASSUMED',

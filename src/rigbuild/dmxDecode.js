@@ -35,6 +35,13 @@ const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t)
 const WARM_3200K = [255, 180, 107]
 // What a white emitter adds, the desk's own mix (src/rigMirror/fixtureColour.js EMITTER_MIX.w).
 const WHITE_MIX = [0.92, 0.92, 0.92]
+// Tunable white (a COB with a warm and a cold emitter, UP-COB200): the two ends of its mix.
+// Warm = WARM_3200K above; cold = the blackbody at 5600 K, CIE 1931 → sRGB (≈ #ffeee3). A look
+// colour is placed on that line by its blue/red balance; anything bluer is all cold, anything
+// redder all warm (the unit makes nothing else). Method stated here, not a maker's figure.
+const COOL_5600K = [255, 238, 227]
+const bOverR = (rgb) => (rgb[0] > 0 ? rgb[2] / rgb[0] : 1)
+export const coolShareOf = (rgb) => Math.max(0, Math.min(1, (bOverR(rgb) - bOverR(WARM_3200K)) / (bOverR(COOL_5600K) - bOverR(WARM_3200K))))
 
 const inRange = (list, v) => (Array.isArray(list) ? list.find((r) => v >= r.from && v <= r.to) || null : null)
 const lerp = (a, b, t) => a + (b - a) * t
@@ -107,6 +114,11 @@ export const decodeDmx = (channels, values, type = null) => {
         if (has('w')) rgb = rgb.map((v, i) => v + (at.w || 0) * WHITE_MIX[i])
     } else if (has('w')) {
         rgb = [at.w, at.w, at.w].map((v, i) => v * WHITE_MIX[i] / 0.92)
+    } else if (has('warm') || has('cool')) {
+        const w = at.warm || 0
+        const c = at.cool || 0
+        const top = Math.max(w, c)
+        rgb = top > 0 ? mix(WARM_3200K, COOL_5600K, c / (w + c)).map((v) => (v * top) / 255) : [0, 0, 0]
     }
     const wheel = Object.values(spec).find((c) => c.cap?.wheel)
     if (!rgb && wheel) {
@@ -125,7 +137,7 @@ export const decodeDmx = (channels, values, type = null) => {
 
     // Level: the dimmer (16-bit with its fine), times the emitters where there is no wheel.
     const dim = has('dimmer') ? sixteen(at.dimmer, has('dimmerFine') ? at.dimmerFine : null) : 1
-    const emitted = (has('r') || has('g') || has('b') || has('w')) ? Math.min(1, peak / 255) : 1
+    const emitted = (has('r') || has('g') || has('b') || has('w') || has('warm') || has('cool')) ? Math.min(1, peak / 255) : 1
     out.level = Math.round(dim * emitted * 10000) / 10000
 
     // Shutter / strobe, or a dedicated flash-rate channel (a strobe fixture).
@@ -225,6 +237,12 @@ export const encodeDmx = (channels, want = {}, type = null) => {
     } else if (rgb && wheel) {
         const v = nearestSlot(wheel.cap.wheel, rgb)
         if (v != null) out[wheel.role] = v
+    } else if (rgb && (has('warm') || has('cool'))) {
+        const f = coolShareOf(rgb)
+        const top = Math.max(f, 1 - f)
+        const scale = has('dimmer') || level == null ? 1 : level
+        if (has('warm')) out.warm = Math.round(((1 - f) / top) * 255 * scale)
+        if (has('cool')) out.cool = Math.round((f / top) * 255 * scale)
     }
     const cto = Object.values(spec).find((c) => c.cap?.cto)
     if (cto && rgb) out[cto.role] = 0
