@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useContext, useEffect, useMemo, useRef } from 'react'
+import { context as fiberContext, useFrame } from '@react-three/fiber'
 import { AdditiveBlending, BufferAttribute, ConeGeometry, DoubleSide } from 'three'
 import { spotTargetOffset } from '../project/viewport/spotLightAim.js'
 import { beamCastsLight, beamFadeColors, beamIsVisible, spotBeamShape } from './spotBeam.js'
 import { strobeEnvelope } from '../rigbuild/rigFlash.js'
+import { DEFAULT_APERTURE } from './beamAir.js'
+import { beamAirBeforeRender, beamAirGeometry, createBeamAirMaterial, setBeamAirUniforms } from './beamAirMaterial.js'
+import { useAtmosphere } from './atmosphereStore.js'
 
 // A spot light that actually points where the entity is turned.
 //
@@ -51,6 +54,13 @@ export default function SpotLightObject({
     // src/rigbuild/dmxPose.js): the light and the cone flash at that rate on the wall
     // clock, so every screen flashes together. No strobe: nothing runs per frame.
     const strobeHz = Number(beam?.strobeHz) > 0 ? Number(beam.strobeHz) : 0
+    // The room's air (renderSettings.atmosphere, via RenderSettingsEffect): with one,
+    // the beam is drawn physically (beamAir.js) — its brightness from the lamp's own
+    // candela, the haze and the camera's exposure; without one, the old flat cone.
+    // Read through the Canvas's own store (not useThree, which throws outside a Canvas —
+    // the lamp is also rendered to markup in tests).
+    const gl = useContext(fiberContext)?.getState?.().gl || null
+    const atmosphere = useAtmosphere(gl)
     // `beam.only`: the cone and no light (spotBeam.js, beamCastsLight). The
     // light is not mounted at all rather than mounted at zero — three.js pays
     // for a light in every shader whatever its intensity.
@@ -61,17 +71,18 @@ export default function SpotLightObject({
     // still costs a draw call and fill over the whole throw. It is how a strobe
     // draws NO cone in the room (looks.js flashEntities, RIG_BUILD.md §15.6).
     const showBeam = beamIsVisible(beam) && throwShape.opacity > 0
+    const physical = Boolean(atmosphere) && showBeam
 
     // The cone is built by hand rather than as <coneGeometry> so the fade along
     // the throw can ride on it as vertex colours. Rebuilt only when the lamp's
     // reach or angle changes, and thrown away with the entity.
     const beamGeometry = useMemo(() => {
-        if (!showBeam) return null
+        if (!showBeam || physical) return null
         const geometry = new ConeGeometry(throwShape.radius, throwShape.length, 28, 12, true)
         const positions = geometry.getAttribute('position')
         geometry.setAttribute('color', new BufferAttribute(beamFadeColors(positions.array, throwShape.length), 3))
         return geometry
-    }, [showBeam, throwShape.radius, throwShape.length])
+    }, [showBeam, physical, throwShape.radius, throwShape.length])
     useEffect(() => () => beamGeometry?.dispose(), [beamGeometry])
 
     useEffect(() => {
@@ -118,6 +129,18 @@ export default function SpotLightObject({
                     <object3D ref={targetRef} position={spotTargetOffset()} />
                 </>
             ) : null}
+            {physical ? (
+                <BeamInAir
+                    color={color}
+                    intensity={intensity}
+                    angle={angle}
+                    penumbra={penumbra}
+                    length={throwShape.length}
+                    aperture={beam?.aperture}
+                    atmosphere={atmosphere}
+                    strobeHz={strobeHz}
+                />
+            ) : null}
             {showBeam && beamGeometry ? (
                 <mesh
                     ref={coneRef}
@@ -158,5 +181,56 @@ function StrobeDriver({ hz, lightRef, coneRef, intensity, opacity }) {
         if (lightRef.current) lightRef.current.intensity = intensity
         if (coneRef.current?.material) coneRef.current.material.opacity = opacity
     }, [lightRef, coneRef, intensity, opacity])
+    return null
+}
+
+// The beam drawn physically (beamAir.js, beamAirMaterial.js). Its brightness is
+// the lamp's intensity in candela — the number that lights the room's surfaces —
+// so the beam and the wall it lands on answer to the same exposure. `haze` on the
+// lamp is not a brightness here (the lamp's level already scales its intensity);
+// 0 still means "no beam" (a strobe draws a flash instead, looks.js flashEntities).
+function BeamInAir({ color, intensity, angle, penumbra, length, aperture, atmosphere, strobeHz = 0 }) {
+    const tanHalf = Math.tan(Math.min(Math.max(Number(angle) || 0.52, 0.001), Math.PI / 2 - 0.01))
+    const a = Number(aperture) > 0 ? Number(aperture) : DEFAULT_APERTURE
+    // A beam's soft edge: the lamp's penumbra, never harder than a fifth of its radius
+    // (a real beam's edge is soft even through a sharp gobo, in haze).
+    const edge = Math.min(1, Math.max(0.2, Number(penumbra) || 0))
+    const values = { color, intensity, tanHalf, aperture: a, length, edge, atmosphere, strobeHz }
+    return (
+        <>
+            <BeamPart part="core" values={values} />
+            <BeamPart part="glare" values={values} />
+        </>
+    )
+}
+
+// three.js calls onBeforeRender as a method of the mesh, so `this` is the mesh.
+function beforeBeamRender(renderer, scene, camera) {
+    beamAirBeforeRender(this, camera)
+}
+
+function BeamPart({ part, values }) {
+    const { aperture, tanHalf, length } = values
+    const geometry = useMemo(() => beamAirGeometry({ aperture, tanHalf, length }, part), [aperture, tanHalf, length, part])
+    const material = useMemo(() => createBeamAirMaterial(part), [part])
+    useEffect(() => () => geometry.dispose(), [geometry])
+    useEffect(() => () => material.dispose(), [material])
+    setBeamAirUniforms(material, values)
+    return (
+        <>
+            <mesh geometry={geometry} material={material} raycast={() => null} onBeforeRender={beforeBeamRender} />
+            {values.strobeHz > 0 ? <BeamAirStrobe material={material} values={values} /> : null}
+        </>
+    )
+}
+
+// A strobing shutter on a beam drawn in the air: the same wall-clock envelope as the
+// flat cone's (StrobeDriver above), on the beam's own intensity. Mounted only while
+// the desk strobes the lamp; nothing runs per frame otherwise.
+function BeamAirStrobe({ material, values }) {
+    useFrame(() => {
+        material.uniforms.uIntensity.value = Math.max(0, Number(values.intensity) || 0) * strobeEnvelope(Date.now() / 1000, values.strobeHz)
+    })
+    useEffect(() => () => setBeamAirUniforms(material, values), [material, values])
     return null
 }

@@ -984,7 +984,10 @@ const normalizeEntity = (entity = {}) => {
     nextComponents.beam = {
       visible: ensureBoolean(sourceComponents.beam.visible, false),
       haze: Math.min(1, Math.max(0, ensureNumber(sourceComponents.beam.haze, 0.4))),
-      ...(sourceComponents.beam.only === true ? { only: true } : {})
+      ...(sourceComponents.beam.only === true ? { only: true } : {}),
+      // `aperture` (2026-09-29): the lens's radius in metres — a beam leaves the
+      // lamp already that wide (beamAir.js). Stored only when given.
+      ...(ensureNumber(sourceComponents.beam.aperture, 0) > 0 ? { aperture: Math.min(2, ensureNumber(sourceComponents.beam.aperture, 0)) } : {})
     }
   }
   // THE JOIN to the lighting desk (`index`) plus the plot's patch beside it —
@@ -1130,7 +1133,23 @@ const normalizeWorldState = (world = {}) => {
   }
 }
 
-const RENDER_TONE_MAPPINGS = new Set(['ACESFilmic', 'none'])
+const RENDER_TONE_MAPPINGS = new Set(['ACESFilmic', 'AgX', 'Neutral', 'none'])
+
+// THE ROOM'S AIR (2026-09-29, docs/architecture/RIG_BUILD.md §20): a uniform haze the
+// beams scatter in — `scattering` σs in 1/m, `anisotropy` the Henyey–Greenstein g.
+// Present, the renderer draws every visible beam physically (src/objectComponents/
+// beamAir.js); absent — every room made before it — the old flat cones. Stored only
+// when it holds a haze, so a document without one reads back byte for byte.
+const normalizeAtmosphere = (atmosphere) => {
+  if (!atmosphere || typeof atmosphere !== 'object') return null
+  const scattering = Number(atmosphere.scattering)
+  if (!(scattering > 0)) return null
+  const anisotropy = Number(atmosphere.anisotropy)
+  return {
+    scattering: Math.min(1, scattering),
+    anisotropy: Number.isFinite(anisotropy) ? Math.min(0.95, Math.max(-0.95, anisotropy)) : 0.7
+  }
+}
 
 // SHADOWS FROM THE ROOM. Deliberately not the older `shadows` field, which is
 // the renderer-level switch (gl.shadowMap.enabled) and has defaulted to true
@@ -1151,16 +1170,19 @@ const normalizeShadowCasting = (casting) => {
 
 const normalizeRenderSettings = (settings = {}) => {
   const source = settings && typeof settings === 'object' ? settings : {}
+  const atmosphere = normalizeAtmosphere(source.atmosphere)
+  const { atmosphere: _unchecked, ...rest } = source
   return {
     ...cloneValue(defaultRenderSettings),
-    ...cloneValue(source),
+    ...cloneValue(rest),
     shadows: ensureBoolean(source.shadows, defaultRenderSettings.shadows),
     antialias: ensureBoolean(source.antialias, defaultRenderSettings.antialias),
     toneMapping: RENDER_TONE_MAPPINGS.has(source.toneMapping) ? source.toneMapping : defaultRenderSettings.toneMapping,
     toneMappingExposure: Math.max(0, ensureNumber(source.toneMappingExposure, defaultRenderSettings.toneMappingExposure)),
     dprMin: Math.max(0.5, ensureNumber(source.dprMin, defaultRenderSettings.dprMin)),
     dprMax: Math.max(0.5, ensureNumber(source.dprMax, defaultRenderSettings.dprMax)),
-    shadowCasting: normalizeShadowCasting(source.shadowCasting)
+    shadowCasting: normalizeShadowCasting(source.shadowCasting),
+    ...(atmosphere ? { atmosphere } : {})
   }
 }
 

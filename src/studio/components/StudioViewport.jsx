@@ -15,6 +15,7 @@ import EntityLink from '../../project/viewport/EntityLink.jsx'
 import { EntityLinksContext } from '../../project/viewport/entityLinkContext.js'
 import WorldEnvironment from '../../project/viewport/WorldEnvironment.jsx'
 import RenderSettingsEffect from '../../project/viewport/RenderSettingsEffect.jsx'
+import { arrivalLightsOf } from '../../project/viewport/worldLights.js'
 import ShadowCasting from '../../project/viewport/ShadowCasting.jsx'
 import { resolveShadowCasting } from '../../project/viewport/shadowCasting.js'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
@@ -686,6 +687,7 @@ function StudioSceneContent({
     // Same fog semantics as LiveProjectScene: colour falls back to the
     // background, `enabled: false` switches it off.
     const fog = document.worldState?.fog
+    const arrivalLights = arrivalLightsOf(document.worldState)
     // Shadows from the room: off unless this space asked for them. The arrival
     // frame and walk mode read the same switch (shadowCasting.js).
     const shadowCasting = resolveShadowCasting(document.renderSettings)
@@ -716,14 +718,12 @@ function StudioSceneContent({
                     intensity={document.worldState?.environmentIntensity}
                 />
             )}
-            <ambientLight
-                color={document.worldState?.ambientLight?.color || '#ffffff'}
-                intensity={document.worldState?.ambientLight?.intensity || 0.85}
-            />
+            {/* an authored 0 is dark (worldLights.js) */}
+            <ambientLight color={arrivalLights.ambient.color} intensity={arrivalLights.ambient.intensity} />
             <directionalLight
-                color={document.worldState?.directionalLight?.color || '#fff7ea'}
-                intensity={document.worldState?.directionalLight?.intensity || 1.15}
-                position={document.worldState?.directionalLight?.position || [8, 12, 4]}
+                color={arrivalLights.directional.color}
+                intensity={arrivalLights.directional.intensity}
+                position={arrivalLights.directional.position}
             />
             <TimelinePreviewDriver />
             {playTimelines && document.worldState?.autoLook?.enabled ? (
