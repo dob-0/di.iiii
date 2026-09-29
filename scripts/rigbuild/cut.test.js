@@ -162,3 +162,24 @@ describe('the cut, simple: what the rental house has, and nothing that moves', (
         expect(lit.length).toBeGreaterThanOrEqual(2)
     })
 })
+
+describe('rehang.mjs — a new rig into a project other hands work in', () => {
+    it('replaces only the rig: keeps the show entity, the wash and the hall; carries each type\'s lens aperture', async () => {
+        const { rehangOps } = await import('./rehang.mjs')
+        const current = { entities: [
+            { id: 'place-hall', type: 'model', components: {} },
+            { id: 'rig-show', type: 'group', components: { rigBounce: { area_m2: 1 } } },
+            { id: 'rig-wash', type: 'model', components: {} },
+            { id: 'rig-line-1', type: 'model', components: { piece: { kind: 'truss-3m' } } },
+            { id: 'rig-par-bridge-01', type: 'spotLight', components: { fixture: { type: 'up-pl5403' }, beam: { aperture: 0.105 } } }
+        ] }
+        const incoming = [{ id: 'rig-par-cut-x-01', type: 'spotLight', components: { fixture: { type: 'up-pl5403' }, beam: { visible: true } } }]
+        const { ops } = rehangOps({ current, incoming, pieces: [{ id: 'rig-line-1', kind: 'truss-3m', position: [0, 5, 4.8], yaw: 0, roll: 0.26, height: null }], assetFor: { 'truss-3m': 'a1' }, carry: { 'up-pl5403': { aperture: 0.105 } }, show: { rigLooks: { looks: [] } } })
+        const deleted = ops.filter((o) => o.type === 'deleteEntity').map((o) => o.payload.entityId)
+        expect(deleted).toEqual(['rig-line-1', 'rig-par-bridge-01'])
+        const made = ops.filter((o) => o.type === 'createEntity').map((o) => o.payload.entity)
+        expect(made.find((e) => e.id === 'rig-line-1').components.transform.rotation).toEqual([0, 0, 0.26])
+        expect(made.find((e) => e.id === 'rig-par-cut-x-01').components.beam).toEqual({ visible: true, aperture: 0.105 })
+        expect(ops.filter((o) => o.type === 'updateComponent').map((o) => [o.payload.entityId, o.payload.component])).toEqual([['rig-show', 'rigLooks']])
+    })
+})
