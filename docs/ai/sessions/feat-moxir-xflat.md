@@ -28,3 +28,12 @@
   the cantilevers are outside the maker's span tables); the crane girder's real height (the
   trim is set from it); the junction's leg length from the house; the COB's photometry; the
   installed client learns `along-arm`/`solo_mask`/the COB body only with the next preview build.
+  Until then the simple candidate's patch sheet reads "6 of 33 addressed · ! 4": the 4 are the
+  UP-COB200s, `unknown-type` to the installed library (plotModel with this branch's
+  `types/moxir.json`: 0 conflicts on both candidates; with origin/dev's: those 4).
+- Frames (`~/Downloads/moxir-xflat/`, `<fixed|heads>-<look>-<view>.png` + `-fps.json`): 5 looks ×
+  4 views (the cut's three cameras + `high-over-crowd`), each on the RTX 3080 via prime-run at
+  ≈ 60 fps, renderer string NVIDIA, the one console error the desk request `--no-desk` blocks.
+  The heads run was stopped twice by rig-look's own 95 °C guard (other sessions heating the CPU);
+  it was resumed one look per run (`LOOKS=<look> moxir-xflat.sh render heads`), each ending at
+  the default look, nominal.
