@@ -5,6 +5,127 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-29 — the fold after the rig-builder landing
+
+- #637's merge left 18 session notes on dev; the deploy's in-place fold took CURRENT.md to 58
+  lines and the docs gate (hard cap 50) stopped the dev deploy before any image was built.
+- Folded here by `session-land.mjs` on a scratch clone of dev, and "Last session" cut to seven
+  lines (48 in all). PROGRESS.md carries every note in full.
+
+## 2026-09-29 — vitest 4 → 5 (dependabot #483), and eslint 10 re-checked
+
+- vitest 5.0.2 from dependabot #483. Its one CI failure was the kit's own guard:
+  `kitCatalogue.test.js` compares `src/kit/kitStack.js` with the installed version
+  ("installed 5.0.2, table says 4.1.10"). Table updated. Full run on vitest 5:
+  625 files passed, 1 skipped; 6878 tests passed, 7 skipped, 0 failed.
+- eslint 10 (#559) is still blocked upstream (plugin peers stop at eslint 9);
+  `dependency-decisions.md` carries the dated re-check. #559 closed.
+
+## 2026-09-28 — AI restyle: a camera surface sent through a local image model, live
+
+- **What it is.** Projection's Analysis menu, on Camera and Stream surfaces, gains AI restyle next to Motion glow: Prompt + Strength. Each camera frame goes to an image model on the same machine and the picture that comes back is what the wall shows. Offline by design — the festival shape, like the local chat model and the NDI® receiver.
+- **The path.** `src/map/liveAiRestyle.js` (page) → `/liveai` WebSocket → `serverXR/src/liveAi/relay.js` → engine at `LIVEAI_URL` (default `ws://127.0.0.1:7861/ws`) → back. The relay forwards every message untouched and writes one thing itself: a `no-engine` status sentence the surface shows, so a missing engine never reads as a mapping mistake. One frame in flight, newest frame wins — no backlog, so the wall lags the room by one model step.
+- **Local only, like /ndi.** 404 on a hosted tier, 403 to other machines unless `DI_ALLOW_LAN_DEVICES=1`. An upgrade never passes through Express, so `trust proxy` does not apply: `clientAddress()` applies the loopback X-Forwarded-For rule by hand — without it every phone reaching the relay through Vite's proxy would count as the machine itself (the same class proxyTrust.js fixed for HTTP).
+- **Schema.** `MAPPING_EFFECT_KINDS` gains `'ai'`; the effect gains `prompt` (≤300 chars) and `strength` (0.05–1, default 0.5), in `src/shared/projectSchema.js` AND `shared/projectSchema.cjs`. `schemaSync.test.js` now carries an ai surface through an op + re-normalize — seen failing with the CJS side reverted. Closed list: an older build on the other end of a rig writes an ai surface back as `none` (same caveat the NDI kind documents).
+- **Engines.** `scripts/liveai/engine.py` — SD-Turbo img2img + TAESD on a 4-step schedule (1–4 steps a frame by strength), steady seed; first start downloads the model, then offline. `scripts/liveai/mock-engine.mjs` echoes frames unchanged, for proving the loop without a GPU. Protocol and install in `scripts/liveai/README.md`.
+- **Overlap:** draft PR #627 (feat/map-warp) reworks `MapInspector.jsx`; this branch only adds an option and two fields inside `MapEffectFields`, and touches no map CSS.
+- **Real engine run (same day).** SD-Turbo on the RTX 5060 laptop (torch 2.11 cu128, Python 3.12 venv): end to end in Chrome through the relay, a moving test source became stained glass at strength 0.75, 5.3 fps; ~10 fps at 0.5. A first run looked like the prompt was ignored: with 2 scheduler steps img2img can only start from 2 noise levels, so every strength above 0.5 behaved as 0.5. The engine now uses 4, which makes Strength a real dial (0.25 ≈ 14 fps near the camera … 1.0 ≈ 4.6 fps all prompt); table in `scripts/liveai/README.md`. The engine also closes quietly when a page disconnects (it logged a traceback per closed surface).
+- Still to do: the "AI Restyle" picture operator for the node graph (`src/project/tops`).
+
+## 2026-09-29 — private projects inside a public space (per-project visibility)
+
+- New `projects.visibility` column (`'public'` default | `'private'`), rule in
+  `serverXR/src/projectVisibility.js`: a private project is seen only by the space's members
+  (the same test a private space applies); to anyone else every route answers the 404 a
+  never-created project gets. One gate in the `/api/projects/:projectId` middleware covers
+  meta, document, ops, events, assets and every write; lists, contents, trash, resolve, og
+  previews and the save-to-file bundle filter separately. Full audit table:
+  `docs/architecture/SPEC_project_visibility.md`.
+- The space's published project cannot be private (409 `published_project_private`, both ways,
+  re-checked when an approval-gated patch executes). Owner or admin changes visibility; anyone
+  who may create can create private.
+- Found and closed: the per-SPACE blob store let a visitor's "save to file" carry a private
+  project's photographs out; visitors now get `space-bundle.mjs export --public-only`. A
+  member's asset bytes for a private project are `Cache-Control: private, no-store`. A
+  visitor's open SSE stream closes when the project turns private.
+- Carried between tiers: tier-sync, project-pull (and local-mirror), promote-space-projects,
+  space-bundle import/export, proposals, snapshot restore, the follower — through
+  `scripts/project-visibility-lib.mjs` (create private, verify the destination kept it before
+  writing content, never widen).
+- Studio: a "public / private" select (titled "Private — only members see it") on each project card for the space owner
+  or an admin, and a lock + "private" mark on private cards; the contents page marks a private
+  row for members. Wiki entry `private-projects`.
+- Not done, stated in the spec: push-space-projects and space-sync(-github) cannot carry
+  visibility (they read no project row); a rollback past this landing serves private projects
+  as public (no SCHEMA_VERSION bump).
+
+## 2026-09-29 — a daily watch for work that lives only on one machine
+
+- `npm run unsaved` only helps when someone runs it; Emilya's laptop showed work can sit 25 days
+  unseen. New `scripts/unsaved-watch/install.sh` (Linux, systemd user timer) and `install.ps1`
+  (Windows, Task Scheduler, daily 18:00 + at logon, runs on battery, catches up after being off).
+  Each copies `unsaved.mjs` + `unsaved-lib.mjs` into a per-user app dir (so the watch never depends
+  on a checkout's branch or a removed worktree) with a SOURCE.txt naming the commit.
+- `unsaved.mjs` gained `--older-than <hours>` (today's work is not news; uncommitted files are aged by
+  their mtime since git keeps no time for them; unknown age and stashes are never hidden), `--notify`
+  (notify-send / WinRT toast / osascript; a failed notification never hides the finding) and
+  `--log <file>` (the one place to look). Exit 1 = something only here (the unit treats it as
+  success via SuccessExitStatus=1), 2 = a repo could not be read (marks the unit failed).
+- Tests: 54/54 (`unsaved-lib.test.js` + `start-check.test.js`), including the age filter, the mtime
+  reader (quoted, renamed, deleted paths) and the flags.
+- Seen on aylmo: installed over ~/work, run by `systemctl --user start di-unsaved` — 23 repos in 2.7 s,
+  16 hold work older than 24 h only here (log written, unit Result=success, timer next 18:00).
+- NOT yet run on Windows: install.ps1 is untested until it runs on ponyo — owed, via Emilya's agent.
+
+## 2026-09-29 — dev deploys build again: the client image copies the hook installer before npm ci
+
+- Three dev deploys failed because `npm ci`'s `prepare` named a script the image did not hold yet; the Dockerfile now copies it first. Guard `scripts/dockerfile-install.test.js` (red on the old Dockerfile).
+
+## 2026-09-29 — the git hooks reach every worktree, whatever its branch
+
+- Found on aylmo right after #612: with `core.hooksPath = scripts/git-hooks` (relative, shared by all
+  worktrees) the main checkout, parked on an older `dev`, had no hook files, and a test commit on `dev`
+  went through (undone at once with `git reset --soft HEAD~1`; nothing pushed).
+- `scripts/install-git-hooks.mjs` now copies `scripts/git-hooks/*` into `<git common dir>/di-hooks`
+  (with a SOURCE.txt naming the commit) and sets that absolute path; the old relative value is replaced.
+  `pre-push` keeps the dev/main guard everywhere and skips only the checks on a branch that predates
+  `push-checks.sh` (that branch still carries the older Claude gate with the checks inline). The Claude
+  gate defers whenever the installed pre-push runs push-checks.
+- Guard: `scripts/unsaved-lib.test.js` "covers a checkout whose branch predates the hooks" — real git,
+  seen failing against the previous installer, passing now (50/50 with start-check's tests).
+- Applied on aylmo: `core.hooksPath` = `/home/dob/work/di.iiii/.git/di-hooks`; a commit on `dev` in the
+  main checkout is now REFUSED (seen).
+
+## 2026-09-29 — /tools cards stand in even rows, a short last row centred
+
+- /tools: cards in a row share one height and their lines (subgrid over picture, name, sentence, button, facts); a short last row is centred at 3 and 2 across. Guard `src/kit/kitGrid.test.js` (3/3 red on the old stylesheet); seen at 1440, 1024 and 390@3 on a local build.
+
+## 2026-09-29 — the daily watch's log reads right in Windows PowerShell
+
+- First Windows run of #641 on ponyo (Emily ran install.ps1; task result 1 = findings, as designed):
+  the log is UTF-8 without a BOM, so Windows PowerShell 5.1's `Get-Content` shows every "—" as "â€”".
+- `unsaved.mjs` writes a UTF-8 BOM when it CREATES the log on win32 (`logPreamble`); other platforms and
+  existing logs are unchanged. Test: `unsaved-lib.test.js` "the watch log on Windows".
+- An existing BOM-less log on Windows keeps its old lines mis-shown; deleting it once lets the next run
+  create it with the BOM.
+
+## 2026-09-29 — batch: the sign-in hub, AI restyle, and the green dependency bumps
+
+- One batch branch carries #636 (the sign-in hub), #631 (Emilya's AI restyle on camera
+  surfaces), #603 (sACN universe 1 — its change had already reached dev), and the
+  dependabot bumps #557 #561 (docker actions) and #482 #556 #558 #560 (server: morgan,
+  dotenv, nodemailer, multer). The four server bumps were applied as one lock-file change,
+  because all four rewrite `serverXR/package-lock.json`.
+- dotenv 17 → 18 is a major version: it removed `-r dotenv/config` preloading and
+  `.env.vault`. The server uses neither (only `config({ path })` in `serverXR/src/index.js`).
+  `src/kit/kitStack.js` lists the new versions. Licences unchanged (checked in the lock file).
+- Conflicts: `serverXR/src/schemaSync.test.js` (#631's AI-effect tests beside dev's cue-loop
+  and show-clock tests — both kept) and `LIGHTING_DESK.md` (dev's cue-runner section kept).
+- Local: `vitest run` 6922 passed, 7 skipped, 0 failed; `npm run build` green.
+- #433 closed: its note was folded on dev long ago (f669a15f).
+- Left alone on purpose: drafts #587 #599 #625 #626 #627 (Emilya's and the MOXIR hall), and
+  the two major bumps eslint 10 (#559) and vitest 5 (#483), which fail CI and go separately.
+
 ## 2026-09-28 — all 15 waiting notes folded; CURRENT.md cut to 46 lines so dev deploys again
 
 - The fold pushed CURRENT.md to 56 lines (limit 50) and every dev deploy since 00:38 failed at the docs gate. Supersedes #606.
