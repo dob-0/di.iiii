@@ -21,6 +21,28 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## A public space showed every project in it — privacy was per space only
+
+Before 2026-09-29 the only visibility was `spaces.is_public`; a public space exposed every
+project and every asset, so private work (MOXIR's venue photographs, no recorded consent)
+could only be kept back by splitting it into another space. Fixed with per-project
+`visibility` — `docs/architecture/SPEC_project_visibility.md`. Two traps found on the way,
+both of which a per-route gate would have missed:
+
+- **The blob store is per SPACE.** Content-addressed bytes of every project live in
+  `spaces/<id>/blobs/`, so the space's "save to file" route (`GET /api/spaces/:id/bundle`)
+  copied a private project's photographs out whole, even with the project's row excluded.
+  Visitors now get `space-bundle.mjs export --public-only`, which copies only blobs a kept
+  project or the scene names.
+- **An older server drops an unknown create field and answers 201.** A copy tool that
+  creates `{visibility:'private'}` on a pre-landing tier gets a PUBLIC project back. The
+  copy tools (`scripts/project-visibility-lib.mjs`) read the answer and stop before
+  writing content.
+
+Guard: `serverXR/src/projectVisibilityContracts.test.js` walks every read path as a visitor
+and compares each 404 to the server's own answer for a project that never existed;
+`scripts/space-bundle.test.js` ("carries project visibility").
+
 ## "Could not save this space to a file." on a hosted tier — the image had no bundle tool
 
 `GET /api/spaces/:id/bundle` and `POST /api/spaces/bundle` spawn `scripts/space-bundle.mjs`

@@ -219,10 +219,14 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // land. Made through this server's own route, with the same id: ids are
         // global in di.iiii, so the same project is the same project on both
         // machines.
+        const remoteRows = Array.isArray(there.payload?.projects) ? there.payload.projects : []
         for (const projectId of remoteProjects) {
             if (localProjects.includes(projectId)) continue
+            // Born private when it is private there — never public for a moment.
+            const privateThere = remoteRows.some((row) => row?.id === projectId && row.visibility === 'private')
             const made = await request(local.url(path), {
-                method: 'POST', token: local.token, servername: local.servername, address: local.address, body: { slug: projectId, title: projectId }
+                method: 'POST', token: local.token, servername: local.servername, address: local.address,
+                body: { slug: projectId, title: projectId, ...(privateThere ? { visibility: 'private' } : {}) }
             })
             if (!made.ok && made.status !== 409) {
                 log.warn?.(`[follow] ${local.spaceId}: could not make room for ${projectId} (${made.status})`)

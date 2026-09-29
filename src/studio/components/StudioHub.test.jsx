@@ -20,6 +20,7 @@ const createCollection = vi.fn()
 const setProjectShelf = vi.fn()
 const listTrash = vi.fn(async () => ({ projects: [], ttlMs: 0 }))
 const restoreProject = vi.fn()
+const updateProject = vi.fn()
 const updateProjectDocument = vi.fn()
 const uploadProjectAsset = vi.fn()
 const getServerSpace = vi.fn()
@@ -40,6 +41,7 @@ vi.mock('../../project/services/projectsApi.js', () => ({
     setProjectShelf: (...args) => setProjectShelf(...args),
     listTrash: (...args) => listTrash(...args),
     restoreProject: (...args) => restoreProject(...args),
+    updateProject: (...args) => updateProject(...args),
     updateProjectDocument: (...args) => updateProjectDocument(...args),
     uploadProjectAsset: (...args) => uploadProjectAsset(...args),
     // GridFloorBackground (rendered by StudioHub) fetches its own live
@@ -490,5 +492,65 @@ describe('the Nodes copy of the list', () => {
         render(<StudioHub spaceId="lab" openIn="nodes"><p>live sync row</p></StudioHub>)
 
         expect(await screen.findByText('live sync row')).toBeTruthy()
+    })
+})
+
+// ── Private projects (docs/architecture/SPEC_project_visibility.md) ─────────
+// A public space can hold work only its members see. The members are the only
+// people who are ever sent a private card, so the lock is for them; the
+// control is for whoever decides the space's own visibility.
+describe('private projects', () => {
+    beforeEach(() => {
+        updateProject.mockReset()
+        updateProject.mockResolvedValue({ project: {} })
+        getServerSpace.mockReset()
+        listCollections.mockResolvedValue([])
+    })
+
+    it('marks a private card with a lock, and a public one with nothing', async () => {
+        authState = { role: 'editor', openSpaceId: null }
+        getServerSpace.mockResolvedValue({ id: 'moxir', label: 'MOXIR', isOwner: false })
+        listProjects.mockResolvedValue([
+            { id: 'hall', title: 'Hall', visibility: 'public', updatedAt: Date.now(), source: 'project' },
+            { id: 'sources', title: 'Sources', visibility: 'private', updatedAt: Date.now(), source: 'project' }
+        ])
+
+        render(<StudioHub spaceId="moxir" />)
+
+        await screen.findByText('Sources')
+        const marks = [...document.querySelectorAll('.sh-state--private')]
+        expect(marks).toHaveLength(1)
+        expect(marks[0].closest('.sh-project-card').textContent).toContain('Sources')
+        // Not the owner, not an admin: no control to change it.
+        expect(screen.queryAllByLabelText('Who sees it')).toHaveLength(0)
+    })
+
+    it('gives the space owner the control, and asks the server to make it private', async () => {
+        authState = { role: 'editor', openSpaceId: null }
+        getServerSpace.mockResolvedValue({ id: 'moxir', label: 'MOXIR', isOwner: true })
+        listProjects.mockResolvedValue([
+            { id: 'sources', title: 'Sources', visibility: 'public', updatedAt: Date.now(), source: 'project' }
+        ])
+
+        render(<StudioHub spaceId="moxir" />)
+
+        const control = await screen.findByLabelText('Who sees it')
+        expect(control.value).toBe('public')
+        fireEvent.change(control, { target: { value: 'private' } })
+        await waitFor(() => expect(updateProject).toHaveBeenCalledWith('sources', { visibility: 'private' }))
+    })
+
+    it('says why, when the server refuses (the published project cannot be private)', async () => {
+        authState = { role: 'admin', openSpaceId: null }
+        getServerSpace.mockResolvedValue({ id: 'moxir', label: 'MOXIR', isOwner: false })
+        listProjects.mockResolvedValue([
+            { id: 'hall', title: 'Hall', visibility: 'public', updatedAt: Date.now(), source: 'project' }
+        ])
+        updateProject.mockRejectedValue(new Error('This project is the space\'s published front door, so it cannot be private.'))
+
+        render(<StudioHub spaceId="moxir" />)
+
+        fireEvent.change(await screen.findByLabelText('Who sees it'), { target: { value: 'private' } })
+        expect(await screen.findByText(/published front door/)).toBeTruthy()
     })
 })

@@ -26,6 +26,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { ensureDestinationVisibility } from './project-visibility-lib.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -136,9 +137,31 @@ async function main() {
         return
     }
 
-    for (const { id: projectId } of targets) {
+    for (const sourceMeta of targets) {
+        const projectId = sourceMeta.id
         console.log(`\n── ${projectId} ──`)
         const { document: doc } = await apiFetch(`${FROM_URL}/api/projects/${projectId}/document`, { headers: authHeaders(FROM_TOKEN) })
+
+        // Private at the source → private at the destination BEFORE any of its
+        // content lands there (scripts/project-visibility-lib.mjs).
+        if (!DRY_RUN) {
+            const kept = await ensureDestinationVisibility({
+                projectId,
+                sourceMeta,
+                request: async (method, pathname, body) => {
+                    const res = await fetch(`${TO_URL}${pathname}`, {
+                        method,
+                        headers: authHeaders(TO_TOKEN, body ? { 'Content-Type': 'application/json' } : {}),
+                        ...(body ? { body: JSON.stringify(body) } : {})
+                    })
+                    return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
+                }
+            })
+            if (!kept.ok) { console.log(`  SKIPPED: ${kept.error}`); process.exitCode = 1; continue }
+            if (kept.note) console.log(`  [visibility] ${kept.note}`)
+        } else if (sourceMeta.visibility === 'private') {
+            console.log('  [visibility] private at the source — would make sure it is private at the destination first')
+        }
 
         if (!DOCS_ONLY) {
             for (const asset of doc.assets || []) {
