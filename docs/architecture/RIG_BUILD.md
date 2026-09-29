@@ -1651,7 +1651,9 @@ strobe; the Cues strip GO/back/stop/loop), Fader (every channel by its chart nam
 ### 19.7 Measured (2026-09-29, the owner's install 0.4.16-rigbuilder.9, MOXIR Minimal, RTX 3080 via PRIME, ANGLE/Vulkan, 1600×900 DPR 1)
 
 `scripts/rigbuild/vis-see.mjs`: a pan channel moved 60 times, alternating, on one UP-B380F; t1 = the first
-DRAWN frame with the lamp's decoded pan at the target (`visProbe.js`, in useFrame).
+DRAWN frame with the lamp's decoded pan at the target (`visProbe.js`, in useFrame). The head is picked by
+`vis-head.mjs` (a B380F first); a rig with no moving head (the cut, simple) runs `--trials 0 --cues` only,
+and asking it for trials, frames or Art-Net is refused with that reason.
 
 | path | n | p50 | p95 | max |
 |---|---|---|---|---|

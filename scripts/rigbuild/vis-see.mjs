@@ -34,6 +34,7 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 import { execSync } from 'node:child_process'
 import { chromium } from 'playwright'
+import { pickHead } from './vis-head.mjs'
 
 const require = createRequire(import.meta.url)
 const { makeSender } = require('../../serverXR/src/lighting/tests/dmx-send.js')
@@ -108,15 +109,15 @@ try {
     // A head to test: the first moving head the desk drives, with its desk patch.
     const driven = await room.evaluate(() => window.__diVis.driven())
     const rig = (await desk(`/api/rig?project=${project}`)).fixtures
-    const head = driven.find((d) => d.pan != null && d.type === 'up-b380f') || driven.find((d) => d.pan != null)
-    const fx = rig.find((f) => f.index === head.index)
+    // No head (a fixed-light rig): only --cues runs. Every head of the tested one's type moves
+    // together in the frames, so a sweep reads in the room.
+    const picked = pickHead(driven, rig, { need: trials > 0 || Boolean(arg('frames')) || Boolean(arg('artnet')) })
+    const { head, fx, heads } = picked || { head: null, fx: null, heads: [] }
     const state = await desk('/api/state')
-    const roles = state.profiles[fx.profile].channels
+    const roles = fx ? state.profiles[fx.profile].channels : []
     const chan = (role) => fx.address + roles.indexOf(role)
-    const U = fx.universe - 1 // desk numbering
-    // Every head of the tested one's type moves together in the frames, so a sweep reads in the room.
-    const heads = rig.filter((f) => f.profile === fx.profile)
-    report.head = { id: head.id, index: head.index, profile: fx.profile, at: `U${fx.universe}.${fx.address}` }
+    const U = fx ? fx.universe - 1 : 0 // desk numbering
+    report.head = fx ? { id: head.id, index: head.index, profile: fx.profile, at: `U${fx.universe}.${fx.address}` } : null
     console.log('testing on', report.head)
 
     // ---- API latency ------------------------------------------------------------
