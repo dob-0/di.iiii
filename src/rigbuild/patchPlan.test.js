@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import library from './types/moxir.json'
 import minimalPlan from '../../scripts/place/rigs/moxir-2026-10-17-minimal.patch.json'
-import { addressSetting, artnetOf, footprintOfName, planPatch, resolveMode } from './patchPlan.js'
+import { addressSetting, artnetOf, footprintOfName, planPatch, resolveMode, selectorTest } from './patchPlan.js'
 import { typeById } from './fixtureTypes.js'
 
 const lamp = (id, type, x, z = 0, extra = {}) => ({ id, type: 'spotLight', name: id, components: { transform: { position: [x, 6, z], rotation: [0, 0, 0] }, fixture: { type, ...extra } } })
@@ -94,6 +94,32 @@ describe('the patch plan', () => {
     })
 })
 
+describe('selecting from the document, so a re-hang re-runs', () => {
+    const air = (id, type, x, y, position) => ({ id, type: 'spotLight', name: id, components: { transform: { position: [x, y, 5], rotation: [0, 0, 0] }, fixture: { type, position } } })
+    it('takes lamps by type and height, whatever the truss is called, and keeps the document\'s position', () => {
+        // the owner's D2 hang: an X over the DJ, a pendulum on the left, a broken line on the right
+        const entities = [
+            air('rig-x-01', 'up-b380f', -1, 6.5, 'X'), air('rig-x-02', 'up-b380f', 1, 6.5, 'X'),
+            air('rig-pendulum-01', 'up-b380f', -6, 3.9, 'pendulum'), air('rig-broken-01', 'up-b380f', 6, 6.4, 'broken line'),
+            air('rig-col-01', 'up-b380f', -11, 0.7, 'column bases')
+        ]
+        const plan = { modes: { 'up-b380f': { crew: '16ch' } }, sides: { L: { x: '<0' } }, universes: [
+            { universe: 1, blocks: [{ select: { type: 'up-b380f', y: '>3' }, start: 1, fixture: 101, order: 'x-asc' }] },
+            { universe: 2, blocks: [{ select: { type: 'up-b380f', y: '<3', xAbs: '>8' }, side: 'L', start: 1, fixture: 201, order: 'z-asc', position: 'column bases HL' }] }
+        ] }
+        const r = planPatch({ entities, library, plan })
+        expect(r.errors).toEqual([])
+        expect(r.assignments.map((a) => `${a.index} ${a.entityId} ${a.position}`)).toEqual([
+            '101 rig-pendulum-01 pendulum', '102 rig-x-01 X', '103 rig-x-02 X', '104 rig-broken-01 broken line', '201 rig-col-01 column bases HL'
+        ])
+        expect(r.ops.find((o) => o.payload.entityId === 'rig-x-01').payload.patch.position).toBeUndefined()
+    })
+    it('refuses an unknown criterion or a comparison it cannot read', () => {
+        expect(() => selectorTest({ colour: 'red' })).toThrow(/unknown criterion/)
+        expect(() => selectorTest({ y: 'high' })).toThrow(/cannot read/)
+    })
+})
+
 describe('modes', () => {
     it('runs the maker\'s list when known, else the assumed list of the same footprint', () => {
         expect(footprintOfName('8ch-assumed')).toBe(8)
@@ -123,5 +149,7 @@ describe('the MOXIR Minimal plan', () => {
         for (const u of plan.universes) for (const b of u.blocks) expect([1, 101, 201, 301, 401]).toContain(b.start)
         expect(plan.minSpare).toBeGreaterThanOrEqual(256)
         expect(new Set(plan.universes.map((u) => u.port)).size).toBe(plan.universes.length)
+        // no block names a truss: the plan survives a re-hang of the crane rig
+        for (const u of plan.universes) for (const b of u.blocks) expect(b.group).toBeUndefined()
     })
 })

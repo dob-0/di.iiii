@@ -1474,8 +1474,9 @@ moxir-2026-10-17-minimal.patch.json`.
 
 ### 19.1 The plan is data; the document is the truth; the desk follows
 
-An LD's patch plan (`*.patch.json`) says per universe which blocks it holds — a block names a
-group of lamps (entity ids `<group>-NN`), optionally one side of the hall (`sides`: `x < 0` …),
+An LD's patch plan (`*.patch.json`) says per universe which blocks it holds — a block SELECTS lamps
+from the document (`select`: `type`, `position` name(s), and geometry `y` / `x` / `xAbs` as "<n" / ">n";
+or `group`, entity ids `<group>-NN`), optionally one side of the hall (`sides`: `x < 0` …),
 its first address, its first fixture number and the order a crew walks it — plus the mode per
 type and the node. `patch-plan.mjs` writes it into the document as ONE batch of ops (index,
 universe, address, mode, unit, position, hung; circuits re-proposed position by position,
@@ -1485,7 +1486,14 @@ them back at exactly the document's addresses and numbers; a clash is refused an
 moved to "next free", and the run exits 1. The desk is never hand-edited. `patch.mjs --unpatch`
 takes another version's fixtures off the desk (the desk runs one patch per space) and leaves its
 document alone. `patch-sheet.mjs` prints the crew's sheet from the document and exits 1 if the
-document has drifted from its plan or from the desk.
+document has drifted from its plan or from the desk. MOXIR's plan names no truss: its air universe
+takes "every UP-B380F / strobe / PAR with its lens above 3 m", the wall universes "below 3 m, |x| > 8 m,
+this side", so a re-hang of the crane rig (the owner's D2 art objects, 2026-09-29) re-runs to a correct
+patch with the document's own position names. Positions and hung come from the document unless a block
+names them (only the column rows add the side, HL/HR). One command re-runs everything after a re-hang:
+`sh ~/di-backups/preview-rig-builder-2026-09-28/moxir-minimal.sh showpatch` (backup, plan, other versions
+off the desk, `--exact`, show loop, MVR + validation, sheet; `PDF=1` for the PDF) — proven end to end
+2026-09-29 19:08.
 
 ### 19.2 MOXIR Minimal — the patch (the columns of a Lightwright hookup and instrument schedule, as §2.5)
 

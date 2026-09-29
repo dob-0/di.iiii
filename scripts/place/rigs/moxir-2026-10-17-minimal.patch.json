@@ -5,6 +5,7 @@
   "writtenAt": "2026-09-29",
   "howToRead": "docs/architecture/RIG_BUILD.md §19. The LD's patch plan as data: which universe each position runs on, where each block starts, the fixture numbers and the DMX mode per type. scripts/rigbuild/patch-plan.mjs applies it to the project document (the single truth); patch.mjs --exact makes the desk agree; patch-sheet.mjs prints the crew's sheet. Never edit addresses in the document or on the desk by hand — change this file and run the three again.",
   "method": [
+    "Blocks select lamps from the DOCUMENT — by type, height (lens above/below 3 m = in the air / on the floor) and side — never by the name of a truss, so a re-hang (a new crane shape) re-runs to a correct patch. Positions and hung/standing come from the document, except the column rows, where the plan adds the side (HL/HR) to the name.",
     "One universe per data run from the node: the crane line (in the air, one cable up the hoist), each side wall of the hall (so no DMX cable crosses the dance floor), and the booth. Four runs = the four ports of one 4-port Art-Net node.",
     "Blocks start on round numbers (001, 101, 201 …) and the fixture number says where a lamp is: hundreds = its universe, tens = its block. A crew reads U2.101 and fixture 211 as the same lamp.",
     "Within a block lamps go in the order a crew walks the position: along the crane line from house left to house right (−x to +x); along a wall from the DJ end outwards (z up).",
@@ -50,35 +51,38 @@
     {
       "universe": 1,
       "port": "A",
-      "label": "Crane line (air)",
-      "run": "node port A → up the crane on the hoist line → along the 8 m truss, house left to house right",
+      "label": "The crane rig (air)",
+      "run": "node port A → up the crane on a hoist line → every truss piece hung from the bridge, house left to house right",
       "blocks": [
         {
-          "group": "rig-beam380-line",
+          "select": {
+            "type": "up-b380f",
+            "y": ">3"
+          },
           "start": 1,
           "fixture": 101,
           "order": "x-asc",
-          "position": "truss top",
-          "hung": false,
-          "what": "7 × UP-B380F standing on the truss"
+          "what": "the UP-B380F heads in the air (on the crane truss)"
         },
         {
-          "group": "rig-strobe-line",
+          "select": {
+            "type": "ext-strobe",
+            "y": ">3"
+          },
           "start": 201,
           "fixture": 111,
           "order": "x-asc",
-          "position": "truss header",
-          "hung": true,
-          "what": "2 strobes under the truss ends"
+          "what": "the strobes in the air"
         },
         {
-          "group": "rig-par-bridge",
+          "select": {
+            "type": "up-pl5403",
+            "y": ">3"
+          },
           "start": 301,
           "fixture": 121,
           "order": "x-asc",
-          "position": "truss top",
-          "hung": false,
-          "what": "4 × UP-PL5403 grazing the crane bridge"
+          "what": "the UP-PL5403 in the air, grazing the crane bridge"
         }
       ]
     },
@@ -89,24 +93,30 @@
       "run": "node port B → along the house-left (NE, x < 0) column row, DJ end outwards",
       "blocks": [
         {
-          "group": "rig-beam380-columns-6",
+          "select": {
+            "type": "up-b380f",
+            "y": "<3",
+            "xAbs": ">8"
+          },
           "side": "HL",
           "start": 1,
           "fixture": 201,
           "order": "z-asc",
           "position": "column bases HL",
-          "hung": false,
-          "what": "3 × UP-B380F on the floor at the column bases, into the roof"
+          "what": "UP-B380F on the floor at the column bases, into the roof"
         },
         {
-          "group": "rig-par-columns-8",
+          "select": {
+            "type": "up-pl5403",
+            "y": "<3",
+            "xAbs": ">8"
+          },
           "side": "HL",
           "start": 101,
           "fixture": 211,
           "order": "z-asc",
           "position": "column uplight HL",
-          "hung": false,
-          "what": "4 × UP-PL5403 uplighting the columns"
+          "what": "UP-PL5403 uplighting the columns"
         }
       ]
     },
@@ -117,24 +127,30 @@
       "run": "node port C → along the house-right (SW, x > 0) column row, DJ end outwards",
       "blocks": [
         {
-          "group": "rig-beam380-columns-6",
+          "select": {
+            "type": "up-b380f",
+            "y": "<3",
+            "xAbs": ">8"
+          },
           "side": "HR",
           "start": 1,
           "fixture": 301,
           "order": "z-asc",
           "position": "column bases HR",
-          "hung": false,
-          "what": "3 × UP-B380F on the floor at the column bases, into the roof"
+          "what": "UP-B380F on the floor at the column bases, into the roof"
         },
         {
-          "group": "rig-par-columns-8",
+          "select": {
+            "type": "up-pl5403",
+            "y": "<3",
+            "xAbs": ">8"
+          },
           "side": "HR",
           "start": 101,
           "fixture": 311,
           "order": "z-asc",
           "position": "column uplight HR",
-          "hung": false,
-          "what": "4 × UP-PL5403 uplighting the columns"
+          "what": "UP-PL5403 uplighting the columns"
         }
       ]
     },
@@ -145,31 +161,34 @@
       "run": "node port D → the press uplights → the pit strobes in front of the booth → the hazers behind it",
       "blocks": [
         {
-          "group": "rig-par-press-3",
+          "select": {
+            "type": "up-pl5403",
+            "y": "<3",
+            "xAbs": "<8"
+          },
           "start": 1,
           "fixture": 401,
           "order": "x-asc",
-          "position": "backdrop floor",
-          "hung": false,
-          "what": "3 × UP-PL5403 uplighting the press"
+          "what": "UP-PL5403 on the floor by the booth, uplighting the press"
         },
         {
-          "group": "rig-strobe-pit",
+          "select": {
+            "type": "ext-strobe",
+            "y": "<3"
+          },
           "start": 101,
           "fixture": 411,
           "order": "x-asc",
-          "position": "booth pit",
-          "hung": false,
-          "what": "4 strobes on the floor of the pit"
+          "what": "strobes on the floor of the pit"
         },
         {
-          "group": "rig-hazer-back",
+          "select": {
+            "type": "ext-hazer"
+          },
           "start": 201,
           "fixture": 421,
           "order": "x-asc",
-          "position": "booth back",
-          "hung": false,
-          "what": "2 hazers behind the booth"
+          "what": "hazers behind the booth"
         }
       ]
     }
