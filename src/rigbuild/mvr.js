@@ -49,6 +49,19 @@ export const mvrMatrix = ({ u = [1, 0, 0], v = [0, 1, 0], w = [0, 0, 1], o = [0,
 
 // A turn about the room's Y (three.js sense) is a turn about MVR's Z by the same angle.
 const yawBasis = (yaw) => ({ u: [Math.cos(yaw), Math.sin(yaw), 0], v: [-Math.sin(yaw), Math.cos(yaw), 0], w: [0, 0, 1] })
+// A full turn (three.js Euler 'XYZ', R = Rx·Ry·Rz) — a truss piece rolled onto a slope (the cut,
+// 2026-09-29) as well as yawed. The object's local axes in the room, then in MVR: u = X,
+// v = −Z (MVR's y is the room's −z), w = Y. With only a yaw it is yawBasis exactly.
+export const turnBasis = ([rx = 0, ry = 0, rz = 0] = []) => {
+    if (!rx && !rz) return yawBasis(ry)
+    const [cx, sx, cy, sy, cz, sz] = [Math.cos(rx), Math.sin(rx), Math.cos(ry), Math.sin(ry), Math.cos(rz), Math.sin(rz)]
+    // columns of Rx·Ry·Rz
+    const X = [cy * cz, cx * sz + sx * sy * cz, sx * sz - cx * sy * cz]
+    const Y = [-cy * sz, cx * cz - sx * sy * sz, sx * cz + cx * sy * sz]
+    const Z = [sy, -sx * cy, cx * cy]
+    const map = ([x, y, z]) => [x, -z, y]
+    return { u: map(X), v: map(Z).map((c) => -c), w: map(Y) }
+}
 
 export const absoluteAddress = (universe, address) => (universe - 1) * 512 + address
 
@@ -112,14 +125,13 @@ export const mvrScene = ({ entities = [], library, meta = {} }) => {
     for (const e of entities) {
         const kind = pieceKindOf(e)
         const t = e.components?.transform || {}
-        const yaw = t.rotation?.[1] || 0
         if (kind) {
             const piece = pieceOf(kind)
             pieces.add(kind)
             const tag = piece.category === 'deck' ? 'SceneObject' : 'Truss'
             children.push(`
         <${tag} name="${esc(e.name || piece.label)}" uuid="${stableUuid(`piece:${e.id}`)}">
-          <Matrix>${mvrMatrix({ ...yawBasis(yaw), o: toMvr(t.position || [0, 0, 0]) })}</Matrix>
+          <Matrix>${mvrMatrix({ ...turnBasis(t.rotation), o: toMvr(t.position || [0, 0, 0]) })}</Matrix>
           <Geometries>
             <Geometry3D fileName="${esc(kind)}.glb"/>
           </Geometries>${tag === 'Truss' ? `
@@ -134,7 +146,7 @@ export const mvrScene = ({ entities = [], library, meta = {} }) => {
             // matrix scales it to the box (room x, z, y -> MVR x, y, z).
             children.push(`
         <SceneObject name="${esc(e.name || e.id)}" uuid="${stableUuid(`box:${e.id}`)}">
-          <Matrix>${mvrMatrix({ ...yawBasis(yaw), o: toMvr(t.position || [0, 0, 0]) })}</Matrix>
+          <Matrix>${mvrMatrix({ ...turnBasis(t.rotation), o: toMvr(t.position || [0, 0, 0]) })}</Matrix>
           <Geometries>
             <Geometry3D fileName="cube.glb">
               <Matrix>${mvrMatrix({ u: [size[0], 0, 0], v: [0, size[2], 0], w: [0, 0, size[1]] })}</Matrix>

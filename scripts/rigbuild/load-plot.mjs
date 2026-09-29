@@ -40,7 +40,7 @@ import path from 'node:path'
 import { parseArgs, die, say, readJson, REPO_ROOT } from '../place/common.mjs'
 import { makeClient, mimeFor } from '../place/api.mjs'
 import { venuePlanFromHall } from '../../src/rigbuild/venuePlan.js'
-import { layRun } from '../../src/rigbuild/plotGeometry.js'
+import { layRun, trussSegments } from '../../src/rigbuild/plotGeometry.js'
 import { PIECES, TRUSS_SECTION_M, catalogueHeightOf } from '../../src/rigbuild/pieces.js'
 
 const args = parseArgs()
@@ -100,7 +100,23 @@ export const piecesFromRigBoxes = (entities) => {
     }
     // A line hung from the crane bridge (rig-lib `truss.kind: 'crane-hung'`): no towers, the
     // header box IS the line — laid as stock segments end to end at its chord height.
-    if (header && towers.length === 0) {
+    const roll = header?.components?.transform?.rotation?.[2] || 0
+    if (header && towers.length === 0 && roll) {
+        // A SLOPED line (the cut, 2026-09-29): the box is base-anchored and rolled about z, so its
+        // centre line runs through anchor + half a section along the rolled "up"; stock pieces
+        // end to end along the slope, each rolled the same.
+        const t = header.components.transform
+        const sec = t.scale[1] || TRUSS_SECTION_M
+        const dir = [Math.cos(roll), Math.sin(roll)]
+        const up = [-Math.sin(roll), Math.cos(roll)]
+        const mid = [t.position[0] + up[0] * sec / 2, t.position[1] + up[1] * sec / 2]
+        let s = -t.scale[0] / 2
+        trussSegments(t.scale[0]).forEach((m, i) => {
+            const c = s + m / 2
+            s += m
+            out.push({ id: `rig-line-${i + 1}`, name: 'truss line (hung from the crane bridge, sloped)', kind: `truss-${m}m`, position: [r3(mid[0] + dir[0] * c), r3(mid[1] + dir[1] * c), t.position[2]], yaw: 0, roll: Math.round(roll * 1e9) / 1e9, height: null, replaces: i === 0 ? header.id : null })
+        })
+    } else if (header && towers.length === 0) {
         const t = header.components.transform
         const chord = r3(t.position[1] + (t.scale[1] || TRUSS_SECTION_M) / 2)
         const half = t.scale[0] / 2
@@ -176,7 +192,7 @@ const main = async () => {
                 entity: {
                     id: p.id, type: 'model', name: p.name,
                     components: {
-                        transform: { position: p.position, rotation: [0, p.yaw, 0], scale: [1, base && p.height ? r3(p.height / base) : 1, 1] },
+                        transform: { position: p.position, rotation: [0, p.yaw, p.roll || 0], scale: [1, base && p.height ? r3(p.height / base) : 1, 1] },
                         media: { assetId: assetFor[p.kind].id },
                         appearance: { color: '#8a8f98', opacity: 1 },
                         piece: { kind: p.kind }

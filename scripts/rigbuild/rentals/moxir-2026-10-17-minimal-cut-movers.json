@@ -1,27 +1,38 @@
 {
     "rentalList": {
-        "name": "MOXIR 17.10 — Minimal — the cut, simple: fixed lights only",
-        "source": "scripts/rigbuild/rentals/moxir-2026-10-17.json (the rental house's price list, imported by rental.mjs) · lines: scripts/place/rigs/moxir-versions-2026-10-17.json, version \"minimal\"",
+        "name": "MOXIR 17.10 — The cut, full: moving heads on the line",
+        "source": "scripts/rigbuild/rentals/moxir-2026-10-17.json (the rental house's price list, imported by rental.mjs) · lines: scripts/place/rigs/moxir-versions-2026-10-17.json, version \"minimal-cut-movers\"",
         "writtenAt": "2026-09-28",
         "currency": "AMD",
         "items": [
             {
-                "code": "UP-COB200",
-                "type": "up-cob200",
-                "ordered": 7,
-                "stock": 8,
-                "rate": 6000,
-                "label": "200W COB PAR (indoor)",
-                "source": "Price list!A14:E14 · version \"minimal\" of scripts/place/rigs/moxir-versions-2026-10-17.json"
+                "code": "UP-B380F",
+                "type": "up-b380f",
+                "ordered": 13,
+                "stock": 18,
+                "rate": 20000,
+                "label": "380W beam moving head (outdoor)",
+                "source": "Price list!A6:E6 · version \"minimal-cut-movers\" of scripts/place/rigs/moxir-versions-2026-10-17.json",
+                "note": "the quote calculator's hidden \"Price data\" sheet says 19000/day"
             },
             {
                 "code": "UP-PL5403",
                 "type": "up-pl5403",
-                "ordered": 27,
+                "ordered": 15,
                 "stock": 50,
                 "rate": 5000,
                 "label": "54x3W LED PAR (outdoor)",
-                "source": "Price list!A13:E13 · version \"minimal\" of scripts/place/rigs/moxir-versions-2026-10-17.json"
+                "source": "Price list!A13:E13 · version \"minimal-cut-movers\" of scripts/place/rigs/moxir-versions-2026-10-17.json"
+            },
+            {
+                "code": "EXT-STROBE",
+                "type": "ext-strobe",
+                "ordered": 6,
+                "label": "LED strobe (other supplier)",
+                "source": "scripts/place/rigs/moxir-versions-2026-10-17.json otherSuppliers.EXT-STROBE",
+                "note": "options: Martin Atomic 3000 LED · GLP JDC2 IP · SGM PALCO Z-FX; rate owed",
+                "from": "other",
+                "supplier": "to choose — see the note"
             },
             {
                 "code": "EXT-HAZER",
