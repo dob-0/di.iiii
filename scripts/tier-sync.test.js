@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { TIERS, main, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, documentSignature, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite, applySkip } from './tier-sync.mjs'
+import { TIERS, main, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, documentSignature, readBackShape, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite, applySkip } from './tier-sync.mjs'
 
 describe('localBase', () => {
     // The documented convention is LOCAL_API_URL with no /serverXR suffix
@@ -109,6 +109,15 @@ describe('documentSignature', () => {
         const a = { entities: [], publishState: { lastExportAt: 1 }, showState: { clockEpoch: 500 } }
         const b = { entities: [], publishState: { lastExportAt: 99999 }, showState: { clockEpoch: 0 } }
         expect(documentSignature(a).hash).toBe(documentSignature(b).hash)
+    })
+
+    it('ignores the show clock each tier starts for itself, but not the cue list', () => {
+        const cues = [{ id: 'c1', look: 'red-room', holdMs: 16000 }]
+        const a = { entities: [], mappingState: { cues, loop: true, showEpoch: 1790682911626 } }
+        const b = { entities: [], mappingState: { cues, loop: true } }
+        expect(documentSignature(a).hash).toBe(documentSignature(b).hash)
+        const edited = { entities: [], mappingState: { cues: [{ ...cues[0], holdMs: 12000 }], loop: true } }
+        expect(documentSignature(edited).hash).not.toBe(documentSignature(b).hash)
     })
 
     it('does not care what order a server serialized its keys in', () => {
@@ -544,5 +553,22 @@ describe('tier-sync carries a private project as private', () => {
         const writes = fakeTiers({ destinationKnowsVisibility: false })
         expect(await run()).toBe(1)
         expect(writes.some((w) => w.method === 'PUT')).toBe(false)
+    })
+})
+
+describe('readBackShape', () => {
+    const sent = { entities: [], mappingState: { surfaces: [{ id: 's1', effect: {} }] } }
+    const kept = { entities: [], mappingState: { surfaces: [{ id: 's1', effect: { prompt: '', strength: 0.5 } }] } }
+    const reply = (ok, status, body) => async () => ({ ok, status, json: async () => body })
+
+    it('records what the destination KEPT, not what was sent (a newer server fills defaults in)', async () => {
+        const shape = await readBackShape({ call: reply(true, 200, { document: kept }), tier: {}, projectId: 'p', sent })
+        expect(shape).toBe(documentSignature(kept).shape)
+        expect(shape).not.toBe(documentSignature(sent).shape)
+    })
+
+    it('falls back to the shape sent when the read-back fails', async () => {
+        const shape = await readBackShape({ call: reply(false, 502, null), tier: {}, projectId: 'p', sent })
+        expect(shape).toBe(documentSignature(sent).shape)
     })
 })

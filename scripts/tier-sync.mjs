@@ -252,13 +252,18 @@ const writeBaseline = (baseline) => {
 // first Time node to exist in a window, so two tiers holding the identical
 // page disagree on both.
 //
+// `mappingState.showEpoch` is the hosted show's start on the wall clock
+// (rigbuild/show-clock.mjs): each tier starts its own, so the same show
+// reads as "changed on both sides" the moment it plays anywhere.
+//
 // Reporting any of them would teach someone to ignore the audit, which costs
 // more than not having written it.
 export const VOLATILE_PATHS = [
     'projectMeta.createdAt',
     'projectMeta.updatedAt',
     'publishState.lastExportAt',
-    'showState.clockEpoch'
+    'showState.clockEpoch',
+    'mappingState.showEpoch'
 ]
 
 const stripVolatile = (document) => {
@@ -472,6 +477,22 @@ export const call = async (tier, pathname, options = {}, timeout = TIMEOUT_MS) =
     },
     signal: AbortSignal.timeout(timeout)
 })
+
+// The shape the destination KEPT after a write. Falls back to the shape sent
+// only when the read fails, and says so, so the next run can still decide.
+export const readBackShape = async ({ call, tier, projectId, sent }) => {
+    try {
+        const res = await call(tier, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
+        if (res.ok) {
+            const body = await res.json()
+            return documentSignature(body.document ?? body).shape
+        }
+        console.log(`    (read-back of ${projectId} answered HTTP ${res.status}; recorded the shape sent)`)
+    } catch (error) {
+        console.log(`    (read-back of ${projectId} failed: ${error.message}; recorded the shape sent)`)
+    }
+    return documentSignature(sent).shape
+}
 
 export const listSpaces = async (tier) => {
     const res = await call(tier, '/api/spaces')
@@ -826,7 +847,12 @@ export const main = async () => {
                 console.log(`  ✓ ${item.spaceId}/${projectId}${assetNote}${kept.note ? ` (${kept.note})` : ''}`)
                 // What the destination now holds, by shape, so the next
                 // --changed can tell "only I edited this" from "we both did".
-                ;((baseline[args.to] ||= {})[`${item.spaceId}/${projectId}`] = documentSignature(document).shape)
+                // Read BACK, never taken from what was sent: a newer server fills
+                // defaults in on write (2026-09-29, dev added an AI effect's
+                // `prompt: ""` and `strength: 0.5` to every mapping surface), and a
+                // baseline of the sent shape then reads as "dev changed it too",
+                // so every later --changed refused the project.
+                ;((baseline[args.to] ||= {})[`${item.spaceId}/${projectId}`] = await readBackShape({ call, tier: to, projectId, sent: document }))
             } catch (error) {
                 failed++
                 console.log(`  ✗ ${item.spaceId}/${projectId} — ${error.message}`)
