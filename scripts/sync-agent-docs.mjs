@@ -329,7 +329,7 @@ const ensureTrailingNewline = (value) => value.endsWith('\n') ? value : `${value
 const writeFileIfChanged = async (relativePath, content) => {
   const absolutePath = toAbsolute(relativePath)
   await fs.mkdir(path.dirname(absolutePath), { recursive: true })
-  const nextContent = ensureTrailingNewline(content)
+  const nextContent = ensureTrailingNewline(toLf(content))
 
   let currentContent = null
   try {
@@ -338,13 +338,20 @@ const writeFileIfChanged = async (relativePath, content) => {
     if (error.code !== 'ENOENT') throw error
   }
 
-  if (currentContent === nextContent) {
+  if (toLf(currentContent) === nextContent) {
     return { relativePath, changed: false }
   }
 
   await fs.writeFile(absolutePath, nextContent)
   return { relativePath, changed: true }
 }
+
+// Git for Windows checks text out with CRLF (core.autocrlf=true), so every file
+// read back here carries "\r\n" while the generated text says "\n". Compared raw,
+// every bridge looked out of sync and every SKILL.md lost its frontmatter — which
+// failed the pre-push checks on every push from a Windows machine (ponyo, 2026-09-29).
+// Line endings are the checkout's business, never content: compare without them.
+export const toLf = (text) => (text == null ? text : text.replace(/\r\n/g, '\n'))
 
 export const syncGeneratedAgentDocs = async () => {
   const results = []
@@ -366,8 +373,9 @@ if (isMain) {
       const absolutePath = toAbsolute(entry.path)
       let current = null
       try { current = await fs.readFile(absolutePath, 'utf8') } catch { /* new file */ }
-      const next = entry.content.endsWith('\n') ? entry.content : `${entry.content}\n`
-      if (current !== next) changed.push(entry.path)
+      const lf = toLf(entry.content)
+      const next = lf.endsWith('\n') ? lf : `${lf}\n`
+      if (toLf(current) !== next) changed.push(entry.path)
     }
     if (!changed.length) {
       console.log('dry-run: AI doc bridges are already up to date.')
