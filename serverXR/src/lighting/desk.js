@@ -438,6 +438,13 @@ function createDesk(opts = {}) {
     layer.firedAt = Date.now();
     layer.lookId = look.id;
     layer.on = true;
+    // The cue layer is the show's playback, and a cue says what each lamp it names IS:
+    // intensity LTP, as a console's cue list (ETC Eos: cue lists LTP by default, subs
+    // HTP). Under HTP a look's dimmer 0 lost to the fixture's own stored value — a new
+    // patch holds 255 — so a lamp a cue put out stayed lit (MOXIR 2026-09-29, the X PARs
+    // in "Red room"). Set on every fire, so a cue layer saved as HTP by an older desk is
+    // corrected too. A layer raised by hand (any other id) keeps its own merge.
+    if (layerId === CUE_LAYER) layer.merge = 'ltp';
     layer.level = body.level != null && Number.isFinite(+body.level)
       ? Math.max(0, Math.min(1, +body.level)) : 1;
     save(); pushFrame();

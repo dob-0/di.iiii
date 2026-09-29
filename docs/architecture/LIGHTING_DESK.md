@@ -229,6 +229,18 @@ room is a visualiser. If output is on, the real rig follows too (see "no loops")
   Discovery packets are recognised and not acted on — §6.2.4.1/§6.5 allow a receiver
   without synchronization to process data as it comes.
 
+
+**The cue layer is LTP for intensity (2026-09-30).** A cue says what each lamp it names IS,
+so a look's `dimmer 0` puts that lamp out even when the fixture's own stored value is higher.
+That is how consoles play a cue list (ETC Eos Family help, "Cue List Properties": cue lists
+are LTP for intensity by default; submasters are HTP). Under HTP the look's 0 lost to the
+stored value, and a fresh patch stores 255 (`ROLE_DEFAULTS`, so a new lamp lights when it is
+patched), so every lamp a cue put out stayed at full. Lamps the look does not name keep their
+own values (tracking). A layer raised by hand under any other id keeps its own merge (HTP by
+default: it adds light, never takes it away). `fireLook` sets `merge: 'ltp'` on the cue layer
+on every fire, so a cue layer an older desk saved as HTP is corrected at the next cue.
+Guard: `serverXR/src/lighting/tests/test-cues.js` "a cue look at dimmer 0 puts a lamp out…".
+
 ### Ports — what to open on a firewall
 
 | Protocol | Port | Direction | Notes |
