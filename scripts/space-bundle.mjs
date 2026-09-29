@@ -23,6 +23,11 @@
  *
  * Export options:
  *   --out <file>        Output path (default: <spaceId>.space-bundle.tar.gz)
+ *   --public-only       Leave out every PRIVATE project (visibility 'private'),
+ *                       its op log, its asset refs, and every blob no kept
+ *                       project or the scene mentions. What the server's
+ *                       "save to file" route hands a visitor who is not a
+ *                       member of the space — docs/architecture/SPEC_project_visibility.md.
  *
  * Import options:
  *   --as <newId>        Import under a different space id (slug, 3-48 chars)
@@ -123,7 +128,7 @@ const die = (msg) => { console.error(`[space-bundle] ERROR: ${msg}`); process.ex
 const log = (msg) => console.log(`[space-bundle] ${msg}`)
 
 const parseArgs = (argv) => {
-    const args = { command: null, target: null, dataRoot: null, out: null, as: null, owner: null, force: false, forceStale: false, prune: false, noBackup: false, tier: null, dryRun: false, acceptLoss: null }
+    const args = { command: null, target: null, dataRoot: null, out: null, as: null, owner: null, force: false, forceStale: false, prune: false, noBackup: false, tier: null, dryRun: false, acceptLoss: null, publicOnly: false }
     const positional = []
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i]
@@ -140,6 +145,7 @@ const parseArgs = (argv) => {
         // explicit word needed to overwrite that too.
         else if (a === '--force-stale') args.forceStale = true
         else if (a === '--dry-run') args.dryRun = true
+        else if (a === '--public-only') args.publicOnly = true
         else if (a === '--accept-loss' || a.startsWith('--accept-loss=')) {
             args.acceptLoss = loadDocumentLoss().parseAcceptLoss(a === '--accept-loss' ? [a, argv[i + 1]] : [a])
             if (a === '--accept-loss') i++
@@ -165,6 +171,39 @@ const copyDirIfExists = async (from, to) => {
     if (!fs.existsSync(from)) return false
     await fsp.cp(from, to, { recursive: true })
     return true
+}
+
+// Every sha256-shaped id a file mentions — an asset ref's name, an id inside a
+// document or a scene. Over-inclusive on purpose: a hex string that merely
+// looks like a hash keeps a blob that was not needed, never drops one that was.
+const HASH_PATTERN = /[a-f0-9]{64}/g
+const hashesInFile = async (file, into) => {
+    try {
+        for (const match of (await fsp.readFile(file, 'utf8')).match(HASH_PATTERN) || []) into.add(match)
+    } catch { /* absent — mentions nothing */ }
+}
+
+const copyReferencedBlobs = async (spaceDir, projectIds, dest) => {
+    const blobsDir = path.join(spaceDir, 'blobs')
+    if (!fs.existsSync(blobsDir)) return 0
+    const wanted = new Set()
+    await hashesInFile(path.join(spaceDir, 'scene.json'), wanted)
+    for (const id of projectIds) {
+        const projectDir = path.join(spaceDir, 'projects', id)
+        await hashesInFile(path.join(projectDir, 'document.json'), wanted)
+        const assetsDir = path.join(projectDir, 'assets')
+        for (const name of fs.existsSync(assetsDir) ? await fsp.readdir(assetsDir) : []) {
+            for (const match of name.match(HASH_PATTERN) || []) wanted.add(match)
+        }
+    }
+    let copied = 0
+    await fsp.mkdir(dest, { recursive: true })
+    for (const name of await fsp.readdir(blobsDir)) {
+        if (!wanted.has(name)) continue
+        await fsp.copyFile(path.join(blobsDir, name), path.join(dest, name))
+        copied++
+    }
+    return copied
 }
 
 const writeJsonl = async (file, rows) => {
@@ -212,6 +251,37 @@ const describeLightShow = (show) => {
 // parsed that way, so hand tar a bare filename and cd it into the directory
 // instead. `--force-local` would also fix GNU tar and is deliberately not used:
 // macOS ships bsdtar, which has no such flag and would abort on it.
+// A bundle holds regular files and directories, nothing else. 2026-09-29
+// (security audit C1): a crafted bundle carried `space/assets/<id>` as a
+// symlink to a file outside the data root, import copied the link as a link,
+// and the asset route then served whatever it pointed at — the database, the
+// env file — to anyone who could sign in. Refused twice: by the archive's own
+// listing before anything is written (a link, hardlink, device or fifo member
+// is named in the mode column, GNU tar and bsdtar alike), and by lstat over
+// everything extracted, which does not depend on how a tar prints.
+const refuseLinkMembers = (listing) => {
+    for (const line of String(listing).split('\n')) {
+        if (!line.trim()) continue
+        const kind = line[0]
+        if (kind !== '-' && kind !== 'd') die(`refusing bundle: it holds a ${kind === 'l' ? 'symbolic link' : kind === 'h' ? 'hard link' : 'special file'} (${line.trim().split(/\s+/).slice(-3).join(' ')})`)
+        if (/ link to /.test(line)) die(`refusing bundle: it holds a hard link (${line.trim()})`)
+    }
+}
+
+const refuseNonRegularEntries = async (root) => {
+    const pending = [root]
+    while (pending.length) {
+        const dir = pending.pop()
+        for (const entry of await fsp.readdir(dir)) {
+            const full = path.join(dir, entry)
+            const st = await fsp.lstat(full)
+            if (st.isDirectory()) { pending.push(full); continue }
+            if (!st.isFile()) die(`refusing bundle: ${path.relative(root, full)} is not a regular file`)
+            if (st.nlink > 1) die(`refusing bundle: ${path.relative(root, full)} is a hard link`)
+        }
+    }
+}
+
 const tarArchiveArgs = (archivePath) => ({
     name: path.basename(archivePath),
     cwd: path.dirname(path.resolve(archivePath))
@@ -232,7 +302,11 @@ async function exportSpace(args) {
     if (!space) die(`space "${spaceId}" not found in ${dbPath}`)
 
     const spaceOps = db.prepare('SELECT version, data, created_at FROM space_ops WHERE space_id = ? ORDER BY version ASC').all(spaceId)
-    const projects = db.prepare('SELECT * FROM projects WHERE space_id = ? ORDER BY created_at ASC').all(spaceId)
+    const allProjects = db.prepare('SELECT * FROM projects WHERE space_id = ? ORDER BY created_at ASC').all(spaceId)
+    // A private project is for the space's members only; --public-only is the
+    // file a visitor gets, so it is not in it at all.
+    const projects = args.publicOnly ? allProjects.filter((p) => p.visibility !== 'private') : allProjects
+    const leftOut = allProjects.length - projects.length
     const selectProjectOps = db.prepare('SELECT version, data, created_at FROM project_ops WHERE project_id = ? ORDER BY version ASC')
     const projectOpsById = new Map(projects.map((p) => [p.id, selectProjectOps.all(p.id)]))
     const commons = db.prepare('SELECT * FROM public_assets WHERE space_id = ?').all(spaceId)
@@ -249,7 +323,15 @@ async function exportSpace(args) {
             await fsp.copyFile(path.join(spaceDir, 'scene.json'), path.join(staging, 'space', 'scene.json'))
         }
         await copyDirIfExists(path.join(spaceDir, 'assets'), path.join(staging, 'space', 'assets'))
-        await copyDirIfExists(path.join(spaceDir, 'blobs'), path.join(staging, 'blobs'))
+        if (args.publicOnly && leftOut) {
+            // Blobs are per SPACE (serverXR/src/blobStore.js), shared by every
+            // project in it — copying the whole store would carry a private
+            // project's photographs out inside a public file. Only blobs a
+            // kept project or the scene names travel.
+            await copyReferencedBlobs(spaceDir, projects.map((p) => p.id), path.join(staging, 'blobs'))
+        } else {
+            await copyDirIfExists(path.join(spaceDir, 'blobs'), path.join(staging, 'blobs'))
+        }
         const lightShow = readLightShow(spaceDir)
         if (lightShow) {
             await fsp.mkdir(path.join(staging, 'space', 'lighting'), { recursive: true })
@@ -302,7 +384,7 @@ async function exportSpace(args) {
         const outTar = tarArchiveArgs(out)
         execFileSync('tar', ['-czf', outTar.name, '-C', staging, '.'], { cwd: outTar.cwd })
         const size = (fs.statSync(out).size / 1024 / 1024).toFixed(2)
-        log(`exported space "${spaceId}" → ${out} (${size} MB, ${projects.length} projects, ${spaceOps.length} space ops${lightShow ? `, ${describeLightShow(lightShow)}` : ''})`)
+        log(`exported space "${spaceId}" → ${out} (${size} MB, ${projects.length} projects${leftOut ? `, ${leftOut} private left out` : ''}, ${spaceOps.length} space ops${lightShow ? `, ${describeLightShow(lightShow)}` : ''})`)
         return out
     } finally {
         await fsp.rm(staging, { recursive: true, force: true })
@@ -404,7 +486,9 @@ async function importSpace(args) {
     const staging = await fsp.mkdtemp(path.join(os.tmpdir(), 'space-bundle-'))
     try {
         const inTar = tarArchiveArgs(bundlePath)
+        refuseLinkMembers(execFileSync('tar', ['-tvzf', inTar.name], { cwd: inTar.cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }))
         execFileSync('tar', ['-xzf', inTar.name, '-C', staging], { cwd: inTar.cwd })
+        await refuseNonRegularEntries(staging)
 
         const manifestPath = path.join(staging, 'bundle.json')
         if (!fs.existsSync(manifestPath)) die('not a space bundle: bundle.json missing')
@@ -569,8 +653,12 @@ async function importSpace(args) {
         // trashed draft or an archived snapshot arrived on the next tier as a
         // LIVE project with a working public address (2026-09-18, WCC).
         // collection_id does not travel: shelves are not part of the file.
-        const insertProject = db.prepare(`INSERT INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at, slug, position, state, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET space_id = excluded.space_id, title = excluded.title, document_version = excluded.document_version, source = excluded.source, updated_at = excluded.updated_at, last_touched_at = excluded.last_touched_at, slug = excluded.slug, position = excluded.position, state = excluded.state, deleted_at = excluded.deleted_at`)
+        // visibility travels the same way: a private project must not arrive
+        // on the next tier as a public one. A file written before the column
+        // existed carries none, and reads as 'public' — which is what every
+        // project was then.
+        const insertProject = db.prepare(`INSERT INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at, slug, position, state, deleted_at, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET space_id = excluded.space_id, title = excluded.title, document_version = excluded.document_version, source = excluded.source, updated_at = excluded.updated_at, last_touched_at = excluded.last_touched_at, slug = excluded.slug, position = excluded.position, state = excluded.state, deleted_at = excluded.deleted_at, visibility = excluded.visibility`)
         const deleteProject = db.prepare('DELETE FROM projects WHERE id = ?')
         const deleteProjectOps = db.prepare('DELETE FROM project_ops WHERE project_id = ?')
         const insertProjectOp = db.prepare('INSERT INTO project_ops (project_id, version, data, created_at) VALUES (?, ?, ?, ?)')
@@ -602,7 +690,8 @@ async function importSpace(args) {
                 insertProject.run(p.id, targetId, p.title ?? 'Untitled Project', p.document_version ?? 0,
                     p.source ?? 'project', p.created_at ?? now, now, now,
                     p.slug ?? null, p.position ?? 0,
-                    ['draft', 'live', 'archived'].includes(p.state) ? p.state : 'live', p.deleted_at ?? null)
+                    ['draft', 'live', 'archived'].includes(p.state) ? p.state : 'live', p.deleted_at ?? null,
+                    p.visibility === 'private' ? 'private' : 'public')
                 deleteProjectOps.run(p.id)
             }
             if (args.force && args.prune) {

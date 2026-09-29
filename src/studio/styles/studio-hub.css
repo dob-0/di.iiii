@@ -426,10 +426,30 @@
     background: rgba(255, 255, 255, 0.06);
 }
 
+/* Private: only the space's members see it. Said on the card because the
+   members are the only people who ever see the card. */
+.sh-state--private {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--di-space-1);
+    color: var(--di-dim);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.sh-lock {
+    width: 0.9em;
+    height: 0.9em;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.2;
+}
+
 /* Filing controls sit at the bottom of the card and stay quiet until hovered —
-   they are how you tidy, not what you came to look at. */
+   they are how you tidy, not what you came to look at. Up to three selects
+   (shelf, state, who sees it), so the row wraps rather than overflowing. */
 .sh-card-filing {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--di-space-2);
     margin-top: var(--di-space-3);
     opacity: 0.45;

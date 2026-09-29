@@ -80,9 +80,43 @@ export const parseWorktrees = (out) => {
 }
 
 /**
+ * When the oldest of these uncommitted changes was made, from the files' mtimes.
+ * git keeps no time for uncommitted work, so the file system is the only witness;
+ * a deleted file has no mtime and is skipped. null when nothing could be read.
+ */
+export const oldestChange = (treePath, porcelainLines) => {
+  let oldest = null
+  for (const line of porcelainLines) {
+    let rel = line.slice(3)
+    if (rel.includes(' -> ')) rel = rel.split(' -> ').pop()
+    rel = rel.replace(/^"|"$/g, '')
+    try {
+      const { mtimeMs } = fs.statSync(path.join(treePath, rel))
+      oldest = oldest === null ? mtimeMs : Math.min(oldest, mtimeMs)
+    } catch { /* deleted or unreadable */ }
+  }
+  return oldest
+}
+
+/**
+ * Keeps only what has sat on this machine longer than `hours` — for a daily
+ * reminder, today's fresh work is not news. Stashes carry no reliable time and are
+ * always kept; a repo with no remote, or one git could not read, is always kept.
+ */
+export const olderThan = (r, hours, now = Date.now()) => {
+  if (!hours) return r
+  const cutoff = now - hours * 60 * 60 * 1000
+  return {
+    ...r,
+    unpushed: r.unpushed.filter((u) => u.oldestMs <= cutoff),
+    dirty: r.dirty.filter((d) => d.oldestMs === null || d.oldestMs <= cutoff)
+  }
+}
+
+/**
  * Everything in one repo that exists only on this machine.
  *   unpushed: [{ branch, commits, oldestMs }]   commits on no remote
- *   dirty:    [{ path, branch, files }]         worktrees with uncommitted or untracked files
+ *   dirty:    [{ path, branch, files, oldestMs }] worktrees with uncommitted or untracked files
  *   stashes:  number                            stashes never leave the machine
  *   noRemote: boolean                           a repo with no remote at all — all of it is here only
  *   error:    string|null                       git could not answer; never read as clean
@@ -113,8 +147,8 @@ export const scanRepo = (repoPath, { git = makeGit(repoPath), allWorktrees = tru
   for (const tree of trees) {
     const status = makeGit(tree.path)(['status', '--porcelain'])
     if (status === null) continue // a missing worktree dir; `git worktree prune` territory, not unsaved work
-    const files = status.split('\n').filter(Boolean).length
-    if (files) result.dirty.push({ path: tree.path, branch: tree.branch, files })
+    const lines = status.split('\n').filter(Boolean)
+    if (lines.length) result.dirty.push({ path: tree.path, branch: tree.branch, files: lines.length, oldestMs: oldestChange(tree.path, lines) })
   }
   return result
 }
@@ -142,7 +176,7 @@ export const formatRepo = (r, { now = Date.now(), cap = 5, indent = '    ' } = {
   }
   if (r.unpushed.length > shown.length) lines.push(`${indent}+${r.unpushed.length - shown.length} more branches with unpushed commits`)
   for (const d of r.dirty) {
-    lines.push(`${indent}ONLY HERE  ${d.files} uncommitted file${d.files === 1 ? '' : 's'} in ${d.path}${d.branch ? ` (${d.branch})` : ''} — commit them on a branch and push`)
+    lines.push(`${indent}ONLY HERE  ${d.files} uncommitted file${d.files === 1 ? '' : 's'} in ${d.path}${d.branch ? ` (${d.branch})` : ''}${d.oldestMs ? `, oldest ${age(d.oldestMs, now)}` : ''} — commit them on a branch and push`)
   }
   if (r.stashes) lines.push(`${indent}ONLY HERE  ${r.stashes} stash${r.stashes === 1 ? '' : 'es'} — a stash never leaves this machine; make it a branch (git stash branch <name>) and push`)
   return lines

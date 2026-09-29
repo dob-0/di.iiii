@@ -41,6 +41,12 @@ as a habit: `DI_ALLOW_FLOW_COMMIT=1`, `DI_ALLOW_FLOW_PUSH=1`, `DI_SKIP_PUSH_GATE
 stash — each exists on one disk and is gone with it. `npm run unsaved -- ~/dev ~/Desktop`
 lists every such thing in every git repo under those folders (di.iiii or not) with the
 command that saves it, and exits 1 when there is any — so a scheduled task can raise it.
+**The daily watch** does that for you, once installed on a machine: every day at 18:00 (or at
+the next boot or logon if it was off) it lists what has sat only there for more than 24 hours,
+raises a desktop notification, and appends the full list to one log.
+`scripts/unsaved-watch/install.sh [folders]` on Linux (systemd user timer; log
+`~/.local/state/di/unsaved.log`), `scripts\unsaved-watch\install.ps1 [-Folders …]` on Windows
+(Task Scheduler; log `%LOCALAPPDATA%\di\unsaved.log`). `--uninstall` / `-Uninstall` removes it.
 Push your branch the day you make it, even unfinished; a draft PR is fine. On a fork,
 every pushed branch opens an upstream PR (`auto-pr.yml`) — except `backup/…` and `wip/…`,
 which are for keeping work safe, not for review.

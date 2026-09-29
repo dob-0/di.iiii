@@ -1,0 +1,43 @@
+{
+  "kind": "cob200",
+  "code": "UP-COB200",
+  "glb": "cob200.glb",
+  "builtBy": "scripts/place/fixtures/build_fixtures.py",
+  "scriptSha256": "cc332ec481c5bb2777541e37bf8025360366aa9b98720490aab93b6de4596b44",
+  "blender": "5.2.2 LTS",
+  "archetype": "par",
+  "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+  "panY": 0.0,
+  "tiltY": 0.195,
+  "lensY": 0.3135,
+  "motion": "tilt",
+  "parts": [
+    "Base",
+    "Yoke",
+    "Head",
+    "Lens"
+  ],
+  "sizeAtHome_mm": {
+    "width_x": 334,
+    "depth_z": 273,
+    "height_y": 324
+  },
+  "triangles": {
+    "Base": 48,
+    "Yoke": 120,
+    "Head": 404,
+    "Lens": 22,
+    "total": 594
+  },
+  "datasheetSize_mm": [
+    295,
+    295,
+    350
+  ],
+  "deviationFromDatasheet_pct": [
+    -7.5,
+    9.8,
+    -4.6
+  ],
+  "comparedParts": "all"
+}

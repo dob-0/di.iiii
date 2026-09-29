@@ -68,6 +68,7 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { remapAssetIds, remapFromUpload } from './asset-remap-lib.mjs'
+import { ensureDestinationVisibility, visibilityCreateFields } from './project-visibility-lib.mjs'
 
 const { diffDocumentLoss, combineLoss, describeLoss, parseAcceptLoss, lossGate } = createRequire(import.meta.url)('../shared/documentLoss.cjs')
 
@@ -251,13 +252,18 @@ const writeBaseline = (baseline) => {
 // first Time node to exist in a window, so two tiers holding the identical
 // page disagree on both.
 //
+// `mappingState.showEpoch` is the hosted show's start on the wall clock
+// (rigbuild/show-clock.mjs): each tier starts its own, so the same show
+// reads as "changed on both sides" the moment it plays anywhere.
+//
 // Reporting any of them would teach someone to ignore the audit, which costs
 // more than not having written it.
 export const VOLATILE_PATHS = [
     'projectMeta.createdAt',
     'projectMeta.updatedAt',
     'publishState.lastExportAt',
-    'showState.clockEpoch'
+    'showState.clockEpoch',
+    'mappingState.showEpoch'
 ]
 
 const stripVolatile = (document) => {
@@ -471,6 +477,22 @@ export const call = async (tier, pathname, options = {}, timeout = TIMEOUT_MS) =
     },
     signal: AbortSignal.timeout(timeout)
 })
+
+// The shape the destination KEPT after a write. Falls back to the shape sent
+// only when the read fails, and says so, so the next run can still decide.
+export const readBackShape = async ({ call, tier, projectId, sent }) => {
+    try {
+        const res = await call(tier, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
+        if (res.ok) {
+            const body = await res.json()
+            return documentSignature(body.document ?? body).shape
+        }
+        console.log(`    (read-back of ${projectId} answered HTTP ${res.status}; recorded the shape sent)`)
+    } catch (error) {
+        console.log(`    (read-back of ${projectId} failed: ${error.message}; recorded the shape sent)`)
+    }
+    return documentSignature(sent).shape
+}
 
 export const listSpaces = async (tier) => {
     const res = await call(tier, '/api/spaces')
@@ -693,6 +715,10 @@ export const main = async () => {
     // documents read here are the ones written below, so what was counted is
     // what arrives.
     const sourceDocs = new Map()
+    // The source's project meta rides on the same document response
+    // (GET …/document answers { document, version, project }) — it is what
+    // says whether the project is private (project-visibility-lib.mjs).
+    const sourceMetas = new Map()
     const lossEntries = []
     for (const item of plan) {
         for (const projectId of item.projects) {
@@ -701,6 +727,7 @@ export const main = async () => {
             const body = await docRes.json()
             const incoming = body.document || body
             sourceDocs.set(projectId, incoming)
+            if (body.project) sourceMetas.set(projectId, body.project)
             const destRes = await call(to, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
             if (destRes.status === 404) continue
             if (!destRes.ok) {
@@ -768,14 +795,32 @@ export const main = async () => {
                     if (!docRes.ok) throw new Error(`source document HTTP ${docRes.status}`)
                     const body = await docRes.json()
                     document = body.document || body
+                    if (body.project) sourceMetas.set(projectId, body.project)
                 }
                 const title = document?.projectMeta?.title || projectId
 
+                // Who may see it travels too — a private project must not land
+                // public (scripts/project-visibility-lib.mjs). A source whose
+                // document response carries no project meta predates the field,
+                // and so holds no private projects.
+                const sourceMeta = sourceMetas.get(projectId) || null
+
                 const create = await call(to, `/api/spaces/${item.spaceId}/projects`, {
                     method: 'POST',
-                    body: JSON.stringify({ slug: projectId, title })
+                    body: JSON.stringify({ slug: projectId, title, ...visibilityCreateFields(sourceMeta) })
                 })
                 if (!create.ok && create.status !== 409) throw new Error(`create HTTP ${create.status}`)
+                const created = create.ok ? ((await create.json().catch(() => null))?.project || null) : null
+                const kept = await ensureDestinationVisibility({
+                    projectId,
+                    sourceMeta,
+                    destMeta: created,
+                    request: async (method, pathname, body) => {
+                        const res = await call(to, pathname, { method, ...(body ? { body: JSON.stringify(body) } : {}) })
+                        return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
+                    }
+                })
+                if (!kept.ok) throw new Error(kept.error)
 
                 const put = await call(to, `/api/projects/${projectId}/document`, {
                     method: 'PUT',
@@ -799,10 +844,15 @@ export const main = async () => {
                     }
                 }
                 copied++
-                console.log(`  ✓ ${item.spaceId}/${projectId}${assetNote}`)
+                console.log(`  ✓ ${item.spaceId}/${projectId}${assetNote}${kept.note ? ` (${kept.note})` : ''}`)
                 // What the destination now holds, by shape, so the next
                 // --changed can tell "only I edited this" from "we both did".
-                ;((baseline[args.to] ||= {})[`${item.spaceId}/${projectId}`] = documentSignature(document).shape)
+                // Read BACK, never taken from what was sent: a newer server fills
+                // defaults in on write (2026-09-29, dev added an AI effect's
+                // `prompt: ""` and `strength: 0.5` to every mapping surface), and a
+                // baseline of the sent shape then reads as "dev changed it too",
+                // so every later --changed refused the project.
+                ;((baseline[args.to] ||= {})[`${item.spaceId}/${projectId}`] = await readBackShape({ call, tier: to, projectId, sent: document }))
             } catch (error) {
                 failed++
                 console.log(`  ✗ ${item.spaceId}/${projectId} — ${error.message}`)

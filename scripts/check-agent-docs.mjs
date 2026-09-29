@@ -6,7 +6,8 @@ import {
   AI_DOC_SCOPES,
   REQUIRED_AI_DOC_FILES,
   getGeneratedEntries,
-  repoRoot
+  repoRoot,
+  toLf
 } from './sync-agent-docs.mjs'
 import { isNoiseBranch } from './repo-state-lib.mjs'
 
@@ -15,7 +16,8 @@ const normalizePath = (value) => value.split(path.sep).join('/')
 const toAbsolute = (relativePath) => path.join(repoRoot, relativePath)
 
 const readFile = async (relativePath) => {
-  return fs.readFile(toAbsolute(relativePath), 'utf8')
+  // CRLF on a Windows checkout is not a content difference — see toLf.
+  return toLf(await fs.readFile(toAbsolute(relativePath), 'utf8'))
 }
 
 const exists = async (relativePath) => {
@@ -312,7 +314,8 @@ const main = async () => {
   }
 
   for (const entry of getGeneratedEntries()) {
-    const expected = entry.content.endsWith('\n') ? entry.content : `${entry.content}\n`
+    const content = toLf(entry.content)
+    const expected = content.endsWith('\n') ? content : `${content}\n`
     if (!await exists(entry.path)) {
       errors.push(`Missing generated bridge file: ${entry.path}`)
       continue

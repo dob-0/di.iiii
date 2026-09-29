@@ -1316,6 +1316,26 @@ a viewer whose tab is in the background is throttled by the browser and catches 
 (it recomputes from the clock, it never drifts); the desk's strobes' DMX pulse is not simulated
 beyond the room's flash.
 
+### Publishing an update to dev — one command
+
+Work happens on the local install; the team sees it on dev. One command carries an update:
+
+    npm run space:publish -- --space moxir [--dry-run] [--no-clock]
+
+It runs, in order and stopping at the first failure (`scripts/space-publish.mjs`):
+`tier-sync --changed` for that space (pushes only what differs, refuses a project edited on
+both tiers, never widens a private project), `show-clock --epoch now` on the published project
+(a pushed document replaces the op log that held the clock), then a visitor check with no
+token — the published project answers 200, every private project 404 and is absent from the
+list. Any leak exits 1.
+
+Two things made `--changed` refuse every MOXIR project after its first push (2026-09-29),
+both fixed in `tier-sync.mjs`: the show clock (`mappingState.showEpoch`) now counts as
+volatile, like `showState.clockEpoch`; and after a write the baseline records the shape the
+destination KEPT (read back), not the shape sent — a newer server fills defaults in on write.
+A project whose baseline predates the fix needs one `tier-sync --space <id> --force` to
+record a true baseline; `--changed` works from then on.
+
 ## 17. Visitors: the tools read only (and a hosted tier with no desk)
 
 Owner, 2026-09-28: share MOXIR with colleagues online — the room, the show, and the tools read

@@ -12,6 +12,7 @@ const { placeOps } = require('../../../shared/placement.cjs')
 const { actorFromAuthState } = require('../opActor')
 const { countProjectLayers } = require('../../../shared/layers.cjs')
 const { canAccessSpace, formatAuthScopeLabel } = require('../authAccess')
+const { assetCacheControl, filterVisibleProjects } = require('../projectVisibility')
 
 const withProjectLock = createKeyedLock()
 
@@ -49,6 +50,11 @@ function registerProjectRoutes(router, {
   reorderProjects,
   setProjectShelf,
   setProjectState,
+  // Per-project visibility (projectVisibility.js). Absent on a router built
+  // without them: the field is then refused rather than silently ignored.
+  setProjectVisibility = null,
+  loadSpaceMeta = null,
+  isSpaceOwnerOrAdminState = null,
   TRASH_TTL_MS,
   listCollections,
   getCollection,
@@ -71,6 +77,9 @@ function registerProjectRoutes(router, {
   // spaceHistory.js — restore points before changes. Absent means none.
   spaceHistory = null
 }) {
+  const visibilityOptions = { requireAuth: Boolean(config.requireAuth) }
+  const visibleTo = (req, spaceId, projects) =>
+    filterVisibleProjects(req.authState, spaceId, projects, visibilityOptions)
   router.get('/api/spaces/:spaceId/projects', async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)
@@ -78,7 +87,9 @@ function registerProjectRoutes(router, {
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      const rows = await listProjectsInSpace(spacesDir, spaceId)
+      // A private project is listed to the space's members only — to anyone
+      // else it is not in this space at all (projectVisibility.js).
+      const rows = visibleTo(req, spaceId, await listProjectsInSpace(spacesDir, spaceId))
       const projects = []
       for (const meta of rows) {
         const layers = await readLayerCounts(spaceId, meta)
@@ -193,7 +204,7 @@ function registerProjectRoutes(router, {
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      const onShow = (await listProjectsInSpace(spacesDir, spaceId))
+      const onShow = visibleTo(req, spaceId, await listProjectsInSpace(spacesDir, spaceId))
         .filter((meta) => (meta.state || 'live') === 'live' && !isLegacyArchivedTitle(meta.title))
       const projects = []
       for (const meta of onShow) {
@@ -202,7 +213,9 @@ function registerProjectRoutes(router, {
           slug: meta.slug || null,
           title: meta.title,
           mode: await readPresentationMode(spaceId, meta),
-          updatedAt: meta.updatedAt
+          updatedAt: meta.updatedAt,
+          // Said only on a private row — which only a member is ever sent.
+          ...(meta.visibility === 'private' ? { visibility: 'private' } : {})
         })
       }
       res.json({ spaceId, projects })
@@ -221,6 +234,14 @@ function registerProjectRoutes(router, {
       await ensureSpaceWritable(spaceId)
       const title = typeof req.body?.title === 'string' ? req.body.title.trim() : ''
       const source = typeof req.body?.source === 'string' ? req.body.source.trim() : ''
+      // A project can be BORN private, so a copy of private work (tier-sync,
+      // project-pull) never exists as public for the moment between a create
+      // and a follow-up PATCH. Hiding is always allowed to whoever may create;
+      // only making something public again is kept to the owner (PATCH below).
+      const visibility = req.body?.visibility
+      if (visibility !== undefined && visibility !== 'public' && visibility !== 'private') {
+        return res.status(400).json({ error: 'visibility must be "public" or "private".' })
+      }
       const slugSource = req.body?.slug || title || `project-${Date.now()}`
       const projectId = normalizeProjectId(slugSource)
       if (!projectId) {
@@ -239,7 +260,8 @@ function registerProjectRoutes(router, {
       }
       const meta = await ensureProject(spacesDir, spaceId, projectId, {
         title: title || 'Untitled Project',
-        ...(source ? { source } : {})
+        ...(source ? { source } : {}),
+        ...(visibility ? { visibility } : {})
       })
       res.status(201).json({
         project: meta,
@@ -269,6 +291,32 @@ function registerProjectRoutes(router, {
         return res.status(404).json({ error: 'Project not found.' })
       }
       await ensureSpaceWritable(project.spaceId)
+      // Visibility: who inside the space may see this project. The space's
+      // steward decides it, like the space's own isPublic — owner or admin.
+      // A private project cannot be the space's front door (the door is what
+      // every visitor is sent to), so hiding the published one is refused
+      // with the way out named; spaceRoutes.js refuses the other direction.
+      let nextVisibility
+      if (req.body?.visibility !== undefined) {
+        nextVisibility = req.body.visibility
+        if (nextVisibility !== 'public' && nextVisibility !== 'private') {
+          return res.status(400).json({ error: 'visibility must be "public" or "private".' })
+        }
+        if (typeof setProjectVisibility !== 'function') {
+          return res.status(501).json({ error: 'This server cannot change a project\'s visibility.' })
+        }
+        const spaceMeta = typeof loadSpaceMeta === 'function' ? await loadSpaceMeta(project.spaceId) : null
+        if (config.requireAuth && typeof isSpaceOwnerOrAdminState === 'function' &&
+          !isSpaceOwnerOrAdminState(req.authState || {}, spaceMeta)) {
+          return res.status(403).json({ error: 'Only the space owner or an admin can change who sees a project.' })
+        }
+        if (nextVisibility === 'private' && spaceMeta?.publishedProjectId === project.projectId) {
+          return res.status(409).json({
+            error: 'This project is the space\'s published front door, so it cannot be private. Publish a different project (or none) first, then make this one private.',
+            code: 'published_project_private'
+          })
+        }
+      }
       // Public handle, independently renameable from id, unique within the
       // owning space only — docs/architecture/SPEC_space_urls_and_portability.md.
       let nextSlug
@@ -290,10 +338,18 @@ function registerProjectRoutes(router, {
         }
         nextSlug = normalized
       }
-      const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
+      let nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
         ...(req.body?.title !== undefined ? { title: req.body.title } : {}),
         ...(req.body?.slug !== undefined ? { slug: nextSlug } : {})
       })
+      if (nextVisibility !== undefined) {
+        nextMeta = await setProjectVisibility(project.projectId, nextVisibility)
+        // Any open stream a visitor holds on this project is closed by the
+        // broadcast itself (index.js drops listeners who may no longer see it).
+        if (typeof broadcastProjectLiveEvent === 'function') {
+          await broadcastProjectLiveEvent(project.projectId, 'project-visibility', { visibility: nextMeta.visibility })
+        }
+      }
       const document = await readProjectDocument(spacesDir, project.spaceId, project.projectId)
       document.projectMeta = {
         ...document.projectMeta,
@@ -353,6 +409,9 @@ function registerProjectRoutes(router, {
         const state = req.authState || {}
         projects = projects.filter((project) => state.authenticated && canAccessSpace(state, project.spaceId))
       }
+      // A public space's trash is readable by its visitors; a private
+      // project's row must not be, trashed or not.
+      if (spaceId) projects = visibleTo(req, spaceId, projects)
       res.json({ projects, ttlMs: TRASH_TTL_MS })
     } catch (error) {
       next(error)
@@ -1046,9 +1105,14 @@ function registerProjectRoutes(router, {
         servePath = getSpaceBlobPaths(spacesDir, project.spaceId).blobPath(assetId)
         await fsp.access(servePath)
       }
+      // A regular file only: never follow a symlink out of the data root
+      // (security audit 2026-09-29, C1). ENOENT answers 404 below.
+      const served = await fsp.lstat(servePath)
+      if (!served.isFile()) throw Object.assign(new Error('not a regular file'), { code: 'ENOENT' })
       res.setHeader('Content-Type', meta?.mimeType || 'application/octet-stream')
       applyAssetSafetyHeaders(res, meta?.mimeType)
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+      // A private project's bytes are never stored by a shared cache.
+      res.setHeader('Cache-Control', assetCacheControl(project.meta))
       // `root` + a name, never sendFile(absolutePath). `send` applies
       // dotfiles: 'ignore' to EVERY segment of an absolute path, and the
       // default install lives in ~/.di — so on any `di` install this 404'd
@@ -1111,7 +1175,9 @@ function registerProjectRoutes(router, {
       res.setHeader('Connection', 'keep-alive')
       res.flushHeaders?.()
       const clientId = crypto.randomUUID()
-      entry.bucket.set(clientId, { res })
+      // Who is listening, kept so a project made private while this stream
+      // is open stops reaching a visitor (broadcastProjectLiveEvent).
+      entry.bucket.set(clientId, { res, authState: req.authState || null })
       res.write(`event: ready\ndata: ${JSON.stringify({ clientId, projectId: entry.normalized })}\n\n`)
       const keepAlive = setInterval(() => {
         try {

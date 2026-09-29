@@ -67,11 +67,13 @@ const corners = (cx, cz, w, d, yaw) => [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 
     })
 
 /** A piece's outline on the plan: [[x, z] x4], with its size and height. */
-export const pieceFootprint = ({ kind, position = [0, 0, 0], yaw = 0, height = null }) => {
+export const pieceFootprint = ({ kind, position = [0, 0, 0], yaw = 0, height = null, roll = 0 }) => {
     const piece = pieceWithHeight(kind, height)
     if (!piece) return null
     const [x, , z] = position
-    if (piece.category === 'truss') return { outline: corners(x, z, piece.length, TRUSS_SECTION_M, yaw), w: piece.length, d: TRUSS_SECTION_M }
+    // a rolled (sloped) truss covers its length × cos(slope) on the plan
+    const plan = piece.length * Math.cos(roll || 0)
+    if (piece.category === 'truss') return { outline: corners(x, z, plan, TRUSS_SECTION_M, yaw), w: r3(plan), d: TRUSS_SECTION_M }
     if (piece.category === 'tower') return { outline: corners(x, z, TOWER_PLATE_M, TOWER_PLATE_M, yaw), w: TOWER_PLATE_M, d: TOWER_PLATE_M }
     return { outline: corners(x, z, piece.size[0], piece.size[2], yaw), w: piece.size[0], d: piece.size[2] }
 }
@@ -82,8 +84,10 @@ export const piecesOf = (entities = []) => entities.map((e) => {
     if (!kind) return null
     const position = e.components?.transform?.position || [0, 0, 0]
     const yaw = e.components?.transform?.rotation?.[1] || 0
+    // a truss piece rolled about its own length onto a slope (the cut, 2026-09-29): rotation z
+    const roll = e.components?.transform?.rotation?.[2] || 0
     const height = pieceHeightOf(e)
-    return { id: e.id, name: e.name || '', kind, category: PIECES[kind].category, position, yaw, height, ...pieceFootprint({ kind, position, yaw, height }) }
+    return { id: e.id, name: e.name || '', kind, category: PIECES[kind].category, position, yaw, ...(roll ? { roll } : {}), height, ...pieceFootprint({ kind, position, yaw, height, roll }) }
 }).filter(Boolean)
 
 // Anything else standing in the room that is a plain box (a riser, a DJ table, a
@@ -154,11 +158,16 @@ export const inMarquee = ({ lamps = [], pieces = [] }, [ax, az, bx, bz]) => {
 
 // ---- truss runs ------------------------------------------------------------------
 
+// A piece's axis in the room: local +X turned by its roll (about Z) then its yaw (Euler XYZ, x = 0).
+export const pieceAxisOf = (p) => {
+    const r = p.roll || 0
+    const d = rotateY([Math.cos(r), 0, 0], p.yaw)
+    return [d[0], Math.sin(r), d[2]]
+}
 const endsOf = (p) => {
     const half = PIECES[p.kind].length / 2
-    const a = rotateY([-half, 0, 0], p.yaw)
-    const b = rotateY([half, 0, 0], p.yaw)
-    return [[p.position[0] + a[0], p.position[1], p.position[2] + a[2]], [p.position[0] + b[0], p.position[1], p.position[2] + b[2]]]
+    const d = pieceAxisOf(p)
+    return [-1, 1].map((k) => [p.position[0] + k * half * d[0], p.position[1] + k * half * d[1], p.position[2] + k * half * d[2]])
 }
 
 /**
@@ -203,7 +212,14 @@ export const trussRuns = (pieces = []) => {
             to: [r3(to[0]), r3(to[2])],
             length: r3(Math.hypot(to[0] - from[0], to[2] - from[2])),
             height: r3(group[0].position[1]),
-            yaw: group[0].yaw
+            yaw: group[0].yaw,
+            // a sloped run (its pieces rolled): its ends in 3D at the chord centre, its true
+            // length along the slope and the slope itself — the plan above keeps the footprint
+            ...(Math.abs(to[1] - from[1]) > 0.005 ? {
+                from3: from.map(r3), to3: to.map(r3),
+                length3: r3(Math.hypot(to[0] - from[0], to[1] - from[1], to[2] - from[2])),
+                slopeDeg: r3((Math.atan2(to[1] - from[1], Math.hypot(to[0] - from[0], to[2] - from[2])) * 180) / Math.PI)
+            } : {})
         })
     }
     return runs

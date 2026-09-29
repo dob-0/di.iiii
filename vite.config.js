@@ -556,6 +556,14 @@ export default {
                 changeOrigin: true,
                 xfwd: true
             },
+            // Live AI — a WebSocket to the image model on this machine, relayed by
+            // serverXR (serverXR/src/liveAi/relay.js). Anchored like /ndi above.
+            '^/liveai(/|$)': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true,
+                xfwd: true,
+                ws: true
+            },
             // Project documents store asset/API URLs as bare `/api/...` (no
             // `/serverXR` prefix) because in production Express serves both
             // frontend and API from one origin, mounted at APP_BASE_PATH. In

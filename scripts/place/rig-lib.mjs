@@ -64,6 +64,27 @@ export const hasTruss = (rig) => Boolean(rig.truss) && rig.truss.kind !== 'none'
 // `x_offset_m` slides the line along itself so a clamp point (every 0.5 m, 0.25 m in from
 // each end — src/rigbuild/pieces.js) falls on the centre line; the lamps stay mirrored.
 export const isCraneHung = (rig) => rig?.truss?.kind === 'crane-hung'
+// A crane-hung line may SLOPE (`slope_deg`, + = its +x end higher): "the cut", owner's pick
+// 2026-09-29 — one straight 12 m line in the vertical plane under the bridge, low house left,
+// high over the press and the machines. `trim_m` is then its bottom chord at u = 0 (above the
+// axis), measured vertically; `u` is metres ALONG the line from there (+ toward +x), and a
+// group's `dx_m` on the line are u, mirrored. Flat (slope 0) is the 8 m line as it was.
+export const trussSlopeOf = (rig) => (isCraneHung(rig) ? (Number(rig.truss.slope_deg) || 0) * DEG : 0)
+/**
+ * A point on the line (a crane-hung line, sloped or flat, or a goalpost header) `u` metres
+ * along it from the axis: its centre line ('axis'), the top of its top chords ('top') or the
+ * underside of its bottom chords ('bottom') — perpendicular to the line, as a clamp sits.
+ */
+export const linePoint = (stage, u, face = 'axis') => {
+    const th = stage.trussSlope || 0
+    const t = stage.trussSection
+    const cx = stage.axis + u * Math.cos(th)
+    const cy = stage.trussH - t / 2 + t / 2 / Math.cos(th) + u * Math.sin(th)
+    const k = face === 'top' ? 1 : face === 'bottom' ? -1 : 0
+    return [cx - k * (t / 2) * Math.sin(th), cy + k * (t / 2) * Math.cos(th), stage.trussZ]
+}
+/** The line's bottom chord height at `u`, measured vertically (what a clearance is read against). */
+export const bottomChordAt = (stage, u) => stage.trussH - stage.trussSection / 2 + u * Math.sin(stage.trussSlope || 0)
 
 export const stageFrame = (rig, hall) => {
     const g = hall.geometry
@@ -150,6 +171,7 @@ export const stageFrame = (rig, hall) => {
     return {
         crane,
         trussX: isCraneHung(rig) ? (rig.truss.x_offset_m ?? 0) : 0,
+        trussSlope: trussSlopeOf(rig),
         into,
         wall,
         back,
@@ -286,13 +308,15 @@ const place = {
     },
     // Clamped under the header's bottom chord, hanging.
     // `dx_m`: mirrored pairs along it (on the header's clamp points), instead of an even spread.
+    // On a sloped crane line `dx_m` are metres ALONG the line (u), and the clamp sits under the
+    // bottom chord where it is at that u (linePoint); flat, the same as before.
     'truss-header': (n, ctx, group) => (needsTruss(ctx, 'truss-header'), group?.dx_m ? mirroredDx(group.dx_m) : spread(n, -ctx.stage.trussW / 2 + 1, ctx.stage.trussW / 2 - 1))
-        .map((x) => ({ pos: [ctx.stage.axis + x, ctx.stage.trussH - ctx.stage.trussSection / 2, ctx.stage.trussZ], orient: 'hung', face: toAudience(ctx) })),
+        .map((u) => ({ pos: linePoint(ctx.stage, u, 'bottom'), orient: 'hung', face: toAudience(ctx) })),
     // Standing ON the truss's top chord (upright, clamped through the top chords), at `dx_m`
     // mirrored or spread along the line — how a moving-head beam is rigged to point at the
     // sky: hung under the truss its 270° tilt cannot reach straight up. View C's "truss top".
     'truss-top': (n, ctx, group) => (needsTruss(ctx, 'truss-top'), group?.dx_m ? mirroredDx(group.dx_m).slice(0, n) : spread(n, -ctx.stage.trussW / 2 + 0.75, ctx.stage.trussW / 2 - 0.75))
-        .map((x) => ({ pos: [ctx.stage.axis + x, ctx.stage.trussH + ctx.stage.trussSection / 2, ctx.stage.trussZ], orient: 'floor', face: toAudience(ctx) })),
+        .map((u) => ({ pos: linePoint(ctx.stage, u, 'top'), orient: 'floor', face: toAudience(ctx) })),
     // Standing on the top plate of each tower — or, on a crane-hung line (no towers), standing
     // on its top chord 0.4 m in from each end.
     'truss-towers': (n, ctx) => (needsTruss(ctx, 'truss-towers'), ctx.stage.crane
@@ -737,6 +761,85 @@ export const groupAxis = (group, stage) => {
     return which === 'nave' ? 0 : stage.axis ?? 0
 }
 
+// ---------------------------------------------------------------------------
+// THE CUT (2026-09-29): a sloped line on 3 picks, each a two-leg BRIDLE from the two
+// bridge girders, a chain hoist under its apex at the shortest drop the hoist allows, a
+// secondary safety steel to a girder, and a tie-off from each end of the line to the
+// nearest nave column, tensioned against each other. Numbers in the rig file (derived by
+// versions.mjs from scripts/place/rigs/moxir-crane-cut-2026-09-29.json). Drawn so the hang
+// can be read and checked — NOT an engineered design: rigging sign-off owed.
+// ---------------------------------------------------------------------------
+/** Where the bridle of each pick is: its two leg tops, its apex, the top chord under it. Pure. */
+export const pickGeometry = (rig, stage) => {
+    const r = rig.truss.rigging
+    const b = r.bridle
+    const crane = stage.crane
+    const legTopY = crane.girder_bottom_m - b.clamp_drop_m
+    const half = b.leg_spread_m / 2
+    return r.picks_u_m.map((u, i) => {
+        const chord = linePoint(stage, u, 'top')
+        // the pick sits on the top chord's centre line, straight under the apex
+        const apexY = chord[1] + r.drop_m
+        const legV = legTopY - apexY
+        return {
+            i, u, x: chord[0], chordTop: chord[1], apexY, legTopY,
+            legs: [-1, 1].map((sg) => [chord[0], legTopY, crane.z_m + sg * half]),
+            included_deg: 2 * Math.atan2(half, legV) / DEG,
+            // a V bridle stops the apex moving across the bridge (z); along the line (x) the
+            // whole V swings from its leg tops — the tie-offs hold that
+            pendulum_x_m: legTopY - chord[1],
+            pendulum_z_m: r.drop_m
+        }
+    })
+}
+
+/** A thin steel or strap between two points, as a box turned onto the segment. */
+const segment = ({ id, name, from, to, w, colour, metalness = 0.9, roughness = 0.35 }) => {
+    const d = [to[0] - from[0], to[1] - from[1], to[2] - from[2]]
+    const len = Math.hypot(...d)
+    const e = box({ id, name, pos: from, size: [w, len, w], colour, metalness, roughness })
+    // base-anchored at `from`, its +Y turned onto d. three.js Euler 'XYZ' [a, 0, c] turns +Y
+    // to (−sin c, cos c cos a, cos c sin a): c = asin(−dx), a = atan2(dz, dy).
+    const u = d.map((v) => v / (len || 1))
+    e.components.transform.rotation = [round(Math.atan2(u[2], u[1]), 9), 0, round(Math.asin(Math.max(-1, Math.min(1, -u[0]))), 9)]
+    return e
+}
+
+export const slopedLineRigging = (rig, stage, hall) => {
+    const r = rig.truss.rigging
+    const t = stage.trussSection
+    const out = []
+    const mid = linePoint(stage, stage.trussX, 'bottom')
+    const line = box({
+        id: `${RIG_PREFIX}truss-header`,
+        name: `Truss line ${stage.trussW} m (${(rig.truss.pieces_m || []).join(' + ')} m, 290 mm box), sloped ${rig.truss.slope_deg}° up to house right, hung from the crane bridge on ${r.picks_u_m.length} bridled picks — rigging sign-off owed`,
+        pos: mid, size: [stage.trussW, t, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
+    })
+    line.components.transform.rotation = [0, 0, round(stage.trussSlope, 9)]
+    out.push(line)
+    for (const p of pickGeometry(rig, stage)) {
+        const tag = `pick ${p.i + 1}/${r.picks_u_m.length} (u ${p.u} m)`
+        p.legs.forEach((top, k) => out.push(segment({
+            id: `${RIG_PREFIX}hoist-${p.i + 1}-bridle-${k ? 'b' : 'a'}`, name: `Bridle leg, ${tag} (rigging: a beam clamp on the ${k ? 'back' : 'audience-side'} girder's bottom flange, steel to the apex — ${round(p.included_deg, 0)}° between the legs)`,
+            from: [p.x, p.apexY, stage.trussZ], to: top, w: 0.014, colour: '#8a8d92'
+        })))
+        out.push(box({ id: `${RIG_PREFIX}hoist-${p.i + 1}`, name: `Chain hoist ${r.hoist}, ${tag} (rigging: under the bridle apex, at its shortest drop)`, pos: [p.x, p.apexY - 0.06 - 0.29, stage.trussZ], size: [0.25, 0.29, 0.2], colour: '#1b1c1f', metalness: 0.4, roughness: 0.6 }))
+        out.push(box({ id: `${RIG_PREFIX}hoist-${p.i + 1}-chain`, name: `Hoist chain and round sling, ${tag} (rigging)`, pos: [p.x, p.chordTop, stage.trussZ], size: [0.03, round(p.apexY - 0.35 - p.chordTop, 3), 0.03], colour: '#4a4c50', metalness: 0.9, roughness: 0.35 }))
+        out.push(segment({
+            id: `${RIG_PREFIX}hoist-${p.i + 1}-steel`, name: `Safety steel, ${tag} (rigging: secondary, top chord to its own clamp on the back girder — independent of the bridle)`,
+            from: [p.x + 0.12, p.chordTop, stage.trussZ], to: [p.x + 0.12, p.legTopY, stage.crane.z_m - r.bridle.leg_spread_m / 2], w: 0.01, colour: '#b0b3b8'
+        }))
+    }
+    for (const tie of r.tieoffs || []) {
+        const end = linePoint(stage, tie.u_m, 'axis')
+        out.push(segment({
+            id: `${RIG_PREFIX}tieoff-${tie.id}`, name: `Tie-off ${tie.id}: ${tie.what} (rigging: tensioned against the other end — stops sway and sliding along the slope)`,
+            from: end, to: tie.to_m, w: 0.025, colour: '#d8a21a', metalness: 0.1, roughness: 0.8
+        }))
+    }
+    return out
+}
+
 export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry = {}, manifest = null } = {}) => {
     const stage = stageFrame(rig, hall)
     const ctx = { rig, hall, stage }
@@ -813,12 +916,13 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
         const lineX = ax + stage.trussX
         const trim = stage.trussH - t / 2
         const gb = stage.crane.girder_bottom_m
-        entities.push(box({
+        if (r.picks_u_m) entities.push(...slopedLineRigging(rig, stage, hall))
+        else entities.push(box({
             id: `${RIG_PREFIX}truss-header`, name: `Truss line ${stage.trussW} m (${(rig.truss.pieces_m || []).join(' + ')} m, 290 mm box) hung from the crane bridge, bottom chord ${round(trim, 2)} m — rigging sign-off owed`,
             pos: [lineX, trim, stage.trussZ], size: [stage.trussW, t, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
         }))
         const hoistDx = r.hoist_dx_m ?? [stage.trussW / 2 - 1.25]
-        const picks = mirroredDx(hoistDx)
+        const picks = r.picks_u_m ? [] : mirroredDx(hoistDx)
         picks.forEach((dx, i) => {
             const x = ax + dx
             const tag = `pick ${i + 1}/${picks.length}`

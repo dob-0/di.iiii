@@ -68,7 +68,7 @@ module.exports = [
           allowEdits: { type: "boolean", description: "whether the space accepts writes" },
           isPublic: { type: "boolean", description: "let anyone with the link read this space" },
           kind: { type: "string", enum: ["normal", "global", "sandbox"], description: "admin-only" },
-          publishedProjectId: { type: ["string", "null"], description: "project this space's front door opens into; null clears it" },
+          publishedProjectId: { type: ["string", "null"], description: "project this space's front door opens into; null clears it; a private project is refused (409 published_project_private)" },
           previewImageAssetId: { type: ["string", "null"], description: "asset id used as the space card's preview image; null clears it" },
           openInscriptions: { type: "boolean", description: "accept anonymous visitor inscriptions on a public space" },
           slug: { type: ["string", "null"], description: "public handle, independent of the id; null clears it back to id-only addressing" },
@@ -328,11 +328,12 @@ module.exports = [
         properties: {
           title: { type: "string", description: "project title; also the default source for its id" },
           slug: { type: "string", description: "explicit project id/slug" },
-          source: { type: "string", description: "optional starting-content marker" }
+          source: { type: "string", description: "optional starting-content marker" },
+          visibility: { type: "string", enum: ["public", "private"], description: "create it private (only the space's members see it); default public" }
         }
       }
     },
-    note: "project ids are unique across the whole server, not just this space — a collision names a project in a space you may not be able to see."
+    note: "project ids are unique across the whole server, not just this space — a collision names a project in a space you may not be able to see. A copy of private work should be created with visibility 'private', never made private after the fact."
   },
   {
     route: "PUT /api/spaces/:spaceId/projects/order",

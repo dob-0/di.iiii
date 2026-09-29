@@ -127,6 +127,14 @@
         "LA-CN": {
             "url": "https://www.uplight.com.cn/pd48855201.html",
             "what": "UPlight UP-LA40WF '40瓦防水全彩激光灯' on the maker's Chinese site — model field UP-LA40WF; specs text, no DMX chart; checked 2026-09-29"
+        },
+        "E": {
+            "url": "https://up-light.en.made-in-china.com/product/bwWGPaldZMfD/China-High-Performance-200W-COB-PAR-Light-for-TV-Studio-Events.html",
+            "what": "UPlight UP-COB200, the maker's own store listing ('Model NO.: UP-COB200'): 200 W COB, warm + cool white, 60°/45° optional, 295 × 295 × 350 mm, 5.1 kg, IP20, 4 ch, strobe 1–25 /s; read 2026-09-29"
+        },
+        "FOS-COB200": {
+            "url": "https://www.fos-lighting.eu/uploads/products_1_2_1_61.pdf",
+            "what": "FOS Technologies PAR COB 200W LED TW user manual — an EQUIVALENT (tunable-white 200 W COB PAR, 60°, 290 × 260 × 305 mm, 4.9 kg); no photometric figure published either"
         }
     },
     "kinds": {
@@ -976,6 +984,77 @@
                     ],
                     "nozzle_d_mm": 70
                 }
+            }
+        },
+        "cob200": {
+            "code": "UP-COB200",
+            "identified": "EXACT (photometry and DMX order not published)",
+            "product": "UPlight UP-COB200, 200 W COB PAR, warm + cool white, indoor",
+            "specs": {
+                "size_mm": {
+                    "value": [
+                        295,
+                        295,
+                        350
+                    ],
+                    "src": "E",
+                    "basis": "EXACT"
+                },
+                "weight_kg": {
+                    "value": 5.1,
+                    "src": "E",
+                    "basis": "EXACT"
+                },
+                "source": {
+                    "value": "one 200 W COB, warm white + cool white (3200–5600 K), CRI ≥ 90",
+                    "src": "E",
+                    "basis": "EXACT"
+                },
+                "beam_deg": {
+                    "value": 45,
+                    "src": "E",
+                    "basis": "EXACT",
+                    "note": "60° or 45° lens, optional — 45° planned (the narrower, for a blade that reads in haze)"
+                },
+                "ip": {
+                    "value": "IP20",
+                    "src": "E",
+                    "basis": "EXACT",
+                    "note": "indoor only"
+                },
+                "power_w": {
+                    "value": 180,
+                    "src": "E",
+                    "basis": "EXACT",
+                    "note": "rated 180 W (200 W light source)"
+                },
+                "dmx_channels": {
+                    "value": 4,
+                    "src": "E",
+                    "basis": "EXACT",
+                    "note": "channel ORDER not published — OWED"
+                }
+            },
+            "look": "A round cast-aluminium PAR can like the UP-PL5403's but deeper, one large COB emitter behind a flat lens, on a U-bracket that folds into its floor stand.",
+            "model": {
+                "archetype": "par",
+                "params": {
+                    "can_d_mm": 270,
+                    "can_l_mm": 250,
+                    "tilt_axis_mm": 195,
+                    "width_mm": 295,
+                    "foot_d_mm": 200,
+                    "window_mm": 190,
+                    "fins": 12
+                },
+                "note": "drawn with the PAR archetype of build_fixtures.py to the maker's outer size; the COB's single emitter drawn as the lens disc"
+            },
+            "photometry": {
+                "flux_lm": 9000,
+                "beam_deg": 45,
+                "src": null,
+                "basis": "ASSUMED",
+                "note": "no maker (UPlight, FOS) publishes a lux or lumen figure for this class. ASSUMED 9,000 lm out of the fixture: a 200 W white COB at ~100–130 lm/W (package) through a PAR reflector at ~40–45 % optical efficiency — an estimate, to be replaced by a measurement or the rental unit's report (OWED). By I = F / Ω it gives ≈ 18,800 cd on axis at 45° (the PL5403's equivalent-sourced figure: 11,000 cd at 25°)."
             }
         }
     },

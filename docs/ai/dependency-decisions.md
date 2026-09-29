@@ -132,6 +132,10 @@ Verdict: **accept.** Do not add `--legacy-peer-deps`, and do not add an
 **Re-check when:** `eslint-plugin-react` and `eslint-plugin-jsx-a11y` both
 declare an eslint 10 peer. Then upgrade all three together in one commit.
 
+Re-checked 2026-09-29 (dependabot #559, eslint 10.11.0, closed): still blocked —
+`eslint-plugin-react` 7.37.5 peers `^9.7`, `eslint-plugin-jsx-a11y` 6.10.2 peers `^9`
+(its last release is 2024-10). CI's `npm ci` fails ERESOLVE on the bump.
+
 ---
 
 ## MUI 7 → 9 (#87/#85) — a styling-engine migration, not a bump

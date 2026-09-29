@@ -7,6 +7,11 @@ FROM node:24-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a5
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+# npm ci runs package.json "prepare", which names this script; it must be here
+# before the rest of the tree is (2026-09-29: three dev deploys failed on
+# "Cannot find module /app/scripts/install-git-hooks.mjs"). Outside a git
+# checkout the script does nothing and exits 0.
+COPY scripts/install-git-hooks.mjs scripts/install-git-hooks.mjs
 RUN npm ci
 
 COPY . .

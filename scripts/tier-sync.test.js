@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { TIERS, main, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, documentSignature, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite, applySkip } from './tier-sync.mjs'
+import { TIERS, main, baselineFromAgreement, baselineShape, planRebuildBaseline, resolveTier, documentSignature, readBackShape, isProductionTarget, localBase, planAudit, planChanged, planSync, shouldRefuseOverwrite, applySkip } from './tier-sync.mjs'
 
 describe('localBase', () => {
     // The documented convention is LOCAL_API_URL with no /serverXR suffix
@@ -109,6 +109,15 @@ describe('documentSignature', () => {
         const a = { entities: [], publishState: { lastExportAt: 1 }, showState: { clockEpoch: 500 } }
         const b = { entities: [], publishState: { lastExportAt: 99999 }, showState: { clockEpoch: 0 } }
         expect(documentSignature(a).hash).toBe(documentSignature(b).hash)
+    })
+
+    it('ignores the show clock each tier starts for itself, but not the cue list', () => {
+        const cues = [{ id: 'c1', look: 'red-room', holdMs: 16000 }]
+        const a = { entities: [], mappingState: { cues, loop: true, showEpoch: 1790682911626 } }
+        const b = { entities: [], mappingState: { cues, loop: true } }
+        expect(documentSignature(a).hash).toBe(documentSignature(b).hash)
+        const edited = { entities: [], mappingState: { cues: [{ ...cues[0], holdMs: 12000 }], loop: true } }
+        expect(documentSignature(edited).hash).not.toBe(documentSignature(b).hash)
     })
 
     it('does not care what order a server serialized its keys in', () => {
@@ -487,5 +496,79 @@ describe('applySkip', () => {
 
     it('changes nothing without rules', () => {
         expect(applySkip(plan, [])).toBe(plan)
+    })
+})
+
+// docs/architecture/SPEC_project_visibility.md — a private project is created
+// private at the destination, and nothing is written into it unless the
+// destination says so back.
+describe('tier-sync carries a private project as private', () => {
+    const PID = 'venue-sources'
+    const DOC = { projectMeta: { id: PID, title: 'Venue sources' }, entities: [] }
+    const fakeTiers = ({ destinationKnowsVisibility }) => {
+        const writes = []
+        vi.stubGlobal('fetch', vi.fn(async (url, options = {}) => {
+            const u = String(url)
+            if (options.method && options.method !== 'GET') writes.push({ method: options.method, url: u, body: options.body })
+            const onDev = u.includes('dev.diiii.xyz')
+            const json = (body, status = 200) => ({ ok: status < 400, status, json: async () => body })
+            if (options.method === 'POST' && /\/api\/spaces\/show\/projects$/.test(u)) {
+                const asked = JSON.parse(options.body)
+                const project = { id: PID, spaceId: 'show', title: asked.title, ...(destinationKnowsVisibility ? { visibility: asked.visibility || 'public' } : {}) }
+                return json({ project }, 201)
+            }
+            if (options.method === 'PUT') return json({ ok: true })
+            if (/\/api\/spaces$/.test(u)) return json({ spaces: onDev ? [] : [{ id: 'show' }] })
+            if (/\/api\/spaces\/show\/projects$/.test(u)) return json({ projects: onDev ? [] : [{ id: PID, visibility: 'private' }] })
+            if (u.includes(`/api/projects/${PID}/document`)) {
+                return onDev ? json({ error: 'Project not found.' }, 404) : json({ document: DOC, version: 1, project: { id: PID, spaceId: 'show', visibility: 'private' } })
+            }
+            return json({}, 404)
+        }))
+        return writes
+    }
+    const run = async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tier-sync-vis-'))
+        process.env.DATA_ROOT = dir
+        process.argv = ['node', 'tier-sync.mjs', '--from', 'local', '--to', 'dev', '--no-assets']
+        vi.spyOn(console, 'log').mockImplementation(() => {})
+        process.exitCode = 0
+        await main()
+        const code = process.exitCode
+        process.exitCode = 0
+        fs.rmSync(dir, { recursive: true, force: true })
+        return code
+    }
+    afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
+
+    it('creates it private, then writes the document', async () => {
+        const writes = fakeTiers({ destinationKnowsVisibility: true })
+        expect(await run()).toBe(0)
+        const create = writes.find((w) => w.method === 'POST' && w.url.endsWith('/api/spaces/show/projects'))
+        expect(JSON.parse(create.body)).toMatchObject({ slug: PID, visibility: 'private' })
+        expect(writes.some((w) => w.method === 'PUT' && w.url.endsWith(`/api/projects/${PID}/document`))).toBe(true)
+    })
+
+    it('writes nothing into it when the destination is older than the field', async () => {
+        const writes = fakeTiers({ destinationKnowsVisibility: false })
+        expect(await run()).toBe(1)
+        expect(writes.some((w) => w.method === 'PUT')).toBe(false)
+    })
+})
+
+describe('readBackShape', () => {
+    const sent = { entities: [], mappingState: { surfaces: [{ id: 's1', effect: {} }] } }
+    const kept = { entities: [], mappingState: { surfaces: [{ id: 's1', effect: { prompt: '', strength: 0.5 } }] } }
+    const reply = (ok, status, body) => async () => ({ ok, status, json: async () => body })
+
+    it('records what the destination KEPT, not what was sent (a newer server fills defaults in)', async () => {
+        const shape = await readBackShape({ call: reply(true, 200, { document: kept }), tier: {}, projectId: 'p', sent })
+        expect(shape).toBe(documentSignature(kept).shape)
+        expect(shape).not.toBe(documentSignature(sent).shape)
+    })
+
+    it('falls back to the shape sent when the read-back fails', async () => {
+        const shape = await readBackShape({ call: reply(false, 502, null), tier: {}, projectId: 'p', sent })
+        expect(shape).toBe(documentSignature(sent).shape)
     })
 })

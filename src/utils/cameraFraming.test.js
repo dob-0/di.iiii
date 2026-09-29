@@ -4,6 +4,7 @@ import {
     computeFramingCamera,
     computeFitDistance,
     fitCameraToAspect,
+    FLOOR_CLEARANCE,
     getAspectFitScale,
     getLimitingHalfFov,
     getViewportAspect,
@@ -200,5 +201,65 @@ describe('fitCameraToAspect', () => {
         const degenerate = { ...authored, position: [1, 2, 3], target: [1, 2, 3] }
         expect(fitCameraToAspect(degenerate, PORTRAIT_ASPECT)).toBe(degenerate)
         expect(fitCameraToAspect(null, PORTRAIT_ASPECT)).toBe(null)
+    })
+})
+
+describe('fitCameraToAspect inside a room', () => {
+    // MOXIR's composed entry, as published on dev (2026-09-29): standing at eye
+    // height near the back of the hall, looking UP at the rig. The plain dolly
+    // put a 390x844 phone at y -1.91 -- under the floor -- and the room drew
+    // black. The hall's declared floor plan is its worldState.walkableAreas.
+    const moxir = {
+        projection: 'perspective',
+        position: [0, 1.6, 20.2],
+        target: [0, 5.2, 3.2],
+        fov: 55,
+        zoom: 1,
+        near: 0.05,
+        far: 400,
+        locked: false
+    }
+    const hall = [{ minX: -36, maxX: 60, minZ: -54.1, maxZ: 55.5 }]
+    // What a square viewport sees horizontally, as a half-angle.
+    const squareHalf = getLimitingHalfFov(moxir.fov, 1)
+    const coveredHalf = (view, aspect) => {
+        const distance = distanceOf(view)
+        const authored = distanceOf(moxir)
+        // Field needed at the authored distance, seen from where the camera is.
+        return Math.asin(Math.min(1, Math.sin(getLimitingHalfFov(view.fov, aspect)) * distance / authored))
+    }
+
+    it('never takes a camera the author put above the floor below it', () => {
+        const fitted = fitCameraToAspect(moxir, PORTRAIT_ASPECT, { walkableAreas: hall })
+        expect(fitted.position[1]).toBeGreaterThanOrEqual(FLOOR_CLEARANCE - 1e-9)
+        // Same axis: the composition is not re-aimed.
+        const axis = (view) => new THREE.Vector3(...view.position).sub(new THREE.Vector3(...view.target)).normalize()
+        expect(axis(fitted).angleTo(axis(moxir))).toBeCloseTo(0, 6)
+    })
+
+    it('makes up what the arm could not reach with field of view', () => {
+        const fitted = fitCameraToAspect(moxir, PORTRAIT_ASPECT, { walkableAreas: hall })
+        expect(fitted.fov).toBeGreaterThan(moxir.fov)
+        expect(coveredHalf(fitted, PORTRAIT_ASPECT)).toBeGreaterThanOrEqual(squareHalf - 1e-6)
+    })
+
+    it('stops at the declared floor plan', () => {
+        // A wall 2 m behind the camera.
+        const tight = [{ minX: -10, maxX: 10, minZ: -10, maxZ: 22.2 }]
+        const fitted = fitCameraToAspect({ ...moxir, position: [0, 6, 20.2], target: [0, 1, 3.2] }, PORTRAIT_ASPECT, { walkableAreas: tight })
+        expect(fitted.position[2]).toBeLessThanOrEqual(22.2)
+        expect(fitted.fov).toBeGreaterThan(moxir.fov)
+    })
+
+    it('still hands a landscape viewport the authored shot untouched', () => {
+        expect(fitCameraToAspect(moxir, LANDSCAPE_ASPECT, { walkableAreas: hall })).toBe(moxir)
+    })
+
+    it('keeps the plain dolly for a shot with room behind it', () => {
+        // The front room case: the camera is above its target, so the arm rises.
+        const open = { ...moxir, position: [0, 3, 14.5], target: [0, 1.2, -14], fov: 50 }
+        const fitted = fitCameraToAspect(open, PORTRAIT_ASPECT)
+        expect(distanceOf(fitted)).toBeCloseTo(distanceOf(open) * getAspectFitScale(50, PORTRAIT_ASPECT), 6)
+        expect(fitted.fov).toBe(50)
     })
 })
