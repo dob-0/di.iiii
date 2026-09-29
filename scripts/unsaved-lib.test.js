@@ -5,7 +5,7 @@ import path from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { findRepos, formatRepo, isClean, oldestChange, olderThan, parseUnpushedLog, parseWorktrees, scanRepo } from './unsaved-lib.mjs'
-import { parseArgs, summaryLine } from './unsaved.mjs'
+import { logPreamble, parseArgs, summaryLine } from './unsaved.mjs'
 
 // Real git in a temp dir, no mocks: the whole point of this lib is to read git
 // exactly as a person's machine holds it, so the test builds that machine.
@@ -220,5 +220,13 @@ describe('the daily watch: only what has sat here a while', () => {
   it('says in one line what a notification can hold', () => {
     expect(summaryLine([{}, {}], [])).toBe('2 repos hold work that exists only on this machine')
     expect(summaryLine([{}], [{}])).toBe('1 repo holds work that exists only on this machine; 1 repo could not be checked')
+  })
+})
+
+describe('the watch log on Windows', () => {
+  it('starts with a UTF-8 BOM there, so Windows PowerShell 5.1 reads "—" right', () => {
+    expect(logPreamble('win32')).toBe('\uFEFF')
+    expect(logPreamble('linux')).toBe('')
+    expect(logPreamble('darwin')).toBe('')
   })
 })

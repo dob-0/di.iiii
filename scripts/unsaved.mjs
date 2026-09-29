@@ -47,6 +47,8 @@ export const summaryLine = (onlyHere, errors) => {
   return parts.join('; ')
 }
 
+export const logPreamble = (platform) => (platform === 'win32' ? '\uFEFF' : '')
+
 const notify = (title, body) => {
   // A notification that cannot be shown must never hide the finding: the log and
   // the exit code still carry it, so a failure here is swallowed on purpose.
@@ -100,6 +102,10 @@ const main = () => {
   if (args.log) {
     try {
       fs.mkdirSync(path.dirname(args.log), { recursive: true })
+      // Windows PowerShell 5.1's Get-Content reads a BOM-less file as the ANSI code page and
+      // shows every "—" as "â€”" (seen on ponyo, 2026-09-29). A UTF-8 BOM on the first write
+      // makes it read right there and changes nothing for anything else.
+      if (!fs.existsSync(args.log)) fs.writeFileSync(args.log, logPreamble(process.platform))
       fs.appendFileSync(args.log, `\n=== ${new Date().toISOString()} — ${results.length} repos under ${args.dirs.join(', ') || ROOT_DIR}\n${lines.join('\n')}\n`)
     } catch (error) {
       console.error(`  could not write the log ${args.log}: ${error.message}`)
