@@ -106,6 +106,30 @@ const rankPairs = (cols) => {
     return cols.map((c) => ({ ...c, rank: n[c.side]++ }))
 }
 
+/**
+ * A run as a line in the room: `at(s, face)` is the point `s` metres along it from its first
+ * end, on the underside of the bottom chords (face −1), the top of the top chords (+1) or the
+ * centre line (0) — offset perpendicular to the run in its vertical plane, as a clamp sits.
+ * A flat run: the plan's line at the chord height ± half a section, as it always was; a
+ * sloped run (the cut, 2026-09-29): along its true 3D length.
+ */
+export const runFrame = (run) => {
+    const a = run.from3 || [run.from[0], run.height, run.from[1]]
+    const b = run.to3 || [run.to[0], run.height, run.to[1]]
+    const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]
+    const length = run.from3 ? run.length3 : run.length
+    const l = Math.hypot(...d) || 1
+    const u = d.map((v) => v / l)
+    // up, less its part along the run: the chord's own "up"
+    const n0 = [-u[1] * u[0], 1 - u[1] * u[1], -u[1] * u[2]]
+    const nl = Math.hypot(...n0) || 1
+    const n = n0.map((v) => v / nl)
+    return {
+        length,
+        at: (s, face = 0) => a.map((v, k) => v + u[k] * s + n[k] * face * (TRUSS_SECTION_M / 2))
+    }
+}
+
 const slot = (id, pos, { hung = false, side = 0, rank = 0, column = null } = {}) => ({ id, pos: pos.map(r3), hung, side, rank, ...(column ? { column } : {}) })
 
 /**
@@ -124,18 +148,15 @@ export const positionsOf = (entities = [], lamps = null) => {
 
     // Truss runs: a clamp at each of the pieces' slot points, hung.
     for (const [i, run] of trussRuns(pieces).entries()) {
-        const d = [run.to[0] - run.from[0], run.to[1] - run.from[1]]
-        const l = Math.hypot(d[0], d[1]) || 1
-        const u = [d[0] / l, d[1] / l]
-        const y = run.height - TRUSS_SECTION_M / 2
-        const at = range(SLOT_PITCH_M / 2, run.length - SLOT_PITCH_M / 2, SLOT_PITCH_M)
+        const along = runFrame(run)
+        const at = range(SLOT_PITCH_M / 2, along.length - SLOT_PITCH_M / 2, SLOT_PITCH_M)
         const name = run.name && run.name !== 'truss' ? run.name : `truss ${i + 1}`
         out.push({
             id: `truss:${run.ids[0]}`, name, kind: 'line', order: 'along',
-            note: `${run.length} m at ${run.height} m · a clamp every ${SLOT_PITCH_M} m`,
+            note: run.slopeDeg ? `${run.length3} m sloped ${run.slopeDeg}° (${run.from3[1]}–${run.to3[1]} m at the chord centre) · a clamp every ${SLOT_PITCH_M} m` : `${run.length} m at ${run.height} m · a clamp every ${SLOT_PITCH_M} m`,
             slots: at.map((s, k) => {
-                const x = run.from[0] + u[0] * s
-                return slot(`${k + 1}`, [x, y, run.from[1] + u[1] * s], { hung: true, side: sideOf(x, axis), rank: k })
+                const p = along.at(s, -1)
+                return slot(`${k + 1}`, p, { hung: true, side: sideOf(p[0], axis), rank: k })
             })
         })
     }
@@ -144,14 +165,11 @@ export const positionsOf = (entities = [], lamps = null) => {
     // under it, its tilt cannot reach straight up). Listed only for a run someone stands
     // lamps on, so a truss rig that never does keeps its rows as they were.
     for (const [i, run] of trussRuns(pieces).entries()) {
-        const d = [run.to[0] - run.from[0], run.to[1] - run.from[1]]
-        const l = Math.hypot(d[0], d[1]) || 1
-        const u = [d[0] / l, d[1] / l]
-        const y = run.height + TRUSS_SECTION_M / 2
-        const at = range(SLOT_PITCH_M / 2, run.length - SLOT_PITCH_M / 2, SLOT_PITCH_M)
+        const along = runFrame(run)
+        const at = range(SLOT_PITCH_M / 2, along.length - SLOT_PITCH_M / 2, SLOT_PITCH_M)
         const slots = at.map((s, k) => {
-            const x = run.from[0] + u[0] * s
-            return slot(`${k + 1}`, [x, y, run.from[1] + u[1] * s], { side: sideOf(x, axis), rank: k })
+            const p = along.at(s, 1)
+            return slot(`${k + 1}`, p, { side: sideOf(p[0], axis), rank: k })
         })
         const riders = (lamps || []).filter((m) => slots.some((q) => Math.hypot(m.mount[0] - q.pos[0], m.mount[1] - q.pos[1], m.mount[2] - q.pos[2]) <= 0.05))
         if (!riders.length) continue
