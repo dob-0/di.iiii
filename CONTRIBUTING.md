@@ -31,8 +31,9 @@ enforce them — so they hold for all of them the same way.
 | Nothing lives only on one machine | `npm run start-check` (this checkout) and `npm run unsaved -- <folders>` (every repo under them) | a laptop's unpushed branches, uncommitted files, stashes |
 
 **The hooks switch on by themselves.** `npm install` runs `scripts/install-git-hooks.mjs`,
-which sets `git config core.hooksPath scripts/git-hooks` (skipped in CI and outside a
-git checkout; left alone if you already point hooks elsewhere). Undo with
+which copies `scripts/git-hooks/` into the repo's own git dir (`.git/di-hooks`) and points
+`core.hooksPath` there, so every worktree gets them, whatever branch it is on (skipped in
+CI and outside a git checkout; left alone if you already point hooks elsewhere). Undo with
 `git config --unset core.hooksPath`. Escapes exist for a deliberate exception, never
 as a habit: `DI_ALLOW_FLOW_COMMIT=1`, `DI_ALLOW_FLOW_PUSH=1`, `DI_SKIP_PUSH_GATE=1`.
 

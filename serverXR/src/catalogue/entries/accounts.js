@@ -60,8 +60,32 @@ module.exports = [
     agent: false
   },
   {
+    route: "GET /api/auth/github",
+    summary: "sign in with GitHub: this server's own registration if it has one, otherwise through the sign-in hub (docs/architecture/AUTH_HUB.md)",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "a browser redirect, not an API: it ends in a session cookie. Offered only when GET /api/auth/providers says github: true."
+  },
+  {
+    route: "GET /api/auth/google",
+    summary: "sign in with Google: this server's own registration if it has one, otherwise through the sign-in hub (docs/architecture/AUTH_HUB.md)",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "a browser redirect, not an API: it ends in a session cookie. Offered only when GET /api/auth/providers says google: true."
+  },
+  {
+    route: "GET /api/auth/hub/callback",
+    summary: "where the sign-in hub returns a person with a signed pass; the pass is checked (signature, this address, this browser, once) and becomes a session here",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "only the hub's own redirect lands here; a pass without the matching di_hub cookie in the same browser is refused."
+  },
+  {
     route: "GET /api/auth/providers",
-    summary: "which sign-in methods this server offers (github/google/telegram/password) and whether it can send mail",
+    summary: "which sign-in methods this server offers (github/google/telegram/password), whether it can send mail, and whether the sign-in hub answered (hub.reachable, hub.via)",
     reach: "read",
     role: "guest",
     agent: false

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { DEFAULT_TEST_PATTERN, TEST_PATTERNS } from './mapTestPattern.jsx'
 import { ndiSourceOptions, ndiSourceStatus, streamInputOptions, streamInputStatus } from './mapMachines.js'
 import { uploadProjectAsset } from '../project/services/projectsApi.js'
+import { MAPPING_EFFECT_PROMPT_MAX } from '../shared/projectSchema.js'
 
 const SOURCE_KINDS = [
     { id: 'test', label: 'Test pattern' },
@@ -444,12 +445,28 @@ function MapEffectFields({ effect, onChange }) {
                 <select value={kind} onChange={(event) => onChange({ kind: event.target.value })}>
                     <option value="none">None — the camera as it is</option>
                     <option value="motion">Motion glow — only what moves</option>
+                    <option value="ai">AI restyle — the room, as the prompt says</option>
                 </select>
             </label>
             {kind === 'motion' ? [
                 slider('threshold', 'Ignore below', 0, 0.5, 0.01),
                 slider('trail', 'Trail', 0, 0.99, 0.01),
                 slider('gain', 'Glow', 0.5, 20, 0.5)
+            ] : null}
+            {/* Runs on this machine's live-AI engine (scripts/liveai/); a
+                surface with no engine says so on the wall instead of going dark. */}
+            {kind === 'ai' ? [
+                <label key="prompt" className="map-field">
+                    <span>Prompt</span>
+                    <input
+                        type="text"
+                        maxLength={MAPPING_EFFECT_PROMPT_MAX}
+                        placeholder="e.g. oil painting, deep blue and gold"
+                        value={effect?.prompt || ''}
+                        onChange={(event) => onChange({ prompt: event.target.value })}
+                    />
+                </label>,
+                slider('strength', 'Strength', 0.05, 1, 0.05)
             ] : null}
         </>
     )
