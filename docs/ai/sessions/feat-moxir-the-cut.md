@@ -31,8 +31,16 @@ numbers and sources: `docs/architecture/RIG_BUILD.md` §15.8. Design file
 
 ## Seen
 
-See the "Seen" paragraph in RIG_BUILD §15.8 and the PR body for the frames and what the installed
-preview (0.4.16-rigbuilder.9) can and cannot draw yet.
+- The installed preview (0.4.16-rigbuilder.9), frames `~/Downloads/moxir-the-cut/cut-*.png`: the line reads as
+  a diagonal slash, but that build has neither the UP-COB200 type nor sloped-run slots, so the curtain sits at
+  its rest light in every cue and the X never shows.
+- This branch's client (vite :5188 proxied to the same install and desk), frames
+  `~/Downloads/moxir-the-cut/branch-code/`: one shaft, the blade, red room, white cathedral with the X and the
+  hit all play. **Defect seen, not yet fixed:** the 6 X PARs are drawn lit in *Red room* (red) and *One
+  shaft* (white), although the desk's looks give them dimmer 0 (checked in `/light/api/state`). The
+  visualiser report on the install also shows every PL5403 at one level per cue. Suspect: the room's
+  decode of `UP-PL5403 8ch-assumed` ignores the dimmer (compare known-fixes "colour-only mode could not be
+  put OUT"). Owed: find and fix it, with a guard.
 
 ## Owed
 
