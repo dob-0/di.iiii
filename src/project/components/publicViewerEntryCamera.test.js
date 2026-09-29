@@ -78,3 +78,22 @@ describe('resolveViewerCamera on a composed entry', () => {
         expect(view.position).not.toEqual(fixedCamera.position)
     })
 })
+
+describe('resolveViewerCamera in an enclosed room', () => {
+    // MOXIR on a 390x844 phone: the composed entry is at eye height looking up
+    // at the rig; before the arm was bounded it landed under the hall floor.
+    it('keeps a phone visitor above the floor and inside the declared plan', () => {
+        const doc = {
+            entities: [],
+            presentationState: {
+                entryView: 'fixed-camera',
+                fixedCamera: { projection: 'perspective', position: [0, 1.6, 20.2], target: [0, 5.2, 3.2], fov: 55, locked: false }
+            },
+            worldState: { walkableAreas: [{ minX: -36, maxX: 60, minZ: -54.1, maxZ: 55.5 }] }
+        }
+        const view = resolveViewerCamera(doc, PORTRAIT_ASPECT)
+        expect(view.position[1]).toBeGreaterThan(0)
+        expect(view.position[2]).toBeLessThanOrEqual(55.5)
+        expect(view.fov).toBeGreaterThan(55)
+    })
+})
