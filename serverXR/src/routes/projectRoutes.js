@@ -1105,6 +1105,10 @@ function registerProjectRoutes(router, {
         servePath = getSpaceBlobPaths(spacesDir, project.spaceId).blobPath(assetId)
         await fsp.access(servePath)
       }
+      // A regular file only: never follow a symlink out of the data root
+      // (security audit 2026-09-29, C1). ENOENT answers 404 below.
+      const served = await fsp.lstat(servePath)
+      if (!served.isFile()) throw Object.assign(new Error('not a regular file'), { code: 'ENOENT' })
       res.setHeader('Content-Type', meta?.mimeType || 'application/octet-stream')
       applyAssetSafetyHeaders(res, meta?.mimeType)
       // A private project's bytes are never stored by a shared cache.

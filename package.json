@@ -49,6 +49,7 @@
         "project:pull": "node scripts/project-pull.mjs",
         "local:mirror": "node scripts/local-mirror.mjs",
         "tier:sync": "node scripts/tier-sync.mjs",
+        "space:publish": "node scripts/space-publish.mjs",
         "local:mirror:check": "node scripts/local-mirror.mjs --dry-run",
         "space:push": "node scripts/space-push.mjs",
         "space:code-push": "node scripts/space-code-push.mjs",

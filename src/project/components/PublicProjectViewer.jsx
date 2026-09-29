@@ -34,6 +34,8 @@ import { isEmbedRequest } from '../../utils/previewMode.js'
 import { hasRig } from '../../rigbuild/hasRigLamps.js'
 import RigVersionSwitch from '../../rigbuild/RigVersionSwitch.jsx'
 import { rigVariantOf } from '../../rigbuild/rigVariant.js'
+import { rigChromeTops } from '../../rigbuild/rigVersionLayout.js'
+import { useViewportMode } from '../../hooks/useViewportMode.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -229,6 +231,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // an `audio` entity silent until asked — see src/utils/roomSound.js. The
     // editor never arms it, so an author still hears what they place.
     useVisitorSoundGate()
+    const { isPhoneCompact } = useViewportMode()
     const { soundOn, locked: soundLocked, toggleSound } = useRoomSound()
     const hasSound = useMemo(() => roomHasSound(document?.entities), [document?.entities])
     const publishState = document?.publishState || {}
@@ -253,6 +256,13 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // The one gate walk mode has: shared by the Walk / Fly button and the
     // arrive-walking effect below.
     const walkGateOpen = isSpatialEntry && (!hasGraph || hasWalkableEntities) && !isPreview && !isEmbed
+    // The version row and the show chip: on a portrait phone the row gets its own line
+    // under Walk / Fly / Sound instead of running under them (rigbuild/rigVersionLayout.js).
+    const { rowTop: rigRowTop, chipTop: rigChipTop } = rigChromeTops(topClear, {
+        rowShown: rigVersionsShown,
+        compact: isPhoneCompact,
+        rightControls: (navMode === 'orbit' && walkGateOpen) || (state.status === 'ready' && hasSound && !soundLocked && !isPreview)
+    })
     const hasFiles = Array.isArray(presentationState.codeFiles) && presentationState.codeFiles.length > 0
     const rawHtml = hasFiles ? bundleCodeFiles(presentationState.codeFiles) : (presentationState.codeHtml || '')
     // the shell's query belongs to the page it is showing — a published page
@@ -576,7 +586,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         document={document}
                         onEntities={setLookEntities}
                         showChip={!isPreview && !isEmbed}
-                        top={rigVersionsShown ? `calc(${topClear} + 56px)` : topClear}
+                        top={rigChipTop}
                     />
                 </Suspense>
             ) : null}
@@ -588,7 +598,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     spaceId={resolvedRouteSpaceId}
                     projectId={projectId}
                     entities={document?.entities || []}
-                    top={topClear}
+                    top={rigRowTop}
                 />
             ) : null}
 
