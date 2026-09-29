@@ -13,22 +13,20 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- spaces audit: every space across local, dev and live (read-only)
-- CONTRIBUTING says who decides what in a space, and walks the program line end to end
-- HTTP Range support for asset streaming
-- a file for an existing space is a proposal: summary, Apply/Reject in the inner bot, restore point first
-- A per-space trusted list, and the gate learns "apply now" — the steward's bypass itself waits for the owner's hand
-- one command for the content line: `npm run send -- <space>`
-- start-check can see the content line again: the server's own env file wins
-- the front door pulled 12.84 MB of its 13.04 MB over one 3.2 MB file
-- batch landing before the promotion: ten green PRs, one CI round
+- the rig-builder line on dev: MOXIR hall + crane rig in three versions; rig base (types, snap, auto-patch, patch sheet, MVR + GDTF)
+- the rig views: plot `/{space}/plot/…`, cards `/cards/…`, first person + crew `/build/…` `/crew/…`, equipment `/equipment/…`
+- hosted show playback: a rig's cue list plays by the wall clock with no desk (RIG_BUILD §16); the tools read only for visitors (§17)
+- the lighting desk takes a console's Art-Net and sACN, and loops a cue list itself
+- one flow for every hand (git hooks); History says who changed what; tier-sync `--skip`
+- small: network rooms link WCC by its public address; three debug-list fixes (#632 #633 #634)
+- 18 waiting notes folded; CURRENT.md cut to the cap so dev deploys again
 
 Full detail: `PROGRESS.md`.
 
 ## What works
 
 Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAuth-first)
-+ open-space/sandbox grants; Open Jam and vanity links; deploy by push; nightly VPS backups.
++ open-space/sandbox grants; Open Jam and vanity links; deploy by push (the host pulls green runs); nightly backups on the serving host, pulled to a second machine.
 
 ## Open
 
