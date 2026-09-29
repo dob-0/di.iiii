@@ -1236,6 +1236,47 @@ eye height, looking up to 5.2 m, fov 55 — the bridge and the line frame the DJ
 `load-version.mjs` copies the hall only (no build pieces from the source's plot: two hand-placed 3 m
 truss pieces in moxir-hall had come across into the versions and were removed from them; moxir-hall keeps
 its own).
+### 15.8 The cut — one straight 12 m diagonal under the crane (2026-09-29)
+
+Owner's pick: option 4 of `~/Downloads/moxir-crane-rig/ten-truss.html` — ONE straight 12 m truss in the crane
+bridge's vertical plane, LOW house left, HIGH house right over the press. Design file
+`scripts/place/rigs/moxir-crane-cut-2026-09-29.json` (every number with its source or marked ESTIMATE);
+`versions.mjs craneCut` derives the rest — nothing below is typed by hand into the rig.
+
+**Geometry (derived).** 4 × 3 m of 290 mm box truss (planned on the Prolyte H30V, 18.9 kg per 3 m), sloped
+15° (the brief's floor for a deliberate slash; the steepest the two ends allow together). Ends x −6.04 (bottom
+chord 3.44 m) and x +5.55 (6.55 m), rise 3.11 m, trim 5.06 m over the DJ's axis. The high end is capped by the
+bridle, not the bridge: the high pick's two-leg V from both girders at its 120° limit puts the apex at 7.57 m,
+and the hoist's shortest drop under it is 0.85 m (CHAINMASTER D8Plus 500 kg SK030/76U data sheet rev 1.1:
+plate 97 + body 192 + chain exit 28 + hook 227 mm, + shackle, sling and margin, ESTIMATES). Lowest point
+3.44 m = 0.94 m over raised hands (2.5 m); the line is in the bridge's plane (z 4.8), behind the crowd barrier.
+
+**Picks and loads (static, ESTIMATE).** Picks at u −5.75, −0.5, +5.25 along the line (spans 5.25 / 5.75 m,
+inside the H30V's 6 m table). Lamps 115.7 kg (7 UP-COB200 × 5.1, 10 UP-PL5403 × 8), truss 75.6 kg, +10 %
+extras → 203 kg; split as a continuous beam on three supports (flexibility method, `threePointReactions`):
+39 / 114 / 50 kg on the line; on the bridge with hoist (20 kg) and chain (12 m × 0.59 kg/m): 72 / 147 / 83 kg.
+Bridle included angles 26° / 42° / 119°; the heaviest leg 76 kg. A safety steel per pick to its own girder
+clamp; two opposed tie-offs to the nave columns hold the line along x. Pendulum periods 1.85 s (across) and
+up to 4.08 s (along): no periodic effect within ±25 % of them, heads on the line move in ≥ 4 s
+(`sway.mjs`, the show files). **Rigging sign-off owed (crane rated load, lock-out, hoists + safety steels);
+a 3-point line is statically indeterminate — load cells at trim.**
+
+**What hangs (Minimal = the cut, simple: no moving heads).** 7 UP-COB200 straight down along the line (the
+curtain; white only, 3200–5600 K — its photometry ASSUMED), 6 UP-PL5403 in two threes from the ends aimed
+to one point 1 m over the DJ's head (the X, in *White cathedral* and *The hit*), 4 red UP-PL5403 grazing the
+bridge. The press PARs sit on the backdrop's clamp points and rise red in *Red room* and *The blade*.
+`moxir-hall-minimal-cut-movers` is the same line with the 7 UP-B380F standing on it.
+
+**Code.** A crane-hung run may slope (`rig-lib` linePoint/bottomChordAt; pieces carry their roll; the
+client's `positions.js runFrame` makes a sloped run one run so its slots follow the 3D line — without it no
+look reaches a lamp on the cut; the MVR truss matrices carry the roll). `rehang.mjs` puts a version's new rig
+into a live project as ops, touching only the rig; `show-cues.mjs` writes a show's cue list into the
+document only; `cue-frames.mjs` shoots every running cue from named cameras on the GPU.
+
+**Seen.** Frames `~/Downloads/moxir-the-cut/` (3 cameras × 5 cues, RTX 3080 via PRIME, 60 fps): the line
+reads as a slash from the floor and from the DJ; see the session note for what the installed preview does
+and does not yet draw.
+
 ## 16. Hosted playback — the show with no desk (`src/rigbuild/showClock.js`)
 
 The light desk (`/light`) runs on a local install only, by design (LIGHTING_DESK.md). On a hosted
@@ -1462,7 +1503,9 @@ strobe; the Cues strip GO/back/stop/loop), Fader (every channel by its chart nam
 ### 18.7 Measured (2026-09-29, the owner's install 0.4.16-rigbuilder.9, MOXIR Minimal, RTX 3080 via PRIME, ANGLE/Vulkan, 1600×900 DPR 1)
 
 `scripts/rigbuild/vis-see.mjs`: a pan channel moved 60 times, alternating, on one UP-B380F; t1 = the first
-DRAWN frame with the lamp's decoded pan at the target (`visProbe.js`, in useFrame).
+DRAWN frame with the lamp's decoded pan at the target (`visProbe.js`, in useFrame). The head is picked by
+`vis-head.mjs` (a B380F first); a rig with no moving head (the cut, simple) runs `--trials 0 --cues` only,
+and asking it for trials, frames or Art-Net is refused with that reason.
 
 | path | n | p50 | p95 | max |
 |---|---|---|---|---|
