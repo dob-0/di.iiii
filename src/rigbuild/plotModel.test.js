@@ -8,7 +8,7 @@ describe('plotModel', () => {
     const entities = [
         lamp('a', { type: 'up-250bsw', mode: '24ch', index: 1, universe: 1, address: 1, hung: true }),
         lamp('b', { type: 'up-250bsw', mode: '24ch', index: 2, universe: 1, address: 10, hung: true }, 1),
-        lamp('c', { type: 'up-pl5403' }, 2)
+        lamp('c', { type: 'up-q108s' }, 2)
     ]
     const model = plotModel({ entities, library: TYPE_LIBRARY, projectId: 'p', deskFlags: [{ key: 'p:c', code: 'no-room', message: 'no universe had room' }] })
 
@@ -19,7 +19,7 @@ describe('plotModel', () => {
     })
 
     it('never calls an owed mode a conflict', () => {
-        const only = plotModel({ entities: [lamp('c', { type: 'up-pl5403' })], library: TYPE_LIBRARY })
+        const only = plotModel({ entities: [lamp('c', { type: 'up-q108s' })], library: TYPE_LIBRARY })
         expect(only.lamps[0].flags).toContain('mode-unknown')
         expect(only.conflicts).toEqual([])
     })
@@ -40,6 +40,6 @@ describe('plotModel', () => {
         const withList = [...entities, { id: 'rig-show', type: 'group', components: { rentalList: { items: [{ code: 'UP-250BSW', type: 'up-250bsw', ordered: 12 }] } } }]
         const m = plotModel({ entities: withList, library: TYPE_LIBRARY })
         expect(m.key.find((k) => k.type === 'up-250bsw').rental).toMatchObject({ placed: 2, ordered: 12, left: 10 })
-        expect(m.key.find((k) => k.type === 'up-pl5403').rental).toBeUndefined()
+        expect(m.key.find((k) => k.type === 'up-q108s').rental).toBeUndefined()
     })
 })

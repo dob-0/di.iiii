@@ -115,6 +115,16 @@ describe('encode is decode\'s inverse where it speaks', () => {
             expect(back.colour.toLowerCase()).toBe('#ff2422')
         }
     })
+    it('a lamp OUT on a colour-only mode (RGBW, no dimmer) is sent all zeros, not nothing', () => {
+        // 2026-09-29: MOXIR's PARs patched in 4ch RGBW. A look that names them at level 0
+        // (or not at all) must still put them out — with no dimmer channel and no colour,
+        // encode used to return {}, and the desk kept the last look's red.
+        const m = mode('UP-PL5403', '4ch-assumed')
+        expect(encodeDmx(m.channels, { level: 0 }, type('UP-PL5403'))).toEqual({ r: 0, g: 0, b: 0, w: 0 })
+        expect(encodeDmx(m.channels, { level: 0, colour: '#ff1408' }, type('UP-PL5403'))).toEqual({ r: 0, g: 0, b: 0, w: 0 })
+        const eight = mode('UP-PL5403', '8ch-assumed')
+        expect(encodeDmx(eight.channels, { level: 0 }, type('UP-PL5403')).dimmer).toBe(0)
+    })
     it('a strobe at 10 Hz encodes as a rate the decode reads back', () => {
         const m = mode('EXT-STROBE', '4ch-assumed')
         const cell = encodeDmx(m.channels, { level: 1, strobeHz: 10 }, type('EXT-STROBE'))
@@ -137,13 +147,25 @@ describe('the assumed profiles', () => {
             }
         }
     })
+    it('every one says how close its stand-in is — EQUIVALENT (same OEM body) or STILL ASSUMED — and why', () => {
+        for (const [code, entry] of Object.entries(ASSUMED_PROFILES)) {
+            expect(['EQUIVALENT', 'STILL ASSUMED'], code).toContain(entry.grade)
+            expect(entry.gradeWhy, code).toMatch(/2026-\d\d-\d\d/)
+            for (const m of assumedModesOf(code)) expect(m.channelsSource.grade).toBe(entry.grade)
+        }
+        expect(ASSUMED_PROFILES['UP-HK1915'].grade).toBe('EQUIVALENT')
+    })
     it('the real mode stays owed beside it (the rental chart replaces the assumed one cleanly)', () => {
         const b = type('UP-B380F')
         expect(b.modes.find((m) => m.name === '16ch').channels).toBeNull()
         expect(b.defaultMode).toBe('16ch')
         expect(b.assumedMode).toBe('16ch-assumed')
+        // UP-PL5403: the maker lists one mode, 8ch (uplight.com.cn, 2026-09-29) — its list is owed
         const par = type('UP-PL5403')
-        expect(par.modesOwed).toBe(true)
+        expect(par.modesOwed).toBe(false)
+        expect(par.defaultMode).toBe('8ch')
+        expect(par.modes.find((m) => m.name === '8ch').channels).toBeNull()
         expect(par.assumedMode).toBe('8ch-assumed')
+        expect(type('UP-Q108S').modesOwed).toBe(true)
     })
 })

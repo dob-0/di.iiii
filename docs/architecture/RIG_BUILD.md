@@ -1461,3 +1461,106 @@ where a frame is 50–70 ms and latency grows by about that. Frames: `~/Download
 The real channel lists from the rental house / UPlight (then `assume-modes.mjs --back`); gobo, prism,
 frost and haze drawn; a base yaw per lamp (pan 0's direction is the default face); a wheel's spin drawn;
 the stream on a real console and a real wifi second machine (ponyo, the owner's run); the iGPU numbers.
+
+## 19. The show patch — planned, not "next free" (MOXIR Minimal, 2026-09-29)
+
+Owner, 2026-09-29: the rig "maximum close" to reality — *real fixture channel lists and a real,
+final patch*, so the crew sets addresses from our sheet and a console on the night matches the
+simulation. Auto-patch (§4) finds the next free address, right while a rig is built and wrong
+for the night: MOXIR Minimal sat scattered over U1/U2/U3/U6 (U1.445…, U2.313…, U6.001…) because
+four versions shared one desk. Code: `src/rigbuild/patchPlan.js` (pure), `scripts/rigbuild/
+patch-plan.mjs`, `patch.mjs --exact | --unpatch`, `patch-sheet.mjs`; data: `scripts/place/rigs/
+moxir-2026-10-17-minimal.patch.json`.
+
+### 19.1 The plan is data; the document is the truth; the desk follows
+
+An LD's patch plan (`*.patch.json`) says per universe which blocks it holds — a block names a
+group of lamps (entity ids `<group>-NN`), optionally one side of the hall (`sides`: `x < 0` …),
+its first address, its first fixture number and the order a crew walks it — plus the mode per
+type and the node. `patch-plan.mjs` writes it into the document as ONE batch of ops (index,
+universe, address, mode, unit, position, hung; circuits re-proposed position by position,
+§2.5) — or refuses the whole plan (overlap, past 512, a lamp in no block, a fixture number
+twice), writing nothing. `patch.mjs --exact` then takes the room's fixtures off the desk and puts
+them back at exactly the document's addresses and numbers; a clash is refused and flagged, never
+moved to "next free", and the run exits 1. The desk is never hand-edited. `patch.mjs --unpatch`
+takes another version's fixtures off the desk (the desk runs one patch per space) and leaves its
+document alone. `patch-sheet.mjs` prints the crew's sheet from the document and exits 1 if the
+document has drifted from its plan or from the desk.
+
+### 19.2 MOXIR Minimal — the patch (the columns of a Lightwright hookup and instrument schedule, as §2.5)
+
+| port | universe | Art-Net (net.sub.uni) | run | blocks (fixture # · first address) | used / free |
+|---|---|---|---|---|---|
+| A | U1 | 0.0.0 | crane line, up the hoist, along the 8 m truss house left → right | 7 × UP-B380F 16ch #101–107 @001 · 2 strobes #111–112 @201 · 4 × UP-PL5403 8ch (bridge) #121–124 @301 | 152 / 360 |
+| B | U2 | 0.0.1 | house-left wall (NE, x < 0), DJ end outwards | 3 × UP-B380F #201–203 @001 · 4 × UP-PL5403 #211–214 @101 | 80 / 432 |
+| C | U3 | 0.0.2 | house-right wall (SW, x > 0) | 3 × UP-B380F #301–303 @001 · 4 × UP-PL5403 #311–314 @101 | 80 / 432 |
+| D | U4 | 0.0.3 | booth: press → pit → behind | 3 × UP-PL5403 #401–403 @001 · 4 strobes #411–414 @101 · 2 hazers #421–422 @201 | 44 / 468 |
+
+Rules, and why: one universe per data run, so no DMX cable crosses the dance floor and each run is
+one node port; blocks start on 001/101/201/301; the fixture number's hundreds are its universe; a
+16-bit head never straddles a universe; at least half of every universe spare, so a lamp added on
+the night takes the next address of its own block. House left/right are the audience's, facing
+the DJ (−z): house left = −x (NE wall). U1 = Art-Net port-address 0 = sACN universe 1.
+
+Modes: the maker's own where the maker lists one — **UP-B380F 16ch and UP-PL5403 8ch are both
+single-mode units** (uplight.com.cn, below); strobes 4ch and hazers 2ch are planning types (no
+supplier yet). Where the maker's channel ORDER is not published the desk runs the ASSUMED list of
+the same footprint (§18.1) and the crew sets the maker's mode on the unit; the sheet says both
+("set mode" / "desk list"). The PARs were first planned at 4ch (colour and level are all the looks
+use); the maker's page then showed the PAR has one mode, 8ch — the blocks had been spaced 8 apart
+for exactly that, so nothing moved.
+
+Outputs (`patch-sheet.mjs`, `export-mvr.mjs`): `patch-sheet.html|pdf` (node ports, patch by
+universe with set-mode / desk-list / set-on-unit, instrument schedule by position, power by
+circuit, the channel lists in use with their sources), `patch.csv`, `power.csv`, `node-plan.csv`,
+`moxir-minimal.mvr` (36 fixtures, 36 addressed, XSD-valid). The in-app sheet
+(`/{space}/patch/{project}`) reads the same document.
+
+The other three versions (As ordered, Middle, Full) were taken off the moxir desk; their
+documents keep their own planned addresses, which now overlap Minimal's on that desk (flagged
+if they are patched again). This also retires the old conflict of 4 As-ordered B380F on U1.001–064
+with the studio's own fixtures: MOXIR has had its own show file per space since show portability,
+and the night's desk holds Minimal alone.
+
+### 19.3 The real channel lists — searched again, 2026-09-29
+
+Three research lanes (the UPlight heads, the bee-eye/BSW, the effects), each source opened and
+looked at; downloads kept outside the repository (the makers' copyright — links only). New: the
+maker has a Chinese site, **uplight.com.cn** (广州灯王舞台设备有限公司, brand UPLIGHT, same contact as
+pro-uplight.com), 451 product pages, each with a model field — it gives each type's MODE LIST but,
+like everything else UPlight publishes, no channel order. Checked also: both sites' download pages
+(CE/RoHS certificates only), all UPlight made-in-china listings for the four heads and ~135
+description images, the Open Fixture Library and QLC+ trees (no UPlight), GDTF Share (login
+needed — not searched), Yerevan rental sites. The session's web-search budget ran out part-way;
+the OEM photo-match hunt for the B380F body is unfinished (owed).
+
+| type | grade | what is now known (source) |
+|---|---|---|
+| UP-B380F | STILL ASSUMED | one mode, 16ch; DMX + RDM; 8/16-bit pan/tilt 540°/270°; one fixed gobo wheel 13 + open (the English listings add a rotating wheel — the maker contradicts itself); strobe 1–12 Hz (CN) vs 1–25 (EN table) vs 0.5–14 (EN text); rated 450 W (CN) vs 500 W (EN); waterproof power and 3-pin DMX connectors. uplight.com.cn/pd45714311.html. The UPlus 380 IP BEAM stand-in is a different body |
+| UP-PL5403 | STILL ASSUMED (mode count CONFIRMED) | one mode, 8ch; rated 162 W (supply 200 W, PFC > 0.99); IP65; 290 × 230 × 260 mm 5.9 kg (EN page: 310 × 310 × 330, 8 kg); DMX / master-slave / sound. uplight.com.cn/pd48298011.html. The UPlus IP PAR-54X3 stand-in is a different body |
+| UP-HK1915 | EQUIVALENT | the Aolait AL1019WR manual (the current stand-in) is the same OEM body: identical 21/23/35/78/92/97/99 mode set (UPlight's own listings), named "HAWKEYE II", matching drawings (19 hex lenses, 4-key LCD, powerCON in/out). Differs: tilt 270° vs 230°, 450 vs 350 W |
+| UP-250BSW | STILL ASSUMED | 24/30ch, DMX + RDM, powerCON, 3-pin (uplight.com.cn/pd152457438.html); no chart anywhere. The Aolait 250 W BSW stand-in is a DIFFERENT fixture (no LED ring, 17/20ch) — test use only |
+| UP-LA40WF | identity CONFIRMED, DMX STILL ASSUMED | UPlight's own page names it (uplight.com.cn/pd48855201.html): R 10 W 638 nm, G 15 W 520 nm, B 16 W 445 nm, ILDA + DMX512 + SD; no mode published |
+| UP-Q108S | STILL ASSUMED | on neither maker site; UPlight's DMX CO₂ column machines are UP-QZ150Y/QZ250Y/QZ12L/QZ18L |
+| UP-YZ31P | STILL ASSUMED | on neither maker site; UPlight's multi-angle smoke machines UP-F1500D…F3000DL are 2ch (IP20, not waterproof) |
+| EXT-STROBE / BLINDER / HAZER | STILL ASSUMED | no supplier chosen; no Yerevan rental lists a model |
+
+Recorded where the code reads it: `fixtures.json` (sources A-CN … LA-CN, the mode lists, notes on
+every contradiction), `assumedProfiles.js` (`grade` + `gradeWhy` on every stand-in; printed on
+the sheet). No type is CONFIRMED to its channel ORDER, so nothing switched to a maker's list; the
+real modes keep `channels: null`. Also found on uplight.com.cn (inventory cards not yet updated,
+owed): UP-SW3000B, UP-236, UP-JG400, UP-BY06, UP-9800, UP-B01, UP-PDU60A, UP-2303, UP-POWER12,
+UP-1024 are UPlight's own codes.
+
+### 19.4 Validated, and owed
+
+Validated on the owner's install (local.thedi.studio, 0.4.16-rigbuilder.9 program, scripts from
+this branch): plan → document (36 lamps, one batch) → desk `--exact` (36 of 36 at the planned
+addresses, 0 flags) → `show-loop.mjs` (5 looks, DMX for 34 lamps) → `patch-sheet.mjs` exit 0 (the
+document agrees with its plan and the desk) → MVR XSD-valid, 36 of 36 addressed. Two bugs found on
+the way, each with a guard (known-fixes 2026-09-29): a colour-only mode could not be put out by a
+look, and the MVR dropped the address of any lamp whose maker's mode is owed.
+Owed: every channel ORDER from the rental house (`~/Downloads/moxir-patch/questions-for-rental.md`);
+the press PARs (#401–403) are on no look position, so every look leaves them dark (a looks issue,
+not the patch); the node and cable lengths from the rental house (it lists splitters, no node);
+the electrician's distribution; GDTF Share with the owner's login.

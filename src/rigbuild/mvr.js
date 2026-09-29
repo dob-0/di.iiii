@@ -87,7 +87,9 @@ export const mvrScene = ({ entities = [], library, meta = {} }) => {
         const lens = e.components.transform?.position || [0, 0, 0]
         const mount = mountFromLens({ lens, hung: f.hung === true, beam, type })
         const basis = f.hung ? {} : { u: [1, 0, 0], v: [0, -1, 0], w: [0, 0, -1] }
-        const patched = mode && Number.isInteger(f.universe) && Number.isInteger(f.address)
+        // The address travels even when the maker's mode is owed (GDTFMode empty): a crew
+        // needs where a lamp is patched before anyone knows its chart (RIG_BUILD.md §19).
+        const patched = Number.isInteger(f.universe) && Number.isInteger(f.address)
         const pos = positionUuid(f.position)
         children.push(`
         <Fixture name="${esc([type.code, f.position, f.unit].filter((x) => x != null && x !== '').join(' '))}" uuid="${stableUuid(`fixture:${e.id}`)}">

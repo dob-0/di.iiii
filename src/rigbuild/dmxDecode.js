@@ -219,6 +219,9 @@ export const encodeDmx = (channels, want = {}, type = null) => {
         if (has('g')) out.g = Math.round((rgb[1] / peak) * 255 * scale)
         if (has('b')) out.b = Math.round((rgb[2] / peak) * 255 * scale)
         if (has('w')) out.w = 0
+    } else if (emitters && !has('dimmer') && level === 0) {
+        // A colour-only mode (RGBW, no dimmer) has no other way to say OUT.
+        for (const role of ['r', 'g', 'b', 'w']) if (has(role)) out[role] = 0
     } else if (rgb && wheel) {
         const v = nearestSlot(wheel.cap.wheel, rgb)
         if (v != null) out[wheel.role] = v
