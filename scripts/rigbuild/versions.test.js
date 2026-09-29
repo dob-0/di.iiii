@@ -9,7 +9,7 @@ import { REPO_ROOT } from '../place/common.mjs'
 import { LASER_MIN_HEIGHT_M, RIG_PREFIX, buildRig, groupAxis, performerBox, stageFrame } from '../place/rig-lib.mjs'
 import { readGeometry } from '../place/fixtures-glb.mjs'
 import { spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
-import { costing, generated, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
+import { allVersions, costing, generated, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
 import { rigLooksFrom } from './looks.mjs'
 
 const read = (f) => JSON.parse(fs.readFileSync(path.join(REPO_ROOT, f), 'utf8'))
@@ -102,9 +102,10 @@ describe('the version files', () => {
     })
 })
 
-for (const v of spec.versions) {
+// the set's three AND its comparison variants (§15.8) pass the same safety tests
+for (const v of allVersions(spec)) {
     describe(`${v.id}: the safety tests, in every look`, () => {
-        const rig = rigs[v.id]
+        const rig = read(rigFileOf(spec.set, v.id))
         const stage = stageFrame(rig, hall)
         for (const look of Object.keys(rig.looks)) {
             const built = buildRig(rig, hall, { geometry, manifest, look })

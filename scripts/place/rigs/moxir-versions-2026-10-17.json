@@ -986,5 +986,1013 @@
     "target_h": 5.2,
     "fov": 55,
     "note": "the first screen of the crane rig: 14 m out on the dance floor, on the centre line, eye height, looking up to 5.2 m so the crane bridge and the line hung under it frame the DJ, the press glowing behind (tuned by looking, 2026-09-28 night: at 20 m / 4.6 m the bridge read small over an empty floor)"
-  }
+  },
+  "variants": [
+    {
+      "id": "minimal-halo",
+      "of": "minimal",
+      "compare": "the owner compares it with option 4 (\"the cut\") on Minimal; a separate project, never Minimal itself",
+      "title": "Minimal · halo",
+      "summary": "Simple: NO moving heads, the rental house's fixed lights only (UP-PL5403 PARs, UP-COB200 COB PARs). Minimal's hall; a flat triangle of 3 x 4 m truss at 6 m under the crane bridge over the DJ, apex to the crowd, 3 hoists on bridles. 8 PARs round it focused IN to a ring round the DJ (the cone), the apex PAR straight down (the pillar), the base corners' PARs crossing over the DJ (the X), 4 PARs out to the crowd, 4 red PARs grazing the bridge, 4 COBs on it and 4 in the pit for the hits; the columns and the press in red.",
+      "source": "owner's option 6 of ~/Downloads/moxir-crane-rig/ten-truss.html ('Halo: a triangle of 3 x 4 m lying flat at 6 m, centred over the DJ; beams on the corners all aim in to a point on the DJ: a cone of light around them, then open outward to the crowd; 3 hoists'), asked 2026-09-29",
+      "truss": "halo",
+      "haloTruss": {
+        "kind": "crane-hung",
+        "shape": "triangle",
+        "why": "Option 6 of the ten truss versions, built as a comparison beside option 4 on Minimal. The triangle is the object; the lamps live on it.",
+        "side_m": 4,
+        "apex": "audience",
+        "trim_m": 6.0,
+        "section_m": 0.29,
+        "section_class": "290 mm square box truss (Global Truss F34; Prolyte H30V is the same class)",
+        "corner": "Global Truss F34 C20 2-way corner 60° (F34C20: 8.80 kg, outer 1000 x 1000 x 290 mm)",
+        "corner_source": "https://globaltruss.de/en/F34-2-way-corner-C20-600/F34C20 (opened 2026-09-29): \"F34 2-way corner C20 60° … Weight: 8,80 kg … Dimensions (L/W/H): 1000 x 1000 x 290 mm\". A 60° corner is a STANDARD catalogue part of the 290 mm system (the same series lists C19 45°, C21 90°, C22 120°, C23 135°).",
+        "corner_leg_m": 0.5,
+        "corner_leg_assumed": true,
+        "corner_leg_why": "The page gives the C20's outer box, not its leg on the centre line. 0.5 m is ASSUMED so a side = 0.5 + 3 m F34300 + 0.5 = 4.0 m node to node; read the real leg from Global Truss's 'DWG files (F34 System)' on the same page before ordering (a longer leg makes the side longer — stock straights only).",
+        "straight_m": 3,
+        "parts": [
+          {
+            "code": "F34300",
+            "n": 3,
+            "each_kg": 16,
+            "source": "globaltruss.de/en/F34-300cm/F34300, 2026-09-29"
+          },
+          {
+            "code": "F34C20",
+            "n": 3,
+            "each_kg": 8.8,
+            "source": "globaltruss.de/en/F34-2-way-corner-C20-600/F34C20, 2026-09-29"
+          }
+        ],
+        "orientation": "Apex toward the crowd (+z), base edge behind the DJ under the bridge's back girder.",
+        "orientation_why": "(1) The base edge lies behind the DJ and 0.3 m clear of the press in plan (its truss z 3.50-3.79; the press ends at z 3.2), so nothing hangs over the machine; with the apex toward the press, the triangle's point would sit 0.25 m off the press's left edge and a side would cross over its corner. (2) From the floor the apex points at the people and the two long sides run back to frame the DJ against the press — the halo reads as an arrowhead opening onto the performer. (3) Either way one corner lies beyond the bridge (the triangle is 3.46 m deep, the two girders span 2.9 m face to face); the apex is one pick, the base would be two.",
+        "plan_m": {
+          "centroid": [
+            0,
+            4.8
+          ],
+          "apex": [
+            0,
+            7.109
+          ],
+          "left": [
+            -2,
+            3.645
+          ],
+          "right": [
+            2,
+            3.645
+          ],
+          "note": "hall frame, from stageFrame + haloGeometry (the centroid on the bridge centre line z 4.8; the DJ box is z 4.3-6.0)"
+        },
+        "height_check": {
+          "girder_bottom_m": 8.15,
+          "rail_m": "7.6 ESTIMATED (range 6.6-8.4)",
+          "stack_m": "girder bottom 8.15 - bridle 0.75 (ring) - hoist suspension + body + hook tackle ≈ 0.10 + 0.34 + 0.23 = 0.67 → hook at ≈ 6.73 m (apex, under the outrigger: ≈ 6.44 m); top chord 6.29 m → 0.15-0.44 m of chain and sling left.",
+          "headroom_basis": "ChainMaster D8Plus 500 kg (SK030/76U) data sheet DS_CH_D8PLUS_SK_030-76U_500kg_4m_1f-400V-50Hz_DC.pdf, dimension sheet §3 (body 127+131+79 mm, hook tackle 227 mm, suspension plate 97 mm) — the sum is DERIVED from the drawing, the maker publishes no single 'headroom' figure for this build.",
+          "low_rail": "At the rail's LOW bound (6.6 m → girder bottom ≈ 7.15 m) the hook is at ≈ 5.73 m and a 6.0 m bottom chord is NOT reachable: the halo then trims at ≈ 5.3 m (bottom chord), still 0.3 m clear of the press crown in plan terms (it is not over the press). Measure the rail.",
+          "press": "Nothing hangs over the press in plan (x 0.25-3.05, z 0.2-3.2, crown 5.6 m): the nearest steel is the base edge at z ≥ 3.50 and the right base corner's lamp body at z ≥ 3.49."
+        },
+        "rigging": {
+          "hoists": 3,
+          "hoist": "chain hoist 500 kg, BGV-D8+ (e.g. ChainMaster D8Plus 500 kg SK030/76U; CM Lodestar class)",
+          "hoist_kg": 20,
+          "hoist_source": "ChainMaster D8Plus 500 kg data sheet: 'Weight (without chain): approx. 20 kg', chain 0.59 kg/m (P5.4 x 15)",
+          "chain_kg_per_m": 0.59,
+          "chain_m": 2,
+          "bridle_kg": 4,
+          "hoist_body_m": 0.34,
+          "bridle_spread_m": 0.75,
+          "bridle_drop_m": 0.75,
+          "per_point": "Each corner: a two-leg bridle (a V, legs ±0.75 m, 0.75 m deep: 90° between the legs, each leg ≈ 0.71 x the pick) on beam clamps, a chain hoist hook-suspended under its ring, the chain and a round sling round the corner block; a safety steel from the corner to the crane, independent of the hoist. Base corners: the V along the back girder (it holds x). Apex: the V along the outrigger (it holds z). Three V's in two directions hold the halo in x, z and in turn.",
+          "outrigger": {
+            "what": "F34 400 cm (F34400, 21 kg — globaltruss.de/en/F34-400cm/F34400, 2026-09-29)",
+            "kg": 21,
+            "span_m": 2.2,
+            "overhang_m": 1.21,
+            "past_apex_m": 0.4,
+            "bridle_spread_m": 0.4
+          },
+          "crane": "the nave's entry-end bridge crane, rolled along its runway to park over the DJ; rail height 7.6 m (disputed 6.6-8.4), girder bottom 8.15 m, two 0.7 m box girders at ±1.1 m",
+          "signoff": "rigging sign-off owed (crane rated load, lock-out, hoists + safety steels): the crane's rated load and a check of the old runway, rails and brakes; the crane locked in place and its power isolated for the whole event; the apex OUTRIGGER is a cantilever off the bridge (its back clamps are pulled up) and needs a structural engineer's check or a different pick (a bridle to the roof steel, or a 3 m halo that fits under the bridge); a rigger's plan with the point loads, signed by a structural or rigging engineer. This file draws it; they approve it.",
+          "sway": {
+            "concern": "Owner, 2026-09-29: moving heads may swing a chain-hung truss.",
+            "method": "A chain-hung load is a pendulum, T = 2π√(L/g), L = pivot to the load's centre of mass. Out of a bridle's plane the pivot is the girder; in its plane the V is triangulated (stiff). The three V's lie in two directions (x at the base, z at the apex), so the halo is held in x, z and turn; the pendulum below is the bound if a bridle is left out.",
+            "rule": {
+              "min_move_s": 4,
+              "avoid_period_s": [
+                1.5,
+                6.0
+              ],
+              "text": "No head moves full range faster than 4 s (every cue that moves a halo head fades ≥ 4 s; a strobe hit moves nothing); no periodic movement (a chase, a sweep FX) with a period between 1.5 and 6 s — half to twice the pendulum's period — on the halo's heads; heads reposition in black."
+            },
+            "tie_offs": "Not drawn: with the three bridles none is needed on paper. If the rigger wants more, tie the base corners back to the crane girders with horizontal ratchet straps — never to the crowd floor.",
+            "fixed": "This version has NO moving heads: nothing on the halo moves, so no head's reaction can set it swinging (the pendulum numbers stay for the heads version)."
+          }
+        }
+      },
+      "groups": [
+        "par-halo-apex",
+        "par-halo-x",
+        "par-halo-ring",
+        "par-halo-out",
+        "par-bridge-back",
+        "par-bridge-front",
+        "cob-halo",
+        "par-columns-8",
+        "par-press-3",
+        "cob-pit"
+      ],
+      "groupDefs": {
+        "par-halo-apex": {
+          "class": "par",
+          "count": 1,
+          "mount": "halo",
+          "halo_at": [
+            "apex"
+          ],
+          "orient": "hung",
+          "aim": "fixed-pillar",
+          "note": "the apex PAR, hung under the corner over the pit, focused straight down: the pillar"
+        },
+        "par-halo-x": {
+          "class": "par",
+          "count": 2,
+          "mount": "halo",
+          "halo_at": [
+            "base-corners"
+          ],
+          "orient": "hung",
+          "aim": "fixed-x",
+          "note": "the two base-corner PARs, focused through one point 3.1 m over the deck above the DJ: they cross in an X on him and run on down past him"
+        },
+        "par-halo-ring": {
+          "class": "par",
+          "count": 8,
+          "mount": "halo",
+          "halo_at": [
+            {
+              "edge": "sides",
+              "t": [
+                0.2,
+                0.4,
+                0.6,
+                0.8
+              ]
+            }
+          ],
+          "orient": "hung",
+          "aim": "fixed-cone",
+          "note": "8 PARs under the two long sides (a fifth of a side apart), each focused IN to a ring 1.3 m round the DJ at deck height: the cone of light round the performer"
+        },
+        "par-halo-out": {
+          "class": "par",
+          "count": 4,
+          "mount": "halo",
+          "halo_at": [
+            {
+              "edge": "base",
+              "dx": [
+                0.5,
+                1.5
+              ]
+            }
+          ],
+          "orient": "hung",
+          "aim": "fixed-out",
+          "note": "4 PARs under the base edge behind the DJ, focused OUT over his head to the crowd, dipped 20°: the halo opening outward"
+        },
+        "cob-halo": {
+          "class": "cob",
+          "count": 4,
+          "mount": "halo",
+          "halo_at": [
+            {
+              "edge": "sides",
+              "t": [
+                0.5
+              ]
+            },
+            {
+              "edge": "base",
+              "dx": [
+                0
+              ]
+            },
+            "apex"
+          ],
+          "orient": "hung",
+          "aim": "fixed-hit",
+          "note": "4 COBs hung on the halo (both sides at the middle, the base centre, the apex) facing the crowd for the hits (strobe 1-25 Hz on the desk)"
+        },
+        "cob-pit": {
+          "class": "cob",
+          "count": 4,
+          "mount": "booth-pit",
+          "dx_m": [
+            1,
+            3
+          ],
+          "pit_m": 0.7,
+          "aim": "at-the-crowd-low-cob",
+          "note": "4 COBs on the floor in the pit (x ±1, ±3), raking up over the crowd — the hits from below (where Minimal had strobes; the rental house has none)"
+        },
+        "par-bridge-back": {
+          "class": "par",
+          "count": 2,
+          "mount": "halo",
+          "halo_at": [
+            {
+              "edge": "base",
+              "dx": [
+                1.0
+              ]
+            }
+          ],
+          "orient": "top",
+          "aim": "bridge-back",
+          "note": "2 PARs standing on the base edge's top chord, grazing the underside of the BACK girder (over them) outward in deep red"
+        },
+        "par-bridge-front": {
+          "class": "par",
+          "count": 2,
+          "mount": "halo",
+          "halo_at": [
+            {
+              "edge": "sides",
+              "t": [
+                0.3
+              ]
+            }
+          ],
+          "orient": "top",
+          "aim": "bridge-front",
+          "note": "2 PARs standing on the sides' top chord (x ±0.6, z 6.07), grazing the underside of the audience-side girder outward in deep red"
+        }
+      },
+      "aimRules": {
+        "fixed-pillar": {
+          "rule": "vertical"
+        },
+        "fixed-x": {
+          "rule": "dj-point",
+          "h": 3.1
+        },
+        "fixed-cone": {
+          "rule": "ring",
+          "r": 1.3
+        },
+        "fixed-out": {
+          "rule": "radial",
+          "elev_deg": -20,
+          "to_audience": 1
+        },
+        "fixed-hit": {
+          "rule": "parallel",
+          "lean_deg": 60
+        },
+        "at-the-crowd-low-cob": {
+          "rule": "parallel",
+          "lean_deg": 40
+        },
+        "bridge-back": {
+          "rule": "bridge-underside",
+          "out": 6,
+          "girder": -1.1
+        },
+        "bridge-front": {
+          "rule": "bridge-underside",
+          "out": 6,
+          "girder": 1.1
+        }
+      },
+      "effects": [
+        "hazer-back"
+      ],
+      "realLights": {
+        "par-halo-ring": 2,
+        "par-halo-apex": 1,
+        "par-columns-8": {
+          "count": 4,
+          "pick": "nearest-stage"
+        }
+      },
+      "defaultLook": "halo-white-cathedral",
+      "looks": {
+        "halo-one-beam": {
+          "title": "Blackout + one beam",
+          "intent": "Everything out but one: the apex PAR straight down — a white pillar in the pit between the crowd and the DJ, who stands behind it as a shape.",
+          "aims": {},
+          "colours": {
+            "par-halo-apex": "#eef3ff"
+          },
+          "levels": {
+            "par-halo-x": 0,
+            "par-halo-ring": 0,
+            "par-halo-out": 0,
+            "cob-halo": 0,
+            "par-columns-8": 0,
+            "par-press-3": 0,
+            "cob-pit": 0,
+            "par-bridge-back": 0,
+            "par-bridge-front": 0
+          }
+        },
+        "halo-slow-sweep": {
+          "title": "Slow sweep",
+          "intent": "Fixed lights cannot sweep: the halo OPENS instead — the 4 PARs behind the DJ throw out over his head to the crowd in cold white, the columns and the bridge glow low red. On the desk this is a slow chase across the four (never a move: nothing moves).",
+          "aims": {},
+          "colours": {
+            "par-halo-out": "#eef3ff",
+            "par-columns-8": "#ff1408",
+            "par-bridge-back": "#ff1408",
+            "par-bridge-front": "#ff1408"
+          },
+          "levels": {
+            "par-halo-apex": 0,
+            "par-halo-x": 0,
+            "par-halo-ring": 0,
+            "par-halo-out": 0.8,
+            "cob-halo": 0,
+            "par-columns-8": 0.3,
+            "par-press-3": 0,
+            "cob-pit": 0,
+            "par-bridge-back": 0.4,
+            "par-bridge-front": 0.4
+          }
+        },
+        "halo-red-room": {
+          "title": "Red room",
+          "intent": "Deep red and low: the cone's 8 PARs at half in red make a red cage round the DJ, the two base-corner PARs cross in a red X over his head, the columns, the press and the bridge glow red from below; the roof stays black.",
+          "aims": {},
+          "colours": {
+            "par-halo-ring": "#ff1408",
+            "par-halo-x": "#ff1408",
+            "par-columns-8": "#ff1408",
+            "par-press-3": "#ff1408",
+            "par-bridge-back": "#ff1408",
+            "par-bridge-front": "#ff1408"
+          },
+          "levels": {
+            "par-halo-apex": 0,
+            "par-halo-x": 0.9,
+            "par-halo-ring": 0.5,
+            "par-halo-out": 0,
+            "cob-halo": 0,
+            "cob-pit": 0
+          }
+        },
+        "halo-white-cathedral": {
+          "title": "White cathedral",
+          "intent": "The cone on the DJ: the 8 PARs round the halo at full cold white close in to a ring round him — a cone of light with the performer inside it, the pillar in front; everything else dark.",
+          "aims": {},
+          "colours": {
+            "par-halo-ring": "#eef3ff",
+            "par-halo-apex": "#eef3ff"
+          },
+          "levels": {
+            "par-halo-x": 0,
+            "par-halo-out": 0,
+            "cob-halo": 0,
+            "par-columns-8": 0,
+            "par-press-3": 0,
+            "cob-pit": 0,
+            "par-halo-apex": 0.6,
+            "par-bridge-back": 0,
+            "par-bridge-front": 0
+          }
+        },
+        "halo-strobe-hit": {
+          "title": "Strobe hit",
+          "intent": "The peak: the 8 COBs (4 on the halo, 4 in the pit) at full in their strobe mode, every PAR out, so the hit lands on black.",
+          "aims": {},
+          "colours": {
+            "cob-halo": "#eef3ff",
+            "cob-pit": "#eef3ff"
+          },
+          "levels": {
+            "par-halo-apex": 0,
+            "par-halo-x": 0,
+            "par-halo-ring": 0,
+            "par-halo-out": 0,
+            "par-columns-8": 0,
+            "par-press-3": 0,
+            "par-bridge-back": 0,
+            "par-bridge-front": 0
+          }
+        }
+      },
+      "show": {
+        "loop": true,
+        "source": "clock",
+        "cues": [
+          {
+            "look": "halo-one-beam",
+            "name": "Blackout + one beam",
+            "fade": 0,
+            "hold": 12
+          },
+          {
+            "look": "halo-slow-sweep",
+            "name": "Slow sweep",
+            "fade": 4,
+            "hold": 16
+          },
+          {
+            "look": "halo-red-room",
+            "name": "Red room",
+            "fade": 5,
+            "hold": 16
+          },
+          {
+            "look": "halo-white-cathedral",
+            "name": "White cathedral",
+            "fade": 2,
+            "hold": 12
+          },
+          {
+            "look": "halo-strobe-hit",
+            "name": "Strobe hit",
+            "fade": 0,
+            "hold": 4
+          }
+        ],
+        "why": "Minimal's five cues, fades and holds (one 60 s pass). Fixed lights: nothing moves, so the sway rule is met by construction; only levels and colours change."
+      },
+      "direction": "Owner, 2026-09-29 (via the parent session): 'the first version of each design is simple with NO moving heads, using only the vendor's fixed lights: UP-PL5403 (54 x 3 W LED PAR, stock 50) and UP-COB200 (200 W COB PAR, stock 8); no strobes in vendor stock.'",
+      "classes": {
+        "cob": {
+          "code": "UP-COB200",
+          "fixture": "cob200",
+          "class": "200 W COB PAR (warm/cool white)",
+          "reach_m": 18,
+          "penumbra": 0.6,
+          "colour": "#eef3ff",
+          "angleDeg": 45,
+          "angleNote": "the page's 45° lens (60° optional)",
+          "intensity": 70,
+          "haze": 0.25,
+          "intensityNote": "ASSUMED for drawing: UPlight publishes no lux or lumens for the UP-COB200 (fixtures.json cob200.photometryNote) — a hand-set intensity and a low haze so a 45° cone does not fog the frame; not photometry"
+        }
+      }
+    },
+    {
+      "id": "minimal-halo-heads",
+      "of": "minimal",
+      "compare": "the owner compares it with option 4 (\"the cut\") on Minimal; a separate project, never Minimal itself",
+      "title": "Minimal · halo · heads",
+      "summary": "The halo with MOVING heads (the second study): Minimal's hall and floor, the line replaced by a HALO: a flat triangle of 3 x 4 m truss at 6 m, centred under the crane bridge over the DJ, apex toward the crowd, on 3 hoists (one per corner, each on a bridle) — its 7 beams close to a cone round the DJ, cross in an X over him, or open out to the crowd; 2 strobes and 4 red PARs grazing the bridge on it.",
+      "source": "owner's option 6 of ~/Downloads/moxir-crane-rig/ten-truss.html ('Halo: a triangle of 3 x 4 m lying flat at 6 m, centred over the DJ; beams on the corners all aim in to a point on the DJ: a cone of light around them, then open outward to the crowd; 3 hoists'), asked 2026-09-29",
+      "truss": "halo",
+      "haloTruss": {
+        "kind": "crane-hung",
+        "shape": "triangle",
+        "why": "Option 6 of the ten truss versions, built as a comparison beside option 4 on Minimal. The triangle is the object; the lamps live on it.",
+        "side_m": 4,
+        "apex": "audience",
+        "trim_m": 6.0,
+        "section_m": 0.29,
+        "section_class": "290 mm square box truss (Global Truss F34; Prolyte H30V is the same class)",
+        "corner": "Global Truss F34 C20 2-way corner 60° (F34C20: 8.80 kg, outer 1000 x 1000 x 290 mm)",
+        "corner_source": "https://globaltruss.de/en/F34-2-way-corner-C20-600/F34C20 (opened 2026-09-29): \"F34 2-way corner C20 60° … Weight: 8,80 kg … Dimensions (L/W/H): 1000 x 1000 x 290 mm\". A 60° corner is a STANDARD catalogue part of the 290 mm system (the same series lists C19 45°, C21 90°, C22 120°, C23 135°).",
+        "corner_leg_m": 0.5,
+        "corner_leg_assumed": true,
+        "corner_leg_why": "The page gives the C20's outer box, not its leg on the centre line. 0.5 m is ASSUMED so a side = 0.5 + 3 m F34300 + 0.5 = 4.0 m node to node; read the real leg from Global Truss's 'DWG files (F34 System)' on the same page before ordering (a longer leg makes the side longer — stock straights only).",
+        "straight_m": 3,
+        "parts": [
+          {
+            "code": "F34300",
+            "n": 3,
+            "each_kg": 16,
+            "source": "globaltruss.de/en/F34-300cm/F34300, 2026-09-29"
+          },
+          {
+            "code": "F34C20",
+            "n": 3,
+            "each_kg": 8.8,
+            "source": "globaltruss.de/en/F34-2-way-corner-C20-600/F34C20, 2026-09-29"
+          }
+        ],
+        "orientation": "Apex toward the crowd (+z), base edge behind the DJ under the bridge's back girder.",
+        "orientation_why": "(1) The base edge lies behind the DJ and 0.3 m clear of the press in plan (its truss z 3.50-3.79; the press ends at z 3.2), so nothing hangs over the machine; with the apex toward the press, the triangle's point would sit 0.25 m off the press's left edge and a side would cross over its corner. (2) From the floor the apex points at the people and the two long sides run back to frame the DJ against the press — the halo reads as an arrowhead opening onto the performer. (3) Either way one corner lies beyond the bridge (the triangle is 3.46 m deep, the two girders span 2.9 m face to face); the apex is one pick, the base would be two.",
+        "plan_m": {
+          "centroid": [
+            0,
+            4.8
+          ],
+          "apex": [
+            0,
+            7.109
+          ],
+          "left": [
+            -2,
+            3.645
+          ],
+          "right": [
+            2,
+            3.645
+          ],
+          "note": "hall frame, from stageFrame + haloGeometry (the centroid on the bridge centre line z 4.8; the DJ box is z 4.3-6.0)"
+        },
+        "height_check": {
+          "girder_bottom_m": 8.15,
+          "rail_m": "7.6 ESTIMATED (range 6.6-8.4)",
+          "stack_m": "girder bottom 8.15 - bridle 0.75 (ring) - hoist suspension + body + hook tackle ≈ 0.10 + 0.34 + 0.23 = 0.67 → hook at ≈ 6.73 m (apex, under the outrigger: ≈ 6.44 m); top chord 6.29 m → 0.15-0.44 m of chain and sling left.",
+          "headroom_basis": "ChainMaster D8Plus 500 kg (SK030/76U) data sheet DS_CH_D8PLUS_SK_030-76U_500kg_4m_1f-400V-50Hz_DC.pdf, dimension sheet §3 (body 127+131+79 mm, hook tackle 227 mm, suspension plate 97 mm) — the sum is DERIVED from the drawing, the maker publishes no single 'headroom' figure for this build.",
+          "low_rail": "At the rail's LOW bound (6.6 m → girder bottom ≈ 7.15 m) the hook is at ≈ 5.73 m and a 6.0 m bottom chord is NOT reachable: the halo then trims at ≈ 5.3 m (bottom chord), still 0.3 m clear of the press crown in plan terms (it is not over the press). Measure the rail.",
+          "press": "Nothing hangs over the press in plan (x 0.25-3.05, z 0.2-3.2, crown 5.6 m): the nearest steel is the base edge at z ≥ 3.50 and the right base corner's lamp body at z ≥ 3.49."
+        },
+        "rigging": {
+          "hoists": 3,
+          "hoist": "chain hoist 500 kg, BGV-D8+ (e.g. ChainMaster D8Plus 500 kg SK030/76U; CM Lodestar class)",
+          "hoist_kg": 20,
+          "hoist_source": "ChainMaster D8Plus 500 kg data sheet: 'Weight (without chain): approx. 20 kg', chain 0.59 kg/m (P5.4 x 15)",
+          "chain_kg_per_m": 0.59,
+          "chain_m": 2,
+          "bridle_kg": 4,
+          "hoist_body_m": 0.34,
+          "bridle_spread_m": 0.75,
+          "bridle_drop_m": 0.75,
+          "per_point": "Each corner: a two-leg bridle (a V, legs ±0.75 m, 0.75 m deep: 90° between the legs, each leg ≈ 0.71 x the pick) on beam clamps, a chain hoist hook-suspended under its ring, the chain and a round sling round the corner block; a safety steel from the corner to the crane, independent of the hoist. Base corners: the V along the back girder (it holds x). Apex: the V along the outrigger (it holds z). Three V's in two directions hold the halo in x, z and in turn.",
+          "outrigger": {
+            "what": "F34 400 cm (F34400, 21 kg — globaltruss.de/en/F34-400cm/F34400, 2026-09-29)",
+            "kg": 21,
+            "span_m": 2.2,
+            "overhang_m": 1.21,
+            "past_apex_m": 0.4,
+            "bridle_spread_m": 0.4
+          },
+          "crane": "the nave's entry-end bridge crane, rolled along its runway to park over the DJ; rail height 7.6 m (disputed 6.6-8.4), girder bottom 8.15 m, two 0.7 m box girders at ±1.1 m",
+          "signoff": "rigging sign-off owed (crane rated load, lock-out, hoists + safety steels): the crane's rated load and a check of the old runway, rails and brakes; the crane locked in place and its power isolated for the whole event; the apex OUTRIGGER is a cantilever off the bridge (its back clamps are pulled up) and needs a structural engineer's check or a different pick (a bridle to the roof steel, or a 3 m halo that fits under the bridge); a rigger's plan with the point loads, signed by a structural or rigging engineer. This file draws it; they approve it.",
+          "sway": {
+            "concern": "Owner, 2026-09-29: moving heads may swing a chain-hung truss.",
+            "method": "A chain-hung load is a pendulum, T = 2π√(L/g), L = pivot to the load's centre of mass. Out of a bridle's plane the pivot is the girder; in its plane the V is triangulated (stiff). The three V's lie in two directions (x at the base, z at the apex), so the halo is held in x, z and turn; the pendulum below is the bound if a bridle is left out.",
+            "rule": {
+              "min_move_s": 4,
+              "avoid_period_s": [
+                1.5,
+                6.0
+              ],
+              "text": "No head moves full range faster than 4 s (every cue that moves a halo head fades ≥ 4 s; a strobe hit moves nothing); no periodic movement (a chase, a sweep FX) with a period between 1.5 and 6 s — half to twice the pendulum's period — on the halo's heads; heads reposition in black."
+            },
+            "tie_offs": "Not drawn: with the three bridles none is needed on paper. If the rigger wants more, tie the base corners back to the crane girders with horizontal ratchet straps — never to the crowd floor."
+          }
+        }
+      },
+      "groups": [
+        "halo-apex",
+        "halo-base",
+        "halo-sides",
+        "beam380-columns-6",
+        "par-columns-8",
+        "par-bridge-back",
+        "par-bridge-front",
+        "par-press-3",
+        "strobe-halo",
+        "strobe-pit"
+      ],
+      "groupDefs": {
+        "halo-apex": {
+          "class": "beam380",
+          "count": 1,
+          "mount": "halo",
+          "halo_at": [
+            "apex"
+          ],
+          "orient": "hung",
+          "aim": "halo-down",
+          "note": "the apex's beam, hung under the corner block over the pit (x 0, z 7.1)"
+        },
+        "halo-base": {
+          "class": "beam380",
+          "count": 2,
+          "mount": "halo",
+          "halo_at": [
+            "base-corners"
+          ],
+          "orient": "hung",
+          "aim": "halo-down",
+          "note": "the base corners' beams, hung (x ±2, z 3.65), behind the DJ; they make the X"
+        },
+        "halo-sides": {
+          "class": "beam380",
+          "count": 4,
+          "mount": "halo",
+          "halo_at": [
+            {
+              "edge": "sides",
+              "t": [
+                0.3333333,
+                0.6666667
+              ]
+            }
+          ],
+          "orient": "hung",
+          "aim": "halo-down",
+          "note": "two beams on each long side at a third and two thirds from the apex (x ±0.67 z 5.95; x ±1.33 z 4.80), hung"
+        },
+        "strobe-halo": {
+          "class": "strobe",
+          "count": 2,
+          "mount": "halo",
+          "halo_at": [
+            {
+              "edge": "base",
+              "dx": [
+                0.8
+              ]
+            }
+          ],
+          "orient": "hung",
+          "aim": "at-the-crowd-high",
+          "note": "2 strobes hung under the base edge (x ±0.8), behind the DJ, facing the crowd"
+        },
+        "par-bridge-back": {
+          "class": "par",
+          "count": 2,
+          "mount": "halo",
+          "halo_at": [
+            {
+              "edge": "base",
+              "dx": [
+                1.4
+              ]
+            }
+          ],
+          "orient": "top",
+          "aim": "bridge-back",
+          "note": "2 PARs standing on the base edge's top chord, grazing the underside of the BACK girder (over them) outward in deep red"
+        },
+        "par-bridge-front": {
+          "class": "par",
+          "count": 2,
+          "mount": "halo",
+          "halo_at": [
+            {
+              "edge": "sides",
+              "t": [
+                0.3
+              ]
+            }
+          ],
+          "orient": "top",
+          "aim": "bridge-front",
+          "note": "2 PARs standing on the sides' top chord (x ±0.6, z 6.07), grazing the underside of the audience-side girder outward in deep red"
+        }
+      },
+      "aimRules": {
+        "halo-down": {
+          "rule": "vertical"
+        },
+        "bridge-back": {
+          "rule": "bridge-underside",
+          "out": 6,
+          "girder": -1.1
+        },
+        "bridge-front": {
+          "rule": "bridge-underside",
+          "out": 6,
+          "girder": 1.1
+        }
+      },
+      "effects": [
+        "hazer-back"
+      ],
+      "realLights": {
+        "halo-apex": 1,
+        "par-columns-8": {
+          "count": 4,
+          "pick": "nearest-stage"
+        },
+        "par-bridge-front": 2
+      },
+      "defaultLook": "halo-white-cathedral",
+      "looks": {
+        "halo-one-beam": {
+          "title": "Blackout + one beam",
+          "intent": "Everything out but one: the apex beam, hung at the triangle's point over the pit, straight down — a white pillar between the crowd and the DJ, who stands behind it as a shape. The other six halo beams wait in the dark already turned to the next look (a move in black, never a move seen).",
+          "aims": {
+            "halo-apex": {
+              "rule": "vertical"
+            },
+            "halo-base": {
+              "rule": "radial",
+              "elev_deg": -24,
+              "to_audience": 0.55
+            },
+            "halo-sides": {
+              "rule": "radial",
+              "elev_deg": -24,
+              "to_audience": 0.55
+            },
+            "beam380-columns-6": null,
+            "par-columns-8": null,
+            "par-press-3": null,
+            "strobe-halo": {
+              "rule": "point",
+              "x": 0,
+              "y": 1.8,
+              "a": 12
+            },
+            "strobe-pit": null,
+            "par-bridge-back": {
+              "rule": "bridge-underside",
+              "out": 6,
+              "girder": -1.1
+            },
+            "par-bridge-front": {
+              "rule": "bridge-underside",
+              "out": 6,
+              "girder": 1.1
+            }
+          },
+          "colours": {
+            "halo-apex": "#eef3ff"
+          },
+          "levels": {
+            "halo-base": 0,
+            "halo-sides": 0,
+            "strobe-halo": 0,
+            "beam380-columns-6": 0,
+            "par-columns-8": 0,
+            "par-press-3": 0,
+            "strobe-pit": 0,
+            "par-bridge-back": 0,
+            "par-bridge-front": 0
+          }
+        },
+        "halo-slow-sweep": {
+          "title": "Slow sweep",
+          "intent": "The halo opens OUTWARD to the crowd: all seven beams leave the triangle along its own directions, bent toward the house and dipped 24° under the horizon, over the heads of the floor; the column beams lean out to the walls in pairs, the columns and the bridge glow low red. A held frame of a slow sweep; nothing flashes.",
+          "aims": {
+            "halo-apex": {
+              "rule": "radial",
+              "elev_deg": -24,
+              "to_audience": 0.55
+            },
+            "halo-base": {
+              "rule": "radial",
+              "elev_deg": -24,
+              "to_audience": 0.55
+            },
+            "halo-sides": {
+              "rule": "radial",
+              "elev_deg": -24,
+              "to_audience": 0.55
+            },
+            "beam380-columns-6": {
+              "rule": "vertical",
+              "in_deg": -22
+            },
+            "par-columns-8": {
+              "rule": "up-the-column"
+            },
+            "par-press-3": null,
+            "strobe-halo": {
+              "rule": "point",
+              "x": 0,
+              "y": 1.8,
+              "a": 12
+            },
+            "strobe-pit": null,
+            "par-bridge-back": {
+              "rule": "bridge-underside",
+              "out": 6,
+              "girder": -1.1
+            },
+            "par-bridge-front": {
+              "rule": "bridge-underside",
+              "out": 6,
+              "girder": 1.1
+            }
+          },
+          "colours": {
+            "halo-apex": "#eef3ff",
+            "halo-base": "#eef3ff",
+            "halo-sides": "#eef3ff",
+            "beam380-columns-6": "#eef3ff",
+            "par-columns-8": "#ff1408",
+            "par-bridge-back": "#ff1408",
+            "par-bridge-front": "#ff1408"
+          },
+          "levels": {
+            "par-columns-8": 0.3,
+            "par-press-3": 0,
+            "strobe-halo": 0,
+            "strobe-pit": 0,
+            "par-bridge-back": 0.4,
+            "par-bridge-front": 0.4
+          }
+        },
+        "halo-red-room": {
+          "title": "Red room",
+          "intent": "Deep red, and low: the apex and the four side beams stand round the DJ as a red cage landing on the floor 2.6 m out from him; the two base-corner beams cross in an X just over his head (3.1 m above the deck) and run on down past him — the X on the DJ. The columns, the press and the bridge glow red from below; the roof stays black.",
+          "aims": {
+            "halo-apex": {
+              "rule": "ring",
+              "r": 2.6,
+              "y": 0
+            },
+            "halo-base": {
+              "rule": "dj-point",
+              "h": 3.1
+            },
+            "halo-sides": {
+              "rule": "ring",
+              "r": 2.6,
+              "y": 0
+            },
+            "beam380-columns-6": null,
+            "par-columns-8": {
+              "rule": "up-the-column"
+            },
+            "par-press-3": {
+              "rule": "backdrop",
+              "h": 0.6
+            },
+            "strobe-halo": {
+              "rule": "point",
+              "x": 0,
+              "y": 1.8,
+              "a": 12
+            },
+            "strobe-pit": null,
+            "par-bridge-back": {
+              "rule": "bridge-underside",
+              "out": 6,
+              "girder": -1.1
+            },
+            "par-bridge-front": {
+              "rule": "bridge-underside",
+              "out": 6,
+              "girder": 1.1
+            }
+          },
+          "colours": {
+            "halo-apex": "#ff1408",
+            "halo-base": "#ff1408",
+            "halo-sides": "#ff1408",
+            "par-columns-8": "#ff1408",
+            "par-press-3": "#ff1408",
+            "par-bridge-back": "#ff1408",
+            "par-bridge-front": "#ff1408"
+          },
+          "levels": {
+            "halo-apex": 0.45,
+            "halo-sides": 0.45,
+            "halo-base": 0.9,
+            "beam380-columns-6": 0,
+            "strobe-halo": 0,
+            "strobe-pit": 0
+          }
+        },
+        "halo-white-cathedral": {
+          "title": "White cathedral",
+          "intent": "The cone on the DJ: all seven halo beams close in to a ring 1.3 m round the performer at deck height — a cone of cold white with the DJ standing untouched inside it; the column beams stand straight up in mirrored pairs down the nave. Everything else dark.",
+          "aims": {
+            "halo-apex": {
+              "rule": "ring",
+              "r": 1.3
+            },
+            "halo-base": {
+              "rule": "ring",
+              "r": 1.3
+            },
+            "halo-sides": {
+              "rule": "ring",
+              "r": 1.3
+            },
+            "beam380-columns-6": {
+              "rule": "vertical",
+              "in_deg": 4
+            },
+            "par-columns-8": null,
+            "par-press-3": null,
+            "strobe-halo": {
+              "rule": "point",
+              "x": 0,
+              "y": 1.8,
+              "a": 12
+            },
+            "strobe-pit": null,
+            "par-bridge-back": {
+              "rule": "bridge-underside",
+              "out": 6,
+              "girder": -1.1
+            },
+            "par-bridge-front": {
+              "rule": "bridge-underside",
+              "out": 6,
+              "girder": 1.1
+            }
+          },
+          "colours": {
+            "halo-apex": "#eef3ff",
+            "halo-base": "#eef3ff",
+            "halo-sides": "#eef3ff",
+            "beam380-columns-6": "#eef3ff"
+          },
+          "levels": {
+            "par-columns-8": 0,
+            "par-press-3": 0,
+            "strobe-pit": 0,
+            "strobe-halo": 0,
+            "par-bridge-back": 0,
+            "par-bridge-front": 0
+          }
+        },
+        "halo-strobe-hit": {
+          "title": "Strobe hit",
+          "intent": "The peak: the two strobes on the halo's base edge flash out over the DJ into the crowd and the pit strobes rake up from the floor; every beam and PAR out so the flash lands on black. The halo beams keep the cone's aim, dark (no head moves under a strobe).",
+          "aims": {
+            "halo-apex": {
+              "rule": "ring",
+              "r": 1.3
+            },
+            "halo-base": {
+              "rule": "ring",
+              "r": 1.3
+            },
+            "halo-sides": {
+              "rule": "ring",
+              "r": 1.3
+            },
+            "beam380-columns-6": null,
+            "par-columns-8": null,
+            "par-press-3": null,
+            "strobe-halo": {
+              "rule": "parallel",
+              "lean_deg": 55
+            },
+            "strobe-pit": {
+              "rule": "parallel",
+              "lean_deg": 35
+            },
+            "par-bridge-back": {
+              "rule": "bridge-underside",
+              "out": 6,
+              "girder": -1.1
+            },
+            "par-bridge-front": {
+              "rule": "bridge-underside",
+              "out": 6,
+              "girder": 1.1
+            }
+          },
+          "colours": {
+            "strobe-halo": "#f4f7ff",
+            "strobe-pit": "#f4f7ff"
+          },
+          "levels": {
+            "halo-apex": 0,
+            "halo-base": 0,
+            "halo-sides": 0,
+            "beam380-columns-6": 0,
+            "par-columns-8": 0,
+            "par-press-3": 0,
+            "par-bridge-back": 0,
+            "par-bridge-front": 0
+          }
+        }
+      },
+      "show": {
+        "loop": true,
+        "source": "clock",
+        "cues": [
+          {
+            "look": "halo-one-beam",
+            "name": "Blackout + one beam",
+            "fade": 4,
+            "hold": 12
+          },
+          {
+            "look": "halo-slow-sweep",
+            "name": "Slow sweep",
+            "fade": 6,
+            "hold": 16
+          },
+          {
+            "look": "halo-red-room",
+            "name": "Red room",
+            "fade": 5,
+            "hold": 16
+          },
+          {
+            "look": "halo-white-cathedral",
+            "name": "White cathedral",
+            "fade": 4,
+            "hold": 12
+          },
+          {
+            "look": "halo-strobe-hit",
+            "name": "Strobe hit",
+            "fade": 0,
+            "hold": 4
+          }
+        ],
+        "why": "Minimal's five cues and holds (one 60 s pass), re-aimed for the halo; fades lengthened to ≥ 4 s wherever a halo head moves (sway rule), the strobe hit moves nothing."
+      }
+    }
+  ]
 }

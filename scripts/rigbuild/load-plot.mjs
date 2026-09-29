@@ -108,6 +108,21 @@ export const piecesFromRigBoxes = (entities) => {
             out.push({ id: `rig-line-${i + 1}`, name: 'truss line (hung from the crane bridge)', kind: seg.kind, position: seg.position, yaw: seg.yaw, height: null, replaces: i === 0 ? header.id : null })
         })
     }
+    // The halo (rig-lib `truss.shape: 'triangle'`): each side's stock straight, a box turned by
+    // its yaw, laid as that run of pieces; its 60° corner blocks have no piece in the catalogue
+    // (src/rigbuild/pieces.js) and stay drawn as the rig's boxes (rig-halo-corner-*).
+    for (const side of entities.filter((e) => /^rig-halo-side-\d+$/.test(e.id))) {
+        const t = side.components.transform
+        const chord = r3(t.position[1] + (t.scale[1] || TRUSS_SECTION_M) / 2)
+        const yaw = t.rotation?.[1] || 0
+        const half = t.scale[0] / 2
+        const dir = [Math.cos(yaw), -Math.sin(yaw)]
+        const from = [r3(t.position[0] - dir[0] * half), r3(t.position[2] - dir[1] * half)]
+        const to = [r3(t.position[0] + dir[0] * half), r3(t.position[2] + dir[1] * half)]
+        layRun({ from, to, y: chord }).forEach((seg, i) => {
+            out.push({ id: `${side.id.replace(/^rig-/, 'rig-piece-')}-${i + 1}`, name: 'halo side (hung from the crane bridge)', kind: seg.kind, position: seg.position, yaw: seg.yaw, height: null, replaces: i === 0 ? side.id : null })
+        })
+    }
     const riser = byId.get('rig-stage-deck')
     if (riser) {
         const t = riser.components.transform

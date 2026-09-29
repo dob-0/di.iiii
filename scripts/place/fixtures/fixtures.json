@@ -107,6 +107,10 @@
         "ANTARI-HZ1000": {
             "url": "https://www.antari.com/products/hz-1000/",
             "what": "Antari HZ-1000 hazer, maker's product page (fetched 2026-09-28): L690 W510 H610 mm, 74.6 kg, 1150 W, 2 DMX channels, 2.2 ml/min at 100 %, 6.4 L tank (40 h at 100 %)"
+        },
+        "UP-COB200": {
+            "url": "https://up-light.en.made-in-china.com/product/bwWGPaldZMfD/China-High-Performance-200W-COB-PAR-Light-for-TV-Studio-Events.html",
+            "what": "UPlight UP-COB200, the maker's store page (model code on the page; opened 2026-09-28 and 2026-09-29)"
         }
     },
     "kinds": {
@@ -944,6 +948,78 @@
                     "nozzle_d_mm": 70
                 }
             }
+        },
+        "cob200": {
+            "code": "UP-COB200",
+            "identified": "EXACT (the maker's store page names UP-COB200; no lux/lumens published)",
+            "product": "UPlight UP-COB200, 200 W warm/cool-white COB PAR (indoor)",
+            "specs": {
+                "size_mm": {
+                    "value": [
+                        295,
+                        295,
+                        350
+                    ],
+                    "src": "UP-COB200",
+                    "basis": "EXACT"
+                },
+                "weight_kg": {
+                    "value": 5.1,
+                    "src": "UP-COB200",
+                    "basis": "EXACT"
+                },
+                "source": {
+                    "value": "200 W COB, 3200-5600 K, CRI >= 90, 50,000 h",
+                    "src": "UP-COB200",
+                    "basis": "EXACT"
+                },
+                "beam_deg": {
+                    "value": 45,
+                    "src": "UP-COB200",
+                    "basis": "EXACT",
+                    "note": "'60°/45° optional' — the 45° lens taken for the hits"
+                },
+                "power_w": {
+                    "value": 180,
+                    "src": "UP-COB200",
+                    "basis": "EXACT",
+                    "note": "rated power 180 W (200 W source)"
+                },
+                "dmx_channels": {
+                    "value": 4,
+                    "src": "UP-COB200",
+                    "basis": "EXACT",
+                    "note": "channel ORDER not published — owed"
+                },
+                "strobe_hz": {
+                    "value": [
+                        1,
+                        25
+                    ],
+                    "src": "UP-COB200",
+                    "basis": "EXACT"
+                },
+                "ip": {
+                    "value": "IP20",
+                    "src": "UP-COB200",
+                    "basis": "EXACT"
+                }
+            },
+            "look": "A round cast-aluminium can like the PL5403 but with one large COB emitter behind a single flat lens, on a U-bracket that is its stand.",
+            "model": {
+                "archetype": "par",
+                "params": {
+                    "can_d_mm": 278,
+                    "can_l_mm": 215,
+                    "tilt_axis_mm": 205,
+                    "width_mm": 262,
+                    "foot_d_mm": 190,
+                    "window_mm": 190,
+                    "fins": 12
+                },
+                "note": "our par archetype to the page's 295 x 295 x 350 mm (sorted axes within 10 %; the page does not say which of its numbers is the height); not the maker's CAD"
+            },
+            "photometryNote": "NO photometry: UPlight publishes no lux or lumens for the UP-COB200 and none was measured. The rig draws it with a hand-set intensity and haze on its class (a drawing choice, labelled ASSUMED there), never a candela."
         }
     },
     "modelsLicence": {

@@ -972,6 +972,14 @@ describe('the show\'s clock (mappingState.showEpoch, hosted playback)', () => {
     expect('showEpoch' in normalizeProjectDocument({ mappingState: { showEpoch: '1790000000000' } }).mappingState).toBe(false)
     expect('showEpoch' in normalizeProjectDocument({}).mappingState).toBe(false)
   })
+  it('keeps showSource "clock" (RIG_BUILD.md §15.8) and nothing else in its place; absent when unset', () => {
+    const written = applyProjectOps(normalizeProjectDocument({}), [
+      { type: 'setMappingState', payload: { patch: { showSource: 'clock' } } }
+    ])
+    expect(normalizeProjectDocument(JSON.parse(JSON.stringify(written))).mappingState.showSource).toBe('clock')
+    expect('showSource' in normalizeProjectDocument({ mappingState: { showSource: 'desk' } }).mappingState).toBe(false)
+    expect('showSource' in normalizeProjectDocument({}).mappingState).toBe(false)
+  })
 })
 
 describe('the ai camera effect on the CJS twin — the server keeps what the desk set', () => {

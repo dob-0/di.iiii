@@ -1050,6 +1050,81 @@
         "writtenAt": "2026-09-28",
         "accessed": "2026-09-28"
       }
+    },
+    {
+      "id": "up-cob200",
+      "code": "UP-COB200",
+      "identified": "EXACT",
+      "identifiedNote": "EXACT (the maker's store page names UP-COB200; no lux/lumens published)",
+      "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd.",
+      "model": "UP-COB200",
+      "modelledOn": null,
+      "product": "UPlight UP-COB200, 200 W warm/cool-white COB PAR (indoor)",
+      "category": "par",
+      "modes": [],
+      "defaultMode": null,
+      "modesOwed": true,
+      "power_w": {
+        "value": 180,
+        "src": "UP-COB200",
+        "basis": "EXACT",
+        "note": "rated power 180 W (200 W source)"
+      },
+      "weight_kg": {
+        "value": 5.1,
+        "src": "UP-COB200",
+        "basis": "EXACT"
+      },
+      "size_mm": {
+        "value": [
+          295,
+          295,
+          350
+        ],
+        "src": "UP-COB200",
+        "basis": "EXACT"
+      },
+      "pan_tilt_deg": null,
+      "ip": {
+        "value": "IP20",
+        "src": "UP-COB200",
+        "basis": "EXACT"
+      },
+      "optics": {
+        "beam_deg": 45,
+        "zoom_deg": null,
+        "lux": null,
+        "at_m": null,
+        "photometrySrc": null,
+        "photometryBasis": null
+      },
+      "model3d": {
+        "glb": "scripts/place/fixtures/glb/cob200.glb",
+        "sidecar": "scripts/place/fixtures/glb/cob200.json",
+        "builtBy": "scripts/place/fixtures/build_fixtures.py",
+        "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": 0,
+        "tiltY": 0.205,
+        "lensY": 0.3078,
+        "sizeAtHome_mm": {
+          "width_x": 342,
+          "depth_z": 281,
+          "height_y": 319
+        },
+        "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+      },
+      "sources": {
+        "UP-COB200": {
+          "url": "https://up-light.en.made-in-china.com/product/bwWGPaldZMfD/China-High-Performance-200W-COB-PAR-Light-for-TV-Studio-Events.html",
+          "what": "UPlight UP-COB200, the maker's store page (model code on the page; opened 2026-09-28 and 2026-09-29)"
+        }
+      },
+      "manifest": {
+        "file": "scripts/place/fixtures/fixtures.json",
+        "kind": "cob200",
+        "writtenAt": "2026-09-28",
+        "accessed": "2026-09-28"
+      }
     }
   ]
 }
