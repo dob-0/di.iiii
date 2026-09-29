@@ -47,6 +47,37 @@ const sideTest = (spec) => {
     return m[1] === '<' ? (x) => x < v : (x) => x > v
 }
 
+const compare = (spec, v) => {
+    const m = /^([<>])\s*(-?\d+(?:\.\d+)?)$/.exec(String(spec).trim())
+    if (!m) throw new Error(`cannot read "${spec}" (write "<n" or ">n")`)
+    return m[1] === '<' ? v < Number(m[2]) : v > Number(m[2])
+}
+
+/**
+ * Which lamps a block takes, from the DOCUMENT: `group` (entity ids `<group>-NN`), `type`,
+ * `position` (a name or a list of names), and geometry — `y` (lens height, m), `x`, `xAbs`
+ * — as "<n" / ">n". Every given criterion must hold. Geometry lets a plan survive a re-hang:
+ * "the heads in the air" stays true whatever the truss is called.
+ */
+export const selectorTest = (sel = {}) => {
+    const known = new Set(['group', 'type', 'position', 'y', 'x', 'xAbs'])
+    for (const k of Object.keys(sel)) if (!known.has(k)) throw new Error(`select: unknown criterion "${k}"`)
+    const re = sel.group ? new RegExp(`^${String(sel.group).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-\\d+$`) : null
+    const names = sel.position == null ? null : new Set([].concat(sel.position))
+    for (const k of ['y', 'x', 'xAbs']) if (sel[k] != null) compare(sel[k], 0)
+    return (e) => {
+        const f = e.components.fixture
+        const p = e.components.transform?.position || [0, 0, 0]
+        if (re && !re.test(e.id)) return false
+        if (sel.type && f.type !== sel.type) return false
+        if (names && !names.has(f.position || '')) return false
+        if (sel.y != null && !compare(sel.y, Number(p[1]) || 0)) return false
+        if (sel.x != null && !compare(sel.x, Number(p[0]) || 0)) return false
+        if (sel.xAbs != null && !compare(sel.xAbs, Math.abs(Number(p[0]) || 0))) return false
+        return true
+    }
+}
+
 const ORDER = {
     'x-asc': (a, b) => a.x - b.x || a.z - b.z,
     'x-desc': (a, b) => b.x - a.x || a.z - b.z,
@@ -74,12 +105,16 @@ export const planPatch = ({ entities = [], library, plan }) => {
         if (!Number.isInteger(u.universe) || u.universe < 1) { errors.push(`universe "${u.universe}" is not a universe number (1 and up)`); continue }
         const spans = []
         for (const block of u.blocks || []) {
-            const where = `U${u.universe} block ${block.group}${block.side ? ` ${block.side}` : ''}`
+            const sel = { ...(block.select || {}) }
+            if (block.group) sel.group = block.group
+            const label = sel.group || [sel.type, sel.position, sel.y && `y${sel.y}`, sel.xAbs && `|x|${sel.xAbs}`].filter(Boolean).join(' ') || '(all)'
+            const where = `U${u.universe} block ${label}${block.side ? ` ${block.side}` : ''}`
             let onSide
             try { onSide = sideTest(block.side ? plan.sides?.[block.side] : null) } catch (e) { errors.push(`${where}: ${e.message}`); continue }
             if (block.side && !plan.sides?.[block.side]) { errors.push(`${where}: side "${block.side}" is not defined in the plan's sides`); continue }
-            const re = new RegExp(`^${String(block.group).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-\\d+$`)
-            const members = lamps.filter((e) => re.test(e.id)).map((e) => {
+            let test
+            try { test = selectorTest(sel) } catch (e) { errors.push(`${where}: ${e.message}`); continue }
+            const members = lamps.filter(test).map((e) => {
                 const p = e.components.transform?.position || [0, 0, 0]
                 return { e, x: Number(p[0]) || 0, z: Number(p[2]) || 0 }
             }).filter((m) => onSide(m.x))
@@ -117,8 +152,9 @@ export const planPatch = ({ entities = [], library, plan }) => {
                     crewMode: mode.crew,
                     assumed: mode.assumed,
                     unit: i + 1,
-                    position: block.position || m.e.components.fixture.position || '',
-                    hung: block.hung === true,
+                    // Position and mount come from the DOCUMENT unless the block names them.
+                    position: 'position' in block ? block.position : (m.e.components.fixture.position || ''),
+                    hung: 'hung' in block ? block.hung === true : m.e.components.fixture.hung === true,
                     port: u.port || null,
                     universeLabel: u.label || '',
                     block: block.what || block.group
