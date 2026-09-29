@@ -18,7 +18,7 @@
   space-bundle import/export, proposals, snapshot restore, the follower — through
   `scripts/project-visibility-lib.mjs` (create private, verify the destination kept it before
   writing content, never widen).
-- Studio: a "public / private — members only" select on each project card for the space owner
+- Studio: a "public / private" select (titled "Private — only members see it") on each project card for the space owner
   or an admin, and a lock + "private" mark on private cards; the contents page marks a private
   row for members. Wiki entry `private-projects`.
 - Not done, stated in the spec: push-space-projects and space-sync(-github) cannot carry

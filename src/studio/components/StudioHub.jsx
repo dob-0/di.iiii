@@ -434,7 +434,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                                     onChange={e => handleVisibility(project, e.target.value)}
                                 >
                                     <option value="public">public</option>
-                                    <option value="private">private — members only</option>
+                                    <option value="private">private</option>
                                 </select>
                             )}
                         </div>
