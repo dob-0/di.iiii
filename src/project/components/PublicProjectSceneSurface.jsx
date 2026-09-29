@@ -71,15 +71,17 @@ export const isCameraCaged = (entryView, fixedCamera) => (
 export const resolveViewerCamera = (document, aspect = getViewportAspect()) => {
     const entryView = document.presentationState?.entryView || 'scene'
     const fixedCamera = document.presentationState?.fixedCamera
+    // The room's declared floor plan bounds how far back the fit may step.
+    const fitOptions = { walkableAreas: document.worldState?.walkableAreas || null }
     // An authored shot gets the same aspect correction a fitted one does. It
     // was composed on somebody's landscape screen; applied verbatim it is the
     // portrait visitor who pays, and a locked camera pays hardest because
     // they cannot move to see what was cut.
     if (entryView === 'fixed-camera' && fixedCamera?.locked) {
-        return fitCameraToAspect(fixedCamera, aspect)
+        return fitCameraToAspect(fixedCamera, aspect, fitOptions)
     }
     if (entryView === 'fixed-camera') {
-        return fitCameraToAspect(fixedCamera || document.worldState?.savedView || null, aspect)
+        return fitCameraToAspect(fixedCamera || document.worldState?.savedView || null, aspect, fitOptions)
     }
     return computeAutoFrameCamera(document, aspect) || document.worldState?.savedView || null
 }
