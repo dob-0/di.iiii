@@ -9,6 +9,7 @@ import {
     enclosingModelIds,
     firstDrawnHit,
     floorMaxPolar,
+    fogOffset,
     isArchitectureEntity,
     isCameraInside,
     isOccluding,
@@ -18,6 +19,7 @@ import {
     outsideDistance,
     parseViewHash,
     presetForKey,
+    rigCore,
     sanitizeViewPresets,
     targetBoundary,
     viewHash
@@ -161,6 +163,41 @@ describe('what is in the way', () => {
     })
 })
 
+describe('the rig core', () => {
+    // MOXIR minimal's lamps: the truss over the DJ, and uplights on the columns down the hall.
+    const lamps = [[-3, 7, 4.8], [0, 7, 4.8], [3, 7, 4.8], [-2.6, 6.5, 4.8], [2.6, 6.5, 4.8], [-3.5, 5.8, 4.9], [3.5, 5.8, 4.9],
+        [-3, 0.2, 7], [3, 0.2, 7], [0.6, 0.3, 3.5], [-10.9, 0.7, 12], [10.9, 0.7, 12], [-10.9, 0.7, 24], [10.9, 0.7, 24],
+        [-10.9, 0.7, 36], [10.9, 0.7, 36], [-11.2, 0.3, 42], [11.2, 0.3, 42]]
+    it('is the stage cluster, not the uplights down the hall', () => {
+        const { lampBox } = rigCore(lamps)
+        expect(lampBox.max[2]).toBeLessThan(8)
+        expect(lampBox.min[0]).toBeGreaterThan(-5)
+        const presets = computeViewPresets(frame, { rigBox: lampBox, lampBox, opening: OPENING })
+        const floor = presets.find((p) => p.id === 'floor')
+        expect(floor.position[2]).toBeGreaterThan(15) // the crowd is toward the entry (+z)
+    })
+    it('takes rig pieces near the core, not far ones', () => {
+        const { rigBox } = rigCore(lamps, [{ min: [-1.5, 0, 4.3], max: [1.5, 1.2, 6] }, { min: [30, 0, 40], max: [31, 2, 41] }])
+        expect(rigBox.min[1]).toBe(0)
+        expect(rigBox.max[0]).toBeLessThan(10)
+    })
+    it('has nothing without lamps or pieces', () => {
+        expect(rigCore([], [])).toEqual({ lampBox: null, rigBox: null })
+    })
+})
+
+describe('the fog', () => {
+    it('stands still at the opening shot and inside at that distance', () => {
+        expect(fogOffset(0, 17.9, 17.9)).toBe(0)
+        expect(fogOffset(0, 10, 17.9)).toBe(0)
+    })
+    it('stands back as far as you are outside, or farther than the opening shot', () => {
+        expect(fogOffset(40, 60, 17.9)).toBeCloseTo(42.1)
+        expect(fogOffset(3, 39, 17.9)).toBeCloseTo(21.1)
+        expect(fogOffset(60, 20, 17.9)).toBe(60)
+    })
+})
+
 describe('the camera limits', () => {
     it('never lets the orbit go under the floor', () => {
         const polar = floorMaxPolar(5, 10, 0, 0.3)
@@ -170,7 +207,7 @@ describe('the camera limits', () => {
         expect(floorMaxPolar(0, 10, 0, 0.3)).toBeLessThan(Math.PI / 2)
     })
     it('holds the orbit to the building and the target inside it', () => {
-        expect(orbitMaxDistance(frame)).toBeCloseTo(frame.radius * 2.5)
+        expect(orbitMaxDistance(frame)).toBeCloseTo(frame.radius * 1.6)
         expect(orbitMaxDistance(frame, 900)).toBeCloseTo(990)
         const b = targetBoundary(frame)
         expect(b.min[1]).toBe(0)
@@ -193,6 +230,7 @@ describe('the six views', () => {
     it('dance floor: eye height, in the crowd, looking at the rig', () => {
         expect(byId.floor.position[1]).toBeCloseTo(1.7)
         expect(byId.floor.position[2]).toBeGreaterThan(15)
+        expect(byId.floor.position[2] - 4.8).toBeLessThanOrEqual(18.5)
         expect(byId.floor.interior).toBe(true)
         expect(isCameraInside(byId.floor.position, frame)).toBe(true)
     })

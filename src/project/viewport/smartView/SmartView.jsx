@@ -12,9 +12,9 @@ import {
     cutawayPlan,
     emptyBox,
     enclosingModelIds,
-    expandBox,
     firstDrawnHit,
     floorMaxPolar,
+    fogOffset,
     isBoxEmpty,
     isLampEntity,
     isOccluding,
@@ -22,6 +22,7 @@ import {
     meshRole,
     orbitMaxDistance,
     outsideDistance,
+    rigCore,
     sanitizeViewPresets,
     sphereCastOffsets,
     targetBoundary,
@@ -107,9 +108,15 @@ function patchMaterial(material, uniforms, planes) {
     material.needsUpdate = true
 }
 
-function setXray(material, on) {
+function setXray(material, on, role = 'wall') {
     const orig = material?.userData?.svOrig
     if (!orig) return
+    // The roof is not drawn in x-ray (colour writes off, i.e. hidden): MOXIR's roof is a
+    // 41k-triangle space frame, and ghosting it as a transparent surface over the whole
+    // screen cost the frame rate (42.8 fps measured at the crane view against 74 without
+    // x-ray). X-ray is for checking hanging and aiming, which a roof only covers.
+    if (orig.visible === undefined) orig.visible = material.visible
+    material.visible = on && role === 'roof' ? false : orig.visible
     const want = on ? { transparent: true, opacity: XRAY_OPACITY * (orig.opacity ?? 1), depthWrite: false } : orig
     if (material.transparent !== want.transparent) material.needsUpdate = true
     material.transparent = want.transparent
@@ -118,13 +125,21 @@ function setXray(material, on) {
 }
 
 const EDGE_COLOR = 0x9fb4c8
+// Edges are drawn only for meshes up to this many triangles: EdgesGeometry of a dense
+// scan or lattice is itself tens of thousands of line segments (a cost, and noise).
+const EDGE_MAX_TRIANGLES = 12000
+const triangleCount = (geometry) => {
+    const n = geometry?.index ? geometry.index.count : geometry?.attributes?.position?.count || 0
+    return Math.floor(n / 3)
+}
 
 // X-ray on or off for the building: the surfaces ghosted, their edges drawn (made once,
 // the first time x-ray is asked for, and kept hidden after).
 function applyXray(state, on, planes) {
     for (const mesh of state.walls) {
-        for (const material of materialsOf(mesh)) setXray(material, on)
-        if (on && !state.edges.has(mesh.uuid) && mesh.geometry) {
+        for (const material of materialsOf(mesh)) setXray(material, on, mesh.userData.svRole)
+        if (on && !state.edges.has(mesh.uuid) && mesh.geometry && mesh.userData.svRole !== 'roof'
+            && triangleCount(mesh.geometry) <= EDGE_MAX_TRIANGLES) {
             const lines = new THREE.LineSegments(
                 new THREE.EdgesGeometry(mesh.geometry, 28),
                 new THREE.LineBasicMaterial({ color: EDGE_COLOR, transparent: true, opacity: 0.32, depthWrite: false, clippingPlanes: planes })
@@ -173,7 +188,13 @@ export default function SmartView({
     const entityById = useMemo(() => new Map(entities.map((e) => [e.id, e])), [entities])
     const venueOutline = useMemo(() => venueOf(entities).plan?.outline || null, [entities])
     const authored = useMemo(() => sanitizeViewPresets(document?.presentationState?.viewPresets), [document?.presentationState?.viewPresets])
-    const opening = document?.presentationState?.fixedCamera?.position || document?.worldState?.savedView?.position || null
+    const openingView = document?.presentationState?.fixedCamera?.position ? document.presentationState.fixedCamera : document?.worldState?.savedView || null
+    const opening = openingView?.position || null
+    const referenceDistance = useMemo(() => {
+        const p = openingView?.position
+        const t = openingView?.target
+        return Array.isArray(p) && Array.isArray(t) ? Math.hypot(p[0] - t[0], p[1] - t[1], p[2] - t[2]) || 15 : 15
+    }, [openingView])
     const walkableAreas = document?.worldState?.walkableAreas || null
 
     const uniforms = useMemo(() => ({
@@ -231,6 +252,7 @@ export default function SmartView({
                         transparent: orig.transparent,
                         opacity: orig.opacity,
                         depthWrite: orig.depthWrite,
+                        visible: orig.visible ?? true,
                         clippingPlanes: orig.clippingPlanes,
                         clipShadows: orig.clipShadows,
                         onBeforeCompile: orig.onBeforeCompile,
@@ -324,35 +346,35 @@ export default function SmartView({
         state.occluders = occluders
         if (xrayRef.current) applyXray(state, true, planes)
 
-        // The rig: lamps by where they are, pieces (truss, riser) by their bodies.
-        let lampBox = emptyBox()
-        let rigBox = emptyBox()
+        // The rig: lamps by where they are, pieces (truss, riser) by their bodies, kept to
+        // the rig's core (smartViewGeometry.rigCore) so lamps down the hall don't count.
+        const lampPoints = []
+        const pieceBoxes = []
         let stageBox = emptyBox()
         for (const [id, group] of groups) {
             const entity = entityById.get(id)
             if (!entity || archIds.has(id)) continue
             if (isLampEntity(entity)) {
-                const p = group.getWorldPosition(new THREE.Vector3()).toArray()
-                expandBox(lampBox, p)
-                expandBox(rigBox, p)
+                lampPoints.push(group.getWorldPosition(new THREE.Vector3()).toArray())
             } else if (isRigEntity(entity)) {
                 const box = worldBox(group)
-                if (box) rigBox = unionBox(rigBox, box)
+                if (box) pieceBoxes.push(box)
             }
             if (!isLampEntity(entity) && /\b(riser|stage|booth|deck)\b/i.test(String(entity.name || ''))) {
                 const box = worldBox(group)
                 if (box) stageBox = unionBox(stageBox, box)
             }
         }
+        const { lampBox, rigBox } = rigCore(lampPoints, pieceBoxes)
         const frame = computeRoomFrame({
             archBox,
             roofMinY: Number.isFinite(roofMinY) ? roofMinY : null,
             outline: venueOutline,
-            rigBox: isBoxEmpty(rigBox) ? null : rigBox
+            rigBox
         })
         state.frame = frame
-        state.rigBox = isBoxEmpty(rigBox) ? null : rigBox
-        state.lampBox = isBoxEmpty(lampBox) ? null : lampBox
+        state.rigBox = rigBox
+        state.lampBox = lampBox
         state.stageBox = isBoxEmpty(stageBox) ? null : stageBox
         publishPresets()
     }
@@ -498,9 +520,10 @@ export default function SmartView({
             planes[5].constant = PARK
         }
 
-        // --- the fog stands back by as far as you are outside -------------------------
+        // --- the fog stands back (smartViewGeometry.fogOffset) --------------------------
         if (scene.fog && fogBase && Number.isFinite(fogBase.near) && Number.isFinite(fogBase.far)) {
-            state.fogOffset = approach(state.fogOffset, outsideDistance(cam.toArray(), frame.bounds), delta, 0.15)
+            const goal = fogOffset(outsideDistance(cam.toArray(), frame.bounds), cam.distanceTo(target), referenceDistance)
+            state.fogOffset = approach(state.fogOffset, goal, delta, 0.15)
             scene.fog.near = fogBase.near + state.fogOffset
             scene.fog.far = fogBase.far + state.fogOffset
         }

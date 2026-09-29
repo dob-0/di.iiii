@@ -21,3 +21,35 @@
   row; the fade circle is a fixed share of the screen; clicks still hit cut-away parts;
   no MOXIR document carries authored `viewPresets` yet (owner's call); the realism PR #660
   (atmosphere/beams) was not on dev — its haze needs a look together with the fog offset.
+
+### Measured (2026-09-30, one sitting, before = origin/dev 37ca97b2, after = this branch)
+
+MOXIR `moxir-hall-minimal` on a scratch copy, RTX 3080 (ANGLE on Vulkan, PRIME offload),
+uncapped (`--disable-gpu-vsync --disable-frame-rate-limit`), 4 s per sample. CPU package
+96–100 °C throughout (85 °C was not reachable: other sessions' jobs hold the cores), so the
+numbers carry a thermal error of the order of ±15 %.
+
+| view | before fps | after fps |
+|---|---|---|
+| desktop 1440×900 DPR 2, opening shot | 140.7 | 100.4 |
+| desktop, a column in the way | 145.6 | 124.3 |
+| desktop, pulled far outside | 3602 (black screen) | 614 (hall cut open) |
+| desktop, Floor / Crane | — | 111.2 / 112.6 |
+| desktop, x-ray Crane / x-ray Top | — | 167.1 / 341.1 |
+| phone 390×844 DPR 3 (emulated), opening | 500.8 | 355.7 |
+| phone, Crane / x-ray Crane | — | 643.8 / 662.0 |
+
+- X-ray at the crane view was 42.8 fps before this round (the roof, a 41k-triangle space
+  frame, ghosted over the whole screen). Now the roof is not drawn in x-ray and edges are
+  made only for meshes ≤ 12 000 triangles: 167 fps.
+- The opening shot costs ~30 % (140 → 100 fps): the dither/clip shader on the building's
+  materials plus the 15 Hz raycast. Still above the 60 fps bar; not profiled further.
+- Floor view no longer grey (target heights now follow the hung lamps; the camera stood in
+  a beam cone). Side stands ~12–18 m out instead of 83 m.
+- Frames + compare page: `~/Downloads/moxir-smart-view/index.html`.
+- Tests: 5 failures in `sdk/door.test.js`, `sdk/sdk.test.js`, `scripts/di/openFile.test.js`,
+  `src/kit/kitCatalogue.test.js` fail the same on untouched origin/dev in this machine's
+  shared node_modules (version strings) — environmental, not this branch.
+- Owed: from far outside the hall reads small and dark (the cut works, but the rig is a few
+  pixels at maxDistance); a real phone (S24) has not been tried; seen on the scratch stack,
+  not yet at https://local.thedi.studio/moxir (that runs the installed release).

@@ -269,6 +269,20 @@ export const firstDrawnHit = (hits = [], plan = null, section = null) => {
     return null
 }
 
+/**
+ * How far the authored fog stands back. Fog is measured from the camera, so an orbit
+ * that backs away from what it looks at loses it into the haze — outside the building
+ * the whole room goes black (MOXIR: fog 0–32 m, the rig 50 m in from the end wall).
+ * The fog moves back by whichever is larger: the camera's distance outside the building,
+ * or how much farther from its target it stands than the room's opening shot does
+ * (`referenceDistance`), so what you look at keeps the atmosphere it has from there.
+ */
+export const fogOffset = (outside, cameraToTarget, referenceDistance = 15) => Math.max(
+    0,
+    Number(outside) || 0,
+    (Number(cameraToTarget) || 0) - (Number(referenceDistance) || 15)
+)
+
 /** Is the look blocked? A hit this far short of the target is in the way. */
 export const isOccluding = (hitDistance, targetDistance, margin = 0.4) => (
     Number.isFinite(hitDistance) && Number.isFinite(targetDistance) && hitDistance < targetDistance - margin
@@ -304,7 +318,7 @@ export const floorMaxPolar = (targetY, distance, floorY = 0, clearance = 0.3) =>
 
 /** How far the orbit may pull back: the building with room to see it whole. */
 export const orbitMaxDistance = (frame, presetDistance = 0) => (
-    frame ? Math.max(20, frame.radius * 2.5, (Number(presetDistance) || 0) * 1.1) : 500
+    frame ? Math.max(20, frame.radius * 1.6, (Number(presetDistance) || 0) * 1.1) : 500
 )
 
 /** Where the orbit target may go (camera-controls' setBoundary): the room, never under it. */
@@ -312,6 +326,41 @@ export const targetBoundary = (frame, margin = 2) => (frame ? {
     min: [frame.bounds.min[0] - margin, frame.floorY, frame.bounds.min[2] - margin],
     max: [frame.bounds.max[0] + margin, frame.roofTop + margin, frame.bounds.max[2] + margin]
 } : null)
+
+// ---------------------------------------------------------------------------------------
+// The rig's core.
+
+const median = (values) => {
+    const v = [...values].sort((a, b) => a - b)
+    const m = Math.floor(v.length / 2)
+    return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2
+}
+
+/**
+ * Where the rig IS, robustly: lamps spread through a room (MOXIR's column uplights run the
+ * hall's length to z = 42) must not drag the views away from the stage. The centre is the
+ * component-wise median of the lamp positions (robust to up to half being elsewhere); the
+ * core is every lamp within `radius` metres of it on the floor plan; rig pieces (truss,
+ * riser) join when their centre is within 1.5 × radius. Returns { lampBox, rigBox } or nulls.
+ */
+export const rigCore = (lampPoints = [], pieceBoxes = [], radius = 8) => {
+    const points = (lampPoints || []).map(vec3).filter(Boolean)
+    if (!points.length) {
+        const boxes = (pieceBoxes || []).filter((b) => !isBoxEmpty(b))
+        return { lampBox: null, rigBox: boxes.length ? boxes.reduce(unionBox, emptyBox()) : null }
+    }
+    const cx = median(points.map((p) => p[0]))
+    const cz = median(points.map((p) => p[2]))
+    const lampBox = emptyBox()
+    for (const p of points) if (Math.hypot(p[0] - cx, p[2] - cz) <= radius) expandBox(lampBox, p)
+    let rigBox = { min: [...lampBox.min], max: [...lampBox.max] }
+    for (const b of pieceBoxes || []) {
+        if (isBoxEmpty(b)) continue
+        const c = boxCenter(b)
+        if (Math.hypot(c[0] - cx, c[2] - cz) <= radius * 1.5) rigBox = unionBox(rigBox, b)
+    }
+    return { lampBox, rigBox }
+}
 
 // ---------------------------------------------------------------------------------------
 // The presets.
@@ -390,7 +439,9 @@ export const computeViewPresets = (frame, {
     const stageTop = stageBox && !isBoxEmpty(stageBox) ? stageBox.max[1] : floorY
     const stageC = stageBox && !isBoxEmpty(stageBox) ? boxCenter(stageBox) : [rc[0], stageTop, rc[2]]
     const stageDepth = stageBox && !isBoxEmpty(stageBox) ? Math.abs(ax * boxSize(stageBox)[0]) + Math.abs(az * boxSize(stageBox)[2]) : 2
-    const lampMidY = lc[1]
+    // Where the eye goes: the hung lamps' height (a floor-standing lamp in the set must not
+    // pull the look down to the floor).
+    const lampMidY = Math.max(lc[1], lamps.max[1] - 1)
     const look = (from) => [lc[0], from, lc[2]]
     const inside = (x, z) => [clampInto(x, bounds.min[0] + 0.5, bounds.max[0] - 0.5), clampInto(z, bounds.min[2] + 0.5, bounds.max[2] - 0.5)]
 
@@ -398,16 +449,17 @@ export const computeViewPresets = (frame, {
 
     // 1 · Dance floor: eye height, back in the crowd, on the rig's centre line.
     {
-        const want = Math.max(12, rigWidth * 2.5)
+        // 12–18 m back: the authored MOXIR floor camera stands 15.5 m from the DJ.
+        const want = clampInto(rigWidth * 0.7, 12, 18)
         const d = Math.min(want, Math.max(3, reachInside(lc[0], lc[2], ax, az, bounds) - 1))
         const [x, z] = inside(lc[0] + ax * d, lc[2] + az * d)
-        out.floor = { position: [x, floorY + EYE_HEIGHT, z], target: look((floorY + EYE_HEIGHT + lampMidY) / 2 + 0.5), fov: 55, interior: true }
+        out.floor = { position: [x, floorY + EYE_HEIGHT, z], target: look((floorY + EYE_HEIGHT + lamps.max[1]) / 2 + 0.5), fov: 55, interior: true }
     }
     // 2 · The DJ: standing at the riser's front edge, eye 1.7 m over the deck, up at the rig.
     {
-        const front = stageDepth / 2 + 0.3
+        const front = stageDepth / 2 + 1.2
         const [x, z] = inside(stageC[0] + ax * front, stageC[2] + az * front)
-        out.dj = { position: [x, stageTop + EYE_HEIGHT, z], target: [lc[0], lampMidY + 0.5, lc[2]], fov: 80, interior: true }
+        out.dj = { position: [x, stageTop + EYE_HEIGHT, z], target: [lc[0], lamps.max[1] - 0.5, lc[2]], fov: 80, interior: true }
     }
     // 3 · Top plan: straight down on the whole footprint, a long lens (reads as a plan).
     {
@@ -423,7 +475,7 @@ export const computeViewPresets = (frame, {
     //     section plane just past the rig so everything between is cut away.
     {
         const fov = 24
-        const along = clampInto(Math.max(15, rigWidth * 3), 6, Math.max(6, Math.abs(ax) * (bounds.max[0] - bounds.min[0]) / 2 + Math.abs(az) * (bounds.max[2] - bounds.min[2]) / 2))
+        const along = clampInto(Math.max(12, rigWidth * 1.5), 6, Math.max(6, Math.abs(ax) * (bounds.max[0] - bounds.min[0]) / 2 + Math.abs(az) * (bounds.max[2] - bounds.min[2]) / 2))
         const halfH = (roofCut - floorY) / 2 + 0.5
         const fit = Math.max(halfH / tanHalf(fov), along / (tanHalf(fov) * safeAspect)) * 1.05
         const toWall = reachInside(rc[0], rc[2], px, pz, bounds, 0)
@@ -448,10 +500,10 @@ export const computeViewPresets = (frame, {
         const d = Math.max(4, r / Math.sin((fov * Math.PI) / 360))
         const dir = [ax + px * 0.35, 0.45, az + pz * 0.35]
         const l = Math.hypot(...dir)
-        let pos = [lc[0] + (dir[0] / l) * d, lc[1] + (dir[1] / l) * d, lc[2] + (dir[2] / l) * d]
+        let pos = [lc[0] + (dir[0] / l) * d, lampMidY + (dir[1] / l) * d, lc[2] + (dir[2] / l) * d]
         const [x, z] = inside(pos[0], pos[2])
         pos = [x, clampInto(pos[1], floorY + 0.5, roofCut - 0.3), z]
-        out.rig = { position: pos, target: [...lc], fov, interior: true }
+        out.rig = { position: pos, target: [lc[0], lampMidY, lc[2]], fov, interior: true }
     }
     // 6 · Crane: a jib high over the crowd, looking down at the stage and the rig.
     {

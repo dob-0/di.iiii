@@ -66,10 +66,13 @@ they are, and the row as soon as it adds `&views=1` to its room frame's address.
    taking the camera lets it go (the hash clears, a section drops).
 4. **X-ray** — Blender's *X-Ray* (and its binding, Alt+Z): the building's surfaces at 7 % of
    their opacity with depth writes off, and its edges (`EdgesGeometry`, 28°) drawn faint;
-   the rig, lamps and beams untouched.
+   the rig, lamps and beams untouched. The roof is not drawn in x-ray, and edges are made
+   only for meshes up to 12 000 triangles: MOXIR's roof is a 41k-triangle space frame, and
+   ghosting it over the whole screen measured 42.8 fps at the crane view against 74 without
+   x-ray (see Measured).
 5. **Camera limits** (visitor surfaces only) — camera-controls' own API, nothing hand-rolled:
    `maxPolarAngle` recomputed each frame so the camera stays 0.3 m over the floor at the
-   current distance, `maxDistance` = 2.5 × the building's radius (or the farthest preset),
+   current distance, `maxDistance` = 1.6 × the building's radius (or the farthest preset),
    `setBoundary` keeps the orbit target inside the building (never under its floor). With
    the target held inside, a camera outside always has the building in front of it, and the
    cutaway opens it — the black screen cannot happen.

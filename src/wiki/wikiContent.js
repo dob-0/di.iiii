@@ -1741,7 +1741,7 @@ export const WIKI_ARTICLES = [
                 'In the way: when a wall, a column or a machine stands between the camera and what it looks at, the part of it in front of that point fades (about 85 % gone, as fine dots), and comes back when the view is clear. Only the building fades — never a lamp, a beam or the rig.',
                 'From outside: step the camera out of the building and the roof and the walls facing you are cut away, like a model with its lid off; the haze stands back as far as you are outside, so the inside stays lit. Step back in and it closes again.',
                 'The six views, keys 1–6 or the row at the bottom: Floor (eye height in the crowd), DJ (from the riser, up at the rig), Top (the plan, straight down), Side (the room cut along its length through the rig), Rig (the lamps close), Crane (high over the crowd). They come from the room and the rig; a project can carry its own under presentationState.viewPresets.',
-                'X-ray (the button, or Alt+Z): the building drawn as a faint ghost with its edges, the rig at full strength — for checking what hangs where and where it points.',
+                'X-ray (the button, or Alt+Z): the building drawn as a faint ghost with its edges and the roof left out, the rig at full strength — for checking what hangs where and where it points.',
                 'A link can open on a view: add #view-top (or floor, dj, side, rig, crane) to the room\'s address.',
                 'For a visitor, the camera never goes under the floor and never wanders off into the dark: it stays within reach of the building, and the point it circles stays inside it.'
             ] },
