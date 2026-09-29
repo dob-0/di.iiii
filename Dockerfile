@@ -7,6 +7,9 @@ FROM node:24-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a5
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+# npm ci runs "prepare" (scripts/install-git-hooks.mjs); it must exist before the rest of
+# the tree is copied. Outside a git checkout it exits 0 and does nothing.
+COPY scripts/install-git-hooks.mjs scripts/
 RUN npm ci
 
 COPY . .
