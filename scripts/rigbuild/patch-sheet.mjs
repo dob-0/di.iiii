@@ -18,7 +18,8 @@
  *   patch-sheet.pdf    (--pdf) the same HTML printed A4 landscape by headless Chromium
  *                      (a static page: no WebGL, GPU and software rasteriser both off)
  * Reads only. Checks the desk (GET <desk>/api/rig?project=) and flags any lamp the desk
- * holds elsewhere; exits 1 if the document disagrees with its plan or with the desk.
+ * holds elsewhere, and any OTHER project's fixture on the desk in the show's universes;
+ * exits 1 if the document disagrees with its plan or with the desk, or the desk is not the show's alone.
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -196,9 +197,16 @@ const main = async () => {
     const entities = doc.entities || []
     const library = libraryWithShow(loadLibrary(), entities)
     let desk = null
+    let foreign = []
     try {
         const r = await fetch(`${deskBase}api/rig?project=${encodeURIComponent(project)}`)
         if (r.ok) desk = (await r.json()).fixtures
+        // Anything else on this desk in the show's universes: another version's lamps (the
+        // Studio auto-patches whatever room is opened into the free slots) would be sent
+        // DMX on the night too.
+        const all = await fetch(`${deskBase}api/rig`)
+        const planned = new Set((plan.universes || []).map((u) => u.universe))
+        if (all.ok) foreign = (await all.json()).fixtures.filter((f) => !String(f.key).startsWith(`${project}:`) && planned.has(f.universe))
     } catch { warn(`  the desk at ${deskBase} did not answer — the sheet is not checked against it`) }
     const model = sheetModel({ entities, library, desk, projectId: project })
     const planned = planPatch({ entities, library, plan })
@@ -223,7 +231,8 @@ const main = async () => {
     const bad = rows.filter((r) => r.drift.length || r.flags.some((f) => ['overlap', 'off-the-end', 'desk-differs', 'not-on-desk', 'not-patched', 'index-duplicate', 'circuit-over'].includes(f)))
     for (const r of bad) warn(`  #${r.index} ${r.id}: ${[...r.flags, ...r.drift].join('; ')}`)
     for (const e of planned.errors) warn(`  plan: ${e}`)
-    if (bad.length || planned.errors.length) die(`${bad.length} fixture(s) disagree with the plan or the desk`)
+    if (foreign.length) warn(`  ${foreign.length} fixture(s) of OTHER projects sit on this desk in the show's universes (${[...new Set(foreign.map((f) => String(f.key).split(':')[0]))].join(', ')}) — take them off: patch.mjs --project <id> --unpatch`)
+    if (bad.length || planned.errors.length || foreign.length) die(`${bad.length} fixture(s) disagree with the plan or the desk; ${foreign.length} foreign fixture(s) on the desk`)
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) main().catch((e) => die(e.message))

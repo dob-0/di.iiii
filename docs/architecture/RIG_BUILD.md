@@ -1768,6 +1768,16 @@ addresses, 0 flags) → `show-loop.mjs` (5 looks, DMX for 34 lamps) → `patch-s
 document agrees with its plan and the desk) → MVR XSD-valid, 36 of 36 addressed. Two bugs found on
 the way, each with a guard (known-fixes 2026-09-29): a colour-only mode could not be put out by a
 look, and the MVR dropped the address of any lamp whose maker's mode is owed.
+Seen in the split visualiser on the install (2026-09-29, RTX 3080 via PRIME/ANGLE-Vulkan, 60 fps,
+`vis-see.mjs --cues`, frames `~/Downloads/moxir-patch/visualiser/`): all 5 cues fired through the new
+patch; the room drew 34 lamps from the desk's DMX (the 2 hazers have nothing drawn); Red room reads red
+on the line and the bridge, Strobe hit flashes the 2 line strobes (U1.201/205) and 4 pit strobes (U4).
+Two things found while looking, neither the patch's: a desk FX "pulse" (120 BPM, depth 255) had been
+switched on over every dimmer between 18:22 and 19:01, so the frames are dimmer than the looks; and
+opening the As-ordered room in the Studio re-patched 32 of its lamps into the free slots of the moxir
+desk (`useRigAutoPatch` patches whatever room is open). `patch-sheet.mjs` now fails on any other
+project's fixture in the show's universes; the desk was cleared again. A rule that only the space's
+chosen version patches onto its desk is owed.
 Owed: every channel ORDER from the rental house (`~/Downloads/moxir-patch/questions-for-rental.md`);
 the press PARs (#401–403) are on no look position, so every look leaves them dark (a looks issue,
 not the patch); the node and cable lengths from the rental house (it lists splitters, no node);
