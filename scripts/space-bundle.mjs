@@ -199,6 +199,37 @@ const describeLightShow = (show) => {
 // parsed that way, so hand tar a bare filename and cd it into the directory
 // instead. `--force-local` would also fix GNU tar and is deliberately not used:
 // macOS ships bsdtar, which has no such flag and would abort on it.
+// A bundle holds regular files and directories, nothing else. 2026-09-29
+// (security audit C1): a crafted bundle carried `space/assets/<id>` as a
+// symlink to a file outside the data root, import copied the link as a link,
+// and the asset route then served whatever it pointed at — the database, the
+// env file — to anyone who could sign in. Refused twice: by the archive's own
+// listing before anything is written (a link, hardlink, device or fifo member
+// is named in the mode column, GNU tar and bsdtar alike), and by lstat over
+// everything extracted, which does not depend on how a tar prints.
+const refuseLinkMembers = (listing) => {
+    for (const line of String(listing).split('\n')) {
+        if (!line.trim()) continue
+        const kind = line[0]
+        if (kind !== '-' && kind !== 'd') die(`refusing bundle: it holds a ${kind === 'l' ? 'symbolic link' : kind === 'h' ? 'hard link' : 'special file'} (${line.trim().split(/\s+/).slice(-3).join(' ')})`)
+        if (/ link to /.test(line)) die(`refusing bundle: it holds a hard link (${line.trim()})`)
+    }
+}
+
+const refuseNonRegularEntries = async (root) => {
+    const pending = [root]
+    while (pending.length) {
+        const dir = pending.pop()
+        for (const entry of await fsp.readdir(dir)) {
+            const full = path.join(dir, entry)
+            const st = await fsp.lstat(full)
+            if (st.isDirectory()) { pending.push(full); continue }
+            if (!st.isFile()) die(`refusing bundle: ${path.relative(root, full)} is not a regular file`)
+            if (st.nlink > 1) die(`refusing bundle: ${path.relative(root, full)} is a hard link`)
+        }
+    }
+}
+
 const tarArchiveArgs = (archivePath) => ({
     name: path.basename(archivePath),
     cwd: path.dirname(path.resolve(archivePath))
@@ -329,7 +360,9 @@ async function importSpace(args) {
     const staging = await fsp.mkdtemp(path.join(os.tmpdir(), 'space-bundle-'))
     try {
         const inTar = tarArchiveArgs(bundlePath)
+        refuseLinkMembers(execFileSync('tar', ['-tvzf', inTar.name], { cwd: inTar.cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }))
         execFileSync('tar', ['-xzf', inTar.name, '-C', staging], { cwd: inTar.cwd })
+        await refuseNonRegularEntries(staging)
 
         const manifestPath = path.join(staging, 'bundle.json')
         if (!fs.existsSync(manifestPath)) die('not a space bundle: bundle.json missing')
