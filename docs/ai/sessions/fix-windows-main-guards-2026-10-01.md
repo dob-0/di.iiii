@@ -8,7 +8,7 @@ space or non-ASCII character, even on Linux, because the URL is percent-encoded)
 
 **Fix:** one helper, `scripts/lib/isMainModule.mjs` (`isMainModule(import.meta.url, argv1 = process.argv[1])`):
 `fileURLToPath` (the documented conversion) on one side, `path.resolve(argv1)` on the other, both passed through
-`fs.realpathSync` in try/catch so a symlinked bin still matches; false when argv1 is missing. 31 scripts now
+`fs.realpathSync` in try/catch so a symlinked bin still matches; false when argv1 is missing. 32 scripts now
 use `if (isMainModule(import.meta.url))` with their existing main call unchanged. Non-guard uses of the same
 pathname idiom (path roots in `realism.mjs`, `sway.mjs`, `build-reel-atlas.mjs` and five test files) became
 `fileURLToPath(...)`.
