@@ -1510,7 +1510,16 @@ copies". A backup and the op log are not enough; he opens old and new side by si
   copy's lamps at addresses another project holds and flags them as overlaps. It moves nothing.
 - **Undo**: `copy-version.mjs --undo --to <copy>`. It deletes only a project whose mark says `copyOf`,
   soft, into the trash.
-- Guard: `copy-version.test.js` (the label, the URLs, the mark alone changes).
+- **Adopt**: `copy-version.mjs --adopt --from <source> --to <copy> --label "old hall 09-29"` gives an
+  existing copy its mark back when a server lost it (`copyOf` normalised away, or the whole mark dropped
+  because its own id fell past `RIG_VERSIONS_CAP` siblings). GET only, then ONE `updateComponent` on the
+  show entity's `rigVariant` at the version re-read just before writing, read back afterwards. It refuses
+  a project that does not look like the source's copy (`looksLikeCopyOf`: same set, entity count within
+  15 % / at least 10, at least 90 % of the hall's ids and names the same; the thresholds are chosen, not
+  measured, and the dry run prints the measured numbers). Idempotent; `--dry-run` writes nothing.
+  Notes and the exact commands: `docs/ai/sessions/feat-copy-version-adopt.md`.
+- Guard: `copy-version.test.js` (the label, the URLs, the mark alone changes; `--adopt`: the mark given
+  back, refusals, idempotence, dry run, one op on the show entity only).
 
 ### 15.12 Movers on the ground — Minimal and Full with nothing that moves in the air (2026-09-30)
 
