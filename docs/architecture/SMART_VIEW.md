@@ -115,7 +115,7 @@ content change for the owner's word (it passes through `normalizePresentationSta
 
 ## Measured
 
-See the table in `docs/ai/sessions/feat-smart-view.md` (moved to PROGRESS.md at land):
+See the table in `PROGRESS.md` (the smart-view note, folded at land):
 frame rate before/after on MOXIR `moxir-hall-minimal`, RTX 3080 (ANGLE on Vulkan, PRIME
 offload), uncapped (`--disable-gpu-vsync --disable-frame-rate-limit`), 1440×900 at DPR 2.
 
