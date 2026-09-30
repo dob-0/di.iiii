@@ -39,3 +39,20 @@ Nothing here was seen on a screen; no visual result is claimed. Line numbers are
 
 ### Not read
 `copy-version.test.js` (not run); `asset-remap-lib.mjs`; `makeClient`; the server's POST /ops handler body (the 409 is taken from the route catalogue, not traced in `projectRoutes.js:715`); `--undo` beyond a glance.
+
+## B3 — Patch sheet reads the desk; desk serves refusal flags and overlap names (ref `origin/feat/desk-serves-refusal-flags`, commit 9db5f099)
+
+### Findings
+1. **medium — `conflictsWith` reports one merged span per universe, so the sheet prints channels that are NOT shared.** `serverXR/src/lighting/rigpatch.js:345-347` folds every overlap in a universe into one `{from, to}`: `u.from = Math.min(u.from, from); u.to = Math.max(u.to, to);`, and `src/rigbuild/sheet.js` prints it as `overlaps N other fixtures on U1 <from>-<to>`. Proven with a node script: room lamps at U1.10, U1.400, U1.510 (3 ch) against studio fixtures at 11, 401 and 505 (16 ch) → `{"universe":1,"from":11,"to":512,...}` — the real shared channels are 11–12, 401–402 and 510–512, and the sheet says 11–512. A number read as measured that is a hull. Fix: keep a list of spans per universe (merge only touching/overlapping ones) and print them as `rangeText` does, or one entry per other fixture.
+2. **low — an older desk that rewrites show.json drops `rigFlags`.** The field is read only by the new loader (`desk.js:308`); a desk from before this commit loads explicit fields and saves without it, so after a downgrade-and-save the sheet's "to decide" count falls back to zero until the next patch run. Self-healing and not a data loss of the rig itself; say so in the note. No fix needed beyond a line in the session note / RIG_BUILD.
+
+### Refuted
+- Leak of another project's or the studio's data: `/light/*` is behind `requireLocalRuntime` (`serverXR/src/routes/lightingRoutes.js:90`, loopback unless `DI_ALLOW_LAN_DEVICES`), and the same callers already get the whole desk state; `conflictsWith` adds only `{id, name}`. Hosted tiers without a local runtime answer 404.
+- Project query injection: `rigConflicts` uses it only as a `startsWith(project + ':')` prefix and returns `[]` for empty; `rigFlagsOf` is a keyed read. `rigPatch` refuses `:` and > 128 chars before storing.
+- Text from the desk reaching the DOM: every flag message, fixture name and span passes `esc` (`sheet.js:401`, `:458`, overlapLines) before the sheet's `dangerouslySetInnerHTML` (`PatchSheetSurface.jsx:136`).
+- Atomic save: `rigFlags` rides the existing `writeWhole` (tmp + rename, `desk.js:546-548`); `save()` is called only on a 200 from the patch route.
+- Footprints: `rigConflicts` uses the same `(PROFILES[profile] || PROFILES.rgb).channels.length` as `rigList`, so the sheet and the conflict list agree. Overlap scan is O(room × others): trivial at hundreds.
+- Malformed kept entries are filtered to the four refusal codes on the way out (`rigFlagsOf`).
+
+### Not read
+`serverXR/src/lighting/tests/test-rigpatch.js`, `sheet.test.js`, `rigProgress.test.js` (not run); `rigPatch` allocation above line 297 (universe/512 wrap, multi-mode footprints) beyond grep; whether `isLoopbackRequest` sees the real client behind the reverse proxy at local.thedi.studio (pre-existing, not today's change).
