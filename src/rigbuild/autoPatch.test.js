@@ -36,7 +36,7 @@ describe('the request', () => {
     it('sends each lamp with its footprint, and none for a type with no known mode', () => {
         const body = patchRequest({
             projectId: 'hall',
-            entities: [lamp('a', 'up-b380f'), lamp('b', 'up-pl5403'), { id: 'c', type: 'box', components: {} }],
+            entities: [lamp('a', 'up-b380f'), lamp('b', 'up-q108s'), { id: 'c', type: 'box', components: {} }],
             library
         })
         expect(body.lamps.map((l) => [l.key, l.mode, l.footprint])).toEqual([['hall:a', '16ch', 16], ['hall:b', null, null]])
@@ -56,7 +56,7 @@ describe('the request', () => {
 
 describe('write-back', () => {
     it('records what the desk decided, the default mode, and clears a lost patch', () => {
-        const entities = [lamp('a', 'up-b380f'), lamp('b', 'up-pl5403', { universe: 1, address: 40 })]
+        const entities = [lamp('a', 'up-b380f'), lamp('b', 'up-q108s', { universe: 1, address: 40 })]
         const ops = writeBackOps({
             projectId: 'p', entities, library,
             result: { assignments: [{ key: 'p:a', index: 7, universe: 1, address: 17, footprint: 16, how: 'created' }, { key: 'p:zz', index: 1, universe: 1, address: 1, footprint: 1, how: 'created' }], removed: ['p:b'] }
@@ -76,7 +76,7 @@ describe('write-back', () => {
 describe('room -> desk -> room, on a real desk', () => {
     it('places, duplicates and deletes lamps and the document follows', async () => {
         const { desk, post } = await realDesk()
-        let doc = normalizeProjectDocument({ entities: [lamp('a', 'up-b380f'), lamp('b', 'up-b380f'), lamp('p1', 'up-pl5403')] })
+        let doc = normalizeProjectDocument({ entities: [lamp('a', 'up-b380f'), lamp('b', 'up-b380f'), lamp('p1', 'up-q108s')] })
         const apply = (ops) => { doc = applyProjectOps(doc, ops) }
         const run = (extra = {}) => autoPatch({ projectId: 'hall', entities: doc.entities, library, post, applyOps: apply, ...extra })
 
@@ -85,7 +85,7 @@ describe('room -> desk -> room, on a real desk', () => {
         const fx = (id) => doc.entities.find((e) => e.id === id).components.fixture
         expect(fx('a')).toMatchObject({ type: 'up-b380f', mode: '16ch', universe: 1, address: 1, index: 1 })
         expect(fx('b')).toMatchObject({ universe: 1, address: 17, index: 2 })
-        expect(fx('p1')).toEqual({ type: 'up-pl5403' })
+        expect(fx('p1')).toEqual({ type: 'up-q108s' })
         expect(first.result.flags.map((f) => [f.key, f.code])).toEqual([['hall:p1', 'mode-unknown']])
 
         // Duplicate a: the copy carries a's patch; it gets the next free address.

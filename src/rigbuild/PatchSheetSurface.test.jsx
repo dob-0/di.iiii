@@ -8,7 +8,7 @@ const doc = {
     projectMeta: { title: 'Hall' },
     entities: [
         { id: 'a', type: 'spotLight', components: { fixture: { index: 1, type: 'up-b380f', mode: '16ch', universe: 1, address: 1, circuit: 'C1', position: 'truss', unit: 1 } } },
-        { id: 'p', type: 'spotLight', components: { fixture: { type: 'up-pl5403', position: 'floor', unit: 1 } } }
+        { id: 'p', type: 'spotLight', components: { fixture: { type: 'up-q108s', position: 'floor', unit: 1 } } }
     ]
 }
 

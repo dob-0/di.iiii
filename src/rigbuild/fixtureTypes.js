@@ -20,6 +20,8 @@
 // the named equivalent the manifest models it on. Each entry names the OFL
 // channel, in order, and becomes the desk profile's role (the desk's own
 // alphabet: letters, digits, _ and -).
+import { assumedModesOf, isAssumedMode } from './assumedProfiles.js'
+
 const OFL_COMMIT = '4992b86027ee3cba19644bc7417435a68c8cdcb5'
 export const OFL_CHANNEL_LISTS = {
     'UP-YH600F': {
@@ -65,7 +67,7 @@ const modesOf = (kind) => {
     const spec = kind.specs?.dmx_channels
     const list = Array.isArray(spec?.value) ? spec.value.filter((n) => Number.isInteger(n) && n > 0) : []
     const entry = OFL_CHANNEL_LISTS[kind.code] || null
-    return list.map((footprint) => {
+    const real = list.map((footprint) => {
         const ofl = entry?.modes?.[footprint] || null
         return {
             name: modeName(footprint),
@@ -76,7 +78,13 @@ const modesOf = (kind) => {
             basis: spec?.basis ?? null
         }
     })
+    // The ASSUMED test modes (assumedProfiles.js, RIG_BUILD.md §19.1) come AFTER the
+    // real ones, so a lamp's default is still the maker's mode, and they are never
+    // mistaken for it: `basis: 'ASSUMED'`, a name ending `-assumed`, their words.
+    return [...real, ...assumedModesOf(kind.code)]
 }
+
+const realModes = (modes) => modes.filter((m) => !isAssumedMode(m))
 
 const MAKER_UPLIGHT = 'UPlight Stage Equipment (Guangzhou) Co., Ltd.'
 
@@ -143,8 +151,11 @@ export const typesFromManifest = (manifest, { manifestFile = 'scripts/place/fixt
             // The mode a lamp takes when none is chosen: the first the source lists.
             // A planning default, not the crew's decision — the sheet prints it and
             // the inspector changes it.
-            defaultMode: modes.length ? modes[0].name : null,
-            modesOwed: modes.length === 0,
+            defaultMode: realModes(modes).length ? realModes(modes)[0].name : null,
+            // Owed = no mode the maker (or its named equivalent) publishes. An assumed
+            // test mode does not pay that debt; `assumedMode` names the one to test with.
+            modesOwed: realModes(modes).length === 0,
+            assumedMode: modes.find(isAssumedMode)?.name || null,
             power_w: sourced(kind.specs?.power_w),
             weight_kg: sourced(kind.specs?.weight_kg),
             size_mm: sourced(kind.specs?.size_mm),
@@ -187,6 +198,8 @@ export const typeById = (library, id) => {
     return list.find((type) => type.id === want) || null
 }
 
+export { isAssumedMode }
+
 export const modeOf = (type, name) => {
     if (!type) return null
     const want = name || type.defaultMode
@@ -209,12 +222,14 @@ export const typeFlags = (fixture, library) => {
     if (!fixture?.type) return flags
     const type = typeById(library, fixture.type)
     if (!type) return [{ code: 'unknown-type', message: `type "${fixture.type}" is not in the library` }]
-    if (type.modesOwed) return [{ code: 'mode-unknown', message: `${type.code}: no DMX mode is known (owed)` }]
     const mode = modeOf(type, fixture.mode)
+    if (!mode && type.modesOwed) return [{ code: 'mode-unknown', message: `${type.code}: no DMX mode is known (owed)` }]
     if (!mode) {
         flags.push({ code: 'mode-unknown', message: `${type.code}: no mode "${fixture.mode}" (known: ${type.modes.map((m) => m.name).join(', ')})` })
         return flags
     }
     if (!mode.channels) flags.push({ code: 'channels-owed', message: `${type.code} ${mode.name}: channel list owed` })
+    // A test mode is patched and drawn, and SAID to be assumed wherever flags are shown.
+    if (isAssumedMode(mode)) flags.push({ code: 'channels-assumed', message: `${type.code} ${mode.name}: ${mode.assumed || 'ASSUMED channel list — verify on the rental unit'}` })
     return flags
 }

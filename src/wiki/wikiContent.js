@@ -1767,6 +1767,22 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['show', 'loop', 'cue', 'cues', 'go', 'stop', 'fade', 'hold', 'strobe', 'blinder', 'flash', 'desk', 'light', 'rig', 'moxir', 'underground', 'clock', 'online', 'hosted', 'sync'],
         updated: '2026-09-28'
+    },
+    {
+        id: 'rig-visualiser',
+        category: 'Spaces & access',
+        title: 'The visualiser — the light desk beside the room, the room drawn from its DMX',
+        summary: 'Operate the lighting desk and watch the 3D room answer: heads turn with pan and tilt, colours change, strobes flash, cues play. Side by side in one window, or in two windows — on one machine or two.',
+        body: [
+            'Open it from the rig row (visualiser) or the desk\'s top bar (Visualiser): /{space}/visualise/{project}. The desk is on one side, the room on the other. Drag the line between them; swap; desk only or room only; ↗ opens either side in its own window, and it stays in sync because both read the desk.',
+            'Two windows work the same without the page: /light in one window and the space (/{space}) in another — on this machine, or on another computer on the network pointed at the same install. Tip: a laptop that runs hot can keep the desk, and the room can run on a stronger machine.',
+            'What the room follows: every lamp joined to a desk fixture whose channel list is known — dimmer, colour (RGBW or the colour wheel), shutter and strobe rate, zoom, pan and tilt (16-bit, over the fixture\'s own range). Gobo and prism are noted, not drawn yet. While the desk is live, the DMX wins over a look; the looks themselves go to the desk as DMX, so a playing show looks the same.',
+            'A console works too: turn Input on (Setup → Input) and send Art-Net or sACN; the room follows the console.',
+            'MOXIR\'s channel lists are ASSUMED — taken from the closest documented equivalent\'s manual, because the maker publishes none. The page says so, and so does the patch sheet: verify each on the rental unit. The real lists replace them when the rental house sends them.',
+            'Measured on the studio\'s own machine: a fader move shows in the room in about 34 ms, a console packet in about 38 ms. The desk\'s OUTPUT stays off unless you switch it on — nothing here drives real lights by itself.'
+        ],
+        tags: ['visualiser', 'visualizer', 'split', 'two windows', 'desk', 'light', 'dmx', 'art-net', 'sacn', 'console', 'pan', 'tilt', 'colour', 'strobe', 'rig', 'moxir', 'assumed', 'channel list'],
+        updated: '2026-09-29'
     }
 ]
 

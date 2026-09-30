@@ -7,6 +7,7 @@ import { buildMapPath } from './mapRouting.js'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import MapCueList from './MapCueList.jsx'
 import { RIG_STEPS, rigLightPath, rigStepPath } from '../rigbuild/rigTools.js'
+import { buildVisualisePath } from '../rigbuild/visualiseRouting.js'
 import {
     cueFadeMs,
     fetchLightScenes,
@@ -61,12 +62,14 @@ describe('the way back from the lighting desk', () => {
             expect(links.studio).toBe(buildStudioProjectPath(projectId, spaceId))
             expect(links.nodes).toBe(buildRawProjectPath(projectId, spaceId))
             expect(links.projection).toBe(buildMapPath(spaceId, projectId))
+            expect(links.visualise).toBe(buildVisualisePath(spaceId, projectId))
         }
         // and, spelled out, the shapes themselves
         expect(deskFrom.projectLinks({ space: 'lab', project: 'first-piece' })).toEqual({
             studio: '/lab/studio/projects/first-piece',
             nodes: '/lab/raw/projects/first-piece',
-            projection: '/lab/map/first-piece'
+            projection: '/lab/map/first-piece',
+            visualise: '/lab/visualise/first-piece'
         })
     })
 
@@ -89,7 +92,10 @@ describe('the way back from the lighting desk', () => {
             expect(links.rig).toBe(rigStepPath(step.key, 'moxir', 'moxir-hall'))
             expect(links.rigLabel).toBe(step.label)
         }
-        expect(Object.keys(deskFrom.RIG_STEPS)).toEqual(RIG_STEPS.map((s) => s.key))
+        // the six steps, and the visualiser (which opens the desk framed with &from=visualise)
+        expect(Object.keys(deskFrom.RIG_STEPS)).toEqual([...RIG_STEPS.map((s) => s.key), 'visualise'])
+        const vis = deskFrom.projectLinks(deskFrom.fromQuery('?space=moxir&project=moxir-hall&from=visualise'))
+        expect(vis.rig).toBe(buildVisualisePath('moxir', 'moxir-hall'))
         // anything else is ignored: the way back stays the Studio's
         const odd = deskFrom.fromQuery('?space=moxir&project=moxir-hall&from=..%2Fevil')
         expect(odd.from).toBeUndefined()

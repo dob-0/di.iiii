@@ -1,0 +1,217 @@
+{
+  "patch": "moxir-2026-10-17-minimal",
+  "title": "MOXIR 17.10 — Minimal — the show patch",
+  "project": "moxir-hall-minimal",
+  "writtenAt": "2026-09-29",
+  "howToRead": "docs/architecture/RIG_BUILD.md §20. The LD's patch plan as data: which universe each position runs on, where each block starts, the fixture numbers and the DMX mode per type. scripts/rigbuild/patch-plan.mjs applies it to the project document (the single truth); patch.mjs --exact makes the desk agree; patch-sheet.mjs prints the crew's sheet. Never edit addresses in the document or on the desk by hand — change this file and run the three again.",
+  "method": [
+    "Blocks select lamps from the DOCUMENT — by type, height (lens above/below 3 m = in the air / on the floor) and side — never by the name of a truss, so a re-hang (a new crane shape) re-runs to a correct patch. Positions and hung/standing come from the document, except the column rows, where the plan adds the side (HL/HR) to the name.",
+    "One universe per data run from the node: the crane line (in the air, one cable up the hoist), each side wall of the hall (so no DMX cable crosses the dance floor), and the booth. Four runs = the four ports of one 4-port Art-Net node.",
+    "Blocks start on round numbers (001, 101, 201 …) and the fixture number says where a lamp is: hundreds = its universe, tens = its block. A crew reads U2.101 and fixture 211 as the same lamp.",
+    "Within a block lamps go in the order a crew walks the position: along the crane line from house left to house right (−x to +x); along a wall from the DJ end outwards (z up).",
+    "A 16-bit fixture is always whole inside one universe (every block is checked against 512).",
+    "Each universe keeps at least half of its 512 channels spare, so a lamp added on the night takes the next free address in its own block without moving anything.",
+    "Mode per type: the maker's own mode where the maker lists one (UP-B380F 16ch, UP-PL5403 8ch — both single-mode units); otherwise the fewest channels that still give what the looks use. Where the maker's channel ORDER is not published, the desk runs the ASSUMED test list of the same footprint (RIG_BUILD.md §19.1) and the crew sets the maker's mode on the unit."
+  ],
+  "node": {
+    "what": "one 4-port Art-Net node at the booth (planning equivalent: Luminex LumiNode 4 — the rental list has DMX splitters UP-PDU60A/B but no node)",
+    "protocol": "Art-Net 4 (sACN E1.31 also possible — the desk sends either)",
+    "numbering": "desk universe U1 = Art-Net Port-Address 0 (Net 0 · Sub-Net 0 · Universe 0) = sACN universe 1; U2 = Port-Address 1 = sACN 2; and so on",
+    "splitters": "a DMX splitter (the rental house's UP-PDU60B, IP-rated) where a run branches; every run ends in a 120 Ω terminator"
+  },
+  "sides": {
+    "HL": {
+      "label": "house left (x < 0, NE wall) — the audience's left, facing the DJ",
+      "x": "<0"
+    },
+    "HR": {
+      "label": "house right (x > 0, SW wall) — the audience's right, facing the DJ",
+      "x": ">0"
+    }
+  },
+  "modes": {
+    "up-b380f": {
+      "crew": "16ch",
+      "why": "the maker lists one mode, 16 channels (uplight.com.cn UP-B380F page, '16通道模式', and the made-in-china listings); pan/tilt 16-bit is in it. Its channel ORDER is not published: the desk runs the ASSUMED 16ch list (UPlus 380 IP BEAM)."
+    },
+    "up-pl5403": {
+      "crew": "8ch",
+      "why": "the maker lists ONE mode, 8 channels (uplight.com.cn UP-PL5403 page, '通道模式：8通道模式', checked 2026-09-29) — so 8ch, whatever the looks need. Its channel ORDER is not published: the desk runs the ASSUMED 8ch list (UPlus IP PAR-54X3: dimmer, R, G, B, W, strobe, function, speed) until the rental unit's chart is read."
+    },
+    "ext-strobe": {
+      "crew": "4ch",
+      "why": "not chosen yet (another supplier). Planned on the Martin Atomic 3000 4-channel mode (intensity, duration, rate, effects) — the looks use intensity and rate. Blocks are spaced so a unit of up to 4 channels needs no re-address."
+    },
+    "ext-hazer": {
+      "crew": "2ch",
+      "why": "not chosen yet (another supplier). Planned on a 2-channel hazer (haze output, fan) — both needed."
+    }
+  },
+  "universes": [
+    {
+      "universe": 1,
+      "port": "A",
+      "label": "The crane rig (air)",
+      "run": "node port A → up the crane on a hoist line → every truss piece hung from the bridge, house left to house right",
+      "blocks": [
+        {
+          "select": {
+            "type": "up-b380f",
+            "y": ">3"
+          },
+          "start": 1,
+          "fixture": 101,
+          "order": "x-asc",
+          "what": "the UP-B380F heads in the air (on the crane truss)"
+        },
+        {
+          "select": {
+            "type": "ext-strobe",
+            "y": ">3"
+          },
+          "start": 201,
+          "fixture": 111,
+          "order": "x-asc",
+          "what": "the strobes in the air"
+        },
+        {
+          "select": {
+            "type": "up-pl5403",
+            "y": ">3"
+          },
+          "start": 301,
+          "fixture": 121,
+          "order": "x-asc",
+          "what": "the UP-PL5403 in the air, grazing the crane bridge"
+        }
+      ]
+    },
+    {
+      "universe": 2,
+      "port": "B",
+      "label": "House left wall (NE)",
+      "run": "node port B → along the house-left (NE, x < 0) column row, DJ end outwards",
+      "blocks": [
+        {
+          "select": {
+            "type": "up-b380f",
+            "y": "<3",
+            "xAbs": ">8"
+          },
+          "side": "HL",
+          "start": 1,
+          "fixture": 201,
+          "order": "z-asc",
+          "position": "column bases HL",
+          "what": "UP-B380F on the floor at the column bases, into the roof"
+        },
+        {
+          "select": {
+            "type": "up-pl5403",
+            "y": "<3",
+            "xAbs": ">8"
+          },
+          "side": "HL",
+          "start": 101,
+          "fixture": 211,
+          "order": "z-asc",
+          "position": "column uplight HL",
+          "what": "UP-PL5403 uplighting the columns"
+        }
+      ]
+    },
+    {
+      "universe": 3,
+      "port": "C",
+      "label": "House right wall (SW)",
+      "run": "node port C → along the house-right (SW, x > 0) column row, DJ end outwards",
+      "blocks": [
+        {
+          "select": {
+            "type": "up-b380f",
+            "y": "<3",
+            "xAbs": ">8"
+          },
+          "side": "HR",
+          "start": 1,
+          "fixture": 301,
+          "order": "z-asc",
+          "position": "column bases HR",
+          "what": "UP-B380F on the floor at the column bases, into the roof"
+        },
+        {
+          "select": {
+            "type": "up-pl5403",
+            "y": "<3",
+            "xAbs": ">8"
+          },
+          "side": "HR",
+          "start": 101,
+          "fixture": 311,
+          "order": "z-asc",
+          "position": "column uplight HR",
+          "what": "UP-PL5403 uplighting the columns"
+        }
+      ]
+    },
+    {
+      "universe": 4,
+      "port": "D",
+      "label": "Booth (DJ, press, pit, haze)",
+      "run": "node port D → the press uplights → the pit strobes in front of the booth → the hazers behind it",
+      "blocks": [
+        {
+          "select": {
+            "type": "up-pl5403",
+            "y": "<3",
+            "xAbs": "<8"
+          },
+          "start": 1,
+          "fixture": 401,
+          "order": "x-asc",
+          "what": "UP-PL5403 on the floor by the booth, uplighting the press"
+        },
+        {
+          "select": {
+            "type": "ext-strobe",
+            "y": "<3"
+          },
+          "start": 101,
+          "fixture": 411,
+          "order": "x-asc",
+          "what": "strobes on the floor of the pit"
+        },
+        {
+          "select": {
+            "type": "ext-hazer"
+          },
+          "start": 201,
+          "fixture": 421,
+          "order": "x-asc",
+          "what": "hazers behind the booth"
+        }
+      ]
+    }
+  ],
+  "minSpare": 256,
+  "addressing": {
+    "up-b380f": {
+      "method": "display",
+      "seen": "LCD and keys on the front of the base in the maker's own render (made-in-china listing qdrawUbcCMAf, description image 45f3j00VpthLuPIRyYf, checked 2026-09-29)",
+      "menu": "OWED — the menu wording (e.g. \"A001\" / \"d001\") is in no published UPlight document"
+    },
+    "up-pl5403": {
+      "method": "display",
+      "seen": "LCD with 4 buttons on the rear of the can in the maker's photos (pro-uplight.com UP-PL5403 page, checked 2026-09-29)",
+      "menu": "OWED — the menu wording and which item selects 4ch / 8ch is in no published UPlight document"
+    },
+    "ext-strobe": {
+      "method": null,
+      "menu": "OWED — the supplier and model are not chosen"
+    },
+    "ext-hazer": {
+      "method": null,
+      "menu": "OWED — the supplier and model are not chosen"
+    }
+  }
+}

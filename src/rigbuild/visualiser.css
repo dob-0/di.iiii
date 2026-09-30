@@ -1,0 +1,96 @@
+/* The visualiser (VisualiserSurface.jsx) — the house's own tokens (base.css) and the bar's
+   words (surfaceBar.css): the mono, the dim names, the cyan "on", no colour of its own.
+   The two sides are the real pages, framed; this file only lays them out. */
+
+.vis-page {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--di-bg);
+    color: var(--di-text, #e8edf3);
+}
+
+.vis-line {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-3, 0.5rem);
+    flex-wrap: wrap;
+    padding: 0 var(--di-space-4, 0.75rem);
+    min-height: var(--sbar-h, 38px);
+    border-bottom: 1px solid var(--di-line);
+    font-family: var(--di-mono, ui-monospace, monospace);
+    font-size: var(--di-text-3, 0.75rem);
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+}
+
+.vis-title {
+    color: var(--di-faint);
+    text-transform: uppercase;
+    letter-spacing: var(--di-label-tracking, 0.12em);
+}
+
+.vis-btn {
+    appearance: none;
+    background: transparent;
+    border: 1px solid var(--di-line);
+    color: var(--di-dim);
+    font: inherit;
+    padding: 0.2rem 0.6rem;
+    min-height: var(--di-touch-target, 32px);
+    border-radius: 2px;
+    cursor: pointer;
+}
+.vis-btn:hover { color: var(--di-text, #fff); }
+.vis-btn.is-on { color: var(--di-cyan); border-color: currentColor; }
+.vis-btn:focus-visible, .vis-divider:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: 1px; }
+
+.vis-read { margin-left: auto; color: var(--di-dim); white-space: nowrap; }
+
+.vis-assumed {
+    padding: 0.25rem var(--di-space-4, 0.75rem);
+    border-bottom: 1px solid var(--di-line);
+    font-family: var(--di-mono, ui-monospace, monospace);
+    font-size: var(--di-text-3, 0.75rem);
+    flex-shrink: 0;
+}
+.vis-assumed summary { cursor: pointer; color: var(--di-text, #fff); }
+.vis-assumed summary::before { content: '! '; }
+.vis-assumed ul { margin: 0.35rem 0 0.2rem; padding-left: 1.2rem; color: var(--di-dim); }
+.vis-assumed a { color: inherit; }
+
+.vis-split {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: 1fr;
+}
+.vis-split.is-dragging { user-select: none; }
+/* While dragging, the frames must not swallow the pointer. */
+.vis-split.is-dragging .vis-frame { pointer-events: none; }
+
+.vis-pane { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+.vis-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: #000; }
+
+.vis-divider {
+    appearance: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    cursor: col-resize;
+    background: var(--di-line);
+    touch-action: none;
+}
+.vis-divider:hover, .vis-split.is-dragging .vis-divider { background: var(--di-cyan); }
+
+.vis-note { padding: 1.5rem; color: var(--di-dim); font-size: 0.9rem; line-height: 1.5; max-width: 40rem; }
+.vis-note code { font-family: var(--di-mono, ui-monospace, monospace); }
+
+/* A phone, or any tall narrow window: the two sides stack, desk above the room, and the
+   divider drags up and down. */
+@media (max-width: 760px), (max-aspect-ratio: 9/10) {
+    .vis-split { grid-template-columns: 1fr !important; grid-template-rows: var(--vis-rows, 1fr 6px 1fr); }
+    .vis-divider { cursor: row-resize; }
+    .vis-read { margin-left: 0; width: 100%; }
+}
