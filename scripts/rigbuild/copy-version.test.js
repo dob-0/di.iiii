@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ADOPT_ENTITY_TOLERANCE, copiedEntities, labelled, looksLikeCopyOf, planAdoption, repointProjectUrls, runAdopt } from './copy-version.mjs'
+import { ADOPT_ENTITY_TOLERANCE, copiedEntities, freshMarkProblem, unknownArgs, labelled, looksLikeCopyOf, planAdoption, repointProjectUrls, runAdopt } from './copy-version.mjs'
 import { mergePatch, normalizeRigVariant } from '../../src/shared/projectSchema.js'
 
 describe('copy-version: a version kept as a labelled copy (RIG_BUILD §15.11)', () => {
@@ -262,5 +262,35 @@ describe('copy-version --adopt: the mark, given back with one op', () => {
     it('fails loudly, not silently, when the install keeps the mark without copyOf', async () => {
         const install = fakeInstall({ p: docOf(sourceMark), [COPY]: docOf(copyMark) }, { dropCopyOf: true })
         await expect(runAdopt(install, OPTS, collect().log)).rejects.toThrow(/did not stay: the server kept the mark without the copyOf/)
+    })
+})
+
+describe('copy-version: review B2 — wrong version, lost mark, mistyped flag', () => {
+    const rigs = (prefix, n) => Array.from({ length: n }, (_, i) => ({ id: `rig-${prefix}-${i + 1}`, type: 'spotLight', name: `${prefix} ${i + 1}`, components: {} }))
+    const withRig = (mark, prefix) => ({ ...docOf(mark, { lampCount: 0 }), entities: [...hall, ...rigs(prefix, 20), show(mark)] })
+
+    it('B2-1: a mark-less copy of version A is not adopted as a copy of version B', () => {
+        const a = withRig(null, 'a')
+        const sourceB = withRig(sourceMark, 'b')
+        const out = looksLikeCopyOf(a, sourceB)
+        expect(out.ok).toBe(false)
+        expect(out.reasons.join(' ')).toMatch(/not the same version/)
+        expect(planAdoption(a, sourceB, OPTS).status).toBe('refused')
+        expect(looksLikeCopyOf(withRig(null, 'b'), sourceB).ok).toBe(true)
+        expect(looksLikeCopyOf(withRig(null, 'b'), sourceB).facts).toMatchObject({ rigCompared: 21, rigMatched: 21 })
+    })
+
+    it('B2-2: a fresh copy whose mark the server would drop is caught before anything is written', () => {
+        const src = [...hall, show({ set: SET, id: 'minimal', title: 'Minimal', siblings: [listed('minimal', 'p')] })]
+        const bare = copiedEntities(src, { from: 'p', to: COPY, label: 'old hall 09-29', suffix: 'oldhall-0929' }) // no --siblings
+        expect(freshMarkProblem(bare)).toMatch(/not among its siblings/)
+        const ok = copiedEntities(src, { from: 'p', to: COPY, label: 'old hall 09-29', suffix: 'oldhall-0929', siblings: SIBLINGS })
+        expect(freshMarkProblem(ok)).toBeNull()
+    })
+
+    it('B2-3: a mistyped --dry-run is an unknown argument, not a write', () => {
+        expect(unknownArgs({ _: [], adopt: true, 'dry-run': true, to: 'x' })).toEqual([])
+        expect(unknownArgs({ _: [], adopt: true, dryrun: true })).toEqual(['--dryrun'])
+        expect(unknownArgs({ _: ['—dry-run'], adopt: true })).toEqual(['—dry-run'])
     })
 })

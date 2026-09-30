@@ -58,11 +58,13 @@ const studioRow = {
 }
 
 // The same numbers as StudioViewport's TOOLBAR_BTN / TOOLBAR_BTN_ACTIVE_STRONG.
-const studioButton = (current) => ({
+// Rectangles, 0-2 px (golden rule); a 44 px target at phone width (`compact`). The toolbar's own 6 px corners are owed the same.
+const studioButton = (current, compact = false) => ({
     display: 'inline-flex',
     alignItems: 'center',
     padding: '5px 9px',
-    borderRadius: '6px',
+    borderRadius: '2px',
+    ...(compact ? { minHeight: '44px', padding: '0 12px' } : {}),
     border: current ? '1px solid #4fd6ff' : '1px solid rgba(255,255,255,0.12)',
     background: current ? 'rgba(79,214,255,0.28)' : 'rgba(15,23,34,0.82)',
     color: current ? '#4fd6ff' : '#c8d8e8',
@@ -79,7 +81,7 @@ const studioButton = (current) => ({
 export default function SmartViewBar({ presets = [], activeId = null, xray = false, onPreset, onXray, variant = 'visitor', compact = false }) {
     if (!presets.length) return null
     const studio = variant === 'studio'
-    const button = studio ? studioButton : visitorButton
+    const button = studio ? (current) => studioButton(current, compact) : visitorButton
     return (
         <div role="toolbar" aria-label="views" style={studio ? studioRow : visitorRow(compact)} data-smart-view-bar>
             {presets.map((p) => (

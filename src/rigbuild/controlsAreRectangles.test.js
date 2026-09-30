@@ -20,7 +20,7 @@ const SWEPT = [
     ...walk(join(ROOT, 'src/rigbuild')),
     join(ROOT, 'src/project/components/ProjectSwitcher.jsx'),
     join(ROOT, 'src/project/components/publicViewerStyles.js'),
-    join(ROOT, 'src/project/components/SmartViewBar.jsx')
+    join(ROOT, 'src/project/viewport/smartView/SmartViewBar.jsx')
 ].filter((p) => { try { readFileSync(p); return true } catch { return false } })
 
 // A round mark that is not a control. Keyed by file + a snippet of the line.
