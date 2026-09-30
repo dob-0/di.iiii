@@ -3,11 +3,12 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { GROUPS, ITEMS, RENDERS, itemFor, picturesOf } from './index.js'
 import rental from '../../../scripts/rigbuild/rentals/moxir-2026-10-17.json'
+import { fileURLToPath } from 'node:url'
 
 // The item catalogue is content with provenance (RIG_BUILD.md §13): these hold it to its own
 // rules, so a card can never show a sentence without a source key that resolves, a photo
 // without its licence, or a price-list code without a card.
-const PUBLIC = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../../public')
+const PUBLIC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../public')
 const groups = new Set(GROUPS.map(([id]) => id))
 const PREVIEWS = new Set(['beam', 'spot', 'wash', 'matrix', 'laser-fan', 'laser-swing', 'co2', 'sparks', 'smoke', 'haze', 'lowfog', 'mist', 'effect', 'none'])
 

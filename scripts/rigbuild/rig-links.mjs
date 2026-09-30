@@ -34,6 +34,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { parseArgs, die, say } from '../place/common.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const args = parseArgs()
 
@@ -207,6 +208,6 @@ const main = async () => {
     if (broken.length) process.exitCode = 1
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => die(error.stack || error.message))
 }

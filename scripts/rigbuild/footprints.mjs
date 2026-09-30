@@ -46,6 +46,7 @@ import { spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
 import { typeById, typeIdOf } from '../../src/rigbuild/fixtureTypes.js'
 import { loadLibrary } from './library.mjs'
 import { VERSIONS_FILE, rigFileOf } from './versions.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const DEG = Math.PI / 180
 /**
@@ -505,6 +506,6 @@ const main = () => {
     }
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     try { main() } catch (error) { die(error.stack || error.message) }
 }

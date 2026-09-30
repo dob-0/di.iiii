@@ -16,6 +16,7 @@ import { parseArgs, die, say, readJson } from '../place/common.mjs'
 import { makeClient } from '../place/api.mjs'
 import { cueOps, showCues } from './show-loop.mjs'
 import fs from 'node:fs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const main = async () => {
     const args = parseArgs()
@@ -33,6 +34,6 @@ const main = async () => {
     say(`${project}: ${cues.length} cues + loop in the document (version ${out.body.newVersion}) — ${cues.map((c) => `${c.name} (fade ${c.fade} s)`).join(' → ')}; the desk untouched`)
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => die(error.stack || error.message))
 }

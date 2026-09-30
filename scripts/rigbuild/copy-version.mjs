@@ -47,6 +47,7 @@ import { makeClient } from '../place/api.mjs'
 import { remapAssetIds } from '../asset-remap-lib.mjs'
 import { RIG_SHOW_ID } from '../../src/rigbuild/rental.js'
 import { normalizeRigVariant } from '../../src/shared/projectSchema.js'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 /**
  * A label joined onto a version's title so the switch's short word carries it: the switch shows a
@@ -388,6 +389,6 @@ const main = async () => {
     say(`${to}: written (version ${back.body.version}) — ${source.entities.length} entities, ${assets.length} assets; ${from} was only read`)
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => die(error.stack || error.message))
 }

@@ -2,6 +2,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_CACHE, insideRepo, judge, sha256, sniff } from './fetch-equipment-media.mjs'
 import { isLocalApi } from '../../src/rigbuild/items/mediaRules.js'
+import { fileURLToPath } from 'node:url'
 
 // The fetch script is the only way a maker's file reaches the studio's install
 // (RIG_BUILD.md §13.8). These hold its three promises: the bytes are what was recorded,
@@ -31,7 +32,7 @@ describe('fetch-equipment-media', () => {
         expect(changed.record).toBeUndefined()
     })
     it('keeps the bytes outside the repository', () => {
-        const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..')
+        const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
         expect(insideRepo(path.join(root, 'public/rigbuild/media'), root)).toBe(true)
         expect(insideRepo(root, root)).toBe(true)
         expect(insideRepo(DEFAULT_CACHE, root)).toBe(false)
