@@ -31,6 +31,7 @@ import path from 'node:path'
 
 import { parseArgs, die, say, REPO_ROOT } from '../place/common.mjs'
 import { launchGpu, rendererOf, waitForCool, cpuC } from './show-record.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const args = parseArgs()
 
@@ -168,6 +169,6 @@ const main = async () => {
     say(`${out}: ${(fs.statSync(out).size / 1e6).toFixed(1)} MB (frames kept in ${frames})`)
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => die(error.stack || error.message))
 }

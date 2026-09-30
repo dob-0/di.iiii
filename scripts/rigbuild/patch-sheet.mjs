@@ -30,6 +30,7 @@ import { addressSetting, artnetOf, planPatch } from '../../src/rigbuild/patchPla
 import { modeOf, typeById } from '../../src/rigbuild/fixtureTypes.js'
 import { libraryWithShow } from '../../src/rigbuild/rental.js'
 import { loadLibrary } from './library.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const args = parseArgs()
 const pad3 = (n) => String(n).padStart(3, '0')
@@ -235,4 +236,4 @@ const main = async () => {
     if (bad.length || planned.errors.length || foreign.length) die(`${bad.length} fixture(s) disagree with the plan or the desk; ${foreign.length} foreign fixture(s) on the desk`)
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) main().catch((e) => die(e.message))
+if (isMainModule(import.meta.url)) main().catch((e) => die(e.message))

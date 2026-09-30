@@ -27,6 +27,7 @@ import { makeClient } from '../place/api.mjs'
 import { readXlsx, rowsOf } from './xlsx.mjs'
 import { normalizeRentalList } from '../../src/shared/projectSchema.js'
 import { RIG_SHOW_ID } from '../../src/rigbuild/rental.js'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const PRICE_LIST = 'Price list'
 const PRICE_DATA = 'Price data'
@@ -163,6 +164,6 @@ const main = async () => {
 }
 
 const args = parseArgs()
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => die(error.stack || error.message))
 }

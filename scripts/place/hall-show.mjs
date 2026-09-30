@@ -24,6 +24,7 @@ import { prune } from '@gltf-transform/functions'
 
 import { parseArgs, die, say } from './common.mjs'
 import { makeClient } from './api.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const args = parseArgs()
 export const PLANNING_MESH = /^hall-zone-/
@@ -78,6 +79,6 @@ const main = async () => {
     say(`${project}: place-hall now draws ${up.body.asset.id} (hall-show.glb); was ${was} — version ${out.body.newVersion}`)
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => die(error.stack || error.message))
 }

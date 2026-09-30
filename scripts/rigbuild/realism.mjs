@@ -35,8 +35,9 @@ import { mat4, vec3 } from 'gl-matrix'
 
 import { parseArgs, die, say } from '../place/common.mjs'
 import { makeClient, readToken } from '../place/api.mjs'
+import { fileURLToPath } from 'node:url'
 
-const REPO = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..')
+const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const FIXTURES = path.join(REPO, 'scripts/place/fixtures/fixtures.json')
 const TYPES = path.join(REPO, 'src/rigbuild/types/moxir.json')
 

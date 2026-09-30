@@ -13,6 +13,7 @@ import path from 'node:path'
 
 import { parseArgs, die, say, readJson, REPO_ROOT } from '../place/common.mjs'
 import { VERSIONS_FILE } from './versions.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 const amd = (n) => (n == null ? '—' : `${Math.round(n).toLocaleString('en').replace(/,/g, ' ')} AMD`)
@@ -149,4 +150,4 @@ not — a load calculation, a rigging sign-off, a laser safety assessment (IEC 6
     say(`wrote ${out}`)
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) main()
+if (isMainModule(import.meta.url)) main()
