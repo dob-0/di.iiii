@@ -944,6 +944,10 @@ const segment = ({ id, name, from, to, w, colour, metalness = 0.9, roughness = 0
     return e
 }
 
+// Bridle legs are drawn about twice as thick as the wire they stand for (14 mm), so they read from an orbit
+// distance; the sizes in the rig file are the real ones. Owner, 2026-09-30: "the truss is not from the crane".
+const RIG_STEEL_W = 0.03
+
 export const slopedLineRigging = (rig, stage, hall) => {
     const r = rig.truss.rigging
     const t = stage.trussSection
@@ -960,13 +964,26 @@ export const slopedLineRigging = (rig, stage, hall) => {
         const tag = `pick ${p.i + 1}/${r.picks_u_m.length} (u ${p.u} m)`
         p.legs.forEach((top, k) => out.push(segment({
             id: `${RIG_PREFIX}hoist-${p.i + 1}-bridle-${k ? 'b' : 'a'}`, name: `Bridle leg, ${tag} (rigging: a beam clamp on the ${k ? 'back' : 'audience-side'} girder's bottom flange, steel to the apex — ${round(p.included_deg, 0)}° between the legs)`,
-            from: [p.x, p.apexY, stage.trussZ], to: top, w: 0.014, colour: '#8a8d92'
+            from: [p.x, p.apexY, stage.trussZ], to: top, w: RIG_STEEL_W, colour: '#8a8d92'
+        })))
+        // The beam clamp each leg ends in grips the girder's bottom flange, so it fills the clamp drop between the
+        // leg top and the girder underside. It was not drawn: the legs stopped `clamp_drop_m` short of the crane and
+        // the truss read as floating (owner, 2026-09-30: "the truss is not from the crane").
+        p.legs.forEach((top, k) => out.push(box({
+            id: `${RIG_PREFIX}hoist-${p.i + 1}-clamp-${k ? 'b' : 'a'}`,
+            name: `Beam clamp, ${tag} (rigging: on the ${k ? 'back' : 'audience-side'} girder's bottom flange, drawn to fill the ${r.bridle.clamp_drop_m} m clamp drop)`,
+            pos: [top[0], top[1], top[2]], size: [0.12, r.bridle.clamp_drop_m, 0.14], colour: '#5a5d62', metalness: 0.9, roughness: 0.4
         })))
         out.push(box({ id: `${RIG_PREFIX}hoist-${p.i + 1}`, name: `Chain hoist ${r.hoist}, ${tag} (rigging: under the bridle apex, at its shortest drop)`, pos: [p.x, p.apexY - 0.06 - 0.29, stage.trussZ], size: [0.25, 0.29, 0.2], colour: '#1b1c1f', metalness: 0.4, roughness: 0.6 }))
         out.push(box({ id: `${RIG_PREFIX}hoist-${p.i + 1}-chain`, name: `Hoist chain and round sling, ${tag} (rigging)`, pos: [p.x, p.chordTop, stage.trussZ], size: [0.03, round(p.apexY - 0.35 - p.chordTop, 3), 0.03], colour: '#4a4c50', metalness: 0.9, roughness: 0.35 }))
         out.push(segment({
             id: `${RIG_PREFIX}hoist-${p.i + 1}-steel`, name: `Safety steel, ${tag} (rigging: secondary, top chord to its own clamp on the back girder — independent of the bridle)`,
-            from: [p.x + 0.12, p.chordTop, stage.trussZ], to: [p.x + 0.12, p.legTopY, stage.crane.z_m - r.bridle.leg_spread_m / 2], w: 0.01, colour: '#b0b3b8'
+            from: [p.x + 0.12, p.chordTop, stage.trussZ], to: [p.x + 0.12, p.legTopY, stage.crane.z_m - r.bridle.leg_spread_m / 2], w: RIG_STEEL_W * 0.7, colour: '#b0b3b8'
+        }))
+        out.push(box({
+            id: `${RIG_PREFIX}hoist-${p.i + 1}-steel-clamp`,
+            name: `Safety steel clamp, ${tag} (rigging: its own clamp on the girder's bottom flange, drawn to fill the ${r.bridle.clamp_drop_m} m clamp drop)`,
+            pos: [p.x + 0.12, p.legTopY, stage.crane.z_m - r.bridle.leg_spread_m / 2], size: [0.08, r.bridle.clamp_drop_m, 0.1], colour: '#7c8086', metalness: 0.9, roughness: 0.4
         }))
     }
     for (const tie of r.tieoffs || []) {
