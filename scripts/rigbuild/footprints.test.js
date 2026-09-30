@@ -59,12 +59,15 @@ describe('the formulas', () => {
         expect(fp.throwM).toBeCloseTo(20, 6) // 10 / cos 60
         expect(fp.incidenceDeg).toBeCloseTo(60, 6)
         expect(fp.lux).toBeCloseTo((100000 / 400) * 0.5, 6)
-        expect(fp.majorM).toBeCloseTo(spotDiameter(20, 20) * 2, 9)
+        expect(fp.majorM).toBeCloseTo(10 * (Math.tan(70 * DEG) - Math.tan(50 * DEG)), 9) // exact cone on a plane: 10 m to the floor square to it
     })
 
     it('grazing: when incidence + half the beam reaches 90 deg the cone never lands, and no ellipse is claimed', () => {
-        expect(ellipseMajor(2, 60, 20)).toBeCloseTo(4, 9)
+        expect(ellipseMajor(2, 60, 20)).toBeGreaterThan(4) // the old D / cos(i) was 4; the exact long axis is longer
         expect(ellipseMajor(2, 80, 20)).toBeNull()
+        // review B4-3: d = 10 m along the axis, beam 25 deg, 60 deg off the normal: 10.4 m (the old formula said 8.9), at 70 deg 20.6 m (old 13.0)
+        expect(ellipseMajor(spotDiameter(10, 25), 60, 25)).toBeCloseTo(10.4, 1)
+        expect(ellipseMajor(spotDiameter(10, 25), 70, 25)).toBeCloseTo(20.6, 1)
         const fp = down({ from: [0, 0.5, 5], dir: [Math.sin(85 * DEG), -Math.cos(85 * DEG), 0], maxReach: 60 })
         expect(fp.surface).toBe('floor')
         expect(fp.incidenceDeg).toBeCloseTo(85, 6)
@@ -203,7 +206,7 @@ describe.each(['minimal-ground', 'full-ground'])('%s: every lamp of every look',
 
     it('the B380F lux is the optics lux x at_m^2 over the throw squared times the cosine; the COB has no figure', () => {
         const { optics: o } = library.types.find((t) => t.id === 'up-b380f')
-        const rows = allRows.filter((x) => x.type === 'up-b380f' && x.lit && x.surface !== 'open air')
+        const rows = allRows.filter((x) => x.type === 'up-b380f' && x.lit && x.surface !== 'open air' && !x.flags.includes('near-field'))
         expect(rows.length).toBeGreaterThan(0)
         for (const row of rows) {
             const expected = ((o.lux * o.at_m ** 2) / row.throwM ** 2) * Math.cos(row.incidenceDeg * DEG)
@@ -226,5 +229,29 @@ describe.each(['minimal-ground', 'full-ground'])('%s: every lamp of every look',
         expect(shaft.summary.lit).toBe(1)
         expect(wordsFor(shaft)).toMatch(/gs-one-shaft/)
         expect(wordsFor(shaft)).toMatch(/lux/)
+    })
+})
+
+describe('review B4: near field, borrowed words', () => {
+    it('B4-1: a 1.8 deg lamp 1.5 m from the floor prints no spot and no lux, and says so', () => {
+        const fp = footprint({ from: [0, 1.5, 5], dir: [0, -1, 0], maxReach: 30, building, solids, angleDeg: 1.8, optics })
+        expect(fp.flags).toContain('near-field')
+        expect(fp.spotM).toBeNull()
+        expect(fp.lux).toBeNull()
+        expect(fp.flags).not.toContain('tight')
+        // the same lamp far away is still a measured-by-formula figure
+        expect(down({ angleDeg: 1.8 }).lux).not.toBeNull()
+        expect(down({ angleDeg: 1.8 }).flags).not.toContain('near-field')
+        // a wide beam close up is not near-field
+        expect(footprint({ from: [0, 1.5, 5], dir: [0, -1, 0], maxReach: 30, building, solids, angleDeg: 20, optics }).flags).not.toContain('near-field')
+        const look = { id: 'l', title: 'L', rows: [{ lit: true, group: 'g', surface: 'floor', code: 'X', beamDeg: 1.8, level: 1, reachM: 20, throwM: 1.5, spotM: null, luxAtLevel: null, basis: 'EQUIVALENT', basisSrc: 'TEST', flags: fp.flags }], summary: { flags: { 'near-field': 1 }, areaM2: 0, brightest: null, dimmest: null } }
+        expect(wordsFor(look)).toMatch(/near-field: figure not valid/)
+    })
+
+    it('B4-2: the words say when the figures are borrowed', () => {
+        const row = { lit: true, group: 'g', surface: 'floor', code: 'X', beamDeg: 20, level: 1, reachM: 20, throwM: 10, spotM: 3.5, luxAtLevel: 1000, basis: 'EQUIVALENT', basisSrc: 'Maker Y', flags: ['borrowed'] }
+        const look = (basis) => ({ id: 'l', title: 'L', rows: [{ ...row, basis }], summary: { flags: basis === 'EXACT' ? {} : { borrowed: 1 }, areaM2: 1, brightest: { id: 'a', lux: 1000 }, dimmest: { id: 'a', lux: 1000 } } })
+        expect(wordsFor(look('EQUIVALENT'))).toMatch(/borrowed from another product.*Maker Y/)
+        expect(wordsFor(look('EXACT'))).not.toMatch(/borrowed/)
     })
 })

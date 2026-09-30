@@ -48,7 +48,12 @@ import { loadLibrary } from './library.mjs'
 import { VERSIONS_FILE, rigFileOf } from './versions.mjs'
 
 const DEG = Math.PI / 180
-export const THRESHOLDS = { wideM: 6, tightM: 0.5, dimLux: 1 }
+/**
+ * nearFieldM / nearFieldBeamDeg: a narrow lamp (under nearFieldBeamDeg) closer than nearFieldM is in its near field:
+ * the front lens (centimetres to tens of centimetres, size NOT in types/moxir.json) is not a point, and I = lux x at_m^2
+ * holds only beyond the photometric distance. CHOSEN, NOT MEASURED; the row says "near-field: figure not valid".
+ */
+export const THRESHOLDS = { wideM: 6, tightM: 0.5, dimLux: 1, nearFieldM: 3, nearFieldBeamDeg: 5 }
 export const DEFAULT_VERSIONS = ['minimal-ground', 'full-ground']
 /** rig-lib's surfaceHit starts 0.3 m out and steps 0.1 m: the same march here. */
 const START_M = 0.3
@@ -68,8 +73,18 @@ const clamp01 = (v) => Math.min(1, Math.max(0, v))
 export const spotDiameter = (throwM, beamDeg) => 2 * throwM * Math.tan((beamDeg * DEG) / 2)
 /** cos of the angle between the beam and the surface normal. */
 export const cosIncidence = (dir, normal) => clamp01(Math.abs(dot(unit(dir), unit(normal))))
-/** Long axis of the spot on a slanted surface: diameter / cos(incidence); null when the cone's edge never lands (open conic). */
-export const ellipseMajor = (diameter, incidenceDeg, beamDeg) => (incidenceDeg + beamDeg / 2 >= 90 ? null : diameter / Math.cos(incidenceDeg * DEG))
+/**
+ * Long axis of the spot on a slanted surface, exact for a cone on a plane: h (tan(t + a) - tan(t - a)), h = the
+ * distance to the plane square to it (throw x cos t), t = incidence, a = half the beam; the throw is recovered from
+ * the diameter (2 throw tan a). Null when the cone's edge never lands (open conic).
+ */
+export const ellipseMajor = (diameter, incidenceDeg, beamDeg) => {
+    const a = (beamDeg / 2) * DEG
+    const t = incidenceDeg * DEG
+    if (incidenceDeg + beamDeg / 2 >= 90) return null
+    const h = (diameter / (2 * Math.tan(a))) * Math.cos(t)
+    return h * (Math.tan(t + a) - Math.tan(t - a))
+}
 /** E = I * cos(incidence) / d^2 (lux; I in candela, d in metres). */
 export const illuminance = (candela, throwM, cosInc) => (candela / (throwM * throwM)) * cosInc
 
@@ -77,9 +92,10 @@ export const illuminance = (candela, throwM, cosInc) => (candela / (throwM * thr
  * The flags of a row. `lux` is the lux at the look's level; `borrowed` is every basis that is not EXACT
  * (a missing basis included). A lamp the look has out carries only 'out'.
  */
-export const flagsOf = ({ lit = true, surface, spot = null, major = null, lux = null, hasFigure = true, basis = null, grazing = false, roomDiffers = false }) => {
+export const flagsOf = ({ lit = true, surface, spot = null, major = null, lux = null, hasFigure = true, basis = null, grazing = false, roomDiffers = false, nearField = false }) => {
     if (!lit) return ['out']
     const flags = []
+    if (nearField) flags.push('near-field')
     if (surface === 'open air') flags.push('open-air')
     if (spot !== null && Math.max(spot, major ?? 0) > THRESHOLDS.wideM) flags.push('wide')
     if (spot !== null && grazing && major === null) flags.push('wide')
@@ -257,14 +273,15 @@ export const footprint = ({ from, dir, maxReach, building, solids, angleDeg, opt
     if (cast.hit === 'open air') return { ...base, flags: flagsOf({ lit: level > 0, surface: cast.hit, basis, hasFigure: cd !== null, roomDiffers }) }
     const cos = cosIncidence(d, cast.normal)
     const incidenceDeg = Math.acos(cos) / DEG
-    const spot = angleDeg ? spotDiameter(cast.throw, angleDeg) : null
+    const nearField = Boolean(angleDeg) && cast.throw < THRESHOLDS.nearFieldM && angleDeg < THRESHOLDS.nearFieldBeamDeg
+    const spot = angleDeg && !nearField ? spotDiameter(cast.throw, angleDeg) : null
     const major = spot === null ? null : ellipseMajor(spot, incidenceDeg, angleDeg)
-    const lux = cd === null ? null : illuminance(cd, cast.throw, cos)
+    const lux = cd === null || nearField ? null : illuminance(cd, cast.throw, cos)
     const luxAtLevel = lux === null ? null : lux * level
     const grazing = spot !== null && major === null
     return {
         ...base, incidenceDeg, spotM: spot, majorM: major, openConic: grazing, lux, luxAtLevel,
-        flags: flagsOf({ lit: level > 0, surface: cast.hit, spot, major, lux: luxAtLevel, hasFigure: cd !== null, basis, grazing, roomDiffers })
+        flags: flagsOf({ lit: level > 0, surface: cast.hit, spot, major, lux: luxAtLevel, hasFigure: cd !== null, basis, grazing, roomDiffers, nearField })
     }
 }
 
@@ -332,7 +349,7 @@ export const summarise = (rows, built) => {
         lamps: rows.length, lit: lit.length, out: rows.length - lit.length, byClass, areaM2: r(area, 1),
         brightest: lux.length ? { id: lux.at(-1).id, lux: lux.at(-1).luxAtLevel } : null,
         dimmest: lux.length ? { id: lux[0].id, lux: lux[0].luxAtLevel } : null,
-        noFigure: lit.filter((x) => x.lux === null && x.surface !== 'open air').length,
+        noFigure: lit.filter((x) => x.lux === null && x.surface !== 'open air' && !x.flags.includes('near-field')).length,
         flags, clashes: built?.summary?.clashes?.length ?? 0
     }
 }
@@ -362,10 +379,11 @@ const csvCell = (v) => {
 export const toCsv = (rows) => {
     const lines = [CSV_COLUMNS.join(',')]
     for (const x of rows) {
-        const luxText = (v) => (x.surface === 'open air' ? '' : v === null ? 'no figure' : v)
+        const near = x.flags.includes('near-field')
+        const luxText = (v) => (x.surface === 'open air' ? '' : near ? 'near-field' : v === null ? 'no figure' : v)
         lines.push([
             x.version, x.look, x.id, x.group, x.type, x.lit ? 1 : 0, x.level, x.x, x.y, x.z, x.dx, x.dy, x.dz, x.reachM, x.surface, x.detail, x.throwM, x.incidenceDeg,
-            x.beamDeg, x.beamSource, x.zoomDeg ? x.zoomDeg.join('-') : '', x.basis, x.basisSrc, x.spotM, x.openConic ? 'open' : x.majorM, x.candela, x.roomCandela, luxText(x.lux), luxText(x.luxAtLevel), x.flags.join(' ')
+            x.beamDeg, x.beamSource, x.zoomDeg ? x.zoomDeg.join('-') : '', x.basis, x.basisSrc, near ? 'near-field' : x.spotM, near ? 'near-field' : x.openConic ? 'open' : x.majorM, x.candela, x.roomCandela, luxText(x.lux), luxText(x.luxAtLevel), x.flags.join(' ')
         ].map(csvCell).join(','))
     }
     return `${lines.join('\n')}\n`
@@ -405,16 +423,20 @@ export const wordsFor = (look) => {
             parts.push(`the ${set.length} ${first.code} (${first.group})${at} fire ${angle} ${kind} into open air (nothing within their ${first.reachM} m reach)`)
             continue
         }
+        const near = set.filter((x) => x.flags.includes('near-field'))
         const lux = set.filter((x) => x.luxAtLevel !== null).map((x) => x.luxAtLevel)
-        const luxWords = lux.length ? `at ${luxRange(lux)} lux` : 'with no lux figure (no candela in the optics)'
+        const luxWords = lux.length ? `at ${luxRange(lux)} lux` : near.length === set.length ? '' : 'with no lux figure (no candela in the optics)'
         const spot = set.filter((x) => x.spotM !== null).map((x) => x.spotM)
-        const spotWords = spot.length ? `a ${range(spot, spot.every((s) => s < 10) ? 1 : 0)} m spot` : 'a spot of unknown size'
-        parts.push(`the ${set.length} ${first.code} (${first.group})${at} throw ${angle} ${kind} ${range(set.map((x) => x.throwM))} m onto ${SURFACE_WORDS[first.surface] || first.surface}: ${spotWords} ${luxWords}`)
+        const spotWords = spot.length ? `a ${range(spot, spot.every((s) => s < 10) ? 1 : 0)} m spot` : near.length === set.length ? 'near-field: figure not valid (lens size unknown)' : 'a spot of unknown size'
+        const nearWords = near.length && near.length < set.length ? ` (${near.length} of them near-field: figure not valid)` : ''
+        parts.push(`the ${set.length} ${first.code} (${first.group})${at} throw ${angle} ${kind} ${range(set.map((x) => x.throwM))} m onto ${SURFACE_WORDS[first.surface] || first.surface}: ${spotWords} ${luxWords}${nearWords}`.replace(/ +$/, ''))
     }
     const s = look.summary
     const tail = [`brightest ${s.brightest ? `${s.brightest.id} at ${luxText(s.brightest.lux)} lux` : 'no lux figure'}`, `dimmest ${s.dimmest ? `${s.dimmest.id} at ${luxText(s.dimmest.lux)} lux` : 'no lux figure'}`]
-    const flagged = ['wide', 'tight', 'dim', 'grazing', 'no-figure'].filter((f) => s.flags[f]).map((f) => `${s.flags[f]} ${f}`)
-    return `**${look.id} — ${look.title}.** ${parts.join('; ')}. Lit spots sum to about ${s.areaM2} m2 (overlaps counted twice); ${tail.join(', ')}${flagged.length ? `; flagged: ${flagged.join(', ')}` : ''}.`
+    const flagged = ['wide', 'tight', 'dim', 'grazing', 'no-figure', 'near-field', 'borrowed'].filter((f) => s.flags[f]).map((f) => `${s.flags[f]} ${f}`)
+    const sources = [...new Set(lit.filter((x) => x.basis !== 'EXACT').map((x) => x.basisSrc || 'no source'))]
+    const borrowed = sources.length ? ` Figures borrowed from another product, not measured on the lamp (${sources.join('; ')}).` : ''
+    return `**${look.id} — ${look.title}.** ${parts.join('; ')}. Lit spots sum to about ${s.areaM2} m2 (overlaps counted twice); ${tail.join(', ')}${flagged.length ? `; flagged: ${flagged.join(', ')}` : ''}.${borrowed}`
 }
 
 export const toMarkdown = ({ version, looks }, rig) => {
@@ -428,8 +450,9 @@ export const toMarkdown = ({ version, looks }, rig) => {
         '- DIRECT light only: no bounce off walls and roof, no haze scattering. The room\'s beams-in-haze look is a rendering effect, not a lux figure.',
         '- Every UP-* photometric number (beam angle and candela) is BORROWED from another maker\'s product (basis EQUIVALENT; the COB\'s is ASSUMED). Each row prints its basis; any basis that is not EXACT is flagged `borrowed`.',
         '- Lux is at the centre of the spot: E = I cos(incidence) / d^2, I = lux x at_m^2 from the type\'s optics (scaled by flux when the class uses another angle than the optics\'). "no figure" = the optics carry no lux (laser, COB): nothing is invented.',
-        '- Spot = 2 d tan(beam/2); on a slanted surface the long axis is spot / cos(incidence) (small-beam approximation); "open" = the cone\'s edge never lands (grazing).',
-        `- Flags: wide (spot over ${THRESHOLDS.wideM} m), tight (under ${THRESHOLDS.tightM} m), dim (under ${THRESHOLDS.dimLux} lux at the look's level: invisible without haze), borrowed, no-figure, open-air, grazing, room-differs (the room's candela differs from the optics' by more than 1 %), out (the look has the lamp out).`,
+        '- Spot = 2 d tan(beam/2); on a slanted surface the long axis is the exact cone-on-plane expression h (tan(i + a) - tan(i - a)), h the distance square to the surface, i the incidence, a half the beam; "open" = the cone\'s edge never lands (grazing).',
+        `- near-field: a lamp with a beam under ${THRESHOLDS.nearFieldBeamDeg} deg and a throw under ${THRESHOLDS.nearFieldM} m. The lens size is not in the type files, so the spot and the lux (a point-source formula, I measured at a far distance) are NOT printed: "near-field: figure not valid".`,
+        `- Flags: near-field, wide (spot over ${THRESHOLDS.wideM} m), tight (under ${THRESHOLDS.tightM} m), dim (under ${THRESHOLDS.dimLux} lux at the look's level: invisible without haze), borrowed, no-figure, open-air, grazing, room-differs (the room's candela differs from the optics' by more than 1 %), out (the look has the lamp out).`,
         '- Not seen on a screen. Lux at level assumes linear dimming.',
         ''
     ]
@@ -443,8 +466,9 @@ export const toMarkdown = ({ version, looks }, rig) => {
         lines.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|')
         for (const x of look.rows.filter((row) => row.lit)) {
             const open = x.surface === 'open air'
-            const lux = (v) => (open ? 'open air' : v === null ? 'no figure' : luxText(v))
-            lines.push(`| ${x.id} | ${x.code} | ${x.x}, ${x.y}, ${x.z} | ${x.dx}, ${x.dy}, ${x.dz} | ${open ? 'open air' : `${x.surface}${x.detail && x.detail !== x.surface ? ` (${x.detail})` : ''}`} | ${open ? 'open air' : fixed(x.throwM, 2)} | ${fixed(x.incidenceDeg, 1)} | ${x.beamDeg ?? '—'} (${x.beamSource}${x.zoomDeg ? `; zoom ${x.zoomDeg.join('-')}` : ''}) | ${x.basis}${x.basisSrc ? ` (${x.basisSrc})` : ''} | ${open ? 'open air' : fixed(x.spotM, 2)} | ${open ? 'open air' : x.openConic ? 'open' : fixed(x.majorM, 2)} | ${x.candela === null ? 'no figure' : group3(x.candela)} | ${lux(x.lux)} | ${lux(x.luxAtLevel)} | ${x.level} | ${x.flags.join(' ')} |`)
+            const near = x.flags.includes('near-field')
+            const lux = (v) => (open ? 'open air' : near ? 'near-field' : v === null ? 'no figure' : luxText(v))
+            lines.push(`| ${x.id} | ${x.code} | ${x.x}, ${x.y}, ${x.z} | ${x.dx}, ${x.dy}, ${x.dz} | ${open ? 'open air' : `${x.surface}${x.detail && x.detail !== x.surface ? ` (${x.detail})` : ''}`} | ${open ? 'open air' : fixed(x.throwM, 2)} | ${fixed(x.incidenceDeg, 1)} | ${x.beamDeg ?? '—'} (${x.beamSource}${x.zoomDeg ? `; zoom ${x.zoomDeg.join('-')}` : ''}) | ${x.basis}${x.basisSrc ? ` (${x.basisSrc})` : ''} | ${open ? 'open air' : near ? 'near-field' : fixed(x.spotM, 2)} | ${open ? 'open air' : near ? 'near-field' : x.openConic ? 'open' : fixed(x.majorM, 2)} | ${x.candela === null ? 'no figure' : group3(x.candela)} | ${lux(x.lux)} | ${lux(x.luxAtLevel)} | ${x.level} | ${x.flags.join(' ')} |`)
         }
         lines.push('')
     }
