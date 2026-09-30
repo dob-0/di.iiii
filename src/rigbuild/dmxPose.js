@@ -17,6 +17,7 @@
 // the room's +Z — the default face mountMatrix gives when none is recorded (the rig
 // records none; §18.3 says so).
 
+import { capStrobeHz } from './strobeCap.js'
 import { spotAimDirection, rotationFromPanTilt } from '../project/viewport/spotLightAim.js'
 import { panTiltOfDirection } from './lookRules.js'
 import { lensFromMount, mountFromLens } from './lampGeometry.js'
@@ -107,7 +108,7 @@ export const dmxEntities = ({ shown, document, fixtures, library }) => {
         if (kind) {
             // A strobe or blinder draws as a flash (RigFlashes.jsx), never a cone: its
             // level and rate come from the desk.
-            components.rigFlash = { kind, level: d.level, hz: d.shutter === 'strobe' ? d.strobeHz : 0, steady: d.shutter !== 'strobe' }
+            components.rigFlash = { kind, level: d.level, hz: d.shutter === 'strobe' ? capStrobeHz(d.strobeHz) : 0, steady: d.shutter !== 'strobe' }
             return { ...e, components }
         }
 
@@ -122,7 +123,7 @@ export const dmxEntities = ({ shown, document, fixtures, library }) => {
             const beam = { ...(e.components.beam || base.components.beam) }
             const haze = Number.isFinite(base.components?.beam?.haze) ? base.components.beam.haze : HAZE_DEFAULT
             beam.haze = Math.round(haze * d.level * 1000) / 1000
-            if (d.shutter === 'strobe' && d.strobeHz > 0 && d.level > 0) beam.strobeHz = d.strobeHz
+            if (d.shutter === 'strobe' && d.strobeHz > 0 && d.level > 0) beam.strobeHz = capStrobeHz(d.strobeHz)
             else delete beam.strobeHz
             components.beam = beam
         }

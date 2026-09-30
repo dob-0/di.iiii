@@ -12,10 +12,9 @@ import { spotAimDirection } from '../project/viewport/spotLightAim.js'
 import { deskLooks, lookPoses, rigLooksOf, flashKindOf } from './looks.js'
 import { typeById } from './fixtureTypes.js'
 import { encodeDmx } from './dmxDecode.js'
+import { lookStrobeHz } from './strobeCap.js'
 import { panTiltOfBeam, runningMode } from './dmxPose.js'
 
-// A look's strobes fire at the room's own flash rate (rigFlash.js STROBE_HZ).
-const LOOK_STROBE_HZ = 10
 
 /**
  * @param {object} rigLooks        components.rigLooks (or null: read from entities)
@@ -30,6 +29,7 @@ export const deskLooksWithValues = (rigLooks, deskFixtures = [], { entities = []
     return shells.map((shell, i) => {
         const look = looks.looks[i]
         const poses = lookPoses({ entities, library, lookId: look.id, rigLooks: looks })
+        // A look's strobes fire at its own strobeHz, clamped to MAX_STROBE_HZ (strobeCap.js); none = the cap.
         const values = {}
         for (const f of deskFixtures) {
             const entityId = String(f.key || '').split(':').slice(1).join(':')
@@ -50,7 +50,7 @@ export const deskLooksWithValues = (rigLooks, deskFixtures = [], { entities = []
                 want.pan = pan
                 want.tilt = tilt
             }
-            if (pose && flashKindOf(library, fx.type) === 'strobe' && level > 0) want.strobeHz = LOOK_STROBE_HZ
+            if (pose && flashKindOf(library, fx.type) === 'strobe' && level > 0) want.strobeHz = lookStrobeHz(look)
             const cell = encodeDmx(mode.channels, want, type)
             if (Object.keys(cell).length) values[f.id] = cell
         }

@@ -125,10 +125,10 @@ describe('encode is decode\'s inverse where it speaks', () => {
         const eight = mode('UP-PL5403', '8ch-assumed')
         expect(encodeDmx(eight.channels, { level: 0 }, type('UP-PL5403')).dimmer).toBe(0)
     })
-    it('a strobe at 10 Hz encodes as a rate the decode reads back', () => {
+    it('a strobe asked at 10 Hz encodes as the capped 3 Hz the decode reads back', () => {
         const m = mode('EXT-STROBE', '4ch-assumed')
         const cell = encodeDmx(m.channels, { level: 1, strobeHz: 10 }, type('EXT-STROBE'))
-        expect(decodeDmx(m.channels, valuesOf(m, cell), type('EXT-STROBE')).strobeHz).toBeCloseTo(10, 0)
+        expect(decodeDmx(m.channels, valuesOf(m, cell), type('EXT-STROBE')).strobeHz).toBeCloseTo(3, 0)
     })
 })
 

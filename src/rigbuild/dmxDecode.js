@@ -22,6 +22,7 @@
 //     wheel is drawn at its open slot and noted (a spin is not a colour);
 //   - CTO warms toward 3200 K (#ffb46b, the blackbody at 3200 K as CIE 1931 → sRGB).
 
+import { capStrobeHz } from './strobeCap.js'
 const clamp01 = (v) => Math.max(0, Math.min(1, v))
 const hex2 = (n) => Math.round(Math.max(0, Math.min(255, n))).toString(16).padStart(2, '0')
 const rgbHex = ([r, g, b]) => `#${hex2(r)}${hex2(g)}${hex2(b)}`
@@ -251,7 +252,10 @@ export const encodeDmx = (channels, want = {}, type = null) => {
     }
     const shutter = Object.values(spec).find((c) => c.cap?.shutter)
     const rate = Object.values(spec).find((c) => c.cap?.rate)
-    const hz = Number(want.strobeHz) || 0
+    // Never write a rate above the cap: the value is mapped from the CAPPED Hz through the
+    // fixture's own table, so the resulting rate is <= MAX_STROBE_HZ. A profile with no
+    // table for that Hz writes nothing (fail safe; real tables owed).
+    const hz = capStrobeHz(want.strobeHz)
     if (shutter) {
         const v = hz > 0 ? strobeValue(shutter.cap.shutter, hz) : openValue(shutter.cap.shutter)
         if (v != null) out[shutter.role] = v

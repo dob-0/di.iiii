@@ -2,6 +2,7 @@
 // docs/architecture/RIG_BUILD.md §15.6.
 
 import { spotAimDirection } from '../project/viewport/spotLightAim.js'
+import { MAX_STROBE_HZ, capStrobeHz } from './strobeCap.js'
 
 // Per kind: the face (w × h, metres — the Atomic 3000's lens field is about 0.40 × 0.16
 // m, a 4-lite blinder's about 0.45 × 0.45), the glare sprite's size, the colour, and the
@@ -14,18 +15,18 @@ export const FLASH = {
 }
 
 // The strobe rate and the flash's length. A xenon or LED strobe fires a pulse of a few
-// milliseconds; on a 60 Hz screen that is one bright frame and a tail. 10 flashes a
-// second, each decaying with a 22 ms time constant: at 60 fps a flash is ~2 frames, at
+// milliseconds; on a 60 Hz screen that is one bright frame and a tail. At most 3 flashes a
+// second (the photosensitivity cap, strobeCap.js; was 10), each decaying with a 22 ms time constant: at 60 fps a flash is ~2 frames, at
 // 30 fps one — short and sharp, dark between.
-export const STROBE_HZ = 10
+export const STROBE_HZ = MAX_STROBE_HZ
 export const FLASH_TAU_S = 0.022
 
 /**
  * The strobe's brightness at time t (seconds), 0..1, at `hz` flashes a second (the desk's
- * flash rate when a desk drives the lamp, RIG_BUILD.md §18.3; else the look's 10 Hz).
+ * flash rate when a desk drives the lamp, RIG_BUILD.md §18.3; else the cap; never above MAX_STROBE_HZ).
  */
 export const strobeEnvelope = (t, hz = STROBE_HZ) => {
-    const rate = Number(hz) > 0 ? Math.min(60, Number(hz)) : STROBE_HZ
+    const rate = Number(hz) > 0 ? capStrobeHz(hz) : STROBE_HZ
     const period = 1 / rate
     const phase = ((Number(t) || 0) % period + period) % period
     return Math.exp(-phase / FLASH_TAU_S)

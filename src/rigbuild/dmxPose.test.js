@@ -126,7 +126,7 @@ describe('the room drawn from DMX', () => {
         expect(get(a.id).light.color).toBe('#ff2422')
         expect(get(a.id).light.intensity).toBeCloseTo(reach * 128 / 255, 1)
         expect(get(b.id).light.intensity).toBe(0)
-        expect(get(c.id).beam.strobeHz).toBe(25)
+        expect(get(c.id).beam.strobeHz).toBe(3) // 25 Hz on the console, capped at 3
     })
 
     it('PRECEDENCE: DMX wins over a playing look for what the list controls; the rest keeps the look', () => {
@@ -158,7 +158,7 @@ describe('the room drawn from DMX', () => {
         const flashed = flashEntities([strobe], TYPE_LIBRARY)
         const fixtures = [{ index: 9, profile: 'EXT-STROBE 4ch-assumed', values: [255, 0, 255, 0] }]
         const { entities: shown } = dmxEntities({ shown: flashed, document: [strobe], fixtures, library: TYPE_LIBRARY })
-        expect(shown[0].components.rigFlash).toMatchObject({ kind: 'strobe', level: 1, hz: 25 })
+        expect(shown[0].components.rigFlash).toMatchObject({ kind: 'strobe', level: 1, hz: 3 })
         expect(shown[0].components.beam.haze).toBe(0) // no cone
     })
 })
