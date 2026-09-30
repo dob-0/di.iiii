@@ -197,6 +197,41 @@ check('load with keepIndex keeps the running cue (a hold edited mid-show)', asyn
   assert.strictEqual(other.body.cues.running, false, 'another project\'s list starts stopped');
 });
 
+// A freshly patched fixture holds its own values at full (ROLE_DEFAULTS: dimmer 255,
+// white) so it lights the moment it is patched. A cue list's look saying "dimmer 0" must
+// still put that lamp OUT: the cue layer is LTP for intensity, as a console's cue list
+// is (ETC Eos: cue lists LTP by default, submasters HTP). Seen 2026-09-29 on MOXIR: the
+// X PARs lit in "Red room" and "One shaft" at their stored 255 though the look said 0.
+const dmxAt = async (d, u, ch) => (await d.GET('/api/dmx')).body.dmx[String(u)][ch - 1];
+const settle = async (d, u, ch, want) => {
+  let v;
+  for (let i = 0; i < 40; i++) { v = await dmxAt(d, u, ch); if (v === want) return v; await sleep(25); }
+  return v;
+};
+check('a cue look at dimmer 0 puts a lamp out though the fixture itself holds 255 (the cue layer is LTP)', async () => {
+  const add = async (address) => (await d.POST('/api/fixtures/add', { profile: 'drgb', universe: 7, address, name: 'ltp-' + address })).body;
+  await add(1); await add(5); await add(9);
+  const { body: st } = await d.GET('/api/state');
+  const [a, b, c] = [1, 5, 9].map((adr) => st.fixtures.find((f) => f.universe === 7 && f.address === adr));
+  assert.ok(a && b && c, 'three fixtures patched on U7');
+  assert.strictEqual(a.values.dimmer, 255, 'a new fixture holds its dimmer at full');
+  const look = { id: 'rig-ltp', name: 'LTP', kind: 'all', fixtures: [a.id, b.id], steps: [{ values: { [a.id]: { dimmer: 0, r: 255, g: 0, b: 0 }, [b.id]: { dimmer: 128, r: 0, g: 0, b: 255 } } }] };
+  await d.POST('/api/looks/add', { look });
+  await d.POST('/api/cues/load', { project: 'ltp', list: [{ id: 'c1', name: 'out', lookId: 'rig-ltp', hold: 0, fade: 0 }], loop: false });
+  await d.POST('/api/cues/go', { index: 0 });
+  assert.strictEqual(await settle(d, 7, 1, 0), 0, 'the look\'s 0 reaches the wire (was the stored 255 under HTP)');
+  assert.strictEqual(await settle(d, 7, 5, 128), 128, 'a look\'s 128 is 128, not the stored 255');
+  assert.strictEqual(await dmxAt(d, 7, 9), 255, 'a lamp the look does not name keeps its own value (tracking)');
+  // A layer an operator raises by hand is a submaster: HTP stays right there.
+  const sub = { id: 'rig-sub', name: 'SUB', kind: 'all', fixtures: [a.id, b.id], steps: [{ values: { [a.id]: { dimmer: 60 }, [b.id]: { dimmer: 60 } } }] };
+  await d.POST('/api/looks/add', { look: sub });
+  await d.POST('/api/looks/fire', { id: 'rig-sub', layerId: 'sub' });
+  assert.strictEqual(await settle(d, 7, 1, 60), 60, 'a hand-raised layer adds light over the cue\'s 0 (HTP)');
+  assert.strictEqual(await dmxAt(d, 7, 5), 128, 'and never takes light away: the cue\'s 128 stays over its 60');
+  await d.POST('/api/layers/remove', { id: 'sub' });
+  await d.POST('/api/cues/stop');
+});
+
 check('a desk restarted mid-show resumes the list where it was', async () => {
   await d.POST('/api/cues/load', { project: 'moxir-hall-minimal', list: list(0.08), loop: true });
   await d.POST('/api/cues/go', { index: 1 });

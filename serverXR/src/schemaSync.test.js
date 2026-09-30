@@ -869,6 +869,48 @@ describe('the beam and the room’s shadows survive both mirrors', () => {
     }
   })
 
+  it('keeps beam.aperture (the lens radius, RIG_BUILD §18) on both sides, only when positive', async () => {
+    const esm = await import('../../src/shared/projectSchema.js')
+    const written = applyProjectOps(normalizeProjectDocument({
+      entities: [{ id: 'lamp', type: 'spotLight', components: { beam: { visible: true, haze: 1, only: true } } }]
+    }), [
+      { type: 'updateComponent', payload: { entityId: 'lamp', component: 'beam', patch: { aperture: 0.08 } } }
+    ])
+    const read = normalizeProjectDocument(JSON.parse(JSON.stringify(written)))
+    expect(read.entities[0].components.beam).toEqual({ visible: true, haze: 1, only: true, aperture: 0.08 })
+    expect(esm.normalizeProjectDocument(JSON.parse(JSON.stringify(written))).entities[0].components.beam)
+      .toEqual(read.entities[0].components.beam)
+    // null (the undo), 0 or junk: not stored — the beam reads back as before it existed.
+    for (const aperture of [null, 0, -1, 'x']) {
+      const input = { entities: [{ id: 'x', type: 'spotLight', components: { beam: { visible: true, haze: 0.4, aperture } } }] }
+      expect(normalizeProjectDocument(input).entities[0].components.beam).toEqual({ visible: true, haze: 0.4 })
+      expect(esm.normalizeProjectDocument(input).entities[0].components.beam).toEqual({ visible: true, haze: 0.4 })
+    }
+  })
+
+  it('keeps renderSettings.atmosphere (the haze) and the AgX / Neutral tone mappings, on both sides', async () => {
+    const esm = await import('../../src/shared/projectSchema.js')
+    const written = applyProjectOps(normalizeProjectDocument({}), [
+      { type: 'setRenderSettings', payload: { patch: { atmosphere: { scattering: 0.02, anisotropy: 0.7 }, toneMapping: 'AgX' } } }
+    ])
+    const read = normalizeProjectDocument(JSON.parse(JSON.stringify(written)))
+    expect(read.renderSettings.atmosphere).toEqual({ scattering: 0.02, anisotropy: 0.7 })
+    expect(read.renderSettings.toneMapping).toBe('AgX')
+    expect(esm.normalizeProjectDocument(JSON.parse(JSON.stringify(written))).renderSettings)
+      .toEqual(read.renderSettings)
+    expect(normalizeProjectDocument({ renderSettings: { toneMapping: 'Neutral' } }).renderSettings.toneMapping).toBe('Neutral')
+    expect(normalizeProjectDocument({ renderSettings: { toneMapping: 'Filmic2000' } }).renderSettings.toneMapping).toBe('ACESFilmic')
+    // clamped; a haze-less or cleared atmosphere is not stored at all
+    expect(normalizeProjectDocument({ renderSettings: { atmosphere: { scattering: 7, anisotropy: -3 } } }).renderSettings.atmosphere)
+      .toEqual({ scattering: 1, anisotropy: -0.95 })
+    for (const atmosphere of [null, {}, { scattering: 0 }, 'thick']) {
+      expect(normalizeProjectDocument({ renderSettings: { atmosphere } }).renderSettings).not.toHaveProperty('atmosphere')
+      expect(esm.normalizeProjectDocument({ renderSettings: { atmosphere } }).renderSettings).not.toHaveProperty('atmosphere')
+    }
+    const cleared = applyProjectOps(written, [{ type: 'setRenderSettings', payload: { patch: { atmosphere: null } } }])
+    expect(cleared.renderSettings).not.toHaveProperty('atmosphere')
+  })
+
   it('keeps renderSettings.shadowCasting through an op and a re-read', async () => {
     const esm = await import('../../src/shared/projectSchema.js')
     const written = applyProjectOps(normalizeProjectDocument({}), [

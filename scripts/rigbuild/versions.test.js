@@ -11,6 +11,8 @@ import { readGeometry } from '../place/fixtures-glb.mjs'
 import { spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
 import { costing, generated, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
 import { rigLooksFrom } from './looks.mjs'
+import { loadLibrary } from './library.mjs'
+import { typeById, typeIdOf } from '../../src/rigbuild/fixtureTypes.js'
 
 const read = (f) => JSON.parse(fs.readFileSync(path.join(REPO_ROOT, f), 'utf8'))
 const spec = read(VERSIONS_FILE)
@@ -22,17 +24,22 @@ const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, r
 const rigs = Object.fromEntries(spec.versions.map((v) => [v.id, read(rigFileOf(spec.set, v.id))]))
 const lists = Object.fromEntries(spec.versions.map((v) => [v.id, read(rentalFileOf(spec.set, v.id)).rentalList]))
 const COMMERCIAL = /co2|spark|confetti|butterfly/i
+const library = loadLibrary()
 
 describe('the version files', () => {
     it('are what versions.mjs makes from the versions file and the base rig (never edited by hand)', () => {
         for (const [file, text] of Object.entries(generated())) expect(fs.readFileSync(path.join(REPO_ROOT, file), 'utf8'), file).toBe(text)
     })
 
-    it('are three, minimal < middle < full, in one hall with one booth', () => {
-        expect(spec.versions.map((v) => v.id)).toEqual(['minimal', 'middle', 'full'])
+    it('are four — the cut simple and full, then middle < full — in one hall with one booth', () => {
+        expect(spec.versions.map((v) => v.id)).toEqual(['minimal', 'minimal-cut-movers', 'middle', 'full'])
         const n = (id) => rigs[id].groups.reduce((s, g) => s + g.count, 0)
-        expect(n('minimal')).toBeLessThan(n('middle'))
         expect(n('middle')).toBeLessThan(n('full'))
+        // Minimal is the cut, simple: the rental house's NON-moving lights only (owner, 2026-09-29)
+        const moving = (id) => rigs[id].groups.filter((g) => typeById(library, typeIdOf(rigs[id].classes[g.class].code))?.pan_tilt_deg)
+        expect(moving('minimal')).toEqual([])
+        expect(new Set(rigs.minimal.groups.map((g) => rigs.minimal.classes[g.class].code))).toEqual(new Set(['UP-PL5403', 'UP-COB200']))
+        expect(moving('minimal-cut-movers').length).toBeGreaterThan(0)
         const base = read(`scripts/place/rigs/${spec.base}`)
         for (const rig of Object.values(rigs)) {
             expect(rig.stage).toEqual(base.stage)
@@ -47,7 +54,8 @@ describe('the version files', () => {
             expect((rig.effects || []).map((f) => f.fixture).join(' '), id).not.toMatch(COMMERCIAL)
             expect(lists[id].items.map((i) => i.code).filter((c) => ['UP-Q108S', 'UP-YH600F', 'UP-HD210'].includes(c)), id).toEqual([])
             expect(rig.effects.some((f) => f.fixture === 'hazer'), id).toBe(true)
-            expect(rig.groups.some((g) => rig.classes[g.class].fixture === 'strobe'), id).toBe(true)
+            // a strobe in every version but the vendor-only one (the rental house has none)
+            if (id !== 'minimal') expect(rig.groups.some((g) => rig.classes[g.class].fixture === 'strobe'), id).toBe(true)
         }
         expect(rigs.full.groups.some((g) => rigs.full.classes[g.class].fixture === 'blinder')).toBe(true)
     })
@@ -61,6 +69,7 @@ describe('the version files', () => {
         for (const [id, rig] of Object.entries(rigs)) {
             expect(rig.truss.kind, id).toBe('crane-hung')
             expect(rig.groups.some((g) => /tower/.test(g.mount)), id).toBe(false)
+            if (rig.truss.shape === 'slope') continue // the cut: cut.test.js
             const stage = stageFrame(rig, hall)
             expect(stage.trussZ, id).toBe(crane.z_m)
             const dj = performerBoxZ(rig, stage)
@@ -78,12 +87,8 @@ describe('the version files', () => {
             expect(load.total_kg[0], id).toBeGreaterThan(load.lamps_kg)
             expect(rig.truss.rigging.signoff, id).toMatch(/rigging sign-off owed \(crane rated load, lock-out, hoists \+ safety steels\)/)
         }
-        // Minimal: 7 B380F + 2 strobes (+ the 4 PARs grazing the bridge) on the line ≈ 250–300 kg on 2 points
-        const m = rigs.minimal.truss.rigging.load
-        expect(m.lamps.find((l) => l.code === 'UP-B380F').n).toBe(7)
-        expect(m.lamps.find((l) => l.code === 'EXT-STROBE').n).toBe(2)
-        expect(m.total_kg[0]).toBeGreaterThanOrEqual(250)
-        expect(m.total_kg[1]).toBeLessThanOrEqual(300)
+        // Middle: the flat 8 m line on 2 points, as before the cut
+        expect(rigs.middle.truss.rigging.load.points).toBe(2)
     })
 
     it('paint with the palette only — cold white, deep red, amber, the blinders\' warm white', () => {
@@ -157,8 +162,11 @@ describe('the cost, by the quote\'s own rule', () => {
             const outdoor = c.options.find((o) => o.id === 'outdoor-full')
             // à la carte is Σ rate × quantity for the rental lines
             expect(alc.perDay).toBe(lists[v.id].items.filter((i) => !i.from).reduce((s, i) => s + i.rate * i.ordered, 0))
-            // the 205,000 outdoor package undercuts à la carte for every version (18 beams alone are 360,000)
-            expect(outdoor.perDay).toBeLessThan(alc.perDay)
+            // the 205,000 outdoor package undercuts à la carte for every version with moving heads
+            // (18 beams alone are 360,000); the cut's simple version (PARs and COBs only) is
+            // cheaper à la carte — the package would be paying for heads it does not hang
+            if (v.id === 'minimal') expect(alc.perDay).toBeLessThan(outdoor.perDay)
+            else expect(outdoor.perDay).toBeLessThan(alc.perDay)
             expect(outdoor.unused.length).toBeGreaterThan(0)
             // two days = 1.5 day-rates
             expect(alc.byDays[2]).toBe(alc.perDay * 1.5)

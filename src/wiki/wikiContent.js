@@ -427,10 +427,11 @@ export const WIKI_ARTICLES = [
             'The cone is drawn as far as the lamp reaches, so set the lamp\'s Distance to roughly where the light actually lands. A lamp with a 15-metre reach hung in a small room draws its cone straight through the floor.',
             'BEAM ONLY. A whole rig is too many lamps for a browser: every lamp that really lights the room costs every pixel, and with shadows on a phone refuses past about a dozen. Tick Beam only (no light) and the lamp keeps its cone in the air but lights nothing — so a rig of ninety heads can hang complete, every beam visible, while a chosen dozen actually light the walls and the floor. A lamp with no beam never goes dark this way; the switch only means something while the beam is showing.',
             'SHADOWS FROM THE ROOM. Under Project → Render there is Lamps throw shadows. Switch it on and the lamps in the room cast: a pillar standing in a beam puts its shadow on the floor behind it, a person-sized box makes a person-sized shadow, and a scanned venue\'s own walls catch what is thrown at them. Shadow detail chooses how sharp the edge is — Sharper costs more, and a phone will feel it. It is off unless a room asks for it, because a shadow pass over a big scanned room is not free.',
-            'What a visitor sees is what you see: the beam and the shadows are part of the room, so they arrive with it in a published space and in walk mode, not only in the Studio.'
+            'What a visitor sees is what you see: the beam and the shadows are part of the room, so they arrive with it in a published space and in walk mode, not only in the Studio.',
+            'THE ROOM\'S AIR. A room can say how hazy its air is (renderSettings.atmosphere). When it does, every beam is drawn as the light the haze really scatters toward you: as bright as the lamp is, brightest looking back up toward the lamp, fading with distance, ending on whatever it hits, with the soft veil an eye sees around a very bright light. The beam and the wall it lands on then answer to the same exposure, like one photograph. A room that says nothing about its air keeps the plain cones. MOXIR is the first room with air: its night is black, and the little light the hall has comes back off what the rig lights — red in the red room.'
         ],
-        tags: ['light', 'lamp', 'spot', 'spotlight', 'aim', 'pan', 'tilt', 'beam', 'haze', 'shadow', 'shadows', 'rig', 'stage', 'studio', 'render'],
-        updated: '2026-09-27'
+        tags: ['light', 'lamp', 'spot', 'spotlight', 'aim', 'pan', 'tilt', 'beam', 'haze', 'air', 'exposure', 'shadow', 'shadows', 'rig', 'stage', 'studio', 'render'],
+        updated: '2026-09-29'
     },
     {
         id: 'the-rig',
@@ -1661,10 +1662,11 @@ export const WIKI_ARTICLES = [
             'A new lamp is patched on this machine\'s desk as soon as it is placed, like in Studio: the number and the address appear beside it. Select several and press patch this group to lay them out again as one block. Two lamps on the same channels are drawn in a dashed box with a !, and the inspector says what the desk said.',
             'The room beside the plan is the same room as in Studio, showing what is selected. On a phone the plan fills the screen; plan and room are one tap apart, and the tools and the inspector are in a sheet you pull up.',
             'Print sheet 1 gives the plot on A3 or A4 at a true scale with a scale bar — the whole rig, or just what is on the screen for a close-up of the stage. Sheets 2 and 3, the patch and the power, are the patch sheet. Print at 100%, not "fit to page".',
-            'The hall comes from the model it was built from, never drawn by hand. The plot makes no load or rigging calculation: a truss end with no tower under it is marked free, and the real hang needs a rigger\'s sign-off.'
+            'The hall comes from the model it was built from, never drawn by hand. The plot makes no load or rigging calculation: a truss end with no tower under it is marked free, and the real hang needs a rigger\'s sign-off.',
+            'A run may slope: a line hung from a crane on picks of different height (MOXIR\'s "cut", 12 m at 15°) is one run, and its clamp points follow it — a lamp on it sits at its real height, the looks reach it, and the plan draws its footprint (its length × the cosine of the slope). Its heights, picks and loads come from the rig file, which states them with their sources; the plot still makes no calculation of its own.'
         ],
         tags: ['plot', 'lighting plot', 'plan', 'cad', 'truss', 'tower', 'deck', 'stage', 'rig', 'fixture', 'lamp', 'dmx', 'patch', 'address', 'print', 'a3', 'scale', 'room', 'build', 'light engineer', 'crew', 'rp-2'],
-        updated: '2026-09-28'
+        updated: '2026-09-29'
     },
     {
         id: 'rig-cards',
@@ -1729,6 +1731,27 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['versions', 'rig', 'minimal', 'full', 'compare', 'switch', 'looks', 'level', 'blackout', 'strobe', 'blinder', 'hazer', 'haze', 'underground', 'moxir', 'equipment'],
         updated: '2026-09-28'
+    },
+    {
+        id: 'smart-view',
+        category: 'Spaces & access',
+        title: 'Smart view — see into a building from anywhere',
+        summary: 'In a room that has a building in it (a place, like MOXIR\'s hall), the view keeps the room in sight: what stands between you and what you look at fades, from outside the roof and the near walls are cut away, and six views take you straight to the dance floor, the DJ, the plan, a section, the rig or a crane shot. X-ray ghosts the building and leaves the rig solid.',
+        body: [
+            'It turns on by itself wherever a room holds a building: a place made by the place pipeline, or a model big enough to hold the rest of the room. Every other room is exactly as before.',
+            { list: [
+                'In the way: when a wall, a column or a machine stands between the camera and what it looks at, the part of it in front of that point fades (about 85 % gone, as fine dots), and comes back when the view is clear. Only the building fades — never a lamp, a beam or the rig.',
+                'From outside: step the camera out of the building and the roof and the walls facing you are cut away, like a model with its lid off; the haze stands back as far as you are outside, so the inside stays lit. Step back in and it closes again.',
+                'The six views, keys 1–6 or the row at the bottom: Floor (eye height in the crowd), DJ (from the riser, up at the rig), Top (the plan, straight down), Side (the room cut along its length through the rig), Rig (the lamps close), Crane (high over the crowd). They come from the room and the rig; a project can carry its own under presentationState.viewPresets.',
+                'X-ray (the button, or Alt+Z): the building drawn as a faint ghost with its edges and the roof left out, the rig at full strength — for checking what hangs where and where it points.',
+                'A link can open on a view: add #view-top (or floor, dj, side, rig, crane) to the room\'s address.',
+                'For a visitor, the camera never goes under the floor and never wanders off into the dark: it stays within reach of the building, and the point it circles stays inside it.'
+            ] },
+            'In Studio the same views and X-ray sit at the top of the viewport and the keys act on the pane under the pointer; a number a cue already uses stays the cue\'s. Studio keeps no camera limits, so you can still look up from under a thing.',
+            'Walking and flying, the fixed opening shot and headset entry are unchanged.'
+        ],
+        tags: ['view', 'views', 'camera', 'smart view', 'cutaway', 'section', 'x-ray', 'xray', 'transparent', 'occlusion', 'fade', 'walls', 'roof', 'outside', 'top', 'plan', 'dj', 'crane', 'rig', 'presets', 'moxir', 'hall', 'place'],
+        updated: '2026-09-29'
     },
     {
         id: 'rig-show-loop',
