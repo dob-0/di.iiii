@@ -5,6 +5,281 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-29 — two waiting notes folded into PROGRESS: the Windows docs check (#651) and the previous fold
+
+- The land job's push to dev is still refused by branch protection (see the 09-22 known issue), so
+  notes pile up on dev; Emilya's agent saw `docs:ai:check` fail on dev with two waiting notes.
+- Folded with `foldNotesIntoProgress` (scripts/session-land-lib.mjs) on a branch, as the 09-29
+  fold after #652 did; CURRENT.md untouched. `npm run land` itself refuses off dev, and a commit on
+  dev is now refused by the git hooks (#612/#639) — a branch + PR is the only route.
+
+## 2026-09-29 — the owner's first-run password idea, parked in the inbox
+
+- Parked verbatim in `docs/ai/INBOX.md`: an install gets an owner on first start (claimed
+  from the machine itself or with a one-time setup code), links Google/GitHub later
+  through the sign-in hub, and can send a local space to another di.iiii.
+- Not started. Waits for the hub's dev rehearsal (#636, merged), which waits on the dev
+  deploy fix (#645 / #647) and dev's hub signing key in the Mac's `source.env`.
+
+## 2026-09-29 — MOXIR hall: the crane measured, the 09-29 layer
+
+Branch `feat/moxir-hall-0929` (worktree `~/work/di.iiii-hall-0929`, from dev 37ca97b2).
+Input: 12 FUJIFILM X-T5 photos the owner sent through di.bo on 09-29 (shot 2026-09-26
+15:45–16:23 +04, no GPS) in `/mnt/data/footage/moxir-2026-10-17/incoming-2026-09-29/2026-09-29/`
+with `photos-2026-09-29.json` (photo_meta.py: EXIF, 35 mm-eq focal, NOAA sun) beside them,
+plus the older photo 007. The photos are the owner's and stay private: the repo holds only
+numbers read off them.
+
+- **Crane heights, measured** — `scripts/place/crane_height.py` (new): single-view metrology
+  (Criminisi, Reid & Zisserman, IJCV 2000) on photo 007 (iPhone 3x tele from the entry crane,
+  looking at the far crane and the end wall). The crane's own rail span (GOST 534-78:
+  24 m − 2λ = 22–23 m) sets its depth; the floor at the end wall is the reference; the horizon
+  cancels; Monte Carlo over focal, camera place/height, wall place, span and ±6 px readings.
+  Pixel readings with how they were read: `rigs/moxir-crane-picks-2026-09-29.json`.
+  Rail top 8.08 m (5–95 % 7.81–8.36; was 7.6 disputed 6.6–8.4), bridge underside 7.96 m
+  (7.69–8.24), girders 0.77 m deep (was 1.5 GUESS), cab bottom 5.85 m, the far crane's hook
+  as parked 3.73 m, far crane 76.2 m from the entry grid line (was 95 GUESS). Scale check in
+  the same photo: the end wall's steel double door reads 2.01 × 2.39 m. Only the FAR crane is
+  measured; the DJ (entry) crane is ASSUMED identical.
+- **Overlays** (history kept, nothing earlier edited): `moxir-hall-dims-2026-09-29.json`,
+  `moxir-hall-features-2026-09-29.json`, `moxir-hall-crane-dj-2026-09-29.json`; every value
+  has value/range/confidence/how/source.
+- **hall.py**: `crane_bridge_bottom_h_m`, `crane_bridge_depth_m`, `crane_cab_h_m` are dims
+  (default = the v2 assumption, so older overlays build the same hall); a `{value, confidence,
+  range}` entry keeps its confidence and range in hall.json; a GOST 100 mm crane-to-roof check;
+  `--preview-camera` takes an image size; the preview prints which GPU drew it.
+- **Outputs**: `/mnt/data/footage/place-moxir-hall-v4-0929/` (as seen) and
+  `…-v4-0929-crane-dj/` (hall.glb, hall-show.glb, hall-night.glb); fixtures
+  `rigs/moxir-hall-2026-09-29.hall.json`, `…-crane-dj.hall.json`.
+- **Rig effect** (minimal rig built on the old vs new crane-dj hall): truss trim 6 m unchanged;
+  hoists/spreaders 0.2 m lower, chains 1.26 → 1.06 m; column PAR and bridge PAR aims shift
+  slightly. The rig files still name the 09-28 hall and "rail 7.6 / girder bottom 8.15" —
+  theirs to update (peers own them).
+- **Dropped**: every object placed from a VGGT/bearing pose — red blower, blue fan housing,
+  fallen lattice (858/867) and the backstage machine tool, its fan head and a block pallet (856):
+  each photo-match render put it visibly wrong (856: the machine fronto-parallel and ~2x too
+  close; it runs diagonally away in the photo). Listed under seen_not_modelled. The 858/867
+  bearing fits and the 856 VGGT pose are rejected as viewpoints.
+- **Owed**: one tape/laser distance to a crane's underside on site; the DJ crane's own
+  underside and hook; a full PnP with identified columns for the 09-26 photos; the roller
+  conveyor seen in 865/866 may sit at the dance floor's left edge — verify on site.
+- Guards: `scripts/place/hall-crane.test.js` (6 tests).
+
+## 2026-09-29 — MOXIR as a camera (and an eye) sees the night: beams in haze, exposure, the dark
+
+- Asked: MOXIR "maximum close" to the real night; measured problem on dev: mean luma ≈ 10–12 desktop,
+  ≈ 8 phone, thin grey beams, barely any haze, a pale-blue DJ table, a blue-grey room.
+- Target written BEFORE the change from 8 Wikimedia Commons photographs (Berlin Atonal/Kraftwerk,
+  Tresor, …; links, authors and licences in RIG_BUILD.md §18.1, files only in
+  `~/Downloads/moxir-realism/refs/`): mean luma median 21, black share median 0.56.
+- Code: beams drawn as single scattering in haze (`beamAir.js`, `beamAirMaterial.js`) when a room carries
+  `renderSettings.atmosphere`; a CIE disability-glare veil around each beam; the rig's own return as the
+  room's ambient and haze colour (`rigBounce.js`, integrating-sphere relation); AgX/Neutral accepted;
+  `atmosphere` + `beam.aperture` in both schemas. Rooms without an atmosphere: unchanged (guard
+  `SpotLightObject.air.test.jsx`).
+- Bug found and fixed: the arrival view turned an authored 0 ambient/directional back into daylight
+  (`||` defaults) — the grey-blue cast. Guard `worldLights.test.js` seen red; known-fixes row.
+- Data (LOCAL only, 2026-09-29 19:50:44 +04): `scripts/rigbuild/realism.mjs` on moxir-hall-minimal
+  (σs 0.05, g 0.7, ACES × 3.5 = EV100 ≈ 3.6, black night, rigBounce, apertures, night hall). Backup + undo:
+  `~/di-backups/preview-rig-builder-2026-09-28/steps/20260929-194513-realism/`. The installed server
+  (0.4.16-rigbuilder.9) drops `beam.aperture` and its client ignores the atmosphere until it runs this
+  branch.
+- Measured (RIG_BUILD.md §18.3): beam cues 18–19 on both viewports (were 8–10), phone = desktop, 60 fps on
+  the 3080; misses stated there (red room by construction of luma, blackout target too high, desktop p99,
+  strobe needs a high-rate capture, iGPU not measured, the 84 °C gate not reachable — ran at ≤ 95 °C).
+- Tools: `scripts/rigbuild/look-probe.mjs` (per-cue luma + fps on the GPU), `look-compare.mjs` (the page).
+
+# feat/moxir-the-cut — MOXIR's crane line as one straight 12 m diagonal (2026-09-29)
+
+Owner's pick: option 4 of `~/Downloads/moxir-crane-rig/ten-truss.html`, "the cut" — one straight
+12 m truss in the crane bridge's plane, low house left, high over the press. Full write-up with
+numbers and sources: `docs/architecture/RIG_BUILD.md` §15.8. Design file
+`scripts/place/rigs/moxir-crane-cut-2026-09-29.json`.
+
+## What landed
+
+- The rig: ends x −6.04 (bottom chord 3.44 m) … x +5.55 (6.55 m), 15°, trim 5.06 m over the DJ,
+  three picks (u −5.75 / −0.5 / +5.25), static loads 39 / 114 / 50 kg on the line, 72 / 147 / 83 kg
+  on the bridge (ESTIMATE; rigging sign-off owed). Derived by `versions.mjs craneCut`, tested
+  (`cut.test.js`, `versions.test.js`).
+- Two versions: `minimal` = the cut, simple (7 UP-COB200 curtain, 6 PL5403 X over the DJ, 4 red PL5403
+  grazing the bridge, press PARs on the backdrop's clamp points); `minimal-cut-movers` = the same line
+  with the 7 UP-B380F.
+- Client: a sloped run is one run and its slots follow the 3D line (`positions.js runFrame`); pieces
+  carry their roll; MVR matrices carry the roll. UP-COB200 type (photometry ASSUMED).
+- Scripts: `rehang.mjs` (new rig into a live project, as ops, rig only), `show-cues.mjs` (cue list into
+  the document only), `cue-frames.mjs` (a frame of every running cue from named cameras, GPU only;
+  helpers tested in `cue-frames.test.js`), `sway.mjs` (heads on a chain-hung line move in ≥ 4 s).
+- Companion branch `feat/moxir-the-cut-patch` (on #659): UP-COB200's assumed 4ch list, tunable white on
+  the desk, Minimal's plan U1–U4, and vis-see running `--cues` on a rig with no moving head.
+
+## Data (local install only; nothing pushed to dev/prod)
+
+- `moxir-hall-minimal` holds the cut (rehang, then realism kept), wash re-baked, `showpatch` run;
+  `moxir-hall-minimal-cut-movers` created.
+- Backup + undo: `~/di-backups/preview-rig-builder-2026-09-28/steps/20260929-201925-the-cut/`
+  (UNDO.txt there).
+
+## Seen
+
+- The installed preview (0.4.16-rigbuilder.9), frames `~/Downloads/moxir-the-cut/cut-*.png`: the line reads as
+  a diagonal slash, but that build has neither the UP-COB200 type nor sloped-run slots, so the curtain sits at
+  its rest light in every cue and the X never shows.
+- This branch's client (vite :5188 proxied to the same install and desk), frames
+  `~/Downloads/moxir-the-cut/branch-code/`: one shaft, the blade, red room, white cathedral with the X and the
+  hit all play. **Defect seen, not yet fixed:** the 6 X PARs are drawn lit in *Red room* (red) and *One
+  shaft* (white), although the desk's looks give them dimmer 0 (checked in `/light/api/state`). The
+  visualiser report on the install also shows every PL5403 at one level per cue. Suspect: the room's
+  decode of `UP-PL5403 8ch-assumed` ignores the dimmer (compare known-fixes "colour-only mode could not be
+  put OUT"). Owed: find and fix it, with a guard.
+
+## Owed
+
+- A preview install carrying this branch + `feat/moxir-the-cut-patch` (the installed .9 has neither the
+  UP-COB200 type nor sloped-run slots).
+- Rigging sign-off (crane rated load, lock-out, hoists + safety steels); the rental house's truss,
+  hoists and COB200 photometry/channel list.
+
+## 2026-09-29 — smart view: a building stays in sight from anywhere (occlusion fade, cutaway from outside, six view presets, x-ray, camera limits)
+
+- The owner on MOXIR: "when i move the mouse i go out from the building and nothing visible
+  … when something front it will be transparent … i need and want smart view methods". A
+  platform feature for every room with a building in it: `src/project/viewport/smartView/`,
+  mounted by `StudioViewport` for the published room (orbit) and the Studio viewport panes.
+  Method, sources and limits: `docs/architecture/SMART_VIEW.md`.
+- Occlusion fade: 5-ray BVH raycast (three-mesh-bvh, now a direct dependency) at 15 Hz decides;
+  the building's fragments in front of the target inside a screen circle are screen-door
+  dithered (Bayer 4×4, up to 85 %). Cutaway: six shared clip planes (roof, four walls, a
+  preset's section); the authored fog stands back by the camera's distance outside. Presets
+  on keys 1–6 and a row (Floor, DJ, Top, Side, Rig, Crane) computed from the room and rig,
+  overridable by `presentationState.viewPresets`; `#view-<id>` deep links. X-ray on Alt+Z.
+  Visitor camera limits through camera-controls (maxPolarAngle for the floor, maxDistance,
+  setBoundary for the target).
+- The building is found through what the place pipeline writes (`place-hall`, `venuePlan`
+  outline, `hall.py` mesh names) with a bounds fallback; the rig is never touched.
+- Studio: same views and x-ray at the top of each pane, keys act on the pane under the
+  pointer, a digit a cue claims stays the cue's; no camera limits there.
+- Not done / owed: the visualiser split (#644) needs `&views=1` on its room frame for the
+  row; the fade circle is a fixed share of the screen; clicks still hit cut-away parts;
+  no MOXIR document carries authored `viewPresets` yet (owner's call); the realism PR #660
+  (atmosphere/beams) was not on dev — its haze needs a look together with the fog offset.
+
+### Measured (2026-09-30, one sitting, before = origin/dev 37ca97b2, after = this branch)
+
+MOXIR `moxir-hall-minimal` on a scratch copy, RTX 3080 (ANGLE on Vulkan, PRIME offload),
+uncapped (`--disable-gpu-vsync --disable-frame-rate-limit`), 4 s per sample. CPU package
+96–100 °C throughout (85 °C was not reachable: other sessions' jobs hold the cores), so the
+numbers carry a thermal error of the order of ±15 %.
+
+| view | before fps | after fps |
+|---|---|---|
+| desktop 1440×900 DPR 2, opening shot | 140.7 | 100.4 |
+| desktop, a column in the way | 145.6 | 124.3 |
+| desktop, pulled far outside | 3602 (black screen) | 614 (hall cut open) |
+| desktop, Floor / Crane | — | 111.2 / 112.6 |
+| desktop, x-ray Crane / x-ray Top | — | 167.1 / 341.1 |
+| phone 390×844 DPR 3 (emulated), opening | 500.8 | 355.7 |
+| phone, Crane / x-ray Crane | — | 643.8 / 662.0 |
+
+- X-ray at the crane view was 42.8 fps before this round (the roof, a 41k-triangle space
+  frame, ghosted over the whole screen). Now the roof is not drawn in x-ray and edges are
+  made only for meshes ≤ 12 000 triangles: 167 fps.
+- The opening shot costs ~30 % (140 → 100 fps): the dither/clip shader on the building's
+  materials plus the 15 Hz raycast. Still above the 60 fps bar; not profiled further.
+- Floor view no longer grey (target heights now follow the hung lamps; the camera stood in
+  a beam cone). Side stands ~12–18 m out instead of 83 m.
+- Frames + compare page: `~/Downloads/moxir-smart-view/index.html`.
+- Tests: 5 failures in `sdk/door.test.js`, `sdk/sdk.test.js`, `scripts/di/openFile.test.js`,
+  `src/kit/kitCatalogue.test.js` fail the same on untouched origin/dev in this machine's
+  shared node_modules (version strings) — environmental, not this branch.
+- Owed: from far outside the hall reads small and dark (the cut works, but the rig is a few
+  pixels at maxDistance); a real phone (S24) has not been tried; seen on the scratch stack,
+  not yet at https://local.thedi.studio/moxir (that runs the installed release).
+
+## 2026-09-29 — one command to publish a space's update to dev
+
+- `scripts/space-publish.mjs` (`npm run space:publish -- --space <id>`): tier-sync --changed →
+  show-clock --epoch now on the published project → visitor check (published 200, private 404 and
+  unlisted). Unknown options are refused (tier-sync ignores them silently: `--skip` looked like it
+  worked). 4 tests.
+- tier-sync: `mappingState.showEpoch` is volatile (each tier starts its own show clock); the
+  baseline after a write is the destination's READ-BACK shape (dev filled AI-effect defaults in on
+  write, so the sent shape made every MOXIR project read "both sides changed"). 3 tests.
+- Measured: dry run on moxir refused all 4 projects before; the diff of moxir-hall-full local vs dev
+  was only createdAt/updatedAt + `effect.prompt ""` / `effect.strength 0.5`.
+- Owed: the three MOXIR show projects need one `--force` push to record a true baseline.
+
+## 2026-09-29 — a crafted bundle can no longer read files outside the data root
+
+- Security audit C1: bundle import refuses links (archive listing + lstat walk); asset serving refuses non-regular files. Guards: `scripts/space-bundle.test.js` "refuses links", `serverXR/src/spaceStore.symlink.test.js` (4/4 red on the old code). Hotfixed to `main` the same day.
+
+# fix/cue-list-ltp — a cue that puts a lamp out puts it out (2026-09-30)
+
+Reported by the cut's session (`feat-moxir-the-cut.md`): MOXIR Minimal's 6 X PARs (UP-PL5403,
+8ch-assumed) drawn lit in "Red room" and "One shaft" though the desk's looks give them dimmer 0.
+Suspect named then: the room ignores their dimmer channel.
+
+## Cause (measured, not guessed)
+
+- The room was right. `dmxDecode` with dimmer 0 gives level 0 (its own tests).
+- The wire was wrong. On the owner's install (0.4.16-rigbuilder.9), `/light/api/dmx` sampled every
+  5 s over one loop: U1.101 (X 1) carried the same dimmer as U1.201 (a bridge PAR) in every cue,
+  whatever the look said (for example, one shaft, look dimmer 0 → wire 73/48/14).
+- Why: every patched fixture stores `dimmer 255, r/g/b 255` (`ROLE_DEFAULTS`: a new patch lights),
+  and the cue layer was created HTP (`sanitizeLayer`'s default), so intensity was
+  `max(stored 255, look 0)`. Every PL5403 sat at one level per cue, as the visualiser report said.
+- Separately (data, not changed here): that desk has `fx` pulse enabled (120 bpm, depth 255), which
+  scales every lamp. It is the moxir space's desk state, left for the owner's call.
+
+## Fix
+
+`fireLook` sets `merge: 'ltp'` on the cue layer on every fire. That is a console's cue-list rule:
+ETC Eos Family help, "Cue List Properties", says cue lists are LTP for intensity by default and
+submasters are HTP. Layers raised by hand keep their own merge. Doc: LIGHTING_DESK.md "The cue runner".
+Guard: `test-cues.js` (seen red without the fix: `255 !== 0`). Lighting + mirror suites 58/58.
+
+## 2026-09-29 — a composed entry no longer dollies a phone visitor under the floor (MOXIR black on portrait)
+
+- Symptom: https://dev.diiii.xyz/moxir at 390x844 (DPR 2 and 3, real GPU) drew the UI
+  chrome over a black room for the whole visit (mean luma 3.2, max 88); 844x390,
+  768x1024 and 1440x900 were fine. Same on the local install (0.4.16-rigbuilder.9).
+- Root cause: `fitCameraToAspect` (the portrait fix from #286) dollies an authored
+  camera straight back along its view axis by `getAspectFitScale` — x1.974 at 390x844,
+  fov 55. MOXIR's entry stands at eye height (y 1.6) looking UP at the rig (target y
+  5.2), so backing away also goes DOWN: the camera landed at [0, -1.91, 36.76], under
+  the hall floor. 768x1024 (x1.27) stayed just above it at y 0.63, which is why the
+  tablet rendered.
+- Fix: the dolly is now a spring arm (Unreal's `USpringArmComponent`, probe 12 cm): it
+  extends only as far as the space behind the camera is clear — above the floor
+  (y 0 + 0.12 m) for a camera authored above it, and inside `worldState.walkableAreas`
+  for a camera authored inside them. What the arm cannot reach is made up with vertical
+  fov ("Hor+"), so the promise "a phone sees at least what a square viewport sees" is
+  kept. MOXIR at 390x844 now opens at [0, 0.12, 27.19], fov 73.7. Landscape and square
+  viewports are untouched (scale 1), and a shot with room behind it (the front room)
+  keeps the plain dolly.
+- Also: at 390 px the rig's version row ran under Walk / Fly ("ly" visible). On a
+  compact phone (≤ 560 px) with a right-hand control present, the row now takes its own
+  line under it and the show chip moves one line down (`src/rigbuild/rigVersionLayout.js`).
+- Guards: `cameraFraming.test.js` "fitCameraToAspect inside a room" (3 of 5 red on the
+  old code), `publicViewerEntryCamera.test.js` "in an enclosed room",
+  `rigVersionLayout.test.js`.
+- Still open: the arm respects the declared floor and plan, not the geometry — a room
+  with a wall inside its walkable rectangles (or none declared) can still put the arm
+  through that wall. A geometry sweep (raycast along the arm after the room loads) is
+  the full spring-arm method and is owed if a room shows it.
+
+## land/batch-2026-09-30
+
+Batch landing into `dev`: #654 (fold notes after 651), #649 (inbox first run), #667 (cue-list LTP),
+#663 (MOXIR hall 09-29), #664 (MOXIR the cut), #660 (MOXIR realism), #666 (smart view). #650 (backup branch) skipped.
+
+- One textual conflict: `docs/ai/known-fixes.md` (#660 vs #664/#667 rows) — both rows kept, additive.
+- `wikiContent.js`, `StudioViewport.jsx`, `RIG_BUILD.md` auto-merged with no conflict.
+- Full suite runs in GitHub CI only (aylmo fan fault: no local full test/build).
+- Semantic interaction fixed after CI: #663's `scripts/place/hall-crane.test.js` ("minimal rig under the measured crane")
+  assumed the flat 8 m line (truss y 6 m, spreaders); #664 replaced that rig with the 15-degree "cut" (trim 5.06 m, bridled hoists
+  with no spreader). Test now asserts the rig's own `trim_m`, bridle/chain parts. Intent (truss keeps its trim, room under the bridge) kept.
+
 ## 2026-09-29 — ten waiting notes folded into PROGRESS: private projects (#652), the sign-in hub batch, vitest 5, live AI restyle, unsaved watch, hooks in every worktree, docker prepare hook, kit grid, unsaved-log BOM, the rig-builder fold
 
 - The dev deploy of #652 stopped at "Check AI docs": the in-place fold of ten waiting notes

@@ -13,13 +13,12 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the rig-builder line on dev: MOXIR hall + crane rig in three versions; rig base (types, snap, auto-patch, patch sheet, MVR + GDTF)
-- the rig views: plot `/{space}/plot/…`, cards `/cards/…`, first person + crew `/build/…` `/crew/…`, equipment `/equipment/…`
-- hosted show playback: a rig's cue list plays by the wall clock with no desk (RIG_BUILD §16); the tools read only for visitors (§17)
-- the lighting desk takes a console's Art-Net and sACN, and loops a cue list itself
-- one flow for every hand (git hooks); History says who changed what; tier-sync `--skip`
-- small: network rooms link WCC by its public address; three debug-list fixes (#632 #633 #634)
-- 18 waiting notes folded; CURRENT.md cut to the cap so dev deploys again
+- MOXIR: the hall measured under the crane; the cut (one 12 m sloped line, fixed lights, rehang + sway checks); beams in haze, exposure and the dark
+- smart view: a building stays in sight from anywhere (occlusion fade, cutaway, view presets, x-ray)
+- the lighting desk's cue list now plays last-takes-precedence (LTP), not a stale channel
+- MOXIR portrait phone entry fixed; a crafted bundle can no longer read files outside the data root
+- one command publishes a space's update to dev; the first-run password idea parked in the inbox
+- 11 waiting notes folded (#670 batch: #654 #649 #667 #663 #664 #660 #666)
 
 Full detail: `PROGRESS.md`.
 
