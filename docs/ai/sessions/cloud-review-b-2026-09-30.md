@@ -22,3 +22,20 @@ Nothing here was seen on a screen; no visual result is claimed. Line numbers are
 
 ### Not read
 `src/rigbuild/lookWash.test.js` and `scripts/place/wash-plan.test.js` (not run); `wash-glb.mjs` beyond a grep for time/random; the model renderer, so whether a `runtime.visible:false` model still downloads its GLB at room open (11 hidden washes loaded up front on an iGPU) is NOT established.
+
+## B2 — copy-version --adopt (ref `origin/preview/rigbuilder-13-2026-09-30`)
+
+### Findings
+1. **medium — `looksLikeCopyOf` can adopt a copy of the WRONG version of the same set.** `scripts/rigbuild/copy-version.mjs:113-127`: the three tests are the set name (skipped when the copy has no mark: `if (copySet && sourceSet && …)`), the entity count (`max(10, ceil(0.15·n))` apart), and the HALL (non-`rig-` entities). Every version of one set shares the same hall, so the only part that tells two versions apart — the `rig-` entities — is compared by count alone. Proven with a node script: a mark-less copy of version A (40 hall + 30 `rig-a-*`) against source `full` (40 hall + 35 `rig-b-*`) → `ok: true`, `hallMatched 40/40`, `allowed 12`, and `planAdoption(…)` → `status: 'write'`. A mark-less copy is exactly the case --adopt exists for (`copy-version.mjs:31-36`), so a wrong `--from` stamps the copy `copyOf: full` with id `full-<suffix>`. Fix: when the copy has no mark, also require the `rig-` entity ids to match (e.g. ≥ 90 % of the copy's `rig-*` ids present in the source), and print that ratio in the facts line.
+2. **medium — a fresh copy made without `--siblings` loses its mark silently (the cause --adopt repairs).** `copiedEntities` (`:79-90`) sets `id: \`${v.id}-${suffix}\`` but keeps the source's `siblings` when none are given; `normalizeRigVariant` (`src/shared/projectSchema.js:870`) returns null when the own id is not among the siblings. Proven: the fresh copy's mark → `normalizeRigVariant(...) === null`. The copy path's read-back (`:344-346`) compares only entity and asset COUNTS, so the PUT succeeds, the mark is gone, and the script prints "written". `--adopt` checks this (`kept`/`dropReason`, read-back); the copy path does not. Fix: in the copy path, run `normalizeRigVariant` on the new mark before the PUT and die with `dropReason` when it is null; after the read-back, check the show entity still has `rigVariant.copyOf`.
+3. **low — a mistyped `--dry-run` writes.** `parseArgs` (`scripts/place/common.mjs:11-29`) accepts any `--key`, and `runAdopt` writes unless `args['dry-run']` (`:302`). `--dryrun`, `--dry_run` or `—dry-run` (an em dash pasted from a doc) all go to the write. The write is guarded (looksLikeCopyOf, one op, read-back) and logs the old mark first, so the damage is bounded to one mark. Fix: in `main`, die on any key not in a known list for the chosen mode.
+
+### Refuted
+- Writes beyond the mark: `planAdoption` returns exactly one `updateComponent` on `rig-show`, component `rigVariant`; the read-back runs `changedBesideMark` and throws on drift.
+- Title/summary overwrite: `{ ...(have || wanted), id, copyOf }` keeps the copy's own title and summary when it has a mark.
+- A mark the server drops: `normalizeRigVariant(mark)` is run before writing, and a null → refusal with `dropReason`, which names RIG_VERSIONS_CAP (32) when the own id is cut off; `copyOf` normalised differently → refused.
+- Concurrent edit between re-read and write: the op carries `baseVersion: fresh.version`; the route answers 409 on a stale base (`serverXR/src/catalogue/entries/projects.js`, POST /ops note) and the script throws "nothing was written". Re-run after success → `status: 'nothing'` (idempotent).
+- `--dry-run` spelled right writes nothing: it returns before the re-read and the POST on the adopt path, and before creating the project on the copy path.
+
+### Not read
+`copy-version.test.js` (not run); `asset-remap-lib.mjs`; `makeClient`; the server's POST /ops handler body (the 409 is taken from the route catalogue, not traced in `projectRoutes.js:715`); `--undo` beyond a glance.
