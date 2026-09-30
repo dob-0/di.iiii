@@ -1517,7 +1517,7 @@ copies". A backup and the op log are not enough; he opens old and new side by si
   a project that does not look like the source's copy (`looksLikeCopyOf`: same set, entity count within
   15 % / at least 10, at least 90 % of the hall's ids and names the same; the thresholds are chosen, not
   measured, and the dry run prints the measured numbers). Idempotent; `--dry-run` writes nothing.
-  Notes and the exact commands: `docs/ai/sessions/feat-copy-version-adopt.md`.
+  Notes and the exact commands: `PROGRESS.md` (the note folded at land: "copy-version --adopt").
 - Guard: `copy-version.test.js` (the label, the URLs, the mark alone changes; `--adopt`: the mark given
   back, refusals, idempotence, dry run, one op on the show entity only).
 

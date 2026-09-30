@@ -26,6 +26,15 @@ export const NOISE_BRANCH_PATTERNS = [/^dependabot\//, /^cpanel-/, /^emily/]
 
 export const isNoiseBranch = (name) => NOISE_BRANCH_PATTERNS.some((re) => re.test(name))
 
+// The fold branch is the ONE kind of branch that legitimately writes CURRENT.md: CI's
+// `land` job cannot push to protected `dev` (GH006, since 2026-09-29), so the hand fold
+// through a PR is the writer of record for CURRENT.md. check-agent-docs.mjs exempts
+// these names from its "CURRENT.md differs from origin/dev" rule. A detached HEAD (what
+// CI checks) has no name, so it stays under the rule.
+export const FOLD_BRANCH_PATTERN = /^(chore\/fold-notes-|land\/)/
+
+export const isFoldBranch = (name) => typeof name === 'string' && FOLD_BRANCH_PATTERN.test(name)
+
 // `vitest run` (one-shot, exits when done) must NOT count as "live" -- caught during
 // development of this module: it briefly still exists during its own exit/report
 // phase, long enough for a concurrent repo-state call to misidentify a one-off test

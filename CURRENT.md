@@ -13,15 +13,12 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the rig-builder line on dev: MOXIR hall + crane rig in three versions; rig base (types, snap, auto-patch, patch sheet, MVR + GDTF)
-- the rig views: plot `/{space}/plot/…`, cards `/cards/…`, first person + crew `/build/…` `/crew/…`, equipment `/equipment/…`
-- hosted show playback: a rig's cue list plays by the wall clock with no desk (RIG_BUILD §16); the tools read only for visitors (§17)
-- the lighting desk takes a console's Art-Net and sACN, and loops a cue list itself
-- one flow for every hand (git hooks); History says who changed what; tier-sync `--skip`
-- small: network rooms link WCC by its public address; three debug-list fixes (#632 #633 #634)
-- 18 waiting notes folded; CURRENT.md cut to the cap so dev deploys again
-
-Full detail: `PROGRESS.md`.
+- land batch #679 (+ #677): the MOXIR rig-builder line, preview 0.4.16-rigbuilder.14, is on dev — ground versions and their scenes, the scene deck, per-look wash, light footprints, patch work, the visualiser
+- cloud reviews A and B of that code and their fixes: strobe capped at 3/s everywhere, no look can light a laser, the deck's guards, the preview pack/install scripts
+- the serverXR dependency audit cleared (#677, engine.io 6.6.11, qs 6.16.0)
+- controls are rectangles: the rig-line sweep; the rest of the platform's round controls is still owed
+- MOXIR work now lives on the owner's second machine; this machine only pushes and lands it
+- 47 session notes folded into PROGRESS.md (every note kept there in full)
 
 ## What works
 
