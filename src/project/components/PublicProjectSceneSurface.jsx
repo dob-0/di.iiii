@@ -3,6 +3,8 @@ import useXrAr from '../../hooks/useXrAr.js'
 import { computeFramingCamera, fitCameraToAspect, getPointsBoundingSphere, getViewportAspect } from '../../utils/cameraFraming.js'
 import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
 import { XR_READY, xrAvailability } from '../../xr/xrAvailability.js'
+import { doorsOf, fitArrivalToDoors } from '../../components/arrivalFraming.js'
+import { isPlatformOwnSpace } from '../../components/MadeWithBadge.jsx'
 import lazyWithReload from '../../utils/lazyWithReload.js'
 import { isEmbedRequest } from '../../utils/previewMode.js'
 
@@ -69,7 +71,31 @@ export const isCameraCaged = (entryView, fixedCamera) => (
     entryView === 'fixed-camera' && fixedCamera?.locked === true
 )
 
-export const resolveViewerCamera = (document, aspect = getViewportAspect()) => {
+// The front room's doors ARE its navigation, and its arc (x +-12.8) is wider
+// than the square-viewport view fitCameraToAspect gives a phone, so the outer
+// two were cut. The walker already answers this (arrivalFraming.js): step back
+// along the facing direction until every door ring is inside the horizontal
+// field. Applied to the composed camera the same way, and only when asked
+// (`fitDoors`) and only on a portrait viewport, so no other room and no
+// landscape view changes.
+export const fitCameraToDoors = (camera, entities, aspect) => {
+    if (!camera || camera.projection === 'orthographic' || !(aspect > 0 && aspect < 1)) return camera
+    const [px, py, pz] = camera.position || []
+    const [tx, , tz] = camera.target || []
+    if (![px, py, pz, tx, tz].every(Number.isFinite)) return camera
+    const yaw = Math.atan2(tx - px, tz - pz)
+    const moved = fitArrivalToDoors({ x: px, z: pz, yaw }, doorsOf(entities), aspect, { fov: camera.fov })
+    if (moved.x === px && moved.z === pz) return camera
+    return { ...camera, position: [moved.x, py, moved.z] }
+}
+
+export const resolveViewerCamera = (document, aspect = getViewportAspect(), { fitDoors = false } = {}) => {
+    const view = resolveComposedCamera(document, aspect)
+    const fixed = document.presentationState?.entryView === 'fixed-camera'
+    return fitDoors && fixed ? fitCameraToDoors(view, document.entities || [], aspect) : view
+}
+
+const resolveComposedCamera = (document, aspect) => {
     const entryView = document.presentationState?.entryView || 'scene'
     const fixedCamera = document.presentationState?.fixedCamera
     // The room's declared floor plan bounds how far back the fit may step.
@@ -105,7 +131,7 @@ export default function PublicProjectSceneSurface({
     const [cameraView, setCameraView] = useState(() => {
         const documentEntryView = document.presentationState?.entryView || 'scene'
         if (!initialCameraView || documentEntryView === 'fixed-camera' || documentEntryView === 'code') {
-            return resolveViewerCamera(document)
+            return resolveViewerCamera(document, undefined, { fitDoors: isPlatformOwnSpace(spaceId) })
         }
         return initialCameraView
     })
@@ -126,12 +152,12 @@ export default function PublicProjectSceneSurface({
             ) {
                 return current
             }
-            return resolveViewerCamera(document)
+            return resolveViewerCamera(document, undefined, { fitDoors: isPlatformOwnSpace(spaceId) })
         })
-    }, [document])
+    }, [document, spaceId])
 
     const xr = useXrAr({
-        default3DView: cameraView || resolveViewerCamera(document),
+        default3DView: cameraView || resolveViewerCamera(document, undefined, { fitDoors: isPlatformOwnSpace(spaceId) }),
         controlsRef,
         setCameraPosition: (position) => setCameraView((current) => ({ ...(current || {}), position })),
         setCameraTarget: (target) => setCameraView((current) => ({ ...(current || {}), target }))
@@ -188,7 +214,7 @@ export default function PublicProjectSceneSurface({
                     cursors={{}}
                     onCursorMove={null}
                     onCursorLeave={null}
-                    cameraView={cameraView || resolveViewerCamera(document)}
+                    cameraView={cameraView || resolveViewerCamera(document, undefined, { fitDoors: isPlatformOwnSpace(spaceId) })}
                     controlsRef={controlsRef}
                     xrStore={xr.xrStore}
                     onCameraChange={(nextView) => {

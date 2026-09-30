@@ -22,7 +22,7 @@ import { buildSpaceProjectsPath, navigateToStudioPath } from '../utils/studioRou
 import { buildRawProjectPath } from '../../raw/utils/rawRouting.js'
 import { buildMapPath } from '../../map/mapRouting.js'
 import { useStudioCues } from '../hooks/useStudioCues.js'
-import { getPointsBoundingSphere } from '../../utils/cameraFraming.js'
+import { computeFitDistance, DEFAULT_FRAMING_DIRECTION, getPointsBoundingSphere } from '../../utils/cameraFraming.js'
 import StudioShell from './StudioShell.jsx'
 import AssetOptimizationDialog from './AssetOptimizationDialog.jsx'
 import { formatAssetSize, optimizeGlbAsset, shouldSuggestGlbOptimization } from '../utils/assetOptimization.js'
@@ -685,10 +685,14 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         if (!sphere || !camera) return
         const previousTarget = cc._target || new Vector3()
         const direction = camera.position.clone().sub(previousTarget)
-        if (direction.lengthSq() <= 1e-8) direction.set(0.8, 0.45, 1)
+        if (direction.lengthSq() <= 1e-8) direction.set(...DEFAULT_FRAMING_DIRECTION)
         direction.normalize()
-        const halfFov = Math.max(0.01, (camera.fov || 50) * Math.PI / 360)
-        const distance = (sphere.radius * (targets.length === 1 ? 1.35 : 1.45)) / Math.sin(halfFov)
+        // Fitted to the NARROWER axis: on a portrait viewport the horizontal
+        // fov limits, and a vertical-only fit crops the selection at the sides.
+        const distance = computeFitDistance(
+            sphere.radius * (targets.length === 1 ? 1.35 : 1.45),
+            { fov: camera.fov || 50, aspect: camera.aspect }
+        )
         const position = sphere.center.clone().add(direction.multiplyScalar(distance))
         cc.setLookAt(position.x, position.y, position.z, sphere.center.x, sphere.center.y, sphere.center.z, true)
     }
