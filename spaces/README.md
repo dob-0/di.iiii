@@ -60,7 +60,7 @@ manifest's `tiers` map (engine v7; `--tier staging` is refused).
 `--dry-run` first and read what it says it would SET.
 
 Tokens come from the tier's declared `tokenEnv` — `PROD_API_TOKEN`,
-`LIVE_API_TOKEN` (the dev tier), `API_TOKEN` (local) — read from the environment or
+`DEV_API_TOKEN` (the dev tier; legacy alias `LIVE_API_TOKEN`), `API_TOKEN` (local) — read from the environment or
 `serverXR/.env.local`. The `local` tier is `governed: false`: shown in the
 table, never enforced, because the dev box holds 70 projects nobody declared.
 

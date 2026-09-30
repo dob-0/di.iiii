@@ -11,7 +11,7 @@
  *   node scripts/push-space-projects.mjs [options]
  *
  * Options:
- *   --to     <url>    Server API base (default: $LIVE_API_URL, else the dev tier —
+ *   --to     <url>    Server API base (default: $DEV_API_URL (legacy alias $LIVE_API_URL), else the dev tier —
  *                     https://dev.diiii.xyz/serverXR. Production pushes
  *                     must be explicit: --to https://di-studio.xyz/serverXR)
  *   --token  <token>  Bearer token (default: $LIVE_API_TOKEN)
@@ -65,8 +65,8 @@ const localEnv = {
 }
 const getEnv = (k) => process.env[k] || localEnv[k] || ''
 
-const BASE_URL = (opt('to') || getEnv('LIVE_API_URL') || DEFAULT_DEV_URL).replace(/\/+$/, '')
-const TOKEN = opt('token') || getEnv('LIVE_API_TOKEN') || ''
+const BASE_URL = (opt('to') || getEnv('DEV_API_URL') || getEnv('LIVE_API_URL') || DEFAULT_DEV_URL).replace(/\/+$/, '')
+const TOKEN = opt('token') || getEnv('DEV_API_TOKEN') || getEnv('LIVE_API_TOKEN') || ''
 
 const PROJECTS_DIR = path.join(ROOT_DIR, 'serverXR', 'data', 'spaces', SPACE_ID, 'projects')
 
