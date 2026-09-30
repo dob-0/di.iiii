@@ -9,7 +9,7 @@ import {
   repoRoot,
   toLf
 } from './sync-agent-docs.mjs'
-import { isNoiseBranch } from './repo-state-lib.mjs'
+import { isFoldBranch, isNoiseBranch } from './repo-state-lib.mjs'
 
 const normalizePath = (value) => value.split(path.sep).join('/')
 
@@ -263,7 +263,10 @@ const collectSessionNoteErrors = async () => {
   // feature branch that edits it is pre-writing what it guesses dev will look like,
   // which is the exact race this protocol replaces. Best-effort: only checks when
   // origin/dev is resolvable locally (it may not be on a shallow/stale fetch).
-  if (gitOrNull(['rev-parse', '--verify', 'origin/dev'])) {
+  // Exception: a fold branch (chore/fold-notes-*, land/*). The land job cannot push to
+  // protected dev, so the fold branch is the writer of record for CURRENT.md. The 50-line
+  // cap and every other check in main() still apply to it.
+  if (!isFoldBranch(branch) && gitOrNull(['rev-parse', '--verify', 'origin/dev'])) {
     // Two-dot, not three-dot: compares the working tree's CURRENT.md against origin/dev's
     // CURRENT tip. `origin/dev...HEAD` would diff from the merge-base instead, which stays
     // "different" for the life of the branch even after reverting back to dev's content.
