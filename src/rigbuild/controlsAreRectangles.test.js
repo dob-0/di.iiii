@@ -1,3 +1,4 @@
+// @vitest-environment node
 // Golden rule "Controls are rectangles" (docs/ai/golden_rules.md): on the rig line no
 // control, and no bar or panel that holds controls, is a pill, a circle or a rounded card.
 // This scans the swept files' source text. It does not see a screen.
