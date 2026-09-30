@@ -35,16 +35,21 @@ already fixed: `docs/ai/sessions/fix-review-a-findings-2026-09-30.md`.
 | # | Item | Where | Size |
 |---|---|---|---|
 | 1 | **B3** — `conflictsWith` hull + `rigFlags` downgrade note: merge `feat/desk-serves-refusal-flags` into the review line, resolve, test | review B | small |
-| 2 | **A1-3** — the strobe limit is per lamp; make it the room-wide union (flashes of all strobes together ≤ 3/s, photosensitive-epilepsy guidance the review cites) | review A | medium |
-| 3 | **Runtime laser gate** — lasers are 0 in every look by data; add the gate in code so a look cannot light a laser without the sign-off marker at run time, not only in the deck | review A | medium |
-| 4 | **A4-4** — per-look op: two installs editing looks lose each other's updates (whole-`rigLooks` writes) | review A | medium |
-| 5 | **A2-4b** — the DJ-riser / crew-floor laser zone | review A | small |
-| 6 | **A5-5** — pool memoisation; **B6** — re-run that review area (the run was cut) | review A/B | small |
-| 7 | `StudioViewport` `TOOLBAR_BTN` radius 6 px → 2 px (owner's rule: rectangles only, 0–2 px) | code | tiny |
-| 8 | Then one PR: the review line + this branch → `dev`, CI green (a Playwright hang: cancel + rerun) | GitHub | — |
+| 2 | **A4-4** — per-look op: two installs editing looks lose each other's updates (whole-`rigLooks` writes) | review A | medium |
+| 3 | **A4-2** — a real save acknowledgement from `useProjectDocumentSync` for the scene-deck ledger (it now waits on the store version as a stand-in) | review A | medium |
+| 4 | **A2-4b** — the DJ-riser / crew-floor laser zone | review A | small |
+| 5 | **A5-5** — pool memoisation | review A | small |
+| 6 | `StudioViewport` `TOOLBAR_BTN` radius 6 px → 2 px (owner's rule: rectangles only, 0–2 px) | code | tiny |
+| 7 | The green "LOCAL local.thedi.studio" badge covers Undo / Restore on the scene deck (desktop) and "Mark this as good" (phone) | code | small |
 
-Not for PONYO: A2-3 (needs the maker's effect-distance figure), the owner's look at `.14` and the work-light level,
-measuring the other 7 versions (needs aylmo's data), the browser-on-3080 fix (aylmo).
+Already DONE on `f00e404a` (do not redo): A1-3 room-wide strobe grid, the runtime laser gate (`deskLookValues`), B6 pack/install
+scripts, A5 1–4, A2-4 a/c/d, A3 1–6, A4 1,2,3,5,6 (corrected 2026-10-01 by session dob-c9). The review line is landing
+through PR #679 (`land/rigbuilder-14-2026-10-01` → `dev`, dob-c9 on aylmo); cut new branches from `dev` after it merges,
+or from `fix/review-a-findings-2026-09-30` before. Return route (PONYO): branches pushed to `emilyanikoghosyan/di.iiii`
+(auto-PR to `dev`).
+
+Not for PONYO: A2-3 (needs the maker's effect-distance figure), the crane + truss fix (the owner has not said what is wrong), the owner's look at `.14` and the work-light level,
+measuring the other 7 versions (aylmo's own check, on aylmo), the browser-on-3080 fix (aylmo).
 
 Emilya's own, if she agrees: give `dob-0` read access to `viz.di.formal` and `viz.di.scenes`; the real DMX charts
 she has for the studio fixtures (the rental house's UP-* charts are still missing everywhere).
