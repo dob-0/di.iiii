@@ -4,7 +4,7 @@
 // This scans the swept files' source text. It does not see a screen.
 import { describe, expect, it } from 'vitest'
 import { readdirSync, readFileSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..', '..')
@@ -20,7 +20,8 @@ const SWEPT = [
     ...walk(join(ROOT, 'src/rigbuild')),
     join(ROOT, 'src/project/components/ProjectSwitcher.jsx'),
     join(ROOT, 'src/project/components/publicViewerStyles.js'),
-    join(ROOT, 'src/project/viewport/smartView/SmartViewBar.jsx')
+    join(ROOT, 'src/project/viewport/smartView/SmartViewBar.jsx'),
+    join(ROOT, 'src/studio/components/StudioViewport.jsx')
 ].filter((p) => { try { readFileSync(p); return true } catch { return false } })
 
 // A round mark that is not a control. Keyed by file + a snippet of the line.
@@ -52,7 +53,7 @@ describe('controls are rectangles — the rig line', () => {
     })
 
     it('has no pill, circle or radius above 2 px, outside the allow-list', () => {
-        const all = SWEPT.flatMap((p) => offences(relative(ROOT, p), readFileSync(p, 'utf8')))
+        const all = SWEPT.flatMap((p) => offences(relative(ROOT, p).split(sep).join('/'), readFileSync(p, 'utf8')))
         expect(all).toEqual([])
     })
 
