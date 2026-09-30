@@ -21,6 +21,7 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { parseArgs, die, say, readJson, REPO_ROOT } from '../place/common.mjs'
 import { normalizeRentalList } from '../../src/shared/projectSchema.js'
@@ -666,6 +667,7 @@ const main = async () => {
     await report({ out: path.resolve(String(args.report)), hallFile: args.hall ? path.resolve(String(args.hall)) : null, only: args.only ? String(args.only).split(',') : null })
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+// fileURLToPath, not URL.pathname: on Windows the pathname is /C:/… and never equals the argv path, so the script silently did nothing.
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
     main().catch((error) => die(error.stack || error.message))
 }
