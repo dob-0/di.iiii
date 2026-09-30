@@ -33,6 +33,7 @@ import { getPatchSheetLocationState, isPatchSheetLocation } from './rigbuild/pat
 import { getVisualiseLocationState, isVisualiseLocation } from './rigbuild/visualiseRouting.js'
 import { getPlotLocationState, isPlotLocation } from './rigbuild/plotRouting.js'
 import { getCardsLocationState, isCardsLocation } from './rigbuild/cardsRouting.js'
+import { getScenesLocationState, isScenesLocation } from './rigbuild/scenesRouting.js'
 import { getEquipmentLocationState, isEquipmentLocation } from './rigbuild/equipmentRouting.js'
 import { getBuildLocationState, isBuildLocation } from './rigbuild/buildRouting.js'
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
@@ -68,6 +69,7 @@ const PatchSheetSurface = lazy(() => import('./rigbuild/PatchSheetSurface.jsx'))
 const VisualiserSurface = lazy(() => import('./rigbuild/VisualiserSurface.jsx'))
 const PlotSurface = lazy(() => import('./rigbuild/PlotSurface.jsx'))
 const CardsSurface = lazy(() => import('./rigbuild/CardsSurface.jsx'))
+const ScenesSurface = lazy(() => import('./rigbuild/ScenesSurface.jsx'))
 const EquipmentSurface = lazy(() => import('./rigbuild/EquipmentSurface.jsx'))
 const BuildSurface = lazy(() => import('./rigbuild/BuildSurface.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
@@ -401,6 +403,7 @@ function AppRouter() {
     const visualiseState = getVisualiseLocationState(location)
     const plotState = getPlotLocationState(location)
     const cardsState = getCardsLocationState(location)
+    const scenesState = getScenesLocationState(location)
     const equipmentState = getEquipmentLocationState(location)
     const buildState = getBuildLocationState(location)
     const chatState = getChatLocationState(location)
@@ -629,6 +632,13 @@ function AppRouter() {
     // Members edit it, a visitor to a public space reads it — the plot's rule (RigToolRoute).
     if (isCardsLocation(cardsState)) {
         return <RigToolRoute spaceId={cardsState.spaceId} surface={(readOnly) => <CardsSurface spaceId={cardsState.spaceId} projectId={cardsState.projectId} readOnly={readOnly} />} />
+    }
+
+    // `/{space}/scenes/{projectId}` — the scene deck (src/rigbuild/, RIG_BUILD.md §22): A the
+    // scene tiles and their four controls, B the loop as a timeline, sync by a carried file.
+    // Members edit it, a visitor to a public space reads it — the plot's rule (RigToolRoute).
+    if (isScenesLocation(scenesState)) {
+        return <RigToolRoute spaceId={scenesState.spaceId} surface={(readOnly) => <ScenesSurface spaceId={scenesState.spaceId} projectId={scenesState.projectId} readOnly={readOnly} />} />
     }
 
     // `/{space}/equipment/{projectId}` — the show's equipment list (src/rigbuild/): the

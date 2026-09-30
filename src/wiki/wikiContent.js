@@ -1785,6 +1785,22 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-29'
     },
     {
+        id: 'rig-scenes',
+        category: 'Spaces & access',
+        title: 'Scenes — the deck (A) and the cue timeline (B), synced with the other copy by a file',
+        summary: 'The show\'s scenes on one page, two ways: A is a deck of scene tiles with four controls each (intensity, colour, speed, strobe on/off) and a small preview; B is the loop as a timeline. Undo, restore last good, and sync with the other organizer\'s copy through a file.',
+        body: [
+            'Open it from the rig row (scenes): /{space}/scenes/{project}. A scene is one cue of the show\'s loop with its look; a look no cue plays is shown as a spare, outside the loop.',
+            'A · SCENE DECK: tap a tile, then set its intensity, colour, speed (the fade into it) or strobe (the blinder on or off). A slider writes once, when you let go. PLAY THE LOOP, NEXT SCENE and LOOP play only in this page\'s preview; the hall plays the show clock. The preview flashes a strobe at most 3 times a second and not at all when your system asks for reduced motion.',
+            'B · CUE TIMELINE: the loop drawn by its holds. Tap a cue to edit its look with the same four controls. The timeline is read only: changing a hold (retime) is not a control yet, because it could take the loop outside 60-90 s.',
+            'Some changes are refused, and the page says why and writes nothing: a laser lit without its laser safety sign-off, a lamp\'s aim moved, a loop taken outside 60-90 s.',
+            'UNDO takes back the last change. RESTORE LAST GOOD goes back to the show as it was when the page opened, when you pressed MARK THIS AS GOOD, or just before you last took a scene from the other copy.',
+            'Sync with the other copy: EXPORT downloads this copy\'s scenes as a file. SYNC FROM A FILE reads the other copy\'s file and marks each scene SAME, CHANGED HERE, CHANGED THERE or CHANGED ON BOTH, from content hashes and the last sync this browser remembers (not from clocks). Reading changes nothing. TAKE THEIRS keeps a restore point first; KEEP MINE changes nothing here; KEEP BOTH keeps theirs as a labelled copy outside the loop. There is no live connection between the two copies yet: the page says "Offline" and the file is the way across.'
+        ],
+        tags: ['scenes', 'scene deck', 'deck', 'timeline', 'cue', 'loop', 'intensity', 'colour', 'speed', 'fade', 'strobe', 'undo', 'restore', 'sync', 'file', 'export', 'rig', 'moxir'],
+        updated: '2026-09-30'
+    },
+    {
         id: 'rig-version-switch',
         category: 'Spaces & access',
         title: 'Rig versions — the row that switches between them',

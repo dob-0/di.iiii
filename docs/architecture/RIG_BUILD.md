@@ -2209,3 +2209,51 @@ Nothing here has been seen on a screen; there is no UI yet.
 (owed: a per-look op, schema-protocol). The loop ORDER is not part of any scene's hash, so a reorder on one side
 is not detected yet. The last-common hashes have no home in the sync ledger yet, and there is no transport
 (file or network) wired. The strobe rate cap (3 flashes/s, WCAG 2.3.1) is enforced elsewhere and not re-checked here.
+
+## 22. Scene deck — layer 2 (screens A and B, sync by file)
+
+The two screens over §21's model, on one page: `/{space}/scenes/{project}` (`src/rigbuild/scenesRouting.js`,
+registered in `RootApp.jsx` behind `RigToolRoute` like the cards; the steps row carries it as `scenes` after the
+visualiser — not a numbered step, because the desk's `from.js` mirrors the six). Code: `ScenesSurface.jsx` (the
+store, the op path, the steps row), `ScenesDeck.jsx` (the screens), `sceneDeck/ledger.js`, `sceneDeck/preview.js`,
+`scenes.css`. Tests: `src/rigbuild/ScenesDeck.test.jsx` (jsdom + testing-library over the real minimal-ground show).
+Layout, copy and states follow the owner's approved sketch (`docs/architecture/moxir-crew-ui/sketch.html`); no
+names, roles, accounts, audit lines or proposals — only "here" (this copy) and "there" (the other organizer's).
+
+- **One scene list, two tabs.** A = the deck: a tile per scene (loop order, then the spares), PLAY THE LOOP /
+  NEXT SCENE / LOOP ON-OFF (preview only — the hall plays the show clock, §16), the four controls and a small 2D
+  canvas preview (no WebGL). B = the loop as a timeline: one button per cue, widths by hold with a 44 px floor,
+  and full-width rows below; tapping a cue opens the same four controls. B is READ ONLY: retime is not a layer-1
+  control, so it says "Read only: retime is not a control yet …" with the loop length, and "! The loop is N s,
+  outside 60-90 s." when it already is.
+- **Writes.** Every control goes through `applyControl` and is sent through the same op path as the cards page
+  (`useProjectDocumentSync().applyLocalOps`, the op log). A range writes once, when it is let go (pointer up,
+  key up, blur): one op, one undo step. Colour = eight preset hexes plus a colour input (native `change`, one
+  write). A `SceneDeckError` is shown in plain words ending "Nothing was written." and no op is sent. Read only
+  (a visitor, §17): the op path is `NO_WRITE` and every control is disabled.
+- **History.** §21's reducer: UNDO sends `out` (the inverse); RESTORE LAST GOOD restores the snapshot taken when
+  the page opened, at MARK THIS AS GOOD, or as the restore point before a take-theirs (the button names which).
+- **Sync strip (both tabs).** Always "SYNC: OFFLINE" with the sketch's sentence — there is no network route yet,
+  the carried file is the way across. The **ledger** (`ledger.js`) is localStorage `di.scenes.ledger/<project>`:
+  `{ lastSync: { [scene id]: sha-256 }, at }`; `at` is only shown ("last synced 10:31"), never compared. A broken
+  or blocked store reads as empty. **SYNC FROM A FILE** reads a `di.scenes/1` file with `parseBundle` (refused in
+  words: not JSON, wrong format, hash mismatch, over 512 KiB, another project's file), then `compareScenes(here,
+  file, ledger)` gives the marks SAME / CHANGED HERE / CHANGED THERE / CHANGED ON BOTH on the strip's rows and
+  the tiles; reading writes nothing to the document (a SAME scene's hash becomes its ledger base). Per row, via
+  `planSync` + `sceneOps`: TAKE THEIRS (changed there or on both) — the ops are checked by `guardSceneChange`
+  FIRST; if refused, nothing happens; otherwise the restore point is taken, then the ops are sent, then the base
+  moves to their hash; KEEP MINE — nothing written here; KEEP BOTH — restore point, theirs added as a labelled
+  copy outside the loop (`<name> (there HH:MM)`), loop length unchanged. **EXPORT** downloads `exportBundle`
+  with the ledger's bases as `<project>.scenes.json`.
+- **Safety.** The preview's strobe is capped at 3 flashes/s (`MAX_PREVIEW_FLASHES_PER_S`, WCAG 2.3.1) and off
+  under `prefers-reduced-motion`; it redraws per frame only while a strobe is shown. Controls are rectangles
+  (2 px corners) and at least 44 px: the test injects `scenes.css` into jsdom and checks every control's computed
+  min-height, min-width and border-radius (seen failing when the stylesheet says 40 px or 6 px).
+
+**Limits, stated.** Not seen on any real screen (no browser in the session that built it): phone 390 px and
+1440 px are owed, and so is the preview's look. Taking theirs where their AIMS differ is refused by the mover
+policy (layer 1 forbids any aim change), so a scene whose aims were changed on the other copy cannot be taken
+yet. KEEP MINE and KEEP BOTH leave the ledger as it was, so the row stays "changed on both" until the other copy
+takes mine from this copy's export. The ledger lives in one browser: another browser on the same install starts
+with no bases (every differing scene reads "changed on both"). The file's `lastSync` is carried but not read on
+import. Scene ORDER is still not synced (§21).
