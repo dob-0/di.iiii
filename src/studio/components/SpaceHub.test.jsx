@@ -498,11 +498,15 @@ describe('SpaceHub', () => {
             render(<SpaceHub />)
 
             await findCard('s0')
-            // The default 1s waitFor is the machine's budget, not this
-            // behaviour's: twelve card frames mount before s0 reports, and on a
-            // loaded CI runner that crossed 1s and failed here while passing
-            // every time locally. The assertion is unchanged.
-            await waitFor(() => expect(frameIn('s0')).not.toBeNull(), { timeout: 8000 })
+            // Wait for the state the case is ABOUT, not for a duration: the
+            // queue is full (twelve card frames mounted) and s12 is the one
+            // card left waiting. Checking only s0 and then asserting s12 is
+            // absent was vacuous on a slow runner -- s12 is trivially absent
+            // while the others are still mounting.
+            await waitFor(() => {
+                expect(document.querySelectorAll('.ssh-card-preview iframe')).toHaveLength(12)
+            })
+            expect(frameIn('s0')).not.toBeNull()
             expect(frameIn('s12')).toBeNull()
 
             // Under DI_PROFILE=local a work's route (wcc, algovrithm) is a
@@ -516,7 +520,7 @@ describe('SpaceHub', () => {
             }))
 
             // the slot is freed like a paint would free it
-            await waitFor(() => expect(frameIn('s12')).not.toBeNull(), { timeout: 8000 })
+            await waitFor(() => expect(frameIn('s12')).not.toBeNull())
             // and the card draws its own line in place of the scaled-down frame
             const card = cardOf('s0')
             expect(card.querySelector('.ssh-card-preview iframe')).toBeNull()
