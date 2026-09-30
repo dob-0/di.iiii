@@ -2746,7 +2746,11 @@ initStorage()
     // Daily snapshot of the open space — its scene and its project documents,
     // which is where the jam's contributions actually live. Vandalism
     // insurance (admin restores via POST /api/spaces/:id/restore-snapshot).
-    snapshotOpenSpace().catch((error) => logger.warn('Failed to snapshot open space', error))
+    // Taken BEFORE the server listens: as a fire-and-forget it raced the first
+    // writes, so the "boot" snapshot could hold a write made after boot (or not
+    // exist yet when a restore asked for it -- the 404 the contract test used to
+    // poll around). Failure is logged and never blocks the boot.
+    await snapshotOpenSpace().catch((error) => logger.warn('Failed to snapshot open space', error))
     setInterval(() => {
       snapshotOpenSpace().catch((error) => logger.warn('Failed to snapshot open space', error))
       // Long-idle account sandboxes fold down to a snapshot (revived on
