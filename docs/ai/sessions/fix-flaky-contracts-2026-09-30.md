@@ -17,3 +17,13 @@ case takes ~80ms; the 8s was only a ceiling. The case asserted "s12 absent" afte
 which is vacuous while the other cards still mount. It now waits for the real state (12 preview frames
 mounted) and the explicit 8000ms overrides are gone. Owed: root cause of the CI-only failure is
 unproven — if it recurs, capture the CI log of the failing assertion.
+
+**projectContracts.test.js** ("expected 401 to be 201", PR #671 first run, green on rerun). Same fixture
+class. `getFreePort` releases the port before the child binds; vitest runs contract files in parallel, so
+a sibling file's server can take it, and the 200ms health poll is then answered by the SIBLING (other
+token / REQUIRE_AUTH) -> 401. Mechanism is derived from the fixture, not observed (the failure was not
+reproduced locally). Fix: new `serverXR/src/testSupport/spawnServer.mjs` (child's own listen line = ready,
+EADDRINUSE-only retry), used by projectContracts. 15.31s before (1 run) -> 8.78 / 8.99 / 8.67s after.
+Owed: `bundleContracts`, `installBundleContracts`, `fallbackContracts`, `spaHostingContracts` and
+`httpContracts` still carry their own copy of the polling fixture and the same TOCTOU; move them to the
+shared helper (httpContracts already has the same logic inline).
