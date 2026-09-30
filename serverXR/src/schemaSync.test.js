@@ -436,13 +436,16 @@ describe('ESM/CJS mirror equivalence', () => {
         { id: 'v2', type: 'video', components: { media: { assetId: 'a' } } },
         // An image's media object must NOT grow spatial fields.
         { id: 'i1', type: 'image', components: { media: { assetId: 'a' } } },
-        // The join to the lighting desk: a number survives, anything else is dropped,
-        // and universe/address never reach the document. The server normalizes with
-        // the mirror, so a mirror that dropped `fixture` would lose every join on save.
+        // The join to the lighting desk and, since 2026-09-28, the plot's patch
+        // (RIG_BUILD.md §2.2). The server normalizes with the mirror, so a mirror
+        // that dropped a field would lose every patch on save.
         { id: 'f1', type: 'spotLight', components: { fixture: { index: 3, universe: 1, address: 17 } } },
         { id: 'f2', type: 'pointLight', components: { fixture: { index: '4' } } },
         { id: 'f3', type: 'pointLight', components: { fixture: { index: 0 } } },
-        { id: 'f4', type: 'directionalLight', components: { fixture: 'nope' } }
+        { id: 'f4', type: 'directionalLight', components: { fixture: 'nope' } },
+        { id: 'f5', type: 'spotLight', components: { fixture: { type: ' up-b380f ', mode: '16ch', universe: 2, address: 273, unit: 5, circuit: 'C4', position: 'column base R', hung: true, extra: 'x' } } },
+        { id: 'f6', type: 'spotLight', components: { fixture: { type: 'up-pl5403', universe: 0, address: 513, unit: -1, hung: 'yes' } } },
+        { id: 'f7', type: 'spotLight', components: { fixture: { mode: '16ch', universe: 1, address: 1 } } }
       ]
     },
     // The show's Perform presets (2026-09-24). The server rebuilds documents
@@ -461,15 +464,32 @@ describe('ESM/CJS mirror equivalence', () => {
     }
   ]
 
-  it('keeps components.fixture as { index } through the mirror, and drops a broken one', () => {
+  it('keeps components.fixture with the plot patch through the mirror, and drops a broken one', () => {
     const doc = schema.normalizeProjectDocument({
       entities: [
         { id: 'f1', type: 'spotLight', components: { fixture: { index: 3, universe: 1, address: 17 } } },
-        { id: 'f3', type: 'pointLight', components: { fixture: { index: 0 } } }
+        { id: 'f3', type: 'pointLight', components: { fixture: { index: 0 } } },
+        { id: 'f5', type: 'spotLight', components: { fixture: { type: ' up-b380f ', mode: '16ch', universe: 2, address: 273, unit: 5, circuit: 'C4', position: 'column base R', hung: true, extra: 'x' } } },
+        { id: 'f6', type: 'spotLight', components: { fixture: { type: 'up-pl5403', universe: 0, address: 513, unit: -1, hung: 'yes' } } },
+        { id: 'f7', type: 'spotLight', components: { fixture: { mode: '16ch', universe: 1, address: 1 } } }
       ]
     })
-    expect(doc.entities[0].components.fixture).toEqual({ index: 3 })
+    expect(doc.entities[0].components.fixture).toEqual({ index: 3, universe: 1, address: 17 })
     expect(doc.entities[1].components.fixture).toBeUndefined()
+    // Every well-formed field kept, trimmed; an unknown field dropped.
+    expect(doc.entities[2].components.fixture).toEqual({ type: 'up-b380f', mode: '16ch', universe: 2, address: 273, unit: 5, circuit: 'C4', position: 'column base R', hung: true })
+    // Out-of-range numbers and a non-boolean hung are left out, the type kept.
+    expect(doc.entities[3].components.fixture).toEqual({ type: 'up-pl5403' })
+    // Neither an index nor a type: no fixture at all.
+    expect(doc.entities[4].components.fixture).toBeUndefined()
+  })
+
+  it('clears one fixture field through updateComponent without losing the rest', () => {
+    const base = schema.normalizeProjectDocument({
+      entities: [{ id: 'l', type: 'spotLight', components: { fixture: { index: 7, type: 'up-b380f', mode: '16ch', universe: 1, address: 1 } } }]
+    })
+    const next = schema.applyProjectOps(base, [{ type: 'updateComponent', payload: { entityId: 'l', component: 'fixture', patch: { index: null } } }])
+    expect(next.entities[0].components.fixture).toEqual({ type: 'up-b380f', mode: '16ch', universe: 1, address: 1 })
   })
 
   // Fresh documents stamp projectMeta with Date.now(); zero the wall-clock

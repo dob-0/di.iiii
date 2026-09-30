@@ -103,11 +103,14 @@ a priority number, beside the existing Art-Net and ENTTEC drivers.
   by id. The desk's own drag uses it, and so does Studio's **Send positions to the desk**
   (`src/rigMirror/sendPositions.js`) — the ONE write the app makes to the desk.
 - **The join from a room to the rig is a number.** A Studio lamp carries
-  `components.fixture = { index }`, the fixture's `index` on this desk (`3.Back left`);
-  never universe/address, which belong to the show the desk runs (the space's or this
-  machine's `show.json`, below) and never travel inside a project document. While the desk is here the lamp draws what the fixture emits
+  `components.fixture = { index }`, the fixture's `index` on this desk (`3.Back left`).
+  While the desk is here the lamp draws what the fixture emits
   (`src/rigMirror/liveLight.js`); otherwise its authored light. Design:
-  `di-atlas/decisions/2026-09-20-one-project-one-stage.md`.
+  `di-atlas/decisions/2026-09-20-one-project-one-stage.md`. **Changed 2026-09-28:**
+  the same component now also carries the PLOT's patch (type, mode, universe,
+  address, unit, circuit, position) — the record a crew is handed, as in MVR. The
+  show the desk runs is still the RUNNING patch and the one that allocates; auto-patch
+  keeps the two equal and flags where they differ. `docs/architecture/RIG_BUILD.md`.
 - `GET /light/api/library`, `/library/manufacturer?key=`, `/library/fixture?…` and
   `POST /light/api/library/import {manufacturer, key, mode}` — patch by name.
 

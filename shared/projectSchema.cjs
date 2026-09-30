@@ -543,6 +543,36 @@ const normalizeFixtureIndex = (fixture) => {
   return Number.isInteger(index) && index > 0 ? index : null
 }
 
+// Mirror of normalizeFixture in src/shared/projectSchema.js (RIG_BUILD.md §2.2).
+const fixtureText = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '')
+const fixtureInt = (value, min, max) => {
+  const n = Number(value)
+  return Number.isInteger(n) && n >= min && n <= max ? n : null
+}
+const normalizeFixture = (fixture) => {
+  if (!fixture || typeof fixture !== 'object') return null
+  const out = {}
+  const index = normalizeFixtureIndex(fixture)
+  if (index != null) out.index = index
+  const type = fixtureText(fixture.type, 64)
+  if (type) out.type = type
+  if (index == null && !type) return null
+  const mode = fixtureText(fixture.mode, 32)
+  if (mode) out.mode = mode
+  const universe = fixtureInt(fixture.universe, 1, 63999)
+  if (universe != null) out.universe = universe
+  const address = fixtureInt(fixture.address, 1, 512)
+  if (address != null) out.address = address
+  const unit = fixtureInt(fixture.unit, 1, 9999)
+  if (unit != null) out.unit = unit
+  const circuit = fixtureText(fixture.circuit, 16)
+  if (circuit) out.circuit = circuit
+  const position = fixtureText(fixture.position, 64)
+  if (position) out.position = position
+  if (fixture.hung === true) out.hung = true
+  return out
+}
+
 const normalizeEntity = (entity = {}) => {
   const rawType = ensureString(entity.type, 'box')
   const type = ENTITY_TYPES.has(rawType) ? rawType : 'box'
@@ -674,15 +704,10 @@ const normalizeEntity = (entity = {}) => {
       ...(sourceComponents.beam.only === true ? { only: true } : {})
     }
   }
-  // THE JOIN between a lamp in the room and a lamp on the lighting desk: the
-  // fixture's `index` on the desk (the number a person sees there, `3.Back left`).
-  // A number and nothing else — never universe/address, which belong to the
-  // machine's own show.json and never travel with a project
-  // (di-atlas/decisions/2026-09-20-one-project-one-stage.md). An index that is not
-  // a positive whole number is no join at all, so the component is dropped rather
-  // than stored broken — which is also how the inspector clears it: `{ index: null }`.
-  const fixtureIndex = normalizeFixtureIndex(sourceComponents.fixture)
-  if (fixtureIndex != null) nextComponents.fixture = { index: fixtureIndex }
+  // THE JOIN to the lighting desk (`index`) plus the plot's patch beside it —
+  // see normalizeFixture and docs/architecture/RIG_BUILD.md §2.2.
+  const fixture = normalizeFixture(sourceComponents.fixture)
+  if (fixture) nextComponents.fixture = fixture
   else delete nextComponents.fixture
   // A screen: a plane that shows one of the project's own mapping surfaces
   // (document.mappingState.surfaces) as its picture. The join is the surface's
@@ -2155,6 +2180,7 @@ module.exports = {
   mergePatch,
   normalizeAsset,
   normalizeAuthor,
+  normalizeFixture,
   normalizeEntity,
   sanitizeLinkHref,
   LINK_HREF_MAX_LENGTH,
