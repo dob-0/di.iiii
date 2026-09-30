@@ -144,3 +144,62 @@ so the A3 findings hold on this ref too (A3 #1, the self-asserted laser sign-off
 **Not read**
 
 - `RigToolRoute` / `rigToolAccess.js` beyond `NO_WRITE` (who gets `readOnly`); `useProjectDocumentSync.js` beyond `applyLocalOps` and the flush error paths; `RigSteps.jsx`; the body of `ScenesDeck.test.jsx` (only run); global stylesheets (whether the page already hides horizontal overflow). Layout at 1440 / 1920 px not assessed.
+
+### A5 — Light pool (ref `origin/preview/rigbuilder-13-2026-09-30`)
+
+Files read in full: `src/rigbuild/lightPool.js`, `src/rigbuild/useLightPool.js`; the integration line in
+`RoomLookFollower.jsx:18-23`; the test names of `lightPool.test.js`. Probes: `stepLightPool` / `slotDrawing` /
+`normalizeProjectDocument` in node.
+
+**Findings**
+
+1. **medium — the document half of the flag, and every pool option, never reach the room.**
+   `lightPool.js:211-216` reads `mappingState.lightPool.enabled` and `:219-230` reads `slots`, `minHoldMs`,
+   `handoverMs`, `margin`, `bounds` from it; but `normalizeProjectDocument({ mappingState: { lightPool: { enabled: true, slots: 4 } } }).mappingState.lightPool`
+   is `undefined` (proved), and the store normalises every document it holds (`projectStore.js:21, 56, 76`).
+   Nothing in `src`, `scripts`, `serverXR` or `shared` writes `lightPool` either. So the pool can only be switched
+   on by `?lightPool=1`, always with the defaults, and `bounds` is always `null`: the `window(d)` term the header
+   describes (`lightPool.js:20-24`) never applies in the room — lamps are ranked by I·Ω alone. The test
+   "is off unless the document or the page query asks" passes a raw `mappingState`, not a normalised one.
+   Smallest fix: keep `lightPool` in the mapping-state normaliser (ESM and the CJS mirror), clamped as
+   `lightPoolOptions` does, with a test through `normalizeProjectDocument`.
+
+2. **low — the dip is not continuous when the incoming lamp goes dark during the fade-out half.**
+   `lightPool.js:128-131` releases the slot (`s.from = null`) and step 2 re-takes the still-lit OLD lamp with
+   `fadeStart = now - handoverMs / 2`. Proved (1 slot): A→B swap at t=2000; at t=2100 the slot shows `a:0.50`;
+   B goes dark at t=2100 → `a:0.00`, then `a:0.17` at 2133, `a:1.00` at 2300: a step of 0.5 in the room's
+   light. Smallest fix: when `lamp` goes dark while `from` is still lit and mid-dip, give the slot back to
+   `from` with a `fadeStart` that keeps the current envelope.
+
+3. **low — `minHoldMs` below `handoverMs` allows a second swap mid-dip (a jump).** `lightPool.js:147` locks a
+   slot on `since` only; `lightPoolOptions` (`:225`) allows `minHoldMs: 0`. Proved: `{ minHoldMs: 0 }`,
+   slot at `b:0.50` at t=2300, a stronger lamp C arrives → `b:1.00`. Unreachable today (finding 1) and live
+   the day finding 1 is fixed. Smallest fix: clamp `minHoldMs >= handoverMs`, or treat a slot as locked while
+   `now - fadeStart < handoverMs`.
+
+4. **low — a strobing lamp's cone flashes but its room light, moved to a slot, stays steady.**
+   `applyLightPool` (`:193, :201-202`) copies `components.light` only; the slot's `beam` is `{ visible: false }`
+   without `strobeHz`, while the lamp, now `beam.only`, still mounts `StrobeDriver` on its cone
+   (`SpotLightObject.jsx:104`). Not a flash-rate hole (fewer flashes, not more) — a picture that disagrees with
+   itself when a desk strobes a pooled lamp. Smallest fix: carry `beam.strobeHz` onto the slot (StrobeDriver
+   then drives the slot's light).
+
+5. **low — during a hand-over every lamp entity gets a new object 30 times a second.** `useLightPool.js:28-31`
+   recomputes `applyLightPool` on each `clock` tick (`TICK_MS = 33`), which copies every poolable lamp
+   (`lightPool.js:184-188`) and re-ranks all lamps (`:26` effect depends on `clock`). Only for ~400 ms per
+   hand-over; cost on an Intel iGPU NOT measured. Smallest fix: memoise the beam-only copies on `entities`
+   and let the tick rebuild only the N slot entities.
+
+**Refuted**
+
+- The real-light count changing — the N slots are always emitted, empty ones parked at intensity 0 (`:189-207`); a slot's `beam.visible: false` makes it cast (`spotBeam.js:116`); every rig lamp is written `beam.visible: true` (`rig-lib.mjs:1218`) so becomes beam-only; flash lamps are already beam-only with no light (`looks.js:406`); `atLevel` scales haze but never hides a beam. Changes only when the flag or `slots` changes.
+- More than 12 slots — `emptyPool` and `lightPoolOptions` both clamp to `POOL_MAX_SLOTS` (proved: `slots: '1e9'` → 12).
+- NaN / missing lamp fields — `num()` turns them into 0 / defaults for the score; a NaN position is passed through, but the lamp itself carried the same NaN before the pool (not introduced here).
+- Oscillation — a displaced lamp must beat the new one by 15 % and the new one is locked 1500 ms (defaults).
+- Flag OFF — `useLightPool` returns the same `entities` array, and `RoomLookFollower` still maps it to `null` (`:21`); state stays `null`.
+- `?lightPool=1` — a regex test on `location.search`, nothing stored, nothing interpolated; it only changes this viewer's own rendering.
+- Slots placed wrongly for nested lamps — rig lamps carry no `parentId` (`rig-lib.mjs`).
+
+**Not read**
+
+- The body of `lightPool.test.js` (names only; not run); `useRigLook.js` (where `look.entities` comes from); `spotLightAim.js`; three.js shader code (the "no recompile" claim was checked on the entity count only, not in a renderer). Nothing was run in a browser; no frame rate was measured.
