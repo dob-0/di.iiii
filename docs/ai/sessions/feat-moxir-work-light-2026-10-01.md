@@ -53,3 +53,30 @@ measuring the other 7 versions (aylmo's own check, on aylmo), the browser-on-308
 
 Emilya's own, if she agrees: give `dob-0` read access to `viz.di.formal` and `viz.di.scenes`; the real DMX charts
 she has for the studio fixtures (the rental house's UP-* charts are still missing everywhere).
+
+## Handover part 2 — the owner looks at MOXIR on PONYO (2026-10-01)
+
+Owner: "i can see it now in machine of ponyo so move it all there". Everything aylmo still owed on MOXIR moves to
+PONYO: the work light on PONYO's copy, the owner's look and his level, the measurement of the versions. Dropped:
+aylmo's browser-on-3080 fix (he no longer looks on aylmo). All of it only on Emily's yes, as before.
+
+1. **Get the script:** in the MOXIR worktree (at f00e404a), `git fetch origin feat/moxir-work-light-2026-10-01` and
+   check it out (it is f00e404a + `scripts/rigbuild/work-light.mjs` + its test + docs; no app code changes).
+2. **Restore point first** of PONYO's own moxir data (`di save moxir` or a copy of the data root).
+3. **Dry run, then write:** `node scripts/rigbuild/work-light.mjs --api <PONYO's local …/serverXR> --space moxir
+   --out <backup dir> --dry-run`, then without `--dry-run`. Token: `DI_API_TOKEN` env or `--token-file <env file with
+   ADMIN_API_TOKEN=>`; it refuses any host but `local.thedi.studio` / `localhost` / `127.0.0.1`. It lists every rig
+   room with the ambient it replaces; expect 14 rooms (archived ones skipped), realism rooms 0.4, older-night rooms 1.4.
+   PONYO's copy was made BEFORE aylmo applied this, so its rooms still read dark.
+4. **The owner's look:** open `/moxir` there, click through the version row and the scenes. His level:
+   `--undo <dir>/work-light-undo.json`, then run again with `--level <n>` (1.4 now; 2 = brighter, 0.8 = darker).
+   The level he picks goes back into RIG_BUILD §20.4 and `DEFAULT_LEVEL`.
+5. **Measure (optional, Emily's yes):** `scripts/rigbuild/look-probe.mjs --gpu --base <PONYO base> --path
+   /moxir/p/<project> --project <project> --out <dir> --tag <project> --viewports desktop` per version. Its CPU
+   temperature guard reads Linux `sensors` only — on Windows it runs WITHOUT that guard; keep PONYO's stop rule
+   (GPU above 85 °C or loud fans for a minute → stop). Aylmo's numbers for Minimal (RTX 3080, desktop): cue means
+   10.5 / 18.9 / 9.6 / 13 / 32.9.
+6. **Report** in ≤ 8 lines, once, to the owner and in this note (push to `emilyanikoghosyan/di.iiii`).
+
+aylmo's own install keeps its work light (undo file on aylmo `~/di-backups/preview-rig-builder-2026-09-28/step-14b/
+work-light/`); aylmo writes nothing more to MOXIR.
