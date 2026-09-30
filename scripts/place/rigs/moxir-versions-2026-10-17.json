@@ -3144,13 +3144,10 @@
         "hazer-back"
       ],
       "realLights": {
-        "cob-cut-curtain": 1,
-        "par-cut-x": 1,
-        "par-cut-bridge": 2,
-        "par-columns-8": {
-          "count": 4,
-          "pick": "nearest-stage"
-        }
+        "beam380-backstage": { "count": 3, "pick": "even" },
+        "beam380-columns-6": { "count": 2, "pick": "even" },
+        "bsw250-ground": { "count": 2, "pick": "even" },
+        "par-columns-8": { "count": 1, "pick": "nearest-stage" }
       },
       "looks": {
         "white-cathedral": {
@@ -3671,13 +3668,10 @@
         "smoke-ground"
       ],
       "realLights": {
-        "cob-cut-curtain": 1,
-        "par-cut-x": 1,
-        "par-cut-bridge": 2,
-        "par-columns-8": {
-          "count": 4,
-          "pick": "nearest-stage"
-        }
+        "beam380-backstage": { "count": 3, "pick": "even" },
+        "beam380-columns-6": { "count": 2, "pick": "even" },
+        "bsw250-ground": { "count": 2, "pick": "even" },
+        "par-columns-8": { "count": 1, "pick": "nearest-stage" }
       },
       "looks": {
         "white-cathedral": {
