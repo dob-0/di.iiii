@@ -88,7 +88,11 @@ export function useRigAutoPatch({ projectId, entities = [], applyOps, edits = 0,
         const timer = setTimeout(() => {
             armed.current = false
             // This person's edit did not touch a lamp: nothing to ask the desk.
-            if (lampSignature(latest.current.entities) === settled.current) return
+            const now = lampSignature(latest.current.entities)
+            if (now === settled.current) return
+            // What is patched now is settled: an answer that changes nothing in the room
+            // must not leave the old signature behind for the next non-lamp edit to "differ" from.
+            settled.current = now
             run()
         }, debounceMs)
         return () => clearTimeout(timer)
