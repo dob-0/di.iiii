@@ -155,12 +155,12 @@ export default function EquipmentSurface({ spaceId, projectId, readOnly = false,
     const { applyLocalOps: sentOps } = useProjectDocumentSync({ projectId, store, clientIdPrefix: 'equipment-client', opIdPrefix: 'equipment-op' })
     // Read only (a visitor on a public space, rigToolAccess.js): nothing reaches the document.
     const syncOps = readOnly ? NO_WRITE : sentOps
-    const { applyLocalOps, undo, redo } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
+    const { applyLocalOps, undo, redo, edits } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
     const document_ = state.document
     const entities = useMemo(() => document_.entities || [], [document_.entities])
     const library = useMemo(() => libraryWithShow(baseLibrary, entities), [baseLibrary, entities])
     // Removed lamps leave the desk too: auto-patch prunes a deleted lamp's fixture (§4.2).
-    const patch = useRigAutoPatch({ projectId: readOnly ? null : projectId, entities: readOnly ? [] : entities, applyOps: syncOps, library })
+    const patch = useRigAutoPatch({ projectId: readOnly ? null : projectId, entities: readOnly ? [] : entities, applyOps: syncOps, edits, library })
     const phone = useIsPhone()
     const apply = useCallback((ops) => applyLocalOps(ops), [applyLocalOps])
     const eq = useEquipment({ entities, library, apply, readOnly })

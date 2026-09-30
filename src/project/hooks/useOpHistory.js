@@ -117,6 +117,10 @@ export function useOpHistory({ projectId, document, applyLocalOps, ignoreTypes =
     // Stack mutations live in refs; this lets panels observe them (history()).
     const [, setHistoryVersion] = useState(0)
     const bumpHistory = useCallback(() => setHistoryVersion((v) => v + 1), [])
+    // How many batches THIS page's person has sent (an edit, an undo, a redo). A change
+    // that arrives from anywhere else — the load, a collaborator — never moves it, so a
+    // hook that must only answer a person (useRigAutoPatch) can tell the two apart.
+    const [edits, setEdits] = useState(0)
     // Tracks the document the *next* local batch will mutate. Re-synced from
     // the store on every render; advanced inline so that several ops applied
     // within one render tick invert against the right intermediate state.
@@ -136,6 +140,7 @@ export function useOpHistory({ projectId, document, applyLocalOps, ignoreTypes =
             const recordable = opsArray.some((op) => !ignoreTypesRef.current.has(op?.type))
             const undoOps = recordable ? invertProjectOps(base, opsArray) : []
             trackedDocRef.current = applyProjectOps(base, opsArray)
+            setEdits((n) => n + 1)
             if (undoOps.length) {
                 const sig = entrySignature(opsArray)
                 const now = Date.now()
@@ -160,6 +165,7 @@ export function useOpHistory({ projectId, document, applyLocalOps, ignoreTypes =
         trackedDocRef.current = applyProjectOps(trackedDocRef.current, ops)
         applyLocalOps(ops.map(stripOp), { activityMessage })
         bumpHistory()
+        setEdits((n) => n + 1)
     }, [applyLocalOps, bumpHistory])
 
     // Photoshop-style linear jump: make exactly the first `target` steps
@@ -206,5 +212,5 @@ export function useOpHistory({ projectId, document, applyLocalOps, ignoreTypes =
         cursor: undoStackRef.current.length
     }), [])
 
-    return { applyLocalOps: applyLocalOpsWithHistory, undo, redo, canUndo, canRedo, history, jumpTo }
+    return { applyLocalOps: applyLocalOpsWithHistory, undo, redo, canUndo, canRedo, history, jumpTo, edits }
 }
