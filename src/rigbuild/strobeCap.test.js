@@ -61,3 +61,23 @@ describe('the strobe rate cap', () => {
         expect(shown[0].components.rigFlash.hz).toBeLessThanOrEqual(3)
     })
 })
+
+describe('the union of every lamp\'s flashes stays within the cap (review A1-3)', () => {
+    it('lamps asked for 3, 2.92, 3.03, 2.5, 1.2 and 0.5 Hz together flash at most 3 separate times a second', () => {
+        const rates = [3, 2.92, 3.03, 2.5, 1.2, 0.5]
+        const stepS = 0.001
+        const flashes = []
+        const prev = rates.map(() => 0)
+        for (let t = 0; t < 20; t += stepS) {
+            rates.forEach((hz, i) => {
+                const v = strobeEnvelope(t, hz)
+                if (v > 0.9 && prev[i] <= 0.9) flashes.push(t)
+                prev[i] = v
+            })
+        }
+        // merge flashes closer than 50 ms (the eye sees one)
+        const merged = flashes.sort((a, b) => a - b).reduce((acc, f) => (acc.length && f - acc[acc.length - 1] < 0.05 ? acc : [...acc, f]), [])
+        for (let s0 = 0; s0 + 1 <= 19; s0 += 0.25) expect(merged.filter((f) => f >= s0 && f < s0 + 1).length).toBeLessThanOrEqual(MAX_STROBE_HZ)
+        expect(merged.length).toBeGreaterThan(10)
+    })
+})
