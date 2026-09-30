@@ -60,7 +60,7 @@ import { RIG_PREFIX, SHADOW_SAFE_REAL_LIGHTS, buildRig, nightOps, openingOps } f
 import { beamsGlb } from './beams-glb.mjs'
 import { FIXTURE_DIR, fixturesGlb, readGeometry } from './fixtures-glb.mjs'
 import { washGlb } from './wash-glb.mjs'
-import { perLookWashOps, uploadsNeeded, washBudget } from './wash-plan.mjs'
+import { freedAssetOps, perLookWashOps, uploadsNeeded, washBudget, washRemovalLine } from './wash-plan.mjs'
 
 const args = parseArgs()
 
@@ -256,7 +256,7 @@ const main = async () => {
                 baseVersion: Number(current.version) || 0,
                 ops: [
                     { type: 'deleteEntity', payload: { entityId: was.id } },
-                    ...(was.components?.media?.assetId ? [{ type: 'deleteAsset', payload: { assetId: was.components.media.assetId } }] : [])
+                    ...freedAssetOps({ removed: [was], have: current.document?.entities || [] })
                 ]
             }), 'removing the wash')
             say('  this look bakes no washes: the old wash is taken away')
@@ -280,7 +280,7 @@ const main = async () => {
             baseVersion: Number(current.version) || 0,
             ops: [
                 ...(was ? [{ type: 'deleteEntity', payload: { entityId: was.id } }] : []),
-                ...(was?.components?.media?.assetId ? [{ type: 'deleteAsset', payload: { assetId: was.components.media.assetId } }] : []),
+                ...(was ? freedAssetOps({ removed: [was], have: current.document?.entities || [], keep: [asset.id] }) : []),
                 { type: 'upsertAsset', payload: { asset } },
                 { type: 'createEntity', payload: { entity: wash } }
             ]
@@ -365,10 +365,9 @@ const main = async () => {
     const current = must(await client.get(`/api/projects/${project}/document`), 'reading the hall')
     const old = (current.document?.entities || []).filter((entity) => entity.id.startsWith(RIG_PREFIX))
     // The old baked beams' file goes out of the document with its entity.
-    const oldAssets = old.map((entity) => entity.components?.media?.assetId).filter(Boolean)
     const all = [
         ...old.map((entity) => ({ type: 'deleteEntity', payload: { entityId: entity.id } })),
-        ...oldAssets.map((assetId) => ({ type: 'deleteAsset', payload: { assetId } })),
+        ...freedAssetOps({ removed: old, have: current.document?.entities || [], keep: ops.filter((o) => o.type === 'upsertAsset').map((o) => o.payload.asset?.id).filter(Boolean) }),
         ...ops
     ]
     if (!all.length) {
@@ -380,6 +379,8 @@ const main = async () => {
         ops: all
     }), `writing ${all.length} changes to ${project}`)
     say(`  took down ${old.length}, hung ${entities.length} (document version ${result.version ?? '?'})`)
+    const washLine = washRemovalLine(old)
+    if (washLine) say(washLine)
 
     // Belt and braces: whatever was chosen, count the real lights the server
     // will actually render, and refuse to leave shadows on past the ceiling —

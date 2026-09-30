@@ -76,10 +76,11 @@ describe('withLookWash — the room shows the playing look\'s wash', () => {
         const out = withLookWash(entities, { toLookId: 'b' })
         expect(out.find((e) => e.id === WASH_ENTITY_ID)).toBe(single)
         expect(visibleOf(out, 'rig-wash:a')).toBe(false)
-        // and mid-fade from a look that has one: that one fades out while the single carries the new look
+        // and mid-fade from a look that has one: that one fades out while the single comes up
+        // to carry the new look (review B1-2), scaled by its own level
         const mid = withLookWash(entities, { fromLookId: 'a', toLookId: 'b', t: 0.25 })
         expect(opacityOf(mid, 'rig-wash:a')).toBe(0.75)
-        expect(mid.find((e) => e.id === WASH_ENTITY_ID)).toBe(single)
+        expect(opacityOf(mid, WASH_ENTITY_ID)).toBeCloseTo(0.6 * 0.25, 6)
     })
 
     it('a per-look wash whose asset the document does not hold counts as missing', () => {
@@ -122,5 +123,28 @@ describe('the room hook cross-fades the per-look washes with the lamps (useRigLo
         } finally {
             vi.useRealTimers()
         }
+    })
+})
+
+describe('review B1-2 — the single wash is the other half of a cross-fade', () => {
+    const base = [lamp, wash(WASH_ENTITY_ID), wash('rig-wash:b')]
+    it('into a look with its own wash from one without: the single wash goes down as b comes up', () => {
+        for (const t of [0, 0.25, 0.75]) {
+            const out = withLookWash(base, { fromLookId: 'a', toLookId: 'b', t })
+            expect(opacityOf(out, 'rig-wash:b')).toBeCloseTo(t, 6)
+            expect(opacityOf(out, WASH_ENTITY_ID)).toBeCloseTo(1 - t, 6)
+        }
+        expect(visibleOf(withLookWash(base, { fromLookId: 'a', toLookId: 'b', t: 0 }), WASH_ENTITY_ID)).toBe(true)
+        expect(opacityOf(withLookWash(base, { fromLookId: 'a', toLookId: 'b', t: 1 }), WASH_ENTITY_ID)).toBe(0)
+    })
+    it('out of a look with its own wash into one without: the single wash comes up as b goes down', () => {
+        const out = withLookWash(base, { fromLookId: 'b', toLookId: 'a', t: 0.25 })
+        expect(opacityOf(out, 'rig-wash:b')).toBeCloseTo(0.75, 6)
+        expect(opacityOf(out, WASH_ENTITY_ID)).toBeCloseTo(0.25, 6)
+        expect(withLookWash(base, { fromLookId: 'b', toLookId: 'a', t: 1 })).toEqual(base.map((e) => (e.id === 'rig-wash:b' ? expect.anything() : e)))
+    })
+    it('keeps the single wash\'s own level as the scale', () => {
+        const dim = withWashLevel(base, 0.5)
+        expect(opacityOf(withLookWash(dim, { fromLookId: 'a', toLookId: 'b', t: 0.5 }), WASH_ENTITY_ID)).toBeCloseTo(0.25, 6)
     })
 })

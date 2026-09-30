@@ -34,7 +34,9 @@ export const washBudget = ({ bakes = [], have = [], assets = [], cap = WASH_BYTE
     for (const b of bakes) sizes.set(sha256Hex(b.bytes), b.bytes.length)
     const assetSize = new Map((assets || []).map((a) => [a?.id, Number(a?.size) || 0]))
     const single = (have || []).find((e) => e?.id === WASH_ENTITY_ID)
-    const singleBytes = single ? assetSize.get(single.components?.media?.assetId) || 0 : 0
+    const singleId = single?.components?.media?.assetId
+    // The single wash's asset is the same file as a bake's when the bytes match: one count.
+    const singleBytes = single && !sizes.has(singleId) ? assetSize.get(singleId) || 0 : 0
     const perLook = [...sizes.values()].reduce((a, b) => a + b, 0)
     const total = perLook + singleBytes
     const ok = total <= cap
@@ -72,7 +74,9 @@ export const perLookWashEntity = ({ lookId, assetId, count }) => ({
  */
 export const perLookWashOps = ({ have = [], bakes = [], assetFor }) => {
     const ops = []
-    const keptAssets = new Set(have.filter((e) => e?.id === WASH_ENTITY_ID).map((e) => e.components?.media?.assetId).filter(Boolean))
+    // Every entity that is NOT a per-look wash stays, so its asset does (the single wash, a
+    // duplicate of a wash, a model with the same bytes).
+    const keptAssets = new Set(have.filter((e) => e && !lookIdOfWash(e.id)).map((e) => e.components?.media?.assetId).filter(Boolean))
     const news = bakes.map((b) => ({ lookId: b.lookId, count: b.count, asset: assetFor(b.lookId) }))
     for (const n of news) keptAssets.add(n.asset.id)
     const old = have.filter((e) => lookIdOfWash(e?.id))
@@ -99,4 +103,25 @@ export const uploadsNeeded = ({ bakes = [], assets = [] } = {}) => {
         out.push({ hash, bytes: b.bytes, lookId: b.lookId })
     }
     return out
+}
+
+/**
+ * The `deleteAsset` ops for the assets of the entities being removed: only those no entity that
+ * STAYS still points at. Assets are content-addressed, so a wash baked for one look and the
+ * per-look bake of the same look are one asset — dropping it would leave the other without a
+ * file. `removed`: the entities going; `have`: the project's entities before the write;
+ * `keep`: asset ids the write itself puts (a new wash's asset).
+ */
+export const freedAssetOps = ({ removed = [], have = [], keep = [] } = {}) => {
+    const gone = new Set(removed.map((e) => e?.id))
+    const used = new Set(keep)
+    for (const e of have) if (e && !gone.has(e.id) && e.components?.media?.assetId) used.add(e.components.media.assetId)
+    const ids = new Set(removed.map((e) => e?.components?.media?.assetId).filter((id) => id && !used.has(id)))
+    return [...ids].map((assetId) => ({ type: 'deleteAsset', payload: { assetId } }))
+}
+
+/** The line a full rig.mjs run says about the per-look washes it takes down with every `rig-` entity. */
+export const washRemovalLine = (old = []) => {
+    const n = old.filter((e) => lookIdOfWash(e?.id)).length
+    return n ? `  ${n} per-look wash${n === 1 ? '' : 'es'} (rig-wash:*) taken down with the rig: re-bake them with rig.mjs --wash-per-look` : null
 }

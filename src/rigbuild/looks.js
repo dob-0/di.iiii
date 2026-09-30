@@ -371,8 +371,17 @@ export const withLookWash = (entities, { fromLookId = '', toLookId = '', t = 1, 
             return washAt(e, 0)
         }
         // The single wash: hidden while a per-look wash carries the look, and — the fallback —
-        // left as withWashLevel drew it while the playing look has none of its own.
-        if (e.id === WASH_ENTITY_ID) return toHas ? washAt(e, 0) : e
+        // left as withWashLevel drew it while the playing look has none of its own. Over a
+        // fade between a look with its own wash and one without, it is the other half of the
+        // cross-fade (1 − t into a look with its own, t out of one), so the columns never lose
+        // the wash for a frame; its own level (withWashLevel) scales it.
+        if (e.id === WASH_ENTITY_ID) {
+            if (fading && toHas !== fromHas) {
+                const own = Number.isFinite(Number(e.components?.appearance?.opacity)) ? Number(e.components.appearance.opacity) : 1
+                return washAt(e, own * (toHas ? 1 - tt : tt))
+            }
+            return toHas ? washAt(e, 0) : e
+        }
         return e
     })
 }

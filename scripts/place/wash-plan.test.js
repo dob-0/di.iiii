@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { WASH_BYTES_CAP, perLookWashEntity, perLookWashOps, sha256Hex, uploadsNeeded, washBudget } from './wash-plan.mjs'
+import { WASH_BYTES_CAP, freedAssetOps, perLookWashEntity, perLookWashOps, sha256Hex, uploadsNeeded, washBudget, washRemovalLine } from './wash-plan.mjs'
 
 // RIG_BUILD.md §15.13 — rig.mjs --wash-per-look, the plan it writes.
 const bytesOf = (text) => Buffer.from(text)
@@ -95,4 +95,33 @@ describe('the ground versions, baked per look (measured)', async () => {
             expect(budget.total).toBeGreaterThan(100 * 1024)
         })
     }
+})
+
+describe('review B1 — a shared asset is never dropped, counted once, and the full run says what it removed', () => {
+    it('B1-1: freedAssetOps keeps an asset another entity (a per-look wash) still points at', () => {
+        const single = wash('rig-wash', 'H')
+        const have = [single, wash('rig-wash:red', 'H'), wash('rig-wash:other', 'Q')]
+        expect(freedAssetOps({ removed: [single], have })).toEqual([])
+        expect(freedAssetOps({ removed: [single], have: [single] })).toEqual([{ type: 'deleteAsset', payload: { assetId: 'H' } }])
+        expect(freedAssetOps({ removed: [single], have: [single], keep: ['H'] })).toEqual([])
+    })
+    it('B1-3: perLookWashOps keeps the asset of any entity that is not a per-look wash', () => {
+        const have = [wash('rig-wash:old', 'X'), { id: 'my-copy', type: 'model', components: { media: { assetId: 'X' } } }, wash('rig-wash:gone', 'Y')]
+        const ops = perLookWashOps({ have, bakes: [{ lookId: 'n', count: 1 }], assetFor: () => ({ id: 'Z', size: 1 }) })
+        const deleted = ops.filter((o) => o.type === 'deleteAsset').map((o) => o.payload.assetId)
+        expect(deleted).toEqual(['Y'])
+    })
+    it('B1-4: a full run names how many per-look washes it took down and the re-bake', () => {
+        expect(washRemovalLine([wash('rig-wash', 'H'), wash('rig-wash:a', 'A'), wash('rig-wash:b', 'B')])).toMatch(/2 per-look washes.*--wash-per-look/)
+        expect(washRemovalLine([wash('rig-wash', 'H')])).toBe(null)
+    })
+    it('B1-5: washBudget counts an asset the single wash shares with a bake once', () => {
+        const bytes = bytesOf('aaaaa')
+        const h = sha256Hex(bytes)
+        const b = washBudget({ bakes: [{ lookId: 'red', bytes }], have: [wash('rig-wash', h)], assets: [{ id: h, size: 5 }] })
+        expect(b.total).toBe(5)
+        expect(b.singleBytes).toBe(0)
+        const c = washBudget({ bakes: [{ lookId: 'red', bytes }], have: [wash('rig-wash', 'other')], assets: [{ id: 'other', size: 7 }] })
+        expect(c.total).toBe(12)
+    })
 })
