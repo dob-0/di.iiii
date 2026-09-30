@@ -14,13 +14,12 @@
 // Same real-server-subprocess harness as fallbackContracts.test.js (each
 // contract-test file owns its own copy — established convention).
 
-import { spawn } from 'node:child_process'
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { spawnServerUntilReady } from './testSupport/spawnServer.mjs'
 
 vi.setConfig({ testTimeout: 25_000, hookTimeout: 40_000 })
 
@@ -33,38 +32,6 @@ const ASSET_BODY = 'export const marker = "real asset file"\n'
 const activeServers = []
 
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms))
-
-const getFreePort = async () => {
-    return new Promise((resolve, reject) => {
-        const server = net.createServer()
-        server.on('error', reject)
-        server.listen(0, '127.0.0.1', () => {
-            const address = server.address()
-            const port = typeof address === 'object' && address ? address.port : 0
-            server.close((error) => {
-                if (error) reject(error)
-                else resolve(port)
-            })
-        })
-    })
-}
-
-const waitForHealth = async ({ url, child, getLogs }) => {
-    const deadline = Date.now() + 15000
-    while (Date.now() < deadline) {
-        if (child.exitCode !== null) {
-            throw new Error(`Server exited early.\n${getLogs()}`)
-        }
-        try {
-            const response = await fetch(url)
-            if (response.ok) return
-        } catch {
-            // retry
-        }
-        await wait(200)
-    }
-    throw new Error(`Server did not become healthy in time.\n${getLogs()}`)
-}
 
 /**
  * A minimal stand-in for a built dist/: an index.html and one hashed asset.
@@ -89,12 +56,11 @@ const makeClientDir = async () => {
 const startServer = async ({ clientDir, extraEnv = {} } = {}) => {
     const sandboxCwd = await mkdtemp(path.join(os.tmpdir(), 'dii-spa-server-cwd-'))
     const sandboxDataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-spa-server-data-'))
-    const port = await getFreePort()
-    const child = spawn(process.execPath, [SERVER_ENTRY], {
+    const { child, port } = await spawnServerUntilReady({
+        entry: SERVER_ENTRY,
         cwd: sandboxCwd,
         env: {
             ...process.env,
-            PORT: String(port),
             NODE_ENV: 'test',
             APP_BASE_PATH: '/serverXR',
             DATA_ROOT: sandboxDataRoot,
@@ -104,14 +70,8 @@ const startServer = async ({ clientDir, extraEnv = {} } = {}) => {
             CORS_ORIGINS: '*',
             ...(clientDir ? { CLIENT_DIR: clientDir } : {}),
             ...extraEnv
-        },
-        stdio: ['ignore', 'pipe', 'pipe']
+        }
     })
-
-    let stdout = ''
-    let stderr = ''
-    child.stdout.on('data', (chunk) => { stdout += chunk.toString() })
-    child.stderr.on('data', (chunk) => { stderr += chunk.toString() })
 
     const origin = `http://127.0.0.1:${port}`
 
@@ -130,12 +90,6 @@ const startServer = async ({ clientDir, extraEnv = {} } = {}) => {
         await rm(sandboxCwd, { recursive: true, force: true })
         await rm(sandboxDataRoot, { recursive: true, force: true })
     }
-
-    await waitForHealth({
-        url: `${origin}/serverXR/api/health`,
-        child,
-        getLogs: () => `STDOUT:\n${stdout}\nSTDERR:\n${stderr}`
-    })
 
     const handle = { origin, baseUrl: `${origin}/serverXR`, stop }
     activeServers.push(handle)
