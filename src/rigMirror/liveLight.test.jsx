@@ -121,3 +121,11 @@ describe('useLiveLightEntity — follows the desk while live, authored when not'
         expect(renders).toBe(before)
     })
 })
+
+describe('a lamp already drawn from its channel list', () => {
+    it('keeps the richer reading (a colour wheel is not white)', () => {
+        const entity = { id: 'l', type: 'spotLight', components: { light: { color: '#ff2422', intensity: 3 }, rigDmx: { colour: '#ff2422', level: 1 }, fixture: { index: 1 } } }
+        const fixture = { index: 1, known: true, level: 1, colour: { r: 255, g: 255, b: 255 } }
+        expect(liveLightEntity(entity, fixture)).toBe(entity)
+    })
+})

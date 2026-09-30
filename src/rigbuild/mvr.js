@@ -31,6 +31,7 @@ import { lensFromMount, mountFromLens } from './lampGeometry.js'
 import { modeOf, typeById } from './fixtureTypes.js'
 import { pieceKindOf, pieceOf } from './pieces.js'
 import { spotAimDirection } from '../project/viewport/spotLightAim.js'
+import { isAssumedMode } from './assumedProfiles.js'
 
 export const MVR_VERSION = { major: 1, minor: 6 }
 
@@ -89,12 +90,19 @@ export const mvrScene = ({ entities = [], library, meta = {} }) => {
         const type = typeById(library, f.type)
         if (!type) { skipped.push(`${e.id}: type "${f.type}" is not in the library`); continue }
         usedTypes.set(type.id, type)
-        const mode = modeOf(type, f.mode || type.defaultMode)
+        const chosen = modeOf(type, f.mode || type.defaultMode)
+        // An ASSUMED test mode is not in the GDTF (gdtf.js leaves it out): the file names the
+        // maker's mode of the same footprint when there is one, else no mode — never the test's.
+        const mode = chosen && isAssumedMode(chosen)
+            ? (type.modes || []).find((m) => !isAssumedMode(m) && m.footprint === chosen.footprint) || null
+            : chosen
         const beam = e.type === 'spotLight' ? spotAimDirection(e.components.transform?.rotation || [0, 0, 0]) : [0, f.hung ? -1 : 1, 0]
         const lens = e.components.transform?.position || [0, 0, 0]
         const mount = mountFromLens({ lens, hung: f.hung === true, beam, type })
         const basis = f.hung ? {} : { u: [1, 0, 0], v: [0, -1, 0], w: [0, 0, -1] }
-        const patched = mode && Number.isInteger(f.universe) && Number.isInteger(f.address)
+        // The address travels even when the maker's mode is owed (GDTFMode empty): a crew
+        // needs where a lamp is patched before anyone knows its chart (RIG_BUILD.md §19).
+        const patched = Number.isInteger(f.universe) && Number.isInteger(f.address)
         const pos = positionUuid(f.position)
         children.push(`
         <Fixture name="${esc([type.code, f.position, f.unit].filter((x) => x != null && x !== '').join(' '))}" uuid="${stableUuid(`fixture:${e.id}`)}">

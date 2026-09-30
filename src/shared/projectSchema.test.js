@@ -833,3 +833,19 @@ describe('components.surface (a plane that is a screen)', () => {
         expect('surface' in doc.entities[0].components).toBe(false)
     })
 })
+
+describe('mappingState.lightPool survives normalization (review A5-1)', () => {
+    it('keeps the switch and the knobs, clamped as lightPoolOptions clamps them', async () => {
+        const { lightPoolOptions, lightPoolWanted } = await import('../rigbuild/lightPool.js')
+        const raw = { lightPool: { enabled: true, slots: '40', minHoldMs: -5, handoverMs: 250, margin: 0.3, bounds: { min: [-10, 0, -10], max: [10, 8, 10] }, junk: 1 } }
+        const doc = normalizeProjectDocument({ mappingState: raw })
+        expect(doc.mappingState.lightPool).toEqual({ enabled: true, slots: 12, minHoldMs: 0, handoverMs: 250, margin: 0.3, bounds: { min: [-10, 0, -10], max: [10, 8, 10] } })
+        expect(lightPoolWanted({ mappingState: doc.mappingState })).toBe(true)
+        expect(lightPoolOptions(doc.mappingState)).toEqual(lightPoolOptions(raw))
+        expect(lightPoolOptions(doc.mappingState).slots).toBe(12)
+    })
+    it('absent means absent', () => {
+        expect(normalizeProjectDocument({ mappingState: {} }).mappingState).not.toHaveProperty('lightPool')
+        expect(normalizeProjectDocument({ mappingState: { lightPool: {} } }).mappingState).not.toHaveProperty('lightPool')
+    })
+})

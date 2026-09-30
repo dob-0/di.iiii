@@ -2,6 +2,7 @@
 // docs/architecture/RIG_BUILD.md §15.6.
 
 import { spotAimDirection } from '../project/viewport/spotLightAim.js'
+import { MAX_STROBE_HZ, capStrobeHz } from './strobeCap.js'
 
 // Per kind: the face (w × h, metres — the Atomic 3000's lens field is about 0.40 × 0.16
 // m, a 4-lite blinder's about 0.45 × 0.45), the glare sprite's size, the colour, and the
@@ -14,17 +15,28 @@ export const FLASH = {
 }
 
 // The strobe rate and the flash's length. A xenon or LED strobe fires a pulse of a few
-// milliseconds; on a 60 Hz screen that is one bright frame and a tail. 10 flashes a
-// second, each decaying with a 22 ms time constant: at 60 fps a flash is ~2 frames, at
+// milliseconds; on a 60 Hz screen that is one bright frame and a tail. At most 3 flashes a
+// second (the photosensitivity cap, strobeCap.js; was 10), each decaying with a 22 ms time constant: at 60 fps a flash is ~2 frames, at
 // 30 fps one — short and sharp, dark between.
-export const STROBE_HZ = 10
+export const STROBE_HZ = MAX_STROBE_HZ
 export const FLASH_TAU_S = 0.022
 
-/** The strobe's brightness at time t (seconds), 0..1. */
-export const strobeEnvelope = (t) => {
-    const period = 1 / STROBE_HZ
-    const phase = ((Number(t) || 0) % period + period) % period
-    return Math.exp(-phase / FLASH_TAU_S)
+/**
+ * The strobe's brightness at time t (seconds), 0..1, at `hz` flashes a second (the desk's
+ * flash rate when a desk drives the lamp, RIG_BUILD.md §18.3; else the cap; never above MAX_STROBE_HZ).
+ */
+export const strobeEnvelope = (t, hz = STROBE_HZ) => {
+    const rate = Number(hz) > 0 ? capStrobeHz(hz) : STROBE_HZ
+    // ONE GRID FOR THE WHOLE ROOM (cap review A1-3, 2026-09-30): the rule is about the flashes a
+    // person sees, not per lamp. Every strobe fires only on a tick of a shared MAX_STROBE_HZ grid,
+    // every n-th tick for a rate of MAX/n (the rate is rounded DOWN to the nearest MAX/n: 3, 1.5,
+    // 1, 0.75 Hz ...), so the flashes of any set of lamps are a subset of the grid's ticks and the
+    // union can never exceed MAX_STROBE_HZ. The price, stated: a lamp asked for 2.5 Hz plays 1.5.
+    const n = Math.max(1, Math.ceil(MAX_STROBE_HZ / rate - 1e-9))
+    const ticks = (Number(t) || 0) * MAX_STROBE_HZ
+    const slot = Math.floor(ticks)
+    const sinceLast = (((slot % n) + n) % n + (ticks - slot)) / MAX_STROBE_HZ // seconds since this lamp's last flash
+    return Math.exp(-sinceLast / FLASH_TAU_S)
 }
 
 /** The lamps the room draws as a flash: id, kind, level (0 = out in this look), lens, aim. */
@@ -34,6 +46,9 @@ export const flashLamps = (entities = []) => entities
         id: e.id,
         kind: e.components.rigFlash.kind,
         level: Math.max(0, Math.min(1, Number(e.components.rigFlash.level) || 0)),
+        // Set only when a desk drives the lamp (dmxPose.js): its own rate, or steady.
+        hz: Number(e.components.rigFlash.hz) > 0 ? Number(e.components.rigFlash.hz) : 0,
+        steady: e.components.rigFlash.steady === true,
         lens: (e.components.transform?.position || [0, 0, 0]).map(Number),
         dir: spotAimDirection(e.components.transform?.rotation)
     }))

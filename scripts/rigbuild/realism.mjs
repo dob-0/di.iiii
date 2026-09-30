@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * realism.mjs — the MOXIR room as a camera would see the night (docs/architecture/RIG_BUILD.md §18):
+ * realism.mjs — the MOXIR room as a camera would see the night (docs/architecture/RIG_BUILD.md §20):
  * the haze the beams are drawn in, the camera's exposure and tone mapping, a black hall whose only
  * light is what the rig returns off it, lens-wide beams, and the skylights dark at night.
  * DATA, written as ops (the op log is what viewers replay), never a bare document write.

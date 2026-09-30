@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { fireEvent, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { RIG_LIGHT, RIG_ROOM, RIG_STEPS, rigEntryPath, rigLightPath, rigNeighbours, rigRow, rigStepPath } from './rigTools.js'
 import { rigProgress } from './rigProgress.js'
@@ -109,7 +110,7 @@ describe('rigProgress — what the document says about each step', () => {
 
 describe('RigSteps — the row', () => {
     it('marks where you are, numbers the steps, and says what each holds', () => {
-        const progress = { said: { equipment: '104 on order', patch: '46 of 104 addressed · ! 4' }, warn: { patch: true }, suggested: 'patch' }
+        const progress = { said: { equipment: '104 on order', patch: '46 of 104 addressed · 4 to decide' }, hints: { patch: '4 to decide (4 overlap) — the sheet lists them' }, warn: { patch: true }, suggested: 'patch' }
         render(<RigSteps spaceId="moxir" projectId="moxir-hall" here="plot" progress={progress} />)
         const nav = screen.getByRole('navigation', { name: 'The rig, step by step' })
         const list = within(nav).getByRole('list')
@@ -117,12 +118,16 @@ describe('RigSteps — the row', () => {
         expect(items.map((a) => a.getAttribute('href'))).toEqual([
             '/moxir', '/moxir/equipment/moxir-hall', '/moxir/build/moxir-hall', '/moxir/plot/moxir-hall',
             '/moxir/cards/moxir-hall', '/moxir/patch/moxir-hall', '/moxir/crew/moxir-hall',
-            '/light/?space=moxir&project=moxir-hall&from=plot'
+            '/light/?space=moxir&project=moxir-hall&from=plot',
+            '/moxir/visualise/moxir-hall', // the desk beside the room (RIG_BUILD.md §18)
+            '/moxir/scenes/moxir-hall' // the scene deck, A and B (RIG_BUILD.md §22)
         ])
         const here = items.find((a) => a.getAttribute('aria-current') === 'page')
         expect(here.textContent).toMatch(/3\s*plot/)
         expect(items[1].textContent).toContain('104 on order')
         expect(items[5].className).toContain('is-warn')
+        expect(items[5].getAttribute('title')).toContain('4 to decide (4 overlap)')
+        expect(items[5].textContent).toContain('4 to decide')
         // the step before and the step after, at the two ends
         expect(within(nav).getByRole('link', { name: 'back to build' }).getAttribute('href')).toBe('/moxir/build/moxir-hall')
         expect(within(nav).getAllByRole('link').find((a) => /next/.test(a.textContent)).getAttribute('href')).toBe('/moxir/cards/moxir-hall')
@@ -133,9 +138,68 @@ describe('RigSteps — the row', () => {
         const pick = screen.getByRole('button', { name: /4\/6\s*cards & looks/ })
         fireEvent.click(pick)
         const menu = screen.getByRole('menu')
-        expect(within(menu).getAllByRole('link')).toHaveLength(8)
+        expect(within(menu).getAllByRole('menuitem')).toHaveLength(10) // room, six steps, light desk, visualiser, scenes
         fireEvent.keyDown(window, { key: 'Escape' })
         expect(screen.queryByRole('menu')).toBeNull()
+    })
+
+    describe('the steps menu — WAI-ARIA APG menu button', () => {
+        const open = async () => {
+            const user = userEvent.setup()
+            render(<><RigSteps spaceId="moxir" projectId="moxir-hall" here="cards" /><button type="button">after</button></>)
+            const pick = screen.getByRole('button', { name: /4\/6\s*cards & looks/ })
+            return { user, pick }
+        }
+
+        it('the trigger says it opens a menu, and which one', async () => {
+            const { user, pick } = await open()
+            expect(pick.getAttribute('aria-haspopup')).toBe('menu')
+            expect(pick.getAttribute('aria-expanded')).toBe('false')
+            await user.click(pick)
+            expect(pick.getAttribute('aria-expanded')).toBe('true')
+            expect(pick.getAttribute('aria-controls')).toBe(screen.getByRole('menu').id)
+        })
+
+        it('opening focuses the first item; arrows, Home and End move and wrap', async () => {
+            const { user, pick } = await open()
+            await user.click(pick)
+            const items = screen.getAllByRole('menuitem')
+            expect(document.activeElement).toBe(items[0])
+            await user.keyboard('{ArrowDown}')
+            expect(document.activeElement).toBe(items[1])
+            await user.keyboard('{End}')
+            expect(document.activeElement).toBe(items[items.length - 1])
+            await user.keyboard('{ArrowDown}')
+            expect(document.activeElement).toBe(items[0])
+            await user.keyboard('{ArrowUp}')
+            expect(document.activeElement).toBe(items[items.length - 1])
+            await user.keyboard('{Home}')
+            expect(document.activeElement).toBe(items[0])
+        })
+
+        it('Esc closes and returns focus to the trigger', async () => {
+            const { user, pick } = await open()
+            await user.click(pick)
+            await user.keyboard('{Escape}')
+            expect(screen.queryByRole('menu')).toBeNull()
+            expect(document.activeElement).toBe(pick)
+        })
+
+        it('Tab closes the menu and moves on from the trigger', async () => {
+            const { user, pick } = await open()
+            await user.click(pick)
+            await user.tab()
+            expect(screen.queryByRole('menu')).toBeNull()
+            expect(document.activeElement).not.toBe(document.body)
+            expect(document.activeElement).not.toBe(pick)
+        })
+
+        it('a click outside closes it', async () => {
+            const { user, pick } = await open()
+            await user.click(pick)
+            await user.click(screen.getByRole('button', { name: 'after' }))
+            expect(screen.queryByRole('menu')).toBeNull()
+        })
     })
 
     it('is gone while the room has the pointer', () => {

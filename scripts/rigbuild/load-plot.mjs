@@ -42,12 +42,15 @@ import { makeClient, mimeFor } from '../place/api.mjs'
 import { venuePlanFromHall } from '../../src/rigbuild/venuePlan.js'
 import { layRun, trussSegments } from '../../src/rigbuild/plotGeometry.js'
 import { PIECES, TRUSS_SECTION_M, catalogueHeightOf } from '../../src/rigbuild/pieces.js'
+import { isWashEntityId } from '../../src/rigbuild/looks.js'
 
 const args = parseArgs()
 // Baked meshes the live rig replaces, and the one it does not (see 3. above).
 export const BAKED_REPLACED = ['rig-beams', 'rig-fixtures']
 export const BAKED_KEPT = ['rig-wash']
-const BAKED = [...BAKED_REPLACED, ...BAKED_KEPT]
+// The single wash and the per-look ones (`rig-wash:<look>`, rig.mjs --wash-per-look, RIG_BUILD.md §15.13).
+export const isBakedKept = (id) => BAKED_KEPT.includes(id) || isWashEntityId(id)
+const isBaked = (id) => BAKED_REPLACED.includes(id) || isBakedKept(id)
 const r3 = (v) => Math.round(v * 1000) / 1000
 
 const readTokenFile = (file) => {
@@ -68,8 +71,8 @@ export const deletions = ({ have, incomingIds, pieceIds, replaced, piecesOnly })
         const oldRig = id.startsWith('rig-') && !incomingIds.has(id) && !pieceIds.has(id)
         const lamp = e.type === 'spotLight' || Boolean(e.components?.fixture)
         const drop = piecesOnly
-            ? (BAKED.includes(id) || replaced.has(id) || (oldRig && lamp))
-            : (BAKED_REPLACED.includes(id) || (oldRig && e.type !== 'model' && !BAKED_KEPT.includes(id)) || replaced.has(id))
+            ? (isBaked(id) || replaced.has(id) || (oldRig && lamp))
+            : (BAKED_REPLACED.includes(id) || (oldRig && e.type !== 'model' && !isBakedKept(id)) || replaced.has(id))
         if (drop) out.push(id)
     }
     return out
@@ -101,7 +104,30 @@ export const piecesFromRigBoxes = (entities) => {
     // A line hung from the crane bridge (rig-lib `truss.kind: 'crane-hung'`): no towers, the
     // header box IS the line — laid as stock segments end to end at its chord height.
     const roll = header?.components?.transform?.rotation?.[2] || 0
-    if (header && towers.length === 0 && roll) {
+    // The X lying down (rig-lib `truss.kind: 'crane-x'`): two arms crossing at a 4-way junction.
+    // Each arm is laid as its two straights either side of the junction — four runs of stock
+    // segments, so the room derives a clamp slot every 0.5 m along each half-arm. The junction
+    // (no piece of that kind in the catalogue) stays the rig's own box.
+    const zArm = byId.get('rig-truss-z-arm')
+    const junction = byId.get('rig-truss-junction')
+    if (header && towers.length === 0 && zArm) {
+        const t = header.components.transform
+        const chord = r3(t.position[1] + (t.scale[1] || TRUSS_SECTION_M) / 2)
+        const [cx, , cz] = t.position
+        const half = t.scale[0] / 2
+        const j = junction ? junction.components.transform.scale[0] / 2 : 0
+        const runs = [
+            [[cx - j, cz], [cx - half, cz], 'x-left'], [[cx + j, cz], [cx + half, cz], 'x-right'],
+            [[cx, cz - j], [cx, cz - half], 'z-back'], [[cx, cz + j], [cx, cz + half], 'z-crowd']
+        ]
+        let k = 0
+        for (const [from, to, name] of runs) {
+            layRun({ from: from.map(r3), to: to.map(r3), y: chord }).forEach((seg) => {
+                k += 1
+                out.push({ id: `rig-x-${k}`, name: `X arm, ${name} half (hung from the crane bridge)`, kind: seg.kind, position: seg.position, yaw: seg.yaw, height: null, replaces: k === 1 ? header.id : k === 2 ? zArm.id : null })
+            })
+        }
+    } else if (header && towers.length === 0 && roll) {
         // A SLOPED line (the cut, 2026-09-29): the box is base-anchored and rolled about z, so its
         // centre line runs through anchor + half a section along the rolled "up"; stock pieces
         // end to end along the slope, each rolled the same.
@@ -122,6 +148,21 @@ export const piecesFromRigBoxes = (entities) => {
         const half = t.scale[0] / 2
         layRun({ from: [r3(t.position[0] - half), t.position[2]], to: [r3(t.position[0] + half), t.position[2]], y: chord }).forEach((seg, i) => {
             out.push({ id: `rig-line-${i + 1}`, name: 'truss line (hung from the crane bridge)', kind: seg.kind, position: seg.position, yaw: seg.yaw, height: null, replaces: i === 0 ? header.id : null })
+        })
+    }
+    // The halo (rig-lib `truss.shape: 'triangle'`): each side's stock straight, a box turned by
+    // its yaw, laid as that run of pieces; its 60° corner blocks have no piece in the catalogue
+    // (src/rigbuild/pieces.js) and stay drawn as the rig's boxes (rig-halo-corner-*).
+    for (const side of entities.filter((e) => /^rig-halo-side-\d+$/.test(e.id))) {
+        const t = side.components.transform
+        const chord = r3(t.position[1] + (t.scale[1] || TRUSS_SECTION_M) / 2)
+        const yaw = t.rotation?.[1] || 0
+        const half = t.scale[0] / 2
+        const dir = [Math.cos(yaw), -Math.sin(yaw)]
+        const from = [r3(t.position[0] - dir[0] * half), r3(t.position[2] - dir[1] * half)]
+        const to = [r3(t.position[0] + dir[0] * half), r3(t.position[2] + dir[1] * half)]
+        layRun({ from, to, y: chord }).forEach((seg, i) => {
+            out.push({ id: `${side.id.replace(/^rig-/, 'rig-piece-')}-${i + 1}`, name: 'halo side (hung from the crane bridge)', kind: seg.kind, position: seg.position, yaw: seg.yaw, height: null, replaces: i === 0 ? side.id : null })
         })
     }
     const riser = byId.get('rig-stage-deck')
@@ -183,7 +224,7 @@ const main = async () => {
         ops.push({ type: 'upsertAsset', payload: { asset } })
     }
     const replaced = new Set(pieces.map((p) => p.replaces).filter(Boolean))
-    for (const id of ['rig-truss-tower-l', 'rig-truss-tower-r', 'rig-truss-header', 'rig-stage-deck']) if (doc.entities.some((e) => e.id === id)) replaced.add(id)
+    for (const id of ['rig-truss-tower-l', 'rig-truss-tower-r', 'rig-truss-header', 'rig-truss-z-arm', 'rig-stage-deck']) if (doc.entities.some((e) => e.id === id)) replaced.add(id)
     for (const p of pieces) {
         const base = catalogueHeightOf(p.kind)
         ops.push({

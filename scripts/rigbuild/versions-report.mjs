@@ -17,18 +17,20 @@ import { moxirDocument, patchMoxir } from './moxir.mjs'
 import { loadLibrary } from './library.mjs'
 import { patchCsv, powerCsv, renderSheetHtml, sheetModel } from '../../src/rigbuild/sheet.js'
 import { libraryWithShow, RIG_SHOW_ID } from '../../src/rigbuild/rental.js'
-import { costing, powerOfList, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
+import { allVersions, costing, powerOfList, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
 
 export const DEFAULT_HALL = 'scripts/place/rigs/moxir-hall-2026-09-28.hall.json'
 
-export const report = async ({ out, hallFile = null }) => {
+export const report = async ({ out, hallFile = null, only = null }) => {
     const spec = readJson(path.join(REPO_ROOT, VERSIONS_FILE))
     const hall = readJson(hallFile || path.join(REPO_ROOT, spec.hall || DEFAULT_HALL))
     const manifest = readJson(path.join(FIXTURE_DIR, 'fixtures.json'))
     const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
     const baseLibrary = loadLibrary()
     const all = []
-    for (const v of spec.versions) {
+    // `only`: the version ids to report (a comparison variant alone, say); default every version,
+    // variant and candidate (the halo's report used --only; the X's report took them all)
+    for (const v of allVersions(spec).filter((x) => (only ? only.includes(x.id) : true))) {
         const rig = readJson(path.join(REPO_ROOT, rigFileOf(spec.set, v.id)))
         const { rentalList: list } = readJson(path.join(REPO_ROOT, rentalFileOf(spec.set, v.id)))
         const library = libraryWithShow(baseLibrary, list)

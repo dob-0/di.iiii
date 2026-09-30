@@ -26,6 +26,7 @@
  * writes over someone's newer ops. `--out` keeps the ops it sent (the undo is the .diiii saved
  * before it: `di open`).
  */
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -40,11 +41,13 @@ import { rigLooksFrom } from './looks.mjs'
 import { variantOf } from './load-version.mjs'
 import { projectOf, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
 import { catalogueHeightOf } from '../../src/rigbuild/pieces.js'
+import { isWashEntityId } from '../../src/rigbuild/looks.js'
 
 const r3 = (v) => Math.round(v * 1000) / 1000
 const isRig = (e) => e.id.startsWith('rig-')
-// What stays of the old rig: the show's entity, the baked wash (rig.mjs --wash-only re-bakes it).
-const KEEP = new Set([RIG_SHOW_ID, 'rig-wash'])
+// What stays of the old rig: the show's entity, the baked washes — the single one (rig.mjs
+// --wash-only re-bakes it) and the per-look ones (`rig-wash:<look>`, --wash-per-look, §15.13).
+const KEEP = { has: (id) => id === RIG_SHOW_ID || isWashEntityId(id) }
 
 /** A lamp's lens radius for its type, as realism.mjs sets it: the manifest's lens or window. */
 export const apertureOf = (typeId, library, manifest) => {
@@ -90,6 +93,13 @@ const readTokenFile = (file) => {
     return line ? line.slice('ADMIN_API_TOKEN='.length).trim() : null
 }
 
+/**
+ * The project's own body for a piece kind, when it is the CURRENT file's: same name AND same content hash
+ * (asset ids are sha-256 of the bytes). A same-named asset with other content is stale and is not reused.
+ * Pure.
+ */
+export const pieceAssetOf = (assets, kind, sha256) => (assets || []).find((a) => a.name === `rigbuild-${kind}.glb` && a.id === sha256) || null
+
 const main = async () => {
     const args = parseArgs()
     const api = args.api ? String(args.api).replace(/\/+$/, '') : die('needs --api <base>/serverXR — no default on purpose')
@@ -131,16 +141,18 @@ const main = async () => {
             if (a != null) carry[type] = { aperture: a }
         }
     }
-    // piece bodies: the document's own asset when it has one, else upload it
+    // piece bodies: the document's own asset when ITS CONTENT is the current file's, else upload it. (By name
+    // alone a regenerated model — the matte steel of 2026-09-30 — was never picked up.) Asset ids are content hashes.
     const assetFor = {}
     const uploads = []
     for (const kind of new Set(pieces.map((p) => p.kind))) {
-        const have = current.assets.find((a) => a.name === `rigbuild-${kind}.glb`)
+        const file = path.join(REPO_ROOT, 'scripts/rigbuild/pieces', `${kind}.glb`)
+        const bytes = fs.readFileSync(file)
+        const have = pieceAssetOf(current.assets, kind, crypto.createHash('sha256').update(bytes).digest('hex'))
         if (have) { assetFor[kind] = have.id; continue }
         if (args['dry-run']) { assetFor[kind] = `dry-${kind}`; continue }
-        const file = path.join(REPO_ROOT, 'scripts/rigbuild/pieces', `${kind}.glb`)
         const form = new FormData()
-        form.append('asset', new Blob([fs.readFileSync(file)], { type: mimeFor(file) }), `rigbuild-${kind}.glb`)
+        form.append('asset', new Blob([bytes], { type: mimeFor(file) }), `rigbuild-${kind}.glb`)
         const up = await client.post(`/api/projects/${project}/assets`, form)
         if (!up.ok) die(`upload ${kind}: ${up.status} ${up.text.slice(0, 200)}`)
         assetFor[kind] = up.body.asset.id

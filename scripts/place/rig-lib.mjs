@@ -63,7 +63,7 @@ export const hasTruss = (rig) => Boolean(rig.truss) && rig.truss.kind !== 'none'
 // runs parallel to the bridge, under its centre line, its bottom chord at `trim_m`.
 // `x_offset_m` slides the line along itself so a clamp point (every 0.5 m, 0.25 m in from
 // each end — src/rigbuild/pieces.js) falls on the centre line; the lamps stay mirrored.
-export const isCraneHung = (rig) => rig?.truss?.kind === 'crane-hung'
+export const isCraneHung = (rig) => rig?.truss?.kind === 'crane-hung' || rig?.truss?.kind === 'crane-x'
 // A crane-hung line may SLOPE (`slope_deg`, + = its +x end higher): "the cut", owner's pick
 // 2026-09-29 — one straight 12 m line in the vertical plane under the bridge, low house left,
 // high over the press and the machines. `trim_m` is then its bottom chord at u = 0 (above the
@@ -85,6 +85,28 @@ export const linePoint = (stage, u, face = 'axis') => {
 }
 /** The line's bottom chord height at `u`, measured vertically (what a clearance is read against). */
 export const bottomChordAt = (stage, u) => stage.trussH - stage.trussSection / 2 + u * Math.sin(stage.trussSlope || 0)
+// `truss: { kind: 'crane-hung', shape: 'triangle' }` — "halo" (owner's option 6, 2026-09-29): an
+// equilateral triangle of box truss lying FLAT, its centroid under the bridge's centre line over
+// the DJ, one corner (`apex`) toward the audience ('audience', default) or the backdrop, a chain
+// hoist at every corner. `side_m` is the side on the truss's centre lines, corner node to corner
+// node (a 60° corner block's legs + a stock straight: `corner_leg_m`, `straight_m`).
+export const isHalo = (rig) => isCraneHung(rig) && rig.truss.shape === 'triangle'
+
+/** The triangle's corners in plan ([x, z]), apex first, then the base's left (-x) and right (+x). Pure. */
+export const haloGeometry = ({ side, centre, apexDir }) => {
+    const R = side / Math.sqrt(3)
+    const [cx, cz] = centre
+    const apex = [cx, cz + apexDir * R]
+    const left = [cx - side / 2, cz - (apexDir * R) / 2]
+    const right = [cx + side / 2, cz - (apexDir * R) / 2]
+    return { side, R, r: R / 2, height: (side * Math.sqrt(3)) / 2, centre: [cx, cz], apexDir, apex, left, right }
+}
+const lerp2 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
+// `truss: { kind: 'crane-x' }` — the X lying down (owner's sketch "ten truss versions", option 2,
+// 2026-09-29): two arms of `arm_m` crossing FLAT at a 4-way junction under the bridge's centre
+// line, one arm along the bridge (x), one across it (z), the second pointing out over the crowd.
+// Hung like the line (bottom chord at `trim_m`), on `rigging.picks`; RIG_BUILD.md §15.8.
+export const isCraneX = (rig) => rig?.truss?.kind === 'crane-x'
 
 export const stageFrame = (rig, hall) => {
     const g = hall.geometry
@@ -93,7 +115,7 @@ export const stageFrame = (rig, hall) => {
     // overhead). The truss mounts then refuse, and no truss boxes are written.
     const truss = !hasTruss(rig) ? { width_m: 0, header_h_m: 0, section_m: 0, from_stage_back_m: 0 }
         // crane-hung: the header is the hung line — its top at trim + section
-        : isCraneHung(rig) ? { ...rig.truss, header_h_m: rig.truss.trim_m + (rig.truss.section_m ?? 0.29) / 2 }
+        : isCraneHung(rig) ? { ...rig.truss, ...(isCraneX(rig) ? { width_m: rig.truss.arm_m } : {}), header_h_m: rig.truss.trim_m + (rig.truss.section_m ?? 0.29) / 2 }
             : rig.truss
     let into
     let wall
@@ -168,10 +190,16 @@ export const stageFrame = (rig, hall) => {
         if (!crane || Math.abs(crane.z_m - dj) > 1) throw new Error(`truss "crane-hung": no crane bridge within 1 m of the DJ (z ${dj.toFixed(2)}); the nearest is at z ${crane?.z_m} — park it over the DJ in the hall's dims (cranes_from_door_m)`)
         trussZ = crane.z_m
     }
+    const halo = isHalo(rig)
+        ? haloGeometry({ side: rig.truss.side_m, centre: [axis + (rig.truss.x_offset_m ?? 0), trussZ], apexDir: (rig.truss.apex || 'audience') === 'audience' ? into : -into })
+        : null
     return {
         crane,
+        halo,
         trussX: isCraneHung(rig) ? (rig.truss.x_offset_m ?? 0) : 0,
         trussSlope: trussSlopeOf(rig),
+        // crane-x: the length of each arm and the junction's size across (null for a line)
+        xArm: isCraneX(rig) ? { arm: rig.truss.arm_m, junction: rig.truss.junction?.across_m ?? 0 } : null,
         into,
         wall,
         back,
@@ -182,7 +210,7 @@ export const stageFrame = (rig, hall) => {
         deck: s.deck_h_m,
         axis,
         trussZ: trussZ ?? back + into * truss.from_stage_back_m,
-        trussW: truss.width_m,
+        trussW: halo ? halo.side : truss.width_m,
         trussH: truss.header_h_m,
         trussSection: truss.section_m ?? 0.4,
         truss: hasTruss(rig)
@@ -277,6 +305,20 @@ const needsTruss = (ctx, mount) => {
 // `dx_m` [a, b, ...]: mirrored pairs at ±a, ±b from the axis, instead of an even spread.
 // A 0 in the list is ONE lamp on the axis, not two (-0 and 0).
 const mirroredDx = (dx) => [...new Set([...dx.map((d) => (d === 0 ? 0 : -d)), ...dx])].sort((a, b) => a - b)
+const xArmSlots = (n, ctx, group, mount) => {
+    if (!ctx.stage.xArm) throw new Error(`mount ${mount} needs a truss of kind "crane-x"`)
+    const at = []
+    for (const [dx, dz] of group?.at_m || []) {
+        if (dx !== 0 && dz !== 0) throw new Error(`mount ${mount}: [${dx}, ${dz}] is on neither arm`)
+        if (Math.max(Math.abs(dx), Math.abs(dz)) > ctx.stage.xArm.arm / 2) throw new Error(`mount ${mount}: [${dx}, ${dz}] is past the arm's end`)
+        for (const x of dx === 0 ? [0] : [-dx, dx]) at.push([x, dz])
+    }
+    const hung = mount === 'x-under' || group?.orient === 'hung'
+    return at.sort((a, b) => a[0] - b[0] || a[1] - b[1]).slice(0, n).map(([dx, dz]) => ({
+        pos: [ctx.stage.axis + dx, hung ? ctx.stage.trussH - ctx.stage.trussSection / 2 : ctx.stage.trussH + ctx.stage.trussSection / 2, ctx.stage.trussZ + dz],
+        orient: hung ? 'hung' : 'floor', face: toAudience(ctx)
+    }))
+}
 const place = {
     'stage-back': (n, ctx) => spread(n, -ctx.stage.width / 2 + 1, ctx.stage.width / 2 - 1)
         .map((x) => ({ pos: [ctx.stage.axis + x, ctx.stage.deck, ctx.stage.back + ctx.stage.into * 0.6], orient: 'floor', face: toAudience(ctx) })),
@@ -317,12 +359,38 @@ const place = {
     // sky: hung under the truss its 270° tilt cannot reach straight up. View C's "truss top".
     'truss-top': (n, ctx, group) => (needsTruss(ctx, 'truss-top'), group?.dx_m ? mirroredDx(group.dx_m).slice(0, n) : spread(n, -ctx.stage.trussW / 2 + 0.75, ctx.stage.trussW / 2 - 0.75))
         .map((u) => ({ pos: linePoint(ctx.stage, u, 'top'), orient: 'floor', face: toAudience(ctx) })),
+    // crane-x: standing ON (or `orient: 'hung'`, under) either arm of the X, at `at_m`
+    // [[dx, dz], …] from the crossing — dx along the bridge (mirrored: ±dx), dz across it (+ = toward
+    // the audience; on the axis, so never mirrored). Each point must be a clamp point of a half-arm
+    // (every 0.5 m from 0.25 m in: pieces.js) so the room's derived slots find the lamp.
+    'x-top': (n, ctx, group) => xArmSlots(n, ctx, group, 'x-top'),
+    'x-under': (n, ctx, group) => xArmSlots(n, ctx, group, 'x-under'),
     // Standing on the top plate of each tower — or, on a crane-hung line (no towers), standing
     // on its top chord 0.4 m in from each end.
     'truss-towers': (n, ctx) => (needsTruss(ctx, 'truss-towers'), ctx.stage.crane
         ? spread(n, -ctx.stage.trussW / 2 + 0.4, ctx.stage.trussW / 2 - 0.4)
         : spread(n, -ctx.stage.trussW / 2, ctx.stage.trussW / 2))
         .map((x) => ({ pos: [ctx.stage.axis + x, ctx.stage.trussH + ctx.stage.trussSection / 2, ctx.stage.trussZ], orient: 'floor', face: toAudience(ctx) })),
+    // On the halo (a flat triangle hung from the crane): `halo_at` lists where — 'apex', 'base-corners'
+    // (the two base corners), { edge: 'sides', t: [..] } (both side edges at t from the apex:
+    // mirrored by construction), { edge: 'base', dx: [..] } (the base edge, mirrored ±dx).
+    // `orient` 'hung' (clamped under the bottom chord, default) or 'top' (standing on the top chord).
+    halo: (n, ctx, group) => {
+        const h = ctx.stage.halo
+        if (!h) throw new Error('mount halo needs truss.shape "triangle" (a crane-hung halo)')
+        const at = []
+        for (const a of group?.halo_at || ['apex', 'base-corners']) {
+            if (a === 'apex') at.push({ p: h.apex, where: 'apex' })
+            else if (a === 'base-corners') at.push({ p: h.left, where: 'corner-left' }, { p: h.right, where: 'corner-right' })
+            else if (a?.edge === 'sides') for (const t of a.t) at.push({ p: lerp2(h.apex, h.left, t), where: `side-left@${t}` }, { p: lerp2(h.apex, h.right, t), where: `side-right@${t}` })
+            else if (a?.edge === 'base') for (const d of mirroredDx(a.dx)) at.push({ p: [h.centre[0] + d, h.left[1]], where: `base@${d}` })
+            else throw new Error(`group ${group?.id}: unknown halo_at ${JSON.stringify(a)}`)
+        }
+        const t = ctx.stage.trussSection
+        const bottom = ctx.stage.trussH - t / 2
+        const top = group?.orient === 'top'
+        return at.slice(0, n).map(({ p, where }) => ({ pos: [p[0], top ? bottom + t : bottom, p[1]], orient: top ? 'floor' : 'hung', face: toAudience(ctx), halo: where }))
+    },
     'column-bases': (n, ctx, group) => {
         if (group?.columns) {
             // The columns a spec picks (columnsFor), one lamp at each base.
@@ -451,6 +519,21 @@ const leaned = (ctx, slot, sideDeg, leanDeg) => {
     return [Math.sin(s), up * Math.cos(s) * Math.cos(l), Math.cos(s) * Math.sin(l) * ctx.stage.into]
 }
 
+const unit2 = (v, fallback) => {
+    const l = Math.hypot(v[0], v[1])
+    return l < 1e-6 ? fallback : [v[0] / l, v[1] / l]
+}
+/**
+ * The DJ in plan: the middle of the performer's box (performerBox: from 0.1 m inside the
+ * riser's back to the DJ table's front, `table.from_front_m` in from the riser's front) —
+ * written from the stage alone so src/rigbuild/lookRules.js answers the same.
+ */
+export const djCentre = (ctx) => {
+    const s = ctx.stage
+    const fromFront = ctx.rig?.stage?.table?.from_front_m ?? 0.2
+    return [s.axis ?? axisOf(ctx), (s.back + s.into * 0.1 + s.front - s.into * fromFront) / 2]
+}
+
 export const AIM_RULES = {
     // Straight up (a hung lamp: straight down), optionally leaned toward the
     // audience and in toward the centre line — "pillars of light".
@@ -505,6 +588,50 @@ export const AIM_RULES = {
     'bridge-underside': (slot, meta, ctx, p = {}) => {
         const crane = ctx.stage.crane || craneNearestStage(ctx.hall, ctx.stage)
         return { target: [slot.pos[0] + sideOf(slot, ctx) * (p.out ?? 6), crane.girder_bottom_m, crane.z_m + ctx.stage.into * (p.girder ?? 1.1)] }
+    },
+    // THE HALO'S RULES (a triangle over the DJ; RIG_BUILD.md §15.8). `djCentre` is the middle of
+    // the performer's box in plan. `ring`: each lamp to a point on a circle of radius `r` round
+    // the DJ at height `y` (default the deck), on the lamp's own bearing from the DJ — a cone of
+    // beams closing round the performer without passing through him (a narrow beam through the
+    // DJ is a clash). `dj-point`: every lamp to one point over the DJ, `h` above the deck — two
+    // lamps from opposite corners cross there in an X. `radial`: outward from the triangle's
+    // centre, `elev_deg` above (+) or below (-) the horizon, bent `to_audience` (0..1) toward
+    // the house — the halo opening out over the crowd.
+    ring: (slot, meta, ctx, p = {}) => {
+        const [cx, cz] = djCentre(ctx)
+        const u = unit2([slot.pos[0] - cx, slot.pos[2] - cz], [0, ctx.stage.into])
+        const r = p.r ?? 1.2
+        return { target: [cx + u[0] * r, p.y ?? ctx.stage.deck, cz + u[1] * r] }
+    },
+    'dj-point': (slot, meta, ctx, p = {}) => {
+        const [cx, cz] = djCentre(ctx)
+        return { target: [cx + (p.x ?? 0), ctx.stage.deck + (p.h ?? 2.8), cz + ctx.stage.into * (p.dz ?? 0)] }
+    },
+    radial: (slot, meta, ctx, p = {}) => {
+        // the halo's centroid: on the axis, under the crane bridge's centre line
+        const crane = ctx.stage.crane || craneNearestStage(ctx.hall, ctx.stage)
+        const c = [axisOf(ctx), crane.z_m]
+        const out = unit2([slot.pos[0] - c[0], slot.pos[2] - c[1]], [0, ctx.stage.into])
+        const k = p.to_audience ?? 0
+        const u = unit2([out[0] * (1 - k), out[1] * (1 - k) + ctx.stage.into * k], [0, ctx.stage.into])
+        const e = (p.elev_deg ?? -20) * DEG
+        return { dir: [u[0] * Math.cos(e), Math.sin(e), u[1] * Math.cos(e)] }
+    },
+    // crane-x: out along the lamp's own arm, away from the crossing, rising `rise_deg` over the
+    // horizon (a hung lamp: under it). The crossing is the bridge's centre line on the axis. A lamp
+    // `end_m` or more from the crossing is an END; the others use `inner_rise_deg`, or stand
+    // straight up with `inner: 'vertical'`. The 4 ends at 30–60°: four rays; at ~10°: the X traced.
+    'along-arm': (slot, meta, ctx, p = {}) => {
+        const crane = ctx.stage.crane || craneNearestStage(ctx.hall, ctx.stage)
+        const h = [slot.pos[0] - axisOf(ctx), slot.pos[2] - crane.z_m]
+        const d = Math.hypot(h[0], h[1])
+        const up = upOf(slot)
+        const end = d >= (p.end_m ?? 2)
+        if (d < 0.05 || (!end && p.inner === 'vertical')) return { dir: [0, up, 0] }
+        // `x_rise_deg`: the bridge arm's own (its rays run under the crane's cab and trolley)
+        const onX = Math.abs(h[1]) < 0.05
+        const r = (onX && p.x_rise_deg !== undefined ? p.x_rise_deg : end ? (p.rise_deg ?? 45) : (p.inner_rise_deg ?? p.rise_deg ?? 45)) * DEG
+        return { dir: [(h[0] / d) * Math.cos(r), up * Math.sin(r), (h[1] / d) * Math.cos(r)] }
     },
     // Hung lamps straight down onto the floor under the crane, splayed out.
     'down-from-crane': (slot, meta, ctx) => ({ target: [slot.pos[0] * 1.1, 0, slot.pos[2] + slot.girder * 4] }),
@@ -639,6 +766,18 @@ export const beamHitsBox = (from, to, reach, b) => {
 }
 
 /** A look's level for a group, 0..1; a group the look does not name is at full. */
+/**
+ * Does the lamp of this rank keep its group's level in this aim? `solo` (an integer): only that
+ * rank; `solo_mask` (an integer, bit r = rank r): several — crane-x's four ends are 85 (ranks 0, 2,
+ * 4, 6), its crossing pair 65 (0 and 6). A number, because the document's schema keeps only
+ * numeric aim parameters (projectSchema normalizeRigLooks). Neither: every lamp keeps it.
+ */
+export const soloKeeps = (aim, rank) => {
+    if (Number.isInteger(aim?.solo_mask)) return rank >= 0 && rank < 31 && ((aim.solo_mask >> rank) & 1) === 1
+    if (Number.isInteger(aim?.solo)) return rank === aim.solo
+    return true
+}
+
 export const levelOf = (look, groupId) => {
     const v = Number(look?.levels?.[groupId])
     return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 1
@@ -663,14 +802,24 @@ const staticAnim = { mode: 'static', speed: 1, amplitude: 1 }
 /** A real lamp's light distance (its cutoff) for a beam that stops at `reach`: see buildRig. */
 export const lightDistance = (reach) => reach * 2
 
-const box = ({ id, name, pos, size, colour, emissive = '#000000', emissiveIntensity = 1, roughness = 0.8, metalness = 0 }) => ({
+// Rigging steel is drawn MATTE. The room has no environment map, so a metal surface (metalness 0.8-0.9) has
+// nothing to reflect and renders almost black in a dark hall: the truss and its hangers vanished and "the
+// truss is not from the crane" (owner, 2026-09-30, checked on his screen). Diffuse light shows the shape.
+const STEEL_METALNESS = 0.3
+const STEEL_ROUGHNESS = 0.55
+// The thin rigging (bridle legs, steels, chains, clamps, hoists) is a few centimetres wide and hangs far above the
+// fill light: it also carries a faint self-light so the hang READS at an orbit distance (drawn to be read, never
+// an engineered design). It changes no size, no position and no rated number.
+const RIGGING_EMISSIVE = '#3b4048'
+
+const box = ({ id, name, pos, size, colour, emissive = '#000000', emissiveIntensity = 1, roughness = 0.8, metalness = 0, rotation = [0, 0, 0] }) => ({
     id,
     type: 'box',
     name,
     components: {
         // Primitives sit ON position.y (base-anchored) and are unit-sized, so
-        // scale IS the size in metres.
-        transform: { position: pos.map((v) => round(v)), rotation: [0, 0, 0], scale: size.map((v) => round(v)) },
+        // scale IS the size in metres. A rotation turns the box about that base point.
+        transform: { position: pos.map((v) => round(v)), rotation: rotation.map((v) => round(v, 6)), scale: size.map((v) => round(v)) },
         primitive: { shape: 'box', size: [1, 1, 1] },
         appearance: { color: colour, opacity: 1, roughness, metalness, emissive, emissiveIntensity },
         // Without this every box drifts and spins in walk mode (entityAnimation.js).
@@ -794,16 +943,20 @@ export const pickGeometry = (rig, stage) => {
 }
 
 /** A thin steel or strap between two points, as a box turned onto the segment. */
-const segment = ({ id, name, from, to, w, colour, metalness = 0.9, roughness = 0.35 }) => {
+const segment = ({ id, name, from, to, w, colour, metalness = STEEL_METALNESS, roughness = STEEL_ROUGHNESS, emissive = RIGGING_EMISSIVE }) => {
     const d = [to[0] - from[0], to[1] - from[1], to[2] - from[2]]
     const len = Math.hypot(...d)
-    const e = box({ id, name, pos: from, size: [w, len, w], colour, metalness, roughness })
+    const e = box({ id, name, pos: from, size: [w, len, w], colour, metalness, roughness, emissive })
     // base-anchored at `from`, its +Y turned onto d. three.js Euler 'XYZ' [a, 0, c] turns +Y
     // to (−sin c, cos c cos a, cos c sin a): c = asin(−dx), a = atan2(dz, dy).
     const u = d.map((v) => v / (len || 1))
     e.components.transform.rotation = [round(Math.atan2(u[2], u[1]), 9), 0, round(Math.asin(Math.max(-1, Math.min(1, -u[0]))), 9)]
     return e
 }
+
+// Bridle legs are drawn about twice as thick as the wire they stand for (14 mm), so they read from an orbit
+// distance; the sizes in the rig file are the real ones. Owner, 2026-09-30: "the truss is not from the crane".
+const RIG_STEEL_W = 0.05
 
 export const slopedLineRigging = (rig, stage, hall) => {
     const r = rig.truss.rigging
@@ -813,21 +966,34 @@ export const slopedLineRigging = (rig, stage, hall) => {
     const line = box({
         id: `${RIG_PREFIX}truss-header`,
         name: `Truss line ${stage.trussW} m (${(rig.truss.pieces_m || []).join(' + ')} m, 290 mm box), sloped ${rig.truss.slope_deg}° up to house right, hung from the crane bridge on ${r.picks_u_m.length} bridled picks — rigging sign-off owed`,
-        pos: mid, size: [stage.trussW, t, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
+        pos: mid, size: [stage.trussW, t, t], colour: '#9aa0a6', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS
     })
     line.components.transform.rotation = [0, 0, round(stage.trussSlope, 9)]
     out.push(line)
     for (const p of pickGeometry(rig, stage)) {
         const tag = `pick ${p.i + 1}/${r.picks_u_m.length} (u ${p.u} m)`
         p.legs.forEach((top, k) => out.push(segment({
-            id: `${RIG_PREFIX}hoist-${p.i + 1}-bridle-${k ? 'b' : 'a'}`, name: `Bridle leg, ${tag} (rigging: a beam clamp on the ${k ? 'back' : 'audience-side'} girder's bottom flange, steel to the apex — ${round(p.included_deg, 0)}° between the legs)`,
-            from: [p.x, p.apexY, stage.trussZ], to: top, w: 0.014, colour: '#8a8d92'
+            id: `${RIG_PREFIX}hoist-${p.i + 1}-bridle-${k ? 'b' : 'a'}`, name: `Bridle leg, ${tag} (rigging: a beam clamp on the ${k ? 'audience-side' : 'back'} girder's bottom flange, steel to the apex — ${round(p.included_deg, 0)}° between the legs)`,
+            from: [p.x, p.apexY, stage.trussZ], to: top, w: RIG_STEEL_W, colour: '#8a8d92'
         })))
-        out.push(box({ id: `${RIG_PREFIX}hoist-${p.i + 1}`, name: `Chain hoist ${r.hoist}, ${tag} (rigging: under the bridle apex, at its shortest drop)`, pos: [p.x, p.apexY - 0.06 - 0.29, stage.trussZ], size: [0.25, 0.29, 0.2], colour: '#1b1c1f', metalness: 0.4, roughness: 0.6 }))
-        out.push(box({ id: `${RIG_PREFIX}hoist-${p.i + 1}-chain`, name: `Hoist chain and round sling, ${tag} (rigging)`, pos: [p.x, p.chordTop, stage.trussZ], size: [0.03, round(p.apexY - 0.35 - p.chordTop, 3), 0.03], colour: '#4a4c50', metalness: 0.9, roughness: 0.35 }))
+        // The beam clamp each leg ends in grips the girder's bottom flange, so it fills the clamp drop between the
+        // leg top and the girder underside. It was not drawn: the legs stopped `clamp_drop_m` short of the crane and
+        // the truss read as floating (owner, 2026-09-30: "the truss is not from the crane").
+        p.legs.forEach((top, k) => out.push(box({
+            id: `${RIG_PREFIX}hoist-${p.i + 1}-clamp-${k ? 'b' : 'a'}`,
+            name: `Beam clamp, ${tag} (rigging: on the ${k ? 'audience-side' : 'back'} girder's bottom flange, drawn to fill the ${r.bridle.clamp_drop_m} m clamp drop)`,
+            pos: [top[0], top[1], top[2]], size: [0.12, r.bridle.clamp_drop_m, 0.14], colour: '#7a7e85', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS, emissive: RIGGING_EMISSIVE
+        })))
+        out.push(box({ id: `${RIG_PREFIX}hoist-${p.i + 1}`, name: `Chain hoist ${r.hoist}, ${tag} (rigging: under the bridle apex, at its shortest drop)`, pos: [p.x, p.apexY - 0.06 - 0.29, stage.trussZ], size: [0.25, 0.29, 0.2], colour: '#45484d', metalness: 0.4, roughness: 0.6, emissive: RIGGING_EMISSIVE }))
+        out.push(box({ id: `${RIG_PREFIX}hoist-${p.i + 1}-chain`, name: `Hoist chain and round sling, ${tag} (rigging)`, pos: [p.x, p.chordTop, stage.trussZ], size: [0.03, round(p.apexY - 0.35 - p.chordTop, 3), 0.03], colour: '#8a8e95', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS, emissive: RIGGING_EMISSIVE }))
         out.push(segment({
             id: `${RIG_PREFIX}hoist-${p.i + 1}-steel`, name: `Safety steel, ${tag} (rigging: secondary, top chord to its own clamp on the back girder — independent of the bridle)`,
-            from: [p.x + 0.12, p.chordTop, stage.trussZ], to: [p.x + 0.12, p.legTopY, stage.crane.z_m - r.bridle.leg_spread_m / 2], w: 0.01, colour: '#b0b3b8'
+            from: [p.x + 0.12, p.chordTop, stage.trussZ], to: [p.x + 0.12, p.legTopY, stage.crane.z_m - r.bridle.leg_spread_m / 2], w: RIG_STEEL_W * 0.7, colour: '#b0b3b8'
+        }))
+        out.push(box({
+            id: `${RIG_PREFIX}hoist-${p.i + 1}-steel-clamp`,
+            name: `Safety steel clamp, ${tag} (rigging: its own clamp on the girder's bottom flange, drawn to fill the ${r.bridle.clamp_drop_m} m clamp drop)`,
+            pos: [p.x + 0.12, p.legTopY, stage.crane.z_m - r.bridle.leg_spread_m / 2], size: [0.08, r.bridle.clamp_drop_m, 0.1], colour: '#8d9198', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS, emissive: RIGGING_EMISSIVE
         }))
     }
     for (const tie of r.tieoffs || []) {
@@ -907,7 +1073,11 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
     }
     const t = stage.trussSection
     const trussTag = booth ? '(owner\'s intent, size ESTIMATED)' : '(ASSUMED)'
-    if (stage.crane) {
+    if (stage.halo) {
+        entities.push(...haloEntities(rig, stage))
+    } else if (stage.crane && stage.xArm) {
+        entities.push(...craneXEntities(rig, stage))
+    } else if (stage.crane) {
         // The line hung from the crane bridge: the truss, and at each pick point a spreader
         // across both girders, a chain hoist under it, its chain down to the top chord and a
         // safety steel beside it. Drawn so the hang can be read; NOT an engineered design —
@@ -919,29 +1089,29 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
         if (r.picks_u_m) entities.push(...slopedLineRigging(rig, stage, hall))
         else entities.push(box({
             id: `${RIG_PREFIX}truss-header`, name: `Truss line ${stage.trussW} m (${(rig.truss.pieces_m || []).join(' + ')} m, 290 mm box) hung from the crane bridge, bottom chord ${round(trim, 2)} m — rigging sign-off owed`,
-            pos: [lineX, trim, stage.trussZ], size: [stage.trussW, t, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
+            pos: [lineX, trim, stage.trussZ], size: [stage.trussW, t, t], colour: '#9aa0a6', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS
         }))
         const hoistDx = r.hoist_dx_m ?? [stage.trussW / 2 - 1.25]
         const picks = r.picks_u_m ? [] : mirroredDx(hoistDx)
         picks.forEach((dx, i) => {
             const x = ax + dx
             const tag = `pick ${i + 1}/${picks.length}`
-            entities.push(box({ id: `${RIG_PREFIX}hoist-${i + 1}-spreader`, name: `Spreader across both crane girders, ${tag} (rigging: beam clamps on the bottom flanges — sign-off owed)`, pos: [x, gb - 0.15, stage.trussZ], size: [0.15, 0.15, 2.9], colour: '#2a2b2e', metalness: 0.7, roughness: 0.5 }))
-            entities.push(box({ id: `${RIG_PREFIX}hoist-${i + 1}`, name: `Chain hoist ${r.hoist || '500 kg–1 t, D8+'}, ${tag} (rigging)`, pos: [x, gb - 0.15 - 0.45, stage.trussZ], size: [0.3, 0.45, 0.25], colour: '#1b1c1f', metalness: 0.4, roughness: 0.6 }))
+            entities.push(box({ id: `${RIG_PREFIX}hoist-${i + 1}-spreader`, name: `Spreader across both crane girders, ${tag} (rigging: beam clamps on the bottom flanges — sign-off owed)`, pos: [x, gb - 0.15, stage.trussZ], size: [0.15, 0.15, 2.9], colour: '#2a2b2e', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS, emissive: RIGGING_EMISSIVE }))
+            entities.push(box({ id: `${RIG_PREFIX}hoist-${i + 1}`, name: `Chain hoist ${r.hoist || '500 kg–1 t, D8+'}, ${tag} (rigging)`, pos: [x, gb - 0.15 - 0.45, stage.trussZ], size: [0.3, 0.45, 0.25], colour: '#45484d', metalness: 0.4, roughness: 0.6, emissive: RIGGING_EMISSIVE }))
             const chainLen = gb - 0.6 - (trim + t)
-            entities.push(box({ id: `${RIG_PREFIX}hoist-${i + 1}-chain`, name: `Hoist chain, ${tag} (rigging)`, pos: [x, trim + t, stage.trussZ], size: [0.03, round(chainLen, 3), 0.03], colour: '#4a4c50', metalness: 0.9, roughness: 0.35 }))
-            entities.push(box({ id: `${RIG_PREFIX}hoist-${i + 1}-steel`, name: `Safety steel, ${tag} (rigging: secondary, to the spreader)`, pos: [x + 0.12, trim + t, stage.trussZ], size: [0.012, round(gb - 0.15 - (trim + t), 3), 0.012], colour: '#8a8d92', metalness: 0.9, roughness: 0.3 }))
+            entities.push(box({ id: `${RIG_PREFIX}hoist-${i + 1}-chain`, name: `Hoist chain, ${tag} (rigging)`, pos: [x, trim + t, stage.trussZ], size: [0.03, round(chainLen, 3), 0.03], colour: '#8a8e95', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS }))
+            entities.push(box({ id: `${RIG_PREFIX}hoist-${i + 1}-steel`, name: `Safety steel, ${tag} (rigging: secondary, to the spreader)`, pos: [x + 0.12, trim + t, stage.trussZ], size: [0.012, round(gb - 0.15 - (trim + t), 3), 0.012], colour: '#8a8d92', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS, emissive: RIGGING_EMISSIVE }))
         })
     }
     for (const side of stage.truss && !stage.crane ? [-1, 1] : []) {
         entities.push(box({
             id: `${RIG_PREFIX}truss-tower-${side < 0 ? 'l' : 'r'}`, name: `Truss tower ${side < 0 ? 'left' : 'right'} ${trussTag}`,
-            pos: [ax + side * stage.trussW / 2, 0, stage.trussZ], size: [t, stage.trussH + t / 2, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
+            pos: [ax + side * stage.trussW / 2, 0, stage.trussZ], size: [t, stage.trussH + t / 2, t], colour: '#9aa0a6', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS
         }))
     }
     if (stage.truss && !stage.crane) entities.push(box({
         id: `${RIG_PREFIX}truss-header`, name: `Truss header ${stage.trussW} m @ ${stage.trussH} m ${trussTag}`,
-        pos: [ax, stage.trussH - t / 2, stage.trussZ], size: [stage.trussW + t, t, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
+        pos: [ax, stage.trussH - t / 2, stage.trussZ], size: [stage.trussW + t, t, t], colour: '#9aa0a6', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS
     }))
     for (const group of rig.groups) {
         const cls = rig.classes[group.class]
@@ -958,7 +1128,9 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
         if (slots.length !== group.count) {
             throw new Error(`group ${group.id}: asked for ${group.count}, the hall has room for ${slots.length} by the rule "${group.mount}"`)
         }
-        const byX = slots.map((s, i) => [s.pos[0], i]).sort((a, b) => a[0] - b[0]).map(([, i]) => i)
+        // rank along x, then z, then y — the room's own order (src/rigbuild/looks.js lookPoses), so a
+        // `solo` names the same lamp in both (lamps on the X's z arm share x = 0)
+        const byX = slots.map((s, i) => [s.pos, i]).sort((a, b) => a[0][0] - b[0][0] || a[0][2] - b[0][2] || a[0][1] - b[0][1]).map(([, i]) => i)
         const real = realIndices(group, slots.length, rig.budget, mode)
         const colour = look?.colours?.[group.id] || group.colour || cls.colour
         // A look's LEVEL for the group, 0..1 (absent = full): its intensity on the desk.
@@ -969,7 +1141,10 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
         const half = (op.angleDeg / 2) * DEG
         let groupReal = 0
         slots.forEach((slot, i) => {
-            const aimed = rule(slot, { i, n: slots.length, rank: byX.indexOf(i) }, gctx, spec)
+            // `rest_up: 1` with a solo: the lamps left dark stand straight up (a rested head) instead
+            // of taking the rule — a dark head asked to aim past its travel is no use to anyone
+            const resting = spec.rest_up === 1 && !soloKeeps(spec, byX.indexOf(i))
+            const aimed = resting ? { dir: [0, slot.orient === 'hung' ? -1 : 1, 0] } : rule(slot, { i, n: slots.length, rank: byX.indexOf(i) }, gctx, spec)
             const posed = aimFixture(geo, slot, aimed)
             const from = posed.lens
             const dir = posed.dir
@@ -1003,7 +1178,7 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
             const { pan, tilt } = aimAt(from, to)
             // `solo` (an aim parameter): only the lamp of that rank — counted from the
             // left along x, the rank the rules use — keeps the group's level; the rest are out.
-            const lampLevel = Number.isInteger(spec.solo) && byX.indexOf(i) !== spec.solo ? 0 : level
+            const lampLevel = soloKeeps(spec, byX.indexOf(i)) ? level : 0
             const isReal = real.has(i)
             if (isReal) groupReal += 1
             if (group.bake && !isReal && lampLevel > 0) {
@@ -1068,6 +1243,169 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
     }
     summary.washes = washes.length
     return { entities, fixtures, summary, stage, washes }
+}
+
+/** A thin box from `a` to `b` (room points): base-anchored at `a`, its +Y turned onto b - a (Euler XYZ = Rx·Rz here). */
+const strut = ({ id, name, a, b, w = 0.02, colour = '#8a8d92', metalness = STEEL_METALNESS, roughness = STEEL_ROUGHNESS }) => {
+    const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]
+    const len = Math.hypot(...d) || 1e-6
+    const [dx, dy, dz] = d.map((v) => v / len)
+    const rz = Math.asin(Math.max(-1, Math.min(1, -dx)))
+    const c = Math.cos(rz) || 1e-9
+    const rx = Math.atan2(dz / c, dy / c)
+    return box({ id, name, pos: a, size: [w, len, w], colour, metalness, roughness, rotation: [rx, 0, rz] })
+}
+
+/**
+ * The halo's steel (truss.shape 'triangle'): three sides of box truss (a stock straight each,
+ * `rig-halo-side-*`, which load-plot lays as pieces) with a 60° corner block at each node (drawn
+ * as its two legs), and at each corner the hang: a two-leg bridle (a V) whose ring sits over the
+ * corner, a chain hoist under the ring, its chain to the top chord, a safety steel from the
+ * crane beside it. The base corners' bridles lie along the girder above them (they hold the
+ * halo against moving along x); the apex, which lies beyond the bridge's audience-side girder,
+ * hangs from an OUTRIGGER — a truss laid across both girders' bottom flanges and out past the
+ * front one — with its bridle along the outrigger (holding the halo along z). Three V's in two
+ * directions hold x, z and the turn about the vertical. Drawn so the hang can be read; NOT an
+ * engineered design — rigging sign-off owed.
+ */
+export const haloEntities = (rig, stage) => {
+    const h = stage.halo
+    const t = stage.trussSection
+    const r = rig.truss.rigging || {}
+    const trim = stage.trussH - t / 2
+    const gb = stage.crane.girder_bottom_m
+    const into = stage.into
+    const out = []
+    const leg = rig.truss.corner_leg_m ?? 0.5
+    const corners = [['apex', h.apex], ['left', h.left], ['right', h.right]]
+    const sides = [[h.apex, h.left], [h.left, h.right], [h.right, h.apex]]
+    const steel = { colour: '#9aa0a6', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS }
+    sides.forEach(([a, b], i) => {
+        const dx = b[0] - a[0]
+        const dz = b[1] - a[1]
+        const len = Math.hypot(dx, dz)
+        const yaw = Math.atan2(-dz, dx)
+        const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]
+        const straight = len - 2 * leg
+        out.push(box({ id: `${RIG_PREFIX}halo-side-${i + 1}`, name: `Halo side ${i + 1}: ${round(straight, 2)} m straight, 290 mm box (${rig.truss.section_class || 'F34 class'}), bottom chord ${round(trim, 2)} m — rigging sign-off owed`, pos: [mid[0], trim, mid[1]], size: [straight, t, t], rotation: [0, yaw, 0], ...steel }))
+    })
+    corners.forEach(([name, p]) => {
+        // the corner block: its two legs along the two sides that meet here
+        const others = corners.filter(([n]) => n !== name).map(([, q]) => q)
+        others.forEach((q, k) => {
+            const dx = q[0] - p[0]
+            const dz = q[1] - p[1]
+            const len = Math.hypot(dx, dz)
+            const c = [p[0] + (dx / len) * (leg / 2), p[1] + (dz / len) * (leg / 2)]
+            out.push(box({ id: `${RIG_PREFIX}halo-corner-${name}-${k + 1}`, name: `Halo corner ${name}: ${rig.truss.corner || '60° 2-way corner block'} (leg ${leg} m${rig.truss.corner_leg_assumed ? ', ASSUMED' : ''})`, pos: [c[0], trim, c[1]], size: [leg + t / 2, t, t], rotation: [0, Math.atan2(-dz, dx), 0], ...steel }))
+        })
+    })
+    const girderZ = (sign) => stage.crane.z_m + sign * (Array.isArray(stage.crane.girders_dz_m) ? Math.abs(stage.crane.girders_dz_m[0]) : 1.1)
+    const spread = r.bridle_spread_m ?? 0.75
+    const drop = r.bridle_drop_m ?? 0.75
+    const hoistH = r.hoist_body_m ?? 0.34
+    const outrigger = r.outrigger || null
+    corners.forEach(([name, p], i) => {
+        const tag = `pick ${i + 1}/3 (${name})`
+        const beyond = name === 'apex' && outrigger
+        let ring
+        if (beyond) {
+            // the outrigger: a truss across both girders' bottom flanges, out past the front one
+            const z0 = girderZ(-into) - into * 0.1
+            const z1 = p[1] + into * (outrigger.past_apex_m ?? 0.5)
+            const oy = gb - t
+            const len = Math.abs(z1 - z0)
+            out.push(box({ id: `${RIG_PREFIX}halo-outrigger`, name: `Outrigger: ${outrigger.what || `${round(len, 1)} m of 290 mm box truss`} on beam clamps under both crane girders, cantilevered ${round(Math.abs(p[1] - girderZ(into)), 2)} m past the audience-side girder to pick the apex — CANTILEVER: rigging/structural sign-off owed`, pos: [p[0], oy, (z0 + z1) / 2], size: [t, t, len], ...steel }))
+            ring = [p[0], oy - drop, p[1]]
+            for (const [k, dz] of [[1, -spread], [2, spread]]) {
+                out.push(strut({ id: `${RIG_PREFIX}halo-bridle-${name}-${k}`, name: `Bridle leg ${k}/2, ${tag}: along the outrigger (a V in the z plane)`, a: ring, b: [p[0], oy, p[1] + dz] }))
+            }
+        } else {
+            const zg = girderZ(Math.sign(p[1] - stage.crane.z_m) || -into)
+            ring = [p[0], gb - drop, p[1]]
+            for (const [k, dx] of [[1, -spread], [2, spread]]) {
+                out.push(strut({ id: `${RIG_PREFIX}halo-bridle-${name}-${k}`, name: `Bridle leg ${k}/2, ${tag}: beam clamp on the girder's bottom flange (a V in the x plane)`, a: ring, b: [p[0] + dx, gb, zg] }))
+            }
+        }
+        out.push(box({ id: `${RIG_PREFIX}halo-hoist-${name}`, name: `Chain hoist ${r.hoist || '500 kg D8+'}, ${tag}, hook-suspended under the bridle ring`, pos: [ring[0], ring[1] - 0.1 - hoistH, ring[2]], size: [0.2, hoistH, 0.34], colour: '#45484d', metalness: 0.4, roughness: 0.6, emissive: RIGGING_EMISSIVE }))
+        const hookY = ring[1] - 0.1 - hoistH - 0.23
+        out.push(box({ id: `${RIG_PREFIX}halo-chain-${name}`, name: `Hoist chain + round sling to the corner, ${tag}`, pos: [p[0], trim + t, p[1]], size: [0.03, round(Math.max(0.05, hookY + 0.23 - (trim + t)), 3), 0.03], colour: '#8a8e95', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS }))
+        out.push(strut({ id: `${RIG_PREFIX}halo-steel-${name}`, name: `Safety steel, ${tag}: the corner to the crane (secondary, independent of the hoist)`, a: [p[0] + 0.12, trim + t, p[1]], b: [p[0] + 0.12, beyond ? gb - t : gb, beyond ? p[1] : p[1]], w: 0.012 }))
+    })
+    return out
+}
+
+/** (the X's own; the halo's `strut` above differs only in its default width) A thin box from `a` up to `b` (a steel, a chain, a bridle leg): base-anchored at `a`, turned so its +Y runs to `b`. */
+const xStrut = ({ id, name, a, b, w = 0.012, colour = '#8a8d92' }) => {
+    const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]
+    const len = Math.hypot(...d) || 1
+    const u = d.map((v) => v / len)
+    // three.js Euler XYZ with y-rotation 0 turns +Y to (-sin z, cos z cos x, cos z sin x)
+    const rz = -Math.asin(Math.max(-1, Math.min(1, u[0])))
+    const rx = Math.atan2(u[2], u[1])
+    const e = box({ id, name, pos: a, size: [w, len, w], colour, metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS })
+    e.components.transform.rotation = [round(rx, 6), 0, round(rz, 6)]
+    return e
+}
+
+/**
+ * crane-x — the X lying down, as it would be rigged (RIG_BUILD.md §15.8). Drawn so the hang can be
+ * read; NOT an engineered design — rigging sign-off owed. The arms, the 4-way junction, and at each
+ * pick a two-leg bridle (a V, 90° between the legs) from beam clamps on the girder flanges down to
+ * the hook of a climbing chain hoist whose body sits on the top chord, a safety steel, and at each
+ * arm end two restraint steels up to the girders (a V in plan) against the X turning or swinging.
+ * Pure.
+ */
+export const craneXEntities = (rig, stage) => {
+    const out = []
+    const r = rig.truss.rigging || {}
+    const t = stage.trussSection
+    const ax = stage.axis ?? 0
+    const z0 = stage.trussZ
+    const trim = stage.trussH - t / 2
+    const top = trim + t
+    const arm = stage.xArm.arm
+    const j = stage.xArm.junction
+    const crane = stage.crane
+    const gb = crane.girder_bottom_m
+    const gdz = crane.girders_dz_m || [-1.1, 1.1]
+    const steel = '#9aa0a6'
+    const pieces = (rig.truss.pieces_m || []).join(' + ')
+    out.push(box({ id: `${RIG_PREFIX}truss-header`, name: `X arm along the bridge ${arm} m (${pieces} m, 290 mm box) hung from the crane bridge, bottom chord ${round(trim, 2)} m — rigging sign-off owed`, pos: [ax, trim, z0], size: [arm, t, t], colour: steel, metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS }))
+    out.push(box({ id: `${RIG_PREFIX}truss-z-arm`, name: `X arm across the bridge, out over the crowd, ${arm} m (${pieces} m, 290 mm box), bottom chord ${round(trim, 2)} m — rigging sign-off owed`, pos: [ax, trim, z0], size: [t, t, arm], colour: steel, metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS }))
+    if (j) out.push(box({ id: `${RIG_PREFIX}truss-junction`, name: `4-way flat cross junction ${rig.truss.junction?.code || ''} (${j} m across)`.replace('  ', ' '), pos: [ax, trim - 0.005, z0], size: [j, t + 0.01, j], colour: '#80868c', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS }))
+    const picks = []
+    for (const pk of r.picks || []) for (const s of [-1, 1]) picks.push({ ...pk, s })
+    picks.forEach((pk, i) => {
+        const n = i + 1
+        const tag = `pick ${n}/${picks.length}`
+        const P = pk.arm === 'x' ? [ax + pk.s * pk.d_m, top, z0] : [ax, top, z0 + pk.s * pk.d_m]
+        // the bridle's two anchors on the girders' bottom flanges, and its apex (90° between the legs)
+        const anchors = pk.arm === 'x'
+            ? gdz.map((dz) => [P[0], gb, z0 + dz])
+            : [-1, 1].map((k) => [P[0] + k * (pk.legs_dx_m ?? 0.75), gb, P[2]])
+        const half = Math.hypot(anchors[1][0] - anchors[0][0], anchors[1][2] - anchors[0][2]) / 2
+        const apex = [P[0], gb - half, P[2]]
+        for (const [k, A] of anchors.entries()) {
+            out.push(box({ id: `${RIG_PREFIX}xpick-${n}-clamp-${k + 1}`, name: `Beam clamp on the girder flange, ${tag} (rigging)`, pos: [A[0], gb - 0.08, A[2]], size: [0.18, 0.08, 0.18], colour: '#2a2b2e', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS, emissive: RIGGING_EMISSIVE }))
+            out.push(xStrut({ id: `${RIG_PREFIX}xpick-${n}-leg-${k + 1}`, name: `Bridle leg ${k + 1}/2 (steel wire rope, 90° between the legs), ${tag} (rigging)`, a: apex, b: A, w: 0.016 }))
+        }
+        // the climbing hoist: its body on the top chord, its chain up to the bridle's apex
+        out.push(box({ id: `${RIG_PREFIX}xpick-${n}-hoist`, name: `Climbing chain hoist ${r.hoist || 'D8+ 500 kg'}, ${tag} (rigging)`, pos: [P[0], top + 0.08, P[2]], size: [0.2, 0.34, 0.2], colour: '#45484d', metalness: 0.4, roughness: 0.6, emissive: RIGGING_EMISSIVE }))
+        out.push(xStrut({ id: `${RIG_PREFIX}xpick-${n}-chain`, name: `Hoist chain to the bridle, ${tag} (rigging)`, a: [P[0], top + 0.42, P[2]], b: apex, w: 0.03, colour: '#8a8e95' }))
+        out.push(xStrut({ id: `${RIG_PREFIX}xpick-${n}-steel`, name: `Safety steel, ${tag} (rigging: secondary, truss to the girder)`, a: [P[0] + 0.1, top, P[2] + 0.1], b: anchors[0].map((v, k) => (k === 1 ? v : v + 0.1)) }))
+    })
+    // restraints: at each arm end two steels up to the girders, spread in plan, so the X can neither
+    // turn about its pick points nor swing along either axis (the owner's concern, 2026-09-29)
+    const ends = [[ax - arm / 2 + 0.1, z0, 'x'], [ax + arm / 2 - 0.1, z0, 'x'], [ax, z0 - arm / 2 + 0.1, 'z'], [ax, z0 + arm / 2 - 0.1, 'z']]
+    const tieDx = r.tieoffs?.dx_m ?? 1.5
+    ends.forEach(([x, z, a], i) => {
+        const to = a === 'x'
+            ? gdz.map((dz) => [x, gb, z0 + dz])
+            : [-1, 1].map((k) => [x + k * tieDx, gb, z0 + (z > z0 ? Math.max(...gdz) : Math.min(...gdz))])
+        to.forEach((b, k) => out.push(xStrut({ id: `${RIG_PREFIX}xtie-${i + 1}-${k + 1}`, name: `Restraint steel ${k + 1}/2 at the ${a === 'x' ? (x < ax ? 'left' : 'right') : (z > z0 ? 'crowd' : 'back')} end, to the crane girder (against sway and turning; rigging)`, a: [x, top, z], b, w: 0.01, colour: '#b8bcc2' })))
+    })
+    return out
 }
 
 /**

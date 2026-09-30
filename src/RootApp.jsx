@@ -30,8 +30,10 @@ import { getMakeLocationState, isMakeLocation } from './make/makeRouting.js'
 import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
 import { getPerformLocationState, isPerformLocation } from './perform/performRouting.js'
 import { getPatchSheetLocationState, isPatchSheetLocation } from './rigbuild/patchRouting.js'
+import { getVisualiseLocationState, isVisualiseLocation } from './rigbuild/visualiseRouting.js'
 import { getPlotLocationState, isPlotLocation } from './rigbuild/plotRouting.js'
 import { getCardsLocationState, isCardsLocation } from './rigbuild/cardsRouting.js'
+import { getScenesLocationState, isScenesLocation } from './rigbuild/scenesRouting.js'
 import { getEquipmentLocationState, isEquipmentLocation } from './rigbuild/equipmentRouting.js'
 import { getBuildLocationState, isBuildLocation } from './rigbuild/buildRouting.js'
 import { getChatLocationState, getPrivateChatTarget } from './chat/chatRouting.js'
@@ -64,8 +66,10 @@ const ScanSurface = lazy(() => import('./scan/ScanSurface.jsx'))
 // to go live.
 const KitPage = lazy(() => import('./kit/KitPage.jsx'))
 const PatchSheetSurface = lazy(() => import('./rigbuild/PatchSheetSurface.jsx'))
+const VisualiserSurface = lazy(() => import('./rigbuild/VisualiserSurface.jsx'))
 const PlotSurface = lazy(() => import('./rigbuild/PlotSurface.jsx'))
 const CardsSurface = lazy(() => import('./rigbuild/CardsSurface.jsx'))
+const ScenesSurface = lazy(() => import('./rigbuild/ScenesSurface.jsx'))
 const EquipmentSurface = lazy(() => import('./rigbuild/EquipmentSurface.jsx'))
 const BuildSurface = lazy(() => import('./rigbuild/BuildSurface.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
@@ -396,8 +400,10 @@ function AppRouter() {
     const mapState = getMapLocationState(location)
     const performState = getPerformLocationState(location)
     const patchSheetState = getPatchSheetLocationState(location)
+    const visualiseState = getVisualiseLocationState(location)
     const plotState = getPlotLocationState(location)
     const cardsState = getCardsLocationState(location)
+    const scenesState = getScenesLocationState(location)
     const equipmentState = getEquipmentLocationState(location)
     const buildState = getBuildLocationState(location)
     const chatState = getChatLocationState(location)
@@ -601,6 +607,18 @@ function AppRouter() {
         )
     }
 
+    // `/{space}/visualise/{projectId}` — the visualiser (src/rigbuild/, RIG_BUILD.md §18):
+    // the light desk and the room side by side, the room drawn from the desk's DMX. No
+    // gate of its own, like the patch sheet: both sides are the real pages, framed, and
+    // each enforces its own rules (the desk is local-only; the room is /{space}/p/{id}).
+    if (isVisualiseLocation(visualiseState)) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <VisualiserSurface spaceId={visualiseState.spaceId} projectId={visualiseState.projectId} />
+            </Suspense>
+        )
+    }
+
     // `/{space}/plot/{projectId}` — the lighting plot, view B (src/rigbuild/): the rig
     // drawn from above, the room beside it. Members edit it behind the same gate as
     // Perform (it writes the same document through the same op layer as the Studio);
@@ -614,6 +632,13 @@ function AppRouter() {
     // Members edit it, a visitor to a public space reads it — the plot's rule (RigToolRoute).
     if (isCardsLocation(cardsState)) {
         return <RigToolRoute spaceId={cardsState.spaceId} surface={(readOnly) => <CardsSurface spaceId={cardsState.spaceId} projectId={cardsState.projectId} readOnly={readOnly} />} />
+    }
+
+    // `/{space}/scenes/{projectId}` — the scene deck (src/rigbuild/, RIG_BUILD.md §22): A the
+    // scene tiles and their four controls, B the loop as a timeline, sync by a carried file.
+    // Members edit it, a visitor to a public space reads it — the plot's rule (RigToolRoute).
+    if (isScenesLocation(scenesState)) {
+        return <RigToolRoute spaceId={scenesState.spaceId} surface={(readOnly) => <ScenesSurface spaceId={scenesState.spaceId} projectId={scenesState.projectId} readOnly={readOnly} />} />
     }
 
     // `/{space}/equipment/{projectId}` — the show's equipment list (src/rigbuild/): the

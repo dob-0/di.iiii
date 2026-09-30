@@ -758,7 +758,7 @@ const normalizeRentalList = (list) => {
 // rig in the same hall, each a project of its own. `siblings` is the set, in order, so the
 // space view can offer a switch between them. Short words and ids only; a version with no
 // id, or a set that does not list it, is dropped.
-const RIG_VERSIONS_CAP = 8
+const RIG_VERSIONS_CAP = 32
 const variantId = (value) => (typeof value === 'string' && /^[a-z0-9][a-z0-9-]{0,47}$/.test(value.trim()) ? value.trim() : '')
 const normalizeRigVariant = (value) => {
   if (!value || typeof value !== 'object') return null
@@ -771,7 +771,11 @@ const normalizeRigVariant = (value) => {
     return sid && projectId ? { id: sid, projectId, title: planText(s.title, 60) || sid, summary: planText(s.summary, 160) } : null
   }).filter(Boolean)
   if (!siblings.some((s) => s.id === id)) return null
-  return { set, id, title: planText(value.title, 60) || id, summary: planText(value.summary, 160), source: planText(value.source, 480), siblings }
+  // A labelled COPY of a version (copy-version.mjs, RIG_BUILD.md §15.11) says what it is a copy of, so
+  // the switch keeps it apart from the live versions; kept through every normalisation pass.
+  const copyId = variantId(value.copyOf?.projectId)
+  const copyOf = copyId ? { projectId: copyId, id: variantId(value.copyOf.id), label: planText(value.copyOf.label, 60) } : null
+  return { set, id, title: planText(value.title, 60) || id, summary: planText(value.summary, 160), source: planText(value.source, 480), siblings, ...(copyOf ? { copyOf } : {}) }
 }
 
 // THE RIG'S DESIGNED LOOKS (RIG_BUILD.md §11.4, view C): per look, a rule and its
@@ -1135,7 +1139,7 @@ const normalizeWorldState = (world = {}) => {
 
 const RENDER_TONE_MAPPINGS = new Set(['ACESFilmic', 'AgX', 'Neutral', 'none'])
 
-// THE ROOM'S AIR (2026-09-29, docs/architecture/RIG_BUILD.md §18): a uniform haze the
+// THE ROOM'S AIR (2026-09-29, docs/architecture/RIG_BUILD.md §20): a uniform haze the
 // beams scatter in — `scattering` σs in 1/m, `anisotropy` the Henyey–Greenstein g.
 // Present, the renderer draws every visible beam physically (src/objectComponents/
 // beamAir.js); absent — every room made before it — the old flat cones. Stored only
@@ -1488,6 +1492,25 @@ const normalizeOutputShow = (show) => {
   return { machine, ...(name ? { name } : {}), screen }
 }
 
+// The light pool's knobs (src/rigbuild/lightPool.js lightPoolOptions clamps the same way):
+// kept so the room reads them — the normaliser used to drop the whole key. Absent means
+// absent: only what the document says is written, each number clamped.
+const normalizeLightPool = (pool) => {
+  if (!pool || typeof pool !== 'object' || Array.isArray(pool)) return null
+  const out = {}
+  if (pool.enabled === true) out.enabled = true
+  const num = (v) => (v === null || v === '' || v === undefined || !Number.isFinite(Number(v)) ? null : Number(v))
+  const slots = num(pool.slots)
+  if (slots !== null) out.slots = Math.max(1, Math.min(12, Math.floor(slots)))
+  for (const key of ['minHoldMs', 'handoverMs', 'margin']) {
+    const v = num(pool[key])
+    if (v !== null) out[key] = Math.max(0, v)
+  }
+  const b = pool.bounds
+  const vec = (a) => Array.isArray(a) && a.length >= 3 && a.slice(0, 3).every((x) => Number.isFinite(Number(x))) ? a.slice(0, 3).map(Number) : null
+  if (b && vec(b.min) && vec(b.max)) out.bounds = { min: vec(b.min), max: vec(b.max) }
+  return Object.keys(out).length ? out : null
+}
 const normalizeMappingState = (mapping = {}) => {
   const source = mapping && typeof mapping === 'object' ? mapping : {}
   const output = source.output && typeof source.output === 'object' ? source.output : {}
@@ -1530,7 +1553,13 @@ const normalizeMappingState = (mapping = {}) => {
     // anywhere see the same moment. Written only when set, like `loop`.
     ...(typeof source.showEpoch === 'number' && Number.isFinite(source.showEpoch) && source.showEpoch > 0
         ? { showEpoch: Math.round(source.showEpoch) }
-        : {})
+        : {}),
+    // Who plays the show where a desk also answers (RIG_BUILD.md §15.8): 'clock' — the
+    // document's own clock, even on a local install whose desk holds another project's
+    // show (a comparison version the desk does not carry). Absent = the desk first (§16).
+    ...(source.showSource === 'clock' ? { showSource: 'clock' } : {}),
+  // The light pool's switch and knobs (src/rigbuild/lightPool.js); absent = off, the defaults.
+  ...(normalizeLightPool(source.lightPool) ? { lightPool: normalizeLightPool(source.lightPool) } : {})
   }
 }
 

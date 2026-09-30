@@ -4,7 +4,7 @@
 // an atmosphere (`renderSettings.atmosphere`); without one the cone keeps its old
 // flat, additive drawing (spotBeam.js) and no room published before this changes.
 //
-// The model (docs/architecture/RIG_BUILD.md §18) is single scattering in a
+// The model (docs/architecture/RIG_BUILD.md §20) is single scattering in a
 // homogeneous participating medium — the model real-time engines use for
 // volumetric lights (S. Hillaire, "Physically Based and Unified Volumetric
 // Rendering in Frostbite", SIGGRAPH 2015 course; B. Wronski, "Volumetric Fog",

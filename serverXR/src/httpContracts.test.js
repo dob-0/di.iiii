@@ -3560,6 +3560,43 @@ describe('a space\'s contents', () => {
         const authoredIds = (await authored.json()).projects.map((p) => p.id).sort()
         expect(authoredIds).toEqual([archived.id, draft.id, legacy.id, live.id].sort())
     })
+
+    // 2026-09-30: the rig version switch was built from a sibling list frozen into each
+    // document, so Minimal named 2 of the space's 8 live versions. The switch now reads
+    // the space's own list; each row carries the version mark of its document, and only that.
+    it('carries a rig version mark on a row, and nothing on a row without one', async () => {
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: { AUTH_SESSION_COOKIE_SECURE: 'false' }
+        })
+        await makeSpace(server, 'contents-open', 'Contents Open')
+        await publish(server, 'contents-open')
+        const plain = await createServerProject(server, 'contents-open', { title: 'Plain Room', slug: 'plain-room' })
+        const halo = await createServerProject(server, 'contents-open', { title: 'Halo', slug: 'halo' })
+        const current = await (await fetch(`${server.baseUrl}/api/projects/${halo.id}/document`, { headers: withAuth(server.apiToken) })).json()
+        const mark = {
+            set: 'moxir-2026-10-17', id: 'minimal-halo', title: 'Minimal · halo', summary: 'a ring',
+            source: 'x', siblings: [{ id: 'a', projectId: 'a', title: 'A' }, { id: 'minimal-halo', projectId: halo.id, title: 'Minimal · halo' }],
+            copyOf: { projectId: 'moxir-hall-minimal', id: 'minimal', label: 'old hall 09-29' }
+        }
+        const put = await fetch(`${server.baseUrl}/api/projects/${halo.id}/document`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({
+                ...current.document,
+                entities: [{ id: 'rig-show', type: 'group', name: 'show', components: { transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }, rigVariant: mark } }]
+            })
+        })
+        expect(put.status).toBe(200)
+
+        const { projects } = await (await fetch(`${server.baseUrl}/api/spaces/contents-open/contents`)).json()
+        const byId = Object.fromEntries(projects.map((p) => [p.id, p]))
+        expect('rigVariant' in byId[plain.id]).toBe(false)
+        expect(byId[halo.id].rigVariant).toEqual({
+            set: 'moxir-2026-10-17', id: 'minimal-halo', title: 'Minimal · halo', summary: 'a ring',
+            copyOf: { projectId: 'moxir-hall-minimal', label: 'old hall 09-29' }
+        })
+    })
 })
 
 // The safety net (2026-09-16): every change has an author the SERVER stamped,

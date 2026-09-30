@@ -24,6 +24,9 @@ import { RIG_SHOW_ID } from '../../src/rigbuild/rental.js'
 export const MOUNT_POSITION = {
     'truss-header': () => 'truss',
     'truss-top': () => 'truss-top',
+    // crane-x: the X's arms are truss runs like any other — the room finds these lamps on them
+    'x-top': () => 'truss-top',
+    'x-under': () => 'truss',
     'crane-bridge': () => 'crane-bridge',
     'tower-ladder': () => 'tower-ladders',
     'truss-towers': () => 'tower-tops',
@@ -32,7 +35,10 @@ export const MOUNT_POSITION = {
     'column-bases': () => 'column-bases',
     'column-uplight': (g) => (g.columns?.rows === 'next' ? 'outer-columns' : 'column-faces'),
     'backdrop-floor': () => 'backdrop',
-    'nave-columns': () => 'dance-columns'
+    'nave-columns': () => 'dance-columns',
+    // the halo (RIG_BUILD.md §15.8): no derived slot, each group its own named position —
+    // moxir.mjs writes the same name on every lamp ("halo <group id in words>")
+    halo: (g) => `halo-${g.id}`
 }
 
 const typeIdOf = (code) => String(code || '').trim().toLowerCase().replace(/\s+/g, '-')

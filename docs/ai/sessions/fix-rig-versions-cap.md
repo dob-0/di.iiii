@@ -1,0 +1,6 @@
+## 2026-09-30 — a version listed past the eighth sibling keeps its mark
+
+- The copy-repair agent found `RIG_VERSIONS_CAP = 8` (src/shared/projectSchema.js, mirrored in shared/projectSchema.cjs): `normalizeRigVariant` kept only the first eight siblings and then dropped the WHOLE mark when the project's own id was not among them. MOXIR's set is now 14 entries (live versions, the two ground versions and six labelled copies), so the two X old-hall copies (entries 10 and 12) had no mark at all — they never reached the version switch, and every future version past the eighth would vanish the same way. Measured on the owner's install: exactly those two projects have `rigVariant` missing.
+- The cap is 32 in both files (the switch itself is derived from the space's live contents, so the stored list is only a fallback); `serverXR/src/schemaSync.test.js` gains a test with 14 siblings and the mark on the 12th; 60 pass with the change, 1 fails with the cap reverted.
+- Owed: the two X copies still have to be re-marked in place by the `--adopt` mode (branch feat/copy-version-adopt), which refuses them until this cap is in the running server.
+- Not seen on a screen; needs the server restart of the next install.

@@ -1,5 +1,5 @@
 // LUMA — how bright a rendered frame reads, as numbers, so "too dark" is a
-// measurement and not an impression (docs/architecture/RIG_BUILD.md §18).
+// measurement and not an impression (docs/architecture/RIG_BUILD.md §20).
 //
 // Luma Y' = 0.2126 R' + 0.7152 G' + 0.0722 B' on the frame's own 8-bit sRGB-encoded
 // values (ITU-R BT.709-6, item 3.2 — the weights applied to gamma-encoded

@@ -2,7 +2,7 @@
 // for what the rig's own light returns off its floor, walls and roof. This is that
 // return, as one ambient term, from the lamps the room is drawing right now (so the
 // red room glows faintly red, the one-beam blackout is nearly black, the white
-// cathedral lifts the whole hall a little). RIG_BUILD.md §18.
+// cathedral lifts the whole hall a little). RIG_BUILD.md §20.
 //
 // The model is the integrating-sphere relation for the mean illuminance an
 // enclosure's walls get from their own inter-reflections (Labsphere, "A Guide to

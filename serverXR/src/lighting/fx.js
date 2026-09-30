@@ -17,6 +17,8 @@ const FX_MODES = ['none', 'strobe', 'chase', 'pulse', 'sine', 'sparkle', 'comet'
 // between pushes and never reaches the wire, so every stepped mode below quantises its
 // clock to the frame grid and floors its step at a whole number of frames. Without this,
 // a fast strobe's 6ms on-window lands between two 25ms frames and the rig just dims.
+// Mirror of src/rigbuild/strobeCap.js (serverXR cannot import from src); a test pins both.
+const MAX_STROBE_HZ = 3;
 const FRAME_MS = 25;
 
 // `exclude` is a list of profile NAMES the effects never touch: the render path gives any
@@ -189,7 +191,9 @@ function fxLevel(fx, fixture, i, n, now) {
     case 'strobe': {
       // Eight flashes to the beat, on for a third of each. The floors are whole frames:
       // one frame on, one frame off is the fastest strobe the 40 Hz loop can carry.
-      const slice = Math.max(FRAME_MS * 2, Math.floor(beatMs / 8 / FRAME_MS) * FRAME_MS);
+      // And never faster than 3 flashes a second, whatever the bpm (the room's rule,
+      // src/rigbuild/strobeCap.js MAX_STROBE_HZ): a slice is one flash, so >= 1000/3 ms.
+      const slice = Math.max(Math.ceil(1000 / MAX_STROBE_HZ / FRAME_MS) * FRAME_MS, Math.floor(beatMs / 8 / FRAME_MS) * FRAME_MS);
       const on = (tq % slice) < Math.max(FRAME_MS, Math.floor(slice / 3 / FRAME_MS) * FRAME_MS);
       return fxApplyDepth(on ? 255 : 0, depth);
     }

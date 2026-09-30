@@ -28,6 +28,11 @@
  *                         `--look list` prints them and sends nothing
  *   --fixtures <dir>      the built fixture models (default scripts/place/fixtures/glb)
  *   --remove              only take the rig down (delete every rig- entity)
+ *   --wash-per-look       bake one wash PER LOOK of the rig file — entity `rig-wash:<lookId>`, hidden
+ *                         until the room plays that look (RIG_BUILD.md §15.13) — and touch nothing
+ *                         else; a look whose PARs are out bakes none. Each asset is uploaded once
+ *                         (content-addressed); the project's wash bytes together are refused over
+ *                         2 MB (wash-plan.mjs). The single `rig-wash` is left as the fallback.
  *   --wash-only           re-bake ONLY the column wash (`rig-wash`) and touch nothing else (a look
  *                         that bakes none takes the old wash away) —
  *                         for a project whose lamps are live, typed entities (load-plot.mjs
@@ -55,6 +60,7 @@ import { RIG_PREFIX, SHADOW_SAFE_REAL_LIGHTS, buildRig, nightOps, openingOps } f
 import { beamsGlb } from './beams-glb.mjs'
 import { FIXTURE_DIR, fixturesGlb, readGeometry } from './fixtures-glb.mjs'
 import { washGlb } from './wash-glb.mjs'
+import { freedAssetOps, perLookWashOps, uploadsNeeded, washBudget, washRemovalLine } from './wash-plan.mjs'
 
 const args = parseArgs()
 
@@ -126,6 +132,7 @@ const main = async () => {
         const geometry = Object.fromEntries([...kinds].map((k) => [k, readGeometry(k, fixtureDir)]))
         built = buildRig(rig, hall, { mode, look: args.look ? String(args.look) : undefined, geometry, manifest })
         built.fixtureDir = fixtureDir
+        built.bakeWith = { hall, mode, geometry, manifest } // --wash-per-look builds every look the same way
         const s = built.summary
         say(`${rig.rig}`)
         say(`  look: ${s.look || '(none — each group\'s own aim)'}${s.look ? ` — ${rig.looks[s.look].title}` : ''}`)
@@ -155,6 +162,28 @@ const main = async () => {
             say(`  fixture bodies written to ${file}`)
         }
     }
+    // One wash per look: every look of the rig file baked the way --wash-only --look <id> bakes one.
+    let bakes = null
+    if (args['wash-per-look']) {
+        if (!built) die('--wash-per-look needs --rig and --hall (it bakes every look of the rig file).')
+        const lookIds = Object.keys(rig.looks || {})
+        if (!lookIds.length) die(`${args.rig} names no looks, so there is nothing to bake per look.`)
+        bakes = []
+        for (const lookId of lookIds) {
+            const one = buildRig(rig, built.bakeWith.hall, { ...built.bakeWith, look: lookId })
+            if (!one.washes.length) { say(`  ${lookId.padEnd(20)} bakes no wash (its PARs are out)`); continue }
+            const bytes = await washGlb(one.washes)
+            bakes.push({ lookId, bytes, count: one.washes.length })
+            say(`  ${lookId.padEnd(20)} ${String(one.washes.length).padStart(3)} washes, ${(bytes.length / 1024).toFixed(0)} KB`)
+        }
+        if (args['dry-run']) {
+            const budget = washBudget({ bakes })
+            say(`  ${budget.line} (the project's own wash not counted in a dry run)`)
+            if (!budget.ok) die(budget.message)
+            say(`[dry run] would write ${bakes.length} per-look washes (rig-wash:<look>) to ${project} on ${api}; the single rig-wash left alone.`)
+            return
+        }
+    }
     if (args['dry-run']) {
         if (args['wash-only']) { say(`[dry run] would replace only ${RIG_PREFIX}wash in ${project} on ${api} (${built?.washes.length || 0} washes).`); return }
         say(`[dry run] would replace the ${RIG_PREFIX}* entities in ${project} on ${api}${built ? ` with ${built.entities.length}` : ''}.`)
@@ -162,6 +191,32 @@ const main = async () => {
     }
     if (!token) die('No API token found, so nothing was sent.', 'Set DI_API_TOKEN or pass --token-file.')
     const client = makeClient(api, token)
+
+    if (bakes) {
+        const current = must(await client.get(`/api/projects/${project}/document`), 'reading the hall')
+        const have = current.document?.entities || []
+        const assets = current.document?.assets || []
+        const budget = washBudget({ bakes, have, assets })
+        say(`  ${budget.line}`)
+        if (!budget.ok) die(budget.message)
+        // Upload once per distinct content the project does not hold yet (asset id = sha256 of the bytes).
+        const byHash = new Map(assets.map((a) => [a.id, a]))
+        const uploaded = new Map()
+        for (const u of uploadsNeeded({ bakes, assets })) {
+            const asset = await uploadGlb(client, project, u.bytes, `rig-wash-${u.lookId}.glb`)
+            uploaded.set(u.hash, asset)
+        }
+        const assetFor = (lookId) => {
+            const bake = bakes.find((b) => b.lookId === lookId)
+            const hash = uploadsNeeded({ bakes: [bake] })[0].hash
+            return uploaded.get(hash) || byHash.get(hash)
+        }
+        const ops = perLookWashOps({ have, bakes, assetFor })
+        const result = must(await client.post(`/api/projects/${project}/ops`, { baseVersion: Number(current.version) || 0, ops }), 'writing the per-look washes')
+        const took = ops.filter((o) => o.type === 'deleteEntity').length
+        say(`  ${bakes.length} per-look washes written (${uploaded.size} uploaded, ${bakes.length - uploaded.size} already held), ${took} old ones taken down; the single rig-wash and everything else untouched (document version ${result.version ?? '?'})`)
+        return
+    }
 
     if (args['night-only']) {
         const [world] = nightOps(rig)
@@ -201,7 +256,7 @@ const main = async () => {
                 baseVersion: Number(current.version) || 0,
                 ops: [
                     { type: 'deleteEntity', payload: { entityId: was.id } },
-                    ...(was.components?.media?.assetId ? [{ type: 'deleteAsset', payload: { assetId: was.components.media.assetId } }] : [])
+                    ...freedAssetOps({ removed: [was], have: current.document?.entities || [] })
                 ]
             }), 'removing the wash')
             say('  this look bakes no washes: the old wash is taken away')
@@ -225,7 +280,7 @@ const main = async () => {
             baseVersion: Number(current.version) || 0,
             ops: [
                 ...(was ? [{ type: 'deleteEntity', payload: { entityId: was.id } }] : []),
-                ...(was?.components?.media?.assetId ? [{ type: 'deleteAsset', payload: { assetId: was.components.media.assetId } }] : []),
+                ...(was ? freedAssetOps({ removed: [was], have: current.document?.entities || [], keep: [asset.id] }) : []),
                 { type: 'upsertAsset', payload: { asset } },
                 { type: 'createEntity', payload: { entity: wash } }
             ]
@@ -310,10 +365,9 @@ const main = async () => {
     const current = must(await client.get(`/api/projects/${project}/document`), 'reading the hall')
     const old = (current.document?.entities || []).filter((entity) => entity.id.startsWith(RIG_PREFIX))
     // The old baked beams' file goes out of the document with its entity.
-    const oldAssets = old.map((entity) => entity.components?.media?.assetId).filter(Boolean)
     const all = [
         ...old.map((entity) => ({ type: 'deleteEntity', payload: { entityId: entity.id } })),
-        ...oldAssets.map((assetId) => ({ type: 'deleteAsset', payload: { assetId } })),
+        ...freedAssetOps({ removed: old, have: current.document?.entities || [], keep: ops.filter((o) => o.type === 'upsertAsset').map((o) => o.payload.asset?.id).filter(Boolean) }),
         ...ops
     ]
     if (!all.length) {
@@ -325,6 +379,8 @@ const main = async () => {
         ops: all
     }), `writing ${all.length} changes to ${project}`)
     say(`  took down ${old.length}, hung ${entities.length} (document version ${result.version ?? '?'})`)
+    const washLine = washRemovalLine(old)
+    if (washLine) say(washLine)
 
     // Belt and braces: whatever was chosen, count the real lights the server
     // will actually render, and refuse to leave shadows on past the ceiling —

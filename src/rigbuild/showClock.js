@@ -19,7 +19,9 @@
 // Precedence (who drives the room), highest first — `showDriver` below:
 //   1. explicit  — a page's own GO (the cards page with no desk: a per-tab preview)
 //   2. desk      — a light desk answers here (a local install): the desk is the driver,
-//                  even when it is dark; this clock never runs beside it
+//                  even when it is dark; this clock never runs beside it — UNLESS the
+//                  document says `mappingState.showSource: 'clock'` (§15.8): then its
+//                  own clock plays it, desk or no desk
 //   3. clock     — no desk, and the document carries a show (cues with rig looks and a
 //                  showEpoch): this file
 //   4. document  — none of those: the room as saved
@@ -46,7 +48,7 @@ export const showOf = (document) => {
             fadeMs: Math.max(0, Math.min(60, Number(c.fade) || 0)) * 1000
         }))
     if (!cues.length) return null
-    return { epoch, loop: ms.loop === true, cues }
+    return { epoch, loop: ms.loop === true, cues, ...(ms.showSource === 'clock' ? { source: 'clock' } : {}) }
 }
 
 /**
@@ -127,6 +129,10 @@ export const clockFadeOf = (state) => (state
 /** Who drives the room — see the precedence at the top of this file. */
 export const showDriver = ({ explicit, deskChecked, deskPresent, show }) => {
     if (explicit !== undefined) return 'explicit'
+    // a document that says its show plays by its own clock (mappingState.showSource
+    // 'clock') is not driven by a desk that happens to answer here: the desk holds
+    // another project's show (RIG_BUILD.md §15.8)
+    if (show?.source === 'clock') return 'clock'
     if (deskPresent) return 'desk'
     if (!show) return 'document'
     if (!deskChecked) return 'pending'

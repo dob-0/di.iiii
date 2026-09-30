@@ -1693,7 +1693,7 @@ export const WIKI_ARTICLES = [
             'Aim at what you are building on. A lamp hangs at the nearest clamp point of a truss, or stands on a deck or the floor. A truss aimed at a tower sits on its top; aimed at another truss it continues it from the nearer end; aimed at the floor it hangs at the height Q and Z set. A tower aimed under a truss end stands on the floor and is built up to it. A deck joins the edge of the deck you aim at. R turns a piece a quarter (Shift+R 15°). Right-click removes what the crosshair is on, with the lamps hanging on it.',
             'Placed lamps are patched by the desk on this machine a moment later: the tag above each one says its fixture number and where its channels start, like #36 U2.025. A clash shows on the lamp itself, with a ! and a dashed tag. Click a tag, or aim at a lamp and press I, for its whole patch in a side sheet. For exact numbers, press Esc after placing: the inspector opens on what you placed, and takes x, z, height, turn, a truss run\'s length, a lamp\'s mode and address.',
             'On a phone: the left half of the screen is the walking stick, a swipe on the right half looks, the crosshair is your hand. The buttons on the right place, remove (del), turn and raise or lower (up, dn); the hotbar scrolls sideways under your thumb.',
-            'Every rig page carries the same row under the bar, in the order a show is made: room · 1 equipment · 2 build · 3 plot · 4 cards & looks · 5 patch sheet · 6 crew link · light desk. Beside each step it says what the project holds (104 on order, 46 of 104 addressed · ! 4); the step before and the next step sit at its two ends. On a phone the row folds to back · the step you are on · next, and a tap on the step lists all eight. In a room, on a di.iiii on your own machine, the same row sits under the bar, and its next is the step the show is waiting on; the Studio has Rig on its bar, and the light desk, opened from a rig page, leads back to it. The row hides while the mouse is taken for walking or building, and comes back with Esc. The first time you press B, the keys are listed once; H brings the list back.',
+            'Every rig page carries the same row under the bar, in the order a show is made: room · 1 equipment · 2 build · 3 plot · 4 cards & looks · 5 patch sheet · 6 crew link · light desk. Beside each step it says what the project holds (104 on order, 46 of 104 addressed · 4 to decide); the step before and the next step sit at its two ends. On a phone the row folds to back · the step you are on · next, and a tap on the step lists all eight. In a room, on a di.iiii on your own machine, the same row sits under the bar, and its next is the step the show is waiting on; the Studio has Rig on its bar, and the light desk, opened from a rig page, leads back to it. The row hides while the mouse is taken for walking or building, and comes back with Esc. The first time you press B, the keys are listed once; H brings the list back.',
             'The crew link (the crew link step) is the same room for the light engineers: tags on, walking only, nothing can be changed, and a clash is tagged from anywhere in the hall. The patch sheet is one tap away. A private space still needs them signed in or invited.',
             'It is the same rig as the plot and the cards: what you build here shows there, and the other way round. It makes no load or rigging calculation.',
             'Hand the link to a colleague. On a PUBLIC space, somebody who is not a member of it (signed out, or a guest) opens the plot, the cards and the equipment list read only, with one line at the top: “View only — sign in as a member of this space to change the rig.” They can look, select, measure, open every item card and play the cue list in their own tab; nothing they press is written. The build link hands them the crew view. A PRIVATE space still asks them to sign in. Members change the rig exactly as before.',
@@ -1767,6 +1767,107 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['show', 'loop', 'cue', 'cues', 'go', 'stop', 'fade', 'hold', 'strobe', 'blinder', 'flash', 'desk', 'light', 'rig', 'moxir', 'underground', 'clock', 'online', 'hosted', 'sync'],
         updated: '2026-09-28'
+    },
+    {
+        id: 'rig-visualiser',
+        category: 'Spaces & access',
+        title: 'The visualiser — the light desk beside the room, the room drawn from its DMX',
+        summary: 'Operate the lighting desk and watch the 3D room answer: heads turn with pan and tilt, colours change, strobes flash, cues play. Side by side in one window, or in two windows — on one machine or two.',
+        body: [
+            'Open it from the rig row (visualiser) or the desk\'s top bar (Visualiser): /{space}/visualise/{project}. The desk is on one side, the room on the other. Drag the line between them; swap; desk only or room only; ↗ opens either side in its own window, and it stays in sync because both read the desk.',
+            'Two windows work the same without the page: /light in one window and the space (/{space}) in another — on this machine, or on another computer on the network pointed at the same install. Tip: a laptop that runs hot can keep the desk, and the room can run on a stronger machine.',
+            'What the room follows: every lamp joined to a desk fixture whose channel list is known — dimmer, colour (RGBW or the colour wheel), shutter and strobe rate, zoom, pan and tilt (16-bit, over the fixture\'s own range). Gobo and prism are noted, not drawn yet. While the desk is live, the DMX wins over a look; the looks themselves go to the desk as DMX, so a playing show looks the same.',
+            'A console works too: turn Input on (Setup → Input) and send Art-Net or sACN; the room follows the console.',
+            'MOXIR\'s channel lists are ASSUMED — taken from the closest documented equivalent\'s manual, because the maker publishes none. The page says so, and so does the patch sheet: verify each on the rental unit. The real lists replace them when the rental house sends them.',
+            'Measured on the studio\'s own machine: a fader move shows in the room in about 34 ms, a console packet in about 38 ms. The desk\'s OUTPUT stays off unless you switch it on — nothing here drives real lights by itself.'
+        ],
+        tags: ['visualiser', 'visualizer', 'split', 'two windows', 'desk', 'light', 'dmx', 'art-net', 'sacn', 'console', 'pan', 'tilt', 'colour', 'strobe', 'rig', 'moxir', 'assumed', 'channel list'],
+        updated: '2026-09-29'
+    },
+    {
+        id: 'rig-scenes',
+        category: 'Spaces & access',
+        title: 'Scenes — the deck (A) and the cue timeline (B), synced with the other copy by a file',
+        summary: 'The show\'s scenes on one page, two ways: A is a deck of scene tiles with four controls each (intensity, colour, speed, strobe on/off) and a small preview; B is the loop as a timeline. Undo, restore last good, and sync with the other organizer\'s copy through a file.',
+        body: [
+            'Open it from the rig row (scenes): /{space}/scenes/{project}. A scene is one cue of the show\'s loop with its look; a look no cue plays is shown as a spare, outside the loop.',
+            'A · SCENE DECK: tap a tile, then set its intensity, colour, speed (the fade into it) or strobe (the blinder on or off). A slider writes once, when you let go. PLAY THE LOOP, NEXT SCENE and LOOP play only in this page\'s preview; the hall plays the show clock. The preview flashes a strobe at most 3 times a second and not at all when your system asks for reduced motion.',
+            'B · CUE TIMELINE: the loop drawn by its holds. Tap a cue to edit its look with the same four controls. The timeline is read only: changing a hold (retime) is not a control yet, because it could take the loop outside 60-90 s.',
+            'Some changes are refused, and the page says why and writes nothing: a laser lit without its laser safety sign-off, a lamp\'s aim moved, a loop taken outside 60-90 s.',
+            'UNDO takes back the last change. RESTORE LAST GOOD goes back to the show as it was when the page opened, when you pressed MARK THIS AS GOOD, or just before you last took a scene from the other copy.',
+            'Sync with the other copy: EXPORT downloads this copy\'s scenes as a file. SYNC FROM A FILE reads the other copy\'s file and marks each scene SAME, CHANGED HERE, CHANGED THERE or CHANGED ON BOTH, from content hashes and the last sync this browser remembers (not from clocks). Reading changes nothing. TAKE THEIRS keeps a restore point first; KEEP MINE changes nothing here; KEEP BOTH keeps theirs as a labelled copy outside the loop. There is no live connection between the two copies yet: the page says "Offline" and the file is the way across.'
+        ],
+        tags: ['scenes', 'scene deck', 'deck', 'timeline', 'cue', 'loop', 'intensity', 'colour', 'speed', 'fade', 'strobe', 'undo', 'restore', 'sync', 'file', 'export', 'rig', 'moxir'],
+        updated: '2026-09-30'
+    },
+    {
+        id: 'rig-version-switch',
+        category: 'Spaces & access',
+        title: 'Rig versions — the row that switches between them',
+        summary: 'A show can be built in several versions — a smaller one, a fuller one — each its own project in the same space. In a room that belongs to such a set, one quiet row lists the versions that really exist, so you can look at one, then the next, and choose by looking.',
+        body: [
+            'A version is a whole rig in its own project: the same hall and the same show, hung differently — fewer lamps, more lamps, movers in a different place. Each version keeps its own equipment list, plot, looks and patch sheet, so changing one never changes another. The versions of one show belong to a set, and a set is only what its projects say they are.',
+            'Open any version of a set and a row of names sits at the top of the room, one name per version. The version you are in is the pale one. Tap another and that version opens. The row lists only versions the space really holds and that you are allowed to see: a version that was archived, removed or is private to someone else is never a link, so a tap never lands on "Project not found". It is the same list, in the same order, from every version, so it does not reshuffle as you move between them.',
+            'Old versions (n). When a version is replaced, its earlier state can be kept as a labelled copy. Copies fold behind one button at the end of the row, "Old versions (2)" for two of them; tap it to open the list, tap it again to close it. The version you are standing in is never folded, so if you opened an old copy you still see where you are.',
+            'A room with only one version, or one that belongs to no set, shows no row at all. While the list is still being read the row shows only the version you are in, as a label with no links.',
+            'Walking in the room. In walk mode the top of the screen belongs to the room\'s own header, so the row folds to a single button under it, "Versions · " and the name of the version you are in. Tap it to open the column of versions, tap a name to go there; you do not have to leave walk mode first.',
+            'On a phone held upright the row does not fit beside the Walk / Fly and Sound buttons, so it takes a line of its own under them, and the show chip moves down one line. If the names are wider than the screen the row scrolls sideways, with a soft fade on the edge where it goes on. Every name and button is a 44 px tap target. Not yet: the walk-mode button has been checked in tests, not yet on a real phone screen.',
+            'What it does not do: it never copies, merges or deletes a version, and it does not tell you which one is better. Making a version, and keeping a copy of one, is done from the terminal with the rig scripts (docs/architecture/RIG_BUILD.md, the versions section).'
+        ],
+        tags: ['rig', 'versions', 'version', 'switch', 'old versions', 'copy', 'walk', 'phone', 'moxir', 'minimal', 'full', 'set', 'room', 'compare'],
+        updated: '2026-09-30'
+    },
+    {
+        id: 'rig-patch-sheet-flags',
+        category: 'Spaces & access',
+        title: 'The patch sheet — where the addresses come from, and what its flags mean',
+        summary: 'diiii.xyz/{space}/patch/{project} is the sheet handed to the light crew: every lamp with its universe and address, the fixture types, the power by circuit, and a Flags list that groups everything still open by what it needs from you. The steps row\'s "29 of 36 addressed · 7 to decide" is the same count.',
+        body: [
+            'Where the addresses come from. The project itself holds no addresses until a patch step has run; the light desk on the machine you are using does. So the sheet says, in one line under its title, which it is showing. "Addresses from the desk on this machine (36 of 36 lamps are on it), not from the document" means the desk\'s numbers are on the page. "The desk on this machine holds none of this project\'s fixtures: addresses are from the document" and "No desk on this tier: addresses are from the document only" mean it is showing what the project stored. The hosted site has no desk, so there the sheet always reads from the document. Check that line before you print.',
+            'If the desk holds a lamp at one address and the document at another, the sheet shows the desk\'s and flags the lamp so someone chooses which is right. The sheet never moves an address by itself.',
+            'The steps row. Under the bar on every rig page, beside the patch sheet step, it says how far the patch is: "29 of 36 addressed · 7 to decide" — 29 of the 36 lamps have an address, and 7 lamps have something a person must choose. Hover or tap the step for the causes in words. The step only counts as done when every lamp is addressed and none is left to decide.',
+            'Flags, grouped by what to do:',
+            { list: [
+                'To decide — someone must choose before the rig is plugged in. Two lamps on the same channels, a lamp running past channel 512, two lamps with the same fixture number, a circuit carrying more than its limit, an address that differs between the desk and the document, a lamp whose type is not in the library, or more lamps placed than ordered. Each line says what to choose, for example move one to the next free address.',
+                'Not addressed yet — no universe or address. Run the patch (the desk on this machine, or the show\'s patch plan). A lamp that has an address in the document but is not on the desk sits here too: patch it on the desk.',
+                'Assumed — labelled, not confirmed. The channel list or the wattage is a stand-in taken from the closest documented equivalent. Nothing to decide, but verify it on the rental unit before the desk drives it.',
+                'Owed by the rental house — the maker publishes no channel list, or the DMX mode is not known. Ask the rental house; the answer is theirs to give.',
+                'Housekeeping — no circuit assigned. Assign circuits so the power table is complete.'
+            ] },
+            'The sheet prints to A4 with no colour: a flag is a word and a mark, so it survives a black-and-white printer. Patch CSV and Power CSV download the two tables. It is read from the project alone, so the link works for anyone who may open the space, with no desk needed; a private space still asks them to sign in.',
+            'What it does not do: it does not check that the channel lists are right (the assumed ones are exactly that), and it makes no load or rigging calculation. The circuit check counts watts against a set limit and is a warning, not an electrician\'s sign-off.'
+        ],
+        tags: ['patch sheet', 'patch', 'address', 'universe', 'dmx', 'flags', 'to decide', 'assumed', 'owed', 'rental house', 'housekeeping', 'circuit', 'power', 'desk', 'document', 'crew', 'light engineer', 'print', 'csv', 'steps', 'rig'],
+        updated: '2026-09-30'
+    },
+    {
+        id: 'rig-ground-versions',
+        category: 'Spaces & access',
+        title: 'Ground versions — moving heads on the floor, and the scenes made for them',
+        summary: 'Two versions of the MOXIR hall rig follow one rule: nothing that moves hangs in the air. Fixed lamps go on the truss, moving heads stand on the ground, lasers and effects wait for sign-off. They are built and tested but not yet loaded into the space, and their scenes have not been seen on a screen.',
+        body: [
+            'Status, said first: the two ground versions, "minimal-ground" and "full-ground", and their scenes are prepared in the repository and loaded in the "moxir" space on the owner\u2019s own install only \u2014 not on the dev site and not live. On that install the room first read too dark, because the moving heads lit nothing on the surfaces they hit; eight of them are now the room\u2019s real lights and the others\u2019 light is baked for one scene, so the other scenes are still dimmer than they will be. Nothing has been checked on a desk, and the scenes are drawn from geometry, so brightness and how the beams read in haze are still guesses until someone looks on the real screen.',
+            'The rule, from the organizer: no moving heads on the air truss. Fixed lamps (the ones that do not move) hang on the truss from the cut, as in the other versions. Moving heads stand on the ground, on floors picked from the hall model: behind the press and at the bases of the nave columns. Two lasers sit fixed on the top of the truss, because a laser on the floor could not stay three metres above the crowd. The second version adds the effects (CO₂, cold spark, smoke, haze), all on the floor.',
+            'The check behind it. A rig file that says it follows the rule is held to it by an automatic test, and a future version is held to it the day it says so. The test fails if any moving head\'s mounting is more than 0.6 m off the floor, if any beam in the dance zone is lower than 2.5 m, or if any laser beam is closer than 3 m over a floor people can stand on. It checks every look and the resting pose, and it was seen to fail on deliberately bad versions. This is a planning check on the model, not a safety certificate.',
+            'What the rule does not say. Nothing here claims safety compliance. Lasers are Class 4 and need a certified laser safety officer before they are ever switched on. Every laser stays at level 0 in every scene unless a scene is marked as needing that sign-off, and the one optional laser scene is in neither loop. Effects (CO₂, spark, haze) need their operator\'s sign-off and their distances to the crowd are not validated. Rigging and load are not calculated.',
+            'The scenes. The owner\'s mood: the underground rave, not the commercial one. Darkness and haze, cold white and deep red only, blinders, the DJ in silhouette, the structure revealed in pieces. No rainbow, no colour chase, no effect as decoration. The minimal ground version has 9 scenes and the full one 11. Eight are shared:',
+            { list: [
+                'Blackout + one shaft — black, one thin white shaft straight up from behind the press into the roof, the DJ a silhouette cut out of it.',
+                'Columns from below — the column faces glow cold white from their feet and fade to black before the roof.',
+                'Roof reveal — the space-frame roof appears in pieces, still, no sweep.',
+                'Slow fan — the beams lean slowly out toward the side walls and the booth beams open into a fan; nothing flashes.',
+                'Cross beams — beams from both walls cross high over the dance floor, above head height, like a lattice in the haze.',
+                'Red room — deep red only and low, the DJ a dark shape against the red press, the roof black.',
+                'White cathedral — the whole nave in cold white, every column beam straight up, the DJ a silhouette against the lit press.',
+                'Blinder hit — one hard white hit on the front of the floor, cut in from black and cut back to black.'
+            ] },
+            'Both versions also carry an optional ninth scene, not in the loop: Laser into the roof — red laser lines into the roof frame, off unless the laser sign-off exists. The full version adds two effect scenes: Haze wall (haze from behind the DJ, all seven booth beams straight up in a row) and Spark hit (a narrow white fan back-lights one burst of cold sparks in the pit, then black). Haze and sparks are not drawn in the room.',
+            'The loop. Each version has a show loop that plays its scenes in that order, each with a slow crossfade in and a hold: about 79 seconds for the minimal ground version and 81 for the full one, starting on the one shaft and ending on the blinder hit (the full loop ends on the spark hit). The loop uses the show\'s normal cue list, so GO and blackout work as for any show, and the desk\'s output stays off until you switch it on.',
+            'Flashing. The only flash is the blinder hit, once per loop, made by the cue cutting it in and out. A test caps flashes at three per second, the common guideline for photosensitive viewers. That is a guideline, not a legal clearance.',
+            'Still owed: a look on the real surface (the owner\'s screen and the desk) and tuning after it, the laser safety officer\'s sign-off, effect distances agreed with the effects operator, a per-scene speed setting and a capped strobe rate.'
+        ],
+        tags: ['rig', 'ground', 'moving heads', 'movers', 'truss', 'laser', 'effects', 'co2', 'haze', 'spark', 'policy', 'safety', 'sign-off', 'scenes', 'loop', 'underground', 'moxir', 'minimal', 'full', 'cold white', 'deep red', 'blinder', 'versions'],
+        updated: '2026-09-30'
     }
 ]
 

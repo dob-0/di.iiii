@@ -11,6 +11,10 @@
 # the renderer string checked, one browser at a time under $LOCK, waiting under 85 C and
 # stopping a view over 95 C). Ends by putting each version back on its default look.
 # Point it only at a stack you own (the looks are written as ops to $API).
+# CAMERAS=<file> adds named views (rig-look --cameras); NO_DESK=1 renders the document as saved
+# even where a light desk runs (rig-look --no-desk); MAX_C caps the CPU package before each view.
+# The version rests at the end on its default look at NOMINAL light (a look rested at level 0
+# never comes back — RIG_BUILD §15.6).
 set -eu
 : "${API:?API=<your stack>/serverXR}" "${BASE:?BASE=<your stack's page origin>}" "${SPACE:?SPACE=<space id>}" "${TOKEN_FILE:?TOKEN_FILE=<env file with ADMIN_API_TOKEN>}" "${OUT:?OUT=<dir>}"
 FROM=${FROM:-moxir-hall}
@@ -26,8 +30,9 @@ for v in $VERSIONS; do
         node scripts/rigbuild/load-version.mjs --api "$API" --space "$SPACE" --from "$FROM" --version "$v" --hall "$HALL" --token-file "$TOKEN_FILE" --look "$look"
         flock "$LOCK" node scripts/place/rig-look.mjs --gpu --base "$BASE" --space "$SPACE" --project "$FROM-$v" --path "/$SPACE/p/$FROM-$v" \
             --hall "$HALL" --rig "scripts/place/rigs/moxir-2026-10-17-$v.json" --look "$look" --out "$OUT" --tag "$v-$look" \
-            --views "$VIEWS" --size "$SIZE" --seconds 4 --settle 25 --token-file "$TOKEN_FILE"
+            --views "$VIEWS" --size "$SIZE" --seconds ${SECONDS_FPS:-4} --settle ${SETTLE:-25} --token-file "$TOKEN_FILE" \
+            ${CAMERAS:+--cameras "$CAMERAS"} ${NO_DESK:+--no-desk} --max-cpu-c ${MAX_C:-85}
     done
     node scripts/rigbuild/load-version.mjs --api "$API" --space "$SPACE" --from "$FROM" --version "$v" --hall "$HALL" --token-file "$TOKEN_FILE" \
-        --look "$(node -e "console.log(require('./scripts/place/rigs/moxir-2026-10-17-$v.json').defaultLook)")"
+        --look "$(node -e "console.log(require('./scripts/place/rigs/moxir-2026-10-17-$v.json').defaultLook)")" --nominal
 done

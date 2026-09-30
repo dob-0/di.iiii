@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useRigLookEntities } from './useRigLook.js'
+import { useLightPool } from './useLightPool.js'
 import { showWords } from './showClock.js'
 
 // THE SPACE VIEW FOLLOWS THE SHOW (RIG_BUILD.md §15.6, §16). /{space} — the room as it
@@ -14,7 +15,9 @@ import { showWords } from './showClock.js'
 // the looks of the loop — the one piece of chrome, small, the room stays the picture.
 export default function RoomLookFollower({ document, onEntities, top = '1rem', showChip = true }) {
     const look = useRigLookEntities(document)
-    const { entities } = look
+    // The light pool (lightPool.js): OFF by default; on, the look's light is carried by N
+    // fixed slot lights. Off, `entities` passes through as the same array.
+    const entities = useLightPool(look.entities, document)
     useEffect(() => {
         onEntities(entities === document?.entities ? null : entities)
     }, [entities, document, onEntities])
@@ -28,7 +31,7 @@ const chipStyle = {
     left: '1rem',
     zIndex: 20,
     maxWidth: 'calc(100vw - 2rem)',
-    borderRadius: '22px',
+    borderRadius: '2px',
     border: '1px solid rgba(255,255,255,0.14)',
     background: 'rgba(10, 16, 24, 0.82)',
     backdropFilter: 'blur(12px)',
