@@ -40,6 +40,95 @@ export const OFL_CHANNEL_LISTS = {
     }
 }
 
+// Channel lists TESTED on the rental units themselves (manifest source SEVAN): the
+// same UPlight rental gear ran live at the Sevan festival (Dilijan camp) on the
+// studio's Art-Net desk, and the owner confirmed it as MOXIR's units on 2026-10-01.
+// These are the maker's modes, not stand-ins: they win over OFL and fill the real
+// mode (the ASSUMED ones stay after it, RIG_BUILD.md §18.1). Order and meanings are
+// the desk's profiles as patched and run there; a meaning nobody wrote down stays a
+// plain `c<n>`/aux channel, never guessed. Roles are unique within a mode.
+const SEVAN = {
+    fixture: 'the rental unit itself (Sevan festival rig, Dilijan camp, 2026)',
+    basis: 'TESTED',
+    url: null,
+    licence: null
+}
+const laserChannel = (n, label) => ({ role: `c${n}`, label })
+export const TESTED_CHANNEL_LISTS = {
+    'UP-B380F': {
+        ...SEVAN,
+        modes: {
+            // Desk profile "Beam 16ch", the map from its manual: strobe 255 = open,
+            // 0-3 = dark; colour 0 = white, 12 = colour 1…; gobo 5-89 = gobo 1-17,
+            // 171+ = shake; prism 1 in at 128+; RESET must stay 0.
+            16: [
+                { role: 'pan', label: 'Pan', default: 128 },
+                { role: 'tilt', label: 'Tilt', default: 128 },
+                { role: 'panFine', label: 'Pan fine', default: 0 },
+                { role: 'tiltFine', label: 'Tilt fine', default: 0 },
+                { role: 'speed', label: 'Pan/tilt speed' },
+                { role: 'frost', label: 'Frost' },
+                { role: 'strobe', label: 'Shutter / strobe (255 open, 0-3 dark)', default: 255, cap: { shutter: [{ from: 0, to: 3, open: false }, { from: 255, to: 255, open: true }] } },
+                { role: 'dimmer', label: 'Dimmer' },
+                { role: 'color', label: 'Colour wheel (0 white, 12 colour 1…)', default: 0 },
+                { role: 'gobo', label: 'Gobo (5-89 gobo 1-17, 171+ shake)', cap: { gobo: true } },
+                { role: 'prism', label: 'Prism 1 insert (128+ in)', cap: { prism: true } },
+                { role: 'rotation', label: 'Prism 1 rotation' },
+                { role: 'aux1', label: 'Prism 2' },
+                { role: 'aux2', label: 'Prism 2 rotation' },
+                { role: 'focus', label: 'Focus' },
+                { role: 'control', label: 'Reset (always 0)', default: 0 }
+            ]
+        }
+    },
+    'UP-PL5403': {
+        ...SEVAN,
+        modes: {
+            // Desk profile "Wash 8ch". Channels 7-8 were never used there and their
+            // meaning was not written down: aux, not guessed.
+            8: [
+                { role: 'dimmer', label: 'Dimmer' },
+                { role: 'r', label: 'Red' },
+                { role: 'g', label: 'Green' },
+                { role: 'b', label: 'Blue' },
+                { role: 'w', label: 'White' },
+                { role: 'strobe', label: 'Strobe' },
+                { role: 'aux1', label: 'Ch 7 (unused in the tested map)' },
+                { role: 'aux2', label: 'Ch 8 (unused in the tested map)' }
+            ]
+        }
+    },
+    'UP-LA40WF': {
+        ...SEVAN,
+        modes: {
+            // Desk profile "Laser 32ch". Ch 1 is named dimmer (as on that desk) so master
+            // and blackout reach it. The per-colour dimmers run 0 = BRIGHTEST, so they are
+            // plain channels, never the r/g/b roles. A laser is held dark by
+            // deskLookValues.js (every channel 0) until the IEC 60825-1 sign-off.
+            32: [
+                { role: 'dimmer', label: 'Ch 1 output (named dimmer so master/blackout reach it)' },
+                laserChannel(2, 'Mode (25 auto, 75 voice, 250 manual graphics)'),
+                laserChannel(3, 'Graphic select'),
+                laserChannel(4, 'Display mode'),
+                laserChannel(5, 'Colour (8 white, 25 red, 76 yellow, 93 purple, 110 cyan)'),
+                laserChannel(6, 'X position (64 centre)'),
+                laserChannel(7, 'Y position (64 centre)'),
+                ...[8, 9, 10].map((n) => laserChannel(n, `Ch ${n}`)),
+                laserChannel(11, 'Centre rotation (150 slow clockwise)'),
+                laserChannel(12, 'Ch 12'),
+                laserChannel(13, 'Wave 1'),
+                laserChannel(14, 'Wave 2'),
+                laserChannel(15, 'Strobe'),
+                laserChannel(16, 'Red level (0 brightest)'),
+                laserChannel(17, 'Green level (0 brightest)'),
+                laserChannel(18, 'Blue level (0 brightest)'),
+                laserChannel(19, 'Ch 19'),
+                ...Array.from({ length: 13 }, (_, i) => laserChannel(20 + i, i === 2 ? 'Graphic 2 colour (mirror ch 5)' : `Graphic 2, ch ${20 + i}`))
+            ]
+        }
+    }
+}
+
 const CODE_RE = /^[A-Za-z0-9][A-Za-z0-9 ._-]{0,31}$/
 
 // The id every lamp uses: the rental/crew code, lowercased. A code, not a
@@ -61,19 +150,20 @@ const sourced = (spec) => {
 const modeName = (footprint) => `${footprint}ch`
 
 // Modes from the manifest's `dmx_channels` (a list of footprints). A channel list
-// is attached where OFL has the fixture (or its named equivalent) with a mode of
-// that footprint.
+// is attached where the unit was tested (TESTED_CHANNEL_LISTS, first) or OFL has
+// the fixture (or its named equivalent) with a mode of that footprint.
 const modesOf = (kind) => {
     const spec = kind.specs?.dmx_channels
     const list = Array.isArray(spec?.value) ? spec.value.filter((n) => Number.isInteger(n) && n > 0) : []
-    const entry = OFL_CHANNEL_LISTS[kind.code] || null
+    const sources = [TESTED_CHANNEL_LISTS[kind.code], OFL_CHANNEL_LISTS[kind.code]].filter(Boolean)
     const real = list.map((footprint) => {
-        const ofl = entry?.modes?.[footprint] || null
+        const entry = sources.find((s) => s.modes?.[footprint]) || null
+        const listed = entry ? entry.modes[footprint] : null
         return {
             name: modeName(footprint),
             footprint,
-            channels: ofl ? ofl.map((c) => ({ ...c })) : null,
-            channelsSource: ofl ? { fixture: entry.fixture, url: entry.url, licence: entry.licence, basis: entry.basis } : null,
+            channels: listed ? listed.map((c) => ({ ...c })) : null,
+            channelsSource: listed ? { fixture: entry.fixture, url: entry.url, licence: entry.licence, basis: entry.basis } : null,
             src: spec?.src ?? null,
             basis: spec?.basis ?? null
         }

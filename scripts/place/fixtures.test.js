@@ -22,7 +22,7 @@ describe('the fixtures manifest', () => {
             expect(entry.code, kind).toMatch(/^(UP|EXT)-/)
             if (entry.code.startsWith('EXT-')) expect(entry.identified, kind).toMatch(/another supplier/)
             for (const [field, spec] of Object.entries(entry.specs)) {
-                expect(['EXACT', 'EQUIVALENT', 'ASSUMED'], `${kind}.${field}`).toContain(spec.basis)
+                expect(['EXACT', 'EQUIVALENT', 'TESTED', 'ASSUMED'], `${kind}.${field}`).toContain(spec.basis)
                 if (spec.basis === 'ASSUMED') continue
                 for (const src of String(spec.src).split(/,\s*/)) expect(manifest.sources[src], `${kind}.${field} cites ${src}`).toBeTruthy()
             }
@@ -30,7 +30,11 @@ describe('the fixtures manifest', () => {
                 expect(manifest.photometrySources?.[src] || manifest.sources[src], `${kind}.photometry cites ${src}`).toBeTruthy()
             }
         }
-        for (const s of Object.values(manifest.sources)) expect(s.url).toMatch(/^https:\/\//)
+        // A source is a page, or (TESTED) the rental unit itself, which has no page: it says so.
+        for (const [id, s] of Object.entries(manifest.sources)) {
+            if (s.url === null) expect(s.what, id).toMatch(/rental units? themselves/)
+            else expect(s.url, id).toMatch(/^https:\/\//)
+        }
     })
 
     it('says what licence the models are under and that they are not the makers\' CAD', () => {

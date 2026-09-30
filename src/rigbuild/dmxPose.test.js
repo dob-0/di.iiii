@@ -90,7 +90,8 @@ describe('the room drawn from DMX', () => {
     it('finds the mode the DESK runs by its profile name', () => {
         const type = typeById(TYPE_LIBRARY, 'up-b380f')
         expect(runningMode(type, '16ch', 'UP-B380F 16ch-assumed').name).toBe('16ch-assumed')
-        expect(runningMode(type, '16ch', 'UP-B380F 16ch')).toBe(null) // the real list is owed: nothing to decode
+        expect(runningMode(type, '16ch', 'UP-B380F 16ch').name).toBe('16ch') // the tested unit's list
+        expect(runningMode(typeById(TYPE_LIBRARY, 'up-250bsw'), '24ch', 'UP-250BSW 24ch')).toBe(null) // the real list is owed: nothing to decode
     })
 
     it('turns a head: DMX pan/tilt → the entity\'s aim, its lens on the arc, and the BODY follows', () => {

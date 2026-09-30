@@ -17,8 +17,105 @@
         {
           "name": "16ch",
           "footprint": 16,
-          "channels": null,
-          "channelsSource": null,
+          "channels": [
+            {
+              "role": "pan",
+              "label": "Pan",
+              "default": 128
+            },
+            {
+              "role": "tilt",
+              "label": "Tilt",
+              "default": 128
+            },
+            {
+              "role": "panFine",
+              "label": "Pan fine",
+              "default": 0
+            },
+            {
+              "role": "tiltFine",
+              "label": "Tilt fine",
+              "default": 0
+            },
+            {
+              "role": "speed",
+              "label": "Pan/tilt speed"
+            },
+            {
+              "role": "frost",
+              "label": "Frost"
+            },
+            {
+              "role": "strobe",
+              "label": "Shutter / strobe (255 open, 0-3 dark)",
+              "default": 255,
+              "cap": {
+                "shutter": [
+                  {
+                    "from": 0,
+                    "to": 3,
+                    "open": false
+                  },
+                  {
+                    "from": 255,
+                    "to": 255,
+                    "open": true
+                  }
+                ]
+              }
+            },
+            {
+              "role": "dimmer",
+              "label": "Dimmer"
+            },
+            {
+              "role": "color",
+              "label": "Colour wheel (0 white, 12 colour 1…)",
+              "default": 0
+            },
+            {
+              "role": "gobo",
+              "label": "Gobo (5-89 gobo 1-17, 171+ shake)",
+              "cap": {
+                "gobo": true
+              }
+            },
+            {
+              "role": "prism",
+              "label": "Prism 1 insert (128+ in)",
+              "cap": {
+                "prism": true
+              }
+            },
+            {
+              "role": "rotation",
+              "label": "Prism 1 rotation"
+            },
+            {
+              "role": "aux1",
+              "label": "Prism 2"
+            },
+            {
+              "role": "aux2",
+              "label": "Prism 2 rotation"
+            },
+            {
+              "role": "focus",
+              "label": "Focus"
+            },
+            {
+              "role": "control",
+              "label": "Reset (always 0)",
+              "default": 0
+            }
+          ],
+          "channelsSource": {
+            "fixture": "the rental unit itself (Sevan festival rig, Dilijan camp, 2026)",
+            "url": null,
+            "licence": null,
+            "basis": "TESTED"
+          },
           "src": "A",
           "basis": "EXACT"
         },
@@ -1175,8 +1272,46 @@
         {
           "name": "8ch",
           "footprint": 8,
-          "channels": null,
-          "channelsSource": null,
+          "channels": [
+            {
+              "role": "dimmer",
+              "label": "Dimmer"
+            },
+            {
+              "role": "r",
+              "label": "Red"
+            },
+            {
+              "role": "g",
+              "label": "Green"
+            },
+            {
+              "role": "b",
+              "label": "Blue"
+            },
+            {
+              "role": "w",
+              "label": "White"
+            },
+            {
+              "role": "strobe",
+              "label": "Strobe"
+            },
+            {
+              "role": "aux1",
+              "label": "Ch 7 (unused in the tested map)"
+            },
+            {
+              "role": "aux2",
+              "label": "Ch 8 (unused in the tested map)"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "the rental unit itself (Sevan festival rig, Dilijan camp, 2026)",
+            "url": null,
+            "licence": null,
+            "basis": "TESTED"
+          },
           "src": "D-CN",
           "basis": "EXACT"
         },
@@ -1385,6 +1520,148 @@
       "category": "laser",
       "modes": [
         {
+          "name": "32ch",
+          "footprint": 32,
+          "channels": [
+            {
+              "role": "dimmer",
+              "label": "Ch 1 output (named dimmer so master/blackout reach it)"
+            },
+            {
+              "role": "c2",
+              "label": "Mode (25 auto, 75 voice, 250 manual graphics)"
+            },
+            {
+              "role": "c3",
+              "label": "Graphic select"
+            },
+            {
+              "role": "c4",
+              "label": "Display mode"
+            },
+            {
+              "role": "c5",
+              "label": "Colour (8 white, 25 red, 76 yellow, 93 purple, 110 cyan)"
+            },
+            {
+              "role": "c6",
+              "label": "X position (64 centre)"
+            },
+            {
+              "role": "c7",
+              "label": "Y position (64 centre)"
+            },
+            {
+              "role": "c8",
+              "label": "Ch 8"
+            },
+            {
+              "role": "c9",
+              "label": "Ch 9"
+            },
+            {
+              "role": "c10",
+              "label": "Ch 10"
+            },
+            {
+              "role": "c11",
+              "label": "Centre rotation (150 slow clockwise)"
+            },
+            {
+              "role": "c12",
+              "label": "Ch 12"
+            },
+            {
+              "role": "c13",
+              "label": "Wave 1"
+            },
+            {
+              "role": "c14",
+              "label": "Wave 2"
+            },
+            {
+              "role": "c15",
+              "label": "Strobe"
+            },
+            {
+              "role": "c16",
+              "label": "Red level (0 brightest)"
+            },
+            {
+              "role": "c17",
+              "label": "Green level (0 brightest)"
+            },
+            {
+              "role": "c18",
+              "label": "Blue level (0 brightest)"
+            },
+            {
+              "role": "c19",
+              "label": "Ch 19"
+            },
+            {
+              "role": "c20",
+              "label": "Graphic 2, ch 20"
+            },
+            {
+              "role": "c21",
+              "label": "Graphic 2, ch 21"
+            },
+            {
+              "role": "c22",
+              "label": "Graphic 2 colour (mirror ch 5)"
+            },
+            {
+              "role": "c23",
+              "label": "Graphic 2, ch 23"
+            },
+            {
+              "role": "c24",
+              "label": "Graphic 2, ch 24"
+            },
+            {
+              "role": "c25",
+              "label": "Graphic 2, ch 25"
+            },
+            {
+              "role": "c26",
+              "label": "Graphic 2, ch 26"
+            },
+            {
+              "role": "c27",
+              "label": "Graphic 2, ch 27"
+            },
+            {
+              "role": "c28",
+              "label": "Graphic 2, ch 28"
+            },
+            {
+              "role": "c29",
+              "label": "Graphic 2, ch 29"
+            },
+            {
+              "role": "c30",
+              "label": "Graphic 2, ch 30"
+            },
+            {
+              "role": "c31",
+              "label": "Graphic 2, ch 31"
+            },
+            {
+              "role": "c32",
+              "label": "Graphic 2, ch 32"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "the rental unit itself (Sevan festival rig, Dilijan camp, 2026)",
+            "url": null,
+            "licence": null,
+            "basis": "TESTED"
+          },
+          "src": "SEVAN",
+          "basis": "TESTED"
+        },
+        {
           "name": "11ch-assumed",
           "footprint": 11,
           "channels": [
@@ -1452,8 +1729,8 @@
           "basis": "ASSUMED"
         }
       ],
-      "defaultMode": null,
-      "modesOwed": true,
+      "defaultMode": "32ch",
+      "modesOwed": false,
       "assumedMode": "11ch-assumed",
       "power_w": {
         "value": 1200,
@@ -1513,6 +1790,10 @@
         "LA-CN": {
           "url": "https://www.uplight.com.cn/pd48855201.html",
           "what": "UPlight UP-LA40WF '40瓦防水全彩激光灯' on the maker's Chinese site — model field UP-LA40WF; specs text, no DMX chart; checked 2026-09-29"
+        },
+        "SEVAN": {
+          "url": null,
+          "what": "The rental units themselves: the same UPlight rental gear ran live at the Sevan festival (Dilijan camp), 2026, on the studio's own Art-Net desk. Channel maps as patched and run there (the desk's show.json custom profiles 'Beam 16ch', 'Wash 8ch', 'Laser 32ch'; the beam's from its manual). Confirmed as the same units by the owner, 2026-10-01"
         }
       },
       "manifest": {
