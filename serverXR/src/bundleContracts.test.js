@@ -1,20 +1,20 @@
 // @vitest-environment node
 
-import { execFile, spawn } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import { mkdtemp, rm } from 'node:fs/promises'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { spawnServerUntilReady } from './testSupport/spawnServer.mjs'
 
 // Every test in this file boots a real serverXR process and talks to it over
 // the loopback. Vitest's default 5s per-test budget covers the *machine*, not
 // the behavior under test: with the suite running in parallel (or beside a
 // second suite -- how this was reproduced) a spawn + listen + first request
 // can cross 5s with nothing wrong. Two tests here failed exactly that way at
-// 5074ms and 5095ms. waitForHealth already allows 15s for the boot alone, so
+// 5074ms and 5095ms. spawnServerUntilReady already allows 15s for the boot alone, so
 // the per-test budget has to be larger than that or the health wait can never
 // finish. Hooks get more again: afterEach stops every server it started.
 vi.setConfig({ testTimeout: 25_000, hookTimeout: 40_000 })
@@ -30,38 +30,6 @@ const tempDirs = []
 
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
-const getFreePort = async () => {
-    return new Promise((resolve, reject) => {
-        const server = net.createServer()
-        server.on('error', reject)
-        server.listen(0, '127.0.0.1', () => {
-            const address = server.address()
-            const port = typeof address === 'object' && address ? address.port : 0
-            server.close((error) => {
-                if (error) reject(error)
-                else resolve(port)
-            })
-        })
-    })
-}
-
-const waitForHealth = async ({ url, child, getLogs }) => {
-    const deadline = Date.now() + 15000
-    while (Date.now() < deadline) {
-        if (child.exitCode !== null) {
-            throw new Error(`Server exited early.\n${getLogs()}`)
-        }
-        try {
-            const response = await fetch(url)
-            if (response.ok) return
-        } catch {
-            // retry
-        }
-        await wait(200)
-    }
-    throw new Error(`Server did not become healthy in time.\n${getLogs()}`)
-}
-
 // Unlike the other contract suites, data roots outlive their server here —
 // export reads the stopped server's data root, import writes the next one's.
 const makeTempDir = async (prefix) => {
@@ -72,26 +40,19 @@ const makeTempDir = async (prefix) => {
 
 const startServer = async (dataRoot) => {
     const sandboxCwd = await makeTempDir('dii-bundle-server-cwd-')
-    const port = await getFreePort()
-    const child = spawn(process.execPath, [SERVER_ENTRY], {
+    const { child, port } = await spawnServerUntilReady({
+        entry: SERVER_ENTRY,
         cwd: sandboxCwd,
         env: {
             ...process.env,
-            PORT: String(port),
             NODE_ENV: 'test',
             APP_BASE_PATH: '/serverXR',
             DATA_ROOT: dataRoot,
             API_TOKEN: 'test-token',
             REQUIRE_AUTH: '',
             CORS_ORIGINS: '*'
-        },
-        stdio: ['ignore', 'pipe', 'pipe']
+        }
     })
-
-    let stdout = ''
-    let stderr = ''
-    child.stdout.on('data', (chunk) => { stdout += chunk.toString() })
-    child.stderr.on('data', (chunk) => { stderr += chunk.toString() })
 
     // child.exitCode stays null when the child dies from a signal — track exit
     // explicitly so a second stop() (mid-test + afterEach) can't wait forever.
@@ -112,12 +73,6 @@ const startServer = async (dataRoot) => {
             await new Promise(resolve => child.once('exit', resolve))
         }
     }
-
-    await waitForHealth({
-        url: `${baseUrl}/api/health`,
-        child,
-        getLogs: () => `STDOUT:\n${stdout}\nSTDERR:\n${stderr}`
-    })
 
     const handle = { baseUrl, dataRoot, stop }
     activeServers.push(handle)
