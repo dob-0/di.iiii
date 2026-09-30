@@ -295,10 +295,12 @@ function SyncStrip({ ledger, compared, readOnly, onFile, onExport, onChoose, fil
 /**
  * doc       the project document (as the store holds it)
  * applyOps  the project document's op path (useProjectDocumentSync's applyLocalOps); never called read only
+ * syncError the store's pending-sync error (null when none); shown on this page
+ * syncVersion the store's document version; it moves when the server takes a write (undefined = no store: bases are written at once)
  * storage   localStorage-like, for the sync ledger (tests pass their own)
  * download  (fileName, text) => void, for EXPORT (tests pass their own)
  */
-export default function ScenesDeck({ doc, applyOps, projectId, readOnly = false, storage, download = downloadJson, now = () => new Date(), reducedMotion: forcedReduced }) {
+export default function ScenesDeck({ doc, applyOps, projectId, readOnly = false, syncError = null, syncVersion, storage, download = downloadJson, now = () => new Date(), reducedMotion: forcedReduced }) {
     const read = useMemo(() => readScenes(doc), [doc])
     const { scenes, loopSeconds } = read
     const [tab, setTab] = useState('A')
@@ -317,6 +319,27 @@ export default function ScenesDeck({ doc, applyOps, projectId, readOnly = false,
         setHistory(next)
         return next.out
     }, [])
+    // Undo and restore send the whole old list, so they are checked first: the history refuses when the looks or
+    // cues changed elsewhere since this page last wrote them, and layer 1's guard runs over EVERY scene. A refusal
+    // says why and changes nothing (the history is left as it was).
+    const tryStep = useCallback((action) => {
+        const next = historyReducer(historyRef.current, action)
+        if (next.refused) {
+            setMessage(`Not done: ${next.refused}. Nothing was changed; use the preview's scenes as they are now.`)
+            return null
+        }
+        if (next.out.length) {
+            try {
+                guardSceneChange(doc, next.out, null)
+            } catch (error) {
+                setMessage(refusalWords(error))
+                return null
+            }
+        }
+        historyRef.current = next
+        setHistory(next)
+        return next.out
+    }, [doc])
     useEffect(() => {
         if (historyRef.current.good || !scenes.length) return
         step({ type: 'markGood', document: doc })
@@ -345,13 +368,14 @@ export default function ScenesDeck({ doc, applyOps, projectId, readOnly = false,
     }, [readOnly, selected, doc, write])
 
     const undo = () => {
-        const ops = step({ type: 'undo' })
-        if (!ops.length) return
+        const ops = tryStep({ type: 'undo', document: doc })
+        if (!ops || !ops.length) return
         applyOps(ops)
         setMessage('Undid the last change.')
     }
     const restoreGood = () => {
-        const ops = step({ type: 'restoreGood', document: doc })
+        const ops = tryStep({ type: 'restoreGood', document: doc })
+        if (!ops) return
         if (!ops.length) {
             setMessage('Already at the last good state.')
             return
@@ -390,6 +414,24 @@ export default function ScenesDeck({ doc, applyOps, projectId, readOnly = false,
         if (!ok) setFileNote('This browser would not keep the sync record; the marks will not remember this sync.')
     }, [projectId, storage, now])
 
+    // The store has no acknowledgement of a write, and applyOps is optimistic (the queue is in memory). The ledger
+    // must not say "synced" before the server has taken the ops: the bases wait until the store's version moves
+    // past the one the write was made on with no sync error; while an error stands they stay held and the page says so.
+    const [held, setHeld] = useState(null)
+    const setBasesWhenSent = (bases) => {
+        if (!Object.keys(bases).length) return
+        if (syncVersion === undefined) {
+            setBases(bases)
+            return
+        }
+        setHeld((h) => ({ bases: { ...(h?.bases || {}), ...bases }, version: h ? Math.min(h.version, syncVersion) : syncVersion }))
+    }
+    useEffect(() => {
+        if (!held || syncError || !(syncVersion > held.version)) return
+        setHeld(null)
+        setBases(held.bases)
+    }, [held, syncError, syncVersion, setBases])
+
     const onFile = async (event) => {
         const file = event.target.files?.[0]
         event.target.value = ''
@@ -408,9 +450,9 @@ export default function ScenesDeck({ doc, applyOps, projectId, readOnly = false,
             setFileNote(`Not read: ${error instanceof SceneDeckError ? error.message : 'the file could not be read'}. Nothing was changed.`)
             return
         }
-        if (parsed.project && parsed.project !== projectId) {
+        if (parsed.project !== projectId) {
             setBundle(null)
-            setFileNote(`Not read: this file holds the scenes of "${parsed.project}", and this page is "${projectId}". Nothing was changed.`)
+            setFileNote(`Not read: this file holds the scenes of ${parsed.project ? `"${parsed.project}"` : 'no named show'}, and this page is "${projectId}". Nothing was changed.`)
             return
         }
         let statuses
@@ -422,10 +464,14 @@ export default function ScenesDeck({ doc, applyOps, projectId, readOnly = false,
             return
         }
         setBundle(parsed)
+        // One restore point per file read, before anything of theirs can be written: every take after it is
+        // undone by RESTORE LAST GOOD (it replaces an earlier MARK THIS AS GOOD).
+        step({ type: 'markGood', document: doc })
+        setGoodAt(`file read ${hhmm(now())}`)
         // Same on both copies: that hash is now the last common one (it changes no scene).
         setBases(Object.fromEntries(statuses.filter((s) => s.state === 'same' && s.hereHash).map((s) => [s.id, s.hereHash])))
         const made = parsed.exportedAt ? ` made ${whenOf(parsed.exportedAt) || parsed.exportedAt}` : ''
-        setFileNote(`Read "${file.name}"${made}. Marks now compare with it. Nothing was changed; use the buttons below.`)
+        setFileNote(`Read "${file.name}"${made}. Marks now compare with it. A restore point was kept (it replaces an earlier one). Nothing was changed; use the buttons below.`)
     }
 
     const onChoose = (status, choice) => {
@@ -455,16 +501,11 @@ export default function ScenesDeck({ doc, applyOps, projectId, readOnly = false,
             setMessage(refusalWords(error))
             return
         }
-        // The restore point comes first, before any write of theirs.
-        if (actions.some((a) => a.kind === 'restorePoint')) {
-            step({ type: 'markGood', document: doc })
-            setGoodAt(`before sync ${hhmm(now())}`)
-        }
         if (ops.length) {
             step({ type: 'record', document: doc, ops })
             applyOps(ops)
         }
-        setBases(Object.fromEntries(actions.filter((a) => a.kind === 'setBase' && a.hash).map((a) => [a.id, a.hash])))
+        setBasesWhenSent(Object.fromEntries(actions.filter((a) => a.kind === 'setBase' && a.hash).map((a) => [a.id, a.hash])))
         if (choice === 'takeTheirs') {
             setDecided((d) => ({ ...d, [status.id]: 'took theirs' }))
             setMessage(`Took "${name}" from there. A restore point was kept first: RESTORE LAST GOOD goes back to before it.`)
@@ -605,6 +646,8 @@ export default function ScenesDeck({ doc, applyOps, projectId, readOnly = false,
             </div>
             <SyncStrip ledger={ledger} compared={compared} readOnly={readOnly} onFile={onFile} onExport={onExport} onChoose={onChoose} fileRef={fileRef} fileNote={fileNote} decided={decided} />
             <p className="rigscenes-msg" role="status" aria-label="what happened">{message}</p>
+            {syncError ? <p className="rigscenes-note" role="alert">Not saved to the server yet: {syncError} What you see here is only on this screen until it is.{held ? ' The sync record is not updated until the server has it.' : ''}</p> : null}
+            {!syncError && held ? <p className="rigscenes-note">Waiting for the server to take the change before it is marked synced.</p> : null}
             <div className="rigscenes-layout">
                 <div>
                     <h2>Preview</h2>

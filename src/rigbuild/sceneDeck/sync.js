@@ -91,7 +91,13 @@ export const planSync = (status, choice, { label = 'there' } = {}) => {
             { kind: 'setBase', id, hash: status.thereHash }
         ]
     }
-    return [{ kind: 'restorePoint', id }, { kind: 'addCopy', id, scene: labelledCopy(status.there, label) }]
+    // keep both records the decision: their hash becomes the base (mine stays here, now "changed here"), so the
+    // next sync does not ask again for the same pair, and copyOps adds nothing it already holds.
+    return [
+        { kind: 'restorePoint', id },
+        { kind: 'addCopy', id, scene: labelledCopy(status.there, label) },
+        { kind: 'setBase', id, hash: status.thereHash }
+    ]
 }
 
 const lookRecord = (c) => ({ id: c.lookId, title: c.look.title, intent: c.look.intent, aims: clone(c.look.aims), colours: clone(c.look.colours), levels: clone(c.look.levels) })
@@ -102,10 +108,17 @@ const writeLooks = (entity, looks) => {
     return [looksOp(entity.id, looks)]
 }
 
+// The same look body: everything but its id and its title (a labelled copy's title carries the label and a time).
+const bodyOf = (look) => canonicalJson({ ...sceneContent({ lookId: 'x', look }).look, title: '' })
+
 const copyOps = (document, scene) => {
     const entity = showEntityOf(document)
     if (!entity) throw new SceneDeckError('no-looks', 'this copy has no rig looks to keep a scene in')
     const c = sceneContent(scene)
+    const body = bodyOf(c.look)
+    // An identical look OUTSIDE the loop (an earlier copy, whatever its label) is already here: no second one.
+    const played = new Set(readScenes(document).scenes.filter((s) => s.inLoop).map((s) => s.lookId))
+    if (entity.components.rigLooks.looks.some((l) => !played.has(l.id) && bodyOf(l) === body)) return []
     const taken = new Set(entity.components.rigLooks.looks.map((l) => l.id))
     let lookId = c.lookId
     for (let n = 2; taken.has(lookId); n += 1) lookId = `${c.lookId.slice(0, 33)}-${n}`

@@ -6,7 +6,7 @@
 // unknown fields, duplicate ids, non-finite numbers, and a hash that does not match its scene.
 // `exportedAt` is a label for a person; nothing ever reads it to decide which copy is newer.
 import { SceneDeckError } from './errors.js'
-import { sceneContent, sceneHash } from './hash.js'
+import { MAX_NUMBER, sceneContent, sceneHash } from './hash.js'
 import { readScenes } from './model.js'
 
 export const BUNDLE_FORMAT = 'di.scenes/1'
@@ -34,9 +34,14 @@ const exactKeys = (v, keys, where) => {
 const text = (v, max, where) => {
     if (typeof v !== 'string' || v.length > max) fail('bad-field', `${where} is not a string of at most ${max}`)
 }
-const walkFinite = (v, where) => {
+const MAX_DEPTH = 12 // a scene nests about 6 deep; a deeper file is refused typed, not by a stack overflow
+const walkFinite = (v, where, depth = 0) => {
     if (typeof v === 'number' && !Number.isFinite(v)) fail('non-finite', `${where} holds ${v}`)
-    if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) walkFinite(x, `${where}.${k}`)
+    if (typeof v === 'number' && Math.abs(v) > MAX_NUMBER) fail('non-finite', `${where} holds ${v}, outside what a scene can hold (${MAX_NUMBER})`)
+    if (v && typeof v === 'object') {
+        if (depth >= MAX_DEPTH) fail('bad-field', `${where} is nested deeper than ${MAX_DEPTH}`)
+        for (const [k, x] of Object.entries(v)) walkFinite(x, `${where}.${k}`, depth + 1)
+    }
 }
 const ID = /^[\w:.-]{1,80}$/
 const LOOK_ID = /^[a-z0-9][a-z0-9-]{0,35}$/
@@ -78,8 +83,8 @@ export const parseBundle = (json) => {
     }
     if (!isPlain(b)) fail('bad-field', 'a scenes bundle is an object')
     if (b.format !== BUNDLE_FORMAT) fail('wrong-format', `expected ${BUNDLE_FORMAT}, found ${JSON.stringify(b.format)}`)
-    walkFinite(b, 'bundle')
     exactKeys(b, ['format', 'project', 'exportedAt', 'scenes', 'lastSync'], 'bundle')
+    walkFinite(b, 'bundle')
     text(b.project, 120, 'project')
     text(b.exportedAt, 40, 'exportedAt')
     if (!Array.isArray(b.scenes) || b.scenes.length > BUNDLE_LIMITS.scenes) fail('bad-field', `scenes is not a list of at most ${BUNDLE_LIMITS.scenes}`)

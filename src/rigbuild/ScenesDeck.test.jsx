@@ -57,6 +57,7 @@ const memoryStorage = () => {
 function Harness({ start, log, ...props }) {
     const [doc, setDoc] = useState(start)
     Harness.current = () => doc
+    Harness.set = setDoc
     return <ScenesDeck doc={doc} applyOps={(ops) => { log.push(ops); setDoc((d) => applyProjectOps(d, ops)) }} projectId={PROJECT} reducedMotion {...props} />
 }
 const mount = (start = MIN, props = {}) => {
@@ -182,7 +183,7 @@ describe('a write layer 1 refuses shows in words and writes nothing', () => {
         fireEvent.click(within(rowOf('Red room')).getByRole('button', { name: 'TAKE THEIRS' }))
         expect(log).toHaveLength(0)
         expect(status()).toMatch(/^Refused: this would move a lamp's aim\..*Nothing was written\.$/)
-        expect(screen.getByRole('button', { name: /RESTORE LAST GOOD/ }).textContent).toContain('as opened') // no restore point taken for a refused write
+        expect(screen.getByRole('button', { name: /RESTORE LAST GOOD/ }).textContent).toContain('file read') // one restore point per file read, kept before any take
     })
     it('loop length: taking a hold that pushes the loop past 90 s', async () => {
         const there = withCue(MIN, LIT.id, { hold: LIT.hold + 20 })
@@ -278,7 +279,7 @@ describe('sync from a file: the three-way marks and the three actions', () => {
         expect(within(strip()).getByText(`${scenesOf(base).length - 2} same, 1 changed here (waiting to send), 0 changed there (as last seen), 1 changed on both`)).toBeTruthy()
         // the restore point is the copy from BEFORE the take, not the one opened and not the one after
         const restore = screen.getByRole('button', { name: /RESTORE LAST GOOD/ })
-        expect(restore.textContent).toContain('before sync 11:00')
+        expect(restore.textContent).toContain('file read 11:00')
         fireEvent.click(restore)
         expect(hashes(doc())).toEqual(hashes(here))
     })
@@ -287,7 +288,7 @@ describe('sync from a file: the three-way marks and the three actions', () => {
         await readFile(bundleText(there))
         fireEvent.click(within(rowOf('White cathedral')).getByRole('button', { name: 'TAKE THEIRS' }))
         expect(named(doc(), 'White cathedral').fade).toBe(2)
-        fireEvent.click(screen.getByRole('button', { name: /RESTORE LAST GOOD \(before sync/ }))
+        fireEvent.click(screen.getByRole('button', { name: /RESTORE LAST GOOD \(file read/ }))
         expect(named(doc(), 'White cathedral').fade).toBe(1)
     })
     it('keep mine: nothing is written here', async () => {
@@ -309,7 +310,7 @@ describe('sync from a file: the three-way marks and the three actions', () => {
         expect(copy).toBeTruthy()
         expect(copy.inLoop).toBe(false)
         expect(readScenes(doc()).loopSeconds).toBe(readScenes(here).loopSeconds)
-        expect(screen.getByRole('button', { name: /RESTORE LAST GOOD \(before sync 11:05\)/ })).toBeTruthy()
+        expect(screen.getByRole('button', { name: /RESTORE LAST GOOD \(file read 11:05\)/ })).toBeTruthy()
     })
     it('read only: the file is compared, but no action can write', async () => {
         const { log } = mount(here, { storage: seeded(hashes(base)), readOnly: true })
@@ -472,5 +473,81 @@ describe('no people on these screens', () => {
         const words = container.textContent.toLowerCase()
         for (const w of ['organizer', 'account', 'user', 'role', 'proposal', 'propose', 'approved by', 'signed in', 'audit', 'changed by']) expect(words).not.toContain(w)
         await waitFor(() => expect(words).toContain('changed there'))
+    })
+})
+
+// --- the review fixes (A4 1-3, 5, 6; 2026-09-30): each of these failed on the code before ---
+describe('review A4-1: undo and restore last good refuse when the show changed elsewhere', () => {
+    const colleagueCue = (doc) => applyProjectOps(doc, [{ type: 'createMappingCue', payload: { cue: { id: 'cue-colleague', name: 'Colleague', fade: 0, hold: 5, lightLook: doc.mappingState.cues[0].lightLook } } }])
+    it('RESTORE LAST GOOD writes nothing over a colleague\'s cue and says why', () => {
+        const { log, doc } = mount()
+        act(() => { Harness.set((d) => colleagueCue(d)) })
+        fireEvent.click(screen.getByRole('button', { name: /RESTORE LAST GOOD/ }))
+        expect(log).toHaveLength(0)
+        expect(status()).toMatch(/^Not done: .*changed elsewhere/)
+        expect(doc().mappingState.cues.some((c) => c.id === 'cue-colleague')).toBe(true)
+    })
+    it('UNDO writes nothing over a colleague\'s later colour on another look and says why', () => {
+        const { log, doc } = mount()
+        pick('Red room')
+        fireEvent.click(screen.getByLabelText('Red room colour #00ff66'))
+        const other = scenesOf(doc()).find((s) => s.id !== LIT.id && s.lookId !== LIT.lookId && Object.values(s.levels).some((v) => v > 0))
+        act(() => { Harness.set((d) => withLook(d, other.lookId, (l) => ({ ...l, colours: { ...l.colours, [Object.keys(other.levels)[0]]: '#123456' } }))) })
+        const before = hashes(doc())
+        fireEvent.click(screen.getByRole('button', { name: 'UNDO' }))
+        expect(log).toHaveLength(1)
+        expect(hashes(doc())).toEqual(before)
+        expect(status()).toMatch(/^Not done: .*changed elsewhere/)
+    })
+})
+
+describe('review A4-3: one restore point per file read, not per take', () => {
+    it('two takes, then RESTORE LAST GOOD goes back before the first', async () => {
+        const base = MIN
+        const cath = named(MIN, 'White cathedral')
+        const roof = named(MIN, 'Roof reveal')
+        const here = withCue(base, LIT.id, { fade: 1 })
+        const there = withCue(withCue(base, roof.id, { fade: 2 }), cath.id, { fade: 2 })
+        const { doc } = mount(here, { storage: seeded(hashes(base)) })
+        await readFile(bundleText(there))
+        fireEvent.click(within(rowOf('Roof reveal')).getByRole('button', { name: 'TAKE THEIRS' }))
+        fireEvent.click(within(rowOf('White cathedral')).getByRole('button', { name: 'TAKE THEIRS' }))
+        expect(named(doc(), 'Roof reveal').fade).toBe(2)
+        fireEvent.click(screen.getByRole('button', { name: /RESTORE LAST GOOD/ }))
+        expect(hashes(doc())).toEqual(hashes(here))
+    })
+})
+
+describe('review A4-2: the ledger does not say synced before the store has taken the write', () => {
+    it('bases are held while the store has not moved, shown with its error, and written once it has', async () => {
+        const base = MIN
+        const roof = named(MIN, 'Roof reveal')
+        const there = withCue(base, roof.id, { fade: 2 })
+        const storage = seeded(hashes(base))
+        const { log, rerender } = mount(base, { storage, syncVersion: 5 })
+        await readFile(bundleText(there))
+        fireEvent.click(within(rowOf('Roof reveal')).getByRole('button', { name: 'TAKE THEIRS' }))
+        expect(log).toHaveLength(1)
+        expect(readLedger(PROJECT, storage).lastSync[roof.id]).toBe(sceneHash(roof)) // not theirs yet
+        const again = (extra) => rerender(<Harness start={base} log={log} storage={storage} projectId={PROJECT} reducedMotion syncVersion={5} {...extra} />)
+        again({ syncError: 'Session expired — sign in again to keep syncing.' })
+        expect(screen.getByRole('alert').textContent).toMatch(/Not saved to the server yet: Session expired/)
+        expect(readLedger(PROJECT, storage).lastSync[roof.id]).toBe(sceneHash(roof))
+        again({ syncError: null, syncVersion: 6 })
+        expect(readLedger(PROJECT, storage).lastSync[roof.id]).toBe(sceneHash(named(there, 'Roof reveal')))
+        expect(screen.queryByRole('alert')).toBeNull()
+    })
+})
+
+describe('review A4-5 / A4-6: the timeline scrolls; a file of no named show is not compared', () => {
+    it('the cue timeline scrolls sideways instead of spilling past its border', () => {
+        const css = fs.readFileSync(path.join(ROOT, 'src/rigbuild/scenes.css'), 'utf8')
+        expect(css).toMatch(/\.rigscenes-tl \{[^}]*overflow-x: auto/)
+    })
+    it('a bundle with project "" is refused like one from another show', async () => {
+        const { log } = mount(MIN, { storage: seeded(hashes(MIN)) })
+        await readFile(JSON.stringify(exportBundle(MIN, { project: '', exportedAt: '2026-09-30T10:00:00.000Z', lastSync: {} })))
+        expect(log).toHaveLength(0)
+        expect(within(strip()).getByText(/^Not read: this file holds the scenes of no named show/)).toBeTruthy()
     })
 })
