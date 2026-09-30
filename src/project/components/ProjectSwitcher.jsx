@@ -46,7 +46,7 @@ const pillStyleIdle = {
     border: '1px solid rgba(255,255,255,0.10)',
     background: 'rgba(10, 16, 24, 0.32)',
     color: 'rgba(245, 247, 250, 0.85)',
-    borderRadius: '999px',
+    borderRadius: '2px',
     padding: '0.45rem 0.8rem',
     fontSize: '0.8rem',
     cursor: 'pointer',

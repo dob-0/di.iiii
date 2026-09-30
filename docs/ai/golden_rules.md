@@ -1174,3 +1174,11 @@ The same trap has a sibling already in this file: a published page's DOM lives i
 **How:** Copy the shape `src/pages/legal.css` already uses. Two follow-ons: a `position: sticky` bar inside that container needs the container to carry **no top padding**, or content scrolls past visibly in the strip above it; and a modal that locks scrolling must toggle the class on the page root, since `body { overflow: hidden }` locks an element that was never scrolling.
 
 **Files:** `src/styles/base.css`, `src/pages/legal.css`
+
+### Controls are rectangles — no pills, no circles, no rounded chrome
+
+**Rule:** In this product's UI, buttons, switches, tabs, chips, segmented bars and their containers are rectangles with a corner radius of 0–2 px. No pill (`border-radius: 999px`, `var(--di-radius-pill)`) and no circle (`50%`) on a control or on the bar that holds controls. The current state of a control is shown by fill and contrast, never by shape. Status dots that are not controls (a recording light) are the only round marks allowed.
+
+**Why:** The owner, 2026-09-30, pointing at the MOXIR room's version switch and its Floor/DJ/Top view bar: "in design we not use the round things". The house look is flat, mono and rectangular (the rig pages, the desk and the visualiser already use 2 px); pills were the one place it broke.
+
+**How:** New UI: write `borderRadius: '2px'` (or the existing 2 px token), never a pill token. Changed 2026-09-30: `RigVersionSwitch.jsx`, `SmartViewBar.jsx`, `overlayButtonStyle` in `publicViewerStyles.js`, and the idle/active button in `ProjectSwitcher.jsx`. **Owed, not yet changed:** the `--di-radius-pill` token and its users (`jamSurface.css`, `kit.css`, `inspector-controls.css`, `authReturnNotice.css`, `liveProjectScene.css`), the `50%` buttons in `build.css` and `jamSurface.css`, and the rounded panels in `ProjectSwitcher.jsx` and `overlayCardStyle` (8–18 px). Change them one surface at a time and look at each on the real screen.
