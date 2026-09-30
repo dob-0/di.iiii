@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { listSpaceContents } from '../project/services/projectsApi.js'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
-import { rigVariantOf, versionLinks } from './rigVariant.js'
+import { rigVariantOf, shortTitle, versionLinks } from './rigVariant.js'
 
 // THE VERSION SWITCH in the space view (RIG_BUILD.md §15). Owner, 2026-09-28: three
 // versions of MOXIR's rig — minimal, middle, full — to choose between by looking.
@@ -25,6 +25,8 @@ const rowStyle = {
     overflowX: 'auto'
 }
 
+const dividerStyle = { alignSelf: 'center', flex: '0 0 1px', height: '24px', margin: '0 4px', background: 'rgba(255,255,255,0.28)' }
+
 const linkStyle = (current) => ({
     display: 'inline-flex',
     alignItems: 'center',
@@ -38,20 +40,17 @@ const linkStyle = (current) => ({
     background: current ? '#f5f7fa' : 'transparent'
 })
 
-/** The short word a version is called by in the row: its title up to the dash. */
-const shortTitle = (title) => String(title || '').split(' — ')[0]
-
-// Which projects the space really holds: the same visitor-safe list the space's contents
-// page reads (GET /api/spaces/:id/contents). null until it answers — and null for good if
+// What the space really holds: the same visitor-safe list the space's contents page reads
+// (GET /api/spaces/:id/contents) — rows with each version's own mark. null until it answers — and null for good if
 // it cannot, so the row then shows only the version you are in, never a dead link.
-function useSpaceProjectIds(spaceId, enabled) {
+function useSpaceProjects(spaceId, enabled) {
     const [ids, setIds] = useState(null)
     useEffect(() => {
         if (!enabled || !spaceId) return undefined
         let live = true
         setIds(null)
         listSpaceContents(spaceId)
-            .then((projects) => { if (live) setIds(new Set((projects || []).map((p) => p.id))) })
+            .then((projects) => { if (live) setIds(projects || []) })
             .catch(() => { if (live) setIds(null) })
         return () => { live = false }
     }, [spaceId, enabled])
@@ -60,15 +59,19 @@ function useSpaceProjectIds(spaceId, enabled) {
 
 export default function RigVersionSwitch({ spaceId, projectId, entities, top = '1rem' }) {
     const variant = useMemo(() => rigVariantOf(entities), [entities])
-    const existing = useSpaceProjectIds(spaceId, Boolean(variant))
+    const existing = useSpaceProjects(spaceId, Boolean(variant))
     const links = useMemo(() => versionLinks(variant, projectId, (id) => buildPublicProjectPath(spaceId, id), existing), [variant, projectId, spaceId, existing])
     if (!links) return null
     return (
         <nav aria-label="rig versions" style={{ ...rowStyle, top }}>
-            {links.map((l) => (
-                <a key={l.id} href={l.href} aria-current={l.current ? 'page' : undefined} title={l.summary || l.title} style={linkStyle(l.current)}>
-                    {shortTitle(l.title)}
-                </a>
+            {links.map((l, i) => (
+                <Fragment key={l.href}>
+                    {/* the labelled copies of old hall versions come after the live ones, apart */}
+                    {l.copy && !links[i - 1]?.copy ? <span aria-hidden="true" style={dividerStyle} /> : null}
+                    <a href={l.href} aria-current={l.current ? 'page' : undefined} title={l.summary || l.title} style={linkStyle(l.current)}>
+                        {shortTitle(l.title, l.id)}
+                    </a>
+                </Fragment>
             ))}
         </nav>
     )
