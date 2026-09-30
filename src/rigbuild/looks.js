@@ -276,9 +276,17 @@ export const blendEntities = (from, to, t) => {
 // ANOTHER colour would need its own bake (owed; MOXIR's looks wash in red or not at all).
 export const WASH_ENTITY_ID = 'rig-wash'
 const WASH_POSITIONS = new Set(['column-faces', 'outer-columns', 'backdrop', 'dance-columns'])
+// Only the lamps whose light the bake paints — the PARs — steer its level. A moving head standing
+// at a washing position (the ground versions' column-base and backdrop movers) is its own beam and
+// not part of the wash: counting it kept the columns glowing in scenes whose PARs were out
+// (measured on the ground versions' scenes, 2026-09-30). A key with no type keeps the old rule.
+const WASH_TYPES = new Set(['up-pl5403'])
 export const washLevelOf = (look) => {
     if (!look) return 1
-    const keys = Object.keys(look.aims || {}).filter((k) => WASH_POSITIONS.has(k.split('/')[0]))
+    const keys = Object.keys(look.aims || {}).filter((k) => {
+        const [position, type] = k.split('/')
+        return WASH_POSITIONS.has(position) && (type === undefined || WASH_TYPES.has(type))
+    })
     if (!keys.length) return 1
     return Math.max(...keys.map((k) => levelOfKey(look, k)))
 }
