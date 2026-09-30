@@ -150,3 +150,33 @@ describe('the sheet says what each warning is, by cause', () => {
         expect(html.split(shown).length - 1).toBeGreaterThanOrEqual(2)
     })
 })
+
+describe('sheetModel reads the desk (owner install 2026-09-30: "36 (0 patched)" vs "29 of 36 addressed")', () => {
+    const project = 'p1'
+    const entities = Array.from({ length: 36 }, (_, i) => lamp(`l${i}`, { index: i + 1, type: 'up-b380f', mode: '16ch', circuit: 'C1', position: 'truss', unit: i + 1 }))
+    const desk = entities.slice(0, 29).map((e, i) => ({ key: `${project}:${e.id}`, universe: 1 + Math.floor(i / 16), address: 1 + (i % 16) * 16 }))
+    it('takes counts, universes and unpatched flags from the desk', () => {
+        const m = sheetModel({ entities, library, desk, projectId: project })
+        expect(m.source).toBe('desk')
+        expect(m.totals).toMatchObject({ lamps: 36, patched: 29, universes: 2 })
+        expect(m.rows.filter((r) => r.flags.includes('not-patched'))).toHaveLength(7)
+        expect(m.rows.find((r) => r.id === 'l16')).toMatchObject({ universe: 2, address: 1 })
+    })
+    it('without a desk it is the document alone and says so', () => {
+        const m = sheetModel({ entities, library, desk: null, projectId: project })
+        expect(m.source).toBe('none')
+        expect(m.totals).toMatchObject({ lamps: 36, patched: 0, universes: 0 })
+    })
+    it('a desk holding none of this project keeps the document addresses', () => {
+        const withAddr = entities.map((e, i) => (i < 2 ? lamp(e.id, { ...e.components.fixture, universe: 1, address: 1 + i * 16 }) : e))
+        const m = sheetModel({ entities: withAddr, library, desk: [], projectId: project })
+        expect(m.source).toBe('document')
+        expect(m.totals.patched).toBe(2)
+    })
+    it('flags a lamp the document addressed but the desk does not hold', () => {
+        const withAddr = entities.map((e, i) => (i === 35 ? lamp(e.id, { ...e.components.fixture, universe: 3, address: 1 }) : e))
+        const m = sheetModel({ entities: withAddr, library, desk, projectId: project })
+        expect(m.rows.find((r) => r.id === 'l35').flags).toContain('not-on-desk')
+        expect(m.totals.patched).toBe(29)
+    })
+})
