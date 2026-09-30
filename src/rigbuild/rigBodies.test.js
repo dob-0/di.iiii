@@ -113,4 +113,11 @@ describe('load-plot keeps the baked column wash (owed on #607)', () => {
     it('--pieces-only: no lamps left, so the wash goes too', () => {
         expect(deletions({ ...base, piecesOnly: true })).toContain('rig-wash')
     })
+
+    // RIG_BUILD.md §15.13 — the per-look washes (rig.mjs --wash-per-look) are kept the same way.
+    it('a per-look wash (rig-wash:<look>) stays on a full load and goes with --pieces-only', () => {
+        const withPerLook = new Map([...have, ['rig-wash:gs-red-room', { id: 'rig-wash:gs-red-room', type: 'model' }]])
+        expect(deletions({ ...base, have: withPerLook, piecesOnly: false })).not.toContain('rig-wash:gs-red-room')
+        expect(deletions({ ...base, have: withPerLook, piecesOnly: true })).toContain('rig-wash:gs-red-room')
+    })
 })

@@ -302,6 +302,81 @@ export const withWashLevel = (entities, level) => {
     }))
 }
 
+// ---- ONE WASH PER LOOK (RIG_BUILD.md §15.13) ------------------------------------------
+// The single `rig-wash` is baked for ONE look: every other scene showed that look's lamps in
+// that look's colour, or nothing. `rig.mjs --wash-per-look` bakes one mesh PER LOOK instead,
+// entity `rig-wash:<lookId>`, written hidden (runtime.visible false). While a look plays the
+// room shows that look's wash at full — the bake already holds the look's levels and colours,
+// so no level multiplies it — and over a cue's fade cross-fades the previous look's out
+// (opacity 1 − t) as the new one comes in (opacity t). Where a playing look has no wash of
+// its own, the single `rig-wash` (at the look's PAR level, withWashLevel) is the fallback;
+// where a project has no per-look wash at all, nothing here changes: the single wash is
+// drawn exactly as before. Pure.
+export const WASH_ENTITY_PREFIX = `${WASH_ENTITY_ID}:`
+export const washEntityId = (lookId) => `${WASH_ENTITY_PREFIX}${lookId}`
+export const lookIdOfWash = (id) => (typeof id === 'string' && id.startsWith(WASH_ENTITY_PREFIX) && id.length > WASH_ENTITY_PREFIX.length ? id.slice(WASH_ENTITY_PREFIX.length) : null)
+/** Any baked wash: the single one or a per-look one. */
+export const isWashEntityId = (id) => id === WASH_ENTITY_ID || lookIdOfWash(id) !== null
+// Every project's wash bytes together (every `rig-wash*` asset) stop here: 11 looks × ~115 KB is
+// ~1.3 MB, and a room that loads 2 MB of decals before it draws is a room that opens late.
+export const WASH_BYTES_CAP = 2 * 1024 * 1024
+
+/** Map(lookId → wash entity) of the per-look washes a document carries. */
+export const perLookWashesOf = (entities = []) => {
+    const out = new Map()
+    for (const e of entities) {
+        const lookId = lookIdOfWash(e?.id)
+        if (lookId) out.set(lookId, e)
+    }
+    return out
+}
+
+// A wash entity whose asset the document does not hold draws nothing (an uploaded model the
+// asset list does not name: §15.6's second trap) — treated as missing, so the fallback shows.
+const washHeld = (entity, assetIds) => {
+    if (!assetIds) return true
+    const assetId = entity?.components?.media?.assetId
+    return Boolean(assetId) && assetIds.has(assetId)
+}
+
+const washAt = (e, opacity) => ({
+    ...e,
+    components: {
+        ...e.components,
+        appearance: { ...(e.components.appearance || {}), opacity: Math.max(0, Math.min(1, opacity)) },
+        runtime: { ...(e.components.runtime || {}), visible: opacity > 0 }
+    }
+})
+
+/**
+ * The washes as the room draws them between two looks: the wash of `toLookId` at t, the wash
+ * of `fromLookId` at 1 − t, every other per-look wash hidden. `assets` (the document's asset
+ * list, optional) says which washes are really there. Returns the same array when there is
+ * nothing to do (no per-look wash, or no look playing), so a memo sees no change.
+ */
+export const withLookWash = (entities, { fromLookId = '', toLookId = '', t = 1, assets = null } = {}) => {
+    const perLook = perLookWashesOf(entities)
+    if (!perLook.size || !toLookId) return entities
+    const held = Array.isArray(assets) ? new Set(assets.map((a) => a?.id).filter(Boolean)) : null
+    const has = (lookId) => Boolean(lookId) && perLook.has(lookId) && washHeld(perLook.get(lookId), held)
+    const tt = Number.isFinite(t) ? Math.max(0, Math.min(1, t)) : 1
+    const fading = tt < 1 && fromLookId && fromLookId !== toLookId
+    const toHas = has(toLookId)
+    const fromHas = fading && has(fromLookId)
+    return entities.map((e) => {
+        const lookId = lookIdOfWash(e.id)
+        if (lookId) {
+            if (toHas && lookId === toLookId) return washAt(e, fading ? tt : 1)
+            if (fromHas && lookId === fromLookId) return washAt(e, 1 - tt)
+            return washAt(e, 0)
+        }
+        // The single wash: hidden while a per-look wash carries the look, and — the fallback —
+        // left as withWashLevel drew it while the playing look has none of its own.
+        if (e.id === WASH_ENTITY_ID) return toHas ? washAt(e, 0) : e
+        return e
+    })
+}
+
 // ---- STROBES AND BLINDERS read as a FLASH, not a cone (RIG_BUILD.md §15.6) ------------
 // A strobe is a white flash of a few milliseconds and a blinder a warm face: neither
 // throws a beam you can see standing in the haze. Drawn as the other lamps are, a 60°

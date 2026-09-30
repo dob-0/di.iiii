@@ -1651,6 +1651,51 @@ floor; HK615, MH100S, MH8060S, BY06 not typed; the laser sign-off and the effect
 the crew's cable plan and cable covers along the nave wall; the far-crane and girder-underside difference
 between the committed and the built hall (`spec.hall` still points at the 09-28 layering).
 
+### 15.13 One baked wash per look (`rig.mjs --wash-per-look`, 2026-09-30)
+
+**The defect (READ, the room-light audit §5).** The baked wash is ONE mesh, `rig-wash`, baked by
+`rig.mjs --wash-only --look <id>` for one look — on the owner's install `gs-white-cathedral`. The room fades
+that mesh's opacity with the look's PAR level (`washLevelOf`, `withWashLevel`) and can change nothing else:
+`gs-red-room` lit its lamps red over a white column wash, and every scene whose PARs aim elsewhere kept the
+cathedral's columns. The ground versions carry 14 and 16 looks.
+
+**The fix: one mesh per look, the room picks.** `rig.mjs --wash-per-look` builds every look of the rig file
+the way `--wash-only --look <id>` builds one (`buildRig` with that look: its aims, colours and levels — a
+lamp at level 0 bakes none) and writes each into its own entity `rig-wash:<lookId>` (type `model`), written
+HIDDEN (`runtime.visible false`, opacity 0). Assets are content-addressed (the id is the sha256 of the
+bytes, serverXR `assetHash.js`): a bake the project already holds is not uploaded again, two looks with
+the same bytes share one asset, and stale `rig-wash:<look>` entities (a look gone or re-baked) go with
+their assets. The single `rig-wash` is NOT touched: it stays the fallback. `--wash-only --look <id>`
+writes the single `rig-wash` exactly as before. Plan and ops are pure in `scripts/place/wash-plan.mjs`.
+
+**The room (`withLookWash`, `src/rigbuild/looks.js`; wired in `useRigLook.js` after `blendEntities`).**
+While a look plays, its wash is shown at full — the bake already holds the look's level and colour, so no
+level multiplies it — and over a cue's fade the previous look's wash goes out at `1 − t` as the new one
+comes in at `t`, on the same ~30 Hz tick as the lamps; every other per-look wash and the single one are
+hidden. Fallbacks, in order: a playing look with no wash of its own (or whose asset the document does not
+hold) leaves the single `rig-wash` as `withWashLevel` drew it; a project with no per-look wash at all is
+returned as the same array — nothing changes for any existing project. No look playing: the document as
+written (the per-look washes hidden; the single one, where it exists, as before).
+
+**The size guard.** `washBudget` sums the distinct per-look bytes plus the single wash's asset, logs one
+line (`wash bytes: N looks, M distinct meshes, … of the 2048 KB cap`) and refuses above `WASH_BYTES_CAP`
+(2 MB) before anything is uploaded, with the message saying what to cut.
+
+**Keep lists.** `load-plot.mjs` (`isBakedKept`) and `rehang.mjs` (`KEEP`) keep `rig-wash:<look>` as they
+keep `rig-wash`; `--pieces-only` takes them all down.
+
+**Measured (the committed rig files and the versions' hall, `wash-plan.test.js`):** minimal-ground bakes
+5 of 14 looks, 491 KB together (red-room, slow-sweep, gs-red-room, gs-white-cathedral 117,580 B each;
+gs-columns-below 32,724 B); full-ground 6 of 16, 575 KB (+ gs-haze-wall 85,876 B). The other looks have
+their PARs out and bake none, so they show no wash — right for a scene that asked for darkness.
+
+**Not seen.** Written and tested on a machine with no browser and no GPU: the cross-fade of two
+alpha-blended decals (coverage `1 − (1 − t·α₁)(1 − (1 − t)·α₂)`, continuous but not constant where
+they overlap), the hidden entities' cost while a room loads six models, and every frame-rate consequence
+are UNVERIFIED until someone looks. Owed: the writer run against a real project (the data step is the
+owner's: `rig.mjs --wash-per-look` per ground version), and the decision whether the default look's wash
+should show at rest (today: none, the writer hides them all).
+
 ## 16. Hosted playback — the show with no desk (`src/rigbuild/showClock.js`)
 
 The light desk (`/light`) runs on a local install only, by design (LIGHTING_DESK.md). On a hosted

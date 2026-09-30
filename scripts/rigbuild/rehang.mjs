@@ -40,11 +40,13 @@ import { rigLooksFrom } from './looks.mjs'
 import { variantOf } from './load-version.mjs'
 import { projectOf, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
 import { catalogueHeightOf } from '../../src/rigbuild/pieces.js'
+import { isWashEntityId } from '../../src/rigbuild/looks.js'
 
 const r3 = (v) => Math.round(v * 1000) / 1000
 const isRig = (e) => e.id.startsWith('rig-')
-// What stays of the old rig: the show's entity, the baked wash (rig.mjs --wash-only re-bakes it).
-const KEEP = new Set([RIG_SHOW_ID, 'rig-wash'])
+// What stays of the old rig: the show's entity, the baked washes — the single one (rig.mjs
+// --wash-only re-bakes it) and the per-look ones (`rig-wash:<look>`, --wash-per-look, §15.13).
+const KEEP = { has: (id) => id === RIG_SHOW_ID || isWashEntityId(id) }
 
 /** A lamp's lens radius for its type, as realism.mjs sets it: the manifest's lens or window. */
 export const apertureOf = (typeId, library, manifest) => {

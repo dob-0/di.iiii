@@ -42,12 +42,15 @@ import { makeClient, mimeFor } from '../place/api.mjs'
 import { venuePlanFromHall } from '../../src/rigbuild/venuePlan.js'
 import { layRun, trussSegments } from '../../src/rigbuild/plotGeometry.js'
 import { PIECES, TRUSS_SECTION_M, catalogueHeightOf } from '../../src/rigbuild/pieces.js'
+import { isWashEntityId } from '../../src/rigbuild/looks.js'
 
 const args = parseArgs()
 // Baked meshes the live rig replaces, and the one it does not (see 3. above).
 export const BAKED_REPLACED = ['rig-beams', 'rig-fixtures']
 export const BAKED_KEPT = ['rig-wash']
-const BAKED = [...BAKED_REPLACED, ...BAKED_KEPT]
+// The single wash and the per-look ones (`rig-wash:<look>`, rig.mjs --wash-per-look, RIG_BUILD.md §15.13).
+export const isBakedKept = (id) => BAKED_KEPT.includes(id) || isWashEntityId(id)
+const isBaked = (id) => BAKED_REPLACED.includes(id) || isBakedKept(id)
 const r3 = (v) => Math.round(v * 1000) / 1000
 
 const readTokenFile = (file) => {
@@ -68,8 +71,8 @@ export const deletions = ({ have, incomingIds, pieceIds, replaced, piecesOnly })
         const oldRig = id.startsWith('rig-') && !incomingIds.has(id) && !pieceIds.has(id)
         const lamp = e.type === 'spotLight' || Boolean(e.components?.fixture)
         const drop = piecesOnly
-            ? (BAKED.includes(id) || replaced.has(id) || (oldRig && lamp))
-            : (BAKED_REPLACED.includes(id) || (oldRig && e.type !== 'model' && !BAKED_KEPT.includes(id)) || replaced.has(id))
+            ? (isBaked(id) || replaced.has(id) || (oldRig && lamp))
+            : (BAKED_REPLACED.includes(id) || (oldRig && e.type !== 'model' && !isBakedKept(id)) || replaced.has(id))
         if (drop) out.push(id)
     }
     return out
