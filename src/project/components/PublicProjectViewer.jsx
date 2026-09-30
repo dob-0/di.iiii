@@ -34,7 +34,7 @@ import { isEmbedRequest } from '../../utils/previewMode.js'
 import { hasRig } from '../../rigbuild/hasRigLamps.js'
 import RigVersionSwitch from '../../rigbuild/RigVersionSwitch.jsx'
 import { rigVariantOf } from '../../rigbuild/rigVariant.js'
-import { rigChromeTops } from '../../rigbuild/rigVersionLayout.js'
+import { rigChromeTops, rigVersionPlacement } from '../../rigbuild/rigVersionLayout.js'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
@@ -262,6 +262,13 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         rowShown: rigVersionsShown,
         compact: isPhoneCompact,
         rightControls: (navMode === 'orbit' && walkGateOpen) || (state.status === 'ready' && hasSound && !soundLocked && !isPreview)
+    })
+    // In walk mode the row is one collapsed button under the room's header (rigVersionPlacement),
+    // so a visitor switches version without Esc; the show chip is an orbit thing and stays put.
+    const rigPlacement = rigVersionPlacement(topClear, {
+        isRigSet: state.status === 'ready' && !isPreview && !isEmbed && Boolean(rigVariantOf(document?.entities || [])),
+        navMode,
+        rowTop: rigRowTop
     })
     const hasFiles = Array.isArray(presentationState.codeFiles) && presentationState.codeFiles.length > 0
     const rawHtml = hasFiles ? bundleCodeFiles(presentationState.codeFiles) : (presentationState.codeHtml || '')
@@ -593,12 +600,13 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
 
             {/* A rig with versions (RIG_BUILD.md §15): a row of links to its siblings. Shown
                 only on a project that says it is one of a set — every other room is untouched. */}
-            {rigVersionsShown ? (
+            {rigPlacement.mode ? (
                 <RigVersionSwitch
                     spaceId={resolvedRouteSpaceId}
                     projectId={projectId}
                     entities={document?.entities || []}
-                    top={rigRowTop}
+                    top={rigPlacement.top}
+                    mode={rigPlacement.mode}
                 />
             ) : null}
 

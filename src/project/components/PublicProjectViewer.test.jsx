@@ -632,6 +632,27 @@ describe('PublicProjectViewer', () => {
         expect(await screen.findByRole('button', { name: 'Walk / Fly' })).toBeInTheDocument()
     })
 
+    // Owner, 2026-09-30: in walk mode the only way to another version was Esc. Now one
+    // collapsed control stays, and switching does not need the orbit view.
+    it('keeps a version control in walk mode on a rig set (no Esc needed)', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                ...sceneDocumentResponse.document,
+                entities: [{ id: 'show', components: { rigVariant: { set: 's', id: 'a', title: 'A', siblings: [{ id: 'a', projectId: 'live-project', title: 'A' }, { id: 'b', projectId: 'p2', title: 'B' }] } } }]
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+        listSpaceContentsMock.mockResolvedValue([{ id: 'live-project' }, { id: 'p2' }])
+        render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+        fireEvent.click(await screen.findByRole('button', { name: 'Walk / Fly' }))
+        await screen.findByRole('button', { name: '← View mode' })
+        const versions = await screen.findByRole('button', { name: 'Versions · A' })
+        fireEvent.click(versions)
+        expect(screen.getByRole('link', { name: 'B' })).toBeInTheDocument()
+        listSpaceContentsMock.mockResolvedValue([{ id: 'p', slug: null, title: 'p', mode: 'scene', updatedAt: 0 }])
+    })
+
     // Regression guard: the public viewer is the platform's widest audience and
     // used to offer no path from viewing into creating (UX audit 2026-07-10).
     it('offers the Made with di.iiii affordance to public visitors', async () => {

@@ -24,3 +24,19 @@ export function rigChromeTops(topClear, { rowShown = false, compact = false, rig
     const rowTop = compact && rightControls ? `calc(${topClear} + ${CONTROL_LINE})` : topClear
     return { rowTop, chipTop: `calc(${rowTop} + ${CONTROL_LINE})` }
 }
+
+// In walk mode the room's own header (exit, title, sound, badge) is the first line and the
+// joystick, Fly and altitude buttons live at the bottom, so the version control takes the
+// free line UNDER the header, top-left, collapsed to one 44 px button. 4.5rem is the header
+// (20 px padding + a 40 px button) plus a gap; measured on no real screen yet.
+export const WALK_HEADER_CLEAR = '4.5rem'
+
+/**
+ * Which version control a viewer shows, and where.
+ * @returns {{ mode: 'row'|'walk'|null, top: string }}
+ */
+export function rigVersionPlacement(topClear, { isRigSet = false, navMode = 'orbit', rowTop = topClear } = {}) {
+    if (!isRigSet) return { mode: null, top: topClear }
+    if (navMode === 'walk') return { mode: 'walk', top: `calc(${topClear} + ${WALK_HEADER_CLEAR})` }
+    return { mode: 'row', top: rowTop }
+}
