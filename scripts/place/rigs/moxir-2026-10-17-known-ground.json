@@ -10,7 +10,7 @@
         "set": "moxir-2026-10-17",
         "id": "known-ground",
         "title": "Known · movers on the ground · haze and smoke",
-        "summary": "Full · movers on the ground, only the fixtures whose DMX is known — tested on these rental units at the Sevan festival (Dilijan camp): 13 UP-B380F on the floor (7 behind the press, 6 at the column bases), 21 UP-PL5403 on the cut and the columns and press, the 2 fixed UP-LA40WF (held dark until the laser sign-off). Plus the 6 hazers and 4 smoke machines, placed but kept OFF DMX (run by hand). Out until their charts arrive: the 7 COB200 curtain, 6 UP-250BSW, 4 UP-HK1915, 6 CO2 jets, 4 cold-spark machines.",
+        "summary": "Full · movers on the ground, only the fixtures whose DMX is known — tested on these rental units at the Sevan festival (Dilijan camp): 13 UP-B380F on the floor (7 behind the press, 6 at the column bases), 21 UP-PL5403 on the cut and the columns and press, the 2 fixed UP-LA40WF (held dark until the laser sign-off). Plus the 6 hazers and 4 smoke machines, placed and meant to stay off DMX (run by hand; the patch does not enforce it yet). Out until their charts arrive: the 7 COB200 curtain, 6 UP-250BSW, 4 UP-HK1915, 6 CO2 jets, 4 cold-spark machines. Strobe hit and Blinder hit are left out: their strobes and blinders are not in this version.",
         "order": 11,
         "candidateOf": "full"
     },
@@ -729,10 +729,6 @@
                     "rule": "backdrop",
                     "h": 0.6
                 },
-                "laser-cut": {
-                    "rule": "laser-into-roof",
-                    "a": 14
-                },
                 "par-columns-8": {
                     "rule": "up-the-column"
                 },
@@ -741,6 +737,10 @@
                 },
                 "beam380-columns-6": {
                     "rule": "vertical"
+                },
+                "laser-cut": {
+                    "rule": "laser-into-roof",
+                    "a": 14
                 }
             },
             "colours": {
@@ -750,9 +750,7 @@
                 "beam380-columns-6": 0,
                 "par-columns-8": 0,
                 "par-cut-bridge": 0,
-                "par-press-cut": 0,
-                "laser-cut": 0,
-                "beam380-backstage": 0
+                "par-press-cut": 0
             }
         },
         "one-beam": {
@@ -1188,49 +1186,6 @@
                 "par-press-cut": 0.4,
                 "beam380-backstage": 0.7,
                 "beam380-columns-6": 0.9,
-                "laser-cut": 0
-            }
-        },
-        "gs-blinder-hit": {
-            "title": "Blinder hit",
-            "intent": "One hard white blinder hit on the front of the floor from the cut, cut in from black and cut back to black. The COB curtain is held steady by the look; the room flashes only by the cue cutting in and out. STROBE-CAPABLE: lights the blinder, held steady, cut by the cue; flash rate never above 3/s.",
-            "aims": {
-                "par-cut-x": {
-                    "rule": "point",
-                    "x": 0,
-                    "y": 4,
-                    "a": -1.4
-                },
-                "par-cut-bridge": {
-                    "rule": "bridge-underside",
-                    "out": 6
-                },
-                "par-columns-8": {
-                    "rule": "up-the-column"
-                },
-                "par-press-cut": {
-                    "rule": "backdrop",
-                    "h": 0.6
-                },
-                "beam380-backstage": {
-                    "rule": "vertical"
-                },
-                "beam380-columns-6": {
-                    "rule": "vertical"
-                },
-                "laser-cut": {
-                    "rule": "laser-into-roof",
-                    "a": 14
-                }
-            },
-            "colours": {},
-            "levels": {
-                "par-cut-x": 0,
-                "par-cut-bridge": 0,
-                "par-columns-8": 0,
-                "par-press-cut": 0,
-                "beam380-backstage": 0,
-                "beam380-columns-6": 0,
                 "laser-cut": 0
             }
         },

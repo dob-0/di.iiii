@@ -6,7 +6,7 @@
   - The 2 UP-LA40WF (held dark by the laser gate).
   - 6 hazers and 4 smoke machines, recorded in `policy.dmx.offDmx` as kept off DMX.
   - Out until the charts arrive: COB200 curtain, UP-250BSW, UP-HK1915, CO2, sparks.
-  - The 15 looks are full-ground's with the dropped groups stripped. gs-spark-hit is dropped because it drove only the sparks.
+  - 13 looks: full-ground's with the dropped groups stripped. gs-spark-hit, strobe-hit and gs-blinder-hit are dropped because their only fixtures (sparks, strobes, blinders, COB) are not in this version; in review they came out as blackouts.
 - The generated files are scripts/place/rigs/moxir-2026-10-17-known-ground.json and scripts/rigbuild/rentals/moxir-2026-10-17-known-ground.json. Every other generated file came out byte-identical apart from line endings, which are left untouched.
 - Fixed `scripts/rigbuild/versions.mjs`'s main guard. `new URL(import.meta.url).pathname` is /C:/… on Windows and never equals the argv path, so the script silently did nothing there, and its `--check` passed without checking. It now uses fileURLToPath. The same guard is in 24 more scripts (grep `=== new URL(import.meta.url).pathname`); they were not changed here.
 - ground-movers.test.js: known-ground is a policy-checked SUBSET (`GROUND_SUBSETS`). It must keep the ground-only rule (passes: no violations) but is not held to the two full versions' type list.
