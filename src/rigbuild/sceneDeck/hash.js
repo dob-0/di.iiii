@@ -64,9 +64,13 @@ export const sha256Hex = (text) => {
     return Array.from(H, (x) => x.toString(16).padStart(8, '0')).join('')
 }
 
-/** A number as the hash sees it: finite, 6 decimals, never -0. */
+/** The largest magnitude a scene holds: beyond ~1.8e302 n * 1e6 overflows and JSON writes it as null. */
+export const MAX_NUMBER = 1e9
+
+/** A number as the hash sees it: finite, at most 1e9, 6 decimals, never -0. */
 export const normaliseNumber = (n) => {
     if (!Number.isFinite(n)) throw new SceneDeckError('non-finite', `a scene cannot hold ${n}`)
+    if (Math.abs(n) > MAX_NUMBER) throw new SceneDeckError('non-finite', `a scene cannot hold ${n}: outside ${MAX_NUMBER}`)
     const r = Math.round(n * 1e6) / 1e6
     return Object.is(r, -0) ? 0 : r
 }

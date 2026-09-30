@@ -24,6 +24,9 @@ export const LASER_TYPES = Object.freeze(['up-la40wf'])
 export const BLINDER_TYPES = Object.freeze(['up-cob200'])
 /** The plain marker ground-scenes.mjs writes into a laser look's intent (a look has no sign-off field). */
 export const SIGN_OFF_MARKER = 'requiresLaserSignOff'
+/** The marker as a whole token: "no requiresLaserSignOff" still counts, "xrequiresLaserSignOffx" does not. */
+const MARKER_TOKEN = new RegExp(`(?<![A-Za-z0-9_])${SIGN_OFF_MARKER}(?![A-Za-z0-9_])`)
+export const hasSignOffMarker = (text) => MARKER_TOKEN.test(String(text || ''))
 export const SPARE_PREFIX = 'look:'
 export const CONTROLS = Object.freeze(['intensity', 'colour', 'speed', 'strobe'])
 const MAX_FADE_S = 60 // showClock.js clamps a fade to 60 s
@@ -50,7 +53,7 @@ const sceneOfLook = (look) => {
         levels,
         colours: { ...(look.colours || {}) },
         flags: {
-            requiresLaserSignOff: String(look.intent || '').includes(SIGN_OFF_MARKER),
+            requiresLaserSignOff: hasSignOffMarker(look.intent),
             strobe: Object.entries(levels).some(([g, v]) => isBlinderKey(g) && v > 0)
         },
         look: clone({ title: look.title || '', intent: look.intent || '', aims: look.aims || {}, colours: look.colours || {}, ...(look.levels ? { levels: look.levels } : {}) })
@@ -102,11 +105,19 @@ export const guardSceneChange = (document, ops, sceneId) => {
     const before = readScenes(document)
     const afterDocument = applyProjectOps(document, ops)
     const after = readScenes(afterDocument)
-    const now = after.scenes.find((s) => s.id === sceneId)
-    if (now) {
+    // sceneId null = every scene (undo, restore last good). A laser that goes from dark to lit needs the sign-off
+    // to have been in the scene BEFORE the ops: a marker arriving with the change (a file, the other copy) is
+    // the data vouching for itself and never counts.
+    const checked = sceneId == null ? after.scenes : after.scenes.filter((s) => s.id === sceneId)
+    for (const now of checked) {
+        const was = before.scenes.find((s) => s.id === now.id) || before.scenes.find((s) => s.lookId === now.lookId)
         const lit = Object.entries(now.levels).filter(([g, v]) => isLaserKey(g) && v > 0).map(([g]) => g)
+        const newlyLit = lit.filter((g) => !(was && was.levels[g] > 0))
         if (lit.length && !now.flags.requiresLaserSignOff) {
             throw new SceneDeckError('laser-sign-off', `"${now.name}" would light a laser (${lit.join(', ')}) without ${SIGN_OFF_MARKER}: a Class 4 laser needs a certified laser safety officer first`, { groups: lit })
+        }
+        if (newlyLit.length && !(was && was.flags.requiresLaserSignOff)) {
+            throw new SceneDeckError('laser-sign-off', `"${now.name}" would light a laser (${newlyLit.join(', ')}) and ${SIGN_OFF_MARKER} was not already on it here: a sign-off that arrives with the change does not count`, { groups: newlyLit })
         }
     }
     for (const was of before.scenes) {
@@ -114,6 +125,13 @@ export const guardSceneChange = (document, ops, sceneId) => {
         if (is && canonicalJson(is.look.aims) !== canonicalJson(was.look.aims)) {
             throw new SceneDeckError('mover-policy', `"${was.name}": a scene control never changes an aim — the ground-movers policy (scripts/rigbuild/ground-movers.mjs) is proven on these aims`, { lookId: was.lookId })
         }
+    }
+    for (const now of checked) {
+        if (!now.inLoop) continue
+        const was = before.scenes.find((s) => s.id === now.id)
+        if (was && was.fade === now.fade && was.hold === now.hold) continue
+        if (now.fade < 0 || now.fade > MAX_FADE_S) throw new SceneDeckError('bad-value', `"${now.name}": a fade is 0-${MAX_FADE_S} s, not ${now.fade} s`, { fade: now.fade })
+        if (now.hold > 0 && now.fade > now.hold) throw new SceneDeckError('fade-longer-than-hold', `"${now.name}": a fade stays inside its hold: ${now.fade} s > ${now.hold} s`, { fade: now.fade, hold: now.hold })
     }
     const { min, max } = LOOP_RANGE_S
     if (after.loopSeconds !== before.loopSeconds && (after.loopSeconds < min || after.loopSeconds > max)) {

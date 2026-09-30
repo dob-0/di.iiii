@@ -4,15 +4,17 @@
 // ops, a redo the ops again, a restore the ops back to the last good snapshot). The inverse of a change is
 // the schema's own invertProjectOps, taken against the document the change was made on. Bounded: the oldest
 // step falls off past `limit`. "Last good" is a snapshot of the cue list and the looks; restoring it is ONE
-// batch of ops and is itself one undoable step. The sync's restore point (sync.js) is a markGood.
-import { invertProjectOps } from '../../shared/projectSchema.js'
+// batch of ops and is itself one undoable step. The inverse is the WHOLE looks list as it was, so a step is only
+// sent while the document is exactly what this history last left (`known`): when a colleague changed a look or
+// a cue since, undo / redo / restore REFUSE (`refused`) rather than write the old list over their work. The sync's restore point (sync.js) is a markGood.
+import { applyProjectOps, invertProjectOps } from '../../shared/projectSchema.js'
 import { canonicalJson } from './hash.js'
 import { looksOp, showEntityOf } from './model.js'
 
 export const HISTORY_LIMIT = 50
 const clone = (v) => JSON.parse(JSON.stringify(v))
 
-export const createHistory = (limit = HISTORY_LIMIT) => ({ limit: Math.max(1, Math.floor(Number(limit) || HISTORY_LIMIT)), past: [], future: [], good: null, out: [] })
+export const createHistory = (limit = HISTORY_LIMIT) => ({ limit: Math.max(1, Math.floor(Number(limit) || HISTORY_LIMIT)), past: [], future: [], good: null, known: null, refused: '', out: [] })
 
 /** The show's cue list and looks, as they are now. */
 export const snapshotOf = (document) => {
@@ -41,38 +43,49 @@ export const snapshotOps = (from, to) => {
     return ops
 }
 
+const sameSnapshot = (a, b) => !!a && !!b && canonicalJson(a) === canonicalJson(b)
+const refuse = (s, words) => ({ ...s, refused: words })
+const CHANGED_ELSEWHERE = 'the looks or cues were changed elsewhere since this page last wrote them'
+
 const push = (list, entry, limit) => [...list, entry].slice(-limit)
 
 /**
- * Actions: { type: 'record', document, ops } (document = BEFORE the ops) · { type: 'undo' } · { type: 'redo' } ·
+ * Actions: { type: 'record', document, ops } (document = BEFORE the ops) · { type: 'undo', document } · { type: 'redo', document } (document = now) ·
  * { type: 'markGood', document } · { type: 'restoreGood', document } (document = now).
  */
 export const historyReducer = (state, action) => {
-    const s = { ...state, out: [] }
+    const s = { ...state, out: [], refused: '' }
     switch (action?.type) {
         case 'record': {
             if (!action.ops?.length) return s
             const inverse = invertProjectOps(action.document, action.ops)
-            return { ...s, past: push(s.past, { ops: clone(action.ops), inverse }, s.limit), future: [] }
+            const before = snapshotOf(action.document)
+            const after = snapshotOf(applyProjectOps(action.document, action.ops))
+            return { ...s, past: push(s.past, { ops: clone(action.ops), inverse, before, after }, s.limit), future: [], known: after }
         }
         case 'undo': {
             const entry = s.past[s.past.length - 1]
             if (!entry) return s
-            return { ...s, past: s.past.slice(0, -1), future: [...s.future, entry], out: entry.inverse }
+            if (!sameSnapshot(snapshotOf(action.document), s.known)) return refuse(s, CHANGED_ELSEWHERE)
+            return { ...s, past: s.past.slice(0, -1), future: [...s.future, entry], known: entry.before, out: entry.inverse }
         }
         case 'redo': {
             const entry = s.future[s.future.length - 1]
             if (!entry) return s
-            return { ...s, past: push(s.past, entry, s.limit), future: s.future.slice(0, -1), out: entry.ops }
+            if (!sameSnapshot(snapshotOf(action.document), s.known)) return refuse(s, CHANGED_ELSEWHERE)
+            return { ...s, past: push(s.past, entry, s.limit), future: s.future.slice(0, -1), known: entry.after, out: entry.ops }
         }
-        case 'markGood':
-            return { ...s, good: snapshotOf(action.document) }
+        case 'markGood': {
+            const good = snapshotOf(action.document)
+            return { ...s, good, known: good }
+        }
         case 'restoreGood': {
             if (!s.good) return s
             const now = snapshotOf(action.document)
+            if (!sameSnapshot(now, s.known)) return refuse(s, CHANGED_ELSEWHERE)
             const ops = snapshotOps(now, s.good)
             if (!ops.length) return s
-            return { ...s, past: push(s.past, { ops, inverse: snapshotOps(s.good, now) }, s.limit), future: [], out: ops }
+            return { ...s, past: push(s.past, { ops, inverse: snapshotOps(s.good, now), before: now, after: s.good }, s.limit), future: [], known: s.good, out: ops }
         }
         default:
             return s

@@ -16,7 +16,7 @@ import './scenes.css'
 export default function ScenesSurface({ spaceId, projectId, readOnly = false }) {
     const store = useProjectStore()
     const { state } = store
-    const { applyLocalOps } = useProjectDocumentSync({ projectId, store, clientIdPrefix: 'scenes-client', opIdPrefix: 'scenes-op' })
+    const { applyLocalOps, syncState } = useProjectDocumentSync({ projectId, store, clientIdPrefix: 'scenes-client', opIdPrefix: 'scenes-op' })
     const applyOps = useMemo(() => (readOnly ? NO_WRITE : applyLocalOps), [readOnly, applyLocalOps])
     const title = state.document?.projectMeta?.title || projectId
     const localInstall = useLocalInstall()
@@ -33,7 +33,7 @@ export default function ScenesSurface({ spaceId, projectId, readOnly = false }) 
                 {readOnly ? <ViewOnlyLine /> : null}
             </div>
             {state.hasLoaded
-                ? <ScenesDeck doc={state.document} applyOps={applyOps} projectId={projectId} readOnly={readOnly} />
+                ? <ScenesDeck doc={state.document} applyOps={applyOps} projectId={projectId} readOnly={readOnly} syncError={readOnly ? null : syncState?.pendingSyncError} syncVersion={state.version} />
                 : <p className="rigscenes-body">Reading the show…</p>}
         </div>
     )

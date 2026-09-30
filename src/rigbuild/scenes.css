@@ -87,7 +87,7 @@
 .rigscenes input[type='range']::-moz-range-thumb { width: 20px; height: 32px; background: var(--sc-tx); border: 0; border-radius: 2px; }
 
 /* B: the loop as a timeline. Widths follow the holds (flex-grow); a short cue keeps 44 px to be tapped. */
-.rigscenes-tl { display: flex; border: 1px solid var(--sc-line); background: #0f0f0f; margin: 12px 0 8px; }
+.rigscenes-tl { display: flex; overflow-x: auto; border: 1px solid var(--sc-line); background: #0f0f0f; margin: 12px 0 8px; }
 .rigscenes .rigscenes-cue { flex: 1 1 0; min-height: 72px; min-width: 44px; padding: 4px; margin: 0; border: 0; border-right: 1px solid var(--sc-line); border-bottom: 6px solid var(--sc-line); text-align: left; }
 .rigscenes .rigscenes-cue.is-both { border-top: 3px dashed currentColor; }
 .rigscenes-rows { display: grid; }
