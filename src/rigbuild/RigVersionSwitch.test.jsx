@@ -33,6 +33,21 @@ describe('RigVersionSwitch in the room', () => {
         expect(screen.getByRole('navigation', { name: 'rig versions' })).toBeTruthy()
     })
 
+    // The row ran under Walk / Fly (top right, same line) once ten versions made it 2216 px wide.
+    it('caps its width at what the viewer passes, so it stops before Walk / Fly', async () => {
+        listSpaceContents.mockResolvedValue(rows)
+        render(<RigVersionSwitch spaceId="moxir" projectId="moxir-hall-minimal-halo" entities={halo} maxWidth="calc(100vw - 10.5rem)" />)
+        await waitFor(() => expect(screen.getAllByRole('link')).toHaveLength(3))
+        expect(screen.getByRole('navigation', { name: 'rig versions' }).style.maxWidth).toBe('calc(100vw - 10.5rem)')
+    })
+
+    it('keeps the full-width cap when the viewer passes none', async () => {
+        listSpaceContents.mockResolvedValue(rows)
+        render(<RigVersionSwitch spaceId="moxir" projectId="moxir-hall-minimal-halo" entities={halo} />)
+        await waitFor(() => expect(screen.getAllByRole('link')).toHaveLength(3))
+        expect(screen.getByRole('navigation', { name: 'rig versions' }).style.maxWidth).toBe('calc(100vw - 2rem)')
+    })
+
     it('if the space list cannot be read, only the version you are in — no link', async () => {
         listSpaceContents.mockRejectedValue(new Error('offline'))
         render(<RigVersionSwitch spaceId="moxir" projectId="moxir-hall-minimal-halo" entities={halo} />)

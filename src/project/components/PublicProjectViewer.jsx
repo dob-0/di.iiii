@@ -34,7 +34,7 @@ import { isEmbedRequest } from '../../utils/previewMode.js'
 import { hasRig } from '../../rigbuild/hasRigLamps.js'
 import RigVersionSwitch from '../../rigbuild/RigVersionSwitch.jsx'
 import { rigVariantOf } from '../../rigbuild/rigVariant.js'
-import { rigChromeTops, rigVersionPlacement } from '../../rigbuild/rigVersionLayout.js'
+import { rigChromeTops, rigRowMaxWidth, rigVersionPlacement } from '../../rigbuild/rigVersionLayout.js'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
@@ -269,6 +269,12 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         isRigSet: state.status === 'ready' && !isPreview && !isEmbed && Boolean(rigVariantOf(document?.entities || [])),
         navMode,
         rowTop: rigRowTop
+    })
+    // The row stops before Walk / Fly and Sound instead of running under them.
+    const rigRowMaxW = rigRowMaxWidth({
+        compact: isPhoneCompact,
+        walk: navMode === 'orbit' && walkGateOpen,
+        sound: state.status === 'ready' && hasSound && !soundLocked && !isPreview
     })
     const hasFiles = Array.isArray(presentationState.codeFiles) && presentationState.codeFiles.length > 0
     const rawHtml = hasFiles ? bundleCodeFiles(presentationState.codeFiles) : (presentationState.codeHtml || '')
@@ -607,6 +613,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     entities={document?.entities || []}
                     top={rigPlacement.top}
                     mode={rigPlacement.mode}
+                    maxWidth={rigRowMaxW}
                 />
             ) : null}
 

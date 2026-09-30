@@ -93,7 +93,7 @@ function VersionLink({ l, curRef }) {
 
 // mode 'row' (orbit): one horizontal row, current scrolled into view, an edge fade where it goes on.
 // mode 'walk': one 44 px "Versions" button; opens a column under it (owner: switch without Esc).
-export default function RigVersionSwitch({ spaceId, projectId, entities, top = '1rem', mode = 'row' }) {
+export default function RigVersionSwitch({ spaceId, projectId, entities, top = '1rem', mode = 'row', maxWidth = null }) {
     const variant = useMemo(() => rigVariantOf(entities), [entities])
     const existing = useSpaceProjects(spaceId, Boolean(variant))
     const links = useMemo(() => versionLinks(variant, projectId, (id) => buildPublicProjectPath(spaceId, id), existing), [variant, projectId, spaceId, existing])
@@ -149,7 +149,7 @@ export default function RigVersionSwitch({ spaceId, projectId, entities, top = '
         )
     }
     return (
-        <nav aria-label="rig versions" style={{ ...rowStyle, top }}>
+        <nav aria-label="rig versions" style={{ ...rowStyle, top, ...(maxWidth ? { maxWidth } : {}) }}>
             <div ref={scrollerRef} onScroll={measure} style={scrollerStyle}>{items}</div>
             {cue.left ? <span aria-hidden="true" data-cue="left" style={fadeStyle('left')} /> : null}
             {cue.right ? <span aria-hidden="true" data-cue="right" style={fadeStyle('right')} /> : null}

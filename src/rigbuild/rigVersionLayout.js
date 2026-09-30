@@ -40,3 +40,16 @@ export function rigVersionPlacement(topClear, { isRigSet = false, navMode = 'orb
     if (navMode === 'walk') return { mode: 'walk', top: `calc(${topClear} + ${WALK_HEADER_CLEAR})` }
     return { mode: 'row', top: rowTop }
 }
+
+// How wide the version row may grow. Walk / Fly is anchored top-right (right 1rem, about 7.7rem
+// wide) and Sound, where the room has sound, left of it (right 9.5rem, about 6.5rem wide), on the
+// row's own line. Capped at the window width the row ran under them: with ten live versions it was
+// 2216 px wide and covered Walk / Fly on a 1568 px window (owner: "where are the walk / fly",
+// 2026-09-30). On a compact phone the row already takes a line of its own (rigChromeTops).
+export function rigRowMaxWidth({ compact = false, walk = false, sound = false } = {}) {
+    const ownLine = compact && (walk || sound)
+    if (ownLine || (!walk && !sound)) return 'calc(100vw - 2rem)'
+    // the row's own 1rem left margin + the controls' width + a gap
+    const reserve = walk && sound ? '18.5rem' : walk ? '10.5rem' : '10rem'
+    return `calc(100vw - ${reserve})`
+}

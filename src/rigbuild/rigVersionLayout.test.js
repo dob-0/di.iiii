@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { rigChromeTops, rigVersionPlacement, WALK_HEADER_CLEAR, CONTROL_LINE } from './rigVersionLayout.js'
+import { rigChromeTops, rigRowMaxWidth, rigVersionPlacement, WALK_HEADER_CLEAR, CONTROL_LINE } from './rigVersionLayout.js'
 
 describe('rigChromeTops', () => {
     const top = 'calc(1rem)'
@@ -40,5 +40,35 @@ describe('rigVersionPlacement', () => {
     it('not a set: nothing in either mode', () => {
         expect(rigVersionPlacement(top, { isRigSet: false, navMode: 'walk' }).mode).toBe(null)
         expect(rigVersionPlacement(top, { isRigSet: false, navMode: 'orbit' }).mode).toBe(null)
+    })
+})
+
+// Measured 2026-09-30 on the owner's install: ten live versions made the row 2216 px wide inside a
+// 1799 px area, and it covered Walk / Fly (top right, same line). The row must stop before them.
+describe('rigRowMaxWidth', () => {
+    it('keeps the full width when nothing sits on the right', () => {
+        expect(rigRowMaxWidth({ compact: false, walk: false, sound: false })).toBe('calc(100vw - 2rem)')
+    })
+
+    it('stops before Walk / Fly on a wide viewport', () => {
+        expect(rigRowMaxWidth({ compact: false, walk: true, sound: false })).toBe('calc(100vw - 10.5rem)')
+    })
+
+    it('stops before Sound and Walk / Fly together', () => {
+        expect(rigRowMaxWidth({ compact: false, walk: true, sound: true })).toBe('calc(100vw - 18.5rem)')
+    })
+
+    it('stops before Sound alone', () => {
+        expect(rigRowMaxWidth({ compact: false, walk: false, sound: true })).toBe('calc(100vw - 10rem)')
+    })
+
+    it('keeps the full width on a compact phone, where the row has a line of its own', () => {
+        expect(rigRowMaxWidth({ compact: true, walk: true, sound: true })).toBe('calc(100vw - 2rem)')
+    })
+
+    it('never leaves the reserve smaller than Walk / Fly (about 8.7 rem from the right edge)', () => {
+        const rem = (v) => Number(String(v).match(/- ([\d.]+)rem\)$/)?.[1])
+        expect(rem(rigRowMaxWidth({ walk: true }))).toBeGreaterThanOrEqual(8.7)
+        expect(rem(rigRowMaxWidth({ walk: true, sound: true }))).toBeGreaterThanOrEqual(16)
     })
 })
