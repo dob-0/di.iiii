@@ -24,6 +24,8 @@ const manifest = read('scripts/place/fixtures/fixtures.json')
 const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
 const library = loadLibrary()
 const GROUND = ['minimal-ground', 'full-ground']
+// Also ground-only, and checked against the same policy, but a SUBSET (only the fixtures whose DMX is known): not held to the two versions' full type list.
+const GROUND_SUBSETS = ['known-ground']
 const rigs = Object.fromEntries(GROUND.map((id) => [id, read(rigFileOf(spec.set, id))]))
 const builds = Object.fromEntries(GROUND.map((id) => [id, buildAllLooks(rigs[id], hall, { geometry, manifest })]))
 const stageOf = (rig) => stageFrame(rig, hall)
@@ -37,7 +39,7 @@ const allRigFiles = fs.readdirSync(path.join(REPO_ROOT, RIGS_DIR)).filter((f) =>
 describe('the policy: no moving fixture hung above 0.6 m (applies to every rig file that opts in)', () => {
     it('is kept by every rig file with policy.movingFixtures.ground_only — the two versions and any future one', () => {
         const optedIn = allRigFiles.filter((x) => x.rig.policy?.movingFixtures?.ground_only)
-        expect(optedIn.map((x) => x.rig.variant.id).sort()).toEqual([...GROUND].sort())
+        expect(optedIn.map((x) => x.rig.variant.id).sort()).toEqual([...GROUND, ...GROUND_SUBSETS].sort())
         for (const { file, rig } of optedIn) {
             const b = buildAllLooks(rig, hall, { geometry, manifest })
             expect(groundPolicyViolations({ rig, hall, library, builds: b, stage: stageOf(rig) }), file).toEqual([])
