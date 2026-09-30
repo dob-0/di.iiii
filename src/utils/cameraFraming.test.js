@@ -8,6 +8,7 @@ import {
     getAspectFitScale,
     getLimitingHalfFov,
     getViewportAspect,
+    DEFAULT_FRAMING_DIRECTION,
     frameSphereInControls
 } from './cameraFraming.js'
 
@@ -261,5 +262,38 @@ describe('fitCameraToAspect inside a room', () => {
         const fitted = fitCameraToAspect(open, PORTRAIT_ASPECT)
         expect(distanceOf(fitted)).toBeCloseTo(distanceOf(open) * getAspectFitScale(50, PORTRAIT_ASPECT), 6)
         expect(fitted.fov).toBe(50)
+    })
+})
+
+describe('bounding-sphere fit: distance = radius / sin(limiting half fov)', () => {
+    const FOV = 50
+    const R = 10
+
+    it('landscape is limited by the vertical fov: R / sin(25 deg)', () => {
+        expect(computeFitDistance(R, { fov: FOV, aspect: LANDSCAPE_ASPECT }))
+            .toBeCloseTo(R / Math.sin(THREE.MathUtils.degToRad(FOV / 2)), 9)
+    })
+
+    it('portrait 390x844 is limited by the horizontal fov: R / sin(atan(tan(25 deg) * aspect))', () => {
+        const half = Math.atan(Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * PORTRAIT_ASPECT)
+        expect(computeFitDistance(R, { fov: FOV, aspect: PORTRAIT_ASPECT })).toBeCloseTo(R / Math.sin(half), 9)
+    })
+
+    it('portrait stands 1.9-2.2x further back than landscape for the same sphere', () => {
+        const ratio = computeFitDistance(R, { fov: FOV, aspect: PORTRAIT_ASPECT })
+            / computeFitDistance(R, { fov: FOV, aspect: LANDSCAPE_ASPECT })
+        expect(ratio).toBeGreaterThan(1.9)
+        expect(ratio).toBeLessThan(2.2)
+    })
+
+    it('the fitted sphere is tangent to the narrow side of the frustum', () => {
+        const d = computeFitDistance(R, { fov: FOV, aspect: PORTRAIT_ASPECT })
+        const horizontalHalfWidthAtCentre = d * Math.tan(Math.atan(Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * PORTRAIT_ASPECT))
+        // sphere silhouette sits on the frustum plane: R = d * sin(half)
+        expect(d * Math.sin(Math.atan(horizontalHalfWidthAtCentre / d))).toBeCloseTo(R, 9)
+    })
+
+    it('exports the fallback direction the editor shares', () => {
+        expect(DEFAULT_FRAMING_DIRECTION).toEqual([0.8, 0.45, 1])
     })
 })
