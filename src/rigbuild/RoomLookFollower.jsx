@@ -31,7 +31,7 @@ const chipStyle = {
     left: '1rem',
     zIndex: 20,
     maxWidth: 'calc(100vw - 2rem)',
-    borderRadius: '22px',
+    borderRadius: '2px',
     border: '1px solid rgba(255,255,255,0.14)',
     background: 'rgba(10, 16, 24, 0.82)',
     backdropFilter: 'blur(12px)',
