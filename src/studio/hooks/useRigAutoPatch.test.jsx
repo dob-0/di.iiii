@@ -60,6 +60,28 @@ describe('useRigAutoPatch', () => {
         expect(postImpl).not.toHaveBeenCalled()
     })
 
+    // Review 2026-10-01: after a patch whose answer changed nothing in the room (a mode edit on a
+    // lamp the desk kept in place), the NEXT edit that touched no lamp still patched the whole room.
+    it('a lamp edit patches once; a later edit that touches no lamp asks nothing more', async () => {
+        const postImpl = vi.fn(async () => answer({ ok: true, assignments: [{ key: 'p:a', index: 1, universe: 1, address: 1, footprint: 16, how: 'kept' }], flags: [], removed: [] }))
+        let edits = 0
+        let entities = [lamp('a', { type: 'up-b380f', mode: '16ch', universe: 1, address: 1, index: 1 })]
+        const mirror = mirrorOf(true) // one desk for the whole test, as a page has
+        const applyOps = vi.fn()
+        const { rerender } = renderHook(() => useRigAutoPatch({ projectId: 'p', entities, edits, applyOps, library, mirror, postImpl }))
+        await flush()
+        entities = [lamp('a', { type: 'up-b380f', mode: '16ch-assumed', universe: 1, address: 1, index: 1 })]
+        edits = 1
+        rerender()
+        await flush()
+        expect(postImpl).toHaveBeenCalledTimes(1)
+        entities = [...entities, { id: 'box', type: 'box', components: {} }]
+        edits = 2
+        rerender()
+        await flush()
+        expect(postImpl).toHaveBeenCalledTimes(1)
+    })
+
     it('patchNow patches the whole room when a person asks', async () => {
         const postImpl = vi.fn(async () => answer({ ok: true, assignments: [{ key: 'p:a', index: 1, universe: 1, address: 1, footprint: 16, how: 'created' }], flags: [], removed: [] }))
         const applyOps = vi.fn()
