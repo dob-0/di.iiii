@@ -120,6 +120,8 @@ export const emptyPool = (slots = DEFAULT_POOL_OPTIONS.slots) => ({
  */
 export const stepLightPool = (state, entities, now, options = {}) => {
     const opts = { ...DEFAULT_POOL_OPTIONS, ...options }
+    // A slot is never re-let inside its own dip: the hold is at least one hand-over.
+    opts.minHoldMs = Math.max(opts.minHoldMs, opts.handoverMs)
     const prev = state && state.slots?.length === opts.slots ? state : emptyPool(opts.slots)
     const ranked = rankLamps(entities, opts)
     const scoreOf = new Map(ranked.map((r) => [r.id, r.score]))
@@ -127,6 +129,14 @@ export const stepLightPool = (state, entities, now, options = {}) => {
     // 1. Incumbents that went dark or away release their slot at once (no fade-out).
     for (const s of slots) {
         if (s.lamp !== null && !(scoreOf.get(s.lamp) > 0)) {
+            // The incoming lamp went dark while the slot is still fading OUT at a lit old
+            // lamp: give the slot back to it, its envelope kept (fade-in u' = 1 - u), so the
+            // room's light does not step.
+            const u = opts.handoverMs > 0 ? (now - s.fadeStart) / opts.handoverMs : 1
+            if (s.from !== null && scoreOf.get(s.from) > 0 && u >= 0 && u < 0.5) {
+                s.lamp = s.from; s.from = null; s.fadeStart = now - (1 - u) * opts.handoverMs
+                continue
+            }
             s.from = null; s.lamp = null; s.since = now; s.fadeStart = now - opts.handoverMs / 2
         }
     }
@@ -144,7 +154,7 @@ export const stepLightPool = (state, entities, now, options = {}) => {
     for (const c of challengers) {
         let weakest = null
         for (const s of slots) {
-            if (s.lamp === null || changed.has(s) || now - s.since < opts.minHoldMs) continue
+            if (s.lamp === null || changed.has(s) || now - s.since < opts.minHoldMs || now - s.fadeStart < opts.handoverMs) continue
             if (!weakest || scoreOf.get(s.lamp) < scoreOf.get(weakest.lamp)) weakest = s
         }
         if (!weakest) break
@@ -199,7 +209,7 @@ export const applyLightPool = (entities, state, now, options = {}) => {
             components: {
                 transform: { position: t.position || PARKED.position, rotation: t.rotation || PARKED.rotation, scale: [1, 1, 1] },
                 light: { ...light, intensity: Math.round(num(light.intensity) * envelope * 100) / 100 },
-                beam: { visible: false },
+                beam: { visible: false, ...(Number(src?.components?.beam?.strobeHz) > 0 ? { strobeHz: Number(src.components.beam.strobeHz) } : {}) },
                 animation: { mode: 'static', speed: 1, amplitude: 1 },
                 lightPool: { slot: k, lamp, envelope: Math.round(envelope * 1000) / 1000 }
             }
@@ -219,11 +229,13 @@ export const lightPoolWanted = ({ mappingState, search = '' } = {}) => {
 export const lightPoolOptions = (mappingState) => {
     const p = mappingState?.lightPool || {}
     const slots = Math.max(1, Math.min(POOL_MAX_SLOTS, Math.floor(num(p.slots, DEFAULT_POOL_OPTIONS.slots))))
+    const handoverMs = Math.max(0, num(p.handoverMs, DEFAULT_POOL_OPTIONS.handoverMs))
     return {
         ...DEFAULT_POOL_OPTIONS,
         slots,
-        minHoldMs: Math.max(0, num(p.minHoldMs, DEFAULT_POOL_OPTIONS.minHoldMs)),
-        handoverMs: Math.max(0, num(p.handoverMs, DEFAULT_POOL_OPTIONS.handoverMs)),
+        // never below one hand-over: a slot must not be re-let mid-dip (a jump in the light)
+        minHoldMs: Math.max(handoverMs, num(p.minHoldMs, DEFAULT_POOL_OPTIONS.minHoldMs)),
+        handoverMs,
         margin: Math.max(0, num(p.margin, DEFAULT_POOL_OPTIONS.margin)),
         bounds: p.bounds?.min && p.bounds?.max ? p.bounds : null
     }

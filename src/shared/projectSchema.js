@@ -1596,6 +1596,25 @@ export const normalizeOutputShow = (show) => {
     return { machine, ...(name ? { name } : {}), screen }
 }
 
+// The light pool's knobs (src/rigbuild/lightPool.js lightPoolOptions clamps the same way):
+// kept so the room reads them — the normaliser used to drop the whole key. Absent means
+// absent: only what the document says is written, each number clamped.
+const normalizeLightPool = (pool) => {
+  if (!pool || typeof pool !== 'object' || Array.isArray(pool)) return null
+  const out = {}
+  if (pool.enabled === true) out.enabled = true
+  const num = (v) => (v === null || v === '' || v === undefined || !Number.isFinite(Number(v)) ? null : Number(v))
+  const slots = num(pool.slots)
+  if (slots !== null) out.slots = Math.max(1, Math.min(12, Math.floor(slots)))
+  for (const key of ['minHoldMs', 'handoverMs', 'margin']) {
+    const v = num(pool[key])
+    if (v !== null) out[key] = Math.max(0, v)
+  }
+  const b = pool.bounds
+  const vec = (a) => Array.isArray(a) && a.length >= 3 && a.slice(0, 3).every((x) => Number.isFinite(Number(x))) ? a.slice(0, 3).map(Number) : null
+  if (b && vec(b.min) && vec(b.max)) out.bounds = { min: vec(b.min), max: vec(b.max) }
+  return Object.keys(out).length ? out : null
+}
 export const normalizeMappingState = (mapping = {}) => {
     const source = mapping && typeof mapping === 'object' ? mapping : {}
     const output = source.output && typeof source.output === 'object' ? source.output : {}
@@ -1647,7 +1666,9 @@ export const normalizeMappingState = (mapping = {}) => {
         // Who plays the show where a desk also answers (RIG_BUILD.md §15.8): 'clock' — the
         // document's own clock, even on a local install whose desk holds another project's
         // show (a comparison version the desk does not carry). Absent = the desk first (§16).
-        ...(source.showSource === 'clock' ? { showSource: 'clock' } : {})
+        ...(source.showSource === 'clock' ? { showSource: 'clock' } : {}),
+    // The light pool's switch and knobs (src/rigbuild/lightPool.js); absent = off, the defaults.
+    ...(normalizeLightPool(source.lightPool) ? { lightPool: normalizeLightPool(source.lightPool) } : {})
     }
 }
 

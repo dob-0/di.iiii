@@ -165,3 +165,46 @@ describe('the flag', () => {
         expect(lightPoolWanted({ search: '?lightPool=0' })).toBe(false)
     })
 })
+
+describe('review A5 fixes', () => {
+    const one = { slots: 1, minHoldMs: 1000, handoverMs: 400, margin: 0.15 }
+    const envAt = (scene, state, now) => {
+        const slot = applyLightPool(scene, state, now, one).find((x) => x.id === `${POOL_ID_PREFIX}0`)
+        return { lamp: slot.components.lightPool.lamp, i: slot.components.light.intensity }
+    }
+    it('A5-2: the incoming lamp going dark mid fade-out gives the slot back without a step', () => {
+        let scene = lamps({ a: 100, b: 10 })
+        let s = stepLightPool(null, scene, 0, one)
+        expect(held(s)).toEqual(['a'])
+        scene = lamps({ a: 10, b: 100 })
+        s = stepLightPool(s, scene, 2000, one) // swap a -> b, dip starts
+        const before = envAt(scene, s, 2100)
+        expect(before.lamp).toBe('a')
+        const dark = lamps({ a: 10, b: 0 })
+        s = stepLightPool(s, dark, 2100, one)
+        const after = envAt(dark, s, 2100)
+        expect(after.lamp).toBe('a')
+        expect(Math.abs(after.i - before.i)).toBeLessThanOrEqual(0.01 * 10 + 0.01)
+        expect(envAt(dark, s, 2133).i).toBeGreaterThan(after.i)
+    })
+    it('A5-3: minHoldMs below handoverMs cannot re-let a slot mid-dip', () => {
+        expect(lightPoolOptions({ lightPool: { minHoldMs: 0, handoverMs: 400 } }).minHoldMs).toBe(400)
+        const o = { slots: 1, minHoldMs: 0, handoverMs: 400, margin: 0.15 }
+        let s = stepLightPool(null, lamps({ a: 10 }), 0, o)
+        s = stepLightPool(s, lamps({ a: 10, b: 50 }), 2000, o)
+        expect(s.slots[0]).toMatchObject({ lamp: 'b', from: 'a', fadeStart: 2000 })
+        const s2 = stepLightPool(s, lamps({ a: 10, b: 50, c: 500 }), 2100, o)
+        expect(s2.slots[0].lamp).toBe('b') // c waits for the dip to finish
+        const s3 = stepLightPool(s2, lamps({ a: 10, b: 50, c: 500 }), 2400, o)
+        expect(s3.slots[0].lamp).toBe('c')
+    })
+    it('A5-4: a strobing lamp strobes its slot too', () => {
+        const strobing = lamp('s', 100)
+        strobing.components.beam = { visible: true, only: true, strobeHz: 5 }
+        const scene = [strobing]
+        const s = stepLightPool(null, scene, 0, one)
+        const slot = applyLightPool(scene, s, 1000, one).find((x) => x.id === `${POOL_ID_PREFIX}0`)
+        expect(slot.components.beam.strobeHz).toBe(5)
+        expect(applyLightPool(lamps({ a: 10 }), stepLightPool(null, lamps({ a: 10 }), 0, one), 1000, one).find((x) => x.id === `${POOL_ID_PREFIX}0`).components.beam.strobeHz).toBeUndefined()
+    })
+})
