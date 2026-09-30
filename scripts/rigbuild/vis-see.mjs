@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * vis-see.mjs — open the VISUALISER on the NVIDIA GPU, measure fader → lamp latency, and
- * record frames of the room answering the desk. docs/architecture/RIG_BUILD.md §18.6.
+ * record frames of the room answering the desk. docs/architecture/RIG_BUILD.md §19.6.
  *
  *   flock <lock> node scripts/rigbuild/vis-see.mjs --base https://local.thedi.studio \
  *       --space moxir --project moxir-hall-minimal --out ~/Downloads/moxir-visualiser \
@@ -18,7 +18,7 @@
  *           the packet is handed to the OS, t1 = the drawn frame on the epoch clock
  *           (performance.timeOrigin + now) — same machine, same clock. Input is switched
  *           OFF again at the end, even on failure.
- * --cues (RIG_BUILD.md §19): the show's own cues fired one by one on the desk (the runner
+ * --cues (RIG_BUILD.md §20): the show's own cues fired one by one on the desk (the runner
  * stopped first, restarted from cue 1 at the end); after each fade, what the room DRAWS from
  * the desk's DMX (every driven lamp's fixture #, level, colour, strobe) is written to the
  * report and the split page is shot — the proof that a re-patch still plays the show.

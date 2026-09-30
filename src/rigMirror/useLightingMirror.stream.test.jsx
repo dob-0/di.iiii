@@ -2,7 +2,7 @@ import { act } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DMX_POLL_MS, createLightingMirror, streamStats } from './useLightingMirror.js'
 
-// THE STREAM (RIG_BUILD.md §18.5): the mirror listens to the desk's pushed frames where
+// THE STREAM (RIG_BUILD.md §19.5): the mirror listens to the desk's pushed frames where
 // the browser has EventSource, falls back to the 10 Hz poll when a stream never opens,
 // and survives a reconnect. A fake EventSource stands in for the browser's.
 

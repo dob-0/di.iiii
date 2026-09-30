@@ -118,7 +118,7 @@ describe('RigSteps — the row', () => {
             '/moxir', '/moxir/equipment/moxir-hall', '/moxir/build/moxir-hall', '/moxir/plot/moxir-hall',
             '/moxir/cards/moxir-hall', '/moxir/patch/moxir-hall', '/moxir/crew/moxir-hall',
             '/light/?space=moxir&project=moxir-hall&from=plot',
-            '/moxir/visualise/moxir-hall' // the desk beside the room (RIG_BUILD.md §18)
+            '/moxir/visualise/moxir-hall' // the desk beside the room (RIG_BUILD.md §19)
         ])
         const here = items.find((a) => a.getAttribute('aria-current') === 'page')
         expect(here.textContent).toMatch(/3\s*plot/)

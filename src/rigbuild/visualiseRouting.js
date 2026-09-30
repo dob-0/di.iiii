@@ -1,7 +1,7 @@
 import { createBasePathHelpers, joinPath } from '../project/routing/laneBasePath.js'
 
 // /{space}/visualise/{projectId} — the VISUALISER: the light desk and the room side by
-// side, the room drawn from the desk's DMX (docs/architecture/RIG_BUILD.md §18). Same
+// side, the room drawn from the desk's DMX (docs/architecture/RIG_BUILD.md §19). Same
 // shape as /{space}/patch/{id}: exactly three segments with the word in the middle,
 // claimed before the generic /{space}/{projectSlug} rule would read it as a project.
 export const VISUALISE_SEGMENT = 'visualise'

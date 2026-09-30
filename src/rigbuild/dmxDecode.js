@@ -1,5 +1,5 @@
 // WHAT A LAMP'S DMX MEANS — a fixture's live channel values read through its channel
-// list into what the room draws. docs/architecture/RIG_BUILD.md §18.2. Pure.
+// list into what the room draws. docs/architecture/RIG_BUILD.md §19.2. Pure.
 //
 // In: a mode's `channels` (fixtureTypes.js / assumedProfiles.js: { role, label, cap }),
 // the fixture's values in that order (0..255, as the desk puts them on the wire), and
@@ -159,7 +159,7 @@ export const decodeDmx = (channels, values, type = null) => {
 
 export default decodeDmx
 
-// ---- the other way: what a look WANTS, as a fixture's DMX (RIG_BUILD.md §18.4) --------
+// ---- the other way: what a look WANTS, as a fixture's DMX (RIG_BUILD.md §19.4) --------
 // A designed look (looks.js lookPoses) says, per lamp: aim, colour, level. The desk plays
 // looks as DMX, so for a lamp with a channel list the look is written as the values that
 // channel list needs — the same list the room decodes, so the room drawn from DMX is the

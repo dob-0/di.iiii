@@ -1,7 +1,7 @@
 ## 2026-09-29 — the visualiser: the light desk beside the room, the room drawn from its DMX
 
 Owner: *"our light and scene sync where i can with split screen or with 2 window see the virutal
-version and test the lights"*. Method and numbers: `docs/architecture/RIG_BUILD.md` §18;
+version and test the lights"*. Method and numbers: `docs/architecture/RIG_BUILD.md` §19;
 the stream: `LIGHTING_DESK.md` "The pushed frame".
 
 - ASSUMED test modes for every MOXIR type (`src/rigbuild/assumedProfiles.js`), separate from the real

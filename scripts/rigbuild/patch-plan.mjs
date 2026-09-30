@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * patch-plan.mjs — write a show's PLANNED patch into its project document.
- * docs/architecture/RIG_BUILD.md §19.
+ * docs/architecture/RIG_BUILD.md §20.
  *
  *   node scripts/rigbuild/patch-plan.mjs --plan scripts/place/rigs/moxir-2026-10-17-minimal.patch.json \
  *        [--project <id>] [--api <base>] [--token-file <f>] [--dry-run] [--keep-circuits]

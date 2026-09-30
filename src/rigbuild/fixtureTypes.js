@@ -78,7 +78,7 @@ const modesOf = (kind) => {
             basis: spec?.basis ?? null
         }
     })
-    // The ASSUMED test modes (assumedProfiles.js, RIG_BUILD.md §18.1) come AFTER the
+    // The ASSUMED test modes (assumedProfiles.js, RIG_BUILD.md §19.1) come AFTER the
     // real ones, so a lamp's default is still the maker's mode, and they are never
     // mistaken for it: `basis: 'ASSUMED'`, a name ending `-assumed`, their words.
     return [...real, ...assumedModesOf(kind.code)]

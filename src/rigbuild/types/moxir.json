@@ -2323,6 +2323,7 @@
       "modes": [],
       "defaultMode": null,
       "modesOwed": true,
+      "assumedMode": null,
       "power_w": {
         "value": 180,
         "src": "E",

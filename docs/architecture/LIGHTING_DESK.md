@@ -161,7 +161,7 @@ to the desk with the list. Tests: `tests/test-cues.js` (in `lighting.test.js`).
 ### The pushed frame — `GET /api/dmx/stream` (`dmxstream.js`, 2026-09-29)
 
 The live DMX as Server-Sent Events (WHATWG HTML §9.2), for a room visualising the rig
-(RIG_BUILD.md §18). SSE, not a WebSocket: one direction, plain HTTP through TLS and a reverse
+(RIG_BUILD.md §19). SSE, not a WebSocket: one direction, plain HTTP through TLS and a reverse
 proxy, the browser's own reconnect, no dependency. Every frame the loop renders (40–44 Hz, and at
 once on every mutating route) goes to every listener — output ON or OFF:
 
@@ -396,7 +396,7 @@ with `tests/dmx-send.js` as the console:
   then waits for the next output tick (≤ 25 ms at 40 Hz). A room lamp polled `api/dmx` every
   100 ms (`DMX_POLL_MS`), which was the visualiser's own latency — since 2026-09-29 the frame is
   PUSHED ("The pushed frame", above): Art-Net packet → the room's drawn lamp p50 37.8 ms / p95
-  39.4 ms (RIG_BUILD.md §18.7).
+  39.4 ms (RIG_BUILD.md §19.7).
 - **Sustained, 44 Hz × 3 universes, 60 s each**: sACN multicast over the LAN — 7923 sent,
   7923 accepted, 0 lost, 0 out of sequence, desk reports 44 fps on each universe, sampled
   state 0 frames behind the sender (118 samples), desk process 1.2 % of one core. Art-Net

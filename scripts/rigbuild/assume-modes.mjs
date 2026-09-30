@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * assume-modes.mjs — switch a project's lamps to their ASSUMED test modes (or back).
- * docs/architecture/RIG_BUILD.md §18.1.
+ * docs/architecture/RIG_BUILD.md §19.1.
  *
  *   node scripts/rigbuild/assume-modes.mjs --project <id> [--api <base>] [--token-file <f>] [--dry-run]
  *   node scripts/rigbuild/assume-modes.mjs --project <id> --back      # to the maker's modes again

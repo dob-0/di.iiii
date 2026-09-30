@@ -3,7 +3,7 @@
   "title": "MOXIR 17.10 — Minimal — the show patch",
   "project": "moxir-hall-minimal",
   "writtenAt": "2026-09-29",
-  "howToRead": "docs/architecture/RIG_BUILD.md §19. The LD's patch plan as data: which universe each position runs on, where each block starts, the fixture numbers and the DMX mode per type. scripts/rigbuild/patch-plan.mjs applies it to the project document (the single truth); patch.mjs --exact makes the desk agree; patch-sheet.mjs prints the crew's sheet. Never edit addresses in the document or on the desk by hand — change this file and run the three again.",
+  "howToRead": "docs/architecture/RIG_BUILD.md §20. The LD's patch plan as data: which universe each position runs on, where each block starts, the fixture numbers and the DMX mode per type. scripts/rigbuild/patch-plan.mjs applies it to the project document (the single truth); patch.mjs --exact makes the desk agree; patch-sheet.mjs prints the crew's sheet. Never edit addresses in the document or on the desk by hand — change this file and run the three again.",
   "method": [
     "Blocks select lamps from the DOCUMENT — by type, height (lens above/below 3 m = in the air / on the floor) and side — never by the name of a truss, so a re-hang (a new crane shape) re-runs to a correct patch. Positions and hung/standing come from the document, except the column rows, where the plan adds the side (HL/HR) to the name.",
     "One universe per data run from the node: the crane line (in the air, one cable up the hoist), each side wall of the hall (so no DMX cable crosses the dance floor), and the booth. Four runs = the four ports of one 4-port Art-Net node.",
@@ -11,7 +11,7 @@
     "Within a block lamps go in the order a crew walks the position: along the crane line from house left to house right (−x to +x); along a wall from the DJ end outwards (z up).",
     "A 16-bit fixture is always whole inside one universe (every block is checked against 512).",
     "Each universe keeps at least half of its 512 channels spare, so a lamp added on the night takes the next free address in its own block without moving anything.",
-    "Mode per type: the maker's own mode where the maker lists one (UP-B380F 16ch, UP-PL5403 8ch — both single-mode units); otherwise the fewest channels that still give what the looks use. Where the maker's channel ORDER is not published, the desk runs the ASSUMED test list of the same footprint (RIG_BUILD.md §18.1) and the crew sets the maker's mode on the unit."
+    "Mode per type: the maker's own mode where the maker lists one (UP-B380F 16ch, UP-PL5403 8ch — both single-mode units); otherwise the fewest channels that still give what the looks use. Where the maker's channel ORDER is not published, the desk runs the ASSUMED test list of the same footprint (RIG_BUILD.md §19.1) and the crew sets the maker's mode on the unit."
   ],
   "node": {
     "what": "one 4-port Art-Net node at the booth (planning equivalent: Luminex LumiNode 4 — the rental list has DMX splitters UP-PDU60A/B but no node)",

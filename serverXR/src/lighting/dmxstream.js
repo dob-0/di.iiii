@@ -1,6 +1,6 @@
 'use strict';
 // THE DESK'S FRAME, PUSHED — a Server-Sent Events stream of the live DMX, for a room
-// that visualises the rig (src/rigMirror/useLightingMirror.js, RIG_BUILD.md §18).
+// that visualises the rig (src/rigMirror/useLightingMirror.js, RIG_BUILD.md §19).
 //
 // Why a push and why SSE. A room used to poll GET /api/dmx every 100 ms: 10 Hz, and up
 // to 100 ms late before the page had even started drawing — too slow for a strobe or a

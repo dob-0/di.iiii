@@ -26,7 +26,7 @@ import { fixtureColour } from './fixtureColour.js'
 // One store for the whole page, reference-counted: four split viewports showing the
 // mirror are still one stream (or one 10 Hz poll), not four.
 //
-// THE STREAM (2026-09-29, RIG_BUILD.md §18.5). Where the browser has EventSource the
+// THE STREAM (2026-09-29, RIG_BUILD.md §19.5). Where the browser has EventSource the
 // DMX is PUSHED by the desk (GET /light/api/dmx/stream, serverXR/src/lighting/
 // dmxstream.js) at its own frame rate, 40–44 Hz, key frame then deltas — the 100 ms poll
 // was the visualiser's whole latency and too slow for a strobe or a chase. What arrives

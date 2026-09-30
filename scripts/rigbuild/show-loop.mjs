@@ -14,7 +14,7 @@
  *   2. the desk: this project's designed looks put on the desk (POST /light/api/looks/add,
  *      over the desk's patched fixtures for this project) — WITH their DMX values for every
  *      fixture whose channel list is known, real or ASSUMED (deskLookValues.js, RIG_BUILD.md
- *      §18.4); a fixture whose list is owed gets none;
+ *      §19.4); a fixture whose list is owed gets none;
  *   3. the desk's cue runner: the list loaded (POST /light/api/cues/load) and cue 1 fired
  *      (POST /light/api/cues/go) — the desk's own clock then runs the show and loops it, with
  *      no page open.

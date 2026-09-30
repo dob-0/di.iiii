@@ -127,7 +127,7 @@ export function useRigLookEntities(document, { explicit, mirror, library: baseLi
 
     const blended = useMemo(() => (shownFrom && t < 1 ? blendEntities(shownFrom, shownTo, t) : shownTo), [shownFrom, shownTo, t])
     const flashed = useMemo(() => flashEntities(blended, library), [blended, library])
-    // DMX WINS (RIG_BUILD.md §18.4): while the desk is live, every lamp joined to a patched
+    // DMX WINS (RIG_BUILD.md §19.4): while the desk is live, every lamp joined to a patched
     // fixture with a known channel list is drawn from what the desk sends, attribute by
     // attribute. A page's own GO (`explicit`) means no desk is being followed.
     const dmxOn = explicit === undefined && deskPresent && dmxLamps && deskFixtures.length > 0

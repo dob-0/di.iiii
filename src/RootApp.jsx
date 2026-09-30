@@ -604,7 +604,7 @@ function AppRouter() {
         )
     }
 
-    // `/{space}/visualise/{projectId}` — the visualiser (src/rigbuild/, RIG_BUILD.md §18):
+    // `/{space}/visualise/{projectId}` — the visualiser (src/rigbuild/, RIG_BUILD.md §19):
     // the light desk and the room side by side, the room drawn from the desk's DMX. No
     // gate of its own, like the patch sheet: both sides are the real pages, framed, and
     // each enforces its own rules (the desk is local-only; the room is /{space}/p/{id}).

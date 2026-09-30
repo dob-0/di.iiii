@@ -1,4 +1,4 @@
-// The visualiser's measuring hooks — window.__diVis. RIG_BUILD.md §18.6.
+// The visualiser's measuring hooks — window.__diVis. RIG_BUILD.md §19.6.
 //
 // Only installed when a page asks (the visualiser page, or any room with ?probe=1), so a
 // room nobody is measuring pays one property read per frame. The harness

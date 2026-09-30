@@ -1,6 +1,6 @@
 // THE DESK'S LOOKS WITH THEIR DMX — a room's designed looks as the values each patched
 // fixture needs, through its channel list (real, or ASSUMED for testing).
-// docs/architecture/RIG_BUILD.md §18.4. Pure.
+// docs/architecture/RIG_BUILD.md §19.4. Pure.
 //
 // Until 2026-09-29 the desk's `rig-<look>` looks carried the fixtures and NO values: every
 // channel list was owed (looks.js deskLooks). With a list, the look is written as DMX, so

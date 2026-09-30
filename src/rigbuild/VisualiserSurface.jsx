@@ -11,7 +11,7 @@ import RigBar from './RigSteps.jsx'
 import useLocalInstall from '../hooks/useLocalInstall.js'
 import './visualiser.css'
 
-// THE VISUALISER — /{space}/visualise/{projectId}. docs/architecture/RIG_BUILD.md §18.
+// THE VISUALISER — /{space}/visualise/{projectId}. docs/architecture/RIG_BUILD.md §19.
 //
 // Owner, 2026-09-29: "our light and scene sync where i can with split screen or with 2
 // window see the virtual version and test the lights". The light desk on one side, the

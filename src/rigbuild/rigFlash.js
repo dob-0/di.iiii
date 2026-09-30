@@ -22,7 +22,7 @@ export const FLASH_TAU_S = 0.022
 
 /**
  * The strobe's brightness at time t (seconds), 0..1, at `hz` flashes a second (the desk's
- * flash rate when a desk drives the lamp, RIG_BUILD.md §18.3; else the look's 10 Hz).
+ * flash rate when a desk drives the lamp, RIG_BUILD.md §19.3; else the look's 10 Hz).
  */
 export const strobeEnvelope = (t, hz = STROBE_HZ) => {
     const rate = Number(hz) > 0 ? Math.min(60, Number(hz)) : STROBE_HZ

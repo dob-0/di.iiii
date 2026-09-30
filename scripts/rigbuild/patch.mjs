@@ -16,7 +16,7 @@
  *   --api    di.iiii API (default https://local.thedi.studio/serverXR)
  *   --desk   the desk (default: the API's origin + /light/)
  *
- * --exact (RIG_BUILD.md §19): for a PLANNED patch (patch-plan.mjs wrote every lamp's
+ * --exact (RIG_BUILD.md §20): for a PLANNED patch (patch-plan.mjs wrote every lamp's
  * universe, address and fixture number into the document). The room's fixtures come off
  * the desk and go back at exactly the document's addresses and numbers; a lamp whose
  * address is taken by something else on the desk is REFUSED and flagged, never moved to

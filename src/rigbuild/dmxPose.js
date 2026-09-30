@@ -1,9 +1,9 @@
 // THE ROOM DRAWN FROM THE DESK'S DMX — every lamp joined to a patched desk fixture whose
 // channel list is known (real, or ASSUMED for testing) is drawn from what the desk is
 // sending: its head turned by pan/tilt, its colour, its level, its zoom, its shutter.
-// docs/architecture/RIG_BUILD.md §18.3. Pure.
+// docs/architecture/RIG_BUILD.md §19.3. Pure.
 //
-// PRECEDENCE (§18.4). While the desk is live and a lamp has a patched, decodable profile,
+// PRECEDENCE (§19.4). While the desk is live and a lamp has a patched, decodable profile,
 // DMX WINS — attribute by attribute, for what the channel list controls. A look's pose
 // (useRigLook.js) is still computed underneath, and whatever the profile does NOT
 // control (a PAR's aim, set by hand on its clamp) keeps the look's value. A lamp with no
@@ -15,7 +15,7 @@
 // about +Y, tilt about the yoke's X, beam = (sin t sin p, cos t, sin t cos p); a hung
 // fixture is the same machine turned half a turn about X, its base's front (+Z) toward
 // the room's +Z — the default face mountMatrix gives when none is recorded (the rig
-// records none; §18.3 says so).
+// records none; §19.3 says so).
 
 import { spotAimDirection, rotationFromPanTilt } from '../project/viewport/spotLightAim.js'
 import { panTiltOfDirection } from './lookRules.js'

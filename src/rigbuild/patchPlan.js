@@ -1,5 +1,5 @@
 // THE SHOW PATCH, PLANNED — an LD's patch plan (data) applied to a room's lamps.
-// docs/architecture/RIG_BUILD.md §19. Pure.
+// docs/architecture/RIG_BUILD.md §20. Pure.
 //
 // Auto-patch (autoPatch.js) finds the next free address: right while a rig is being
 // built, wrong for the night — a crew wants universes that follow the cable runs, blocks

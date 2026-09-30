@@ -1,5 +1,5 @@
 // ASSUMED DMX PROFILES — channel lists to TEST THE VISUALISER WITH while the real
-// charts are owed. docs/architecture/RIG_BUILD.md §18.1.
+// charts are owed. docs/architecture/RIG_BUILD.md §19.1.
 //
 // Why these exist. UPlight publishes no manual or DMX chart for any of the MOXIR codes
 // (RIG_BUILD.md §13.8): the lamps have footprints and no channel lists, so a DMX value

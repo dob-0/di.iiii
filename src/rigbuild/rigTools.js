@@ -35,7 +35,7 @@ export const RIG_STEPS = Object.freeze([
 // Before the steps, the room as a visitor sees it; after them, the desk that runs it.
 export const RIG_ROOM = Object.freeze({ key: 'room', label: 'room', short: 'as a visitor sees it', hint: 'the room as a visitor sees it' })
 export const RIG_LIGHT = Object.freeze({ key: 'light', label: 'light desk', short: 'run the show', hint: 'run the show: patch, looks, faders — on this machine' })
-// And the two together: the desk beside the room it drives (RIG_BUILD.md §18).
+// And the two together: the desk beside the room it drives (RIG_BUILD.md §19).
 export const RIG_VISUALISE = Object.freeze({ key: 'visualise', label: 'visualiser', short: 'desk + room, live', hint: 'the desk and the room side by side — move a fader, watch the lamps' })
 
 export const RIG_STEP_KEYS = RIG_STEPS.map((s) => s.key)
