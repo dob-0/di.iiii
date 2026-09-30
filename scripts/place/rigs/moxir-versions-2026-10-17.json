@@ -588,6 +588,68 @@
       ],
       "aim": "cob-out",
       "note": "the 4 COBs hung under the arm ends, focused out along their arm 35° under the horizon: the hits — the crowd arm's lands on the front of the floor, the side arms' on the floor either side, the back arm's on the press. Fixed focus."
+    },
+    "beam380-backstage": {
+      "class": "beam380",
+      "count": 7,
+      "mount": "backdrop-floor",
+      "x_m": [
+        -4.5,
+        -3,
+        -1.5,
+        0,
+        1.5,
+        3,
+        4.5
+      ],
+      "backdrop_gap_m": -4.7,
+      "aim": "fan-into-roof",
+      "symmetric": "positions",
+      "note": "7 UP-B380F on the FLOOR of the backstage zone, 1.5 m behind the press (z -1.5, x -4.5 .. 4.5 at 1.5 m): behind the machinery, out of the crowd's reach and of the DJ's, rising into the roof frame so the press stands in silhouette in front of the shafts. Not behind the riser: the crane parked over the DJ (girders z 3.35-4.05 and 5.55-6.25) and the hung line stand in every beam from there."
+    },
+    "bsw250-ground": {
+      "class": "bsw250",
+      "count": 6,
+      "mount": "column-bases",
+      "columns": {
+        "z_at": [
+          18,
+          30,
+          42
+        ],
+        "rows": "nave"
+      },
+      "off_m": 1,
+      "aim": "up-into-truss",
+      "symmetric": "positions",
+      "note": "6 UP-250BSW on the FLOOR at the bases of the nave columns at z 18, 30, 42, both sides, standing 1.0 m off the column face (0.3 m further out than the beams, so the PAR uplight on the same face and the beam at the next column keep their room): spot mode, aimed UP the wall and into the roof frame — never across the floor (the set's booth-key rule would rake the dance zone at 0.7-1.6 m)."
+    },
+    "beeeye-ground": {
+      "class": "beeEye",
+      "count": 4,
+      "mount": "column-bases",
+      "columns": {
+        "z_at": [
+          -6,
+          48
+        ],
+        "rows": "nave"
+      },
+      "off_m": 1,
+      "aim": "up-into-truss",
+      "symmetric": "positions",
+      "note": "4 UP-HK1915 on the FLOOR at the bases of the column pairs at the two ends of the dance length of the nave (z -6 behind the press, z 48 at the far end of the dance floor; z 6 is under the crane bridge and would fire into it), beam mode 4 deg, aimed up and a little in or out along the wall and into the roof frame. Ends of the room, so the two ends of the nave are lit as well as its middle."
+    },
+    "laser-cut": {
+      "class": "laser",
+      "count": 2,
+      "mount": "truss-top",
+      "dx_m": [
+        4.5
+      ],
+      "aim": "laser-into-roof",
+      "symmetric": "positions",
+      "note": "2 UP-LA40WF standing on the top chord of the cut at u +-4.5 (lens above 4 m): FIXED devices, bolted, nothing on them pans or tilts (the scanner is a pair of mirrors inside); every beam rises into the roof over the house, never into the audience plane (>= 3 m over any floor a person can stand on). Not on the floor: a laser on the floor cannot keep its beams 3 m above the crowd. Class 4: needs a certified laser safety officer — OWNER SIGN-OFF, nothing here claims compliance."
     }
   },
   "effects": {
@@ -613,6 +675,37 @@
       "colour": "#8a9096",
       "fixture": "hazer",
       "note": "hazers along the nave columns, so the far half of the hall holds haze too"
+    },
+    "co2-ground": {
+      "id": "co2",
+      "label": "CO2 jet",
+      "count": 6,
+      "mount": "booth-pit",
+      "half_width_m": 3.6,
+      "pit_m": 0.9,
+      "colour": "#d8dde2",
+      "fixture": "co2",
+      "note": "in the pit on the floor, aimed up: 6 UP-Q108S between the riser and the crowd barrier. Never hung. Exposure and distances to be settled with the effects operator and the venue: UNVALIDATED."
+    },
+    "spark-ground": {
+      "id": "spark",
+      "label": "cold spark machine",
+      "count": 4,
+      "mount": "booth-pit",
+      "half_width_m": 2.4,
+      "pit_m": 0.4,
+      "colour": "#ff9a2e",
+      "fixture": "spark",
+      "note": "in the pit on the floor at the riser side: 4 UP-YH600F. Never hung. Plume height and clearance to the crowd: UNVALIDATED (maker's manual owed)."
+    },
+    "smoke-ground": {
+      "id": "smoke",
+      "label": "smoke / haze machine",
+      "count": 4,
+      "mount": "nave-columns",
+      "colour": "#8a9096",
+      "fixture": "smoke",
+      "note": "4 UP-YZ31P on the floor beside nave columns. Never hung."
     }
   },
   "looks": {
@@ -3012,6 +3105,391 @@
             "beam380-columns-6": 0,
             "par-x-bridge": 0.4,
             "strobe-x": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "minimal-ground",
+      "candidateOf": "minimal",
+      "title": "Minimal · movers on the ground",
+      "summary": "The owner's basic rule (2026-09-30): statics on the air truss, every moving head on the ground, 2 lasers. Minimal's cut carries its fixed lights only (7 COB200 curtain, the X of 6 PL5403, 4 red PL5403 on the bridge) with the column and press PARs; the movers stand on the floor: 7 UP-B380F on the floor behind the press, 6 at the column bases into the roof, 6 UP-250BSW and 4 UP-HK1915 up the walls; 2 fixed UP-LA40WF on the cut's top chord into the roof. Nothing that moves is hung. 2 hazers.",
+      "truss": "crane-cut",
+      "policy": {
+        "movingFixtures": {
+          "ground_only": true,
+          "max_mount_height_m": 0.6,
+          "audience_eye_height_m": 2.5,
+          "owner": "2026-09-30: \"nothing moving on the air truss … no moving heads for now. All moving heads on the ground … statics go to the air truss, moving heads all safe on the ground, and 2 lasers.\"",
+          "rule": "no fixture that pans, tilts, rotates or zooms by motor is mounted above 0.6 m (its mounting face); no ground mover's beam passes through the dance zone below 2.5 m in any look; the two lasers are fixed, and every laser beam stays >= 3 m over any floor a person can stand on.",
+          "lasers": {
+            "min_beam_height_m": 3,
+            "signoff": "Class 4 40 W: a certified laser safety officer must approve the positions and the show (owner sign-off, owed); nothing in this file claims compliance."
+          }
+        }
+      },
+      "groups": [
+        "cob-cut-curtain",
+        "par-cut-x",
+        "par-cut-bridge",
+        "par-columns-8",
+        "par-press-cut",
+        "beam380-backstage",
+        "beam380-columns-6",
+        "bsw250-ground",
+        "beeeye-ground",
+        "laser-cut"
+      ],
+      "effects": [
+        "hazer-back"
+      ],
+      "realLights": {
+        "cob-cut-curtain": 1,
+        "par-cut-x": 1,
+        "par-cut-bridge": 2,
+        "par-columns-8": {
+          "count": 4,
+          "pick": "nearest-stage"
+        }
+      },
+      "looks": {
+        "white-cathedral": {
+          "aims": {
+            "bsw250-ground": {
+              "rule": "vertical",
+              "in_deg": 0
+            },
+            "beeeye-ground": {
+              "rule": "vertical",
+              "in_deg": -6
+            },
+            "laser-cut": {
+              "rule": "laser-into-roof",
+              "a": 14
+            },
+            "beam380-backstage": {
+              "rule": "fan",
+              "spread_deg": 8,
+              "lean_deg": 0
+            }
+          },
+          "colours": {
+            "beeeye-ground": "#eef3ff",
+            "beam380-backstage": "#eef3ff"
+          },
+          "levels": {
+            "bsw250-ground": 0,
+            "beeeye-ground": 0.6,
+            "laser-cut": 0
+          }
+        },
+        "red-room": {
+          "aims": {
+            "bsw250-ground": {
+              "rule": "vertical",
+              "in_deg": 0
+            },
+            "beeeye-ground": {
+              "rule": "vertical",
+              "in_deg": 0
+            },
+            "laser-cut": {
+              "rule": "laser-into-roof",
+              "a": 14
+            },
+            "beam380-backstage": {
+              "rule": "vertical"
+            }
+          },
+          "colours": {
+            "bsw250-ground": "#ff1408",
+            "beeeye-ground": "#ff1408",
+            "beam380-backstage": "#ff1408"
+          },
+          "levels": {
+            "bsw250-ground": 0.25,
+            "beeeye-ground": 0.4,
+            "laser-cut": 0,
+            "beam380-backstage": 0.45
+          }
+        },
+        "strobe-hit": {
+          "aims": {
+            "bsw250-ground": {
+              "rule": "vertical",
+              "in_deg": 0
+            },
+            "beeeye-ground": {
+              "rule": "vertical",
+              "in_deg": 0
+            },
+            "laser-cut": {
+              "rule": "laser-into-roof",
+              "a": 14
+            }
+          },
+          "colours": {},
+          "levels": {
+            "bsw250-ground": 0,
+            "beeeye-ground": 0,
+            "laser-cut": 0,
+            "beam380-backstage": 0
+          }
+        },
+        "one-beam": {
+          "aims": {
+            "bsw250-ground": {
+              "rule": "vertical",
+              "in_deg": 0
+            },
+            "beeeye-ground": {
+              "rule": "vertical",
+              "in_deg": 0
+            },
+            "laser-cut": {
+              "rule": "laser-into-roof",
+              "a": 14
+            },
+            "beam380-backstage": {
+              "rule": "vertical",
+              "solo": 1
+            }
+          },
+          "colours": {
+            "beam380-backstage": "#eef3ff"
+          },
+          "levels": {
+            "bsw250-ground": 0,
+            "beeeye-ground": 0,
+            "laser-cut": 0
+          }
+        },
+        "slow-sweep": {
+          "aims": {
+            "bsw250-ground": {
+              "rule": "vertical",
+              "in_deg": -10
+            },
+            "beeeye-ground": {
+              "rule": "vertical",
+              "in_deg": 12
+            },
+            "laser-cut": {
+              "rule": "laser-into-roof",
+              "a": 18
+            },
+            "beam380-backstage": {
+              "rule": "fan",
+              "spread_deg": 16,
+              "lean_deg": 2
+            }
+          },
+          "colours": {
+            "bsw250-ground": "#eef3ff",
+            "beeeye-ground": "#eef3ff",
+            "laser-cut": "#ff1408",
+            "beam380-backstage": "#eef3ff"
+          },
+          "levels": {
+            "bsw250-ground": 0.35,
+            "beeeye-ground": 0.5,
+            "laser-cut": 0.6
+          }
+        }
+      }
+    },
+    {
+      "id": "full-ground",
+      "candidateOf": "full",
+      "title": "Full · movers on the ground · effects",
+      "summary": "Minimal · movers on the ground, plus the effects, all on the floor and none hung: 6 CO2 jets and 4 cold-spark machines in the pit, 4 smoke machines beside the nave columns, the hazers. Same air truss (the cut) with the same statics; the same 23 movers on the floor and the 2 fixed lasers. Butterfly effect: not modelled (no type in the library).",
+      "truss": "crane-cut",
+      "policy": {
+        "movingFixtures": {
+          "ground_only": true,
+          "max_mount_height_m": 0.6,
+          "audience_eye_height_m": 2.5,
+          "owner": "2026-09-30: \"nothing moving on the air truss … no moving heads for now. All moving heads on the ground … statics go to the air truss, moving heads all safe on the ground, and 2 lasers.\"",
+          "rule": "no fixture that pans, tilts, rotates or zooms by motor is mounted above 0.6 m (its mounting face); no ground mover's beam passes through the dance zone below 2.5 m in any look; the two lasers are fixed, and every laser beam stays >= 3 m over any floor a person can stand on.",
+          "lasers": {
+            "min_beam_height_m": 3,
+            "signoff": "Class 4 40 W: a certified laser safety officer must approve the positions and the show (owner sign-off, owed); nothing in this file claims compliance."
+          }
+        }
+      },
+      "groups": [
+        "cob-cut-curtain",
+        "par-cut-x",
+        "par-cut-bridge",
+        "par-columns-8",
+        "par-press-cut",
+        "beam380-backstage",
+        "beam380-columns-6",
+        "bsw250-ground",
+        "beeeye-ground",
+        "laser-cut"
+      ],
+      "effects": [
+        "hazer-back",
+        {
+          "from": "hazer-hall",
+          "count": 4
+        },
+        "co2-ground",
+        "spark-ground",
+        "smoke-ground"
+      ],
+      "realLights": {
+        "cob-cut-curtain": 1,
+        "par-cut-x": 1,
+        "par-cut-bridge": 2,
+        "par-columns-8": {
+          "count": 4,
+          "pick": "nearest-stage"
+        }
+      },
+      "looks": {
+        "white-cathedral": {
+          "aims": {
+            "bsw250-ground": {
+              "rule": "vertical",
+              "in_deg": 0
+            },
+            "beeeye-ground": {
+              "rule": "vertical",
+              "in_deg": -6
+            },
+            "laser-cut": {
+              "rule": "laser-into-roof",
+              "a": 14
+            },
+            "beam380-backstage": {
+              "rule": "fan",
+              "spread_deg": 8,
+              "lean_deg": 0
+            }
+          },
+          "colours": {
+            "beeeye-ground": "#eef3ff",
+            "beam380-backstage": "#eef3ff"
+          },
+          "levels": {
+            "bsw250-ground": 0,
+            "beeeye-ground": 0.6,
+            "laser-cut": 0
+          }
+        },
+        "red-room": {
+          "aims": {
+            "bsw250-ground": {
+              "rule": "vertical",
+              "in_deg": 0
+            },
+            "beeeye-ground": {
+              "rule": "vertical",
+              "in_deg": 0
+            },
+            "laser-cut": {
+              "rule": "laser-into-roof",
+              "a": 14
+            },
+            "beam380-backstage": {
+              "rule": "vertical"
+            }
+          },
+          "colours": {
+            "bsw250-ground": "#ff1408",
+            "beeeye-ground": "#ff1408",
+            "beam380-backstage": "#ff1408"
+          },
+          "levels": {
+            "bsw250-ground": 0.25,
+            "beeeye-ground": 0.4,
+            "laser-cut": 0,
+            "beam380-backstage": 0.45
+          }
+        },
+        "strobe-hit": {
+          "aims": {
+            "bsw250-ground": {
+              "rule": "vertical",
+              "in_deg": 0
+            },
+            "beeeye-ground": {
+              "rule": "vertical",
+              "in_deg": 0
+            },
+            "laser-cut": {
+              "rule": "laser-into-roof",
+              "a": 14
+            }
+          },
+          "colours": {},
+          "levels": {
+            "bsw250-ground": 0,
+            "beeeye-ground": 0,
+            "laser-cut": 0,
+            "beam380-backstage": 0
+          }
+        },
+        "one-beam": {
+          "aims": {
+            "bsw250-ground": {
+              "rule": "vertical",
+              "in_deg": 0
+            },
+            "beeeye-ground": {
+              "rule": "vertical",
+              "in_deg": 0
+            },
+            "laser-cut": {
+              "rule": "laser-into-roof",
+              "a": 14
+            },
+            "beam380-backstage": {
+              "rule": "vertical",
+              "solo": 1
+            }
+          },
+          "colours": {
+            "beam380-backstage": "#eef3ff"
+          },
+          "levels": {
+            "bsw250-ground": 0,
+            "beeeye-ground": 0,
+            "laser-cut": 0
+          }
+        },
+        "slow-sweep": {
+          "aims": {
+            "bsw250-ground": {
+              "rule": "vertical",
+              "in_deg": -10
+            },
+            "beeeye-ground": {
+              "rule": "vertical",
+              "in_deg": 12
+            },
+            "laser-cut": {
+              "rule": "laser-into-roof",
+              "a": 18
+            },
+            "beam380-backstage": {
+              "rule": "fan",
+              "spread_deg": 16,
+              "lean_deg": 2
+            }
+          },
+          "colours": {
+            "bsw250-ground": "#eef3ff",
+            "beeeye-ground": "#eef3ff",
+            "laser-cut": "#ff1408",
+            "beam380-backstage": "#eef3ff"
+          },
+          "levels": {
+            "bsw250-ground": 0.35,
+            "beeeye-ground": 0.5,
+            "laser-cut": 0.6
           }
         }
       }

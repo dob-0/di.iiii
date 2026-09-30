@@ -1512,6 +1512,145 @@ copies". A backup and the op log are not enough; he opens old and new side by si
   soft, into the trash.
 - Guard: `copy-version.test.js` (the label, the URLs, the mark alone changes).
 
+### 15.12 Movers on the ground — Minimal and Full with nothing that moves in the air (2026-09-30)
+
+Owner, 2026-09-30: "nothing moving on the air truss ... no moving heads for now. All moving heads on the
+ground, some other reachable places — analyze once they are so; the basic is: statics go to the air
+truss, moving heads all safe on the ground, and 2 lasers. So the basic one: all movings indoor/outdoor
+once, and wash. The 2nd version: full with special effects but again mostly the same setup: movings on the
+ground or super safe, no air truss; statics can go on the truss also; not-hard-moving things, not the
+spots, can go on the truss again." Built as two CANDIDATES beside the versions (versions file
+`candidates`, the same set, so the switch lists them): `minimal-ground` (of Minimal) and `full-ground`
+(of Full). Every existing version, variant and candidate is untouched (their rig files are byte for
+byte what they were; a test holds the ids and their order).
+
+**Definitions used.** MOVING = anything that pans, tilts, rotates or zooms by motor: UP-B380F,
+UP-250BSW, UP-HK1915 (the library types with `pan_tilt_deg`) and the list's UP-HK615, UP-MH100S,
+UP-MH8060S and the BY06 swing laser — the last four have no type or 3D model in the library, so they are
+NOT placed here (owed). STATIC = PARs, washes, COB, strobes, blinders, UP-PL5403, UP-COB200. The
+UP-LA40WF is a scanning device on a FIXED mount: nothing on it pans or tilts (the scanner is two mirrors
+inside), so it is not a "moving head" for the rule below; that is a reading, flagged for the owner.
+
+**Method.** No published method for placing ground movers against an audience was found or used: the
+method is written here first and its results are UNVALIDATED (never seen on a screen, never measured in
+the hall). It is a geometric test on the committed hall model (`moxir-hall-2026-09-28-crane-dj.hall.json`;
+the built model `/mnt/data/footage/place-moxir-hall-v4-0929-crane-dj/hall.json` was read, read only, and
+agrees on the zones, the massing, the column grid and the crane over the DJ; it differs on the far crane
+and the girder underside, neither near a chosen place): for each candidate place, its distance to the
+booth, the floor cable route (Manhattan, round obstacles by hand), the distance to the dance zone (x -5.35
+to 5.35, z 7.5 to 48), to the machinery boxes (press, crown, machine line, pipe) and whether it lies under
+a crane girder; for each chosen mover, in EVERY look and at the rest aim, rays along the lower edge of its
+beam cone (8 azimuths + the axis, the light's half angle: B380F 0.9 deg, 250BSW 7.5 deg, HK1915 2 deg) stepped
+0.1 m out to its reach against the dance zone below 2.5 m (audience eye height, the owner's number). All in
+`scripts/rigbuild/ground-movers.mjs`; the numbers below are its output in
+`scripts/place/rigs/moxir-ground-movers-2026-09-30.json` (generated; `--check`).
+
+**Every candidate place** (x, z as the hall: the nave centre x 0, the DJ at z ~5.2, the entry door at
+z 54.5, +z toward the house):
+
+| place | x, z (m) | lens above the floor (m) | floor cable route from the booth (m) | straight distance to the DJ (m) | distance to the dance zone (m) | machinery floor | decision | trip risk |
+|---|---|---|---|---|---|---|---|---|
+| floor behind the DJ riser (the old beam380-back / -flank line) | 0, 3.95 | 0.7 | 1.25 | 1.25 | 3.55 | no | under a crane girder: rejected | low |
+| floor of the pit between the riser and the crowd barrier | 0, 6.95 | 0.7 | 1.75 | 1.75 | 0.55 | no | rejected | high |
+| the DJ riser's deck | 0, 5.2 | 1.9 | 0 | 0 | 2.3 | no | rejected | the DJ stands there |
+| floor at the press's foot (where the press PARs stand) | 1.5, 3.5 | 0.7 | 3.2 | 2.27 | 4 | YES | under a crane girder: rejected | low |
+| the brick plinth and body of the machine line | 8, 1 | 1.6 | 12.2 | 9.04 | 7.02 | YES | rejected | low |
+| floor of the backstage zone, 1.5 m behind the press | 0, -1.5 | 0.7 | 13.7 | 6.7 | 9 | no | CHOSEN | low |
+| the floor at the base of nave columns z 12, 24, 36 (both rows) | 10.88, 24 | 0.7 | 29.68 | 21.72 | 5.53 | no | CHOSEN | medium |
+| the same wall, columns z 18, 30, 42, 1.0 m off the face | 10.6, 30 | 0.54 | 35.4 | 26.97 | 5.25 | no | CHOSEN | medium |
+| the wall at z -6 (behind the press) and z 48 (far end of the dance floor) | 10.6, 48 | 0.49 | 53.4 | 44.09 | 5.25 | no | CHOSEN | medium |
+| the wall at z 6 (the first column pair, beside the stage) | 10.6, 6 | 0.7 | 11.4 | 10.63 | 5.46 | no | under a crane girder: rejected | low |
+| on the dance floor | 0, 28 | 0.7 | 22.8 | 22.8 | 0 | no | rejected | high |
+| the aisle between the dance zone and the wall | 8, 28 | 0.7 | 30.8 | 24.16 | 2.65 | no | rejected | high |
+| the tops of the 3 m low walls (left row z 12.5-42.5; the right row is a GUESS) | 11.6, 27 | 3.7 | 33.4 | 24.69 | 6.25 | no | rejected | none |
+| the floor by the entry door (z 54.5, 6 m wide) | 0, 52 | 0.7 | 46.8 | 46.8 | 4 | no | rejected | high |
+
+Why each was taken or left:
+
+- **floor behind the DJ riser (the old beam380-back / -flank line)** (rejected): REJECTED: the crane parked over the DJ stands in every beam from here (girders z 3.35-4.05 and 5.55-6.25, bottom 7.95 m) and so does the hung line at z 4.8; buildRig refuses all 7 ("beam runs into the crane"). Also 1 m behind the DJ: heat, fan noise, glare on the desk. Crowd: none (crew side of the barrier). Machinery: no: plain floor 0.75 m from the press face (z 3.2). Cable: a few metres to the booth.
+- **floor of the pit between the riser and the crowd barrier** (rejected): REJECTED for movers: a beam leaned toward the house by more than about 15 degrees (hand calculation, lens 0.45 m) rakes the dance zone below 2.5 m (0.55 m to its edge); the pit is where the effects stand (RIG_BUILD §15.12, full-ground). Kept free of heads. Crowd: barrier at z 7.5, 0.55 m away; nothing between it and the crowd but a 1.1 m rail. Machinery: no. Cable: about 2-9 m to the booth.
+- **the DJ riser's deck** (rejected): REJECTED: the mounting face is at 1.2 m, above the 0.6 m rule; heads a metre from the DJ. Crowd: none. Machinery: no. Cable: in the booth.
+- **floor at the press's foot (where the press PARs stand)** (rejected): REJECTED: machinery floor; the press PARs already stand here; a lens 0.3 m from the face blows it out white. Crowd: none. Machinery: YES, 0.3 m from the press face: floor next to a forging press (oil, drip, hot dies), not confirmed as clean floor. Cable: a few metres.
+- **the brick plinth and body of the machine line** (rejected): REJECTED: machinery, and above the 0.6 m rule; load-bearing not known. Crowd: none. Machinery: YES: the machine line itself (plinth 0.9 m, body to 2.4 m). Cable: about 10 m.
+- **floor of the backstage zone, 1.5 m behind the press** (CHOSEN): CHOSEN for 7 UP-B380F: no crowd, no crane in the way (the girders are 3.35 m or more in front), beams rise behind the press so it stands in silhouette in front of the shafts (the underground brief: the building revealed in pieces). Lens 0.70 m. Crowd: none: behind the press and the machine line, in the owner's red backstage zone (z -10 .. -1). Machinery: no at z -1.5: the press ends at z 0.2 and the machine line at z -0.5 (1.0 m clear of the nearest fixture); loose machinery reported in the zone must be cleared (hall.json "clear"). Cable: about 11-15 m from the booth, round the press (it blocks the straight line: out along the side of the riser, down the backstage side).
+- **the floor at the base of nave columns z 12, 24, 36 (both rows)** (CHOSEN): CHOSEN for 6 UP-B380F (the pillars of the "white cathedral"): the most protected floor the crowd shares the room with; the beams rise straight up the wall into the space frame; lean up to +-22 degrees toward the walls in the looks. Lens 0.70 m. Crowd: 5.5 m outside the dance zone (x 5.35); the inner face of the column row is x 11.6. Machinery: no. Cable: 10.9 m across + the run along the wall: 17-42 m from the booth.
+- **the same wall, columns z 18, 30, 42, 1.0 m off the face** (CHOSEN): CHOSEN for 6 UP-250BSW: interleaved with the beams; 1.0 m off the face because the PAR uplight stands on the same face (x 11.15). Spot mode 15 degrees, up the wall and into the roof. Lens 0.54 m. Crowd: 5.25 m outside the dance zone. Machinery: no. Cable: 23-47 m along the wall.
+- **the wall at z -6 (behind the press) and z 48 (far end of the dance floor)** (CHOSEN): CHOSEN for 4 UP-HK1915 (2 per side): the two ends of the room. Beam mode 4 degrees. Lens 0.49 m. Crowd: 5.25 m outside the dance zone; z 48 is its far edge. Machinery: no (z -6 is past the machine line, which ends at z -0.5). Cable: about 22 m (z -6) and 53 m (z 48).
+- **the wall at z 6 (the first column pair, beside the stage)** (rejected): REJECTED: z 6 lies under the crane's second girder (z 5.55-6.25): a beam straight up hits it (buildRig refuses it). Crowd: none. Machinery: no. Cable: about 12 m.
+- **on the dance floor** (rejected): REJECTED: a head inside the crowd is knocked, kicked and looked into. Crowd: IN the crowd. Machinery: no. Cable: long.
+- **the aisle between the dance zone and the wall** (rejected): REJECTED: overflow floor; the wall line is 3 m further and safer. Crowd: 2.65 m from the dance zone: crowd overflow, people stand and sit here. Machinery: no. Cable: long.
+- **the tops of the 3 m low walls (left row z 12.5-42.5; the right row is a GUESS)** (rejected): REJECTED for now: mounting face 3.0 m, above the 0.6 m rule; masonry not surveyed; the right row is a guess. A survey could make it the first "other reachable place" (OWED). Crowd: out of reach. Machinery: no. Cable: up a ladder, 40 m.
+- **the floor by the entry door (z 54.5, 6 m wide)** (rejected): REJECTED: an escape route; nothing stands in it. Crowd: the way in and out. Machinery: no. Cable: 47 m.
+
+**What the chosen places reach.** Aimed up they light the column face and the space frame (its underside
+11.0 m): the cone's radius at the frame is 0.16 m for a B380F (0.9 deg half angle), 1.38 m for a 250BSW in
+spot mode (7.5 deg) and 0.37 m for an HK1915 (2 deg). Leaned across, to the opposite wall, a ground beam
+crosses the dance zone at 2.5 m or less (hand calculation, lens 0.7 m: from a column base, 18 deg above the horizontal or less), so no
+look leans further than 22 deg from vertical, and only away from the floor's centre (`in_deg` negative)
+or a few degrees in. The old key-the-DJ-from-the-side rule of `bsw250-booms` (a beam from a column base to
+the DJ at 1.6 m) rakes the floor at 0.7-1.6 m and is NOT used; a test builds it and watches the guard fail.
+
+**The versions.**
+
+| | Basic — `minimal-ground` | Full — `full-ground` |
+|---|---|---|
+| on the air truss (the cut, as Minimal: 12 m, 15 deg, 3 bridled hoists) | 7 COB200 curtain, 6 PL5403 X, 4 PL5403 on the bridge — statics only | the same |
+| on the floor, moving | 7 UP-B380F behind the press, 6 UP-B380F at the column bases (z 12, 24, 36), 6 UP-250BSW (z 18, 30, 42), 4 UP-HK1915 (z -6, 48) = 23 | the same 23 |
+| statics on the floor | 8 PL5403 up the column faces, 3 at the press's foot (as Minimal; the 6 pillars are dropped: the column beams stand there) | the same |
+| lasers | 2 UP-LA40WF fixed on the cut's top chord, into the roof | the same |
+| effects, all on the floor | 2 hazers | 6 hazers, 6 CO2 jets and 4 cold-spark machines in the pit, 4 smoke machines by the nave columns |
+| rental lines | B380F 13/18, 250BSW 6/12, HK1915 4/14, PL5403 21/50, COB200 7/8, LA40WF 2/2 | the same + Q108S 6/6, YH600F 4/4, YZ31P 4/4 (hazers: other supplier) |
+| load on the cut | 280 kg static (ESTIMATE, lasers included), picks 65 / 134 / 80 kg | the same |
+
+**Assumptions to say out loud.** (1) "Once" = one kit of each mover type, at the counts the Minimal
+family already uses for beams (13 UP-B380F, the number of `minimal-cut-movers`, the pre-cut Minimal and
+both X and halo variants) and, for the two types Minimal never carried, the number of SAFE places found
+(6 and 4), each far under the stock (18, 12, 14). (2) The two lasers stand on the cut's top chord, not on
+the floor: a laser on the floor cannot keep its beams 3 m above the crowd, and the rig code refuses any
+laser under 3 m. That is a fixed device on the truss, which the owner's sentence ("nothing moving on the
+air truss") does not name either way. If the owner wants them at the same time off the truss, they need a
+purpose-built stand of 3 m or more; none is modelled. (3) Full is built on the cut like Basic (the rule
+says "the same"); Full's old extras (blinders, strobes, 50 PARs) are not added: the owner asked for the
+same plus effects. (4) The effects' distances to the crowd, CO2 and cold-spark exposure, the smoke's
+detector cover are UNVALIDATED: to be settled with the effects operator and the venue. Butterfly effects:
+no type in the library.
+
+**The guard (`scripts/rigbuild/ground-movers.test.js`).** A rig file opts in with
+`policy.movingFixtures.ground_only: true` (a version in the versions file carries `policy`; `versionRig`
+copies it, only when present). The test runs over EVERY `moxir-2026-10-17-*.json` in `scripts/place/rigs`,
+so a future version is held to it the day it opts in, and any version whose id names "ground" that
+forgets the flag fails. It checks: no mover's mounting face above 0.6 m (floor, or a plinth that low; the
+deck of the riser is 1.2 m and fails; everything on a truss, a bridge, a tower or a halo fails, and an
+unknown mount counts as high); no cone in the dance zone under 2.5 m in any look or at rest; every laser
+lens at 3 m or more, rising, its cone never under 3 m over any floor a person can stand on. The failure
+message names the group, the fixture, the mount and the rule, and says how to opt out. Two tests build a
+violation (a B380F hung on the cut; a 250BSW keyed across the floor) and watch the message. The rest: counts
+against the rental stock, every fixture inside the nave and under its roof, none inside the machinery
+boxes or the riser (0.5 m clear in plan for the floor movers), the effects on the floor.
+
+**The lasers.** UP-LA40WF is a 40 W Class 4 laser. Using one where people stand needs a certified laser
+safety officer's approval of the positions and the show; the applicable standard and the national rule
+were NOT read in this session. OWNER SIGN-OFF, owed. The placement only keeps every beam above 3 m in
+every look (a test). Nothing here claims compliance.
+
+**Loading (not done here; the owner's install is loaded by the main session).**
+
+```bash
+HALL=/mnt/data/footage/place-moxir-hall-v4-0929-crane-dj/hall.json
+node scripts/rigbuild/versions.mjs --report $REPORT --hall $HALL --only minimal-ground,full-ground
+for V in minimal-ground full-ground; do
+  node scripts/rigbuild/load-version.mjs --api $API --space moxir --from moxir-hall --version $V \
+    --hall $HALL --token-file ~/.di/di.env --no-mark-from --report $REPORT      # --force to load over
+done
+# undo: delete only the project moxir-hall-<version> (nothing else is written)
+```
+
+**Owed.** No cue list / show file for the two (the set's looks play, the X candidates' `shows/` files
+were not made); nothing seen on a screen or in the hall; a survey of the low-wall tops and the machinery
+floor; HK615, MH100S, MH8060S, BY06 not typed; the laser sign-off and the effects operator's distances;
+the crew's cable plan and cable covers along the nave wall; the far-crane and girder-underside difference
+between the committed and the built hall (`spec.hall` still points at the 09-28 layering).
+
 ## 16. Hosted playback — the show with no desk (`src/rigbuild/showClock.js`)
 
 The light desk (`/light`) runs on a local install only, by design (LIGHTING_DESK.md). On a hosted

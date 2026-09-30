@@ -502,6 +502,8 @@ export const versionRig = ({ spec, base, id }) => {
         defaultLook: v.defaultLook || spec.defaultLook,
         looks,
         ...(v.show ? { show: clone(v.show) } : {}),
+        // a version that opts in to a policy carries it in its rig file (ground-movers.mjs holds it)
+        ...(v.policy ? { policy: clone(v.policy) } : {}),
         opening: clone(v.opening || ((truss.kind === 'crane-hung' || truss.kind === 'crane-x') && spec.craneOpening ? spec.craneOpening : base.opening)),
         ...(spec.hall ? { hall: spec.hall } : {})
     }
