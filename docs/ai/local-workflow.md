@@ -83,6 +83,18 @@ auto-issued a guest session by the same code path production uses, which makes
 the weakest session the honest one to test with. Sign in afterwards, for the
 authenticated view only.
 
+## Which variable means which tier
+
+`DEV_API_URL`/`DEV_API_TOKEN` is the dev tier (`dev.diiii.xyz`), `PROD_API_URL`/`PROD_API_TOKEN`
+is production, `LOCAL_API_URL` is this machine. `LIVE_API_URL`/`LIVE_API_TOKEN` is the old
+ambiguous name. Scripts that always meant the dev tier (`dev-stack`, `data-inventory`,
+`local-mirror`, `promote-space-projects --from`, `push-space-projects`, `space-code-push`,
+`wcc-page-snapshot`, `data-cleanup`) read `DEV_*` first and fall back to `LIVE_*`, so nothing
+changes until an env file is migrated. Still reading only `LIVE_*` (target = whatever the
+operator set, production when unset): `space-push`, `space-pull`, `space-new`, `project-pull`,
+`space-sync`, `space-sync-github`. The server's own `LIVE_API_URL` (`serverXR/src/config.js`,
+the upstream its sync routes talk to) is a different thing and is set in deployed env.
+
 ## Two live footguns
 
 - **`npm run space:push` can write to production.** `space-push.mjs` reads the
