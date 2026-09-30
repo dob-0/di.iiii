@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MOXIR light scenes - sketch A/B</title>
+<style>
+:root{--bg:#0b0b0b;--panel:#141414;--line:#3a3a3a;--tx:#e8e8e8;--dim:#9a9a9a}
+*{box-sizing:border-box;border-radius:2px}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+body{padding:0 16px 24px;max-width:1440px;margin:0 auto}
+h1{font-size:15px;margin:12px 0 2px;font-weight:600;letter-spacing:.06em}
+h2{font-size:12px;margin:12px 0 8px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;font-weight:400}
+p{margin:4px 0}.dim{color:var(--dim)}
+button{font:inherit;color:var(--tx);background:var(--panel);border:1px solid var(--line);min-height:44px;min-width:44px;padding:0 12px;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--tx)}
+button[aria-pressed=true],button.primary{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+button:disabled{opacity:.35;cursor:not-allowed;border-style:dashed}
+:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar{display:flex}.bar button{flex:1;margin-left:-1px}
+.box{background:var(--panel);border:1px solid var(--line);padding:12px;margin-top:8px}
+.sync{border:1px solid var(--line);padding:10px 12px;margin:8px 0}
+.sync.off{border-style:dashed;border-color:var(--tx)}
+.msg{min-height:20px;margin:6px 0}
+.layout{display:grid;gap:16px;grid-template-columns:1fr}
+@media(min-width:900px){.layout{grid-template-columns:minmax(380px,5fr) 6fr}}
+canvas{width:100%;display:block;background:#000;border:1px solid var(--line);aspect-ratio:16/10}
+.mini{max-width:420px}
+.tiles{display:grid;gap:8px;grid-template-columns:1fr 1fr}
+@media(min-width:1100px){.tiles{grid-template-columns:1fr 1fr 1fr}}
+.tile{text-align:left;min-height:96px;padding:10px 12px;display:block;width:100%}
+.tile b{display:block;font-weight:600}.tile .sw{display:block;height:8px;margin:6px 0}
+.tile.both,.rw.both{border-style:dashed;border-color:var(--tx)}
+.mark{font-size:12px;border:1px solid currentColor;padding:0 6px;display:inline-block}
+.sl{display:grid;grid-template-columns:88px 1fr 40px;gap:8px;align-items:center;min-height:44px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:44px;background:transparent;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:6px;background:var(--line)}
+input[type=range]::-moz-range-track{height:6px;background:var(--line)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:32px;background:var(--tx);border:0;margin-top:-13px}
+input[type=range]::-moz-range-thumb{width:20px;height:32px;background:var(--tx);border:0}
+.tl{position:relative;height:72px;border:1px solid var(--line);background:#0f0f0f;margin:12px 0 28px;touch-action:none}
+.cue{position:absolute;top:0;bottom:0;border-right:1px solid var(--line);overflow:hidden;padding:4px;font-size:12px;min-width:0;text-align:left;background:var(--panel);min-height:0}
+.cue.sel{background:var(--tx);color:var(--bg)}.cue.both{border-top:3px dashed currentColor}
+.cue .sw{position:absolute;left:0;right:0;bottom:0;height:6px}
+.hd{position:absolute;top:-6px;bottom:-6px;width:44px;margin-left:-22px;min-width:44px;min-height:0;padding:0;background:transparent;border:0;cursor:ew-resize;touch-action:none}
+.hd::after{content:"";position:absolute;left:19px;width:6px;top:6px;bottom:6px;background:var(--dim)}
+.hd:focus-visible::after,.hd:hover::after{background:#fff}
+.ph{position:absolute;top:-8px;bottom:-8px;width:2px;background:#fff;pointer-events:none}
+.ticks{position:absolute;top:100%;left:0;right:0;font-size:11px;color:var(--dim);height:16px}
+.ticks span{position:absolute}.ticks span:last-child{transform:translateX(-100%)}
+.rows .rw{display:grid;grid-template-columns:1fr auto;width:100%;text-align:left;margin-top:-1px;min-height:48px;align-items:center;gap:8px}
+table{border-collapse:collapse;width:100%;margin:8px 0}td,th{border:1px solid var(--line);padding:6px 8px;text-align:left;font-weight:400}
+.foot{position:sticky;bottom:0;background:var(--bg);border-top:1px solid var(--tx);padding:8px 0;margin-top:16px;z-index:5}
+.note{font-size:12px;color:var(--dim);border-left:2px solid var(--line);padding-left:8px;margin-top:8px}
+</style></head><body>
+<h1>MOXIR LIGHT SCENES &middot; SKETCH</h1>
+<p class="dim">Mock data, nothing saved or sent. Two options on one scene list (a 60 s loop). Preview is a 2D placeholder.</p>
+<div class="bar" role="tablist" id="opts" style="margin:8px 0">
+  <button data-o="A">A &middot; SCENE DECK</button><button data-o="B">B &middot; CUE TIMELINE</button>
+</div>
+
+<div class="sync" id="sync" aria-live="polite"></div>
+<div class="msg" id="msg" aria-live="polite"></div>
+
+<div class="layout">
+  <div>
+    <h2>Room preview</h2>
+    <canvas id="cv" width="640" height="400" aria-label="Mock room preview"></canvas>
+    <div class="bar" id="pm" style="margin-top:8px">
+      <button data-m="edit">THIS SCENE</button><button data-m="live">THE LOOP, ON THE CLOCK</button>
+    </div>
+    <p id="clockline" class="dim" style="margin-top:8px"></p>
+    <p class="note">Strobe here is capped at 3 flashes a second and is off with reduced motion. The hall hit runs at full rate.</p>
+  </div>
+  <div id="panel"></div>
+</div>
+
+<div class="foot"><div class="row">
+  <button id="undo">UNDO</button>
+  <button id="restore">RESTORE LAST GOOD</button>
+  <button id="restoresync" hidden>RESTORE BEFORE SYNC</button>
+  <button id="markgood">MARK THIS AS GOOD</button>
+  <button id="demo" style="margin-left:auto">DEMO: CHANGE THERE</button>
+  <button id="demooff">DEMO: GO OFFLINE</button>
+</div></div>
+
+<script>
+'use strict';
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const el=(t,a={},...k)=>{const e=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='class')e.className=v;else if(x.startsWith('on'))e[x]=v;else if(v!==false&&v!==null)e.setAttribute(x,v===true?'':v)}for(const c of k.flat())e.append(c&&c.nodeType?c:String(c??''));return e};
+const hhmm=()=>new Date().toTimeString().slice(0,5);
+const clone=o=>JSON.parse(JSON.stringify(o));
+const KEYS=[['int','intensity'],['col','colour'],['spd','speed'],['str','strobe']];
+const FIELDS=[['hold','hold s'],['fade','fade s'],...KEYS.map(([k,l])=>[k,l])];
+const mk=(id,name,hold,fade,int,col,spd,str)=>({id,name,hold,fade,int,col,spd,str});
+/* one shared data model: a scene = one look + its cue timing. Deck and timeline both read/write this list. */
+const START=[mk('one','Blackout + one beam',12,0,8,50,0,0),mk('sweep','Slow sweep',16,4,45,50,20,0),mk('red','Red room',16,5,70,0,10,10),mk('cath','White cathedral + the X',12,4,100,50,5,0),mk('hit','Strobe hit',4,0,100,50,60,90)];
+/* content hash per scene (FNV-1a over the fields that make the scene). No timestamps, no counters. */
+const hash=s=>{let h=2166136261;const t=[s.name,s.hold,s.fade,s.int,s.col,s.spd,s.str,s.spare?1:0].join('|');for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619)}return(h>>>0).toString(16).padStart(8,'0')};
+const S={opt:'A',sel:'red',mode:'edit',loop:true,online:true,epoch:Date.now(),msg:'',
+  scenes:clone(START),there:{},known:{},base:{},lastSynced:'10:31',fileTime:'09:58',undo:[],
+  good:{t:'10:31',scenes:clone(START)},syncPoint:null};
+START.forEach(s=>{S.base[s.id]=hash(s);S.there[s.id]=clone(s)});
+// starting picture: red changed here, sweep changed there, cathedral changed on both
+S.scenes.find(s=>s.id==='red').str=25;
+S.scenes.find(s=>s.id==='cath').int=90;
+S.there.sweep.spd=35;S.there.cath.col=62;
+S.known=clone(S.there);
+const loopScenes=()=>S.scenes.filter(s=>!s.spare),byId=id=>S.scenes.find(s=>s.id===id);
+/* three-way decision per scene: here vs there vs last-common-ancestor hash */
+function state(s){
+  const t=S.known[s.id],a=S.base[s.id];
+  if(!t)return 'here';                       // new here, unknown there
+  const h=hash(s),th=hash(t);
+  if(h===th)return 'same';
+  if(th===a)return 'here';
+  if(h===a)return 'there';
+  return 'both';
+}
+const WORD={same:'SAME',here:'CHANGED HERE',there:'CHANGED THERE',both:'CHANGED ON BOTH'};
+const GLYPH={same:'',here:'H',there:'T',both:'!'};
+const counts=()=>{const c={same:0,here:0,there:0,both:0};S.scenes.forEach(s=>c[state(s)]++);return c};
+const cur=()=>byId(S.opt==='B'?S.tlsel:S.sel)||S.scenes[0];
+S.tlsel='red';
+function say(t){S.msg=t;$('#msg').textContent=t}
+function point(label,good=false){const p={t:hhmm(),label,scenes:clone(S.scenes),good};if(!good)S.syncPoint=p;return p}
+/* ---------- placeholder room (2D canvas, no WebGL) ---------- */
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const colourOf=(s,a=1)=>{const d=Math.abs(s.col-50)*2,h=s.col<50?0:215;return `hsla(${h},${d}%,${60+(100-d)*.35}%,${a})`};
+function drawRoom(c,s,time,small){
+  const x=c.getContext('2d'),w=c.width,h=c.height;x.globalCompositeOperation='source-over';
+  x.fillStyle='#050505';x.fillRect(0,0,w,h);x.strokeStyle='#1c1c1c';x.lineWidth=1;const hz=h*.5;
+  x.beginPath();x.moveTo(0,hz);x.lineTo(w,hz);x.stroke();
+  for(let i=-6;i<=6;i++){x.beginPath();x.moveTo(w/2+i*w*.02,hz);x.lineTo(w/2+i*w*.16,h);x.stroke()}
+  for(let j=1;j<5;j++){const y=hz+(h-hz)*(j/5)**1.6;x.beginPath();x.moveTo(0,y);x.lineTo(w,y);x.stroke()}
+  x.strokeStyle='#2a2a2a';x.strokeRect(w*.1,h*.08,w*.8,3);
+  const I=s.int/100,sp=s.spd/100;let flash=0;
+  if(s.str>0&&!RM&&!small){const f=Math.min(3,.5+s.str/100*2.5),p=1000/f;flash=(time%p)<70?1:0}
+  x.globalCompositeOperation='lighter';
+  for(let i=0;i<7;i++){
+    const ox=w*(.14+.72*i/6),oy=h*.1,ang=Math.sin(time*.0015*(.2+sp*3)+i*.9)*sp*w*.25,tx=w*(.2+.6*i/6)+ang,ty=h*.9;
+    const g=x.createLinearGradient(ox,oy,tx,ty);g.addColorStop(0,colourOf(s,.55*I));g.addColorStop(1,colourOf(s,.06*I));
+    x.fillStyle=g;x.beginPath();x.moveTo(ox-2,oy);x.lineTo(ox+2,oy);x.lineTo(tx+w*.05,ty);x.lineTo(tx-w*.05,ty);x.closePath();x.fill();
+    const r=x.createRadialGradient(tx,ty,0,tx,ty,w*.09);r.addColorStop(0,colourOf(s,.5*I));r.addColorStop(1,colourOf(s,0));x.fillStyle=r;x.fillRect(tx-w*.1,ty-w*.1,w*.2,w*.2);
+  }
+  if(flash){x.fillStyle='rgba(255,255,255,.55)';x.fillRect(0,0,w,h)}
+  x.globalCompositeOperation='source-over';x.fillStyle='#777';x.font='12px monospace';x.fillText(s.name,8,h-8);
+}
+function clockState(now){
+  const L=loopScenes(),pass=L.reduce((a,s)=>a+s.hold,0),t=((now-S.epoch)/1000)%pass;let a=0;
+  for(const s of L){if(t<a+s.hold)return{t,pass,s};a+=s.hold}return{t,pass,s:L[0]};
+}
+function frame(now){
+  const cs=clockState(Date.now()),s=S.mode==='live'?cs.s:cur();
+  drawRoom($('#cv'),s,now,false);
+  const ph=$('#tlphase');if(ph)ph.style.left=(cs.t/cs.pass*100)+'%';
+  $('#clockline').textContent=`clock: ${cs.t.toFixed(0)} s of ${cs.pass} s${S.loop?', looping':', no loop (holds last scene)'} - now ${cs.s.name}`;
+  requestAnimationFrame(frame);
+}
+/* ---------- shared: sync strip, sliders, per-scene sync box ---------- */
+function renderSync(){
+  const c=counts(),b=$('#sync');b.className='sync'+(S.online?'':' off');b.replaceChildren();
+  b.append(el('div',{class:'row'},el('b',{},S.online?'SYNC: THE OTHER COPY IS REACHABLE':'SYNC: OFFLINE'),el('span',{class:'dim'},`last synced ${S.lastSynced}`)));
+  if(!S.online)b.append(el('p',{},'Offline. Changes are kept here and will sync when the other copy is reachable.'));
+  b.append(el('p',{},`${c.same} same, ${c.here} changed here${S.online?'':' (waiting to send)'}, ${c.there} changed there${S.online?'':' (as last seen)'}, ${c.both} changed on both`));
+  b.append(el('div',{class:'row',style:'margin-top:6px'},
+    el('button',{class:'primary',disabled:!S.online,onclick:syncNow},'SYNC NOW'),
+    el('button',{onclick:syncFile},`SYNC FROM A FILE (${S.fileTime})`)));
+}
+function syncNow(){
+  if(!S.online){say('Offline. Nothing was sent or taken.');return}
+  contact();let sent=0,took=0;
+  const pulls=S.scenes.filter(s=>state(s)==='there');
+  if(pulls.length)point(`before taking ${pulls.length} from there`);
+  for(const s of S.scenes){const st=state(s);
+    if(st==='here'){S.there[s.id]=clone(s);S.known[s.id]=clone(s);S.base[s.id]=hash(s);sent++}
+    else if(st==='there'){const t=S.there[s.id];Object.assign(s,clone(t));S.base[s.id]=hash(s);took++}
+    else if(st==='same')S.base[s.id]=hash(s)}
+  S.lastSynced=hhmm();const c=counts();
+  say(`Synced ${S.lastSynced}: sent ${sent}, took ${took}${took?` (restore point ${S.syncPoint.t} kept)`:''}${c.both?`, ${c.both} changed on both is waiting for you.`:'.'}`);renderAll();
+}
+function syncFile(){ // a carried .diiii: same compare, "there" as of the file time
+  contact(true);say(`Read a file made ${S.fileTime}. Marks now compare with it. Nothing was changed; use the scene's buttons or SYNC NOW.`);renderAll();
+}
+function contact(){S.known=clone(S.there)}
+function sliders(s){
+  const f=el('fieldset',{style:'border:0;padding:0;margin:0'});
+  for(const[k,label]of KEYS){
+    const out=el('output',{},s[k]);
+    const inp=el('input',{type:'range',min:0,max:100,value:s[k],'aria-label':`${s.name} ${label}`,
+      oninput:e=>{s[k]=+e.target.value;out.textContent=s[k]},
+      onpointerdown:()=>{inp._f=s[k]},onfocus:()=>{if(inp._f==null)inp._f=s[k]},
+      onchange:()=>{const from=inp._f??s[k];inp._f=null;if(from===s[k])return;S.undo.push([{id:s.id,key:k,from,to:s[k]}]);say(`${s.name} ${label} ${from} -> ${s[k]}`);renderAll()}});
+    f.append(el('div',{class:'sl'},el('label',{},label),inp,out));
+  }
+  return f;
+}
+const swatch=s=>el('span',{class:'sw',style:`background:${colourOf(s,s.int/100*.9+.1)}`});
+function syncBox(s){
+  const st=state(s),t=S.known[s.id],box=el('div',{class:'box'});
+  box.append(el('div',{class:'row'},el('b',{},'SYNC'),el('span',{class:'mark'},WORD[st]),el('span',{class:'dim'},`last synced ${S.lastSynced}`)));
+  if(st==='same'){box.append(el('p',{class:'dim'},'Same on both copies.'));return box}
+  if(t){const rows=FIELDS.filter(([k])=>s[k]!==t[k]||(S.base[s.id]&&0));
+    box.append(el('table',{},el('tr',{},...['','here','there'].map(x=>el('th',{},x))),...rows.map(([k,l])=>el('tr',{},el('td',{},l),el('td',{},s[k]),el('td',{},t[k])))));}
+  else box.append(el('p',{},'New here. The other copy does not have it yet.'));
+  const off=!S.online;
+  const acts=[];
+  if(st==='here')acts.push(['SEND MINE',()=>{S.there[s.id]=clone(s);S.known[s.id]=clone(s);S.base[s.id]=hash(s);say(`Sent ${s.name}.`)},true]);
+  if(st==='there')acts.push(['TAKE THEIRS',()=>takeTheirs(s),true]);
+  if(st==='both'){acts.push(['TAKE THEIRS',()=>takeTheirs(s)],['KEEP MINE',()=>{S.there[s.id]=clone(s);S.known[s.id]=clone(s);S.base[s.id]=hash(s);say(`Kept mine for ${s.name}; sent to there.`)}],['KEEP BOTH',()=>keepBoth(s)]);}
+  box.append(el('div',{class:'row'},...acts.map(([l,f,p])=>el('button',{class:p?'primary':'',disabled:off,onclick:()=>{f();renderAll()}},l))));
+  if(off)box.append(el('p',{class:'dim'},'The other copy is not reachable. This waits; nothing is overwritten.'));
+  else if(st==='both')box.append(el('p',{class:'dim'},'Take theirs: their scene replaces mine (restore point first). Keep mine: mine replaces theirs there. Keep both: mine stays, theirs becomes a labelled copy outside the loop.'));
+  return box;
+}
+function takeTheirs(s){const t=S.there[s.id];point(`before taking ${s.name} from there`);Object.assign(s,clone(t));S.known[s.id]=clone(t);S.base[s.id]=hash(s);say(`Took ${s.name} from there. Restore point ${S.syncPoint.t} kept.`)}
+function keepBoth(s){
+  const t=clone(S.there[s.id]);const id=s.id+'-there-'+Date.now();
+  const copy={...t,id,name:`${t.name} (there ${hhmm()})`,hold:0,spare:true};
+  S.scenes.push(copy);S.there[id]=clone(copy);S.known[id]=clone(copy);S.base[id]=hash(copy);
+  S.there[s.id]=clone(s);S.known[s.id]=clone(s);S.base[s.id]=hash(s);
+  say(`Kept both: ${s.name} is mine, theirs is now "${copy.name}", outside the loop, on both copies.`);
+}
+/* ---------- option A: deck ---------- */
+function panelA(){
+  const p=el('div');p.append(el('h2',{style:'margin-top:0'},'Scenes - tap one to edit'));
+  const tiles=el('div',{class:'tiles'});let n=0;
+  S.scenes.forEach(s=>{const st=state(s);n+=s.spare?0:1;
+    tiles.append(el('button',{class:'tile '+st,'aria-pressed':S.sel===s.id,onclick:()=>{S.sel=s.id;S.mode='edit';renderAll()}},
+      el('b',{},s.spare?`spare  ${s.name}`:`${n}  ${s.name}`),el('span',{class:'dim'},s.spare?'not in the loop':`${s.hold} s hold, ${s.fade} s fade`),swatch(s),el('span',{class:'mark'},WORD[st])))});
+  p.append(tiles);
+  const s=byId(S.sel);
+  p.append(el('div',{class:'row',style:'margin:12px 0'},
+    el('button',{'aria-pressed':S.mode==='live',onclick:()=>{S.mode='live';renderAll()}},'PLAY THE LOOP'),
+    el('button',{onclick:()=>{const L=S.scenes,i=L.indexOf(s);S.sel=L[(i+1)%L.length].id;S.mode='edit';renderAll()}},'NEXT SCENE'),
+    el('button',{'aria-pressed':S.loop,onclick:()=>{S.loop=!S.loop;renderAll()}},`LOOP: ${S.loop?'ON':'OFF'}`)));
+  p.append(el('div',{class:'box'},el('h2',{style:'margin-top:0'},s.name),sliders(s)));
+  p.append(syncBox(s));return p;
+}
+/* ---------- option B: timeline ---------- */
+function panelB(){
+  const p=el('div'),L=loopScenes(),pass=L.reduce((a,s)=>a+s.hold,0);
+  p.append(el('h2',{style:'margin-top:0'},`Loop, ${pass} s - drag a boundary, or focus it and use the arrow keys`));
+  if(pass!==60)p.append(el('p',{},`! The loop is ${pass} s, not 60 s (a synced retime changed it).`));
+  const tl=el('div',{class:'tl',id:'tl'});let a=0;
+  L.forEach((s,i)=>{const st=state(s);
+    tl.append(el('button',{class:'cue '+(S.tlsel===s.id?'sel ':'')+st,style:`left:${a/pass*100}%;width:${s.hold/pass*100}%`,'aria-label':`${s.name}, ${s.hold} s, ${WORD[st]}`,onclick:()=>{S.tlsel=s.id;S.mode='edit';renderAll()}},`${i+1} ${GLYPH[st]}`,el('span',{class:'sw',style:`background:${colourOf(s)}`})));
+    a+=s.hold;
+    if(i<L.length-1){
+      const h=el('button',{class:'hd',style:`left:${a/pass*100}%`,role:'slider','aria-label':`Boundary after ${s.name}, at ${a} s`,'aria-valuemin':0,'aria-valuemax':pass,'aria-valuenow':a});
+      h.onkeydown=e=>{const d=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;if(d){e.preventDefault();retime(i,d*(e.shiftKey?5:1))}};
+      h.onpointerdown=e=>{h.setPointerCapture(e.pointerId);h._d={w:tl.getBoundingClientRect().width,a:s.hold,b:L[i+1].hold,x:e.clientX}};
+      h.onpointermove=e=>{const d=h._d;if(!d)return;moveTo(i,d.a,d.b,Math.round((e.clientX-d.x)/d.w*pass))};
+      h.onpointerup=()=>{const d=h._d;if(!d)return;h._d=null;if(s.hold!==d.a){S.undo.push([{id:s.id,key:'hold',from:d.a,to:s.hold},{id:L[i+1].id,key:'hold',from:d.b,to:L[i+1].hold}]);say(`${s.name} now ${s.hold} s`)}renderAll()};
+      tl.append(h)}});
+  tl.append(el('div',{class:'ph',id:'tlphase'}));
+  const tk=el('div',{class:'ticks'});for(let t=0;t<=pass;t+=15)tk.append(el('span',{style:`left:${t/pass*100}%`},t+' s'));tl.append(tk);p.append(tl);
+  p.append(el('p',{class:'dim'},'H changed here   T changed there   ! changed on both   (dashed top edge = both)'));
+  const rows=el('div',{class:'rows'});L.forEach((s,i)=>{const st=state(s);rows.append(el('button',{class:'rw '+st,'aria-pressed':S.tlsel===s.id,onclick:()=>{S.tlsel=s.id;S.mode='edit';renderAll()}},el('span',{},`${i+1}  ${s.name} - ${s.hold} s`),el('span',{class:'mark'},WORD[st])))});p.append(rows);
+  const spares=S.scenes.filter(s=>s.spare);
+  if(spares.length){p.append(el('h2',{},'Not in the loop'));spares.forEach(s=>p.append(el('button',{class:'rw '+state(s),style:'width:100%;text-align:left','aria-pressed':S.tlsel===s.id,onclick:()=>{S.tlsel=s.id;S.mode='edit';renderAll()}},`${s.name}`)))}
+  const s=byId(S.tlsel),i=L.indexOf(s);
+  p.append(el('div',{class:'box'},el('h2',{style:'margin-top:0'},s.spare?s.name:`Cue ${i+1} - ${s.name}`),
+    s.spare?'':el('div',{class:'row',style:'margin-bottom:8px'},el('span',{},`hold ${s.hold} s`),el('button',{disabled:i>=L.length-1,onclick:()=>retime(i,-1)},'HOLD -1'),el('button',{disabled:i>=L.length-1,onclick:()=>retime(i,1)},'HOLD +1'),el('span',{class:'dim'},`fade ${s.fade} s`)),sliders(s)));
+  p.append(syncBox(s));return p;
+}
+function moveTo(i,fa,fb,dt){const L=loopScenes(),a=L[i],b=L[i+1],n=Math.max(1,Math.min(fa+fb-1,fa+dt));a.hold=n;b.hold=fa+fb-n;
+  const t=$('#tl'),pass=L.reduce((x,s)=>x+s.hold,0);if(!t)return;let x=0;$$('.cue',t).forEach((c,k)=>{c.style.left=x/pass*100+'%';c.style.width=L[k].hold/pass*100+'%';x+=L[k].hold});x=0;$$('.hd',t).forEach((h,k)=>{x+=L[k].hold;h.style.left=x/pass*100+'%'})}
+function retime(i,d){const L=loopScenes(),a=L[i],b=L[i+1],fa=a.hold,fb=b.hold;moveTo(i,fa,fb,d);if(a.hold===fa)return;S.undo.push([{id:a.id,key:'hold',from:fa,to:a.hold},{id:b.id,key:'hold',from:fb,to:b.hold}]);say(`${a.name} now ${a.hold} s (${b.name} ${b.hold} s)`);renderAll();const h=$$('.hd')[i];h&&h.focus()}
+/* ---------- wiring ---------- */
+function renderAll(){
+  $$('#opts button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.o===S.opt));
+  $$('#pm button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===S.mode));
+  $('#panel').replaceChildren(S.opt==='A'?panelA():panelB());
+  renderSync();$('#msg').textContent=S.msg;
+  $('#undo').disabled=!S.undo.length;
+  $('#restoresync').hidden=!S.syncPoint;if(S.syncPoint)$('#restoresync').textContent=`RESTORE BEFORE SYNC (${S.syncPoint.t})`;
+  $('#demo').disabled=!S.online;$('#demooff').textContent=S.online?'DEMO: GO OFFLINE':'DEMO: COME BACK ONLINE';
+}
+$('#opts').onclick=e=>{const b=e.target.closest('button');if(b){S.opt=b.dataset.o;renderAll()}};
+$('#pm').onclick=e=>{const b=e.target.closest('button');if(b){S.mode=b.dataset.m;renderAll()}};
+$('#undo').onclick=()=>{const e=S.undo.pop();if(!e)return;let skipped=0;for(const c of e.slice().reverse()){const s=byId(c.id);if(s[c.key]===c.to)s[c.key]=c.from;else skipped++}say(skipped?'Undo skipped a field that changed since.':'Undid the last change.');renderAll()};
+$('#restore').onclick=()=>{S.scenes=clone(S.good.scenes);S.undo=[];say(`Restored the last good state (${S.good.t}). Marks now compare it with there.`);renderAll()};
+$('#restoresync').onclick=()=>{S.scenes=clone(S.syncPoint.scenes);S.undo=[];say(`Restored the state from before the sync (${S.syncPoint.t}).`);renderAll()};
+$('#markgood').onclick=()=>{S.good={t:hhmm(),scenes:clone(S.scenes)};say(`Marked good ${S.good.t}.`);renderAll()};
+$('#demo').onclick=()=>{const s=byId(S.opt==='B'?S.tlsel:S.sel);const t=S.there[s.id];if(!t)return;t.str=Math.min(100,t.str+30);say(`Demo: ${s.name} was changed on the other copy (strobe ${t.str}). ${S.online?'Marks update on the next contact.':''}`);contact();renderAll()};
+$('#demooff').onclick=()=>{S.online=!S.online;if(S.online)contact();say(S.online?'The other copy is reachable again.':'Went offline. Marks show the other copy as last seen.');renderAll()};
+renderAll();requestAnimationFrame(frame);
+</script></body></html>
