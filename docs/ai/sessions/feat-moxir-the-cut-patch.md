@@ -22,3 +22,17 @@ visualiser plays all 5 cues through the new patch — 27 PL5403 driven, levels a
 per cue; the 7 UP-COB200 are NOT driven there (the installed build does not know the type), so
 the curtain stays at its rest light. Frames `~/Downloads/moxir-the-cut/visualiser/`.
 Owed: a preview install carrying both branches.
+
+## Rebase onto #659's rebase (dev 76834691, 2026-09-30)
+
+Rebased with `git rebase --onto feat/moxir-patch ab793391`; no textual conflicts. Decisions:
+
+- Dev's #664 (the cut as one straight 12 m diagonal) changed the rig; this plan's position
+  selectors (`truss header`, `truss top`, `column bases`, `column uplight`) and types were
+  checked against the current local document: `patch-plan.mjs --dry-run` plans all 36 lamps on
+  four universes with no error (U1 17 lamps, U2 7, U3 7, U4 5). No address, universe or height
+  was changed; dev's document is the truth and the plan fits it.
+- `RIG_BUILD.md` numbering: dev took section 18, so #659's visualiser is 19 and its show patch 20;
+  this branch's `§18.x` references (vis-head.mjs, the COB200 note in the plan) are now `§19.x`.
+- `types/moxir.json` regenerated (`node scripts/rigbuild/types.mjs`): UP-COB200 now carries the
+  assumed 4ch mode this branch's generator gives it; the committed file was stale after the merge.

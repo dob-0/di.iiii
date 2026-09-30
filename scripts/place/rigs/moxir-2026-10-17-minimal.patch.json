@@ -48,7 +48,7 @@
     },
     "up-cob200": {
       "crew": "4ch",
-      "why": "the maker lists 4 channels (its made-in-china store, 'Channel 4CH') and no order: the desk runs the ASSUMED 4ch list of the FOS PAR COB 200W LED TW (a4CH: master dimmer, warm, cold, strobe — RIG_BUILD §18.1) until the rental unit's chart is read."
+      "why": "the maker lists 4 channels (its made-in-china store, 'Channel 4CH') and no order: the desk runs the ASSUMED 4ch list of the FOS PAR COB 200W LED TW (a4CH: master dimmer, warm, cold, strobe — RIG_BUILD §19.1) until the rental unit's chart is read."
     }
   },
   "universes": [

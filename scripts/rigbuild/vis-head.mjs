@@ -1,5 +1,5 @@
 /**
- * vis-head.mjs — which lamp vis-see.mjs tests on (RIG_BUILD.md §18.6).
+ * vis-head.mjs — which lamp vis-see.mjs tests on (RIG_BUILD.md §19.6).
  *
  * The first moving head the room draws from the desk (a B380F if there is one), with its desk
  * patch. A rig with no moving head (the cut, simple: fixed lights only) has nothing to sweep:
