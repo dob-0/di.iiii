@@ -11,6 +11,8 @@
  *       --space moxir --from moxir-hall-minimal --to moxir-hall-minimal-oldhall-0929 --label "old hall 09-29" \
  *       [--suffix oldhall-0929] [--siblings <file>] [--dry-run]
  *   node scripts/rigbuild/copy-version.mjs … --undo --to moxir-hall-minimal-oldhall-0929   # delete the copy (only it)
+ *   node scripts/rigbuild/copy-version.mjs … --adopt --from moxir-hall-minimal --to moxir-hall-minimal-oldhall-0929 \
+ *       --label "old hall 09-29" [--suffix oldhall-0929] [--siblings <file>] [--dry-run]   # give an existing copy its mark back
  *
  * What a copy is: a NEW project in the same space (its own id — ids are global, the server
  * refuses a taken one with 409 and this script checks first) holding the source's document as
@@ -25,6 +27,17 @@
  * (`<id>-<suffix>`), its title with the label (`labelled`), `copyOf`, and — with `--siblings`, a
  * JSON list of { id, projectId, title, summary } — the version buttons it shows. The source
  * project is only read.
+ *
+ * --adopt: a copy whose mark was lost (an earlier server normalised `copyOf` away, or dropped a
+ * mark whose own id fell past RIG_VERSIONS_CAP) cannot be `--undo`ne (no copyOf) and its mark cannot
+ * be repaired in place. --adopt reads the copy's and the source's documents (GET only), checks the
+ * copy really derives from the source (`looksLikeCopyOf`: same set, entity count, same hall) and
+ * refuses otherwise, computes the mark exactly as a fresh copy would carry it, and writes ONLY the
+ * show entity's `components.rigVariant` — one `updateComponent` op at the version it re-read just
+ * before writing (the ops route every rigbuild script writes through). A copy that has a mark keeps
+ * its own title and summary (it is a snapshot) and gains `copyOf`; one with none gets the fresh
+ * copy's mark. Idempotent; `--dry-run` prints the mark and writes nothing; the mark is read back
+ * afterwards and a mark the server did not keep is an error, never silence.
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -32,6 +45,8 @@ import path from 'node:path'
 import { parseArgs, die, say } from '../place/common.mjs'
 import { makeClient } from '../place/api.mjs'
 import { remapAssetIds } from '../asset-remap-lib.mjs'
+import { RIG_SHOW_ID } from '../../src/rigbuild/rental.js'
+import { normalizeRigVariant } from '../../src/shared/projectSchema.js'
 
 /**
  * A label joined onto a version's title so the switch's short word carries it: the switch shows a
@@ -73,6 +88,178 @@ export const copiedEntities = (entities, { from, to, label, suffix, siblings = n
     return { ...e, components: { ...e.components, rigVariant: mark } }
 })
 
+/** The version id's suffix; default the label as a slug ("old hall 09-29" → "old-hall-09-29"). */
+export const defaultSuffix = (label) => String(label).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
+// ---- --adopt: give an existing copy its version mark back ----------------------------------------
+
+/**
+ * How far a copy may have drifted from its source since it was made and still be called its copy:
+ * entity counts at most 15 % of the source's apart, never tighter than 10. CHOSEN, NOT MEASURED —
+ * the dry run prints the measured counts, so the margin can be read off each pair.
+ */
+export const ADOPT_ENTITY_TOLERANCE = { ratio: 0.15, floor: 10 }
+/** Of the copy's hall entities (not `rig-…`, not a piece), at least this share has the same id AND name in the source. Chosen, not measured. */
+export const ADOPT_HALL_MATCH_MIN = 0.9
+
+const entitiesOf = (doc) => (Array.isArray(doc?.entities) ? doc.entities : [])
+const isHall = (e) => typeof e?.id === 'string' && !e.id.startsWith('rig-') && !e.components?.piece // the hall as load-version.mjs reads it
+const hallKey = (e) => `${e.id}\u0000${e.name ?? ''}`
+/** The entity carrying the document's version mark: the show entity's, else the first that has one. */
+const markHolder = (doc) => entitiesOf(doc).find((e) => e?.id === RIG_SHOW_ID && e.components?.rigVariant) || entitiesOf(doc).find((e) => e?.components?.rigVariant) || null
+const markOf = (doc) => markHolder(doc)?.components.rigVariant ?? null
+const byKey = ([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)
+const stable = (value) => JSON.stringify(value, (key, v) => (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(byKey)) : v))
+/** The same mark once the server's own normaliser has had it — what is stored is always that form. */
+const sameMark = (a, b) => {
+    const x = normalizeRigVariant(a)
+    const y = normalizeRigVariant(b)
+    return Boolean(x && y) && stable(x) === stable(y)
+}
+
+/**
+ * Does `copyDoc` derive from `sourceDoc`? The guard that keeps --adopt from stamping a foreign
+ * project. Three tests, all must hold: the marks that exist name the same set; the entity counts
+ * are within ADOPT_ENTITY_TOLERANCE; the copy's hall (its non-rig entities) is the source's — the
+ * same id and name, at least ADOPT_HALL_MATCH_MIN of them. `facts` carries the measured numbers. Pure.
+ */
+export const looksLikeCopyOf = (copyDoc, sourceDoc) => {
+    const copyList = entitiesOf(copyDoc)
+    const sourceList = entitiesOf(sourceDoc)
+    const reasons = []
+    const copySet = markOf(copyDoc)?.set || null
+    const sourceSet = markOf(sourceDoc)?.set || null
+    if (copySet && sourceSet && copySet !== sourceSet) reasons.push(`not the same set: the copy's mark names "${copySet}", the source's "${sourceSet}"`)
+    const allowed = Math.max(ADOPT_ENTITY_TOLERANCE.floor, Math.ceil(ADOPT_ENTITY_TOLERANCE.ratio * sourceList.length))
+    if (Math.abs(copyList.length - sourceList.length) > allowed) reasons.push(`the entity counts are too far apart: the copy has ${copyList.length}, the source ${sourceList.length} (at most ${allowed} apart)`)
+    const copyHall = copyList.filter(isHall)
+    const sourceKeys = new Set(sourceList.filter(isHall).map(hallKey))
+    const hallMatched = copyHall.filter((e) => sourceKeys.has(hallKey(e))).length
+    if (!copyHall.length) reasons.push('the copy has no hall entities (all rig or pieces), so there is nothing to tell it from another project by')
+    else if (hallMatched / copyHall.length < ADOPT_HALL_MATCH_MIN) reasons.push(`not the same hall: ${hallMatched} of the copy's ${copyHall.length} hall entities have the same id and name in the source (needs ${Math.round(ADOPT_HALL_MATCH_MIN * 100)} %)`)
+    return { ok: reasons.length === 0, reasons, facts: { copyEntities: copyList.length, sourceEntities: sourceList.length, allowed, hallCompared: copyHall.length, hallMatched, copySet, sourceSet } }
+}
+
+const dropReason = (mark) => {
+    const list = Array.isArray(mark.siblings) ? mark.siblings : []
+    const at = list.findIndex((s) => s?.id === mark.id)
+    if (!mark.set) return 'the mark has no set id, and the server drops a mark without one'
+    if (!/^[a-z0-9][a-z0-9-]{0,47}$/.test(String(mark.id))) return `"${mark.id}" is not a valid version id (lower-case letters, digits and dashes, up to 48), so the server drops the mark`
+    if (at < 0) return `the mark's own id "${mark.id}" is not among its siblings, and the server drops such a mark — give --siblings a list that includes it`
+    return `the mark's own id "${mark.id}" is sibling ${at + 1} of ${list.length}; the server keeps only the first few (RIG_VERSIONS_CAP in src/shared/projectSchema.js and shared/projectSchema.cjs) and drops a mark whose own entry is cut off. Written as it is, the op would be accepted and the mark silently not be there. Raise the cap, or give this copy a shorter --siblings list that lists it early`
+}
+
+/**
+ * What --adopt would do for this pair, no I/O. Returns
+ *   { status: 'refused', reasons }                       never stamps what it cannot vouch for
+ *   { status: 'nothing', mark }                          the copy already has the right mark
+ *   { status: 'write', mark, ops, had, notes, facts }    ops: ONE updateComponent on the show entity
+ * The mark is the fresh copy's (`copiedEntities` on the source's mark: `<id>-<suffix>`, the labelled
+ * title, `copyOf`, --siblings). A copy that already has a mark keeps its own words (title, summary:
+ * it is a snapshot) and gains `copyOf` (and the siblings, when given). Pure.
+ */
+export const planAdoption = (copyDoc, sourceDoc, { from, to, label, suffix, siblings = null }) => {
+    const refuse = (...reasons) => ({ status: 'refused', reasons })
+    if (from === to) return refuse('--from and --to are the same project: a project is not a copy of itself')
+    const like = looksLikeCopyOf(copyDoc, sourceDoc)
+    if (!like.ok) return { status: 'refused', reasons: like.reasons, facts: like.facts }
+    const sourceHolder = markHolder(sourceDoc)
+    if (!sourceHolder?.components.rigVariant.id) return refuse(`${from} has no version mark (rigVariant with an id): there is nothing to derive a copy's mark from`)
+    if (siblings !== null && !Array.isArray(siblings)) return refuse('--siblings must be a JSON list of { id, projectId, title, summary }')
+    const wanted = copiedEntities([sourceHolder], { from, to, label, suffix, siblings })[0].components.rigVariant // what a fresh copy carries
+    if (!entitiesOf(copyDoc).some((e) => e?.id === RIG_SHOW_ID)) return refuse(`${to} has no show entity (${RIG_SHOW_ID}) to carry the mark`)
+    const holder = markHolder(copyDoc)
+    if (holder && holder.id !== RIG_SHOW_ID) return refuse(`${to}'s version mark sits on "${holder.id}", not on the show entity — not touching it`)
+    const have = holder ? holder.components.rigVariant : null
+    if (have?.id && have.id !== wanted.id) return refuse(`${to}'s mark id is "${have.id}"; a copy of ${from} made with suffix "${suffix}" would carry "${wanted.id}" — another --suffix, or not this project's copy`)
+    if (have?.copyOf?.projectId && have.copyOf.projectId !== from) return refuse(`${to}'s mark already says it is a copy of "${have.copyOf.projectId}", not ${from} — not overwriting a different claim`)
+    const own = (siblings || []).find((s) => s?.id === wanted.id)
+    if (own && own.projectId !== to) return refuse(`the siblings list puts "${wanted.id}" in project "${own.projectId}", not in ${to}`)
+
+    const mark = { ...(have || wanted), id: wanted.id, copyOf: wanted.copyOf, ...(siblings ? { siblings } : {}) }
+    const kept = normalizeRigVariant(mark)
+    if (!kept) return refuse(dropReason(mark))
+    if (kept.copyOf?.projectId !== mark.copyOf.projectId || kept.copyOf?.id !== mark.copyOf.id || kept.copyOf?.label !== mark.copyOf.label) return refuse(`the server's normaliser would change copyOf ${stable(mark.copyOf)} into ${stable(kept.copyOf)} — not writing it`)
+    const notes = kept.siblings.length < (mark.siblings || []).length
+        ? [`the server keeps ${kept.siblings.length} of the ${mark.siblings.length} siblings listed (RIG_VERSIONS_CAP); the version row is built from the space's own projects (rigVariant.js setFromRows), so the copy still folds`]
+        : []
+    if (have && sameMark(have, mark)) return { status: 'nothing', mark: have, notes, facts: like.facts }
+    const had = have ? (have.copyOf ? 'a mark with another copyOf' : 'a mark without copyOf') : 'no mark'
+    return { status: 'write', mark, had, notes, facts: like.facts, ops: [{ type: 'updateComponent', payload: { entityId: RIG_SHOW_ID, component: 'rigVariant', patch: mark } }] }
+}
+
+/** The document with its version mark and its meta taken out: what an adoption must leave exactly as it was. Pure. */
+const withoutMark = (doc) => {
+    const { projectMeta, ...rest } = doc || {}
+    return {
+        ...rest,
+        entities: entitiesOf(doc).map((e) => {
+            if (e?.id !== RIG_SHOW_ID || !e.components || !('rigVariant' in e.components)) return e
+            const { rigVariant, ...others } = e.components
+            return { ...e, components: others }
+        })
+    }
+}
+/** The top-level parts of the document that differ between two reads, besides the mark. Pure. */
+export const changedBesideMark = (before, after) => {
+    const a = withoutMark(before)
+    const b = withoutMark(after)
+    return [...new Set([...Object.keys(a), ...Object.keys(b)])].filter((k) => stable(a[k]) !== stable(b[k]))
+}
+
+/**
+ * --adopt against an install: GET the copy and the source, plan, and (unless --dry-run) re-read the
+ * copy right before writing, post ONE op at that version, read back. `client` is makeClient's.
+ * Returns the plan (status 'refused' | 'nothing' | 'dry-run' | 'written'); throws on an API failure
+ * or when the read-back finds the mark did not stay.
+ */
+export const runAdopt = async (client, { from, to, label, suffix, siblings = null, dry = false }, log = () => {}) => {
+    const read = async (id) => {
+        const got = await client.get(`/api/projects/${id}/document`)
+        if (!got.ok) throw new Error(`reading ${id}'s document: ${got.status} ${String(got.text || '').slice(0, 200)}`)
+        return { version: Number(got.body?.version) || 0, document: got.body?.document }
+    }
+    const opts = { from, to, label, suffix, siblings }
+    const copy = await read(to)
+    const source = await read(from)
+    let plan = planAdoption(copy.document, source.document, opts)
+    const f = plan.facts
+    if (f) log(`${to} (version ${copy.version}) against ${from} (version ${source.version}): ${f.copyEntities} / ${f.sourceEntities} entities (at most ${f.allowed} apart), hall ${f.hallMatched} of ${f.hallCompared} the same, set ${f.copySet ?? 'no mark'} / ${f.sourceSet ?? 'no mark'}`)
+    if (plan.status === 'refused') return plan
+    plan.notes.forEach((n) => log(`  note: ${n}`))
+    if (plan.status === 'nothing') { log(`${to}: already carries the mark (copyOf ${from}) — nothing to do`); return plan }
+    log(`${to}: the mark now (kept here for the rollback): ${markOf(copy.document) ? stable(markOf(copy.document)) : 'none'}`)
+    log(`${to}: has ${plan.had}; would write the mark (only components.rigVariant of ${RIG_SHOW_ID}):`)
+    log(JSON.stringify(plan.mark, null, 2))
+    if (dry) { log('--dry-run: nothing written'); return { ...plan, status: 'dry-run' } }
+
+    // the version to write against is the one read just now, not the one the plan was made on
+    const fresh = await read(to)
+    plan = planAdoption(fresh.document, source.document, opts)
+    if (plan.status !== 'write') { log(`${to}: changed since it was first read (${plan.status}) — writing nothing`); return plan }
+    const stamp = `${Date.now()}`
+    const out = await client.post(`/api/projects/${to}/ops`, { baseVersion: fresh.version, ops: plan.ops.map((op, i) => ({ ...op, opId: `copy-version-adopt-${stamp}-${i}`, clientId: 'copy-version' })) })
+    if (!out.ok) throw new Error(`writing the mark on ${to}: ${out.status} ${String(out.text || '').slice(0, 300)} — nothing was written; run it again`)
+
+    // read it back: the mark must have stayed, and nothing else may have moved
+    const back = await read(to)
+    const after = planAdoption(back.document, source.document, opts)
+    if (after.status !== 'nothing') {
+        const now = markOf(back.document)
+        throw new Error(`${to}: the op was accepted (version ${fresh.version} to ${back.version}) but the mark did not stay: ${now ? 'the server kept the mark without the copyOf it was given (an install older than the copyOf fix in src/shared/projectSchema.js)' : 'the server dropped the mark (its own id cut off, or not among the siblings)'}. Read back: ${after.status === 'refused' ? after.reasons.join('; ') : 'the mark differs from the one written'}. Roll back from the saved space.`)
+    }
+    const drift = changedBesideMark(fresh.document, back.document)
+    if (drift.length) throw new Error(`${to}: after the write, ${drift.join(', ')} differ from before it, besides the mark — stop and check the op log`)
+    log(`${to}: mark written (version ${fresh.version} to ${back.version}), read back with copyOf ${from}; every other entity, asset and setting is as it was; ${from} was only read`)
+    return { ...plan, status: 'written', version: back.version }
+}
+
+const readSiblings = (file) => {
+    if (!file) return null
+    const list = JSON.parse(fs.readFileSync(path.resolve(String(file)), 'utf8'))
+    return Array.isArray(list) ? list : die(`${file} is not a JSON list of { id, projectId, title, summary }`)
+}
+
 const readToken = (file) => {
     const line = fs.readFileSync(file, 'utf8').split('\n').find((l) => l.startsWith('ADMIN_API_TOKEN='))
     return line ? line.slice('ADMIN_API_TOKEN='.length).trim() : die(`no ADMIN_API_TOKEN in ${file}`)
@@ -95,12 +282,21 @@ const main = async () => {
         return
     }
 
+    if (args.adopt) {
+        const from = String(args.from || die('needs --from <source project id>'))
+        const label = String(args.label || die('needs --label, e.g. "old hall 09-29"'))
+        const suffix = String(args.suffix || defaultSuffix(label)) || die('empty suffix')
+        const result = await runAdopt(client, { from, to, label, suffix, siblings: readSiblings(args.siblings), dry: Boolean(args['dry-run']) }, say).catch((error) => die(error.message))
+        if (result.status === 'refused') die(`${to}: not adopted, nothing was written:`, ...result.reasons.map((r) => `  - ${r}`))
+        return
+    }
+
     const space = String(args.space || die('needs --space'))
     const from = String(args.from || die('needs --from <project id>'))
     const label = String(args.label || die('needs --label, e.g. "old hall 09-29"'))
     // the version id's suffix; default the label as a slug ("old hall 09-29" → "old-hall-09-29")
-    const suffix = String(args.suffix || label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')) || die('empty suffix')
-    const siblings = args.siblings ? JSON.parse(fs.readFileSync(path.resolve(String(args.siblings)), 'utf8')) : null
+    const suffix = String(args.suffix || defaultSuffix(label)) || die('empty suffix')
+    const siblings = readSiblings(args.siblings)
     const dry = Boolean(args['dry-run'])
 
     // 1. the new id must be free — on the whole install, not only in this space
