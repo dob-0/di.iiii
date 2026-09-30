@@ -41,11 +41,19 @@ export const foldNotesIntoProgress = (progressContent, notes) => {
 // the rest of the file untouched. If no "## Last session" heading exists, the new
 // section is inserted right after the file's "---" divider (matches every real
 // CURRENT.md seen in this repo's history).
+// CURRENT.md is capped at 50 lines and is rewritten in place on every landing, so this section
+// must not grow with the number of notes: a batch of ~30 notes once made it 88 lines and stopped
+// the dev deploy at the docs gate (three times on 2026-09-30/10-01). At most this many bullets,
+// the last one saying how many titles were left out (PROGRESS.md keeps every note in full).
+export const MAX_LAST_SESSION_BULLETS = 6
+
 export const buildLastSessionSection = (notes) => {
   const titles = notes.map(extractNoteTitle).filter(Boolean)
   const lines = ['## Last session', '']
   if (titles.length) {
-    for (const title of titles) lines.push(`- ${title}`)
+    const shown = titles.length > MAX_LAST_SESSION_BULLETS ? titles.slice(0, MAX_LAST_SESSION_BULLETS - 1) : titles
+    for (const title of shown) lines.push(`- ${title}`)
+    if (shown.length < titles.length) lines.push(`- …and ${titles.length - shown.length} more notes, each in full in PROGRESS.md`)
   } else {
     lines.push('- (no session notes were staged for this landing)')
   }

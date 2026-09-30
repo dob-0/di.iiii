@@ -4,6 +4,7 @@ import {
   extractNoteTitle,
   foldNotesIntoProgress,
   buildLastSessionSection,
+  MAX_LAST_SESSION_BULLETS,
   replaceLastSessionSection
 } from './session-land-lib.mjs'
 
@@ -75,6 +76,23 @@ describe('buildLastSessionSection', () => {
     expect(section).toContain('- first thing')
     expect(section).toContain('- second thing')
     expect(section).toContain('PROGRESS.md')
+  })
+
+  it('never grows with the number of notes: at most MAX_LAST_SESSION_BULLETS bullets, the last one counting the rest', () => {
+    const many = Array.from({ length: 47 }, (_, i) => `## 2026-10-01 — note number ${i + 1}\n\n- detail`)
+    const section = buildLastSessionSection(many)
+    const bullets = section.split('\n').filter((l) => l.startsWith('- '))
+    expect(bullets).toHaveLength(MAX_LAST_SESSION_BULLETS)
+    expect(bullets[0]).toBe('- note number 1')
+    expect(bullets.at(-1)).toBe(`- …and ${47 - (MAX_LAST_SESSION_BULLETS - 1)} more notes, each in full in PROGRESS.md`)
+    expect(section).toContain('Full detail: `PROGRESS.md`.')
+  })
+
+  it('keeps every title when there are exactly MAX_LAST_SESSION_BULLETS notes', () => {
+    const exact = Array.from({ length: MAX_LAST_SESSION_BULLETS }, (_, i) => `## 2026-10-01 — n${i + 1}\n\n- d`)
+    const bullets = buildLastSessionSection(exact).split('\n').filter((l) => l.startsWith('- '))
+    expect(bullets).toHaveLength(MAX_LAST_SESSION_BULLETS)
+    expect(bullets.some((b) => b.includes('more notes'))).toBe(false)
   })
 
   it('says plainly when nothing was staged, rather than an empty bullet list', () => {
