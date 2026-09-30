@@ -5,6 +5,17 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-09-30 — main gets dev's CURRENT.md so the hotfix deploy can pass the docs freshness check
+
+- Hotfix #657 (bundle symlink read) merged to main on 2026-09-29, but its deploy stopped at "Check AI docs": main's CURRENT.md was last recapped 2026-09-24 while code changed 2026-09-29 (grace 2 days). Every other step, lint, build, tests and audits, passed.
+- This branch changes one file: CURRENT.md, copied unchanged from dev (the `npm run land` output of 2026-09-29), not hand-edited. The next promotion carries the same content.
+- The docs freshness check has no path for a hotfix that goes straight to main; still owed: exempt hotfix branches, or let the deploy read the recap date from dev.
+- The re-run (after #668) failed at the same step for a second reason: `docs/ai/sessions/` must be empty on main, and it held this note and the hotfix's. CI folds notes in place only for dev deploys (`land_in_place`), never for main, and every PR branch must carry a note, so a hotfix merged straight to main always fails its own deploy. Both notes are folded here by `foldNotesIntoProgress` (not `npm run land`: it refuses off dev and sweeps worktrees). Still owed: give main's deploy `land_in_place` (deploy-vps.yml), or exempt hotfix branches. diiii.xyz stays on the 2026-09-24 version until a main deploy passes.
+
+## 2026-09-29 — a crafted bundle can no longer read files outside the data root
+
+- Security audit C1: bundle import refuses links (archive listing + lstat walk); asset serving refuses non-regular files. Guards: `scripts/space-bundle.test.js` "refuses links", `serverXR/src/spaceStore.symlink.test.js` (4/4 red on the old code). Hotfixed to `main` the same day.
+
 ## 2026-09-23 — folding the layers batch's four notes by hand
 
 - PR #547 (`land/batch-layers-2026-09-23`) merged; dev's `land` job cannot push its fold
