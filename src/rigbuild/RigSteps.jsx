@@ -31,13 +31,13 @@ export const usePointerLocked = () => {
     return locked
 }
 
-function StepLink({ step, said, warn, className = '', onPick }) {
+function StepLink({ step, said, warn, hint, className = '', onPick }) {
     return (
         <a
             className={`sbar-link rigsteps-step${step.here ? ' is-here' : ''}${warn ? ' is-warn' : ''}${className ? ` ${className}` : ''}`}
             href={step.href}
             aria-current={step.here ? 'page' : undefined}
-            title={step.hint}
+            title={hint ? `${step.hint} — ${hint}` : step.hint}
             onClick={(event) => {
                 onPick?.()
                 if (step.clientSide) navigateInApp(event, step.href)
@@ -108,7 +108,7 @@ export function RigSteps({ spaceId, projectId, projectLabel = null, here = null,
             <ol className="rigsteps-list">
                 {row.map((step) => (
                     <li key={step.key}>
-                        <StepLink step={step} said={said(step.key)} warn={warn(step.key)} />
+                        <StepLink step={step} said={said(step.key)} warn={warn(step.key)} hint={progress?.hints?.[step.key] || ''} />
                     </li>
                 ))}
             </ol>
@@ -132,7 +132,7 @@ export function RigSteps({ spaceId, projectId, projectLabel = null, here = null,
             {menuOpen && typeof document !== 'undefined' && createPortal(
                 <div className="sbar-menu rigsteps-menu" style={{ top: menuTop }} role="menu" aria-label="The rig, step by step">
                     {row.map((step) => (
-                        <StepLink key={step.key} step={step} said={said(step.key)} warn={warn(step.key)} className="sbar-menu-link" onPick={() => setMenuOpen(false)} />
+                        <StepLink key={step.key} step={step} said={said(step.key)} warn={warn(step.key)} hint={progress?.hints?.[step.key] || ''} className="sbar-menu-link" onPick={() => setMenuOpen(false)} />
                     ))}
                 </div>,
                 document.body

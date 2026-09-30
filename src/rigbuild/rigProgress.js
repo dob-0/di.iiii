@@ -1,6 +1,7 @@
 import { plotModel } from './plotModel.js'
 import { rigLooksOf } from './looks.js'
 import { rentalOf } from './rental.js'
+import { FLAG_WORDS } from './sheet.js'
 
 // Where the show stands, step by step, read from the document alone (RIG_BUILD.md §14).
 // The steps row prints these beside the steps and the room's row uses `suggested` for
@@ -13,7 +14,7 @@ import { rentalOf } from './rental.js'
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
 /**
- * @returns {{ said: Record<string, string>, done: Record<string, boolean>, warn: Record<string, boolean>, suggested: string, totals: object }}
+ * @returns {{ said: Record<string, string>, hints: Record<string, string>, done: Record<string, boolean>, warn: Record<string, boolean>, suggested: string, totals: object }}
  */
 export const rigProgress = ({ entities = [], library, deskFlags = [], projectId = '' }) => {
     const model = plotModel({ entities, library, deskFlags, projectId })
@@ -27,6 +28,10 @@ export const rigProgress = ({ entities = [], library, deskFlags = [], projectId 
     const lamps = model.sheet.totals.lamps
     const patched = model.sheet.totals.patched
     const conflicts = model.conflicts.length
+    // What the conflicts are made of, by cause, in words (the sheet's Flags list names each lamp).
+    const byCause = new Map()
+    for (const lamp of model.conflicts) for (const code of lamp.conflicts) byCause.set(code, (byCause.get(code) || 0) + 1)
+    const causes = [...byCause].sort((a, b) => b[1] - a[1]).map(([code, n]) => `${n} ${FLAG_WORDS[code] || code}`)
     const looks = rigLooksOf(entities)?.looks?.length || 0
 
     const said = {
@@ -34,7 +39,7 @@ export const rigProgress = ({ entities = [], library, deskFlags = [], projectId 
         build: ordered ? `${placed} of ${ordered} placed` : lamps ? `${plural(lamps, 'lamp')} placed` : '',
         plot: '',
         cards: looks ? plural(looks, 'look') : '',
-        patch: lamps ? `${patched} of ${lamps} addressed${conflicts ? ` · ! ${conflicts}` : ''}` : '',
+        patch: lamps ? `${patched} of ${lamps} addressed${conflicts ? ` · ${conflicts} to decide` : ''}` : '',
         crew: ''
     }
     const done = {
@@ -45,9 +50,12 @@ export const rigProgress = ({ entities = [], library, deskFlags = [], projectId 
         patch: lamps > 0 && patched >= lamps && conflicts === 0,
         crew: false
     }
+    const hints = conflicts ? {
+        patch: `${conflicts} to decide (${causes.join(', ')}) — the patch sheet's Flags list, under "To decide", names each one. ${lamps - patched ? `${lamps - patched} of the ${lamps} lamps have no address yet.` : ''}`.trim()
+    } : {}
     const warn = { patch: conflicts > 0 }
     // The step the show is waiting on, in the order it is made. The plot has no "done"
     // of its own (it is a way of checking); the crew link is the last thing handed over.
     const suggested = ['equipment', 'build', 'cards', 'patch'].find((k) => !done[k]) || 'crew'
-    return { said, done, warn, suggested, totals: { units, ordered, placed, lamps, patched, conflicts, looks } }
+    return { said, hints, done, warn, suggested, totals: { units, ordered, placed, lamps, patched, conflicts, looks } }
 }

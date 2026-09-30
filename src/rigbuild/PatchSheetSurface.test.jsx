@@ -28,7 +28,7 @@ describe('PatchSheetSurface', () => {
         await waitFor(() => expect(screen.getByText('Hall — patch sheet')).toBeTruthy())
         expect(screen.getByText(/universe 1 — used 001–016/)).toBeTruthy()
         expect(screen.getByText('001–016')).toBeTruthy()
-        expect(screen.getByText((_, el) => el?.tagName === 'LI' && /mode unknown — 1 fixture$/.test(el.textContent))).toBeTruthy()
+        expect(screen.getByText((_, el) => el?.tagName === 'LI' && /mode unknown — 1 fixture\. the DMX mode is not known — ask the rental house$/.test(el.textContent))).toBeTruthy()
         expect(screen.getByRole('button', { name: 'Print' })).toBeTruthy()
         expect(screen.getByRole('button', { name: 'Patch CSV' })).toBeTruthy()
         expect(screen.getByText(/No desk on this machine/)).toBeTruthy()
