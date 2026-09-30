@@ -40,6 +40,12 @@ html.rigsheet-page, html.rigsheet-page body, html.rigsheet-page #root { position
 @media print { html.rigsheet-page .mode-mark { display: none !important; } }
 `
 
+const sourceSentence = (model) => (model.source === 'desk'
+    ? `Addresses from the desk on this machine (${model.deskHeld} of ${model.totals.lamps} lamps are on it), not from the document.`
+    : model.source === 'document'
+        ? 'The desk on this machine holds none of this project\'s fixtures: addresses are from the document.'
+        : 'No desk on this tier: addresses are from the document only.')
+
 const readDeskRig = async (projectId) => {
     try {
         if (!(await probeLightingDesk())) return null
@@ -86,8 +92,8 @@ export default function PatchSheetSurface({ spaceId, projectId, library: baseLib
     const localInstall = useLocalInstall()
     const progress = useMemo(() => {
         const entities = state.document?.entities
-        return entities ? rigProgress({ entities, library: libraryWithShow(baseLibrary, entities), projectId }) : null
-    }, [state.document, baseLibrary, projectId])
+        return entities ? rigProgress({ entities, library: libraryWithShow(baseLibrary, entities), projectId, desk: state.desk }) : null
+    }, [state.document, state.desk, baseLibrary, projectId])
     useEffect(() => {
         const previous = document.title
         document.title = `Patch sheet — ${title}`
@@ -100,8 +106,8 @@ export default function PatchSheetSurface({ spaceId, projectId, library: baseLib
         project: projectId,
         version: state.version,
         generatedAt: new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC',
-        source: state.desk ? 'The desk on this machine was read and compared.' : 'No desk on this machine: the sheet is the document\'s patch only.'
-    }) : ''), [model, title, spaceId, projectId, state.version, state.desk])
+        source: sourceSentence(model)
+    }) : ''), [model, title, spaceId, projectId, state.version])
 
     return (
         <div style={{ minHeight: '100vh', background: '#fff' }}>

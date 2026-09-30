@@ -104,8 +104,29 @@ export const groupFlags = (flagCounts = {}) => {
  *        the desk's rig fixtures for this room (GET /light/api/rig), when a desk is here
  * @param {string}  [args.projectId] needed to match desk keys
  */
-export const sheetModel = ({ entities = [], library, circuit = DEFAULT_CIRCUIT, desk = null, projectId = null }) => {
+export const sheetModel = ({ entities: documentEntities = [], library, circuit = DEFAULT_CIRCUIT, desk = null, projectId = null }) => {
     const limitW = circuitLimitW(circuit)
+    // Where the addresses come from. The document holds none until a patch step runs; the
+    // desk on this machine holds them. When the desk holds any of THIS project's fixtures
+    // its addresses are the sheet's (the same numbers the room's steps row reads); a lamp
+    // the desk does not hold is unaddressed here, and says so if the document had one.
+    const deskByKey = Array.isArray(desk) && projectId ? new Map(desk.map((d) => [d.key, d])) : new Map()
+    const deskHeld = documentEntities.filter(isLamp).filter((e) => deskByKey.has(`${projectId}:${e.id}`)).length
+    const source = !Array.isArray(desk) ? 'none' : deskHeld > 0 ? 'desk' : 'document'
+    const notOnDesk = new Set()
+    const differs = new Map()
+    const entities = source !== 'desk' ? documentEntities : documentEntities.map((entity) => {
+        if (!isLamp(entity)) return entity
+        const d = deskByKey.get(`${projectId}:${entity.id}`)
+        const { universe, address, ...rest } = entity.components.fixture
+        const documented = Number.isInteger(universe) && Number.isInteger(address)
+        if (d && documented && (d.universe !== universe || d.address !== address)) differs.set(entity.id, `the document has it at U${universe}.${pad3(address)}`)
+        if (!d) {
+            if (documented) notOnDesk.add(entity.id)
+            return { ...entity, components: { ...entity.components, fixture: rest } }
+        }
+        return { ...entity, components: { ...entity.components, fixture: { ...rest, universe: d.universe, address: d.address } } }
+    })
     const rows = entities.filter(isLamp).map((entity) => {
         const f = entity.components.fixture
         const type = typeById(library, f.type)
@@ -168,7 +189,12 @@ export const sheetModel = ({ entities = [], library, circuit = DEFAULT_CIRCUIT, 
     for (const r of rows) if (r.index != null && indexCount.get(r.index) > 1) r.flags.push('index-duplicate')
 
     // The desk, when there is one: does it hold what the sheet says?
-    if (Array.isArray(desk) && projectId) {
+    if (source === 'desk') {
+        for (const r of rows) {
+            if (notOnDesk.has(r.id)) r.flags.push('not-on-desk')
+            if (differs.has(r.id)) { r.flags.push('desk-differs'); r.notes.push(differs.get(r.id)) }
+        }
+    } else if (Array.isArray(desk) && projectId) {
         const onDesk = new Map(desk.map((d) => [d.key, d]))
         for (const r of rows) {
             if (r.universe == null) continue
@@ -224,6 +250,8 @@ export const sheetModel = ({ entities = [], library, circuit = DEFAULT_CIRCUIT, 
     for (const r of rows) for (const code of r.flags) flagCounts[code] = (flagCounts[code] || 0) + 1
 
     return {
+        source,
+        deskHeld,
         rows,
         hookup: [...rows].sort(byHookup),
         schedule: [...rows].sort(bySchedule),
@@ -442,6 +470,7 @@ export const renderSheetBody = (model, meta = {}) => {
 <p class="sub">patch sheet · power sheet${meta.space ? ` · space <span class="mono">${esc(meta.space)}</span>` : ''}${meta.project ? ` · project <span class="mono">${esc(meta.project)}</span>` : ''}</p>
 <dl class="block">
   <dt>fixtures</dt><dd>${model.totals.lamps} (${model.totals.patched} patched)</dd>
+  <dt>addresses</dt><dd>${model.source === 'desk' ? 'from the desk on this machine' : model.source === 'document' ? 'from the document (the desk holds none of this project)' : 'from the document (no desk on this tier)'}</dd>
   <dt>universes</dt><dd>${model.universes.map((u) => `U${u.universe} ${rangeText(u.ranges)}`).join(' · ') || '—'}</dd>
   <dt>channels</dt><dd>${model.totals.channels}</dd>
   <dt>power</dt><dd>${(p.totalW / 1000).toFixed(1)} kW datasheet max · ${p.circuits.length} circuits · load alone needs ≥ ${p.minCircuitsByLoad}</dd>

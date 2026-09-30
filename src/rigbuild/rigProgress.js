@@ -16,8 +16,8 @@ const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 /**
  * @returns {{ said: Record<string, string>, hints: Record<string, string>, done: Record<string, boolean>, warn: Record<string, boolean>, suggested: string, totals: object }}
  */
-export const rigProgress = ({ entities = [], library, deskFlags = [], projectId = '' }) => {
-    const model = plotModel({ entities, library, deskFlags, projectId })
+export const rigProgress = ({ entities = [], library, deskFlags = [], projectId = '', desk = null }) => {
+    const model = plotModel({ entities, library, deskFlags, projectId, desk })
     const ordered = model.rental?.totals?.ordered || 0
     const placed = model.rental?.totals?.placed || 0
     // The equipment page counts every unit on the list, a cable or a node included;
