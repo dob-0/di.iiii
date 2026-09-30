@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import library from './types/moxir.json'
-import { assignCircuits, circuitLimitW, patchCsv, plotData, powerCsv, renderSheetBody, renderSheetHtml, sheetModel, toCsv } from './sheet.js'
+import { assignCircuits, circuitLimitW, groupFlags, patchCsv, plotData, powerCsv, renderSheetBody, renderSheetHtml, sheetModel, toCsv } from './sheet.js'
 import { applyProjectOps, normalizeProjectDocument } from '../shared/projectSchema.js'
 
 const lamp = (id, fixture, extra = {}) => ({ id, type: 'spotLight', name: id, components: { transform: { position: [0, 6, 0], rotation: [0, 0, 0] }, fixture, ...extra } })
@@ -10,7 +10,7 @@ describe('the sheet model', () => {
         lamp('a', { index: 1, type: 'up-b380f', mode: '16ch', universe: 1, address: 1, position: 'truss', unit: 1, circuit: 'C1' }),
         lamp('b', { index: 2, type: 'up-b380f', mode: '16ch', universe: 1, address: 10, position: 'truss', unit: 2, circuit: 'C1' }),
         lamp('c', { index: 3, type: 'up-250bsw', universe: 2, address: 500, position: 'floor', unit: 1 }),
-        lamp('d', { type: 'up-pl5403', position: 'floor', unit: 2, circuit: 'C2' }),
+        lamp('d', { type: 'up-q108s', position: 'floor', unit: 2, circuit: 'C2' }),
         lamp('e', { index: 3, type: 'up-yh600f', mode: '2ch', position: 'floor', unit: 3, circuit: 'C2' }),
         { id: 'box', type: 'box', components: {} }
     ]
@@ -27,10 +27,18 @@ describe('the sheet model', () => {
         expect(row('a').flags).toEqual(['channels-owed', 'overlap'])
         expect(row('a').notes[0]).toMatch(/overlaps #2 UP-B380F at U1\.010/)
         expect(row('c').flags).toEqual(expect.arrayContaining(['off-the-end', 'no-circuit']))
-        expect(row('d').flags).toEqual(['mode-unknown', 'power-assumed'])
+        expect(row('d').flags).toEqual(['mode-unknown'])
         expect(row('d').universe).toBe(null)
         expect(row('e').flags).toEqual(['not-patched', 'index-duplicate'])
         expect(row('c').flags).toContain('index-duplicate')
+    })
+
+    it('says when a lamp\'s watts are ASSUMED (no datasheet figure)', () => {
+        // Since 2026-09-29 no MOXIR type has an assumed wattage (UP-PL5403's 162 W is the maker's);
+        // the flag is still owed wherever a type's power basis says ASSUMED.
+        const lib = { types: library.types.map((t) => (t.id === 'up-b380f' ? { ...t, power_w: { value: 500, basis: 'ASSUMED' } } : t)) }
+        const m = sheetModel({ entities: [lamp('x', { type: 'up-b380f', mode: '16ch', circuit: 'C1' })], library: lib })
+        expect(m.rows[0].flags).toContain('power-assumed')
     })
 
     it('sums a universe as merged ranges', () => {
@@ -42,7 +50,7 @@ describe('the sheet model', () => {
         const c1 = model.power.circuits.find((c) => c.circuit === 'C1')
         expect(c1).toMatchObject({ lamps: 2, watts: 1000, pct: 34, over: false })
         expect(model.power.unassigned).toEqual({ lamps: 1, watts: 280 })
-        expect(model.power.totalW).toBe(500 + 500 + 280 + 162 + 500)
+        expect(model.power.totalW).toBe(500 + 500 + 280 + 20 + 500)
     })
 
     it('orders the hookup by universe and address, unpatched last', () => {
@@ -105,5 +113,70 @@ describe('plot data', () => {
         expect(plot.pieces).toEqual([{ id: 't', kind: 'truss-2m', category: 'truss', size: [2, 0.29, 0.29], position: [0, 6, 0], yaw: 0 }])
         expect(plot.lamps[0].hung).toBe(true)
         plot.lamps[0].mount.forEach((v, i) => expect(v).toBeCloseTo([0, 6, 0][i], 3))
+    })
+})
+
+describe('the sheet says what each warning is, by cause', () => {
+    const at = (id, extra) => lamp(id, { type: 'up-b380f', mode: '16ch', position: 'booth', ...extra })
+    const model = sheetModel({ entities: [at('a', { index: 1, universe: 1, address: 1 }), at('b', { index: 2, universe: 1, address: 10 }), at('c', { index: 3 })], library })
+
+    it('groups the flags: to decide, not addressed, owed — each with one line of what to do', () => {
+        const groups = groupFlags(model.flagCounts)
+        const of = (id) => groups.find((g) => g.id === id)
+        expect(of('decide').items.map((i) => [i.code, i.n])).toEqual([['overlap', 2]])
+        expect(of('decide').items[0].todo).toMatch(/next free address.*separate desk/)
+        expect(of('unaddressed').items[0]).toMatchObject({ code: 'not-patched', n: 1 })
+        expect(of('owed').items[0].code).toBe('channels-owed')
+        expect(groups.map((g) => g.id).indexOf('decide')).toBeLessThan(groups.map((g) => g.id).indexOf('owed'))
+    })
+    it('prints the groups on the sheet', () => {
+        const html = renderSheetBody(model, {})
+        expect(html).toMatch(/id="flags-decide">To decide/)
+        expect(html).toMatch(/overlap<\/span> — 2 fixtures\. two fixtures claim the same channels/)
+        expect(html).toMatch(/id="flags-unaddressed">Not addressed yet/)
+    })
+    it('never lets a desk code through as a bare code', () => {
+        const [g] = groupFlags({ 'no-room': 1, 'made-up': 2 })
+        expect(g.items[0].word).toBe('no universe had room')
+        expect(groupFlags({ 'made-up': 2 }).at(-1)).toMatchObject({ id: 'other', n: 2 })
+    })
+    it('labels an assumed channel list as assumed in the patch table and the type table', () => {
+        const assumed = library.types.flatMap((t) => (t.modes || []).filter((m) => m.assumed || m.basis === 'ASSUMED').map((m) => ({ type: t.id, mode: m.name })))[0]
+        expect(assumed).toBeTruthy()
+        const m = sheetModel({ entities: [lamp('x', { type: assumed.type, mode: assumed.mode, index: 1, universe: 1, address: 1, position: 'p' })], library })
+        expect(m.rows[0].modeAssumed).toBe(true)
+        const html = renderSheetBody(m, {})
+        const shown = assumed.mode.toLowerCase().includes('assumed') ? assumed.mode : `${assumed.mode} (assumed)`
+        expect(html.split(shown).length - 1).toBeGreaterThanOrEqual(2)
+    })
+})
+
+describe('sheetModel reads the desk (owner install 2026-09-30: "36 (0 patched)" vs "29 of 36 addressed")', () => {
+    const project = 'p1'
+    const entities = Array.from({ length: 36 }, (_, i) => lamp(`l${i}`, { index: i + 1, type: 'up-b380f', mode: '16ch', circuit: 'C1', position: 'truss', unit: i + 1 }))
+    const desk = entities.slice(0, 29).map((e, i) => ({ key: `${project}:${e.id}`, universe: 1 + Math.floor(i / 16), address: 1 + (i % 16) * 16 }))
+    it('takes counts, universes and unpatched flags from the desk', () => {
+        const m = sheetModel({ entities, library, desk, projectId: project })
+        expect(m.source).toBe('desk')
+        expect(m.totals).toMatchObject({ lamps: 36, patched: 29, universes: 2 })
+        expect(m.rows.filter((r) => r.flags.includes('not-patched'))).toHaveLength(7)
+        expect(m.rows.find((r) => r.id === 'l16')).toMatchObject({ universe: 2, address: 1 })
+    })
+    it('without a desk it is the document alone and says so', () => {
+        const m = sheetModel({ entities, library, desk: null, projectId: project })
+        expect(m.source).toBe('none')
+        expect(m.totals).toMatchObject({ lamps: 36, patched: 0, universes: 0 })
+    })
+    it('a desk holding none of this project keeps the document addresses', () => {
+        const withAddr = entities.map((e, i) => (i < 2 ? lamp(e.id, { ...e.components.fixture, universe: 1, address: 1 + i * 16 }) : e))
+        const m = sheetModel({ entities: withAddr, library, desk: [], projectId: project })
+        expect(m.source).toBe('document')
+        expect(m.totals.patched).toBe(2)
+    })
+    it('flags a lamp the document addressed but the desk does not hold', () => {
+        const withAddr = entities.map((e, i) => (i === 35 ? lamp(e.id, { ...e.components.fixture, universe: 3, address: 1 }) : e))
+        const m = sheetModel({ entities: withAddr, library, desk, projectId: project })
+        expect(m.rows.find((r) => r.id === 'l35').flags).toContain('not-on-desk')
+        expect(m.totals.patched).toBe(29)
     })
 })

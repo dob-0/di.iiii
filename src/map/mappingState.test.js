@@ -402,4 +402,12 @@ describe('the show\'s clock — mappingState.showEpoch', () => {
         expect('showEpoch' in normalizeMappingState({})).toBe(false)
         expect('showEpoch' in normalizeMappingState({ showEpoch: -5 })).toBe(false)
     })
+    it('keeps showSource "clock" on the ESM twin (RIG_BUILD.md §15.8); anything else and unset write nothing', () => {
+        const written = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'setMappingState', payload: { patch: { showSource: 'clock' } } }
+        ])
+        expect(normalizeProjectDocument(JSON.parse(JSON.stringify(written))).mappingState.showSource).toBe('clock')
+        expect('showSource' in normalizeMappingState({ showSource: 'desk' })).toBe(false)
+        expect('showSource' in normalizeMappingState({})).toBe(false)
+    })
 })

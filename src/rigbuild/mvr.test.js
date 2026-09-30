@@ -30,7 +30,7 @@ describe('GDTF, authored', () => {
     })
 
     it('writes a type with no known mode with none', () => {
-        const xml = gdtfDescription(typeById(library, 'up-pl5403'))
+        const xml = gdtfDescription(typeById(library, 'up-q108s'))
         expect(xml).not.toMatch(/<DMXMode /)
         expect(xml).toMatch(/every DMX mode \(owed from the rental house\)/)
     })
@@ -84,11 +84,19 @@ describe('MVR scene', () => {
     })
 
     it('a standing lamp turns over; an unpatched one carries no address; owed modes stay empty', () => {
-        const { xml } = mvrScene({ library, entities: [lamp('p', { type: 'up-pl5403' }, [0, 0.3, 0])] })
+        const { xml } = mvrScene({ library, entities: [lamp('p', { type: 'up-q108s' }, [0, 0.3, 0])] })
         expect(xml).toMatch(/<Matrix>\{1,0,0\}\{0,-1,0\}\{0,0,-1\}/)
         expect(xml).not.toMatch(/<Addresses>/)
         expect(xml).toMatch(/<GDTFMode><\/GDTFMode>/)
         expect(xml).toMatch(/<UnitNumber>0<\/UnitNumber>/)
+    })
+
+    it('a patched lamp whose maker\'s modes are owed keeps its address, with no mode named', () => {
+        // 2026-09-29: MOXIR's 15 PARs ran an ASSUMED list with no maker's mode of that width,
+        // so the file named none — and dropped the address. The crew still needs it.
+        const { xml } = mvrScene({ library, entities: [lamp('p', { type: 'up-q108s', mode: '3ch-assumed', universe: 2, address: 101, index: 211 }, [0, 0.3, 0])] })
+        expect(xml).toMatch(/<GDTFMode><\/GDTFMode>/)
+        expect(xml).toMatch(/<Address break="0">613<\/Address>/)
     })
 
     it('writes pieces with their bodies and rig boxes as scaled cubes, and skips an unknown type', () => {

@@ -2,7 +2,7 @@
 /**
  * look-compare.mjs — one plain HTML page (no WebGL) laying look-probe.mjs runs side by side:
  * per viewport and cue, the frames and their luma / fps numbers, against the target
- * (RIG_BUILD.md §18.1). Images are referenced by relative path, so the page lives beside them.
+ * (RIG_BUILD.md §20.1). Images are referenced by relative path, so the page lives beside them.
  *
  *   node scripts/rigbuild/look-compare.mjs --out ~/Downloads/moxir-realism/compare.html \
  *       --run "before (dev)=before/dev-probe.json" --run "after=after/after-probe.json" [--refs refs/measurements.json]
@@ -36,7 +36,7 @@ const loaded = runs.map((spec) => {
     return { label, file: abs, data: JSON.parse(fs.readFileSync(abs, 'utf8')) }
 })
 
-// The target, as written before the change (RIG_BUILD.md §18.1).
+// The target, as written before the change (RIG_BUILD.md §20.1).
 const target = (cue) => (cue === 1
     ? { mean: [6, null], p10: [null, 4], p99: [120, null], black: [0.75, null] }
     : cue === 5 ? { mean: [18, null], p99: [200, null] } : { mean: [18, 45], p10: [null, 8], p99: [120, null], black: [0.35, null] })
@@ -82,7 +82,7 @@ td img{width:100%;max-width:560px;display:block;background:#000}
 .n{font-size:12px;color:var(--fg);margin:6px 0 0}.ok{color:var(--ok)}.miss{color:var(--miss)}
 </style></head><body>
 <h1>MOXIR — the room as a camera sees it</h1>
-<p>Each frame: the room's own opening shot, the show held on one cue (in the browser's copy only; the show clock drives, no desk), on the NVIDIA RTX 3080. Luma = BT.709 on the 8-bit sRGB values, rows 20–90 % of the height; the brightest of the shots is shown. Green = inside the target written before the change (docs/architecture/RIG_BUILD.md §18.1), red = outside.</p>
+<p>Each frame: the room's own opening shot, the show held on one cue (in the browser's copy only; the show clock drives, no desk), on the NVIDIA RTX 3080. Luma = BT.709 on the 8-bit sRGB values, rows 20–90 % of the height; the brightest of the shots is shown. Green = inside the target written before the change (docs/architecture/RIG_BUILD.md §20.1), red = outside.</p>
 ${refLine}
 <div class="wrap"><table><thead><tr><th></th>${loaded.map((r) => `<th>${esc(r.label)}<br><small>${esc(r.data.base)}${esc(r.data.path)} · ${esc(r.data.at)}</small></th>`).join('')}</tr></thead>
 <tbody>${rows.join('\n')}</tbody></table></div>

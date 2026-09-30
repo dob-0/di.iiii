@@ -5,14 +5,14 @@ import { rentalCounts } from './rental.js'
 import { barTitle, patchBars } from './patchBars.js'
 
 const lamp = (id, fixture) => ({ id, type: 'spotLight', components: { transform: { position: [0, 5, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }, fixture } })
-const list = { items: [{ code: 'UP-250BSW', type: 'up-250bsw', ordered: 12 }, { code: 'UP-B380F', type: 'up-b380f', ordered: 1 }, { code: 'UP-PL5403', type: 'up-pl5403', ordered: 50 }] }
+const list = { items: [{ code: 'UP-250BSW', type: 'up-250bsw', ordered: 12 }, { code: 'UP-B380F', type: 'up-b380f', ordered: 1 }, { code: 'UP-Q108S', type: 'up-q108s', ordered: 6 }] }
 
 describe('patch bars', () => {
     const entities = [
         ...Array.from({ length: 9 }, (_, i) => lamp(`s${i}`, { type: 'up-250bsw', mode: '24ch', index: i + 1, universe: 2, address: 1 + i * 24 })),
         lamp('b1', { type: 'up-b380f', mode: '16ch', index: 20, universe: 1, address: 1 }),
         lamp('b2', { type: 'up-b380f', mode: '16ch', index: 21, universe: 1, address: 10 }),
-        lamp('p1', { type: 'up-pl5403' })
+        lamp('p1', { type: 'up-q108s' })
     ]
     const model = plotModel({ entities, library: TYPE_LIBRARY })
     const bars = patchBars({ model, rental: rentalCounts({ entities, library: TYPE_LIBRARY, list }) })
@@ -32,7 +32,7 @@ describe('patch bars', () => {
         const u1 = bars.universes[0]
         expect(u1.segments.every((s) => s.conflict)).toBe(true)
         expect(bars.conflicts.map((c) => c.at).sort()).toEqual(['U1.001', 'U1.010'])
-        expect(bars.owed).toEqual([{ code: 'UP-PL5403', type: 'up-pl5403', ordered: 50, placed: 1 }])
+        expect(bars.owed).toEqual([{ code: 'UP-Q108S', type: 'up-q108s', ordered: 6, placed: 1 }])
     })
 
     it('offers the move on the lamp the desk flagged, not on the one it overlaps', () => {

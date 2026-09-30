@@ -127,3 +127,14 @@ describe('the room between two looks (useRigLookEntities)', () => {
         }
     })
 })
+
+describe('solo_mask — several lamps of a group kept lit (crane-x, RIG_BUILD §15.8)', async () => {
+    const { soloKeeps } = await import('./looks.js')
+    const { soloKeeps: scriptKeeps } = await import('../../scripts/place/rig-lib.mjs')
+    it('keeps the ranks whose bit is set, as the rig script does', () => {
+        for (const aim of [{ solo_mask: 85 }, { solo_mask: 65 }, { solo: 3 }, {}, { solo_mask: 448 }]) {
+            for (let r = 0; r < 12; r++) expect(soloKeeps(aim, r), JSON.stringify(aim) + r).toBe(scriptKeeps(aim, r))
+        }
+        expect([0, 1, 2, 3, 4, 5, 6].filter((r) => soloKeeps({ solo_mask: 85 }, r))).toEqual([0, 2, 4, 6])
+    })
+})

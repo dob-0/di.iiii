@@ -130,8 +130,9 @@ describe('the lighting mirror', () => {
         expect(result.current.master).toBe(255)
         expect(result.current.blackout).toBe(false)
         expect(result.current.fixtures).toEqual([
-            { id: 'fx_a', index: 1, known: true, name: 'Back left', x: 0.2, y: 0.3, colour: { r: 255, g: 120, b: 0 }, level: 1 },
-            { id: 'fx_b', index: 2, known: true, name: 'Wash', x: 0.8, y: 0.6, colour: { r: 200, g: 40, b: 0 }, level: 0.784 }
+            // `values`: the fixture's own slots in its channel order (the visualiser decodes them).
+            { id: 'fx_a', index: 1, known: true, name: 'Back left', profile: 'drgb', universe: 0, address: 1, x: 0.2, y: 0.3, colour: { r: 255, g: 120, b: 0 }, level: 1, values: [255, 255, 120, 0] },
+            { id: 'fx_b', index: 2, known: true, name: 'Wash', profile: 'rgbw', universe: 0, address: 5, x: 0.8, y: 0.6, colour: { r: 200, g: 40, b: 0 }, level: 0.784, values: [200, 40, 0, 0] }
         ])
 
         desk.dmx = [128, 255, 0, 0, 200, 40, 0, 0]

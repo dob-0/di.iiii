@@ -96,6 +96,16 @@ describe('precedence — who drives the room', () => {
     it('a desk that is present drives the room even while it is dark', () => {
         expect(showDriver({ explicit: undefined, deskChecked: true, deskPresent: true, show: null })).toBe('desk')
     })
+    // RIG_BUILD.md §15.8: a comparison version the desk does not carry plays by its own clock
+    it('a document whose show says showSource "clock" plays by its clock even where a desk answers — a page\'s GO still first', () => {
+        const own = showOf({ mappingState: { ...LOOP.mappingState, showSource: 'clock' } })
+        expect(own.source).toBe('clock')
+        expect('source' in show).toBe(false)
+        expect(showDriver({ explicit: undefined, deskChecked: true, deskPresent: true, show: own })).toBe('clock')
+        expect(showDriver({ explicit: undefined, deskChecked: false, deskPresent: false, show: own })).toBe('clock')
+        expect(showDriver({ explicit: 'x', deskChecked: true, deskPresent: true, show: own })).toBe('explicit')
+        expect(showOf({ mappingState: { ...LOOP.mappingState, showSource: 'desk' } }).source).toBeUndefined()
+    })
 })
 
 describe('the show chip line', () => {

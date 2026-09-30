@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import FixtureBodies from './FixtureBodies.jsx'
 import RigFlashes from './RigFlashes.jsx'
+import DmxProbe from './DmxProbe.jsx'
 import { TYPE_LIBRARY } from './types/index.js'
 import { libraryWithShow } from './rental.js'
 import { rigBodyLamps } from './rigBodyLamps.js'
@@ -34,6 +35,8 @@ export default function RigBodies({ entities, library = TYPE_LIBRARY }) {
             </Suspense>
             {/* strobes and blinders: their face and their flash (looks.js flashEntities) */}
             <RigFlashes entities={entities} />
+            {/* the visualiser's stopwatch: idle unless a page asked (visProbe.js) */}
+            <DmxProbe entities={entities} />
             {bounce ? <ambientLight color={bounce.color} intensity={bounce.intensity} /> : null}
             {bounce ? <HazeGlow bounce={bounce} /> : null}
         </>

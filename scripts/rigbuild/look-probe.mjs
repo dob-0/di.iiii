@@ -2,7 +2,7 @@
 /**
  * look-probe.mjs — measure how a show room READS on a screen, cue by cue: luma
  * (scripts/rigbuild/luma.mjs) and frame rate, on the GPU, from the room's own
- * opening shot, as a visitor sees it (docs/architecture/RIG_BUILD.md §18).
+ * opening shot, as a visitor sees it (docs/architecture/RIG_BUILD.md §20).
  *
  * For each cue of the document's show it opens the room with the show pinned
  * to that cue — in THIS BROWSER'S COPY ONLY (Playwright rewrites the document

@@ -82,6 +82,13 @@ const nearestFace = (slot) => {
  * pan, tilt, rule }). Lamps not on a position, or on a group the look does not name,
  * are left out (they keep their own).
  */
+// The positions a rig names for itself (scripts/rigbuild/moxir.mjs writes "halo <group id in
+// words>"; looks.mjs keys the same group "halo-<group id>").
+export const namedPositionKey = (fixture) => {
+    const p = typeof fixture?.position === 'string' ? fixture.position.trim() : ''
+    return /^halo /.test(p) ? p.replace(/\s+/g, '-') : null
+}
+
 export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) => {
     const looks = rigLooks || rigLooksOf(entities)
     const look = looks?.looks?.find((l) => l.id === lookId)
@@ -94,10 +101,23 @@ export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) =
     const byEntity = new Map(entities.map((e) => [e.id, e]))
     const lampById = new Map(lamps.map((l) => [l.id, l]))
     const groups = new Map()
+    // A lamp the rig NAMED a position for (`fixture.position` "halo <group>", RIG_BUILD.md §15.8:
+    // the halo's corners and sides are no derived slot) is grouped by that name, wherever the
+    // derived positions would put it.
+    const named = new Set()
+    for (const l of lamps) {
+        const e = byEntity.get(l.id)
+        const key = namedPositionKey(e?.components?.fixture)
+        if (!key) continue
+        named.add(l.id)
+        const k = `${key}/${e.components.fixture.type}`
+        if (!groups.has(k)) groups.set(k, [])
+        groups.get(k).push({ id: l.id, slot: { pos: l.mount } })
+    }
     for (const p of positions) {
         for (const s of p.slots) {
             const id = fill.get(`${p.id}/${s.id}`)
-            if (!id) continue
+            if (!id || named.has(id)) continue
             const type = byEntity.get(id)?.components?.fixture?.type
             const key = `${positionKey(p.id)}/${type}`
             if (!groups.has(key)) groups.set(key, [])
@@ -116,7 +136,10 @@ export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) =
             const hung = lamp.hung
             const tiltY = Number(type?.model3d?.tiltY) || 0
             const from = [lamp.mount[0], lamp.mount[1] + (hung ? -tiltY : tiltY), lamp.mount[2]]
-            const answer = rule({ pos: lamp.mount, orient: hung ? 'hung' : 'floor', column: { faceX: nearestFace(slot) } }, { rank, n: members.length }, ctx, aim)
+            // `rest_up: 1` with a solo: the dark lamps stand straight up (rig-lib.mjs, the same)
+            const answer = aim.rest_up === 1 && !soloKeeps(aim, rank)
+                ? { dir: [0, hung ? -1 : 1, 0] }
+                : rule({ pos: lamp.mount, orient: hung ? 'hung' : 'floor', column: { faceX: nearestFace(slot) } }, { rank, n: members.length }, ctx, aim)
             const dir = aimDirection(answer, from)
             if (!dir) return
             const { pan, tilt } = panTiltOfDirection(dir)
@@ -125,7 +148,7 @@ export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) =
                 rotation: rotationFromPanTilt({ pan, tilt }),
                 color: look.colours?.[key] || null,
                 // `solo`: only the lamp of that rank keeps the level (rig-lib.mjs, the same rank).
-                level: Number.isInteger(aim.solo) && rank !== aim.solo ? 0 : levelOfKey(look, key),
+                level: soloKeeps(aim, rank) ? levelOfKey(look, key) : 0,
                 pan: Math.round(pan * 10) / 10,
                 tilt: Math.round(tilt * 10) / 10,
                 rule: aim.rule
@@ -133,6 +156,17 @@ export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) =
         })
     }
     return out
+}
+
+/**
+ * Does the lamp of this rank keep its group's level in this aim (rig-lib.mjs `soloKeeps`, the same
+ * rule): `solo` one rank, `solo_mask` several (bit r = rank r — a number, since the schema keeps only
+ * numeric aim parameters), neither every lamp.
+ */
+export const soloKeeps = (aim, rank) => {
+    if (Number.isInteger(aim?.solo_mask)) return rank >= 0 && rank < 31 && ((aim.solo_mask >> rank) & 1) === 1
+    if (Number.isInteger(aim?.solo)) return rank === aim.solo
+    return true
 }
 
 /** A look's level for a group key, 0..1 (RIG_BUILD.md §15); a group it does not name is at full. */
@@ -242,9 +276,17 @@ export const blendEntities = (from, to, t) => {
 // ANOTHER colour would need its own bake (owed; MOXIR's looks wash in red or not at all).
 export const WASH_ENTITY_ID = 'rig-wash'
 const WASH_POSITIONS = new Set(['column-faces', 'outer-columns', 'backdrop', 'dance-columns'])
+// Only the lamps whose light the bake paints — the PARs — steer its level. A moving head standing
+// at a washing position (the ground versions' column-base and backdrop movers) is its own beam and
+// not part of the wash: counting it kept the columns glowing in scenes whose PARs were out
+// (measured on the ground versions' scenes, 2026-09-30). A key with no type keeps the old rule.
+const WASH_TYPES = new Set(['up-pl5403'])
 export const washLevelOf = (look) => {
     if (!look) return 1
-    const keys = Object.keys(look.aims || {}).filter((k) => WASH_POSITIONS.has(k.split('/')[0]))
+    const keys = Object.keys(look.aims || {}).filter((k) => {
+        const [position, type] = k.split('/')
+        return WASH_POSITIONS.has(position) && (type === undefined || WASH_TYPES.has(type))
+    })
     if (!keys.length) return 1
     return Math.max(...keys.map((k) => levelOfKey(look, k)))
 }
@@ -258,6 +300,90 @@ export const withWashLevel = (entities, level) => {
             ...(level <= 0 ? { runtime: { ...(e.components.runtime || {}), visible: false } } : {})
         }
     }))
+}
+
+// ---- ONE WASH PER LOOK (RIG_BUILD.md §15.13) ------------------------------------------
+// The single `rig-wash` is baked for ONE look: every other scene showed that look's lamps in
+// that look's colour, or nothing. `rig.mjs --wash-per-look` bakes one mesh PER LOOK instead,
+// entity `rig-wash:<lookId>`, written hidden (runtime.visible false). While a look plays the
+// room shows that look's wash at full — the bake already holds the look's levels and colours,
+// so no level multiplies it — and over a cue's fade cross-fades the previous look's out
+// (opacity 1 − t) as the new one comes in (opacity t). Where a playing look has no wash of
+// its own, the single `rig-wash` (at the look's PAR level, withWashLevel) is the fallback;
+// where a project has no per-look wash at all, nothing here changes: the single wash is
+// drawn exactly as before. Pure.
+export const WASH_ENTITY_PREFIX = `${WASH_ENTITY_ID}:`
+export const washEntityId = (lookId) => `${WASH_ENTITY_PREFIX}${lookId}`
+export const lookIdOfWash = (id) => (typeof id === 'string' && id.startsWith(WASH_ENTITY_PREFIX) && id.length > WASH_ENTITY_PREFIX.length ? id.slice(WASH_ENTITY_PREFIX.length) : null)
+/** Any baked wash: the single one or a per-look one. */
+export const isWashEntityId = (id) => id === WASH_ENTITY_ID || lookIdOfWash(id) !== null
+// Every project's wash bytes together (every `rig-wash*` asset) stop here: 11 looks × ~115 KB is
+// ~1.3 MB, and a room that loads 2 MB of decals before it draws is a room that opens late.
+export const WASH_BYTES_CAP = 2 * 1024 * 1024
+
+/** Map(lookId → wash entity) of the per-look washes a document carries. */
+export const perLookWashesOf = (entities = []) => {
+    const out = new Map()
+    for (const e of entities) {
+        const lookId = lookIdOfWash(e?.id)
+        if (lookId) out.set(lookId, e)
+    }
+    return out
+}
+
+// A wash entity whose asset the document does not hold draws nothing (an uploaded model the
+// asset list does not name: §15.6's second trap) — treated as missing, so the fallback shows.
+const washHeld = (entity, assetIds) => {
+    if (!assetIds) return true
+    const assetId = entity?.components?.media?.assetId
+    return Boolean(assetId) && assetIds.has(assetId)
+}
+
+const washAt = (e, opacity) => ({
+    ...e,
+    components: {
+        ...e.components,
+        appearance: { ...(e.components.appearance || {}), opacity: Math.max(0, Math.min(1, opacity)) },
+        runtime: { ...(e.components.runtime || {}), visible: opacity > 0 }
+    }
+})
+
+/**
+ * The washes as the room draws them between two looks: the wash of `toLookId` at t, the wash
+ * of `fromLookId` at 1 − t, every other per-look wash hidden. `assets` (the document's asset
+ * list, optional) says which washes are really there. Returns the same array when there is
+ * nothing to do (no per-look wash, or no look playing), so a memo sees no change.
+ */
+export const withLookWash = (entities, { fromLookId = '', toLookId = '', t = 1, assets = null } = {}) => {
+    const perLook = perLookWashesOf(entities)
+    if (!perLook.size || !toLookId) return entities
+    const held = Array.isArray(assets) ? new Set(assets.map((a) => a?.id).filter(Boolean)) : null
+    const has = (lookId) => Boolean(lookId) && perLook.has(lookId) && washHeld(perLook.get(lookId), held)
+    const tt = Number.isFinite(t) ? Math.max(0, Math.min(1, t)) : 1
+    const fading = tt < 1 && fromLookId && fromLookId !== toLookId
+    const toHas = has(toLookId)
+    const fromHas = fading && has(fromLookId)
+    return entities.map((e) => {
+        const lookId = lookIdOfWash(e.id)
+        if (lookId) {
+            if (toHas && lookId === toLookId) return washAt(e, fading ? tt : 1)
+            if (fromHas && lookId === fromLookId) return washAt(e, 1 - tt)
+            return washAt(e, 0)
+        }
+        // The single wash: hidden while a per-look wash carries the look, and — the fallback —
+        // left as withWashLevel drew it while the playing look has none of its own. Over a
+        // fade between a look with its own wash and one without, it is the other half of the
+        // cross-fade (1 − t into a look with its own, t out of one), so the columns never lose
+        // the wash for a frame; its own level (withWashLevel) scales it.
+        if (e.id === WASH_ENTITY_ID) {
+            if (fading && toHas !== fromHas) {
+                const own = Number.isFinite(Number(e.components?.appearance?.opacity)) ? Number(e.components.appearance.opacity) : 1
+                return washAt(e, own * (toHas ? 1 - tt : tt))
+            }
+            return toHas ? washAt(e, 0) : e
+        }
+        return e
+    })
 }
 
 // ---- STROBES AND BLINDERS read as a FLASH, not a cone (RIG_BUILD.md §15.6) ------------

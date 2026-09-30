@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import SpotLightObject from './SpotLightObject.jsx'
 import { getAtmosphere, setAtmosphere } from './atmosphereStore.js'
 
-// RIG_BUILD.md §18: a room with an atmosphere draws its beams physically; a room
+// RIG_BUILD.md §20: a room with an atmosphere draws its beams physically; a room
 // without one keeps the old flat cone, byte for byte. Rendered to markup (three's
 // elements come out as tags) inside a stand-in for the Canvas's store.
 const lamp = { color: '#ff1408', intensity: 1004000, distance: 7, angle: 0.0157, penumbra: 0.1, beam: { visible: true, haze: 1, only: true, aperture: 0.08 } }
