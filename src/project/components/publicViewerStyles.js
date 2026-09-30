@@ -16,7 +16,7 @@ export const overlayCardStyle = {
     background: 'rgba(6, 9, 13, 0.78)',
     border: '1px solid rgba(255,255,255,0.1)',
     color: '#f5f7fa',
-    borderRadius: '18px',
+    borderRadius: '2px',
     padding: '1rem 1.1rem',
     maxWidth: '28rem',
     boxShadow: '0 20px 60px rgba(0,0,0,0.35)',
@@ -26,7 +26,7 @@ export const overlayCardStyle = {
 // The stand-in for a code-mode preview that never got a chance to paint
 // (PublicProjectViewer's CODE_PREVIEW_PAINT_TIMEOUT_MS). Deliberately NOT
 // overlayCardStyle: that one is chrome floating on top of a live scene,
-// rounded and glowing so it reads as UI reaching toward a visitor. This IS
+// glowing so it reads as UI reaching toward a visitor. This IS
 // the picture, sitting among other cards that show real content — square
 // corners, no shadow, no call to action, so it reads as quiet rather than
 // broken or asking for a click.

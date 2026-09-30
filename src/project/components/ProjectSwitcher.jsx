@@ -65,7 +65,7 @@ const pillStyleActive = {
 const cardStyle = {
     background: 'rgba(6, 9, 13, 0.9)',
     border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: '18px',
+    borderRadius: '2px',
     padding: '0.4rem',
     minWidth: '14rem',
     maxWidth: '20rem',
@@ -87,7 +87,7 @@ const itemStyle = {
     border: 0,
     background: 'transparent',
     color: '#f5f7fa',
-    borderRadius: '12px',
+    borderRadius: '2px',
     padding: '0.55rem 0.75rem',
     fontSize: '0.95rem',
     cursor: 'pointer',
@@ -115,7 +115,7 @@ const copyButtonStyle = {
     background: 'transparent',
     color: '#f5f7fa',
     opacity: 0.6,
-    borderRadius: '8px',
+    borderRadius: '2px',
     padding: '0.4rem 0.5rem',
     fontSize: '0.85rem',
     cursor: 'pointer'

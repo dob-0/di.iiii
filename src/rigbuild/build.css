@@ -49,7 +49,7 @@
 .rigbuild-totals {
     position: absolute; top: 64px; right: 16px; z-index: 8;
     display: grid; gap: 2px; font-size: 11px; line-height: 1.35; text-align: right;
-    background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 4px;
+    background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 2px;
     padding: 8px 10px; max-width: 280px;
 }
 .rigbuild-dim { color: rgba(255, 255, 255, 0.62); }
@@ -61,7 +61,7 @@
     position: absolute; top: 64px; left: 16px; z-index: 8;
     font: 700 12px var(--di-mono, monospace); letter-spacing: 0.12em; text-transform: uppercase;
     color: #fff; background: rgba(0, 0, 0, 0.45); border: 1.5px solid rgba(var(--di-danger-rgb, 255, 80, 80), 0.6);
-    border-radius: var(--di-radius-pill, 999px); padding: 0 16px; min-height: 44px; cursor: pointer;
+    border-radius: 2px; padding: 0 16px; min-height: 44px; cursor: pointer;
 }
 .rigbuild-mode.is-on { background: rgba(var(--di-danger-rgb, 255, 80, 80), 0.22); border-color: var(--di-danger, #f55); }
 
@@ -71,7 +71,7 @@
     display: flex; flex-direction: column; align-items: center; gap: 6px; max-width: calc(100vw - 32px);
 }
 .rigbuild-status, .rigbuild-said {
-    margin: 0; font-size: 12px; background: rgba(0, 0, 0, 0.55); border-radius: 3px; padding: 4px 10px;
+    margin: 0; font-size: 12px; background: rgba(0, 0, 0, 0.55); border-radius: 2px; padding: 4px 10px;
     max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .rigbuild-status b { letter-spacing: 0.12em; margin-right: 6px; }
@@ -82,7 +82,7 @@
 }
 .rigbuild-hotbar {
     list-style: none; margin: 0; padding: 4px; display: flex; gap: 4px;
-    background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 4px;
+    background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 2px;
     max-width: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
     touch-action: pan-x;
 }
@@ -92,7 +92,7 @@
     position: relative; width: 78px; min-height: 58px; padding: 16px 4px 5px;
     display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px;
     color: #fff; background: rgba(255, 255, 255, 0.06); border: 1.5px solid rgba(255, 255, 255, 0.22);
-    border-radius: 3px; cursor: pointer; font: inherit;
+    border-radius: 2px; cursor: pointer; font: inherit;
 }
 .rigbuild-slot.is-on { border-color: #fff; background: rgba(255, 255, 255, 0.2); box-shadow: 0 0 0 1px #fff inset; }
 .rigbuild-slot.is-full { border-style: dashed; color: rgba(255, 255, 255, 0.55); }
@@ -104,7 +104,7 @@
 /* what is under the crosshair, while walking */
 .rigbuild-aimed {
     position: absolute; left: 50%; top: calc(50% + 22px); transform: translateX(-50%); z-index: 8;
-    margin: 0; font-size: 12px; background: rgba(0, 0, 0, 0.6); padding: 3px 8px; border-radius: 3px; white-space: nowrap;
+    margin: 0; font-size: 12px; background: rgba(0, 0, 0, 0.6); padding: 3px 8px; border-radius: 2px; white-space: nowrap;
     pointer-events: none;
 }
 
@@ -138,14 +138,14 @@
     display: grid; grid-template-columns: 52px 52px; gap: 8px;
 }
 .rigbuild-thumb {
-    min-width: 52px; min-height: 52px; border-radius: 50%;
+    min-width: 52px; min-height: 52px; border-radius: 2px;
     font: 700 11px var(--di-mono, monospace); letter-spacing: 0.06em; text-transform: uppercase;
     color: #fff; background: rgba(0, 0, 0, 0.5); border: 1.5px solid rgba(255, 255, 255, 0.45); cursor: pointer;
     touch-action: manipulation;
 }
 .rigbuild-thumb:disabled { opacity: 0.35; }
 .rigbuild-thumb--place {
-    grid-column: 1 / span 2; width: 112px; height: 72px; border-radius: 36px; justify-self: center;
+    grid-column: 1 / span 2; width: 112px; height: 72px; border-radius: 2px; justify-self: center;
     font-size: 14px; background: rgba(var(--di-danger-rgb, 255, 80, 80), 0.35); border-color: var(--di-danger, #f55);
 }
 .rigbuild-thumb--place.is-off { background: rgba(0, 0, 0, 0.5); border-style: dashed; border-color: rgba(255, 255, 255, 0.45); }
