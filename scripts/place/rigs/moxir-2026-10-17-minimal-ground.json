@@ -1257,15 +1257,15 @@
                 },
                 "beam380-columns-6": {
                     "rule": "vertical",
-                    "in_deg": 48
+                    "in_deg": 30
                 },
                 "bsw250-ground": {
                     "rule": "vertical",
-                    "in_deg": 40
+                    "in_deg": 24
                 },
                 "beeeye-ground": {
                     "rule": "vertical",
-                    "in_deg": 35
+                    "in_deg": 22
                 },
                 "cob-cut-curtain": {
                     "rule": "vertical"
@@ -1503,7 +1503,7 @@
         },
         "gs-laser-roof": {
             "title": "Laser into the roof",
-            "intent": "OPTIONAL, NOT IN THE LOOP. In the dark, red laser lines from the top of the cut into the roof frame, one dim red shaft behind the DJ. Needs a certified laser safety officer before it is ever switched on. LASER: off by default; requiresLaserSignOff (Class 4 — certified laser safety officer, owed).",
+            "intent": "OPTIONAL, NOT IN THE LOOP. In the dark, red laser lines from the top of the cut into the roof frame, one dim red shaft behind the DJ. Needs a certified laser safety officer before it is ever switched on. LASER: off by default; requiresLaserSignOff: written at level 0, the laser stays dark until a human raises it after a certified laser safety officer signs off (Class 4, owed).",
             "aims": {
                 "beam380-backstage": {
                     "rule": "vertical",
@@ -1558,7 +1558,7 @@
                 "beam380-columns-6": 0,
                 "bsw250-ground": 0,
                 "beeeye-ground": 0,
-                "laser-cut": 0.6
+                "laser-cut": 0
             }
         }
     },

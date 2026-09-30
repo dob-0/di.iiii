@@ -70,17 +70,13 @@ describe.each(GROUND_VERSIONS)('%s scenes', (id) => {
         expect(groundPolicyViolations({ rig, hall, library, builds: builds[id], stage: stageFrame(rig, hall) })).toEqual([])
     })
 
-    it('keeps every laser OFF by default: level 0 in every look, and a scene that lights one is flagged requiresLaserSignOff and is not in the loop', () => {
-        for (const [key, look] of Object.entries(rig.looks)) {
-            const lit = look.levels[LASER_GROUP] > 0
-            if (!lit) continue
-            expect(SCENES[key]?.laser, `${key} lights the laser and is not flagged`).toBe(true)
-            expect(look.intent).toMatch(/requiresLaserSignOff/)
-            expect(look.intent).toMatch(/certified laser safety officer/)
+    it('keeps every laser OFF: level 0 in EVERY look (a look level is sent like any group; the sign-off is text, not a gate), laser scenes flagged in their intent and not in the loop', () => {
+        for (const [key, look] of Object.entries(rig.looks)) expect(look.levels[LASER_GROUP], key).toBe(0)
+        for (const key of sceneIds) if (SCENES[key].laser) {
+            expect(rig.looks[key].intent).toMatch(/requiresLaserSignOff/)
+            expect(rig.looks[key].intent).toMatch(/certified laser safety officer/)
         }
-        for (const key of sceneIds) if (SCENES[key].laser) expect(rig.looks[key].levels[LASER_GROUP]).toBeGreaterThan(0)
-        for (const [key, look] of Object.entries(rig.looks)) if (!SCENES[key]?.laser) expect(look.levels[LASER_GROUP], key).toBe(0)
-        for (const c of show.cues) expect(rig.looks[c.look].levels[LASER_GROUP], `the loop's ${c.look}`).toBe(0)
+        for (const c of show.cues) expect(SCENES[c.look]?.laser, `the loop's ${c.look}`).toBeFalsy()
     })
 
     it('marks every strobe scene, and never flashes above 3 a second', () => {

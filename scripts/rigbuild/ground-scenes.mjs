@@ -76,9 +76,9 @@ export const SCENES = {
         title: 'Cross beams',
         sees: 'Beams from both walls lean in and cross high over the dance floor, above head height, like a lattice in the haze. The booth beams stay upright and dim behind.',
         parts: {
-            'beam380-columns-6': on(0.85, WHITE, up({ in_deg: 48 })),
-            'bsw250-ground': on(0.5, WHITE, up({ in_deg: 40 })),
-            'beeeye-ground': on(0.6, WHITE, up({ in_deg: 35 })),
+            'beam380-columns-6': on(0.85, WHITE, up({ in_deg: 30 })),
+            'bsw250-ground': on(0.5, WHITE, up({ in_deg: 24 })),
+            'beeeye-ground': on(0.6, WHITE, up({ in_deg: 22 })),
             'beam380-backstage': on(0.4, WHITE, up())
         }
     },
@@ -169,7 +169,7 @@ export const showFileOf = (id) => `${RIGS_DIR}/moxir-2026-10-17-${id}.show.json`
 const clean = (s) => s.replace(/\s+/g, ' ').trim()
 
 /** The intent line: what it is, with the plain markers a person reading the look sees. */
-const intentOf = (s) => clean(`${s.sees}${s.strobe ? ' STROBE-CAPABLE: lights the blinder, held steady, cut by the cue; flash rate never above 3/s.' : ''}${s.laser ? ' LASER: off by default; requiresLaserSignOff (Class 4 — certified laser safety officer, owed).' : ''}${s.effects ? ` EFFECT: ${s.effects}.` : ''}`).slice(0, 480)
+const intentOf = (s) => clean(`${s.sees}${s.strobe ? ' STROBE-CAPABLE: lights the blinder, held steady, cut by the cue; flash rate never above 3/s.' : ''}${s.laser ? ' LASER: off by default; requiresLaserSignOff: written at level 0, the laser stays dark until a human raises it after a certified laser safety officer signs off (Class 4, owed).' : ''}${s.effects ? ` EFFECT: ${s.effects}.` : ''}`).slice(0, 480)
 
 /** A scene as a rig look. Pure. */
 export const lookOf = (scene) => {
@@ -180,7 +180,11 @@ export const lookOf = (scene) => {
         const part = scene.parts[g]
         if (part?.aim) aims[g] = { ...part.aim } // a group the scene does not light keeps its resting aim (versions.mjs restAim)
         if (part?.colour) colours[g] = part.colour
-        levels[g] = part ? part.level : 0
+        // The laser is ALWAYS written at 0 (cap review A2-1, 2026-09-30): a level in a look is sent
+        // like any other group, and `requiresLaserSignOff` in the intent is only text. A laser scene
+        // keeps its aim and its asked level (`laserAskedLevel`); lighting it is a human's act after a
+        // certified laser safety officer signs off, not something selecting a look can do.
+        levels[g] = part && g !== LASER_GROUP ? part.level : 0
     }
     return { title: scene.title, intent: intentOf(scene), aims, colours, levels }
 }

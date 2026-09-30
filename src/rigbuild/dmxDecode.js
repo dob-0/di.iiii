@@ -195,15 +195,19 @@ const toSixteen = (unit) => {
     return [v >> 8, v & 255]
 }
 
+// A DMX value is a whole number: round toward the SLOWER side of the table, never the nearer
+// one, so the rate the fixture plays is <= the rate asked for (cap review A1-2, 2026-09-30).
+const towardSlower = (v, r) => (r.to >= r.from ? Math.floor(v + 1e-9) : Math.ceil(v - 1e-9))
+
 const rateValue = (ranges, hz) => {
     const r = (ranges || []).find((x) => x.hz && hz >= Math.min(...x.hz) && hz <= Math.max(...x.hz))
     if (!r) return null
-    return Math.round(r.from + ((hz - r.hz[0]) / (r.hz[1] - r.hz[0] || 1)) * (r.to - r.from))
+    return towardSlower(r.from + ((hz - r.hz[0]) / (r.hz[1] - r.hz[0] || 1)) * (r.to - r.from), r)
 }
 const strobeValue = (ranges, hz) => {
     const r = (ranges || []).find((x) => x.strobe && x.strobe[1] > x.strobe[0] && hz >= x.strobe[0] && hz <= x.strobe[1])
     if (!r) return null
-    return Math.round(r.from + ((hz - r.strobe[0]) / (r.strobe[1] - r.strobe[0])) * (r.to - r.from))
+    return towardSlower(r.from + ((hz - r.strobe[0]) / (r.strobe[1] - r.strobe[0])) * (r.to - r.from), r)
 }
 const openValue = (ranges) => {
     const r = (ranges || []).filter((x) => x.open === true).sort((a, b) => b.to - a.to)[0]

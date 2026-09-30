@@ -91,7 +91,9 @@ describe('the data this file stands on', () => {
         expect(intensityOf(LIT)).toBeGreaterThan(0)
         expect(HIT).toBeTruthy()
         expect(LASER_SCENE).toBeTruthy()
-        expect(Object.entries(LASER_SCENE.levels).some(([g, v]) => isLaserKey(g) && v > 0)).toBe(true)
+        // the laser is written at 0 in every look (cap review A2-1); the scene still carries the sign-off flag
+        expect(Object.entries(LASER_SCENE.levels).filter(([g]) => isLaserKey(g)).every(([, v]) => v === 0)).toBe(true)
+        expect(LASER_SCENE.flags.requiresLaserSignOff).toBe(true)
         expect(readScenes(MIN).loopSeconds).toBe(79)
     })
 })
@@ -165,7 +167,7 @@ describe('A: the four controls write exactly their fields', () => {
 
 describe('a write layer 1 refuses shows in words and writes nothing', () => {
     it('laser: a lit laser without the sign-off', () => {
-        const unsigned = withLook(MIN, LASER_SCENE.lookId, (l) => ({ ...l, intent: String(l.intent).replaceAll(SIGN_OFF_MARKER, '') }))
+        const unsigned = withLook(MIN, LASER_SCENE.lookId, (l) => ({ ...l, intent: String(l.intent).replaceAll(SIGN_OFF_MARKER, ''), levels: Object.fromEntries(Object.entries(l.levels).map(([g, v]) => [g, isLaserKey(g) ? 0.6 : v])) }))
         const { log } = mount(unsigned)
         pick(LASER_SCENE.name)
         fireEvent.click(screen.getByLabelText(`${LASER_SCENE.name} colour #ff0000`))

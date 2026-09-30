@@ -71,18 +71,20 @@ export const coneRays = (dir, half) => {
     return rays
 }
 /** The lowest y at which a beam from `from` (cone half-angle `half`, reach `reach` m) is inside `box`'s plan, or null. */
-export const lowestInZone = (from, dir, half, reach, box, step = 0.1) => {
+export const lowestInZone = (from, dir, half, reach, box, step = 0.1, skipRadius = 0) => {
     let low = null
     for (const r of coneRays(dir, half)) {
         for (let t = 0; t <= reach; t += step) {
             const p = [from[0] + r[0] * t, from[1] + r[1] * t, from[2] + r[2] * t]
             if (p[1] < 0) break
+            if (skipRadius && Math.hypot(p[0] - from[0], p[2] - from[2]) < skipRadius) continue
             if (inPlan(p, box) && p[1] < box.y[1] && (low === null || p[1] < low)) low = p[1]
         }
     }
     return low
 }
 
+export const AISLE_LENS_CLEAR_M = 1.5
 const groupOf = (rig, entityId) => rig.groups.find((g) => entityId.startsWith(`${RIG_PREFIX}${g.id}-`))
 
 /**
@@ -105,6 +107,12 @@ export const groundPolicyViolations = ({ rig, hall, library, builds, stage }) =>
         }
     }
     const zone = zoneBox(hall, 'dance', [0, eye])
+    // The aisles between the dance box and the column faces: the analysis says people stand and sit
+    // there (PLACES 'crowd overflow'), so a mover's beam is held to the same eye height over them
+    // (cap review A2-2, 2026-09-30). Points within AISLE_LENS_CLEAR_M (plan distance) of the lens
+    // are not counted: the lens itself stands in the aisle, and a beam that has only just left it is at the lens.
+    const face = hall.geometry.column_inner_face_x_m
+    const aisles = [[-face, zone.x[0]], [zone.x[1], face]].filter(([a, b]) => b > a).map(([a, b]) => ({ x: [a, b], z: zone.z, y: zone.y }))
     const laserZone = { x: [-hall.geometry.column_inner_face_x_m, hall.geometry.column_inner_face_x_m], z: [stage.front, hall.geometry.door.z_m], y: [0, pol.lasers?.min_beam_height_m ?? 3] }
     for (const [look, b] of Object.entries(builds)) {
         for (const e of b.entities.filter((x) => x.type === 'spotLight')) {
@@ -117,6 +125,10 @@ export const groundPolicyViolations = ({ rig, hall, library, builds, stage }) =>
             if (isMover(cls.code, library)) {
                 const low = lowestInZone(from, dir, half, cls.reach_m ?? 30, zone)
                 if (low !== null) out.push(`${id} / look "${look}": ${e.id} (${cls.code}) fires into the dance zone at ${low.toFixed(2)} m — under the ${eye} m audience eye height; a ground mover aims up and into the roof or the walls`)
+                for (const aisle of aisles) {
+                    const lowAisle = lowestInZone(from, dir, half, cls.reach_m ?? 30, aisle, 0.1, AISLE_LENS_CLEAR_M)
+                    if (lowAisle !== null) out.push(`${id} / look "${look}": ${e.id} (${cls.code}) fires into the aisle at ${lowAisle.toFixed(2)} m — under the ${eye} m audience eye height; people stand and sit there`)
+                }
             } else if (isLaser(cls.code)) {
                 const min = pol.lasers?.min_beam_height_m ?? 3
                 if (from[1] < min) out.push(`${id} / look "${look}": laser ${e.id} sits at ${from[1].toFixed(2)} m, under ${min} m`)

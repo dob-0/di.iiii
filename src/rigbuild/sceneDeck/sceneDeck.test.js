@@ -145,7 +145,7 @@ describe('the four controls: minimal ops on existing fields, nothing else moves'
     it('laser guard: no laser is lit in a scene without requiresLaserSignOff', () => {
         expect(codeOf(() => applyControl(MIN, red.id, 'intensity', { group: LASER, level: 0.5 }))).toBe('laser-sign-off')
         const laser = spareSceneId('gs-laser-roof')
-        expect(readScenes(MIN).scenes.find((s) => s.id === laser).levels[LASER]).toBeGreaterThan(0)
+        expect(readScenes(MIN).scenes.find((s) => s.id === laser).levels[LASER]).toBe(0) // dark in the data (cap review A2-1); a flagged scene may be raised
         expect(applyControl(MIN, laser, 'intensity', { group: LASER, level: 0.3 })).toHaveLength(1)
         expect(applyControl(MIN, laser, 'intensity', 0.5)).toHaveLength(1)
     })
