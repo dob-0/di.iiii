@@ -74,3 +74,22 @@ Nothing here was seen on a screen; no visual result is claimed. Line numbers are
 
 ### Not read
 `footprints.test.js` (not run); rig-lib `candelaAt`, `surfaceHit`, `craneSolids`; `spotAimDirection`. The −15/−37 % numbers are from the formula above, not a run.
+
+## B5 — Version row width, walk-mode versions control, view bar (ref `origin/preview/rigbuilder-13-2026-09-30`)
+
+Code reading only; no layout was rendered or measured, so every width below is arithmetic, not a screenshot.
+
+### Findings
+1. **low (plausible, not established) — in walk mode the show chip and the walk "Versions" button may share the top-left corner.** `PublicProjectViewer.jsx:600-608` renders `RoomLookFollower` with `top={rigChipTop}` whatever `navMode` is; `rigChromeTops` puts the chip at `topClear + 56px` (phone with right controls: `+ 112px`), `left: 1rem` (`RoomLookFollower.jsx:28-31`). In walk mode `rigVersionPlacement` puts the Versions button at `topClear + 4.5rem` (72 px), `left: 1rem`, 44 px tall (`rigVersionLayout.js:38-42`). On a desktop in walk mode with a hosted show playing, 56 px + the chip's height overlaps 72–116 px. Not traced: whether LiveProjectScene's fixed root covers the chip (z 20) while the button (fixed, z 30) stays above it. Fix: pass `showChip={... && navMode === 'orbit'}` (the comment at `:266` already says "the show chip is an orbit thing").
+2. **low — the walk "Versions" button clips a long title without an ellipsis.** `RigVersionSwitch.jsx:139`: `Versions · ${shortTitle(current.title)}` in `linkStyle` (`whiteSpace: nowrap`) inside a nav with `overflow: hidden` and `maxWidth: calc(100vw - 2rem)`. A 60-character title (the normaliser's cap) with no " — " is ~480 px at 0.9rem, so at 390 px it is cut mid-word at the right edge, with no fade cue in walk mode. Fix: `overflow: hidden; textOverflow: ellipsis; maxWidth: 100%` on that button, or show only "Versions".
+3. **low — the studio variant of the view bar breaks the rectangle and touch rules.** `SmartViewBar.jsx:60-76`: `studioButton` has `borderRadius: '6px'` and `padding: '5px 9px'` at 12 px (≈ 26 px tall). Commit 29ec1c77 ("controls are rectangles — … view bar …") fixed only the visitor variant. It matches `StudioViewport` TOOLBAR_BTN on purpose, so the fix belongs with that toolbar: 2 px corners, and 44 px at phone width.
+
+### Refuted
+- Row under Walk / Fly / Sound: the reserves line up with the placements in code — Walk / Fly at `right: 1rem`, Sound at `right: 9.5rem` beside it or at `1rem` alone (`PublicProjectViewer.jsx:566`); reserve 18.5 / 10.5 / 10 rem = 1 rem margin + control(s) + ≥ 1.5 rem gap, if the ~7.7 rem / ~6.5 rem widths hold (the comment calls them "about"; unmeasured here). At 390 px (`max-width: 560px` = compact) the row takes its own line.
+- 30 versions: the row scrolls horizontally with edge-fade cues from `measure` (scroll, resize, links change); the walk column scrolls (`maxHeight`, `overflowY: auto`, `minHeight: 0`).
+- aria: links carry `aria-current="page"`; the fold and the walk button carry `aria-expanded` + `aria-controls`; the nav has `aria-label`; all are native `<a>`/`<button>`, so keyboard order is DOM order.
+- Row controls: every row link/button is `minHeight: 44px`, `borderRadius: 2px`; the visitor view bar is 44 × 44 min, 2 px.
+- Titles reach the DOM only as React text (no innerHTML); hrefs come from `buildPublicProjectPath(spaceId, projectId)`.
+
+### Not read
+`LiveProjectScene` stacking in walk mode (finding 1); `publicViewerStyles.js` heights of Walk / Fly and Sound (padding 0.7 rem ×2 + line height — whether that is ≥ 44 px depends on the inherited line-height, not checked); `useViewportMode` beyond the query; tests of these components.
