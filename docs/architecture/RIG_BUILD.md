@@ -2213,6 +2213,20 @@ passes unknown keys) but DROPS `beam.aperture` and refuses 'AgX'**; and a client
 ignores the atmosphere — on such an install the data alone gives the old thin cones in a black room at
 exposure 3.5. Push the data to a tier only after the code.
 
+**The work light (2026-10-01).** On his screen the owner found the realism night too dark ("ok so its to
+dark", then "let me see you fixed in all scenes"). Cause, measured: ambient 0 and only 8 of Minimal's 90
+lamps light surfaces (82 are beam-only), so the hall got almost nothing; +1 stop of exposure (3.5 → 7) left
+82–95 % of the frame black. The fix is a dim neutral **work light** — lighting visualisers keep a venue light
+apart from the rig for exactly this — stated as a viewing aid, not the night a camera would see.
+`node scripts/rigbuild/work-light.mjs --space moxir --out <backup dir> [--level 1.4] [--dry-run]` writes only
+`worldState.ambientLight` = `#a39c92` × (level ÷ the room's `toneMappingExposure`) into every room with a
+`rig-show` (archived ones skipped), undo first to `<dir>/work-light-undo.json`; `--undo <file>` puts every
+room back. Level 1.4 = ambient 0.4 at exposure 3.5; the older-night rooms (exposure 1, blue `#8ea2c8` 0.5)
+get 1.4 neutral. Measured on Minimal, RTX 3080, desktop 1440×900, cues 1–4 mean luma 5.5 / 13.8 / 4.8 / 8 →
+10.5 / 18.9 / 9.6 / 13, black share 0.93–0.96 → 0.67–0.78, 60 fps unchanged (`~/Downloads/moxir-dark/`).
+Applied to the local install's 14 MOXIR rooms 2026-10-01 (restore point
+`~/di-backups/preview-rig-builder-2026-09-28/step-14b/`). The level is the owner's to set by eye.
+
 ### 20.5 Owed
 
 A real-eye look by the owner on his screen (and in his browser, iGPU). Multiple scattering (the broad glow
