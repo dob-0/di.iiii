@@ -1,0 +1,5 @@
+## 2026-09-30 — the owner's crew-UI sketch (scene deck A, cue timeline B, two-organizer sync) is in the repo
+
+- Owner, 2026-09-30: a simple UI colleagues can change and watch the light shows; A (scene deck) and B (cue timeline) on ONE cue/look data model, no names / roles / audit, and a second organizer whose copy of the show must sync (scene-level compare by content hash, offline, carried file first). The sketch was drawn as a static HTML page (headless-checked at 390 and 1440 px, never on the owner's screen) and lived only in ~/Downloads; it is committed here so cloud agents can read it.
+- `docs/architecture/moxir-crew-ui/sketch.html` (three views of the same mock show, rectangles only, 44 px targets, no WebGL) and `NOTES.md` (per-option data needs, conflict rule, sizes, and the sync design: content hash per scene + last-common hash, take theirs / keep mine / keep both, restore point before any take-theirs).
+- Docs only; no code. Layer 1 (model, history, hash, sync compare, bundle) is on `feat/scene-deck-model`; the screens (layer 2) are the next branch.

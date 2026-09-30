@@ -6,6 +6,7 @@ import { buildPlotPath } from './plotRouting.js'
 import { buildCardsPath } from './cardsRouting.js'
 import { buildPatchSheetPath } from './patchRouting.js'
 import { buildVisualisePath } from './visualiseRouting.js'
+import { buildScenesPath } from './scenesRouting.js'
 
 // THE RIG, STEP BY STEP — one list, read by every door to the rig tools: the steps row
 // on each rig page (RigSteps.jsx), the room's own row on /{space}, the Studio's Rig
@@ -37,6 +38,9 @@ export const RIG_ROOM = Object.freeze({ key: 'room', label: 'room', short: 'as a
 export const RIG_LIGHT = Object.freeze({ key: 'light', label: 'light desk', short: 'run the show', hint: 'run the show: patch, looks, faders — on this machine' })
 // And the two together: the desk beside the room it drives (RIG_BUILD.md §18).
 export const RIG_VISUALISE = Object.freeze({ key: 'visualise', label: 'visualiser', short: 'desk + room, live', hint: 'the desk and the room side by side — move a fader, watch the lamps' })
+// And the scenes of the show: A the deck, B the loop as a timeline, one scene list (RIG_BUILD.md §22).
+// Not a numbered step (the desk's from.js mirrors the six), so it sits at the end of the row.
+export const RIG_SCENES = Object.freeze({ key: 'scenes', label: 'scenes', short: 'deck + timeline', hint: 'the scenes of the show: tiles, four controls, the loop as a timeline, sync by file' })
 
 export const RIG_STEP_KEYS = RIG_STEPS.map((s) => s.key)
 export const isRigStep = (key) => RIG_STEP_KEYS.includes(key)
@@ -54,6 +58,7 @@ export const rigStepPath = (key, spaceId, projectId, { isLocalInstall = true, la
         case 'crew': return buildCrewPath(spaceId, projectId)
         case 'light': return rigLightPath({ spaceId, projectId, label, isLocalInstall })
         case 'visualise': return buildVisualisePath(spaceId, projectId)
+        case 'scenes': return buildScenesPath(spaceId, projectId)
         default: return null
     }
 }
@@ -78,7 +83,7 @@ export const rigRow = ({ spaceId, projectId, projectLabel = null, here = null, i
     const hrefOf = (key) => (key === 'light'
         ? rigLightPath({ spaceId, projectId, label: projectLabel, from: isRigStep(here) ? here : null, isLocalInstall })
         : rigStepPath(key, spaceId, projectId, { isLocalInstall }))
-    return [RIG_ROOM, ...RIG_STEPS, RIG_LIGHT, RIG_VISUALISE].map((s) => ({
+    return [RIG_ROOM, ...RIG_STEPS, RIG_LIGHT, RIG_VISUALISE, RIG_SCENES].map((s) => ({
         ...s,
         href: hrefOf(s.key),
         here: s.key === here,

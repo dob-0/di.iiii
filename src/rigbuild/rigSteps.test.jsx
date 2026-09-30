@@ -119,7 +119,8 @@ describe('RigSteps — the row', () => {
             '/moxir', '/moxir/equipment/moxir-hall', '/moxir/build/moxir-hall', '/moxir/plot/moxir-hall',
             '/moxir/cards/moxir-hall', '/moxir/patch/moxir-hall', '/moxir/crew/moxir-hall',
             '/light/?space=moxir&project=moxir-hall&from=plot',
-            '/moxir/visualise/moxir-hall' // the desk beside the room (RIG_BUILD.md §18)
+            '/moxir/visualise/moxir-hall', // the desk beside the room (RIG_BUILD.md §18)
+            '/moxir/scenes/moxir-hall' // the scene deck, A and B (RIG_BUILD.md §22)
         ])
         const here = items.find((a) => a.getAttribute('aria-current') === 'page')
         expect(here.textContent).toMatch(/3\s*plot/)
@@ -137,7 +138,7 @@ describe('RigSteps — the row', () => {
         const pick = screen.getByRole('button', { name: /4\/6\s*cards & looks/ })
         fireEvent.click(pick)
         const menu = screen.getByRole('menu')
-        expect(within(menu).getAllByRole('menuitem')).toHaveLength(9)
+        expect(within(menu).getAllByRole('menuitem')).toHaveLength(10) // room, six steps, light desk, visualiser, scenes
         fireEvent.keyDown(window, { key: 'Escape' })
         expect(screen.queryByRole('menu')).toBeNull()
     })
