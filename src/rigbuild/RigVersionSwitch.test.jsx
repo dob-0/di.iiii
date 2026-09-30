@@ -144,5 +144,16 @@ describe('RigVersionSwitch in the room', () => {
             expect(screen.getAllByRole('link').map((a) => a.textContent)).toEqual(['Live a', 'Live b', 'Live c', 'Live d'])
             expect(screen.getByRole('button', { name: 'Old versions (3)' })).toBeTruthy()
         })
+
+        it('a long title is cut with an ellipsis inside the button, not at the nav edge (review B5-2)', async () => {
+            const long = 'A very long version title with no dash that goes on and on past sixty characters'
+            listSpaceContents.mockResolvedValue(many.map((c) => (c.id === 'p-b' ? { ...c, rigVariant: mark('b', long) } : c)))
+            render(<RigVersionSwitch spaceId="moxir" projectId="p-b" entities={entitiesFor('b')} mode="walk" top="5rem" />)
+            const btn = await screen.findByRole('button', { name: /^Versions · / })
+            expect(btn.style.maxWidth).toBe('100%')
+            const text = btn.querySelector('span')
+            expect(text.style.textOverflow).toBe('ellipsis')
+            expect(text.style.overflow).toBe('hidden')
+        })
     })
 })

@@ -141,8 +141,8 @@ export default function RigVersionSwitch({ spaceId, projectId, entities, top = '
     if (walk) {
         return (
             <nav aria-label="rig versions" style={{ ...rowStyle, top, position: 'fixed', zIndex: 30, flexDirection: 'column', maxHeight: `calc(100vh - ${top} - 1rem)` }}>
-                <button type="button" aria-expanded={menuOpen} aria-controls="rig-walk-versions" onClick={() => setMenuOpen((v) => !v)} style={buttonStyle}>
-                    {`Versions · ${current ? shortTitle(current.title, current.id) : ''}`}
+                <button type="button" aria-expanded={menuOpen} aria-controls="rig-walk-versions" onClick={() => setMenuOpen((v) => !v)} style={{ ...buttonStyle, maxWidth: '100%', minWidth: 0 }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{`Versions · ${current ? shortTitle(current.title, current.id) : ''}`}</span>
                 </button>
                 {menuOpen ? <div id="rig-walk-versions" style={columnStyle}>{items}</div> : null}
             </nav>
