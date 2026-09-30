@@ -29,6 +29,11 @@ const resolveStudioPreviewCamera = (document, cameraView) => {
     return cameraView || document.worldState?.savedView || null
 }
 
+// The smart view in the editor (docs/architecture/SMART_VIEW.md): the fade, the cutaway,
+// the presets and x-ray — but no floor or distance limits: an author may need to look up
+// from under a thing, and the pane's own Bottom view stands under the floor.
+const STUDIO_SMART_VIEW = { bar: 'studio', constraints: false, deepLink: false }
+
 export default function StudioPresentationSurface({
     document,
     selectedEntityId,
@@ -169,6 +174,7 @@ export default function StudioPresentationSurface({
             onCloseHelp={onCloseHelp}
             overlays={overlays}
             rigMirror={rigMirror}
+            smartView={STUDIO_SMART_VIEW}
         />
     )
 }

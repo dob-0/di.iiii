@@ -32,9 +32,16 @@ import {
 import StudioHelpDialog from './StudioHelpDialog.jsx'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
+import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
+import useSmartViewState from '../../project/viewport/smartView/useSmartViewState.js'
+import { classifyArchitecture } from '../../project/viewport/smartView/smartViewGeometry.js'
+import { useViewportMode } from '../../hooks/useViewportMode.js'
 
 // The lamps' bodies (src/rigbuild/RigBodies.jsx): loaded only by a room that has a rig.
 const RigBodies = lazy(() => import('../../rigbuild/RigBodies.jsx'))
+// The smart view (docs/architecture/SMART_VIEW.md): loaded only by a room with a building
+// in it — a place, or a model big enough to be one — so every other room pays nothing.
+const SmartView = lazy(() => import('../../project/viewport/smartView/SmartView.jsx'))
 
 const AR_SCENE_POSITION = [0, 0, -1.2]
 const DEFAULT_SCENE_POSITION = [0, 0, 0]
@@ -307,6 +314,8 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
                 position={t.position || [0, 0, 0]}
                 rotation={t.rotation || [0, 0, 0]}
                 scale={t.scale || [1, 1, 1]}
+                // How the smart view finds an entity's object (SmartView.jsx).
+                userData={{ svEntityId: entity.id }}
                 onClick={(e) => {
                     e.stopPropagation()
                     const additive = e.nativeEvent?.ctrlKey || e.nativeEvent?.metaKey || e.nativeEvent?.shiftKey
@@ -354,6 +363,7 @@ function SceneEntityNode({ entity, childMap, assetMap, screens = null, selectedI
                 position={t.position || [0, 0, 0]}
                 rotation={t.rotation || [0, 0, 0]}
                 scale={t.scale || [1, 1, 1]}
+                userData={{ svEntityId: entity.id }}
                 onClick={(e) => {
                     if (e.delta > 2) return
                     e.stopPropagation()
@@ -505,10 +515,13 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
 const CC_ACTION = { NONE: 0, ROTATE: 1, TRUCK: 2, SCREEN_PAN: 4, OFFSET: 8, DOLLY: 16, ZOOM: 32,
     TOUCH_DOLLY_TRUCK: 4096 }
 
-function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, enabled = true }) {
+function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, enabled = true, fovRef = null }) {
     const isXrPresenting = useXR((state) => state.session != null)
 
-    const targetFovRef = useRef(cameraView?.fov || 50)
+    // The lens the camera eases toward. Shared with the smart view when there is one
+    // (a preset changes the lens as well as the place), else this component's own.
+    const ownFovRef = useRef(cameraView?.fov || 50)
+    const targetFovRef = fovRef || ownFovRef
 
     // Wheel always dollies (zooms) — never rotates. A plain mouse wheel and a
     // trackpad two-finger swipe both arrive as wheel events with ctrlKey:false,
@@ -531,7 +544,7 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
     // Track target FOV when the view changes
     useEffect(() => {
         if (cameraView?.fov != null) targetFovRef.current = cameraView.fov
-    }, [cameraView?.fov])
+    }, [cameraView?.fov, targetFovRef])
 
     // In ortho views (small FOV), left drag pans instead of rotating so you can
     // navigate the locked view and arrange objects — same as Blender's ortho behavior
@@ -620,7 +633,8 @@ function StudioSceneContent({
     rigMirror = false,
     screens = null,
     followLinks = false,
-    rigLook = undefined
+    rigLook = undefined,
+    smartView = null
 }) {
     const isArMode = useXR((state) => state.mode === 'immersive-ar')
     // Keyed on assets + project id so the map only rebuilds when assets change,
@@ -785,6 +799,21 @@ function StudioSceneContent({
                     />
                 </Suspense>
             </group>
+            {smartView && !isArMode ? (
+                <Suspense fallback={null}>
+                    <SmartView
+                        document={document}
+                        controlsRef={controlsRef}
+                        fovRef={smartView.fovRef}
+                        command={smartView.command}
+                        xray={smartView.xray}
+                        constraints={smartView.constraints}
+                        fogBase={fogAuthored ? { near: fogNear, far: fogFar } : null}
+                        onPresets={smartView.onPresets}
+                        onUserMove={smartView.onUserMove}
+                    />
+                </Suspense>
+            ) : null}
             {transformOp && selectedEntities.length > 0 && (
                 <ModalTransform
                     op={transformOp}
@@ -967,8 +996,42 @@ export default function StudioViewport({
     // A designed look to pose the room by ('' none), overriding the desk's (view C's GO
     // with no desk here). Undefined: follow the desk.
     rigLook = undefined,
+    // The smart view (docs/architecture/SMART_VIEW.md): occlusion fade, cutaway from
+    // outside, the six view presets, x-ray. Off unless the surface asks:
+    //   { bar: 'visitor' | 'studio' | false, constraints: bool, deepLink: bool }
+    // It then runs only where the room has a building in it.
+    smartView = null,
 }) {
     const viewportRef = useRef(null)
+    const fovRef = useRef(cameraView?.fov || document.worldState?.savedView?.fov || 50)
+    const [pointerOver, setPointerOver] = useState(false)
+    const { isPhoneCompact } = useViewportMode()
+    const entitiesForView = document.entities
+    const hasBuilding = useMemo(() => (
+        classifyArchitecture(entitiesForView || []).ids.size > 0
+        || (entitiesForView || []).some((e) => e?.type === 'model')
+    ), [entitiesForView])
+    const smartOn = Boolean(smartView) && !lowPower && hasBuilding
+    const studioBar = smartView?.bar === 'studio'
+    const cues = document.mappingState?.cues
+    const reservedKeys = useMemo(() => (
+        studioBar ? new Set((cues || []).map((c) => c?.key).filter(Boolean).map(String)) : null
+    ), [studioBar, cues])
+    const sv = useSmartViewState({
+        enabled: smartOn,
+        deepLink: Boolean(smartView?.deepLink),
+        keysLive: studioBar ? pointerOver : true,
+        reservedKeys
+    })
+    const { setPresets, release: releaseView } = sv
+    const smartViewProps = useMemo(() => (smartOn ? {
+        fovRef,
+        command: sv.command,
+        xray: sv.xray,
+        constraints: Boolean(smartView?.constraints),
+        onPresets: setPresets,
+        onUserMove: releaseView
+    } : null), [smartOn, sv.command, sv.xray, smartView?.constraints, setPresets, releaseView])
     const [transformStatus, setTransformStatus] = useState(null)
     // What each screen in the room draws, by mapping surface id — filled by
     // LiveScreens (the DOM sources beside the canvas), read by EntityContent.
@@ -1002,7 +1065,11 @@ export default function StudioViewport({
             ref={viewportRef}
             className="studio-viewport-shell"
             onPointerMove={handlePointerMove}
-            onPointerLeave={onCursorLeave}
+            onPointerEnter={() => setPointerOver(true)}
+            onPointerLeave={(event) => {
+                setPointerOver(false)
+                onCursorLeave?.(event)
+            }}
         >
             <Canvas
                 key={canvasKey}
@@ -1032,6 +1099,7 @@ export default function StudioViewport({
                         onCameraChange={onCameraChange}
                         onRotateStart={onRotateStart}
                         enabled={enableNavigation}
+                        fovRef={smartOn ? fovRef : null}
                     />
                     <StudioSceneContent
                         document={document}
@@ -1054,6 +1122,7 @@ export default function StudioViewport({
                         rigLook={rigLook}
                         screens={screens}
                         followLinks={followLinks}
+                        smartView={smartViewProps}
                     />
                 </XR>
             </Canvas>
@@ -1077,6 +1146,18 @@ export default function StudioViewport({
             {transformStatus && (
                 <div className="studio-transform-hud">{transformStatus.text}</div>
             )}
+
+            {smartOn && smartView?.bar ? (
+                <SmartViewBar
+                    presets={sv.presets}
+                    activeId={sv.activeId}
+                    xray={sv.xray}
+                    onPreset={sv.choose}
+                    onXray={sv.setXray}
+                    variant={studioBar ? 'studio' : 'visitor'}
+                    compact={isPhoneCompact}
+                />
+            ) : null}
 
             {showChrome && <FullscreenButton />}
             {onShowHelp && (
