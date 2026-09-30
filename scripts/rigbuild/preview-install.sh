@@ -53,6 +53,10 @@ if [ "$DRY" = 1 ]; then
     exit 0
 fi
 
+# Built in $DIR.partial and moved into place at the end, so a failure half-way leaves no step directory
+# that blocks the re-run (review B6-5). Nothing has been installed until `di update` at the very end.
+FINAL=$DIR; DIR="$FINAL.partial"
+[ ! -e "$DIR" ] || { echo "$DIR is left over from a failed run — nothing was installed; remove it and run again" >&2; exit 1; }
 mkdir -p "$DIR/data" "$DIR/runtime" "$DIR/installed"
 cp "$PREV_ART" "$DIR/runtime/"
 cp "$HOME/.di/di.env" "$DIR/di.env"; chmod 600 "$DIR/di.env"
@@ -71,6 +75,8 @@ cat > "$DIR/rollback.sh" <<'EOF'
 # rollback.sh — undo __VERSION__ and go back to __PREV__ in one command.
 #   sh .../step-__STEP__/rollback.sh              # program + di.env back
 #   sh .../step-__STEP__/rollback.sh --with-data  # ALSO di.db, moxir, the desk (taken just before the install)
+#                                                 (taken while di was running: di.db, the space files and moxir.diiii are
+#                                                  three copies a moment apart, not one instant)
 #   sh .../step-__STEP__/rollback.sh --dry-run    # check, change nothing
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -86,21 +92,24 @@ if [ "$DRY" = 1 ]; then
     [ "$DATA" = 1 ] && echo "[dry-run] would stop di, restore data/di.db, data/lighting.tar.gz, data/spaces-moxir.tar, start di"
     exit 0
 fi
-cp "$HERE/di.env" "$HOME/.di/di.env"
-di update --from "$ART"
+# With data: stop di FIRST, restore the data, then bring the old program in — the old program must never
+# run for a moment on data the newer one wrote (review B6-1). Without data: program and env only.
 if [ "$DATA" = 1 ]; then
     di down
     cp "$HERE/data/di.db" "$HOME/.di/data/di.db"; rm -f "$HOME/.di/data/di.db-wal" "$HOME/.di/data/di.db-shm"
     rm -rf "$HOME/.di/data/lighting"; tar -C "$HOME/.di/data" -xzf "$HERE/data/lighting.tar.gz"
     rm -rf "$HOME/.di/data/spaces/moxir"; tar -C "$HOME/.di/data" -xf "$HERE/data/spaces-moxir.tar"
-    di up
 fi
+cp "$HERE/di.env" "$HOME/.di/di.env"
+di update --from "$ART" || { echo "di update FAILED — di.env is already restored, the program is NOT (and with --with-data the data is): run di update --from $ART by hand, then di up" >&2; exit 1; }
+[ "$DATA" = 1 ] && di up
 echo "back on __PREV__"
 EOF
 sed -i "s/__VERSION__/$VERSION/g; s/__PREV__/$PREV/g; s/__STEP__/$STEP/g" "$DIR/rollback.sh"
 
 ( cd "$DIR" && find . -type f ! -name SHA256SUMS ! -name rollback.sh ! -name install.log | sort | xargs sha256sum ) > "$DIR/SHA256SUMS"
 ( cd "$DIR" && sha256sum rollback.sh >> SHA256SUMS )
+mv "$DIR" "$FINAL"; DIR=$FINAL
 echo "backup written: $DIR ($(du -sh "$DIR" | cut -f1)); rollback: sh $DIR/rollback.sh [--with-data] [--dry-run]"
 
 # the rollback checks its own inputs before anything changes
