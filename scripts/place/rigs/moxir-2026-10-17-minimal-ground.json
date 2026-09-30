@@ -940,7 +940,7 @@
             "aims": {
                 "beam380-columns-6": {
                     "rule": "vertical",
-                    "in_deg": -22
+                    "in_deg": 22
                 },
                 "par-columns-8": {
                     "rule": "up-the-column"
@@ -1184,7 +1184,7 @@
         },
         "gs-slow-fan": {
             "title": "Slow fan",
-            "intent": "The column beams and the wall beams lean slowly out toward the side walls, the booth beams open into a wide fan up into the roof. The move is the slow crossfade in from the reveal (6 s); nothing flashes.",
+            "intent": "The column beams lean slowly in across the nave, the wall beams lean slowly out toward the side walls, the booth beams open into a wide fan up into the roof. The move is the slow crossfade in from the reveal (6 s); nothing flashes.",
             "aims": {
                 "beam380-backstage": {
                     "rule": "fan",
@@ -1193,7 +1193,7 @@
                 },
                 "beam380-columns-6": {
                     "rule": "vertical",
-                    "in_deg": -24
+                    "in_deg": 24
                 },
                 "bsw250-ground": {
                     "rule": "vertical",

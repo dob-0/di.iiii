@@ -64,10 +64,10 @@ export const SCENES = {
     },
     'gs-slow-fan': {
         title: 'Slow fan',
-        sees: 'The column beams and the wall beams lean slowly out toward the side walls, the booth beams open into a wide fan up into the roof. The move is the slow crossfade in from the reveal (6 s); nothing flashes.',
+        sees: 'The column beams lean slowly in across the nave, the wall beams lean slowly out toward the side walls, the booth beams open into a wide fan up into the roof. The move is the slow crossfade in from the reveal (6 s); nothing flashes.',
         parts: {
             'beam380-backstage': on(0.8, WHITE, { rule: 'fan', spread_deg: 34, lean_deg: 3 }),
-            'beam380-columns-6': on(0.7, WHITE, up({ in_deg: -24 })),
+            'beam380-columns-6': on(0.7, WHITE, up({ in_deg: 24 })),
             'bsw250-ground': on(0.4, WHITE, up({ in_deg: -14 })),
             'beeeye-ground': on(0.5, WHITE, up({ in_deg: 12 }))
         }

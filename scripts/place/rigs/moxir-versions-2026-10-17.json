@@ -3144,10 +3144,22 @@
         "hazer-back"
       ],
       "realLights": {
-        "beam380-backstage": { "count": 3, "pick": "even" },
-        "beam380-columns-6": { "count": 2, "pick": "even" },
-        "bsw250-ground": { "count": 2, "pick": "even" },
-        "par-columns-8": { "count": 1, "pick": "nearest-stage" }
+        "beam380-backstage": {
+          "count": 3,
+          "pick": "even"
+        },
+        "beam380-columns-6": {
+          "count": 2,
+          "pick": "even"
+        },
+        "bsw250-ground": {
+          "count": 2,
+          "pick": "even"
+        },
+        "par-columns-8": {
+          "count": 1,
+          "pick": "nearest-stage"
+        }
       },
       "looks": {
         "white-cathedral": {
@@ -3263,6 +3275,10 @@
         },
         "slow-sweep": {
           "aims": {
+            "beam380-columns-6": {
+              "rule": "vertical",
+              "in_deg": 22
+            },
             "bsw250-ground": {
               "rule": "vertical",
               "in_deg": -10
@@ -3386,7 +3402,7 @@
         },
         "gs-slow-fan": {
           "title": "Slow fan",
-          "intent": "The column beams and the wall beams lean slowly out toward the side walls, the booth beams open into a wide fan up into the roof. The move is the slow crossfade in from the reveal (6 s); nothing flashes.",
+          "intent": "The column beams lean slowly in across the nave, the wall beams lean slowly out toward the side walls, the booth beams open into a wide fan up into the roof. The move is the slow crossfade in from the reveal (6 s); nothing flashes.",
           "aims": {
             "beam380-backstage": {
               "rule": "fan",
@@ -3395,7 +3411,7 @@
             },
             "beam380-columns-6": {
               "rule": "vertical",
-              "in_deg": -24
+              "in_deg": 24
             },
             "bsw250-ground": {
               "rule": "vertical",
@@ -3668,10 +3684,22 @@
         "smoke-ground"
       ],
       "realLights": {
-        "beam380-backstage": { "count": 3, "pick": "even" },
-        "beam380-columns-6": { "count": 2, "pick": "even" },
-        "bsw250-ground": { "count": 2, "pick": "even" },
-        "par-columns-8": { "count": 1, "pick": "nearest-stage" }
+        "beam380-backstage": {
+          "count": 3,
+          "pick": "even"
+        },
+        "beam380-columns-6": {
+          "count": 2,
+          "pick": "even"
+        },
+        "bsw250-ground": {
+          "count": 2,
+          "pick": "even"
+        },
+        "par-columns-8": {
+          "count": 1,
+          "pick": "nearest-stage"
+        }
       },
       "looks": {
         "white-cathedral": {
@@ -3787,6 +3815,10 @@
         },
         "slow-sweep": {
           "aims": {
+            "beam380-columns-6": {
+              "rule": "vertical",
+              "in_deg": 22
+            },
             "bsw250-ground": {
               "rule": "vertical",
               "in_deg": -10
@@ -3910,7 +3942,7 @@
         },
         "gs-slow-fan": {
           "title": "Slow fan",
-          "intent": "The column beams and the wall beams lean slowly out toward the side walls, the booth beams open into a wide fan up into the roof. The move is the slow crossfade in from the reveal (6 s); nothing flashes.",
+          "intent": "The column beams lean slowly in across the nave, the wall beams lean slowly out toward the side walls, the booth beams open into a wide fan up into the roof. The move is the slow crossfade in from the reveal (6 s); nothing flashes.",
           "aims": {
             "beam380-backstage": {
               "rule": "fan",
@@ -3919,7 +3951,7 @@
             },
             "beam380-columns-6": {
               "rule": "vertical",
-              "in_deg": -24
+              "in_deg": 24
             },
             "bsw250-ground": {
               "rule": "vertical",
