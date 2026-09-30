@@ -37,6 +37,19 @@ export const CMD = (() => {
     return /^[A-Za-z0-9_.-]+$/.test(name) ? name : 'di'
 })()
 
+/**
+ * `di status | head -1` closes our stdout early; Node then raises EPIPE as an
+ * unhandled 'error' event and prints a stack trace. Closing a pipe is how the
+ * reader says "enough", so it ends quietly with success (the convention of
+ * every Unix tool that ignores SIGPIPE). Anything else is still fatal.
+ */
+for (const stream of [process.stdout, process.stderr]) {
+    stream.on('error', (error) => {
+        if (error && error.code === 'EPIPE') process.exit(0)
+        throw error
+    })
+}
+
 export const say = (message = '') => { process.stdout.write(`${message}\n`) }
 export const warn = (message = '') => { process.stderr.write(`${style.yellow(message)}\n`) }
 export const fail = (message = '') => { process.stderr.write(`${style.red(message)}\n`) }
