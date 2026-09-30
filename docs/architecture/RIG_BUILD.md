@@ -2167,3 +2167,45 @@ the atmospheric PSF) — not drawn. Beams are not cut by what stands in them (no
 through the DJ lights the air behind him). Auto-exposure (an eye adapts to the red room; Reinhard et al.
 2002 key value) — the exposure is one fixed camera. A strobe-rate capture. The haze's σs is a choice checked
 against photographs, not a measurement of the hazers the hall will have.
+
+## 21. Scene deck — layer 1 (model, history, sync compare)
+
+The data layer under the owner's two scene screens (2026-09-30: A = a deck of scenes, B = a cue timeline over
+the same data; no names, roles or audit; two organizers keep their own copy of the show, "here" and "there").
+Code: `src/rigbuild/sceneDeck/` — pure functions, no React, no network, no clock. Tests:
+`src/rigbuild/sceneDeck/sceneDeck.test.js`, built from the real `moxir-2026-10-17-minimal-ground` and
+`-full-ground` rig and show files, written into a document by the same ops `looks.mjs` and `show-cues.mjs` send.
+Nothing here has been seen on a screen; there is no UI yet.
+
+- **A scene** (`model.js` `readScenes`) = one cue of `mappingState.cues` (§16) joined with its look in
+  `rigLooks` (§11.4) by the cue's desk look id: `{id, name, lookId, fade, hold, levels, colours, flags}`, in cue
+  order, plus the loop length exactly as `showClock.js` lays it out (79 s minimal-ground, 81 s full-ground). A
+  look no cue plays is a scene outside the loop, id `look:<look id>` (e.g. the laser scene). `flags.strobe` = the
+  blinder group (type `up-cob200`) is lit; `flags.requiresLaserSignOff` = the look's intent carries the marker
+  `ground-scenes.mjs` writes (a look has no such field).
+- **The four controls** (`applyControl(document, sceneId, control, value)`) map onto existing fields only:
+  intensity = `levels[group]` (a factor on the lit groups, or `{group, level}`; clamped 0..1); colour =
+  `colours[group]` hex (colour temperature is not a field — a hex stands in); speed = the cue's `fade` (kept
+  inside its hold); strobe = the blinder group's level on/off (a look has no strobe rate). They return the ops
+  the scripts send (`updateComponent` rigLooks, `setMappingCue`) and throw a typed `SceneDeckError`: a laser
+  lit without the sign-off (`laser-sign-off`), any aim changed (`mover-policy` — controls never aim; the
+  ground-movers policy is proven on the aims), a loop moved outside 60-90 s (`loop-length`).
+- **History** (`history.js`): a pure bounded undo/redo reducer over the schema's own `invertProjectOps`, and
+  "restore last good" = a snapshot of the cues and looks restored as one batch (itself undoable).
+- **Hash** (`hash.js`): SHA-256 (FIPS 180-4, pure, checked against `node:crypto`) over a canonical JSON of the
+  scene's own content — sorted keys, numbers to 6 decimals, no ids of other scenes, no timestamps, no
+  documentVersion.
+- **Sync compare** (`sync.js`): per scene, from the hash here, the hash there and the last-common hash:
+  same / changedHere / changedThere / changedBoth / onlyHere / onlyThere. A scene gone on one side and changed
+  on the other is changedBoth (asked, never dropped). `planSync(status, choice)`: takeTheirs (a restore point
+  first), keepMine, keepBoth (theirs kept as a labelled copy outside the loop, so the loop length is unchanged).
+  Timestamps and document versions are never read: they are per-install counters.
+- **Carried file** (`bundle.js`): `{format: 'di.scenes/1', project, exportedAt, scenes: [{id, name, hash,
+  scene}], lastSync}`; `parseBundle` refuses non-JSON, oversize (512 KiB), the wrong format, unknown fields,
+  duplicate ids, non-finite numbers and a scene that does not match its hash.
+
+**Limits, stated.** The schema has no per-look op, so a look change rewrites the `rigLooks.looks` list whole
+(one op); two edits to different looks on the SAME install at the same moment are last-writer-wins on that list
+(owed: a per-look op, schema-protocol). The loop ORDER is not part of any scene's hash, so a reorder on one side
+is not detected yet. The last-common hashes have no home in the sync ledger yet, and there is no transport
+(file or network) wired. The strobe rate cap (3 flashes/s, WCAG 2.3.1) is enforced elsewhere and not re-checked here.
