@@ -25,3 +25,5 @@
   on desktop or phone. Owner's call (it adds a control to the room).
 - Landing REST_POSE is not aspect-fitted on a phone (outer doors cropped for the first frames of the
   flight); the page covers it. Owed if the flight is ever shown bare.
+
+- Follow-up (same day): the owed phone arrival is done. `fitCameraToDoors` (PublicProjectSceneSurface.jsx) reuses `fitArrivalToDoors`; guarded by `isPlatformOwnSpace(spaceId)` + fixed-camera + aspect < 1. Looked at 390x844 @3: all four doors whole, the right ring close to the edge.
