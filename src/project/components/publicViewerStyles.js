@@ -5,7 +5,7 @@ export const overlayButtonStyle = {
     border: '1px solid rgba(255,255,255,0.14)',
     background: 'rgba(10, 16, 24, 0.82)',
     color: '#f5f7fa',
-    borderRadius: '999px',
+    borderRadius: '2px',
     padding: '0.7rem 1rem',
     fontSize: '0.95rem',
     cursor: 'pointer',
