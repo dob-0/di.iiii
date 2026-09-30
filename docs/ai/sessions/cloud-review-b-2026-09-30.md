@@ -56,3 +56,21 @@ Nothing here was seen on a screen; no visual result is claimed. Line numbers are
 
 ### Not read
 `serverXR/src/lighting/tests/test-rigpatch.js`, `sheet.test.js`, `rigProgress.test.js` (not run); `rigPatch` allocation above line 297 (universe/512 wrap, multi-mode footprints) beyond grep; whether `isLoopbackRequest` sees the real client behind the reverse proxy at local.thedi.studio (pre-existing, not today's change).
+
+## B4 — Light footprint calculator (ref `origin/feat/light-footprints`)
+
+### Findings
+1. **medium — near-field rows print a far-field spot and lux: the lens has no size.** `scripts/rigbuild/footprints.mjs:61` `spotDiameter = 2 * throwM * tan(beam/2)` and `:77` `E = I cos / d²` treat the lamp as a point source. For the 1.8° B380F that holds far away, but not at 1.5 m: the beam leaves a front lens that is centimetres to tens of centimetres wide, and I = lux × at_m² (measured at 20 m) is only valid beyond the photometric distance. Proven by running `analyse` on full-ground: 12 lit rows with throw < 3 m and beam < 5°, e.g. `beam380-columns-6-01` throw 1.54 m → spot 0.048 m at 7,926,443 lux. The session note repeats "0.04 m spot at 7.9 million lux" as a finding. The spot can't be smaller than the lens, and the lux is not what the formula gives there; the row is flagged only `tight` and `borrowed`, nothing says the formula does not apply. `types/moxir.json` carries no lens/aperture field for any lamp (grep). Fix: add a `near-field` flag (and print no lux) when throw < k·at_m, or a `lens_m` per type and `D = lens + 2 d tan(beam/2)`; say which in the Read-this-first list.
+2. **medium — `--words` prints borrowed lux figures with no word that they are borrowed.** `wordsFor` (`:399`) lists only `['wide', 'tight', 'dim', 'grazing', 'no-figure']` as flags, and with `--words` `main` prints only those paragraphs (`:470-473`), without the Markdown's "Read this first" block. The note's "The scenes in words" section is exactly that output ("a 0.4 m spot at about 302,000 lux"), and every lit row in both versions is `borrowed` (273/273, 290/290 per the note). House rule: a borrowed number must never read as measured. Fix: add `borrowed` to the words' flag list, or end each words paragraph with "(figures borrowed: <basis sources>)" whenever any lit row has it.
+3. **low — the ellipse's long axis is far off near grazing, and nothing flags it as approximate.** `ellipseMajor` (`:66`) = `D / cos(incidence)`. The 2-D cone section's long axis is `d·cos θ·(tan(θ+α) − tan(θ−α))`. For d = 10 m, beam 25° (α 12.5°): at θ = 60° the formula gives 8.9 m vs 10.4 m (−15 %); at θ = 70° 13.0 m vs 20.6 m (−37 %), still printed as a number until θ + α hits 90°. The approximation is named in the method, but the rows don't say where it no longer holds. Fix: use the exact expression (it is one line), or flag `approx` when θ + α > 60°.
+
+### Refuted
+- Units and conventions: `tan` takes `beamDeg * DEG` (radians); I = lux·at_m² (candela from illuminance at a distance, right); `cosIncidence` uses |dir·normal|; the beam is stated as FWHM with the caveat that the sources don't say.
+- Silent zero/NaN on 'open air': open air returns throw/spot/lux null and prints "open air", not 0; a missing figure prints "no figure".
+- Level fallback to 1: every class of both ground versions has room photometry in every look (checked by script), so `level` is never the `intensity > 0 ? 1` fallback.
+- Borrowed flagging: every row with basis ≠ `EXACT` (a missing one included, `'NONE'`) gets `borrowed`; out rows carry only `out` and don't reach the Markdown tables.
+- CSV vs Markdown: same fields; the CSV keeps out rows and `I_room_cd`, the tables show lit rows only, as the header says.
+- Columns: `surfaceHit` ignores them, footprints adds them, and the note says so (the column B380F "the room draws these beams through the column").
+
+### Not read
+`footprints.test.js` (not run); rig-lib `candelaAt`, `surfaceHit`, `craneSolids`; `spotAimDirection`. The −15/−37 % numbers are from the formula above, not a run.
