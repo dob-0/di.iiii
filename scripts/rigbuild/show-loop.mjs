@@ -12,7 +12,9 @@
  *      — one per designed look, each naming its desk look `rig-<look>`, with its fade and
  *      hold — and `mappingState.loop` on. As ops (undo-able, in the op log).
  *   2. the desk: this project's designed looks put on the desk (POST /light/api/looks/add,
- *      over the desk's patched fixtures for this project — values owed, RIG_BUILD.md §9);
+ *      over the desk's patched fixtures for this project) — WITH their DMX values for every
+ *      fixture whose channel list is known, real or ASSUMED (deskLookValues.js, RIG_BUILD.md
+ *      §19.4); a fixture whose list is owed gets none;
  *   3. the desk's cue runner: the list loaded (POST /light/api/cues/load) and cue 1 fired
  *      (POST /light/api/cues/go) — the desk's own clock then runs the show and loops it, with
  *      no page open.
@@ -27,7 +29,10 @@ import path from 'node:path'
 
 import { parseArgs, die, say, readJson } from '../place/common.mjs'
 import { makeClient } from '../place/api.mjs'
-import { deskLookId, deskLooks, rigLooksOf } from '../../src/rigbuild/looks.js'
+import { deskLookId, rigLooksOf } from '../../src/rigbuild/looks.js'
+import { deskLooksWithValues } from '../../src/rigbuild/deskLookValues.js'
+import { libraryWithShow } from '../../src/rigbuild/rental.js'
+import { loadLibrary } from './library.mjs'
 
 const args = parseArgs()
 
@@ -113,11 +118,14 @@ const main = async () => {
     const rig = await desk.get(`/api/rig?project=${encodeURIComponent(project)}`)
     if (!rig.ok) die(`the desk's rig for ${project}: ${rig.status}`)
     const fixtures = rig.body.fixtures || []
-    for (const look of deskLooks(looks, fixtures)) {
+    const library = libraryWithShow(loadLibrary(), document.entities)
+    const deskSet = deskLooksWithValues(looks, fixtures, { entities: document.entities, library })
+    for (const look of deskSet) {
         const put = await desk.post('/api/looks/add', { look })
         if (!put.ok) die(`the desk did not take ${look.id}: ${put.status} ${put.text.slice(0, 200)}`)
     }
-    say(`desk: ${looks.looks.length} looks over ${fixtures.length} patched fixtures (DMX values owed — no channel lists)`)
+    const valued = new Set(deskSet.flatMap((l) => Object.keys(l.steps[0]?.values || {})))
+    say(`desk: ${looks.looks.length} looks over ${fixtures.length} patched fixtures — DMX values for ${valued.size} (channel lists, ASSUMED where the type says so), none for ${fixtures.length - valued.size} (nothing a look sets on them — hazers — or a list owed)`)
 
     const loaded = await desk.post('/api/cues/load', { project, list: runnerList(cues), loop: show.loop !== false })
     if (!loaded.ok) die(`loading the runner: ${loaded.status} ${loaded.text.slice(0, 200)}`)

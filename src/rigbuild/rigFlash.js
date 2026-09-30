@@ -20,9 +20,13 @@ export const FLASH = {
 export const STROBE_HZ = 10
 export const FLASH_TAU_S = 0.022
 
-/** The strobe's brightness at time t (seconds), 0..1. */
-export const strobeEnvelope = (t) => {
-    const period = 1 / STROBE_HZ
+/**
+ * The strobe's brightness at time t (seconds), 0..1, at `hz` flashes a second (the desk's
+ * flash rate when a desk drives the lamp, RIG_BUILD.md §19.3; else the look's 10 Hz).
+ */
+export const strobeEnvelope = (t, hz = STROBE_HZ) => {
+    const rate = Number(hz) > 0 ? Math.min(60, Number(hz)) : STROBE_HZ
+    const period = 1 / rate
     const phase = ((Number(t) || 0) % period + period) % period
     return Math.exp(-phase / FLASH_TAU_S)
 }
@@ -34,6 +38,9 @@ export const flashLamps = (entities = []) => entities
         id: e.id,
         kind: e.components.rigFlash.kind,
         level: Math.max(0, Math.min(1, Number(e.components.rigFlash.level) || 0)),
+        // Set only when a desk drives the lamp (dmxPose.js): its own rate, or steady.
+        hz: Number(e.components.rigFlash.hz) > 0 ? Number(e.components.rigFlash.hz) : 0,
+        steady: e.components.rigFlash.steady === true,
         lens: (e.components.transform?.position || [0, 0, 0]).map(Number),
         dir: spotAimDirection(e.components.transform?.rotation)
     }))

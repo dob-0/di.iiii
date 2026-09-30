@@ -4648,6 +4648,16 @@ $('#miSceneFilterClear').addEventListener('click', () => { $('#miSceneFilter').v
     $(id).href = href;
     $(id).title = 'Open ' + from.label + ' in ' + tool;
   }
+  // The visualiser: this desk beside the room. Inside the visualiser already (framed),
+  // the link would open a visualiser within a visualiser — it is hidden there.
+  let framed = false;
+  try { framed = window.self !== window.top; } catch (e) { framed = true; }
+  const vis = $('#fromVisualise');
+  if (vis) {
+    vis.href = links.visualise;
+    vis.title = 'The desk beside ' + from.label + ' — move a fader, watch the lamps';
+    vis.hidden = framed;
+  }
   back.hidden = false;
   $('#fromTools').hidden = false;
 })();

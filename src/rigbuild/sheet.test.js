@@ -10,7 +10,7 @@ describe('the sheet model', () => {
         lamp('a', { index: 1, type: 'up-b380f', mode: '16ch', universe: 1, address: 1, position: 'truss', unit: 1, circuit: 'C1' }),
         lamp('b', { index: 2, type: 'up-b380f', mode: '16ch', universe: 1, address: 10, position: 'truss', unit: 2, circuit: 'C1' }),
         lamp('c', { index: 3, type: 'up-250bsw', universe: 2, address: 500, position: 'floor', unit: 1 }),
-        lamp('d', { type: 'up-pl5403', position: 'floor', unit: 2, circuit: 'C2' }),
+        lamp('d', { type: 'up-q108s', position: 'floor', unit: 2, circuit: 'C2' }),
         lamp('e', { index: 3, type: 'up-yh600f', mode: '2ch', position: 'floor', unit: 3, circuit: 'C2' }),
         { id: 'box', type: 'box', components: {} }
     ]
@@ -27,10 +27,18 @@ describe('the sheet model', () => {
         expect(row('a').flags).toEqual(['channels-owed', 'overlap'])
         expect(row('a').notes[0]).toMatch(/overlaps #2 UP-B380F at U1\.010/)
         expect(row('c').flags).toEqual(expect.arrayContaining(['off-the-end', 'no-circuit']))
-        expect(row('d').flags).toEqual(['mode-unknown', 'power-assumed'])
+        expect(row('d').flags).toEqual(['mode-unknown'])
         expect(row('d').universe).toBe(null)
         expect(row('e').flags).toEqual(['not-patched', 'index-duplicate'])
         expect(row('c').flags).toContain('index-duplicate')
+    })
+
+    it('says when a lamp\'s watts are ASSUMED (no datasheet figure)', () => {
+        // Since 2026-09-29 no MOXIR type has an assumed wattage (UP-PL5403's 162 W is the maker's);
+        // the flag is still owed wherever a type's power basis says ASSUMED.
+        const lib = { types: library.types.map((t) => (t.id === 'up-b380f' ? { ...t, power_w: { value: 500, basis: 'ASSUMED' } } : t)) }
+        const m = sheetModel({ entities: [lamp('x', { type: 'up-b380f', mode: '16ch', circuit: 'C1' })], library: lib })
+        expect(m.rows[0].flags).toContain('power-assumed')
     })
 
     it('sums a universe as merged ranges', () => {
@@ -42,7 +50,7 @@ describe('the sheet model', () => {
         const c1 = model.power.circuits.find((c) => c.circuit === 'C1')
         expect(c1).toMatchObject({ lamps: 2, watts: 1000, pct: 34, over: false })
         expect(model.power.unassigned).toEqual({ lamps: 1, watts: 280 })
-        expect(model.power.totalW).toBe(500 + 500 + 280 + 162 + 500)
+        expect(model.power.totalW).toBe(500 + 500 + 280 + 20 + 500)
     })
 
     it('orders the hookup by universe and address, unpatched last', () => {

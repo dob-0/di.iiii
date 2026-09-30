@@ -38,6 +38,8 @@
 // join in the room stays the fixture's `index`, so the room's live mirror and "Send
 // positions to the desk" work unchanged.
 
+const { ROLE_DEFAULTS } = require('./roles');
+
 const MAX_UNIVERSE = 32767;
 const PROFILE_NAME_RE = /[^A-Za-z0-9 _-]/g;
 
@@ -48,6 +50,9 @@ const profileNameFor = (code, mode) => {
 
 // Roles for a mode: the source's channel list when there is one, else ch1..chN with a
 // label that says the list is owed — the footprint is enough to patch, not to program.
+// A listed channel rests at its own `default` (a shutter where 0 = CLOSED rests open, a
+// pan at centre); without one, at the desk's default for that role (pan/tilt 128 — home,
+// not hard over to one end), else 0. An owed ch1..chN rests at 0.
 function channelsFor(lamp) {
   const n = lamp.footprint;
   const listed = Array.isArray(lamp.channels) && lamp.channels.length === n ? lamp.channels : null;
@@ -59,7 +64,8 @@ function channelsFor(lamp) {
     const role = c && typeof c.role === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,23}$/.test(c.role) ? c.role : `ch${i + 1}`;
     roles.push(role);
     labels[role] = c && c.label ? String(c.label).slice(0, 24) : `Ch ${i + 1} (list owed)`;
-    defaults[role] = 0;
+    const own = c && Number.isFinite(+c.default) ? Math.max(0, Math.min(255, +c.default | 0)) : null;
+    defaults[role] = own != null ? own : (c && ROLE_DEFAULTS[role] != null && role !== 'dimmer' ? ROLE_DEFAULTS[role] : 0);
   }
   return { roles, labels, defaults };
 }
