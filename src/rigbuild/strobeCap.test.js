@@ -81,3 +81,16 @@ describe('the union of every lamp\'s flashes stays within the cap (review A1-3)'
         expect(merged.length).toBeGreaterThan(10)
     })
 })
+
+describe('a laser is never lit by a look (runtime gate, review A2-1)', () => {
+    const laserType = TYPES.types.find((t) => t.code === 'UP-LA40WF')
+    const laserMode = laserType.modes[0]
+    const laser = { id: 'L1', type: 'spotLight', components: { transform: { position: [0, 6, 0], rotation: [0, 0, 0] }, light: { color: '#ff0000', intensity: 5, angle: 0.1 }, beam: { visible: true }, fixture: { type: 'up-la40wf', mode: laserMode.name, index: 1 } } }
+    const fx = [{ id: 'F1', key: 'x:L1', profile: `UP-LA40WF ${laserMode.name}` }]
+    const run = (look) => deskLooksWithValues({ looks: [{ id: 'l', ...look }] }, fx, { entities: [laser], library: TYPE_LIBRARY })[0].steps[0].values.F1
+    it('a look that asks the laser at 60 % writes every channel at 0', () => {
+        const cell = run({ aims: {}, colours: {}, levels: { 'truss-top/up-la40wf': 0.6 } })
+        expect(Object.values(cell).every((v) => v === 0)).toBe(true)
+        expect(Object.keys(cell).length).toBe(laserMode.channels.length)
+    })
+})

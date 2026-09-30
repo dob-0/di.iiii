@@ -42,7 +42,12 @@ export const deskLooksWithValues = (rigLooks, deskFixtures = [], { entities = []
             const pose = poses.get(entityId)
             // A lamp the look does not name is OUT in that look (a designed look lights
             // what it names; the rest of the rig is dark, as the room drew it).
-            const level = pose ? (pose.level ?? 1) : 0
+            // A laser is never lit by a look (cap review A2-1/runtime gate, 2026-09-30): "requiresLaserSignOff"
+            // in an intent is text, so the level path itself holds the line. It stays dark unless the look
+            // carries an explicit `laserSignedOff: true` — a field nothing writes yet (the sign-off is a
+            // certified laser safety officer's, owed), so today every laser in every look is OUT.
+            const laserHeld = type?.category === 'laser' && look.laserSignedOff !== true
+            const level = pose && !laserHeld ? (pose.level ?? 1) : 0
             const want = { level }
             if (pose?.color) want.colour = pose.color
             if (pose && Array.isArray(type?.pan_tilt_deg?.value)) {
@@ -51,7 +56,9 @@ export const deskLooksWithValues = (rigLooks, deskFixtures = [], { entities = []
                 want.tilt = tilt
             }
             if (pose && flashKindOf(library, fx.type) === 'strobe' && level > 0) want.strobeHz = lookStrobeHz(look)
-            const cell = encodeDmx(mode.channels, want, type)
+            // A held laser has no dimmer channel to zero (its list is control/aux/shutter/colour), so the level
+            // alone would change nothing: write EVERY channel at 0 — DMX 0 on a laser's control channel is OUT.
+            const cell = laserHeld ? Object.fromEntries(mode.channels.map((c) => [c.role, 0])) : encodeDmx(mode.channels, want, type)
             if (Object.keys(cell).length) values[f.id] = cell
         }
         return { ...shell, steps: [{ values }], valuesFrom: Object.keys(values).length ? 'channel lists (assumed where marked)' : null }
