@@ -595,6 +595,19 @@ describe('ESM/CJS mirror equivalence', () => {
     expect(doc.entities[0].components.rigVariant.copyOf).toEqual({ projectId: 'moxir-hall-minimal', id: 'minimal', label: 'old hall 09-29' })
   })
 
+  // The owner's MOXIR set grew past eight versions (two X old-hall copies were entries 10 and 12): a mark whose own
+  // id fell past the sibling cap was dropped whole, so those projects had no mark at all and never reached the switch.
+  it('keeps the mark of a version listed past the eighth sibling (cap raised from 8)', () => {
+    const siblings = Array.from({ length: 14 }, (_, i) => ({ id: `v-${i + 1}`, projectId: `moxir-hall-v-${i + 1}`, title: `Version ${i + 1}` }))
+    const doc = schema.normalizeProjectDocument({
+      entities: [{ id: 'l3', type: 'group', components: { rigVariant: { set: 'moxir-2026-10-17', id: 'v-12', siblings } } }]
+    })
+    const mark = doc.entities[0].components.rigVariant
+    expect(mark).toBeTruthy()
+    expect(mark.id).toBe('v-12')
+    expect(mark.siblings.length).toBe(14)
+  })
+
   it('clears one fixture field through updateComponent without losing the rest', () => {
     const base = schema.normalizeProjectDocument({
       entities: [{ id: 'l', type: 'spotLight', components: { fixture: { index: 7, type: 'up-b380f', mode: '16ch', universe: 1, address: 1 } } }]
