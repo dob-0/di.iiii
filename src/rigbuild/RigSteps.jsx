@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import SurfaceBar, { navigateInApp } from '../components/SurfaceBar.jsx'
 import { RIG_STEPS, rigNeighbours, rigRow } from './rigTools.js'
@@ -31,12 +31,14 @@ export const usePointerLocked = () => {
     return locked
 }
 
-function StepLink({ step, said, warn, hint, className = '', onPick }) {
+function StepLink({ step, said, warn, hint, className = '', onPick, role, tabIndex }) {
     return (
         <a
             className={`sbar-link rigsteps-step${step.here ? ' is-here' : ''}${warn ? ' is-warn' : ''}${className ? ` ${className}` : ''}`}
             href={step.href}
             aria-current={step.here ? 'page' : undefined}
+            role={role}
+            tabIndex={tabIndex}
             title={hint ? `${step.hint} — ${hint}` : step.hint}
             onClick={(event) => {
                 onPick?.()
@@ -62,11 +64,19 @@ export function RigSteps({ spaceId, projectId, projectLabel = null, here = null,
     const [menuTop, setMenuTop] = useState(0)
     const navRef = useRef(null)
     const pickRef = useRef(null)
+    const menuRef = useRef(null)
+    const menuId = useId()
 
     useEffect(() => {
         if (!menuOpen) return undefined
+        // WAI-ARIA APG menu button: Esc closes and returns focus to the trigger; Tab closes
+        // (focus goes back to the trigger first, so Tab moves on from there, not from <body>).
         const close = (event) => {
-            if (event.type === 'keydown' && event.key !== 'Escape') return
+            if (event.type === 'keydown') {
+                if (event.key === 'Escape') pickRef.current?.focus()
+                else if (event.key === 'Tab') pickRef.current?.focus()
+                else return
+            }
             if (event.type === 'pointerdown' && (pickRef.current?.contains(event.target) || event.target.closest?.('.rigsteps-menu'))) return
             setMenuOpen(false)
         }
@@ -80,6 +90,20 @@ export function RigSteps({ spaceId, projectId, projectLabel = null, here = null,
         }
     }, [menuOpen])
     useEffect(() => { if (hidden) setMenuOpen(false) }, [hidden])
+    // Opening puts focus on the first item.
+    useEffect(() => {
+        if (menuOpen) menuRef.current?.querySelector('[role="menuitem"]')?.focus()
+    }, [menuOpen])
+
+    const onMenuKeyDown = (event) => {
+        const items = Array.from(menuRef.current?.querySelectorAll('[role="menuitem"]') || [])
+        if (!items.length) return
+        const at = items.indexOf(document.activeElement)
+        const to = { ArrowDown: (at + 1) % items.length, ArrowUp: (at - 1 + items.length) % items.length, Home: 0, End: items.length - 1 }[event.key]
+        if (to === undefined) return
+        event.preventDefault()
+        items[to].focus()
+    }
 
     const row = rigRow({ spaceId, projectId, projectLabel, here, isLocalInstall })
     if (hidden || !row.length) return null
@@ -116,8 +140,9 @@ export function RigSteps({ spaceId, projectId, projectLabel = null, here = null,
                 type="button"
                 ref={pickRef}
                 className={`sbar-link rigsteps-pick${current ? ' is-here' : ''}`}
-                aria-haspopup="true"
+                aria-haspopup="menu"
                 aria-expanded={menuOpen}
+                aria-controls={menuOpen ? menuId : undefined}
                 onClick={toggleMenu}
             >
                 {numbered ? <span className="rigsteps-n">{numbered}</span> : null}
@@ -130,9 +155,9 @@ export function RigSteps({ spaceId, projectId, projectLabel = null, here = null,
                 </a>
             ) : null}
             {menuOpen && typeof document !== 'undefined' && createPortal(
-                <div className="sbar-menu rigsteps-menu" style={{ top: menuTop }} role="menu" aria-label="The rig, step by step">
+                <div id={menuId} ref={menuRef} className="sbar-menu rigsteps-menu" style={{ top: menuTop }} role="menu" tabIndex={-1} aria-label="The rig, step by step" onKeyDown={onMenuKeyDown}>
                     {row.map((step) => (
-                        <StepLink key={step.key} step={step} said={said(step.key)} warn={warn(step.key)} hint={progress?.hints?.[step.key] || ''} className="sbar-menu-link" onPick={() => setMenuOpen(false)} />
+                        <StepLink key={step.key} step={step} said={said(step.key)} warn={warn(step.key)} hint={progress?.hints?.[step.key] || ''} className="sbar-menu-link" role="menuitem" tabIndex={-1} onPick={() => setMenuOpen(false)} />
                     ))}
                 </div>,
                 document.body

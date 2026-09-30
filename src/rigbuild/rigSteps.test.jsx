@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { fireEvent, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { RIG_LIGHT, RIG_ROOM, RIG_STEPS, rigEntryPath, rigLightPath, rigNeighbours, rigRow, rigStepPath } from './rigTools.js'
 import { rigProgress } from './rigProgress.js'
@@ -136,9 +137,68 @@ describe('RigSteps — the row', () => {
         const pick = screen.getByRole('button', { name: /4\/6\s*cards & looks/ })
         fireEvent.click(pick)
         const menu = screen.getByRole('menu')
-        expect(within(menu).getAllByRole('link')).toHaveLength(9)
+        expect(within(menu).getAllByRole('menuitem')).toHaveLength(9)
         fireEvent.keyDown(window, { key: 'Escape' })
         expect(screen.queryByRole('menu')).toBeNull()
+    })
+
+    describe('the steps menu — WAI-ARIA APG menu button', () => {
+        const open = async () => {
+            const user = userEvent.setup()
+            render(<><RigSteps spaceId="moxir" projectId="moxir-hall" here="cards" /><button type="button">after</button></>)
+            const pick = screen.getByRole('button', { name: /4\/6\s*cards & looks/ })
+            return { user, pick }
+        }
+
+        it('the trigger says it opens a menu, and which one', async () => {
+            const { user, pick } = await open()
+            expect(pick.getAttribute('aria-haspopup')).toBe('menu')
+            expect(pick.getAttribute('aria-expanded')).toBe('false')
+            await user.click(pick)
+            expect(pick.getAttribute('aria-expanded')).toBe('true')
+            expect(pick.getAttribute('aria-controls')).toBe(screen.getByRole('menu').id)
+        })
+
+        it('opening focuses the first item; arrows, Home and End move and wrap', async () => {
+            const { user, pick } = await open()
+            await user.click(pick)
+            const items = screen.getAllByRole('menuitem')
+            expect(document.activeElement).toBe(items[0])
+            await user.keyboard('{ArrowDown}')
+            expect(document.activeElement).toBe(items[1])
+            await user.keyboard('{End}')
+            expect(document.activeElement).toBe(items[items.length - 1])
+            await user.keyboard('{ArrowDown}')
+            expect(document.activeElement).toBe(items[0])
+            await user.keyboard('{ArrowUp}')
+            expect(document.activeElement).toBe(items[items.length - 1])
+            await user.keyboard('{Home}')
+            expect(document.activeElement).toBe(items[0])
+        })
+
+        it('Esc closes and returns focus to the trigger', async () => {
+            const { user, pick } = await open()
+            await user.click(pick)
+            await user.keyboard('{Escape}')
+            expect(screen.queryByRole('menu')).toBeNull()
+            expect(document.activeElement).toBe(pick)
+        })
+
+        it('Tab closes the menu and moves on from the trigger', async () => {
+            const { user, pick } = await open()
+            await user.click(pick)
+            await user.tab()
+            expect(screen.queryByRole('menu')).toBeNull()
+            expect(document.activeElement).not.toBe(document.body)
+            expect(document.activeElement).not.toBe(pick)
+        })
+
+        it('a click outside closes it', async () => {
+            const { user, pick } = await open()
+            await user.click(pick)
+            await user.click(screen.getByRole('button', { name: 'after' }))
+            expect(screen.queryByRole('menu')).toBeNull()
+        })
     })
 
     it('is gone while the room has the pointer', () => {
