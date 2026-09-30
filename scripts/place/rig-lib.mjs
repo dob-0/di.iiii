@@ -973,7 +973,7 @@ export const slopedLineRigging = (rig, stage, hall) => {
     for (const p of pickGeometry(rig, stage)) {
         const tag = `pick ${p.i + 1}/${r.picks_u_m.length} (u ${p.u} m)`
         p.legs.forEach((top, k) => out.push(segment({
-            id: `${RIG_PREFIX}hoist-${p.i + 1}-bridle-${k ? 'b' : 'a'}`, name: `Bridle leg, ${tag} (rigging: a beam clamp on the ${k ? 'back' : 'audience-side'} girder's bottom flange, steel to the apex — ${round(p.included_deg, 0)}° between the legs)`,
+            id: `${RIG_PREFIX}hoist-${p.i + 1}-bridle-${k ? 'b' : 'a'}`, name: `Bridle leg, ${tag} (rigging: a beam clamp on the ${k ? 'audience-side' : 'back'} girder's bottom flange, steel to the apex — ${round(p.included_deg, 0)}° between the legs)`,
             from: [p.x, p.apexY, stage.trussZ], to: top, w: RIG_STEEL_W, colour: '#8a8d92'
         })))
         // The beam clamp each leg ends in grips the girder's bottom flange, so it fills the clamp drop between the
@@ -981,7 +981,7 @@ export const slopedLineRigging = (rig, stage, hall) => {
         // the truss read as floating (owner, 2026-09-30: "the truss is not from the crane").
         p.legs.forEach((top, k) => out.push(box({
             id: `${RIG_PREFIX}hoist-${p.i + 1}-clamp-${k ? 'b' : 'a'}`,
-            name: `Beam clamp, ${tag} (rigging: on the ${k ? 'back' : 'audience-side'} girder's bottom flange, drawn to fill the ${r.bridle.clamp_drop_m} m clamp drop)`,
+            name: `Beam clamp, ${tag} (rigging: on the ${k ? 'audience-side' : 'back'} girder's bottom flange, drawn to fill the ${r.bridle.clamp_drop_m} m clamp drop)`,
             pos: [top[0], top[1], top[2]], size: [0.12, r.bridle.clamp_drop_m, 0.14], colour: '#7a7e85', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS, emissive: RIGGING_EMISSIVE
         })))
         out.push(box({ id: `${RIG_PREFIX}hoist-${p.i + 1}`, name: `Chain hoist ${r.hoist}, ${tag} (rigging: under the bridle apex, at its shortest drop)`, pos: [p.x, p.apexY - 0.06 - 0.29, stage.trussZ], size: [0.25, 0.29, 0.2], colour: '#45484d', metalness: 0.4, roughness: 0.6, emissive: RIGGING_EMISSIVE }))

@@ -31,7 +31,7 @@ const codeOf = (rig, g) => rig.classes[g.class].code
 const groupOfEntity = (rig, e) => rig.groups.find((g) => e.id.startsWith(`${RIG_PREFIX}${g.id}-`))
 
 // every rig file in the rigs directory, so a version added next month is held to the policy the day it opts in
-const allRigFiles = fs.readdirSync(path.join(REPO_ROOT, RIGS_DIR)).filter((f) => /^moxir-2026-10-17-.*\.json$/.test(f) && !/\.(show|patch)\.json$/.test(f))
+const allRigFiles = fs.readdirSync(path.join(REPO_ROOT, RIGS_DIR)).filter((f) => /^moxir-\d{4}-\d{2}-\d{2}-.*\.json$/.test(f) && !/\.(show|patch)\.json$/.test(f))
     .map((f) => ({ file: `${RIGS_DIR}/${f}`, rig: read(`${RIGS_DIR}/${f}`) })).filter((x) => x.rig.groups)
 
 describe('the policy: no moving fixture hung above 0.6 m (applies to every rig file that opts in)', () => {
@@ -238,5 +238,14 @@ describe('the analysis file', () => {
             if (p.chosen) expect(p.under_a_crane_girder, p.id).toBe(false)
             expect(p.distance_to_dance_zone_m, `${p.id}: chosen places are outside the crowd`).toBeGreaterThanOrEqual(p.chosen ? 5 : 0)
         }
+    })
+})
+
+describe('the guard recognises a laser by its library category, not only by one code (cap review A2-4)', () => {
+    it('UP-LA40WF is a laser with or without the library; a mover is not', () => {
+        const library = loadLibrary()
+        expect(isLaser('UP-LA40WF', library)).toBe(true)
+        expect(isLaser('UP-LA40WF')).toBe(true)
+        expect(isLaser('UP-B380F', library)).toBe(false)
     })
 })

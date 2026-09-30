@@ -43,7 +43,8 @@ export const mountHeight = (group, stageDeck) => {
 }
 
 export const isMover = (code, library) => Boolean(typeById(library, typeIdOf(code))?.pan_tilt_deg)
-export const isLaser = (code) => code === 'UP-LA40WF'
+// By the library's category, so a second laser model is checked too (cap review A2-4); the code stays as a fallback when no library is given.
+export const isLaser = (code, library) => (library ? typeById(library, typeIdOf(code))?.category === 'laser' : false) || code === 'UP-LA40WF'
 
 /** Boxes in plan: x [a,b], z [a,b]. */
 export const zoneBox = (hall, id, y = [0, 2.5]) => ({ x: hall.geometry.zones[id].used.x_m, z: hall.geometry.zones[id].used.z_m, y })
@@ -85,7 +86,8 @@ export const lowestInZone = (from, dir, half, reach, box, step = 0.1, skipRadius
 }
 
 export const AISLE_LENS_CLEAR_M = 1.5
-const groupOf = (rig, entityId) => rig.groups.find((g) => entityId.startsWith(`${RIG_PREFIX}${g.id}-`))
+// The LONGEST matching group id: a group `beam380` listed before `beam380-columns` must not claim its lamps (A2-4).
+const groupOf = (rig, entityId) => rig.groups.filter((g) => entityId.startsWith(`${RIG_PREFIX}${g.id}-`)).sort((a, b) => b.id.length - a.id.length)[0]
 
 /**
  * Every way a rig breaks the policy, as sentences. Empty when the rig has not opted in, or keeps it.
@@ -129,7 +131,7 @@ export const groundPolicyViolations = ({ rig, hall, library, builds, stage }) =>
                     const lowAisle = lowestInZone(from, dir, half, cls.reach_m ?? 30, aisle, 0.1, AISLE_LENS_CLEAR_M)
                     if (lowAisle !== null) out.push(`${id} / look "${look}": ${e.id} (${cls.code}) fires into the aisle at ${lowAisle.toFixed(2)} m — under the ${eye} m audience eye height; people stand and sit there`)
                 }
-            } else if (isLaser(cls.code)) {
+            } else if (isLaser(cls.code, library)) {
                 const min = pol.lasers?.min_beam_height_m ?? 3
                 if (from[1] < min) out.push(`${id} / look "${look}": laser ${e.id} sits at ${from[1].toFixed(2)} m, under ${min} m`)
                 const low = lowestInZone(from, dir, half, cls.reach_m ?? 60, laserZone)
