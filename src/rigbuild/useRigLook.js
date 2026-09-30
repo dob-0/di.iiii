@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { getSharedLightingMirror } from '../rigMirror/useLightingMirror.js'
 import { TYPE_LIBRARY } from './types/index.js'
 import { libraryWithShow } from './rental.js'
-import { blendEntities, flashEntities, lookIdOfDesk, lookPoses, posedEntities, rigLooksOf, washLevelOf, withWashLevel } from './looks.js'
+import { blendEntities, flashEntities, lookIdOfDesk, lookPoses, posedEntities, rigLooksOf, washLevelOf, withLookWash, withWashLevel } from './looks.js'
 import { clockFadeOf, showDriver, showOf, showStateAt } from './showClock.js'
 import { dmxEntities } from './dmxPose.js'
 import { isAssumedMode, typeById } from './fixtureTypes.js'
@@ -125,7 +125,12 @@ export function useRigLookEntities(document, { explicit, mirror, library: baseLi
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `tick` is the clock's beat
     const t = useMemo(() => (shownFrom ? fadeProgress(fade) : 1), [shownFrom, fade, tick])
 
-    const blended = useMemo(() => (shownFrom && t < 1 ? blendEntities(shownFrom, shownTo, t) : shownTo), [shownFrom, shownTo, t])
+    const faded = useMemo(() => (shownFrom && t < 1 ? blendEntities(shownFrom, shownTo, t) : shownTo), [shownFrom, shownTo, t])
+    // One wash per look (§15.13): the playing look's wash shown, the previous look's cross-faded
+    // out on the same tick as the lamps. A project with only the single `rig-wash` passes through
+    // untouched (the same array), drawn at the look's level by roomInLook as before.
+    const assets = document?.assets
+    const blended = useMemo(() => withLookWash(faded, { fromLookId: shownFrom ? fromId : '', toLookId: lookId, t: shownFrom ? t : 1, assets }), [faded, shownFrom, fromId, lookId, t, assets])
     const flashed = useMemo(() => flashEntities(blended, library), [blended, library])
     // DMX WINS (RIG_BUILD.md §18.4): while the desk is live, every lamp joined to a patched
     // fixture with a known channel list is drawn from what the desk sends, attribute by

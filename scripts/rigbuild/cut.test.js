@@ -170,6 +170,7 @@ describe('rehang.mjs — a new rig into a project other hands work in', () => {
             { id: 'place-hall', type: 'model', components: {} },
             { id: 'rig-show', type: 'group', components: { rigBounce: { area_m2: 1 } } },
             { id: 'rig-wash', type: 'model', components: {} },
+            { id: 'rig-wash:gs-red-room', type: 'model', components: {} }, // a per-look wash (§15.13) stays too
             { id: 'rig-line-1', type: 'model', components: { piece: { kind: 'truss-3m' } } },
             { id: 'rig-par-bridge-01', type: 'spotLight', components: { fixture: { type: 'up-pl5403' }, beam: { aperture: 0.105 } } }
         ] }
