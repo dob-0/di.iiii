@@ -1,0 +1,12 @@
+{
+  "project": "moxir-hall-minimal",
+  "why": "MOXIR Minimal — the cut, simple (fixed lights only). The same five cues and timing as the underground loop (scripts/rigbuild/show-loop.mjs MOXIR_MINIMAL_SHOW), named for what the fixed rig does in each. No head moves on the line in this version, so the sway rule (scripts/rigbuild/sway.mjs) has nothing to hold; it is checked all the same.",
+  "loop": true,
+  "cues": [
+    { "look": "one-beam", "name": "Blackout + one shaft", "fade": 0, "hold": 12 },
+    { "look": "slow-sweep", "name": "The blade", "fade": 4, "hold": 16 },
+    { "look": "red-room", "name": "Red room", "fade": 5, "hold": 16 },
+    { "look": "white-cathedral", "name": "White cathedral + the X", "fade": 2, "hold": 12 },
+    { "look": "strobe-hit", "name": "The hit", "fade": 0, "hold": 4 }
+  ]
+}

@@ -26,6 +26,9 @@ import { parseArgs, die, say, readJson, REPO_ROOT } from '../place/common.mjs'
 import { normalizeRentalList } from '../../src/shared/projectSchema.js'
 import { billedDays } from '../../src/rigbuild/equipment.js'
 import { powerOf, typeById, typeIdOf } from '../../src/rigbuild/fixtureTypes.js'
+import { linePoint, pickGeometry, stageFrame } from '../place/rig-lib.mjs'
+
+const DEG = Math.PI / 180
 
 export const VERSIONS_FILE = 'scripts/place/rigs/moxir-versions-2026-10-17.json'
 export const RIGS_DIR = 'scripts/place/rigs'
@@ -98,6 +101,189 @@ export const craneTruss = (spec, groups, classes) => {
     return t
 }
 
+// ---------------------------------------------------------------------------
+// THE CUT (2026-09-29, RIG_BUILD.md §15.8): the versions file names an overlay
+// (`craneCut`, scripts/place/rigs/moxir-crane-cut-2026-09-29.json) and a version says
+// `truss: "crane-cut"`. Everything the overlay does not state is DERIVED here, never typed:
+// the trim (the high pick's bridle at its angle limit), the ends' heights and the slope's
+// clearances, the load per pick (a continuous beam on three supports), the bridle angles and
+// leg tensions, the sway periods and the motion limits.
+// ---------------------------------------------------------------------------
+
+/**
+ * Reactions of a straight beam on THREE supports under vertical loads (kg), by the
+ * flexibility method: take the middle support away, find the deflection there under the
+ * loads and under a unit force, and ask for none (EI constant — it cancels). A 3-point line
+ * is statically indeterminate: this is the design split for three hoists at the same trim;
+ * on the night the load cells say what each really carries. `supports` [a, b, c] (x along
+ * the beam's plan), `loads` [{ x, kg }], `udl` [{ from, to, kgm }]. Pure; checked against the
+ * textbook two-equal-spans case (3/8 · 10/8 · 3/8 of w·L) in versions.test.js.
+ */
+export const threePointReactions = ({ supports, loads = [], udl = [], steps = 4000 }) => {
+    const [a, b, c] = [...supports].sort((x, y) => x - y)
+    const pts = [...loads.map((l) => ({ x: l.x, f: -l.kg }))]
+    for (const u of udl) {
+        const n = Math.max(1, Math.round(((u.to - u.from) / (c - a)) * steps))
+        const dx = (u.to - u.from) / n
+        for (let i = 0; i < n; i++) pts.push({ x: u.from + dx * (i + 0.5), f: -u.kgm * dx })
+    }
+    const lo = Math.min(a, ...pts.map((p) => p.x))
+    const hi = Math.max(c, ...pts.map((p) => p.x))
+    // deflection at b of a beam on supports a and c under forces `fs` (up = +)
+    const deflectAtB = (fs) => {
+        const total = fs.reduce((sum, p) => sum + p.f, 0)
+        const moment = fs.reduce((sum, p) => sum + p.f * (p.x - a), 0)
+        const rc = -moment / (c - a)
+        const ra = -total - rc
+        const all = [...fs, { x: a, f: ra }, { x: c, f: rc }].sort((p, q) => p.x - q.x)
+        const n = steps
+        const h = (hi - lo) / n
+        const xs = Array.from({ length: n + 1 }, (_, i) => lo + i * h)
+        const M = xs.map((x) => all.reduce((sum, p) => sum + (p.x < x ? p.f * (x - p.x) : 0), 0))
+        const slope = [0]
+        for (let i = 1; i <= n; i++) slope.push(slope[i - 1] + ((M[i - 1] + M[i]) / 2) * h)
+        const y = [0]
+        for (let i = 1; i <= n; i++) y.push(y[i - 1] + ((slope[i - 1] + slope[i]) / 2) * h)
+        const at = (x) => {
+            const k = Math.min(n - 1, Math.max(0, Math.floor((x - lo) / h)))
+            const t = (x - xs[k]) / h
+            return y[k] + (y[k + 1] - y[k]) * t
+        }
+        const [ya, yc] = [at(a), at(c)]
+        return at(b) - (ya + ((yc - ya) * (b - a)) / (c - a))
+    }
+    const yLoads = deflectAtB(pts)
+    const yUnit = deflectAtB([{ x: b, f: 1 }])
+    const rb = -yLoads / yUnit
+    const total = -pts.reduce((sum, p) => sum + p.f, 0)
+    const moment = -pts.reduce((sum, p) => sum + p.f * (p.x - a), 0)
+    const rc = (moment - rb * (b - a)) / (c - a)
+    const ra = total - rb - rc
+    return { at: [a, b, c], kg: [ra, rb, rc], total }
+}
+
+const CUT_ON_LINE = new Set(['truss-header', 'truss-top'])
+const mirrored = (dx) => [...new Set([...dx.map((d) => (d === 0 ? 0 : -d)), ...dx])].sort((p, q) => p - q)
+const r2 = (v) => Math.round(v * 100) / 100
+const r1 = (v) => Math.round(v * 10) / 10
+
+/** The cut's truss block of the rig file, every derived number with it. Pure (reads the committed files). */
+export const craneCut = ({ spec, base, groups, classes }) => {
+    const cut = readJson(path.join(REPO_ROOT, spec.craneCut))
+    const hall = readJson(path.join(REPO_ROOT, spec.hall))
+    const types = readJson(path.join(REPO_ROOT, TYPE_FILE)).types
+    const r = cut.rigging
+    const th = cut.truss.slope_deg * DEG
+    const t = cut.truss.section_m
+    const drop = r.drop.stack_m.reduce((sum, x) => sum + x.m, 0)
+    const stage0 = stageFrame({ stage: base.stage, truss: { ...cut.truss, trim_m: 0 } }, hall)
+    const crane = stage0.crane
+    const girder = hall.geometry.cranes.find((k) => k.z_m === crane.z_m) || crane
+    const legSpread = 2 * (Math.abs(girder.girders_dz_m[1]) - girder.girder_w_m / 2)
+    const legTop = crane.girder_bottom_m - r.bridle.clamp_drop_m
+    const apexMax = legTop - legSpread / 2 / Math.tan((r.bridle.max_included_deg / 2) * DEG)
+    // the top of the top chords at u, above the trim (linePoint 'top', vertical part)
+    const topOver = (u) => t / (2 * Math.cos(th)) + (t / 2) * Math.cos(th) + u * Math.sin(th)
+    const trim = Math.floor(Math.min(...r.picks_u_m.map((u) => apexMax - drop - topOver(u))) * 100) / 100
+    const bottomAt = (u) => trim + u * Math.sin(th)
+    const uEnds = [cut.truss.x_offset_m - cut.truss.width_m / 2, cut.truss.x_offset_m + cut.truss.width_m / 2]
+    const truss = {
+        ...clone(cut.truss),
+        why: cut.owner,
+        trim_m: trim,
+        trim_why: `derived (versions.mjs craneCut): the high pick's bridle at its ${r.bridle.max_included_deg}° limit puts its apex at ${r2(apexMax)} m; the hoist's shortest drop under it (${r2(drop)} m) and the chords at that pick leave ${trim} m for the bottom chord over the axis`,
+        ends: uEnds.map((u) => ({ u_m: u, x_m: r2(u * Math.cos(th) + stage0.axis), bottom_chord_m: r2(bottomAt(u)) })),
+        rise_m: r2(cut.truss.width_m * Math.sin(th)),
+        rigging: { ...clone(r), hoists: r.picks_u_m.length, drop_m: r2(drop), bridle: { ...clone(r.bridle), leg_spread_m: r2(legSpread) }, source: spec.craneCut }
+    }
+    const rig = { stage: base.stage, truss }
+    const stage = stageFrame(rig, hall)
+    const picks = pickGeometry(rig, stage)
+    // tie-offs: from each end's centre line to the nearest nave column's inner face on the
+    // column grid line nearest the bridge, at the end's height or the stated one
+    const g = hall.geometry
+    const gridZ = [...g.column_grid_z_m].sort((p, q) => Math.abs(p - crane.z_m) - Math.abs(q - crane.z_m))[0]
+    truss.rigging.tieoffs = r.tieoffs.map((tie) => {
+        const end = linePoint(stage, tie.u_m, 'axis')
+        const to = [tie.side * g.column_inner_face_x_m, tie.y_m === 'end' ? r2(end[1]) : tie.y_m, gridZ]
+        return { ...clone(tie), from_m: end.map(r2), to_m: to, length_m: r2(Math.hypot(to[0] - end[0], to[1] - end[1], to[2] - end[2])) }
+    })
+
+    // what hangs on the line, where, and its weight (the type library's, the makers' figures)
+    const kgOf = (code) => types.find((x) => x.code === code)?.weight_kg?.value ?? null
+    const lamps = []
+    for (const grp of groups.filter((x) => CUT_ON_LINE.has(x.mount))) {
+        const code = classes[grp.class].code
+        const each = kgOf(code)
+        if (each == null) throw new Error(`craneCut: no weight for ${code} in ${TYPE_FILE}`)
+        const us = grp.dx_m ? mirrored(grp.dx_m) : []
+        if (us.length !== grp.count) throw new Error(`craneCut: group ${grp.id} counts ${grp.count} but its dx_m give ${us.length} places`)
+        for (const u of us) lamps.push({ group: grp.id, code, u, kg: each, hung: grp.mount === 'truss-header' })
+    }
+    const lampsKg = lamps.reduce((sum, l) => sum + l.kg, 0)
+    const extras = lampsKg * r.extras_fraction
+    const trussKg = r.truss_kg_per_m * cut.truss.width_m
+    const x = (u) => u * Math.cos(th)
+    const split = threePointReactions({
+        supports: picks.map((p) => x(p.u)),
+        loads: lamps.map((l) => ({ x: x(l.u), kg: l.kg * (1 + r.extras_fraction) })),
+        udl: [{ from: x(uEnds[0]), to: x(uEnds[1]), kgm: trussKg / (x(uEnds[1]) - x(uEnds[0])) }]
+    })
+    if (split.kg.some((k) => k <= 0)) throw new Error(`craneCut: a pick would lift off (${split.kg.map(r1).join(' / ')} kg) — move the picks`)
+    const chainKg = r.chain_kg_per_m * r.chain_carried_m
+    const byGroup = {}
+    for (const l of lamps) {
+        byGroup[l.group] ||= { group: l.group, code: l.code, n: 0, each_kg: l.kg, kg: 0 }
+        byGroup[l.group].n += 1
+        byGroup[l.group].kg = r1(byGroup[l.group].kg + l.kg)
+    }
+    truss.rigging.picks = picks.map((p, i) => {
+        // the legs carry what hangs from the apex: the line's share, the hoist and its chain
+        const fromApex = split.kg[i] + r.hoist_kg + chainKg
+        const leg = fromApex / (2 * Math.cos((p.included_deg / 2) * DEG))
+        return {
+            u_m: p.u, x_m: r2(p.x), top_chord_m: r2(p.chordTop), bottom_chord_m: r2(bottomAt(p.u)), apex_m: r2(p.apexY),
+            bridle_included_deg: Math.round(p.included_deg), line_kg: r1(split.kg[i]),
+            on_bridge_kg: r1(fromApex + r.bridle.hardware_kg), leg_kg: r1(leg),
+            pendulum_x_m: r2(p.pendulum_x_m), period_x_s: r2(2 * Math.PI * Math.sqrt(p.pendulum_x_m / cut.motion.g)),
+            pendulum_z_m: r2(p.pendulum_z_m), period_z_s: r2(2 * Math.PI * Math.sqrt(p.pendulum_z_m / cut.motion.g))
+        }
+    })
+    const total = lampsKg + extras + trussKg
+    truss.rigging.load = {
+        lamps: Object.values(byGroup),
+        lamps_kg: r1(lampsKg),
+        truss_kg: [r1(trussKg), r1(trussKg)],
+        truss_basis: r.truss_kg_per_m_source,
+        extras_kg: r1(extras),
+        extras_basis: r.extras_basis,
+        total_kg: [Math.round(total), Math.round(total)],
+        points: picks.length,
+        per_point_kg: split.kg.map((k) => Math.round(k)),
+        method: 'a continuous beam on three supports (flexibility method, versions.mjs threePointReactions), the lamps as point loads at their places, the truss as a uniform load; the hoist (datasheet 20 kg), its chain (0.59 kg/m × the chain carried) and the bridle hardware load the bridge on top (picks[].on_bridge_kg); leg tension = on-bridge load / (2 cos(half the included angle)). ESTIMATE, static, before any dynamic factor.',
+        note: 'a 3-point line is statically indeterminate: this split holds for three hoists at one trim; the middle pick\'s share moves with the chains\' lengths — load cells at trim. rigging sign-off owed (crane rated load, lock-out, hoists + safety steels).'
+    }
+    // clearances: the lowest thing on the line (a hung body, else the bottom chord) against raised hands
+    const heightOf = (code) => (types.find((y) => y.code === code)?.model3d?.sizeAtHome_mm?.height_y ?? 0) / 1000
+    const low = Math.min(bottomAt(uEnds[0]), ...lamps.filter((l) => l.hung).map((l) => bottomAt(l.u) - heightOf(l.code)))
+    truss.clearance = {
+        lowest_m: r2(low),
+        over_raised_hands_m: r2(low - cut.clearance.raised_hands_m),
+        over_dj_raised_hands_m: r2(bottomAt(0) - (cut.clearance.dj_deck_m + cut.clearance.raised_hands_m)),
+        raised_hands_m: cut.clearance.raised_hands_m,
+        note: 'the line hangs in the bridge\'s plane (z 4.8), behind the crowd barrier: no audience stands under it; the low end is over the back of house-left'
+    }
+    // sway: the natural periods and the limits the looks keep (versions.test.js holds them)
+    const periods = truss.rigging.picks.flatMap((p) => [p.period_x_s, p.period_z_s])
+    const m = cut.motion.resonance_margin
+    truss.motion = {
+        ...clone(cut.motion),
+        periods_s: [Math.min(...periods), Math.max(...periods)],
+        avoid_periodic_s: [r2(Math.min(...periods) * (1 - m)), r2(Math.max(...periods) * (1 + m))]
+    }
+    return truss
+}
+
 /**
  * One version as a complete rig file. Pure.
  * Every look names every group: a group a look leaves out rests on its own aim.
@@ -116,12 +302,15 @@ export const versionRig = ({ spec, base, id }) => {
         const aims = pick(l.aims)
         for (const g of groups) if (!aims[g.id]) aims[g.id] = restAim(spec, g)
         const levels = pick(l.levels)
-        return [lookId, { title: l.title, intent: l.intent, aims, colours: pick(l.colours), ...(Object.keys(levels).length ? { levels } : {}) }]
+        // a version may retitle a look for what IT has (the cut's fixed-light looks: "The blade")
+        const own = v.looks?.[lookId] || {}
+        return [lookId, { title: own.title || l.title, intent: own.intent || l.intent, aims, colours: pick(l.colours), ...(Object.keys(levels).length ? { levels } : {}) }]
     }))
     const truss = v.truss === 'none'
         ? { kind: 'none', note: 'this version hangs nothing overhead: no goalpost, the floor line is the rig' }
         : v.truss === 'crane' ? craneTruss(spec, groups, classes)
-            : clone(base.truss)
+            : v.truss === 'crane-cut' ? craneCut({ spec, base, groups, classes })
+                : clone(base.truss)
     const hasLaser = groups.some((g) => classes[g.class]?.fixture === 'laser')
     return {
         rig: `${base.rig.replace(/ — .*$/, '')} — ${v.title}`,
@@ -136,6 +325,7 @@ export const versionRig = ({ spec, base, id }) => {
         assumptions: [
             ...base.assumptions.slice(0, 3),
             ...(truss.kind === 'none' ? ['No truss: this version stands every fixture on the floor (the booth line, the pit, the column bases, the press).']
+                : truss.shape === 'slope' ? [`No stage deck, no towers: the DJ stand alone. THE CUT: one straight ${truss.width_m} m line of ${truss.section_class}, sloped ${truss.slope_deg}° in the bridge's plane — bottom chord ${truss.ends[0].bottom_chord_m} m at house left (x ${truss.ends[0].x_m}) to ${truss.ends[1].bottom_chord_m} m at house right (x ${truss.ends[1].x_m}) — on ${truss.rigging.hoists} bridled chain hoists at their shortest drop, with safety steels and a tie-off at each end; load on the line ≈ ${truss.rigging.load.total_kg[0]} kg, ${truss.rigging.load.per_point_kg.join(' / ')} kg a pick (house left → right, ESTIMATE). ${truss.rigging.signoff.split(':')[0]}.`]
                 : truss.kind === 'crane-hung' ? [`No stage deck, no towers: the DJ stand alone. One ${truss.width_m} m line of ${truss.section_class} hangs from the bridge of the overhead crane parked over the DJ, bottom chord ${truss.trim_m} m, on ${truss.rigging.hoists} chain hoists with safety steels; load on the line ≈ ${truss.rigging.load.total_kg[0]}–${truss.rigging.load.total_kg[1]} kg, ≈ ${truss.rigging.load.per_point_kg[0]}–${truss.rigging.load.per_point_kg[1]} kg a point. ${truss.rigging.signoff.split(':')[0]}.`]
                     : [base.assumptions[3]]),
             ...(hasLaser ? [base.assumptions[5]] : []),

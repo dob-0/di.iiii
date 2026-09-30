@@ -14,6 +14,7 @@ import sparkUrl from '../../scripts/place/fixtures/glb/spark.glb?url'
 import strobeUrl from '../../scripts/place/fixtures/glb/strobe.glb?url'
 import blinderUrl from '../../scripts/place/fixtures/glb/blinder.glb?url'
 import hazerUrl from '../../scripts/place/fixtures/glb/hazer.glb?url'
+import cob200Url from '../../scripts/place/fixtures/glb/cob200.glb?url'
 import beam380 from '../../scripts/place/fixtures/glb/beam380.json'
 import beeEye from '../../scripts/place/fixtures/glb/beeEye.json'
 import bsw250 from '../../scripts/place/fixtures/glb/bsw250.json'
@@ -25,6 +26,7 @@ import spark from '../../scripts/place/fixtures/glb/spark.json'
 import strobe from '../../scripts/place/fixtures/glb/strobe.json'
 import blinder from '../../scripts/place/fixtures/glb/blinder.json'
 import hazer from '../../scripts/place/fixtures/glb/hazer.json'
+import cob200 from '../../scripts/place/fixtures/glb/cob200.json'
 
 // THE LAMPS' BODIES in the room — one body per lamp entity, posed where its beam goes
 // (docs/architecture/RIG_BUILD.md §12; the owed item of §10.8 for view A).
@@ -52,7 +54,8 @@ const KINDS = {
     spark: { url: sparkUrl, geo: spark },
     strobe: { url: strobeUrl, geo: strobe },
     blinder: { url: blinderUrl, geo: blinder },
-    hazer: { url: hazerUrl, geo: hazer }
+    hazer: { url: hazerUrl, geo: hazer },
+    cob200: { url: cob200Url, geo: cob200 }
 }
 
 /** The body kind of a type: the basename of its model3d.glb ("…/bsw250.glb" → "bsw250"). */

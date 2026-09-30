@@ -1,0 +1,12 @@
+{
+  "project": "moxir-hall-minimal-cut-movers",
+  "why": "The cut, full (moving heads on the line). The underground loop with ONE change for the sway rule (owner 2026-09-29: moving heads must not swing a chain-hung line): the white cathedral fades in 4 s, not 2, because its fan is a move of the heads on the line; the cuts into and out of the hit move nothing (the dark heads stay where the cathedral left them). scripts/rigbuild/sway.mjs checks it.",
+  "loop": true,
+  "cues": [
+    { "look": "one-beam", "name": "Blackout + one beam", "fade": 0, "hold": 12 },
+    { "look": "slow-sweep", "name": "Slow sweep", "fade": 4, "hold": 16 },
+    { "look": "red-room", "name": "Red room", "fade": 5, "hold": 16 },
+    { "look": "white-cathedral", "name": "White cathedral + the X", "fade": 4, "hold": 12 },
+    { "look": "strobe-hit", "name": "Strobe hit", "fade": 0, "hold": 4 }
+  ]
+}
