@@ -1,15 +1,14 @@
 // @vitest-environment node
 
-import { spawn } from 'node:child_process'
 import { mkdtemp, mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import fs from 'node:fs'
-import net from 'node:net'
 import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { spawnServerUntilReady } from './testSupport/spawnServer.mjs'
 
 const require = createRequire(import.meta.url)
 const { createAuthSessionValue } = require('./authSession.js')
@@ -20,7 +19,7 @@ const { io: ioClient } = require('socket.io-client')
 // the behavior under test: with the suite running in parallel (or beside a
 // second suite -- how this was reproduced) a spawn + listen + first request
 // can cross 5s with nothing wrong. Two tests here failed exactly that way at
-// 5074ms and 5095ms. waitForHealth already allows 15s for the boot alone, so
+// 5074ms and 5095ms. spawnServerUntilReady already allows 15s for the boot alone, so
 // the per-test budget has to be larger than that or the health wait can never
 // finish. Hooks get more again: afterEach stops every server it started.
 vi.setConfig({ testTimeout: 25_000, hookTimeout: 40_000 })
@@ -30,57 +29,7 @@ const SERVER_ENTRY = path.join(SERVER_ROOT, 'src/index.js')
 
 const activeServers = []
 
-const getFreePort = async () => {
-    return new Promise((resolve, reject) => {
-        const server = net.createServer()
-        server.on('error', reject)
-        server.listen(0, '127.0.0.1', () => {
-            const address = server.address()
-            const port = typeof address === 'object' && address ? address.port : 0
-            server.close((error) => {
-                if (error) {
-                    reject(error)
-                    return
-                }
-                resolve(port)
-            })
-        })
-    })
-}
-
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms))
-
-// Ready = the server says so. index.js logs this line from the listen callback,
-// i.e. once the socket is bound and accepting -- so the fixture reacts to the
-// event instead of polling /api/health every 200ms (which added ~100ms of
-// idle to each of the 86 boots). The 15s budget is a failure guard only: a
-// server that never binds is reported with its logs, not waited on.
-const READY_LINE = 'Server running. Listening on:'
-
-const waitForReady = ({ child, getStdout, getLogs }) => new Promise((resolve, reject) => {
-    const cleanup = () => {
-        clearTimeout(guard)
-        child.stdout.off('data', check)
-        child.off('exit', onExit)
-    }
-    const check = () => {
-        if (getStdout().includes(READY_LINE)) {
-            cleanup()
-            resolve()
-        }
-    }
-    const onExit = () => {
-        cleanup()
-        reject(new Error(`Server exited early.\n${getLogs()}`))
-    }
-    const guard = setTimeout(() => {
-        cleanup()
-        reject(new Error(`Server did not become ready in time.\n${getLogs()}`))
-    }, 15000)
-    child.stdout.on('data', check)
-    child.once('exit', onExit)
-    check()
-})
 
 // Yield until the wall clock has moved on by at least `ms`, without sleeping:
 // for tests that need "strictly later than" a timestamp the server just wrote.
@@ -136,38 +85,14 @@ const startServer = async ({
 
     childEnv.REQUIRE_AUTH = requireAuth === undefined ? '' : String(requireAuth)
 
-    // getFreePort() closes its probe socket before the child binds, so another
-    // process on the machine can take the port in between (the flake this
-    // guards). The child then dies with EADDRINUSE; that -- and only that -- is
-    // retried on a fresh port. Anything else fails the test with the logs.
-    let child
-    let port
-    let stdout = ''
-    let stderr = ''
-    const getLogs = () => `STDOUT:\n${stdout}\nSTDERR:\n${stderr}`
-    for (let attempt = 1; ; attempt += 1) {
-        port = await getFreePort()
-        stdout = ''
-        stderr = ''
-        child = spawn(process.execPath, [SERVER_ENTRY], {
-            cwd: sandboxCwd,
-            env: { ...childEnv, PORT: String(port) },
-            stdio: ['ignore', 'pipe', 'pipe']
-        })
-        child.stdout.on('data', (chunk) => {
-            stdout += chunk.toString()
-        })
-        child.stderr.on('data', (chunk) => {
-            stderr += chunk.toString()
-        })
-        try {
-            await waitForReady({ child, getStdout: () => stdout, getLogs })
-            break
-        } catch (error) {
-            if (attempt < 3 && /EADDRINUSE/.test(`${stdout}${stderr}`)) continue
-            throw error
-        }
-    }
+    // Ready = the child's own listen line, with EADDRINUSE alone retried on a
+    // fresh port: see testSupport/spawnServer.mjs for why a health poll is not
+    // enough when contract files run in parallel.
+    const { child, port, logs: getLogs } = await spawnServerUntilReady({
+        entry: SERVER_ENTRY,
+        cwd: sandboxCwd,
+        env: childEnv
+    })
 
     const baseUrl = `http://127.0.0.1:${port}${appBasePath || ''}`
     const stop = async () => {
@@ -194,7 +119,7 @@ const startServer = async ({
         baseUrl,
         dataRoot: sandboxDataRoot,
         apiToken,
-        logs: () => `STDOUT:\n${stdout}\nSTDERR:\n${stderr}`,
+        logs: getLogs,
         stop
     }
     activeServers.push(handle)
