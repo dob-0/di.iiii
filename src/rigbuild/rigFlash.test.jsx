@@ -135,6 +135,11 @@ describe('the baked wash follows the look', () => {
         expect(washLevelOf(look({ 'column-faces/up-pl5403': 0, 'backdrop/up-pl5403': 0 }))).toBe(0)
         expect(washLevelOf(look({ 'column-faces/up-pl5403': 0.3, 'backdrop/up-pl5403': 0 }))).toBe(0.3)
         expect(washLevelOf(look({ 'column-bases/up-b380f': 0 }))).toBe(1)
+        // a MOVER at a washing position does not steer the bake (the ground versions' scenes)
+        const groundLook = (levels) => ({ aims: { 'column-faces/up-pl5403': { rule: 'up-the-column' }, 'backdrop/up-b380f': { rule: 'fan' }, 'column-faces/up-b380f': { rule: 'vertical' } }, levels })
+        expect(washLevelOf(groundLook({ 'column-faces/up-pl5403': 0, 'backdrop/up-b380f': 1, 'column-faces/up-b380f': 1 }))).toBe(0)
+        expect(washLevelOf(groundLook({ 'column-faces/up-pl5403': 0.55, 'backdrop/up-b380f': 1 }))).toBe(0.55)
+        expect(washLevelOf({ aims: { 'backdrop/up-b380f': { rule: 'fan' } }, levels: { 'backdrop/up-b380f': 0 } })).toBe(1)
         const wash = { id: 'rig-wash', type: 'model', components: { appearance: {} } }
         expect(withWashLevel([wash], 0)[0].components.runtime.visible).toBe(false)
         expect(withWashLevel([wash], 0.3)[0].components.appearance.opacity).toBe(0.3)
