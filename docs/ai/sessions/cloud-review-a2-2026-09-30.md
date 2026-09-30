@@ -74,3 +74,73 @@ Read-only: no code changed. Claims were proved with small node scripts run in a 
 **Not read**
 
 - `src/shared/projectSchema.js` beyond the cue normalisation lines and `invertProjectOps`' callers; `showClock.js` (loop length taken as the tests assert it); `scripts/rigbuild/looks.mjs`, `show-loop.mjs` (used only to build the probe documents).
+
+### A4 — Scene deck screens A and B, layer 2 (ref `origin/preview/rigbuilder-13-2026-09-30`)
+
+Layer 1 (`src/rigbuild/sceneDeck/{hash,model,history,sync,bundle}.js`) is byte-identical to `feat/scene-deck-model`,
+so the A3 findings hold on this ref too (A3 #1, the self-asserted laser sign-off, is reachable from SYNC FROM A FILE).
+`npx vitest run src/rigbuild/ScenesDeck.test.jsx`: 29/29 pass.
+
+**Findings**
+
+1. **medium — RESTORE LAST GOOD (and UNDO) write the whole old snapshot, unguarded, over everyone's later work.**
+   `ScenesDeck.jsx:353-361` sends `step({ type: 'restoreGood', document: doc })` straight to `applyOps` with no
+   `guardSceneChange`; `history.js:29` — `for (const c of from.cues) if (!wanted.has(c.id)) ops.push({ type: 'deleteMappingCue', … })`.
+   The default snapshot is "as opened" (`ScenesDeck.jsx:320-324`). Scenario (proved in node): open the page,
+   a colleague adds cue `cue-colleague` (hold 5 s), press RESTORE LAST GOOD → ops `["deleteMappingCue:cue-colleague"]`,
+   loop 84 → 79 s; any change the colleague made to any look is reverted too (the looks list is written whole).
+   Smallest fix: compute restore/undo only over the scenes this page wrote, and run `guardSceneChange` on the
+   result; refuse with words when the document changed elsewhere since the snapshot.
+
+2. **medium — the sync ledger says "synced" before, and whether or not, the write reaches the server.**
+   `ScenesDeck.jsx:463-467` — `applyOps(ops)` then `setBases(…)` at once; `applyOps` is `applyLocalOps`
+   (`useProjectDocumentSync.js:385-405`): optimistic, the queue lives in memory, and on a 401 it only keeps the
+   batch queued (`:260-277`). `ScenesSurface.jsx` renders no pending-sync error. Scenario: session expired, TAKE
+   THEIRS → the page shows theirs, `localStorage` holds base = their hash, no error on this page; close the tab →
+   the queued op is gone; reopen → here = old, base = theirs → `changedHere`, "CHANGED HERE (waiting to send)",
+   default keep mine: the take is silently undone and the OLD scene is offered to the other copy. (Reasoned from
+   the code; not run against a server.) Smallest fix: show the store's `pending-sync-error` on this page and
+   write bases only once the op is acknowledged (or re-derive them on load).
+
+3. **medium — the restore point before a take is one in-memory slot: each take overwrites the last one.**
+   `ScenesDeck.jsx:459-461` — `step({ type: 'markGood', document: doc })` on every take; `history.js:68-69`
+   keeps a single `good`. Scenario (proved in node): take (or change) scene 1, then scene 2, RESTORE LAST GOOD →
+   scene 2 is back, scene 1 keeps the change; the owner's own MARK THIS AS GOOD is also replaced by the first
+   take. The point also disappears on reload while the ledger (persistent) says the sync happened. House rule:
+   "no write to the owner's data without a restore point" — it exists, but only for the latest write of a
+   session. Smallest fix: mark good once per file read (in `onFile`), not per take, and say so in the message.
+
+4. **medium — lost updates: the deck never checks a document version, and every look write is the whole list.**
+   `ScenesDeck.jsx:326-331` (`write`) and `model.js:166` (`looksOp` patches `rigLooks.looks` whole). On a 409
+   the sync hook catches up and RESUBMITS the same batch on top (`useProjectDocumentSync.js:279-330`), so a
+   colleague's change to a DIFFERENT look that landed first is replaced by this page's stale copy of it. §21 names
+   last-writer-wins only for two edits "on the same install"; this is across installs. (Reasoned; not run
+   against a server.) Smallest fix: a per-look op (owed per §21), or rebuild the looks op from the current
+   document at flush time.
+
+5. **low — B at 390 px: ten cues cannot fit.** `scenes.css:91` — `.rigscenes-cue { flex: 1 1 0; min-width: 44px }`
+   in `.rigscenes-tl { display: flex }` (`:90`, no wrap, no overflow rule). full-ground has 10 cues: 10 × 44 =
+   440 px against a 358 px column (390 − 2 × 16 padding), so the row spills about 82 px past its border.
+   Arithmetic only — NOT seen on a screen. Smallest fix: `overflow-x: auto` on `.rigscenes-tl` (or wrap).
+
+6. **low — a file whose `project` is empty skips the project check.** `ScenesDeck.jsx:411` —
+   `if (parsed.project && parsed.project !== projectId)`. A bundle from another show with `"project": ""` is
+   compared, and its scenes (onlyThere, default take theirs) become cues here. Smallest fix: require
+   `parsed.project === projectId`.
+
+**Refuted**
+
+- A control that skips the guard — all four go `applyControl` → `guardSceneChange` (`model.js:324`); strobe is on/off only, no rate can be written.
+- Sync writes unguarded — every sync action is run through `guardSceneChange` on a working copy BEFORE anything is sent; a refusal sends nothing (`ScenesDeck.jsx:442-457`); the order guard → restore point → record → `applyOps` is enforced in code.
+- A laser lit through the sync WITHOUT the marker — refused (A3 refuted list); a take that moves an aim is refused (`mover-policy`), conservative, not a hole.
+- Loop pushed outside 60-90 s by a control or a take — guarded (keep both adds no cue). Only restore/undo are unguarded (finding 1).
+- Ledger: every storage read/write is in try/catch, a broken entry reads empty, a refused write shows a note (`ledger.js:88-115`); `__proto__` from storage assigns a string to a prototype slot, which is ignored — no pollution.
+- Bundle text in the DOM — names and ids are JSX text only; no `dangerouslySetInnerHTML`, no `href` from data; inline styles take only `previewColour` (hex) and numbers.
+- Timers and animation frames — the play interval and the preview `requestAnimationFrame` are cleared on unmount / change (`:490-496`, `:150`).
+- Preview strobe — fixed 1000/3 ms period, 70 ms flash, off with reduced motion (`preview.js:132-136`).
+- Rectangles and targets — every button / range / colour input is `min-height/min-width: 44px`, `border-radius: 2px` (`scenes.css:28-36`); tabs move with arrow keys; ranges commit on key up / pointer up.
+- Read only — `applyOps` is `NO_WRITE` and every write path returns early on `readOnly`.
+
+**Not read**
+
+- `RigToolRoute` / `rigToolAccess.js` beyond `NO_WRITE` (who gets `readOnly`); `useProjectDocumentSync.js` beyond `applyLocalOps` and the flush error paths; `RigSteps.jsx`; the body of `ScenesDeck.test.jsx` (only run); global stylesheets (whether the page already hides horizontal overflow). Layout at 1440 / 1920 px not assessed.
