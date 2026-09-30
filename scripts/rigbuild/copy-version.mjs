@@ -101,6 +101,8 @@ export const defaultSuffix = (label) => String(label).toLowerCase().replace(/[^a
 export const ADOPT_ENTITY_TOLERANCE = { ratio: 0.15, floor: 10 }
 /** Of the copy's hall entities (not `rig-…`, not a piece), at least this share has the same id AND name in the source. Chosen, not measured. */
 export const ADOPT_HALL_MATCH_MIN = 0.9
+/** A copy with no mark of its own: at least this share of its `rig-…` entity ids is in the source, or it is another version of the set. Chosen, not measured. */
+export const ADOPT_RIG_MATCH_MIN = 0.9
 
 const entitiesOf = (doc) => (Array.isArray(doc?.entities) ? doc.entities : [])
 const isHall = (e) => typeof e?.id === 'string' && !e.id.startsWith('rig-') && !e.components?.piece // the hall as load-version.mjs reads it
@@ -121,7 +123,10 @@ const sameMark = (a, b) => {
  * Does `copyDoc` derive from `sourceDoc`? The guard that keeps --adopt from stamping a foreign
  * project. Three tests, all must hold: the marks that exist name the same set; the entity counts
  * are within ADOPT_ENTITY_TOLERANCE; the copy's hall (its non-rig entities) is the source's — the
- * same id and name, at least ADOPT_HALL_MATCH_MIN of them. `facts` carries the measured numbers. Pure.
+ * same id and name, at least ADOPT_HALL_MATCH_MIN of them. Every version of one set shares its hall,
+ * so a copy with NO mark of its own must also carry the source version's `rig-…` ids (at least
+ * ADOPT_RIG_MATCH_MIN of the copy's): the rig is the part that tells two versions apart. `facts`
+ * carries the measured numbers. Pure.
  */
 export const looksLikeCopyOf = (copyDoc, sourceDoc) => {
     const copyList = entitiesOf(copyDoc)
@@ -137,7 +142,12 @@ export const looksLikeCopyOf = (copyDoc, sourceDoc) => {
     const hallMatched = copyHall.filter((e) => sourceKeys.has(hallKey(e))).length
     if (!copyHall.length) reasons.push('the copy has no hall entities (all rig or pieces), so there is nothing to tell it from another project by')
     else if (hallMatched / copyHall.length < ADOPT_HALL_MATCH_MIN) reasons.push(`not the same hall: ${hallMatched} of the copy's ${copyHall.length} hall entities have the same id and name in the source (needs ${Math.round(ADOPT_HALL_MATCH_MIN * 100)} %)`)
-    return { ok: reasons.length === 0, reasons, facts: { copyEntities: copyList.length, sourceEntities: sourceList.length, allowed, hallCompared: copyHall.length, hallMatched, copySet, sourceSet } }
+    const isRig = (e) => typeof e?.id === 'string' && e.id.startsWith('rig-')
+    const copyRig = copyList.filter(isRig)
+    const sourceRigIds = new Set(sourceList.filter(isRig).map((e) => e.id))
+    const rigMatched = copyRig.filter((e) => sourceRigIds.has(e.id)).length
+    if (!markOf(copyDoc) && copyRig.length && rigMatched / copyRig.length < ADOPT_RIG_MATCH_MIN) reasons.push(`not the same version: only ${rigMatched} of the copy's ${copyRig.length} rig entities have an id in the source (needs ${Math.round(ADOPT_RIG_MATCH_MIN * 100)} % when the copy has no mark to say which version it is)`)
+    return { ok: reasons.length === 0, reasons, facts: { copyEntities: copyList.length, sourceEntities: sourceList.length, allowed, hallCompared: copyHall.length, hallMatched, rigCompared: copyRig.length, rigMatched, copySet, sourceSet } }
 }
 
 const dropReason = (mark) => {
@@ -224,7 +234,7 @@ export const runAdopt = async (client, { from, to, label, suffix, siblings = nul
     const source = await read(from)
     let plan = planAdoption(copy.document, source.document, opts)
     const f = plan.facts
-    if (f) log(`${to} (version ${copy.version}) against ${from} (version ${source.version}): ${f.copyEntities} / ${f.sourceEntities} entities (at most ${f.allowed} apart), hall ${f.hallMatched} of ${f.hallCompared} the same, set ${f.copySet ?? 'no mark'} / ${f.sourceSet ?? 'no mark'}`)
+    if (f) log(`${to} (version ${copy.version}) against ${from} (version ${source.version}): ${f.copyEntities} / ${f.sourceEntities} entities (at most ${f.allowed} apart), hall ${f.hallMatched} of ${f.hallCompared} the same, rig ids ${f.rigMatched} of ${f.rigCompared} in the source, set ${f.copySet ?? 'no mark'} / ${f.sourceSet ?? 'no mark'}`)
     if (plan.status === 'refused') return plan
     plan.notes.forEach((n) => log(`  note: ${n}`))
     if (plan.status === 'nothing') { log(`${to}: already carries the mark (copyOf ${from}) — nothing to do`); return plan }
@@ -254,6 +264,26 @@ export const runAdopt = async (client, { from, to, label, suffix, siblings = nul
     return { ...plan, status: 'written', version: back.version }
 }
 
+/**
+ * What would make a FRESH copy lose its version mark: the same normaliser the server runs, on the mark
+ * `copiedEntities` gave the show entity (null = fine). Without --siblings the source's list is kept,
+ * and it does not name the copy's id, so the server drops the mark and the copy would print "written". Pure.
+ */
+export const freshMarkProblem = (entities) => {
+    const holder = entitiesOf({ entities }).find((e) => e?.id === RIG_SHOW_ID && e.components?.rigVariant) || entitiesOf({ entities }).find((e) => e?.components?.rigVariant)
+    if (!holder) return null // the source carries no mark: nothing to keep
+    const mark = holder.components.rigVariant
+    const kept = normalizeRigVariant(mark)
+    if (!kept) return dropReason(mark)
+    if (!kept.copyOf?.projectId) return 'the server would keep the mark without its copyOf'
+    return null
+}
+
+/** Every flag this script reads; anything else is a typo, and a typo must never fall through to a write (`--dryrun`). */
+export const KNOWN_FLAGS = ['api', 'token-file', 'to', 'undo', 'adopt', 'from', 'label', 'suffix', 'siblings', 'dry-run', 'space']
+/** The arguments this script does not know: unknown --keys and stray words (an em dash pasted for `--`). Pure. */
+export const unknownArgs = (args) => [...Object.keys(args).filter((k) => k !== '_' && !KNOWN_FLAGS.includes(k)).map((k) => `--${k}`), ...(args._ || [])]
+
 const readSiblings = (file) => {
     if (!file) return null
     const list = JSON.parse(fs.readFileSync(path.resolve(String(file)), 'utf8'))
@@ -267,6 +297,8 @@ const readToken = (file) => {
 
 const main = async () => {
     const args = parseArgs()
+    const stray = unknownArgs(args)
+    if (stray.length) die(`unknown argument${stray.length > 1 ? 's' : ''}: ${stray.join(' ')} — nothing was done (known: ${KNOWN_FLAGS.map((k) => `--${k}`).join(' ')})`)
     const api = String(args.api || die('needs --api <install>/serverXR')).replace(/\/+$/, '')
     const client = makeClient(api, readToken(path.resolve(String(args['token-file'] || die('needs --token-file')))))
     const to = String(args.to || die('needs --to <new project id>'))
@@ -314,6 +346,9 @@ const main = async () => {
     // carries it before its dash, for the switch's button (copiedEntities)
     const title = `${meta.body.project?.title || source.projectMeta?.title || from} · ${label}`
     say(`${from} (version ${src.body.version}, ${source.entities.length} entities, ${source.assets.length} assets) → ${to} "${title}"`)
+    // the new mark must survive the server's normaliser — before anything is created, not after "written"
+    const problem = freshMarkProblem(copiedEntities(source.entities, { from, to, label, suffix, siblings }))
+    if (problem) die(`${to}: the copy's version mark would be lost — nothing created: ${problem}`)
     if (dry) { say('--dry-run: nothing written'); return }
 
     // 3. the project
@@ -348,6 +383,8 @@ const main = async () => {
     const back = await client.get(`/api/projects/${to}/document`)
     const same = back.ok && back.body.document.entities.length === source.entities.length && back.body.document.assets.length === source.assets.length
     if (!same) die(`${to}: read back ${back.body?.document?.entities?.length} entities / ${back.body?.document?.assets?.length} assets, the source has ${source.entities.length} / ${source.assets.length}`)
+    const backMark = back.body.document.entities.find((e) => e?.id === RIG_SHOW_ID)?.components?.rigVariant
+    if (freshMarkProblem(copiedEntities(source.entities, { from, to, label, suffix, siblings })) === null && source.entities.some((e) => e?.components?.rigVariant) && !backMark?.copyOf) die(`${to}: written, but the version mark did not stay (no rigVariant.copyOf on ${RIG_SHOW_ID} read back) — run --adopt to repair it`)
     say(`${to}: written (version ${back.body.version}) — ${source.entities.length} entities, ${assets.length} assets; ${from} was only read`)
 }
 
