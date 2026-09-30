@@ -4,7 +4,14 @@ const MIN_RADIUS = 0.75
 const DEFAULT_PADDING = 1.35
 const DEFAULT_FOV = 50
 const MIN_HALF_FOV = 0.01
-const DEFAULT_FALLBACK_DIRECTION = new THREE.Vector3(0.8, 0.45, 1)
+// The direction (from the framed centre out to the camera) used when nothing
+// says which way the visitor should be looking from: a three-quarter view from
+// the front-right, above the floor. It is a DIRECTION only; how far back the
+// camera stands is always fitted from the bounds and the viewport aspect
+// (computeFitDistance). Exported so the editor's "frame selected" uses this one
+// value instead of its own copy of the literal.
+export const DEFAULT_FRAMING_DIRECTION = [0.8, 0.45, 1]
+const DEFAULT_FALLBACK_DIRECTION = new THREE.Vector3(...DEFAULT_FRAMING_DIRECTION)
 
 const getSafeAspect = (aspect) => {
     const numericAspect = Number(aspect)
@@ -24,6 +31,14 @@ export const getLimitingHalfFov = (fov = DEFAULT_FOV, aspect = 1) => {
     return Math.max(MIN_HALF_FOV, Math.min(verticalHalfFov, horizontalHalfFov))
 }
 
+// Bounding-sphere fit: the camera must stand at
+//     distance = radius / sin(halfFov)
+// for a sphere of `radius` to fit a cone of half-angle `halfFov` (the standard
+// derivation used by three.js examples and every "zoom to fit" — the sphere is
+// tangent to the frustum's side planes). `halfFov` is the LIMITING half-angle:
+// the vertical one on a landscape viewport, the horizontal one
+// (atan(tan(vFov/2) * aspect)) on a portrait phone. See Box3.getBoundingSphere
+// and PerspectiveCamera.fov in three.js.
 export const computeFitDistance = (radius, { fov = DEFAULT_FOV, aspect = 1 } = {}) =>
     radius / Math.sin(getLimitingHalfFov(fov, aspect))
 

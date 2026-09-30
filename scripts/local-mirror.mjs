@@ -51,11 +51,11 @@ const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const DEFAULT_LOCAL_URL = 'http://localhost:4000/serverXR'
 
 // The tier map matches spaces/README.md: PROD_API_TOKEN for production,
-// LIVE_API_TOKEN for the dev tier. Order matters — production is walked first so a
+// DEV_API_TOKEN (legacy alias LIVE_API_TOKEN) for the dev tier. Order matters — production is walked first so a
 // space both tiers hold is taken from production.
 const TIERS = {
     prod: { urlEnv: 'PROD_API_URL', tokenEnv: 'PROD_API_TOKEN', fallbackUrl: 'https://di-studio.xyz/serverXR' },
-    dev: { urlEnv: 'LIVE_API_URL', tokenEnv: 'LIVE_API_TOKEN', fallbackUrl: 'https://dev.diiii.xyz/serverXR' },
+    dev: { urlEnv: 'DEV_API_URL', tokenEnv: 'DEV_API_TOKEN', legacyUrlEnv: 'LIVE_API_URL', legacyTokenEnv: 'LIVE_API_TOKEN', fallbackUrl: 'https://dev.diiii.xyz/serverXR' },
 }
 
 // Sandboxes are per-account scratch space, provisioned lazily on first visit.
@@ -183,8 +183,8 @@ const main = async () => {
             .filter(([name]) => args.tier === 'all' || args.tier === name)
             .map(([name, tier]) => ({
                 name,
-                base: (getEnv(tier.urlEnv) || tier.fallbackUrl).replace(/\/+$/, ''),
-                token: args.token || getEnv(tier.tokenEnv) || '',
+                base: (getEnv(tier.urlEnv) || (tier.legacyUrlEnv && getEnv(tier.legacyUrlEnv)) || tier.fallbackUrl).replace(/\/+$/, ''),
+                token: args.token || getEnv(tier.tokenEnv) || (tier.legacyTokenEnv && getEnv(tier.legacyTokenEnv)) || '',
             }))
 
     if (!sources.length) {
