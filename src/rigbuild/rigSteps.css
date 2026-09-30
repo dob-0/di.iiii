@@ -60,6 +60,8 @@
 
 .rigsteps-menu { min-width: 16em; }
 .rigsteps-menu .rigsteps-step { gap: var(--di-space-3); }
+.rigsteps-menu .rigsteps-step:focus-visible,
+.rigsteps-pick:focus-visible { outline: 2px solid var(--di-ink); outline-offset: -2px; }
 
 /* The whole row shown, "back" is only its arrow: the step it names is right beside it. */
 @media (min-width: 1181px) {
