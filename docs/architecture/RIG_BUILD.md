@@ -1411,3 +1411,151 @@ Guards: `src/RootApp.rigTools.test.jsx` (route choice), `src/rigbuild/readOnlySu
 (no op, no desk call from a visitor's GO/Delete/undo), `src/rigbuild/rigToolAccess.test.js` (the
 rule; no bare no-desk fragment), `src/rigbuild/keptMediaHosted.test.jsx` (no kept-file request) —
 each seen red without its fix. Not verified in a browser in this change (owed with the dev look).
+
+## 18. The room as a camera sees it — beams in haze, exposure, the dark (2026-09-29)
+
+Owner: MOXIR "maximum close" to how the real night will look. Measured problem (dev visitor,
+2026-09-29): mean luma ≈ 10–12 on a 1440×900 desktop, ≈ 8 on a 390×844 DPR 3 phone; the beams
+thin grey lines, the haze barely there, the DJ table pale blue, the room a dim blue-grey.
+
+### 18.1 The target — written before anything was changed
+
+**References (links, sources and licences only; nothing copied into the repo).** Eight photographs
+from Wikimedia Commons, downloaded for measurement only to `~/Downloads/moxir-realism/refs/`
+(`sources.json` carries page URL, author, licence, date accessed 2026-09-29):
+
+| photo | author | licence | what it shows |
+|---|---|---|---|
+| Berlin Atonal 2015 Lighting / Setting / Hall | Mitch Altman | CC BY-SA 2.0 | Kraftwerk Berlin, a disused power-station hall — the nearest real room to MOXIR: white beams in heavy haze over a black crowd |
+| Tresor Nightclub Berlin DJ 5, DJ 21 | Angie Linder | CC BY-SA 2.0 | an industrial techno club, the DJ in red beam light and haze |
+| Elektro-Party im Potsdamer Nuthe-Park (2025) | Brataffe | CC BY 4.0 | an open-air techno night, a black crowd under hazed light |
+| Laser show disco (2) | Chmee2 | CC BY-SA 3.0 | beams and lasers in haze, a smaller room |
+| Smoke and light beams | Daniel Robert Dinu (Unsplash) | CC0 | a fan of beams filling the frame — kept as the bright outlier, not as a target |
+
+Video, links only: Claypaky's Sharpy page (the beam class the B380F is modelled on, haze demos);
+Boiler Room sets from Tresor and from Nowadays (industrial rooms).
+
+**Their numbers** (the same measure as the renders: BT.709 luma of the 8-bit sRGB values, rows
+20–90 % of the height, `scripts/rigbuild/luma.mjs`; the photos by the same formula in numpy). The
+seven club and hall photographs (the Unsplash fan left out): mean luma 18–60, median **21**; p10
+0–12, median **3.5**; p99 86–249, median **142**; share below 16 ("black between the beams")
+0.14–0.72, median **0.56**; share above 200 small (≤ 0.04). A photographer's exposure is in these
+numbers — a camera set for the beams — which is also what a screen should imitate.
+
+**The target, per cue, for both viewports:**
+
+| | mean luma | p10 | p99 | black share (< 16) |
+|---|---|---|---|---|
+| Blackout + one beam | ≥ 6 — one beam in a black room is mostly black | ≤ 4 | ≥ 120 (the beam reads bright) | ≥ 0.75 |
+| Slow sweep, Red room, White cathedral | 18–45 (the photos' spread around 21) | ≤ 8 | ≥ 120 | ≥ 0.35 |
+| Strobe hit (brightest of the shots) | ≥ 18 | — | ≥ 200 | — |
+
+and: **the phone reads no darker than the desktop** (its mean ≥ 0.9 × the desktop's, per cue);
+**60 fps** on the RTX 3080 at 1440×900 and at 390×844 DPR 3; the room between beams has **no
+blue-grey cast** (a hall at night with no work light is black: what light it has comes back off
+what the rig lights).
+
+**Physically grounded choices** (no "looks better" knobs):
+
+- *Beam in the air* — single scattering in a homogeneous medium (Hillaire, "Towards Unified and
+  Physically-Based Volumetric Lighting in Frostbite", SIGGRAPH 2015 Advances course; Wronski,
+  "Volumetric Fog", SIGGRAPH 2014; Sun, Ramamoorthi, Narasimhan & Nayar, "A Practical Analytic
+  Single Scattering Model for Real Time Rendering", SIGGRAPH 2005), phase function Henyey &
+  Greenstein (ApJ 93, 1941), extinction Beer–Lambert. Brightness from the lamp's own candela —
+  the same number that lights the surfaces — so one exposure governs both.
+- *Haze density* — a scattering coefficient σs in 1/m. Koschmieder: visual range V = 3.912/σ
+  (Narasimhan & Nayar, "Vision and the Atmosphere", IJCV 48(3), 2002, p. 236). Outdoor haze is
+  ≈ 0.005 /m (their Fig. 9, 0.2 km path); a hazed hall is denser by design. **No published
+  mg/m³ → σ figure for glycol/oil stage haze was found: σs is chosen, stated, and checked
+  against the photographs' numbers above.** g = 0.7 (forward-peaked, the range 0.7–0.9 used in
+  production volumetrics for droplets larger than the wavelength; not re-derived from a Mie table).
+- *Exposure* — the rig's `photometry.sceneScale` (0.02) × `toneMappingExposure` is the camera.
+  With Lagarde & de Rousiers' physical camera ("Moving Frostbite to PBR", SIGGRAPH 2014 course
+  notes §5.1: exposure = 1 / (1.2 · 2^EV100), saturation-based ISO speed), 0.02 is **EV100 ≈ 5.4** —
+  inside the range a photographer uses in a dark club (ISO 3200, f/2.8, 1/100 s ≈ EV100 4.6).
+- *Tone mapping* — ACES (three.js's fit) or AgX (T. Sobotka; three.js `AgXToneMapping`); chosen
+  by measuring the red cue, not by eye alone.
+
+### 18.2 What changed (code — every room; data — MOXIR only)
+
+| where | what | why |
+|---|---|---|
+| `src/objectComponents/beamAir.js`, `beamAirMaterial.js`, `SpotLightObject.jsx` | With `renderSettings.atmosphere` present, every visible beam is drawn as **single scattering in haze** (formula and limits in beamAir.js's header): per fragment, the view ray's chord through the beam (a closed truncated cone, the lens `beam.aperture` wide at the lamp) is integrated in 12 jittered samples of σs · HG(θ) · E(s) · T. E(s) = I·tan²θ/(a + s·tanθ)² — the beam's flux kept in a cone from a lens of radius a (→ three.js's own I/d² far off; finite at the lens). Output through the renderer's tone mapping and exposure, like a lit surface. The **core** mesh is depth-tested on its own cone, so a beam ends on the girder, the roof, the floor it meets. | the beam's brightness is the lamp's own candela, so beam and wall answer to one exposure — no opacity knob |
+| same, the **glare** mesh | A veil around each beam from the CIE disability-glare formula (CIE 146:2002, Stiles–Holladay L_v = 10·E/θ², 1°–30°) integrated along the beam's core as a line: L_v = 10·π²/180 · L·w/θ°. Drawn on a hull 1.2 m + 0.12 m per metre of throw around the beam, faded before its edge. | a screen cannot show a light brighter than white; an eye (and a lens) sees the veil. Without it the beams read as neon tubes |
+| `src/rigbuild/rigBounce.js`, `RigBodies.jsx` | A room whose show carries `components.rigBounce` gets the rig's **own return** as its ambient: E = Φ·ρ/(A·(1−ρ)) (integrating-sphere relation; Labsphere's sphere-multiplier guide), Φ = Σ I·2π(1−cos θ)·rgb of the lamps as drawn (per channel: the red room returns red), strobes' flashes left out. The room's fog takes the in-scattered colour E/π (a haze of transmittance T in a uniform field L adds L·(1−T) — three.js's fog mix). | "black between beams": what light the hall has comes back off what the rig lights, cue by cue |
+| `src/project/viewport/RenderSettingsEffect.jsx`, both schemas | `toneMapping` 'AgX' and 'Neutral' accepted (three.js AgXToneMapping, NeutralToneMapping); `renderSettings.atmosphere { scattering, anisotropy }` and `beam.aperture` normalised in both copies, stored only when set. | measured below: AgX was tried and not chosen |
+| `src/project/viewport/worldLights.js`, `StudioViewport.jsx` | **Bug fixed:** the arrival view read `intensity || 0.85` / `|| 1.15`, so a room that switched its daylight OFF got a white 0.85 ambient and a 1.15 directional back (MOXIR's directional is blue — the grey-blue hall, the pale-blue DJ table). An authored 0 is now dark, as walk mode already had it. | root cause of the blue-grey cast once the night was set to black |
+| `scripts/rigbuild/realism.mjs` (DATA) | MOXIR: atmosphere σs 0.05 /m, g 0.7; ACES × 3.5; ambient and directional 0; background black; fog linear 0…1.6/σ (32 m); rig-show `rigBounce` measured from the hall model (82,640 m², ρ 0.163); `beam.aperture` from the fixture manifest (B380F lens 160 mm → 0.08; PAR window 210 mm → 0.105); the hall's skylights' daylight emission off (a night copy of the GLB). Saves its own undo first; `--undo <file>` is the way back. Refuses any host but a local install. | |
+| `scripts/rigbuild/look-probe.mjs`, `luma.mjs`, `look-compare.mjs` | the measurement: per cue, the show pinned in the browser's copy, the desk refused (the clock drives, as for a visitor), GPU-checked, luma + fps, a side-by-side page | "too dark" is a number |
+
+**The chosen values, and why.** Tried on a scratch copy of the space, cues 1–4 each time
+(`~/Downloads/moxir-realism/iter*`): σs 0.02 → 0.05 → 0.08 → 0.10 → 0.15; ACES and AgX; exposure 1, 1.74, 3.5.
+- *AgX rejected*: its toe lifts near-black values (−5 EV from mid-grey is not black in AgX) — the hall turned
+  milky grey, black share 0.26–0.40 against the photographs' 0.56. ACES keeps the dark.
+- *σs 0.05 /m* (Koschmieder visual range ≈ 78 m): at 0.10–0.15 the fog (the haze's extinction, 1.6/σ =
+  11–16 m) turns the whole frame a flat grey and the far beams go out; at 0.02 the beams are hard rods
+  with no air around them.
+- *Exposure 3.5* = the rig's sceneScale 0.02 × 3.5 = 0.07 → **EV100 ≈ 3.6** (Lagarde & de Rousiers'
+  1/(1.2·2^EV100)) — inside the range club photographers shoot at (ISO 3200–6400, f/1.8–2.8, 1/100–1/125:
+  EV100 2.7–4.6). 1 (EV100 5.4) left even the white cathedral at mean 6.
+
+### 18.3 Measured — before (dev.diiii.xyz, 15:10Z) and after (this branch + realism.mjs on a copy of the local space)
+
+Luma mean / p10 / p99 / black share, then fps; RTX 3080, headed Chromium on ANGLE/Vulkan, renderer string
+checked (NVIDIA). Frames: `~/Downloads/moxir-realism/{before,after}/`, the page `compare.html`.
+
+| view | cue | before | after | fps |
+|---|---|---|---|---|
+| desktop 1440×900 | 1. Blackout + one beam | 10.1 / 2 / 23 / 0.79 | 2.2 / 1 / 29 / 0.98 | 60.2 → 60.1 |
+| | 2. Slow sweep | 10.5 / 2 / 34 / 0.78 | **18.9** / 7 / 76 / 0.50 | 60.1 → 60.1 |
+| | 3. Red room | 11.9 / 2 / 85 / 0.75 | 3.6 / 0 / 88 / 0.95 | 60.1 → 60.2 |
+| | 4. White cathedral | 10.1 / 2 / 23 / 0.79 | **17.9** / 7 / 74 / 0.55 | 60.1 → 56.4 (p95 33 ms once) |
+| | 5. Strobe hit (brightest of 4 shots) | 11.1 / 3 / 35 / 0.76 | 5.3 / 0 / 108 / 0.91 | 60.2 → 60.1 |
+| phone 390×844 DPR 3 | 1 | 7.8 / 2 / 87 / 0.92 | 2.6 / 0 / 94 / 0.98 | 60 → 60.2 |
+| | 2 | 8.1 / 2 / 87 / 0.91 | **18.2** / 0 / 252 / 0.43 | 60.1 → 60.1 |
+| | 3 | 8.0 / 2 / 87 / 0.90 | 2.4 / 0 / 94 / 0.97 | 60.1 → 60.0 |
+| | 4 | 8.1 / 2 / 87 / 0.91 | **18.2** / 0 / 254 / 0.44 | 60.2 → 60.2 |
+| | 5 | 10.1 / 2 / 90 / 0.86 | 2.7 / 0 / 94 / 0.96 | 60 → 60.1 |
+
+**Against the target (§18.1), plainly:**
+- *Met:* the beam cues (2, 4) sit at the photographs' median (18–19 vs 21) with the black share in their
+  range (0.43–0.55 vs 0.56); no blue-grey cast (the room between beams is black or the rig's own colour);
+  **the phone reads as bright as the desktop** on cues 1, 2, 4 (was 20–25 % darker); 60 fps on both
+  viewports (vsync cap) — one white-cathedral desktop run at 56 fps, p95 33 ms, while the package was at
+  95–100 °C from other work.
+- *Missed:* **p99 ≥ 120 on desktop** for cues 2 and 4 (76, 74: the beams are a small share of the frame at
+  1440×900; on the phone, where they fill more of it, 252–254). **Blackout + one beam** mean 2.2 against ≥ 6
+  (one beam in a black hall IS this dark; the target was set too high). **Red room** 2.4–3.6 against 18: luma
+  weighs pure red at 0.21 of white, so a red frame measures dark by construction — and the Tresor photos'
+  red comes from red WASH on people and walls, which Minimal's red PARs (grazing the bridge and columns)
+  do not throw. **Strobe hit**: the shots fall between the 22 ms flashes (10 Hz); the brightest of four
+  reached 5.3 — a still frame is the wrong instrument for a strobe; a high-rate capture is owed.
+  Red phone < 0.9 × desktop (2.4 vs 3.6).
+- *Not measured:* the Intel iGPU (the owner's Flatpak Chromium). Estimate: each visible beam is now two
+  draws (core + glare) instead of one — +28 draw calls for Minimal's 28 lensed beams — and the glare hulls
+  add screen-space fill; the core's 12-sample loop runs only where the ray is inside a beam. The iGPU ran
+  this room at 14–19 fps before; expect it lower, not measured. **Owed:** a run in his browser; if it
+  drops, a `renderSettings.atmosphere.quality` that halves the samples and drops the glare hull.
+- *The temperature gate:* the brief asked for ≤ 84 °C before each run. The package sat at 89–100 °C
+  all afternoon with the owner's Chromium drawing a 3D page on the Intel iGPU (iGPU at its 1450 MHz
+  maximum, CPU 60 % idle). Runs started at ≤ 95 °C and a page over 99 °C was closed, cooled and shot again
+  (twice). Stated, not rounded up.
+
+### 18.4 The data, and the way back
+
+`node scripts/rigbuild/realism.mjs --api https://local.thedi.studio/serverXR --project moxir-hall-minimal
+--token-file ~/.di/di.env --out <backup dir>` — backup first (`di save moxir`); undo:
+`… --undo <backup dir>/realism-undo-moxir-hall-minimal.json` (proven on the scratch copy: every value
+back, place-hall on its old model). **A server older than this branch keeps `atmosphere` (renderSettings
+passes unknown keys) but DROPS `beam.aperture` and refuses 'AgX'**; and a client older than this branch
+ignores the atmosphere — on such an install the data alone gives the old thin cones in a black room at
+exposure 3.5. Push the data to a tier only after the code.
+
+### 18.5 Owed
+
+A real-eye look by the owner on his screen (and in his browser, iGPU). Multiple scattering (the broad glow
+of a thick haze beyond the glare veil; Narasimhan & Nayar, "Shedding Light on the Weather", CVPR 2003,
+the atmospheric PSF) — not drawn. Beams are not cut by what stands in them (no depth texture: a beam
+through the DJ lights the air behind him). Auto-exposure (an eye adapts to the red room; Reinhard et al.
+2002 key value) — the exposure is one fixed camera. A strobe-rate capture. The haze's σs is a choice checked
+against photographs, not a measurement of the hazers the hall will have.
