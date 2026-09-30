@@ -127,9 +127,10 @@ export const pieceGlb = async (piece) => {
     doc.getRoot().getAsset().generator = 'di.iiii scripts/rigbuild/pieces-glb.mjs'
     const buffer = doc.createBuffer()
     const material = doc.createMaterial(piece.category)
-        .setBaseColorFactor(piece.category === 'deck' ? [0.08, 0.08, 0.09, 1] : [0.62, 0.64, 0.66, 1])
-        .setMetallicFactor(piece.category === 'deck' ? 0 : 0.8)
-        .setRoughnessFactor(piece.category === 'deck' ? 0.9 : 0.4)
+        // matte steel: with no environment map a metallic 0.8 truss renders near-black in a dark hall (owner, 2026-09-30)
+        .setBaseColorFactor(piece.category === 'deck' ? [0.08, 0.08, 0.09, 1] : [0.72, 0.74, 0.77, 1])
+        .setMetallicFactor(piece.category === 'deck' ? 0 : 0.3)
+        .setRoughnessFactor(piece.category === 'deck' ? 0.9 : 0.55)
     const prim = doc.createPrimitive()
         .setAttribute('POSITION', doc.createAccessor().setType('VEC3').setArray(new Float32Array(mesh.positions)).setBuffer(buffer))
         .setAttribute('NORMAL', doc.createAccessor().setType('VEC3').setArray(new Float32Array(mesh.normals)).setBuffer(buffer))
