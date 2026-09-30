@@ -46,26 +46,33 @@ const sourceSentence = (model) => (model.source === 'desk'
         ? 'The desk on this machine holds none of this project\'s fixtures: addresses are from the document.'
         : 'No desk on this tier: addresses are from the document only.')
 
+// A loader may answer the bare fixture list (older callers) or {fixtures, flags, conflictsWith}.
+const deskFixtures = (desk) => (Array.isArray(desk) ? desk : desk?.fixtures || null)
+const deskFlagsOf = (desk) => (Array.isArray(desk) ? [] : desk?.flags || [])
+const deskConflictsOf = (desk) => (Array.isArray(desk) ? [] : desk?.conflictsWith || [])
+
 const readDeskRig = async (projectId) => {
     try {
         if (!(await probeLightingDesk())) return null
         const response = await fetch(lightingApiUrl(`api/rig?project=${encodeURIComponent(projectId)}`))
         if (!response.ok) return null
-        return (await response.json()).fixtures || null
+        const answer = await response.json()
+        // `flags` and `conflictsWith` come from a desk that keeps its refusals; an older desk sends neither.
+        return { fixtures: answer.fixtures || null, flags: answer.flags || [], conflictsWith: answer.conflictsWith || [] }
     } catch {
         return null
     }
 }
 
 export default function PatchSheetSurface({ spaceId, projectId, library: baseLibrary = TYPE_LIBRARY, loadDocument = getProjectDocument, loadDesk = readDeskRig }) {
-    const [state, setState] = useState({ status: 'loading', document: null, version: null, desk: null, error: '' })
+    const [state, setState] = useState({ status: 'loading', document: null, version: null, desk: null, deskFlags: [], conflictsWith: [], error: '' })
 
     useEffect(() => {
         let alive = true
         Promise.all([loadDocument(projectId), loadDesk(projectId)])
             .then(([response, desk]) => {
                 if (!alive) return
-                setState({ status: 'ready', document: response?.document || null, version: response?.version ?? null, desk, error: '' })
+                setState({ status: 'ready', document: response?.document || null, version: response?.version ?? null, desk: deskFixtures(desk), deskFlags: deskFlagsOf(desk), conflictsWith: deskConflictsOf(desk), error: '' })
             })
             .catch((error) => {
                 if (!alive) return
@@ -79,8 +86,8 @@ export default function PatchSheetSurface({ spaceId, projectId, library: baseLib
     }, [projectId, loadDocument, loadDesk])
 
     const model = useMemo(() => (state.document
-        ? sheetModel({ entities: state.document.entities || [], library: libraryWithShow(baseLibrary, state.document.entities || []), desk: state.desk, projectId })
-        : null), [state.document, state.desk, baseLibrary, projectId])
+        ? sheetModel({ entities: state.document.entities || [], library: libraryWithShow(baseLibrary, state.document.entities || []), desk: state.desk, projectId, deskFlags: state.deskFlags, conflictsWith: state.conflictsWith })
+        : null), [state.document, state.desk, state.deskFlags, state.conflictsWith, baseLibrary, projectId])
 
     useEffect(() => {
         const root = document.documentElement
@@ -92,8 +99,8 @@ export default function PatchSheetSurface({ spaceId, projectId, library: baseLib
     const localInstall = useLocalInstall()
     const progress = useMemo(() => {
         const entities = state.document?.entities
-        return entities ? rigProgress({ entities, library: libraryWithShow(baseLibrary, entities), projectId, desk: state.desk }) : null
-    }, [state.document, state.desk, baseLibrary, projectId])
+        return entities ? rigProgress({ entities, library: libraryWithShow(baseLibrary, entities), projectId, desk: state.desk, deskFlags: state.deskFlags, conflictsWith: state.conflictsWith }) : null
+    }, [state.document, state.desk, state.deskFlags, state.conflictsWith, baseLibrary, projectId])
     useEffect(() => {
         const previous = document.title
         document.title = `Patch sheet — ${title}`

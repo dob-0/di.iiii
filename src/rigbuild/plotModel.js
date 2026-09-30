@@ -36,10 +36,10 @@ const ORDER_WORDS = { 'over-order': 'more placed than the equipment list orders 
  * @param {string} [args.projectId]
  * @param {object[]|null} [args.desk]  the desk's rig fixtures (GET /light/api/rig): its addresses win over the document's
  */
-export const plotModel = ({ entities = [], library: base, deskFlags = [], projectId = '', desk = null }) => {
+export const plotModel = ({ entities = [], library: base, deskFlags = [], projectId = '', desk = null, conflictsWith = [] }) => {
     const library = libraryWithShow(base, entities)
     const order = orderFlags(entities)
-    const sheet = sheetModel({ entities, library, desk, projectId })
+    const sheet = sheetModel({ entities, library, desk, projectId, deskFlags, conflictsWith })
     const data = plotData({ entities, library })
     const rowById = new Map(sheet.rows.map((r) => [r.id, r]))
     const flagsByEntity = new Map()

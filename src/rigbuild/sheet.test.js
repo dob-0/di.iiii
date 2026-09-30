@@ -180,3 +180,32 @@ describe('sheetModel reads the desk (owner install 2026-09-30: "36 (0 patched)" 
         expect(m.totals.patched).toBe(29)
     })
 })
+
+describe('sheetModel uses the desk\'s kept refusals and overlaps (served by GET /light/api/rig)', () => {
+    const project = 'p1'
+    const entities = Array.from({ length: 6 }, (_, i) => lamp(`l${i}`, { index: i + 1, type: 'up-b380f', mode: '16ch', circuit: 'C1', position: 'truss', unit: i + 1 }))
+    const desk = entities.slice(0, 4).map((e, i) => ({ key: `${project}:${e.id}`, universe: 1, address: 1 + i * 16 }))
+    const deskFlags = [{ key: `${project}:l4`, code: 'no-room', message: 'no universe has room' }, { key: `${project}:l5`, code: 'profile-clash' }, { key: 'other:l4', code: 'group-split' }]
+    it('puts each refusal on its lamp, in the To decide group, and leaves other projects alone', () => {
+        const m = sheetModel({ entities, library, desk, projectId: project, deskFlags })
+        expect(m.rows.find((r) => r.id === 'l4').flags).toEqual(expect.arrayContaining(['no-room', 'not-patched']))
+        expect(m.flagCounts['no-room']).toBe(1)
+        expect(m.flagCounts['profile-clash']).toBe(1)
+        expect(m.flagCounts['group-split']).toBeUndefined()
+        const decide = groupFlags(m.flagCounts).find((g) => g.id === 'decide')
+        expect(decide.items.map((i) => i.code)).toEqual(expect.arrayContaining(['no-room', 'profile-clash']))
+    })
+    it('an older desk (no flags, no conflictsWith) behaves as before', () => {
+        const m = sheetModel({ entities, library, desk, projectId: project })
+        expect(m.flagCounts['no-room']).toBeUndefined()
+        expect(m.conflictsWith).toEqual([])
+    })
+    it('says who it overlaps, by name, and prints it on the sheet', () => {
+        const conflictsWith = [{ universe: 1, from: 1, to: 64, fixtures: Array.from({ length: 12 }, (_, i) => ({ id: `s${i}`, name: `Studio ${i + 1}` })) }]
+        const m = sheetModel({ entities, library, desk, projectId: project, conflictsWith })
+        expect(m.conflictsWith).toHaveLength(1)
+        const html = renderSheetBody(m, {})
+        expect(html).toContain('overlaps 12 other fixtures on U1 1-64')
+        expect(html).toContain('Studio 1, Studio 2')
+    })
+})

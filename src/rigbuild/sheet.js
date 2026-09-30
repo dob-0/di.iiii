@@ -95,6 +95,9 @@ export const groupFlags = (flagCounts = {}) => {
     return groups
 }
 
+/** 'overlaps 12 fixtures on U1 1-64' for one desk conflict, names not listed. Pure. */
+export const conflictWithText = (c) => `overlaps ${c.fixtures.length} other fixture${c.fixtures.length === 1 ? '' : 's'} on U${c.universe} ${c.from}-${c.to}`
+
 /**
  * @param {object} args
  * @param {object[]} args.entities   the project document's entities
@@ -103,8 +106,12 @@ export const groupFlags = (flagCounts = {}) => {
  * @param {{key?: string, entityId?: string, universe: number, address: number}[]} [args.desk]
  *        the desk's rig fixtures for this room (GET /light/api/rig), when a desk is here
  * @param {string}  [args.projectId] needed to match desk keys
+ * @param {{key: string, code: string, message?: string}[]} [args.deskFlags]
+ *        the desk's kept refusals for this project (GET /light/api/rig `flags`); an older desk sends none
+ * @param {{universe: number, from: number, to: number, fixtures: {id: string, name: string}[]}[]} [args.conflictsWith]
+ *        other fixtures on the desk sharing this project's channels (`conflictsWith`), names only
  */
-export const sheetModel = ({ entities: documentEntities = [], library, circuit = DEFAULT_CIRCUIT, desk = null, projectId = null }) => {
+export const sheetModel = ({ entities: documentEntities = [], library, circuit = DEFAULT_CIRCUIT, desk = null, projectId = null, deskFlags = [], conflictsWith = [] }) => {
     const limitW = circuitLimitW(circuit)
     // Where the addresses come from. The document holds none until a patch step runs; the
     // desk on this machine holds them. When the desk holds any of THIS project's fixtures
@@ -207,6 +214,18 @@ export const sheetModel = ({ entities: documentEntities = [], library, circuit =
         }
     }
 
+    // The desk's kept refusals: a lamp the desk would not place is a lamp to decide about,
+    // the same list and the same count the room's steps row makes from its patch answer.
+    if (projectId && Array.isArray(deskFlags)) {
+        const rowOf = new Map(rows.map((r) => [`${projectId}:${r.id}`, r]))
+        for (const f of deskFlags) {
+            const r = rowOf.get(f?.key)
+            if (!r || !f.code || r.flags.includes(f.code)) continue
+            r.flags.push(f.code)
+            if (f.message) r.notes.push(f.message)
+        }
+    }
+
     // Universes: what is used, as merged ranges, and what is free.
     const universes = [...byUniverse.keys()].sort((a, b) => a - b).map((universe) => {
         const list = byUniverse.get(universe)
@@ -252,6 +271,7 @@ export const sheetModel = ({ entities: documentEntities = [], library, circuit =
     return {
         source,
         deskHeld,
+        conflictsWith: (Array.isArray(conflictsWith) ? conflictsWith : []).filter((c) => c && Array.isArray(c.fixtures) && c.fixtures.length),
         rows,
         hookup: [...rows].sort(byHookup),
         schedule: [...rows].sort(bySchedule),
@@ -457,6 +477,9 @@ const powerTable = (model) => {
 export const renderSheetBody = (model, meta = {}) => {
     const p = model.power
     const flagLines = groupFlags(model.flagCounts).map((g) => `<h3 id="flags-${g.id}">${esc(g.title)} — ${g.n}</h3><ul>${g.items.map((i) => `<li><span class="mono">${esc(i.word)}</span> — ${i.n} fixture${i.n === 1 ? '' : 's'}${i.todo ? `. ${esc(i.todo)}` : ''}</li>`).join('')}</ul>`).join('')
+    const overlapLines = (model.conflictsWith || []).length
+        ? `<h3 id="flags-overlaps">Overlaps other fixtures on the desk — ${model.conflictsWith.length}</h3><ul>${model.conflictsWith.map((c) => `<li><span class="mono">${esc(conflictWithText(c))}</span>: ${esc(c.fixtures.map((f) => f.name || f.id).join(', '))}. Nothing was moved — choose the next free address or a separate desk.</li>`).join('')}</ul>`
+        : ''
     const types = new Map()
     for (const r of model.rows) {
         if (!types.has(r.code)) types.set(r.code, { code: r.code, maker: r.maker, modelledOn: r.modelledOn, n: 0, modes: new Set() })
@@ -493,7 +516,7 @@ ${powerTable(model)}
 </section>
 <section>
 <h2 id="flags">Flags</h2>
-${flagLines || '<p>none</p>'}
+${flagLines || overlapLines ? flagLines + overlapLines : '<p>none</p>'}
 </section>
 <p class="foot">From the project document${meta.version != null ? ` at version ${esc(meta.version)}` : ''}${meta.generatedAt ? ` · ${esc(meta.generatedAt)}` : ''}. Types: src/rigbuild/types (sources in each type). Method: docs/architecture/RIG_BUILD.md. Not validated against a console; modes marked owed come from the rental house.${meta.source ? ` ${esc(meta.source)}` : ''}</p>
 `

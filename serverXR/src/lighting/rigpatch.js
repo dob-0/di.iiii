@@ -297,7 +297,57 @@ function rigPatch(ctx, body) {
     }
   }
 
+  // The desk KEEPS the refusals of this run so a page that did not make the POST (the
+  // patch sheet) can serve the same list: state.rigFlags[project] = [{key, code, message}].
+  // Lamps named in this run are re-decided (their old flags dropped, new refusals added);
+  // flags of lamps not in this run stay until a run that names them succeeds; a pruned
+  // lamp's flag goes with it. An empty list is removed, not kept.
+  const runKeys = new Set(lamps.map((l) => l.key));
+  const goneKeys = new Set(removed);
+  const kept = (state.rigFlags && state.rigFlags[project] || []).filter((f) => !runKeys.has(f.key) && !goneKeys.has(f.key));
+  const next = kept.concat(flags.filter((f) => REFUSAL_CODES.has(f.code)).map((f) => ({ key: f.key, code: f.code, message: f.message })));
+  if (!state.rigFlags || typeof state.rigFlags !== 'object') state.rigFlags = {};
+  if (next.length) state.rigFlags[project] = next; else delete state.rigFlags[project];
+
   return { status: 200, body: { ok: true, assignments, flags, removed } };
+}
+
+// The four refusals a room counts in "to decide" (the rest of `flags` is answered live).
+const REFUSAL_CODES = new Set(['no-room', 'profile-clash', 'profile-refused', 'group-split']);
+
+// The last refusals the desk kept for a project. A malformed entry is dropped, not served.
+function rigFlagsOf(ctx, project) {
+  const kept = ctx.state.rigFlags && ctx.state.rigFlags[project];
+  return (Array.isArray(kept) ? kept : [])
+    .filter((f) => f && typeof f.key === 'string' && REFUSAL_CODES.has(f.code))
+    .map((f) => ({ key: f.key, code: f.code, message: String(f.message || '') }));
+}
+
+// Where this project's fixtures share channels with fixtures that are NOT this project's
+// (another room's, or the desk's own): per universe, the overlapping channel span and the
+// other fixtures' ids and NAMES only. Read-only; nothing is moved.
+function rigConflicts(ctx, project) {
+  const { state, PROFILES } = ctx;
+  if (!project) return [];
+  const prefix = project + ':';
+  const width = (f) => (PROFILES[f.profile] || PROFILES.rgb).channels.length;
+  const mine = state.fixtures.filter((f) => f.rigKey && f.rigKey.startsWith(prefix));
+  const byUniverse = new Map();
+  for (const o of state.fixtures) {
+    if (o.rigKey && o.rigKey.startsWith(prefix)) continue;
+    for (const m of mine) {
+      if (m.universe !== o.universe) continue;
+      const from = Math.max(m.address, o.address);
+      const to = Math.min(m.address + width(m) - 1, o.address + width(o) - 1);
+      if (from > to) continue;
+      if (!byUniverse.has(o.universe)) byUniverse.set(o.universe, { universe: o.universe + 1, from, to, fixtures: new Map() });
+      const u = byUniverse.get(o.universe);
+      u.from = Math.min(u.from, from); u.to = Math.max(u.to, to);
+      u.fixtures.set(o.id, { id: o.id, name: o.name });
+    }
+  }
+  return [...byUniverse.values()].sort((a, b) => a.universe - b.universe)
+    .map((u) => ({ universe: u.universe, from: u.from, to: u.to, fixtures: [...u.fixtures.values()] }));
 }
 
 // What this desk holds for a room: its rig fixtures, by key.
@@ -313,4 +363,4 @@ function rigList(ctx, project) {
     }));
 }
 
-module.exports = { rigPatch, rigList, profileNameFor };
+module.exports = { rigPatch, rigList, rigFlagsOf, rigConflicts, profileNameFor };

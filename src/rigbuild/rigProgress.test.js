@@ -45,3 +45,20 @@ describe('rigProgress reads the desk when given one (the sheet page and the room
         expect(rigProgress({ entities, library, projectId: project }).said.patch).toMatch(/^0 of 36 addressed/)
     })
 })
+
+describe('the sheet page and the room count the same "to decide" (desk kept flags)', () => {
+    const project = 'p1'
+    const entities = Array.from({ length: 6 }, (_, i) => ({ id: `l${i}`, type: 'spotLight', components: { fixture: { index: i + 1, type: 'up-b380f', mode: '16ch', circuit: `C${i}`, position: 'truss', unit: i + 1 } } }))
+    const desk = entities.slice(0, 4).map((e, i) => ({ key: `${project}:${e.id}`, universe: 1, address: 1 + i * 16 }))
+    const flags = [{ key: `${project}:l4`, code: 'no-room' }, { key: `${project}:l5`, code: 'profile-refused' }]
+    it('equal counts and the same "N to decide" wording', () => {
+        const room = rigProgress({ entities, library, projectId: project, deskFlags: flags })
+        const sheet = rigProgress({ entities, library, projectId: project, desk, deskFlags: flags })
+        expect(room.totals.conflicts).toBe(2)
+        expect(sheet.totals.conflicts).toBe(2)
+        expect(sheet.said.patch).toMatch(/4 of 6 addressed · 2 to decide/)
+    })
+    it('without the served flags the sheet under-counts (older desk) — no error', () => {
+        expect(rigProgress({ entities, library, projectId: project, desk }).totals.conflicts).toBe(0)
+    })
+})

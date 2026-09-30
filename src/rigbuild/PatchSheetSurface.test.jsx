@@ -63,6 +63,15 @@ describe('PatchSheetSurface reads the desk', () => {
         expect(screen.queryByText(/0 patched/)).toBeNull()
     })
 
+    it('shows the desk\'s kept refusals under To decide and the overlap with other fixtures', async () => {
+        const served = { fixtures: desk29, flags: [{ key: `${project}:l30`, code: 'no-room', message: 'no universe has room' }], conflictsWith: [{ universe: 1, from: 1, to: 64, fixtures: [{ id: 's1', name: 'Studio par' }] }] }
+        open(async () => served)
+        await waitFor(() => expect(screen.getByText('Minimal — patch sheet')).toBeTruthy())
+        expect(screen.getAllByText(/29 of 36 addressed · \d+ to decide/).length).toBeGreaterThan(0)
+        expect(screen.getByText(/the desk found no universe with room/)).toBeTruthy()
+        expect(screen.getByText(/overlaps 1 other fixture on U1 1-64/)).toBeTruthy()
+    })
+
     it('says "no desk on this tier" and keeps the document-only sheet when there is no desk', async () => {
         open(async () => null)
         await waitFor(() => expect(screen.getByText('Minimal — patch sheet')).toBeTruthy())

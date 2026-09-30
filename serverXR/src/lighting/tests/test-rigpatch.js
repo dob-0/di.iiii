@@ -179,6 +179,40 @@ check('the rig key survives a save and a reload; a hand-patched fixture gains no
   again.stop();
 });
 
+check('the desk keeps its last refusals per project and serves them, plus who it overlaps', async () => {
+  const d = await deskOn();
+  // this project: one lamp asks for a profile name that clashes (same name, other width)
+  await d.patch({ project: 'p', lamps: [beam(1, { footprint: 16 })] });
+  // the studio's own fixture (no rigKey) added by hand on channels the project already holds
+  const own = d.desk.state.fixtures.find((f) => f.rigKey === 'p:b1');
+  d.desk.state.fixtures.push(Object.assign({}, own, { id: 'studio-1', name: 'Studio par', rigKey: undefined, address: own.address + 4 }));
+  await d.patch({ project: 'other', lamps: [{ key: 'other:x', name: 'their lamp', code: 'X', type: 'x', mode: '16ch', footprint: 16 }] });
+  const clash = await d.patch({ project: 'p', lamps: [beam(2, { mode: '16ch', footprint: 12 })] });
+  assert.ok(clash.body.flags.some((f) => f.code === 'profile-clash'), 'the POST answers the clash');
+  const served = await d.call('GET', '/api/rig?project=p');
+  assert.deepStrictEqual(served.body.flags.map((f) => [f.key, f.code]), [['p:b2', 'profile-clash']]);
+  assert.ok(served.body.flags[0].message.length > 0);
+  // no other project's flags leak into this one
+  assert.deepStrictEqual((await d.call('GET', '/api/rig?project=other')).body.flags, []);
+  // names only: ids and names of the fixtures it overlaps, and the span
+  const c = served.body.conflictsWith;
+  assert.strictEqual(c.length, 1);
+  assert.strictEqual(c[0].universe, 1);
+  assert.strictEqual(c[0].from, 5);
+  assert.strictEqual(c[0].to, 16);
+  assert.deepStrictEqual(c[0].fixtures, [{ id: 'studio-1', name: 'Studio par' }]);
+  assert.deepStrictEqual(Object.keys(c[0].fixtures[0]).sort(), ['id', 'name']);
+  // survives a restart
+  d.desk.writeShow(); d.close();
+  const again = await deskOn(d.dir);
+  assert.deepStrictEqual((await again.call('GET', '/api/rig?project=p')).body.flags.map((f) => f.code), ['profile-clash']);
+  // re-run without the refusal clears it
+  await again.patch({ project: 'p', lamps: [beam(2, { footprint: 16 })] });
+  assert.deepStrictEqual((await again.call('GET', '/api/rig?project=p')).body.flags, []);
+  // an older show file with no rigFlags serves an empty list
+  again.stop();
+});
+
 check('a bad request is refused whole', async () => {
   const d = await deskOn();
   assert.strictEqual((await d.patch({ lamps: [beam(1)] })).status, 400);

@@ -22,7 +22,7 @@ const {
 const { FX_MODES, FX_SPATIAL, DEFAULT_FX, sanitizeFxPatch, fxActive, beatGrid, BEATS_PER_BAR } = require('./fx');
 const { sanitizeLfos, LFO_WAVES, isGenericChannels } = require('./lfo');
 const { STYLES: FAN_STYLES, fanValues } = require('./fan');
-const { rigPatch, rigList } = require('./rigpatch');
+const { rigPatch, rigList, rigFlagsOf, rigConflicts } = require('./rigpatch');
 const library = require('./library');
 const { SACN, cidFor } = require('./sacn');
 const { DmxInput } = require('./dmxin-net');
@@ -304,6 +304,8 @@ function createDesk(opts = {}) {
       s.raw = sanitizeRaw(disk.raw);
       s.master = Number.isFinite(+disk.master) ? Math.max(0, Math.min(255, Math.round(+disk.master))) : 255;
       s.blackout = !!disk.blackout;
+      // Last auto-patch refusals per project (rigpatch.js). Older shows have none.
+      s.rigFlags = disk.rigFlags && typeof disk.rigFlags === 'object' && !Array.isArray(disk.rigFlags) ? disk.rigFlags : {};
       return s;
     } catch (e) {
       // Nothing was loaded. Remembered, because an empty desk that then SAVES would
@@ -1608,7 +1610,13 @@ function createDesk(opts = {}) {
     },
     'GET /api/rig': (req, res) => {
       const project = new URL(req.url, 'http://desk').searchParams.get('project') || '';
-      json(res, { fixtures: rigList({ state, PROFILES }, project) });
+      // `flags`: the desk's last refusals for this project; `conflictsWith`: other
+      // fixtures sharing its channels (names only). Older desks omit both.
+      json(res, {
+        fixtures: rigList({ state, PROFILES }, project),
+        flags: project ? rigFlagsOf({ state }, project) : [],
+        conflictsWith: rigConflicts({ state, PROFILES }, project),
+      });
     },
 
     'POST /api/fixtures/add': (req, res, body) => {
