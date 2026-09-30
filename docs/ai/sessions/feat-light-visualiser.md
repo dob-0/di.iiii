@@ -19,3 +19,4 @@ the stream: `LIGHTING_DESK.md` "The pushed frame".
   measured there: API → drawn lamp p50 33.8 / p95 34.8 ms, Art-Net → drawn lamp p50 37.8 / p95 39.4 ms.
 - Owed: the real channel lists; gobo/prism/haze drawn; base yaw per lamp; a real console; ponyo run by
   the owner; iGPU numbers.
+- CI fix: `raw/rawTestScope.test.js` went red because `src/rigbuild/dmxPose.test.js` imports `../project/viewport/spotLightAim.js` but `test:raw` did not cover it; added `rigbuild/dmxPose` to the `test:raw` filters in package.json (the guard is the gate; lint was warnings only).
