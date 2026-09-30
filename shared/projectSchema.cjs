@@ -758,7 +758,7 @@ const normalizeRentalList = (list) => {
 // rig in the same hall, each a project of its own. `siblings` is the set, in order, so the
 // space view can offer a switch between them. Short words and ids only; a version with no
 // id, or a set that does not list it, is dropped.
-const RIG_VERSIONS_CAP = 8
+const RIG_VERSIONS_CAP = 32
 const variantId = (value) => (typeof value === 'string' && /^[a-z0-9][a-z0-9-]{0,47}$/.test(value.trim()) ? value.trim() : '')
 const normalizeRigVariant = (value) => {
   if (!value || typeof value !== 'object') return null
