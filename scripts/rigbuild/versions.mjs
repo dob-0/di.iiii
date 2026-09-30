@@ -449,10 +449,14 @@ export const versionRig = ({ spec, base, id }) => {
     // looks, a candidate re-aiming per group (its title, intent, aims/colours/levels win)
     const lookSource = isVariantId(spec, id)
         ? Object.entries(v.looks || spec.looks)
-        : Object.entries(spec.looks).map(([lookId, base]) => {
-            const o = v.looks?.[lookId] || {}
-            return [lookId, { ...base, ...o, aims: { ...base.aims, ...o.aims }, colours: { ...base.colours, ...o.colours }, levels: { ...base.levels, ...o.levels } }]
-        })
+        : [
+            ...Object.entries(spec.looks).map(([lookId, base]) => {
+                const o = v.looks?.[lookId] || {}
+                return [lookId, { ...base, ...o, aims: { ...base.aims, ...o.aims }, colours: { ...base.colours, ...o.colours }, levels: { ...base.levels, ...o.levels } }]
+            }),
+            // a look the set does not have, named only in this version (the ground scenes, ground-scenes.mjs): its own, complete
+            ...Object.entries(v.looks || {}).filter(([lookId]) => !spec.looks[lookId])
+        ]
     const looks = Object.fromEntries(lookSource.map(([lookId, l]) => {
         const aims = pick(l.aims)
         for (const g of groups) if (!aims[g.id]) aims[g.id] = restAim(spec, g, v)
@@ -502,6 +506,8 @@ export const versionRig = ({ spec, base, id }) => {
         defaultLook: v.defaultLook || spec.defaultLook,
         looks,
         ...(v.show ? { show: clone(v.show) } : {}),
+        // a version that opts in to a policy carries it in its rig file (ground-movers.mjs holds it)
+        ...(v.policy ? { policy: clone(v.policy) } : {}),
         opening: clone(v.opening || ((truss.kind === 'crane-hung' || truss.kind === 'crane-x') && spec.craneOpening ? spec.craneOpening : base.opening)),
         ...(spec.hall ? { hall: spec.hall } : {})
     }
