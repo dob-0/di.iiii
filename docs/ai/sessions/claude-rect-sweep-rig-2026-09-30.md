@@ -4,7 +4,7 @@
 
 **Kept round:** only the show chip's recording light (`RoomLookFollower.jsx`, 8×8 `50%`, a status dot). No swatch or joystick knob exists in these files. It is in the test's allow-list with that reason.
 
-**Guard:** `src/rigbuild/controlsAreRectangles.test.js` scans `src/rigbuild/**` (css/jsx/js), ProjectSwitcher and publicViewerStyles. On the base it fails with 13 offences; with the change it passes.
+**Guard:** `src/rigbuild/controlsAreRectangles.test.js` scans `src/rigbuild/**` (css/jsx/js), ProjectSwitcher and publicViewerStyles. On the base it fails with 13 offences; with the change it passes (4 tests).
 
 **Measured.** Full `npm run test -- --run`: with change 159 failed / 7106 passed; base 159 failed / 7102 passed (the same 159 fail on both — serverXR/scripts suites that cannot load on this machine; not investigated). Lint: 0 errors. Not run: `test:server-contracts`, build.
 

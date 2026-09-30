@@ -4,9 +4,8 @@
 import { describe, expect, it } from 'vitest'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
-import { fileURLToPath } from 'node:url'
 
-const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..', '..')
+const ROOT = globalThis.process.cwd().endsWith('src') ? join(globalThis.process.cwd(), '..') : globalThis.process.cwd()
 const MAX_PX = 2
 
 const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
