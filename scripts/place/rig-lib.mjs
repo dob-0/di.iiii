@@ -802,6 +802,16 @@ const staticAnim = { mode: 'static', speed: 1, amplitude: 1 }
 /** A real lamp's light distance (its cutoff) for a beam that stops at `reach`: see buildRig. */
 export const lightDistance = (reach) => reach * 2
 
+// Rigging steel is drawn MATTE. The room has no environment map, so a metal surface (metalness 0.8-0.9) has
+// nothing to reflect and renders almost black in a dark hall: the truss and its hangers vanished and "the
+// truss is not from the crane" (owner, 2026-09-30, checked on his screen). Diffuse light shows the shape.
+const STEEL_METALNESS = 0.3
+const STEEL_ROUGHNESS = 0.55
+// The thin rigging (bridle legs, steels, chains, clamps, hoists) is a few centimetres wide and hangs far above the
+// fill light: it also carries a faint self-light so the hang READS at an orbit distance (drawn to be read, never
+// an engineered design). It changes no size, no position and no rated number.
+const RIGGING_EMISSIVE = '#3b4048'
+
 const box = ({ id, name, pos, size, colour, emissive = '#000000', emissiveIntensity = 1, roughness = 0.8, metalness = 0, rotation = [0, 0, 0] }) => ({
     id,
     type: 'box',
@@ -933,10 +943,10 @@ export const pickGeometry = (rig, stage) => {
 }
 
 /** A thin steel or strap between two points, as a box turned onto the segment. */
-const segment = ({ id, name, from, to, w, colour, metalness = 0.9, roughness = 0.35 }) => {
+const segment = ({ id, name, from, to, w, colour, metalness = STEEL_METALNESS, roughness = STEEL_ROUGHNESS, emissive = RIGGING_EMISSIVE }) => {
     const d = [to[0] - from[0], to[1] - from[1], to[2] - from[2]]
     const len = Math.hypot(...d)
-    const e = box({ id, name, pos: from, size: [w, len, w], colour, metalness, roughness })
+    const e = box({ id, name, pos: from, size: [w, len, w], colour, metalness, roughness, emissive })
     // base-anchored at `from`, its +Y turned onto d. three.js Euler 'XYZ' [a, 0, c] turns +Y
     // to (−sin c, cos c cos a, cos c sin a): c = asin(−dx), a = atan2(dz, dy).
     const u = d.map((v) => v / (len || 1))
@@ -946,7 +956,7 @@ const segment = ({ id, name, from, to, w, colour, metalness = 0.9, roughness = 0
 
 // Bridle legs are drawn about twice as thick as the wire they stand for (14 mm), so they read from an orbit
 // distance; the sizes in the rig file are the real ones. Owner, 2026-09-30: "the truss is not from the crane".
-const RIG_STEEL_W = 0.03
+const RIG_STEEL_W = 0.05
 
 export const slopedLineRigging = (rig, stage, hall) => {
     const r = rig.truss.rigging
@@ -956,7 +966,7 @@ export const slopedLineRigging = (rig, stage, hall) => {
     const line = box({
         id: `${RIG_PREFIX}truss-header`,
         name: `Truss line ${stage.trussW} m (${(rig.truss.pieces_m || []).join(' + ')} m, 290 mm box), sloped ${rig.truss.slope_deg}° up to house right, hung from the crane bridge on ${r.picks_u_m.length} bridled picks — rigging sign-off owed`,
-        pos: mid, size: [stage.trussW, t, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
+        pos: mid, size: [stage.trussW, t, t], colour: '#9aa0a6', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS
     })
     line.components.transform.rotation = [0, 0, round(stage.trussSlope, 9)]
     out.push(line)
@@ -972,10 +982,10 @@ export const slopedLineRigging = (rig, stage, hall) => {
         p.legs.forEach((top, k) => out.push(box({
             id: `${RIG_PREFIX}hoist-${p.i + 1}-clamp-${k ? 'b' : 'a'}`,
             name: `Beam clamp, ${tag} (rigging: on the ${k ? 'back' : 'audience-side'} girder's bottom flange, drawn to fill the ${r.bridle.clamp_drop_m} m clamp drop)`,
-            pos: [top[0], top[1], top[2]], size: [0.12, r.bridle.clamp_drop_m, 0.14], colour: '#5a5d62', metalness: 0.9, roughness: 0.4
+            pos: [top[0], top[1], top[2]], size: [0.12, r.bridle.clamp_drop_m, 0.14], colour: '#7a7e85', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS, emissive: RIGGING_EMISSIVE
         })))
-        out.push(box({ id: `${RIG_PREFIX}hoist-${p.i + 1}`, name: `Chain hoist ${r.hoist}, ${tag} (rigging: under the bridle apex, at its shortest drop)`, pos: [p.x, p.apexY - 0.06 - 0.29, stage.trussZ], size: [0.25, 0.29, 0.2], colour: '#1b1c1f', metalness: 0.4, roughness: 0.6 }))
-        out.push(box({ id: `${RIG_PREFIX}hoist-${p.i + 1}-chain`, name: `Hoist chain and round sling, ${tag} (rigging)`, pos: [p.x, p.chordTop, stage.trussZ], size: [0.03, round(p.apexY - 0.35 - p.chordTop, 3), 0.03], colour: '#4a4c50', metalness: 0.9, roughness: 0.35 }))
+        out.push(box({ id: `${RIG_PREFIX}hoist-${p.i + 1}`, name: `Chain hoist ${r.hoist}, ${tag} (rigging: under the bridle apex, at its shortest drop)`, pos: [p.x, p.apexY - 0.06 - 0.29, stage.trussZ], size: [0.25, 0.29, 0.2], colour: '#45484d', metalness: 0.4, roughness: 0.6, emissive: RIGGING_EMISSIVE }))
+        out.push(box({ id: `${RIG_PREFIX}hoist-${p.i + 1}-chain`, name: `Hoist chain and round sling, ${tag} (rigging)`, pos: [p.x, p.chordTop, stage.trussZ], size: [0.03, round(p.apexY - 0.35 - p.chordTop, 3), 0.03], colour: '#8a8e95', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS, emissive: RIGGING_EMISSIVE }))
         out.push(segment({
             id: `${RIG_PREFIX}hoist-${p.i + 1}-steel`, name: `Safety steel, ${tag} (rigging: secondary, top chord to its own clamp on the back girder — independent of the bridle)`,
             from: [p.x + 0.12, p.chordTop, stage.trussZ], to: [p.x + 0.12, p.legTopY, stage.crane.z_m - r.bridle.leg_spread_m / 2], w: RIG_STEEL_W * 0.7, colour: '#b0b3b8'
@@ -983,7 +993,7 @@ export const slopedLineRigging = (rig, stage, hall) => {
         out.push(box({
             id: `${RIG_PREFIX}hoist-${p.i + 1}-steel-clamp`,
             name: `Safety steel clamp, ${tag} (rigging: its own clamp on the girder's bottom flange, drawn to fill the ${r.bridle.clamp_drop_m} m clamp drop)`,
-            pos: [p.x + 0.12, p.legTopY, stage.crane.z_m - r.bridle.leg_spread_m / 2], size: [0.08, r.bridle.clamp_drop_m, 0.1], colour: '#7c8086', metalness: 0.9, roughness: 0.4
+            pos: [p.x + 0.12, p.legTopY, stage.crane.z_m - r.bridle.leg_spread_m / 2], size: [0.08, r.bridle.clamp_drop_m, 0.1], colour: '#8d9198', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS, emissive: RIGGING_EMISSIVE
         }))
     }
     for (const tie of r.tieoffs || []) {
@@ -1079,7 +1089,7 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
         if (r.picks_u_m) entities.push(...slopedLineRigging(rig, stage, hall))
         else entities.push(box({
             id: `${RIG_PREFIX}truss-header`, name: `Truss line ${stage.trussW} m (${(rig.truss.pieces_m || []).join(' + ')} m, 290 mm box) hung from the crane bridge, bottom chord ${round(trim, 2)} m — rigging sign-off owed`,
-            pos: [lineX, trim, stage.trussZ], size: [stage.trussW, t, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
+            pos: [lineX, trim, stage.trussZ], size: [stage.trussW, t, t], colour: '#9aa0a6', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS
         }))
         const hoistDx = r.hoist_dx_m ?? [stage.trussW / 2 - 1.25]
         const picks = r.picks_u_m ? [] : mirroredDx(hoistDx)
@@ -1087,21 +1097,21 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
             const x = ax + dx
             const tag = `pick ${i + 1}/${picks.length}`
             entities.push(box({ id: `${RIG_PREFIX}hoist-${i + 1}-spreader`, name: `Spreader across both crane girders, ${tag} (rigging: beam clamps on the bottom flanges — sign-off owed)`, pos: [x, gb - 0.15, stage.trussZ], size: [0.15, 0.15, 2.9], colour: '#2a2b2e', metalness: 0.7, roughness: 0.5 }))
-            entities.push(box({ id: `${RIG_PREFIX}hoist-${i + 1}`, name: `Chain hoist ${r.hoist || '500 kg–1 t, D8+'}, ${tag} (rigging)`, pos: [x, gb - 0.15 - 0.45, stage.trussZ], size: [0.3, 0.45, 0.25], colour: '#1b1c1f', metalness: 0.4, roughness: 0.6 }))
+            entities.push(box({ id: `${RIG_PREFIX}hoist-${i + 1}`, name: `Chain hoist ${r.hoist || '500 kg–1 t, D8+'}, ${tag} (rigging)`, pos: [x, gb - 0.15 - 0.45, stage.trussZ], size: [0.3, 0.45, 0.25], colour: '#45484d', metalness: 0.4, roughness: 0.6, emissive: RIGGING_EMISSIVE }))
             const chainLen = gb - 0.6 - (trim + t)
-            entities.push(box({ id: `${RIG_PREFIX}hoist-${i + 1}-chain`, name: `Hoist chain, ${tag} (rigging)`, pos: [x, trim + t, stage.trussZ], size: [0.03, round(chainLen, 3), 0.03], colour: '#4a4c50', metalness: 0.9, roughness: 0.35 }))
+            entities.push(box({ id: `${RIG_PREFIX}hoist-${i + 1}-chain`, name: `Hoist chain, ${tag} (rigging)`, pos: [x, trim + t, stage.trussZ], size: [0.03, round(chainLen, 3), 0.03], colour: '#8a8e95', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS }))
             entities.push(box({ id: `${RIG_PREFIX}hoist-${i + 1}-steel`, name: `Safety steel, ${tag} (rigging: secondary, to the spreader)`, pos: [x + 0.12, trim + t, stage.trussZ], size: [0.012, round(gb - 0.15 - (trim + t), 3), 0.012], colour: '#8a8d92', metalness: 0.9, roughness: 0.3 }))
         })
     }
     for (const side of stage.truss && !stage.crane ? [-1, 1] : []) {
         entities.push(box({
             id: `${RIG_PREFIX}truss-tower-${side < 0 ? 'l' : 'r'}`, name: `Truss tower ${side < 0 ? 'left' : 'right'} ${trussTag}`,
-            pos: [ax + side * stage.trussW / 2, 0, stage.trussZ], size: [t, stage.trussH + t / 2, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
+            pos: [ax + side * stage.trussW / 2, 0, stage.trussZ], size: [t, stage.trussH + t / 2, t], colour: '#9aa0a6', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS
         }))
     }
     if (stage.truss && !stage.crane) entities.push(box({
         id: `${RIG_PREFIX}truss-header`, name: `Truss header ${stage.trussW} m @ ${stage.trussH} m ${trussTag}`,
-        pos: [ax, stage.trussH - t / 2, stage.trussZ], size: [stage.trussW + t, t, t], colour: '#9aa0a6', metalness: 0.8, roughness: 0.4
+        pos: [ax, stage.trussH - t / 2, stage.trussZ], size: [stage.trussW + t, t, t], colour: '#9aa0a6', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS
     }))
     for (const group of rig.groups) {
         const cls = rig.classes[group.class]
@@ -1236,7 +1246,7 @@ export const buildRig = (rig, hall, { mode = 'budget', look: lookName, geometry 
 }
 
 /** A thin box from `a` to `b` (room points): base-anchored at `a`, its +Y turned onto b - a (Euler XYZ = Rx·Rz here). */
-const strut = ({ id, name, a, b, w = 0.02, colour = '#8a8d92', metalness = 0.9, roughness = 0.35 }) => {
+const strut = ({ id, name, a, b, w = 0.02, colour = '#8a8d92', metalness = STEEL_METALNESS, roughness = STEEL_ROUGHNESS }) => {
     const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]
     const len = Math.hypot(...d) || 1e-6
     const [dx, dy, dz] = d.map((v) => v / len)
@@ -1269,7 +1279,7 @@ export const haloEntities = (rig, stage) => {
     const leg = rig.truss.corner_leg_m ?? 0.5
     const corners = [['apex', h.apex], ['left', h.left], ['right', h.right]]
     const sides = [[h.apex, h.left], [h.left, h.right], [h.right, h.apex]]
-    const steel = { colour: '#9aa0a6', metalness: 0.8, roughness: 0.4 }
+    const steel = { colour: '#9aa0a6', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS }
     sides.forEach(([a, b], i) => {
         const dx = b[0] - a[0]
         const dz = b[1] - a[1]
@@ -1317,9 +1327,9 @@ export const haloEntities = (rig, stage) => {
                 out.push(strut({ id: `${RIG_PREFIX}halo-bridle-${name}-${k}`, name: `Bridle leg ${k}/2, ${tag}: beam clamp on the girder's bottom flange (a V in the x plane)`, a: ring, b: [p[0] + dx, gb, zg] }))
             }
         }
-        out.push(box({ id: `${RIG_PREFIX}halo-hoist-${name}`, name: `Chain hoist ${r.hoist || '500 kg D8+'}, ${tag}, hook-suspended under the bridle ring`, pos: [ring[0], ring[1] - 0.1 - hoistH, ring[2]], size: [0.2, hoistH, 0.34], colour: '#1b1c1f', metalness: 0.4, roughness: 0.6 }))
+        out.push(box({ id: `${RIG_PREFIX}halo-hoist-${name}`, name: `Chain hoist ${r.hoist || '500 kg D8+'}, ${tag}, hook-suspended under the bridle ring`, pos: [ring[0], ring[1] - 0.1 - hoistH, ring[2]], size: [0.2, hoistH, 0.34], colour: '#45484d', metalness: 0.4, roughness: 0.6, emissive: RIGGING_EMISSIVE }))
         const hookY = ring[1] - 0.1 - hoistH - 0.23
-        out.push(box({ id: `${RIG_PREFIX}halo-chain-${name}`, name: `Hoist chain + round sling to the corner, ${tag}`, pos: [p[0], trim + t, p[1]], size: [0.03, round(Math.max(0.05, hookY + 0.23 - (trim + t)), 3), 0.03], colour: '#4a4c50', metalness: 0.9, roughness: 0.35 }))
+        out.push(box({ id: `${RIG_PREFIX}halo-chain-${name}`, name: `Hoist chain + round sling to the corner, ${tag}`, pos: [p[0], trim + t, p[1]], size: [0.03, round(Math.max(0.05, hookY + 0.23 - (trim + t)), 3), 0.03], colour: '#8a8e95', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS }))
         out.push(strut({ id: `${RIG_PREFIX}halo-steel-${name}`, name: `Safety steel, ${tag}: the corner to the crane (secondary, independent of the hoist)`, a: [p[0] + 0.12, trim + t, p[1]], b: [p[0] + 0.12, beyond ? gb - t : gb, beyond ? p[1] : p[1]], w: 0.012 }))
     })
     return out
@@ -1333,7 +1343,7 @@ const xStrut = ({ id, name, a, b, w = 0.012, colour = '#8a8d92' }) => {
     // three.js Euler XYZ with y-rotation 0 turns +Y to (-sin z, cos z cos x, cos z sin x)
     const rz = -Math.asin(Math.max(-1, Math.min(1, u[0])))
     const rx = Math.atan2(u[2], u[1])
-    const e = box({ id, name, pos: a, size: [w, len, w], colour, metalness: 0.9, roughness: 0.35 })
+    const e = box({ id, name, pos: a, size: [w, len, w], colour, metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS })
     e.components.transform.rotation = [round(rx, 6), 0, round(rz, 6)]
     return e
 }
@@ -1361,8 +1371,8 @@ export const craneXEntities = (rig, stage) => {
     const gdz = crane.girders_dz_m || [-1.1, 1.1]
     const steel = '#9aa0a6'
     const pieces = (rig.truss.pieces_m || []).join(' + ')
-    out.push(box({ id: `${RIG_PREFIX}truss-header`, name: `X arm along the bridge ${arm} m (${pieces} m, 290 mm box) hung from the crane bridge, bottom chord ${round(trim, 2)} m — rigging sign-off owed`, pos: [ax, trim, z0], size: [arm, t, t], colour: steel, metalness: 0.8, roughness: 0.4 }))
-    out.push(box({ id: `${RIG_PREFIX}truss-z-arm`, name: `X arm across the bridge, out over the crowd, ${arm} m (${pieces} m, 290 mm box), bottom chord ${round(trim, 2)} m — rigging sign-off owed`, pos: [ax, trim, z0], size: [t, t, arm], colour: steel, metalness: 0.8, roughness: 0.4 }))
+    out.push(box({ id: `${RIG_PREFIX}truss-header`, name: `X arm along the bridge ${arm} m (${pieces} m, 290 mm box) hung from the crane bridge, bottom chord ${round(trim, 2)} m — rigging sign-off owed`, pos: [ax, trim, z0], size: [arm, t, t], colour: steel, metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS }))
+    out.push(box({ id: `${RIG_PREFIX}truss-z-arm`, name: `X arm across the bridge, out over the crowd, ${arm} m (${pieces} m, 290 mm box), bottom chord ${round(trim, 2)} m — rigging sign-off owed`, pos: [ax, trim, z0], size: [t, t, arm], colour: steel, metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS }))
     if (j) out.push(box({ id: `${RIG_PREFIX}truss-junction`, name: `4-way flat cross junction ${rig.truss.junction?.code || ''} (${j} m across)`.replace('  ', ' '), pos: [ax, trim - 0.005, z0], size: [j, t + 0.01, j], colour: '#80868c', metalness: 0.8, roughness: 0.45 }))
     const picks = []
     for (const pk of r.picks || []) for (const s of [-1, 1]) picks.push({ ...pk, s })
@@ -1381,8 +1391,8 @@ export const craneXEntities = (rig, stage) => {
             out.push(xStrut({ id: `${RIG_PREFIX}xpick-${n}-leg-${k + 1}`, name: `Bridle leg ${k + 1}/2 (steel wire rope, 90° between the legs), ${tag} (rigging)`, a: apex, b: A, w: 0.016 }))
         }
         // the climbing hoist: its body on the top chord, its chain up to the bridle's apex
-        out.push(box({ id: `${RIG_PREFIX}xpick-${n}-hoist`, name: `Climbing chain hoist ${r.hoist || 'D8+ 500 kg'}, ${tag} (rigging)`, pos: [P[0], top + 0.08, P[2]], size: [0.2, 0.34, 0.2], colour: '#1b1c1f', metalness: 0.4, roughness: 0.6 }))
-        out.push(xStrut({ id: `${RIG_PREFIX}xpick-${n}-chain`, name: `Hoist chain to the bridle, ${tag} (rigging)`, a: [P[0], top + 0.42, P[2]], b: apex, w: 0.03, colour: '#4a4c50' }))
+        out.push(box({ id: `${RIG_PREFIX}xpick-${n}-hoist`, name: `Climbing chain hoist ${r.hoist || 'D8+ 500 kg'}, ${tag} (rigging)`, pos: [P[0], top + 0.08, P[2]], size: [0.2, 0.34, 0.2], colour: '#45484d', metalness: 0.4, roughness: 0.6, emissive: RIGGING_EMISSIVE }))
+        out.push(xStrut({ id: `${RIG_PREFIX}xpick-${n}-chain`, name: `Hoist chain to the bridle, ${tag} (rigging)`, a: [P[0], top + 0.42, P[2]], b: apex, w: 0.03, colour: '#8a8e95' }))
         out.push(xStrut({ id: `${RIG_PREFIX}xpick-${n}-steel`, name: `Safety steel, ${tag} (rigging: secondary, truss to the girder)`, a: [P[0] + 0.1, top, P[2] + 0.1], b: anchors[0].map((v, k) => (k === 1 ? v : v + 0.1)) }))
     })
     // restraints: at each arm end two steels up to the girders, spread in plan, so the X can neither

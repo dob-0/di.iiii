@@ -26,6 +26,7 @@
  * writes over someone's newer ops. `--out` keeps the ops it sent (the undo is the .diiii saved
  * before it: `di open`).
  */
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -90,6 +91,13 @@ const readTokenFile = (file) => {
     return line ? line.slice('ADMIN_API_TOKEN='.length).trim() : null
 }
 
+/**
+ * The project's own body for a piece kind, when it is the CURRENT file's: same name AND same content hash
+ * (asset ids are sha-256 of the bytes). A same-named asset with other content is stale and is not reused.
+ * Pure.
+ */
+export const pieceAssetOf = (assets, kind, sha256) => (assets || []).find((a) => a.name === `rigbuild-${kind}.glb` && a.id === sha256) || null
+
 const main = async () => {
     const args = parseArgs()
     const api = args.api ? String(args.api).replace(/\/+$/, '') : die('needs --api <base>/serverXR — no default on purpose')
@@ -131,16 +139,18 @@ const main = async () => {
             if (a != null) carry[type] = { aperture: a }
         }
     }
-    // piece bodies: the document's own asset when it has one, else upload it
+    // piece bodies: the document's own asset when ITS CONTENT is the current file's, else upload it. (By name
+    // alone a regenerated model — the matte steel of 2026-09-30 — was never picked up.) Asset ids are content hashes.
     const assetFor = {}
     const uploads = []
     for (const kind of new Set(pieces.map((p) => p.kind))) {
-        const have = current.assets.find((a) => a.name === `rigbuild-${kind}.glb`)
+        const file = path.join(REPO_ROOT, 'scripts/rigbuild/pieces', `${kind}.glb`)
+        const bytes = fs.readFileSync(file)
+        const have = pieceAssetOf(current.assets, kind, crypto.createHash('sha256').update(bytes).digest('hex'))
         if (have) { assetFor[kind] = have.id; continue }
         if (args['dry-run']) { assetFor[kind] = `dry-${kind}`; continue }
-        const file = path.join(REPO_ROOT, 'scripts/rigbuild/pieces', `${kind}.glb`)
         const form = new FormData()
-        form.append('asset', new Blob([fs.readFileSync(file)], { type: mimeFor(file) }), `rigbuild-${kind}.glb`)
+        form.append('asset', new Blob([bytes], { type: mimeFor(file) }), `rigbuild-${kind}.glb`)
         const up = await client.post(`/api/projects/${project}/assets`, form)
         if (!up.ok) die(`upload ${kind}: ${up.status} ${up.text.slice(0, 200)}`)
         assetFor[kind] = up.body.asset.id
