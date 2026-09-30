@@ -37,4 +37,17 @@ describe('the visitor viewer draws rectangles', () => {
         }
         expect(read('../../components/authReturnNotice.css')).not.toMatch(round)
     })
+
+    // Wave 2. The jam surface and the kit page: every round corner left in these files is a
+    // named non-control mark, so a new pill or circle on a button fails here.
+    it('keeps the jam surface round only on its two non-control marks', () => {
+        const css = read('../../project/components/jamSurface.css')
+        const rounds = [...css.matchAll(/([^{}]+)\{[^}]*border-radius:\s*(var\(--di-radius-pill\)|999px|50%)/g)]
+            .map((m) => m[1].trim())
+        expect(rounds).toEqual(['.jam-count-dot', '.jam-mine-swatch'])
+    })
+
+    it('draws every kit page control and tag with a 2 px corner', () => {
+        expect(read('../../kit/kit.css')).not.toMatch(round)
+    })
 })
