@@ -1,0 +1,29 @@
+version,row,group_or_effect,code,mount,n,each_w,w_basis,total_w,each_a_at_230v_pf1,total_a_at_230v_pf1,pct_of_one_2944w_circuit,fixtures_per_circuit_whole,min_circuits_this_row_alone,dmx_mode,mode_assumed,channels_each,channels_total,flag
+minimal-ground,group,cob-cut-curtain,UP-COB200,truss-header,7,180,EXACT,1260,0.78,5.48,42.8,16,1,4ch-assumed,ASSUMED,4,28,W from the type table
+minimal-ground,group,par-cut-x,UP-PL5403,truss-header,6,162,EXACT,972,0.7,4.23,33,18,1,8ch,listed,8,48,W from the type table
+minimal-ground,group,par-cut-bridge,UP-PL5403,truss-top,4,162,EXACT,648,0.7,2.82,22,18,1,8ch,listed,8,32,W from the type table
+minimal-ground,group,par-columns-8,UP-PL5403,column-uplight,8,162,EXACT,1296,0.7,5.63,44,18,1,8ch,listed,8,64,W from the type table
+minimal-ground,group,par-press-cut,UP-PL5403,backdrop-floor,3,162,EXACT,486,0.7,2.11,16.5,18,1,8ch,listed,8,24,W from the type table
+minimal-ground,group,beam380-backstage,UP-B380F,backdrop-floor,7,500,EXACT,3500,2.17,15.22,118.9,5,2,16ch,listed,16,112,W from the type table
+minimal-ground,group,beam380-columns-6,UP-B380F,column-bases,6,500,EXACT,3000,2.17,13.04,101.9,5,2,16ch,listed,16,96,W from the type table
+minimal-ground,group,bsw250-ground,UP-250BSW,column-bases,6,280,EXACT,1680,1.22,7.3,57.1,10,1,24ch,listed,24,144,W from the type table
+minimal-ground,group,beeeye-ground,UP-HK1915,column-bases,4,350,EXACT,1400,1.52,6.09,47.6,8,1,21ch,listed,21,84,W from the type table
+minimal-ground,group,laser-cut,UP-LA40WF,truss-top,2,1200,EQUIVALENT,2400,5.22,10.43,81.5,2,1,11ch-assumed,ASSUMED,11,22,"W is EQUIVALENT (another maker's published product), not this rental unit"
+minimal-ground,effect,hazer-back,EXT-HAZER,booth-back,2,1150,EQUIVALENT,2300,5,10,78.1,2,1,2ch,listed,2,4,"W is EQUIVALENT (another maker's published product), not this rental unit"
+minimal-ground,VERSION_TOTAL,all,,,55,,,18942,,82.4,643,,7,,,,658,lower bound if any types may share a circuit = ceil(total/2944); 10 if no two types share a circuit (whole fixtures); channels 658 = at least 2 DMX universes of 512
+full-ground,group,cob-cut-curtain,UP-COB200,truss-header,7,180,EXACT,1260,0.78,5.48,42.8,16,1,4ch-assumed,ASSUMED,4,28,W from the type table
+full-ground,group,par-cut-x,UP-PL5403,truss-header,6,162,EXACT,972,0.7,4.23,33,18,1,8ch,listed,8,48,W from the type table
+full-ground,group,par-cut-bridge,UP-PL5403,truss-top,4,162,EXACT,648,0.7,2.82,22,18,1,8ch,listed,8,32,W from the type table
+full-ground,group,par-columns-8,UP-PL5403,column-uplight,8,162,EXACT,1296,0.7,5.63,44,18,1,8ch,listed,8,64,W from the type table
+full-ground,group,par-press-cut,UP-PL5403,backdrop-floor,3,162,EXACT,486,0.7,2.11,16.5,18,1,8ch,listed,8,24,W from the type table
+full-ground,group,beam380-backstage,UP-B380F,backdrop-floor,7,500,EXACT,3500,2.17,15.22,118.9,5,2,16ch,listed,16,112,W from the type table
+full-ground,group,beam380-columns-6,UP-B380F,column-bases,6,500,EXACT,3000,2.17,13.04,101.9,5,2,16ch,listed,16,96,W from the type table
+full-ground,group,bsw250-ground,UP-250BSW,column-bases,6,280,EXACT,1680,1.22,7.3,57.1,10,1,24ch,listed,24,144,W from the type table
+full-ground,group,beeeye-ground,UP-HK1915,column-bases,4,350,EXACT,1400,1.52,6.09,47.6,8,1,21ch,listed,21,84,W from the type table
+full-ground,group,laser-cut,UP-LA40WF,truss-top,2,1200,EQUIVALENT,2400,5.22,10.43,81.5,2,1,11ch-assumed,ASSUMED,11,22,"W is EQUIVALENT (another maker's published product), not this rental unit"
+full-ground,effect,hazer-back,EXT-HAZER,booth-back,2,1150,EQUIVALENT,2300,5,10,78.1,2,1,2ch,listed,2,4,"W is EQUIVALENT (another maker's published product), not this rental unit"
+full-ground,effect,hazer-hall,EXT-HAZER,nave-columns,4,1150,EQUIVALENT,4600,5,20,156.3,2,2,2ch,listed,2,8,"W is EQUIVALENT (another maker's published product), not this rental unit"
+full-ground,effect,co2,UP-Q108S,booth-pit,6,20,EQUIVALENT,120,0.09,0.52,4.1,147,1,3ch-assumed,ASSUMED,3,18,"W is EQUIVALENT (another maker's published product), not this rental unit"
+full-ground,effect,spark,UP-YH600F,booth-pit,4,500,EQUIVALENT,2000,2.17,8.7,67.9,5,1,2ch,listed,2,8,"W is EQUIVALENT (another maker's published product), not this rental unit"
+full-ground,effect,smoke,UP-YZ31P,nave-columns,4,1500,EQUIVALENT,6000,6.52,26.09,203.8,1,4,1ch,listed,1,4,"W is EQUIVALENT (another maker's published product), not this rental unit"
+full-ground,VERSION_TOTAL,all,,,73,,,31662,,137.7,1075,,11,,,,696,lower bound if any types may share a circuit = ceil(total/2944); 18 if no two types share a circuit (whole fixtures); channels 696 = at least 2 DMX universes of 512
