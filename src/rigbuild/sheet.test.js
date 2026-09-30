@@ -24,7 +24,8 @@ describe('the sheet model', () => {
     })
 
     it('flags, in words, what a crew must know — and invents nothing', () => {
-        expect(row('a').flags).toEqual(['channels-owed', 'overlap'])
+        expect(row('a').flags).toEqual(['overlap']) // UP-B380F 16ch: the tested unit's list, nothing owed
+        expect(row('c').flags).toContain('channels-owed') // UP-250BSW 24ch: no chart yet
         expect(row('a').notes[0]).toMatch(/overlaps #2 UP-B380F at U1\.010/)
         expect(row('c').flags).toEqual(expect.arrayContaining(['off-the-end', 'no-circuit']))
         expect(row('d').flags).toEqual(['mode-unknown'])
@@ -117,7 +118,7 @@ describe('plot data', () => {
 })
 
 describe('the sheet says what each warning is, by cause', () => {
-    const at = (id, extra) => lamp(id, { type: 'up-b380f', mode: '16ch', position: 'booth', ...extra })
+    const at = (id, extra) => lamp(id, { type: 'up-250bsw', mode: '24ch', position: 'booth', ...extra })
     const model = sheetModel({ entities: [at('a', { index: 1, universe: 1, address: 1 }), at('b', { index: 2, universe: 1, address: 10 }), at('c', { index: 3 })], library })
 
     it('groups the flags: to decide, not addressed, owed — each with one line of what to do', () => {

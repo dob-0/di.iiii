@@ -62,11 +62,12 @@ describe('the equipment model', () => {
         expect(m.totals.billed).toBe(1.5)
         expect(m.totals.cost).toBe(m.lines.reduce((s, l) => s + (l.cost || 0), 0))
         expect(m.totals.units).toBe(104)
-        // two types' modes are owed: said, never assumed (UP-PL5403's one mode, 8ch, is published)
-        expect(m.totals.modesOwed).toEqual(['UP-LA40WF ×2', 'UP-Q108S ×6'])
+        // one type's modes are owed: said, never assumed (UP-LA40WF's 32ch is the tested unit's)
+        expect(m.totals.modesOwed).toEqual(['UP-Q108S ×6'])
         expect(m.owed).toContain('UP-Q108S: DMX mode')
-        expect(m.owed).toContain('UP-PL5403 8ch: channel list')
-        expect(m.owed).toContain('UP-B380F 16ch: channel list')
+        expect(m.owed).not.toContain('UP-PL5403 8ch: channel list') // the tested unit's list
+        expect(m.owed).not.toContain('UP-B380F 16ch: channel list')
+        expect(m.owed).toContain('UP-250BSW 24ch: channel list')
     })
     it('flags an order above the house\'s stock', () => {
         const list = withQuantity(LIST, 'up-hk1915', 20)

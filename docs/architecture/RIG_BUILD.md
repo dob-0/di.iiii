@@ -1877,6 +1877,18 @@ each channel named from the chart) and on the visualiser (a line naming every li
 patches a listed channel at its own `default` (a B380F shutter where 0 = CLOSED rests open at 255;
 pan/tilt at 128 = home) — `rigpatch.js`.
 
+**TESTED on the rental units (2026-10-01).** The same UPlight rental gear ran live at the Sevan
+festival (Dilijan camp) on the studio's own Art-Net desk; the owner confirmed the units. Three real
+modes now carry that desk's channel maps (`TESTED_CHANNEL_LISTS` in `fixtureTypes.js`, manifest
+source `SEVAN`, basis `TESTED`, no url because the source is the unit): **UP-B380F 16ch** (pan, tilt,
+pan fine, tilt fine, speed, frost, strobe 255 open/0–3 dark, dimmer, colour, gobo, prism 1, prism 1
+rot, prism 2, prism 2 rot, focus, reset 0; the order differs from the assumed UPlus stand-in),
+**UP-PL5403 8ch** (dimmer, R, G, B, W, strobe, two channels unused there), **UP-LA40WF 32ch** (the
+mode it ran in; the maker publishes none; per-colour levels run 0 = brightest, so they are plain
+channels; still held dark by the laser gate until the IEC 60825-1 sign-off). A meaning nobody wrote
+down stays a plain channel. `resolveMode` now runs these real lists; the assumed modes stay after
+them. Still owed from the rental house: UP-250BSW, UP-HK1915, UP-COB200 and the effects' charts.
+
 ### 18.2 What a lamp's DMX means (`src/rigbuild/dmxDecode.js`)
 
 Through the running mode's channel list: dimmer (16-bit with its fine), colour (RGB(W) emitters, else

@@ -155,17 +155,21 @@ describe('the assumed profiles', () => {
         }
         expect(ASSUMED_PROFILES['UP-HK1915'].grade).toBe('EQUIVALENT')
     })
-    it('the real mode stays owed beside it (the rental chart replaces the assumed one cleanly)', () => {
+    it('the real mode sits beside it, filled only from the tested unit (the assumed one stays a separate mode)', () => {
+        // UP-B380F / UP-PL5403: the channel maps run on the rental units at the Sevan
+        // festival (TESTED, 2026-10-01) fill the real mode; the assumed ones stay after it.
         const b = type('UP-B380F')
-        expect(b.modes.find((m) => m.name === '16ch').channels).toBeNull()
+        const real16 = b.modes.find((m) => m.name === '16ch')
+        expect(real16.channelsSource.basis).toBe('TESTED')
+        expect(real16.channels.map((c) => c.role).slice(0, 4)).toEqual(['pan', 'tilt', 'panFine', 'tiltFine'])
         expect(b.defaultMode).toBe('16ch')
         expect(b.assumedMode).toBe('16ch-assumed')
-        // UP-PL5403: the maker lists one mode, 8ch (uplight.com.cn, 2026-09-29) — its list is owed
         const par = type('UP-PL5403')
         expect(par.modesOwed).toBe(false)
         expect(par.defaultMode).toBe('8ch')
-        expect(par.modes.find((m) => m.name === '8ch').channels).toBeNull()
+        expect(par.modes.find((m) => m.name === '8ch').channelsSource.basis).toBe('TESTED')
         expect(par.assumedMode).toBe('8ch-assumed')
+        // no tested unit, no chart: still owed
         expect(type('UP-Q108S').modesOwed).toBe(true)
     })
 })
