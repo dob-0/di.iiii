@@ -112,10 +112,14 @@ describe('the minimal rig under the measured crane (moxir-hall-2026-09-29-crane-
     })
     it('keeps the truss where the rig file trims it, below the bridge with room for the hoists', () => {
         const truss = byId('rig-truss-header').position
-        expect(truss[1]).toBeCloseTo(6, 6)
+        // #664 (the cut) replaced the flat 8 m line (trim 6 m) with a 15-degree slope: the entity sits at
+        // the rig's derived trim over the DJ's axis, not at a fixed 6 m
+        expect(Math.abs(truss[1] - rig.truss.trim_m)).toBeLessThan(0.1)
         const top = truss[1] + rig.truss.section_m / 2
-        expect(dj.girder_bottom_m - top).toBeGreaterThan(1.5)               // spreader + hoist + chain
-        expect(byId('rig-hoist-1-spreader').position[1]).toBeCloseTo(dj.girder_bottom_m - 0.15, 6)
-        expect(byId('rig-hoist-1-chain').scale[1]).toBeGreaterThan(0.5)
+        expect(dj.girder_bottom_m - top).toBeGreaterThan(1.5)               // bridle + hoist + chain
+        // the cut hangs each pick as a bridle (two legs to the girders) over a hoist chain: the legs
+        // follow the measured bridge, the chain has length left under the apex
+        expect(byId('rig-hoist-1-chain').scale[1]).toBeGreaterThan(0)
+        expect(byId('rig-hoist-3-bridle-a').position[1]).toBeLessThanOrEqual(dj.girder_bottom_m)
     })
 })
