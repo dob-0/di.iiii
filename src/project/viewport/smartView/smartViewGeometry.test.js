@@ -184,6 +184,23 @@ describe('the rig core', () => {
     it('has nothing without lamps or pieces', () => {
         expect(rigCore([], [])).toEqual({ lampBox: null, rigBox: null })
     })
+    // MOXIR known-full, 2026-10-01: 34 uplights and 10 floor beams on the nave columns
+    // (x ±11.6, z 6…48) outnumber the cut and the press, so the component-wise median
+    // (x 0, z ≈ 18) fell on the empty dance floor, 11 m from any lamp — an EMPTY core,
+    // and every preset aimed at the outline's centre (x 12, z 0), inside the steel.
+    it('is the stage cluster when the lamps down the hall outnumber it', () => {
+        const stage = [[-6, 3.6, 4.8], [-3.5, 4.4, 4.8], [-1, 5.1, 4.8], [1.5, 5.8, 4.8], [4, 6.4, 4.8], [5.5, 6.6, 4.8],
+            ...[-4.5, -3, -1.5, 0, 1.5, 3, 4.5].map((x) => [x, 0.1, -1.5]), [1.2, 0.3, 2.6], [1.65, 0.3, 2.6], [2.1, 0.3, 2.6]]
+        const columns = [6, 12, 18, 24, 30, 36, 42, 48].flatMap((z) => [-12.9, -11.1, 11.1, 12.9].map((x) => [x, 0.2, z]))
+            .concat([24, 30, 36, 42, 48].flatMap((z) => [[-10.2, 0.1, z], [10.2, 0.1, z]]))
+        expect(columns.length).toBeGreaterThan(stage.length)
+        const { lampBox } = rigCore([...stage, ...columns])
+        expect(lampBox.min.every(Number.isFinite)).toBe(true) // an empty box is ±Infinity
+        expect(lampBox.min[0]).toBeGreaterThan(-8)
+        expect(lampBox.max[0]).toBeLessThan(8)
+        expect(lampBox.min[2]).toBeGreaterThan(-3)
+        expect(lampBox.max[2]).toBeLessThan(8)
+    })
 })
 
 describe('the fog', () => {
