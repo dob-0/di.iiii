@@ -252,7 +252,7 @@ function EntityVisual({ entity, assetMap }) {
     }
     case 'spotLight': {
         const l = entity.components?.light || {}
-        return <SpotLightObject color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} beam={entity.components?.beam || null} />
+        return <SpotLightObject color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} beam={entity.components?.beam || null} fitted={Boolean(entity.components?.fixture)} />
     }
     case 'directionalLight': {
         const l = entity.components?.light || {}
