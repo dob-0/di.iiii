@@ -165,3 +165,12 @@ describe('the beam through a field', () => {
         expect(beamAirRadiance(ro, rd, { ...beam, sigmaAt: plume })).toBeGreaterThan(5 * beamAirRadiance(ro, rd, beam))
     })
 })
+
+describe('the fog the haze lays on the surfaces', () => {
+    it('reaches 1.6/σ, as realism.mjs writes it for a uniform haze', async () => {
+        const { hazeFogFar } = await import('./hazeField.js')
+        const { hazeFog } = await import('../../scripts/rigbuild/realism.mjs')
+        expect(hazeFogFar(0.05)).toBeCloseTo(hazeFog(0.05).far, 0)
+        expect(hazeFogFar(0)).toBe(Infinity)
+    })
+})

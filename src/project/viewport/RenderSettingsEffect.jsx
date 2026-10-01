@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { atmosphereOf } from '../../objectComponents/beamAir.js'
 import { getHazeField, setAtmosphere } from '../../objectComponents/atmosphereStore.js'
 import { hazeUniformsFor } from '../../objectComponents/hazeUniforms.js'
+import { hazeFogFar } from '../../objectComponents/hazeField.js'
 
 // The document's tone-mapping name → three.js's operator. ACES (Narkowicz's fit,
 // three.js's ACESFilmic) stays the default; 'AgX' (T. Sobotka's AgX, three.js
@@ -46,9 +47,17 @@ export default function RenderSettingsEffect({ renderSettings }) {
     }, [gl, scattering, anisotropy, hazeKey])
     // The haze's eddies drift with the hall's air: one clock for every beam (the shared
     // uniform), ticking only while the room's haze is uneven.
-    useFrame(({ clock }) => {
+    // And the hall's haze dims the surfaces as it dims the beams: a linear fog to
+    // 1.6/σ (hazeFogFar), only while the haze is worked out from the machines — a room
+    // with one hand-set haze keeps the fog it was authored with.
+    useFrame(({ clock, scene }) => {
         const field = getHazeField(gl)
-        if (field && field.patchiness > 0) hazeUniformsFor(gl).uHazeTime.value = clock.elapsedTime
+        if (!field) return
+        if (field.patchiness > 0) hazeUniformsFor(gl).uHazeTime.value = clock.elapsedTime
+        if (scene.fog?.isFog) {
+            scene.fog.near = 0
+            scene.fog.far = Math.min(hazeFogFar(field.fill), 1e5)
+        }
     })
     useEffect(() => () => setAtmosphere(gl, null), [gl])
     return null

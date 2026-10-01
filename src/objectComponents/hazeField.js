@@ -185,7 +185,7 @@ const hash3 = (x, y, z) => {
     return (h >>> 0) / 4294967295
 }
 let noiseCache = null
-/** The noise volume, Uint8 0..255, NOISE_SIZE³, x fastest. Two octaves of smoothed value noise. */
+/** The noise volume, Uint8 0..255, NOISE_SIZE³, x fastest. Three octaves of smoothed value noise. */
 export const hazeNoiseData = () => {
     if (noiseCache) return noiseCache
     const N = NOISE_SIZE
@@ -214,7 +214,7 @@ export const hazeNoiseData = () => {
     for (let z = 0; z < N; z += 1) {
         for (let y = 0; y < N; y += 1) {
             for (let x = 0; x < N; x += 1) {
-                raw[x + N * (y + N * z)] = 0.65 * lattice(4, x, y, z) + 0.35 * lattice(8, x, y, z)
+                raw[x + N * (y + N * z)] = 0.5 * lattice(4, x, y, z) + 0.3 * lattice(8, x, y, z) + 0.2 * lattice(16, x, y, z)
             }
         }
     }
@@ -247,8 +247,10 @@ export const sampleHazeNoise = (p) => {
     )
 }
 
-// One noise tile spans this many metres of hall: eddies of a few metres.
-export const NOISE_TILE_M = 12
+// One noise tile spans this many metres of hall. With the octaves above (4, 8 and 16
+// cells a tile) the eddies are 2 m, 1 m and 0.5 m — the wisps a beam shows in a real
+// haze; a coarser tile (12 m was tried) read as an even haze from the audience.
+export const NOISE_TILE_M = 8
 
 /**
  * The scattering at a world point p, 1/m — the JS twin of the shader's hazeSigma().
@@ -362,6 +364,13 @@ export const buildHazeField = (settings, machines) => {
         .map((m) => ({ ...jetOf(m), position: m.position, direction: m.direction, id: m.id }))
     return { fill, jets, patchiness: settings.patchiness, drift: settings.drift }
 }
+
+/**
+ * The room's fog for a haze field: the hall's well-mixed haze dims the SURFACES too, as
+ * it dims the beams. The same stand-in for Beer–Lambert that scripts/rigbuild/
+ * realism.mjs writes for a uniform haze (linear fog 0 … 1.6/σ, exact at d = 1/σ).
+ */
+export const hazeFogFar = (fill) => (fill > 0 ? 1.6 / fill : Infinity)
 
 /** Two fields the beams would draw the same (so the store does not wake every beam for nothing). */
 export const sameHazeField = (a, b) => {
