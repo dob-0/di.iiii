@@ -5,6 +5,43 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-10-01 — a canvas that asks for 'high-performance' must not go black when the browser refuses it
+
+Found in the dev.diiii.xyz black-room audit (owner: "do the deep audit fix everything"). In the owner's Flatpak
+Chromium, moved to the RTX 3080 that night (di-atlas #17: ANGLE on Vulkan + PRIME offload), a WebGL2 context is
+granted for powerPreference 'default' and 'low-power' and REFUSED (null) for 'high-performance' — with or without the
+offload variables. R3F defaults to 'high-performance', three.js throws on null: the front room, SceneCanvas,
+LiveProjectScene and the Raw viewport drew nothing; StudioViewport ('default'/'low-power') was unaffected.
+
+Fix: `rendererWithFallback()` (`src/project/viewport/rendererFallback.js`) — R3F's own renderer defaults, one retry with
+'default'. Used as the `gl` prop of SceneCanvas, LiveProjectScene, RawViewport. Guard `rendererFallback.test.js` (3).
+Seen in the owner's configured browser against this code: `/` and `/moxir` draw a canvas; dev without it draws none.
+Open: three adds its context-lost listeners before getContext, so a retried canvas holds them twice (harmless).
+
+## 2026-10-01 — the show chip's recording light is square; the rectangle guard reads inline styles right
+
+From the dev.diiii.xyz MOXIR audit (owner: "do the deep audit fix everything"): the SHOW chip's red light was a circle
+(`borderRadius: '50%'`, RoomLookFollower.jsx:78), allowed by an exception in `controlsAreRectangles.test.js`. The owner's
+rule is rectangles only, no circles (memory feedback_no_round_ui), so the light is square and the exception is gone.
+The guard also misread inline styles: its value ran to the end of the line ("0, background: …"), so a correct `0` failed
+and only the exception had kept the file green; the value now ends at a comma. Guard: 4 pass, and it fails on dev's
+round dot ("border-radius 50%").
+
+## 2026-10-01 — dev's 3D rooms were black: the viewport crashed on frozen camera bindings
+
+Owner: "check why dev.diiii.xyz/moxir is black do the deep audit fix everything". A first-time visitor on the GPU
+(RTX 3080, fresh profile) got NO canvas on desktop or phone; console: `TypeError: Cannot assign to read only property
+'left' of object` in StudioViewport. Not lighting, not files (every asset GET answers; a HEAD 403s, which is the edge,
+not the app). Cause: a9b9a77a (Blender navigation) passed the frozen preset `mouseButtons`/`touches` to camera-controls,
+which keeps the object; the ortho-swap effect and `useCameraNavigation` write into it → throw → viewport unmounted.
+Every Studio 3D view on dev was affected, not only MOXIR. Prod (main) does not have a9b9a77a.
+
+Fix: `controlBindingsFor()` (mappings.js) — fresh writable copies; StudioViewport memoises them per preset. Guard:
+`mappings.test.js` "controlBindingsFor" (wiring case fails on the old viewport); `src/studio/navigation/` 37 tests pass.
+Seen: this branch's app (vite on 127.0.0.1:5299, proxied to dev.diiii.xyz) at /moxir — desktop mean luma 11.9, phone
+9.2, canvas drawn, 0 failed requests; frames `~/Downloads/moxir-dev-black/fixed-*.png`. Dev itself is black until this
+lands and deploys.
+
 ## 2026-10-01 — fold the 23 session notes left on dev after #686–#699 into PROGRESS and CURRENT
 
 - The CI `land` job did not fold the notes after the #686 deploy, so 16 (then 23, after #697, #698, #699 merged) sat in `docs/ai/sessions/`; the pre-push gate refuses a push from a `dev` checkout while they do.

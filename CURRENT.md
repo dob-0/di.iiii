@@ -13,8 +13,9 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- fold the 23 session notes left on dev after #686–#699 into PROGRESS and CURRENT
-- the hand-fold branch no longer has to leave a session note
+- a canvas that asks for 'high-performance' must not go black when the browser refuses it
+- the show chip's recording light is square; the rectangle guard reads inline styles right
+- dev's 3D rooms were black: the viewport crashed on frozen camera bindings
 
 Full detail: `PROGRESS.md`.
 
