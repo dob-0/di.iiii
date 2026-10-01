@@ -276,9 +276,61 @@ function LayoutNode({ node, isRoot, onSplit, onClose, setRatio, shared }) {
     return <ViewPane node={node} isRoot={isRoot} onSplit={onSplit} onClose={onClose} shared={shared} />
 }
 
+// On a phone / tablet StudioShell draws the context bar (.smb-topbar, position:fixed, one or two rows by
+// width) over the viewport. What a pane pins to its top edge must sit BELOW it, and a constant would be
+// wrong somewhere, so measure it. Sets --svl-top-clear on the layout root (the variable the desktop bar
+// already feeds, studio.css) and --svl-ctrl-row, the split-controls row the view bar stacks under.
+// Desktop has no .smb-topbar: nothing is set and the stylesheet's values rule.
+const STACKED_CTRL_ROW = '52px'
+function useMobileTopClear(rootRef) {
+    useEffect(() => {
+        const root = rootRef.current
+        const host = root?.parentElement
+        if (!root || !host) return undefined
+        let bar = null
+        let ro = null
+        const clearVars = () => {
+            root.style.removeProperty('--svl-top-clear')
+            root.style.removeProperty('--svl-ctrl-row')
+            delete root.dataset.stacked
+        }
+        const measure = () => {
+            if (!bar) return
+            const clear = Math.max(0, Math.round(bar.getBoundingClientRect().bottom - root.getBoundingClientRect().top))
+            root.style.setProperty('--svl-top-clear', `${clear}px`)
+            root.style.setProperty('--svl-ctrl-row', STACKED_CTRL_ROW)
+            root.dataset.stacked = 'true'
+        }
+        const find = () => {
+            const next = host.querySelector(':scope > .smb-topbar')
+            if (next === bar) return
+            ro?.disconnect()
+            bar = next
+            if (!bar) { clearVars(); return }
+            measure()
+            if (typeof ResizeObserver === 'function') {
+                ro = new ResizeObserver(measure)
+                ro.observe(bar)
+            }
+        }
+        find()
+        const mo = typeof MutationObserver === 'function' ? new MutationObserver(find) : null
+        mo?.observe(host, { childList: true })
+        window.addEventListener('resize', measure)
+        return () => {
+            mo?.disconnect()
+            ro?.disconnect()
+            window.removeEventListener('resize', measure)
+            clearVars()
+        }
+    }, [rootRef])
+}
+
 export default function StudioViewportLayout({ layout, onSplit, onClose, onSetRatio, shared }) {
+    const rootRef = useRef(null)
+    useMobileTopClear(rootRef)
     return (
-        <div className="svl-root">
+        <div className="svl-root" ref={rootRef}>
             <LayoutNode
                 node={layout}
                 isRoot={layout.type === 'view'}
