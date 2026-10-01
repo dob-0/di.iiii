@@ -7,6 +7,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import { isBloomAllowed, setBloomActive } from '../../objectComponents/atmosphereStore.js'
 import { bloomOf } from './bloom.js'
+import { AutoExposurePass, autoExposureOf } from './autoExposure.js'
 
 // THE ROOM IN HIGH DYNAMIC RANGE, WITH BLOOM (renderSettings.bloom, bloom.js).
 //
@@ -40,10 +41,13 @@ export default function HdrBloom({ renderSettings }) {
         const composer = new EffectComposer(gl, target)
         const render = new RenderPass(scene, null)
         const glow = new UnrealBloomPass(new Vector2(256, 256), 0.03, 0.4, 1)
+        // the camera's adaptation (autoExposure.js): after the glow, before the exposure
+        const exposure = new AutoExposurePass()
         composer.addPass(render)
         composer.addPass(glow)
+        composer.addPass(exposure)
         composer.addPass(new OutputPass())
-        return { composer, render, glow, target }
+        return { composer, render, glow, exposure, target }
     }, [gl, scene])
     useEffect(() => {
         // A phone at DPR 3 would carry a half-float, multisampled 1170×2532 buffer plus
@@ -55,6 +59,7 @@ export default function HdrBloom({ renderSettings }) {
     useEffect(() => () => {
         passes.composer.dispose()
         passes.glow.dispose()
+        passes.exposure.dispose()
         passes.target.dispose()
         setBloomActive(gl, false)
     }, [passes, gl])
@@ -76,6 +81,9 @@ export default function HdrBloom({ renderSettings }) {
         passes.glow.enabled = glow
         setBloomActive(gl, glow)
         passes.render.camera = state.camera
+        const auto = autoExposureOf(renderSettings)
+        passes.exposure.enabled = Boolean(auto)
+        if (auto) Object.assign(passes.exposure, auto)
         passes.glow.strength = bloom.strength
         passes.glow.radius = bloom.radius
         // the threshold is said in the screen's terms (1 = what the exposure makes
