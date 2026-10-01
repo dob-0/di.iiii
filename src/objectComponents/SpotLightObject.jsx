@@ -2,7 +2,7 @@ import { useContext, useEffect, useMemo, useRef } from 'react'
 import { context as fiberContext, useFrame } from '@react-three/fiber'
 import { AdditiveBlending, BufferAttribute, ConeGeometry, DoubleSide } from 'three'
 import { spotTargetOffset } from '../project/viewport/spotLightAim.js'
-import { beamCastsLight, beamFadeColors, beamIsVisible, spotBeamShape } from './spotBeam.js'
+import { beamCastsLight, beamFadeColors, beamIsVisible, spotBeamShape, spotLightCone } from './spotBeam.js'
 import { strobeEnvelope } from '../rigbuild/rigFlash.js'
 import { DEFAULT_APERTURE } from './beamAir.js'
 import { beamAirBeforeRender, beamAirGeometry, createBeamAirMaterial, setBeamAirUniforms } from './beamAirMaterial.js'
@@ -47,7 +47,11 @@ export default function SpotLightObject({
     angle = 0.52,
     penumbra = 0.2,
     decay = 2,
-    beam = null
+    beam = null,
+    // A rig fixture (the entity carries components.fixture): its `angle` is half its BEAM
+    // angle, the datasheet's 50 % point, so its real light is fitted to it (spotBeam.js
+    // spotLightCone). An authored spot's angle is its cutoff, as three reads it.
+    fitted = false
 }) {
     const lightRef = useRef(null)
     const targetRef = useRef(null)
@@ -67,6 +71,7 @@ export default function SpotLightObject({
     // light is not mounted at all rather than mounted at zero — three.js pays
     // for a light in every shader whatever its intensity.
     const castsLight = beamCastsLight(beam)
+    const cone = fitted ? spotLightCone({ angle, penumbra }) : { angle, penumbra }
     const throwShape = spotBeamShape({ distance, angle, intensity, haze: beam?.haze })
     // A cone that would draw at opacity 0 (haze 0, or a lamp held at 0) is not
     // mounted at all: an additive mesh at 0 adds nothing to the picture and
@@ -124,8 +129,8 @@ export default function SpotLightObject({
                         color={color}
                         intensity={intensity}
                         distance={distance}
-                        angle={angle}
-                        penumbra={penumbra}
+                        angle={cone.angle}
+                        penumbra={cone.penumbra}
                         decay={decay}
                     />
                     <object3D ref={targetRef} position={spotTargetOffset()} />
