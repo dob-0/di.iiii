@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { dressForShadows, undressShadows } from './shadowCasting.js'
+import { dressForShadows, shadowLampCap, undressShadows } from './shadowCasting.js'
 
 // The scene-side half of `renderSettings.shadowCasting`, shared by the two
 // surfaces that render the same document — the arrival view (StudioViewport)
@@ -15,12 +15,15 @@ const REDRESS_EVERY_FRAMES = 30
 
 export default function ShadowCasting({ enabled = false, mapSize = 1024 }) {
     const scene = useThree((state) => state.scene)
+    // How many lamps may throw at once on THIS GPU (shadowCasting.js shadowLampCap): a room
+    // of 64 real lamps (MOXIR Known · full) shadows its brightest 12, not none.
+    const maxLights = useThree((state) => shadowLampCap(state.gl?.capabilities?.maxTextures))
     const frames = useRef(0)
 
     const dress = useCallback(() => {
         if (!enabled || !scene) return
-        dressForShadows(scene, mapSize)
-    }, [enabled, mapSize, scene])
+        dressForShadows(scene, mapSize, { maxLights })
+    }, [enabled, mapSize, maxLights, scene])
 
     // Dress while it is on, and put the scene back the moment it goes off or
     // this surface goes away. The cleanup is the switch's other half: the flags
