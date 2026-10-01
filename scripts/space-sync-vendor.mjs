@@ -46,6 +46,7 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { isMainModule } from './lib/isMainModule.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const UPSTREAM = path.join(ROOT_DIR, 'scripts', 'space-sync.mjs')
@@ -350,4 +351,4 @@ const main = () => {
   return 0
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) process.exit(main())
+if (isMainModule(import.meta.url)) process.exit(main())

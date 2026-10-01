@@ -5,11 +5,12 @@ import { describe, expect, it } from 'vitest'
 import { ITEMS, picturesOf } from './index.js'
 import { MEDIA, assetUrl, documentsOf, mediaProblems, photosOf, rightsLine, verificationOf } from './media.js'
 import rental from '../../../scripts/rigbuild/rentals/moxir-2026-10-17.json'
+import { fileURLToPath } from 'node:url'
 
 // The makers' photos and documents (RIG_BUILD.md §13.8) are the makers' copyright: the
 // repository holds where each came from, never the bytes; a file is kept only where the maker
 // offers it for download; every item says whether its rental code was verified, with evidence.
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../..')
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
 
 describe('the makers\' media — metadata only, with provenance', () => {
     it('is well formed: every status, evidence, date, maker and offer', () => {

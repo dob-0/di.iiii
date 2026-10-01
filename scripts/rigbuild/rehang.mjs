@@ -42,6 +42,7 @@ import { variantOf } from './load-version.mjs'
 import { projectOf, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
 import { catalogueHeightOf } from '../../src/rigbuild/pieces.js'
 import { isWashEntityId } from '../../src/rigbuild/looks.js'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const r3 = (v) => Math.round(v * 1000) / 1000
 const isRig = (e) => e.id.startsWith('rig-')
@@ -177,6 +178,6 @@ const main = async () => {
     say(`${project}: written, version ${version}. Next: rig.mjs --wash-only --look ${rest}; patch-plan.mjs; the show loop.`)
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => die(error.stack || error.message))
 }

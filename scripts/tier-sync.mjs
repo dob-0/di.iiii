@@ -69,6 +69,7 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { remapAssetIds, remapFromUpload } from './asset-remap-lib.mjs'
 import { ensureDestinationVisibility, visibilityCreateFields } from './project-visibility-lib.mjs'
+import { isMainModule } from './lib/isMainModule.mjs'
 
 const { diffDocumentLoss, combineLoss, describeLoss, parseAcceptLoss, lossGate } = createRequire(import.meta.url)('../shared/documentLoss.cjs')
 
@@ -899,7 +900,7 @@ const copyAssets = async ({ call, from, to, projectId, document }) => {
     return { moved, remap }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => {
         console.error(process.env.TIER_SYNC_DEBUG ? error.stack : error.message)
         process.exit(1)

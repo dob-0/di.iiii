@@ -20,6 +20,7 @@
 // --dry-run  report what would be restored and which files answer; write nothing
 
 import fs from 'node:fs'
+import { isMainModule } from './lib/isMainModule.mjs'
 
 const arg = (name, fallback = null) => {
     const i = process.argv.indexOf(`--${name}`)
@@ -100,6 +101,6 @@ async function main() {
     console.log(`restored ${missing.length} entities; version ${version} → ${body.version ?? body.latestVersion ?? body.documentVersion ?? body.project?.documentVersion ?? '?'}`)
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => die(error.message))
 }
