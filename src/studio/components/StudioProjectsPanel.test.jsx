@@ -108,4 +108,26 @@ describe('StudioProjectsPanel', () => {
         expect(updateServerSpace).toHaveBeenCalledWith('br-id-ge', { publishedProjectId: null })
         expect(listProjects).toHaveBeenCalledTimes(2)
     })
+
+    it('ignores an old space answer that lands after the new space answer', async () => {
+        const defer = () => { let resolve; const promise = new Promise(r => { resolve = r }); return { promise, resolve } }
+        const listA = defer(); const listB = defer(); const spaceA = defer(); const spaceB = defer()
+        listProjects.mockImplementation((id) => (id === 'space-a' ? listA.promise : listB.promise))
+        getServerSpace.mockImplementation((id) => (id === 'space-a' ? spaceA.promise : spaceB.promise))
+
+        const { rerender } = render(<StudioProjectsPanel spaceId="space-a" currentProjectId="x" />)
+        rerender(<StudioProjectsPanel spaceId="space-b" currentProjectId="x" />)
+
+        listB.resolve([{ id: 'b1', title: 'from B' }])
+        spaceB.resolve({ publishedProjectId: 'b1' })
+        expect(await screen.findByRole('button', { name: /from B/ })).toBeInTheDocument()
+        expect(await screen.findByText('live')).toBeInTheDocument()
+
+        listA.resolve([{ id: 'a1', title: 'from A' }])
+        spaceA.resolve({ publishedProjectId: 'a1' })
+        await new Promise(r => setTimeout(r, 20))
+
+        expect(screen.queryByRole('button', { name: /from A/ })).not.toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /from B/ })).toBeInTheDocument()
+    })
 })

@@ -403,8 +403,10 @@ function AuthGateInner({
                     <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, letterSpacing: '-0.02em' }}>
                         di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.62)' }}>
-                        Backend unavailable — {error}
+                    {/* One plain sentence and a next step. The raw error stays one
+                        hover away (title) and in the console, not as the message. */}
+                    <Typography variant="body2" role="alert" title={String(error)} sx={{ color: 'rgba(255, 255, 255, 0.62)' }}>
+                        We can&apos;t reach the server right now. Nothing is lost — check your connection, then try again.
                     </Typography>
                     <Button
                         variant="outlined"
@@ -581,7 +583,7 @@ function AuthGateInner({
                     disabled={submitting}
                     error={Boolean(loginError)}
                     helperText={loginError || ''}
-                    inputProps={{ spellCheck: false }}
+                    inputProps={{ spellCheck: false, 'aria-label': 'Access token' }}
                 />
                 <Button
                     type="submit"

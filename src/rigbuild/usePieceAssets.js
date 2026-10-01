@@ -20,14 +20,26 @@ export function usePieceAssets({ projectId, document, applyOps }) {
     const assetIdFor = useCallback((kind) => known.current[kind]
         || (document?.assets || []).find((a) => a.name === pieceAssetName(kind))?.id
         || null, [document?.assets])
-    const ensureAsset = useCallback(async (kind) => {
+    // In-flight uploads by kind: placing several pieces at once calls this in
+    // parallel, and the asset id is only known after fetch + upload, so without
+    // this the same GLB is uploaded and upserted once per caller.
+    const inflight = useRef(new Map())
+    const ensureAsset = useCallback((kind) => {
         const have = assetIdFor(kind)
-        if (have) return have
-        const blob = await (await fetch(PIECE_URLS[kind])).blob()
-        const asset = await uploadProjectAsset(projectId, new File([blob], pieceAssetName(kind), { type: 'model/gltf-binary' }))
-        known.current[kind] = asset.id
-        applyOps({ type: 'upsertAsset', payload: { asset: { ...asset, name: pieceAssetName(kind) } } })
-        return asset.id
+        if (have) return Promise.resolve(have)
+        const pending = inflight.current.get(kind)
+        if (pending) return pending
+        const job = (async () => {
+            const response = await fetch(PIECE_URLS[kind])
+            if (!response.ok) throw new Error(`piece ${kind}: HTTP ${response.status}`)
+            const blob = await response.blob()
+            const asset = await uploadProjectAsset(projectId, new File([blob], pieceAssetName(kind), { type: 'model/gltf-binary' }))
+            known.current[kind] = asset.id
+            applyOps({ type: 'upsertAsset', payload: { asset: { ...asset, name: pieceAssetName(kind) } } })
+            return asset.id
+        })().finally(() => { inflight.current.delete(kind) })
+        inflight.current.set(kind, job)
+        return job
     }, [assetIdFor, projectId, applyOps])
     return { assetIdFor, ensureAsset }
 }

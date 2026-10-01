@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { aimFixture } from '../../scripts/place/fixture-lib.mjs'
@@ -110,6 +110,11 @@ function KindBodies({ kind, poses }) {
         })
         return list
     }, [scene, geo.parts])
+    // The lens materials are made in the memo above and are ours to free; the
+    // other materials belong to the cached GLTF and must NOT be disposed here.
+    useEffect(() => () => {
+        for (const m of meshes) if (m.lens) m.material.dispose()
+    }, [meshes])
     return meshes.map((m) => <PartInstances key={m.key} mesh={m} poses={poses} />)
 }
 

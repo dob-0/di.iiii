@@ -18,6 +18,7 @@ import DeskPerformSwitch from '../perform/DeskPerformSwitch.jsx'
 import useLocalInstall from '../hooks/useLocalInstall.js'
 import useSpaceName from '../hooks/useSpaceName.js'
 import { isEmbedRequest, isPreviewRequest, signalPreviewReady } from '../utils/previewMode.js'
+import { useLocalFileUrl } from './useLocalFileUrl.js'
 import './mapSurface.css'
 
 // THE MAPPER'S DESK.
@@ -90,7 +91,7 @@ export default function MapSurface({ projectId, spaceId }) {
         () => (doc?.nodes || []).filter((node) => node.typeId === 'top.out').map((node) => ({ id: node.id, label: node.label || 'Picture Out' })),
         [doc]
     )
-    const [localReference, setLocalReference] = useState('')
+    const [localReference, setLocalReferenceFile] = useLocalFileUrl()
     const [transferText, setTransferText] = useState(null)
     const [lightingHere, setLightingHere] = useState(false)
 
@@ -427,7 +428,7 @@ export default function MapSurface({ projectId, spaceId }) {
                                     // Held in this browser only: a blob URL means nothing to
                                     // another machine, and a wall photo baked into the
                                     // document as base64 would follow every edit forever.
-                                    setLocalReference(URL.createObjectURL(file))
+                                    setLocalReferenceFile(file)
                                     setOutput({ reference: { ...reference, visible: true } })
                                 }} />
                             </label>

@@ -65,13 +65,13 @@
 .sh-help-header-text p {
     margin: 0;
     font-size: var(--di-text-3);
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--di-text-muted);
 }
 
 .sh-help-close {
     background: none;
     border: none;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--di-text-muted);
     cursor: pointer;
     font-size: var(--di-text-6);
     line-height: 1;
@@ -308,7 +308,7 @@
     margin: 0;
     font-size: var(--di-text-2);
     line-height: 1.4;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--di-text-muted);
 }
 
 .sh-help-steps {
@@ -357,7 +357,7 @@
     border-top: 1px solid rgba(var(--di-cyan-rgb), 0.15);
     font-size: var(--di-text-2);
     line-height: 1.5;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--di-text-muted);
 }
 
 .sh-help-note a {
