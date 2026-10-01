@@ -32,7 +32,7 @@ import {
     setTimelinePreview
 } from '../utils/timelinePreview.js'
 import StudioHelpDialog from './StudioHelpDialog.jsx'
-import { getNavigationPreset, mouseButtonsFor } from '../navigation/mappings.js'
+import { controlBindingsFor, getNavigationPreset, mouseButtonsFor } from '../navigation/mappings.js'
 import { useNavigationPreference } from '../navigation/preference.js'
 import { useCameraNavigation } from '../navigation/useCameraNavigation.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
@@ -567,6 +567,12 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         if (cameraView?.fov != null) targetFovRef.current = cameraView.fov
     }, [cameraView?.fov, targetFovRef])
 
+    // Writable copies for camera-controls, made once per preset (navigation/
+    // mappings.js controlBindingsFor): it keeps the object it is given, and
+    // this file and useCameraNavigation write into it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const bindings = useMemo(() => controlBindingsFor(preset.id), [preset.id])
+
     // In ortho views (small FOV), left drag pans instead of rotating so you can
     // navigate the locked view and arrange objects — same as Blender's ortho behavior
     // (Also restores the preset's resting bindings when the preset changes.)
@@ -612,8 +618,8 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
             draggingSmoothTime={0.0}
             minDistance={0.35}
             maxDistance={500}
-            mouseButtons={preset.mouseButtons}
-            touches={preset.touches}
+            mouseButtons={bindings.mouseButtons}
+            touches={bindings.touches}
             onControlEnd={() => {
                 const cc = controlsRef.current
                 if (!cc || !onCameraChange) return
