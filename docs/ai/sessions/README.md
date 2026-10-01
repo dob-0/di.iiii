@@ -40,7 +40,9 @@ Append to your own file across a session; don't touch anyone else's.
 1. Working on a branch → write/append to `docs/ai/sessions/<your-branch>.md`.
 2. Open a PR into `dev` → CI (`docs:ai:check`) requires exactly one such file, matching
    your branch, with at least one `## ` heading. Exempt: branches matching
-   `NOISE_BRANCH_PATTERNS` in `scripts/repo-state-lib.mjs` (dependabot, etc).
+   `NOISE_BRANCH_PATTERNS` in `scripts/repo-state-lib.mjs` (dependabot, etc), and the hand-fold
+   branch `chore/fold-notes-*` (it folds the notes and leaves none; a note it left would block every push from a
+   `dev` checkout until the next fold, since CI's `land` job cannot push to protected `dev`).
 3. Land the PR → the dev-tier deploy (`deploy-vps-dev.yml`, job `land`) runs
    `npm run land` on `dev` for you: folds every file in this directory into
    `PROGRESS.md` (newest at top), rewrites `CURRENT.md`'s "Last session" from them,
