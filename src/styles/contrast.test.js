@@ -215,7 +215,7 @@ describe('contrast pairs from the 2026-10-01 audit', () => {
     // not accepted: the fix needs the owner's call and a look at the screen. Each
     // entry must keep failing at about the recorded ratio. If one is raised to 3:1
     // this test goes red and the entry must be deleted; if one gets worse it goes
-    // red too. Audit id: F2 (docs/ai/sessions/fix-a11y-safe-batch-2026-10-01.md).
+    // red too. Audit id: F2 (PROGRESS.md, the 2026-10-01 a11y batch entry).
     const KNOWN_BORDER_FAILURES = [
         { token: '--ui-border', recorded: 2.14, audit: 'F2' },
         { token: '--di-line', recorded: 1.22, audit: 'F2' }
