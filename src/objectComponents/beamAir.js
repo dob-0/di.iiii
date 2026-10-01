@@ -75,6 +75,25 @@ export const atmosphereOf = (renderSettings) => {
     }
 }
 
+// THE BEAM'S CROSS-SECTION — how a real fixture's intensity falls off across its beam.
+// A photometric beam angle is where the intensity is 50 % of the centre's, the field
+// angle where it is 10 % (ANSI/IES; every maker's "beam / field" pair). The lamp's
+// three.js `angle` is the BEAM half-angle; the light goes on past it, softly. The shape:
+//
+//     I(ρ) / I(0) = exp(−ln2 · ρ^p)       ρ = r / (beam radius at that distance)
+//
+// p = 2 is a Gaussian (a wash: field ≈ 1.8 × beam); a larger p is a beam fixture's
+// steep-shouldered rod (p = 8: field ≈ 1.2 × beam). `edge` (the lamp's penumbra, 0..1)
+// picks it: hard edge → p 8, soft → p 2. Until 2026-10-01 the profile was a flat top
+// with a short smoothstep edge — every beam read as a solid bar that the exposure
+// clipped to flat white; a real beam's core clips but its shoulders keep the colour
+// and show the haze's grain.
+export const PROFILE_FLOOR = 0.02 // the hull ends where the beam has fallen to 2 %
+export const beamProfileExponent = (edge) => 2 + 6 * (1 - clamp(finite(edge, 0.2), 0, 1))
+export const beamProfile = (rho, edge) => Math.exp(-Math.LN2 * Math.abs(rho) ** beamProfileExponent(edge))
+/** How far out (in beam radii) the light is drawn: where the profile reaches PROFILE_FLOOR. */
+export const beamExtent = (edge) => (Math.log(1 / PROFILE_FLOOR) / Math.LN2) ** (1 / beamProfileExponent(edge))
+
 /** Henyey–Greenstein phase function, 1/sr; integrates to 1 over the sphere. */
 export const hgPhase = (cosTheta, g) => {
     const g2 = g * g
@@ -165,7 +184,9 @@ export const beamChord = (ro, rd, { aperture: a, tanHalf: t, length: L }) => {
  * `scattering` (the hall's well-mixed haze) either way, as the shader does.
  */
 export const beamAirRadiance = (ro, rd, { candela, aperture = DEFAULT_APERTURE, tanHalf, length, edge = 0.2, scattering, anisotropy, samples = BEAM_AIR_SAMPLES, sigmaAt = null }) => {
-    const chord = beamChord(ro, rd, { aperture, tanHalf, length })
+    // the light reaches past the beam angle (beamProfile): the chord through its extent
+    const k = beamExtent(edge)
+    const chord = beamChord(ro, rd, { aperture: aperture * k, tanHalf: tanHalf * k, length })
     if (!chord) return 0
     const [la, lb] = chord
     const dl = (lb - la) / samples
@@ -177,8 +198,7 @@ export const beamAirRadiance = (ro, rd, { candela, aperture = DEFAULT_APERTURE, 
         const s = Math.max(-p[1], 0)
         const R = aperture + s * tanHalf
         const rho = Math.hypot(p[0], p[2]) / Math.max(R, 1e-6)
-        const x = clamp((rho - (1 - edge)) / Math.max(edge, 1e-6), 0, 1)
-        const profile = 1 - x * x * (3 - 2 * x)
+        const profile = beamProfile(rho, edge)
         const wi = [p[0], p[1] - apexY, p[2]]
         const wl = Math.hypot(...wi) || 1
         const cosTheta = -(wi[0] * rd[0] + wi[1] * rd[1] + wi[2] * rd[2]) / wl

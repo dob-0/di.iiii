@@ -194,8 +194,9 @@ function StrobeDriver({ hz, lightRef, coneRef, intensity, opacity }) {
 function BeamInAir({ gl, color, intensity, angle, penumbra, length, aperture, atmosphere, strobeHz = 0 }) {
     const tanHalf = Math.tan(Math.min(Math.max(Number(angle) || 0.52, 0.001), Math.PI / 2 - 0.01))
     const a = Number(aperture) > 0 ? Number(aperture) : DEFAULT_APERTURE
-    // A beam's soft edge: the lamp's penumbra, never harder than a fifth of its radius
-    // (a real beam's edge is soft even through a sharp gobo, in haze).
+    // A beam's edge: the lamp's penumbra picks its cross-section (beamAir.js beamProfile:
+    // hard → a beam fixture's steep-shouldered rod, soft → a wash's Gaussian). Never
+    // harder than 0.2 (a real beam's edge is soft even through a sharp gobo, in haze).
     const edge = Math.min(1, Math.max(0.2, Number(penumbra) || 0))
     const values = { color, intensity, tanHalf, aperture: a, length, edge, atmosphere, strobeHz }
     return (
@@ -212,8 +213,8 @@ function beforeBeamRender(renderer, scene, camera) {
 }
 
 function BeamPart({ gl, part, values }) {
-    const { aperture, tanHalf, length } = values
-    const geometry = useMemo(() => beamAirGeometry({ aperture, tanHalf, length }, part), [aperture, tanHalf, length, part])
+    const { aperture, tanHalf, length, edge } = values
+    const geometry = useMemo(() => beamAirGeometry({ aperture, tanHalf, length, edge }, part), [aperture, tanHalf, length, edge, part])
     // the room's haze field: this renderer's shared uniforms (hazeUniforms.js)
     const material = useMemo(() => createBeamAirMaterial(part, hazeUniformsFor(gl)), [part, gl])
     useEffect(() => () => geometry.dispose(), [geometry])

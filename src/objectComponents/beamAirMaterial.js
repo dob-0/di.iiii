@@ -17,7 +17,7 @@
 // it (a front face is not there to draw from inside). Chosen per frame in
 // onBeforeRender, before three.js sets the draw's state.
 import { AdditiveBlending, BackSide, Color, CylinderGeometry, FrontSide, Matrix4, ShaderMaterial, Vector3 } from 'three'
-import { BEAM_AIR_SAMPLES, DEFAULT_APERTURE, HULL_BASE, HULL_SLOPE } from './beamAir.js'
+import { BEAM_AIR_SAMPLES, DEFAULT_APERTURE, HULL_BASE, HULL_SLOPE, beamExtent } from './beamAir.js'
 import { JET_K, MAX_HAZE_SOURCES, NOISE_TILE_M } from './hazeField.js'
 import { hazeUniformsFor } from './hazeUniforms.js'
 
@@ -45,6 +45,7 @@ uniform vec3 uCamLocal;
 uniform float uHullBase;
 uniform float uHullSlope;
 uniform float uGlare;
+uniform float uLit; // how much of the throw is above the floor (beamAirBeforeRender)
 varying vec3 vLocal;
 varying vec3 vWorld;
 #include <common>
@@ -100,8 +101,14 @@ void main() {
     vec3 rd = normalize(vLocal - ro);
     float t = max(uTan, 1e-4);
     float a = uAperture;
-    float c0 = a - ro.y * t;
-    float c1 = -rd.y * t;
+    // The cross-section (beamAir.js beamProfile): 50 % at the beam angle, falling as
+    // exp(−ln2·ρ^p); the chord is taken through where it has fallen to PROFILE_FLOOR.
+    float pExp = 2.0 + 6.0 * (1.0 - clamp(uEdge, 0.0, 1.0));
+    float kExt = pow(log(1.0 / 0.02) / 0.693147, 1.0 / pExp);
+    float tw = t * kExt;
+    float aw = a * kExt;
+    float c0 = aw - ro.y * tw;
+    float c1 = -rd.y * tw;
     float A = rd.x * rd.x + rd.z * rd.z - c1 * c1;
     float B = 2.0 * (ro.x * rd.x + ro.z * rd.z - c0 * c1);
     float C = ro.x * ro.x + ro.z * ro.z - c0 * c0;
@@ -154,7 +161,6 @@ void main() {
     // samples, so the sum's error is grain, not bands.
     float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
     vec3 apex = vec3(0.0, a / t, 0.0);
-    float edge = max(uEdge, 0.02);
     float sum = 0.0;
     // The same ray in the world, where the haze field lives: from the camera through
     // this fragment, the beam frame's metres converted (an entity may be scaled).
@@ -170,7 +176,7 @@ void main() {
         float s = max(-p.y, 0.0);
         float R = a + s * t;
         float rho = length(p.xz) / max(R, 1e-5);
-        float profile = 1.0 - smoothstep(1.0 - edge, 1.0, rho);
+        float profile = exp(-0.693147 * pow(rho, pExp));
         float E = uIntensity * t * t / max(R * R, 1e-8);
         vec3 wi = p - apex;
         float cosT = -dot(wi, rd) / max(length(wi), 1e-5);
@@ -199,7 +205,9 @@ void main() {
     float dd = dot(rd, ro);
     float ee = dot(axis, ro);
     float den = max(1.0 - bb * bb, 1e-5);
-    float tq = clamp((ee - bb * dd) / den, 0.0, uLength);
+    // only the part of the beam above the floor shines: a veil worked out from the
+    // throw beneath it laid a flat grey sheath over the floor where each beam lands
+    float tq = clamp((ee - bb * dd) / den, 0.0, uLit);
     vec3 q = axis * tq;
     vec3 v = q - ro;
     float dq = max(length(v), 1e-3);
@@ -207,7 +215,7 @@ void main() {
     float cosV = clamp(dot(rd, v) / dq, -1.0, 1.0);
     float theta = max(acos(cosV) - Rq / dq, 0.0);
     float sinPhi = sqrt(den);
-    float chordQ = min(2.0 * Rq / max(sinPhi, 1e-3), uLength);
+    float chordQ = min(2.0 * Rq / max(sinPhi, 1e-3), uLit);
     vec3 wq = q - apex;
     float cosQ = -dot(wq, normalize(v)) / max(length(wq), 1e-5);
     float Eq = uIntensity * t * t / max(Rq * Rq, 1e-8);
@@ -237,14 +245,16 @@ void main() {
 `
 
 /** The closed cone that bounds a beam: lens at the origin, the throw down −Y. */
-export const beamAirGeometry = ({ aperture, tanHalf, length }, part = 'core') => {
-    // The core: the beam's own cone, 2 % over (its soft edge is never cut), so the depth
-    // test ends it on the girder, the roof or the floor it meets. The glare: the beam
-    // plus the margin its veil is drawn in (HULL_BASE + HULL_SLOPE·s) — a veil lies over
-    // what stands in front of the beam too, as it does in an eye.
-    const [base, slope] = part === 'glare' ? [HULL_BASE, HULL_SLOPE] : [0.02 * aperture, 0.02 * tanHalf]
-    const top = Math.max(aperture, 1e-3) + base
-    const bottom = aperture + length * tanHalf + base + slope * length
+export const beamAirGeometry = ({ aperture, tanHalf, length, edge = 0.2 }, part = 'core') => {
+    // The core: the cone the beam's light reaches (beamExtent — past the beam angle, to
+    // where its profile has fallen to 2 %), 2 % over, so the depth test ends it on the
+    // girder, the roof or the floor it meets. The glare: the beam plus the margin its
+    // veil is drawn in (HULL_BASE + HULL_SLOPE·s) — a veil lies over what stands in front
+    // of the beam too, as it does in an eye.
+    const k = part === 'glare' ? 1 : beamExtent(edge)
+    const [base, slope] = part === 'glare' ? [HULL_BASE, HULL_SLOPE] : [0.02 * aperture * k, 0.02 * tanHalf * k]
+    const top = Math.max(aperture * k, 1e-3) + base
+    const bottom = (aperture + length * tanHalf) * k + base + slope * length
     const geometry = new CylinderGeometry(top, bottom, length, 24, 1, false)
     geometry.translate(0, -length / 2, 0)
     return geometry
@@ -252,6 +262,11 @@ export const beamAirGeometry = ({ aperture, tanHalf, length }, part = 'core') =>
 
 const inverse = new Matrix4()
 const camera = new Vector3()
+const lens = new Vector3()
+const axis = new Vector3()
+
+// The floor the hall stands on (world y). The rig's rooms are built on y = 0.
+const FLOOR_Y = 0
 
 /**
  * A material for one beam's core ('core') or its glare ('glare'); update it with
@@ -275,6 +290,7 @@ export const createBeamAirMaterial = (part = 'core', shared = hazeUniformsFor(nu
             uHullBase: { value: glare ? HULL_BASE : 0 },
             uHullSlope: { value: glare ? HULL_SLOPE : 0 },
             uGlare: { value: 1 },
+            uLit: { value: 10 },
             ...shared
         },
         vertexShader,
@@ -297,6 +313,7 @@ export const setBeamAirUniforms = (material, { color, intensity, tanHalf, apertu
     u.uTan.value = tanHalf
     u.uAperture.value = aperture
     u.uLength.value = length
+    u.uLit.value = length
     u.uEdge.value = edge
     u.uG.value = atmosphere.anisotropy
 }
@@ -311,8 +328,17 @@ export const beamAirBeforeRender = (mesh, cam) => {
     inverse.copy(mesh.matrixWorld).invert()
     camera.setFromMatrixPosition(cam.matrixWorld).applyMatrix4(inverse)
     u.uCamLocal.value.copy(camera)
+    // How far down its throw the beam is still above the floor, in the beam's own units:
+    // the lens and the beam's axis (−Y) in the world, and where that line meets y = FLOOR_Y.
+    lens.setFromMatrixPosition(mesh.matrixWorld)
+    const perMetre = axis.set(0, -1, 0).applyMatrix4(mesh.matrixWorld).sub(lens).length() || 1
+    axis.divideScalar(perMetre)
+    let lit = u.uLength.value
+    if (axis.y < -1e-4 && lens.y > FLOOR_Y) lit = Math.min(lit, (lens.y - FLOOR_Y) / -axis.y / perMetre)
+    u.uLit.value = Math.max(lit, 0)
     const s = -camera.y
-    const radius = u.uAperture.value + Math.max(s, 0) * (u.uTan.value + u.uHullSlope.value) + u.uHullBase.value
+    const k = Math.max(beamExtent(u.uEdge.value), 1)
+    const radius = (u.uAperture.value + Math.max(s, 0) * u.uTan.value) * k + Math.max(s, 0) * u.uHullSlope.value + u.uHullBase.value
     // A margin of the near plane's reach: a camera a hair outside the surface
     // still has the front face clipped away by the near plane.
     const margin = (cam.near || 0.05) * 2
