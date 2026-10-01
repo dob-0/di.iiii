@@ -117,6 +117,20 @@ describe('plot data', () => {
     })
 })
 
+describe('a device kept off DMX (run by hand)', () => {
+    it('says "by hand", never "not patched" or "mode unknown", and is not counted as unaddressed', () => {
+        const entities = [
+            lamp('haze', { type: 'ext-hazer', dmx: false, position: 'booth', unit: 1, circuit: 'C1' }),
+            lamp('smoke', { type: 'up-yz31p', dmx: false, position: 'floor', unit: 1, circuit: 'C1' })
+        ]
+        const model = sheetModel({ entities, library })
+        for (const r of model.rows) expect(r.flags, r.id).toEqual(['by-hand'])
+        const groups = groupFlags(model.flagCounts)
+        expect(groups.find((g) => g.id === 'unaddressed')).toBeUndefined()
+        expect(groups.flatMap((g) => g.items.map((i) => i.code))).toContain('by-hand')
+    })
+})
+
 describe('the sheet says what each warning is, by cause', () => {
     const at = (id, extra) => lamp(id, { type: 'up-250bsw', mode: '24ch', position: 'booth', ...extra })
     const model = sheetModel({ entities: [at('a', { index: 1, universe: 1, address: 1 }), at('b', { index: 2, universe: 1, address: 10 }), at('c', { index: 3 })], library })

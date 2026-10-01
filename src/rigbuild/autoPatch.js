@@ -15,6 +15,11 @@ export const rigKeyOf = (projectId, entityId) => `${projectId}:${entityId}`
 
 export const isLamp = (entity) => typeof entity?.components?.fixture?.type === 'string' && entity.components.fixture.type !== ''
 
+// A device the owner keeps OFF DMX (`fixture.dmx === false`: hazers and smoke run by hand,
+// MOXIR 2026-10-01). It stays in the room and on the equipment list, and is never sent to
+// the desk — so it takes no address, and a prune takes it off the desk if it was there.
+export const isOffDmx = (entity) => entity?.components?.fixture?.dmx === false
+
 /**
  * The lamps of a room, each with its type and mode resolved and its local flags.
  * @returns {{entity, fixture, type, mode, footprint, flags}[]}
@@ -42,7 +47,7 @@ export const patchGroupOf = (lamp) => lamp.fixture.position || lamp.entity.paren
  * address was typed in the room since the last patch (they are sent with `move`).
  */
 export const patchRequest = ({ projectId, entities, library, group = false, prune = true, repatch = false, moved = new Set(), only = null }) => {
-    const lamps = lampsOf(entities, library).filter((lamp) => !only || only.has(lamp.entity.id))
+    const lamps = lampsOf(entities, library).filter((lamp) => !isOffDmx(lamp.entity) && (!only || only.has(lamp.entity.id)))
     return {
         project: projectId,
         group,

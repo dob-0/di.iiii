@@ -39,6 +39,7 @@ export const FLAG_WORDS = {
     'over-order': 'over the equipment list',
     'not-on-list': 'not on the equipment list',
     // the desk's own refusals (serverXR/src/lighting/rigpatch.js) — said in words, not as codes
+    'by-hand': 'off DMX — run by hand',
     'no-room': 'no universe had room',
     'profile-clash': 'channel list clashes with the desk',
     'profile-refused': 'desk refused the channel list',
@@ -76,7 +77,8 @@ export const FLAG_GROUPS = [
         'mode-unknown': 'the DMX mode is not known — ask the rental house'
     } },
     { id: 'housekeeping', title: 'Housekeeping', codes: {
-        'no-circuit': 'no circuit assigned — assign circuits'
+        'no-circuit': 'no circuit assigned — assign circuits',
+        'by-hand': 'kept off DMX by the owner (run by hand) — no address, nothing to patch'
     } }
 ]
 
@@ -134,8 +136,11 @@ export const sheetModel = ({ entities: documentEntities = [], library, circuit =
         const mode = type ? modeOf(type, modeName) : null
         const footprint = mode ? mode.footprint : null
         const patched = Number.isInteger(f.universe) && Number.isInteger(f.address)
-        const flags = typeFlags({ ...f, mode: modeName || undefined }, library).map((x) => x.code)
-        if (!flags.includes('mode-unknown') && !flags.includes('unknown-type') && !patched) flags.push('not-patched')
+        // Kept off DMX (fixture.dmx === false, autoPatch.js isOffDmx): run by hand, so no mode,
+        // channel list or address is owed — it says so instead of "not patched".
+        const byHand = f.dmx === false
+        const flags = byHand ? ['by-hand'] : typeFlags({ ...f, mode: modeName || undefined }, library).map((x) => x.code)
+        if (!byHand && !flags.includes('mode-unknown') && !flags.includes('unknown-type') && !patched) flags.push('not-patched')
         if (patched && footprint && f.address + footprint - 1 > 512) flags.push('off-the-end')
         if (!f.circuit) flags.push('no-circuit')
         if (type?.power_w?.basis === 'ASSUMED') flags.push('power-assumed')
