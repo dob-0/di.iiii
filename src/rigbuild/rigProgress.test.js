@@ -30,6 +30,12 @@ describe('rigProgress — the patch step says what its warning is', () => {
         expect(clean.said.patch).toBe('1 of 1 addressed')
         expect(clean.hints).toEqual({})
     })
+    // MOXIR 2026-10-01: hazers and smoke are run by hand — never addressed, so never "owed" an address.
+    it('counts a device kept off DMX as by hand, not as unaddressed, and the patch step can be done', () => {
+        const p = rigProgress({ entities: [lamp('a', { ...B, index: 1, universe: 1, address: 1 }), lamp('haze', { type: 'ext-hazer', dmx: false })], library })
+        expect(p.said.patch).toBe('1 of 1 addressed · 1 by hand')
+        expect(p.done.patch).toBe(true)
+    })
     it("words the desk's own refusals instead of printing the code", () => {
         const q = rigProgress({ entities: [lamp('a', { ...B, index: 1 })], library, projectId: 'p', deskFlags: [{ key: 'p:a', code: 'no-room' }] })
         expect(q.hints.patch).toMatch(/1 no universe had room/)

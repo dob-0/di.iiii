@@ -2,7 +2,7 @@
     "manifest": "MOXIR rig fixtures — identity, datasheet numbers, photometry and the 3D model of each, with a source for every number",
     "writtenAt": "2026-09-28",
     "accessed": "2026-09-28",
-    "howToRead": "Every spec is { value, src, basis }. `src` names an entry in `sources`. `basis` is EXACT (the maker's own page for this very model code), EQUIVALENT (a named fixture of the same class, because the maker publishes nothing for this field or the code could not be traced), or ASSUMED (no source; a stated guess). Nothing here was measured by us.",
+    "howToRead": "Every spec is { value, src, basis }. `src` names an entry in `sources`. `basis` is EXACT (the maker's own page for this very model code), EQUIVALENT (a named fixture of the same class, because the maker publishes nothing for this field or the code could not be traced), TESTED (run on the rental units themselves — source SEVAN: the Sevan festival rig, 2026), or ASSUMED (no source; a stated guess). Nothing else here was measured by us.",
     "identification": {
         "maker": "UPlight Stage Equipment (Guangzhou) Co., Ltd. — own site pro-uplight.com, store up-light.en.made-in-china.com",
         "confirmed": "UP-B380F, UP-250BSW, UP-HK1915, UP-PL5403: the model code is printed as 'Model' / 'Model NO.' on the maker's page (sources A, A2, B, B2, C, C2, C3, D). 2026-09-29: the maker's Chinese site uplight.com.cn (same company, same contact) prints model fields for UP-LA40WF too, and gives each MOXIR type's mode list (B380F 16; PL5403 8; 250BSW 24/30; HK1915 21/35/78/92/97) — still no channel ORDER for any (sources A-CN … LA-CN).",
@@ -127,6 +127,10 @@
         "LA-CN": {
             "url": "https://www.uplight.com.cn/pd48855201.html",
             "what": "UPlight UP-LA40WF '40瓦防水全彩激光灯' on the maker's Chinese site — model field UP-LA40WF; specs text, no DMX chart; checked 2026-09-29"
+        },
+        "SEVAN": {
+            "url": null,
+            "what": "The rental units themselves: the same UPlight rental gear ran live at the Sevan festival (Dilijan camp), 2026, on the studio's own Art-Net desk. Channel maps as patched and run there (the desk's show.json custom profiles 'Beam 16ch', 'Wash 8ch', 'Laser 32ch'; the beam's from its manual). Confirmed as the same units by the owner, 2026-10-01"
         },
         "E": {
             "url": "https://up-light.en.made-in-china.com/product/bwWGPaldZMfD/China-High-Performance-200W-COB-PAR-Light-for-TV-Studio-Events.html",
@@ -587,6 +591,12 @@
                     "src": "LA-CN",
                     "basis": "EXACT",
                     "note": "no DMX mode or channel count published"
+                },
+                "dmx_channels": {
+                    "value": [32],
+                    "src": "SEVAN",
+                    "basis": "TESTED",
+                    "note": "the maker publishes no mode; 32 ch is the mode the rental unit ran in at the Sevan festival (its menu must be set to DMX, or it ignores DMX)"
                 }
             },
             "look": "A black box, wider than tall, a raised hood at the top centre of the front face with a small output window, a vent grille across the front, in a U-bracket with side locking knobs.",

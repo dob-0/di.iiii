@@ -31,6 +31,15 @@ import { AIM_RULES, aimDirection, panTiltOfDirection } from './lookRules.js'
 export const DESK_LOOK_PREFIX = 'rig-'
 export const deskLookId = (lookId) => `${DESK_LOOK_PREFIX}${lookId}`.slice(0, 40)
 export const lookIdOfDesk = (deskId) => (typeof deskId === 'string' && deskId.startsWith(DESK_LOOK_PREFIX) ? deskId.slice(DESK_LOOK_PREFIX.length) : null)
+/**
+ * The desk's rig looks (`rig-…`) that are not in `keepIds` — another room's, left on the desk
+ * when the space's patch moved to this room (the desk runs one patch per space). A look the
+ * operator made on the desk has no `rig-` prefix and is never named.
+ */
+export const staleDeskLooks = (deskLooks, keepIds) => {
+    const keep = new Set(keepIds || [])
+    return (deskLooks || []).map((l) => l?.id).filter((id) => lookIdOfDesk(id) !== null && !keep.has(id))
+}
 
 /** A position's key in a look: truss runs are all "truss"; the rest by their id. */
 export const positionKey = (positionId) => (String(positionId).startsWith('truss:') ? 'truss' : String(positionId).startsWith('truss-top:') ? 'truss-top' : String(positionId))

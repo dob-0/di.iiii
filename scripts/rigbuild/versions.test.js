@@ -130,9 +130,17 @@ for (const v of allVersions(spec)) {
                 }
             })
 
-            it(`${look}: lights the room with 8 real lamps at most`, () => {
-                expect(built.summary.real).toBeLessThanOrEqual(8)
-            })
+            // the browser budget (rig-lib budget.realLights) — unless the version states that every
+            // lamp is real (`realLightsAll`, MOXIR Known and Known · full, 2026-10-01), and then it is
+            if (rig.budget?.realLightsAll) {
+                it(`${look}: lights the room with every lamp real, as its version states`, () => {
+                    expect(built.summary.real).toBe(lamps.length)
+                })
+            } else {
+                it(`${look}: lights the room with 8 real lamps at most`, () => {
+                    expect(built.summary.real).toBeLessThanOrEqual(8)
+                })
+            }
 
             it(`${look}: is mirror-symmetric about the nave centre line (the press's own lamps and a solo aside)`, () => {
                 const near = (a, b) => a.every((x, i) => Math.abs(x - b[i]) < 0.02)

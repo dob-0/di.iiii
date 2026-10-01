@@ -95,7 +95,8 @@
       "#f4f7ff": "strobe white (5,700 K LEDs)",
       "#ff1408": "deep red",
       "#ffb45e": "amber",
-      "#ffc58f": "blinder warm white (3,096 K)"
+      "#ffc58f": "blinder warm white (3,096 K)",
+      "#3c8244": "MOXIR green — the announcement video's glow (owner + Gevorg 2026-10-01: an accent, used sparingly)"
     }
   },
   "classes": {
@@ -4237,6 +4238,966 @@
           }
         }
       }
+    },
+    {
+      "id": "known-full",
+      "candidateOf": "full",
+      "title": "Known · full · the cut, movers on the ground",
+      "summary": "Every fixture whose DMX is known, at stock, on the cut under the crane; nothing that moves is hung. The cut carries statics only: 6 UP-PL5403 in the X, 4 on the bridge, and the 2 fixed UP-LA40WF (held dark until the laser sign-off). The floor carries every mover: 17 UP-B380F (7 behind the press, 10 at the nave column bases; the 18th is the spare; nothing at the booth, the crane is parked over it). 32 UP-PL5403 up the nave columns and 3 at the press — 45 of the 50 PARs. 6 hazers and 4 smoke machines, run by hand, off DMX. Crane height approximate and strobe rates assumed (Gevorg 2026-10-01: correct later); charts for the rest owed.",
+      "truss": "crane-cut",
+      "policy": {
+        "movingFixtures": {
+          "ground_only": true,
+          "max_mount_height_m": 0.6,
+          "audience_eye_height_m": 2.5,
+          "owner": "2026-09-30: \"nothing moving on the air truss … no moving heads for now. All moving heads on the ground … statics go to the air truss, moving heads all safe on the ground, and 2 lasers.\"",
+          "rule": "no fixture that pans, tilts, rotates or zooms by motor is mounted above 0.6 m (its mounting face); no ground mover's beam passes through the dance zone below 2.5 m in any look; the two lasers are fixed, and every laser beam stays >= 3 m over any floor a person can stand on.",
+          "lasers": {
+            "min_beam_height_m": 3,
+            "signoff": "Class 4 40 W: a certified laser safety officer must approve the positions and the show (owner sign-off, owed); nothing in this file claims compliance."
+          }
+        },
+        "dmx": {
+          "owner": "2026-10-01: hazers and smoke run by hand, off DMX",
+          "offDmx": [
+            "EXT-HAZER",
+            "UP-YZ31P"
+          ]
+        }
+      },
+      "groups": [
+        "par-cut-x",
+        "par-cut-bridge",
+        "par-columns",
+        "par-press-cut",
+        "beam380-backstage",
+        "beam380-columns",
+        "laser-cut"
+      ],
+      "effects": [
+        "hazer-back",
+        {
+          "from": "hazer-hall",
+          "count": 4
+        },
+        "smoke-ground"
+      ],
+      "spares": {
+        "UP-B380F": 1
+      },
+      "realLights": {
+        "par-cut-x": {
+          "count": 6,
+          "pick": "even"
+        },
+        "par-cut-bridge": {
+          "count": 4,
+          "pick": "even"
+        },
+        "par-columns": {
+          "count": 32,
+          "pick": "even"
+        },
+        "par-press-cut": {
+          "count": 3,
+          "pick": "even"
+        },
+        "beam380-backstage": {
+          "count": 7,
+          "pick": "even"
+        },
+        "beam380-columns": {
+          "count": 10,
+          "pick": "even"
+        },
+        "laser-cut": {
+          "count": 2,
+          "pick": "even"
+        }
+      },
+      "looks": {
+        "gs-one-shaft": {
+          "title": "Blackout + one shaft",
+          "intent": "Black. One thin white shaft stands straight up from behind the press into the roof, the DJ a silhouette cut out of it. Nothing else.",
+          "aims": {
+            "beam380-backstage": {
+              "rule": "vertical",
+              "in_deg": 0,
+              "solo": 3
+            }
+          },
+          "colours": {
+            "beam380-backstage": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0,
+            "par-columns": 0,
+            "par-press-cut": 0,
+            "beam380-backstage": 1,
+            "beam380-columns": 0,
+            "laser-cut": 0
+          }
+        },
+        "gs-columns-below": {
+          "title": "Columns from below",
+          "intent": "The eight column faces glow cold white from their feet and fade to black before the roof; a low white beam at the foot of each far column. The floor is dark, the structure stands up out of it.",
+          "aims": {
+            "par-columns": {
+              "rule": "up-the-column"
+            }
+          },
+          "colours": {
+            "par-columns": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0,
+            "par-columns": 0.55,
+            "par-press-cut": 0,
+            "beam380-backstage": 0,
+            "beam380-columns": 0,
+            "laser-cut": 0
+          }
+        },
+        "gs-haze-wall": {
+          "title": "Haze wall",
+          "intent": "Haze rolls from behind the DJ; all seven booth beams stand straight up in a row, a wall of light in the haze behind the silhouette; the rest is dark. EFFECT: hazers on (hazer-back, hazer-hall) — NOT SIMULATED.",
+          "aims": {
+            "par-press-cut": {
+              "rule": "backdrop",
+              "h": 0.6
+            },
+            "beam380-backstage": {
+              "rule": "vertical",
+              "in_deg": 0
+            }
+          },
+          "colours": {
+            "par-press-cut": "#eef3ff",
+            "beam380-backstage": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0,
+            "par-columns": 0,
+            "par-press-cut": 0.25,
+            "beam380-backstage": 0.8,
+            "beam380-columns": 0,
+            "laser-cut": 0
+          }
+        },
+        "gs-roof-reveal": {
+          "title": "Roof reveal",
+          "intent": "The space-frame roof appears in pieces: the beams behind the press fan open into the trusswork, then the column beams stand up beside them; a dim white graze along the crane bridge above. Still, no sweep.",
+          "aims": {
+            "par-cut-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            },
+            "beam380-backstage": {
+              "rule": "fan",
+              "spread_deg": 14,
+              "lean_deg": 0
+            },
+            "beam380-columns": {
+              "rule": "vertical",
+              "in_deg": 0
+            }
+          },
+          "colours": {
+            "par-cut-bridge": "#eef3ff",
+            "beam380-backstage": "#eef3ff",
+            "beam380-columns": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0.35,
+            "par-columns": 0,
+            "par-press-cut": 0,
+            "beam380-backstage": 0.9,
+            "beam380-columns": 0.7,
+            "laser-cut": 0
+          }
+        },
+        "gs-slow-fan": {
+          "title": "Slow fan",
+          "intent": "The column beams lean slowly in across the nave, the wall beams lean slowly out toward the side walls, the booth beams open into a wide fan up into the roof. The move is the slow crossfade in from the reveal (6 s); nothing flashes.",
+          "aims": {
+            "beam380-backstage": {
+              "rule": "fan",
+              "spread_deg": 34,
+              "lean_deg": 3
+            },
+            "beam380-columns": {
+              "rule": "vertical",
+              "in_deg": 24
+            }
+          },
+          "colours": {
+            "beam380-backstage": "#eef3ff",
+            "beam380-columns": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0,
+            "par-columns": 0,
+            "par-press-cut": 0,
+            "beam380-backstage": 0.8,
+            "beam380-columns": 0.7,
+            "laser-cut": 0
+          }
+        },
+        "gs-cross-beams": {
+          "title": "Cross beams",
+          "intent": "Beams from both walls lean in and cross high over the dance floor, above head height, like a lattice in the haze. The booth beams stay upright and dim behind.",
+          "aims": {
+            "beam380-backstage": {
+              "rule": "vertical",
+              "in_deg": 0
+            },
+            "beam380-columns": {
+              "rule": "vertical",
+              "in_deg": 30
+            }
+          },
+          "colours": {
+            "beam380-backstage": "#eef3ff",
+            "beam380-columns": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0,
+            "par-columns": 0,
+            "par-press-cut": 0,
+            "beam380-backstage": 0.4,
+            "beam380-columns": 0.85,
+            "laser-cut": 0
+          }
+        },
+        "gs-red-room": {
+          "title": "Red room",
+          "intent": "Deep red only and low: the columns and the press glow red from their feet, a dim red graze on the crane bridge, the booth beams stand still and dim. The DJ is a dark shape against the red press. The roof stays black.",
+          "aims": {
+            "par-cut-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            },
+            "par-columns": {
+              "rule": "up-the-column"
+            },
+            "par-press-cut": {
+              "rule": "backdrop",
+              "h": 0.6
+            },
+            "beam380-backstage": {
+              "rule": "vertical",
+              "in_deg": 0
+            }
+          },
+          "colours": {
+            "par-cut-bridge": "#ff1408",
+            "par-columns": "#ff1408",
+            "par-press-cut": "#ff1408",
+            "beam380-backstage": "#ff1408"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0.45,
+            "par-columns": 0.5,
+            "par-press-cut": 0.6,
+            "beam380-backstage": 0.4,
+            "beam380-columns": 0,
+            "laser-cut": 0
+          }
+        },
+        "gs-white-cathedral": {
+          "title": "White cathedral",
+          "intent": "The whole nave in cold white: every column beam straight up in mirrored pairs, the wall beams up the walls, the crane bridge grazed white from the cut above, a narrow fan behind the DJ, who stands as a silhouette against the lit press.",
+          "aims": {
+            "par-cut-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            },
+            "par-columns": {
+              "rule": "up-the-column"
+            },
+            "par-press-cut": {
+              "rule": "backdrop",
+              "h": 0.6
+            },
+            "beam380-backstage": {
+              "rule": "fan",
+              "spread_deg": 8,
+              "lean_deg": 0
+            },
+            "beam380-columns": {
+              "rule": "vertical",
+              "in_deg": 0
+            }
+          },
+          "colours": {
+            "par-cut-bridge": "#eef3ff",
+            "par-columns": "#eef3ff",
+            "par-press-cut": "#eef3ff",
+            "beam380-backstage": "#eef3ff",
+            "beam380-columns": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0.6,
+            "par-columns": 0.3,
+            "par-press-cut": 0.4,
+            "beam380-backstage": 0.7,
+            "beam380-columns": 0.9,
+            "laser-cut": 0
+          }
+        },
+        "gs-laser-roof": {
+          "title": "Laser into the roof",
+          "intent": "OPTIONAL, NOT IN THE LOOP. In the dark, red laser lines from the top of the cut into the roof frame, one dim red shaft behind the DJ. Needs a certified laser safety officer before it is ever switched on. LASER: off by default; requiresLaserSignOff: written at level 0, the laser stays dark until a human raises it after a certified laser safety officer signs off (Class 4, owed).",
+          "aims": {
+            "beam380-backstage": {
+              "rule": "vertical",
+              "in_deg": 0,
+              "solo": 3
+            },
+            "laser-cut": {
+              "rule": "laser-into-roof",
+              "a": 18
+            }
+          },
+          "colours": {
+            "beam380-backstage": "#ff1408",
+            "laser-cut": "#ff1408"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0,
+            "par-columns": 0,
+            "par-press-cut": 0,
+            "beam380-backstage": 0.35,
+            "beam380-columns": 0,
+            "laser-cut": 0
+          }
+        },
+        "k-doors": {
+          "title": "Doors",
+          "intent": "Before the first act: haze up, the nave columns barely glowing amber from their feet, the press a dim silhouette. Enough to find your way, nothing that performs.",
+          "aims": {
+            "par-columns": {
+              "rule": "up-the-column"
+            },
+            "par-press-cut": {
+              "rule": "backdrop",
+              "h": 0.6
+            }
+          },
+          "colours": {
+            "par-columns": "#ffb45e",
+            "par-press-cut": "#ffb45e"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0,
+            "par-columns": 0.12,
+            "par-press-cut": 0.1,
+            "beam380-backstage": 0,
+            "beam380-columns": 0,
+            "laser-cut": 0
+          }
+        },
+        "k-the-x": {
+          "title": "The X",
+          "intent": "The X of PARs on the cut lights the DJ from above while the column beams cross the nave in an X high over the floor — the rig drawing its own sign.",
+          "aims": {
+            "par-cut-x": {
+              "rule": "point",
+              "x": 0,
+              "y": 4,
+              "a": -1.4
+            },
+            "beam380-columns": {
+              "rule": "x-cross",
+              "x": 1,
+              "y": 44,
+              "a": 10
+            }
+          },
+          "colours": {
+            "par-cut-x": "#eef3ff",
+            "beam380-columns": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0.8,
+            "par-cut-bridge": 0,
+            "par-columns": 0,
+            "par-press-cut": 0,
+            "beam380-backstage": 0,
+            "beam380-columns": 0.9,
+            "laser-cut": 0
+          }
+        },
+        "k-tunnel": {
+          "title": "Tunnel",
+          "intent": "The ten column beams lean hard in from both walls and meet in a pointed arch high over the dance floor: a tunnel of white in the haze, the crowd underneath it.",
+          "aims": {
+            "beam380-columns": {
+              "rule": "vertical",
+              "in_deg": 34
+            }
+          },
+          "colours": {
+            "beam380-columns": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0,
+            "par-columns": 0,
+            "par-press-cut": 0,
+            "beam380-backstage": 0,
+            "beam380-columns": 0.95,
+            "laser-cut": 0
+          }
+        },
+        "k-green-core": {
+          "title": "Green core",
+          "intent": "MOXIR's green, once: every nave column glows green from its foot and the press goes green behind the DJ, while a narrow white fan stands up behind the booth. The only colour in the night that is the brand's.",
+          "aims": {
+            "par-columns": {
+              "rule": "up-the-column"
+            },
+            "par-press-cut": {
+              "rule": "backdrop",
+              "h": 0.6
+            },
+            "beam380-backstage": {
+              "rule": "fan",
+              "spread_deg": 10,
+              "lean_deg": 0
+            }
+          },
+          "colours": {
+            "par-columns": "#3c8244",
+            "par-press-cut": "#3c8244",
+            "beam380-backstage": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0,
+            "par-columns": 0.55,
+            "par-press-cut": 0.45,
+            "beam380-backstage": 0.6,
+            "beam380-columns": 0,
+            "laser-cut": 0
+          }
+        },
+        "k-amber-dust": {
+          "title": "Amber dust",
+          "intent": "The teaser's warm sodium light: amber up the columns and under the crane bridge, low, like dust in a factory afternoon. No beams. A breath between the white sections.",
+          "aims": {
+            "par-columns": {
+              "rule": "up-the-column"
+            },
+            "par-cut-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            }
+          },
+          "colours": {
+            "par-columns": "#ffb45e",
+            "par-cut-bridge": "#ffb45e"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0.3,
+            "par-columns": 0.35,
+            "par-press-cut": 0,
+            "beam380-backstage": 0,
+            "beam380-columns": 0,
+            "laser-cut": 0
+          }
+        },
+        "k-lights-up": {
+          "title": "Lights up",
+          "intent": "The end of the night: every column and the crane bridge in warm white at full, all beams off. Clean-out light, not a show look.",
+          "aims": {
+            "par-columns": {
+              "rule": "up-the-column"
+            },
+            "par-cut-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            },
+            "par-press-cut": {
+              "rule": "backdrop",
+              "h": 0.6
+            }
+          },
+          "colours": {
+            "par-columns": "#ffc58f",
+            "par-cut-bridge": "#ffc58f",
+            "par-press-cut": "#ffc58f"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 1,
+            "par-columns": 1,
+            "par-press-cut": 1,
+            "beam380-backstage": 0,
+            "beam380-columns": 0,
+            "laser-cut": 0
+          }
+        },
+        "white-cathedral": {
+          "title": "White cathedral · hung rig"
+        },
+        "red-room": {
+          "title": "Red room · hung rig"
+        },
+        "strobe-hit": {
+          "title": "Strobe hit · hung rig"
+        },
+        "one-beam": {
+          "title": "Blackout + one beam · hung rig"
+        },
+        "slow-sweep": {
+          "title": "Slow sweep · hung rig"
+        }
+      },
+      "realLightsWhy": "EVERY lamp is a real light (Emily 2026-10-01: 'i want 100% ident what we will have, you can optimize'): the room is the night as it will be, no picked few, no baked stand-ins. Measured on PONYO, 1440x900: RTX 5060, shadows on the 12 lamps putting the most light in (shadowCasting.js): 61 fps floor view, 65 fps DJ view; the integrated AMD 860M (most likely): 36-49 fps. A phone will not hold this: the 8-lamp budget is the fallback.",
+      "realLightsAll": true,
+      "looksWhy": "The set's own looks were made for the hung rig; on the ground versions they sit beside ground looks of the same name (\"White cathedral\", \"Red room\"), which the Touch page could not tell apart (Emily 2026-10-01: rename, keep both)."
+    },
+    {
+      "id": "known-ground",
+      "candidateOf": "full",
+      "title": "Known · movers on the ground · haze and smoke",
+      "summary": "Full · movers on the ground, only the fixtures whose DMX is known — tested on these rental units at the Sevan festival (Dilijan camp): 13 UP-B380F on the floor (7 behind the press, 6 at the column bases), 21 UP-PL5403 on the cut and the columns and press, the 2 fixed UP-LA40WF (held dark until the laser sign-off). Plus the 6 hazers and 4 smoke machines, placed and meant to stay off DMX (run by hand; the patch does not enforce it yet). Out until their charts arrive: the 7 COB200 curtain, 6 UP-250BSW, 4 UP-HK1915, 6 CO2 jets, 4 cold-spark machines. Strobe hit and Blinder hit are left out: their strobes and blinders are not in this version.",
+      "truss": "crane-cut",
+      "policy": {
+        "movingFixtures": {
+          "ground_only": true,
+          "max_mount_height_m": 0.6,
+          "audience_eye_height_m": 2.5,
+          "owner": "2026-09-30: \"nothing moving on the air truss … no moving heads for now. All moving heads on the ground … statics go to the air truss, moving heads all safe on the ground, and 2 lasers.\"",
+          "rule": "no fixture that pans, tilts, rotates or zooms by motor is mounted above 0.6 m (its mounting face); no ground mover's beam passes through the dance zone below 2.5 m in any look; the two lasers are fixed, and every laser beam stays >= 3 m over any floor a person can stand on.",
+          "lasers": {
+            "min_beam_height_m": 3,
+            "signoff": "Class 4 40 W: a certified laser safety officer must approve the positions and the show (owner sign-off, owed); nothing in this file claims compliance."
+          }
+        },
+        "dmx": {
+          "owner": "2026-10-01: \"lets work only with the known ones and with hazer and smoke but keep them out of dmx\"",
+          "offDmx": [
+            "EXT-HAZER",
+            "UP-YZ31P"
+          ]
+        }
+      },
+      "groups": [
+        "par-cut-x",
+        "par-cut-bridge",
+        "par-columns-8",
+        "par-press-cut",
+        "beam380-backstage",
+        "beam380-columns-6",
+        "laser-cut"
+      ],
+      "effects": [
+        "hazer-back",
+        {
+          "from": "hazer-hall",
+          "count": 4
+        },
+        "smoke-ground"
+      ],
+      "realLights": {
+        "par-cut-x": {
+          "count": 6,
+          "pick": "even"
+        },
+        "par-cut-bridge": {
+          "count": 4,
+          "pick": "even"
+        },
+        "par-columns-8": {
+          "count": 8,
+          "pick": "even"
+        },
+        "par-press-cut": {
+          "count": 3,
+          "pick": "even"
+        },
+        "beam380-backstage": {
+          "count": 7,
+          "pick": "even"
+        },
+        "beam380-columns-6": {
+          "count": 6,
+          "pick": "even"
+        },
+        "laser-cut": {
+          "count": 2,
+          "pick": "even"
+        }
+      },
+      "looks": {
+        "white-cathedral": {
+          "aims": {
+            "laser-cut": {
+              "rule": "laser-into-roof",
+              "a": 14
+            },
+            "beam380-backstage": {
+              "rule": "fan",
+              "spread_deg": 8,
+              "lean_deg": 0
+            }
+          },
+          "colours": {
+            "beam380-backstage": "#eef3ff"
+          },
+          "levels": {
+            "laser-cut": 0
+          },
+          "title": "White cathedral · hung rig"
+        },
+        "red-room": {
+          "aims": {
+            "laser-cut": {
+              "rule": "laser-into-roof",
+              "a": 14
+            },
+            "beam380-backstage": {
+              "rule": "vertical"
+            }
+          },
+          "colours": {
+            "beam380-backstage": "#ff1408"
+          },
+          "levels": {
+            "laser-cut": 0,
+            "beam380-backstage": 0.45
+          },
+          "title": "Red room · hung rig"
+        },
+        "one-beam": {
+          "aims": {
+            "laser-cut": {
+              "rule": "laser-into-roof",
+              "a": 14
+            },
+            "beam380-backstage": {
+              "rule": "vertical",
+              "solo": 1
+            }
+          },
+          "colours": {
+            "beam380-backstage": "#eef3ff"
+          },
+          "levels": {
+            "laser-cut": 0
+          },
+          "title": "Blackout + one beam · hung rig"
+        },
+        "slow-sweep": {
+          "aims": {
+            "beam380-columns-6": {
+              "rule": "vertical",
+              "in_deg": 22
+            },
+            "laser-cut": {
+              "rule": "laser-into-roof",
+              "a": 18
+            },
+            "beam380-backstage": {
+              "rule": "fan",
+              "spread_deg": 16,
+              "lean_deg": 2
+            }
+          },
+          "colours": {
+            "laser-cut": "#ff1408",
+            "beam380-backstage": "#eef3ff"
+          },
+          "levels": {
+            "laser-cut": 0
+          },
+          "title": "Slow sweep · hung rig"
+        },
+        "gs-one-shaft": {
+          "title": "Blackout + one shaft",
+          "intent": "Black. One thin white shaft stands straight up from behind the press into the roof, the DJ a silhouette cut out of it. Nothing else.",
+          "aims": {
+            "beam380-backstage": {
+              "rule": "vertical",
+              "in_deg": 0,
+              "solo": 3
+            }
+          },
+          "colours": {
+            "beam380-backstage": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0,
+            "par-columns-8": 0,
+            "par-press-cut": 0,
+            "beam380-backstage": 1,
+            "beam380-columns-6": 0,
+            "laser-cut": 0
+          }
+        },
+        "gs-columns-below": {
+          "title": "Columns from below",
+          "intent": "The eight column faces glow cold white from their feet and fade to black before the roof; a low white beam at the foot of each far column. The floor is dark, the structure stands up out of it.",
+          "aims": {
+            "par-columns-8": {
+              "rule": "up-the-column"
+            }
+          },
+          "colours": {
+            "par-columns-8": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0,
+            "par-columns-8": 0.55,
+            "par-press-cut": 0,
+            "beam380-backstage": 0,
+            "beam380-columns-6": 0,
+            "laser-cut": 0
+          }
+        },
+        "gs-roof-reveal": {
+          "title": "Roof reveal",
+          "intent": "The space-frame roof appears in pieces: the beams behind the press fan open into the trusswork, then the column beams stand up beside them; a dim white graze along the crane bridge above. Still, no sweep.",
+          "aims": {
+            "par-cut-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            },
+            "beam380-backstage": {
+              "rule": "fan",
+              "spread_deg": 14,
+              "lean_deg": 0
+            },
+            "beam380-columns-6": {
+              "rule": "vertical",
+              "in_deg": 0
+            }
+          },
+          "colours": {
+            "par-cut-bridge": "#eef3ff",
+            "beam380-backstage": "#eef3ff",
+            "beam380-columns-6": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0.35,
+            "par-columns-8": 0,
+            "par-press-cut": 0,
+            "beam380-backstage": 0.9,
+            "beam380-columns-6": 0.7,
+            "laser-cut": 0
+          }
+        },
+        "gs-slow-fan": {
+          "title": "Slow fan",
+          "intent": "The column beams lean slowly in across the nave, the wall beams lean slowly out toward the side walls, the booth beams open into a wide fan up into the roof. The move is the slow crossfade in from the reveal (6 s); nothing flashes.",
+          "aims": {
+            "beam380-backstage": {
+              "rule": "fan",
+              "spread_deg": 34,
+              "lean_deg": 3
+            },
+            "beam380-columns-6": {
+              "rule": "vertical",
+              "in_deg": 24
+            }
+          },
+          "colours": {
+            "beam380-backstage": "#eef3ff",
+            "beam380-columns-6": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0,
+            "par-columns-8": 0,
+            "par-press-cut": 0,
+            "beam380-backstage": 0.8,
+            "beam380-columns-6": 0.7,
+            "laser-cut": 0
+          }
+        },
+        "gs-cross-beams": {
+          "title": "Cross beams",
+          "intent": "Beams from both walls lean in and cross high over the dance floor, above head height, like a lattice in the haze. The booth beams stay upright and dim behind.",
+          "aims": {
+            "beam380-backstage": {
+              "rule": "vertical",
+              "in_deg": 0
+            },
+            "beam380-columns-6": {
+              "rule": "vertical",
+              "in_deg": 30
+            }
+          },
+          "colours": {
+            "beam380-backstage": "#eef3ff",
+            "beam380-columns-6": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0,
+            "par-columns-8": 0,
+            "par-press-cut": 0,
+            "beam380-backstage": 0.4,
+            "beam380-columns-6": 0.85,
+            "laser-cut": 0
+          }
+        },
+        "gs-red-room": {
+          "title": "Red room",
+          "intent": "Deep red only and low: the columns and the press glow red from their feet, a dim red graze on the crane bridge, the booth beams stand still and dim. The DJ is a dark shape against the red press. The roof stays black.",
+          "aims": {
+            "par-cut-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            },
+            "par-columns-8": {
+              "rule": "up-the-column"
+            },
+            "par-press-cut": {
+              "rule": "backdrop",
+              "h": 0.6
+            },
+            "beam380-backstage": {
+              "rule": "vertical",
+              "in_deg": 0
+            }
+          },
+          "colours": {
+            "par-cut-bridge": "#ff1408",
+            "par-columns-8": "#ff1408",
+            "par-press-cut": "#ff1408",
+            "beam380-backstage": "#ff1408"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0.45,
+            "par-columns-8": 0.5,
+            "par-press-cut": 0.6,
+            "beam380-backstage": 0.4,
+            "beam380-columns-6": 0,
+            "laser-cut": 0
+          }
+        },
+        "gs-white-cathedral": {
+          "title": "White cathedral",
+          "intent": "The whole nave in cold white: every column beam straight up in mirrored pairs, the wall beams up the walls, the crane bridge grazed white from the cut above, a narrow fan behind the DJ, who stands as a silhouette against the lit press.",
+          "aims": {
+            "par-cut-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            },
+            "par-columns-8": {
+              "rule": "up-the-column"
+            },
+            "par-press-cut": {
+              "rule": "backdrop",
+              "h": 0.6
+            },
+            "beam380-backstage": {
+              "rule": "fan",
+              "spread_deg": 8,
+              "lean_deg": 0
+            },
+            "beam380-columns-6": {
+              "rule": "vertical",
+              "in_deg": 0
+            }
+          },
+          "colours": {
+            "par-cut-bridge": "#eef3ff",
+            "par-columns-8": "#eef3ff",
+            "par-press-cut": "#eef3ff",
+            "beam380-backstage": "#eef3ff",
+            "beam380-columns-6": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0.6,
+            "par-columns-8": 0.3,
+            "par-press-cut": 0.4,
+            "beam380-backstage": 0.7,
+            "beam380-columns-6": 0.9,
+            "laser-cut": 0
+          }
+        },
+        "gs-haze-wall": {
+          "title": "Haze wall",
+          "intent": "Haze rolls from behind the DJ; all seven booth beams stand straight up in a row, a wall of light in the haze behind the silhouette; the rest is dark. EFFECT: hazers on (hazer-back, hazer-hall) — NOT SIMULATED.",
+          "aims": {
+            "par-press-cut": {
+              "rule": "backdrop",
+              "h": 0.6
+            },
+            "beam380-backstage": {
+              "rule": "vertical",
+              "in_deg": 0
+            }
+          },
+          "colours": {
+            "par-press-cut": "#eef3ff",
+            "beam380-backstage": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0,
+            "par-columns-8": 0,
+            "par-press-cut": 0.25,
+            "beam380-backstage": 0.8,
+            "beam380-columns-6": 0,
+            "laser-cut": 0
+          }
+        },
+        "gs-laser-roof": {
+          "title": "Laser into the roof",
+          "intent": "OPTIONAL, NOT IN THE LOOP. In the dark, red laser lines from the top of the cut into the roof frame, one dim red shaft behind the DJ. Needs a certified laser safety officer before it is ever switched on. LASER: off by default; requiresLaserSignOff: written at level 0, the laser stays dark until a human raises it after a certified laser safety officer signs off (Class 4, owed).",
+          "aims": {
+            "beam380-backstage": {
+              "rule": "vertical",
+              "in_deg": 0,
+              "solo": 3
+            },
+            "laser-cut": {
+              "rule": "laser-into-roof",
+              "a": 18
+            }
+          },
+          "colours": {
+            "beam380-backstage": "#ff1408",
+            "laser-cut": "#ff1408"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0,
+            "par-columns-8": 0,
+            "par-press-cut": 0,
+            "beam380-backstage": 0.35,
+            "beam380-columns-6": 0,
+            "laser-cut": 0
+          }
+        },
+        "strobe-hit": {
+          "title": "Strobe hit · hung rig"
+        }
+      },
+      "realLightsWhy": "EVERY lamp is a real light, as in known-full (Emily 2026-10-01: 'do the same for known-ground'): the room is the night as it will be. Shadows on the 12 lamps putting the most light in (shadowCasting.js shadowLampCap).",
+      "realLightsAll": true,
+      "looksWhy": "The set's own looks were made for the hung rig; on the ground versions they sit beside ground looks of the same name (\"White cathedral\", \"Red room\"), which the Touch page could not tell apart (Emily 2026-10-01: rename, keep both)."
     }
   ]
 }

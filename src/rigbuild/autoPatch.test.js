@@ -6,7 +6,7 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 import { afterEach, describe, expect, it } from 'vitest'
 import { applyProjectOps, normalizeProjectDocument } from '../shared/projectSchema.js'
-import { addressMap, autoPatch, lampSignature, patchRequest, rigKeyOf, typedMoves, writeBackOps } from './autoPatch.js'
+import { addressMap, autoPatch, isOffDmx, lampSignature, patchRequest, rigKeyOf, typedMoves, writeBackOps } from './autoPatch.js'
 import library from './types/moxir.json'
 
 const require = createRequire(import.meta.url)
@@ -42,6 +42,20 @@ describe('the request', () => {
         expect(body.lamps.map((l) => [l.key, l.mode, l.footprint])).toEqual([['hall:a', '16ch', 16], ['hall:b', null, null]])
         expect(body.prune).toBe(true)
         expect(rigKeyOf('hall', 'a')).toBe('hall:a')
+    })
+
+    // MOXIR 2026-10-01: hazers and smoke are run by hand. A device kept off DMX never reaches
+    // the desk, so it takes no address — and a prune takes it off the desk if it was there.
+    it('never sends a device kept off DMX', () => {
+        const body = patchRequest({
+            projectId: 'hall',
+            entities: [lamp('a', 'up-b380f'), lamp('haze', 'ext-hazer', { dmx: false }), lamp('smoke', 'up-yz31p', { dmx: false, universe: 1, address: 500 })],
+            library
+        })
+        expect(body.lamps.map((l) => l.key)).toEqual(['hall:a'])
+        expect(body.prune).toBe(true)
+        expect(isOffDmx(lamp('x', 'ext-hazer', { dmx: false }))).toBe(true)
+        expect(isOffDmx(lamp('x', 'ext-hazer'))).toBe(false)
     })
 
     it('marks typed moves, and a subset never prunes the rest', () => {
