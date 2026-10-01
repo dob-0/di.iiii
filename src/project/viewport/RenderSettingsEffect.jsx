@@ -2,9 +2,8 @@ import { useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { atmosphereOf } from '../../objectComponents/beamAir.js'
-import { getHazeField, setAtmosphere } from '../../objectComponents/atmosphereStore.js'
+import { getHazeField, hazeFogBase, setAtmosphere, subscribeHazeField } from '../../objectComponents/atmosphereStore.js'
 import { hazeUniformsFor } from '../../objectComponents/hazeUniforms.js'
-import { hazeFogFar } from '../../objectComponents/hazeField.js'
 
 // The document's tone-mapping name → three.js's operator. ACES (Narkowicz's fit,
 // three.js's ACESFilmic) stays the default; 'AgX' (T. Sobotka's AgX, three.js
@@ -47,18 +46,27 @@ export default function RenderSettingsEffect({ renderSettings }) {
     }, [gl, scattering, anisotropy, hazeKey])
     // The haze's eddies drift with the hall's air: one clock for every beam (the shared
     // uniform), ticking only while the room's haze is uneven.
-    // And the hall's haze dims the surfaces as it dims the beams: a linear fog to
-    // 1.6/σ (hazeFogFar), only while the haze is worked out from the machines — a room
-    // with one hand-set haze keeps the fog it was authored with.
-    useFrame(({ clock, scene }) => {
+    useFrame(({ clock }) => {
         const field = getHazeField(gl)
-        if (!field) return
-        if (field.patchiness > 0) hazeUniformsFor(gl).uHazeTime.value = clock.elapsedTime
-        if (scene.fog?.isFog) {
-            scene.fog.near = 0
-            scene.fog.far = Math.min(hazeFogFar(field.fill), 1e5)
-        }
+        if (field && field.patchiness > 0) hazeUniformsFor(gl).uHazeTime.value = clock.elapsedTime
     })
+    // And the hall's haze dims the surfaces as it dims the beams: the fog's resting
+    // distances become the haze's (atmosphereStore.js hazeFogBase), set when the haze
+    // changes — not every frame, which would fight SmartView, the one that moves the fog
+    // at run time (it adds its offset to the same base). A room with one hand-set haze
+    // keeps the fog it was authored with.
+    const { scene } = useThree()
+    useEffect(() => {
+        const apply = () => {
+            const base = hazeFogBase(gl)
+            if (base && scene.fog?.isFog) {
+                scene.fog.near = base.near
+                scene.fog.far = base.far
+            }
+        }
+        apply()
+        return subscribeHazeField(gl, apply)
+    }, [gl, scene])
     useEffect(() => () => setAtmosphere(gl, null), [gl])
     return null
 }

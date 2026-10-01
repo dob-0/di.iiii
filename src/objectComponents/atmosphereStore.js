@@ -11,7 +11,7 @@
 // type library). Their sum is written into the renderer's shared haze uniforms
 // (hazeUniforms.js); a beam never re-renders for it.
 import { useSyncExternalStore } from 'react'
-import { buildHazeField, hazeSettingsOf, sameHazeField } from './hazeField.js'
+import { buildHazeField, hazeFogFar, hazeSettingsOf, sameHazeField } from './hazeField.js'
 import { hazeUniformsFor, writeHazeUniforms } from './hazeUniforms.js'
 
 const stores = new WeakMap()
@@ -19,7 +19,7 @@ const storeOf = (gl) => {
     if (!gl) return null
     let store = stores.get(gl)
     if (!store) {
-        store = { value: null, machines: [], field: null, listeners: new Set() }
+        store = { value: null, machines: [], field: null, listeners: new Set(), fieldListeners: new Set() }
         stores.set(gl, store)
     }
     return store
@@ -31,8 +31,10 @@ const same = (a, b) =>
 
 const refreshField = (gl, store) => {
     const field = store.value ? buildHazeField(hazeSettingsOf(store.value), store.machines) : null
-    if (!sameHazeField(field, store.field)) store.field = field
+    const changed = !sameHazeField(field, store.field)
+    if (changed) store.field = field
     writeHazeUniforms(hazeUniformsFor(gl), store.value, store.field)
+    if (changed) for (const listener of store.fieldListeners) listener(store.field)
 }
 
 /** Set the air for this renderer (null = no atmosphere: the old cones). */
@@ -56,6 +58,26 @@ export const getAtmosphere = (gl) => storeOf(gl)?.value || null
 
 /** The field the beams draw now (null: one uniform haze). */
 export const getHazeField = (gl) => storeOf(gl)?.field || null
+
+/** Be told when the field changes (a machine turned up, the settings edited). Returns the unsubscribe. */
+export const subscribeHazeField = (gl, listener) => {
+    const store = storeOf(gl)
+    if (!store) return () => {}
+    store.fieldListeners.add(listener)
+    return () => store.fieldListeners.delete(listener)
+}
+
+/**
+ * The fog's resting distances: the haze's (0 … 1.6/σ) when the room works its haze out
+ * from its machines, else `fallback` (as authored). Whoever moves the fog at run time —
+ * SmartView stands it back by the camera's distance outside the building — adds its
+ * offset to THIS, so the two compose instead of overwriting each other.
+ */
+export const hazeFogBase = (gl, fallback = null) => {
+    const field = getHazeField(gl)
+    if (!field) return fallback
+    return { near: 0, far: Math.min(hazeFogFar(field.fill), 1e5) }
+}
 
 export function useAtmosphere(gl) {
     return useSyncExternalStore(
