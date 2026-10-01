@@ -5180,8 +5180,8 @@
             "par-cut-bridge": 0,
             "par-cut-curtain": 0,
             "par-columns": 0,
-            "par-press-cut": 0.7,
-            "par-press-sides": 0.7,
+            "par-press-cut": 1,
+            "par-press-sides": 1,
             "par-vista": 0,
             "par-neighbour": 0,
             "beam380-backstage": 0,
@@ -5212,7 +5212,7 @@
             "par-columns": 0,
             "par-press-cut": 0,
             "par-press-sides": 0,
-            "par-vista": 0.6,
+            "par-vista": 1,
             "par-neighbour": 0,
             "beam380-backstage": 0.3,
             "beam380-columns": 0,
@@ -5316,7 +5316,7 @@
       },
       "realLightsWhy": "EVERY lamp is a real light (Emily 2026-10-01: 'i want 100% ident what we will have, you can optimize'): the room is the night as it will be, no picked few, no baked stand-ins. Measured on PONYO (RTX laptop, 1440x900): 40-52 fps; with shadows on the 12 lamps putting the most light in (shadowCasting.js shadowLampCap) 36-49 fps. A phone will not hold this: the 8-lamp budget is the fallback.",
       "realLightsAll": true,
-      "looksWhy": "The set's own looks were made for the hung rig; on the ground versions they sit beside ground looks of the same name (\"White cathedral\", \"Red room\"), which the Touch page could not tell apart (Emily 2026-10-01: rename, keep both).",
+      "looksWhy": "The set's own looks were made for the hung rig; on the ground versions they sit beside ground looks of the same name (\"White cathedral\", \"Red room\"), which the Touch page could not tell apart (Emily 2026-10-01: rename, keep both). HAZE: the room is written at sigma 0.02/m (realism.mjs --scattering 0.02, fog far ~80 m), emily-41 2026-10-02 on Emily's behalf from the club-haze research (0.004-0.02): at 0.05 the 32 m fog blanked the vista 62-98 m from the back of the crowd. The joint sigma call with Gevorg is still owed before this goes upstream.",
       "groupDefs": {
         "par-columns": {
           "from": "par-columns",
