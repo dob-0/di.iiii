@@ -26,10 +26,13 @@ const SWEPT = [
 
 // A round mark that is not a control. Keyed by file + a snippet of the line.
 export const ALLOW = [
-    { file: 'src/rigbuild/RoomLookFollower.jsx', snippet: "background: '#ff3b3b'", why: 'the recording light of the show chip: a status dot, not a control' }
+    // (2026-10-01) the show chip's recording light was allowed round here; the owner's rule is rectangles
+    // only, no circles anywhere (memory feedback_no_round_ui) — it is square now and no longer excepted.
 ]
 
-const RADIUS = /(?:border-radius|borderRadius)\s*:\s*([^;}\n]+)/g
+// The value ends at ; } newline — or a comma: a border-radius never holds one, and in an inline
+// style object the next property follows a comma on the same line.
+const RADIUS = /(?:border-radius|borderRadius)\s*:\s*([^;},\n]+)/g
 
 export const offences = (file, text) => {
     const found = []
