@@ -2051,7 +2051,11 @@ function buildTouch() {
   // Structure only, like the bank: the active tile is a class toggle below, so a recall
   // never rebuilds a few hundred tiles of innerHTML — which also ate the tap that was
   // mid-flight when the poll landed.
-  const sig = scenes.map((sc) => sc.id + sc.name + sceneHealth(sc).dead + sceneHealth(sc).missing).join('|') + '#' + q;
+  // The "save some scenes" hint is only true when the desk has nothing else to play: a show
+  // that is all looks and cues (MOXIR) has no scenes and does not need telling to save any.
+  const hasLooks = looksOf().length > 0;
+  const hasCues = !!(CUES && CUES.n);
+  const sig = scenes.map((sc) => sc.id + sc.name + sceneHealth(sc).dead + sceneHealth(sc).missing).join('|') + '#' + q + '#' + (hasLooks || hasCues ? 1 : 0);
   if (wrap.dataset.sig !== sig) {
   wrap.dataset.sig = sig;
   // Same group headers as the bank. Headers are not .tbtn, so the delegated click and
@@ -2068,7 +2072,7 @@ function buildTouch() {
   }
   wrap.innerHTML = html || (q
     ? `<p class="muted">no scene matches "${esc(q)}"</p>`
-    : '<p class="muted">Save some scenes on the Control page.</p>');
+    : hasLooks || hasCues ? '' : '<p class="muted">Save some scenes on the Control page.</p>');
   delete wrap.dataset.active;   // force the class pass below
   }
   const act = String(S.activeScene ?? '');
@@ -2076,13 +2080,114 @@ function buildTouch() {
     wrap.dataset.active = act;
     for (const b of $$('.tbtn', wrap)) b.classList.toggle('active', b.dataset.id === act);
   }
+  // The scene filter is for scenes: with none saved (a looks-and-cues show) it is a dead box.
+  $('.touchsearch').hidden = !S.scenes.length && (hasLooks || hasCues);
   const tf = $('#tSceneFilter');
   if (tf && document.activeElement !== tf && tf.value !== sceneFilter) tf.value = sceneFilter;
   if (document.activeElement !== $('#tMaster')) $('#tMaster').value = S.master;
   $('#tMasterOut').textContent = Math.round(S.master / 255 * 100) + '%';
   $('#tBlackout').classList.toggle('on', S.blackout);
+  buildTouchLooks();
+  paintTouchCues();
   buildTouchStrip();
 }
+
+// The cue list as the Touch page shows it. CUES is declared up here, not beside the cue
+// poller at the foot of the file: showPage() runs before that line and a let is not
+// readable until its declaration has run.
+let CUES = null;
+
+// LOOKS: tap one and it goes on the cue layer — the same layer the cue list fires on, so a
+// tapped look and a GO are never two things playing at once. The tile that is on is the
+// cue layer's look; structure is rebuilt only when the looks change, like the scene grid.
+const TOUCH_LOOK_LAYER = 'cue';
+function activeLookId() {
+  const l = layersOf().find((x) => x.id === TOUCH_LOOK_LAYER);
+  return l && l.on && l.level > 0 && l.lookId ? l.lookId : '';
+}
+function buildTouchLooks() {
+  const sec = $('#tLooks');
+  const wrap = $('#touchLooks');
+  const looks = looksOf();
+  sec.hidden = !looks.length;
+  if (!looks.length) { delete wrap.dataset.sig; return; }
+  const sig = looks.map((l) => l.id + '\u0001' + l.name).join('|');
+  if (wrap.dataset.sig !== sig) {
+    wrap.dataset.sig = sig;
+    wrap.innerHTML = looks.map((l) =>
+      `<button class="tbtn lookbtn" data-look="${esc(l.id)}"><span>${esc(l.name)}</span><i class="tnote"></i></button>`).join('');
+    delete wrap.dataset.active;
+  }
+  const act = activeLookId();
+  if (wrap.dataset.active !== act) {
+    wrap.dataset.active = act;
+    for (const b of $$('.lookbtn', wrap)) {
+      const on = !!act && b.dataset.look === act;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      b.querySelector('.tnote').textContent = on ? 'on now' : '';
+    }
+  }
+}
+$('#touchLooks').addEventListener('click', async (e) => {
+  const b = e.target.closest('.lookbtn');
+  if (!b || !b.dataset.look) return;
+  const look = looksOf().find((l) => l.id === b.dataset.look);
+  const r = await post('api/looks/fire', { id: b.dataset.look });
+  if (!r || r.error) { say(`look did not fire — ${(r && r.error) || 'no answer'}`, true); return; }
+  // Mark it now from the answer, not from the next poll: the tile has to be seen to take.
+  if (r.layer && S) {
+    const ls = layersOf();
+    const at = ls.findIndex((x) => x.id === r.layer.id);
+    const mine = { id: r.layer.id, name: r.layer.name, on: r.layer.on, level: r.layer.level, lookId: r.layer.lookId };
+    if (at >= 0) ls[at] = Object.assign({}, ls[at], mine); else if (S.layers) S.layers.push(mine);
+    buildTouchLooks();
+  }
+  say(`look: ${look ? look.name : r.look.name}`);
+  pullState();
+});
+
+function paintTouchCues() {
+  const bar = $('#tCueBar');
+  bar.hidden = !CUES || !CUES.n;
+  if (bar.hidden) return;
+  const list = Array.isArray(CUES.list) ? CUES.list : [];
+  $('#tCueNow').textContent = CUES.index >= 0
+    ? `Cue ${CUES.index + 1}/${CUES.n} · ${CUES.name || ''}`
+    : `Nothing fired · ${CUES.n} cues`;
+  const ni = CUES.index + 1 < CUES.n ? CUES.index + 1 : (CUES.loop ? 0 : -1);
+  const next = ni >= 0 && list[ni] ? `next ${ni + 1} ${list[ni].name}` : 'last cue';
+  const clock = CUES.running ? (CUES.nextInMs != null ? 'auto in ' + Math.ceil(CUES.nextInMs / 1000) + ' s' : 'waits for GO') : 'stopped';
+  const missing = CUES.missing && CUES.missing.length ? ' · ' + CUES.missing.length + ' not on the desk' : '';
+  $('#tCueNext').textContent = `${next} · ${clock}${missing}`;
+  $('#tCueLoop').setAttribute('aria-pressed', CUES.loop ? 'true' : 'false');
+  $('#tCueLoop').textContent = CUES.loop ? 'loop on' : 'loop off';
+  $('#tCueLoop').classList.toggle('accent', !!CUES.loop);
+  $('#tCueStop').disabled = !CUES.running;
+  $('#tCueBack').disabled = CUES.index <= 0;
+}
+async function touchCue(route, body, what) {
+  const r = await cueAct(route, body);
+  // A cue moves the cue layer's look, so the Looks tile that is on has to follow at once. The
+  // poll cannot do it: pullState keeps its own layers for 700 ms after any press (the fader
+  // guard), so mark it from the cue we know went out, then let the poll confirm.
+  const cur = CUES && Array.isArray(CUES.list) ? CUES.list[CUES.index] : null;
+  if (cur && what !== 'stop' && !(r && (r.error || r.ended)) && S && Array.isArray(S.layers)) {
+    const at = S.layers.findIndex((x) => x.id === TOUCH_LOOK_LAYER);
+    if (at >= 0) S.layers[at] = Object.assign({}, S.layers[at], { on: true, level: 1, lookId: cur.lookId });
+    else S.layers.push({ id: TOUCH_LOOK_LAYER, name: 'Cues', on: true, level: 1, lookId: cur.lookId });
+    buildTouchLooks();
+  }
+  setTimeout(pullState, 750);
+  if (r && r.error) { say(`${what}: ${r.error}`, true); return; }
+  if (r && r.ended) { say('end of the cue list'); return; }
+  if (what === 'stop') say('cue list stopped — the look stays');
+  else if (CUES && CUES.index >= 0) say(`cue ${CUES.index + 1}/${CUES.n} · ${CUES.name || ''}`);
+}
+$('#tCueGo').addEventListener('click', () => touchCue('api/cues/go', {}, 'GO'));
+$('#tCueBack').addEventListener('click', () => touchCue('api/cues/back', {}, 'back'));
+$('#tCueStop').addEventListener('click', () => touchCue('api/cues/stop', {}, 'stop'));
+$('#tCueLoop').addEventListener('click', () => cueAct('api/cues/loop', { loop: !(CUES && CUES.loop) }));
 
 // One delegated recall for the whole grid, mirroring #bankList — the capture-phase
 // long-press suppressor (further down) still eats the lift after a long-press.
@@ -5504,7 +5609,10 @@ $$('.railpane > .pane-head').forEach((head) => {
 // browser preferences (localStorage), like the hotkeys and the pane splits.
 
 let lsTab = 'fx';
-let lsFolded = false;
+// On a phone the open strip takes about half the screen and the looks and cue bar get
+// what is left (MOXIR, 2026-10-01): folded by default there, one tap on a tab opens it.
+// A saved preference still wins.
+let lsFolded = typeof matchMedia === 'function' && matchMedia('(max-width: 600px)').matches;
 try {
   const raw = JSON.parse(localStorage.getItem('touchStrip'));
   if (raw && typeof raw === 'object') { lsTab = raw.tab || 'fx'; lsFolded = !!raw.fold; }
@@ -5959,8 +6067,8 @@ setInterval(pullDmx, 100);
 /* =============== the cue list the desk plays (cuerun.js) =============== */
 // Any page may drive it; the desk alone keeps the time. This strip is one more driver:
 // GO, back, stop and the loop switch go to the same routes the cards page uses.
-let CUES = null;
 function paintCues() {
+  paintTouchCues();
   const strip = $('#cueStrip');
   strip.hidden = !CUES || !CUES.n;
   if (strip.hidden) return;
@@ -5981,6 +6089,7 @@ async function pullCues() {
 async function cueAct(route, body) {
   const r = await post(route, body);
   if (r && r.cues) { CUES = r.cues; paintCues(); }
+  return r;
 }
 $('#cueGo').addEventListener('click', () => cueAct('api/cues/go', {}));
 $('#cueBack').addEventListener('click', () => cueAct('api/cues/back', {}));
