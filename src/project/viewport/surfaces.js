@@ -14,11 +14,15 @@
 //   surfaces: { floor: { albedo: 1.7,        the sampled colour × this (0.07 → ~0.12)
 //                        roughness: 0.6,     the mean finish
 //                        variation: 0.25,    ± around it, by a world-space wear pattern
-//                        scale: 0.35 } }     the pattern's cycles per metre
+//                        scale: 0.35,        the pattern's cycles per metre
+//                        reflect: 0.5 } }    the strength of the beams' reflection in it
+//                                            (BeamMirrors.jsx), 0 = none
+import { AlwaysStencilFunc, ReplaceStencilOp } from 'three'
+
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n))
 const num = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d)
 
-export const FLOOR_DEFAULTS = { albedo: 1.7, roughness: 0.6, variation: 0.25, scale: 0.35 }
+export const FLOOR_DEFAULTS = { albedo: 1.7, roughness: 0.6, variation: 0.25, scale: 0.35, reflect: 0.5 }
 
 /** The overrides a room asks for, cleaned: { [materialName]: {...} }, or null. */
 export const surfacesOf = (renderSettings) => {
@@ -27,12 +31,13 @@ export const surfacesOf = (renderSettings) => {
     const out = {}
     for (const [name, v] of Object.entries(s)) {
         if (!v || typeof v !== 'object' || v.enabled === false) continue
-        const d = name === 'floor' ? FLOOR_DEFAULTS : { albedo: 1, roughness: 0.6, variation: 0, scale: 0.35 }
+        const d = name === 'floor' ? FLOOR_DEFAULTS : { albedo: 1, roughness: 0.6, variation: 0, scale: 0.35, reflect: 0 }
         out[name] = {
             albedo: clamp(num(v.albedo, d.albedo), 0.1, 6),
             roughness: clamp(num(v.roughness, d.roughness), 0.04, 1),
             variation: clamp(num(v.variation, d.variation), 0, 0.5),
-            scale: clamp(num(v.scale, d.scale), 0.01, 10)
+            scale: clamp(num(v.scale, d.scale), 0.01, 10),
+            reflect: clamp(num(v.reflect, d.reflect), 0, 2)
         }
     }
     return Object.keys(out).length ? out : null
@@ -74,12 +79,37 @@ float surfNoise(vec2 p) {
 float surfWear(vec2 p, float s) { return 0.65 * surfNoise(p * s) + 0.35 * surfNoise(p * s * 3.1); }
 `
 
+/**
+ * A neighbour of a reflecting surface in the same mesh (one draw, several materials): it
+ * clears the stencil mark where it is drawn, so a column drawn after the floor in that draw
+ * never carries the floor's reflection. A clone; the model's own material is untouched.
+ */
+export const stencilClearingMaterial = (material) => {
+    const m = material.clone()
+    m.stencilWrite = true
+    m.stencilRef = 0
+    m.stencilFunc = AlwaysStencilFunc
+    m.stencilZPass = ReplaceStencilOp
+    m.userData.surfaceOverride = { clearsStencil: true }
+    return m
+}
+
 /** A material with the override applied: a clone (the model's own stays as loaded). */
 export const overriddenMaterial = (material, o) => {
     const m = material.clone()
     m.color.multiplyScalar(o.albedo)
     m.roughness = o.roughness
     m.userData.surfaceOverride = o
+    if (o.reflect > 0) {
+        // MARK WHERE THE FLOOR IS SEEN, for the beams' reflections (BeamMirrors.jsx): the floor
+        // writes stencil 1 wherever it passes the depth test. The floor's mesh is drawn LAST of
+        // the opaque room (SurfaceOverrides sets its renderOrder), so anything standing in front
+        // has already won the depth there and the floor marks only the floor that shows.
+        m.stencilWrite = true
+        m.stencilRef = 1
+        m.stencilFunc = AlwaysStencilFunc
+        m.stencilZPass = ReplaceStencilOp
+    }
     m.onBeforeCompile = (shader) => {
         shader.uniforms.uSurfVariation = { value: o.variation }
         shader.uniforms.uSurfScale = { value: o.scale }

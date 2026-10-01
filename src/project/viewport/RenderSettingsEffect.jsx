@@ -7,6 +7,7 @@ import { hazeUniformsFor } from '../../objectComponents/hazeUniforms.js'
 import { bloomOf } from './bloom.js'
 import { surfacesOf } from './surfaces.js'
 import SurfaceOverrides from './SurfaceOverrides.jsx'
+import BeamMirrors from './BeamMirrors.jsx'
 
 // The room in high dynamic range with bloom (HdrBloom.jsx): loaded only by a room that asks.
 const HdrBloom = lazy(() => import('./HdrBloom.jsx'))
@@ -87,6 +88,8 @@ export default function RenderSettingsEffect({ renderSettings }) {
             {bloomOf(renderSettings) ? <HdrBloom renderSettings={renderSettings} /> : null}
             {governed ? <QualityGovernor renderSettings={renderSettings} /> : null}
             {surfaces ? <SurfaceOverrides surfaces={surfaces} /> : null}
+            {/* the beams reflected in the floor: needs the HDR path's stencil (HdrBloom.jsx) */}
+            {surfaces?.floor?.reflect > 0 && bloomOf(renderSettings) ? <BeamMirrors floor={surfaces.floor} /> : null}
         </Suspense>
     )
 }

@@ -16,7 +16,7 @@
 // a beam ends on what it hits — and the back faces while the camera stands inside
 // it (a front face is not there to draw from inside). Chosen per frame in
 // onBeforeRender, before three.js sets the draw's state.
-import { AdditiveBlending, BackSide, Color, CylinderGeometry, FrontSide, Matrix4, ShaderMaterial, Vector3 } from 'three'
+import { AdditiveBlending, BackSide, Color, CylinderGeometry, EqualStencilFunc, FrontSide, KeepStencilOp, Matrix4, ShaderMaterial, Vector3 } from 'three'
 import { BEAM_AIR_SAMPLES, DEFAULT_APERTURE, HULL_BASE, HULL_SLOPE, beamExtentOf, beamProfileExponent } from './beamAir.js'
 
 // the profile's exponent under frost: the shader's mix(p, 2, uFrost)
@@ -31,6 +31,10 @@ import { BEAM_SHAPE_GLSL, FROST_WIDEN, beamOpticsOf, frostWiden, opticsSpreadTan
 
 // The floor the hall stands on (world y). The rig's rooms are built on y = 0.
 export const FLOOR_Y = 0
+
+// A rough floor spreads a reflected ray over ~MIRROR_SPREAD·α radians either side (α =
+// roughness², the GGX lobe's half-width, Walter et al. 2007, roughly): the reflection's blur.
+export const MIRROR_SPREAD = 1.3
 
 const vertexShader = /* glsl */`
 varying vec3 vLocal;
@@ -59,6 +63,20 @@ uniform float uGlare;
 uniform int uSamples; // BEAM_SAMPLES, as a uniform so the sample loop is not unrolled
 uniform float uLit; // how much of the throw is above the floor (beamAirBeforeRender)
 uniform float uFloorY; // the floor's world height (FLOOR_Y)
+// THE BEAM REFLECTED IN THE FLOOR (BeamMirrors.jsx): the same beam drawn mirrored under the
+// floor plane, seen only where the floor is the visible surface (stencil), weighted by the
+// floor's reflectance for the angle the eye meets it at (Schlick's Fresnel, F0 of a
+// dielectric 0.04) and by how glossy it is.
+uniform float uMirror;  // 1 = this draw is the reflection
+uniform float uReflect; // the floor's gloss × the room's strength
+#ifdef BEAM_MIRROR
+// the floor's finish where the eye's ray meets it (surfaces.js: the same wear pattern,
+// injected by createBeamMirrorMaterial)
+uniform float uSurfRough;
+uniform float uSurfVar;
+uniform float uSurfScale;
+// SURFACE_WEAR
+#endif
 varying vec3 vLocal;
 varying vec3 vWorld;
 #include <common>
@@ -194,10 +212,29 @@ void main() {
     // past where it meets the floor plane. The hull's depth test only hides the part of the
     // HULL behind a surface; the integral ran on beneath it, so beams thickened and
     // brightened toward their footprint and then cut hard (render audit 6, 2026-10-01).
+    float mirrorWeight = 1.0;
+    float mirrorSpread = 0.0;
     if (cameraPosition.y > uFloorY && wrd.y < -1e-5) {
         float floorLam = (uFloorY - cameraPosition.y) / wrd.y / worldPerLocal;
-        lb = min(lb, max(floorLam, la));
+        if (uMirror > 0.5) {
+            // the reflection: only the mirrored beam BEYOND the floor plane is seen in it
+            la = max(la, floorLam);
+            float c = clamp(-wrd.y, 0.0, 1.0);
+            mirrorWeight = uReflect * (0.04 + 0.96 * pow(1.0 - c, 5.0));
+#ifdef BEAM_MIRROR
+            // how far the floor's microfacets spread a reflected ray, where this one lands:
+            // the GGX lobe's width, ~1.3·α (α = roughness²) radians either side
+            vec3 hit = cameraPosition + wrd * (floorLam * worldPerLocal);
+            float rough = clamp(uSurfRough + uSurfVar * (surfWear(hit.xz, uSurfScale) - 0.5) * 2.0, 0.04, 1.0);
+            mirrorSpread = ${MIRROR_SPREAD.toFixed(2)} * rough * rough;
+#endif
+        } else {
+            lb = min(lb, max(floorLam, la));
+        }
+    } else if (uMirror > 0.5) {
+        mirrorWeight = 0.0;
     }
+    if (lb < la) lb = la;
 
     // the step follows the samples actually run (uSamples — the frame-rate governor lowers
     // it); dividing by the full count cut every beam short at the lower notches
@@ -223,8 +260,22 @@ void main() {
         // toward the eye and from the lens, the well-mixed haze dims the light
         // (a plume between is not counted — hazeField.js, limits)
         float T = exp(-uFill * (s + lam));
-        float sigma = hazeSigma(cameraPosition + wrd * (lam * worldPerLocal));
-        sum += sigma * E * profile * hgPhase(cosT, uG) * T;
+        vec3 hazeAt = cameraPosition + wrd * (lam * worldPerLocal);
+        float blur = 1.0;
+        if (uMirror > 0.5) {
+            // A ROUGH FLOOR BLURS THE REFLECTION, the more the farther the reflected point
+            // stands from it (the blur's width ≈ that height × the lobe's spread): a beam's
+            // thin line of light, spread that wide, keeps its flux and loses its peak by
+            // R / (R + width). Crisp where the beam meets the floor, gone high up, and
+            // patchy with the wear — the polished lanes carry it, the dusty concrete not.
+            float height = max(uFloorY - hazeAt.y, 0.0);
+            float Rw = R * worldPerLocal;
+            blur = Rw / max(Rw + height * mirrorSpread, 1e-6);
+            // a reflected sample lies under the floor: the haze it stands for is above it
+            hazeAt.y = 2.0 * uFloorY - hazeAt.y;
+        }
+        float sigma = hazeSigma(hazeAt);
+        sum += sigma * E * profile * hgPhase(cosT, uG) * T * blur;
     }
     float inBeam = sum * dl;
 #if BEAM_PART == 1
@@ -271,11 +322,13 @@ void main() {
     float glare = uGlare * Lcore * width * lsf * fade;
 
 #if BEAM_PART == 0
-    float total = inBeam;
+    float total = inBeam * mirrorWeight;
 #else
     float total = glare;
 #endif
+#ifndef BEAM_MIRROR
     if (total <= 0.0) discard;
+#endif
     vec3 radiance = uColor * total;
     gl_FragColor = vec4(radiance, 1.0);
     #include <tonemapping_fragment>
@@ -336,6 +389,8 @@ export const createBeamAirMaterial = (part = 'core', shared = hazeUniformsFor(nu
             uGlare: { value: 1 },
             uLit: { value: 10 },
             uFloorY: { value: FLOOR_Y },
+            uMirror: { value: 0 },
+            uReflect: { value: 1 },
             uFrost: { value: 0 },
             uPrismN: { value: 0 },
             uPrismTan: { value: 0 },
@@ -414,4 +469,73 @@ export const beamAirBeforeRender = (mesh, cam) => {
     const inside = s > -margin && s < u.uLength.value + margin && Math.hypot(camera.x, camera.z) < radius + margin
     const side = inside ? BackSide : FrontSide
     if (material.side !== side) material.side = side
+}
+
+const MIRROR = new Matrix4().makeScale(1, -1, 1)
+/**
+ * A beam's reflection in the floor (BeamMirrors.jsx): the beam's own material, its uniforms
+ * SHARED (colour, level, optics, haze follow the beam with no copying), except the
+ * camera-in-the-beam's-frame (each draw has its own) and the mirror switches. Drawn only on
+ * pixels the floor marked (stencil ref 1), additive, after the opaque room.
+ */
+// The floor's finish, when a room gives none (a smooth floor: a sharp reflection).
+const NO_WEAR_GLSL = 'float surfWear(vec2 p, float s) { return 0.5; }'
+
+/**
+ * `floor` = the floor's override (surfaces.js surfacesOf: reflect, roughness, variation,
+ * scale) and `wearGlsl` its wear pattern (surfaces.js WEAR_GLSL, defining surfWear): the
+ * reflection is blurred by the floor's roughness where each ray meets it.
+ */
+export const createBeamMirrorMaterial = (beamMaterial, floor = {}, wearGlsl = NO_WEAR_GLSL) => {
+    const m = beamMaterial.clone()
+    // BEAM_MIRROR: no `discard` in this program — a shader that may discard turns off the
+    // GPU's early stencil test, and every mirrored pixel then paid the whole haze integral
+    // before the floor's mask threw it away (27 fps against ~100, PONYO's RTX 5060). Writing
+    // zero, additively, costs nothing. And half the samples: a reflection is a blur.
+    m.defines = { ...m.defines, BEAM_MIRROR: 1 }
+    m.fragmentShader = m.fragmentShader.replace('// SURFACE_WEAR', wearGlsl)
+    m.uniforms = {
+        ...beamMaterial.uniforms,
+        uCamLocal: { value: new Vector3() },
+        uMirror: { value: 1 },
+        uReflect: { value: 0.5 },
+        uSamples: { value: 6 },
+        uSurfRough: { value: 0.04 },
+        uSurfVar: { value: 0 },
+        uSurfScale: { value: 1 }
+    }
+    setBeamMirrorFloor(m, floor)
+    m.depthTest = false
+    m.stencilWrite = true
+    m.stencilWriteMask = 0
+    m.stencilRef = 1
+    m.stencilFunc = EqualStencilFunc
+    m.stencilFail = KeepStencilOp
+    m.stencilZFail = KeepStencilOp
+    m.stencilZPass = KeepStencilOp
+    return m
+}
+
+/** The floor a reflection is seen in: its strength and finish (no recompile). */
+export const setBeamMirrorFloor = (material, { reflect = 0.5, roughness = 0.04, variation = 0, scale = 1 } = {}) => {
+    const u = material.uniforms
+    u.uReflect.value = reflect
+    u.uSurfRough.value = roughness
+    u.uSurfVar.value = variation
+    u.uSurfScale.value = scale
+}
+
+/**
+ * The share of a reflected beam's peak a rough floor leaves (the shader's `blur`, for
+ * tests): a line of light `radius` wide, reflected from `height` above the floor, by a
+ * floor of this roughness.
+ */
+export const mirrorBlur = (radius, height, roughness) => radius / Math.max(radius + Math.max(height, 0) * MIRROR_SPREAD * roughness * roughness, 1e-6)
+
+/** The world matrix of a beam's reflection: mirrored through the floor plane y = FLOOR_Y. */
+export const mirrorMatrix = (out, matrixWorld) => {
+    out.copy(matrixWorld)
+    out.premultiply(MIRROR)
+    if (FLOOR_Y !== 0) out.elements[13] += 2 * FLOOR_Y
+    return out
 }

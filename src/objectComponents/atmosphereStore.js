@@ -65,6 +65,17 @@ const bloomAllowed = new WeakMap()
 export const setBloomAllowed = (gl, allowed) => { if (gl) bloomAllowed.set(gl, Boolean(allowed)) }
 export const isBloomAllowed = (gl) => (gl ? bloomAllowed.get(gl) !== false : true)
 
+const beamMeshes = new WeakMap()
+/** A beam's core hull, for its reflection in the floor (beamMirror.js). Returns the unregister. */
+export const registerBeamMesh = (gl, mesh) => {
+    if (!gl || !mesh) return () => {}
+    let set = beamMeshes.get(gl)
+    if (!set) { set = new Set(); beamMeshes.set(gl, set) }
+    set.add(mesh)
+    return () => set.delete(mesh)
+}
+export const beamMeshesOf = (gl) => beamMeshes.get(gl) || new Set()
+
 const glareMeshes = new WeakMap()
 /** A beam's glare hull, shown only while the room is drawn without bloom. Returns the unregister. */
 export const registerGlareMesh = (gl, mesh) => {

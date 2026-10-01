@@ -37,7 +37,8 @@ export default function HdrBloom({ renderSettings }) {
     const passes = useMemo(() => {
         // half float: values above 1 survive to the bloom and the tone mapping; 4×
         // multisampling, what the Canvas's own antialias gives the plain path
-        const target = new WebGLRenderTarget(1, 1, { type: HalfFloatType, samples: 4 })
+        // and a stencil: the floor marks where it is the visible surface, for the reflections (beamMirror.js)
+        const target = new WebGLRenderTarget(1, 1, { type: HalfFloatType, samples: 4, stencilBuffer: true })
         const composer = new EffectComposer(gl, target)
         const render = new RenderPass(scene, null)
         const glow = new UnrealBloomPass(new Vector2(256, 256), 0.03, 0.4, 1)

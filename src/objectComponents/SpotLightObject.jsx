@@ -6,7 +6,7 @@ import { beamCastsLight, beamFadeColors, beamIsVisible, spotBeamShape, spotLight
 import { strobeEnvelope } from '../rigbuild/rigFlash.js'
 import { DEFAULT_APERTURE } from './beamAir.js'
 import { beamAirBeforeRender, beamAirGeometry, createBeamAirMaterial, setBeamAirUniforms } from './beamAirMaterial.js'
-import { registerGlareMesh, useAtmosphere } from './atmosphereStore.js'
+import { registerBeamMesh, registerGlareMesh, useAtmosphere } from './atmosphereStore.js'
 import { hazeUniformsFor } from './hazeUniforms.js'
 import { beamOpticsOf } from './beamOptics.js'
 
@@ -237,7 +237,8 @@ function BeamPart({ gl, part, values }) {
     useEffect(() => () => material.dispose(), [material])
     // the glare hull steps aside, undrawn, while the room has real bloom (atmosphereStore.js)
     const meshRef = useRef(null)
-    useEffect(() => (part === 'glare' ? registerGlareMesh(gl, meshRef.current) : undefined), [gl, part])
+    // the glare hull steps aside under bloom; the core is known to the floor's reflection (beamMirror.js)
+    useEffect(() => (part === 'glare' ? registerGlareMesh(gl, meshRef.current) : registerBeamMesh(gl, meshRef.current)), [gl, part])
     setBeamAirUniforms(material, values)
     return (
         <>

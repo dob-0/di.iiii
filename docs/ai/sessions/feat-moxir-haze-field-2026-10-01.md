@@ -19,3 +19,12 @@
 - Schema (cjs + esm): `beam.optics`, clamped, stored only when given.
 - ANGLE trap found and fixed: on Windows (Direct3D 11) the beam shader with nested constant-bound loops (12 samples × 12 jets × prism × honeycomb) failed to link with an EMPTY log and then lost the context. Loops are now bounded by uniforms (uSamples, uHazeCount) so ANGLE keeps them loops, and the split-beam loop is flat.
 - Seen on the RTX 5060, Known · full, DJ view, haze + bloom, shadows on: prism 62.6 fps, honeycomb 61.9, gobo 62.0, frost 64.2, no errors. The gobo is faint from the audience (a 1.8° beam) — it shows looking up the beam.
+
+## 2026-10-02 — the beams reflected in the floor
+
+- Owner's ask (Emily, 2026-10-01): "ok go on with the floor reflections" (after the research pass: in a club photo the reflections are the beams and lenses mirrored in the concrete).
+- `src/project/viewport/BeamMirrors.jsx`: each beam core drawn a second time, mirrored through y = FLOOR_Y, only where the floor is the visible surface — the floor's override marks stencil 1 and is drawn last of the opaque room (`surfaces.js`, `SurfaceOverrides.jsx`); its neighbours in the same mesh clear the mark. One extra draw per beam, no second render of the room. The composer target carries the stencil (`HdrBloom.jsx`).
+- Weighted by Schlick's Fresnel (F0 0.04) × `surfaces.floor.reflect`, and blurred by the floor's roughness where each ray lands (the same wear pattern as the lit floor): a sample h metres up keeps R / (R + 1.3·α·h) of its peak (`mirrorBlur`). Crisp where a beam meets the floor, gone high up, patchy with the wear.
+- The mirror program never discards (a discard turned off early stencil: 27 fps against ~100 on the RTX 5060) and runs 6 samples.
+- Not in a headset yet (the XR layer has no stencil; the mirrors hide while presenting). Only in a room with bloom on (the half-float path).
+- Seen in headless Chrome on PONYO's RTX 5060 (the owner's own visualiser tab held the GPU at 89–96 %, so the 24–26 fps read then is contention, not this — reflections on and off read the same): Known · full, the-x / tunnel / white-cathedral, Floor and DJ views.
