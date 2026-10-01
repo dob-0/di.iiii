@@ -60,6 +60,20 @@ describe('looks — the rig file\'s looks on the dealt lamps', () => {
         expect(cross.size).toBe(4) // the truss spots are not in this look: they keep their own
     })
 
+    // MOXIR 2026-10-01: floor movers standing near, not on, a column base were on no derived slot,
+    // so no look ever posed them and every beam look stayed dark on the desk and in the room.
+    it('places a lamp no derived slot holds by the position its fixture names, and only an unambiguous one', () => {
+        const doc = dealt()
+        const one = doc.entities.find((e) => e.components.fixture?.type === 'up-b380f')
+        const off = (id, position, dx) => ({ ...one, id, components: { ...one.components, transform: { ...one.components.transform, position: [one.components.transform.position[0] + dx, one.components.transform.position[1], one.components.transform.position[2] + 1.7] }, fixture: { ...one.components.fixture, index: undefined, position } } })
+        const entities = [...doc.entities, off('near-base', 'column bases', 0.6), off('booth', 'booth back', -0.6)]
+        const up = lookPoses({ entities, library: TYPE_LIBRARY, lookId: 'up' })
+        expect(up.has('near-base')).toBe(true)
+        expect(up.get('near-base').color).toBe('#ff0000')
+        expect(up.has('booth')).toBe(false) // "booth back" is stage-back OR stage-flanks: not guessed
+        expect(up.size).toBe(7)
+    })
+
     it('draws the look without writing it, and writes it only when asked to rest on it', () => {
         const doc = dealt()
         const poses = lookPoses({ entities: doc.entities, library: TYPE_LIBRARY, lookId: 'cross' })
