@@ -17,7 +17,14 @@
 // it (a front face is not there to draw from inside). Chosen per frame in
 // onBeforeRender, before three.js sets the draw's state.
 import { AdditiveBlending, BackSide, Color, CylinderGeometry, FrontSide, Matrix4, ShaderMaterial, Vector3 } from 'three'
-import { BEAM_AIR_SAMPLES, DEFAULT_APERTURE, HULL_BASE, HULL_SLOPE, beamExtent } from './beamAir.js'
+import { BEAM_AIR_SAMPLES, DEFAULT_APERTURE, HULL_BASE, HULL_SLOPE, beamExtentOf, beamProfileExponent } from './beamAir.js'
+
+// the profile's exponent under frost: the shader's mix(p, 2, uFrost)
+const mixedExponent = (edge, frost) => {
+    const p = beamProfileExponent(edge)
+    const f = Math.min(1, Math.max(0, Number(frost) || 0))
+    return p + (2 - p) * f
+}
 import { JET_K, MAX_HAZE_SOURCES, NOISE_TILE_M } from './hazeField.js'
 import { hazeUniformsFor } from './hazeUniforms.js'
 import { BEAM_SHAPE_GLSL, FROST_WIDEN, beamOpticsOf, frostWiden, opticsSpreadTan } from './beamOptics.js'
@@ -174,7 +181,9 @@ void main() {
     float lb = min(s1, e1);
     if (!hit || lb <= la) lb = la;
 
-    float dl = (lb - la) / float(BEAM_SAMPLES);
+    // the step follows the samples actually run (uSamples — the frame-rate governor lowers
+    // it); dividing by the full count cut every beam short at the lower notches
+    float dl = (lb - la) / float(uSamples);
     // Interleaved gradient noise (Jimenez, "Next Generation Post Processing in
     // Call of Duty: Advanced Warfare", SIGGRAPH 2014): a per-pixel offset of the
     // samples, so the sum's error is grain, not bands.
@@ -273,7 +282,9 @@ export const beamAirGeometry = ({ aperture, tanHalf: plainTan, length, edge = 0.
     // girder, the roof or the floor it meets. The glare: the beam plus the margin its
     // veil is drawn in (HULL_BASE + HULL_SLOPE·s) — a veil lies over what stands in front
     // of the beam too, as it does in an eye.
-    const k = part === 'glare' ? 1 : beamExtent(edge)
+    // the reach of the profile actually drawn: frost turns it Gaussian (beamOptics.js), and a
+    // hull sized for the unfrosted edge cut the frosted tail at ~30 % (a hard silhouette)
+    const k = part === 'glare' ? 1 : beamExtentOf(mixedExponent(edge, o.frost))
     const [base, slope] = part === 'glare' ? [HULL_BASE, HULL_SLOPE] : [0.02 * aperture * k, 0.02 * tanHalf * k]
     const top = Math.max(aperture * k, 1e-3) + base
     const bottom = (aperture + length * tanHalf) * k + length * spread + base + slope * length
@@ -332,7 +343,10 @@ export const createBeamAirMaterial = (part = 'core', shared = hazeUniformsFor(nu
         side: FrontSide,
         fog: false,
         toneMapped: true,
-        dithering: true
+        // no dither here: in the half-float buffer (HdrBloom.jsx) the ±½-code noise is never
+        // rounded away, and the exposure (×~6) turned it into green-and-magenta grain over every
+        // dark area; in the plain path it summed, positive only, over ~20 overlapping hulls
+        dithering: false
     })
     return material
 }
@@ -378,7 +392,7 @@ export const beamAirBeforeRender = (mesh, cam) => {
     if (axis.y < -1e-4 && lens.y > FLOOR_Y) lit = Math.min(lit, (lens.y - FLOOR_Y) / -axis.y / perMetre)
     u.uLit.value = Math.max(lit, 0)
     const s = -camera.y
-    const k = Math.max(beamExtent(u.uEdge.value), 1)
+    const k = Math.max(beamExtentOf(mixedExponent(u.uEdge.value, u.uFrost.value)), 1)
     const tanEff = u.uTan.value * frostWiden(u.uFrost.value)
     const spread = (u.uPrismN.value > 0 ? u.uPrismTan.value : 0) + u.uHoney.value * u.uHoneyTan.value
     const radius = (u.uAperture.value + Math.max(s, 0) * tanEff) * k + Math.max(s, 0) * (spread + u.uHullSlope.value) + u.uHullBase.value

@@ -65,10 +65,24 @@ const bloomAllowed = new WeakMap()
 export const setBloomAllowed = (gl, allowed) => { if (gl) bloomAllowed.set(gl, Boolean(allowed)) }
 export const isBloomAllowed = (gl) => (gl ? bloomAllowed.get(gl) !== false : true)
 
+const glareMeshes = new WeakMap()
+/** A beam's glare hull, shown only while the room is drawn without bloom. Returns the unregister. */
+export const registerGlareMesh = (gl, mesh) => {
+    if (!gl || !mesh) return () => {}
+    let set = glareMeshes.get(gl)
+    if (!set) { set = new Set(); glareMeshes.set(gl, set) }
+    set.add(mesh)
+    mesh.visible = hazeUniformsFor(gl).uGlareOn.value > 0.5
+    return () => set.delete(mesh)
+}
+
 export const setBloomActive = (gl, active) => {
     const u = hazeUniformsFor(gl).uGlareOn
     const value = active ? 0 : 1
-    if (u.value !== value) u.value = value
+    if (u.value === value) return
+    u.value = value
+    // not drawn at all while bloom runs: 64 wide hulls rasterised only to discard cost fill
+    for (const mesh of glareMeshes.get(gl) || []) mesh.visible = value > 0.5
 }
 
 /** The field the beams draw now (null: one uniform haze). */

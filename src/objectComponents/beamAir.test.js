@@ -147,3 +147,19 @@ describe('no large constant-bound loop in the beam shader (ANGLE / Direct3D 11)'
         }
     })
 })
+
+describe('the beam shader steps through the samples it actually runs', () => {
+    it('the step divides the chord by uSamples (the governor lowers it), never the full count', async () => {
+        const fs = await import('node:fs')
+        const path = await import('node:path')
+        const { cwd } = await import('node:process')
+        const shader = fs.readFileSync(path.resolve(cwd(), 'src/objectComponents/beamAirMaterial.js'), 'utf8')
+        expect(shader).toContain('float dl = (lb - la) / float(uSamples);')
+        expect(shader).not.toContain('/ float(BEAM_SAMPLES)')
+    })
+    it('the JS integral covers the whole chord at any sample count', () => {
+        const lamp = { candela: 1e6, aperture: 0.08, tanHalf: Math.tan(0.0157), length: 12, edge: 0.2, scattering: 0.03, anisotropy: 0.7 }
+        const full = beamAirRadiance([-14, -6, 0], [1, 0, 0], { ...lamp, samples: 64 })
+        for (const samples of [5, 6, 8, 12]) expect(beamAirRadiance([-14, -6, 0], [1, 0, 0], { ...lamp, samples }) / full).toBeGreaterThan(0.8)
+    })
+})

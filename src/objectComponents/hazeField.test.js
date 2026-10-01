@@ -7,6 +7,7 @@ import {
     NOISE_TILE_M,
     buildHazeField,
     dropletMassFlow,
+    extinctionEfficiency,
     fillScattering,
     hazeMachinesOf,
     hazeNoiseData,
@@ -22,12 +23,17 @@ import {
 const hazer = HAZE_KINDS.hazer
 const fog = HAZE_KINDS['smoke-machine']
 
-describe('massExtinction — large spheres, Q = 2', () => {
-    it('1 µm oil droplets: 3·2/(2·0.85e6 g/m³·1e-6 m) = 3.53 m²/g', () => {
-        expect(massExtinction(1, 0.85)).toBeCloseTo(6 / 1.7, 6)
+describe('massExtinction — anomalous diffraction (van de Hulst)', () => {
+    it('Q tends to 2 for large droplets, and is ≈ 2.6 for a 1 µm oil droplet in green light', () => {
+        expect(extinctionEfficiency(200, 1.47)).toBeCloseTo(2, 1)
+        expect(extinctionEfficiency(1, 1.47)).toBeGreaterThan(2.5)
+        expect(extinctionEfficiency(1, 1.47)).toBeLessThan(2.8)
     })
-    it('falls as 1/D: the same mass in bigger droplets scatters less', () => {
-        expect(massExtinction(3, 0.85)).toBeCloseTo(massExtinction(1, 0.85) / 3, 9)
+    it('1 µm oil droplets: 3·Q/(2·0.85e6 g/m³·1e-6 m)', () => {
+        expect(massExtinction(1, 0.85)).toBeCloseTo((3 * extinctionEfficiency(1, 1.47)) / 1.7, 9)
+    })
+    it('the same mass in bigger droplets scatters less', () => {
+        expect(massExtinction(3, 0.85)).toBeLessThan(massExtinction(1, 0.85) / 2)
     })
 })
 
@@ -172,5 +178,22 @@ describe('the fog the haze lays on the surfaces', () => {
         const { hazeFog } = await import('../../scripts/rigbuild/realism.mjs')
         expect(hazeFogFar(0.05)).toBeCloseTo(hazeFog(0.05).far, 0)
         expect(hazeFogFar(0)).toBe(Infinity)
+    })
+})
+
+describe('calibration — the photographed haze, spread by the machines', () => {
+    const machines = hazeMachinesOf(entities, typeOf)
+    it('the machines at their usual levels give exactly the room hand-set scattering', () => {
+        const field = buildHazeField(hazeSettingsOf({ scattering: 0.05, haze: { patchiness: 0 } }), machines)
+        expect(field.fill).toBeCloseTo(0.05, 9)
+    })
+    it('turning the hazer up from its usual 0.6 to full thickens the hall by that ratio', () => {
+        const usual = buildHazeField(hazeSettingsOf({ scattering: 0.05, haze: {} }), machines)
+        const full = buildHazeField(hazeSettingsOf({ scattering: 0.05, haze: { kindLevels: { hazer: 1 } } }), machines)
+        expect(full.fill / usual.fill).toBeCloseTo(1 / 0.6, 6)
+    })
+    it('calibrate: false trusts the physics own number', () => {
+        const raw = buildHazeField(hazeSettingsOf({ scattering: 0.05, haze: { calibrate: false } }), machines)
+        expect(raw.scale).toBe(1)
     })
 })

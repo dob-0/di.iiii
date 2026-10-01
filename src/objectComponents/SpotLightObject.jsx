@@ -6,7 +6,7 @@ import { beamCastsLight, beamFadeColors, beamIsVisible, spotBeamShape } from './
 import { strobeEnvelope } from '../rigbuild/rigFlash.js'
 import { DEFAULT_APERTURE } from './beamAir.js'
 import { beamAirBeforeRender, beamAirGeometry, createBeamAirMaterial, setBeamAirUniforms } from './beamAirMaterial.js'
-import { useAtmosphere } from './atmosphereStore.js'
+import { registerGlareMesh, useAtmosphere } from './atmosphereStore.js'
 import { hazeUniformsFor } from './hazeUniforms.js'
 import { beamOpticsOf } from './beamOptics.js'
 
@@ -224,10 +224,13 @@ function BeamPart({ gl, part, values }) {
     const material = useMemo(() => createBeamAirMaterial(part, hazeUniformsFor(gl)), [part, gl])
     useEffect(() => () => geometry.dispose(), [geometry])
     useEffect(() => () => material.dispose(), [material])
+    // the glare hull steps aside, undrawn, while the room has real bloom (atmosphereStore.js)
+    const meshRef = useRef(null)
+    useEffect(() => (part === 'glare' ? registerGlareMesh(gl, meshRef.current) : undefined), [gl, part])
     setBeamAirUniforms(material, values)
     return (
         <>
-            <mesh geometry={geometry} material={material} raycast={() => null} onBeforeRender={beforeBeamRender} />
+            <mesh ref={meshRef} geometry={geometry} material={material} raycast={() => null} onBeforeRender={beforeBeamRender} />
             {values.strobeHz > 0 ? <BeamAirStrobe material={material} values={values} /> : null}
         </>
     )

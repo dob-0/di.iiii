@@ -77,6 +77,7 @@ export const HAZE_KINDS = {
     hazer: {
         dropletD_um: 1.0,
         fluidDensity_g_ml: 0.85,
+        refractiveIndex: 1.47, // white mineral oil
         persistent: 1,
         fan_m3_s: 0.08,
         dryTau_min: Infinity,
@@ -87,6 +88,7 @@ export const HAZE_KINDS = {
     'smoke-machine': {
         dropletD_um: 3.0,
         fluidDensity_g_ml: 1.05,
+        refractiveIndex: 1.43, // a glycol droplet once its water has gone
         persistent: 0.35,
         fan_m3_s: 0.04,
         dryTau_min: 1.5,
@@ -101,14 +103,24 @@ export const HAZE_KINDS = {
 // air handling running at 6 air changes an hour (τ = 10 min).
 export const DEFAULT_HALL = { volume_m3: 12000, airChangesPerHour: 6 }
 
-// Large-sphere extinction efficiency (see 3. above).
-export const Q_EXT = 2
+// Extinction efficiency of a droplet: van de Hulst's ANOMALOUS DIFFRACTION approximation
+// (Light Scattering by Small Particles, 1957, §11.22), good for droplets a few wavelengths
+// across with a refractive index near 1.4–1.5:
+//     Q = 2 − (4/ρ)·sin ρ + (4/ρ²)·(1 − cos ρ),   ρ = 2x(n − 1),   x = πD/λ
+// It tends to 2 for large droplets (the "extinction paradox"); a 1 µm oil droplet in green
+// light (n ≈ 1.47, λ = 0.55 µm) gives ≈ 2.6. Haze absorbs almost nothing: scattering = extinction.
+export const LAMBDA_UM = 0.55
+export const extinctionEfficiency = (dropletD_um, n = 1.47, lambda_um = LAMBDA_UM) => {
+    const x = (Math.PI * Math.max(num(dropletD_um, 1), 0.05)) / lambda_um
+    const r = 2 * x * Math.max(num(n, 1.47) - 1, 0.01)
+    return 2 - (4 / r) * Math.sin(r) + (4 / (r * r)) * (1 - Math.cos(r))
+}
 
-/** Extinction (= scattering) per unit mass concentration, m²/g, for droplets of diameter D (µm) and density ρ (g/ml). */
-export const massExtinction = (dropletD_um, density_g_ml) => {
+/** Extinction (= scattering) per unit mass concentration, m²/g, for droplets of diameter D (µm), density ρ (g/ml), index n. */
+export const massExtinction = (dropletD_um, density_g_ml, n = 1.47) => {
     const D = Math.max(num(dropletD_um, 1), 0.05) * 1e-6 // m
     const rho = Math.max(num(density_g_ml, 1), 0.1) * 1e6 // g/m³
-    return (3 * Q_EXT) / (2 * rho * D)
+    return (3 * extinctionEfficiency(dropletD_um, n)) / (2 * rho * D)
 }
 
 /** Droplet mass flow, g/min, for a machine of `fluid_ml_per_min` run at `level` (0..1). */
@@ -136,7 +148,7 @@ export const fillScattering = (sources, hall = DEFAULT_HALL, minutes = null) => 
         const mdot = dropletMassFlow(kind, s.fluid_ml_per_min, s.level)
         let C = (mdot * tau) / V // g/m³ at steady state
         if (minutes != null) C *= 1 - Math.exp(-Math.max(num(minutes, 0), 0) / tau)
-        sigma += C * massExtinction(kind.dropletD_um, kind.fluidDensity_g_ml)
+        sigma += C * massExtinction(kind.dropletD_um, kind.fluidDensity_g_ml, kind.refractiveIndex)
     }
     return sigma
 }
@@ -151,7 +163,7 @@ export const jetOf = (source) => {
     const mdot = dropletMassFlow(kind, source.fluid_ml_per_min, source.level) / 60 // g/s
     const c0 = mdot / Math.max(kind.fan_m3_s, 1e-4) // g/m³ at the nozzle
     return {
-        sigma0: c0 * massExtinction(kind.dropletD_um, kind.fluidDensity_g_ml),
+        sigma0: c0 * massExtinction(kind.dropletD_um, kind.fluidDensity_g_ml, kind.refractiveIndex),
         nozzle: Math.max(num(source.nozzle_d_mm, kind.nozzle_d_mm), 5) / 1000,
         spread: 0.11,
         reach: Math.max(num(kind.reach_m, 6), 0.5)
@@ -294,6 +306,11 @@ export const hazeSettingsOf = (atmosphere) => {
         levels: h.levels && typeof h.levels === 'object' ? h.levels : {},
         kindLevels: h.kindLevels && typeof h.kindLevels === 'object' ? h.kindLevels : {},
         minutes: h.minutes == null ? null : Math.max(num(h.minutes, 0), 0),
+        // CALIBRATION: the room's hand-set scattering (atmosphere.scattering, chosen against
+        // the §20 photographs) is the hall's haze with every machine at its usual level; the
+        // machines decide only how it is spread and how it changes when they are turned up or
+        // down. `calibrate: false` trusts the physics' absolute number instead.
+        calibrateTo: h.calibrate === false ? null : (num(atmosphere?.scattering, 0) > 0 ? num(atmosphere.scattering, 0) : null),
         patchiness: clamp(num(h.patchiness, 0.35), 0, 1),
         drift
     }
@@ -357,12 +374,20 @@ export const buildHazeField = (settings, machines) => {
     }
     const running = machines.map((m) => ({ ...m, level: levelOf(m) }))
     const hall = { volume_m3: settings.volume_m3, airChangesPerHour: settings.airChangesPerHour }
-    const fill = fillScattering(running, hall, settings.minutes)
+    // calibrated: scaled so the machines at their usual levels give the photographed haze
+    // (the physics' absolute number rests on assumed droplet sizes, fan flows and hall size;
+    // the RATIOS — this hazer up, that fog machine on — are what it gets right)
+    let scale = 1
+    if (settings.calibrateTo > 0) {
+        const usual = fillScattering(machines.map((m) => ({ ...m, level: m.kind.defaultLevel })), hall, null)
+        if (usual > 0) scale = settings.calibrateTo / usual
+    }
+    const fill = fillScattering(running, hall, settings.minutes) * scale
     const jets = running
         .filter((m) => m.level > 0)
         .slice(0, MAX_HAZE_SOURCES)
-        .map((m) => ({ ...jetOf(m), position: m.position, direction: m.direction, id: m.id }))
-    return { fill, jets, patchiness: settings.patchiness, drift: settings.drift }
+        .map((m) => { const j = jetOf(m); return { ...j, sigma0: j.sigma0 * scale, position: m.position, direction: m.direction, id: m.id } })
+    return { fill, jets, patchiness: settings.patchiness, drift: settings.drift, scale }
 }
 
 /**

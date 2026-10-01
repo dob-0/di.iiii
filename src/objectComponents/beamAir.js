@@ -93,7 +93,8 @@ export const beamProfileExponent = (edge) => 2 + 6 * (1 - clamp(finite(edge, 0.2
 export const beamProfileAt = (rho, p) => Math.exp(-Math.LN2 * Math.abs(rho) ** p)
 export const beamProfile = (rho, edge) => beamProfileAt(rho, beamProfileExponent(edge))
 /** How far out (in beam radii) the light is drawn: where the profile reaches PROFILE_FLOOR. */
-export const beamExtent = (edge) => (Math.log(1 / PROFILE_FLOOR) / Math.LN2) ** (1 / beamProfileExponent(edge))
+export const beamExtentOf = (p) => (Math.log(1 / PROFILE_FLOOR) / Math.LN2) ** (1 / p)
+export const beamExtent = (edge) => beamExtentOf(beamProfileExponent(edge))
 
 /** Henyey–Greenstein phase function, 1/sr; integrates to 1 over the sphere. */
 export const hgPhase = (cosTheta, g) => {

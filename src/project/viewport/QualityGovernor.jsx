@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { hazeUniformsFor } from '../../objectComponents/hazeUniforms.js'
 import { setBloomAllowed } from '../../objectComponents/atmosphereStore.js'
-import { QUALITY_STEPS, RAISE_FPS, WINDOW_MS, nextQuality, qualityDpr } from './qualityGovernor.js'
+import { HITCH_MS, QUALITY_STEPS, RAISE_FPS, WARMUP_MS, WINDOW_MS, nextQuality, qualityDpr } from './qualityGovernor.js'
 
 // The frame-rate governor (qualityGovernor.js) at work in a room with a physical haze:
 // counts frames, decides a notch every WINDOW_MS, and applies it — the beams' sample
@@ -14,7 +14,7 @@ export default function QualityGovernor({ renderSettings }) {
     const { gl, setDpr, viewport } = useThree()
     const frameloop = useThree((s) => s.frameloop)
     const level = useRef(0)
-    const win = useRef({ start: 0, frames: 0, goodSince: 0 })
+    const win = useRef({ start: 0, frames: 0, goodSince: 0, born: 0, last: 0 })
     const deviceDpr = useRef(viewport.initialDpr || viewport.dpr || 1)
 
     const apply = (n) => {
@@ -36,6 +36,11 @@ export default function QualityGovernor({ renderSettings }) {
         if (gl.xr.isPresenting || frameloop !== 'always') return
         const now = performance.now()
         const w = win.current
+        if (!w.born) w.born = now
+        const gap = w.last ? now - w.last : 0
+        w.last = now
+        // warming up (compiles, uploads), or a hitch: start the window again
+        if (now - w.born < WARMUP_MS || gap > HITCH_MS) { w.start = now; w.frames = 0; return }
         if (!w.start) { w.start = now; w.frames = 0; return }
         w.frames += 1
         const elapsed = now - w.start

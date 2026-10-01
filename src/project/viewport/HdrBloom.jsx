@@ -62,14 +62,19 @@ export default function HdrBloom({ renderSettings }) {
     // Priority 1: this frame is drawn here (R3F stops its own render when a frame
     // callback has a priority), after every other frame callback has moved the room.
     useFrame((state, delta) => {
-        // in a headset, or when the frame-rate governor has stepped bloom off
-        // (qualityGovernor.js): the plain way, with the beams' glare veil back
-        if (gl.xr.isPresenting || !isBloomAllowed(gl)) {
+        // in a headset: the plain way (a composer goes black in WebXR), glare veil back
+        if (gl.xr.isPresenting) {
             setBloomActive(gl, false)
             gl.render(scene, state.camera)
             return
         }
-        setBloomActive(gl, true)
+        // the frame-rate governor stepped bloom off (qualityGovernor.js): still drawn in
+        // high dynamic range — only the glow is skipped, and the veil stands in. Leaving the
+        // HDR path here tone-mapped each beam on its own (overlaps clipped white), put the
+        // fog after the exposure, and recompiled every lit material mid-measurement.
+        const glow = isBloomAllowed(gl)
+        passes.glow.enabled = glow
+        setBloomActive(gl, glow)
         passes.render.camera = state.camera
         passes.glow.strength = bloom.strength
         passes.glow.radius = bloom.radius

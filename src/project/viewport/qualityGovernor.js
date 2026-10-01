@@ -27,6 +27,12 @@ export const TARGET_FPS = 55 // a little under 60: vsync jitter alone must not s
 export const RAISE_FPS = 70 // only climb back with clear room to spare (no see-saw)
 export const WINDOW_MS = 2000 // frame rate measured over this long
 export const RAISE_AFTER_MS = 8000 // and held this long before a step up
+// A room's first seconds are shader compiles and texture uploads, not its frame rate: no
+// decision until this long after the governor starts, and a frame longer than HITCH_MS is
+// a hitch (a compile, a tab switch) — it restarts the window instead of counting as slow.
+// (Seen on PONYO: the governor stepped bloom off during the load and the lenses lost their glow.)
+export const WARMUP_MS = 6000
+export const HITCH_MS = 250
 
 /**
  * The next notch, given the current one and a measurement.

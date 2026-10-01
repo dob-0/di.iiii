@@ -1272,6 +1272,7 @@ const normalizeHaze = (haze) => {
     }
     const minutes = Number(haze.minutes)
     if (haze.minutes != null && Number.isFinite(minutes) && minutes >= 0) out.minutes = minutes
+    if (haze.calibrate === false) out.calibrate = false
     const patchiness = unitLevel(haze.patchiness)
     if (patchiness != null) out.patchiness = patchiness
     if (Array.isArray(haze.drift) && haze.drift.length === 3 && haze.drift.every((v) => Number.isFinite(Number(v)))) {
