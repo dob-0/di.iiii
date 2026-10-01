@@ -392,7 +392,7 @@ export const WIKI_ARTICLES = [
             { list: [
                 'Setup — patch the rig. Add each fixture, give it a profile and an address, and drag it into place on a plan of the room, so the desk looks like the room you are standing in. The plan is not a fixed canvas — pan and zoom go as far out as the rig needs, so a truss run or a followspot off to one side has somewhere to sit.',
                 'Control — the desk proper. Fixtures, colours, a master, scenes, chases, effects and LFOs; save what you are looking at as a scene and give it a name you will recognise in the dark. Looks stack on layers with their own fader, so a colour chase and a strobe can run at once instead of one replacing the other, and a look can follow the room instead of the patch order — Line sweep, Radar and Grid are one-press starters for a wave crossing the floor, a beam turning round its centre, and two waves crossing into a moving grid. Drag a fixture on the Setup stage and it moves inside every one of them.',
-                'Touch — the show surface. Big scene buttons, made for a phone in one hand at the back of the room. A phone can only get there when di.iiii was started with di up --lan; the desk’s Phone box shows the address and a QR code when it can, and says so plainly when it cannot.',
+                'Touch — the show surface. Big scene buttons, made for a phone in one hand at the back of the room. A show built from looks and a cue list rather than saved scenes shows exactly that: the cue bar on top (the cue that is on, the next one, and big GO, back, stop and loop buttons) and a Looks grid where one tap puts a look on and the tile that is on says so. Sections with nothing in them stay out of the way. A phone can only get there when di.iiii was started with di up --lan; the desk’s Phone box shows the address and a QR code when it can, and says so plainly when it cannot.',
                 'Fader — plain channel faders, for when a fixture is doing something no profile explains and you need to poke a channel by hand.',
                 'MIDI — map a controller. Mappings live with the desk, not in one browser, so the same knobs work from any screen you open it on.'
             ] },
@@ -408,7 +408,7 @@ export const WIKI_ARTICLES = [
             'The desk lives on a local di.iiii only — `di up`, or npm run dev. A hosted diiii.xyz has no /light in it at all, on purpose: a lighting desk is a thing that reaches hardware in a room, and the room is where you are. Asking a hosted address for /light says exactly that, and offers the install — it used to hand back an ordinary di.iiii page with no explanation at all.'
         ],
         tags: ['light', 'lighting', 'dmx', 'artnet', 'enttec', 'desk', 'scene', 'show', 'stage', 'performance', 'local', 'di up', 'lan', 'phone', 'rig', 'fixture', 'marker', 'studio', 'index', 'positions', 'back', 'project', 'nodes', 'projection', 'input', 'console', 'grandma3', 'sacn', 'e1.31', 'visualiser', 'merge', 'htp', 'ltp'],
-        updated: '2026-09-28'
+        updated: '2026-10-01'
     },
     {
         id: 'ai-restyle-camera',
