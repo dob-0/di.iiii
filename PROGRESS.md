@@ -5,6 +5,55 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-10-01 — a canvas that asks for 'high-performance' must not go black when the browser refuses it
+
+Found in the dev.diiii.xyz black-room audit (owner: "do the deep audit fix everything"). In the owner's Flatpak
+Chromium, moved to the RTX 3080 that night (di-atlas #17: ANGLE on Vulkan + PRIME offload), a WebGL2 context is
+granted for powerPreference 'default' and 'low-power' and REFUSED (null) for 'high-performance' — with or without the
+offload variables. R3F defaults to 'high-performance', three.js throws on null: the front room, SceneCanvas,
+LiveProjectScene and the Raw viewport drew nothing; StudioViewport ('default'/'low-power') was unaffected.
+
+Fix: `rendererWithFallback()` (`src/project/viewport/rendererFallback.js`) — R3F's own renderer defaults, one retry with
+'default'. Used as the `gl` prop of SceneCanvas, LiveProjectScene, RawViewport. Guard `rendererFallback.test.js` (3).
+Seen in the owner's configured browser against this code: `/` and `/moxir` draw a canvas; dev without it draws none.
+Open: three adds its context-lost listeners before getContext, so a retried canvas holds them twice (harmless).
+
+## 2026-10-01 — the show chip's recording light is square; the rectangle guard reads inline styles right
+
+From the dev.diiii.xyz MOXIR audit (owner: "do the deep audit fix everything"): the SHOW chip's red light was a circle
+(`borderRadius: '50%'`, RoomLookFollower.jsx:78), allowed by an exception in `controlsAreRectangles.test.js`. The owner's
+rule is rectangles only, no circles (memory feedback_no_round_ui), so the light is square and the exception is gone.
+The guard also misread inline styles: its value ran to the end of the line ("0, background: …"), so a correct `0` failed
+and only the exception had kept the file green; the value now ends at a comma. Guard: 4 pass, and it fails on dev's
+round dot ("border-radius 50%").
+
+## 2026-10-01 — dev's 3D rooms were black: the viewport crashed on frozen camera bindings
+
+Owner: "check why dev.diiii.xyz/moxir is black do the deep audit fix everything". A first-time visitor on the GPU
+(RTX 3080, fresh profile) got NO canvas on desktop or phone; console: `TypeError: Cannot assign to read only property
+'left' of object` in StudioViewport. Not lighting, not files (every asset GET answers; a HEAD 403s, which is the edge,
+not the app). Cause: a9b9a77a (Blender navigation) passed the frozen preset `mouseButtons`/`touches` to camera-controls,
+which keeps the object; the ortho-swap effect and `useCameraNavigation` write into it → throw → viewport unmounted.
+Every Studio 3D view on dev was affected, not only MOXIR. Prod (main) does not have a9b9a77a.
+
+Fix: `controlBindingsFor()` (mappings.js) — fresh writable copies; StudioViewport memoises them per preset. Guard:
+`mappings.test.js` "controlBindingsFor" (wiring case fails on the old viewport); `src/studio/navigation/` 37 tests pass.
+Seen: this branch's app (vite on 127.0.0.1:5299, proxied to dev.diiii.xyz) at /moxir — desktop mean luma 11.9, phone
+9.2, canvas drawn, 0 failed requests; frames `~/Downloads/moxir-dev-black/fixed-*.png`. Dev itself is black until this
+lands and deploys.
+
+## 2026-10-01 — fold the 23 session notes left on dev after #686–#699 into PROGRESS and CURRENT
+
+- The CI `land` job did not fold the notes after the #686 deploy, so 16 (then 23, after #697, #698, #699 merged) sat in `docs/ai/sessions/`; the pre-push gate refuses a push from a `dev` checkout while they do.
+- Done with `session-land-lib` (the same functions `npm run land` calls), not the script itself: its last step sweeps worktrees, which would reach other sessions' checkouts. `CURRENT.md` stays under its 50-line limit.
+- Owed: find why the CI land job skipped the fold on the #686 deploy (dev deploy for that commit was green); this note is the one the gate requires for this branch and folds on its own merge.
+
+## 2026-10-01 — the hand-fold branch no longer has to leave a session note
+
+- The pre-push docs gate asked every branch for `docs/ai/sessions/<branch-slug>.md`, the fold branch `chore/fold-notes-after-686` included. That note then sat on `dev` after the merge, and the same gate refuses every push from a `dev` checkout while the directory is not empty — PONYO's tags-only push was refused with exactly that message. CI's `land` job cannot push to protected `dev` (GH006), so nothing folded it until the next hand fold.
+- `chore/fold-notes-*` is now exempt from the "must have a note" rule (`isFoldNotesBranch` in `scripts/repo-state-lib.mjs`, used in `scripts/check-agent-docs.mjs`). `land/*` branches carry real notes and still need one. Tests: `scripts/check-agent-docs.fold-notes.test.js` (the name pattern, and the real checker on a throwaway checkout: a feature branch is asked for its note, a fold-notes branch is not).
+- Not changed: the tags-only-push idea (skip the docs check when only tags go). Owed if the owner wants it; the gate still checks docs for tag pushes from `dev`.
+
 ## 2026-10-01 — hand fold after the #679 land batch, with the docs-gate fix (#675) merged in
 
 - #679 (the MOXIR rig-builder line, preview rigbuilder.14) brought about thirty session notes onto dev; with the others waiting that made 47. The in-place fold in CI would have taken `CURRENT.md` to about 88 lines (cap 50) and stopped the dev image build at the docs gate, as it did after #637 — so this is the hand fold, made on a scratch clone of dev: `session-land-lib.mjs`'s three functions, without `npm run land`'s branch guard and WITHOUT its worktree sweep (this machine carries about a hundred worktrees of other sessions). PROGRESS.md keeps every note in full; "Last session" is cut to six lines (CURRENT.md 45).

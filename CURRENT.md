@@ -13,12 +13,9 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- hand fold after the #679 land batch, with the docs-gate fix (#675) merged in
-- What this branch adds
-- Studio viewport: a Blender mouse-navigation preference
-- Studio view keys (Blender numpad) and frame-selected real extents
-- a11y SAFE batch (F4 F7 F9 F10 F12 F15 F17)
-- …and 18 more notes, each in full in PROGRESS.md
+- a canvas that asks for 'high-performance' must not go black when the browser refuses it
+- the show chip's recording light is square; the rectangle guard reads inline styles right
+- dev's 3D rooms were black: the viewport crashed on frozen camera bindings
 
 Full detail: `PROGRESS.md`.
 
