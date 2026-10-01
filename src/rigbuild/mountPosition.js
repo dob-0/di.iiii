@@ -3,7 +3,9 @@
 // keys from it) and the room (looks.js lookPoses places a lamp the derived positions missed by
 // the mount its `fixture.position` names), so the two cannot drift.
 export const MOUNT_POSITION = {
-    'truss-header': () => 'truss',
+    // `named: true` on a group gives it its own position (like the halo's), for the second group of one
+    // type hung on the same line — the curtain beside the X under the cut
+    'truss-header': (g) => (g?.named ? `named-${g.id}` : 'truss'),
     'truss-top': () => 'truss-top',
     // crane-x: the X's arms are truss runs like any other — the room finds these lamps on them
     'x-top': () => 'truss-top',

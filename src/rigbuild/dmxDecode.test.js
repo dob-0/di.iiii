@@ -125,6 +125,20 @@ describe('encode is decode\'s inverse where it speaks', () => {
         const eight = mode('UP-PL5403', '8ch-assumed')
         expect(encodeDmx(eight.channels, { level: 0 }, type('UP-PL5403')).dimmer).toBe(0)
     })
+    it('a neutral white on an RGBW lamp is the white emitter alone; a coloured light keeps W at 0', () => {
+        // 2026-10-02 (the blade, emily-41 spec): the tested UP-PL5403 has a W LED. A white
+        // look used to be R=G=B=255 with W 0; the lamp's own white is cleaner and cooler on the
+        // truss. Only an exactly neutral colour changes — the cold-white palette tint and every
+        // red stay as they were.
+        const tested = mode('UP-PL5403', '8ch')
+        expect(encodeDmx(tested.channels, { level: 1, colour: '#ffffff' }, type('UP-PL5403'))).toMatchObject({ dimmer: 255, r: 0, g: 0, b: 0, w: 255 })
+        expect(encodeDmx(tested.channels, { level: 1, colour: '#ff0000' }, type('UP-PL5403'))).toMatchObject({ r: 255, g: 0, b: 0, w: 0 })
+        expect(encodeDmx(tested.channels, { level: 1, colour: '#eef3ff' }, type('UP-PL5403'))).toMatchObject({ w: 0 })
+        const four = mode('UP-PL5403', '4ch-assumed')
+        expect(encodeDmx(four.channels, { level: 0.5, colour: '#ffffff' }, type('UP-PL5403'))).toEqual({ r: 0, g: 0, b: 0, w: 128 })
+        const back = decodeDmx(tested.channels, valuesOf(tested, encodeDmx(tested.channels, { level: 1, colour: '#ffffff' }, type('UP-PL5403'))), type('UP-PL5403'))
+        expect(back.colour.toLowerCase()).toBe('#ffffff')
+    })
     it('a strobe asked at 10 Hz encodes as the capped 3 Hz the decode reads back', () => {
         const m = mode('EXT-STROBE', '4ch-assumed')
         const cell = encodeDmx(m.channels, { level: 1, strobeHz: 10 }, type('EXT-STROBE'))

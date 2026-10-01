@@ -1,0 +1,13 @@
+{
+  "project": "moxir-hall-known-full",
+  "why": "MOXIR Known · full — the cut. The stored loop was the Minimal's (its blade and hit were COB200 looks the room does not have, so they lit nothing). This is the same five cues, played by what the room has: the curtain of seven PL5403 under the cut is the blade and the hit, the centre curtain PAR alone is the shaft, and the Haze wall joins after the Red room. White is the PARs' own W emitter; red is R alone. No strobe channel (the PL5403's rates are untested): the hit is the cue's own 0 s cut in and out.",
+  "loop": true,
+  "cues": [
+    { "look": "k-one-shaft", "name": "Blackout + one shaft", "fade": 0, "hold": 12 },
+    { "look": "k-blade", "name": "The blade", "fade": 4, "hold": 16 },
+    { "look": "gs-red-room", "name": "Red room", "fade": 5, "hold": 16 },
+    { "look": "gs-haze-wall", "name": "Haze wall", "fade": 5, "hold": 10 },
+    { "look": "k-cathedral-x", "name": "White cathedral + the X", "fade": 2, "hold": 12 },
+    { "look": "k-hit", "name": "The hit", "fade": 0, "hold": 4 }
+  ]
+}

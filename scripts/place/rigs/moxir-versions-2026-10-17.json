@@ -651,6 +651,22 @@
       "aim": "laser-into-roof",
       "symmetric": "positions",
       "note": "2 UP-LA40WF standing on the top chord of the cut at u +-4.5 (lens above 4 m): FIXED devices, bolted, nothing on them pans or tilts (the scanner is a pair of mirrors inside); every beam rises into the roof over the house, never into the audience plane (>= 3 m over any floor a person can stand on). Not on the floor: a laser on the floor cannot keep its beams 3 m above the crowd. Class 4: needs a certified laser safety officer — OWNER SIGN-OFF, nothing here claims compliance."
+    },
+    "par-cut-curtain": {
+      "class": "par",
+      "count": 7,
+      "mount": "truss-header",
+      "dx_m": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "orient": "hung",
+      "aim": "curtain-down",
+      "symmetric": "positions",
+      "note": "THE CURTAIN: 7 PL5403 hung under the middle 6 m of the cut (u 0, ±1, ±2, ±3 — a metre apart), straight down, white only: in haze a sheet of white whose top edge IS the slope (the Minimal's cob-cut-curtain, with PARs: known-full has no COB200). Fixed focus — the same aim in every look.",
+      "named": true
     }
   },
   "effects": {
@@ -4243,7 +4259,7 @@
       "id": "known-full",
       "candidateOf": "full",
       "title": "Known · full · the cut, movers on the ground",
-      "summary": "Every fixture whose DMX is known, at stock, on the cut under the crane; nothing that moves is hung. The cut carries statics only: 6 UP-PL5403 in the X, 4 on the bridge, and the 2 fixed UP-LA40WF (held dark until the laser sign-off). The floor carries every mover: 17 UP-B380F (7 behind the press, 10 at the nave column bases; the 18th is the spare; nothing at the booth, the crane is parked over it). 32 UP-PL5403 up the nave columns and 3 at the press — 45 of the 50 PARs. 6 hazers and 4 smoke machines, run by hand, off DMX. Crane height approximate and strobe rates assumed (Gevorg 2026-10-01: correct later); charts for the rest owed.",
+      "summary": "Every fixture whose DMX is known, at stock, on the cut under the crane; nothing that moves is hung. The cut carries statics only: 6 UP-PL5403 in the X, 4 on the bridge, 7 in the curtain (a sheet of white straight down under the middle 6 m), and the 2 fixed UP-LA40WF (held dark until the laser sign-off). The floor carries every mover: 17 UP-B380F (7 behind the press, 10 at the nave column bases; the 18th is the spare; nothing at the booth, the crane is parked over it). 30 UP-PL5403 up the nave columns and 3 at the press — all 50 PARs of the order. 6 hazers and 4 smoke machines, run by hand, off DMX. Crane height approximate and strobe rates assumed (Gevorg 2026-10-01: correct later); charts for the rest owed.",
       "truss": "crane-cut",
       "policy": {
         "movingFixtures": {
@@ -4268,6 +4284,7 @@
       "groups": [
         "par-cut-x",
         "par-cut-bridge",
+        "par-cut-curtain",
         "par-columns",
         "par-press-cut",
         "beam380-backstage",
@@ -4295,7 +4312,7 @@
           "pick": "even"
         },
         "par-columns": {
-          "count": 32,
+          "count": 30,
           "pick": "even"
         },
         "par-press-cut": {
@@ -4312,6 +4329,10 @@
         },
         "laser-cut": {
           "count": 2,
+          "pick": "even"
+        },
+        "par-cut-curtain": {
+          "count": 7,
           "pick": "even"
         }
       },
@@ -4336,7 +4357,8 @@
             "par-press-cut": 0,
             "beam380-backstage": 1,
             "beam380-columns": 0,
-            "laser-cut": 0
+            "laser-cut": 0,
+            "par-cut-curtain": 0
           }
         },
         "gs-columns-below": {
@@ -4357,7 +4379,8 @@
             "par-press-cut": 0,
             "beam380-backstage": 0,
             "beam380-columns": 0,
-            "laser-cut": 0
+            "laser-cut": 0,
+            "par-cut-curtain": 0
           }
         },
         "gs-haze-wall": {
@@ -4384,7 +4407,8 @@
             "par-press-cut": 0.25,
             "beam380-backstage": 0.8,
             "beam380-columns": 0,
-            "laser-cut": 0
+            "laser-cut": 0,
+            "par-cut-curtain": 0
           }
         },
         "gs-roof-reveal": {
@@ -4417,7 +4441,8 @@
             "par-press-cut": 0,
             "beam380-backstage": 0.9,
             "beam380-columns": 0.7,
-            "laser-cut": 0
+            "laser-cut": 0,
+            "par-cut-curtain": 0
           }
         },
         "gs-slow-fan": {
@@ -4445,7 +4470,8 @@
             "par-press-cut": 0,
             "beam380-backstage": 0.8,
             "beam380-columns": 0.7,
-            "laser-cut": 0
+            "laser-cut": 0,
+            "par-cut-curtain": 0
           }
         },
         "gs-cross-beams": {
@@ -4472,7 +4498,8 @@
             "par-press-cut": 0,
             "beam380-backstage": 0.4,
             "beam380-columns": 0.85,
-            "laser-cut": 0
+            "laser-cut": 0,
+            "par-cut-curtain": 0
           }
         },
         "gs-red-room": {
@@ -4508,7 +4535,8 @@
             "par-press-cut": 0.6,
             "beam380-backstage": 0.4,
             "beam380-columns": 0,
-            "laser-cut": 0
+            "laser-cut": 0,
+            "par-cut-curtain": 0
           }
         },
         "gs-white-cathedral": {
@@ -4550,7 +4578,8 @@
             "par-press-cut": 0.4,
             "beam380-backstage": 0.7,
             "beam380-columns": 0.9,
-            "laser-cut": 0
+            "laser-cut": 0,
+            "par-cut-curtain": 0
           }
         },
         "gs-laser-roof": {
@@ -4578,7 +4607,8 @@
             "par-press-cut": 0,
             "beam380-backstage": 0.35,
             "beam380-columns": 0,
-            "laser-cut": 0
+            "laser-cut": 0,
+            "par-cut-curtain": 0
           }
         },
         "k-doors": {
@@ -4604,7 +4634,8 @@
             "par-press-cut": 0.1,
             "beam380-backstage": 0,
             "beam380-columns": 0,
-            "laser-cut": 0
+            "laser-cut": 0,
+            "par-cut-curtain": 0
           }
         },
         "k-the-x": {
@@ -4635,7 +4666,8 @@
             "par-press-cut": 0,
             "beam380-backstage": 0,
             "beam380-columns": 0.9,
-            "laser-cut": 0
+            "laser-cut": 0,
+            "par-cut-curtain": 0
           }
         },
         "k-tunnel": {
@@ -4657,7 +4689,8 @@
             "par-press-cut": 0,
             "beam380-backstage": 0,
             "beam380-columns": 0.95,
-            "laser-cut": 0
+            "laser-cut": 0,
+            "par-cut-curtain": 0
           }
         },
         "k-green-core": {
@@ -4689,7 +4722,8 @@
             "par-press-cut": 0.45,
             "beam380-backstage": 0.6,
             "beam380-columns": 0,
-            "laser-cut": 0
+            "laser-cut": 0,
+            "par-cut-curtain": 0
           }
         },
         "k-amber-dust": {
@@ -4715,7 +4749,8 @@
             "par-press-cut": 0,
             "beam380-backstage": 0,
             "beam380-columns": 0,
-            "laser-cut": 0
+            "laser-cut": 0,
+            "par-cut-curtain": 0
           }
         },
         "k-lights-up": {
@@ -4746,28 +4781,197 @@
             "par-press-cut": 1,
             "beam380-backstage": 0,
             "beam380-columns": 0,
-            "laser-cut": 0
+            "laser-cut": 0,
+            "par-cut-curtain": 0
           }
         },
         "white-cathedral": {
-          "title": "White cathedral · hung rig"
+          "title": "White cathedral · hung rig",
+          "levels": {
+            "par-cut-curtain": 0
+          }
         },
         "red-room": {
-          "title": "Red room · hung rig"
+          "title": "Red room · hung rig",
+          "levels": {
+            "par-cut-curtain": 0
+          }
         },
         "strobe-hit": {
-          "title": "Strobe hit · hung rig"
+          "title": "Strobe hit · hung rig",
+          "levels": {
+            "par-cut-curtain": 0
+          }
         },
         "one-beam": {
-          "title": "Blackout + one beam · hung rig"
+          "title": "Blackout + one beam · hung rig",
+          "levels": {
+            "par-cut-curtain": 0
+          }
         },
         "slow-sweep": {
-          "title": "Slow sweep · hung rig"
+          "title": "Slow sweep · hung rig",
+          "levels": {
+            "par-cut-curtain": 0
+          }
+        },
+        "k-blade": {
+          "title": "The blade",
+          "intent": "The curtain at full white under the cut: in haze a sheet of cold white whose top edge is the cut's 15° slope; the four bridge PARs red at 60 % draw the crane as a frame. Nothing else.",
+          "aims": {},
+          "colours": {
+            "par-cut-curtain": "#ffffff",
+            "par-cut-bridge": "#ff0000"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0.6,
+            "par-cut-curtain": 1,
+            "par-columns": 0,
+            "par-press-cut": 0,
+            "beam380-backstage": 0,
+            "beam380-columns": 0,
+            "laser-cut": 0
+          }
+        },
+        "k-hit": {
+          "title": "The hit",
+          "intent": "From black: the curtain and the six X PARs at full white together. No strobe channel (rates are untested on the PL5403) — the hit is the cue's own 0 s cut in and out.",
+          "aims": {},
+          "colours": {
+            "par-cut-curtain": "#ffffff",
+            "par-cut-x": "#ffffff"
+          },
+          "levels": {
+            "par-cut-x": 1,
+            "par-cut-bridge": 0,
+            "par-cut-curtain": 1,
+            "par-columns": 0,
+            "par-press-cut": 0,
+            "beam380-backstage": 0,
+            "beam380-columns": 0,
+            "laser-cut": 0
+          }
+        },
+        "k-one-shaft": {
+          "title": "One shaft on the DJ",
+          "intent": "Black. The centre curtain PAR alone, full white, straight down on the DJ: one hard shaft from the cut, the DJ in it. Nothing else.",
+          "aims": {
+            "par-cut-curtain": {
+              "rule": "vertical",
+              "solo": 3
+            }
+          },
+          "colours": {
+            "par-cut-curtain": "#ffffff"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0,
+            "par-cut-curtain": 1,
+            "par-columns": 0,
+            "par-press-cut": 0,
+            "beam380-backstage": 0,
+            "beam380-columns": 0,
+            "laser-cut": 0
+          }
+        },
+        "k-cathedral-x": {
+          "title": "White cathedral + the X",
+          "intent": "White cathedral with the X of PARs on the cut drawn over the DJ.",
+          "aims": {
+            "par-cut-bridge": {
+              "rule": "bridge-underside",
+              "out": 6
+            },
+            "par-columns": {
+              "rule": "up-the-column"
+            },
+            "par-press-cut": {
+              "rule": "backdrop",
+              "h": 0.6
+            },
+            "beam380-backstage": {
+              "rule": "fan",
+              "spread_deg": 8,
+              "lean_deg": 0
+            },
+            "beam380-columns": {
+              "rule": "vertical",
+              "in_deg": 0
+            }
+          },
+          "colours": {
+            "par-cut-bridge": "#eef3ff",
+            "par-columns": "#eef3ff",
+            "par-press-cut": "#eef3ff",
+            "beam380-backstage": "#eef3ff",
+            "beam380-columns": "#eef3ff",
+            "par-cut-x": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0.8,
+            "par-cut-bridge": 0.6,
+            "par-cut-curtain": 0,
+            "par-columns": 0.3,
+            "par-press-cut": 0.4,
+            "beam380-backstage": 0.7,
+            "beam380-columns": 0.9,
+            "laser-cut": 0
+          }
+        },
+        "k-fan-hit": {
+          "title": "Fan hit",
+          "intent": "From black, the seven booth beams open in a narrow white fan straight up behind the DJ. No sparks (no chart); the cue cuts in at 0 s.",
+          "aims": {
+            "beam380-backstage": {
+              "rule": "fan",
+              "spread_deg": 10,
+              "lean_deg": 0
+            }
+          },
+          "colours": {
+            "beam380-backstage": "#eef3ff"
+          },
+          "levels": {
+            "par-cut-x": 0,
+            "par-cut-bridge": 0,
+            "par-cut-curtain": 0,
+            "par-columns": 0,
+            "par-press-cut": 0,
+            "beam380-backstage": 1,
+            "beam380-columns": 0,
+            "laser-cut": 0
+          }
         }
       },
       "realLightsWhy": "EVERY lamp is a real light (Emily 2026-10-01: 'i want 100% ident what we will have, you can optimize'): the room is the night as it will be, no picked few, no baked stand-ins. Measured on PONYO (RTX laptop, 1440x900): 40-52 fps; with shadows on the 12 lamps putting the most light in (shadowCasting.js shadowLampCap) 36-49 fps. A phone will not hold this: the 8-lamp budget is the fallback.",
       "realLightsAll": true,
-      "looksWhy": "The set's own looks were made for the hung rig; on the ground versions they sit beside ground looks of the same name (\"White cathedral\", \"Red room\"), which the Touch page could not tell apart (Emily 2026-10-01: rename, keep both)."
+      "looksWhy": "The set's own looks were made for the hung rig; on the ground versions they sit beside ground looks of the same name (\"White cathedral\", \"Red room\"), which the Touch page could not tell apart (Emily 2026-10-01: rename, keep both).",
+      "groupDefs": {
+        "par-columns": {
+          "from": "par-columns",
+          "count": 30,
+          "columns": {
+            "zones": [
+              "stage",
+              "dance"
+            ],
+            "rows": "nave",
+            "faces": [
+              "inner",
+              "back"
+            ],
+            "omit": [
+              {
+                "z": 48,
+                "face": "back"
+              }
+            ]
+          },
+          "note": "one on each nave column's inner face and one on its back face, grid lines around the dance floor and the stage — minus the two BACK faces at the far end (z 48, one each side) that the curtain's 7 PARs take from the order of 50."
+        }
+      }
     },
     {
       "id": "known-ground",

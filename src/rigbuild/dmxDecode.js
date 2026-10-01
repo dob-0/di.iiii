@@ -232,10 +232,19 @@ export const encodeDmx = (channels, want = {}, type = null) => {
     if (rgb && emitters) {
         const peak = Math.max(...rgb) || 1
         const scale = has('dimmer') || level == null ? 1 : level
-        if (has('r')) out.r = Math.round((rgb[0] / peak) * 255 * scale)
-        if (has('g')) out.g = Math.round((rgb[1] / peak) * 255 * scale)
-        if (has('b')) out.b = Math.round((rgb[2] / peak) * 255 * scale)
-        if (has('w')) out.w = 0
+        // An exactly neutral colour on a lamp with a white emitter is that emitter alone
+        // (cleaner than R+G+B at full); any tint keeps the RGB mix and W 0.
+        if (has('w') && rgb[0] === rgb[1] && rgb[1] === rgb[2] && rgb[0] > 0) {
+            if (has('r')) out.r = 0
+            if (has('g')) out.g = 0
+            if (has('b')) out.b = 0
+            out.w = Math.round(255 * scale)
+        } else {
+            if (has('r')) out.r = Math.round((rgb[0] / peak) * 255 * scale)
+            if (has('g')) out.g = Math.round((rgb[1] / peak) * 255 * scale)
+            if (has('b')) out.b = Math.round((rgb[2] / peak) * 255 * scale)
+            if (has('w')) out.w = 0
+        }
     } else if (emitters && !has('dimmer') && level === 0) {
         // A colour-only mode (RGBW, no dimmer) has no other way to say OUT.
         for (const role of ['r', 'g', 'b', 'w']) if (has(role)) out[role] = 0

@@ -10,7 +10,7 @@
         "set": "moxir-2026-10-17",
         "id": "known-full",
         "title": "Known · full · the cut, movers on the ground",
-        "summary": "Every fixture whose DMX is known, at stock, on the cut under the crane; nothing that moves is hung. The cut carries statics only: 6 UP-PL5403 in the X, 4 on the bridge, and the 2 fixed UP-LA40WF (held dark until the laser sign-off). The floor carries every mover: 17 UP-B380F (7 behind the press, 10 at the nave column bases; the 18th is the spare; nothing at the booth, the crane is parked over it). 32 UP-PL5403 up the nave columns and 3 at the press — 45 of the 50 PARs. 6 hazers and 4 smoke machines, run by hand, off DMX. Crane height approximate and strobe rates assumed (Gevorg 2026-10-01: correct later); charts for the rest owed.",
+        "summary": "Every fixture whose DMX is known, at stock, on the cut under the crane; nothing that moves is hung. The cut carries statics only: 6 UP-PL5403 in the X, 4 on the bridge, 7 in the curtain (a sheet of white straight down under the middle 6 m), and the 2 fixed UP-LA40WF (held dark until the laser sign-off). The floor carries every mover: 17 UP-B380F (7 behind the press, 10 at the nave column bases; the 18th is the spare; nothing at the booth, the crane is parked over it). 30 UP-PL5403 up the nave columns and 3 at the press — all 50 PARs of the order. 6 hazers and 4 smoke machines, run by hand, off DMX. Crane height approximate and strobe rates assumed (Gevorg 2026-10-01: correct later); charts for the rest owed.",
         "order": 11,
         "candidateOf": "full"
     },
@@ -27,7 +27,7 @@
         "The DJ place (the owner's green, 2026-09-28) is a riser of stage decks 3 m wide x 2 m deep x 1.2 m high ON THE NAVE CENTRE LINE (x 0; the owner, 04:13: 'make the scene in center'), its back edge 1.0 m in front of the press's face (z 3.2 m, +-1.5 m), facing the entry and the crowd. The press stays where it stands, 1.65 m right of the axis (range 0.5-3.5), behind the right half of the riser. Three 2 x 1 m decks on 1.2 m legs; 'a bit top' read as 1.0-1.4 m. Options considered: stage.options (D chosen).",
         "The DJ stands behind a 1.8 x 0.8 m DJ table, 0.95 m high, at the riser's front edge; treads up the left side (toward the backstage); a crowd barrier 1.3 m in front of the riser, 9 m long. The crowd (blue) fills the floor from the barrier to under the crane.",
         "The machinery stays the backdrop: the press (to 5.3 m) stands behind the right half of the riser and the machine line beside it further right, so from the floor the DJ is seen against the press; the goalpost header at 7 m is above the press's crown.",
-        "No stage deck, no towers: the DJ stand alone. THE CUT: one straight 12 m line of 290 mm square box truss, planned on the Prolyte H30V (4 × H30V-L300; the rental house's own truss and its load table owed), sloped 15° in the bridge's plane — bottom chord 3.44 m at house left (x -6.04) to 6.55 m at house right (x 5.55) — on 3 bridled chain hoists at their shortest drop, with safety steels and a tie-off at each end; load on the line ≈ 241 kg, 63 / 102 / 76 kg a pick (house left → right, ESTIMATE). rigging sign-off owed (crane rated load, lock-out, hoists + safety steels).",
+        "No stage deck, no towers: the DJ stand alone. THE CUT: one straight 12 m line of 290 mm square box truss, planned on the Prolyte H30V (4 × H30V-L300; the rental house's own truss and its load table owed), sloped 15° in the bridge's plane — bottom chord 3.44 m at house left (x -6.04) to 6.55 m at house right (x 5.55) — on 3 bridled chain hoists at their shortest drop, with safety steels and a tie-off at each end; load on the line ≈ 302 kg, 66 / 153 / 83 kg a pick (house left → right, ESTIMATE). rigging sign-off owed (crane rated load, lock-out, hoists + safety steels).",
         "Lasers stand on the top plates of the two towers (7.15 m) and are aimed UP into the roof over the audience; the rig script refuses any laser aim that descends, and any that passes under 3 m above the floor. This is a picture of intent, not a laser safety assessment — a qualified laser safety officer and the national rules (e.g. the Maximum Permissible Exposure limits of IEC 60825-1) are OWED before any 40 W laser is switched on in front of people.",
         "Strobes, blinders and hazers are other-supplier lines (the rental house lists none): each is a planning type modelled on a named product (scripts/place/fixtures/fixtures.json, EXT- codes). No CO2 jet, cold spark or confetti — the underground brief (versions file, method).",
         "Each LOOK is one static state for previsualisation (a focus palette), not a show: positions are the rig's, aims and colours the look's. Every lamp but the press's own six mirrors about the nave centre line (x 0), the booth's axis too. Brightness between fixtures follows the datasheets (photometry below); the overall exposure is one chosen number (photometry.sceneScale)."
@@ -283,9 +283,9 @@
                     "bottom_chord_m": 3.57,
                     "apex_m": 4.71,
                     "bridle_included_deg": 26,
-                    "line_kg": 63.4,
-                    "on_bridge_kg": 96.5,
-                    "leg_kg": 46.4,
+                    "line_kg": 66,
+                    "on_bridge_kg": 99.1,
+                    "leg_kg": 47.7,
                     "pendulum_x_m": 4.14,
                     "period_x_s": 4.08,
                     "pendulum_z_m": 0.85,
@@ -298,9 +298,9 @@
                     "bottom_chord_m": 4.93,
                     "apex_m": 6.07,
                     "bridle_included_deg": 42,
-                    "line_kg": 101.7,
-                    "on_bridge_kg": 134.8,
-                    "leg_kg": 69.1,
+                    "line_kg": 152.9,
+                    "on_bridge_kg": 186,
+                    "leg_kg": 96.6,
                     "pendulum_x_m": 2.78,
                     "period_x_s": 3.34,
                     "pendulum_z_m": 0.85,
@@ -313,9 +313,9 @@
                     "bottom_chord_m": 6.42,
                     "apex_m": 7.56,
                     "bridle_included_deg": 119,
-                    "line_kg": 75.5,
-                    "on_bridge_kg": 108.6,
-                    "leg_kg": 101.2,
+                    "line_kg": 83.3,
+                    "on_bridge_kg": 116.3,
+                    "leg_kg": 108.8,
                     "pendulum_x_m": 1.29,
                     "period_x_s": 2.28,
                     "pendulum_z_m": 0.85,
@@ -339,6 +339,13 @@
                         "kg": 32
                     },
                     {
+                        "group": "par-cut-curtain",
+                        "code": "UP-PL5403",
+                        "n": 7,
+                        "each_kg": 8,
+                        "kg": 56
+                    },
+                    {
                         "group": "laser-cut",
                         "code": "UP-LA40WF",
                         "n": 2,
@@ -346,23 +353,23 @@
                         "kg": 70
                     }
                 ],
-                "lamps_kg": 150,
+                "lamps_kg": 206,
                 "truss_kg": [
                     75.6,
                     75.6
                 ],
                 "truss_basis": "Prolyte H30V standard lengths table: H30V-L300 3.00 m 18.90 kg (https://www.prolyte.com/products/aluminium-truss/square-truss/h30v-l100-square-30-length-100-cm, read 2026-09-29) → 6.3 kg/m",
-                "extras_kg": 15,
+                "extras_kg": 20.6,
                 "extras_basis": "clamps, safety bonds and the cable loom along the line: +10 % of the lamps — ESTIMATE",
                 "total_kg": [
-                    241,
-                    241
+                    302,
+                    302
                 ],
                 "points": 3,
                 "per_point_kg": [
-                    63,
-                    102,
-                    76
+                    66,
+                    153,
+                    83
                 ],
                 "method": "a continuous beam on three supports (flexibility method, versions.mjs threePointReactions), the lamps as point loads at their places, the truss as a uniform load; the hoist (datasheet 20 kg), its chain (0.59 kg/m × the chain carried) and the bridle hardware load the bridge on top (picks[].on_bridge_kg); leg tension = on-bridge load / (2 cos(half the included angle)). ESTIMATE, static, before any dynamic factor.",
                 "note": "a 3-point line is statically indeterminate: this split holds for three hoists at one trim; the middle pick's share moves with the chains' lengths — load cells at trim. rigging sign-off owed (crane rated load, lock-out, hoists + safety steels)."
@@ -454,12 +461,29 @@
             "id": "par-cut-bridge"
         },
         {
+            "class": "par",
+            "count": 7,
+            "mount": "truss-header",
+            "dx_m": [
+                0,
+                1,
+                2,
+                3
+            ],
+            "orient": "hung",
+            "aim": "curtain-down",
+            "symmetric": "positions",
+            "note": "THE CURTAIN: 7 PL5403 hung under the middle 6 m of the cut (u 0, ±1, ±2, ±3 — a metre apart), straight down, white only: in haze a sheet of white whose top edge IS the slope (the Minimal's cob-cut-curtain, with PARs: known-full has no COB200). Fixed focus — the same aim in every look.",
+            "named": true,
+            "id": "par-cut-curtain"
+        },
+        {
             "id": "par-columns",
             "class": "par",
-            "count": 32,
+            "count": 30,
             "mount": "column-uplight",
             "aim": "up-the-column",
-            "note": "one on each nave column's inner face and one on its back face, grid lines around the dance floor and the stage; the beam-only ones' light is BAKED (wash-glb.mjs)",
+            "note": "one on each nave column's inner face and one on its back face, grid lines around the dance floor and the stage — minus the two BACK faces at the far end (z 48, one each side) that the curtain's 7 PARs take from the order of 50.",
             "columns": {
                 "zones": [
                     "stage",
@@ -469,6 +493,12 @@
                 "faces": [
                     "inner",
                     "back"
+                ],
+                "omit": [
+                    {
+                        "z": 48,
+                        "face": "back"
+                    }
                 ]
             },
             "bake": true
@@ -583,7 +613,7 @@
                 "pick": "even"
             },
             "par-columns": {
-                "count": 32,
+                "count": 30,
                 "pick": "even"
             },
             "par-press-cut": {
@@ -600,6 +630,10 @@
             },
             "laser-cut": {
                 "count": 2,
+                "pick": "even"
+            },
+            "par-cut-curtain": {
+                "count": 7,
                 "pick": "even"
             }
         },
@@ -657,6 +691,9 @@
                     "rule": "backdrop",
                     "h": 0.6
                 },
+                "par-cut-curtain": {
+                    "rule": "vertical"
+                },
                 "par-columns": {
                     "rule": "up-the-column"
                 },
@@ -675,7 +712,8 @@
             "levels": {
                 "par-columns": 0,
                 "par-cut-bridge": 0,
-                "par-press-cut": 0
+                "par-press-cut": 0,
+                "par-cut-curtain": 0
             }
         },
         "red-room": {
@@ -699,6 +737,9 @@
                     "rule": "backdrop",
                     "h": 0.6
                 },
+                "par-cut-curtain": {
+                    "rule": "vertical"
+                },
                 "beam380-backstage": {
                     "rule": "vertical"
                 },
@@ -718,7 +759,8 @@
             },
             "levels": {
                 "beam380-columns": 0,
-                "par-cut-x": 0
+                "par-cut-x": 0,
+                "par-cut-curtain": 0
             }
         },
         "strobe-hit": {
@@ -738,6 +780,9 @@
                 "par-press-cut": {
                     "rule": "backdrop",
                     "h": 0.6
+                },
+                "par-cut-curtain": {
+                    "rule": "vertical"
                 },
                 "par-columns": {
                     "rule": "up-the-column"
@@ -760,7 +805,8 @@
                 "beam380-columns": 0,
                 "par-columns": 0,
                 "par-cut-bridge": 0,
-                "par-press-cut": 0
+                "par-press-cut": 0,
+                "par-cut-curtain": 0
             }
         },
         "one-beam": {
@@ -780,6 +826,9 @@
                 "par-press-cut": {
                     "rule": "backdrop",
                     "h": 0.6
+                },
+                "par-cut-curtain": {
+                    "rule": "vertical"
                 },
                 "par-columns": {
                     "rule": "up-the-column"
@@ -801,7 +850,8 @@
                 "par-columns": 0,
                 "par-cut-x": 0,
                 "par-cut-bridge": 0,
-                "par-press-cut": 0
+                "par-press-cut": 0,
+                "par-cut-curtain": 0
             }
         },
         "slow-sweep": {
@@ -829,6 +879,9 @@
                     "rule": "backdrop",
                     "h": 0.6
                 },
+                "par-cut-curtain": {
+                    "rule": "vertical"
+                },
                 "beam380-backstage": {
                     "rule": "vertical"
                 },
@@ -847,7 +900,8 @@
                 "par-columns": 0.3,
                 "par-cut-x": 0,
                 "par-cut-bridge": 0.4,
-                "par-press-cut": 0.3
+                "par-press-cut": 0.3,
+                "par-cut-curtain": 0
             }
         },
         "gs-one-shaft": {
@@ -868,6 +922,9 @@
                 "par-cut-bridge": {
                     "rule": "bridge-underside",
                     "out": 6
+                },
+                "par-cut-curtain": {
+                    "rule": "vertical"
                 },
                 "par-columns": {
                     "rule": "up-the-column"
@@ -894,7 +951,8 @@
                 "par-press-cut": 0,
                 "beam380-backstage": 1,
                 "beam380-columns": 0,
-                "laser-cut": 0
+                "laser-cut": 0,
+                "par-cut-curtain": 0
             }
         },
         "gs-columns-below": {
@@ -913,6 +971,9 @@
                 "par-cut-bridge": {
                     "rule": "bridge-underside",
                     "out": 6
+                },
+                "par-cut-curtain": {
+                    "rule": "vertical"
                 },
                 "par-press-cut": {
                     "rule": "backdrop",
@@ -939,7 +1000,8 @@
                 "par-press-cut": 0,
                 "beam380-backstage": 0,
                 "beam380-columns": 0,
-                "laser-cut": 0
+                "laser-cut": 0,
+                "par-cut-curtain": 0
             }
         },
         "gs-haze-wall": {
@@ -964,6 +1026,9 @@
                     "rule": "bridge-underside",
                     "out": 6
                 },
+                "par-cut-curtain": {
+                    "rule": "vertical"
+                },
                 "par-columns": {
                     "rule": "up-the-column"
                 },
@@ -986,7 +1051,8 @@
                 "par-press-cut": 0.25,
                 "beam380-backstage": 0.8,
                 "beam380-columns": 0,
-                "laser-cut": 0
+                "laser-cut": 0,
+                "par-cut-curtain": 0
             }
         },
         "gs-roof-reveal": {
@@ -1012,6 +1078,9 @@
                     "y": 4,
                     "a": -1.4
                 },
+                "par-cut-curtain": {
+                    "rule": "vertical"
+                },
                 "par-columns": {
                     "rule": "up-the-column"
                 },
@@ -1036,7 +1105,8 @@
                 "par-press-cut": 0,
                 "beam380-backstage": 0.9,
                 "beam380-columns": 0.7,
-                "laser-cut": 0
+                "laser-cut": 0,
+                "par-cut-curtain": 0
             }
         },
         "gs-slow-fan": {
@@ -1062,6 +1132,9 @@
                     "rule": "bridge-underside",
                     "out": 6
                 },
+                "par-cut-curtain": {
+                    "rule": "vertical"
+                },
                 "par-columns": {
                     "rule": "up-the-column"
                 },
@@ -1085,7 +1158,8 @@
                 "par-press-cut": 0,
                 "beam380-backstage": 0.8,
                 "beam380-columns": 0.7,
-                "laser-cut": 0
+                "laser-cut": 0,
+                "par-cut-curtain": 0
             }
         },
         "gs-cross-beams": {
@@ -1110,6 +1184,9 @@
                     "rule": "bridge-underside",
                     "out": 6
                 },
+                "par-cut-curtain": {
+                    "rule": "vertical"
+                },
                 "par-columns": {
                     "rule": "up-the-column"
                 },
@@ -1133,7 +1210,8 @@
                 "par-press-cut": 0,
                 "beam380-backstage": 0.4,
                 "beam380-columns": 0.85,
-                "laser-cut": 0
+                "laser-cut": 0,
+                "par-cut-curtain": 0
             }
         },
         "gs-red-room": {
@@ -1161,6 +1239,9 @@
                     "y": 4,
                     "a": -1.4
                 },
+                "par-cut-curtain": {
+                    "rule": "vertical"
+                },
                 "beam380-columns": {
                     "rule": "vertical"
                 },
@@ -1182,7 +1263,8 @@
                 "par-press-cut": 0.6,
                 "beam380-backstage": 0.4,
                 "beam380-columns": 0,
-                "laser-cut": 0
+                "laser-cut": 0,
+                "par-cut-curtain": 0
             }
         },
         "gs-white-cathedral": {
@@ -1215,6 +1297,9 @@
                     "y": 4,
                     "a": -1.4
                 },
+                "par-cut-curtain": {
+                    "rule": "vertical"
+                },
                 "laser-cut": {
                     "rule": "laser-into-roof",
                     "a": 14
@@ -1234,7 +1319,8 @@
                 "par-press-cut": 0.4,
                 "beam380-backstage": 0.7,
                 "beam380-columns": 0.9,
-                "laser-cut": 0
+                "laser-cut": 0,
+                "par-cut-curtain": 0
             }
         },
         "gs-laser-roof": {
@@ -1260,6 +1346,9 @@
                     "rule": "bridge-underside",
                     "out": 6
                 },
+                "par-cut-curtain": {
+                    "rule": "vertical"
+                },
                 "par-columns": {
                     "rule": "up-the-column"
                 },
@@ -1282,7 +1371,8 @@
                 "par-press-cut": 0,
                 "beam380-backstage": 0.35,
                 "beam380-columns": 0,
-                "laser-cut": 0
+                "laser-cut": 0,
+                "par-cut-curtain": 0
             }
         },
         "k-doors": {
@@ -1306,6 +1396,9 @@
                     "rule": "bridge-underside",
                     "out": 6
                 },
+                "par-cut-curtain": {
+                    "rule": "vertical"
+                },
                 "beam380-backstage": {
                     "rule": "vertical"
                 },
@@ -1328,7 +1421,8 @@
                 "par-press-cut": 0.1,
                 "beam380-backstage": 0,
                 "beam380-columns": 0,
-                "laser-cut": 0
+                "laser-cut": 0,
+                "par-cut-curtain": 0
             }
         },
         "k-the-x": {
@@ -1350,6 +1444,9 @@
                 "par-cut-bridge": {
                     "rule": "bridge-underside",
                     "out": 6
+                },
+                "par-cut-curtain": {
+                    "rule": "vertical"
                 },
                 "par-columns": {
                     "rule": "up-the-column"
@@ -1377,7 +1474,8 @@
                 "par-press-cut": 0,
                 "beam380-backstage": 0,
                 "beam380-columns": 0.9,
-                "laser-cut": 0
+                "laser-cut": 0,
+                "par-cut-curtain": 0
             }
         },
         "k-tunnel": {
@@ -1397,6 +1495,9 @@
                 "par-cut-bridge": {
                     "rule": "bridge-underside",
                     "out": 6
+                },
+                "par-cut-curtain": {
+                    "rule": "vertical"
                 },
                 "par-columns": {
                     "rule": "up-the-column"
@@ -1423,7 +1524,8 @@
                 "par-press-cut": 0,
                 "beam380-backstage": 0,
                 "beam380-columns": 0.95,
-                "laser-cut": 0
+                "laser-cut": 0,
+                "par-cut-curtain": 0
             }
         },
         "k-green-core": {
@@ -1452,6 +1554,9 @@
                     "rule": "bridge-underside",
                     "out": 6
                 },
+                "par-cut-curtain": {
+                    "rule": "vertical"
+                },
                 "beam380-columns": {
                     "rule": "vertical"
                 },
@@ -1472,7 +1577,8 @@
                 "par-press-cut": 0.45,
                 "beam380-backstage": 0.6,
                 "beam380-columns": 0,
-                "laser-cut": 0
+                "laser-cut": 0,
+                "par-cut-curtain": 0
             }
         },
         "k-amber-dust": {
@@ -1491,6 +1597,9 @@
                     "x": 0,
                     "y": 4,
                     "a": -1.4
+                },
+                "par-cut-curtain": {
+                    "rule": "vertical"
                 },
                 "par-press-cut": {
                     "rule": "backdrop",
@@ -1518,7 +1627,8 @@
                 "par-press-cut": 0,
                 "beam380-backstage": 0,
                 "beam380-columns": 0,
-                "laser-cut": 0
+                "laser-cut": 0,
+                "par-cut-curtain": 0
             }
         },
         "k-lights-up": {
@@ -1542,6 +1652,9 @@
                     "y": 4,
                     "a": -1.4
                 },
+                "par-cut-curtain": {
+                    "rule": "vertical"
+                },
                 "beam380-backstage": {
                     "rule": "vertical"
                 },
@@ -1564,6 +1677,265 @@
                 "par-columns": 1,
                 "par-press-cut": 1,
                 "beam380-backstage": 0,
+                "beam380-columns": 0,
+                "laser-cut": 0,
+                "par-cut-curtain": 0
+            }
+        },
+        "k-blade": {
+            "title": "The blade",
+            "intent": "The curtain at full white under the cut: in haze a sheet of cold white whose top edge is the cut's 15° slope; the four bridge PARs red at 60 % draw the crane as a frame. Nothing else.",
+            "aims": {
+                "par-cut-x": {
+                    "rule": "point",
+                    "x": 0,
+                    "y": 4,
+                    "a": -1.4
+                },
+                "par-cut-bridge": {
+                    "rule": "bridge-underside",
+                    "out": 6
+                },
+                "par-cut-curtain": {
+                    "rule": "vertical"
+                },
+                "par-columns": {
+                    "rule": "up-the-column"
+                },
+                "par-press-cut": {
+                    "rule": "backdrop",
+                    "h": 0.6
+                },
+                "beam380-backstage": {
+                    "rule": "vertical"
+                },
+                "beam380-columns": {
+                    "rule": "vertical"
+                },
+                "laser-cut": {
+                    "rule": "laser-into-roof",
+                    "a": 14
+                }
+            },
+            "colours": {
+                "par-cut-curtain": "#ffffff",
+                "par-cut-bridge": "#ff0000"
+            },
+            "levels": {
+                "par-cut-x": 0,
+                "par-cut-bridge": 0.6,
+                "par-cut-curtain": 1,
+                "par-columns": 0,
+                "par-press-cut": 0,
+                "beam380-backstage": 0,
+                "beam380-columns": 0,
+                "laser-cut": 0
+            }
+        },
+        "k-hit": {
+            "title": "The hit",
+            "intent": "From black: the curtain and the six X PARs at full white together. No strobe channel (rates are untested on the PL5403) — the hit is the cue's own 0 s cut in and out.",
+            "aims": {
+                "par-cut-x": {
+                    "rule": "point",
+                    "x": 0,
+                    "y": 4,
+                    "a": -1.4
+                },
+                "par-cut-bridge": {
+                    "rule": "bridge-underside",
+                    "out": 6
+                },
+                "par-cut-curtain": {
+                    "rule": "vertical"
+                },
+                "par-columns": {
+                    "rule": "up-the-column"
+                },
+                "par-press-cut": {
+                    "rule": "backdrop",
+                    "h": 0.6
+                },
+                "beam380-backstage": {
+                    "rule": "vertical"
+                },
+                "beam380-columns": {
+                    "rule": "vertical"
+                },
+                "laser-cut": {
+                    "rule": "laser-into-roof",
+                    "a": 14
+                }
+            },
+            "colours": {
+                "par-cut-curtain": "#ffffff",
+                "par-cut-x": "#ffffff"
+            },
+            "levels": {
+                "par-cut-x": 1,
+                "par-cut-bridge": 0,
+                "par-cut-curtain": 1,
+                "par-columns": 0,
+                "par-press-cut": 0,
+                "beam380-backstage": 0,
+                "beam380-columns": 0,
+                "laser-cut": 0
+            }
+        },
+        "k-one-shaft": {
+            "title": "One shaft on the DJ",
+            "intent": "Black. The centre curtain PAR alone, full white, straight down on the DJ: one hard shaft from the cut, the DJ in it. Nothing else.",
+            "aims": {
+                "par-cut-curtain": {
+                    "rule": "vertical",
+                    "solo": 3
+                },
+                "par-cut-x": {
+                    "rule": "point",
+                    "x": 0,
+                    "y": 4,
+                    "a": -1.4
+                },
+                "par-cut-bridge": {
+                    "rule": "bridge-underside",
+                    "out": 6
+                },
+                "par-columns": {
+                    "rule": "up-the-column"
+                },
+                "par-press-cut": {
+                    "rule": "backdrop",
+                    "h": 0.6
+                },
+                "beam380-backstage": {
+                    "rule": "vertical"
+                },
+                "beam380-columns": {
+                    "rule": "vertical"
+                },
+                "laser-cut": {
+                    "rule": "laser-into-roof",
+                    "a": 14
+                }
+            },
+            "colours": {
+                "par-cut-curtain": "#ffffff"
+            },
+            "levels": {
+                "par-cut-x": 0,
+                "par-cut-bridge": 0,
+                "par-cut-curtain": 1,
+                "par-columns": 0,
+                "par-press-cut": 0,
+                "beam380-backstage": 0,
+                "beam380-columns": 0,
+                "laser-cut": 0
+            }
+        },
+        "k-cathedral-x": {
+            "title": "White cathedral + the X",
+            "intent": "White cathedral with the X of PARs on the cut drawn over the DJ.",
+            "aims": {
+                "par-cut-bridge": {
+                    "rule": "bridge-underside",
+                    "out": 6
+                },
+                "par-columns": {
+                    "rule": "up-the-column"
+                },
+                "par-press-cut": {
+                    "rule": "backdrop",
+                    "h": 0.6
+                },
+                "beam380-backstage": {
+                    "rule": "fan",
+                    "spread_deg": 8,
+                    "lean_deg": 0
+                },
+                "beam380-columns": {
+                    "rule": "vertical",
+                    "in_deg": 0
+                },
+                "par-cut-x": {
+                    "rule": "point",
+                    "x": 0,
+                    "y": 4,
+                    "a": -1.4
+                },
+                "par-cut-curtain": {
+                    "rule": "vertical"
+                },
+                "laser-cut": {
+                    "rule": "laser-into-roof",
+                    "a": 14
+                }
+            },
+            "colours": {
+                "par-cut-bridge": "#eef3ff",
+                "par-columns": "#eef3ff",
+                "par-press-cut": "#eef3ff",
+                "beam380-backstage": "#eef3ff",
+                "beam380-columns": "#eef3ff",
+                "par-cut-x": "#eef3ff"
+            },
+            "levels": {
+                "par-cut-x": 0.8,
+                "par-cut-bridge": 0.6,
+                "par-cut-curtain": 0,
+                "par-columns": 0.3,
+                "par-press-cut": 0.4,
+                "beam380-backstage": 0.7,
+                "beam380-columns": 0.9,
+                "laser-cut": 0
+            }
+        },
+        "k-fan-hit": {
+            "title": "Fan hit",
+            "intent": "From black, the seven booth beams open in a narrow white fan straight up behind the DJ. No sparks (no chart); the cue cuts in at 0 s.",
+            "aims": {
+                "beam380-backstage": {
+                    "rule": "fan",
+                    "spread_deg": 10,
+                    "lean_deg": 0
+                },
+                "par-cut-x": {
+                    "rule": "point",
+                    "x": 0,
+                    "y": 4,
+                    "a": -1.4
+                },
+                "par-cut-bridge": {
+                    "rule": "bridge-underside",
+                    "out": 6
+                },
+                "par-cut-curtain": {
+                    "rule": "vertical"
+                },
+                "par-columns": {
+                    "rule": "up-the-column"
+                },
+                "par-press-cut": {
+                    "rule": "backdrop",
+                    "h": 0.6
+                },
+                "beam380-columns": {
+                    "rule": "vertical"
+                },
+                "laser-cut": {
+                    "rule": "laser-into-roof",
+                    "a": 14
+                }
+            },
+            "colours": {
+                "beam380-backstage": "#eef3ff"
+            },
+            "levels": {
+                "par-cut-x": 0,
+                "par-cut-bridge": 0,
+                "par-cut-curtain": 0,
+                "par-columns": 0,
+                "par-press-cut": 0,
+                "beam380-backstage": 1,
                 "beam380-columns": 0,
                 "laser-cut": 0
             }
