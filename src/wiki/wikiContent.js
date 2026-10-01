@@ -117,6 +117,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-15'
     },
     {
+        id: 'studio-mouse-navigation',
+        category: 'Editing',
+        title: 'Moving the view: Studio or Blender mouse',
+        summary: 'Studio\u2019s 3D view can be moved the Studio way (the default) or the way Blender does it. Choose in Shift+? \u2192 Shortcuts.',
+        body: [
+            'The default never changes unless you change it: drag to orbit, right-drag to pan, scroll or middle-drag to zoom toward the pointer. On a touch screen, one finger orbits and two fingers pinch and slide.',
+            'If your hands know Blender, open the help with Shift+?, go to Shortcuts, and pick Blender under Mouse navigation. Then the middle mouse button orbits, Shift with the middle button pans, Ctrl with the middle button zooms, and the wheel zooms toward the pointer. The left button no longer moves the view, so it is free for picking things. Without a middle button, hold Alt with the left button: Alt orbits, Shift+Alt pans, Ctrl+Alt zooms. Touch stays the same.',
+            'In the Blender setting the view turns, slides and zooms around the surface under the pointer instead of a fixed point in the middle. Tick Orbit around selection to turn around what you selected instead.',
+            'The choice is kept in this browser on this device only. The table under it always shows the mouse keys of the setting you chose. Some desktops take Alt+drag for moving windows; if Alt+drag moves the window instead of the view, use the middle button or change that desktop setting.'
+        ],
+        tags: ['studio', 'navigation', 'mouse', 'blender', 'orbit', 'pan', 'zoom', 'keyboard', 'preferences'],
+        updated: '2026-10-01'
+    },
+    {
         id: 'shelves-and-the-trash',
         category: 'Editing',
         title: 'Shelves, draft/live/archived, and the trash',

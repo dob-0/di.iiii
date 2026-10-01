@@ -376,6 +376,79 @@
     .sh-help-shortcuts { grid-template-columns: 1fr; }
 }
 
+/* Mouse navigation preference (NavigationPreferenceControl) — spans the grid. */
+.sh-nav-pref {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: var(--di-space-3);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--di-radius);
+    display: grid;
+    gap: var(--di-space-2);
+}
+
+.sh-nav-pref-legend {
+    padding: 0 var(--di-space-2);
+    color: rgba(var(--di-cyan-rgb), 0.7);
+    font-size: var(--di-text-2);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.sh-nav-pref-option {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--di-space-3);
+    color: var(--di-text);
+    font-weight: 700;
+    font-size: var(--di-text-3);
+    min-height: 44px;
+    padding: var(--di-space-2);
+    border-radius: var(--di-radius);
+    cursor: pointer;
+}
+
+.sh-nav-pref-option { --sh-nav-box: 18px; }
+
+.sh-nav-pref-option--sub { margin-left: var(--di-space-6); }
+
+/* Native inputs, drawn as rectangles (house rule: no round controls). */
+.sh-nav-pref-option input {
+    appearance: none;
+    flex: none;
+    width: var(--sh-nav-box);
+    height: var(--sh-nav-box);
+    order: -1;
+    margin: 0;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: var(--di-radius);
+    background: transparent;
+    cursor: pointer;
+}
+
+.sh-nav-pref-option input:checked {
+    background: var(--di-cyan);
+    border-color: var(--di-cyan);
+    box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.6);
+}
+
+/* Description on its own line, aligned under the label text. */
+.sh-nav-pref-text {
+    flex-basis: 100%;
+    padding-left: calc(var(--sh-nav-box) + var(--di-space-3));
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 400;
+}
+
+.sh-nav-pref-status {
+    margin: 0;
+    min-height: 1em;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: var(--di-text-2);
+}
+
 .sh-help-shortcut-title {
     color: rgba(var(--di-cyan-rgb), 0.7);
     font-size: var(--di-text-2);

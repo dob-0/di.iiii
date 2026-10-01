@@ -1,4 +1,6 @@
-import { Suspense, createContext, lazy, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { registerEntityObject } from '../utils/entityObjectRegistry.js'
+import { runViewCommand } from '../utils/viewCommands.js'
+import { Suspense, createContext, lazy, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import '../styles/studio.css'
@@ -30,6 +32,9 @@ import {
     setTimelinePreview
 } from '../utils/timelinePreview.js'
 import StudioHelpDialog from './StudioHelpDialog.jsx'
+import { getNavigationPreset, mouseButtonsFor } from '../navigation/mappings.js'
+import { useNavigationPreference } from '../navigation/preference.js'
+import { useCameraNavigation } from '../navigation/useCameraNavigation.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
@@ -261,6 +266,9 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
     const gizmoActive = isPrimary && editMode === 'edit' && gizmoVisible && !isLocked
     const snapping = useSnapModifier()
     useEntityPose(entity, groupRef, isDragging)
+
+    // Real extents for View Selected / View All (viewCommands.js).
+    useEffect(() => registerEntityObject(entity.id, groupRef.current), [entity.id, isVisible])
 
     // Attach TransformControls to the group
     useEffect(() => {
@@ -511,12 +519,25 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
     )
 }
 
-// ACTION values from camera-controls (binary flags):
-const CC_ACTION = { NONE: 0, ROTATE: 1, TRUCK: 2, SCREEN_PAN: 4, OFFSET: 8, DOLLY: 16, ZOOM: 32,
-    TOUCH_DOLLY_TRUCK: 4096 }
-
-function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, enabled = true, fovRef = null }) {
+function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, enabled = true, fovRef = null, selectedEntityIds = null }) {
     const isXrPresenting = useXR((state) => state.session != null)
+    const scene = useThree((state) => state.scene)
+    const getScene = useCallback(() => scene, [scene])
+
+    // Mouse navigation preset (Shift+? > Shortcuts). 'studio' is the default and
+    // the bindings Studio always had; see src/studio/navigation/mappings.js.
+    const navigation = useNavigationPreference()
+    const preset = getNavigationPreset(navigation.preset)
+    const isOrtho = (cameraView?.fov ?? 50) < 20
+    useCameraNavigation({
+        controlsRef,
+        presetId: preset.id,
+        ortho: isOrtho,
+        orbitSelection: navigation.orbitSelection,
+        selectedEntityIds,
+        getScene,
+        active: enabled && !isXrPresenting,
+    })
 
     // The lens the camera eases toward. Shared with the smart view when there is one
     // (a preset changes the lens as well as the place), else this component's own.
@@ -548,13 +569,13 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
 
     // In ortho views (small FOV), left drag pans instead of rotating so you can
     // navigate the locked view and arrange objects — same as Blender's ortho behavior
+    // (Also restores the preset's resting bindings when the preset changes.)
     useEffect(() => {
         const cc = controlsRef.current
         if (!cc) return
-        const isOrtho = (cameraView?.fov ?? 50) < 20
-        cc.mouseButtons.left = isOrtho ? CC_ACTION.TRUCK : CC_ACTION.ROTATE
+        Object.assign(cc.mouseButtons, mouseButtonsFor(preset.id, { ortho: isOrtho }))
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [cameraView?.fov])
+    }, [isOrtho, preset.id])
 
     // Smooth FOV lerp — runs every frame inside the R3F canvas
     useFrame(() => {
@@ -586,21 +607,13 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         <CameraControls
             ref={controlsRef}
             makeDefault
-            dollyToCursor
+            dollyToCursor={preset.dollyToCursor}
             smoothTime={0.15}
             draggingSmoothTime={0.0}
             minDistance={0.35}
             maxDistance={500}
-            mouseButtons={{
-                left: CC_ACTION.ROTATE,
-                middle: CC_ACTION.DOLLY,
-                right: CC_ACTION.TRUCK,
-                wheel: CC_ACTION.DOLLY,
-            }}
-            touches={{
-                one: CC_ACTION.ROTATE,
-                two: CC_ACTION.TOUCH_DOLLY_TRUCK,
-            }}
+            mouseButtons={preset.mouseButtons}
+            touches={preset.touches}
             onControlEnd={() => {
                 const cc = controlsRef.current
                 if (!cc || !onCameraChange) return
@@ -923,6 +936,54 @@ const TOOLBAR_BTN_ACTIVE_STRONG = {
     boxShadow: '0 0 8px rgba(79,214,255,0.35)'
 }
 
+// Every Blender numpad view command as a visible, labelled 44 px button, so a laptop
+// without a numpad (WCAG 2.1.1) and a touch screen (2.5.1) reach the same commands.
+const VIEW_BUTTONS = [
+    ['Front', 'View from the front (Numpad 1, Shift+1)', { kind: 'axis', axis: 'front', back: false }],
+    ['Back', 'View from the back (Ctrl+Numpad 1, Ctrl+Shift+1)', { kind: 'axis', axis: 'front', back: true }],
+    ['Right', 'View from the right (Numpad 3, Shift+3)', { kind: 'axis', axis: 'right', back: false }],
+    ['Left', 'View from the left (Ctrl+Numpad 3, Ctrl+Shift+3)', { kind: 'axis', axis: 'right', back: true }],
+    ['Top', 'View from the top (Numpad 7, Shift+7)', { kind: 'axis', axis: 'top', back: false }],
+    ['Bottom', 'View from the bottom (Ctrl+Numpad 7, Ctrl+Shift+7)', { kind: 'axis', axis: 'top', back: true }],
+    ['Frame', 'Frame the selection (F, Numpad .)', { kind: 'frame-selected' }],
+    ['All', 'Frame the whole room (Home)', { kind: 'frame-all' }]
+]
+
+function ViewCommandBar({ onCommand }) {
+    return (
+        <div
+            role="toolbar"
+            aria-label="View commands"
+            style={{
+                position: 'absolute',
+                bottom: 14 + 44 + 6,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: 4,
+                maxWidth: 'calc(100% - 20px)',
+                zIndex: 10,
+                pointerEvents: 'auto'
+            }}
+        >
+            {VIEW_BUTTONS.map(([label, title, command]) => (
+                <button
+                    key={label}
+                    type="button"
+                    title={title}
+                    aria-label={title}
+                    style={{ ...TOOLBAR_BTN, minHeight: 44, minWidth: 44, justifyContent: 'center' }}
+                    onClick={() => onCommand(command)}
+                >
+                    {label}
+                </button>
+            ))}
+        </div>
+    )
+}
+
 function ViewportToolbar({ editMode, setEditMode, gizmoMode, setGizmoMode }) {
     const btn = (label, isActive, onClick) => (
         <button
@@ -1100,6 +1161,7 @@ export default function StudioViewport({
                         onRotateStart={onRotateStart}
                         enabled={enableNavigation}
                         fovRef={smartOn ? fovRef : null}
+                        selectedEntityIds={selectedEntityIds}
                     />
                     <StudioSceneContent
                         document={document}
@@ -1140,6 +1202,15 @@ export default function StudioViewport({
                     setEditMode={setEditMode}
                     gizmoMode={gizmoMode}
                     setGizmoMode={setGizmoMode}
+                />
+            )}
+
+            {setEditMode && controlsRef && (
+                <ViewCommandBar
+                    onCommand={(command) => runViewCommand(controlsRef.current, command, {
+                        entities: document.entities || [],
+                        selectedEntities: (document.entities || []).filter((e) => (selectedEntityIds || []).includes(e.id))
+                    })}
                 />
             )}
 
