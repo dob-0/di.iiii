@@ -179,6 +179,38 @@ check('the rig key survives a save and a reload; a hand-patched fixture gains no
   again.stop();
 });
 
+// MOXIR 2026-10-01: a show file carried "UP-PL5403 8ch" as an OWED placeholder (ch1..ch8).
+// Patching the room with the tested list kept the placeholder because the name and width
+// matched — every look's dimmer/r/g/b fell on no channel and the whole rig stayed dark.
+const par = (n, extra) => Object.assign({ key: `p:p${n}`, name: `par ${n}`, code: 'UP-PL5403', type: 'up-pl5403', mode: '8ch', footprint: 8 }, extra || {});
+const profileNamed = (d, name) => Object.values(d.desk.state.customProfiles || {}).find((x) => x && x.name === name);
+const TESTED_PAR = ['dimmer', 'r', 'g', 'b', 'w', 'strobe', 'aux1', 'aux2'].map((role) => ({ role, label: role }));
+
+check('a placeholder profile on the desk is upgraded when the room brings the known list', async () => {
+  const d = await deskOn();
+  await d.patch({ project: 'p', lamps: [par(1)] }); // no list: the desk makes the ch1..ch8 placeholder
+  assert.deepStrictEqual(profileNamed(d, 'UP-PL5403 8ch').channels.slice(0, 2), ['ch1', 'ch2']);
+  const r = await d.patch({ project: 'p', lamps: [par(1, { channels: TESTED_PAR }), par(2, { channels: TESTED_PAR })] });
+  assert.strictEqual(r.status, 200);
+  assert.deepStrictEqual(r.body.flags.filter((f) => f.code === 'profile-clash'), []);
+  assert.deepStrictEqual(profileNamed(d, 'UP-PL5403 8ch').channels, TESTED_PAR.map((c) => c.role));
+  const f = d.desk.state.fixtures.find((x) => x.rigKey === 'p:p1');
+  assert.ok(f.values.dimmer != null && f.values.r != null, 'the fixture already on the desk gains the new roles');
+  d.stop();
+});
+
+check('a different KNOWN list under the same name is flagged, and the desk keeps its own', async () => {
+  const d = await deskOn();
+  // profiles are the desk process's own table: a name of its own, so the test above cannot leak in
+  const two = (extra) => par(1, Object.assign({ code: 'UP-PLTWO', type: 'up-pltwo' }, extra));
+  const other = ['r', 'g', 'b', 'w', 'dimmer', 'strobe', 'aux1', 'aux2'].map((role) => ({ role, label: role }));
+  await d.patch({ project: 'p', lamps: [two({ channels: other })] });
+  const r = await d.patch({ project: 'p', lamps: [two({ channels: TESTED_PAR })] });
+  assert.ok(r.body.flags.some((f) => f.code === 'profile-clash' && f.key === 'p:p1'), 'said, not silently reused');
+  assert.deepStrictEqual(profileNamed(d, 'UP-PLTWO 8ch').channels, other.map((c) => c.role));
+  d.stop();
+});
+
 check('a bad request is refused whole', async () => {
   const d = await deskOn();
   assert.strictEqual((await d.patch({ lamps: [beam(1)] })).status, 400);
