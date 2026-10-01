@@ -5609,7 +5609,10 @@ $$('.railpane > .pane-head').forEach((head) => {
 // browser preferences (localStorage), like the hotkeys and the pane splits.
 
 let lsTab = 'fx';
-let lsFolded = false;
+// On a phone the open strip takes about half the screen and the looks and cue bar get
+// what is left (MOXIR, 2026-10-01): folded by default there, one tap on a tab opens it.
+// A saved preference still wins.
+let lsFolded = typeof matchMedia === 'function' && matchMedia('(max-width: 600px)').matches;
 try {
   const raw = JSON.parse(localStorage.getItem('touchStrip'));
   if (raw && typeof raw === 'object') { lsTab = raw.tab || 'fx'; lsFolded = !!raw.fold; }
