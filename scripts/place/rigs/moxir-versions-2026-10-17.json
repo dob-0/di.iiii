@@ -4780,17 +4780,33 @@
         "smoke-ground"
       ],
       "realLights": {
-        "beam380-backstage": {
-          "count": 3,
+        "par-cut-x": {
+          "count": 6,
           "pick": "even"
         },
-        "beam380-columns-6": {
-          "count": 2,
+        "par-cut-bridge": {
+          "count": 4,
           "pick": "even"
         },
         "par-columns-8": {
-          "count": 1,
-          "pick": "nearest-stage"
+          "count": 8,
+          "pick": "even"
+        },
+        "par-press-cut": {
+          "count": 3,
+          "pick": "even"
+        },
+        "beam380-backstage": {
+          "count": 7,
+          "pick": "even"
+        },
+        "beam380-columns-6": {
+          "count": 6,
+          "pick": "even"
+        },
+        "laser-cut": {
+          "count": 2,
+          "pick": "even"
         }
       },
       "looks": {
@@ -5138,7 +5154,8 @@
             "laser-cut": 0
           }
         }
-      }
+      },
+      "realLightsWhy": "EVERY lamp is a real light, as in known-full (Emily 2026-10-01: 'do the same for known-ground'): the room is the night as it will be. Shadows on the 12 lamps putting the most light in (shadowCasting.js shadowLampCap)."
     }
   ]
 }
