@@ -4748,10 +4748,26 @@
             "beam380-columns": 0,
             "laser-cut": 0
           }
+        },
+        "white-cathedral": {
+          "title": "White cathedral · hung rig"
+        },
+        "red-room": {
+          "title": "Red room · hung rig"
+        },
+        "strobe-hit": {
+          "title": "Strobe hit · hung rig"
+        },
+        "one-beam": {
+          "title": "Blackout + one beam · hung rig"
+        },
+        "slow-sweep": {
+          "title": "Slow sweep · hung rig"
         }
       },
       "realLightsWhy": "EVERY lamp is a real light (Emily 2026-10-01: 'i want 100% ident what we will have, you can optimize'): the room is the night as it will be, no picked few, no baked stand-ins. Measured on PONYO (RTX laptop, 1440x900): 40-52 fps; with shadows on the 12 lamps putting the most light in (shadowCasting.js shadowLampCap) 36-49 fps. A phone will not hold this: the 8-lamp budget is the fallback.",
-      "realLightsAll": true
+      "realLightsAll": true,
+      "looksWhy": "The set's own looks were made for the hung rig; on the ground versions they sit beside ground looks of the same name (\"White cathedral\", \"Red room\"), which the Touch page could not tell apart (Emily 2026-10-01: rename, keep both)."
     },
     {
       "id": "known-ground",
@@ -4844,7 +4860,8 @@
           },
           "levels": {
             "laser-cut": 0
-          }
+          },
+          "title": "White cathedral · hung rig"
         },
         "red-room": {
           "aims": {
@@ -4862,7 +4879,8 @@
           "levels": {
             "laser-cut": 0,
             "beam380-backstage": 0.45
-          }
+          },
+          "title": "Red room · hung rig"
         },
         "one-beam": {
           "aims": {
@@ -4880,7 +4898,8 @@
           },
           "levels": {
             "laser-cut": 0
-          }
+          },
+          "title": "Blackout + one beam · hung rig"
         },
         "slow-sweep": {
           "aims": {
@@ -4904,7 +4923,8 @@
           },
           "levels": {
             "laser-cut": 0
-          }
+          },
+          "title": "Slow sweep · hung rig"
         },
         "gs-one-shaft": {
           "title": "Blackout + one shaft",
@@ -5170,10 +5190,14 @@
             "beam380-columns-6": 0,
             "laser-cut": 0
           }
+        },
+        "strobe-hit": {
+          "title": "Strobe hit · hung rig"
         }
       },
       "realLightsWhy": "EVERY lamp is a real light, as in known-full (Emily 2026-10-01: 'do the same for known-ground'): the room is the night as it will be. Shadows on the 12 lamps putting the most light in (shadowCasting.js shadowLampCap).",
-      "realLightsAll": true
+      "realLightsAll": true,
+      "looksWhy": "The set's own looks were made for the hung rig; on the ground versions they sit beside ground looks of the same name (\"White cathedral\", \"Red room\"), which the Touch page could not tell apart (Emily 2026-10-01: rename, keep both)."
     }
   ]
 }
