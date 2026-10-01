@@ -116,8 +116,17 @@ export const dmxEntities = ({ shown, document, fixtures, library }) => {
         const light = { ...(e.components.light || baseLight) }
         if (d.colour) light.color = d.colour
         const reach = Number.isFinite(Number(baseLight.intensity)) ? Number(baseLight.intensity) : 1
-        light.intensity = Math.round(reach * d.level * 100) / 100
-        if (d.zoomDeg != null) light.angle = Math.round((d.zoomDeg / 2) * DEG * 10000) / 10000
+        let intensity = reach * d.level
+        if (d.zoomDeg != null) {
+            const zoomed = Math.round((d.zoomDeg / 2) * DEG * 10000) / 10000
+            // Zoom spreads the SAME flux over a wider cone: the candela falls by the ratio of
+            // the cones' solid angles, Ω = 2π(1 − cos θ) (scripts/place/rig-lib.mjs candelaAt).
+            // Keeping it made a Bee Eye zoomed 4° → 60° emit ~220× its light (render audit C).
+            const base = Number(baseLight.angle)
+            if (base > 0 && zoomed > 0) intensity *= (1 - Math.cos(base)) / (1 - Math.cos(zoomed))
+            light.angle = zoomed
+        }
+        light.intensity = Math.round(intensity * 100) / 100
         components.light = light
         if (e.components.beam || base.components?.beam) {
             const beam = { ...(e.components.beam || base.components.beam) }

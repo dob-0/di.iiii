@@ -36,6 +36,18 @@ const hexRgb = (hex) => {
     return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t)
+// LED emitters are driven LINEARLY (PWM): R at 255 and G at 128 is half the green light,
+// not the sRGB code 128 (which three.js reads as 21 %). An emitter mix is therefore made
+// linear, normalised, and only then written as an sRGB colour code — the code every
+// `color=` in the room is decoded from. (Render audit B, 2026-10-01: amber 255/128 came
+// out redder and 35 % dimmer; pastels with W went deep.)
+const toLinear = (c) => { const v = c / 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }
+const toCode = (l) => { const v = l <= 0.0031308 ? l * 12.92 : 1.055 * l ** (1 / 2.4) - 0.055; return Math.max(0, Math.min(1, v)) * 255 }
+/** Emitter drive levels (linear, 0..255) → the sRGB colour code at full. */
+const emitterHex = (drive) => {
+    const peak = Math.max(...drive)
+    return peak > 0 ? rgbHex(drive.map((v) => toCode(v / peak))) : null
+}
 const WARM_3200K = [255, 180, 107]
 // What a white emitter adds, the desk's own mix (src/rigMirror/fixtureColour.js EMITTER_MIX.w).
 const WHITE_MIX = [0.92, 0.92, 0.92]
@@ -113,7 +125,9 @@ export const decodeDmx = (channels, values, type = null) => {
 
     // Colour: RGB(W) emitters, else a wheel, else nothing to say.
     let rgb = null
+    let emitterDrive = false
     if (has('r') || has('g') || has('b')) {
+        emitterDrive = true
         rgb = [at.r || 0, at.g || 0, at.b || 0]
         if (has('w')) rgb = rgb.map((v, i) => v + (at.w || 0) * WHITE_MIX[i])
     } else if (has('w')) {
@@ -134,10 +148,12 @@ export const decodeDmx = (channels, values, type = null) => {
     const cto = Object.values(spec).find((c) => c.cap?.cto)
     if (rgb && cto && at[cto.role] > 0) {
         const peak = Math.max(...rgb) || 1
-        rgb = mix(rgb, WARM_3200K.map((v) => v * peak / 255), at[cto.role] / 255)
+        // the warm target in the same space as the mix: linear drive for emitters, a code otherwise
+        const warm = emitterDrive ? WARM_3200K.map((v) => toLinear(v) * 255) : WARM_3200K
+        rgb = mix(rgb, warm.map((v) => v * peak / 255), at[cto.role] / 255)
     }
     const peak = rgb ? Math.max(...rgb) : 0
-    if (rgb) out.colour = peak > 0 ? rgbHex(rgb.map((v) => (v / peak) * 255)) : null
+    if (rgb) out.colour = peak > 0 ? (emitterDrive ? emitterHex(rgb) : rgbHex(rgb.map((v) => (v / peak) * 255))) : null
 
     // Level: the dimmer (16-bit with its fine), times the emitters where there is no wheel.
     const dim = has('dimmer') ? sixteen(at.dimmer, has('dimmerFine') ? at.dimmerFine : null) : 1
@@ -261,11 +277,13 @@ export const encodeDmx = (channels, want = {}, type = null) => {
     const wheel = Object.values(spec).find((c) => c.cap?.wheel)
     const emitters = has('r') || has('g') || has('b')
     if (rgb && emitters) {
-        const peak = Math.max(...rgb) || 1
+        // the look's colour code → linear light → emitter drive (decode's emitterHex, inverted)
+        const lin = rgb.map(toLinear)
+        const peak = Math.max(...lin) || 1
         const scale = has('dimmer') || level == null ? 1 : level
-        if (has('r')) out.r = Math.round((rgb[0] / peak) * 255 * scale)
-        if (has('g')) out.g = Math.round((rgb[1] / peak) * 255 * scale)
-        if (has('b')) out.b = Math.round((rgb[2] / peak) * 255 * scale)
+        if (has('r')) out.r = Math.round((lin[0] / peak) * 255 * scale)
+        if (has('g')) out.g = Math.round((lin[1] / peak) * 255 * scale)
+        if (has('b')) out.b = Math.round((lin[2] / peak) * 255 * scale)
         if (has('w')) out.w = 0
     } else if (emitters && !has('dimmer') && level === 0) {
         // A colour-only mode (RGBW, no dimmer) has no other way to say OUT.

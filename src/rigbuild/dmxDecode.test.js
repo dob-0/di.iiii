@@ -111,8 +111,11 @@ describe('encode is decode\'s inverse where it speaks', () => {
             expect(back.pan).toBeCloseTo(100, 1)
             expect(back.tilt).toBeCloseTo(-40, 1)
             expect(back.level).toBeCloseTo(0.5, 1)
-            // drawn at full: the colour's hue, its brightness is the level
-            expect(back.colour.toLowerCase()).toBe('#ff2422')
+            // drawn at full: the colour's hue, its brightness is the level. Normalised in LINEAR
+            // light (emitters are driven linearly — render audit B, 2026-10-01), so #c41c1a at
+            // full is #ff2626, not the sRGB-scaled #ff2422
+            const emitters = m.channels.some((c) => c.role === 'r')
+            expect(back.colour.toLowerCase()).toBe(emitters ? '#ff2626' : '#ff2422') // a wheel's filter is a colour code
         }
     })
     it('a lamp OUT on a colour-only mode (RGBW, no dimmer) is sent all zeros, not nothing', () => {
@@ -190,5 +193,21 @@ describe('tunable white (UP-COB200, the cut 2026-09-29)', () => {
         const w = decodeDmx(cob, [128, 255, 0, 0])
         expect(w.colour).toBe('#ffb46b')
         expect(w.level).toBeCloseTo(128 / 255, 3)
+    })
+})
+
+describe('emitters are driven linearly (render audit B)', () => {
+    it('R 255 + G 128 is half the green LIGHT: the colour code is sRGB-encoded from linear', () => {
+        const channels = [{ role: 'dimmer' }, { role: 'r' }, { role: 'g' }, { role: 'b' }]
+        const d = decodeDmx(channels, [255, 255, 128, 0], {})
+        // linear (1, 0.502, 0) → sRGB code (255, 188, 0)
+        expect(d.colour).toBe('#ffbc00')
+    })
+    it('encode inverts it: the code #ffbc00 drives green at half', () => {
+        const channels = [{ role: 'dimmer' }, { role: 'r' }, { role: 'g' }, { role: 'b' }]
+        const cell = encodeDmx(channels, { level: 1, colour: '#ffbc00' })
+        expect(cell.r).toBe(255)
+        expect(cell.g).toBeGreaterThanOrEqual(127)
+        expect(cell.g).toBeLessThanOrEqual(129)
     })
 })
