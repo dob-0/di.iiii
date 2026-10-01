@@ -35,13 +35,13 @@ describe('the patch plan', () => {
         expect(r.errors).toEqual([])
         const at = Object.fromEntries(r.assignments.map((a) => [a.entityId, `${a.index} U${a.universe}.${a.address} ${a.mode}/${a.crewMode} u${a.unit}`]))
         expect(at).toEqual({
-            'rig-beam-01': '101 U1.1 16ch-assumed/16ch u1',
-            'rig-beam-02': '102 U1.17 16ch-assumed/16ch u2',
+            'rig-beam-01': '101 U1.1 16ch/16ch u1',
+            'rig-beam-02': '102 U1.17 16ch/16ch u2',
             'rig-par-01': '111 U1.101 4ch-assumed/4ch u1',
             'rig-par-02': '112 U1.109 4ch-assumed/4ch u2', // spaced 8 apart: room for the 8ch mode
-            'rig-col-03': '201 U2.1 16ch-assumed/16ch u1', // z 6 before z 12
-            'rig-col-01': '202 U2.17 16ch-assumed/16ch u2',
-            'rig-col-02': '211 U2.101 16ch-assumed/16ch u1'
+            'rig-col-03': '201 U2.1 16ch/16ch u1', // z 6 before z 12
+            'rig-col-01': '202 U2.17 16ch/16ch u2',
+            'rig-col-02': '211 U2.101 16ch/16ch u1'
         })
         expect(r.universes.map((u) => [u.universe, u.used, u.free])).toEqual([[1, 40, 472], [2, 48, 464]])
     })
@@ -123,7 +123,8 @@ describe('selecting from the document, so a re-hang re-runs', () => {
 describe('modes', () => {
     it('runs the maker\'s list when known, else the assumed list of the same footprint', () => {
         expect(footprintOfName('8ch-assumed')).toBe(8)
-        expect(resolveMode(typeById(library, 'up-b380f'), '16ch')).toMatchObject({ desk: '16ch-assumed', footprint: 16, assumed: true })
+        expect(resolveMode(typeById(library, 'up-b380f'), '16ch')).toMatchObject({ desk: '16ch', footprint: 16, assumed: false }) // the tested unit's list
+        expect(resolveMode(typeById(library, 'up-hk1915'), '21ch')).toMatchObject({ desk: '21ch-assumed', footprint: 21, assumed: true })
         expect(resolveMode(typeById(library, 'up-pl5403'), '4ch')).toMatchObject({ desk: '4ch-assumed', footprint: 4 })
         expect(resolveMode(typeById(library, 'up-yh600f'), '2ch')).toMatchObject({ desk: '2ch', assumed: false })
         expect(resolveMode(typeById(library, 'up-250bsw'), '30ch')).toBe(null) // no list of that width at all

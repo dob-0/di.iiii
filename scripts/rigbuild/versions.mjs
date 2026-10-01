@@ -21,6 +21,7 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { parseArgs, die, say, readJson, REPO_ROOT } from '../place/common.mjs'
 import { normalizeRentalList } from '../../src/shared/projectSchema.js'
@@ -500,7 +501,9 @@ export const versionRig = ({ spec, base, id }) => {
         classes: clone(classes),
         groups,
         effects,
-        budget: { ...clone(base.budget), realLights: clone(v.realLights) },
+        // `realLightsAll`: the version asks for EVERY lamp as a real light (the room as it will
+        // be; the renderer caps only the shadows, shadowCasting.js) — stated, never inferred
+        budget: { ...clone(base.budget), realLights: clone(v.realLights), ...(v.realLightsAll ? { realLightsAll: true, realLightsWhy: v.realLightsWhy } : {}) },
         night: clone(spec.night || base.night),
         photometry: { ...clone(base.photometry), ...(spec.photometry?.air ? { air: spec.photometry.air, airWhy: spec.photometry.why } : {}) },
         defaultLook: v.defaultLook || spec.defaultLook,
@@ -666,6 +669,7 @@ const main = async () => {
     await report({ out: path.resolve(String(args.report)), hallFile: args.hall ? path.resolve(String(args.hall)) : null, only: args.only ? String(args.only).split(',') : null })
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+// fileURLToPath, not URL.pathname: on Windows the pathname is /C:/… and never equals the argv path, so the script silently did nothing.
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
     main().catch((error) => die(error.stack || error.message))
 }

@@ -187,12 +187,13 @@ export const WIKI_ARTICLES = [
             'ONE DESK ACROSS MACHINES. Two di.iiii installs linked with `di invite` / `di follow` share a space. Place a DESK node: it lists every machine that has a page of that space open, with its cameras, microphones, speakers and screens. "+ Camera In" and "+ Picture Out" place the operator already set to that machine and device.',
             'RUNS ON is the first setting of every picture operator. "Where the page is open" means every machine runs its own copy — your webcam in your browser, the kiosk\'s on the kiosk. Choose a machine and only that machine computes it. A wire between operators on two machines carries the picture across the network by itself (browser to browser, no internet needed on one network); cards of operators computed elsewhere show small previews, and Analyze numbers travel both ways.',
             'A machine takes part while a di.iiii page of the space is open on it. Close the editor on the PC and whatever runs on the PC stops; set everything to the machine with the projector and the wall no longer needs the PC at all.',
+            'WHEN BOTH CHANGE THE SAME THING. Edits to different things always reach both machines. If two people change the same thing at the same moment — both move one box — both machines settle on the HOST\'s version (the install that ran `di invite`), and the other change is undone; a restore point is kept first. A follow also remembers where it was, so a restart picks up without sending old edits again.',
             'FILES TRAVEL WITH THE FOLLOW. A video, picture or model added to a project on one machine is copied to the other, either way round, while edits keep flowing — `di follows` says how many files are still coming and names any that could not be carried. Two things do not travel yet: files placed straight into the room itself rather than into a project, and older files added before files were named by their content (add those again and they go).',
             'SEND OUT puts a picture on the network so OTHER programs can use it — Resolume, OBS, a media server, somebody else\'s rig, or a machine that cannot run the patch. End a chain in a Send Out, give it a name, and that name appears as a source on the local network for anything that speaks NDI to pick up. No name means it sends nothing, which is the default. Between two linked di.iiii machines you do not need this at all: the patch itself travels and the wall draws it natively, at better quality than any encoding. It needs the NDI runtime installed on the machine that sends — di.iiii never ships it, and the operator says so plainly when it is missing. NDI\u00ae is a registered trademark of Vizrt NDI AB.',
             'A NETWORK CAN START WITHOUT A CAMERA. Five generators need no picture wired in at all: CLOUDS is soft animated noise (Scale, Speed, Detail, Contrast, and a Colour switch — off is grey); GRADIENT is a two-colour blend, straight across, up, out from the centre, or swept around it, with an Offset a hand or a script can slide; SHAPE is one soft-edged Circle, Ring, Bar or Grid of dots with its own Spin. TINT maps a picture\'s brightness between a dark colour and a bright one — its own default is black to deep amber, the duotone that keeps a wall warm. REFRAME scales, rotates and moves a picture around its own centre, and wired into a loop with Feedback it is what turns a still Gradient into a tunnel. Every one of them opens dark and warm, never white, with nothing to tune.',
         ],
         tags: ['operators', 'touchdesigner', 'tops', 'camera', 'projector', 'desk', 'machines', 'devices', 'follow', 'webrtc', 'analyze', 'generators', 'noise', 'gradient', 'tint', 'shape', 'clock', 'send', 'ndi', 'resolume', 'obs'],
-        updated: '2026-09-21'
+        updated: '2026-10-01'
     },
     {
         id: 'vj-deck-and-clip-in',
@@ -391,7 +392,7 @@ export const WIKI_ARTICLES = [
             { list: [
                 'Setup — patch the rig. Add each fixture, give it a profile and an address, and drag it into place on a plan of the room, so the desk looks like the room you are standing in. The plan is not a fixed canvas — pan and zoom go as far out as the rig needs, so a truss run or a followspot off to one side has somewhere to sit.',
                 'Control — the desk proper. Fixtures, colours, a master, scenes, chases, effects and LFOs; save what you are looking at as a scene and give it a name you will recognise in the dark. Looks stack on layers with their own fader, so a colour chase and a strobe can run at once instead of one replacing the other, and a look can follow the room instead of the patch order — Line sweep, Radar and Grid are one-press starters for a wave crossing the floor, a beam turning round its centre, and two waves crossing into a moving grid. Drag a fixture on the Setup stage and it moves inside every one of them.',
-                'Touch — the show surface. Big scene buttons, made for a phone in one hand at the back of the room. A phone can only get there when di.iiii was started with di up --lan; the desk’s Phone box shows the address and a QR code when it can, and says so plainly when it cannot.',
+                'Touch — the show surface. Big scene buttons, made for a phone in one hand at the back of the room. A show built from looks and a cue list rather than saved scenes shows exactly that: the cue bar on top (the cue that is on, the next one, and big GO, back, stop and loop buttons) and a Looks grid where one tap puts a look on and the tile that is on says so. Sections with nothing in them stay out of the way. A phone can only get there when di.iiii was started with di up --lan; the desk’s Phone box shows the address and a QR code when it can, and says so plainly when it cannot.',
                 'Fader — plain channel faders, for when a fixture is doing something no profile explains and you need to poke a channel by hand.',
                 'MIDI — map a controller. Mappings live with the desk, not in one browser, so the same knobs work from any screen you open it on.'
             ] },
@@ -407,7 +408,7 @@ export const WIKI_ARTICLES = [
             'The desk lives on a local di.iiii only — `di up`, or npm run dev. A hosted diiii.xyz has no /light in it at all, on purpose: a lighting desk is a thing that reaches hardware in a room, and the room is where you are. Asking a hosted address for /light says exactly that, and offers the install — it used to hand back an ordinary di.iiii page with no explanation at all.'
         ],
         tags: ['light', 'lighting', 'dmx', 'artnet', 'enttec', 'desk', 'scene', 'show', 'stage', 'performance', 'local', 'di up', 'lan', 'phone', 'rig', 'fixture', 'marker', 'studio', 'index', 'positions', 'back', 'project', 'nodes', 'projection', 'input', 'console', 'grandma3', 'sacn', 'e1.31', 'visualiser', 'merge', 'htp', 'ltp'],
-        updated: '2026-09-28'
+        updated: '2026-10-01'
     },
     {
         id: 'ai-restyle-camera',
@@ -423,7 +424,7 @@ export const WIKI_ARTICLES = [
             'AI restyle lives on a local di.iiii only — `di up`, or npm run dev — the same as the lighting desk and the NDI® source. A hosted address has no engine and does not offer one.'
         ],
         tags: ['ai', 'restyle', 'camera', 'stream', 'projection', 'mapping', 'live', 'prompt', 'stable diffusion', 'sd-turbo', 'local', 'offline', 'effect', 'analysis'],
-        updated: '2026-09-28'
+        updated: '2026-10-01'
     },
     {
         id: 'lights-on-a-place',
@@ -440,7 +441,7 @@ export const WIKI_ARTICLES = [
             'THE BEAM. A lamp\'s Beam section switches on the throw itself: the cone of light in the air between the lamp and what it lands on, the way a beam shows in a hazed room. Haze is how thick that air is. The beam is off in every room until somebody switches it on, and it takes the lamp\'s own colour — so a lamp joined to a fixture on the lighting desk beams in the colour the desk is emitting, live, and goes out when the desk takes it out.',
             'The cone is drawn as far as the lamp reaches, so set the lamp\'s Distance to roughly where the light actually lands. A lamp with a 15-metre reach hung in a small room draws its cone straight through the floor.',
             'BEAM ONLY. A whole rig is too many lamps for a browser: every lamp that really lights the room costs every pixel, and with shadows on a phone refuses past about a dozen. Tick Beam only (no light) and the lamp keeps its cone in the air but lights nothing — so a rig of ninety heads can hang complete, every beam visible, while a chosen dozen actually light the walls and the floor. A lamp with no beam never goes dark this way; the switch only means something while the beam is showing.',
-            'SHADOWS FROM THE ROOM. Under Project → Render there is Lamps throw shadows. Switch it on and the lamps in the room cast: a pillar standing in a beam puts its shadow on the floor behind it, a person-sized box makes a person-sized shadow, and a scanned venue\'s own walls catch what is thrown at them. Shadow detail chooses how sharp the edge is — Sharper costs more, and a phone will feel it. It is off unless a room asks for it, because a shadow pass over a big scanned room is not free.',
+            'SHADOWS FROM THE ROOM. Under Project → Render there is Lamps throw shadows. Switch it on and the lamps in the room cast: a pillar standing in a beam puts its shadow on the floor behind it, a person-sized box makes a person-sized shadow, and a scanned venue\'s own walls catch what is thrown at them. Shadow detail chooses how sharp the edge is — Sharper costs more, and a phone will feel it. It is off unless a room asks for it, because a shadow pass over a big scanned room is not free. A room with many lamps still gets shadows: the twelve lamps putting the most light into the room at that moment throw them (fewer on a phone whose graphics chip has fewer slots), and they move to the next lamps up as a look changes.',
             'What a visitor sees is what you see: the beam and the shadows are part of the room, so they arrive with it in a published space and in walk mode, not only in the Studio.',
             'THE ROOM\'S AIR. A room can say how hazy its air is (renderSettings.atmosphere). When it does, every beam is drawn as the light the haze really scatters toward you: as bright as the lamp is, brightest looking back up toward the lamp, fading with distance, ending on whatever it hits, with the soft veil an eye sees around a very bright light. The beam and the wall it lands on then answer to the same exposure, like one photograph. A room that says nothing about its air keeps the plain cones. MOXIR is the first room with air: its night is black, and the little light the hall has comes back off what the rig lights — red in the red room.'
         ],
@@ -1647,7 +1648,7 @@ export const WIKI_ARTICLES = [
         title: 'The patch sheet: what the light engineers plug by',
         summary: 'Every lamp in a room that has a fixture type is on one printable sheet — fixture number, type, mode, position, universe, address, circuit and watts — at diiii.xyz/{space}/patch/{project}.',
         body: [
-            'A lamp in a room can say which real fixture it is: its type (the code on the rental list), its DMX mode, and where it hangs. On a machine with the lighting desk, such a lamp is patched on the desk the moment it is placed, copied or deleted — the desk picks the next free address in the universe, the way a console does — and the room writes down what the desk decided.',
+            'A lamp in a room can say which real fixture it is: its type (the code on the rental list), its DMX mode, and where it hangs. On a machine with the lighting desk, such a lamp is patched on the desk the moment you place, copy or delete it — the desk picks the next free address in the universe, the way a console does — and the room writes down what the desk decided. Only a change you make patches: opening a page, refreshing it, or somebody else looking at it never touches the desk or the show.',
             'The sheet reads the room alone, so the link works for anybody who can open the space, on any tier, with no desk. It lists the patch by universe and address, the fixture types, the power by circuit and every flag. Print gives A4 pages; Patch CSV and Power CSV give the same tables for a spreadsheet.',
             'A flag is a word, never a colour, so it survives a black-and-white printer:',
             {
@@ -1663,7 +1664,7 @@ export const WIKI_ARTICLES = [
             'For the engineers\' console the same rig exports as an MVR file with a GDTF file per fixture type (scripts/rigbuild/export-mvr.mjs).'
         ],
         tags: ['patch', 'patch sheet', 'dmx', 'universe', 'address', 'lighting', 'rig', 'fixture', 'mvr', 'gdtf', 'console', 'power', 'circuit', 'print', 'csv', 'light engineer', 'crew'],
-        updated: '2026-09-28'
+        updated: '2026-10-01'
     },
     {
         id: 'lighting-plot',
@@ -1673,14 +1674,14 @@ export const WIKI_ARTICLES = [
         body: [
             'The plot is the rig drawn the way a lighting designer draws it: the hall seen from above at its real size, its walls, columns and grid, the dance floor and the DJ place, the machinery on the floor and what hangs over it dashed. Each lamp is a symbol for its type at the point it hangs from, with its unit number inside and its console number and universe.address beside it. The key and the title block say what is there, how many channels each universe uses and how much power the rig draws.',
             'On the left is a rail: select, truss, tower, deck, fixture, fx and measure. Drag on the plan with truss to draw a run — it is laid in 3, 2 and 1 m pieces end to end. Click with tower near the end of a truss and the tower stands under it, built to the truss\'s height. Click with fixture near a truss and the lamp hangs at the nearest clamp point. Everything snaps: truss end to truss end, tower top, deck edge, a 0.5 m grid. Type exact numbers in the inspector when you want them — length, height, x, z, turn.',
-            'A new lamp is patched on this machine\'s desk as soon as it is placed, like in Studio: the number and the address appear beside it. Select several and press patch this group to lay them out again as one block. Two lamps on the same channels are drawn in a dashed box with a !, and the inspector says what the desk said.',
+            'A new lamp is patched on this machine\'s desk as soon as you place it, like in Studio: the number and the address appear beside it. Opening the plot never patches anything — a room that arrived unpatched (a bundle from another machine) stays as it is until you press patch the room on the desk, in the title block. Select several and press patch this group to lay them out again as one block. Two lamps on the same channels are drawn in a dashed box with a !, and the inspector says what the desk said.',
             'The room beside the plan is the same room as in Studio, showing what is selected. On a phone the plan fills the screen; plan and room are one tap apart, and the tools and the inspector are in a sheet you pull up.',
             'Print sheet 1 gives the plot on A3 or A4 at a true scale with a scale bar — the whole rig, or just what is on the screen for a close-up of the stage. Sheets 2 and 3, the patch and the power, are the patch sheet. Print at 100%, not "fit to page".',
             'The hall comes from the model it was built from, never drawn by hand. The plot makes no load or rigging calculation: a truss end with no tower under it is marked free, and the real hang needs a rigger\'s sign-off.',
             'A run may slope: a line hung from a crane on picks of different height (MOXIR\'s "cut", 12 m at 15°) is one run, and its clamp points follow it — a lamp on it sits at its real height, the looks reach it, and the plan draws its footprint (its length × the cosine of the slope). Its heights, picks and loads come from the rig file, which states them with their sources; the plot still makes no calculation of its own.'
         ],
         tags: ['plot', 'lighting plot', 'plan', 'cad', 'truss', 'tower', 'deck', 'stage', 'rig', 'fixture', 'lamp', 'dmx', 'patch', 'address', 'print', 'a3', 'scale', 'room', 'build', 'light engineer', 'crew', 'rp-2'],
-        updated: '2026-09-29'
+        updated: '2026-10-01'
     },
     {
         id: 'rig-cards',

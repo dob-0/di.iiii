@@ -38,7 +38,7 @@ import path from 'node:path'
 
 import { parseArgs, die, say, readJson } from '../place/common.mjs'
 import { makeClient } from '../place/api.mjs'
-import { deskLookId, rigLooksOf } from '../../src/rigbuild/looks.js'
+import { deskLookId, rigLooksOf, staleDeskLooks } from '../../src/rigbuild/looks.js'
 import { deskLooksWithValues } from '../../src/rigbuild/deskLookValues.js'
 import { libraryWithShow } from '../../src/rigbuild/rental.js'
 import { loadLibrary } from './library.mjs'
@@ -153,6 +153,16 @@ const main = async () => {
         const put = await desk.post('/api/looks/add', { look })
         if (!put.ok) die(`the desk did not take ${look.id}: ${put.status} ${put.text.slice(0, 200)}`)
     }
+    // another room's rig looks, left by a desk swap (patch.mjs --unpatch / --exact): taken away,
+    // so the Touch page shows this room's looks only. The operator's own looks stay.
+    const onDesk = await desk.get('/api/looks')
+    if (!onDesk.ok) die(`reading the desk's looks: ${onDesk.status}`)
+    const stale = staleDeskLooks(onDesk.body.looks, deskSet.map((l) => l.id))
+    for (const id of stale) {
+        const gone = await desk.post('/api/looks/remove', { id })
+        if (!gone.ok) die(`the desk did not remove ${id}: ${gone.status} ${gone.text.slice(0, 200)}`)
+    }
+    if (stale.length) say(`desk: ${stale.length} looks of another room taken off (${stale.join(', ')})`)
     const valued = new Set(deskSet.flatMap((l) => Object.keys(l.steps[0]?.values || {})))
     say(`desk: ${looks.looks.length} looks over ${fixtures.length} patched fixtures — DMX values for ${valued.size} (channel lists, ASSUMED where the type says so), none for ${fixtures.length - valued.size} (nothing a look sets on them — hazers — or a list owed)`)
 

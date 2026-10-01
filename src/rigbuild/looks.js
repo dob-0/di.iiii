@@ -25,11 +25,21 @@ import { plotData } from './sheet.js'
 import { piecesOf } from './plotGeometry.js'
 import { venueOf } from './venuePlan.js'
 import { fillOf, positionsOf, stageFrameOf } from './positions.js'
+import { positionOfWords } from './mountPosition.js'
 import { AIM_RULES, aimDirection, panTiltOfDirection } from './lookRules.js'
 
 export const DESK_LOOK_PREFIX = 'rig-'
 export const deskLookId = (lookId) => `${DESK_LOOK_PREFIX}${lookId}`.slice(0, 40)
 export const lookIdOfDesk = (deskId) => (typeof deskId === 'string' && deskId.startsWith(DESK_LOOK_PREFIX) ? deskId.slice(DESK_LOOK_PREFIX.length) : null)
+/**
+ * The desk's rig looks (`rig-…`) that are not in `keepIds` — another room's, left on the desk
+ * when the space's patch moved to this room (the desk runs one patch per space). A look the
+ * operator made on the desk has no `rig-` prefix and is never named.
+ */
+export const staleDeskLooks = (deskLooks, keepIds) => {
+    const keep = new Set(keepIds || [])
+    return (deskLooks || []).map((l) => l?.id).filter((id) => lookIdOfDesk(id) !== null && !keep.has(id))
+}
 
 /** A position's key in a look: truss runs are all "truss"; the rest by their id. */
 export const positionKey = (positionId) => (String(positionId).startsWith('truss:') ? 'truss' : String(positionId).startsWith('truss-top:') ? 'truss-top' : String(positionId))
@@ -114,6 +124,7 @@ export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) =
         if (!groups.has(k)) groups.set(k, [])
         groups.get(k).push({ id: l.id, slot: { pos: l.mount } })
     }
+    const placed = new Set(named)
     for (const p of positions) {
         for (const s of p.slots) {
             const id = fill.get(`${p.id}/${s.id}`)
@@ -122,7 +133,21 @@ export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) =
             const key = `${positionKey(p.id)}/${type}`
             if (!groups.has(key)) groups.set(key, [])
             groups.get(key).push({ id, slot: s })
+            placed.add(id)
         }
+    }
+    // A lamp no derived slot holds — a mover standing near, not on, a column base or behind the
+    // press — is placed by the mount its `fixture.position` names, the same table the looks were
+    // keyed by (mountPosition.js). Without this it was in no look at all: every beam that stands
+    // off a derived slot stayed dark in every look, on the desk and in the room (MOXIR 2026-10-01).
+    for (const l of lamps) {
+        if (placed.has(l.id)) continue
+        const fixture = byEntity.get(l.id)?.components?.fixture
+        const where = positionOfWords(fixture?.position)
+        if (!where || !fixture?.type) continue
+        const key = `${where}/${fixture.type}`
+        if (!groups.has(key)) groups.set(key, [])
+        groups.get(key).push({ id: l.id, slot: { pos: l.mount } })
     }
     for (const [key, members] of groups) {
         const aim = look.aims?.[key]

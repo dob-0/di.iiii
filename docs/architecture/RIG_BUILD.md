@@ -263,8 +263,17 @@ known, else `ch1…chN` labelled as owed. The desk's own validation applies.
   flags:[{key, code, message}], removed:[key]}`; `GET /light/api/rig?project=` lists a
   room's rig fixtures. Code: `serverXR/src/lighting/rigpatch.js`.
 - room: `src/rigbuild/autoPatch.js` — `patchRequest`, `writeBackOps`, `autoPatch`;
-  in the Studio `useRigAutoPatch` (mounted in `StudioEditor`) runs it 400 ms after any
-  lamp change and returns `{flags, message, patchGroup(entityIds)}`.
+  in the Studio `useRigAutoPatch` (mounted in `StudioEditor` and the plot, cards,
+  equipment and build pages) runs it 400 ms after a lamp change **made on that page** —
+  `useOpHistory`'s `edits` count moves on the person's own edit, undo or redo — and
+  returns `{flags, message, patchNow(), patchGroup(entityIds)}`.
+- **A reader never writes** (2026-10-01): opening, refreshing or a second viewer never
+  patches — no POST to the desk (its `prune` would take the project's other fixtures off)
+  and no write-back into the document. A change that arrived from a collaborator does not
+  patch either. The explicit whole-room patch is **patch the room on the desk** (the
+  plot's title block) and the cards' **send looks to the desk** (and GO, when looks are
+  missing), which patch first because a desk look is made over the patched fixtures.
+  Until a person patches, `flags` and `message` are empty (the pages read the document).
 - flag codes: `mode-unknown`, `overlap`, `desk-differs`, `off-the-end`, `no-room`,
   `profile-clash`, `profile-refused`, `group-split`; locally `unknown-type`,
   `channels-owed`.
@@ -1891,6 +1900,18 @@ the plot's mode list (the name ends `-assumed`), on the desk (the profile is `UP
 each channel named from the chart) and on the visualiser (a line naming every list in use). The desk
 patches a listed channel at its own `default` (a B380F shutter where 0 = CLOSED rests open at 255;
 pan/tilt at 128 = home) — `rigpatch.js`.
+
+**TESTED on the rental units (2026-10-01).** The same UPlight rental gear ran live at the Sevan
+festival (Dilijan camp) on the studio's own Art-Net desk; the owner confirmed the units. Three real
+modes now carry that desk's channel maps (`TESTED_CHANNEL_LISTS` in `fixtureTypes.js`, manifest
+source `SEVAN`, basis `TESTED`, no url because the source is the unit): **UP-B380F 16ch** (pan, tilt,
+pan fine, tilt fine, speed, frost, strobe 255 open/0–3 dark, dimmer, colour, gobo, prism 1, prism 1
+rot, prism 2, prism 2 rot, focus, reset 0; the order differs from the assumed UPlus stand-in),
+**UP-PL5403 8ch** (dimmer, R, G, B, W, strobe, two channels unused there), **UP-LA40WF 32ch** (the
+mode it ran in; the maker publishes none; per-colour levels run 0 = brightest, so they are plain
+channels; still held dark by the laser gate until the IEC 60825-1 sign-off). A meaning nobody wrote
+down stays a plain channel. `resolveMode` now runs these real lists; the assumed modes stay after
+them. Still owed from the rental house: UP-250BSW, UP-HK1915, UP-COB200 and the effects' charts.
 
 ### 18.2 What a lamp's DMX means (`src/rigbuild/dmxDecode.js`)
 

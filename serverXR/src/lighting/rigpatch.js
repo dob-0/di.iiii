@@ -103,6 +103,7 @@ function rigPatch(ctx, body) {
 
   // 1. Profiles for every (type, mode) asked for.
   const profileFor = new Map();
+  const upgraded = new Set(); // placeholder profiles replaced by a known list in this call
   for (const l of lamps) {
     const n = Number(l.footprint);
     if (!Number.isInteger(n) || n < 1 || n > 512) continue;
@@ -110,9 +111,35 @@ function rigPatch(ctx, body) {
     if (profileFor.has(l.key)) continue;
     const existing = findProfile(name);
     if (existing) {
-      if (PROFILES[existing].channels.length !== n) {
-        flag(l.key, 'profile-clash', `a fixture type named "${existing}" already exists with ${PROFILES[existing].channels.length} channels, not ${n} — rename it on the desk`);
+      const have = PROFILES[existing].channels;
+      if (have.length !== n) {
+        flag(l.key, 'profile-clash', `a fixture type named "${existing}" already exists with ${have.length} channels, not ${n} — rename it on the desk`);
         continue;
+      }
+      // Same name and width is not the same list. The room brings a KNOWN list and the desk
+      // holds only the owed placeholder (ch1..chN): upgrade it, or every look's dimmer/r/g/b
+      // falls on no channel and the rig stays dark (MOXIR, 2026-10-01). Two different known
+      // lists: said, and the desk keeps its own — which is right is a person's call.
+      const known = Array.isArray(l.channels) && l.channels.length === n;
+      if (known && !upgraded.has(existing)) {
+        const want = channelsFor({ ...l, footprint: n });
+        if (have.some((role, i) => role !== want.roles[i])) {
+          if (have.every((role, i) => role === `ch${i + 1}`)) {
+            try {
+              addProfile(existing, want.roles, { cat: PROFILES[existing].cat || '_RIG', labels: want.labels, defaults: want.defaults, replace: true });
+              upgraded.add(existing);
+              // fixtures already on this profile keep their address and gain the new roles at their resting value
+              for (const f of state.fixtures) {
+                if (f.profile !== existing) continue;
+                for (const role of want.roles) if (f.values[role] == null) f.values[role] = want.defaults[role] ?? 0;
+              }
+            } catch (e) {
+              flag(l.key, 'profile-refused', e.message);
+            }
+          } else {
+            flag(l.key, 'profile-clash', `the desk's "${existing}" has a different channel list from the room's — check it against the rental unit and keep one`);
+          }
+        }
       }
       profileFor.set(l.key, existing);
       continue;

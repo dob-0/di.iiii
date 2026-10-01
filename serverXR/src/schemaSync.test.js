@@ -446,6 +446,9 @@ describe('ESM/CJS mirror equivalence', () => {
         { id: 'f5', type: 'spotLight', components: { fixture: { type: ' up-b380f ', mode: '16ch', universe: 2, address: 273, unit: 5, circuit: 'C4', position: 'column base R', hung: true, extra: 'x' } } },
         { id: 'f6', type: 'spotLight', components: { fixture: { type: 'up-pl5403', universe: 0, address: 513, unit: -1, hung: 'yes' } } },
         { id: 'f7', type: 'spotLight', components: { fixture: { mode: '16ch', universe: 1, address: 1 } } },
+        // Kept off DMX (hazers, smoke run by hand): `dmx: false` survives; any other value is dropped.
+        { id: 'f8', type: 'group', components: { fixture: { type: 'ext-hazer', dmx: false, unit: 1 } } },
+        { id: 'f9', type: 'group', components: { fixture: { type: 'ext-hazer', dmx: 'no' } } },
         // Build pieces (RIG_BUILD.md §2.3): a kind survives, trimmed; an empty one is dropped.
         { id: 'k1', type: 'group', components: { piece: { kind: ' truss-2m ', load: 9 } } },
         { id: 'k2', type: 'group', components: { piece: { kind: '' } } },

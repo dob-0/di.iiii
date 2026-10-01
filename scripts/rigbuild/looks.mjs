@@ -21,26 +21,9 @@ import { normalizeRigLooks } from '../../src/shared/projectSchema.js'
 import { RIG_SHOW_ID } from '../../src/rigbuild/rental.js'
 import { isMainModule } from '../lib/isMainModule.mjs'
 
-// The rig script's mount rules (scripts/place/rig-lib.mjs `place`) → view C's positions.
-export const MOUNT_POSITION = {
-    'truss-header': () => 'truss',
-    'truss-top': () => 'truss-top',
-    // crane-x: the X's arms are truss runs like any other — the room finds these lamps on them
-    'x-top': () => 'truss-top',
-    'x-under': () => 'truss',
-    'crane-bridge': () => 'crane-bridge',
-    'tower-ladder': () => 'tower-ladders',
-    'truss-towers': () => 'tower-tops',
-    'booth-back': (g) => (g.dx_m ? 'stage-flanks' : 'stage-back'),
-    'booth-pit': () => 'pit',
-    'column-bases': () => 'column-bases',
-    'column-uplight': (g) => (g.columns?.rows === 'next' ? 'outer-columns' : 'column-faces'),
-    'backdrop-floor': () => 'backdrop',
-    'nave-columns': () => 'dance-columns',
-    // the halo (RIG_BUILD.md §15.8): no derived slot, each group its own named position —
-    // moxir.mjs writes the same name on every lamp ("halo <group id in words>")
-    halo: (g) => `halo-${g.id}`
-}
+// The rig script's mount rules → view C's positions: one table, shared with the room (src/rigbuild/mountPosition.js).
+import { MOUNT_POSITION } from '../../src/rigbuild/mountPosition.js'
+export { MOUNT_POSITION }
 
 const typeIdOf = (code) => String(code || '').trim().toLowerCase().replace(/\s+/g, '-')
 

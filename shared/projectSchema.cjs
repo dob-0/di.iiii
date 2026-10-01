@@ -857,6 +857,8 @@ const normalizeFixture = (fixture) => {
   const position = fixtureText(fixture.position, 64)
   if (position) out.position = position
   if (fixture.hung === true) out.hung = true
+  // Kept off DMX by the owner (run by hand: hazers, smoke): never patched (rigbuild/autoPatch.js).
+  if (fixture.dmx === false) out.dmx = false
   return out
 }
 
