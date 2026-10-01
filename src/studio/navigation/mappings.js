@@ -101,6 +101,20 @@ export function mouseButtonsFor(presetId, { ortho = false } = {}) {
     return { ...preset.mouseButtons, left: ortho ? preset.orthoLeft : preset.mouseButtons.left }
 }
 
+// The bindings to HAND camera-controls: fresh, writable copies. The presets
+// above are frozen, and camera-controls keeps the object it is given — then
+// this app writes into it (the ortho swap in StudioViewport, the per-gesture
+// action in useCameraNavigation). Handing it the frozen preset made the first
+// such write throw "Cannot assign to read only property 'left'" and took the
+// whole viewport down: every 3D room on dev rendered black (2026-10-01).
+export function controlBindingsFor(presetId, { ortho = false } = {}) {
+    const preset = getNavigationPreset(presetId)
+    return {
+        mouseButtons: { ...mouseButtonsFor(preset.id, { ortho }) },
+        touches: { ...preset.touches },
+    }
+}
+
 // The camera-controls action one mouse gesture should perform.
 // button: DOM MouseEvent.button (0 left, 1 middle, 2 right).
 // mods: { shift, ctrl, alt } as held at pointerdown — the gesture keeps it.

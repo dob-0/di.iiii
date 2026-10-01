@@ -1,5 +1,9 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { CC_ACTION, NAVIGATION_PRESETS, actionFor, mouseButtonsFor, normalizeNavigationPreset } from './mappings.js'
+import { CC_ACTION, NAVIGATION_PRESETS, actionFor, controlBindingsFor, getNavigationPreset, mouseButtonsFor, normalizeNavigationPreset } from './mappings.js'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 
 const { NONE, ROTATE, TRUCK, DOLLY, TOUCH_DOLLY_TRUCK } = CC_ACTION
 
@@ -61,5 +65,36 @@ describe('normalize', () => {
     it('junk -> studio', () => {
         for (const junk of [null, undefined, '', 'maya', 'BLENDER', 42, {}]) expect(normalizeNavigationPreset(junk)).toBe('studio')
         expect(normalizeNavigationPreset('blender')).toBe('blender')
+    })
+})
+
+// 2026-10-01: dev.diiii.xyz rendered every 3D room black. StudioViewport handed
+// camera-controls the FROZEN preset bindings; camera-controls keeps that object,
+// and the app's own writes into it (the ortho swap, the per-gesture action)
+// threw "Cannot assign to read only property 'left'" and took the viewport down.
+describe('controlBindingsFor — what camera-controls is handed', () => {
+    it.each(['studio', 'blender'])('gives %s bindings that take every write the app makes', (id) => {
+        const { mouseButtons, touches } = controlBindingsFor(id)
+        expect(Object.isFrozen(mouseButtons)).toBe(false)
+        expect(Object.isFrozen(touches)).toBe(false)
+        const cc = { mouseButtons, touches }
+        expect(() => Object.assign(cc.mouseButtons, mouseButtonsFor(id, { ortho: true }))).not.toThrow() // the ortho swap
+        expect(() => { cc.mouseButtons.left = 0 }).not.toThrow() // useCameraNavigation's per-gesture write
+        expect(mouseButtonsFor(id)).toEqual(getNavigationPreset(id).mouseButtons) // and the preset itself is untouched
+    })
+
+    it('is a fresh copy every call, equal to the preset', () => {
+        const a = controlBindingsFor('studio')
+        const b = controlBindingsFor('studio')
+        expect(a.mouseButtons).not.toBe(b.mouseButtons)
+        expect(a.mouseButtons).toEqual(getNavigationPreset('studio').mouseButtons)
+        expect(a.touches).toEqual(getNavigationPreset('studio').touches)
+    })
+
+    it('the viewport hands camera-controls the copies, never the frozen preset', () => {
+        const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../components/StudioViewport.jsx'), 'utf8')
+        expect(source).not.toMatch(/mouseButtons=\{preset\.mouseButtons\}/)
+        expect(source).not.toMatch(/touches=\{preset\.touches\}/)
+        expect(source).toMatch(/mouseButtons=\{bindings\.mouseButtons\}/)
     })
 })

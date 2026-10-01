@@ -63,6 +63,7 @@ import { ENTRY_PENDING_ATTR } from './entryTransition/entryPlan.js'
 import { captureRendererFrame, FrameSource } from './entryTransition/EntryGlide.jsx'
 import { markArriveWalking } from './arriveWalking.js'
 import './liveProjectScene.css'
+import { rendererWithFallback } from '../project/viewport/rendererFallback.js'
 
 // The lamps' bodies (src/rigbuild/RigBodies.jsx): loaded only by a room that has a rig.
 const RigBodies = lazy(() => import('../rigbuild/RigBodies.jsx'))
@@ -1841,7 +1842,7 @@ export default function LiveProjectScene({
                 camera={{ position: [0, EYE_HEIGHT, 6], fov: interactive ? 60 : 45, near: 0.1, far: cameraFar }}
                 dpr={[renderSettings.dprMin ?? 1, Math.min(renderSettings.dprMax ?? 2, WALK_DPR_CEILING)]}
                 shadows={renderSettings.shadows !== false}
-                gl={{ antialias: renderSettings.antialias !== false }}
+                gl={rendererWithFallback({ antialias: renderSettings.antialias !== false })}
                 onCreated={({ gl }) => bindContextGuard(gl)}
                 style={{ position: 'absolute', inset: 0, display: 'block', touchAction: 'none' }}
             >
