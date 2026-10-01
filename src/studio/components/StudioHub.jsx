@@ -445,7 +445,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
     }
 
     return (
-        <Box className="studio-shell-root studio-hub-root">
+        <Box component="main" className="studio-shell-root studio-hub-root">
             <GridFloorBackground
                 opacity={0.25}
                 showNodes={false}

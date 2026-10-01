@@ -398,7 +398,7 @@ function LandingPageInner() {
     const showBackground = entered || flightArmed || (heroInView && !isSmallScreen)
 
     return (
-        <Box className={`lp-root${entered ? ' lp-root--inside' : ''}`} data-page="landing" ref={rootRef}>
+        <Box component="main" className={`lp-root${entered ? ' lp-root--inside' : ''}`} data-page="landing" ref={rootRef}>
 
             {/* ── NAV ──────────────────────────────────────────── */}
             {!entered && (

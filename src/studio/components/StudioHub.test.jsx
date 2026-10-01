@@ -245,6 +245,12 @@ describe('StudioHub', () => {
         })
     })
 
+    it('is the page main landmark (F4)', async () => {
+        listProjects.mockResolvedValue([])
+        render(<StudioHub spaceId="gallery" />)
+        expect(await screen.findByRole('main')).toBeTruthy()
+    })
+
     it('shows a create-first-project empty state when the space has no projects', async () => {
         listProjects.mockResolvedValue([])
 

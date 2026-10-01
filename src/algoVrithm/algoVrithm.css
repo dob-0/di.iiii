@@ -88,7 +88,7 @@
     font-size: 11px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--di-text-muted);
 }
 
 /* In the flow of the bar now, not floating over it. `flex-shrink: 0` is what
@@ -291,7 +291,7 @@
 }
 
 .algo-vrithm-stage-empty {
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--di-text-muted);
     background: rgba(5, 6, 15, 0.8);
     border-radius: 999px;
     padding: 6px 14px;
@@ -406,7 +406,7 @@
     letter-spacing: 0.02em;
     text-transform: none;
     line-height: 1.35;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--di-text-muted);
     white-space: normal;
 }
 
@@ -417,7 +417,7 @@
     font-size: 10px;
     letter-spacing: 0.02em;
     line-height: 1.35;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--di-text-muted);
     white-space: nowrap;
 }
 
