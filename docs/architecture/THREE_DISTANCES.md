@@ -52,6 +52,9 @@ repurposed. Second tier: `dev.diiii.xyz`.
 
 ## The sync door — design sketch
 
+> **Built since (2026-10-01):** the op-level, two-way part is `di invite` / `di follow` — see
+> `SPEC_follow.md` for what it guarantees (host-ordered convergence, saved state) and what is still owed.
+
 The missing piece is a space that lives in more than one place and reconciles
 when a connection exists. What is already true in the code shapes the design:
 

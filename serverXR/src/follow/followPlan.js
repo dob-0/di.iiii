@@ -26,6 +26,8 @@
  *      again.
  */
 
+const { CONVERGE_CLIENT } = require('./followConverge')
+
 /** How many ops we will carry in one direction per tick. */
 const BATCH = 200
 
@@ -54,8 +56,12 @@ const moreToCarry = (ops = [], seen = new Set()) => ops
     .filter(op => op && op.opId && !seen.has(op.opId) && !WHOLE_WORK_OPS.has(op.type))
     .length > BATCH
 
-/** Whether a batch contained a whole-work op we refused to carry. */
-const refusedWholeWork = (ops = []) => ops.some(op => WHOLE_WORK_OPS.has(op?.type))
+/**
+ * Whether a batch contained a whole-work op we refused to carry. The follower's
+ * own convergence write (followConverge.js) is a whole-work op too, but it is
+ * not someone replacing the room: it is this follower agreeing with the host.
+ */
+const refusedWholeWork = (ops = []) => ops.some(op => WHOLE_WORK_OPS.has(op?.type) && op?.clientId !== CONVERGE_CLIENT)
 
 /**
  * The next move for one direction.
