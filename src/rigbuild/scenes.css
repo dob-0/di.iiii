@@ -93,4 +93,5 @@
 .rigscenes-rows { display: grid; }
 .rigscenes .rigscenes-rowbtn { display: grid; grid-template-columns: 1fr auto; width: 100%; text-align: left; margin-top: -1px; min-height: 48px; align-items: center; gap: 8px; }
 
-.rigscenes-foot { position: sticky; bottom: 0; background: var(--sc-bg); border-top: 1px solid var(--sc-tx); padding: 8px 0; margin-top: 16px; z-index: 5; }
+.rigscenes-foot { position: sticky; bottom: 0; background: var(--sc-bg); border-top: 1px solid var(--sc-tx); padding: 8px 0 calc(8px + var(--di-mode-mark-clearance, 0px)); margin-top: 16px; z-index: 5; }
+/* The tier chip (ModeMark, bottom-left) is fixed above the page: the bar reserves its height so UNDO / RESTORE / MARK stay clear of it. */

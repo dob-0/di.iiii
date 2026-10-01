@@ -49,6 +49,7 @@ import { FIXTURE_DIR, readGeometry } from '../place/fixtures-glb.mjs'
 import { RIG_SHOW_ID } from '../../src/rigbuild/rental.js'
 import { findVersion, projectOf, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
 import { rigLooksFrom } from './looks.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const args = parseArgs()
 const readTokenFile = (file) => {
@@ -248,6 +249,6 @@ const main = async () => {
     else if (!args['no-mark-from']) await markFrom()
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => die(error.stack || error.message))
 }

@@ -43,6 +43,7 @@ import { venuePlanFromHall } from '../../src/rigbuild/venuePlan.js'
 import { layRun, trussSegments } from '../../src/rigbuild/plotGeometry.js'
 import { PIECES, TRUSS_SECTION_M, catalogueHeightOf } from '../../src/rigbuild/pieces.js'
 import { isWashEntityId } from '../../src/rigbuild/looks.js'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const args = parseArgs()
 // Baked meshes the live rig replaces, and the one it does not (see 3. above).
@@ -263,7 +264,7 @@ const main = async () => {
     say(`written; the project is at version ${version}`)
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => die(error.stack || error.message))
 }
 

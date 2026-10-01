@@ -39,6 +39,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { collectProjectAssetRefs } from './document-asset-refs.mjs'
+import { isMainModule } from './lib/isMainModule.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -202,6 +203,6 @@ const main = async () => {
     if (broken.length) process.exitCode = 1
 }
 
-if (process.argv[1] && import.meta.url === `file://${path.resolve(process.argv[1])}`) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => { console.error(error?.message || error); process.exit(2) })
 }

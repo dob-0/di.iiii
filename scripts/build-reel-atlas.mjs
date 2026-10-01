@@ -24,10 +24,11 @@ import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import sharp from 'sharp'
+import { fileURLToPath } from 'node:url'
 
-const ASSETS = new URL('../src/algoVrithm/assets/', import.meta.url).pathname
-const OUT = new URL('../src/algoVrithm/landing/reelAtlas.webp', import.meta.url).pathname
-const META = new URL('../src/algoVrithm/landing/reelAtlas.json', import.meta.url).pathname
+const ASSETS = fileURLToPath(new URL('../src/algoVrithm/assets/', import.meta.url))
+const OUT = fileURLToPath(new URL('../src/algoVrithm/landing/reelAtlas.webp', import.meta.url))
+const META = fileURLToPath(new URL('../src/algoVrithm/landing/reelAtlas.json', import.meta.url))
 
 // 9:16, matching the cells the globe cuts. Small on purpose: a frame is about
 // 1.4m wide on a 7m shell in the piece and a good deal smaller than that on the

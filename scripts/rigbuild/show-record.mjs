@@ -19,6 +19,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { parseArgs, die, say } from '../place/common.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const args = parseArgs()
 const PRIME_ENV = {
@@ -150,6 +151,6 @@ const main = async () => {
     }
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => die(error.stack || error.message))
 }

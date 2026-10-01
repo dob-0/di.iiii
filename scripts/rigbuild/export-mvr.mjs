@@ -22,6 +22,7 @@ import { gdtfArchive, gdtfFileName } from '../../src/rigbuild/gdtf.js'
 import { mvrScene } from '../../src/rigbuild/mvr.js'
 import { PIECES_GLB_DIR, cubeGlb } from './pieces-glb.mjs'
 import { loadLibrary } from './library.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const DATE = new Date(Date.UTC(2026, 8, 28))
 
@@ -75,6 +76,6 @@ const main = async () => {
     for (const why of scene.skipped) warn(`  skipped ${why}`)
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => die(error.stack || error.message))
 }
