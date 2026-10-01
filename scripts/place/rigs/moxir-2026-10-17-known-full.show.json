@@ -1,13 +1,17 @@
 {
   "project": "moxir-hall-known-full",
-  "why": "MOXIR Known · full — the cut. The stored loop was the Minimal's (its blade and hit were COB200 looks the room does not have, so they lit nothing). This is the same five cues, played by what the room has: the curtain of seven PL5403 under the cut is the blade and the hit, the centre curtain PAR alone is the shaft, and the Haze wall joins after the Red room. White is the PARs' own W emitter; red is R alone. No strobe channel (the PL5403's rates are untested): the hit is the cue's own 0 s cut in and out.",
+  "why": "MOXIR Known · full — the area, used smart (emily-41 spec 5). The stored loop was the Minimal's and lit nothing; this one plays what the room has: the press, the cut's blade, the 50 m vista behind the DJ, the red forest, the roof lantern as a light box, the haze wall, the crown, the hit and the fan hit. White is the PARs' own W emitter, red is R alone; no strobe channel (the PL5403's rates are untested), so the hits are the cue's own 0 s cut. Nothing moves on the truss; every B380F stands on the floor.",
   "loop": true,
   "cues": [
-    { "look": "k-one-shaft", "name": "Blackout + one shaft", "fade": 0, "hold": 12 },
+    { "look": "k-monolith", "name": "Monolith", "fade": 0, "hold": 12 },
     { "look": "k-blade", "name": "The blade", "fade": 4, "hold": 16 },
-    { "look": "gs-red-room", "name": "Red room", "fade": 5, "hold": 16 },
+    { "look": "k-vista", "name": "Vista", "fade": 6, "hold": 16 },
+    { "look": "gs-red-room", "name": "Red room", "fade": 5, "hold": 12 },
+    { "look": "k-forest", "name": "Forest", "fade": 5, "hold": 12 },
+    { "look": "k-lightbox", "name": "Light box", "fade": 6, "hold": 16 },
     { "look": "gs-haze-wall", "name": "Haze wall", "fade": 5, "hold": 10 },
-    { "look": "k-cathedral-x", "name": "White cathedral + the X", "fade": 2, "hold": 12 },
-    { "look": "k-hit", "name": "The hit", "fade": 0, "hold": 4 }
+    { "look": "k-crown", "name": "Crown", "fade": 3, "hold": 12 },
+    { "look": "k-hit", "name": "The hit", "fade": 0, "hold": 4 },
+    { "look": "k-fan-hit", "name": "Fan hit", "fade": 0, "hold": 4 }
   ]
 }

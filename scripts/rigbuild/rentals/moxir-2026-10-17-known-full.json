@@ -21,7 +21,7 @@
                 "stock": 18,
                 "rate": 20000,
                 "label": "380W beam moving head (outdoor)",
-                "source": "Price list!A6:E6 · version \"known-full\" of scripts/place/rigs/moxir-versions-2026-10-17.json (+1 spare)",
+                "source": "Price list!A6:E6 · version \"known-full\" of scripts/place/rigs/moxir-versions-2026-10-17.json",
                 "note": "the quote calculator's hidden \"Price data\" sheet says 19000/day"
             },
             {
