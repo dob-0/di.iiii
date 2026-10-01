@@ -42,6 +42,26 @@
 
 .homelink:hover { border-color: var(--accent); color: var(--accent); }
 .homelink:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Framed as the visualiser's desk half (app.js marks <html>): the ways out are the
+   visualiser's, and on a phone they took the whole pane. The page tabs stay. */
+.is-framed .topbar .homelink, .is-framed #fromTools { display: none !important; }
+/* …and in that pane the desk is a preview — fire a look, watch the room — so the
+   live-booth controls step aside: tempo, snap, Save scene and the scene Go (the full
+   desk is one link away). Blackout stays, one tap, but a button in the row, not the
+   full-width phone panic bar; the safety pills stay too. */
+.is-framed .topright .bpm, .is-framed #bpm, .is-framed #tapBtn, .is-framed #snap,
+.is-framed #saveNow, .is-framed #goBtn { display: none !important; }
+.is-framed .topbo { width: auto; }
+/* The page tabs step aside too (the pane is Touch); "Full desk ↗" is the door to the rest.
+   One row: ••• · Blackout · Full desk — the looks start under the cue bar. */
+.is-framed .topbar > nav.pages:not(#fromTools) { display: none !important; }
+.is-framed .topbar { flex-wrap: nowrap; }
+.is-framed .topright { flex-wrap: nowrap; padding: 4px 8px 4px 0; }
+.fulldesk { white-space: nowrap; }
+.is-framed .topbar .homelink.fulldesk { display: inline-flex !important; order: 9; margin-left: auto; }
+/* The performance strip (FX / Audio / Set / Master) is the full desk's: pinned to the
+   pane's bottom it covered the first row of looks. */
+.is-framed #liveStrip { display: none !important; }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }   /* beats the display rules below */
