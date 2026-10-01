@@ -211,3 +211,31 @@ describe('shadows for a room of many lamps', () => {
         expect(lamps.every((l) => l.castShadow === false)).toBe(true)
     })
 })
+
+// Seen 2026-10-01 (Chrome, ANGLE D3D11: 16 units): the cap must leave room for what each
+// lit material samples itself. A fixed reserve guessed how many maps a material carries;
+// a textured model with more would push the shader past the GPU's units and the room
+// goes black. The units are counted from the scene instead.
+describe('the shadow cap counts the units the materials use', () => {
+    const lamp = (name, intensity) => ({ ...spotLight(), name, intensity, angle: 0.3, uuid: name })
+    const tex = { isTexture: true }
+    it('gives the lamps only the units the busiest lit material leaves, one spare', () => {
+        const lamps = Array.from({ length: 20 }, (_, i) => lamp(`m${String(i).padStart(2, '0')}`, 10 + i))
+        const busy = mesh({ material: { map: tex, normalMap: tex, roughnessMap: tex, metalnessMap: tex, aoMap: tex, emissiveMap: tex } })
+        const root = { children: [busy, mesh(), ...lamps] }
+        dressForShadows(root, 1024, { maxLights: 12, maxTextures: 16 })
+        expect(lamps.filter((l) => l.castShadow).length).toBe(16 - 6 - 1)
+    })
+    it('counts the scene environment on a standard material, and another light\'s shadow', () => {
+        const lamps = Array.from({ length: 20 }, (_, i) => lamp(`e${String(i).padStart(2, '0')}`, 10 + i))
+        const sun = { isDirectionalLight: true, isLight: true, castShadow: true, children: [] }
+        const root = { environment: tex, children: [mesh({ material: { isMeshStandardMaterial: true, map: tex } }), sun, ...lamps] }
+        dressForShadows(root, 1024, { maxLights: 12, maxTextures: 14 })
+        expect(lamps.filter((l) => l.castShadow).length).toBe(14 - 2 - 1 - 1) // map + environment, the sun, one spare
+    })
+    it('still never gives more than the cap on a GPU with room to spare', () => {
+        const lamps = Array.from({ length: 20 }, (_, i) => lamp(`p${String(i).padStart(2, '0')}`, 10 + i))
+        dressForShadows({ children: [mesh(), ...lamps] }, 1024, { maxLights: 12, maxTextures: 32 })
+        expect(lamps.filter((l) => l.castShadow).length).toBe(12)
+    })
+})
