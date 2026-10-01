@@ -65,6 +65,9 @@ export const disposeObject3D = (root, { materialsOnly = false } = {}) => {
     })
 }
 
+// scripts/place/hall.py names its zone tape `hall-zone-<id>` (dance, stage, backstage …).
+export const isPlanningMarker = (name) => /^hall-zone-/.test(String(name || ''))
+
 export default function ModelObject({
     assetRef,
     data,
@@ -275,6 +278,10 @@ export default function ModelObject({
         // deep clone renders rigged models frozen in their bind pose.
         const clone = cloneSkeleton(loadedScene)
         clone.traverse((child) => {
+            // A hall's floor-tape zone outlines are a planning mark, self-lit at full colour: in a
+            // dark show room they were the brightest thing on screen and drowned every look
+            // (MOXIR, 2026-10-01). The 2D plot still draws the zones from the venue plan.
+            if (isPlanningMarker(child.name)) { child.visible = false; return }
             if (!child.isMesh) return
             let nextMaterial
             if (applyModelColor) {
