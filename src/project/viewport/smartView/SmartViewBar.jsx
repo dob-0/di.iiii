@@ -45,15 +45,23 @@ const visitorButton = (current) => ({
     background: current ? '#f5f7fa' : 'transparent'
 })
 
+// Below whatever the studio draws over the top of the pane: --svl-top-clear is the floating nav on desktop
+// (--sbar-h) or, on a phone / tablet, the measured bottom of the context bar (StudioViewportLayout); and
+// --svl-ctrl-row, set only there, drops the bar under the split-controls row instead of beside it. A bare
+// top:10 put the whole bar under the nav, where every click landed on the nav (2026-10-01).
+// maxWidth + scroll: seven buttons are wider than a 390px phone.
 const studioRow = {
     position: 'absolute',
-    top: 10,
+    top: 'calc(10px + var(--svl-top-clear, 0px) + var(--svl-ctrl-row, 0px))',
     left: '50%',
     transform: 'translateX(-50%)',
     display: 'flex',
     alignItems: 'center',
     gap: 4,
     zIndex: 10,
+    maxWidth: 'calc(100% - 16px)',
+    overflowX: 'auto',
+    scrollbarWidth: 'none',
     pointerEvents: 'auto'
 }
 
