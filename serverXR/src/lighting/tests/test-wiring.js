@@ -243,5 +243,19 @@ check('the Touch cue bar headline reads state.now, never "Nothing fired"', () =>
   if (!/now:\s*nowOnDesk\(\)/.test(server)) throw new Error('publicState no longer sends now');
 });
 
+// Regression guard (2026-10-01, MOXIR UI audit, P1 #5/#13 on the Control page): its cue
+// strip said "nothing fired" beside a look lit by hand, its loop was styled as GO, and the
+// empty scene-detail pane stayed when the Scenes list gave way.
+check('the Control page reads the one NOW, its loop is a toggle, the empty scene pane gives way', () => {
+  const paint = js.slice(js.indexOf('function paintCues()'), js.indexOf('async function pullCues'));
+  if (!/touchHeadline\(\)/.test(paint)) throw new Error('paintCues does not use the one NOW (touchHeadline)');
+  if (/classList\.toggle\('accent'/.test(paint)) throw new Error('#cueLoop still takes the accent (GO) fill');
+  if (!/class="[^"]*toggle[^"]*" id="cueLoop"|id="cueLoop"[^>]*class="[^"]*toggle/.test(html)) throw new Error('#cueLoop is not a .toggle');
+  // …and no top-row pane is hidden: the row is a fixed grid with its splitters as items, so
+  // hiding one shifts the rest into the wrong columns (Layers and Master drew blank).
+  const ctl = js.slice(js.indexOf('function paintControlScenes'), js.indexOf('function paintCues()'));
+  if (/#ctlSceneArea'\)\.hidden/.test(ctl)) throw new Error('the scene detail pane is hidden — that breaks the top-row grid');
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);

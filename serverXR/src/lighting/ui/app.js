@@ -6158,6 +6158,9 @@ function paintControlScenes() {
   const none = !S.scenes.length && (looksOf().length > 0 || !!(CUES && CUES.n));
   $('#ctlScenes').hidden = none;
   $('#ctlChase').hidden = none;
+  // The scene detail beside them stays: the top row is a fixed grid with its splitters as
+  // items, and hiding one pane shifted every later pane into the wrong column (Layers and
+  // Master drew blank — seen 2026-10-01).
   $('#ctlNoScenes').hidden = !none;
 }
 function paintCues() {
@@ -6166,13 +6169,15 @@ function paintCues() {
   const strip = $('#cueStrip');
   strip.hidden = !CUES || !CUES.n;
   if (strip.hidden) return;
-  const cue = CUES.index >= 0 ? (CUES.index + 1) + '/' + CUES.n + ' ' + (CUES.name || '') : 'nothing fired · ' + CUES.n + ' cues';
-  const clock = CUES.running ? (CUES.nextInMs != null ? 'next in ' + Math.ceil(CUES.nextInMs / 1000) + ' s' : 'waits for GO') : 'stopped';
+  // The same NOW the Touch bar reads (touchHeadline, from the desk's state.now): this strip
+  // said "nothing fired" beside a look lit by hand. The clock only while the list runs.
+  const clock = CUES.running ? ' · ' + (CUES.nextInMs != null ? 'next in ' + Math.ceil(CUES.nextInMs / 1000) + ' s' : 'waits for GO') : '';
   const missing = CUES.missing && CUES.missing.length ? ' · ' + CUES.missing.length + ' not on the desk' : '';
-  $('#cueWhere').textContent = cue + ' · ' + clock + missing;
+  $('#cueWhere').textContent = touchHeadline() + clock + missing;
+  // A switch, not an action: styled as the Touch bar's Loop (.toggle), never GO's fill.
   $('#cueLoop').setAttribute('aria-pressed', CUES.loop ? 'true' : 'false');
-  $('#cueLoop').textContent = CUES.loop ? 'loop on' : 'loop off';
-  $('#cueLoop').classList.toggle('accent', !!CUES.loop);
+  $('#cueLoop').classList.toggle('on', !!CUES.loop);
+  $('#cueLoop').title = 'Loop ' + (CUES.loop ? 'on' : 'off') + ' — after the last cue, cue 1 again';
   $('#cueStop').disabled = !CUES.running;
   $('#cueBack').disabled = CUES.index <= 0;
 }
