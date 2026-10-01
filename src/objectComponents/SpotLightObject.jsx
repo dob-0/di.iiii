@@ -92,6 +92,12 @@ export default function SpotLightObject({
     }, [showBeam, physical, throwShape.radius, throwShape.length])
     useEffect(() => () => beamGeometry?.dispose(), [beamGeometry])
 
+    // The lamp's steady intensity, for whoever ranks lamps by their light (shadowCasting.js
+    // shadowScore): a strobe flashes light.intensity per frame, this does not move.
+    useEffect(() => {
+        if (lightRef.current) lightRef.current.userData.nominalIntensity = intensity
+    }, [intensity, castsLight])
+
     useEffect(() => {
         const light = lightRef.current
         const target = targetRef.current
