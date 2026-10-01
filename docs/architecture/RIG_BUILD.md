@@ -1660,6 +1660,21 @@ floor; HK615, MH100S, MH8060S, BY06 not typed; the laser sign-off and the effect
 the crew's cable plan and cable covers along the nave wall; the far-crane and girder-underside difference
 between the committed and the built hall (`spec.hall` still points at the 09-28 layering).
 
+### 15.13 The bridle limit is checked on every built pick (`scripts/rigbuild/bridle-limit.test.js`, 2026-10-01)
+
+Found by the PONYO audit (2026-10-01), checked here with `pickGeometry`: `bridle.max_included_deg` (120°, Donovan,
+*Entertainment Rigging* 2002) was used ONCE, in `versions.mjs craneCut`, to derive the trim from the girder height of the hall
+in use then — the 09-28 guess, 8.15 m, which the versions file and the rig files still point at. The high pick (u 5.25 m,
+apex 7.56 m) sits at 119.1° there (legs 0.99 × the load). Against the measured 09-29 hall (girder underside 7.95 m) the clamps
+are 0.24 m above that apex: **144.4°, legs about 1.63 × the load** (geometry only; no hardware rating, no sign-off). The two other
+picks stay at 26–47°. Same for `minimal`, `minimal-cut-movers`, `minimal-ground` and `full-ground`.
+
+The test builds every bridled rig against (1) the hall it points at — must be within the limit — and (2) the measured hall —
+the violations must equal the recorded list, so a stale list fails in either direction — and (3) proves it can fail (a hall 0.2 m
+lower). It does not fix the rigs. **Owed to the owner, a human's work:** tape the girder underside on site, repoint `hall` in the
+versions file to the measured hall, re-derive the trims and bridles (`versions.mjs`), re-check the crane-clash rule for the lasers,
+then empty the recorded list. Repointing without re-deriving now fails (1).
+
 ### 15.13 One baked wash per look (`rig.mjs --wash-per-look`, 2026-09-30)
 
 **The defect (READ, the room-light audit §5).** The baked wash is ONE mesh, `rig-wash`, baked by
