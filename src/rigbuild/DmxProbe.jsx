@@ -16,6 +16,8 @@ export default function DmxProbe({ entities }) {
         const probe = visProbe()
         if (!probe) return
         probe.scene = state.scene // for a harness that must check what the renderer holds
+        probe.camera = state.camera // …and where the eye is (the view presets, SMART_VIEW.md)
+        probe.controls = state.controls // …and the hand that moves it (a harness sets a view: controls.setLookAt)
         probe.frame(latest.current)
     })
     return null
