@@ -6,6 +6,7 @@ import { buildStudioHubPath, buildStudioProjectPath } from '../studio/utils/stud
 import { buildRawProjectPath, buildRawProjectsPath } from '../raw/utils/rawRouting.js'
 import { buildMapPath } from '../map/mapRouting.js'
 import { useAllTools } from '../studio/utils/jamMode.js'
+import SyncLight from '../sync/SyncLight.jsx'
 
 /**
  * The one strip that is on every surface.
@@ -165,6 +166,11 @@ export default function SurfaceBar({
     // of the row spilling leftward over them.
     const [floor, setFloor] = useState(0)
     const [menuOpen, setMenuOpen] = useState(false)
+    // The sync light (src/sync): on only when this install follows the space or
+    // is followed by someone. On a phone it takes a second row, so everything
+    // under the bar clears the bar's REAL height while it is there.
+    const barRef = useRef(null)
+    const [syncShown, setSyncShown] = useState(false)
     const [menuTop, setMenuTop] = useState(0)
     const keys = destinations.map(d => d.key).join(' ')
 
@@ -199,6 +205,26 @@ export default function SurfaceBar({
         if (measureRef.current) observer.observe(measureRef.current)
         return () => observer.disconnect()
     }, [hidden, keys, measure])
+
+    useLayoutEffect(() => {
+        const bar = barRef.current
+        if (!syncShown || !bar || typeof window.matchMedia !== 'function') return undefined
+        const root = document.documentElement
+        const narrow = window.matchMedia('(max-width: 720px)')
+        const follow = () => {
+            if (narrow.matches) root.style.setProperty('--sbar-h', `${bar.offsetHeight}px`)
+            else root.style.removeProperty('--sbar-h')
+        }
+        follow()
+        narrow.addEventListener?.('change', follow)
+        const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(follow) : null
+        observer?.observe(bar)
+        return () => {
+            observer?.disconnect()
+            narrow.removeEventListener?.('change', follow)
+            root.style.removeProperty('--sbar-h')
+        }
+    }, [syncShown])
 
     // The menu closes on a choice, a tap anywhere else, Escape, or a resize.
     useEffect(() => {
@@ -244,7 +270,7 @@ export default function SurfaceBar({
     }
 
     return (
-        <nav className={`sbar${float ? ' sbar--float' : ''}`} aria-label="di.iiii">
+        <nav ref={barRef} className={`sbar${float ? ' sbar--float' : ''}${syncShown ? ' sbar--sync' : ''}`} aria-label="di.iiii">
             <a className="sbar-home" href="/spaces">di.iiii</a>
             {space && (
                 <>
@@ -278,6 +304,7 @@ export default function SurfaceBar({
                     </span>
                 </span>
             </div>
+            {space && <SyncLight space={space} onShown={setSyncShown} />}
             {menuOpen && overflow.length > 0 && typeof document !== 'undefined' && createPortal(
                 <div className="sbar-menu" style={{ top: menuTop }} role="menu" aria-label="More destinations">
                     {overflow.map(d => linkFor(d, 'sbar-link sbar-menu-link'))}

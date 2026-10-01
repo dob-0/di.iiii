@@ -120,6 +120,23 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_space_invites_space ON space_invites(space_id);
 
+  -- Join codes (serverXR/src/joinCodeStore.js): four words that stand in, for ten
+  -- minutes and once, for a per-space sync key. Only a hash of the words is kept —
+  -- never the words, and never a key: the key is minted at the moment of redeeming.
+  CREATE TABLE IF NOT EXISTS space_join_codes (
+    id TEXT PRIMARY KEY,
+    space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+    owner_user_id TEXT,
+    code_hash TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_at INTEGER,
+    revoked INTEGER NOT NULL DEFAULT 0,
+    key_id TEXT
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_join_codes_hash ON space_join_codes(code_hash);
+  CREATE INDEX IF NOT EXISTS idx_join_codes_space ON space_join_codes(space_id);
+
   CREATE TABLE IF NOT EXISTS space_links (
     space_id TEXT PRIMARY KEY REFERENCES spaces(id) ON DELETE CASCADE,
     owner TEXT NOT NULL,

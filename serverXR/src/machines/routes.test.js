@@ -122,6 +122,19 @@ describe('machine routes', () => {
         ])
     })
 
+    it('remembers which machine followed and when — but never on a guest\'s word', async () => {
+        // The host's sync light says "followed by ponyo". An anonymous visitor to a
+        // public space is an editor and may call /machines/sync, so it must not be
+        // able to make machines up.
+        const follower = await boot({ auth: { authenticated: true, type: 'sync-key', role: 'editor', subject: 'sync-key:k1', spaces: [SPACE] } })
+        await follower.call('POST', `/api/spaces/${SPACE}/machines/sync`, { machine: { id: 'f1', name: 'ponyo' }, peers: [] })
+        expect(follower.hub.followersOf(SPACE).map(one => [one.machineId, one.name])).toEqual([['f1', 'ponyo']])
+
+        const guest = await boot({ auth: { authenticated: true, type: 'guest', role: 'editor', subject: 'guest:abc', spaces: [SPACE] } })
+        await guest.call('POST', `/api/spaces/${SPACE}/machines/sync`, { machine: { id: 'made-up', name: 'liar' }, peers: [] })
+        expect(guest.hub.followersOf(SPACE)).toEqual([])
+    })
+
     it('says 404 for nobody, 413 for too much, 502 when the host is gone', async () => {
         const { hub, call } = await boot({ forward: async () => ({ status: 0, payload: null }) })
         await call('POST', `/api/spaces/${SPACE}/machines/hello`, { peerId: 'a' })

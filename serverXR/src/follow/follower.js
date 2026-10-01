@@ -205,7 +205,12 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     // with the room's, and both have nothing to do with the other machine's.
     const cursors = new Map(Object.entries(resume?.cursors || {}))
     let streams = [sceneStream(local.spaceId)]
-    let state = { status: 'starting', carriedIn: 0, carriedOut: 0, streams: 1, lastError: null, lastMoveAt: null, converged: 0, lastConvergeAt: null, resumed: Boolean(resume) }
+    let state = { status: 'starting', carriedIn: 0, carriedOut: 0, streams: 1, lastError: null, lastMoveAt: null, converged: 0, lastConvergeAt: null, convergedAt: [], resumed: Boolean(resume), hostAnswering: null, hostRefused: false, lastAnswerAt: null, latencyMs: null }
+    // What the interface's sync light reads (src/sync/syncLight.js). The host
+    // "answered" when a request to it came back at all, and "how fast" is the
+    // round trip of the small project-list read each tick makes — never a
+    // parked read, whose duration is the room's quiet and not the wire.
+    let answered = { at: null, latencyMs: null, down: false }
     // Per stream: has each side moved since the copies were last compared?
     // Copies can only disagree after BOTH sides edited (followConverge.js), so
     // a stream is compared once it is quiet again after both moved — and once
@@ -244,10 +249,17 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     /** The projects on both sides, so a project made on either appears on both. */
     const refreshStreams = async () => {
         const path = `/api/spaces/${encodeURIComponent(local.spaceId)}/projects`
+        const askedAt = Date.now()
         const [here, there] = await Promise.all([
             request(local.url(path), { token: local.token, servername: local.servername, address: local.address }),
             request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address })
+                .then((answer) => { answer.tookMs = Date.now() - askedAt; return answer })
         ])
+        // Any HTTP answer is the host being there; a 401/403 is a host that
+        // answers and refuses, which the next reads say in words. Only silence
+        // is "not answering".
+        if (there.status > 0) answered = { at: Date.now(), latencyMs: there.ok ? there.tookMs : answered.latencyMs, down: false }
+        else answered = { ...answered, down: true }
         const localProjects = projectIdsFrom(here.payload)
         const remoteProjects = projectIdsFrom(there.payload)
 
@@ -304,7 +316,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     }
 
     /** Carry one stream, both ways. */
-    const runStream = async (stream, { wait = false } = {}) => {
+    const runStream = async (stream, { wait = false, onPark = null } = {}) => {
         const cursor = cursorFor(stream)
 
         // OUR side first, always. A read parked on the other machine can be
@@ -315,6 +327,10 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         const ours = await readOps(local, stream, cursor.localVersion)
         const parkable = wait && ours.reachable && !unseen(ours.ops, seen).length
         parking = parkable ? new AbortController() : null
+        // About to sit on the host for up to twenty seconds: say what is true
+        // NOW (the projects are carried, the host just answered) rather than
+        // leaving the interface on "connecting" for the length of the wait.
+        if (parkable) onPark?.()
         const theirs = await readOps(remote, stream, cursor.remoteVersion, {
             waitSeconds: parkable ? WAIT_SECONDS : 0,
             signal: parking?.signal || null
@@ -325,7 +341,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // failure of the follow: it will exist on the next pass.
         if (!theirs.reachable) {
             if (theirs.status === 404) return { moved: false, skipped: true }
-            return { moved: false, failed: `the other di.iiii is not answering (${theirs.status || 'no route'})` }
+            return { moved: false, failed: `the other di.iiii is not answering (${theirs.status || 'no route'})`, hostDown: !theirs.status, hostRefused: theirs.status === 401 || theirs.status === 403 }
         }
         if (!ours.reachable) {
             if (ours.status === 404) return { moved: false, skipped: true }
@@ -391,6 +407,24 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         }
     }
 
+    /**
+     * The part of the state the sync light reads (hostAnswering, speed, status),
+     * published before a parked read as well as after the tick — so a quiet room
+     * is not "connecting" for twenty seconds, and a dead host is not "following"
+     * for twenty. Counters are NOT touched here; the end of the tick adds them.
+     */
+    const publishHealth = ({ failed, more, hostDown, hostRefused }) => {
+        state = {
+            ...state,
+            status: failed ? 'waiting' : (more ? 'catching up' : 'following'),
+            lastError: failed || state.lastError,
+            hostAnswering: !(hostDown || answered.down),
+            hostRefused,
+            lastAnswerAt: hostDown || answered.down ? state.lastAnswerAt : Date.now(),
+            latencyMs: answered.latencyMs
+        }
+    }
+
     const tick = async () => {
         await refreshStreams()
 
@@ -403,6 +437,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         let failed = null
         let converged = 0
         let convergeRefused = null
+        let hostDown = false
+        let hostRefused = false
 
         // The room's own log parks on the other side (that is what makes a
         // followed room feel like one room); the project logs are asked
@@ -416,7 +452,10 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             // projects, which never park, are already carried when we settle
             // into the wait.
             const willPark = index === ordered.length - 1
-            const result = await runStream(stream, { wait: willPark })
+            const result = await runStream(stream, {
+                wait: willPark,
+                onPark: () => publishHealth({ failed, more, hostDown, hostRefused })
+            })
             if (willPark) parked = true
             if (result.skipped) continue
             moved = moved || result.moved
@@ -425,6 +464,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             carriedIn += result.carriedIn || 0
             carriedOut += result.carriedOut || 0
             failed = failed || result.failed
+            hostDown = hostDown || Boolean(result.hostDown)
+            hostRefused = hostRefused || Boolean(result.hostRefused)
             if (result.converged) converged += 1
             convergeRefused = convergeRefused || result.convergeRefused || null
         }
@@ -446,7 +487,20 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             lastMoveAt: moved ? Date.now() : state.lastMoveAt,
             converged: state.converged + converged,
             lastConvergeAt: converged ? Date.now() : state.lastConvergeAt,
-            resumed: state.resumed
+            // When each clash happened (last 100), so the interface can say
+            // "clashes today" by ITS calendar day. Held in memory: a restart
+            // starts the count again, and the panel says "since this started".
+            convergedAt: converged
+                ? [...(state.convergedAt || []), ...Array(converged).fill(Date.now())].slice(-100)
+                : (state.convergedAt || []),
+            resumed: state.resumed,
+            // A parked read that came back is an answer too: it proves the
+            // host was there until a moment ago.
+            hostAnswering: !(hostDown || answered.down),
+            // Answered, and said no: a revoked or expired key. Not silence.
+            hostRefused,
+            lastAnswerAt: hostDown || answered.down ? state.lastAnswerAt : Date.now(),
+            latencyMs: answered.latencyMs
         }
         save()
         // Still behind: go round again at once. A capped batch that slept would
