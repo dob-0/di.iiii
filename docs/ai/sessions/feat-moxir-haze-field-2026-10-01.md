@@ -28,3 +28,8 @@
 - The mirror program never discards (a discard turned off early stencil: 27 fps against ~100 on the RTX 5060) and runs 6 samples.
 - Not in a headset yet (the XR layer has no stencil; the mirrors hide while presenting). Only in a room with bloom on (the half-float path).
 - Seen in headless Chrome on PONYO's RTX 5060 (the owner's own visualiser tab held the GPU at 89–96 %, so the 24–26 fps read then is contention, not this — reflections on and off read the same): Known · full, the-x / tunnel / white-cathedral, Floor and DJ views.
+
+## 2026-10-02 — the black square at the end of the DJ view
+
+- Owner: "fix the black square in dj view". It was the hall's 6 × 6 m entry gate (DJ camera at z 6.6, gate at z 54: 47 m, 74 px, matching the projection) showing the scene background, which three.js never fogs.
+- `src/project/viewport/NightOutside.jsx`: a dark box just around the building, found from the floor mesh, fog on, no bottom face, visible only while the camera is inside it. Mounted by RenderSettingsEffect in rooms with `atmosphere.haze` (opt-in like the rest). Seen on the RTX 5060: DJ view veiled, Top and Side views as before.
