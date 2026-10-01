@@ -28,5 +28,7 @@ describe('the hall\'s enclosure for the bounce', () => {
         expect(e.area_m2).toBe(700)
         expect(e.surface_m2).toBe(704) // every face, kept for the record
         expect(e.reflectance).toBeGreaterThan(0.2) // still the area-weighted mean of what is there
+        // the air the haze fills: the room's single-scattered glow takes τ = σ·4V/A (mean chord)
+        expect(e.volume_m3).toBe(1000)
     })
 })

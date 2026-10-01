@@ -6,3 +6,4 @@
 - Seen in Chrome on the RTX 5060, Known from the floor: White cathedral now lifts the whole hall (roof frame, columns, crane, press), while Blackout + one shaft stays nearly black. The bounce follows the look. The floor still reads near-black; that is the hall model's floor albedo (audit item I, a hall.py change for Emily to approve).
 - Not done (audit E, second half): a hemisphere or down-light in place of the ambient work light. worldState has no hemisphere light yet, so it is a schema change.
 - Tests: scripts/rigbuild/realism.test.js (new; red on the old code: 704 against 700 m²).
+- Later: `enclosureOf` also returns `volume_m3` (L·W·H of the same box), written to rigBounce, for the room's once-scattered haze glow (τ = σ·4V/A, emily-41's HazeGlow term). realism.test checks it (red on the old code).
