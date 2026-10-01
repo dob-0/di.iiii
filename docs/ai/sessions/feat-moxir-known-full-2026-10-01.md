@@ -1,0 +1,21 @@
+## 2026-10-01 — MOXIR "Known · full": every known fixture at stock on the cut, and new light forms for a real night
+
+- Owner and Gevorg on PONYO: "now lets use all knowns and make all possible stage design best light forms". Crane height approximate and strobe rates assumed for now ("we will correct in future"); charts for the rest come later.
+- New candidate `known-full` (candidateOf full) on the crane cut. Nothing that moves is hung:
+  - The cut carries statics only: 6 UP-PL5403 in the X, 4 on the bridge, and 2 fixed UP-LA40WF, held dark until the laser sign-off.
+  - The floor carries 17 UP-B380F: 7 behind the press and 10 at the nave column bases, plus 1 spare (18 of the 18 in stock).
+  - 32 UP-PL5403 go up the nave columns and 3 at the press, so 45 of the 50 PARs are used.
+  - 6 hazers and 4 smoke are kept off DMX (policy.dmx.offDmx).
+- Tried and dropped: 4 booth-flank beams (beam380-flank). The crane is parked over the booth at z 4.8 m, so a vertical beam there fires into it; the versions safety test caught it in every look.
+- 15 looks:
+  - From full-ground's ground scenes, re-mapped: par-columns-8 → par-columns (32), beam380-columns-6 → beam380-columns (10); the removed types drop out.
+  - New:
+    - **Doors**: dim amber column feet.
+    - **The X**: the X of PARs on the DJ, the column beams crossing high in an X. Steepened until no beam crosses the aisle below 2.5 m.
+    - **Tunnel**: column beams leaning 34° in, meeting in an arch high over the floor.
+    - **Green core**: MOXIR green up the columns and the press, a narrow white fan.
+    - **Amber dust**: amber columns and bridge, no beams.
+    - **Lights up**: warm white at full, the clean-out light.
+- The palette gains MOXIR green `#3c8244` (sampled from the announcement video), as one accent. This is why every generated rig file changes: they carry the palette.
+- ground-movers.test: known-full is a GROUND_SUBSETS entry and passes the ground-only policy in every look.
+- Validation: versions.test and ground-movers.test for known-full, 81 passed: hangs every fixture, nothing into the crane or through the DJ, every head within its travel, lasers ≥ 3 m and rising, ≤ 8 real lamps, mirror-symmetric, no mover beam in the eye zone.
