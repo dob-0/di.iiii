@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { WASH_BYTES_CAP, freedAssetOps, perLookWashEntity, perLookWashOps, sha256Hex, uploadsNeeded, washBudget, washRemovalLine } from './wash-plan.mjs'
+import { fileURLToPath } from 'node:url'
 
 // RIG_BUILD.md §15.13 — rig.mjs --wash-per-look, the plan it writes.
 const bytesOf = (text) => Buffer.from(text)
@@ -70,7 +71,7 @@ describe('the ground versions, baked per look (measured)', async () => {
     const { washGlb } = await import('./wash-glb.mjs')
     const { readGeometry } = await import('./fixtures-glb.mjs')
     const { washEntityId } = await import('../../src/rigbuild/looks.js')
-    const here = path.dirname(new URL(import.meta.url).pathname)
+    const here = path.dirname(fileURLToPath(import.meta.url))
     const manifest = JSON.parse(fs.readFileSync(path.join(here, 'fixtures', 'fixtures.json'), 'utf8'))
     const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
     const spec = JSON.parse(fs.readFileSync(path.join(here, 'rigs', 'moxir-versions-2026-10-17.json'), 'utf8'))

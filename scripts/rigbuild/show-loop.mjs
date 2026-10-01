@@ -42,6 +42,7 @@ import { deskLookId, rigLooksOf } from '../../src/rigbuild/looks.js'
 import { deskLooksWithValues } from '../../src/rigbuild/deskLookValues.js'
 import { libraryWithShow } from '../../src/rigbuild/rental.js'
 import { loadLibrary } from './library.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const args = parseArgs()
 
@@ -166,6 +167,6 @@ const main = async () => {
     say(`desk OUTPUT is ${summary.body?.output?.enabled ? 'ON — DMX is going out' : 'OFF — no Art-Net/sACN/DMX is sent'} (this script never changes it)`)
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => die(error.stack || error.message))
 }

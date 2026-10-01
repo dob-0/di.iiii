@@ -20,6 +20,7 @@ import { fixtureOps } from '../../src/rigbuild/plotEdits.js'
 import { typeById } from '../../src/rigbuild/fixtureTypes.js'
 import { libraryWithShow } from '../../src/rigbuild/rental.js'
 import { loadLibrary } from './library.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const args = parseArgs()
 
@@ -62,4 +63,4 @@ const main = async () => {
     say(`${ops.length} lamps ${args.back ? 'back on the maker\'s modes' : 'on their ASSUMED test modes'} (version ${write.body.newVersion ?? '?'})`)
 }
 
-if (process.argv[1] && new URL(import.meta.url).pathname === process.argv[1]) main().catch((e) => die(e.message))
+if (isMainModule(import.meta.url)) main().catch((e) => die(e.message))

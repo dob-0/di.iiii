@@ -58,7 +58,7 @@ const studioRow = {
 }
 
 // The same numbers as StudioViewport's TOOLBAR_BTN / TOOLBAR_BTN_ACTIVE_STRONG.
-// Rectangles, 0-2 px (golden rule); a 44 px target at phone width (`compact`). The toolbar's own 6 px corners are owed the same.
+// Rectangles, 0-2 px (golden rule); a 44 px target at phone width (`compact`).
 const studioButton = (current, compact = false) => ({
     display: 'inline-flex',
     alignItems: 'center',

@@ -1,15 +1,14 @@
 // @vitest-environment node
 
-import { spawn } from 'node:child_process'
 import { mkdtemp, mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import fs from 'node:fs'
-import net from 'node:net'
 import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { spawnServerUntilReady } from './testSupport/spawnServer.mjs'
 
 const require = createRequire(import.meta.url)
 const { createAuthSessionValue } = require('./authSession.js')
@@ -20,7 +19,7 @@ const { io: ioClient } = require('socket.io-client')
 // the behavior under test: with the suite running in parallel (or beside a
 // second suite -- how this was reproduced) a spawn + listen + first request
 // can cross 5s with nothing wrong. Two tests here failed exactly that way at
-// 5074ms and 5095ms. waitForHealth already allows 15s for the boot alone, so
+// 5074ms and 5095ms. spawnServerUntilReady already allows 15s for the boot alone, so
 // the per-test budget has to be larger than that or the health wait can never
 // finish. Hooks get more again: afterEach stops every server it started.
 vi.setConfig({ testTimeout: 25_000, hookTimeout: 40_000 })
@@ -30,43 +29,13 @@ const SERVER_ENTRY = path.join(SERVER_ROOT, 'src/index.js')
 
 const activeServers = []
 
-const getFreePort = async () => {
-    return new Promise((resolve, reject) => {
-        const server = net.createServer()
-        server.on('error', reject)
-        server.listen(0, '127.0.0.1', () => {
-            const address = server.address()
-            const port = typeof address === 'object' && address ? address.port : 0
-            server.close((error) => {
-                if (error) {
-                    reject(error)
-                    return
-                }
-                resolve(port)
-            })
-        })
-    })
-}
-
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
-const waitForHealth = async ({ url, child, getLogs }) => {
-    const deadline = Date.now() + 15000
-    while (Date.now() < deadline) {
-        if (child.exitCode !== null) {
-            throw new Error(`Server exited early.\n${getLogs()}`)
-        }
-        try {
-            const response = await fetch(url)
-            if (response.ok) {
-                return
-            }
-        } catch {
-            // retry until the deadline
-        }
-        await wait(200)
-    }
-    throw new Error(`Server did not become healthy in time.\n${getLogs()}`)
+// Yield until the wall clock has moved on by at least `ms`, without sleeping:
+// for tests that need "strictly later than" a timestamp the server just wrote.
+const untilClockAdvances = async (ms = 2) => {
+    const start = Date.now()
+    while (Date.now() < start + ms) await new Promise(resolve => setImmediate(resolve))
 }
 
 const startServer = async ({
@@ -85,7 +54,6 @@ const startServer = async ({
     const sandboxDataRoot = hiddenDataRoot
         ? await mkdtemp(path.join(os.tmpdir(), '.dii-hidden-data-'))
         : await mkdtemp(path.join(os.tmpdir(), 'dii-server-data-'))
-    const port = await getFreePort()
     const releaseFilePath = path.join(sandboxDataRoot, 'release.json')
 
     if (releaseManifest) {
@@ -94,7 +62,6 @@ const startServer = async ({
 
     const childEnv = {
         ...process.env,
-        PORT: String(port),
         NODE_ENV: nodeEnv,
         APP_BASE_PATH: appBasePath,
         DATA_ROOT: sandboxDataRoot,
@@ -118,19 +85,13 @@ const startServer = async ({
 
     childEnv.REQUIRE_AUTH = requireAuth === undefined ? '' : String(requireAuth)
 
-    const child = spawn(process.execPath, [SERVER_ENTRY], {
+    // Ready = the child's own listen line, with EADDRINUSE alone retried on a
+    // fresh port: see testSupport/spawnServer.mjs for why a health poll is not
+    // enough when contract files run in parallel.
+    const { child, port, logs: getLogs } = await spawnServerUntilReady({
+        entry: SERVER_ENTRY,
         cwd: sandboxCwd,
-        env: childEnv,
-        stdio: ['ignore', 'pipe', 'pipe']
-    })
-
-    let stdout = ''
-    let stderr = ''
-    child.stdout.on('data', (chunk) => {
-        stdout += chunk.toString()
-    })
-    child.stderr.on('data', (chunk) => {
-        stderr += chunk.toString()
+        env: childEnv
     })
 
     const baseUrl = `http://127.0.0.1:${port}${appBasePath || ''}`
@@ -150,17 +111,15 @@ const startServer = async ({
         await rm(sandboxDataRoot, { recursive: true, force: true })
     }
 
-    await waitForHealth({
-        url: `${baseUrl}/api/health`,
-        child,
-        getLogs: () => `STDOUT:\n${stdout}\nSTDERR:\n${stderr}`
-    })
+    // One request, no loop: proves the routes answer, not just the socket.
+    const health = await fetch(`${baseUrl}/api/health`)
+    if (!health.ok) throw new Error(`Health answered ${health.status}.\n${getLogs()}`)
 
     const handle = {
         baseUrl,
         dataRoot: sandboxDataRoot,
         apiToken,
-        logs: () => `STDOUT:\n${stdout}\nSTDERR:\n${stderr}`,
+        logs: getLogs,
         stop
     }
     activeServers.push(handle)
@@ -1166,7 +1125,7 @@ describe('server write contracts', () => {
         const guestState = await guest.json()
         const guestCookie = (guest.headers.get('set-cookie') || '').split(';')[0]
         await fetch(`${server.baseUrl}/api/spaces/${guestState.sandboxSpaceId}/scene`, { headers: { Cookie: guestCookie } })
-        await wait(20)
+        await untilClockAdvances()
 
         const purge = await fetch(`${server.baseUrl}/api/admin/sandboxes/purge`, {
             method: 'POST',
@@ -1207,7 +1166,7 @@ describe('server write contracts', () => {
             body: JSON.stringify({ objects: [{ id: 'archived-cube' }], assets: [] })
         })
         expect(write.status).toBe(200)
-        await wait(20)
+        await untilClockAdvances()
 
         // The sweep folds the sandbox down to a snapshot — the space row and
         // directory are gone…
@@ -1306,18 +1265,12 @@ describe('server write contracts', () => {
         })
         expect(vandalize.status).toBe(200)
 
-        // …then restore the latest snapshot (taken at boot; poll briefly in
-        // case the boot snapshot write is still in flight).
-        let restore
-        const deadline = Date.now() + 5000
-        for (;;) {
-            restore = await fetch(`${server.baseUrl}/api/spaces/open/restore-snapshot`, {
-                method: 'POST',
-                headers: withAuth(server.apiToken)
-            })
-            if (restore.status !== 404 || Date.now() > deadline) break
-            await wait(200)
-        }
+        // …then restore the latest snapshot. The boot snapshot is taken before
+        // the server listens, so it exists by the time startServer returns.
+        const restore = await fetch(`${server.baseUrl}/api/spaces/open/restore-snapshot`, {
+            method: 'POST',
+            headers: withAuth(server.apiToken)
+        })
         expect(restore.status).toBe(200)
         const restored = await restore.json()
         expect(restored.ok).toBe(true)
@@ -3845,18 +3798,33 @@ describe('space history: authors, restore points, notices', () => {
     const startFakeBot = async () => {
         const { createServer } = await import('node:http')
         const received = []
+        const watchers = []
+        // Resolves the moment a matching request has arrived -- an event, not a
+        // poll. The 15s bound only turns a notice that never comes into a
+        // failure with a message, instead of a silent test-timeout.
+        const waitFor = (predicate, label = 'notice') => new Promise((resolve, reject) => {
+            const hit = received.find(predicate)
+            if (hit) { resolve(hit); return }
+            const timer = setTimeout(() => reject(new Error(`No ${label} reached the bot in 15s.`)), 15000)
+            watchers.push({ predicate, resolve: (r) => { clearTimeout(timer); resolve(r) } })
+        })
         const bot = createServer((req, res) => {
             let body = ''
             req.on('data', (chunk) => { body += chunk })
             req.on('end', () => {
-                received.push({ path: req.url, headers: req.headers, body })
+                const entry = { path: req.url, headers: req.headers, body }
+                received.push(entry)
+                for (const w of watchers.splice(0)) {
+                    if (w.predicate(entry)) w.resolve(entry)
+                    else watchers.push(w)
+                }
                 res.writeHead(200, { 'Content-Type': 'application/json' })
                 res.end('{"ok":true}')
             })
         })
         await new Promise((resolve) => bot.listen(0, '127.0.0.1', resolve))
         const url = `http://127.0.0.1:${bot.address().port}`
-        return { url, received, close: () => new Promise((resolve) => bot.close(resolve)) }
+        return { url, received, waitFor, close: () => new Promise((resolve) => bot.close(resolve)) }
     }
 
     const sign = async (secret, body) => {
@@ -3889,9 +3857,11 @@ describe('space history: authors, restore points, notices', () => {
             // Someone else starts: Emilya's burst is over, and its notice goes.
             await postOps(server, spaceId, owner, [{ type: 'updateObject', payload: { objectId: 'owner-1', patch: {} } }])
 
-            const deadline = Date.now() + 10000
-            while (!bot.received.some((r) => r.body.includes(EDITOR)) && Date.now() < deadline) await wait(100)
-            await wait(500) // room for a second (wrong) notice to show up
+            // Wait for the notice itself. Had the burst split, an earlier
+            // "+1 image" notice would have been sent before this one and would
+            // sit in bot.received (or fail the summary text below); there is
+            // nothing to sleep for.
+            await bot.waitFor((r) => r.path === '/content-changed' && JSON.parse(r.body).actor?.subject === EDITOR, 'editor notice')
             // Only Emilya's: the API token that seeded the scene is another
             // non-owner author, and may get a notice of its own.
             const notices = bot.received.filter((r) => r.path === '/content-changed' && JSON.parse(r.body).actor?.subject === EDITOR)
@@ -3947,12 +3917,36 @@ describe('space history: authors, restore points, notices', () => {
         try {
             const server = await startServer({
                 requireAuth: true,
-                extraEnv: { APPROVAL_BOT_URL: bot.url, APPROVAL_SHARED_SECRET: secret, CONTENT_BURST_GAP_MS: '300' }
+                extraEnv: { APPROVAL_BOT_URL: bot.url, APPROVAL_SHARED_SECRET: secret, CONTENT_BURST_GAP_MS: '60000' }
             })
-            const { spaceId, editor } = await setupSpace(server)
+            const { spaceId, owner, editor } = await setupSpace(server)
             await postOps(server, spaceId, editor, [{ type: 'addObject', payload: { object: { id: 'e1' } } }])
-            await wait(1000)
-            expect(bot.received).toHaveLength(0)
+            // The owner starting to edit is what closes the editor's burst (as in
+            // the notices-on test); a timer gap this short would fire before the
+            // op row is written.
+            await postOps(server, spaceId, owner, [{ type: 'addObject', payload: { object: { id: 'o1' } } }])
+
+            // "Nothing arrives" cannot be awaited, so it is proved by a control
+            // instead of a sleep: a second server with notices ON makes the same
+            // edit, against the same bot, with the same 1ms gap, strictly after
+            // this one. When the control's notice has arrived, this server has had
+            // every chance its own would have -- and its space must be absent.
+            const control = await startServer({
+                requireAuth: true,
+                extraEnv: {
+                    CONTENT_CHANGE_NOTICES_ENABLED: 'true',
+                    APPROVAL_BOT_URL: bot.url,
+                    APPROVAL_SHARED_SECRET: 'control-secret',
+                    CONTENT_BURST_GAP_MS: '60000',
+                    SITE_ORIGIN: 'https://diiii.test'
+                }
+            })
+            const ctl = await setupSpace(control, 'control-space')
+            await postOps(control, ctl.spaceId, ctl.editor, [{ type: 'addObject', payload: { object: { id: 'c1' } } }])
+            await postOps(control, ctl.spaceId, ctl.owner, [{ type: 'addObject', payload: { object: { id: 'o1' } } }])
+            await bot.waitFor((r) => r.path === '/content-changed' && JSON.parse(r.body).space?.id === 'control-space', 'control notice')
+            expect(bot.received.filter((r) => JSON.parse(r.body).space?.id === spaceId)).toHaveLength(0)
+
             const body = JSON.stringify({ spaceId, snapshotId: '2026-09-16T10-00-00-000Z' })
             const { ts, sig } = await sign(secret, body)
             const undo = await fetch(`${server.baseUrl}/api/content-changes/undo`, {

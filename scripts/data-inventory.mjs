@@ -78,10 +78,10 @@ const local = localInventory();
 printEnv('LOCAL  (serverXR/data/di.db)', local);
 
 for (const [name, urlKey, tokKey] of [
-  ['DEV (dev.diiii.xyz)', 'LIVE_API_URL', 'LIVE_API_TOKEN'],
+  ['DEV (dev.diiii.xyz)', 'DEV_API_URL', 'DEV_API_TOKEN'],
   ['PRODUCTION (di-studio.xyz)', 'PROD_API_URL', 'PROD_API_TOKEN']
 ]) {
-  const base = env[urlKey], token = env[tokKey];
+  const base = env[urlKey] || (urlKey === 'DEV_API_URL' ? env.LIVE_API_URL : ''), token = env[tokKey] || (tokKey === 'DEV_API_TOKEN' ? env.LIVE_API_TOKEN : '');
   if (!base || !token) { console.log(`\n(skipping ${name}: missing ${urlKey}/${tokKey})`); continue; }
   try {
     printEnv(name, await remoteInventory(base, token));

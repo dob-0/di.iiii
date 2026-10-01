@@ -30,6 +30,7 @@ import path from 'node:path'
 
 import { parseArgs, die, say, readJson } from '../place/common.mjs'
 import { launchGpu, rendererOf, waitForCool } from './show-record.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -135,6 +136,6 @@ const main = async () => {
     fs.writeFileSync(path.join(out, `${tag}-frames.json`), `${JSON.stringify({ base, path: pagePath, project, doc: args['doc-file'] || 'live', size: [w, h], frames: record }, null, 2)}\n`)
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => die(error.stack || error.message))
 }

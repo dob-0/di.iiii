@@ -19,6 +19,7 @@ import { parseArgs, die, say, readJson } from '../place/common.mjs'
 import { makeClient } from '../place/api.mjs'
 import { normalizeRigLooks } from '../../src/shared/projectSchema.js'
 import { RIG_SHOW_ID } from '../../src/rigbuild/rental.js'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 // The rig script's mount rules (scripts/place/rig-lib.mjs `place`) → view C's positions.
 export const MOUNT_POSITION = {
@@ -102,6 +103,6 @@ const main = async () => {
 }
 
 const args = parseArgs()
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => die(error.stack || error.message))
 }

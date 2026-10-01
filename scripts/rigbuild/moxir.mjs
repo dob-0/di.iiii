@@ -35,6 +35,7 @@ import { typeById, typeIdOf } from '../../src/rigbuild/fixtureTypes.js'
 import { lensFromMount } from '../../src/rigbuild/lampGeometry.js'
 import { assignCircuits, patchCsv, powerCsv, renderSheetHtml, sheetModel } from '../../src/rigbuild/sheet.js'
 import { loadLibrary } from './library.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const require = createRequire(import.meta.url)
 const args = parseArgs()
@@ -175,6 +176,6 @@ const main = async () => {
     say(`  written to ${out}`)
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => die(error.stack || error.message))
 }

@@ -23,6 +23,7 @@ import { planPatch } from '../../src/rigbuild/patchPlan.js'
 import { assignCircuits } from '../../src/rigbuild/sheet.js'
 import { libraryWithShow } from '../../src/rigbuild/rental.js'
 import { loadLibrary } from './library.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const args = parseArgs()
 
@@ -79,4 +80,4 @@ const main = async () => {
     say(`${r.allOps.length} lamps written (version ${write.body.newVersion ?? '?'}). Next: node scripts/rigbuild/patch.mjs --project ${project} --exact`)
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) main().catch((e) => die(e.message))
+if (isMainModule(import.meta.url)) main().catch((e) => die(e.message))
