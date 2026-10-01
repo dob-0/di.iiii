@@ -79,3 +79,12 @@ describe('disposeObject3D (2026-07-16 audit fix: ModelObject GPU-resource leak)'
         expect(() => disposeObject3D(root)).not.toThrow()
     })
 })
+
+describe('planning markers', () => {
+    // MOXIR 2026-10-01: the hall's self-lit zone tape (hall.py `hall-zone-*`) drowned every look in the dark room.
+    it('hides a hall\'s zone tape and nothing else', async () => {
+        const { isPlanningMarker } = await import('./ModelObject.jsx')
+        expect(['hall-zone-dance', 'hall-zone-stage', 'hall-zone-backstage'].every(isPlanningMarker)).toBe(true)
+        expect(['hall-skylight', 'zone-dance', 'hall', '', undefined].some(isPlanningMarker)).toBe(false)
+    })
+})
