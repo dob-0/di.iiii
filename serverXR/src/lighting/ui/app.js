@@ -2196,22 +2196,33 @@ $('#touchLooks').addEventListener('click', async (e) => {
   pullState();
 });
 
+// The cue bar's headline, from the desk's one NOW (state.now) rather than the cue list alone:
+// a look fired by hand is on whatever the list says, and "Nothing fired" beside a lit look
+// was the lie. (MOXIR UI audit, 2026-10-01)
+function touchHeadline() {
+  const n = S && S.now;
+  if (!n) return S && 'now' in S ? `Nothing on · ${CUES.n} cues` : (CUES.index >= 0 ? `Cue ${CUES.index + 1}/${CUES.n} · ${CUES.name || ''}` : `${CUES.n} cues`);
+  const c = n.cue;
+  if (n.source === 'cue' && c) return `${n.name} · cue ${c.index + 1} of ${c.n} · ${c.running ? 'running' : 'stopped'}`;
+  if (!c) return `${n.name} · fired by hand`;
+  const at = c.index + 1 < c.n ? c.index + 2 : (c.loop ? 1 : 0);
+  return `${n.name} · fired by hand · ${at ? `GO resumes at cue ${at}` : 'end of the cue list'}`;
+}
 function paintTouchCues() {
   const bar = $('#tCueBar');
   bar.hidden = !CUES || !CUES.n;
   if (bar.hidden) return;
   const list = Array.isArray(CUES.list) ? CUES.list : [];
-  $('#tCueNow').textContent = CUES.index >= 0
-    ? `Cue ${CUES.index + 1}/${CUES.n} · ${CUES.name || ''}`
-    : `Nothing fired · ${CUES.n} cues`;
+  $('#tCueNow').textContent = touchHeadline();
   const ni = CUES.index + 1 < CUES.n ? CUES.index + 1 : (CUES.loop ? 0 : -1);
   const next = ni >= 0 && list[ni] ? `next ${ni + 1} ${list[ni].name}` : 'last cue';
   const clock = CUES.running ? (CUES.nextInMs != null ? 'auto in ' + Math.ceil(CUES.nextInMs / 1000) + ' s' : 'waits for GO') : 'stopped';
   const missing = CUES.missing && CUES.missing.length ? ' · ' + CUES.missing.length + ' not on the desk' : '';
   $('#tCueNext').textContent = `${next} · ${clock}${missing}`;
   $('#tCueLoop').setAttribute('aria-pressed', CUES.loop ? 'true' : 'false');
-  $('#tCueLoop').textContent = CUES.loop ? 'loop on' : 'loop off';
-  $('#tCueLoop').classList.toggle('accent', !!CUES.loop);
+  // A switch, not an action: the state is the outline (.toggle.on), the title keeps the word.
+  $('#tCueLoop').title = (CUES.loop ? 'Loop on' : 'Loop off') + ' — after the last cue, cue 1 again';
+  $('#tCueLoop').classList.toggle('on', !!CUES.loop);
   $('#tCueStop').disabled = !CUES.running;
   $('#tCueBack').disabled = CUES.index <= 0;
 }
@@ -4116,6 +4127,10 @@ function renderAll(busy) {
   const whose = S.show && S.show.space && window.deskShow ? window.deskShow.whose(S.show) + ' · ' : '';
   $('#showName').textContent = `— ${whose}${S.fixtures.length} fixtures · ${st.universes.length} universe${st.universes.length === 1 ? '' : 's'} · ${wire}`;
   paintShow(S.show);
+  // Go steps the desk's SCENES, so with none it would press and do nothing: hide it then.
+  // (MOXIR UI audit, 2026-10-01)
+  $('#goBtn').hidden = !S.scenes.length;
+  paintControlScenes();
 
   // A channel held on the Fader page overrides the fixtures everywhere, so a scene or a
   // colour fader can appear to do nothing. Say so on every page, not just the one that
@@ -5369,20 +5384,39 @@ $('#snap').addEventListener('change', (e) => {
   say(snapTo === 'off' ? 'presses land immediately' : `presses land on the next ${snapTo}`);
 });
 
-// tap tempo
+// Tap tempo maths, pure so test-tap.js can run it. A tempo needs at least 3 taps (2
+// intervals); a gap under 250 ms is a double tap and restarts the run, one over 3 s is a
+// pause and does too; a result at the input's ends (20 / 300) is a mistake to say, not a
+// tempo to save. (MOXIR UI audit, 2026-10-01: two taps 200 ms apart saved 300 BPM.)
+function tapTempo(timesMs) {
+  let run = [];
+  let tooFast = false;
+  for (const t of timesMs) {
+    const gap = run.length ? t - run[run.length - 1] : Infinity;
+    if (gap < 250) { tooFast = true; run = [t]; }
+    else if (gap > 3000) run = [t];
+    else run.push(t);
+  }
+  if (run.length < 3) {
+    return tooFast ? { reject: 'taps too close together — tap the beat again' } : { reject: 'keep tapping — a tempo needs 3 taps', quiet: true };
+  }
+  const bpm = Math.round(60000 / ((run[run.length - 1] - run[0]) / (run.length - 1)));
+  if (bpm >= 300 || bpm <= 20) return { reject: `${bpm} BPM is off the scale — not saved` };
+  return { bpm };
+}
 let taps = [];
 $('#tapBtn').addEventListener('click', () => {
   const now = Date.now();
-  taps = taps.filter((t) => now - t < 3000); taps.push(now);
+  taps.push(now); taps = taps.slice(-8);
   // A tap says two things and the desk only ever heard one of them: how fast, and WHERE.
   // The anchor goes with every tap, so the beat grid starts under the finger — that is
   // what makes a wave begin on the downbeat and a quantised press land in the track
   // rather than at the right speed in the wrong place.
   post('api/fx', { epoch: now });
-  if (taps.length > 1) {
-    $('#bpm').value = Math.round(60000 / ((taps[taps.length - 1] - taps[0]) / (taps.length - 1)));
-    $('#bpm').dispatchEvent(new Event('change'));
-  }
+  const t = tapTempo(taps);
+  if (t.reject) { if (!t.quiet) say(t.reject, true); return; }
+  $('#bpm').value = t.bpm;
+  $('#bpm').dispatchEvent(new Event('change'));
 });
 // One tempo for the desk. The chase and the effects both run off this field, so tapping a
 // tempo moves everything that is beat-driven rather than leaving the two silently at
@@ -6116,7 +6150,18 @@ setInterval(pullDmx, 100);
 /* =============== the cue list the desk plays (cuerun.js) =============== */
 // Any page may drive it; the desk alone keeps the time. This strip is one more driver:
 // GO, back, stop and the loop switch go to the same routes the cards page uses.
+// No desk scenes (a show of looks and cues): the Scenes and Chase panes are empty with three
+// primary buttons, so they give way to one muted line. A bare desk with nothing at all keeps
+// them: that is where the first scene is saved. (MOXIR UI audit, 2026-10-01)
+function paintControlScenes() {
+  if (!S || !Array.isArray(S.scenes)) return;
+  const none = !S.scenes.length && (looksOf().length > 0 || !!(CUES && CUES.n));
+  $('#ctlScenes').hidden = none;
+  $('#ctlChase').hidden = none;
+  $('#ctlNoScenes').hidden = !none;
+}
 function paintCues() {
+  paintControlScenes();
   paintTouchCues();
   const strip = $('#cueStrip');
   strip.hidden = !CUES || !CUES.n;

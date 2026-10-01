@@ -143,6 +143,10 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .sq:hover { border-color: var(--muted); }
 .sq.accent { background: var(--accent); color: #041012; border-color: var(--accent); font-weight: 600; }
 .sq.danger { color: var(--danger); }
+/* A switch, not an action: on reads as an accent outline with accent text, never the GO fill.
+   (MOXIR UI audit, 2026-10-01: "loop on" was filled like GO and read as a button to press.) */
+.toggle.on { background: transparent; border-color: var(--accent); color: var(--accent); }
+.noscenes { padding: 8px 12px; margin: 0; font-size: 12px; }
 
 /* ---------------- setup: top split ---------------- */
 /* minmax(0, 1fr): a bare 1fr keeps its content's min-width, which let the patch grid

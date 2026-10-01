@@ -187,5 +187,61 @@ check('Touch look tiles say when a look lights nothing here, and keep the hung-r
   if (!/lookHealth\(l\)\.dead/.test(build.slice(build.indexOf('const sig')))) throw new Error('the tile signature ignores health — a patch change would not repaint the tiles');
 });
 
+// Regression guard (2026-10-01, MOXIR UI audit): the top-bar Go steps the desk's SCENES and
+// silently did nothing on a show with none (looks + cues). It is hidden then, and says what it does.
+check('the top-bar Go says "Next scene" and is hidden when the show has no scenes', () => {
+  if (!/<button id="goBtn"[^>]*title="Step to the next desk scene"[^>]*>Next scene<\/button>/.test(html)) {
+    throw new Error('#goBtn is not labelled "Next scene" with the title "Step to the next desk scene"');
+  }
+  const render = js.slice(js.indexOf('function renderAll('));
+  if (!/\$\('#goBtn'\)\.hidden = !S\.scenes\.length/.test(render.slice(0, render.indexOf('\nfunction ', 10)))) {
+    throw new Error('renderAll does not hide #goBtn when S.scenes is empty');
+  }
+});
+
+// Regression guard (2026-10-01, MOXIR UI audit): "loop" wore the same filled accent as GO, so a
+// state read as an action. It is a toggle: aria-pressed, outline + accent text, never the fill.
+check('the Touch loop button is a toggle (aria-pressed, .toggle.on outline), not a GO-style fill', () => {
+  const tag = (html.match(/<button[^>]*id="tCueLoop"[^>]*>/) || [''])[0];
+  if (!tag) throw new Error('no #tCueLoop');
+  if (/class="[^"]*\b(go|accent)\b/.test(tag)) throw new Error('#tCueLoop carries the go/accent fill class');
+  if (!/class="[^"]*\btoggle\b/.test(tag)) throw new Error('#tCueLoop is not a .toggle');
+  const paint = js.slice(js.indexOf('function paintTouchCues'), js.indexOf('async function touchCue'));
+  if (!/\$\('#tCueLoop'\)\.setAttribute\('aria-pressed'/.test(paint)) throw new Error('paintTouchCues does not set aria-pressed on #tCueLoop');
+  if (/\$\('#tCueLoop'\)\.classList\.toggle\('accent'/.test(paint)) throw new Error('paintTouchCues still fills #tCueLoop with accent');
+  if (!/\$\('#tCueLoop'\)\.classList\.toggle\('on'/.test(paint)) throw new Error('paintTouchCues does not toggle .on');
+  const css = fs.readFileSync(path.join(ROOT, '../ui/style.css'), 'utf8');
+  const rule = (css.match(/\.toggle\.on\s*\{([^}]*)\}/) || [])[1];
+  if (!rule) throw new Error('style.css has no .toggle.on rule');
+  if (/background:\s*var\(--accent\)/.test(rule)) throw new Error('.toggle.on is filled with the accent');
+  if (!/border-color:\s*var\(--accent\)/.test(rule) || !/[^-]color:\s*var\(--accent\)/.test(rule)) throw new Error('.toggle.on is not an accent outline with accent text');
+});
+
+// Regression guard (2026-10-01, MOXIR UI audit): a looks+cues show with no desk scenes showed
+// empty Scenes and Chase panes with three cyan buttons. Both hide, with one muted line.
+check('a show with no desk scenes hides the Scenes and Chase panes and says where its looks are', () => {
+  for (const id of ['ctlScenes', 'ctlChase', 'ctlNoScenes']) {
+    if (!html.includes(`id="${id}"`)) throw new Error(`#${id} is not in the Control page`);
+    if (!js.includes(`'#${id}'`)) throw new Error(`app.js never reaches #${id}`);
+  }
+  if (!html.includes('No desk scenes in this show — looks and the cue list are on Touch.')) throw new Error('the muted line is missing or reworded');
+  const fn = js.slice(js.indexOf('function paintControlScenes'));
+  const body = fn.slice(0, fn.search(/\r?\n\}/));
+  if (!/S\.scenes\.length/.test(body) || !/\$\('#ctlScenes'\)\.hidden/.test(body) || !/\$\('#ctlChase'\)\.hidden/.test(body)) {
+    throw new Error('paintControlScenes does not hide both panes on an empty scene list');
+  }
+  if (!/paintControlScenes\(\)/.test(js.slice(js.indexOf('function paintCues')))) throw new Error('a cue list arriving does not repaint the Control panes');
+});
+
+// Regression guard (2026-10-01, MOXIR UI audit): the Touch cue bar said "Nothing fired" while a
+// look fired by hand was on. Its headline now reads the desk's one NOW (state.now).
+check('the Touch cue bar headline reads state.now, never "Nothing fired"', () => {
+  const paint = js.slice(js.indexOf('function paintTouchCues'), js.indexOf('async function touchCue'));
+  if (/Nothing fired/.test(paint)) throw new Error('paintTouchCues still says "Nothing fired"');
+  if (!/S\.now/.test(js.slice(js.indexOf('function touchHeadline'), js.indexOf('function paintTouchCues')))) throw new Error('touchHeadline does not read S.now');
+  if (!/touchHeadline\(\)/.test(paint)) throw new Error('paintTouchCues does not use touchHeadline');
+  if (!/now:\s*nowOnDesk\(\)/.test(server)) throw new Error('publicState no longer sends now');
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);

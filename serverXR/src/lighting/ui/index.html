@@ -60,7 +60,7 @@
   </div>
   <div class="topright">
     <button id="topBlackout" class="blackout topbo" title="Blackout (B) — reaches every page">Blackout</button>
-    <button id="goBtn" class="go">Go</button>
+    <button id="goBtn" class="go" title="Step to the next desk scene">Next scene</button>
     <div class="bpm"><span>BPM</span><div class="bpmbar"><i id="bpmBar"></i></div></div>
     <input type="number" id="bpm" class="bpmnum" value="120" min="20" max="300">
     <button id="tapBtn" class="tap" title="Tap tempo — each tap also says WHERE the beat is, so waves start on the downbeat">Tap</button>
@@ -272,6 +272,10 @@
           <button class="sq" id="cueLoop" aria-pressed="false" title="After the last cue, cue 1 again">loop off</button>
         </div>
       </div>
+      <!-- With no desk scenes (a show of looks and cues) the Scenes and Chase panes are empty
+           and three cyan buttons: they give way to one muted line (MOXIR UI audit, 2026-10-01). -->
+      <p class="muted noscenes" id="ctlNoScenes" hidden>No desk scenes in this show — looks and the cue list are on Touch.</p>
+      <div id="ctlScenes">
       <div class="pane-head"><h2>Scenes</h2></div>
       <div class="transport">
         <button class="sq" id="chasePause" title="Stop the chase">❚❚</button>
@@ -291,11 +295,14 @@
       <div class="inline pad">
         <input type="text" id="sceneName" placeholder="name the next save" maxlength="40">
       </div>
+      </div>
+      <div id="ctlChase">
       <div class="pane-head"><h2>Chase</h2><span class="muted" id="chaseCount"></span></div>
       <div class="railchase">
         <label>Hold <input type="number" id="chaseHold" min="0.05" step="0.1" value="2">s</label>
         <label>Fade <input type="number" id="chaseFade" min="0" step="0.1" value="0.8">s</label>
         <button class="sq accent" id="chaseToggle">Start</button>
+      </div>
       </div>
     </div>
 
@@ -599,7 +606,7 @@
           <button class="sq accent" id="tCueGo" title="Fire the next cue">GO</button>
           <button class="sq" id="tCueBack" title="Fire the cue before">back</button>
           <button class="sq" id="tCueStop" title="Stop the list — the look stays">stop</button>
-          <button class="sq" id="tCueLoop" aria-pressed="false" title="After the last cue, cue 1 again">loop off</button>
+          <button class="sq toggle" id="tCueLoop" aria-pressed="false" title="Loop off — after the last cue, cue 1 again">Loop</button>
         </div>
       </div>
       <!-- The desk's looks (what a project's cues fire): tap one to put it on the cue layer -->
