@@ -1,3 +1,5 @@
+import { registerEntityObject } from '../utils/entityObjectRegistry.js'
+import { runViewCommand } from '../utils/viewCommands.js'
 import { Suspense, createContext, lazy, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
@@ -261,6 +263,9 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, isPrimar
     const gizmoActive = isPrimary && editMode === 'edit' && gizmoVisible && !isLocked
     const snapping = useSnapModifier()
     useEntityPose(entity, groupRef, isDragging)
+
+    // Real extents for View Selected / View All (viewCommands.js).
+    useEffect(() => registerEntityObject(entity.id, groupRef.current), [entity.id, isVisible])
 
     // Attach TransformControls to the group
     useEffect(() => {
@@ -923,6 +928,54 @@ const TOOLBAR_BTN_ACTIVE_STRONG = {
     boxShadow: '0 0 8px rgba(79,214,255,0.35)'
 }
 
+// Every Blender numpad view command as a visible, labelled 44 px button, so a laptop
+// without a numpad (WCAG 2.1.1) and a touch screen (2.5.1) reach the same commands.
+const VIEW_BUTTONS = [
+    ['Front', 'View from the front (Numpad 1, Shift+1)', { kind: 'axis', axis: 'front', back: false }],
+    ['Back', 'View from the back (Ctrl+Numpad 1, Ctrl+Shift+1)', { kind: 'axis', axis: 'front', back: true }],
+    ['Right', 'View from the right (Numpad 3, Shift+3)', { kind: 'axis', axis: 'right', back: false }],
+    ['Left', 'View from the left (Ctrl+Numpad 3, Ctrl+Shift+3)', { kind: 'axis', axis: 'right', back: true }],
+    ['Top', 'View from the top (Numpad 7, Shift+7)', { kind: 'axis', axis: 'top', back: false }],
+    ['Bottom', 'View from the bottom (Ctrl+Numpad 7, Ctrl+Shift+7)', { kind: 'axis', axis: 'top', back: true }],
+    ['Frame', 'Frame the selection (F, Numpad .)', { kind: 'frame-selected' }],
+    ['All', 'Frame the whole room (Home)', { kind: 'frame-all' }]
+]
+
+function ViewCommandBar({ onCommand }) {
+    return (
+        <div
+            role="toolbar"
+            aria-label="View commands"
+            style={{
+                position: 'absolute',
+                bottom: 14 + 44 + 6,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: 4,
+                maxWidth: 'calc(100% - 20px)',
+                zIndex: 10,
+                pointerEvents: 'auto'
+            }}
+        >
+            {VIEW_BUTTONS.map(([label, title, command]) => (
+                <button
+                    key={label}
+                    type="button"
+                    title={title}
+                    aria-label={title}
+                    style={{ ...TOOLBAR_BTN, minHeight: 44, minWidth: 44, justifyContent: 'center' }}
+                    onClick={() => onCommand(command)}
+                >
+                    {label}
+                </button>
+            ))}
+        </div>
+    )
+}
+
 function ViewportToolbar({ editMode, setEditMode, gizmoMode, setGizmoMode }) {
     const btn = (label, isActive, onClick) => (
         <button
@@ -1140,6 +1193,15 @@ export default function StudioViewport({
                     setEditMode={setEditMode}
                     gizmoMode={gizmoMode}
                     setGizmoMode={setGizmoMode}
+                />
+            )}
+
+            {setEditMode && controlsRef && (
+                <ViewCommandBar
+                    onCommand={(command) => runViewCommand(controlsRef.current, command, {
+                        entities: document.entities || [],
+                        selectedEntities: (document.entities || []).filter((e) => (selectedEntityIds || []).includes(e.id))
+                    })}
                 />
             )}
 
