@@ -9,6 +9,11 @@
 // light at a degree off), so 0.6 — three's own default, made for 0..1 colour — washed
 // MOXIR's hall white. Seen on ponyo's RTX 5060 (Known · full, DJ view): 0.01 crisp,
 // 0.03 the lamps blooming into the haze as a camera shows them, 0.08 already milky.
+// And NOT a high threshold with a stronger glow (tried: strength 0.3, threshold 20 —
+// the far hall went milky): the beams sit thousands of times above any threshold that
+// keeps the walls out, so what passes is still a flood. A low strength with no effective
+// threshold IS a lens's point-spread: every pixel gives up a few percent, the walls
+// (near 1) visibly nothing, the beams a glow. Do not "fix" it back to 0.6.
 // `threshold` is in the screen's terms: light that the exposure takes past about white
 // starts to glow. Returns null when the room has no bloom.
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n))
