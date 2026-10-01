@@ -33,6 +33,7 @@ import { parseArgs } from 'node:util'
 import { randomUUID } from 'node:crypto'
 
 import { LOCAL_FEATURES, agree, verify } from './lib.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const MAX_BODY_BYTES = 64 * 1024
 const CUE_DEDUPE_MS = 60000
@@ -310,7 +311,7 @@ export const createMockMember = (opts = {}) => {
 
 const isMain = () => {
     try {
-        return import.meta.url === `file://${process.argv[1]}`
+        return isMainModule(import.meta.url)
     } catch {
         return false
     }

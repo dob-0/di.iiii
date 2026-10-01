@@ -24,6 +24,7 @@ import path from 'node:path'
 import { parseArgs, die, say } from '../place/common.mjs'
 import { makeClient } from '../place/api.mjs'
 import { showOf, showStateAt, showTimeline, showWords } from '../../src/rigbuild/showClock.js'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const PROD_HOSTS = /(^|\.)(diiii\.xyz|di-studio\.xyz)$/
 
@@ -101,6 +102,6 @@ const main = async () => {
     say(`${off ? 'show clock off' : 'show clock on'} — ${project} version ${wrote.body?.newVersion ?? '?'}`)
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => die(error.stack || error.message))
 }

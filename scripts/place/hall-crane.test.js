@@ -94,6 +94,36 @@ describe.skipIf(!hasPython)('crane_height.py on photo 007', () => {
     })
 })
 
+// The 2026-09-29 hall under the minimal rig (the one line hung from the crane over the DJ):
+// the measured bridge is 0.2 m lower than the v2 guess. The rig's trim (bottom chord 6 m) is
+// an absolute height, so the truss stays; the hoists, spreaders and chains follow the bridge.
+describe('the minimal rig under the measured crane (moxir-hall-2026-09-29-crane-dj.hall.json)', () => {
+    const read = (f) => JSON.parse(fs.readFileSync(path.join(rigs, f), 'utf8'))
+    const manifest = JSON.parse(fs.readFileSync(path.join(here, 'fixtures', 'fixtures.json'), 'utf8'))
+    const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+    const rig = read('moxir-2026-10-17-minimal.json')
+    const hall = read('moxir-hall-2026-09-29-crane-dj.hall.json')
+    const { entities } = buildRig(rig, hall, { geometry, manifest })
+    const byId = (id) => entities.find((e) => e.id === id).components.transform
+    const dj = hall.geometry.cranes.find((c) => Math.abs(c.z_m - 4.8) < 1e-6)
+
+    it('parks the DJ crane with the measured underside', () => {
+        expect(dj.girder_bottom_m).toBeCloseTo(7.95, 6)
+    })
+    it('keeps the truss where the rig file trims it, below the bridge with room for the hoists', () => {
+        const truss = byId('rig-truss-header').position
+        // #664 (the cut) replaced the flat 8 m line (trim 6 m) with a 15-degree slope: the entity sits at
+        // the rig's derived trim over the DJ's axis, not at a fixed 6 m
+        expect(Math.abs(truss[1] - rig.truss.trim_m)).toBeLessThan(0.1)
+        const top = truss[1] + rig.truss.section_m / 2
+        expect(dj.girder_bottom_m - top).toBeGreaterThan(1.5)               // bridle + hoist + chain
+        // the cut hangs each pick as a bridle (two legs to the girders) over a hoist chain: the legs
+        // follow the measured bridge, the chain has length left under the apex
+        expect(byId('rig-hoist-1-chain').scale[1]).toBeGreaterThan(0)
+        expect(byId('rig-hoist-3-bridle-a').position[1]).toBeLessThanOrEqual(dj.girder_bottom_m)
+    })
+})
+
 // The 2026-09-29 hall under the flat line hung from the crane over the DJ (Minimal's line when
 // this was written; since the cut, #664, Minimal is a sloped line and the flat 8 m line is Middle's):
 // the measured bridge is 0.2 m lower than the v2 guess. The rig's trim (bottom chord 6 m) is

@@ -6,6 +6,26 @@ session end; picked items become normal scoped tasks. Newest on top.
 
 ---
 
+## 2026-09-28 · first-run-owner-and-send-work
+**raw:** "yes and also what i tought we need to admin or 1st usage pswd where when you
+install it will create psd if you work local and want to keep files and workflow and after
+if needed push it to yours or new so think about that"
+**translation:** A fresh install should have an owner from its first minute, and local
+work should be able to leave the machine later. Three parts, in this order:
+(1) **first-run owner setup**: on first start with no owner, the server makes the first
+account the admin. It is claimed only from the machine itself (loopback) or with a
+one-time setup code printed in the server log, the pattern Jenkins, Grafana and Home
+Assistant use, so nobody on the same wifi can claim it first. It replaces today's
+`DI_LOCAL=1` "owner at the machine" shortcut (`serverXR/src/localOwner.js`) for any install
+reachable over a network. (2) **connect an identity later**: the owner links Google or
+GitHub through the sign-in hub (`docs/architecture/AUTH_HUB.md`) when online; the local
+password keeps working offline. (3) **send this space to…**: push a local space (files,
+workflow, history) to diiii.xyz, dev, or another di.iiii the owner has an account on,
+built on the existing bundle and tier-sync tools, not a new format.
+**route:** BAE (owner setup, account linking) → SEC review (setup code, loopback check) →
+BAE + SPE (send-to, op-log upstream) · **size:** M (1) / S (2) / L (3)
+**status:** parked. Start after the hub's dev rehearsal (#636), unless the owner says sooner.
+
 ## 2026-07-19 · sound-in-spaces
 **raw:** "i have idea: add sound to spaces"
 **translation:** Spaces are currently silent; give creators audio as a first-class

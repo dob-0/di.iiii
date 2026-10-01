@@ -22,6 +22,7 @@ import path from 'node:path'
 
 import { parseArgs, die, say, readJson, REPO_ROOT } from '../place/common.mjs'
 import { VERSIONS_FILE, RIGS_DIR, findVersion } from './versions.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 export const GROUND_VERSIONS = ['minimal-ground', 'full-ground']
 export const WHITE = '#eef3ff' // cold white — the set's white (the existing looks')
@@ -226,4 +227,4 @@ const main = () => {
     if (!stale.length) say('nothing to write')
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) main()
+if (isMainModule(import.meta.url)) main()

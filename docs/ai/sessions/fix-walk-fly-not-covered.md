@@ -1,6 +1,0 @@
-## 2026-09-30 — the version row no longer covers Walk / Fly
-
-- Owner: "where are the walk / fly". Cause: the row (RigVersionSwitch) is anchored top-left and Walk / Fly (and Sound) top-right on the same line; the layout assumed the row was short. With ten live versions the row was 2216 px wide (capped at the window width) and ran under Walk / Fly. Measured on the owner's install; the earlier screenshot of the cut version had no Walk / Fly for that reason.
-- `rigRowMaxWidth` (`rigVersionLayout.js`) says how wide the row may be given what sits on the right (Walk / Fly, Sound, both); `PublicProjectViewer.jsx` passes it, `RigVersionSwitch.jsx` applies it as `maxWidth`. The row keeps scrolling inside that width (edge fade already there). On a compact phone the row has its own line (`rigChromeTops`) and keeps the full width.
-- Tests: `rigVersionLayout.test.js` (6 new) and `RigVersionSwitch.test.jsx` (2 new); 59 pass with the change, 7 fail with only the three source files reverted.
-- Widths of Walk / Fly (about 7.7 rem) and Sound (about 6.5 rem) are read from their padding and font, not measured on a real screen: check that the row's end clears them at 1440, 1568 and 1920 px, with and without Sound. Not seen on a screen.

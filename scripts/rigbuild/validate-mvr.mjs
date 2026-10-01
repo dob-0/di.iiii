@@ -25,6 +25,7 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import JSZip from 'jszip'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 export const SCHEMAS = {
     commit: 'e199c6ed635de23cb5ebf9654ee54a358775a065',
@@ -157,6 +158,6 @@ const main = async () => {
     process.exit(result.ok ? 0 : 1)
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => { console.error(error.stack || error.message); process.exit(2) })
 }

@@ -28,7 +28,7 @@ describe('check-agent-docs on a Windows (CRLF) checkout', () => {
     git(ROOT, 'worktree', 'add', '--detach', tree, 'HEAD')
     // The checker must judge the committed files; carry this checkout's scripts over so
     // an uncommitted fix is what runs (in CI the two are the same commit).
-    for (const f of ['check-agent-docs.mjs', 'sync-agent-docs.mjs']) {
+    for (const f of ['check-agent-docs.mjs', 'sync-agent-docs.mjs', 'repo-state-lib.mjs']) {
       fs.copyFileSync(path.join(ROOT, 'scripts', f), path.join(tree, 'scripts', f))
     }
     const docs = git(tree, 'ls-files', '*.md', '*.mdc').split('\n').filter(Boolean)

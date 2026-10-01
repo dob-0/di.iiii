@@ -27,6 +27,7 @@ import { spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
 import { typeById, typeIdOf } from '../../src/rigbuild/fixtureTypes.js'
 import { loadLibrary } from './library.mjs'
 import { findVersion, RIGS_DIR, versionRig, VERSIONS_FILE } from './versions.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 export const ANALYSIS_FILE = 'scripts/place/rigs/moxir-ground-movers-2026-09-30.json'
 export const RIG_PREFIX = 'rig-'
@@ -249,6 +250,6 @@ const main = () => {
     say(`wrote ${ANALYSIS_FILE}`)
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isMainModule(import.meta.url)) {
     try { main() } catch (error) { die(error.stack || error.message) }
 }

@@ -182,7 +182,7 @@
     padding: 0 var(--di-space-3);
     background: var(--di-scrim-strong);
     border: 1px solid var(--di-cyan-line);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     color: var(--di-cyan);
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
@@ -200,7 +200,7 @@
     bottom: var(--di-space-3);
     padding: var(--di-space-1) var(--di-space-2);
     background: var(--di-scrim-strong);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     color: var(--di-cyan);
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
@@ -241,7 +241,7 @@
     min-height: 36px;
     padding: 0 var(--di-space-4);
     border: 1px solid var(--di-cyan-line);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     background: var(--di-cyan-wash);
     color: var(--di-cyan);
     font-size: var(--di-text-3);
@@ -277,7 +277,7 @@
     min-height: 24px;
     padding: 0 var(--di-space-2);
     border: 1px solid var(--kit-hairline);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     color: var(--kit-text-2);
     font-size: var(--di-text-2);
     text-decoration: none;

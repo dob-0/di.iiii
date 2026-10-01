@@ -35,6 +35,7 @@
  * Exit code 0 when it counted; 1 when the page could not be opened.
  */
 import { chromium } from 'playwright'
+import { isMainModule } from './lib/isMainModule.mjs'
 
 const arg = (name, fallback = null) => {
     const i = process.argv.indexOf(`--${name}`)
@@ -126,6 +127,6 @@ async function main() {
 
 // Imported for collectControls alone (a walk script can reuse it) — only a
 // direct run counts a page.
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainModule(import.meta.url)) {
     await main()
 }
