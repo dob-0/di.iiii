@@ -70,12 +70,18 @@
 .rigsteps-pick:focus-visible { outline: 2px solid var(--di-ink); outline-offset: -2px; }
 
 /* The whole row shown, "back" is only its arrow: the step it names is right beside it. */
-@media (min-width: 1681px) {
+@media (min-width: 1181px) {
     .rigsteps-back .rigsteps-wide { display: none; }
 }
 
-/* The whole row (8 steps + light desk, visualiser, scenes + next) needs about 1650 px; below that it folds to back · the step ▾ · next. */
+/* Under 1680 px the row keeps the tool NAMES and drops the progress text (it stays the link's tooltip and in the
+   folded menu): Emily could not find edit / visualise when they hid behind the fold. */
 @media (max-width: 1680px) {
+    .rigsteps-list .rigsteps-said { display: none; }
+}
+
+/* Below the fold the row is back · the step ▾ · next. */
+@media (max-width: 1180px) {
     .rigsteps-list { display: none; }
     .rigsteps-pick { display: inline-flex; margin: 0 auto; }
     .rigsteps-next { margin-left: 0; }
