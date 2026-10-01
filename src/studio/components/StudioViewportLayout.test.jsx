@@ -99,3 +99,46 @@ describe('StudioViewportLayout node-graph pane (dev-only preview)', () => {
         expect(screen.queryByTestId('camera-view')).not.toBeInTheDocument()
     })
 })
+
+// 2026-10-01 MOXIR show test: the pane's H / V / N / W split buttons sat at opacity 0 + pointer-events none
+// until the pane was hovered (so never on touch; elementFromPoint at their spot returned the canvas), and on
+// a phone / tablet the fixed .smb-topbar covered the pane's top edge. jsdom does no layout: the stylesheet
+// is read as text, and the measuring hook is driven with a faked bar rect.
+describe('StudioViewportLayout split controls stay reachable', () => {
+    it('stylesheet: the controls are visible and clickable at rest, not hover-only', async () => {
+        const fs = await import('node:fs')
+        const path = await import('node:path')
+        const { cwd } = await import('node:process')
+        const css = fs.readFileSync(path.join(cwd(), 'src/studio/styles/studio.css'), 'utf8')
+        const block = css.match(/\.svl-pane-controls\s*\{[^}]*\}/)?.[0] ?? ''
+        expect(block).not.toMatch(/opacity:\s*0\s*;/)
+        expect(block).not.toMatch(/pointer-events:\s*none/)
+        expect(css).toMatch(/\.svl-root\[data-stacked\]\s+\.svl-ctrl-btn\s*\{[^}]*min-height:\s*44px/)
+    })
+
+    it('sets --svl-top-clear from the phone context bar so the pane clears it', () => {
+        const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function () {
+            const bottom = this.classList?.contains('smb-topbar') ? 163 : 0
+            return { top: 0, bottom, left: 0, right: 390, width: 390, height: bottom, x: 0, y: 0 }
+        })
+        const { container } = render(
+            <>
+                <div className="smb-topbar" />
+                <StudioViewportLayout layout={singlePane} onSplit={vi.fn()} onClose={vi.fn()} onSetRatio={vi.fn()} shared={{}} />
+            </>
+        )
+        const root = container.querySelector('.svl-root')
+        expect(root.style.getPropertyValue('--svl-top-clear')).toBe('163px')
+        expect(root.dataset.stacked).toBe('true')
+        rect.mockRestore()
+    })
+
+    it('leaves the variable alone when there is no phone context bar (desktop)', () => {
+        const { container } = render(
+            <StudioViewportLayout layout={singlePane} onSplit={vi.fn()} onClose={vi.fn()} onSetRatio={vi.fn()} shared={{}} />
+        )
+        const root = container.querySelector('.svl-root')
+        expect(root.style.getPropertyValue('--svl-top-clear')).toBe('')
+        expect(root.dataset.stacked).toBeUndefined()
+    })
+})

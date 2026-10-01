@@ -15,7 +15,11 @@
     color: var(--sc-tx);
     font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
-.rigscenes-page { min-height: 100vh; }
+/* The page owns its scroll: html/body/#root are position:fixed (src/styles/base.css), so the document never
+   scrolls and a min-height page just overflowed a fixed viewport — on a phone the tiles sat below the fold
+   with nothing to scroll (2026-10-01 MOXIR show test). The sticky foot (UNDO / RESTORE / MARK) lives inside the
+   scroller, so it rests after the last row instead of over it; the page padding clears the corner badge. */
+.rigscenes-page { height: 100%; box-sizing: border-box; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; scroll-padding-bottom: 72px; padding-bottom: 44px; }
 .rigscenes-page h1 { font-size: 15px; margin: 12px 0 2px; font-weight: 600; letter-spacing: 0.06em; }
 .rigscenes-body { padding: 0 16px 24px; max-width: 1440px; margin: 0 auto; box-sizing: border-box; }
 .rigscenes h2 { font-size: 12px; margin: 12px 0 8px; color: var(--sc-dim); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 400; }
