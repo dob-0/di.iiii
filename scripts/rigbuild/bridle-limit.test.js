@@ -51,6 +51,8 @@ describe('bridle limit: included angle of every built pick', () => {
     it('finds the bridled rigs (so the guard is not an empty loop)', () => {
         expect(rigs.map((r) => r.file).sort()).toEqual([
             'moxir-2026-10-17-full-ground.json',
+            'moxir-2026-10-17-known-full.json',
+            'moxir-2026-10-17-known-ground.json',
             'moxir-2026-10-17-minimal-cut-movers.json',
             'moxir-2026-10-17-minimal-ground.json',
             'moxir-2026-10-17-minimal.json'
