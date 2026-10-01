@@ -1,5 +1,5 @@
-import { Suspense, useMemo } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { Suspense, useEffect, useMemo } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import FixtureBodies from './FixtureBodies.jsx'
 import RigFlashes from './RigFlashes.jsx'
@@ -8,6 +8,9 @@ import { TYPE_LIBRARY } from './types/index.js'
 import { libraryWithShow } from './rental.js'
 import { rigBodyLamps } from './rigBodyLamps.js'
 import { bounceOf, bounceSpecOf } from './rigBounce.js'
+import { typeById } from './fixtureTypes.js'
+import { hazeMachinesOf } from '../objectComponents/hazeField.js'
+import { setHazeMachines } from '../objectComponents/atmosphereStore.js'
 
 // THE LAMPS' BODIES IN ANY ROOM — the space view (LiveProjectScene), the Studio and the
 // rooms beside the plot and the cards (StudioViewport). RIG_BUILD.md §12.4.
@@ -37,10 +40,26 @@ export default function RigBodies({ entities, library = TYPE_LIBRARY }) {
             <RigFlashes entities={entities} />
             {/* the visualiser's stopwatch: idle unless a page asked (visProbe.js) */}
             <DmxProbe entities={entities} />
+            {/* the hazers and fog machines, for the room's haze field (hazeField.js) */}
+            <HazeMachines entities={entities} library={shownLibrary} />
             {bounce ? <ambientLight color={bounce.color} intensity={bounce.intensity} /> : null}
             {bounce ? <HazeGlow bounce={bounce} /> : null}
         </>
     )
+}
+
+// The room's hazers and fog machines handed to the beams' haze (atmosphereStore.js):
+// where each stands, which way it blows and how much fluid it turns into haze. They are
+// the rig's own entities (the off-DMX effects of the Known versions), typed by the same
+// library the bodies are — no second list of machines.
+function HazeMachines({ entities, library }) {
+    const { gl } = useThree()
+    const machines = useMemo(() => hazeMachinesOf(entities, (id) => typeById(library, id)), [entities, library])
+    useEffect(() => {
+        setHazeMachines(gl, machines)
+    }, [gl, machines])
+    useEffect(() => () => setHazeMachines(gl, []), [gl])
+    return null
 }
 
 // The haze between the viewer and the far hall is lit by the same return: the room's

@@ -56,15 +56,22 @@ export const BEAM_AIR_SAMPLES = 12
 export const HULL_BASE = 1.2
 export const HULL_SLOPE = 0.12
 
-/** The haze's optics from `renderSettings.atmosphere`, or null (the old cone). */
+/**
+ * The haze's optics from `renderSettings.atmosphere`, or null (the old cone). `haze`
+ * (hazeField.js hazeSettingsOf) is passed through: a room that works its haze out from
+ * its machines. Such a room needs no hand-set scattering — the 0.03 kept here is only
+ * what a beam draws with before the machines have arrived.
+ */
 export const atmosphereOf = (renderSettings) => {
     const a = renderSettings?.atmosphere
     if (!a || typeof a !== 'object') return null
+    const haze = a.haze && typeof a.haze === 'object' ? a.haze : null
     const scattering = Number(a.scattering)
-    if (!(scattering > 0)) return null
+    if (!(scattering > 0) && !haze) return null
     return {
-        scattering: clamp(scattering, 0, 1),
-        anisotropy: clamp(finite(a.anisotropy, 0.7), -0.95, 0.95)
+        scattering: scattering > 0 ? clamp(scattering, 0, 1) : 0.03,
+        anisotropy: clamp(finite(a.anisotropy, 0.7), -0.95, 0.95),
+        haze
     }
 }
 
@@ -153,8 +160,11 @@ export const beamChord = (ro, rd, { aperture: a, tanHalf: t, length: L }) => {
  * The radiance the beam adds along one view ray — the shader's sum, in JS.
  * Returns cd/m² in the scene's units (the lamp's `intensity` × the same factors),
  * before the lamp's colour and the camera's exposure.
+ * `sigmaAt(p)` — the haze's scattering at a point of the beam's frame (a haze field,
+ * hazeField.js); absent, the haze is `scattering` everywhere. The transmittance uses
+ * `scattering` (the hall's well-mixed haze) either way, as the shader does.
  */
-export const beamAirRadiance = (ro, rd, { candela, aperture = DEFAULT_APERTURE, tanHalf, length, edge = 0.2, scattering, anisotropy, samples = BEAM_AIR_SAMPLES }) => {
+export const beamAirRadiance = (ro, rd, { candela, aperture = DEFAULT_APERTURE, tanHalf, length, edge = 0.2, scattering, anisotropy, samples = BEAM_AIR_SAMPLES, sigmaAt = null }) => {
     const chord = beamChord(ro, rd, { aperture, tanHalf, length })
     if (!chord) return 0
     const [la, lb] = chord
@@ -173,7 +183,8 @@ export const beamAirRadiance = (ro, rd, { candela, aperture = DEFAULT_APERTURE, 
         const wl = Math.hypot(...wi) || 1
         const cosTheta = -(wi[0] * rd[0] + wi[1] * rd[1] + wi[2] * rd[2]) / wl
         const T = Math.exp(-scattering * (s + lam))
-        sum += beamIlluminance(candela, s, aperture, tanHalf) * profile * hgPhase(cosTheta, anisotropy) * T
+        const sigma = sigmaAt ? sigmaAt(p) : scattering
+        sum += sigma * beamIlluminance(candela, s, aperture, tanHalf) * profile * hgPhase(cosTheta, anisotropy) * T
     }
-    return scattering * sum * dl
+    return sum * dl
 }

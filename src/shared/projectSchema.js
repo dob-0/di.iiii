@@ -1216,14 +1216,61 @@ const RENDER_TONE_MAPPINGS = new Set(['ACESFilmic', 'AgX', 'Neutral', 'none'])
 // Present, the renderer draws every visible beam physically (src/objectComponents/
 // beamAir.js); absent — every room made before it — the old flat cones. Stored only
 // when it holds a haze, so a document without one reads back byte for byte.
+// THE HAZE WORKED OUT FROM THE ROOM'S MACHINES (2026-10-01, src/objectComponents/
+// hazeField.js): the hall (volume, air changes an hour), each hazer's or fog machine's
+// level as it is run by hand (by entity id, or per kind), minutes since they were
+// switched on (absent: steady state), and how uneven and how drifting the haze is.
+// Plain numbers, clamped; anything else is dropped.
+const HAZE_LEVEL_KINDS = new Set(['hazer', 'smoke-machine'])
+const unitLevel = (value) => {
+    const n = Number(value)
+    return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : null
+}
+const normalizeHaze = (haze) => {
+    if (!haze || typeof haze !== 'object' || Array.isArray(haze)) return null
+    const out = {}
+    const volume = Number(haze.volume_m3)
+    if (volume > 0) out.volume_m3 = Math.min(volume, 1e7)
+    const ach = Number(haze.airChangesPerHour)
+    if (ach > 0) out.airChangesPerHour = Math.min(ach, 120)
+    if (haze.levels && typeof haze.levels === 'object' && !Array.isArray(haze.levels)) {
+        const levels = {}
+        for (const [id, value] of Object.entries(haze.levels)) {
+            const level = unitLevel(value)
+            if (level != null && typeof id === 'string' && id.length <= 200) levels[id] = level
+        }
+        out.levels = levels
+    }
+    if (haze.kindLevels && typeof haze.kindLevels === 'object' && !Array.isArray(haze.kindLevels)) {
+        const kindLevels = {}
+        for (const [kind, value] of Object.entries(haze.kindLevels)) {
+            const level = unitLevel(value)
+            if (level != null && HAZE_LEVEL_KINDS.has(kind)) kindLevels[kind] = level
+        }
+        out.kindLevels = kindLevels
+    }
+    const minutes = Number(haze.minutes)
+    if (haze.minutes != null && Number.isFinite(minutes) && minutes >= 0) out.minutes = minutes
+    const patchiness = unitLevel(haze.patchiness)
+    if (patchiness != null) out.patchiness = patchiness
+    if (Array.isArray(haze.drift) && haze.drift.length === 3 && haze.drift.every((v) => Number.isFinite(Number(v)))) {
+        out.drift = haze.drift.map((v) => Math.min(5, Math.max(-5, Number(v))))
+    }
+    return out
+}
+
 const normalizeAtmosphere = (atmosphere) => {
     if (!atmosphere || typeof atmosphere !== 'object') return null
     const scattering = Number(atmosphere.scattering)
-    if (!(scattering > 0)) return null
+    const haze = normalizeHaze(atmosphere.haze)
+    if (!(scattering > 0) && !haze) return null
     const anisotropy = Number(atmosphere.anisotropy)
     return {
-        scattering: Math.min(1, scattering),
-        anisotropy: Number.isFinite(anisotropy) ? Math.min(0.95, Math.max(-0.95, anisotropy)) : 0.7
+        // a room whose haze comes from its machines may leave scattering out: 0.03 is only
+        // what a beam draws with before the machines have arrived (beamAir.js atmosphereOf)
+        scattering: scattering > 0 ? Math.min(1, scattering) : 0.03,
+        anisotropy: Number.isFinite(anisotropy) ? Math.min(0.95, Math.max(-0.95, anisotropy)) : 0.7,
+        ...(haze ? { haze } : {})
     }
 }
 

@@ -95,8 +95,11 @@ describe('atmosphereOf', () => {
         expect(atmosphereOf(null)).toBeNull()
     })
     it('reads scattering and anisotropy, clamped', () => {
-        expect(atmosphereOf({ atmosphere: { scattering: 0.04, anisotropy: 0.7 } })).toEqual({ scattering: 0.04, anisotropy: 0.7 })
-        expect(atmosphereOf({ atmosphere: { scattering: 5, anisotropy: 2 } })).toEqual({ scattering: 1, anisotropy: 0.95 })
+        expect(atmosphereOf({ atmosphere: { scattering: 0.04, anisotropy: 0.7 } })).toEqual({ scattering: 0.04, anisotropy: 0.7, haze: null })
+        expect(atmosphereOf({ atmosphere: { scattering: 5, anisotropy: 2 } })).toEqual({ scattering: 1, anisotropy: 0.95, haze: null })
+    })
+    it('a room that works its haze out from its machines needs no hand-set scattering', () => {
+        expect(atmosphereOf({ atmosphere: { haze: { volume_m3: 9000 } } })).toEqual({ scattering: 0.03, anisotropy: 0.7, haze: { volume_m3: 9000 } })
         expect(atmosphereOf({ atmosphere: { scattering: 0.02 } }).anisotropy).toBe(0.7)
     })
 })

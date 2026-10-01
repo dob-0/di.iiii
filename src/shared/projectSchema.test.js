@@ -849,3 +849,45 @@ describe('mappingState.lightPool survives normalization (review A5-1)', () => {
         expect(normalizeProjectDocument({ mappingState: { lightPool: {} } }).mappingState).not.toHaveProperty('lightPool')
     })
 })
+
+describe('renderSettings.atmosphere.haze — the haze worked out from the machines', () => {
+    it('keeps the hall, the levels and the drift, clamped; drops the rest', () => {
+        const doc = normalizeProjectDocument({
+            renderSettings: {
+                atmosphere: {
+                    scattering: 0.05,
+                    anisotropy: 0.7,
+                    haze: {
+                        volume_m3: 12000,
+                        airChangesPerHour: 6,
+                        levels: { 'rig-hazer-back-01': 1.5, 'rig-smoke-01': 0.5, bad: 'x' },
+                        kindLevels: { hazer: 0.6, 'smoke-machine': -1, laser: 1 },
+                        patchiness: 0.35,
+                        drift: [0.15, 9, 0.05],
+                        junk: 1
+                    }
+                }
+            }
+        })
+        expect(doc.renderSettings.atmosphere).toEqual({
+            scattering: 0.05,
+            anisotropy: 0.7,
+            haze: {
+                volume_m3: 12000,
+                airChangesPerHour: 6,
+                levels: { 'rig-hazer-back-01': 1, 'rig-smoke-01': 0.5 },
+                kindLevels: { hazer: 0.6, 'smoke-machine': 0 },
+                patchiness: 0.35,
+                drift: [0.15, 5, 0.05]
+            }
+        })
+    })
+    it('a haze with no hand-set scattering is still a haze', () => {
+        const doc = normalizeProjectDocument({ renderSettings: { atmosphere: { haze: {} } } })
+        expect(doc.renderSettings.atmosphere).toEqual({ scattering: 0.03, anisotropy: 0.7, haze: {} })
+    })
+    it('a room without one reads back as before', () => {
+        expect(normalizeProjectDocument({ renderSettings: { atmosphere: { scattering: 0.05 } } }).renderSettings.atmosphere).toEqual({ scattering: 0.05, anisotropy: 0.7 })
+        expect(normalizeProjectDocument({ renderSettings: {} }).renderSettings).not.toHaveProperty('atmosphere')
+    })
+})

@@ -252,6 +252,10 @@ export const typesFromManifest = (manifest, { manifestFile = 'scripts/place/fixt
             pan_tilt_deg: sourced(kind.specs?.pan_tilt_deg),
             ip: sourced(kind.specs?.ip),
             optics: opticsOf(kind),
+            // A hazer's or fog machine's output, what the room's haze is worked out from
+            // (src/objectComponents/hazeField.js). Null on every lamp.
+            fluid_ml_per_min: sourced(kind.specs?.fluid_ml_per_min),
+            nozzle_d_mm: Number(kind.model?.params?.nozzle_d_mm) > 0 ? Number(kind.model.params.nozzle_d_mm) : null,
             model3d: {
                 glb: `${glbDir}/${kindKey}.glb`,
                 sidecar: `${glbDir}/${kindKey}.json`,

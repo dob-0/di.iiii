@@ -7,6 +7,7 @@ import { strobeEnvelope } from '../rigbuild/rigFlash.js'
 import { DEFAULT_APERTURE } from './beamAir.js'
 import { beamAirBeforeRender, beamAirGeometry, createBeamAirMaterial, setBeamAirUniforms } from './beamAirMaterial.js'
 import { useAtmosphere } from './atmosphereStore.js'
+import { hazeUniformsFor } from './hazeUniforms.js'
 
 // A spot light that actually points where the entity is turned.
 //
@@ -131,6 +132,7 @@ export default function SpotLightObject({
             ) : null}
             {physical ? (
                 <BeamInAir
+                    gl={gl}
                     color={color}
                     intensity={intensity}
                     angle={angle}
@@ -189,7 +191,7 @@ function StrobeDriver({ hz, lightRef, coneRef, intensity, opacity }) {
 // so the beam and the wall it lands on answer to the same exposure. `haze` on the
 // lamp is not a brightness here (the lamp's level already scales its intensity);
 // 0 still means "no beam" (a strobe draws a flash instead, looks.js flashEntities).
-function BeamInAir({ color, intensity, angle, penumbra, length, aperture, atmosphere, strobeHz = 0 }) {
+function BeamInAir({ gl, color, intensity, angle, penumbra, length, aperture, atmosphere, strobeHz = 0 }) {
     const tanHalf = Math.tan(Math.min(Math.max(Number(angle) || 0.52, 0.001), Math.PI / 2 - 0.01))
     const a = Number(aperture) > 0 ? Number(aperture) : DEFAULT_APERTURE
     // A beam's soft edge: the lamp's penumbra, never harder than a fifth of its radius
@@ -198,8 +200,8 @@ function BeamInAir({ color, intensity, angle, penumbra, length, aperture, atmosp
     const values = { color, intensity, tanHalf, aperture: a, length, edge, atmosphere, strobeHz }
     return (
         <>
-            <BeamPart part="core" values={values} />
-            <BeamPart part="glare" values={values} />
+            <BeamPart gl={gl} part="core" values={values} />
+            <BeamPart gl={gl} part="glare" values={values} />
         </>
     )
 }
@@ -209,10 +211,11 @@ function beforeBeamRender(renderer, scene, camera) {
     beamAirBeforeRender(this, camera)
 }
 
-function BeamPart({ part, values }) {
+function BeamPart({ gl, part, values }) {
     const { aperture, tanHalf, length } = values
     const geometry = useMemo(() => beamAirGeometry({ aperture, tanHalf, length }, part), [aperture, tanHalf, length, part])
-    const material = useMemo(() => createBeamAirMaterial(part), [part])
+    // the room's haze field: this renderer's shared uniforms (hazeUniforms.js)
+    const material = useMemo(() => createBeamAirMaterial(part, hazeUniformsFor(gl)), [part, gl])
     useEffect(() => () => geometry.dispose(), [geometry])
     useEffect(() => () => material.dispose(), [material])
     setBeamAirUniforms(material, values)

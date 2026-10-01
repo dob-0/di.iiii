@@ -5,6 +5,12 @@
 // tone mapping and exposure (toneMapped), exactly like a lit surface, and is ADDED
 // to what is behind it.
 //
+// The haze's scattering is not one number any more: hazeSigma() asks the room's haze
+// field (hazeField.js — the hall's well-mixed haze, each hazer's and fog machine's
+// jet, and the drifting unevenness) at every sample. A room with no haze settings
+// hands every beam a field that IS one number (uFill = atmosphere.scattering, no
+// jets, no noise), and draws exactly as before.
+//
 // Faces: the front faces while the camera is outside the beam — the depth test
 // then hides the part of a beam behind a wall, the floor or the roof, which is how
 // a beam ends on what it hits — and the back faces while the camera stands inside
@@ -12,12 +18,17 @@
 // onBeforeRender, before three.js sets the draw's state.
 import { AdditiveBlending, BackSide, Color, CylinderGeometry, FrontSide, Matrix4, ShaderMaterial, Vector3 } from 'three'
 import { BEAM_AIR_SAMPLES, DEFAULT_APERTURE, HULL_BASE, HULL_SLOPE } from './beamAir.js'
+import { JET_K, MAX_HAZE_SOURCES, NOISE_TILE_M } from './hazeField.js'
+import { hazeUniformsFor } from './hazeUniforms.js'
 
 const vertexShader = /* glsl */`
 varying vec3 vLocal;
+varying vec3 vWorld;
 void main() {
     vLocal = position;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vec4 world = modelMatrix * vec4(position, 1.0);
+    vWorld = world.xyz;
+    gl_Position = projectionMatrix * viewMatrix * world;
 }
 `
 
@@ -29,15 +40,55 @@ uniform float uTan;
 uniform float uAperture;
 uniform float uLength;
 uniform float uEdge;
-uniform float uScattering;
 uniform float uG;
 uniform vec3 uCamLocal;
 uniform float uHullBase;
 uniform float uHullSlope;
 uniform float uGlare;
 varying vec3 vLocal;
+varying vec3 vWorld;
 #include <common>
 #include <dithering_pars_fragment>
+
+// THE HAZE FIELD (hazeField.js has the formulas and where they come from; this is
+// hazeScatteringAt, line for line). Shared by every beam of the renderer
+// (hazeUniforms.js).
+#define HAZE_MAX ${MAX_HAZE_SOURCES}
+uniform float uFill;
+uniform int uHazeCount;
+uniform vec3 uHazePos[HAZE_MAX];
+uniform vec3 uHazeDir[HAZE_MAX];
+uniform vec4 uHazeJet[HAZE_MAX]; // σ0 at the nozzle, nozzle diameter, spread, reach
+uniform highp sampler3D uHazeNoise;
+uniform float uPatch;
+uniform vec3 uDrift;
+uniform float uHazeTime;
+
+float hazeSigma(vec3 p) {
+    if (uHazeCount == 0 && uPatch <= 0.0) return uFill;
+    float n = 0.5;
+    if (uPatch > 0.0) n = texture(uHazeNoise, (p - uDrift * uHazeTime) / ${NOISE_TILE_M.toFixed(1)}).r;
+    float swing = 2.0 * (n - 0.5);
+    float sigma = uFill * (1.0 + uPatch * swing);
+    float eddy = clamp(1.0 + 1.6 * uPatch * swing, 0.0, 3.0);
+    for (int j = 0; j < HAZE_MAX; j++) {
+        if (j >= uHazeCount) break;
+        vec4 jet = uHazeJet[j];
+        vec3 v = p - uHazePos[j];
+        float u = dot(v, uHazeDir[j]);
+        float along = max(u, 0.0);
+        // far behind the nozzle, past five reaches, or three widths off the axis:
+        // under e^-5 of the jet, skipped (most samples, most jets)
+        if (u < -jet.y || along > jet.w * 5.0) continue;
+        float r2 = max(dot(v, v) - u * u, 0.0);
+        float w = jet.y * 0.5 + jet.z * along;
+        if (r2 > 9.0 * w * w) continue;
+        float decay = min(1.0, ${JET_K.toFixed(1)} * jet.y / max(along, 1e-6));
+        float ramp = clamp((u + jet.y * 0.5) / jet.y, 0.0, 1.0);
+        sigma += jet.x * decay * exp(-r2 / (w * w)) * exp(-along / jet.w) * ramp * eddy;
+    }
+    return sigma;
+}
 
 float hgPhase(float c, float g) {
     float g2 = g * g;
@@ -105,6 +156,11 @@ void main() {
     vec3 apex = vec3(0.0, a / t, 0.0);
     float edge = max(uEdge, 0.02);
     float sum = 0.0;
+    // The same ray in the world, where the haze field lives: from the camera through
+    // this fragment, the beam frame's metres converted (an entity may be scaled).
+    vec3 wd = vWorld - cameraPosition;
+    float worldPerLocal = length(wd) / max(length(vLocal - ro), 1e-6);
+    vec3 wrd = normalize(wd);
 #if BEAM_PART == 1
     lb = la;
 #endif
@@ -118,10 +174,13 @@ void main() {
         float E = uIntensity * t * t / max(R * R, 1e-8);
         vec3 wi = p - apex;
         float cosT = -dot(wi, rd) / max(length(wi), 1e-5);
-        float T = exp(-uScattering * (s + lam));
-        sum += E * profile * hgPhase(cosT, uG) * T;
+        // toward the eye and from the lens, the well-mixed haze dims the light
+        // (a plume between is not counted — hazeField.js, limits)
+        float T = exp(-uFill * (s + lam));
+        float sigma = hazeSigma(cameraPosition + wrd * (lam * worldPerLocal));
+        sum += sigma * E * profile * hgPhase(cosT, uG) * T;
     }
-    float inBeam = uScattering * sum * dl;
+    float inBeam = sum * dl;
 #if BEAM_PART == 1
     inBeam = 0.0;
 #endif
@@ -133,7 +192,8 @@ void main() {
     // core is a line on the picture, of radiance L and angular width w; integrated
     // along it, L_v = 10·π²/180 · L·w / θ(deg) — a 1/θ fall-off. Drawn on the wider
     // hull around the beam and faded out before the hull's edge (so it stops, softly,
-    // a few degrees out — the formula's tail beyond is not drawn).
+    // a few degrees out — the formula's tail beyond is not drawn). The core's radiance
+    // here uses the hall's well-mixed haze (a veil is too soft to show a plume).
     vec3 axis = vec3(0.0, -1.0, 0.0);
     float bb = dot(rd, axis);
     float dd = dot(rd, ro);
@@ -151,7 +211,7 @@ void main() {
     vec3 wq = q - apex;
     float cosQ = -dot(wq, normalize(v)) / max(length(wq), 1e-5);
     float Eq = uIntensity * t * t / max(Rq * Rq, 1e-8);
-    float Lcore = uScattering * hgPhase(cosQ, uG) * Eq * chordQ * exp(-uScattering * (tq + dq));
+    float Lcore = uFill * hgPhase(cosQ, uG) * Eq * chordQ * exp(-uFill * (tq + dq));
     float width = 2.0 * Rq / dq;
     float thetaDeg = max(theta * 57.29578, 1.0);
     float lsf = 0.54831 / thetaDeg;
@@ -193,8 +253,13 @@ export const beamAirGeometry = ({ aperture, tanHalf, length }, part = 'core') =>
 const inverse = new Matrix4()
 const camera = new Vector3()
 
-/** A material for one beam's core ('core') or its glare ('glare'); update it with setBeamAirUniforms. */
-export const createBeamAirMaterial = (part = 'core') => {
+/**
+ * A material for one beam's core ('core') or its glare ('glare'); update it with
+ * setBeamAirUniforms. `shared` = the renderer's haze uniforms (hazeUniforms.js): the
+ * same objects in every beam, so the haze changes for all of them without a React
+ * render or a recompile.
+ */
+export const createBeamAirMaterial = (part = 'core', shared = hazeUniformsFor(null)) => {
     const glare = part === 'glare'
     const material = new ShaderMaterial({
         defines: { BEAM_PART: glare ? 1 : 0 },
@@ -205,12 +270,12 @@ export const createBeamAirMaterial = (part = 'core') => {
             uAperture: { value: DEFAULT_APERTURE },
             uLength: { value: 10 },
             uEdge: { value: 0.2 },
-            uScattering: { value: 0.03 },
             uG: { value: 0.7 },
             uCamLocal: { value: new Vector3() },
             uHullBase: { value: glare ? HULL_BASE : 0 },
             uHullSlope: { value: glare ? HULL_SLOPE : 0 },
-            uGlare: { value: 1 }
+            uGlare: { value: 1 },
+            ...shared
         },
         vertexShader,
         fragmentShader,
@@ -233,7 +298,6 @@ export const setBeamAirUniforms = (material, { color, intensity, tanHalf, apertu
     u.uAperture.value = aperture
     u.uLength.value = length
     u.uEdge.value = edge
-    u.uScattering.value = atmosphere.scattering
     u.uG.value = atmosphere.anisotropy
 }
 
