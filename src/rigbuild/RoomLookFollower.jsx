@@ -75,7 +75,7 @@ export function ShowChip({ show, state, offset, top }) {
         <div style={{ ...chipStyle, top }} data-testid="rig-show-chip" data-look={state.lookId} data-cue={state.index}>
             <button type="button" style={buttonStyle} aria-expanded={open} onClick={() => setOpen((o) => !o)}
                 title="The show plays by the clock: everyone watching sees the same look at the same moment">
-                <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff3b3b', boxShadow: '0 0 8px #ff3b3b', flex: '0 0 auto' }} />
+                <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 0, background: '#ff3b3b', boxShadow: '0 0 8px #ff3b3b', flex: '0 0 auto' }} />
                 <span style={{ fontWeight: 700, letterSpacing: '0.08em', fontSize: '0.72rem', flex: '0 0 auto' }}>SHOW</span>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{line}</span>
             </button>
