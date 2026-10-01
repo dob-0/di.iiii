@@ -193,14 +193,17 @@ describe('contrast pairs from the 2026-10-01 audit', () => {
     // F7: text set in white at .4 / .45 alpha (3.66 / 4.41) was moved to
     // var(--di-text-muted). This ratchet keeps new ones out of CSS `color:`.
     // Borders, backgrounds and --di-faint (used for ids) are not text colour here.
-    it('no stylesheet sets `color:` to white at .4 or .45 alpha (F7)', () => {
+    // The works are artworks and are not swept (docs/ai/golden_rules.md, "Platform and works"):
+    // src/algoVrithm/algoVrithm.css keeps its own text colours until its maker decides.
+    const ARTWORK_STYLESHEETS = new Set(['../algoVrithm/algoVrithm.css'])
+    it('no stylesheet sets `color:` to white at .4 or .45 alpha (F7), artworks excepted', () => {
         const offenders = []
         const walk = (dir) => {
             for (const entry of readdirSync(resolve(HERE, dir), { withFileTypes: true })) {
                 const rel = `${dir}/${entry.name}`
                 if (entry.isDirectory()) { if (entry.name !== 'node_modules') walk(rel) } else if (entry.name.endsWith('.css')) {
                     const text = read(rel)
-                    if (/(?:^|[\s;{])color:\s*rgba\(255,\s*255,\s*255,\s*0?\.(?:4|45)\)/m.test(text)) offenders.push(rel)
+                    if (!ARTWORK_STYLESHEETS.has(rel) && /(?:^|[\s;{])color:\s*rgba\(255,\s*255,\s*255,\s*0?\.(?:4|45)\)/m.test(text)) offenders.push(rel)
                 }
             }
         }
