@@ -130,3 +130,20 @@ describe('the beam\'s cross-section — beam angle 50 %, field angle 10 %', () =
         expect(shader).toContain(`log(1.0 / ${PROFILE_FLOOR})`)
     })
 })
+
+describe('no large constant-bound loop in the beam shader (ANGLE / Direct3D 11)', () => {
+    it('every loop over 8 is bounded by a uniform', async () => {
+        const fs = await import('node:fs')
+        const path = await import('node:path')
+        const { cwd } = await import('node:process')
+        const { GOBO_GLSL, BEAM_SHAPE_GLSL } = await import('./beamOptics.js')
+        const source = fs.readFileSync(path.resolve(cwd(), 'src/objectComponents/beamAirMaterial.js'), 'utf8') + GOBO_GLSL + BEAM_SHAPE_GLSL
+        const loops = [...source.matchAll(/for\s*\(\s*int\s+\w+\s*=\s*[-\w]+\s*;\s*\w+\s*<=?\s*([\w.]+)\s*;/g)].map((m) => m[1])
+        expect(loops.length).toBeGreaterThan(0)
+        for (const bound of loops) {
+            const uniform = /^u[A-Z]/.test(bound)
+            const small = /^\d+$/.test(bound) && Number(bound) <= 8
+            expect(uniform || small, `loop bound ${bound}`).toBe(true)
+        }
+    })
+})
