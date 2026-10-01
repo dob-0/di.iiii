@@ -29,6 +29,9 @@ import { JET_K, MAX_HAZE_SOURCES, NOISE_TILE_M } from './hazeField.js'
 import { hazeUniformsFor } from './hazeUniforms.js'
 import { BEAM_SHAPE_GLSL, FROST_WIDEN, beamOpticsOf, frostWiden, opticsSpreadTan } from './beamOptics.js'
 
+// The floor the hall stands on (world y). The rig's rooms are built on y = 0.
+export const FLOOR_Y = 0
+
 const vertexShader = /* glsl */`
 varying vec3 vLocal;
 varying vec3 vWorld;
@@ -55,6 +58,7 @@ uniform float uHullSlope;
 uniform float uGlare;
 uniform int uSamples; // BEAM_SAMPLES, as a uniform so the sample loop is not unrolled
 uniform float uLit; // how much of the throw is above the floor (beamAirBeforeRender)
+uniform float uFloorY; // the floor's world height (FLOOR_Y)
 varying vec3 vLocal;
 varying vec3 vWorld;
 #include <common>
@@ -181,6 +185,20 @@ void main() {
     float lb = min(s1, e1);
     if (!hit || lb <= la) lb = la;
 
+    // The same ray in the world, where the haze field and the floor live: from the camera
+    // through this fragment, the beam frame's metres converted (an entity may be scaled).
+    vec3 wd = vWorld - cameraPosition;
+    float worldPerLocal = length(wd) / max(length(vLocal - ro), 1e-6);
+    vec3 wrd = normalize(wd);
+    // THE FLOOR ENDS THE AIR: a fragment's ray, from a camera above the floor, is not summed
+    // past where it meets the floor plane. The hull's depth test only hides the part of the
+    // HULL behind a surface; the integral ran on beneath it, so beams thickened and
+    // brightened toward their footprint and then cut hard (render audit 6, 2026-10-01).
+    if (cameraPosition.y > uFloorY && wrd.y < -1e-5) {
+        float floorLam = (uFloorY - cameraPosition.y) / wrd.y / worldPerLocal;
+        lb = min(lb, max(floorLam, la));
+    }
+
     // the step follows the samples actually run (uSamples — the frame-rate governor lowers
     // it); dividing by the full count cut every beam short at the lower notches
     float dl = (lb - la) / float(uSamples);
@@ -190,11 +208,6 @@ void main() {
     float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
     vec3 apex = vec3(0.0, a / t, 0.0);
     float sum = 0.0;
-    // The same ray in the world, where the haze field lives: from the camera through
-    // this fragment, the beam frame's metres converted (an entity may be scaled).
-    vec3 wd = vWorld - cameraPosition;
-    float worldPerLocal = length(wd) / max(length(vLocal - ro), 1e-6);
-    vec3 wrd = normalize(wd);
 #if BEAM_PART == 1
     lb = la;
 #endif
@@ -298,8 +311,6 @@ const camera = new Vector3()
 const lens = new Vector3()
 const axis = new Vector3()
 
-// The floor the hall stands on (world y). The rig's rooms are built on y = 0.
-const FLOOR_Y = 0
 
 /**
  * A material for one beam's core ('core') or its glare ('glare'); update it with
@@ -324,6 +335,7 @@ export const createBeamAirMaterial = (part = 'core', shared = hazeUniformsFor(nu
             uHullSlope: { value: glare ? HULL_SLOPE : 0 },
             uGlare: { value: 1 },
             uLit: { value: 10 },
+            uFloorY: { value: FLOOR_Y },
             uFrost: { value: 0 },
             uPrismN: { value: 0 },
             uPrismTan: { value: 0 },
