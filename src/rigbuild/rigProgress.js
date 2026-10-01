@@ -25,7 +25,9 @@ export const rigProgress = ({ entities = [], library, deskFlags = [], projectId 
     const list = rentalOf(entities).list
     const hasList = Boolean(list?.items?.length)
     const units = (list?.items || []).reduce((sum, item) => sum + (Number(item.ordered) || 0), 0)
-    const lamps = model.sheet.totals.lamps
+    const byHand = model.sheet.totals.byHand || 0
+    // a device run by hand is never addressed: the patch step counts only what goes on DMX
+    const lamps = model.sheet.totals.lamps - byHand
     const patched = model.sheet.totals.patched
     const conflicts = model.conflicts.length
     // What the conflicts are made of, by cause, in words (the sheet's Flags list names each lamp).
@@ -39,7 +41,7 @@ export const rigProgress = ({ entities = [], library, deskFlags = [], projectId 
         build: ordered ? `${placed} of ${ordered} placed` : lamps ? `${plural(lamps, 'lamp')} placed` : '',
         plot: '',
         cards: looks ? plural(looks, 'look') : '',
-        patch: lamps ? `${patched} of ${lamps} addressed${conflicts ? ` · ${conflicts} to decide` : ''}` : '',
+        patch: lamps ? `${patched} of ${lamps} addressed${byHand ? ` · ${byHand} by hand` : ''}${conflicts ? ` · ${conflicts} to decide` : ''}` : '',
         crew: ''
     }
     const done = {

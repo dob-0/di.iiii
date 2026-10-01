@@ -273,6 +273,8 @@ export const sheetModel = ({ entities: documentEntities = [], library, circuit =
         totals: {
             lamps: rows.length,
             patched: rows.filter((r) => r.universe != null).length,
+            // kept off DMX (run by hand): never to be addressed, so not counted as owed one
+            byHand: rows.filter((r) => r.flags.includes('by-hand')).length,
             channels: universes.reduce((s, u) => s + u.channels, 0),
             universes: universes.length
         }
