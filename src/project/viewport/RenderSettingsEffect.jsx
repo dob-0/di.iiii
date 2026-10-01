@@ -5,6 +5,8 @@ import { atmosphereOf } from '../../objectComponents/beamAir.js'
 import { getHazeField, hazeFogBase, setAtmosphere, subscribeHazeField } from '../../objectComponents/atmosphereStore.js'
 import { hazeUniformsFor } from '../../objectComponents/hazeUniforms.js'
 import { bloomOf } from './bloom.js'
+import { surfacesOf } from './surfaces.js'
+import SurfaceOverrides from './SurfaceOverrides.jsx'
 
 // The room in high dynamic range with bloom (HdrBloom.jsx): loaded only by a room that asks.
 const HdrBloom = lazy(() => import('./HdrBloom.jsx'))
@@ -77,11 +79,14 @@ export default function RenderSettingsEffect({ renderSettings }) {
     // Mounted only while the room asks for bloom: once it is mounted it draws every
     // frame itself (a priority frame callback stops R3F's own render).
     const governed = Boolean(atmosphereOf({ atmosphere: renderSettings?.atmosphere })) && renderSettings?.quality?.adaptive !== false
-    if (!bloomOf(renderSettings) && !governed) return null
+    // the room's surfaces corrected at load (surfaces.js): e.g. the hall's floor finish
+    const surfaces = surfacesOf(renderSettings)
+    if (!bloomOf(renderSettings) && !governed && !surfaces) return null
     return (
         <Suspense fallback={null}>
             {bloomOf(renderSettings) ? <HdrBloom renderSettings={renderSettings} /> : null}
             {governed ? <QualityGovernor renderSettings={renderSettings} /> : null}
+            {surfaces ? <SurfaceOverrides surfaces={surfaces} /> : null}
         </Suspense>
     )
 }
