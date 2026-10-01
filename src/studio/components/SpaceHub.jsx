@@ -824,7 +824,7 @@ export default function SpaceHub() {
         ].filter(Boolean)
 
     return (
-        <Box className="studio-shell-root ssh-root">
+        <Box component="main" className="studio-shell-root ssh-root">
             <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 } }}>
                 <div className="ssh-top-row">
                     <div>

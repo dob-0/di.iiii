@@ -185,6 +185,14 @@
     font-size: var(--di-text-3);
     line-height: 1;
     cursor: pointer;
+    position: relative;
+}
+
+/* WCAG 2.5.8 / 2.5.5: the visible box stays 22 px, the pointer target is 44 px. */
+.preferences-collapse-toggle::before {
+    content: '';
+    position: absolute;
+    inset: -11px;
 }
 
 .preferences-collapse-toggle:hover {

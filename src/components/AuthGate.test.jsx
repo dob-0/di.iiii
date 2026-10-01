@@ -334,6 +334,27 @@ describe('AuthGate sign-in card priority', () => {
         expect(await screen.findByPlaceholderText('Access token')).toBeInTheDocument()
         expect(screen.queryByRole('button', { name: /Continue with/ })).not.toBeInTheDocument()
     })
+
+    // F9 (a11y audit 2026-10-01): placeholder is not a name.
+    it('gives the access-token field an accessible name, not only a placeholder', async () => {
+        mockUseAuthSession.mockReturnValue(signedOutSession())
+        render(<AuthGate>editor</AuthGate>)
+        const field = await screen.findByLabelText('Access token')
+        expect(field).toHaveAttribute('type', 'password')
+        expect(field).toHaveFocus()
+    })
+})
+
+// F17: the raw error was the message.
+describe('AuthGate when the backend is unreachable', () => {
+    it('says it in one plain sentence with a next step, keeping the raw error out of the text', () => {
+        mockUseAuthSession.mockReturnValue({ ...signedOutSession(), error: 'ECONNREFUSED 127.0.0.1:3001' })
+        render(<AuthGate>editor</AuthGate>)
+        const alert = screen.getByRole('alert')
+        expect(alert).toHaveTextContent(/can.t reach the server.*try again/i)
+        expect(alert).not.toHaveTextContent('ECONNREFUSED')
+        expect(alert).toHaveAttribute('title', 'ECONNREFUSED 127.0.0.1:3001')
+    })
 })
 
 // An invite link lands on this card before it can be redeemed. It used to say

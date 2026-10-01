@@ -570,7 +570,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     }}
                     onClick={toggleSound}
                 >
-                    {soundOn ? 'Sound on' : 'Sound off'}
+                    Sound
                 </button>
             ) : null}
 

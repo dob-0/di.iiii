@@ -183,7 +183,7 @@
 
 .di-director-clip-label em {
     font-style: normal;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--di-text-muted);
     font-variant-numeric: tabular-nums;
 }
 
@@ -249,7 +249,7 @@
     font-size: var(--di-text-2);
     letter-spacing: 0.02em;
     text-transform: none;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--di-text-muted);
 }
 
 .di-director-rows {
@@ -272,7 +272,7 @@
     display: flex;
     align-items: center;
     gap: var(--di-space-1);
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--di-text-muted);
 }
 
 .di-director-jump {
@@ -500,7 +500,7 @@
 }
 
 .di-director-section-toggle {
-    color: rgba(255, 255, 255, 0.45) !important;
+    color: var(--di-text-muted) !important;
     border-color: transparent !important;
     background: transparent !important;
     letter-spacing: 0.08em;
