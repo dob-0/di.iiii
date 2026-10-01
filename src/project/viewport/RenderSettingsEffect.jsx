@@ -1,9 +1,13 @@
-import { useEffect } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { atmosphereOf } from '../../objectComponents/beamAir.js'
 import { getHazeField, hazeFogBase, setAtmosphere, subscribeHazeField } from '../../objectComponents/atmosphereStore.js'
 import { hazeUniformsFor } from '../../objectComponents/hazeUniforms.js'
+import { bloomOf } from './bloom.js'
+
+// The room in high dynamic range with bloom (HdrBloom.jsx): loaded only by a room that asks.
+const HdrBloom = lazy(() => import('./HdrBloom.jsx'))
 
 // The document's tone-mapping name → three.js's operator. ACES (Narkowicz's fit,
 // three.js's ACESFilmic) stays the default; 'AgX' (T. Sobotka's AgX, three.js
@@ -68,5 +72,11 @@ export default function RenderSettingsEffect({ renderSettings }) {
         return subscribeHazeField(gl, apply)
     }, [gl, scene])
     useEffect(() => () => setAtmosphere(gl, null), [gl])
-    return null
+    // Mounted only while the room asks for bloom: once it is mounted it draws every
+    // frame itself (a priority frame callback stops R3F's own render).
+    return bloomOf(renderSettings) ? (
+        <Suspense fallback={null}>
+            <HdrBloom renderSettings={renderSettings} />
+        </Suspense>
+    ) : null
 }

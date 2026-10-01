@@ -32,7 +32,10 @@ const createHazeUniforms = () => ({
     uHazeNoise: { value: hazeNoiseTexture() },
     uPatch: { value: 0 },
     uDrift: { value: new Vector3() },
-    uHazeTime: { value: 0 }
+    uHazeTime: { value: 0 },
+    // 1 = draw the beams' glare veil; 0 while the room is drawn with real bloom
+    // (HdrBloom.jsx), which shows the same glow the veil was standing in for
+    uGlareOn: { value: 1 }
 })
 
 const perRenderer = new WeakMap()

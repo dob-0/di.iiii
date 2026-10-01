@@ -56,6 +56,16 @@ export const setHazeMachines = (gl, machines) => {
 
 export const getAtmosphere = (gl) => storeOf(gl)?.value || null
 
+/**
+ * Real bloom is drawing this renderer's frames (HdrBloom.jsx): the beams' glare veil,
+ * which only stood in for it, steps aside. Off again in a headset, where bloom cannot run.
+ */
+export const setBloomActive = (gl, active) => {
+    const u = hazeUniformsFor(gl).uGlareOn
+    const value = active ? 0 : 1
+    if (u.value !== value) u.value = value
+}
+
 /** The field the beams draw now (null: one uniform haze). */
 export const getHazeField = (gl) => storeOf(gl)?.field || null
 

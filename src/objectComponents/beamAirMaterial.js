@@ -96,7 +96,13 @@ float hgPhase(float c, float g) {
     return (1.0 - g2) / (12.566370614 * pow(max(1.0 + g2 - 2.0 * g * c, 1e-4), 1.5));
 }
 
+uniform float uGlareOn;
+
 void main() {
+#if BEAM_PART == 1
+    // the room is drawn with real bloom (HdrBloom.jsx): the veil steps aside
+    if (uGlareOn < 0.5) discard;
+#endif
     vec3 ro = uCamLocal;
     vec3 rd = normalize(vLocal - ro);
     float t = max(uTan, 1e-4);
