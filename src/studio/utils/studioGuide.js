@@ -129,6 +129,11 @@ export const STUDIO_SHORTCUT_SECTIONS = [
             ['Scroll', 'Zoom'],
             ['Middle drag', 'Orbit'],
             ['Right drag', 'Pan'],
+            ['Numpad 1 / 3 / 7', 'Front / Right / Top view (Ctrl = Back / Left / Bottom)'],
+            ['Shift+1 / 3 / 7', 'Same views without a numpad (Ctrl+Shift = opposite side)'],
+            ['Numpad 4 / 6 / 8 / 2', 'Orbit 15° (or Shift+Arrows)'],
+            ['Home', 'Frame the whole room'],
+            ['Numpad .', 'Frame selection'],
         ]
     },
     {
