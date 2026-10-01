@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Box, Container } from '@mui/material'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { buildAppSpacePath, buildPreferencesPath } from '../../utils/spaceRouting.js'
@@ -126,13 +126,22 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
     useEffect(() => {
         setSpaceLabel(spaceId)
         setSpaceMeta(null)
+        // A slow answer for the previous space must not overwrite the new one.
+        let cancelled = false
         getServerSpace(spaceId).then((space) => {
+            if (cancelled) return
             if (space?.label) setSpaceLabel(space.label)
             setSpaceMeta(space || null)
         }).catch(() => {})
+        return () => { cancelled = true }
     }, [spaceId])
 
+    // Latest-request-wins for the project list: every load (space change or a
+    // handler's reload) takes a number, and only the newest may apply its answer.
+    const loadRequestRef = useRef(0)
+
     const loadProjects = useCallback(async () => {
+        const requestId = ++loadRequestRef.current
         setStatus('loading...')
         try {
             const [next, shelves] = await Promise.all([
@@ -141,10 +150,12 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                 // them; that is a space with no shelves, not an error to show.
                 listCollections(spaceId).catch(() => [])
             ])
+            if (requestId !== loadRequestRef.current) return
             setProjects(next)
             setCollections(shelves)
             setStatus('')
         } catch (e) {
+            if (requestId !== loadRequestRef.current) return
             setStatus(e.message || 'error loading projects')
         }
     }, [spaceId])

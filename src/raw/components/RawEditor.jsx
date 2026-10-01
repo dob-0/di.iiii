@@ -111,12 +111,15 @@ const USER_ID_KEY = 'dii.raw.userId'
 // Carry them over once instead of silently resetting the identity they picked.
 const LEGACY_KEY_PREFIX = 'dii.seed.'
 function migrateLegacyRawStorage() {
-    if (typeof window === 'undefined' || !window.localStorage) return
-    for (const key of [DISPLAY_NAME_KEY, NODE_SCALE_KEY, USER_ID_KEY]) {
-        if (window.localStorage.getItem(key) !== null) continue
-        const legacy = window.localStorage.getItem(LEGACY_KEY_PREFIX + key.slice('dii.raw.'.length))
-        if (legacy !== null) window.localStorage.setItem(key, legacy)
-    }
+    // Runs at import time: blocked storage must not stop the whole bundle loading.
+    try {
+        if (typeof window === 'undefined' || !window.localStorage) return
+        for (const key of [DISPLAY_NAME_KEY, NODE_SCALE_KEY, USER_ID_KEY]) {
+            if (window.localStorage.getItem(key) !== null) continue
+            const legacy = window.localStorage.getItem(LEGACY_KEY_PREFIX + key.slice('dii.raw.'.length))
+            if (legacy !== null) window.localStorage.setItem(key, legacy)
+        }
+    } catch { /* storage blocked: identity just is not carried over */ }
 }
 migrateLegacyRawStorage()
 const ROOT_WORLD_CARD_WIDTH = 160

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createProject, deleteProject, listProjects, updateProject } from '../../project/services/projectsApi.js'
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
@@ -15,13 +15,17 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
     const [creating, setCreating] = useState(false)
     const [createValue, setCreateValue] = useState('')
 
+    const loadRequestRef = useRef(0)
     const loadProjects = useCallback(async () => {
         if (!spaceId) return
+        const requestId = ++loadRequestRef.current
         try {
             const next = await listProjects(spaceId)
+            if (requestId !== loadRequestRef.current) return
             setProjects(next)
             setStatus('')
         } catch (e) {
+            if (requestId !== loadRequestRef.current) return
             setProjects([])
             setStatus(e.message || 'error loading projects')
         }
@@ -31,9 +35,11 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
 
     useEffect(() => {
         if (!spaceId) return
+        let cancelled = false
         getServerSpace(spaceId)
-            .then((space) => setPublishedProjectId(space?.publishedProjectId || null))
+            .then((space) => { if (!cancelled) setPublishedProjectId(space?.publishedProjectId || null) })
             .catch(() => {})
+        return () => { cancelled = true }
     }, [spaceId])
 
     const openProject = (projectId) => {
