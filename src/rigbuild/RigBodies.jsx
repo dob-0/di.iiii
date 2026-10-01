@@ -7,10 +7,10 @@ import DmxProbe from './DmxProbe.jsx'
 import { TYPE_LIBRARY } from './types/index.js'
 import { libraryWithShow } from './rental.js'
 import { rigBodyLamps } from './rigBodyLamps.js'
-import { bounceOf, bounceSpecOf } from './rigBounce.js'
+import { bounceOf, bounceSpecOf, hazeGlowFactor } from './rigBounce.js'
 import { typeById } from './fixtureTypes.js'
 import { hazeMachinesOf } from '../objectComponents/hazeField.js'
-import { setHazeMachines } from '../objectComponents/atmosphereStore.js'
+import { getAtmosphere, getHazeField, setHazeMachines } from '../objectComponents/atmosphereStore.js'
 
 // THE LAMPS' BODIES IN ANY ROOM — the space view (LiveProjectScene), the Studio and the
 // rooms beside the plot and the cards (StudioViewport). RIG_BUILD.md §12.4.
@@ -43,7 +43,7 @@ export default function RigBodies({ entities, library = TYPE_LIBRARY }) {
             {/* the hazers and fog machines, for the room's haze field (hazeField.js) */}
             <HazeMachines entities={entities} library={shownLibrary} />
             {bounce ? <ambientLight color={bounce.color} intensity={bounce.intensity} /> : null}
-            {bounce ? <HazeGlow bounce={bounce} /> : null}
+            {bounce ? <HazeGlow bounce={bounce} spec={bounceSpecOf(entities)} /> : null}
         </>
     )
 }
@@ -68,10 +68,13 @@ function HazeMachines({ entities, library }) {
 // transmittance T adds L·(1 − T), which is exactly three.js's fog mix with that colour
 // (linear, before tone mapping). Black when the rig is dark; red in the red room.
 const glowColour = new THREE.Color()
-function HazeGlow({ bounce }) {
-    useFrame(({ scene }) => {
+function HazeGlow({ bounce, spec }) {
+    useFrame(({ scene, gl }) => {
         if (!scene.fog) return
-        glowColour.set(bounce.color).multiplyScalar(bounce.intensity / Math.PI)
+        // the haze's own scatter on top of the walls' return (rigBounce.js hazeGlowFactor),
+        // with the haze the beams are drawn in: the field's fill, else the room's scattering
+        const sigma = getHazeField(gl)?.fill ?? getAtmosphere(gl)?.scattering ?? 0
+        glowColour.set(bounce.color).multiplyScalar((bounce.intensity / Math.PI) * hazeGlowFactor(spec, sigma))
         scene.fog.color.copy(glowColour)
     })
     return null
