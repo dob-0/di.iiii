@@ -5,7 +5,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
-import { setBloomActive } from '../../objectComponents/atmosphereStore.js'
+import { isBloomAllowed, setBloomActive } from '../../objectComponents/atmosphereStore.js'
 import { bloomOf } from './bloom.js'
 
 // THE ROOM IN HIGH DYNAMIC RANGE, WITH BLOOM (renderSettings.bloom, bloom.js).
@@ -62,7 +62,9 @@ export default function HdrBloom({ renderSettings }) {
     // Priority 1: this frame is drawn here (R3F stops its own render when a frame
     // callback has a priority), after every other frame callback has moved the room.
     useFrame((state, delta) => {
-        if (gl.xr.isPresenting) {
+        // in a headset, or when the frame-rate governor has stepped bloom off
+        // (qualityGovernor.js): the plain way, with the beams' glare veil back
+        if (gl.xr.isPresenting || !isBloomAllowed(gl)) {
             setBloomActive(gl, false)
             gl.render(scene, state.camera)
             return

@@ -4,6 +4,7 @@
 // array sizes are fixed at MAX_HAZE_SOURCES).
 import { Data3DTexture, LinearFilter, RedFormat, RepeatWrapping, UnsignedByteType, Vector3, Vector4 } from 'three'
 import { MAX_HAZE_SOURCES, NOISE_SIZE, hazeNoiseData } from './hazeField.js'
+import { BEAM_AIR_SAMPLES } from './beamAir.js'
 
 let noiseTexture = null
 /** The patchiness noise (hazeField.js hazeNoiseData), one texture for the whole page. */
@@ -35,7 +36,10 @@ const createHazeUniforms = () => ({
     uHazeTime: { value: 0 },
     // 1 = draw the beams' glare veil; 0 while the room is drawn with real bloom
     // (HdrBloom.jsx), which shows the same glow the veil was standing in for
-    uGlareOn: { value: 1 }
+    uGlareOn: { value: 1 },
+    // samples along each beam's chord: BEAM_AIR_SAMPLES, fewer when the frame-rate
+    // governor steps down (src/project/viewport/qualityGovernor.js) — shared, no recompile
+    uSamples: { value: BEAM_AIR_SAMPLES }
 })
 
 const perRenderer = new WeakMap()

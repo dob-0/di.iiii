@@ -60,6 +60,11 @@ export const getAtmosphere = (gl) => storeOf(gl)?.value || null
  * Real bloom is drawing this renderer's frames (HdrBloom.jsx): the beams' glare veil,
  * which only stood in for it, steps aside. Off again in a headset, where bloom cannot run.
  */
+const bloomAllowed = new WeakMap()
+/** The frame-rate governor (qualityGovernor.js) lets bloom run, or not, on this renderer. */
+export const setBloomAllowed = (gl, allowed) => { if (gl) bloomAllowed.set(gl, Boolean(allowed)) }
+export const isBloomAllowed = (gl) => (gl ? bloomAllowed.get(gl) !== false : true)
+
 export const setBloomActive = (gl, active) => {
     const u = hazeUniformsFor(gl).uGlareOn
     const value = active ? 0 : 1

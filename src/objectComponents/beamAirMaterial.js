@@ -312,7 +312,6 @@ export const createBeamAirMaterial = (part = 'core', shared = hazeUniformsFor(nu
             uHullBase: { value: glare ? HULL_BASE : 0 },
             uHullSlope: { value: glare ? HULL_SLOPE : 0 },
             uGlare: { value: 1 },
-            uSamples: { value: BEAM_AIR_SAMPLES },
             uLit: { value: 10 },
             uFrost: { value: 0 },
             uPrismN: { value: 0 },
