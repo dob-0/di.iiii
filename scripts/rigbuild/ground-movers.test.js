@@ -25,7 +25,7 @@ const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, r
 const library = loadLibrary()
 const GROUND = ['minimal-ground', 'full-ground']
 // Also ground-only, and checked against the same policy, but a SUBSET (only the fixtures whose DMX is known): not held to the two versions' full type list.
-const GROUND_SUBSETS = ['known-ground']
+const GROUND_SUBSETS = ['known-ground', 'known-full']
 const rigs = Object.fromEntries(GROUND.map((id) => [id, read(rigFileOf(spec.set, id))]))
 const builds = Object.fromEntries(GROUND.map((id) => [id, buildAllLooks(rigs[id], hall, { geometry, manifest })]))
 const stageOf = (rig) => stageFrame(rig, hall)
