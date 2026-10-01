@@ -57,12 +57,23 @@ export const apertureByType = (types, fixtures) => {
 const luminance = ([r, g, b]) => 0.2126 * r + 0.7152 * g + 0.0722 * b
 
 /**
- * The enclosure a hall's model makes: its surface area and the area-weighted mean
- * reflectance of its materials (base colour luminance), every mesh in world space.
+ * The enclosure a hall's model makes, for the bounce (rigBounce.js: E = Φρ / (A(1−ρ))):
+ *   area_m2      the ENVELOPE the model spans — floor, roof and four walls of its world
+ *                bounding box, 2(LW + LH + WH). The inter-reflection is between the
+ *                enclosure's faces; the steel inside it (columns, trusses, the roof frame)
+ *                is lattice the light passes through. (Render audit E, 2026-10-01: summing
+ *                every triangle counted both faces of every bar — 82,640 m² for a ~27,000 m²
+ *                hall — and the return came out ~3× too dark.)
+ *   surface_m2   every triangle, both faces of everything: kept for the record
+ *   reflectance  the area-weighted mean luminance of the base colours (linear, BT.709)
+ * Every mesh in world space.
  */
 export const enclosureOf = (doc) => {
     let area = 0
     let weighted = 0
+    const lo = [Infinity, Infinity, Infinity]
+    const hi = [-Infinity, -Infinity, -Infinity]
+    const grow = (v) => { for (let k = 0; k < 3; k += 1) { if (v[k] < lo[k]) lo[k] = v[k]; if (v[k] > hi[k]) hi[k] = v[k] } }
     const byMaterial = {}
     const a = vec3.create()
     const b = vec3.create()
@@ -86,6 +97,7 @@ export const enclosureOf = (doc) => {
                 vec3.transformMat4(a, pos.getElement(at(i), p), world)
                 vec3.transformMat4(b, pos.getElement(at(i + 1), p), world)
                 vec3.transformMat4(c, pos.getElement(at(i + 2), p), world)
+                grow(a); grow(b); grow(c)
                 vec3.sub(ab, b, a)
                 vec3.sub(ac, c, a)
                 vec3.cross(cross, ab, ac)
@@ -101,7 +113,9 @@ export const enclosureOf = (doc) => {
         }
     }
     for (const m of Object.values(byMaterial)) m.area_m2 = Math.round(m.area_m2)
-    return { area_m2: Math.round(area), reflectance: Math.round((weighted / Math.max(area, 1e-9)) * 1000) / 1000, byMaterial }
+    const [L, H, W] = [0, 1, 2].map((k) => (hi[k] > lo[k] ? hi[k] - lo[k] : 0))
+    const envelope = 2 * (L * W + L * H + W * H)
+    return { area_m2: Math.round(envelope), surface_m2: Math.round(area), reflectance: Math.round((weighted / Math.max(area, 1e-9)) * 1000) / 1000, byMaterial }
 }
 
 /** Switch off every emissive material (daylight through the skylights); returns their names. */
@@ -172,7 +186,7 @@ const main = async () => {
     const glb = await io.readBinary(new Uint8Array(bytes.buffer))
     const enclosure = enclosureOf(glb)
     const off = nightOf(glb)
-    say(`hall ${hallAsset.slice(0, 12)}…: ${enclosure.area_m2} m² of surface, mean reflectance ${enclosure.reflectance}; emissive switched off: ${off.join(', ') || 'none'}`)
+    say(`hall ${hallAsset.slice(0, 12)}…: ${enclosure.area_m2} m² of envelope (${enclosure.surface_m2} m² of triangles), mean reflectance ${enclosure.reflectance}; emissive switched off: ${off.join(', ') || 'none'}`)
 
     // 2. The undo, before anything is written.
     const types = JSON.parse(fs.readFileSync(TYPES, 'utf8'))
@@ -239,7 +253,8 @@ const main = async () => {
                 patch: {
                     area_m2: enclosure.area_m2,
                     reflectance: enclosure.reflectance,
-                    method: 'scripts/rigbuild/realism.mjs enclosureOf: every triangle of the hall model in world space; reflectance = area-weighted luminance of the base colours (linear, BT.709)',
+                    surface_m2: enclosure.surface_m2,
+                    method: 'scripts/rigbuild/realism.mjs enclosureOf: area = the envelope of the hall model’s world bounding box, 2(LW + LH + WH); reflectance = area-weighted luminance of the base colours over every triangle (linear, BT.709)',
                     source: `hall asset ${hallAsset}`
                 }
             }

@@ -1,0 +1,8 @@
+## 2026-10-01 — the rig's return off the hall uses the hall's envelope
+
+- Render audit E (emily-41's audit; this half is mine). The bounce (rigBounce.js, the integrating-sphere relation E = Φρ / (A(1−ρ))) took A from realism.mjs `enclosureOf`, which summed every triangle of the hall model: 82,640 m² for MOXIR's hall, against an envelope of 28,605 m². The return came out ~2.9× too dark.
+- `enclosureOf` now returns `area_m2` = the envelope of the model's world bounding box, 2(LW + LH + WH), and `surface_m2` = the old triangle sum, kept for the record. The reflectance is unchanged (area-weighted over every triangle, 0.163 for MOXIR). realism.mjs writes both, and its `method` says which.
+- Found on the way: the MOXIR Known and Known · full rooms had NO `rigBounce`. load-version builds a fresh show entity, so a rebuilt room loses it. On PONYO I re-ran realism.mjs on both, with Minimal's settings (σ 0.05, g 0.7, ACES × 3.5), then work-light.mjs at level 0.35. Gevorg's rooms are untouched: Minimal still carries the old 82,640 m².
+- Seen in Chrome on the RTX 5060, Known from the floor: White cathedral now lifts the whole hall (roof frame, columns, crane, press), while Blackout + one shaft stays nearly black. The bounce follows the look. The floor still reads near-black; that is the hall model's floor albedo (audit item I, a hall.py change for Emily to approve).
+- Not done (audit E, second half): a hemisphere or down-light in place of the ambient work light. worldState has no hemisphere light yet, so it is a schema change.
+- Tests: scripts/rigbuild/realism.test.js (new; red on the old code: 704 against 700 m²).
