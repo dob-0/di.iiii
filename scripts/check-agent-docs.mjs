@@ -9,7 +9,7 @@ import {
   repoRoot,
   toLf
 } from './sync-agent-docs.mjs'
-import { isFoldBranch, isNoiseBranch } from './repo-state-lib.mjs'
+import { isFoldBranch, isFoldNotesBranch, isNoiseBranch } from './repo-state-lib.mjs'
 
 const normalizePath = (value) => value.split(path.sep).join('/')
 
@@ -243,6 +243,8 @@ const collectSessionNoteErrors = async () => {
   }
 
   if (isNoiseBranch(branch)) return []
+  // The hand-fold branch folds the notes; it leaves none (see repo-state-lib.mjs).
+  if (isFoldNotesBranch(branch)) return []
 
   const errors = []
   const expected = `${slugifyBranch(branch)}.md`
