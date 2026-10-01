@@ -112,7 +112,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         opIdPrefix: 'studio-op'
     })
     const clipboardRef = useRef(null)
-    const { applyLocalOps, undo, redo, history, jumpTo } = useOpHistory({
+    const { applyLocalOps, undo, redo, history, jumpTo, edits } = useOpHistory({
         projectId,
         document: state.document,
         applyLocalOps: _applyLocalOps
@@ -146,10 +146,11 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         document,
         applyLocalOps
     })
-    // Lamps with a fixture type are patched on this machine's desk as they are placed,
-    // duplicated or deleted (docs/architecture/RIG_BUILD.md §4); a room without them,
+    // Lamps with a fixture type are patched on this machine's desk when THIS person places,
+    // duplicates or deletes them (docs/architecture/RIG_BUILD.md §4) — never on opening the
+    // project or on a collaborator's change (a reader never writes); a room without them,
     // or a machine without a desk, is untouched.
-    useRigAutoPatch({ projectId, entities: document.entities, applyOps: _applyLocalOps })
+    useRigAutoPatch({ projectId, entities: document.entities, applyOps: _applyLocalOps, edits })
     const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
     const { assets: spaceAssets, refresh: refreshSpaceAssets } = useSpaceAssets(resolvedSpaceId)
     // useDriveImport counts result.entries, the routes answer with .assets
