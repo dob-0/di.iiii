@@ -86,7 +86,8 @@ describe('CSV and HTML', () => {
     it('writes RFC 4180 CSV: quotes doubled, CRLF', () => {
         expect(toCsv([{ a: 'x,"y"', b: 2 }], [{ label: 'A', value: (r) => r.a }, { label: 'B', value: (r) => r.b }])).toBe('A,B\r\n"x,""y""",2\r\n')
         const model = sheetModel({ entities: [lamp('a', { index: 1, type: 'up-b380f', universe: 1, address: 1, circuit: 'C1' })], library })
-        expect(patchCsv(model).split('\r\n')[1]).toBe('1,UP-B380F,"UPlight Stage Equipment (Guangzhou) Co., Ltd.",16ch,,,1,1,16,C1,500,EXACT,channel list owed,a')
+        // the 16ch list is TESTED on the rental units (fixtureTypes.js, MOXIR 2026-10-01): no list owed
+        expect(patchCsv(model).split('\r\n')[1]).toBe('1,UP-B380F,"UPlight Stage Equipment (Guangzhou) Co., Ltd.",16ch,,,1,1,16,C1,500,EXACT,,a')
         expect(powerCsv(model).split('\r\n')[1]).toBe('C1,1,500,2944,17,,0')
     })
 
