@@ -13,12 +13,14 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- land batch #679 (+ #677): the MOXIR rig-builder line, preview 0.4.16-rigbuilder.14, is on dev — ground versions and their scenes, the scene deck, per-look wash, light footprints, patch work, the visualiser
-- cloud reviews A and B of that code and their fixes: strobe capped at 3/s everywhere, no look can light a laser, the deck's guards, the preview pack/install scripts
-- the serverXR dependency audit cleared (#677, engine.io 6.6.11, qs 6.16.0)
-- controls are rectangles: the rig-line sweep; the rest of the platform's round controls is still owed
-- MOXIR work now lives on the owner's second machine; this machine only pushes and lands it
-- 47 session notes folded into PROGRESS.md (every note kept there in full)
+- hand fold after the #679 land batch, with the docs-gate fix (#675) merged in
+- What this branch adds
+- Studio viewport: a Blender mouse-navigation preference
+- Studio view keys (Blender numpad) and frame-selected real extents
+- a11y SAFE batch (F4 F7 F9 F10 F12 F15 F17)
+- …and 18 more notes, each in full in PROGRESS.md
+
+Full detail: `PROGRESS.md`.
 
 ## What works
 

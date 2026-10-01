@@ -5,6 +5,510 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-10-01 — hand fold after the #679 land batch, with the docs-gate fix (#675) merged in
+
+- #679 (the MOXIR rig-builder line, preview rigbuilder.14) brought about thirty session notes onto dev; with the others waiting that made 47. The in-place fold in CI would have taken `CURRENT.md` to about 88 lines (cap 50) and stopped the dev image build at the docs gate, as it did after #637 — so this is the hand fold, made on a scratch clone of dev: `session-land-lib.mjs`'s three functions, without `npm run land`'s branch guard and WITHOUT its worktree sweep (this machine carries about a hundred worktrees of other sessions). PROGRESS.md keeps every note in full; "Last session" is cut to six lines (CURRENT.md 45).
+- It also carries #675 (`fix/docs-gate-fold-branches`, merged in): the docs gate no longer refuses a fold branch (`chore/fold-notes-*`, `land/*`) for writing `CURRENT.md`. Without it this very branch could not be pushed. GitHub marks #675 merged once this lands; the one conflict was a pair of rows added to the same table in `docs/ai/known-fixes.md`.
+- Left unfolded on purpose: `fix-docs-gate-fold-branches.md` (arrives from #675) and this note — the next land folds them.
+- Not checked: the dev deploy for the #679 merge commit was still running when this was written.
+
+# feat/moxir-work-light-2026-10-01 — the work light, and MOXIR handed to the PONYO laptop
+
+Branch cut from `fix/review-a-findings-2026-09-30` (f00e404a, the `.14` preview line). aylmo session, 2026-10-01.
+
+## What this branch adds
+
+- `scripts/rigbuild/work-light.mjs` (+ `work-light.test.js`, 4 tests): a dim neutral ambient (`#a39c92`) in every
+  room with a `rig-show`, scene-referred (level ÷ the room's `toneMappingExposure`, default level 1.4), undo file
+  first, local install only. Cause, numbers and the way back: RIG_BUILD §20.4.
+- Owner, on his screen: "ok so its to dark", then "let me see you fixed in all scenes". Applied to the 14 MOXIR rig
+  rooms on aylmo's install (`.14`). Measured on Minimal only (RTX 3080, desktop, 5 cues: mean luma 10.5 / 18.9 / 9.6 /
+  13 / 32.9). The other 7 visible versions are applied but NOT measured: the run was stopped at CPU 100 °C.
+- The level is the owner's to judge by eye; he has not said yes yet.
+
+## Found, not fixed here
+
+- The owner's browser (Flatpak Chromium on aylmo) renders on the **Intel iGPU**; the RTX 3080 sits at 0 %. The room
+  in his tab drove the CPU package to 98–100 °C with both fans at max. The Flatpak's NVIDIA GL extension
+  (`GL.nvidia-615-71-09`) matches the driver, so the card is reachable; on 09-28 the PRIME env gave the Flatpak no
+  WebGL at all. Owed: a tested route (separate profile, check `UNMASKED_RENDERER`), aylmo-only.
+
+## Handover — MOXIR work for the PONYO laptop (Emilya's)
+
+Owner, 2026-10-01: "we moved to emily laptop so move from moxir give them work". aylmo steps back from MOXIR.
+Everything below is on GitHub (`dob-0/di.iiii`, public). The MOXIR **data** (the local install's space, 16 projects)
+lives only on aylmo — restore file `~/di-backups/preview-rig-builder-2026-09-28/step-14b/moxir.diiii` (73 MB); the
+public view is https://dev.diiii.xyz/moxir (older Minimal). Code items need no data.
+
+Rules: one branch per item, cut from `fix/review-a-findings-2026-09-30` (or this branch); never commit to `dev`/`main`;
+a regression test that fails without the fix; gate on a COUNTED vitest pass ("No test files found" exits 0); push the
+branch the same day; write a session note `docs/ai/sessions/<branch>.md`. Review reports: `docs/ai/sessions/
+cloud-review-{a,b}-2026-09-30.md` on branches `cloud/review-a-2026-09-30`, `cloud/review-b-2026-09-30`; what is
+already fixed: `docs/ai/sessions/fix-review-a-findings-2026-09-30.md`.
+
+| # | Item | Where | Size |
+|---|---|---|---|
+| 1 | **B3** — `conflictsWith` hull + `rigFlags` downgrade note: merge `feat/desk-serves-refusal-flags` into the review line, resolve, test | review B | small |
+| 2 | **A4-4** — per-look op: two installs editing looks lose each other's updates (whole-`rigLooks` writes) | review A | medium |
+| 3 | **A4-2** — a real save acknowledgement from `useProjectDocumentSync` for the scene-deck ledger (it now waits on the store version as a stand-in) | review A | medium |
+| 4 | **A2-4b** — the DJ-riser / crew-floor laser zone | review A | small |
+| 5 | **A5-5** — pool memoisation | review A | small |
+| 6 | `StudioViewport` `TOOLBAR_BTN` radius 6 px → 2 px (owner's rule: rectangles only, 0–2 px) | code | tiny |
+| 7 | The green "LOCAL local.thedi.studio" badge covers Undo / Restore on the scene deck (desktop) and "Mark this as good" (phone) | code | small |
+| 8 | **Crane + truss** — the owner has not said what looked wrong; do it on PONYO from the real render (truss / clamps / crane were last fixed in `fix/truss-hangs-from-the-crane`, in f00e404a) | owner + code | ? |
+| 9 | Phone Studio layout still draws 999 px pills (←, Nodes, Projection, Edit, cue chips) — found by PONYO | code | small |
+
+Done on PONYO (local, not pushed — Emily's call): item "TOOLBAR_BTN 6→2 px" as af874a2d on
+`fix/studio-toolbar-rectangles-2026-10-01` (+ a Windows path fix in `controlsAreRectangles`).
+
+Already DONE on `f00e404a` (do not redo): A1-3 room-wide strobe grid, the runtime laser gate (`deskLookValues`), B6 pack/install
+scripts, A5 1–4, A2-4 a/c/d, A3 1–6, A4 1,2,3,5,6 (corrected 2026-10-01 by session dob-c9). The review line is landing
+through PR #679 (`land/rigbuilder-14-2026-10-01` → `dev`, dob-c9 on aylmo); cut new branches from `dev` after it merges,
+or from `fix/review-a-findings-2026-09-30` before. Return route (PONYO): branches pushed to `emilyanikoghosyan/di.iiii`
+(auto-PR to `dev`).
+
+Not for PONYO: A2-3 (needs the maker's effect-distance figure), the crane + truss fix (the owner has not said what is wrong), the owner's look at `.14` and the work-light level,
+measuring the other 7 versions (aylmo's own check, on aylmo), the browser-on-3080 fix (aylmo).
+
+Emilya's own, if she agrees: give `dob-0` read access to `viz.di.formal` and `viz.di.scenes`; the real DMX charts
+she has for the studio fixtures (the rental house's UP-* charts are still missing everywhere).
+
+## Handover part 2 — the owner looks at MOXIR on PONYO (2026-10-01)
+
+Owner: "i can see it now in machine of ponyo so move it all there"; to dob-c9 the same night: aylmo only pushes and lands
+MOXIR, the MOXIR work itself is on PONYO. Everything aylmo still owed on MOXIR moves to
+PONYO: the work light on PONYO's copy, the owner's look and his level, the measurement of the versions. Dropped:
+aylmo's browser-on-3080 fix (he no longer looks on aylmo). All of it only on Emily's yes, as before.
+
+1. **Get the script:** in the MOXIR worktree (at f00e404a), `git fetch origin feat/moxir-work-light-2026-10-01` and
+   check it out (it is f00e404a + `scripts/rigbuild/work-light.mjs` + its test + docs; no app code changes).
+2. **Restore point first** of PONYO's own moxir data (`di save moxir` or a copy of the data root).
+3. **Dry run, then write:** `node scripts/rigbuild/work-light.mjs --api <PONYO's local …/serverXR> --space moxir
+   --out <backup dir> --dry-run`, then without `--dry-run`. Token: `DI_API_TOKEN` env or `--token-file <env file with
+   ADMIN_API_TOKEN=>`; it refuses any host but `local.thedi.studio` / `localhost` / `127.0.0.1`. It lists every rig
+   room with the ambient it replaces; expect 14 rooms (archived ones skipped), realism rooms 0.4, older-night rooms 1.4.
+   **Checked by PONYO: its copy (exported 21:51Z, after the run) ALREADY carries the work light** (0.4 / 1.4) — skip
+   the write; the dry run should show "was" equal to the new value in every room.
+4. **The owner's look:** open `/moxir` there, click through the version row and the scenes. His level:
+   `--undo <dir>/work-light-undo.json`, then run again with `--level <n>` (1.4 now; 2 = brighter, 0.8 = darker).
+   The level he picks goes back into RIG_BUILD §20.4 and `DEFAULT_LEVEL`.
+5. **Measure (optional, Emily's yes):** `scripts/rigbuild/look-probe.mjs --gpu --base <PONYO base> --path
+   /moxir/p/<project> --project <project> --out <dir> --tag <project> --viewports desktop` per version. Its CPU
+   temperature guard reads Linux `sensors` only — on Windows it runs WITHOUT that guard; keep PONYO's stop rule
+   (GPU above 85 °C or loud fans for a minute → stop). Aylmo's numbers for Minimal (RTX 3080, desktop): cue means
+   10.5 / 18.9 / 9.6 / 13 / 32.9.
+6. **Report** in ≤ 8 lines, once, to the owner and in this note (push to `emilyanikoghosyan/di.iiii`).
+
+aylmo's own install keeps its work light (undo file on aylmo `~/di-backups/preview-rig-builder-2026-09-28/step-14b/
+work-light/`); aylmo writes nothing more to MOXIR.
+
+## 2026-10-01 — Studio viewport: a Blender mouse-navigation preference
+
+Branch `feat/studio-navigation-blender-2026-10-01` (from origin/dev e5d95ac9). Not pushed.
+
+### What it is
+
+A per-device preference `di.studio.navigation` = `studio` (default) | `blender`, chosen in the
+help dialog (Shift+? → Shortcuts → "Mouse navigation"), right above the mouse rows it changes.
+That place was picked because it is where Studio already lists the viewport's mouse and keys,
+so the table and the choice are read together; Studio has no other viewport preferences
+panel (the account PreferencesPage is not about the editor).
+
+- `studio` is the old bindings, unchanged: the same values are passed to `<CameraControls>` as
+  before (left ROTATE, middle DOLLY, right TRUCK, wheel DOLLY, `dollyToCursor`, touch one ROTATE /
+  two TOUCH_DOLLY_TRUCK, ortho left TRUCK). `mappings.test.js` pins them to the old literal.
+  No listener is installed for this preset.
+- `blender`: middle orbit, Shift+middle pan, Ctrl+middle zoom, wheel zoom to the pointer, left
+  and right do not navigate; Alt+left / Shift+Alt+left / Ctrl+Alt+left for a mouse with no
+  middle button; Auto Depth on; "Orbit around selection" checkbox (default off). Touch keeps the
+  Studio gestures (the manual names no touch navigation).
+
+### Source (behaviour only, GPL-3.0 code not used)
+
+Blender 5.2 LTS manual, fetched 2026-10-01 from docs.blender.org/manual/en/latest/:
+`editors/3dview/navigate/navigation.html` (Orbit: MMB; Pan: Shift-MMB; Zoom: Ctrl-MMB, Wheel),
+`editors/preferences/navigation.html` (Auto Depth: "Use the depth under the mouse to improve
+view pan, rotate, zoom functionality"; Zoom to Mouse Position; Orbit Around Selection),
+`editors/preferences/input.html` (Emulate 3 Button Mouse: "MMB drag becomes Alt-LMB drag").
+The Shift+Alt / Ctrl+Alt emulate rows are derived from that sentence plus the MMB rows (the
+manual's table did not come through in text form). Recalled, not verified: Blender ships Auto
+Depth and Zoom to Mouse Position OFF (here they are ON by design); Blender's fallback "last
+selection" for Orbit Around Selection is not reproduced (no selection → Auto Depth).
+
+### How
+
+- `src/studio/navigation/mappings.js` — presets as data, `actionFor(preset, button, mods, {ortho})`.
+- `src/studio/navigation/autoDepth.js` — `pickPivot({camera, ndc, objects, maxMeshes})`, a pure
+  raycast over visible meshes, skipping `userData.noPick`, `*Helper`, `TransformControls*`.
+  The adapter passes only entity groups (`userData.svEntityId`), so grid and gizmo are never
+  candidates. Cost: 2000 boxes, median 0.21 ms, p95 0.28 ms, max 1.19 ms (n=50, node/vitest on
+  aylmo). Boxes are 12 triangles; heavy GLTF meshes without a BVH will cost more — not measured.
+- `src/studio/navigation/useCameraNavigation.js` — camera-controls 2.10.1 has no modifier
+  bindings, so a capture-phase document `pointerdown` sets `mouseButtons[button]` per gesture
+  (camera-controls reads them on every pointermove), then picks the pivot once and calls
+  `setOrbitPoint` only when `cc.active` is false (its d.ts: "SHOULD NOT RUN DURING ANIMATIONS").
+  Wheel: one pick per burst (200 ms quiet).
+- `src/studio/navigation/preference.js` — get/set in try/catch, junk → studio, page-lifetime copy
+  when storage throws.
+- Fixed: the help said "Middle drag: Orbit"; the middle button dollies. Mouse rows now come from
+  the preset (known-fixes row).
+
+### Verified
+
+Only unit tests: `npx vitest run src/studio` 55 files / 371 tests pass; new tests failed before
+(guide test 2/2 failed on the old copy). eslint clean on changed files.
+**Nothing was verified in a real browser.** No build was run (machine heat rule).
+
+### Owed
+
+- A look in a real browser on the owner's screen: the Shortcuts tab layout (desktop + phone),
+  a real middle-button mouse in the Blender preset (orbit, Shift/Ctrl+middle, wheel toward the
+  surface), a trackpad with Alt+click-drag, and the studio preset feeling exactly as before.
+- KDE (aylmo) moves windows on Alt+drag by default, and macOS turns Ctrl+click into a right
+  click; Alt-emulation may be taken by the desktop there. Not tested.
+- Keyboard access (WCAG 2.2): no keyboard orbit/pan/zoom of the viewport exists (2.1.1); orbit
+  and pan are drag-only with no single-pointer alternative beyond the smart-view preset buttons
+  (2.5.7), and touch zoom is pinch-only (2.5.1). Numpad views / Home are being added on
+  `feat/studio-view-keys-2026-10-01`; continuous keyboard orbit/pan/zoom is still owed.
+
+## 2026-10-01 — Studio view keys (Blender numpad) and frame-selected real extents
+
+**Bug.** `handleFrameSelected` framed `getPointsBoundingSphere` of the entities' origin points, so a large
+object (the MOXIR hall: one origin) framed like a point. Now `src/utils/entityBounds.js`
+(`entitiesBoundingSphere(entities, getBox)`) unions real world boxes. Bounds come from
+`src/studio/utils/entityObjectRegistry.js`: `SelectableEntity` registers its scene group (which carries
+position/rotation/scale and the model/primitive children) and `Box3.setFromObject` measures it. No object
+(e.g. an empty or light) -> a unit box with `transform.scale` and `rotation` applied. Hidden entities are skipped;
+no selection = whole visible room. The fit formula in `cameraFraming.js` is unchanged.
+
+**Keys** (by `event.code`, `src/utils/viewAxisPose.js` `resolveViewKey`): Numpad1/3/7 front/right/top, Ctrl = back/left/bottom
+(camera on the axis at the current distance, animated; top/bottom up = -Z/+Z); Numpad4/6/8/2 orbit 15 deg;
+Home = view all; Numpad Period = frame selected (the existing `.` and `F` stay). **Numpad5 not done:** the viewport has no
+orthographic camera, only the narrow-fov (`fov < 20`) preset hack in `StudioOrbit`; faking ortho on it was refused.
+
+**Without a numpad (WCAG 2.1.1, 2.5.1).** SmartViewBar only offers the six room presets, not axis views, so it was not extended.
+Chosen: Shift+1/3/7 (Ctrl+Shift = opposite side), Shift+Arrows orbit, Home. Alt+digit rejected: Chrome and Firefox on
+Linux switch tabs with it. Visible control: a `View commands` toolbar above the Navigate/Edit bar in `StudioViewport.jsx`
+(Front Back Right Left Top Bottom Frame All), each `aria-label`led with its shortcut, min 44 px, 2 px rectangles
+(existing `TOOLBAR_BTN`). Help rows appended to the 'View' section of `studioGuide.js` only.
+
+**Tests.** `entityBounds.test.js`, `viewAxisPose.test.js` (new), 3 cases in `studioKeyboardContract.test.js`
+(red on the old editor/guide/viewport, green now). `npx vitest run src/studio src/utils`: 87 files, 807 tests pass.
+
+**Not verified.** Nothing was run in a browser. Owed: a look with a real numpad and on a laptop without one; the
+orbit direction of Numpad4/6/8/2 (sign of `rotate()` deltas) against Blender; Ctrl+Numpad may be eaten by the
+browser (tab switch) in some browsers, then the buttons / Ctrl+Shift route apply; the button row on a 390 px phone;
+the top view's screen-up (relies on camera-controls' spherical azimuth at polar 0).
+
+## 2026-10-01 — a11y SAFE batch (F4 F7 F9 F10 F12 F15 F17)
+
+Source: static WCAG 2.2 AA audit of 2026-10-01. Its findings were hypotheses; each was re-read on this tree before fixing. **Nothing here was seen on a screen** (no browser, no build, targeted vitest only). Branch `fix/a11y-safe-batch-2026-10-01`, not pushed.
+
+- **F9 done.** AuthGate token field: `inputProps['aria-label']='Access token'`; autoFocus kept. Test `gives the access-token field an accessible name` (failed before).
+- **F12 done.** Visible text and name are now both `Sound`; `aria-pressed` carries the state; the cyan colour keeps the on look (label-in-name, WCAG 2.5.3). Test `PublicProjectViewer.sound.test.jsx` (failed before). Owed: a sighted look that on/off is still obvious.
+- **F17 done.** Plain sentence + next step, `role="alert"`, raw error in `title`. Test `AuthGate when the backend is unreachable`. No console logging added.
+- **F4 partly done.** `<main>` (MUI `Box component="main"`) on Landing, StudioHub, SpaceHub roots. Checked: no CSS selects the `main` element; `useKeyboardPageScroll` uses a ref, not the tag. Test: StudioHub `is the page main landmark`. Landing/SpaceHub covered by their existing suites passing, no new test. Skipped: Studio shell (`StudioShell` is `role=application`, viewport files off-limits) and the skip link (cannot verify layout without a screen). Owed: look at Landing (nav now inside main).
+- **F7 done, wider than listed.** Every CSS `color: rgba(255,255,255,.4|.45)` (wider than the audit's 12 sites; `src/algoVrithm/algoVrithm.css` is an ARTWORK's stylesheet and is deliberately left alone — reverted by the lead, allow-listed in the ratchet test) became `var(--di-text-muted)`. Borders/backgrounds untouched. Ratchet test added in contrast.test.js. Owed: a look at raw.css and algoVrithm.css, which the audit did not name.
+- **F15 done.** `contrast.test.js`: muted 5.28, accent/danger/white AA, F7 ratchet, F2 allow-list (`--ui-border` 2.14, `--di-line` 1.22, white@.1 1.20) that fails if one is fixed or worsens.
+- **F10 partly done.** `.preferences-collapse-toggle` got a 44 px `::before` hit area. **Needs a look:** `.insp-num-btn` (its parent has `overflow:hidden`, a pseudo-element would be clipped), the colour inputs (`<input>` cannot take a pseudo-element), `.rigequip-pick input` (already inside a 44 px `label`, so the label click target is 44 px; the bare 20 px input is unchanged).
+- Not touched: F1 F2 F5 F6 F8 F11 F13, StudioViewport/StudioEditor/studioGuide.
+
+## 2026-10-01 — the bridle limit guard: every built crane pick must stay within max_included_deg (PONYO audit finding)
+
+- PONYO's audit (2026-10-01) said the cut truss's high bridle is drawn at 119° against the 120° limit using the 09-28 girder GUESS (8.15 m), and that the 09-29 photo-fitted hall (7.95 m) would put it at ~144°. Checked here with `rig-lib.mjs` `pickGeometry`: confirmed (u 5.25, apex 7.56 m; 119.1° → 144.4°; clamps 0.44 → 0.24 m above the apex; leg tension 0.99 → 1.63 × the load by geometry, about 101 → 165 kg on their figure — the audit's 175 kg came from its own arithmetic). Same for `minimal`, `minimal-cut-movers`, `minimal-ground`, `full-ground`. The limit was used once, to derive the trim; nothing checked a built pick.
+- Added `scripts/rigbuild/bridle-limit.test.js` (10 tests): the four bridled rigs are found; each is within the limit against the hall it points at; against the measured hall the violations equal the recorded list (a stale list fails either way); the guard can fail (hall 0.2 m lower). Proven by hand: pointing `minimal-ground` at the measured hall without re-deriving its trim makes the guard fail with 144.4°. `docs/architecture/RIG_BUILD.md` §15.13 says what is owed.
+- NOT done, and not mine to do: measuring the girder underside on site, repointing the versions file to the measured hall, re-deriving the trims and bridles, re-checking the crane-clash rule for the lasers, and the rigging sign-off itself (geometry only here; no hardware rating). The 3/s strobe cap on raw DMX values 4–254 of the PL5403 / B380F has no known rate map until a real unit is read (also from the audit; not changed here).
+
+## 2026-09-30 — docs gate lets a fold branch write CURRENT.md
+
+- `scripts/check-agent-docs.mjs` refused any branch whose `CURRENT.md` differed from `origin/dev`, which blocked the hand fold `chore/fold-notes-after-670` in the pre-push hook. CI's `land` job cannot push to protected `dev` (GH006), so since 2026-09-29 the fold PR is the only route.
+- The rule now skips branches named `chore/fold-notes-*` or `land/*` (`isFoldBranch` in `scripts/repo-state-lib.mjs`). Detached HEAD (CI) and every other branch keep the rule; the 50-line cap on `CURRENT.md` and all other checks apply to everyone.
+- Guard: `scripts/check-agent-docs.fold-branch.test.js`.
+
+## 2026-09-30 — httpContracts waits on events, not sleeps; SpaceHub stub case waits on its state
+
+**httpContracts.test.js** (87 cases, each boots a real serverXR). Cause of the time and the red:
+200ms `/api/health` poll per boot (~100ms idle x 87); the open-space restore case polled for a boot
+snapshot that `index.js` took fire-and-forget (a real race with the first writes — fixed in the server:
+the snapshot is now awaited before listen); `getFreePort` closes its probe before the child binds (port
+stolen -> boot dies with EADDRINUSE); five sleeps (20ms x2 clock guard, 500ms and 1000ms "nothing extra
+arrived", 200ms/100ms polls). Now: ready = the server's own listen log line, EADDRINUSE alone retried
+on a fresh port, bot waits are events, "nothing sent" is proved by a notices-on control server against
+the same bot. Measured (`vitest run`, `--reporter=verbose`, one file): before 34.09 / 32.86 / 34.57 s;
+after 22.51 / 22.47 / 22.23 s, 87/87 each time. Slowest case now 599ms (was 1444ms).
+Limit: a late duplicate notice is excluded by ordering (it would be sent before the awaited one and fail
+the summary text), not by a clock.
+
+**SpaceHub.test.jsx preview-stub case.** Not reproduced: 6/6 green (3 idle, 3 with four CPU burners),
+case takes ~80ms; the 8s was only a ceiling. The case asserted "s12 absent" after waiting only for s0,
+which is vacuous while the other cards still mount. It now waits for the real state (12 preview frames
+mounted) and the explicit 8000ms overrides are gone. Owed: root cause of the CI-only failure is
+unproven — if it recurs, capture the CI log of the failing assertion.
+
+**projectContracts.test.js** ("expected 401 to be 201", PR #671 first run, green on rerun). Same fixture
+class. `getFreePort` releases the port before the child binds; vitest runs contract files in parallel, so
+a sibling file's server can take it, and the 200ms health poll is then answered by the SIBLING (other
+token / REQUIRE_AUTH) -> 401. Mechanism is derived from the fixture, not observed (the failure was not
+reproduced locally). Fix: new `serverXR/src/testSupport/spawnServer.mjs` (child's own listen line = ready,
+EADDRINUSE-only retry), used by projectContracts. 15.31s before (1 run) -> 8.78 / 8.99 / 8.67s after.
+Owed: `bundleContracts`, `installBundleContracts`, `fallbackContracts`, `spaHostingContracts` and
+`httpContracts` still carry their own copy of the polling fixture and the same TOCTOU; move them to the
+shared helper (httpContracts already has the same logic inline).
+
+## 2026-09-30 — front-door "hardcoded auto-frame 0.8,0.45,1" and the phone exit: what they really were
+
+- The CURRENT.md diagnosis was half right. `0.8, 0.45, 1` is a camera DIRECTION (centre -> camera,
+  three-quarter from front-right, above the floor), not a position or a fit. Distance was already
+  fitted from the bounding sphere and the viewport aspect in `computeFramingCamera`.
+- The `main` room never reaches it: its document is `entryView: 'fixed-camera'` with
+  `fixedCamera [0,3,14.5] -> [0,1.2,-14]` fov 50 (read from the local tier and from the
+  di-spaces backup), so `resolveViewerCamera` takes the authored lane + `fitCameraToAspect`.
+  Auto-frame only serves `entryView: 'scene'` rooms.
+- The place the constant DID hide a real bug: Studio "Frame selected" (`StudioEditor.jsx`
+  `handleFrameSelected`) carried its own copy of the literal AND its own vertical-only distance
+  (`radius / sin(vFov/2)`), the drifted twin of the fix that #286 made in `cameraFraming.js`.
+  On a portrait viewport it cropped the selection at the sides. It now uses `computeFitDistance`
+  (radius / sin(limiting half fov), limiting = min(vertical, atan(tan(vFov/2) * aspect))) with the
+  camera's own aspect, and the direction is the one exported constant `DEFAULT_FRAMING_DIRECTION`.
+  Landscape is byte-identical (limiting fov is vertical for aspect >= 1). No other room's behaviour
+  changed; an authored camera is still respected.
+- Guard: `src/utils/cameraFraming.test.js` "bounding-sphere fit" (landscape R/sin(25 deg); portrait
+  390x844 R/sin(atan(tan25 * 0.462)); ratio 1.9-2.2).
+- Phone exit: NOT a live defect. The bare Raw canvas wordmark (link home) was moved to the top-left
+  on <=640 px, 44 px tall, in fe00ef62 (2026-08-22); the CURRENT.md line is stale. Same control as
+  desktop. Pinned by `src/raw/phoneExit.test.js`. Owed: CURRENT.md line to be dropped by `npm run land`.
+- Not fixed, named: on a hosted install the published `main` room opened bare (`/main`) suppresses
+  `MadeWithBadge` (`homeIsThisRoom`), but `/` is the landing again, so that room has no visible exit
+  on desktop or phone. Owner's call (it adds a control to the room).
+- Landing REST_POSE is not aspect-fitted on a phone (outer doors cropped for the first frames of the
+  flight); the page covers it. Owed if the flight is ever shown bare.
+
+- Follow-up (same day): the owed phone arrival is done. `fitCameraToDoors` (PublicProjectSceneSurface.jsx) reuses `fitArrivalToDoors`; guarded by `isPlatformOwnSpace(spaceId)` + fixed-camera + aspect < 1. Looked at 390x844 @3: all four doors whole, the right ring close to the edge.
+
+## 2026-10-01 — front-end bug batch from the read-only audit
+
+Source: the front-end audit of origin/dev e5d95ac9 (findings were hypotheses; each was re-read on this tree
+first). Branch `fix/frontend-bugs-batch-2026-10-01`, not pushed. **Nothing here was seen in a browser**:
+only targeted `npx vitest run` on the touched modules and their neighbours (101 files, 1454 tests green)
+and eslint on the changed files (0 errors; the remaining warnings are pre-existing, plus the
+`react-hooks/refs` report on the lazily-built DMX senders). Installed node_modules are older than 09-24.
+
+| # | Item | Result |
+|---|---|---|
+| 1 | `useSceneInitializer` catch called `localStorage.removeItem` unguarded | DONE. Local `readSavedScene` / `safeRemoveItem` (no shared helper exists in the repo; fewer than 3 sites). Tests: "survives blocked localStorage" (every call throws; `window.localStorage` getter throws), fail before / pass after. |
+| 2 | `RawEditor` `migrateLegacyRawStorage()` at import | DONE. Body in try/catch. Tests in `RawEditor.blockedStorage.test.jsx` (getter throws; getItem throws), fail before. |
+| 3 | Stale responses in `StudioHub` / `StudioProjectsPanel` | DONE. Cancelled flag on the space effects; request-number ref on `loadProjects` (latest wins, also covers the handler reloads). Tests with two deferred promises, old answer lands last; fail before. |
+| 4 | `spaceStore.writeSpaces` unguarded `setItem` | DONE (confirmed). try/catch, returns boolean; callers keep their in-memory record. Test `spaceStore.blockedStorage.test.js`. Honest limit: nothing tells the person the list was not saved. |
+| 5 | `RawGraphSurface` wires memo missing `portScopeNodes` | DONE (confirmed real). `portScopeNodes` is every node, `nodes` only the current scope, so a doorway added/removed inside a container leaves wires to that container's sockets at the old row. Test removes a door with `nodes`/`edges` unchanged; fails before. |
+| 6 | `usePieceAssets.ensureAsset` double upload | DONE (confirmed). In-flight Map by kind, cleared on settle; also checks `response.ok` before uploading. `usePieceAssets.test.jsx`, fails before. |
+| 7a | `MapSurface` reference-photo blob URL | DONE. New `src/map/useLocalFileUrl.js` revokes the previous URL on replace and on unmount. Test with a `URL.revokeObjectURL` spy. |
+| 7b | `LiveScreens` blob URL on `onerror` | REFUTED. `image.onerror = () => URL.revokeObjectURL(url)` is already there (line 116). |
+| 7c | `SpaceConstellation` line geometries | FIXED, UNTESTED. Effect cleanup disposes them. Needs a look: no cheap unit test; verify in a GPU session. |
+| 7d | `FixtureBodies` lens material | FIXED, UNTESTED. Cleanup disposes only the lens materials made in the memo (GLTF-owned materials are left alone). Needs a look, same reason. |
+| 8 | `DmxOutPanelWindow` render-time `.cancel()` | DONE (confirmed). Cancel moved into an effect cleanup keyed on `lane`. The new test checks cancel on lane change and unmount; it also passes before the fix (a discarded concurrent render cannot be reproduced cheaply), so the benefit is by reasoning, not by a failing test. |
+
+Not touched (other agents): StudioViewport, StudioEditor, studioGuide, AuthGate, PublicProjectViewer,
+StudioShell, Landing. Audit items 9+ (AgentRunPanel, reel players, WebglContextGuard, JSON clone, JSON.parse of
+imports) were outside this batch and remain owed.
+
+## 2026-10-01 — the in-place fold can no longer push CURRENT.md over its 50-line cap (the dev deploy stopped three times)
+
+- Why: CI's `land` job folds the waiting session notes into PROGRESS.md and rewrites `CURRENT.md`'s "Last session" section with one bullet per note title. That section had no cap, so a landing with many notes made `CURRENT.md` longer than its 50-line limit and `check-agent-docs` (run by `scripts/check-agent-docs.crlf.test.js` in `build-and-test`) failed; no dev image was built. It happened after #670, after #677 (88 lines once the ~30 notes of #679 arrived) and after #683 (51 lines). Each time a hand fold fixed it (#638, #680); this removes the cause.
+- What: `buildLastSessionSection` in `scripts/session-land-lib.mjs` now writes at most `MAX_LAST_SESSION_BULLETS` (6) bullets — the first five titles plus "…and N more notes, each in full in PROGRESS.md" — so the section is a fixed size. PROGRESS.md still keeps every note in full. Tests in `scripts/session-land-lib.test.js` (fail on the old code): 47 notes give exactly 6 bullets and the right count; exactly 6 notes keep every title.
+- Measured: folding the notes waiting on dev (11) with the old code gives a `CURRENT.md` of 52 lines (the failure); with the cap it is 47 lines for 11, 30 or 100 notes. Not run: CI itself (it runs on this PR), the real `land` job.
+- Not changed: the 50-line limit, the other sections of `CURRENT.md` (35 lines today: a few more lines there would cost this margin of 3), and the land job's inability to push to protected dev (GH006) — the hand-fold route stays.
+
+## 2026-10-01 — the LOCAL tier chip no longer covers the scene deck's bottom bar
+
+Owner review: the green "LOCAL local.thedi.studio" chip (`src/components/ModeMark.jsx`, `modeMark.css`, fixed
+bottom-left, z-index 10001) sat on UNDO / RESTORE LAST GOOD (1440x900) and MARK THIS AS GOOD (390x844) of
+`/{space}/scenes/{project}` (`.rigscenes-foot`, sticky bottom, `src/rigbuild/scenes.css`).
+
+**Fix (smallest, reusable):** `modeMark.css` defines `--di-mode-mark-clearance` on `:root`
+(`calc(44px + env(safe-area-inset-bottom))`: 10px offset + ~24px chip + air). A page with a bottom action
+bar adds it to that bar's bottom padding. `.rigscenes-foot` does. The chip is not hidden; it still says which
+tier you are on. The next page with a bottom bar uses the same variable.
+
+**Guard:** `src/rigbuild/modeMarkClearance.test.js` reads the CSS sources (variable exists, covers chip
+offset + height, deck bar uses it).
+
+**Not seen on a screen** (asserted in CSS only). Owed: a look at 1440 and 390 px. Note the chip also
+collapses to a thin line after 4 s; the reserved strip stays (a constant 44 px gap under the bar).
+
+## 2026-09-30 — four small recorded bugs, each proved before touched
+
+- **`di status | head` EPIPE — real, fixed.** `di status | head -1` printed the line then a
+  Node stack (`Error: write EPIPE … at say (cli/ui.mjs:40)`), reproduced on the installed
+  0.4.16-rigbuilder.11. `scripts/di/ui.mjs` now handles `error` on stdout and stderr: EPIPE
+  exits 0 quietly, any other error still throws. Guard `scripts/di/ui.epipe.test.js`
+  (seen red without the fix, green with it). After: `node scripts/di/cli.mjs status | head -1`
+  exits 0, no trace. Only reaches installed CLIs on the next `di update`.
+- **`/make` 404s `/api/spaces/make` — already fixed since f4b539ee (2026-09-10).** No client
+  code calls that path (`grep -rn spaces/make src serverXR/src` finds none);
+  `getBareReservedSegment` answers a bare `/make` with a card and makes no lookup. Dev
+  answers `GET /api/spaces/make` with the SPA shell (200), never a 404 on the wire. Row 578
+  of known-fixes already records it. No change.
+- **`main/privacy` unreachable — reserved word, not a router bug; product decision, not
+  changed.** `privacy` is `APP_PAGE_PRIVACY` in `RESERVED_APP_SEGMENTS`, so `/privacy`
+  serves the platform's privacy page and `/main/privacy` falls to the SPA shell. A stale
+  `privacy` project (id `privacy`, live, public, July text) still sits in dev's `main`.
+  Options: (A) archive/delete that stale project — tier data, the owner's call, the real
+  page already lives at `/privacy`; (B) let the router honour a reserved word in the
+  project position — weakens the reserved-word guarantee (`shared/reservedSegments.cjs`)
+  that keeps app pages from being shadowed. Recommended: A.
+- **`LIVE_API_URL` — partly unified.** Dev-tier scripts (`dev-stack`, `data-inventory`,
+  `local-mirror`, `promote-space-projects --from`, `push-space-projects`) now read
+  `DEV_API_URL`/`DEV_API_TOKEN` first with `LIVE_*` as legacy alias (as `data-cleanup`,
+  `space-code-push`, `wcc-page-snapshot` already did). Behaviour identical when only `LIVE_*`
+  is set. Guard `scripts/tier-env-names.test.js`. Docs: `.env.example`,
+  `docs/ai/local-workflow.md`, `spaces/README.md`. **Owed:** `space-push`, `space-pull`,
+  `space-new`, `project-pull`, `space-sync`, `space-sync-github` keep `LIVE_API_URL`
+  ("the tier I target", production when unset; root `.env` says prod, `.env.local` overrides
+  to dev). Renaming them changes which tier a routine push hits unless the owner's env files
+  migrate first, so it needs the owner. The server's own `LIVE_API_URL` (`config.js`, sync
+  routes) is a separate upstream setting in deployed env; not touched.
+
+## 2026-09-30 - controls become rectangles, wave 2 (jam surface, kit page)
+
+- Continues #673 (`docs/ai/sessions/fix-viewer-square-controls.md`); branch `fix/square-controls-wave-2` is cut from that PR's branch so its test and owed list exist. Rule: `docs/ai/golden_rules.md` "Controls are rectangles". Only the radius changed - sizes, colours, positions and copy are identical.
+- **Fullscreen button (bottom right of /moxir): source NOT found, nothing changed.** Rendering was tried: dev.diiii.xyz and diiii.xyz both answered `502 Bad gateway` (the Mac's tunnel was down), and `localhost:5173` is another stack behind its sign-in wall ("Access restricted"), so `elementFromPoint(370, 820)` hit nothing of the viewer. Falling back to grep of `src`, `public`, `scripts`: the only `requestFullscreen` callers are `useAutoHideChrome` (algoVrithm only), `useFullscreen` (editor `useControlButtons`, key `fullscreen`, drawer "Display"), `MapOutput`, `StudioShell`, `StudioViewport`; none is in `PublicProjectViewer`'s tree (`SurfaceBar`, `ProjectSwitcher`, `RigVersionSwitch`, `LiveProjectScene`, `RoomTextLayer`, `MadeWithBadge`). Remaining suspects: a control drawn by the space's own published page code (data, not repo), or the browser's. Owed: DOM-inspect it on a phone (`document.elementFromPoint(370, 820)`, walk `parentElement`, read computed `border-radius`) once dev is up.
+- `src/project/components/jamSurface.css`, 9 round rules: changed 7 to `var(--di-radius)` (2 px): `.jam-exit`, `.jam-share`, `.jam-add` (64 px circle), `.jam-mine-chip`, `.jam-sheet-grip` (4 px bar, looks the same), `.jam-colour` (colour button, circle), `.jam-status` (toast). Kept round: `.jam-count-dot` (status dot), `.jam-mine-swatch` (1 rem colour mark inside a chip).
+- `src/kit/kit.css`, 4 rules, all changed: `.kit-live-button`, `.kit-live-mark`, `.kit-try`, `.kit-fact dd a`.
+- The `--di-radius-pill` token (`src/styles/base.css:80`) stays. `var(--di-radius-pill)` users left: 34 in 17 files (`raw/styles/raw.css` 9, `styles/inspector/misc.css` 5, `styles/workspace.css` 3, `styles/controls.css` 2, `studio/styles/studio-help.css` 2, `studio/styles/studio.css` 2, one each: `styles/panels/spaces.css`, `styles/panels/asset.css`, `styles/mobile-shell.css`, `styles/inspector-controls.css`, `studio/styles/studio-mobile.css`, `studio/styles/studio-coach.css`, `scan/scanSurface.css`, `raw/director/director.css`, `pages/spaceContents.css`, `components/webglContextGuard.css`, `components/liveProjectScene.css`). Literal `999px`: 17 in 5 files. Regenerate: `grep -rn "var(--di-radius-pill)" src`.
+- Test: `squareControls.test.js` gained two cases (jam surface allows exactly `.jam-count-dot` and `.jam-mine-swatch` round; kit.css allows none); both seen red on the old CSS.
+- Not seen on screen: sites 502, the laptop at 94 C after one browser run. The owner looks on dev after the land.
+
+## 2026-10-01 — Studio viewport toolbar: 6 px corners → 2 px (controls are rectangles)
+
+- Handover item (feat-moxir-work-light-2026-10-01.md, "TOOLBAR_BTN 6→2 px"), done on the PONYO laptop. Cut from `feat/moxir-work-light-2026-10-01` (4f7fd530, the `.14` review line + work light).
+- `src/studio/components/StudioViewport.jsx`: `TOOLBAR_BTN` 6px → 2px, and the two 30 px corner buttons in the same file (Fullscreen, the `?` above it) 6 → 2. `SmartViewBar.jsx` loses its "the toolbar's own 6 px corners are owed the same" note.
+- Guard: `src/rigbuild/controlsAreRectangles.test.js` now sweeps `StudioViewport.jsx`. Seen failing first, on exactly the three lines (838, 887, 1180), then passing.
+- The same test failed on Windows before this change: `relative()` gives `src\rigbuild\…` and the allow-list says `src/rigbuild/…`, so the recording dot in `RoomLookFollower.jsx` was flagged. Paths are now joined with `/` before matching. Linux CI was never affected.
+- Validation: vitest `controlsAreRectangles` + `StudioViewportLayout` + `SmartViewBar` = 3 files, 11 tests pass (Node 24.18, Windows); eslint clean on the three files. Looked at in Chrome at 1440×900 and 390×844 on `/moxir/studio/projects/moxir-hall-minimal-ground`: every toolbar and corner button computes 2px.
+- Found, not fixed (outside this item): the phone Studio layout still draws pills (999px): `←`, Nodes, Projection, Edit, the cue chips and the "Tap an object" hint. Not in `StudioViewport.jsx`; worth its own branch and a sweep entry.
+
+## 2026-09-30 - the visitor viewer's controls become rectangles
+
+- Owner, on dev.diiii.xyz/moxir at 390x844: Walk / Fly and the SHOW chip were full pills, Fullscreen had a rounded corner. Rule: `docs/ai/golden_rules.md` "Controls are rectangles" (radius 0-2 px, state = fill/contrast, only non-control status dots stay round).
+- Started from `origin/dev`. `origin/fix/moxir-square-controls` (29ec1c77) holds the rule and four files but sits on a 185-file preview merge and is not on dev; its commit was cherry-picked here without the `SmartViewBar.jsx` hunk (the file is not on dev - it still needs 999px -> 2px when it lands) and without its own session note (superseded by this one).
+- Changed: `overlayButtonStyle` (Walk / Fly, Sound), `ProjectSwitcher` idle button, `RigVersionSwitch` (999px -> 2px); `RoomLookFollower.jsx` chip 22px -> 2px (red dot stays round); `liveProjectScene.css` exit, sound, fly, vertical buttons -> `var(--di-radius)`; `authReturnNotice.css` -> `var(--di-radius)`.
+- Not found: the "Fullscreen" button bottom right of /moxir. No visitor-viewer source renders it: `StudioControlCluster` (`.scc-btn`, 2 px), `.toggle-button` (2 px), `algoVrithm.css` (999px, but that is another work) all differ. It may be the browser's own control or a piece of the preview-only SmartView. Needs a look on the phone (DOM inspect) before the next pass.
+- Not seen on screen: laptop at 98 C when work began, no browser run. Owner looks on dev after the land.
+- Test: `src/project/components/squareControls.test.js` (3 cases; the live-scene case seen red on the old CSS).
+
+### Still round after this change (the owed list for the next pass), radius 999px / pill token / 50% by file (count)
+raw/styles/raw.css 11 · wccSite/landing/landing.css 9 · project/components/jamSurface.css 9 · styles/inspector/misc.css 7 · studio/styles/studio.css 7 · components/liveProjectScene.css 3 (loading ring, joystick pad + thumb: status/gesture marks, arguable) plus 4 ghost-hint marks · studio/styles/studio-help.css 6 · scan/scanSurface.css 4 · make/makeSurface.css 4 · kit/kit.css 4 · algoVrithm/algoVrithm.css 4 (its Full screen / Enter VR buttons are 999px) · styles/workspace.css 3 · styles/inspector-controls.css 3 · styles/panels/base.css 2 · styles/controls.css 2 (collaboration cursor marks) · studio/styles/studio-coach.css 2 · rigbuild/build.css 2 (the 44px pill button, the 52px 50% button) · chat/ChatHomeSurface.jsx 2 · one each: preferences.css, panels/spaces.css, panels/asset.css, mobile-shell.css (nav badge), inspector/overlays.css, base.css (the token), studio-mobile.css, space-constellation.css, RoomLookFollower.jsx (the red dot, allowed), raw/director/director.css, perform/perform.css, pages/spaceContents.css, webglContextGuard.css, loadingScreen.css, chat/StudioChatSurface.jsx.
+Rounded panels 8-18 px: `overlayCardStyle` (18 px), `ProjectSwitcher` panels (18 / 12 / 8 px). Regenerate with `grep -rnE "999px|radius-pill|border-radius: *50%|borderRadius: *'50%'" src`.
+
+## 2026-10-01 — Windows main-script guards
+
+**Symptom (found on Windows by another session):** scripts that ended with
+`if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) main()` ran
+nothing and printed nothing. On Windows the URL pathname is `/C:/Users/...`, never equal to `C:\Users\...`.
+The variants `import.meta.url === \`file://${process.argv[1]}\`` fail the same way (and on any path with a
+space or non-ASCII character, even on Linux, because the URL is percent-encoded).
+
+**Fix:** one helper, `scripts/lib/isMainModule.mjs` (`isMainModule(import.meta.url, argv1 = process.argv[1])`):
+`fileURLToPath` (the documented conversion) on one side, `path.resolve(argv1)` on the other, both passed through
+`fs.realpathSync` in try/catch so a symlinked bin still matches; false when argv1 is missing. 32 scripts now
+use `if (isMainModule(import.meta.url))` with their existing main call unchanged. Non-guard uses of the same
+pathname idiom (path roots in `realism.mjs`, `sway.mjs`, `build-reel-atlas.mjs` and five test files) became
+`fileURLToPath(...)`.
+No changed script is documented as copied alone to another machine, so none inlines the logic. (The
+vendored `space-sync.mjs` already used `fileURLToPath` and was not touched.)
+
+**Left alone on purpose:** `scripts/rigbuild/versions.mjs` (another session fixes it on its own branch); it is
+allow-listed in `scripts/noPathnameMainGuard.test.js` with that reason. Remove the allow-list entry when that
+branch lands. Scripts that already used `fileURLToPath` were not touched.
+
+**Tests:** `scripts/lib/isMainModule.test.js` (same file, other file, argv1 missing/empty, relative argv1,
+symlink, spaces/non-ASCII, Windows shape) and `scripts/noPathnameMainGuard.test.js` (scans scripts, serverXR,
+src for the old patterns). Before the fix: the helper test could not load (no helper) and the scan test failed
+with 43 hits; after: 8 of 8 pass.
+
+**Run:** those two files; 19 changed scripts' own test files (214 tests pass); `eslint` on changed files (0
+errors; one existing unused-variable warning in `versions-page.mjs`); `node scripts/tier-sync.mjs --help`
+(prints usage); `node --check` on every changed script.
+
+**NOT run:** on a real Windows machine. The Windows case in the helper test is asserted by construction, on
+Linux, using Node's `fileURLToPath(url, { windows: true })` against `path.win32`; someone must run e.g.
+`node scripts/rigbuild/sway.mjs` on Windows to see it. The scripts themselves (most write, call the API, or
+launch a browser) were not run. `serverXR/src/rig/routes.test.js` could not run here: `express` is not
+installed in the shared node_modules (same failure without my change).
+
+## 2026-10-01 — land batch: small-bug sweep (#671) and Studio frame-selected framing (#672); #673 and #674 were already in dev
+
+- Four PRs were open, each with a green CI run on its own branch and 127-155 commits behind dev. Two of them, #673 (the visitor viewer's controls are rectangles) and #674 (make httpContracts, SpaceHub stub and projectContracts deterministic), turned out to be already in dev — their heads are ancestors of dev, they went in with the 09-30 land batch (#670) — so they are closed with a pointer, not merged again.
+- Landed here: #671 (di EPIPE fixed, `DEV_API_URL` for dev-tier scripts, and the small-bug sweep's script changes) and #672 (Studio frame-selected fits the narrow axis; the shared framing direction). The only conflict in either was a pair of rows in `docs/ai/known-fixes.md`, both kept.
+- Checked: `scripts/di`, `scripts/tier-env-names.test.js`, `src/utils`, `src/raw/phoneExit.test.js`, `src/project/components`, `src/studio` — 120 of 121 files, 1206 of 1207 tests pass. The one failure, `scripts/di/openFile.test.js` ("introduces itself with the release version, not 0.0.0"), fails the same way on plain dev (checked on a dev worktree 2026-10-01), so it is not from these PRs. Docs checks pass. Not run: the full suite (CI runs it on the batch PR).
+
+## 2026-10-01 — land batch: five server contract tests on the shared spawn helper (#678) and square controls wave 2 (#676)
+
+- Both PRs were green-by-default but had never run CI (their only check was the skipped `open-pr`) and were 133 commits behind dev, so they land as one batch on current dev instead of one by one: #678 merged clean; #676 conflicted in `docs/ai/known-fixes.md` (rows from both sides kept) and `docs/ai/golden_rules.md` (both edited the "controls are rectangles" paragraph).
+- golden_rules: kept dev's paragraph (the rig-line sweep, true on dev) and added only what wave 2 brings — `jamSurface.css` and `kit.css` squared, guarded by `squareControls.test.js` — and removed those two from the owed list. #676's own line also described `liveProjectScene.css` / `authReturnNotice.css`; those are in the still-open #673, not in this batch, so they are not claimed here.
+- Checked: the five contract files, `src/project/components`, `controlsAreRectangles` — 14 files, 200 tests pass; docs checks pass. Not run: the full suite (CI runs it on this PR).
+
+## 2026-10-01 — land batch: accessibility safe fixes (7 audit items) and front-end bug fixes (6 confirmed bugs)
+
+- Two audits of the current dev tree were made on 2026-10-01 by read-only agents (WCAG 2.2 AA static audit; front-end bug audit); every finding was re-read by the lead before a fix was written (audit findings are hypotheses). Two fix branches, merged here on current dev (59de36e2); the only conflicts were rows in `docs/ai/known-fixes.md`.
+- Accessibility (static, nothing seen on a screen): the access-token field has an accessible name (F9); the Sound button's name is constant with `aria-pressed` carrying the state (F12); the auth error is one plain sentence plus a next step, `role=alert`, raw error in a tooltip (F17); `<main>` landmark on Landing, the Studio hub and the Spaces hub (F4, partial: not the Studio shell, no skip link); muted-text colours under 4.5:1 now use `--di-text-muted` (F7; `src/algoVrithm/algoVrithm.css` is an artwork's stylesheet and was deliberately left alone, allow-listed in the ratchet); `.preferences-collapse-toggle` gets an invisible 24 px hit area (F10, partial); `contrast.test.js` records the known border failures (F2) so the test fails if one worsens or is fixed without updating the list (F15). Needs a look: `.insp-num-btn` (a clipped parent), the colour inputs, the Landing nav now inside `<main>`.
+- Front end: blocked storage no longer stops the blank scene or the whole Raw bundle (the legacy-storage migration ran at import time unguarded; `window.localStorage` access alone can throw); `writeSpaces` guards `setItem`; stale `getServerSpace`/`listProjects` responses no longer overwrite the new space after navigation (StudioHub, StudioProjectsPanel); the Raw wires memo missed `portScopeNodes` (a removed doorway inside a container left its wires on the old row); concurrent `ensureAsset` calls no longer upload the same asset twice; `MapSurface` revokes its blob URLs; `SpaceConstellation` geometry and `FixtureBodies` lens material are disposed (not unit-tested: need a look); the render-time throttle cancel in `DmxOutPanelWindow` moved into an effect (its test passes before the fix too, so that one rests on reasoning). `LiveScreens` was refuted (its onerror already revokes). 
+- Not in this batch, needs the owner's design call and a screen: border contrast under 3:1 (F2), tiny text (F8), focus rings defeated by `outline:none` (F1), dialog focus traps (F6), split-pane keyboard (F5), overlay contrast on bright scenes (F11), idle auto-rotate vs reduced motion (F13). The server/security audit has not been run.
+
+## 2026-10-01 — land batch: the tier chip clears the scene deck's bottom bar; main-script guards work on Windows
+
+- Two fixes made by parallel agents on 2026-10-01 from reports of this day, landed as one batch on current dev (e5d95ac9): (1) the scene deck's Undo / Restore / Mark buttons are no longer covered by the page-wide tier chip ("LOCAL local.thedi.studio") — `--di-mode-mark-clearance` in `src/components/modeMark.css`, reserved in `.rigscenes-foot`; asserted in CSS only, NOT seen on a screen (owed: a look at 1440 and 390 px). (2) `scripts/lib/isMainModule.mjs` replaces the `new URL(import.meta.url).pathname` "am I the main script" check in 32 scripts, which is always false on Windows (another session found it in `versions.mjs` on the PONYO laptop); `versions.mjs` is left to its own branch and allow-listed in `scripts/noPathnameMainGuard.test.js`.
+- Checked: 132 files / 1179 tests pass on the touched areas plus the scan test over the merged tree; docs checks pass. Packaging checked by hand: the scripts copied alone into the Docker images (`install-git-hooks`, `space-bundle`, `project-move`) and into the runtime pack (`space-bundle`, `install-bundle`) are not among the changed ones, so the new import cannot break an image. Not run: real Windows (asserted by construction, `fileURLToPath` with `windows: true`), most changed scripts (they write, call the API or open a browser), CI (runs on this PR).
+- Conflict: one pair of rows in `docs/ai/known-fixes.md`, both kept.
+
+## 2026-10-01 — land batch: Studio navigation — a Blender mouse preference with Auto Depth, Blender view keys, and frame-selected from real bounds
+
+- Two branches made by parallel agents on 2026-10-01, merged here on current dev (59de36e2); conflicts were the known-fixes table, the imports and the guide rows in `StudioViewport.jsx` / `studioGuide.js` (kept both sides: the mouse rows now come from the active preset, the view-key rows stay static).
+- (1) `feat/studio-navigation-blender-2026-10-01`: a navigation preference `studio` (DEFAULT, exactly the bindings Studio always had, pinned by a test, and it installs no listener) or `blender` (middle drag orbits, Shift+middle pans, Ctrl+middle zooms; with no middle button Alt+left orbits, Shift+Alt pans, Ctrl+Alt zooms; Auto Depth on, optional Orbit around selection), chosen in Shift+? > Shortcuts. Auto Depth raycasts the scene's entity meshes once at the start of a gesture (`pickPivot`, median 0.21 ms on 2000 boxes) and calls camera-controls `setOrbitPoint`; touch is never remapped. Follows the Blender 5.2 manual's described behaviour (Blender is GPL-3.0; no Blender code used). Also fixes the keyboard guide, which said "Middle drag: Orbit" while the code made middle zoom.
+- (2) `feat/studio-view-keys-2026-10-01`: frame-selected / view-all use real object bounding boxes instead of origin points (a big object such as the hall was framed like a point); Numpad 1/3/7 (+Ctrl) views, Numpad 4/6/8/2 orbit 15°, Home, Numpad `.`; no-numpad route Shift+1/3/7, Shift+Arrows and a labelled 8-button "View commands" toolbar (WCAG 2.2 2.1.1 / 2.5.1). Numpad 5 skipped: the viewport has no real orthographic camera.
+- Checked: `src/studio`, `src/utils`, `src/project/viewport` — 113 files / 1075 tests pass, eslint 0 errors, docs checks pass. NOT verified in any real browser: orbit direction against Blender, the top-view up vector, whether browsers swallow Ctrl+Numpad, Alt+drag on KDE (the window manager takes it), Ctrl+click on macOS (right-click), the toolbar on a 390 px phone. Owed: a look with a real middle-button mouse, a trackpad, and a laptop without a numpad; the owner's call on the new always-visible toolbar.
+- Still open from the audit (not in this batch): no keyboard pan/zoom (2.1.1), orbit/pan are drag-only (2.5.7), touch zoom is pinch-only (2.5.1).
+
+## 2026-09-30 — the five remaining contract files move to the shared spawn helper
+
+Closes the "owed" item of `fix-flaky-contracts-2026-09-30.md`. `bundleContracts`, `installBundleContracts`,
+`fallbackContracts`, `spaHostingContracts` and `httpContracts` now boot serverXR through
+`serverXR/src/testSupport/spawnServer.mjs` (`spawnServerUntilReady`): ready = the child's own
+"Server running. Listening on:" line, EADDRINUSE alone retried on a fresh port. One commit per file.
+
+**What the four old copies did** (identical apart from env): `getFreePort()` (probe socket closed before
+the child binds) then poll `GET /api/health` every 200ms until `response.ok`, 15s guard. A port a sibling
+file's server takes in between answers the poll from the wrong process (other token / REQUIRE_AUTH), so
+the test talks to the wrong instance: the "expected 401 to be 201" seen on projectContracts. They also
+leaked the child if the health wait threw (the handle was registered after it). Each file keeps its own
+env, auth setup, `stop()` and temp-dir handling; only port choice, spawn, log capture and readiness moved.
+`httpContracts` already had the ready-line logic inline (from #674's predecessor); it was replaced by the
+helper call and keeps its single post-boot `/api/health` request (a route check, not a readiness wait).
+The stale "waitForHealth allows 15s" comments now name `spawnServerUntilReady`.
+
+**Measured** (`vitest run <file> --maxWorkers=2 --reporter=verbose`, single file, 3 runs each, Duration
+as vitest prints it; laptop shared with other agents' work, so read differences under ~1s as noise):
+
+| File | Cases | Before (s) | After (s) |
+|---|---|---|---|
+| bundleContracts | 2 | 2.03 / 2.02 / 1.81 | 1.42 / 1.42 / 1.42 |
+| installBundleContracts | 5 | 4.13 / 4.13 / 4.57 | 3.28 / 3.31 / 3.31 |
+| fallbackContracts | 12 | 5.12 / 5.31 / 5.56 | 3.35 / 3.25 / 3.24 |
+| spaHostingContracts | 9 | 3.82 / 3.82 / 3.83 | 2.55 / 2.33 / 2.32 |
+| httpContracts | 87 | 23.96 / 23.68 / 23.16 | 23.47 / 23.24 / 22.94 |
+
+All cases passed in every run. The four polling files save ~0.4-1.9s (the 200ms poll granularity per
+boot); httpContracts already waited on the listen line, so no speedup is claimed there. The race fix
+itself is derived, not observed: the failure was never reproduced locally, and the timings above do not
+prove it gone. CI (parallel files) is the check.
+
+Not run here, by house rule (fan fault): the full suite, build, Playwright.
+
+**Owed (out of the five asked for):** a grep shows `syncContracts`, `ndiContracts` (spawns with
+`--require preload`, which the helper's fixed argv does not take) and `projectVisibilityContracts` still
+carry their own `net.createServer` free-port probe + spawn, so the same race applies to them.
+`placeContracts` has no spawn. Not touched in this change.
+
 ## 2026-09-29 — two waiting notes folded into PROGRESS: the Windows docs check (#651) and the previous fold
 
 - The land job's push to dev is still refused by branch protection (see the 09-22 known issue), so
