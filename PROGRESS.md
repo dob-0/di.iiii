@@ -5,6 +5,18 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-10-01 — fold the 23 session notes left on dev after #686–#699 into PROGRESS and CURRENT
+
+- The CI `land` job did not fold the notes after the #686 deploy, so 16 (then 23, after #697, #698, #699 merged) sat in `docs/ai/sessions/`; the pre-push gate refuses a push from a `dev` checkout while they do.
+- Done with `session-land-lib` (the same functions `npm run land` calls), not the script itself: its last step sweeps worktrees, which would reach other sessions' checkouts. `CURRENT.md` stays under its 50-line limit.
+- Owed: find why the CI land job skipped the fold on the #686 deploy (dev deploy for that commit was green); this note is the one the gate requires for this branch and folds on its own merge.
+
+## 2026-10-01 — the hand-fold branch no longer has to leave a session note
+
+- The pre-push docs gate asked every branch for `docs/ai/sessions/<branch-slug>.md`, the fold branch `chore/fold-notes-after-686` included. That note then sat on `dev` after the merge, and the same gate refuses every push from a `dev` checkout while the directory is not empty — PONYO's tags-only push was refused with exactly that message. CI's `land` job cannot push to protected `dev` (GH006), so nothing folded it until the next hand fold.
+- `chore/fold-notes-*` is now exempt from the "must have a note" rule (`isFoldNotesBranch` in `scripts/repo-state-lib.mjs`, used in `scripts/check-agent-docs.mjs`). `land/*` branches carry real notes and still need one. Tests: `scripts/check-agent-docs.fold-notes.test.js` (the name pattern, and the real checker on a throwaway checkout: a feature branch is asked for its note, a fold-notes branch is not).
+- Not changed: the tags-only-push idea (skip the docs check when only tags go). Owed if the owner wants it; the gate still checks docs for tag pushes from `dev`.
+
 ## 2026-10-01 — hand fold after the #679 land batch, with the docs-gate fix (#675) merged in
 
 - #679 (the MOXIR rig-builder line, preview rigbuilder.14) brought about thirty session notes onto dev; with the others waiting that made 47. The in-place fold in CI would have taken `CURRENT.md` to about 88 lines (cap 50) and stopped the dev image build at the docs gate, as it did after #637 — so this is the hand fold, made on a scratch clone of dev: `session-land-lib.mjs`'s three functions, without `npm run land`'s branch guard and WITHOUT its worktree sweep (this machine carries about a hundred worktrees of other sessions). PROGRESS.md keeps every note in full; "Last session" is cut to six lines (CURRENT.md 45).

@@ -1,5 +1,0 @@
-## 2026-10-01 — the hand-fold branch no longer has to leave a session note
-
-- The pre-push docs gate asked every branch for `docs/ai/sessions/<branch-slug>.md`, the fold branch `chore/fold-notes-after-686` included. That note then sat on `dev` after the merge, and the same gate refuses every push from a `dev` checkout while the directory is not empty — PONYO's tags-only push was refused with exactly that message. CI's `land` job cannot push to protected `dev` (GH006), so nothing folded it until the next hand fold.
-- `chore/fold-notes-*` is now exempt from the "must have a note" rule (`isFoldNotesBranch` in `scripts/repo-state-lib.mjs`, used in `scripts/check-agent-docs.mjs`). `land/*` branches carry real notes and still need one. Tests: `scripts/check-agent-docs.fold-notes.test.js` (the name pattern, and the real checker on a throwaway checkout: a feature branch is asked for its note, a fold-notes branch is not).
-- Not changed: the tags-only-push idea (skip the docs check when only tags go). Owed if the owner wants it; the gate still checks docs for tag pushes from `dev`.
