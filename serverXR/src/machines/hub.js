@@ -227,6 +227,32 @@ const createMachineHub = ({
         return recorded
     }
 
+    /**
+     * Which machines follow this space, and when each last called in — for the
+     * sync light on the HOST (the host is never told anything else about them).
+     * Kept apart from `spaces`, which prunes a machine nobody has heard from in
+     * thirty seconds: "ponyo has not answered for two minutes" needs the machine
+     * to be remembered after it went quiet. In memory, so a restart forgets;
+     * bounded, so a space cannot grow it.
+     */
+    const followers = new Map()
+    const MAX_FOLLOWERS = 32
+    const noteFollower = (spaceId, machineId, name = null) => {
+        if (!isPeerId(machineId)) return false
+        let known = followers.get(spaceId)
+        if (!known) { known = new Map(); followers.set(spaceId, known) }
+        if (!known.has(machineId) && known.size >= MAX_FOLLOWERS) {
+            const oldest = [...known.entries()].sort((a, b) => a[1].seenAt - b[1].seenAt)[0]
+            if (oldest) known.delete(oldest[0])
+        }
+        known.set(machineId, { machineId, name: cleanText(name, 80), seenAt: now() })
+        return true
+    }
+    const followersOf = (spaceId) => [...(followers.get(spaceId)?.values() || [])]
+        .map((entry) => ({ ...entry }))
+        .sort((a, b) => b.seenAt - a.seenAt)
+    const forgetFollower = (spaceId, machineId) => followers.get(spaceId)?.delete(machineId) || false
+
     /** A follower server called in — its mailbox stays alive while it does. */
     const noteServer = (spaceId, machineId) => {
         if (!isPeerId(machineId)) return false
@@ -310,6 +336,9 @@ const createMachineHub = ({
         localPeers,
         recordRemotePeers,
         noteServer,
+        noteFollower,
+        followersOf,
+        forgetFollower,
         route,
         checkPayload,
         deliver,

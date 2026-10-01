@@ -114,6 +114,11 @@ const { describeListen } = require('./listenInfo')
 const { getMachine } = require('./machineIdentity')
 const { createMachineHub } = require('./machines/hub')
 const { registerMachineRoutes } = require('./machines/routes')
+const { registerJoinCodeDoor, registerFollowManagement } = require('./routes/followRoutes')
+const { machineLinkStates } = require('./machines/link')
+const { readFollows: readFollowsFile, addFollow: addFollowFile, removeFollow: removeFollowFile } = require('./follow/followStore')
+const { followStates } = require('./follow')
+const { isLoopbackRequest } = require('./localRuntimeGuard')
 const { createApprovalGate, createGatedRequestNet, verifyInboundSignature, GATED_ROUTES } = require('./approvalGate')
 const pendingActionStore = require('./pendingActionStore')
 const configStore = require('./configStore')
@@ -1345,6 +1350,21 @@ router.use(createVisitorBouncer({ guestBook, isKnownCaller, log: logger }))
 registerDmRoutes(router, {})
 registerChatRoutes(router, { deps: { listSpaces } })
 
+// Joining a space with four words (serverXR/src/routes/followRoutes.js). The
+// joiner holds no credential yet — the code is it — so these two routes sit
+// BEFORE the blanket requireWriteRole('editor') gate below, and carry their
+// own attempt counter in joinCodeStore.js (rateLimit.js steps aside on a local
+// install, which is where this is used).
+registerJoinCodeDoor(router, {
+  machine: () => getMachine(config.directories.dataDir),
+  describeSpace: async (spaceId) => {
+    const meta = await loadSpaceMeta(spaceId)
+    if (!meta) return null
+    const projects = await listProjectsInSpace(SPACES_DIR, spaceId)
+    return { label: meta.label || spaceId, projects: projects.length }
+  }
+})
+
 const sendRoleError = (res, status, requiredRole, currentRole = null, error = null) => {
   res.status(status).json({
     error: error || (status === 401 ? 'Unauthorized' : `${formatAuthRoleLabel(requiredRole)} role required.`),
@@ -2134,6 +2154,47 @@ registerMachineRoutes(router, {
   spaceExists
 })
 
+// The sync light and the join form (serverXR/src/routes/followRoutes.js). A
+// space's owner or an admin when auth is on; the person at the machine when it
+// is off (everyone is the "admin" sentinel there, and these routes name other
+// machines). The follower is started by the 2 s watch on follows.json, or at
+// once through `followsChanged`, which the listen block fills in.
+let followsChanged = () => {}
+const serverFacts = { tlsName: null }
+registerFollowManagement(router, {
+  requireAuth: () => config.requireAuth,
+  atTheMachine: (req) => isLoopbackRequest(req) || isOwnerAtTheMachine(req),
+  isOwnerOrAdmin: (state, meta) => isSpaceOwnerOrAdminState(state, meta),
+  isAdmin: (state) => state?.role === 'admin',
+  loadSpaceMeta,
+  machine: thisMachine,
+  hub: machineHub,
+  followStates,
+  linkStates: machineLinkStates,
+  readFollows: readFollowsFile,
+  addFollow: addFollowFile,
+  removeFollow: removeFollowFile,
+  dataDir: () => config.directories.dataDir,
+  reach: () => {
+    const { lan, addresses } = describeListenNow()
+    const urls = serverFacts.tlsName
+      ? [`https://${serverFacts.tlsName}${PORT === 443 ? '' : `:${PORT}`}`]
+      : addresses.map((address) => `http://${address}:${PORT}`)
+    return { lan, urls }
+  },
+  spaceExistsHere: async (spaceId) => Boolean(normalizeSpaceId(spaceId)) && spaceExists(normalizeSpaceId(spaceId)),
+  ensureSpace: async (spaceId, label) => {
+    const id = normalizeSpaceId(spaceId)
+    if (!id) throw new Error('not a space id')
+    if (await spaceExists(id)) return
+    await ensureSpaceScene(id)
+    await upsertSpaceMeta(id, { label: label || id, allowEdits: true })
+  },
+  followsChanged: () => followsChanged(),
+  issueLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 20, name: 'join codes' }),
+  joinLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'join attempts' })
+})
+
 // Space sync keys — mint/list/revoke. Management is restricted to the space
 // OWNER (via session) or an ADMIN; editor/viewer/sync-key identities are
 // rejected so a leaked sync key can never mint more keys (no escalation).
@@ -2842,6 +2903,8 @@ initStorage()
       }
     }
 
+    serverFacts.tlsName = tlsFiles ? certificateName(tlsFiles.cert) : null
+    followsChanged = startFollowsWhenUp
     httpServer.listen(PORT, config.host, () => {
       startFollowsWhenUp()
       // `di follow` / `di unfollow` write follows.json while this runs. Polled

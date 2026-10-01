@@ -80,6 +80,8 @@ const SPINE_FILES = [
     'raw/components/vjDeck/vjDeck.css',
     // Born on the spine, 2026-09-24 — the Perform desk.
     'perform/perform.css',
+    // Born on the spine, 2026-10-01 — the sync light, the invite and the join form.
+    'sync/syncLight.css',
 ]
 
 // Not yet converted, and honest about it. Each line is a debt, not an
