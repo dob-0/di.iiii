@@ -1648,7 +1648,7 @@ export const WIKI_ARTICLES = [
         title: 'The patch sheet: what the light engineers plug by',
         summary: 'Every lamp in a room that has a fixture type is on one printable sheet — fixture number, type, mode, position, universe, address, circuit and watts — at diiii.xyz/{space}/patch/{project}.',
         body: [
-            'A lamp in a room can say which real fixture it is: its type (the code on the rental list), its DMX mode, and where it hangs. On a machine with the lighting desk, such a lamp is patched on the desk the moment it is placed, copied or deleted — the desk picks the next free address in the universe, the way a console does — and the room writes down what the desk decided.',
+            'A lamp in a room can say which real fixture it is: its type (the code on the rental list), its DMX mode, and where it hangs. On a machine with the lighting desk, such a lamp is patched on the desk the moment you place, copy or delete it — the desk picks the next free address in the universe, the way a console does — and the room writes down what the desk decided. Only a change you make patches: opening a page, refreshing it, or somebody else looking at it never touches the desk or the show.',
             'The sheet reads the room alone, so the link works for anybody who can open the space, on any tier, with no desk. It lists the patch by universe and address, the fixture types, the power by circuit and every flag. Print gives A4 pages; Patch CSV and Power CSV give the same tables for a spreadsheet.',
             'A flag is a word, never a colour, so it survives a black-and-white printer:',
             {
@@ -1664,7 +1664,7 @@ export const WIKI_ARTICLES = [
             'For the engineers\' console the same rig exports as an MVR file with a GDTF file per fixture type (scripts/rigbuild/export-mvr.mjs).'
         ],
         tags: ['patch', 'patch sheet', 'dmx', 'universe', 'address', 'lighting', 'rig', 'fixture', 'mvr', 'gdtf', 'console', 'power', 'circuit', 'print', 'csv', 'light engineer', 'crew'],
-        updated: '2026-09-28'
+        updated: '2026-10-01'
     },
     {
         id: 'lighting-plot',
@@ -1674,14 +1674,14 @@ export const WIKI_ARTICLES = [
         body: [
             'The plot is the rig drawn the way a lighting designer draws it: the hall seen from above at its real size, its walls, columns and grid, the dance floor and the DJ place, the machinery on the floor and what hangs over it dashed. Each lamp is a symbol for its type at the point it hangs from, with its unit number inside and its console number and universe.address beside it. The key and the title block say what is there, how many channels each universe uses and how much power the rig draws.',
             'On the left is a rail: select, truss, tower, deck, fixture, fx and measure. Drag on the plan with truss to draw a run — it is laid in 3, 2 and 1 m pieces end to end. Click with tower near the end of a truss and the tower stands under it, built to the truss\'s height. Click with fixture near a truss and the lamp hangs at the nearest clamp point. Everything snaps: truss end to truss end, tower top, deck edge, a 0.5 m grid. Type exact numbers in the inspector when you want them — length, height, x, z, turn.',
-            'A new lamp is patched on this machine\'s desk as soon as it is placed, like in Studio: the number and the address appear beside it. Select several and press patch this group to lay them out again as one block. Two lamps on the same channels are drawn in a dashed box with a !, and the inspector says what the desk said.',
+            'A new lamp is patched on this machine\'s desk as soon as you place it, like in Studio: the number and the address appear beside it. Opening the plot never patches anything — a room that arrived unpatched (a bundle from another machine) stays as it is until you press patch the room on the desk, in the title block. Select several and press patch this group to lay them out again as one block. Two lamps on the same channels are drawn in a dashed box with a !, and the inspector says what the desk said.',
             'The room beside the plan is the same room as in Studio, showing what is selected. On a phone the plan fills the screen; plan and room are one tap apart, and the tools and the inspector are in a sheet you pull up.',
             'Print sheet 1 gives the plot on A3 or A4 at a true scale with a scale bar — the whole rig, or just what is on the screen for a close-up of the stage. Sheets 2 and 3, the patch and the power, are the patch sheet. Print at 100%, not "fit to page".',
             'The hall comes from the model it was built from, never drawn by hand. The plot makes no load or rigging calculation: a truss end with no tower under it is marked free, and the real hang needs a rigger\'s sign-off.',
             'A run may slope: a line hung from a crane on picks of different height (MOXIR\'s "cut", 12 m at 15°) is one run, and its clamp points follow it — a lamp on it sits at its real height, the looks reach it, and the plan draws its footprint (its length × the cosine of the slope). Its heights, picks and loads come from the rig file, which states them with their sources; the plot still makes no calculation of its own.'
         ],
         tags: ['plot', 'lighting plot', 'plan', 'cad', 'truss', 'tower', 'deck', 'stage', 'rig', 'fixture', 'lamp', 'dmx', 'patch', 'address', 'print', 'a3', 'scale', 'room', 'build', 'light engineer', 'crew', 'rp-2'],
-        updated: '2026-09-29'
+        updated: '2026-10-01'
     },
     {
         id: 'rig-cards',

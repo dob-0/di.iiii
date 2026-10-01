@@ -145,13 +145,13 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
     const store = useProjectStore()
     const { state, dispatch } = store
     const { applyLocalOps: syncOps } = useProjectDocumentSync({ projectId, store, clientIdPrefix: crew ? 'crew-client' : 'build-client', opIdPrefix: crew ? 'crew-op' : 'build-op' })
-    const { applyLocalOps, undo, redo } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
+    const { applyLocalOps, undo, redo, edits } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
     const projectDocument = state.document
     const entities = useMemo(() => projectDocument?.entities || [], [projectDocument?.entities])
     // The library with the show's own types (RIG_BUILD.md §13), one object per list.
     const library = useMemo(() => libraryWithShow(baseLibrary, entities), [baseLibrary, entities])
     // Crew view asks the desk nothing and writes nothing: no auto-patch.
-    const patch = useRigAutoPatch({ projectId: crew ? null : projectId, entities: crew ? [] : entities, applyOps: syncOps, library })
+    const patch = useRigAutoPatch({ projectId: crew ? null : projectId, entities: crew ? [] : entities, applyOps: syncOps, edits, library })
     const phone = useIsPhone()
     const { assetIdFor, ensureAsset } = usePieceAssets({ projectId, document: projectDocument, applyOps: applyLocalOps })
 
