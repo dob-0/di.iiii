@@ -65,6 +65,8 @@ const luminance = ([r, g, b]) => 0.2126 * r + 0.7152 * g + 0.0722 * b
  *                every triangle counted both faces of every bar — 82,640 m² for a ~27,000 m²
  *                hall — and the return came out ~3× too dark.)
  *   surface_m2   every triangle, both faces of everything: kept for the record
+ *   volume_m3    the air the box holds, L·W·H — the haze's mean chord is 4V/A, so the room's
+ *                once-scattered glow takes τ = σ·4V/A (HazeGlow; the photo research, 2026-10-01)
  *   reflectance  the area-weighted mean luminance of the base colours (linear, BT.709)
  * Every mesh in world space.
  */
@@ -115,7 +117,7 @@ export const enclosureOf = (doc) => {
     for (const m of Object.values(byMaterial)) m.area_m2 = Math.round(m.area_m2)
     const [L, H, W] = [0, 1, 2].map((k) => (hi[k] > lo[k] ? hi[k] - lo[k] : 0))
     const envelope = 2 * (L * W + L * H + W * H)
-    return { area_m2: Math.round(envelope), surface_m2: Math.round(area), reflectance: Math.round((weighted / Math.max(area, 1e-9)) * 1000) / 1000, byMaterial }
+    return { area_m2: Math.round(envelope), volume_m3: Math.round(L * W * H), surface_m2: Math.round(area), reflectance: Math.round((weighted / Math.max(area, 1e-9)) * 1000) / 1000, byMaterial }
 }
 
 /** Switch off every emissive material (daylight through the skylights); returns their names. */
@@ -254,6 +256,7 @@ const main = async () => {
                     area_m2: enclosure.area_m2,
                     reflectance: enclosure.reflectance,
                     surface_m2: enclosure.surface_m2,
+                    volume_m3: enclosure.volume_m3,
                     method: 'scripts/rigbuild/realism.mjs enclosureOf: area = the envelope of the hall model’s world bounding box, 2(LW + LH + WH); reflectance = area-weighted luminance of the base colours over every triangle (linear, BT.709)',
                     source: `hall asset ${hallAsset}`
                 }
