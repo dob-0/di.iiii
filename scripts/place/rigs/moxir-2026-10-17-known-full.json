@@ -607,7 +607,7 @@
         "shadowMapSize": 1024,
         "realNote": "2026-09-28 (DJ place): the press's own uplights stand 0.35 m from it, where a real lamp in the renderer blows the face out white; they are baked like the other PARs, and the 4 header spots (6.3 m up, over the DJ and the press) are the real lamps that light the backdrop.",
         "realLightsAll": true,
-        "realLightsWhy": "EVERY lamp is a real light (Emily 2026-10-01: 'i want 100% ident what we will have, you can optimize'): the room is the night as it will be, no picked few, no baked stand-ins. Measured on PONYO (RTX laptop, 1440x900): 40-52 fps; with shadows on the 12 lamps putting the most light in (shadowCasting.js shadowLampCap) 36-49 fps. A phone will not hold this: the 8-lamp budget is the fallback."
+        "realLightsWhy": "EVERY lamp is a real light (Emily 2026-10-01: 'i want 100% ident what we will have, you can optimize'): the room is the night as it will be, no picked few, no baked stand-ins. Measured on PONYO, 1440x900: RTX 5060, shadows on the 12 lamps putting the most light in (shadowCasting.js): 61 fps floor view, 65 fps DJ view; the integrated AMD 860M (most likely): 36-49 fps. A phone will not hold this: the 8-lamp budget is the fallback."
     },
     "night": {
         "backgroundColor": "#030304",
@@ -636,7 +636,7 @@
     "defaultLook": "white-cathedral",
     "looks": {
         "white-cathedral": {
-            "title": "White cathedral",
+            "title": "White cathedral · hung rig",
             "intent": "The roof frame and the columns as a nave of cold white: the column beams stand straight up in mirrored pairs, the booth's line opens a narrow apse fan behind the DJ. Everything else is dark — no PAR, no spot, no strobe.",
             "aims": {
                 "beam380-columns": {
@@ -679,7 +679,7 @@
             }
         },
         "red-room": {
-            "title": "Red room",
+            "title": "Red room · hung rig",
             "intent": "Deep red only, and low: the columns and the press glow from their feet, the booth's beams stand still and dim in red, the DJ a dark shape against the red press. The column beams are out: the roof stays black.",
             "aims": {
                 "par-columns": {
@@ -722,7 +722,7 @@
             }
         },
         "strobe-hit": {
-            "title": "Strobe hit",
+            "title": "Strobe hit · hung rig",
             "intent": "The peak: every strobe and blinder at full — the pit strobes rake up over the crowd from the floor, the header strobes and the blinders hit the front of the floor; every beam and PAR out, so the flash lands on black.",
             "aims": {
                 "par-cut-x": {
@@ -764,7 +764,7 @@
             }
         },
         "one-beam": {
-            "title": "Blackout + one beam",
+            "title": "Blackout + one beam · hung rig",
             "intent": "Everything out but one: the beam on the floor right behind the DJ, straight up into the roof — the DJ a silhouette cut out of it.",
             "aims": {
                 "par-cut-x": {
@@ -805,7 +805,7 @@
             }
         },
         "slow-sweep": {
-            "title": "Slow sweep",
+            "title": "Slow sweep · hung rig",
             "intent": "A held frame of a slow mirrored sweep: the column beams lean out toward the walls in pairs, the booth's line fans wide; the columns glow a low red underneath. Nothing flashes.",
             "aims": {
                 "beam380-columns": {

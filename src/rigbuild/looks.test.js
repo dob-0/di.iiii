@@ -138,3 +138,16 @@ describe('solo_mask — several lamps of a group kept lit (crane-x, RIG_BUILD §
         expect([0, 1, 2, 3, 4, 5, 6].filter((r) => soloKeeps({ solo_mask: 85 }, r))).toEqual([0, 2, 4, 6])
     })
 })
+
+// MOXIR 2026-10-01: the desk runs one patch per space. Swapping Known · full off and Known on
+// left Known · full's 20 looks on the desk; the six it alone has (Doors, The X…) lit nothing
+// on Known, and a look of the same name could not be told apart on the Touch page.
+describe('a desk swap takes the other room\'s looks away', () => {
+    it('names the desk\'s rig looks this room does not have, and never an operator\'s own', async () => {
+        const { staleDeskLooks } = await import('./looks.js')
+        const desk = [{ id: 'rig-k-doors' }, { id: 'rig-gs-red-room' }, { id: 'lk123' }, { id: 'my-chase' }, { id: 'rig-k-tunnel' }]
+        expect(staleDeskLooks(desk, ['rig-gs-red-room', 'rig-k-tunnel'])).toEqual(['rig-k-doors'])
+        expect(staleDeskLooks([], ['rig-x'])).toEqual([])
+        expect(staleDeskLooks(undefined, [])).toEqual([])
+    })
+})

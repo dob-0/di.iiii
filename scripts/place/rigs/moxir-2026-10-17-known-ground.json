@@ -637,7 +637,7 @@
     "defaultLook": "white-cathedral",
     "looks": {
         "white-cathedral": {
-            "title": "White cathedral",
+            "title": "White cathedral · hung rig",
             "intent": "The roof frame and the columns as a nave of cold white: the column beams stand straight up in mirrored pairs, the booth's line opens a narrow apse fan behind the DJ. Everything else is dark — no PAR, no spot, no strobe.",
             "aims": {
                 "beam380-columns-6": {
@@ -684,7 +684,7 @@
             }
         },
         "red-room": {
-            "title": "Red room",
+            "title": "Red room · hung rig",
             "intent": "Deep red only, and low: the columns and the press glow from their feet, the booth's beams stand still and dim in red, the DJ a dark shape against the red press. The column beams are out: the roof stays black.",
             "aims": {
                 "par-columns-8": {
@@ -730,7 +730,7 @@
             }
         },
         "strobe-hit": {
-            "title": "Strobe hit",
+            "title": "Strobe hit · hung rig",
             "intent": "The peak: every strobe and blinder at full — the pit strobes rake up over the crowd from the floor, the header strobes and the blinders hit the front of the floor; every beam and PAR out, so the flash lands on black.",
             "aims": {
                 "par-cut-x": {
@@ -772,7 +772,7 @@
             }
         },
         "one-beam": {
-            "title": "Blackout + one beam",
+            "title": "Blackout + one beam · hung rig",
             "intent": "Everything out but one: the beam on the floor right behind the DJ, straight up into the roof — the DJ a silhouette cut out of it.",
             "aims": {
                 "par-cut-x": {
@@ -817,7 +817,7 @@
             }
         },
         "slow-sweep": {
-            "title": "Slow sweep",
+            "title": "Slow sweep · hung rig",
             "intent": "A held frame of a slow mirrored sweep: the column beams lean out toward the walls in pairs, the booth's line fans wide; the columns glow a low red underneath. Nothing flashes.",
             "aims": {
                 "beam380-columns-6": {
