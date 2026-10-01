@@ -168,7 +168,9 @@ check("a framed desk (the visualiser's half) hides its ways out, from the first 
   }
   const rule = css.match(/\.is-framed[^{]*\{[^}]*\}/g) || [];
   const hides = rule.join('\n');
-  for (const sel of ['.homelink', '#fromTools']) {
+  if (!/id="fullDesk"[^>]*target="_blank"/.test(html)) throw new Error('no "Full desk ↗" door for the framed desk');
+  if (!/\.is-framed \.topbar > nav\.pages/.test(css)) throw new Error('the framed desk keeps its page tabs (they eat the pane)');
+  for (const sel of ['.homelink', '#fromTools', '#bpm', '#tapBtn', '#snap', '#saveNow', '#goBtn', '#liveStrip']) {
     if (!hides.includes(sel) || !/display:\s*none/.test(hides)) throw new Error(`style.css does not hide ${sel} under .is-framed`);
   }
 });

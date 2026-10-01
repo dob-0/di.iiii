@@ -16,6 +16,13 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
   try { framed = window.self !== window.top; } catch (e) { framed = true; }
   if (framed) document.documentElement.classList.add('is-framed');
 })();
+// Its one door out: the same desk in a window of its own, on Setup.
+if (document.documentElement.classList.contains('is-framed')) {
+  addEventListener('DOMContentLoaded', () => {
+    const a = document.getElementById('fullDesk');
+    if (a) { a.href = location.pathname + location.search + '#setup'; a.hidden = false; }
+  });
+}
 
 let S = null;                  // last full state from the server
 let DMX = {};                  // live buffers, polled fast
