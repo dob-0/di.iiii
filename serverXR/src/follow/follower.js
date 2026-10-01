@@ -22,6 +22,7 @@ const { httpRequest } = require('../httpClient')
 const { accountedThrough, moreToCarry, unseen, planDirection, planAfterConflict, nextInterval, refusedWholeWork, WHOLE_WORK_OPS } = require('./followPlan')
 const { projectIdsFrom, sceneStream, streamsFor } = require('./streams')
 const { createAssetChase } = require('./assets')
+const { CONVERGE_CLIENT, planConverge, readDocument } = require('./followConverge')
 
 const FLOOR_MS = 700
 // Five seconds, not thirty. A followed space is a room with someone else in
@@ -134,11 +135,11 @@ const readOps = async (from, stream, since, { waitSeconds = 0, signal = null } =
  * HTTP's: how many landed, whether the target moved, and whether we are still
  * in step with it.
  */
-const carry = async ({ to, stream, ops, seen, targetVersion }) => {
+const carry = async ({ to, stream, ops, seen, targetVersion, send = request }) => {
     const plan = planDirection({ ops, seen, targetVersion })
     if (!plan) return { wrote: 0, targetVersion, moved: false }
 
-    const answer = await request(to.writeUrl(stream), { method: 'POST', token: to.token, servername: to.servername, address: to.address, body: plan })
+    const answer = await send(to.writeUrl(stream), { method: 'POST', token: to.token, servername: to.servername, address: to.address, body: plan })
     if (answer.ok) {
         rememberSeen(seen, plan.ops)
         const newVersion = Number.isFinite(answer.payload?.newVersion) ? answer.payload.newVersion : targetVersion
@@ -161,10 +162,17 @@ const carry = async ({ to, stream, ops, seen, targetVersion }) => {
     }
 
     if (answer.status === 409) {
-        // Not an error: the other side is handing us the edits we had not seen
-        // yet. Take them, and come back on the next tick with the new floor.
+        // Not an error: the target moved since we read it (someone there just
+        // edited). Come back on the next tick with the new floor.
+        //
+        // The ops in the refusal are the TARGET's own new edits. They must NOT
+        // be marked seen here: they have not been carried anywhere yet — they
+        // still have to travel the other way. Marking them seen (as this did
+        // until 2026-10-01) made the next tick skip them as already carried and
+        // move the cursor past them, so an edit made at exactly the wrong
+        // moment never reached the other machine. The next tick reads them from
+        // the target's log like any other edit.
         const { apply, retryAt } = planAfterConflict(answer.payload)
-        rememberSeen(seen, apply)
         return { wrote: 0, targetVersion: retryAt ?? targetVersion, moved: apply.length > 0, caughtUp: apply, carriedThrough: null }
     }
 
@@ -177,8 +185,15 @@ const carry = async ({ to, stream, ops, seen, targetVersion }) => {
  * `onState` is called after every tick with a plain object a person could read:
  * this is what `di follows` prints and what the interface will show.
  */
-const startFollowing = ({ local, remote, log = console, onState = () => {}, files = {} }) => {
-    const seen = new Set()
+const startFollowing = ({ local, remote, log = console, onState = () => {}, files = {}, saved = null, onSave = null }) => {
+    // Where this follower had got to, kept on disk between runs (index.js,
+    // followStore.js). Without it a restart forgot both cursors and every opId
+    // it had carried, re-read both retained windows and re-sent whatever it no
+    // longer recognised — and the receiving server's dedupe only looks inside
+    // ITS retained window, so an old edit could be applied a second time over
+    // newer ones. Ignored when it belongs to another remote or another space.
+    const resume = saved && saved.remote === remote.base && saved.spaceId === local.spaceId ? saved : null
+    const seen = new Set(Array.isArray(resume?.seen) ? resume.seen : [])
     // The files the projects name (follow/assets.js). Its own task, beside the
     // op loop and never inside it: the loop hands it what it read and walks on,
     // so ops keep crossing while a two-gigabyte video is still on its way.
@@ -188,9 +203,30 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     // One cursor pair per stream — the room's own log and every project in it.
     // Keyed by stream, because a project's version counter has nothing to do
     // with the room's, and both have nothing to do with the other machine's.
-    const cursors = new Map()
+    const cursors = new Map(Object.entries(resume?.cursors || {}))
     let streams = [sceneStream(local.spaceId)]
-    let state = { status: 'starting', carriedIn: 0, carriedOut: 0, streams: 1, lastError: null, lastMoveAt: null }
+    let state = { status: 'starting', carriedIn: 0, carriedOut: 0, streams: 1, lastError: null, lastMoveAt: null, converged: 0, lastConvergeAt: null, resumed: Boolean(resume) }
+    // Per stream: has each side moved since the copies were last compared?
+    // Copies can only disagree after BOTH sides edited (followConverge.js), so
+    // a stream is compared once it is quiet again after both moved — and once
+    // at the start, so a follow resumed after a gap checks it agrees.
+    const moves = new Map()
+    const movesFor = (stream) => {
+        if (!moves.has(stream.key)) moves.set(stream.key, { in: true, out: true })
+        return moves.get(stream.key)
+    }
+    // Saved only when it changed — a follow that cannot reach the other side
+    // writes nothing — and never after stop(), so a stopped follow leaves its
+    // directory alone.
+    let lastSaved = JSON.stringify(Object.fromEntries(cursors)) + seen.size
+    const save = () => {
+        if (!onSave || stopped) return
+        const snapshot = { remote: remote.base, spaceId: local.spaceId, cursors: Object.fromEntries(cursors), seen: [...seen] }
+        const key = JSON.stringify(snapshot.cursors) + seen.size
+        if (key === lastSaved) return
+        lastSaved = key
+        Promise.resolve(onSave(snapshot)).catch((error) => log.warn?.(`[follow] ${local.spaceId}: could not save where it got to (${error?.message || error})`))
+    }
 
     // Woken by this install's own writes, so an edit made here leaves at once
     // instead of waiting out whatever backoff the quiet had earned.
@@ -235,6 +271,38 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         streams = streamsFor({ spaceId: local.spaceId, localProjects, remoteProjects })
     }
 
+    /**
+     * Make this side agree with the host (followConverge.js): read both copies,
+     * and if they differ write the host's over this one through this server's
+     * own write route — same version check, same restore point, same broadcast.
+     * A 409 means someone here just edited: leave it for the next quiet pass.
+     */
+    const converge = async (stream) => {
+        const [here, there] = await Promise.all([
+            request(local.url(stream.documentPath), { token: local.token, servername: local.servername, address: local.address }),
+            request(remote.url(stream.documentPath), { token: remote.token, servername: remote.servername, address: remote.address })
+        ])
+        if (!here.ok || !there.ok) return { done: false }
+        const plan = planConverge({
+            kind: stream.kind,
+            projectId: stream.projectId || null,
+            local: readDocument(stream.kind, here.payload),
+            remote: readDocument(stream.kind, there.payload)
+        })
+        if (plan.same) return { done: true }
+        if (plan.refused) return { done: true, refused: plan.refused }
+        const opId = `${CONVERGE_CLIENT}-${stream.key}-${Date.now().toString(36)}`
+        const answer = await request(local.writeUrl(stream), {
+            method: 'POST', token: local.token, servername: local.servername, address: local.address,
+            body: { baseVersion: plan.baseVersion, ops: [{ ...plan.op, opId }] }
+        })
+        if (!answer.ok) return { done: false }
+        // Ours, and already the host's state: never carried back.
+        rememberSeen(seen, [{ opId }])
+        log.info?.(`[follow] ${local.spaceId}: ${stream.key} disagreed with the host — took the host's copy`)
+        return { done: true, converged: true }
+    }
+
     /** Carry one stream, both ways. */
     const runStream = async (stream, { wait = false } = {}) => {
         const cursor = cursorFor(stream)
@@ -264,6 +332,18 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             return { moved: false, failed: 'this install is not answering its own op log' }
         }
 
+        // A saved cursor past the end of a log means that log started again
+        // (a restored or rebuilt install). Read it from its start; the opId
+        // dedupe on each side keeps that safe.
+        const behind = (at, latest) => Number.isFinite(at) && Number.isFinite(latest) && at > latest
+        if (behind(cursor.remoteVersion, theirs.latestVersion) || behind(cursor.localVersion, ours.latestVersion)) {
+            cursors.set(stream.key, {
+                localVersion: behind(cursor.localVersion, ours.latestVersion) ? null : cursor.localVersion,
+                remoteVersion: behind(cursor.remoteVersion, theirs.latestVersion) ? null : cursor.remoteVersion
+            })
+            return { moved: false, more: true }
+        }
+
         // Any file these ops name is chased separately; this only takes a note.
         if (stream.kind === 'project') chase.noteOps(stream.projectId, [...theirs.ops, ...ours.ops])
 
@@ -285,8 +365,22 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             remoteVersion: accountedThrough(theirs.ops, seen, theirs.latestVersion) ?? cursor.remoteVersion
         })
 
+        // Did the copies get a chance to disagree, and are they quiet now?
+        const flags = movesFor(stream)
+        if (inbound.wrote > 0 || inbound.caughtUp?.length) flags.in = true
+        if (outbound.wrote > 0 || outbound.caughtUp?.length) flags.out = true
+        const quiet = !more && !inbound.wrote && !outbound.wrote && !inbound.caughtUp?.length && !outbound.caughtUp?.length
+            && !unseen(theirs.ops, seen).length && !unseen(ours.ops, seen).length
+        let agreed = null
+        if (quiet && flags.in && flags.out && stream.documentPath) {
+            agreed = await converge(stream)
+            if (agreed.done) { flags.in = false; flags.out = false }
+        }
+
         return {
-            moved: inbound.moved || outbound.moved,
+            converged: Boolean(agreed?.converged),
+            convergeRefused: agreed?.refused || null,
+            moved: inbound.moved || outbound.moved || Boolean(agreed?.converged),
             more,
             carriedIn: inbound.wrote,
             carriedOut: outbound.wrote,
@@ -307,6 +401,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         let carriedIn = 0
         let carriedOut = 0
         let failed = null
+        let converged = 0
+        let convergeRefused = null
 
         // The room's own log parks on the other side (that is what makes a
         // followed room feel like one room); the project logs are asked
@@ -329,6 +425,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             carriedIn += result.carriedIn || 0
             carriedOut += result.carriedOut || 0
             failed = failed || result.failed
+            if (result.converged) converged += 1
+            convergeRefused = convergeRefused || result.convergeRefused || null
         }
 
         // Every project's document is read once for the files it already
@@ -343,9 +441,14 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             carriedOut: state.carriedOut + carriedOut,
             streams: streams.length,
             lastError: failed
+                || convergeRefused
                 || (refused ? 'one side replaced a whole scene — that is not carried by a follow; use di sync' : null),
-            lastMoveAt: moved ? Date.now() : state.lastMoveAt
+            lastMoveAt: moved ? Date.now() : state.lastMoveAt,
+            converged: state.converged + converged,
+            lastConvergeAt: converged ? Date.now() : state.lastConvergeAt,
+            resumed: state.resumed
         }
+        save()
         // Still behind: go round again at once. A capped batch that slept would
         // trickle a long history across at one batch per tick.
         return { moved, parked: parked && !more, more }

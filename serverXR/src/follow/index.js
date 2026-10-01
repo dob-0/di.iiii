@@ -9,7 +9,7 @@
  */
 
 const { startFollowing, side } = require('./follower')
-const { readFollows } = require('./followStore')
+const { readFollows, readFollowState, writeFollowState } = require('./followStore')
 
 const running = new Map()
 
@@ -53,7 +53,12 @@ const startFollows = ({ dataDir, port, basePath = '/serverXR', selfToken = null,
             log.warn?.(`[follow] ${spaceId}: could not make room for it here (${error?.message || error})`)
         })
         log.info?.(`[follow] ${spaceId} follows ${entry.remote}`)
-        running.set(spaceId, startFollowing({ local, remote, log, files }))
+        running.set(spaceId, startFollowing({
+            local, remote, log, files,
+            // Resume where this follow had got to; save as it goes (followStore.js).
+            saved: readFollowState(dataDir, spaceId),
+            onSave: (state) => writeFollowState(dataDir, spaceId, state)
+        }))
     }
     return running
 }
