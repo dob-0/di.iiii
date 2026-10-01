@@ -1055,7 +1055,9 @@ export const normalizeEntity = (entity = {}) => {
             ...(sourceComponents.beam.only === true ? { only: true } : {}),
             // `aperture` (2026-09-29): the lens's radius in metres — a beam leaves the
             // lamp already that wide (beamAir.js). Stored only when given.
-            ...(ensureNumber(sourceComponents.beam.aperture, 0) > 0 ? { aperture: Math.min(2, ensureNumber(sourceComponents.beam.aperture, 0)) } : {})
+            ...(ensureNumber(sourceComponents.beam.aperture, 0) > 0 ? { aperture: Math.min(2, ensureNumber(sourceComponents.beam.aperture, 0)) } : {}),
+            // `optics` (2026-10-01): prism, honeycomb, frost, gobo (beamOptics.js). Stored only when given.
+            ...(normalizeBeamOptics(sourceComponents.beam.optics) ? { optics: normalizeBeamOptics(sourceComponents.beam.optics) } : {})
         }
     }
     // THE JOIN between a lamp in the room and a lamp on the lighting desk: the
@@ -1207,6 +1209,25 @@ const normalizeWorldState = (world = {}) => {
             far: ensureNumber(source.savedView?.far, defaultWorldState.savedView.far)
         }
     }
+}
+
+// `components.beam.optics` (2026-10-01, src/objectComponents/beamOptics.js): what is in
+// the beam's path — a radial prism, a honeycomb prism, frost, a gobo — set by the desk's
+// DMX or a look. Plain numbers, clamped; absent parts left out; null when nothing is in.
+const normalizeBeamOptics = (optics) => {
+    if (!optics || typeof optics !== 'object' || Array.isArray(optics)) return null
+    const out = {}
+    const angle = (v) => (Number.isFinite(Number(v)) ? Number(v) % (Math.PI * 2) : 0)
+    if (optics.prism && typeof optics.prism === 'object') {
+        const facets = Math.round(Number(optics.prism.facets))
+        out.prism = { facets: Number.isFinite(facets) ? Math.min(32, Math.max(2, facets)) : 16, rotation: angle(optics.prism.rotation) }
+    }
+    if (optics.honeycomb && typeof optics.honeycomb === 'object') out.honeycomb = { rotation: angle(optics.honeycomb.rotation) }
+    const frost = Number(optics.frost)
+    if (Number.isFinite(frost) && frost > 0) out.frost = Math.min(1, frost)
+    const pattern = Math.round(Number(optics.gobo?.pattern))
+    if (pattern >= 1 && pattern <= 17) out.gobo = { pattern, rotation: angle(optics.gobo.rotation) }
+    return Object.keys(out).length ? out : null
 }
 
 const RENDER_TONE_MAPPINGS = new Set(['ACESFilmic', 'AgX', 'Neutral', 'none'])

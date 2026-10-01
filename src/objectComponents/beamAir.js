@@ -90,7 +90,8 @@ export const atmosphereOf = (renderSettings) => {
 // and show the haze's grain.
 export const PROFILE_FLOOR = 0.02 // the hull ends where the beam has fallen to 2 %
 export const beamProfileExponent = (edge) => 2 + 6 * (1 - clamp(finite(edge, 0.2), 0, 1))
-export const beamProfile = (rho, edge) => Math.exp(-Math.LN2 * Math.abs(rho) ** beamProfileExponent(edge))
+export const beamProfileAt = (rho, p) => Math.exp(-Math.LN2 * Math.abs(rho) ** p)
+export const beamProfile = (rho, edge) => beamProfileAt(rho, beamProfileExponent(edge))
 /** How far out (in beam radii) the light is drawn: where the profile reaches PROFILE_FLOOR. */
 export const beamExtent = (edge) => (Math.log(1 / PROFILE_FLOOR) / Math.LN2) ** (1 / beamProfileExponent(edge))
 

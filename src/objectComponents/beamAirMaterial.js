@@ -20,6 +20,7 @@ import { AdditiveBlending, BackSide, Color, CylinderGeometry, FrontSide, Matrix4
 import { BEAM_AIR_SAMPLES, DEFAULT_APERTURE, HULL_BASE, HULL_SLOPE, beamExtent } from './beamAir.js'
 import { JET_K, MAX_HAZE_SOURCES, NOISE_TILE_M } from './hazeField.js'
 import { hazeUniformsFor } from './hazeUniforms.js'
+import { BEAM_SHAPE_GLSL, FROST_WIDEN, beamOpticsOf, frostWiden, opticsSpreadTan } from './beamOptics.js'
 
 const vertexShader = /* glsl */`
 varying vec3 vLocal;
@@ -45,6 +46,7 @@ uniform vec3 uCamLocal;
 uniform float uHullBase;
 uniform float uHullSlope;
 uniform float uGlare;
+uniform int uSamples; // BEAM_SAMPLES, as a uniform so the sample loop is not unrolled
 uniform float uLit; // how much of the throw is above the floor (beamAirBeforeRender)
 varying vec3 vLocal;
 varying vec3 vWorld;
@@ -72,8 +74,9 @@ float hazeSigma(vec3 p) {
     float swing = 2.0 * (n - 0.5);
     float sigma = uFill * (1.0 + uPatch * swing);
     float eddy = clamp(1.0 + 1.6 * uPatch * swing, 0.0, 3.0);
-    for (int j = 0; j < HAZE_MAX; j++) {
-        if (j >= uHazeCount) break;
+    // a loop bounded by a uniform: ANGLE's Direct3D back end keeps it a loop (a constant
+    // bound is unrolled — 12 jets × 12 samples became a program too large to build)
+    for (int j = 0; j < uHazeCount; j++) {
         vec4 jet = uHazeJet[j];
         vec3 v = p - uHazePos[j];
         float u = dot(v, uHazeDir[j]);
@@ -90,6 +93,10 @@ float hazeSigma(vec3 p) {
     }
     return sigma;
 }
+
+// WHAT IS IN THE BEAM'S PATH (beamOptics.js): prism, honeycomb, gobo; frost below.
+uniform float uFrost;
+${BEAM_SHAPE_GLSL}
 
 float hgPhase(float c, float g) {
     float g2 = g * g;
@@ -110,8 +117,14 @@ void main() {
     // The cross-section (beamAir.js beamProfile): 50 % at the beam angle, falling as
     // exp(−ln2·ρ^p); the chord is taken through where it has fallen to PROFILE_FLOOR.
     float pExp = 2.0 + 6.0 * (1.0 - clamp(uEdge, 0.0, 1.0));
+    // frost: the beam angle widened, the candela ÷ the widening² (flux kept), the edge
+    // gone Gaussian (beamOptics.js)
+    float fw = 1.0 + ${FROST_WIDEN.toFixed(1)} * uFrost;
+    pExp = mix(pExp, 2.0, uFrost);
+    t = t * fw;
     float kExt = pow(log(1.0 / 0.02) / 0.693147, 1.0 / pExp);
-    float tw = t * kExt;
+    // the hull reaches the 2 % point of the widest part of a split beam
+    float tw = t * kExt + (uPrismN > 0.5 ? uPrismTan : 0.0) + uHoney * uHoneyTan;
     float aw = a * kExt;
     float c0 = aw - ro.y * tw;
     float c1 = -rd.y * tw;
@@ -176,14 +189,13 @@ void main() {
 #if BEAM_PART == 1
     lb = la;
 #endif
-    if (lb > la) for (int i = 0; i < BEAM_SAMPLES; i++) {
+    if (lb > la) for (int i = 0; i < uSamples; i++) {
         float lam = la + (float(i) + jitter) * dl;
         vec3 p = ro + rd * lam;
         float s = max(-p.y, 0.0);
         float R = a + s * t;
-        float rho = length(p.xz) / max(R, 1e-5);
-        float profile = exp(-0.693147 * pow(rho, pExp));
-        float E = uIntensity * t * t / max(R * R, 1e-8);
+        float profile = beamShape(p.xz, R, pExp, s);
+        float E = uIntensity / (fw * fw) * t * t / max(R * R, 1e-8);
         vec3 wi = p - apex;
         float cosT = -dot(wi, rd) / max(length(wi), 1e-5);
         // toward the eye and from the lens, the well-mixed haze dims the light
@@ -224,7 +236,7 @@ void main() {
     float chordQ = min(2.0 * Rq / max(sinPhi, 1e-3), uLit);
     vec3 wq = q - apex;
     float cosQ = -dot(wq, normalize(v)) / max(length(wq), 1e-5);
-    float Eq = uIntensity * t * t / max(Rq * Rq, 1e-8);
+    float Eq = uIntensity / (fw * fw) * t * t / max(Rq * Rq, 1e-8);
     float Lcore = uFill * hgPhase(cosQ, uG) * Eq * chordQ * exp(-uFill * (tq + dq));
     float width = 2.0 * Rq / dq;
     float thetaDeg = max(theta * 57.29578, 1.0);
@@ -251,7 +263,11 @@ void main() {
 `
 
 /** The closed cone that bounds a beam: lens at the origin, the throw down −Y. */
-export const beamAirGeometry = ({ aperture, tanHalf, length, edge = 0.2 }, part = 'core') => {
+export const beamAirGeometry = ({ aperture, tanHalf: plainTan, length, edge = 0.2, optics = null }, part = 'core') => {
+    // frost widens the beam; a prism or a honeycomb fans it out (beamOptics.js)
+    const o = optics || beamOpticsOf(null)
+    const tanHalf = plainTan * frostWiden(o.frost)
+    const spread = opticsSpreadTan(o)
     // The core: the cone the beam's light reaches (beamExtent — past the beam angle, to
     // where its profile has fallen to 2 %), 2 % over, so the depth test ends it on the
     // girder, the roof or the floor it meets. The glare: the beam plus the margin its
@@ -260,7 +276,7 @@ export const beamAirGeometry = ({ aperture, tanHalf, length, edge = 0.2 }, part 
     const k = part === 'glare' ? 1 : beamExtent(edge)
     const [base, slope] = part === 'glare' ? [HULL_BASE, HULL_SLOPE] : [0.02 * aperture * k, 0.02 * tanHalf * k]
     const top = Math.max(aperture * k, 1e-3) + base
-    const bottom = (aperture + length * tanHalf) * k + base + slope * length
+    const bottom = (aperture + length * tanHalf) * k + length * spread + base + slope * length
     const geometry = new CylinderGeometry(top, bottom, length, 24, 1, false)
     geometry.translate(0, -length / 2, 0)
     return geometry
@@ -296,7 +312,17 @@ export const createBeamAirMaterial = (part = 'core', shared = hazeUniformsFor(nu
             uHullBase: { value: glare ? HULL_BASE : 0 },
             uHullSlope: { value: glare ? HULL_SLOPE : 0 },
             uGlare: { value: 1 },
+            uSamples: { value: BEAM_AIR_SAMPLES },
             uLit: { value: 10 },
+            uFrost: { value: 0 },
+            uPrismN: { value: 0 },
+            uPrismTan: { value: 0 },
+            uPrismRot: { value: 0 },
+            uHoney: { value: 0 },
+            uHoneyTan: { value: 0 },
+            uHoneyRot: { value: 0 },
+            uGobo: { value: 0 },
+            uGoboRot: { value: 0 },
             ...shared
         },
         vertexShader,
@@ -312,7 +338,7 @@ export const createBeamAirMaterial = (part = 'core', shared = hazeUniformsFor(nu
     return material
 }
 
-export const setBeamAirUniforms = (material, { color, intensity, tanHalf, aperture, length, edge, atmosphere }) => {
+export const setBeamAirUniforms = (material, { color, intensity, tanHalf, aperture, length, edge, atmosphere, optics = null }) => {
     const u = material.uniforms
     u.uColor.value.set(color || '#ffffff')
     u.uIntensity.value = Math.max(0, Number(intensity) || 0)
@@ -322,6 +348,16 @@ export const setBeamAirUniforms = (material, { color, intensity, tanHalf, apertu
     u.uLit.value = length
     u.uEdge.value = edge
     u.uG.value = atmosphere.anisotropy
+    const o = optics || beamOpticsOf(null)
+    u.uFrost.value = o.frost
+    u.uPrismN.value = o.prism ? o.prism.facets : 0
+    u.uPrismTan.value = o.prism ? opticsSpreadTan({ prism: o.prism }) : 0
+    u.uPrismRot.value = o.prism ? o.prism.rotation : 0
+    u.uHoney.value = o.honeycomb ? 1 : 0
+    u.uHoneyTan.value = o.honeycomb ? opticsSpreadTan({ honeycomb: o.honeycomb }) : 0
+    u.uHoneyRot.value = o.honeycomb ? o.honeycomb.rotation : 0
+    u.uGobo.value = o.gobo ? o.gobo.pattern : 0
+    u.uGoboRot.value = o.gobo ? o.gobo.rotation : 0
 }
 
 /**
@@ -344,7 +380,9 @@ export const beamAirBeforeRender = (mesh, cam) => {
     u.uLit.value = Math.max(lit, 0)
     const s = -camera.y
     const k = Math.max(beamExtent(u.uEdge.value), 1)
-    const radius = (u.uAperture.value + Math.max(s, 0) * u.uTan.value) * k + Math.max(s, 0) * u.uHullSlope.value + u.uHullBase.value
+    const tanEff = u.uTan.value * frostWiden(u.uFrost.value)
+    const spread = (u.uPrismN.value > 0 ? u.uPrismTan.value : 0) + u.uHoney.value * u.uHoneyTan.value
+    const radius = (u.uAperture.value + Math.max(s, 0) * tanEff) * k + Math.max(s, 0) * (spread + u.uHullSlope.value) + u.uHullBase.value
     // A margin of the near plane's reach: a camera a hair outside the surface
     // still has the front face clipped away by the near plane.
     const margin = (cam.near || 0.05) * 2

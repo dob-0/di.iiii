@@ -125,6 +125,10 @@ export const dmxEntities = ({ shown, document, fixtures, library }) => {
             beam.haze = Math.round(haze * d.level * 1000) / 1000
             if (d.shutter === 'strobe' && d.strobeHz > 0 && d.level > 0) beam.strobeHz = capStrobeHz(d.strobeHz)
             else delete beam.strobeHz
+            // prism, honeycomb, frost, gobo — what the desk put in the beam's path
+            // (dmxDecode.js opticsAt → src/objectComponents/beamOptics.js)
+            if (d.optics) beam.optics = { prism: d.optics.prism, honeycomb: d.optics.honeycomb, frost: d.optics.frost, gobo: d.optics.gobo }
+            else delete beam.optics
             components.beam = beam
         }
         components.rigShown = { level: d.level }

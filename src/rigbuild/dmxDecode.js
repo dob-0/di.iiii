@@ -11,7 +11,10 @@
 //   shutter    'open' | 'closed' | 'strobe'  (and `strobeHz` when strobing)
 //   pan, tilt  degrees FROM HOME (the fixture's own frame, fixture-lib.mjs), or null
 //   zoomDeg    the full beam angle, or null
-//   gobo, prism, wheelSpin   noted, not drawn yet (the owner's brief: note them)
+//   gobo, prism, wheelSpin   noted (the owner's brief: note them)
+//   optics     what is in the beam's path, for the room to draw (beamOptics.js):
+//              { prism, honeycomb, frost, gobo } from the channel caps that state them
+//              (goboSlots, prismIn, prism2, prismRotation, frost) — null when nothing is in
 //
 // Conventions, each stated once:
 //   - 16-bit: coarse × 256 + fine, over 65535 (ANSI E1.11 slots are 8-bit; a fine
@@ -166,11 +169,39 @@ export const decodeDmx = (channels, values, type = null) => {
     const gobo = Object.values(spec).find((c) => c.cap?.gobo)
     if (gobo && at[gobo.role] > 0) { out.gobo = at[gobo.role]; out.notes.push(`gobo at ${at[gobo.role]} — not drawn yet`) }
     const prism = Object.values(spec).find((c) => c.cap?.prism)
-    if (prism && at[prism.role] > 0) { out.prism = at[prism.role]; out.notes.push(`prism at ${at[prism.role]} — not drawn yet`) }
+    if (prism && at[prism.role] > 0) { out.prism = at[prism.role]; out.notes.push(`prism at ${at[prism.role]}`) }
+    out.optics = opticsAt(spec, at)
+    if (out.optics?.goboShake) out.notes.push('gobo shaking — drawn still')
     return out
 }
 
 export default decodeDmx
+
+// What is in the beam's path, from the caps that say so (fixtureTypes.js — the B380F's
+// list carries them, each with its basis). Rotation channels are read as an index
+// (0…255 → 0…360°); the chart does not say whether they index or spin.
+const opticsAt = (spec, at) => {
+    const caps = Object.values(spec)
+    const optics = {}
+    const rotationOf = (n) => {
+        const c = caps.find((x) => x.cap?.prismRotation?.prism === n)
+        return c ? (at[c.role] / 255) * Math.PI * 2 : 0
+    }
+    const gobo = caps.find((c) => c.cap?.goboSlots)
+    if (gobo) {
+        const v = at[gobo.role]
+        const g = gobo.cap.goboSlots
+        if (v >= g.from && v <= g.to) optics.gobo = { pattern: 1 + Math.min(g.count - 1, Math.floor(((v - g.from) * g.count) / (g.to - g.from + 1))), rotation: 0 }
+        if (gobo.cap.goboShake && v >= gobo.cap.goboShake.from) optics.goboShake = true
+    }
+    const p1 = caps.find((c) => c.cap?.prismIn)
+    if (p1 && at[p1.role] >= p1.cap.prismIn.from) optics.prism = { facets: p1.cap.prismIn.facets || 16, rotation: rotationOf(1) }
+    const p2 = caps.find((c) => c.cap?.prism2)
+    if (p2 && at[p2.role] >= (p2.cap.prism2.in?.from ?? 128)) optics.honeycomb = { rotation: rotationOf(2) }
+    const frost = caps.find((c) => c.cap?.frost)
+    if (frost && at[frost.role] > 0) optics.frost = Math.round((at[frost.role] / 255) * 1000) / 1000
+    return Object.keys(optics).length ? optics : null
+}
 
 // ---- the other way: what a look WANTS, as a fixture's DMX (RIG_BUILD.md §18.4) --------
 // A designed look (looks.js lookPoses) says, per lamp: aim, colour, level. The desk plays

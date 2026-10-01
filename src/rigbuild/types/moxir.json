@@ -44,7 +44,12 @@
             },
             {
               "role": "frost",
-              "label": "Frost"
+              "label": "Frost",
+              "cap": {
+                "frost": {
+                  "basis": "ASSUMED — linear, 0 clear … 255 full; the chart states no curve"
+                }
+              }
             },
             {
               "role": "strobe",
@@ -78,27 +83,63 @@
               "role": "gobo",
               "label": "Gobo (5-89 gobo 1-17, 171+ shake)",
               "cap": {
-                "gobo": true
+                "gobo": true,
+                "goboSlots": {
+                  "from": 5,
+                  "to": 89,
+                  "count": 17,
+                  "basis": "TESTED range; slots DERIVED"
+                },
+                "goboShake": {
+                  "from": 171,
+                  "basis": "TESTED"
+                }
               }
             },
             {
               "role": "prism",
               "label": "Prism 1 insert (128+ in)",
               "cap": {
-                "prism": true
+                "prism": true,
+                "prismIn": {
+                  "from": 128,
+                  "facets": 16,
+                  "basis": "TESTED threshold"
+                }
               }
             },
             {
               "role": "rotation",
-              "label": "Prism 1 rotation"
+              "label": "Prism 1 rotation",
+              "cap": {
+                "prismRotation": {
+                  "prism": 1,
+                  "basis": "ASSUMED — index or spin not stated; read as an index, 0…255 → 0…360°"
+                }
+              }
             },
             {
               "role": "aux1",
-              "label": "Prism 2"
+              "label": "Prism 2",
+              "cap": {
+                "prism2": {
+                  "kind": "honeycomb",
+                  "in": {
+                    "from": 128
+                  },
+                  "basis": "ASSUMED — prism 1's threshold"
+                }
+              }
             },
             {
               "role": "aux2",
-              "label": "Prism 2 rotation"
+              "label": "Prism 2 rotation",
+              "cap": {
+                "prismRotation": {
+                  "prism": 2,
+                  "basis": "ASSUMED — index or spin not stated; read as an index, 0…255 → 0…360°"
+                }
+              }
             },
             {
               "role": "focus",

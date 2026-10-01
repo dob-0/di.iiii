@@ -8,6 +8,7 @@ import { DEFAULT_APERTURE } from './beamAir.js'
 import { beamAirBeforeRender, beamAirGeometry, createBeamAirMaterial, setBeamAirUniforms } from './beamAirMaterial.js'
 import { useAtmosphere } from './atmosphereStore.js'
 import { hazeUniformsFor } from './hazeUniforms.js'
+import { beamOpticsOf } from './beamOptics.js'
 
 // A spot light that actually points where the entity is turned.
 //
@@ -139,6 +140,7 @@ export default function SpotLightObject({
                     penumbra={penumbra}
                     length={throwShape.length}
                     aperture={beam?.aperture}
+                    opticsKey={JSON.stringify(beam?.optics ?? null)}
                     atmosphere={atmosphere}
                     strobeHz={strobeHz}
                 />
@@ -191,14 +193,17 @@ function StrobeDriver({ hz, lightRef, coneRef, intensity, opacity }) {
 // so the beam and the wall it lands on answer to the same exposure. `haze` on the
 // lamp is not a brightness here (the lamp's level already scales its intensity);
 // 0 still means "no beam" (a strobe draws a flash instead, looks.js flashEntities).
-function BeamInAir({ gl, color, intensity, angle, penumbra, length, aperture, atmosphere, strobeHz = 0 }) {
+function BeamInAir({ gl, color, intensity, angle, penumbra, length, aperture, opticsKey = 'null', atmosphere, strobeHz = 0 }) {
     const tanHalf = Math.tan(Math.min(Math.max(Number(angle) || 0.52, 0.001), Math.PI / 2 - 0.01))
     const a = Number(aperture) > 0 ? Number(aperture) : DEFAULT_APERTURE
     // A beam's edge: the lamp's penumbra picks its cross-section (beamAir.js beamProfile:
     // hard → a beam fixture's steep-shouldered rod, soft → a wash's Gaussian). Never
     // harder than 0.2 (a real beam's edge is soft even through a sharp gobo, in haze).
     const edge = Math.min(1, Math.max(0.2, Number(penumbra) || 0))
-    const values = { color, intensity, tanHalf, aperture: a, length, edge, atmosphere, strobeHz }
+    // prism, honeycomb, frost, gobo (beamOptics.js) — keyed by value, so a re-render with
+    // the same optics keeps the same hull
+    const optics = useMemo(() => beamOpticsOf({ optics: JSON.parse(opticsKey) }), [opticsKey])
+    const values = { color, intensity, tanHalf, aperture: a, length, edge, atmosphere, strobeHz, optics }
     return (
         <>
             <BeamPart gl={gl} part="core" values={values} />
@@ -213,8 +218,8 @@ function beforeBeamRender(renderer, scene, camera) {
 }
 
 function BeamPart({ gl, part, values }) {
-    const { aperture, tanHalf, length, edge } = values
-    const geometry = useMemo(() => beamAirGeometry({ aperture, tanHalf, length, edge }, part), [aperture, tanHalf, length, edge, part])
+    const { aperture, tanHalf, length, edge, optics } = values
+    const geometry = useMemo(() => beamAirGeometry({ aperture, tanHalf, length, edge, optics }, part), [aperture, tanHalf, length, edge, optics, part])
     // the room's haze field: this renderer's shared uniforms (hazeUniforms.js)
     const material = useMemo(() => createBeamAirMaterial(part, hazeUniformsFor(gl)), [part, gl])
     useEffect(() => () => geometry.dispose(), [geometry])

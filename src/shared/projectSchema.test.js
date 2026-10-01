@@ -891,3 +891,15 @@ describe('renderSettings.atmosphere.haze — the haze worked out from the machin
         expect(normalizeProjectDocument({ renderSettings: {} }).renderSettings).not.toHaveProperty('atmosphere')
     })
 })
+
+describe('components.beam.optics — prism, honeycomb, frost, gobo', () => {
+    const lamp = (beam) => normalizeProjectDocument({ entities: [{ id: 'l', type: 'spotLight', components: { beam } }] }).entities[0].components.beam
+    it('keeps what is in the beam\'s path, clamped', () => {
+        expect(lamp({ visible: true, optics: { prism: { facets: 40, rotation: 1 }, honeycomb: {}, frost: 3, gobo: { pattern: 4, rotation: 0.5 }, junk: 1 } }).optics)
+            .toEqual({ prism: { facets: 32, rotation: 1 }, honeycomb: { rotation: 0 }, frost: 1, gobo: { pattern: 4, rotation: 0.5 } })
+    })
+    it('drops a gobo the wheel does not have, and stores nothing when nothing is in', () => {
+        expect(lamp({ visible: true, optics: { gobo: { pattern: 40 } } })).not.toHaveProperty('optics')
+        expect(lamp({ visible: true })).not.toHaveProperty('optics')
+    })
+})
