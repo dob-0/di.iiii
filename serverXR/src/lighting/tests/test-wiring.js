@@ -131,5 +131,31 @@ check('the desk reaches Fan, with the server\'s own styles, in selection order',
   if (!/fixtures:\s*\[\.\.\.sel\]/.test(js)) throw new Error('the fan does not send the selection in its order ([...sel])');
 });
 
+// Regression guard (2026-10-01, MOXIR): the Touch page showed only desk scenes, so a show of
+// looks and cues (0 scenes) offered a tablet "Save some scenes" and nothing to tap. The page
+// now fires looks and drives the cue list; every hook it needs is in the markup, wired, and
+// the empty-state hint is gated on there being nothing else to play.
+check('the Touch page fires looks and drives the cue list (hooks, routes, empty-state gate)', () => {
+  const touch = html.slice(html.indexOf('data-page="touch"'), html.indexOf('id="liveStrip"'));
+  for (const id of ['touchLooks', 'tLooks', 'tCueBar', 'tCueNow', 'tCueNext', 'tCueGo', 'tCueBack', 'tCueStop', 'tCueLoop']) {
+    if (!touch.includes(`id="${id}"`)) throw new Error(`#${id} is not on the Touch page`);
+    if (!js.includes(`'#${id}'`)) throw new Error(`app.js never reaches #${id}`);
+  }
+  for (const route of ['api/looks/fire', 'api/cues/go', 'api/cues/back', 'api/cues/stop', 'api/cues/loop']) {
+    if (!js.includes(`'${route}'`)) throw new Error(`app.js never posts ${route}`);
+    if (!server.includes(`'POST /${route}'`)) throw new Error(`desk.js has no POST /${route}`);
+  }
+  if (!/function buildTouchLooks\(/.test(js) || !/buildTouchLooks\(\);\s*paintTouchCues\(\);/.test(js)) {
+    throw new Error('buildTouch no longer builds the looks and paints the cue bar');
+  }
+  if (!/hasLooks \|\| hasCues \? '' : '<p class="muted">Save some scenes/.test(js)) {
+    throw new Error('the "save some scenes" hint is shown even when the desk has looks or cues');
+  }
+  // CUES is read by buildTouch, which showPage() can run before the poller at the foot of
+  // the file: its declaration has to come first or the Touch page throws on a fresh load.
+  const decl = js.indexOf('\nlet CUES = null;');
+  if (decl < 0 || decl > js.indexOf('\nshowPage(location.hash.slice(1));')) throw new Error('`let CUES` is declared after the first showPage() call');
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);

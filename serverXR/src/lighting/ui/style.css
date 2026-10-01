@@ -490,6 +490,7 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .touchwrap { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px; padding: 12px; min-height: 0; }
 /* the shared scene filter, dressed as a pane row rather than a bare strip */
 .touchsearch { border: 1px solid var(--line); background: var(--pane); }
+.touchsearch[hidden] { display: none; }
 /* group headers span the whole grid and stick while their section scrolls */
 .touchgrid .bankhead { grid-column: 1 / -1; }
 .touchgrid > .muted { grid-column: 1 / -1; }
@@ -504,6 +505,34 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
   font-size: 15px; padding: 10px;
 }
 .tbtn.active { border-color: var(--accent); }
+/* One scroll for the cue bar, the looks and the scenes; the bar stays pinned on top */
+.touchbody { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: auto; }
+.touchbody > .touchgrid { overflow: visible; flex: none; }
+.touchbody [hidden] { display: none; }
+.tcuebar {
+  position: sticky; top: 0; z-index: 2; flex: none;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  background: var(--pane); border: 1px solid var(--line); border-radius: 0; padding: 8px;
+}
+.tcuewhere { flex: 1 1 180px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tcuewhere b { font-size: 16px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tcuewhere .muted { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tcuebtns { flex: 1 1 260px; display: flex; gap: 4px; }
+.tcuebtns .sq { flex: 1 1 0; min-width: 44px; min-height: 44px; }
+.tcuebtns #tCueGo { flex-grow: 2; font-size: 16px; }
+@media (max-width: 700px) {
+  /* the strip and the top bar already take most of a phone: keep the pinned bar slim */
+  .tcuebar { padding: 6px; gap: 4px 8px; }
+  .tcuewhere { flex-basis: 100%; }
+  .tcuewhere b { font-size: 14px; }
+}
+.tlooks { flex: none; }
+.tlooks .bankhead { position: static; }
+.tlooks .touchgrid { margin-top: 10px; overflow: visible; }
+.tbtn.lookbtn { gap: 4px; }
+.tbtn.lookbtn .tnote { color: var(--muted); }
+.tbtn.lookbtn.active { background: #ffffff10; border-width: 2px; padding: 9px; }
+.tbtn.lookbtn.active .tnote { color: var(--accent); }
 .tbtn .strip { display: flex; height: 6px; width: 100%; border-radius: 0; overflow: hidden; border: 1px solid var(--line); }
 .tbtn .strip i { flex: 1; }
 
