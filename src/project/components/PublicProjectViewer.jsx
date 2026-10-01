@@ -516,6 +516,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         projectId={projectId}
                         spaceId={resolvedRouteSpaceId}
                         document={sceneDocument}
+                        posedEntities={lookEntities}
                         title={viewerTitle}
                         entryView={entryView}
                         navMode={navMode}

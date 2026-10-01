@@ -124,7 +124,9 @@ export default function PublicProjectSceneSurface({
     isPreview,
     initialCameraView = null,
     xrDefaultMode = 'none',
-    canOfferXrEntry = false
+    canOfferXrEntry = false,
+    // the lamps as the desk's live look poses them (RoomLookFollower), or null
+    posedEntities = null
 }) {
     // The seed can frame a custom entry view on first paint, but fixed-camera
     // and code presentations are authored choices and always win over it.
@@ -195,6 +197,10 @@ export default function PublicProjectSceneSurface({
                 <LiveProjectScene
                     projectId={projectId}
                     spaceId={spaceId}
+                    // Walk/Fly keeps the look the desk is playing: the walk scene loads its own
+                    // copy of the document, and drew the room as saved (a green look walked
+                    // into amber) until it was handed the posed lamps
+                    entitiesOverride={posedEntities}
                     interactive
                     showChrome
                     title={title}

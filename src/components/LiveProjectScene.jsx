@@ -1504,6 +1504,9 @@ export default function LiveProjectScene({
     cameraPoseRef = null,
     onExit = null,
     exitLabel = '← Exit',
+    // `entitiesOverride`: the entities to draw instead of the loaded document's — the
+    // room as a desk look poses it (PublicProjectSceneSurface). Null: the document's own.
+    entitiesOverride = null,
     title = '',
     // --- Four optional seams, added for the jam surface (JamSurface.jsx).
     // Every one of them defaults to exactly what this component did before,
@@ -1677,7 +1680,7 @@ export default function LiveProjectScene({
         return () => window.removeEventListener('keydown', onKey)
     }, [walking, showModeControls])
 
-    const entities = useMemo(() => doc?.entities || [], [doc?.entities])
+    const entities = useMemo(() => entitiesOverride || doc?.entities || [], [entitiesOverride, doc?.entities])
     // Legacy-imported projects store assets with an empty `url` field (the
     // registry that fills it in -- registerAssetSources -- only ever runs
     // inside the Studio editor's useAssetRestore hook, never here). Fall back
