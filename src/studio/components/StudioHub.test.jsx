@@ -560,3 +560,38 @@ describe('private projects', () => {
         expect(await screen.findByText(/published front door/)).toBeTruthy()
     })
 })
+
+describe('StudioHub stale responses on space change', () => {
+    beforeEach(() => {
+        listProjects.mockReset()
+        getServerSpace.mockReset()
+        listCollections.mockReset()
+        listCollections.mockResolvedValue([])
+        listTrash.mockResolvedValue({ projects: [], ttlMs: 0 })
+        authState = { role: null, openSpaceId: null }
+    })
+
+    it('ignores an old space answer that lands after the new space answer', async () => {
+        const defer = () => { let resolve; const promise = new Promise(r => { resolve = r }); return { promise, resolve } }
+        const listA = defer(); const listB = defer()
+        const spaceA = defer(); const spaceB = defer()
+        listProjects.mockImplementation((id) => (id === 'space-a' ? listA.promise : listB.promise))
+        getServerSpace.mockImplementation((id) => (id === 'space-a' ? spaceA.promise : spaceB.promise))
+
+        const { rerender } = render(<StudioHub spaceId="space-a" />)
+        rerender(<StudioHub spaceId="space-b" />)
+
+        listB.resolve([{ id: 'b-proj', title: 'Project from B', updatedAt: Date.now(), source: 'studio-v3' }])
+        spaceB.resolve({ id: 'space-b', label: 'Label B' })
+        expect(await screen.findByText(/Project from B/)).toBeInTheDocument()
+        await waitFor(() => expect(screen.getByText(/Space: Label B/)).toBeInTheDocument())
+
+        listA.resolve([{ id: 'a-proj', title: 'Project from A', updatedAt: Date.now(), source: 'studio-v3' }])
+        spaceA.resolve({ id: 'space-a', label: 'Label A' })
+        await new Promise(r => setTimeout(r, 20))
+
+        expect(screen.queryByText(/Project from A/)).not.toBeInTheDocument()
+        expect(screen.getByText(/Project from B/)).toBeInTheDocument()
+        expect(screen.getByText(/Space: Label B/)).toBeInTheDocument()
+    })
+})

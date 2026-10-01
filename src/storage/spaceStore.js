@@ -28,9 +28,17 @@ const readSpaces = () => {
     }
 }
 
+// Returns whether the list was stored. A full or blocked store (QuotaExceeded,
+// SecurityError) must not throw into the UI handlers; the caller keeps its
+// in-memory result and the list simply is not persisted.
 const writeSpaces = (spaces) => {
-    if (!isBrowser) return
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(spaces))
+    if (!isBrowser) return false
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(spaces))
+        return true
+    } catch {
+        return false
+    }
 }
 
 const normalizeSpace = (space) => {
