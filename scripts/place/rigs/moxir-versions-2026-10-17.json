@@ -4750,7 +4750,7 @@
           }
         }
       },
-      "realLightsWhy": "EVERY lamp is a real light (Emily 2026-10-01: 'i want 100% ident what we will have, you can optimize'): the room is the night as it will be, no picked few, no baked stand-ins. Measured on PONYO (RTX laptop, 1440x900): 40-52 fps; with shadows on the 12 lamps putting the most light in (shadowCasting.js shadowLampCap) 36-49 fps. A phone will not hold this: the 8-lamp budget is the fallback.",
+      "realLightsWhy": "EVERY lamp is a real light (Emily 2026-10-01: 'i want 100% ident what we will have, you can optimize'): the room is the night as it will be, no picked few, no baked stand-ins. Measured on PONYO, 1440x900: RTX 5060, shadows on the 12 lamps putting the most light in (shadowCasting.js): 61 fps floor view, 65 fps DJ view; the integrated AMD 860M (most likely): 36-49 fps. A phone will not hold this: the 8-lamp budget is the fallback.",
       "realLightsAll": true
     },
     {

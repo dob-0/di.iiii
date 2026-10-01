@@ -22,7 +22,7 @@
 
 ## 2026-10-01 (later) — every lamp a real light; rebased on dev for the push
 
-- Emily, looking at the room: "i want real simulation of the light", then "no i want to 100% ident what we will have, you can optimize". Known · full (64 lamps) and Known (36) now carry `realLights` for every group: no picked few, no baked per-look stand-ins. Shadows ride on feat/room-shadow-cap-2026-10-01 (the twelve brightest lamps throw). Measured on PONYO: Known · full 36–49 fps, Known 58–75 fps, shadows on.
+- Emily, looking at the room: "i want real simulation of the light", then "no i want to 100% ident what we will have, you can optimize". Known · full (64 lamps) and Known (36) now carry `realLights` for every group: no picked few, no baked per-look stand-ins. Shadows ride on feat/room-shadow-cap-2026-10-01 (the twelve brightest lamps throw). Measured on PONYO, shadows on: Known · full 61–65 fps on the RTX 5060 (emily-41); 36–49 fps (Known · full) and 58–75 fps (Known) in Playwright Chrome, most likely on the AMD 860M iGPU.
 - The patch step counts devices run by hand apart ("36 of 36 addressed · 10 by hand"), carried here from the off-DMX work.
 - Room setup used on PONYO (data, not in git): both known rooms take their hall from `moxir-hall-minimal` (`load-version --hall-from moxir-hall-minimal`), whose glb has the nave crane parked over the DJ where the cut hangs. `moxir-hall`'s glb has it at the far end. They rest on a look with no solo (k-tunnel, gs-cross-beams), have work light 0.35, and carry authored Floor/DJ views looking down the hall.
 - This branch now stacks the whole MOXIR line: tested charts, Known, off-DMX, Known · full. Rebased on dev e244f802 without conflicts; `versions.mjs --check` is current after the rebase.
