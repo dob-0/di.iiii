@@ -266,12 +266,12 @@ export default function CardsSurface({ spaceId, projectId, readOnly = false, lib
     // Read only (a visitor on a public space, rigToolAccess.js): every write in this file
     // goes through here, so none reaches the document.
     const syncOps = readOnly ? NO_WRITE : sentOps
-    const { applyLocalOps, undo, redo } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
+    const { applyLocalOps, undo, redo, edits } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
     const document_ = state.document
     const entities = useMemo(() => document_.entities || [], [document_.entities])
     // The library with the show's own types (RIG_BUILD.md §13), one object per list.
     const library = useMemo(() => libraryWithShow(baseLibrary, entities), [baseLibrary, entities])
-    const patch = useRigAutoPatch({ projectId: readOnly ? null : projectId, entities: readOnly ? [] : entities, applyOps: syncOps, library })
+    const patch = useRigAutoPatch({ projectId: readOnly ? null : projectId, entities: readOnly ? [] : entities, applyOps: syncOps, edits, library })
     const phone = useIsPhone()
 
     const { list } = useMemo(() => rentalOf(entities), [entities])
@@ -333,8 +333,13 @@ export default function CardsSurface({ spaceId, projectId, readOnly = false, lib
         } catch { /* the desk went away between the two calls */ }
     }, [readOnly])
     useEffect(() => { readDesk() }, [readDesk])
+    const patchRoom = patch.patchNow
     const sendLooks = useCallback(async () => {
         try {
+            // A desk look is made over this room's PATCHED fixtures, so the room is patched
+            // first — here, because a person asked (this button, or GO with looks missing),
+            // never on opening the page (a reader never writes).
+            await patchRoom()
             const rig = await (await fetch(lightingApiUrl(`api/rig?project=${encodeURIComponent(projectId)}`))).json()
             const list = deskLooks(looks, rig.fixtures || [])
             for (const look of list) {
@@ -343,7 +348,7 @@ export default function CardsSurface({ spaceId, projectId, readOnly = false, lib
             setStatus(`${list.length} looks on the desk, over ${(rig.fixtures || []).length} patched fixtures — their DMX values are owed (no channel lists)`)
             readDesk()
         } catch (error) { setStatus(`the desk did not take the looks: ${error.message}`) }
-    }, [looks, projectId, readDesk])
+    }, [looks, projectId, readDesk, patchRoom])
     const addCues = useCallback((list) => {
         const ops = list.map((l) => ({ type: 'createMappingCue', payload: { cue: { id: `cue-${deskLookId(l.id)}`, name: l.title, fade: 2, hold: 0, lightLook: deskLookId(l.id) } } }))
         edit(ops, `${list.length} looks on the cue list`)

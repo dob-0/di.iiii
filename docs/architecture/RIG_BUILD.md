@@ -263,8 +263,17 @@ known, else `ch1…chN` labelled as owed. The desk's own validation applies.
   flags:[{key, code, message}], removed:[key]}`; `GET /light/api/rig?project=` lists a
   room's rig fixtures. Code: `serverXR/src/lighting/rigpatch.js`.
 - room: `src/rigbuild/autoPatch.js` — `patchRequest`, `writeBackOps`, `autoPatch`;
-  in the Studio `useRigAutoPatch` (mounted in `StudioEditor`) runs it 400 ms after any
-  lamp change and returns `{flags, message, patchGroup(entityIds)}`.
+  in the Studio `useRigAutoPatch` (mounted in `StudioEditor` and the plot, cards,
+  equipment and build pages) runs it 400 ms after a lamp change **made on that page** —
+  `useOpHistory`'s `edits` count moves on the person's own edit, undo or redo — and
+  returns `{flags, message, patchNow(), patchGroup(entityIds)}`.
+- **A reader never writes** (2026-10-01): opening, refreshing or a second viewer never
+  patches — no POST to the desk (its `prune` would take the project's other fixtures off)
+  and no write-back into the document. A change that arrived from a collaborator does not
+  patch either. The explicit whole-room patch is **patch the room on the desk** (the
+  plot's title block) and the cards' **send looks to the desk** (and GO, when looks are
+  missing), which patch first because a desk look is made over the patched fixtures.
+  Until a person patches, `flags` and `message` are empty (the pages read the document).
 - flag codes: `mode-unknown`, `overlap`, `desk-differs`, `off-the-end`, `no-room`,
   `profile-clash`, `profile-refused`, `group-split`; locally `unknown-type`,
   `channels-owed`.
