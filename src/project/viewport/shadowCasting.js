@@ -124,16 +124,26 @@ export const dressLightForShadows = (light, mapSize) => {
 }
 
 // How many lamps may throw a shadow at once. Each takes a texture unit in every lit
-// material's fragment shader (WebGL gives 16, desktop GPUs 32) and a depth pass of the
-// scene each frame; the material keeps a few units for itself. 12 is what MOXIR's
-// rooms were measured at (scripts/place/rig-lib.mjs SHADOW_SAFE_REAL_LIGHTS).
+// material's fragment shader (WebGL gives 16 — ANGLE on Windows sits there — desktop GPUs
+// 32) and a depth pass of the scene each frame. 12 is what MOXIR's rooms were measured at
+// (scripts/place/rig-lib.mjs SHADOW_SAFE_REAL_LIGHTS); on a GPU with fewer units the cap
+// is what the busiest lit material leaves (dressForShadows `maxTextures`).
 export const SHADOW_LAMP_CAP = 12
-const RESERVED_TEXTURE_UNITS = 4
-/** The cap on this GPU: the measured 12, or fewer where the GPU has fewer texture units. */
-export const shadowLampCap = (maxTextures) => {
-    const units = Number(maxTextures)
-    return Number.isFinite(units) && units > 0 ? Math.max(0, Math.min(SHADOW_LAMP_CAP, units - RESERVED_TEXTURE_UNITS)) : SHADOW_LAMP_CAP
+
+// The texture slots a material samples in its fragment shader, besides the lamps' shadows.
+const SAMPLER_KEYS = ['map', 'normalMap', 'bumpMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap', 'lightMap',
+    'envMap', 'alphaMap', 'specularMap', 'clearcoatMap', 'clearcoatNormalMap', 'clearcoatRoughnessMap', 'sheenColorMap',
+    'sheenRoughnessMap', 'transmissionMap', 'thicknessMap', 'iridescenceMap', 'iridescenceThicknessMap', 'anisotropyMap',
+    'specularIntensityMap', 'specularColorMap', 'gradientMap', 'matcap']
+/** A material's own fragment samplers; a standard material without its own envMap samples the scene's. */
+export const materialSamplers = (material, environment = null) => {
+    if (!material) return 0
+    const own = SAMPLER_KEYS.filter((k) => material[k]?.isTexture).length
+    const sceneEnv = environment && !material.envMap && (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial) ? 1 : 0
+    return own + sceneEnv
 }
+// One unit kept back for what the count cannot see (a transmission target, a driver's own).
+const SPARE_UNITS = 1
 
 // A lamp holding a shadow keeps it against a challenger less than this much brighter,
 // so two lamps of near-equal light do not trade it back and forth on every re-dress.
@@ -159,12 +169,19 @@ export const shadowScore = (light) => {
  * the most light into the room now (shadowScore, a holder kept within HOLD_MARGIN).
  * Exactly that many, lit or not, so the shader's count of shadowed lamps never
  * changes when a look does (a change would recompile every lit material: a hitch).
+ * `maxTextures` (the GPU's MAX_TEXTURE_IMAGE_UNITS): the cap comes down to what the
+ * busiest lit material leaves — its own maps, the scene's environment, the other
+ * lights' shadows and spot-light maps, one spare. Past the units the material fails to
+ * link and the room draws black (seen 2026-10-01 on ANGLE D3D11, 16 units).
  *
  * @returns {{ meshes: number, lights: number }} for tests
  */
-export const dressForShadows = (root, mapSize = defaultShadowCasting.mapSize, { maxLights = Infinity } = {}) => {
+export const dressForShadows = (root, mapSize = defaultShadowCasting.mapSize, { maxLights = Infinity, maxTextures = Infinity } = {}) => {
     let meshes = 0
+    let busiest = 0
+    let otherShadows = 0
     const spots = []
+    const environment = root?.environment || null
     const walk = (object) => {
         const role = shadowRoleOf(object)
         if (role === 'skip-subtree') return
@@ -173,12 +190,19 @@ export const dressForShadows = (root, mapSize = defaultShadowCasting.mapSize, { 
             object.castShadow = true
             object.receiveShadow = true
             meshes += 1
+            for (const material of [].concat(object.material || [])) busiest = Math.max(busiest, materialSamplers(material, environment))
         }
         if (object?.isSpotLight) spots.push(object)
+        else if (object?.isLight && object.castShadow) otherShadows += 1
         const children = object?.children
         if (Array.isArray(children)) children.forEach(walk)
     }
     walk(root)
+    const units = Number(maxTextures)
+    if (Number.isFinite(units) && units > 0) {
+        const spotMaps = spots.filter((light) => light.map?.isTexture).length
+        maxLights = Math.max(0, Math.min(maxLights, units - busiest - otherShadows - spotMaps - SPARE_UNITS))
+    }
     let chosen = spots
     if (spots.length > maxLights) {
         const key = (light) => String(light.name || light.uuid || '')
