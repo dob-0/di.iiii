@@ -501,7 +501,9 @@ export const versionRig = ({ spec, base, id }) => {
         classes: clone(classes),
         groups,
         effects,
-        budget: { ...clone(base.budget), realLights: clone(v.realLights) },
+        // `realLightsAll`: the version asks for EVERY lamp as a real light (the room as it will
+        // be; the renderer caps only the shadows, shadowCasting.js) — stated, never inferred
+        budget: { ...clone(base.budget), realLights: clone(v.realLights), ...(v.realLightsAll ? { realLightsAll: true, realLightsWhy: v.realLightsWhy } : {}) },
         night: clone(spec.night || base.night),
         photometry: { ...clone(base.photometry), ...(spec.photometry?.air ? { air: spec.photometry.air, airWhy: spec.photometry.why } : {}) },
         defaultLook: v.defaultLook || spec.defaultLook,

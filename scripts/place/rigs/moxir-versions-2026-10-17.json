@@ -4750,7 +4750,8 @@
           }
         }
       },
-      "realLightsWhy": "EVERY lamp is a real light (Emily 2026-10-01: 'i want 100% ident what we will have, you can optimize'): the room is the night as it will be, no picked few, no baked stand-ins. Measured on PONYO (RTX laptop, 1440x900): 40-52 fps; with shadows on the 12 lamps putting the most light in (shadowCasting.js shadowLampCap) 36-49 fps. A phone will not hold this: the 8-lamp budget is the fallback."
+      "realLightsWhy": "EVERY lamp is a real light (Emily 2026-10-01: 'i want 100% ident what we will have, you can optimize'): the room is the night as it will be, no picked few, no baked stand-ins. Measured on PONYO (RTX laptop, 1440x900): 40-52 fps; with shadows on the 12 lamps putting the most light in (shadowCasting.js shadowLampCap) 36-49 fps. A phone will not hold this: the 8-lamp budget is the fallback.",
+      "realLightsAll": true
     },
     {
       "id": "known-ground",
@@ -5171,7 +5172,8 @@
           }
         }
       },
-      "realLightsWhy": "EVERY lamp is a real light, as in known-full (Emily 2026-10-01: 'do the same for known-ground'): the room is the night as it will be. Shadows on the 12 lamps putting the most light in (shadowCasting.js shadowLampCap)."
+      "realLightsWhy": "EVERY lamp is a real light, as in known-full (Emily 2026-10-01: 'do the same for known-ground'): the room is the night as it will be. Shadows on the 12 lamps putting the most light in (shadowCasting.js shadowLampCap).",
+      "realLightsAll": true
     }
   ]
 }
