@@ -338,10 +338,14 @@ const median = (values) => {
 
 /**
  * Where the rig IS, robustly: lamps spread through a room (MOXIR's column uplights run the
- * hall's length to z = 42) must not drag the views away from the stage. The centre is the
- * component-wise median of the lamp positions (robust to up to half being elsewhere); the
- * core is every lamp within `radius` metres of it on the floor plan; rig pieces (truss,
- * riser) join when their centre is within 1.5 × radius. Returns { lampBox, rigBox } or nulls.
+ * hall's length to z = 48) must not drag the views away from the stage. The centre is the
+ * densest cluster: the lamp with the most others within `radius` metres on the floor plan
+ * (ties to the one nearest the component-wise median), then the median of that cluster.
+ * The median alone is not enough: when the lamps down the hall outnumber the stage's, it
+ * falls on the empty floor between the column lines (MOXIR known-full, 2026-10-01: x 0,
+ * z 18, 11 m from any lamp) and the core comes out empty. The core is every lamp within
+ * `radius` of the centre; rig pieces (truss, riser) join when their centre is within
+ * 1.5 × radius. Returns { lampBox, rigBox } or nulls.
  */
 export const rigCore = (lampPoints = [], pieceBoxes = [], radius = 8) => {
     const points = (lampPoints || []).map(vec3).filter(Boolean)
@@ -349,8 +353,18 @@ export const rigCore = (lampPoints = [], pieceBoxes = [], radius = 8) => {
         const boxes = (pieceBoxes || []).filter((b) => !isBoxEmpty(b))
         return { lampBox: null, rigBox: boxes.length ? boxes.reduce(unionBox, emptyBox()) : null }
     }
-    const cx = median(points.map((p) => p[0]))
-    const cz = median(points.map((p) => p[2]))
+    const near = (a, b) => Math.hypot(a[0] - b[0], a[2] - b[2]) <= radius
+    const mx = median(points.map((p) => p[0]))
+    const mz = median(points.map((p) => p[2]))
+    let peak = null
+    for (const p of points) {
+        const n = points.filter((q) => near(p, q)).length
+        const d = Math.hypot(p[0] - mx, p[2] - mz)
+        if (!peak || n > peak.n || (n === peak.n && d < peak.d)) peak = { p, n, d }
+    }
+    const cluster = points.filter((q) => near(peak.p, q))
+    const cx = median(cluster.map((p) => p[0]))
+    const cz = median(cluster.map((p) => p[2]))
     const lampBox = emptyBox()
     for (const p of points) if (Math.hypot(p[0] - cx, p[2] - cz) <= radius) expandBox(lampBox, p)
     let rigBox = { min: [...lampBox.min], max: [...lampBox.max] }
