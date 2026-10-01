@@ -1,6 +1,6 @@
 import { registerEntityObject } from '../utils/entityObjectRegistry.js'
 import { runViewCommand } from '../utils/viewCommands.js'
-import { Suspense, createContext, lazy, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, createContext, lazy, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import '../styles/studio.css'
@@ -32,6 +32,9 @@ import {
     setTimelinePreview
 } from '../utils/timelinePreview.js'
 import StudioHelpDialog from './StudioHelpDialog.jsx'
+import { getNavigationPreset, mouseButtonsFor } from '../navigation/mappings.js'
+import { useNavigationPreference } from '../navigation/preference.js'
+import { useCameraNavigation } from '../navigation/useCameraNavigation.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
@@ -516,12 +519,25 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
     )
 }
 
-// ACTION values from camera-controls (binary flags):
-const CC_ACTION = { NONE: 0, ROTATE: 1, TRUCK: 2, SCREEN_PAN: 4, OFFSET: 8, DOLLY: 16, ZOOM: 32,
-    TOUCH_DOLLY_TRUCK: 4096 }
-
-function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, enabled = true, fovRef = null }) {
+function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, enabled = true, fovRef = null, selectedEntityIds = null }) {
     const isXrPresenting = useXR((state) => state.session != null)
+    const scene = useThree((state) => state.scene)
+    const getScene = useCallback(() => scene, [scene])
+
+    // Mouse navigation preset (Shift+? > Shortcuts). 'studio' is the default and
+    // the bindings Studio always had; see src/studio/navigation/mappings.js.
+    const navigation = useNavigationPreference()
+    const preset = getNavigationPreset(navigation.preset)
+    const isOrtho = (cameraView?.fov ?? 50) < 20
+    useCameraNavigation({
+        controlsRef,
+        presetId: preset.id,
+        ortho: isOrtho,
+        orbitSelection: navigation.orbitSelection,
+        selectedEntityIds,
+        getScene,
+        active: enabled && !isXrPresenting,
+    })
 
     // The lens the camera eases toward. Shared with the smart view when there is one
     // (a preset changes the lens as well as the place), else this component's own.
@@ -553,13 +569,13 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
 
     // In ortho views (small FOV), left drag pans instead of rotating so you can
     // navigate the locked view and arrange objects — same as Blender's ortho behavior
+    // (Also restores the preset's resting bindings when the preset changes.)
     useEffect(() => {
         const cc = controlsRef.current
         if (!cc) return
-        const isOrtho = (cameraView?.fov ?? 50) < 20
-        cc.mouseButtons.left = isOrtho ? CC_ACTION.TRUCK : CC_ACTION.ROTATE
+        Object.assign(cc.mouseButtons, mouseButtonsFor(preset.id, { ortho: isOrtho }))
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [cameraView?.fov])
+    }, [isOrtho, preset.id])
 
     // Smooth FOV lerp — runs every frame inside the R3F canvas
     useFrame(() => {
@@ -591,21 +607,13 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         <CameraControls
             ref={controlsRef}
             makeDefault
-            dollyToCursor
+            dollyToCursor={preset.dollyToCursor}
             smoothTime={0.15}
             draggingSmoothTime={0.0}
             minDistance={0.35}
             maxDistance={500}
-            mouseButtons={{
-                left: CC_ACTION.ROTATE,
-                middle: CC_ACTION.DOLLY,
-                right: CC_ACTION.TRUCK,
-                wheel: CC_ACTION.DOLLY,
-            }}
-            touches={{
-                one: CC_ACTION.ROTATE,
-                two: CC_ACTION.TOUCH_DOLLY_TRUCK,
-            }}
+            mouseButtons={preset.mouseButtons}
+            touches={preset.touches}
             onControlEnd={() => {
                 const cc = controlsRef.current
                 if (!cc || !onCameraChange) return
@@ -1153,6 +1161,7 @@ export default function StudioViewport({
                         onRotateStart={onRotateStart}
                         enabled={enableNavigation}
                         fovRef={smartOn ? fovRef : null}
+                        selectedEntityIds={selectedEntityIds}
                     />
                     <StudioSceneContent
                         document={document}

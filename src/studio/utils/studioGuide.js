@@ -1,3 +1,5 @@
+import { getNavigationPreset } from '../navigation/mappings.js'
+
 // Content model for Studio's visual help (StudioHelpDialog). Copy stays
 // terse on purpose: the diagrams carry the explanation, the words only
 // anchor them.
@@ -10,7 +12,7 @@ export const STUDIO_GUIDE_SECTIONS = [
         description: 'The viewport is a camera you fly, not a page you scroll.',
         icon: '◎',
         callouts: [
-            { icon: '↻', title: 'Orbit', detail: 'Drag (or middle-drag) to circle the scene.' },
+            { icon: '↻', title: 'Orbit', detail: 'Drag to circle the scene.' },
             { icon: '⇅', title: 'Zoom', detail: 'Scroll to move closer or further.' },
             { icon: '✛', title: 'Pan', detail: 'Right-drag to slide sideways.' }
         ],
@@ -126,9 +128,7 @@ export const STUDIO_SHORTCUT_SECTIONS = [
             ['Tab / E', 'Toggle Navigate ↔ Edit'],
             ['T', 'Toggle gizmo visibility'],
             ['H', 'Hide / show UI'],
-            ['Scroll', 'Zoom'],
-            ['Middle drag', 'Orbit'],
-            ['Right drag', 'Pan'],
+            // Mouse rows follow the chosen navigation preset: viewportMouseRows().
             ['Numpad 1 / 3 / 7', 'Front / Right / Top view (Ctrl = Back / Left / Bottom)'],
             ['Shift+1 / 3 / 7', 'Same views without a numpad (Ctrl+Shift = opposite side)'],
             ['Numpad 4 / 6 / 8 / 2', 'Orbit 15° (or Shift+Arrows)'],
@@ -191,4 +191,11 @@ export function markJamCoachDone() {
     } catch {
         // storage unavailable (private mode) — jam hint may show again, harmless
     }
+}
+
+// The viewport's mouse rows for the help table, from the navigation preset the
+// viewer chose (src/studio/navigation/mappings.js), so the table never claims a
+// mapping the viewport does not have.
+export function viewportMouseRows(presetId) {
+    return getNavigationPreset(presetId).rows.map(([key, desc]) => [key, desc])
 }
