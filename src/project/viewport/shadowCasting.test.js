@@ -167,3 +167,47 @@ describe('undressing', () => {
         expect(mesh.castShadow).toBe(false)
     })
 })
+
+// MOXIR Known · full, 2026-10-01: every lamp a real light (64). A browser has 16–32 texture
+// units and every shadow-casting lamp takes one in every lit material, so past ~12 the room
+// fails to compile and goes black — the shadows were switched off for the whole room.
+// Now a fixed number of lamps throw: the ones putting the most light into the room.
+describe('shadows for a room of many lamps', () => {
+    const lamp = (name, intensity, angle = 0.3) => ({ ...spotLight(), name, intensity, angle, uuid: name })
+    it('gives a shadow to exactly the cap, the lamps throwing the most light, and the count never changes', () => {
+        const lamps = Array.from({ length: 20 }, (_, i) => lamp(`l${String(i).padStart(2, '0')}`, i < 5 ? 0 : i * 10))
+        const root = { children: [mesh(), ...lamps] }
+        const out = dressForShadows(root, 1024, { maxLights: 12 })
+        expect(out.lights).toBe(12)
+        expect(lamps.filter((l) => l.castShadow).length).toBe(12)
+        expect(lamps.slice(8).every((l) => l.castShadow)).toBe(true) // l08…l19, the brightest
+        expect(lamps.slice(0, 5).some((l) => l.castShadow)).toBe(false) // dark lamps never take one while lit ones wait
+        lamps[19].intensity = 0 // a fade takes the brightest down: the next one up takes its shadow
+        dressForShadows(root, 1024, { maxLights: 12 })
+        expect(lamps.filter((l) => l.castShadow).length).toBe(12)
+        expect(lamps[19].castShadow).toBe(false)
+        expect(lamps[7].castShadow).toBe(true)
+    })
+    it('keeps a shadow on its lamp against a challenger that is only a little brighter', () => {
+        const a = lamp('a', 100)
+        const b = lamp('b', 50)
+        const root = { children: [a, b] }
+        dressForShadows(root, 1024, { maxLights: 1 })
+        expect(a.castShadow).toBe(true)
+        b.intensity = 110 // 10 % over: not enough to take it
+        dressForShadows(root, 1024, { maxLights: 1 })
+        expect(a.castShadow).toBe(true)
+        expect(b.castShadow).toBe(false)
+        b.intensity = 130
+        dressForShadows(root, 1024, { maxLights: 1 })
+        expect(b.castShadow).toBe(true)
+        expect(a.castShadow).toBe(false)
+    })
+    it('puts every lamp back on undress, the uncapped ones too', () => {
+        const lamps = Array.from({ length: 4 }, (_, i) => lamp(`u${i}`, 10 + i))
+        const root = { children: lamps }
+        dressForShadows(root, 1024, { maxLights: 2 })
+        undressShadows(root)
+        expect(lamps.every((l) => l.castShadow === false)).toBe(true)
+    })
+})

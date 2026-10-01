@@ -4287,14 +4287,30 @@
       },
       "realLights": {
         "par-cut-x": {
-          "count": 4,
+          "count": 6,
           "pick": "even"
         },
         "par-cut-bridge": {
-          "count": 2,
+          "count": 4,
+          "pick": "even"
+        },
+        "par-columns": {
+          "count": 32,
+          "pick": "even"
+        },
+        "par-press-cut": {
+          "count": 3,
           "pick": "even"
         },
         "beam380-backstage": {
+          "count": 7,
+          "pick": "even"
+        },
+        "beam380-columns": {
+          "count": 10,
+          "pick": "even"
+        },
+        "laser-cut": {
           "count": 2,
           "pick": "even"
         }
@@ -4734,7 +4750,7 @@
           }
         }
       },
-      "realLightsWhy": "8 real lamps, where their light lands on something the eye reads (Emily 2026-10-01: 'i want real simulation of the light'): 4 of the X's PARs on the DJ and the floor, 2 bridge PARs on the crane, 2 backstage beams on the press and the roof. The column and press PARs are baked per look (rig.mjs --wash-per-look); the column beams are narrow and land only on the roof."
+      "realLightsWhy": "EVERY lamp is a real light (Emily 2026-10-01: 'i want 100% ident what we will have, you can optimize'): the room is the night as it will be, no picked few, no baked stand-ins. Measured on PONYO (RTX laptop, 1440x900): 40-52 fps; with shadows on the 12 lamps putting the most light in (shadowCasting.js shadowLampCap) 36-49 fps. A phone will not hold this: the 8-lamp budget is the fallback."
     },
     {
       "id": "known-ground",
