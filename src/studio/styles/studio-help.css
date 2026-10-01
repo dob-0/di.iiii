@@ -410,14 +410,16 @@
     cursor: pointer;
 }
 
+.sh-nav-pref-option { --sh-nav-box: 18px; }
+
 .sh-nav-pref-option--sub { margin-left: var(--di-space-6); }
 
 /* Native inputs, drawn as rectangles (house rule: no round controls). */
 .sh-nav-pref-option input {
     appearance: none;
     flex: none;
-    width: 18px;
-    height: 18px;
+    width: var(--sh-nav-box);
+    height: var(--sh-nav-box);
     order: -1;
     margin: 0;
     border: 1px solid rgba(255, 255, 255, 0.5);
@@ -435,7 +437,7 @@
 /* Description on its own line, aligned under the label text. */
 .sh-nav-pref-text {
     flex-basis: 100%;
-    padding-left: calc(18px + var(--di-space-3));
+    padding-left: calc(var(--sh-nav-box) + var(--di-space-3));
     color: rgba(255, 255, 255, 0.8);
     font-weight: 400;
 }
