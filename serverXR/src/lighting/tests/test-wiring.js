@@ -157,5 +157,33 @@ check('the Touch page fires looks and drives the cue list (hooks, routes, empty-
   if (decl < 0 || decl > js.indexOf('\nshowPage(location.hash.slice(1));')) throw new Error('`let CUES` is declared after the first showPage() call');
 });
 
+// Regression guard (2026-10-01, MOXIR UI audit, P0): framed as the visualiser's desk half,
+// the desk kept its ways out (di.iiii, ← project, Studio / Nodes / Projection). On a phone
+// the pane is ~240 px and those rows took all of it: not one look tile was on screen.
+check("a framed desk (the visualiser's half) hides its ways out, from the first paint", () => {
+  const css = fs.readFileSync(path.join(ROOT, '../ui/style.css'), 'utf8');
+  const head = js.slice(0, 4000);
+  if (!/window\.self !== window\.top/.test(head) || !/classList\.add\('is-framed'\)/.test(head)) {
+    throw new Error("app.js does not mark <html> 'is-framed' near its top (before the first render)");
+  }
+  const rule = css.match(/\.is-framed[^{]*\{[^}]*\}/g) || [];
+  const hides = rule.join('\n');
+  for (const sel of ['.homelink', '#fromTools']) {
+    if (!hides.includes(sel) || !/display:\s*none/.test(hides)) throw new Error(`style.css does not hide ${sel} under .is-framed`);
+  }
+});
+
+// Regression guard (2026-10-01, MOXIR UI audit, P0): a rig look whose fixtures are not on
+// the desk, or are all held dark, fired into a black room with no word — and two looks of
+// one name ("White cathedral", the set's hung-rig look and the ground one) sat side by side.
+check('Touch look tiles say when a look lights nothing here, and keep the hung-rig looks apart', () => {
+  const build = js.slice(js.indexOf('function buildTouchLooks'), js.indexOf("$('#touchLooks').addEventListener"));
+  if (!/function lookHealth\(/.test(js)) throw new Error('no lookHealth() in app.js');
+  if (!/lookHealth\(/.test(build)) throw new Error('buildTouchLooks does not ask lookHealth');
+  if (!/class="tbtn lookbtn\$\{[^}]*dead/.test(build)) throw new Error('a dead look tile is not marked .dead');
+  if (!/hung rig/.test(build) || !/bankhead/.test(build)) throw new Error('the hung-rig looks have no group header of their own');
+  if (!/lookHealth\(l\)\.dead/.test(build.slice(build.indexOf('const sig')))) throw new Error('the tile signature ignores health — a patch change would not repaint the tiles');
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);

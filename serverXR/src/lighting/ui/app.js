@@ -7,6 +7,16 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // "Back <left>" simply loses its label everywhere, silently.
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+// Framed — the visualiser's desk half (RIG_BUILD.md §18): the ways out (di.iiii, ← project,
+// Studio / Nodes / Projection) are the visualiser's own, not this pane's. Marked before the
+// first render so style.css never paints them: on a phone the pane is ~240 px and those
+// rows took all of it (MOXIR UI audit, 2026-10-01). A cross-origin parent throws: framed.
+(() => {
+  let framed = false;
+  try { framed = window.self !== window.top; } catch (e) { framed = true; }
+  if (framed) document.documentElement.classList.add('is-framed');
+})();
+
 let S = null;                  // last full state from the server
 let DMX = {};                  // live buffers, polled fast
 // The fan styles, in the order ../fan.js defines them (tests/test-wiring.js keeps the two equal).
@@ -2105,17 +2115,48 @@ function activeLookId() {
   const l = layersOf().find((x) => x.id === TOUCH_LOOK_LAYER);
   return l && l.on && l.level > 0 && l.lookId ? l.lookId : '';
 }
+// Does a look light anything on what is patched NOW? Only a room's rig looks (`rig-…`,
+// show-loop.mjs) are judged: they carry their DMX values per fixture. A look made on the
+// desk may be an effect with no stored values, so it is never called dark. A fixture lights
+// when its dimmer is up, or — without a dimmer — any colour emitter is. (MOXIR UI audit,
+// 2026-10-01: a look whose lamps were not on the desk fired into a black room, no word.)
+const EMITTER_ROLE = /^(r|g|b|w|red|green|blue|white|amber|uv|cw|ww)$/;
+function lookHealth(l) {
+  if (!l || !String(l.id).startsWith('rig-')) return { dead: false };
+  const patched = new Set(((S && S.fixtures) || []).map((f) => f.id));
+  const vals = (l.steps && l.steps[0] && l.steps[0].values) || {};
+  const ids = Object.keys(vals).filter((id) => patched.has(id));
+  if (!ids.length) return { dead: true, why: 'nothing patched' };
+  const lit = ids.filter((id) => {
+    const v = vals[id] || {};
+    if (v.dimmer != null) return Number(v.dimmer) > 0;
+    return Object.keys(v).some((k) => EMITTER_ROLE.test(k) && Number(v[k]) > 0);
+  }).length;
+  return lit ? { dead: false, lit } : { dead: true, why: 'lights nothing here' };
+}
+// The set's own looks kept on a ground version are titled "… · hung rig" (versions file):
+// they were made for the hung movers, so they sit in a group of their own, after this
+// version's looks — never mixed in beside a ground look of the same name.
+const HUNG_RIG = /·\s*hung rig$/;
 function buildTouchLooks() {
   const sec = $('#tLooks');
   const wrap = $('#touchLooks');
   const looks = looksOf();
   sec.hidden = !looks.length;
   if (!looks.length) { delete wrap.dataset.sig; return; }
-  const sig = looks.map((l) => l.id + '\u0001' + l.name).join('|');
+  const sig = looks.map((l) => l.id + '\u0001' + l.name + '\u0001' + (lookHealth(l).dead ? 1 : 0)).join('|');
   if (wrap.dataset.sig !== sig) {
     wrap.dataset.sig = sig;
-    wrap.innerHTML = looks.map((l) =>
-      `<button class="tbtn lookbtn" data-look="${esc(l.id)}"><span>${esc(l.name)}</span><i class="tnote"></i></button>`).join('');
+    const tile = (l) => {
+      const h = lookHealth(l);
+      const name = l.name.replace(HUNG_RIG, '').trim();
+      return `<button class="tbtn lookbtn${h.dead ? ' dead' : ''}" data-look="${esc(l.id)}"${h.dead ? ` data-why="${esc(h.why)}" title="${esc(l.name)} — ${esc(h.why)}"` : ''}>`
+        + `<span>${esc(name)}</span><i class="tnote">${h.dead ? esc(h.why) : ''}</i></button>`;
+    };
+    const own = looks.filter((l) => !HUNG_RIG.test(l.name));
+    const hung = looks.filter((l) => HUNG_RIG.test(l.name));
+    wrap.innerHTML = own.map(tile).join('')
+      + (hung.length ? `<div class="bankhead">made for the hung rig</div>` + hung.map(tile).join('') : '');
     delete wrap.dataset.active;
   }
   const act = activeLookId();
@@ -2125,7 +2166,8 @@ function buildTouchLooks() {
       const on = !!act && b.dataset.look === act;
       b.classList.toggle('active', on);
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
-      b.querySelector('.tnote').textContent = on ? 'on now' : '';
+      // a dark look keeps its reason when it is not the one on (lookHealth)
+      b.querySelector('.tnote').textContent = on ? 'on now' : (b.dataset.why || '');
     }
   }
 }

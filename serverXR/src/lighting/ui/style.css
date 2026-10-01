@@ -42,6 +42,9 @@
 
 .homelink:hover { border-color: var(--accent); color: var(--accent); }
 .homelink:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Framed as the visualiser's desk half (app.js marks <html>): the ways out are the
+   visualiser's, and on a phone they took the whole pane. The page tabs stay. */
+.is-framed .topbar .homelink, .is-framed #fromTools { display: none !important; }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }   /* beats the display rules below */
