@@ -23,12 +23,18 @@
     gap: var(--di-space-5);
     list-style: none;
     margin: 0;
-    padding: 0;
-    flex: 1 1 auto;
+    padding: 0 2.5em 0 0;
+    flex: 1 1 0;
     min-width: 0;
+    /* never under the next button: what does not fit scrolls, fading at the edge (2026-10-02: at
+       1440 px the extras overprinted "next") */
+    overflow-x: auto;
+    scrollbar-width: none;
+    mask-image: linear-gradient(to right, #000 calc(100% - 2.5em), transparent);
 }
+.rigsteps-list::-webkit-scrollbar { display: none; }
 
-.rigsteps-step { display: inline-flex; align-items: baseline; gap: var(--di-space-2); }
+.rigsteps-step { flex-shrink: 0; white-space: nowrap; display: inline-flex; align-items: baseline; gap: var(--di-space-2); }
 
 /* The step's number, and what the document says about it: quieter than the name. */
 .rigsteps-n { color: var(--di-faint); }
@@ -64,12 +70,12 @@
 .rigsteps-pick:focus-visible { outline: 2px solid var(--di-ink); outline-offset: -2px; }
 
 /* The whole row shown, "back" is only its arrow: the step it names is right beside it. */
-@media (min-width: 1181px) {
+@media (min-width: 1681px) {
     .rigsteps-back .rigsteps-wide { display: none; }
 }
 
-/* The whole row fits a laptop; below that it folds to back · the step ▾ · next. */
-@media (max-width: 1180px) {
+/* The whole row (8 steps + light desk, visualiser, scenes + next) needs about 1650 px; below that it folds to back · the step ▾ · next. */
+@media (max-width: 1680px) {
     .rigsteps-list { display: none; }
     .rigsteps-pick { display: inline-flex; margin: 0 auto; }
     .rigsteps-next { margin-left: 0; }
