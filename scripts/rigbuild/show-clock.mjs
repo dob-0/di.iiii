@@ -14,9 +14,9 @@
  * program it first (show-loop.mjs, or the cards page). The script refuses a project whose cue
  * list fires no rig look, and prints the timeline it will play.
  *
- * The token: DI_API_TOKEN in the environment, or --token-file <file with ADMIN_API_TOKEN= /
- * API_TOKEN= / LIVE_API_TOKEN=>. Production (diiii.xyz, di-studio.xyz) is refused without
- * --allow-production — prod only on the owner's word.
+ * The token: DI_API_TOKEN in the environment, or --token-file <file> — the key for the host --api names
+ * (dev → LIVE_API_TOKEN, production → PROD_API_TOKEN, local → ADMIN_API_TOKEN / API_TOKEN; tokenKeysFor).
+ * Production (diiii.xyz, di-studio.xyz) is refused without --allow-production — prod only on the owner's word.
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -50,11 +50,26 @@ export const isProductionApi = (api) => {
     } catch { return false }
 }
 
-const tokenFrom = (file) => {
+/**
+ * Which keys in a token file belong to the server `api` points at, in order. Pure.
+ * The same mapping tier-sync.mjs uses (TIERS): the dev tier is LIVE_API_TOKEN, production is
+ * PROD_API_TOKEN, a local install is ADMIN_API_TOKEN / API_TOKEN. Before 2026-10-01 the order was
+ * fixed (ADMIN, API, LIVE), so serverXR/.env.local — which holds the LOCAL key first — sent the
+ * local key to dev and the write came back 401 after the data push had already landed.
+ */
+export const tokenKeysFor = (api) => {
+    let host = ''
+    try { host = new URL(api).hostname } catch { return ['ADMIN_API_TOKEN', 'API_TOKEN'] }
+    if (host.startsWith('dev.') && PROD_HOSTS.test(host)) return ['LIVE_API_TOKEN', 'DEV_API_TOKEN']
+    if (PROD_HOSTS.test(host)) return ['PROD_API_TOKEN']
+    return ['ADMIN_API_TOKEN', 'API_TOKEN']
+}
+
+const tokenFrom = (file, api) => {
     if (process.env.DI_API_TOKEN) return process.env.DI_API_TOKEN.trim()
     if (!file) return null
     const text = fs.readFileSync(path.resolve(String(file)), 'utf8')
-    for (const key of ['ADMIN_API_TOKEN', 'API_TOKEN', 'LIVE_API_TOKEN']) {
+    for (const key of tokenKeysFor(api)) {
         const line = text.split('\n').find((l) => l.startsWith(`${key}=`))
         if (line && line.slice(key.length + 1).trim()) return line.slice(key.length + 1).trim()
     }
@@ -66,7 +81,8 @@ const main = async () => {
     const api = args.api ? String(args.api).replace(/\/+$/, '') : die('needs --api <base>/serverXR — no default on purpose')
     const project = args.project ? String(args.project) : die('needs --project <id>')
     if (isProductionApi(api) && !args['allow-production']) die(`${api} is production — refused without --allow-production (prod only on the owner's word)`)
-    const token = tokenFrom(args['token-file'])
+    const token = tokenFrom(args['token-file'], api)
+    if (args['token-file'] && !token && !args.check) die(`${args['token-file']} has none of ${tokenKeysFor(api).join(' / ')} — the key for ${new URL(api).hostname}`)
     const client = makeClient(api, token)
 
     const doc = await client.get(`/api/projects/${encodeURIComponent(project)}/document`)
