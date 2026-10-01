@@ -4286,8 +4286,16 @@
         "UP-B380F": 1
       },
       "realLights": {
+        "par-cut-x": {
+          "count": 4,
+          "pick": "even"
+        },
+        "par-cut-bridge": {
+          "count": 2,
+          "pick": "even"
+        },
         "beam380-backstage": {
-          "count": 3,
+          "count": 2,
           "pick": "even"
         }
       },
@@ -4725,7 +4733,8 @@
             "laser-cut": 0
           }
         }
-      }
+      },
+      "realLightsWhy": "8 real lamps, where their light lands on something the eye reads (Emily 2026-10-01: 'i want real simulation of the light'): 4 of the X's PARs on the DJ and the floor, 2 bridge PARs on the crane, 2 backstage beams on the press and the roof. The column and press PARs are baked per look (rig.mjs --wash-per-look); the column beams are narrow and land only on the roof."
     },
     {
       "id": "known-ground",

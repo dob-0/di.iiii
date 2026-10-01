@@ -574,8 +574,16 @@
     "budget": {
         "why": "A browser cannot run ~90 real three.js spot lights: each is a term in the shader of every lit pixel and, with shadows on, a shadow render and a texture unit each (WebGL gives 16-32; past that every lit material fails to compile). Every fixture draws its beam cone; only these 8 lamps also light the room (the rest of the PARs' light on the columns and the press is baked, wash-glb.mjs), and shadows are OFF by default (the owner found the first version too laggy, 2026-09-27). Measured — see scripts/place/README.md, 'The rig'.",
         "realLights": {
+            "par-cut-x": {
+                "count": 4,
+                "pick": "even"
+            },
+            "par-cut-bridge": {
+                "count": 2,
+                "pick": "even"
+            },
             "beam380-backstage": {
-                "count": 3,
+                "count": 2,
                 "pick": "even"
             }
         },
