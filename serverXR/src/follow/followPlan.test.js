@@ -92,3 +92,24 @@ describe('what a follow refuses to carry', () => {
         expect(moreToCarry(many, new Set(many.map(o => o.opId)))).toBe(false)
     })
 })
+
+describe('failureDelay — a refused stream is left alone longer each time', () => {
+    const { failureDelay, describeWriteFailure, isStuckRefusal } = require('./followPlan.js')
+
+    it('doubles from 5 s and stops at 5 minutes', () => {
+        expect([1, 2, 3, 4].map(count => failureDelay(count))).toEqual([5000, 10_000, 20_000, 40_000])
+        expect(failureDelay(20)).toBe(300_000)
+    })
+
+    it('only a server error counts as stuck — a conflict or no answer is the loop\'s ordinary business', () => {
+        expect(isStuckRefusal(500)).toBe(true)
+        expect(isStuckRefusal(503)).toBe(true)
+        expect(isStuckRefusal(409)).toBe(false)
+        expect(isStuckRefusal(0)).toBe(false)
+    })
+
+    it('says when it will try again and that the rest keeps following', () => {
+        const text = describeWriteFailure({ stream: { kind: 'project', projectId: 'test', key: 'project:test' }, direction: 'in', status: 500, error: 'Server error', retryInMs: 20_000 })
+        expect(text).toBe("this di.iiii refused the other side's changes to project test (HTTP 500: Server error) (see this server's log) — trying again in 20 s; the rest of the space keeps following")
+    })
+})

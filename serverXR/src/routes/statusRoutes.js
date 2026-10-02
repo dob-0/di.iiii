@@ -20,8 +20,12 @@ function registerStatusRoutes(router, {
       return
     }
     try {
-      const { followStates } = require('../follow')
-      res.json({ follows: followStates() })
+      // On a server that shares its data folder with another, only one of the
+      // two carries the follows (follow/lease.js); the other answers with an
+      // empty list AND says who does, so `di follows` never reads as "nothing
+      // is running" when something is.
+      const { followStates, followCarrier } = require('../follow')
+      res.json({ follows: followStates(), ...followCarrier() })
     } catch {
       res.json({ follows: [] })
     }
