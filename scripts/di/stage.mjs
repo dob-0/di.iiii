@@ -199,7 +199,8 @@ export const resolveTarget = async ({ home, port, spaceId, project = null }) => 
 
 // ── join ──────────────────────────────────────────────────────────────────
 
-const autostartFor = (home, kind = null) => autostartSpec({
+const autostartFor = (home, kind = null, entry = {}) => autostartSpec({
+    ...entry,
     platform: process.platform,
     kind,
     home,
@@ -213,11 +214,11 @@ const autostartFor = (home, kind = null) => autostartSpec({
         'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup'),
     user: process.env.USERNAME || process.env.USER || os.userInfo().username,
     uid: typeof process.getuid === 'function' ? process.getuid() : 501,
-    logFile: stagePaths(home).stageLog,
+    logFile: entry.logFile || stagePaths(home).stageLog,
     join: (...parts) => path.join(...parts.filter(Boolean))
 })
 
-const runStep = ({ command, args }) => {
+export const runStep = ({ command, args }) => {
     const result = spawnSync(command, args, { encoding: 'utf8', windowsHide: true })
     return {
         ok: result.status === 0,
@@ -234,11 +235,11 @@ const runStep = ({ command, args }) => {
  * covered on a Linux CI, and it is why this function does not know what an OS
  * is.
  */
-export const installAutostart = async ({ home, kind = null, run = runStep }) => {
-    const preferred = autostartFor(home, kind)
+export const installAutostart = async ({ home, kind = null, run = runStep, entry = {} }) => {
+    const preferred = autostartFor(home, kind, entry)
     if (!preferred) return { spec: null, fallback: false, reason: 'no autostart entry exists for this platform' }
     const tried = []
-    for (const spec of [preferred, kind ? null : (fallbackKind(process.platform) ? autostartFor(home, fallbackKind(process.platform)) : null)].filter(Boolean)) {
+    for (const spec of [preferred, kind ? null : (fallbackKind(process.platform) ? autostartFor(home, fallbackKind(process.platform), entry) : null)].filter(Boolean)) {
         // The entry lives outside DI_HOME — `~/.config/systemd/user`,
         // `~/Library/LaunchAgents`, the Startup folder. Whatever of that path
         // did not exist is written down, so leave takes back the folders it

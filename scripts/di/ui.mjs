@@ -778,6 +778,7 @@ export const ui = {
         `  ${CMD} down          stop it`,
         `  ${CMD} status        what is running, where, and how big`,
         `  ${CMD} open          open it in your browser`,
+        `  ${CMD} autostart     on | off | status — start at login, put back if it stops (on after install)`,
         '',
         `  ${CMD} new NAME      start a new space`,
         `  ${CMD} save SPACE    save it as one file you can carry anywhere`,

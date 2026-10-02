@@ -64,6 +64,7 @@ import {
     isStageMachine, joinPlan, joinStage, leaveStage, readManifest,
     restartSupervisor, runSupervisor, stageStatus, startSupervisor
 } from './stage.mjs'
+import { autostartState, clearStopped, markStopped, runAutostartLoop, turnOffAutostart, turnOnAutostart } from './autostart.mjs'
 import { parseArgs } from './args.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
 
@@ -155,6 +156,9 @@ const cmdUp = async (args) => {
     if (!requireInstalled(home)) return
     const port = resolvePort(home, args.flags.port)
     const runner = runnerFor(home)
+    // A start, typed or from the autostart loop, means running is wanted again:
+    // the mark `di down` left is what kept the loop from undoing that stop.
+    await clearStopped(home)
     // `--lan` is per start and is never written down: the room is let in by a
     // person typing it tonight, and tomorrow's `di up` is loopback again.
     const lan = Boolean(args.flags.lan)
@@ -171,7 +175,14 @@ const cmdUp = async (args) => {
     // Refused before the already-running check, or a running docker install
     // would be told it is "on this network too".
     if (lan && runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker()); process.exitCode = 1; return }
-    if (await alive(home, port)) { say(ui.alreadyRunning(publicUrl(home, port), await probeReach(home, port), lan)); return }
+    // A closed browser tab is the usual reason to type `di` again: the server
+    // never stopped, the window did. So a second `di` opens it too — one word
+    // brings di.iiii back whatever state it was left in.
+    if (await alive(home, port)) {
+        say(ui.alreadyRunning(publicUrl(home, port), await probeReach(home, port), lan))
+        if (!args.flags['no-open']) openBrowser(publicUrl(home, port))
+        return
+    }
 
     say(ui.starting())
     try {
@@ -290,10 +301,13 @@ const cmdDown = async () => {
     const home = HOME()
     if (!requireInstalled(home)) return
     const runner = runnerFor(home)
+    // Before the stop, so the autostart loop cannot restart it in between.
+    await markStopped(home)
     const was = await runner.stop({ home })
     await stopName(home)
     await stopKeeper(home)
     say(was ? ui.stopped(runner.describe(home).dataDir) : ui.notRunning())
+    if (autostartState(home)) say(style.dim(`  it stays stopped until ${CMD} up — and starts again at the next login`))
     // On a stage machine this stop does not last: the supervisor puts the
     // server back within a tick, which from the room looks like a wall coming
     // on by itself. Better said than discovered.
@@ -696,6 +710,8 @@ const cmdUninstall = async (args) => {
         const left = await leaveStage({ home })
         if (left.ok) say(ui.stageLeft(left.done, false))
     }
+    // The same for di.iiii's own entry (`di autostart`).
+    try { await turnOffAutostart({ home }) } catch { /* nothing written */ }
     if (isInstalled(home)) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
 
     // credentials.json holds live editor keys — secrets are not "your work"
@@ -1327,11 +1343,45 @@ const cmdStage = async (args) => {
     process.exitCode = 1
 }
 
+/**
+ * `di autostart on | off | status` — di.iiii starts at login and is put back
+ * if it stops on its own. The install turns it on; `run` is what the entry
+ * calls and does not return. See autostart.mjs.
+ */
+const cmdAutostart = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const what = args._[1] || 'status'
+    if (what === 'run') {
+        await runAutostartLoop({ home, log: (line) => say(`${new Date().toISOString()} ${line}`) })
+        return
+    }
+    if (what === 'on') {
+        const result = await turnOnAutostart({ home })
+        if (!result.spec) { fail(`could not turn it on: ${result.reason}`); process.exitCode = 1; return }
+        say(`on — ${result.spec.note.replace('the supervisor', 'di.iiii')}`)
+        return
+    }
+    if (what === 'off') {
+        const result = await turnOffAutostart({ home })
+        say(result.was ? `off — di.iiii no longer starts at login (${result.kind} removed)` : 'it was not on')
+        return
+    }
+    if (what === 'status') {
+        const entry = autostartState(home)
+        say(entry ? `on — ${entry.kind}${entry.restartsOnFailure ? '' : ' (starts at login, does NOT restart if it stops)'}  ${style.dim(entry.path)}` : `off — ${CMD} autostart on`)
+        return
+    }
+    fail(`${CMD} autostart on | off | status`)
+    process.exitCode = 1
+}
+
 const COMMANDS = {
     up: cmdUp,
     invite: cmdInvite,
     follow: cmdFollow,
     stage: cmdStage,
+    autostart: cmdAutostart,
     follows: cmdFollows,
     unfollow: cmdUnfollow,
     down: cmdDown,
