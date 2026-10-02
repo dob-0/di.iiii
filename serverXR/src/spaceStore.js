@@ -10,14 +10,11 @@ const logger = require('./logger')
 const { isValidAssetId } = require('./assetHash')
 const { serverActor } = require('./opActor')
 const {
-  appendProjectOps,
   ensureProject,
   getProjectPaths,
   listProjectsInSpace,
   loadProjectMeta,
-  normalizeProjectId,
-  upsertProjectMeta,
-  writeProjectDocument
+  normalizeProjectId
 } = require('./projectStore')
 
 const SLUG_REGEX = /^[a-z0-9-]{3,48}$/
@@ -703,21 +700,34 @@ function createSpaceStore({
         // snapshot or arriving from a file must come back private.
         ...(meta.visibility === 'private' ? { visibility: 'private' } : {})
       })
-      const current = await loadProjectMeta(spacesDir, spaceId, projectId)
-      const version = (Number(current?.documentVersion) || 0) + 1
-      await writeProjectDocument(spacesDir, spaceId, projectId, document)
-      await restoreProjectAssetManifests(spaceId, projectId, entry.assets)
-      const resetOp = {
-        opId: crypto.randomUUID?.() || `project-op-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-        clientId: 'server',
-        type: 'replaceDocument',
-        payload: { document },
-        version,
-        timestamp: Date.now()
-      }
-      await appendProjectOps(spacesDir, spaceId, projectId, [resetOp], maxOpHistory, maxOpAgeMs, actor)
-      await upsertProjectMeta(spacesDir, spaceId, projectId, { documentVersion: version })
-      restored.push({ projectId, version, ops: [resetOp] })
+      // The same guarded write as PUT /api/projects/:id/document
+      // (projectWrite.js): the version is read, and the reset op and the new
+      // version committed, while no other server on this data folder can
+      // write the project.
+      const { withProjectWriteLock, commitProjectWrite } = require('./projectWrite')
+      const landed = await withProjectWriteLock({ spacesDir, spaceId, projectId, log: logger }, async () => {
+        const current = await loadProjectMeta(spacesDir, spaceId, projectId)
+        const baseVersion = Number(current?.documentVersion) || 0
+        const version = baseVersion + 1
+        await restoreProjectAssetManifests(spaceId, projectId, entry.assets)
+        const resetOp = {
+          opId: crypto.randomUUID?.() || `project-op-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+          clientId: 'server',
+          type: 'replaceDocument',
+          payload: { document },
+          version,
+          timestamp: Date.now()
+        }
+        const committed = await commitProjectWrite({
+          spacesDir, spaceId, projectId, baseVersion, ops: [resetOp], document,
+          maxHistory: maxOpHistory, maxAgeMs: maxOpAgeMs, actor, log: logger
+        })
+        if (!committed.ok) {
+          throw Object.assign(new Error(`Project ${projectId} changed while it was being restored. Restore again.`), { status: 409 })
+        }
+        return { version, resetOp }
+      })
+      restored.push({ projectId, version: landed.version, ops: [landed.resetOp] })
     }
     return restored
   }

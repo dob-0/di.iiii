@@ -19,7 +19,7 @@
  */
 
 const { httpRequest } = require('../httpClient')
-const { accountedThrough, moreToCarry, unseen, planDirection, planAfterConflict, nextInterval, refusedWholeWork, WHOLE_WORK_OPS } = require('./followPlan')
+const { accountedThrough, moreToCarry, unseen, planDirection, planAfterConflict, nextInterval, refusedWholeWork, WHOLE_WORK_OPS, failureDelay, isStuckRefusal, describeWriteFailure } = require('./followPlan')
 const { projectIdsFrom, sceneStream, streamsFor } = require('./streams')
 const { createAssetChase } = require('./assets')
 const { CONVERGE_CLIENT, planConverge, readDocument } = require('./followConverge')
@@ -135,7 +135,7 @@ const readOps = async (from, stream, since, { waitSeconds = 0, signal = null } =
  * HTTP's: how many landed, whether the target moved, and whether we are still
  * in step with it.
  */
-const carry = async ({ to, stream, ops, seen, targetVersion, send = request }) => {
+const carry = async ({ to, stream, ops, seen, targetVersion, send = request, direction = null }) => {
     const plan = planDirection({ ops, seen, targetVersion })
     if (!plan) return { wrote: 0, targetVersion, moved: false }
 
@@ -176,7 +176,18 @@ const carry = async ({ to, stream, ops, seen, targetVersion, send = request }) =
         return { wrote: 0, targetVersion: retryAt ?? targetVersion, moved: apply.length > 0, caughtUp: apply, carriedThrough: null }
     }
 
-    return { wrote: 0, targetVersion, moved: false, carriedThrough: null, failed: answer.status || answer.error || 'unreachable' }
+    // A sentence, never a bare number: `di follows` printed "500" for hours on
+    // 2026-10-02 and nobody could tell which project, which side, or why.
+    return {
+        wrote: 0,
+        targetVersion,
+        moved: false,
+        carriedThrough: null,
+        status: answer.status || 0,
+        stuck: isStuckRefusal(answer.status),
+        refusal: answer.payload?.error || answer.error || null,
+        failed: describeWriteFailure({ stream, direction, status: answer.status, error: answer.payload?.error || answer.error || null })
+    }
 }
 
 /**
@@ -240,6 +251,20 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     })
 
     const cursorFor = (stream) => cursors.get(stream.key) || { localVersion: null, remoteVersion: null }
+
+    // Streams whose last write was refused with a server error, and when they
+    // may be tried again (followPlan.js failureDelay). Not saved: a restart is
+    // a fair moment to try once more.
+    const refusals = new Map()
+    const noteRefusal = (stream, result) => {
+        const count = (refusals.get(stream.key)?.count || 0) + 1
+        const delay = failureDelay(count)
+        const message = describeWriteFailure({ ...result, stream, retryInMs: delay })
+        refusals.set(stream.key, { count, until: Date.now() + delay, message })
+        // Said once per doubling, not once per tick.
+        if ((count & (count - 1)) === 0) log.warn?.(`[follow] ${local.spaceId}: ${message}`)
+        return message
+    }
 
     /** The projects on both sides, so a project made on either appears on both. */
     const refreshStreams = async () => {
@@ -306,6 +331,13 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     /** Carry one stream, both ways. */
     const runStream = async (stream, { wait = false } = {}) => {
         const cursor = cursorFor(stream)
+        // Refused with a server error a moment ago: leave it alone until its
+        // time is up, and keep saying why. The room's stream is never skipped —
+        // it is the one that parks, and a park is what paces the whole loop.
+        const refused = refusals.get(stream.key)
+        if (refused && stream.kind === 'project' && Date.now() < refused.until) {
+            return { moved: false, failed: refused.message, backingOff: true }
+        }
 
         // OUR side first, always. A read parked on the other machine can be
         // held for twenty seconds, and an edit made here while it is parked
@@ -347,8 +379,11 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // Any file these ops name is chased separately; this only takes a note.
         if (stream.kind === 'project') chase.noteOps(stream.projectId, [...theirs.ops, ...ours.ops])
 
-        const inbound = await carry({ to: local, stream, ops: theirs.ops, seen, targetVersion: ours.latestVersion })
-        const outbound = await carry({ to: remote, stream, ops: ours.ops, seen, targetVersion: theirs.latestVersion })
+        const inbound = await carry({ to: local, stream, ops: theirs.ops, seen, targetVersion: ours.latestVersion, direction: 'in' })
+        const outbound = await carry({ to: remote, stream, ops: ours.ops, seen, targetVersion: theirs.latestVersion, direction: 'out' })
+        const stuck = [inbound, outbound].find(result => result.stuck)
+        if (stuck) stuck.failed = noteRefusal(stream, { direction: stuck === inbound ? 'in' : 'out', status: stuck.status, error: stuck.refusal })
+        else if (inbound.wrote > 0 || outbound.wrote > 0 || (!inbound.failed && !outbound.failed)) refusals.delete(stream.key)
         // Anything a whole-work op blocked is still accounted for: it was seen,
         // considered, and deliberately left where it is.
         rememberSeen(seen, [...theirs.ops, ...ours.ops].filter(op => WHOLE_WORK_OPS.has(op?.type)))

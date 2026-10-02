@@ -5,7 +5,8 @@ const { hashFileSha256, isSha256AssetId } = require('../assetHash')
 const { UNSCRUBBABLE_IMAGE_ERROR, scrubImageMetadata } = require('../assetScrub')
 const { getSpaceBlobPaths, hasBlob, storeBlobFromFile } = require('../blobStore')
 const { receiveBodyToTempFile } = require('../verbatimAsset')
-const { createKeyedLock } = require('../asyncLock')
+const { withProjectWriteLock, commitProjectWrite: commitWrite } = require('../projectWrite')
+const logger = require('../logger')
 const { applyAssetSafetyHeaders } = require('../spaceStore')
 const { findIdlessCreateOp } = require('../opValidation')
 const { placeOps } = require('../../../shared/placement.cjs')
@@ -14,11 +15,20 @@ const { countProjectLayers } = require('../../../shared/layers.cjs')
 const { canAccessSpace, formatAuthScopeLabel } = require('../authAccess')
 const { assetCacheControl, filterVisibleProjects } = require('../projectVisibility')
 
-const withProjectLock = createKeyedLock()
+// A project's write: the version check, the document, the ops and the version
+// itself, guarded against this process AND every other server on the same data
+// folder (projectWrite.js), then committed in one database transaction that
+// re-checks the version (projectStore.commitProjectOps). A lost race is a 409,
+// never a 500 and never ops ahead of the version.
+const withProjectLock = (project, fn) => withProjectWriteLock({
+  spacesDir: project.spacesDir,
+  spaceId: project.spaceId,
+  projectId: project.projectId,
+  log: logger
+}, fn)
 
 function registerProjectRoutes(router, {
   config = {},
-  appendProjectOps,
   applyProjectOps,
   broadcastProjectLiveEvent,
   buildProjectAssetMeta,
@@ -374,17 +384,22 @@ function registerProjectRoutes(router, {
           await broadcastProjectLiveEvent(project.projectId, 'project-visibility', { visibility: nextMeta.visibility })
         }
       }
-      const document = await readProjectDocument(spacesDir, project.spaceId, project.projectId)
-      document.projectMeta = {
-        ...document.projectMeta,
-        id: nextMeta.id,
-        spaceId: nextMeta.spaceId,
-        title: nextMeta.title,
-        createdAt: nextMeta.createdAt,
-        updatedAt: nextMeta.updatedAt,
-        source: nextMeta.source
-      }
-      await writeProjectDocument(spacesDir, project.spaceId, project.projectId, document)
+      // The title lives in the document too: a read-modify-write of the same
+      // file the op writes rewrite, so it takes the same lock — without it a
+      // rename racing an edit put the pre-edit document back.
+      await withProjectLock({ ...project, spacesDir }, async () => {
+        const document = await readProjectDocument(spacesDir, project.spaceId, project.projectId)
+        document.projectMeta = {
+          ...document.projectMeta,
+          id: nextMeta.id,
+          spaceId: nextMeta.spaceId,
+          title: nextMeta.title,
+          createdAt: nextMeta.createdAt,
+          updatedAt: nextMeta.updatedAt,
+          source: nextMeta.source
+        }
+        await writeProjectDocument(spacesDir, project.spaceId, project.projectId, document)
+      })
       res.json({ project: nextMeta })
     } catch (error) {
       next(error)
@@ -616,7 +631,7 @@ function registerProjectRoutes(router, {
       // makes this endpoint's replace atomic relative to every other writer
       // for the same project, even though it's still last-write-wins by
       // design (a full replace has no baseVersion to conflict-check against).
-      const result = await withProjectLock(project.projectId, async () => {
+      const result = await withProjectLock({ ...project, spacesDir }, async () => {
         // Re-fetch inside the lock: `project.meta` was read before we
         // acquired it and may already be stale.
         const fresh = await resolveProjectContext(project.projectId)
@@ -633,7 +648,6 @@ function registerProjectRoutes(router, {
           createdAt: fresh.meta?.createdAt || Date.now(),
           updatedAt: Date.now()
         }
-        await writeProjectDocument(spacesDir, project.spaceId, project.projectId, document)
         const resetOp = {
           opId: crypto.randomUUID?.() || `project-op-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
           clientId: 'server',
@@ -642,15 +656,23 @@ function registerProjectRoutes(router, {
           version: nextVersion,
           timestamp: Date.now()
         }
-        await appendProjectOps(spacesDir, project.spaceId, project.projectId, [resetOp], maxOpHistory, maxOpAgeMs, actor)
-        const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
-          title: document.projectMeta.title,
-          documentVersion: nextVersion
+        const committed = await commitWrite({ log: logger,
+          spacesDir, spaceId: project.spaceId, projectId: project.projectId,
+          baseVersion: currentVersion, ops: [resetOp], document,
+          title: document.projectMeta.title, maxHistory: maxOpHistory, maxAgeMs: maxOpAgeMs, actor
         })
-        return { nextVersion, nextMeta, document, resetOp }
+        if (committed.notFound) return null
+        // Only reachable when another server wrote between our read and our
+        // commit despite the lock (a lock taken over from a stalled holder):
+        // a whole replace is last-write-wins, but never a silent clobber.
+        if (committed.conflict) return { conflict: true, latestVersion: committed.latestVersion }
+        return { nextVersion, nextMeta: committed.meta, document, resetOp }
       })
       if (!result) {
         return res.status(404).json({ error: 'Project not found.' })
+      }
+      if (result.conflict) {
+        return res.status(409).json({ error: 'The project changed while this replace was being saved. Load it again and retry.', latestVersion: result.latestVersion })
       }
       const { nextVersion, nextMeta, document, resetOp } = result
       await broadcastProjectLiveEvent(project.projectId, 'project-op', {
@@ -747,7 +769,7 @@ function registerProjectRoutes(router, {
       // it guards must be one atomic step, or two concurrent requests at the
       // same baseVersion both pass the check and both write, one silently
       // clobbering the other (the race this lock exists to close).
-      const result = await withProjectLock(project.projectId, async () => {
+      const result = await withProjectLock({ ...project, spacesDir }, async () => {
         const fresh = await resolveProjectContext(project.projectId)
         if (!fresh) return { notFound: true }
         const currentVersion = Number(fresh.meta?.documentVersion) || 0
@@ -804,13 +826,23 @@ function registerProjectRoutes(router, {
           createdAt: fresh.meta?.createdAt || nextDocument.projectMeta.createdAt,
           updatedAt: Date.now()
         }
-        await writeProjectDocument(spacesDir, project.spaceId, project.projectId, nextDocument)
-        await appendProjectOps(spacesDir, project.spaceId, project.projectId, versionedOps, maxOpHistory, maxOpAgeMs, actor)
-        const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
-          title: nextDocument.projectMeta.title,
-          documentVersion: nextVersion
+        const committed = await commitWrite({ log: logger,
+          spacesDir, spaceId: project.spaceId, projectId: project.projectId,
+          baseVersion: currentVersion, ops: versionedOps, document: nextDocument,
+          title: nextDocument.projectMeta.title, maxHistory: maxOpHistory, maxAgeMs: maxOpAgeMs, actor
         })
-        return { nextVersion, nextMeta, nextDocument, versionedOps }
+        if (committed.notFound) return { notFound: true }
+        if (committed.conflict) {
+          // Another server on this data folder got there first. The ordinary
+          // answer to "you were behind": the ops since baseVersion.
+          const pendingOps = await readProjectOpsSince(spacesDir, project.spaceId, project.projectId, baseVersion)
+          return {
+            conflict: true,
+            latestVersion: committed.latestVersion,
+            pendingOps: pendingOps.filter(entry => (entry.version || 0) > baseVersion)
+          }
+        }
+        return { nextVersion, nextMeta: committed.meta, nextDocument, versionedOps }
       })
 
       if (result.notFound) {
