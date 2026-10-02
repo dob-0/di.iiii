@@ -92,6 +92,8 @@ function ProjectSatellites({ node, count, projects, publishedId }) {
         new THREE.Vector3(...node.position),
         new THREE.Vector3(...s.position)
     ])), [sats, node.position])
+    // The geometries are ours (built in the memo above), so they are ours to free.
+    useEffect(() => () => { lines.forEach((g) => g.dispose()) }, [lines])
 
     return (
         <group>

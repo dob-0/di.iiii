@@ -488,3 +488,95 @@ describe('GET ops with ?wait=', () => {
         expect(elapsed).toBeLessThan(1000)
     })
 })
+
+// The gaps closed on 2026-10-01 (docs/architecture/SPEC_follow.md "What a follow
+// guarantees"): two installs that edit the same thing at the same moment end up
+// showing the same thing, and a follow that is restarted picks up where it was.
+describe('a followed space stays one space', () => {
+    let hosting = null
+    let following = null
+    const quiet = { warn: () => {}, info: () => {} }
+    const follow = (extra = {}) => startFollowing({
+        local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+        remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+        log: quiet,
+        ...extra
+    })
+    const objectNamed = (scene, id) => (scene?.scene?.objects || []).find(object => object.id === id)?.name
+    const update = (id, name, opId) => ({ opId, type: 'updateObject', payload: { objectId: id, patch: { name } } })
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+    })
+
+    afterAll(async () => {
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it("agrees on the host's value when both sides change the same field at the same moment", async () => {
+        let follower = follow()
+        expect((await writeOp(hosting, addObject('box', 'op-box'))).status).toBe(200)
+        await settle('the box reaching the follower', hasOp(following, 'op-box'))
+        follower.stop()
+
+        // Same object, same field, different value, made on each side while
+        // they could not see each other. Each side then receives the other's
+        // edit AFTER its own, so "last applied" is the other person's edit on
+        // each machine — the two rooms would show different names for good.
+        expect((await writeOp(hosting, update('box', 'named on the host', 'op-name-host'))).status).toBe(200)
+        expect((await writeOp(following, update('box', 'named on the follower', 'op-name-follower'))).status).toBe(200)
+
+        follower = follow()
+        try {
+            await settle('both name edits on both sides', async () => {
+                const [h, f] = await Promise.all([readOps(hosting), readOps(following)])
+                return ['op-name-host', 'op-name-follower'].every(id => opIds(h).includes(id) && opIds(f).includes(id))
+            })
+            const agreed = await settle('the two rooms showing the same name', async () => {
+                const [h, f] = await Promise.all([readScene(hosting), readScene(following)])
+                const names = [objectNamed(h, 'box'), objectNamed(f, 'box')]
+                return names[0] && names[0] === names[1] ? names : false
+            })
+            // The host's order is the order (followConverge.js): whatever the
+            // host shows is what both show.
+            expect(agreed[1]).toBe(objectNamed(await readScene(hosting), 'box'))
+            expect(follower.state.converged).toBeGreaterThan(0)
+        } finally {
+            follower.stop()
+        }
+    })
+
+    it('resumes from where it was after a restart, and never applies an old edit twice', async () => {
+        let saved = null
+        let follower = follow({ onSave: (state) => { saved = state } })
+        expect((await writeOp(hosting, addObject('lamp', 'op-lamp-once'))).status).toBe(200)
+        await settle('the lamp reaching the follower', hasOp(following, 'op-lamp-once'))
+        await settle('the follower saving where it got to', async () => saved && saved.seen.includes('op-lamp-once'))
+        follower.stop()
+
+        // Push the lamp's op out of the FOLLOWER's retained window (500 ops):
+        // its dedupe can no longer recognise it. A follower that forgot where
+        // it was would read the host's window again, find the lamp's op there,
+        // and the follower's server would apply it a second time.
+        expect((await writeOp(following, addObject('pad', 'op-pad'))).status).toBe(200)
+        for (let batch = 0; batch < 3; batch += 1) {
+            const ops = Array.from({ length: 170 }, (_, i) => update('pad', `pad ${batch}-${i}`, `op-pad-${batch}-${i}`))
+            const base = (await readOps(following)).latestVersion
+            const response = await fetch(`${following.baseUrl}/api/spaces/${SPACE}/ops`, { method: 'POST', headers: authHeaders, body: JSON.stringify({ baseVersion: base, ops }) })
+            expect(response.status).toBe(200)
+        }
+        expect(opIds(await readOps(following))).not.toContain('op-lamp-once')
+
+        follower = follow({ saved, onSave: (state) => { saved = state } })
+        try {
+            expect(follower.state.resumed).toBe(true)
+            await settle('the pad edits reaching the host', hasOp(hosting, 'op-pad-2-169'), { timeout: 40_000 })
+            expect(opIds(await readOps(following))).not.toContain('op-lamp-once')
+        } finally {
+            follower.stop()
+        }
+    })
+})

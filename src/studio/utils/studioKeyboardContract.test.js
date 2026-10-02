@@ -50,4 +50,25 @@ describe('Studio keyboard contract', () => {
         const editor = read('components/StudioEditor.jsx')
         expect(editor).toMatch(/if \(!meta && \(event\.key === 'f' \|\| event\.key === 'F' \|\| event\.key === '\.'\)\)/)
     })
+
+    // View keys: the handler goes through resolveViewKey (event.code) and the help
+    // dialog lists the numpad rows plus the no-numpad route.
+    it('StudioEditor routes view keys through resolveViewKey and frames real extents', () => {
+        const editor = read('components/StudioEditor.jsx')
+        expect(editor).toMatch(/resolveViewKey\(event\)/)
+        expect(editor).not.toMatch(/getPointsBoundingSphere/)
+    })
+
+    it('the help dialog lists the numpad views and the no-numpad alternative', () => {
+        const guide = read('utils/studioGuide.js')
+        expect(guide).toMatch(/Numpad 1 \/ 3 \/ 7/)
+        expect(guide).toMatch(/Shift\+1 \/ 3 \/ 7/)
+        expect(guide).toMatch(/Home/)
+    })
+
+    it('the viewport offers every view command as a labelled button', () => {
+        const viewport = read('components/StudioViewport.jsx')
+        expect(viewport).toMatch(/aria-label="View commands"/)
+        expect(viewport).toMatch(/minHeight: 44/)
+    })
 })

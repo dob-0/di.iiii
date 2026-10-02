@@ -25,6 +25,26 @@
 
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n))
 
+/**
+ * THE HAZE'S OWN GLOW, as a factor on the wall return. The air between the beams is lit by
+ * two kinds of diffuse light: what the walls send back (ρ of the flux, the bounce above) and
+ * what the haze itself scatters out of the beams before they reach a wall — the fraction
+ * 1 − e^(−τ) of the flux, with τ = σ · 4V/A the haze's optical depth over the enclosure's
+ * mean chord (4V/A, the mean free path of a straight line in a convex volume — Cauchy).
+ * The beam shader draws the first scatter INSIDE each cone; this is that light after it
+ * has left the cone, spread through the hall. Seen through enough haze, the air's radiance
+ * is the diffuse field's: (ρ + 1 − e^(−τ)) · Φ / (π A (1 − ρ)) — so the factor on
+ * E_bounce/π (which is ρ · Φ / (π A (1 − ρ))) is (ρ + 1 − e^(−τ)) / ρ.
+ * (Photo research 2026-10-01: in hazed halls the air between beams sits at 10–20 % code,
+ * tinted the show's colour — the walls' return alone left it near black. Model agreed with
+ * emily-9f, who measured the hall's one air: V 186 890 m³, A 28 605 m², τ ≈ 1.3 at σ 0.05.)
+ */
+export const hazeGlowFactor = (spec, sigma) => {
+    if (!spec?.volume || !(sigma > 0)) return 1
+    const tau = (sigma * 4 * spec.volume) / spec.area
+    return (spec.reflectance + (1 - Math.exp(-tau))) / spec.reflectance
+}
+
 /** The room's enclosure, from `components.rigBounce` on any entity, or null. */
 export const bounceSpecOf = (entities = []) => {
     for (const e of entities) {
@@ -32,7 +52,9 @@ export const bounceSpecOf = (entities = []) => {
         if (!b) continue
         const area = Number(b.area_m2)
         const reflectance = Number(b.reflectance)
-        if (area > 0 && reflectance > 0 && reflectance < 1) return { area, reflectance: clamp(reflectance, 0.01, 0.95) }
+        // volume_m3 (realism.mjs enclosureOf, 2026-10-01): the hall's one air, for the haze glow
+        const volume = Number(b.volume_m3) > 0 ? Number(b.volume_m3) : null
+        if (area > 0 && reflectance > 0 && reflectance < 1) return { area, reflectance: clamp(reflectance, 0.01, 0.95), ...(volume ? { volume } : {}) }
     }
     return null
 }

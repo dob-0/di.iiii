@@ -159,8 +159,6 @@ export default function DmxOutPanelWindow({
     const send = useRef(null)
     const lane = deskMode ? `desk:${deskBase}` : `vizzz:${base}`
     if (send.current === null || send.current.lane !== lane) {
-        send.current?.master.cancel()
-        send.current?.level.cancel()
         const out = deskMode
             ? (command) => { sendDeskCommand(deskBase, command, { fetchImpl: fetchRef.current }) }
             : (path) => sendRigCommand(base, path, { fetchImpl: fetchRef.current })
@@ -173,10 +171,16 @@ export default function DmxOutPanelWindow({
             level: createThrottledSender(out, 100),
         }
     }
-    useEffect(() => () => {
-        send.current?.master.cancel()
-        send.current?.level.cancel()
-    }, [])
+    // Cancel in the cleanup, never in render: a render React throws away must
+    // not drop the pending send of a lane that is still the committed one. The
+    // cleanup runs when the lane changes (for the lane being left) and on unmount.
+    useEffect(() => {
+        const mine = send.current
+        return () => {
+            mine?.master.cancel()
+            mine?.level.cancel()
+        }
+    }, [lane])
 
     const master = values?.master
     const lastMaster = useRef(master)

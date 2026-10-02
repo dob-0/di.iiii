@@ -22,7 +22,8 @@ import { buildSpaceProjectsPath, navigateToStudioPath } from '../utils/studioRou
 import { buildRawProjectPath } from '../../raw/utils/rawRouting.js'
 import { buildMapPath } from '../../map/mapRouting.js'
 import { useStudioCues } from '../hooks/useStudioCues.js'
-import { computeFitDistance, DEFAULT_FRAMING_DIRECTION, getPointsBoundingSphere } from '../../utils/cameraFraming.js'
+import { frameEntities, runViewCommand } from '../utils/viewCommands.js'
+import { resolveViewKey } from '../../utils/viewAxisPose.js'
 import StudioShell from './StudioShell.jsx'
 import AssetOptimizationDialog from './AssetOptimizationDialog.jsx'
 import { formatAssetSize, optimizeGlbAsset, shouldSuggestGlbOptimization } from '../utils/assetOptimization.js'
@@ -673,30 +674,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         dispatch({ type: 'select-entity', entityId })
     }
 
-    const handleFrameSelected = () => {
-        const cc = controlsRef.current
-        if (!cc) return
-        const visibleEntities = entities.filter((entity) => entity.components?.runtime?.visible !== false)
-        const targets = selectedEntities.length ? selectedEntities.filter((entity) => entity.components?.runtime?.visible !== false) : visibleEntities
-        const sphere = getPointsBoundingSphere(
-            targets.map((entity) => entity.components?.transform?.position || [0, 0, 0]),
-            { minRadius: targets.length === 1 ? 0.75 : 1 }
-        )
-        const camera = cc.camera || cc._camera
-        if (!sphere || !camera) return
-        const previousTarget = cc._target || new Vector3()
-        const direction = camera.position.clone().sub(previousTarget)
-        if (direction.lengthSq() <= 1e-8) direction.set(...DEFAULT_FRAMING_DIRECTION)
-        direction.normalize()
-        // Fitted to the NARROWER axis: on a portrait viewport the horizontal
-        // fov limits, and a vertical-only fit crops the selection at the sides.
-        const distance = computeFitDistance(
-            sphere.radius * (targets.length === 1 ? 1.35 : 1.45),
-            { fov: camera.fov || 50, aspect: camera.aspect }
-        )
-        const position = sphere.center.clone().add(direction.multiplyScalar(distance))
-        cc.setLookAt(position.x, position.y, position.z, sphere.center.x, sphere.center.y, sphere.center.z, true)
-    }
+    // Real extents (object bounding boxes), not origin points: src/utils/entityBounds.js.
+    const handleFrameSelected = () => frameEntities(controlsRef.current, entities, selectedEntities)
 
     useEffect(() => {
         const handler = (event) => {
@@ -709,6 +688,16 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
 
             const meta = event.ctrlKey || event.metaKey
             const key = event.key
+
+            // Blender view keys by event.code (numpad, Home, and the no-numpad
+            // Shift+1/3/7, Shift+Arrows) -- see resolveViewKey. Skipped while focus is
+            // on a widget that owns these keys.
+            const viewCommand = resolveViewKey(event)
+            if (viewCommand && !event.target?.closest?.('select,[role="slider"],[role="listbox"],[role="tree"],[role="menu"]')) {
+                event.preventDefault()
+                runViewCommand(controlsRef.current, viewCommand, { entities, selectedEntities })
+                return
+            }
 
             // Select all (A) / deselect all (Alt+A) — Blender style
             if (!meta && (key === 'a' || key === 'A')) {

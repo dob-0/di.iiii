@@ -59,7 +59,36 @@ const removeFollow = async (dataDir, spaceId) => {
     if (!follows[spaceId]) return { follows, removed: false }
     delete follows[spaceId]
     await writeFollows(dataDir, follows)
+    await fsp.rm(statePath(dataDir, spaceId), { force: true })
     return { follows, removed: true }
 }
 
-module.exports = { readFollows, writeFollows, addFollow, removeFollow, filePath, FORMAT }
+/*
+ * Where a follower had got to: its two cursors per stream and the opIds it has
+ * already carried (follower.js `saved` / `onSave`). One small file per space,
+ * beside follows.json, so a restart resumes instead of re-reading and re-sending
+ * both retained windows. Written whole to a temporary file and renamed, so a
+ * crash mid-write leaves the previous state, never half of one.
+ */
+const STATE_DIR = 'follow-state'
+const STATE_FORMAT = 'di.follow-state'
+const statePath = (dataDir, spaceId) => path.join(dataDir, STATE_DIR, `${encodeURIComponent(spaceId)}.json`)
+
+const readFollowState = (dataDir, spaceId) => {
+    try {
+        const parsed = JSON.parse(fs.readFileSync(statePath(dataDir, spaceId), 'utf8'))
+        return parsed?.format === STATE_FORMAT ? parsed.state : null
+    } catch {
+        return null
+    }
+}
+
+const writeFollowState = async (dataDir, spaceId, state) => {
+    const file = statePath(dataDir, spaceId)
+    await fsp.mkdir(path.dirname(file), { recursive: true })
+    const tmp = `${file}.${process.pid}.tmp`
+    await fsp.writeFile(tmp, JSON.stringify({ format: STATE_FORMAT, version: 1, savedAt: new Date().toISOString(), state }), { mode: 0o600 })
+    await fsp.rename(tmp, file)
+}
+
+module.exports = { readFollows, writeFollows, addFollow, removeFollow, readFollowState, writeFollowState, filePath, statePath, FORMAT }

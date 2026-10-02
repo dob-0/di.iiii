@@ -1,6 +1,0 @@
-## 2026-10-01 — hand fold after the #679 land batch, with the docs-gate fix (#675) merged in
-
-- #679 (the MOXIR rig-builder line, preview rigbuilder.14) brought about thirty session notes onto dev; with the others waiting that made 47. The in-place fold in CI would have taken `CURRENT.md` to about 88 lines (cap 50) and stopped the dev image build at the docs gate, as it did after #637 — so this is the hand fold, made on a scratch clone of dev: `session-land-lib.mjs`'s three functions, without `npm run land`'s branch guard and WITHOUT its worktree sweep (this machine carries about a hundred worktrees of other sessions). PROGRESS.md keeps every note in full; "Last session" is cut to six lines (CURRENT.md 45).
-- It also carries #675 (`fix/docs-gate-fold-branches`, merged in): the docs gate no longer refuses a fold branch (`chore/fold-notes-*`, `land/*`) for writing `CURRENT.md`. Without it this very branch could not be pushed. GitHub marks #675 merged once this lands; the one conflict was a pair of rows added to the same table in `docs/ai/known-fixes.md`.
-- Left unfolded on purpose: `fix-docs-gate-fold-branches.md` (arrives from #675) and this note — the next land folds them.
-- Not checked: the dev deploy for the #679 merge commit was still running when this was written.

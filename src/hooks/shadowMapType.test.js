@@ -16,7 +16,9 @@ const files = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((d) 
 describe('shadow map type', () => {
     const sources = files(root).map((f) => [path.relative(root, f), fs.readFileSync(f, 'utf8')])
     it('nothing in src asks for the deprecated PCFSoftShadowMap', () => {
-        expect(sources.filter(([, s]) => s.includes('PCFSoftShadowMap')).map(([f]) => f)).toEqual([])
+        // code, not a comment that names it
+        const uses = /\bTHREE\.PCFSoftShadowMap\b|^[^/\n]*\bPCFSoftShadowMap\b/m
+        expect(sources.filter(([, s]) => uses.test(s)).map(([f]) => f)).toEqual([])
     })
     it('no Canvas passes a bare boolean shadows prop (r3f maps true to PCFSoft)', () => {
         const bare = /(?<=\s)shadows(?:\s*\n|\s*>|=\{[^}?]*\})/

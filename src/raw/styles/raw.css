@@ -306,7 +306,7 @@
     padding: var(--di-space-1) var(--di-space-2);
     border-radius: var(--di-radius);
     background: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--di-text-muted);
     font-size: var(--di-text-2);
     letter-spacing: 0.02em;
     text-transform: uppercase;
@@ -872,7 +872,7 @@
     appearance: none;
     border: none;
     background: transparent;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--di-text-muted);
     font-size: var(--di-text-3);
     font-family: var(--di-mono);
     padding: var(--di-space-1) var(--di-space-2);
@@ -1641,7 +1641,7 @@
 
 .raw-property-sheet-header p {
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--di-text-muted);
     font-family: var(--di-mono);
     letter-spacing: 0.04em;
     margin: 0;
@@ -1689,7 +1689,7 @@
 
 .raw-property-field > span {
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--di-text-muted);
     letter-spacing: 0.02em;
     font-family: var(--di-mono);
     white-space: nowrap;
@@ -5084,7 +5084,7 @@
 .raw-anatomy-foot {
     margin: 0;
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--di-text-muted);
 }
 
 .raw-anatomy-foot { margin-top: var(--di-space-3); }
@@ -5094,7 +5094,7 @@
     padding-top: var(--di-space-3);
     border-top: 1px solid rgba(255, 255, 255, 0.09);
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--di-text-muted);
 }
 
 /* Two buttons where there was one. Stacked rather than side by side: at the
@@ -5182,7 +5182,7 @@
 .raw-anatomy-code-note {
     margin: var(--di-space-1) 0 0;
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--di-text-muted);
 }
 
 .raw-anatomy-code-note.is-refusal { color: var(--di-warning); }
@@ -5270,7 +5270,7 @@
 
 .raw-desk-panel.is-empty,
 .raw-desk-hint {
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--di-text-muted);
     font-size: var(--di-text-3);
 }
 
@@ -5362,7 +5362,7 @@
 }
 
 .raw-monitor-panel.is-empty p {
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--di-text-muted);
     font-size: var(--di-text-3);
     padding: 0 var(--di-space-4);
     text-align: center;
@@ -5486,7 +5486,7 @@
 .raw-list-count {
     font-size: var(--di-text-3);
     font-variant-numeric: tabular-nums;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--di-text-muted);
 }
 
 .raw-list-rows {
@@ -5578,7 +5578,7 @@
    44px hit area — it just stops wearing a box until you reach for it. */
 .raw-list-group-head .raw-list-btn {
     border-color: transparent;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--di-text-muted);
 }
 
 .raw-list-group-head .raw-list-btn:hover {

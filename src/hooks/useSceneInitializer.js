@@ -2,6 +2,15 @@ import { useCallback, useEffect, useState } from 'react'
 import { defaultScene, SCENE_DATA_VERSION, normalizeObjects } from '../state/sceneStore.js'
 import { preferLocalAssetsBaseUrl } from '../utils/assetsBaseUrl.js'
 
+// Storage can be blocked (sandboxed embed, Safari private mode): even touching
+// `window.localStorage` may throw. A blocked store is an empty store.
+function readSavedScene(key) {
+    try { return window.localStorage.getItem(key) } catch { return null }
+}
+function safeRemoveItem(key) {
+    try { window.localStorage.removeItem(key) } catch { /* blocked storage: nothing to remove */ }
+}
+
 export function useSceneInitializer({
     sceneStorageKey,
     spaceId,
@@ -113,7 +122,7 @@ export function useSceneInitializer({
 
         const initializeScene = async () => {
             try {
-                const savedData = localStorage.getItem(sceneStorageKey)
+                const savedData = readSavedScene(sceneStorageKey)
 
                 if (preferServerScene && canPublishToServer && !isOfflineMode && spaceId) {
                     try {
@@ -169,7 +178,7 @@ export function useSceneInitializer({
                 }
 
                 if (!sceneData.version || sceneData.version < SCENE_DATA_VERSION) {
-                    localStorage.removeItem(sceneStorageKey)
+                    safeRemoveItem(sceneStorageKey)
                     initializeBlankScene()
                     return
                 }
@@ -213,7 +222,7 @@ export function useSceneInitializer({
                 updateSceneSignature(normalizedSceneData)
                 persistSceneDataWithStatus(normalizedSceneData, 'Loaded scene locally')
             } catch {
-                localStorage.removeItem(sceneStorageKey)
+                safeRemoveItem(sceneStorageKey)
                 if (!isCancelled) {
                     initializeBlankScene()
                 }

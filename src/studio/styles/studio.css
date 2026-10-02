@@ -331,7 +331,7 @@
     appearance: none;
     background: none;
     border: none;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--di-text-muted);
     cursor: pointer;
     font-size: var(--di-text-2);
     padding: var(--di-space-1) var(--di-space-1);
@@ -420,7 +420,7 @@
     background: none;
     border: none;
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--di-text-muted);
     flex-shrink: 0;
     margin-right: var(--di-space-1);
     line-height: 1;
@@ -750,7 +750,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--di-text-muted);
 }
 
 .spa-activity-level--error   { color: var(--di-danger); }
@@ -1010,7 +1010,7 @@
     background: rgba(255, 255, 255, 0.05);
     border: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--di-text-muted);
     cursor: pointer;
     font-size: var(--di-text-1);
     line-height: 1;
@@ -1454,7 +1454,7 @@
 
 .ssgs-node-readout span {
     font-size: var(--di-text-2);
-    color: rgba(255,255,255,0.45);
+    color: var(--di-text-muted);
 }
 
 /* ── Studio live-world 3D pane (dev-only preview, see graphViewFlag.js) ── */
@@ -1470,7 +1470,7 @@
     justify-content: center;
     padding: var(--di-space-5);
     text-align: center;
-    color: rgba(255,255,255,0.45);
+    color: var(--di-text-muted);
     font-size: var(--di-text-3);
     background: var(--di-surface);
 }
