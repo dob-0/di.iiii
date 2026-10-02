@@ -23,14 +23,14 @@
     gap: var(--di-space-5);
     list-style: none;
     margin: 0;
-    padding: 0 2.5em 0 0;
+    padding: 0 var(--di-space-6) 0 0;
     flex: 1 1 0;
     min-width: 0;
     /* never under the next button: what does not fit scrolls, fading at the edge (2026-10-02: at
        1440 px the extras overprinted "next") */
     overflow-x: auto;
     scrollbar-width: none;
-    mask-image: linear-gradient(to right, #000 calc(100% - 2.5em), transparent);
+    mask-image: linear-gradient(to right, black calc(100% - var(--di-space-6)), transparent);
 }
 .rigsteps-list::-webkit-scrollbar { display: none; }
 
