@@ -11,6 +11,7 @@ import { isTypingTarget, keyHint, matchesKeyId } from '../input/keymap.js'
 import ContextMenu from './ContextMenu.jsx'
 import { useLongPress } from '../utils/useLongPress.js'
 import {
+    CONTAINER_TYPE_IDS,
     arePortsCompatible,
     getNodeCardLines,
     getNodeCardSummary,
@@ -1253,7 +1254,10 @@ export default function RawGraphSurface({
 
     const cardMenuItems = (node) => {
         const type = getNodeType(node.typeId)
-        const isWindow = type?.render === 'panel-2d'
+        // A place you can be inside (Scene, Geo, Constructor…) is entered; a
+        // window-only node (Text, List…) opens its window. Scene draws as a
+        // window too, so the render kind alone said "Open its window" (seen).
+        const isWindow = type?.render === 'panel-2d' && !CONTAINER_TYPE_IDS.has(node.typeId)
         return [
             onEnterNode ? { id: 'enter', label: isWindow ? 'Open its window' : 'Go inside', kb: keyHint('enter'), run: () => onEnterNode(node.id) } : null,
             onShowReading ? { id: 'reading', label: 'What it reads and gives', hint: 'middle-click', run: () => onShowReading(node.id) } : null,
