@@ -86,6 +86,7 @@ import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
 import { RAW_ANATOMY_Z, RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getAnatomyDefaultFrame, getBottomReserve, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import { CARD_WIDTH, cardHeight, getCardBox } from '../utils/cardGeometry.js'
+import { settleCardStacks } from '../utils/cardStacks.js'
 import { placeNewCard } from '../utils/cardPlacement.js'
 import { isPaletteSummons, readChosenZen, resolveZenPreference, writeZenPreference, liftAutoZen, isAutoZen } from '../utils/zenMode.js'
 import {
@@ -1417,10 +1418,14 @@ export default function RawEditor({
     // builds nothing that isn't implemented — see the module for which ports are
     // deliberately left unwired and why.
     const handleCreateAllNodesExample = () => {
-        const { nodes: exampleNodes, edges: exampleEdges } = buildAllNodesExample({
+        const built = buildAllNodesExample({
             parentId: currentScopeId || null,
             workspaceTop
         })
+        // Tall cards outgrow their grid row and hid the next card's ports and
+        // wires — settled by real card height (cardStacks.js).
+        const exampleNodes = settleCardStacks(built.nodes, (node) => cardHeight(node, built.nodes))
+        const exampleEdges = built.edges
         if (!exampleNodes.length) return
 
         dispatch({ type: 'select-entity', entityId: null })
