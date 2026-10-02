@@ -41,6 +41,13 @@ const PORT_GRAB_RADIUS_PX = 28
 // nobody can act on is worse than a working view of part of the graph. Below
 // the floor we fit a legible neighbourhood instead and say so.
 const FIT_MIN_USEFUL_ZOOM = 0.34
+// The floor for the re-fit that runs when a docked window changes the free
+// band (a List opening on the right). Measured 2026-10-02 at 1200 × 760: the
+// plain floor let eight cards shrink to 50 % (6–9 px text) beside the docked
+// List. A re-fit the person did not ask for must keep the cards readable; below
+// this it frames the selected card's neighbourhood instead and says how much
+// it shows, the fallback fitGraph already has.
+const DOCK_REFIT_MIN_ZOOM = 0.8
 // Framing ONE node is allowed to magnify, unlike fit-all which caps at 1.
 const FRAME_TARGET_ZOOM = 1
 const FRAME_MAX_ZOOM = 1.6
@@ -381,6 +388,11 @@ export default function RawGraphSurface({
         return {
             width: rect.width,
             height: rect.height,
+            // The free band's edges — what is not under a docked window.
+            freeLeft: dockLeft,
+            freeRight: rect.width - dockRight,
+            freeTop: dockTop,
+            freeBottom: rect.height - bottom,
             usableWidth: Math.max(1, rect.width - dockLeft - dockRight - GRAPH_FIT_PADDING_PX * 2),
             usableHeight: Math.max(1, rect.height - dockTop - bottom - GRAPH_FIT_PADDING_PX * 2),
             centerX: dockLeft + (rect.width - dockLeft - dockRight) / 2,
@@ -467,19 +479,20 @@ export default function RawGraphSurface({
 
     /**
      * Fit the graph. Magnifies no further than FIT_MAX_ZOOM — and refuses to drop
-     * below FIT_MIN_USEFUL_ZOOM, because an overview too small to act on is
+     * below `minZoom` (FIT_MIN_USEFUL_ZOOM unless the caller asks for more, as the
+     * docked-window re-fit does), because an overview too small to act on is
      * worse than a working view of part of the graph. Below the floor it fits a
      * legible neighbourhood and says how much it is showing.
      *
      * `force` runs the true overview anyway, at whatever zoom that takes.
      */
-    const fitGraph = ({ force = false } = {}) => {
+    const fitGraph = ({ force = false, minZoom = FIT_MIN_USEFUL_ZOOM } = {}) => {
         if (!cardsInView.length) return
         const all = withExtraBounds(boundsOf(cardsInView))
         const overviewZoom = zoomToFitBounds(all, { maxZoom: FIT_MAX_ZOOM })
         if (overviewZoom === null) return
 
-        if (force || overviewZoom >= FIT_MIN_USEFUL_ZOOM) {
+        if (force || overviewZoom >= minZoom) {
             applyFitTo(all, overviewZoom)
             setFitNotice(null)
             return
@@ -508,7 +521,7 @@ export default function RawGraphSurface({
             minY: (anchor.minY + anchor.maxY) / 2,
             maxY: (anchor.minY + anchor.maxY) / 2
         }
-        applyFitTo(centre, FIT_MIN_USEFUL_ZOOM)
+        applyFitTo(centre, minZoom)
         clampPanToContent(all)
 
         // Report honestly: how many cards actually landed on screen.
@@ -520,7 +533,9 @@ export default function RawGraphSurface({
                 const y = (node.graphY ?? 0) * vp.zoom + vp.panY
                 const w = CARD_WIDTH * vp.zoom
                 const h = cardHeight(node, portScopeNodes) * vp.zoom
-                return x + w > 0 && x < box.width && y + h > 0 && y < box.height - Math.max(0, bottomInset)
+                // Count only cards in the free band: a card under a docked
+                // window is not "shown" (it said 8 of 8 with two behind the List).
+                return x + w > box.freeLeft && x < box.freeRight && y + h > box.freeTop && y < box.freeBottom
             }).length
             : 0
         setFitNotice({ shown, total: cardsInView.length })
@@ -579,7 +594,7 @@ export default function RawGraphSurface({
             && Math.abs(settled.panY - now.panY) < 0.5
             && Math.abs(settled.zoom - now.zoom) < 0.001
         lastFitInsetsRef.current = insetKey
-        if (untouched) fitGraph()
+        if (untouched) fitGraph({ minZoom: DOCK_REFIT_MIN_ZOOM })
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [insetKey])
 
