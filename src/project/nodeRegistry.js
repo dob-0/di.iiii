@@ -2857,7 +2857,11 @@ export const arePortsCompatible = (fromType, toType) => {
     if (fromType === 'any' || toType === 'any') return true
     if (fromType === toType) return true
     const colorVec = (fromType === 'color' && toType === 'vec3') || (fromType === 'vec3' && toType === 'color')
-    return colorVec
+    // One number fills all three (evaluateNodeInput converts at the link, as
+    // Blender does): a Number into a Cube's Size makes it uniformly that big.
+    // The audit's first wire a person tries; it was refused (2026-10-02).
+    const numberToVec = fromType === 'number' && toType === 'vec3'
+    return colorVec || numberToVec
 }
 
 // Create a node instance from a type ID.
