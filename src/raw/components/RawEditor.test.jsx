@@ -34,6 +34,14 @@ vi.mock('./RawGraphSurface.jsx', () => ({
                     enter-first-node
                 </button>
             )}
+            {/* A plain click on a card. Selection is the viewer's own now
+                (NOPA audit F4), so a test selects the way a person does
+                rather than seeding it into the document. */}
+            {props.nodes?.map((node) => (
+                <button key={`select-${node.id}`} type="button" onClick={() => props.onSelectNode?.(node.id)}>
+                    {`select:${node.id}`}
+                </button>
+            ))}
             {/* The real surface offers this beside "Make me a scene" whenever
                 the scope you are standing in is empty. Same reason as the hint
                 above: without it here, the empty-state route to the sheet is
@@ -325,16 +333,18 @@ describe('RawEditor delete/reset confirmations', () => {
             JSON.stringify({
                 nodes: [makeNodeZero()],
                 edges: [],
-                workspaceState: { selectedNodeId: 'node-0' }
+                workspaceState: {}
             })
         )
     }
+    const selectNodeZero = () => fireEvent.click(screen.getByRole('button', { name: 'select:node-0' }))
 
     it('deletes Node 0 via the Delete FAB through the same confirm as any other node', () => {
         seedSelectedNodeZero()
         const confirmSpy = vi.spyOn(window, 'confirm')
         mockApplyLocalOps.mockClear()
         render(<RawEditor localStorageKey={GUARD_STORAGE_KEY} />)
+        selectNodeZero()
 
         fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
         expect(mockApplyLocalOps).not.toHaveBeenCalled()
@@ -356,6 +366,7 @@ describe('RawEditor delete/reset confirmations', () => {
         const confirmSpy = vi.spyOn(window, 'confirm')
         mockApplyLocalOps.mockClear()
         render(<RawEditor localStorageKey={GUARD_STORAGE_KEY} />)
+        selectNodeZero()
 
         fireEvent.click(screen.getByText('delete-via-graph-canvas'))
 
@@ -450,12 +461,13 @@ describe('RawEditor delete/reset confirmations', () => {
             JSON.stringify({
                 nodes: [makeNodeZero(), { id: 'c1', typeId: 'geom.cube', label: 'Test Cube', values: {} }],
                 edges: [],
-                workspaceState: { selectedNodeId: 'c1' }
+                workspaceState: {}
             })
         )
         const confirmSpy = vi.spyOn(window, 'confirm')
         mockApplyLocalOps.mockClear()
         render(<RawEditor localStorageKey={GUARD_STORAGE_KEY} />)
+        fireEvent.click(screen.getByRole('button', { name: 'select:c1' }))
 
         fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
         expect(screen.getByRole('dialog')).toHaveTextContent('Delete “Test Cube”?')
@@ -577,26 +589,48 @@ describe('RawEditor scope-clamped selection (the surface axis is retired)', () =
         window.localStorage.removeItem(KEY)
     })
 
+    // Selection is the viewer's own (NOPA audit F4, 2026-10-02): a click
+    // selects locally and nothing about it reaches the sync layer, so no
+    // POST /ops and no documentVersion bump for everybody else.
+    const selectionOpsSent = () => mockApplyLocalOps.mock.calls
+        .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
+        .flat()
+        .filter((op) => op?.type === 'setWorkspaceState'
+            && Object.prototype.hasOwnProperty.call(op.payload?.patch || {}, 'selectedNodeId'))
+
     it('a selected PANEL node gets the inspector and the Delete FAB', () => {
         // The old filter matched node TYPE against activeSurface (default
         // 'world'), so Text/Image/Monitor selections showed nothing at all.
         window.localStorage.setItem(KEY, JSON.stringify({
             nodes: [{ id: 't1', typeId: 'view.text', label: 'Note', values: { frame: { visible: true, x: 40, y: 120, width: 200, height: 120 } } }],
             edges: [],
-            workspaceState: { selectedNodeId: 't1' }
+            workspaceState: {}
         }))
         render(<RawEditor localStorageKey={KEY} />)
+        expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
+        fireEvent.click(screen.getByRole('button', { name: 'select:t1' }))
         expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy()
     })
 
-    it('a selection whose node stands in ANOTHER scope shows no Delete FAB', () => {
+    it('selecting a card writes no selection op to the project (per-viewer state)', () => {
         window.localStorage.setItem(KEY, JSON.stringify({
-            nodes: [
-                { id: 'geo', typeId: 'geom.geo', label: 'Geo', values: {} },
-                { id: 'c1', typeId: 'geom.cube', label: 'Cube', parentId: 'geo', values: {} }
-            ],
+            nodes: [{ id: 'geo', typeId: 'geom.geo', label: 'Geo', values: {} }],
             edges: [],
-            workspaceState: { selectedNodeId: 'c1' }
+            workspaceState: {}
+        }))
+        mockApplyLocalOps.mockClear()
+        render(<RawEditor localStorageKey={KEY} />)
+        fireEvent.click(screen.getByRole('button', { name: 'select:geo' }))
+        expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy()
+        expect(selectionOpsSent()).toEqual([])
+        expect(graphMountProps.at(-1).selectedNodeId).toBe('geo')
+    })
+
+    it('a selection stored in the shared document (an older client) selects nothing here', () => {
+        window.localStorage.setItem(KEY, JSON.stringify({
+            nodes: [{ id: 't1', typeId: 'view.text', label: 'Note', values: { frame: { visible: true, x: 40, y: 120, width: 200, height: 120 } } }],
+            edges: [],
+            workspaceState: { selectedNodeId: 't1' }
         }))
         render(<RawEditor localStorageKey={KEY} />)
         expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
@@ -606,16 +640,15 @@ describe('RawEditor scope-clamped selection (the surface axis is retired)', () =
         window.localStorage.setItem(KEY, JSON.stringify({
             nodes: [{ id: 'geo', typeId: 'geom.geo', label: 'Geo', values: {} }],
             edges: [],
-            workspaceState: { selectedNodeId: 'geo' }
+            workspaceState: {}
         }))
         mockApplyLocalOps.mockClear()
         render(<RawEditor localStorageKey={KEY} />)
+        fireEvent.click(screen.getByRole('button', { name: 'select:geo' }))
+        expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy()
         fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
-        const clearedSelection = mockApplyLocalOps.mock.calls
-            .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
-            .flat()
-            .some((op) => op.type === 'setWorkspaceState' && op.payload?.patch?.selectedNodeId === null)
-        expect(clearedSelection).toBe(true)
+        expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
+        expect(selectionOpsSent()).toEqual([])
     })
 })
 
@@ -1737,5 +1770,78 @@ describe('RawEditor — the Scene button counts what stands in the room', () => 
         window.localStorage.setItem(ROOM_KEY, makeWorkspaceDoc([makeCube('c1'), makeCube('c2')]))
         render(<RawEditor localStorageKey={ROOM_KEY} />)
         expect(sceneButton().getAttribute('title')).toMatch(/2 things standing in it/)
+    })
+})
+
+// NOPA audit F9 (2026-10-02): below 1200px the toolbar under the bar said only
+// "hayfilm" — the space — while the bar right above already names the space.
+// The toolbar names the PROJECT; the space is the bar's job.
+describe('RawEditor toolbar names the project, not the space', () => {
+    afterEach(() => {
+        mockLoadOnMount = null
+    })
+
+    it('shows the project title in the toolbar when the bar above names the space', async () => {
+        mockLoadOnMount = {
+            document: {
+                nodes: [{ id: 'n1', typeId: 'geom.geo', label: 'Geo', values: {} }],
+                edges: [],
+                projectMeta: { title: 'NOPA x MOCT · 3 Oct', spaceId: 'hayfilm' }
+            },
+            version: 3
+        }
+        const { container } = render(<RawEditor projectId="p-title" spaceId="hayfilm" />)
+        await waitFor(() => expect(container.querySelector('.raw-topbar-name')).toBeTruthy())
+        const name = container.querySelector('.raw-topbar-name')
+        expect(name.textContent).toBe('NOPA x MOCT · 3 Oct')
+        expect(name.querySelector('.raw-topbar-name-space')).toBeNull()
+        // The space is still one hover away, and still in the bar above.
+        expect(name.getAttribute('title')).toBe('hayfilm · NOPA x MOCT · 3 Oct')
+    })
+})
+
+// NOPA audit F8 (2026-10-02): every List opened on its saved spot, one over
+// the next, and Escape did nothing. A second window on the same spot is
+// cascaded; Escape closes the front window the person opened.
+describe('RawEditor window pile (cascade + Escape)', () => {
+    const KEY = 'test-window-pile'
+    const listNode = (id, label, visible) => ({
+        id,
+        typeId: 'view.list',
+        label,
+        values: { title: label, items: [], groups: ['People'], frame: { visible, x: 63, y: 305, width: 360, height: 280 } }
+    })
+    afterEach(() => {
+        window.localStorage.removeItem(KEY)
+    })
+
+    it('cascades a window that would open exactly on another', () => {
+        window.localStorage.setItem(KEY, JSON.stringify({
+            nodes: [listNode('gear', 'Gear', true), listNode('people', 'People', true)],
+            edges: [],
+            workspaceState: {}
+        }))
+        render(<RawEditor localStorageKey={KEY} />)
+        const gear = screen.getByRole('dialog', { name: 'Gear' })
+        const people = screen.getByRole('dialog', { name: 'People' })
+        expect(gear.style.transform).not.toBe(people.style.transform)
+    })
+
+    it('Escape closes the window the person just opened, and leaves the rest', () => {
+        window.localStorage.setItem(KEY, JSON.stringify({
+            nodes: [listNode('gear', 'Gear', false), listNode('people', 'People', true)],
+            edges: [],
+            workspaceState: {}
+        }))
+        render(<RawEditor localStorageKey={KEY} />)
+        expect(screen.queryByRole('dialog', { name: 'Gear' })).toBeNull()
+        fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
+        expect(screen.getByRole('dialog', { name: 'Gear' })).toBeTruthy()
+        fireEvent.keyDown(window, { key: 'Escape' })
+        expect(screen.queryByRole('dialog', { name: 'Gear' })).toBeNull()
+        // The window the project opened with is its arrangement: a second
+        // Escape does not take it away.
+        fireEvent.keyDown(window, { key: 'Escape' })
+        expect(screen.getByRole('dialog', { name: 'People' })).toBeTruthy()
     })
 })

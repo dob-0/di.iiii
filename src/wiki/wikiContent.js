@@ -1290,11 +1290,13 @@ export const WIKI_ARTICLES = [
                 'Press ⌖ to pin a window to the screen — it holds still at its current on-screen position and size while the canvas pans and zooms underneath it, the old behaviour. Press it again to release it back onto the canvas, where it keeps exactly where it was standing.',
                 'Drag the title bar to move a window; drag any edge or corner to resize it, not only the bottom-right grip. Arrow keys on the title bar move it, arrow keys on the corner grip resize it — hold Shift for a one-pixel nudge.',
                 'Scrolling inside a window\'s body belongs to that window: a Text note scrolls, a List scrolls, a Scene orbits. Scrolling on the canvas zooms the desk, and Ctrl/⌘ + scroll zooms the desk from anywhere, including over a window.',
-                'On a phone every window stays pinned — the clamp that fits a wide default frame into a narrow screen is the whole layout there, and a window that travelled freely on the canvas would walk straight off it.'
+                'On a phone every window stays pinned — the clamp that fits a wide default frame into a narrow screen is the whole layout there, and a window that travelled freely on the canvas would walk straight off it.',
+                'A window that would open exactly on top of another one steps down and to the right, so four Lists opened one after another show four title bars, not one.',
+                'Escape closes the window in front that you opened or clicked — one per press. Windows the project opened with stay, and Escape still leaves a level when no such window is open. Closing only hides a window; double-click its card to open it again.'
             ] }
         ],
-        tags: ['raw', 'nodes', 'windows', 'pin', 'resize', 'zoom', 'canvas', 'editor'],
-        updated: '2026-09-03'
+        tags: ['raw', 'nodes', 'windows', 'pin', 'resize', 'zoom', 'canvas', 'editor', 'escape'],
+        updated: '2026-10-02'
     },
     {
         id: 'raw-on-a-phone',
@@ -1307,13 +1309,16 @@ export const WIKI_ARTICLES = [
                 'Drag from an output port to an input port to wire them. You do not have to land exactly on the dot — the drop snaps to the nearest port that accepts that type, within a finger’s width, so a small miss still connects.',
                 'Pinch with two fingers to zoom and pan the canvas at the same time. The zoom buttons in the bottom-left corner do the same thing in steps.',
                 'Opening a graph fits it to the screen instead of dropping you at 100% somewhere inside it, so you can see the whole patch before choosing where to work.',
+                'The ⤢ button fits every card, at whatever zoom that takes — on a phone a wide graph can land small, and pinching in from there is one gesture. Fits nobody asked for (opening, resizing) stop at a readable size and say "showing N of M".',
+                'Resizing the window (or turning the phone) keeps the cards: a view you have not moved fits again; a view you panned or zoomed keeps the same point in the middle, and if no card is left on screen it fits.',
+                'Which card is selected is yours alone. Selecting no longer writes to the project, so a click does not move anyone else\'s selection.',
                 'Tap a wire to delete it — the tap area is much wider than the line you see.',
                 'Panel windows (Scene, Text, Browser, Image) shrink to fit the screen rather than running off the edge.'
             ] },
             'The overflow menu (⋯) has an All Nodes Example: one graph containing every node type the palette can create, with a clock driving a chain of maths into a pulsing sphere, a colour crossfade on a cube, and a breathing light. It is the quickest way to see what the node system can currently do — and it is deliberately honest about what it cannot: geometry, texture and signal outputs are declared on several node types but are not computed yet, so those ports are left unwired rather than connected to look complete.'
         ],
-        tags: ['raw', 'nodes', 'mobile', 'touch', 'phone', 'example', 'editor'],
-        updated: '2026-08-19'
+        tags: ['raw', 'nodes', 'mobile', 'touch', 'phone', 'example', 'editor', 'fit', 'resize'],
+        updated: '2026-10-02'
     },
     {
         id: 'br-id-ge',
