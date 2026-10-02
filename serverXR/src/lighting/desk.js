@@ -437,6 +437,11 @@ function createDesk(opts = {}) {
     layer.fadeMs = body.fadeMs != null && Number.isFinite(+body.fadeMs) ? Math.max(0, Math.min(60000, Math.round(+body.fadeMs))) : 0;
     layer.firedAt = Date.now();
     layer.lookId = look.id;
+    // Who put it here, kept in memory only (sanitizeLayer drops it): nowOnDesk() reads it.
+    // firedFor pins the claim to this look, so a layer later pointed elsewhere by hand never
+    // inherits a stale "cue". (MOXIR UI audit, 2026-10-01)
+    layer.firedBy = body.by === 'cue' ? 'cue' : 'manual';
+    layer.firedFor = look.id;
     layer.on = true;
     // The cue layer is the show's playback, and a cue says what each lamp it names IS:
     // intensity LTP, as a console's cue list (ETC Eos: cue lists LTP by default, subs
@@ -458,7 +463,7 @@ function createDesk(opts = {}) {
     fire: (cue) => {
       const look = state.looks.find((l) => l.id === cue.lookId);
       if (!look) return false;
-      fireLook(look, { layerId: CUE_LAYER, fadeMs: cue.fade * 1000 });
+      fireLook(look, { layerId: CUE_LAYER, fadeMs: cue.fade * 1000, by: 'cue' });
       return true;
     },
     save: () => save(),
@@ -466,6 +471,28 @@ function createDesk(opts = {}) {
   });
   // Set once a show load has resumed the cue list, so boot does not resume it twice.
   let resumed = false;
+
+  // ONE NOW FOR THE DESK: what is on the cue layer and who put it there. A page used to
+  // work this out from the cue list alone and said "Nothing fired" while a look fired by
+  // hand was lit. source is 'cue' when the cue runner fired the look now on the layer,
+  // 'manual' for anything else; `cue` is where the list stands (null with no list), so a
+  // hand-fired look can still say where GO resumes. null when nothing is on.
+  // (MOXIR UI audit, 2026-10-01)
+  function nowOnDesk() {
+    const layer = state.layers.find((l) => l.id === CUE_LAYER);
+    if (!layer || !layer.on || !(layer.level > 0) || !layer.lookId) return null;
+    const look = state.looks.find((l) => l.id === layer.lookId);
+    const brief = cueRunner.brief();
+    // After a restart the in-memory claim is gone; the list's own place still tells.
+    const placed = brief && brief.index >= 0 && (state.cues.list[brief.index] || {}).lookId === layer.lookId;
+    const byCue = layer.firedFor === layer.lookId ? layer.firedBy === 'cue' : !!placed;
+    return {
+      lookId: layer.lookId,
+      name: look ? look.name : layer.lookId,
+      source: byCue ? 'cue' : 'manual',
+      cue: brief ? { index: brief.index, n: brief.n, running: brief.running, loop: brief.loop } : null,
+    };
+  }
 
   // ---- more than one device at once -----------------------------------------
   // Each extra send owns a driver instance of its own, keyed by the send's id. They are
@@ -1045,6 +1072,7 @@ function createDesk(opts = {}) {
   function publicState(withScenes = true) {
     const patched = new Set(state.fixtures.map((f) => f.id));
     return Object.assign({}, state, {
+      now: nowOnDesk(),
       // How much of each scene still exists. Recall skips fixtures that have been unpatched,
       // so a scene saved against a rig that has since been repatched recalls silently and
       // does nothing at all — which reads as a broken button. The counts let the interface
