@@ -117,6 +117,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-15'
     },
     {
+        id: 'studio-mouse-navigation',
+        category: 'Editing',
+        title: 'Moving the view: Studio or Blender mouse',
+        summary: 'Studio\u2019s 3D view can be moved the Studio way (the default) or the way Blender does it. Choose in Shift+? \u2192 Shortcuts.',
+        body: [
+            'The default never changes unless you change it: drag to orbit, right-drag to pan, scroll or middle-drag to zoom toward the pointer. On a touch screen, one finger orbits and two fingers pinch and slide.',
+            'If your hands know Blender, open the help with Shift+?, go to Shortcuts, and pick Blender under Mouse navigation. Then the middle mouse button orbits, Shift with the middle button pans, Ctrl with the middle button zooms, and the wheel zooms toward the pointer. The left button no longer moves the view, so it is free for picking things. Without a middle button, hold Alt with the left button: Alt orbits, Shift+Alt pans, Ctrl+Alt zooms. Touch stays the same.',
+            'In the Blender setting the view turns, slides and zooms around the surface under the pointer instead of a fixed point in the middle. Tick Orbit around selection to turn around what you selected instead.',
+            'The choice is kept in this browser on this device only. The table under it always shows the mouse keys of the setting you chose. Some desktops take Alt+drag for moving windows; if Alt+drag moves the window instead of the view, use the middle button or change that desktop setting.'
+        ],
+        tags: ['studio', 'navigation', 'mouse', 'blender', 'orbit', 'pan', 'zoom', 'keyboard', 'preferences'],
+        updated: '2026-10-01'
+    },
+    {
         id: 'shelves-and-the-trash',
         category: 'Editing',
         title: 'Shelves, draft/live/archived, and the trash',
@@ -173,12 +187,13 @@ export const WIKI_ARTICLES = [
             'ONE DESK ACROSS MACHINES. Two di.iiii installs linked with `di invite` / `di follow` share a space. Place a DESK node: it lists every machine that has a page of that space open, with its cameras, microphones, speakers and screens. "+ Camera In" and "+ Picture Out" place the operator already set to that machine and device.',
             'RUNS ON is the first setting of every picture operator. "Where the page is open" means every machine runs its own copy — your webcam in your browser, the kiosk\'s on the kiosk. Choose a machine and only that machine computes it. A wire between operators on two machines carries the picture across the network by itself (browser to browser, no internet needed on one network); cards of operators computed elsewhere show small previews, and Analyze numbers travel both ways.',
             'A machine takes part while a di.iiii page of the space is open on it. Close the editor on the PC and whatever runs on the PC stops; set everything to the machine with the projector and the wall no longer needs the PC at all.',
+            'WHEN BOTH CHANGE THE SAME THING. Edits to different things always reach both machines. If two people change the same thing at the same moment — both move one box — both machines settle on the HOST\'s version (the install that ran `di invite`), and the other change is undone; a restore point is kept first. A follow also remembers where it was, so a restart picks up without sending old edits again.',
             'FILES TRAVEL WITH THE FOLLOW. A video, picture or model added to a project on one machine is copied to the other, either way round, while edits keep flowing — `di follows` says how many files are still coming and names any that could not be carried. Two things do not travel yet: files placed straight into the room itself rather than into a project, and older files added before files were named by their content (add those again and they go).',
             'SEND OUT puts a picture on the network so OTHER programs can use it — Resolume, OBS, a media server, somebody else\'s rig, or a machine that cannot run the patch. End a chain in a Send Out, give it a name, and that name appears as a source on the local network for anything that speaks NDI to pick up. No name means it sends nothing, which is the default. Between two linked di.iiii machines you do not need this at all: the patch itself travels and the wall draws it natively, at better quality than any encoding. It needs the NDI runtime installed on the machine that sends — di.iiii never ships it, and the operator says so plainly when it is missing. NDI\u00ae is a registered trademark of Vizrt NDI AB.',
             'A NETWORK CAN START WITHOUT A CAMERA. Five generators need no picture wired in at all: CLOUDS is soft animated noise (Scale, Speed, Detail, Contrast, and a Colour switch — off is grey); GRADIENT is a two-colour blend, straight across, up, out from the centre, or swept around it, with an Offset a hand or a script can slide; SHAPE is one soft-edged Circle, Ring, Bar or Grid of dots with its own Spin. TINT maps a picture\'s brightness between a dark colour and a bright one — its own default is black to deep amber, the duotone that keeps a wall warm. REFRAME scales, rotates and moves a picture around its own centre, and wired into a loop with Feedback it is what turns a still Gradient into a tunnel. Every one of them opens dark and warm, never white, with nothing to tune.',
         ],
         tags: ['operators', 'touchdesigner', 'tops', 'camera', 'projector', 'desk', 'machines', 'devices', 'follow', 'webrtc', 'analyze', 'generators', 'noise', 'gradient', 'tint', 'shape', 'clock', 'send', 'ndi', 'resolume', 'obs'],
-        updated: '2026-09-21'
+        updated: '2026-10-01'
     },
     {
         id: 'vj-deck-and-clip-in',

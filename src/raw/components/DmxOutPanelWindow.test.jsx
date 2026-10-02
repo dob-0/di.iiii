@@ -1,5 +1,21 @@
 import { render, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+
+const cancels = []
+vi.mock('../utils/dmxRigClient.js', async (importOriginal) => {
+    const real = await importOriginal()
+    return {
+        ...real,
+        createThrottledSender: (out, ms) => {
+            const inner = real.createThrottledSender(out, ms)
+            const cancel = vi.fn(() => inner.cancel())
+            cancels.push(cancel)
+            const wrapped = (...args) => inner(...args)
+            Object.assign(wrapped, inner, { cancel })
+            return wrapped
+        }
+    }
+})
 import DmxOutPanelWindow from './DmxOutPanelWindow.jsx'
 
 const node = (values = {}) => ({ id: 'dmx-1', typeId: 'device.dmx.out', values })
@@ -277,5 +293,26 @@ describe('DmxOutPanelWindow — the lighting desk', () => {
         expect(view.container.querySelector('input[type="text"]')).not.toBeNull()
         const deskView = render(desk({ node: node({ rig: 'desk' }), values: {}, fetchImpl: fakeDesk().fetchImpl }))
         expect(deskView.container.querySelector('input[type="text"]')).toBeNull()
+    })
+})
+
+describe('DmxOutPanelWindow throttles', () => {
+    it('cancels the old lane\'s throttles when the lane changes and the rest on unmount', async () => {
+        cancels.length = 0
+        const { fetchImpl } = fakeRig()
+        const props = { values: {}, onStatus: vi.fn(), fetchImpl, pageProtocol: 'http:' }
+        const { rerender, unmount } = render(<DmxOutPanelWindow node={node({ rig: 'vizzz', host: 'a.local' })} {...props} />)
+        expect(cancels.length).toBe(2)
+        expect(cancels.every((c) => c.mock.calls.length === 0)).toBe(true)
+
+        rerender(<DmxOutPanelWindow node={node({ rig: 'vizzz', host: 'b.local' })} {...props} />)
+        expect(cancels.length).toBe(4)
+        expect(cancels[0]).toHaveBeenCalledTimes(1)
+        expect(cancels[1]).toHaveBeenCalledTimes(1)
+        expect(cancels[2]).not.toHaveBeenCalled()
+
+        unmount()
+        expect(cancels[2]).toHaveBeenCalledTimes(1)
+        expect(cancels[3]).toHaveBeenCalledTimes(1)
     })
 })

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -151,5 +151,83 @@ describe('the hero copy, over the room it now stands in', () => {
     ])('%s clears AA over the brightest thing behind it — %s', (selector) => {
         const ground = scrimmed()
         expect(ratio(over(textColour(selector), ground), ground)).toBeGreaterThanOrEqual(AA_BODY)
+    })
+})
+
+// ---------------------------------------------------------------------------
+// 2026-10-01, a11y audit F15 / F2 / F7. The guard above covered one token and the
+// landing hero. This adds the computed pairs from the static audit
+// (WCAG 2.2 AA; luminance as above, alpha composited over the black ground).
+// ---------------------------------------------------------------------------
+describe('contrast pairs from the 2026-10-01 audit', () => {
+    const base = read('./base.css')
+    const colour = (value, hops = 0) => {
+        const v = value.trim()
+        if (v.startsWith('var(') && hops < 5) {
+            const name = v.slice(4, v.indexOf(')')).trim()
+            const declared = base.match(new RegExp(`${name}:\\s*([^;]+);`))
+            expect(declared, `${name} must stay declared in base.css`).toBeTruthy()
+            return colour(declared[1], hops + 1)
+        }
+        if (v.startsWith('#')) {
+            const h = v.slice(1)
+            return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16))
+        }
+        return rgbaValues(v)
+    }
+    const tokenOnBlack = (name) => {
+        const c = colour(`var(${name})`)
+        return ratio(over(c, BLACK), BLACK)
+    }
+
+    it('--di-text-muted is 5.28:1, the value the audit measured', () => {
+        expect(tokenOnBlack('--di-text-muted')).toBeCloseTo(5.28, 1)
+    })
+
+    it('the accent, danger and plain white text pairs stay AA', () => {
+        expect(ratio(CYAN, BLACK)).toBeGreaterThanOrEqual(AA_BODY)
+        expect(tokenOnBlack('--di-danger')).toBeGreaterThanOrEqual(AA_BODY)
+        expect(ratio(WHITE, BLACK)).toBeGreaterThanOrEqual(AA_BODY)
+    })
+
+    // F7: text set in white at .4 / .45 alpha (3.66 / 4.41) was moved to
+    // var(--di-text-muted). This ratchet keeps new ones out of CSS `color:`.
+    // Borders, backgrounds and --di-faint (used for ids) are not text colour here.
+    // The works are artworks and are not swept (docs/ai/golden_rules.md, "Platform and works"):
+    // src/algoVrithm/algoVrithm.css keeps its own text colours until its maker decides.
+    const ARTWORK_STYLESHEETS = new Set(['../algoVrithm/algoVrithm.css'])
+    it('no stylesheet sets `color:` to white at .4 or .45 alpha (F7), artworks excepted', () => {
+        const offenders = []
+        const walk = (dir) => {
+            for (const entry of readdirSync(resolve(HERE, dir), { withFileTypes: true })) {
+                const rel = `${dir}/${entry.name}`
+                if (entry.isDirectory()) { if (entry.name !== 'node_modules') walk(rel) } else if (entry.name.endsWith('.css')) {
+                    const text = read(rel)
+                    if (!ARTWORK_STYLESHEETS.has(rel) && /(?:^|[\s;{])color:\s*rgba\(255,\s*255,\s*255,\s*0?\.(?:4|45)\)/m.test(text)) offenders.push(rel)
+                }
+            }
+        }
+        walk('..')
+        expect(offenders).toEqual([])
+    })
+
+    // F2: KNOWN failures of WCAG 1.4.11 (3:1 for the edge of a control). Recorded,
+    // not accepted: the fix needs the owner's call and a look at the screen. Each
+    // entry must keep failing at about the recorded ratio. If one is raised to 3:1
+    // this test goes red and the entry must be deleted; if one gets worse it goes
+    // red too. Audit id: F2 (PROGRESS.md, the 2026-10-01 a11y batch entry).
+    const KNOWN_BORDER_FAILURES = [
+        { token: '--ui-border', recorded: 2.14, audit: 'F2' },
+        { token: '--di-line', recorded: 1.22, audit: 'F2' }
+    ]
+    it.each(KNOWN_BORDER_FAILURES)('$token is a recorded border failure ($audit, $recorded:1)', ({ token, recorded }) => {
+        const got = tokenOnBlack(token)
+        expect(got, `${token} now clears 3:1 — remove it from KNOWN_BORDER_FAILURES`).toBeLessThan(3)
+        expect(got, `${token} got worse than the recorded ${recorded}:1`).toBeGreaterThanOrEqual(recorded - 0.05)
+        expect(got, `${token} changed from the recorded ${recorded}:1 — update the record`).toBeLessThanOrEqual(recorded + 0.05)
+    })
+
+    it('white at .1 alpha as a border is the recorded 1.20:1 failure (F2)', () => {
+        expect(ratio(over([255, 255, 255, 0.1], BLACK), BLACK)).toBeCloseTo(1.2, 1)
     })
 })

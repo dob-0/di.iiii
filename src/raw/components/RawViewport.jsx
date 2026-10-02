@@ -24,6 +24,7 @@ import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/
 import { asColor } from '../../utils/colorValue.js'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 import { buildEntityTree } from '../../project/entityTree.js'
+import { rendererWithFallback } from '../../project/viewport/rendererFallback.js'
 
 const isSpatialNode = (node) => getNodeType(node?.typeId)?.render === 'spatial-3d'
 
@@ -1409,6 +1410,7 @@ export default function RawViewport({
             <Canvas
                 key={canvasKey}
                 shadows="percentage"
+                gl={rendererWithFallback()}
                 // offsetSize: measure the layout box, not the painted one. A
                 // Scene window is placed through the graph's viewport
                 // transform (translate + scale), and getBoundingClientRect

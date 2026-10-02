@@ -17,7 +17,9 @@ const sceneStream = (spaceId) => ({
     key: `scene:${spaceId}`,
     kind: 'scene',
     opsPath: `/api/spaces/${encodeURIComponent(spaceId)}/ops`,
-    writePath: `/api/spaces/${encodeURIComponent(spaceId)}/ops`
+    writePath: `/api/spaces/${encodeURIComponent(spaceId)}/ops`,
+    // What is STORED, not the hydrated view: the copies are compared as stored.
+    documentPath: `/api/spaces/${encodeURIComponent(spaceId)}/scene?verbatim=1`
 })
 
 const projectStream = (projectId) => ({
@@ -25,7 +27,8 @@ const projectStream = (projectId) => ({
     kind: 'project',
     projectId,
     opsPath: `/api/projects/${encodeURIComponent(projectId)}/ops`,
-    writePath: `/api/projects/${encodeURIComponent(projectId)}/ops`
+    writePath: `/api/projects/${encodeURIComponent(projectId)}/ops`,
+    documentPath: `/api/projects/${encodeURIComponent(projectId)}/document`
 })
 
 /**

@@ -6,6 +6,7 @@ export const DEFAULT_RENDER_SETTINGS = {
     toneMapping: 'ACESFilmic',
     toneMappingExposure: 1,
     shadows: true,
+    // three r185 dropped PCFSoftShadowMap (it warns, then draws PCFShadowMap): ask for that directly
     shadowType: THREE.PCFShadowMap,
     antialias: true,
     powerPreference: 'high-performance'

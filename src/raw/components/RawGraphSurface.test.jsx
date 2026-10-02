@@ -961,3 +961,23 @@ describe('wheel policy', () => {
         expect(readZoom()).not.toBe(mid)
     })
 })
+
+describe('RawGraphSurface wires follow portScopeNodes', () => {
+    it('re-anchors a wire when a doorway inside a container disappears (nodes and edges unchanged)', () => {
+        const box = makeNode('universe.space', { id: 'box-1', graphX: 0, graphY: 0 })
+        const sink = makeNode('geom.cube', { id: 'cube-1', graphX: 400, graphY: 0 })
+        const d1 = { ...createNode('port.out', { parentId: box.id, values: { label: 'A', portType: 'any' } }), id: 'door-1' }
+        const d2 = { ...createNode('port.out', { parentId: box.id, values: { label: 'B', portType: 'any' } }), id: 'door-2' }
+        const nodes = [box, sink]
+        const edges = [{ id: 'e1', fromNodeId: 'box-1', fromPort: 'door-2', toNodeId: 'cube-1', toPort: 'in' }]
+        const wireD = (container) => container.querySelector('svg g path:nth-of-type(2)')?.getAttribute('d')
+
+        const { container, rerender } = render(
+            <RawGraphSurface nodes={nodes} edges={edges} portScopeNodes={[...nodes, d1, d2]} />
+        )
+        const before = wireD(container)
+        expect(before).toBeTruthy()
+        rerender(<RawGraphSurface nodes={nodes} edges={edges} portScopeNodes={[...nodes, d2]} />)
+        expect(wireD(container)).not.toBe(before)
+    })
+})

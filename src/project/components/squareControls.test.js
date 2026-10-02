@@ -19,12 +19,12 @@ describe('the visitor viewer draws rectangles', () => {
         expect(px(overlayButtonStyle.borderRadius)).toBeLessThanOrEqual(2)
     })
 
-    it('gives the SHOW chip a 0-2 px corner; only its red dot is round', () => {
+    it('gives the SHOW chip and its red light 0-2 px corners — no circle (owner: rectangles only, 2026-10-01)', () => {
         const source = read('../../rigbuild/RoomLookFollower.jsx')
-        const radii = [...source.matchAll(/borderRadius:\s*'([^']+)'/g)].map((m) => m[1])
-        const round = radii.filter((r) => px(r) > 2)
-        expect(round).toEqual(['50%'])
-        expect(source).toMatch(/width: 8, height: 8, borderRadius: '50%'/)
+        const radii = [...source.matchAll(/borderRadius:\s*('([^']+)'|\d+)/g)].map((m) => m[2] ?? m[1])
+        expect(radii.length).toBeGreaterThan(1)
+        expect(radii.filter((r) => px(r) > 2)).toEqual([])
+        expect(source).toMatch(/width: 8, height: 8, borderRadius: 0,/)
     })
 
     it('keeps the live scene\'s buttons and the sign-in notice off the pill token', () => {

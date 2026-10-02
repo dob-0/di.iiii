@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh'
 import { fitCameraToAspect } from '../../../utils/cameraFraming.js'
 import { venueOf } from '../../../rigbuild/venuePlan.js'
+import { hazeFogBase } from '../../../objectComponents/atmosphereStore.js'
 import {
     approach,
     classifyArchitecture,
@@ -338,9 +339,10 @@ export default function SmartView({
                 lines.material.dispose()
             }
             state.edges.clear()
-            if (scene.fog && fogBase) {
-                scene.fog.near = fogBase.near
-                scene.fog.far = fogBase.far
+            const base = hazeFogBase(gl, fogBase)
+            if (scene.fog && base) {
+                scene.fog.near = base.near
+                scene.fog.far = base.far
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -625,11 +627,14 @@ export default function SmartView({
         }
 
         // --- the fog stands back (smartViewGeometry.fogOffset) --------------------------
-        if (scene.fog && fogBase && Number.isFinite(fogBase.near) && Number.isFinite(fogBase.far)) {
+        // from the haze's resting distances when the room works its haze out from its
+        // machines (atmosphereStore.js hazeFogBase), else from the authored fog
+        const base = hazeFogBase(gl, fogBase)
+        if (scene.fog && base && Number.isFinite(base.near) && Number.isFinite(base.far)) {
             const goal = fogOffset(outsideDistance(cam.toArray(), frame.bounds), cam.distanceTo(target), referenceDistance)
             state.fogOffset = approach(state.fogOffset, goal, delta, 0.15)
-            scene.fog.near = fogBase.near + state.fogOffset
-            scene.fog.far = fogBase.far + state.fogOffset
+            scene.fog.near = base.near + state.fogOffset
+            scene.fog.far = base.far + state.fogOffset
         }
 
         // --- the occlusion fade ---------------------------------------------------------

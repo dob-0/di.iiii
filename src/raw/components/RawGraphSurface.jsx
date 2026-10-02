@@ -1088,7 +1088,7 @@ export default function RawGraphSurface({
             out.push({ id: edge.id, from, to, color })
         }
         return out
-    }, [edges, nodeById])
+    }, [edges, nodeById, portScopeNodes])
 
     const pendingFromPos = pendingWire ? outputPortCenter(nodeById.get(pendingWire.fromNodeId) || {}, pendingWire.fromPort, portScopeNodes) : null
 

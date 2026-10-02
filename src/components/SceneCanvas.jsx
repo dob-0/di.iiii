@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import * as THREE from 'three'
 import Experience from '../Experience.jsx'
 import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGuard.jsx'
+import { rendererWithFallback } from '../project/viewport/rendererFallback.js'
 
 const SceneContentXr = lazy(() => import('../xr/SceneContentXr.jsx'))
 
@@ -48,10 +49,10 @@ export default function SceneCanvas({
                 camera={cameraProps}
                 dpr={renderSettings.dpr}
                 shadows={renderSettings.shadows ? 'percentage' : false}
-                gl={{
+                gl={rendererWithFallback({
                     antialias: renderSettings.antialias,
                     powerPreference: renderSettings.powerPreference
-                }}
+                })}
                 onCreated={({ gl }) => {
                     if (rendererRef) {
                         rendererRef.current = gl

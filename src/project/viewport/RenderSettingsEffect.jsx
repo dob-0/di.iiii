@@ -1,8 +1,19 @@
-import { useEffect } from 'react'
-import { useThree } from '@react-three/fiber'
+import { Suspense, lazy, useEffect } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { atmosphereOf } from '../../objectComponents/beamAir.js'
-import { setAtmosphere } from '../../objectComponents/atmosphereStore.js'
+import { getHazeField, hazeFogBase, setAtmosphere, subscribeHazeField } from '../../objectComponents/atmosphereStore.js'
+import { hazeUniformsFor } from '../../objectComponents/hazeUniforms.js'
+import { bloomOf } from './bloom.js'
+import { surfacesOf } from './surfaces.js'
+import SurfaceOverrides from './SurfaceOverrides.jsx'
+import BeamMirrors from './BeamMirrors.jsx'
+import NightOutside from './NightOutside.jsx'
+
+// The room in high dynamic range with bloom (HdrBloom.jsx): loaded only by a room that asks.
+const HdrBloom = lazy(() => import('./HdrBloom.jsx'))
+// The frame-rate governor (qualityGovernor.js): in a room drawn with a physical haze.
+const QualityGovernor = lazy(() => import('./QualityGovernor.jsx'))
 
 // The document's tone-mapping name → three.js's operator. ACES (Narkowicz's fit,
 // three.js's ACESFilmic) stays the default; 'AgX' (T. Sobotka's AgX, three.js
@@ -37,9 +48,52 @@ export default function RenderSettingsEffect({ renderSettings }) {
     }, [gl, renderSettings?.toneMapping, renderSettings?.toneMappingExposure, renderSettings?.shadows])
     const scattering = renderSettings?.atmosphere?.scattering
     const anisotropy = renderSettings?.atmosphere?.anisotropy
+    // the haze worked out from the room's machines (hazeField.js), compared by value:
+    // a document re-read with the same settings must not wake every beam
+    const hazeKey = JSON.stringify(renderSettings?.atmosphere?.haze ?? null)
     useEffect(() => {
-        setAtmosphere(gl, atmosphereOf({ atmosphere: { scattering, anisotropy } }))
-    }, [gl, scattering, anisotropy])
+        setAtmosphere(gl, atmosphereOf({ atmosphere: { scattering, anisotropy, haze: JSON.parse(hazeKey) } }))
+    }, [gl, scattering, anisotropy, hazeKey])
+    // The haze's eddies drift with the hall's air: one clock for every beam (the shared
+    // uniform), ticking only while the room's haze is uneven.
+    useFrame(({ clock }) => {
+        const field = getHazeField(gl)
+        if (field && field.patchiness > 0) hazeUniformsFor(gl).uHazeTime.value = clock.elapsedTime
+    })
+    // And the hall's haze dims the surfaces as it dims the beams: the fog's resting
+    // distances become the haze's (atmosphereStore.js hazeFogBase), set when the haze
+    // changes — not every frame, which would fight SmartView, the one that moves the fog
+    // at run time (it adds its offset to the same base). A room with one hand-set haze
+    // keeps the fog it was authored with.
+    const { scene } = useThree()
+    useEffect(() => {
+        const apply = () => {
+            const base = hazeFogBase(gl)
+            if (base && scene.fog?.isFog) {
+                scene.fog.near = base.near
+                scene.fog.far = base.far
+            }
+        }
+        apply()
+        return subscribeHazeField(gl, apply)
+    }, [gl, scene])
     useEffect(() => () => setAtmosphere(gl, null), [gl])
-    return null
+    // Mounted only while the room asks for bloom: once it is mounted it draws every
+    // frame itself (a priority frame callback stops R3F's own render).
+    const governed = Boolean(atmosphereOf({ atmosphere: renderSettings?.atmosphere })) && renderSettings?.quality?.adaptive !== false
+    // the room's surfaces corrected at load (surfaces.js): e.g. the hall's floor finish
+    const surfaces = surfacesOf(renderSettings)
+    // a room with a physical haze: what its openings show takes the haze's veil (NightOutside.jsx)
+    const hazy = Boolean(renderSettings?.atmosphere?.haze)
+    if (!bloomOf(renderSettings) && !governed && !surfaces && !hazy) return null
+    return (
+        <Suspense fallback={null}>
+            {bloomOf(renderSettings) ? <HdrBloom renderSettings={renderSettings} /> : null}
+            {governed ? <QualityGovernor renderSettings={renderSettings} /> : null}
+            {surfaces ? <SurfaceOverrides surfaces={surfaces} /> : null}
+            {hazy ? <NightOutside /> : null}
+            {/* the beams reflected in the floor: needs the HDR path's stencil (HdrBloom.jsx) */}
+            {surfaces?.floor?.reflect > 0 && bloomOf(renderSettings) ? <BeamMirrors floor={surfaces.floor} /> : null}
+        </Suspense>
+    )
 }

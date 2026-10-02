@@ -67,15 +67,20 @@ export const TESTED_CHANNEL_LISTS = {
                 { role: 'panFine', label: 'Pan fine', default: 0 },
                 { role: 'tiltFine', label: 'Tilt fine', default: 0 },
                 { role: 'speed', label: 'Pan/tilt speed' },
-                { role: 'frost', label: 'Frost' },
+                // frost's curve is not on the chart: read as linear (beamOptics.js)
+                { role: 'frost', label: 'Frost', cap: { frost: { basis: 'ASSUMED — linear, 0 clear … 255 full; the chart states no curve' } } },
                 { role: 'strobe', label: 'Shutter / strobe (255 open, 0-3 dark)', default: 255, cap: { shutter: [{ from: 0, to: 3, open: false }, { from: 255, to: 255, open: true }] } },
                 { role: 'dimmer', label: 'Dimmer' },
                 { role: 'color', label: 'Colour wheel (0 white, 12 colour 1…)', default: 0 },
-                { role: 'gobo', label: 'Gobo (5-89 gobo 1-17, 171+ shake)', cap: { gobo: true } },
-                { role: 'prism', label: 'Prism 1 insert (128+ in)', cap: { prism: true } },
-                { role: 'rotation', label: 'Prism 1 rotation' },
-                { role: 'aux1', label: 'Prism 2' },
-                { role: 'aux2', label: 'Prism 2 rotation' },
+                // gobo 5-89 = gobos 1-17 and 171+ = shake are the chart's (TESTED); the
+                // even five-value slots inside 5-89 (5-9 gobo 1, 10-14 gobo 2 …) are DERIVED,
+                // not stated; 90-170 is left unmapped rather than guessed
+                { role: 'gobo', label: 'Gobo (5-89 gobo 1-17, 171+ shake)', cap: { gobo: true, goboSlots: { from: 5, to: 89, count: 17, basis: 'TESTED range; slots DERIVED' }, goboShake: { from: 171, basis: 'TESTED' } } },
+                // 128+ in is the chart's (TESTED); 16 facets from the spec (fixtures.json)
+                { role: 'prism', label: 'Prism 1 insert (128+ in)', cap: { prism: true, prismIn: { from: 128, facets: 16, basis: 'TESTED threshold' } } },
+                { role: 'rotation', label: 'Prism 1 rotation', cap: { prismRotation: { prism: 1, basis: 'ASSUMED — index or spin not stated; read as an index, 0…255 → 0…360°' } } },
+                { role: 'aux1', label: 'Prism 2', cap: { prism2: { kind: 'honeycomb', in: { from: 128 }, basis: "ASSUMED — prism 1's threshold" } } },
+                { role: 'aux2', label: 'Prism 2 rotation', cap: { prismRotation: { prism: 2, basis: 'ASSUMED — index or spin not stated; read as an index, 0…255 → 0…360°' } } },
                 { role: 'focus', label: 'Focus' },
                 { role: 'control', label: 'Reset (always 0)', default: 0 }
             ]
@@ -252,6 +257,10 @@ export const typesFromManifest = (manifest, { manifestFile = 'scripts/place/fixt
             pan_tilt_deg: sourced(kind.specs?.pan_tilt_deg),
             ip: sourced(kind.specs?.ip),
             optics: opticsOf(kind),
+            // A hazer's or fog machine's output, what the room's haze is worked out from
+            // (src/objectComponents/hazeField.js). Null on every lamp.
+            fluid_ml_per_min: sourced(kind.specs?.fluid_ml_per_min),
+            nozzle_d_mm: Number(kind.model?.params?.nozzle_d_mm) > 0 ? Number(kind.model.params.nozzle_d_mm) : null,
             model3d: {
                 glb: `${glbDir}/${kindKey}.glb`,
                 sidecar: `${glbDir}/${kindKey}.json`,
