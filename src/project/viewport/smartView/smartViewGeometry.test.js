@@ -20,6 +20,7 @@ import {
     outsideDistance,
     parseViewHash,
     presetForKey,
+    reachInBox,
     rigCore,
     roofCapRect,
     sanitizeViewPresets,
@@ -384,5 +385,21 @@ describe('farthestCornerDistance', () => {
     })
     it('is 0 without a building', () => {
         expect(farthestCornerDistance([0, 0, 0], null)).toBe(0)
+    })
+})
+
+// 2026-10-02 (/moxir on a phone): the fitted Floor and Rig presets left the hall.
+describe('reachInBox', () => {
+    const box = { min: [-47.5, 0.8, -54], max: [47.5, 10.6, 54] }
+    it('stops a pulled-back camera at the end wall', () => {
+        const k = reachInBox([0, 5.5, 4], [0, 1.2, 55.5], box)
+        expect(4 + (55.5 - 4) * k).toBeCloseTo(54, 6)
+    })
+    it('stops it under the roof', () => {
+        const k = reachInBox([-2, 6, 10], [-13.5, 14.1, 40.3], box)
+        expect(6 + (14.1 - 6) * k).toBeCloseTo(10.6, 6)
+    })
+    it('leaves a camera already inside where it is', () => {
+        expect(reachInBox([0, 5, 0], [0, 1.7, 50], box)).toBe(1)
     })
 })

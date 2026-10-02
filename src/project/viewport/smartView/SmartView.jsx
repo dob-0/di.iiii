@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh'
-import { fitCameraToAspect } from '../../../utils/cameraFraming.js'
+import { fitCameraToAspect, getFovForArm } from '../../../utils/cameraFraming.js'
 import { venueOf } from '../../../rigbuild/venuePlan.js'
 import { hazeFogBase, setCameraOutside } from '../../../objectComponents/atmosphereStore.js'
 import {
@@ -28,6 +28,7 @@ import {
     meshRole,
     orbitMaxDistance,
     outsideDistance,
+    reachInBox,
     rigCore,
     sanitizeViewPresets,
     sphereCastOffsets,
@@ -490,9 +491,19 @@ export default function SmartView({
         const preset = state.presets.find((p) => p.id === command.presetId)
         if (!cc || !preset) return
         const aspect = size.width / Math.max(1, size.height)
-        const fitted = preset.interior
+        let fitted = preset.interior
             ? fitCameraToAspect({ position: preset.position, target: preset.target, fov: preset.fov }, aspect, { walkableAreas })
             : { position: preset.position, target: preset.target, fov: preset.fov }
+        // An interior view stays in the room: a narrow screen's pull-back stops at the walls and the roof
+        // (reachInBox), and the lens widens for the rest, as for a walkable area.
+        const room = preset.interior ? insideBox(state.frame) : null
+        if (room && boxHolds(preset.position, room) && !boxHolds(fitted.position, room)) {
+            const k = reachInBox(fitted.target, fitted.position, room)
+            const along = (i) => fitted.target[i] + (fitted.position[i] - fitted.target[i]) * k
+            const position = [along(0), along(1), along(2)]
+            const arm = Math.hypot(...position.map((v, i) => v - preset.target[i])) / Math.max(1e-6, Math.hypot(...preset.position.map((v, i) => v - preset.target[i])))
+            fitted = { ...fitted, position, fov: getFovForArm(preset.fov, aspect, arm) }
+        }
         const [px, py, pz] = fitted.position
         const [tx, ty, tz] = fitted.target
         const distance = Math.hypot(px - tx, py - ty, pz - tz)

@@ -643,3 +643,23 @@ export const farthestCornerDistance = (position, bounds) => {
     }
     return best
 }
+
+/**
+ * How far along from → to (0…1) a point stays in the box; `from` is inside it (the slab method).
+ * The phone's interior presets: fitting a portrait screen pulls the camera back along its arm, and
+ * on MOXIR the Floor view left through the end wall (z 55.5 against 54.5) and the Rig view through
+ * the roof, so the cutaway cut the hall open and half the screen went black (2026-10-02, /moxir on
+ * a 390×844 phone). The arm stops at the box; the lens widens for the rest (cameraFraming getFovForArm).
+ */
+export const reachInBox = (from, to, box) => {
+    const a = vec3(from)
+    const b = vec3(to)
+    if (!a || !b || !box) return 1
+    let k = 1
+    for (let i = 0; i < 3; i += 1) {
+        const d = b[i] - a[i]
+        if (d > 1e-9 && b[i] > box.max[i]) k = Math.min(k, (box.max[i] - a[i]) / d)
+        if (d < -1e-9 && b[i] < box.min[i]) k = Math.min(k, (box.min[i] - a[i]) / d)
+    }
+    return Math.max(0, Math.min(1, k))
+}
