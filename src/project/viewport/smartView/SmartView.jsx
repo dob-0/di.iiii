@@ -70,13 +70,26 @@ const INSIDE_MAX_DISTANCE = 25
 const INSIDE_TARGET_INSET = 3
 const INSIDE_MIN_DISTANCE = 2
 
-const SV_VERTEX_HEAD = 'varying float vSvDepth;\n'
+// The cut never reaches above the roof's underside (uSvCeiling, world y). From inside, the roof is never what
+// stands in the way of the stage, yet it is nearer than the target over the whole circle, so the cut used to
+// open a black disc of night sky above the rig (2026-10-02, /moxir Free view). From outside, the cutaway's
+// roof plane already clips it.
+const SV_VERTEX_HEAD = 'varying float vSvDepth;\nvarying float vSvWorldY;\n'
+export const SV_VERTEX_BODY = `
+vec4 svWorld = vec4(transformed, 1.0);
+#ifdef USE_INSTANCING
+svWorld = instanceMatrix * svWorld;
+#endif
+vSvWorldY = (modelMatrix * svWorld).y;
+`
 const SV_FRAGMENT_HEAD = `
 varying float vSvDepth;
+varying float vSvWorldY;
 uniform float uSvStrength;
 uniform vec2 uSvCenter;
 uniform float uSvRadius;
 uniform float uSvDepth;
+uniform float uSvCeiling;
 float svBayer4(vec2 p) {
     ivec2 i = ivec2(mod(floor(p), 4.0));
     int idx = i.x + i.y * 4;
@@ -85,7 +98,7 @@ float svBayer4(vec2 p) {
 }
 `
 export const SV_FRAGMENT_BODY = `
-if (uSvStrength > 0.001) {
+if (uSvStrength > 0.001 && vSvWorldY < uSvCeiling) {
     float svD = length(gl_FragCoord.xy - uSvCenter);
     float svInside = 1.0 - smoothstep(uSvRadius * 0.7, uSvRadius, svD);
     float svNearer = 1.0 - smoothstep(uSvDepth - 1.2, uSvDepth - 0.4, vSvDepth);
@@ -115,13 +128,13 @@ function patchMaterial(material, uniforms, planes) {
         Object.assign(shader.uniforms, uniforms)
         shader.vertexShader = shader.vertexShader
             .replace('#include <common>', `#include <common>\n${SV_VERTEX_HEAD}`)
-            .replace('#include <project_vertex>', '#include <project_vertex>\nvSvDepth = -mvPosition.z;')
+            .replace('#include <project_vertex>', `#include <project_vertex>\nvSvDepth = -mvPosition.z;\n${SV_VERTEX_BODY}`)
         shader.fragmentShader = shader.fragmentShader
             .replace('#include <common>', `#include <common>\n${SV_FRAGMENT_HEAD}`)
             .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>\n${SV_FRAGMENT_BODY}`)
     }
     const previousKey = material.customProgramCacheKey?.bind(material)
-    material.customProgramCacheKey = () => `smartview1|${previousKey ? previousKey() : ''}`
+    material.customProgramCacheKey = () => `smartview2|${previousKey ? previousKey() : ''}`
     material.needsUpdate = true
 }
 
@@ -224,7 +237,8 @@ export default function SmartView({
         uSvStrength: { value: 0 },
         uSvCenter: { value: new THREE.Vector2() },
         uSvRadius: { value: 200 },
-        uSvDepth: { value: 10 }
+        uSvDepth: { value: 10 },
+        uSvCeiling: { value: PARK }
     }), [])
     // roof, x+, x-, z+, z-, section
     const planes = useMemo(() => [
@@ -403,6 +417,8 @@ export default function SmartView({
             rigBox
         })
         state.frame = frame
+        // The roof's own underside, not roofCut (that is raised above a rig hung higher than the roof's lowest member).
+        uniforms.uSvCeiling.value = Number.isFinite(roofMinY) ? roofMinY : (Number.isFinite(frame?.roofCut) ? frame.roofCut : PARK)
         state.rigBox = rigBox
         state.lampBox = lampBox
         state.stageBox = isBoxEmpty(stageBox) ? null : stageBox
