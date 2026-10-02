@@ -14,7 +14,7 @@ Measured on his screen (2560 × 1440, scale 1, Zen), project `hayfilm-nopa-2026-
 | C | an opened List is a 662 × 563 floating window over the cards; its last group is cut off | List (and Text) open docked on the right at full canvas height. The cards stay visible. Same window system, docked frame. |
 | D | each row has ↑ ↓ group-select × (~230 px), the text gets ~280 px and is clipped | the text gets the full row and wraps. One ⋯ button per row opens Move up / Move down / Move to group / Delete. Keyboard: Alt+↑/↓ moves. Existing behaviour and tests are kept, only the controls move. |
 | E | the inspector shows `universe.world` under the name | show the type's label ("Scene"), never the id. Lexicon: no identifiers on screen. |
-| F | a stage Scene takes nothing in. Gear and people are rows in two lists | **owner's "node thing" (10-02): a Scene takes INPUTS**. Things are connected into the stage it belongs to. The mechanism exists: In doors (`port.in` with `parentId` = the Scene) become inputs on the Scene card (`getNodeInputs` → `doorwaysInside`). **New:** a **Gear** node (name, already there / we bring, stage) and a **Person** node (name, role, contact), each with one output a stage door can take. **Waits for the owner's word on the Gear/Person fields before building.** |
+| F | a stage Scene takes nothing in. Gear and people are rows in two lists | **owner's "node thing" (10-02): a Scene takes INPUTS**. Things are connected into the stage it belongs to. The mechanism exists: In doors (`port.in` with `parentId` = the Scene) become inputs on the Scene card (`getNodeInputs` → `doorwaysInside`). **New:** a **Gear** node (name, already there / we bring, stage) and a **Person** node (name, role, contact), each with one output a stage door can take. Owner 10-02: *"we need A–E mixed with F"*, so F is in the same build. Fields as sketched (Gear: name · already there / we bring · stage; Person: name · role · contact), stored so more can be added later. B shows a Gear/Person card's fields. C docks their editor. A Scene card lists its inputs (E: by name, never a code). |
 
 **Not changing:** the top bars, the palette, the colours of the joint types, the node model, ops, routes,
 `arePortsCompatible`, the In/Out doors. The visual language stays as it is (square, mono labels, the same colours). Only
@@ -28,4 +28,4 @@ size, placement and what the card shows change.
    Before and after screenshots with the measured coverage of A and the row text width of D.
 3. Browser runs under the shared lock, only below 85 °C, never with SwiftShader.
 
-Order: E (smallest) → A → B → D → C. F after the owner confirms the Gear and Person fields.
+Order: E → A → F (Gear + Person nodes, doors on the stage Scenes) → B (cards show content, Gear/Person included) → D → C. Then the NOPA project is rebuilt with it: each gear item and person wired into its stage.
