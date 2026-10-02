@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
     clampWindowFrame,
+    getDockedPanelFrame,
+    DOCKED_PANEL_BOTTOM_CLEARANCE,
     getGraphEdgeInsets,
     getWorkspaceTopInset,
     selectMountedPanelNodes,
@@ -597,5 +599,31 @@ describe('placeNewWindowFrame', () => {
         const rect = onScreen(frame, viewport)
         expectInside(rect, desktop)
         expect(overlaps(rect, onScreen(deckCard, viewport))).toBe(false)
+    })
+})
+
+describe('getDockedPanelFrame', () => {
+    // Owner 2026-10-02: an opened List floated at 662 × 563 over the cards
+    // with its last group cut off. It now docks right, full height, pinned.
+    it('docks right at full height on the owner\'s 2560 × 1340 screen', () => {
+        const f = getDockedPanelFrame({ viewportWidth: 2560, viewportHeight: 1340, top: 100 })
+        expect(f.width).toBe(520)
+        expect(f.x + f.width).toBe(2560 - RAW_WINDOW_PADDING)
+        expect(f.y).toBe(100)
+        // Clears the Delete button bottom-right (24px up, ~41px tall).
+        expect(f.y + f.height).toBe(1340 - DOCKED_PANEL_BOTTOM_CLEARANCE)
+        expect(1340 - (f.y + f.height)).toBeGreaterThan(24 + 41)
+        expect(f.pinned).toBe(true)
+    })
+
+    it('is charged to the right edge, so the graph fit dodges it', () => {
+        const f = getDockedPanelFrame({ viewportWidth: 1440, viewportHeight: 900, top: 100 })
+        const insets = getGraphEdgeInsets({ frames: [f], surfaceRect: { left: 0, top: 0, width: 1440, height: 900 } })
+        expect(insets.right).toBe(f.width + RAW_WINDOW_PADDING)
+        expect(insets.left).toBe(0)
+    })
+
+    it('leaves the phone to its own layout', () => {
+        expect(getDockedPanelFrame({ viewportWidth: 390, viewportHeight: 844 })).toBeNull()
     })
 })

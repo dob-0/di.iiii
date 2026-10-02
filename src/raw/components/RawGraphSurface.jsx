@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
-import { CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, cardHeight } from '../utils/cardGeometry.js'
+import { CARD_CONTENT_LINE_HEIGHT, CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, TOP_PICTURE_HEIGHT, cardHeight, cardPortRows, hasCardPicture } from '../utils/cardGeometry.js'
 import { isPictureType, pictureIdOf } from '../../project/tops/vjDeck.js'
 import TopThumbnail from './TopThumbnail.jsx'
 import CardPreview from './cardPreview/CardPreview.jsx'
 import { hasCardPreview } from './cardPreview/previewTypes.js'
 import {
     arePortsCompatible,
+    getNodeCardLines,
     getNodeCardSummary,
     getNodeFamily,
     getNodeInputs,
@@ -40,9 +41,23 @@ const PORT_GRAB_RADIUS_PX = 28
 // nobody can act on is worse than a working view of part of the graph. Below
 // the floor we fit a legible neighbourhood instead and say so.
 const FIT_MIN_USEFUL_ZOOM = 0.34
+// The floor for the re-fit that runs when a docked window changes the free
+// band (a List opening on the right). Measured 2026-10-02 at 1200 × 760: the
+// plain floor let eight cards shrink to 50 % (6–9 px text) beside the docked
+// List. A re-fit the person did not ask for must keep the cards readable; below
+// this it frames the selected card's neighbourhood instead and says how much
+// it shows, the fallback fitGraph already has.
+const DOCK_REFIT_MIN_ZOOM = 0.8
 // Framing ONE node is allowed to magnify, unlike fit-all which caps at 1.
 const FRAME_TARGET_ZOOM = 1
 const FRAME_MAX_ZOOM = 1.6
+// How far fit-all may MAGNIFY a small graph. It used to cap at 1 ("never
+// magnifies"), which on a 2560-wide screen left six cards covering ~9 % of the
+// canvas (owner 2026-10-02: "bad use of the space"). Up to 2 the cards are
+// still cards — text bigger, nothing re-laid out — and a big graph is
+// unaffected, because the fit is the smaller of this and what fits. 1.5 was
+// tried first and still left ~31 % coverage at 2560 × 1340 (measured).
+const FIT_MAX_ZOOM = 2
 
 // Semantic zoom. Below each threshold the card renders less, so that what is
 // left stays legible instead of everything shrinking into an unreadable smear.
@@ -89,6 +104,34 @@ const DOOR_HALO_MIN_ZOOM = 0.44
 const DOOR_WIDTH_PX = 34
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
+
+// A List's rows under their group headings, or a Text's first lines, drawn in
+// the card under its ports. One clipped line per entry at a fixed line height,
+// so the height cardContentHeight reserved is exactly what is drawn.
+function CardContentLines({ content, top }) {
+    return (
+        <ul className="raw-graph-node-content" style={{ top }}>
+            {content.lines.map((line, i) => (
+                <li
+                    key={i}
+                    className={`raw-graph-node-content-line is-${line.kind}`}
+                    style={{ height: CARD_CONTENT_LINE_HEIGHT, lineHeight: `${CARD_CONTENT_LINE_HEIGHT}px` }}
+                    title={line.text}
+                >
+                    {line.text}
+                </li>
+            ))}
+            {content.more > 0 ? (
+                <li
+                    className="raw-graph-node-content-line is-more"
+                    style={{ height: CARD_CONTENT_LINE_HEIGHT, lineHeight: `${CARD_CONTENT_LINE_HEIGHT}px` }}
+                >
+                    + {content.more} more
+                </li>
+            ) : null}
+        </ul>
+    )
+}
 
 // The card box itself (CARD_WIDTH, cardHeight) lives in cardGeometry.js: the
 // editor places a panel node's window against it and must not guess.
@@ -345,6 +388,11 @@ export default function RawGraphSurface({
         return {
             width: rect.width,
             height: rect.height,
+            // The free band's edges — what is not under a docked window.
+            freeLeft: dockLeft,
+            freeRight: rect.width - dockRight,
+            freeTop: dockTop,
+            freeBottom: rect.height - bottom,
             usableWidth: Math.max(1, rect.width - dockLeft - dockRight - GRAPH_FIT_PADDING_PX * 2),
             usableHeight: Math.max(1, rect.height - dockTop - bottom - GRAPH_FIT_PADDING_PX * 2),
             centerX: dockLeft + (rect.width - dockLeft - dockRight) / 2,
@@ -430,20 +478,21 @@ export default function RawGraphSurface({
     }
 
     /**
-     * Fit the graph. Caps at zoom 1 (never magnifies) — but refuses to drop
-     * below FIT_MIN_USEFUL_ZOOM, because an overview too small to act on is
+     * Fit the graph. Magnifies no further than FIT_MAX_ZOOM — and refuses to drop
+     * below `minZoom` (FIT_MIN_USEFUL_ZOOM unless the caller asks for more, as the
+     * docked-window re-fit does), because an overview too small to act on is
      * worse than a working view of part of the graph. Below the floor it fits a
      * legible neighbourhood and says how much it is showing.
      *
      * `force` runs the true overview anyway, at whatever zoom that takes.
      */
-    const fitGraph = ({ force = false } = {}) => {
+    const fitGraph = ({ force = false, minZoom = FIT_MIN_USEFUL_ZOOM } = {}) => {
         if (!cardsInView.length) return
         const all = withExtraBounds(boundsOf(cardsInView))
-        const overviewZoom = zoomToFitBounds(all, { maxZoom: 1 })
+        const overviewZoom = zoomToFitBounds(all, { maxZoom: FIT_MAX_ZOOM })
         if (overviewZoom === null) return
 
-        if (force || overviewZoom >= FIT_MIN_USEFUL_ZOOM) {
+        if (force || overviewZoom >= minZoom) {
             applyFitTo(all, overviewZoom)
             setFitNotice(null)
             return
@@ -472,7 +521,7 @@ export default function RawGraphSurface({
             minY: (anchor.minY + anchor.maxY) / 2,
             maxY: (anchor.minY + anchor.maxY) / 2
         }
-        applyFitTo(centre, FIT_MIN_USEFUL_ZOOM)
+        applyFitTo(centre, minZoom)
         clampPanToContent(all)
 
         // Report honestly: how many cards actually landed on screen.
@@ -484,7 +533,9 @@ export default function RawGraphSurface({
                 const y = (node.graphY ?? 0) * vp.zoom + vp.panY
                 const w = CARD_WIDTH * vp.zoom
                 const h = cardHeight(node, portScopeNodes) * vp.zoom
-                return x + w > 0 && x < box.width && y + h > 0 && y < box.height - Math.max(0, bottomInset)
+                // Count only cards in the free band: a card under a docked
+                // window is not "shown" (it said 8 of 8 with two behind the List).
+                return x + w > box.freeLeft && x < box.freeRight && y + h > box.freeTop && y < box.freeBottom
             }).length
             : 0
         setFitNotice({ shown, total: cardsInView.length })
@@ -543,7 +594,7 @@ export default function RawGraphSurface({
             && Math.abs(settled.panY - now.panY) < 0.5
             && Math.abs(settled.zoom - now.zoom) < 0.001
         lastFitInsetsRef.current = insetKey
-        if (untouched) fitGraph()
+        if (untouched) fitGraph({ minZoom: DOCK_REFIT_MIN_ZOOM })
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [insetKey])
 
@@ -1473,8 +1524,18 @@ export default function RawGraphSurface({
                                         pure empty box — see getNodeCardSummary. One line, and
                                         only where there is genuinely nothing else to draw, so
                                         it can never collide with a port row. */}
-                                    {showPorts && !inputs.length && !outputs.length && getNodeCardSummary(node) ? (
+                                    {showPorts && !inputs.length && !outputs.length && getNodeCardSummary(node) && !getNodeCardLines(node) ? (
                                         <span className="raw-graph-node-summary">{getNodeCardSummary(node)}</span>
+                                    ) : null}
+                                    {/* What the card holds — a List's rows under their
+                                        groups, a Text's first lines. Below the ports and any
+                                        picture, inside the height cardHeight already gave it. */}
+                                    {showPorts && getNodeCardLines(node) ? (
+                                        <CardContentLines
+                                            content={getNodeCardLines(node)}
+                                            top={cardPortRows(node, portScopeNodes) * PORT_ROW_HEIGHT
+                                                + (hasCardPicture(node.typeId) ? TOP_PICTURE_HEIGHT + 4 : 0)}
+                                        />
                                     ) : null}
                                     {showPorts && isPictureType(node.typeId) ? (
                                         <TopThumbnail
