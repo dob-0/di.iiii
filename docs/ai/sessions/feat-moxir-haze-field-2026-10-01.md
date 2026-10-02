@@ -47,3 +47,9 @@
 - Same measure (Playwright rAF count over 3 s, 1440×900, RTX 5060, GPU otherwise idle): emily-d6's :5184 (plain path) 120 fps with all 70 lights; mine 39–45 at notch 5. Off one at a time: reflections ±0, beams ±0, shadows +10 %, real lights off → 62 at notch 0, MSAA off → 109–120 at notch 0.
 - HdrBloom: samples 4 → 0, SMAAPass after OutputPass. Every view now 120 fps (the cap) at FULL quality: bloom on, 12 samples. A light pool was proposed to emily-d6 and then dropped: every lamp stays a real light.
 - Still open: a dotted dome on the crane girder over the press and a dotted strip on the press at full quality (not shadows, not sample count; the next isolation).
+
+## 2026-10-02 — the dotted dome on the crane
+
+- Owner: "fix the dome". The dotted half-disc on the crane bridge (Crane view) and the dotted strip on the press are SmartView's occlusion fade (a Bayer-4 screen-door discard where the building stands between the camera and its target), not the renderer. Ruled out one by one: shadows (renderer shadow map off), the 4 bridge PARs and all spot lights, beams and reflections (material.visible off: their own frame code re-shows meshes), post (glow, auto exposure, SMAA), dithering flags, z-fighting (polygon offset), textures (none), half-float overflow (FloatType target). It vanished only under a scene override material; the hall materials carry userData.svPatched.
+- Handed to emily-d6 (SmartView is its area): no fade at authored presets, and a clean cut-out instead of a stipple when it does run.
+- A dev-only harness hook stays in HdrBloom (window.__diRoom).

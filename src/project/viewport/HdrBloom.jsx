@@ -35,6 +35,11 @@ export const BLOOM_MAX_DPR = 1.5
 export default function HdrBloom({ renderSettings }) {
     const { gl, scene, size, viewport } = useThree()
     const bloom = bloomOf(renderSettings)
+    // DEV ONLY, for a harness: window.__diRoom = { scene, gl, camera, passes, debug }. A probe
+    // can hide things, swap materials or set debug.noGlow / debug.noExposure (the frame loop
+    // honours them) to isolate an artefact. How the 2026-10-02 "dotted dome" was traced to
+    // SmartView's occlusion fade after shadows, lights, beams and post were each ruled out.
+    if (import.meta.env.DEV && typeof window !== 'undefined') window.__diRoom = { scene, gl }
     const passes = useMemo(() => {
         // half float: values above 1 survive to the bloom and the tone mapping; and a
         // stencil: the floor marks where it is the visible surface, for the reflections
@@ -87,12 +92,14 @@ export default function HdrBloom({ renderSettings }) {
         // high dynamic range — only the glow is skipped, and the veil stands in. Leaving the
         // HDR path here tone-mapped each beam on its own (overlaps clipped white), put the
         // fog after the exposure, and recompiled every lit material mid-measurement.
-        const glow = isBloomAllowed(gl)
+        const dbg = (import.meta.env.DEV && window.__diRoom?.debug) || {}
+        const glow = isBloomAllowed(gl) && !dbg.noGlow
         passes.glow.enabled = glow
         setBloomActive(gl, glow)
         passes.render.camera = state.camera
+        if (import.meta.env.DEV && window.__diRoom) Object.assign(window.__diRoom, { camera: state.camera, passes })
         const auto = autoExposureOf(renderSettings)
-        passes.exposure.enabled = Boolean(auto)
+        passes.exposure.enabled = Boolean(auto) && !dbg.noExposure
         if (auto) Object.assign(passes.exposure, auto)
         passes.glow.strength = bloom.strength
         passes.glow.radius = bloom.radius
