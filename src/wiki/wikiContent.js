@@ -637,10 +637,11 @@ export const WIKI_ARTICLES = [
             ] },
             'The headings are yours. Type in one to rename it — every line under it comes along, so nothing is stranded. “+ Add a group” makes another. Removing a heading never removes work: its lines move to the first heading rather than disappearing with it.',
             'Everything saves as you go, undo works on all of it, and anyone who can edit the project can maintain the list — including a collaborator who arrived by invite. If two of you have it open you will see each other working.',
-            'The window is a node like any other: close it, minimize it to a bar, move it, or open it from its graph card.'
+            'The window is a node like any other: close it, minimize it to a bar, move it, or open it from its graph card.',
+            'Its card gives the list out on two joints: Rows (the lines, one per line, heading by heading) and Count. Wire Rows into a Text or a Scene’s Title to show the list somewhere else.'
         ],
         tags: ['list', 'checklist', 'window', 'node', 'raw', 'editing', 'groups', 'todo'],
-        updated: '2026-08-21'
+        updated: '2026-10-02'
     },
     {
         id: 'free-spaces',
@@ -1278,6 +1279,23 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['raw', 'constructor', 'geometry', 'shape', 'merge', 'nodes', 'container', 'doorways', 'build', 'graph'],
         updated: '2026-08-19'
+    },
+    {
+        id: 'scene-objects-and-picture',
+        category: 'Editing',
+        title: 'Wiring into a Scene, and a Scene as a picture',
+        summary: 'A Scene takes Objects in by wire and gives its Picture out. Text and List give what they say, so they can feed a Scene, a Plane or another Text.',
+        body: [
+            'A Scene is still a place you can go into (›) and fill by hand. It can now also be fed from outside, the way TouchDesigner’s Render takes geometry in and gives an image out.',
+            { list: [
+                'Objects: wire any shape (a Cube, a Sphere, a Transform, a Merge) into the Scene’s Objects joint and it stands on the Scene’s stage. For several, chain them through Merge first: one joint takes one wire.',
+                'Picture: the Scene’s Picture joint gives what its window shows, as a picture. Wire it into an Image, a picture operator or a Plane’s Texture. It is the same kind of picture a webcam gives, so anything that takes a webcam takes a Scene.',
+                'Text gives what it says on its Text joint. List gives its lines on Rows (one per line, heading by heading, empty lines left out) and how many there are on Count. Wire a Text into a Scene’s Title and the Scene is named by the note.'
+            ] },
+            'Limits, stated plainly: the Picture is there only while the Scene’s own window is open in the editor; a closed window draws nothing, so it gives nothing. The /out page and Studio do not give a Scene’s Picture yet. The picture is the size of the window.'
+        ],
+        tags: ['raw', 'scene', 'objects', 'picture', 'texture', 'render', 'text', 'list', 'wire', 'nodes', 'merge'],
+        updated: '2026-10-02'
     },
     {
         id: 'raw-windows-travel-with-the-canvas',
