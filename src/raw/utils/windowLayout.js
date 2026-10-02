@@ -500,3 +500,26 @@ export function placeNewWindowFrame({
         height: inWorld ? Math.round(placed.height / scale) : placed.height
     }
 }
+
+// Where a List or Text window opens on a desktop: docked on the right, full
+// height, pinned to the screen. Owner 2026-10-02: an opened List was a
+// 662 × 563 window floating over the cards with its last group cut off.
+// Pinned windows are what getGraphEdgeInsets dodges, so the cards re-fit into
+// the band left of it and stay visible. Null on a narrow viewport — there the
+// existing full-screen clamp IS the layout.
+export const DOCKED_PANEL_TYPES = ['view.list', 'view.text']
+export const DOCKED_PANEL_MIN_WIDTH = 380
+export const DOCKED_PANEL_MAX_WIDTH = 520
+// The red Delete button (.raw-delete-fab, z-index 1300) sits bottom-right,
+// 24px up and ~41px tall, whenever a node is selected — and opening a List
+// selects it. MEASURED at 1440 × 900: a window ending at the wide 40px reserve
+// ran 15px under it. Clear it, with a gap.
+export const DOCKED_PANEL_BOTTOM_CLEARANCE = 76
+export function getDockedPanelFrame({ viewportWidth, viewportHeight, top = DEFAULT_RAW_WORKSPACE_TOP } = {}) {
+    if (!Number.isFinite(viewportWidth) || !Number.isFinite(viewportHeight)) return null
+    if (viewportWidth < RAW_NARROW_VIEWPORT) return null
+    const width = clamp(Math.round(viewportWidth * 0.3), DOCKED_PANEL_MIN_WIDTH, DOCKED_PANEL_MAX_WIDTH)
+    const y = Math.max(0, top)
+    const height = Math.max(RAW_WINDOW_MIN_HEIGHT, viewportHeight - y - Math.max(DOCKED_PANEL_BOTTOM_CLEARANCE, getBottomReserve(viewportWidth)))
+    return { x: viewportWidth - width - RAW_WINDOW_PADDING, y, width, height, pinned: true, minimized: false, visible: true }
+}

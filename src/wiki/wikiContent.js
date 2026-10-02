@@ -629,18 +629,18 @@ export const WIKI_ARTICLES = [
         body: [
             'A List window holds a list with headings: what a project needs, what it would be nice to have, what is already done. It is the alternative to keeping a list as written text, where moving one line from one heading to another means retyping two paragraphs and hoping nothing was lost on the way.',
             { list: [
-                'Type in a line to change it.',
-                'The arrows move a line up or down inside its own heading.',
-                'The dropdown beside a line moves it to a different heading.',
-                '× removes a line.',
+                'Type in a line to change it. A long line wraps instead of being cut off.',
+                '⋯ beside a line opens what you can do with it: move it up or down inside its own heading, move it to a different heading, or remove it (×).',
+                'Alt+↑ and Alt+↓ move the line you are typing in without opening ⋯.',
                 '+ Add puts a new line under the heading you pressed it on.'
             ] },
             'The headings are yours. Type in one to rename it — every line under it comes along, so nothing is stranded. “+ Add a group” makes another. Removing a heading never removes work: its lines move to the first heading rather than disappearing with it.',
             'Everything saves as you go, undo works on all of it, and anyone who can edit the project can maintain the list — including a collaborator who arrived by invite. If two of you have it open you will see each other working.',
-            'The window is a node like any other: close it, minimize it to a bar, move it, or open it from its graph card.',
+            'The window is a node like any other: close it, minimize it to a bar, move it, or open it from its graph card. On a computer it opens docked on the right at full height, so the whole list is readable and the cards stay in view beside it; on a phone it opens over the canvas.',
+            'You do not have to open it to read it: the List’s card on the canvas shows its lines under their headings, and a Text card shows its first lines. A long list ends in “+ N more”.',
             'Its card gives the list out on two joints: Rows (the lines, one per line, heading by heading) and Count. Wire Rows into a Text or a Scene’s Title to show the list somewhere else.'
         ],
-        tags: ['list', 'checklist', 'window', 'node', 'raw', 'editing', 'groups', 'todo'],
+        tags: ['list', 'checklist', 'window', 'node', 'raw', 'editing', 'groups', 'todo', 'card', 'docked'],
         updated: '2026-10-02'
     },
     {

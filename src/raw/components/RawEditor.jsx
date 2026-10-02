@@ -84,7 +84,7 @@ import { buildObjectCards, buildScopeItems, thingBandBounds } from '../utils/obj
 import { DEFAULT_PROJECT_SPACE_ID, createProject, updateProjectDocument, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
-import { RAW_ANATOMY_Z, RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getAnatomyDefaultFrame, getBottomReserve, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
+import { DOCKED_PANEL_TYPES, RAW_ANATOMY_Z, RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getAnatomyDefaultFrame, getBottomReserve, getDockedPanelFrame, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import { CARD_WIDTH, cardHeight, getCardBox } from '../utils/cardGeometry.js'
 import { settleCardStacks } from '../utils/cardStacks.js'
 import { placeNewCard } from '../utils/cardPlacement.js'
@@ -712,7 +712,16 @@ export default function RawEditor({
         // node's graph card now reopens its window instead of entering an
         // empty scope.
         if (getNodeRender(node) === 'panel-2d' && frameOf(node).visible === false) {
-            setLocalFrame(nodeId, { visible: true })
+            // A List or Text opens docked on the right at full height, so the
+            // whole list is readable and the cards stay in view beside it.
+            const docked = DOCKED_PANEL_TYPES.includes(node.typeId) && typeof window !== 'undefined'
+                ? getDockedPanelFrame({
+                    viewportWidth: window.innerWidth,
+                    viewportHeight: window.innerHeight,
+                    top: (chromeVisible ? workspaceTop : 0) + RAW_WINDOW_PADDING
+                })
+                : null
+            setLocalFrame(nodeId, docked || { visible: true })
             return
         }
         if (node.typeId === 'universe.world') setIsWorldFullscreen(true)
@@ -722,7 +731,7 @@ export default function RawEditor({
         // travelling in the shared workspace state at all.
         if (workspaceState.selectedNodeId || selectedEntity) clearSelection()
         scopeEnterNode(nodeId)
-    }, [authoredNodes, scopeEnterNode, frameOf, setLocalFrame, workspaceState.selectedNodeId, selectedEntity, clearSelection])
+    }, [authoredNodes, scopeEnterNode, frameOf, setLocalFrame, workspaceState.selectedNodeId, selectedEntity, clearSelection, chromeVisible, workspaceTop])
 
     const handleNavigateToScope = useCallback((targetIndex) => {
         // Fullscreen SURVIVES scope navigation now: walking through a door
@@ -2789,7 +2798,7 @@ export default function RawEditor({
                             key={node.id}
                             windowState={windowState}
                             title={windowState.title}
-                            kicker={family?.label || node.typeId}
+                            kicker={family?.label || getNodeType(node.typeId)?.label || 'Node'}
                             accent={family?.color || null}
                             allowOverflowLeft
                             allowOverflowTop

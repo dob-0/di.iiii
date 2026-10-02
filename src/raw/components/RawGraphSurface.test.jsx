@@ -231,12 +231,24 @@ describe('RawGraphSurface', () => {
         expect(zoom).toBeLessThanOrEqual(1)
     })
 
-    it('never magnifies a graph that already fits', () => {
-        const small = [makeNode('value.number', { id: 'a', graphX: 0, graphY: 0 })]
-        const { container } = render(<RawGraphSurface nodes={small} edges={[]} />)
-        const stage = container.querySelector('.raw-graph-stage')
-        const zoom = Number(/scale\(([-\d.]+)\)/.exec(stage.style.transform)[1])
-        expect(zoom).toBeLessThanOrEqual(1)
+    // Owner 2026-10-02: six cards covered ~9 % of a 2560-wide canvas because
+    // the fit never magnified. It may now, up to 2 — and no further.
+    it('magnifies a small graph on a big screen, but no further than 2', () => {
+        const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+            x: 0, y: 0, left: 0, top: 0, right: 2560, bottom: 1250, width: 2560, height: 1250, toJSON: () => ({})
+        })
+        try {
+            const small = [
+                makeNode('value.number', { id: 'a', graphX: 0, graphY: 0 }),
+                makeNode('value.number', { id: 'b', graphX: 300, graphY: 0 })
+            ]
+            const { container } = render(<RawGraphSurface nodes={small} edges={[]} />)
+            const stage = container.querySelector('.raw-graph-stage')
+            const zoom = Number(/scale\(([-\d.]+)\)/.exec(stage.style.transform)[1])
+            expect(zoom).toBeCloseTo(2, 5)
+        } finally {
+            rect.mockRestore()
+        }
     })
 
     it('supports zooming in and out with graph controls', () => {
