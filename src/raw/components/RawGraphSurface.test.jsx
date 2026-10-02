@@ -1039,3 +1039,21 @@ describe('the door at low zoom', () => {
         expect(container.querySelector('.raw-graph-node-door-anchor.is-tucked')).toBeNull()
     })
 })
+
+describe('one value, one name on a card row', () => {
+    it('a Text card says Content once, with a joint on each side', () => {
+        const text = makeNode('view.text', { id: 't1' })
+        const { container } = render(<RawGraphSurface nodes={[text]} edges={[]} initialZoom={1} />)
+        const labels = [...container.querySelectorAll('.raw-graph-port-label')].map((el) => el.textContent)
+        expect(labels.filter((l) => l === 'Content')).toHaveLength(1)
+        expect(container.querySelectorAll('.raw-graph-port-dot--out')).toHaveLength(1)
+        expect(container.querySelectorAll('.raw-graph-port-dot--in')).toHaveLength(1)
+    })
+
+    it('different names on one row both show', () => {
+        const merge = makeNode('shape.merge', { id: 'm1' })
+        const { container } = render(<RawGraphSurface nodes={[merge]} edges={[]} initialZoom={1} />)
+        const labels = [...container.querySelectorAll('.raw-graph-port-label')].map((el) => el.textContent)
+        expect(labels).toEqual(expect.arrayContaining(['A', 'B', 'Out']))
+    })
+})

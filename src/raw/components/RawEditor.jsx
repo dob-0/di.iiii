@@ -1029,7 +1029,11 @@ export default function RawEditor({
         ? { values: { ...(scopedSelectedNode.values || {}) } }
         : (scopedSelectedEntity ? scopedSelectedEntity.components : { worldState: document.worldState })
     const inspectorTitle = scopedSelectedNode ? scopedSelectedNode.label : (scopedSelectedEntity ? scopedSelectedEntity.name : 'World')
-    const inspectorSubtitle = scopedSelectedNode ? scopedSelectedNode.typeId : (scopedSelectedEntity ? scopedSelectedEntity.type : 'Scene defaults')
+    // The type's NAME ("Text"), never its id ("view.text") — docs/ai/vocabulary.md:
+    // no identifiers on screen. The owner saw the id under a Text's name (2026-10-02).
+    const inspectorSubtitle = scopedSelectedNode
+        ? (getNodeType(scopedSelectedNode.typeId)?.label || 'Node')
+        : (scopedSelectedEntity ? scopedSelectedEntity.type : 'Scene defaults')
 
     // Entering the fullscreen room with a node selected kept the inspector
     // sheet over 38% of it — with an armed Delete floating over the stage

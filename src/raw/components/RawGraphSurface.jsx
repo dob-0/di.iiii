@@ -1640,7 +1640,12 @@ export default function RawGraphSurface({
                                             className="raw-graph-port-row raw-graph-port-row--out"
                                             style={{ top: idx * PORT_ROW_HEIGHT }}
                                         >
-                                            {showPortLabels ? (
+                                            {/* One value, one name: when the input on this row has the
+                                                same name (a Text's Content in and out, a Scene's Title and
+                                                Sky), the card says it once — "Content … Content" read as two
+                                                parameters (owner, 2026-10-02). The dot stays; the hover
+                                                title still names it. */}
+                                            {showPortLabels && (port.label || port.id) !== (inputs[idx]?.label || inputs[idx]?.id) ? (
                                                 <span className="raw-graph-port-label">{port.label || port.id}</span>
                                             ) : null}
                                             <span
