@@ -818,3 +818,20 @@ describe('view.list — rows and count, in reading order', () => {
         expect(evalPort(doc, 'l', 'count')).toBe(0)
     })
 })
+
+describe('universe.world Picture — the Scene, seen', () => {
+    it('carries what the live window published, and null where nothing draws it', () => {
+        const world = node('w', 'universe.world')
+        const picture = { isTexture: true }
+        const drawn = createNodeGraphContext({ nodes: [world], edges: [] }, { liveOutputs: new Map([['w:picture', picture]]) })
+        expect(evaluateNodeOutput(world, 'picture', drawn)).toBe(picture)
+        expect(evalPort({ nodes: [world], edges: [] }, 'w', 'picture')).toBeNull()
+    })
+
+    it('a Picture wire into an Image is a legal texture → texture wire', () => {
+        const out = getNodeType('universe.world').outputs.find((port) => port.id === 'picture')
+        const into = getNodeType('view.image').inputs.find((port) => port.id === 'src')
+        expect(out.type).toBe('texture')
+        expect(into.type).toBe(out.type)
+    })
+})

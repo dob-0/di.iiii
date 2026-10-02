@@ -360,6 +360,9 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
             if (portId === 'title' || portId === 'bgColor') {
                 return evaluateNodeInput(node, portId, context, nextStack)
             }
+            // What the live Scene's window draws (ScenePictureFeed.jsx) — the
+            // webcam idiom: null where no window draws it.
+            if (portId === 'picture') return context?.liveOutputs?.get(`${node.id}:picture`) ?? null
             break
         case 'universe.desk.3d':
             if (portId === 'position' || portId === 'rotation' || portId === 'scale') {
