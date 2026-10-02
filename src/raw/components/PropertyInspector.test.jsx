@@ -265,3 +265,30 @@ describe('a Send Out\'s sheet (a picture leaving the machine as an NDI® source)
         expect(container.querySelector('.raw-property-note')).toBeNull()
     })
 })
+
+// NOPA audit F11 (2026-10-02): selecting a List (no inspector sections) drew
+// a 2px teal stripe under the toolbar. The empty message reused the CANVAS's
+// empty-state class — absolutely positioned — so the selection sheet had no
+// in-flow content and collapsed to its two borders. A selection with nothing
+// to set still says what it is, in flow.
+describe('PropertyInspector with a selection that has no sections', () => {
+    it('keeps the header and an in-flow note, never the canvas empty-state', () => {
+        const { container } = render(
+            <PropertyInspector
+                title="Gear"
+                subtitle="view.list"
+                sections={[]}
+                showHeaderWhenEmpty
+                emptyMessage="Nothing to set here."
+            />
+        )
+        expect(container.querySelector('.raw-empty-state')).toBeNull()
+        expect(container.querySelector('.raw-property-sheet-header').textContent).toContain('Gear')
+        expect(screen.getByText('Nothing to set here.').className).toBe('raw-property-empty')
+    })
+
+    it('without a selection (the Inspector window) keeps its centred empty state', () => {
+        const { container } = render(<PropertyInspector title="World" sections={[]} emptyMessage="Select a node to inspect it." />)
+        expect(container.querySelector('.raw-empty-state').textContent).toBe('Select a node to inspect it.')
+    })
+})

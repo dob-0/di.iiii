@@ -221,6 +221,9 @@ export default function RawGraphSurface({
     const hasFitRef = useRef(false)
     const lastFitViewportRef = useRef(null)
     const lastFitInsetsRef = useRef(null)
+    // The visible box at the last fit or resize, so a resize knows what it was
+    // before and which graph point sat in the middle of it.
+    const lastBoxRef = useRef(null)
     const [panX, setPanX] = useState(60)
     const [panY, setPanY] = useState(60)
     const [zoom, setZoom] = useState(initialZoom ?? 1)
@@ -363,6 +366,32 @@ export default function RawGraphSurface({
         // Remembered so a later change in docked windows can tell whether the
         // person has moved the view since — see the re-fit effect below.
         lastFitViewportRef.current = { ...viewportRef.current }
+        lastBoxRef.current = box
+    }
+
+    // Has the view stayed exactly where the last fit left it? Then nobody has
+    // panned or zoomed since, and re-fitting moves nothing a person chose.
+    const isViewAtLastFit = () => {
+        const settled = lastFitViewportRef.current
+        const now = viewportRef.current
+        return Boolean(settled)
+            && Math.abs(settled.panX - now.panX) < 0.5
+            && Math.abs(settled.panY - now.panY) < 0.5
+            && Math.abs(settled.zoom - now.zoom) < 0.001
+    }
+
+    // How many cards touch the visible part of the canvas right now.
+    const countCardsOnScreen = () => {
+        const box = visibleBox()
+        if (!box) return 0
+        const vp = viewportRef.current
+        return cardsInView.filter((node) => {
+            const x = (node.graphX ?? 0) * vp.zoom + vp.panX
+            const y = (node.graphY ?? 0) * vp.zoom + vp.panY
+            const w = CARD_WIDTH * vp.zoom
+            const h = cardHeight(node, portScopeNodes) * vp.zoom
+            return x + w > 0 && x < box.width && y + h > 0 && y < box.height - Math.max(0, bottomInset)
+        }).length
     }
 
     const zoomToFitBounds = (bounds, { maxZoom = 1 } = {}) => {
@@ -474,20 +503,13 @@ export default function RawGraphSurface({
         }
         applyFitTo(centre, FIT_MIN_USEFUL_ZOOM)
         clampPanToContent(all)
+        // The clamp is part of this fit, not a person's pan: without this a
+        // window resize took the clamped view for a hand-moved one and never
+        // re-fitted it.
+        lastFitViewportRef.current = { ...viewportRef.current }
 
         // Report honestly: how many cards actually landed on screen.
-        const box = visibleBox()
-        const vp = viewportRef.current
-        const shown = box
-            ? cardsInView.filter((node) => {
-                const x = (node.graphX ?? 0) * vp.zoom + vp.panX
-                const y = (node.graphY ?? 0) * vp.zoom + vp.panY
-                const w = CARD_WIDTH * vp.zoom
-                const h = cardHeight(node, portScopeNodes) * vp.zoom
-                return x + w > 0 && x < box.width && y + h > 0 && y < box.height - Math.max(0, bottomInset)
-            }).length
-            : 0
-        setFitNotice({ shown, total: cardsInView.length })
+        setFitNotice({ shown: countCardsOnScreen(), total: cardsInView.length })
     }
 
     // Zoom to the selected node. Unlike fit-all this is ALLOWED to magnify —
@@ -536,12 +558,7 @@ export default function RawGraphSurface({
         if (initialZoom !== null) return
         if (hasFitRef.current !== scopeKey) return
         if (lastFitInsetsRef.current === insetKey) return
-        const settled = lastFitViewportRef.current
-        const now = viewportRef.current
-        const untouched = settled
-            && Math.abs(settled.panX - now.panX) < 0.5
-            && Math.abs(settled.panY - now.panY) < 0.5
-            && Math.abs(settled.zoom - now.zoom) < 0.001
+        const untouched = isViewAtLastFit()
         lastFitInsetsRef.current = insetKey
         if (untouched) fitGraph()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -560,6 +577,69 @@ export default function RawGraphSurface({
         lastFitInsetsRef.current = insetKey
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fitSignal])
+
+    // A window that changes size keeps its cards (NOPA audit F1, 2026-10-02:
+    // 2560 -> 1200 left 2 of 8 cards on screen). Untouched since the last fit,
+    // the view fits again — it was a fit, and the fit is what the person saw.
+    // Moved by hand, it keeps the zoom and keeps the same graph point in the
+    // middle of the canvas (the way a map app keeps its centre on a window
+    // resize), and only if that leaves no card at all on screen does it fit.
+    // It also catches the first fit that never ran because the canvas had no
+    // size when the cards arrived (F2).
+    const handleResize = () => {
+        if (initialZoom !== null) return
+        const box = visibleBox()
+        if (!box) return
+        const prev = lastBoxRef.current
+        lastBoxRef.current = box
+        if (!cardsInView.length) return
+        if (hasFitRef.current !== scopeKey) {
+            fitGraph()
+            hasFitRef.current = scopeKey
+            lastFitInsetsRef.current = insetKey
+            return
+        }
+        if (!prev || (Math.abs(prev.width - box.width) < 0.5 && Math.abs(prev.height - box.height) < 0.5)) return
+        if (isViewAtLastFit()) {
+            fitGraph()
+            return
+        }
+        const vp = viewportRef.current
+        const graphCentreX = (prev.centerX - vp.panX) / vp.zoom
+        const graphCentreY = (prev.centerY - vp.panY) / vp.zoom
+        applyViewport(box.centerX - graphCentreX * vp.zoom, box.centerY - graphCentreY * vp.zoom, vp.zoom)
+        if (countCardsOnScreen() === 0) fitGraph()
+    }
+    const resizeHandlerRef = useRef(handleResize)
+    useEffect(() => { resizeHandlerRef.current = handleResize })
+    useEffect(() => {
+        const run = () => resizeHandlerRef.current()
+        window.addEventListener('resize', run)
+        // The canvas also changes size without the window doing so (the bar
+        // above it folds, a sync alert pushes it down).
+        let observer = null
+        if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
+            observer = new ResizeObserver(run)
+            observer.observe(containerRef.current)
+        }
+        return () => {
+            window.removeEventListener('resize', run)
+            observer?.disconnect?.()
+        }
+    }, [])
+
+    // Cards that land after the first fit (a document arriving in parts) can
+    // all sit outside a view nobody has touched yet; then show them (F2). Only
+    // when NONE is on screen and the view is still the fit's own — adding a
+    // card is never a reason to move the canvas under a person.
+    useEffect(() => {
+        if (initialZoom !== null) return
+        if (hasFitRef.current !== scopeKey || !cardsInView.length) return
+        if (!isViewAtLastFit()) return
+        if (countCardsOnScreen() > 0) return
+        fitGraph()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cardsInView])
 
     // The fit notice is transient — it reports on one fit, not a state.
     useEffect(() => {
@@ -1233,7 +1313,13 @@ export default function RawGraphSurface({
                 <button type="button" aria-label="Zoom out" onClick={() => updateZoom(zoom - GRAPH_ZOOM_STEP)}>-</button>
                 <span className="raw-graph-zoom-value">{Math.round(zoom * 100)}%</span>
                 <button type="button" aria-label="Zoom in" onClick={() => updateZoom(zoom + GRAPH_ZOOM_STEP)}>+</button>
-                <button type="button" aria-label="Fit graph" title="Fit the graph" onClick={() => fitGraph()}>⤢</button>
+                {/* The button is a request to see EVERYTHING, so it fits all
+                    the cards at whatever zoom that takes (Figma's Shift+1 and
+                    TouchDesigner's Home do the same). The legible floor stays
+                    for the fits nobody asked for — opening, resizing — which
+                    say "showing N of M" instead. On a phone the floor left
+                    cards off the edge and the button did nothing (NOPA F3). */}
+                <button type="button" aria-label="Fit graph" title="Fit the whole graph" onClick={() => fitGraph({ force: true })}>⤢</button>
                 {selectedNodeId ? (
                     <button type="button" aria-label="Frame selection" title="Frame the selected node" onClick={frameSelection}>◎</button>
                 ) : null}
