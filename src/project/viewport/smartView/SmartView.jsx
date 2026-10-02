@@ -61,6 +61,14 @@ const XRAY_OPACITY = 0.07
 const CUT_AT = 0.55
 const CUT_BAND = 0.1
 const CIRCLE_FRACTION = 0.26
+// Inside: the camera keeps this far short of any building surface along its line to the target, and a hard
+// wheel-out cannot pull it farther from the target than the view it started from (at least INSIDE_MAX_DISTANCE).
+const INSIDE_STANDOFF = 1
+const INSIDE_MAX_DISTANCE = 25
+// …the orbit target stays this much farther in from the walls than the camera (a view into a corner is a wall),
+// and the camera never closer to it than INSIDE_MIN_DISTANCE.
+const INSIDE_TARGET_INSET = 3
+const INSIDE_MIN_DISTANCE = 2
 
 const SV_VERTEX_HEAD = 'varying float vSvDepth;\n'
 const SV_FRAGMENT_HEAD = `
@@ -250,6 +258,7 @@ export default function SmartView({
         flyUntil: 0,
         building: false,
         colliding: false,
+        startDistance: 0,
         edges: new Map(),
         boundaryKey: ''
     })
@@ -620,7 +629,12 @@ export default function SmartView({
             cc.maxDistance = orbitMaxDistance(frame, state.presetDistance)
             // "Inside": the target and the camera both stay in the interior box; otherwise today's limits.
             const lockBox = lockRef.current && !state.lockPaused ? insideBox(frame) : null
-            const b = lockBox || targetBoundary(frame)
+            if (state.atPreset) state.startDistance = toTarget
+            if (lockBox) cc.maxDistance = Math.min(cc.maxDistance, Math.max(INSIDE_MAX_DISTANCE, state.startDistance))
+            if (lockBox) cc.minDistance = INSIDE_MIN_DISTANCE
+            else if (cc.minDistance === INSIDE_MIN_DISTANCE) cc.minDistance = state.baseMinDistance ?? Number.EPSILON
+            if (state.baseMinDistance === undefined && !lockBox) state.baseMinDistance = cc.minDistance
+            const b = lockBox ? { min: [lockBox.min[0] + INSIDE_TARGET_INSET, lockBox.min[1], lockBox.min[2] + INSIDE_TARGET_INSET], max: [lockBox.max[0] - INSIDE_TARGET_INSET, lockBox.max[1] - 0.7, lockBox.max[2] - INSIDE_TARGET_INSET] } : targetBoundary(frame)
             const key = `${b.min.join(',')}|${b.max.join(',')}`
             if (key !== state.boundaryKey && cc.setBoundary) {
                 state.boundaryKey = key
@@ -635,6 +649,22 @@ export default function SmartView({
             if (collide !== state.colliding && 'colliderMeshes' in cc) {
                 state.colliding = collide
                 cc.colliderMeshes = collide ? state.occluders : []
+            }
+            // …and stops INSIDE_STANDOFF short of the surface it would otherwise press against.
+            if (collide && state.occluders.length) {
+                const rc = scratch.raycaster
+                rc.firstHitOnly = true
+                scratch.dir.subVectors(camera.position, target)
+                const dist = scratch.dir.length()
+                if (dist > 0.5) {
+                    rc.set(target, scratch.dir.normalize())
+                    rc.far = dist + INSIDE_STANDOFF
+                    const hit = rc.intersectObjects(state.occluders, false).find((h) => h.distance > 0.5)
+                    if (hit && hit.distance < dist + INSIDE_STANDOFF) {
+                        const want = Math.max(1, hit.distance - INSIDE_STANDOFF)
+                        if (want < dist - 0.01) cc.dollyTo(want, false)
+                    }
+                }
             }
             // The camera is clamped once the visitor has taken it and no preset is in flight.
             if (lockBox && !state.atPreset && performance.now() > state.flyUntil && !boxHolds(camera.position.toArray(), lockBox)) {
