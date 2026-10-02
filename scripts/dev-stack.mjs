@@ -1,5 +1,5 @@
 import { execFileSync, spawn } from 'node:child_process'
-import { readFileSync, statSync } from 'node:fs'
+import { readFileSync, realpathSync, statSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
@@ -8,6 +8,7 @@ import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 
 import {
+    classifyAttach,
     collectDependencyDrift,
     collectMissingSpaces,
     pagesAlreadyHere,
@@ -218,7 +219,14 @@ if (shouldAutoStartLocalServer) {
     const serverReachable = await canReachHealth(healthUrl)
 
     if (serverReachable) {
-        console.log(`[dev-stack] ServerXR already reachable at ${parsedApiBase.apiBaseUrl}`)
+        const health = await fetch(healthUrl, { signal: AbortSignal.timeout(1500) }).then(r => r.json()).catch(() => null)
+        const ours = (() => { try { return realpathSync(serverRoot) } catch { return serverRoot } })()
+        const verdict = classifyAttach(health, ours)
+        if (!verdict.attach) {
+            console.error(`[dev-stack] Refusing to attach: ${verdict.message}`)
+            process.exit(1)
+        }
+        console.log(`[dev-stack] ServerXR already reachable at ${parsedApiBase.apiBaseUrl} (this checkout's own)`)
     } else {
         // Same rule serverXR enforces (serverXR/src/dataRootGuard.js), checked here
         // first so the refusal is one clear message, not a respawning watch loop.

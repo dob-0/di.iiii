@@ -2,7 +2,8 @@
 // Regression guard for the stray-database bug class (known-fixes, 2026-10-02):
 // serverXR in a git checkout must refuse a relative or unset DATA_ROOT.
 
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
+import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
@@ -83,5 +84,54 @@ describe.skipIf(pinned || !fs.existsSync(path.join(repoRoot, '.git')))('the real
         expect(run.status).toBe(1)
         expect(run.stderr).toContain('serverXR refuses to start')
         expect(run.stdout).not.toContain('Starting ServerXR')
+    })
+})
+
+// dev-stack must not attach to a server on its port that is not this checkout's.
+describe.skipIf(!fs.existsSync(path.join(repoRoot, '.git')))('npm run dev and a foreign server on its port', () => {
+    it('refuses to attach, exits 1, starts nothing', async () => {
+        const foreign = http.createServer((req, res) => {
+            res.setHeader('content-type', 'application/json')
+            res.end(JSON.stringify({ ok: true, serverRoot: '/somewhere/else/serverXR', dataRoot: '/somewhere/else/data' }))
+        })
+        await new Promise((r) => foreign.listen(0, '127.0.0.1', r))
+        const { port } = foreign.address()
+        try {
+            const env = { ...bareEnv(), DATA_ROOT: '/tmp/never-used', VITE_API_BASE_URL: `http://127.0.0.1:${port}/serverXR` }
+            const run = await new Promise((resolve) => {
+                const child = spawn(process.execPath, ['scripts/dev-stack.mjs'], { cwd: repoRoot, env })
+                let err = ''; let out = ''
+                child.stderr.on('data', (d) => { err += d }); child.stdout.on('data', (d) => { out += d })
+                const t = setTimeout(() => child.kill('SIGTERM'), 25000)
+                child.on('exit', (status) => { clearTimeout(t); resolve({ status, err, out }) })
+            })
+            expect(run.status).toBe(1)
+            expect(run.err).toContain('Refusing to attach')
+            expect(run.err).toContain('/somewhere/else/serverXR')
+            expect(run.out).not.toContain('Starting front-end')
+        } finally {
+            foreign.close()
+        }
+    }, 40000)
+})
+
+describe('/api/health says whose server it is, to a direct loopback caller only', () => {
+    const { registerStatusRoutes } = require('./routes/statusRoutes.js')
+    const { config } = require('./config.js')
+    const health = (req) => {
+        const routes = {}
+        registerStatusRoutes({ get: (p, h) => { routes[p] = h } }, { recentEvents: [], startedAt: 0, releaseInfo: {} })
+        let body
+        routes['/api/health'](req, { json: (b) => { body = b } })
+        return body
+    }
+    it('names serverRoot and dataRoot on loopback', () => {
+        const b = health({ socket: { remoteAddress: '127.0.0.1' }, headers: {} })
+        expect(b.serverRoot).toBe(config.root)
+        expect(b.dataRoot).toBe(config.dataDir)
+    })
+    it('keeps paths out of a proxied or remote answer', () => {
+        expect(health({ socket: { remoteAddress: '127.0.0.1' }, headers: { 'x-forwarded-for': '1.2.3.4' } }).serverRoot).toBeUndefined()
+        expect(health({ socket: { remoteAddress: '10.0.0.5' }, headers: {} }).serverRoot).toBeUndefined()
     })
 })
