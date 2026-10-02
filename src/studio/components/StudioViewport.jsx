@@ -19,8 +19,10 @@ import EntityLink from '../../project/viewport/EntityLink.jsx'
 import { EntityLinksContext } from '../../project/viewport/entityLinkContext.js'
 import WorldEnvironment from '../../project/viewport/WorldEnvironment.jsx'
 import RenderSettingsEffect from '../../project/viewport/RenderSettingsEffect.jsx'
+import '../../project/viewport/spotLightLoop.js'
 import { arrivalLightsOf } from '../../project/viewport/worldLights.js'
 import ShadowCasting from '../../project/viewport/ShadowCasting.jsx'
+import ShaderWarmup from '../../project/viewport/ShaderWarmup.jsx'
 import { resolveShadowCasting } from '../../project/viewport/shadowCasting.js'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { applyPivotTransform, getSelectionCentroid } from '../utils/multiTransform.js'
@@ -712,6 +714,7 @@ function StudioSceneContent({
         <LiveTimelineContext.Provider value={playTimelines}>
         <EntityLinksContext.Provider value={followLinks}>
             <RenderSettingsEffect renderSettings={document.renderSettings} />
+            <ShaderWarmup />
             <ShadowCasting enabled={shadowCasting.enabled} mapSize={shadowCasting.mapSize} />
             <color attach="background" args={[document.worldState?.backgroundColor || '#0a1118']} />
             {/* Authored fog reached walk mode only. A room composed with
