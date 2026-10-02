@@ -41,3 +41,9 @@
 - Not a bug: standing in a column-base beam whites out the view (you are inside a 380 W beam 1 m from its lens).
 - Open: the speckled beams and the dotted dome on the crane are the IGN sample jitter at the governor's lowest notch (5 samples, DPR 0.75). The room sat at notch 5 at ~23 fps because several Chrome windows were rendering the 70-light room at once (GPU 97 %). Clean fps owed with one window. Also open: the milky grey wash from the crowd in bright looks; the hard horizon line in the Floor view; walk collision with objects (no infrastructure; walkableAreas only).
 - Tool-page and desk bugs went to emily-d6 (moxir-local commits 8b2a4749, d5f90815, 0f79e27f); the hall corrections from the photo + standards audit went to emily-d6 too.
+
+## 2026-10-02 — the frame rate: MSAA on the HDR target was the cost
+
+- Same measure (Playwright rAF count over 3 s, 1440×900, RTX 5060, GPU otherwise idle): emily-d6's :5184 (plain path) 120 fps with all 70 lights; mine 39–45 at notch 5. Off one at a time: reflections ±0, beams ±0, shadows +10 %, real lights off → 62 at notch 0, MSAA off → 109–120 at notch 0.
+- HdrBloom: samples 4 → 0, SMAAPass after OutputPass. Every view now 120 fps (the cap) at FULL quality: bloom on, 12 samples. A light pool was proposed to emily-d6 and then dropped: every lamp stays a real light.
+- Still open: a dotted dome on the crane girder over the press and a dotted strip on the press at full quality (not shadows, not sample count; the next isolation).

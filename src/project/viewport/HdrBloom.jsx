@@ -5,6 +5,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
+import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js'
 import { isBloomAllowed, setBloomActive } from '../../objectComponents/atmosphereStore.js'
 import { bloomOf } from './bloom.js'
 import { AutoExposurePass, autoExposureOf } from './autoExposure.js'
@@ -35,10 +36,14 @@ export default function HdrBloom({ renderSettings }) {
     const { gl, scene, size, viewport } = useThree()
     const bloom = bloomOf(renderSettings)
     const passes = useMemo(() => {
-        // half float: values above 1 survive to the bloom and the tone mapping; 4×
-        // multisampling, what the Canvas's own antialias gives the plain path
-        // and a stencil: the floor marks where it is the visible surface, for the reflections (beamMirror.js)
-        const target = new WebGLRenderTarget(1, 1, { type: HalfFloatType, samples: 4, stencilBuffer: true })
+        // half float: values above 1 survive to the bloom and the tone mapping; and a
+        // stencil: the floor marks where it is the visible surface, for the reflections
+        // (BeamMirrors.jsx). NO multisampling: 4× MSAA on a half-float target, through ANGLE's
+        // Direct3D 11 on PONYO's RTX 5060, cost every lit fragment of the 70-light MOXIR room
+        // about threefold: 39–45 fps at the governor's lowest notch, against 109–120 fps at
+        // full quality without it (same measure, 2026-10-02). The edges are smoothed after
+        // the tone mapping instead (SMAA, below), as most engines do in an HDR pipeline.
+        const target = new WebGLRenderTarget(1, 1, { type: HalfFloatType, samples: 0, stencilBuffer: true })
         const composer = new EffectComposer(gl, target)
         const render = new RenderPass(scene, null)
         const glow = new UnrealBloomPass(new Vector2(256, 256), 0.03, 0.4, 1)
@@ -48,7 +53,10 @@ export default function HdrBloom({ renderSettings }) {
         composer.addPass(glow)
         composer.addPass(exposure)
         composer.addPass(new OutputPass())
-        return { composer, render, glow, exposure, target }
+        // the edges, on the tone-mapped picture (SMAA wants display values, not HDR)
+        const smaa = new SMAAPass()
+        composer.addPass(smaa)
+        return { composer, render, glow, exposure, smaa, target }
     }, [gl, scene])
     useEffect(() => {
         // A phone at DPR 3 would carry a half-float, multisampled 1170×2532 buffer plus
@@ -61,6 +69,7 @@ export default function HdrBloom({ renderSettings }) {
         passes.composer.dispose()
         passes.glow.dispose()
         passes.exposure.dispose()
+        passes.smaa.dispose()
         passes.target.dispose()
         setBloomActive(gl, false)
     }, [passes, gl])
