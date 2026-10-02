@@ -26,6 +26,21 @@ export const STAGE = {
     taskXml: 'di-stage.xml'
 }
 
+/**
+ * The names of the OTHER autostart entry: di.iiii itself, kept running from
+ * login on every install (`di autostart run`), not only on the stage machine. Distinct
+ * from every STAGE name so the two never overwrite each other, and from the
+ * hand-made `di-up.service` some machines still carry.
+ */
+export const DI_ENTRY = {
+    taskName: 'di.iiii',
+    unit: 'di-iiii.service',
+    label: 'studio.thedi.di-iiii',
+    desktop: 'di-iiii.desktop',
+    startupCmd: 'di-iiii.cmd',
+    taskXml: 'di-iiii.xml'
+}
+
 /** How often the supervisor looks at the world and puts it back the way it should be. */
 export const RECONCILE_MS = 5000
 
@@ -51,12 +66,12 @@ const xmlEscape = (value) => String(value)
 
 const plistEscape = xmlEscape
 
-const windowsTaskXml = ({ node, cli, home, user }) => [
+const windowsTaskXml = ({ node, cli, home, user, names = STAGE, args = ['stage', 'run'], what = 'di.iiii stage — keeps the server, the screen and the wake hold up.' }) => [
     '<?xml version="1.0" encoding="UTF-16"?>',
     '<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">',
     '  <RegistrationInfo>',
-    '    <Description>di.iiii stage — keeps the server, the screen and the wake hold up.</Description>',
-    '    <URI>\\di stage</URI>',
+    `    <Description>${xmlEscape(what)}</Description>`,
+    `    <URI>\\${xmlEscape(names.taskName)}</URI>`,
     '  </RegistrationInfo>',
     '  <Triggers>',
     '    <LogonTrigger>',
@@ -96,7 +111,7 @@ const windowsTaskXml = ({ node, cli, home, user }) => [
     '  <Actions Context="Author">',
     '    <Exec>',
     `      <Command>${xmlEscape(node)}</Command>`,
-    `      <Arguments>"${xmlEscape(cli)}" stage run</Arguments>`,
+    `      <Arguments>"${xmlEscape(cli)}" ${args.join(' ')}</Arguments>`,
     `      <WorkingDirectory>${xmlEscape(home)}</WorkingDirectory>`,
     '    </Exec>',
     '  </Actions>',
@@ -104,28 +119,27 @@ const windowsTaskXml = ({ node, cli, home, user }) => [
     ''
 ].join('\r\n')
 
-const windowsStartupCmd = ({ node, cli, home }) => [
+const windowsStartupCmd = ({ node, cli, home, args = ['stage', 'run'], what = 'di.iiii stage — written by `di stage join`, removed by `di stage leave`.' }) => [
     '@echo off',
-    'rem di.iiii stage — written by `di stage join`, removed by `di stage leave`.',
-    'rem The Startup folder has no restart-on-failure. `di stage status` says so.',
+    `rem ${what}`,
+    'rem The Startup folder has no restart-on-failure. `status` says so.',
     `set "DI_HOME=${home}"`,
-    `start "" /b "${node}" "${cli}" stage run`,
+    `start "" /b "${node}" "${cli}" ${args.join(' ')}`,
     ''
 ].join('\r\n')
 
-const launchAgentPlist = ({ node, cli, home, logFile }) => [
+const launchAgentPlist = ({ node, cli, home, logFile, names = STAGE, args = ['stage', 'run'], keepChildren = false }) => [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
     '<plist version="1.0">',
     '<dict>',
     '  <key>Label</key>',
-    `  <string>${plistEscape(STAGE.label)}</string>`,
+    `  <string>${plistEscape(names.label)}</string>`,
     '  <key>ProgramArguments</key>',
     '  <array>',
     `    <string>${plistEscape(node)}</string>`,
     `    <string>${plistEscape(cli)}</string>`,
-    '    <string>stage</string>',
-    '    <string>run</string>',
+    ...args.map((arg) => `    <string>${plistEscape(arg)}</string>`),
     '  </array>',
     '  <key>EnvironmentVariables</key>',
     `  <dict><key>DI_HOME</key><string>${plistEscape(home)}</string></dict>`,
@@ -135,6 +149,9 @@ const launchAgentPlist = ({ node, cli, home, logFile }) => [
     '  <true/>',
     '  <key>ProcessType</key>',
     '  <string>Interactive</string>',
+    // di autostart run: the server it starts is its own detached process, and a
+    // restart of this job must not take the server down with it.
+    ...(keepChildren ? ['  <key>AbandonProcessGroup</key>', '  <true/>'] : []),
     '  <key>StandardOutPath</key>',
     `  <string>${plistEscape(logFile)}</string>`,
     '  <key>StandardErrorPath</key>',
@@ -144,30 +161,33 @@ const launchAgentPlist = ({ node, cli, home, logFile }) => [
     ''
 ].join('\n')
 
-const systemdUnit = ({ node, cli, home }) => [
+const systemdUnit = ({ node, cli, home, args = ['stage', 'run'], what = 'di.iiii stage — server, screen and wake hold', keepChildren = false }) => [
     '[Unit]',
-    'Description=di.iiii stage — server, screen and wake hold',
+    `Description=${what}`,
     'After=graphical-session.target',
     'PartOf=graphical-session.target',
     '',
     '[Service]',
     'Type=simple',
     `Environment=DI_HOME=${home}`,
-    `ExecStart=${node} ${cli} stage run`,
+    `ExecStart=${node} ${cli} ${args.join(' ')}`,
     'Restart=always',
     'RestartSec=5',
+    // di autostart run: only the supervisor is this unit's — the server it starts is
+    // detached and must survive the supervisor being restarted.
+    ...(keepChildren ? ['KillMode=process'] : []),
     '',
     '[Install]',
     'WantedBy=default.target',
     ''
 ].join('\n')
 
-const xdgDesktop = ({ node, cli, home }) => [
+const xdgDesktop = ({ node, cli, home, args = ['stage', 'run'], what = 'di.iiii stage', comment = 'Keeps the server, the screen and the wake hold up. Written by `di stage join`.' }) => [
     '[Desktop Entry]',
     'Type=Application',
-    'Name=di.iiii stage',
-    'Comment=Keeps the server, the screen and the wake hold up. Written by `di stage join`.',
-    `Exec=env DI_HOME=${home} ${node} ${cli} stage run`,
+    `Name=${what}`,
+    `Comment=${comment}`,
+    `Exec=env DI_HOME=${home} ${node} ${cli} ${args.join(' ')}`,
     'Terminal=false',
     'X-GNOME-Autostart-enabled=true',
     ''
@@ -193,21 +213,27 @@ export const autostartSpec = ({
     user = 'the-user',
     uid = 501,
     logFile = null,
-    join = (...parts) => parts.filter(Boolean).join('/')
+    join = (...parts) => parts.filter(Boolean).join('/'),
+    // Which entry: the stage supervisor by default, or di.iiii itself
+    // (names DI_ENTRY, args ['autostart', 'run']). Same four OS shapes, different names.
+    names = STAGE,
+    args = ['stage', 'run'],
+    words = null
 } = {}) => {
     const wanted = kind || PREFERRED_AUTOSTART[platform] || null
     if (!wanted) return null
     const log = logFile || join(home, 'logs', 'stage.log')
+    const say = words || {}
 
     if (wanted === 'windows-task') {
-        const file = join(home, 'stage', 'autostart', STAGE.taskXml)
+        const file = join(home, names === STAGE ? 'stage' : 'run', 'autostart', names.taskXml)
         return {
             kind: wanted,
             path: file,
-            content: windowsTaskXml({ node, cli, home, user }),
+            content: windowsTaskXml({ node, cli, home, user, names, args, ...(say.task ? { what: say.task } : {}) }),
             encoding: 'utf16le',
-            install: [{ command: 'schtasks', args: ['/Create', '/TN', STAGE.taskName, '/XML', file, '/F'] }],
-            remove: [{ command: 'schtasks', args: ['/Delete', '/TN', STAGE.taskName, '/F'] }],
+            install: [{ command: 'schtasks', args: ['/Create', '/TN', names.taskName, '/XML', file, '/F'] }],
+            remove: [{ command: 'schtasks', args: ['/Delete', '/TN', names.taskName, '/F'] }],
             restartsOnFailure: true,
             note: 'a scheduled task that runs at logon and restarts the supervisor if it dies'
         }
@@ -215,8 +241,8 @@ export const autostartSpec = ({
     if (wanted === 'windows-startup') {
         return {
             kind: wanted,
-            path: join(startupDir, STAGE.startupCmd),
-            content: windowsStartupCmd({ node, cli, home }),
+            path: join(startupDir, names.startupCmd),
+            content: windowsStartupCmd({ node, cli, home, args, ...(say.startup ? { what: say.startup } : {}) }),
             encoding: 'utf8',
             install: [],
             remove: [],
@@ -225,31 +251,31 @@ export const autostartSpec = ({
         }
     }
     if (wanted === 'launchagent') {
-        const file = join(userHome, 'Library', 'LaunchAgents', `${STAGE.label}.plist`)
+        const file = join(userHome, 'Library', 'LaunchAgents', `${names.label}.plist`)
         return {
             kind: wanted,
             path: file,
-            content: launchAgentPlist({ node, cli, home, logFile: log }),
+            content: launchAgentPlist({ node, cli, home, logFile: log, names, args, keepChildren: names !== STAGE }),
             encoding: 'utf8',
             install: [{ command: 'launchctl', args: ['bootstrap', `gui/${uid}`, file] }],
-            remove: [{ command: 'launchctl', args: ['bootout', `gui/${uid}/${STAGE.label}`] }],
+            remove: [{ command: 'launchctl', args: ['bootout', `gui/${uid}/${names.label}`] }],
             restartsOnFailure: true,
             note: 'a LaunchAgent with KeepAlive — it starts at login and is restarted if it dies'
         }
     }
     if (wanted === 'systemd-user') {
-        const file = join(configHome, 'systemd', 'user', STAGE.unit)
+        const file = join(configHome, 'systemd', 'user', names.unit)
         return {
             kind: wanted,
             path: file,
-            content: systemdUnit({ node, cli, home }),
+            content: systemdUnit({ node, cli, home, args, keepChildren: names !== STAGE, ...(say.unit ? { what: say.unit } : {}) }),
             encoding: 'utf8',
             install: [
                 { command: 'systemctl', args: ['--user', 'daemon-reload'] },
-                { command: 'systemctl', args: ['--user', 'enable', '--now', STAGE.unit] }
+                { command: 'systemctl', args: ['--user', 'enable', '--now', names.unit] }
             ],
             remove: [
-                { command: 'systemctl', args: ['--user', 'disable', '--now', STAGE.unit] },
+                { command: 'systemctl', args: ['--user', 'disable', '--now', names.unit] },
                 { command: 'systemctl', args: ['--user', 'daemon-reload'] }
             ],
             restartsOnFailure: true,
@@ -259,8 +285,8 @@ export const autostartSpec = ({
     if (wanted === 'xdg-autostart') {
         return {
             kind: wanted,
-            path: join(configHome, 'autostart', STAGE.desktop),
-            content: xdgDesktop({ node, cli, home }),
+            path: join(configHome, 'autostart', names.desktop),
+            content: xdgDesktop({ node, cli, home, args, ...(say.desktop ? { what: say.desktop, comment: say.comment || '' } : {}) }),
             encoding: 'utf8',
             install: [],
             remove: [],

@@ -24,3 +24,24 @@ start warns and prints the old line — the install itself already succeeded.
 - Measured: real `install.sh` of a packed release (`di:pack --no-build`) into a throwaway DI_HOME + HOME, fake opener:
   6 s to running, opener got `http://di.localhost:4391`, health 200; `down` → 000; real ~/.bashrc untouched.
 - Not done: after a reboot nothing starts it (autostart owed); not run on Windows/macOS.
+
+### Third step — it comes back by itself (`di autostart`)
+
+Owner: "yes go fix" (after a restart nothing started di.iiii; aylmo carried a hand-made `di-up.service` whose own
+comment said "di has no supervisor of its own yet"). The install now writes ONE autostart entry, the stage machine's
+four OS shapes (`autostartSpec`: systemd user unit, LaunchAgent, logon scheduled task; xdg/Startup fallbacks) under
+di.iiii's own names (`DI_ENTRY`: `di-iiii.service`, `studio.thedi.di-iiii`, task `di.iiii`). It runs
+`di autostart run` (autostart.mjs): every 5 s, start the server if it is down. `di down` leaves `run/stopped` and the
+loop obeys it; `di up` lifts it; a login clears it. On a stage machine the loop does nothing (the stage supervisor owns
+the server). The service manager restarts the loop; `KillMode=process` / `AbandonProcessGroup` keep the detached
+server alive across that (stage entry unchanged). `di autostart on|off|status`; uninstall removes it first;
+`DI_NO_AUTOSTART=1` skips it at install.
+
+- Guards: `scripts/di/autostart.test.js` (9: decision, kill→back, di down obeyed mid-loop, login clears, stage idle,
+  the three OS entries, on/off leave nothing).
+- Measured on aylmo's real systemd user manager, throwaway DI_HOME: `autostart on` → unit active; server SIGKILLed 3×
+  → back in 5.4 / 5.4 / 5.4 s; `di down` → still down after 15 s; `di up` → 200; `systemctl --user restart` of the
+  loop → same server pid alive; `autostart off` → unit file gone, 0 unit files, health 000.
+- Not done: a real reboot + login (the unit is WantedBy=default.target, the stage path is the same shape); Windows
+  and macOS entries covered by spec tests only. aylmo's own hand-made `di-up.service` stays until its di is a release
+  with this — then `di autostart on` and remove `di-up.service` (owner's look).

@@ -210,8 +210,18 @@ const main = async () => {
     if (shouldStartAfterInstall()) {
         try {
             run(process.execPath, [versionLayout(finalDir).cli, 'up'], { env: { ...process.env, DI_HOME: home } })
+            // And after a restart too: the page is only useful while its server
+            // runs. One autostart entry (autostart.mjs); `di autostart off`
+            // takes it back. Its failure is said, never fatal.
+            if (process.env.DI_NO_AUTOSTART !== '1') {
+                try {
+                    run(process.execPath, [versionLayout(finalDir).cli, 'autostart', 'on'], { env: { ...process.env, DI_HOME: home } })
+                } catch (error) {
+                    warn(`it will not start by itself after a restart: ${error.message}`)
+                }
+            }
             say('')
-            say(style.dim(`  closed the browser, or restarted? type ${naming.primary} in a new terminal and it opens again`))
+            say(style.dim(`  closed the browser? type ${naming.primary} in a new terminal and it opens again`))
             say('')
             say(hint || ui.freshTerminal(naming.primary))
             return
