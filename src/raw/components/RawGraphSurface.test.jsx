@@ -138,6 +138,17 @@ describe('RawGraphSurface', () => {
         expect(onCreateEdge).not.toHaveBeenCalled()
     })
 
+    // Picked as "Math" in the palette, the card used to read only "Add"
+    // (nodecheck 2026-10-02, item 5). It reads both now; a typed name alone.
+    it('titles an operator card with the palette name and its operation', () => {
+        const math = makeNode('math.op', { id: 'm-1' })
+        const route = makeNode('logic.route', { id: 'r-1', graphX: 320 })
+        const named = makeNode('math.op', { id: 'm-2', graphX: 640, label: 'Speed × 2', values: { operation: 'multiply' } })
+        const { container } = render(<RawGraphSurface nodes={[math, route, named]} edges={[]} />)
+        const titles = [...container.querySelectorAll('.raw-graph-node-label')].map((el) => el.textContent)
+        expect(titles).toEqual(['Math · Add', 'Route · Gate', 'Speed × 2'])
+    })
+
     it('rejects incompatible port pairs (color -> number)', () => {
         const colorNode = makeNode('value.color', { id: 'color-1' })
         const sinNode = makeNode('math.op', { id: 'sin-1', graphX: 320, values: { operation: 'sin' } })
