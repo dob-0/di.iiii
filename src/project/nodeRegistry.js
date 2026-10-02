@@ -1518,7 +1518,12 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'content', type: 'string', label: 'Content', default: 'Hello' },
         ],
-        outputs: [],
+        // What it says, so a note can feed a Scene's title, a Plane, another
+        // Text. Owner 2026-10-02: "a Text has an OUT we can connect to
+        // something" (docs/raw/2026-10-02-nodes-audit.md).
+        outputs: [
+            { id: 'text', type: 'string', label: 'Text' },
+        ],
         defaultValues: {},
         render: 'panel-2d',
     },
@@ -1594,11 +1599,16 @@ export const NODE_TYPES = {
         category: 'view',
         runtime: 'any',
         singleton: false,
-        // No ports. A list is read by people, and the dead-port rule says a
-        // socket nothing consumes should not exist — see view.timeline, which
-        // only grew outputs once the transport actually read them.
+        // No inputs: the rows are typed by people. Two outputs since
+        // 2026-10-02 (docs/raw/2026-10-02-nodes-audit.md: a List was a dead
+        // end). Both have consumers, so the dead-port rule holds: every string
+        // input (Text, Plane, a Scene's title) reads `text`, every number
+        // input reads `count`. view.list/runtime.js says what they carry.
         inputs: [],
-        outputs: [],
+        outputs: [
+            { id: 'text',  type: 'string', label: 'Rows'  },
+            { id: 'count', type: 'number', label: 'Count' },
+        ],
         // `groups` are plain strings and the rows carry their group by name,
         // so the headings are editable without a migration. The defaults are
         // deliberately generic: the grouping is the thinking, and fixing the
