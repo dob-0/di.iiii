@@ -55,6 +55,24 @@ const DEVICE_KINDS = new Set(['camera', 'mic', 'speaker', 'screen', 'midi-in', '
 // 27 KB — small beside the body limit, and a fixed number either way.
 const MAX_DEVICES = 32
 const MAX_DEVICES_TOTAL = 96
+// The projects a page runs picture operators for, and whether it can open a
+// camera at all (a page on plain http from another address cannot). A viewer
+// asks THAT page for a project's pictures — before 2026-10-02 it asked the
+// machine's newest page, and a projector kiosk showing another project
+// answered nothing. `null` = not said (an older page): the viewer falls back.
+const MAX_PROJECTS = 32
+const cleanProjects = (list) => {
+    if (!Array.isArray(list)) return null
+    const out = []
+    for (const id of list) {
+        const clean = cleanText(id, 128)
+        if (clean && !out.includes(clean)) out.push(clean)
+        if (out.length >= MAX_PROJECTS) break
+    }
+    return out
+}
+const cleanCapture = (value) => (typeof value === 'boolean' ? value : null)
+
 const cleanDevices = (list) => {
     const perKind = new Map()
     const out = []
@@ -136,6 +154,8 @@ const createMachineHub = ({
         role: peer.role,
         scripts: peer.scripts === true,
         devices: peer.devices || [],
+        projects: peer.projects ?? null,
+        capture: peer.capture ?? null,
         seenAt: peer.seenAt,
         via: peer.via
     })
@@ -144,7 +164,7 @@ const createMachineHub = ({
      * A tab on this server says it is here. Refreshes a peer that already is.
      * @returns {{ peer } | { error, status }}
      */
-    const hello = (spaceId, { peerId, role = null, devices = [], machine }) => {
+    const hello = (spaceId, { peerId, role = null, devices = [], projects = null, capture = null, machine }) => {
         if (!isPeerId(peerId)) return { error: 'peerId must be 1-128 letters, digits, _ . : -', status: 400 }
         prune(spaceId)
         const space = spaceFor(spaceId, true)
@@ -158,6 +178,8 @@ const createMachineHub = ({
             role: cleanText(role, 40),
             scripts: machine.scripts === true,
             devices: cleanDevices(devices),
+            projects: cleanProjects(projects),
+            capture: cleanCapture(capture),
             seenAt: now(),
             via: LOCAL
         }
@@ -218,6 +240,8 @@ const createMachineHub = ({
                 role: cleanText(raw.role, 40),
                 scripts: raw.scripts === true,
                 devices: cleanDevices(raw.devices),
+                projects: cleanProjects(raw.projects),
+                capture: cleanCapture(raw.capture),
                 seenAt: now(),
                 via
             })

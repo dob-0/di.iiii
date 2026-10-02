@@ -36,6 +36,11 @@ export const createMachineLink = ({ spaceId, role = 'runner' }) => {
     let machine = null
     let peers = []
     let devices = []
+    // The projects this page runs operators for (one count per user of the
+    // link), and whether it can open a camera — so another machine asks the
+    // page that has the picture, not merely the newest page (see runnerOn).
+    const projects = new Map()
+    const capture = canCapture()
     let stopped = false
     let helloTimer = null
     let controller = null
@@ -47,7 +52,7 @@ export const createMachineLink = ({ spaceId, role = 'runner' }) => {
 
     const hello = async () => {
         try {
-            const answer = await apiFetch(`${base}/machines/hello`, { method: 'POST', body: { peerId, role, devices } })
+            const answer = await apiFetch(`${base}/machines/hello`, { method: 'POST', body: { peerId, role, devices, projects: [...projects.keys()], capture } })
             machine = answer?.machine || machine
             setPeers(answer?.peers)
         } catch {
@@ -102,6 +107,21 @@ export const createMachineLink = ({ spaceId, role = 'runner' }) => {
         onPeers: (listener) => { peerListeners.add(listener); listener(peers, machine); return () => peerListeners.delete(listener) },
         /** What this machine has; told to the others on the next hello, which is now. */
         setDevices: (next) => { devices = Array.isArray(next) ? next : []; hello() },
+        /** This page now runs `projectId`'s operators; the returned function stops saying so. */
+        runProject: (projectId) => {
+            if (!projectId) return () => {}
+            projects.set(projectId, (projects.get(projectId) || 0) + 1)
+            hello()
+            let done = false
+            return () => {
+                if (done) return
+                done = true
+                const left = (projects.get(projectId) || 1) - 1
+                if (left > 0) projects.set(projectId, left)
+                else projects.delete(projectId)
+                if (!stopped) hello()
+            }
+        },
         stop() {
             stopped = true
             clearInterval(helloTimer)
@@ -143,12 +163,39 @@ export const acquireMachineLink = (spaceId) => {
     }
 }
 
-/** The page on `machineId` that runs operators, most recently seen first. */
-export const runnerOn = (peers, machineId, selfPeerId = null) => (
-    (peers || [])
-        .filter((peer) => peer.machineId === machineId && peer.role === 'runner' && peer.peerId !== selfPeerId)
-        .sort((a, b) => (b.seenAt || 0) - (a.seenAt || 0))[0] || null
+/** Whether this page can open a camera at all: a secure page with the API. */
+export const canCapture = (scope = globalThis) => (
+    scope?.isSecureContext !== false && typeof scope?.navigator?.mediaDevices?.getUserMedia === 'function'
 )
+
+/**
+ * The page on `machineId` to ask for pictures.
+ *
+ * Until 2026-10-02 this was simply that machine's newest runner page — and a
+ * machine often has two: asuz's projector kiosk showed project `wall` while a
+ * viewer wanted project `test`'s Camera In, the kiosk was asked, and it had
+ * nothing to send. So, among the machine's runners:
+ *   - a page that says it runs `projectId` comes first; a page that says it
+ *     runs OTHER projects only is never asked (it cannot have the picture);
+ *   - with `needsCapture`, a page that says it cannot open a camera is never
+ *     asked;
+ *   - a page that says nothing (an older install) stays a candidate, after
+ *     the ones that said yes — so two old installs behave as before.
+ * Newest first within each rank.
+ */
+export const runnerOn = (peers, machineId, selfPeerId = null, { projectId = null, needsCapture = false } = {}) => {
+    const rank = (peer) => {
+        if (needsCapture && peer.capture === false) return -1
+        const list = Array.isArray(peer.projects) ? peer.projects : null
+        if (!projectId || !list) return 1
+        return list.includes(projectId) ? 2 : -1
+    }
+    return (peers || [])
+        .filter((peer) => peer.machineId === machineId && peer.role === 'runner' && peer.peerId !== selfPeerId)
+        .map((peer) => ({ peer, rank: rank(peer) }))
+        .filter(({ rank: r }) => r > 0)
+        .sort((a, b) => (b.rank - a.rank) || ((b.peer.seenAt || 0) - (a.peer.seenAt || 0)))[0]?.peer || null
+}
 
 /** Every machine a space can see, this one first, each once. */
 export const machinesIn = (peers, self, selfDevices = []) => {

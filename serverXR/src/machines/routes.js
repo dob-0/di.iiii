@@ -140,8 +140,8 @@ function registerMachineRoutes(router, {
     router.post('/api/spaces/:spaceId/machines/hello', requireSpaceEditor, (req, res) => {
         const spaceId = req.machineSpaceId
         const me = machine()
-        const { peerId, role = null, devices = [] } = req.body || {}
-        const result = hub.hello(spaceId, { peerId, role, devices, machine: me })
+        const { peerId, role = null, devices = [], projects = null, capture = null } = req.body || {}
+        const result = hub.hello(spaceId, { peerId, role, devices, projects, capture, machine: me })
         if (result.error) return res.status(result.status).json({ error: result.error })
         const payload = { machine: me, peers: hub.listPeers(spaceId) }
         res.json(isGuestActor(getAuthState(req)) ? redactForGuest(payload) : payload)
@@ -170,6 +170,10 @@ function registerMachineRoutes(router, {
             // host's — the host listed the stage machine with nothing on it.
             // recordRemotePeers runs cleanDevices over it, as hello does.
             devices: peer?.devices,
+            // Which projects that tab runs and whether it can open a camera,
+            // so a viewer here asks the right tab (hub.cleanProjects).
+            projects: peer?.projects,
+            capture: peer?.capture,
             scripts: peer?.scripts === true,
             machineId: caller.id,
             machineName: callerName
