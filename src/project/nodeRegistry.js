@@ -753,7 +753,7 @@ export const NODE_TYPES = {
         // isn't answering" and "the desk's output is off" are all normal states
         // of this node, and each needs somewhere to be said.
         render: 'panel-2d',
-        defaultFrame: { width: 340, height: 260 },
+        defaultFrame: { width: 340, height: 330 },
     },
 
     'device.midi.out': {
