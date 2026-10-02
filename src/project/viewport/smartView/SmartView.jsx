@@ -249,6 +249,7 @@ export default function SmartView({
         lockPaused: false,
         flyUntil: 0,
         building: false,
+        colliding: false,
         edges: new Map(),
         boundaryKey: ''
     })
@@ -626,6 +627,14 @@ export default function SmartView({
                 scratch.boundary.min.fromArray(b.min)
                 scratch.boundary.max.fromArray(b.max)
                 cc.setBoundary(scratch.boundary)
+            }
+            // Inside: camera-controls' own collision pulls the camera in front of whatever building mesh (column,
+            // wall, press, girder) stands between it and its target, instead of letting it pass through. The BVH
+            // trees the occlusion raycast built make it cheap. Off with the lock, and while a preset is in flight.
+            const collide = Boolean(lockBox) && !state.atPreset && performance.now() > state.flyUntil
+            if (collide !== state.colliding && 'colliderMeshes' in cc) {
+                state.colliding = collide
+                cc.colliderMeshes = collide ? state.occluders : []
             }
             // The camera is clamped once the visitor has taken it and no preset is in flight.
             if (lockBox && !state.atPreset && performance.now() > state.flyUntil && !boxHolds(camera.position.toArray(), lockBox)) {
