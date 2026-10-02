@@ -2153,6 +2153,8 @@ export default function RawEditor({
             const isUndo = (event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey
             const isRedo = (event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))
             if (!isUndo && !isRedo) return
+            // A focused Director window handles its own undo and says so.
+            if (event.defaultPrevented) return
             event.preventDefault()
             // Undo/redo replays inverse ops through applyLocalOps — the same
             // network-backed path as every other document write, so history
