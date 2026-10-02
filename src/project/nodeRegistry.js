@@ -988,6 +988,12 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'title',    type: 'string',  label: 'Title',    default: 'Scene'    },
             { id: 'bgColor',  type: 'color',   label: 'Sky',      default: '#0a0e16'  },
+            // Owner 2026-10-02: "a scene can have inputs — objects, other
+            // info". What is wired here stands on the Scene's stage
+            // (RawViewport's sceneObjects); info arrives through Title, which
+            // a Text or List OUT now feeds. One wire: many objects come
+            // through Merge. docs/raw/2026-10-02-nodes-audit.md.
+            { id: 'objects',  type: 'geometry', label: 'Objects' },
         ],
         // A CONTAINER OUTPUTS ITS OWN SETTINGS, NEVER ITS CONTENTS.
         //
@@ -1008,9 +1014,15 @@ export const NODE_TYPES = {
         // separate keyspaces in the runtime and edgesByTarget only ever keys
         // inputs, and a self-wire is impossible because resolveWireDrop skips
         // the source node.
+        //
+        // Picture is not a child leaking out: it is the Scene itself, seen —
+        // TouchDesigner's Render TOP, objects in, an image out (owner
+        // 2026-10-02, docs/raw/2026-10-02-nodes-audit.md). It is live only
+        // while the live Scene's window draws it (ScenePictureFeed.jsx).
         outputs: [
-            { id: 'title',   type: 'string', label: 'Title' },
-            { id: 'bgColor', type: 'color',  label: 'Sky'   },
+            { id: 'title',   type: 'string',  label: 'Title'   },
+            { id: 'bgColor', type: 'color',   label: 'Sky'     },
+            { id: 'picture', type: 'texture', label: 'Picture' },
         ],
         defaultValues: {
             title: 'Scene',

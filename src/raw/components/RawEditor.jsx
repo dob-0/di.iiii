@@ -1527,6 +1527,11 @@ export default function RawEditor({
     const handleFrameOutputChange = useCallback((nodeId, texture) => {
         handleLiveOutputChange(nodeId, 'frame', texture)
     }, [handleLiveOutputChange])
+    // A Scene's Picture — what its window draws (ScenePictureFeed.jsx). Stable
+    // for the same reason as the Frame handler above.
+    const handleScenePictureChange = useCallback((nodeId, texture) => {
+        handleLiveOutputChange(nodeId, 'picture', texture)
+    }, [handleLiveOutputChange])
     const handleKeyState = useCallback((nodeId, pressed, count) => {
         handleLiveOutputChange(nodeId, 'pressed', pressed)
         handleLiveOutputChange(nodeId, 'count', count)
@@ -1740,6 +1745,11 @@ export default function RawEditor({
                     worldNode={worldNode}
                     liveOutputs={liveOutputs}
                     isLive={(document.workspaceState?.liveWorldNodeIdByScope || {})[node.parentId || ''] === node.id}
+                    // Only the window that shows its OWN Scene (the scope's
+                    // resolved one) gives that Scene's Picture: a second
+                    // Scene's window draws the live one, not itself.
+                    pictureNodeId={worldNode?.id === node.id ? node.id : null}
+                    onPictureChange={handleScenePictureChange}
                     onSetLive={() => markWorldLive(node)}
                     onEnterFullscreen={() => {
                         // The fullscreen/overlay renders always show `worldNode`

@@ -1,4 +1,5 @@
 import { evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
+import { isGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
 
 // Hierarchy-as-connection active-node pick (Kantan Mapper pattern) for
 // scope-repeatable types where exactly one "active" result is wanted
@@ -86,4 +87,16 @@ export function getRawWorldBackgroundColor(document, graphContext = null, { scop
     const worldColor = worldNode ? evaluateNodeInput(worldNode, 'bgColor', graphContext) : null
     if (typeof worldColor === 'string' && worldColor.trim()) return worldColor
     return document?.worldState?.backgroundColor || '#0a0e16'
+}
+
+// What is WIRED into a Scene's Objects input: the shape that stands on its
+// stage beside what stands in the room. Read off the scope's ●-resolved Scene
+// — the same node sky and light come from — so every surface that shows the
+// scope draws the same objects. Anything that is not a shape draws nothing.
+// One wire per input in this graph; many objects arrive through Merge
+// (shape.merge, chained for more — Blender's Join Geometry, Houdini's Merge).
+export const readSceneObjects = (worldNode, graphContext) => {
+    if (worldNode?.typeId !== 'universe.world') return null
+    const value = evaluateNodeInput(worldNode, 'objects', graphContext)
+    return isGeometryDescriptor(value) ? value : null
 }
