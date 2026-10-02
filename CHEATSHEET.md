@@ -13,7 +13,7 @@ Quick reference. Full context: `CURRENT.md` (read it first) → `AGENTS.md` → 
 ## Commands you'll actually use
 
 ```bash
-npm run dev                          # start frontend (5173) + backend (4000)
+npm run dev                          # frontend (5173) + backend (4000); needs an absolute DATA_ROOT (or DI_SCRATCH=1). On aylmo: di-dev up <tree>
 npm run dev:browser                  # same, but also opens a fresh wiped Chromium profile
                                       # (closes/wipes on Ctrl+C — needs flatpak Chromium, Linux only)
 npm run lint                         # eslint src/
