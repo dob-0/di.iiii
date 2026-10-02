@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getNodeCardLines } from '../nodeRegistry.js'
+import { getNodeCardLines, getNodeInputs, getNodeOutputs } from '../nodeRegistry.js'
 import { cardContentHeight, cardHeight, CARD_CONTENT_LINE_HEIGHT, HEADER_HEIGHT } from '../../raw/utils/cardGeometry.js'
 
 // Owner 2026-10-02: a List card read "7 rows · 3 groups" and a Text card read
@@ -77,10 +77,13 @@ describe('cardContentHeight', () => {
 
     // The Gear card opened with a blank port row above its rows: a portless
     // card with content starts its lines right under the header.
+    // Counted from the type's real ports, so the rule holds whether List has
+    // ports or not (PR #730 gives it Rows + Count).
     it('gives a portless card with content no empty port row', () => {
         const gear = list({ groups: ['A'], items: [{ text: 'one', group: 'A' }] })
-        expect(cardHeight(gear)).toBe(HEADER_HEIGHT + cardContentHeight(gear) + 8)
+        const ports = Math.max(getNodeInputs(gear).length, getNodeOutputs(gear).length)
+        expect(cardHeight(gear)).toBe(HEADER_HEIGHT + ports * 22 + cardContentHeight(gear) + 8)
         const empty = list({ groups: ['A'], items: [] })
-        expect(cardHeight(empty)).toBe(HEADER_HEIGHT + 22 + 8)
+        expect(cardHeight(empty)).toBe(HEADER_HEIGHT + Math.max(ports, 1) * 22 + 8)
     })
 })
