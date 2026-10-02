@@ -5421,6 +5421,26 @@
 }
 
 /* A wire that died on release says why, where it died. */
+.raw-wire-remove {
+    position: fixed;
+    transform: translate(-50%, -140%);
+    min-height: 44px;
+    padding: var(--di-space-2) var(--di-space-3);
+    background: var(--di-scrim-strong);
+    border: 1px solid rgba(var(--di-danger-rgb), 0.7);
+    border-radius: var(--di-radius);
+    color: var(--di-danger);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    cursor: pointer;
+    z-index: 61;
+}
+
+.raw-wire-remove:hover,
+.raw-wire-remove:focus-visible {
+    background: rgba(var(--di-danger-rgb), 0.18);
+}
+
 .raw-wire-notice {
     position: fixed;
     transform: translate(-50%, -130%);

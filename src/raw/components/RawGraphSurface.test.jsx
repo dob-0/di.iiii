@@ -271,7 +271,7 @@ describe('RawGraphSurface', () => {
         expect(after.zoom).toBeGreaterThan(before.zoom)
     })
 
-    it('calls onDeleteEdge when a wire path is clicked', () => {
+    it('a click on a wire marks it; Remove wire removes it (a tap alone never does)', () => {
         const colorNode = makeNode('value.color', { id: 'color-1' })
         const cubeNode = makeNode('geom.cube', { id: 'cube-1', graphX: 320 })
         const onDeleteEdge = vi.fn()
@@ -286,7 +286,34 @@ describe('RawGraphSurface', () => {
 
         const wire = container.querySelector('svg path')
         expect(wire).toBeTruthy()
+        fireEvent.click(wire, { clientX: 300, clientY: 200 })
+        expect(onDeleteEdge).not.toHaveBeenCalled()
+        const remove = container.querySelector('.raw-wire-remove')
+        expect(remove?.textContent).toBe('Remove wire')
+        fireEvent.click(remove)
+        expect(onDeleteEdge).toHaveBeenCalledWith('edge-1')
+    })
+
+    it('a marked wire goes with Delete, and is let go by Escape or a press elsewhere', () => {
+        const colorNode = makeNode('value.color', { id: 'color-1' })
+        const cubeNode = makeNode('geom.cube', { id: 'cube-1', graphX: 320 })
+        const onDeleteEdge = vi.fn()
+        const { container } = render(
+            <RawGraphSurface
+                nodes={[colorNode, cubeNode]}
+                edges={[{ id: 'edge-1', fromNodeId: 'color-1', fromPort: 'out', toNodeId: 'cube-1', toPort: 'color' }]}
+                onDeleteEdge={onDeleteEdge}
+            />
+        )
+        const wire = container.querySelector('svg path')
         fireEvent.click(wire)
+        fireEvent.keyDown(window, { key: 'Escape' })
+        expect(container.querySelector('.raw-wire-remove')).toBeNull()
+        fireEvent.click(wire)
+        fireEvent.pointerDown(container.firstChild)
+        expect(container.querySelector('.raw-wire-remove')).toBeNull()
+        fireEvent.click(wire)
+        fireEvent.keyDown(window, { key: 'Delete' })
         expect(onDeleteEdge).toHaveBeenCalledWith('edge-1')
     })
 
