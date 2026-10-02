@@ -259,6 +259,28 @@ describe('RawEditor undo/redo', () => {
     })
 })
 
+describe('RawEditor undo yields to a handled key', () => {
+    it('skips Ctrl+Z when another handler (the Director) already preventDefault-ed it', () => {
+        mockApplyLocalOps.mockClear()
+        render(<RawEditor projectId="proj-1" />)
+        fireEvent.doubleClick(screen.getByTestId('mock-graph'))
+        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Cube' } })
+        fireEvent.keyDown(screen.getByPlaceholderText('type a node or panel name…'), { key: 'Enter' })
+        const before = mockApplyLocalOps.mock.calls.length
+        expect(before).toBeGreaterThan(0)
+
+        const claim = (event) => event.preventDefault()
+        window.addEventListener('keydown', claim, true)
+        fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
+        window.removeEventListener('keydown', claim, true)
+        expect(mockApplyLocalOps.mock.calls.length).toBe(before)
+
+        // Unhandled, the same key still undoes.
+        fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
+        expect(mockApplyLocalOps.mock.calls.length).toBeGreaterThan(before)
+    })
+})
+
 describe('RawEditor canvas mode', () => {
     const CANVAS_STORAGE_KEY = 'test-canvas-node0'
 
