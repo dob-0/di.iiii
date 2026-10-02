@@ -2,7 +2,7 @@ import { Suspense, lazy } from 'react'
 import { Canvas } from '@react-three/fiber'
 import * as THREE from 'three'
 import Experience from '../Experience.jsx'
-import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGuard.jsx'
+import { WebglContextLostOverlay, useWebglContextGuard, WebglUnavailableBoundary } from './WebglContextGuard.jsx'
 import { rendererWithFallback } from '../project/viewport/rendererFallback.js'
 
 const SceneContentXr = lazy(() => import('../xr/SceneContentXr.jsx'))
@@ -42,55 +42,57 @@ export default function SceneCanvas({
             onPointerMove={onCanvasPointerMove}
             onPointerLeave={onCanvasPointerLeave}
         >
-            <Canvas
-                key={canvasKey}
-                style={{ height: '100dvh' }}
-                orthographic={cameraSettings?.orthographic}
-                camera={cameraProps}
-                dpr={renderSettings.dpr}
-                shadows={renderSettings.shadows}
-                gl={rendererWithFallback({
-                    antialias: renderSettings.antialias,
-                    powerPreference: renderSettings.powerPreference
-                })}
-                onCreated={({ gl }) => {
-                    if (rendererRef) {
-                        rendererRef.current = gl
-                    }
-                    bindContextGuard(gl)
-                    // Avoid Three warnings about resizing while an XR session is presenting.
-                    const originalSetSize = gl.setSize.bind(gl)
-                    const originalSetPixelRatio = gl.setPixelRatio.bind(gl)
-                    gl.setSize = (w, h, updateStyle) => {
-                        if (gl.xr?.isPresenting) return
-                        originalSetSize(w, h, updateStyle)
-                    }
-                    gl.setPixelRatio = (v) => {
-                        if (gl.xr?.isPresenting) return
-                        originalSetPixelRatio(v)
-                    }
+            <WebglUnavailableBoundary>
+                <Canvas
+                    key={canvasKey}
+                    style={{ height: '100dvh' }}
+                    orthographic={cameraSettings?.orthographic}
+                    camera={cameraProps}
+                    dpr={renderSettings.dpr}
+                    shadows={renderSettings.shadows}
+                    gl={rendererWithFallback({
+                        antialias: renderSettings.antialias,
+                        powerPreference: renderSettings.powerPreference
+                    })}
+                    onCreated={({ gl }) => {
+                        if (rendererRef) {
+                            rendererRef.current = gl
+                        }
+                        bindContextGuard(gl)
+                        // Avoid Three warnings about resizing while an XR session is presenting.
+                        const originalSetSize = gl.setSize.bind(gl)
+                        const originalSetPixelRatio = gl.setPixelRatio.bind(gl)
+                        gl.setSize = (w, h, updateStyle) => {
+                            if (gl.xr?.isPresenting) return
+                            originalSetSize(w, h, updateStyle)
+                        }
+                        gl.setPixelRatio = (v) => {
+                            if (gl.xr?.isPresenting) return
+                            originalSetPixelRatio(v)
+                        }
 
-                    gl.outputColorSpace = THREE.SRGBColorSpace
-                    gl.toneMapping = renderSettings.toneMapping === 'None'
-                        ? THREE.NoToneMapping
-                        : THREE.ACESFilmicToneMapping
-                    gl.toneMappingExposure = renderSettings.toneMappingExposure ?? 1
-                    gl.shadowMap.enabled = !!renderSettings.shadows
-                    gl.shadowMap.type = renderSettings.shadowType ?? THREE.PCFSoftShadowMap
-                }}
-                onContextMenu={(event) => event.preventDefault()}
-                onPointerMissed={handlePointerMissed}
-            >
-                {xrStore ? (
-                    <Suspense fallback={<Experience />}>
-                        <SceneContentXr xrStore={xrStore} />
-                    </Suspense>
-                ) : (
-                    <Suspense fallback={null}>
-                        <Experience />
-                    </Suspense>
-                )}
-            </Canvas>
+                        gl.outputColorSpace = THREE.SRGBColorSpace
+                        gl.toneMapping = renderSettings.toneMapping === 'None'
+                            ? THREE.NoToneMapping
+                            : THREE.ACESFilmicToneMapping
+                        gl.toneMappingExposure = renderSettings.toneMappingExposure ?? 1
+                        gl.shadowMap.enabled = !!renderSettings.shadows
+                        gl.shadowMap.type = renderSettings.shadowType ?? THREE.PCFSoftShadowMap
+                    }}
+                    onContextMenu={(event) => event.preventDefault()}
+                    onPointerMissed={handlePointerMissed}
+                >
+                    {xrStore ? (
+                        <Suspense fallback={<Experience />}>
+                            <SceneContentXr xrStore={xrStore} />
+                        </Suspense>
+                    ) : (
+                        <Suspense fallback={null}>
+                            <Experience />
+                        </Suspense>
+                    )}
+                </Canvas>
+            </WebglUnavailableBoundary>
             {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}
         </div>
     )

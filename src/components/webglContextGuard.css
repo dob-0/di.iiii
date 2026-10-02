@@ -17,7 +17,7 @@
 
 .webgl-context-lost button {
     padding: var(--di-space-2) var(--di-space-4);
-    border-radius: var(--di-radius-pill);
+    border-radius: 2px;
     border: 1px solid var(--di-cyan-border);
     background: var(--di-scrim-strong);
     color: var(--di-cyan);
@@ -27,4 +27,14 @@
 
 .webgl-context-lost button:hover {
     border-color: var(--di-cyan);
+}
+
+.webgl-unavailable {
+    padding: var(--di-space-4);
+}
+
+.webgl-unavailable-reason {
+    max-width: 52ch;
+    color: var(--di-text-muted);
+    font-size: var(--di-text-2);
 }

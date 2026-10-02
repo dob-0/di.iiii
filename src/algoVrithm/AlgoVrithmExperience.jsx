@@ -45,6 +45,8 @@ import './algoVrithm.css'
 // The director's styling is the tool's, not this piece's — this file mounts
 // DirectorPanel, so it asks for the tool's stylesheet the same way Raw does.
 import '../raw/director/director.css'
+import { WebglUnavailableBoundary } from '../components/WebglContextGuard.jsx'
+import { rendererWithFallback } from '../project/viewport/rendererFallback.js'
 
 // algovrithm — a virtual installation on hyperreality: pixels and code
 // becoming reality. For an audience the piece plays itself; there is nothing
@@ -78,6 +80,8 @@ const EYE_HEIGHT = STANDPOINT.y
 // and a fresh `camera`/`style` object each time would have R3F re-apply the
 // camera 60 times a second, fighting LookAround for control of it.
 const CAMERA = { position: [0, EYE_HEIGHT, 0], fov: 72, near: 0.05, far: 200 }
+// R3F's own renderer, with one retry at powerPreference 'default' (rendererFallback.js).
+const RENDERER = rendererWithFallback()
 
 // Resolution ceiling, and the single cheapest performance decision in the piece.
 //
@@ -746,33 +750,35 @@ function AlgoVrithmStage({
                     two different "whites" in one room. The piece is authored
                     in absolute values everywhere; the background now honours
                     them too. */}
-                <Canvas flat dpr={DPR} camera={CAMERA} style={CANVAS_STYLE}>
-                    <XR store={xr.xrStore}>
-                        {/* Sits above the Suspense boundary on purpose: a
-                            sequence suspending on an asset must not take the
-                            playhead down with it. Renders nothing — see
-                            RitualClockDriver.jsx for why the clock is ticked
-                            from in here rather than from a
-                            window.requestAnimationFrame loop in the hook. */}
-                        <RitualClockDriver advance={clock.advance} />
-                        <Suspense fallback={null}>
-                            <Stage
-                                playheadSec={clock.playheadSec}
-                                sequences={editList}
-                                durationSec={durationSec}
-                                view={stageView}
-                                onEnterInside={enterInside}
-                                dragRef={dragRef}
-                                selectedId={selectedId}
-                                gizmoMode={gizmoMode}
-                                onTransformChange={handleTransformChange}
-                                onTransformDragStart={handleDragStart}
-                                suppressOrbitRef={suppressOrbitRef}
-                                onEyeHeight={handleEyeHeight}
-                            />
-                        </Suspense>
-                    </XR>
-                </Canvas>
+                <WebglUnavailableBoundary>
+                    <Canvas flat dpr={DPR} camera={CAMERA} style={CANVAS_STYLE} gl={RENDERER}>
+                        <XR store={xr.xrStore}>
+                            {/* Sits above the Suspense boundary on purpose: a
+                                sequence suspending on an asset must not take the
+                                playhead down with it. Renders nothing — see
+                                RitualClockDriver.jsx for why the clock is ticked
+                                from in here rather than from a
+                                window.requestAnimationFrame loop in the hook. */}
+                            <RitualClockDriver advance={clock.advance} />
+                            <Suspense fallback={null}>
+                                <Stage
+                                    playheadSec={clock.playheadSec}
+                                    sequences={editList}
+                                    durationSec={durationSec}
+                                    view={stageView}
+                                    onEnterInside={enterInside}
+                                    dragRef={dragRef}
+                                    selectedId={selectedId}
+                                    gizmoMode={gizmoMode}
+                                    onTransformChange={handleTransformChange}
+                                    onTransformDragStart={handleDragStart}
+                                    suppressOrbitRef={suppressOrbitRef}
+                                    onEyeHeight={handleEyeHeight}
+                                />
+                            </Suspense>
+                        </XR>
+                    </Canvas>
+                </WebglUnavailableBoundary>
             </div>
 
             <Chrome

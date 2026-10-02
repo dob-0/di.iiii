@@ -20,7 +20,7 @@ import { wearConstructorGeometry } from '../../project/graph/constructorGeometry
 import { pruneGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
 import { createTapTracker } from '../utils/useDoubleTap.js'
 import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
-import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
+import { WebglContextLostOverlay, useWebglContextGuard, WebglUnavailableBoundary } from '../../components/WebglContextGuard.jsx'
 import { asColor } from '../../utils/colorValue.js'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 import { buildEntityTree } from '../../project/entityTree.js'
@@ -1407,53 +1407,55 @@ export default function RawViewport({
                     </div>
                 </div>
             ) : null}
-            <Canvas
-                key={canvasKey}
-                shadows
-                gl={rendererWithFallback()}
-                // offsetSize: measure the layout box, not the painted one. A
-                // Scene window is placed through the graph's viewport
-                // transform (translate + scale), and getBoundingClientRect
-                // returns the SCALED box there — at 70% zoom the canvas sized
-                // itself to 70% of its window and then got scaled again by
-                // the transform, double-shrinking it.
-                resize={{ scroll: true, debounce: { scroll: 50, resize: 0 }, offsetSize: true }}
-                onCreated={({ gl }) => bindContextGuard(gl)}
-                camera={{
-                    position: camera.position || [0, 2.4, 6.5],
-                    fov: cameraFov,
-                    near: 0.1,
-                    far: 200
-                }}
-                onPointerMissed={interactive ? () => {
-                    // A node selection lives in the shared workspace state, so
-                    // clearing it costs an op — only pay that when a node is
-                    // actually selected; otherwise keep the cheap local clear.
-                    if (selectedNodeId && onClearSelection) onClearSelection()
-                    else onSelectEntity?.(null)
-                } : undefined}
-            >
-                {interactive && !hasAuthoredCamera && <OrbitControls makeDefault target={camera.target || [0, 0.75, 0]} />}
-                {viewRequest ? <ViewRequestApplier request={viewRequest} /> : null}
-                <SceneContent
-                    ambience={ambience}
-                    showSelectionPills={showSelectionPills}
-                    interactive={interactive}
-                    document={document}
-                    selectedEntityId={selectedEntityId}
-                    selectedNodeId={selectedNodeId}
-                    onSelectEntity={onSelectEntity}
-                    onSelectNode={onSelectNode}
-                    onClearSelection={onClearSelection}
-                    onWorldDoubleClick={onWorldDoubleClick}
-                    onMoveNode={onMoveNode}
-                    onMoveEntity={onMoveEntity}
-                    nodeScale={nodeScale}
-                    scopeId={scopeId}
-                    worldNode={worldNode}
-                    liveOutputs={liveOutputs}
-                />
-            </Canvas>
+            <WebglUnavailableBoundary>
+                <Canvas
+                    key={canvasKey}
+                    shadows
+                    gl={rendererWithFallback()}
+                    // offsetSize: measure the layout box, not the painted one. A
+                    // Scene window is placed through the graph's viewport
+                    // transform (translate + scale), and getBoundingClientRect
+                    // returns the SCALED box there — at 70% zoom the canvas sized
+                    // itself to 70% of its window and then got scaled again by
+                    // the transform, double-shrinking it.
+                    resize={{ scroll: true, debounce: { scroll: 50, resize: 0 }, offsetSize: true }}
+                    onCreated={({ gl }) => bindContextGuard(gl)}
+                    camera={{
+                        position: camera.position || [0, 2.4, 6.5],
+                        fov: cameraFov,
+                        near: 0.1,
+                        far: 200
+                    }}
+                    onPointerMissed={interactive ? () => {
+                        // A node selection lives in the shared workspace state, so
+                        // clearing it costs an op — only pay that when a node is
+                        // actually selected; otherwise keep the cheap local clear.
+                        if (selectedNodeId && onClearSelection) onClearSelection()
+                        else onSelectEntity?.(null)
+                    } : undefined}
+                >
+                    {interactive && !hasAuthoredCamera && <OrbitControls makeDefault target={camera.target || [0, 0.75, 0]} />}
+                    {viewRequest ? <ViewRequestApplier request={viewRequest} /> : null}
+                    <SceneContent
+                        ambience={ambience}
+                        showSelectionPills={showSelectionPills}
+                        interactive={interactive}
+                        document={document}
+                        selectedEntityId={selectedEntityId}
+                        selectedNodeId={selectedNodeId}
+                        onSelectEntity={onSelectEntity}
+                        onSelectNode={onSelectNode}
+                        onClearSelection={onClearSelection}
+                        onWorldDoubleClick={onWorldDoubleClick}
+                        onMoveNode={onMoveNode}
+                        onMoveEntity={onMoveEntity}
+                        nodeScale={nodeScale}
+                        scopeId={scopeId}
+                        worldNode={worldNode}
+                        liveOutputs={liveOutputs}
+                    />
+                </Canvas>
+            </WebglUnavailableBoundary>
             {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}
             <div className="raw-cursor-layer">
                 {Object.values(cursors).map((cursor) => (

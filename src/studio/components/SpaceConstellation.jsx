@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Html, OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
-import { useWebglContextGuard, WebglContextLostOverlay } from '../../components/WebglContextGuard.jsx'
+import { useWebglContextGuard, WebglContextLostOverlay, WebglUnavailableBoundary } from '../../components/WebglContextGuard.jsx'
 import {
     fitDistance,
     layoutSpaces,
@@ -279,29 +279,31 @@ export default function SpaceConstellation({
         <div className="scon-root">
             <div className="scon-canvas-wrap" ref={wrapRef}>
                 {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}
-                <Canvas
-                    /* the camera is built once per canvas, so a frame that
-                       changes shape enough to need a different distance gets a
-                       new one */
-                    key={`${canvasKey}:${aspect}`}
-                    camera={{ position: cameraPosition, fov: 55 }}
-                    onCreated={({ gl }) => bindContextGuard(gl)}
-                    gl={{ antialias: true, alpha: true, powerPreference: 'low-power' }}
-                    dpr={[1, 2]}
-                >
-                    <color attach="background" args={['#05080d']} />
-                    <fog attach="fog" args={['#05080d', 18, 44]} />
-                    <ConstellationScene
-                        nodes={nodes}
-                        counts={counts}
-                        selectedId={selectedId}
-                        projects={projects}
-                        publishedId={selectedSpace?.publishedProjectId || null}
-                        onSelect={selectNode}
-                        onBackground={clearSelection}
-                        bindContextGuard={bindContextGuard}
-                    />
-                </Canvas>
+                <WebglUnavailableBoundary>
+                    <Canvas
+                        /* the camera is built once per canvas, so a frame that
+                           changes shape enough to need a different distance gets a
+                           new one */
+                        key={`${canvasKey}:${aspect}`}
+                        camera={{ position: cameraPosition, fov: 55 }}
+                        onCreated={({ gl }) => bindContextGuard(gl)}
+                        gl={{ antialias: true, alpha: true, powerPreference: 'low-power' }}
+                        dpr={[1, 2]}
+                    >
+                        <color attach="background" args={['#05080d']} />
+                        <fog attach="fog" args={['#05080d', 18, 44]} />
+                        <ConstellationScene
+                            nodes={nodes}
+                            counts={counts}
+                            selectedId={selectedId}
+                            projects={projects}
+                            publishedId={selectedSpace?.publishedProjectId || null}
+                            onSelect={selectNode}
+                            onBackground={clearSelection}
+                            bindContextGuard={bindContextGuard}
+                        />
+                    </Canvas>
+                </WebglUnavailableBoundary>
 
                 <div className="scon-legend mono">
                     <span><i style={{ background: NODE_COLORS.main }} /> main</span>
