@@ -52,7 +52,11 @@ import {
 const RAYCAST_HZ = 15
 const PARK = 1e5
 const XRAY_OPACITY = 0.07
-const DITHER_MAX = 0.85
+// The fade is a clean cut-out, not a stipple (2026-10-02: a 4x4 Bayer field read as dots on the crane bridge
+// once the renderer lost its MSAA): fully gone where the fade strength x inside x nearer passes CUT_AT,
+// dithered only across a narrow band of CUT_BAND below it so the rim is not aliased.
+const CUT_AT = 0.55
+const CUT_BAND = 0.1
 const CIRCLE_FRACTION = 0.26
 
 const SV_VERTEX_HEAD = 'varying float vSvDepth;\n'
@@ -69,12 +73,14 @@ float svBayer4(vec2 p) {
     return (m[idx] + 0.5) / 16.0;
 }
 `
-const SV_FRAGMENT_BODY = `
+export const SV_FRAGMENT_BODY = `
 if (uSvStrength > 0.001) {
     float svD = length(gl_FragCoord.xy - uSvCenter);
     float svInside = 1.0 - smoothstep(uSvRadius * 0.7, uSvRadius, svD);
     float svNearer = 1.0 - smoothstep(uSvDepth - 1.2, uSvDepth - 0.4, vSvDepth);
-    if (svBayer4(gl_FragCoord.xy) < uSvStrength * svInside * svNearer * ${DITHER_MAX.toFixed(2)}) discard;
+    float svK = uSvStrength * svInside * svNearer;
+    if (svK > ${CUT_AT.toFixed(2)}) discard;
+    if (svK > ${(CUT_AT - CUT_BAND).toFixed(2)} && svBayer4(gl_FragCoord.xy) < (svK - ${(CUT_AT - CUT_BAND).toFixed(2)}) / ${CUT_BAND.toFixed(2)}) discard;
 }
 `
 
@@ -229,6 +235,7 @@ export default function SmartView({
         sinceScan: 1,
         fogOffset: 0,
         presetDistance: 0,
+        atPreset: false,
         edges: new Map(),
         boundaryKey: ''
     })
@@ -409,6 +416,7 @@ export default function SmartView({
     useEffect(() => {
         if (!command?.presetId) {
             live.current.section = null
+            live.current.atPreset = false
             return
         }
         const state = live.current
@@ -433,6 +441,9 @@ export default function SmartView({
         }
         if (fovRef) fovRef.current = fitted.fov || preset.fov || 50
         state.section = preset.section || null
+        // A preset is composed on purpose (on Crane the bridge IS the subject): no occlusion fade while the
+        // camera sits at it; the fade is back once the visitor takes the camera (controlstart).
+        state.atPreset = true
         cc.setLookAt(px, py, pz, tx, ty, tz, true)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [command?.nonce])
@@ -449,6 +460,7 @@ export default function SmartView({
         if (!cc) return
         state.onControlStart = () => {
             live.current.section = null
+            live.current.atPreset = false
             onUserMoveRef.current?.()
         }
         cc.addEventListener('controlstart', state.onControlStart)
@@ -552,7 +564,7 @@ export default function SmartView({
                     if (hit && isOccluding(hit.distance, length)) { blocked = true; break }
                 }
             }
-            state.goal = blocked ? 1 : 0
+            state.goal = blocked && !state.atPreset ? 1 : 0
         }
         state.strength = approach(state.strength, state.goal, delta, state.goal > state.strength ? 0.08 : 0.2)
         uniforms.uSvStrength.value = state.strength < 0.002 ? 0 : state.strength
