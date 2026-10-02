@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 // The floor the auto-fit will not go below; the door must survive it.
 const FIT_MIN_USEFUL_ZOOM_FOR_TEST = 0.34
@@ -298,6 +298,35 @@ describe('RawGraphSurface', () => {
             expect(Math.abs(top - (760 - bottom))).toBeLessThan(2)
         } finally {
             rect.mockRestore()
+        }
+    })
+
+    // 2026-10-03, owner's screen: a new window opened at 800 × 600 and was
+    // tiled to half the screen — the canvas kept the 49 % fit of the small
+    // size. An untouched view re-fits when the surface changes size.
+    it('re-fits an untouched view when the window grows', () => {
+        let size = { width: 800, height: 600 }
+        const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(() => ({
+            x: 0, y: 0, left: 0, top: 0, right: size.width, bottom: size.height, ...size, toJSON: () => ({})
+        }))
+        const observers = []
+        const realObserver = globalThis.ResizeObserver
+        const realFrame = globalThis.requestAnimationFrame
+        globalThis.ResizeObserver = class { constructor(cb) { this.cb = cb; observers.push(this) } observe() {} disconnect() {} }
+        globalThis.requestAnimationFrame = (fn) => { fn(); return 1 }
+        try {
+            const row = [0, 400, 800, 1200].map((x) => makeNode('value.number', { id: `n${x}`, graphX: x, graphY: 0 }))
+            const zoomOf = (container) => Number(/scale\(([-\d.]+)\)/.exec(container.querySelector('.raw-graph-stage').style.transform)[1])
+            const { container } = render(<RawGraphSurface nodes={row} edges={[]} />)
+            const small = zoomOf(container)
+            act(() => observers.forEach((o) => o.cb([]))) // the observer's first report
+            size = { width: 1290, height: 1300 }
+            act(() => observers.forEach((o) => o.cb([])))
+            expect(zoomOf(container)).toBeGreaterThan(small * 1.4)
+        } finally {
+            rect.mockRestore()
+            globalThis.ResizeObserver = realObserver
+            globalThis.requestAnimationFrame = realFrame
         }
     })
 

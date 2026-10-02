@@ -615,6 +615,49 @@ export default function RawGraphSurface({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [insetKey])
 
+    // The browser window changes size under an untouched view — a new window
+    // opened small and then tiled to half the screen kept the 49 % fit it got
+    // at 800 × 600 (owner's screen, 2026-10-03; 82 % when opened at full size).
+    // Same rule as the docked edges: re-fit only while the view is exactly
+    // where the last fit left it. Also covers a first fit skipped because the
+    // surface had no size yet.
+    const fitGraphRef = useRef(fitGraph)
+    useEffect(() => { fitGraphRef.current = fitGraph })
+    useEffect(() => {
+        const element = containerRef.current
+        if (!element || typeof ResizeObserver === 'undefined' || initialZoom !== null) return undefined
+        let frame = 0
+        let lastSize = null
+        const observer = new ResizeObserver(() => {
+            cancelAnimationFrame(frame)
+            frame = requestAnimationFrame(() => {
+                const rect = element.getBoundingClientRect()
+                const size = `${Math.round(rect.width)}x${Math.round(rect.height)}`
+                if (!rect.width || !rect.height || size === lastSize) return
+                const first = lastSize === null
+                lastSize = size
+                if (hasFitRef.current !== scopeKey) {
+                    if (!scopeKey) return
+                    fitGraphRef.current()
+                    hasFitRef.current = scopeKey
+                    lastFitInsetsRef.current = insetKey
+                    return
+                }
+                if (first) return
+                const settled = lastFitViewportRef.current
+                const now = viewportRef.current
+                const untouched = settled
+                    && Math.abs(settled.panX - now.panX) < 0.5
+                    && Math.abs(settled.panY - now.panY) < 0.5
+                    && Math.abs(settled.zoom - now.zoom) < 0.001
+                if (untouched) fitGraphRef.current()
+            })
+        })
+        observer.observe(element)
+        return () => { cancelAnimationFrame(frame); observer.disconnect() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [scopeKey, insetKey])
+
     // An editor-side insertion of a whole graph (the all-nodes example)
     // lands mostly off-screen if the view stays where it was — the ONE case
     // where re-fitting under the user is the kindness, not the yank: they

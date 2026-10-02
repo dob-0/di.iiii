@@ -18,3 +18,4 @@
 - Owner on the NOPA To do card: "text in a row is invisible, it goes out of the window". Rows now wrap up to 6 lines, counted with the browser's text metrics before drawing (`textWrap.js`), so the card reserves exactly the lines it draws. Measured on NOPA: 0 of 51 lines clipped at 1440×900 (DPR 1 and 2) and 390×844 (DPR 3); before, 24 of 51 were cut.
 - Phone: the canvas opened with a blank band on top. The fit's clamp now centres any axis whose content fits the free band beside docked windows; the F7 docked-List test still holds.
 - The work was started by a session cut off by the aylmo reboot; finished and checked in session dob-96.
+- Window resize: the canvas kept the fit of the size it opened at (a new window opened at 800×600, then tiled: 49 % instead of 82 %). An untouched view now re-fits when the surface changes size; a view the person has zoomed or panned is left alone (measured in a real browser: 49 % → 80 %, then 97 % kept).
