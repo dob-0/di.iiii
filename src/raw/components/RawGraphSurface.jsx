@@ -7,6 +7,9 @@ import TopThumbnail from './TopThumbnail.jsx'
 import CardPreview from './cardPreview/CardPreview.jsx'
 import { hasCardPreview } from './cardPreview/previewTypes.js'
 import { cardEmptyHint } from '../utils/cardEmptyHint.js'
+import { isTypingTarget, keyHint, matchesKeyId } from '../input/keymap.js'
+import ContextMenu from './ContextMenu.jsx'
+import { useLongPress } from '../utils/useLongPress.js'
 import {
     arePortsCompatible,
     getNodeCardLines,
@@ -212,6 +215,14 @@ export default function RawGraphSurface({
     // wrong for an insertion that lands mostly off-screen.
     fitSignal = null,
     onEnterNode,
+    // The canvas keys' callbacks (input/keymap.js): U, N/F2, ?.
+    onLeaveScope = null,
+    onRenameNode = null,
+    onShowKeys = null,
+    // Middle-click a card: what it reads and gives (the reading sheet).
+    onShowReading = null,
+    // Right-click a card: Duplicate (RawEditor's handleDuplicateNode).
+    onDuplicateNode = null,
     // Optional, like every other handler here: Studio wraps this read-only and
     // passes none, so no menu is offered there at all.
     onPromotePort = null,
@@ -255,6 +266,13 @@ export default function RawGraphSurface({
     // anywhere on a 24px band deleted a wire with no warning (audit
     // 2026-10-02). Select, then delete: how Blender and Unreal treat a link.
     const [armedWire, setArmedWire] = useState(null)
+    const middlePressRef = useRef(null)
+    // THE right-click menus (docs/raw/2026-10-02-keys-and-mouse.md): one per
+    // thing under the pointer — empty canvas, a card, a wire — built here from
+    // the same actions the keys use, each item showing its key (keymap.js).
+    // Ports keep their own menu; windows' keys are their own. A long press is
+    // the right-click on touch.
+    const [contextMenu, setContextMenu] = useState(null)
     const dragOffsetRef = useRef({ x: 0, y: 0 })
     // pendingWire mirrored into a ref: the window-level pointerup handler is
     // registered once per drag and would otherwise close over a stale value.
@@ -742,7 +760,7 @@ export default function RawGraphSurface({
     useEffect(() => {
         if (!armedWire && (!selectedNodeId || !onDeleteNode)) return undefined
         const handler = (event) => {
-            if (event.key === 'Escape' && armedWire) { setArmedWire(null); return }
+            if (event.key === 'Escape' && armedWire && !event.defaultPrevented) { event.preventDefault(); setArmedWire(null); return }
             if (event.key !== 'Delete' && event.key !== 'Backspace') return
             const target = event.target
             const tag = target?.tagName?.toLowerCase?.()
@@ -765,8 +783,10 @@ export default function RawGraphSurface({
                 () => onDeleteNode(selectedNodeId)
             )
         }
-        window.addEventListener('keydown', handler)
-        return () => window.removeEventListener('keydown', handler)
+        // Capture phase: a marked wire takes Escape (and Delete) before the
+        // editor's Escape ladder, which then sees it handled.
+        window.addEventListener('keydown', handler, true)
+        return () => window.removeEventListener('keydown', handler, true)
     }, [selectedNodeId, onDeleteNode, nodeById, requestDelete, armedWire, onDeleteEdge])
 
     // The output port nearest a screen point, within the grab radius. Distance
@@ -1220,6 +1240,71 @@ export default function RawGraphSurface({
     // test). The tracker also guards against Chromium firing BOTH paths.
     const doubleTap = useMemo(() => createTapTracker(), [])
 
+    const canvasMenuItems = (clientX, clientY) => [
+        onDoubleClick ? { id: 'add', label: 'Add a node here', kb: keyHint('add'), run: () => onDoubleClick({ clientX, clientY }) } : null,
+        { sep: true },
+        { id: 'fitAll', label: 'Fit everything', kb: keyHint('fitAll'), run: () => fitGraph({ force: true }) },
+        { id: 'frameSelected', label: 'Frame the selected node', kb: keyHint('frameSelected'), disabled: !selectedNodeId, run: () => frameSelection() },
+        { id: 'zoom100', label: 'Zoom 100%', kb: keyHint('zoom100'), run: () => updateZoom(1) },
+        onLeaveScope ? { id: 'leave', label: 'Leave this level', kb: keyHint('leave'), run: () => onLeaveScope() } : null,
+        { sep: true },
+        onShowKeys ? { id: 'keys', label: 'Keys and mouse', kb: keyHint('keys'), run: () => onShowKeys() } : null,
+    ].filter(Boolean)
+
+    const cardMenuItems = (node) => {
+        const type = getNodeType(node.typeId)
+        const isWindow = type?.render === 'panel-2d'
+        return [
+            onEnterNode ? { id: 'enter', label: isWindow ? 'Open its window' : 'Go inside', kb: keyHint('enter'), run: () => onEnterNode(node.id) } : null,
+            onShowReading ? { id: 'reading', label: 'What it reads and gives', hint: 'middle-click', run: () => onShowReading(node.id) } : null,
+            activeMarkerTypeIds.includes(node.typeId) && onSetActive ? { id: 'live', label: isNodeActive(node) ? 'Active here' : 'Make this the active one', disabled: isNodeActive(node), run: () => onSetActive(node) } : null,
+            { sep: true },
+            onRenameNode ? { id: 'rename', label: 'Rename', kb: keyHint('rename'), run: () => onRenameNode(node.id) } : null,
+            onDuplicateNode ? { id: 'duplicate', label: 'Duplicate', kb: keyHint('duplicate'), run: () => onDuplicateNode(node.id) } : null,
+            { sep: true },
+            onDeleteNode ? {
+                id: 'delete', label: 'Delete', kb: 'Del', danger: true,
+                run: () => requestDelete({ id: node.id, name: node.label, author: node.createdBy }, () => onDeleteNode(node.id))
+            } : null,
+        ].filter(Boolean)
+    }
+
+    const wireMenuItems = (edge) => {
+        const from = nodeById.get(edge.fromNodeId)
+        const to = nodeById.get(edge.toNodeId)
+        return [
+            from && onSelectNode ? { id: 'from', label: `Select where it comes from: ${from.label || 'node'}`, run: () => onSelectNode(from.id) } : null,
+            to && onSelectNode ? { id: 'to', label: `Select where it goes: ${to.label || 'node'}`, run: () => onSelectNode(to.id) } : null,
+            { sep: true },
+            onDeleteEdge ? { id: 'remove', label: 'Remove wire', kb: 'Del', danger: true, run: () => onDeleteEdge(edge.id) } : null,
+        ].filter(Boolean)
+    }
+
+    // What is under the pointer decides the menu. Typing, windows and ports
+    // keep their own right-click (a port's menu stops the event itself).
+    const openContextMenuAt = (target, clientX, clientY) => {
+        if (isTypingTarget(target) || target?.closest?.('.raw-window') || target?.closest?.('.raw-graph-port-dot')) return false
+        const cardEl = target?.closest?.('[data-card-id]')
+        const wireEl = target?.closest?.('[data-wire-id]')
+        if (cardEl) {
+            const node = nodeById.get(cardEl.getAttribute('data-card-id'))
+            if (!node) return false
+            onSelectNode?.(node.id)
+            setContextMenu({ x: clientX, y: clientY, title: node.label || getNodeType(node.typeId)?.label, items: cardMenuItems(node) })
+            return true
+        }
+        if (wireEl) {
+            const edge = edges.find((candidate) => candidate.id === wireEl.getAttribute('data-wire-id'))
+            if (!edge) return false
+            setArmedWire(null)
+            setContextMenu({ x: clientX, y: clientY, title: 'Wire', items: wireMenuItems(edge) })
+            return true
+        }
+        setContextMenu({ x: clientX, y: clientY, items: canvasMenuItems(clientX, clientY) })
+        return true
+    }
+    const longPress = useLongPress(({ clientX, clientY, target }) => openContextMenuAt(target, clientX, clientY))
+
     const handleSectionKeyDown = (event) => {
         if ((event.key === '+' || event.key === '=') && (event.metaKey || event.ctrlKey)) {
             event.preventDefault()
@@ -1230,6 +1315,20 @@ export default function RawGraphSurface({
             event.preventDefault()
             updateZoom(zoom - GRAPH_ZOOM_STEP)
             return
+        }
+        // The canvas keys (input/keymap.js). Only here, on the canvas's own
+        // handler, so they act while the canvas has focus (WCAG 2.1.4) — never
+        // while typing, never inside a window, whose keys are its own.
+        if (!isTypingTarget(event.target) && !event.target?.closest?.('.raw-window')) {
+            const selected = selectedNodeId && nodeById.has(selectedNodeId) ? selectedNodeId : null
+            const act = (fn) => { event.preventDefault(); fn() }
+            if (matchesKeyId(event, 'fitAll')) return act(() => fitGraph({ force: true }))
+            if (matchesKeyId(event, 'frameSelected')) return act(() => (selected ? frameSelection() : fitGraph({ force: true })))
+            if (matchesKeyId(event, 'zoom100')) return act(() => updateZoom(1))
+            if (matchesKeyId(event, 'enter') && selected && onEnterNode) return act(() => onEnterNode(selected))
+            if (matchesKeyId(event, 'leave') && onLeaveScope) return act(() => onLeaveScope())
+            if (matchesKeyId(event, 'rename') && selected && onRenameNode) return act(() => onRenameNode(selected))
+            if (matchesKeyId(event, 'keys') && onShowKeys) return act(() => onShowKeys())
         }
         if (event.key !== 'Enter' || event.target !== event.currentTarget || !onDoubleClick) return
         const rect = event.currentTarget.getBoundingClientRect()
@@ -1266,17 +1365,60 @@ export default function RawGraphSurface({
                 handleSectionDoubleClick(event)
             }}
             onKeyDown={handleSectionKeyDown}
+            onMouseDown={(event) => {
+                // Remember where a middle press began: a click (no travel) on a
+                // card asks for its reading; a drag is the pan, as before.
+                if (event.button === 1) middlePressRef.current = { x: event.clientX, y: event.clientY }
+                // Back/Forward (buttons 3/4) must not navigate the browser away.
+                if (event.button === 3 || event.button === 4) event.preventDefault()
+            }}
+            onMouseUp={(event) => {
+                if (event.button === 3) {
+                    // Mouse Back = leave one level (input/keymap.js 'leave').
+                    event.preventDefault()
+                    onLeaveScope?.()
+                    return
+                }
+                if (event.button === 4) event.preventDefault()
+                if (event.button !== 1 || !middlePressRef.current) return
+                const start = middlePressRef.current
+                middlePressRef.current = null
+                if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 6) return
+                const card = event.target?.closest?.('[data-card-id]')
+                if (card && onShowReading) {
+                    event.preventDefault()
+                    onShowReading(card.getAttribute('data-card-id'))
+                }
+            }}
+            onContextMenu={(event) => {
+                if (openContextMenuAt(event.target, event.clientX, event.clientY)) event.preventDefault()
+            }}
+            onPointerMove={(event) => longPress.onPointerMove?.(event)}
+            onClickCapture={(event) => longPress.onClickCapture?.(event)}
             onPointerDown={(event) => {
+                if (!event.target?.closest?.('.raw-graph-port-dot')) longPress.onPointerDown?.(event)
                 // Anywhere but the Remove button lets go of a marked wire.
                 if (armedWire && !event.target?.closest?.('.raw-wire-remove')) setArmedWire(null)
                 doubleTap.down(event)
                 handleSurfacePointerDown(event)
             }}
             onPointerUp={(event) => {
+                longPress.onPointerUp?.(event)
                 if (doubleTap.up(event)) handleSectionDoubleClick(event)
             }}
-            onPointerCancel={doubleTap.cancel}
+            onPointerCancel={(event) => {
+                longPress.onPointerCancel?.(event)
+                doubleTap.cancel(event)
+            }}
         >
+            <ContextMenu
+                open={Boolean(contextMenu)}
+                x={contextMenu?.x || 0}
+                y={contextMenu?.y || 0}
+                title={contextMenu?.title}
+                items={contextMenu?.items || []}
+                onClose={() => setContextMenu(null)}
+            />
             {armedWire && edges.some((edge) => edge.id === armedWire.id) ? (
                 <button
                     type="button"
@@ -1361,6 +1503,7 @@ export default function RawGraphSurface({
                                         made deletion — the only way to remove an edge —
                                         desktop-only. */}
                                     <path
+                                        data-wire-id={wire.id}
                                         d={path}
                                         stroke="transparent"
                                         strokeWidth={24}
@@ -1411,6 +1554,7 @@ export default function RawGraphSurface({
                             <div
                                 key={node.id}
                                 className={`raw-graph-node-card is-lod-${tier}${isSelected ? ' is-selected' : ''}`}
+                                data-card-id={node.id}
                                 style={{
                                     position: 'absolute',
                                     left: node.graphX,
