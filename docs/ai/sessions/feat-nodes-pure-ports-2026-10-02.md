@@ -17,3 +17,10 @@
 - Limits, plainly: the Picture exists only while the live Scene's window is open in the editor. `/out` and Studio don't
   publish it yet. One Objects wire (fan-in is a graph-model change, not done here). The window's size sets the picture's
   size.
+- A shape wired into the Scene's Objects is drawn once, by the Scene. It isn't also drawn standing in the room
+  (`sceneObjectSourceIds`: the wired node and every shape feeding it through Merge, Transform or Array). This is the rule
+  of Houdini's display flag, Blender's Group Output and the Constructor.
+- Seen on the RTX 3080 (ANGLE Vulkan, renderer string checked), on a throwaway local stack with a private test project.
+  At 2560×1340 DPR 1: the Scene titled by a Text, a cube and a sphere through Merge on its stage, each drawn once, an
+  unwired cube still in the room, and an Image showing the Scene's Picture live. At 390×844 DPR 3: the same. Tests: raw
+  scope 2269/2269 before the draw-once rule, and the touched files after it.
