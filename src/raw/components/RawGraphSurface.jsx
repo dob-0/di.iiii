@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
-import { CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, cardHeight } from '../utils/cardGeometry.js'
+import { CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, TOP_PICTURE_HEIGHT, TOP_PICTURE_WIDTH, cardHeight } from '../utils/cardGeometry.js'
 import { isPictureType, pictureIdOf } from '../../project/tops/vjDeck.js'
 import TopThumbnail from './TopThumbnail.jsx'
 import CardPreview from './cardPreview/CardPreview.jsx'
 import { hasCardPreview } from './cardPreview/previewTypes.js'
+import { cardEmptyHint } from '../utils/cardEmptyHint.js'
 import {
     arePortsCompatible,
     getNodeCardSummary,
@@ -1516,6 +1517,14 @@ export default function RawGraphSurface({
                                             nodeId={pictureIdOf(node)}
                                             top={Math.max(inputs.length, outputs.length, 1) * PORT_ROW_HEIGHT + 4}
                                         />
+                                    ) : null}
+                                    {showPorts && isPictureType(node.typeId) && cardEmptyHint(node, { edges, scopeNodes: portScopeNodes }) ? (
+                                        <span
+                                            className="raw-card-empty-hint"
+                                            style={{ top: Math.max(inputs.length, outputs.length, 1) * PORT_ROW_HEIGHT + 4, width: TOP_PICTURE_WIDTH, height: TOP_PICTURE_HEIGHT }}
+                                        >
+                                            {cardEmptyHint(node, { edges, scopeNodes: portScopeNodes })}
+                                        </span>
                                     ) : null}
                                     {/* The cube itself, on the Cube's card — the same slot and
                                         size as a picture operator's picture, below the ports, so
