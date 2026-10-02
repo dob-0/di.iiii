@@ -4927,91 +4927,6 @@
             "beam380-lighthouse": 0
           }
         },
-        "white-cathedral": {
-          "title": "White cathedral · hung rig",
-          "levels": {
-            "par-cut-curtain": 0,
-            "par-cut-x": 0,
-            "par-cut-bridge": 0,
-            "par-columns": 0,
-            "par-press-cut": 0,
-            "par-press-sides": 0,
-            "par-vista": 0,
-            "par-neighbour": 0,
-            "beam380-backstage": 0,
-            "beam380-columns": 0,
-            "beam380-lighthouse": 0,
-            "laser-cut": 0
-          }
-        },
-        "red-room": {
-          "title": "Red room · hung rig",
-          "levels": {
-            "par-cut-curtain": 0,
-            "par-cut-x": 0,
-            "par-cut-bridge": 0,
-            "par-columns": 0,
-            "par-press-cut": 0,
-            "par-press-sides": 0,
-            "par-vista": 0,
-            "par-neighbour": 0,
-            "beam380-backstage": 0,
-            "beam380-columns": 0,
-            "beam380-lighthouse": 0,
-            "laser-cut": 0
-          }
-        },
-        "strobe-hit": {
-          "title": "Strobe hit · hung rig",
-          "levels": {
-            "par-cut-curtain": 0,
-            "par-cut-x": 0,
-            "par-cut-bridge": 0,
-            "par-columns": 0,
-            "par-press-cut": 0,
-            "par-press-sides": 0,
-            "par-vista": 0,
-            "par-neighbour": 0,
-            "beam380-backstage": 0,
-            "beam380-columns": 0,
-            "beam380-lighthouse": 0,
-            "laser-cut": 0
-          }
-        },
-        "one-beam": {
-          "title": "Blackout + one beam · hung rig",
-          "levels": {
-            "par-cut-curtain": 0,
-            "par-cut-x": 0,
-            "par-cut-bridge": 0,
-            "par-columns": 0,
-            "par-press-cut": 0,
-            "par-press-sides": 0,
-            "par-vista": 0,
-            "par-neighbour": 0,
-            "beam380-backstage": 0,
-            "beam380-columns": 0,
-            "beam380-lighthouse": 0,
-            "laser-cut": 0
-          }
-        },
-        "slow-sweep": {
-          "title": "Slow sweep · hung rig",
-          "levels": {
-            "par-cut-curtain": 0,
-            "par-cut-x": 0,
-            "par-cut-bridge": 0,
-            "par-columns": 0,
-            "par-press-cut": 0,
-            "par-press-sides": 0,
-            "par-vista": 0,
-            "par-neighbour": 0,
-            "beam380-backstage": 0,
-            "beam380-columns": 0,
-            "beam380-lighthouse": 0,
-            "laser-cut": 0
-          }
-        },
         "k-blade": {
           "title": "The blade",
           "intent": "The curtain at full white under the cut: in haze a sheet of cold white whose top edge is the cut's 15° slope; the four bridge PARs red at 60 % draw the crane as a frame. Nothing else.",
@@ -5333,7 +5248,15 @@
           },
           "note": "one uplight on the inner face of each nave column around the dance floor and the stage (the 8 pairs z 6-48) — the back faces went to the vista and the forest: depth reads better than more brightness here."
         }
-      }
+      },
+      "omitLooks": [
+        "white-cathedral",
+        "red-room",
+        "strobe-hit",
+        "one-beam",
+        "slow-sweep"
+      ],
+      "defaultLook": "k-monolith"
     },
     {
       "id": "known-ground",
