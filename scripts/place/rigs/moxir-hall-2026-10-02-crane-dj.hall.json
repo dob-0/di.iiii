@@ -1,7 +1,7 @@
 {
   "tool": "scripts/place/hall.py",
   "version": 2,
-  "createdAt": "2026-10-02T00:50:36.363705+00:00",
+  "createdAt": "2026-10-02T02:21:10.676214+00:00",
   "what": "A clean parametric model of a Soviet multi-span crane hall with a flat space-frame roof (MOXIR, Charentsavan). Not a scan. Frame: Y up, metres, the entry end at +Z, the far end at -Z, the nave centred on x = 0, +x to the right looking from the entry.",
   "dims": {
     "span_m": 24.0,
@@ -66,13 +66,20 @@
     "far_gate_h_m": 5.4,
     "aisle_w_m": 0.0,
     "track_x_m": [
-      -4.0,
-      4.0
+      0
     ],
     "track_gauge_m": 1.52,
+    "track_z_range_m": [
+      20,
+      54.5
+    ],
+    "track_cross_z_m": [
+      38,
+      46
+    ],
     "cranes_from_door_m": [
       49.2,
-      95.0
+      76.2
     ],
     "neighbour_cranes_from_door_m": {
       "left": 60.0,
@@ -82,10 +89,10 @@
       {
         "row": "left",
         "from_door_m": [
-          24.0,
-          36.0
+          24,
+          36
         ],
-        "h_m": 3.0,
+        "h_m": 3,
         "seen": "photos 004, 009 (from the entry-end crane): the block wall runs from the first big Y column in view to the third, 2 bays, then the row is open; also 003, 005, 006, 013, 008, 033/034. Photo 032 has a white shed hiding the bay before the first column. The bays are decided by a render from the 004/009 viewpoint (camera 0, 7.8, 53, looking down the hall, vfov 47): [24, 36] (grid z 30.5 to 18.5) puts the wall's start at the first big column and its end at the third, as in the photo; [12, 24] and [18, 30] do not."
       }
     ],
@@ -177,6 +184,226 @@
         "material": "rust",
         "how": "photo 032 horizontal pipe at v 305-310 from u 680 to 800 at D ~50 m; 2026-09-28: drawn as a 0.5 m pipe on posts with an elbow up at the press end (1c3956d1)",
         "model": "pipe_run"
+      },
+      {
+        "id": "transformer",
+        "label": "oil power transformer (ribbed radiators, conservator tank)",
+        "x_m": [
+          -11,
+          -9.5
+        ],
+        "z_m": [
+          -4,
+          4
+        ],
+        "y_m": [
+          0,
+          2.5
+        ],
+        "material": "machine",
+        "photos": "020, 021, 022, 014",
+        "confidence": "medium for x and y, LOW for z (+-3 m)",
+        "how": "Stands beside a left-row column, likely near the paired columns at the expansion joint; x +-1.5 m, z +-3 m from the photos. HOLD the exact z for the USB originals / a site check. Drawn as one envelope box."
+      },
+      {
+        "id": "cabinets-column-feet",
+        "label": "grey electrical cabinets on the left-row column feet",
+        "x_m": [
+          -12,
+          -11
+        ],
+        "z_m": [
+          -4,
+          4
+        ],
+        "y_m": [
+          0,
+          1.9
+        ],
+        "material": "machine",
+        "photos": "020, 021, 022, 036, 038",
+        "confidence": "medium-low",
+        "how": "One envelope box for the cabinets standing on the column feet in this stretch (x +-1.5 m, z +-3 m). HOLD: whether they are bolted."
+      },
+      {
+        "id": "press-pedestal",
+        "label": "press control pedestal (grey desk on a box) and the drilled beam beside it",
+        "x_m": [
+          -1,
+          0.5
+        ],
+        "z_m": [
+          3,
+          4.5
+        ],
+        "y_m": [
+          0,
+          1.2
+        ],
+        "material": "machine",
+        "photos": "024 (lower centre)",
+        "confidence": "medium-low",
+        "how": "CHECK ON SITE: bolted or loose? It touches the front of the DJ riser footprint (riser z 4.2 to 6.2, x -1.5 to 1.5): the pedestal overlaps it by 0.3 m in z. Photo estimate x +-1.5 m, z +-3 m."
+      },
+      {
+        "id": "press-side-cabinets",
+        "label": "two grey control cabinets near the press side",
+        "x_m": [
+          2,
+          5
+        ],
+        "z_m": [
+          3,
+          8
+        ],
+        "y_m": [
+          0,
+          1.6
+        ],
+        "material": "machine",
+        "photos": "035",
+        "confidence": "LOW",
+        "how": "Photo 035 only; x +-1.5 m, z +-3 m. Kept low and out of the riser footprint (x 2 to 5)."
+      },
+      {
+        "id": "blower",
+        "label": "centrifugal blower on a pedestal",
+        "x_m": [
+          5,
+          7
+        ],
+        "z_m": [
+          20,
+          25
+        ],
+        "y_m": [
+          0,
+          3
+        ],
+        "material": "machine",
+        "photos": "004, 005, 009",
+        "confidence": "medium-low",
+        "how": "Right of the dance zone (x 5.35 edge). x +-1.5 m, z +-3 m."
+      },
+      {
+        "id": "lean-to-canopy",
+        "label": "corrugated lean-to canopy on posts",
+        "x_m": [
+          8,
+          11
+        ],
+        "z_m": [
+          14,
+          22
+        ],
+        "y_m": [
+          2.5,
+          3.2
+        ],
+        "material": "deck",
+        "photos": "004, 005, 009",
+        "confidence": "medium-low",
+        "how": "Roof of the lean-to only (the posts are not drawn). x +-1.5 m, z +-3 m."
+      },
+      {
+        "id": "drum-tank",
+        "label": "horizontal drum tank on saddles with a ladder (about 3 m dia x 5 m)",
+        "x_m": [
+          8,
+          11
+        ],
+        "z_m": [
+          22,
+          28
+        ],
+        "y_m": [
+          0,
+          3
+        ],
+        "material": "rust",
+        "photos": "004, 009, 027-031",
+        "confidence": "medium-low",
+        "how": "Drawn as its envelope box (a cylinder in the photos). x +-1.5 m, z +-3 m."
+      },
+      {
+        "id": "prefab-cabin",
+        "label": "white prefab cabin",
+        "x_m": [
+          -12,
+          -9
+        ],
+        "z_m": [
+          30.7,
+          35.3
+        ],
+        "y_m": [
+          0,
+          2.5
+        ],
+        "material": "block",
+        "photos": "004, 005, 009",
+        "confidence": "medium-low",
+        "how": "x +-1.5 m, z +-3 m from the photos (28 to 34). Narrowed to z 30.7-35.3 so it stands between the column feet at z 30 and 36: a PAR stands at each foot in the lit rigs, and a lamp inside a cabin is not a design. Check on site."
+      },
+      {
+        "id": "pipe-rack-1",
+        "label": "right-row pipe rack, pipe 1 (dia 0.3-0.5 m at y 3 to 4.5)",
+        "x_m": [
+          10,
+          12
+        ],
+        "z_m": [
+          10,
+          48
+        ],
+        "y_m": [
+          3,
+          3.4
+        ],
+        "material": "rust",
+        "photos": "004, 005, 009, 032",
+        "confidence": "LOW",
+        "how": "Three of the 3-4 pipes drawn as thin boxes along the row; the run length is a guess (z 10 to 48)."
+      },
+      {
+        "id": "pipe-rack-2",
+        "label": "right-row pipe rack, pipe 2",
+        "x_m": [
+          10,
+          12
+        ],
+        "z_m": [
+          10,
+          48
+        ],
+        "y_m": [
+          3.6,
+          4
+        ],
+        "material": "rust",
+        "photos": "004, 005, 009, 032",
+        "confidence": "LOW",
+        "how": "As pipe 1."
+      },
+      {
+        "id": "pipe-rack-3",
+        "label": "right-row pipe rack, pipe 3",
+        "x_m": [
+          10,
+          12
+        ],
+        "z_m": [
+          10,
+          48
+        ],
+        "y_m": [
+          4.1,
+          4.5
+        ],
+        "material": "rust",
+        "photos": "004, 005, 009, 032",
+        "confidence": "LOW",
+        "how": "As pipe 1."
       }
     ],
     "zones": {
@@ -382,13 +609,15 @@
     "far_gate_w_m": "estimate (moxir-hall-features-2026-09-28.json; confidence low (photo 004))",
     "far_gate_h_m": "estimate (moxir-hall-features-2026-09-28.json)",
     "aisle_w_m": "estimate (moxir-hall-features-2026-09-28.json)",
-    "track_x_m": "placeholder",
+    "track_x_m": "estimate (moxir-hall-dims-2026-10-02.json; confidence LOW: one track at x about 0, gauge about 1.5 m, in the entry zone (005); the old +-4 m pair is dropped)",
     "track_gauge_m": "placeholder",
-    "cranes_from_door_m": "estimate (moxir-hall-crane-dj-2026-09-28.json)",
+    "track_z_range_m": "estimate (moxir-hall-dims-2026-10-02.json)",
+    "track_cross_z_m": "estimate (moxir-hall-dims-2026-10-02.json; confidence LOW: transverse lines somewhere between z 38 and 46 (027-031); two drawn)",
+    "cranes_from_door_m": "estimate (moxir-hall-dims-2026-10-02.json; confidence medium: the far crane at 76.2 m from the door is the 2026-09-29 measurement (the older 95.0 was a guess); the entry-end crane is the one rolled over the DJ (49.2))",
     "neighbour_cranes_from_door_m": "estimate (moxir-hall-features-2026-09-28.json; confidence seen (photos 036, 017), positions GUESS)",
     "low_walls": "estimate (moxir-hall-dims-2026-10-02.json; confidence medium: the left row from the render match to photos 004/009 (2 bays); the right row is open everywhere (003, 005, 006, 009, 027) and has no wall)",
     "bracing_bays_from_door_m": "estimate (moxir-hall-features-2026-09-28.json; confidence GUESS (bracing seen in 017, 036; the bays are not identified))",
-    "massing": "estimate (moxir-hall-features-2026-09-28.json; confidence seen; envelopes from photo 032 at ~50 m (+-20 %); the press and machine line MODELLED from 1c3956d1/018/29b70cf5 by proportion inside those envelopes (ESTIMATED); the press type not identified)",
+    "massing": "estimate (moxir-hall-features-2026-09-28.json; confidence seen; envelopes from photo 032 at ~50 m (+-20 %); the press and machine line MODELLED from 1c3956d1/018/29b70cf5 by proportion inside those envelopes (ESTIMATED); the press type not identified) + 11 from moxir-hall-dims-2026-10-02.json",
     "zones": "estimate (moxir-hall-features-2026-09-28.json; confidence owner's marks; positions +-8% of the distance from the crane (fit) plus the marker's hand (+-1.5 m); the booth +-1.5 m (press position))",
     "cameras": "estimate (moxir-hall-features-2026-09-28.json)",
     "crane_trolley_x_m": "estimate (moxir-hall-crane-dj-2026-09-28.json)"
@@ -425,7 +654,8 @@
       "file": "moxir-hall-dims-2026-10-02.json",
       "notes": [
         "2026-10-02 hall corrections, each with its source: (1) the LEFT low wall is 2 closed bays, not 5 (the 09-28 features file said bays 3-7 from photo 032, wrong): from_door_m [24, 36]. (2) the RIGHT low wall (a GUESS in the 09-28 file, [60, 84]) is deleted: the right row is open (003, 005, 006, 009, 027: machinery and pipes between the columns). (3) the crane cab hangs at the RIGHT (+x) end (002, 003, 004, 005, 009, 013), x 8.35-10.35 in the nave crane's frame. (4) the roof underside 11.0 -> 10.8 m (Soviet height series 8.4 / 9.6 / 10.8 / 12.0) and the top chord 13.5 -> 13.3 (2.5 m depth kept). (5) the lantern 3.5 -> 3.2 m (standard lantern for a 24 m span: 2.77 or 3.22 m). (6) the right runway girder has no handrail; the left one keeps it.",
-        "Left unchanged on purpose: the crane rail (7.6 m in this layer set; the standards give 7.75 for 16-20 t or 8.15 for <= 10 t cranes and the crane's capacity is unknown, so measure on site); the 6 x 6 x 2.5 m space frame (photo-derived; it is NOT the 'Kislovodsk' series, which is 3 x 3 x 2.12 m for low buildings); the expansion joint (the lantern gap is the evidence); the floor-rail gauge (unmeasured)."
+        "Left unchanged on purpose: the crane rail (7.6 m in this layer set; the standards give 7.75 for 16-20 t or 8.15 for <= 10 t cranes and the crane's capacity is unknown, so measure on site); the 6 x 6 x 2.5 m space frame (photo-derived; it is NOT the 'Kislovodsk' series, which is 3 x 3 x 2.12 m for low buildings); the expansion joint (the lantern gap is the evidence); the floor-rail gauge (unmeasured).",
+        "2026-10-02, permanent objects near the stage (emily-41, from a researcher's pass over all 36 photos; the transformer (021) and the press pedestal (024) checked by hand): the 11 massing_add items are the things that stay when the hall is cleared (transformer, column-foot cabinets, press pedestal, press-side cabinets, blower, lean-to canopy, drum tank, prefab cabin, right-row pipe rack). Ignored on purpose, being loose and due to be cleared: the five 5-6 m pressure vessels at x -6..0, z -2..+8, gas cylinders, scrap, bags, boards. Corrected: the far crane at 76.2 m from the door (was 95.0); the floor rails are one track at x about 0 in the entry zone (z 20 to the door) plus two transverse lines at z 38 and 46, all LOW confidence. HELD for the originals or a site check: the machine line's length (it may run on to z 10-14), the transformer's exact z, and whether the pedestal and cabinets are bolted."
       ]
     }
   ],
@@ -495,8 +725,8 @@
         }
       },
       {
-        "z_m": -41.0,
-        "from_entry_m": 95.0,
+        "z_m": -22.2,
+        "from_entry_m": 76.2,
         "girder_bottom_m": 8.15,
         "girder_top_m": 9.65,
         "girders_dz_m": [
@@ -839,6 +1069,380 @@
         "how": "photo 032 horizontal pipe at v 305-310 from u 680 to 800 at D ~50 m; 2026-09-28: drawn as a 0.5 m pipe on posts with an elbow up at the press end (1c3956d1)",
         "model": "pipe_run",
         "faces": []
+      },
+      {
+        "id": "transformer",
+        "label": "oil power transformer (ribbed radiators, conservator tank)",
+        "x_m": [
+          -11,
+          -9.5
+        ],
+        "z_m": [
+          -4,
+          4
+        ],
+        "y_m": [
+          0,
+          2.5
+        ],
+        "material": "machine",
+        "photos": "020, 021, 022, 014",
+        "confidence": "medium for x and y, LOW for z (+-3 m)",
+        "how": "Stands beside a left-row column, likely near the paired columns at the expansion joint; x +-1.5 m, z +-3 m from the photos. HOLD the exact z for the USB originals / a site check. Drawn as one envelope box.",
+        "faces": [
+          {
+            "x_m": [
+              -11,
+              -9.5
+            ],
+            "y_m": [
+              0,
+              2.5
+            ],
+            "z_m": 4,
+            "albedo": 0.1583
+          }
+        ]
+      },
+      {
+        "id": "cabinets-column-feet",
+        "label": "grey electrical cabinets on the left-row column feet",
+        "x_m": [
+          -12,
+          -11
+        ],
+        "z_m": [
+          -4,
+          4
+        ],
+        "y_m": [
+          0,
+          1.9
+        ],
+        "material": "machine",
+        "photos": "020, 021, 022, 036, 038",
+        "confidence": "medium-low",
+        "how": "One envelope box for the cabinets standing on the column feet in this stretch (x +-1.5 m, z +-3 m). HOLD: whether they are bolted.",
+        "faces": [
+          {
+            "x_m": [
+              -12,
+              -11
+            ],
+            "y_m": [
+              0,
+              1.9
+            ],
+            "z_m": 4,
+            "albedo": 0.1583
+          }
+        ]
+      },
+      {
+        "id": "press-pedestal",
+        "label": "press control pedestal (grey desk on a box) and the drilled beam beside it",
+        "x_m": [
+          -1,
+          0.5
+        ],
+        "z_m": [
+          3,
+          4.5
+        ],
+        "y_m": [
+          0,
+          1.2
+        ],
+        "material": "machine",
+        "photos": "024 (lower centre)",
+        "confidence": "medium-low",
+        "how": "CHECK ON SITE: bolted or loose? It touches the front of the DJ riser footprint (riser z 4.2 to 6.2, x -1.5 to 1.5): the pedestal overlaps it by 0.3 m in z. Photo estimate x +-1.5 m, z +-3 m.",
+        "faces": [
+          {
+            "x_m": [
+              -1,
+              0.5
+            ],
+            "y_m": [
+              0,
+              1.2
+            ],
+            "z_m": 4.5,
+            "albedo": 0.1583
+          }
+        ]
+      },
+      {
+        "id": "press-side-cabinets",
+        "label": "two grey control cabinets near the press side",
+        "x_m": [
+          2,
+          5
+        ],
+        "z_m": [
+          3,
+          8
+        ],
+        "y_m": [
+          0,
+          1.6
+        ],
+        "material": "machine",
+        "photos": "035",
+        "confidence": "LOW",
+        "how": "Photo 035 only; x +-1.5 m, z +-3 m. Kept low and out of the riser footprint (x 2 to 5).",
+        "faces": [
+          {
+            "x_m": [
+              2,
+              5
+            ],
+            "y_m": [
+              0,
+              1.6
+            ],
+            "z_m": 8,
+            "albedo": 0.1583
+          }
+        ]
+      },
+      {
+        "id": "blower",
+        "label": "centrifugal blower on a pedestal",
+        "x_m": [
+          5,
+          7
+        ],
+        "z_m": [
+          20,
+          25
+        ],
+        "y_m": [
+          0,
+          3
+        ],
+        "material": "machine",
+        "photos": "004, 005, 009",
+        "confidence": "medium-low",
+        "how": "Right of the dance zone (x 5.35 edge). x +-1.5 m, z +-3 m.",
+        "faces": [
+          {
+            "x_m": [
+              5,
+              7
+            ],
+            "y_m": [
+              0,
+              3
+            ],
+            "z_m": 25,
+            "albedo": 0.1583
+          }
+        ]
+      },
+      {
+        "id": "lean-to-canopy",
+        "label": "corrugated lean-to canopy on posts",
+        "x_m": [
+          8,
+          11
+        ],
+        "z_m": [
+          14,
+          22
+        ],
+        "y_m": [
+          2.5,
+          3.2
+        ],
+        "material": "deck",
+        "photos": "004, 005, 009",
+        "confidence": "medium-low",
+        "how": "Roof of the lean-to only (the posts are not drawn). x +-1.5 m, z +-3 m.",
+        "faces": [
+          {
+            "x_m": [
+              8,
+              11
+            ],
+            "y_m": [
+              2.5,
+              3.2
+            ],
+            "z_m": 22,
+            "albedo": 0.0823
+          }
+        ]
+      },
+      {
+        "id": "drum-tank",
+        "label": "horizontal drum tank on saddles with a ladder (about 3 m dia x 5 m)",
+        "x_m": [
+          8,
+          11
+        ],
+        "z_m": [
+          22,
+          28
+        ],
+        "y_m": [
+          0,
+          3
+        ],
+        "material": "rust",
+        "photos": "004, 009, 027-031",
+        "confidence": "medium-low",
+        "how": "Drawn as its envelope box (a cylinder in the photos). x +-1.5 m, z +-3 m.",
+        "faces": [
+          {
+            "x_m": [
+              8,
+              11
+            ],
+            "y_m": [
+              0,
+              3
+            ],
+            "z_m": 28,
+            "albedo": 0.09
+          }
+        ]
+      },
+      {
+        "id": "prefab-cabin",
+        "label": "white prefab cabin",
+        "x_m": [
+          -12,
+          -9
+        ],
+        "z_m": [
+          30.7,
+          35.3
+        ],
+        "y_m": [
+          0,
+          2.5
+        ],
+        "material": "block",
+        "photos": "004, 005, 009",
+        "confidence": "medium-low",
+        "how": "x +-1.5 m, z +-3 m from the photos (28 to 34). Narrowed to z 30.7-35.3 so it stands between the column feet at z 30 and 36: a PAR stands at each foot in the lit rigs, and a lamp inside a cabin is not a design. Check on site.",
+        "faces": [
+          {
+            "x_m": [
+              -12,
+              -9
+            ],
+            "y_m": [
+              0,
+              2.5
+            ],
+            "z_m": 35.3,
+            "albedo": 0.3233
+          }
+        ]
+      },
+      {
+        "id": "pipe-rack-1",
+        "label": "right-row pipe rack, pipe 1 (dia 0.3-0.5 m at y 3 to 4.5)",
+        "x_m": [
+          10,
+          12
+        ],
+        "z_m": [
+          10,
+          48
+        ],
+        "y_m": [
+          3,
+          3.4
+        ],
+        "material": "rust",
+        "photos": "004, 005, 009, 032",
+        "confidence": "LOW",
+        "how": "Three of the 3-4 pipes drawn as thin boxes along the row; the run length is a guess (z 10 to 48).",
+        "faces": [
+          {
+            "x_m": [
+              10,
+              12
+            ],
+            "y_m": [
+              3,
+              3.4
+            ],
+            "z_m": 48,
+            "albedo": 0.09
+          }
+        ]
+      },
+      {
+        "id": "pipe-rack-2",
+        "label": "right-row pipe rack, pipe 2",
+        "x_m": [
+          10,
+          12
+        ],
+        "z_m": [
+          10,
+          48
+        ],
+        "y_m": [
+          3.6,
+          4
+        ],
+        "material": "rust",
+        "photos": "004, 005, 009, 032",
+        "confidence": "LOW",
+        "how": "As pipe 1.",
+        "faces": [
+          {
+            "x_m": [
+              10,
+              12
+            ],
+            "y_m": [
+              3.6,
+              4
+            ],
+            "z_m": 48,
+            "albedo": 0.09
+          }
+        ]
+      },
+      {
+        "id": "pipe-rack-3",
+        "label": "right-row pipe rack, pipe 3",
+        "x_m": [
+          10,
+          12
+        ],
+        "z_m": [
+          10,
+          48
+        ],
+        "y_m": [
+          4.1,
+          4.5
+        ],
+        "material": "rust",
+        "photos": "004, 005, 009, 032",
+        "confidence": "LOW",
+        "how": "As pipe 1.",
+        "faces": [
+          {
+            "x_m": [
+              10,
+              12
+            ],
+            "y_m": [
+              4.1,
+              4.5
+            ],
+            "z_m": 48,
+            "albedo": 0.09
+          }
+        ]
       }
     ],
     "zones": {
@@ -997,19 +1601,19 @@
       }
     }
   },
-  "triangles": 54468,
+  "triangles": 54624,
   "meshes": {
     "hall-concrete": 4248,
     "hall-floor": 12,
-    "hall-block": 180,
+    "hall-block": 192,
     "hall-glass": 120,
     "hall-frame": 40948,
     "hall-steel": 4368,
     "hall-girder": 2040,
-    "hall-rust": 1028,
+    "hall-rust": 1100,
     "hall-crane": 288,
-    "hall-deck": 348,
-    "hall-machine": 72,
+    "hall-deck": 360,
+    "hall-machine": 132,
     "hall-press": 468,
     "hall-brick": 12,
     "hall-skylight": 192,
