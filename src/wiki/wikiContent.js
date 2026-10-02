@@ -1290,7 +1290,7 @@ export const WIKI_ARTICLES = [
             { list: [
                 'Objects: wire any shape (a Cube, a Sphere, a Transform, a Merge) into the Scene’s Objects joint and it stands on the Scene’s stage. For several, chain them through Merge first: one joint takes one wire.',
                 'Picture: the Scene’s Picture joint gives what its window shows, as a picture. Wire it into an Image, a picture operator or a Plane’s Texture. It is the same kind of picture a webcam gives, so anything that takes a webcam takes a Scene.',
-                'Text gives what it says on its Text joint. List gives its lines on Rows (one per line, heading by heading, empty lines left out) and how many there are on Count. Wire a Text into a Scene’s Title and the Scene is named by the note.'
+                'Text gives what it says on its Content joint (right side of the same row). List gives its lines on Rows (one per line, heading by heading, empty lines left out) and how many there are on Count. Wire a Text into a Scene’s Title and the Scene is named by the note.'
             ] },
             'Limits, stated plainly: the Picture is there only while the Scene’s own window is open in the editor; a closed window draws nothing, so it gives nothing. The /out page and Studio do not give a Scene’s Picture yet. The picture is the size of the window.'
         ],
@@ -1325,13 +1325,13 @@ export const WIKI_ARTICLES = [
                 'Drag from an output port to an input port to wire them. You do not have to land exactly on the dot — the drop snaps to the nearest port that accepts that type, within a finger’s width, so a small miss still connects.',
                 'Pinch with two fingers to zoom and pan the canvas at the same time. The zoom buttons in the bottom-left corner do the same thing in steps.',
                 'Opening a graph fits it to the screen instead of dropping you at 100% somewhere inside it, so you can see the whole patch before choosing where to work.',
-                'Tap a wire to delete it — the tap area is much wider than the line you see.',
+                'Tap a wire to mark it, then tap Remove wire to delete it — the tap area is much wider than the line you see, so a stray tap never removes anything.',
                 'Panel windows (Scene, Text, Browser, Image) shrink to fit the screen rather than running off the edge.'
             ] },
             'The overflow menu (⋯) has an All Nodes Example: one graph containing every node type the palette can create, with a clock driving a chain of maths into a pulsing sphere, a colour crossfade on a cube, and a breathing light. It is the quickest way to see what the node system can currently do — and it is deliberately honest about what it cannot: geometry, texture and signal outputs are declared on several node types but are not computed yet, so those ports are left unwired rather than connected to look complete.'
         ],
         tags: ['raw', 'nodes', 'mobile', 'touch', 'phone', 'example', 'editor'],
-        updated: '2026-08-19'
+        updated: '2026-10-02'
     },
     {
         id: 'br-id-ge',

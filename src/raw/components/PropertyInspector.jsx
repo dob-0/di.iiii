@@ -34,9 +34,25 @@ const getAssetOptionsForField = (field, assetOptions = []) => {
 // `disabled` is the wired case: the port reads its wire, so the box shows the
 // stored value but takes nothing — the input is disabled rather than hidden,
 // because a field that vanishes when a wire lands reads as a bug.
+export const textareaRows = (value) => {
+    const text = String(value || '')
+    // Hard lines plus soft wraps at ~42 characters, the box's width in this panel.
+    const lines = text.split('\n').reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / 42)), 0)
+    return Math.min(16, Math.max(4, lines + 1))
+}
+
+const WIRE_IN_HINTS = {
+    geometry: 'Wire a shape in',
+    texture: 'Wire a picture in',
+    signal: 'Wire a trigger in',
+}
+export const wireInHint = (portType) => WIRE_IN_HINTS[portType] || 'Wire something in'
+
 function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetFile = null, disabled = false }) {
     if (field.type === 'textarea') {
-        return <textarea value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)} rows={4} />
+        // Grows with what it holds, 4 to 16 lines: a fixed 4 rows showed two and
+        // a half lines of a long note and a scrollbar (owner, 2026-10-02).
+        return <textarea value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)} rows={textareaRows(value)} />
     }
     if (field.type === 'color') {
         // The port's real default, not white: an unset Colour on a blue cube
@@ -162,9 +178,11 @@ function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetF
         return null
     }
     if (field.type === 'connection') {
+        // A port only a wire can fill. It used to read "—", which says nothing:
+        // now it says what to wire in, or that the wire is doing it.
         return (
-            <span style={{ opacity: 0.6, fontSize: '0.8em' }}>
-                {value == null ? '—' : 'connected'}
+            <span className="raw-property-connection">
+                {disabled || value != null ? 'comes in by its wire' : wireInHint(field.portType)}
             </span>
         )
     }
@@ -244,7 +262,10 @@ export default function PropertyInspector({
     onPickAssetFile = null,
     emptyMessage = 'Nothing selected yet.'
 }) {
-    if (!sections.length) {
+    // A selected node with nothing to set (List, Timeline, Webcam…) used to show
+    // the canvas's own empty message — "double-click the world…" — and no way
+    // to rename it. It keeps its header and says where its settings live.
+    if (!sections.length && !onRename) {
         return <div className="raw-empty-state">{emptyMessage}</div>
     }
 
@@ -252,9 +273,14 @@ export default function PropertyInspector({
         <div className="raw-property-sheet">
             <header className="raw-property-sheet-header">
                 <TitleField title={title} onRename={onRename} />
-                {subtitle ? <p>{subtitle}</p> : null}
+                {/* The type's name under a node's own name — once. "Scene / Scene"
+                    read as two things (owner, 2026-10-02). */}
+                {subtitle && subtitle !== title ? <p>{subtitle}</p> : null}
             </header>
             <div className="raw-property-sections-scroll">
+                {!sections.length ? (
+                    <p className="raw-property-note raw-full-width-field">Its window holds everything it does — › on its card opens it.</p>
+                ) : null}
                 {sections.map((section) => {
                     const sectionValue = values[section.id] || values[section.component] || {}
                     return (

@@ -86,6 +86,7 @@ import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
 import { RAW_ANATOMY_Z, RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getAnatomyDefaultFrame, getBottomReserve, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import { CARD_WIDTH, cardHeight, getCardBox } from '../utils/cardGeometry.js'
+import { settleCardStacks } from '../utils/cardStacks.js'
 import { placeNewCard } from '../utils/cardPlacement.js'
 import { isPaletteSummons, readChosenZen, resolveZenPreference, writeZenPreference, liftAutoZen, isAutoZen } from '../utils/zenMode.js'
 import {
@@ -388,15 +389,24 @@ export default function RawEditor({
     // Panel windows are scoped exactly like graph cards. Before, this filtered
     // the whole document, so every universe.world node at any depth kept a live
     // <Canvas> mounted in every scope — see selectMountedPanelNodes.
+    // A phone shows one window at a time (selectMountedPanelNodes' frontOnly).
+    const [narrowWindows, setNarrowWindows] = useState(() => isNarrowViewport())
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined
+        const onResize = () => setNarrowWindows(isNarrowViewport())
+        window.addEventListener('resize', onResize)
+        return () => window.removeEventListener('resize', onResize)
+    }, [])
     const visibleViewNodes = useMemo(
         () => selectMountedPanelNodes({
             nodes,
             isPanel: isPanelNode,
             currentScopeId,
             isWorldFullscreen,
-            frameOf
+            frameOf,
+            frontOnly: narrowWindows
         }),
-        [nodes, currentScopeId, isWorldFullscreen, frameOf]
+        [nodes, currentScopeId, isWorldFullscreen, frameOf, narrowWindows]
     )
     // A layout outlives the windows it describes. Prune against what the
     // document actually holds, so a deleted node cannot keep a slot forever.
@@ -1010,7 +1020,11 @@ export default function RawEditor({
         ? { values: { ...(scopedSelectedNode.values || {}) } }
         : (scopedSelectedEntity ? scopedSelectedEntity.components : { worldState: document.worldState })
     const inspectorTitle = scopedSelectedNode ? scopedSelectedNode.label : (scopedSelectedEntity ? scopedSelectedEntity.name : 'World')
-    const inspectorSubtitle = scopedSelectedNode ? scopedSelectedNode.typeId : (scopedSelectedEntity ? scopedSelectedEntity.type : 'Scene defaults')
+    // The type's NAME ("Text"), never its id ("view.text") — docs/ai/vocabulary.md:
+    // no identifiers on screen. The owner saw the id under a Text's name (2026-10-02).
+    const inspectorSubtitle = scopedSelectedNode
+        ? (getNodeType(scopedSelectedNode.typeId)?.label || 'Node')
+        : (scopedSelectedEntity ? scopedSelectedEntity.type : 'Scene defaults')
 
     // Entering the fullscreen room with a node selected kept the inspector
     // sheet over 38% of it — with an armed Delete floating over the stage
@@ -1417,10 +1431,14 @@ export default function RawEditor({
     // builds nothing that isn't implemented — see the module for which ports are
     // deliberately left unwired and why.
     const handleCreateAllNodesExample = () => {
-        const { nodes: exampleNodes, edges: exampleEdges } = buildAllNodesExample({
+        const built = buildAllNodesExample({
             parentId: currentScopeId || null,
             workspaceTop
         })
+        // Tall cards outgrow their grid row and hid the next card's ports and
+        // wires — settled by real card height (cardStacks.js).
+        const exampleNodes = settleCardStacks(built.nodes, (node) => cardHeight(node, built.nodes))
+        const exampleEdges = built.edges
         if (!exampleNodes.length) return
 
         dispatch({ type: 'select-entity', entityId: null })
@@ -1766,7 +1784,14 @@ export default function RawEditor({
             return <BrowserPanelWindow node={{ ...node, values: resolvedValues }} />
         }
         if (node.typeId === 'view.image') {
-            return <ImagePanelWindow node={node} values={resolvedValues} assetMap={assetMap} />
+            return (
+                <ImagePanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    assetMap={assetMap}
+                    sourceWired={(document.edges || []).some((edge) => edge.toNodeId === node.id && edge.toPort === 'src')}
+                />
+            )
         }
         if (node.typeId === 'stream.monitor') {
             return <MonitorPanelWindow node={node} values={resolvedValues} />
@@ -2146,8 +2171,13 @@ export default function RawEditor({
     // sitting resident on the surface — and any panel node that is currently
     // hidden is listed generically, so a node type added later is summonable
     // without touching this list.
+    // Closed ones, and on a phone the open ones waiting behind the front one.
+    const mountedPanelIds = new Set(visibleViewNodes.map((node) => node.id))
     const hiddenPanelNodes = authoredNodes.filter(
-        (node) => isPanelNode(node) && frameOf(node).visible === false
+        (node) => isPanelNode(node) && (
+            frameOf(node).visible === false
+            || (narrowWindows && (node.parentId || null) === (currentScopeId || null) && !mountedPanelIds.has(node.id))
+        )
     )
     const paletteCommands = [
         {
@@ -2167,8 +2197,10 @@ export default function RawEditor({
         ...hiddenPanelNodes.map((node) => ({
             id: `window:${node.id}`,
             label: frameOf(node).title || node.label || getNodeType(node.typeId)?.label || 'Panel',
-            hint: `open — ${node.typeId}`,
-            run: () => setLocalFrame(node.id, { visible: true })
+            // The type's name, never its id (docs/ai/vocabulary.md).
+            hint: `open — ${getNodeType(node.typeId)?.label || 'window'}`,
+            // Opened in FRONT: on a phone the front window is the one shown.
+            run: () => setLocalFrame(node.id, { visible: true, zIndex: topZIndex + 1 })
         }))
     ]
 

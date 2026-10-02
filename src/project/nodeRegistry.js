@@ -1533,8 +1533,10 @@ export const NODE_TYPES = {
         // What it says, so a note can feed a Scene's title, a Plane, another
         // Text. Owner 2026-10-02: "a Text has an OUT we can connect to
         // something" (docs/raw/2026-10-02-nodes-audit.md).
+        // Labelled like the input it passes on, so the card reads one row,
+        // "Content", with a joint on each side — not two parameters.
         outputs: [
-            { id: 'text', type: 'string', label: 'Text' },
+            { id: 'text', type: 'string', label: 'Content' },
         ],
         defaultValues: {},
         render: 'panel-2d',
@@ -2857,7 +2859,11 @@ export const arePortsCompatible = (fromType, toType) => {
     if (fromType === 'any' || toType === 'any') return true
     if (fromType === toType) return true
     const colorVec = (fromType === 'color' && toType === 'vec3') || (fromType === 'vec3' && toType === 'color')
-    return colorVec
+    // One number fills all three (evaluateNodeInput converts at the link, as
+    // Blender does): a Number into a Cube's Size makes it uniformly that big.
+    // The audit's first wire a person tries; it was refused (2026-10-02).
+    const numberToVec = fromType === 'number' && toType === 'vec3'
+    return colorVec || numberToVec
 }
 
 // Create a node instance from a type ID.
