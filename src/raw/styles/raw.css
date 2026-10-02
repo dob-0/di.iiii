@@ -297,7 +297,7 @@
 .raw-node-palette-item-note {
     flex: 0 0 100%;
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--di-text-muted);
     text-align: left;
     line-height: 1.35;
 }
