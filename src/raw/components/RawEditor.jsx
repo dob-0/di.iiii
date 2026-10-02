@@ -1666,10 +1666,10 @@ export default function RawEditor({
     // visible and fixable; a deep clone with re-identified interior wiring is
     // its own change), stepped aside in both spaces so the copy never lands
     // exactly on the original.
-    const handleDuplicateSelected = useCallback(() => {
-        const source = workspaceState.selectedNodeId
-            ? authoredNodes.find((node) => node.id === workspaceState.selectedNodeId)
-            : null
+    // Any node, by id — the right-click menu duplicates the card it was opened
+    // on; Ctrl+D duplicates the selected one (handleDuplicateSelected below).
+    const handleDuplicateNode = useCallback((nodeId) => {
+        const source = nodeId ? authoredNodes.find((node) => node.id === nodeId) : null
         if (!source) return
         const values = JSON.parse(JSON.stringify(source.values || {}))
         if (Array.isArray(values.position)) {
@@ -1691,7 +1691,12 @@ export default function RawEditor({
             { activityMessage: `Duplicated ${source.label || 'a node'}.` }
         )
         selectNode(copy.id)
-    }, [applyLocalOps, authoredNodes, selectNode, workspaceState.selectedNodeId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [applyLocalOps, authoredNodes, selectNode])
+    const handleDuplicateSelected = useCallback(
+        () => handleDuplicateNode(workspaceState.selectedNodeId),
+        [handleDuplicateNode, workspaceState.selectedNodeId]
+    )
     // Between-pass node state (a Lag's last answer) — this window's own,
     // never React state, dropped whole when the document changes.
     const [frameMemory] = useState(() => createFrameMemory())
@@ -2741,6 +2746,7 @@ export default function RawEditor({
                         setRenameRequest((count) => count + 1)
                     }}
                     onShowReading={(nodeId) => openAnatomy(nodeId)}
+                    onDuplicateNode={handleDuplicateNode}
                     onShowKeys={() => {
                         setHelpSection('keys')
                         setHelpOpen(true)

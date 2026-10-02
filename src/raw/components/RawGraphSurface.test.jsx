@@ -1105,3 +1105,57 @@ describe('the canvas keys and mouse buttons (input/keymap.js)', () => {
         expect(onLeaveScope).toHaveBeenCalledTimes(1)
     })
 })
+
+describe('right-click menus (one per thing under the pointer)', () => {
+    const setup = () => {
+        const color = makeNode('value.color', { id: 'col', label: 'Red' })
+        const cube = makeNode('geom.cube', { id: 'cube', graphX: 320, label: 'Box' })
+        const handlers = { onEnterNode: vi.fn(), onRenameNode: vi.fn(), onDuplicateNode: vi.fn(), onDeleteNode: vi.fn(), onDeleteEdge: vi.fn(), onSelectNode: vi.fn(), onDoubleClick: vi.fn(), onShowKeys: vi.fn() }
+        const utils = render(
+            <RawGraphSurface
+                nodes={[color, cube]}
+                edges={[{ id: 'e1', fromNodeId: 'col', fromPort: 'out', toNodeId: 'cube', toPort: 'color' }]}
+                initialZoom={1}
+                {...handlers}
+            />
+        )
+        const menuItems = () => [...document.querySelectorAll('[role="menuitem"]')].map((el) => el.textContent)
+        return { ...utils, ...handlers, menuItems }
+    }
+
+    it('empty canvas: add here, view and keys, each with its key', () => {
+        const { container, menuItems, onDoubleClick } = setup()
+        fireEvent.contextMenu(container.querySelector('.raw-graph-surface'), { clientX: 500, clientY: 400 })
+        const items = menuItems()
+        expect(items.some((t) => /Add a node here/.test(t) && /\//.test(t))).toBe(true)
+        expect(items.some((t) => /Fit everything/.test(t) && /H/.test(t))).toBe(true)
+        fireEvent.click([...document.querySelectorAll('[role="menuitem"]')].find((el) => /Add a node here/.test(el.textContent)))
+        expect(onDoubleClick).toHaveBeenCalledWith({ clientX: 500, clientY: 400 })
+    })
+
+    it('a card: go inside, rename, duplicate, delete — and it selects the card', () => {
+        const { container, menuItems, onDuplicateNode, onSelectNode } = setup()
+        fireEvent.contextMenu(container.querySelector('[data-card-id="cube"]'), { clientX: 400, clientY: 200 })
+        expect(onSelectNode).toHaveBeenCalledWith('cube')
+        const items = menuItems()
+        for (const label of ['Go inside', 'Rename', 'Duplicate', 'Delete']) expect(items.some((t) => t.includes(label)), label).toBe(true)
+        fireEvent.click([...document.querySelectorAll('[role="menuitem"]')].find((el) => el.textContent.includes('Duplicate')))
+        expect(onDuplicateNode).toHaveBeenCalledWith('cube')
+    })
+
+    it('a wire: where it comes from and goes, and Remove wire', () => {
+        const { container, menuItems, onDeleteEdge } = setup()
+        fireEvent.contextMenu(container.querySelector('[data-wire-id="e1"]'), { clientX: 300, clientY: 120 })
+        const items = menuItems()
+        expect(items.some((t) => t.includes('comes from: Red'))).toBe(true)
+        fireEvent.click([...document.querySelectorAll('[role="menuitem"]')].find((el) => el.textContent.includes('Remove wire')))
+        expect(onDeleteEdge).toHaveBeenCalledWith('e1')
+    })
+
+    it('a port keeps its own menu, not the card menu', () => {
+        const { container, menuItems } = setup()
+        const dot = container.querySelector('.raw-graph-port-dot--out')
+        fireEvent.contextMenu(dot, { clientX: 300, clientY: 120 })
+        expect(menuItems().some((t) => t.includes('Duplicate'))).toBe(false)
+    })
+})
