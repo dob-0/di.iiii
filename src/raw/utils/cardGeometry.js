@@ -1,4 +1,4 @@
-import { getNodeInputs, getNodeOutputs } from '../../project/nodeRegistry.js'
+import { getNodeCardLines, getNodeInputs, getNodeOutputs } from '../../project/nodeRegistry.js'
 import { isPictureType } from '../../project/tops/vjDeck.js'
 import { hasCardPreview } from '../components/cardPreview/previewTypes.js'
 
@@ -27,10 +27,31 @@ export const hasCardPicture = (typeId) => isPictureType(typeId) || hasCardPrevie
 // ports are DERIVED from the doorway nodes inside it — see getNodeInputs. Miss
 // one of these call sites and the container grows a socket the card does not
 // draw, or draws one the wires do not land on.
+// How many port rows the card's body holds. A card with no ports keeps one
+// empty row so it is not a bare header — unless it has content lines to show,
+// which then start right under the header (the Gear list's card opened with a
+// blank 22px row above its rows).
+export const cardPortRows = (node, scopeNodes = null) => {
+    const ports = Math.max(getNodeInputs(node, scopeNodes).length, getNodeOutputs(node, scopeNodes).length)
+    if (ports > 0) return ports
+    return getNodeCardLines(node) ? 0 : 1
+}
+
 export const cardHeight = (node, scopeNodes = null) => {
-    const rows = Math.max(getNodeInputs(node, scopeNodes).length, getNodeOutputs(node, scopeNodes).length, 1)
+    const rows = cardPortRows(node, scopeNodes)
     const picture = hasCardPicture(node?.typeId) ? TOP_PICTURE_HEIGHT + TOP_PICTURE_GAP : 0
-    return HEADER_HEIGHT + rows * PORT_ROW_HEIGHT + picture + CARD_FOOT
+    return HEADER_HEIGHT + rows * PORT_ROW_HEIGHT + picture + cardContentHeight(node) + CARD_FOOT
+}
+
+// The content lines a List or Text card shows (getNodeCardLines), BELOW the
+// ports and any picture, for the same reason the picture is: no port moves.
+export const CARD_CONTENT_LINE_HEIGHT = 18
+const CARD_CONTENT_PAD = 8
+export const cardContentHeight = (node) => {
+    const content = getNodeCardLines(node)
+    if (!content) return 0
+    const lines = content.lines.length + (content.more > 0 ? 1 : 0)
+    return lines * CARD_CONTENT_LINE_HEIGHT + CARD_CONTENT_PAD
 }
 
 export const getCardBox = (node, scopeNodes = null) => ({
