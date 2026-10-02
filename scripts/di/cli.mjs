@@ -171,7 +171,14 @@ const cmdUp = async (args) => {
     // Refused before the already-running check, or a running docker install
     // would be told it is "on this network too".
     if (lan && runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker()); process.exitCode = 1; return }
-    if (await alive(home, port)) { say(ui.alreadyRunning(publicUrl(home, port), await probeReach(home, port), lan)); return }
+    // A closed browser tab is the usual reason to type `di` again: the server
+    // never stopped, the window did. So a second `di` opens it too — one word
+    // brings di.iiii back whatever state it was left in.
+    if (await alive(home, port)) {
+        say(ui.alreadyRunning(publicUrl(home, port), await probeReach(home, port), lan))
+        if (!args.flags['no-open']) openBrowser(publicUrl(home, port))
+        return
+    }
 
     say(ui.starting())
     try {

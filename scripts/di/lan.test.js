@@ -88,7 +88,7 @@ describe('what `di up --lan` does', () => {
         // A docker install that is up would otherwise be told "on this network
         // too" — the container binds 0.0.0.0, the compose publishes 127.0.0.1.
         const refused = up.indexOf("runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker())")
-        const alreadyRunning = up.indexOf('if (await alive(home, port)) { say(ui.alreadyRunning(')
+        const alreadyRunning = up.indexOf('if (await alive(home, port)) {\n        say(ui.alreadyRunning(')
         expect(refused).toBeGreaterThan(-1)
         expect(alreadyRunning).toBeGreaterThan(-1)
         expect(refused).toBeLessThan(alreadyRunning)
