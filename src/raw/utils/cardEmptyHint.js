@@ -23,6 +23,8 @@ export const cardEmptyHint = (node, { edges = [], hasShape = false, scopeNodes =
     if (cardPreviewKind(node.typeId) !== 'shape' || hasShape) return null
     if (PLACE_INSIDE.has(node.typeId)) return 'Place shapes inside ›'
     const shapeInputs = getNodeInputs(node, scopeNodes).filter((port) => port.type === 'geometry')
-    if (!shapeInputs.length) return null
+    // Wired but nothing arriving yet is not "wire a shape" — the person already
+    // did; the box stays quiet rather than tell them something false.
+    if (!shapeInputs.length || shapeInputs.some((port) => wired(port.id))) return null
     return `Wire a shape into ${shapeInputs[0].label}`
 }

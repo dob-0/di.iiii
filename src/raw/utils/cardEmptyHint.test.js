@@ -19,6 +19,8 @@ describe('cardEmptyHint — an empty box says what it waits for', () => {
         expect(cardEmptyHint(n('shape.merge'))).toBe('Wire a shape into A')
         expect(cardEmptyHint(n('geom.transform'))).toBe('Wire a shape into Geometry')
         expect(cardEmptyHint(n('shape.merge'), { hasShape: true })).toBeNull()
+        // Wired, but nothing has arrived yet: no false "wire a shape".
+        expect(cardEmptyHint(n('geom.transform'), { edges: [{ toNodeId: 'geom.transform', toPort: 'geometry' }] })).toBeNull()
     })
 
     it('Geo and Constructor are filled from inside', () => {
