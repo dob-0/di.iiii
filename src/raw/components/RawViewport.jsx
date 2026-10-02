@@ -14,7 +14,7 @@ import { detectModelFormatFromMeta } from '../../utils/modelFormats.js'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { getNodeType } from '../../project/nodeRegistry.js'
-import { resolveSceneLighting, getRawWorldBackgroundColor, pickActiveTypeNode, readSceneObjects } from '../utils/viewportWorldState.js'
+import { resolveSceneLighting, getRawWorldBackgroundColor, pickActiveTypeNode, readSceneObjects, sceneObjectSourceIds } from '../utils/viewportWorldState.js'
 import { createFrameMemory, createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { wearConstructorGeometry } from '../../project/graph/constructorGeometry.js'
 import { pruneGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
@@ -791,11 +791,18 @@ function SceneContent({
     // and a `world.light` as a marker; both are controls, and both were sitting
     // in the middle of a child's room looking like something they had made by
     // accident. Raw keeps them — that is where they are controls.
+    // What feeds the live Scene's Objects is drawn ONCE, by the Scene — not
+    // also standing in the room (sceneObjectSourceIds, viewportWorldState.js).
+    const sceneObjectSources = useMemo(
+        () => sceneObjectSourceIds(document, worldNode),
+        [document, worldNode]
+    )
     const renderableNodes = useMemo(
         () => (document.nodes || []).filter((node) => isSpatialNode(node) && inScope(node)
+            && !sceneObjectSources.has(node.id)
             && !(ambience && String(node.typeId || '').startsWith('world.'))),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [document.nodes, scopeId, ambience]
+        [document.nodes, scopeId, ambience, sceneObjectSources]
     )
     // Everything standing inside a container, keyed by the container it stands
     // in. Descent stops at a nested universe.world: a World is its own stage,

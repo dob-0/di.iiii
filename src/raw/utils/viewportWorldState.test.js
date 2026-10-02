@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createEdge, createNode } from '../../project/nodeRegistry.js'
 import { createNodeGraphContext } from '../../project/graph/nodeGraphRuntime.js'
-import { getRawWorldBackgroundColor, pickActiveTypeNode, readSceneObjects, resolveSceneLighting, resolveScopeWorldNode } from './viewportWorldState.js'
+import { getRawWorldBackgroundColor, pickActiveTypeNode, readSceneObjects, resolveSceneLighting, sceneObjectSourceIds, resolveScopeWorldNode } from './viewportWorldState.js'
 
 describe('resolveScopeWorldNode', () => {
     const nodes = [
@@ -229,5 +229,42 @@ describe('readSceneObjects — what is wired into a Scene stands on its stage', 
         expect(readSceneObjects(null, createNodeGraphContext({ nodes: [], edges: [] }))).toBeNull()
         const cube = createNode('geom.cube', { id: 'c' })
         expect(readSceneObjects(cube, createNodeGraphContext({ nodes: [cube], edges: [] }))).toBeNull()
+    })
+})
+
+describe('sceneObjectSourceIds — what the Scene draws, the room does not draw again', () => {
+    const world = createNode('universe.world', { id: 'w' })
+    const cube = createNode('geom.cube', { id: 'c' })
+    const sphere = createNode('geom.sphere', { id: 's' })
+    const loose = createNode('geom.cube', { id: 'loose' })
+    const merge = createNode('shape.merge', { id: 'm' })
+    const colour = createNode('value.color', { id: 'col' })
+
+    it('walks the shape back through Merge to every part, and only shapes', () => {
+        const document = {
+            nodes: [world, cube, sphere, loose, merge, colour],
+            edges: [
+                createEdge('col', 'out', 'c', 'color'),
+                createEdge('c', 'geometry', 'm', 'a'),
+                createEdge('s', 'geometry', 'm', 'b'),
+                createEdge('m', 'out', 'w', 'objects'),
+            ]
+        }
+        expect([...sceneObjectSourceIds(document, world)].sort()).toEqual(['c', 'm', 's'])
+    })
+
+    it('nothing wired → nothing hidden; a Cube wired elsewhere stays in the room', () => {
+        const document = { nodes: [world, cube, merge], edges: [createEdge('c', 'geometry', 'm', 'a')] }
+        expect(sceneObjectSourceIds(document, world).size).toBe(0)
+        expect(sceneObjectSourceIds(document, null).size).toBe(0)
+    })
+
+    it('a feedback loop ends', () => {
+        const t = createNode('geom.transform', { id: 't' })
+        const document = {
+            nodes: [world, t, merge],
+            edges: [createEdge('t', 'out', 'm', 'a'), createEdge('m', 'out', 't', 'geometry'), createEdge('m', 'out', 'w', 'objects')]
+        }
+        expect([...sceneObjectSourceIds(document, world)].sort()).toEqual(['m', 't'])
     })
 })

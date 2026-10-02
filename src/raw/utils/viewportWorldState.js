@@ -1,5 +1,6 @@
 import { evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { isGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
+import { getNodeOutputs } from '../../project/nodeRegistry.js'
 
 // Hierarchy-as-connection active-node pick (Kantan Mapper pattern) for
 // scope-repeatable types where exactly one "active" result is wanted
@@ -99,4 +100,33 @@ export const readSceneObjects = (worldNode, graphContext) => {
     if (worldNode?.typeId !== 'universe.world') return null
     const value = evaluateNodeInput(worldNode, 'objects', graphContext)
     return isGeometryDescriptor(value) ? value : null
+}
+
+// Every node whose SHAPE reaches the Scene's Objects — the wired node and,
+// through Merge / Transform / Array, everything feeding it a shape. Those are
+// the Scene's definition, so the room does not draw them a second time: the
+// Scene draws the result once (readSceneObjects). The rule Houdini's display
+// flag, Blender's Group Output and this repo's Constructor all follow ("only
+// what reaches a door is worn"). Only wires that carry geometry are walked: a
+// colour wired into a Cube does not make the colour's node a shape.
+export const sceneObjectSourceIds = (document, worldNode) => {
+    const found = new Set()
+    if (worldNode?.typeId !== 'universe.world') return found
+    const edges = document?.edges || []
+    const nodesById = new Map((document?.nodes || []).map((node) => [node.id, node]))
+    const carriesShape = (edge) => {
+        const from = nodesById.get(edge.fromNodeId)
+        const port = from ? getNodeOutputs(from).find((p) => p.id === edge.fromPort) : null
+        return port?.type === 'geometry'
+    }
+    const queue = edges.filter((edge) => edge.toNodeId === worldNode.id && edge.toPort === 'objects')
+    while (queue.length) {
+        const edge = queue.shift()
+        if (found.has(edge.fromNodeId) || !carriesShape(edge)) continue
+        found.add(edge.fromNodeId)
+        for (const upstream of edges) {
+            if (upstream.toNodeId === edge.fromNodeId) queue.push(upstream)
+        }
+    }
+    return found
 }
