@@ -801,6 +801,26 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-19'
     },
     {
+        id: 'studio-inside-a-geo',
+        category: 'Editing',
+        title: 'Studio inside a Geo',
+        summary: 'Open a Geo made in Nodes in Studio: Create puts things into it, Objects lists what stands in it, and Nodes sees every change live.',
+        body: [
+            'A Geo is the place you build in Nodes. Studio can stand inside one, and then it edits what stands there — the same things Nodes shows, in the same project, written the same way Nodes writes them. Nothing is copied: move a box in Studio and it has moved in Nodes.',
+            { list: [
+                'Getting in: on a Geo card in Nodes, the small ↗ in its header opens Studio inside that Geo. Standing inside a Geo in Nodes, the ⋯ menu has “Open … in Studio” (the easier tap on a phone). In Studio, the Geo menu at the top of the Create window lists the project’s Geos — “Whole room” is Studio as it always was — and “+ Geo” makes a new, empty Geo and steps into it.',
+                'The address says where you are: the project’s Studio address with ?geo= and the Geo’s id. Share or bookmark it and it opens inside the same Geo. The plain address still opens the whole room.',
+                'Create inside a Geo offers what exists as a node: box, sphere, cone, cylinder, plane, torus and the Point lamp, and files — a model, a video or a sound — from Import or the Files list. Each lands inside the Geo, as a card on the Geo’s own canvas in Nodes.',
+                'Objects lists what stands directly in the Geo. Select one there or in the room; in Edit mode the gizmo moves, turns and scales it, and the inspector edits its position, rotation, scale, colour and its other plain values. Double-click a row to rename it. Delete removes it, with what stands inside it, and undo brings it back.',
+                'The room shows the Geo’s inside, as Nodes does after ›: positions are the Geo’s own, so a thing at 0,0,0 stands at the Geo’s centre wherever the Geo itself stands.',
+                'In the whole room, Studio now also draws what Nodes made — every Geo with what stands in it, where Nodes draws it. There it is to look at; step into the Geo to change it.'
+            ] },
+            'Limits, plainly: Studio’s own objects (text, groups, portals, images, the spot, directional and ambient lights) cannot stand inside a Geo yet — Create inside a Geo leaves them out and says so if one is dropped in. Grouping, duplicating and copy/paste are for Studio’s objects and are off inside a Geo. The whole room keeps Studio’s own sky and lights; a Scene node’s sky or an Environment node’s light show in Nodes only. Nodes inside a Geo that are wiring, not things (a Time, a Math), stay a Nodes matter and are not listed.'
+        ],
+        tags: ['studio', 'geo', 'nodes', 'raw', 'container', 'editing'],
+        updated: '2026-10-02'
+    },
+    {
         id: 'scenes-that-show-themselves',
         category: 'Editing',
         title: 'Scenes that show themselves',
@@ -1194,7 +1214,7 @@ export const WIKI_ARTICLES = [
                 'The palette groups its nodes into seven families by what you are doing — bring in, make, numbers, the scene, watch, send out, agents — each with its own colour, the same colour the node’s card wears on the canvas. Typing dissolves the groups into a flat search. It only lists node types that actually compute or render; a “shell” tag marks anything that places but carries nothing yet, and “local dev” marks nodes that only work against a local dev server.',
                 'While you drag a wire, every input that can take it lights up and every input that cannot goes quiet — an incompatible drop no longer fails silently.',
                 'Starting from nothing: a blank canvas shows a “Build an example” button in the canvas’s lower band (out of the double-click zone). It builds a scene with a light, a cube, a colour wired into that cube, and an empty Model node waiting for your own file — plus a note giving the moves in plain words. It only offers itself on a truly blank canvas at the top level: inside a container the empty state stays yours (a stray double-click used to inject the whole demo INTO the container being filled); the ⋯ menu still offers it deliberately, anywhere. It is there because a blank canvas opens with no toolbar at all, so the ⋯ menu (which also offers it) does not exist for the person most likely to want it.',
-                'The Geo is the plain container — TouchDesigner’s Geometry COMP, by name. It arrives empty but is visibly a place (a faint floor tile marks its footprint), you enter it and collect what you need — objects, models, Lights — and everything renders inside it and travels with it. It adds nothing of its own — no shell, no rules — and it gives out what it collects: a Geometry port carrying everything standing in it as one shape, so Geo → Merge → Constructor composes collected scenes, and a Geo standing inside a Geo carries through. When in doubt, build in a Geo. A Geo stands on the floor, and in the scene a click picks up the whole Geo — drag it or set its Position to part two geos; enter the Geo to handle one thing inside. A place shows only what stands IN it: objects made in Studio’s Create window live in the project’s top scene and never appear inside a container.',
+                'The Geo is the plain container — TouchDesigner’s Geometry COMP, by name. It arrives empty but is visibly a place (a faint floor tile marks its footprint), you enter it and collect what you need — objects, models, Lights — and everything renders inside it and travels with it. It adds nothing of its own — no shell, no rules — and it gives out what it collects: a Geometry port carrying everything standing in it as one shape, so Geo → Merge → Constructor composes collected scenes, and a Geo standing inside a Geo carries through. When in doubt, build in a Geo. A Geo stands on the floor, and in the scene a click picks up the whole Geo — drag it or set its Position to part two geos; enter the Geo to handle one thing inside. A place shows only what stands IN it: objects made in Studio’s Create window live in the project’s top scene and never appear inside a container — except when Studio is standing inside a Geo (Studio inside a Geo), where Create makes nodes inside it.',
                 'Light and Environment are two nodes now, because they were always two things. A Light is a lamp: a real point light with a glowing marker, standing wherever you put it — top level or inside any container, no disappearing act. An Environment is the scene’s settings: the ambient wash and one sun (colour, intensity, direction), one per level, the ● toggle picking the active one. Old projects made before the split keep their old Light nodes and light exactly as they did.',
                 'The Camera is the authored eye. Placing one never steals the view: it stands in the scene as a small housing until the ● toggle on its card marks it as the eye for this level. Marked, the scene is seen through it — Position, Look At and FOV are inputs like any other, so a wire can move the shot — its housing disappears, and orbiting is off because the shot is authored. Unmark (or delete) it to look around freely again.',
                 'The projector cable: /out. Every project has an output address — /{space}/raw/projects/{id}/out — that renders just the scene, read-only, no toolbar, following every edit live. A space\'s own canvas has /{space}/raw/out (same browser only — a local canvas lives in that browser). Add ?scope= to output a container\'s scene; mark a Camera ● there and the output holds the authored shot. If the space is public, /out is public with it — open it on the show machine, press F11, walk away, no sign-in anywhere. In a private space it stays behind the same gate as the editor, so that machine has to be signed in as someone with access. The space\'s own canvas /out is always gated: it renders whatever is in THAT browser, so there is nothing in it to show anyone else.',
@@ -1216,7 +1236,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone', 'work-status', 'agent-run', 'timeline', 'director', 'model', 'glb', 'video', 'sound', 'import', 'containers', 'doorways', 'ports', 'scene', 'example', 'getting-started', 'anatomy', 'made-of', 'crossing', 'projects', 'list'],
-        updated: '2026-09-23'
+        updated: '2026-10-02'
     },
     {
         id: 'studio-node',
