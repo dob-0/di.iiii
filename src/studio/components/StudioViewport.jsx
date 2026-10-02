@@ -30,7 +30,7 @@ import {
     setTimelinePreview
 } from '../utils/timelinePreview.js'
 import StudioHelpDialog from './StudioHelpDialog.jsx'
-import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
+import { WebglContextLostOverlay, useWebglContextGuard, WebglUnavailableBoundary } from '../../components/WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
 import useSmartViewState from '../../project/viewport/smartView/useSmartViewState.js'
@@ -1071,61 +1071,63 @@ export default function StudioViewport({
                 onCursorLeave?.(event)
             }}
         >
-            <Canvas
-                key={canvasKey}
-                style={{ height: '100%' }}
-                onCreated={({ gl }) => bindContextGuard(gl)}
-                shadows={document.renderSettings?.shadows !== false}
-                gl={{
-                    antialias: document.renderSettings?.antialias !== false,
-                    powerPreference: lowPower ? 'low-power' : 'default'
-                }}
-                dpr={lowPower ? 1 : [document.renderSettings?.dprMin ?? 1, document.renderSettings?.dprMax ?? 2]}
-                frameloop={lowPower && settled ? 'demand' : 'always'}
-                camera={{
-                    position: camera.position || [0, 2.4, 6.5],
-                    fov: camera.fov || 50,
-                    zoom: camera.zoom || 1,
-                    near: camera.near || 0.1,
-                    far: camera.far || 1000,
-                    orthographic: camera.projection === 'orthographic'
-                }}
-                onPointerMissed={() => onSelectEntity?.(null)}
-            >
-                <XR store={xrStore}>
-                    <StudioOrbit
-                        controlsRef={controlsRef}
-                        cameraView={camera}
-                        onCameraChange={onCameraChange}
-                        onRotateStart={onRotateStart}
-                        enabled={enableNavigation}
-                        fovRef={smartOn ? fovRef : null}
-                    />
-                    <StudioSceneContent
-                        document={document}
-                        selectedEntityId={selectedEntityId}
-                        selectedEntityIds={selectedEntityIds}
-                        onSelectEntity={onSelectEntity}
-                        onToggleSelectEntity={onToggleSelectEntity}
-                        editMode={editMode}
-                        gizmoMode={gizmoMode}
-                        gizmoAxis={gizmoAxis}
-                        gizmoVisible={gizmoVisible}
-                        transformOp={transformOp}
-                        onTransformCommit={onTransformCommit}
-                        onTransformCommitMany={onTransformCommitMany}
-                        onTransformCancel={onTransformCancel}
-                        onTransformStatus={setTransformStatus}
-                        controlsRef={controlsRef}
-                        playTimelines={playTimelines}
-                        rigMirror={rigMirror}
-                        rigLook={rigLook}
-                        screens={screens}
-                        followLinks={followLinks}
-                        smartView={smartViewProps}
-                    />
-                </XR>
-            </Canvas>
+            <WebglUnavailableBoundary>
+                <Canvas
+                    key={canvasKey}
+                    style={{ height: '100%' }}
+                    onCreated={({ gl }) => bindContextGuard(gl)}
+                    shadows={document.renderSettings?.shadows !== false}
+                    gl={{
+                        antialias: document.renderSettings?.antialias !== false,
+                        powerPreference: lowPower ? 'low-power' : 'default'
+                    }}
+                    dpr={lowPower ? 1 : [document.renderSettings?.dprMin ?? 1, document.renderSettings?.dprMax ?? 2]}
+                    frameloop={lowPower && settled ? 'demand' : 'always'}
+                    camera={{
+                        position: camera.position || [0, 2.4, 6.5],
+                        fov: camera.fov || 50,
+                        zoom: camera.zoom || 1,
+                        near: camera.near || 0.1,
+                        far: camera.far || 1000,
+                        orthographic: camera.projection === 'orthographic'
+                    }}
+                    onPointerMissed={() => onSelectEntity?.(null)}
+                >
+                    <XR store={xrStore}>
+                        <StudioOrbit
+                            controlsRef={controlsRef}
+                            cameraView={camera}
+                            onCameraChange={onCameraChange}
+                            onRotateStart={onRotateStart}
+                            enabled={enableNavigation}
+                            fovRef={smartOn ? fovRef : null}
+                        />
+                        <StudioSceneContent
+                            document={document}
+                            selectedEntityId={selectedEntityId}
+                            selectedEntityIds={selectedEntityIds}
+                            onSelectEntity={onSelectEntity}
+                            onToggleSelectEntity={onToggleSelectEntity}
+                            editMode={editMode}
+                            gizmoMode={gizmoMode}
+                            gizmoAxis={gizmoAxis}
+                            gizmoVisible={gizmoVisible}
+                            transformOp={transformOp}
+                            onTransformCommit={onTransformCommit}
+                            onTransformCommitMany={onTransformCommitMany}
+                            onTransformCancel={onTransformCancel}
+                            onTransformStatus={setTransformStatus}
+                            controlsRef={controlsRef}
+                            playTimelines={playTimelines}
+                            rigMirror={rigMirror}
+                            rigLook={rigLook}
+                            screens={screens}
+                            followLinks={followLinks}
+                            smartView={smartViewProps}
+                        />
+                    </XR>
+                </Canvas>
+            </WebglUnavailableBoundary>
 
             {/* The sources behind the room's screens. Not in a low-power preview
                 card: thirteen cards each running a video would be the cost the

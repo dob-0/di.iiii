@@ -2,6 +2,8 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
+import { WebglUnavailableBoundary } from '../../components/WebglContextGuard.jsx'
+import { rendererWithFallback } from '../../project/viewport/rendererFallback.js'
 
 /*
  * The process documentation as a repulsion field instead of a masonry grid.
@@ -363,28 +365,30 @@ export default function ProcessField({ images }) {
 
     return (
         <div className="wcc-process-field">
-            <Canvas
-                dpr={[1, 1.6]}
-                gl={{ antialias: true, alpha: true }}
-                camera={{ fov: 45, position: [0, 0, CAMERA_Z] }}
-                /* On the Canvas, NOT on the group inside it. A group is never a
-                   raycast target, so a group-level onPointerMissed fires on every
-                   click — including the ones that hit a photo — and the deselect
-                   raced the select. The Canvas prop fires only when the click hit
-                   nothing at all. */
-                onPointerMissed={handleDeselect}
-            >
-                <Suspense fallback={null}>
-                    <Field
-                        images={images}
-                        seats={seats}
-                        revealed={revealed}
-                        selected={selected}
-                        focused={focused}
-                        onSelect={handleSelect}
-                    />
-                </Suspense>
-            </Canvas>
+            <WebglUnavailableBoundary>
+                <Canvas
+                    dpr={[1, 1.6]}
+                    gl={rendererWithFallback({ antialias: true, alpha: true })}
+                    camera={{ fov: 45, position: [0, 0, CAMERA_Z] }}
+                    /* On the Canvas, NOT on the group inside it. A group is never a
+                       raycast target, so a group-level onPointerMissed fires on every
+                       click — including the ones that hit a photo — and the deselect
+                       raced the select. The Canvas prop fires only when the click hit
+                       nothing at all. */
+                    onPointerMissed={handleDeselect}
+                >
+                    <Suspense fallback={null}>
+                        <Field
+                            images={images}
+                            seats={seats}
+                            revealed={revealed}
+                            selected={selected}
+                            focused={focused}
+                            onSelect={handleSelect}
+                        />
+                    </Suspense>
+                </Canvas>
+            </WebglUnavailableBoundary>
 
             {/* The pager, only while a photo is open. Visible and clickable, unlike
                 the list below — once you are looking at one photo full-frame the
