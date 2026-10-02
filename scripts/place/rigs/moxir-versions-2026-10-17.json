@@ -1699,7 +1699,7 @@
     },
     "note": "Darker than the base's readable night (ambient 0.8 -> 0.5, directional 0.35 -> 0.22): darkness is part of the design here (rule 1); the hall must still read in a render. Tuned by eye on the RTX 3080, 2026-09-28."
   },
-  "hall": "scripts/place/rigs/moxir-hall-2026-09-28-crane-dj.hall.json",
+  "hall": "scripts/place/rigs/moxir-hall-2026-10-02-crane-dj.hall.json",
   "craneTruss": {
     "kind": "crane-hung",
     "why": "Owner, 2026-09-28 23:1x: no stage, no towers — only the DJ stand; the yellow overhead crane is movable and parks over the DJ, and the truss hangs from its bridge on chains (\"the metal chain conected thr the yellow crane\"). The minimal hang, approved: ONE line (\"ok take complimentary\"). The crane is moved in the hall's dims (moxir-hall-crane-dj-2026-09-28.json: bridge centre over the DJ, z 4.8 m; trolley parked at the right end), not duplicated.",

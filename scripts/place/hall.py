@@ -109,7 +109,9 @@ PLACEHOLDER = {
     # the rail head, the girders 0.8 m deep, the cab ~2.1 m under them.
     'crane_bridge_bottom_h_m': None,  # floor to the bridge girders' underside at mid-span
     'crane_bridge_depth_m': 1.5,      # the bridge girders' depth at mid-span
-    'crane_cab_h_m': 2.2,             # the operator's cab, hung under the left end
+    'crane_cab_h_m': 2.2,             # the operator's cab, hung under one end
+    'crane_cab_side': 'left',         # which end of the bridge the cab hangs at: 'left' (-x) or 'right' (+x) (MOXIR: right, photos 002-005, 009, 013)
+    'runway_handrail_rows': ['left', 'right'],  # which inner rows' nave-side runway girder carries the walkway handrail (MOXIR: left only, photos 004, 009)
     'roof_type': 'space_frame_flat',
     'space_frame_module_m': 3.0,
     'space_frame_depth_m': 2.5,
@@ -144,7 +146,7 @@ KEYS_FROM_DIMS = [
     'span_m', 'pitch_m', 'bays', 'length_m', 'crane_rail_h_m', 'truss_bottom_h_m',
     'ridge_h_m', 'lantern_w_m', 'column_w_m', 'column_d_m', 'upper_column_d_m', 'truss_top_h_m',
     'lantern_h_m', 'column_head', 'column_head_width_m', 'crane_girders_each_row', 'crane_girder_depth_m',
-    'crane_bridge_bottom_h_m', 'crane_bridge_depth_m', 'crane_cab_h_m',
+    'crane_bridge_bottom_h_m', 'crane_bridge_depth_m', 'crane_cab_h_m', 'crane_cab_side', 'runway_handrail_rows',
     'roof_type', 'space_frame_module_m', 'space_frame_depth_m', 'space_frame_member_m', 'space_frame_node_m',
     'lantern_module_m', 'lantern_segments_m', 'lantern_spans',
     'neighbour_spans', 'expansion_joint_m', 'paired_columns_at_joint',
@@ -599,13 +601,15 @@ def build(dims):
             b.box('rust', (gx - 0.04, y_lo, head_top + girder_depth), (gx + 0.04, y_hi, rail_h))
             rails.append((gx, ax))
             if nave_face:
-                # Web stiffeners every 1.5 m, and the walkway handrail (photo 004).
+                # Web stiffeners every 1.5 m, and (on the rows `runway_handrail_rows` names) the walkway handrail (photo 004).
                 face = gx + (0.02 if ax < 0 else -0.02)
                 n_st = int(L / 1.5)
                 for k in range(n_st + 1):
                     sy = -L / 2 + k * 1.5
                     x0, x1 = sorted((face, face + (0.1 if ax < 0 else -0.1)))
                     b.box('girder', (x0, sy - 0.02, head_top + 0.04), (x1, sy + 0.02, head_top + girder_depth - 0.04))
+                if ('left' if ax < 0 else 'right') not in dims['runway_handrail_rows']:
+                    continue
                 hx = gx + (0.3 if ax < 0 else -0.3)
                 for h in (0.5, 1.0):
                     b.box('steel', (hx - 0.025, y_lo, head_top + girder_depth + h), (hx + 0.025, y_hi, head_top + girder_depth + h + 0.05))
@@ -651,13 +655,15 @@ def build(dims):
             b.box('crane', (x - 0.4, cy - 2.6, rail_h), (x + 0.4, cy + 2.6, max(rail_h + 0.8, girder_bottom + 0.4)))
         tx0 = cx + trolley_x
         b.box('crane', (tx0, cy - 1.6, girder_bottom + crane_depth), (tx0 + 2.6, cy + 1.6, girder_bottom + crane_depth + 1.0))
-        cab_x = xa + 1.0
+        cab_right = dims['crane_cab_side'] == 'right'
+        cab_x = (xb - 3.0) if cab_right else (xa + 1.0)
         b.box('crane', (cab_x, cy - 1.0, girder_bottom - cab_h), (cab_x + 2.0, cy + 1.0, girder_bottom))
-        b.box('glass', (cab_x + 1.95, cy - 0.8, girder_bottom - cab_h + 0.3), (cab_x + 2.02, cy + 0.8, girder_bottom - 0.9))
+        gx0 = cab_x - 0.02 if cab_right else cab_x + 1.95  # the cab's window faces along the bridge, toward the middle
+        b.box('glass', (gx0, cy - 0.8, girder_bottom - cab_h + 0.3), (gx0 + 0.07, cy + 0.8, girder_bottom - 0.9))
         if record:
             # The shape the rig checks beams against (rig-lib.mjs beamHitsCrane): the two
             # box girders (0.7 m wide, 1.1 m either side of the bridge's centre line, a
-            # 1.5 m gap between them) and the trolley on top; the cab hangs at the left end.
+            # 1.5 m gap between them) and the trolley on top; the cab hangs at the end `crane_cab_side` names.
             cranes.append({'z_m': round(-cy, 3), 'from_entry_m': round(from_door, 3),
                            'girder_bottom_m': round(girder_bottom, 3), 'girder_top_m': round(girder_bottom + crane_depth, 3),
                            'girders_dz_m': [-1.1, 1.1], 'girder_w_m': 0.7,
