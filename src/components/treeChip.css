@@ -1,0 +1,27 @@
+/* Bottom-right, 10px from the edge: inside the 44px bottom strip pages already
+   keep free for ModeMark (--di-mode-mark-clearance) and below the account
+   button (--di-account-btn-bottom, 86px). Rectangle, no radius, it only
+   answers a hover (its title says what it is). */
+.tree-chip {
+    position: fixed;
+    right: calc(10px + env(safe-area-inset-right, 0px));
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    z-index: 10001;
+    max-width: calc(100vw - 20px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: var(--di-space-1) var(--di-space-2);
+    border: 1px solid var(--di-warning, #ffb347);
+    background: var(--di-scrim-strong);
+    color: var(--di-warning, #ffb347);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    letter-spacing: 0.04em;
+    line-height: 1;
+}
+
+.tree-chip[data-mode="scratch"] {
+    border-color: var(--di-danger);
+    color: var(--di-danger);
+}
