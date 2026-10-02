@@ -233,11 +233,13 @@ float profileAt(float u, float p) { return exp(-0.693147 * pow(u, p)); }
 float beamShape(vec2 q, float R, float p, float s) {
     bool prism = uPrismN > 0.5;
     bool honey = uHoney > 0.5;
+    // ONE return, at the end: Direct3D's compiler (ANGLE on Windows) read the early return
+    // before the loop as a value "potentially uninitialized" (warning X4000, f_beamShape)
+    float result = 0.0;
     if (!prism && !honey) {
-        float prof = profileAt(length(q) / max(R, 1e-5), p);
-        if (uGobo > 0.5 && prof > 0.001) prof *= goboMask(uGobo, length(q) / max(R, 1e-5), atan(q.y, q.x) - uGoboRot, 0.06);
-        return prof;
-    }
+        result = profileAt(length(q) / max(R, 1e-5), p);
+        if (uGobo > 0.5 && result > 0.001) result *= goboMask(uGobo, length(q) / max(R, 1e-5), atan(q.y, q.x) - uGoboRot, 0.06);
+    } else {
     float dP = prism ? s * uPrismTan : 0.0;
     float dH = honey ? s * uHoneyTan : 0.0;
     float spread = dP + dH;
@@ -274,6 +276,8 @@ float beamShape(vec2 q, float R, float p, float s) {
     float apart = sum / (nP * (honey ? 7.0 : 1.0));
     if (uGobo > 0.5 && best > 0.001) apart *= goboMask(uGobo, length(bestQ) / max(R, 1e-5), atan(bestQ.y, bestQ.x) - uGoboRot, 0.06);
     float w = goboSmooth(${MERGE_FROM.toFixed(1)}, ${MERGE_TO.toFixed(1)}, spread / max(R, 1e-5));
-    return mix(merged, apart, w);
+    result = mix(merged, apart, w);
+    }
+    return result;
 }
 `

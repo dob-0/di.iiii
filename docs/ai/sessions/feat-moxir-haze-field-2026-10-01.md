@@ -33,3 +33,11 @@
 
 - Owner: "fix the black square in dj view". It was the hall's 6 × 6 m entry gate (DJ camera at z 6.6, gate at z 54: 47 m, 74 px, matching the projection) showing the scene background, which three.js never fogs.
 - `src/project/viewport/NightOutside.jsx`: a dark box just around the building, found from the floor mesh, fog on, no bottom face, visible only while the camera is inside it. Mounted by RenderSettingsEffect in rooms with `atmosphere.haze` (opt-in like the rest). Seen on the RTX 5060: DJ view veiled, Top and Side views as before.
+
+## 2026-10-02 — the human audit: walk mode, white specks, console, fps reading
+
+- Owner: "check all for bugs, make the human audit", then "walk as a real human … you are the event organiser". Three auditors (room/renderer, tool pages read-only on :5184, operator test of desk + visualiser on the :5310 preview) plus my own walk at eye height (8 stops × 4 looks).
+- Fixed here: the decorative motes in hazy rooms (white snow); walk mode Esc / fly floor / header under the steps row / touch controls; the visualiser fps reading; the PCFSoftShadowMap and X4000 warnings. known-fixes rows added.
+- Not a bug: standing in a column-base beam whites out the view (you are inside a 380 W beam 1 m from its lens).
+- Open: the speckled beams and the dotted dome on the crane are the IGN sample jitter at the governor's lowest notch (5 samples, DPR 0.75). The room sat at notch 5 at ~23 fps because several Chrome windows were rendering the 70-light room at once (GPU 97 %). Clean fps owed with one window. Also open: the milky grey wash from the crowd in bright looks; the hard horizon line in the Floor view; walk collision with objects (no infrastructure; walkableAreas only).
+- Tool-page and desk bugs went to emily-d6 (moxir-local commits 8b2a4749, d5f90815, 0f79e27f); the hall corrections from the photo + standards audit went to emily-d6 too.

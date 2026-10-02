@@ -121,6 +121,7 @@ export default function PublicProjectSceneSurface({
     entryView,
     navMode,
     onNavModeChange,
+    topClear = null,
     isPreview,
     initialCameraView = null,
     xrDefaultMode = 'none',
@@ -206,6 +207,7 @@ export default function PublicProjectSceneSurface({
                     title={title}
                     onExit={() => onNavModeChange('orbit')}
                     exitLabel="← View mode"
+                    topClear={topClear}
                 />
             ) : hasGraph ? (
                 <PublicGraphSurface

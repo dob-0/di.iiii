@@ -219,6 +219,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const showRigSteps = state.status === 'ready' && roomHasRig && localInstall.isLocal && !isPreview && !isEmbed
     // What the room's own corner controls clear at the top: the bar, and the steps row.
     const topClear = `calc(1rem${localInstall.isLocal ? ' + var(--sbar-h, 36px)' : ''}${showRigSteps ? ' + var(--sbar-h, 36px)' : ''})`
+    // The same clearance without the 1rem gutter, for a header that pads itself.
+    const chromeClear = `calc(0px${localInstall.isLocal ? ' + var(--sbar-h, 36px)' : ''}${showRigSteps ? ' + var(--sbar-h, 36px)' : ''})`
 
     // While the desk plays one of the room's looks, the scene draws the lamps as the look
     // poses them (RoomLookFollower); the document itself is never written.
@@ -521,6 +523,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         entryView={entryView}
                         navMode={navMode}
                         onNavModeChange={setNavMode}
+                        topClear={chromeClear}
                         isPreview={isPreview}
                         initialCameraView={initialCameraView}
                         xrDefaultMode={xrDefaultMode}

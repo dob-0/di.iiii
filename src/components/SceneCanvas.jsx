@@ -76,7 +76,7 @@ export default function SceneCanvas({
                         : THREE.ACESFilmicToneMapping
                     gl.toneMappingExposure = renderSettings.toneMappingExposure ?? 1
                     gl.shadowMap.enabled = !!renderSettings.shadows
-                    gl.shadowMap.type = renderSettings.shadowType ?? THREE.PCFSoftShadowMap
+                    gl.shadowMap.type = renderSettings.shadowType ?? THREE.PCFShadowMap
                 }}
                 onContextMenu={(event) => event.preventDefault()}
                 onPointerMissed={handlePointerMissed}

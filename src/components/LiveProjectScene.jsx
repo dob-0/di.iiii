@@ -464,6 +464,15 @@ export const centroidSpawn = (center, bounds) => {
     return { x: center?.x ?? 0, z: (center?.z ?? 0) + back, yaw: Math.PI, pitch: 0 }
 }
 
+// A touch-first device: a coarse primary pointer, or a touch screen with no fine
+// pointer anywhere (some phone browsers / emulations report `pointer: fine` while
+// still delivering touch only). A touch laptop with a mouse stays on pointer-lock.
+export const detectTouchDevice = () => {
+    if (typeof window === 'undefined' || !window.matchMedia) return false
+    if (window.matchMedia('(pointer: coarse)').matches) return true
+    return (navigator.maxTouchPoints || 0) > 0 && !window.matchMedia('(any-pointer: fine)').matches
+}
+
 function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef, altitudeKeys = DEFAULT_ALTITUDE_KEYS, wheelDolly = true }) {
     const { camera, gl } = useThree()
     // During an XR session the camera pose is owned by the headset/phone and
@@ -521,7 +530,7 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
         // element instead whenever AR is active.
         const el = (isArActive && arTouchElRef?.current) || gl.domElement
         const player = playerRef.current
-        const isTouch = isArActive || window.matchMedia('(pointer: coarse)').matches
+        const isTouch = isArActive || detectTouchDevice()
 
         if (!isTouch) {
             // Desktop: pointer lock
@@ -730,7 +739,15 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
                 if (joyThumbRef?.current) joyThumbRef.current.style.transform = 'translate(0,0)'
             }
             const hideJoy = () => {
-                if (joyVisRef?.current) joyVisRef.current.style.opacity = '0'
+                // Back to the resting ring (bottom-left, faint) so a touch screen always
+                // shows where the move control lives, not only while a thumb is on it.
+                if (joyVisRef?.current) {
+                    const o = joyVisRef.current.style
+                    o.left = ''
+                    o.top = ''
+                    o.bottom = ''
+                    o.opacity = ''
+                }
                 if (joystickRef) { joystickRef.current.x = 0; joystickRef.current.y = 0 }
             }
             const updateJoy = (tx, ty) => {
@@ -884,7 +901,7 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             player.z = dollied.z
         }
         if (fly && vert !== 0) {
-            player.altY = THREE.MathUtils.clamp(player.altY + vert * FLY_SPEED * delta, -2, 60)
+            player.altY = THREE.MathUtils.clamp(player.altY + vert * FLY_SPEED * delta, FLY_MIN_ALTITUDE, 60)
         }
         if (!fly) {
             player.altY = THREE.MathUtils.lerp(player.altY, EYE_HEIGHT, Math.min(1, delta * 3))
@@ -939,6 +956,9 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
 // slow and `dwell` long. The visitor always wins: the first yaw change we did
 // not make ourselves (mouse-look, thumbstick turn) hands the view over for good.
 const TOUR_YAW_EPSILON = 0.01
+// Fly never dips under the floor: below y=0 the eye is inside the ground and the
+// whole frame is one flat fill.
+const FLY_MIN_ALTITUDE = 0.25
 function RingTour({ playerRef, config }) {
     const startedAt = useRef(null)
     const surrendered = useRef(false)
@@ -1504,6 +1524,9 @@ export default function LiveProjectScene({
     cameraPoseRef = null,
     onExit = null,
     exitLabel = '← Exit',
+    // `topClear`: what the host page's own top chrome covers (CSS length). The header
+    // starts below it, so the exit button and title are not cut under a top bar.
+    topClear = null,
     // `entitiesOverride`: the entities to draw instead of the loaded document's — the
     // room as a desk look poses it (PublicProjectSceneSurface). Null: the document's own.
     entitiesOverride = null,
@@ -1560,7 +1583,7 @@ export default function LiveProjectScene({
     const xr = useXrAr()
     const [nearestLabel, setNearestLabel] = useState(null)
     const [isLocked, setIsLocked] = useState(false)
-    const [isMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
+    const [isMobile] = useState(detectTouchDevice)
     // First-visit movement hint: fades on a timer, but dismiss immediately on the
     // first interaction so the ghost-joystick demo never overlaps the real joystick.
     const [showMoveHint, setShowMoveHint] = useState(true)
@@ -1679,6 +1702,24 @@ export default function LiveProjectScene({
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
     }, [walking, showModeControls])
+
+    // Esc is always a way out. While the pointer is locked the browser keeps the first
+    // Esc for itself (it releases the lock and sends the page nothing); the next one
+    // lands here (a keydown that reaches the page means the lock is not holding it) and returns to the previous mode, same as the exit button.
+    const onExitRef = useRef(onExit)
+    onExitRef.current = onExit
+    const lockChangedAtRef = useRef(0)
+    useEffect(() => { lockChangedAtRef.current = performance.now() }, [isLocked])
+    useEffect(() => {
+        if (!walking || !exitLabel) return undefined
+        const onKey = (e) => {
+            if (e.key !== 'Escape' || e.repeat || isTypingTarget(e.target)) return
+            if (performance.now() - lockChangedAtRef.current < 300) return
+            onExitRef.current?.()
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [walking, exitLabel])
 
     const entities = useMemo(() => entitiesOverride || doc?.entities || [], [entitiesOverride, doc?.entities])
     // Legacy-imported projects store assets with an empty `url` field (the
@@ -1844,7 +1885,8 @@ export default function LiveProjectScene({
                 {...(!doc && !loadError ? { [ENTRY_PENDING_ATTR]: 'document' } : {})}
                 camera={{ position: [0, EYE_HEIGHT, 6], fov: interactive ? 60 : 45, near: 0.1, far: cameraFar }}
                 dpr={[renderSettings.dprMin ?? 1, Math.min(renderSettings.dprMax ?? 2, WALK_DPR_CEILING)]}
-                shadows={renderSettings.shadows !== false}
+                // three r185 dropped PCFSoftShadowMap (it warns, then draws PCFShadowMap): ask for that directly
+                shadows={renderSettings.shadows !== false ? 'percentage' : false}
                 gl={rendererWithFallback({ antialias: renderSettings.antialias !== false })}
                 onCreated={({ gl }) => bindContextGuard(gl)}
                 style={{ position: 'absolute', inset: 0, display: 'block', touchAction: 'none' }}
@@ -1905,7 +1947,10 @@ export default function LiveProjectScene({
                         infiniteGrid
                     />
                 )}
-                <AmbientField center={center} />
+                {/* a room with a physical haze (renderSettings.atmosphere.haze) has real air: the
+                    decorative motes read as white snow under its exposure (×3.5, auto up to ×3), and one
+                    in front of the eye drew as a big white square (MOXIR walk audit, 2026-10-02) */}
+                {renderSettings?.atmosphere?.haze ? null : <AmbientField center={center} />}
                 {showEntities && rootEntities.map((entity) => (
                     <SceneEntityErrorBoundary key={entity.id} resetKey={entity.id}>
                         <AnimatedEntity entity={entity} assetMap={assetMap} childMap={entityChildMap} />
@@ -2054,7 +2099,7 @@ export default function LiveProjectScene({
                         )}
                     </div>
 
-                    <header className="live-scene-chrome">
+                    <header className="live-scene-chrome" style={topClear ? { top: topClear } : undefined}>
                         {/* exitLabel={null}: the surface gives the way out itself (the rig's
                             bar over view A), so the room does not draw a second one. */}
                         {exitLabel ? (
@@ -2103,6 +2148,11 @@ export default function LiveProjectScene({
                             WASD · move &nbsp;·&nbsp; Mouse · look &nbsp;·&nbsp; F · {flyMode ? 'walk' : 'fly'}
                             {flyMode ? <>&nbsp;·&nbsp; Space/Q · up &nbsp;·&nbsp; C/E · down</> : null}
                             &nbsp;·&nbsp; ESC · release
+                        </p>
+                    )}
+                    {walking && isMobile && !showMoveHint && (
+                        <p className="live-scene-hint live-scene-hint--touch">
+                            Left thumb · move &nbsp;·&nbsp; Right thumb · look
                         </p>
                     )}
                     {walking && showMoveHint && (isMobile || !isLocked) && (
