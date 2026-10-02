@@ -22,8 +22,7 @@ import {
     rigCore,
     sanitizeViewPresets,
     targetBoundary,
-    viewHash
-} from './smartViewGeometry.js'
+    viewHash, boxHolds, clampToBox, insideBox } from './smartViewGeometry.js'
 
 // MOXIR's numbers (scripts/place/rigs/moxir-hall-2026-09-28.hall.json, the minimal rig).
 const OUTLINE = [[-36.4, -54.5], [60.4, -54.5], [60.4, 54.5], [-36.4, 54.5]]
@@ -322,5 +321,26 @@ describe('keys and links', () => {
         expect(presetForKey('7')).toBe(null)
         expect(presetForKey('01')).toBe(null)
         expect(presetForKey('a')).toBe(null)
+    })
+})
+
+describe('the lock inside the building', () => {
+    const frame = { bounds: { min: [-48, 0, -54.5], max: [48, 17, 54.5] }, floorY: 0, roofCut: 10.75, roofTop: 17, center: [0, 8.5, 0], radius: 70 }
+    it('is the interior: 0.5 m off the walls, 0.8 m above the frame floor (0.5 above the floor itself), 0.3 m under the roof underside', () => {
+        expect(insideBox(frame)).toEqual({ min: [-47.5, 0.8, -54], max: [47.5, 10.45, 54] })
+    })
+    it('holds a point or not, with a little tolerance', () => {
+        const box = insideBox(frame)
+        expect(boxHolds([0, 5, 0], box)).toBe(true)
+        expect(boxHolds([0, 12, 0], box)).toBe(false)
+        expect(boxHolds([47.5005, 5, 0], box)).toBe(true)
+    })
+    it('clamps each axis and leaves a point already inside alone', () => {
+        const box = insideBox(frame)
+        expect(clampToBox([100, -3, 0], box)).toEqual([47.5, 0.8, 0])
+        expect(clampToBox([1, 2, 3], box)).toEqual([1, 2, 3])
+    })
+    it('has no box without a building', () => {
+        expect(insideBox(null)).toBe(null)
     })
 })

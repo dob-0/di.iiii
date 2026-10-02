@@ -321,6 +321,24 @@ export const orbitMaxDistance = (frame, presetDistance = 0) => (
     frame ? Math.max(20, frame.radius * 1.6, (Number(presetDistance) || 0) * 1.1) : 500
 )
 
+/**
+ * The interior a visitor's camera may be locked inside ("Inside" toggle, 2026-10-02): the building's
+ * footprint `wall` m off the walls, `floor` m above the floor, `ceiling` m under the roof underside
+ * (roofCut). Null without a building.
+ */
+// floor 0.8: the frame's floorY is the model's lowest point, which in MOXIR is the floor slab 0.3 m under the
+// floor (the camera then stands 0.5 m above the floor itself).
+export const insideBox = (frame, wall = 0.5, floor = 0.8, ceiling = 0.3) => (frame ? {
+    min: [frame.bounds.min[0] + wall, frame.floorY + floor, frame.bounds.min[2] + wall],
+    max: [frame.bounds.max[0] - wall, frame.roofCut - ceiling, frame.bounds.max[2] - wall]
+} : null)
+
+/** Is the point in the box (to `tolerance` m)? */
+export const boxHolds = (p, box, tolerance = 0.01) => Boolean(box) && [0, 1, 2].every((i) => p[i] >= box.min[i] - tolerance && p[i] <= box.max[i] + tolerance)
+
+/** The point pulled into the box, axis by axis. */
+export const clampToBox = (p, box) => [0, 1, 2].map((i) => Math.min(box.max[i], Math.max(box.min[i], p[i])))
+
 /** Where the orbit target may go (camera-controls' setBoundary): the room, never under it. */
 export const targetBoundary = (frame, margin = 2) => (frame ? {
     min: [frame.bounds.min[0] - margin, frame.floorY, frame.bounds.min[2] - margin],

@@ -14,7 +14,10 @@ import {
     enclosingModelIds,
     firstDrawnHit,
     floorMaxPolar,
+    boxHolds,
+    clampToBox,
     fogOffset,
+    insideBox,
     isBoxEmpty,
     isLampEntity,
     isOccluding,
@@ -176,6 +179,9 @@ const worldBox = (object) => {
  * @param {object}   props.fogBase       { near, far } as authored, or null
  * @param {Function} props.onPresets     (presets | []) when the room is measured
  * @param {Function} props.onUserMove    the visitor took the camera (the preset lets go)
+ * @param {boolean}  props.lockInside    keep the camera (and its target) inside the building (the "Inside" toggle)
+ * @param {Function} props.onBuilding    (true) once the room has a building to lock inside
+ * @param {Function} props.onLockPaused  (bool) a preset whose camera stands outside the building pauses the lock
  */
 export default function SmartView({
     document,
@@ -186,7 +192,10 @@ export default function SmartView({
     constraints = false,
     fogBase = null,
     onPresets,
-    onUserMove
+    onUserMove,
+    lockInside = false,
+    onBuilding,
+    onLockPaused
 }) {
     const { scene, camera, gl, size } = useThree()
     const entities = useMemo(() => document?.entities || [], [document?.entities])
@@ -237,6 +246,9 @@ export default function SmartView({
         presetDistance: 0,
         // true from the start: the landing view is composed too (no fade until the visitor takes the camera)
         atPreset: true,
+        lockPaused: false,
+        flyUntil: 0,
+        building: false,
         edges: new Map(),
         boundaryKey: ''
     })
@@ -444,12 +456,31 @@ export default function SmartView({
         // A preset is composed on purpose (on Crane the bridge IS the subject): no occlusion fade while the
         // camera sits at it; the fade is back once the visitor takes the camera (controlstart).
         state.atPreset = true
+        // The lock: a preset whose camera stands outside the building (Top, Side …) pauses it while that view
+        // is on; nothing is clamped mid-flight either.
+        const box = insideBox(state.frame)
+        state.lockPaused = Boolean(lockRef.current && box && !boxHolds([px, py, pz], box))
+        onLockPausedRef.current?.(state.lockPaused)
+        state.flyUntil = performance.now() + 1800
         cc.setLookAt(px, py, pz, tx, ty, tz, true)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [command?.nonce])
 
     // The visitor takes the camera: the preset (and its section) lets go. Bound from the
     // frame loop, because camera-controls mounts and remounts on its own schedule.
+    const lockRef = useRef(lockInside)
+    const onBuildingRef = useRef(onBuilding)
+    const onLockPausedRef = useRef(onLockPaused)
+    useEffect(() => {
+        lockRef.current = lockInside
+        onBuildingRef.current = onBuilding
+        onLockPausedRef.current = onLockPaused
+    })
+    // A fresh choice of the toggle: the lock is whole again (a paused preset stays paused only until then).
+    useEffect(() => {
+        live.current.lockPaused = false
+        onLockPausedRef.current?.(false)
+    }, [lockInside])
     const onUserMoveRef = useRef(onUserMove)
     useEffect(() => { onUserMoveRef.current = onUserMove }, [onUserMove])
     const bindControls = (cc) => {
@@ -498,6 +529,10 @@ export default function SmartView({
         }
         const frame = state.frame
         if (!frame) return
+        if (!state.building) {
+            state.building = true
+            onBuildingRef.current?.(true)
+        }
         const cc = controlsRef?.current
         bindControls(cc)
         const target = scratch.target
@@ -582,13 +617,20 @@ export default function SmartView({
             const distance = typeof cc.distance === 'number' ? cc.distance : toTarget
             cc.maxPolarAngle = floorMaxPolar(target.y, distance, frame.floorY, 0.3)
             cc.maxDistance = orbitMaxDistance(frame, state.presetDistance)
-            const b = targetBoundary(frame)
+            // "Inside": the target and the camera both stay in the interior box; otherwise today's limits.
+            const lockBox = lockRef.current && !state.lockPaused ? insideBox(frame) : null
+            const b = lockBox || targetBoundary(frame)
             const key = `${b.min.join(',')}|${b.max.join(',')}`
             if (key !== state.boundaryKey && cc.setBoundary) {
                 state.boundaryKey = key
                 scratch.boundary.min.fromArray(b.min)
                 scratch.boundary.max.fromArray(b.max)
                 cc.setBoundary(scratch.boundary)
+            }
+            // The camera is clamped once the visitor has taken it and no preset is in flight.
+            if (lockBox && !state.atPreset && performance.now() > state.flyUntil && !boxHolds(camera.position.toArray(), lockBox)) {
+                const c = clampToBox(camera.position.toArray(), lockBox)
+                cc.setPosition(c[0], c[1], c[2], false)
             }
         }
     })

@@ -76,6 +76,21 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // 'scene' entry view only -- fixed-camera and code/iframe presentations
     // are a deliberate per-project choice and stay exactly as authored.
     const [navMode, setNavMode] = useState('orbit')
+    // "Inside": keep the camera inside the building (SmartView). On by default where there is a building,
+    // remembered per browser; a preset whose camera stands outside the building (Top, Side) pauses it.
+    const [lockInside, setLockInside] = useState(() => {
+        try { return window.localStorage.getItem('di.view.lockInside') !== '0' } catch { return true }
+    })
+    const [hasBuilding, setHasBuilding] = useState(false)
+    const [lockPaused, setLockPaused] = useState(false)
+    const onBuilding = useCallback((on) => setHasBuilding(Boolean(on)), [])
+    const onLockPaused = useCallback((on) => setLockPaused(Boolean(on)), [])
+    const toggleLockInside = useCallback(() => {
+        setLockInside((on) => {
+            try { window.localStorage.setItem('di.view.lockInside', on ? '0' : '1') } catch { /* private window */ }
+            return !on
+        })
+    }, [])
     // ?preview=1 — embedded thumbnail mode (Studio space cards): static
     // authored camera, no navigation, no Walk/Fly or XR chrome. The document
     // still live-syncs, so the thumbnail follows what is actually published.
@@ -523,6 +538,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         isPreview={isPreview}
                         initialCameraView={initialCameraView}
                         xrDefaultMode={xrDefaultMode}
+                        lockInside={lockInside}
+                        onBuilding={onBuilding}
+                        onLockPaused={onLockPaused}
                         canOfferXrEntry={
                             state.status === 'ready'
                             && navMode === 'orbit'
@@ -590,6 +608,32 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     onClick={() => setNavMode('walk')}
                 >
                     Walk / Fly
+                </button>
+            ) : null}
+
+            {/* Directly under Walk / Fly, same size and style: keep the camera inside the building. Orbit mode
+                only (walk is already confined), and only where the room has a building. Paused (shown as
+                Free) while a view whose camera stands outside the building, such as Top or Side, is on. */}
+            {state.status === 'ready' && navMode === 'orbit' && walkGateOpen && hasBuilding ? (
+                <button
+                    type="button"
+                    aria-pressed={lockInside && !lockPaused}
+                    title={lockPaused ? 'This view stands outside the building, so the camera is free here' : 'Keep the camera inside the building'}
+                    style={{
+                        ...overlayButtonStyle,
+                        position: 'absolute',
+                        top: `calc(${topClear} + 3.4rem)`,
+                        right: '1rem',
+                        zIndex: 20,
+                        minHeight: 44,
+                        minWidth: 104,
+                        background: lockInside && !lockPaused ? 'rgba(77, 249, 255, 0.22)' : overlayButtonStyle.background,
+                        border: `1px solid ${lockInside && !lockPaused ? 'var(--di-cyan, #4df9ff)' : 'rgba(255,255,255,0.14)'}`,
+                        color: lockInside && !lockPaused ? 'var(--di-cyan, #4df9ff)' : overlayButtonStyle.color
+                    }}
+                    onClick={toggleLockInside}
+                >
+                    {lockInside && !lockPaused ? 'Inside' : 'Free'}
                 </button>
             ) : null}
 
