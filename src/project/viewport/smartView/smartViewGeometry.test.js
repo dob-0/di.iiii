@@ -20,6 +20,7 @@ import {
     parseViewHash,
     presetForKey,
     rigCore,
+    roofCapRect,
     sanitizeViewPresets,
     targetBoundary,
     viewHash, boxHolds, clampToBox, insideBox } from './smartViewGeometry.js'
@@ -342,5 +343,33 @@ describe('the lock inside the building', () => {
     })
     it('has no box without a building', () => {
         expect(insideBox(null)).toBe(null)
+    })
+})
+
+// 2026-10-02 (/moxir Side view): with the roof cut away a beam aimed up ran on into the sky.
+describe('roofCapRect', () => {
+    const bounds = { min: [-48, 0, -54.5], max: [48, 17, 54.5] }
+    it('is off with no roof cut, or with the camera at or above the cut', () => {
+        expect(roofCapRect(null, bounds, [100, 5, 0])).toBeNull()
+        expect(roofCapRect(10.75, bounds, [0, 30, 0])).toBeNull()
+        expect(roofCapRect(10.75, bounds, [0, 10.75, 0])).toBeNull()
+    })
+    it('sits at the cut and takes in a camera standing beyond a wall', () => {
+        const cap = roofCapRect(10.75, bounds, [120, 5.6, 3])
+        expect(cap.y).toBe(10.75)
+        expect(cap.x1).toBeGreaterThan(120)
+        expect(cap.x0).toBeLessThan(-48)
+        expect(cap.z0).toBeLessThan(-54.5)
+        expect(cap.z1).toBeGreaterThan(54.5)
+    })
+    it('covers where any sight line from the camera to a point above the cut crosses the cut height', () => {
+        const cam = [120, 5.6, 3]
+        const cap = roofCapRect(10.75, bounds, cam)
+        for (const p of [[0, 30, 0], [-40, 14, 50], [47, 11, -54]]) {
+            const t = (10.75 - cam[1]) / (p[1] - cam[1])
+            const x = cam[0] + (p[0] - cam[0]) * t
+            const z = cam[2] + (p[2] - cam[2]) * t
+            expect(x >= cap.x0 && x <= cap.x1 && z >= cap.z0 && z <= cap.z1).toBe(true)
+        }
     })
 })

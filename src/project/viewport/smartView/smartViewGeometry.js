@@ -606,3 +606,24 @@ export const presetForKey = (key) => {
     const i = Number(key)
     return Number.isInteger(i) && i >= 1 && i <= VIEW_PRESET_IDS.length && String(key) === String(i) ? VIEW_PRESET_IDS[i - 1] : null
 }
+
+/**
+ * The roof cap: where the cutaway took the roof off, a depth-only sheet at the cut ends the beams the roof
+ * would have ended (2026-10-02, /moxir Side view: a beam aimed up ran on into the sky). Null when there is
+ * no cut or the camera is not below it (from above, the sheet would hide the hall the cut opened). The
+ * rectangle is the footprint grown to take in the camera: a sight line to anything above the cut crosses
+ * the cut's height between the camera and it, and from beyond a wall that crossing lies outside the footprint.
+ * @returns {{ y: number, x0: number, x1: number, z0: number, z1: number } | null}
+ */
+export const roofCapRect = (cutY, bounds, camera, margin = 1) => {
+    const c = vec3(camera)
+    if (cutY === null || cutY === undefined || !Number.isFinite(cutY) || !bounds || !c) return null
+    if (!(c[1] < cutY - 0.05)) return null
+    return {
+        y: cutY,
+        x0: Math.min(bounds.min[0], c[0]) - margin,
+        x1: Math.max(bounds.max[0], c[0]) + margin,
+        z0: Math.min(bounds.min[2], c[2]) - margin,
+        z1: Math.max(bounds.max[2], c[2]) + margin
+    }
+}

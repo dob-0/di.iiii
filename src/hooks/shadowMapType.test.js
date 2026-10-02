@@ -1,11 +1,12 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 // 2026-10-02 (/moxir console): three.js deprecated PCFSoftShadowMap and falls back to PCFShadowMap with a
 // warning, about 60 per room load. react-three-fiber's `shadows={true}` asks for PCFSoft too, so every
 // Canvas names 'percentage' (PCFShadowMap): the same shadows on screen, no warning.
-const root = path.resolve(__dirname, '..')
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const files = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
     const p = path.join(dir, d.name)
     if (d.isDirectory()) return d.name === 'node_modules' ? [] : files(p)

@@ -21,6 +21,7 @@ import {
     isBoxEmpty,
     isLampEntity,
     isOccluding,
+    roofCapRect,
     isRigEntity,
     meshRole,
     orbitMaxDistance,
@@ -276,6 +277,30 @@ export default function SmartView({
         edges: new Map(),
         boundaryKey: ''
     })
+
+    // The roof cap: when the cutaway takes the roof off, a beam aimed up ran on through where the roof was and
+    // into the sky (2026-10-02, /moxir Side view). A beam ends on the depth of what it meets (beamAirMaterial),
+    // so an invisible, depth-only sheet at the cut stands in for the roof. Only with the camera below it: from
+    // above it would hide the hall the cut opened.
+    const roofCap = useMemo(() => {
+        const mesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+            new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide })
+        )
+        mesh.name = 'smart-view-roof-cap'
+        mesh.visible = false
+        mesh.raycast = () => {}
+        mesh.frustumCulled = false
+        return mesh
+    }, [])
+    useEffect(() => {
+        scene.add(roofCap)
+        return () => {
+            scene.remove(roofCap)
+            roofCap.geometry.dispose()
+            roofCap.material.dispose()
+        }
+    }, [scene, roofCap])
 
     // Clip planes need the renderer's local clipping; give it back as found.
     useEffect(() => {
@@ -584,6 +609,12 @@ export default function SmartView({
         planes[2].constant = s[2] === null ? PARK : -s[2]
         planes[3].constant = s[3] === null ? PARK : s[3]
         planes[4].constant = s[4] === null ? PARK : -s[4]
+        const cap = roofCapRect(s[0], frame.bounds, cam.toArray())
+        roofCap.visible = Boolean(cap)
+        if (cap) {
+            roofCap.position.set((cap.x0 + cap.x1) / 2, cap.y, (cap.z0 + cap.z1) / 2)
+            roofCap.scale.set(cap.x1 - cap.x0, 1, cap.z1 - cap.z0)
+        }
         const section = state.section
         if (section) {
             planes[5].normal.set(...section.normal)
