@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh'
 import { fitCameraToAspect } from '../../../utils/cameraFraming.js'
 import { venueOf } from '../../../rigbuild/venuePlan.js'
-import { hazeFogBase } from '../../../objectComponents/atmosphereStore.js'
+import { hazeFogBase, setCameraOutside } from '../../../objectComponents/atmosphereStore.js'
 import {
     approach,
     classifyArchitecture,
@@ -12,6 +12,7 @@ import {
     computeViewPresets,
     cutawayPlan,
     emptyBox,
+    farthestCornerDistance,
     enclosingModelIds,
     firstDrawnHit,
     floorMaxPolar,
@@ -307,7 +308,7 @@ export default function SmartView({
     useEffect(() => {
         const before = gl.localClippingEnabled
         gl.localClippingEnabled = true
-        return () => { gl.localClippingEnabled = before }
+        return () => { gl.localClippingEnabled = before; setCameraOutside(gl, false) }
     }, [gl])
 
     // Everything this component put on the scene comes off when it goes.
@@ -595,6 +596,7 @@ export default function SmartView({
 
         // --- the cutaway ------------------------------------------------------------
         const plan = cutawayPlan(cam.toArray(), frame)
+        setCameraOutside(gl, plan.roof !== null)
         const goals = [plan.roof, plan.xMax, plan.xMin, plan.zMax, plan.zMin]
         const edges = [frame.roofTop + 0.5, frame.bounds.max[0] + 0.5, frame.bounds.min[0] - 0.5, frame.bounds.max[2] + 0.5, frame.bounds.min[2] - 0.5]
         for (let i = 0; i < 5; i += 1) {
@@ -631,7 +633,9 @@ export default function SmartView({
         // machines (atmosphereStore.js hazeFogBase), else from the authored fog
         const base = hazeFogBase(gl, fogBase)
         if (scene.fog && base && Number.isFinite(base.near) && Number.isFinite(base.far)) {
-            const goal = fogOffset(outsideDistance(cam.toArray(), frame.bounds), cam.distanceTo(target), referenceDistance)
+            let goal = fogOffset(outsideDistance(cam.toArray(), frame.bounds), cam.distanceTo(target), referenceDistance)
+            // a haze worked out from its machines, seen from outside: no veil on the surfaces (farthestCornerDistance)
+            if (base !== fogBase && plan.roof !== null) goal = Math.max(goal, farthestCornerDistance(cam.toArray(), frame.bounds))
             state.fogOffset = approach(state.fogOffset, goal, delta, 0.15)
             scene.fog.near = base.near + state.fogOffset
             scene.fog.far = base.far + state.fogOffset

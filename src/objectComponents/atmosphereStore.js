@@ -65,6 +65,15 @@ const bloomAllowed = new WeakMap()
 export const setBloomAllowed = (gl, allowed) => { if (gl) bloomAllowed.set(gl, Boolean(allowed)) }
 export const isBloomAllowed = (gl) => (gl ? bloomAllowed.get(gl) !== false : true)
 
+const cameraOutside = new WeakMap()
+/**
+ * SmartView says when the camera stands outside the building (a cutaway: Top, Side, an orbit from
+ * beyond a wall). Bloom is the eye's glow IN the hall; from outside it turned a beam aimed at the cut
+ * roof into a white blob over the whole plan (2026-10-02, /moxir Top and Side), so it rests there.
+ */
+export const setCameraOutside = (gl, outside) => { if (gl) cameraOutside.set(gl, Boolean(outside)) }
+export const isCameraOutside = (gl) => (gl ? cameraOutside.get(gl) === true : false)
+
 const beamMeshes = new WeakMap()
 /** A beam's core hull, for its reflection in the floor (beamMirror.js). Returns the unregister. */
 export const registerBeamMesh = (gl, mesh) => {

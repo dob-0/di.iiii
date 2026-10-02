@@ -627,3 +627,19 @@ export const roofCapRect = (cutY, bounds, camera, margin = 1) => {
         z1: Math.max(bounds.max[2], c[2]) + margin
     }
 }
+
+/**
+ * How far the camera is from the building's farthest corner. A room whose haze is worked out from its
+ * machines veils every surface with the haze's glow; from outside (a cutaway: Top, Side) the sight
+ * line crosses the whole hall, so its far wall came out a flat white slab (2026-10-02, /moxir Side).
+ * Standing the fog back this far leaves the surfaces unveiled from outside; the beams keep their haze.
+ */
+export const farthestCornerDistance = (position, bounds) => {
+    const p = vec3(position)
+    if (!p || !bounds) return 0
+    let best = 0
+    for (const x of [bounds.min[0], bounds.max[0]]) for (const y of [bounds.min[1], bounds.max[1]]) for (const z of [bounds.min[2], bounds.max[2]]) {
+        best = Math.max(best, Math.hypot(x - p[0], y - p[1], z - p[2]))
+    }
+    return best
+}

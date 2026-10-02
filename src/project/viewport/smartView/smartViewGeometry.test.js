@@ -7,6 +7,7 @@ import {
     computeViewPresets,
     cutawayPlan,
     enclosingModelIds,
+    farthestCornerDistance,
     firstDrawnHit,
     floorMaxPolar,
     fogOffset,
@@ -371,5 +372,17 @@ describe('roofCapRect', () => {
             const z = cam[2] + (p[2] - cam[2]) * t
             expect(x >= cap.x0 && x <= cap.x1 && z >= cap.z0 && z <= cap.z1).toBe(true)
         }
+    })
+})
+
+// 2026-10-02 (/moxir Side): from outside, the haze's veil turned the far wall into a white slab.
+describe('farthestCornerDistance', () => {
+    const bounds = { min: [-48, 0, -54.5], max: [48, 17, 54.5] }
+    it('reaches the far corner of the building from a camera beyond a wall', () => {
+        const d = farthestCornerDistance([-65, 5, 2], bounds)
+        expect(d).toBeCloseTo(Math.hypot(48 + 65, 17 - 5, 54.5 + 2), 6)
+    })
+    it('is 0 without a building', () => {
+        expect(farthestCornerDistance([0, 0, 0], null)).toBe(0)
     })
 })

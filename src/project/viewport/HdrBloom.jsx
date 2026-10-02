@@ -6,7 +6,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js'
-import { isBloomAllowed, setBloomActive } from '../../objectComponents/atmosphereStore.js'
+import { isBloomAllowed, isCameraOutside, setBloomActive } from '../../objectComponents/atmosphereStore.js'
 import { bloomOf } from './bloom.js'
 import { AutoExposurePass, autoExposureOf } from './autoExposure.js'
 
@@ -93,7 +93,7 @@ export default function HdrBloom({ renderSettings }) {
         // HDR path here tone-mapped each beam on its own (overlaps clipped white), put the
         // fog after the exposure, and recompiled every lit material mid-measurement.
         const dbg = (import.meta.env.DEV && window.__diRoom?.debug) || {}
-        const glow = isBloomAllowed(gl) && !dbg.noGlow
+        const glow = isBloomAllowed(gl) && !isCameraOutside(gl) && !dbg.noGlow // no eye in the hall to glow from outside (SmartView)
         passes.glow.enabled = glow
         setBloomActive(gl, glow)
         passes.render.camera = state.camera
