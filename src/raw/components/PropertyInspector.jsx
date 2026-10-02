@@ -277,10 +277,10 @@ export default function PropertyInspector({
                     read as two things (owner, 2026-10-02). */}
                 {subtitle && subtitle !== title ? <p>{subtitle}</p> : null}
             </header>
-            {!sections.length ? (
-                <p className="raw-property-note raw-full-width-field">Its window holds everything it does — › on its card opens it.</p>
-            ) : null}
             <div className="raw-property-sections-scroll">
+                {!sections.length ? (
+                    <p className="raw-property-note raw-full-width-field">Its window holds everything it does — › on its card opens it.</p>
+                ) : null}
                 {sections.map((section) => {
                     const sectionValue = values[section.id] || values[section.component] || {}
                     return (
