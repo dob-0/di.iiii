@@ -12,3 +12,9 @@
   purely wired, and does it output a picture? After that, A–E are re-checked against the answer.
 - The first push on 10-02 failed. The branch tracked `origin/dev`, so the pre-push guard refused it, and the worktree
   had no `node_modules`, so lint couldn't run. Fixed by `npm ci` and pushing to the branch's own name.
+
+## 2026-10-03 — rows wrap instead of vanishing; a short graph is centred on a phone
+
+- Owner on the NOPA To do card: "text in a row is invisible, it goes out of the window". Rows now wrap up to 6 lines, counted with the browser's text metrics before drawing (`textWrap.js`), so the card reserves exactly the lines it draws. Measured on NOPA: 0 of 51 lines clipped at 1440×900 (DPR 1 and 2) and 390×844 (DPR 3); before, 24 of 51 were cut.
+- Phone: the canvas opened with a blank band on top. The fit's clamp now centres any axis whose content fits the free band beside docked windows; the F7 docked-List test still holds.
+- The work was started by a session cut off by the aylmo reboot; finished and checked in session dob-96.

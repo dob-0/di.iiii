@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
-import { CARD_CONTENT_LINE_HEIGHT, CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, TOP_PICTURE_HEIGHT, cardHeight, cardPortRows, hasCardPicture } from '../utils/cardGeometry.js'
+import { CARD_CONTENT_LINE_HEIGHT, CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, TOP_PICTURE_HEIGHT, cardContentLayout, cardHeight, cardPortRows, hasCardPicture } from '../utils/cardGeometry.js'
 import { isPictureType, pictureIdOf } from '../../project/tops/vjDeck.js'
 import TopThumbnail from './TopThumbnail.jsx'
 import CardPreview from './cardPreview/CardPreview.jsx'
@@ -106,8 +106,9 @@ const DOOR_WIDTH_PX = 34
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
 // A List's rows under their group headings, or a Text's first lines, drawn in
-// the card under its ports. One clipped line per entry at a fixed line height,
-// so the height cardContentHeight reserved is exactly what is drawn.
+// the card under its ports. Each row wraps to the line count cardContentLayout
+// measured and is clamped to it, so the height the card reserved is exactly
+// what is drawn — a wrong measure shows an ellipsis, never text over a port.
 function CardContentLines({ content, top }) {
     return (
         <ul className="raw-graph-node-content" style={{ top }}>
@@ -115,7 +116,13 @@ function CardContentLines({ content, top }) {
                 <li
                     key={i}
                     className={`raw-graph-node-content-line is-${line.kind}`}
-                    style={{ height: CARD_CONTENT_LINE_HEIGHT, lineHeight: `${CARD_CONTENT_LINE_HEIGHT}px` }}
+                    style={line.kind === 'group'
+                        ? { height: line.height, lineHeight: `${line.height}px` }
+                        : {
+                            height: line.height,
+                            lineHeight: `${CARD_CONTENT_LINE_HEIGHT}px`,
+                            WebkitLineClamp: line.wraps
+                        }}
                     title={line.text}
                 >
                     {line.text}
@@ -124,7 +131,7 @@ function CardContentLines({ content, top }) {
             {content.more > 0 ? (
                 <li
                     className="raw-graph-node-content-line is-more"
-                    style={{ height: CARD_CONTENT_LINE_HEIGHT, lineHeight: `${CARD_CONTENT_LINE_HEIGHT}px` }}
+                    style={{ height: content.moreHeight, lineHeight: `${content.moreHeight}px` }}
                 >
                     + {content.more} more
                 </li>
@@ -446,9 +453,19 @@ export default function RawGraphSurface({
             if (left > pad) nextPanX = vp.panX - (left - pad)
             else if (left + contentW < box.width - pad) nextPanX = vp.panX + ((box.width - pad) - (left + contentW))
         }
+        if (contentW <= box.freeRight - box.freeLeft - pad * 2) {
+            nextPanX = box.centerX - (bounds.minX + bounds.maxX) / 2 * vp.zoom
+        }
+        // The smaller axis was left where centring on the seed put it — on a
+        // 390 × 844 phone the NOPA graph (too wide, short) sat in the lower
+        // half under a blank band (2026-10-03). An axis whose content fits the
+        // FREE band (beside any docked window) is centred in it.
         if (contentH > visibleH - pad * 2) {
             if (top > pad) nextPanY = vp.panY - (top - pad)
             else if (top + contentH < visibleH - pad) nextPanY = vp.panY + ((visibleH - pad) - (top + contentH))
+        }
+        if (contentH <= box.freeBottom - box.freeTop - pad * 2) {
+            nextPanY = box.centerY - (bounds.minY + bounds.maxY) / 2 * vp.zoom
         }
         if (nextPanX !== vp.panX || nextPanY !== vp.panY) applyViewport(nextPanX, nextPanY, vp.zoom)
     }
@@ -1532,7 +1549,7 @@ export default function RawGraphSurface({
                                         picture, inside the height cardHeight already gave it. */}
                                     {showPorts && getNodeCardLines(node) ? (
                                         <CardContentLines
-                                            content={getNodeCardLines(node)}
+                                            content={cardContentLayout(node)}
                                             top={cardPortRows(node, portScopeNodes) * PORT_ROW_HEIGHT
                                                 + (hasCardPicture(node.typeId) ? TOP_PICTURE_HEIGHT + 4 : 0)}
                                         />

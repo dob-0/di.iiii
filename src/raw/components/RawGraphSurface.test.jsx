@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 const FIT_MIN_USEFUL_ZOOM_FOR_TEST = 0.34
 import RawGraphSurface from './RawGraphSurface.jsx'
 import { createNode } from '../../project/nodeRegistry.js'
+import { cardHeight } from '../utils/cardGeometry.js'
 
 const makeNode = (typeId, overrides = {}) => ({
     ...createNode(typeId, { graphX: overrides.graphX ?? 0, graphY: overrides.graphY ?? 0 }),
@@ -270,6 +271,31 @@ describe('RawGraphSurface', () => {
             const notice = container.textContent.match(/showing (\d+) of (\d+)/)
             expect(notice).not.toBeNull()
             expect(Number(notice[1])).toBeLessThan(Number(notice[2]))
+        } finally {
+            rect.mockRestore()
+        }
+    })
+
+    // 2026-10-03, NOPA on a 390 × 844 phone: the graph was too wide to fit
+    // legibly but short, and the partial view left it in the lower half under
+    // a blank band — the axis that fits was never centred.
+    it('centres a short, too-wide graph vertically on a phone', () => {
+        const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+            x: 0, y: 0, left: 0, top: 0, right: 390, bottom: 760, width: 390, height: 760, toJSON: () => ({})
+        })
+        try {
+            const row = [0, 600, 1200, 1800].flatMap((x) => [
+                makeNode('value.number', { id: `t${x}`, graphX: x, graphY: 0 }),
+                makeNode('value.number', { id: `b${x}`, graphX: x, graphY: 240 })
+            ])
+            const { container } = render(<RawGraphSurface nodes={row} edges={[]} />)
+            const [, panY, zoom] = /translate\(([-\d.]+)px,([-\d.]+)px\) scale\(([-\d.]+)\)/
+                .exec(container.querySelector('.raw-graph-stage').style.transform).slice(1).map(Number)
+            expect(container.textContent).toMatch(/showing \d+ of 8/)
+            const bottom = (240 + cardHeight(row[1])) * zoom + panY
+            const top = panY
+            // the blank band above equals the one below
+            expect(Math.abs(top - (760 - bottom))).toBeLessThan(2)
         } finally {
             rect.mockRestore()
         }

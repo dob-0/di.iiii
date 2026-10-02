@@ -5667,6 +5667,19 @@
     color: var(--card-family);
 }
 .raw-graph-node-content-line.is-row { padding-left: var(--di-space-2) }
+/* Rows and Text lines WRAP (up to 6 lines) to the count cardContentLayout measured (owner
+   2026-10-02: To do rows were cut to one line). -webkit-line-clamp (set inline
+   to that count) is the guard: a longer row ends in an ellipsis inside its
+   box and reads in full in its window. Groups and "+ N more" stay one line. */
+.raw-graph-node-content-line.is-row,
+.raw-graph-node-content-line.is-line {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    box-sizing: border-box;
+    padding-bottom: 3px;
+}
 .raw-graph-node-content-line.is-more { color: var(--di-text-muted) }
 
 /* The Raw topbar overflowed a 390px phone BEFORE the room count was added:
