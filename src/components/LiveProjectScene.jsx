@@ -7,7 +7,7 @@ import { XR, XROrigin, useXR, useXRControllerLocomotion, useXRInputSourceState }
 import * as THREE from 'three'
 import { useXrAr } from '../hooks/useXrAr.js'
 import MadeWithBadge from './MadeWithBadge.jsx'
-import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGuard.jsx'
+import { WebglContextLostOverlay, useWebglContextGuard, WebglUnavailableBoundary } from './WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from './SceneEntityErrorBoundary.jsx'
 import { confineToAreas } from './walkableAreas.js'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
@@ -1832,121 +1832,123 @@ export default function LiveProjectScene({
 
     return (
         <>
-            <Canvas
-                key={canvasKey}
-                className="live-scene-canvas"
-                // Until the document is here the canvas draws an empty dark
-                // room; a door being gone through must not count that as the
-                // destination's first frame (entryPlan.isDestinationPainted).
-                {...(!doc && !loadError ? { [ENTRY_PENDING_ATTR]: 'document' } : {})}
-                camera={{ position: [0, EYE_HEIGHT, 6], fov: interactive ? 60 : 45, near: 0.1, far: cameraFar }}
-                dpr={[renderSettings.dprMin ?? 1, Math.min(renderSettings.dprMax ?? 2, WALK_DPR_CEILING)]}
-                shadows={renderSettings.shadows !== false}
-                gl={rendererWithFallback({ antialias: renderSettings.antialias !== false })}
-                onCreated={({ gl }) => bindContextGuard(gl)}
-                style={{ position: 'absolute', inset: 0, display: 'block', touchAction: 'none' }}
-            >
-                <XR store={xr.xrStore}>
-                <RenderSettingsEffect renderSettings={renderSettings} />
-                <ShadowCasting enabled={shadowCasting.enabled} mapSize={shadowCasting.mapSize} />
-                {/* The landing holds its page through a front-page button; this
-                    is how the copy of the page gets this room's frame. */}
-                <FrameSource />
-                <color attach="background" args={[backgroundColor]} />
-                {fogEnabled ? <fog attach="fog" args={[fogColor, fogNear, fogFar]} /> : null}
-                {walking && worldState.atmosphereBlend && atmosphereZones.length > 0 ? (
-                    <AtmosphereBlender zones={atmosphereZones} playerRef={playerRef} baseBg={backgroundColor} />
-                ) : null}
-                {worldState.hubDecor && atmosphereZones.length > 0 ? (
-                    <HubDecor zones={atmosphereZones} />
-                ) : null}
-                <ambientLight color={ambient.color} intensity={ambient.intensity} />
-                <directionalLight color={directional.color} intensity={directional.intensity} position={directional.position} />
-                {worldState.environmentAssetId && (
-                    <WorldEnvironment
-                        environmentAsset={assetMap.get(worldState.environmentAssetId) || null}
-                        intensity={worldState.environmentIntensity}
-                    />
-                )}
-                {/* worldState.gridVisible is authored in the Studio and was honoured
-                    by StudioViewport only -- walk mode drew the grid unconditionally,
-                    so a space with a real floor (the WCC corridor) got a grid printed
-                    through it. Defaults to visible, so spaces that never set the flag
-                    look exactly as they did. Hidden in AR for the same reason the
-                    studio hides it: the floor there is the room you are standing in. */}
-                {/* Every other grid field was hardcoded here, so a room whose
-                    floor the author had coloured, spaced or faded reverted to the
-                    same slate lattice the moment the visitor walked into it. These
-                    are StudioViewport's values, read from the same document, so the
-                    floor survives the click.
+            <WebglUnavailableBoundary>
+                <Canvas
+                    key={canvasKey}
+                    className="live-scene-canvas"
+                    // Until the document is here the canvas draws an empty dark
+                    // room; a door being gone through must not count that as the
+                    // destination's first frame (entryPlan.isDestinationPainted).
+                    {...(!doc && !loadError ? { [ENTRY_PENDING_ATTR]: 'document' } : {})}
+                    camera={{ position: [0, EYE_HEIGHT, 6], fov: interactive ? 60 : 45, near: 0.1, far: cameraFar }}
+                    dpr={[renderSettings.dprMin ?? 1, Math.min(renderSettings.dprMax ?? 2, WALK_DPR_CEILING)]}
+                    shadows={renderSettings.shadows !== false}
+                    gl={rendererWithFallback({ antialias: renderSettings.antialias !== false })}
+                    onCreated={({ gl }) => bindContextGuard(gl)}
+                    style={{ position: 'absolute', inset: 0, display: 'block', touchAction: 'none' }}
+                >
+                    <XR store={xr.xrStore}>
+                    <RenderSettingsEffect renderSettings={renderSettings} />
+                    <ShadowCasting enabled={shadowCasting.enabled} mapSize={shadowCasting.mapSize} />
+                    {/* The landing holds its page through a front-page button; this
+                        is how the copy of the page gets this room's frame. */}
+                    <FrameSource />
+                    <color attach="background" args={[backgroundColor]} />
+                    {fogEnabled ? <fog attach="fog" args={[fogColor, fogNear, fogFar]} /> : null}
+                    {walking && worldState.atmosphereBlend && atmosphereZones.length > 0 ? (
+                        <AtmosphereBlender zones={atmosphereZones} playerRef={playerRef} baseBg={backgroundColor} />
+                    ) : null}
+                    {worldState.hubDecor && atmosphereZones.length > 0 ? (
+                        <HubDecor zones={atmosphereZones} />
+                    ) : null}
+                    <ambientLight color={ambient.color} intensity={ambient.intensity} />
+                    <directionalLight color={directional.color} intensity={directional.intensity} position={directional.position} />
+                    {worldState.environmentAssetId && (
+                        <WorldEnvironment
+                            environmentAsset={assetMap.get(worldState.environmentAssetId) || null}
+                            intensity={worldState.environmentIntensity}
+                        />
+                    )}
+                    {/* worldState.gridVisible is authored in the Studio and was honoured
+                        by StudioViewport only -- walk mode drew the grid unconditionally,
+                        so a space with a real floor (the WCC corridor) got a grid printed
+                        through it. Defaults to visible, so spaces that never set the flag
+                        look exactly as they did. Hidden in AR for the same reason the
+                        studio hides it: the floor there is the room you are standing in. */}
+                    {/* Every other grid field was hardcoded here, so a room whose
+                        floor the author had coloured, spaced or faded reverted to the
+                        same slate lattice the moment the visitor walked into it. These
+                        are StudioViewport's values, read from the same document, so the
+                        floor survives the click.
 
-                    `infiniteGrid` stays: the walker's floor has to reach the horizon
-                    in every direction, and `args` (24x24 by default) would end it 12m
-                    away -- every existing walkable room would lose its ground. Extent
-                    in walk mode is fadeDistance's job, not the grid's. */}
-                {worldState.gridVisible !== false && !isArActive && (
-                    <Grid
-                        // Furniture, not scenery: a reference grid that joined
-                        // the shadow pass would drop a black square under the
-                        // whole room. shadowCasting.js reads this flag.
-                        userData={{ noShadow: true }}
-                        position={[0, -(worldState.gridOffset ?? 0.015), 0]}
-                        cellSize={worldState.gridCellSize ?? 0.75}
-                        cellThickness={worldState.gridCellThickness ?? 0.3}
-                        cellColor={worldState.gridCellColor || '#2a6e73'}
-                        sectionSize={worldState.gridSectionSize ?? 6}
-                        sectionThickness={worldState.gridSectionThickness ?? 0.65}
-                        sectionColor={worldState.gridSectionColor || '#4df9ff'}
-                        fadeDistance={worldState.gridFadeDistance ?? 80}
-                        fadeStrength={worldState.gridFadeStrength ?? 1}
-                        infiniteGrid
-                    />
-                )}
-                <AmbientField center={center} />
-                {showEntities && rootEntities.map((entity) => (
-                    <SceneEntityErrorBoundary key={entity.id} resetKey={entity.id}>
-                        <AnimatedEntity entity={entity} assetMap={assetMap} childMap={entityChildMap} />
-                    </SceneEntityErrorBoundary>
-                ))}
-                {showEntities && gateEntity ? <GateGlow entity={gateEntity} /> : null}
-                {showEntities && rigBodies && hasRig ? (
-                    <Suspense fallback={null}>
-                        <RigBodies entities={entities} />
-                    </Suspense>
-                ) : null}
-                {sceneExtras}
-                {walking ? (
-                    <Walker
-                        playerRef={playerRef}
-                        onNearestZone={setNearestLabel}
-                        onPortalReached={handlePortalReached}
-                        entities={entities}
-                        bounds={bounds}
-                        walkableAreas={worldState.walkableAreas}
-                        joystickRef={joystickRef}
-                        joyVisRef={joyVisRef}
-                        joyThumbRef={joyThumbRef}
-                        vertTouchRef={vertTouchRef}
-                        onLockChange={setIsLocked}
-                        flyMode={flyMode}
-                        isArActive={isArActive}
-                        arTouchElRef={arTouchElRef}
-                        altitudeKeys={altitudeKeys}
-                        wheelDolly={wheelDolly}
-                    />
-                ) : viewing ? (
-                    <ViewOrbit center={center} />
-                ) : cameraPoseRef ? (
-                    <PosedCamera poseRef={cameraPoseRef} />
-                ) : (
-                    <IdleOrbit center={center} />
-                )}
-                {walking && <XrLocomotion playerRef={playerRef} joystickRef={joystickRef} flyMode={flyMode} vertTouchRef={vertTouchRef} />}
-                {walking && worldState.ringTour?.enabled ? (
-                    <RingTour playerRef={playerRef} config={worldState.ringTour} />
-                ) : null}
-                </XR>
-            </Canvas>
+                        `infiniteGrid` stays: the walker's floor has to reach the horizon
+                        in every direction, and `args` (24x24 by default) would end it 12m
+                        away -- every existing walkable room would lose its ground. Extent
+                        in walk mode is fadeDistance's job, not the grid's. */}
+                    {worldState.gridVisible !== false && !isArActive && (
+                        <Grid
+                            // Furniture, not scenery: a reference grid that joined
+                            // the shadow pass would drop a black square under the
+                            // whole room. shadowCasting.js reads this flag.
+                            userData={{ noShadow: true }}
+                            position={[0, -(worldState.gridOffset ?? 0.015), 0]}
+                            cellSize={worldState.gridCellSize ?? 0.75}
+                            cellThickness={worldState.gridCellThickness ?? 0.3}
+                            cellColor={worldState.gridCellColor || '#2a6e73'}
+                            sectionSize={worldState.gridSectionSize ?? 6}
+                            sectionThickness={worldState.gridSectionThickness ?? 0.65}
+                            sectionColor={worldState.gridSectionColor || '#4df9ff'}
+                            fadeDistance={worldState.gridFadeDistance ?? 80}
+                            fadeStrength={worldState.gridFadeStrength ?? 1}
+                            infiniteGrid
+                        />
+                    )}
+                    <AmbientField center={center} />
+                    {showEntities && rootEntities.map((entity) => (
+                        <SceneEntityErrorBoundary key={entity.id} resetKey={entity.id}>
+                            <AnimatedEntity entity={entity} assetMap={assetMap} childMap={entityChildMap} />
+                        </SceneEntityErrorBoundary>
+                    ))}
+                    {showEntities && gateEntity ? <GateGlow entity={gateEntity} /> : null}
+                    {showEntities && rigBodies && hasRig ? (
+                        <Suspense fallback={null}>
+                            <RigBodies entities={entities} />
+                        </Suspense>
+                    ) : null}
+                    {sceneExtras}
+                    {walking ? (
+                        <Walker
+                            playerRef={playerRef}
+                            onNearestZone={setNearestLabel}
+                            onPortalReached={handlePortalReached}
+                            entities={entities}
+                            bounds={bounds}
+                            walkableAreas={worldState.walkableAreas}
+                            joystickRef={joystickRef}
+                            joyVisRef={joyVisRef}
+                            joyThumbRef={joyThumbRef}
+                            vertTouchRef={vertTouchRef}
+                            onLockChange={setIsLocked}
+                            flyMode={flyMode}
+                            isArActive={isArActive}
+                            arTouchElRef={arTouchElRef}
+                            altitudeKeys={altitudeKeys}
+                            wheelDolly={wheelDolly}
+                        />
+                    ) : viewing ? (
+                        <ViewOrbit center={center} />
+                    ) : cameraPoseRef ? (
+                        <PosedCamera poseRef={cameraPoseRef} />
+                    ) : (
+                        <IdleOrbit center={center} />
+                    )}
+                    {walking && <XrLocomotion playerRef={playerRef} joystickRef={joystickRef} flyMode={flyMode} vertTouchRef={vertTouchRef} />}
+                    {walking && worldState.ringTour?.enabled ? (
+                        <RingTour playerRef={playerRef} config={worldState.ringTour} />
+                    ) : null}
+                    </XR>
+                </Canvas>
+            </WebglUnavailableBoundary>
 
             {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}
 
