@@ -32,6 +32,21 @@ const REPO = 'dob-0/di.iiii'
  * bootstrap.mjs; `di update` did neither and failed on exactly the machines
  * that needed it, with `spawn npm ENOENT`. One helper, so the two cannot drift.
  */
+/**
+ * Whether the one-line install should start di.iiii and open it, or only say
+ * how. The person who just typed that line wants to see it — the terminal is
+ * the door, the browser is where they work — so yes, by default.
+ *
+ * Not when asked not to (DI_NO_START=1), not in CI, and not with no terminal
+ * to show what happened: a script that pipes the installer is installing, not
+ * sitting in front of the machine.
+ */
+export const shouldStartAfterInstall = ({ env = process.env, isTTY = Boolean(process.stdout.isTTY) } = {}) => {
+    if (env.DI_NO_START === '1') return false
+    if (env.CI) return false
+    return isTTY
+}
+
 export const npmInvocation = ({ execPath = process.execPath, env = process.env } = {}) => {
     const dir = path.dirname(execPath)
     const sibling = path.join(dir, isWindows ? 'npm.cmd' : 'npm')

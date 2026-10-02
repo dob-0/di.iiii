@@ -20,7 +20,7 @@ import path from 'node:path'
 import process from 'node:process'
 
 import { decideCommandName, decideMode } from './detect.mjs'
-import { npmInvocation, shellSafeSpawnArgs, unlinkLink } from './install.mjs'
+import { npmInvocation, shellSafeSpawnArgs, shouldStartAfterInstall, unlinkLink } from './install.mjs'
 import { isWindows, paths, versionLayout } from './paths.mjs'
 import { probeAll, probeForeignDi } from './probe.mjs'
 import { writeEnv, writeState } from './state.mjs'
@@ -202,6 +202,24 @@ const main = async () => {
     say(`di.iiii ${version} is installed.`)
     say(style.dim(`  ${mode} mode · ${home}`))
     say('')
+
+    // The terminal is only the door: start it and open the browser now, so
+    // everything after the one line happens on the page. A failed start is
+    // not a failed install — the version is in place, and the line below says
+    // how to start it.
+    if (shouldStartAfterInstall()) {
+        try {
+            run(process.execPath, [versionLayout(finalDir).cli, 'up'], { env: { ...process.env, DI_HOME: home } })
+            say('')
+            say(style.dim(`  closed the browser, or restarted? type ${naming.primary} in a new terminal and it opens again`))
+            say('')
+            say(hint || ui.freshTerminal(naming.primary))
+            return
+        } catch (error) {
+            warn(`installed, but it did not start: ${error.message}`)
+        }
+    }
+
     say(`  ${style.cyan(`${naming.primary} up`)}   start it, and open it`)
     say(style.dim(`  ${naming.primary} help  everything else`))
     say('')
