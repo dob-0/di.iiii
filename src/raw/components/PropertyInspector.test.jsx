@@ -72,7 +72,8 @@ describe('PropertyInspector', () => {
             />
         )
 
-        expect(screen.getByText('—')).toBeTruthy()
+        // Was '—', which said nothing (panel audit 2026-10-02): it names what to wire in.
+        expect(screen.getByText('Wire a shape in')).toBeTruthy()
     })
 
     it('filters asset picker options to the field asset kind', () => {
@@ -263,5 +264,43 @@ describe('a Send Out\'s sheet (a picture leaving the machine as an NDI® source)
         )
         expect(container.querySelector('a[href="https://ndi.video"]')).toBeNull()
         expect(container.querySelector('.raw-property-note')).toBeNull()
+    })
+})
+
+describe('PropertyInspector — the gaps the 2026-10-02 panel audit found', () => {
+    it('says the type name once: no "Scene / Scene"', () => {
+        const { container } = render(<PropertyInspector title="Scene" subtitle="Scene" onRename={vi.fn()} sections={deriveNodeInspectorSections({ id: 'w', typeId: 'universe.world', values: {} })} />)
+        expect(container.querySelector('.raw-property-sheet-header p')).toBeNull()
+        const renamed = render(<PropertyInspector title="Bar" subtitle="Scene" onRename={vi.fn()} sections={deriveNodeInspectorSections({ id: 'w', typeId: 'universe.world', values: {} })} />)
+        expect(renamed.container.querySelector('.raw-property-sheet-header p').textContent).toBe('Scene')
+    })
+
+    it('a selected node with nothing to set keeps its name (renamable) and says where its settings are', () => {
+        const { container, getByText } = render(<PropertyInspector title="Gear" subtitle="List" onRename={vi.fn()} sections={[]} emptyMessage="Double-click the world or the view to start authoring." />)
+        expect(container.querySelector('.raw-property-title-button').textContent).toBe('Gear')
+        expect(getByText(/› on its card opens it/)).toBeTruthy()
+        expect(container.textContent).not.toMatch(/Double-click the world/)
+    })
+
+    it('nothing selected still shows the empty message', () => {
+        const { getByText } = render(<PropertyInspector sections={[]} emptyMessage="Nothing selected yet." />)
+        expect(getByText('Nothing selected yet.')).toBeTruthy()
+    })
+
+    it('a wire-only port says what to wire in, or that its wire fills it', () => {
+        const sections = deriveNodeInspectorSections({ id: 'w', typeId: 'universe.world', values: {} })
+        const unwired = render(<PropertyInspector title="Scene" sections={sections} />)
+        expect(unwired.getByText('Wire a shape in')).toBeTruthy()
+        const wired = render(<PropertyInspector title="Scene" sections={deriveNodeInspectorSections({ id: 'w', typeId: 'universe.world', values: {} }, { wiredPortIds: ['objects'] })} />)
+        expect(wired.getByText('comes in by its wire')).toBeTruthy()
+    })
+})
+
+describe('textareaRows — the box grows with the note', () => {
+    it('4 at least, 16 at most, more for more lines', async () => {
+        const { textareaRows } = await import('./PropertyInspector.jsx')
+        expect(textareaRows('')).toBe(4)
+        expect(textareaRows('a\nb\nc\nd\ne\nf')).toBe(7)
+        expect(textareaRows('x'.repeat(5000))).toBe(16)
     })
 })
