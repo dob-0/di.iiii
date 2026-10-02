@@ -1159,3 +1159,17 @@ describe('right-click menus (one per thing under the pointer)', () => {
         expect(menuItems().some((t) => t.includes('Duplicate'))).toBe(false)
     })
 })
+
+describe('the card menu names what happens', () => {
+    it('a Scene is gone inside; a Text opens its window', () => {
+        const world = makeNode('universe.world', { id: 'w', label: 'Studio' })
+        const text = makeNode('view.text', { id: 't', graphX: 320, label: 'Note' })
+        const { container } = render(<RawGraphSurface nodes={[world, text]} edges={[]} initialZoom={1} onEnterNode={vi.fn()} onSelectNode={vi.fn()} />)
+        fireEvent.contextMenu(container.querySelector('[data-card-id="w"]'), { clientX: 200, clientY: 100 })
+        expect([...document.querySelectorAll('[role="menuitem"]')].some((el) => el.textContent.includes('Go inside'))).toBe(true)
+        fireEvent.keyDown(document.activeElement || document.body, { key: 'Escape' })
+        fireEvent.pointerDown(document.body)
+        fireEvent.contextMenu(container.querySelector('[data-card-id="t"]'), { clientX: 500, clientY: 100 })
+        expect([...document.querySelectorAll('[role="menuitem"]')].some((el) => el.textContent.includes('Open its window'))).toBe(true)
+    })
+})

@@ -5686,7 +5686,9 @@
 
 /* ContextMenu (src/raw/components/ContextMenu.jsx): the one right-click menu.
    Rectangles only; rows are a finger target under (hover: none). */
-.raw-ctx { position: fixed; z-index: 1300; min-width: 208px; max-width: min(320px, calc(100vw - 16px)); overflow-y: auto; display: flex; flex-direction: column; gap: 1px; padding: var(--di-space-2); background: var(--di-scrim-strong); border: 1px solid var(--di-cyan-line); border-radius: var(--di-radius); font-family: var(--di-sans); outline: none; }
+/* Solid, not the translucent scrim: a card's text and port dots showed through the
+   menu (seen 2026-10-02 at 2560x1340). */
+.raw-ctx { position: fixed; z-index: 1300; min-width: 208px; max-width: min(320px, calc(100vw - 16px)); overflow-y: auto; display: flex; flex-direction: column; gap: 1px; padding: var(--di-space-2); background: var(--di-surface-2); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6); border: 1px solid var(--di-cyan-line); border-radius: var(--di-radius); font-family: var(--di-sans); outline: none; }
 .raw-ctx-title, .raw-ctx-heading { padding: var(--di-space-1) var(--di-space-3) var(--di-space-2); font-size: var(--di-text-2); letter-spacing: 0.04em; text-transform: uppercase; color: var(--di-text-muted); }
 .raw-ctx-sep { height: 1px; margin: var(--di-space-1) 0; background: var(--di-cyan-line); opacity: 0.5; }
 .raw-ctx-row { position: relative; }
