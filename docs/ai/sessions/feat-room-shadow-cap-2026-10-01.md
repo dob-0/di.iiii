@@ -12,3 +12,9 @@
 - emily-41 (haze work) saw MOXIR Known · full draw black on Chrome/ANGLE D3D11 (16 units): "FRAGMENT shader texture image units count exceeds MAX_TEXTURE_IMAGE_UNITS(16)". On their stack the cause was dev WITHOUT this branch: all 64 lamps cast. With this branch, PONYO under the same D3D11 limit measured 12 casters, no shader error. But the fixed 4-unit reserve was a guess: a lit material with more than 4 maps would still overflow at 12.
 - `dressForShadows(…, { maxTextures })` now counts each lit material's own samplers (`materialSamplers`: its maps, plus the scene environment on a standard material without its own), the other lights' shadows and the spot-light maps, and keeps one unit spare. The cap is min(12, what the busiest material leaves). `shadowLampCap` is gone; ShadowCasting.jsx passes `gl.capabilities.maxTextures`.
 - Tests: shadowCasting.test +3 (2 red on the old code; the third holds the 12 ceiling on a 32-unit GPU).
+
+## 2026-10-01 (later) — a strobe does not flip the shadows
+
+- Render audit K: a strobing lamp's light is flashed per frame (StrobeDriver). Scored on its instantaneous intensity, it won and lost a shadow on alternate re-dresses, every 30 frames.
+- `shadowScore` uses `light.userData.nominalIntensity` when present. SpotLightObject writes it from its `intensity` prop, which a flash does not move.
+- Tests: shadowCasting.test +1 (red on the old code); 291 passed in src/project/viewport + src/objectComponents.

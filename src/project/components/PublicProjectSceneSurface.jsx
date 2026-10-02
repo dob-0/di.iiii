@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import useXrAr from '../../hooks/useXrAr.js'
 import { computeFramingCamera, fitCameraToAspect, getPointsBoundingSphere, getViewportAspect } from '../../utils/cameraFraming.js'
 import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
@@ -121,10 +121,16 @@ export default function PublicProjectSceneSurface({
     entryView,
     navMode,
     onNavModeChange,
+    topClear = null,
     isPreview,
     initialCameraView = null,
     xrDefaultMode = 'none',
-    canOfferXrEntry = false
+    canOfferXrEntry = false,
+    // the lamps as the desk's live look poses them (RoomLookFollower), or null
+    posedEntities = null,
+    lockInside = false,
+    onBuilding,
+    onLockPaused
 }) {
     // The seed can frame a custom entry view on first paint, but fixed-camera
     // and code presentations are authored choices and always win over it.
@@ -189,17 +195,25 @@ export default function PublicProjectSceneSurface({
         }
     })
 
+    // The "Inside" toggle (PublicProjectViewer) and its two reports travel with the smart view's settings.
+    const smartViewLive = useMemo(() => ({ ...smartView, lockInside, onBuilding, onLockPaused }), [smartView, lockInside, onBuilding, onLockPaused])
+
     return (
         <>
             {navMode === 'walk' ? (
                 <LiveProjectScene
                     projectId={projectId}
                     spaceId={spaceId}
+                    // Walk/Fly keeps the look the desk is playing: the walk scene loads its own
+                    // copy of the document, and drew the room as saved (a green look walked
+                    // into amber) until it was handed the posed lamps
+                    entitiesOverride={posedEntities}
                     interactive
                     showChrome
                     title={title}
                     onExit={() => onNavModeChange('orbit')}
                     exitLabel="← View mode"
+                    topClear={topClear}
                 />
             ) : hasGraph ? (
                 <PublicGraphSurface
@@ -239,7 +253,7 @@ export default function PublicProjectSceneSurface({
                     // A visitor's click on an object with a link follows it.
                     // Not on a space-card picture (?preview=1).
                     followLinks={!isPreview}
-                    smartView={!caged && !isPreview ? smartView : null}
+                    smartView={!caged && !isPreview ? smartViewLive : null}
                 />
             )}
 

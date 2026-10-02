@@ -1409,7 +1409,7 @@ export default function RawViewport({
             ) : null}
             <Canvas
                 key={canvasKey}
-                shadows
+                shadows="percentage"
                 gl={rendererWithFallback()}
                 // offsetSize: measure the layout box, not the painted one. A
                 // Scene window is placed through the graph's viewport

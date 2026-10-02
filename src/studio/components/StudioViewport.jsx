@@ -827,6 +827,9 @@ function StudioSceneContent({
                         command={smartView.command}
                         xray={smartView.xray}
                         constraints={smartView.constraints}
+                        lockInside={smartView.lockInside}
+                        onBuilding={smartView.onBuilding}
+                        onLockPaused={smartView.onLockPaused}
                         fogBase={fogAuthored ? { near: fogNear, far: fogFar } : null}
                         onPresets={smartView.onPresets}
                         onUserMove={smartView.onUserMove}
@@ -1096,9 +1099,12 @@ export default function StudioViewport({
         command: sv.command,
         xray: sv.xray,
         constraints: Boolean(smartView?.constraints),
+        lockInside: Boolean(smartView?.lockInside),
+        onBuilding: smartView?.onBuilding,
+        onLockPaused: smartView?.onLockPaused,
         onPresets: setPresets,
         onUserMove: releaseView
-    } : null), [smartOn, sv.command, sv.xray, smartView?.constraints, setPresets, releaseView])
+    } : null), [smartOn, sv.command, sv.xray, smartView?.constraints, smartView?.lockInside, smartView?.onBuilding, smartView?.onLockPaused, setPresets, releaseView])
     const [transformStatus, setTransformStatus] = useState(null)
     // What each screen in the room draws, by mapping surface id — filled by
     // LiveScreens (the DOM sources beside the canvas), read by EntityContent.
@@ -1142,7 +1148,7 @@ export default function StudioViewport({
                 key={canvasKey}
                 style={{ height: '100%' }}
                 onCreated={({ gl }) => bindContextGuard(gl)}
-                shadows={document.renderSettings?.shadows !== false}
+                shadows={document.renderSettings?.shadows !== false ? 'percentage' : false}
                 gl={{
                     antialias: document.renderSettings?.antialias !== false,
                     powerPreference: lowPower ? 'low-power' : 'default'

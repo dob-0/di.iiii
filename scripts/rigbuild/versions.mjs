@@ -451,7 +451,9 @@ export const versionRig = ({ spec, base, id }) => {
     const lookSource = isVariantId(spec, id)
         ? Object.entries(v.looks || spec.looks)
         : [
-            ...Object.entries(spec.looks).map(([lookId, base]) => {
+            // `omitLooks`: set looks this version does not play (known-full: the five made for the hung rig, which
+            // light nothing here and sat beside working looks of the same names)
+            ...Object.entries(spec.looks).filter(([lookId]) => !(v.omitLooks || []).includes(lookId)).map(([lookId, base]) => {
                 const o = v.looks?.[lookId] || {}
                 return [lookId, { ...base, ...o, aims: { ...base.aims, ...o.aims }, colours: { ...base.colours, ...o.colours }, levels: { ...base.levels, ...o.levels } }]
             }),
