@@ -75,6 +75,31 @@ describe('a patch across machines', () => {
         expect(runnerOn([old], 'asuz', 'me', { projectId: 'test', needsCapture: true }).peerId).toBe('old')
     })
 
+    it('never asks a page whose browser is on another computer', () => {
+        const peers = [
+            { peerId: 'visitor', machineId: 'asuz', role: 'runner', seenAt: 30, projects: ['test'], capture: true, away: true },
+            { peerId: 'kiosk', machineId: 'asuz', role: 'runner', seenAt: 10, projects: ['test'], capture: true }
+        ]
+        expect(runnerOn(peers, 'asuz', 'me', { projectId: 'test', needsCapture: true }).peerId).toBe('kiosk')
+        expect(runnerOn(peers.slice(0, 1), 'asuz', 'me', { projectId: 'test' })).toBe(null)
+    })
+
+    it('an away page is not that machine: no "this machine" card, and away pages add nothing', () => {
+        const peers = [
+            { peerId: 'visitor', machineId: 'asuz', machineName: 'asuz', away: true, devices: [{ kind: 'screen', id: 's', label: 'Screen' }] },
+            { peerId: 'kiosk', machineId: 'asuz', machineName: 'asuz', devices: [{ kind: 'camera', id: 'c', label: 'USB2.0 HD UVC WebCam' }] }
+        ]
+        const list = machinesIn(peers, { id: 'asuz', name: 'asuz', away: true }, [{ kind: 'screen', id: 'mine', label: 'Screen' }])
+        expect(list).toEqual([{ id: 'asuz', name: 'asuz', self: false, scripts: false, devices: [{ kind: 'camera', id: 'c', label: 'USB2.0 HD UVC WebCam' }], pages: 1 }])
+    })
+
+    it("an away page runs only what runs anywhere; the machine's operators come to it as pictures", () => {
+        const net = { nodes: [{ id: 'cam', type: 'top.camera', values: { machine: 'asuz' } }, { id: 'blur', type: 'top.blur', values: {} }], wires: [{ from: 'cam', to: 'blur', port: 'a' }] }
+        const split = splitNetwork(net, null)
+        expect(split.local.map((node) => node.id)).toEqual(['blur'])
+        expect(split.remote).toEqual(['cam'])
+    })
+
     it('knows when this page can open a camera', () => {
         const api = { mediaDevices: { getUserMedia: () => {} } }
         expect(canCapture({ isSecureContext: true, navigator: api })).toBe(true)

@@ -142,7 +142,9 @@ export function useTopNetwork({
     })
 
     const hasNodes = network.nodes.length > 0
-    const machineId = linkView.machine?.id || null
+    // A page whose browser is on another computer runs only what runs
+    // anywhere; the machine's own operators reach it as pictures.
+    const machineId = (linkView.machine && !linkView.machine.away && linkView.machine.id) || null
     const scriptsAllowed = linkView.machine?.scripts === true
     const scriptsAllowedRef = useRef(scriptsAllowed)
     useEffect(() => { scriptsAllowedRef.current = scriptsAllowed }, [scriptsAllowed])

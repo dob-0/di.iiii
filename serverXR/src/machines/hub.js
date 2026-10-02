@@ -156,6 +156,7 @@ const createMachineHub = ({
         devices: peer.devices || [],
         projects: peer.projects ?? null,
         capture: peer.capture ?? null,
+        away: peer.away === true,
         seenAt: peer.seenAt,
         via: peer.via
     })
@@ -164,7 +165,7 @@ const createMachineHub = ({
      * A tab on this server says it is here. Refreshes a peer that already is.
      * @returns {{ peer } | { error, status }}
      */
-    const hello = (spaceId, { peerId, role = null, devices = [], projects = null, capture = null, machine }) => {
+    const hello = (spaceId, { peerId, role = null, devices = [], projects = null, capture = null, away = false, machine }) => {
         if (!isPeerId(peerId)) return { error: 'peerId must be 1-128 letters, digits, _ . : -', status: 400 }
         prune(spaceId)
         const space = spaceFor(spaceId, true)
@@ -177,9 +178,12 @@ const createMachineHub = ({
             machineName: machine.name,
             role: cleanText(role, 40),
             scripts: machine.scripts === true,
-            devices: cleanDevices(devices),
+            // A page whose browser is on another computer (onThisMachine.js)
+            // lists none of this machine's devices: they are not here.
+            devices: away === true ? [] : cleanDevices(devices),
             projects: cleanProjects(projects),
             capture: cleanCapture(capture),
+            away: away === true,
             seenAt: now(),
             via: LOCAL
         }
@@ -242,6 +246,7 @@ const createMachineHub = ({
                 devices: cleanDevices(raw.devices),
                 projects: cleanProjects(raw.projects),
                 capture: cleanCapture(raw.capture),
+                away: raw.away === true,
                 seenAt: now(),
                 via
             })

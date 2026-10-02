@@ -53,7 +53,9 @@ export const createMachineLink = ({ spaceId, role = 'runner' }) => {
     const hello = async () => {
         try {
             const answer = await apiFetch(`${base}/machines/hello`, { method: 'POST', body: { peerId, role, devices, projects: [...projects.keys()], capture } })
-            machine = answer?.machine || machine
+            // `away`: this browser is not on the machine that served it
+            // (serverXR machines/onThisMachine.js) — it must not act as it.
+            if (answer?.machine) machine = { ...answer.machine, away: answer.away === true }
             setPeers(answer?.peers)
         } catch {
             // The server may be restarting, or older than this page. Try again
@@ -185,6 +187,8 @@ export const canCapture = (scope = globalThis) => (
  */
 export const runnerOn = (peers, machineId, selfPeerId = null, { projectId = null, needsCapture = false } = {}) => {
     const rank = (peer) => {
+        // A page whose browser is on another computer is not on this machine.
+        if (peer.away === true) return -1
         if (needsCapture && peer.capture === false) return -1
         const list = Array.isArray(peer.projects) ? peer.projects : null
         if (!projectId || !list) return 1
@@ -200,9 +204,11 @@ export const runnerOn = (peers, machineId, selfPeerId = null, { projectId = null
 /** Every machine a space can see, this one first, each once. */
 export const machinesIn = (peers, self, selfDevices = []) => {
     const byId = new Map()
-    if (self?.id) byId.set(self.id, { id: self.id, name: self.name || 'this machine', self: true, scripts: self.scripts === true, devices: selfDevices, pages: 1 })
+    // An away page (its browser on another computer) is not that machine: no
+    // "this machine" card, and away pages add no devices and count as no page.
+    if (self?.id && !self.away) byId.set(self.id, { id: self.id, name: self.name || 'this machine', self: true, scripts: self.scripts === true, devices: selfDevices, pages: 1 })
     for (const peer of peers || []) {
-        if (!peer.machineId) continue
+        if (!peer.machineId || peer.away === true) continue
         const known = byId.get(peer.machineId)
         if (known) {
             if (known.self) continue
