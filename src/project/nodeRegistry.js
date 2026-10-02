@@ -1533,8 +1533,10 @@ export const NODE_TYPES = {
         // What it says, so a note can feed a Scene's title, a Plane, another
         // Text. Owner 2026-10-02: "a Text has an OUT we can connect to
         // something" (docs/raw/2026-10-02-nodes-audit.md).
+        // Labelled like the input it passes on, so the card reads one row,
+        // "Content", with a joint on each side — not two parameters.
         outputs: [
-            { id: 'text', type: 'string', label: 'Text' },
+            { id: 'text', type: 'string', label: 'Content' },
         ],
         defaultValues: {},
         render: 'panel-2d',

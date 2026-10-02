@@ -1290,7 +1290,7 @@ export const WIKI_ARTICLES = [
             { list: [
                 'Objects: wire any shape (a Cube, a Sphere, a Transform, a Merge) into the Scene’s Objects joint and it stands on the Scene’s stage. For several, chain them through Merge first: one joint takes one wire.',
                 'Picture: the Scene’s Picture joint gives what its window shows, as a picture. Wire it into an Image, a picture operator or a Plane’s Texture. It is the same kind of picture a webcam gives, so anything that takes a webcam takes a Scene.',
-                'Text gives what it says on its Text joint. List gives its lines on Rows (one per line, heading by heading, empty lines left out) and how many there are on Count. Wire a Text into a Scene’s Title and the Scene is named by the note.'
+                'Text gives what it says on its Content joint (right side of the same row). List gives its lines on Rows (one per line, heading by heading, empty lines left out) and how many there are on Count. Wire a Text into a Scene’s Title and the Scene is named by the note.'
             ] },
             'Limits, stated plainly: the Picture is there only while the Scene’s own window is open in the editor; a closed window draws nothing, so it gives nothing. The /out page and Studio do not give a Scene’s Picture yet. The picture is the size of the window.'
         ],
