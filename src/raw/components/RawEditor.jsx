@@ -389,15 +389,24 @@ export default function RawEditor({
     // Panel windows are scoped exactly like graph cards. Before, this filtered
     // the whole document, so every universe.world node at any depth kept a live
     // <Canvas> mounted in every scope — see selectMountedPanelNodes.
+    // A phone shows one window at a time (selectMountedPanelNodes' frontOnly).
+    const [narrowWindows, setNarrowWindows] = useState(() => isNarrowViewport())
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined
+        const onResize = () => setNarrowWindows(isNarrowViewport())
+        window.addEventListener('resize', onResize)
+        return () => window.removeEventListener('resize', onResize)
+    }, [])
     const visibleViewNodes = useMemo(
         () => selectMountedPanelNodes({
             nodes,
             isPanel: isPanelNode,
             currentScopeId,
             isWorldFullscreen,
-            frameOf
+            frameOf,
+            frontOnly: narrowWindows
         }),
-        [nodes, currentScopeId, isWorldFullscreen, frameOf]
+        [nodes, currentScopeId, isWorldFullscreen, frameOf, narrowWindows]
     )
     // A layout outlives the windows it describes. Prune against what the
     // document actually holds, so a deleted node cannot keep a slot forever.
@@ -1771,7 +1780,14 @@ export default function RawEditor({
             return <BrowserPanelWindow node={{ ...node, values: resolvedValues }} />
         }
         if (node.typeId === 'view.image') {
-            return <ImagePanelWindow node={node} values={resolvedValues} assetMap={assetMap} />
+            return (
+                <ImagePanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    assetMap={assetMap}
+                    sourceWired={(document.edges || []).some((edge) => edge.toNodeId === node.id && edge.toPort === 'src')}
+                />
+            )
         }
         if (node.typeId === 'stream.monitor') {
             return <MonitorPanelWindow node={node} values={resolvedValues} />
@@ -2151,8 +2167,13 @@ export default function RawEditor({
     // sitting resident on the surface — and any panel node that is currently
     // hidden is listed generically, so a node type added later is summonable
     // without touching this list.
+    // Closed ones, and on a phone the open ones waiting behind the front one.
+    const mountedPanelIds = new Set(visibleViewNodes.map((node) => node.id))
     const hiddenPanelNodes = authoredNodes.filter(
-        (node) => isPanelNode(node) && frameOf(node).visible === false
+        (node) => isPanelNode(node) && (
+            frameOf(node).visible === false
+            || (narrowWindows && (node.parentId || null) === (currentScopeId || null) && !mountedPanelIds.has(node.id))
+        )
     )
     const paletteCommands = [
         {
@@ -2172,8 +2193,10 @@ export default function RawEditor({
         ...hiddenPanelNodes.map((node) => ({
             id: `window:${node.id}`,
             label: frameOf(node).title || node.label || getNodeType(node.typeId)?.label || 'Panel',
-            hint: `open — ${node.typeId}`,
-            run: () => setLocalFrame(node.id, { visible: true })
+            // The type's name, never its id (docs/ai/vocabulary.md).
+            hint: `open — ${getNodeType(node.typeId)?.label || 'window'}`,
+            // Opened in FRONT: on a phone the front window is the one shown.
+            run: () => setLocalFrame(node.id, { visible: true, zIndex: topZIndex + 1 })
         }))
     ]
 

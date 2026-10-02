@@ -1008,3 +1008,22 @@ describe('RawGraphSurface wires follow portScopeNodes', () => {
         expect(wireD(container)).not.toBe(before)
     })
 })
+
+describe('the door at low zoom', () => {
+    it('is tucked on unselected cards below the halo zoom, and shown on the selected one', () => {
+        const world = makeNode('universe.world', { id: 'w1' })
+        const other = makeNode('universe.world', { id: 'w2', graphX: 300 })
+        const { container } = render(
+            <RawGraphSurface nodes={[world, other]} edges={[]} initialZoom={0.3} selectedNodeId="w1" onEnterNode={vi.fn()} />
+        )
+        const anchors = [...container.querySelectorAll('.raw-graph-node-door-anchor')]
+        expect(anchors).toHaveLength(2)
+        expect(anchors.filter((el) => el.classList.contains('is-tucked'))).toHaveLength(1)
+    })
+
+    it('is never tucked at a working zoom', () => {
+        const world = makeNode('universe.world', { id: 'w1' })
+        const { container } = render(<RawGraphSurface nodes={[world]} edges={[]} initialZoom={1} onEnterNode={vi.fn()} />)
+        expect(container.querySelector('.raw-graph-node-door-anchor.is-tucked')).toBeNull()
+    })
+})

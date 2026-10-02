@@ -1432,7 +1432,12 @@ export default function RawGraphSurface({
                                     filled. */}
                                 {onEnterNode && tier !== 'block' ? (
                                     <div
-                                        className="raw-graph-node-door-anchor"
+                                        // Tucked: zoomed out, a finger's 44px door is wider
+                                        // than the column gutter and covered the previous
+                                        // column's output ports (audit 2026-10-02, 390×844
+                                        // at 34%). On a touch screen it then shows only on
+                                        // the selected card — tap the card, then its door.
+                                        className={`raw-graph-node-door-anchor${zoom < DOOR_HALO_MIN_ZOOM && !isSelected ? ' is-tucked' : ''}`}
                                         style={{ transform: `scale(${1 / Math.max(zoom, FIT_MIN_USEFUL_ZOOM)})` }}
                                     >
                                         <button

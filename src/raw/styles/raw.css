@@ -2785,6 +2785,12 @@
    Because the anchor is counter-scaled by the surface's zoom, 44 here is 44
    SCREEN pixels at every zoom, not 44 graph units that shrink with the view. */
 @media (hover: none) {
+    /* Below DOOR_HALO_MIN_ZOOM the 44px plate is wider than the gutter and lands
+       on the previous column's outputs: only the selected card shows its door. */
+    .raw-graph-node-door-anchor.is-tucked {
+        display: none;
+    }
+
     .raw-graph-node-door {
         min-height: 44px;
         min-width: 44px;
