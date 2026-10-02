@@ -6,7 +6,7 @@ export const DEFAULT_RENDER_SETTINGS = {
     toneMapping: 'ACESFilmic',
     toneMappingExposure: 1,
     shadows: true,
-    shadowType: THREE.PCFSoftShadowMap,
+    shadowType: THREE.PCFShadowMap,
     antialias: true,
     powerPreference: 'high-performance'
 }
@@ -25,7 +25,7 @@ const applyRenderSettings = (renderer, renderSettings) => {
     renderer.toneMappingExposure = renderSettings.toneMappingExposure ?? 1
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.shadowMap.enabled = !!renderSettings.shadows
-    renderer.shadowMap.type = renderSettings.shadowType ?? THREE.PCFSoftShadowMap
+    renderer.shadowMap.type = renderSettings.shadowType ?? THREE.PCFShadowMap
     if (renderSettings.dpr) {
         const device = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1
         const clamped = clampDpr(renderSettings.dpr, device)

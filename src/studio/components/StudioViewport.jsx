@@ -1081,7 +1081,7 @@ export default function StudioViewport({
                 key={canvasKey}
                 style={{ height: '100%' }}
                 onCreated={({ gl }) => bindContextGuard(gl)}
-                shadows={document.renderSettings?.shadows !== false}
+                shadows={document.renderSettings?.shadows !== false ? 'percentage' : false}
                 gl={{
                     antialias: document.renderSettings?.antialias !== false,
                     powerPreference: lowPower ? 'low-power' : 'default'

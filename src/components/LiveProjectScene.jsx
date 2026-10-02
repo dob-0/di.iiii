@@ -1840,7 +1840,7 @@ export default function LiveProjectScene({
                 {...(!doc && !loadError ? { [ENTRY_PENDING_ATTR]: 'document' } : {})}
                 camera={{ position: [0, EYE_HEIGHT, 6], fov: interactive ? 60 : 45, near: 0.1, far: cameraFar }}
                 dpr={[renderSettings.dprMin ?? 1, Math.min(renderSettings.dprMax ?? 2, WALK_DPR_CEILING)]}
-                shadows={renderSettings.shadows !== false}
+                shadows={renderSettings.shadows !== false ? 'percentage' : false}
                 gl={{ antialias: renderSettings.antialias !== false }}
                 onCreated={({ gl }) => bindContextGuard(gl)}
                 style={{ position: 'absolute', inset: 0, display: 'block', touchAction: 'none' }}
