@@ -3,7 +3,7 @@
 Owner, 2026-10-02, on the NOPA x MOCT project in Nodes: *"optimize the UI of Raw, also UX — it's too bad
 use of the space and hard to work with"*. After the sketches (local `lab/p/nodes-ui-sketch-2026-10-02`,
 source di-atlas `decisions/sketches/2026-10-02-nodes-ui.html`): *"all 5 plus the node thing"*. The node
-thing is the joints: *"where are the joint places"*.
+thing, after a first wrong reading (joint visuals), is: *"a scene can have the inputs … connected things there, objects for example, or some other info, and things which can be in the scene in future"*.
 
 Measured on his screen (2560 × 1440, scale 1, Zen), project `hayfilm-nopa-2026-10-03`, six nodes:
 
@@ -14,18 +14,18 @@ Measured on his screen (2560 × 1440, scale 1, Zen), project `hayfilm-nopa-2026-
 | C | an opened List is a 662 × 563 floating window over the cards; its last group is cut off | List (and Text) open docked on the right at full canvas height. The cards stay visible. Same window system, docked frame. |
 | D | each row has ↑ ↓ group-select × (~230 px), the text gets ~280 px and is clipped | the text gets the full row and wraps. One ⋯ button per row opens Move up / Move down / Move to group / Delete. Keyboard: Alt+↑/↓ moves. Existing behaviour and tests are kept, only the controls move. |
 | E | the inspector shows `universe.world` under the name | show the type's label ("Scene"), never the id. Lexicon: no identifiers on screen. |
-| F | joints are 6 px marks inside "■ Title … Title ■" text rows, so the name shows twice and in/out can't be told apart | joints are 12 px squares on the card edge (inputs left, outputs right), each name labelled once under an IN / OUT heading, in the type colour. While dragging a wire, the joints that `arePortsCompatible` accepts light up and the rest dim. No round shapes (`feedback_no_round_ui`). |
+| F | a stage Scene takes nothing in. Gear and people are rows in two lists | **owner's "node thing" (10-02): a Scene takes INPUTS**. Things are connected into the stage it belongs to. The mechanism exists: In doors (`port.in` with `parentId` = the Scene) become inputs on the Scene card (`getNodeInputs` → `doorwaysInside`). **New:** a **Gear** node (name, already there / we bring, stage) and a **Person** node (name, role, contact), each with one output a stage door can take. **Waits for the owner's word on the Gear/Person fields before building.** |
 
 **Not changing:** the top bars, the palette, the colours of the joint types, the node model, ops, routes,
-`arePortsCompatible`. The visual language stays as it is (square, mono labels, the same colours). Only
+`arePortsCompatible`, the In/Out doors. The visual language stays as it is (square, mono labels, the same colours). Only
 size, placement and what the card shows change.
 
 **Proof required before the PR leaves draft:**
 1. Unit tests per change (fit on open runs once; list card preview rows; docked frame; row menu actions
-   keep their order semantics; inspector label; joint layout and compatible highlight). Gate on
+   keep their order semantics; inspector label; Gear/Person nodes and their doors). Gate on
    `Tests N passed`, N > 0.
 2. The same six-node project seen at 2560 × 1340 DPR 1 (his screen), and at 390 × 844 DPR 3 (phone).
    Before and after screenshots with the measured coverage of A and the row text width of D.
 3. Browser runs under the shared lock, only below 85 °C, never with SwiftShader.
 
-Order: E (smallest) → A → B → D → C → F (largest, touches the card and the wire drag).
+Order: E (smallest) → A → B → D → C. F after the owner confirms the Gear and Person fields.
