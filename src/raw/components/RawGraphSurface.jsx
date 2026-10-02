@@ -7,6 +7,7 @@ import TopThumbnail from './TopThumbnail.jsx'
 import CardPreview from './cardPreview/CardPreview.jsx'
 import { hasCardPreview } from './cardPreview/previewTypes.js'
 import { cardEmptyHint } from '../utils/cardEmptyHint.js'
+import { isTypingTarget, matchesKeyId } from '../input/keymap.js'
 import {
     arePortsCompatible,
     getNodeCardSummary,
@@ -176,6 +177,12 @@ export default function RawGraphSurface({
     // wrong for an insertion that lands mostly off-screen.
     fitSignal = null,
     onEnterNode,
+    // The canvas keys' callbacks (input/keymap.js): U, N/F2, ?.
+    onLeaveScope = null,
+    onRenameNode = null,
+    onShowKeys = null,
+    // Middle-click a card: what it reads and gives (the reading sheet).
+    onShowReading = null,
     // Optional, like every other handler here: Studio wraps this read-only and
     // passes none, so no menu is offered there at all.
     onPromotePort = null,
@@ -219,6 +226,7 @@ export default function RawGraphSurface({
     // anywhere on a 24px band deleted a wire with no warning (audit
     // 2026-10-02). Select, then delete: how Blender and Unreal treat a link.
     const [armedWire, setArmedWire] = useState(null)
+    const middlePressRef = useRef(null)
     const dragOffsetRef = useRef({ x: 0, y: 0 })
     // pendingWire mirrored into a ref: the window-level pointerup handler is
     // registered once per drag and would otherwise close over a stale value.
@@ -706,7 +714,7 @@ export default function RawGraphSurface({
     useEffect(() => {
         if (!armedWire && (!selectedNodeId || !onDeleteNode)) return undefined
         const handler = (event) => {
-            if (event.key === 'Escape' && armedWire) { setArmedWire(null); return }
+            if (event.key === 'Escape' && armedWire && !event.defaultPrevented) { event.preventDefault(); setArmedWire(null); return }
             if (event.key !== 'Delete' && event.key !== 'Backspace') return
             const target = event.target
             const tag = target?.tagName?.toLowerCase?.()
@@ -729,8 +737,10 @@ export default function RawGraphSurface({
                 () => onDeleteNode(selectedNodeId)
             )
         }
-        window.addEventListener('keydown', handler)
-        return () => window.removeEventListener('keydown', handler)
+        // Capture phase: a marked wire takes Escape (and Delete) before the
+        // editor's Escape ladder, which then sees it handled.
+        window.addEventListener('keydown', handler, true)
+        return () => window.removeEventListener('keydown', handler, true)
     }, [selectedNodeId, onDeleteNode, nodeById, requestDelete, armedWire, onDeleteEdge])
 
     // The output port nearest a screen point, within the grab radius. Distance
@@ -1195,6 +1205,20 @@ export default function RawGraphSurface({
             updateZoom(zoom - GRAPH_ZOOM_STEP)
             return
         }
+        // The canvas keys (input/keymap.js). Only here, on the canvas's own
+        // handler, so they act while the canvas has focus (WCAG 2.1.4) — never
+        // while typing, never inside a window, whose keys are its own.
+        if (!isTypingTarget(event.target) && !event.target?.closest?.('.raw-window')) {
+            const selected = selectedNodeId && nodeById.has(selectedNodeId) ? selectedNodeId : null
+            const act = (fn) => { event.preventDefault(); fn() }
+            if (matchesKeyId(event, 'fitAll')) return act(() => fitGraph({ force: true }))
+            if (matchesKeyId(event, 'frameSelected')) return act(() => (selected ? frameSelection() : fitGraph({ force: true })))
+            if (matchesKeyId(event, 'zoom100')) return act(() => updateZoom(1))
+            if (matchesKeyId(event, 'enter') && selected && onEnterNode) return act(() => onEnterNode(selected))
+            if (matchesKeyId(event, 'leave') && onLeaveScope) return act(() => onLeaveScope())
+            if (matchesKeyId(event, 'rename') && selected && onRenameNode) return act(() => onRenameNode(selected))
+            if (matchesKeyId(event, 'keys') && onShowKeys) return act(() => onShowKeys())
+        }
         if (event.key !== 'Enter' || event.target !== event.currentTarget || !onDoubleClick) return
         const rect = event.currentTarget.getBoundingClientRect()
         onDoubleClick({
@@ -1230,6 +1254,31 @@ export default function RawGraphSurface({
                 handleSectionDoubleClick(event)
             }}
             onKeyDown={handleSectionKeyDown}
+            onMouseDown={(event) => {
+                // Remember where a middle press began: a click (no travel) on a
+                // card asks for its reading; a drag is the pan, as before.
+                if (event.button === 1) middlePressRef.current = { x: event.clientX, y: event.clientY }
+                // Back/Forward (buttons 3/4) must not navigate the browser away.
+                if (event.button === 3 || event.button === 4) event.preventDefault()
+            }}
+            onMouseUp={(event) => {
+                if (event.button === 3) {
+                    // Mouse Back = leave one level (input/keymap.js 'leave').
+                    event.preventDefault()
+                    onLeaveScope?.()
+                    return
+                }
+                if (event.button === 4) event.preventDefault()
+                if (event.button !== 1 || !middlePressRef.current) return
+                const start = middlePressRef.current
+                middlePressRef.current = null
+                if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 6) return
+                const card = event.target?.closest?.('[data-card-id]')
+                if (card && onShowReading) {
+                    event.preventDefault()
+                    onShowReading(card.getAttribute('data-card-id'))
+                }
+            }}
             onPointerDown={(event) => {
                 // Anywhere but the Remove button lets go of a marked wire.
                 if (armedWire && !event.target?.closest?.('.raw-wire-remove')) setArmedWire(null)
@@ -1375,6 +1424,7 @@ export default function RawGraphSurface({
                             <div
                                 key={node.id}
                                 className={`raw-graph-node-card is-lod-${tier}${isSelected ? ' is-selected' : ''}`}
+                                data-card-id={node.id}
                                 style={{
                                     position: 'absolute',
                                     left: node.graphX,

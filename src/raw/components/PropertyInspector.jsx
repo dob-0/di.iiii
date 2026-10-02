@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { cloneValue } from '../../shared/projectSchema.js'
 import { detectAssetMediaKind } from '../../utils/mediaAssetTypes.js'
 import { panTiltFromRotation, rotationFromPanTilt } from '../../project/viewport/spotLightAim.js'
@@ -213,8 +213,13 @@ function FieldNote({ note }) {
 // the one element every selected node already shows its name on, so the name
 // is edited exactly where it is read: click, type, Enter. Same edit-buffer
 // manners as ScrubNumberInput's text-edit mode — Escape abandons, blur commits.
-function TitleField({ title, onRename }) {
+function TitleField({ title, onRename, renameRequest = 0 }) {
     const [draft, setDraft] = useState(null)
+    // N / F2 on the canvas (input/keymap.js) opens the name for typing.
+    useEffect(() => {
+        if (renameRequest > 0 && onRename) setDraft(title || '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [renameRequest])
     if (!onRename) return <h4>{title}</h4>
     if (draft === null) {
         return (
@@ -254,6 +259,7 @@ function TitleField({ title, onRename }) {
 export default function PropertyInspector({
     title,
     onRename = null,
+    renameRequest = 0,
     subtitle = '',
     sections = [],
     assetOptions = [],
@@ -272,7 +278,7 @@ export default function PropertyInspector({
     return (
         <div className="raw-property-sheet">
             <header className="raw-property-sheet-header">
-                <TitleField title={title} onRename={onRename} />
+                <TitleField title={title} onRename={onRename} renameRequest={renameRequest} />
                 {/* The type's name under a node's own name — once. "Scene / Scene"
                     read as two things (owner, 2026-10-02). */}
                 {subtitle && subtitle !== title ? <p>{subtitle}</p> : null}

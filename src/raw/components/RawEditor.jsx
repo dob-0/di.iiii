@@ -215,6 +215,9 @@ export default function RawEditor({
     })
     const [overflowOpen, setOverflowOpen] = useState(false)
     const [helpOpen, setHelpOpen] = useState(false)
+    const [helpSection, setHelpSection] = useState('start')
+    // N / F2 (input/keymap.js): each press opens the panel's name for typing.
+    const [renameRequest, setRenameRequest] = useState(0)
     // Zen: nothing resident on the workspace. Read once, from this device's
     // preference, defaulting to on only for a workspace with no work in it —
     // see zenMode.js for why it is not document state.
@@ -228,6 +231,10 @@ export default function RawEditor({
     // here whose opening size depends on the viewport it opens into, because on
     // a phone it has to finish above where the selection sheet docks.
     const [anatomyFrame, setAnatomyFrame] = useState(null)
+    // Which node the sheet reads: null = the node you are inside (as before);
+    // an id = a card middle-clicked on the canvas (TouchDesigner: middle-click
+    // a node for its info). input/keymap.js 'reading'.
+    const [anatomyNodeId, setAnatomyNodeId] = useState(null)
     // The canvas viewport as the graph surface publishes it — pan, zoom and
     // where the surface's box begins. Unpinned panel windows are placed
     // through it, which is what makes them part of the world.
@@ -1156,7 +1163,8 @@ export default function RawEditor({
     // seeds the frame from the viewport, because on a phone the sheet has to
     // finish above where the selection sheet docks and that arithmetic needs a
     // height nobody has at mount.
-    const openAnatomy = useCallback(() => {
+    const openAnatomy = useCallback((nodeId = null) => {
+        setAnatomyNodeId(typeof nodeId === 'string' ? nodeId : null)
         setAnatomyFrame(getAnatomyDefaultFrame({
             viewportWidth: typeof window === 'undefined' ? 1280 : window.innerWidth,
             viewportHeight: typeof window === 'undefined' ? 800 : window.innerHeight,
@@ -1167,7 +1175,7 @@ export default function RawEditor({
 
     // Leaving the node closes the sheet. A sheet describing the node you have
     // walked out of is worse than no sheet: it looks current and is not.
-    useEffect(() => { setAnatomyFrame(null) }, [currentScopeId])
+    useEffect(() => { setAnatomyFrame(null); setAnatomyNodeId(null) }, [currentScopeId])
 
     const buildNodeValues = (definitionId, params, place) =>
         buildNodeValuesForType(definitionId, params, place, {
@@ -1491,6 +1499,7 @@ export default function RawEditor({
             <PropertyInspector
                 title={inspectorTitle}
                 onRename={scopedSelectedNode ? handleRenameSelected : null}
+                renameRequest={renameRequest}
                 subtitle={inspectorSubtitle}
                 sections={inspectorSections}
                 values={inspectorValues}
@@ -1710,18 +1719,19 @@ export default function RawEditor({
     // somebody is reading, not a frame being drawn.
     const anatomyNow = Math.floor((clockNow || 0) / 125) * 125
     const [anatomyMemory] = useState(() => createFrameMemory())
+    const anatomyNode = (anatomyNodeId && authoredNodes.find((node) => node.id === anatomyNodeId)) || scopeNode
     const anatomyReading = useMemo(() => {
-        if (!anatomyFrame || !scopeNode) return null
-        return readNode(scopeNode, {
+        if (!anatomyFrame || !anatomyNode) return null
+        return readNode(anatomyNode, {
             // EVERY node, never the scoped card list: a container's sockets come
             // from doorway nodes living in a different scope, and the scoped
             // list finds none of them, silently, with every test still green.
             allNodes: authoredNodes,
             context: createNodeGraphContext(document, { now: anatomyNow, liveOutputs, frameMemory: anatomyMemory }),
             document,
-            childCount: childCounts.get(scopeNode.id) || 0
+            childCount: childCounts.get(anatomyNode.id) || 0
         })
-    }, [anatomyFrame, scopeNode, authoredNodes, document, liveOutputs, anatomyMemory, childCounts, anatomyNow])
+    }, [anatomyFrame, anatomyNode, authoredNodes, document, liveOutputs, anatomyMemory, childCounts, anatomyNow])
 
     const handleShowFeedingCard = useCallback((nodeId) => {
         // What feeds the node you are standing in is a card in the scope
@@ -1981,6 +1991,7 @@ export default function RawEditor({
                 <PropertyInspector
                     title={inspectorTitle}
                     onRename={scopedSelectedNode ? handleRenameSelected : null}
+                    renameRequest={renameRequest}
                     subtitle={inspectorSubtitle}
                     sections={inspectorSections}
                     values={inspectorValues}
@@ -2092,6 +2103,16 @@ export default function RawEditor({
         const handler = (event) => {
             const tag = event.target?.tagName?.toLowerCase?.()
             if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
+            // The Escape ladder (docs/raw/2026-10-02-keys-and-mouse.md): a menu,
+            // a dialog or a marked wire takes Escape first and marks it handled;
+            // then the selection clears; only then does Escape leave a level.
+            // Three listeners used to act on one press (inventory §1f.1).
+            if (event.key === 'Escape' && event.defaultPrevented) return
+            if (event.key === 'Escape' && workspaceState.selectedNodeId) {
+                event.preventDefault()
+                clearSelection()
+                return
+            }
             if (event.key === 'Escape' && navStack.length > 1) {
                 event.preventDefault()
                 handleNavigateToScope(navStack.length - 2)
@@ -2145,7 +2166,7 @@ export default function RawEditor({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [handleDuplicateSelected, handleNavigateToScope, navStack.length, undo, redo, isWorldFullscreen, visibleViewNodes, frameOf, setLocalFrame, selectNode, topZIndex, workspaceState.selectedNodeId])
+    }, [handleDuplicateSelected, handleNavigateToScope, navStack.length, undo, redo, isWorldFullscreen, visibleViewNodes, frameOf, setLocalFrame, selectNode, topZIndex, workspaceState.selectedNodeId, clearSelection])
 
     const handleMoveWorldNode = (nodeId, nextPosition) => {
         applyLocalOps({
@@ -2191,7 +2212,7 @@ export default function RawEditor({
         // route in; the audit called its absence critical back when the
         // backdrop still papered over it.
         { id: 'room', label: 'Full screen', hint: 'the 3D view, fullscreen', run: () => setIsWorldFullscreen(true) },
-        { id: 'help', label: 'Help', hint: 'what the keys do', run: () => setHelpOpen(true) },
+        { id: 'help', label: 'Help', hint: 'what the keys do', run: () => { setHelpSection('start'); setHelpOpen(true) } },
         { id: 'chat', label: 'Chat', hint: 'talk to whoever is here', run: () => setChatOpen(true) },
         { id: 'outliner', label: 'Outliner', hint: 'every node in the project', run: () => setOutlinerOpen(true) },
         ...hiddenPanelNodes.map((node) => ({
@@ -2490,7 +2511,7 @@ export default function RawEditor({
                             </div>
                         </div>
                         <div className="raw-topbar-right">
-                            <button type="button" className="raw-topbar-help-action" onClick={() => setHelpOpen(true)}>
+                            <button type="button" className="raw-topbar-help-action" onClick={() => { setHelpSection('start'); setHelpOpen(true) }}>
                                 Help
                             </button>
                             {/* Counts BOTH kinds, and appears for either: it
@@ -2707,11 +2728,21 @@ export default function RawEditor({
                     // the question. A container's reading stays one tap away on
                     // the marker's ? — two resident buttons for one answer was
                     // the clutter the audit counted.
-                    onExplainScope={currentScopeId && isNodeMadeOfCode(scopeNode?.typeId) ? openAnatomy : null}
+                    onExplainScope={currentScopeId && isNodeMadeOfCode(scopeNode?.typeId) ? () => openAnatomy() : null}
                     emptyHint={scopeEmptyHint}
                     edges={graphCardEdges}
                     selectedNodeId={workspaceState.selectedNodeId}
                     onEnterNode={handleEnterNode}
+                    onLeaveScope={navStack.length > 1 ? () => handleNavigateToScope(navStack.length - 2) : null}
+                    onRenameNode={(nodeId) => {
+                        selectNode(nodeId)
+                        setRenameRequest((count) => count + 1)
+                    }}
+                    onShowReading={(nodeId) => openAnatomy(nodeId)}
+                    onShowKeys={() => {
+                        setHelpSection('keys')
+                        setHelpOpen(true)
+                    }}
                     onSelectNode={selectNode}
                     onCreateEdge={handleCreateEdge}
                     onDeleteEdge={handleDeleteEdge}
@@ -3064,6 +3095,7 @@ export default function RawEditor({
             <RawHelpDialog
                 open={helpOpen}
                 onClose={() => setHelpOpen(false)}
+                initialSection={helpSection}
             />
 
             {visibleSelection ? hostInspector : null}

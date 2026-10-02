@@ -1045,3 +1045,63 @@ describe('one value, one name on a card row', () => {
         expect(labels).toEqual(expect.arrayContaining(['A', 'B', 'Out']))
     })
 })
+
+describe('the canvas keys and mouse buttons (input/keymap.js)', () => {
+    const setup = (props = {}) => {
+        const world = makeNode('universe.world', { id: 'w1' })
+        const cube = makeNode('geom.cube', { id: 'c1', graphX: 320 })
+        const handlers = { onEnterNode: vi.fn(), onLeaveScope: vi.fn(), onRenameNode: vi.fn(), onShowKeys: vi.fn(), onShowReading: vi.fn() }
+        const utils = render(<RawGraphSurface nodes={[world, cube]} edges={[]} initialZoom={1} selectedNodeId="w1" {...handlers} {...props} />)
+        return { ...utils, ...handlers, surface: utils.container.querySelector('.raw-graph-surface') }
+    }
+
+    it('I enters, U leaves, N and F2 rename, ? shows the keys — on the focused canvas', () => {
+        const { surface, onEnterNode, onLeaveScope, onRenameNode, onShowKeys } = setup()
+        fireEvent.keyDown(surface, { key: 'i' })
+        fireEvent.keyDown(surface, { key: 'u' })
+        fireEvent.keyDown(surface, { key: 'n' })
+        fireEvent.keyDown(surface, { key: 'F2' })
+        fireEvent.keyDown(surface, { key: '?', shiftKey: true })
+        expect(onEnterNode).toHaveBeenCalledWith('w1')
+        expect(onLeaveScope).toHaveBeenCalledTimes(1)
+        expect(onRenameNode).toHaveBeenCalledTimes(2)
+        expect(onShowKeys).toHaveBeenCalledTimes(1)
+    })
+
+    it('a letter typed in a field never reaches the canvas', () => {
+        const { container, onEnterNode } = setup()
+        const input = document.createElement('input')
+        container.querySelector('.raw-graph-surface').appendChild(input)
+        fireEvent.keyDown(input, { key: 'i' })
+        expect(onEnterNode).not.toHaveBeenCalled()
+    })
+
+    it('1 zooms to 100%', () => {
+        const onViewportChange = vi.fn()
+        const { surface } = setup({ initialZoom: 0.5, onViewportChange })
+        fireEvent.keyDown(surface, { key: '1' })
+        expect(onViewportChange.mock.calls.at(-1)[0].zoom).toBe(1)
+    })
+
+    it('a middle click on a card asks for its reading; a middle drag does not', () => {
+        const { container, onShowReading } = setup()
+        const card = container.querySelector('[data-card-id="c1"]')
+        fireEvent.mouseDown(card, { button: 1, clientX: 100, clientY: 100 })
+        fireEvent.mouseUp(card, { button: 1, clientX: 101, clientY: 100 })
+        expect(onShowReading).toHaveBeenCalledWith('c1')
+        fireEvent.mouseDown(card, { button: 1, clientX: 100, clientY: 100 })
+        fireEvent.mouseUp(card, { button: 1, clientX: 180, clientY: 100 })
+        expect(onShowReading).toHaveBeenCalledTimes(1)
+    })
+
+    it('the mouse Back button leaves one level and does not navigate the page', () => {
+        const { surface, onLeaveScope } = setup()
+        const down = new MouseEvent('mousedown', { button: 3, bubbles: true, cancelable: true })
+        surface.dispatchEvent(down)
+        const up = new MouseEvent('mouseup', { button: 3, bubbles: true, cancelable: true })
+        surface.dispatchEvent(up)
+        expect(down.defaultPrevented).toBe(true)
+        expect(up.defaultPrevented).toBe(true)
+        expect(onLeaveScope).toHaveBeenCalledTimes(1)
+    })
+})
