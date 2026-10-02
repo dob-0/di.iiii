@@ -13,6 +13,8 @@ as them, and can hold two of them open side by side.
 
 All paths are relative to the repo root.
 
+**On aylmo: `di-dev up <tree>` (di-atlas tools/di-dev); never a relative `DATA_ROOT`.** serverXR refuses to start in a git checkout with an unset or relative `DATA_ROOT` (absolute path, or `DI_SCRATCH=1` for a throwaway) — `serverXR/src/dataRootGuard.js`.
+
 **Before you start it, look at who already holds `:4000`.** On a machine with a
 local `di` install — the artist's own machine, a stage box — port 4000 is that
 install's LIVE server, serving a wall or a show, and it is started the same way
@@ -65,8 +67,8 @@ it prints anything about a server. A fresh clone cannot run `npm run dev` until
 they exist.
 
 The example env is a working local configuration: port 4000, API under
-`/serverXR`, `REQUIRE_AUTH=true`, and its own data root at `serverXR/data/`
-(created on first boot). A visitor with no account gets a guest session scoped to
+`/serverXR`, `REQUIRE_AUTH=true`, and, in `.env.example`, no `DATA_ROOT` at all —
+set an absolute one (a checkout without it refuses to start). A visitor with no account gets a guest session scoped to
 `open` plus a private sandbox — which is why the driver makes accounts.
 
 If this checkout is meant to share one machine-wide local tier instead, that is
