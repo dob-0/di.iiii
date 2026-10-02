@@ -12,3 +12,15 @@ usual case after closing the tab. `cmdUp` now opens the public URL there too, un
   fails the same on dev 170340f5 in this worktree (not this change).
 - Not done: seen on Windows/macOS (the opener is `start` / `open`, unchanged); after a reboot di does not
   start by itself — `di` starts it (no autostart for the main server; owed if wanted).
+
+### Same day, second step — the install itself opens it
+
+Owner: "you install the di., it opens in browser and everything you do from there". `bootstrap.mjs` printed
+"di up — start it, and open it" and stopped. Now it runs `up` from the installed version when a person is at a
+terminal (`shouldStartAfterInstall` in install.mjs: not with DI_NO_START=1, not under CI, not without a TTY). A failed
+start warns and prints the old line — the install itself already succeeded.
+
+- Guard: `scripts/di/startAfterInstall.test.js` (decision + order in bootstrap).
+- Measured: real `install.sh` of a packed release (`di:pack --no-build`) into a throwaway DI_HOME + HOME, fake opener:
+  6 s to running, opener got `http://di.localhost:4391`, health 200; `down` → 000; real ~/.bashrc untouched.
+- Not done: after a reboot nothing starts it (autostart owed); not run on Windows/macOS.
