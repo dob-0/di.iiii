@@ -77,10 +77,12 @@ describe('cardContentHeight', () => {
 
     // The Gear card opened with a blank port row above its rows: a portless
     // card with content starts its lines right under the header.
-    it('gives a portless card with content no empty port row', () => {
+    // A List has had two outputs (Rows, Count) since #730, so it is no longer
+    // portless: its content sits under those two rows, and adds nothing when empty.
+    it('puts a List\'s content under its two output rows', () => {
         const gear = list({ groups: ['A'], items: [{ text: 'one', group: 'A' }] })
-        expect(cardHeight(gear)).toBe(HEADER_HEIGHT + cardContentHeight(gear) + 8)
+        expect(cardHeight(gear)).toBe(HEADER_HEIGHT + 2 * 22 + cardContentHeight(gear) + 8)
         const empty = list({ groups: ['A'], items: [] })
-        expect(cardHeight(empty)).toBe(HEADER_HEIGHT + 22 + 8)
+        expect(cardHeight(empty)).toBe(HEADER_HEIGHT + 2 * 22 + cardContentHeight(empty) + 8)
     })
 })
