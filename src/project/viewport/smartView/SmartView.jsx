@@ -235,7 +235,8 @@ export default function SmartView({
         sinceScan: 1,
         fogOffset: 0,
         presetDistance: 0,
-        atPreset: false,
+        // true from the start: the landing view is composed too (no fade until the visitor takes the camera)
+        atPreset: true,
         edges: new Map(),
         boundaryKey: ''
     })
@@ -416,7 +417,6 @@ export default function SmartView({
     useEffect(() => {
         if (!command?.presetId) {
             live.current.section = null
-            live.current.atPreset = false
             return
         }
         const state = live.current
