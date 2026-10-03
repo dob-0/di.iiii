@@ -5688,3 +5688,34 @@
         display: inline;
     }
 }
+
+/* LaserCube Out — the one big switch. A rectangle (no round UI); red when the cube is lit,
+   so "on" reads from across the room. */
+.raw-laser-panel-switch {
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid var(--raw-border, #3a3f44);
+    border-radius: 2px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+.raw-laser-panel-switch.is-on {
+    background: #b3261e;
+    border-color: #ff6b5a;
+    color: #fff;
+}
+.raw-laser-panel-switch:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.raw-laser-panel-preview {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    height: auto;
+    background: #000;
+    border-radius: 0;
+    flex: none;
+}

@@ -9,6 +9,8 @@ const { requireLocalRuntime } = require('../localRuntimeGuard')
 //   GET  /laser/api/state   what the lane and the cube are doing
 //   POST /laser/api/update  { ip?, rate?, look?, on? } — also the page's heartbeat
 //   POST /laser/api/off     OFF, from anywhere on this machine, no body needed
+//   POST /laser/api/preview { look, t? } — the frame the cube would get, for the panel's
+//                           picture; touches no cube and builds no lane
 function registerLaserRoutes(app, { mountPaths = ['/laser'], log } = {}) {
   let lane = null
   const getLane = () => {
@@ -42,6 +44,14 @@ function registerLaserRoutes(app, { mountPaths = ['/laser'], log } = {}) {
     } catch (err) {
       res.status(err.status || 500).json({ error: String(err.message || err) })
     }
+  })
+  router.post('/api/preview', (req, res) => {
+    const { renderFrame } = require('../lighting/laser/shapes')
+    const t = Number(req.body?.t) || 0
+    // 300 points is plenty to see the shape; [x, y, r, g, b] rounded to keep it small.
+    const frame = renderFrame(req.body?.look || {}, t, 300)
+    res.set('Cache-Control', 'no-store')
+    res.json({ points: frame.map((p) => [p.x, p.y, p.r, p.g, p.b].map((v) => Math.round(v * 1000) / 1000)) })
   })
   router.post('/api/off', (_req, res) => {
     if (lane) lane.switchOff('switched off (/laser/api/off)')

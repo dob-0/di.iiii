@@ -549,6 +549,13 @@ export default {
                 changeOrigin: true,
                 xfwd: true
             },
+            // The laser lane — the same shape: serverXR answers /laser itself on a local
+            // install (serverXR/src/routes/laserRoutes.js).
+            '^/laser(/|$)': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true,
+                xfwd: true
+            },
             // NDI® in — the same shape: serverXR answers /ndi itself on a local install
             // (serverXR/src/routes/ndiRoutes.js).
             '^/ndi(/|$)': {

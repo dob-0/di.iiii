@@ -7,6 +7,8 @@ import { computeOutput as colourSplit } from './colour.split/runtime.js'
 import { computeOutput as deviceKeyboard } from './device.keyboard/runtime.js'
 import { computeOutput as deviceDmxOut } from './device.dmx.out/runtime.js'
 import { computeOutput as deviceMidiOut } from './device.midi.out/runtime.js'
+import { computeOutput as deviceLaserOut } from './device.laser.out/runtime.js'
+import { computeOutput as laserShape } from './laser.shape/runtime.js'
 import { computeOutput as geomArray } from './geom.array/runtime.js'
 import { computeOutput as geomCone } from './geom.cone/runtime.js'
 import { computeOutput as geomCylinder } from './geom.cylinder/runtime.js'
@@ -67,6 +69,8 @@ export const NODE_RUNTIMES = new Map([
     ['device.keyboard', deviceKeyboard],
     ['device.dmx.out', deviceDmxOut],
     ['device.midi.out', deviceMidiOut],
+    ['device.laser.out', deviceLaserOut],
+    ['laser.shape', laserShape],
     ['geom.array', geomArray],
     ['geom.cone', geomCone],
     ['geom.cylinder', geomCylinder],

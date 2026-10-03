@@ -174,6 +174,8 @@ export const FAMILY_BY_TYPE = {
     // changes is what a stranger receives, not what the graph makes.
     'view.publish': 'send-out',
     'device.dmx.out': 'send-out',
+    'device.laser.out': 'send-out',
+    'laser.shape': 'send-out',
     'device.midi.out': 'send-out',
     'device.osc.out': 'send-out',
     'stream.output': 'send-out',
@@ -754,6 +756,63 @@ export const NODE_TYPES = {
         // of this node, and each needs somewhere to be said.
         render: 'panel-2d',
         defaultFrame: { width: 340, height: 260 },
+    },
+
+    // A LaserCube on the network, the TouchDesigner pair (Laser CHOP + the LaserCube
+    // script) as two nodes: Laser makes a look, LaserCube Out hands it to this
+    // di.iiii's server, which draws it on the cube (serverXR/src/lighting/laser).
+    'laser.shape': {
+        id: 'laser.shape',
+        label: 'Laser',
+        category: 'device',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['laser', 'lasercube', 'beam', 'shape', 'circle', 'spiral', 'lissajous', 'ilda', 'show'],
+        inputs: [
+            // circle · polygon · star · line · wave · spiral · lissajous
+            { id: 'shape',     type: 'string', label: 'Shape',     default: 'circle' },
+            { id: 'size',      type: 'number', label: 'Size',      default: 0.5 },
+            { id: 'intensity', type: 'number', label: 'Intensity', default: 0.3 },
+            { id: 'color',     type: 'color',  label: 'Colour',    default: '#00ff00' },
+            { id: 'spin',      type: 'number', label: 'Spin',      default: 0 },
+            { id: 'x',         type: 'number', label: 'X',         default: 0 },
+            { id: 'y',         type: 'number', label: 'Y',         default: 0 },
+            { id: 'sides',     type: 'number', label: 'Sides',     default: 5 },
+            { id: 'waves',     type: 'number', label: 'Waves',     default: 3 },
+            { id: 'speed',     type: 'number', label: 'Speed',     default: 0.25 },
+        ],
+        outputs: [
+            { id: 'look', type: 'any', label: 'Look' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'device.laser.out': {
+        id: 'device.laser.out',
+        label: 'LaserCube Out',
+        category: 'device',
+        runtime: 'web',
+        singleton: false,
+        keywords: ['laser', 'lasercube', 'wicked lasers', 'out', 'beam', 'show', 'kill', 'off'],
+        inputs: [
+            { id: 'look',     type: 'any', label: 'Look' },
+            // A wire's rising edge switches on, its falling edge off; its first
+            // value (a project opening) does nothing.
+            { id: 'on',       type: 'any', label: 'On' },
+            { id: 'blackout', type: 'any', label: 'Blackout' },
+        ],
+        outputs: [
+            { id: 'status', type: 'string', label: 'Status' },
+        ],
+        // The cube's address and rate are config, not ports: set once for the room.
+        defaultValues: { host: '192.168.1.1', rate: 30000 },
+        configInputs: [
+            { id: 'host', type: 'string', label: 'Cube IP' },
+            { id: 'rate', type: 'number', label: 'Rate (pps)' },
+        ],
+        render: 'panel-2d',
+        defaultFrame: { width: 380, height: 640 },
     },
 
     'device.midi.out': {
