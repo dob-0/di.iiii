@@ -50,7 +50,7 @@ export default function LaserOutPanelWindow({
 
     // The latest settings, read by the beat without restarting it.
     const latest = useRef({ host, rate, look })
-    latest.current = { host, rate, look }
+    useEffect(() => { latest.current = { host, rate, look } })
 
     const push = async (extra = {}) => {
         const { host: ip, rate: r, look: l } = latest.current
@@ -119,9 +119,10 @@ export default function LaserOutPanelWindow({
 
     // The picture of what is drawn: lit points as lines, blank moves as a faint dash.
     const canvasRef = useRef(null)
-    const startedAt = useRef(Date.now())
+    const startedAt = useRef(0)
     useEffect(() => {
         if (lane.status !== LASER_STATUS.ANSWERING) return undefined
+        if (!startedAt.current) startedAt.current = Date.now()
         let alive = true
         const draw = async () => {
             const points = await readLaserPreview(base, latest.current.look, (Date.now() - startedAt.current) / 1000, { fetchImpl: fetchRef.current })
