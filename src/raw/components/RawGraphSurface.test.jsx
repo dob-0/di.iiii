@@ -32,6 +32,24 @@ const inputPortGraphPoint = (node, index) => ({
 })
 
 describe('RawGraphSurface', () => {
+    it('a Geo card offers Open in Studio, and only a Geo card', () => {
+        const geo = makeNode('geom.geo', { id: 'geo-1', label: 'Table', graphX: 0, graphY: 0 })
+        const cube = makeNode('geom.cube', { id: 'cube-1', graphX: 320, graphY: 0 })
+        const onOpenInStudio = vi.fn()
+        render(<RawGraphSurface nodes={[geo, cube]} edges={[]} onOpenInStudio={onOpenInStudio} />)
+        const buttons = screen.getAllByRole('button', { name: /in Studio$/ })
+        expect(buttons).toHaveLength(1)
+        expect(buttons[0].getAttribute('aria-label')).toBe('Open Table in Studio')
+        fireEvent.click(buttons[0])
+        expect(onOpenInStudio).toHaveBeenCalledWith('geo-1')
+    })
+
+    it('no Open in Studio where no way across is handed (Studio\'s read-only view, a local canvas)', () => {
+        const geo = makeNode('geom.geo', { id: 'geo-1', label: 'Table' })
+        render(<RawGraphSurface nodes={[geo]} edges={[]} />)
+        expect(screen.queryByRole('button', { name: /in Studio$/ })).toBeNull()
+    })
+
     it('dispatches createEdge when dragging from a compatible output to an input port', () => {
         const colorNode = makeNode('value.color', { id: 'color-1', graphX: 0, graphY: 0 })
         const cubeNode = makeNode('geom.cube', { id: 'cube-1', graphX: 320, graphY: 0 })

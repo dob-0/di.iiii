@@ -117,6 +117,36 @@ export function LibraryPanel({ onCreateEntity, primitives = PRIMITIVES, lights =
     )
 }
 
+// Which room Studio is standing in: the whole room (Studio's own objects), or
+// the inside of one of the project's Geos (owner's decision 2026-10-02, "edit
+// inside the Geo"). Inside a Geo, Create puts things into it and Objects lists
+// what stands in it — the same nodes Nodes shows. Existing classes only: the
+// section and its label, the inspector's own select, the small button.
+export function GeoSwitcher({ geos = [], currentGeoId = null, onOpenGeo, onNewGeo }) {
+    if (!geos.length && !currentGeoId) return null
+    return (
+        <div className="scc-section">
+            <div className="scc-section-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>Geo</span>
+                {onNewGeo ? (
+                    <button type="button" className="scc-btn scc-btn--xs" onClick={onNewGeo} title="A new, empty Geo in the room — Studio opens inside it">+ Geo</button>
+                ) : null}
+            </div>
+            <select
+                className="insp-select"
+                aria-label="Geo"
+                value={currentGeoId || ''}
+                onChange={(event) => onOpenGeo?.(event.target.value || null)}
+            >
+                <option value="">Whole room</option>
+                {geos.map((geo) => (
+                    <option key={geo.id} value={geo.id}>{geo.label}</option>
+                ))}
+            </select>
+        </div>
+    )
+}
+
 // Jam mode's whole inspector: the two edits a first-timer actually wants —
 // their text and its color — plus Remove. Everything routes through the same
 // updateComponent patch pipeline as the full inspector (merge semantics), so

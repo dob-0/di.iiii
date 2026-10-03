@@ -175,6 +175,10 @@ export default function RawGraphSurface({
     // wrong for an insertion that lands mostly off-screen.
     fitSignal = null,
     onEnterNode,
+    // A Geo card's way into Studio, standing inside that Geo (owner's decision
+    // 2026-10-02). Optional: Studio's read-only wrapper and a local canvas,
+    // which has no Studio twin, pass none and no button is drawn.
+    onOpenInStudio = null,
     // Optional, like every other handler here: Studio wraps this read-only and
     // passes none, so no menu is offered there at all.
     onPromotePort = null,
@@ -1523,6 +1527,21 @@ export default function RawGraphSurface({
                                     <span className="raw-graph-node-icon" />
                                     {tier !== 'block' ? (
                                         <span className="raw-graph-node-label">{node.label}</span>
+                                    ) : null}
+                                    {onOpenInStudio && node.typeId === 'geom.geo' && tier !== 'block' ? (
+                                        // The header's own small glyph button (the ● toggle's
+                                        // class), so the card keeps its exact geometry.
+                                        <button
+                                            type="button"
+                                            className="raw-graph-node-active-toggle"
+                                            title={`Open ${node.label} in Studio`}
+                                            aria-label={`Open ${node.label} in Studio`}
+                                            onPointerDown={(event) => event.stopPropagation()}
+                                            onDoubleClick={(event) => event.stopPropagation()}
+                                            onClick={(event) => { event.stopPropagation(); onOpenInStudio(node.id) }}
+                                        >
+                                            ↗
+                                        </button>
                                     ) : null}
                                     {tier === 'full' ? (
                                         // The family, not the category: a studio card used to
