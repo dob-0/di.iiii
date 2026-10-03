@@ -239,3 +239,17 @@ describe('the shadow cap counts the units the materials use', () => {
         expect(lamps.filter((l) => l.castShadow).length).toBe(12)
     })
 })
+
+// MOXIR render audit K (2026-10-01): a strobing lamp's light is flashed per frame
+// (StrobeDriver), so scored on its instantaneous intensity it won and lost a shadow on
+// alternate re-dresses. Lamps are scored on their NOMINAL intensity (SpotLightObject puts
+// it on light.userData.nominalIntensity); the flash does not move a shadow.
+describe('a strobe does not flip the shadows', () => {
+    it('scores a lamp on its nominal intensity when it carries one', async () => {
+        const { shadowScore } = await import('./shadowCasting.js')
+        const flashing = { intensity: 0, angle: 0.3, userData: { nominalIntensity: 500 } }
+        const steady = { intensity: 500, angle: 0.3, userData: {} }
+        expect(shadowScore(flashing)).toBeCloseTo(shadowScore(steady), 9)
+        expect(shadowScore({ intensity: 7, angle: 0.3 })).toBeGreaterThan(0) // no userData: as before
+    })
+})

@@ -39,7 +39,7 @@ function StepLink({ step, said, warn, hint, className = '', onPick, role, tabInd
             aria-current={step.here ? 'page' : undefined}
             role={role}
             tabIndex={tabIndex}
-            title={hint ? `${step.hint} — ${hint}` : step.hint}
+            title={hint || said ? `${step.hint} — ${hint || said}` : step.hint}
             onClick={(event) => {
                 onPick?.()
                 if (step.clientSide) navigateInApp(event, step.href)

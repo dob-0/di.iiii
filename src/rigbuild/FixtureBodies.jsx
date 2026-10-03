@@ -3,6 +3,7 @@ import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { aimFixture } from '../../scripts/place/fixture-lib.mjs'
 import { typeById } from './fixtureTypes.js'
+import { createLensMaterial } from './lensMaterial.js'
 import beam380Url from '../../scripts/place/fixtures/glb/beam380.glb?url'
 import beeEyeUrl from '../../scripts/place/fixtures/glb/beeEye.glb?url'
 import bsw250Url from '../../scripts/place/fixtures/glb/bsw250.glb?url'
@@ -76,7 +77,7 @@ export const bodyPoses = (lamps, library) => {
         const { geo } = KINDS[kind]
         const posed = aimFixture(geo, { pos: l.mount, orient: l.hung ? 'hung' : 'floor' }, { dir: l.beam })
         if (!out.has(kind)) out.set(kind, [])
-        out.get(kind).push({ id: l.id, parts: posed.parts, colour: l.colour || '#ffffff' })
+        out.get(kind).push({ id: l.id, parts: posed.parts, colour: l.colour || '#ffffff', glow: l.glow || null, beam: l.beam })
     }
     return out
 }
@@ -103,7 +104,8 @@ function KindBodies({ kind, poses }) {
                 key: `${part}:${o.uuid}`,
                 part,
                 geometry: o.geometry,
-                material: lens ? new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: false }) : o.material,
+                // the lens is a source: its luminance by the angle it is seen at (lensMaterial.js)
+                material: lens ? createLensMaterial() : o.material,
                 local,
                 lens
             })
@@ -124,6 +126,16 @@ const tint = new THREE.Color()
 function PartInstances({ mesh, poses }) {
     const ref = useRef(null)
     const count = poses.length
+    // A lens carries two per-instance values of its own (lensMaterial.js): its glow and its
+    // beam's direction — on a copy of the shared geometry, sized to this count.
+    const geometry = useMemo(() => {
+        if (!mesh.lens) return mesh.geometry
+        const g = mesh.geometry.clone()
+        g.setAttribute('aGlow', new THREE.InstancedBufferAttribute(new Float32Array(Math.max(count, 1) * 3), 3))
+        g.setAttribute('aDir', new THREE.InstancedBufferAttribute(new Float32Array(Math.max(count, 1) * 3), 3))
+        return g
+    }, [mesh, count])
+    useEffect(() => () => { if (geometry !== mesh.geometry) geometry.dispose() }, [geometry, mesh.geometry])
     useLayoutEffect(() => {
         const im = ref.current
         if (!im) return
@@ -132,15 +144,25 @@ function PartInstances({ mesh, poses }) {
             if (!m) return
             tmp.copy(m).multiply(mesh.local)
             im.setMatrixAt(i, tmp)
-            if (mesh.lens) im.setColorAt(i, tint.set(p.colour))
+            if (mesh.lens) {
+                im.setColorAt(i, tint.set(p.colour))
+                const g = p.glow || [0, 0.1, 6]
+                im.geometry.attributes.aGlow.setXYZ(i, g[0], g[1], g[2])
+                const d = Array.isArray(p.beam) ? p.beam : [0, -1, 0]
+                im.geometry.attributes.aDir.setXYZ(i, d[0], d[1], d[2])
+            }
         })
+        if (mesh.lens) {
+            im.geometry.attributes.aGlow.needsUpdate = true
+            im.geometry.attributes.aDir.needsUpdate = true
+        }
         im.instanceMatrix.needsUpdate = true
         if (im.instanceColor) im.instanceColor.needsUpdate = true
         im.computeBoundingSphere()
-    }, [poses, mesh])
+    }, [poses, mesh, geometry])
     if (!count) return null
     // A new count needs a new InstancedMesh (its buffers are sized at creation).
-    return <instancedMesh key={count} ref={ref} args={[mesh.geometry, mesh.material, count]} frustumCulled={false} userData={{ noShadow: true, rigBody: true }} />
+    return <instancedMesh key={count} ref={ref} args={[geometry, mesh.material, count]} frustumCulled={false} userData={{ noShadow: true, rigBody: true }} />
 }
 
 export default function FixtureBodies({ lamps, library }) {
