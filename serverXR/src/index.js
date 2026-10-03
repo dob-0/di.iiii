@@ -104,6 +104,7 @@ const { registerDmRoutes } = require('./routes/dmRoutes')
 const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
+const { registerLaserRoutes } = require('./routes/laserRoutes')
 const { registerNdiRoutes, scanAtBootFrom } = require('./routes/ndiRoutes')
 const { hasLocalRuntime } = require('./localRuntimeGuard')
 const { registerPlaceRoutes } = require('./routes/placeRoutes')
@@ -499,6 +500,14 @@ const lighting = registerLightingRoutes(app, {
   mountPaths: [...new Set(['/light', `${config.mountPath || ''}/light`.replace(/\/+/g, '/')])],
   offline: process.env.ARTNET_OFFLINE === '1',
   listen: describeListenNow
+})
+
+// The laser lane (serverXR/src/lighting/laser) at /laser — a LaserCube on the network,
+// fed by this server from a look the Raw LaserCube Out node sends. The desk's rules:
+// local runtime only, built on first use, output OFF until a page switches it on.
+registerLaserRoutes(app, {
+  mountPaths: [...new Set(['/laser', `${config.mountPath || ''}/laser`.replace(/\/+/g, '/')])],
+  log: (line) => logger.info(line)
 })
 
 // NDI® in (serverXR/src/ndi) at /ndi — the lighting desk's twin: a local-runtime lane,
