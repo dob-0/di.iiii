@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { useFrame, useThree } from '@react-three/fiber'
+import { useFrame, useStore, useThree } from '@react-three/fiber'
 import { hazeUniformsFor } from '../../objectComponents/hazeUniforms.js'
 import { setBloomAllowed } from '../../objectComponents/atmosphereStore.js'
-import { HITCH_MS, QUALITY_STEPS, RAISE_FPS, WARMUP_MS, WINDOW_MS, nextQuality, qualityDpr } from './qualityGovernor.js'
+import { HITCH_MS, QUALITY_STEPS, RAISE_FPS, WARMUP_MS, WINDOW_MS, cappedDpr, mayRaiseTo, nextQuality, qualityDpr } from './qualityGovernor.js'
 
 // The frame-rate governor (qualityGovernor.js) at work in a room with a physical haze:
 // counts frames, decides a notch every WINDOW_MS, and applies it — the beams' sample
@@ -11,9 +11,12 @@ import { HITCH_MS, QUALITY_STEPS, RAISE_FPS, WARMUP_MS, WINDOW_MS, nextQuality, 
 // headset's) and under an on-demand frame loop (frames there are not a rate).
 // The notch is on the canvas as data-quality, for a person or a probe to read.
 export default function QualityGovernor({ renderSettings }) {
-    const { gl, setDpr, viewport } = useThree()
+    const { gl, viewport } = useThree()
+    const store = useStore()
     const frameloop = useThree((s) => s.frameloop)
     const level = useRef(0)
+    const cap = useRef(Infinity)
+    const tooSlowAt = useRef({})
     const win = useRef({ start: 0, frames: 0, goodSince: 0, born: 0, last: 0 })
     const deviceDpr = useRef(viewport.initialDpr || viewport.dpr || 1)
 
@@ -21,11 +24,18 @@ export default function QualityGovernor({ renderSettings }) {
         const step = QUALITY_STEPS[n]
         hazeUniformsFor(gl).uSamples.value = step.samples
         setBloomAllowed(gl, step.bloom)
-        setDpr(qualityDpr(n, renderSettings, deviceDpr.current))
+        cap.current = qualityDpr(n, renderSettings, deviceDpr.current)
+        store.getState().setDpr(cap.current)
         gl.domElement.dataset.quality = String(n)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, at the room's full quality
     useEffect(() => { apply(0) }, [gl])
+    // Hold R3F's own re-apply of the Canvas `dpr` under the notch (cappedDpr).
+    useEffect(() => {
+        const setDpr = store.getState().setDpr
+        store.setState({ setDpr: (dpr) => setDpr(cappedDpr(dpr, cap.current, window.devicePixelRatio || 1)) })
+        return () => store.setState({ setDpr })
+    }, [store])
     // Leaving the room: the next one starts at full quality.
     useEffect(() => () => {
         hazeUniformsFor(gl).uSamples.value = QUALITY_STEPS[0].samples
@@ -47,7 +57,9 @@ export default function QualityGovernor({ renderSettings }) {
         if (elapsed < WINDOW_MS) return
         const fps = (w.frames * 1000) / elapsed
         if (fps > RAISE_FPS) { if (!w.goodSince) w.goodSince = now } else w.goodSince = 0
-        const next = nextQuality(level.current, fps, w.goodSince ? now - w.goodSince : 0)
+        let next = nextQuality(level.current, fps, w.goodSince ? now - w.goodSince : 0)
+        if (next > level.current) tooSlowAt.current[level.current] = now
+        if (next < level.current && !mayRaiseTo(next, tooSlowAt.current, now)) next = level.current
         if (next !== level.current) {
             level.current = next
             apply(next)

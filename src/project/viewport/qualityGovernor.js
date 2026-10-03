@@ -53,3 +53,25 @@ export const qualityDpr = (level, renderSettings, deviceDpr = 1) => {
     const hi = Number(renderSettings?.dprMax) > 0 ? Number(renderSettings.dprMax) : 2
     return Math.max(Math.min(lo, step.dprMax), Math.min(deviceDpr, hi, step.dprMax))
 }
+
+/**
+ * A DPR request (a number, or R3F's `[min, max]` range) held under the governor's cap.
+ * R3F re-applies the Canvas's `dpr` prop every time the Canvas's parent renders — in a
+ * room following the desk that is many times a second — and that put the room straight
+ * back at full resolution after each step down (seen on the 860M: 2880 → 1440 → 2880 px).
+ * The governor wraps the store's `setDpr` with this, so the re-apply lands on the cap.
+ */
+export const cappedDpr = (requested, cap = Infinity, devicePixelRatio = 1) => {
+    const wanted = Array.isArray(requested)
+        ? Math.min(Math.max(requested[0], devicePixelRatio), requested[1])
+        : requested
+    return Math.min(wanted, cap)
+}
+
+// A notch that was just too slow is not tried again for this long. Without it the room
+// see-sawed on the 860M: DPR 1 ran at 75 fps (over RAISE_FPS), the step back to 1.25 ran
+// at 56 (under TARGET_FPS), and it flipped between the two every ~10 s.
+export const RETRY_AFTER_MS = 60000
+
+/** May the governor climb back to `level`, given when each level last proved too slow? */
+export const mayRaiseTo = (level, tooSlowAt, now) => !(now - (tooSlowAt[level] ?? -Infinity) < RETRY_AFTER_MS)
