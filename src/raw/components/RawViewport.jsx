@@ -14,7 +14,7 @@ import { detectModelFormatFromMeta } from '../../utils/modelFormats.js'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { getNodeType } from '../../project/nodeRegistry.js'
-import { resolveSceneLighting, getRawWorldBackgroundColor, pickActiveTypeNode } from '../utils/viewportWorldState.js'
+import { resolveSceneLighting, getRawWorldBackgroundColor, pickActiveTypeNode, readSceneObjects, sceneObjectSourceIds } from '../utils/viewportWorldState.js'
 import { createFrameMemory, createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { wearConstructorGeometry } from '../../project/graph/constructorGeometry.js'
 import { pruneGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
@@ -23,6 +23,7 @@ import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import { asColor } from '../../utils/colorValue.js'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
+import ScenePictureFeed from './ScenePictureFeed.jsx'
 import { buildEntityTree } from '../../project/entityTree.js'
 import { rendererWithFallback } from '../../project/viewport/rendererFallback.js'
 
@@ -790,11 +791,18 @@ function SceneContent({
     // and a `world.light` as a marker; both are controls, and both were sitting
     // in the middle of a child's room looking like something they had made by
     // accident. Raw keeps them — that is where they are controls.
+    // What feeds the live Scene's Objects is drawn ONCE, by the Scene — not
+    // also standing in the room (sceneObjectSourceIds, viewportWorldState.js).
+    const sceneObjectSources = useMemo(
+        () => sceneObjectSourceIds(document, worldNode),
+        [document, worldNode]
+    )
     const renderableNodes = useMemo(
         () => (document.nodes || []).filter((node) => isSpatialNode(node) && inScope(node)
+            && !sceneObjectSources.has(node.id)
             && !(ambience && String(node.typeId || '').startsWith('world.'))),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [document.nodes, scopeId, ambience]
+        [document.nodes, scopeId, ambience, sceneObjectSources]
     )
     // Everything standing inside a container, keyed by the container it stands
     // in. Descent stops at a nested universe.world: a World is its own stage,
@@ -826,6 +834,8 @@ function SceneContent({
         }
         return byParent
     }, [document.nodes, graphContext])
+    // What is wired into the live Scene's Objects input — viewportWorldState.js.
+    const sceneObjects = useMemo(() => readSceneObjects(worldNode, graphContext), [worldNode, graphContext])
     const resolvedLight = useMemo(
         () => resolveSceneLighting(document, graphContext, { scopeId }),
         [document, graphContext, scopeId]
@@ -1152,6 +1162,13 @@ function SceneContent({
                         </SceneEntityErrorBoundary>
                     )
                 })}
+                {sceneObjects ? (
+                    <SceneEntityErrorBoundary key="scene-objects" resetKey={worldNode?.id}>
+                        <group name="scene-objects">
+                            <GeometryPieces descriptor={sceneObjects} />
+                        </group>
+                    </SceneEntityErrorBoundary>
+                ) : null}
                 {/* Boundaried like entities are: a node can now load an
                     arbitrary file off someone's disk, and a corrupt mesh must
                     cost that one node, not the whole scene. */}
@@ -1291,6 +1308,11 @@ export default function RawViewport({
     scopeId,
     worldNode,
     liveOutputs = null,
+    // The Scene whose Picture this canvas gives, and where to report it
+    // (ScenePictureFeed.jsx). Both null for every surface but the live
+    // Scene's own window.
+    pictureNodeId = null,
+    onPictureChange = null,
     // In the backdrop the graph card IS the selection feedback; a floating
     // name pill duplicated it in the room's sky, detached from its object
     // (the "GEO" chip the audit photographed). Fullscreen keeps pills — the
@@ -1453,6 +1475,9 @@ export default function RawViewport({
                     worldNode={worldNode}
                     liveOutputs={liveOutputs}
                 />
+                {pictureNodeId && onPictureChange
+                    ? <ScenePictureFeed nodeId={pictureNodeId} onPictureChange={onPictureChange} />
+                    : null}
             </Canvas>
             {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}
             <div className="raw-cursor-layer">
