@@ -1393,6 +1393,44 @@ check('fan leaves alone a fixture that has no such attribute', async () => {
   await POST('/api/fixtures/remove', { ids: [wash.id, head.id] });
 });
 
+// One NOW for the desk (MOXIR UI audit, 2026-10-01): /api/state says what is on the cue layer
+// and who put it there, so no page has to guess from the cue list ("Nothing fired" while a
+// look was on).
+check('/api/state carries now: a hand-fired look is manual, a cue-fired one is cue with its index', async () => {
+  await POST('/api/looks', { looks: [
+    { id: 'now-a', name: 'Green core', kind: 'colour', steps: [{ values: {} }] },
+    { id: 'now-b', name: 'Red room', kind: 'colour', steps: [{ values: {} }] },
+  ] });
+  await POST('/api/layers', { layers: [] });
+  assert.strictEqual((await GET('/api/state')).body.now, null, 'nothing on is null');
+  await POST('/api/looks/fire', { id: 'now-a' });
+  let now = (await GET('/api/state')).body.now;
+  assert.ok(now, 'a look is on, so now is not null');
+  assert.strictEqual(now.source, 'manual');
+  assert.strictEqual(now.lookId, 'now-a');
+  assert.strictEqual(now.name, 'Green core');
+  assert.strictEqual(now.cue, null, 'no cue list loaded');
+  await POST('/api/cues/load', { project: 'now-test', list: [
+    { id: 'c1', name: 'One', lookId: 'now-a', hold: 0, fade: 0 },
+    { id: 'c2', name: 'Two', lookId: 'now-b', hold: 0, fade: 0 },
+  ], loop: false });
+  await POST('/api/cues/go', {});
+  await POST('/api/cues/go', {});
+  now = (await GET('/api/state')).body.now;
+  assert.strictEqual(now.source, 'cue');
+  assert.strictEqual(now.name, 'Red room');
+  assert.strictEqual(now.cue.index, 1);
+  assert.strictEqual(now.cue.n, 2);
+  // Taking the layer back by hand makes it manual again, and the cue list is still there to resume.
+  await POST('/api/looks/fire', { id: 'now-a' });
+  now = (await GET('/api/state')).body.now;
+  assert.strictEqual(now.source, 'manual');
+  assert.strictEqual(now.cue.index, 1, 'the cue list keeps its place');
+  await POST('/api/cues/load', { project: '', list: [], loop: false });
+  await POST('/api/layers', { layers: [] });
+  await POST('/api/looks', { looks: [] });
+});
+
 check('fan refuses without an attribute, and says the styles it knows', async () => {
   assert.strictEqual((await POST('/api/fan', { from: 0, to: 255 })).status, 400);
   const { body } = await GET('/api/state');

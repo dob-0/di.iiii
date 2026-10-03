@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo } from 'react'
-import { dimension, formatMetres, layoutLabels } from './plotGeometry.js'
+import { dimension, formatMetres, layoutLabels, placeNotes } from './plotGeometry.js'
 import { isFilledShape, lampNotation, meaningfulColour, shapePath } from './plotSymbols.js'
 import { FLAG_WORDS } from './sheet.js'
 
@@ -24,10 +24,26 @@ import { FLAG_WORDS } from './sheet.js'
 
 const EMPTY = new Set()
 
+// The dashed circle at a run's loose end; said once, in the key (PlotSurface, PlotPrint), not at each end.
+export const FREE_END_WORDS = 'free end · no tower under it'
+
 export const SCREEN_SIZES = { stroke: 1, heavy: 2.4, text: 10.5, small: 8.5, tiny: 7.5, symbol: 7, gap: 2, bubble: 8 }
 export const PAPER_SIZES = { stroke: 0.18, heavy: 0.5, text: 1.9, small: 1.5, tiny: 1.3, symbol: 1.5, gap: 0.4, bubble: 1.8 }
 
 const ptsOf = (poly) => poly.map(([x, z]) => `${x},${z}`).join(' ')
+
+// The room around the middle of a rig is crowded: zone names, machine heights, the truss line's
+// dimension and the lamps' numbers all want the same square metre. Every NOTE (not a lamp's
+// number — layoutLabels owns those) is placed by placeNotes: the first spot that is clear of the
+// symbols, the lamp labels shown, the pieces and the notes before it; a note with no clear spot
+// is left out (zoom in) — except a dimension, which is data and takes its least-bad spot.
+const textBox = (x, y, text, size, anchor = 'start', caps = false) => {
+    const w = text.length * size * (caps ? 0.7 : 0.62)
+    const x0 = anchor === 'end' ? x - w : x
+    return [x0, y - size, x0 + w, y + size * 0.3]
+}
+const zoneText = (z) => `${z.label} · ${formatMetres(z.rects[0][2] - z.rects[0][0]).replace(' m', '')} × ${formatMetres(z.rects[0][3] - z.rects[0][1])}`
+const runText = (run, named) => `${named && run.name ? `${run.name} · ` : ''}${formatMetres(run.length)} · h ${formatMetres(run.height)}`
 
 const Hatch = ({ id, u, s }) => (
     <pattern id={id} patternUnits="userSpaceOnUse" width={6 * u * s.stroke * 4} height={6 * u * s.stroke * 4} patternTransform="rotate(45)">
@@ -35,7 +51,7 @@ const Hatch = ({ id, u, s }) => (
     </pattern>
 )
 
-function Venue({ plan, u, s, view, idPrefix }) {
+function Venue({ plan, u, s, view, idPrefix, placed }) {
     if (!plan) return null
     const [vx, vy, vw, vh] = view
     const chain = `${8 * u * s.stroke * 3} ${2 * u * s.stroke * 3} ${1.5 * u * s.stroke * 3} ${2 * u * s.stroke * 3}`
@@ -53,9 +69,11 @@ function Venue({ plan, u, s, view, idPrefix }) {
                     {z.rects.map((r, i) => (
                         <rect key={i} x={r[0]} y={r[1]} width={r[2] - r[0]} height={r[3] - r[1]} fill="none" stroke="#6d6d6d" strokeWidth={u * s.stroke} strokeDasharray={chain} />
                     ))}
-                    <text x={z.rects[0][0] + 1.2 * s.small * u} y={z.rects[0][1] + 1.6 * s.small * u} fontSize={s.small * u} fill="#555" className="rigplot-mono rigplot-caps">
-                        {`${z.label} · ${formatMetres(z.rects[0][2] - z.rects[0][0]).replace(' m', '')} × ${formatMetres(z.rects[0][3] - z.rects[0][1])}`}
-                    </text>
+                    {placed.zones.get(z.id) ? (
+                        <text x={placed.zones.get(z.id).x} y={placed.zones.get(z.id).y} textAnchor={placed.zones.get(z.id).anchor} fontSize={s.small * u} fill="#555" className="rigplot-mono rigplot-caps">
+                            {placed.zones.get(z.id).text}
+                        </text>
+                    ) : null}
                 </g>
             ))}
             {/* machinery on the floor */}
@@ -114,27 +132,11 @@ function GridBubbles({ plan, u, s, view }) {
 
 // Labels for what is not a lamp: machinery heights, overhead names. Placed after
 // the lamps so they never cover a symbol's notation.
-function VenueNotes({ plan, u, s, view }) {
+function VenueNotes({ plan, u, s, placed }) {
     if (!plan) return null
-    const [vx, vy, vw, vh] = view
-    const inView = (x, z) => x > vx && x < vx + vw && z > vy && z < vy + vh
-    // A note is written only where its thing is wide enough to carry it (drawn at
-    // least 12 characters wide at this scale); zoom in to read the small ones.
-    const roomy = (w) => w / u >= 12 * s.tiny * 0.62
-    const seen = new Set()
     return (
         <g fontSize={s.tiny * u} fill="#555" className="rigplot-mono">
-            {plan.solids.map((m) => (inView(m.rect[0], m.rect[3]) && roomy(m.rect[2] - m.rect[0]) ? (
-                <text key={m.id} x={m.rect[0]} y={m.rect[3] + 1.3 * s.tiny * u}>{`${m.label} · ${m.top} m`}</text>
-            ) : null))}
-            {plan.overhead.map((o) => {
-                if (seen.has(o.label)) return null
-                const [x, z] = o.rect ? [o.rect[0], o.rect[1]] : o.line[0][1] === o.line[1][1] ? [o.line[0][0], o.line[0][1]] : [o.line[0][0], vy + vh * 0.5]
-                if (!inView(x, z)) return null
-                if (o.rect && !roomy(o.rect[2] - o.rect[0])) return null
-                seen.add(o.label)
-                return <text key={o.id} x={x + s.tiny * u * 0.6} y={z - s.tiny * u * 0.5}>{`${o.label} over · ${o.bottom} m`}</text>
-            })}
+            {[...placed.notes.values()].map((n) => (n ? <text key={n.id} x={n.x} y={n.y}>{n.text}</text> : null))}
         </g>
     )
 }
@@ -167,8 +169,8 @@ function Piece({ p, u, s, selected }) {
     )
 }
 
-function RunDimension({ run, u, s }) {
-    const dim = dimension(run.from, run.to, -3.2 * s.text * u)
+function RunDimension({ run, u, s, offset, label }) {
+    const dim = dimension(run.from, run.to, offset)
     const tick = 2 * u * s.text * 0.3
     return (
         <g stroke="#333" strokeWidth={u * s.stroke * 0.7} fill="none">
@@ -180,7 +182,7 @@ function RunDimension({ run, u, s }) {
                 x={dim.mid[0]} y={dim.mid[1] - 0.5 * s.small * u} fontSize={s.small * u} textAnchor="middle" stroke="none" fill="#111"
                 transform={`rotate(${dim.angle} ${dim.mid[0]} ${dim.mid[1]})`} className="rigplot-mono"
             >
-                {`${run.name ? `${run.name} · ` : ''}${formatMetres(run.length)} · h ${formatMetres(run.height)}`}
+                {label}
             </text>
         </g>
     )
@@ -215,13 +217,103 @@ export default function PlotDrawing({ model, u, sizes: s = SCREEN_SIZES, view, s
         return { items: new Map(items.map((i) => [i.id, i])), placed: layoutLabels(items, s.gap * u) }
     }, [lamps, u, s, r0, model.lamps, selected])
 
+    const placed = useMemo(() => {
+        const plan = model.venue
+        const sm = s.small * u
+        const tiny = s.tiny * u
+        // what the notes must keep clear of: the symbols, the lamp labels shown, the pieces
+        const blockers = []
+        for (const l of lamps) {
+            const [x, z] = l.at
+            blockers.push([x - r0 * 1.2, z - r0 * 1.2, x + r0 * 1.2, z + r0 * 1.2])
+            const place = labels.placed.get(l.id)
+            const mute = l.index == null && l.row?.universe == null
+            if (place && (selected.has(l.id) || l.conflicts.length || (!mute && (!hideCrowded || place.clear)))) blockers.push(place.box)
+        }
+        for (const p of model.pieces) {
+            const xs = p.outline.map((q) => q[0])
+            const zs = p.outline.map((q) => q[1])
+            blockers.push([Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)])
+        }
+        const notes = []
+        // the dimension of each truss run: beside it on either side, farther out each try, then without its name
+        for (const run of model.runs) {
+            const boxes = []
+            const tries = []
+            for (const named of run.name ? [true, false] : [false]) {
+                for (const k of [0, 1, 2, 3]) {
+                    for (const side of [-1, 1]) {
+                        const offset = side * (3.2 + 1.6 * k) * s.text * u
+                        const label = runText(run, named)
+                        const dim = dimension(run.from, run.to, offset)
+                        const rad = (dim.angle * Math.PI) / 180
+                        const hl = (label.length * sm * 0.62) / 2
+                        const hh = sm * 0.8
+                        const ex = Math.abs(Math.cos(rad)) * hl + Math.abs(Math.sin(rad)) * hh
+                        const ey = Math.abs(Math.sin(rad)) * hl + Math.abs(Math.cos(rad)) * hh
+                        boxes.push([dim.mid[0] - ex, dim.mid[1] - ey, dim.mid[0] + ex, dim.mid[1] + ey])
+                        tries.push({ offset, label })
+                    }
+                }
+            }
+            notes.push({ id: `run:${run.ids[0]}`, keep: true, boxes, tries })
+        }
+        if (plan) {
+            for (const z of plan.zones) {
+                // the name with its size, then the name alone; each from the top of the zone, then up from the foot
+                const [x0, y0, x1, y1] = z.rects[0]
+                const tries = []
+                for (const text of [zoneText(z), z.label]) {
+                    for (const k of [0, 1, 2, 3, 4]) tries.push({ x: x0 + 1.2 * sm, y: y0 + 1.6 * sm + k * 1.3 * sm, anchor: 'start', text })
+                    for (const k of [0, 1, 2]) tries.push({ x: x1 - 1.2 * sm, y: y0 + 1.6 * sm + k * 1.3 * sm, anchor: 'end', text })
+                    for (const k of [0, 1, 2]) tries.push({ x: x0 + 1.2 * sm, y: y1 - 0.8 * sm - k * 1.3 * sm, anchor: 'start', text })
+                    for (const k of [0, 1, 2]) tries.push({ x: x1 - 1.2 * sm, y: y1 - 0.8 * sm - k * 1.3 * sm, anchor: 'end', text })
+                }
+                notes.push({ id: `zone:${z.id}`, boxes: tries.map((t) => textBox(t.x, t.y, t.text, sm, t.anchor, true)), tries })
+            }
+            const [vx, vy, vw, vh] = view
+            const inView = (x, z) => x > vx && x < vx + vw && z > vy && z < vy + vh
+            // written only where the thing is wide enough to carry it (12 characters at this scale)
+            const roomy = (w) => w / u >= 12 * s.tiny * 0.62
+            for (const m of plan.solids) {
+                if (!inView(m.rect[0], m.rect[3]) || !roomy(m.rect[2] - m.rect[0])) continue
+                const text = `${m.label} · ${m.top} m`
+                const tries = [0, 1, 2, 3].map((k) => ({ x: m.rect[0], y: m.rect[3] + (1.3 + k * 1.2) * tiny, text }))
+                notes.push({ id: `solid:${m.id}`, boxes: tries.map((t) => textBox(t.x, t.y, text, tiny)), tries })
+            }
+            const seen = new Set()
+            for (const o of plan.overhead) {
+                if (seen.has(o.label)) continue
+                const [x, z] = o.rect ? [o.rect[0], o.rect[1]] : o.line[0][1] === o.line[1][1] ? [o.line[0][0], o.line[0][1]] : [o.line[0][0], vy + vh * 0.5]
+                if (!inView(x, z)) continue
+                if (o.rect && !roomy(o.rect[2] - o.rect[0])) continue
+                seen.add(o.label)
+                const text = `${o.label} over · ${o.bottom} m`
+                const tries = [0, 1, 2, -1].map((k) => ({ x: x + tiny * 0.6, y: z - tiny * 0.5 + k * 1.2 * tiny, text }))
+                notes.push({ id: `over:${o.id}`, boxes: tries.map((t) => textBox(t.x, t.y, text, tiny)), tries })
+            }
+        }
+        const chosen = placeNotes(notes, blockers)
+        const dims = new Map()
+        const zones = new Map()
+        const others = new Map()
+        for (const n of notes) {
+            const at = chosen.get(n.id)
+            const t = at >= 0 ? n.tries[at] : null
+            if (n.id.startsWith('run:')) dims.set(n.id.slice(4), t || n.tries[0])
+            else if (n.id.startsWith('zone:')) zones.set(n.id.slice(5), t)
+            else others.set(n.id, t ? { x: t.x, y: t.y, text: t.text } : null)
+        }
+        return { dims, zones, notes: others }
+    }, [lamps, labels, selected, model.pieces, model.runs, model.venue, u, s, r0, view, hideCrowded])
+
     const hidden = hideCrowded ? [...labels.placed.values()].filter((p) => !p.clear).length : 0
     useEffect(() => { onHidden?.(hidden) }, [hidden, onHidden])
 
     return (
         <g className="rigplot-drawing" data-hidden-labels={hidden}>
             <defs><Hatch id={`${idPrefix}hatch`} u={u} s={s} /></defs>
-            <Venue plan={model.venue} u={u} s={s} view={view} idPrefix={idPrefix} />
+            <Venue plan={model.venue} u={u} s={s} view={view} idPrefix={idPrefix} placed={placed} />
             {model.boxes.map((b) => (
                 <polygon key={b.id} points={ptsOf(b.outline)} fill="none" stroke="#555" strokeWidth={u * s.stroke * 0.8} />
             ))}
@@ -231,11 +323,11 @@ export default function PlotDrawing({ model, u, sizes: s = SCREEN_SIZES, view, s
             {model.pieces.filter((p) => p.category === 'deck').map((p) => (
                 <text key={`h${p.id}`} x={p.position[0]} y={p.position[2]} fontSize={s.tiny * u} textAnchor="middle" dominantBaseline="central" fill="#333" className="rigplot-mono">{`h ${p.height}`}</text>
             ))}
-            {model.runs.map((run) => <RunDimension key={run.ids[0]} run={run} u={u} s={s} />)}
+            {model.runs.map((run) => <RunDimension key={run.ids[0]} run={run} u={u} s={s} offset={placed.dims.get(run.ids[0]).offset} label={placed.dims.get(run.ids[0]).label} />)}
             {(model.freeEnds || []).map((f, i) => (
                 <g key={`free${i}`} className="rigplot-mono">
                     <circle cx={f.at[0]} cy={f.at[1]} r={r0 * 0.8} fill="#fff" stroke="#111" strokeWidth={u * s.stroke} strokeDasharray={`${u * s.stroke * 2} ${u * s.stroke * 1.5}`} />
-                    <text x={f.at[0]} y={f.at[1] + r0 * 0.8 + s.tiny * u * 1.1} fontSize={s.tiny * u} textAnchor="middle" fill="#333">free end · point owed</text>
+                    <title>{FREE_END_WORDS}</title>
                 </g>
             ))}
             {lamps.map((l) => {
@@ -279,7 +371,7 @@ export default function PlotDrawing({ model, u, sizes: s = SCREEN_SIZES, view, s
                     </g>
                 )
             })}
-            <VenueNotes plan={model.venue} u={u} s={s} view={view} />
+            <VenueNotes plan={model.venue} u={u} s={s} placed={placed} />
             <GridBubbles plan={model.venue} u={u} s={s} view={view} />
             {children}
         </g>

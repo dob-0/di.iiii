@@ -243,6 +243,20 @@ cp /mnt/data/footage/place-moxir-hall-v4-0929/hall.json $R/moxir-hall-2026-09-29
 cp /mnt/data/footage/place-moxir-hall-v4-0929-crane-dj/hall.json $R/moxir-hall-2026-09-29-crane-dj.hall.json
 ```
 
+### Putting a corrected hall into the rooms (2026-10-02)
+
+`load-version.mjs --hall-from <project>` copies the hall's MODEL from that project, so a new `hall.py` build reaches a room only when the source project holds it. After a hall correction (`moxir-hall-dims-2026-10-02.json` and the `moxir-hall-2026-10-02-crane-dj.hall.json` record it writes):
+
+```bash
+R=scripts/place/rigs
+blender -b -P scripts/place/hall.py -- --out <dir> --dims $R/moxir-hall-dims-2026-09-28.json   --dims $R/moxir-hall-features-2026-09-28.json --dims $R/moxir-hall-crane-dj-2026-09-28.json --dims $R/moxir-hall-dims-2026-10-02.json
+cp <dir>/hall.json $R/moxir-hall-2026-10-02-crane-dj.hall.json
+node scripts/rigbuild/swap-hall.mjs --api <local api> --project moxir-hall-minimal --glb <dir>/hall.glb --token-file <env>   # the --hall-from source
+# a room already built: swap-hall.mjs on it too, then realism.mjs (the night copy is made from the model) and work-light.mjs
+```
+
+On PONYO `moxir-hall-minimal` (archived) holds the corrected model since 2026-10-02, so `--hall-from moxir-hall-minimal` gives the corrected hall. `moxir-hall` and Gevorg's other projects still hold the old one.
+
 ### The zones the owner marked (2026-09-28)
 
 He drew them on three photographs: "red backstage, green stage, blue dance

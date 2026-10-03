@@ -158,6 +158,17 @@ describe('the DJ place the owner asked for (2026-09-28: small, a bit raised, cen
         for (const c of cols) expect(Math.abs(c.faceX)).toBeGreaterThan(11)
     })
 
+    it('leaves out the (z, face) pairs a spec omits, on both sides, so the rest stays mirrored', () => {
+        const all = columnsFor(hall, stage, { zones: ['stage', 'dance'], rows: 'nave', faces: ['inner', 'back'] })
+        const far = Math.max(...all.map((c) => c.z))
+        const cols = columnsFor(hall, stage, { zones: ['stage', 'dance'], rows: 'nave', faces: ['inner', 'back'], omit: [{ z: far, face: 'back' }] })
+        expect(cols).toHaveLength(30)
+        expect(cols.filter((c) => c.z === far).map((c) => c.face)).toEqual(['inner', 'inner'])
+        expect(all.length - cols.length).toBe(2)
+        const sides = (list, z, face) => list.filter((c) => c.z === z && c.face === face).map((c) => c.side).sort()
+        expect(sides(all, far, 'back')).toEqual([-1, 1])
+    })
+
     it('knows where the DJ stands, and sees a beam through him', () => {
         const box = performerBox(rig, stage)
         expect(box.x[0]).toBeCloseTo(stage.axis - 0.9, 6)
