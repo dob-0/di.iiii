@@ -20,6 +20,8 @@ export default function WorldPanelWindow({
     onSetLive,
     onEnterFullscreen,
     liveOutputs = null,
+    pictureNodeId = null,
+    onPictureChange = null,
 }) {
     return (
         // The scope a file dropped ON the room should join. Without it a drop
@@ -46,6 +48,8 @@ export default function WorldPanelWindow({
                 scopeId={scopeId}
                 worldNode={worldNode}
                 liveOutputs={liveOutputs}
+                pictureNodeId={pictureNodeId}
+                onPictureChange={onPictureChange}
             />
             <div className="raw-world-panel-actions">
                 <button

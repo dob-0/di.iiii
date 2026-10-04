@@ -289,6 +289,19 @@
     white-space: nowrap;
 }
 
+.raw-node-palette-item.has-note {
+    flex-wrap: wrap;
+}
+
+/* The line under a row that has a neighbour doing a nearby job. */
+.raw-node-palette-item-note {
+    flex: 0 0 100%;
+    font-size: var(--di-text-2);
+    color: var(--di-text-muted);
+    text-align: left;
+    line-height: 1.35;
+}
+
 .raw-node-palette-item.is-active,
 .raw-node-palette-item:hover {
     background: var(--di-cyan-dim);
@@ -1797,6 +1810,12 @@
 /* A sentence a field is read with (PropertyInspector's FieldNote). Dim and
    warm — the first one is a licence line, and it must stay legible without
    shouting. Never white: this sheet can be on a projector. */
+.raw-property-connection {
+    color: var(--di-text-muted);
+    font-size: var(--di-text-3);
+    line-height: 1.4;
+}
+
 .raw-property-note {
     margin: 0;
     font-family: var(--di-mono);
@@ -2702,7 +2721,10 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    flex: 1;
+    /* Sized from its content, shrinking only after the family tag has: the
+       name is what a person looks for, the tag is the quieter of the two. */
+    flex: 1 1 auto;
+    min-width: 0;
     letter-spacing: 0.01em;
 }
 
@@ -2710,7 +2732,10 @@
     font-size: var(--di-text-2);
     color: var(--di-text-muted);
     white-space: nowrap;
-    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 0 1000 auto;
+    min-width: 0;
     font-family: var(--di-mono);
 }
 
@@ -2806,6 +2831,12 @@
         justify-content: center;
         color: rgba(var(--di-cyan-rgb), 0.9);
         border-color: rgba(var(--di-cyan-rgb), 0.45);
+    }
+
+    /* Below DOOR_HALO_MIN_ZOOM the 44px plate is wider than the gutter and lands
+       on the previous column's outputs: only the selected card shows its door. */
+    .raw-graph-node-door-anchor.is-tucked {
+        display: none;
     }
 }
 
@@ -5458,6 +5489,26 @@
 }
 
 /* A wire that died on release says why, where it died. */
+.raw-wire-remove {
+    position: fixed;
+    transform: translate(-50%, -140%);
+    min-height: 44px;
+    padding: var(--di-space-2) var(--di-space-3);
+    background: var(--di-scrim-strong);
+    border: 1px solid rgba(var(--di-danger-rgb), 0.7);
+    border-radius: var(--di-radius);
+    color: var(--di-danger);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    cursor: pointer;
+    z-index: 61;
+}
+
+.raw-wire-remove:hover,
+.raw-wire-remove:focus-visible {
+    background: rgba(var(--di-danger-rgb), 0.18);
+}
+
 .raw-wire-notice {
     position: fixed;
     transform: translate(-50%, -130%);
@@ -5537,7 +5588,8 @@
 
 .raw-list-row {
     display: flex;
-    align-items: center;
+    flex-wrap: wrap;
+    align-items: flex-start;
     gap: var(--di-space-2);
     min-height: 44px;
 }
@@ -5545,6 +5597,15 @@
 .raw-list-text {
     flex: 1;
     min-width: 0;
+    min-height: 44px;
+    /* The autosize sets height = scrollHeight, which already includes the
+       padding; content-box would add the padding a second time. */
+    box-sizing: border-box;
+    resize: none;
+    overflow: hidden;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
     padding: var(--di-space-2) var(--di-space-3);
     border: 1px solid transparent;
     border-radius: 0;
@@ -5559,12 +5620,18 @@
     border-color: rgba(var(--di-cyan-rgb), 0.85);
 }
 
+/* The row's actions, behind its one ⋯ button. They open on their own line
+   under the text, so opening them never squeezes what you are reading. */
 .raw-list-row-controls {
     display: flex;
     align-items: center;
     gap: var(--di-space-1);
-    flex: none;
+    flex: 1 0 100%;
+    padding-left: var(--di-space-3);
 }
+.raw-list-more { flex: none; border-color: transparent; color: var(--di-text-muted) }
+.raw-list-row:hover .raw-list-more,
+.raw-list-row.is-menu-open .raw-list-more { border-color: rgba(255, 255, 255, 0.16); color: var(--di-text) }
 
 .raw-list-btn {
     width: 44px;
@@ -5629,8 +5696,6 @@
 /* The controls stack under the text on a phone rather than squeezing a
    44px row into 90px of leftover width. */
 @media (max-width: 520px) {
-    .raw-list-row { align-items: stretch; flex-wrap: wrap }
-    .raw-list-text { flex-basis: 100% }
     .raw-list-move { flex: 1; max-width: none }
 }
 
@@ -5661,6 +5726,50 @@
     pointer-events: none;
 }
 
+/* A List's rows and a Text's lines on the card itself, under the ports.
+   Height per line is set inline from CARD_CONTENT_LINE_HEIGHT — the card's
+   box (cardContentHeight) is computed from the same number, so nothing here
+   may add vertical margin or padding. */
+.raw-graph-node-content {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    margin: 0;
+    padding: var(--di-space-1) 0 0;
+    list-style: none;
+    pointer-events: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.raw-graph-node-content-line {
+    font-size: var(--di-text-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: rgba(255, 255, 255, 0.82);
+}
+.raw-graph-node-content-line.is-group {
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--card-family);
+}
+.raw-graph-node-content-line.is-row { padding-left: var(--di-space-2) }
+/* Rows and Text lines WRAP (up to 6 lines) to the count cardContentLayout measured (owner
+   2026-10-02: To do rows were cut to one line). -webkit-line-clamp (set inline
+   to that count) is the guard: a longer row ends in an ellipsis inside its
+   box and reads in full in its window. Groups and "+ N more" stay one line. */
+.raw-graph-node-content-line.is-row,
+.raw-graph-node-content-line.is-line {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    box-sizing: border-box;
+    padding-bottom: var(--di-space-1); /* = CARD_CONTENT_ROW_GAP (cardGeometry.js) */
+}
+.raw-graph-node-content-line.is-more { color: var(--di-text-muted) }
+
 /* The Raw topbar overflowed a 390px phone BEFORE the room count was added:
    measured at 433px of content in a 390px bar, which pushed the ⋯ button clean
    off the right edge — and ⋯ is the only route on a phone to "Save to <space>",
@@ -5688,3 +5797,21 @@
         display: inline;
     }
 }
+
+/* ContextMenu (src/raw/components/ContextMenu.jsx): the one right-click menu.
+   Rectangles only; rows are a finger target under (hover: none). */
+/* Solid, not the translucent scrim: a card's text and port dots showed through the
+   menu (seen 2026-10-02 at 2560x1340). */
+.raw-ctx { position: fixed; z-index: 1300; min-width: 208px; max-width: min(320px, calc(100vw - 16px)); overflow-y: auto; display: flex; flex-direction: column; gap: 1px; padding: var(--di-space-2); background: var(--di-surface-2); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6); border: 1px solid var(--di-cyan-line); border-radius: var(--di-radius); font-family: var(--di-sans); outline: none; }
+.raw-ctx-title, .raw-ctx-heading { padding: var(--di-space-1) var(--di-space-3) var(--di-space-2); font-size: var(--di-text-2); letter-spacing: 0.04em; text-transform: uppercase; color: var(--di-text-muted); }
+.raw-ctx-sep { height: 1px; margin: var(--di-space-1) 0; background: var(--di-cyan-line); opacity: 0.5; }
+.raw-ctx-row { position: relative; }
+.raw-ctx-item { -webkit-appearance: none; appearance: none; width: 100%; min-height: 28px; display: flex; align-items: center; justify-content: space-between; gap: var(--di-space-3); padding: 0 var(--di-space-3); text-align: left; border: none; border-radius: var(--di-radius); background: transparent; color: rgba(255, 255, 255, 0.92); font-family: inherit; font-size: 13px; cursor: pointer; }
+.raw-ctx-item:hover, .raw-ctx-item:focus-visible, .raw-ctx-item.is-active { background: rgba(var(--di-cyan-rgb), 0.16); color: var(--di-cyan); outline: none; }
+.raw-ctx-item.is-danger { color: var(--di-danger); }
+.raw-ctx-item.is-danger:hover, .raw-ctx-item.is-danger:focus-visible, .raw-ctx-item.is-danger.is-active { background: rgba(var(--di-danger-rgb), 0.16); color: var(--di-danger); }
+.raw-ctx-item.is-disabled { opacity: 0.4; cursor: default; }
+.raw-ctx-item.is-disabled:hover { background: transparent; color: rgba(255, 255, 255, 0.92); }
+.raw-ctx-kb { margin-left: auto; font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--di-text-muted); white-space: nowrap; }
+.raw-ctx-sub { position: fixed; max-height: none; overflow: visible; z-index: 1301; }
+@media (hover: none) { .raw-ctx-item { min-height: 44px; } }

@@ -1,18 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
-import { CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, cardHeight } from '../utils/cardGeometry.js'
+import { CARD_CONTENT_LINE_HEIGHT, CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, TOP_PICTURE_HEIGHT, TOP_PICTURE_WIDTH, cardContentLayout, cardHeight, cardPortRows, hasCardPicture } from '../utils/cardGeometry.js'
 import { isPictureType, pictureIdOf } from '../../project/tops/vjDeck.js'
 import TopThumbnail from './TopThumbnail.jsx'
 import CardPreview from './cardPreview/CardPreview.jsx'
 import { hasCardPreview } from './cardPreview/previewTypes.js'
+import { cardEmptyHint } from '../utils/cardEmptyHint.js'
+import { isTypingTarget, keyHint, matchesKeyId } from '../input/keymap.js'
+import ContextMenu from './ContextMenu.jsx'
+import { useLongPress } from '../utils/useLongPress.js'
 import {
+    CONTAINER_TYPE_IDS,
     arePortsCompatible,
+    getNodeCardLines,
     getNodeCardSummary,
     getNodeFamily,
     getNodeInputs,
     getNodeOutputs,
     getNodeType,
+    getNodeCardTitle,
     getPortType
 } from '../../project/nodeRegistry.js'
 
@@ -40,9 +47,23 @@ const PORT_GRAB_RADIUS_PX = 28
 // nobody can act on is worse than a working view of part of the graph. Below
 // the floor we fit a legible neighbourhood instead and say so.
 const FIT_MIN_USEFUL_ZOOM = 0.34
+// The floor for the re-fit that runs when a docked window changes the free
+// band (a List opening on the right). Measured 2026-10-02 at 1200 × 760: the
+// plain floor let eight cards shrink to 50 % (6–9 px text) beside the docked
+// List. A re-fit the person did not ask for must keep the cards readable; below
+// this it frames the selected card's neighbourhood instead and says how much
+// it shows, the fallback fitGraph already has.
+const DOCK_REFIT_MIN_ZOOM = 0.8
 // Framing ONE node is allowed to magnify, unlike fit-all which caps at 1.
 const FRAME_TARGET_ZOOM = 1
 const FRAME_MAX_ZOOM = 1.6
+// How far fit-all may MAGNIFY a small graph. It used to cap at 1 ("never
+// magnifies"), which on a 2560-wide screen left six cards covering ~9 % of the
+// canvas (owner 2026-10-02: "bad use of the space"). Up to 2 the cards are
+// still cards — text bigger, nothing re-laid out — and a big graph is
+// unaffected, because the fit is the smaller of this and what fits. 1.5 was
+// tried first and still left ~31 % coverage at 2560 × 1340 (measured).
+const FIT_MAX_ZOOM = 2
 
 // Semantic zoom. Below each threshold the card renders less, so that what is
 // left stays legible instead of everything shrinking into an unreadable smear.
@@ -89,6 +110,41 @@ const DOOR_HALO_MIN_ZOOM = 0.44
 const DOOR_WIDTH_PX = 34
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
+
+// A List's rows under their group headings, or a Text's first lines, drawn in
+// the card under its ports. Each row wraps to the line count cardContentLayout
+// measured and is clamped to it, so the height the card reserved is exactly
+// what is drawn — a wrong measure shows an ellipsis, never text over a port.
+function CardContentLines({ content, top }) {
+    return (
+        <ul className="raw-graph-node-content" style={{ top }}>
+            {content.lines.map((line, i) => (
+                <li
+                    key={i}
+                    className={`raw-graph-node-content-line is-${line.kind}`}
+                    style={line.kind === 'group'
+                        ? { height: line.height, lineHeight: `${line.height}px` }
+                        : {
+                            height: line.height,
+                            lineHeight: `${CARD_CONTENT_LINE_HEIGHT}px`,
+                            WebkitLineClamp: line.wraps
+                        }}
+                    title={line.text}
+                >
+                    {line.text}
+                </li>
+            ))}
+            {content.more > 0 ? (
+                <li
+                    className="raw-graph-node-content-line is-more"
+                    style={{ height: content.moreHeight, lineHeight: `${content.moreHeight}px` }}
+                >
+                    + {content.more} more
+                </li>
+            ) : null}
+        </ul>
+    )
+}
 
 // The card box itself (CARD_WIDTH, cardHeight) lives in cardGeometry.js: the
 // editor places a panel node's window against it and must not guess.
@@ -175,6 +231,18 @@ export default function RawGraphSurface({
     // wrong for an insertion that lands mostly off-screen.
     fitSignal = null,
     onEnterNode,
+    // The canvas keys' callbacks (input/keymap.js): U, N/F2, ?.
+    onLeaveScope = null,
+    onRenameNode = null,
+    onShowKeys = null,
+    // Middle-click a card: what it reads and gives (the reading sheet).
+    onShowReading = null,
+    // Right-click a card: Duplicate (RawEditor's handleDuplicateNode).
+    onDuplicateNode = null,
+    // A Geo card's way into Studio, standing inside that Geo (owner's decision
+    // 2026-10-02). Optional: Studio's read-only wrapper and a local canvas,
+    // which has no Studio twin, pass none and no button is drawn.
+    onOpenInStudio = null,
     // Optional, like every other handler here: Studio wraps this read-only and
     // passes none, so no menu is offered there at all.
     onPromotePort = null,
@@ -211,6 +279,20 @@ export default function RawGraphSurface({
     const [isPanning, setIsPanning] = useState(false)
     const [isPanMoving, setIsPanMoving] = useState(false)
     const [hoveredWireId, setHoveredWireId] = useState(null)
+    // A wire is removed in two steps: a click (a tap) MARKS it and shows a
+    // Remove button where it was touched; the button or Delete removes it. One
+    // click used to remove it outright — fine with a mouse, whose hover had
+    // already turned it red, but a finger has no hover, so on a phone a tap
+    // anywhere on a 24px band deleted a wire with no warning (audit
+    // 2026-10-02). Select, then delete: how Blender and Unreal treat a link.
+    const [armedWire, setArmedWire] = useState(null)
+    const middlePressRef = useRef(null)
+    // THE right-click menus (docs/raw/2026-10-02-keys-and-mouse.md): one per
+    // thing under the pointer — empty canvas, a card, a wire — built here from
+    // the same actions the keys use, each item showing its key (keymap.js).
+    // Ports keep their own menu; windows' keys are their own. A long press is
+    // the right-click on touch.
+    const [contextMenu, setContextMenu] = useState(null)
     const dragOffsetRef = useRef({ x: 0, y: 0 })
     // pendingWire mirrored into a ref: the window-level pointerup handler is
     // registered once per drag and would otherwise close over a stale value.
@@ -348,6 +430,11 @@ export default function RawGraphSurface({
         return {
             width: rect.width,
             height: rect.height,
+            // The free band's edges — what is not under a docked window.
+            freeLeft: dockLeft,
+            freeRight: rect.width - dockRight,
+            freeTop: dockTop,
+            freeBottom: rect.height - bottom,
             usableWidth: Math.max(1, rect.width - dockLeft - dockRight - GRAPH_FIT_PADDING_PX * 2),
             usableHeight: Math.max(1, rect.height - dockTop - bottom - GRAPH_FIT_PADDING_PX * 2),
             centerX: dockLeft + (rect.width - dockLeft - dockRight) / 2,
@@ -390,7 +477,9 @@ export default function RawGraphSurface({
             const y = (node.graphY ?? 0) * vp.zoom + vp.panY
             const w = CARD_WIDTH * vp.zoom
             const h = cardHeight(node, portScopeNodes) * vp.zoom
-            return x + w > 0 && x < box.width && y + h > 0 && y < box.height - Math.max(0, bottomInset)
+            // Only the free band counts: a card under a docked window is not
+            // "shown" (it said 8 of 8 with two behind the List).
+            return x + w > box.freeLeft && x < box.freeRight && y + h > box.freeTop && y < box.freeBottom
         }).length
     }
 
@@ -427,9 +516,19 @@ export default function RawGraphSurface({
             if (left > pad) nextPanX = vp.panX - (left - pad)
             else if (left + contentW < box.width - pad) nextPanX = vp.panX + ((box.width - pad) - (left + contentW))
         }
+        if (contentW <= box.freeRight - box.freeLeft - pad * 2) {
+            nextPanX = box.centerX - (bounds.minX + bounds.maxX) / 2 * vp.zoom
+        }
+        // The smaller axis was left where centring on the seed put it — on a
+        // 390 × 844 phone the NOPA graph (too wide, short) sat in the lower
+        // half under a blank band (2026-10-03). An axis whose content fits the
+        // FREE band (beside any docked window) is centred in it.
         if (contentH > visibleH - pad * 2) {
             if (top > pad) nextPanY = vp.panY - (top - pad)
             else if (top + contentH < visibleH - pad) nextPanY = vp.panY + ((visibleH - pad) - (top + contentH))
+        }
+        if (contentH <= box.freeBottom - box.freeTop - pad * 2) {
+            nextPanY = box.centerY - (bounds.minY + bounds.maxY) / 2 * vp.zoom
         }
         if (nextPanX !== vp.panX || nextPanY !== vp.panY) applyViewport(nextPanX, nextPanY, vp.zoom)
     }
@@ -459,20 +558,21 @@ export default function RawGraphSurface({
     }
 
     /**
-     * Fit the graph. Caps at zoom 1 (never magnifies) — but refuses to drop
-     * below FIT_MIN_USEFUL_ZOOM, because an overview too small to act on is
+     * Fit the graph. Magnifies no further than FIT_MAX_ZOOM — and refuses to drop
+     * below `minZoom` (FIT_MIN_USEFUL_ZOOM unless the caller asks for more, as the
+     * docked-window re-fit does), because an overview too small to act on is
      * worse than a working view of part of the graph. Below the floor it fits a
      * legible neighbourhood and says how much it is showing.
      *
      * `force` runs the true overview anyway, at whatever zoom that takes.
      */
-    const fitGraph = ({ force = false } = {}) => {
+    const fitGraph = ({ force = false, minZoom = FIT_MIN_USEFUL_ZOOM } = {}) => {
         if (!cardsInView.length) return
         const all = withExtraBounds(boundsOf(cardsInView))
-        const overviewZoom = zoomToFitBounds(all, { maxZoom: 1 })
+        const overviewZoom = zoomToFitBounds(all, { maxZoom: FIT_MAX_ZOOM })
         if (overviewZoom === null) return
 
-        if (force || overviewZoom >= FIT_MIN_USEFUL_ZOOM) {
+        if (force || overviewZoom >= minZoom) {
             applyFitTo(all, overviewZoom)
             setFitNotice(null)
             return
@@ -501,7 +601,7 @@ export default function RawGraphSurface({
             minY: (anchor.minY + anchor.maxY) / 2,
             maxY: (anchor.minY + anchor.maxY) / 2
         }
-        applyFitTo(centre, FIT_MIN_USEFUL_ZOOM)
+        applyFitTo(centre, minZoom)
         clampPanToContent(all)
         // The clamp is part of this fit, not a person's pan: without this a
         // window resize took the clamped view for a hand-moved one and never
@@ -560,9 +660,52 @@ export default function RawGraphSurface({
         if (lastFitInsetsRef.current === insetKey) return
         const untouched = isViewAtLastFit()
         lastFitInsetsRef.current = insetKey
-        if (untouched) fitGraph()
+        if (untouched) fitGraph({ minZoom: DOCK_REFIT_MIN_ZOOM })
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [insetKey])
+
+    // The browser window changes size under an untouched view — a new window
+    // opened small and then tiled to half the screen kept the 49 % fit it got
+    // at 800 × 600 (owner's screen, 2026-10-03; 82 % when opened at full size).
+    // Same rule as the docked edges: re-fit only while the view is exactly
+    // where the last fit left it. Also covers a first fit skipped because the
+    // surface had no size yet.
+    const fitGraphRef = useRef(fitGraph)
+    useEffect(() => { fitGraphRef.current = fitGraph })
+    useEffect(() => {
+        const element = containerRef.current
+        if (!element || typeof ResizeObserver === 'undefined' || initialZoom !== null) return undefined
+        let frame = 0
+        let lastSize = null
+        const observer = new ResizeObserver(() => {
+            cancelAnimationFrame(frame)
+            frame = requestAnimationFrame(() => {
+                const rect = element.getBoundingClientRect()
+                const size = `${Math.round(rect.width)}x${Math.round(rect.height)}`
+                if (!rect.width || !rect.height || size === lastSize) return
+                const first = lastSize === null
+                lastSize = size
+                if (hasFitRef.current !== scopeKey) {
+                    if (!scopeKey) return
+                    fitGraphRef.current()
+                    hasFitRef.current = scopeKey
+                    lastFitInsetsRef.current = insetKey
+                    return
+                }
+                if (first) return
+                const settled = lastFitViewportRef.current
+                const now = viewportRef.current
+                const untouched = settled
+                    && Math.abs(settled.panX - now.panX) < 0.5
+                    && Math.abs(settled.panY - now.panY) < 0.5
+                    && Math.abs(settled.zoom - now.zoom) < 0.001
+                if (untouched) fitGraphRef.current()
+            })
+        })
+        observer.observe(element)
+        return () => { cancelAnimationFrame(frame); observer.disconnect() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [scopeKey, insetKey])
 
     // An editor-side insertion of a whole graph (the all-nodes example)
     // lands mostly off-screen if the view stays where it was — the ONE case
@@ -776,27 +919,36 @@ export default function RawGraphSurface({
     }, [])
 
     useEffect(() => {
-        if (!selectedNodeId || !onDeleteNode) return undefined
+        if (!armedWire && (!selectedNodeId || !onDeleteNode)) return undefined
         const handler = (event) => {
+            if (event.key === 'Escape' && armedWire && !event.defaultPrevented) { event.preventDefault(); setArmedWire(null); return }
             if (event.key !== 'Delete' && event.key !== 'Backspace') return
             const target = event.target
             const tag = target?.tagName?.toLowerCase?.()
             if (tag === 'input' || tag === 'textarea' || target?.isContentEditable) return
+            // A marked wire goes first: it is what the person just pointed at.
+            if (armedWire) {
+                onDeleteEdge?.(armedWire.id)
+                setArmedWire(null)
+                return
+            }
             // Only nodes rendered on THIS surface. Selection survives entering
             // a card (pointerdown selects, then dblclick enters), so without
             // this guard Backspace deleted the scope you were standing inside
             // — cascading over its whole subtree and dumping you back to the
             // parent with everything gone.
-            if (!nodeById.has(selectedNodeId)) return
+            if (!onDeleteNode || !nodeById.has(selectedNodeId)) return
             const node = nodeById.get(selectedNodeId)
             requestDelete(
                 { id: selectedNodeId, name: node?.label, author: node?.createdBy },
                 () => onDeleteNode(selectedNodeId)
             )
         }
-        window.addEventListener('keydown', handler)
-        return () => window.removeEventListener('keydown', handler)
-    }, [selectedNodeId, onDeleteNode, nodeById, requestDelete])
+        // Capture phase: a marked wire takes Escape (and Delete) before the
+        // editor's Escape ladder, which then sees it handled.
+        window.addEventListener('keydown', handler, true)
+        return () => window.removeEventListener('keydown', handler, true)
+    }, [selectedNodeId, onDeleteNode, nodeById, requestDelete, armedWire, onDeleteEdge])
 
     // The output port nearest a screen point, within the grab radius. Distance
     // is in SCREEN pixels so the tolerance is a fingertip at every zoom.
@@ -1249,6 +1401,74 @@ export default function RawGraphSurface({
     // test). The tracker also guards against Chromium firing BOTH paths.
     const doubleTap = useMemo(() => createTapTracker(), [])
 
+    const canvasMenuItems = (clientX, clientY) => [
+        onDoubleClick ? { id: 'add', label: 'Add a node here', kb: keyHint('add'), run: () => onDoubleClick({ clientX, clientY }) } : null,
+        { sep: true },
+        { id: 'fitAll', label: 'Fit everything', kb: keyHint('fitAll'), run: () => fitGraph({ force: true }) },
+        { id: 'frameSelected', label: 'Frame the selected node', kb: keyHint('frameSelected'), disabled: !selectedNodeId, run: () => frameSelection() },
+        { id: 'zoom100', label: 'Zoom 100%', kb: keyHint('zoom100'), run: () => updateZoom(1) },
+        onLeaveScope ? { id: 'leave', label: 'Leave this level', kb: keyHint('leave'), run: () => onLeaveScope() } : null,
+        { sep: true },
+        onShowKeys ? { id: 'keys', label: 'Keys and mouse', kb: keyHint('keys'), run: () => onShowKeys() } : null,
+    ].filter(Boolean)
+
+    const cardMenuItems = (node) => {
+        const type = getNodeType(node.typeId)
+        // A place you can be inside (Scene, Geo, Constructor…) is entered; a
+        // window-only node (Text, List…) opens its window. Scene draws as a
+        // window too, so the render kind alone said "Open its window" (seen).
+        const isWindow = type?.render === 'panel-2d' && !CONTAINER_TYPE_IDS.has(node.typeId)
+        return [
+            onEnterNode ? { id: 'enter', label: isWindow ? 'Open its window' : 'Go inside', kb: keyHint('enter'), run: () => onEnterNode(node.id) } : null,
+            onShowReading ? { id: 'reading', label: 'What it reads and gives', hint: 'middle-click', run: () => onShowReading(node.id) } : null,
+            activeMarkerTypeIds.includes(node.typeId) && onSetActive ? { id: 'live', label: isNodeActive(node) ? 'Active here' : 'Make this the active one', disabled: isNodeActive(node), run: () => onSetActive(node) } : null,
+            { sep: true },
+            onRenameNode ? { id: 'rename', label: 'Rename', kb: keyHint('rename'), run: () => onRenameNode(node.id) } : null,
+            onDuplicateNode ? { id: 'duplicate', label: 'Duplicate', kb: keyHint('duplicate'), run: () => onDuplicateNode(node.id) } : null,
+            { sep: true },
+            onDeleteNode ? {
+                id: 'delete', label: 'Delete', kb: 'Del', danger: true,
+                run: () => requestDelete({ id: node.id, name: node.label, author: node.createdBy }, () => onDeleteNode(node.id))
+            } : null,
+        ].filter(Boolean)
+    }
+
+    const wireMenuItems = (edge) => {
+        const from = nodeById.get(edge.fromNodeId)
+        const to = nodeById.get(edge.toNodeId)
+        return [
+            from && onSelectNode ? { id: 'from', label: `Select where it comes from: ${from.label || 'node'}`, run: () => onSelectNode(from.id) } : null,
+            to && onSelectNode ? { id: 'to', label: `Select where it goes: ${to.label || 'node'}`, run: () => onSelectNode(to.id) } : null,
+            { sep: true },
+            onDeleteEdge ? { id: 'remove', label: 'Remove wire', kb: 'Del', danger: true, run: () => onDeleteEdge(edge.id) } : null,
+        ].filter(Boolean)
+    }
+
+    // What is under the pointer decides the menu. Typing, windows and ports
+    // keep their own right-click (a port's menu stops the event itself).
+    const openContextMenuAt = (target, clientX, clientY) => {
+        if (isTypingTarget(target) || target?.closest?.('.raw-window') || target?.closest?.('.raw-graph-port-dot')) return false
+        const cardEl = target?.closest?.('[data-card-id]')
+        const wireEl = target?.closest?.('[data-wire-id]')
+        if (cardEl) {
+            const node = nodeById.get(cardEl.getAttribute('data-card-id'))
+            if (!node) return false
+            onSelectNode?.(node.id)
+            setContextMenu({ x: clientX, y: clientY, title: node.label || getNodeType(node.typeId)?.label, items: cardMenuItems(node) })
+            return true
+        }
+        if (wireEl) {
+            const edge = edges.find((candidate) => candidate.id === wireEl.getAttribute('data-wire-id'))
+            if (!edge) return false
+            setArmedWire(null)
+            setContextMenu({ x: clientX, y: clientY, title: 'Wire', items: wireMenuItems(edge) })
+            return true
+        }
+        setContextMenu({ x: clientX, y: clientY, items: canvasMenuItems(clientX, clientY) })
+        return true
+    }
+    const longPress = useLongPress(({ clientX, clientY, target }) => openContextMenuAt(target, clientX, clientY))
+
     const handleSectionKeyDown = (event) => {
         if ((event.key === '+' || event.key === '=') && (event.metaKey || event.ctrlKey)) {
             event.preventDefault()
@@ -1259,6 +1479,20 @@ export default function RawGraphSurface({
             event.preventDefault()
             updateZoom(zoom - GRAPH_ZOOM_STEP)
             return
+        }
+        // The canvas keys (input/keymap.js). Only here, on the canvas's own
+        // handler, so they act while the canvas has focus (WCAG 2.1.4) — never
+        // while typing, never inside a window, whose keys are its own.
+        if (!isTypingTarget(event.target) && !event.target?.closest?.('.raw-window')) {
+            const selected = selectedNodeId && nodeById.has(selectedNodeId) ? selectedNodeId : null
+            const act = (fn) => { event.preventDefault(); fn() }
+            if (matchesKeyId(event, 'fitAll')) return act(() => fitGraph({ force: true }))
+            if (matchesKeyId(event, 'frameSelected')) return act(() => (selected ? frameSelection() : fitGraph({ force: true })))
+            if (matchesKeyId(event, 'zoom100')) return act(() => updateZoom(1))
+            if (matchesKeyId(event, 'enter') && selected && onEnterNode) return act(() => onEnterNode(selected))
+            if (matchesKeyId(event, 'leave') && onLeaveScope) return act(() => onLeaveScope())
+            if (matchesKeyId(event, 'rename') && selected && onRenameNode) return act(() => onRenameNode(selected))
+            if (matchesKeyId(event, 'keys') && onShowKeys) return act(() => onShowKeys())
         }
         if (event.key !== 'Enter' || event.target !== event.currentTarget || !onDoubleClick) return
         const rect = event.currentTarget.getBoundingClientRect()
@@ -1295,15 +1529,75 @@ export default function RawGraphSurface({
                 handleSectionDoubleClick(event)
             }}
             onKeyDown={handleSectionKeyDown}
+            onMouseDown={(event) => {
+                // Remember where a middle press began: a click (no travel) on a
+                // card asks for its reading; a drag is the pan, as before.
+                if (event.button === 1) middlePressRef.current = { x: event.clientX, y: event.clientY }
+                // Back/Forward (buttons 3/4) must not navigate the browser away.
+                if (event.button === 3 || event.button === 4) event.preventDefault()
+            }}
+            onMouseUp={(event) => {
+                if (event.button === 3) {
+                    // Mouse Back = leave one level (input/keymap.js 'leave').
+                    event.preventDefault()
+                    onLeaveScope?.()
+                    return
+                }
+                if (event.button === 4) event.preventDefault()
+                if (event.button !== 1 || !middlePressRef.current) return
+                const start = middlePressRef.current
+                middlePressRef.current = null
+                if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 6) return
+                const card = event.target?.closest?.('[data-card-id]')
+                if (card && onShowReading) {
+                    event.preventDefault()
+                    onShowReading(card.getAttribute('data-card-id'))
+                }
+            }}
+            onContextMenu={(event) => {
+                if (openContextMenuAt(event.target, event.clientX, event.clientY)) event.preventDefault()
+            }}
+            onPointerMove={(event) => longPress.onPointerMove?.(event)}
+            onClickCapture={(event) => longPress.onClickCapture?.(event)}
             onPointerDown={(event) => {
+                if (!event.target?.closest?.('.raw-graph-port-dot')) longPress.onPointerDown?.(event)
+                // Anywhere but the Remove button lets go of a marked wire.
+                if (armedWire && !event.target?.closest?.('.raw-wire-remove')) setArmedWire(null)
                 doubleTap.down(event)
                 handleSurfacePointerDown(event)
             }}
             onPointerUp={(event) => {
+                longPress.onPointerUp?.(event)
                 if (doubleTap.up(event)) handleSectionDoubleClick(event)
             }}
-            onPointerCancel={doubleTap.cancel}
+            onPointerCancel={(event) => {
+                longPress.onPointerCancel?.(event)
+                doubleTap.cancel(event)
+            }}
         >
+            <ContextMenu
+                open={Boolean(contextMenu)}
+                x={contextMenu?.x || 0}
+                y={contextMenu?.y || 0}
+                title={contextMenu?.title}
+                items={contextMenu?.items || []}
+                onClose={() => setContextMenu(null)}
+            />
+            {armedWire && edges.some((edge) => edge.id === armedWire.id) ? (
+                <button
+                    type="button"
+                    className="raw-wire-remove"
+                    style={{ left: `${armedWire.x}px`, top: `${armedWire.y}px` }}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                        event.stopPropagation()
+                        onDeleteEdge?.(armedWire.id)
+                        setArmedWire(null)
+                    }}
+                >
+                    Remove wire
+                </button>
+            ) : null}
             {wireNotice ? (
                 <div className="raw-wire-notice" style={{ left: `${wireNotice.x}px`, top: `${wireNotice.y}px` }} role="status">
                     {wireNotice.text}
@@ -1370,7 +1664,7 @@ export default function RawGraphSurface({
                         style={{ position: 'absolute', top: 0, left: 0, width: '1px', height: '1px', pointerEvents: 'none', overflow: 'visible' }}
                     >
                         {wires.map((wire) => {
-                            const isHovered = hoveredWireId === wire.id
+                            const isHovered = hoveredWireId === wire.id || armedWire?.id === wire.id
                             const path = buildWirePath(wire.from, wire.to)
                             return (
                                 <g key={wire.id}>
@@ -1379,6 +1673,7 @@ export default function RawGraphSurface({
                                         made deletion — the only way to remove an edge —
                                         desktop-only. */}
                                     <path
+                                        data-wire-id={wire.id}
                                         d={path}
                                         stroke="transparent"
                                         strokeWidth={24}
@@ -1386,7 +1681,11 @@ export default function RawGraphSurface({
                                         style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
                                         onPointerEnter={() => setHoveredWireId(wire.id)}
                                         onPointerLeave={() => setHoveredWireId(null)}
-                                        onClick={(e) => { e.stopPropagation(); onDeleteEdge?.(wire.id) }}
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            if (!onDeleteEdge) return
+                                            setArmedWire({ id: wire.id, x: e.clientX, y: e.clientY })
+                                        }}
                                     />
                                     <path
                                         d={path}
@@ -1425,6 +1724,7 @@ export default function RawGraphSurface({
                             <div
                                 key={node.id}
                                 className={`raw-graph-node-card is-lod-${tier}${isSelected ? ' is-selected' : ''}`}
+                                data-card-id={node.id}
                                 style={{
                                     position: 'absolute',
                                     left: node.graphX,
@@ -1482,7 +1782,12 @@ export default function RawGraphSurface({
                                     filled. */}
                                 {onEnterNode && tier !== 'block' ? (
                                     <div
-                                        className="raw-graph-node-door-anchor"
+                                        // Tucked: zoomed out, a finger's 44px door is wider
+                                        // than the column gutter and covered the previous
+                                        // column's output ports (audit 2026-10-02, 390×844
+                                        // at 34%). On a touch screen it then shows only on
+                                        // the selected card — tap the card, then its door.
+                                        className={`raw-graph-node-door-anchor${zoom < DOOR_HALO_MIN_ZOOM && !isSelected ? ' is-tucked' : ''}`}
                                         style={{ transform: `scale(${1 / Math.max(zoom, FIT_MIN_USEFUL_ZOOM)})` }}
                                     >
                                         <button
@@ -1522,7 +1827,22 @@ export default function RawGraphSurface({
                                     )}
                                     <span className="raw-graph-node-icon" />
                                     {tier !== 'block' ? (
-                                        <span className="raw-graph-node-label">{node.label}</span>
+                                        <span className="raw-graph-node-label">{getNodeCardTitle(node)}</span>
+                                    ) : null}
+                                    {onOpenInStudio && node.typeId === 'geom.geo' && tier !== 'block' ? (
+                                        // The header's own small glyph button (the ● toggle's
+                                        // class), so the card keeps its exact geometry.
+                                        <button
+                                            type="button"
+                                            className="raw-graph-node-active-toggle"
+                                            title={`Open ${node.label} in Studio`}
+                                            aria-label={`Open ${node.label} in Studio`}
+                                            onPointerDown={(event) => event.stopPropagation()}
+                                            onDoubleClick={(event) => event.stopPropagation()}
+                                            onClick={(event) => { event.stopPropagation(); onOpenInStudio(node.id) }}
+                                        >
+                                            ↗
+                                        </button>
                                     ) : null}
                                     {tier === 'full' ? (
                                         // The family, not the category: a studio card used to
@@ -1559,14 +1879,32 @@ export default function RawGraphSurface({
                                         pure empty box — see getNodeCardSummary. One line, and
                                         only where there is genuinely nothing else to draw, so
                                         it can never collide with a port row. */}
-                                    {showPorts && !inputs.length && !outputs.length && getNodeCardSummary(node) ? (
+                                    {showPorts && !inputs.length && !outputs.length && getNodeCardSummary(node) && !getNodeCardLines(node) ? (
                                         <span className="raw-graph-node-summary">{getNodeCardSummary(node)}</span>
+                                    ) : null}
+                                    {/* What the card holds — a List's rows under their
+                                        groups, a Text's first lines. Below the ports and any
+                                        picture, inside the height cardHeight already gave it. */}
+                                    {showPorts && getNodeCardLines(node) ? (
+                                        <CardContentLines
+                                            content={cardContentLayout(node)}
+                                            top={cardPortRows(node, portScopeNodes) * PORT_ROW_HEIGHT
+                                                + (hasCardPicture(node.typeId) ? TOP_PICTURE_HEIGHT + 4 : 0)}
+                                        />
                                     ) : null}
                                     {showPorts && isPictureType(node.typeId) ? (
                                         <TopThumbnail
                                             nodeId={pictureIdOf(node)}
                                             top={Math.max(inputs.length, outputs.length, 1) * PORT_ROW_HEIGHT + 4}
                                         />
+                                    ) : null}
+                                    {showPorts && isPictureType(node.typeId) && cardEmptyHint(node, { edges, scopeNodes: portScopeNodes }) ? (
+                                        <span
+                                            className="raw-card-empty-hint"
+                                            style={{ top: Math.max(inputs.length, outputs.length, 1) * PORT_ROW_HEIGHT + 4, width: TOP_PICTURE_WIDTH, height: TOP_PICTURE_HEIGHT }}
+                                        >
+                                            {cardEmptyHint(node, { edges, scopeNodes: portScopeNodes })}
+                                        </span>
                                     ) : null}
                                     {/* The cube itself, on the Cube's card — the same slot and
                                         size as a picture operator's picture, below the ports, so
@@ -1631,7 +1969,12 @@ export default function RawGraphSurface({
                                             className="raw-graph-port-row raw-graph-port-row--out"
                                             style={{ top: idx * PORT_ROW_HEIGHT }}
                                         >
-                                            {showPortLabels ? (
+                                            {/* One value, one name: when the input on this row has the
+                                                same name (a Text's Content in and out, a Scene's Title and
+                                                Sky), the card says it once — "Content … Content" read as two
+                                                parameters (owner, 2026-10-02). The dot stays; the hover
+                                                title still names it. */}
+                                            {showPortLabels && (port.label || port.id) !== (inputs[idx]?.label || inputs[idx]?.id) ? (
                                                 <span className="raw-graph-port-label">{port.label || port.id}</span>
                                             ) : null}
                                             <span

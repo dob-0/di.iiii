@@ -1,6 +1,7 @@
-import { getNodeInputs, getNodeOutputs } from '../../project/nodeRegistry.js'
+import { getNodeCardLines, getNodeInputs, getNodeOutputs } from '../../project/nodeRegistry.js'
 import { isPictureType } from '../../project/tops/vjDeck.js'
 import { hasCardPreview } from '../components/cardPreview/previewTypes.js'
+import { countWrappedLines } from './textWrap.js'
 
 // A graph card's box, in graph units. Shared between the surface that draws
 // the cards (and lands wires on them — see graphGeometry.test.jsx for why
@@ -27,11 +28,63 @@ export const hasCardPicture = (typeId) => isPictureType(typeId) || hasCardPrevie
 // ports are DERIVED from the doorway nodes inside it — see getNodeInputs. Miss
 // one of these call sites and the container grows a socket the card does not
 // draw, or draws one the wires do not land on.
-export const cardHeight = (node, scopeNodes = null) => {
-    const rows = Math.max(getNodeInputs(node, scopeNodes).length, getNodeOutputs(node, scopeNodes).length, 1)
-    const picture = hasCardPicture(node?.typeId) ? TOP_PICTURE_HEIGHT + TOP_PICTURE_GAP : 0
-    return HEADER_HEIGHT + rows * PORT_ROW_HEIGHT + picture + CARD_FOOT
+// How many port rows the card's body holds. A card with no ports keeps one
+// empty row so it is not a bare header — unless it has content lines to show,
+// which then start right under the header (the Gear list's card opened with a
+// blank 22px row above its rows).
+export const cardPortRows = (node, scopeNodes = null) => {
+    const ports = Math.max(getNodeInputs(node, scopeNodes).length, getNodeOutputs(node, scopeNodes).length)
+    if (ports > 0) return ports
+    return getNodeCardLines(node) ? 0 : 1
 }
+
+export const cardHeight = (node, scopeNodes = null) => {
+    const rows = cardPortRows(node, scopeNodes)
+    const picture = hasCardPicture(node?.typeId) ? TOP_PICTURE_HEIGHT + TOP_PICTURE_GAP : 0
+    return HEADER_HEIGHT + rows * PORT_ROW_HEIGHT + picture + cardContentHeight(node) + CARD_FOOT
+}
+
+// The content lines a List or Text card shows (getNodeCardLines), BELOW the
+// ports and any picture, for the same reason the picture is: no port moves.
+//
+// A row WRAPS (owner 2026-10-02 on the NOPA To do card: "text in a row is
+// invisible, it goes out of the window" — 24 of 51 lines were cut to one line
+// with an ellipsis). Each row takes as many lines as the browser needs, up to
+// CARD_CONTENT_MAX_WRAP; a longer row ends in an ellipsis and reads in full in
+// its window. The count comes from the browser's text metrics (textWrap.js),
+// so the box reserved here is the box drawn.
+export const CARD_CONTENT_LINE_HEIGHT = 14
+export const CARD_CONTENT_GROUP_HEIGHT = 18
+export const CARD_CONTENT_ROW_GAP = 3
+export const CARD_CONTENT_MAX_WRAP = 6
+const CARD_CONTENT_PAD = 8
+// Must match raw.css: .raw-graph-node-content (left/right 10px) and
+// .raw-graph-node-content-line.is-row (padding-left --di-space-2 = 7px), less
+// 2px so a sub-pixel difference wraps one line early rather than late.
+const CONTENT_WIDTH = CARD_WIDTH - 20
+const ROW_INDENT = 7
+const CONTENT_FONT_SIZE = 10
+const CONTENT_FONT = `${CONTENT_FONT_SIZE}px Inter, "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
+
+const lineBox = (line) => {
+    if (line.kind === 'group') return { ...line, wraps: 1, height: CARD_CONTENT_GROUP_HEIGHT }
+    const width = CONTENT_WIDTH - (line.kind === 'row' ? ROW_INDENT : 0) - 2
+    const wraps = Math.min(CARD_CONTENT_MAX_WRAP, countWrappedLines(line.text, { width, font: CONTENT_FONT, fontSize: CONTENT_FONT_SIZE }))
+    return { ...line, wraps, height: wraps * CARD_CONTENT_LINE_HEIGHT + CARD_CONTENT_ROW_GAP }
+}
+
+// The lines with their wrapped heights — one function for the geometry and
+// the drawing, so they cannot disagree.
+export const cardContentLayout = (node) => {
+    const content = getNodeCardLines(node)
+    if (!content) return null
+    const lines = content.lines.map(lineBox)
+    const moreHeight = content.more > 0 ? CARD_CONTENT_GROUP_HEIGHT : 0
+    const height = lines.reduce((sum, line) => sum + line.height, 0) + moreHeight + CARD_CONTENT_PAD
+    return { lines, more: content.more, moreHeight, height }
+}
+
+export const cardContentHeight = (node) => cardContentLayout(node)?.height ?? 0
 
 export const getCardBox = (node, scopeNodes = null) => ({
     x: node?.graphX ?? 0,

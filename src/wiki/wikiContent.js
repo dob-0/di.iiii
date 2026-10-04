@@ -629,18 +629,19 @@ export const WIKI_ARTICLES = [
         body: [
             'A List window holds a list with headings: what a project needs, what it would be nice to have, what is already done. It is the alternative to keeping a list as written text, where moving one line from one heading to another means retyping two paragraphs and hoping nothing was lost on the way.',
             { list: [
-                'Type in a line to change it.',
-                'The arrows move a line up or down inside its own heading.',
-                'The dropdown beside a line moves it to a different heading.',
-                '× removes a line.',
+                'Type in a line to change it. A long line wraps instead of being cut off.',
+                '⋯ beside a line opens what you can do with it: move it up or down inside its own heading, move it to a different heading, or remove it (×).',
+                'Alt+↑ and Alt+↓ move the line you are typing in without opening ⋯.',
                 '+ Add puts a new line under the heading you pressed it on.'
             ] },
             'The headings are yours. Type in one to rename it — every line under it comes along, so nothing is stranded. “+ Add a group” makes another. Removing a heading never removes work: its lines move to the first heading rather than disappearing with it.',
             'Everything saves as you go, undo works on all of it, and anyone who can edit the project can maintain the list — including a collaborator who arrived by invite. If two of you have it open you will see each other working.',
-            'The window is a node like any other: close it, minimize it to a bar, move it, or open it from its graph card.'
+            'The window is a node like any other: close it, minimize it to a bar, move it, or open it from its graph card. On a computer it opens docked on the right at full height, so the whole list is readable and the cards stay in view beside it; on a phone it opens over the canvas.',
+            'You do not have to open it to read it: the List’s card on the canvas shows its lines under their headings, and a Text card shows its first lines. A long list ends in “+ N more”.',
+            'Its card gives the list out on two joints: Rows (the lines, one per line, heading by heading) and Count. Wire Rows into a Text or a Scene’s Title to show the list somewhere else.'
         ],
-        tags: ['list', 'checklist', 'window', 'node', 'raw', 'editing', 'groups', 'todo'],
-        updated: '2026-08-21'
+        tags: ['list', 'checklist', 'window', 'node', 'raw', 'editing', 'groups', 'todo', 'card', 'docked'],
+        updated: '2026-10-02'
     },
     {
         id: 'free-spaces',
@@ -799,6 +800,26 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['studio', 'files', 'assets', 'code', 'content'],
         updated: '2026-08-19'
+    },
+    {
+        id: 'studio-inside-a-geo',
+        category: 'Editing',
+        title: 'Studio inside a Geo',
+        summary: 'Open a Geo made in Nodes in Studio: Create puts things into it, Objects lists what stands in it, and Nodes sees every change live.',
+        body: [
+            'A Geo is the place you build in Nodes. Studio can stand inside one, and then it edits what stands there — the same things Nodes shows, in the same project, written the same way Nodes writes them. Nothing is copied: move a box in Studio and it has moved in Nodes.',
+            { list: [
+                'Getting in: on a Geo card in Nodes, the small ↗ in its header opens Studio inside that Geo. Standing inside a Geo in Nodes, the ⋯ menu has “Open … in Studio” (the easier tap on a phone). In Studio, the Geo menu at the top of the Create window lists the project’s Geos — “Whole room” is Studio as it always was — and “+ Geo” makes a new, empty Geo and steps into it.',
+                'The address says where you are: the project’s Studio address with ?geo= and the Geo’s id. Share or bookmark it and it opens inside the same Geo. The plain address still opens the whole room.',
+                'Create inside a Geo offers what exists as a node: box, sphere, cone, cylinder, plane, torus and the Point lamp, and files — a model, a video or a sound — from Import or the Files list. Each lands inside the Geo, as a card on the Geo’s own canvas in Nodes.',
+                'Objects lists what stands directly in the Geo. Select one there or in the room; in Edit mode the gizmo moves, turns and scales it, and the inspector edits its position, rotation, scale, colour and its other plain values. Double-click a row to rename it. Delete removes it, with what stands inside it, and undo brings it back.',
+                'The room shows the Geo’s inside, as Nodes does after ›: positions are the Geo’s own, so a thing at 0,0,0 stands at the Geo’s centre wherever the Geo itself stands.',
+                'In the whole room, Studio now also draws what Nodes made — every Geo with what stands in it, where Nodes draws it. There it is to look at; step into the Geo to change it.'
+            ] },
+            'Limits, plainly: Studio’s own objects (text, groups, portals, images, the spot, directional and ambient lights) cannot stand inside a Geo yet — Create inside a Geo leaves them out and says so if one is dropped in. Grouping, duplicating and copy/paste are for Studio’s objects and are off inside a Geo. The whole room keeps Studio’s own sky and lights; a Scene node’s sky or an Environment node’s light show in Nodes only. Nodes inside a Geo that are wiring, not things (a Time, a Math), stay a Nodes matter and are not listed.'
+        ],
+        tags: ['studio', 'geo', 'nodes', 'raw', 'container', 'editing'],
+        updated: '2026-10-02'
     },
     {
         id: 'scenes-that-show-themselves',
@@ -1194,7 +1215,7 @@ export const WIKI_ARTICLES = [
                 'The palette groups its nodes into seven families by what you are doing — bring in, make, numbers, the scene, watch, send out, agents — each with its own colour, the same colour the node’s card wears on the canvas. Typing dissolves the groups into a flat search. It only lists node types that actually compute or render; a “shell” tag marks anything that places but carries nothing yet, and “local dev” marks nodes that only work against a local dev server.',
                 'While you drag a wire, every input that can take it lights up and every input that cannot goes quiet — an incompatible drop no longer fails silently.',
                 'Starting from nothing: a blank canvas shows a “Build an example” button in the canvas’s lower band (out of the double-click zone). It builds a scene with a light, a cube, a colour wired into that cube, and an empty Model node waiting for your own file — plus a note giving the moves in plain words. It only offers itself on a truly blank canvas at the top level: inside a container the empty state stays yours (a stray double-click used to inject the whole demo INTO the container being filled); the ⋯ menu still offers it deliberately, anywhere. It is there because a blank canvas opens with no toolbar at all, so the ⋯ menu (which also offers it) does not exist for the person most likely to want it.',
-                'The Geo is the plain container — TouchDesigner’s Geometry COMP, by name. It arrives empty but is visibly a place (a faint floor tile marks its footprint), you enter it and collect what you need — objects, models, Lights — and everything renders inside it and travels with it. It adds nothing of its own — no shell, no rules — and it gives out what it collects: a Geometry port carrying everything standing in it as one shape, so Geo → Merge → Constructor composes collected scenes, and a Geo standing inside a Geo carries through. When in doubt, build in a Geo. A Geo stands on the floor, and in the scene a click picks up the whole Geo — drag it or set its Position to part two geos; enter the Geo to handle one thing inside. A place shows only what stands IN it: objects made in Studio’s Create window live in the project’s top scene and never appear inside a container.',
+                'The Geo is the plain container — TouchDesigner’s Geometry COMP, by name. It arrives empty but is visibly a place (a faint floor tile marks its footprint), you enter it and collect what you need — objects, models, Lights — and everything renders inside it and travels with it. It adds nothing of its own — no shell, no rules — and it gives out what it collects: a Geometry port carrying everything standing in it as one shape, so Geo → Merge → Constructor composes collected scenes, and a Geo standing inside a Geo carries through. When in doubt, build in a Geo. A Geo stands on the floor, and in the scene a click picks up the whole Geo — drag it or set its Position to part two geos; enter the Geo to handle one thing inside. A place shows only what stands IN it: objects made in Studio’s Create window live in the project’s top scene and never appear inside a container — except when Studio is standing inside a Geo (Studio inside a Geo), where Create makes nodes inside it.',
                 'Light and Environment are two nodes now, because they were always two things. A Light is a lamp: a real point light with a glowing marker, standing wherever you put it — top level or inside any container, no disappearing act. An Environment is the scene’s settings: the ambient wash and one sun (colour, intensity, direction), one per level, the ● toggle picking the active one. Old projects made before the split keep their old Light nodes and light exactly as they did.',
                 'The Camera is the authored eye. Placing one never steals the view: it stands in the scene as a small housing until the ● toggle on its card marks it as the eye for this level. Marked, the scene is seen through it — Position, Look At and FOV are inputs like any other, so a wire can move the shot — its housing disappears, and orbiting is off because the shot is authored. Unmark (or delete) it to look around freely again.',
                 'The projector cable: /out. Every project has an output address — /{space}/raw/projects/{id}/out — that renders just the scene, read-only, no toolbar, following every edit live. A space\'s own canvas has /{space}/raw/out (same browser only — a local canvas lives in that browser). Add ?scope= to output a container\'s scene; mark a Camera ● there and the output holds the authored shot. If the space is public, /out is public with it — open it on the show machine, press F11, walk away, no sign-in anywhere. In a private space it stays behind the same gate as the editor, so that machine has to be signed in as someone with access. The space\'s own canvas /out is always gated: it renders whatever is in THAT browser, so there is nothing in it to show anyone else.',
@@ -1216,7 +1237,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone', 'work-status', 'agent-run', 'timeline', 'director', 'model', 'glb', 'video', 'sound', 'import', 'containers', 'doorways', 'ports', 'scene', 'example', 'getting-started', 'anatomy', 'made-of', 'crossing', 'projects', 'list'],
-        updated: '2026-09-23'
+        updated: '2026-10-02'
     },
     {
         id: 'studio-node',
@@ -1280,6 +1301,23 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-19'
     },
     {
+        id: 'scene-objects-and-picture',
+        category: 'Editing',
+        title: 'Wiring into a Scene, and a Scene as a picture',
+        summary: 'A Scene takes Objects in by wire and gives its Picture out. Text and List give what they say, so they can feed a Scene, a Plane or another Text.',
+        body: [
+            'A Scene is still a place you can go into (›) and fill by hand. It can now also be fed from outside, the way TouchDesigner’s Render takes geometry in and gives an image out.',
+            { list: [
+                'Objects: wire any shape (a Cube, a Sphere, a Transform, a Merge) into the Scene’s Objects joint and it stands on the Scene’s stage. For several, chain them through Merge first: one joint takes one wire.',
+                'Picture: the Scene’s Picture joint gives what its window shows, as a picture. Wire it into an Image, a picture operator or a Plane’s Texture. It is the same kind of picture a webcam gives, so anything that takes a webcam takes a Scene.',
+                'Text gives what it says on its Content joint (right side of the same row). List gives its lines on Rows (one per line, heading by heading, empty lines left out) and how many there are on Count. Wire a Text into a Scene’s Title and the Scene is named by the note.'
+            ] },
+            'Limits, stated plainly: the Picture is there only while the Scene’s own window is open in the editor; a closed window draws nothing, so it gives nothing. The /out page and Studio do not give a Scene’s Picture yet. The picture is the size of the window.'
+        ],
+        tags: ['raw', 'scene', 'objects', 'picture', 'texture', 'render', 'text', 'list', 'wire', 'nodes', 'merge'],
+        updated: '2026-10-02'
+    },
+    {
         id: 'raw-windows-travel-with-the-canvas',
         category: 'Editing',
         title: 'Panel windows: travelling with the canvas, or pinned to the screen',
@@ -1312,7 +1350,7 @@ export const WIKI_ARTICLES = [
                 'The ⤢ button fits every card, at whatever zoom that takes — on a phone a wide graph can land small, and pinching in from there is one gesture. Fits nobody asked for (opening, resizing) stop at a readable size and say "showing N of M".',
                 'Resizing the window (or turning the phone) keeps the cards: a view you have not moved fits again; a view you panned or zoomed keeps the same point in the middle, and if no card is left on screen it fits.',
                 'Which card is selected is yours alone. Selecting no longer writes to the project, so a click does not move anyone else\'s selection.',
-                'Tap a wire to delete it — the tap area is much wider than the line you see.',
+                'Tap a wire to mark it, then tap Remove wire to delete it — the tap area is much wider than the line you see, so a stray tap never removes anything.',
                 'Panel windows (Scene, Text, Browser, Image) shrink to fit the screen rather than running off the edge.'
             ] },
             'The overflow menu (⋯) has an All Nodes Example: one graph containing every node type the palette can create, with a clock driving a chain of maths into a pulsing sphere, a colour crossfade on a cube, and a breathing light. It is the quickest way to see what the node system can currently do — and it is deliberately honest about what it cannot: geometry, texture and signal outputs are declared on several node types but are not computed yet, so those ports are left unwired rather than connected to look complete.'
