@@ -1,3 +1,5 @@
+@import "./rawChrome.css";
+
 /* The knobs a component hands this stylesheet, given their resting values HERE
    rather than as a var() fallback at each call site. A fallback is a second
    palette nobody chose: the same token wore three different neutrals in three
@@ -613,9 +615,9 @@
 
 .raw-outliner-dot {
     grid-row: 1 / 3;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
+    width: 6px;
+    height: 6px;
+    border-radius: 0;
     flex-shrink: 0;
 }
 
@@ -1608,7 +1610,7 @@
     transform: translate(-50%, -50%);
     width: 14px;
     height: 14px;
-    border-radius: 50%;
+    border-radius: 0;
     background: var(--di-warning);
     box-shadow: 0 0 0 3px rgba(var(--di-warning-rgb), 0.2);
 }
@@ -2342,7 +2344,7 @@
     min-height: 44px;
     padding: 0 var(--di-space-5);
     border: 1px solid rgba(var(--di-cyan-rgb), 0.5);
-    border-radius: var(--di-radius-pill);
+    border-radius: 0;
     background: var(--di-line);
     color: var(--di-cyan);
     font-family: inherit;
@@ -3259,7 +3261,7 @@
     height: 76px;
     right: 18%;
     top: 31%;
-    border-radius: var(--di-radius-pill);
+    border-radius: 0;
 }
 
 .raw-help-diagram-window {
@@ -3598,7 +3600,7 @@
 .raw-mic-panel-meter {
     width: 100%;
     height: 10px;
-    border-radius: var(--di-radius-pill);
+    border-radius: 0;
     overflow: hidden;
     background: rgba(var(--di-cyan-rgb), 0.08);
     border: 1px solid var(--di-cyan-border);
@@ -4681,7 +4683,7 @@
     color: var(--di-text);
     background: var(--di-scrim-strong);
     border: 1px solid var(--di-cyan);
-    border-radius: var(--di-radius-pill);
+    border-radius: 0;
     padding: var(--di-space-3) var(--di-space-4);
 }
 
@@ -4727,7 +4729,7 @@
     color: rgba(255, 255, 255, 0.78);
     background: var(--di-scrim-strong);
     border: 1px solid var(--di-cyan-line);
-    border-radius: var(--di-radius-pill);
+    border-radius: 0;
     padding: var(--di-space-1) var(--di-space-1) var(--di-space-1) var(--di-space-1);
     z-index: 1400;
     pointer-events: auto;
@@ -4759,7 +4761,7 @@
     min-width: 44px;
     min-height: 44px;
     border: none;
-    border-radius: var(--di-radius-pill);
+    border-radius: 0;
     background: rgba(var(--di-cyan-rgb), 0.14);
     color: var(--di-cyan);
     font-size: var(--di-text-4);
@@ -4892,7 +4894,7 @@
     color: rgba(255, 255, 255, 0.9);
     background: var(--di-scrim-strong);
     border: 1px solid rgba(var(--di-cyan-rgb), 0.4);
-    border-radius: var(--di-radius-pill);
+    border-radius: 0;
 }
 
 .raw-promoted-notice strong {
@@ -4907,7 +4909,7 @@
     min-width: 44px;
     padding: 0 var(--di-space-3);
     border: none;
-    border-radius: var(--di-radius-pill);
+    border-radius: 0;
     background: rgba(var(--di-cyan-rgb), 0.16);
     color: var(--di-cyan);
     font-family: inherit;
@@ -5147,7 +5149,7 @@
     min-height: 44px;
     padding: 0 var(--di-space-3);
     border: none;
-    border-radius: var(--di-radius-pill);
+    border-radius: 0;
     background: var(--di-cyan-dim);
     color: var(--di-cyan);
     font-family: inherit;

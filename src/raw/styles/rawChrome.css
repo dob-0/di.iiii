@@ -1,0 +1,104 @@
+/* Nodes chrome: the one bar's cells and the tokens they use (audit
+   2026-10-05 §3.1-3.3, build-plan rows 5-6). Every value in this file is a
+   token below; src/raw/rawChrome.test.js keeps it that way. */
+
+:root {
+    /* One spacing scale: 4 · 8 · 12 · 16 · 24 · 32. */
+    --raw-s-1: 4px;
+    --raw-s-2: 8px;
+    --raw-s-3: 12px;
+    --raw-s-4: 16px;
+    --raw-s-5: 24px;
+    --raw-s-6: 32px;
+    /* One type scale: meta 11, body 13, title 15. */
+    --raw-text-meta: 11px;
+    --raw-text-body: 13px;
+    --raw-text-title: 15px;
+    /* One control height: 28 on a mouse, 44 on a finger. */
+    --raw-cell: 28px;
+    --raw-bar-h: 40px;
+    /* Rectangles: 0-2px. */
+    --raw-radius: 0;
+}
+
+@media (pointer: coarse) {
+    :root { --raw-cell: 44px; }
+}
+
+/* The Nodes shell lends the bar its 40px to everything that reads --sbar-h. */
+.raw-editor-shell { --sbar-h: var(--raw-bar-h); }
+
+.raw-editor-shell > .sbar {
+    box-sizing: border-box;
+    height: var(--raw-bar-h);
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.raw-bar-tools {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--raw-s-1);
+}
+
+/* One cell, one style: a 1px line, no fill, 11-13px text. */
+.raw-editor-shell button.raw-cell {
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+    min-width: var(--raw-cell);
+    height: var(--raw-cell);
+    padding: 0 var(--raw-s-2);
+    border: 1px solid var(--di-line, rgba(255, 255, 255, 0.14));
+    border-radius: var(--raw-radius);
+    background: transparent;
+    color: var(--di-dim, rgba(255, 255, 255, 0.62));
+    font-family: var(--di-mono);
+    font-size: var(--raw-text-meta);
+    letter-spacing: 0;
+    text-transform: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.1s, border-color 0.1s;
+}
+
+.raw-editor-shell button.raw-cell--square { width: var(--raw-cell); padding: 0; }
+
+.raw-editor-shell button.raw-cell:hover,
+.raw-editor-shell button.raw-cell:focus-visible,
+.raw-editor-shell button.raw-cell.is-active {
+    color: var(--di-cyan);
+    border-color: var(--di-cyan);
+}
+
+.raw-editor-shell button.raw-cell kbd {
+    margin-left: var(--raw-s-1);
+    font: inherit;
+    opacity: 0.6;
+}
+
+.raw-bar-account {
+    display: inline-flex;
+    width: var(--raw-cell);
+    height: var(--raw-cell);
+}
+
+.raw-bar-tools .raw-topbar-breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--raw-s-1);
+    font-size: var(--raw-text-body);
+}
+
+/* The ⋯ menu leaves the bar (on a phone the bar scrolls and would clip it). */
+.sbar .raw-topbar-overflow-menu {
+    position: fixed;
+    top: var(--raw-bar-h);
+    right: var(--raw-s-2);
+    max-height: calc(100dvh - var(--raw-bar-h) - var(--raw-s-2));
+    overflow-y: auto;
+}
+
+@media (max-width: 900px) {
+    .raw-bar-tools .raw-topbar-word { display: none; }
+}
