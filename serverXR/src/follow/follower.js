@@ -287,7 +287,15 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             // create there would take it out again (ensureProject restores a
             // trashed id). Deletion is not carried, so it must not be undone
             // either. A trash that cannot be read makes nothing this tick.
-            if (!toTrash.ok) return
+            if (!toTrash.ok) {
+                // Said once, never silently: nothing is made there until the trash can be read.
+                const unread = `${toSide.base}|trash-unread`
+                if (!refusedMake.has(unread)) {
+                    refusedMake.add(unread)
+                    log.warn?.(`[follow] ${local.spaceId}: cannot read the trash on ${toSide === local ? 'this install' : 'the other di.iiii'} (${toTrash.status || toTrash.error || 'no answer'}) — projects missing there are not made`)
+                }
+                return
+            }
             const trashed = new Set(projectIdsFrom(toTrash.payload))
             const rows = Array.isArray(from.payload?.projects) ? from.payload.projects : []
             for (const projectId of projectIdsFrom(from.payload)) {

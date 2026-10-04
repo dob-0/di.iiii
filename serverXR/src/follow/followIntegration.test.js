@@ -64,7 +64,7 @@ const waitForHealth = async ({ url, child, getLogs }) => {
  * outage case restarts the SAME install rather than a fresh one — a follower
  * that only works against a machine that lost its disk proves nothing.
  */
-const startServer = async ({ port = null, dataRoot = null } = {}) => {
+const startServer = async ({ port = null, dataRoot = null, requireAuth = false } = {}) => {
     const sandboxCwd = await mkdtemp(path.join(os.tmpdir(), 'dii-follow-cwd-'))
     const sandboxDataRoot = dataRoot || await mkdtemp(path.join(os.tmpdir(), 'dii-follow-data-'))
     const listenPort = port || await getFreePort()
@@ -78,7 +78,8 @@ const startServer = async ({ port = null, dataRoot = null } = {}) => {
         API_TOKEN,
         CORS_ORIGINS: '*',
         AUTH_SESSION_SECRET: 'test-session-secret',
-        REQUIRE_AUTH: ''
+        REQUIRE_AUTH: requireAuth ? 'true' : '',
+        ...(requireAuth ? { AUTH_SESSION_COOKIE_SECURE: 'false', AUTH_HUB_URL: 'off' } : {})
     }
     delete childEnv.SPACES_DIR
     delete childEnv.UPLOADS_DIR
@@ -743,13 +744,22 @@ describe('a project made empty on either side appears on both', () => {
     }
 
     beforeAll(async () => {
-        hosting = await startServer()
+        // The host is a real one: auth on, and the follower holds what `di
+        // follow` holds — a per-space sync key (editor, scoped to this space),
+        // never the install's own token. A follow that only worked with an
+        // admin token passed here and did nothing on a real machine.
+        hosting = await startServer({ requireAuth: true })
         following = await startServer()
         await createSpace(hosting, SPACE)
         await createSpace(following, SPACE)
+        const minted = await fetch(`${hosting.baseUrl}/api/spaces/${SPACE}/sync-keys`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ label: 'follows the host' })
+        })
+        expect(minted.status).toBe(201)
+        const syncKey = (await minted.json()).token
         follower = startFollowing({
             local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
-            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: syncKey }),
             log: { warn: message => warned.push(message), info: () => {} }
         })
     })
