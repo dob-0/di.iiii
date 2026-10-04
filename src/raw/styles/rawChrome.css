@@ -153,3 +153,76 @@
     .raw-graph-zoom-controls .raw-graph-zoom-value { display: none; }
     .raw-graph-zoom-controls button.raw-zoom-fit { width: var(--raw-cell); }
 }
+
+/* Help: one true sheet (audit §3.9). No tabs. Lines are 13px, keys 11px mono. */
+.raw-help-dialog {
+    position: relative;
+    box-sizing: border-box;
+    width: min(360px, calc(100vw - var(--raw-s-5)));
+    max-height: calc(100dvh - var(--raw-s-5));
+    overflow-y: auto;
+    padding: var(--raw-s-4);
+    background: var(--di-surface);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--raw-radius);
+    font-size: var(--raw-text-body);
+}
+
+.raw-help-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--raw-s-3);
+    padding: 0 0 var(--raw-s-3);
+    border-bottom: 1px solid var(--di-line, rgba(255, 255, 255, 0.14));
+}
+
+.raw-help-header .raw-window-kicker { font-size: var(--raw-text-meta); }
+
+.raw-help-header h3 {
+    margin: 0;
+    font-size: var(--raw-text-title);
+    font-weight: 600;
+}
+
+.raw-help-lines {
+    display: grid;
+    gap: var(--raw-s-2);
+    margin: 0;
+    padding: var(--raw-s-3) 0 0;
+    list-style: none;
+}
+
+.raw-help-line {
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    align-items: baseline;
+    gap: var(--raw-s-2);
+    font-size: var(--raw-text-body);
+    line-height: 18px;
+}
+
+.raw-help-line b { font-weight: 600; color: var(--di-ink, #fff); }
+
+.raw-help-line kbd {
+    font-family: var(--di-mono);
+    font-size: var(--raw-text-meta);
+    color: var(--di-dim, rgba(255, 255, 255, 0.62));
+}
+
+.raw-help-keys {
+    margin-top: var(--raw-s-3);
+    font-size: var(--raw-text-meta);
+    color: var(--di-dim, rgba(255, 255, 255, 0.62));
+}
+
+.raw-help-keys summary { cursor: pointer; }
+
+.raw-help-keys dl {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--raw-s-1) var(--raw-s-3);
+    margin: var(--raw-s-2) 0 0;
+}
+
+.raw-help-keys dd { margin: 0; font-family: var(--di-mono); }

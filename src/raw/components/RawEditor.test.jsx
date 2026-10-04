@@ -1953,6 +1953,15 @@ describe('RawEditor: one bar (audit row 5)', () => {
         expect(document.querySelector('.account-btn-wrapper')?.style.position || 'static').not.toBe('fixed')
     })
 
+    it('Help speaks about the project shown: 1 node, nothing wired, never "starts empty"', async () => {
+        await open()
+        fireEvent.click(screen.getByRole('button', { name: 'Help' }))
+        const dialog = screen.getByRole('dialog', { name: 'Help' })
+        expect(within(dialog).getByRole('heading').textContent).toBe('1 node · nothing wired yet')
+        expect(dialog.textContent).not.toMatch(/starts empty/i)
+        expect(within(dialog).queryAllByRole('tab')).toHaveLength(0)
+    })
+
     it('opens Help on the ? key', async () => {
         await open()
         expect(screen.queryByRole('dialog', { name: /help/i })).toBeNull()

@@ -220,7 +220,6 @@ export default function RawEditor({
     })
     const [overflowOpen, setOverflowOpen] = useState(false)
     const [helpOpen, setHelpOpen] = useState(false)
-    const [helpSection, setHelpSection] = useState('start')
     // N / F2 (input/keymap.js): each press opens the panel's name for typing.
     const [renameRequest, setRenameRequest] = useState(0)
     // Zen: nothing resident on the workspace. Read once, from this device's
@@ -2146,7 +2145,6 @@ export default function RawEditor({
             const tag = event.target?.tagName?.toLowerCase?.()
             if (tag === 'input' || tag === 'textarea' || tag === 'select' || event.target?.isContentEditable) return
             event.preventDefault()
-            setHelpSection('start')
             setHelpOpen(true)
         }
         window.addEventListener('keydown', handler)
@@ -2294,7 +2292,7 @@ export default function RawEditor({
         // route in; the audit called its absence critical back when the
         // backdrop still papered over it.
         { id: 'room', label: 'Full screen', hint: 'the 3D view, fullscreen', run: () => setIsWorldFullscreen(true) },
-        { id: 'help', label: 'Help', hint: 'what the keys do', run: () => { setHelpSection('start'); setHelpOpen(true) } },
+        { id: 'help', label: 'Help', hint: 'what the keys do', run: () => { setHelpOpen(true) } },
         { id: 'chat', label: 'Chat', hint: 'talk to whoever is here', run: () => setChatOpen(true) },
         { id: 'outliner', label: 'Outliner', hint: 'every node in the project', run: () => setOutlinerOpen(true) },
         ...hiddenPanelNodes.map((node) => ({
@@ -2483,7 +2481,7 @@ export default function RawEditor({
             className="raw-cell raw-cell--square raw-topbar-help-action"
             aria-label="Help"
             title="Help (?)"
-            onClick={() => { setHelpSection('start'); setHelpOpen(true) }}
+            onClick={() => { setHelpOpen(true) }}
         >
             ?
         </button>
@@ -2876,7 +2874,6 @@ export default function RawEditor({
                     onShowReading={(nodeId) => openAnatomy(nodeId)}
                     onDuplicateNode={handleDuplicateNode}
                     onShowKeys={() => {
-                        setHelpSection('keys')
                         setHelpOpen(true)
                     }}
                     onSelectNode={selectNode}
@@ -3235,7 +3232,9 @@ export default function RawEditor({
             <RawHelpDialog
                 open={helpOpen}
                 onClose={() => setHelpOpen(false)}
-                initialSection={helpSection}
+                nodeCount={nodeCount}
+                wireCount={graphCardEdges.length}
+                thingCount={thingCount}
             />
 
             {visibleSelection ? hostInspector : null}
