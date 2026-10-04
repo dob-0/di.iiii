@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createEdge, createNode } from '../../project/nodeRegistry.js'
 import { createNodeGraphContext } from '../../project/graph/nodeGraphRuntime.js'
-import { getRawWorldBackgroundColor, pickActiveTypeNode, resolveSceneLighting, resolveScopeWorldNode } from './viewportWorldState.js'
+import { getRawWorldBackgroundColor, pickActiveTypeNode, readSceneObjects, resolveSceneLighting, sceneObjectSourceIds, resolveScopeWorldNode } from './viewportWorldState.js'
 
 describe('resolveScopeWorldNode', () => {
     const nodes = [
@@ -191,5 +191,80 @@ describe('resolveSceneLighting — the Light split, read side', () => {
 
     it('with neither, null — callers keep their own fallbacks', () => {
         expect(resolveSceneLighting({ nodes: [], workspaceState: {} }, null, { scopeId: null })).toBeNull()
+    })
+})
+
+describe('readSceneObjects — what is wired into a Scene stands on its stage', () => {
+    const world = createNode('universe.world', { id: 'w' })
+    const read = (nodes, edges, worldNode = world) =>
+        readSceneObjects(worldNode, createNodeGraphContext({ nodes: [worldNode, ...nodes], edges }))
+
+    it('a wired Cube arrives as its shape, with its own size and colour', () => {
+        const cube = createNode('geom.cube', { id: 'c', values: { size: [2, 1, 1], color: '#ff0000' } })
+        const shape = read([cube], [createEdge('c', 'geometry', 'w', 'objects')])
+        expect(shape.kind).toBe('box')
+        expect(shape.size).toEqual([2, 1, 1])
+        expect(shape.color).toBe('#ff0000')
+    })
+
+    it('many objects arrive through Merge, chained for more', () => {
+        const a = createNode('geom.cube', { id: 'a' })
+        const b = createNode('geom.sphere', { id: 'b' })
+        const c = createNode('geom.cone', { id: 'c' })
+        const m1 = createNode('shape.merge', { id: 'm1' })
+        const m2 = createNode('shape.merge', { id: 'm2' })
+        const shape = read([a, b, c, m1, m2], [
+            createEdge('a', 'geometry', 'm1', 'a'),
+            createEdge('b', 'geometry', 'm1', 'b'),
+            createEdge('m1', 'out', 'm2', 'a'),
+            createEdge('c', 'geometry', 'm2', 'b'),
+            createEdge('m2', 'out', 'w', 'objects'),
+        ])
+        expect(shape.kind).toBe('group')
+        expect(shape.children).toHaveLength(3)
+    })
+
+    it('nothing wired, or not a Scene, draws nothing', () => {
+        expect(read([], [])).toBeNull()
+        expect(readSceneObjects(null, createNodeGraphContext({ nodes: [], edges: [] }))).toBeNull()
+        const cube = createNode('geom.cube', { id: 'c' })
+        expect(readSceneObjects(cube, createNodeGraphContext({ nodes: [cube], edges: [] }))).toBeNull()
+    })
+})
+
+describe('sceneObjectSourceIds — what the Scene draws, the room does not draw again', () => {
+    const world = createNode('universe.world', { id: 'w' })
+    const cube = createNode('geom.cube', { id: 'c' })
+    const sphere = createNode('geom.sphere', { id: 's' })
+    const loose = createNode('geom.cube', { id: 'loose' })
+    const merge = createNode('shape.merge', { id: 'm' })
+    const colour = createNode('value.color', { id: 'col' })
+
+    it('walks the shape back through Merge to every part, and only shapes', () => {
+        const document = {
+            nodes: [world, cube, sphere, loose, merge, colour],
+            edges: [
+                createEdge('col', 'out', 'c', 'color'),
+                createEdge('c', 'geometry', 'm', 'a'),
+                createEdge('s', 'geometry', 'm', 'b'),
+                createEdge('m', 'out', 'w', 'objects'),
+            ]
+        }
+        expect([...sceneObjectSourceIds(document, world)].sort()).toEqual(['c', 'm', 's'])
+    })
+
+    it('nothing wired → nothing hidden; a Cube wired elsewhere stays in the room', () => {
+        const document = { nodes: [world, cube, merge], edges: [createEdge('c', 'geometry', 'm', 'a')] }
+        expect(sceneObjectSourceIds(document, world).size).toBe(0)
+        expect(sceneObjectSourceIds(document, null).size).toBe(0)
+    })
+
+    it('a feedback loop ends', () => {
+        const t = createNode('geom.transform', { id: 't' })
+        const document = {
+            nodes: [world, t, merge],
+            edges: [createEdge('t', 'out', 'm', 'a'), createEdge('m', 'out', 't', 'geometry'), createEdge('m', 'out', 'w', 'objects')]
+        }
+        expect([...sceneObjectSourceIds(document, world)].sort()).toEqual(['m', 't'])
     })
 })
