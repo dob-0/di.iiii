@@ -512,6 +512,7 @@
         "basis": "EXACT",
         "note": "A-CN gives rated 450 W; the higher figure (A) is kept for power planning"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 23,
         "src": "A",
@@ -927,6 +928,7 @@
         "src": "B",
         "basis": "EXACT"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 13.5,
         "src": "B",
@@ -1220,6 +1222,7 @@
         "basis": "EXACT",
         "note": "C3 says 300 W"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 15,
         "src": "OFL-K10",
@@ -1487,6 +1490,12 @@
         "src": "D-CN",
         "basis": "EXACT",
         "note": "rated 162 W; supply power 200 W; switch-mode supply with PFC, PF > 0.99"
+      },
+      "supply_w": {
+        "value": 200,
+        "src": "D-CN",
+        "basis": "EXACT",
+        "note": "the mains draw the maker states beside the 162 W rating (switch-mode supply with PFC): circuits and power totals are planned on it (audit A-05, 2026-10-05: 16 PARs on C6 = 3200 W at supply, over the 2944 W planning limit, though 2592 W at the rating)"
       },
       "weight_kg": {
         "value": 8,
@@ -1786,6 +1795,7 @@
         "src": "BLUESEA",
         "basis": "EQUIVALENT"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 35,
         "src": "BLUESEA",
@@ -1910,6 +1920,7 @@
         "src": "MAGICFX",
         "basis": "EQUIVALENT"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 4.2,
         "src": "MAGICFX",
@@ -2008,6 +2019,7 @@
         "basis": "EQUIVALENT",
         "note": "the code's '600' suggests a 600 W generic unit"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 8.5,
         "src": "SHOWVEN",
@@ -2122,6 +2134,7 @@
         "src": "ANTARI",
         "basis": "EQUIVALENT"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 13.3,
         "src": "ANTARI",
@@ -2282,6 +2295,7 @@
         "basis": "EQUIVALENT",
         "note": "maximum; 663 W typical"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 7.8,
         "src": "MARTIN-A3K",
@@ -2483,6 +2497,7 @@
         "basis": "EQUIVALENT",
         "note": "at 230 V"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 8.7,
         "src": "CHAUVET-STRIKE4",
@@ -2603,6 +2618,7 @@
         "src": "ANTARI-HZ1000",
         "basis": "EQUIVALENT"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 74.6,
         "src": "ANTARI-HZ1000",
@@ -2741,6 +2757,7 @@
         "basis": "EXACT",
         "note": "rated 180 W (200 W light source)"
       },
+      "supply_w": null,
       "weight_kg": {
         "value": 5.1,
         "src": "E",
@@ -2897,6 +2914,7 @@
       "modesOwed": false,
       "assumedMode": null,
       "power_w": null,
+      "supply_w": null,
       "weight_kg": {
         "value": 3.7,
         "src": "LASEROS-MK2",

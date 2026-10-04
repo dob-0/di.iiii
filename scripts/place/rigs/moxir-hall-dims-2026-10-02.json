@@ -34,6 +34,22 @@
     "lantern_h_m": [
       2.77,
       3.5
+    ],
+    "crane_rail_h_m": [
+      7.8,
+      8.4
+    ],
+    "crane_bridge_bottom_h_m": [
+      7.7,
+      8.25
+    ],
+    "crane_bridge_depth_m": [
+      0.7,
+      0.9
+    ],
+    "crane_cab_h_m": [
+      2.0,
+      2.3
     ]
   },
   "confidence": {
@@ -47,17 +63,23 @@
     "cranes_from_door_m": "medium: the far crane at 76.2 m from the door is the 2026-09-29 measurement (the older 95.0 was a guess); the entry-end crane is the one rolled over the DJ (49.2)",
     "track_x_m": "LOW: one track at x about 0, gauge about 1.5 m, in the entry zone (005); the old +-4 m pair is dropped",
     "track_cross_z_m": "LOW: transverse lines somewhere between z 38 and 46 (027-031); two drawn",
-    "massing_add": "each item carries its own confidence and photos; positions are photo estimates (+-1.5 m in x, +-3 m in z) unless noted"
+    "massing_add": "each item carries its own confidence and photos; positions are photo estimates (+-1.5 m in x, +-3 m in z) unless noted",
+    "crane_rail_h_m": "medium-high: top of rail where the far crane's end trucks sit, photo 007: fronto-parallel two-depth metrology (Criminisi et al. 2000) — the crane's own rail span (GOST 534-78: 24 m - 2*lambda = 22.0-23.0 m) gives its depth (69 m), the floor at the far end wall is the reference, the horizon cancels; Monte Carlo over focal, camera place/height, wall position, rail span and +-6 px reading: median 8.08, 5-95 % 7.81-8.36. Agrees with the 2026-09-27 perspective estimate (runway top 8.2 m) and with the Soviet unified crane-rail level 8.15 m for 24 m spans; the VGGT cloud's 6.6-7.4 is rejected (VGGT compresses telephoto/far depth). Scale check in the same photo: the end wall's steel double door reads 2.01 x 2.39 m (a standard 2.0 x 2.4 m industrial door).",
+    "crane_bridge_bottom_h_m": "medium: underside of the bridge girders at mid-span, photo 007 (edge profile at x 1750/2250): 7.96 m, 5-95 % 7.69-8.24; 0.12 m (0.05-0.20) BELOW the rail head — the box girders hang between the end trucks and are shallower at their ends (end underside rail +0.27). Measured on the FAR crane; the entry-end crane (the one to park over the DJ) is ASSUMED the same type: same runway, same yellow double-girder bridge with the same slotted side plates (photos 004/010/012/032 from under it); its own underside is not measured.",
+    "crane_bridge_depth_m": "medium: bridge girder side plate at mid-span, photo 007: top 8.73 m - underside 7.96 m = 0.77 m (was 1.5 m GUESS)",
+    "crane_cab_h_m": "medium: operator's cab (yellow-black stripes) under the far crane's right end, photo 007: its bottom 5.85 m (5.56-6.15) = 2.1 m under the girders"
   },
   "notes": [
     "2026-10-02 hall corrections, each with its source: (1) the LEFT low wall is 2 closed bays, not 5 (the 09-28 features file said bays 3-7 from photo 032, wrong): from_door_m [24, 36]. (2) the RIGHT low wall (a GUESS in the 09-28 file, [60, 84]) is deleted: the right row is open (003, 005, 006, 009, 027: machinery and pipes between the columns). (3) the crane cab hangs at the RIGHT (+x) end (002, 003, 004, 005, 009, 013), x 8.35-10.35 in the nave crane's frame. (4) the roof underside 11.0 -> 10.8 m (Soviet height series 8.4 / 9.6 / 10.8 / 12.0) and the top chord 13.5 -> 13.3 (2.5 m depth kept). (5) the lantern 3.5 -> 3.2 m (standard lantern for a 24 m span: 2.77 or 3.22 m). (6) the right runway girder has no handrail; the left one keeps it.",
     "Left unchanged on purpose: the crane rail (7.6 m in this layer set; the standards give 7.75 for 16-20 t or 8.15 for <= 10 t cranes and the crane's capacity is unknown, so measure on site); the 6 x 6 x 2.5 m space frame (photo-derived; it is NOT the 'Kislovodsk' series, which is 3 x 3 x 2.12 m for low buildings); the expansion joint (the lantern gap is the evidence); the floor-rail gauge (unmeasured).",
-    "2026-10-02, permanent objects near the stage (emily-41, from a researcher's pass over all 36 photos; the transformer (021) and the press pedestal (024) checked by hand): the 11 massing_add items are the things that stay when the hall is cleared (transformer, column-foot cabinets, press pedestal, press-side cabinets, blower, lean-to canopy, drum tank, prefab cabin, right-row pipe rack). Ignored on purpose, being loose and due to be cleared: the five 5-6 m pressure vessels at x -6..0, z -2..+8, gas cylinders, scrap, bags, boards. Corrected: the far crane at 76.2 m from the door (was 95.0); the floor rails are one track at x about 0 in the entry zone (z 20 to the door) plus two transverse lines at z 38 and 46, all LOW confidence. HELD for the originals or a site check: the machine line's length (it may run on to z 10-14), the transformer's exact z, and whether the pedestal and cabinets are bolted."
+    "2026-10-02, permanent objects near the stage (emily-41, from a researcher's pass over all 36 photos; the transformer (021) and the press pedestal (024) checked by hand): the 11 massing_add items are the things that stay when the hall is cleared (transformer, column-foot cabinets, press pedestal, press-side cabinets, blower, lean-to canopy, drum tank, prefab cabin, right-row pipe rack). Ignored on purpose, being loose and due to be cleared: the five 5-6 m pressure vessels at x -6..0, z -2..+8, gas cylinders, scrap, bags, boards. Corrected: the far crane at 76.2 m from the door (was 95.0); the floor rails are one track at x about 0 in the entry zone (z 20 to the door) plus two transverse lines at z 38 and 46, all LOW confidence. HELD for the originals or a site check: the machine line's length (it may run on to z 10-14), the transformer's exact z, and whether the pedestal and cabinets are bolted.",
+    "2026-10-05 (audit A-01, dob-0/di.iiii docs/ai/audits/moxir-2026-10-05/A): the crane is the 09-29 PHOTO-MEASURED one, not the 09-28 guess this layer sat on — rail top 8.1 m, bridge girder underside 7.95 m (was 8.15, 'crane rail + 0.55, unmeasured'), girder depth 0.8 m (was 1.5), cab 2.1 m high (was a placeholder). Carried here from moxir-hall-dims-2026-09-29.json so the 10-02 hall, and every hang derived from it, uses the measured girder; at 8.15 the cut's high pick drew 119 deg, at the real 7.95 the old trim would be a 144 deg bridle."
   ],
   "sources": {
     "photos": "hall-photos/ 004, 009 (main view), 002, 003, 005, 006, 008, 013, 027, 032, 033/034",
     "standards": "hall-standards/e.txt (Soviet height series, lantern sizes, crane rail heights by capacity)",
-    "osm": "hall-standards/osm.json"
+    "osm": "hall-standards/osm.json",
+    "crane": "moxir-hall-dims-2026-09-29.json: crane_rail_h_m, crane_bridge_bottom_h_m, crane_bridge_depth_m, crane_cab_h_m (photo 007, fronto-parallel two-depth metrology)"
   },
   "massing_add": [
     {
@@ -295,5 +317,9 @@
   "track_cross_z_m": [
     38,
     46
-  ]
+  ],
+  "crane_rail_h_m": 8.1,
+  "crane_bridge_bottom_h_m": 7.95,
+  "crane_bridge_depth_m": 0.8,
+  "crane_cab_h_m": 2.1
 }

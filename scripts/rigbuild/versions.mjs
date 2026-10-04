@@ -27,7 +27,7 @@ import { parseArgs, die, say, readJson, REPO_ROOT } from '../place/common.mjs'
 import { normalizeRentalList } from '../../src/shared/projectSchema.js'
 import { billedDays } from '../../src/rigbuild/equipment.js'
 import { powerOf, typeById, typeIdOf } from '../../src/rigbuild/fixtureTypes.js'
-import { linePoint, pickGeometry, stageFrame } from '../place/rig-lib.mjs'
+import { LASER_FIXTURES, linePoint, pickGeometry, stageFrame } from '../place/rig-lib.mjs'
 
 const DEG = Math.PI / 180
 
@@ -475,7 +475,7 @@ export const versionRig = ({ spec, base, id }) => {
             : v.truss === 'halo' ? haloTruss(v, groups, classes)
             : v.truss === 'crane-x' ? craneTruss(spec, groups, classes, 'craneX')
                 : clone(base.truss)
-    const hasLaser = groups.some((g) => classes[g.class]?.fixture === 'laser')
+    const hasLaser = groups.some((g) => LASER_FIXTURES.has(classes[g.class]?.fixture))
     return {
         rig: `${base.rig.replace(/ — .*$/, '')} — ${v.title}`,
         version: base.version,
