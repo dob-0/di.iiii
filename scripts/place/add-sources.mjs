@@ -23,6 +23,10 @@
  *   --api <base>            di.iiii API base (default https://local.thedi.studio/serverXR)
  *   --dry-run               say what would be uploaded, skipped and hung; change nothing
  *                           (it still READS the document, so it needs the token)
+ *   --originals             also: for a name already hung whose file here is LARGER than the hung asset
+ *                           (dev holds reduced copies), upload the original and point the SAME entity at
+ *                           it (one updateComponent op, transform untouched); the old asset is dropped
+ *                           from the document only after the new one reads back
  *   --allow-skips           exit 0 even if the server refused some file
  *   --token-file <path>     as in import.mjs
  *
@@ -112,14 +116,45 @@ export const addOps = (assets, document, options = {}) => {
     })
 }
 
+/**
+ * Already-hung files whose original here is bigger than the asset on the wall.
+ * Returns the swaps (entity, old asset, file, both sizes) and the matches left
+ * alone (same size or smaller here: never trade a bigger picture for a smaller).
+ */
+export const planSwaps = (skipped, document) => {
+    const swaps = []
+    const same = []
+    const claimed = new Set()
+    for (const { file, name } of skipped) {
+        const keys = [name.toLowerCase(), bareName(name)]
+        const asset = (document?.assets || []).find((a) => !claimed.has(a.id) &&
+            keys.some((key) => String(a.name || '').toLowerCase() === key || bareName(a.name) === key))
+        const entity = asset && (document?.entities || []).find((e) => e.components?.media?.assetId === asset.id)
+        if (!entity) continue
+        claimed.add(asset.id)
+        const localSize = fs.statSync(file).size
+        if (localSize > Number(asset.size || 0)) swaps.push({ file, name, entity, asset, oldSize: Number(asset.size || 0), newSize: localSize })
+        else same.push({ name, oldSize: Number(asset.size || 0), newSize: localSize })
+    }
+    return { swaps, same }
+}
+
+/** The one-op swap: the entity keeps its id and its transform; only media.assetId moves. */
+export const swapOps = (swap, asset) => [
+    { type: 'upsertAsset', payload: { asset } },
+    { type: 'updateComponent', payload: { entityId: swap.entity.id, component: 'media', patch: { assetId: asset.id } } }
+]
+
 export const exitCodeFor = (refused, allowSkips) => (refused.length && !allowSkips ? 2 : 0)
 
 /** Everything the run does, with the client handed in so a test can stand in for the server. */
-export const runAddSources = async ({ client, space, projectId, files, dryRun = false, say: out = say, warn: bad = warn }) => {
+export const runAddSources = async ({ client, space, projectId, files, dryRun = false, originals = false, say: out = say, warn: bad = warn }) => {
     const current = must(await client.get(`/api/projects/${projectId}/document`), `reading ${projectId}`)
     const document = current.document || {}
     const { fresh, skipped } = planFiles(files, document)
     skipped.forEach((entry) => out(`  skip  ${entry.name} — ${entry.why}`))
+    const { swaps, same } = originals ? planSwaps(skipped, document) : { swaps: [], same: [] }
+    same.forEach((entry) => out(`  keep  ${entry.name} — hung ${fmtBytes(entry.oldSize)}, file here ${fmtBytes(entry.newSize)}, not larger`))
     const { firstRow } = nextWallSlot(document)
     out(`  ${wallEntities(document).length} pictures hang now; new rows start at row ${firstRow + 1} from the bottom`)
 
@@ -130,8 +165,9 @@ export const runAddSources = async ({ client, space, projectId, files, dryRun = 
             const [x, y] = ops[k].payload.entity.components.transform.position
             out(`  would upload+hang  ${path.basename(file)} (${fmtBytes(fs.statSync(file).size)}) as ${ops[k].payload.entity.id} at x ${x.toFixed(2)}, height ${y.toFixed(2)}`)
         })
-        out(`[dry run] ${fresh.length} would be hung, ${skipped.length} skipped, nothing changed`)
-        return { hung: [], skipped, refused: [], dryRun: true, planned: fresh.length }
+        swaps.forEach((swap) => out(`  would swap  ${swap.name}: ${fmtBytes(swap.oldSize)} on the wall -> ${fmtBytes(swap.newSize)} original, entity ${swap.entity.id} stays where it hangs`))
+        out(`[dry run] ${fresh.length} would be hung, ${swaps.length} swapped to the original, ${skipped.length} skipped, nothing changed`)
+        return { hung: [], skipped, refused: [], dryRun: true, planned: fresh.length, plannedSwaps: swaps.length }
     }
 
     const refused = []
@@ -151,9 +187,28 @@ export const runAddSources = async ({ client, space, projectId, files, dryRun = 
             ...addOps(carried, document)
         ])
     }
-    out(`  ${carried.length} hung, ${skipped.length} skipped, ${refused.length} refused`)
+
+    const swapped = []
+    for (const swap of swaps) {
+        const asset = await uploadAsset(client, projectId, swap.file, { skippable: true, onRefused: (entry) => refused.push(entry) })
+        if (!asset) continue
+        await sendOps(client, projectId, swapOps(swap, asset))
+        // Drop the old asset only once the document reads back with the entity on the new one.
+        const back = must(await client.get(`/api/projects/${projectId}/document`), `reading ${projectId} back`).document || {}
+        const entity = (back.entities || []).find((e) => e.id === swap.entity.id)
+        const stillUsed = (back.entities || []).some((e) => e.components?.media?.assetId === swap.asset.id)
+        if (entity?.components?.media?.assetId === asset.id && (back.assets || []).some((a) => a.id === asset.id)) {
+            if (!stillUsed) await sendOps(client, projectId, [{ type: 'deleteAsset', payload: { assetId: swap.asset.id } }])
+            swapped.push({ name: swap.name, entityId: swap.entity.id, oldSize: swap.oldSize, newSize: asset.size })
+        } else {
+            bad(`  NOT DROPPED ${swap.name}: the new asset did not read back, the old one is kept`)
+            refused.push({ name: swap.name, size: swap.newSize, status: 0, reason: 'swap did not read back' })
+        }
+    }
+    swapped.forEach((e) => out(`  swapped ${e.name}: ${fmtBytes(e.oldSize)} -> ${fmtBytes(e.newSize)} (${e.entityId})`))
+    out(`  ${carried.length} hung, ${swapped.length} swapped to the original, ${skipped.length} skipped, ${refused.length} refused`)
     refused.forEach((entry) => bad(`  REFUSED ${entry.name} · ${fmtBytes(entry.size)} · HTTP ${entry.status} ${entry.reason}`))
-    return { hung: carried, skipped, refused, dryRun: false }
+    return { hung: carried, swapped, skipped, refused, dryRun: false }
 }
 
 const main = async () => {
@@ -173,7 +228,7 @@ const main = async () => {
     const token = readToken(args['token-file'] ? String(args['token-file']) : null)
     if (!token) die('No API token found, so nothing was sent.', 'Set DI_API_TOKEN, or pass --token-file <env file>.')
     say(`Space "${space}", project ${projectId} on ${api} — ${files.length} files in ${dir}`)
-    const result = await runAddSources({ client: makeClient(api, token), space, projectId, files, dryRun: Boolean(args['dry-run']) })
+    const result = await runAddSources({ client: makeClient(api, token), space, projectId, files, dryRun: Boolean(args['dry-run']), originals: Boolean(args.originals) })
     const code = exitCodeFor(result.refused, Boolean(args['allow-skips']))
     if (code) warn(`\n${result.refused.length} file(s) refused — exit ${code}. Re-run with --allow-skips to accept that.`)
     process.exit(code)

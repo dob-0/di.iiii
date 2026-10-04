@@ -20,3 +20,9 @@
 - **Limits.** Name match only (a renamed copy of a hung picture would be hung again). Reads the document once and
   does not re-check between upload and write (a concurrent writer to the wall could produce a clashing id). No
   delete or rename of pictures.
+- **`--originals` (owner's addition, same day).** dev's `moxir-sources` holds reduced copies (e.g. `000-file_83.JPG`
+  1,204,458 B on dev vs 2,885,346 B original). With the flag, a hung name whose local file is larger is uploaded and
+  the SAME entity is pointed at it (`updateComponent` media `{assetId}` only), the old asset dropped after a
+  read-back. Proof: 5 more tests (12 in the file); reverted guards fail (swap-when-not-larger 1, no read-back check 1,
+  flag ignored 4, patch widened beyond assetId 1). The 111 MB mp4 is over `MAX_UPLOAD_MB=100`
+  (`serverXR/src/config.js:137`) and is reported as refused, not transcoded.

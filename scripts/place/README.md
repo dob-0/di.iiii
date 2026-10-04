@@ -114,7 +114,11 @@ node scripts/place/add-sources.mjs --add-sources <dir> --name moxir             
 
 Options: `--sources-project <id>` (default `<space>-sources`), `--api <base>`, `--allow-skips`. A file the server
 refuses (413 too large, 415) is printed by name, size and reason, the rest is hung, and the run exits 2 unless
-`--allow-skips`. The dry run still reads the document, so it needs the token. Limit: the new rows sit above the
+`--allow-skips`. The dry run still reads the document, so it needs the token. `--originals` also swaps reduced copies for the originals: for an already-hung name whose file here is LARGER than
+the hung asset, it uploads the original and points the same entity at it (one `updateComponent` on `media.assetId`,
+position, rotation and scale untouched), then drops the old asset only after the document reads back with the new
+one. `--dry-run` lists each swap with both sizes. A file over the server's `MAX_UPLOAD_MB` (default 100) is refused
+and reported, never transcoded. Limit: the new rows sit above the
 existing top row, so on a 37-picture wall they hang about 8.6 m up; move them in Studio if that is too high.
 
 What ends up in the working folder:

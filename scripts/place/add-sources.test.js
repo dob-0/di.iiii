@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { sourceWall } from './import.mjs'
-import { runAddSources, planFiles, addOps, exitCodeFor, bareName } from './add-sources.mjs'
+import { runAddSources, planFiles, addOps, exitCodeFor, bareName, planSwaps } from './add-sources.mjs'
 
 // A wall as import.mjs built it: 37 pictures, the total known, so row 0 is the TOP row.
 const hungAssets = Array.from({ length: 37 }, (_, i) => ({ id: `h${i}`, name: `${String(i + 1).padStart(3, '0')}-shot_${i}.jpg`, mimeType: 'image/jpeg' }))
@@ -31,6 +31,14 @@ const fakeClient = (document, { refuse = {} } = {}) => {
                 return { ok: true, status: 200, body: { asset: { id: `new-${upload.name}`, name: upload.name, mimeType: upload.type, size: upload.size, url: '/x' } }, text: '' }
             }
             sent.ops.push(...body.ops)
+            for (const op of body.ops) {
+                if (op.type === 'upsertAsset') document.assets.push(op.payload.asset)
+                if (op.type === 'updateComponent') {
+                    const e = document.entities.find((x) => x.id === op.payload.entityId)
+                    e.components[op.payload.component] = { ...e.components[op.payload.component], ...op.payload.patch }
+                }
+                if (op.type === 'deleteAsset') document.assets = document.assets.filter((a) => a.id !== op.payload.assetId)
+            }
             return { ok: true, status: 200, body: { version: 6 }, text: '' }
         }
     }
@@ -108,5 +116,73 @@ describe('add-sources', () => {
         expect(result.planned).toBe(1)
         expect(lines.join('\n')).toMatch(/would upload\+hang\s+d1\.jpg/)
         expect(lines.join('\n')).toMatch(/skip\s+001-shot_0\.jpg/)
+    })
+})
+
+describe('add-sources --originals', () => {
+    const reduced = () => {
+        const doc = documentOf()
+        doc.assets[0].size = 100
+        return doc
+    }
+    const name0 = hungAssets[0].name
+
+    it('swaps a reduced copy for the larger original: same entity, transform untouched, old asset dropped', async () => {
+        const doc = reduced()
+        const before = JSON.stringify(doc.entities[0].components.transform)
+        const client = fakeClient(doc)
+        const result = await runAddSources({ client, projectId: 'p', files: [file(name0, 5000)], originals: true, ...quiet })
+        expect(result.swapped).toHaveLength(1)
+        const update = client.sent.ops.filter((o) => o.type === 'updateComponent')
+        expect(update).toHaveLength(1)
+        expect(update[0].payload).toMatchObject({ entityId: wall[0].id, component: 'media', patch: { assetId: `new-${name0}` } })
+        expect(Object.keys(update[0].payload.patch)).toEqual(['assetId'])
+        expect(JSON.stringify(doc.entities[0].components.transform)).toBe(before)
+        expect(doc.entities[0].components.media.assetId).toBe(`new-${name0}`)
+        expect(doc.assets.some((a) => a.id === 'h0')).toBe(false)
+        expect(client.sent.ops.filter((o) => o.type === 'createEntity')).toHaveLength(0)
+    })
+
+    it('does nothing to a hung file without --originals, and never swaps for a smaller or equal one', async () => {
+        const plain = fakeClient(reduced())
+        await runAddSources({ client: plain, projectId: 'p', files: [file(name0, 5000)], ...quiet })
+        expect(plain.sent.uploads).toHaveLength(0)
+        const doc = reduced()
+        doc.assets[0].size = 9000
+        const smaller = fakeClient(doc)
+        await runAddSources({ client: smaller, projectId: 'p', files: [file(name0, 5000)], originals: true, ...quiet })
+        expect(smaller.sent.uploads).toHaveLength(0)
+    })
+
+    it('an original the server refuses (413) keeps the old asset and is reported', async () => {
+        const doc = reduced()
+        const client = fakeClient(doc, { refuse: { [name0]: 413 } })
+        const result = await runAddSources({ client, projectId: 'p', files: [file(name0, 5000)], originals: true, ...quiet })
+        expect(result.refused[0]).toMatchObject({ name: name0, status: 413 })
+        expect(doc.entities[0].components.media.assetId).toBe('h0')
+        expect(doc.assets.some((a) => a.id === 'h0')).toBe(true)
+    })
+
+    it('keeps the old asset when the new one does not read back', async () => {
+        const doc = reduced()
+        const client = fakeClient(doc)
+        const realPost = client.post
+        client.post = async (route, body) => {
+            const r = await realPost(route, body)
+            if (!route.endsWith('/assets')) doc.entities[0].components.media.assetId = 'h0'  // a write that did not stick
+            return r
+        }
+        const result = await runAddSources({ client, projectId: 'p', files: [file(name0, 5000)], originals: true, ...quiet })
+        expect(doc.assets.some((a) => a.id === 'h0')).toBe(true)
+        expect(result.refused.some((r) => r.reason === 'swap did not read back')).toBe(true)
+    })
+
+    it('--dry-run lists the swap with both sizes and changes nothing', async () => {
+        const client = fakeClient(reduced())
+        const lines = []
+        await runAddSources({ client, projectId: 'p', files: [file(name0, 5000)], originals: true, dryRun: true, say: (l) => lines.push(l), warn: () => {} })
+        expect(client.sent.uploads).toHaveLength(0)
+        expect(client.sent.ops).toHaveLength(0)
+        expect(lines.join('\n')).toMatch(/would swap\s+001-shot_0\.jpg: 100 B on the wall -> 4\.9 KB/)
     })
 })
