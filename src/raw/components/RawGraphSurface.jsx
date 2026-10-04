@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
+import { dragClamp, edgePanVelocity } from '../utils/dragClamp.js'
 import { CARD_CONTENT_LINE_HEIGHT, CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, TOP_PICTURE_HEIGHT, TOP_PICTURE_WIDTH, cardContentLayout, cardHeight, cardPortRows, hasCardPicture } from '../utils/cardGeometry.js'
 import { isPictureType, pictureIdOf } from '../../project/tops/vjDeck.js'
 import TopThumbnail from './TopThumbnail.jsx'
@@ -294,6 +295,9 @@ export default function RawGraphSurface({
     // the right-click on touch.
     const [contextMenu, setContextMenu] = useState(null)
     const dragOffsetRef = useRef({ x: 0, y: 0 })
+    // Last pointer position of a card drag (client px), whether a move has
+    // arrived yet (`live`), and the auto-pan clock (`last`).
+    const dragPanRef = useRef({ x: 0, y: 0, live: false, last: 0 })
     // pendingWire mirrored into a ref: the window-level pointerup handler is
     // registered once per drag and would otherwise close over a stale value.
     const pendingWireRef = useRef(null)
@@ -1241,40 +1245,69 @@ export default function RawGraphSurface({
             pendingPos = null
             onMoveNode?.(draggingNodeId, nextX, nextY)
         }
+        // The pointer and the pan clock live in refs: every committed move
+        // changes `nodes`, which re-runs this effect, and a pointer held still
+        // at the edge must keep panning across that.
+        const drag = dragPanRef
+        let panRaf = null
+        // Where the card wants to be for the pointer as it is NOW and the
+        // viewport as it is NOW, kept GRAB_PX inside the canvas (utils/dragClamp.js).
+        const commitWanted = () => {
+            const point = clientPointToGraphPoint(drag.current.x, drag.current.y)
+            const rect = containerRef.current?.getBoundingClientRect?.()
+            const vp = viewportRef.current
+            const wanted = dragClamp(
+                { x: point.x - dragOffsetRef.current.x, y: point.y - dragOffsetRef.current.y },
+                { rect, panX: vp.panX, panY: vp.panY, zoom: vp.zoom }
+            )
+            pendingPos = { nextX: wanted.x, nextY: wanted.y }
+        }
+        // Edge auto-pan: while the pointer rests in the band at an edge (or
+        // past it, off the canvas) the canvas pans under it and the card follows.
+        const panTick = (now) => {
+            panRaf = null
+            if (!drag.current.live) return
+            const velocity = edgePanVelocity(drag.current, containerRef.current?.getBoundingClientRect?.())
+            if (!velocity) { drag.current.last = 0; return }
+            const dt = drag.current.last ? Math.min(now - drag.current.last, 50) : 16
+            drag.current.last = now
+            const vp = viewportRef.current
+            applyViewport(vp.panX + velocity.vx * dt / 1000, vp.panY + velocity.vy * dt / 1000, vp.zoom)
+            commitWanted()
+            flush()
+            panRaf = requestAnimationFrame(panTick)
+        }
+        const armPan = () => {
+            if (panRaf === null && edgePanVelocity(drag.current, containerRef.current?.getBoundingClientRect?.())) {
+                panRaf = requestAnimationFrame(panTick)
+            }
+        }
         const move = (event) => {
             if (pinchRef.current) return
             const node = nodeById.get(draggingNodeId)
             if (!node) return
-            const point = clientPointToGraphPoint(event.clientX, event.clientY)
-            let nextX = point.x - dragOffsetRef.current.x
-            let nextY = point.y - dragOffsetRef.current.y
-            // Same law as placement: the card and the door hanging off its
-            // left edge stay reachable. A card dragged past the edge used to
-            // leave the canvas entirely, door and all, with no way back
-            // (audit 08-21: card at x:-108, door fully off-screen).
-            const rect = containerRef.current?.getBoundingClientRect?.()
-            if (rect?.width && rect?.height) {
-                const halfCard = CARD_WIDTH / 2
-                const topLeft = clientPointToGraphPoint(rect.left + GRAPH_FIT_PADDING_PX, rect.top + GRAPH_FIT_PADDING_PX)
-                const bottomRight = clientPointToGraphPoint(rect.right - GRAPH_FIT_PADDING_PX, rect.bottom - GRAPH_FIT_PADDING_PX)
-                const minX = topLeft.x + halfCard + (DOOR_WIDTH_PX / viewportRef.current.zoom)
-                const maxX = bottomRight.x - halfCard
-                const minY = topLeft.y + HEADER_HEIGHT
-                const maxY = bottomRight.y - HEADER_HEIGHT
-                if (maxX > minX) nextX = clamp(nextX, minX, maxX)
-                if (maxY > minY) nextY = clamp(nextY, minY, maxY)
-            }
-            pendingPos = { nextX, nextY }
+            drag.current.x = event.clientX
+            drag.current.y = event.clientY
+            drag.current.live = true
+            commitWanted()
             if (rafId === null) rafId = requestAnimationFrame(flush)
+            armPan()
         }
+        if (drag.current.live) armPan()
         const up = () => {
+            if (panRaf !== null) { cancelAnimationFrame(panRaf); panRaf = null }
             if (rafId !== null) { cancelAnimationFrame(rafId); flush() }
+            drag.current.live = false
+            drag.current.last = 0
             setDraggingNodeId(null)
         }
         window.addEventListener('pointermove', move)
         window.addEventListener('pointerup', up)
+        window.addEventListener('pointercancel', up)
         return () => {
             if (rafId !== null) cancelAnimationFrame(rafId)
+            if (panRaf !== null) cancelAnimationFrame(panRaf)
+            window.removeEventListener('pointercancel', up)
             window.removeEventListener('pointermove', move)
             window.removeEventListener('pointerup', up)
         }
@@ -1762,6 +1795,7 @@ export default function RawGraphSurface({
                                         x: point.x - node.graphX,
                                         y: point.y - node.graphY
                                     }
+                                    dragPanRef.current = { x: event.clientX, y: event.clientY, live: false, last: 0 }
                                     onSelectNode?.(node.id)
                                     setIsPanning(false)
                                     setDraggingNodeId(node.id)
