@@ -1169,29 +1169,6 @@
     }
 }
 
-.raw-delete-fab {
-    position: fixed;
-    bottom: calc(24px + env(safe-area-inset-bottom));
-    right: calc(24px + env(safe-area-inset-right));
-    z-index: 1300;
-    -webkit-appearance: none;
-    appearance: none;
-    border: 1px solid rgba(var(--di-danger-rgb), 0.4);
-    border-radius: 0;
-    background: rgba(var(--di-danger-rgb), 0.1);
-    color: var(--di-danger);
-    padding: var(--di-space-3) var(--di-space-4);
-    cursor: pointer;
-    font-size: var(--di-text-3);
-    font-weight: 600;
-
-}
-
-.raw-delete-fab:hover {
-    background: rgba(var(--di-danger-rgb), 0.2);
-    color: var(--di-danger);
-}
-
 /* ONE JOB PER COLOUR (2026-08-18). A window and a graph card used to be the
    same rectangle — the same cyan hairline, the same square corner, the same
    near-black fill, neither casting a shadow — so nothing in the picture said
@@ -2555,6 +2532,9 @@
    no card is ever behind it. */
 .raw-workbench {
     position: relative;
+    /* The column's default width (settingsColumn.js COLUMN_DEFAULT_WIDTH);
+       RawEditor sets the remembered one inline on the column. */
+    --raw-column-w: 320px;
 }
 
 .raw-workbench.has-column {
@@ -2570,8 +2550,8 @@
 .raw-selection-scaffold {
     position: sticky;
     top: 0;
-    flex: 0 0 var(--raw-column-w, 320px);
-    width: var(--raw-column-w, 320px);
+    flex: 0 0 var(--raw-column-w);
+    width: var(--raw-column-w);
     box-sizing: border-box;
     /* Starts below the toolbar, which RawEditor measures and publishes as a
        custom property (an inline `top` would beat the phone rule below). */
@@ -2616,7 +2596,7 @@
     height: 28px;
     line-height: 26px;
     text-align: center;
-    font-size: 18px;
+    font-size: var(--di-text-5);
     cursor: pointer;
     border: 1px solid transparent;
     border-radius: 0;
@@ -4730,71 +4710,6 @@
     border-color: var(--di-warning);
 }
 
-/* You are inside something. Never hidden — not by zen, not by fullscreen.
-   Every corner is already taken, and each one was checked by measuring, not by
-   eye: .raw-topbar is 49px tall and full-width (so top:12px sat INSIDE it
-   whenever chrome was on), .raw-graph-fit-notice is top:12px/left:50%, the zoom
-   cluster is bottom-left and .raw-delete-fab bottom-right. What is free is the
-   top-left BELOW the topbar — the component supplies the offset, since the
-   topbar's height is 0 in zen and ~49px with chrome. */
-.raw-scope-marker {
-    position: fixed;
-    left: 14px;
-    display: flex;
-    align-items: center;
-    gap: var(--di-space-1);
-    max-width: min(420px, calc(100vw - 24px));
-    font-family: var(--di-sans);
-    font-size: var(--di-text-3);
-    color: rgba(255, 255, 255, 0.78);
-    background: var(--di-scrim-strong);
-    border: 1px solid var(--di-cyan-line);
-    border-radius: var(--di-radius-pill);
-    padding: var(--di-space-1) var(--di-space-1) var(--di-space-1) var(--di-space-1);
-    z-index: 1400;
-    pointer-events: auto;
-}
-
-.raw-scope-marker-label {
-    padding: 0 var(--di-space-2) 0 var(--di-space-1);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.raw-scope-marker-label strong {
-    color: var(--di-text);
-    font-weight: 600;
-}
-
-.raw-scope-marker-out,
-.raw-scope-marker-root {
-    -webkit-appearance: none;
-    appearance: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    /* A finger's target, because leaving is the one thing a lost person needs
-       and there is no keyboard on a phone. */
-    /* 44, not 34: raw.css's own floor for the controls in this lane, and this
-       is the one control a lost person needs on a phone. */
-    min-width: 44px;
-    min-height: 44px;
-    border: none;
-    border-radius: var(--di-radius-pill);
-    background: rgba(var(--di-cyan-rgb), 0.14);
-    color: var(--di-cyan);
-    font-size: var(--di-text-4);
-    line-height: 1;
-    cursor: pointer;
-    touch-action: manipulation;
-}
-
-.raw-scope-marker-out:hover,
-.raw-scope-marker-root:hover {
-    background: rgba(var(--di-cyan-rgb), 0.28);
-}
-
 .raw-inspector-asset-field {
     display: flex;
     align-items: stretch;
@@ -5156,32 +5071,6 @@
        back the ten pixels. */
     .raw-anatomy-port { padding-left: var(--di-space-2); }
 }
-
-/* "what is it made of", on the scope marker. Text rather than a glyph: ‹ and ◈
-   are directions, and this is a question — there is no symbol for it that a
-   first-time visitor reads correctly. 44px because it sits in the marker, which
-   is the one strip a lost person on a phone reaches for. */
-.raw-scope-marker-what {
-    -webkit-appearance: none;
-    appearance: none;
-    display: inline-flex;
-    align-items: center;
-    min-height: 44px;
-    padding: 0 var(--di-space-3);
-    border: none;
-    border-radius: var(--di-radius-pill);
-    background: var(--di-cyan-dim);
-    color: var(--di-cyan);
-    font-family: inherit;
-    font-size: var(--di-text-3);
-    line-height: 1;
-    white-space: nowrap;
-    cursor: pointer;
-    touch-action: manipulation;
-}
-
-.raw-scope-marker-what:hover,
-.raw-scope-marker-what:focus-visible { background: rgba(var(--di-cyan-rgb), 0.26); }
 
 /* The empty state had no max-width and had never carried more than one short
    sentence; the "made of code" line ran the full 1440px of the canvas as a
@@ -5797,7 +5686,7 @@
     right: 10px;
     box-sizing: border-box;
     margin: 0;
-    padding: var(--di-space-1) 4px;
+    padding: var(--di-space-1) var(--di-space-1);
     resize: none;
     overflow-y: auto;
     border: 1px solid var(--di-cyan-border);
@@ -5837,17 +5726,212 @@
         border-bottom: none;
         padding-bottom: env(safe-area-inset-bottom);
     }
+}
 
-    /* The Delete FAB rides just ABOVE the docked sheet (the editor publishes
-       the sheet's measured height as --raw-sheet-inset). It used to move to
-       the top-right instead — where Android notification banners drop over
-       it and steal the tap, which read as a dead Delete button on the real
-       S24 (2026-08-20). Bottom-right above the sheet is thumb-reachable and
-       banner-safe, and the sheet is only ever up when something is selected
-       — exactly when Delete is the button you want. */
-    .raw-delete-fab {
-        top: auto;
-        bottom: calc(var(--raw-sheet-inset) + 12px);
-        right: calc(12px + env(safe-area-inset-right));
-    }
+/* ── The right region and the inside view (audit 2026-10-05 §3.5, §3.6) ──
+   Rectangles only: every rule below is radius 0 (raw-shape.test.js reads
+   this block). One spacing scale, 4 · 8 · 12 · 16 · 24. */
+
+/* The column's footer: Delete, pinned to the bottom, never over content. */
+.raw-property-footer {
+    flex-shrink: 0;
+    padding: var(--di-space-2) var(--di-space-4);
+    border-top: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+}
+
+.raw-column-delete {
+    -webkit-appearance: none;
+    appearance: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 28px;
+    padding: 0 var(--di-space-3);
+    border: 1px solid rgba(var(--di-danger-rgb), 0.5);
+    border-radius: 0;
+    background: transparent;
+    color: var(--di-danger);
+    font-family: inherit;
+    font-size: var(--di-text-3);
+    cursor: pointer;
+}
+
+.raw-column-delete kbd {
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    color: var(--di-text-muted);
+}
+
+.raw-column-delete:hover,
+.raw-column-delete:focus-visible { background: rgba(var(--di-danger-rgb), 0.12); }
+
+@media (hover: none), (pointer: coarse) {
+    .raw-column-delete { min-height: 44px; }
+}
+
+/* Ports with what is in them now. */
+.raw-column-ports { padding: var(--di-space-2) var(--di-space-4); }
+
+.raw-port-list h5 {
+    margin: var(--di-space-2) 0 var(--di-space-1);
+    font-size: var(--di-text-2);
+    color: var(--di-text-muted);
+    font-weight: 600;
+}
+
+.raw-port-list ul { list-style: none; margin: 0; padding: 0; }
+
+.raw-port-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0 var(--di-space-2);
+    padding: var(--di-space-1) 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 0;
+    font-size: var(--di-text-3);
+}
+
+.raw-port-name { color: var(--di-text); }
+.raw-port-type { color: var(--di-text-muted); font-size: var(--di-text-2); }
+.raw-port-value { grid-column: 1 / -1; font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--di-cyan); overflow-wrap: anywhere; }
+.raw-port-value.is-empty { color: var(--di-text-muted); }
+.raw-port-swatch { display: inline-block; width: 8px; height: 8px; margin-right: var(--di-space-1); border-radius: 0; vertical-align: middle; }
+.raw-port-where { grid-column: 1 / -1; color: var(--di-text-muted); font-size: var(--di-text-2); }
+.raw-port-none { margin: 0; color: var(--di-text-muted); font-size: var(--di-text-2); }
+
+/* Outliner and chat, when they hold the region. */
+.raw-region-panel { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+
+.raw-region-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 48px;
+    padding: 0 var(--di-space-4);
+    border-bottom: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+}
+
+.raw-region-head h4 { margin: 0; font-size: var(--di-text-4); }
+.raw-region-body { flex: 1; min-height: 0; overflow: auto; }
+
+/* Help, in the region: the dialog's body without its backdrop. */
+.raw-help-inline { flex: 1; min-height: 0; overflow: auto; }
+.raw-help-inline .raw-help-dialog {
+    position: static;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    transform: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* The strip under the bar while inside a node: Back · crumb · meta. */
+.raw-inside-bar {
+    position: fixed;
+    left: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    min-height: 28px;
+    padding: 0 var(--di-space-2);
+    font-family: var(--di-sans);
+    font-size: var(--di-text-3);
+    color: var(--di-text);
+    background: var(--di-surface);
+    border: 1px solid var(--di-cyan-border);
+    border-left: 0;
+    border-radius: 0;
+    z-index: 1400;
+}
+
+.raw-inside-back,
+.raw-inside-root {
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 28px;
+    padding: 0 var(--di-space-2);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--di-cyan);
+    font-family: inherit;
+    font-size: var(--di-text-3);
+    cursor: pointer;
+}
+
+.raw-inside-back:hover,
+.raw-inside-root:hover { background: rgba(var(--di-cyan-rgb), 0.12); }
+
+.raw-inside-crumb { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.raw-inside-crumb strong { font-weight: 600; }
+.raw-inside-meta { font-size: var(--di-text-2); color: var(--di-text-muted); white-space: nowrap; }
+
+@media (hover: none), (pointer: coarse) {
+    .raw-inside-back,
+    .raw-inside-root { min-height: 44px; min-width: 44px; }
+}
+
+/* The inside view fills the canvas. */
+.raw-inside-view {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    padding-top: calc(var(--di-space-8) + var(--di-space-5));
+    box-sizing: border-box;
+    background: var(--di-bg);
+    border-radius: 0;
+    overflow: hidden;
+}
+
+.raw-inside-split { position: absolute; inset: 0; display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
+.raw-inside-split > .raw-graph-surface { position: relative; }
+.raw-inside-split > .raw-inside-view { position: relative; inset: auto; padding-top: 0; border-top: 1px solid var(--di-cyan-border); }
+
+.raw-inside-body { flex: 1; min-width: 0; overflow: auto; padding: var(--di-space-4); }
+.raw-inside-view.is-text .raw-inside-body > * { max-width: 72ch; }
+.raw-inside-view.is-tool .raw-inside-body { padding: 0; }
+
+.raw-inside-rail {
+    flex: 0 0 220px;
+    overflow: auto;
+    padding: 0 var(--di-space-3) var(--di-space-3);
+    border-radius: 0;
+}
+
+.raw-inside-rail.is-in { border-right: 1px solid var(--di-cyan-border); }
+.raw-inside-rail.is-out { border-left: 1px solid var(--di-cyan-border); }
+
+.raw-inside-codeview { display: flex; flex: 1; min-width: 0; }
+.raw-inside-centre { flex: 1; min-width: 0; overflow: auto; padding: var(--di-space-4); }
+
+.raw-inside-code-label {
+    margin: 0 0 var(--di-space-1);
+    font-size: var(--di-text-2);
+    color: var(--di-text-muted);
+    text-transform: none;
+}
+
+.raw-inside-code-loc { margin: 0 0 var(--di-space-2); font-family: var(--di-mono); font-size: var(--di-text-2); }
+.raw-inside-code-note { margin: 0; font-size: var(--di-text-2); color: var(--di-text-muted); }
+
+.raw-inside-code-lines {
+    margin: 0;
+    padding: var(--di-space-3);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    line-height: 1.6;
+    overflow: auto;
+    white-space: pre;
+}
+
+@media (max-width: 699px) {
+    .raw-inside-view, .raw-inside-codeview { flex-direction: column; overflow: auto; }
+    .raw-inside-rail { flex: 0 0 auto; border: 0; border-bottom: 1px solid var(--di-cyan-border); }
 }

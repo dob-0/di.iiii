@@ -23,7 +23,10 @@ export default function RawHelpDialog({
     open,
     onClose,
     // '?' on the canvas opens straight onto the keys list.
-    initialSection = 'start'
+    initialSection = 'start',
+    // In the right region (audit 2026-10-05 §3.5): no backdrop, no scrim, a
+    // panel in the layout that replaces whatever stood there.
+    inline = false
 }) {
     const [activeSectionId, setActiveSectionId] = useState(initialSection)
     const [activeMode, setActiveMode] = useState('basics')
@@ -54,14 +57,21 @@ export default function RawHelpDialog({
     const activeSection = GUIDE_SECTIONS.find((section) => section.id === activeSectionId) || suggestedSection
 
     return (
-        <div className="raw-help-backdrop">
-            <button
-                type="button"
-                className="raw-help-scrim"
-                aria-label="Close help"
-                onClick={onClose}
-            />
-            <section className="raw-help-dialog" role="dialog" aria-modal="true" aria-label="Help">
+        <div className={inline ? 'raw-help-inline' : 'raw-help-backdrop'}>
+            {inline ? null : (
+                <button
+                    type="button"
+                    className="raw-help-scrim"
+                    aria-label="Close help"
+                    onClick={onClose}
+                />
+            )}
+            <section
+                className="raw-help-dialog"
+                role={inline ? 'region' : 'dialog'}
+                aria-modal={inline ? undefined : 'true'}
+                aria-label="Help"
+            >
                 <header className="raw-help-header">
                     <div className="raw-help-header-mark" aria-hidden="true">
                         <span>{activeSection.icon}</span>

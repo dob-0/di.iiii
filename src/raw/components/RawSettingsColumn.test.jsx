@@ -224,7 +224,8 @@ describe('settings column', () => {
         fireEvent.click(screen.getByRole('button', { name: 'select:t1' }))
         const column = screen.getByTestId('raw-settings-column')
         expect(within(column).queryByRole('textbox', { name: /content/i })).toBeNull()
-        expect(within(column).queryByText('Content')).toBeNull()
+        // No Content FIELD; the Ports section names the port, which is §3.5's "Content ↔".
+        expect([...column.querySelectorAll('.raw-property-field')].some((label) => /Content/.test(label.textContent))).toBe(false)
         const { onEditMainValue } = graphMountProps.at(-1)
         act(() => onEditMainValue('t1', 'content', 'New words'))
         const op = mockApplyLocalOps.mock.calls.map(([o]) => (Array.isArray(o) ? o : [o])).flat().filter((o) => o?.type === 'updateNode').at(-1)

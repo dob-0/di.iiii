@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import PropertyInspector from './PropertyInspector.jsx'
 import { COLUMN_DEFAULT_WIDTH, clampColumnWidth, isPhoneWidth, readColumnWidth, writeColumnWidth } from '../utils/settingsColumn.js'
 import DesktopWindow from './DesktopWindow.jsx'
 import NodeAnatomyPanel from './NodeAnatomyPanel.jsx'
+import NodePorts from './NodePorts.jsx'
+import NodeInsideView, { insideMetaLine } from './NodeInsideView.jsx'
+import { insideShowsGraph, insideViewKind } from '../utils/insideView.js'
 import RawViewport from './RawViewport.jsx'
 import RawGraphSurface from './RawGraphSurface.jsx'
 import NodePalette from './NodePalette.jsx'
@@ -196,6 +199,17 @@ function BrowserPanelWindow({ node }) {
     )
 }
 
+// The right region's updater for one occupant: true (or a toggle that comes
+// out true) puts it there, replacing whatever stood there; false takes it away
+// only if it is the one there.
+const WINDOWLESS_ON_DESKTOP = new Set(['view.list', 'view.text'])
+
+const regionUpdate = (id, value) => (current) => {
+    const next = typeof value === 'function' ? value(current === id) : value
+    if (next) return id
+    return current === id ? null : current
+}
+
 export default function RawEditor({
     projectId,
     spaceId = DEFAULT_PROJECT_SPACE_ID,
@@ -218,7 +232,17 @@ export default function RawEditor({
         placement: null
     })
     const [overflowOpen, setOverflowOpen] = useState(false)
-    const [helpOpen, setHelpOpen] = useState(false)
+    // The right region holds ONE occupant (audit 2026-10-05 §3.5): the
+    // selected node's settings, or the outliner, chat or help. Opening one
+    // replaces whatever stood there; it is a column in the layout, so nothing
+    // floats over the canvas. null = the settings, when something is selected.
+    const [regionPanel, setRegionPanel] = useState(null)
+    const setHelpOpen = useCallback((value) => setRegionPanel(regionUpdate('help', value)), [])
+    const setOutlinerOpen = useCallback((value) => setRegionPanel(regionUpdate('outliner', value)), [])
+    const setChatOpen = useCallback((value) => setRegionPanel(regionUpdate('chat', value)), [])
+    const helpOpen = regionPanel === 'help'
+    const outlinerOpen = regionPanel === 'outliner'
+    const chatOpen = regionPanel === 'chat'
     const [helpSection, setHelpSection] = useState('start')
     // N / F2 (input/keymap.js): each press opens the panel's name for typing.
     const [renameRequest, setRenameRequest] = useState(0)
@@ -228,8 +252,6 @@ export default function RawEditor({
     const zenWorkspaceKey = projectId || localStorageKey || 'default'
     const [zen, setZen] = useState(false)
     const zenReadRef = useRef(false)
-    const [outlinerOpen, setOutlinerOpen] = useState(false)
-    const [outlinerFrame, setOutlinerFrame] = useState({ x: 24, y: 56, width: 240, height: 360, zIndex: 20, minimized: false, pinned: false })
     // The "what is it made of" sheet. Same shape as the Outliner's state, but
     // its frame is seeded on open rather than at mount: it is the only window
     // here whose opening size depends on the viewport it opens into, because on
@@ -244,8 +266,6 @@ export default function RawEditor({
     // through it, which is what makes them part of the world.
     const [graphViewport, setGraphViewport] = useState(null)
     const handleViewportChange = useCallback((viewport) => setGraphViewport(viewport), [])
-    const [chatOpen, setChatOpen] = useState(false)
-    const [chatFrame, setChatFrame] = useState({ x: 24, y: 432, width: 280, height: 360, zIndex: 20, minimized: false, pinned: false })
     const [readChatCount, setReadChatCount] = useState(0)
     const [readSpaceChatCount, setReadSpaceChatCount] = useState(0)
     // Where the windows are, for this person, on this device. The document
@@ -442,10 +462,13 @@ export default function RawEditor({
         window.addEventListener('resize', onResize)
         return () => window.removeEventListener('resize', onResize)
     }, [])
+    // List and Text windows no longer exist on desktop (audit 2026-10-05
+    // §3.5): the card is their read view and the inside view their editor, so
+    // no window can stand over the column or a card. A phone keeps them.
     const visibleViewNodes = useMemo(
         () => selectMountedPanelNodes({
             nodes,
-            isPanel: isPanelNode,
+            isPanel: (node) => isPanelNode(node) && (narrowWindows || !WINDOWLESS_ON_DESKTOP.has(node.typeId)),
             currentScopeId,
             isWorldFullscreen,
             frameOf,
@@ -635,7 +658,7 @@ export default function RawEditor({
         setIsWorldFullscreen(false)
         setOutlinerOpen(false)
         scopeReset()
-    }, [hasAnyWork, scopeReset])
+    }, [hasAnyWork, scopeReset, setOutlinerOpen])
 
 
 
@@ -1541,7 +1564,8 @@ export default function RawEditor({
         if (event.key !== 'Escape' || event.defaultPrevented) return
         event.preventDefault()
         event.stopPropagation()
-        closeColumn()
+        if (regionPanel) setRegionPanel(null)
+        else closeColumn()
     }
     const changeColumnWidth = useCallback((next) => {
         const width = clampColumnWidth(next, window.innerWidth)
@@ -1576,14 +1600,15 @@ export default function RawEditor({
     // bottom sheet. CSS decides which; JS only supplies the measured offset and
     // the remembered width as custom properties.
     /* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex -- focus target and window splitter, see above */
-    const hostInspector = (
+    const renderColumn = () => (
         // A focus target, not a control: select moves focus here and Escape
         // closes it (the keyboard contract in the brief), hence the handler.
         <aside
             ref={scaffoldRef}
             className="raw-selection-scaffold"
             data-testid="raw-settings-column"
-            aria-label="Settings"
+            data-occupant={regionOccupant}
+            aria-label={regionOccupant === 'settings' ? 'Settings' : regionOccupant === 'help' ? 'Help' : regionOccupant === 'chat' ? 'Chat' : 'Outliner'}
             tabIndex={-1}
             onKeyDown={handleColumnKeyDown}
             style={{ '--raw-scaffold-top': workspaceTop + 'px', '--raw-column-w': `${columnPx}px` }}
@@ -1605,10 +1630,13 @@ export default function RawEditor({
                     }}
                 />
             ) : null}
-            <PropertyInspector
+            {regionOccupant === 'settings' ? <PropertyInspector
                 title={inspectorTitle}
                 onRename={scopedSelectedNode ? handleRenameSelected : null}
                 onOpen={scopedSelectedNode ? () => handleEnterNode(scopedSelectedNode.id) : null}
+                openLabel={scopedSelectedNode && insideViewKind(scopedSelectedNode.typeId) === 'graph'
+                    ? `Open: ${childCounts.get(scopedSelectedNode.id) || 0} ${(childCounts.get(scopedSelectedNode.id) || 0) === 1 ? 'node' : 'nodes'} inside`
+                    : 'Open'}
                 renameRequest={renameRequest}
                 subtitle={inspectorSubtitle}
                 sections={inspectorSections}
@@ -1619,8 +1647,54 @@ export default function RawEditor({
                 onClose={closeColumn}
                 skipField={inspectorSkipField}
                 showHeaderWhenEmpty
-                emptyMessage="Nothing to set here. Double-click the card to open it."
-            />
+                emptyMessage="Nothing to set here."
+                footer={(
+                    // Delete lives in the column's footer (B5): never a float
+                    // over the canvas, never covered by the column.
+                    <button type="button" className="raw-column-delete" onClick={handleDeleteSelected}>
+                        <span>Delete</span>
+                        <kbd aria-hidden="true">Del</kbd>
+                    </button>
+                )}
+            >
+                {scopedSelectedNode ? (
+                    <NodePorts reading={columnReading} nodeId={scopedSelectedNode.id} edges={document.edges || []} nodes={authoredNodes} />
+                ) : null}
+            </PropertyInspector> : null}
+            {regionOccupant === 'outliner' || regionOccupant === 'chat' ? (
+                <div className="raw-region-panel">
+                    <header className="raw-region-head">
+                        <h4>{regionOccupant === 'outliner' ? 'Outliner' : 'Chat'}</h4>
+                        <button type="button" className="raw-property-close" aria-label={`Close ${regionOccupant}`} title="Close (Esc)" onClick={() => setRegionPanel(null)}>×</button>
+                    </header>
+                    <div className="raw-region-body">
+                        {regionOccupant === 'outliner' ? (
+                            <OutlinerPanelWindow
+                                items={outlinerItems}
+                                selectedNodeId={selectedNodeId || null}
+                                onSelectNode={(nodeId) => selectNode(nodeId)}
+                                selectedEntityId={scopedSelectedEntity?.id || null}
+                                onSelectEntity={selectEntity}
+                            />
+                        ) : (
+                            <ChatPanelWindow
+                                messages={presence.messages}
+                                onSend={presence.sendChatMessage}
+                                spaceMessages={spaceChatMessages}
+                                onSendSpace={presence.sendSpaceChatMessage}
+                                spaceLabel={chatSpaceId || 'Space'}
+                                canModerate={Boolean(presence.canModerateSpaceChat)}
+                                onRemoveSpaceMessage={presence.removeSpaceChatMessage}
+                                channel={chatChannel}
+                                onChannelChange={setChatChannel}
+                            />
+                        )}
+                    </div>
+                </div>
+            ) : null}
+            {regionOccupant === 'help' ? (
+                <RawHelpDialog inline open onClose={() => setHelpOpen(false)} initialSection={helpSection} />
+            ) : null}
         </aside>
     )
     /* eslint-enable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */
@@ -1859,6 +1933,21 @@ export default function RawEditor({
             childCount: childCounts.get(anatomyNode.id) || 0
         })
     }, [anatomyFrame, anatomyNode, authoredNodes, document, liveOutputs, anatomyMemory, childCounts, anatomyNow])
+
+    // The same reading, live, for the selected node's Ports in the column and
+    // for the node you are inside (its rails). Own memory, as above.
+    const [columnMemory] = useState(() => createFrameMemory())
+    const readingContext = useMemo(
+        () => createNodeGraphContext(document, { now: anatomyNow, liveOutputs, frameMemory: columnMemory }),
+        [document, anatomyNow, liveOutputs, columnMemory]
+    )
+    const columnReading = useMemo(() => (scopedSelectedNode
+        ? readNode(scopedSelectedNode, { allNodes: authoredNodes, context: readingContext, document, childCount: childCounts.get(scopedSelectedNode.id) || 0 })
+        : null), [scopedSelectedNode, authoredNodes, readingContext, document, childCounts])
+    const insideKind = currentScopeId ? insideViewKind(scopeNode?.typeId) : 'graph'
+    const insideReading = useMemo(() => (scopeNode && insideKind !== 'graph'
+        ? readNode(scopeNode, { allNodes: authoredNodes, context: readingContext, document, childCount: childCounts.get(scopeNode.id) || 0 })
+        : null), [scopeNode, insideKind, authoredNodes, readingContext, document, childCounts])
 
     const handleShowFeedingCard = useCallback((nodeId) => {
         // What feeds the node you are standing in is a card in the scope
@@ -2178,6 +2267,50 @@ export default function RawEditor({
     }
 
     const visibleSelection = Boolean(scopedSelectedNode || scopedSelectedEntity)
+    // The one occupant of the right region (§3.5).
+    const regionOccupant = regionPanel || (visibleSelection ? 'settings' : null)
+
+    // Inside a node that is not a container (§3.6): the List's table, the
+    // Text's editor, a tool's own body, a picture operator's TopInsidePanel,
+    // or the code view (inputs · its settings and the platform's lines ·
+    // outputs). The node's settings are edited here, at the top of the code.
+    const handleScopeSettingsChange = (component, nextComponentValue) => {
+        if (!scopeNode) return
+        applyLocalOps({
+            type: 'updateNode',
+            payload: { nodeId: scopeNode.id, patch: { [component]: nextComponentValue, ...operationLabelPatch(scopeNode, component, nextComponentValue) } }
+        })
+    }
+    const GraphWrap = insideKind === 'spatial' ? 'div' : Fragment
+    const renderInsideView = () => {
+        if (!scopeNode || insideKind === 'graph') return null
+        if (insideKind === 'picture') {
+            return (
+                <TopInsidePanel
+                    node={scopeNode}
+                    machines={knownMachines}
+                    top={chromeVisible ? workspaceTop : 0}
+                    onPatchValues={(values) => applyLocalOps({ type: 'updateNode', payload: { nodeId: scopeNode.id, patch: { values } } })}
+                />
+            )
+        }
+        const codeKind = insideKind === 'code' || insideKind === 'spatial'
+        const scopeWired = (document.edges || []).filter((edge) => edge.toNodeId === scopeNode.id).map((edge) => edge.toPort)
+        return (
+            <NodeInsideView
+                kind={insideKind}
+                node={scopeNode}
+                reading={insideReading}
+                edges={document.edges || []}
+                nodes={authoredNodes}
+                body={codeKind ? null : renderViewNodeContent(scopeNode)}
+                sections={codeKind ? deriveNodeInspectorSections(scopeNode, { wiredPortIds: scopeWired }) : []}
+                values={{ values: { ...(scopeNode.values || {}) } }}
+                onSectionChange={handleScopeSettingsChange}
+                assetOptions={document.assets || []}
+            />
+        )
+    }
 
     // Focus moves into the column when something is selected, so the keyboard
     // is where the settings are; Escape (handleColumnKeyDown) hands it back.
@@ -2363,7 +2496,7 @@ export default function RawEditor({
     // Closed ones, and on a phone the open ones waiting behind the front one.
     const mountedPanelIds = new Set(visibleViewNodes.map((node) => node.id))
     const hiddenPanelNodes = authoredNodes.filter(
-        (node) => isPanelNode(node) && (
+        (node) => isPanelNode(node) && (narrowWindows || !WINDOWLESS_ON_DESKTOP.has(node.typeId)) && (
             frameOf(node).visible === false
             || (narrowWindows && (node.parentId || null) === (currentScopeId || null) && !mountedPanelIds.has(node.id))
         )
@@ -2861,21 +2994,10 @@ export default function RawEditor({
 
             {state.loading ? <div className="raw-overlay-message">Loading project…</div> : null}
             {state.loadError ? <div className="raw-overlay-message is-error">{state.loadError}</div> : null}
-            {visibleSelection && (
-                <button
-                    type="button"
-                    className="raw-delete-fab"
-                    // The phone rule rides this: Delete sits just above the
-                    // docked sheet, not top-right where Android notification
-                    // banners steal the tap (measured on the S24, 2026-08-20).
-                    style={{ '--raw-sheet-inset': `${graphBottomInset}px` }}
-                    onClick={handleDeleteSelected}
-                >
-                    Delete
-                </button>
-            )}
-
-            <div className={`raw-workbench${visibleSelection && !columnPhone ? ' has-column' : ''}`} data-testid="raw-workbench">
+            {/* Delete is in the column's footer now (audit 2026-10-05 B5): the
+                floating button sat over content on dev and under the column
+                on #769. */}
+            <div className={`raw-workbench${regionOccupant && !columnPhone ? ' has-column' : ''}`} data-testid="raw-workbench">
             <section
                 className={`raw-surface-shell${navStack.length > 1 ? ' is-inside-node' : ''}${dropState.over ? ' is-drop-target' : ''}`}
                 onDragEnter={handleSurfaceDragEnter}
@@ -2890,7 +3012,11 @@ export default function RawEditor({
                 desk"). The room is seen through the Scene window (resizable),
                 the fullscreen Room (topbar and palette), and /out — never as
                 wallpaper behind the cards. */}
-                {/* Graph is the primary surface — always visible */}
+                {/* Inside a node that is not a container, its substance fills
+                    the canvas (audit 2026-10-05 §3.6); a spatial node keeps
+                    its children above and shows its code below. */}
+                {insideShowsGraph(insideKind) ? (
+                <GraphWrap {...(insideKind === 'spatial' ? { className: 'raw-inside-split' } : {})}>
                 <RawGraphSurface
                     key={currentScopeId || 'root'}
                     chromeless={!chromeVisible}
@@ -2903,7 +3029,7 @@ export default function RawEditor({
                     // use, so the inspector that opens already edits it.
                     objectCards={objectCards}
                     selectedObjectId={scopedSelectedEntity?.id || null}
-                    onSelectObject={selectEntity}
+                    onSelectObject={(entityId) => { if (entityId) setRegionPanel(null); selectEntity(entityId) }}
                     childCounts={childCounts}
                     // EVERY node, not graphCardNodes. A container's doorways
                     // live INSIDE it — a different scope from its own card — so
@@ -2925,11 +3051,6 @@ export default function RawEditor({
                     // injects six nodes, and offering that as the primary action
                     // on somebody's Studio project invites them to bury it.
                     onMakeScene={currentScopeId === null && nodes.length === 0 && entities.length === 0 ? handleCreateSceneExample : null}
-                    // Only inside a CODE-made node: there the empty canvas IS
-                    // the question. A container's reading stays one tap away on
-                    // the marker's ? — two resident buttons for one answer was
-                    // the clutter the audit counted.
-                    onExplainScope={currentScopeId && isNodeMadeOfCode(scopeNode?.typeId) ? () => openAnatomy() : null}
                     emptyHint={scopeEmptyHint}
                     edges={graphCardEdges}
                     selectedNodeId={selectedNodeId}
@@ -2945,7 +3066,9 @@ export default function RawEditor({
                         setHelpSection('keys')
                         setHelpOpen(true)
                     }}
-                    onSelectNode={selectNode}
+                    // A card picked on the canvas takes the right region
+                    // back for its settings: one occupant, the newest.
+                    onSelectNode={(nodeId) => { if (nodeId) setRegionPanel(null); selectNode(nodeId) }}
                     onCreateEdge={handleCreateEdge}
                     onDeleteEdge={handleDeleteEdge}
                     onDeleteNode={handleDeleteNode}
@@ -2961,16 +3084,9 @@ export default function RawEditor({
                     onViewportChange={handleViewportChange}
                     extraBounds={worldWindowBounds}
                 />
-                {/* Inside a picture operator: what it is made of, live and
-                    changeable — the camera, the shader, the script. */}
-                {isTopType(scopeNode?.typeId) ? (
-                    <TopInsidePanel
-                        node={scopeNode}
-                        machines={knownMachines}
-                        top={chromeVisible ? workspaceTop : 0}
-                        onPatchValues={(values) => applyLocalOps({ type: 'updateNode', payload: { nodeId: scopeNode.id, patch: { values } } })}
-                    />
-                ) : null}
+                {insideKind === 'spatial' ? renderInsideView() : null}
+                </GraphWrap>
+                ) : renderInsideView()}
                 {/* Zen's three residents are surface, nodes, wordmark — this is
                     the wordmark. Ambient, kept when the toolbar is summoned too.
                     It became the way home in the 2026-08-21 doors audit: the
@@ -3095,7 +3211,7 @@ export default function RawEditor({
                     )
                 })}
             </section>
-            {visibleSelection ? hostInspector : null}
+            {regionOccupant ? renderColumn() : null}
             </div>
 
             {/* The socket this made is one level up and off-screen, so the
@@ -3135,55 +3251,31 @@ export default function RawEditor({
                 and no visible exit — indistinguishable from having destroyed
                 your work. This is the one thing that must never be hidden. */}
             {navStack.length > 1 && (
-                <div
-                    className="raw-scope-marker"
-                    role="status"
-                    aria-live="polite"
-                    // Below the topbar when there is one, near the top when
-                    // there is not. Measured: the topbar is 49px and full-width,
-                    // so a fixed top:12px sat inside it with chrome on.
+                // One rectangular strip under the bar: the way back, where you
+                // are, and one meta line (audit 2026-10-05 §3.6). It replaces
+                // the round "inside" pill and its "?" button. Outside the
+                // chromeVisible gate on purpose: the way out is never hidden.
+                <nav
+                    className="raw-inside-bar"
+                    aria-label="Inside"
                     style={{ top: `${getScopeMarkerTop({ chromeVisible, workspaceTop })}px` }}
                 >
                     <button
                         type="button"
-                        className="raw-scope-marker-out"
+                        className="raw-inside-back"
                         onClick={() => handleNavigateToScope(navStack.length - 2)}
-                        title="Leave"
-                        aria-label="Leave"
+                        title="Back (Esc)"
                     >
-                        ‹
-                    </button>
-                    <span className="raw-scope-marker-label">
-                        inside <strong>{scopeNode?.label || 'a node'}</strong>
-                    </span>
-                    {/* The general way in. The empty-state button only exists
-                        while the scope is empty, and a container you have put
-                        something in is exactly where "what is this made of" is
-                        most worth asking. */}
-                    {/* A glyph, not a sentence: the resident four-word button
-                        was the audit's example of info squatting on the one
-                        strip that must stay minimal. The question mark IS the
-                        question; title and accessible name carry the words. */}
-                    <button
-                        type="button"
-                        className="raw-scope-marker-what"
-                        onClick={openAnatomy}
-                        title={`What ${scopeNode?.label || 'this node'} is made of`}
-                        aria-label={`what is it made of — ${scopeNode?.label || 'this node'}`}
-                    >
-                        ?
+                        ← Back
                     </button>
                     {navStack.length > 2 && (
-                        <button
-                            type="button"
-                            className="raw-scope-marker-root"
-                            onClick={() => handleNavigateToScope(0)}
-                            title="All the way out"
-                        >
-                            ◈
-                        </button>
+                        <button type="button" className="raw-inside-root" onClick={() => handleNavigateToScope(0)} title="All the way out">…</button>
                     )}
-                </div>
+                    <span className="raw-inside-crumb">› <strong>{scopeNode?.label || 'a node'}</strong></span>
+                    <span className="raw-inside-meta" role="status" aria-live="polite">
+                        {insideMetaLine({ node: scopeNode, reading: insideReading, childCount: childCounts.get(scopeNode?.id) || 0, kind: insideKind })}
+                    </span>
+                </nav>
             )}
 
             {runtimeFeeds}
@@ -3237,27 +3329,6 @@ export default function RawEditor({
             )}
 
 
-            {outlinerOpen && (
-                <DesktopWindow
-                    windowState={outlinerFrame}
-                    title="Outliner"
-                    minTop={workspaceTop}
-                    onFocus={() => setOutlinerFrame((f) => ({ ...f, zIndex: 20 }))}
-                    onPatch={(patch) => setOutlinerFrame((f) => ({ ...f, ...patch }))}
-                    onClose={() => setOutlinerOpen(false)}
-                    onToggleMinimize={() => setOutlinerFrame((f) => ({ ...f, minimized: !f.minimized }))}
-                    onTogglePin={() => setOutlinerFrame((f) => ({ ...f, pinned: !f.pinned }))}
-                >
-                    <OutlinerPanelWindow
-                        items={outlinerItems}
-                        selectedNodeId={selectedNodeId || null}
-                        onSelectNode={(nodeId) => selectNode(nodeId)}
-                        selectedEntityId={scopedSelectedEntity?.id || null}
-                        onSelectEntity={selectEntity}
-                    />
-                </DesktopWindow>
-            )}
-
             {anatomyFrame && anatomyReading && (
                 <DesktopWindow
                     windowState={anatomyFrame}
@@ -3274,37 +3345,6 @@ export default function RawEditor({
                     <NodeAnatomyPanel reading={anatomyReading} onShowCard={handleShowFeedingCard} />
                 </DesktopWindow>
             )}
-
-            {chatOpen && (
-                <DesktopWindow
-                    windowState={chatFrame}
-                    title="Chat"
-                    minTop={workspaceTop}
-                    onFocus={() => setChatFrame((f) => ({ ...f, zIndex: 20 }))}
-                    onPatch={(patch) => setChatFrame((f) => ({ ...f, ...patch }))}
-                    onClose={() => setChatOpen(false)}
-                    onToggleMinimize={() => setChatFrame((f) => ({ ...f, minimized: !f.minimized }))}
-                    onTogglePin={() => setChatFrame((f) => ({ ...f, pinned: !f.pinned }))}
-                >
-                    <ChatPanelWindow
-                        messages={presence.messages}
-                        onSend={presence.sendChatMessage}
-                        spaceMessages={spaceChatMessages}
-                        onSendSpace={presence.sendSpaceChatMessage}
-                        spaceLabel={chatSpaceId || 'Space'}
-                        canModerate={Boolean(presence.canModerateSpaceChat)}
-                        onRemoveSpaceMessage={presence.removeSpaceChatMessage}
-                        channel={chatChannel}
-                        onChannelChange={setChatChannel}
-                    />
-                </DesktopWindow>
-            )}
-
-            <RawHelpDialog
-                open={helpOpen}
-                onClose={() => setHelpOpen(false)}
-                initialSection={helpSection}
-            />
 
             <NodePalette
                 open={paletteState.open}
