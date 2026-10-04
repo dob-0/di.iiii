@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import PropertyInspector from './PropertyInspector.jsx'
+import { COLUMN_DEFAULT_WIDTH, clampColumnWidth, isPhoneWidth, readColumnWidth, writeColumnWidth } from '../utils/settingsColumn.js'
 import DesktopWindow from './DesktopWindow.jsx'
 import NodeAnatomyPanel from './NodeAnatomyPanel.jsx'
 import RawViewport from './RawViewport.jsx'
@@ -54,7 +55,7 @@ import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
 import { currentAuthor } from '../../project/authorship.js'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
-import { createEdge, createNode, getNodeFamily, getNodeType, isNodeMadeOfCode, operationLabelPatch } from '../../project/nodeRegistry.js'
+import { createEdge, createNode, getCardMainField, getNodeFamily, getNodeType, isNodeMadeOfCode, operationLabelPatch } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { readNode } from '../../project/graph/nodeReading.js'
 import { createFrameMemory, createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
@@ -273,6 +274,17 @@ export default function RawEditor({
     // component and needs it; the effect that measures it lives further down,
     // next to the selection state it depends on.
     const scaffoldRef = useRef(null)
+    // The settings column's width, remembered per browser, and whether the
+    // window is phone-wide (then the column is a bottom sheet instead).
+    const [columnWidth, setColumnWidth] = useState(() => readColumnWidth())
+    const [viewportWidth, setViewportWidth] = useState(() => (typeof window === 'undefined' ? 1280 : window.innerWidth))
+    useEffect(() => {
+        const onResize = () => setViewportWidth(window.innerWidth)
+        window.addEventListener('resize', onResize)
+        return () => window.removeEventListener('resize', onResize)
+    }, [])
+    const columnPhone = isPhoneWidth(viewportWidth)
+    const columnPx = clampColumnWidth(columnWidth, viewportWidth)
 
     const initialStoreState = useMemo(() => {
         if (projectId || !localStorageKey) return undefined
@@ -1516,8 +1528,83 @@ export default function RawEditor({
     // the phone bottom-sheet rule in raw.css could not override it, so the
     // panel stayed pinned over the very node it was inspecting. CSS decides
     // where this sits; JS only supplies the measured offset.
+    const closeColumn = useCallback(() => {
+        const id = selectedNodeId
+        clearSelection()
+        // Escape and the button hand focus back to the card they came from.
+        requestAnimationFrame(() => {
+            const card = id ? window.document.querySelector(`[data-card-id="${id}"]`) : null
+            ;(card || window.document.querySelector('.raw-graph-surface'))?.focus?.({ preventScroll: true })
+        })
+    }, [clearSelection, selectedNodeId])
+    const handleColumnKeyDown = (event) => {
+        if (event.key !== 'Escape' || event.defaultPrevented) return
+        event.preventDefault()
+        event.stopPropagation()
+        closeColumn()
+    }
+    const changeColumnWidth = useCallback((next) => {
+        const width = clampColumnWidth(next, window.innerWidth)
+        setColumnWidth(width)
+        writeColumnWidth(width)
+    }, [])
+    const startColumnResize = (event) => {
+        event.preventDefault()
+        const move = (e) => changeColumnWidth(window.innerWidth - e.clientX)
+        const up = () => {
+            window.removeEventListener('pointermove', move)
+            window.removeEventListener('pointerup', up)
+        }
+        window.addEventListener('pointermove', move)
+        window.addEventListener('pointerup', up)
+    }
+    // The node's one main field is typed IN the card (RawGraphSurface); the
+    // column keeps everything else. Same op the column's own fields send.
+    const handleEditMainValue = useCallback((nodeId, key, value) => {
+        const node = authoredNodes.find((n) => n.id === nodeId)
+        if (!node) return
+        applyLocalOps({
+            type: 'updateNode',
+            payload: { nodeId, patch: { values: { ...(node.values || {}), [key]: value } } }
+        })
+    }, [authoredNodes, applyLocalOps])
+    const mainField = scopedSelectedNode ? getCardMainField(scopedSelectedNode.typeId) : null
+    const inspectorSkipField = mainField ? (field) => field.path?.[0] === mainField.key : null
+
+    // The selected node's settings: a fixed column on the right, a sibling of
+    // the canvas (the canvas gives the width up and re-fits); on a phone, a
+    // bottom sheet. CSS decides which; JS only supplies the measured offset and
+    // the remembered width as custom properties.
+    /* eslint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex -- focus target and window splitter, see above */
     const hostInspector = (
-        <aside ref={scaffoldRef} className="raw-selection-scaffold" style={{ '--raw-scaffold-top': workspaceTop + 'px' }}>
+        // A focus target, not a control: select moves focus here and Escape
+        // closes it (the keyboard contract in the brief), hence the handler.
+        <aside
+            ref={scaffoldRef}
+            className="raw-selection-scaffold"
+            data-testid="raw-settings-column"
+            aria-label="Settings"
+            tabIndex={-1}
+            onKeyDown={handleColumnKeyDown}
+            style={{ '--raw-scaffold-top': workspaceTop + 'px', '--raw-column-w': `${columnPx}px` }}
+        >
+            {!columnPhone ? (
+                // A focusable separator is the WAI-ARIA window-splitter pattern.
+                <div
+                    className="raw-column-resize"
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label="Resize settings column"
+                    aria-valuenow={columnPx}
+                    tabIndex={0}
+                    title="Drag to resize"
+                    onPointerDown={startColumnResize}
+                    onKeyDown={(event) => {
+                        if (event.key === 'ArrowLeft') { event.preventDefault(); event.stopPropagation(); changeColumnWidth(columnPx + 24) }
+                        if (event.key === 'ArrowRight') { event.preventDefault(); event.stopPropagation(); changeColumnWidth(columnPx - 24) }
+                    }}
+                />
+            ) : null}
             <PropertyInspector
                 title={inspectorTitle}
                 onRename={scopedSelectedNode ? handleRenameSelected : null}
@@ -1529,11 +1616,14 @@ export default function RawEditor({
                 assetOptions={document.assets || []}
                 onSectionChange={handleInspectorChange}
                 onPickAssetFile={handlePickAssetFile}
+                onClose={closeColumn}
+                skipField={inspectorSkipField}
                 showHeaderWhenEmpty
                 emptyMessage="Nothing to set here. Double-click the card to open it."
             />
         </aside>
     )
+    /* eslint-enable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */
 
     const assetMap = useMemo(() => new Map((document.assets || []).map((asset) => [asset.id, asset])), [document.assets])
     // Rebuilt every frame while a Time node exists — the per-pass outputCache
@@ -2089,6 +2179,17 @@ export default function RawEditor({
 
     const visibleSelection = Boolean(scopedSelectedNode || scopedSelectedEntity)
 
+    // Focus moves into the column when something is selected, so the keyboard
+    // is where the settings are; Escape (handleColumnKeyDown) hands it back.
+    // Never while a card is being typed in.
+    const selectionKey = scopedSelectedNode?.id || scopedSelectedEntity?.id || null
+    useEffect(() => {
+        if (!selectionKey) return
+        const active = window.document.activeElement
+        if (active && active.tagName === 'TEXTAREA' && active.closest('[data-card-id]')) return
+        scaffoldRef.current?.focus?.({ preventScroll: true })
+    }, [selectionKey])
+
     // How much of the canvas the selection panel is covering from the bottom,
     // so the graph can fit itself into the part you can actually see. Only
     // counts when the panel is anchored to the bottom edge (the phone sheet) —
@@ -2103,7 +2204,9 @@ export default function RawEditor({
         }
         const measure = () => {
             const rect = el.getBoundingClientRect()
-            const anchoredToBottom = Math.abs(rect.bottom - window.innerHeight) < 2
+            // The side column also touches the bottom edge, but it is a column
+            // BESIDE the canvas (already out of its width), not a band over it.
+            const anchoredToBottom = Math.abs(rect.bottom - window.innerHeight) < 2 && rect.width >= window.innerWidth - 2
             setGraphBottomInset(anchoredToBottom ? rect.height : 0)
         }
         measure()
@@ -2772,6 +2875,7 @@ export default function RawEditor({
                 </button>
             )}
 
+            <div className={`raw-workbench${visibleSelection && !columnPhone ? ' has-column' : ''}`} data-testid="raw-workbench">
             <section
                 className={`raw-surface-shell${navStack.length > 1 ? ' is-inside-node' : ''}${dropState.over ? ' is-drop-target' : ''}`}
                 onDragEnter={handleSurfaceDragEnter}
@@ -2809,6 +2913,7 @@ export default function RawEditor({
                     portScopeNodes={authoredNodes}
                     onClearSelection={clearSelection}
                     fitSignal={fitSignal}
+                    onEditMainValue={handleEditMainValue}
                     onPromotePort={handlePromotePort}
                     // Only at the ROOT of a truly blank desk. Inside a
                     // container the same button injected the whole six-node
@@ -2990,6 +3095,8 @@ export default function RawEditor({
                     )
                 })}
             </section>
+            {visibleSelection ? hostInspector : null}
+            </div>
 
             {/* The socket this made is one level up and off-screen, so the
                 gesture would otherwise look like it did nothing. */}
@@ -3198,8 +3305,6 @@ export default function RawEditor({
                 onClose={() => setHelpOpen(false)}
                 initialSection={helpSection}
             />
-
-            {visibleSelection ? hostInspector : null}
 
             <NodePalette
                 open={paletteState.open}
