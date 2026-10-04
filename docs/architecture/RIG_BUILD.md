@@ -2373,3 +2373,34 @@ yet. KEEP MINE and KEEP BOTH leave the ledger as it was, so the row stays "chang
 takes mine from this copy's export. The ledger lives in one browser: another browser on the same install starts
 with no bases (every differing scene reads "changed on both"). The file's `lastSync` is carried but not read on
 import. Scene ORDER is still not synced (§21).
+
+## 23. The picture from the code — `apply-picture.mjs` (2026-10-04)
+
+**The defect.** On /moxir/p/moxir-hall-known-ground the owner saw a round "porthole". Measured: that project's
+`worldState.fog` was {near 0, far 32} in a 108 m hall, and three.js linear fog (`<fog>` in
+`src/components/LiveProjectScene.jsx`) blacks out everything past `far`. Every rig file in git says
+`night.fog` {near 60, far 250}. Dev's data had drifted into two families: far 32 with `toneMappingExposure`
+3.5 and `atmosphere` σ 0.05, and far 250 (or 80) with exposure 1 and no atmosphere.
+
+**What wrote the values.** `scripts/rigbuild/realism.mjs` (commit bc511e97, 2026-09-29, §20) writes, per
+project and by hand, fog 0…1.6/σ = 32 m (`hazeFog`), exposure 3.5 and the atmosphere. It was run on some
+versions and not others. It stands for the haze's extinction; it was never in the rig file, so a project
+made again from code (load-version → `nightOps`) got 60/250 while a realism project kept 32. `1a96b664`
+(work light) then set the ambient per exposure.
+
+**The tool.** `scripts/rigbuild/apply-picture.mjs` (a new script: `realism.mjs` owns the haze, the hall copy
+and the beam apertures, and refuses any host but a local install; this one writes only the rig file's
+`night` and `budget`, to any install named). For each version it takes the rig file (list entry `rig.file`,
+else the code's versions file, else `rigVariant.source`) and writes background, ambient, directional, fog
+(and `shadows` when the rig says false) through the ops route at the re-read version, reads back, and
+refuses on a mismatch. The previous values go to `~/.di/picture-undo/<project>-<time>.json` first; `--undo
+<file>` puts them back. `--dry-run` prints `before → after` per field. `--fields fog,background` writes
+only some groups. A field the rig file lacks is left and reported "not in the code". `toneMappingExposure`
+and `renderSettings.atmosphere` are in no rig file and are never written; each project reports what it holds.
+The list entry's note becomes "picture from code <rig file>@<blob> — not yet matched to reality (light-meter
++ photo test owed)" and its fingerprint is re-recorded.
+
+**Limit, owed.** The code's ambient (0.5) and directional (0.22) assume exposure 1. On a project still at
+exposure 3.5 they are 3.5 times brighter on screen than the realism night (ambient 0, then the work light
+0.4/3.5). Use `--fields fog,background` on those until the exposure is decided in the code, or decide it. The
+picture is not matched to reality: a light-meter and photo test is owed.
