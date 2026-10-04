@@ -1037,9 +1037,19 @@ const cmdFollow = async (args) => {
         return
     }
 
+    // The answer to a refusal, never a default (audit F4): at most one.
+    const takeHost = Boolean(args.flags['take-host'])
+    const takeMine = Boolean(args.flags['take-mine'])
+    if (takeHost && takeMine) { fail(ui.followBothDirections()); process.exitCode = 1; return }
+    // `--from-now` is the default start, accepted so it can be said out loud;
+    // `--replay` is the old one — read both logs from the beginning.
+    if (args.flags['from-now'] && args.flags.replay) { fail(ui.followBothStarts()); process.exitCode = 1; return }
+
     say(ui.checkingFollow())
     const result = await followSpace({
         home, spaceId, from, key, into: args.flags.into, address: at, port: resolvePort(home),
+        direction: takeHost ? 'take-host' : (takeMine ? 'take-mine' : null),
+        start: args.flags.replay ? 'replay' : 'now',
         insecure: Boolean(args.flags.insecure)
     })
     if (!result.ok) {

@@ -9,9 +9,13 @@
  */
 
 const { startFollowing, side } = require('./follower')
-const { readFollows, readFollowState, writeFollowState } = require('./followStore')
+const { readFollows, readFollowState, writeFollowState, clearDirection } = require('./followStore')
 
 const running = new Map()
+// The direction each running follower was started with. A new one in
+// follows.json (the person ran `di follow … --take-host`) restarts that
+// follower; it resumes from its saved cursors, so a restart loses nothing.
+const startedWith = new Map()
 
 // A server with a certificate speaks https and nothing else, so reaching itself
 // over http got no answer and a follow on that install never wrote a thing.
@@ -37,7 +41,16 @@ const startFollows = ({ dataDir, port, basePath = '/serverXR', selfToken = null,
         if (follows[spaceId]) continue
         follower.stop()
         running.delete(spaceId)
+        startedWith.delete(spaceId)
         log.info?.(`[follow] ${spaceId} no longer followed`)
+    }
+    for (const [spaceId, follower] of [...running]) {
+        const wanted = follows[spaceId]?.direction || null
+        if (wanted && wanted !== startedWith.get(spaceId)) {
+            follower.stop()
+            running.delete(spaceId)
+            log.info?.(`[follow] ${spaceId}: restarting to apply --${wanted}`)
+        }
     }
     for (const [spaceId, entry] of Object.entries(follows)) {
         if (running.has(spaceId)) continue
@@ -57,8 +70,13 @@ const startFollows = ({ dataDir, port, basePath = '/serverXR', selfToken = null,
             local, remote, log, files,
             // Resume where this follow had got to; save as it goes (followStore.js).
             saved: readFollowState(dataDir, spaceId),
-            onSave: (state) => writeFollowState(dataDir, spaceId, state)
+            onSave: (state) => writeFollowState(dataDir, spaceId, state),
+            // First start: from now, unless the follow asked to replay (follower.js).
+            start: entry.start === 'replay' ? 'replay' : 'now',
+            direction: entry.direction || null,
+            onDirectionDone: () => { startedWith.delete(spaceId); return clearDirection(dataDir, spaceId) }
         }))
+        startedWith.set(spaceId, entry.direction || null)
     }
     return running
 }
@@ -66,6 +84,7 @@ const startFollows = ({ dataDir, port, basePath = '/serverXR', selfToken = null,
 const stopFollows = () => {
     for (const follower of running.values()) follower.stop()
     running.clear()
+    startedWith.clear()
 }
 
 /**

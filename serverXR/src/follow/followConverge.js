@@ -78,13 +78,51 @@ const isBlank = (kind, body) => {
     return count(body?.entities) + count(body?.nodes) + count(body?.assets) === 0
 }
 
+/** The ids in `a` that `b` does not hold, for the lists a copy is made of. An item with no id counts by its content. */
+const missingFrom = (a, b) => {
+    const key = (item) => (item && typeof item === 'object' && item.id !== undefined ? `id:${item.id}` : `v:${stable(item)}`)
+    const there = new Set((Array.isArray(b) ? b : []).map(key))
+    return (Array.isArray(a) ? a : []).filter((item) => !there.has(key(item))).length
+}
+
+/**
+ * What the local copy holds that the host's does not — the work a host-wins
+ * overwrite would erase (audit F4). Counts by id, so a changed field is not
+ * "ahead" (that is the ordinary disagreement the host wins) but an added
+ * entity, node, asset or scene object is.
+ */
+const localOnly = (kind, local, remote) => (kind === 'scene'
+    ? { objects: missingFrom(local?.objects, remote?.objects) }
+    : {
+        entities: missingFrom(local?.entities, remote?.entities),
+        nodes: missingFrom(local?.nodes, remote?.nodes),
+        assets: missingFrom(local?.assets, remote?.assets)
+    })
+
+const total = (counts) => Object.values(counts).reduce((sum, n) => sum + n, 0)
+
+const SINGULAR = { entities: 'entity', nodes: 'node', assets: 'asset', objects: 'object' }
+/** "3 entities, 1 asset" — nothing for zero. */
+const describeCounts = (counts) => Object.entries(counts)
+    .filter(([, n]) => n > 0)
+    .map(([name, n]) => `${n} ${n === 1 ? SINGULAR[name] || name : name}`)
+    .join(', ')
+
+const DIRECTIONS = ['take-host', 'take-mine']
+
 /**
  * The op that makes `local` equal `remote` (the host), or why not.
  *   { same: true }                        — the copies already agree
- *   { refused: '…' }                      — they differ, and overwriting would be wrong
+ *   { refused: '…', localOnly }           — they differ, and overwriting would be wrong
  *   { op, baseVersion }                   — write this to the local side
+ *   { op, baseVersion, target: 'remote' } — `take-mine`: write this to the host
+ *
+ * `direction` is the person's answer to a refusal (`di follow --take-host` /
+ * `--take-mine`), never a default: without one, a difference where this copy
+ * holds something the host lacks is refused, so work that exists only here is
+ * never erased by a follow start (audit F4).
  */
-const planConverge = ({ kind, projectId = null, local, remote }) => {
+const planConverge = ({ kind, projectId = null, local, remote, direction = null }) => {
     if (!local || !remote) return { refused: 'could not read both copies' }
     const a = kind === 'scene' ? comparableScene(local.body) : comparableProject(local.body, projectId)
     const b = kind === 'scene' ? comparableScene(remote.body) : comparableProject(remote.body, projectId)
@@ -92,14 +130,28 @@ const planConverge = ({ kind, projectId = null, local, remote }) => {
     // An empty host and a full follower is not a disagreement about an edit:
     // it is a host that lost its disk, or was never filled. Overwriting would
     // erase the only copy of the work. Said out loud, never done.
-    if (isBlank(kind, remote.body) && !isBlank(kind, local.body)) {
+    if (isBlank(kind, remote.body) && !isBlank(kind, local.body) && direction !== 'take-mine') {
         return { refused: "the host's copy is empty and this one is not — not overwriting it; check the host" }
+    }
+    const ahead = localOnly(kind, local.body, remote.body)
+    if (direction === 'take-mine') {
+        if (!Number.isFinite(remote.version)) return { refused: "the host's copy has no version to write against" }
+        const mine = kind === 'scene'
+            ? { type: 'replaceScene', payload: { scene: local.body } }
+            : { type: 'replaceDocument', payload: { document: local.body } }
+        return { op: { ...mine, clientId: CONVERGE_CLIENT }, baseVersion: remote.version, target: 'remote', direction, localOnly: ahead }
+    }
+    if (!direction && total(ahead) > 0) {
+        return {
+            refused: `this copy holds ${describeCounts(ahead)} the host lacks — not overwriting it`,
+            localOnly: ahead
+        }
     }
     if (!Number.isFinite(local.version)) return { refused: 'this copy has no version to write against' }
     const op = kind === 'scene'
         ? { type: 'replaceScene', payload: { scene: remote.body } }
         : { type: 'replaceDocument', payload: { document: remote.body } }
-    return { op: { ...op, clientId: CONVERGE_CLIENT }, baseVersion: local.version }
+    return { op: { ...op, clientId: CONVERGE_CLIENT }, baseVersion: local.version, direction, localOnly: ahead }
 }
 
-module.exports = { CONVERGE_CLIENT, stable, comparableProject, comparableScene, readDocument, isBlank, planConverge }
+module.exports = { CONVERGE_CLIENT, DIRECTIONS, localOnly, describeCounts, stable, comparableProject, comparableScene, readDocument, isBlank, planConverge }

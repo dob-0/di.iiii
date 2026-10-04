@@ -70,7 +70,8 @@ export const localSpaceOnDisk = async (home, spaceId) => {
  * `reason` is one of the words ui.followRefused already knows: unreachable,
  * cert-mismatch, missing, denied, local-space, itself, merge.
  */
-export const followSpace = async ({ home, spaceId, from, key = null, into = null, address = null, port, insecure = false }) => {
+export const followSpace = async ({ home, spaceId, from, key = null, into = null, address = null, port, insecure = false, direction = null, start = null }) => {
+    if (direction && direction !== 'take-host' && direction !== 'take-mine') return { ok: false, reason: 'direction' }
     // Refuse before touching anything: a key must not travel in clear to a public
     // host, and a follows.json that does not parse must not be written over.
     if (!insecure && !isTrustedCleartext(from, address)) return { ok: false, reason: 'cleartext' }
@@ -119,7 +120,7 @@ export const followSpace = async ({ home, spaceId, from, key = null, into = null
     const hadFile = Object.keys(all).length > 0
 
     try {
-        await addFollow(paths(home).data, spaceId, { remote: base, token: key, address })
+        await addFollow(paths(home).data, spaceId, { remote: base, token: key, address, direction, start })
     } catch (error) {
         if (error instanceof FollowsCorruptError) return { ok: false, reason: 'corrupt' }
         throw error
