@@ -267,7 +267,7 @@ export const VOLATILE_PATHS = [
     'mappingState.showEpoch'
 ]
 
-const stripVolatile = (document) => {
+export const stripVolatile = (document) => {
     const copy = JSON.parse(JSON.stringify(document ?? {}))
     for (const dotted of VOLATILE_PATHS) {
         const parts = dotted.split('.')
@@ -338,7 +338,7 @@ const sha1 = (text) => crypto.createHash('sha1').update(text).digest('hex').slic
  * actually swapped for another changes its filename, and `hash` catches
  * anything that `shape` does not.
  */
-const byName = (document) => {
+export const byName = (document) => {
     const assets = Array.isArray(document.assets) ? document.assets : []
     const names = assets.filter((a) => a?.id).map((a) => [a.id, a.name || a.id])
     const reduced = {
