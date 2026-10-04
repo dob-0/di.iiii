@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { listSpaceContents } from '../project/services/projectsApi.js'
+import { getProjectDocument, listSpaceContents } from '../project/services/projectsApi.js'
+import { versionsFromDocument } from '../shared/productionVersions.js'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
-import { rigVariantOf, shortTitle, versionLinks } from './rigVariant.js'
+import { rigVariantOf, shortTitle, versionLinks, versionListProjectOf } from './rigVariant.js'
 
 // THE VERSION SWITCH in the space view (RIG_BUILD.md §15). Owner, 2026-09-28: three
 // versions of MOXIR's rig — minimal, middle, full — to choose between by looking.
@@ -74,6 +75,24 @@ function useSpaceProjects(spaceId, enabled) {
     return ids
 }
 
+// The production's version list (docs/architecture/decisions/2026-10-04-production-versions.md): the
+// project `<set>-versions`, born private, so only the space's members can read it — for anyone else (and
+// on an install that has no list) this is null and the row is what it was. undefined while it loads.
+function useVersionList(listProjectId) {
+    const [list, setList] = useState(undefined)
+    useEffect(() => {
+        if (!listProjectId) { setList(null); return undefined }
+        let live = true
+        setList(undefined)
+        Promise.resolve()
+            .then(() => getProjectDocument(listProjectId))
+            .then((answer) => { if (live) setList(answer?.document ? versionsFromDocument(answer.document) : null) })
+            .catch(() => { if (live) setList(null) })
+        return () => { live = false }
+    }, [listProjectId])
+    return list
+}
+
 // The labelled copies of old hall versions fold behind one entry. The current version is
 // never folded (a visitor in an old copy still sees where they are). With no `copyOf`
 // marks there are no copies, so no fold — the row is what it was.
@@ -85,8 +104,9 @@ export const splitVersions = (links) => {
 
 function VersionLink({ l, curRef }) {
     return (
-        <a ref={l.current ? curRef : undefined} href={l.href} aria-current={l.current ? 'page' : undefined} title={l.summary || l.title} style={linkStyle(l.current)}>
+        <a ref={l.current ? curRef : undefined} href={l.href} aria-current={l.current ? 'page' : undefined} title={`${l.summary || l.title}${l.show ? ' — for the show' : ''}`} style={linkStyle(l.current)}>
             {shortTitle(l.title, l.id)}
+            {l.show ? <span data-show="true" style={{ marginLeft: '0.4rem', opacity: 0.72, fontSize: '0.8rem' }}>· for the show</span> : null}
         </a>
     )
 }
@@ -96,7 +116,9 @@ function VersionLink({ l, curRef }) {
 export default function RigVersionSwitch({ spaceId, projectId, entities, top = '1rem', mode = 'row', maxWidth = null }) {
     const variant = useMemo(() => rigVariantOf(entities), [entities])
     const existing = useSpaceProjects(spaceId, Boolean(variant))
-    const links = useMemo(() => versionLinks(variant, projectId, (id) => buildPublicProjectPath(spaceId, id), existing), [variant, projectId, spaceId, existing])
+    const list = useVersionList(versionListProjectOf(variant))
+    // while the list is loading only the current version shows (no row that reshuffles when it lands)
+    const links = useMemo(() => versionLinks(variant, projectId, (id) => buildPublicProjectPath(spaceId, id), list === undefined ? null : existing, list || null), [variant, projectId, spaceId, existing, list])
     const [foldOpen, setFoldOpen] = useState(false)
     const [menuOpen, setMenuOpen] = useState(false)
     const [cue, setCue] = useState({ left: false, right: false })

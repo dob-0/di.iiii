@@ -267,33 +267,69 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
 
     const cursorFor = (stream) => cursors.get(stream.key) || { localVersion: null, remoteVersion: null }
 
+    const refusedMake = new Set()
+
     /** The projects on both sides, so a project made on either appears on both. */
     const refreshStreams = async () => {
         const path = `/api/spaces/${encodeURIComponent(local.spaceId)}/projects`
-        const [here, there] = await Promise.all([
+        const trashPath = `/api/trash?space=${encodeURIComponent(local.spaceId)}`
+        const [here, there, hereTrash, thereTrash] = await Promise.all([
             request(local.url(path), { token: local.token, servername: local.servername, address: local.address }),
-            request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address })
+            request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address }),
+            request(local.url(trashPath), { token: local.token, servername: local.servername, address: local.address }),
+            request(remote.url(trashPath), { token: remote.token, servername: remote.servername, address: remote.address })
         ])
         const localProjects = projectIdsFrom(here.payload)
         const remoteProjects = projectIdsFrom(there.payload)
 
-        // A project that exists only there has to exist here before its ops can
-        // land. Made through this server's own route, with the same id: ids are
-        // global in di.iiii, so the same project is the same project on both
-        // machines.
-        const remoteRows = Array.isArray(there.payload?.projects) ? there.payload.projects : []
-        for (const projectId of remoteProjects) {
-            if (localProjects.includes(projectId)) continue
-            // Born private when it is private there — never public for a moment.
-            const privateThere = remoteRows.some((row) => row?.id === projectId && row.visibility === 'private')
-            const made = await request(local.url(path), {
-                method: 'POST', token: local.token, servername: local.servername, address: local.address,
-                body: { slug: projectId, title: projectId, ...(privateThere ? { visibility: 'private' } : {}) }
-            })
-            if (!made.ok && made.status !== 409) {
-                log.warn?.(`[follow] ${local.spaceId}: could not make room for ${projectId} (${made.status})`)
+        // A project that exists on only one side has to exist on the other
+        // before its ops can land — and an EMPTY one has no ops to make it
+        // exist, so it is made from the listing, in both directions (seen
+        // 2026-10-04: six projects made empty on the follower never reached
+        // the host). Made through the receiving server's own route, with the
+        // same id: ids are global in di.iiii, so the same project is the same
+        // project on both machines. Title as made; born private when private
+        // at the source — never public for a moment. Deletions are not carried.
+        const makeMissing = async (from, toProjects, toSide, toTrash) => {
+            // A project deleted on a side is still in that side's trash, and a
+            // create there would take it out again (ensureProject restores a
+            // trashed id). Deletion is not carried, so it must not be undone
+            // either. A trash that cannot be read makes nothing this tick.
+            if (!toTrash.ok) {
+                // Said once, never silently: nothing is made there until the trash can be read.
+                const unread = `${toSide.base}|trash-unread`
+                if (!refusedMake.has(unread)) {
+                    refusedMake.add(unread)
+                    log.warn?.(`[follow] ${local.spaceId}: cannot read the trash on ${toSide === local ? 'this install' : 'the other di.iiii'} (${toTrash.status || toTrash.error || 'no answer'}) — projects missing there are not made`)
+                }
+                return
+            }
+            const trashed = new Set(projectIdsFrom(toTrash.payload))
+            const rows = Array.isArray(from.payload?.projects) ? from.payload.projects : []
+            for (const projectId of projectIdsFrom(from.payload)) {
+                if (toProjects.includes(projectId)) continue
+                if (trashed.has(projectId)) {
+                    if (!refusedMake.has(`${toSide.base}|${projectId}|trash`)) {
+                        refusedMake.add(`${toSide.base}|${projectId}|trash`)
+                        log.warn?.(`[follow] ${local.spaceId}: ${projectId} is in the trash on ${toSide === local ? 'this install' : 'the other di.iiii'} — not re-made`)
+                    }
+                    continue
+                }
+                const row = rows.find(candidate => candidate?.id === projectId)
+                const title = typeof row?.title === 'string' && row.title.trim() ? row.title.trim() : projectId
+                const made = await request(toSide.url(path), {
+                    method: 'POST', token: toSide.token, servername: toSide.servername, address: toSide.address,
+                    body: { slug: projectId, title, ...(row?.visibility === 'private' ? { visibility: 'private' } : {}) }
+                })
+                if (!made.ok && made.status !== 409 && !refusedMake.has(`${toSide.base}|${projectId}`)) {
+                    // Once, not every tick: a refusal repeats until someone fixes it.
+                    refusedMake.add(`${toSide.base}|${projectId}`)
+                    log.warn?.(`[follow] ${local.spaceId}: could not make room for ${projectId} (${made.status})`)
+                }
             }
         }
+        await makeMissing(there, localProjects, local, hereTrash)
+        await makeMissing(here, remoteProjects, remote, thereTrash)
         streams = streamsFor({ spaceId: local.spaceId, localProjects, remoteProjects })
     }
 

@@ -187,7 +187,9 @@ export const ui = {
             missing: 'that di.iiii has no space by that name.',
             denied: 'that key was refused — ask for a fresh one: di invite <space> on their machine.',
             'local-space': 'this install could not make room for it — is di.iiii running here?',
-            itself: 'that address is this di.iiii — a space cannot follow itself.'
+            itself: 'that address is this di.iiii — a space cannot follow itself.',
+            cleartext: `that address is plain http on a network that is not yours — the key and every edit would travel in the clear. use https, or say so out loud: --insecure`,
+            corrupt: `follows.json in this install's data folder cannot be read, so nothing was written — writing over it would drop every other follow and its key. it was left as it is, with a .corrupt copy beside it. look at it, fix or move it, then follow again.`
         }[reason] || `could not follow ${where}.`
         // Only on a plain, un-pinned "unreachable": the address pin is the fix
         // for the one failure it fixes, and there is no point suggesting it to
@@ -466,6 +468,8 @@ export const ui = {
         '                  --from names a machine this one can only reach somewhere else —',
         '                  a Tailscale IP, say — and there is no hosts-file edit to make.',
         `  --into SPACE    merge into a space of that name that already exists here`,
+        '  --insecure      allow a key to travel over plain http to a public address (http to',
+        '                  localhost, .local, LAN and Tailscale addresses needs no flag)',
         '',
         style.dim(`  ${CMD} follows          what this install is following`),
         style.dim(`  ${CMD} unfollow SPACE   stop carrying edits`)

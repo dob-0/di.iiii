@@ -292,5 +292,8 @@ describe('copy-version: review B2 — wrong version, lost mark, mistyped flag', 
         expect(unknownArgs({ _: [], adopt: true, 'dry-run': true, to: 'x' })).toEqual([])
         expect(unknownArgs({ _: [], adopt: true, dryrun: true })).toEqual(['--dryrun'])
         expect(unknownArgs({ _: ['—dry-run'], adopt: true })).toEqual(['—dry-run'])
+        // a copy from another install (2026-10-04): the source's address and token are known flags
+        expect(unknownArgs({ _: [], 'from-api': 'http://ponyo:4100/serverXR', 'from-token-file': 'x', to: 'y' })).toEqual([])
+        expect(unknownArgs({ _: [], fromapi: 'x' })).toEqual(['--fromapi'])
     })
 })

@@ -1172,6 +1172,31 @@ describe('the trash has scope, same as everything else', () => {
         expect(allowedRestore.status).toBe(200)
     })
 
+    // A follow reads the other machine's trash with its per-space sync key
+    // (follow/follower.js refreshStreams) — that key, and only for its own space.
+    it('lets a sync key read the trash of its own space only', async () => {
+        const server = await startScopedServer()
+        await createSpace(server, 'keyed-space')
+        await createSpace(server, 'other-space')
+        const own = await createAndTrash(server, 'keyed-space', 'Keyed')
+        const other = await createAndTrash(server, 'other-space', 'Other')
+        const minted = await fetch(`${server.baseUrl}/api/spaces/keyed-space/sync-keys`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(ADMIN_TOKEN) },
+            body: JSON.stringify({ label: 'follows keyed-space' })
+        })
+        expect(minted.status).toBe(201)
+        const key = withAuth((await minted.json()).token)
+
+        const read = await fetch(`${server.baseUrl}/api/trash?space=keyed-space`, { headers: key })
+        expect(read.status).toBe(200)
+        expect((await read.json()).projects.map(p => p.id)).toEqual([own.id])
+
+        expect((await fetch(`${server.baseUrl}/api/trash?space=other-space`, { headers: key })).status).toBe(403)
+        const unscoped = await (await fetch(`${server.baseUrl}/api/trash`, { headers: key })).json()
+        expect(unscoped.projects.map(p => p.id)).not.toContain(other.id)
+    })
+
     it('shows an admin every space\'s trash', async () => {
         const server = await startScopedServer()
         await createSpace(server, 'secret-space')
