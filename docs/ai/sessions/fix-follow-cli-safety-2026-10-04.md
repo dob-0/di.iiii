@@ -1,4 +1,4 @@
-# fix/follow-cli-safety-2026-10-04
+## 2026-10-04 — fix/follow-cli-safety-2026-10-04: di follow refuses unsafe merges, keeps a corrupt follows.json, writes keys 0600
 
 Source: `docs/ai/audits/follow-audit-2026-10-04.md` (branch `docs/follow-audit-2026-10-04`), findings F5, F6, F15, F19, F20.
 Files: `scripts/di/{follow,follows,cli,ui,stage}.mjs`, `serverXR/src/follow/followStore.js`; test `scripts/di/followSafety.test.js`.
