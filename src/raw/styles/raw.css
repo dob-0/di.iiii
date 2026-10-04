@@ -2658,8 +2658,8 @@
 
 .raw-graph-zoom-controls {
     position: absolute;
-    /* Bottom-LEFT: .raw-delete-fab is position:fixed at bottom/right 24px with
-       z-index 1300, so anything in the bottom-right corner sits underneath it. */
+    /* Bottom-LEFT. (The Delete button that once sat bottom-right is the
+       settings column's footer now.) */
     bottom: calc(16px + var(--raw-bottom-chrome) + env(safe-area-inset-bottom));
     left: calc(16px + env(safe-area-inset-left));
     transition: bottom 0.18s ease;
@@ -5818,7 +5818,16 @@
 .raw-region-body { flex: 1; min-height: 0; overflow: auto; }
 
 /* Help, in the region: the dialog's body without its backdrop. */
-.raw-help-inline { flex: 1; min-height: 0; overflow: auto; }
+.raw-help-inline { flex: 1; min-height: 0; overflow: auto; font-size: var(--di-text-3); }
+/* The modal's wide two-pane body, stacked to the column's width; the diagram
+   (absolutely placed for the modal) is left out. Help's own redesign is
+   build-plan row 8. */
+.raw-help-inline .raw-help-body { display: block; }
+.raw-help-inline .raw-help-diagram { display: none; }
+.raw-help-inline .raw-help-header h3 { font-size: var(--di-text-5); }
+.raw-help-inline .raw-help-header p,
+.raw-help-inline .raw-help-step-card p,
+.raw-help-inline .raw-help-callout p { font-size: var(--di-text-3); }
 .raw-help-inline .raw-help-dialog {
     position: static;
     width: auto;
@@ -5889,7 +5898,7 @@
 }
 
 .raw-inside-split { position: absolute; inset: 0; display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
-.raw-inside-split > .raw-graph-surface { position: relative; }
+.raw-inside-split-graph { position: relative; overflow: hidden; min-height: 0; }
 .raw-inside-split > .raw-inside-view { position: relative; inset: auto; padding-top: 0; border-top: 1px solid var(--di-cyan-border); }
 
 .raw-inside-body { flex: 1; min-width: 0; overflow: auto; padding: var(--di-space-4); }
@@ -5907,7 +5916,12 @@
 .raw-inside-rail.is-out { border-left: 1px solid var(--di-cyan-border); }
 
 .raw-inside-codeview { display: flex; flex: 1; min-width: 0; }
-.raw-inside-centre { flex: 1; min-width: 0; overflow: auto; padding: var(--di-space-4); }
+.raw-inside-centre { flex: 1; min-width: 0; overflow: auto; padding: 0 var(--di-space-4) var(--di-space-4); }
+/* The settings sit on top of the code at their own height — the sheet's
+   column layout (flex: 1, end-justified) pushed the code to the bottom edge. */
+.raw-inside-centre .raw-property-sheet { height: auto; flex: none; }
+.raw-inside-centre .raw-property-sections-scroll { flex: none; justify-content: flex-start; overflow: visible; }
+.raw-inside-centre .raw-inside-code { margin-top: var(--di-space-4); }
 
 .raw-inside-code-label {
     margin: 0 0 var(--di-space-1);

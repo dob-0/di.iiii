@@ -182,15 +182,61 @@ describe('row 3: one right region', () => {
         expect(Math.max(...counts)).toBeLessThanOrEqual(1)
     })
 
-    it('List and Text have no window on desktop, so nothing stands over the column or a card', () => {
+    it('a card\'s reading ("what it is made of") takes the region too, never a floating window', () => {
         setWidth(1440)
         seed()
         render(<RawEditor localStorageKey={KEY} />)
-        const labels = [...document.querySelectorAll('.raw-window')].map((el) => el.getAttribute('aria-label'))
-        expect(labels).not.toContain('The night')
-        expect(labels).not.toContain('Bar')
-        // A tool keeps its window.
-        expect(labels.length).toBeGreaterThan(0)
+        select('math')
+        act(() => graphMountProps.at(-1).onShowReading('math'))
+        expect(column().getAttribute('data-occupant')).toBe('reading')
+        expect(column().querySelector('.raw-anatomy')).toBeTruthy()
+        expect([...document.querySelectorAll('.raw-window')].some((el) => /made of/.test(el.textContent))).toBe(false)
+        expect(occupants()).toHaveLength(1)
+        select('text')
+        expect(column().getAttribute('data-occupant')).toBe('settings')
+    })
+
+        // Seen in the browser (2026-10-05): opening the column narrows the canvas
+    // and re-fits it, so a card near the right edge moved under the pointer
+    // between the two clicks of a double-click and the second click landed in
+    // the column. The column now waits out the double-click.
+    it('the column waits out a double-click, so the canvas never moves between its clicks', () => {
+        vi.useFakeTimers()
+        try {
+            setWidth(1440)
+            seed()
+            render(<RawEditor localStorageKey={KEY} columnOpenDelayMs={320} />)
+            select('cube')
+            expect(column()).toBeNull()
+            act(() => { vi.advanceTimersByTime(200) })
+            expect(column()).toBeNull()
+            // the second click arrives: Open, and the column never came
+            open('cube')
+            act(() => { vi.advanceTimersByTime(1000) })
+            expect(column()).toBeNull()
+            expect(screen.getByTestId('raw-inside-codeview')).toBeTruthy()
+            // a single click: the column arrives after the wait
+            fireEvent.click(screen.getByRole('button', { name: '← Back' }))
+            select('text')
+            act(() => { vi.advanceTimersByTime(320) })
+            expect(column().getAttribute('data-occupant')).toBe('settings')
+        } finally {
+            vi.useRealTimers()
+        }
+    })
+
+        it('List and Text have no window, on desktop or phone, so nothing stands over the column or a card', () => {
+        for (const width of [1440, 390]) {
+            setWidth(width)
+            seed()
+            render(<RawEditor localStorageKey={KEY} />)
+            const labels = [...document.querySelectorAll('.raw-window')].map((el) => el.getAttribute('aria-label'))
+            expect(labels, `${width}`).not.toContain('The night')
+            expect(labels, `${width}`).not.toContain('Bar')
+            // A tool keeps its window.
+            expect(labels.length, `${width}`).toBeGreaterThan(0)
+            cleanup()
+        }
     })
 
     it('Delete is in the column footer when something is selected; no floating Delete', () => {

@@ -1323,8 +1323,9 @@ export const WIKI_ARTICLES = [
         title: 'Nodes: the settings column and inside a node',
         summary: 'Select a card and its column opens on the right — name, settings, ports with their live values, Open, and Delete at the bottom. Open a node and you see what it is made of at once: a List as a table, a Text as text, code as inputs, lines and outputs.',
         body: [
-            'The right side of Nodes holds one thing at a time, beside the canvas and never over it: the selected card’s settings, the Outliner, Chat or Help. Opening one replaces whatever was there, and the canvas gives up the width and re-fits.',
+            'The right side of Nodes holds one thing at a time, beside the canvas and never over it: the selected card’s settings, the Outliner, Chat, Help, or a card’s reading (what it is made of). Opening one replaces whatever was there, and the canvas gives up the width and re-fits.',
             { list: [
+                'The column opens a moment after a click, once a double-click can no longer be on its way, so a double-click always goes inside instead of landing in the column.',
                 'The column, top to bottom: the node’s name (click it, or press F2, to rename) and its kind; its settings, when it has any beyond what is typed in the card; its ports, each with what is in it now and where it is wired from or to; Open; and Delete, pinned to the bottom. It is never empty. A Text’s words are typed in its card: click the text of a selected Text card.',
                 'Open — double-click the card, press Enter, or the Open button — goes inside, every time. A container (Scene, Geo, Kiosk…) shows the nodes in it. A List opens as an editable table, a Text as a text editor, each with its ports down the sides. A maths, value or logic node opens as its inputs, its own settings above the platform’s lines that work it out (read-only — they are the same code for every project), and its outputs. A Cube or another shape shows what you placed in it above and its code below. A tool (Outliner, Library, Webcam…) fills the canvas.',
                 'The strip under the bar says where you are: ← Back, the node’s name, its kind and its counts. Escape goes back too.',
@@ -1340,7 +1341,7 @@ export const WIKI_ARTICLES = [
         title: 'Panel windows: travelling with the canvas, or pinned to the screen',
         summary: 'An unpinned panel window (Scene, Image, Browser, Monitor) lives on the canvas with its card — pan and it moves, zoom and it shrinks. Press ⌖ to pin one to the screen instead. Resize from any edge, and scrolling inside a window scrolls the window, not the desk.',
         body: [
-            'Text and List have no window on a computer any more: the card is where you read them and opening one is where you edit it (see “Nodes: the settings column and inside a node”). On a phone they keep their window.',
+            'Text and List have no window any more, on a computer or a phone: the card is where you read them and opening one is where you edit it (see “Nodes: the settings column and inside a node”).',
             'A panel node — Scene, Image, Browser, Monitor — is two views of one thing: the card on the canvas and the window that shows its panel. Unpinned, that window is placed in the same graph space as the card: panning the canvas carries it along, and zooming out shrinks it with everything else, the way a scene parked far from the rest of the desk stays reachable by panning to it rather than by scrolling a fixed sidebar.',
             { list: [
                 'Press ⌖ to pin a window to the screen — it holds still at its current on-screen position and size while the canvas pans and zooms underneath it, the old behaviour. Press it again to release it back onto the canvas, where it keeps exactly where it was standing.',

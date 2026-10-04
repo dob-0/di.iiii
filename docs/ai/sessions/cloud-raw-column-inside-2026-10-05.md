@@ -16,11 +16,20 @@ Cloud routine (no owner live). Spec: `docs/ai/audits/raw-ui-2026-10-05/audit.md`
 
 **Tests.** New: `RawRegionAndInside.test.jsx` (13) and `utils/insideView.test.js` (3). On the base (the merge commit, before this work): 13 fail, and the util file fails to load (3); after: 16 pass. Updated to the new behaviour: outliner is a `complementary` region, not a dialog; window-arrangement and window-pile tests use tool panels (List/Text have no desktop window); the anatomy tests reach the sheet through the card's reading; PropertyInspector's Open order. `src/raw` + `src/styles` + copyVocabulary: 1286 pass. `npm run build` passes.
 
-**Not seen.** No browser was run: nothing here was looked at on desktop or phone. Owed: `npm run verify:surfaces` on dev, and the owner's 1140×940 look; the "0 intersections" criterion is measured structurally (column in the flow, no FAB, no List/Text window), not by rectangles.
+**Seen (second pass, same day, owner said "go").** Local stack (`npm run dev`, server on 4360, driver account `ann`), headless Chromium, local canvas with 5 nodes, at 1440×900, 1140×940 @1.5 and 390×844 (iPhone 13). Script and shots: `.verify-surfaces/raw-region/` (untracked). Measured on select: 0 cards under the column on desktop and 1140, Delete visible in the footer, no FAB, no horizontal scroll, no console errors; Help and the reading occupy the column, no modal. Fixed from what the shots showed:
+- a double-click on a card near the right edge landed in the column (column now waits out a double-click, `COLUMN_OPEN_DELAY_MS`);
+- on the phone the List window opened with its × under the bar, uncloseable — List/Text windows retired at every width;
+- the code view's settings stretched and pushed the code to the bottom edge, and repeated the node name;
+- the inside view's top rail sat under the Back strip;
+- in the spatial split the zoom strip spilled over the code view;
+- Help in the column used the modal's wide layout (the diagram showed through);
+- the column had two "Ports" headings — the derived settings section is now "Settings" / "Operation and settings" (`nodeInspectorSections.js`).
+Still seen and NOT fixed (other rows): the account "A" button floats over the column and the code view (B6, row 5); the top bar and mode mark are fixed over the column's top padding (row 5); Help still says "The canvas starts empty." over a full canvas (row 8); "showing 3 of 5 — fit all" on the phone (row 7); the phone sheet covers a card below the selected one (by design of the sheet). Not run: `npm run verify:surfaces` against dev (the branch is not deployed).
 
 **Not done.**
 - Tool windows (webcam, monitor, director, timeline) do not move into the region; they stay canvas windows with pin/minimise. The hand-kept z-stack (`windowLayout.js:290-298`) stays.
-- The anatomy sheet (a card's middle-click reading) is still a floating window, so it can stand beside the region.
+- The anatomy sheet is a region occupant now (second pass).
+- Tool windows into the region is a decision for the owner, not built: it would retire canvas windows outright (the Scene window included), and §3.6 already gives a tool its whole-canvas view on Open.
 - The node name is in the inside strip, not in the bar's crumb (row 5, one bar).
 - Text inside: 72-character measure is CSS only; List rows drag-to-reorder is whatever `ListPanelWindow` already does.
 - B9 (shared selection) untouched.

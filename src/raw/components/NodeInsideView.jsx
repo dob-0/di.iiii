@@ -57,8 +57,10 @@ export function CodeView({ node, reading, edges = [], nodes = [], sections = [],
             </aside>
             <div className="raw-inside-centre">
                 {sections.length ? (
+                    // No header: the name is in the crumb, once (§3.6).
                     <PropertyInspector
                         title={node?.label || ''}
+                        hideHeader
                         sections={sections}
                         values={values}
                         assetOptions={assetOptions}
@@ -84,11 +86,11 @@ export const insideMetaLine = ({ node, reading = null, childCount = 0, kind = 'c
 }
 
 // The whole-canvas body for every kind that is not a sub-graph.
-export default function NodeInsideView({ kind, node, body = null, reading = null, edges = [], nodes = [], sections = [], values = {}, onSectionChange = null, assetOptions = [] }) {
+export default function NodeInsideView({ kind, node, top = null, body = null, reading = null, edges = [], nodes = [], sections = [], values = {}, onSectionChange = null, assetOptions = [] }) {
     if (!node) return null
     if (kind === 'code' || kind === 'spatial') {
         return (
-            <div className={`raw-inside-view is-${kind}`} data-testid="raw-inside-view" data-kind={kind}>
+            <div className={`raw-inside-view is-${kind}`} data-testid="raw-inside-view" data-kind={kind} style={kind === 'code' && top != null ? { paddingTop: top } : undefined}>
                 <CodeView node={node} reading={reading} edges={edges} nodes={nodes} sections={sections} values={values} onSectionChange={onSectionChange} assetOptions={assetOptions} />
             </div>
         )
@@ -98,7 +100,7 @@ export default function NodeInsideView({ kind, node, body = null, reading = null
     const rails = kind === 'list' || kind === 'text'
     const nodesById = new Map(nodes.map((other) => [other.id, other]))
     return (
-        <div className={`raw-inside-view is-${kind}`} data-testid="raw-inside-view" data-kind={kind}>
+        <div className={`raw-inside-view is-${kind}`} data-testid="raw-inside-view" data-kind={kind} style={top != null ? { paddingTop: top } : undefined}>
             {rails ? (
                 <aside className="raw-inside-rail is-in" aria-label="Inputs">
                     <PortList rows={reading?.takes || []} side="in" label="Inputs" />

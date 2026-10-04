@@ -8,6 +8,13 @@ export const COLUMN_STORAGE_KEY = 'di.raw.settingsColumnWidth'
 export const COLUMN_DEFAULT_WIDTH = 320
 export const COLUMN_MIN_WIDTH = 260
 export const COLUMN_MAX_WIDTH = 560
+// The column waits out a double-click before it opens. Opening it narrows the
+// canvas and re-fits, so a card near the right edge moved under the pointer
+// between the two clicks and the second landed in the column (seen in the
+// browser, 2026-10-05: a Cube's double-click opened the column's colour picker
+// instead of going inside). 0 under test, where every click is instant.
+export const COLUMN_OPEN_DELAY_MS = import.meta.env?.MODE === 'test' ? 0 : 320
+
 // Below this viewport width the column is a bottom sheet (the phone shape).
 export const PHONE_MAX_WIDTH = 699
 

@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import PropertyInspector from './PropertyInspector.jsx'
-import { COLUMN_DEFAULT_WIDTH, clampColumnWidth, isPhoneWidth, readColumnWidth, writeColumnWidth } from '../utils/settingsColumn.js'
+import { COLUMN_DEFAULT_WIDTH, COLUMN_OPEN_DELAY_MS, clampColumnWidth, isPhoneWidth, readColumnWidth, writeColumnWidth } from '../utils/settingsColumn.js'
 import DesktopWindow from './DesktopWindow.jsx'
 import NodeAnatomyPanel from './NodeAnatomyPanel.jsx'
 import NodePorts from './NodePorts.jsx'
@@ -91,7 +91,7 @@ import { buildObjectCards, buildScopeItems, thingBandBounds } from '../utils/obj
 import { DEFAULT_PROJECT_SPACE_ID, createProject, updateProjectDocument, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
-import { RAW_ANATOMY_Z, RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getAnatomyDefaultFrame, getBottomReserve, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
+import { RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getBottomReserve, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import { CARD_WIDTH, cardHeight, getCardBox } from '../utils/cardGeometry.js'
 import { settleCardStacks } from '../utils/cardStacks.js'
 import { placeNewCard } from '../utils/cardPlacement.js'
@@ -202,7 +202,9 @@ function BrowserPanelWindow({ node }) {
 // The right region's updater for one occupant: true (or a toggle that comes
 // out true) puts it there, replacing whatever stood there; false takes it away
 // only if it is the one there.
-const WINDOWLESS_ON_DESKTOP = new Set(['view.list', 'view.text'])
+const REGION_LABELS = { settings: 'Settings', help: 'Help', chat: 'Chat', outliner: 'Outliner', reading: 'Reading' }
+
+const WINDOWLESS = new Set(['view.list', 'view.text'])
 
 const regionUpdate = (id, value) => (current) => {
     const next = typeof value === 'function' ? value(current === id) : value
@@ -218,7 +220,10 @@ export default function RawEditor({
     // The Perform line (src/perform/): { preset, from } from the address.
     // Set, the editor is the Perform desk — the same project, windows and op
     // log, with the patch canvas taken away and a preset choosing the windows.
-    perform = null
+    perform = null,
+    // How long the settings column waits before it opens (see
+    // settingsColumn.js). A prop so a test can hold the real delay.
+    columnOpenDelayMs = COLUMN_OPEN_DELAY_MS
 }) {
     const [displayName] = useState(() => {
         try {
@@ -252,11 +257,9 @@ export default function RawEditor({
     const zenWorkspaceKey = projectId || localStorageKey || 'default'
     const [zen, setZen] = useState(false)
     const zenReadRef = useRef(false)
-    // The "what is it made of" sheet. Same shape as the Outliner's state, but
-    // its frame is seeded on open rather than at mount: it is the only window
-    // here whose opening size depends on the viewport it opens into, because on
-    // a phone it has to finish above where the selection sheet docks.
-    const [anatomyFrame, setAnatomyFrame] = useState(null)
+    // The "what is it made of" sheet is a right-region occupant too
+    // (audit 2026-10-05 §3.5), no longer a floating window.
+    const anatomyOpen = regionPanel === 'reading'
     // Which node the sheet reads: null = the node you are inside (as before);
     // an id = a card middle-clicked on the canvas (TouchDesigner: middle-click
     // a node for its info). input/keymap.js 'reading'.
@@ -462,13 +465,15 @@ export default function RawEditor({
         window.addEventListener('resize', onResize)
         return () => window.removeEventListener('resize', onResize)
     }, [])
-    // List and Text windows no longer exist on desktop (audit 2026-10-05
-    // §3.5): the card is their read view and the inside view their editor, so
-    // no window can stand over the column or a card. A phone keeps them.
+    // List and Text windows no longer exist (audit 2026-10-05 §3.5): the card
+    // is their read view and the inside view their editor, so no window can
+    // stand over the column or a card. Not on a phone either: there the List
+    // window opened with its × under the top bar, uncloseable, over the cards
+    // (seen at 390×844, 2026-10-05).
     const visibleViewNodes = useMemo(
         () => selectMountedPanelNodes({
             nodes,
-            isPanel: (node) => isPanelNode(node) && (narrowWindows || !WINDOWLESS_ON_DESKTOP.has(node.typeId)),
+            isPanel: (node) => isPanelNode(node) && !WINDOWLESS.has(node.typeId),
             currentScopeId,
             isWorldFullscreen,
             frameOf,
@@ -1215,24 +1220,19 @@ export default function RawEditor({
         return `Inside ${label}. ${pointerVerb} to place the first node in it.`
     }, [currentScopeId, isLocalWorkspace, pointerVerb, scopeNode])
 
-    // …and the sentence above is only the first half of the answer. It says
-    // THAT a Cube has no inside; the sheet says what it has instead. Opening
-    // seeds the frame from the viewport, because on a phone the sheet has to
-    // finish above where the selection sheet docks and that arithmetic needs a
-    // height nobody has at mount.
+    // A card's reading (middle-click, or the scope itself) takes the right
+    // region, replacing whatever stood there.
     const openAnatomy = useCallback((nodeId = null) => {
         setAnatomyNodeId(typeof nodeId === 'string' ? nodeId : null)
-        setAnatomyFrame(getAnatomyDefaultFrame({
-            viewportWidth: typeof window === 'undefined' ? 1280 : window.innerWidth,
-            viewportHeight: typeof window === 'undefined' ? 800 : window.innerHeight,
-            workspaceTop,
-            chromeVisible
-        }))
-    }, [chromeVisible, workspaceTop])
+        setRegionPanel('reading')
+    }, [])
 
     // Leaving the node closes the sheet. A sheet describing the node you have
     // walked out of is worse than no sheet: it looks current and is not.
-    useEffect(() => { setAnatomyFrame(null); setAnatomyNodeId(null) }, [currentScopeId])
+    useEffect(() => {
+        setRegionPanel((current) => (current === 'reading' ? null : current))
+        setAnatomyNodeId(null)
+    }, [currentScopeId])
 
     const buildNodeValues = (definitionId, params, place) =>
         buildNodeValuesForType(definitionId, params, place, {
@@ -1608,7 +1608,7 @@ export default function RawEditor({
             className="raw-selection-scaffold"
             data-testid="raw-settings-column"
             data-occupant={regionOccupant}
-            aria-label={regionOccupant === 'settings' ? 'Settings' : regionOccupant === 'help' ? 'Help' : regionOccupant === 'chat' ? 'Chat' : 'Outliner'}
+            aria-label={REGION_LABELS[regionOccupant] || 'Settings'}
             tabIndex={-1}
             onKeyDown={handleColumnKeyDown}
             style={{ '--raw-scaffold-top': workspaceTop + 'px', '--raw-column-w': `${columnPx}px` }}
@@ -1689,6 +1689,17 @@ export default function RawEditor({
                                 onChannelChange={setChatChannel}
                             />
                         )}
+                    </div>
+                </div>
+            ) : null}
+            {regionOccupant === 'reading' && anatomyReading ? (
+                <div className="raw-region-panel">
+                    <header className="raw-region-head">
+                        <h4>What {anatomyReading.label} is made of</h4>
+                        <button type="button" className="raw-property-close" aria-label="Close reading" title="Close (Esc)" onClick={() => setRegionPanel(null)}>×</button>
+                    </header>
+                    <div className="raw-region-body">
+                        <NodeAnatomyPanel reading={anatomyReading} onShowCard={handleShowFeedingCard} />
                     </div>
                 </div>
             ) : null}
@@ -1922,7 +1933,7 @@ export default function RawEditor({
     const [anatomyMemory] = useState(() => createFrameMemory())
     const anatomyNode = (anatomyNodeId && authoredNodes.find((node) => node.id === anatomyNodeId)) || scopeNode
     const anatomyReading = useMemo(() => {
-        if (!anatomyFrame || !anatomyNode) return null
+        if (!anatomyOpen || !anatomyNode) return null
         return readNode(anatomyNode, {
             // EVERY node, never the scoped card list: a container's sockets come
             // from doorway nodes living in a different scope, and the scoped
@@ -1932,7 +1943,7 @@ export default function RawEditor({
             document,
             childCount: childCounts.get(anatomyNode.id) || 0
         })
-    }, [anatomyFrame, anatomyNode, authoredNodes, document, liveOutputs, anatomyMemory, childCounts, anatomyNow])
+    }, [anatomyOpen, anatomyNode, authoredNodes, document, liveOutputs, anatomyMemory, childCounts, anatomyNow])
 
     // The same reading, live, for the selected node's Ports in the column and
     // for the node you are inside (its rails). Own memory, as above.
@@ -2267,8 +2278,18 @@ export default function RawEditor({
     }
 
     const visibleSelection = Boolean(scopedSelectedNode || scopedSelectedEntity)
-    // The one occupant of the right region (§3.5).
-    const regionOccupant = regionPanel || (visibleSelection ? 'settings' : null)
+    // The one occupant of the right region (§3.5). The settings arrive only
+    // after a double-click would have finished (settingsColumn.js
+    // COLUMN_OPEN_DELAY_MS), so the canvas never moves between its two clicks.
+    const [columnArmed, setColumnArmed] = useState(false)
+    useEffect(() => {
+        if (!visibleSelection) { setColumnArmed(false); return undefined }
+        if (columnArmed || columnOpenDelayMs <= 0) return undefined
+        const timer = setTimeout(() => setColumnArmed(true), columnOpenDelayMs)
+        return () => clearTimeout(timer)
+    }, [visibleSelection, columnArmed, columnOpenDelayMs])
+    const settingsShown = visibleSelection && (columnArmed || columnOpenDelayMs <= 0)
+    const regionOccupant = regionPanel || (settingsShown ? 'settings' : null)
 
     // Inside a node that is not a container (§3.6): the List's table, the
     // Text's editor, a tool's own body, a picture operator's TopInsidePanel,
@@ -2300,6 +2321,8 @@ export default function RawEditor({
             <NodeInsideView
                 kind={insideKind}
                 node={scopeNode}
+                // Below the Back strip (28 px) with a 12 px gap.
+                top={getScopeMarkerTop({ chromeVisible, workspaceTop }) + 40}
                 reading={insideReading}
                 edges={document.edges || []}
                 nodes={authoredNodes}
@@ -2317,11 +2340,11 @@ export default function RawEditor({
     // Never while a card is being typed in.
     const selectionKey = scopedSelectedNode?.id || scopedSelectedEntity?.id || null
     useEffect(() => {
-        if (!selectionKey) return
+        if (!selectionKey || !settingsShown) return
         const active = window.document.activeElement
         if (active && active.tagName === 'TEXTAREA' && active.closest('[data-card-id]')) return
         scaffoldRef.current?.focus?.({ preventScroll: true })
-    }, [selectionKey])
+    }, [selectionKey, settingsShown])
 
     // How much of the canvas the selection panel is covering from the bottom,
     // so the graph can fit itself into the part you can actually see. Only
@@ -2496,7 +2519,7 @@ export default function RawEditor({
     // Closed ones, and on a phone the open ones waiting behind the front one.
     const mountedPanelIds = new Set(visibleViewNodes.map((node) => node.id))
     const hiddenPanelNodes = authoredNodes.filter(
-        (node) => isPanelNode(node) && (narrowWindows || !WINDOWLESS_ON_DESKTOP.has(node.typeId)) && (
+        (node) => isPanelNode(node) && !WINDOWLESS.has(node.typeId) && (
             frameOf(node).visible === false
             || (narrowWindows && (node.parentId || null) === (currentScopeId || null) && !mountedPanelIds.has(node.id))
         )
@@ -2561,10 +2584,6 @@ export default function RawEditor({
             })
     const graphContentInsets = getGraphEdgeInsets({
         frames: [
-            // The anatomy sheet is a docked window like any other, so the fit
-            // has to dodge it too — otherwise the cards centre underneath the
-            // window explaining them.
-            ...(anatomyFrame && !anatomyFrame.minimized ? [anatomyFrame] : []),
             // Only PINNED windows dock against the graph's edges now. An
             // unpinned window lives in the world with the cards — it is
             // content the fit frames, not chrome the fit dodges.
@@ -3017,6 +3036,7 @@ export default function RawEditor({
                     its children above and shows its code below. */}
                 {insideShowsGraph(insideKind) ? (
                 <GraphWrap {...(insideKind === 'spatial' ? { className: 'raw-inside-split' } : {})}>
+                <GraphWrap {...(insideKind === 'spatial' ? { className: 'raw-inside-split-graph' } : {})}>
                 <RawGraphSurface
                     key={currentScopeId || 'root'}
                     chromeless={!chromeVisible}
@@ -3084,6 +3104,7 @@ export default function RawEditor({
                     onViewportChange={handleViewportChange}
                     extraBounds={worldWindowBounds}
                 />
+                </GraphWrap>
                 {insideKind === 'spatial' ? renderInsideView() : null}
                 </GraphWrap>
                 ) : renderInsideView()}
@@ -3328,23 +3349,6 @@ export default function RawEditor({
                 </div>
             )}
 
-
-            {anatomyFrame && anatomyReading && (
-                <DesktopWindow
-                    windowState={anatomyFrame}
-                    title={`What ${anatomyReading.label} is made of`}
-                    kicker={anatomyReading.kicker}
-                    accent={anatomyReading.accent}
-                    minTop={workspaceTop}
-                    onFocus={() => setAnatomyFrame((f) => ({ ...f, zIndex: RAW_ANATOMY_Z }))}
-                    onPatch={(patch) => setAnatomyFrame((f) => ({ ...f, ...patch }))}
-                    onClose={() => setAnatomyFrame(null)}
-                    onToggleMinimize={() => setAnatomyFrame((f) => ({ ...f, minimized: !f.minimized }))}
-                    onTogglePin={() => setAnatomyFrame((f) => ({ ...f, pinned: !f.pinned }))}
-                >
-                    <NodeAnatomyPanel reading={anatomyReading} onShowCard={handleShowFeedingCard} />
-                </DesktopWindow>
-            )}
 
             <NodePalette
                 open={paletteState.open}

@@ -284,7 +284,8 @@ export default function PropertyInspector({
     // footer, pinned to the bottom (Delete). Both optional.
     children = null,
     footer = null,
-    openLabel = 'Open'
+    openLabel = 'Open',
+    hideHeader = false
 }) {
     // A selected node with nothing to set (List, Timeline, Webcam…) used to show
     // the canvas's own empty message — "double-click the world…" — and no way
@@ -295,7 +296,7 @@ export default function PropertyInspector({
 
     return (
         <div className="raw-property-sheet">
-            <header className="raw-property-sheet-header">
+            {hideHeader ? null : <header className="raw-property-sheet-header">
                 {onClose ? (
                     <button type="button" className="raw-property-close" aria-label="Close settings" title="Close (Esc)" onClick={onClose}>×</button>
                 ) : null}
@@ -303,7 +304,7 @@ export default function PropertyInspector({
                 {/* The type's name under a node's own name — once. "Scene / Scene"
                     read as two things (owner, 2026-10-02). */}
                 {subtitle && subtitle !== title ? <p>{subtitle}</p> : null}
-            </header>
+            </header>}
             {!sections.length && showHeaderWhenEmpty && !children ? <p className="raw-property-empty">{emptyMessage}</p> : null}
             <div className="raw-property-sections-scroll">
                 {!sections.length && !showHeaderWhenEmpty ? (
