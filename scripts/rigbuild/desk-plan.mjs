@@ -8,8 +8,15 @@
  *   node scripts/rigbuild/desk-plan.mjs --space moxir --project moxir-hall-known-full \
  *        --out ~/Downloads/moxir-desk-plan-2026-10-05 [--show <show.json>] [--document <doc.json>] \
  *        [--gate scripts/place/rigs/moxir-2026-10-17-known-full.patch.json]
- *   # 2. APPLY (the owner, with the desk stopped: di down … di up)
+ *   # 2. APPLY (the owner). The desk is stopped FIRST and the plan made from the stopped show:
+ *   #    a running desk saves its show at every cue, so a plan made while it runs is stale at once.
+ *   #    With di down the local API is down too: read the document from dev (the hub), which
+ *   #    every install follows (--api https://dev.diiii.xyz/serverXR).
+ *   di down
+ *   node scripts/rigbuild/desk-plan.mjs --space moxir --project moxir-hall-known-full --api https://dev.diiii.xyz/serverXR \
+ *        --out ~/Downloads/moxir-desk-plan-2026-10-05 --gate scripts/place/rigs/moxir-2026-10-17-known-full.patch.json
  *   node scripts/rigbuild/desk-plan.mjs --space moxir --apply ~/Downloads/moxir-desk-plan-2026-10-05
+ *   di up
  *   # 3. UNDO, from the backup the apply wrote (also with the desk stopped)
  *   node scripts/rigbuild/desk-plan.mjs --space moxir --undo ~/di-backups/moxir-desk-plan-<stamp>
  *
@@ -39,7 +46,9 @@
  *   --data   the installed di's data dir (default ~/.di/data); the live show is
  *            <data>/spaces/<space>/lighting/show.json
  *   --api    where the project document is read (GET only; default https://local.thedi.studio/serverXR)
- *   --desk   the live desk, which must NOT answer during --apply/--undo (default http://127.0.0.1:4000/light/)
+ *   --backups where --apply keeps the show it replaces (default ~/di-backups)
+ *   --desk   a live desk address that must NOT answer during --apply/--undo (default http://127.0.0.1:4000/light/;
+ *            the install's own port from <data>/../di.env and https://local.thedi.studio/light/ are always checked too)
  */
 import fs from 'node:fs'
 import os from 'node:os'
@@ -288,11 +297,29 @@ const csv = (rows, cols) => [cols.join(','), ...rows.map((r) => cols.map((c) => 
 
 const liveShowPath = (data, space) => path.join(data, 'spaces', space, 'lighting', 'show.json')
 
-const deskAnswers = async (desk) => {
-    try {
-        const r = await fetch(`${desk}api/show`, { signal: AbortSignal.timeout(3000) })
-        return `HTTP ${r.status}`
-    } catch { return null }
+// Where the installed desk may answer: the one given, the install's own port (di.env PORT;
+// 443 on aylmo, behind the gateway) over http and https, and the front door. A gateway answering
+// 502/503/504 means the desk behind it is down. Any other answer means it runs and would save over
+// the file. Returns what answered, or null.
+const deskCandidates = (desk, data) => {
+    let port = null
+    try { port = /^PORT=(\d+)$/m.exec(fs.readFileSync(path.join(path.dirname(data), 'di.env'), 'utf8'))?.[1] || null } catch { /* no env file */ }
+    // The front door serves the installed di only: a --data other than the install's is a test copy.
+    const installed = path.resolve(data) === path.join(os.homedir(), '.di', 'data')
+    return [...new Set([desk, ...(port ? [`http://127.0.0.1:${port}/light/`, `https://127.0.0.1:${port}/light/`] : []), ...(installed ? ['https://local.thedi.studio/light/'] : [])])]
+}
+const deskAnswers = async (desk, data) => {
+    for (const base of deskCandidates(desk, data)) {
+        try {
+            const r = await fetch(`${base}api/show`, { signal: AbortSignal.timeout(3000) })
+            if (![502, 503, 504].includes(r.status)) return `${base} HTTP ${r.status}`
+        } catch (e) {
+            // A TLS name mismatch on https://127.0.0.1 is still a server listening there.
+            const code = e?.cause?.code || ''
+            if (/CERT|TLS|SSL|ALTNAME|SELF_SIGNED/i.test(code)) return `${base} (TLS: ${code})`
+        }
+    }
+    return null
 }
 
 const machineOutputOn = (data) => {
@@ -307,19 +334,19 @@ const writeAtomic = (file, text) => {
 
 const stamp = () => new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
 
-async function apply({ dir, data, space, desk }) {
+async function apply({ dir, data, space, desk, backups }) {
     const meta = JSON.parse(fs.readFileSync(path.join(dir, 'plan-meta.json'), 'utf8'))
     const text = fs.readFileSync(path.join(dir, 'show.planned.json'), 'utf8')
     if (sha256(text) !== meta.planned.sha256) die('show.planned.json does not match plan-meta.json (changed since it was planned) — plan again')
     if (meta.space !== space) die(`the plan is for space ${meta.space}, not ${space}`)
-    if (meta.gate && meta.gate.passed !== true) die('the plan did not pass its gate (patch-sheet.mjs) — nothing applied')
+    if (meta.gate?.passed !== true) die(meta.gate ? 'the plan did not pass its gate (patch-sheet.mjs) — nothing applied' : 'the plan was made without --gate — plan again with --gate <plan>; nothing applied')
     const live = liveShowPath(data, space)
-    const answer = await deskAnswers(desk)
-    if (answer) die(`the desk at ${desk} is running (${answer}) — it would write over the new show at its next save. Run \`di down\` first, then this, then \`di up\`.`)
+    const answer = await deskAnswers(desk, data)
+    if (answer) die(`the desk is running (${answer}) — it would write over the new show at its next save. Run \`di down\` first, then this, then \`di up\`.`)
     if (machineOutputOn(data)) die(`this machine's desk OUTPUT is ON (${path.join(data, 'lighting', 'show.json')}) — a new show must not start transmitting on load. Switch OUTPUT off first.`)
     const current = fs.readFileSync(live, 'utf8')
     if (sha256(current) !== meta.source.sha256) die(`the live show changed since the plan was made (sha256 ${sha256(current).slice(0, 12)}…, planned from ${meta.source.sha256.slice(0, 12)}…) — plan again from the live show`)
-    const backup = path.join(os.homedir(), 'di-backups', `${space}-desk-plan-${stamp()}`)
+    const backup = path.join(backups, `${space}-desk-plan-${stamp()}`)
     fs.mkdirSync(backup, { recursive: true })
     const files = {}
     for (const name of ['show.json', 'show.prev.json']) {
@@ -342,8 +369,8 @@ async function undo({ backup, data, space, desk }) {
     if (manifest.space !== space) die(`the backup is of space ${manifest.space}, not ${space}`)
     const text = fs.readFileSync(path.join(backup, 'show.json'), 'utf8')
     if (sha256(text) !== manifest.files['show.json']) die(`the backup's show.json does not match its manifest — not restored`)
-    const answer = await deskAnswers(desk)
-    if (answer) die(`the desk at ${desk} is running (${answer}). Run \`di down\` first.`)
+    const answer = await deskAnswers(desk, data)
+    if (answer) die(`the desk is running (${answer}). Run \`di down\` first.`)
     const live = liveShowPath(data, space)
     // The show being undone is kept too, so the undo can itself be undone.
     const aside = path.join(backup, `undone-${stamp()}`)
@@ -375,7 +402,8 @@ const main = async () => {
     const space = String(args.space || die('needs --space <id>'))
     const data = path.resolve(String(args.data || path.join(os.homedir(), '.di', 'data')).replace(/^~/, os.homedir()))
     const desk = String(args.desk || 'http://127.0.0.1:4000/light/').replace(/\/?$/, '/')
-    if (args.apply) return apply({ dir: path.resolve(String(args.apply).replace(/^~/, os.homedir())), data, space, desk })
+    const backups = path.resolve(String(args.backups || path.join(os.homedir(), 'di-backups')).replace(/^~/, os.homedir()))
+    if (args.apply) return apply({ dir: path.resolve(String(args.apply).replace(/^~/, os.homedir())), data, space, desk, backups })
     if (args.undo) return undo({ backup: path.resolve(String(args.undo).replace(/^~/, os.homedir())), data, space, desk })
 
     const project = String(args.project || die('needs --project <id>'))
@@ -460,7 +488,8 @@ const main = async () => {
     }
     fs.writeFileSync(path.join(out, 'plan-meta.json'), JSON.stringify(meta, null, 2) + '\n')
     say(`dry run: ${out}/show.planned.json, plan-meta.json, assumed-modes.csv — the live desk was not touched.`)
-    say(`apply (owner): di down && node scripts/rigbuild/desk-plan.mjs --space ${space} --apply ${out} && di up`)
+    say(`apply (owner): plan with the desk STOPPED (di down), so the live show cannot move under the plan; then`)
+    say(`  node scripts/rigbuild/desk-plan.mjs --space ${space} --apply ${out} && di up`)
     if (meta.gate && !meta.gate.passed) process.exit(1)
 }
 
