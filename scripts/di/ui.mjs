@@ -470,7 +470,9 @@ export const ui = {
     followUsage: () => [
         style.bold(`${CMD} follow SPACE --from URL --key KEY`) + style.dim(' — join a space that lives on another di.iiii'),
         '',
-        'both sides keep the whole work; edits travel both ways.',
+        'both sides keep the whole work; edits travel both ways. The host\'s label, front door',
+        'and visibility come too (never more public than either side has it).',
+        `a new key for a follow that exists: ${CMD} follow SPACE --from URL --key - --into SPACE (takes effect while di runs)`,
         '',
         '  --from URL      where the other di.iiii answers, e.g. https://local.thedi.studio',
         `  --key KEY       the per-space sync key, minted on their machine with: ${CMD} invite SPACE`,
