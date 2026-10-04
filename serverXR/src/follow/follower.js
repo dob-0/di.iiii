@@ -215,6 +215,14 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     // a stream is compared once it is quiet again after both moved — and once
     // at the start, so a follow resumed after a gap checks it agrees.
     const moves = new Map()
+    // Streams where a whole-work op sat in a log and the two copies were found
+    // to DIFFER — stream key -> why. A whole-work op is never carried
+    // (followPlan.js), and the cursor steps past it like any op it has
+    // accounted for, so the log stops saying anything about it. What stays is
+    // this: the copies are compared again every tick until they agree, and the
+    // follow says so out loud for as long as they do not. Nothing is ever
+    // overwritten here — that is `di sync`'s job, with a restore point.
+    const disagree = new Map()
     const movesFor = (stream) => {
         if (!moves.has(stream.key)) moves.set(stream.key, { in: true, out: true })
         return moves.get(stream.key)
@@ -289,6 +297,21 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         streams = streamsFor({ spaceId: local.spaceId, localProjects, remoteProjects })
     }
 
+    // Both copies of one stream, read and compared (followConverge.js).
+    const compare = async (stream) => {
+        const [here, there] = await Promise.all([
+            request(local.url(stream.documentPath), { token: local.token, servername: local.servername, address: local.address }),
+            request(remote.url(stream.documentPath), { token: remote.token, servername: remote.servername, address: remote.address })
+        ])
+        if (!here.ok || !there.ok) return null
+        return planConverge({
+            kind: stream.kind,
+            projectId: stream.projectId || null,
+            local: readDocument(stream.kind, here.payload),
+            remote: readDocument(stream.kind, there.payload)
+        })
+    }
+
     /**
      * Make this side agree with the host (followConverge.js): read both copies,
      * and if they differ write the host's over this one through this server's
@@ -296,17 +319,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
      * A 409 means someone here just edited: leave it for the next quiet pass.
      */
     const converge = async (stream) => {
-        const [here, there] = await Promise.all([
-            request(local.url(stream.documentPath), { token: local.token, servername: local.servername, address: local.address }),
-            request(remote.url(stream.documentPath), { token: remote.token, servername: remote.servername, address: remote.address })
-        ])
-        if (!here.ok || !there.ok) return { done: false }
-        const plan = planConverge({
-            kind: stream.kind,
-            projectId: stream.projectId || null,
-            local: readDocument(stream.kind, here.payload),
-            remote: readDocument(stream.kind, there.payload)
-        })
+        const plan = await compare(stream)
+        if (!plan) return { done: false }
         if (plan.same) return { done: true }
         if (plan.refused) return { done: true, refused: plan.refused }
         const opId = `${CONVERGE_CLIENT}-${stream.key}-${Date.now().toString(36)}`
@@ -392,6 +406,17 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             remoteVersion: accountedThrough(theirs.ops, seen, theirs.latestVersion) ?? cursor.remoteVersion
         })
 
+        // A whole-work op was left where it is. If the copies already agree
+        // (both sides were given the same replacement, or the follower
+        // converged on the host's) there is nothing to report and nothing owed;
+        // if they differ, say which work, and keep saying it.
+        if (stream.documentPath && (refusedWholeWork(theirs.ops) || refusedWholeWork(ours.ops) || disagree.has(stream.key))) {
+            const verdict = await compare(stream)
+            if (verdict?.same) disagree.delete(stream.key)
+            else if (verdict) disagree.set(stream.key, verdict.refused || 'the two copies differ')
+            else if (!disagree.has(stream.key)) disagree.set(stream.key, 'could not read both copies to compare them')
+        }
+
         // Did the copies get a chance to disagree, and are they quiet now?
         const flags = movesFor(stream)
         if (inbound.wrote > 0 || inbound.caughtUp?.length) flags.in = true
@@ -416,7 +441,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             carriedOut: outbound.wrote,
             // A whole-work op sat in the log and was left there deliberately.
             // Said out loud, because silence would look like everything crossed.
-            refused: refusedWholeWork(theirs.ops) || refusedWholeWork(ours.ops),
+            refused: disagree.has(stream.key) ? stream.key : null,
             failed: inbound.failed || outbound.failed || null
         }
     }
@@ -431,12 +456,33 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         let changedThere = false
         let moved = false
         let more = false
-        let refused = false
+        let refused = []
         let carriedIn = 0
         let carriedOut = 0
         let failed = null
         let converged = 0
         let convergeRefused = null
+
+        // What `di follows` shows. Built before the room's read parks as well as
+        // after it: that read can hold the tick for twenty seconds, and a
+        // disagreement found in a project a moment ago must not wait that long
+        // to be said — or, once the copies agree, to be unsaid.
+        const started = state
+        const report = () => {
+            state = {
+                status: failed ? 'waiting' : (more ? 'catching up' : 'following'),
+                carriedIn: started.carriedIn + carriedIn,
+                carriedOut: started.carriedOut + carriedOut,
+                streams: streams.length,
+                lastError: failed
+                    || convergeRefused
+                    || (refused.length ? `${refused.join(', ')}: one side replaced the whole work and the two copies differ — a follow does not carry that; use di sync` : null),
+                lastMoveAt: moved ? Date.now() : started.lastMoveAt,
+                converged: started.converged + converged,
+                lastConvergeAt: converged ? Date.now() : started.lastConvergeAt,
+                resumed: started.resumed
+            }
+        }
 
         // The room's own log parks on the other side (that is what makes a
         // followed room feel like one room); the project logs are asked
@@ -450,13 +496,14 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             // projects, which never park, are already carried when we settle
             // into the wait.
             const willPark = index === ordered.length - 1
+            if (willPark) report()
             const result = await runStream(stream, { wait: willPark })
             if (willPark) parked = true
             if (result.skipped) continue
             changedThere = changedThere || result.changedThere
             moved = moved || result.moved
             more = more || result.more
-            refused = refused || result.refused
+            if (result.refused) refused.push(result.refused)
             carriedIn += result.carriedIn || 0
             carriedOut += result.carriedOut || 0
             failed = failed || result.failed
@@ -470,19 +517,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         chase.noteProjects(streams.filter(stream => stream.kind === 'project').map(stream => stream.projectId))
         chase.run()
 
-        state = {
-            status: failed ? 'waiting' : (more ? 'catching up' : 'following'),
-            carriedIn: state.carriedIn + carriedIn,
-            carriedOut: state.carriedOut + carriedOut,
-            streams: streams.length,
-            lastError: failed
-                || convergeRefused
-                || (refused ? 'one side replaced a whole scene — that is not carried by a follow; use di sync' : null),
-            lastMoveAt: moved ? Date.now() : state.lastMoveAt,
-            converged: state.converged + converged,
-            lastConvergeAt: converged ? Date.now() : state.lastConvergeAt,
-            resumed: state.resumed
-        }
+        report()
         save()
         // Still behind: go round again at once. A capped batch that slept would
         // trickle a long history across at one batch per tick.

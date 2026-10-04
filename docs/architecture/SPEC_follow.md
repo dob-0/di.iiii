@@ -59,6 +59,16 @@ space") — each fails without its fix.
   119 ms; both ended at version 8 with the same 8 entities. One < 8 s "not answering" blip, self-recovered, cause
   not known. Measured before the 2026-10-01 fixes.
 
+## Whole-work ops (done 2026-10-04)
+
+A `replaceDocument` / `replaceScene` is never carried (a follow carries edits; replacing the whole work is `di sync`).
+The cursor steps over such an op like any op it has accounted for, with or without an opId (older logs have ops with
+none). When one is seen, the follower compares the two copies: equal, and nothing is said; different, and
+`di follows` names the stream (`project:<id>`) and says so until they agree. Nothing is overwritten; the host-wins
+converge rule above is unchanged. Measured: `followIntegration.test.js` (two servers), both ways, edits cross
+in under 5 s past a whole-work op and the error clears. Not covered: the `PUT /api/projects/:id/document` route does
+not wake a follow, so a replacement made there is noticed at the next park end (up to 20 s).
+
 ## Not yet (owed)
 
 - **Keeping both people's intent** on a same-field conflict (an op-based CRDT with per-field Lamport stamps,
