@@ -12,7 +12,8 @@ import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { side, startFollowing } = require('./follower.js')
+const { side, startFollowing, startCursorAt } = require('./follower.js')
+const { sceneStream } = require('./streams.js')
 const { httpRequest, httpDownloadToFile, httpUploadFile } = require('../httpClient.js')
 const { CONVERGE_CLIENT } = require('./followConverge.js')
 
@@ -178,16 +179,6 @@ const settle = async (label, probe, { timeout = 30_000, every = 120 } = {}) => {
     throw new Error(`${label} — never became true within ${timeout}ms (last saw: ${JSON.stringify(last)})`)
 }
 
-/**
- * A follow with no saved cursors starts FROM NOW, and "now" is taken by its
- * first tick, a moment after startFollowing() returns. An edit made before that
- * is history, and by design is never carried (#757) — so a test that writes
- * straight after starting a follow is racing the follow's own baseline, and
- * loses on a slow machine (CI, 2026-10-04: three PRs, three different tests).
- * Wait for the follow to say it is following: the baseline is taken by then.
- */
-const started = (follower) => settle('the follow taking its starting point', () => ['following', 'catching up'].includes(follower.state.status))
-
 const hasOp = (server, opId, spaceId = SPACE) => async () => {
     const log = await readOps(server, spaceId)
     return opIds(log).includes(opId) ? log : false
@@ -230,7 +221,6 @@ describe('a space that lives on two di.iiii at once', () => {
                 }
             }
         })
-        await started(follower)
     })
 
     afterAll(async () => {
@@ -535,7 +525,6 @@ describe('a followed space stays one space', () => {
 
     it("agrees on the host's value when both sides change the same field at the same moment", async () => {
         let follower = follow()
-        await started(follower)
         expect((await writeOp(hosting, addObject('box', 'op-box'))).status).toBe(200)
         await settle('the box reaching the follower', hasOp(following, 'op-box'))
         follower.stop()
@@ -574,7 +563,6 @@ describe('a followed space stays one space', () => {
     it('resumes from where it was after a restart, and never applies an old edit twice', async () => {
         let saved = null
         let follower = follow({ onSave: (state) => { saved = state } })
-        await started(follower)
         expect((await writeOp(hosting, addObject('lamp', 'op-lamp-once'))).status).toBe(200)
         await settle('the lamp reaching the follower', hasOp(following, 'op-lamp-once'))
         await settle('the follower saving where it got to', async () => saved && saved.seen.includes('op-lamp-once'))
@@ -903,7 +891,6 @@ describe('a project made empty on either side appears on both', () => {
             remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: syncKey }),
             log: { warn: message => warned.push(message), info: () => {} }
         })
-        await started(follower)
     })
 
     afterAll(async () => {
@@ -1091,5 +1078,65 @@ describe('a follow starts from now and never silently erases work only the follo
         } finally {
             follower.stop()
         }
+    })
+})
+
+// "From now" is the moment the follow starts, not the moment its first pass
+// reaches a stream (seen in CI 2026-10-04/05: an edit written straight after
+// startFollowing() was folded into the history and never carried). No waiting
+// for the follow to settle here — that wait is exactly what hid the race.
+describe('an edit made the instant a follow starts is carried', () => {
+    let hosting = null
+    let following = null
+    let follower = null
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+    })
+
+    afterAll(async () => {
+        follower?.stop()
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    // The exact rule, independent of how fast the machine is: the starting
+    // point sits just before the first op stamped at or after the start.
+    it('starts just before the first op made after the start, however late it looks', async () => {
+        expect(typeof startCursorAt).toBe('function')
+        const before = await writeOp(hosting, addObject('before-start', 'op-before-start'))
+        expect(before.status).toBe(200)
+        await new Promise(resolve => setTimeout(resolve, 30))
+        const at = Date.now()
+        await new Promise(resolve => setTimeout(resolve, 30))
+        const after = await writeOp(hosting, addObject('after-start', 'op-after-start'))
+        expect(after.status).toBe(200)
+        const log = await readOps(hosting)
+        const versionOf = (opId) => log.ops.find(op => op.opId === opId).version
+        const host = side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN })
+        const cursor = await startCursorAt(host, sceneStream(SPACE), at)
+        expect(cursor.reachable).toBe(true)
+        expect(cursor.latestVersion).toBe(versionOf('op-after-start') - 1)
+        expect(cursor.latestVersion).toBeGreaterThanOrEqual(versionOf('op-before-start'))
+    })
+
+    it('carries both sides\' first edits, made before the follow\'s first pass', async () => {
+        follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: () => {}, info: () => {} }
+        })
+        const [onHost, onFollower] = await Promise.all([
+            writeOp(hosting, addObject('first-host', 'op-first-host')),
+            writeOp(following, addObject('first-follower', 'op-first-follower'))
+        ])
+        expect(onHost.status).toBe(200)
+        expect(onFollower.status).toBe(200)
+        await settle('the host\'s first edit reaching the follower', hasOp(following, 'op-first-host'))
+        await settle('the follower\'s first edit reaching the host', hasOp(hosting, 'op-first-follower'))
+        expect(objectIds(await readScene(following))).toContain('first-host')
+        expect(objectIds(await readScene(hosting))).toContain('first-follower')
     })
 })

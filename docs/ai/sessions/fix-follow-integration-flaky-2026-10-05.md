@@ -1,24 +1,8 @@
-## Follow integration tests: flaky on CI (2026-10-05)
+# fix/follow-integration-flaky-2026-10-05
 
-**Symptom.** `serverXR/src/follow/followIntegration.test.js` failed a different test on each of three CI runs
-(#760 twice: "carries an edit made on the host" and "never applies the same op twice" with `expected 3 to be 4`;
-#763: "agrees on the host's value when both sides change the same field"). Dev and aylmo runs passed.
+## What changed and why
 
-**Root cause (one, in the tests).** Since #757 a follow with no saved cursors starts from now. "Now" is taken by the
-follow's first tick (`runStream`, `fromNowPending`), a moment after `startFollowing()` returns. The tests wrote
-their first edit straight after starting the follow. On a slow runner the edit landed before the baseline, counted as
-history, and was never carried:
-- "carries an edit made on the host": the lamp never arrives, `settle` times out.
-- "never applies the same op twice": the lamp is missing on the follower, so 3 edits instead of 4.
-- "agrees on the host's value": `op-box` never arrives (`settle` at the first wait).
-
-**Fix.** A `started(follower)` helper waits on the real state (`follower.state.status` leaves `starting`, which the
-follower only does after the first tick has taken its cursors) before any write. Applied to every first-start follow
-in the file that writes right after starting. No timeouts shortened, no assertion weakened. No change to follower.js:
-start-from-now is the designed behaviour; a user's edit in the instant between `di follow` and its baseline being
-history is a limit, not a bug in the rule (owed if the owner wants the baseline taken at the call, not the first tick).
-
-**Measured.** No before/after pass rate under artificial load: the coordinator stopped the load runs because aylmo has a
-fan fault (package hit 100 C). The first local run on aylmo before the fix passed 35/35 as already reported; proof is by
-reasoning (above) and by GitHub CI on the pushed branch (re-runs listed in the PR). Owed: a before/after rate on a
-machine that can take load.
+- CI failed a different followIntegration test on each of three PRs (#760 ×2, #763). Cause: since #757 a from-now follow took its starting point at its first pass over each stream, a moment after startFollowing() returned; an edit made in between was folded into the history and NEVER carried — a product race, not only a test problem.
+- Fix (follower.js): "now" is the moment the follow is started (startedAt). The first pass sets each cursor just before the first op stamped at or after startedAt (startCursorAt reads the latest version and the last 200 ops, never the whole log). No margin on either side: a margin replays history made just before the start. Remaining window: two clocks' skew (NTP).
+- The started() waits added to the tests earlier on this branch are removed: they hid the race.
+- Guard: 'an edit made the instant a follow starts is carried' — startCursorAt lands exactly between an op before and an op after the start; both sides' first edits are carried. Red on origin/dev (2 failed), green after. serverXR/src/follow: 8 files, 93 tests passed (aylmo, ≤ 81 °C, no load).
