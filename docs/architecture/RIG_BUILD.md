@@ -2124,8 +2124,8 @@ the electrician's distribution; GDTF Share with the owner's login.
 
 ### 19.5 One chosen version on its desk — planned offline, applied with the desk stopped (2026-10-05)
 
-The owed rule of §19.4, as a script: `scripts/rigbuild/desk-plan.mjs`. Why (audit
-`docs/ai/audits/moxir-2026-10-05/B-show-control.md` B1, B2): the moxir desk held the Minimal's
+The owed rule of §19.4, as a script: `scripts/rigbuild/desk-plan.mjs`. Why (the MOXIR audit of
+2026-10-05, area B "show control", B1 and B2 — on branch `docs/moxir-audit-2026-10-05` until it lands): the moxir desk held the Minimal's
 loop and 241 fixtures of 7 other versions, U1–U4 full, so Known · full could not land at its
 planned addresses. The live routes (`patch.mjs --unpatch` × 7, `--exact`, `show-loop.mjs`) change
 a running desk step by step with no single undo; this makes the whole change ONE file, seen first.
