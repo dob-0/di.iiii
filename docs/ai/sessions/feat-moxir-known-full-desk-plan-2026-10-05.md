@@ -13,3 +13,8 @@
 - Open: at rest the planned desk is NOT dark (desk fixtures rest at dimmer 255: 227 non-zero ch on U1, 44 on U2) —
   OUTPUT on before the first GO lights every lamp; the owner's call. The crew sheet says "maker's" for the
   TESTED (Sevan) channel lists (audit B5). Not seen in a browser.
+- INCIDENT 02:01:20: testing apply's "is the desk stopped?" probe, `GET https://local.thedi.studio/light/api/show`
+  BUILT the lazy installed desk, which resumed the Minimal's saved running loop (OUTPUT stayed off: no DMX).
+  Probe fixed to `/light/api/clock` (never builds the desk); known-fixes row. The desk was left as it is; `di down` stops it.
+- Apply flow corrected: `di down` FIRST, plan from the stopped show (document from dev), apply, `di up` — a running
+  desk saves at every cue, so a plan made while it runs is stale (apply's sha check refuses it).
