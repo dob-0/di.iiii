@@ -33,6 +33,7 @@ import AgentRunPanel from './AgentRunPanel.jsx'
 import TimelinePanelWindow from './TimelinePanelWindow.jsx'
 import KeeperPanelWindow from './KeeperPanelWindow.jsx'
 import DmxOutPanelWindow from './DmxOutPanelWindow.jsx'
+import LaserOutPanelWindow from './LaserOutPanelWindow.jsx'
 import MidiInputPanel from './MidiInputPanel.jsx'
 import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import VjDeckView from './vjDeck/VjDeckView.jsx'
@@ -1939,6 +1940,15 @@ export default function RawEditor({
                         type: 'updateNode',
                         payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
                     })}
+                />
+            )
+        }
+        if (node.typeId === 'device.laser.out') {
+            return (
+                <LaserOutPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onStatus={handleMidiOutStatus}
                 />
             )
         }

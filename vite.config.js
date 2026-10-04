@@ -556,6 +556,14 @@ export default {
                 changeOrigin: true,
                 xfwd: true
             },
+            // The lasers — the same shape: serverXR answers /laser itself on a local install
+            // (serverXR/src/routes/laserRoutes.js). Without this a dev page's Laser Out and the
+            // room's laser view got index.html back and read "no laser server here".
+            '^/laser(/|$)': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true,
+                xfwd: true
+            },
             // Live AI — a WebSocket to the image model on this machine, relayed by
             // serverXR (serverXR/src/liveAi/relay.js). Anchored like /ndi above.
             '^/liveai(/|$)': {
