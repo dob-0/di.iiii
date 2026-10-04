@@ -96,10 +96,13 @@ function useVersionList(listProjectId) {
 // The labelled copies of old hall versions fold behind one entry. The current version is
 // never folded (a visitor in an old copy still sees where they are). With no `copyOf`
 // marks there are no copies, so no fold — the row is what it was.
+// CONCEPTS (a version kept on purpose as an idea) fold the same way, behind their own button, "Concepts (n)".
+// The version for the show comes first on the row as ever; a concept you are standing in is not folded.
 export const splitVersions = (links) => {
-    const shown = links.filter((l) => !l.copy || l.current)
-    const folded = links.filter((l) => l.copy && !l.current)
-    return { shown, folded }
+    const shown = links.filter((l) => (!l.copy && !l.concept) || l.current)
+    const folded = links.filter((l) => l.copy && !l.concept && !l.current)
+    const concepts = links.filter((l) => l.concept && !l.current)
+    return { shown, folded, concepts }
 }
 
 function VersionLink({ l, curRef }) {
@@ -120,12 +123,13 @@ export default function RigVersionSwitch({ spaceId, projectId, entities, top = '
     // while the list is loading only the current version shows (no row that reshuffles when it lands)
     const links = useMemo(() => versionLinks(variant, projectId, (id) => buildPublicProjectPath(spaceId, id), list === undefined ? null : existing, list || null), [variant, projectId, spaceId, existing, list])
     const [foldOpen, setFoldOpen] = useState(false)
+    const [conceptsOpen, setConceptsOpen] = useState(false)
     const [menuOpen, setMenuOpen] = useState(false)
     const [cue, setCue] = useState({ left: false, right: false })
     const scrollerRef = useRef(null)
     const curRef = useRef(null)
     const walk = mode === 'walk'
-    const { shown, folded } = useMemo(() => (links ? splitVersions(links) : { shown: [], folded: [] }), [links])
+    const { shown, folded, concepts } = useMemo(() => (links ? splitVersions(links) : { shown: [], folded: [], concepts: [] }), [links])
 
     const measure = () => {
         const el = scrollerRef.current
@@ -140,7 +144,7 @@ export default function RigVersionSwitch({ spaceId, projectId, entities, top = '
         const cur = curRef.current
         if (el && cur && !walk) el.scrollLeft = Math.max(0, cur.offsetLeft - (el.clientWidth - cur.offsetWidth) / 2)
         measure()
-    }, [links, foldOpen, walk])
+    }, [links, foldOpen, conceptsOpen, walk])
     useEffect(() => {
         window.addEventListener('resize', measure)
         return () => window.removeEventListener('resize', measure)
@@ -153,11 +157,18 @@ export default function RigVersionSwitch({ spaceId, projectId, entities, top = '
             {`Old versions (${folded.length})`}
         </button>
     ) : null
+    const conceptFold = concepts.length ? (
+        <button type="button" aria-expanded={conceptsOpen} aria-controls="rig-concepts" onClick={() => setConceptsOpen((v) => !v)} style={buttonStyle}>
+            {`Concepts (${concepts.length})`}
+        </button>
+    ) : null
     const items = (
         <>
             {shown.map((l) => <VersionLink key={l.href} l={l} curRef={curRef} />)}
             {fold}
             {foldOpen ? <span id="rig-old-versions" style={{ display: 'contents' }}>{folded.map((l) => <VersionLink key={l.href} l={l} curRef={curRef} />)}</span> : null}
+            {conceptFold}
+            {conceptsOpen ? <span id="rig-concepts" style={{ display: 'contents' }}>{concepts.map((l) => <VersionLink key={l.href} l={l} curRef={curRef} />)}</span> : null}
         </>
     )
     if (walk) {
