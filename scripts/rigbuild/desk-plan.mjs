@@ -299,8 +299,8 @@ const liveShowPath = (data, space) => path.join(data, 'spaces', space, 'lighting
 
 // Where the installed desk may answer: the one given, the install's own port (di.env PORT;
 // 443 on aylmo, behind the gateway) over http and https, and the front door. A gateway answering
-// 502/503/504 means the desk behind it is down. Any other answer means it runs and would save over
-// the file. Returns what answered, or null.
+// 502/503/504 means di behind it is down. Any other answer means di runs, and its desk would save
+// over the file (or load it half-way). Returns what answered, or null.
 const deskCandidates = (desk, data) => {
     let port = null
     try { port = /^PORT=(\d+)$/m.exec(fs.readFileSync(path.join(path.dirname(data), 'di.env'), 'utf8'))?.[1] || null } catch { /* no env file */ }
@@ -311,7 +311,10 @@ const deskCandidates = (desk, data) => {
 const deskAnswers = async (desk, data) => {
     for (const base of deskCandidates(desk, data)) {
         try {
-            const r = await fetch(`${base}api/show`, { signal: AbortSignal.timeout(3000) })
+            // api/clock, never api/show: on the installed di any other /light/ request BUILDS the desk
+            // (lightingRoutes.js getDesk), which binds Art-Net and resumes a saved running cue list.
+            // The clock answers without building it. Any answer at all means di is up: refuse.
+            const r = await fetch(`${base}api/clock`, { signal: AbortSignal.timeout(3000) })
             if (![502, 503, 504].includes(r.status)) return `${base} HTTP ${r.status}`
         } catch (e) {
             // A TLS name mismatch on https://127.0.0.1 is still a server listening there.
@@ -342,7 +345,7 @@ async function apply({ dir, data, space, desk, backups }) {
     if (meta.gate?.passed !== true) die(meta.gate ? 'the plan did not pass its gate (patch-sheet.mjs) — nothing applied' : 'the plan was made without --gate — plan again with --gate <plan>; nothing applied')
     const live = liveShowPath(data, space)
     const answer = await deskAnswers(desk, data)
-    if (answer) die(`the desk is running (${answer}) — it would write over the new show at its next save. Run \`di down\` first, then this, then \`di up\`.`)
+    if (answer) die(`di is running (${answer}) — its desk would write over the new show at its next save. Run \`di down\` first, then this, then \`di up\`.`)
     if (machineOutputOn(data)) die(`this machine's desk OUTPUT is ON (${path.join(data, 'lighting', 'show.json')}) — a new show must not start transmitting on load. Switch OUTPUT off first.`)
     const current = fs.readFileSync(live, 'utf8')
     if (sha256(current) !== meta.source.sha256) die(`the live show changed since the plan was made (sha256 ${sha256(current).slice(0, 12)}…, planned from ${meta.source.sha256.slice(0, 12)}…) — plan again from the live show`)
@@ -370,7 +373,7 @@ async function undo({ backup, data, space, desk }) {
     const text = fs.readFileSync(path.join(backup, 'show.json'), 'utf8')
     if (sha256(text) !== manifest.files['show.json']) die(`the backup's show.json does not match its manifest — not restored`)
     const answer = await deskAnswers(desk, data)
-    if (answer) die(`the desk is running (${answer}). Run \`di down\` first.`)
+    if (answer) die(`di is running (${answer}). Run \`di down\` first.`)
     const live = liveShowPath(data, space)
     // The show being undone is kept too, so the undo can itself be undone.
     const aside = path.join(backup, `undone-${stamp()}`)
