@@ -51,7 +51,20 @@ space") — each fails without its fix.
   119 ms; both ended at version 8 with the same 8 entities. One < 8 s "not answering" blip, self-recovered, cause
   not known. Measured before the 2026-10-01 fixes.
 
+- **The internet case, 2026-10-04** — aylmo (follower, 0.4.16-dev.fc83b198, local.thedi.studio) ↔ dev.diiii.xyz (host, the same
+  commit), space `hayfilm`, after the 2026-10-01 fixes. Start: the follower's history went up (out 313), dev's came down (in 73),
+  two projects converged to the host's copy; all four shared projects then hash the same on both sides. One edit each way on
+  `hayfilm-moct-2026-10-09`'s To do list (a row added on aylmo, removed on dev), three runs: aylmo→dev **652 / 21,389 / 21,482 ms**,
+  dev→aylmo **20,789 / 20,676 / 20,697 ms**. ~21 s is the room log's 20 s park: a project edit on either side waits for the park to
+  end. Neither a local edit (spec above: "wakes the loop at once") nor a host project edit cuts it short while it is parked. Owed below.
+  Probe script: the session note `docs/ai/sessions/docs-follow-measured-dev-2026-10-04.md`.
+
 ## Not yet (owed)
+
+- **A parked follow does not wake.** Measured 2026-10-04 (above): ~21 s per edit in both directions once the loop parks on the room
+  log. The fix to look at: a local edit aborts the parked read; the host's park also returns on any project op in the space.
+- **An empty project does not travel.** Projects with no ops (version 0) stayed on the follower only (six empty room projects in
+  `hayfilm`, 2026-10-04).
 
 - **Keeping both people's intent** on a same-field conflict (an op-based CRDT with per-field Lamport stamps,
   Kleppmann et al., "Local-first software", 2019). Today the host's value wins.
