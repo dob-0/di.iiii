@@ -31,7 +31,9 @@ describe('StudioGraphSurface', () => {
         render(<StudioGraphSurface document={{ nodes: [cube], edges: [] }} />)
         fireEvent.click(screen.getByText('My Cube'))
         expect(screen.getAllByText('My Cube').length).toBeGreaterThan(1) // graph card + readout
-        expect(screen.getByText('geom.cube')).toBeInTheDocument()
+        // The type's label, never its id — no identifiers on screen (2026-10-02).
+        expect(screen.getByText('Cube')).toBeInTheDocument()
+        expect(screen.queryByText('geom.cube')).toBeNull()
 
         // Delete/Backspace must be a no-op here — no onDeleteNode was passed to
         // RawGraphSurface, so nothing in this read-only view can remove a node.

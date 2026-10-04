@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 // The floor the auto-fit will not go below; the door must survive it.
 const FIT_MIN_USEFUL_ZOOM_FOR_TEST = 0.34
 import RawGraphSurface from './RawGraphSurface.jsx'
 import { createNode } from '../../project/nodeRegistry.js'
+import { cardHeight } from '../utils/cardGeometry.js'
 
 const makeNode = (typeId, overrides = {}) => ({
     ...createNode(typeId, { graphX: overrides.graphX ?? 0, graphY: overrides.graphY ?? 0 }),
@@ -242,12 +243,102 @@ describe('RawGraphSurface', () => {
         expect(zoom).toBeLessThanOrEqual(1)
     })
 
-    it('never magnifies a graph that already fits', () => {
-        const small = [makeNode('value.number', { id: 'a', graphX: 0, graphY: 0 })]
-        const { container } = render(<RawGraphSurface nodes={small} edges={[]} />)
-        const stage = container.querySelector('.raw-graph-stage')
-        const zoom = Number(/scale\(([-\d.]+)\)/.exec(stage.style.transform)[1])
-        expect(zoom).toBeLessThanOrEqual(1)
+    // Owner 2026-10-02: six cards covered ~9 % of a 2560-wide canvas because
+    // the fit never magnified. It may now, up to 2 — and no further.
+    it('magnifies a small graph on a big screen, but no further than 2', () => {
+        const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+            x: 0, y: 0, left: 0, top: 0, right: 2560, bottom: 1250, width: 2560, height: 1250, toJSON: () => ({})
+        })
+        try {
+            const small = [
+                makeNode('value.number', { id: 'a', graphX: 0, graphY: 0 }),
+                makeNode('value.number', { id: 'b', graphX: 300, graphY: 0 })
+            ]
+            const { container } = render(<RawGraphSurface nodes={small} edges={[]} />)
+            const stage = container.querySelector('.raw-graph-stage')
+            const zoom = Number(/scale\(([-\d.]+)\)/.exec(stage.style.transform)[1])
+            expect(zoom).toBeCloseTo(2, 5)
+        } finally {
+            rect.mockRestore()
+        }
+    })
+
+    // F7, 2026-10-02: a List docking on the right re-fit eight cards to 50 %
+    // at 1200 × 760. The re-fit nobody asked for keeps them readable instead.
+    it('keeps cards readable when a docked window narrows the view', () => {
+        const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+            x: 0, y: 0, left: 0, top: 0, right: 1200, bottom: 760, width: 1200, height: 760, toJSON: () => ({})
+        })
+        try {
+            const grid = [0, 400, 800].flatMap((x, col) => [0, 260].map((y, row) => (
+                makeNode('value.number', { id: `n${col}${row}`, graphX: x, graphY: y })
+            )))
+            const zoomOf = (container) => Number(/scale\(([-\d.]+)\)/.exec(container.querySelector('.raw-graph-stage').style.transform)[1])
+            const { container, rerender } = render(<RawGraphSurface nodes={grid} edges={[]} selectedNodeId="n00" />)
+            expect(zoomOf(container)).toBeGreaterThan(0.9)
+            rerender(<RawGraphSurface nodes={grid} edges={[]} selectedNodeId="n00" contentInsets={{ left: 0, right: 520, top: 0, bottom: 0 }} />)
+            expect(zoomOf(container)).toBeGreaterThanOrEqual(0.8)
+            // and says honestly that some cards are now behind the window
+            const notice = container.textContent.match(/showing (\d+) of (\d+)/)
+            expect(notice).not.toBeNull()
+            expect(Number(notice[1])).toBeLessThan(Number(notice[2]))
+        } finally {
+            rect.mockRestore()
+        }
+    })
+
+    // 2026-10-03, NOPA on a 390 × 844 phone: the graph was too wide to fit
+    // legibly but short, and the partial view left it in the lower half under
+    // a blank band — the axis that fits was never centred.
+    it('centres a short, too-wide graph vertically on a phone', () => {
+        const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+            x: 0, y: 0, left: 0, top: 0, right: 390, bottom: 760, width: 390, height: 760, toJSON: () => ({})
+        })
+        try {
+            const row = [0, 600, 1200, 1800].flatMap((x) => [
+                makeNode('value.number', { id: `t${x}`, graphX: x, graphY: 0 }),
+                makeNode('value.number', { id: `b${x}`, graphX: x, graphY: 240 })
+            ])
+            const { container } = render(<RawGraphSurface nodes={row} edges={[]} />)
+            const [, panY, zoom] = /translate\(([-\d.]+)px,([-\d.]+)px\) scale\(([-\d.]+)\)/
+                .exec(container.querySelector('.raw-graph-stage').style.transform).slice(1).map(Number)
+            expect(container.textContent).toMatch(/showing \d+ of 8/)
+            const bottom = (240 + cardHeight(row[1])) * zoom + panY
+            const top = panY
+            // the blank band above equals the one below
+            expect(Math.abs(top - (760 - bottom))).toBeLessThan(2)
+        } finally {
+            rect.mockRestore()
+        }
+    })
+
+    // 2026-10-03, owner's screen: a new window opened at 800 × 600 and was
+    // tiled to half the screen — the canvas kept the 49 % fit of the small
+    // size. An untouched view re-fits when the surface changes size.
+    it('re-fits an untouched view when the window grows', () => {
+        let size = { width: 800, height: 600 }
+        const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(() => ({
+            x: 0, y: 0, left: 0, top: 0, right: size.width, bottom: size.height, ...size, toJSON: () => ({})
+        }))
+        const observers = []
+        const realObserver = globalThis.ResizeObserver
+        const realFrame = globalThis.requestAnimationFrame
+        globalThis.ResizeObserver = class { constructor(cb) { this.cb = cb; observers.push(this) } observe() {} disconnect() {} }
+        globalThis.requestAnimationFrame = (fn) => { fn(); return 1 }
+        try {
+            const row = [0, 400, 800, 1200].map((x) => makeNode('value.number', { id: `n${x}`, graphX: x, graphY: 0 }))
+            const zoomOf = (container) => Number(/scale\(([-\d.]+)\)/.exec(container.querySelector('.raw-graph-stage').style.transform)[1])
+            const { container } = render(<RawGraphSurface nodes={row} edges={[]} />)
+            const small = zoomOf(container)
+            act(() => observers.forEach((o) => o.cb([]))) // the observer's first report
+            size = { width: 1290, height: 1300 }
+            act(() => observers.forEach((o) => o.cb([])))
+            expect(zoomOf(container)).toBeGreaterThan(small * 1.4)
+        } finally {
+            rect.mockRestore()
+            globalThis.ResizeObserver = realObserver
+            globalThis.requestAnimationFrame = realFrame
+        }
     })
 
     it('supports zooming in and out with graph controls', () => {

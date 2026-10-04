@@ -213,6 +213,57 @@ export const getNodeCardSummary = (node) => {
     return null
 }
 
+// What a card shows of its CONTENT, below its port rows (owner 2026-10-02:
+// a List card read "7 rows · 3 groups" and a Text card read "Content" —
+// you had to open every card to know what was in it). The lines sit under
+// the ports, like a picture operator's picture, so no port moves and no wire
+// lands anywhere new; cardGeometry.js adds their height to the card.
+//
+// One line per entry, each clipped to the card width, so the height is a
+// pure function of the node and never of the font.
+export const CARD_CONTENT_MAX_LINES = { 'view.list': 12, 'view.text': 6 }
+
+export const getNodeCardLines = (node) => {
+    if (!node) return null
+    if (node.typeId === 'view.list') {
+        const max = CARD_CONTENT_MAX_LINES['view.list']
+        const items = (Array.isArray(node.values?.items) ? node.values.items : [])
+            .filter((it) => String(it?.text || '').trim())
+        if (!items.length) return null
+        const declared = Array.isArray(node.values?.groups) && node.values.groups.length ? node.values.groups : ['List']
+        // A row whose group was renamed away still exists — show it at the end
+        // rather than lose it from the card.
+        const orphans = items.filter((it) => !declared.includes(it.group))
+        const sections = declared.map((group) => ({ group, rows: items.filter((it) => it.group === group) }))
+        if (orphans.length) sections.push({ group: null, rows: orphans })
+        const lines = []
+        let shown = 0
+        for (const { group, rows } of sections) {
+            if (!rows.length) continue
+            // A heading with no row under it reads as an empty group — only
+            // start a section when at least one of its rows fits too.
+            if (group !== null) {
+                if (lines.length + 2 > max) break
+                lines.push({ kind: 'group', text: group })
+            }
+            for (const row of rows) {
+                if (lines.length >= max) break
+                lines.push({ kind: 'row', text: String(row.text).trim() })
+                shown += 1
+            }
+        }
+        return { lines, more: items.length - shown }
+    }
+    if (node.typeId === 'view.text') {
+        const max = CARD_CONTENT_MAX_LINES['view.text']
+        const text = String(node.values?.content ?? node.values?.text ?? '')
+        const all = text.split('\n').map((line) => line.trim()).filter(Boolean)
+        if (!all.length) return null
+        return { lines: all.slice(0, max).map((line) => ({ kind: 'line', text: line })), more: Math.max(0, all.length - max) }
+    }
+    return null
+}
+
 // --- Operator families ---
 //
 // One node, a menu of operations — the TouchDesigner Math CHOP shape, asked

@@ -5588,7 +5588,8 @@
 
 .raw-list-row {
     display: flex;
-    align-items: center;
+    flex-wrap: wrap;
+    align-items: flex-start;
     gap: var(--di-space-2);
     min-height: 44px;
 }
@@ -5596,6 +5597,15 @@
 .raw-list-text {
     flex: 1;
     min-width: 0;
+    min-height: 44px;
+    /* The autosize sets height = scrollHeight, which already includes the
+       padding; content-box would add the padding a second time. */
+    box-sizing: border-box;
+    resize: none;
+    overflow: hidden;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
     padding: var(--di-space-2) var(--di-space-3);
     border: 1px solid transparent;
     border-radius: 0;
@@ -5610,12 +5620,18 @@
     border-color: rgba(var(--di-cyan-rgb), 0.85);
 }
 
+/* The row's actions, behind its one ⋯ button. They open on their own line
+   under the text, so opening them never squeezes what you are reading. */
 .raw-list-row-controls {
     display: flex;
     align-items: center;
     gap: var(--di-space-1);
-    flex: none;
+    flex: 1 0 100%;
+    padding-left: var(--di-space-3);
 }
+.raw-list-more { flex: none; border-color: transparent; color: var(--di-text-muted) }
+.raw-list-row:hover .raw-list-more,
+.raw-list-row.is-menu-open .raw-list-more { border-color: rgba(255, 255, 255, 0.16); color: var(--di-text) }
 
 .raw-list-btn {
     width: 44px;
@@ -5680,8 +5696,6 @@
 /* The controls stack under the text on a phone rather than squeezing a
    44px row into 90px of leftover width. */
 @media (max-width: 520px) {
-    .raw-list-row { align-items: stretch; flex-wrap: wrap }
-    .raw-list-text { flex-basis: 100% }
     .raw-list-move { flex: 1; max-width: none }
 }
 
@@ -5711,6 +5725,50 @@
     font-variant-numeric: tabular-nums;
     pointer-events: none;
 }
+
+/* A List's rows and a Text's lines on the card itself, under the ports.
+   Height per line is set inline from CARD_CONTENT_LINE_HEIGHT — the card's
+   box (cardContentHeight) is computed from the same number, so nothing here
+   may add vertical margin or padding. */
+.raw-graph-node-content {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    margin: 0;
+    padding: var(--di-space-1) 0 0;
+    list-style: none;
+    pointer-events: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.raw-graph-node-content-line {
+    font-size: var(--di-text-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: rgba(255, 255, 255, 0.82);
+}
+.raw-graph-node-content-line.is-group {
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--card-family);
+}
+.raw-graph-node-content-line.is-row { padding-left: var(--di-space-2) }
+/* Rows and Text lines WRAP (up to 6 lines) to the count cardContentLayout measured (owner
+   2026-10-02: To do rows were cut to one line). -webkit-line-clamp (set inline
+   to that count) is the guard: a longer row ends in an ellipsis inside its
+   box and reads in full in its window. Groups and "+ N more" stay one line. */
+.raw-graph-node-content-line.is-row,
+.raw-graph-node-content-line.is-line {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    box-sizing: border-box;
+    padding-bottom: 3px;
+}
+.raw-graph-node-content-line.is-more { color: var(--di-text-muted) }
 
 /* The Raw topbar overflowed a 390px phone BEFORE the room count was added:
    measured at 433px of content in a 390px bar, which pushed the ⋯ button clean
