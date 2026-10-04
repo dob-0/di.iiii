@@ -56,13 +56,18 @@ import { uploadAsset, sendOps, must } from './import.mjs'
 export const DEFAULT_MAX_BYTES = 100 * 1000 * 1000
 export const PROVENANCE_NAME = 'PROVENANCE.md'
 
+// What the file is DECLARED as on upload. The server (serverXR/src/index.js isAllowedUpload) takes image/ video/ audio/ model/
+// and application/json, pdf, zip, gzip, octet-stream (only for a listed extension), text/plain. It refuses text/csv,
+// text/markdown, text/html and an .mvr/.gdtf as octet-stream (measured 2026-10-04, HTTP 400 "Unsupported asset type"). So plain
+// text goes up as text/plain (csv, md, html, logs, obj, mtl: the bytes are untouched, only the label is general) and
+// MVR/GDTF, which the specs define as ZIP containers, as application/zip.
 const MIME = {
-    '.pdf': 'application/pdf', '.csv': 'text/csv', '.md': 'text/markdown', '.html': 'text/html',
-    '.json': 'application/json', '.txt': 'text/plain', '.log': 'text/plain', '.mp4': 'video/mp4',
+    '.pdf': 'application/pdf', '.csv': 'text/plain', '.md': 'text/plain', '.html': 'text/plain',
+    '.json': 'application/json', '.txt': 'text/plain', '.log': 'text/plain', '.out': 'text/plain', '.mp4': 'video/mp4',
     '.glb': 'model/gltf-binary', '.gltf': 'model/gltf+json', '.obj': 'text/plain', '.mtl': 'text/plain',
     '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp',
-    '.exr': 'application/octet-stream', '.mvr': 'application/octet-stream', '.gdtf': 'application/octet-stream',
-    '.mg': 'application/json', '.xml': 'application/xml'
+    '.exr': 'application/octet-stream', '.mvr': 'application/zip', '.gdtf': 'application/zip',
+    '.mg': 'application/json', '.xml': 'text/plain'
 }
 export const mimeOf = (name) => MIME[path.extname(String(name)).toLowerCase()] || 'application/octet-stream'
 
@@ -262,6 +267,29 @@ export const cpuTemp = () => {
     return hottest
 }
 
+/** `{"error":"Too many uploads from this session — retry in 509s."}` → 509 (seconds), or null. */
+export const retryAfterSeconds = (text) => {
+    const m = /retry in (\d+)\s*s/i.exec(String(text || ''))
+    return m ? Number(m[1]) : null
+}
+
+/** Upload one file; on HTTP 429 (the server's per-session upload limit) wait the time it names and try again, up to `tries` times. */
+export const uploadWithBackoff = async (client, projectId, file, options, { sleep, tries = 10, bad = warn } = {}) => {
+    for (let attempt = 1; ; attempt++) {
+        let refusal = null
+        const asset = await uploadAsset(client, projectId, file, { ...options, onRefused: (r) => { refusal = r } })
+        if (asset) return asset
+        if (refusal?.status === 429 && attempt < tries) {
+            const wait = (retryAfterSeconds(refusal.reason) ?? 60) + 2
+            bad(`  rate limit (429) on ${options.name} — waiting ${wait}s, then again (${attempt}/${tries - 1})`)
+            await sleep(wait * 1000)
+            continue
+        }
+        options.onRefused?.(refusal)
+        return null
+    }
+}
+
 const projectVisibility = async (client, space, projectId) => {
     const listed = must(await client.get(`/api/spaces/${space}/projects`), `listing the projects of ${space}`)
     const found = (listed.projects || []).find((p) => p.id === projectId)
@@ -275,7 +303,7 @@ const projectVisibility = async (client, space, projectId) => {
 export const runAddFiles = async ({
     client, space, projectId, title, entries, createPrivate = false, dryRun = false, dedupeSpace = false,
     maxBytes = DEFAULT_MAX_BYTES, manifest = {}, notes = [], say: out = say, warn: bad = warn, today = new Date().toISOString().slice(0, 10),
-    pause = async () => {}
+    pause = async () => {}, sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 }) => {
     let visibility = await projectVisibility(client, space, projectId)
     if (visibility === null && !createPrivate) die(`No project "${projectId}" in ${space}.`, 'Pass --create-private to create it (private).')
@@ -321,9 +349,9 @@ export const runAddFiles = async ({
     const carried = []
     for (const entry of plan.fresh) {
         await pause()
-        const asset = await uploadAsset(client, projectId, entry.abs, {
+        const asset = await uploadWithBackoff(client, projectId, entry.abs, {
             skippable: true, name: entry.name, mimeType: mimeOf(entry.name), onRefused: (r) => refused.push({ ...entry, status: r.status, reason: r.reason })
-        })
+        }, { sleep, bad })
         if (asset) { carried.push({ entry, asset }); out(`  up    ${entry.name} (${fmtBytes(entry.size)})`) }
     }
     if (carried.length) await sendOps(client, projectId, carried.map(({ asset }) => ({ type: 'upsertAsset', payload: { asset } })))
@@ -334,7 +362,7 @@ export const runAddFiles = async ({
     const mdFull = provenanceMd({ title, space, project: projectId, date: today, plan: { ...plan, fresh: carried.map((c) => c.entry) }, uploaded, refused: runtimeRefused, manifest, notes })
     const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'add-files-')), PROVENANCE_NAME)
     fs.writeFileSync(tmp, mdFull)
-    const provAsset = await uploadAsset(client, projectId, tmp, { skippable: true, name: PROVENANCE_NAME, mimeType: 'text/markdown', onRefused: (r) => refused.push({ name: PROVENANCE_NAME, size: fs.statSync(tmp).size, status: r.status, reason: r.reason }) })
+    const provAsset = await uploadWithBackoff(client, projectId, tmp, { skippable: true, name: PROVENANCE_NAME, mimeType: mimeOf(PROVENANCE_NAME), onRefused: (r) => refused.push({ name: PROVENANCE_NAME, size: fs.statSync(tmp).size, status: r.status, reason: r.reason }) }, { sleep, bad })
     if (provAsset) {
         const before = must(await client.get(`/api/projects/${projectId}/document`), 'reading before provenance').document || {}
         const stale = (before.assets || []).filter((a) => a.name === PROVENANCE_NAME && a.id !== provAsset.id)

@@ -37,3 +37,6 @@ visitors; Cloudflare 413 above 100 MB; images re-encoded by assetScrub. `uploadA
 Tests: `add-files.test.js` (15). Run record and refusals: `REPORT-moxir-documents.md`.
 Owed: the originals of the hall photographs on dev are reduced copies (`add-sources --originals`); maker page for the 24 PDFs is only
 known where media.json has the sha256.
+Run findings (dev, 2026-10-04): (1) the server takes only image/ video/ audio/ model/ + json, pdf, zip, gzip, text/plain, octet-stream for a listed
+extension: csv/md/html declared text/plain, MVR/GDTF (ZIP containers) application/zip; (2) uploads are limited to 60 per 10 min per session (HTTP 429
+"retry in Ns"): the tool waits and retries; a re-run skips what is there by name. 133 assets in moxir-documents (132 + PROVENANCE.md), private, visitor 404.

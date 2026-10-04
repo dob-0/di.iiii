@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { runAddFiles, planFiles, expandManifest, mediaIndex, provenanceMd, mimeOf, assetNameFor, sha256File } from './add-files.mjs'
+import { retryAfterSeconds, runAddFiles, planFiles, expandManifest, mediaIndex, provenanceMd, mimeOf, assetNameFor, sha256File } from './add-files.mjs'
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'add-files-'))
 const write = (rel, content) => {
@@ -96,9 +96,9 @@ describe('add-files', () => {
         await runAddFiles({ client: server.client, space: 'moxir', projectId: 'p', entries: names.map((n) => entryOf(n, `content of ${n}`)), createPrivate: true, ...quiet })
         const types = Object.fromEntries(server.log.uploads.map((u) => [u.name, u.type]))
         expect(types['a.pdf']).toBe('application/pdf')
-        expect(types['b.csv']).toBe('text/csv')
+        expect(types['b.csv']).toBe('text/plain')
         expect(types['e.glb']).toBe('model/gltf-binary')
-        expect(types['d.mvr']).toBe('application/octet-stream')
+        expect(types['d.mvr']).toBe('application/zip')
         expect(server.log.ops.every((o) => o.type === 'upsertAsset' || o.type === 'deleteAsset')).toBe(true)
         expect(server.log.ops.some((o) => o.type === 'createEntity')).toBe(false)
         expect(server.projects.get('p').document.assets.map((a) => a.name)).toEqual(expect.arrayContaining(names))
@@ -142,6 +142,7 @@ describe('add-files', () => {
         const b = entryOf('b.csv', 'bbb')
         await runAddFiles({ client: server.client, space: 'moxir', projectId: 'p', createPrivate: true, entries: [a, b], ...quiet })
         expect(server.log.order.at(-1)).toBe('up:PROVENANCE.md')
+        expect(server.log.uploads.at(-1).type).toBe('text/plain') // text/markdown is refused by the server (400)
         const prov = server.log.uploads.at(-1).text
         for (const e of [a, b]) {
             expect(prov).toContain(e.sha256)
@@ -184,6 +185,36 @@ describe('add-files', () => {
     })
 })
 
+describe('add-files rate limit', () => {
+    it('waits the time the server names on HTTP 429, then uploads the same file', async () => {
+        const server = fakeServer()
+        const orig = server.client.post
+        let hits = 0
+        server.client.post = async (route, body) => {
+            if (route.endsWith('/assets') && body.get('asset').name === 'a.csv' && hits++ < 2) {
+                return { ok: false, status: 429, body: null, text: '{"error":"Too many uploads from this session — retry in 509s."}' }
+            }
+            return orig(route, body)
+        }
+        const waits = []
+        const result = await runAddFiles({ client: server.client, space: 'moxir', projectId: 'p', createPrivate: true, entries: [entryOf('a.csv', '1')], sleep: async (ms) => { waits.push(ms) }, ...quiet })
+        expect(waits).toEqual([511000, 511000])
+        expect(result.refused).toEqual([])
+        expect(server.log.uploads.map((u) => u.name)).toContain('a.csv')
+    })
+
+    it('gives up after the tries and reports the 429 by name', async () => {
+        const server = fakeServer({ refuse: { 'a.csv': 429 } })
+        const result = await runAddFiles({ client: server.client, space: 'moxir', projectId: 'p', createPrivate: true, entries: [entryOf('a.csv', '1')], sleep: async () => {}, ...quiet })
+        expect(result.refused[0]).toMatchObject({ name: 'a.csv', status: 429 })
+    })
+
+    it('reads the seconds out of the server message', () => {
+        expect(retryAfterSeconds('{"error":"Too many uploads from this session — retry in 509s."}')).toBe(509)
+        expect(retryAfterSeconds('nope')).toBeNull()
+    })
+})
+
 describe('add-files helpers', () => {
     it('expands a manifest: prefix, include and exclude rules, sha256, and reports a missing folder', () => {
         write('m/one/a.csv', 'a')
@@ -213,6 +244,17 @@ describe('add-files helpers', () => {
     it('indexes the makers\' pages by sha256 from media.json', () => {
         const index = mediaIndex({ items: { hazer: { media: [{ sha256: 'abc', maker: 'MDG', title: 'T', kind: 'manual', page: 'https://m', fetched: '2026-09-28' }] } } })
         expect(index.get('abc')).toMatchObject({ maker: 'MDG', page: 'https://m' })
+    })
+
+    it('declares only types the server takes (mirror of serverXR/src/index.js isAllowedUpload) for every kind in the manifest', () => {
+        const prefixes = ['image/', 'video/', 'audio/', 'model/']
+        const types = new Set(['application/json', 'application/octet-stream', 'application/pdf', 'application/zip', 'application/x-zip-compressed', 'application/gzip', 'text/plain'])
+        const extensions = new Set(['.exr', '.glb', '.gltf', '.obj', '.mtl', '.png', '.jpg', '.mp4'])
+        for (const name of ['a.pdf', 'a.csv', 'a.md', 'a.html', 'a.mvr', 'a.gdtf', 'a.glb', 'a.mp4', 'a.json', 'a.log', 'a.out', 'a.exr', 'a.mg', 'a.png', 'a.jpg', 'a.txt', 'a.obj', 'a.mtl']) {
+            const mime = mimeOf(name)
+            const ok = prefixes.some((p) => mime.startsWith(p)) || (types.has(mime) && (mime !== 'application/octet-stream' || extensions.has(path.extname(name))))
+            expect(ok, `${name} as ${mime}`).toBe(true)
+        }
     })
 
     it('knows the real type of each kind', () => {
