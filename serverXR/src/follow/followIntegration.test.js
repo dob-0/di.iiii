@@ -718,3 +718,56 @@ describe('a followed space answers at once, edit after edit', () => {
         expect(proxy.chunks - before).toBeLessThan(12)
     }, 20_000)
 })
+
+// "A project made on either appears on both" — including one with nothing in
+// it yet. Seen 2026-10-04 (aylmo following dev.diiii.xyz): six projects made
+// on the follower and never edited (documentVersion 0, no ops) never reached
+// the host, because a project is only ever made on the other side from its
+// ops, and an empty one has none.
+describe('a project made empty on either side appears on both', () => {
+    let hosting = null
+    let following = null
+    let follower = null
+
+    const makeProject = async (server, slug, title) => {
+        const response = await fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug, title })
+        })
+        expect(response.status).toBe(201)
+    }
+    const projectRow = (server, slug) => async () => {
+        const response = await fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, { headers: authHeaders })
+        const { projects } = await response.json()
+        return projects.find(project => project.id === slug) || false
+    }
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: () => {}, info: () => {} }
+        })
+    })
+
+    afterAll(async () => {
+        follower?.stop()
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('carries an empty project made on the follower to the host, with its title', async () => {
+        await makeProject(following, 'empty-bar', 'The Bar')
+        follower.wake()
+        const row = await settle('the follower project reaching the host', projectRow(hosting, 'empty-bar'), { timeout: 10_000 })
+        expect(row.title).toBe('The Bar')
+    })
+
+    it('carries an empty project made on the host to the follower, with its title', async () => {
+        await makeProject(hosting, 'empty-studio', 'The Studio')
+        const row = await settle('the host project reaching the follower', projectRow(following, 'empty-studio'), { timeout: 10_000 })
+        expect(row.title).toBe('The Studio')
+    })
+})
