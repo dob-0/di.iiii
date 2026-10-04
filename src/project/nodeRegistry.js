@@ -302,6 +302,20 @@ export const isAutoOperationLabel = (node, label) => {
     return label === type?.label || menu.some((operation) => operation.label === label)
 }
 
+// The title a card WEARS. Picked as "Math" in the palette, an operator card
+// is stored (and was drawn) as "Add"; nothing said it was a Math. While the
+// name is the automatic one the card reads "<palette name> · <Operation>"; a
+// name a person typed reads alone. Nothing stored changes — this is only what
+// is drawn. The operation shown is the menu's, not the stored label, so an old
+// document whose label lags its operation still says what the card does.
+export const getNodeCardTitle = (node) => {
+    const type = getNodeType(node?.typeId)
+    const operation = getNodeOperationLabel(node)
+    if (!operation) return node?.label || type?.label || ''
+    if (!isAutoOperationLabel(node, node?.label)) return node.label
+    return `${type?.label || node.typeId} · ${operation}`
+}
+
 export const getNodeFamily = (typeId) => {
     const familyId = FAMILY_BY_TYPE[typeId]
     return NODE_FAMILIES.find((f) => f.id === familyId) || null
@@ -451,6 +465,7 @@ export const NODE_TYPES = {
         label: 'Webcam',
         category: 'source',
         runtime: 'web',
+        keywords: ['camera', 'cam', 'video', 'browser', 'getusermedia'],
         singleton: false,
         inputs: [],
         outputs: [

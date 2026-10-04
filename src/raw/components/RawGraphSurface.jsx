@@ -18,6 +18,7 @@ import {
     getNodeInputs,
     getNodeOutputs,
     getNodeType,
+    getNodeCardTitle,
     getPortType
 } from '../../project/nodeRegistry.js'
 
@@ -1711,7 +1712,7 @@ export default function RawGraphSurface({
                                     )}
                                     <span className="raw-graph-node-icon" />
                                     {tier !== 'block' ? (
-                                        <span className="raw-graph-node-label">{node.label}</span>
+                                        <span className="raw-graph-node-label">{getNodeCardTitle(node)}</span>
                                     ) : null}
                                     {tier === 'full' ? (
                                         // The family, not the category: a studio card used to
