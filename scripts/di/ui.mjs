@@ -80,6 +80,14 @@ export const followFileLines = (files) => {
     return lines
 }
 
+/**
+ * What a follow says about the space's own settings (label, visibility, front
+ * door — serverXR/src/follow/followSettings.js): only what it could not do, so
+ * a quiet line means the settings agree. An install too old to report sends none.
+ */
+export const followSettingsLines = (settings) => (Array.isArray(settings?.notes) ? settings.notes : [])
+    .map(note => style.dim(`settings: ${note}`))
+
 export const ui = {
     // What a start prints. It used to be three lines — the address, six space
     // ids and how to stop — and everything else di.iiii can do was a thing you
@@ -227,7 +235,7 @@ export const ui = {
             if (!state) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim('(not running)')}`
             const moving = `${state.status} · in ${state.carriedIn} · out ${state.carriedOut}${state.streams > 1 ? ` · ${state.streams} logs` : ''}`
             const line = `  ${style.cyan(id.padEnd(18))}${where}  ${state.lastError ? style.yellow(state.lastError) : style.dim(moving)}`
-            return [line, ...followFileLines(state.files).map(text => `  ${' '.repeat(18)}${text}`)].join('\n')
+            return [line, ...followSettingsLines(state.settings), ...followFileLines(state.files)].map((text, index) => (index === 0 ? text : `  ${' '.repeat(18)}${text}`)).join('\n')
         }).join('\n')
     },
 

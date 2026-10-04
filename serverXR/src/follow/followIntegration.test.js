@@ -1200,3 +1200,68 @@ describe('a project only the follower holds fills the host\'s new copy, with no 
         }
     })
 })
+
+// Gap 4 (2026-10-05): label, isPublic and the front door (publishedProjectId)
+// differed between dev and the local install for the same space. Host to
+// follower, never more public (followSettings.js).
+describe('a follow carries the space\'s own settings from the host, and never makes it more public', () => {
+    let hosting = null
+    let following = null
+    let follower = null
+    const FRONT = 'front-door'
+
+    const patchSpace = async (server, body) => {
+        const response = await fetch(`${server.baseUrl}/api/spaces/${SPACE}`, { method: 'PATCH', headers: authHeaders, body: JSON.stringify(body) })
+        expect(response.status).toBe(200)
+    }
+    const spaceOf = async (server) => (await (await fetch(`${server.baseUrl}/api/spaces/${SPACE}`, { headers: authHeaders })).json()).space
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        const made = await fetch(`${hosting.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: FRONT, title: 'Front' })
+        })
+        expect(made.status).toBe(201)
+        await patchSpace(hosting, { label: 'The Laser Room', publishedProjectId: FRONT, isPublic: false })
+        // this copy was made public on its own
+        await patchSpace(following, { isPublic: true })
+        follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: () => {}, info: () => {} }
+        })
+    })
+
+    afterAll(async () => {
+        follower?.stop()
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('takes the host\'s label and front door, and a private host makes this copy private', async () => {
+        const mine = await settle('the settings arriving', async () => {
+            const space = await spaceOf(following)
+            return space.label === 'The Laser Room' && space.publishedProjectId === FRONT ? space : false
+        }, { timeout: 20_000 })
+        expect(mine.isPublic).toBe(false)
+    })
+
+    it('does not make a private copy public because the host is', async () => {
+        await patchSpace(hosting, { isPublic: true })
+        // Settings are looked at on each pass, and a host's settings change does
+        // not end the held read, so this may take up to one park (20 s).
+        await settle('the follow saying why', () => (follower.state.settings?.notes || []).some(note => /left private/.test(note)), { timeout: 32_000 })
+        expect((await spaceOf(following)).isPublic).toBe(false)
+    })
+
+    it('carries a changed label later, and clears the front door when the host does', async () => {
+        await patchSpace(hosting, { label: 'Laser, renamed', publishedProjectId: null })
+        const mine = await settle('the change arriving', async () => {
+            const space = await spaceOf(following)
+            return space.label === 'Laser, renamed' && !space.publishedProjectId ? space : false
+        }, { timeout: 20_000 })
+        expect(mine.isPublic).toBe(false)
+    })
+})

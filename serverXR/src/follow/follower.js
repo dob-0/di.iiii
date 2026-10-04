@@ -23,6 +23,7 @@ const { accountedThrough, moreToCarry, unseen, planDirection, planAfterConflict,
 const { projectIdsFrom, sceneStream, streamsFor } = require('./streams')
 const { createAssetChase } = require('./assets')
 const { CONVERGE_CLIENT, DIRECTIONS, describeCounts, planConverge, readDocument } = require('./followConverge')
+const { planSettings, readSettings } = require('./followSettings')
 
 const FLOOR_MS = 700
 // Five seconds, not thirty. A followed space is a room with someone else in
@@ -36,6 +37,8 @@ const TIMEOUT_MS = 8000
 // costs almost nothing, short enough that a dropped wifi is noticed and said
 // out loud rather than hanging forever.
 const WAIT_SECONDS = 20
+// How often the space's own settings (label, visibility, front door) are compared.
+const SETTINGS_EVERY_MS = 5000
 // Enough opIds to cover any batch several times over. Bounded because a room
 // runs for days: the set is a courtesy to keep the wire quiet, and the servers'
 // own dedupe is the correctness.
@@ -389,6 +392,50 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         streams = streamsFor({ spaceId: local.spaceId, localProjects, remoteProjects })
     }
 
+    // The space's own settings, host to this install (followSettings.js). Never
+    // fails the follow: a refusal is said once, in the log and in `di follows`.
+    let settingsAt = 0
+    // Set when the other side said its space changed, or a local write woke the
+    // loop: look at the settings on the very next pass, whatever the interval.
+    let settingsForce = false
+    let settingsNotes = []
+    let settingsCarried = 0
+    const settingsAttempted = new Set()
+    const syncSettings = async () => {
+        if (!settingsForce && Date.now() - settingsAt < SETTINGS_EVERY_MS) return
+        settingsForce = false
+        settingsAt = Date.now()
+        const path = `/api/spaces/${encodeURIComponent(local.spaceId)}`
+        const [there, here, mine] = await Promise.all([
+            request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address }),
+            request(local.url(path), { token: local.token, servername: local.servername, address: local.address }),
+            request(local.url(`${path}/projects`), { token: local.token, servername: local.servername, address: local.address })
+        ])
+        if (!there.ok || !here.ok) return
+        const { patch, notes } = planSettings({
+            host: readSettings(there.payload),
+            local: readSettings(here.payload),
+            localProjects: Array.isArray(mine.payload?.projects) ? mine.payload.projects : []
+        })
+        settingsNotes = notes
+        if (!Object.keys(patch).length) return
+        // The same change asked twice in a row and refused is said once.
+        const attempt = JSON.stringify(patch)
+        const answer = await request(local.url(path), { method: 'PATCH', token: local.token, servername: local.servername, address: local.address, body: patch })
+        if (answer.ok && answer.status === 200) {
+            settingsAttempted.delete(attempt)
+            settingsCarried += 1
+            log.info?.(`[follow] ${local.spaceId}: took the host's space settings (${Object.keys(patch).join(', ')})`)
+            return
+        }
+        if (!settingsAttempted.has(attempt)) {
+            settingsAttempted.add(attempt)
+            const why = answer.status === 202 ? 'it waits for approval here' : `${answer.status || 'no answer'}: ${answer.payload?.error || answer.error || 'refused'}`
+            log.warn?.(`[follow] ${local.spaceId}: could not take the host's space settings (${Object.keys(patch).join(', ')}) — ${why}`)
+        }
+        settingsNotes = [...notes, `the host's ${Object.keys(patch).join(', ')} could not be set here`]
+    }
+
     // Both copies of one stream, read and compared (followConverge.js).
     const compare = async (stream, direction = null, { seedHost = false } = {}) => {
         const [here, there] = await Promise.all([
@@ -595,6 +642,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // been answered; one from after this line keeps the tick from parking.
         woken = false
         await refreshStreams()
+        await syncSettings().catch(() => {})
 
         let parked = false
         let changedThere = false
@@ -625,7 +673,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 lastMoveAt: moved ? Date.now() : started.lastMoveAt,
                 converged: started.converged + converged,
                 lastConvergeAt: converged ? Date.now() : started.lastConvergeAt,
-                resumed: started.resumed
+                resumed: started.resumed,
+                settings: { carried: settingsCarried, notes: settingsNotes }
             }
         }
 
@@ -676,6 +725,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // trickle a long history across at one batch per tick.
         // Woken while this tick ran, or told the other side changed after its
         // projects were read: go round again at once, never into a sleep.
+        if (woken || changedThere) settingsForce = true
         return { moved, parked: parked && !more, more, again: woken || changedThere }
     }
 
