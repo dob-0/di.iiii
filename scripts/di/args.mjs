@@ -15,6 +15,8 @@ export const parseArgs = (argv) => {
         if (name === 'port') { args.flags.port = argv[++i]; continue }
         if (name === 'out') { args.flags.out = argv[++i]; continue }
         if (name === 'from') { args.flags.from = argv[++i]; continue }
+        // `di update --channel dev` — which release channel, one value.
+        if (name === 'channel') { args.flags.channel = argv[++i]; continue }
         if (name === 'as') { args.flags.as = argv[++i]; continue }
         if (name === 'remote') { args.flags.remote = argv[++i]; continue }
         if (name === 'key') { args.flags.key = argv[++i]; continue }
