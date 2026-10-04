@@ -189,6 +189,23 @@ const carry = async ({ to, stream, ops, seen, targetVersion, send = request }) =
  * `onState` is called after every tick with a plain object a person could read:
  * this is what `di follows` prints and what the interface will show.
  */
+// How far back the first pass looks for ops made after the follow started.
+const START_LOOKBACK = 200
+
+/**
+ * Where a from-now cursor starts on one side: just before the first op stamped
+ * at or after `at`, else the latest version. Reads the latest version, then the
+ * last START_LOOKBACK ops — never the whole log.
+ */
+const startCursorAt = async (side, stream, at) => {
+    const now = await readOps(side, stream, Number.MAX_SAFE_INTEGER)
+    if (!now.reachable || !Number.isFinite(now.latestVersion)) return now
+    const recent = await readOps(side, stream, Math.max(0, now.latestVersion - START_LOOKBACK))
+    if (!recent.reachable) return recent
+    const firstAfter = recent.ops.find(op => Number(op?.timestamp) >= at && Number.isFinite(op?.version))
+    return { reachable: true, latestVersion: firstAfter ? Math.min(firstAfter.version - 1, now.latestVersion) : now.latestVersion }
+}
+
 const startFollowing = ({ local, remote, log = console, onState = () => {}, files = {}, saved = null, onSave = null, start = 'now', direction = null, onDirectionDone = null }) => {
     // Where this follower had got to, kept on disk between runs (index.js,
     // followStore.js). Without it a restart forgot both cursors and every opId
@@ -209,6 +226,15 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     // for a stream that exists on BOTH sides then: a project that is on one
     // side only has history the other side has never seen.
     const fromNow = start !== 'replay' && !resume
+    // "Now" is the moment the follow was started, not the moment its first pass
+    // reaches a stream: that pass can come seconds later, and an edit made in
+    // between used to be folded into the history and never carried (CI,
+    // 2026-10-04/05: three PRs, three different integration tests). Both
+    // sides are compared with no margin: a margin would replay ops made just
+    // BEFORE the start, which is the history a from-now follow must not carry.
+    // Installs keep NTP time; an edit made within the two clocks' skew of the
+    // start is the one window left (an op carried twice is dropped by its opId).
+    const startedAt = Date.now()
     let fromNowPending = null
     // `take-host` / `take-mine`: the person's answer to a refusal, applied to
     // each stream's first comparison and then dropped (onDirectionDone clears it
@@ -425,8 +451,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // First start: begin at the latest version on both sides, replay nothing.
         if (fromNowPending?.has(stream.key) && !cursors.has(stream.key)) {
             const [mine, theirsNow] = await Promise.all([
-                readOps(local, stream, Number.MAX_SAFE_INTEGER),
-                readOps(remote, stream, Number.MAX_SAFE_INTEGER)
+                startCursorAt(local, stream, startedAt),
+                startCursorAt(remote, stream, startedAt)
             ])
             if (!mine.reachable || !theirsNow.reachable) {
                 const status = !mine.reachable ? mine.status : theirsNow.status
@@ -679,4 +705,4 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     }
 }
 
-module.exports = { side, readOps, carry, startFollowing, FLOOR_MS, CEILING_MS }
+module.exports = { side, readOps, carry, startFollowing, startCursorAt, FLOOR_MS, CEILING_MS }

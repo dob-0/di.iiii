@@ -12,7 +12,8 @@ import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { side, startFollowing } = require('./follower.js')
+const { side, startFollowing, startCursorAt } = require('./follower.js')
+const { sceneStream } = require('./streams.js')
 const { httpRequest, httpDownloadToFile, httpUploadFile } = require('../httpClient.js')
 const { CONVERGE_CLIENT } = require('./followConverge.js')
 
@@ -1077,5 +1078,65 @@ describe('a follow starts from now and never silently erases work only the follo
         } finally {
             follower.stop()
         }
+    })
+})
+
+// "From now" is the moment the follow starts, not the moment its first pass
+// reaches a stream (seen in CI 2026-10-04/05: an edit written straight after
+// startFollowing() was folded into the history and never carried). No waiting
+// for the follow to settle here — that wait is exactly what hid the race.
+describe('an edit made the instant a follow starts is carried', () => {
+    let hosting = null
+    let following = null
+    let follower = null
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+    })
+
+    afterAll(async () => {
+        follower?.stop()
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    // The exact rule, independent of how fast the machine is: the starting
+    // point sits just before the first op stamped at or after the start.
+    it('starts just before the first op made after the start, however late it looks', async () => {
+        expect(typeof startCursorAt).toBe('function')
+        const before = await writeOp(hosting, addObject('before-start', 'op-before-start'))
+        expect(before.status).toBe(200)
+        await new Promise(resolve => setTimeout(resolve, 30))
+        const at = Date.now()
+        await new Promise(resolve => setTimeout(resolve, 30))
+        const after = await writeOp(hosting, addObject('after-start', 'op-after-start'))
+        expect(after.status).toBe(200)
+        const log = await readOps(hosting)
+        const versionOf = (opId) => log.ops.find(op => op.opId === opId).version
+        const host = side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN })
+        const cursor = await startCursorAt(host, sceneStream(SPACE), at)
+        expect(cursor.reachable).toBe(true)
+        expect(cursor.latestVersion).toBe(versionOf('op-after-start') - 1)
+        expect(cursor.latestVersion).toBeGreaterThanOrEqual(versionOf('op-before-start'))
+    })
+
+    it('carries both sides\' first edits, made before the follow\'s first pass', async () => {
+        follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: () => {}, info: () => {} }
+        })
+        const [onHost, onFollower] = await Promise.all([
+            writeOp(hosting, addObject('first-host', 'op-first-host')),
+            writeOp(following, addObject('first-follower', 'op-first-follower'))
+        ])
+        expect(onHost.status).toBe(200)
+        expect(onFollower.status).toBe(200)
+        await settle('the host\'s first edit reaching the follower', hasOp(following, 'op-first-host'))
+        await settle('the follower\'s first edit reaching the host', hasOp(hosting, 'op-first-follower'))
+        expect(objectIds(await readScene(following))).toContain('first-host')
+        expect(objectIds(await readScene(hosting))).toContain('first-follower')
     })
 })
