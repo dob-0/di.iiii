@@ -39,14 +39,31 @@ Code: `serverXR/src/follow/` — `follower.js` (the loop), `followPlan.js` (what
    - **Cost:** of two edits to the same thing at the same moment, the follower's is undone. Edits to different
      things are never touched.
    - **Safety:** a full copy is never overwritten by an empty host — the follow says so in `di follows` instead.
+   - **Safety, follower ahead (2026-10-04, audit F4):** when the copies differ and this copy holds entities, nodes,
+     assets (or scene objects) the host lacks, nothing is written. `di follows` shows `lastError` ("this copy holds
+     3 entities, 1 asset the host lacks — not overwriting it. Choose: di follow SPACE --take-host or --take-mine"),
+     the log carries a `warn` naming the project and the counts, and the refusal stays said until that stream agrees.
+     The person answers with `di follow SPACE --from … --take-host` (the host wins; a restore point is taken on this
+     install first) or `--take-mine` (this copy is written to the host; a restore point is taken on the host first).
+     Both ride the receiving server's own write route, which always takes a restore point for a whole-work op
+     (reason `before-whole-replace-op`); the follower logs the newest restore point id when it can read it. The
+     direction is saved in `follows.json`, applies to each stream's first comparison only, and is then cleared.
    - The same check bootstraps a follower whose history is older than the host's retained window.
 3. **A restart resumes where it was.** Cursors and the carried opIds are saved to
    `DATA_ROOT/follow-state/<space>.json` (temp file + rename) and reloaded; an old edit is never re-sent past the
    receiver's 500-op dedupe window and applied twice. A saved cursor past the end of a log (a rebuilt install)
    is reset.
+4. **A first start begins from now (2026-10-04, audit F4).** A follow with no saved state used to start both cursors
+   at null, reading each side's whole log: this install's history was replayed onto the host and the host's onto
+   this one (measured need: `moxir` 876 / 2378 ops already on dev). Now each stream (the scene and every project
+   that exists on BOTH sides at that moment) starts at the latest version on both sides, nothing from the past is
+   replayed, and the two documents are compared once. `di follow … --from-now` says it out loud (it is the
+   default); `--replay` is the old start, for history the other side has never seen. A project on one side only
+   still replays from the start — its history is new to the other side. Limit: decided at the first tick, so a
+   follow that crashed before saving state starts from now again (no harm: the comparison still protects).
 
 Guards: `follower.test.js`, `followConverge.test.js`, `followIntegration.test.js` ("a followed space stays one
-space") — each fails without its fix.
+space"; "a follow starts from now and never silently erases work only the follower has") — each fails without its fix.
 
 ## Measured
 

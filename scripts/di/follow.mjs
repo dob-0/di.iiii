@@ -24,7 +24,8 @@ import { checkFollowable, createLocalSpace, instanceOf, localSpaceExists, resolv
  * `reason` is one of the words ui.followRefused already knows: unreachable,
  * cert-mismatch, missing, denied, local-space, itself, merge.
  */
-export const followSpace = async ({ home, spaceId, from, key = null, into = null, address = null, port }) => {
+export const followSpace = async ({ home, spaceId, from, key = null, into = null, address = null, direction = null, start = null, port }) => {
+    if (direction && direction !== 'take-host' && direction !== 'take-mine') return { ok: false, reason: 'direction' }
     const resolved = await resolveBase(from, { address })
     if (!resolved.base) return { ok: false, reason: resolved.reason }
     const base = resolved.base
@@ -64,6 +65,6 @@ export const followSpace = async ({ home, spaceId, from, key = null, into = null
     const previous = all[spaceId] ?? null
     const hadFile = Object.keys(all).length > 0
 
-    await addFollow(paths(home).data, spaceId, { remote: base, token: key, address })
+    await addFollow(paths(home).data, spaceId, { remote: base, token: key, address, direction, start })
     return { ok: true, base, running, address: address || null, previous, hadFile }
 }

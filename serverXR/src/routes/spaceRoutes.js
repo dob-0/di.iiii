@@ -877,7 +877,11 @@ function registerSpaceRoutes(router, {
       // normalizeIncomingOps keeps only opId/clientId/type/payload.
       const actor = actorFromAuthState(req.authState)
       // The first change of a new burst takes a restore point first.
-      if (spaceHistory) await spaceHistory.beforeChange(spaceId, actor)
+      // A whole-work op (a follow's `take-host` / `take-mine`, a restore sent as
+      // ops) always gets its own restore point, burst or not — the same rule as
+      // every other whole replace (spaceHistory.beforeChange).
+      const wholeReplace = normalizedOps.some(op => op.type === 'replaceScene' || op.type === 'replaceDocument')
+      if (spaceHistory) await spaceHistory.beforeChange(spaceId, actor, wholeReplace ? { reason: 'before-whole-replace-op' } : {})
 
       // Serialized per space: the version check and the read-modify-write it
       // guards must be one atomic step, or two concurrent requests at the

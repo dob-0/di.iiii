@@ -42,7 +42,7 @@ const writeFollows = async (dataDir, follows) => {
     return follows
 }
 
-export const addFollow = async (dataDir, spaceId, { remote, token, label = null, address = null }) => {
+export const addFollow = async (dataDir, spaceId, { remote, token, label = null, address = null, direction = null, start = null }) => {
     const follows = readFollows(dataDir)
     follows[spaceId] = {
         remote: String(remote || '').replace(/\/$/, ''),
@@ -53,7 +53,13 @@ export const addFollow = async (dataDir, spaceId, { remote, token, label = null,
         // out entirely when there is none, not written as null: a record with
         // no pin must serialise byte-identically to one from before this
         // existed (scripts/di/follows.test.js holds that line).
-        ...(address ? { address } : {})
+        ...(address ? { address } : {}),
+        // `--take-host` / `--take-mine`: spent by the server on the first
+        // comparison of each stream, then cleared. `start: 'replay'` is the
+        // explicit `--replay`; absent means start from now. Both absent when
+        // unset (serverXR/src/follow/followStore.js keeps the same shape).
+        ...(direction ? { direction } : {}),
+        ...(start === 'replay' ? { start } : {})
     }
     return writeFollows(dataDir, follows)
 }

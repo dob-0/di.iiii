@@ -197,6 +197,9 @@ export const ui = {
             : message
     },
 
+    followBothDirections: () => '--take-host and --take-mine answer opposite questions — say one of them.',
+    followBothStarts: () => '--from-now and --replay are opposite starts — say one of them.',
+
     badAddress: (value) => `${value} is not an address — --at wants an IPv4 or IPv6 literal, like --at 100.87.4.12`,
 
     following: (spaceId, remote, running, at = null) => [
@@ -466,6 +469,17 @@ export const ui = {
         '                  --from names a machine this one can only reach somewhere else —',
         '                  a Tailscale IP, say — and there is no hosts-file edit to make.',
         `  --into SPACE    merge into a space of that name that already exists here`,
+        '  --from-now      the start, and the default: nothing from either side\'s past is',
+        '                  replayed; the two copies are compared once and only what happens',
+        '                  after is carried',
+        '  --replay        the old start: read both logs from their beginning (for history',
+        '                  the other side has never seen). Not for a space both already hold.',
+        '  --take-host     when the two copies differ and this one holds work the host lacks,',
+        '                  the host wins. A restore point is taken first; used once, then cleared',
+        '  --take-mine     the same, the other way: this copy becomes the host\'s. Restore point',
+        '                  taken on the host first; used once, then cleared',
+        '                  (with neither, a difference where this copy is ahead is REFUSED and',
+        `                  shown in ${CMD} follows)`,
         '',
         style.dim(`  ${CMD} follows          what this install is following`),
         style.dim(`  ${CMD} unfollow SPACE   stop carrying edits`)

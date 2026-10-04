@@ -2,7 +2,7 @@ import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { CONVERGE_CLIENT, stable, planConverge, readDocument } = require('./followConverge.js')
+const { CONVERGE_CLIENT, stable, planConverge, readDocument, localOnly } = require('./followConverge.js')
 
 const project = (entities, extra = {}) => ({
     body: { projectMeta: { id: 'p', title: 'p', createdAt: 1, updatedAt: 2 }, version: 1, entities, nodes: [], assets: [], worldState: {}, ...extra },
@@ -58,5 +58,47 @@ describe('followConverge — the host wins when the copies disagree', () => {
         expect(readDocument('scene', { scene: { objects: [] }, version: 2 })).toEqual({ body: { objects: [] }, version: 2 })
         expect(readDocument('project', { error: 'x' })).toBeNull()
         expect(planConverge({ kind: 'project', local: null, remote: project([]) }).refused).toBeTruthy()
+    })
+
+    // Audit F4: the host wins a disagreement, never an absence.
+    describe('when this copy holds work the host lacks', () => {
+        const mine = () => project([box('b', 1), box('extra', 4)], { nodes: [{ id: 'n1' }], assets: [{ id: 'a1', url: '' }] })
+        const host = () => project([box('b', 2)])
+
+        it('counts what is only here, by id', () => {
+            expect(localOnly('project', mine().body, host().body)).toEqual({ entities: 1, nodes: 1, assets: 1 })
+            expect(localOnly('scene', { objects: [{ id: 'x' }, { id: 'y' }] }, { objects: [{ id: 'x' }] })).toEqual({ objects: 1 })
+        })
+
+        it('refuses, with the counts, when no direction was given', () => {
+            const plan = planConverge({ kind: 'project', projectId: 'p', local: mine(), remote: host() })
+            expect(plan.op).toBeUndefined()
+            expect(plan.refused).toBe('this copy holds 1 entity, 1 node, 1 asset the host lacks — not overwriting it')
+            expect(plan.localOnly).toEqual({ entities: 1, nodes: 1, assets: 1 })
+        })
+
+        it('take-host writes the host\'s copy over this one', () => {
+            const plan = planConverge({ kind: 'project', projectId: 'p', local: mine(), remote: host(), direction: 'take-host' })
+            expect(plan.target).toBeUndefined()
+            expect(plan.baseVersion).toBe(7)
+            expect(plan.op.payload.document.entities.map(e => e.id)).toEqual(['b'])
+        })
+
+        it('take-mine writes this copy to the host, against the host\'s version', () => {
+            const remote = host()
+            remote.version = 11
+            const plan = planConverge({ kind: 'project', projectId: 'p', local: mine(), remote, direction: 'take-mine' })
+            expect(plan.target).toBe('remote')
+            expect(plan.baseVersion).toBe(11)
+            expect(plan.op.payload.document.entities.map(e => e.id)).toEqual(['b', 'extra'])
+        })
+
+        it('still lets the host win a plain disagreement where nothing is only here', () => {
+            expect(planConverge({ kind: 'project', projectId: 'p', local: project([box('b', 1)]), remote: host() }).op.type).toBe('replaceDocument')
+        })
+
+        it('take-host does not erase this copy for an EMPTY host either', () => {
+            expect(planConverge({ kind: 'project', projectId: 'p', local: mine(), remote: project([]), direction: 'take-host' }).refused).toMatch(/empty/)
+        })
     })
 })

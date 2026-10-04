@@ -741,7 +741,8 @@ function registerProjectRoutes(router, {
       // The author, from the session — never from the ops — and, at the first
       // change of a new burst in this space, a restore point before it lands.
       const actor = actorFromAuthState(req.authState)
-      if (spaceHistory) await spaceHistory.beforeChange(project.spaceId, actor)
+      const wholeReplace = normalizedOps.some(op => op.type === 'replaceScene' || op.type === 'replaceDocument')
+      if (spaceHistory) await spaceHistory.beforeChange(project.spaceId, actor, wholeReplace ? { reason: 'before-whole-replace-op' } : {})
 
       // Serialized per project: the version check and the read-modify-write
       // it guards must be one atomic step, or two concurrent requests at the

@@ -533,7 +533,11 @@ describe('a followed space stays one space', () => {
         expect((await writeOp(hosting, update('box', 'named on the host', 'op-name-host'))).status).toBe(200)
         expect((await writeOp(following, update('box', 'named on the follower', 'op-name-follower'))).status).toBe(200)
 
-        follower = follow()
+        // No saved cursors here, so this restart would start from now — and a
+        // start from now by design carries nothing from the time apart. This
+        // test is about the ops crossing and then the host's value winning, so
+        // it asks for the old start (`start: 'replay'`, `di follow --replay`).
+        follower = follow({ start: 'replay' })
         try {
             await settle('both name edits on both sides', async () => {
                 const [h, f] = await Promise.all([readOps(hosting), readOps(following)])
@@ -717,4 +721,141 @@ describe('a followed space answers at once, edit after edit', () => {
         // parking would be hundreds in three seconds through this proxy.
         expect(proxy.chunks - before).toBeLessThan(12)
     }, 20_000)
+})
+
+// Audit F4 (docs/ai/audits/follow-audit-2026-10-04.md), owner 2026-10-04: a
+// follow that starts on an install with a long local history must not replay
+// that history onto the host, and a host-wins comparison must not erase work
+// that exists only here. Real servers, real wire.
+describe('a follow starts from now and never silently erases work only the follower has', () => {
+    let hosting = null
+    let following = null
+    const warnings = []
+    const quiet = { warn: (line) => warnings.push(String(line)), info: () => {} }
+    const open = (space, extra = {}) => startFollowing({
+        local: side({ base: following.baseUrl, spaceId: space, token: API_TOKEN }),
+        remote: side({ base: hosting.baseUrl, spaceId: space, token: API_TOKEN }),
+        log: quiet,
+        ...extra
+    })
+    const sceneOf = (ids) => ({ objects: ids.map(id => ({ id, type: 'box', name: id })) })
+    const replaceScene = (ids, opId) => ({ opId, type: 'replaceScene', payload: { scene: sceneOf(ids) } })
+    const snapshots = async (server, space) => (await (await fetch(`${server.baseUrl}/api/spaces/${space}/snapshots`, { headers: authHeaders })).json()).snapshots || []
+
+    /** Host holds `h1`; the follower holds a, b, c that came through a whole-scene write, which a follow never carries. */
+    const aheadFollower = async (space) => {
+        await createSpace(hosting, space)
+        await createSpace(following, space)
+        expect((await writeOp(hosting, addObject('h1', `op-h1-${space}`), { spaceId: space })).status).toBe(200)
+        expect((await writeOp(following, replaceScene(['a', 'b', 'c'], `op-abc-${space}`), { spaceId: space })).status).toBe(200)
+    }
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+    })
+
+    afterAll(async () => {
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('does not replay this install\'s history onto the host on a first start', async () => {
+        const space = 'fromnow-history'
+        await createSpace(hosting, space)
+        await createSpace(following, space)
+        expect((await writeOp(hosting, addObject('h1', 'op-h1-hist'), { spaceId: space })).status).toBe(200)
+        for (let i = 1; i <= 30; i += 1) {
+            expect((await writeOp(following, addObject(`l${i}`, `op-local-${i}`), { spaceId: space })).status).toBe(200)
+        }
+        const hostOpsBefore = (await readOps(hosting, space)).ops.length
+
+        const follower = open(space)
+        try {
+            // The copies differ and this one is ahead: said, not resolved.
+            await settle('the refusal being said', async () => /host lacks/.test(follower.state.lastError || ''))
+            const hostLog = await readOps(hosting, space)
+            expect(hostLog.ops.length).toBe(hostOpsBefore)
+            expect(opIds(hostLog).filter(id => id.startsWith('op-local-'))).toEqual([])
+            expect(objectIds(await readScene(hosting, space))).toEqual(['h1'])
+            expect(objectIds(await readScene(following, space)).length).toBe(30)
+        } finally {
+            follower.stop()
+        }
+    })
+
+    it('refuses, visibly, a difference where the follower holds work the host lacks', async () => {
+        const space = 'fromnow-refuse'
+        await aheadFollower(space)
+        const follower = open(space)
+        try {
+            await settle('the refusal being said', async () => /host lacks/.test(follower.state.lastError || ''))
+            expect(follower.state.lastError).toContain('3 objects')
+            expect(follower.state.lastError).toContain('--take-host')
+            expect(warnings.some(line => line.includes(space) && line.includes('3 objects') && line.includes('scene:'))).toBe(true)
+            // Nothing was written: the follower still shows its own work.
+            expect(objectIds(await readScene(following, space)).sort()).toEqual(['a', 'b', 'c'])
+            expect(objectIds(await readScene(hosting, space))).toEqual(['h1'])
+            // And it stays said on later ticks, not only on the one that refused (F7).
+            await wait(1800)
+            expect(follower.state.lastError).toContain('3 objects')
+        } finally {
+            follower.stop()
+        }
+    })
+
+    it('--take-host: the host wins, a restore point is taken first and named, the direction is spent', async () => {
+        const space = 'fromnow-take-host'
+        await aheadFollower(space)
+        const spent = vi.fn()
+        const follower = open(space, { direction: 'take-host', onDirectionDone: spent })
+        try {
+            await settle('the follower showing the host\'s copy', async () => objectIds(await readScene(following, space)).join() === 'h1')
+            await settle('the direction being spent', async () => spent.mock.calls.length > 0)
+            expect(spent).toHaveBeenCalledWith('take-host')
+            const points = await snapshots(following, space)
+            const before = points.find(point => point.reason === 'before-whole-replace-op')
+            expect(before).toBeTruthy()
+            // The log names it, so a person can find it.
+            expect(warnings.some(line => line.includes(space) && line.includes('--take-host') && line.includes(before.id))).toBe(true)
+            // Nothing travelled to the host from this: it is the host's own copy.
+            expect(objectIds(await readScene(hosting, space))).toEqual(['h1'])
+        } finally {
+            follower.stop()
+        }
+    })
+
+    it('--take-mine: this copy becomes the host\'s, with a restore point on the host', async () => {
+        const space = 'fromnow-take-mine'
+        await aheadFollower(space)
+        const spent = vi.fn()
+        const follower = open(space, { direction: 'take-mine', onDirectionDone: spent })
+        try {
+            await settle('the host showing this copy', async () => objectIds(await readScene(hosting, space)).sort().join() === 'a,b,c')
+            await settle('the direction being spent', async () => spent.mock.calls.length > 0)
+            expect(spent).toHaveBeenCalledWith('take-mine')
+            const before = (await snapshots(hosting, space)).find(point => point.reason === 'before-whole-replace-op')
+            expect(before).toBeTruthy()
+            expect(warnings.some(line => line.includes(space) && line.includes('--take-mine') && line.includes(before.id))).toBe(true)
+            expect(objectIds(await readScene(following, space)).sort()).toEqual(['a', 'b', 'c'])
+        } finally {
+            follower.stop()
+        }
+    })
+
+    it('after a start from now, an edit made on either side afterwards crosses as usual', async () => {
+        const space = 'fromnow-then-edits'
+        await createSpace(hosting, space)
+        await createSpace(following, space)
+        expect((await writeOp(hosting, addObject('h1', 'op-h1-then'), { spaceId: space })).status).toBe(200)
+        const follower = open(space)
+        try {
+            await settle('the first comparison', async () => follower.state.converged > 0)
+            expect(objectIds(await readScene(following, space))).toEqual(['h1'])
+            expect((await writeOp(following, addObject('late', 'op-late'), { spaceId: space })).status).toBe(200)
+            follower.wake()
+            await settle('the later edit reaching the host', hasOp(hosting, 'op-late', space))
+        } finally {
+            follower.stop()
+        }
+    })
 })
