@@ -121,6 +121,34 @@ one. `--dry-run` lists each swap with both sizes. A file over the server's `MAX_
 and reported, never transcoded. Limit: the new rows sit above the
 existing top row, so on a 37-picture wall they hang about 8.6 m up; move them in Studio if that is too high.
 
+### Any file into one private project, with its provenance (`add-files.mjs`, 2026-10-04)
+
+A production owns files that are not pictures: the makers' manuals (PDF), an equipment order (CSV, PDF), a patch
+(MVR, GDTF), sketches (HTML), research (Markdown), scan meshes (GLB, OBJ). `add-files.mjs` puts them in ONE project
+as **project assets** (the project's Files panel is `document.assets`; a PDF turns into image pages only when
+someone presses "+ Add"; the other kinds are "stored and usable by URL"). It writes `upsertAsset` ops and no
+entity, no new type. What goes in is a manifest (`manifests/moxir-documents.json`): folders, each with a source and a
+licence note, and include/exclude rules. `--from-space-api` also pulls the SPACE files of another install (the
+maker PDFs) into `--stage`; `--media-json src/rigbuild/items/media.json` names each manual's maker page and date by sha256.
+
+```
+node scripts/place/add-files.mjs --manifest scripts/place/manifests/moxir-documents.json --name moxir --project moxir-documents \
+  --create-private --api https://dev.diiii.xyz/serverXR --token-file ~/work/di.iiii/serverXR/.env.local --token-key LIVE_API_TOKEN \
+  --from-space-api https://local.thedi.studio/serverXR --stage <dir> --media-json src/rigbuild/items/media.json --dedupe-space --dry-run
+```
+
+Drop `--dry-run` to write. Rules the tool keeps: the project is created with `visibility: 'private'` in the same
+request and nothing is uploaded until the server reads it back private (a public space's file list is public; a
+private project's document and files answer visitors 404); a name already in the project is skipped; a file with the
+same sha256 as an asset in the project or (with `--dedupe-space`) another project of the space, or the same name and
+size there, is a duplicate and not added; a file over `--max-bytes` (default 100 MB, Cloudflare's 413) is refused by
+name, size and reason without being tried, never split or transcoded; a server refusal (413, 415) is reported by name, size,
+status and reason and the run goes on (exit 2 unless `--allow-skips`); `PROVENANCE.md` (original path, sha256, size,
+date, source, licence note, status for every file, refused and duplicate ones too) is uploaded last and replaces an
+earlier one; the document is read back and every upload checked (non-image files must hash to their asset id).
+Tests: `add-files.test.js`. Limits: the server re-encodes images (privacy scrub), so a PNG or JPG is kept but its id
+is not its source sha256; a panorama 12032x3296 was refused 415 earlier. CPU above 85 C pauses the run.
+
 What ends up in the working folder:
 
 | file | what it is |

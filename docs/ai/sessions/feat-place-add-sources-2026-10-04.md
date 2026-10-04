@@ -26,3 +26,14 @@
   read-back. Proof: 5 more tests (12 in the file); reverted guards fail (swap-when-not-larger 1, no read-back check 1,
   flag ignored 4, patch widened beyond assetId 1). The 111 MB mp4 is over `MAX_UPLOAD_MB=100`
   (`serverXR/src/config.js:137`) and is reported as refused, not transcoded.
+
+## 2026-10-04 (evening) — add-files.mjs: all MOXIR files into one private project
+
+Owner: "there is not all info about moxir on dev — I want all." New `scripts/place/add-files.mjs` + `manifests/moxir-documents.json`.
+Decision: a non-image file lives in a project as an **asset** (`document.assets` = the Files panel; PDF to pages only on "+ Add";
+AssetsPanel hint "stored and usable by URL") — no entity type invented. Private first: created with `visibility:'private'` in one
+request, writes blocked until read back private. Hard facts used: public space file list is public, private project URLs 404 for
+visitors; Cloudflare 413 above 100 MB; images re-encoded by assetScrub. `uploadAsset` in import.mjs gained `name`/`mimeType` options.
+Tests: `add-files.test.js` (15). Run record and refusals: `REPORT-moxir-documents.md`.
+Owed: the originals of the hall photographs on dev are reduced copies (`add-sources --originals`); maker page for the 24 PDFs is only
+known where media.json has the sha256.
