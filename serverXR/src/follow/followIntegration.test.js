@@ -178,6 +178,16 @@ const settle = async (label, probe, { timeout = 30_000, every = 120 } = {}) => {
     throw new Error(`${label} — never became true within ${timeout}ms (last saw: ${JSON.stringify(last)})`)
 }
 
+/**
+ * A follow with no saved cursors starts FROM NOW, and "now" is taken by its
+ * first tick, a moment after startFollowing() returns. An edit made before that
+ * is history, and by design is never carried (#757) — so a test that writes
+ * straight after starting a follow is racing the follow's own baseline, and
+ * loses on a slow machine (CI, 2026-10-04: three PRs, three different tests).
+ * Wait for the follow to say it is following: the baseline is taken by then.
+ */
+const started = (follower) => settle('the follow taking its starting point', () => ['following', 'catching up'].includes(follower.state.status))
+
 const hasOp = (server, opId, spaceId = SPACE) => async () => {
     const log = await readOps(server, spaceId)
     return opIds(log).includes(opId) ? log : false
@@ -220,6 +230,7 @@ describe('a space that lives on two di.iiii at once', () => {
                 }
             }
         })
+        await started(follower)
     })
 
     afterAll(async () => {
@@ -524,6 +535,7 @@ describe('a followed space stays one space', () => {
 
     it("agrees on the host's value when both sides change the same field at the same moment", async () => {
         let follower = follow()
+        await started(follower)
         expect((await writeOp(hosting, addObject('box', 'op-box'))).status).toBe(200)
         await settle('the box reaching the follower', hasOp(following, 'op-box'))
         follower.stop()
@@ -562,6 +574,7 @@ describe('a followed space stays one space', () => {
     it('resumes from where it was after a restart, and never applies an old edit twice', async () => {
         let saved = null
         let follower = follow({ onSave: (state) => { saved = state } })
+        await started(follower)
         expect((await writeOp(hosting, addObject('lamp', 'op-lamp-once'))).status).toBe(200)
         await settle('the lamp reaching the follower', hasOp(following, 'op-lamp-once'))
         await settle('the follower saving where it got to', async () => saved && saved.seen.includes('op-lamp-once'))
@@ -890,6 +903,7 @@ describe('a project made empty on either side appears on both', () => {
             remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: syncKey }),
             log: { warn: message => warned.push(message), info: () => {} }
         })
+        await started(follower)
     })
 
     afterAll(async () => {
