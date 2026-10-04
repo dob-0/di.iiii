@@ -1110,6 +1110,14 @@ never appear for a viewer who may not see them, a version made later is on every
 and the row is the same from each. Order: by project id; labelled copies (`copyOf`) after the live
 versions, behind a divider. A mark with no `siblings` still works. Pure part: `src/rigbuild/rigVariant.js`.
 
+**The switch reads the production's version list first (2026-10-04).** One list per production, kept in the
+space as the project `<set>-versions` (private), one entity per version, each with a status — `for-the-show` ·
+`candidate` · `kept-copy` · `archived`, at most one for the show. With a list, the row is the list: the version
+for the show first and marked "for the show", then candidates, kept copies folded, archived versions not on the
+row; linked only where the space holds the project for this viewer. Without one (a visitor, or an install that
+has none) the row is as above. `siblings` is legacy: read only as the last fallback. Decision, method and
+limits: `docs/architecture/decisions/2026-10-04-production-versions.md`. Tools: `scripts/production/`.
+
 ### 15.2 Made as data, generated, tested
 
 - **The design** — `moxir-versions-2026-10-17.json`: the brief's rules with the sources that
@@ -1529,6 +1537,10 @@ copies". A backup and the op log are not enough; he opens old and new side by si
   Notes and the exact commands: `PROGRESS.md` (the note folded at land: "copy-version --adopt").
 - Guard: `copy-version.test.js` (the label, the URLs, the mark alone changes; `--adopt`: the mark given
   back, refusals, idempotence, dry run, one op on the show entity only).
+- **Listed in the same run (2026-10-04).** A new copy goes into the production's version list as `kept-copy`,
+  made from its source version; a copy brought from another install under its own id (`--from-api`) as a
+  `candidate`; `--adopt` registers the copy; `--undo` takes it out of the list; `--dry-run` writes no list.
+  Guard: `copy-version-list.test.js`. The decision: `docs/architecture/decisions/2026-10-04-production-versions.md`.
 
 ### 15.12 Movers on the ground — Minimal and Full with nothing that moves in the air (2026-09-30)
 
