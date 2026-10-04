@@ -65,7 +65,7 @@ export const followFileLines = (files) => {
     const count = (n, one, many) => `${n} ${n === 1 ? one : many}`
     if (files.pending > 0) {
         const mb = files.bytesPending > 0 ? ` (${Math.max(1, Math.round(files.bytesPending / 1024 / 1024))} MB)` : ''
-        lines.push(style.dim(`${count(files.pending, 'file', 'files')} still coming${mb}`))
+        lines.push(style.dim(`${count(files.pending, 'file', 'files')} still coming${mb}${files.listed > files.pending ? `, of ${files.listed} listed` : ''}`))
     }
     const failures = Array.isArray(files.failures) ? files.failures : []
     if (files.failed > 0 || failures.length) {

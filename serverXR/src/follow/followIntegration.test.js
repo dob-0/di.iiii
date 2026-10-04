@@ -1265,3 +1265,81 @@ describe('a follow carries the space\'s own settings from the host, and never ma
         expect(mine.isPublic).toBe(false)
     })
 })
+
+// Gap 3 (2026-10-05, di.laser): the document listed 101 files, the follow said
+// "79 files still coming", di was restarted twice and afterwards the host held
+// 29 with nothing said. A restart forgot what was owed; the files named by a
+// document the follow never saw ops for are only known from the listing.
+describe('an interrupted file transfer is resumed after a restart, and says what is owed', () => {
+    let hosting = null
+    let following = null
+    const PIECE = 'laser-show'
+    const COUNT = 6
+    const bytesOf = (seed) => Buffer.from(Array.from({ length: 50_000 }, (_, i) => (i * seed + 3) % 256))
+    const files = []
+
+    const holds = async (server, id) => (await fetch(`${server.baseUrl}/api/projects/${PIECE}/assets/${id}/meta`, { headers: authHeaders })).status === 200
+    const heldCount = async (server) => (await Promise.all(files.map(file => holds(server, file.id)))).filter(Boolean).length
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        // The project and its files exist on the follower only, named in its document.
+        const made = await fetch(`${following.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: PIECE, title: PIECE })
+        })
+        expect(made.status).toBe(201)
+        for (let n = 1; n <= COUNT; n += 1) {
+            const bytes = bytesOf(n * 7)
+            const form = new FormData()
+            form.append('asset', new Blob([bytes], { type: 'video/mp4' }), `clip-${n}.mp4`)
+            const uploaded = await fetch(`${following.baseUrl}/api/projects/${PIECE}/assets`, { method: 'POST', headers: { Authorization: authHeaders.Authorization }, body: form })
+            expect(uploaded.status).toBe(200)
+            files.push((await uploaded.json()).asset)
+        }
+        const document = { entities: [], nodes: [], assets: files.map(file => ({ ...file, url: '' })) }
+        const put = await fetch(`${following.baseUrl}/api/projects/${PIECE}/document`, { method: 'PUT', headers: authHeaders, body: JSON.stringify(document) })
+        expect(put.status).toBe(200)
+    })
+
+    afterAll(async () => {
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('carries what the first run did not, after a restart, and shows it in the follow\'s state', async () => {
+        let uploads = 0
+        let saved = null
+        const first = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: () => {}, info: () => {} },
+            onSave: (state) => { saved = state },
+            // Two files cross, then the install is "restarted" with the rest still owed.
+            files: { backoffMs: [200, 200, 200], io: { request: httpRequest, download: httpDownloadToFile, upload: async (...args) => { uploads += 1; if (uploads > 2) return new Promise(() => {}); return httpUploadFile(...args) } } }
+        })
+        await settle('two files having crossed', async () => (await heldCount(hosting)) === 2, { timeout: 20_000 })
+        first.stop()
+        expect(await heldCount(hosting)).toBe(2)
+
+        const second = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: () => {}, info: () => {} },
+            saved,
+            // slowed a little, so what is still owed can be seen while it is owed
+            files: { backoffMs: [200, 200, 200], io: { request: httpRequest, download: httpDownloadToFile, upload: async (...args) => { await wait(500); return httpUploadFile(...args) } } }
+        })
+        try {
+            // Said while it is owed, in the state `di follows` prints …
+            await settle('the restart saying what is owed', () => second.state.files.listed === COUNT && second.state.files.missing > 0, { timeout: 10_000 })
+            // … and carried.
+            // Before the first park on the quiet room (20 s), not after it.
+            await settle('every listed file on the host', async () => (await heldCount(hosting)) === COUNT, { timeout: 12_000 })
+            await settle('nothing owed any more', () => second.state.files.pending === 0 && second.state.files.missing === 0, { timeout: 10_000 })
+        } finally {
+            second.stop()
+        }
+    })
+})

@@ -644,6 +644,14 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         await refreshStreams()
         await syncSettings().catch(() => {})
 
+        // The files the documents list are looked at NOW, before this tick reads
+        // the room's log and parks on the other machine for up to 20 s. They used to
+        // be looked at after the park, so a restarted follow on a quiet space
+        // owed every unfinished file for 20 s more — and a di restarted twice in
+        // that time never got to them (gap 3, di.laser, 2026-10-05).
+        chase.noteProjects(streams.filter(stream => stream.kind === 'project').map(stream => stream.projectId))
+        chase.run()
+
         let parked = false
         let changedThere = false
         let moved = false
