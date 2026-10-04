@@ -65,7 +65,7 @@ const waitForHealth = async ({ url, child, getLogs }) => {
  * outage case restarts the SAME install rather than a fresh one — a follower
  * that only works against a machine that lost its disk proves nothing.
  */
-const startServer = async ({ port = null, dataRoot = null } = {}) => {
+const startServer = async ({ port = null, dataRoot = null, requireAuth = false } = {}) => {
     const sandboxCwd = await mkdtemp(path.join(os.tmpdir(), 'dii-follow-cwd-'))
     const sandboxDataRoot = dataRoot || await mkdtemp(path.join(os.tmpdir(), 'dii-follow-data-'))
     const listenPort = port || await getFreePort()
@@ -79,7 +79,8 @@ const startServer = async ({ port = null, dataRoot = null } = {}) => {
         API_TOKEN,
         CORS_ORIGINS: '*',
         AUTH_SESSION_SECRET: 'test-session-secret',
-        REQUIRE_AUTH: ''
+        REQUIRE_AUTH: requireAuth ? 'true' : '',
+        ...(requireAuth ? { AUTH_SESSION_COOKIE_SECURE: 'false', AUTH_HUB_URL: 'off' } : {})
     }
     delete childEnv.SPACES_DIR
     delete childEnv.UPLOADS_DIR
@@ -840,5 +841,100 @@ describe.each([
         await writeProjectOps(following, [createEntity('op-after-follower')])
         await settle('the follower edit reaching the host', hasProjectOp(hosting, 'op-after-follower'), { timeout: 5000, every: 25 })
         await settle('the follow no longer reporting a replaced work', async () => (await followState())?.lastError === null, { timeout: 5000 })
+    })
+})
+
+// "A project made on either appears on both" — including one with nothing in
+// it yet. Seen 2026-10-04 (aylmo following dev.diiii.xyz): six projects made
+// on the follower and never edited (documentVersion 0, no ops) never reached
+// the host, because a project is only ever made on the other side from its
+// ops, and an empty one has none.
+describe('a project made empty on either side appears on both', () => {
+    let hosting = null
+    let following = null
+    let follower = null
+    const warned = []
+
+    const makeProject = async (server, slug, title) => {
+        const response = await fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug, title })
+        })
+        expect(response.status).toBe(201)
+    }
+    const projectRow = (server, slug) => async () => {
+        const response = await fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, { headers: authHeaders })
+        const { projects } = await response.json()
+        return projects.find(project => project.id === slug) || false
+    }
+
+    beforeAll(async () => {
+        // The host is a real one: auth on, and the follower holds what `di
+        // follow` holds — a per-space sync key (editor, scoped to this space),
+        // never the install's own token. A follow that only worked with an
+        // admin token passed here and did nothing on a real machine.
+        hosting = await startServer({ requireAuth: true })
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        const minted = await fetch(`${hosting.baseUrl}/api/spaces/${SPACE}/sync-keys`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ label: 'follows the host' })
+        })
+        expect(minted.status).toBe(201)
+        const syncKey = (await minted.json()).token
+        follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: syncKey }),
+            log: { warn: message => warned.push(message), info: () => {} }
+        })
+    })
+
+    afterAll(async () => {
+        follower?.stop()
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('carries an empty project made on the follower to the host, with its title', async () => {
+        await makeProject(following, 'empty-bar', 'The Bar')
+        follower.wake()
+        const row = await settle('the follower project reaching the host', projectRow(hosting, 'empty-bar'), { timeout: 10_000 })
+        expect(row.title).toBe('The Bar')
+    })
+
+    it('carries an empty project made on the host to the follower, with its title', async () => {
+        await makeProject(hosting, 'empty-studio', 'The Studio')
+        const row = await settle('the host project reaching the follower', projectRow(following, 'empty-studio'), { timeout: 10_000 })
+        expect(row.title).toBe('The Studio')
+    })
+
+    // Deletion is not carried, so it must not be undone either: a project in
+    // one side's trash is not made there again by the other side's copy.
+    const trash = async (server, slug) => {
+        const response = await fetch(`${server.baseUrl}/api/projects/${slug}`, { method: 'DELETE', headers: authHeaders })
+        expect(response.status).toBe(200)
+    }
+    const trashedHere = async (server, slug) => {
+        const response = await fetch(`${server.baseUrl}/api/trash?space=${SPACE}`, { headers: authHeaders })
+        return (await response.json()).projects.some(project => project.id === slug)
+    }
+    const tick = async () => { follower.wake(); await wait(1500) }
+
+    it('does not make again, on the host, a project trashed there', async () => {
+        await makeProject(hosting, 'both-a', 'A')
+        await settle('both-a on the follower', projectRow(following, 'both-a'), { timeout: 10_000 })
+        await trash(hosting, 'both-a')
+        await tick(); await tick()
+        expect(await trashedHere(hosting, 'both-a')).toBe(true)
+        expect(await projectRow(hosting, 'both-a')()).toBe(false)
+        expect(warned.filter(message => message.includes('both-a') && message.includes('in the trash'))).toHaveLength(1)
+    })
+
+    it('does not make again, on the follower, a project trashed there', async () => {
+        await makeProject(following, 'both-b', 'B')
+        follower.wake()
+        await settle('both-b on the host', projectRow(hosting, 'both-b'), { timeout: 10_000 })
+        await trash(following, 'both-b')
+        await tick(); await tick()
+        expect(await trashedHere(following, 'both-b')).toBe(true)
+        expect(await projectRow(following, 'both-b')()).toBe(false)
     })
 })

@@ -40,6 +40,11 @@ Code: `serverXR/src/follow/` — `follower.js` (the loop), `followPlan.js` (what
      things are never touched.
    - **Safety:** a full copy is never overwritten by an empty host — the follow says so in `di follows` instead.
    - The same check bootstraps a follower whose history is older than the host's retained window.
+3. **A project made on either side appears on both, even empty.** Each tick the follower compares the two project
+   lists and makes a missing project on the side that lacks it, through that side's own `POST /spaces/:id/projects`
+   with the same id, the title as made, and private when private at the source. An empty project (version 0, no ops)
+   has no ops to carry it, so before 2026-10-04 it never left the machine it was made on. Making a project also
+   wakes the follower and the space's waiters, so it crosses in about a second. Deletion is still not carried.
 3. **A restart resumes where it was.** Cursors and the carried opIds are saved to
    `DATA_ROOT/follow-state/<space>.json` (temp file + rename) and reloaded; an old edit is never re-sent past the
    receiver's 500-op dedupe window and applied twice. A saved cursor past the end of a log (a rebuilt install)

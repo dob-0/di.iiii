@@ -287,6 +287,11 @@ function registerProjectRoutes(router, {
         ...(source ? { source } : {}),
         ...(visibility ? { visibility } : {})
       })
+      // A followed space carries a project made with nothing in it (it has no
+      // ops to wake anyone): wake this install's follower, and release any
+      // di.iiii parked on the room's log. Never fatal.
+      try { require('../follow').nudgeFollow(spaceId) } catch { /* no follows here */ }
+      try { require('../follow/waiters').noteChange(spaceId) } catch { /* nobody waiting */ }
       res.status(201).json({
         project: meta,
         document: await readProjectDocument(spacesDir, spaceId, projectId)
