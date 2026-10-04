@@ -9,9 +9,13 @@
 // lock anyway. Rootful Xwayland inside a headless KWin gives a private X11
 // screen where XTest works (a rootless Xwayland ignores XTest without libei):
 //
-//   dbus-run-session -- kwin_wayland --virtual --xwayland --socket wl-looktest --width 1920 --height 1080 &
-//   (its OWN session bus: on the desktop bus a nested KWin exiting strips the real KWin of its global keys)
-//   WAYLAND_DISPLAY=wl-looktest Xwayland :7 -geometry 1920x1080 -noreset &
+//   RT=$(mktemp -d) && chmod 700 "$RT"
+//   env -u WAYLAND_DISPLAY -u DISPLAY XDG_RUNTIME_DIR=$RT \
+//       dbus-run-session -- kwin_wayland --virtual --xwayland --socket wl-looktest --width 1920 --height 1080 &
+//   (its OWN session bus: on the desktop bus a nested KWin exiting strips the real KWin of its global keys;
+//    its OWN runtime dir: on the owner's, the private bus's document portal takes his flatpak mount with it
+//    and Zen/Chromium stop starting — 2026-10-05, di-atlas tools/doc-portal-heal)
+//   WAYLAND_DISPLAY=$RT/wl-looktest Xwayland :7 -geometry 1920x1080 -noreset &
 //   echo "Xft.dpi: 144" | DISPLAY=:7 xrdb -merge      # DPR 1.5, as on the owner's screen
 //   DISPLAY=:7 flatpak run --env=__NV_PRIME_RENDER_OFFLOAD=1 --env=__GLX_VENDOR_LIBRARY_NAME=nvidia \
 //       org.chromium.Chromium --ozone-platform=x11 --use-angle=gl \
