@@ -813,12 +813,19 @@ function registerSpaceRoutes(router, {
       // is neither, needs no socket (a per-space sync key cannot open one), and
       // costs one idle connection. Capped, and only ever entered when there is
       // nothing to send: a caller that is behind gets its ops immediately.
+      //
+      // `?mark=` is the `changeMark` an earlier answer carried (follow/
+      // waiters.js): if the space — its scene OR any project in it — has been
+      // written since, the wait ends at once. A follower reads the projects
+      // first and parks here last; a write that fell between the two used to
+      // find nobody parked and was held for the whole wait.
       const wait = Math.min(Number(req.query.wait) || 0, 30)
+      const { waitForChange, changeMark } = require('../follow/waiters')
       if (wait > 0 && !filtered.length) {
-        const { waitForChange } = require('../follow/waiters')
         const closed = new AbortController()
         req.on('close', () => closed.abort())
-        const changed = await waitForChange(spaceId, wait * 1000, { signal: closed.signal })
+        const mark = typeof req.query.mark === 'string' ? req.query.mark.slice(0, 64) : null
+        const changed = await waitForChange(spaceId, wait * 1000, { signal: closed.signal, mark })
         if (changed) {
           filtered = Number.isFinite(since)
             ? await readOpsHistorySince(spaceId, since)
@@ -830,7 +837,11 @@ function registerSpaceRoutes(router, {
       const latestVersion = meta?.sceneVersion || 0
       res.json({
         ops: filtered,
-        latestVersion
+        latestVersion,
+        // Taken after the log was read: a write that lands after this moment
+        // moves the mark, and anything before it is already readable. Only for
+        // a space that exists — see changeMark.
+        ...(meta ? { changeMark: changeMark(spaceId) } : {})
       })
     } catch (error) {
       next(error)

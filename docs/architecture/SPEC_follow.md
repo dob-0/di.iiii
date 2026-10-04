@@ -17,8 +17,13 @@ Code: `serverXR/src/follow/` — `follower.js` (the loop), `followPlan.js` (what
 - Every op has an `opId`; a write route drops ops whose opId it already holds, so an op returning to where it came
   from is a no-op. A write states its `baseVersion`; if the target moved it answers 409 and the follower comes
   back next tick.
-- A read parks on the other side for up to 20 s (`?wait=`), so a quiet room costs one held request and an edit
+- A read parks on the other side for up to 20 s (`?wait=`), so a quiet space costs one held request and an edit
   arrives as soon as it lands. A local edit wakes the loop at once.
+- Both wakes are **latched**, so one that comes between a tick's reads and its park is not lost (2026-10-04). A
+  local `wake()` that comes mid-tick keeps that tick from parking. The park carries the space's change mark
+  (`&mark=`, from the last answer's `changeMark`), and the host answers at once if the space (scene or any
+  project) was written since. This is the same rule as a blocking query's index (Consul `?index=`). Before this,
+  the edit made right after another had crossed waited the whole 20 s, in both directions.
 
 ## What a follow guarantees (2026-10-01)
 
@@ -46,6 +51,9 @@ space") — each fails without its fix.
 ## Measured
 
 - Loopback, two real servers (PROGRESS.md): ~25 ms host→follower, ~97 ms follower→host.
+- Through an 80 ms-each-way delay proxy, follow running inside the following server, edits alternating as soon as
+  the last one landed (2026-10-04, `followIntegration.test.js` "edit after edit"): before the latches every crossing
+  but the first 20.7–21.1 s, after 745–1090 ms. Not yet re-measured on aylmo ↔ dev.diiii.xyz.
 - aylmo (Arch, follower, 0.4.16-rigbuilder.14) ↔ ponyo (Windows, host, 0.4.16-connect.4) over Tailscale, 2026-10-01,
   space `sync-test-1001`: 3 edits each way through the API, aylmo→ponyo 202 / 877 / 109 ms, ponyo→aylmo 135 / 128 /
   119 ms; both ended at version 8 with the same 8 entities. One < 8 s "not answering" blip, self-recovered, cause

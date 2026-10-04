@@ -110,10 +110,13 @@ const side = ({ base, spaceId, token = null, servername = null, address = null }
  * parameter simply answers straight away, and the loop falls back to its own
  * timing — so this is an improvement, never a requirement.
  */
-const readOps = async (from, stream, since, { waitSeconds = 0, signal = null } = {}) => {
+const readOps = async (from, stream, since, { waitSeconds = 0, signal = null, mark = null } = {}) => {
     const plain = from.opsUrl(stream, since)
+    // `mark`: the space's change mark from the last answer (follow/waiters.js) —
+    // the other server ends the wait at once if anything in the space was
+    // written since. A server that does not know it ignores it.
     const url = waitSeconds > 0
-        ? `${plain}${plain.includes('?') ? '&' : '?'}wait=${waitSeconds}`
+        ? `${plain}${plain.includes('?') ? '&' : '?'}wait=${waitSeconds}${mark ? `&mark=${encodeURIComponent(mark)}` : ''}`
         : plain
     const answer = await request(url, {
         token: from.token,
@@ -126,7 +129,8 @@ const readOps = async (from, stream, since, { waitSeconds = 0, signal = null } =
     return {
         reachable: true,
         ops: Array.isArray(answer.payload?.ops) ? answer.payload.ops : [],
-        latestVersion: Number.isFinite(answer.payload?.latestVersion) ? answer.payload.latestVersion : null
+        latestVersion: Number.isFinite(answer.payload?.latestVersion) ? answer.payload.latestVersion : null,
+        changeMark: typeof answer.payload?.changeMark === 'string' ? answer.payload.changeMark : null
     }
 }
 
@@ -234,6 +238,20 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     // The request currently parked on the other machine, if any — abandoned the
     // moment this install writes something of its own.
     let parking = null
+    // A wake is LATCHED, not just fired. Between reading a project's log and
+    // parking on the scene's, the loop is neither asleep nor parked — and a
+    // wake that arrived then (an edit made here right after something was
+    // carried, which is exactly when a person edits) found nothing to end, was
+    // dropped, and the edit sat out the whole park behind it. Measured
+    // 2026-10-04: 21s. Cleared when a tick starts, because that tick reads
+    // every log afresh; set at any point after, it keeps the tick from parking
+    // and sends the loop straight round again.
+    let woken = false
+    // The same latch on the other machine's side: the space's change mark from
+    // its last answer (follow/waiters.js). Parking with it means an edit made
+    // there after we read the projects ends the park at once, instead of being
+    // missed because it landed before we were parked.
+    let spaceMark = null
     const sleep = (ms) => new Promise((resolve) => {
         const timer = setTimeout(resolve, ms)
         wakeNow = () => { clearTimeout(timer); wakeNow = null; resolve() }
@@ -313,13 +331,22 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // design is against. Read ours, then park, and let a local write abort
         // the park (see wake()).
         const ours = await readOps(local, stream, cursor.localVersion)
-        const parkable = wait && ours.reachable && !unseen(ours.ops, seen).length
+        const parkable = wait && !woken && ours.reachable && !unseen(ours.ops, seen).length
         parking = parkable ? new AbortController() : null
         const theirs = await readOps(remote, stream, cursor.remoteVersion, {
             waitSeconds: parkable ? WAIT_SECONDS : 0,
-            signal: parking?.signal || null
+            signal: parking?.signal || null,
+            mark: parkable ? spaceMark : null
         })
+        const abandoned = Boolean(parking?.signal.aborted)
         parking = null
+        // Only the stream that parks reads the mark: it is the whole space's.
+        // An answer without one (an older server) leaves the last one standing.
+        const markBefore = spaceMark
+        if (wait && theirs.changeMark) spaceMark = theirs.changeMark
+        // A park this install abandoned for its own edit is not the other side
+        // failing — say nothing, and let the next tick read everything.
+        if (abandoned) return { moved: false, skipped: true }
 
         // A project one side does not have yet is a 404 on that stream, not a
         // failure of the follow: it will exist on the next pass.
@@ -378,6 +405,9 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         }
 
         return {
+            // The other side said its space changed since we last looked —
+            // something there may still be unread in a project's log.
+            changedThere: Boolean(wait && markBefore && theirs.changeMark && theirs.changeMark !== markBefore),
             converged: Boolean(agreed?.converged),
             convergeRefused: agreed?.refused || null,
             moved: inbound.moved || outbound.moved || Boolean(agreed?.converged),
@@ -392,9 +422,13 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     }
 
     const tick = async () => {
+        // Everything from here on is read afresh, so a wake from before now has
+        // been answered; one from after this line keeps the tick from parking.
+        woken = false
         await refreshStreams()
 
         let parked = false
+        let changedThere = false
         let moved = false
         let more = false
         let refused = false
@@ -419,6 +453,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             const result = await runStream(stream, { wait: willPark })
             if (willPark) parked = true
             if (result.skipped) continue
+            changedThere = changedThere || result.changedThere
             moved = moved || result.moved
             more = more || result.more
             refused = refused || result.refused
@@ -451,16 +486,19 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         save()
         // Still behind: go round again at once. A capped batch that slept would
         // trickle a long history across at one batch per tick.
-        return { moved, parked: parked && !more, more }
+        // Woken while this tick ran, or told the other side changed after its
+        // projects were read: go round again at once, never into a sleep.
+        return { moved, parked: parked && !more, more, again: woken || changedThere }
     }
 
     const loop = async () => {
         while (!stopped) {
             let moved = false
             let parked = false
+            let again = false
             const startedAt = Date.now()
             try {
-                ({ moved, parked } = await tick())
+                ({ moved, parked, again } = await tick())
             } catch (error) {
                 // A follower must never take the server down with it.
                 state = { ...state, status: 'waiting', lastError: String(error?.message || error) }
@@ -473,7 +511,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             // woken for. The elapsed check keeps a server that answers a park
             // instantly (an old one that ignores `wait`) from becoming a spin.
             const elapsed = Date.now() - startedAt
-            interval = parked && elapsed > 200
+            interval = again || (parked && elapsed > 200)
                 ? 0
                 : nextInterval({ moved, current: interval, floor: FLOOR_MS, ceiling: CEILING_MS })
             if (interval > 0) await sleep(interval)
@@ -485,6 +523,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         stop() { stopped = true; chase.stop() },
         wake() {
             interval = FLOOR_MS
+            woken = true
             // Both: end the sleep between ticks, AND abandon a read parked on
             // the other machine. Without the second, `di follow`'s own promise —
             // that an edit leaves at once — was true only when the loop happened

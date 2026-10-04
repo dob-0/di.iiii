@@ -2,7 +2,7 @@
 
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import net from 'node:net'
 import { createRequire } from 'node:module'
 import os from 'node:os'
@@ -13,6 +13,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 const require = createRequire(import.meta.url)
 const { side, startFollowing } = require('./follower.js')
 const { httpRequest, httpDownloadToFile, httpUploadFile } = require('../httpClient.js')
+const { CONVERGE_CLIENT } = require('./followConverge.js')
 
 // Two real serverXR processes, real HTTP between them, and the real follower
 // running in this process — nothing here is stubbed, because the thing under
@@ -20,13 +21,11 @@ const { httpRequest, httpDownloadToFile, httpUploadFile } = require('../httpClie
 // A unit test of followPlan.js already proves the rule (followPlan.test.js);
 // only two servers can prove the rule is wired to anything.
 //
-// The budget is generous for one reason, and it is the follower's, not the
-// machine's: the loop parks its read on the other install for WAIT_SECONDS
-// (20s), and a write made HERE cannot leave until that parked read comes back
-// — wake() can cut a sleep but not an in-flight request. So an edit made on
-// the following side can sit for a whole park before it travels. Deadlines
-// below are sized for that; none of them is a sleep, so the file gets faster
-// on its own the day that changes.
+// The budget is generous, though no deadline below is a sleep: the loop parks
+// its read on the other install for WAIT_SECONDS (20s), and an edit that was
+// not woken would sit out a whole park before it travelled. wake() abandons a
+// parked read, and since 2026-10-04 a wake that lands mid-tick is latched — the
+// last describe block holds every crossing under three seconds.
 vi.setConfig({ testTimeout: 45_000, hookTimeout: 60_000 })
 
 const SERVER_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
@@ -242,10 +241,8 @@ describe('a space that lives on two di.iiii at once', () => {
         expect(log.latestVersion).toBeGreaterThan(0)
     })
 
-    // The slow direction, and the one worth watching: the loop has parked its
-    // read on the host, and this edit cannot leave until that read returns —
-    // measured at a full 20s here. Nothing below waits on a clock; the
-    // deadline is only wide enough to survive the park.
+    // The direction worth watching: the loop has parked its read on the host,
+    // and this edit leaves only because wake() abandons that read.
     it('carries an edit made on the follower back to the host', async () => {
         const written = await writeOp(following, addObject('chair', 'op-follower-chair'))
         expect(written.status).toBe(200)
@@ -292,8 +289,15 @@ describe('a space that lives on two di.iiii at once', () => {
         // back by the side that made it. Without the receiving route's opId
         // dedupe — or without the follower's own seen set — an op would land
         // again each pass and the log would grow on its own, forever.
+        //
+        // Counted as EDITS: the rug and the door landed in a different order on
+        // each side, so the follower may by now have taken the host's copy of
+        // the scene (followConverge.js) — its own write, made once, never
+        // carried. Whether it is there yet is only a matter of how fast the
+        // follow went quiet.
+        const edits = (log) => opIds(log).filter(id => !String(id).startsWith(CONVERGE_CLIENT))
         for (const [name, server] of [['host', hosting], ['follower', following]]) {
-            const ids = opIds(await readOps(server))
+            const ids = edits(await readOps(server))
             const counts = ids.reduce((acc, id) => ({ ...acc, [id]: (acc[id] || 0) + 1 }), {})
             const repeated = Object.entries(counts).filter(([, count]) => count > 1)
             expect(`${name}: ${JSON.stringify(repeated)}`).toBe(`${name}: []`)
@@ -302,8 +306,8 @@ describe('a space that lives on two di.iiii at once', () => {
 
         // And the same four edits, not four different ones each.
         const [hostIds, followerIds] = await Promise.all([
-            readOps(hosting).then(log => opIds(log).sort()),
-            readOps(following).then(log => opIds(log).sort())
+            readOps(hosting).then(log => edits(log).sort()),
+            readOps(following).then(log => edits(log).sort())
         ])
         expect(followerIds).toEqual(hostIds)
     })
@@ -579,4 +583,138 @@ describe('a followed space stays one space', () => {
             follower.stop()
         }
     })
+})
+
+// Measured on real machines on 2026-10-04 (aylmo following dev.diiii.xyz): after
+// a quiet spell an edit crossed in half a second, but an edit made RIGHT AFTER
+// one had been carried waited out the whole twenty-second park, in either
+// direction. A tick reads every project, then parks on the scene's log; an edit
+// that lands between the two was lost — the local wake found nothing to wake,
+// and the host's release came before anyone was parked. On loopback that gap
+// is microseconds and nothing shows, so the follow here reaches the host
+// through a proxy that holds every byte for DELAY_MS each way, the way the
+// internet does. It runs as it runs in an install — inside the following
+// server, from its follows.json, woken by that server's own write routes — and
+// each edit is made the moment the last has landed, which is what a person
+// working on both screens does.
+const DELAY_MS = 80
+
+/** A TCP proxy to `port` that delays every chunk, both ways, by `ms`. */
+const startDelayProxy = async (port, ms) => {
+    const sockets = new Set()
+    const later = (fn) => setTimeout(fn, ms)
+    let chunks = 0
+    const server = net.createServer((client) => {
+        const upstream = net.connect(port, '127.0.0.1')
+        sockets.add(client)
+        sockets.add(upstream)
+        // Same delay for every chunk, so timers keep the bytes in order.
+        client.on('data', chunk => { chunks += 1; later(() => upstream.write(chunk)) })
+        upstream.on('data', chunk => { chunks += 1; later(() => client.write(chunk)) })
+        client.on('end', () => later(() => upstream.end()))
+        upstream.on('end', () => later(() => client.end()))
+        const drop = () => later(() => { client.destroy(); upstream.destroy() })
+        client.on('close', drop)
+        upstream.on('close', drop)
+        client.on('error', () => {})
+        upstream.on('error', () => {})
+    })
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
+    return {
+        port: server.address().port,
+        get chunks() { return chunks },
+        stop: () => new Promise(resolve => {
+            for (const socket of sockets) socket.destroy()
+            server.close(() => resolve())
+        })
+    }
+}
+
+describe('a followed space answers at once, edit after edit', () => {
+    let hosting = null
+    let following = null
+    let proxy = null
+    const FOLLOWED = 'answer-space'
+    const PIECE = 'answer-piece'
+
+    const projectOps = async (server) => (await fetch(`${server.baseUrl}/api/projects/${PIECE}/ops`, { headers: authHeaders })).json()
+    const writeProjectOp = async (server, opId) => {
+        const { latestVersion } = await projectOps(server)
+        const response = await fetch(`${server.baseUrl}/api/projects/${PIECE}/ops`, {
+            method: 'POST',
+            headers: authHeaders,
+            body: JSON.stringify({ baseVersion: latestVersion, ops: [{ opId, type: 'createEntity', payload: { entity: { id: opId, name: opId } } }] })
+        })
+        expect(response.status).toBe(200)
+    }
+    const projectHasOp = (server, opId) => async () => {
+        const response = await fetch(`${server.baseUrl}/api/projects/${PIECE}/ops`, { headers: authHeaders })
+        if (response.status !== 200) return false
+        return opIds(await response.json()).includes(opId)
+    }
+    /** How long an edit made on `from` takes to be in `to`'s log. */
+    const crossing = async (from, to, opId) => {
+        const startedAt = Date.now()
+        await writeProjectOp(from, opId)
+        await settle(`${opId} crossing`, projectHasOp(to, opId), { timeout: 30_000, every: 25 })
+        return Date.now() - startedAt
+    }
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        proxy = await startDelayProxy(hosting.port, DELAY_MS)
+        await createSpace(hosting, FOLLOWED)
+        const made = await fetch(`${hosting.baseUrl}/api/spaces/${FOLLOWED}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: PIECE, title: PIECE })
+        })
+        expect(made.status).toBe(201)
+        // A second project, read after the first in every tick (streams are
+        // in id order) — a space like hayfilm holds several, and each one read
+        // after the edited project is one more round trip of gap.
+        const another = await fetch(`${hosting.baseUrl}/api/spaces/${FOLLOWED}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: `${PIECE}-later`, title: `${PIECE}-later` })
+        })
+        expect(another.status).toBe(201)
+
+        // What `di follow` writes: the follow is in the install's own data dir
+        // before it starts, so the server runs it, not this test.
+        const dataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-follow-data-'))
+        await writeFile(path.join(dataRoot, 'follows.json'), JSON.stringify({
+            format: 'di.follows',
+            version: 1,
+            follows: { [FOLLOWED]: { remote: `http://127.0.0.1:${proxy.port}/serverXR`, token: API_TOKEN, label: null, followedAt: new Date().toISOString() } }
+        }))
+        following = await startServer({ dataRoot })
+        await settle('the project reaching the follower', async () => (await fetch(`${following.baseUrl}/api/projects/${PIECE}/ops`, { headers: authHeaders })).status === 200)
+        // One edit across, so every crossing below starts from a follow that
+        // has carried something and settled.
+        await crossing(hosting, following, 'op-answer-warm')
+    })
+
+    afterAll(async () => {
+        await Promise.all([hosting?.stop(), following?.stop(), proxy?.stop()])
+    })
+
+    it('carries each edit in well under one park, in both directions, one after another', async () => {
+        const times = []
+        for (let round = 0; round < 3; round += 1) {
+            times.push(['follower→host', await crossing(following, hosting, `op-answer-out-${round}`)])
+            times.push(['host→follower', await crossing(hosting, following, `op-answer-in-${round}`)])
+        }
+        // A park is 20s. An edit that waited one out was not woken; a few
+        // round trips through the proxy is the follow doing its job.
+        const slow = times.filter(([, ms]) => ms >= 3000)
+        expect(`${JSON.stringify(slow)} of ${JSON.stringify(times)}`).toBe(`[] of ${JSON.stringify(times)}`)
+    }, 200_000)
+
+    // The latch must not cost the quiet: a follow that goes round "at once"
+    // too often never parks, and hammers the other machine all night.
+    it('parks again once the space is quiet, rather than going round and round', async () => {
+        await wait(2000) // let the last crossing's extra rounds finish
+        const before = proxy.chunks
+        await wait(3000)
+        // One held read is a handful of chunks at most; a loop that stopped
+        // parking would be hundreds in three seconds through this proxy.
+        expect(proxy.chunks - before).toBeLessThan(12)
+    }, 20_000)
 })
