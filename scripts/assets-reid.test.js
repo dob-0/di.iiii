@@ -198,3 +198,12 @@ describe('assets-reid: a run against a fake install', () => {
         expect(doc.presentationState.codeHtml).toBe(before.presentationState.codeHtml)
     })
 })
+
+describe('sourceProjectOf — the store that holds an imported asset', () => {
+    it('reads the project from the asset url, else the fallback', async () => {
+        const { sourceProjectOf } = await import('./assets-reid.mjs')
+        expect(sourceProjectOf({ url: '/api/projects/main-dii-project/assets/4c12' }, 'look-signal')).toBe('main-dii-project')
+        expect(sourceProjectOf({ url: '/serverXR/api/projects/x%20y/assets/1' }, 'p')).toBe('x y')
+        expect(sourceProjectOf({}, 'look-signal')).toBe('look-signal')
+    })
+})

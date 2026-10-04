@@ -50,6 +50,12 @@ const require = createRequire(import.meta.url)
 // one definition of "checkable name": the one follow uses
 const { isCarriableId } = require('../serverXR/src/follow/assets.js')
 
+/** The project whose store holds an asset's bytes: the one its url names, else `fallback`. Pure. */
+export const sourceProjectOf = (asset, fallback) => {
+    const m = /\/api\/projects\/([^/]+)\/assets\//.exec(String(asset?.url || ''))
+    return m ? decodeURIComponent(m[1]) : fallback
+}
+
 export const KNOWN_FLAGS = ['space', 'api', 'token-file', 'project', 'dry-run', 'undo', 'undo-dir', 'max-bytes', 'verbose']
 export const DEFAULT_MAX_BYTES = 200 * 1024 * 1024
 const CHUNK = 100
@@ -295,7 +301,13 @@ export const runReid = async (client, { space, project = null, dry = false, maxB
             // 1-2: bytes down, bytes up
             const entriesByNew = {}
             for (const a of legacy) {
-                const bytes = await client.bytes(`/api/projects/${id}/assets/${encodeURIComponent(a.id)}`)
+                // An imported asset can live in ANOTHER project's store: its own
+                // url names the project that holds the bytes (seen 2026-10-05:
+                // open/look-signal's 78 files are main-dii-project's). Ask that
+                // project first, then this one.
+                const owner = sourceProjectOf(a, id)
+                let bytes = await client.bytes(`/api/projects/${owner}/assets/${encodeURIComponent(a.id)}`)
+                if (!bytes.ok && owner !== id) bytes = await client.bytes(`/api/projects/${id}/assets/${encodeURIComponent(a.id)}`)
                 if (!bytes.ok) { row.why.push(`${a.name || a.id}: download answered ${bytes.status} — left as it is`); continue }
                 if (bytes.buffer.byteLength > maxBytes) { row.why.push(`${a.name || a.id}: ${bytes.buffer.byteLength} bytes is over --max-bytes — left as it is`); continue }
                 const form = new FormData()
