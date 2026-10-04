@@ -271,7 +271,7 @@ describe('RawGraphSurface', () => {
         expect(after.zoom).toBeGreaterThan(before.zoom)
     })
 
-    it('calls onDeleteEdge when a wire path is clicked', () => {
+    it('a click on a wire marks it; Remove wire removes it (a tap alone never does)', () => {
         const colorNode = makeNode('value.color', { id: 'color-1' })
         const cubeNode = makeNode('geom.cube', { id: 'cube-1', graphX: 320 })
         const onDeleteEdge = vi.fn()
@@ -286,7 +286,34 @@ describe('RawGraphSurface', () => {
 
         const wire = container.querySelector('svg path')
         expect(wire).toBeTruthy()
+        fireEvent.click(wire, { clientX: 300, clientY: 200 })
+        expect(onDeleteEdge).not.toHaveBeenCalled()
+        const remove = container.querySelector('.raw-wire-remove')
+        expect(remove?.textContent).toBe('Remove wire')
+        fireEvent.click(remove)
+        expect(onDeleteEdge).toHaveBeenCalledWith('edge-1')
+    })
+
+    it('a marked wire goes with Delete, and is let go by Escape or a press elsewhere', () => {
+        const colorNode = makeNode('value.color', { id: 'color-1' })
+        const cubeNode = makeNode('geom.cube', { id: 'cube-1', graphX: 320 })
+        const onDeleteEdge = vi.fn()
+        const { container } = render(
+            <RawGraphSurface
+                nodes={[colorNode, cubeNode]}
+                edges={[{ id: 'edge-1', fromNodeId: 'color-1', fromPort: 'out', toNodeId: 'cube-1', toPort: 'color' }]}
+                onDeleteEdge={onDeleteEdge}
+            />
+        )
+        const wire = container.querySelector('svg path')
         fireEvent.click(wire)
+        fireEvent.keyDown(window, { key: 'Escape' })
+        expect(container.querySelector('.raw-wire-remove')).toBeNull()
+        fireEvent.click(wire)
+        fireEvent.pointerDown(container.firstChild)
+        expect(container.querySelector('.raw-wire-remove')).toBeNull()
+        fireEvent.click(wire)
+        fireEvent.keyDown(window, { key: 'Delete' })
         expect(onDeleteEdge).toHaveBeenCalledWith('edge-1')
     })
 
@@ -979,5 +1006,42 @@ describe('RawGraphSurface wires follow portScopeNodes', () => {
         expect(before).toBeTruthy()
         rerender(<RawGraphSurface nodes={nodes} edges={edges} portScopeNodes={[...nodes, d2]} />)
         expect(wireD(container)).not.toBe(before)
+    })
+})
+
+describe('the door at low zoom', () => {
+    it('is tucked on unselected cards below the halo zoom, and shown on the selected one', () => {
+        const world = makeNode('universe.world', { id: 'w1' })
+        const other = makeNode('universe.world', { id: 'w2', graphX: 300 })
+        const { container } = render(
+            <RawGraphSurface nodes={[world, other]} edges={[]} initialZoom={0.3} selectedNodeId="w1" onEnterNode={vi.fn()} />
+        )
+        const anchors = [...container.querySelectorAll('.raw-graph-node-door-anchor')]
+        expect(anchors).toHaveLength(2)
+        expect(anchors.filter((el) => el.classList.contains('is-tucked'))).toHaveLength(1)
+    })
+
+    it('is never tucked at a working zoom', () => {
+        const world = makeNode('universe.world', { id: 'w1' })
+        const { container } = render(<RawGraphSurface nodes={[world]} edges={[]} initialZoom={1} onEnterNode={vi.fn()} />)
+        expect(container.querySelector('.raw-graph-node-door-anchor.is-tucked')).toBeNull()
+    })
+})
+
+describe('one value, one name on a card row', () => {
+    it('a Text card says Content once, with a joint on each side', () => {
+        const text = makeNode('view.text', { id: 't1' })
+        const { container } = render(<RawGraphSurface nodes={[text]} edges={[]} initialZoom={1} />)
+        const labels = [...container.querySelectorAll('.raw-graph-port-label')].map((el) => el.textContent)
+        expect(labels.filter((l) => l === 'Content')).toHaveLength(1)
+        expect(container.querySelectorAll('.raw-graph-port-dot--out')).toHaveLength(1)
+        expect(container.querySelectorAll('.raw-graph-port-dot--in')).toHaveLength(1)
+    })
+
+    it('different names on one row both show', () => {
+        const merge = makeNode('shape.merge', { id: 'm1' })
+        const { container } = render(<RawGraphSurface nodes={[merge]} edges={[]} initialZoom={1} />)
+        const labels = [...container.querySelectorAll('.raw-graph-port-label')].map((el) => el.textContent)
+        expect(labels).toEqual(expect.arrayContaining(['A', 'B', 'Out']))
     })
 })

@@ -16,6 +16,25 @@ import {
     RAW_WINDOW_PADDING
 } from './windowLayout.js'
 
+describe('selectMountedPanelNodes — a phone shows the front window only', () => {
+    const isPanel = () => true
+    const win = (id, zIndex, extra = {}) => ({ id, parentId: null, values: { frame: { visible: true, zIndex, ...extra } } })
+
+    it('frontOnly keeps the highest window; the rest stay open in the document', () => {
+        const nodes = [win('a', 6), win('b', 9), win('c', 7)]
+        expect(selectMountedPanelNodes({ nodes, isPanel, frontOnly: true }).map((n) => n.id)).toEqual(['b'])
+        expect(nodes.every((n) => n.values.frame.visible)).toBe(true)
+    })
+
+    it('a tie goes to the one that painted last', () => {
+        expect(selectMountedPanelNodes({ nodes: [win('a', 6), win('b', 6)], isPanel, frontOnly: true }).map((n) => n.id)).toEqual(['b'])
+    })
+
+    it('without frontOnly (a computer) every open window mounts', () => {
+        expect(selectMountedPanelNodes({ nodes: [win('a', 6), win('b', 9)], isPanel }).map((n) => n.id)).toEqual(['a', 'b'])
+    })
+})
+
 describe('selectMountedPanelNodes', () => {
     const isPanel = (node) => node.panel === true
     const world = (id, parentId) => ({ id, parentId, panel: true })

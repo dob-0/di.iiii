@@ -52,19 +52,33 @@ export function getWorkspaceTopInset({ topbarRect = null, padding = 8 } = {}) {
 // their own arrangement over the document's seed (utils/workspaceLayout.js).
 // Without it a window closed on this device would stay mounted, because the
 // document still says it is open.
+//
+// frontOnly (a phone): only the FRONT window mounts. Every window on a phone is
+// full width, so two open windows covered the whole canvas and no card could
+// be seen or tapped (audit 2026-10-02, 390×844: a tap on a card timed out
+// against two windows). The others stay open in the document — nothing is
+// written, a computer showing the same project keeps its layout — and the
+// Windows menu brings any of them to the front.
 export function selectMountedPanelNodes({
     nodes = [],
     isPanel = () => false,
     currentScopeId = null,
     isWorldFullscreen = false,
-    frameOf = (node) => node?.values?.frame
+    frameOf = (node) => node?.values?.frame,
+    frontOnly = false
 } = {}) {
     if (isWorldFullscreen) return []
-    return nodes.filter((node) => (
+    const open = nodes.filter((node) => (
         isPanel(node)
         && (node.parentId || null) === (currentScopeId || null)
         && frameOf(node)?.visible !== false
     ))
+    if (!frontOnly || open.length < 2) return open
+    // The front one: highest zIndex; on a tie, the later one (it painted last).
+    const front = open.reduce((best, node) => (
+        (frameOf(node)?.zIndex || 0) >= (frameOf(best)?.zIndex || 0) ? node : best
+    ))
+    return [front]
 }
 
 export function clampWindowFrame(frame = {}, bounds = {}) {

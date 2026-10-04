@@ -1797,6 +1797,12 @@
 /* A sentence a field is read with (PropertyInspector's FieldNote). Dim and
    warm — the first one is a licence line, and it must stay legible without
    shouting. Never white: this sheet can be on a projector. */
+.raw-property-connection {
+    color: var(--di-text-muted);
+    font-size: var(--di-text-3);
+    line-height: 1.4;
+}
+
 .raw-property-note {
     margin: 0;
     font-family: var(--di-mono);
@@ -2806,6 +2812,12 @@
         justify-content: center;
         color: rgba(var(--di-cyan-rgb), 0.9);
         border-color: rgba(var(--di-cyan-rgb), 0.45);
+    }
+
+    /* Below DOOR_HALO_MIN_ZOOM the 44px plate is wider than the gutter and lands
+       on the previous column's outputs: only the selected card shows its door. */
+    .raw-graph-node-door-anchor.is-tucked {
+        display: none;
     }
 }
 
@@ -5458,6 +5470,26 @@
 }
 
 /* A wire that died on release says why, where it died. */
+.raw-wire-remove {
+    position: fixed;
+    transform: translate(-50%, -140%);
+    min-height: 44px;
+    padding: var(--di-space-2) var(--di-space-3);
+    background: var(--di-scrim-strong);
+    border: 1px solid rgba(var(--di-danger-rgb), 0.7);
+    border-radius: var(--di-radius);
+    color: var(--di-danger);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    cursor: pointer;
+    z-index: 61;
+}
+
+.raw-wire-remove:hover,
+.raw-wire-remove:focus-visible {
+    background: rgba(var(--di-danger-rgb), 0.18);
+}
+
 .raw-wire-notice {
     position: fixed;
     transform: translate(-50%, -130%);

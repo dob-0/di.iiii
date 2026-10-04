@@ -61,3 +61,10 @@ describe('ImagePanelWindow', () => {
         expect(screen.getByText('No image selected yet.')).toBeTruthy()
     })
 })
+
+describe('ImagePanelWindow — wired but empty', () => {
+    it('says the wire is there and nothing arrives, instead of "no image selected"', () => {
+        const { getByText } = render(<ImagePanelWindow node={{ id: 'i', typeId: 'view.image', values: {} }} sourceWired />)
+        expect(getByText('Wired to Source — no picture is arriving yet.')).toBeTruthy()
+    })
+})

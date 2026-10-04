@@ -835,3 +835,23 @@ describe('universe.world Picture — the Scene, seen', () => {
         expect(into.type).toBe(out.type)
     })
 })
+
+describe('number → vector, converted at the link', () => {
+    it('a Number into a Cube\'s Size fills x, y and z', () => {
+        const doc = {
+            nodes: [node('n', 'value.number', { value: 2 }), node('c', 'geom.cube')],
+            edges: [edge('n', 'out', 'c', 'size')]
+        }
+        const context = createNodeGraphContext(doc)
+        const cube = doc.nodes[1]
+        expect(evaluateNodeOutput(cube, 'geometry', context).size).toEqual([2, 2, 2])
+    })
+
+    it('a number into a Number socket stays a number', () => {
+        const doc = {
+            nodes: [node('n', 'value.number', { value: 0.3 }), node('c', 'geom.cube')],
+            edges: [edge('n', 'out', 'c', 'opacity')]
+        }
+        expect(evaluateNodeOutput(doc.nodes[1], 'geometry', createNodeGraphContext(doc)).size).toEqual([1, 1, 1])
+    })
+})

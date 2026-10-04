@@ -304,6 +304,9 @@ describe('arePortsCompatible', () => {
 
     it('incompatible types return false', () => {
         expect(arePortsCompatible('number', 'geometry')).toBe(false)
+        // One number fills a vector (converted at the link) — but not the reverse.
+        expect(arePortsCompatible('number', 'vec3')).toBe(true)
+        expect(arePortsCompatible('vec3', 'number')).toBe(false)
         expect(arePortsCompatible('string', 'texture')).toBe(false)
     })
 })

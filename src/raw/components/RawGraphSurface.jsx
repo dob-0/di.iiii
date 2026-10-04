@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
-import { CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, cardHeight } from '../utils/cardGeometry.js'
+import { CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, TOP_PICTURE_HEIGHT, TOP_PICTURE_WIDTH, cardHeight } from '../utils/cardGeometry.js'
 import { isPictureType, pictureIdOf } from '../../project/tops/vjDeck.js'
 import TopThumbnail from './TopThumbnail.jsx'
 import CardPreview from './cardPreview/CardPreview.jsx'
 import { hasCardPreview } from './cardPreview/previewTypes.js'
+import { cardEmptyHint } from '../utils/cardEmptyHint.js'
 import {
     arePortsCompatible,
     getNodeCardSummary,
@@ -211,6 +212,13 @@ export default function RawGraphSurface({
     const [isPanning, setIsPanning] = useState(false)
     const [isPanMoving, setIsPanMoving] = useState(false)
     const [hoveredWireId, setHoveredWireId] = useState(null)
+    // A wire is removed in two steps: a click (a tap) MARKS it and shows a
+    // Remove button where it was touched; the button or Delete removes it. One
+    // click used to remove it outright — fine with a mouse, whose hover had
+    // already turned it red, but a finger has no hover, so on a phone a tap
+    // anywhere on a 24px band deleted a wire with no warning (audit
+    // 2026-10-02). Select, then delete: how Blender and Unreal treat a link.
+    const [armedWire, setArmedWire] = useState(null)
     const dragOffsetRef = useRef({ x: 0, y: 0 })
     // pendingWire mirrored into a ref: the window-level pointerup handler is
     // registered once per drag and would otherwise close over a stale value.
@@ -776,18 +784,25 @@ export default function RawGraphSurface({
     }, [])
 
     useEffect(() => {
-        if (!selectedNodeId || !onDeleteNode) return undefined
+        if (!armedWire && (!selectedNodeId || !onDeleteNode)) return undefined
         const handler = (event) => {
+            if (event.key === 'Escape' && armedWire) { setArmedWire(null); return }
             if (event.key !== 'Delete' && event.key !== 'Backspace') return
             const target = event.target
             const tag = target?.tagName?.toLowerCase?.()
             if (tag === 'input' || tag === 'textarea' || target?.isContentEditable) return
+            // A marked wire goes first: it is what the person just pointed at.
+            if (armedWire) {
+                onDeleteEdge?.(armedWire.id)
+                setArmedWire(null)
+                return
+            }
             // Only nodes rendered on THIS surface. Selection survives entering
             // a card (pointerdown selects, then dblclick enters), so without
             // this guard Backspace deleted the scope you were standing inside
             // — cascading over its whole subtree and dumping you back to the
             // parent with everything gone.
-            if (!nodeById.has(selectedNodeId)) return
+            if (!onDeleteNode || !nodeById.has(selectedNodeId)) return
             const node = nodeById.get(selectedNodeId)
             requestDelete(
                 { id: selectedNodeId, name: node?.label, author: node?.createdBy },
@@ -796,7 +811,7 @@ export default function RawGraphSurface({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [selectedNodeId, onDeleteNode, nodeById, requestDelete])
+    }, [selectedNodeId, onDeleteNode, nodeById, requestDelete, armedWire, onDeleteEdge])
 
     // The output port nearest a screen point, within the grab radius. Distance
     // is in SCREEN pixels so the tolerance is a fingertip at every zoom.
@@ -1296,6 +1311,8 @@ export default function RawGraphSurface({
             }}
             onKeyDown={handleSectionKeyDown}
             onPointerDown={(event) => {
+                // Anywhere but the Remove button lets go of a marked wire.
+                if (armedWire && !event.target?.closest?.('.raw-wire-remove')) setArmedWire(null)
                 doubleTap.down(event)
                 handleSurfacePointerDown(event)
             }}
@@ -1304,6 +1321,21 @@ export default function RawGraphSurface({
             }}
             onPointerCancel={doubleTap.cancel}
         >
+            {armedWire && edges.some((edge) => edge.id === armedWire.id) ? (
+                <button
+                    type="button"
+                    className="raw-wire-remove"
+                    style={{ left: `${armedWire.x}px`, top: `${armedWire.y}px` }}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                        event.stopPropagation()
+                        onDeleteEdge?.(armedWire.id)
+                        setArmedWire(null)
+                    }}
+                >
+                    Remove wire
+                </button>
+            ) : null}
             {wireNotice ? (
                 <div className="raw-wire-notice" style={{ left: `${wireNotice.x}px`, top: `${wireNotice.y}px` }} role="status">
                     {wireNotice.text}
@@ -1370,7 +1402,7 @@ export default function RawGraphSurface({
                         style={{ position: 'absolute', top: 0, left: 0, width: '1px', height: '1px', pointerEvents: 'none', overflow: 'visible' }}
                     >
                         {wires.map((wire) => {
-                            const isHovered = hoveredWireId === wire.id
+                            const isHovered = hoveredWireId === wire.id || armedWire?.id === wire.id
                             const path = buildWirePath(wire.from, wire.to)
                             return (
                                 <g key={wire.id}>
@@ -1386,7 +1418,11 @@ export default function RawGraphSurface({
                                         style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
                                         onPointerEnter={() => setHoveredWireId(wire.id)}
                                         onPointerLeave={() => setHoveredWireId(null)}
-                                        onClick={(e) => { e.stopPropagation(); onDeleteEdge?.(wire.id) }}
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            if (!onDeleteEdge) return
+                                            setArmedWire({ id: wire.id, x: e.clientX, y: e.clientY })
+                                        }}
                                     />
                                     <path
                                         d={path}
@@ -1482,7 +1518,12 @@ export default function RawGraphSurface({
                                     filled. */}
                                 {onEnterNode && tier !== 'block' ? (
                                     <div
-                                        className="raw-graph-node-door-anchor"
+                                        // Tucked: zoomed out, a finger's 44px door is wider
+                                        // than the column gutter and covered the previous
+                                        // column's output ports (audit 2026-10-02, 390×844
+                                        // at 34%). On a touch screen it then shows only on
+                                        // the selected card — tap the card, then its door.
+                                        className={`raw-graph-node-door-anchor${zoom < DOOR_HALO_MIN_ZOOM && !isSelected ? ' is-tucked' : ''}`}
                                         style={{ transform: `scale(${1 / Math.max(zoom, FIT_MIN_USEFUL_ZOOM)})` }}
                                     >
                                         <button
@@ -1568,6 +1609,14 @@ export default function RawGraphSurface({
                                             top={Math.max(inputs.length, outputs.length, 1) * PORT_ROW_HEIGHT + 4}
                                         />
                                     ) : null}
+                                    {showPorts && isPictureType(node.typeId) && cardEmptyHint(node, { edges, scopeNodes: portScopeNodes }) ? (
+                                        <span
+                                            className="raw-card-empty-hint"
+                                            style={{ top: Math.max(inputs.length, outputs.length, 1) * PORT_ROW_HEIGHT + 4, width: TOP_PICTURE_WIDTH, height: TOP_PICTURE_HEIGHT }}
+                                        >
+                                            {cardEmptyHint(node, { edges, scopeNodes: portScopeNodes })}
+                                        </span>
+                                    ) : null}
                                     {/* The cube itself, on the Cube's card — the same slot and
                                         size as a picture operator's picture, below the ports, so
                                         no port or wire moves. Unmounted below the port tier,
@@ -1631,7 +1680,12 @@ export default function RawGraphSurface({
                                             className="raw-graph-port-row raw-graph-port-row--out"
                                             style={{ top: idx * PORT_ROW_HEIGHT }}
                                         >
-                                            {showPortLabels ? (
+                                            {/* One value, one name: when the input on this row has the
+                                                same name (a Text's Content in and out, a Scene's Title and
+                                                Sky), the card says it once — "Content … Content" read as two
+                                                parameters (owner, 2026-10-02). The dot stays; the hover
+                                                title still names it. */}
+                                            {showPortLabels && (port.label || port.id) !== (inputs[idx]?.label || inputs[idx]?.id) ? (
                                                 <span className="raw-graph-port-label">{port.label || port.id}</span>
                                             ) : null}
                                             <span
