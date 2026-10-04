@@ -13,9 +13,12 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a canvas that asks for 'high-performance' must not go black when the browser refuses it
-- the show chip's recording light is square; the rectangle guard reads inline styles right
-- dev's 3D rooms were black: the viewport crashed on frozen camera bindings
+- the desk's Touch page plays looks and the cue list
+- a followed space stays one space: no lost edits, copies agree, restarts resume
+- Studio stands inside a Geo
+- MOXIR: the area stage, the corrected hall, the realism renderer, and the audit fixes
+- MOXIR previs: the haze worked out from the hazers, real beam fall-off, real bloom
+- …and 27 more notes, each in full in PROGRESS.md
 
 Full detail: `PROGRESS.md`.
 
