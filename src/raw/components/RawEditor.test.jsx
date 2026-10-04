@@ -1324,8 +1324,8 @@ describe('RawEditor view.library panel', () => {
 // them — nodes created while "inside" a World always landed as siblings at
 // the surrounding scope instead of real children of the World (found via
 // live manual testing, confirmed by inspecting parentId directly against
-// the server's own document). DesktopWindow's Enter button, wired to the
-// same handleEnterNode used by the graph card's double-click, is the fix.
+// the server's own document). Opening the card (double-click, Enter or Open) is
+// handleEnterNode, the fix; the window has no Enter button of its own now.
 describe('RawEditor world scope entry', () => {
     const ENTER_STORAGE_KEY = 'test-world-scope-entry'
 
@@ -1333,7 +1333,7 @@ describe('RawEditor world scope entry', () => {
         window.localStorage.removeItem(ENTER_STORAGE_KEY)
     })
 
-    it('navigates into a World node\'s own scope via its window\'s Enter button', () => {
+    it('navigates into a World node\'s own scope when the card is opened', () => {
         window.localStorage.setItem(
             ENTER_STORAGE_KEY,
             makeWorkspaceDoc([
@@ -1344,7 +1344,7 @@ describe('RawEditor world scope entry', () => {
 
         expect(screen.queryByRole('navigation', { name: 'Node scope' })).toBeNull()
 
-        fireEvent.click(screen.getByText('Enter ›'))
+        fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
 
         expect(screen.getByRole('navigation', { name: 'Node scope' })).toBeTruthy()
     })
@@ -1359,7 +1359,7 @@ describe('RawEditor world scope entry', () => {
         mockApplyLocalOps.mockClear()
         render(<RawEditor localStorageKey={ENTER_STORAGE_KEY} />)
 
-        fireEvent.click(screen.getByText('Enter ›'))
+        fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
         fireEvent.doubleClick(screen.getByTestId('mock-graph'))
         fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Cube' } })
         fireEvent.keyDown(screen.getByPlaceholderText('type a node or panel name…'), { key: 'Enter' })
@@ -1857,7 +1857,10 @@ describe('RawEditor window pile (cascade + Escape)', () => {
         }))
         render(<RawEditor localStorageKey={KEY} />)
         expect(screen.queryByRole('dialog', { name: 'Gear' })).toBeNull()
-        fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
+        // A closed window comes back through the palette, not through Open.
+        fireEvent.doubleClick(screen.getByTestId('mock-graph'))
+        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Gear' } })
+        fireEvent.keyDown(screen.getByPlaceholderText('type a node or panel name…'), { key: 'Enter' })
         expect(screen.getByRole('dialog', { name: 'Gear' })).toBeTruthy()
         fireEvent.keyDown(window, { key: 'Escape' })
         expect(screen.queryByRole('dialog', { name: 'Gear' })).toBeNull()
@@ -1865,5 +1868,40 @@ describe('RawEditor window pile (cascade + Escape)', () => {
         // Escape does not take it away.
         fireEvent.keyDown(window, { key: 'Escape' })
         expect(screen.getByRole('dialog', { name: 'People' })).toBeTruthy()
+    })
+})
+
+// Audit 2026-10-05 B2: one gesture, two results. Opening a List (double-click,
+// Enter, or Open in the settings) opened its closed window the first time and
+// the empty inside the second.
+describe('RawEditor: Open means the inside, every time', () => {
+    const KEY = 'test-one-open'
+    afterEach(() => { window.localStorage.removeItem(KEY) })
+    const listDoc = () => JSON.stringify({
+        nodes: [{ id: 'list-1', typeId: 'view.list', label: 'Bar', parentId: null, values: { frame: { visible: false, x: 40, y: 120, width: 300, height: 300 } } }],
+        edges: [],
+        workspaceState: {}
+    })
+
+    it('a List with a closed window goes inside on the first open and on the second', () => {
+        window.localStorage.setItem(KEY, listDoc())
+        render(<RawEditor localStorageKey={KEY} />)
+        for (let round = 0; round < 2; round += 1) {
+            expect(screen.queryByRole('navigation', { name: 'Node scope' })).toBeNull()
+            fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
+            expect(screen.getByRole('navigation', { name: 'Node scope' })).toBeTruthy()
+            // Opening never put a window on screen as a side effect.
+            expect(document.querySelector('.raw-window')).toBeNull()
+            act(() => { window.dispatchEvent(new PopStateEvent('popstate')) })
+        }
+    })
+
+    it('the settings Open button does the same, and a window header has no Enter', () => {
+        window.localStorage.setItem(KEY, listDoc())
+        render(<RawEditor localStorageKey={KEY} />)
+        fireEvent.click(screen.getByRole('button', { name: 'select:list-1' }))
+        fireEvent.click(screen.getByRole('button', { name: /^Open/ }))
+        expect(screen.getByRole('navigation', { name: 'Node scope' })).toBeTruthy()
+        expect(screen.queryByText('Enter ›')).toBeNull()
     })
 })

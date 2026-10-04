@@ -21,7 +21,7 @@ export const GUIDE_SECTIONS = [
         callouts: [
             { icon: '◎', title: 'Make', detail: 'Double-click, type a name' },
             { icon: '→', title: 'Wire', detail: 'Drag port to port' },
-            { icon: '›', title: 'Enter', detail: 'Step inside a card' }
+            { icon: '›', title: 'Open', detail: 'Double-click a card' }
         ],
         controls: [
             ['Add', 'Double-click or double-tap the canvas'],
@@ -78,19 +78,19 @@ export const GUIDE_SECTIONS = [
         title: 'A thing is a place',
         description: 'Enter a card, build inside it, come back out.',
         callouts: [
-            { icon: '›', title: 'Enter', detail: 'The › on a card' },
+            { icon: '›', title: 'Open', detail: 'Double-click a card' },
             { icon: '‹', title: 'Leave', detail: 'Escape, or ‹ at the top' },
             { icon: '◈', title: 'All the way out', detail: 'The ◈ in the trail' }
         ],
         controls: [
-            ['Enter', 'Press › on a card, or double-click it'],
+            ['Open', 'Double-click a card, press Enter, or Open in its settings'],
             ['Leave', 'Escape, the ‹ button, or hardware Back on a phone'],
             ['Where am I', 'The trail at the top names every level'],
             ['Doorways', 'An In or Out node inside makes a port on the wall']
         ],
         steps: [
             'Make a Geo — the plain container.',
-            'Press › and build inside it: cubes, a Light, anything.',
+            'Open it and build inside: cubes, a Light, anything.',
             'Leave — the Geo carries its contents as one thing.',
             'A Geo inside a Geo works too.'
         ],
