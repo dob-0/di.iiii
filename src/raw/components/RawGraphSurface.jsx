@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
-import { CARD_CONTENT_LINE_HEIGHT, CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, TOP_PICTURE_HEIGHT, TOP_PICTURE_WIDTH, cardContentLayout, cardHeight, cardPortRows, hasCardPicture } from '../utils/cardGeometry.js'
+import { CARD_CONTENT_LINE_HEIGHT, CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, TOP_PICTURE_HEIGHT, TOP_PICTURE_WIDTH, cardContentHeight, cardContentLayout, cardHeight, cardPortRows, hasCardPicture } from '../utils/cardGeometry.js'
 import { isPictureType, pictureIdOf } from '../../project/tops/vjDeck.js'
 import TopThumbnail from './TopThumbnail.jsx'
 import CardPreview from './cardPreview/CardPreview.jsx'
@@ -14,6 +14,7 @@ import {
     CONTAINER_TYPE_IDS,
     arePortsCompatible,
     getNodeCardLines,
+    getCardMainField,
     getNodeCardSummary,
     getNodeFamily,
     getNodeInputs,
@@ -146,6 +147,14 @@ function CardContentLines({ content, top }) {
     )
 }
 
+// In-card editing: how tall the box is for what is typed, 3 to 12 lines.
+const EDIT_LINE_CHARS = 30
+const editRowsFor = (text) => clamp(
+    String(text || '').split('\n').reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / EDIT_LINE_CHARS)), 0) + 1,
+    3,
+    12
+)
+
 // The card box itself (CARD_WIDTH, cardHeight) lives in cardGeometry.js: the
 // editor places a panel node's window against it and must not guess.
 const inputPortCenter = (node, portId, scopeNodes = null) => {
@@ -254,6 +263,9 @@ export default function RawGraphSurface({
     onDeleteNode,
     onMoveNode,
     onDoubleClick,
+    // Edits a card's one main field in place (a Text's content). Optional: the
+    // read-only wrappers pass none and the card behaves exactly as before.
+    onEditMainValue = null,
     // Kantan Mapper-style active marker: for scope-repeatable types where
     // exactly one "active" result is wanted (world.light/background/grid),
     // isNodeActive(node) says whether this card is the active one and
@@ -276,6 +288,26 @@ export default function RawGraphSurface({
     const containerRef = useRef(null)
     const [pendingWire, setPendingWire] = useState(null)
     const [draggingNodeId, setDraggingNodeId] = useState(null)
+    // The card whose main field is open for typing. The text itself is never
+    // copied here: the box reads and writes node.values, the same value the
+    // side column shows.
+    const [editingId, setEditingId] = useState(null)
+    const startEditing = (nodeId) => {
+        const node = nodes.find((n) => n.id === nodeId)
+        if (!onEditMainValue || !node || !getCardMainField(node.typeId)) return false
+        onSelectNode?.(nodeId)
+        setEditingId(nodeId)
+        return true
+    }
+    const stopEditing = (nodeId) => {
+        setEditingId(null)
+        requestAnimationFrame(() => {
+            containerRef.current?.querySelector(`[data-card-id="${nodeId}"]`)?.focus?.({ preventScroll: true })
+        })
+    }
+    useEffect(() => {
+        if (editingId && editingId !== selectedNodeId) setEditingId(null)
+    }, [editingId, selectedNodeId])
     const [isPanning, setIsPanning] = useState(false)
     const [isPanMoving, setIsPanMoving] = useState(false)
     const [hoveredWireId, setHoveredWireId] = useState(null)
@@ -1505,6 +1537,8 @@ export default function RawGraphSurface({
     const handleNodeKeyDown = (event, nodeId) => {
         if (event.key !== 'Enter' && event.key !== ' ') return
         event.preventDefault()
+        // Enter on a card with a main field opens it for typing, in the card.
+        if (event.key === 'Enter' && event.target === event.currentTarget && startEditing(nodeId)) return
         onSelectNode?.(nodeId)
     }
 
@@ -1715,7 +1749,28 @@ export default function RawGraphSurface({
                         // `h` and the card's left/top/width come from the same
                         // geometry the wires use, at EVERY tier. The tier below
                         // only decides what is drawn inside this box.
-                        const h = cardHeight(node, portScopeNodes)
+                        const isEditing = editingId === node.id && Boolean(getCardMainField(node.typeId))
+                        const mainField = isEditing ? getCardMainField(node.typeId) : null
+                        const mainText = mainField ? String(node.values?.[mainField.key] ?? '') : ''
+                        const baseH = cardHeight(node, portScopeNodes)
+                        // The card grows to fit what is typed, but only into free
+                        // space: never past the next card below it in its column.
+                        let editBoxHeight = 0
+                        let editGrow = 0
+                        if (isEditing) {
+                            editBoxHeight = editRowsFor(mainText) * CARD_CONTENT_LINE_HEIGHT + 12
+                            const have = cardContentHeight(node)
+                            const bottom = (node.graphY ?? 0) + baseH
+                            const below = nodes
+                                .filter((other) => other.id !== node.id
+                                    && Math.abs((other.graphX ?? 0) - (node.graphX ?? 0)) < CARD_WIDTH
+                                    && (other.graphY ?? 0) >= bottom - 1)
+                                .reduce((min, other) => Math.min(min, other.graphY ?? Infinity), Infinity)
+                            const room = Number.isFinite(below) ? Math.max(0, below - bottom - 8) : Infinity
+                            editGrow = Math.min(Math.max(0, editBoxHeight - have), room)
+                            editBoxHeight = have + editGrow
+                        }
+                        const h = baseH + editGrow
                         const isSelected = node.id === selectedNodeId
                         const typeDef = getNodeType(node.typeId)
                         const showPorts = tier === 'full' || tier === 'compact'
@@ -1768,7 +1823,11 @@ export default function RawGraphSurface({
                                     event.currentTarget.setPointerCapture(event.pointerId)
                                 }}
                                 onKeyDown={(event) => handleNodeKeyDown(event, node.id)}
-                                onDoubleClick={(event) => { event.stopPropagation(); onEnterNode?.(node.id) }}
+                                onDoubleClick={(event) => {
+                                    event.stopPropagation()
+                                    if (startEditing(node.id)) return
+                                    onEnterNode?.(node.id)
+                                }}
                             >
                                 {/* The door. Hangs off the card's LEFT edge, counter-scaled so
                                     it is the same size on screen at every zoom — a control that
@@ -1885,7 +1944,37 @@ export default function RawGraphSurface({
                                     {/* What the card holds — a List's rows under their
                                         groups, a Text's first lines. Below the ports and any
                                         picture, inside the height cardHeight already gave it. */}
-                                    {showPorts && getNodeCardLines(node) ? (
+                                    {showPorts && isEditing ? (
+                                        <textarea
+                                            className="raw-graph-node-edit"
+                                            aria-label={`${mainField.label} of ${node.label}`}
+                                            data-main-field={mainField.key}
+                                            style={{
+                                                top: cardPortRows(node, portScopeNodes) * PORT_ROW_HEIGHT
+                                                    + (hasCardPicture(node.typeId) ? TOP_PICTURE_HEIGHT + 4 : 0),
+                                                height: editBoxHeight || undefined
+                                            }}
+                                            value={mainText}
+                                            ref={(el) => { if (el && window.document.activeElement !== el) el.focus({ preventScroll: true }) }}
+                                            onFocus={(event) => {
+                                                const end = event.target.value.length
+                                                event.target.setSelectionRange(end, end)
+                                            }}
+                                            onChange={(event) => onEditMainValue(node.id, mainField.key, event.target.value)}
+                                            onPointerDown={(event) => event.stopPropagation()}
+                                            onDoubleClick={(event) => event.stopPropagation()}
+                                            onClick={(event) => event.stopPropagation()}
+                                            onBlur={() => setEditingId((current) => (current === node.id ? null : current))}
+                                            onKeyDown={(event) => {
+                                                event.stopPropagation()
+                                                if (event.key === 'Escape') {
+                                                    event.preventDefault()
+                                                    stopEditing(node.id)
+                                                }
+                                            }}
+                                        />
+                                    ) : null}
+                                    {showPorts && !isEditing && getNodeCardLines(node) ? (
                                         <CardContentLines
                                             content={cardContentLayout(node)}
                                             top={cardPortRows(node, portScopeNodes) * PORT_ROW_HEIGHT

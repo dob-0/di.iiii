@@ -250,7 +250,7 @@ function TitleField({ title, onRename, renameRequest = 0 }) {
             }}
             onKeyDown={(event) => {
                 if (event.key === 'Enter') event.currentTarget.blur()
-                if (event.key === 'Escape') setDraft(null)
+                if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); setDraft(null) }
             }}
         />
     )
@@ -267,6 +267,10 @@ export default function PropertyInspector({
     onSectionChange,
     onPickAssetFile = null,
     emptyMessage = 'Nothing selected yet.',
+    // The settings column passes a close (button + Escape) and the field that
+    // is edited in the card instead, so it is not shown twice.
+    onClose = null,
+    skipField = null,
     // The selection sheet passes this: something IS selected, it just has no
     // fields. `.raw-empty-state` is the canvas's centred, absolutely placed
     // hint — inside the sheet it left no in-flow content and the sheet
@@ -283,6 +287,9 @@ export default function PropertyInspector({
     return (
         <div className="raw-property-sheet">
             <header className="raw-property-sheet-header">
+                {onClose ? (
+                    <button type="button" className="raw-property-close" aria-label="Close settings" title="Close (Esc)" onClick={onClose}>×</button>
+                ) : null}
                 <TitleField title={title} onRename={onRename} renameRequest={renameRequest} />
                 {/* The type's name under a node's own name — once. "Scene / Scene"
                     read as two things (owner, 2026-10-02). */}
@@ -293,13 +300,13 @@ export default function PropertyInspector({
                 {!sections.length && !showHeaderWhenEmpty ? (
                     <p className="raw-property-note raw-full-width-field">Its window holds everything it does — › on its card opens it.</p>
                 ) : null}
-                {sections.map((section) => {
+                {sections.filter((section) => !skipField || section.fields.some((field) => !skipField(field))).map((section) => {
                     const sectionValue = values[section.id] || values[section.component] || {}
                     return (
                         <section key={section.id} className="raw-property-section">
                             <h5>{section.label}</h5>
                             <div className="raw-property-grid">
-                                {section.fields.map((field) => {
+                                {section.fields.filter((field) => !(skipField && skipField(field))).map((field) => {
                                     const value = readNestedValue(sectionValue, field.path)
                                     const isFullWidth = field.type === 'textarea' || field.type === 'select' || field.type === 'asset'
                                     const wired = field.wired === true
