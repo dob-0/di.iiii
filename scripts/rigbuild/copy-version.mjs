@@ -389,6 +389,86 @@ const main = async () => {
     say(`${to}: written (version ${back.body.version}) — ${source.entities.length} entities, ${assets.length} assets; ${from} was only read`)
 }
 
+// ---- the production's version list (docs/architecture/decisions/2026-10-04-production-versions.md) --------
+//
+// Run around main(), not inside it, so main's own lines stay as they are: a copy is listed in the same
+// run that makes it. A new copy → `kept-copy`, made from the source's version; a copy brought from another
+// install under its own id (--from-api, from == to) → a `candidate`; --adopt → registered from its mark (a
+// listed copy keeps its status); --undo → taken out of the list. --dry-run writes no list either. A list
+// write that fails after the copy is made says so and names the command that finishes it.
+
+/** What the list step will do for these arguments: 'undo' | 'adopt' | 'copy' | null (nothing: a dry run, or arguments main refuses). Pure. */
+export const listStepFor = (args) => {
+    if (!args?.api || !args.to || args['dry-run'] || unknownArgs(args).length) return null
+    if (args.undo) return 'undo'
+    if (args.adopt) return args.from && args.label ? 'adopt' : null
+    return args.space && args.from && args.label ? 'copy' : null
+}
+
+/**
+ * The entry fields for a copy just made, from the copy's own mark read back. Pure.
+ * { production, id, status, madeFrom, note } or null when the copy carries no mark (not a version).
+ */
+export const copyListing = (mark, { from, to, fromApi = null }) => {
+    if (!mark?.set || !mark.id) return null
+    const sameId = from === to
+    return {
+        production: mark.set,
+        id: mark.id,
+        status: sameId ? 'candidate' : 'kept-copy',
+        madeFrom: sameId ? null : (mark.copyOf?.id || null),
+        note: sameId ? `Brought from another install${fromApi ? ` (${fromApi})` : ''} under the same id by copy-version.mjs --from-api.` : `A labelled copy of ${from}${mark.copyOf?.label ? ` ("${mark.copyOf.label}")` : ''}.`
+    }
+}
+
+const listStep = async (args, before) => {
+    const step = listStepFor(args)
+    if (!step) {
+        if (args?.['dry-run']) say('--dry-run: the version list is not written either')
+        return
+    }
+    const { makeClient: client$, readToken: token$ } = await import('../place/api.mjs')
+    const versionList = await import('../production/versionList.mjs')
+    const api = String(args.api).replace(/\/+$/, '')
+    const tokenFile = path.resolve(String(args['token-file']))
+    const client = client$(api, token$(tokenFile))
+    const to = String(args.to)
+    if (step === 'undo') {
+        if (!before?.mark?.set) return say(`${to}: carried no version mark, so no version list to update`)
+        const list = await versionList.readList(client, before.mark.set)
+        if (!list.entries.some((v) => v.projectId === to)) return say(`${to}: not in the version list of ${before.mark.set} — nothing to take out`)
+        const id = list.entries.find((v) => v.projectId === to).id
+        await versionList.removeEntry({ client, api, tokenFile, production: before.mark.set, meta: { id: before.mark.set }, log: say }, id)
+        return
+    }
+    const project = await versionList.readProject(client, to)
+    if (!project?.mark?.set) return say(`${to}: carries no version mark — not a version, not listed`)
+    if (step === 'adopt') {
+        const { run } = await import('../production/versions.mjs')
+        await run(['--api', api, '--token-file', tokenFile, 'register', to], { client, log: say })
+        return
+    }
+    const from = String(args.from)
+    const listing = copyListing(project.mark, { from, to, fromApi: args['from-api'] ? String(args['from-api']) : null })
+    await versionList.recordMadeVersion({
+        client, api, tokenFile, space: String(args.space), production: listing.production, title: listing.production,
+        projectId: to, id: listing.id, tool: args['from-api'] ? 'copy-version.mjs --from-api' : 'copy-version.mjs',
+        status: listing.status, madeFrom: listing.madeFrom, note: listing.note, log: say
+    })
+}
+
+/** For --undo the copy is gone after main(): read which production it belonged to first (GET only). */
+const beforeStep = async (args) => {
+    if (listStepFor(args) !== 'undo') return null
+    const { makeClient: client$, readToken: token$ } = await import('../place/api.mjs')
+    const client = client$(String(args.api).replace(/\/+$/, ''), token$(path.resolve(String(args['token-file']))))
+    const got = await client.get(`/api/projects/${args.to}/document`)
+    return { mark: got.ok ? markOf(got.body?.document) : null }
+}
+
 if (isMainModule(import.meta.url)) {
-    main().catch((error) => die(error.stack || error.message))
+    const listArgs = parseArgs()
+    beforeStep(listArgs)
+        .then((before) => main().then(() => listStep(listArgs, before)))
+        .catch((error) => die(error.stack || error.message))
 }
