@@ -5766,7 +5766,7 @@
     white-space: normal;
     overflow-wrap: anywhere;
     box-sizing: border-box;
-    padding-bottom: 3px;
+    padding-bottom: var(--di-space-1); /* = CARD_CONTENT_ROW_GAP (cardGeometry.js) */
 }
 .raw-graph-node-content-line.is-more { color: var(--di-text-muted) }
 
