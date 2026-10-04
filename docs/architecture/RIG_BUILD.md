@@ -2149,8 +2149,10 @@ a running desk step by step with no single undo; this makes the whole change ONE
    any lamp off its planned address. `moxir-2026-10-17-known-full.patch.json` is the Known · full
    patch AS DOCUMENTED (it reproduces the document: `patch-plan.mjs` makes 0 ops) — not the
    data-run plan W1 owes.
-4. **Apply / undo (the owner).** `di down`, `--apply <dir>`, `di up`. Apply refuses while the desk
-   answers (it would save over the file), while the machine's OUTPUT is on, if the live show
+4. **Apply / undo (the owner).** `di down`, plan again from the stopped show (document from dev:
+   `--api https://dev.diiii.xyz/serverXR`), `--apply <dir>`, `di up`. Apply refuses while di answers
+   (probed on `/light/api/clock`, the one route that does not BUILD the lazy desk; its desk would save
+   over the file), while the machine's OUTPUT is on, if the live show
    changed since the plan (sha256), or if the gate did not pass; it backs up `show.json` and
    `show.prev.json` to `~/di-backups/<space>-desk-plan-<stamp>/` with a manifest, swaps atomically
    and reads back. `--undo <backup>` restores (keeping the show it replaces beside the backup).
