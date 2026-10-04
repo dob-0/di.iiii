@@ -49,6 +49,11 @@ Code: `serverXR/src/follow/` — `follower.js` (the loop), `followPlan.js` (what
      (reason `before-whole-replace-op`); the follower logs the newest restore point id when it can read it. The
      direction is saved in `follows.json`, applies to each stream's first comparison only, and is then cleared.
    - The same check bootstraps a follower whose history is older than the host's retained window.
+3. **A project made on either side appears on both, even empty.** Each tick the follower compares the two project
+   lists and makes a missing project on the side that lacks it, through that side's own `POST /spaces/:id/projects`
+   with the same id, the title as made, and private when private at the source. An empty project (version 0, no ops)
+   has no ops to carry it, so before 2026-10-04 it never left the machine it was made on. Making a project also
+   wakes the follower and the space's waiters, so it crosses in about a second. Deletion is still not carried.
 3. **A restart resumes where it was.** Cursors and the carried opIds are saved to
    `DATA_ROOT/follow-state/<space>.json` (temp file + rename) and reloaded; an old edit is never re-sent past the
    receiver's 500-op dedupe window and applied twice. A saved cursor past the end of a log (a rebuilt install)
@@ -75,6 +80,16 @@ space"; "a follow starts from now and never silently erases work only the follow
   space `sync-test-1001`: 3 edits each way through the API, aylmo→ponyo 202 / 877 / 109 ms, ponyo→aylmo 135 / 128 /
   119 ms; both ended at version 8 with the same 8 entities. One < 8 s "not answering" blip, self-recovered, cause
   not known. Measured before the 2026-10-01 fixes.
+
+## Whole-work ops (done 2026-10-04)
+
+A `replaceDocument` / `replaceScene` is never carried (a follow carries edits; replacing the whole work is `di sync`).
+The cursor steps over such an op like any op it has accounted for, with or without an opId (older logs have ops with
+none). When one is seen, the follower compares the two copies: equal, and nothing is said; different, and
+`di follows` names the stream (`project:<id>`) and says so until they agree. Nothing is overwritten; the host-wins
+converge rule above is unchanged. Measured: `followIntegration.test.js` (two servers), both ways, edits cross
+in under 5 s past a whole-work op and the error clears. Not covered: the `PUT /api/projects/:id/document` route does
+not wake a follow, so a replacement made there is noticed at the next park end (up to 20 s).
 
 ## Not yet (owed)
 

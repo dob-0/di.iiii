@@ -1,5 +1,6 @@
 
 import { normalizePlacement } from './placement.js'
+import { normalizeProductionMeta, normalizeProductionVersion } from './productionVersions.js'
 export const PROJECT_DOCUMENT_VERSION = 4
 export const ENTITY_TYPES = [
     'box',
@@ -1102,6 +1103,18 @@ export const normalizeEntity = (entity = {}) => {
         const variant = normalizeRigVariant(sourceComponents.rigVariant)
         if (variant) nextComponents.rigVariant = variant
         else delete nextComponents.rigVariant
+    }
+    // A production's version list (src/shared/productionVersions.js): the production, and one
+    // version per entity. Kept only when well formed; the server's twin is shared/projectSchema.cjs.
+    if (sourceComponents.productionMeta) {
+        const meta = normalizeProductionMeta(sourceComponents.productionMeta)
+        if (meta) nextComponents.productionMeta = meta
+        else delete nextComponents.productionMeta
+    }
+    if (sourceComponents.productionVersion) {
+        const version = normalizeProductionVersion(sourceComponents.productionVersion)
+        if (version) nextComponents.productionVersion = version
+        else delete nextComponents.productionVersion
     }
     // A screen: a plane that shows one of the project's own mapping surfaces
     // (document.mappingState.surfaces) as its picture. The join is the surface's

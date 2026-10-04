@@ -7,6 +7,7 @@ import net from 'node:net'
 import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
@@ -64,7 +65,7 @@ const waitForHealth = async ({ url, child, getLogs }) => {
  * outage case restarts the SAME install rather than a fresh one — a follower
  * that only works against a machine that lost its disk proves nothing.
  */
-const startServer = async ({ port = null, dataRoot = null } = {}) => {
+const startServer = async ({ port = null, dataRoot = null, requireAuth = false } = {}) => {
     const sandboxCwd = await mkdtemp(path.join(os.tmpdir(), 'dii-follow-cwd-'))
     const sandboxDataRoot = dataRoot || await mkdtemp(path.join(os.tmpdir(), 'dii-follow-data-'))
     const listenPort = port || await getFreePort()
@@ -78,7 +79,8 @@ const startServer = async ({ port = null, dataRoot = null } = {}) => {
         API_TOKEN,
         CORS_ORIGINS: '*',
         AUTH_SESSION_SECRET: 'test-session-secret',
-        REQUIRE_AUTH: ''
+        REQUIRE_AUTH: requireAuth ? 'true' : '',
+        ...(requireAuth ? { AUTH_SESSION_COOKIE_SECURE: 'false', AUTH_HUB_URL: 'off' } : {})
     }
     delete childEnv.SPACES_DIR
     delete childEnv.UPLOADS_DIR
@@ -721,6 +723,224 @@ describe('a followed space answers at once, edit after edit', () => {
         // parking would be hundreds in three seconds through this proxy.
         expect(proxy.chunks - before).toBeLessThan(12)
     }, 20_000)
+})
+
+// A work whose log holds a whole-work op — a restore, or a pull made with
+// `di sync` — and holds it on BOTH sides, with the same result. Seen on aylmo
+// following dev.diiii.xyz (2026-10-04): every project of the space `wcc` had
+// one, the copies were equal, and the follow said "one side replaced a whole
+// scene" for good. Its cursor stood before the op, because an older log can hold
+// a whole-work op with no opId at all and the cursor only passed ops it could
+// name. Both shapes of log are held here: ids minted, and ids absent.
+describe.each([
+    ['whole-work ops with ids', false],
+    ['whole-work ops from an older log, with no opId', true]
+])('a followed space whose copies already agree past a whole-work op (%s)', (_label, stripIds) => {
+    let hosting = null
+    let following = null
+    const FOLLOWED = 'replaced-space'
+    const PIECE = 'replaced-piece'
+    const document = { entities: [{ id: 'chair', name: 'chair' }], nodes: [], assets: [] }
+
+    const projectOps = async (server) => (await fetch(`${server.baseUrl}/api/projects/${PIECE}/ops`, { headers: authHeaders })).json()
+    const writeProjectOps = async (server, ops) => {
+        const { latestVersion } = await projectOps(server)
+        const response = await fetch(`${server.baseUrl}/api/projects/${PIECE}/ops`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ baseVersion: latestVersion, ops })
+        })
+        expect(response.status).toBe(200)
+    }
+    const hasProjectOp = (server, opId) => async () => opIds(await projectOps(server)).includes(opId)
+    const createEntity = (opId) => ({ opId, type: 'createEntity', payload: { entity: { id: opId, name: opId } } })
+    const followState = async () => {
+        const response = await fetch(`${following.baseUrl}/api/follows`, { headers: authHeaders })
+        return (await response.json()).follows?.find(follow => follow.spaceId === FOLLOWED) || null
+    }
+    // What an older di.iiii left in a log: a replaceDocument with no opId.
+    // Written into the install's own database while it is stopped.
+    const stripReplaceIds = (dataRoot) => {
+        const db = new DatabaseSync(path.join(dataRoot, 'di.db'))
+        try {
+            for (const row of db.prepare('SELECT seq, data FROM project_ops').all()) {
+                const op = JSON.parse(row.data)
+                if (op.type !== 'replaceDocument') continue
+                delete op.opId
+                db.prepare('UPDATE project_ops SET data = ? WHERE seq = ?').run(JSON.stringify(op), row.seq)
+            }
+        } finally {
+            db.close()
+        }
+    }
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        for (const [tag, server] of [['host', hosting], ['follower', following]]) {
+            await createSpace(server, FOLLOWED)
+            const made = await fetch(`${server.baseUrl}/api/spaces/${FOLLOWED}/projects`, {
+                method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: PIECE, title: PIECE })
+            })
+            expect(made.status).toBe(201)
+            // Each side replaced the work with the same document, more than
+            // once, between edits of its own, before any follow exists.
+            for (let round = 0; round < 3; round += 1) {
+                await writeProjectOps(server, [createEntity(`op-${tag}-before-${round}`)])
+                await writeProjectOps(server, [{ opId: `op-${tag}-gone-${round}`, type: 'deleteEntity', payload: { entityId: `op-${tag}-before-${round}` } }])
+                const put = await fetch(`${server.baseUrl}/api/projects/${PIECE}/document`, {
+                    method: 'PUT', headers: authHeaders, body: JSON.stringify(document)
+                })
+                expect(put.status).toBe(200)
+            }
+        }
+        if (stripIds) {
+            const [hostRoot, hostPort] = [hosting.dataRoot, hosting.port]
+            await hosting.stop({ keepData: true })
+            stripReplaceIds(hostRoot)
+            hosting = await startServer({ dataRoot: hostRoot, port: hostPort })
+        }
+        // What `di follow` writes: the follow is in the install's own data dir,
+        // and the server — not this test — runs it, so a local write wakes it
+        // the way it does for a person.
+        const { dataRoot, port } = following
+        await following.stop({ keepData: true })
+        if (stripIds) stripReplaceIds(dataRoot)
+        await writeFile(path.join(dataRoot, 'follows.json'), JSON.stringify({
+            format: 'di.follows',
+            version: 1,
+            follows: { [FOLLOWED]: { remote: hosting.baseUrl, token: API_TOKEN, label: null, followedAt: new Date().toISOString() } }
+        }))
+        following = await startServer({ dataRoot, port })
+    })
+
+    afterAll(async () => {
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('says which work differs, and does not overwrite it, when only one side replaced it', async () => {
+        // The first pass of a follow compares the copies once and finds them
+        // equal; only then is a replacement made on one side alone.
+        await settle('the follow settled', async () => (await followState())?.status === 'following', { timeout: 10_000 })
+        await wait(1500)
+        const other = { entities: [{ id: 'table', name: 'table' }], nodes: [], assets: [] }
+        await writeProjectOps(hosting, [{ opId: 'op-replaced-host-only', type: 'replaceDocument', payload: { document: other } }])
+        const told = await settle('the follow naming the work that differs', async () => {
+            const error = (await followState())?.lastError || ''
+            return error.includes(`project:${PIECE}`) ? error : false
+        }, { timeout: 5000 })
+        expect(told).toMatch(/use di sync/)
+        // Still said a few ticks later, and the follower's copy is untouched.
+        await wait(2500)
+        expect((await followState())?.lastError).toContain(`project:${PIECE}`)
+        const doc = await (await fetch(`${following.baseUrl}/api/projects/${PIECE}/document`, { headers: authHeaders })).json()
+        expect(JSON.stringify(doc)).not.toContain('table')
+        // The other side makes the same replacement — now they agree, and the
+        // follow lets go of it without anyone running anything.
+        await writeProjectOps(following, [{ opId: 'op-replaced-follower-too', type: 'replaceDocument', payload: { document: other } }])
+        await settle('the follow letting go once the copies agree', async () => (await followState())?.lastError === null, { timeout: 5000 })
+    })
+
+    it('carries an edit made after it, both ways, and stops reporting a replacement', async () => {
+        await writeProjectOps(hosting, [createEntity('op-after-host')])
+        await settle('the host edit reaching the follower', hasProjectOp(following, 'op-after-host'), { timeout: 5000, every: 25 })
+        await writeProjectOps(following, [createEntity('op-after-follower')])
+        await settle('the follower edit reaching the host', hasProjectOp(hosting, 'op-after-follower'), { timeout: 5000, every: 25 })
+        await settle('the follow no longer reporting a replaced work', async () => (await followState())?.lastError === null, { timeout: 5000 })
+    })
+})
+
+// "A project made on either appears on both" — including one with nothing in
+// it yet. Seen 2026-10-04 (aylmo following dev.diiii.xyz): six projects made
+// on the follower and never edited (documentVersion 0, no ops) never reached
+// the host, because a project is only ever made on the other side from its
+// ops, and an empty one has none.
+describe('a project made empty on either side appears on both', () => {
+    let hosting = null
+    let following = null
+    let follower = null
+    const warned = []
+
+    const makeProject = async (server, slug, title) => {
+        const response = await fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug, title })
+        })
+        expect(response.status).toBe(201)
+    }
+    const projectRow = (server, slug) => async () => {
+        const response = await fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, { headers: authHeaders })
+        const { projects } = await response.json()
+        return projects.find(project => project.id === slug) || false
+    }
+
+    beforeAll(async () => {
+        // The host is a real one: auth on, and the follower holds what `di
+        // follow` holds — a per-space sync key (editor, scoped to this space),
+        // never the install's own token. A follow that only worked with an
+        // admin token passed here and did nothing on a real machine.
+        hosting = await startServer({ requireAuth: true })
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        const minted = await fetch(`${hosting.baseUrl}/api/spaces/${SPACE}/sync-keys`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ label: 'follows the host' })
+        })
+        expect(minted.status).toBe(201)
+        const syncKey = (await minted.json()).token
+        follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: syncKey }),
+            log: { warn: message => warned.push(message), info: () => {} }
+        })
+    })
+
+    afterAll(async () => {
+        follower?.stop()
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('carries an empty project made on the follower to the host, with its title', async () => {
+        await makeProject(following, 'empty-bar', 'The Bar')
+        follower.wake()
+        const row = await settle('the follower project reaching the host', projectRow(hosting, 'empty-bar'), { timeout: 10_000 })
+        expect(row.title).toBe('The Bar')
+    })
+
+    it('carries an empty project made on the host to the follower, with its title', async () => {
+        await makeProject(hosting, 'empty-studio', 'The Studio')
+        const row = await settle('the host project reaching the follower', projectRow(following, 'empty-studio'), { timeout: 10_000 })
+        expect(row.title).toBe('The Studio')
+    })
+
+    // Deletion is not carried, so it must not be undone either: a project in
+    // one side's trash is not made there again by the other side's copy.
+    const trash = async (server, slug) => {
+        const response = await fetch(`${server.baseUrl}/api/projects/${slug}`, { method: 'DELETE', headers: authHeaders })
+        expect(response.status).toBe(200)
+    }
+    const trashedHere = async (server, slug) => {
+        const response = await fetch(`${server.baseUrl}/api/trash?space=${SPACE}`, { headers: authHeaders })
+        return (await response.json()).projects.some(project => project.id === slug)
+    }
+    const tick = async () => { follower.wake(); await wait(1500) }
+
+    it('does not make again, on the host, a project trashed there', async () => {
+        await makeProject(hosting, 'both-a', 'A')
+        await settle('both-a on the follower', projectRow(following, 'both-a'), { timeout: 10_000 })
+        await trash(hosting, 'both-a')
+        await tick(); await tick()
+        expect(await trashedHere(hosting, 'both-a')).toBe(true)
+        expect(await projectRow(hosting, 'both-a')()).toBe(false)
+        expect(warned.filter(message => message.includes('both-a') && message.includes('in the trash'))).toHaveLength(1)
+    })
+
+    it('does not make again, on the follower, a project trashed there', async () => {
+        await makeProject(following, 'both-b', 'B')
+        follower.wake()
+        await settle('both-b on the host', projectRow(hosting, 'both-b'), { timeout: 10_000 })
+        await trash(following, 'both-b')
+        await tick(); await tick()
+        expect(await trashedHere(following, 'both-b')).toBe(true)
+        expect(await projectRow(following, 'both-b')()).toBe(false)
+    })
 })
 
 // Audit F4 (docs/ai/audits/follow-audit-2026-10-04.md), owner 2026-10-04: a

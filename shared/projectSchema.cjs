@@ -778,6 +778,51 @@ const normalizeRigVariant = (value) => {
   return { set, id, title: planText(value.title, 60) || id, summary: planText(value.summary, 160), source: planText(value.source, 480), siblings, ...(copyOf ? { copyOf } : {}) }
 }
 
+// A PRODUCTION'S VERSION LIST — mirror of src/shared/productionVersions.js (the normalisers only;
+// docs/architecture/decisions/2026-10-04-production-versions.md). One entity `production`
+// (productionMeta) and one entity per version (productionVersion) in the list's own project.
+const PRODUCTION_VERSION_STATUSES = ['for-the-show', 'candidate', 'kept-copy', 'archived']
+const productionText = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '')
+const productionTextOrNull = (value, max) => productionText(value, max) || null
+const productionWho = (value) => {
+  const v = value && typeof value === 'object' ? value : {}
+  return {
+    machine: productionTextOrNull(v.machine, 120),
+    install: productionTextOrNull(v.install, 160),
+    tool: productionTextOrNull(v.tool, 160),
+    commit: productionTextOrNull(v.commit, 64)
+  }
+}
+const normalizeProductionVersion = (value) => {
+  if (!value || typeof value !== 'object') return null
+  const id = variantId(value.id)
+  const projectId = variantId(value.projectId)
+  const status = PRODUCTION_VERSION_STATUSES.includes(value.status) ? value.status : ''
+  if (!id || !projectId || !status) return null
+  const fingerprint = typeof value.fingerprint === 'string' && /^sha256:[0-9a-f]{64}$/.test(value.fingerprint) ? value.fingerprint : null
+  const out = {
+    id,
+    projectId,
+    title: productionText(value.title, 120) || id,
+    status,
+    madeFrom: variantId(value.madeFrom) || null,
+    madeBy: productionWho(value.madeBy),
+    madeAt: productionTextOrNull(value.madeAt, 40),
+    fingerprint,
+    listed: { at: productionTextOrNull(value.listed && value.listed.at, 40), by: productionWho(value.listed && value.listed.by) },
+    note: productionText(value.note, 480)
+  }
+  const file = productionText(value.rig && value.rig.file, 240)
+  if (file) out.rig = { file, blob: typeof value.rig.blob === 'string' && /^[0-9a-f]{40}([0-9a-f]{24})?$/.test(value.rig.blob) ? value.rig.blob : null }
+  return out
+}
+const normalizeProductionMeta = (value) => {
+  if (!value || typeof value !== 'object') return null
+  const id = variantId(value.id)
+  if (!id) return null
+  return { id, title: productionText(value.title, 160) || id, space: productionText(value.space, 64), codeList: productionText(value.codeList, 240) }
+}
+
 // THE RIG'S DESIGNED LOOKS (RIG_BUILD.md §11.4, view C): per look, a rule and its
 // numbers per group of lamps (a group is `${position}/${type}`), and a colour per
 // group. Written by scripts/rigbuild/looks.mjs from the rig file; the cards put them on
@@ -1032,6 +1077,17 @@ const normalizeEntity = (entity = {}) => {
     const variant = normalizeRigVariant(sourceComponents.rigVariant)
     if (variant) nextComponents.rigVariant = variant
     else delete nextComponents.rigVariant
+  }
+  // A production's version list — mirror of src/shared/projectSchema.js.
+  if (sourceComponents.productionMeta) {
+    const meta = normalizeProductionMeta(sourceComponents.productionMeta)
+    if (meta) nextComponents.productionMeta = meta
+    else delete nextComponents.productionMeta
+  }
+  if (sourceComponents.productionVersion) {
+    const version = normalizeProductionVersion(sourceComponents.productionVersion)
+    if (version) nextComponents.productionVersion = version
+    else delete nextComponents.productionVersion
   }
   // A screen: a plane that shows one of the project's own mapping surfaces
   // (document.mappingState.surfaces) as its picture. The join is the surface's
@@ -2606,6 +2662,8 @@ const invertProjectOps = (document, ops = []) => {
 
 module.exports = {
   PROJECT_DOCUMENT_VERSION,
+  normalizeProductionVersion,
+  normalizeProductionMeta,
   ENTITY_TYPES: Array.from(ENTITY_TYPES),
   WINDOW_IDS,
   defaultProjectDocument,
