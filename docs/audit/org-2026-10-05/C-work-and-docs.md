@@ -14,8 +14,8 @@ Method: `git worktree list --porcelain`, per tree `git log -1`, `git status --po
 | Worktrees holding commits that exist on NO remote | 3 | CONFIRMED |
 | Worktrees holding uncommitted edits (real work, not a report) | 3 (nocpanel 75 files, movement 9, followgaps 5) | CONFIRMED |
 | Worktrees holding only an untracked REPORT-*.md or .verify/ | 27 | CONFIRMED |
-| Open PRs | 62 (30 draft); 19 in one stack; 10 dependabot | CONFIRMED |
-| Open PRs that conflict with dev | 21 | CONFIRMED |
+| Open PRs | 62 (34 draft); 19 in one stack; 10 dependabot | CONFIRMED |
+| Open PRs that conflict with dev | 19 | CONFIRMED |
 | Branches on origin | 470 (296 merged PR, 58 open PR, 12 closed unmerged, 104 with no PR, of which 32 are already inside dev) | CONFIRMED |
 | Stale `pr/*` and fork remote-tracking refs in the local repo | 413 `pr/*` and about 40 others (emily*, n22, tmpwcc, probe) | CONFIRMED |
 | Local branches | 625 (433 already merged into origin/dev) | CONFIRMED |
@@ -44,7 +44,7 @@ So **3 worktrees hold unpushed commits** and **2 more hold only uncommitted work
 | Merged and safe to remove | 185 | branch or PR already in dev, no unpushed commit, no uncommitted edit except a REPORT file (24 of them) | CONFIRMED |
 | Stale but not merged, work is pushed | 45 | worktree removable without loss (the branch is on origin), but the branch/PR needs an owner decision, see section 3 | CONFIRMED |
 | Detached packs and checkouts (`pack-*`, `pr754`, `rawaudit`, `moxir-todev`) | 15 | `pack-*` are the commits packed for `di update --from`; keep the latest, rest are safe | SUSPECTED |
-| `.claude/worktrees/agent-*` inside the main checkout | 15 | 11 are clean and merged or pushed; 4 are 5 days old, clean, pushed | CONFIRMED |
+| `.claude/worktrees/agent-*` inside the main checkout | 15 | 15 trees, all clean (no unsaved file); 4 are 5 days old with pushed branches | CONFIRMED |
 | Main checkout `~/work/di.iiii` | 1 | on dev, 6 days old; holds 3 untracked files (`.claude/settings.local.json`, `.env.bak-2026-09-21`, `serverXR/.env.local.before-shared-tier`). **Two of them are env backups that may hold secrets** — never commit; consider moving to a private place | SUSPECTED |
 
 Odd cases: `moxir-versions` tracks the preview branch of another tree; `the-cut-run` and `signoff-pack` are local-only branches whose commits do exist on some remote. `di.iiii-movetest/.movement-rig/trees/507dcbba` is a worktree nested inside another worktree (tool-made, a hand-made state that no script owns).
@@ -68,7 +68,7 @@ Agents were told to write their report to a file; 27 trees hold an untracked REP
 | Conflicting with dev, drafts or ready, single: #599, #625, #627, #718, #724, #725, #726, #728, #732, #737, #741, #746, #748 | 13 | CONFIRMED |
 | Fresh (today, 2026-10-05), behind dev only: #753, #760–#762, #765–#769 (#763 BLOCKED) | 10 | CONFIRMED |
 
-Age: oldest open PRs are 7 days (the rig stack); nothing is older than 7 days, but there are 62 of them, which is the same size as the whole last week of work. 21 conflict with dev (CONFIRMED by `mergeable=CONFLICTING`).
+Age: oldest open PRs are 7 days (the rig stack); nothing is older than 7 days, but there are 62 of them, which is the same size as the whole last week of work. 19 conflict with dev (CONFIRMED by `mergeable=CONFLICTING`).
 
 ### 3b. Branches on origin (470)
 - 296 belong to merged PRs and are still on origin — safe to delete on the remote after the PR page confirms (the PR page keeps the diff). CONFIRMED.
