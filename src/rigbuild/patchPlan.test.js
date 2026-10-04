@@ -154,3 +154,13 @@ describe('the MOXIR Minimal plan', () => {
         for (const u of plan.universes) for (const b of u.blocks) expect(b.group).toBeUndefined()
     })
 })
+
+describe('lamps off DMX', () => {
+    it('takes no address, is selected by no block and is not "in no block" (MOXIR Known · full: LaserCubes, hazers, smoke)', () => {
+        const entities = [...room(), lamp('rig-hazer-01', 'ext-hazer', 0, 0, { dmx: false }), lamp('rig-beam-03', 'up-b380f', 3, 0, { dmx: false })]
+        const r = planPatch({ entities, library, plan: basePlan() })
+        expect(r.errors).toEqual([])
+        expect(r.assignments.map((a) => a.entityId)).not.toContain('rig-hazer-01')
+        expect(r.assignments.map((a) => a.entityId)).not.toContain('rig-beam-03')
+    })
+})

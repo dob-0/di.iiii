@@ -2122,6 +2122,50 @@ the press PARs (#401–403) are on no look position, so every look leaves them d
 not the patch); the node and cable lengths from the rental house (it lists splitters, no node);
 the electrician's distribution; GDTF Share with the owner's login.
 
+### 19.5 One chosen version on its desk — planned offline, applied with the desk stopped (2026-10-05)
+
+The owed rule of §19.4, as a script: `scripts/rigbuild/desk-plan.mjs`. Why (audit
+`docs/ai/audits/moxir-2026-10-05/B-show-control.md` B1, B2): the moxir desk held the Minimal's
+loop and 241 fixtures of 7 other versions, U1–U4 full, so Known · full could not land at its
+planned addresses. The live routes (`patch.mjs --unpatch` × 7, `--exact`, `show-loop.mjs`) change
+a running desk step by step with no single undo; this makes the whole change ONE file, seen first.
+
+1. **Plan (dry run, the default).** The desk's own code (`serverXR/src/lighting/desk.js`, offline:
+   no port bound, nothing transmitted) loads a COPY of the space's show and is driven through its
+   own routes: every other project's rig fixtures off (`/api/rig/patch` with no lamps, on EVERY
+   universe — the desk runs one patch per space, and a lamp left on U3–U5 would still be sent its
+   old looks); the chosen project on at the document's universe, address and fixture number;
+   its 25 designed looks on with DMX values (`deskLookValues.js`), other projects' rig looks off;
+   the document's cue list (`mappingState.cues`) loaded with **loop OFF, not started**. A fixture
+   the operator added by hand (no `rigKey`) is kept.
+2. **Exact or fail.** Before the desk is asked (`exactProblems`): a lamp with no address, past 512,
+   two lamps of the document on one channel, a kept fixture on a lamp's channels or fixture
+   number. After (`exactVerdict`): any flag, any lamp not patched, moved, renumbered or placed as a
+   "copy" (rigpatch.js puts the second of two lamps sharing an address at the next free one,
+   with no flag — measured, `desk-plan.test.js`). Then the written show is checked on its own
+   (`planProblems`). Any problem: exit 1, no show written.
+3. **Gate.** `--gate <plan>` serves the PLANNED show on a throwaway offline desk and runs
+   `patch-sheet.mjs` against it: exit 1 on any other project's fixture in the plan's universes or
+   any lamp off its planned address. `moxir-2026-10-17-known-full.patch.json` is the Known · full
+   patch AS DOCUMENTED (it reproduces the document: `patch-plan.mjs` makes 0 ops) — not the
+   data-run plan W1 owes.
+4. **Apply / undo (the owner).** `di down`, `--apply <dir>`, `di up`. Apply refuses while the desk
+   answers (it would save over the file), while the machine's OUTPUT is on, if the live show
+   changed since the plan (sha256), or if the gate did not pass; it backs up `show.json` and
+   `show.prev.json` to `~/di-backups/<space>-desk-plan-<stamp>/` with a manifest, swaps atomically
+   and reads back. `--undo <backup>` restores (keeping the show it replaces beside the backup).
+   A space's show never carries `output` (desk.js `withoutRig`), so the plan cannot switch OUTPUT on.
+
+Measured on the moxir copy (2026-10-05, show sha256 1adeeb05…, document v2, dev == local):
+241 fixtures off (U1 62, U2 49, U3 36, U4 54, U5 40), 68 on (U1 57 / 512 ch, U2 11 / 176 ch),
+0 kept, 16 off-DMX lamps take no address; 25 looks on, 5 off; 10 cues, 114 s, loop off; gate PASS
+(negative control: the same gate on the unplanned show exits 1, 111 foreign fixtures, 68 lamps off
+their addresses). **At rest the planned desk is NOT dark**: a desk fixture rests at dimmer 255
+(engine.js `makeFixture`), so with no cue fired its frame has 227 non-zero channels on U1 and 44
+on U2 — OUTPUT on before the first GO lights every lamp. Owed: the owner's call (rest dark, or
+GO before OUTPUT, written in the night's run sheet). Also owed: the crew sheet says "maker's" for
+the PL5403 8ch / B380F 16ch lists, whose basis is TESTED on the Sevan units (audit B5).
+
 ## 20. The room as a camera sees it — beams in haze, exposure, the dark (2026-09-29)
 
 Owner: MOXIR "maximum close" to how the real night will look. Measured problem (dev visitor,
