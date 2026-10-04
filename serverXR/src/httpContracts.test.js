@@ -133,7 +133,8 @@ const withAuth = (token) => ({
 const createServerProject = async (server, spaceId, {
     title = 'Live Project',
     slug = 'live-project',
-    source = 'studio-v3'
+    source = 'studio-v3',
+    visibility
 } = {}) => {
     const response = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`, {
         method: 'POST',
@@ -141,7 +142,7 @@ const createServerProject = async (server, spaceId, {
             'Content-Type': 'application/json',
             ...withAuth(server.apiToken)
         },
-        body: JSON.stringify({ title, slug, source })
+        body: JSON.stringify({ title, slug, source, ...(visibility ? { visibility } : {}) })
     })
     expect(response.status).toBe(201)
     const payload = await response.json()
@@ -3512,6 +3513,71 @@ describe('a space\'s contents', () => {
         expect(authored.status).toBe(200)
         const authoredIds = (await authored.json()).projects.map((p) => p.id).sort()
         expect(authoredIds).toEqual([archived.id, draft.id, legacy.id, live.id].sort())
+    })
+
+    // 2026-10-05: the production's version list is a PRIVATE project, so a visitor's read of it was a 404
+    // and the version row fell back to stale siblings (no "for the show", "Old versions (8)"). The server
+    // now answers the public parts of the list, and only those.
+    describe('GET /api/spaces/:spaceId/productions/:production/versions', () => {
+        const entity = (id, components) => ({ id, type: 'group', name: id, components: { transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }, ...components } })
+        const putDoc = async (server, projectId, entities) => {
+            const current = await (await fetch(`${server.baseUrl}/api/projects/${projectId}/document`, { headers: withAuth(server.apiToken) })).json()
+            const put = await fetch(`${server.baseUrl}/api/projects/${projectId}/document`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+                body: JSON.stringify({ ...current.document, entities })
+            })
+            expect(put.status).toBe(200)
+        }
+        const version = (id, projectId, status) => entity(`version-${id}`, {
+            productionVersion: {
+                id, projectId, title: `Title ${id}`, status,
+                madeBy: { machine: 'secret-machine', install: 'secret-install', tool: 't', commit: 'c' },
+                fingerprint: `sha256:${'a'.repeat(64)}`, note: 'SECRET NOTE', rig: { file: 'secret/rig.json', blob: null }
+            }
+        })
+
+        it('answers a visitor and a member only {id, projectId, title, status}, and leaves out a version whose project is private', async () => {
+            const server = await startServer({ nodeEnv: 'production', extraEnv: { AUTH_SESSION_COOKIE_SECURE: 'false' } })
+            await makeSpace(server, 'prod-space', 'Prod Space')
+            await publish(server, 'prod-space')
+            const list = await createServerProject(server, 'prod-space', { title: 'Show versions', slug: 'show-2026-versions', visibility: 'private' })
+            const open = await createServerProject(server, 'prod-space', { title: 'Open hall', slug: 'open-hall' })
+            const other = await createServerProject(server, 'prod-space', { title: 'Other hall', slug: 'other-hall' })
+            const hidden = await createServerProject(server, 'prod-space', { title: 'Hidden hall', slug: 'hidden-hall', visibility: 'private' })
+            await putDoc(server, list.id, [
+                entity('production', { productionMeta: { id: 'show-2026', title: 'Show', space: 'prod-space', codeList: '' } }),
+                version('open', open.id, 'for-the-show'),
+                version('other', other.id, 'concept'),
+                version('hidden', hidden.id, 'candidate')
+            ])
+            const url = `${server.baseUrl}/api/spaces/prod-space/productions/show-2026/versions`
+
+            // the list project itself is still private to a visitor
+            expect((await fetch(`${server.baseUrl}/api/projects/${list.id}/document`)).status).toBe(404)
+
+            const visitor = await fetch(url)
+            expect(visitor.status).toBe(200)
+            const body = await visitor.json()
+            expect(body.versions).toEqual([
+                { id: 'open', projectId: open.id, title: 'Title open', status: 'for-the-show' },
+                { id: 'other', projectId: other.id, title: 'Title other', status: 'concept' }
+            ])
+            const raw = JSON.stringify(body)
+            for (const leak of ['secret-machine', 'secret-install', 'SECRET NOTE', 'sha256:', 'secret/rig.json', 'hidden-hall', 'Hidden hall']) expect(raw).not.toContain(leak)
+
+            const member = await fetch(url, { headers: withAuth(server.apiToken) })
+            expect(member.status).toBe(200)
+            const memberBody = await member.json()
+            expect(memberBody.versions.map((v) => v.id)).toEqual(['open', 'hidden', 'other'])
+            for (const v of memberBody.versions) expect(Object.keys(v).sort()).toEqual(['id', 'projectId', 'status', 'title'])
+
+            // no such list, a malformed production id, a private space
+            expect((await fetch(`${server.baseUrl}/api/spaces/prod-space/productions/nothing/versions`)).status).toBe(404)
+            expect((await fetch(`${server.baseUrl}/api/spaces/prod-space/productions/Bad_Id/versions`)).status).toBe(400)
+            await makeSpace(server, 'prod-shut', 'Prod Shut')
+            expect((await fetch(`${server.baseUrl}/api/spaces/prod-shut/productions/show-2026/versions`)).status).toBe(401)
+        })
     })
 
     // 2026-09-30: the rig version switch was built from a sibling list frozen into each

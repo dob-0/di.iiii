@@ -13,6 +13,7 @@ const { actorFromAuthState } = require('../opActor')
 const { countProjectLayers } = require('../../../shared/layers.cjs')
 const { canAccessSpace, formatAuthScopeLabel } = require('../authAccess')
 const { assetCacheControl, filterVisibleProjects } = require('../projectVisibility')
+const { normalizeProductionVersion, normalizeProductionMeta } = require('../../../shared/projectSchema.cjs')
 
 const withProjectLock = createKeyedLock()
 
@@ -243,6 +244,44 @@ function registerProjectRoutes(router, {
         })
       }
       res.json({ spaceId, projects })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // ── a production's versions, the public parts ────────────────────────────
+  //
+  // The production's version list lives in a project of its own, `<production>-versions`, born
+  // PRIVATE (docs/architecture/decisions/2026-10-04-production-versions.md) — so a visitor's read of
+  // it answers 404 and the version row fell back to the old per-project siblings. This route reads
+  // that list on the server and answers only what a visitor may know: { id, projectId, title, status }
+  // per version, and only for versions whose project this caller may see. Never madeBy, fingerprints,
+  // notes or the rig file. Members get the same shape (the full list is theirs at the project route).
+  // The list project itself stays private; nothing here makes it readable.
+  const VERSION_STATUS_ORDER = ['for-the-show', 'candidate', 'kept-copy', 'concept', 'archived']
+  router.get('/api/spaces/:spaceId/productions/:production/versions', async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      if (!(await spaceExists(spaceId))) return res.status(404).json({ error: 'Space not found.' })
+      const production = String(req.params.production || '')
+      if (!/^[a-z0-9][a-z0-9-]{0,47}$/.test(production)) return res.status(400).json({ error: 'Invalid production id.' })
+      const rows = await listProjectsInSpace(spacesDir, spaceId)
+      const listMeta = rows.find((m) => m.id === `${production}-versions`)
+      if (!listMeta) return res.status(404).json({ error: 'No version list for this production.' })
+      const document = await readProjectDocument(spacesDir, spaceId, listMeta.id)
+      const entities = Array.isArray(document?.entities) ? document.entities : []
+      const meta = normalizeProductionMeta(entities.find((e) => e?.id === 'production')?.components?.productionMeta)
+      if (!meta || meta.id !== production) return res.status(404).json({ error: 'No version list for this production.' })
+      const seeable = new Set(visibleTo(req, spaceId, rows).map((m) => m.id))
+      const versions = entities
+        .filter((e) => typeof e?.id === 'string' && e.id.startsWith('version-'))
+        .map((e) => [e.id, normalizeProductionVersion(e.components?.productionVersion)])
+        .filter(([entityId, v]) => v && entityId === `version-${v.id}` && seeable.has(v.projectId))
+        .map(([, v]) => ({ id: v.id, projectId: v.projectId, title: v.title, status: v.status }))
+        .sort((a, b) => (VERSION_STATUS_ORDER.indexOf(a.status) - VERSION_STATUS_ORDER.indexOf(b.status)) || (a.projectId < b.projectId ? -1 : a.projectId > b.projectId ? 1 : 0))
+        .slice(0, 200)
+      res.json({ spaceId, production, versions })
     } catch (error) {
       next(error)
     }

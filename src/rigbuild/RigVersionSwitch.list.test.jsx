@@ -6,9 +6,11 @@ import { applyProjectOps, normalizeProjectDocument } from '../shared/projectSche
 
 const listSpaceContents = vi.fn()
 const getProjectDocument = vi.fn()
+const listProductionVersions = vi.fn()
 vi.mock('../project/services/projectsApi.js', () => ({
     listSpaceContents: (...a) => listSpaceContents(...a),
-    getProjectDocument: (...a) => getProjectDocument(...a)
+    getProjectDocument: (...a) => getProjectDocument(...a),
+    listProductionVersions: (...a) => listProductionVersions(...a)
 }))
 
 const SET = 'moxir-2026-10-17'
@@ -30,7 +32,7 @@ const listDocument = () => {
     return doc
 }
 
-afterEach(() => { cleanup(); listSpaceContents.mockReset(); getProjectDocument.mockReset() })
+afterEach(() => { cleanup(); listSpaceContents.mockReset(); getProjectDocument.mockReset(); listProductionVersions.mockReset(); listProductionVersions.mockRejectedValue(Object.assign(new Error('Not found'), { status: 404 })) })
 
 describe('RigVersionSwitch reads the production\'s version list', () => {
     it('asks for the list project, and shows its order: the version for the show first, marked, then by project; archived not shown', async () => {
@@ -75,5 +77,22 @@ describe('RigVersionSwitch reads the production\'s version list', () => {
         expect(screen.getAllByRole('link').map((a) => a.textContent)).toEqual(['Minimal · movers on the ground· for the show', 'Minimal', 'Full · movers on the ground', 'Middle'])
         fireEvent.click(fold)
         expect(screen.getAllByRole('link')).toHaveLength(2)
+    })
+
+    it('a visitor: the server\'s public list is read FIRST — for the show marked, concepts folded, the private list never asked', async () => {
+        listSpaceContents.mockResolvedValue(rows)
+        getProjectDocument.mockRejectedValue(Object.assign(new Error('Project not found.'), { status: 404 }))
+        listProductionVersions.mockResolvedValue([
+            { id: 'minimal-ground', projectId: 'moxir-hall-minimal-ground', title: 'Minimal · movers on the ground', status: 'for-the-show' },
+            { id: 'minimal', projectId: 'moxir-hall-minimal', title: 'Minimal — simple', status: 'candidate' },
+            { id: 'full-ground', projectId: 'moxir-hall-full-ground', title: 'Full · movers on the ground', status: 'concept' },
+            { id: 'middle', projectId: 'moxir-hall-middle', title: 'Middle — the line', status: 'archived' }
+        ])
+        render(<RigVersionSwitch spaceId="moxir" projectId="moxir-hall-minimal" entities={minimal} />)
+        await screen.findByRole('button', { name: 'Concepts (1)' })
+        expect(listProductionVersions).toHaveBeenCalledWith('moxir', SET)
+        expect(getProjectDocument).not.toHaveBeenCalled()
+        expect(screen.getAllByRole('link').map((a) => a.textContent)).toEqual(['Minimal · movers on the ground· for the show', 'Minimal'])
+        expect(screen.queryByText(/Old versions/)).toBe(null)
     })
 })

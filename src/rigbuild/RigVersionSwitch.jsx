@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { getProjectDocument, listSpaceContents } from '../project/services/projectsApi.js'
+import { getProjectDocument, listProductionVersions, listSpaceContents } from '../project/services/projectsApi.js'
 import { versionsFromDocument } from '../shared/productionVersions.js'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
 import { rigVariantOf, shortTitle, versionLinks, versionListProjectOf } from './rigVariant.js'
@@ -75,21 +75,29 @@ function useSpaceProjects(spaceId, enabled) {
     return ids
 }
 
-// The production's version list (docs/architecture/decisions/2026-10-04-production-versions.md): the
-// project `<set>-versions`, born private, so only the space's members can read it — for anyone else (and
-// on an install that has no list) this is null and the row is what it was. undefined while it loads.
-function useVersionList(listProjectId) {
+// The production's version list (docs/architecture/decisions/2026-10-04-production-versions.md). Read in
+// this order: the server's public parts of it (GET /api/spaces/:id/productions/:production/versions — the
+// only one a visitor can read, the list project is private), then the private list project itself (a member
+// on an older server), then null and the row is what it was. undefined while it loads.
+function useVersionList(spaceId, variant) {
+    const production = variant?.set || null
+    const listProjectId = versionListProjectOf(variant)
     const [list, setList] = useState(undefined)
     useEffect(() => {
-        if (!listProjectId) { setList(null); return undefined }
+        if (!listProjectId || !spaceId) { setList(null); return undefined }
         let live = true
         setList(undefined)
+        const fromPrivate = () => getProjectDocument(listProjectId)
+            .then((answer) => (answer?.document ? versionsFromDocument(answer.document) : null))
         Promise.resolve()
-            .then(() => getProjectDocument(listProjectId))
-            .then((answer) => { if (live) setList(answer?.document ? versionsFromDocument(answer.document) : null) })
-            .catch(() => { if (live) setList(null) })
+            .then(() => listProductionVersions(spaceId, production))
+            .then((versions) => (Array.isArray(versions) && versions.length ? { production: { id: production }, entries: versions, problems: [] } : null))
+            .catch(() => null)
+            .then((answered) => answered || fromPrivate())
+            .catch(() => null)
+            .then((answer) => { if (live) setList(answer) })
         return () => { live = false }
-    }, [listProjectId])
+    }, [spaceId, production, listProjectId])
     return list
 }
 
@@ -119,7 +127,7 @@ function VersionLink({ l, curRef }) {
 export default function RigVersionSwitch({ spaceId, projectId, entities, top = '1rem', mode = 'row', maxWidth = null }) {
     const variant = useMemo(() => rigVariantOf(entities), [entities])
     const existing = useSpaceProjects(spaceId, Boolean(variant))
-    const list = useVersionList(versionListProjectOf(variant))
+    const list = useVersionList(spaceId, variant)
     // while the list is loading only the current version shows (no row that reshuffles when it lands)
     const links = useMemo(() => versionLinks(variant, projectId, (id) => buildPublicProjectPath(spaceId, id), list === undefined ? null : existing, list || null), [variant, projectId, spaceId, existing, list])
     const [foldOpen, setFoldOpen] = useState(false)

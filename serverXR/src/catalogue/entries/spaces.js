@@ -151,6 +151,14 @@ module.exports = [
     note: "drops draft/archived rows and legacy \"[archived]\"-titled ones that the author's own project list (GET .../projects) still includes."
   },
   {
+    route: "GET /api/spaces/:spaceId/productions/:production/versions",
+    summary: "a production's version list, public parts only: id, project id, title, status per version",
+    reach: "read",
+    role: "viewer",
+    agent: true,
+    note: "the list project (<production>-versions) stays private; this answers only {id, projectId, title, status}, and leaves out a version whose project the caller may not see. Never madeBy, fingerprints or notes."
+  },
+  {
     route: "GET /api/spaces/:spaceId/events",
     summary: "open a live event stream (Server-Sent Events) of scene changes and cursors for a space",
     reach: "read",
