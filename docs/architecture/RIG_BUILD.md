@@ -550,8 +550,8 @@ lists) and `schemaSync.test.js` holds them together.
 Each item carries its sheet cells (`Price list!A6:E6`) and the order's own words. The
 importer refuses a code the sheet does not list. An order above the listed stock is written
 with a note, not refused. The importer also says where the workbook disagrees with itself.
-For MOXIR, the quote calculator's hidden "Price data" sheet has UP-B380F at 19000 AMD a
-day, while the visible list says 20000. The quote sheet itself is blank, so no line of the
+For MOXIR, the quote calculator's hidden "Price data" sheet has a different UP-B380F day rate
+from the visible list (both numbers are in the private repo, not here). The quote sheet itself is blank, so no line of the
 order is confirmed by the rental house.
 
 A card shows `placed n / ordered m` for its type (`rentalCounts`), with its mode, footprint
@@ -846,8 +846,8 @@ from OFL is placed, drawn, patched and counted like a UPlight type.
 Cost of a line = rate × quantity × billed days, billed days = 1 + (days − 1) × 0.5. The rule is
 the spreadsheet's (`"Price list"!A2` "Day 1 full rate; each additional day 50%.", `"Quote 2"!E7`,
 `"Price data"!H2 = 0.5`); `equipment.test.js` holds `billedDays` to the sheet's own 2-day /
-3-day / 1-week columns (20000 → 30000 / 40000 / 80000; 13500 → 20250 / 27000 / 54000).
-Delivery, rigging and de-rig are "On request" (row 36) — the calculator's default 150000 AMD
+3-day / 1-week columns (the multiples 1.5 / 2 / 4 of the day rate; the rates are invented in the test).
+Delivery, rigging and de-rig are "On request" (row 36) — the calculator's default amount
 (`"Quote 2"!G38`) is printed as a term, never added to the total. VAT excluded, as the sheet.
 Power = Σ quantity × datasheet max (items with `watts`). Universes = the list's lamps packed in
 list order, a lamp never split across two (ANSI E1.11) — a planning count; owed modes are
@@ -2406,3 +2406,16 @@ The list entry's note becomes "picture from code <rig file>@<blob> — not yet m
 exposure 3.5 they are 3.5 times brighter on screen than the realism night (ambient 0, then the work light
 0.4/3.5). Use `--fields fog,background` on those until the exposure is decided in the code, or decide it. The
 picture is not matched to reality: a light-meter and photo test is owed.
+
+### Supplier prices are private (2026-10-05)
+
+The rental house's prices are the supplier's; this repo is public. No `rate` is committed in
+`scripts/rigbuild/rentals/`, `scripts/place/rigs/` or `src/rigbuild/`; `rental.mjs` reads the rates
+from the spreadsheet for its hidden-sheet check but never writes them; the equipment page shows
+"price: private" and counts units, stock, placed and watts without a price. On the owner's machine,
+`DI_PRIVATE_PRICES=<csv with the columns model,amd_1_night>` (the private repo dob-0/di-atlas,
+`production/rental-house-2026-09-27.csv`) makes the Node scripts (`versions-report.mjs`) price a
+version: `scripts/rigbuild/privatePrices.mjs`. It is never imported by `src/` and never goes into a
+pack. `scripts/rigbuild/noSupplierPrices.test.js` fails if a price field with a number, or a
+"<n> AMD" / "<n>/day" text, comes back. A document that already holds rates (the dev project
+`moxir-hall-known-full`) is data, edited by the owner, not by this code.
