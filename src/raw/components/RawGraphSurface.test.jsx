@@ -1189,3 +1189,17 @@ describe('the card menu names what happens', () => {
         expect([...document.querySelectorAll('[role="menuitem"]')].some((el) => /Go inside|Open its window/.test(el.textContent))).toBe(false)
     })
 })
+
+describe('RawGraphSurface zoom strip (audit row 6, §3.8)', () => {
+    it('is [−] [100%] [+] [Fit] with no frame button, and the value resets to 100%', () => {
+        const node = makeNode('value.color', { id: 'color-1' })
+        const { container } = render(<RawGraphSurface nodes={[node]} edges={[]} initialZoom={1.5} selectedNodeId="color-1" />)
+        const strip = container.querySelector('.raw-graph-zoom-controls')
+        expect([...strip.querySelectorAll('button')].map((b) => b.getAttribute('aria-label'))).toEqual([
+            'Zoom out', 'Reset zoom to 100%', 'Zoom in', 'Fit graph'
+        ])
+        expect(strip.querySelector('.raw-graph-zoom-value').textContent).toBe('150%')
+        fireEvent.click(strip.querySelector('.raw-graph-zoom-value'))
+        expect(strip.querySelector('.raw-graph-zoom-value').textContent).toBe('100%')
+    })
+})

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -32,5 +32,70 @@ describe('one bar (row 5)', () => {
     it('squares the account cell: radius 0, the same cell size', () => {
         expect(token('--raw-radius')).toBe('0')
         expect(css).toMatch(/\.raw-bar-account \{[^}]*width: var\(--raw-cell\)[^}]*height: var\(--raw-cell\)/s)
+    })
+})
+
+// Row 6: the census. Every size, space and radius in the Nodes chrome sheet
+// is on the scale, so the sheet has <= 3 font sizes, <= 6 spacing values and
+// no radius over 2px.
+const SCALE_SPACE = new Set([0, 4, 8, 12, 16, 24, 32])
+const SCALE_TEXT = new Set([11, 13, 15])
+const resolve = (value) => value.replace(/var\(--raw-s-(\d)\)/g, (_, n) => `${[4, 8, 12, 16, 24, 32][Number(n) - 1]}px`)
+    .replace(/var\(--raw-text-(meta|body|title)\)/g, (_, k) => ({ meta: '11px', body: '13px', title: '15px' })[k])
+const declarations = (source) => [...source.matchAll(/([a-z-]+):\s*([^;{}]+);/g)].map((m) => [m[1], m[2].trim()])
+    .filter(([prop]) => !prop.startsWith('--'))
+
+describe('type, spacing and radius census (row 6)', () => {
+    const decls = declarations(css.replace(/\/\*[\s\S]*?\*\//g, ''))
+    const pxOf = (value) => [...resolve(value).matchAll(/(-?\d+(?:\.\d+)?)px/g)].map((m) => Number(m[1]))
+
+    it('uses at most 3 font sizes, all of 11 / 13 / 15', () => {
+        const sizes = new Set(decls.filter(([p]) => p === 'font-size').map(([, v]) => pxOf(v)[0]))
+        expect(sizes.size).toBeGreaterThan(0)
+        expect(sizes.size).toBeLessThanOrEqual(3)
+        sizes.forEach((size) => expect(SCALE_TEXT.has(size)).toBe(true))
+    })
+
+    it('uses at most 6 spacing values, all on the 4 / 8 / 12 / 16 / 24 / 32 scale', () => {
+        const spaceProps = /^(padding|margin|gap|column-gap|row-gap)(-(top|right|bottom|left))?$/
+        const used = new Set()
+        decls.filter(([p]) => spaceProps.test(p)).forEach(([, v]) => pxOf(v).forEach((n) => used.add(Math.abs(n))))
+        used.forEach((n) => expect(SCALE_SPACE.has(n), `${n}px is not on the scale`).toBe(true))
+        expect([...used].filter((n) => n > 0).length).toBeLessThanOrEqual(6)
+    })
+})
+
+describe('rectangles: no radius over 2px anywhere in src/raw (row 6 guard)', () => {
+    const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const full = path.join(dir, entry.name)
+        if (entry.isDirectory()) return walk(full)
+        return /\.(css|jsx?)$/.test(entry.name) && !/\.test\./.test(entry.name) ? [full] : []
+    })
+    const root = path.dirname(fileURLToPath(import.meta.url))
+    const offenders = []
+    for (const file of walk(root)) {
+        const text = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+        for (const match of text.matchAll(/(?:border(?:-[a-z]+){0,2}-radius|borderRadius)['"]?\s*[:=]\s*([^;,}\n]+)/g)) {
+            const value = match[1].trim().replace(/!important$/, '').trim().replace(/^['"`{]|['"`}]$/g, '')
+            const ok = value.split(/\s+/).every((part) => (
+                part === '0' || part === 'inherit' || part === 'var(--di-radius)' || part === 'var(--raw-radius)'
+                || (/^\d+(\.\d+)?px$/.test(part) && parseFloat(part) <= 2)
+            ))
+            if (!ok) offenders.push(`${path.relative(root, file)}: ${match[0].trim()}`)
+        }
+        if (/radius-pill/.test(text)) offenders.push(`${path.relative(root, file)}: uses --di-radius-pill`)
+    }
+    it('finds none', () => {
+        expect(offenders).toEqual([])
+    })
+})
+
+describe('the zoom strip (row 6, §3.8)', () => {
+    it('is [−] [100%] [+] [Fit], 136x28, and a finger gets Fit alone at 44', () => {
+        expect(css).toMatch(/button\.raw-graph-zoom-value \{ width: 44px; \}/)
+        expect(css).toMatch(/button\.raw-zoom-fit \{ width: 36px; \}/)
+        // 28 + 44 + 28 + 36; neighbours share one 1px line.
+        expect(28 + 44 + 28 + 36).toBe(136)
+        expect(css).toMatch(/@media \(pointer: coarse\) \{[^@]*\.raw-zoom-step,[^@]*\.raw-graph-zoom-value \{ display: none; \}/)
     })
 })

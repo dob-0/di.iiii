@@ -1619,19 +1619,16 @@ export default function RawGraphSurface({
                 </div>
             ) : null}
             <div className={`raw-graph-zoom-controls${chromeless ? ' is-chromeless' : ''}`}>
-                <button type="button" aria-label="Zoom out" onClick={() => updateZoom(zoom - GRAPH_ZOOM_STEP)}>-</button>
-                <span className="raw-graph-zoom-value">{Math.round(zoom * 100)}%</span>
-                <button type="button" aria-label="Zoom in" onClick={() => updateZoom(zoom + GRAPH_ZOOM_STEP)}>+</button>
+                <button type="button" className="raw-zoom-cell raw-zoom-step" aria-label="Zoom out" onClick={() => updateZoom(zoom - GRAPH_ZOOM_STEP)}>−</button>
+                <button type="button" className="raw-zoom-cell raw-graph-zoom-value" aria-label="Reset zoom to 100%" title="Reset to 100%" onClick={() => updateZoom(1)}>{Math.round(zoom * 100)}%</button>
+                <button type="button" className="raw-zoom-cell raw-zoom-step" aria-label="Zoom in" onClick={() => updateZoom(zoom + GRAPH_ZOOM_STEP)}>+</button>
                 {/* The button is a request to see EVERYTHING, so it fits all
                     the cards at whatever zoom that takes (Figma's Shift+1 and
                     TouchDesigner's Home do the same). The legible floor stays
-                    for the fits nobody asked for — opening, resizing — which
-                    say "showing N of M" instead. On a phone the floor left
-                    cards off the edge and the button did nothing (NOPA F3). */}
-                <button type="button" aria-label="Fit graph" title="Fit the whole graph" onClick={() => fitGraph({ force: true })}>⤢</button>
-                {selectedNodeId ? (
-                    <button type="button" aria-label="Frame selection" title="Frame the selected node" onClick={frameSelection}>◎</button>
-                ) : null}
+                    for the fits nobody asked for — opening, resizing. The
+                    selection is framed by the F key (the ◎ button went: one
+                    strip, [−] [100%] [+] [Fit], audit §3.8). */}
+                <button type="button" className="raw-zoom-cell raw-zoom-fit" aria-label="Fit graph" title="Fit the whole graph (H)" onClick={() => fitGraph({ force: true })}>Fit</button>
             </div>
             {/* Says how much of the graph is on screen when the whole thing
                 would have been too small to work with. Tappable, so the true

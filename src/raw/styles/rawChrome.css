@@ -102,3 +102,54 @@
 @media (max-width: 900px) {
     .raw-bar-tools .raw-topbar-word { display: none; }
 }
+
+/* The zoom strip, §3.8: [−] [100%] [+] [Fit] = 28 + 44 + 28 + 36 = 136×28,
+   bottom-left, 12px in. A finger pinches, so on a coarse pointer − and + go
+   and the cells are 44. */
+.raw-graph-zoom-controls {
+    position: absolute;
+    bottom: calc(var(--raw-s-3) + var(--raw-bottom-chrome) + env(safe-area-inset-bottom));
+    left: calc(var(--raw-s-3) + env(safe-area-inset-left));
+    transition: bottom 0.18s ease;
+    z-index: 2;
+    width: fit-content;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--di-scrim-strong);
+}
+
+.raw-graph-zoom-controls button.raw-zoom-cell {
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+    height: var(--raw-cell);
+    min-width: var(--raw-cell);
+    margin: 0;
+    padding: 0 var(--raw-s-2);
+    border: 1px solid var(--di-line, rgba(255, 255, 255, 0.14));
+    border-radius: var(--raw-radius);
+    background: transparent;
+    color: var(--di-dim, rgba(255, 255, 255, 0.62));
+    font-family: var(--di-mono);
+    font-size: var(--raw-text-meta);
+    cursor: pointer;
+    transition: border-color 0.1s, color 0.1s;
+}
+
+.raw-graph-zoom-controls button.raw-zoom-cell + button.raw-zoom-cell { border-left-width: 0; }
+.raw-graph-zoom-controls button.raw-graph-zoom-value { width: 44px; }
+.raw-graph-zoom-controls button.raw-zoom-fit { width: 36px; }
+
+.raw-graph-zoom-controls button.raw-zoom-cell:hover,
+.raw-graph-zoom-controls button.raw-zoom-cell:focus-visible {
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+    position: relative;
+}
+
+@media (pointer: coarse) {
+    .raw-graph-zoom-controls .raw-zoom-step,
+    .raw-graph-zoom-controls .raw-graph-zoom-value { display: none; }
+    .raw-graph-zoom-controls button.raw-zoom-fit { width: var(--raw-cell); }
+}

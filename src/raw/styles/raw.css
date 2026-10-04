@@ -2624,48 +2624,7 @@
     .raw-graph-zoom-controls.is-chromeless { transition: none; }
 }
 
-.raw-graph-zoom-controls {
-    position: absolute;
-    /* Bottom-LEFT: .raw-delete-fab is position:fixed at bottom/right 24px with
-       z-index 1300, so anything in the bottom-right corner sits underneath it. */
-    bottom: calc(16px + var(--raw-bottom-chrome) + env(safe-area-inset-bottom));
-    left: calc(16px + env(safe-area-inset-left));
-    transition: bottom 0.18s ease;
-    z-index: 2;
-    width: fit-content;
-    display: flex;
-    align-items: center;
-    gap: var(--di-space-2);
-    padding: var(--di-space-2) var(--di-space-2);
-    /* Furniture (see the window rule): the zoom cluster is a tool for looking
-       at the work, not part of it. */
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: var(--di-scrim-strong);
-}
-
-.raw-graph-zoom-controls button {
-    min-width: 44px;
-    height: 44px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    background: var(--di-black);
-    color: rgba(255, 255, 255, 0.62);
-    cursor: pointer;
-    transition: border-color 0.1s, color 0.1s;
-}
-
-.raw-graph-zoom-controls button:hover,
-.raw-graph-zoom-controls button:focus-visible {
-    border-color: var(--di-cyan);
-    color: var(--di-cyan);
-}
-
-.raw-graph-zoom-value {
-    min-width: 3.75rem;
-    text-align: center;
-    color: var(--di-text-muted);
-    font-family: var(--di-mono);
-    font-size: var(--di-text-2);
-}
+/* The zoom strip's own rules live in rawChrome.css (one cell style, tokens). */
 
 .raw-graph-grid {
     display: grid;
