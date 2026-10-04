@@ -11,7 +11,10 @@
  *       --space moxir --from moxir-hall-minimal --to moxir-hall-minimal-oldhall-0929 --label "old hall 09-29" \
  *       [--suffix oldhall-0929] [--siblings <file>] [--dry-run]
  *   node scripts/rigbuild/copy-version.mjs … --undo --to moxir-hall-minimal-oldhall-0929   # delete the copy (only it)
- *   node scripts/rigbuild/copy-version.mjs --api https://dev.diiii.xyz/serverXR --token-file <dev token>  *       --from-api http://<ponyo>:4100/serverXR --space moxir --from moxir-hall-known-full  *       --to moxir-hall-known-full --label "PONYO 10-04"      # from ANOTHER install: read there, written here
+ *   node scripts/rigbuild/copy-version.mjs --api https://dev.diiii.xyz/serverXR --token-file <dev token> \
+ *       --from-api http://<ponyo>:4100/serverXR --from-token-file <a DUMMY token file, never the dev key> \
+ *       --space moxir --from moxir-hall-known-full --to moxir-hall-known-full --label "PONYO 10-04"
+ *       # from ANOTHER install: read there, written here
  *   node scripts/rigbuild/copy-version.mjs … --adopt --from moxir-hall-minimal --to moxir-hall-minimal-oldhall-0929 \
  *       --label "old hall 09-29" [--suffix oldhall-0929] [--siblings <file>] [--dry-run]   # give an existing copy its mark back
  *
@@ -333,10 +336,13 @@ const main = async () => {
     const siblings = readSiblings(args.siblings)
     const dry = Boolean(args['dry-run'])
     // --from-api: the source lives on ANOTHER install (PONYO's room into dev's space, 2026-10-04).
-    // Only read there — meta, document, asset bytes; everything written goes to --api. Its token
-    // defaults to --token-file (a local install with auth off takes any).
+    // Only read there — meta, document, asset bytes; everything written goes to --api. It takes its
+    // OWN token file, never --token-file's: that is the target's key, and it would travel to the
+    // other install (over plain http on a tailnet) with every read. A local install with auth off
+    // takes any token, so a dummy file is enough there.
     const fromApi = args['from-api'] ? String(args['from-api']).replace(/\/+$/, '') : null
-    const source$ = fromApi ? makeClient(fromApi, readToken(path.resolve(String(args['from-token-file'] || args['token-file'])))) : client
+    if (fromApi && !args['from-token-file']) die("--from-api needs its own --from-token-file (never the target's token: it would be sent to the other install) — nothing was done")
+    const source$ = fromApi ? makeClient(fromApi, readToken(path.resolve(String(args['from-token-file'])))) : client
     const where = fromApi ? ` on ${fromApi}` : ''
 
     // 1. the new id must be free — on the whole install, not only in this space
