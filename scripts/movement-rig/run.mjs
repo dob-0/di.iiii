@@ -91,7 +91,13 @@ if (!process.env.DI_MOVRIG_INNER && arg('display') !== 'host') {
     fs.writeFileSync(script, `#!/bin/bash\nexport DI_MOVRIG_INNER=1\ncd ${q(RIG_REPO)}\n${q(process.execPath)} ${[fileURLToPath(import.meta.url), ...argv, '--out', outDir].map(q).join(' ')} 2>&1 | tee ${q(path.join(outDir, 'run.log'))}\necho \${PIPESTATUS[0]} > ${q(exitFile)}\n`)
     fs.chmodSync(script, 0o755)
     const socket = `di-movrig-${process.pid}`
-    const env = { ...process.env, XDG_SESSION_TYPE: 'wayland' }
+    // Its own runtime dir too: on the owner's XDG_RUNTIME_DIR the private bus starts a
+    // second xdg-document-portal, and when it exits the owner's /run/user/<uid>/doc mount
+    // goes with it, so no flatpak app (Zen, Chromium) can start (2026-10-05, reproduced
+    // 1 -> 0 mounts; with a private runtime dir 1 -> 1). di-atlas tools/doc-portal-heal.
+    const runtimeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'di-movrig-rt-'))
+    fs.chmodSync(runtimeDir, 0o700)
+    const env = { ...process.env, XDG_SESSION_TYPE: 'wayland', XDG_RUNTIME_DIR: runtimeDir }
     delete env.DISPLAY; delete env.WAYLAND_DISPLAY
     console.log(`[rig] private display: kwin_wayland --virtual ${W}x${H} (socket ${socket}) → ${outDir}`)
     // Its own session bus (dbus-run-session): on the owner's DESKTOP bus a nested
@@ -101,6 +107,7 @@ if (!process.env.DI_MOVRIG_INNER && arg('display') !== 'host') {
     const r = spawnSync('dbus-run-session', ['--', 'kwin_wayland', '--virtual', '--xwayland', '--socket', socket, '--width', String(W), '--height', String(H),
         '--no-lockscreen', '--no-global-shortcuts', '--no-kactivities', '--exit-with-session', script],
     { env, stdio: ['ignore', fs.openSync(path.join(outDir, 'kwin.log'), 'w'), fs.openSync(path.join(outDir, 'kwin.log'), 'a')], timeout: 45 * 60 * 1000 })
+    fs.rmSync(runtimeDir, { recursive: true, force: true })
     if (r.error) { console.error(`[rig] kwin_wayland failed to start: ${r.error.message}`); process.exit(2) }
     const code = fs.existsSync(exitFile) ? Number(fs.readFileSync(exitFile, 'utf8').trim()) : 3
     if (code !== 0) console.error(`[rig] FAILED (exit ${code}) — see ${path.join(outDir, 'run.log')}`)
