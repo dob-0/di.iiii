@@ -1083,6 +1083,8 @@ shit"*. Same hall, same DJ booth, same zones; what changes is how much is hung a
 
 ### 15.1 The data model — a version is a PROJECT (decision)
 
+> Since 2026-10-04 the production's version list also has the status `concept`: a version kept on purpose as an idea, folded on the row under one "Concepts (n)" button beside "Old versions (n)" (decision note 2026-10-04-production-versions.md, "Concept").
+
 Each version is a project of the space beside the hall's own: `moxir-hall-minimal`, `-middle`,
 `-full`; the hall's own project (`moxir-hall`, the rig as ordered) is the fourth member of the set.
 Considered and not chosen: a `variant` field on every lamp inside one project. Every view (plot,

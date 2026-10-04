@@ -781,7 +781,7 @@ const normalizeRigVariant = (value) => {
 // A PRODUCTION'S VERSION LIST — mirror of src/shared/productionVersions.js (the normalisers only;
 // docs/architecture/decisions/2026-10-04-production-versions.md). One entity `production`
 // (productionMeta) and one entity per version (productionVersion) in the list's own project.
-const PRODUCTION_VERSION_STATUSES = ['for-the-show', 'candidate', 'kept-copy', 'archived']
+const PRODUCTION_VERSION_STATUSES = ['for-the-show', 'candidate', 'kept-copy', 'concept', 'archived']
 const productionText = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '')
 const productionTextOrNull = (value, max) => productionText(value, max) || null
 const productionWho = (value) => {
