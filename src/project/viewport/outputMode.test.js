@@ -2,17 +2,15 @@ import { describe, expect, it } from 'vitest'
 import { OUTPUT_POOL_SLOTS, outputDocument, outputModeWanted, outputRenderSettings } from './outputMode.js'
 
 describe('outputModeWanted', () => {
-    it('gives the work machine with a mouse the full room, everyone else the output', () => {
-        expect(outputModeWanted({ workMachine: true })).toBe(false)
-        expect(outputModeWanted({ workMachine: true, coarse: true })).toBe(true)
-        expect(outputModeWanted({ workMachine: false })).toBe(true)
+    it('gives everyone Lite by default, the work machine included (owner, 2026-10-04)', () => {
+        expect(outputModeWanted({})).toBe(true)
+        expect(outputModeWanted({ search: '?x=1' })).toBe(true)
     })
     it('lets the address win over the stored choice, and the stored choice over the default', () => {
-        expect(outputModeWanted({ workMachine: true, stored: 'full', search: '?quality=lite' })).toBe(true)
-        expect(outputModeWanted({ coarse: true, stored: 'lite', search: '?x=1&quality=FULL' })).toBe(false)
-        expect(outputModeWanted({ coarse: true, stored: 'full' })).toBe(false)
-        expect(outputModeWanted({ workMachine: true, stored: 'lite' })).toBe(true)
-        expect(outputModeWanted({ workMachine: true, stored: 'junk', search: '?quality=max' })).toBe(false)
+        expect(outputModeWanted({ stored: 'full', search: '?quality=lite' })).toBe(true)
+        expect(outputModeWanted({ stored: 'lite', search: '?x=1&quality=FULL' })).toBe(false)
+        expect(outputModeWanted({ stored: 'full' })).toBe(false)
+        expect(outputModeWanted({ stored: 'junk', search: '?quality=max' })).toBe(true)
     })
 })
 
@@ -22,11 +20,12 @@ describe('outputRenderSettings', () => {
         bloom: { enabled: true }, surfaces: { floor: { reflect: 0.5 } },
         atmosphere: { scattering: 0.02, haze: {} }, toneMapping: 'ACESFilmic', toneMappingExposure: 3.5
     }
-    it('drops shadows, bloom, the floor model and antialias, holds DPR 1, keeps the haze and the tone', () => {
+    it('drops shadows, bloom, the floor mirror and antialias, holds DPR 1, keeps the floor finish, the haze and the tone, and draws footprints', () => {
         const out = outputRenderSettings(full)
-        expect(out).toMatchObject({ shadows: false, shadowCasting: { enabled: false, mapSize: 1024 }, antialias: false, dprMin: 1, dprMax: 1 })
+        expect(out).toMatchObject({ shadows: false, shadowCasting: { enabled: false, mapSize: 1024 }, antialias: false, dprMin: 1, dprMax: 1, lampFootprints: true })
         expect(out).not.toHaveProperty('bloom')
-        expect(out).not.toHaveProperty('surfaces')
+        expect(out.surfaces).toEqual({ floor: { reflect: 0 } })
+        expect(full.surfaces.floor.reflect).toBe(0.5)
         expect(out.atmosphere).toBe(full.atmosphere)
         expect(out.toneMappingExposure).toBe(3.5)
         expect(full.bloom).toEqual({ enabled: true })

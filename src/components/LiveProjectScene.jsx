@@ -20,6 +20,7 @@ import { applyProjectOps, normalizeProjectDocument } from '../shared/projectSche
 import { ensureGuestSession } from '../services/guestSession.js'
 import { buildAssetMap } from '../project/viewport/buildAssetMap.js'
 import { outputRenderSettings } from '../project/viewport/outputMode.js'
+import LampFootprints from '../project/viewport/LampFootprints.jsx'
 import BoxObject from '../objectComponents/BoxObject.jsx'
 import PlaneObject from '../objectComponents/PlaneObject.jsx'
 import TorusObject from '../objectComponents/TorusObject.jsx'
@@ -1900,6 +1901,7 @@ export default function LiveProjectScene({
             >
                 <XR store={xr.xrStore}>
                 <RenderSettingsEffect renderSettings={renderSettings} />
+                {renderSettings.lampFootprints ? <LampFootprints entities={entities} /> : null}
                 <ShadowCasting enabled={shadowCasting.enabled} mapSize={shadowCasting.mapSize} />
                 {/* The landing holds its page through a front-page button; this
                     is how the copy of the page gets this room's frame. */}

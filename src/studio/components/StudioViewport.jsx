@@ -22,6 +22,7 @@ import RenderSettingsEffect from '../../project/viewport/RenderSettingsEffect.js
 import '../../project/viewport/spotLightSkip.js'
 import { arrivalLightsOf } from '../../project/viewport/worldLights.js'
 import ShadowCasting from '../../project/viewport/ShadowCasting.jsx'
+import LampFootprints from '../../project/viewport/LampFootprints.jsx'
 import ShaderWarmup from '../../project/viewport/ShaderWarmup.jsx'
 import { resolveShadowCasting } from '../../project/viewport/shadowCasting.js'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
@@ -714,6 +715,8 @@ function StudioSceneContent({
         <LiveTimelineContext.Provider value={playTimelines}>
         <EntityLinksContext.Provider value={followLinks}>
             <RenderSettingsEffect renderSettings={document.renderSettings} />
+            {/* Lite: every lamp's light on the surfaces, not only the pool's (lampFootprints.js) */}
+            {document.renderSettings?.lampFootprints ? <LampFootprints entities={document.entities} /> : null}
             <ShaderWarmup />
             <ShadowCasting enabled={shadowCasting.enabled} mapSize={shadowCasting.mapSize} />
             <color attach="background" args={[document.worldState?.backgroundColor || '#0a1118']} />
