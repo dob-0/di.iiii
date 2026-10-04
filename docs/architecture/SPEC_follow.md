@@ -58,9 +58,77 @@ space") — each fails without its fix.
 - **One remote per space, star only.** A third install follows the host; two followers do not talk to each other.
 - **Not carried:** project deletion, slug renames, later visibility changes, shelf/collection membership, space
   meta, files placed in the room itself (not in a project).
-- **No sync UI and no discovery:** peers are typed URLs (`--at <ip>` for Tailscale); `rig/discovery.js` is not
-  wired to follows.
+- **No discovery:** peers are typed addresses (`--at <ip>` for Tailscale); `rig/discovery.js` is not wired to
+  follows. The UI is below ("The sync light and joining with four words").
 - **Saved state cost:** up to 5,000 opIds (~200 KB) rewritten after each tick that moved; fine for a room, not
   measured for a long show.
 - Real-network runs still owed: large files, auth-on host with `--guests`, the internet case, and a run AFTER these
   fixes between two machines.
+
+## The sync light and joining with four words (2026-10-01)
+
+Owner-approved sketches A + C (`/home/dob/Downloads/di-sync-ui/sketches.html`, 2026-10-01). Code: `src/sync/`
+(light, panel, invite, join form), `serverXR/src/routes/followRoutes.js`, `serverXR/src/joinCodeStore.js`,
+`serverXR/src/follow/{join,syncStatus}.js`.
+
+### A. The light
+
+- In the space's bar (`SurfaceBar`) whenever the bar knows a space. It is drawn only when this install follows the
+  space or has been called in on by a follower; otherwise it renders nothing, and a visitor is told nothing.
+- Facts come from `GET /api/spaces/:spaceId/sync`; the words are made in the browser by `src/sync/syncLight.js`.
+  Follower: `SYNCED · PONYO · 0.1 S`, `PONYO NOT ANSWERING · 2 MIN`, `SYNCING · PONYO · 3 FILES COMING`,
+  `2 FILES FAILED · PONYO`, `CONNECTING · PONYO`, `PONYO REFUSED THIS MACHINE` (a revoked key), `PONYO · NEEDS A LOOK`.
+  **"SYNCED" is said in exactly one case** — the host answered, no file is pending or failed, the follower is
+  `following`, and nothing is in `lastError`. `syncLight.test.js` walks all 1,152 combinations of those inputs.
+  Host: `SHARED · NAME · LIVE` / `NAME NOT ANSWERING · 2 MIN`. The host cannot know about files or clashes, so it
+  never says "synced".
+- What "answered" and "0.1 S" mean (follower.js): the host answered when any HTTP response came back from the small
+  project-list read each tick makes; the speed is that read's round trip. A parked read's duration is the room's
+  quiet, not the wire, and is never used. State is published before a parked read as well as after the tick, so a
+  quiet room is not "connecting" for the 20 s of the park. A refusal (401/403) is "refused", not "not answering".
+- The host hears a follower through the machine link (`POST /machines/sync`, every ~3 s; `hub.noteFollower` keeps
+  name and last-seen, never on a guest's word). It is in memory: a host restart forgets followers until they call in.
+- "Clashes today" is the follower's `converged` count — each is a time the host's version was kept — counted from
+  `convergedAt` timestamps (last 100) on the viewer's calendar day. Held in memory; a restart starts it again.
+- Access: the space's owner or an admin when auth is on (the sync-key routes' rule); with auth off, only the person
+  at the machine (loopback or one of the machine's own addresses, never through a proxy header) — every caller is
+  the "admin" sentinel there and these routes name other machines. A key never appears in the response.
+- Phone (390 px): the chip takes a second row of the bar, 44 px tall; the bar keeps `--sbar-h` equal to its real
+  height while it is there, so what sits under it still clears.
+
+### C. Join with four words
+
+- **Invite a machine** (`POST /api/spaces/:spaceId/join-codes`, owner/admin): four words from `joinCodeWords.js`
+  (EFF Short Wordlist #1, CC BY, 1,257 words after our cuts, 41.2 bits). Valid 10 minutes, one space, single use,
+  revocable (`DELETE .../join-codes/:id`). A space has one live code: a new one revokes the unused old one.
+  Offered under the light and on the space's card in the Manage row (so the first invite has a door before
+  anything is shared).
+- **Storage:** only `sha256("di.join-code.v1:" + words)` is stored (table `space_join_codes`), never the words and
+  never a key. **The key is minted when the code is redeemed**, by `syncKeyStore.mintSyncKey` with the same owner and
+  the same 1-year ttl as `POST /sync-keys`, and is returned in that one response. A code nobody uses never becomes a
+  credential. After use the key is the existing thing: `di invite --revoke` or `DELETE .../sync-keys/:id` ends it.
+- **The door** is two anonymous routes (`/api/join-codes/peek`, `/redeem`) registered before the blanket write gate.
+  Wrong, used, expired and revoked answer the same 404. Guesses are counted in `joinCodeStore.createAttemptLimiter`
+  (8 wrong per client per 10 min, 60 overall) and are **not** exempt on a local install, where `rateLimit.js` counts
+  nobody — joinIntegration.test.js proves a `DI_LOCAL=1` host still answers 429.
+- **Join** (`POST /api/follows/join/preview`, `/join`, install admin): this install's server reaches the host
+  (`follow/join.js`) — a browser cannot (https vs http). Refusals before the code is spent: unreachable, wrong code,
+  itself (machine id), space already followed, same-named space here (needs `into: true`). Then spend, check the key
+  reads the space, make the space, write `follows.json`; the running install starts the follower at once.
+- Limits: with four words the code is a hand-over between two people in a room, not a password; the two machines
+  still have to reach each other (same network or Tailscale). The server makes an outbound request to an address an
+  admin typed (as `di follow` does from the CLI).
+
+### Measured
+
+- Two real installs on loopback (`joinIntegration.test.js`, 2026-10-01): join to `SYNCED` in ~150 ms; host
+  round trip 2-3 ms, shown as "<0.1 S". Real Tailscale numbers are owed — the 2026-10-01 aylmo<->ponyo run
+  (above) measured 109-877 ms for edits, which this light does not claim to reproduce.
+
+### Not done (owed)
+
+- The sketch's QR code (needs a QR library; `qrcode-generator`, MIT, is the candidate).
+- The sketch's "2.5 GB" in Join's "found" line (the size of a space is not computed anywhere cheap).
+- Host side: no per-follower "stop sharing" button (use `di invite --revoke`), and no list of past joins.
+- The sketch's "Edits made here wait and cross … Nothing is lost" is true while the host's op log still holds the
+  gap; a follower offline past the retained window is resynced by the converge pass, and no warning says so yet.

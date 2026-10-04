@@ -175,6 +175,10 @@ function registerMachineRoutes(router, {
             machineName: callerName
         }))
         hub.noteServer(spaceId, caller.id)
+        // Remembered for the host's sync light — but never on a guest's word: an
+        // anonymous visitor to a public space is an "editor" and could otherwise
+        // make up machines the light then reports as following.
+        if (!isGuestActor(getAuthState(req))) hub.noteFollower(spaceId, caller.id, callerName === caller.id ? null : callerName)
         hub.recordRemotePeers(spaceId, via, peers)
         const payload = { machine: me, peers: hub.listPeers(spaceId, { excludeVia: via, excludeMachineId: caller.id }) }
         res.json(isGuestActor(getAuthState(req)) ? redactForGuest(payload) : payload)

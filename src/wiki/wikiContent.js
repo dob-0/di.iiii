@@ -196,6 +196,22 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-01'
     },
     {
+        id: 'link-a-machine',
+        category: 'Spaces & access',
+        title: 'Link a machine with four words, and the sync light',
+        summary: 'Two di.iiii installs share a space without a terminal: one makes four words, the other types them. A light in the space\'s bar says whether the two are in step.',
+        body: [
+            'INVITE A MACHINE. On the machine that has the space, open the space\'s card on the home page, press Manage, then Invite a machine. It shows four words — like AMBER · DESK · NINE · RIVER — and the address to type with them. The words work for 10 minutes, for that one space, and once. Revoke this code ends them sooner. A new code replaces an unused one.',
+            'JOIN. On the other machine press Join at the top of its home page, type the address and the four words, and press Find. It shows what it found — the machine, the space, how many projects — before anything is used. Join then copies the space there and keeps it in step, the same as di follow. If a space with that name is already on this machine, nothing is merged until you say so.',
+            'The two machines still have to reach each other: the same network, or Tailscale. If the host only answers on itself, the code says so instead of showing an address that cannot work — start it with di up --lan.',
+            'THE LIGHT. Once a space is followed — or followed by someone — a small light appears in its bar: SYNCED · PONYO · 0.1 S means the other machine answered, nothing is waiting, and 0.1 S is how long it took. PONYO NOT ANSWERING · 2 MIN means it has been quiet for two minutes; edits made here wait and cross when it is back. It never says SYNCED while a file is still on its way — it says how many files are coming — and never while a file could not be fetched. The machine that hosts the space cannot see the other\'s files, so its light says SHARED · NAME · LIVE.',
+            'Press the light for the details: which machine, live or not and when the last edit crossed, files still coming, and clashes today — the times both machines changed the same thing at the same moment and the host\'s version was kept. Stop following ends the carrying; the space and everything in it stays where it is.',
+            'ONLY YOU SEE IT. The light and these buttons are for the space\'s owner or an admin — and, on an install with no sign-in, only for the person at that machine. A visitor sees no light and nothing about who else holds the space. The four words are not kept anywhere; the machine only remembers a scrambled form to check them against, and the long key they stand for is made at the moment they are used.'
+        ],
+        tags: ['sync', 'follow', 'invite', 'join', 'machines', 'light', 'code', 'four words', 'share', 'tailscale'],
+        updated: '2026-10-01'
+    },
+    {
         id: 'vj-deck-and-clip-in',
         category: 'Editing',
         title: 'The VJ deck, and Clip In',
