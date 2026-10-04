@@ -135,6 +135,15 @@ describe('checkCode', () => {
     expect(result.behindOriginDev).toBe(12)
   })
 
+  // 2026-10-02: the push gate enriched all 204 worktrees on aylmo (a git
+  // status + merge checks each) and held the CPU at 95-100 °C per push.
+  it('asks repo-state about this checkout only', () => {
+    runWith({
+      state: { currentBranch: 'dev', currentPath: '/repo', headBehindDev: null, currentUpstreamGone: false, worktrees: [{ path: '/repo', dirty: true }] }
+    })
+    expect(getState).toHaveBeenCalledWith({ currentOnly: true })
+  })
+
   it('reports a fork whose dev trails upstream/dev', () => {
     childProcess.execFileSync.mockImplementation((_bin, args) => {
       if (args[0] === 'remote') return 'origin\nupstream'

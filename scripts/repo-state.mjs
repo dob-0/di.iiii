@@ -195,8 +195,14 @@ const getUnmergedBranches = () => {
   })
 }
 
-const getEnrichedWorktrees = () => {
-  const worktrees = getWorktrees()
+// `currentOnly` describes just the checkout this runs in. The push gate
+// (start-check --code-only) reads nothing else, and enriching every worktree
+// costs a `git status` + merge/upstream checks per worktree: on aylmo
+// (204 di.iiii worktrees, a laptop with a fan fault) that held the CPU at
+// 95-100 °C for minutes on every push (measured 2026-10-02).
+const getEnrichedWorktrees = ({ currentOnly = false } = {}) => {
+  const all = getWorktrees()
+  const worktrees = currentOnly ? all.filter((wt) => wt.path === repoRoot) : all
   for (const wt of worktrees) {
     if (wt.prunable) continue // directory is gone — nothing left to inspect
     wt.volatile = wt.path.startsWith('/tmp/')
@@ -206,19 +212,20 @@ const getEnrichedWorktrees = () => {
   return worktrees
 }
 
-export const getState = () => {
+export const getState = ({ currentOnly = false } = {}) => {
   const currentBranch = getCurrentBranch()
-  const worktrees = getEnrichedWorktrees()
+  const worktrees = getEnrichedWorktrees({ currentOnly })
   return {
     currentBranch: currentBranch || '(detached)',
     currentPath: repoRoot || null,
-    primaryPath: worktrees[0]?.path ?? null, // git worktree list always puts the main checkout first
+    // With currentOnly the list holds one worktree, so the primary is unknown.
+    primaryPath: currentOnly ? null : (worktrees[0]?.path ?? null), // git worktree list always puts the main checkout first
     currentBranchBehindDev: getCurrentBranchBehindDev(currentBranch),
     headBehindDev: getHeadBehindDev(currentBranch),
     currentUpstreamGone: isCurrentUpstreamGone(currentBranch),
-    promotionPlan: getPromotionPlan(),
+    promotionPlan: currentOnly ? null : getPromotionPlan(),
     worktrees,
-    unmergedBranches: getUnmergedBranches()
+    unmergedBranches: currentOnly ? null : getUnmergedBranches()
   }
 }
 
