@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import DirectorPanel from '../director/DirectorPanel.jsx'
 import useEditHistory from '../director/useEditHistory.js'
 import { PIECE_IDS, loadPiece } from '../director/pieces.js'
@@ -130,7 +130,9 @@ function DirectorPanelWindowEditor({ piece, initialSequences, onSaveTiming, spac
     // mounting it before the space's saved timing arrives would start every
     // session from the raw file and silently drop whatever was last saved to
     // this space.
-    const history = useEditHistory(initialSequences, { enabled: true })
+    // Undo/redo acts only while focus is inside this window; see useEditHistory.
+    const windowRef = useRef(null)
+    const history = useEditHistory(initialSequences, { enabled: true, scopeRef: windowRef })
     const editList = history.present
     const durationSec = useMemo(() => totalDurationSec(editList), [editList])
     const clock = useSceneClock({ durationSec, loop: true })
@@ -142,7 +144,7 @@ function DirectorPanelWindowEditor({ piece, initialSequences, onSaveTiming, spac
     )
 
     return (
-        <div className="raw-director-window">
+        <div className="raw-director-window" ref={windowRef} tabIndex={-1}>
             <div className="raw-director-note">
                 editing the built-in piece <strong>{piece.label}</strong>
                 {spaceMissing
