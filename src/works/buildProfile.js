@@ -30,8 +30,8 @@ import { WORK_IDS, workAssetDirs, workEntries, workPublicDirs } from './works.js
  * vite copies publicDir wholesale and offers no filter, so the choice is
  * between copying everything and deleting afterwards, or naming what belongs.
  * Naming it means the next thing dropped into public/ for the website does not
- * silently become part of every artist's install — which is how the cPanel php
- * shims and the site's OpenGraph images got there.
+ * silently become part of every artist's install — which is how the old Apache
+ * php shims and the site's OpenGraph images got there.
  *
  * unicode-fonts: the Armenian glyph fallback for 3D text
  *   (public/unicode-fonts/README.md) — without it a local install reaches for

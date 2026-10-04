@@ -1,7 +1,8 @@
 // Minimal HTTP client over node:http / node:https — used by the GitHub-sync path
 // instead of global fetch(). Node's fetch (undici) instantiates a WASM HTTP
-// parser, which fails under cPanel/LVE virtual-memory limits
-// ("WebAssembly.Instance(): Out of memory"). The built-in parser has no WASM.
+// parser, which failed under the old shared host's virtual-memory limits
+// ("WebAssembly.Instance(): Out of memory"). The built-in parser has no WASM, and
+// the server container still runs under a memory cap (docker-compose mem_limit).
 
 const http = require('node:http')
 const https = require('node:https')

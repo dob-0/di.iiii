@@ -117,27 +117,17 @@ const rotPatterns = [
   { re: /not in CI/gi, why: 'stale CI claim (ci.yml runs the full suite incl. contracts + schema-sync)' }
 ]
 
-// Production deploy moved from cPanel to a Hetzner VPS on 2026-07-15
-// (docs/deploy/LIVE_DEPLOY.md is the current deploy truth) — an agent
-// session afterward still cited the old workflow/branch names from session
-// memory (see docs/ai/golden_rules.md's "verify infra/deploy/tool facts"
-// rule). These files are the only place those strings are still expected to
-// appear (they document the legacy path on purpose); anywhere else is a
-// stale citation.
+// Production deploy moved from cPanel to a Hetzner VPS on 2026-07-15, and the
+// cPanel pipeline was removed from the repo on 2026-09-16
+// (docs/deploy/LIVE_DEPLOY.md is the current deploy truth). An agent session
+// after the move still cited the old workflow/branch names from session memory
+// (see docs/ai/golden_rules.md's "verify infra/deploy/tool facts" rule), so
+// those names are flagged in every scanned live doc; none of them exists now.
 const legacyDeployPatterns = [
-  { re: /publish-cpanel-prebuilt-v2\.yml/g, why: 'legacy cPanel workflow — current deploy is deploy-vps.yml/deploy-vps-dev.yml' },
-  { re: /cpanel-staging\b/g, why: 'legacy cPanel artifact branch — current deploy target is the Hetzner VPS' },
-  { re: /cpanel-production\b/g, why: 'legacy cPanel artifact branch — current deploy target is the Hetzner VPS' }
+  { re: /publish-cpanel-prebuilt-v2\.yml/g, why: 'removed cPanel workflow — current deploy is deploy-vps.yml/deploy-vps-dev.yml' },
+  { re: /cpanel-staging\b/g, why: 'removed cPanel artifact branch — current deploy target is the Hetzner VPS' },
+  { re: /cpanel-production\b/g, why: 'removed cPanel artifact branch — current deploy target is the Hetzner VPS' }
 ]
-const legacyDeployAllowlist = new Set([
-  'docs/deploy/CPANEL_DEPLOYMENT.md',
-  'docs/deploy/CPANEL_PREBUILT_DEPLOY.md',
-  'docs/deploy/PUBLISH_WORKFLOW.md',
-  'docs/deploy/LIVE_DEPLOY.md',
-  'docs/deploy/VPS_DOCKER_DEPLOY.md',
-  'deploy/AGENTS.md',
-  'docs/ai/roles/infrastructure-engineer.md'
-])
 
 const collectRotScanTargets = async () => {
   const targets = []
@@ -393,8 +383,7 @@ const main = async () => {
 
   for (const relativePath of await collectRotScanTargets()) {
     const content = await readFile(relativePath)
-    const isLegacyDeployAllowed = legacyDeployAllowlist.has(relativePath)
-    const patterns = isLegacyDeployAllowed ? rotPatterns : [...rotPatterns, ...legacyDeployPatterns]
+    const patterns = [...rotPatterns, ...legacyDeployPatterns]
     for (const line of content.split('\n')) {
       for (const { re, why } of patterns) {
         re.lastIndex = 0

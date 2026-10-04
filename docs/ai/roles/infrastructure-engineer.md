@@ -15,7 +15,7 @@ serverXR/Dockerfile               ← container build definition
 .dockerignore                     ← Docker build context exclusions
 deploy/                           ← deployment docs and examples
 scripts/                          ← automation and release helpers
-ecosystem.config.js               ← PM2 process config (shared with BAE)
+docker-compose*.yml               ← Compose stacks (production, dev tier)
 ```
 
 ---
@@ -36,7 +36,7 @@ You may read any file to understand what to build or deploy. You do not edit pro
 ## Current Deployment Architecture — Elite Knowledge
 
 Production DNS (`di-studio.xyz`) is fully cut over to a **Hetzner VPS running Docker + Caddy**.
-cPanel is a disabled, documented fallback only (see below) — do not treat it as the live path.
+It is the only deploy path: the legacy cPanel pipeline was removed from the repo on 2026-09-16.
 
 **The deploy pipeline is wired up and verified (2026-07-16).** Both `deploy-vps.yml` (production,
 push to `main`) and `deploy-vps-dev.yml` (the dev tier, push to `dev`) have had real, successful
@@ -65,16 +65,6 @@ list --workflow=deploy-vps.yml` and the run's `head_sha` if in doubt.
   Caddy is the only way in) + `docker-compose.dev.yml` (dev-tier override). CPU/memory `limits`
   are set per-service but oversubscribe the 2 vCPU host once the dev tier is running alongside prod
   (see audit notes) — check actual host specs before raising any service's ceiling.
-
-### cPanel — Legacy Fallback (disabled)
-
-Kept only until its hosting term expires; do not build new deploy work against it.
-
-- `publish-cpanel-prebuilt-v2.yml` is `workflow_dispatch`-only (no longer triggers on push)
-- Docs: `docs/deploy/CPANEL_DEPLOYMENT.md`, `docs/deploy/CPANEL_PREBUILT_DEPLOY.md`,
-  `docs/deploy/legacy/` — treat as historical reference, not instructions to follow
-- Known limitations that motivated the VPS move: no reliable process resurrection, shared disk
-  I/O hurting SQLite write performance, no Docker support, no background workers
 
 ### Docker Build Rule — Critical
 
@@ -112,8 +102,7 @@ dev → main
 
 `deploy-vps.yml` (production, push to `main`) and `deploy-vps-dev.yml` (the dev tier, push to
 `dev`) both: build+push images to GHCR, SSH into the VPS, `docker compose pull && up -d`, then
-run `scripts/smoke-check.mjs` (shared smoke check for both the VPS and cPanel paths, renamed
-from `smoke-check-cpanel.mjs` since it was never cPanel-specific) against the deployed host.
+run `scripts/smoke-check.mjs` against the deployed host.
 
 Required GitHub secrets/variables: see `docs/deploy/VPS_DOCKER_DEPLOY.md`.
 

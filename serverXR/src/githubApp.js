@@ -11,7 +11,7 @@ const GH = 'https://api.github.com'
 const b64url = (buf) => Buffer.from(buf).toString('base64url')
 
 const getPrivateKey = () => {
-  // Prefer a .pem file path (most reliable on cPanel — no fragile long base64 line).
+  // Prefer a .pem file path when one is set (no fragile long base64 line).
   const keyPath = process.env.GITHUB_APP_PRIVATE_KEY_PATH
   if (keyPath) {
     try { return require('node:fs').readFileSync(keyPath, 'utf8') } catch { return '' }

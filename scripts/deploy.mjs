@@ -8,12 +8,6 @@ import { getProductionPromotionPlan } from './deploy-lib.mjs'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, '..')
 const nodeCommand = process.execPath
-const remoteDefaults = {
-    sshTarget: process.env.DEPLOY_SSH_TARGET || 'distudio@di-studio.xyz',
-    devRepo: process.env.DEPLOY_REMOTE_DEV_REPO || '/home/distudio/repositories/di.iiii-staging',
-    productionRepo: process.env.DEPLOY_REMOTE_PRODUCTION_REPO || '/home/distudio/repositories/di.iiii-production'
-}
-
 const rawArgs = process.argv.slice(2)
 const options = {
     dryRun: false,
@@ -40,30 +34,19 @@ Usage:
   npm run deploy -- status
   npm run deploy -- dev
   npm run deploy -- production
-  npm run deploy -- host dev
-  npm run deploy -- host production
-  npm run deploy -- remote dev
-  npm run deploy -- remote production
   npm run deploy -- smoke dev
   npm run deploy -- smoke production
-  npm run deploy -- build dev
-  npm run deploy -- build production
 
 Shortcuts:
   npm run deploy:status
   npm run deploy:dev
   npm run deploy:production
-  npm run deploy:host:dev
-  npm run deploy:host:production
-  npm run deploy:remote:dev
-  npm run deploy:remote:production
 
 Rules:
   - tiers: local -> dev (https://dev.diiii.xyz, branch dev) -> production (branch main)
   - run the dev promotion command from a clean dev branch
   - production promotion fast-forwards main when possible, or merges origin/dev into main with dev-preferred conflict resolution if the branches diverged
-  - host commands are for the cPanel clone or server repo, not your laptop
-  - remote commands SSH from your laptop into the cPanel host and run the host apply there
+  - a push to dev runs deploy-vps-dev.yml; a push to main runs deploy-vps.yml (both deploy the Hetzner VPS)
 
 Flags:
   --dry-run
@@ -281,19 +264,9 @@ const normalizeAction = (values) => {
             return 'dev'
         case 'production':
             return first
-        case 'host':
-        case 'hosting':
-        case 'apply':
-            return `host:${second}`
-        case 'remote':
-        case 'ssh':
-            return `remote:${second}`
         case 'smoke':
         case 'check':
             return `smoke:${second}`
-        case 'build':
-        case 'release':
-            return `build:${second}`
         default:
             return first
     }
@@ -319,21 +292,6 @@ const printStatus = async () => {
     console.log('Deploy lanes:')
     console.log('  dev -> https://dev.diiii.xyz (the dev tier)')
     console.log('  production -> https://di-studio.xyz')
-    console.log(`Remote dev-tier host: ${remoteDefaults.sshTarget}:${remoteDefaults.devRepo}`)
-    console.log(`Remote production host: ${remoteDefaults.sshTarget}:${remoteDefaults.productionRepo}`)
-}
-
-const buildRemoteDeployCommand = (deployEnv) => {
-    const repoPath = deployEnv === 'staging'
-        ? remoteDefaults.devRepo
-        : remoteDefaults.productionRepo
-    const cpanelBranch = deployEnv === 'staging' ? 'cpanel-staging' : 'cpanel-production'
-
-    return [
-        'ssh',
-        remoteDefaults.sshTarget,
-        `cd ${quoteArg(repoPath)} && git pull --ff-only origin ${cpanelBranch} && bash scripts/cpanel-apply-prebuilt-release.sh ${deployEnv}`
-    ]
 }
 
 const handlers = {
@@ -349,13 +307,12 @@ const handlers = {
         await runMaybe('git', ['push', 'origin', 'HEAD:dev'])
         if (options.dryRun) {
             console.log('Would promote current dev HEAD to origin/dev.')
-            console.log('GitHub would then publish cpanel-staging automatically (push to dev triggers it).')
-            console.log('Next on the host: npm run deploy -- host dev')
+            console.log('GitHub would then run deploy-vps-dev.yml (push to dev triggers it).')
             return
         }
         console.log('Promoted current dev HEAD to origin/dev.')
-        console.log('GitHub should now publish cpanel-staging (the dev tier release branch) automatically.')
-        console.log('Next: run `npm run deploy -- host dev` on the dev-tier host, or click cPanel Deploy HEAD Commit.')
+        console.log('GitHub should now run deploy-vps-dev.yml, which deploys the dev tier.')
+        console.log('Next: wait for it, then `npm run deploy -- smoke dev`.')
     },
     production: async () => {
         await ensureCleanWorktree()
@@ -391,13 +348,12 @@ const handlers = {
             await runMaybe('git', ['push', 'origin', `${sourceCommit}:main`])
             if (options.dryRun) {
                 console.log(`Would fast-forward origin/main from ${shortCommit(mainCommit)} to ${shortCommit(sourceCommit)}.`)
-                console.log('GitHub would then publish cpanel-production automatically.')
-                console.log('Next on the host: let cron apply production automatically, or run npm run deploy -- host production')
+                console.log('GitHub would then run deploy-vps.yml (push to main triggers it).')
                 return
             }
             console.log(`Fast-forwarded origin/main from ${shortCommit(mainCommit)} to ${shortCommit(sourceCommit)}.`)
-            console.log('GitHub should now publish cpanel-production automatically.')
-            console.log('Next: let cron apply production automatically, or run `npm run deploy -- host production` on the production host.')
+            console.log('GitHub should now run deploy-vps.yml, which deploys production.')
+            console.log('Next: wait for it, then `npm run deploy -- smoke production`.')
             return
         }
 
@@ -405,8 +361,7 @@ const handlers = {
             console.log(
                 `Would create a merge commit on top of origin/main (${shortCommit(mainCommit)}) that brings in origin/dev (${shortCommit(sourceCommit)}), preferring dev on conflicting hunks, then push that merge to origin/main.`
             )
-            console.log('GitHub would then publish cpanel-production automatically.')
-            console.log('Next on the host: let cron apply production automatically, or run npm run deploy -- host production')
+            console.log('GitHub would then run deploy-vps.yml (push to main triggers it).')
             return
         }
 
@@ -442,8 +397,8 @@ const handlers = {
             console.log(
                 `Merged origin/dev (${shortCommit(sourceCommit)}) into origin/main (${shortCommit(mainCommit)}) as ${mergedCommit}.`
             )
-            console.log('GitHub should now publish cpanel-production automatically.')
-            console.log('Next: let cron apply production automatically, or run `npm run deploy -- host production` on the production host.')
+            console.log('GitHub should now run deploy-vps.yml, which deploys production.')
+            console.log('Next: wait for it, then `npm run deploy -- smoke production`.')
         } catch (error) {
             if (switchedHead && await hasMergeInProgress()) {
                 await runCommand('git', ['merge', '--abort'])
@@ -455,71 +410,11 @@ const handlers = {
             }
         }
     },
-    'host:dev': async () => {
-        await runMaybe('bash', ['scripts/cpanel-apply-prebuilt-release.sh', 'staging'])
-        if (options.dryRun) {
-            console.log('Would apply the dev-tier prebuilt release on this host.')
-            return
-        }
-        console.log('Applied the dev-tier prebuilt release on this host.')
-    },
-    'host:production': async () => {
-        await runMaybe('bash', ['scripts/cpanel-apply-prebuilt-release.sh', 'production'])
-        if (options.dryRun) {
-            console.log('Would apply the production prebuilt release on this host.')
-            return
-        }
-        console.log('Applied the production prebuilt release on this host.')
-    },
-    'remote:dev': async () => {
-        const [command, ...args] = buildRemoteDeployCommand('staging')
-        await runMaybe(command, args)
-        if (options.dryRun) {
-            console.log('Would SSH to the cPanel host and apply the dev-tier prebuilt release there.')
-            return
-        }
-        console.log('Triggered the dev-tier prebuilt release on the remote cPanel host.')
-    },
-    'remote:production': async () => {
-        const [command, ...args] = buildRemoteDeployCommand('production')
-        await runMaybe(command, args)
-        if (options.dryRun) {
-            console.log('Would SSH to the cPanel host and apply the production prebuilt release there.')
-            return
-        }
-        console.log('Triggered the production prebuilt release on the remote cPanel host.')
-    },
     'smoke:dev': async () => {
         await runMaybe(nodeCommand, ['scripts/smoke-check.mjs', '--base-url', 'https://dev.diiii.xyz'])
     },
     'smoke:production': async () => {
         await runMaybe(nodeCommand, ['scripts/smoke-check.mjs', '--base-url', 'https://di-studio.xyz'])
-    },
-    'build:dev': async () => {
-        await runMaybe(nodeCommand, ['scripts/stage-cpanel-nodeapp-release.mjs'], {
-            env: {
-                ...process.env,
-                DEPLOY_ENV: 'staging'
-            }
-        })
-        if (options.dryRun) {
-            console.log('Would build the local dev-tier cPanel bundle in .deploy/cpanel/.')
-            return
-        }
-        console.log('Built the local dev-tier cPanel bundle in .deploy/cpanel/.')
-    },
-    'build:production': async () => {
-        await runMaybe(nodeCommand, ['scripts/stage-cpanel-nodeapp-release.mjs'], {
-            env: {
-                ...process.env,
-                DEPLOY_ENV: 'production'
-            }
-        })
-        if (options.dryRun) {
-            console.log('Would build the local production cPanel bundle in .deploy/cpanel/.')
-            return
-        }
-        console.log('Built the local production cPanel bundle in .deploy/cpanel/.')
     }
 }
 

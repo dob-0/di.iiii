@@ -38,7 +38,7 @@ const APP_SEGMENTS = [
 //
 // `wcc` is deliberately NOT here: it is both a directory in public/ AND a real
 // space, which is why nginx.conf carries a hand-written `location ~ ^/wcc/?$`
-// block (mirrored in public/.htaccess) to send the bare path to the app. That
+// block to send the bare path to the app. That
 // exception is the cost of the collision — see src/works/works.js.
 const STATIC_SEGMENTS = [
     'assets', 'basis', 'brand', 'draco', 'fonts', 'get', 'og',

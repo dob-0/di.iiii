@@ -12,7 +12,7 @@ const mailer = require('../mailer')
 // self-host setups). Must stay identical across processes/restarts on the
 // same deployment — a random-per-process secret breaks state verification
 // whenever the authorize and callback hops land on different processes
-// (e.g. cPanel/Passenger spawning or recycling workers).
+// (e.g. a process manager spawning or recycling workers).
 const deriveFallbackStateSecret = (oauth) => {
   const material = [oauth?.github?.clientSecret, oauth?.google?.clientSecret]
     .filter(Boolean)

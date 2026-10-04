@@ -17,7 +17,6 @@ serverXR/src/spaceStore.js            ← space/project metadata CRUD
 serverXR/src/projectStore.js          ← project ops and document CRUD
 serverXR/src/authSession.js           ← session cookie auth
 serverXR/src/sharedRuntime.js         ← server-side use of shared/ schema
-serverXR/ecosystem.config.js          ← PM2 process config
 serverXR/Dockerfile                   ← container build (shared with IE)
 ```
 
@@ -77,9 +76,9 @@ db.pragma('foreign_keys = ON')
 ```
 
 `node:sqlite` was chosen deliberately (see `docs/ai/golden_rules.md`):
-`better-sqlite3` has no prebuilt binary for this Node version / no C++
-toolchain on the retired cPanel host, and `node-sqlite3-wasm` OOMs under
-CloudLinux LVE memory caps. `DB_PATH` defaults to `{DATA_ROOT}/di.db`.
+`better-sqlite3` needs a native build (no prebuilt binary for this Node
+version), and `node-sqlite3-wasm` OOMs under memory caps — both first failed
+on the old shared host, and the built-in driver keeps the image free of native deps. `DB_PATH` defaults to `{DATA_ROOT}/di.db`.
 Override with the `DB_PATH` env var.
 
 ### Prepared Statement Pattern
@@ -140,7 +139,7 @@ Role model: `viewer` | `editor` | `admin`. Role is stored in the session, not in
 - Never use empty `catch {}` — log with context
 - Never let auth errors silently fall through to a 200 response
 - Ops that fail validation must return 4xx, never silently drop
-- Server startup failures must exit with a non-zero code — PM2 will restart
+- Server startup failures must exit with a non-zero code — Docker's restart policy restarts the container
 
 ---
 

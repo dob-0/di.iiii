@@ -6,7 +6,6 @@ Short routing guide for AI agents working in `scripts/`.
 
 - deploy helpers and promotion wrappers
 - environment file writers
-- cPanel release staging
 - smoke checks, asset sync, public-repo sync, and dev-stack helpers
 - repository maintenance automation such as AI-doc sync/check scripts
 

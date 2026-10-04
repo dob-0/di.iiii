@@ -1224,8 +1224,8 @@ router.delete('/api/auth/session', (req, res) => {
   res.status(204).end()
 })
 
-// Dynamic, auth-scoped JSON — never let a CDN/edge cache (e.g. LiteSpeed LSCache on
-// cPanel) serve a stale or cross-user response for these. Asset/static routes set
+// Dynamic, auth-scoped JSON — never let a CDN/edge cache serve a stale or
+// cross-user response for these. Asset/static routes set
 // their own explicit Cache-Control and are unaffected.
 router.use('/api', (req, res, next) => {
   res.setHeader('Cache-Control', 'no-store')
@@ -1443,9 +1443,9 @@ approvalGate.registerReauthorizer('spaces.patch', (args, subject, actorType) => 
 approvalGate.registerReauthorizer('spaces.delete', (args, subject, actorType) => currentlyOwnerOrAdmin(args?.spaceId, actorType, subject))
 
 // ── One-click GitHub sync: webhook receiver (signature-authed, pre-gate) ──────
-// Default loopback works on a normal TCP listen; under Passenger (cPanel) the app
-// is fronted by a Unix socket and nothing binds config.port, so SELF_API_URL must
-// point at the server's own public origin (e.g. https://di-studio.xyz/serverXR).
+// Default loopback works on a normal TCP listen (the Docker server listens on
+// config.port). SELF_API_URL overrides it for a host where the process does not
+// bind that port, and must then point at the server's own public origin.
 const internalApiBase = () =>
   process.env.SELF_API_URL?.replace(/\/$/, '') || `http://127.0.0.1:${config.port}${config.basePath || ''}`
 const internalHeaders = () => ({ 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${config.internalApiToken}` })
@@ -1475,7 +1475,7 @@ async function uploadSyncedAsset(base, projectId, rel, buf) {
 }
 
 // Assets bigger than this are skipped (and reported) rather than buffered
-// through base64 + multipart under cPanel/LVE memory limits.
+// through base64 + multipart in the server's memory.
 const MAX_SYNC_ASSET_BYTES = 30 * 1024 * 1024
 
 // Pull the linked repo into the space via the GitHub App installation token,

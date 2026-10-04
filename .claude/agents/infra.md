@@ -28,7 +28,7 @@ cd serverXR && docker build .
 
 **Current deploy:** push `dev` → `deploy-vps-dev.yml` → the dev tier, dev.diiii.xyz; push `main` →
 `deploy-vps.yml` → prod, diiii.xyz (GHCR build + SSH into the Hetzner VPS, Docker Compose restart).
-cPanel is legacy/fallback only — see `docs/deploy/LIVE_DEPLOY.md` for current deploy truth.
+There is no other path — see `docs/deploy/LIVE_DEPLOY.md` for current deploy truth.
 
 ## Done criteria
 

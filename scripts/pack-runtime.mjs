@@ -16,8 +16,7 @@
  * playwright), every test, every doc, .git. An artist installs a product.
  *
  * The build runs under DI_PROFILE=local, which leaves out di-studio.xyz's
- * hosting furniture — the install scripts, the OpenGraph images, the cPanel
- * php shims — and keeps the studio's own pieces, because an install that
+ * hosting furniture — the install scripts, the OpenGraph images — and keeps the studio's own pieces, because an install that
  * cannot open the owner's own exhibition offline is not an offline install.
  *
  *   npm run di:pack                 # local: the program and the works

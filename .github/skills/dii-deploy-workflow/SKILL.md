@@ -1,6 +1,6 @@
 ---
 name: dii-deploy-workflow
-description: 'Promote code from dev to main, run prebuilt cPanel releases, verify hosts, and handle emergency hotfixes. Use when deploying, releasing, or deciding whether a change is ready for production.'
+description: 'Promote code from dev to main, verify the VPS deploy, and handle emergency hotfixes. Use when deploying, releasing, or deciding whether a change is ready for production.'
 argument-hint: 'Describe the deployment or promotion task'
 ---
 
@@ -8,7 +8,6 @@ argument-hint: 'Describe the deployment or promotion task'
 
 ## When to Use
 - You are promoting code from dev to main for production.
-- A prebuilt cPanel release artifact needs to be created or applied.
 - You need to smoke-test a host after deploy.
 - A hotfix needs to reach production outside the normal branch flow.
 
@@ -16,9 +15,8 @@ argument-hint: 'Describe the deployment or promotion task'
 Advance code through the correct branch path, verify the host, and document the deploy without leaking private host details.
 
 ## Branch Model
-- dev: active development lane
-- main: production lane — push here triggers the deploy pipeline
-- cpanel-production: prebuilt artifact branch consumed by cPanel Git Version Control (auto-updated by CI)
+- dev: active development lane — push here deploys the dev tier (https://dev.diiii.xyz) via deploy-vps-dev.yml
+- main: production lane — push here runs deploy-vps.yml (GHCR build + SSH to the Hetzner VPS)
 - do not start routine feature work on main
 - use main as a starting point only for emergency production hotfixes
 
@@ -26,18 +24,18 @@ Advance code through the correct branch path, verify the host, and document the 
 1. Confirm the current branch is clean and on dev.
 2. Run the test suite and build before promoting.
 3. Promote to main.
-4. GitHub Actions builds, tests, and pushes to cpanel-production automatically.
-5. Wait 1-2 minutes for cPanel to apply the published branch.
+4. GitHub Actions (`deploy-vps.yml`) runs the CI suite, builds images to GHCR, and restarts the production Compose project on the VPS.
+5. Wait for the `Deploy VPS (GHCR + SSH)` run to finish.
 
 ## Commands
 - Promote to production: `git checkout main && git merge dev --no-edit && git push origin main && git checkout dev`
-- Check CI: `gh run list --workflow publish-cpanel-prebuilt-v2.yml`
-- Verify production host: `npm run smoke production`
+- Check CI: `gh run list --workflow deploy-vps.yml`
+- Verify production host: `npm run deploy -- smoke production`
 
 ## Smoke Check After Deploy
-1. Wait 1-2 minutes for cPanel cron to apply the published branch.
+1. Wait for the deploy workflow run to finish.
 2. Check the health endpoint manually or via smoke command.
-3. Confirm the release manifest version matches what was promoted.
+3. Confirm `release.gitCommit` in `/serverXR/api/health` matches what was promoted.
 
 ## Emergency Hotfix Path
 1. Branch from main directly.
@@ -52,7 +50,7 @@ Advance code through the correct branch path, verify the host, and document the 
 - publish state or live pointer changes
 - deploy automation script changes
 - env variable shape changes
-- changes to the cPanel Node.js App bootstrap or entrypoint
+- changes to the Dockerfiles, compose files, or Caddy/nginx config
 
 ## What Can Go Straight to Main
 - frontend-only style changes with passing tests and build
@@ -64,13 +62,13 @@ Advance code through the correct branch path, verify the host, and document the 
 - Automation: ../../scripts/AGENTS.md
 - Deploy docs: ../../deploy/AGENTS.md
 - Shortcut commands: package.json scripts section
-- cPanel bundle: ../../deploy/cpanel/DEPLOY.md
-- Prebuilt workflow: ../../.github/workflows/publish-cpanel-prebuilt-v2.yml
+- VPS setup: ../../docs/deploy/VPS_DOCKER_DEPLOY.md
+- Deploy workflows: ../../.github/workflows/deploy-vps.yml, ../../.github/workflows/deploy-vps-dev.yml
 
 ## Validation
 - Before promoting: `npm run test && npm run build`
 - Backend contract changes: `npm run test:server-contracts` first
-- After deploy: `npm run smoke`
+- After deploy: `npm run deploy -- smoke production` (or `smoke dev`)
 
 ## Completion Checks
 - No routine work started on main.

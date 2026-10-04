@@ -1,12 +1,8 @@
 # VPS Docker Deploy (GHCR + SSH)
 
-This is the new production deploy path, replacing cPanel as the primary
-target. It builds the `server` and `client` Docker images, pushes them to
+This is the production and dev-tier deploy path (the legacy cPanel pipeline
+was removed from the repo on 2026-09-16). It builds the `server` and `client` Docker images, pushes them to
 GHCR, then SSHes into the VPS to pull and restart the Docker Compose stack.
-
-cPanel (`publish-cpanel-prebuilt-v2.yml`, `cpanel-staging`/`cpanel-production`
-branches) is untouched and remains a documented fallback until its hosting
-term expires. Do not delete it as part of adopting this path.
 
 ## Workflow
 

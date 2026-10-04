@@ -50,15 +50,14 @@ jobs:
         run: npm test
 
       # The artifact `curl … /get | sh` installs — FIRST, because it is the one
-      # thing a release must produce. It used to sit behind the cPanel bundle
-      # below, so a legacy path the repo moved off in July 2026 could stop a
-      # release outright: v0.2.1 and v0.3.0 both died there and published nothing.
+      # thing a release must produce. It used to sit behind a legacy bundle step
+      # the repo moved off in July 2026, which could stop a release outright:
+      # v0.2.1 and v0.3.0 both died there and published nothing.
       #
       # Built from the tag rather than package.json so the filename always
       # matches the tag the installer resolves from the release feed — a
       # mismatch there is a 404 for every person who pastes the line.
-      # Its own build, not the cPanel one: that step sets VITE_API_BASE_URL for
-      # a different topology, and a local install is same-origin.
+      # A local install is same-origin, so this build sets no VITE_API_BASE_URL.
       - name: Pack the di runtime
         env:
           # The tag when a human pushed one, the input when the promotion
@@ -70,54 +69,16 @@ jobs:
           echo "packing $VERSION"
           npm run di:pack -- --version="$VERSION"
 
-      # Legacy: deploy moved to the VPS on 2026-07-15 (docs/deploy/LIVE_DEPLOY.md).
-      # These bundles are a fallback nobody currently uses, and the step never
-      # received VITE_API_TOKEN in the first place, so it could only ever fail.
-      # Kept, but they can no longer take the release down with them.
-      - name: Can the legacy cPanel bundle be built
-        id: cpanel
-        env:
-          VITE_API_TOKEN: ${{ secrets.VITE_API_TOKEN }}
-        run: |
-          if [ -n "${VITE_API_TOKEN:-}" ]; then
-            echo 'possible=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'possible=false' >> "$GITHUB_OUTPUT"
-            echo '::notice::VITE_API_TOKEN is not set - skipping the legacy cPanel bundles. The di runtime artifact is unaffected.'
-          fi
-
-      - name: Stage cPanel release
-        if: steps.cpanel.outputs.possible == 'true'
-        env:
-          VITE_API_BASE_URL: /serverXR
-          VITE_API_TOKEN: ${{ secrets.VITE_API_TOKEN }}
-        run: npm run deploy:cpanel
-
-      - name: Zip dist
-        if: steps.cpanel.outputs.possible == 'true'
-        run: |
-          cd .deploy/cpanel/public_html
-          zip -r ../../../dist.zip .
-
-      - name: Zip cPanel release
-        if: steps.cpanel.outputs.possible == 'true'
-        run: |
-          cd .deploy/cpanel
-          zip -r ../../cpanel-release.zip .
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           # Named explicitly, because on a workflow_call the ref is a branch and
           # the action would otherwise try to release from it.
           tag_name: ${{ inputs.version && format('v{0}', inputs.version) || github.ref_name }}
-          # The cPanel zips are skipped whenever the legacy secret is absent, so
-          # their patterns match nothing on a normal release. That must not fail
-          # the upload of the artifact people actually install.
-          fail_on_unmatched_files: false
+          # Both files are always produced by the pack step above, so a missing
+          # one means the artifact people install is missing: fail loudly.
+          fail_on_unmatched_files: true
           files: |
-            dist.zip
-            cpanel-release.zip
             dist-runtime/di-runtime-*.tar.gz
             dist-runtime/checksums.txt
         env:

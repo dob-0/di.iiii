@@ -290,9 +290,8 @@ accepts the old name.
 
 A CLI handed `staging` fails with `"staging" is now "dev"` — no silent alias.
 
-Two survivors, both left for the owner to decide: the legacy cPanel pipeline (dead since
-2026-07-15 — `publish-cpanel-prebuilt-v2.yml`, `scripts/cpanel-*`, branch `cpanel-staging`) and the
-Android package id `xyz.distudio.chat.staging` (changing it makes a new app).
+One survivor, left for the owner to decide: the Android package id `xyz.distudio.chat.staging`
+(changing it makes a new app).
 
 The line in "Amended 2026-08-19, same day" — "Stage collided with the deploy tier" — is history and stays as it was said.
 It explains a 2026-08-19 decision; the tier it collided with is now called dev.

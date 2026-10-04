@@ -114,7 +114,6 @@ lifecycle (`space-new/pull/push/sync/bundle`), `self-host.mjs`, doc-sync
 Daily work ─▶ dob-0/di.iiii (primary public repo)
                  ├─ dev branch  ─▶ dev.diiii.xyz (the dev tier)
                  └─ main branch ─▶ diiii.xyz (prod)
-                        └─ cpanel-* release branches ─▶ cPanel hosting
 ```
 
 - Branch flow: **`dev → main`**. Don't start routine work on `main` (hotfix

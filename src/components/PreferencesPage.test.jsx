@@ -183,7 +183,7 @@ describe('PreferencesPage', () => {
                     deployEnv: 'dev',
                     sourceRef: 'dev',
                     gitCommit: 'abcdef1234567890',
-                    releaseId: 'cpanel-20260415-150000',
+                    releaseId: 'release-20260415-150000',
                     generatedAt: '2026-04-15T15:00:00.000Z'
                 }
             })
@@ -205,7 +205,7 @@ describe('PreferencesPage', () => {
         // was really testing that nobody had touched package.json, and it broke
         // the moment someone did.
         expect(screen.getByText(__APP_VERSION__)).toBeInTheDocument()
-        expect(await screen.findByText('cpanel-20260415-150000')).toBeInTheDocument()
+        expect(await screen.findByText('release-20260415-150000')).toBeInTheDocument()
         expect(screen.getByText('abcdef1234567890')).toBeInTheDocument()
 
         const snapshotSection = screen.getByText('Session Snapshot').closest('section')

@@ -14,8 +14,9 @@ Two ways to pull assets into a space from Google Drive (Studio → Project Asset
 
 ## Server env
 
-All optional and baked into `.env.generated` via the `write-server-env.mjs`
-allowlist (put them in `~/.config/dii/<env>.deploy.env`, like the GitHub-sync vars).
+All optional. Set them in the VPS checkout's `.env` (`DEV_`-prefixed for the dev tier); a var
+reaches the server only if the `server` service in `docker-compose.yml` (or
+`docker-compose.dev.yml`) passes it through.
 
 | Var | Needed for | Notes |
 | --- | --- | --- |
@@ -50,8 +51,8 @@ connects consent to `drive.file` only.
   to obtain a refresh token, so imports keep working after the access token expires.
 - Tokens live in `user_drive_tokens` (one row per user), access/refresh encrypted
   with AES-256-GCM keyed off the server session secret (`driveTokenStore.js`).
-- All Google HTTP calls use `node:https` — never global `fetch` (undici WASM-OOMs
-  under cPanel/LVE; see known-fixes).
+- All Google HTTP calls use `node:https` — never global `fetch` (undici's WASM parser
+  OOMs under a memory cap; see known-fixes).
 - Imported bytes are stored in the normal per-space asset store, identical to
   uploads, so nothing downstream needs to know the origin.
 

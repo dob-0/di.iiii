@@ -4,7 +4,7 @@
 //   2. GOOGLE_API_KEY present — Drive API v3 gives real metadata, public folder
 //      listing (import a whole shared folder), and media download by id.
 // Uses node:https directly, never global fetch: undici instantiates a WASM HTTP
-// parser that OOMs under cPanel/LVE ("WebAssembly.Instance(): Out of memory").
+// parser that OOMed under a virtual-memory cap ("WebAssembly.Instance(): Out of memory").
 
 const https = require('node:https')
 

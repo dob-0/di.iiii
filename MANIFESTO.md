@@ -111,51 +111,6 @@ Minimum note format:
 
 Keep it brief and actionable. Capture the path that worked, not a long narrative.
 
-### Shortcut: Smart Dev-Tier Deploy (No Guesswork)
-
-> Legacy cPanel-era path, dead since 2026-07-15 — kept as a record, not a route (its `:staging`
-> npm scripts are gone). The dev tier
-> (`dev.diiii.xyz`, its only address) deploys by pushing `dev` (`deploy-vps-dev.yml`).
-
-- Problem: Deploy request arrives while the branch has uncommitted or mixed-scope changes.
-- Short way:
-	1. Never deploy from a dirty worktree unless explicitly approved.
-	2. Commit only the intended deploy scope (or clearly approved full scope), then deploy from that commit.
-	3. Run `npm run deploy:staging` from `dev` only (the cPanel-era command).
-	4. Verify publish pipeline status, then run dev-tier smoke checks.
-- Verification:
-	- `git status --short --branch` shows clean worktree before deploy.
-	- `gh run list --workflow publish-cpanel-prebuilt-v2.yml` shows the latest dev-tier publish succeeded.
-	- `npm run deploy -- smoke staging` passes.
-	- `https://dev.diiii.xyz` and `https://dev.diiii.xyz/serverXR/api/health` respond correctly.
-- Source files or commands used:
-	- `scripts/deploy.mjs`
-	- `CURRENT.md` deploy commands
-	- `npm run deploy:staging`
-	- `npm run deploy -- smoke staging`
-
-### Shortcut: Dev Tier Not Fresh After Push
-
-> Legacy cPanel-era path, dead since 2026-07-15 — kept as a record, not a route.
-
-- Problem: the dev tier still serves an old build or throws runtime errors after it was updated.
-- Short way:
-	1. Check publish workflow result for `publish-cpanel-prebuilt-v2.yml`.
-	2. If `Publish target branch` fails with missing `deploy/cpanel/cpanel.prebuilt.yml`, restore that file.
-	3. Commit and run `npm run deploy:staging`.
-	4. Confirm `origin/cpanel-staging` moved to a newer commit.
-- Verification:
-	- Workflow conclusion is `success`.
-	- `git ls-remote --heads origin staging cpanel-staging` shows updated prebuilt branch head.
-	- The dev tier (dev.diiii.xyz) loads node palette and node inspector without the prior runtime error.
-- Source files or commands used:
-	- `deploy/cpanel/cpanel.prebuilt.yml`
-	- `.github/workflows/publish-cpanel-prebuilt-v2.yml`
-	- `npm run deploy:staging`
-	- `gh run list --workflow publish-cpanel-prebuilt-v2.yml`
-
----
-
 ### Shortcut: White Screen / TDZ Crash in Production (`Cannot access X before initialization`)
 
 - Problem: App loads fine locally and in dev build, but production build shows a white screen or console `TDZ` / `Cannot access 'X' before initialization` errors.

@@ -107,26 +107,9 @@ commit back into `dev` so the branches do not drift apart.
 4. `docker compose logs caddy` if TLS/routing looks wrong
 5. browser console and network panel
 
-## cPanel Fallback (legacy)
-
-cPanel is no longer the live path but remains a documented fallback until
-its hosting term expires. `publish-cpanel-prebuilt-v2.yml`'s automatic push
-trigger was disabled (2026-07-15, #63) — its smoke-check was failing every
-run since the DNS cutover, and it was burning CI minutes for a host real
-traffic no longer reaches. It still runs via `workflow_dispatch` if cPanel
-is ever needed again.
-
-Canonical pieces (unchanged, kept for that fallback):
-
-- workflow: [.github/workflows/publish-cpanel-prebuilt-v2.yml](../../.github/workflows/publish-cpanel-prebuilt-v2.yml)
-  (manual dispatch only)
-- release bundle: `.deploy/cpanel/`
-- apply script: [scripts/cpanel-apply-prebuilt-release.sh](../../scripts/cpanel-apply-prebuilt-release.sh)
-- `npm run deploy:host:*` — only for the matching cPanel clone/host shell
-- cron-based auto-apply, host runtime contract, and recovery steps: see
-  [CPANEL_PREBUILT_DEPLOY.md](CPANEL_PREBUILT_DEPLOY.md) and
-  [legacy/README.md](legacy/README.md)
+## `npm run deploy:*`
 
 `npm run deploy:dev` / `deploy:production` (via `scripts/deploy.mjs`)
-still just push `dev` / merge-and-push `main` — same git operations as
-above, regardless of which workflow is currently wired to that branch.
+just push `dev` / merge-and-push `main` — the same git operations as above.
+`npm run deploy -- smoke dev|production` runs `scripts/smoke-check.mjs`
+against the matching host.

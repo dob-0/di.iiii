@@ -20,7 +20,7 @@ const STATE_TTL_MS = 10 * 60 * 1000
 // self-host setups). Must stay identical across processes/restarts on the
 // same deployment — a random-per-process secret breaks state verification
 // whenever the authorize and callback hops land on different processes
-// (e.g. cPanel/Passenger spawning or recycling workers).
+// (e.g. a process manager spawning or recycling workers).
 const fallbackStateSecret = () => {
   const material = [config.oauth?.github?.clientSecret, config.oauth?.google?.clientSecret]
     .filter(Boolean)

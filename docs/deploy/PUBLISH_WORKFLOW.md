@@ -2,36 +2,6 @@
 
 How to push content to a live public route (`/<space>`).
 
-## cPanel Safety Rules
-
-> cPanel is the retired fallback (prod left it 2026-07-15). The live tiers are the dev tier,
-> `https://dev.diiii.xyz` (branch `dev`), and production (branch `main`), both on the VPS — see
-> [LIVE_DEPLOY.md](LIVE_DEPLOY.md). The cPanel branch names and the `staging` argument below are
-> cPanel identifiers and stay as they are.
-
-If you deploy to cPanel (`cpanel-staging` / `cpanel-production`), follow these rules to avoid backend outages.
-
-- Do not add native Node dependencies (C++ addons) in `serverXR` on cPanel deploy branches. The SQLite driver is the Node.js built-in `node:sqlite` — zero native deps.
-- cPanel hosts may not have compatible `glibc`/Python toolchains for native addon install/rebuild.
-- The cPanel publish workflow now enforces this with `scripts/check-cpanel-compat.mjs`.
-
-Safe cPanel update flow:
-
-```bash
-cd ~/repositories/di.iiii-staging
-git fetch --prune origin
-git checkout cpanel-staging
-git pull --ff-only origin cpanel-staging
-bash scripts/cpanel-apply-prebuilt-release.sh staging
-curl -sS -i --max-time 20 https://dev.diiii.xyz/serverXR/api/health | head -n 30
-```
-
-Notes:
-
-- `scripts/cpanel-poll-deploy.sh staging` only applies when the tracked commit changes.
-- If it says `already up to date`, run `bash scripts/cpanel-apply-prebuilt-release.sh staging` to force re-apply.
-- You can opt into forced apply behavior by setting `CPANEL_APPLY_WHEN_UPTODATE=1` before running poll.
-
 ## Visual Quality Checklist (public teaser pages)
 
 Before publishing a teaser page on `/<space>`:

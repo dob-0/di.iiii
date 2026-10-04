@@ -75,8 +75,8 @@ phase gets its own doc and its own review.
 
 ## What this proposal deliberately avoids
 
-- Running an IPFS daemon inside serverXR (cPanel/LVE memory ceiling — the same
-  constraint that banned undici; pinning happens from scripts/CI, not the server)
+- Running an IPFS daemon inside serverXR (the server container's memory cap — the
+  same kind of constraint that banned undici; pinning happens from scripts/CI, not the server)
 - Any change to auth, publish state ownership, or the op-log format in Phases 1–2
 - Token/secret material in bundles or pinned content (already stripped by design)
 

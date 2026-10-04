@@ -5,7 +5,7 @@ Short routing guide for AI agents working in `deploy/`.
 ## What This Area Owns
 
 - versioned deployment docs
-- cPanel env examples and release templates
+- VPS backup, restore, and housekeeping scripts and units
 - checked-in deploy contracts that explain how artifacts should be staged and applied
 
 ## VPS Docker Deploy (current production path, live since 2026-07-15)
@@ -19,8 +19,7 @@ Short routing guide for AI agents working in `deploy/`.
 - Required secrets/variables are configured on both prod and the dev tier (dev.diiii.xyz; GitHub
   environment `dev`) as of 2026-07-16 — this is
   the live path, not a future/additive one.
-- cPanel (`publish-cpanel-prebuilt-v2.yml`, `cpanel-staging`/`cpanel-production`) is untouched and
-  remains the documented fallback until its hosting term expires.
+- There is no other deploy path: the legacy cPanel pipeline was removed from the repo on 2026-09-16.
 
 ## When To Edit Here
 
@@ -48,8 +47,6 @@ Short routing guide for AI agents working in `deploy/`.
 - `npm run docs:ai:check`
 - cross-check deploy docs against:
   - `scripts/deploy.mjs`
-  - `deploy/cpanel/DEPLOY.md`
-  - `.github/workflows/publish-cpanel-prebuilt-v2.yml`
   - `.github/workflows/deploy-vps.yml` and `docs/deploy/VPS_DOCKER_DEPLOY.md`
 
 ## One-Line Summary

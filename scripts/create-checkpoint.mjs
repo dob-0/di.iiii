@@ -29,7 +29,7 @@ const { values } = parseArgs({
 const repoRoot = process.cwd()
 const environment = String(values.environment || 'local').trim() || 'local'
 const note = String(values.note || '').trim()
-const releasePath = path.resolve(repoRoot, values.release || '.deploy/cpanel/release.json')
+const releasePath = values.release ? path.resolve(repoRoot, values.release) : ''
 const smokePath = values.smoke ? path.resolve(repoRoot, values.smoke) : ''
 const outputDir = path.resolve(repoRoot, values['output-dir'] || 'docs/checkpoints')
 

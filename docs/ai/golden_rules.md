@@ -398,15 +398,15 @@ function findSpace(id) { return db.prepare('SELECT * FROM spaces WHERE id = ?').
 
 ---
 
-### cPanel SQLite: use node:sqlite, never better-sqlite3 or WASM
+### SQLite: use node:sqlite, never better-sqlite3 or WASM
 
-**Rule:** On cPanel shared hosting, the only working SQLite driver is the Node.js built-in `node:sqlite` (`DatabaseSync`). Do not use `better-sqlite3` (no prebuilt for Node 24, no C++ toolchain on host) or `node-sqlite3-wasm` (CloudLinux LVE memory cap blocks WASM instantiation).
+**Rule:** The SQLite driver is the Node.js built-in `node:sqlite` (`DatabaseSync`). Do not use `better-sqlite3` (native build, no prebuilt for Node 24) or `node-sqlite3-wasm` (WASM instantiation fails under a memory cap).
 
-**Why:** Both alternatives crash on cPanel's CloudLinux environment. `better-sqlite3` fails with `gyp ERR! not ok` during `npm install`. `node-sqlite3-wasm` throws `RangeError: WebAssembly.Instance(): Out of memory` at startup. `node:sqlite` is stable since Node 22.5+, requires zero native compilation, and works inside the LVE memory limit.
+**Why:** Both alternatives crashed on the old cPanel/CloudLinux host (removed 2026-09-16), and the server container still runs under a memory cap. `better-sqlite3` fails with `gyp ERR! not ok` during `npm install`. `node-sqlite3-wasm` throws `RangeError: WebAssembly.Instance(): Out of memory` at startup. `node:sqlite` is stable since Node 22.5+, requires zero native compilation, and works inside the LVE memory limit.
 
 **How:** `const { DatabaseSync } = require('node:sqlite')`. The `better-sqlite3` surface (`.pragma()`, `.transaction()`) is patched via a compat layer in `serverXR/src/db.js`. `StatementSync` already accepts variadic positional args natively — no wrapping needed.
 
-**Files:** `serverXR/src/db.js`, `scripts/check-cpanel-compat.mjs`
+**Files:** `serverXR/src/db.js`
 
 ---
 

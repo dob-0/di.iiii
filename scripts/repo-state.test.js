@@ -385,7 +385,7 @@ describe('isLiveProcessCmdline', () => {
 })
 
 describe('isNoiseBranch', () => {
-  it.each(['dependabot/npm_and_yarn/foo', 'cpanel-staging', 'cpanel-production', 'emily-algovrithm'])(
+  it.each(['dependabot/npm_and_yarn/foo', 'emily-algovrithm'])(
     'excludes %s',
     (name) => expect(isNoiseBranch(name)).toBe(true)
   )

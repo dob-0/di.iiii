@@ -1574,7 +1574,7 @@ describe('server write contracts', () => {
             deployEnv: 'dev',
             sourceRef: 'dev',
             gitCommit: 'abcdef1234567890',
-            releaseId: 'cpanel-20260412-120000',
+            releaseId: 'release-20260412-120000',
             generatedAt: '2026-04-12T12:00:00.000Z'
         }
         const server = await startServer({ releaseManifest })
@@ -2014,7 +2014,7 @@ describe('server write contracts', () => {
     }, 20000)
 
     // undici (global fetch) instantiates a WASM HTTP parser that OOMs under
-    // cPanel/LVE memory limits — every outbound HTTP call in serverXR must go
+    // virtual-memory caps — every outbound HTTP call in serverXR must go
     // through httpClient.js (node:http/https). This bug class shipped twice
     // (GitHub sync, then syncRoutes); this contract keeps it at zero.
     it('serverXR source never calls global fetch', async () => {

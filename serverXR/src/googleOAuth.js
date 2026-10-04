@@ -1,5 +1,5 @@
 // Minimal Google OAuth2 client for the "Connect your Drive" flow, over node:https
-// (never global fetch — undici WASM-OOMs under cPanel/LVE). Separate from the
+// (never global fetch — undici's WASM parser OOMs under a memory cap). Separate from the
 // passport login strategy: this requests incremental Drive scope + offline access
 // so we get a refresh token and can import on the user's behalf later.
 

@@ -35,7 +35,7 @@ function registerSyncRoutes(router, {
   const { liveSync } = config
 
   // httpRequest (node:https), never global fetch — undici's WASM HTTP parser
-  // OOMs under cPanel/LVE limits (same fix as the GitHub-sync path).
+  // OOMs under memory caps (same fix as the GitHub-sync path).
   const liveFetch = async (urlPath, opts = {}) => {
     const url = `${liveSync.url}${urlPath}`
     const headers = { Accept: 'application/json', ...opts.headers }

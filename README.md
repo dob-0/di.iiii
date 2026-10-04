@@ -193,8 +193,9 @@ Both wired up and verified end-to-end (2026-07-16): GitHub secrets/variables are
 workflows sync tracked config from git and reload Caddy as needed. See
 `docs/deploy/VPS_DOCKER_DEPLOY.md` for the full setup this relies on.
 
-`npm run deploy:*` (`scripts/deploy.mjs`) is the older cPanel-era path, kept only as a documented
-fallback (see `docs/deploy/legacy/`) — it is not how `di-studio.xyz` is deployed today.
+`npm run deploy:dev` / `deploy:production` (`scripts/deploy.mjs`) are thin wrappers over the same
+pushes (production merges `origin/dev` into `main`); `npm run deploy -- smoke <dev|production>`
+runs the smoke check against the deployed host.
 
 Rules:
 
@@ -217,8 +218,6 @@ flowchart LR
     branchMain --> ghcrProd["GHCR build<br/>deploy-vps.yml"]
     ghcrDev --> vpsDev["Hetzner VPS<br/>dev tier Compose project<br/>→ dev.diiii.xyz"]
     ghcrProd --> vpsProd["Hetzner VPS<br/>production Compose project<br/>→ di-studio.xyz"]
-    branchMain -.disabled fallback.-> release["cpanel-* release branches"]
-    release -.-> hosting["cPanel hosting<br/>(legacy, workflow_dispatch-only)"]
 ```
 
 ## Read Next

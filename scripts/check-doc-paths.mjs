@@ -81,8 +81,8 @@ const IGNORE = [
     /^scripts\/di-sync\.mjs$/,
     /^scripts\/audit\//,
     /^scripts\/lib\//,
-    // cPanel's "startup file" field, which is relative to the app root named
-    // two lines above it — not a path from the repo root.
+    // serverXR/README.md names its entry as `src/index.js`, relative to
+    // serverXR/ — not a path from the repo root.
     /^src\/index\.js$/,
     // Written by `install:export` into a data root; never in the repo.
     /^spaces\/_server-config\.json$/,

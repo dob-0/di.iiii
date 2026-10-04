@@ -40,7 +40,6 @@ CLAUDE.local.md
 *.dii-project.zip
 *.scene.zip
 docs/checkpoints/
-.cpanel.yml
 scratchpad/
 docs/ai/agent-handoff.md
 

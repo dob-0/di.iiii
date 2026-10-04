@@ -20,9 +20,8 @@ const shortSha = (sha) => (sha ? sha.slice(0, 8) : '?')
 const lastPathSegment = (p) => p.split('/').filter(Boolean).pop() || p
 
 // Branches that are never meant to reach dev and would otherwise drown the report in
-// noise that isn't actionable — dependabot PRs, the legacy cPanel artifact branches,
-// and personal scratch branches.
-export const NOISE_BRANCH_PATTERNS = [/^dependabot\//, /^cpanel-/, /^emily/]
+// noise that isn't actionable — dependabot PRs and personal scratch branches.
+export const NOISE_BRANCH_PATTERNS = [/^dependabot\//, /^emily/]
 
 export const isNoiseBranch = (name) => NOISE_BRANCH_PATTERNS.some((re) => re.test(name))
 
