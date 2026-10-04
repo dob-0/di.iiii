@@ -105,18 +105,21 @@ export default function DirectorPanelWindow({ node }) {
 const EMPTY = []
 
 // null while asking, then true or false. Never throws.
+// The answer carries the space it was asked about: when the piece loads, the
+// space changes from none to its own, and an answer kept from "none" must not
+// stand in for one about the real space for even one render.
 function useServerHasSpace(spaceId) {
-    const [here, setHere] = useState(null)
+    const [answer, setAnswer] = useState({ spaceId: null, here: null })
     useEffect(() => {
-        if (!spaceId) { setHere(false); return undefined }
+        if (!spaceId) return undefined
         let alive = true
-        setHere(null)
         listServerSpaces()
-            .then((spaces) => { if (alive) setHere(spaces.some((space) => space?.id === spaceId)) })
-            .catch(() => { if (alive) setHere(false) })
+            .then((spaces) => { if (alive) setAnswer({ spaceId, here: spaces.some((space) => space?.id === spaceId) }) })
+            .catch(() => { if (alive) setAnswer({ spaceId, here: false }) })
         return () => { alive = false }
     }, [spaceId])
-    return here
+    if (!spaceId) return false
+    return answer.spaceId === spaceId ? answer.here : null
 }
 
 function DirectorPanelWindowEditor({ piece, initialSequences, onSaveTiming, spaceMissing = null }) {

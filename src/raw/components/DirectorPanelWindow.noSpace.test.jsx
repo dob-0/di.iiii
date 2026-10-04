@@ -12,7 +12,8 @@ vi.mock('../director/pieces.js', () => ({
     PIECE_IDS: ['algovrithm'],
     loadPiece: vi.fn(async () => PIECE)
 }))
-vi.mock('../director/DirectorPanel.jsx', () => ({ default: () => <div data-testid="panel" /> }))
+const { panelRenders } = vi.hoisted(() => ({ panelRenders: vi.fn() }))
+vi.mock('../director/DirectorPanel.jsx', () => ({ default: () => { panelRenders(); return <div data-testid="panel" /> } }))
 vi.mock('../../services/serverSpaces.js', () => ({ listServerSpaces: vi.fn() }))
 vi.mock('../../services/spaceSettings.js', () => ({
     getSpaceSettings: vi.fn(async () => ({})),
@@ -32,6 +33,23 @@ describe('DirectorPanelWindow on a server without the piece\'s space', () => {
         expect(getSpaceSettings).not.toHaveBeenCalled()
         expect(screen.getByText(/no space called/).textContent).toMatch(/algovrithm/)
         expect(document.body.textContent).not.toMatch(/only piece registered/)
+    })
+
+    // CI on #744 (2026-10-04): when the piece loaded, the "no space" answer kept
+    // from before (asked about no space at all) stood in for the real space for
+    // one render, so the editor flashed with "no space called" and then hid
+    // again while the server was asked. Hold the server's answer and look.
+    it('shows nothing about the space until the server has answered for that space', async () => {
+        vi.clearAllMocks()
+        let answer
+        listServerSpaces.mockReturnValue(new Promise((resolve) => { answer = resolve }))
+        render(<DirectorPanelWindow node={{ values: {} }} />)
+        await waitFor(() => expect(listServerSpaces).toHaveBeenCalled())
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        expect(panelRenders).not.toHaveBeenCalled()
+        expect(document.body.textContent).not.toMatch(/no space called/)
+        answer([{ id: 'hayfilm' }])
+        expect(await screen.findByText(/no space called/)).toBeTruthy()
     })
 
     it('still reads the saved timing when the server does have the space', async () => {
