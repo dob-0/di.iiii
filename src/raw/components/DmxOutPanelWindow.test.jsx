@@ -212,6 +212,43 @@ describe('DmxOutPanelWindow — the lighting desk', () => {
         await waitFor(() => expect(onStatus).toHaveBeenCalledWith('dmx-1', expect.stringMatching(/DI_ALLOW_LAN_DEVICES=1/)))
     })
 
+    // Seen by the node check (2026-10-02): with no server behind /light the
+    // window read "Desk: 0 fixtures, 0 scenes - output OFF", the same words as a
+    // desk that is running with an empty rig.
+    it('says the desk is not running when /light/api/summary cannot be reached', async () => {
+        const onStatus = vi.fn()
+        const fetchImpl = vi.fn(async () => { throw new TypeError('Failed to fetch') })
+        render(desk({ node: node(), values: {}, onStatus, fetchImpl }))
+        await waitFor(() => expect(onStatus).toHaveBeenCalledWith(
+            'dmx-1', expect.stringMatching(/not running on this machine.*di up/)
+        ))
+        expect(onStatus).not.toHaveBeenCalledWith('dmx-1', expect.stringMatching(/Desk: 0 fixtures/))
+    })
+
+    it('does not read a JSON answer that is not a desk summary as an empty running desk', async () => {
+        const onStatus = vi.fn()
+        const fetchImpl = vi.fn(async () => ({
+            ok: true, status: 200,
+            headers: { get: () => 'application/json' },
+            json: async () => ({}),
+        }))
+        render(desk({ node: node(), values: {}, onStatus, fetchImpl }))
+        await waitFor(() => expect(onStatus).toHaveBeenCalledWith('dmx-1', expect.stringMatching(/not running on this machine/)))
+        expect(onStatus).not.toHaveBeenCalledWith('dmx-1', expect.stringMatching(/Desk: 0 fixtures/))
+    })
+
+    it('still says "0 fixtures" for a desk that really is running with an empty rig', async () => {
+        const onStatus = vi.fn()
+        const body = { ...SUMMARY, fixtures: 0, scenes: 0, activeScene: null, activeSceneName: null, fx: { enabled: false } }
+        const fetchImpl = vi.fn(async () => ({
+            ok: true, status: 200,
+            headers: { get: () => 'application/json' },
+            json: async () => body,
+        }))
+        render(desk({ node: node(), values: {}, onStatus, fetchImpl }))
+        await waitFor(() => expect(onStatus).toHaveBeenCalledWith('dmx-1', 'Desk: 0 fixtures, 0 scenes · output OFF'))
+    })
+
     it('offers the way in — a link to the desk itself', async () => {
         const { fetchImpl } = fakeDesk()
         const view = render(desk({ node: node(), values: {}, fetchImpl }))
