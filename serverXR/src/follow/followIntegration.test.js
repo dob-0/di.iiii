@@ -1140,3 +1140,63 @@ describe('an edit made the instant a follow starts is carried', () => {
         expect(objectIds(await readScene(hosting))).toContain('first-follower')
     })
 })
+
+// Gap 5 (2026-10-05, seen on the owner's install: 5 projects in space `open`).
+// A project that exists only on the follower is made EMPTY on the host from the
+// listing. Its content is not a stream of ops a follow carries (it came in as a
+// whole document: an import, a restore), so the host's new copy stayed empty and
+// the comparison refused: "the host's copy is empty and this one is not".
+describe('a project only the follower holds fills the host\'s new copy, with no refusal', () => {
+    let hosting = null
+    let following = null
+    const ONLY = 'only-here'
+    const document = { entities: [{ id: 'chair', name: 'chair' }, { id: 'table', name: 'table' }], nodes: [{ id: 'n1' }], assets: [] }
+    const warned = []
+
+    beforeAll(async () => {
+        hosting = await startServer()
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        const made = await fetch(`${following.baseUrl}/api/spaces/${SPACE}/projects`, {
+            method: 'POST', headers: authHeaders, body: JSON.stringify({ slug: ONLY, title: 'Only Here' })
+        })
+        expect(made.status).toBe(201)
+        const put = await fetch(`${following.baseUrl}/api/projects/${ONLY}/document`, {
+            method: 'PUT', headers: authHeaders, body: JSON.stringify(document)
+        })
+        expect(put.status).toBe(200)
+    })
+
+    afterAll(async () => {
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    const entityIds = async (server) => {
+        const response = await fetch(`${server.baseUrl}/api/projects/${ONLY}/document`, { headers: authHeaders })
+        if (response.status !== 200) return []
+        return ((await response.json()).document?.entities || []).map(entity => entity.id).sort()
+    }
+
+    it('writes this copy into the host\'s empty one, once, and says nothing is wrong', async () => {
+        const follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            log: { warn: line => warned.push(String(line)), info: () => {} }
+        })
+        try {
+            await settle('the host holding the follower\'s project, with its content', async () => {
+                const ids = await entityIds(hosting)
+                return ids.length === 2 ? ids : false
+            }, { timeout: 15_000 })
+            expect(await entityIds(hosting)).toEqual(['chair', 'table'])
+            // nothing refused, nothing owed
+            await settle('the follow saying nothing is wrong', () => follower.state.lastError === null, { timeout: 10_000 })
+            expect(warned.filter(line => /empty and this one is not/.test(line))).toEqual([])
+            // and the copy on this side is the one it was
+            expect(await entityIds(following)).toEqual(['chair', 'table'])
+        } finally {
+            follower.stop()
+        }
+    })
+})
