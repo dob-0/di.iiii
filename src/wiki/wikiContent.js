@@ -1812,6 +1812,25 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-29'
     },
     {
+        id: 'room-quality-lite-full',
+        category: 'Spaces & access',
+        title: 'Lite and Full — a room light enough for a phone',
+        summary: 'A published room is drawn two ways. Full is the work renderer: every lamp a real light, shadows, bloom, the floor\'s reflection. Lite is what everyone else sees: the same room following the same desk, light enough for a phone. The Full / Lite button under Walk / Fly switches between them.',
+        body: [
+            'Who gets which, by itself: a phone or a tablet, and anyone opening the room from another address, gets Lite. The machine the room is made on, with a mouse, gets Full. The button changes it and this browser remembers the choice; ?quality=lite or ?quality=full in the address wins over both.',
+            { list: [
+                'Lite keeps every beam and its lens, and the haze — the light you see in the air.',
+                'The light falling on the room comes from four real lights that follow the lamps that matter most in the look that plays, so the floor and the walls still answer the show.',
+                'Lite leaves out shadows, bloom, the floor\'s reflection and edge smoothing, and draws at one pixel per screen pixel.',
+                'Your saved room is never changed: Lite draws a copy.'
+            ] },
+            'Measured on a laptop\'s built-in graphics, a 70-lamp room: Full still had nothing on screen after a minute of preparing its shaders; Lite drew the hall and the beams in seconds and ran at over 200 frames a second at phone size.',
+            'The real lights never depend on this: the desk sends DMX from the server on its own clock, whatever any screen is doing.'
+        ],
+        tags: ['lite', 'full', 'quality', 'phone', 'mobile', 'performance', 'fps', 'lag', 'slow', 'shadows', 'bloom', 'output', 'visitor', 'moxir', 'rig', 'room'],
+        updated: '2026-10-04'
+    },
+    {
         id: 'rig-show-loop',
         category: 'Spaces & access',
         title: 'A show that loops — the cue list played by the desk, the room following it',
