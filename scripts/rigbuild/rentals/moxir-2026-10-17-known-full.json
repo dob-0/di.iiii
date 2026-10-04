@@ -25,13 +25,14 @@
                 "note": "the quote calculator's hidden \"Price data\" sheet says 19000/day"
             },
             {
-                "code": "UP-LA40WF",
-                "type": "up-la40wf",
-                "ordered": 2,
-                "stock": 2,
-                "rate": 83000,
-                "label": "40W full-colour laser",
-                "source": "Price list!A16:E16 · version \"known-full\" of scripts/place/rigs/moxir-versions-2026-10-17.json"
+                "code": "EXT-LC-ULTRA-MK2",
+                "type": "ext-lc-ultra-mk2",
+                "ordered": 6,
+                "label": "LaserCube Ultra MK2 (the owner's own)",
+                "source": "scripts/place/rigs/moxir-versions-2026-10-17.json otherSuppliers.EXT-LC-ULTRA-MK2",
+                "note": "options: Wicked Lasers LaserCube Ultra MK2; rate owed",
+                "from": "other",
+                "supplier": "to choose — see the note"
             },
             {
                 "code": "EXT-HAZER",

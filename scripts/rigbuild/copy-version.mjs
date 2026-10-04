@@ -11,6 +11,7 @@
  *       --space moxir --from moxir-hall-minimal --to moxir-hall-minimal-oldhall-0929 --label "old hall 09-29" \
  *       [--suffix oldhall-0929] [--siblings <file>] [--dry-run]
  *   node scripts/rigbuild/copy-version.mjs … --undo --to moxir-hall-minimal-oldhall-0929   # delete the copy (only it)
+ *   node scripts/rigbuild/copy-version.mjs --api https://dev.diiii.xyz/serverXR --token-file <dev token>  *       --from-api http://<ponyo>:4100/serverXR --space moxir --from moxir-hall-known-full  *       --to moxir-hall-known-full --label "PONYO 10-04"      # from ANOTHER install: read there, written here
  *   node scripts/rigbuild/copy-version.mjs … --adopt --from moxir-hall-minimal --to moxir-hall-minimal-oldhall-0929 \
  *       --label "old hall 09-29" [--suffix oldhall-0929] [--siblings <file>] [--dry-run]   # give an existing copy its mark back
  *
@@ -281,7 +282,7 @@ export const freshMarkProblem = (entities) => {
 }
 
 /** Every flag this script reads; anything else is a typo, and a typo must never fall through to a write (`--dryrun`). */
-export const KNOWN_FLAGS = ['api', 'token-file', 'to', 'undo', 'adopt', 'from', 'label', 'suffix', 'siblings', 'dry-run', 'space']
+export const KNOWN_FLAGS = ['api', 'token-file', 'from-api', 'from-token-file', 'to', 'undo', 'adopt', 'from', 'label', 'suffix', 'siblings', 'dry-run', 'space']
 /** The arguments this script does not know: unknown --keys and stray words (an em dash pasted for `--`). Pure. */
 export const unknownArgs = (args) => [...Object.keys(args).filter((k) => k !== '_' && !KNOWN_FLAGS.includes(k)).map((k) => `--${k}`), ...(args._ || [])]
 
@@ -331,6 +332,12 @@ const main = async () => {
     const suffix = String(args.suffix || defaultSuffix(label)) || die('empty suffix')
     const siblings = readSiblings(args.siblings)
     const dry = Boolean(args['dry-run'])
+    // --from-api: the source lives on ANOTHER install (PONYO's room into dev's space, 2026-10-04).
+    // Only read there — meta, document, asset bytes; everything written goes to --api. Its token
+    // defaults to --token-file (a local install with auth off takes any).
+    const fromApi = args['from-api'] ? String(args['from-api']).replace(/\/+$/, '') : null
+    const source$ = fromApi ? makeClient(fromApi, readToken(path.resolve(String(args['from-token-file'] || args['token-file'])))) : client
+    const where = fromApi ? ` on ${fromApi}` : ''
 
     // 1. the new id must be free — on the whole install, not only in this space
     const taken = await client.get(`/api/projects/${to}`)
@@ -338,15 +345,15 @@ const main = async () => {
     if (taken.status !== 404) die(`checking ${to}: ${taken.status} ${taken.text.slice(0, 200)}`)
 
     // 2. the source, as it is now
-    const meta = await client.get(`/api/projects/${from}`)
-    if (!meta.ok) die(`reading ${from}: ${meta.status}`)
-    const src = await client.get(`/api/projects/${from}/document`)
-    if (!src.ok) die(`reading ${from}'s document: ${src.status}`)
+    const meta = await source$.get(`/api/projects/${from}`)
+    if (!meta.ok) die(`reading ${from}${where}: ${meta.status}`)
+    const src = await source$.get(`/api/projects/${from}/document`)
+    if (!src.ok) die(`reading ${from}'s document${where}: ${src.status}`)
     const source = src.body.document
     // the project's own title (the space's list) ends with the label; the version mark's title
     // carries it before its dash, for the switch's button (copiedEntities)
     const title = `${meta.body.project?.title || source.projectMeta?.title || from} · ${label}`
-    say(`${from} (version ${src.body.version}, ${source.entities.length} entities, ${source.assets.length} assets) → ${to} "${title}"`)
+    say(`${from}${where} (version ${src.body.version}, ${source.entities.length} entities, ${source.assets.length} assets) → ${to} "${title}"`)
     // the new mark must survive the server's normaliser — before anything is created, not after "written"
     const problem = freshMarkProblem(copiedEntities(source.entities, { from, to, label, suffix, siblings }))
     if (problem) die(`${to}: the copy's version mark would be lost — nothing created: ${problem}`)
@@ -362,7 +369,7 @@ const main = async () => {
     const remap = {}
     const assets = []
     for (const a of source.assets) {
-        const got = await client.bytes(`/api/projects/${from}/assets/${a.id}`)
+        const got = await source$.bytes(`/api/projects/${from}/assets/${a.id}`)
         if (!got.ok) die(`downloading ${a.name} (${a.id}): ${got.status}`)
         const form = new FormData()
         form.append('asset', new Blob([got.buffer], { type: a.mimeType || 'application/octet-stream' }), a.name)
@@ -386,7 +393,7 @@ const main = async () => {
     if (!same) die(`${to}: read back ${back.body?.document?.entities?.length} entities / ${back.body?.document?.assets?.length} assets, the source has ${source.entities.length} / ${source.assets.length}`)
     const backMark = back.body.document.entities.find((e) => e?.id === RIG_SHOW_ID)?.components?.rigVariant
     if (freshMarkProblem(copiedEntities(source.entities, { from, to, label, suffix, siblings })) === null && source.entities.some((e) => e?.components?.rigVariant) && !backMark?.copyOf) die(`${to}: written, but the version mark did not stay (no rigVariant.copyOf on ${RIG_SHOW_ID} read back) — run --adopt to repair it`)
-    say(`${to}: written (version ${back.body.version}) — ${source.entities.length} entities, ${assets.length} assets; ${from} was only read`)
+    say(`${to}: written (version ${back.body.version}) — ${source.entities.length} entities, ${assets.length} assets; ${from}${where} was only read`)
 }
 
 if (isMainModule(import.meta.url)) {
