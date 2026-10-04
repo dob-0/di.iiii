@@ -50,6 +50,8 @@ export default function useSmartViewState({ enabled = true, deepLink = false, ke
         const onKey = (event) => {
             const t = event.target
             if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return
+            // Numpad 1/3/7 are the axis views of the navigation layer (Blender's), not presets.
+            if (typeof event.code === 'string' && event.code.startsWith('Numpad')) return
             if (event.altKey && !event.ctrlKey && !event.metaKey && (event.code === 'KeyZ' || event.key === 'z' || event.key === 'Z')) {
                 event.preventDefault()
                 setXray((on) => !on)

@@ -34,6 +34,11 @@ const resolveStudioPreviewCamera = (document, cameraView) => {
 // from under a thing, and the pane's own Bottom view stands under the floor.
 const STUDIO_SMART_VIEW = { bar: 'studio', constraints: false, deepLink: false }
 
+// The navigation layer in a Studio pane: zoom to the pointer at the depth under it and Blender's
+// mouse set. Not its keys, double-click, Home button or card: the Studio has its own (F frames the
+// selection, Shift+? is its help) and editing must not change under a hand.
+const STUDIO_NAVIGATION = { wheel: true, keys: false, doubleTap: false, button: false, help: false }
+
 export default function StudioPresentationSurface({
     document,
     selectedEntityId,
@@ -175,6 +180,7 @@ export default function StudioPresentationSurface({
             overlays={overlays}
             rigMirror={rigMirror}
             smartView={STUDIO_SMART_VIEW}
+            navigation={STUDIO_NAVIGATION}
         />
     )
 }

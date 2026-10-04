@@ -10,6 +10,10 @@ export const WALK_ACCEL = 14
 export const WALK_FRICTION = 10
 export const TURN_SPEED = 1.6
 export const EYE_HEIGHT = 1.6
+// Blender's Walk Navigation: Shift speeds up (Preferences ‣ Navigation ‣ Walk ‣ Speed Factor,
+// default 5), Alt slows down. A 108 m hall is 21 s end to end at 5.2 m/s, 4 s at the boost.
+export const WALK_BOOST = 5
+export const WALK_SLOW = 0.25
 
 // -- Look sensitivity, one per input method --
 // Pointer-lock is the reference; every other method below is defined

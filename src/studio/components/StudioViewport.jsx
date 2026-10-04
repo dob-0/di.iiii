@@ -1,4 +1,4 @@
-import { Suspense, createContext, lazy, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, createContext, lazy, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import '../styles/studio.css'
@@ -32,6 +32,8 @@ import StudioHelpDialog from './StudioHelpDialog.jsx'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 import SmartViewBar from '../../project/viewport/smartView/SmartViewBar.jsx'
+import Navigation from '../../project/viewport/navigation/Navigation.jsx'
+import NavigationControls from '../../project/viewport/navigation/NavigationControls.jsx'
 import useSmartViewState from '../../project/viewport/smartView/useSmartViewState.js'
 import { classifyArchitecture } from '../../project/viewport/smartView/smartViewGeometry.js'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
@@ -512,9 +514,9 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
 
 // ACTION values from camera-controls (binary flags):
 const CC_ACTION = { NONE: 0, ROTATE: 1, TRUCK: 2, SCREEN_PAN: 4, OFFSET: 8, DOLLY: 16, ZOOM: 32,
-    TOUCH_DOLLY_TRUCK: 4096 }
+    TOUCH_TRUCK: 128, TOUCH_DOLLY_TRUCK: 4096 }
 
-function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, enabled = true, fovRef = null }) {
+function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, enabled = true, fovRef = null, zoomToPointer = false }) {
     const isXrPresenting = useXR((state) => state.session != null)
 
     // The lens the camera eases toward. Shared with the smart view when there is one
@@ -590,15 +592,18 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
             draggingSmoothTime={0.0}
             minDistance={0.35}
             maxDistance={500}
+            // With the navigation layer (src/project/viewport/navigation) the wheel and the
+            // pinch are its (zoom to the pointer, at the depth under it) and the middle button
+            // orbits as in Blender; without it the viewer is exactly what it was.
             mouseButtons={{
                 left: CC_ACTION.ROTATE,
-                middle: CC_ACTION.DOLLY,
+                middle: zoomToPointer ? CC_ACTION.ROTATE : CC_ACTION.DOLLY,
                 right: CC_ACTION.TRUCK,
-                wheel: CC_ACTION.DOLLY,
+                wheel: zoomToPointer ? CC_ACTION.NONE : CC_ACTION.DOLLY,
             }}
             touches={{
                 one: CC_ACTION.ROTATE,
-                two: CC_ACTION.TOUCH_DOLLY_TRUCK,
+                two: zoomToPointer ? CC_ACTION.TOUCH_TRUCK : CC_ACTION.TOUCH_DOLLY_TRUCK,
             }}
             onControlEnd={() => {
                 const cc = controlsRef.current
@@ -1001,16 +1006,28 @@ export default function StudioViewport({
     //   { bar: 'visitor' | 'studio' | false, constraints: bool, deepLink: bool }
     // It then runs only where the room has a building in it.
     smartView = null,
+    // The navigation layer (docs/architecture/MOVEMENT.md): zoom to the pointer at the depth
+    // under it, Home, frame, double-click/tap, Blender's mouse and numpad keys, the Home button
+    // and the key card. Off unless the surface asks:
+    //   { home?: {current: {position,target,fov}}, wheel, keys, doubleTap, button, help }
+    // `home` defaults to the camera this viewport opened with.
+    navigation = null,
 }) {
     const viewportRef = useRef(null)
+    const navApiRef = useRef(null)
+    const [openingRef] = useState(() => {
+        const c = cameraView || document.worldState?.savedView || {}
+        return { current: { position: c.position || [0, 2.4, 6.5], target: c.target || [0, 0.75, 0], fov: c.fov || 50 } }
+    })
     const fovRef = useRef(cameraView?.fov || document.worldState?.savedView?.fov || 50)
     const [pointerOver, setPointerOver] = useState(false)
     const { isPhoneCompact } = useViewportMode()
     const entitiesForView = document.entities
+    const architectureIds = useMemo(() => classifyArchitecture(entitiesForView || []).ids, [entitiesForView])
     const hasBuilding = useMemo(() => (
-        classifyArchitecture(entitiesForView || []).ids.size > 0
+        architectureIds.size > 0
         || (entitiesForView || []).some((e) => e?.type === 'model')
-    ), [entitiesForView])
+    ), [architectureIds, entitiesForView])
     const smartOn = Boolean(smartView) && !lowPower && hasBuilding
     const studioBar = smartView?.bar === 'studio'
     const cues = document.mappingState?.cues
@@ -1032,6 +1049,10 @@ export default function StudioViewport({
         onPresets: setPresets,
         onUserMove: releaseView
     } : null), [smartOn, sv.command, sv.xray, smartView?.constraints, setPresets, releaseView])
+    const navOn = Boolean(navigation) && !lowPower && enableNavigation && (cameraView?.projection || document.worldState?.savedView?.projection) !== 'orthographic'
+    const isBuilding = useCallback((id) => architectureIds.has(id), [architectureIds])
+    const { setXray: setSvXray } = sv
+    const navEscape = useCallback(() => { setSvXray(false) }, [setSvXray])
     const [transformStatus, setTransformStatus] = useState(null)
     // What each screen in the room draws, by mapping surface id — filled by
     // LiveScreens (the DOM sources beside the canvas), read by EntityContent.
@@ -1099,8 +1120,23 @@ export default function StudioViewport({
                         onCameraChange={onCameraChange}
                         onRotateStart={onRotateStart}
                         enabled={enableNavigation}
-                        fovRef={smartOn ? fovRef : null}
+                        fovRef={smartOn || navOn ? fovRef : null}
+                        zoomToPointer={navOn && navigation.wheel !== false}
                     />
+                    {navOn ? (
+                        <Navigation
+                            controlsRef={controlsRef}
+                            home={navigation.home || openingRef}
+                            fovRef={fovRef}
+                            apiRef={navApiRef}
+                            wheel={navigation.wheel !== false}
+                            keys={navigation.keys !== false}
+                            doubleTap={navigation.doubleTap !== false}
+                            isBuilding={isBuilding}
+                            onUserMove={releaseView}
+                            onEscape={navEscape}
+                        />
+                    ) : null}
                     <StudioSceneContent
                         document={document}
                         selectedEntityId={selectedEntityId}
@@ -1157,6 +1193,10 @@ export default function StudioViewport({
                     variant={studioBar ? 'studio' : 'visitor'}
                     compact={isPhoneCompact}
                 />
+            ) : null}
+
+            {navOn && showChrome && navigation.button !== false ? (
+                <NavigationControls onHome={() => navApiRef.current?.home()} help={navigation.help !== false} />
             ) : null}
 
             {showChrome && <FullscreenButton />}

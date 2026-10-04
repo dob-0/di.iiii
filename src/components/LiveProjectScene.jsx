@@ -48,7 +48,7 @@ import { hasTimelineTracks, sampleTimeline, applyTimelinePose } from '../project
 import { ringTourYaw } from '../project/viewport/ringTour.js'
 import { flyVertFromStick, moveFromStick, xrTurnSpeed } from './xrFlyControl.js'
 import {
-    WALK_MAX_SPEED, FLY_SPEED, WALK_ACCEL, WALK_FRICTION, TURN_SPEED, EYE_HEIGHT,
+    WALK_MAX_SPEED, WALK_BOOST, WALK_SLOW, FLY_SPEED, WALK_ACCEL, WALK_FRICTION, TURN_SPEED, EYE_HEIGHT,
     POINTER_LOCK_SENSITIVITY, DRAG_LOOK_SENSITIVITY, TOUCH_LOOK_SENSITIVITY, TRACKPAD_LOOK_SENSITIVITY,
     WHEEL_DOLLY_SPEED, WALK_PITCH_LIMIT, FLY_PITCH_LIMIT, JOY_RADIUS, BOUNDS_MARGIN, BOUNDS_MIN_HALF,
     BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_DEAD_DELTA_MAX, BROKEN_LOCK_SETTLE_MS
@@ -463,7 +463,7 @@ export const centroidSpawn = (center, bounds) => {
     return { x: center?.x ?? 0, z: (center?.z ?? 0) + back, yaw: Math.PI, pitch: 0 }
 }
 
-function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef, altitudeKeys = DEFAULT_ALTITUDE_KEYS, wheelDolly = true }) {
+function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef, altitudeKeys = DEFAULT_ALTITUDE_KEYS, wheelDolly = true, onExit: walkerOnExit = null }) {
     const { camera, gl } = useThree()
     // During an XR session the camera pose is owned by the headset/phone and
     // locomotion is driven through XROrigin (see XrLocomotion). Walker must NOT
@@ -476,6 +476,9 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
     const strafeSpeedRef = useRef(0)
     const bobPhaseRef = useRef(0)
     const wheelDollyRef = useRef(0)
+    const modsRef = useRef({ shift: false, alt: false })
+    const onExitRef = useRef(walkerOnExit)
+    onExitRef.current = walkerOnExit
     const touchLookRef = useRef(null)
     const touchMoveRef = useRef(null)
     const joyBaseRef = useRef({ x: 0, y: 0 })
@@ -498,12 +501,15 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
         const moveKeys = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'q', 'e', 'c']
         const onKeyDown = (e) => {
             if (isTypingTarget(e.target)) return
+            // Blender's Walk Navigation: Shift speeds up, Alt slows down, Esc leaves.
+            modsRef.current = { shift: e.shiftKey, alt: e.altKey }
+            if (e.key === 'Escape') { onExitRef.current?.(); return }
             const key = e.key.toLowerCase()
             if (!moveKeys.includes(key)) return
             if (key === ' ') e.preventDefault()
             keys.add(key)
         }
-        const onKeyUp = (e) => keys.delete(e.key.toLowerCase())
+        const onKeyUp = (e) => { modsRef.current = { shift: e.shiftKey, alt: e.altKey }; keys.delete(e.key.toLowerCase()) }
         window.addEventListener('keydown', onKeyDown)
         window.addEventListener('keyup', onKeyUp)
         return () => {
@@ -837,12 +843,13 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             vert += vertTouchRef?.current || 0
         }
 
-        const targetSpeed = forward * WALK_MAX_SPEED
+        const pace = modsRef.current.shift ? WALK_BOOST : modsRef.current.alt ? WALK_SLOW : 1
+        const targetSpeed = forward * WALK_MAX_SPEED * pace
         const accel = forward !== 0 ? WALK_ACCEL : WALK_FRICTION
         speedRef.current += THREE.MathUtils.clamp(targetSpeed - speedRef.current, -accel * delta, accel * delta)
         if (Math.abs(speedRef.current) < 0.001) speedRef.current = 0
 
-        const targetStrafeSpeed = strafe * WALK_MAX_SPEED
+        const targetStrafeSpeed = strafe * WALK_MAX_SPEED * pace
         const strafeAccel = strafe !== 0 ? WALK_ACCEL : WALK_FRICTION
         strafeSpeedRef.current += THREE.MathUtils.clamp(targetStrafeSpeed - strafeSpeedRef.current, -strafeAccel * delta, strafeAccel * delta)
         if (Math.abs(strafeSpeedRef.current) < 0.001) strafeSpeedRef.current = 0
@@ -883,7 +890,7 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             player.z = dollied.z
         }
         if (fly && vert !== 0) {
-            player.altY = THREE.MathUtils.clamp(player.altY + vert * FLY_SPEED * delta, -2, 60)
+            player.altY = THREE.MathUtils.clamp(player.altY + vert * FLY_SPEED * pace * delta, -2, 60)
         }
         if (!fly) {
             player.altY = THREE.MathUtils.lerp(player.altY, EYE_HEIGHT, Math.min(1, delta * 3))
@@ -1917,6 +1924,7 @@ export default function LiveProjectScene({
                 {walking ? (
                     <Walker
                         playerRef={playerRef}
+                        onExit={onExit}
                         onNearestZone={setNearestLabel}
                         onPortalReached={handlePortalReached}
                         entities={entities}

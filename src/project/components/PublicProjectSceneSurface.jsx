@@ -163,6 +163,14 @@ export default function PublicProjectSceneSurface({
         }
     })
 
+    // The navigation layer (docs/architecture/MOVEMENT.md). Home is the room's opening view as
+    // it is worked out NOW (this viewport's shape included), not the camera as it was left.
+    const documentRef = useRef(document)
+    useEffect(() => { documentRef.current = document }, [document])
+    const [navigation] = useState(() => ({
+        home: { get current() { return resolveViewerCamera(documentRef.current) } }
+    }))
+
     return (
         <>
             {navMode === 'walk' ? (
@@ -214,6 +222,7 @@ export default function PublicProjectSceneSurface({
                     // Not on a space-card picture (?preview=1).
                     followLinks={!isPreview}
                     smartView={!caged && !isPreview ? smartView : null}
+                    navigation={!caged && !isPreview ? navigation : null}
                 />
             )}
 
