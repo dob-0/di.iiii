@@ -728,6 +728,7 @@ describe('a project made empty on either side appears on both', () => {
     let hosting = null
     let following = null
     let follower = null
+    const warned = []
 
     const makeProject = async (server, slug, title) => {
         const response = await fetch(`${server.baseUrl}/api/spaces/${SPACE}/projects`, {
@@ -749,7 +750,7 @@ describe('a project made empty on either side appears on both', () => {
         follower = startFollowing({
             local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
             remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: API_TOKEN }),
-            log: { warn: () => {}, info: () => {} }
+            log: { warn: message => warned.push(message), info: () => {} }
         })
     })
 
@@ -769,5 +770,37 @@ describe('a project made empty on either side appears on both', () => {
         await makeProject(hosting, 'empty-studio', 'The Studio')
         const row = await settle('the host project reaching the follower', projectRow(following, 'empty-studio'), { timeout: 10_000 })
         expect(row.title).toBe('The Studio')
+    })
+
+    // Deletion is not carried, so it must not be undone either: a project in
+    // one side's trash is not made there again by the other side's copy.
+    const trash = async (server, slug) => {
+        const response = await fetch(`${server.baseUrl}/api/projects/${slug}`, { method: 'DELETE', headers: authHeaders })
+        expect(response.status).toBe(200)
+    }
+    const trashedHere = async (server, slug) => {
+        const response = await fetch(`${server.baseUrl}/api/trash?space=${SPACE}`, { headers: authHeaders })
+        return (await response.json()).projects.some(project => project.id === slug)
+    }
+    const tick = async () => { follower.wake(); await wait(1500) }
+
+    it('does not make again, on the host, a project trashed there', async () => {
+        await makeProject(hosting, 'both-a', 'A')
+        await settle('both-a on the follower', projectRow(following, 'both-a'), { timeout: 10_000 })
+        await trash(hosting, 'both-a')
+        await tick(); await tick()
+        expect(await trashedHere(hosting, 'both-a')).toBe(true)
+        expect(await projectRow(hosting, 'both-a')()).toBe(false)
+        expect(warned.filter(message => message.includes('both-a') && message.includes('in the trash'))).toHaveLength(1)
+    })
+
+    it('does not make again, on the follower, a project trashed there', async () => {
+        await makeProject(following, 'both-b', 'B')
+        follower.wake()
+        await settle('both-b on the host', projectRow(hosting, 'both-b'), { timeout: 10_000 })
+        await trash(following, 'both-b')
+        await tick(); await tick()
+        expect(await trashedHere(following, 'both-b')).toBe(true)
+        expect(await projectRow(following, 'both-b')()).toBe(false)
     })
 })

@@ -9,3 +9,5 @@ Seen on aylmo following dev.diiii.xyz (space `hayfilm`): six follower-only proje
 **Test.** `followIntegration.test.js` "a project made empty on either side appears on both": 2 tests, both red on the base branch (fix/follow-wake-after-carry-2026-10-04), green after. `vitest run serverXR/src/follow` 73/73; `test:server-contracts` 193/193; eslint clean on the three changed files.
 
 **Owed.** Not seen on aylmo against dev.diiii.xyz yet; the six existing projects will be made on the host on its next tick once this is installed on aylmo.
+
+**Review fix.** Making projects in both directions would have resurrected a project deleted on one side (deletes are not carried, and the create route restores a trashed id). `refreshStreams` reads each side's trash and skips trashed ids, warning once per id. Tests: 2 more integration cases (trashed on host, trashed on follower), red on 639d8684 (2 failed), now follow 75/75, server-contracts 193/193, eslint clean.

@@ -264,9 +264,12 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     /** The projects on both sides, so a project made on either appears on both. */
     const refreshStreams = async () => {
         const path = `/api/spaces/${encodeURIComponent(local.spaceId)}/projects`
-        const [here, there] = await Promise.all([
+        const trashPath = `/api/trash?space=${encodeURIComponent(local.spaceId)}`
+        const [here, there, hereTrash, thereTrash] = await Promise.all([
             request(local.url(path), { token: local.token, servername: local.servername, address: local.address }),
-            request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address })
+            request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address }),
+            request(local.url(trashPath), { token: local.token, servername: local.servername, address: local.address }),
+            request(remote.url(trashPath), { token: remote.token, servername: remote.servername, address: remote.address })
         ])
         const localProjects = projectIdsFrom(here.payload)
         const remoteProjects = projectIdsFrom(there.payload)
@@ -279,10 +282,23 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // same id: ids are global in di.iiii, so the same project is the same
         // project on both machines. Title as made; born private when private
         // at the source — never public for a moment. Deletions are not carried.
-        const makeMissing = async (from, toProjects, toSide) => {
+        const makeMissing = async (from, toProjects, toSide, toTrash) => {
+            // A project deleted on a side is still in that side's trash, and a
+            // create there would take it out again (ensureProject restores a
+            // trashed id). Deletion is not carried, so it must not be undone
+            // either. A trash that cannot be read makes nothing this tick.
+            if (!toTrash.ok) return
+            const trashed = new Set(projectIdsFrom(toTrash.payload))
             const rows = Array.isArray(from.payload?.projects) ? from.payload.projects : []
             for (const projectId of projectIdsFrom(from.payload)) {
                 if (toProjects.includes(projectId)) continue
+                if (trashed.has(projectId)) {
+                    if (!refusedMake.has(`${toSide.base}|${projectId}|trash`)) {
+                        refusedMake.add(`${toSide.base}|${projectId}|trash`)
+                        log.warn?.(`[follow] ${local.spaceId}: ${projectId} is in the trash on ${toSide === local ? 'this install' : 'the other di.iiii'} — not re-made`)
+                    }
+                    continue
+                }
                 const row = rows.find(candidate => candidate?.id === projectId)
                 const title = typeof row?.title === 'string' && row.title.trim() ? row.title.trim() : projectId
                 const made = await request(toSide.url(path), {
@@ -296,8 +312,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 }
             }
         }
-        await makeMissing(there, localProjects, local)
-        await makeMissing(here, remoteProjects, remote)
+        await makeMissing(there, localProjects, local, hereTrash)
+        await makeMissing(here, remoteProjects, remote, thereTrash)
         streams = streamsFor({ spaceId: local.spaceId, localProjects, remoteProjects })
     }
 
