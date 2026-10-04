@@ -49,14 +49,14 @@ const args = parseArgs()
 // module already published it.
 export { readToken } from './api.mjs'
 
-const must = (result, what) => {
+export const must = (result, what) => {
     if (!result.ok) {
         die(`${what} failed — HTTP ${result.status}`, result.text.slice(0, 300))
     }
     return result.body
 }
 
-const uploadAsset = async (client, projectId, file, options = {}) => {
+export const uploadAsset = async (client, projectId, file, options = {}) => {
     const form = new FormData()
     const bytes = fs.readFileSync(file)
     form.append('asset', new Blob([bytes], { type: mimeFor(file) }), path.basename(file))
@@ -67,6 +67,8 @@ const uploadAsset = async (client, projectId, file, options = {}) => {
     // footage passes `skippable`.
     if (options.skippable && !result.ok) {
         warn(`    left out, the server refused it (${result.status}): ${path.basename(file)}`)
+        // add-sources.mjs reports every refusal by name, size and reason at the end.
+        options.onRefused?.({ name: path.basename(file), size: bytes.length, status: result.status, reason: result.text.slice(0, 160) })
         return null
     }
     const asset = must(result, `uploading ${path.basename(file)}`).asset
@@ -101,7 +103,7 @@ const ensureProject = async (client, spaceId, projectId, title) => {
     return { created: true }
 }
 
-const sendOps = async (client, projectId, ops) => {
+export const sendOps = async (client, projectId, ops) => {
     const current = must(await client.get(`/api/projects/${projectId}/document`), 'reading the document')
     const result = await client.post(`/api/projects/${projectId}/ops`, {
         baseVersion: Number(current.version) || 0,
