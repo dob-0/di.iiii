@@ -100,10 +100,24 @@ describe('versions-audit: does every copy of the production agree?', () => {
         ])
     })
 
+    it('D2: the real versions file\'s ids, as the production list on dev and local holds them (live 2026-10-05), pass the git check — and a missing one still fails, by its list id', () => {
+        const spec = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, '../place/rigs/moxir-versions-2026-10-17.json'), 'utf8'))
+        // the three ids the list gives its entries that the code names another way (read from dev and local, GET only)
+        const listed = { ordered: 'ordered-live-lamps-09-29', 'known-full': 'known-full-ponyo-10-04', 'known-ground': 'known-ground-ponyo-10-04' }
+        const codeIds = [spec.ordered.id, ...spec.versions, ...spec.variants, ...spec.candidates].map((x) => x.id ?? x)
+        const entry = (id) => ({ id, projectId: `moxir-hall-${id}`, title: id, status: 'candidate', fingerprint: null })
+        const side = (ids) => [{ name: 'dev', list: { exists: true, version: 3, entries: ids.map(entry), problems: [] }, projects: Object.fromEntries(ids.map((id) => [`moxir-hall-${id}`, { fingerprint: 'sha256:x' }])) }]
+        const git = { spec, codeList: 'versions.json', blobOf: () => null }
+        const ids = codeIds.map((id) => listed[id] || id)
+        expect(compareVersions({ production: SET, sides: side(ids), git }).mismatches).toEqual([])
+        const without = compareVersions({ production: SET, sides: side(ids.filter((id) => id !== 'known-full-ponyo-10-04')), git })
+        expect(without.mismatches).toEqual(['"known-full-ponyo-10-04" is named in versions.json but is not in the list'])
+    })
+
     it('against the real repo: the MOXIR list built from the versions file\'s own ids passes the git check', async () => {
         const spec = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, '../place/rigs/moxir-versions-2026-10-17.json'), 'utf8'))
         const ids = [spec.ordered.id, ...spec.versions, ...spec.variants, ...spec.candidates].map((x) => x.id ?? x)
-        const projects = Object.fromEntries(ids.map((id) => [id === 'ordered' ? 'moxir-hall' : `moxir-hall-${id}`, { document: markedDoc(v(id)) }]))
+        const projects = Object.fromEntries(ids.map((id) => [id === 'ordered' ? 'moxir-hall' : `moxir-hall-${id}`, { document: markedDoc(v(spec.listedAs[id] || id)) }]))
         const dev = fakeInstall(projects)
         await build(['--api', 'https://dev.example/serverXR'], { client: dev, ...quiet })
         const r = await audit({ dev })

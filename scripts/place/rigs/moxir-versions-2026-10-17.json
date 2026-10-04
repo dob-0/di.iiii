@@ -1710,6 +1710,12 @@
       "truss": "crane"
     }
   ],
+  "listedAs": {
+    "why": "The version list of this production (project moxir-2026-10-17-versions) is the record, and it names three versions otherwise than the rig builder does: the builder's ids are rig-file and project-mark ids (they name moxir-2026-10-17-<id>.json and the version mark in the project), the list's ids say which copy was listed. scripts/production/versions-audit.mjs reads a code id through this map before looking it up in the list. A version not named here is listed under its own id. (Audit 2026-10-05 finding D2.)",
+    "ordered": "ordered-live-lamps-09-29",
+    "known-full": "known-full-ponyo-10-04",
+    "known-ground": "known-ground-ponyo-10-04"
+  },
   "ordered": {
     "id": "ordered",
     "title": "As ordered — the rig of the 27.09 order",
