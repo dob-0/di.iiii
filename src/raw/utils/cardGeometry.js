@@ -53,17 +53,22 @@ export const cardHeight = (node, scopeNodes = null) => {
 // CARD_CONTENT_MAX_WRAP; a longer row ends in an ellipsis and reads in full in
 // its window. The count comes from the browser's text metrics (textWrap.js),
 // so the box reserved here is the box drawn.
-export const CARD_CONTENT_LINE_HEIGHT = 14
+export const CARD_CONTENT_LINE_HEIGHT = 18
 export const CARD_CONTENT_GROUP_HEIGHT = 18
-export const CARD_CONTENT_ROW_GAP = 3
+export const CARD_CONTENT_ROW_GAP = 4
 export const CARD_CONTENT_MAX_WRAP = 6
 const CARD_CONTENT_PAD = 8
 // Must match raw.css: .raw-graph-node-content (left/right 10px) and
 // .raw-graph-node-content-line.is-row (padding-left --di-space-2 = 7px), less
 // 2px so a sub-pixel difference wraps one line early rather than late.
 const CONTENT_WIDTH = CARD_WIDTH - 20
-const ROW_INDENT = 7
-const CONTENT_FONT_SIZE = 10
+const ROW_INDENT = 8
+// Card body text: 13 graph units (audit §3.2; it was 10). CARD_WIDTH stays 200
+// because saved projects are laid out on its pitch. On screen it is 13 x zoom,
+// so it is 11px — the floor — at LEGIBLE_SCREEN_PX / CARD_BODY_FONT_PX.
+export const CARD_BODY_FONT_PX = 13
+export const LEGIBLE_SCREEN_PX = 11
+const CONTENT_FONT_SIZE = CARD_BODY_FONT_PX
 const CONTENT_FONT = `${CONTENT_FONT_SIZE}px Inter, "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
 
 const lineBox = (line) => {
@@ -82,6 +87,27 @@ export const cardContentLayout = (node) => {
     const moreHeight = content.more > 0 ? CARD_CONTENT_GROUP_HEIGHT : 0
     const height = lines.reduce((sum, line) => sum + line.height, 0) + moreHeight + CARD_CONTENT_PAD
     return { lines, more: content.more, moreHeight, height }
+}
+
+// The summary tier's lines: each group's name with its row count, or one line
+// for rows with no group and for a Text. Rows themselves are never drawn.
+export const summarizeCardContent = (lines = [], more = 0) => {
+    const out = []
+    let current = null
+    let loose = 0
+    for (const line of lines) {
+        if (line.kind === 'group') {
+            current = { name: line.text, count: 0 }
+            out.push(current)
+        } else if (current) {
+            current.count += 1
+        } else {
+            loose += 1
+        }
+    }
+    const summary = out.map((g) => `${g.name} · ${g.count}`)
+    if (loose + more > 0 && !out.length) summary.push(`${loose + more} ${lines.some((l) => l.kind === 'line') ? 'lines' : 'rows'}`)
+    return summary
 }
 
 export const cardContentHeight = (node) => cardContentLayout(node)?.height ?? 0

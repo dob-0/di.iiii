@@ -2845,7 +2845,7 @@
 }
 
 .raw-graph-node-card.is-lod-header .raw-graph-node-label,
-.raw-graph-node-card.is-lod-compact .raw-graph-node-label {
+.raw-graph-node-card.is-lod-summary .raw-graph-node-label {
     overflow: hidden;
     text-overflow: clip;
     white-space: nowrap;
@@ -5653,7 +5653,7 @@
     border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 .raw-graph-node-content-line {
-    font-size: var(--di-text-2);
+    font-size: 13px; /* = CARD_BODY_FONT_PX (cardGeometry.js): geometry and drawing agree */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -5661,12 +5661,12 @@
 }
 .raw-graph-node-content-line.is-group {
     font-family: var(--di-mono);
-    font-size: var(--di-text-2);
+    font-size: 11px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--card-family);
 }
-.raw-graph-node-content-line.is-row { padding-left: var(--di-space-2) }
+.raw-graph-node-content-line.is-row { padding-left: 8px } /* = ROW_INDENT */
 /* Rows and Text lines WRAP (up to 6 lines) to the count cardContentLayout measured (owner
    2026-10-02: To do rows were cut to one line). -webkit-line-clamp (set inline
    to that count) is the guard: a longer row ends in an ellipsis inside its
@@ -5678,7 +5678,7 @@
     white-space: normal;
     overflow-wrap: anywhere;
     box-sizing: border-box;
-    padding-bottom: var(--di-space-1); /* = CARD_CONTENT_ROW_GAP (cardGeometry.js) */
+    padding-bottom: 4px; /* = CARD_CONTENT_ROW_GAP (cardGeometry.js) */
 }
 .raw-graph-node-content-line.is-more { color: var(--di-text-muted) }
 
