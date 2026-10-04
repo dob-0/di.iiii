@@ -1,4 +1,4 @@
-# Shelf routes keep to the caller's space (2026-10-04)
+## 2026-10-04 — shelf routes keep to the caller's space (audit F8)
 
 Branch `fix/shelf-routes-space-scope-2026-10-04`, from `origin/dev` 56ea6eea. Finding F8 of
 `docs/ai/audits/follow-audit-2026-10-04.md`.
