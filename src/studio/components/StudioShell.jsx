@@ -28,6 +28,7 @@ import { JAM_PRIMITIVES } from '../../project/entityPalette.js'
 import {
     AssetsPanel,
     FilesPanel,
+    GeoSwitcher,
     HistoryPanel,
     JamEditPanel,
     LibraryPanel,
@@ -172,7 +173,15 @@ export default function StudioShell({
     cues = [],
     liveCueId = null,
     onFireCue = null,
+    // Nodes' things in the room, and which room Studio stands in — the whole
+    // room, or the inside of a Geo (StudioEditor; null on the open jam).
+    // geoSwitcher: { geos, currentGeoId, onOpenGeo, onNewGeo }
+    graphRoom = null,
+    geoSwitcher = null,
+    // Inside a Geo, Create offers only what exists as a node.
+    createPalette = null,
 }) {
+    const insideGeo = Boolean(geoSwitcher?.currentGeoId)
     const persistedWorkspace = useMemo(() => loadStudioWorkspace(), [])
     const { open, toggle, isOpen } = useStudioPanelState(migratePanelIds(persistedWorkspace?.open))
     const { layout: vpLayout, split: vpSplit, close: vpClose, setRatio: vpSetRatio } = useViewportLayout()
@@ -524,6 +533,7 @@ export default function StudioShell({
         onShowHelp: () => setShowHelp(true),
         onCloseHelp: () => setShowHelp(false),
         rigMirror: rigMirror.on,
+        graphRoom,
     }
 
     // One source of truth for each window's content, shared by the desktop
@@ -538,7 +548,8 @@ export default function StudioShell({
             </>
         ) : (
             <>
-                            <LibraryPanel onCreateEntity={onCreateEntity} />
+                            {geoSwitcher ? <GeoSwitcher {...geoSwitcher} /> : null}
+                            <LibraryPanel onCreateEntity={onCreateEntity} {...(createPalette || {})} />
                             {/* Bare: the 15 things and Import files. Drive and Commons
                                 are not handed until the first thing is placed, and the
                                 Files list waits for its first file. */}
@@ -583,7 +594,7 @@ export default function StudioShell({
                             ) : (
                                 <p className="sfp-empty">Select an object above or in the viewport to edit it.</p>
                             )}
-                            {selectedEntity && selectedEntityIds.length <= 1 && (
+                            {selectedEntity && selectedEntityIds.length <= 1 && !insideGeo && (
                                 <TimelinePanel
                                     entity={selectedEntity}
                                     onTimelineChange={(next) => onInspectorChange?.('timeline', next)}

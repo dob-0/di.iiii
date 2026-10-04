@@ -63,6 +63,8 @@ export default function StudioPresentationSurface({
     onCloseHelp,
     overlays,
     rigMirror = false,
+    // What Nodes made, for the room (StudioGraphNodes.jsx) — passed through.
+    graphRoom = null,
 }) {
     const presentationState = document.presentationState || {}
     const previewMode = presentationState.mode || 'scene'
@@ -175,6 +177,7 @@ export default function StudioPresentationSurface({
             overlays={overlays}
             rigMirror={rigMirror}
             smartView={STUDIO_SMART_VIEW}
+            graphRoom={graphRoom}
         />
     )
 }

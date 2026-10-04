@@ -67,6 +67,7 @@ import { buildAllNodesExample } from '../../project/graph/examples/allNodesExamp
 import { buildSceneExample } from '../../project/graph/examples/sceneExample.js'
 import { STUDIO_TYPE_ID, buildStudioInterior } from '../../project/graph/studioNode.js'
 import { buildStudioProjectPath, buildSpacesPath } from '../../studio/utils/studioRouting.js'
+import { buildStudioGeoPath } from '../../studio/utils/geoScopeAddress.js'
 import { buildWikiPath } from '../../utils/spaceRouting.js'
 
 const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
@@ -1690,6 +1691,14 @@ export default function RawEditor({
             { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: null } } }
         ], { activityMessage: 'Deleted node.', activityLevel: 'warning' })
     }, [applyLocalOps])
+    // The node whose inside we are standing in (null at Home).
+    const currentScopeNode = currentScopeId ? (nodes.find((node) => node.id === currentScopeId) || null) : null
+    // A Geo's own way into Studio: the project's Studio address with ?geo=,
+    // where Studio stands inside that Geo and edits what stands in it.
+    const handleOpenGeoInStudio = useCallback((nodeId) => {
+        if (!projectId) return
+        navigateToRawPath(buildStudioGeoPath(projectId, resolvedSpaceId, nodeId))
+    }, [projectId, resolvedSpaceId])
     const handleMoveNode = useCallback((nodeId, nextX, nextY) => applyLocalOps({
         type: 'updateNode',
         payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
@@ -2673,6 +2682,20 @@ export default function RawEditor({
                                                 Open in Studio
                                             </button>
                                         )}
+                                        {/* Standing inside a Geo: the same way across, into
+                                            Studio standing inside it — the phone's path,
+                                            where the card's small ↗ is hard to hit. */}
+                                        {!isLocalWorkspace && projectId && currentScopeNode?.typeId === 'geom.geo' && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setOverflowOpen(false)
+                                                    handleOpenGeoInStudio(currentScopeNode.id)
+                                                }}
+                                            >
+                                                Open {currentScopeNode.label} in Studio
+                                            </button>
+                                        )}
                                         {/* The projector cable had zero inbound
                                             links — /out was reachable only by
                                             typing the address (doors audit). */}
@@ -2834,6 +2857,7 @@ export default function RawEditor({
                     onDeleteEdge={handleDeleteEdge}
                     onDeleteNode={handleDeleteNode}
                     onMoveNode={handleMoveNode}
+                    onOpenInStudio={!isLocalWorkspace && projectId ? handleOpenGeoInStudio : null}
                     onDoubleClick={(placement) => openPalette(placement)}
                     isNodeActive={(node) =>
                         activeMarkerTypeIds.includes(node.typeId)
