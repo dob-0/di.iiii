@@ -1039,7 +1039,8 @@ const cmdFollow = async (args) => {
 
     say(ui.checkingFollow())
     const result = await followSpace({
-        home, spaceId, from, key, into: args.flags.into, address: at, port: resolvePort(home)
+        home, spaceId, from, key, into: args.flags.into, address: at, port: resolvePort(home),
+        insecure: Boolean(args.flags.insecure)
     })
     if (!result.ok) {
         sayFollowRefusal(result.reason, { spaceId, url: from }, at)
@@ -1061,13 +1062,21 @@ const cmdFollows = async () => {
     say(ui.followList(follows, live?.follows || []))
 }
 
-/** `di unfollow <space>` — stop carrying edits. Nothing here is deleted. */
+/** `di unfollow <space>` — stop carrying edits. Your copy of the space is not touched; the follower's saved place is dropped. */
 const cmdUnfollow = async (args) => {
     const home = HOME()
     if (!requireInstalled(home)) return
     const spaceId = args._[1]
     if (!spaceId) { fail(`which space? — ${CMD} unfollow their-space`); process.exitCode = 1; return }
-    const { removed } = await removeFollow(paths(home).data, spaceId)
+    let removed
+    try {
+        ;({ removed } = await removeFollow(paths(home).data, spaceId))
+    } catch (error) {
+        if (error?.code !== 'FOLLOWS_CORRUPT') throw error
+        fail(ui.followRefused('corrupt', spaceId))
+        process.exitCode = 1
+        return
+    }
     say(removed ? ui.unfollowed(spaceId) : ui.notFollowing(spaceId))
 }
 
@@ -1267,7 +1276,8 @@ const cmdStage = async (args) => {
             home, ...plan,
             key: await readKeyFlag(args),
             into: args.flags.into,
-            lan: Boolean(args.flags.lan)
+            lan: Boolean(args.flags.lan),
+            insecure: Boolean(args.flags.insecure)
         })
         if (!result.ok) {
             if (result.reason === 'no-browser') fail(ui.stageNoBrowser())
