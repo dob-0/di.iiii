@@ -9,3 +9,6 @@
 - The DMX never depends on any screen: `serverXR/src/lighting/desk.js` sends at 40 Hz on its own timer.
 - Wiki: new entry "Lite and Full — a room light enough for a phone".
 - Still open: Lite's floor reads black (no surface model) — a cheap glow under the beams is the next step; not yet measured on a real phone.
+- Review fix (aylmo): the shader warm-up could hold the last frame forever — three 0.185 caches the `null` a released program answers, so waiting for `true` never ended. A released or non-`false` program now counts as settled and the hold is capped at 8 s; on the AMD 860M this was the "Full still blank after 60 s" and a Studio that stayed black.
+- Scope note: `<ShaderWarmup/>` in StudioViewport and spotLightSkip's patch of three's ShaderChunk reach the Studio editor too; checked on the 860M (writes blocked): Studio draws by 30 s and stays responsive, where untouched dev froze its page ~2 min. Studio's partly-drawn first view looks the same on dev — not this branch.
+- Open, Gevorg's call: dev.diiii.xyz and tailnet names (`*.ts.net`) count as non-local, so his own desktop sees Lite there by default (Full is one tap, and remembered).
