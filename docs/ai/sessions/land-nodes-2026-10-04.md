@@ -16,6 +16,10 @@ Owner, 2026-10-04: "lets work on di.iiii and moxir" after the order was named (R
   - known-fixes and the List wiki article are unions.
 - #727. RawGraphSurface takes both prop sets. RawViewport uses #727's shared `buildSpatialChildMap` (it already holds the Constructor rule) plus dev's `sceneObjects`.
 
+**Also in this batch:**
+- **#735** (push gate looks at its own checkout only). The first push of this branch ran the old gate's `git status` over ~200 worktrees and held aylmo at 98–100 °C for minutes. With #735 merged here, the hook runs the new check. known-fixes conflict: union.
+- **The fold.** The gate refused the push: CURRENT.md was 3 days behind, because dev's land job cannot push to protected dev (GH006) and 32 notes were stranded. `land/*` is a fold branch, so session-land-lib's three functions ran here (branch guard and worktree sweep skipped). 32 notes went into PROGRESS/CURRENT; CURRENT.md is 47 lines. This note stays for the gate and folds on the next landing.
+
 **One fix on the land branch.** The rhythm guard (`styles/spine.test.js`) caught two literals.
 - #729's card-row `padding-bottom: 3px` → `var(--di-space-1)` (also 3px).
 - #736's context-menu `gap: 1px` → named as a raw.css hairline exception, like the `-1px` already there.
