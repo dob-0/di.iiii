@@ -2216,7 +2216,9 @@ export default function RawEditor({
         }
         const measure = () => {
             const rect = el.getBoundingClientRect()
-            const anchoredToBottom = Math.abs(rect.bottom - window.innerHeight) < 2
+            // The side column also touches the bottom edge, but it is a column
+            // BESIDE the canvas (already out of its width), not a band over it.
+            const anchoredToBottom = Math.abs(rect.bottom - window.innerHeight) < 2 && rect.width >= window.innerWidth - 2
             setGraphBottomInset(anchoredToBottom ? rect.height : 0)
         }
         measure()

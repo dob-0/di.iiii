@@ -163,6 +163,27 @@ describe('settings column', () => {
         expect(screen.getByTestId('raw-workbench').classList.contains('has-column')).toBe(false)
     })
 
+    // Found in the real browser: the column touches the bottom edge, was read as
+    // a bottom sheet, and the fit gave the graph a 900 px bottom inset (zoom 34 %).
+    it('does not tell the canvas it is covered from below (only the phone sheet does)', () => {
+        setWidth(1440)
+        window.innerHeight = 900
+        const spy = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function rect() {
+            const column = this.classList?.contains('raw-selection-scaffold')
+            return column
+                ? { x: 1120, y: 0, left: 1120, top: 0, right: 1440, bottom: 900, width: 320, height: 900, toJSON: () => ({}) }
+                : { x: 0, y: 0, left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0, toJSON: () => ({}) }
+        })
+        try {
+            seed()
+            render(<RawEditor localStorageKey={KEY} />)
+            fireEvent.click(screen.getByRole('button', { name: 'select:c1' }))
+            expect(graphMountProps.at(-1).bottomInset).toBe(0)
+        } finally {
+            spy.mockRestore()
+        }
+    })
+
     it('moves focus into the column on select; Escape closes it', () => {
         setWidth(1440)
         seed()
