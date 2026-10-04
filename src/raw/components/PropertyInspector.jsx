@@ -242,9 +242,14 @@ export default function PropertyInspector({
     values = {},
     onSectionChange,
     onPickAssetFile = null,
-    emptyMessage = 'Nothing selected yet.'
+    emptyMessage = 'Nothing selected yet.',
+    // The selection sheet passes this: something IS selected, it just has no
+    // fields. `.raw-empty-state` is the canvas's centred, absolutely placed
+    // hint — inside the sheet it left no in-flow content and the sheet
+    // collapsed to a 2px teal stripe under the toolbar (NOPA audit F11).
+    showHeaderWhenEmpty = false
 }) {
-    if (!sections.length) {
+    if (!sections.length && !showHeaderWhenEmpty) {
         return <div className="raw-empty-state">{emptyMessage}</div>
     }
 
@@ -254,6 +259,7 @@ export default function PropertyInspector({
                 <TitleField title={title} onRename={onRename} />
                 {subtitle ? <p>{subtitle}</p> : null}
             </header>
+            {!sections.length ? <p className="raw-property-empty">{emptyMessage}</p> : null}
             <div className="raw-property-sections-scroll">
                 {sections.map((section) => {
                     const sectionValue = values[section.id] || values[section.component] || {}

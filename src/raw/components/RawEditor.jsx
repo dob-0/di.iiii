@@ -48,6 +48,8 @@ import { isEmbedRequest, isPreviewRequest, signalPreviewReady } from '../../util
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
+import { splitSelectionOps } from '../utils/localSelection.js'
+import { cascadeCoincidentWindows, pickEscapeWindow } from '../utils/windowCascade.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
 import { currentAuthor } from '../../project/authorship.js'
@@ -243,7 +245,17 @@ export default function RawEditor({
         projectId: projectId || localStorageKey || null,
         viewportWidth: typeof window === 'undefined' ? 1280 : window.innerWidth
     })
-    const { frameOf, setLocalFrame, forgetNodes: forgetWindowFrames } = workspaceLayout
+    const { frameOf, setLocalFrame: setLayoutFrame, forgetNodes: forgetWindowFrames } = workspaceLayout
+    // The windows the person opened or raised in this session, oldest first —
+    // the ones Escape may close, front-most first (NOPA audit F8). A window
+    // the project opened with is its arrangement; Escape leaves it alone.
+    const touchedWindowIdsRef = useRef([])
+    const setLocalFrame = useCallback((nodeId, patch = {}) => {
+        const touched = touchedWindowIdsRef.current.filter((id) => id !== nodeId)
+        if (patch.visible === false) touchedWindowIdsRef.current = touched
+        else if (patch.visible === true || patch.zIndex != null) touchedWindowIdsRef.current = [...touched, nodeId]
+        setLayoutFrame(nodeId, patch)
+    }, [setLayoutFrame])
     const [isWorldFullscreen, setIsWorldFullscreen] = useState(false)
     // Bumped after inserting a whole graph at once — tells the surface this
     // is the one moment a forced re-fit is a kindness, not a yank.
@@ -330,10 +342,21 @@ export default function RawEditor({
         const deviceType = detectDeviceType()
         return getDefaultNodeScale(deviceType)
     })
+    // Which card is selected is this viewer's, never the project's: the
+    // selection half of every batch is held here and only the rest is synced
+    // (see utils/localSelection.js — NOPA audit F4). Wrapped BELOW the history,
+    // so an undo's inverse ops are split the same way.
+    const [localSelectedNodeId, setLocalSelectedNodeId] = useState(null)
+    const applySharedOps = useCallback((ops = [], options = {}) => {
+        const { ops: shared, selection } = splitSelectionOps(ops)
+        if (selection !== undefined) setLocalSelectedNodeId(selection)
+        if (!shared.length) return undefined
+        return _applyLocalOps(shared, options)
+    }, [_applyLocalOps])
     const { applyLocalOps, undo, redo } = useOpHistory({
         projectId,
         document: state.document,
-        applyLocalOps: _applyLocalOps,
+        applyLocalOps: applySharedOps,
         ignoreTypes: ['setWorkspaceState', 'setShowState']
     })
 
@@ -356,9 +379,11 @@ export default function RawEditor({
     // from it, and a fresh `[]` every render rebuilt both every render.
     const entities = useMemo(() => document.entities || [], [document.entities])
     const nodes = useMemo(() => document.nodes || [], [document.nodes])
-    const workspaceState = document.workspaceState || {}
     const selectedEntity = entities.find((entity) => entity.id === state.selectedEntityId) || null
-    const selectedNode = nodes.find((node) => node.id === workspaceState.selectedNodeId) || null
+    // A selection whose node is gone (deleted here or by someone else) is no
+    // selection — the document used to clear this inside deleteNodes.
+    const selectedNode = nodes.find((node) => node.id === localSelectedNodeId) || null
+    const selectedNodeId = selectedNode ? selectedNode.id : null
     const authoredNodes = nodes
     // Node-graph scope has no forced root type — the true document root
     // (currentScopeId === null) is a plain, always-available scope you can
@@ -710,18 +735,18 @@ export default function RawEditor({
         // keeping a red Delete armed for a node no longer on screen — the
         // scope clamp above hides it, and this stops the stale id from
         // travelling in the shared workspace state at all.
-        if (workspaceState.selectedNodeId || selectedEntity) clearSelection()
+        if (selectedNodeId || selectedEntity) clearSelection()
         scopeEnterNode(nodeId)
-    }, [authoredNodes, scopeEnterNode, frameOf, setLocalFrame, workspaceState.selectedNodeId, selectedEntity, clearSelection])
+    }, [authoredNodes, scopeEnterNode, frameOf, setLocalFrame, selectedNodeId, selectedEntity, clearSelection])
 
     const handleNavigateToScope = useCallback((targetIndex) => {
         // Fullscreen SURVIVES scope navigation now: walking through a door
         // swaps which room fills the screen, which is the TouchDesigner
         // go-inside/come-out feel. It used to cancel on every step — the
         // render and the graph could never both be part of one journey.
-        if (workspaceState.selectedNodeId || selectedEntity) clearSelection()
+        if (selectedNodeId || selectedEntity) clearSelection()
         scopeNavigateToScope(targetIndex)
-    }, [scopeNavigateToScope, workspaceState.selectedNodeId, selectedEntity, clearSelection])
+    }, [scopeNavigateToScope, selectedNodeId, selectedEntity, clearSelection])
 
     // Browser/hardware BACK pops one scope level. This is the only exit on a
     // phone when a space hides the chrome (showChrome:false removes the back
@@ -998,13 +1023,13 @@ export default function RawEditor({
     // Renaming exists only for nodes — entities and the world keep their
     // own naming stories. Empty names are refused upstream in TitleField.
     const handleRenameSelected = useCallback((label) => {
-        const nodeId = workspaceState.selectedNodeId
+        const nodeId = selectedNodeId
         if (!nodeId) return
         applyLocalOps({
             type: 'updateNode',
             payload: { nodeId, patch: { label } }
         }, { activityMessage: `Renamed a node to “${label}”.` })
-    }, [applyLocalOps, workspaceState.selectedNodeId])
+    }, [applyLocalOps, selectedNodeId])
 
     const inspectorValues = scopedSelectedNode
         ? { values: { ...(scopedSelectedNode.values || {}) } }
@@ -1479,7 +1504,8 @@ export default function RawEditor({
                 assetOptions={document.assets || []}
                 onSectionChange={handleInspectorChange}
                 onPickAssetFile={handlePickAssetFile}
-                emptyMessage="Double-click the world or the view to start authoring."
+                showHeaderWhenEmpty
+                emptyMessage="Nothing to set here. Double-click the card to open it."
             />
         </aside>
     )
@@ -1635,8 +1661,8 @@ export default function RawEditor({
     // its own change), stepped aside in both spaces so the copy never lands
     // exactly on the original.
     const handleDuplicateSelected = useCallback(() => {
-        const source = workspaceState.selectedNodeId
-            ? authoredNodes.find((node) => node.id === workspaceState.selectedNodeId)
+        const source = selectedNodeId
+            ? authoredNodes.find((node) => node.id === selectedNodeId)
             : null
         if (!source) return
         const values = JSON.parse(JSON.stringify(source.values || {}))
@@ -1659,7 +1685,7 @@ export default function RawEditor({
             { activityMessage: `Duplicated ${source.label || 'a node'}.` }
         )
         selectNode(copy.id)
-    }, [applyLocalOps, authoredNodes, selectNode, workspaceState.selectedNodeId])
+    }, [applyLocalOps, authoredNodes, selectNode, selectedNodeId])
     // Between-pass node state (a Lag's last answer) — this window's own,
     // never React state, dropped whole when the document changes.
     const [frameMemory] = useState(() => createFrameMemory())
@@ -1919,7 +1945,7 @@ export default function RawEditor({
             return (
                 <OutlinerPanelWindow
                     items={outlinerItems}
-                    selectedNodeId={workspaceState.selectedNodeId || null}
+                    selectedNodeId={selectedNodeId || null}
                     onSelectNode={(nodeId) => selectNode(nodeId)}
                     selectedEntityId={scopedSelectedEntity?.id || null}
                     onSelectEntity={selectEntity}
@@ -2053,10 +2079,38 @@ export default function RawEditor({
         return () => window.removeEventListener('keydown', handler)
     }, [handleDeleteSelected, scopedSelectedEntity])
 
+    // Escape closes the front window the person opened (NOPA audit F8) —
+    // before it clears a selection or leaves a level. Capture phase with
+    // preventDefault, and it yields to anything that already took the key (an
+    // open menu, the help sheet, a marked wire), so it slots into the one
+    // Escape ladder rather than racing it.
+    useEffect(() => {
+        const handler = (event) => {
+            if (event.key !== 'Escape' || event.defaultPrevented) return
+            const tag = event.target?.tagName?.toLowerCase?.()
+            if (tag === 'input' || tag === 'textarea' || tag === 'select' || event.target?.isContentEditable) return
+            if (overflowOpen || helpOpen || paletteState.open) return
+            const frontId = pickEscapeWindow(
+                visibleViewNodes.map((node) => {
+                    const frame = frameOf(node)
+                    return { id: node.id, zIndex: frame.zIndex || 6, minimized: Boolean(frame.minimized) }
+                }),
+                touchedWindowIdsRef.current
+            )
+            if (!frontId) return
+            event.preventDefault()
+            setLocalFrame(frontId, { visible: false })
+        }
+        window.addEventListener('keydown', handler, true)
+        return () => window.removeEventListener('keydown', handler, true)
+    }, [visibleViewNodes, frameOf, setLocalFrame, overflowOpen, helpOpen, paletteState.open])
+
     useEffect(() => {
         const handler = (event) => {
             const tag = event.target?.tagName?.toLowerCase?.()
             if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
+            // Taken by an earlier step of the ladder (a window closed above).
+            if (event.key === 'Escape' && event.defaultPrevented) return
             if (event.key === 'Escape' && navStack.length > 1) {
                 event.preventDefault()
                 handleNavigateToScope(navStack.length - 2)
@@ -2080,7 +2134,7 @@ export default function RawEditor({
                     .filter((node) => frameOf(node).minimized !== true)
                     .sort((a, b) => (frameOf(b).zIndex || 6) - (frameOf(a).zIndex || 6))
                     .map((node) => node.id)
-                const nextId = cycleFocus(order, workspaceState.selectedNodeId, event.shiftKey ? -1 : 1)
+                const nextId = cycleFocus(order, selectedNodeId, event.shiftKey ? -1 : 1)
                 if (!nextId) return
                 event.preventDefault()
                 selectNode(nextId)
@@ -2110,7 +2164,7 @@ export default function RawEditor({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [handleDuplicateSelected, handleNavigateToScope, navStack.length, undo, redo, isWorldFullscreen, visibleViewNodes, frameOf, setLocalFrame, selectNode, topZIndex, workspaceState.selectedNodeId])
+    }, [handleDuplicateSelected, handleNavigateToScope, navStack.length, undo, redo, isWorldFullscreen, visibleViewNodes, frameOf, setLocalFrame, selectNode, topZIndex, selectedNodeId])
 
     const handleMoveWorldNode = (nodeId, nextPosition) => {
         applyLocalOps({
@@ -2175,6 +2229,17 @@ export default function RawEditor({
     // frame put the graph's free band in the wrong place entirely.
     const narrowViewport = isNarrowViewport()
     const windowSpaceFor = (frame) => panelWindowSpace(frame, graphViewport)
+    // Windows that would open exactly on top of another are cascaded down and
+    // right, in document order, so the one that keeps its spot never changes
+    // when a click reorders the pile (NOPA audit F8: four Lists, one spot).
+    const windowCascade = cascadeCoincidentWindows(
+        visibleViewNodes.map((node, index) => {
+            const frame = frameOf(node)
+            const state = buildWindowStateFromNode(node, index, graphContext, frame)
+            return { id: node.id, x: state.x, y: state.y, inWorld: windowSpaceFor(frame) === 'world' }
+        }),
+        { zoom: graphViewport?.zoom || 1 }
+    )
     // World windows are content: fit-all frames them along with the cards.
     const worldWindowBounds = narrowViewport
         ? []
@@ -2381,11 +2446,17 @@ export default function RawEditor({
                                 editing in. Folded into the existing element rather than
                                 adding chrome — the id is what the URL says, so it is the
                                 recognisable form. */}
+                            {/* When the one bar is up it already says "Space · Project"
+                                right above, so this names the PROJECT alone — the
+                                narrow rule below used to drop the title and keep the
+                                space, and a 1200px window read "hayfilm" twice and
+                                its project nowhere (NOPA audit F9). With the bar
+                                hidden this is the only place left, so both stay. */}
                             <span
-                                className="raw-topbar-name"
+                                className={`raw-topbar-name${showBar && !isLocalWorkspace ? ' is-project-only' : ''}`}
                                 title={isLocalWorkspace ? workspaceTitle : `${resolvedSpaceId} · ${workspaceTitle}`}
                             >
-                                {isLocalWorkspace ? workspaceTitle : (
+                                {(isLocalWorkspace || showBar) ? workspaceTitle : (
                                     <>
                                         <span className="raw-topbar-name-space">{resolvedSpaceId}</span>
                                         {/* Its own element so the narrow rule can drop the
@@ -2668,7 +2739,7 @@ export default function RawEditor({
                     onExplainScope={currentScopeId && isNodeMadeOfCode(scopeNode?.typeId) ? openAnatomy : null}
                     emptyHint={scopeEmptyHint}
                     edges={graphCardEdges}
-                    selectedNodeId={workspaceState.selectedNodeId}
+                    selectedNodeId={selectedNodeId}
                     onEnterNode={handleEnterNode}
                     onSelectNode={selectNode}
                     onCreateEdge={handleCreateEdge}
@@ -2739,8 +2810,12 @@ export default function RawEditor({
                     phone every window is, because the clamp is the layout. */}
                 {visibleViewNodes.map((node, index) => {
                     const frame = frameOf(node)
-                    const windowState = buildWindowStateFromNode(node, index, graphContext, frame)
                     const space = windowSpaceFor(frame)
+                    const cascaded = windowCascade.get(node.id)
+                    const windowState = {
+                        ...buildWindowStateFromNode(node, index, graphContext, frame),
+                        ...(cascaded || {})
+                    }
                     // The family, not the type id: the cards say "the room" and
                     // the windows used to say UNIVERSE.WORLD. Same node, two
                     // vocabularies — and the colour is what ties the window to
@@ -2969,7 +3044,7 @@ export default function RawEditor({
                 >
                     <OutlinerPanelWindow
                         items={outlinerItems}
-                        selectedNodeId={workspaceState.selectedNodeId || null}
+                        selectedNodeId={selectedNodeId || null}
                         onSelectNode={(nodeId) => selectNode(nodeId)}
                         selectedEntityId={scopedSelectedEntity?.id || null}
                         onSelectEntity={selectEntity}

@@ -803,6 +803,10 @@
     max-width: 180px;
 }
 
+.raw-topbar-name.is-project-only {
+    max-width: 240px;
+}
+
 .raw-topbar-center {
     display: flex;
     align-items: center;
@@ -1626,6 +1630,13 @@
     flex-direction: column;
 }
 
+.raw-property-empty {
+    margin: 0;
+    padding: 0 var(--di-space-4) var(--di-space-4);
+    font-size: var(--di-text-2);
+    color: var(--di-text-muted);
+}
+
 .raw-property-sheet-header {
     padding: var(--di-space-4) var(--di-space-4) var(--di-space-3);
     border-bottom: 1px solid var(--di-cyan-border);
@@ -1801,6 +1812,10 @@
 }
 
 .raw-window-stack {
+    /* height 100% WITH padding: content-box made the pane 32px taller than
+       the body (overflow hidden), and a List's last row could never be
+       scrolled into view (NOPA audit F5). */
+    box-sizing: border-box;
     height: 100%;
     overflow: auto;
     padding: var(--di-space-4);
@@ -3854,6 +3869,28 @@
 
     .raw-topbar-name-project {
         display: none;
+    }
+
+    /* The project alone (the bar above names the space): it is the only word
+       here, so it gets the room the space id had and a little more. */
+    .raw-topbar-name.is-project-only {
+        max-width: 160px;
+    }
+}
+
+/* A phone's topbar has room for the project's first words, not all of them
+   (check:toolbar-overlap at 390px: 415px of content at 160px). */
+@media (max-width: 640px) {
+    .raw-topbar-name.is-project-only {
+        max-width: 112px;
+        min-width: 0;
+    }
+
+    /* …and gives way first: the left group shrinks (the title ellipsizes)
+       before anything on the right is pushed off the screen. */
+    .raw-topbar-left:has(.is-project-only) {
+        flex: 0 1 auto;
+        min-width: 0;
     }
 }
 
