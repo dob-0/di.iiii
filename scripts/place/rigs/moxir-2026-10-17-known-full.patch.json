@@ -1,0 +1,147 @@
+{
+  "patch": "moxir-2026-10-17-known-full",
+  "title": "MOXIR 17.10 — Known · full — the patch AS DOCUMENTED (index-order packing, not yet a data-run plan)",
+  "project": "moxir-hall-known-full",
+  "writtenAt": "2026-10-05",
+  "status": "AS DOCUMENTED. This file writes down the addresses the project document already holds (U1 1-512, U2 1-176, fixture numbers 1-68), so that patch-sheet.mjs can check the desk against them and desk-plan.mjs can load them exactly. It is NOT the data-run plan the audit owes (docs/ai/audits/moxir-2026-10-05/B-show-control.md W1: one universe per cable run, half of every universe spare, splitters). When that plan is written, it replaces this file and patch-plan.mjs re-addresses the document.",
+  "howToRead": "docs/architecture/RIG_BUILD.md §19 (the plan format) and §19.5 (loading a chosen version onto its desk: scripts/rigbuild/desk-plan.mjs). Running patch-plan.mjs with this file changes nothing in the document (0 ops): every block reproduces the address, fixture number and unit the document has.",
+  "method": [
+    "Blocks select lamps by their entity group (<group>-NN) and keep the order the document numbers them in; every start, fixture number and order was read off the document (local install, version 2, 2026-10-05) and checked by running planPatch against it (0 ops, 0 errors).",
+    "Off-DMX lamps (6 LaserCube, 6 hazers, 4 smoke machines: components.fixture.dmx = false) take no address and are in no block.",
+    "Known limits, owed: U1 has 0 channels spare and carries 57 units on one line (over the DMX512-A 32 unit-load guide without a splitter); U3 and U4 of the 4-port node are unused."
+  ],
+  "minSpare": 256,
+  "node": {
+    "what": "one 4-port Art-Net node at the booth (planning equivalent: Luminex LumiNode 4; in the order as one row, model not chosen)",
+    "protocol": "Art-Net 4 (sACN E1.31 also possible — the desk sends either)",
+    "numbering": "desk universe U1 = Art-Net Port-Address 0 (Net 0 · Sub-Net 0 · Universe 0) = sACN universe 1; U2 = Port-Address 1 = sACN 2",
+    "splitters": "OWED: no splitter is in the order; U1 needs one (57 units on one line)."
+  },
+  "modes": {
+    "up-pl5403": {
+      "crew": "8ch",
+      "why": "the maker lists one mode, 8 channels (uplight.com.cn UP-PL5403). The desk runs the TESTED list from the Sevan festival rental units (RIG_BUILD §18.1), not a maker chart; the rental house chart is owed (audit B5)."
+    },
+    "up-b380f": {
+      "crew": "16ch",
+      "why": "the maker lists one mode, 16 channels (uplight.com.cn UP-B380F). The desk runs the TESTED list from the Sevan festival rental units (RIG_BUILD §18.1), not a maker chart; the rental house chart is owed (audit B5)."
+    }
+  },
+  "universes": [
+    {
+      "universe": 1,
+      "port": "A",
+      "label": "U1 — PARs and the backstage beams (as documented)",
+      "run": "OWED: no cable run is planned for this packing",
+      "blocks": [
+        {
+          "select": {
+            "group": "rig-par-cut-x"
+          },
+          "start": 1,
+          "fixture": 1,
+          "order": "x-asc",
+          "what": "the X: 6 UP-PL5403 under the ends of the cut"
+        },
+        {
+          "select": {
+            "group": "rig-par-cut-bridge"
+          },
+          "start": 49,
+          "fixture": 7,
+          "order": "x-asc",
+          "what": "4 UP-PL5403 standing on the cut (the bridge)"
+        },
+        {
+          "select": {
+            "group": "rig-par-cut-curtain"
+          },
+          "start": 81,
+          "fixture": 11,
+          "order": "x-asc",
+          "what": "the curtain: 7 UP-PL5403 under the middle of the cut"
+        },
+        {
+          "select": {
+            "group": "rig-par-columns"
+          },
+          "start": 137,
+          "fixture": 18,
+          "order": "z-asc",
+          "what": "16 UP-PL5403 column uplights, both walls, DJ end outwards"
+        },
+        {
+          "select": {
+            "group": "rig-par-press-cut"
+          },
+          "start": 265,
+          "fixture": 34,
+          "order": "x-asc",
+          "what": "3 UP-PL5403 on the backdrop floor (the press)"
+        },
+        {
+          "select": {
+            "group": "rig-par-press-sides"
+          },
+          "start": 289,
+          "fixture": 37,
+          "order": "x-asc",
+          "what": "2 UP-PL5403 at the press sides"
+        },
+        {
+          "select": {
+            "group": "rig-par-vista"
+          },
+          "start": 305,
+          "fixture": 39,
+          "order": "z-desc",
+          "what": "8 UP-PL5403 down the 50 m vista behind the DJ"
+        },
+        {
+          "select": {
+            "group": "rig-par-neighbour"
+          },
+          "start": 369,
+          "fixture": 47,
+          "order": "z-asc",
+          "what": "4 UP-PL5403 in the neighbour hall (the forest)"
+        },
+        {
+          "select": {
+            "group": "rig-beam380-backstage"
+          },
+          "start": 401,
+          "fixture": 51,
+          "order": "x-asc",
+          "what": "7 UP-B380F on the floor behind the DJ"
+        }
+      ]
+    },
+    {
+      "universe": 2,
+      "port": "B",
+      "label": "U2 — column-base beams and the lighthouse (as documented)",
+      "run": "OWED: no cable run is planned for this packing",
+      "blocks": [
+        {
+          "select": {
+            "group": "rig-beam380-columns"
+          },
+          "start": 1,
+          "fixture": 58,
+          "order": "z-asc",
+          "what": "10 UP-B380F at the column bases"
+        },
+        {
+          "select": {
+            "group": "rig-beam380-lighthouse"
+          },
+          "start": 161,
+          "fixture": 68,
+          "order": "x-asc",
+          "what": "1 UP-B380F, the lighthouse at the end of the vista"
+        }
+      ]
+    }
+  ]
+}

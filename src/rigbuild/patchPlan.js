@@ -96,7 +96,9 @@ export const planPatch = ({ entities = [], library, plan }) => {
     const errors = []
     const warnings = []
     const assignments = []
-    const lamps = entities.filter((e) => typeof e?.components?.fixture?.type === 'string' && e.components.fixture.type)
+    // A lamp off DMX (`fixture.dmx === false`: a LaserCube on its own network, a hazer run
+    // by hand) takes no address, so no block may select it and it is not "in no block".
+    const lamps = entities.filter((e) => typeof e?.components?.fixture?.type === 'string' && e.components.fixture.type && e.components.fixture.dmx !== false)
     const claimed = new Map()
     const universes = []
     const minSpare = Number(plan?.minSpare) || 0
