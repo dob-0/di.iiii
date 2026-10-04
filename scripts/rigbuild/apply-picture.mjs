@@ -224,7 +224,7 @@ export const undoFrom = async ({ client, api, tokenFile, file, dry = false, log 
 }
 
 /** The projects to do: from the production's list, or the named ones (resolved against the list for their rig file). */
-export const targetsOf = async ({ client, production, projects, spec, repoRoot = REPO_ROOT }) => {
+export const targetsOf = async ({ client, production, projects, spec, repoRoot = REPO_ROOT, rigFileGiven = null }) => {
     const list = production ? await readList(client, production) : null
     if (production && !list.exists) throw new Error(`no version list for ${production} on this install (${listProjectIdOf(production)})`)
     const entries = list?.entries || []
@@ -234,13 +234,14 @@ export const targetsOf = async ({ client, production, projects, spec, repoRoot =
         const entry = entries.find((v) => v.projectId === projectId) || null
         const project = await readProject(client, projectId)
         if (!project) { targets.push({ projectId, skip: 'not on this install' }); continue }
-        const rigFile = rigFileFor({ entry, mark: project.mark, spec, id: project.mark?.id, repoRoot })
-        targets.push(rigFile ? { projectId, entry, rigFile } : { projectId, skip: 'no rig file found (no list rig.file, not in the code versions file, no rigVariant.source)' })
+        const rigFile = rigFileGiven ? { file: rigFileGiven, from: '--rig-file' } : rigFileFor({ entry, mark: project.mark, spec, id: project.mark?.id, repoRoot })
+        targets.push(rigFile ? { projectId, entry, rigFile } : { projectId, entry, skip: 'no rig file found (no list rig.file, not in the code versions file, no rigVariant.source)' })
     }
     return targets
 }
 
-export const KNOWN_FLAGS = ['api', 'token-file', 'space', 'production', 'project', 'fields', 'dry-run', 'undo']
+const UNDO_DIR_NOW = () => process.env.DI_PICTURE_UNDO_DIR || UNDO_DIR
+export const KNOWN_FLAGS = ['api', 'token-file', 'space', 'production', 'project', 'fields', 'dry-run', 'undo', 'rig-file']
 
 export const run = async (argv, { client = null, log = say, repoRoot = REPO_ROOT } = {}) => {
     const dry = argv.includes('--dry-run')
@@ -264,12 +265,31 @@ export const run = async (argv, { client = null, log = say, repoRoot = REPO_ROOT
     const groups = args.fields ? String(args.fields).split(',').map((s) => s.trim()).filter(Boolean) : GROUPS
     const bad = groups.filter((g) => !GROUPS.includes(g))
     if (bad.length) throw new Error(`--fields: ${bad.join(', ')} is not one of ${GROUPS.join(' · ')}`)
+    const given = args['rig-file'] ? String(args['rig-file']) : null
+    if (given) {
+        if (production) throw new Error('--rig-file is for one --project and cannot be used with --production (the list is not touched; record rig.file with versions.mjs put, then run with --production)')
+        if (multi.length !== 1) throw new Error('--rig-file needs exactly one --project')
+        const rel = path.isAbsolute(given) ? path.relative(repoRoot, given) : given
+        if (rel.startsWith('..') || !fs.existsSync(path.join(repoRoot, rel))) throw new Error(`--rig-file ${given}: not a file inside this checkout`)
+        args['rig-file'] = rel
+    }
     const specFile = path.join(repoRoot, VERSIONS_FILE)
     const spec = fs.existsSync(specFile) ? readJson(specFile) : null
-    const targets = await targetsOf({ client: c, production, projects: multi, spec, repoRoot })
+    const targets = await targetsOf({ client: c, production, projects: multi, spec, repoRoot, rigFileGiven: given ? args['rig-file'] : null })
     const rows = []
     for (const t of targets) {
-        if (t.skip) { log(`${t.projectId}: skipped — ${t.skip}`); rows.push({ projectId: t.projectId, status: 'skipped', reason: t.skip }); continue }
+        if (t.skip) {
+            log(`${t.projectId}: skipped — ${t.skip}`)
+            if (t.entry && production) {
+                // never guess a file by name: write the entry as listed, the person names the rig file in it
+                fs.mkdirSync(UNDO_DIR_NOW(), { recursive: true })
+                const ef = path.join(UNDO_DIR_NOW(), `${t.projectId}-record-rig-file.json`)
+                fs.writeFileSync(ef, `${JSON.stringify({ ...t.entry, rig: { file: 'REPLACE-WITH-THE-RIG-FILE-PATH', blob: null } }, null, 2)}\n`)
+                log(`  to record its rig file: put the real path in "rig.file" of ${ef}, then`)
+                log(`    node scripts/production/versions.mjs --api ${api}${tokenFile ? ` --token-file ${tokenFile}` : ''} --production ${production} put --file ${ef}`)
+                log(`  or, for this one project now (list untouched): … --project ${t.projectId} --rig-file <path>`)
+            } rows.push({ projectId: t.projectId, status: 'skipped', reason: t.skip }); continue
+        }
         const row = await applyOne({ client: c, api, tokenFile, production, projectId: t.projectId, entry: t.entry, rigFile: t.rigFile, groups, dry, log, repoRoot })
         rows.push(row)
         log(`${t.projectId} — picture from ${row.rig} (${t.rigFile.from})`)

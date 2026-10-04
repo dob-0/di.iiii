@@ -107,4 +107,18 @@ describe('apply-picture — the code\'s picture into every version', () => {
         await expect(run(['--api', API, '--production', SET, '--nope', '1'], { client: i })).rejects.toThrow(/unknown argument/)
         await expect(run(['--api', API], { client: i })).rejects.toThrow(/needs --production/)
     })
+    it('--rig-file covers a version the code does not name; --production with it is refused; a skipped one prints the versions.mjs command', async () => {
+        const i = await install()
+        i.rows.get('moxir-hall-known-ground').document.entities.find((e) => e.id === 'rig-show').components.rigVariant.id = 'unnamed'
+        await versions(['--api', API, '--production', SET, 'remove', 'known-ground'], { client: i, log: () => {} })
+        await versions(['--api', API, '--production', SET, 'register', 'moxir-hall-known-ground'], { client: i, log: () => {} })
+        const a = quiet()
+        await run(['--api', API, '--production', SET, '--project', 'moxir-hall-known-ground'], { client: i, log: a.log })
+        expect(a.lines.join('\n')).toMatch(/skipped — no rig file found[\s\S]*versions\.mjs .* put --file .*record-rig-file\.json/)
+        await expect(run(['--api', API, '--production', SET, '--project', 'moxir-hall-known-ground', '--rig-file', 'scripts/place/rigs/moxir-2026-10-17-known-full.json'], { client: i })).rejects.toThrow(/cannot be used with --production/)
+        const b = quiet()
+        await run(['--api', API, '--project', 'moxir-hall-known-ground', '--rig-file', 'scripts/place/rigs/moxir-2026-10-17-known-full.json', '--dry-run'], { client: i, log: b.log })
+        expect(b.lines.join('\n')).toMatch(/worldState\.fog\.far\s+32 → 250/)
+        expect(b.lines.join('\n')).toMatch(/not in the code, left as they are/)
+    })
 })
