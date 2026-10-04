@@ -36,6 +36,8 @@ import RigVersionSwitch from '../../rigbuild/RigVersionSwitch.jsx'
 import { rigVariantOf } from '../../rigbuild/rigVariant.js'
 import { rigChromeTops, rigRowMaxWidth, rigVersionPlacement } from '../../rigbuild/rigVersionLayout.js'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
+import useOutputMode from '../viewport/useOutputMode.js'
+import { outputDocument } from '../viewport/outputMode.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -243,7 +245,11 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // The rig's version row (RigVersionSwitch) shows in orbit on a project that is one of
     // a set; the show chip sits under it then, else where the row would be.
     const rigVersionsShown = state.status === 'ready' && navMode === 'orbit' && !isPreview && !isEmbed && Boolean(rigVariantOf(document?.entities || []))
-    const sceneDocument = useMemo(() => (document && lookEntities ? { ...document, entities: lookEntities } : document), [document, lookEntities])
+    // Output mode (viewport/outputMode.js): everyone but the work machine sees a copy of the
+    // room drawn light enough for a phone; the document itself is never written.
+    const [outputMode, setOutputMode] = useOutputMode()
+    const viewDocument = useMemo(() => (outputMode ? outputDocument(document) : document), [outputMode, document])
+    const sceneDocument = useMemo(() => (viewDocument && lookEntities ? { ...viewDocument, entities: lookEntities } : viewDocument), [viewDocument, lookEntities])
     // A visitor is standing here, not authoring. Arming the gate is what makes
     // an `audio` entity silent until asked — see src/utils/roomSound.js. The
     // editor never arms it, so an author still hears what they place.
@@ -534,6 +540,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         spaceId={resolvedRouteSpaceId}
                         document={sceneDocument}
                         posedEntities={lookEntities}
+                        outputMode={outputMode}
                         title={viewerTitle}
                         entryView={entryView}
                         navMode={navMode}
@@ -641,10 +648,34 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 </button>
             ) : null}
 
+            {/* Under them, same size: the room's quality. Lite is the output (viewport/outputMode.js),
+                Full the work renderer; the choice is remembered per browser. */}
+            {state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (
+                <button
+                    type="button"
+                    aria-pressed={!outputMode}
+                    title={outputMode
+                        ? 'Lite: beams and haze, light enough for a phone. Tap for the full renderer (shadows, bloom, every lamp a real light)'
+                        : 'Full: the work renderer. Tap for Lite, light enough for a phone'}
+                    style={{
+                        ...overlayButtonStyle,
+                        position: 'absolute',
+                        top: `calc(${topClear} + ${hasBuilding ? '6.8rem' : '3.4rem'})`,
+                        right: '1rem',
+                        zIndex: 20,
+                        minHeight: 44,
+                        minWidth: 104
+                    }}
+                    onClick={() => setOutputMode(!outputMode)}
+                >
+                    {outputMode ? 'Lite' : 'Full'}
+                </button>
+            ) : null}
+
             {roomHasRig && document && !showCodeView ? (
                 <Suspense fallback={null}>
                     <RoomLookFollower
-                        document={document}
+                        document={viewDocument}
                         onEntities={setLookEntities}
                         showChip={!isPreview && !isEmbed}
                         top={rigChipTop}

@@ -128,6 +128,8 @@ export default function PublicProjectSceneSurface({
     canOfferXrEntry = false,
     // the lamps as the desk's live look poses them (RoomLookFollower), or null
     posedEntities = null,
+    // output mode (viewport/outputMode.js): the room drawn light enough for a phone
+    outputMode = false,
     lockInside = false,
     onBuilding,
     onLockPaused
@@ -202,6 +204,9 @@ export default function PublicProjectSceneSurface({
         <>
             {navMode === 'walk' ? (
                 <LiveProjectScene
+                    // a new renderer on a quality switch: antialias is fixed when the context is made
+                    key={outputMode ? 'lite' : 'full'}
+                    outputMode={outputMode}
                     projectId={projectId}
                     spaceId={spaceId}
                     // Walk/Fly keeps the look the desk is playing: the walk scene loads its own
@@ -222,6 +227,7 @@ export default function PublicProjectSceneSurface({
                 />
             ) : (
                 <StudioViewport
+                    key={outputMode ? 'lite' : 'full'}
                     document={document}
                     selectedEntityId={null}
                     onSelectEntity={null}
