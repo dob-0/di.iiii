@@ -31,6 +31,8 @@ di spaces      what is in this di.iiii
 
 di backup      write your whole di.iiii to one file
 di update      get the newest — never touches your work
+di channel     which channel this install follows: stable (releases) or dev (what dev.diiii.xyz serves)
+di autoupdate  on | off | status — keep it on its channel every 15 minutes (Linux)
 di doctor      what this machine can and cannot do
 di keeper get  a small model on this machine — works with no internet
 di ndi get     video in and out over the network — OBS, Resolume, a projector
@@ -355,6 +357,25 @@ for someone who wants the source and the dev stack.
 installs dependencies and health-checks it **on a scratch port** before stopping
 anything. `current` flips last. Any failure leaves you exactly where you were
 and says so. `di update --rollback` returns to `previous`.
+
+### Channels and automatic updates
+
+- `di update --channel stable` (the default) installs the newest published release.
+- `di update --channel dev` installs the dev-channel build of the commit **dev.diiii.xyz is serving right now**
+  (read from its `/serverXR/api/health`), so this install never runs ahead of or behind the hub. If CI has not
+  published that commit yet it says so; run it again in a few minutes. The checksum is verified before anything is
+  unpacked.
+- No GitHub account is needed, ever: installs download public release files anonymously.
+- `di channel dev` remembers the channel; `di channel` shows it.
+- `di autoupdate on` installs a systemd **user** timer (Linux) that runs the update every 15 minutes. It skips and
+  logs while the CPU package is above 85 C. `di autoupdate status` (and `di status`) show last check, last update and
+  last error; the log is `~/.di/logs/autoupdate.log`, one line per run. `di autoupdate off` removes it.
+  To run with nobody logged in: `loginctl enable-linger $USER`.
+- On a running di an automatic update restarts it, like `di update` does. Keep a show on `stable`, or `autoupdate off`.
+- Windows and macOS: not built. The equivalent is a Task Scheduler task or a LaunchAgent running
+  `di autoupdate run` every 15 minutes.
+
+Why and the limits: `docs/architecture/decisions/2026-10-05-release-channels.md`.
 
 ### What an update actually risks
 

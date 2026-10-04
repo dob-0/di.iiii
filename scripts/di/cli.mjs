@@ -65,6 +65,8 @@ import {
     restartSupervisor, runSupervisor, stageStatus, startSupervisor
 } from './stage.mjs'
 import { parseArgs } from './args.mjs'
+import { CHANNELS, DEFAULT_CHANNEL, devRelease, hubUrl, isChannel } from './channels.mjs'
+import * as autoupdate from './autoupdate.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
 
 const HOME = () => {
@@ -308,8 +310,10 @@ const cmdStatus = async () => {
     const info = runner.describe(home)
     const healthy = await alive(home, port)
 
+    const autoLines = () => { for (const l of autoupdate.statusLines(autoupdate.statusOf({ home }))) say(style.dim(l)) }
     if (!healthy) {
         say(`${ui.notRunning()}  ${style.dim(`${info.version || '?'} · ${info.dataDir}`)}`)
+        autoLines()
         return
     }
     const size = info.mode === 'node' ? humanSize(await dirSize(paths(home).data)) : null
@@ -331,6 +335,7 @@ const cmdStatus = async () => {
     const onName = cert ? await probeRig(port, cert.name, '/serverXR', 'https') : null
     const rig = (onName && !onName.refused) ? onName : ((await probeRig(port)) || onName)
     say(ui.rigVisibility(rig))
+    autoLines()
 }
 
 const cmdOpen = async (args) => {
@@ -719,6 +724,13 @@ const cmdUpdate = async (args) => {
     if (!requireInstalled(home)) return
     const verbose = Boolean(args.flags.verbose)
     const from = installedVersion(home)
+    // --channel for this run; otherwise the one `di channel` remembered.
+    const channel = args.flags.channel || readState(home).channel || DEFAULT_CHANNEL
+    if (!isChannel(channel)) {
+        fail(`no such channel: ${channel} — one of ${CHANNELS.join(', ')}`)
+        process.exitCode = 1
+        return
+    }
 
     if (args.flags.rollback) {
         // Going back to a build that cannot read the data it is going back TO
@@ -745,9 +757,18 @@ const cmdUpdate = async (args) => {
         // --from is the venue case: a machine with no network, an artifact on a
         // USB stick. It skips the feed entirely, and with it the "is this newer"
         // question — someone who names a file has chosen that file.
-        release = args.flags.from
-            ? await releaseFromFile(args.flags.from)
-            : await latestRelease()
+        if (args.flags.from) {
+            release = await releaseFromFile(args.flags.from)
+        } else if (channel === 'dev') {
+            // The dev channel is the hub's own commit, not "newest": an install
+            // must not run ahead of or behind dev.diiii.xyz.
+            const picked = await devRelease({ hub: hubUrl(readState(home)), installed: from })
+            if (picked.current) { say(ui.upToDate(from)); return }
+            if (!picked.release) { say(picked.pending); return }
+            release = picked.release
+        } else {
+            release = await latestRelease()
+        }
     } catch (error) {
         fail(String(error.message || error))
         process.exitCode = 1
@@ -757,7 +778,9 @@ const cmdUpdate = async (args) => {
     // A machine can be AHEAD of the release feed — a build installed from a
     // file, an rc, a test install. "Not the same version" is not "newer", and
     // walking someone backwards is not an update.
-    if (!args.flags.from && !isNewerVersion(release.version, from) && !args.flags.force) {
+    // Dev builds are matched to the hub by commit, not ordered by version: the
+    // hub moving back is a move the channel must follow.
+    if (!args.flags.from && channel !== 'dev' && !isNewerVersion(release.version, from) && !args.flags.force) {
         say(ui.aheadOfRelease(from, release.version))
         return
     }
@@ -817,6 +840,7 @@ const cmdUpdate = async (args) => {
     await activate({ home, ...staged, version: release.version, mode: readState(home).mode })
     await pruneVersions({ home, keep: [release.version, from].filter(Boolean) })
 
+    await writeState(home, { lastUpdate: { at: new Date().toISOString(), from, to: release.version, channel: args.flags.from ? 'file' : channel } })
     say(ui.updated(from, release.version))
     if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })
 }
@@ -1347,7 +1371,61 @@ const cmdStage = async (args) => {
     process.exitCode = 1
 }
 
+const cmdChannel = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const wanted = args._[1]
+    if (!wanted) {
+        say(`channel ${readState(home).channel || DEFAULT_CHANNEL}  (${CHANNELS.join(' | ')})`)
+        return
+    }
+    if (!isChannel(wanted)) {
+        fail(`no such channel: ${wanted} — one of ${CHANNELS.join(', ')}`)
+        process.exitCode = 1
+        return
+    }
+    await writeState(home, { channel: wanted })
+    say(`channel ${wanted} — ${wanted === 'dev' ? 'this install follows the build dev.diiii.xyz serves' : 'this install follows published releases'}. apply it now with: ${CMD} update`)
+}
+
+const cmdAutoupdate = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const action = args._[1] || 'status'
+    if (action === 'run') {
+        // The timer's job. One log line, always; exit 1 only when it failed.
+        const { outcome, detail } = await autoupdate.runAutoUpdate({
+            home,
+            update: ({ channel }) => new Promise((resolve) => {
+                const child = spawn(process.execPath, [fileURLToPath(import.meta.url), 'update', '--channel', channel], { stdio: ['ignore', 'pipe', 'pipe'] })
+                let output = ''
+                child.stdout.on('data', (d) => { output += d })
+                child.stderr.on('data', (d) => { output += d })
+                child.on('error', (e) => resolve({ code: 1, output: String(e.message) }))
+                child.on('exit', (code) => resolve({ code, output }))
+            })
+        })
+        say(`${outcome} ${detail}`)
+        if (outcome === 'failed') process.exitCode = 1
+        return
+    }
+    if (action === 'status') { for (const l of autoupdate.statusLines(autoupdate.statusOf({ home }))) say(l); return }
+    if (action !== 'on' && action !== 'off') {
+        fail(`${CMD} autoupdate on | off | status`)
+        process.exitCode = 1
+        return
+    }
+    if (!autoupdate.supported()) { say(autoupdate.unsupportedText()); process.exitCode = 1; return }
+    if (action === 'off') { await autoupdate.disable(); say('automatic updates off — timer and units removed.'); return }
+    const result = await autoupdate.enable({ home })
+    if (!result.ok) { fail(`could not install the timer: ${result.why}`); process.exitCode = 1; return }
+    say(`automatic updates on — every ${autoupdate.EVERY_MINUTES} minutes, channel ${readState(home).channel || DEFAULT_CHANNEL}. log: ${autoupdate.logFile(home)}`)
+    say(style.dim('  to run with nobody logged in:  loginctl enable-linger $USER'))
+}
+
 const COMMANDS = {
+    channel: cmdChannel,
+    autoupdate: cmdAutoupdate,
     up: cmdUp,
     invite: cmdInvite,
     follow: cmdFollow,

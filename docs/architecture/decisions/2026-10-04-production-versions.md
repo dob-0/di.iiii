@@ -86,7 +86,7 @@ The list project holds one entity `production` (component `productionMeta`) and 
 | field | meaning |
 |---|---|
 | `id`, `projectId`, `title` | the version (the mark's id), the project it lives in, its name |
-| `status` | exactly one of `for-the-show` · `candidate` · `kept-copy` · `archived`; at most one `for-the-show`; none is valid |
+| `status` | exactly one of `for-the-show` · `candidate` · `kept-copy` · `concept` · `archived`; at most one `for-the-show`; none is valid |
 | `madeFrom` | the version id it was made from, or null |
 | `madeBy` | `{ machine, install, tool, commit }` — the machine the tool ran on, the install it wrote to, the tool, the git commit (`+dirty` if the checkout had changes); null where not known |
 | `madeAt` | ISO time |
@@ -165,6 +165,30 @@ own mark and row and from the code's versions file (`derive.mjs`):
 It refuses, and writes nothing, in two cases: two projects claim one version id, or an `*-oldhall-0929` lost
 its `copyOf`. Run it on the hub (dev). Every install that follows `moxir` then receives the list with the
 space. **This change does not run it.**
+
+## Concept (added 2026-10-04, owner: "keep the others as concept, take only the good ones and concentrate on the new setup")
+
+A fifth status. A **concept** is a version kept on purpose as an idea: never deleted, not on the main row, folded
+under ONE button "Concepts (n)" on the version row, reachable in one click. It is not archived (an archived
+version is not on the row at all) and not a kept copy (a labelled copy of an old state, folded under "Old
+versions (n)", which keeps its own fold). The version for the show is first on the row; a concept you are
+standing in is never folded. The audit treats a concept like any listed version (same checks, its status is
+printed). Order in the list: for-the-show, candidate, kept-copy, concept, archived.
+
+- `versions.mjs set-status <id> concept` and `set-status --all-except <id,id,...> concept [--dry-run]`. The bulk
+  form moves the listed **candidates** that are not named; it leaves kept copies and archived versions as they
+  are, and it refuses, writing nothing, when the version for the show is not named in the except list or an
+  id is not in the list. Each version is one write with its own read-back and printed undo.
+- **Older installs.** Code from before this change does not know the word. Measured on origin/dev 7a751cf3:
+  `normalizeProductionVersion` returns null for an unknown status, so the entry is dropped from that install's
+  reading of the list (the row, `list`, the audit): a concept is simply not on an old install's row, and can
+  never appear as a candidate or for the show. The server's normaliser does the same to the component when it
+  normalises a whole document (`drops a malformed entry at the server`), so an OLD server can lose the concept
+  entry from its own copy. That is why the order is: land and deploy this to dev, update every install
+  (`di update --from`), and only then run `set-status ... concept` on dev. If an old install did lose an
+  entry, `di follow` brings it back from dev (dev is the hub), and the audit reports "the list does not have it".
+  Unknown statuses are deliberately not coerced to a guess (a guess could promote a hidden version to the main
+  row).
 
 ## Limits
 
