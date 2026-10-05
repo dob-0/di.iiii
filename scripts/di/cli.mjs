@@ -529,6 +529,57 @@ const cmdNew = async (args) => {
     }
 }
 
+/**
+ * `di move PROJECT --to SPACE` — move a project into another space.
+ *
+ * Through the server's own route (POST /api/projects/:id/move), never the
+ * database: the server owns who may do it (an admin, or the owner of both
+ * spaces), what a clash is, and the all-or-nothing order of the files and the
+ * row. Here by default means THIS install; `--from URL` aims it at another
+ * di.iiii, with a token read from DI_TOKEN or from stdin (`--token -`), never
+ * from an argument that a process list would show.
+ */
+const cmdMove = async (args) => {
+    const project = args._[1]
+    const to = args.flags.to
+    const from = args.flags.from
+    if (!project || !to || to === true) {
+        fail(`which project, and into which space? — ${CMD} move my-project --to other-space  (add --dry-run to look first)`)
+        process.exitCode = 1
+        return
+    }
+    let base
+    const headers = { 'Content-Type': 'application/json' }
+    if (from && from !== true) {
+        base = `${String(from).replace(/\/+$/, '')}/serverXR`
+        const token = args.flags.token === '-' ? (await readStdin()).trim() : String(process.env.DI_TOKEN || '').trim()
+        if (token) headers.Authorization = `Bearer ${token}`
+    } else {
+        const home = HOME()
+        if (!requireInstalled(home)) return
+        const port = resolvePort(home)
+        if (!(await alive(home, port))) { say(ui.notRunning()); return }
+        base = apiBase(home, port)
+    }
+    const dryRun = Boolean(args.flags['dry-run'])
+    try {
+        const response = await fetch(`${base}/api/projects/${encodeURIComponent(project)}/move`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ toSpace: to, unpublish: Boolean(args.flags.unpublish), dryRun })
+        })
+        const body = await response.json().catch(() => ({}))
+        if (!response.ok) { fail(body?.error || `could not move "${project}" (${response.status})`); process.exitCode = 1; return }
+        say(dryRun
+            ? `would move "${body.projectId}" from ${body.fromSpaceId} into ${body.toSpaceId} — nothing changed (--dry-run)`
+            : `moved "${body.projectId}" from ${body.fromSpaceId} into ${body.toSpaceId} — the stable link is ${body.stableLink}`)
+        if (body.wasPublished) say(`  ${body.fromSpaceId} no longer shows it as its front door`)
+    } catch (error) {
+        fail(String(error?.message || error))
+        process.exitCode = 1
+    }
+}
+
 const cmdSpaces = async () => {
     const home = HOME()
     if (!requireInstalled(home)) return
@@ -1444,6 +1495,7 @@ const COMMANDS = {
     new: cmdNew,
     save: cmdSave,
     spaces: cmdSpaces,
+    move: cmdMove,
     link: cmdLink,
     sync: cmdSync,
     update: cmdUpdate,

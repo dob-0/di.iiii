@@ -56,6 +56,7 @@ const {
   countProjectsIn,
 } = require('./collectionStore')
 const { registerProjectRoutes } = require('./routes/projectRoutes')
+const { moveProjectBetweenSpaces } = require('./projectMove')
 const { registerSpaceRoutes } = require('./routes/spaceRoutes')
 const { createSpaceIdParam } = require('./routes/spaceIdParam')
 const { createKeyedLock } = require('./asyncLock')
@@ -2431,6 +2432,7 @@ registerProjectRoutes(router, {
   setProjectVisibility,
   loadSpaceMeta,
   isSpaceOwnerOrAdminState,
+  moveProject: (args) => moveProjectBetweenSpaces({ db: getDb(), spacesDir: SPACES_DIR, ...args }),
   TRASH_TTL_MS,
   listCollections,
   getCollection,
