@@ -19,3 +19,15 @@
   origin/dev too.
 - Owed: the owner's switch-over is his go (commands in the PR body); it needs a build with this code installed on
   aylmo first. launchd `KeepAlive` for macOS is not built (nothing to see it on here).
+
+## 2026-10-05 — merged with dev, the unit keeps its node, installed on aylmo
+
+- Merged `origin/dev` (conflicts only in `cli.mjs`: `di status` now prints the supervisor line and the autoupdate lines).
+- #785 (autoupdate pins the node on PATH) applies here too. `di service install` records the node it ran with
+  (`state.json` -> `service.node`); every later `di up` writes that node into `ExecStart=` and first on `PATH` in
+  `server.env` while the file exists, so a `di up` from a shell with `/usr/bin/node` (v26, no `cap_net_bind_service`,
+  cannot bind 443) cannot swap it. Test: "keeps the node the install ran with" in `service.test.js`.
+- Restart policy stays `Restart=always` (not `on-failure`): systemd counts SIGTERM as a clean exit. A SIGSEGV is a
+  failure under either; `systemctl stop` (`di down`) is never restarted under either.
+- Owed: the hand-written `di-up.service` (oneshot, `di up --no-open`) still runs at login and restarts the
+  supervised unit once; retire it after the proof. Session note renamed to the branch name the push gate expects.
