@@ -50,10 +50,14 @@ if (!registered.ok) throw new Error(`register ${registered.status}`)
     db.close()
 }
 const browser = await chromium.launch()
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1.25 })
-await context.close()
-const page = await person(browser, { as: user })
-await page.setViewportSize({ width: 1440, height: 900 })
+// Sign in with the driver, then carry the session into a context at the owner's
+// screen: 1440x900, device pixel ratio 1.25 (the driver's own is 2).
+const signedIn = await person(browser, { as: user })
+const state = await signedIn.context().storageState()
+await signedIn.context().close()
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1.25, storageState: state })
+const page = await context.newPage()
+await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' })
 
 // A project with four cards, made through the page's own session.
 const projectId = `drag-${Date.now().toString(36)}`
