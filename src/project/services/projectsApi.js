@@ -63,6 +63,13 @@ export const listSpaceContents = async (spaceId) => {
     return data.projects || []
 }
 
+// A production's versions, the public parts: [{ id, projectId, title, status }]. The list project is private;
+// the server answers this for a visitor. Rejects (404) where the space has no such list.
+export const listProductionVersions = async (spaceId, production) => {
+    const data = await apiFetch(`/api/spaces/${spaceId}/productions/${production}/versions`)
+    return data.versions || []
+}
+
 export const createProject = async (spaceId = DEFAULT_PROJECT_SPACE_ID, payload = {}) => {
     return withAutoProvisionedSpace(spaceId, () => apiFetch(`/api/spaces/${spaceId}/projects`, {
         method: 'POST',
