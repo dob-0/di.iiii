@@ -1888,8 +1888,7 @@ export default function RawGraphSurface({
                                 {onResizeNode ? (
                                     <span
                                         className="raw-graph-node-resize"
-                                        role="button"
-                                        aria-label="Resize card"
+                                        aria-hidden="true"
                                         title="Drag to resize. Double-click for the automatic size."
                                         onPointerDown={(event) => {
                                             if (event.button !== 0) return
@@ -1899,7 +1898,6 @@ export default function RawGraphSurface({
                                             onSelectNode?.(node.id)
                                             setResizing(node.id)
                                         }}
-                                        onClick={(event) => event.stopPropagation()}
                                         onDoubleClick={(event) => {
                                             event.stopPropagation()
                                             if (cardSizeOf(node)) onResizeNode(node.id, null)
