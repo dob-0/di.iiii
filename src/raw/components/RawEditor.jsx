@@ -1692,6 +1692,13 @@ export default function RawEditor({
         payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
     }), [applyLocalOps])
 
+    // The card's own size (values.cardSize, graph units) — one op per resize,
+    // and null gives the automatic size back.
+    const handleResizeNode = useCallback((nodeId, size) => applyLocalOps({
+        type: 'updateNode',
+        payload: { nodeId, patch: { values: { cardSize: size } } }
+    }), [applyLocalOps])
+
     // Ctrl/Cmd+D. The audit found NO duplication path of any kind — a composed
     // object could not be stamped twice except by rebuilding it. This clones
     // the node alone (not its subtree — a container's copy arriving empty is
@@ -2845,6 +2852,7 @@ export default function RawEditor({
                     onDeleteEdge={handleDeleteEdge}
                     onDeleteNode={handleDeleteNode}
                     onMoveNode={handleMoveNode}
+                    onResizeNode={handleResizeNode}
                     onOpenInStudio={!isLocalWorkspace && projectId ? handleOpenGeoInStudio : null}
                     onDoubleClick={(placement) => openPalette(placement)}
                     isNodeActive={(node) =>
