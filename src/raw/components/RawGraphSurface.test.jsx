@@ -681,12 +681,27 @@ describe('RawGraphSurface', () => {
 
         // Simulate the animation frame firing: only the LATEST position (not
         // all five) should be committed.
-        rafCallbacks[0]()
-        expect(onMoveNode).toHaveBeenCalledTimes(1)
-        expect(onMoveNode.mock.calls[0]).toEqual(['color-1', -40, -30])
+        // A frame only redraws the held card (local state): the document
+        // hears nothing while the pointer is held. One op, on release, with
+        // the latest position (2026-10-05: ~70 moves had written 255 ops).
+        act(() => { rafCallbacks[0]() })
+        expect(onMoveNode).not.toHaveBeenCalled()
 
         rafSpy.mockRestore()
         fireEvent.pointerUp(window)
+        expect(onMoveNode).toHaveBeenCalledTimes(1)
+        expect(onMoveNode.mock.calls[0]).toEqual(['color-1', -40, -30])
+    })
+
+    it('sends no op for a click, or for a drag that ends where it began', () => {
+        const onMoveNode = vi.fn()
+        const colorNode = makeNode('value.color', { id: 'color-1', graphX: 40, graphY: 30 })
+        const { container } = render(<RawGraphSurface nodes={[colorNode]} edges={[]} onMoveNode={onMoveNode} />)
+        const nodeCard = container.querySelector('.raw-graph-node-card')
+        nodeCard.setPointerCapture = vi.fn()
+        fireEvent.pointerDown(nodeCard, { button: 0, clientX: 50, clientY: 40, pointerId: 1 })
+        fireEvent.pointerUp(window)
+        expect(onMoveNode).not.toHaveBeenCalled()
     })
 
     it('shows an active-marker toggle only for activatable types, and reports the click', () => {

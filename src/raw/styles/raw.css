@@ -2731,6 +2731,12 @@
     border-color: rgba(var(--di-cyan-rgb), 0.55);
 }
 
+.raw-graph-node-card.is-held {
+    /* The card in the hand is on top of every card it passes over. Held only:
+       on release it goes back to its place in the document's order. */
+    z-index: 20;
+}
+
 .raw-graph-node-card:active {
     cursor: grabbing;
 }

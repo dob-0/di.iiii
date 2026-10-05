@@ -194,7 +194,7 @@ export default function RawGraphSurface({
     // Skips the auto-fit and starts at a fixed zoom. Only for tests and for
     // callers that restore a saved viewport; normal use fits on mount.
     initialZoom = null,
-    nodes = [],
+    nodes: nodesProp = [],
     edges = [],
     // THE THINGS IN THE ROOM, as cards (src/raw/utils/objectCards.js). A
     // project holds things (Studio's objects) beside its nodes, and this
@@ -299,6 +299,18 @@ export default function RawGraphSurface({
     useEffect(() => {
         if (editingId && editingId !== selectedNodeId) setEditingId(null)
     }, [editingId, selectedNodeId])
+    // Where the held card is NOW, kept here and nowhere else until the pointer
+    // is released: one `updateNode` op per drag, never one per move (measured
+    // 2026-10-05: ~70 mouse moves wrote 255 ops, and each echo of an older op
+    // pulled the card back under the pointer). `nodes` is the document's
+    // nodes with this one position laid over the top.
+    const [dragPos, setDragPos] = useState(null)
+    const dragPosRef = useRef(null)
+    // The insets as the drag effect must read them: current at every frame.
+    const contentInsetsRef = useRef(contentInsets)
+    contentInsetsRef.current = contentInsets
+    const bottomInsetRef = useRef(bottomInset)
+    bottomInsetRef.current = bottomInset
     const [isPanning, setIsPanning] = useState(false)
     const [isPanMoving, setIsPanMoving] = useState(false)
     const [hoveredWireId, setHoveredWireId] = useState(null)
@@ -349,6 +361,14 @@ export default function RawGraphSurface({
     // Everything the view has to hold, both kinds. Only the FIT and the
     // is-this-canvas-empty question use it — wires and ports stay on `nodes`
     // alone, because only nodes have any.
+    const nodes = useMemo(
+        () => (dragPos ? nodesProp.map((node) => (node.id === dragPos.id ? { ...node, graphX: dragPos.x, graphY: dragPos.y } : node)) : nodesProp),
+        [nodesProp, dragPos]
+    )
+    // The document's own nodes: what a drag starts from and what its effect
+    // follows, so a held card moving does not restart the effect every frame.
+    const nodePropById = useMemo(() => new Map(nodesProp.map((node) => [node.id, node])), [nodesProp])
+
     const cardsInView = useMemo(
         () => (objectCards.length ? [...nodes, ...objectCards] : nodes),
         [nodes, objectCards]
@@ -1280,42 +1300,56 @@ export default function RawGraphSurface({
     useEffect(() => {
         if (!isDraggingNode) return undefined
         // rAF-gated: raw pointermove can fire far more often than the display
-        // refresh rate (high-poll-rate mice/trackpads), and each call was
-        // committing a document op + re-evaluating the whole node graph --
-        // capping to one commit per animation frame is a real, safe win with
-        // no change in drag responsiveness (2026-07-17 perf audit).
+        // refresh rate, so the held card is redrawn at most once per frame.
+        // The card moves in LOCAL state only (`dragPos`); the document hears
+        // about it once, on release (see `up`).
         let rafId = null
         let pendingPos = null
         const flush = () => {
             rafId = null
             if (!pendingPos) return
-            const { nextX, nextY } = pendingPos
+            dragPosRef.current = { id: draggingNodeId, x: pendingPos.nextX, y: pendingPos.nextY }
             pendingPos = null
-            onMoveNode?.(draggingNodeId, nextX, nextY)
+            setDragPos(dragPosRef.current)
         }
-        // The pointer and the pan clock live in refs: every committed move
-        // changes `nodes`, which re-runs this effect, and a pointer held still
-        // at the edge must keep panning across that.
+        // The pointer and the pan clock live in refs: a pointer held still
+        // at the edge must keep panning without any new pointer event.
         const drag = dragPanRef
         let panRaf = null
+        // The part of the canvas a person can see: the element minus any docked
+        // window or panel (contentInsets) and the selection sheet. The card is
+        // kept inside it and the edge pan starts at ITS edge, never at the
+        // window's, so a drag stops before it goes under a panel.
+        const visibleInsets = () => ({
+            left: Math.max(0, contentInsetsRef.current?.left || 0),
+            right: Math.max(0, contentInsetsRef.current?.right || 0),
+            top: Math.max(0, contentInsetsRef.current?.top || 0),
+            bottom: Math.max(0, contentInsetsRef.current?.bottom || 0) + Math.max(0, bottomInsetRef.current || 0)
+        })
+        const visibleRect = () => {
+            const rect = containerRef.current?.getBoundingClientRect?.()
+            if (!rect) return rect
+            const inset = visibleInsets()
+            return { left: rect.left + inset.left, right: rect.right - inset.right, top: rect.top + inset.top, bottom: rect.bottom - inset.bottom }
+        }
         // Where the card wants to be for the pointer as it is NOW and the
-        // viewport as it is NOW, kept GRAB_PX inside the canvas (utils/dragClamp.js).
+        // viewport as it is NOW, kept GRAB_PX inside the visible band.
         const commitWanted = () => {
             const point = clientPointToGraphPoint(drag.current.x, drag.current.y)
             const rect = containerRef.current?.getBoundingClientRect?.()
             const vp = viewportRef.current
             const wanted = dragClamp(
                 { x: point.x - dragOffsetRef.current.x, y: point.y - dragOffsetRef.current.y },
-                { rect, panX: vp.panX, panY: vp.panY, zoom: vp.zoom }
+                { rect, panX: vp.panX, panY: vp.panY, zoom: vp.zoom, inset: visibleInsets() }
             )
             pendingPos = { nextX: wanted.x, nextY: wanted.y }
         }
-        // Edge auto-pan: while the pointer rests in the band at an edge (or
-        // past it, off the canvas) the canvas pans under it and the card follows.
+        // Edge auto-pan: while the pointer rests in the band at an edge of the
+        // visible canvas (or past it) the canvas pans and the card follows.
         const panTick = (now) => {
             panRaf = null
             if (!drag.current.live) return
-            const velocity = edgePanVelocity(drag.current, containerRef.current?.getBoundingClientRect?.())
+            const velocity = edgePanVelocity(drag.current, visibleRect())
             if (!velocity) { drag.current.last = 0; return }
             const dt = drag.current.last ? Math.min(now - drag.current.last, 50) : 16
             drag.current.last = now
@@ -1326,14 +1360,13 @@ export default function RawGraphSurface({
             panRaf = requestAnimationFrame(panTick)
         }
         const armPan = () => {
-            if (panRaf === null && edgePanVelocity(drag.current, containerRef.current?.getBoundingClientRect?.())) {
+            if (panRaf === null && edgePanVelocity(drag.current, visibleRect())) {
                 panRaf = requestAnimationFrame(panTick)
             }
         }
         const move = (event) => {
             if (pinchRef.current) return
-            const node = nodeById.get(draggingNodeId)
-            if (!node) return
+            if (!nodePropById.has(draggingNodeId)) return
             drag.current.x = event.clientX
             drag.current.y = event.clientY
             drag.current.live = true
@@ -1347,6 +1380,15 @@ export default function RawGraphSurface({
             if (rafId !== null) { cancelAnimationFrame(rafId); flush() }
             drag.current.live = false
             drag.current.last = 0
+            // The one op of the drag: only when the card really moved, and
+            // never one identical to where it already is.
+            const final = dragPosRef.current
+            const start = nodePropById.get(draggingNodeId)
+            dragPosRef.current = null
+            if (final && start && (final.x !== start.graphX || final.y !== start.graphY)) {
+                onMoveNode?.(draggingNodeId, final.x, final.y)
+            }
+            setDragPos(null)
             setDraggingNodeId(null)
         }
         window.addEventListener('pointermove', move)
@@ -1359,7 +1401,7 @@ export default function RawGraphSurface({
             window.removeEventListener('pointermove', move)
             window.removeEventListener('pointerup', up)
         }
-    }, [isDraggingNode, draggingNodeId, nodeById, onMoveNode])
+    }, [isDraggingNode, draggingNodeId, nodePropById, onMoveNode])
 
     useEffect(() => {
         if (!isPanning) return undefined
@@ -1827,7 +1869,7 @@ export default function RawGraphSurface({
                         return (
                             <div
                                 key={node.id}
-                                className={`raw-graph-node-card is-lod-${tier}${isSelected ? ' is-selected' : ''}`}
+                                className={`raw-graph-node-card is-lod-${tier}${isSelected ? ' is-selected' : ''}${draggingNodeId === node.id ? ' is-held' : ''}`}
                                 data-card-id={node.id}
                                 style={{
                                     position: 'absolute',
