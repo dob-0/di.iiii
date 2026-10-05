@@ -855,6 +855,7 @@ export const ui = {
         `  ${CMD} save SPACE    save it as one file you can carry anywhere`,
         `  ${CMD} open FILE     open a file someone saved (or ${CMD} open, for di.iiii itself)`,
         `  ${CMD} spaces        what is in this di.iiii`,
+        `  ${CMD} move PROJECT --to SPACE   move a project into another space (--dry-run to look first)`,
         `  ${CMD} backup        every space and the light show, in one file`,
         `  ${CMD} restore FILE  read one back in`,
         `  ${CMD} restore --snapshot   the copies taken automatically before an update`,
