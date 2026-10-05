@@ -240,8 +240,15 @@ function TitleField({ title, onRename, renameRequest = 0 }) {
             className="raw-property-title-input"
             type="text"
             value={draft}
-            ref={(element) => element?.focus()}
-            onFocus={(event) => event.target.select()}
+            ref={(element) => {
+                // Caret at the end, not select-all: N then a key must add to the name,
+                // not replace it (Bar -> "o"). Ctrl+A still selects everything.
+                if (element && document.activeElement !== element) {
+                    element.focus()
+                    const end = element.value.length
+                    element.setSelectionRange(end, end)
+                }
+            }}
             onChange={(event) => setDraft(event.target.value)}
             onBlur={() => {
                 const next = draft.trim()
