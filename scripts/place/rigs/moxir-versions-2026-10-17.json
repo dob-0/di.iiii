@@ -1538,7 +1538,6 @@
       {
         "id": "outdoor-full",
         "label": "Outdoor system — full rig",
-        "rate": 205000,
         "cells": "Price data!A27:F27",
         "contents": "50 PARs, 18x380W beams, laser, MA console, CO2 x6, cold-spark x4, smoke x4",
         "covers": {
@@ -1555,7 +1554,6 @@
       {
         "id": "indoor-stage",
         "label": "Indoor 8x3.5 m stage — full rig",
-        "rate": 96000,
         "cells": "Price data!A28:F28",
         "contents": "12x250W beams, 14 bee-eyes, 8 COB PARs, low-fog, desk, distro",
         "covers": {

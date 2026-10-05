@@ -10,17 +10,15 @@
                 "type": "up-b380f",
                 "ordered": 18,
                 "stock": 18,
-                "rate": 20000,
                 "label": "380W beam moving head (outdoor)",
                 "source": "Price list!A6:E6 · version \"full\" of scripts/place/rigs/moxir-versions-2026-10-17.json (+1 spare)",
-                "note": "the quote calculator's hidden \"Price data\" sheet says 19000/day"
+                "note": "the quote calculator's hidden \"Price data\" sheet differs from the visible price list on this rate (both in the private repo)"
             },
             {
                 "code": "UP-250BSW",
                 "type": "up-250bsw",
                 "ordered": 12,
                 "stock": 12,
-                "rate": 15000,
                 "label": "250W beam / spot / wash",
                 "source": "Price list!A7:E7 · version \"full\" of scripts/place/rigs/moxir-versions-2026-10-17.json"
             },
@@ -29,7 +27,6 @@
                 "type": "up-hk1915",
                 "ordered": 8,
                 "stock": 14,
-                "rate": 13500,
                 "label": "19x15W bee-eye",
                 "source": "Price list!A8:E8 · version \"full\" of scripts/place/rigs/moxir-versions-2026-10-17.json"
             },
@@ -38,7 +35,6 @@
                 "type": "up-la40wf",
                 "ordered": 2,
                 "stock": 2,
-                "rate": 83000,
                 "label": "40W full-colour laser",
                 "source": "Price list!A16:E16 · version \"full\" of scripts/place/rigs/moxir-versions-2026-10-17.json"
             },
@@ -47,7 +43,6 @@
                 "type": "up-pl5403",
                 "ordered": 50,
                 "stock": 50,
-                "rate": 5000,
                 "label": "54x3W LED PAR (outdoor)",
                 "source": "Price list!A13:E13 · version \"full\" of scripts/place/rigs/moxir-versions-2026-10-17.json"
             },
@@ -98,8 +93,7 @@
                 "details": "High-output beam, IP-rated",
                 "category": "Moving heads",
                 "cells": "Price list!A6:E6",
-                "stock": 18,
-                "rate": 20000
+                "stock": 18
             },
             {
                 "code": "UP-250BSW",
@@ -107,8 +101,7 @@
                 "details": "LED 3-in-1 pattern beam",
                 "category": "Moving heads",
                 "cells": "Price list!A7:E7",
-                "stock": 12,
-                "rate": 15000
+                "stock": 12
             },
             {
                 "code": "UP-HK1915",
@@ -116,8 +109,7 @@
                 "details": "19-lens matrix with zoom",
                 "category": "Moving heads",
                 "cells": "Price list!A8:E8",
-                "stock": 14,
-                "rate": 13500
+                "stock": 14
             },
             {
                 "code": "UP-HK615",
@@ -125,8 +117,7 @@
                 "details": "6-lens with laser",
                 "category": "Moving heads",
                 "cells": "Price list!A9:E9",
-                "stock": 6,
-                "rate": 6500
+                "stock": 6
             },
             {
                 "code": "UP-MH100S",
@@ -134,8 +125,7 @@
                 "details": "Gobo / pattern, compact",
                 "category": "Moving heads",
                 "cells": "Price list!A10:E10",
-                "stock": 8,
-                "rate": 7000
+                "stock": 8
             },
             {
                 "code": "UP-MH8060S",
@@ -143,8 +133,7 @@
                 "details": "Gobo / pattern, compact",
                 "category": "Moving heads",
                 "cells": "Price list!A11:E11",
-                "stock": 6,
-                "rate": 6500
+                "stock": 6
             },
             {
                 "code": "UP-PL5403",
@@ -152,8 +141,7 @@
                 "details": "RGBW wash, IP-rated cast aluminium",
                 "category": "PAR & wash",
                 "cells": "Price list!A13:E13",
-                "stock": 50,
-                "rate": 5000
+                "stock": 50
             },
             {
                 "code": "UP-COB200",
@@ -161,8 +149,7 @@
                 "details": "COB wash",
                 "category": "PAR & wash",
                 "cells": "Price list!A14:E14",
-                "stock": 8,
-                "rate": 6000
+                "stock": 8
             },
             {
                 "code": "UP-LA40WF",
@@ -170,8 +157,7 @@
                 "details": "Waterproof, high power",
                 "category": "Lasers",
                 "cells": "Price list!A16:E16",
-                "stock": 2,
-                "rate": 83000
+                "stock": 2
             },
             {
                 "code": "UP-BY06",
@@ -179,8 +165,7 @@
                 "details": "Swing laser effect",
                 "category": "Lasers",
                 "cells": "Price list!A17:E17",
-                "stock": 4,
-                "rate": 11500
+                "stock": 4
             },
             {
                 "code": "UP-JG400",
@@ -188,8 +173,7 @@
                 "details": "Compact full-colour",
                 "category": "Lasers",
                 "cells": "Price list!A18:E18",
-                "stock": 2,
-                "rate": 6000
+                "stock": 2
             },
             {
                 "code": "UP-Q108S",
@@ -197,8 +181,7 @@
                 "details": "8-10 m spray, DMX",
                 "category": "Atmosphere & FX",
                 "cells": "Price list!A20:E20",
-                "stock": 6,
-                "rate": 7500
+                "stock": 6
             },
             {
                 "code": "UP-YH600F",
@@ -206,8 +189,7 @@
                 "details": "Waterproof, DMX",
                 "category": "Atmosphere & FX",
                 "cells": "Price list!A21:E21",
-                "stock": 4,
-                "rate": 19500
+                "stock": 4
             },
             {
                 "code": "UP-YZ31P",
@@ -215,8 +197,7 @@
                 "details": "Waterproof",
                 "category": "Atmosphere & FX",
                 "cells": "Price list!A22:E22",
-                "stock": 4,
-                "rate": 15500
+                "stock": 4
             },
             {
                 "code": "UP-SW3000B",
@@ -224,8 +205,7 @@
                 "details": "Double-head ground fog",
                 "category": "Atmosphere & FX",
                 "cells": "Price list!A23:E23",
-                "stock": 1,
-                "rate": 19000
+                "stock": 1
             },
             {
                 "code": "UP-236",
@@ -233,8 +213,7 @@
                 "details": "Double-head",
                 "category": "Atmosphere & FX",
                 "cells": "Price list!A24:E24",
-                "stock": 2,
-                "rate": 14000
+                "stock": 2
             },
             {
                 "code": "UP-HD210",
@@ -242,8 +221,7 @@
                 "details": "Multi-effect",
                 "category": "Atmosphere & FX",
                 "cells": "Price list!A25:E25",
-                "stock": 2,
-                "rate": 5000
+                "stock": 2
             },
             {
                 "code": "UP-Q3L",
@@ -251,8 +229,7 @@
                 "details": "Linux OS, full-size control",
                 "category": "Control & power",
                 "cells": "Price list!A27:E27",
-                "stock": 1,
-                "rate": 80000
+                "stock": 1
             },
             {
                 "code": "UP-1024",
@@ -260,8 +237,7 @@
                 "details": "1024-channel",
                 "category": "Control & power",
                 "cells": "Price list!A28:E28",
-                "stock": 1,
-                "rate": 20000
+                "stock": 1
             },
             {
                 "code": "UP-9800",
@@ -269,8 +245,7 @@
                 "details": "Central control",
                 "category": "Control & power",
                 "cells": "Price list!A29:E29",
-                "stock": 1,
-                "rate": 7000
+                "stock": 1
             },
             {
                 "code": "UP-B01",
@@ -278,8 +253,7 @@
                 "details": "Control unit",
                 "category": "Control & power",
                 "cells": "Price list!A30:E30",
-                "stock": 1,
-                "rate": 6500
+                "stock": 1
             },
             {
                 "code": "UP-PDU60B",
@@ -287,8 +261,7 @@
                 "details": "IP-rated distribution",
                 "category": "Control & power",
                 "cells": "Price list!A31:E31",
-                "stock": 2,
-                "rate": 5500
+                "stock": 2
             },
             {
                 "code": "UP-PDU60A",
@@ -296,8 +269,7 @@
                 "details": "1-way DMX512 distribution",
                 "category": "Control & power",
                 "cells": "Price list!A32:E32",
-                "stock": 1,
-                "rate": 6500
+                "stock": 1
             },
             {
                 "code": "UP-2303",
@@ -305,8 +277,7 @@
                 "details": "Decoder",
                 "category": "Control & power",
                 "cells": "Price list!A33:E33",
-                "stock": 1,
-                "rate": 2500
+                "stock": 1
             },
             {
                 "code": "UP-POWER12",
@@ -314,8 +285,7 @@
                 "details": "12-channel distro",
                 "category": "Control & power",
                 "cells": "Price list!A34:E34",
-                "stock": 1,
-                "rate": 11500
+                "stock": 1
             }
         ],
         "terms": [
