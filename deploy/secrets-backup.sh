@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
-# Pull the production secrets off the VPS, encrypt them, keep them with the
-# backups that already exist.
+# Pull the production secrets off the Mac (production since 2026-09-27; the
+# VPS is offline), encrypt them, keep the encrypted bundle in two places:
+# this machine and a second one (asuz).
 #
 # Why this exists: the nightly backup covers the database, the spaces and the
 # uploads, in four places. It does not cover a single .env. So a full VPS loss
@@ -13,6 +14,12 @@
 # Plaintext never touches the disk: the bundle is assembled under /dev/shm
 # (tmpfs, RAM only) and removed on every exit path, including a failure.
 #
+# Source: SOURCE_HOST (default di-mac, user non, who can read the tier files
+# under /usr/local/di-*/etc). The old name VPS_HOST is still honoured.
+# Second copy: SECOND_HOST (default asuz, then asuz-ts) into SECOND_DIR
+# (default ~/di-backups/secrets); only the encrypted file travels, and both
+# sides are compared by sha256. SECOND_HOST=none turns the second copy off.
+#
 #   ./secrets-backup.sh          write today's bundle
 #   ./secrets-backup.sh --check  say what would be captured, encrypt nothing
 #
@@ -21,7 +28,9 @@
 #   gpg -d secrets-<date>.gpg | tar xz                          (gpg fallback)
 set -euo pipefail
 
-VPS="${VPS_HOST:-dii-vps}"
+VPS="${SOURCE_HOST:-${VPS_HOST:-di-mac}}"
+SECOND_HOSTS="${SECOND_HOST:-asuz asuz-ts}"
+SECOND_DIR="${SECOND_DIR:-di-backups/secrets}"   # relative to the second host's home
 OUT_DIR="${SECRETS_OUT:-$HOME/di-backups/secrets}"
 KEEP="${SECRETS_KEEP:-14}"
 RECIPIENT_KEY="${SECRETS_AGE_RECIPIENT:-$HOME/.ssh/id_ed25519.pub}"
@@ -34,19 +43,22 @@ RECIPIENTS_FILE="${SECRETS_AGE_RECIPIENTS:-$OUT_DIR/recipients.txt}"
 CHECK=0
 [ "${1:-}" = "--check" ] && CHECK=1
 
-# path-on-vps : name-in-bundle. The name records where it belongs, because a
-# restore happens under pressure and "which .env was this" is not a question
-# anyone should be answering then.
+# path-on-source : name-in-bundle. The name records where it belongs, because a
+# restore happens under pressure. Names of the three .env members are kept
+# from the VPS era: di-atlas tools/standby-deploy.sh reads them from the newest
+# bundle (`tar xzOf - opt-di.iiii--.env`). On the Mac the compose files and
+# Caddy do not exist (the repo carries compose; nginx/tunnel are the Mac's).
 FILES=(
-  "/opt/di.iiii/.env:opt-di.iiii--.env"
-  "/opt/di.iiii-dev/.env:opt-di.iiii-dev--.env"
-  "/opt/di-bo/.env:opt-di-bo--.env"
-  "/opt/di.iiii/docker-compose.yml:opt-di.iiii--docker-compose.yml"
-  "/opt/di.iiii-dev/docker-compose.dev.yml:opt-di.iiii-dev--docker-compose.dev.yml"
-  "/opt/di.iiii/Caddyfile:opt-di.iiii--Caddyfile"
+  "/usr/local/di-standby/etc/source.env:opt-di.iiii--.env"
+  "/usr/local/di-dev/etc/source.env:opt-di.iiii-dev--.env"
+  "/usr/local/di-bo/etc/bot.env:opt-di-bo--.env"
+  "/usr/local/di-standby/etc/tunnel.yml:mac-di-standby--tunnel.yml"
+  "/usr/local/di-standby/etc/tunnel-cde8afd8-c97d-4052-99d6-737465ad2c8e.json:mac-di-standby--tunnel-credentials.json"
+  "/usr/local/di-standby/etc/nginx.conf:mac-di-standby--nginx.conf"
 )
 
 say() { printf '%s\n' "$*" >&2; }
+fail() { say "FAILED: $*"; exit 1; }
 
 # tmpfs, not /tmp — /tmp is a real filesystem here and a crash would leave
 # plaintext secrets in it until someone noticed.
@@ -62,7 +74,7 @@ mkdir -p "$payload"
 manifest="$payload/MANIFEST.txt"
 {
   echo "di.iiii secrets bundle"
-  echo "taken from: $VPS"
+  echo "taken from: $VPS (production Mac)"
   echo
   echo "Each file's name is its path with / written as -. To restore, put it"
   echo "back where the name says, chmod 600, and restart the unit that reads it."
@@ -87,8 +99,7 @@ for entry in "${FILES[@]}"; do
 done
 
 if [ "$got" -eq 0 ]; then
-  say "nothing captured — is $VPS reachable?"
-  exit 1
+  fail "nothing captured from $VPS — unreachable, or no readable file at the listed paths"
 fi
 
 if [ "$CHECK" = 1 ]; then
@@ -125,8 +136,7 @@ elif command -v gpg >/dev/null 2>&1; then
   fi
   method="gpg symmetric"
 else
-  say "no age and no gpg — refusing to write secrets in the clear."
-  exit 1
+  fail "no age and no gpg — refusing to write secrets in the clear"
 fi
 chmod 600 "$out"
 
@@ -140,6 +150,28 @@ chmod 600 "$out"
 find "$OUT_DIR" -maxdepth 1 -name 'secrets-*' -printf '%T@ %p\n' 2>/dev/null \
   | sort -rn | tail -n +$((KEEP + 1)) | cut -d' ' -f2- | xargs -r rm -f || true
 
+# Second place. Only the encrypted file leaves this machine. Verified by
+# sha256 on both sides; any failure is loud and non-zero (the local bundle
+# stays, the exit code says the second copy is missing).
+second=""
+if [ "$SECOND_HOSTS" != "none" ]; then
+  want=$(sha256sum "$out" | cut -d' ' -f1)
+  for h in $SECOND_HOSTS; do
+    if ssh -o BatchMode=yes -o ConnectTimeout=10 "$h" \
+         "umask 077; mkdir -p '$SECOND_DIR' && chmod 700 '$SECOND_DIR'" 2>/dev/null \
+       && cat "$out" | ssh -o BatchMode=yes "$h" \
+         "umask 077; cat > '$SECOND_DIR/$(basename "$out").part' && mv '$SECOND_DIR/$(basename "$out").part' '$SECOND_DIR/$(basename "$out")'" 2>/dev/null; then
+      have=$(ssh -o BatchMode=yes "$h" "sha256sum '$SECOND_DIR/$(basename "$out")'" 2>/dev/null | cut -d' ' -f1)
+      [ "$have" = "$want" ] || fail "second copy on $h differs (local $want, remote ${have:-none})"
+      ssh -o BatchMode=yes "$h" "cd '$SECOND_DIR' && ls -1t secrets-* 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm -f" 2>/dev/null || true
+      second="$h:$SECOND_DIR sha256 ${want:0:12}"
+      break
+    fi
+  done
+  [ -n "$second" ] || fail "second copy not written — none of [$SECOND_HOSTS] reachable by key (Tailscale SSH check? LAN?); local bundle $out is kept"
+fi
+
 say "wrote $out"
 say "  $got file(s), $method, $(du -h "$out" | cut -f1)"
+[ -z "$second" ] || say "  second copy: $second (verified)"
 say "  keeping $(ls -1 "$OUT_DIR"/secrets-* 2>/dev/null | wc -l) of $KEEP"
