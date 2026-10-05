@@ -2764,6 +2764,9 @@
 }
 
 .raw-graph-node-card.is-selected {
+    /* The card you just moved stays selected, so it stays above the cards it was
+       dropped on; below is-held (20), which is the card in the hand. */
+    z-index: 10;
     border-color: var(--di-cyan);
     box-shadow: 0 0 0 1px var(--di-cyan), 0 0 18px rgba(var(--di-cyan-rgb), 0.15);
 }
