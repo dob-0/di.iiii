@@ -1347,6 +1347,7 @@
     width: 22px;
     height: 22px;
     cursor: nwse-resize;
+    z-index: 3;
     border-radius: 0;
     /* A button now (it takes the keyboard); none of a button's furniture. */
     appearance: none;
@@ -2695,6 +2696,27 @@
 
 .raw-graph-node-card:hover {
     border-color: rgba(var(--di-cyan-rgb), 0.55);
+}
+
+.raw-graph-node-resize {
+    /* A square in the bottom-right corner: rectangles only. The hit area is
+       bigger than the mark so a fingertip finds it. */
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    width: 14px;
+    height: 14px;
+    border-radius: 0;
+    cursor: nwse-resize;
+    z-index: 3;
+    touch-action: none;
+    background: linear-gradient(135deg, transparent 0 55%, var(--card-family) 55% 70%, transparent 70% 80%, var(--card-family) 80% 95%, transparent 95%);
+    opacity: 0.55;
+}
+
+.raw-graph-node-card:hover .raw-graph-node-resize,
+.raw-graph-node-resize:hover {
+    opacity: 1;
 }
 
 .raw-graph-node-card.is-held {
