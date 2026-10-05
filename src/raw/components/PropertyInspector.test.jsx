@@ -333,11 +333,18 @@ describe('textareaRows — the box grows with the note', () => {
 })
 
 describe('PropertyInspector: Open', () => {
-    it('is the first row under the header, runs onOpen, and is absent when nothing can be opened', () => {
+    // Audit 2026-10-05 §3.5: name, settings, ports, then Open; Delete in the footer.
+    it('comes after the settings and the ports, runs onOpen, and is absent when nothing can be opened', () => {
         const onOpen = vi.fn()
-        const { container, rerender } = render(<PropertyInspector title="Bar" subtitle="List" sections={[]} showHeaderWhenEmpty onOpen={onOpen} />)
+        const { container, rerender } = render(
+            <PropertyInspector title="Bar" subtitle="List" sections={[]} showHeaderWhenEmpty onOpen={onOpen} footer={<button type="button">Delete</button>}>
+                <section data-testid="ports">ports</section>
+            </PropertyInspector>
+        )
         const open = screen.getByRole('button', { name: /^Open/ })
-        expect(open.previousElementSibling?.tagName).toBe('HEADER')
+        expect(open.previousElementSibling).toBe(screen.getByTestId('ports'))
+        expect(container.querySelector('.raw-property-footer').contains(screen.getByRole('button', { name: 'Delete' }))).toBe(true)
+        expect(container.querySelector('.raw-property-empty')).toBeNull()
         fireEvent.click(open)
         expect(onOpen).toHaveBeenCalledTimes(1)
         rerender(<PropertyInspector title="Bar" subtitle="List" sections={[]} showHeaderWhenEmpty />)

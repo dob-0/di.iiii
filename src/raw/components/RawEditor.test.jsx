@@ -46,6 +46,11 @@ vi.mock('./RawGraphSurface.jsx', () => ({
                 the scope you are standing in is empty. Same reason as the hint
                 above: without it here, the empty-state route to the sheet is
                 untested while the marker route passes. */}
+            {/* A middle-click on a card (or the scope itself, with null)
+                opens its reading. */}
+            {props.onShowReading && (
+                <button type="button" onClick={() => props.onShowReading(null)}>show-reading</button>
+            )}
             {props.onExplainScope && (
                 <button type="button" onClick={() => props.onExplainScope()}>explain-scope</button>
             )}
@@ -199,7 +204,7 @@ describe('RawEditor outliner toggle', () => {
         )
         render(<RawEditor localStorageKey={OUTLINER_STORAGE_KEY} />)
         fireEvent.click(screen.getByRole('button', { name: /2 nodes/i }))
-        expect(screen.getByRole('dialog', { name: 'Outliner' })).toBeTruthy()
+        expect(screen.getByRole('complementary', { name: 'Outliner' })).toBeTruthy()
     })
 
     it('closes the outliner when the count button is clicked again', () => {
@@ -213,9 +218,9 @@ describe('RawEditor outliner toggle', () => {
         render(<RawEditor localStorageKey={OUTLINER_STORAGE_KEY} />)
         const btn = screen.getByRole('button', { name: /2 nodes/i })
         fireEvent.click(btn)
-        expect(screen.getByRole('dialog', { name: 'Outliner' })).toBeTruthy()
+        expect(screen.getByRole('complementary', { name: 'Outliner' })).toBeTruthy()
         fireEvent.click(btn)
-        expect(screen.queryByRole('dialog', { name: 'Outliner' })).toBeNull()
+        expect(screen.queryByRole('complementary', { name: 'Outliner' })).toBeNull()
     })
 })
 
@@ -511,7 +516,7 @@ describe('RawEditor delete/reset confirmations', () => {
 describe('RawEditor — arranging windows is the person\'s, not the project\'s', () => {
     const KEY = 'test-window-arrangement'
     const withTextWindow = (frame = { visible: true, x: 40, y: 120, width: 200, height: 120 }) => JSON.stringify({
-        nodes: [{ id: 't1', typeId: 'view.text', label: 'Note', values: { frame } }],
+        nodes: [{ id: 't1', typeId: 'view.outliner', label: 'Note', values: { frame } }],
         edges: [],
         workspaceState: {}
     })
@@ -578,8 +583,8 @@ describe('RawEditor — arranging windows is the person\'s, not the project\'s',
     it('brings a maximized window to the front', () => {
         window.localStorage.setItem(KEY, JSON.stringify({
             nodes: [
-                { id: 't1', typeId: 'view.text', label: 'Note', values: { frame: { visible: true, x: 40, y: 120, width: 200, height: 120, zIndex: 6 } } },
-                { id: 't2', typeId: 'view.text', label: 'Other', values: { frame: { visible: true, x: 300, y: 120, width: 200, height: 120, zIndex: 40 } } }
+                { id: 't1', typeId: 'view.outliner', label: 'Note', values: { frame: { visible: true, x: 40, y: 120, width: 200, height: 120, zIndex: 6 } } },
+                { id: 't2', typeId: 'view.outliner', label: 'Other', values: { frame: { visible: true, x: 300, y: 120, width: 200, height: 120, zIndex: 40 } } }
             ],
             edges: [],
             workspaceState: {}
@@ -624,7 +629,7 @@ describe('RawEditor scope-clamped selection (the surface axis is retired)', () =
         // The old filter matched node TYPE against activeSurface (default
         // 'world'), so Text/Image/Monitor selections showed nothing at all.
         window.localStorage.setItem(KEY, JSON.stringify({
-            nodes: [{ id: 't1', typeId: 'view.text', label: 'Note', values: { frame: { visible: true, x: 40, y: 120, width: 200, height: 120 } } }],
+            nodes: [{ id: 't1', typeId: 'view.outliner', label: 'Note', values: { frame: { visible: true, x: 40, y: 120, width: 200, height: 120 } } }],
             edges: [],
             workspaceState: {}
         }))
@@ -650,7 +655,7 @@ describe('RawEditor scope-clamped selection (the surface axis is retired)', () =
 
     it('a selection stored in the shared document (an older client) selects nothing here', () => {
         window.localStorage.setItem(KEY, JSON.stringify({
-            nodes: [{ id: 't1', typeId: 'view.text', label: 'Note', values: { frame: { visible: true, x: 40, y: 120, width: 200, height: 120 } } }],
+            nodes: [{ id: 't1', typeId: 'view.outliner', label: 'Note', values: { frame: { visible: true, x: 40, y: 120, width: 200, height: 120 } } }],
             edges: [],
             workspaceState: { selectedNodeId: 't1' }
         }))
@@ -862,7 +867,7 @@ describe('things are cards in Nodes (layers unit 6)', () => {
         fireEvent.click(screen.getByText('card:Box one'))
         expect(graphMountProps.at(-1).selectedObjectId).toBe('b1')
         fireEvent.click(screen.getByRole('button', { name: '4 things' }))
-        const dialog = screen.getByRole('dialog', { name: /outliner/i })
+        const dialog = screen.getByRole('complementary', { name: /outliner/i })
         const rows = within(dialog).getAllByRole('button').filter((b) => b.closest('.raw-outliner'))
         expect(rows.map((row) => row.textContent)).toEqual(['groupGroup', 'boxBox one', 'boxBox two', 'boxBox three'])
         expect(rows[1].style.paddingLeft).toBe('22px')
@@ -1630,7 +1635,7 @@ describe('RawEditor — what a node is made of', () => {
     // every other test in this file stays green.
     it('reads a socket fed from outside, through a door, with the app own graph', () => {
         enterTheContainer()
-        fireEvent.click(screen.getByRole('button', { name: /what is it made of/i }))
+        fireEvent.click(screen.getByRole('button', { name: 'show-reading' }))
         const sheet = document.querySelector('.raw-anatomy')
         expect(sheet).toBeTruthy()
         expect(sheet.textContent).toContain('9, 9, 9')
@@ -1639,11 +1644,10 @@ describe('RawEditor — what a node is made of', () => {
         expect(sheet.textContent).toContain('this socket is the door \u201cCamera\u201d standing inside it')
     })
 
-    // The empty-canvas entry point exists only inside CODE-made nodes, where
-    // the empty canvas IS the question; a container's reading stays one tap
-    // away on the marker's ? — two resident buttons for one answer was the
-    // clutter the audit counted.
-    it('offers the empty-canvas way in only inside a code-made node', () => {
+    // Audit 2026-10-05 §3.6: inside a code-made node there is no empty canvas
+    // left to explain — its code view is the answer, at once. The empty-state
+    // button is gone everywhere.
+    it('offers no empty-canvas button; inside a code-made node its code view shows at once', () => {
         enterTheContainer()
         expect(screen.queryByRole('button', { name: 'explain-scope' })).toBeNull()
         cleanup()
@@ -1654,19 +1658,17 @@ describe('RawEditor — what a node is made of', () => {
         }))
         render(<RawEditor localStorageKey={ANATOMY_STORAGE_KEY} />)
         fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
-        fireEvent.click(screen.getByRole('button', { name: 'explain-scope' }))
-        expect(document.querySelector('.raw-anatomy')).toBeTruthy()
+        expect(screen.queryByRole('button', { name: 'explain-scope' })).toBeNull()
+        expect(screen.getByTestId('raw-inside-codeview')).toBeTruthy()
     })
 
     // A sheet describing the node you have walked out of looks current and is
     // not, which is worse than no sheet.
     it('closes itself when you leave the node', () => {
         enterTheContainer()
-        fireEvent.click(screen.getByRole('button', { name: /what is it made of/i }))
+        fireEvent.click(screen.getByRole('button', { name: 'show-reading' }))
         expect(document.querySelector('.raw-anatomy')).toBeTruthy()
-        // By class, not by name: the way out is labelled with a chevron and
-        // carries "Leave" only as a title, so its accessible name is the glyph.
-        fireEvent.click(document.querySelector('.raw-scope-marker-out'))
+        fireEvent.click(screen.getByRole('button', { name: '← Back' }))
         expect(document.querySelector('.raw-anatomy')).toBeNull()
     })
 })
@@ -1824,12 +1826,13 @@ describe('RawEditor toolbar names the project, not the space', () => {
 
 // NOPA audit F8 (2026-10-02): every List opened on its saved spot, one over
 // the next, and Escape did nothing. A second window on the same spot is
-// cascaded; Escape closes the front window the person opened.
+// cascaded; Escape closes the front window the person opened. (Tool windows:
+// List and Text have none on desktop since audit 2026-10-05 §3.5.)
 describe('RawEditor window pile (cascade + Escape)', () => {
     const KEY = 'test-window-pile'
     const listNode = (id, label, visible) => ({
         id,
-        typeId: 'view.list',
+        typeId: 'view.outliner',
         label,
         values: { title: label, items: [], groups: ['People'], frame: { visible, x: 63, y: 305, width: 360, height: 280 } }
     })

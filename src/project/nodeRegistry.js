@@ -223,6 +223,12 @@ export const getNodeCardSummary = (node) => {
 // pure function of the node and never of the font.
 export const CARD_CONTENT_MAX_LINES = { 'view.list': 12, 'view.text': 6 }
 
+// The one field a card shows and lets you edit in place (Enter or a
+// double-click on its text). The side column keeps everything else. Both write
+// node.values[key] — one value, no second copy (owner, 2026-10-05).
+export const CARD_MAIN_FIELD = { 'view.text': { key: 'content', label: 'Content' } }
+export const getCardMainField = (typeId) => CARD_MAIN_FIELD[typeId] || null
+
 export const getNodeCardLines = (node, { unlimited = false } = {}) => {
     if (!node) return null
     if (node.typeId === 'view.list') {
