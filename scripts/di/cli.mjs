@@ -49,6 +49,7 @@ import { getKeeper, keeperPaths, keeperStatus, removeKeeper, startKeeper, stopKe
 import { getNdi, ndiDownloadFor, ndiPaths, ndiStatus, readNdiScan, removeNdi, verifyNdi, watchNdiScanFeed } from './ndi.mjs'
 import * as docker from './runner-docker.mjs'
 import * as node from './runner-node.mjs'
+import { DEFAULT_UNIT, activeService, installService, removeService, systemdUsable, unitStatus, validUnitName } from './service.mjs'
 import {
     alive, apiBase, currentVersionDir, dirSize, humanSize, installedVersion, isInstalled,
     ensureGuestSecrets, lanUrl, localUrl, nameUrl, publicUrl, readCert, readEnv, readState, resolvePort, writeEnv, writeState
@@ -310,9 +311,15 @@ const cmdStatus = async () => {
     const info = runner.describe(home)
     const healthy = await alive(home, port)
 
+    // Asked of systemd when it keeps this install up: "not running" alone
+    // hides the one case that will not fix itself — a unit systemd gave up on.
+    const svc = info.mode === 'node' ? activeService(home) : null
+    const unit = svc ? unitStatus(svc) : null
     const autoLines = () => { for (const l of autoupdate.statusLines(autoupdate.statusOf({ home }))) say(style.dim(l)) }
+
     if (!healthy) {
         say(`${ui.notRunning()}  ${style.dim(`${info.version || '?'} · ${info.dataDir}`)}`)
+        if (svc) say(ui.supervisorLine(svc, unit))
         autoLines()
         return
     }
@@ -335,6 +342,7 @@ const cmdStatus = async () => {
     const onName = cert ? await probeRig(port, cert.name, '/serverXR', 'https') : null
     const rig = (onName && !onName.refused) ? onName : ((await probeRig(port)) || onName)
     say(ui.rigVisibility(rig))
+    if (svc) say(unit.active ? ui.supervisorLine(svc, unit) : ui.unsupervisedWhileInstalled(svc))
     autoLines()
 }
 
@@ -753,6 +761,9 @@ const cmdUninstall = async (args) => {
         if (left.ok) say(ui.stageLeft(left.done, false))
     }
     if (isInstalled(home)) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
+    // The systemd unit lives outside DI_HOME too, and names this install's
+    // `current` — left behind it would restart nothing, forever, at every login.
+    if (readState(home).service) { try { await removeService({ home }) } catch { /* reported by systemctl itself */ } }
 
     // credentials.json holds live editor keys — secrets are not "your work"
     // and must not outlive the install that minted their links
@@ -1422,6 +1433,79 @@ const cmdStage = async (args) => {
     process.exitCode = 1
 }
 
+/**
+ * `di service` — hand the installed server to systemd, so it is restarted
+ * whenever it dies. Everything it does is in service.mjs; this routes, prints
+ * and sets the exit code.
+ */
+const cmdService = async (args) => {
+    const home = HOME()
+    const what = args._[1] || 'status'
+
+    if (what === 'install') {
+        if (!requireInstalled(home)) return
+        if (readState(home).mode === 'docker') { fail(ui.serviceNotInDocker()); process.exitCode = 1; return }
+        const name = typeof args.flags.name === 'string' ? args.flags.name : DEFAULT_UNIT
+        if (!validUnitName(name)) { fail(ui.serviceBadName(name)); process.exitCode = 1; return }
+        const existing = readState(home).service?.name
+        if (existing && existing !== name) { fail(ui.serviceOtherName(existing)); process.exitCode = 1; return }
+        if (!systemdUsable()) { fail(ui.serviceNoSystemd()); process.exitCode = 1; return }
+
+        // The hand-over: a server this install started detached is stopped
+        // and started again under the unit, on the same terms (`--lan` asked
+        // of the running server, like update and restore do). Seconds down,
+        // once, and from then on systemd holds it.
+        const port = resolvePort(home)
+        const wasRunning = await alive(home, port)
+        const wasLan = wasRunning ? Boolean((await probeReach(home, port))?.lan) : false
+        if (wasRunning) { try { await node.stop({ home }) } catch { /* already down */ } }
+
+        let svc
+        try {
+            svc = await installService({
+                home,
+                name,
+                node: node.nodeBinary(home),
+                serverEnv: node.serverEnv({ home, port, base: node.unitBaseEnv(home) })
+            })
+        } catch (error) {
+            fail(String(error.message || error))
+            process.exitCode = 1
+            if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })
+            return
+        }
+        say(ui.serviceInstalled(svc, wasRunning))
+        if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })
+        return
+    }
+
+    if (what === 'remove') {
+        if (!readState(home).service) { say(ui.serviceNone()); return }
+        // Asked before the unit goes: removing the supervisor is not a request
+        // to stop di.iiii, so a running server comes back, unsupervised.
+        const port = resolvePort(home)
+        const wasRunning = isInstalled(home) && await alive(home, port)
+        const wasLan = wasRunning ? Boolean((await probeReach(home, port))?.lan) : false
+        const svc = await removeService({ home })
+        say(svc ? ui.serviceRemoved(svc) : ui.serviceNone())
+        if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })
+        return
+    }
+
+    if (what === 'status') {
+        const svc = activeService(home)
+        if (!svc) {
+            say(readState(home).service ? `${ui.serviceNone()} ${style.dim(`(state.json names ${readState(home).service.name}, but its unit file or systemd is missing)`)}` : ui.serviceNone())
+            return
+        }
+        say(ui.serviceStatus(svc, unitStatus(svc)))
+        return
+    }
+
+    fail(`${CMD} service install | remove | status`)
+    process.exitCode = 1
+}
+
 const cmdChannel = async (args) => {
     const home = HOME()
     if (!requireInstalled(home)) return
@@ -1478,6 +1562,7 @@ const COMMANDS = {
     channel: cmdChannel,
     autoupdate: cmdAutoupdate,
     up: cmdUp,
+    service: cmdService,
     invite: cmdInvite,
     follow: cmdFollow,
     stage: cmdStage,
