@@ -59,6 +59,22 @@ resolves the server's source as `./src` when there is no `serverXR/` above it.
 ls /app/scripts/space-bundle.mjs`. A tool that is present but crashes prints its own
 sentence in the same log line.
 
+## A follow's gaps: new key ignored, remote stored without its mount, files owed in silence, settings not carried, follower-only project refused
+
+Found on the owner's install 2026-10-04/05 (di.laser, moxir, space `open`). Five faults in `serverXR/src/follow/` and
+`scripts/di/share.mjs`; each has a guard that fails without its fix (SPEC_follow.md items 5-9).
+
+1. `di follow --key` on an existing follow wrote follows.json but the running server kept the old key: `startFollows`
+   restarted a follower only on a new `direction`. Fix: key it on remote + key + address + start (`index.js`, `index.test.js`).
+2. A remote stored as `https://dev.diiii.xyz` (no `/serverXR`): the host answers `/api/health` with its web page (200), which
+   passed for a di.iiii when the real mount dropped one answer. Fix: health must be JSON `ok:true`, mount asked twice
+   (`share.mjs`, `followRemote.test.js`).
+3. Unfinished files were not resumed or said: the chase started after the room's 20 s park and compared documents once per
+   run. Fix: start before the park, compare every 10 min, `listed`/`missing` in `di follows` (`assets.js`, `assets.test.js`).
+4. label / isPublic / front door were not carried: host to follower only, `isPublic:false` wins (`followSettings.js`).
+5. A follower-only project reached the host empty and was refused: the follow now fills a host copy it made itself
+   (`followConverge.js` `seedHost`).
+
 ## A code page's assets are invisible to `document.assets`, so transfers leave them behind
 
 `beyond-form/open-call` ("Beyond Form", the Gyumri exhibition) published a 1.4 MB
@@ -145,6 +161,7 @@ If you add a wildcard route, add that check with it.
 
 | Symptom | Root cause | Fix | File |
 |---------|-----------|-----|------|
+| **Every Dependabot PR failed `build-and-test` on one test: "dotenv: installed 18.0.4, table says 18.0.3"** (8 PRs stuck, 2026-10-05) | `src/kit/kitStack.js` carried each npm version by hand and `kitCatalogue.test.js` compared it to the installed package, so a bump could never pass without a hand edit | Versions come from the lock files at build time (`virtual:kit-versions`, `kitVersionsPlugin` in `vite.config.js`, reads the table's `npm:` names with acorn); guard test fails on any hand-typed npm version (seen failing on the old table: 37 lines) | `vite.config.js`, `src/kit/kitStack.js`, `src/kit/kitCatalogue.test.js` |
 | **`di follow` on an existing space (`main`) with the install STOPPED skipped the merge refusal, and the host then overwrote it** (audit F5) | The refusal asked the running server `localSpaceExists`, guarded by `running &&`; stopped, nothing was asked | `followSpace` reads the space list in `<data>/di.db` (read-only) when stopped; unreadable counts as "exists". `--into` unchanged | `scripts/di/follow.mjs`, test `scripts/di/followSafety.test.js` |
 | **A truncated `follows.json` read as "follows nothing"; the next `di follow` dropped every other follow and its key** (F6) | Reader swallowed the parse error, writer was `writeFile` onto the target | Writers (CLI and server) refuse to write over a file that does not parse (`FOLLOWS_CORRUPT`, `reason: 'corrupt'`), keep it and a `.corrupt-<time>` copy; writes are temp + fsync + rename | `scripts/di/follows.mjs`, `serverXR/src/follow/followStore.js` |
 | **`follows.json` (keys inside) stayed 0644 if it had been created so** (F15) | `mode` only applies at creation | Every write is a new 0600 file renamed into place, plus `chmod 0600` | same |

@@ -87,7 +87,7 @@ import { buildObjectCards, buildScopeItems, thingBandBounds } from '../utils/obj
 import { DEFAULT_PROJECT_SPACE_ID, createProject, updateProjectDocument, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
-import { DOCKED_PANEL_TYPES, RAW_ANATOMY_Z, RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getAnatomyDefaultFrame, getBottomReserve, getDockedPanelFrame, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
+import { RAW_ANATOMY_Z, RAW_NARROW_VIEWPORT, RAW_WINDOW_MINIMIZED_HEIGHT, RAW_WINDOW_PADDING, clampWindowFrame, getAnatomyDefaultFrame, getBottomReserve, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, placeNewWindowFrame, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import { CARD_WIDTH, cardHeight, getCardBox } from '../utils/cardGeometry.js'
 import { settleCardStacks } from '../utils/cardStacks.js'
 import { placeNewCard } from '../utils/cardPlacement.js'
@@ -740,23 +740,10 @@ export default function RawEditor({
     const handleEnterNode = useCallback((nodeId) => {
         const node = authoredNodes.find((n) => n.id === nodeId)
         if (!node) return
-        // A closed panel window had NO reopen path (close wrote
-        // frame.visible=false and nothing ever set it back) — entering the
-        // node's graph card now reopens its window instead of entering an
-        // empty scope.
-        if (getNodeRender(node) === 'panel-2d' && frameOf(node).visible === false) {
-            // A List or Text opens docked on the right at full height, so the
-            // whole list is readable and the cards stay in view beside it.
-            const docked = DOCKED_PANEL_TYPES.includes(node.typeId) && typeof window !== 'undefined'
-                ? getDockedPanelFrame({
-                    viewportWidth: window.innerWidth,
-                    viewportHeight: window.innerHeight,
-                    top: (chromeVisible ? workspaceTop : 0) + RAW_WINDOW_PADDING
-                })
-                : null
-            setLocalFrame(nodeId, docked || { visible: true })
-            return
-        }
+        // One meaning (audit 2026-10-05 B2): Open goes INSIDE the node, every
+        // time, whatever state its window is in. It used to open a closed
+        // window the first time and the empty inside the second. A closed
+        // window comes back through the palette (hiddenPanelNodes), not here.
         if (node.typeId === 'universe.world') setIsWorldFullscreen(true)
         // Selection dies at the door. It used to survive every scope walk,
         // keeping a red Delete armed for a node no longer on screen — the
@@ -764,7 +751,7 @@ export default function RawEditor({
         // travelling in the shared workspace state at all.
         if (selectedNodeId || selectedEntity) clearSelection()
         scopeEnterNode(nodeId)
-    }, [authoredNodes, scopeEnterNode, frameOf, setLocalFrame, selectedNodeId, selectedEntity, clearSelection, chromeVisible, workspaceTop])
+    }, [authoredNodes, scopeEnterNode, selectedNodeId, selectedEntity, clearSelection])
 
     const handleNavigateToScope = useCallback((targetIndex) => {
         // Fullscreen SURVIVES scope navigation now: walking through a door
@@ -1534,6 +1521,7 @@ export default function RawEditor({
             <PropertyInspector
                 title={inspectorTitle}
                 onRename={scopedSelectedNode ? handleRenameSelected : null}
+                onOpen={scopedSelectedNode ? () => handleEnterNode(scopedSelectedNode.id) : null}
                 renameRequest={renameRequest}
                 subtitle={inspectorSubtitle}
                 sections={inspectorSections}
@@ -2996,7 +2984,6 @@ export default function RawEditor({
                                     }
                                 setLocalFrame(node.id, { ...converted, pinned })
                             }}
-                            onEnter={() => handleEnterNode(node.id)}
                         >
                             {renderViewNodeContent(node)}
                         </DesktopWindow>
