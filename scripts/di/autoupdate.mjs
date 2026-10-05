@@ -38,7 +38,13 @@ export const unitDir = (env = process.env, homedir = os.homedir()) =>
     path.join(env.XDG_CONFIG_HOME || path.join(homedir, '.config'), 'systemd', 'user')
 
 /** The service and the timer, as the text that lands on disk. */
-export const unitTexts = ({ home, shim }) => {
+// The service runs under systemd's user PATH, where /usr/bin comes first: the
+// shim then picked the system's node (v26 on aylmo, no cap_net_bind_service),
+// the restarted server could not bind 443 and di stayed down after every
+// update, silently (measured 2026-10-05: EACCES 127.0.0.1:443, then a pkexec
+// prompt nobody was there to answer). The node that ran `di autoupdate on` goes
+// first, so the update restarts di with the node it was installed with.
+export const unitTexts = ({ home, shim, nodeDir = path.dirname(process.execPath) }) => {
     const service = [
         '# Written by `di autoupdate on`. Remove with `di autoupdate off`.',
         '[Unit]',
@@ -50,6 +56,7 @@ export const unitTexts = ({ home, shim }) => {
         'Type=oneshot',
         'Nice=10',
         `Environment=DI_HOME=${home}`,
+        `Environment=PATH=${nodeDir}:/usr/local/bin:/usr/bin:/bin`,
         `ExecStart=${shim} autoupdate run`,
         ''
     ].join('\n')
