@@ -2,6 +2,7 @@ import { fireEvent, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ScrubNumberInput, {
     clampValue,
+    formatDisplayNumber,
     computeDragValue,
     computeStepValue,
     getEffectiveStep,
@@ -259,5 +260,14 @@ describe('ScrubNumberInput component', () => {
             fireEvent.pointerUp(window)
             flushFrame()
         }).not.toThrow()
+    })
+})
+
+describe('formatDisplayNumber', () => {
+    it('hides float noise on a resting field and leaves the stored value alone', () => {
+        expect(formatDisplayNumber(-2.0999999999999)).toBe('-2.1')
+        expect(formatDisplayNumber(0.5)).toBe('0.5')
+        expect(formatDisplayNumber(1)).toBe('1')
+        expect(formatDisplayNumber(0.12345678)).toBe('0.1235')
     })
 })
