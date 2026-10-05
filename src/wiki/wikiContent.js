@@ -146,6 +146,21 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-10'
     },
     {
+        id: 'delete-a-space-and-the-trash',
+        category: 'Spaces & access',
+        title: 'Delete a space, the Trash, and moving a project',
+        summary: 'Deleting a space moves it, with its projects, to the Trash for 30 days; Restore brings it back whole. Permanent and front-room spaces are never deleted.',
+        body: [
+            'On the Spaces page, Manage on a space card has Delete. It does not delete yet: it opens a box that says what goes — how many projects and how much space on disk — and that the space goes to the Trash for 30 days. Move to Trash is the only button that does anything.',
+            'The Trash button appears on the Spaces page once something is in it. Each row shows how many projects went with the space and how many days are left. Restore brings the space back with exactly the projects that went with it; a project you had deleted on its own earlier stays in that project trash. Delete forever… asks twice and is the only way the files go before the 30 days are up.',
+            'A space marked permanent is not deleted: the box says so, and an admin can unmark it there first. The front room, the shared global space and a sandbox are never deleted. While a space is in the Trash its name is held, so a new space cannot take it by accident.',
+            'A project can move to another space you own: on a project card in Studio, "move to…" lists them. Its link keeps working. A project that is its space\u2019s front door asks first, because moving it leaves that space with no front door.',
+            'Not yet carried: a space that is followed from another copy (di follow) does nothing special when it is trashed — the copy that follows simply stops finding it. A delete does not travel to the copies that follow.'
+        ],
+        tags: ['delete', 'trash', 'restore', 'space', 'permanent', 'move', 'undo'],
+        updated: '2026-10-05'
+    },
+    {
         id: 'your-space-your-word',
         category: 'Spaces & access',
         title: 'Your space, your word: owners and trusted people',

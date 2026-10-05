@@ -221,6 +221,15 @@ const {
   collectSceneAssetRefs,
   countSpacesOwnedBy,
   deleteSpace,
+  trashSpace,
+  protectedReason,
+  restoreSpace,
+  listTrashedSpaces,
+  loadTrashedSpaceMeta,
+  spaceFootprint,
+  purgeTrashedSpace,
+  purgeSpaceTrash,
+  SPACE_TRASH_TTL_MS,
   ensureDefaultSpace,
   ensureSpaceScene,
   ensureSpaceWritable,
@@ -1423,6 +1432,23 @@ const requireSpaceOwnerOrAdminWrite = async (req, res, next) => {
   }
 }
 
+// Same gate for a space that is in the trash: restore and purge name a space
+// loadSpaceMeta no longer sees, so the owner is read from the trashed row.
+const requireTrashedSpaceOwnerOrAdminWrite = async (req, res, next) => {
+  if (!config.requireAuth) return next()
+  try {
+    const spaceId = normalizeSpaceId(req.params.spaceId) || req.params.spaceId
+    const meta = await loadTrashedSpaceMeta(spaceId)
+    if (!meta) return res.status(404).json({ error: 'Nothing by that name is in the trash.' })
+    if (!isSpaceOwnerOrAdminState(req.authState || {}, meta)) {
+      return res.status(403).json({ error: 'Only the space owner or an admin can manage this space.' })
+    }
+    return next()
+  } catch (error) {
+    return next(error)
+  }
+}
+
 // Unlike requireWriteRole, this applies to every method including GET/HEAD —
 // for admin-only resources (like user management) that have no public read path.
 const requireAdminAlways = (req, res, next) => {
@@ -1526,6 +1552,14 @@ async function currentlyOwnerOrAdmin(spaceId, actorType, actorSubject) {
 }
 approvalGate.registerReauthorizer('spaces.patch', (args, subject, actorType) => currentlyOwnerOrAdmin(args?.spaceId, actorType, subject))
 approvalGate.registerReauthorizer('spaces.delete', (args, subject, actorType) => currentlyOwnerOrAdmin(args?.spaceId, actorType, subject))
+// A purge names a space that is already in the trash, which loadSpaceMeta no
+// longer sees — the owner is re-read from the trashed row.
+approvalGate.registerReauthorizer('spaces.purge', async (args, subject, actorType) => {
+  if (hasRequiredAuthRole(currentRoleForActor(actorType, subject), 'admin')) return true
+  if (actorType !== 'session') return false
+  const meta = await loadTrashedSpaceMeta(args?.spaceId).catch(() => null)
+  return Boolean(meta?.ownerUserId) && meta.ownerUserId === subject
+})
 
 // ── One-click GitHub sync: webhook receiver (signature-authed, pre-gate) ──────
 // Default loopback works on a normal TCP listen; under Passenger (cPanel) the app
@@ -2064,6 +2098,16 @@ const { replaceSceneAndBroadcast, restoreSnapshotAndBroadcast } = registerSpaceR
   spaceLimit: config.freeSpaceLimit,
   grantSpaceToSessionUser,
   deleteSpace,
+  trashSpace,
+  protectedReason,
+  spaceTrashTtlMs: SPACE_TRASH_TTL_MS,
+  restoreSpace,
+  listTrashedSpaces,
+  loadTrashedSpaceMeta,
+  spaceFootprint,
+  purgeTrashedSpace,
+  isSpaceOwnerOrAdminState,
+  requireTrashedSpaceOwnerOrAdminWrite,
   ensureSpaceScene,
   ensureSpaceWritable,
   findProjectById,
@@ -2750,7 +2794,10 @@ initStorage()
       // only path that removes them, and only after TRASH_TTL_MS. Rides the
       // same half-hour sweep — a deletion is not urgent, and its whole value
       // is the delay.
-      purgeTrash(SPACES_DIR)
+      purgeSpaceTrash()
+        .then((purged) => { if (purged.length) logger.info(`[trash] purged ${purged.length} space(s) past the 30-day hold`) })
+        .catch((error) => logger.warn('Failed to purge the space trash', error))
+            purgeTrash(SPACES_DIR)
         .then((purged) => { if (purged.length) logger.info(`[trash] purged ${purged.length} project(s) past the 30-day hold`) })
         .catch((error) => logger.warn('Failed to purge the trash', error))
     }

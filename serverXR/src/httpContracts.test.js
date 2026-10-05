@@ -3154,7 +3154,7 @@ describe('saving and opening a space as a file', () => {
         const made = await fetch(`${server.baseUrl}/api/spaces`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
-            body: JSON.stringify({ label: 'carried file', permanent: true })
+            body: JSON.stringify({ label: 'carried file' })
         })
         expect(made.status).toBe(201)
         const saved = await fetch(`${server.baseUrl}/api/spaces/carried-file/bundle`, { headers: withAuth(server.apiToken) })
@@ -3164,6 +3164,10 @@ describe('saving and opening a space as a file', () => {
         // way the Spaces page sends it, with no `as`.
         const removed = await fetch(`${server.baseUrl}/api/spaces/carried-file`, { method: 'DELETE', headers: withAuth(server.apiToken) })
         expect(removed.status).toBe(200)
+        // Delete is the soft delete now (the space waits in the trash); the file
+        // opens under its own name only once the trash has let go of it.
+        const purged = await fetch(`${server.baseUrl}/api/spaces/carried-file/purge`, { method: 'DELETE', headers: withAuth(server.apiToken) })
+        expect(purged.status).toBe(200)
 
         const register = await fetch(`${server.baseUrl}/api/auth/password/register`, {
             method: 'POST',

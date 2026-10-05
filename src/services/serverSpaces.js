@@ -172,9 +172,32 @@ export const redeemSpaceInvite = async (token) =>
 export const getServerSpaceAssetUrl = (spaceId, assetId, { width } = {}) =>
     `${apiBaseUrl}/api/spaces/${resolveServerSpaceId(spaceId)}/assets/${assetId}${width ? `?w=${width}` : ''}`
 
-export const deleteServerSpace = async (spaceId) => {
-    await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}`, { method: 'DELETE' })
+// Delete is the soft delete: the space and its projects go to the trash and
+// come back with restoreServerSpace for 30 days. The answer says how many
+// projects went and until when it can be undone ({ trashed, projects,
+// restorableUntil }); a pending approval answers { status: 'pending_approval' }.
+export const deleteServerSpace = async (spaceId) =>
+    apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}`, { method: 'DELETE' })
+
+// What a delete would take, read before the click so the confirm can name it:
+// { projects, bytes, protected, holdMs } — `protected` is 'permanent' | 'global' |
+// 'sandbox' | 'front-room' when the server will refuse.
+export const getSpaceFootprint = async (spaceId) =>
+    apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/footprint`)
+
+// Spaces in the trash this account may restore, each with the number of
+// projects that went with it and `restorableUntil`.
+export const listTrashedSpaces = async () => {
+    const data = await apiFetch('/api/trash/spaces')
+    return { spaces: data.spaces || [], ttlMs: data.ttlMs || 0 }
 }
+
+export const restoreServerSpace = async (spaceId) =>
+    apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/restore`, { method: 'POST' })
+
+// The one irreversible call: only for a space already in the trash.
+export const purgeServerSpace = async (spaceId) =>
+    apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/purge`, { method: 'DELETE' })
 
 export const touchServerSpace = async (spaceId) => {
     const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/touch`, { method: 'POST' })
