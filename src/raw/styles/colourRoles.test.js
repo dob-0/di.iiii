@@ -64,32 +64,15 @@ describe('raw colour roles', () => {
         expect(btn).toMatch(/font-family/)
     })
 
-    it('holds the only way into a node on a phone to the same floor', () => {
-        // Inside @media (hover: none) — the coarse-pointer branch, where the
-        // door is the sole affordance for entering a container node.
-        //
-        // Look the selector up EXPLICITLY rather than slicing on indexOf: a
-        // rename made indexOf return -1, slice(-1) then read one character, and
-        // the failure surfaced as a baffling regex mismatch instead of "that
-        // selector is gone". Renaming this control should fail loudly here.
-        const coarse = css.slice(css.indexOf('@media (hover: none)'))
-        const at = coarse.indexOf('.raw-graph-node-door')
-        expect(at, 'the coarse-pointer branch no longer mentions .raw-graph-node-door').toBeGreaterThan(-1)
+    it('holds the Open row of the selection sheet to the same floor on a phone', () => {
+        // The door is gone (audit 2026-10-05 B2). A finger has no double-click,
+        // so the sheet's first row, Open, is the way in on touch: 44px there.
+        expect(css).not.toMatch(/\.raw-graph-node-door/)
+        const coarse = css.slice(css.indexOf('@media (hover: none), (pointer: coarse)'))
+        const at = coarse.indexOf('.raw-property-open')
+        expect(at, 'the coarse-pointer branch no longer mentions .raw-property-open').toBeGreaterThan(-1)
         const rule = coarse.slice(at, coarse.indexOf('}', at))
         expect(rule).toMatch(/min-height:\s*44px/)
-        expect(rule).toMatch(/min-width:\s*44px/)
-    })
-
-    // The door is counter-scaled by the surface's zoom, so its size in the
-    // stylesheet is a SCREEN size at every zoom. It lived in the card header
-    // inside the graph transform before, where the fit shrank it to 7x7 real
-    // pixels while every DOM-presence test kept passing.
-    it('anchors the door outside the card so it can be counter-scaled', () => {
-        const anchor = css.slice(css.indexOf('.raw-graph-node-door-anchor'))
-        const rule = anchor.slice(0, anchor.indexOf('}'))
-        expect(rule).toMatch(/position:\s*absolute/)
-        expect(rule).toMatch(/right:\s*100%/)
-        expect(rule).toMatch(/transform-origin:\s*100%\s*50%/)
     })
 
     it('gives pinned and minimized windows a visible difference', () => {

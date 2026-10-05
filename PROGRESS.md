@@ -5,6 +5,23 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-10-05 — /tools versions come from the lock files; Dependabot bumps can pass again
+
+- Eight Dependabot PRs (#687–#693, #695) failed CI on one assertion only, each naming its own package:
+  `kitCatalogue.test.js` › "prints the version and licence of the package that is installed"
+  (e.g. #691: "dotenv: installed 18.0.4, table says 18.0.3"; 7761 other tests passed).
+  `src/kit/kitStack.js` typed every npm version by hand, so a bump failed by design.
+- Now `virtual:kit-versions` (`kitVersionsPlugin` in `vite.config.js`, the same shape as
+  `virtual:node-anatomy`) reads the table's `npm:` names with acorn and resolves each from
+  `package-lock.json` / `serverXR/package-lock.json`, the top-level entry `import 'x'` gets.
+  Lock files, not node_modules: the Docker build, CI and a fresh clone all have them, and a
+  bump rewrites them in the same change. Only the 37 listed packages ship (all ~750 would be ~25 KB).
+- Guard: a new test fails on any hand-typed npm version (seen failing on dev's table, 37 lines)
+  and on any listed package missing from its lock file (it caught `zod`, which is transitive).
+- Proved on the real case: #691's lock change on top of this branch → kit tests 32/32 pass.
+  Looked at /tools on the dev server (`di-dev up kit-versions`): 57 rows, 38 with a version
+  (37 npm + Node.js), "—" only on standards and services; phone 390 px, no sideways scroll.
+
 ## 2026-10-01 — the desk's Touch page plays looks and the cue list
 
 Found for the MOXIR show: 0 desk scenes, a set of looks and a cue list. The Touch page rendered only

@@ -102,3 +102,23 @@ describe('followConverge — the host wins when the copies disagree', () => {
         })
     })
 })
+
+describe('followConverge — a host copy this follow made empty is filled, not refused (gap 5)', () => {
+    const full = project([box('a', 1), box('b', 2)])
+    const empty = project([])
+
+    it('refuses an empty host the follow did not make (a host that lost its disk)', () => {
+        expect(planConverge({ kind: 'project', projectId: 'p', local: full, remote: empty }).refused).toMatch(/empty and this one is not/)
+    })
+
+    it('writes this copy to the host when the follow made the host copy itself', () => {
+        const plan = planConverge({ kind: 'project', projectId: 'p', local: full, remote: empty, seedHost: true })
+        expect(plan).toMatchObject({ target: 'remote', seeded: true, baseVersion: 7, op: { type: 'replaceDocument', clientId: CONVERGE_CLIENT } })
+        expect(plan.refused).toBeUndefined()
+    })
+
+    it('does not seed over a host copy that has since been given content', () => {
+        const filled = project([box('x', 9)])
+        expect(planConverge({ kind: 'project', projectId: 'p', local: full, remote: filled, seedHost: true }).seeded).toBeUndefined()
+    })
+})

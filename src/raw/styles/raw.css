@@ -1671,6 +1671,46 @@
     margin: 0;
 }
 
+.raw-property-open {
+    -webkit-appearance: none;
+    appearance: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    width: 100%;
+    min-height: 28px;
+    padding: 0 var(--di-space-4);
+    border: 0;
+    border-bottom: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+    background: transparent;
+    color: var(--di-cyan);
+    font-family: inherit;
+    font-size: var(--di-text-3);
+    text-align: left;
+    cursor: pointer;
+}
+
+.raw-property-open kbd {
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    color: var(--di-text-muted);
+}
+
+.raw-property-open:hover,
+.raw-property-open:focus-visible {
+    background: rgba(var(--di-cyan-rgb), 0.12);
+}
+
+/* A finger has no double-click, so on a coarse pointer the sheet's first row
+   is a full 44px Open. */
+@media (hover: none), (pointer: coarse) {
+    .raw-property-open {
+        min-height: 44px;
+    }
+}
+
 .raw-property-sections-scroll {
     flex: 1;
     overflow-y: auto;
@@ -2739,105 +2779,16 @@
     font-family: var(--di-mono);
 }
 
-/* THE DOOR — the way into a container.
-   It hangs off the card's LEFT edge and is counter-scaled by the surface's zoom,
-   so it is the same size on screen whatever the graph is doing. It used to live
-   in the card header inside the graph's own transform: at the zoom the auto-fit
-   lands an oversized graph on, that measured 7x7 SCREEN PIXELS — in the DOM,
-   invisible in the browser, and passing a DOM-presence test the whole time.
-   Left rather than right because nearestOutputPort's grab radius is 28 screen
-   pixels and covers the card's right-hand end when zoomed out, so a door there
-   fights with starting a wire. */
-.raw-graph-node-door-anchor {
-    position: absolute;
-    right: 100%;
-    top: 22px;
-    width: 0;
-    height: 0;
-    transform-origin: 100% 50%;
-    pointer-events: none;
-}
-
-.raw-graph-node-door {
-    -webkit-appearance: none;
-    appearance: none;
-    position: absolute;
-    right: 3px;
-    top: 50%;
-    transform: translateY(-50%);
-    display: inline-flex;
-    align-items: center;
-    gap: var(--di-space-1);
-    min-height: 22px;
-    padding: var(--di-space-1) var(--di-space-1);
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    border-radius: var(--di-radius);
-    background: var(--di-scrim-strong);
-    /* Was rgba(244,247,251,0.2) on --di-black — about 1.6:1, under the 3:1
-       floor for a non-text control. */
-    color: rgba(255, 255, 255, 0.62);
-    font-family: inherit;
-    font-size: var(--di-text-3);
-    line-height: 1;
-    white-space: nowrap;
-    cursor: pointer;
-    touch-action: manipulation;
-    pointer-events: auto;
-    transition: color 0.15s, border-color 0.15s;
-}
-
-.raw-graph-node-card:hover .raw-graph-node-door,
-.raw-graph-node-card.is-selected .raw-graph-node-door,
-.raw-graph-node-door:focus-visible {
-    color: rgba(var(--di-cyan-rgb), 0.95);
-    border-color: rgba(var(--di-cyan-rgb), 0.5);
-}
-
-/* A card that actually holds something says so, and says how much. Every card
-   used to wear the same mark whether or not there was anything behind it, so
-   the mark carried no information at all. Never a GATE on the door: the same
-   control reopens a closed panel window, and an un-enterable empty container is
-   a box that can never be filled. */
-.raw-graph-node-door.has-contents {
-    color: var(--card-family);
-    border-color: color-mix(in srgb, var(--card-family) 55%, transparent);
-}
-
+/* A container's card says how much is inside, as plain meta text in the
+   header (audit 2026-10-05 section 3.4). The way in is double-click, Enter or
+   Open in the settings: the card carries no control for it. */
 .raw-graph-node-child-count {
+    margin-left: auto;
     font-size: var(--di-text-2);
-    font-weight: 700;
+    font-family: var(--di-mono);
     line-height: 1;
-}
-
-/* The 44px finger target, extended LEFT ONLY into the column gutter — a
-   symmetric halo would cover the card's own drag area at low zoom. Gated above
-   DOOR_HALO_MIN_ZOOM in the component, because below that it would reach into
-   the previous column's output ports. */
-.raw-graph-node-door.has-halo::after {
-    content: "";
-    position: absolute;
-    inset: -11px 0 -11px -22px;
-}
-
-/* Coarse pointers get no hover, and this is the ONLY way into a container on a
-   phone — double-click is not a gesture a finger has. So the plate itself is a
-   full 44px target rather than relying on the halo, which is gated by zoom.
-   Because the anchor is counter-scaled by the surface's zoom, 44 here is 44
-   SCREEN pixels at every zoom, not 44 graph units that shrink with the view. */
-@media (hover: none) {
-    .raw-graph-node-door {
-        min-height: 44px;
-        min-width: 44px;
-        justify-content: center;
-        color: rgba(var(--di-cyan-rgb), 0.9);
-        border-color: rgba(var(--di-cyan-rgb), 0.45);
-    }
-
-    /* Below DOOR_HALO_MIN_ZOOM the 44px plate is wider than the gutter and lands
-       on the previous column's outputs: only the selected card shows its door. */
-    .raw-graph-node-door-anchor.is-tucked {
-        display: none;
-    }
+    color: var(--di-text-muted);
+    white-space: nowrap;
 }
 
 .raw-graph-port-row {

@@ -65,7 +65,7 @@ export const followFileLines = (files) => {
     const count = (n, one, many) => `${n} ${n === 1 ? one : many}`
     if (files.pending > 0) {
         const mb = files.bytesPending > 0 ? ` (${Math.max(1, Math.round(files.bytesPending / 1024 / 1024))} MB)` : ''
-        lines.push(style.dim(`${count(files.pending, 'file', 'files')} still coming${mb}`))
+        lines.push(style.dim(`${count(files.pending, 'file', 'files')} still coming${mb}${files.listed > files.pending ? `, of ${files.listed} listed` : ''}`))
     }
     const failures = Array.isArray(files.failures) ? files.failures : []
     if (files.failed > 0 || failures.length) {
@@ -79,6 +79,14 @@ export const followFileLines = (files) => {
     }
     return lines
 }
+
+/**
+ * What a follow says about the space's own settings (label, visibility, front
+ * door — serverXR/src/follow/followSettings.js): only what it could not do, so
+ * a quiet line means the settings agree. An install too old to report sends none.
+ */
+export const followSettingsLines = (settings) => (Array.isArray(settings?.notes) ? settings.notes : [])
+    .map(note => style.dim(`settings: ${note}`))
 
 export const ui = {
     // What a start prints. It used to be three lines — the address, six space
@@ -227,7 +235,7 @@ export const ui = {
             if (!state) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim('(not running)')}`
             const moving = `${state.status} · in ${state.carriedIn} · out ${state.carriedOut}${state.streams > 1 ? ` · ${state.streams} logs` : ''}`
             const line = `  ${style.cyan(id.padEnd(18))}${where}  ${state.lastError ? style.yellow(state.lastError) : style.dim(moving)}`
-            return [line, ...followFileLines(state.files).map(text => `  ${' '.repeat(18)}${text}`)].join('\n')
+            return [line, ...followSettingsLines(state.settings), ...followFileLines(state.files)].map((text, index) => (index === 0 ? text : `  ${' '.repeat(18)}${text}`)).join('\n')
         }).join('\n')
     },
 
@@ -462,7 +470,9 @@ export const ui = {
     followUsage: () => [
         style.bold(`${CMD} follow SPACE --from URL --key KEY`) + style.dim(' — join a space that lives on another di.iiii'),
         '',
-        'both sides keep the whole work; edits travel both ways.',
+        'both sides keep the whole work; edits travel both ways. The host\'s label, front door',
+        'and visibility come too (never more public than either side has it).',
+        `a new key for a follow that exists: ${CMD} follow SPACE --from URL --key - --into SPACE (takes effect while di runs)`,
         '',
         '  --from URL      where the other di.iiii answers, e.g. https://local.thedi.studio',
         `  --key KEY       the per-space sync key, minted on their machine with: ${CMD} invite SPACE`,
