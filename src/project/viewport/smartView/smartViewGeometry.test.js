@@ -7,6 +7,7 @@ import {
     computeViewPresets,
     cutawayPlan,
     enclosingModelIds,
+    farthestCornerDistance,
     firstDrawnHit,
     floorMaxPolar,
     fogOffset,
@@ -19,11 +20,12 @@ import {
     outsideDistance,
     parseViewHash,
     presetForKey,
+    reachInBox,
     rigCore,
+    roofCapRect,
     sanitizeViewPresets,
     targetBoundary,
-    viewHash
-} from './smartViewGeometry.js'
+    viewHash, boxHolds, clampToBox, insideBox } from './smartViewGeometry.js'
 
 // MOXIR's numbers (scripts/place/rigs/moxir-hall-2026-09-28.hall.json, the minimal rig).
 const OUTLINE = [[-36.4, -54.5], [60.4, -54.5], [60.4, 54.5], [-36.4, 54.5]]
@@ -322,5 +324,82 @@ describe('keys and links', () => {
         expect(presetForKey('7')).toBe(null)
         expect(presetForKey('01')).toBe(null)
         expect(presetForKey('a')).toBe(null)
+    })
+})
+
+describe('the lock inside the building', () => {
+    const frame = { bounds: { min: [-48, 0, -54.5], max: [48, 17, 54.5] }, floorY: 0, roofCut: 10.75, roofTop: 17, center: [0, 8.5, 0], radius: 70 }
+    it('is the interior: 0.5 m off the walls, 0.8 m above the frame floor (0.5 above the floor itself), 0.3 m under the roof underside', () => {
+        expect(insideBox(frame)).toEqual({ min: [-47.5, 0.8, -54], max: [47.5, 10.45, 54] })
+    })
+    it('holds a point or not, with a little tolerance', () => {
+        const box = insideBox(frame)
+        expect(boxHolds([0, 5, 0], box)).toBe(true)
+        expect(boxHolds([0, 12, 0], box)).toBe(false)
+        expect(boxHolds([47.5005, 5, 0], box)).toBe(true)
+    })
+    it('clamps each axis and leaves a point already inside alone', () => {
+        const box = insideBox(frame)
+        expect(clampToBox([100, -3, 0], box)).toEqual([47.5, 0.8, 0])
+        expect(clampToBox([1, 2, 3], box)).toEqual([1, 2, 3])
+    })
+    it('has no box without a building', () => {
+        expect(insideBox(null)).toBe(null)
+    })
+})
+
+// 2026-10-02 (/moxir Side view): with the roof cut away a beam aimed up ran on into the sky.
+describe('roofCapRect', () => {
+    const bounds = { min: [-48, 0, -54.5], max: [48, 17, 54.5] }
+    it('is off with no roof cut, or with the camera at or above the cut', () => {
+        expect(roofCapRect(null, bounds, [100, 5, 0])).toBeNull()
+        expect(roofCapRect(10.75, bounds, [0, 30, 0])).toBeNull()
+        expect(roofCapRect(10.75, bounds, [0, 10.75, 0])).toBeNull()
+    })
+    it('sits at the cut and takes in a camera standing beyond a wall', () => {
+        const cap = roofCapRect(10.75, bounds, [120, 5.6, 3])
+        expect(cap.y).toBe(10.75)
+        expect(cap.x1).toBeGreaterThan(120)
+        expect(cap.x0).toBeLessThan(-48)
+        expect(cap.z0).toBeLessThan(-54.5)
+        expect(cap.z1).toBeGreaterThan(54.5)
+    })
+    it('covers where any sight line from the camera to a point above the cut crosses the cut height', () => {
+        const cam = [120, 5.6, 3]
+        const cap = roofCapRect(10.75, bounds, cam)
+        for (const p of [[0, 30, 0], [-40, 14, 50], [47, 11, -54]]) {
+            const t = (10.75 - cam[1]) / (p[1] - cam[1])
+            const x = cam[0] + (p[0] - cam[0]) * t
+            const z = cam[2] + (p[2] - cam[2]) * t
+            expect(x >= cap.x0 && x <= cap.x1 && z >= cap.z0 && z <= cap.z1).toBe(true)
+        }
+    })
+})
+
+// 2026-10-02 (/moxir Side): from outside, the haze's veil turned the far wall into a white slab.
+describe('farthestCornerDistance', () => {
+    const bounds = { min: [-48, 0, -54.5], max: [48, 17, 54.5] }
+    it('reaches the far corner of the building from a camera beyond a wall', () => {
+        const d = farthestCornerDistance([-65, 5, 2], bounds)
+        expect(d).toBeCloseTo(Math.hypot(48 + 65, 17 - 5, 54.5 + 2), 6)
+    })
+    it('is 0 without a building', () => {
+        expect(farthestCornerDistance([0, 0, 0], null)).toBe(0)
+    })
+})
+
+// 2026-10-02 (/moxir on a phone): the fitted Floor and Rig presets left the hall.
+describe('reachInBox', () => {
+    const box = { min: [-47.5, 0.8, -54], max: [47.5, 10.6, 54] }
+    it('stops a pulled-back camera at the end wall', () => {
+        const k = reachInBox([0, 5.5, 4], [0, 1.2, 55.5], box)
+        expect(4 + (55.5 - 4) * k).toBeCloseTo(54, 6)
+    })
+    it('stops it under the roof', () => {
+        const k = reachInBox([-2, 6, 10], [-13.5, 14.1, 40.3], box)
+        expect(6 + (14.1 - 6) * k).toBeCloseTo(10.6, 6)
+    })
+    it('leaves a camera already inside where it is', () => {
+        expect(reachInBox([0, 5, 0], [0, 1.7, 50], box)).toBe(1)
     })
 })

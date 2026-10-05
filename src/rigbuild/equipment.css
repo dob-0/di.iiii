@@ -273,3 +273,16 @@
 .rigequip-docs__rights a { color: var(--soft); }
 .rigequip-photolinks { margin: 0; padding: 6px 16px 8px; border-bottom: 1px solid var(--rule); font-size: 11.5px; }
 .rigequip-photolinks a { color: var(--ink); overflow-wrap: anywhere; display: inline-block; min-height: 24px; }
+
+/* a finger on the equipment page: the view tabs and the row buttons a full 44 px target */
+@media (pointer: coarse) {
+    .rigequip-page .rigplot-toggle button,
+    .rigequip-page .rigcards-links button,
+    .rigequip-page .rigcards-links a,
+    .rigequip-page .rigcards-btn,
+    .rigequip-inv .rigplot-seg button,
+    .rigequip-inv .rigcards-btn {
+        min-height: var(--di-touch-target, 44px);
+        min-width: var(--di-touch-target, 44px);
+    }
+}

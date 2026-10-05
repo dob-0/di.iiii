@@ -287,6 +287,11 @@ function registerProjectRoutes(router, {
         ...(source ? { source } : {}),
         ...(visibility ? { visibility } : {})
       })
+      // A followed space carries a project made with nothing in it (it has no
+      // ops to wake anyone): wake this install's follower, and release any
+      // di.iiii parked on the room's log. Never fatal.
+      try { require('../follow').nudgeFollow(spaceId) } catch { /* no follows here */ }
+      try { require('../follow/waiters').noteChange(spaceId) } catch { /* nobody waiting */ }
       res.status(201).json({
         project: meta,
         document: await readProjectDocument(spacesDir, spaceId, projectId)
@@ -741,7 +746,8 @@ function registerProjectRoutes(router, {
       // The author, from the session — never from the ops — and, at the first
       // change of a new burst in this space, a restore point before it lands.
       const actor = actorFromAuthState(req.authState)
-      if (spaceHistory) await spaceHistory.beforeChange(project.spaceId, actor)
+      const wholeReplace = normalizedOps.some(op => op.type === 'replaceScene' || op.type === 'replaceDocument')
+      if (spaceHistory) await spaceHistory.beforeChange(project.spaceId, actor, wholeReplace ? { reason: 'before-whole-replace-op' } : {})
 
       // Serialized per project: the version check and the read-modify-write
       // it guards must be one atomic step, or two concurrent requests at the

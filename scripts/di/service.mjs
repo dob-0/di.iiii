@@ -68,6 +68,17 @@ export const servicePaths = (home, name, env = process.env) => ({
     startEnv: path.join(runtimeDir(env), `${name}.start.env`)
 })
 
+/**
+ * The node `di service install` ran with, while it is still there. A later
+ * `di up` from a shell whose PATH puts another node first (the system's v26,
+ * which cannot bind :443 on aylmo) must not swap the unit's node under it:
+ * the install is re-pointed only by `di service install`.
+ */
+export const pinnedNode = (home, { exists = fs.existsSync } = {}) => {
+    const node = readState(home).service?.node
+    return typeof node === 'string' && node && exists(node) ? node : null
+}
+
 /** sd_booted(3), plus a user manager we can talk to. */
 export const systemdUsable = ({ run = systemctl, platform = process.platform, exists = fs.existsSync } = {}) => {
     if (platform !== 'linux') return false
@@ -254,7 +265,7 @@ export const installService = async ({ home, name = DEFAULT_UNIT, node, serverEn
     await writeUnit({ svc, home, node, serverEnv, run })
     check(run(['daemon-reload']), 'daemon-reload')
     check(run(['enable', svc.unit]), `enable ${svc.unit}`)
-    await writeState(home, { service: { name, unitFile: svc.unitFile } })
+    await writeState(home, { service: { name, unitFile: svc.unitFile, node } })
     return svc
 }
 

@@ -44,7 +44,12 @@
             },
             {
               "role": "frost",
-              "label": "Frost"
+              "label": "Frost",
+              "cap": {
+                "frost": {
+                  "basis": "ASSUMED — linear, 0 clear … 255 full; the chart states no curve"
+                }
+              }
             },
             {
               "role": "strobe",
@@ -78,27 +83,63 @@
               "role": "gobo",
               "label": "Gobo (5-89 gobo 1-17, 171+ shake)",
               "cap": {
-                "gobo": true
+                "gobo": true,
+                "goboSlots": {
+                  "from": 5,
+                  "to": 89,
+                  "count": 17,
+                  "basis": "TESTED range; slots DERIVED"
+                },
+                "goboShake": {
+                  "from": 171,
+                  "basis": "TESTED"
+                }
               }
             },
             {
               "role": "prism",
               "label": "Prism 1 insert (128+ in)",
               "cap": {
-                "prism": true
+                "prism": true,
+                "prismIn": {
+                  "from": 128,
+                  "facets": 16,
+                  "basis": "TESTED threshold"
+                }
               }
             },
             {
               "role": "rotation",
-              "label": "Prism 1 rotation"
+              "label": "Prism 1 rotation",
+              "cap": {
+                "prismRotation": {
+                  "prism": 1,
+                  "basis": "ASSUMED — index or spin not stated; read as an index, 0…255 → 0…360°"
+                }
+              }
             },
             {
               "role": "aux1",
-              "label": "Prism 2"
+              "label": "Prism 2",
+              "cap": {
+                "prism2": {
+                  "kind": "honeycomb",
+                  "in": {
+                    "from": 128
+                  },
+                  "basis": "ASSUMED — prism 1's threshold"
+                }
+              }
             },
             {
               "role": "aux2",
-              "label": "Prism 2 rotation"
+              "label": "Prism 2 rotation",
+              "cap": {
+                "prismRotation": {
+                  "prism": 2,
+                  "basis": "ASSUMED — index or spin not stated; read as an index, 0…255 → 0…360°"
+                }
+              }
             },
             {
               "role": "focus",
@@ -509,6 +550,8 @@
         "photometryBasis": "EQUIVALENT",
         "note": "maker's claim, not an independent measurement"
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/beam380.glb",
         "sidecar": "scripts/place/fixtures/glb/beam380.json",
@@ -926,6 +969,8 @@
         "photometryBasis": "EQUIVALENT",
         "note": "a 250 W LED spot, not a beam/spot/wash hybrid; the UP-250BSW zooms 10-30 deg"
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/bsw250.glb",
         "sidecar": "scripts/place/fixtures/glb/bsw250.json",
@@ -1218,6 +1263,8 @@
         "photometryBasis": "EQUIVALENT",
         "note": "reseller claim, likely all colours at full"
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/beeEye.glb",
         "sidecar": "scripts/place/fixtures/glb/beeEye.json",
@@ -1472,6 +1519,8 @@
         "photometryBasis": "EQUIVALENT",
         "note": "no brand datasheet with lux for a 54 x 3 W PAR found (3 searches)"
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/par.glb",
         "sidecar": "scripts/place/fixtures/glb/par.json",
@@ -1767,6 +1816,8 @@
         "photometryBasis": "EQUIVALENT",
         "note": "a laser is not a lamp with a candela figure: 40 W optical from a 6-10 mm aperture, divergence < 1.3 mrad (BLUESEA). Its drawn beam's air brightness is set by hand (the rig's airFixed)."
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/laser.glb",
         "sidecar": "scripts/place/fixtures/glb/laser.json",
@@ -1884,6 +1935,8 @@
         "photometrySrc": null,
         "photometryBasis": null
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/co2.glb",
         "sidecar": "scripts/place/fixtures/glb/co2.json",
@@ -1981,6 +2034,8 @@
         "photometrySrc": null,
         "photometryBasis": null
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": 40,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/spark.glb",
         "sidecar": "scripts/place/fixtures/glb/spark.json",
@@ -2092,6 +2147,12 @@
         "photometrySrc": null,
         "photometryBasis": null
       },
+      "fluid_ml_per_min": {
+        "value": 150,
+        "src": "ANTARI",
+        "basis": "EQUIVALENT"
+      },
+      "nozzle_d_mm": 50,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/smoke.glb",
         "sidecar": "scripts/place/fixtures/glb/smoke.json",
@@ -2252,6 +2313,8 @@
         "photometryBasis": "EQUIVALENT",
         "note": "flux from the maker; the angle ASSUMED (see specs.beam_deg), so the candela is a planning figure"
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/strobe.glb",
         "sidecar": "scripts/place/fixtures/glb/strobe.json",
@@ -2449,6 +2512,8 @@
         "photometrySrc": "CHAUVET-STRIKE4",
         "photometryBasis": "EQUIVALENT"
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/blinder.glb",
         "sidecar": "scripts/place/fixtures/glb/blinder.json",
@@ -2563,6 +2628,13 @@
         "photometrySrc": null,
         "photometryBasis": null
       },
+      "fluid_ml_per_min": {
+        "value": 2.2,
+        "src": "ANTARI-HZ1000",
+        "basis": "EQUIVALENT",
+        "note": "at 100 % output"
+      },
+      "nozzle_d_mm": 70,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/hazer.glb",
         "sidecar": "scripts/place/fixtures/glb/hazer.json",
@@ -2699,6 +2771,8 @@
         "photometryBasis": "ASSUMED",
         "note": "no maker (UPlight, FOS) publishes a lux or lumen figure for this class. ASSUMED 9,000 lm out of the fixture: a 200 W white COB at ~100–130 lm/W (package) through a PAR reflector at ~40–45 % optical efficiency — an estimate, to be replaced by a measurement or the rental unit's report (OWED). By I = F / Ω it gives ≈ 18,800 cd on axis at 45° (the PL5403's equivalent-sourced figure: 11,000 cd at 25°)."
       },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
       "model3d": {
         "glb": "scripts/place/fixtures/glb/cob200.glb",
         "sidecar": "scripts/place/fixtures/glb/cob200.json",
@@ -2723,6 +2797,158 @@
       "manifest": {
         "file": "scripts/place/fixtures/fixtures.json",
         "kind": "cob200",
+        "writtenAt": "2026-09-28",
+        "accessed": "2026-09-28"
+      }
+    },
+    {
+      "id": "ext-lc-ultra-mk2",
+      "code": "EXT-LC-ULTRA-MK2",
+      "identified": "EXACT",
+      "identifiedNote": "EXACT (Wicked Lasers LaserCube Ultra MK2, from the maker's page and manual) — from another supplier: the owner's own cubes, not a line on the rental house's list (owner 2026-10-04)",
+      "maker": null,
+      "model": "EXT-LC-ULTRA-MK2",
+      "modelledOn": null,
+      "product": "Wicked Lasers LaserCube Ultra MK2, 10 W RGB laser projector (455 / 525 / 638 nm), AT-40S galvos 35k pps @ 7°; Ethernet RJ45 100 Mbps and WiFi, DMX in/out, Art-Net, ILDA, SD card, CubeOS stand-alone",
+      "category": "laser",
+      "modes": [
+        {
+          "name": "16ch",
+          "footprint": 16,
+          "channels": [
+            {
+              "role": "c1",
+              "label": "Access mode (0-31 blackout, 33-95 basic 4 ch, 97-159 standard 8, 161-223 extended 12, 225-255 full 16)"
+            },
+            {
+              "role": "c2",
+              "label": "Page (9 pages of 48 cues)"
+            },
+            {
+              "role": "c3",
+              "label": "Cue select (0-31 blackout, then cues 1-48)"
+            },
+            {
+              "role": "c4",
+              "label": "Speed (0-15 100 %, 17-31 pause, 33… 25 % … 128 100 % … 255 200 %)"
+            },
+            {
+              "role": "dimmer",
+              "label": "Fader (named dimmer so master/blackout reach it)"
+            },
+            {
+              "role": "c6",
+              "label": "Scale (zero … full size)"
+            },
+            {
+              "role": "c7",
+              "label": "X size (0 −full, 128 zero, 255 +full)"
+            },
+            {
+              "role": "c8",
+              "label": "Y size (0 −full, 128 zero, 255 +full)"
+            },
+            {
+              "role": "c9",
+              "label": "Rotation (0 … 360°)"
+            },
+            {
+              "role": "c10",
+              "label": "X position (128 centre)",
+              "default": 128
+            },
+            {
+              "role": "c11",
+              "label": "Y position (128 centre)",
+              "default": 128
+            },
+            {
+              "role": "c12",
+              "label": "Reserved"
+            },
+            {
+              "role": "c13",
+              "label": "Scan rate (0-31 default 35K pps, 33-223 6K-29K, 225+ 30K)"
+            },
+            {
+              "role": "c14",
+              "label": "Reserved"
+            },
+            {
+              "role": "c15",
+              "label": "Recolour (0-31 off, 33-223 hue sweep, 225+ white)"
+            },
+            {
+              "role": "c16",
+              "label": "Reserved"
+            }
+          ],
+          "channelsSource": {
+            "fixture": "Wicked Lasers LaserCube Ultra MK2 (ULTRA MK2 Guide v1.2, DMX/Art-Net channel layout)",
+            "url": "https://www.laseros.com/manual-mk2.pdf",
+            "licence": null,
+            "basis": "EXACT"
+          },
+          "src": "LASEROS-MK2",
+          "basis": "EXACT"
+        }
+      ],
+      "defaultMode": "16ch",
+      "modesOwed": false,
+      "assumedMode": null,
+      "power_w": null,
+      "weight_kg": {
+        "value": 3.7,
+        "src": "LASEROS-MK2",
+        "basis": "EXACT"
+      },
+      "size_mm": {
+        "value": [
+          155,
+          150,
+          155
+        ],
+        "src": "LASEROS-MK2",
+        "basis": "EXACT",
+        "order": "published 155 x 150 x 155 mm"
+      },
+      "pan_tilt_deg": null,
+      "ip": null,
+      "optics": {
+        "beam_deg": null,
+        "zoom_deg": null,
+        "lux": null,
+        "at_m": null,
+        "photometrySrc": "LASEROS-MK2",
+        "photometryBasis": "EXACT",
+        "note": "a laser is not a lamp with a candela figure: 10 W optical, 4 mm beam, 1 mrad (LASEROS-MK2), scanned into shapes. Its drawn beam's air brightness is set by hand (the rig's airFixed)."
+      },
+      "fluid_ml_per_min": null,
+      "nozzle_d_mm": null,
+      "model3d": {
+        "glb": "scripts/place/fixtures/glb/lasercube.glb",
+        "sidecar": "scripts/place/fixtures/glb/lasercube.json",
+        "builtBy": "scripts/place/fixtures/build_fixtures.py",
+        "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+        "panY": 0,
+        "tiltY": 0.11,
+        "lensY": 0.214,
+        "sizeAtHome_mm": {
+          "width_x": 255,
+          "depth_z": 155,
+          "height_y": 214
+        },
+        "licence": "AGPL-3.0-only, the licence of this repository (LICENSE)"
+      },
+      "sources": {
+        "LASEROS-MK2": {
+          "url": "https://www.laseros.com/lasercube-models/",
+          "what": "Wicked Lasers, LaserCube Ultra MK2: the maker's specs page, and its ULTRA MK2 Guide v1.2 (https://www.laseros.com/manual-mk2.pdf): specifications, connections, and the DMX/Art-Net default fixture channel layout (pp. 57-59). Accessed 2026-10-04"
+        }
+      },
+      "manifest": {
+        "file": "scripts/place/fixtures/fixtures.json",
+        "kind": "lasercube",
         "writtenAt": "2026-09-28",
         "accessed": "2026-09-28"
       }

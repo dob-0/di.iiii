@@ -40,6 +40,14 @@ const DEFAULT_BACKOFF_MS = [2000, 10_000, 30_000]
 // A file that ran out of tries is looked at again after this long — the other
 // machine may simply have been switched off for the afternoon.
 const DEFAULT_RETRY_FAILED_AFTER_MS = 5 * 60_000
+// What the documents list is compared with what each machine can serve again
+// this often, for as long as the follow runs (not only once after a start): a
+// transfer that was interrupted, or a file lost from one disk, is found and
+// carried again instead of being owed in silence (gap 3, 2026-10-05, di.laser).
+const DEFAULT_RECONCILE_EVERY_MS = 10 * 60_000
+// A .part a killed install left behind (the `finally` that removes it does not
+// run on a kill). Another follower in the same process may own a younger one.
+const STALE_PART_MS = 60 * 60_000
 
 const isCarriableId = (id) => SHA256.test(String(id || ''))
 
@@ -107,6 +115,7 @@ const createAssetChase = ({
     tmpDir = os.tmpdir(),
     backoffMs = DEFAULT_BACKOFF_MS,
     retryFailedAfterMs = DEFAULT_RETRY_FAILED_AFTER_MS,
+    reconcileEveryMs = DEFAULT_RECONCILE_EVERY_MS,
     io = { request: httpRequest, download: httpDownloadToFile, upload: httpUploadFile },
     now = () => Date.now(),
     log = console
@@ -116,16 +125,28 @@ const createAssetChase = ({
     const settled = new Set()     // keys both machines are known to hold
     const notCarried = new Set()  // legacy ids — named, never chased
     const toReconcile = new Set() // projects whose document has not been read yet
-    const reconciled = new Set()
+    const reconciled = new Map()   // projectId → when its documents were last compared with what each side holds
+    const known = new Set()        // keys of every file a document or an op has named, carriable or not
     let carried = 0
     let stopped = false
     let running = null
     let timer = null
     const abort = new AbortController()
 
+    // A killed install leaves its half-received files behind; they are not
+    // resumed (a file is checked whole against its name), only cleared.
+    fsp.readdir(tmpDir).then(async (names) => {
+        for (const entry of names.filter(entry => /^follow-[0-9a-f-]+\.part$/.test(entry))) {
+            const file = path.join(tmpDir, entry)
+            const stat = await fsp.stat(file).catch(() => null)
+            if (stat && Date.now() - stat.mtimeMs > STALE_PART_MS) await fsp.rm(file, { force: true }).catch(() => {})
+        }
+    }).catch(() => {})
+
     const keyOf = (projectId, id) => `${projectId}:${id}`
 
     const name = (projectId, ref) => {
+        known.add(keyOf(projectId, ref.id))
         if (!isCarriableId(ref.id)) {
             notCarried.add(keyOf(projectId, ref.id))
             return
@@ -142,6 +163,7 @@ const createAssetChase = ({
         failed.delete(key)
         settled.delete(key)
         notCarried.delete(key)
+        known.delete(key)
     }
 
     /** Ops seen on a project's stream, from either machine. */
@@ -156,7 +178,8 @@ const createAssetChase = ({
     /** The projects in the followed space; each document is read once. */
     const noteProjects = (projectIds = []) => {
         for (const projectId of projectIds) {
-            if (!reconciled.has(projectId)) toReconcile.add(projectId)
+            const last = reconciled.get(projectId)
+            if (last === undefined || now() - last >= reconcileEveryMs) toReconcile.add(projectId)
         }
     }
 
@@ -277,6 +300,9 @@ const createAssetChase = ({
     // document already names everything. Done only when BOTH have answered (a
     // project one side has not made yet is an answer: 404).
     const reconcileOne = async (projectId) => {
+        // A file settled earlier is asked about again: this comparison exists to
+        // find what has stopped being true since.
+        for (const key of [...settled]) if (key.startsWith(`${projectId}:`)) settled.delete(key)
         const answers = await Promise.all([local, remote].map(side => readDocument(side, projectId).catch(() => null)))
         for (const answer of answers) {
             if (answer?.ok) for (const ref of assetsFromDocument(answer.json()?.document)) name(projectId, ref)
@@ -317,7 +343,7 @@ const createAssetChase = ({
             try {
                 if (await reconcileOne(projectId)) {
                     toReconcile.delete(projectId)
-                    reconciled.add(projectId)
+                    reconciled.set(projectId, now())
                 }
             } catch { /* this install not answering — asked again next time */ }
         }
@@ -374,6 +400,11 @@ const createAssetChase = ({
             for (const item of pending.values()) bytesPending += item.size || 0
             return {
                 carried,
+                // How many files the documents and ops have named, and how many of
+                // those a machine is known to lack (pending, or tried and failed):
+                // what `di follows` says after a restart while the rest is still owed.
+                listed: known.size,
+                missing: pending.size + failed.size,
                 pending: pending.size,
                 failed: failed.size,
                 // who and why, for a person: `di follows` prints these

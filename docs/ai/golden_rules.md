@@ -895,6 +895,14 @@ const stop = async () => {
 
 **Files:** `scripts/space-sync.mjs` (push-only, no pull), `br_id_ge-ops/scripts/sync-ops.sh`, `br_id_ge-ops/AGENTS.md` (per-project authority list).
 
+### WebGL shaders on Windows: bound big loops with a uniform, never a constant
+
+**Rule:** In a GLSL shader, any loop that runs more than a handful of times — or sits inside another loop — takes its bound from a uniform (`for (int i = 0; i < uSamples; i++)`), not a `#define` or a literal.
+
+**Why:** Chrome on Windows runs WebGL through ANGLE on Direct3D 11, which UNROLLS constant-bound loops. Nested, they multiply into an HLSL program too large to build: the link fails with an EMPTY info log and the stall loses the WebGL context (beamAirMaterial.js, 2026-10-01 — 12 samples × 12 haze jets × prism × honeycomb). Nothing in a unit test or on a Mac/Linux GPU shows it.
+
+**How to verify:** open the room in Chrome on Windows on the real GPU (Playwright `channel: 'chrome'`, `--use-angle=d3d11 --force_high_performance_gpu`) and read the console for `VALIDATE_STATUS false`. Guard for the beams: beamAir.test.js "no large constant-bound loop in the beam shader".
+
 ### 3D/spatial labels need a backdrop plate, and fixed UI chrome needs its neighbor's footprint reserved — neither gets overlap avoidance for free
 
 **Rule:** Any billboarded in-scene text (portal node names, constellation node names) must render on top of an opaque or near-opaque plate, never bare text over the scene. Any fixed-position DOM chrome (corner badges, floating panels) that can grow — a dropdown, an expanding list — must have its max size capped to leave room for whatever else is pinned to the same or an adjacent corner, computed explicitly, not left to "they're in different corners so it's fine."

@@ -1775,6 +1775,16 @@ router.use('/api/trash', (req, res, next) => {
   next()
 })
 
+// A shelf id names a shelf, not a space, so /api/collections/:collectionId has
+// no :spaceId for the gate to read: requiredSpaceId stayed null and
+// requireWriteRole let an editor scoped to ONE space rename or delete shelves
+// in any other (audit F8, 2026-10-04). Resolve the shelf's space here, ahead
+// of the role gate. An unknown id leaves it null; the handler answers 404.
+router.use('/api/collections/:collectionId', (req, res, next) => {
+  req.requiredSpaceId = getCollection(req.params.collectionId)?.spaceId || null
+  next()
+})
+
 router.use('/api/projects/:projectId', async (req, res, next) => {
   try {
     const project = await resolveProjectContext(req.params.projectId)

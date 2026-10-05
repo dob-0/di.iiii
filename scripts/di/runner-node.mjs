@@ -174,11 +174,12 @@ const waitForHealth = async ({ home, port, host, gone, tail, pid = null }) => {
  */
 const startSupervised = async ({ home, svc, port, host, guests, verbose, systemd }) => {
     const opts = systemd || {}
-    const base = unitBaseEnv(home)
+    const nodeBin = service.pinnedNode(home) || nodeBinary(home)
+    const base = { PATH: [path.dirname(nodeBin), path.join(os.homedir(), '.local', 'bin'), '/usr/local/bin', '/usr/bin', '/bin'].join(':') }
     const loopback = serverEnv({ home, port, host: '127.0.0.1', guests: false, base })
     const wanted = serverEnv({ home, port, host, guests, base })
     await service.writeUnit({
-        svc, home, node: nodeBinary(home),
+        svc, home, node: nodeBin,
         serverEnv: loopback,
         startEnv: service.envDelta(wanted, loopback),
         ...opts

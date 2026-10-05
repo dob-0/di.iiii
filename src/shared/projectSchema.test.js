@@ -849,3 +849,57 @@ describe('mappingState.lightPool survives normalization (review A5-1)', () => {
         expect(normalizeProjectDocument({ mappingState: { lightPool: {} } }).mappingState).not.toHaveProperty('lightPool')
     })
 })
+
+describe('renderSettings.atmosphere.haze — the haze worked out from the machines', () => {
+    it('keeps the hall, the levels and the drift, clamped; drops the rest', () => {
+        const doc = normalizeProjectDocument({
+            renderSettings: {
+                atmosphere: {
+                    scattering: 0.05,
+                    anisotropy: 0.7,
+                    haze: {
+                        volume_m3: 12000,
+                        airChangesPerHour: 6,
+                        levels: { 'rig-hazer-back-01': 1.5, 'rig-smoke-01': 0.5, bad: 'x' },
+                        kindLevels: { hazer: 0.6, 'smoke-machine': -1, laser: 1 },
+                        patchiness: 0.35,
+                        drift: [0.15, 9, 0.05],
+                        junk: 1
+                    }
+                }
+            }
+        })
+        expect(doc.renderSettings.atmosphere).toEqual({
+            scattering: 0.05,
+            anisotropy: 0.7,
+            haze: {
+                volume_m3: 12000,
+                airChangesPerHour: 6,
+                levels: { 'rig-hazer-back-01': 1, 'rig-smoke-01': 0.5 },
+                kindLevels: { hazer: 0.6, 'smoke-machine': 0 },
+                patchiness: 0.35,
+                drift: [0.15, 5, 0.05]
+            }
+        })
+    })
+    it('a haze with no hand-set scattering is still a haze', () => {
+        const doc = normalizeProjectDocument({ renderSettings: { atmosphere: { haze: {} } } })
+        expect(doc.renderSettings.atmosphere).toEqual({ scattering: 0.03, anisotropy: 0.7, haze: {} })
+    })
+    it('a room without one reads back as before', () => {
+        expect(normalizeProjectDocument({ renderSettings: { atmosphere: { scattering: 0.05 } } }).renderSettings.atmosphere).toEqual({ scattering: 0.05, anisotropy: 0.7 })
+        expect(normalizeProjectDocument({ renderSettings: {} }).renderSettings).not.toHaveProperty('atmosphere')
+    })
+})
+
+describe('components.beam.optics — prism, honeycomb, frost, gobo', () => {
+    const lamp = (beam) => normalizeProjectDocument({ entities: [{ id: 'l', type: 'spotLight', components: { beam } }] }).entities[0].components.beam
+    it('keeps what is in the beam\'s path, clamped', () => {
+        expect(lamp({ visible: true, optics: { prism: { facets: 40, rotation: 1 }, honeycomb: {}, frost: 3, gobo: { pattern: 4, rotation: 0.5 }, junk: 1 } }).optics)
+            .toEqual({ prism: { facets: 32, rotation: 1 }, honeycomb: { rotation: 0 }, frost: 1, gobo: { pattern: 4, rotation: 0.5 } })
+    })
+    it('drops a gobo the wheel does not have, and stores nothing when nothing is in', () => {
+        expect(lamp({ visible: true, optics: { gobo: { pattern: 40 } } })).not.toHaveProperty('optics')
+        expect(lamp({ visible: true })).not.toHaveProperty('optics')
+    })
+})

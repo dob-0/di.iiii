@@ -451,7 +451,9 @@ export const versionRig = ({ spec, base, id }) => {
     const lookSource = isVariantId(spec, id)
         ? Object.entries(v.looks || spec.looks)
         : [
-            ...Object.entries(spec.looks).map(([lookId, base]) => {
+            // `omitLooks`: set looks this version does not play (known-full: the five made for the hung rig, which
+            // light nothing here and sat beside working looks of the same names)
+            ...Object.entries(spec.looks).filter(([lookId]) => !(v.omitLooks || []).includes(lookId)).map(([lookId, base]) => {
                 const o = v.looks?.[lookId] || {}
                 return [lookId, { ...base, ...o, aims: { ...base.aims, ...o.aims }, colours: { ...base.colours, ...o.colours }, levels: { ...base.levels, ...o.levels } }]
             }),
@@ -587,17 +589,25 @@ export const costing = ({ spec, list, days = [1, 2] }) => {
     const rateOf = new Map(list.catalogue.map((c) => [c.code, c.rate]))
     const extraDay = list.rule?.extraDay ?? 0.5
     const need = new Map(rental.map((i) => [i.code, i.ordered]))
+    // The rates are the supplier's and are not in the repo (privatePrices.mjs adds them at
+    // script time on the owner's machine). A sum with any rate missing is null, never a partial.
     const perDay = (pkgs) => {
         const cover = new Map()
         for (const p of pkgs) for (const [code, n] of Object.entries(p.covers)) cover.set(code, (cover.get(code) || 0) + n)
-        let sum = pkgs.reduce((s, p) => s + p.rate, 0)
+        let sum = 0
+        let priced = true
+        for (const p of pkgs) { if (Number.isFinite(p.rate)) sum += p.rate; else priced = false }
         const alaCarte = []
         for (const [code, n] of need) {
             const rest = Math.max(0, n - (cover.get(code) || 0))
-            if (rest) { sum += rest * (rateOf.get(code) || 0); alaCarte.push({ code, n: rest, rate: rateOf.get(code) }) }
+            if (rest) {
+                const rate = rateOf.get(code)
+                if (Number.isFinite(rate)) sum += rest * rate; else priced = false
+                alaCarte.push({ code, n: rest, rate: Number.isFinite(rate) ? rate : null })
+            }
         }
         const unused = [...cover].map(([code, n]) => ({ code, n: Math.max(0, n - (need.get(code) || 0)) })).filter((u) => u.n > 0)
-        return { perDay: sum, alaCarte, unused }
+        return { perDay: priced ? sum : null, alaCarte, unused }
     }
     const pkgs = spec.packages.items
     const options = [
@@ -606,17 +616,19 @@ export const costing = ({ spec, list, days = [1, 2] }) => {
         { id: pkgs.map((p) => p.id).join('+'), label: `${pkgs.map((p) => p.label).join(' + ')} + the rest à la carte`, packages: pkgs }
     ].map((o) => {
         const c = perDay(o.packages)
-        return { ...o, packages: o.packages.map((p) => ({ id: p.id, label: p.label, rate: p.rate, cells: p.cells })), ...c, byDays: Object.fromEntries(days.map((d) => [d, c.perDay * billedDays(d, extraDay)])) }
+        return { ...o, packages: o.packages.map((p) => ({ id: p.id, label: p.label, rate: p.rate ?? null, cells: p.cells })), ...c, byDays: Object.fromEntries(days.map((d) => [d, c.perDay == null ? null : c.perDay * billedDays(d, extraDay)])) }
     })
-    const best = [...options].sort((a, b) => a.perDay - b.perDay)[0]
+    const priced = options.every((o) => o.perDay != null)
+    const best = priced ? [...options].sort((a, b) => a.perDay - b.perDay)[0] : null
     const alaCarte = options[0]
     return {
         rule: list.rule,
         options,
-        best: best.id,
-        cheaperThanALaCarte: options.filter((o) => o.id !== 'a-la-carte' && o.perDay < alaCarte.perDay).map((o) => ({ id: o.id, saves: alaCarte.perDay - o.perDay })),
+        priced,
+        best: best ? best.id : null,
+        cheaperThanALaCarte: !priced ? [] : options.filter((o) => o.id !== 'a-la-carte' && o.perDay < alaCarte.perDay).map((o) => ({ id: o.id, saves: alaCarte.perDay - o.perDay })),
         otherSupplierLines: list.items.filter((i) => i.from === 'other').map((i) => ({ code: i.code, ordered: i.ordered, note: i.note })),
-        caveat: 'Rental lines only; other-supplier lines have no rate yet. VAT excluded; delivery, rigging and de-rig on request (the quote calculator\'s default 150,000 is a term, not added). Packages read from the hidden "Price data" sheet; the day rule is assumed to apply to them.'
+        caveat: 'Rental lines only; other-supplier lines have no rate yet; the rental house\'s rates are private (DI_PRIVATE_PRICES) and without them every sum is null. VAT excluded; delivery, rigging and de-rig on request (the quote calculator\'s default delivery term is not added). Packages read from the hidden "Price data" sheet; the day rule is assumed to apply to them.'
     }
 }
 

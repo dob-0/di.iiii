@@ -194,6 +194,24 @@ describe('which path a command takes', () => {
 })
 
 describe('up / down drive the unit when it is installed', () => {
+    it('keeps the node the install ran with, first on PATH, when a later `di up` runs under another node', async () => {
+        // /opt/node/bin/node is what `supervise` installs with; this test
+        // process (a different node) stands in for the system v26 on a shell PATH.
+        const home = installedHome()
+        const sd = fakeSystemd()
+        const pinned = path.join(tmp('di-svc-node-'), 'node')
+        fs.writeFileSync(pinned, '')
+        await installService({ home, name: NAME, node: pinned, serverEnv: { PATH: '/usr/bin' }, run: sd.run })
+        expect(readState(home).service.node).toBe(pinned)
+        const health = await healthServer()
+        try { await node.start({ home, port: health.port, systemd: sd }) } finally { await health.close() }
+        const sp = servicePaths(home, NAME)
+        expect(fs.readFileSync(sp.unitFile, 'utf8')).toContain(`ExecStart="${pinned}" `)
+        const envText = fs.readFileSync(sp.serverEnv, 'utf8')
+        expect(envText).toContain(`PATH='${path.dirname(pinned)}:`)
+        expect(process.execPath).not.toBe(pinned)
+    })
+
     it('`di up` writes the env, (re)starts the unit and spawns nothing itself', async () => {
         const home = installedHome()
         const sd = fakeSystemd()
@@ -313,7 +331,7 @@ describe('`di service install` / `remove`', () => {
         const svc = await supervise(home, sd)
         expect(fs.existsSync(svc.unitFile)).toBe(true)
         expect(sd.calls).toContain(`enable ${NAME}.service`)
-        expect(readState(home).service).toEqual({ name: NAME, unitFile: svc.unitFile })
+        expect(readState(home).service).toEqual({ name: NAME, unitFile: svc.unitFile, node: "/opt/node/bin/node" })
 
         fs.writeFileSync(svc.startEnv, "HOST='0.0.0.0'\n")
         const removed = await removeService({ home, run: sd.run })

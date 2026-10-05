@@ -1,4 +1,6 @@
 import { registerEntityObject } from '../utils/entityObjectRegistry.js'
+import { GIZMO_SNAP, useSnapModifier } from '../utils/gizmoSnap.js'
+import StudioGraphNodes from './StudioGraphNodes.jsx'
 import { runViewCommand } from '../utils/viewCommands.js'
 import { Suspense, createContext, lazy, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
@@ -17,8 +19,10 @@ import EntityLink from '../../project/viewport/EntityLink.jsx'
 import { EntityLinksContext } from '../../project/viewport/entityLinkContext.js'
 import WorldEnvironment from '../../project/viewport/WorldEnvironment.jsx'
 import RenderSettingsEffect from '../../project/viewport/RenderSettingsEffect.jsx'
+import '../../project/viewport/spotLightSkip.js'
 import { arrivalLightsOf } from '../../project/viewport/worldLights.js'
 import ShadowCasting from '../../project/viewport/ShadowCasting.jsx'
+import ShaderWarmup from '../../project/viewport/ShaderWarmup.jsx'
 import { resolveShadowCasting } from '../../project/viewport/shadowCasting.js'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { applyPivotTransform, getSelectionCentroid } from '../utils/multiTransform.js'
@@ -51,22 +55,6 @@ const SmartView = lazy(() => import('../../project/viewport/smartView/SmartView.
 const AR_SCENE_POSITION = [0, 0, -1.2]
 const DEFAULT_SCENE_POSITION = [0, 0, 0]
 
-// Holding Ctrl/Cmd while dragging a gizmo snaps it: 0.5 world units, 15°,
-// 0.1 scale steps — same increments as the modal G/R/S operators.
-const GIZMO_SNAP = { translation: 0.5, rotation: Math.PI / 12, scale: 0.1 }
-function useSnapModifier() {
-    const [snapping, setSnapping] = useState(false)
-    useEffect(() => {
-        const update = (e) => setSnapping(e.ctrlKey || e.metaKey)
-        window.addEventListener('keydown', update)
-        window.addEventListener('keyup', update)
-        return () => {
-            window.removeEventListener('keydown', update)
-            window.removeEventListener('keyup', update)
-        }
-    }, [])
-    return snapping
-}
 
 // True when this viewport is showing a finished piece rather than hosting an
 // edit session: authored timelines then play continuously off the render clock,
@@ -653,7 +641,8 @@ function StudioSceneContent({
     screens = null,
     followLinks = false,
     rigLook = undefined,
-    smartView = null
+    smartView = null,
+    graphRoom = null
 }) {
     const isArMode = useXR((state) => state.mode === 'immersive-ar')
     // Keyed on assets + project id so the map only rebuilds when assets change,
@@ -674,7 +663,13 @@ function StudioSceneContent({
         }
         return map
     }, [sceneEntities])
-    const rootEntities = useMemo(() => sceneEntities.filter((e) => !e.parentId), [sceneEntities])
+    // Inside a Geo the room IS the Geo's inside, as in Nodes after "›": Studio's
+    // own objects stand in the top room and are not drawn there.
+    const insideGeo = Boolean(graphRoom?.editable)
+    const rootEntities = useMemo(
+        () => (insideGeo ? [] : sceneEntities.filter((e) => !e.parentId)),
+        [sceneEntities, insideGeo]
+    )
     const hasRig = useMemo(() => hasRigLamps(sceneEntities), [sceneEntities])
     const [previewById, setPreviewById] = useState({})
 
@@ -719,6 +714,7 @@ function StudioSceneContent({
         <LiveTimelineContext.Provider value={playTimelines}>
         <EntityLinksContext.Provider value={followLinks}>
             <RenderSettingsEffect renderSettings={document.renderSettings} />
+            <ShaderWarmup />
             <ShadowCasting enabled={shadowCasting.enabled} mapSize={shadowCasting.mapSize} />
             <color attach="background" args={[document.worldState?.backgroundColor || '#0a1118']} />
             {/* Authored fog reached walk mode only. A room composed with
@@ -798,10 +794,27 @@ function StudioSceneContent({
                             />
                         </SceneEntityErrorBoundary>
                     ))}
+                    {/* What Nodes made: the top room's Geos and things, read-only,
+                        or — inside a Geo — what stands in it, editable. Its own
+                        boundary, so a model loading there never blanks the
+                        objects beside it. */}
+                    {graphRoom ? (
+                        <Suspense fallback={null}>
+                            <StudioGraphNodes
+                                document={document}
+                                graphRoom={graphRoom}
+                                editMode={editMode}
+                                gizmoMode={gizmoMode}
+                                gizmoAxis={gizmoAxis}
+                                gizmoVisible={gizmoVisibleEffective}
+                                orbitRef={controlsRef}
+                            />
+                        </Suspense>
+                    ) : null}
                     {/* Its own boundary: the lazy chunk (and its models) suspending here
                         must never hide or remount every root entity and the gizmo with it
                         — the whole room blanked while the lamps' bodies loaded. */}
-                    {hasRig ? (
+                    {hasRig && !insideGeo ? (
                         <Suspense fallback={null}>
                             <RigBodies entities={sceneEntities} />
                         </Suspense>
@@ -827,6 +840,9 @@ function StudioSceneContent({
                         command={smartView.command}
                         xray={smartView.xray}
                         constraints={smartView.constraints}
+                        lockInside={smartView.lockInside}
+                        onBuilding={smartView.onBuilding}
+                        onLockPaused={smartView.onLockPaused}
                         fogBase={fogAuthored ? { near: fogNear, far: fogFar } : null}
                         onPresets={smartView.onPresets}
                         onUserMove={smartView.onUserMove}
@@ -1068,6 +1084,10 @@ export default function StudioViewport({
     //   { bar: 'visitor' | 'studio' | false, constraints: bool, deepLink: bool }
     // It then runs only where the room has a building in it.
     smartView = null,
+    // What Nodes made, drawn in this room (StudioGraphNodes.jsx). Null for every
+    // caller but the editor, so the published viewer and the rig plot are
+    // exactly what they were.
+    graphRoom = null,
 }) {
     const viewportRef = useRef(null)
     const fovRef = useRef(cameraView?.fov || document.worldState?.savedView?.fov || 50)
@@ -1096,9 +1116,12 @@ export default function StudioViewport({
         command: sv.command,
         xray: sv.xray,
         constraints: Boolean(smartView?.constraints),
+        lockInside: Boolean(smartView?.lockInside),
+        onBuilding: smartView?.onBuilding,
+        onLockPaused: smartView?.onLockPaused,
         onPresets: setPresets,
         onUserMove: releaseView
-    } : null), [smartOn, sv.command, sv.xray, smartView?.constraints, setPresets, releaseView])
+    } : null), [smartOn, sv.command, sv.xray, smartView?.constraints, smartView?.lockInside, smartView?.onBuilding, smartView?.onLockPaused, setPresets, releaseView])
     const [transformStatus, setTransformStatus] = useState(null)
     // What each screen in the room draws, by mapping surface id — filled by
     // LiveScreens (the DOM sources beside the canvas), read by EntityContent.
@@ -1142,7 +1165,7 @@ export default function StudioViewport({
                 key={canvasKey}
                 style={{ height: '100%' }}
                 onCreated={({ gl }) => bindContextGuard(gl)}
-                shadows={document.renderSettings?.shadows !== false}
+                shadows={document.renderSettings?.shadows !== false ? 'percentage' : false}
                 gl={{
                     antialias: document.renderSettings?.antialias !== false,
                     powerPreference: lowPower ? 'low-power' : 'default'
@@ -1191,6 +1214,7 @@ export default function StudioViewport({
                         screens={screens}
                         followLinks={followLinks}
                         smartView={smartViewProps}
+                        graphRoom={graphRoom}
                     />
                 </XR>
             </Canvas>

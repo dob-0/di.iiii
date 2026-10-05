@@ -65,7 +65,7 @@ export const followFileLines = (files) => {
     const count = (n, one, many) => `${n} ${n === 1 ? one : many}`
     if (files.pending > 0) {
         const mb = files.bytesPending > 0 ? ` (${Math.max(1, Math.round(files.bytesPending / 1024 / 1024))} MB)` : ''
-        lines.push(style.dim(`${count(files.pending, 'file', 'files')} still coming${mb}`))
+        lines.push(style.dim(`${count(files.pending, 'file', 'files')} still coming${mb}${files.listed > files.pending ? `, of ${files.listed} listed` : ''}`))
     }
     const failures = Array.isArray(files.failures) ? files.failures : []
     if (files.failed > 0 || failures.length) {
@@ -79,6 +79,14 @@ export const followFileLines = (files) => {
     }
     return lines
 }
+
+/**
+ * What a follow says about the space's own settings (label, visibility, front
+ * door — serverXR/src/follow/followSettings.js): only what it could not do, so
+ * a quiet line means the settings agree. An install too old to report sends none.
+ */
+export const followSettingsLines = (settings) => (Array.isArray(settings?.notes) ? settings.notes : [])
+    .map(note => style.dim(`settings: ${note}`))
 
 export const ui = {
     // What a start prints. It used to be three lines — the address, six space
@@ -187,7 +195,9 @@ export const ui = {
             missing: 'that di.iiii has no space by that name.',
             denied: 'that key was refused — ask for a fresh one: di invite <space> on their machine.',
             'local-space': 'this install could not make room for it — is di.iiii running here?',
-            itself: 'that address is this di.iiii — a space cannot follow itself.'
+            itself: 'that address is this di.iiii — a space cannot follow itself.',
+            cleartext: `that address is plain http on a network that is not yours — the key and every edit would travel in the clear. use https, or say so out loud: --insecure`,
+            corrupt: `follows.json in this install's data folder cannot be read, so nothing was written — writing over it would drop every other follow and its key. it was left as it is, with a .corrupt copy beside it. look at it, fix or move it, then follow again.`
         }[reason] || `could not follow ${where}.`
         // Only on a plain, un-pinned "unreachable": the address pin is the fix
         // for the one failure it fixes, and there is no point suggesting it to
@@ -196,6 +206,9 @@ export const ui = {
             ? `${message}\nif that name points somewhere this machine cannot reach, say where it is: --at <address>`
             : message
     },
+
+    followBothDirections: () => '--take-host and --take-mine answer opposite questions — say one of them.',
+    followBothStarts: () => '--from-now and --replay are opposite starts — say one of them.',
 
     badAddress: (value) => `${value} is not an address — --at wants an IPv4 or IPv6 literal, like --at 100.87.4.12`,
 
@@ -222,7 +235,7 @@ export const ui = {
             if (!state) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim('(not running)')}`
             const moving = `${state.status} · in ${state.carriedIn} · out ${state.carriedOut}${state.streams > 1 ? ` · ${state.streams} logs` : ''}`
             const line = `  ${style.cyan(id.padEnd(18))}${where}  ${state.lastError ? style.yellow(state.lastError) : style.dim(moving)}`
-            return [line, ...followFileLines(state.files).map(text => `  ${' '.repeat(18)}${text}`)].join('\n')
+            return [line, ...followSettingsLines(state.settings), ...followFileLines(state.files)].map((text, index) => (index === 0 ? text : `  ${' '.repeat(18)}${text}`)).join('\n')
         }).join('\n')
     },
 
@@ -457,7 +470,9 @@ export const ui = {
     followUsage: () => [
         style.bold(`${CMD} follow SPACE --from URL --key KEY`) + style.dim(' — join a space that lives on another di.iiii'),
         '',
-        'both sides keep the whole work; edits travel both ways.',
+        'both sides keep the whole work; edits travel both ways. The host\'s label, front door',
+        'and visibility come too (never more public than either side has it).',
+        `a new key for a follow that exists: ${CMD} follow SPACE --from URL --key - --into SPACE (takes effect while di runs)`,
         '',
         '  --from URL      where the other di.iiii answers, e.g. https://local.thedi.studio',
         `  --key KEY       the per-space sync key, minted on their machine with: ${CMD} invite SPACE`,
@@ -466,6 +481,19 @@ export const ui = {
         '                  --from names a machine this one can only reach somewhere else —',
         '                  a Tailscale IP, say — and there is no hosts-file edit to make.',
         `  --into SPACE    merge into a space of that name that already exists here`,
+        '  --from-now      the start, and the default: nothing from either side\'s past is',
+        '                  replayed; the two copies are compared once and only what happens',
+        '                  after is carried',
+        '  --replay        the old start: read both logs from their beginning (for history',
+        '                  the other side has never seen). Not for a space both already hold.',
+        '  --take-host     when the two copies differ and this one holds work the host lacks,',
+        '                  the host wins. A restore point is taken first; used once, then cleared',
+        '  --take-mine     the same, the other way: this copy becomes the host\'s. Restore point',
+        '                  taken on the host first; used once, then cleared',
+        '                  (with neither, a difference where this copy is ahead is REFUSED and',
+        `                  shown in ${CMD} follows)`,
+        '  --insecure      allow a key to travel over plain http to a public address (http to',
+        '                  localhost, .local, LAN and Tailscale addresses needs no flag)',
         '',
         style.dim(`  ${CMD} follows          what this install is following`),
         style.dim(`  ${CMD} unfollow SPACE   stop carrying edits`)
@@ -845,6 +873,9 @@ export const ui = {
         '',
         `  ${CMD} update        get the newest version — never touches your work`,
         `  ${CMD} update --from FILE   update from an artifact on this machine (no network)`,
+        `  ${CMD} update --channel dev|stable   one run on a channel (dev = the build dev.diiii.xyz serves)`,
+        `  ${CMD} channel [dev|stable]   show or set which channel this install follows`,
+        `  ${CMD} autoupdate on|off|status   keep it on its channel by itself, every 15 minutes (Linux)`,
         `  ${CMD} logs [-f]     what the server is saying`,
         `  ${CMD} doctor        what this machine can and cannot do`,
         `  ${CMD} where         the three paths that matter`,

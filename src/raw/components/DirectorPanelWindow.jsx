@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import DirectorPanel from '../director/DirectorPanel.jsx'
 import useEditHistory from '../director/useEditHistory.js'
 import { PIECE_IDS, loadPiece } from '../director/pieces.js'
 import { totalDurationSec } from '../../timeline/editList.js'
 import { useSceneClock } from '../../timeline/clock.js'
 import useSavedTiming from '../director/useSavedTiming.js'
+import { listServerSpaces } from '../../services/serverSpaces.js'
 import '../director/director.css'
 
 // The director, hosted in Raw (moved out of the piece 2026-08-05, made general
@@ -58,10 +59,19 @@ export default function DirectorPanelWindow({ node }) {
     //
     // Called unconditionally, before any early return — a hook behind an `if`
     // changes hook order the moment the piece resolves.
-    const savesTo = piece?.savesToSpace || null
+    //
+    // The space is only used if THIS server has it. A piece names its space
+    // (algovrithm), but a project on a fresh install, a scratch server or a
+    // hosted tier has no such space, and asking for its settings is a 404 the
+    // browser logs as a console error. So the server's own space list (always
+    // answers) is read first, and no settings request is made for a space that
+    // is not in it. A list that cannot be read counts as "not there".
+    const wantedSpace = piece?.savesToSpace || null
+    const spaceHere = useServerHasSpace(wantedSpace)
+    const savesTo = wantedSpace && spaceHere === true ? wantedSpace : null
     const timing = useSavedTiming({ spaceId: savesTo, baseline: piece?.baseline ?? EMPTY })
 
-    if (!resolved || (savesTo && !timing.ready)) {
+    if (!resolved || (wantedSpace && spaceHere === null) || (savesTo && !timing.ready)) {
         return <div className="raw-director-window" aria-hidden="true" />
     }
 
@@ -85,6 +95,7 @@ export default function DirectorPanelWindow({ node }) {
             piece={piece}
             initialSequences={savesTo ? timing.sequences : piece.baseline}
             onSaveTiming={savesTo ? timing.save : null}
+            spaceMissing={wantedSpace && spaceHere === false ? wantedSpace : null}
         />
     )
 }
@@ -93,7 +104,25 @@ export default function DirectorPanelWindow({ node }) {
 // every paint.
 const EMPTY = []
 
-function DirectorPanelWindowEditor({ piece, initialSequences, onSaveTiming }) {
+// null while asking, then true or false. Never throws.
+// The answer carries the space it was asked about: when the piece loads, the
+// space changes from none to its own, and an answer kept from "none" must not
+// stand in for one about the real space for even one render.
+function useServerHasSpace(spaceId) {
+    const [answer, setAnswer] = useState({ spaceId: null, here: null })
+    useEffect(() => {
+        if (!spaceId) return undefined
+        let alive = true
+        listServerSpaces()
+            .then((spaces) => { if (alive) setAnswer({ spaceId, here: spaces.some((space) => space?.id === spaceId) }) })
+            .catch(() => { if (alive) setAnswer({ spaceId, here: false }) })
+        return () => { alive = false }
+    }, [spaceId])
+    if (!spaceId) return false
+    return answer.spaceId === spaceId ? answer.here : null
+}
+
+function DirectorPanelWindowEditor({ piece, initialSequences, onSaveTiming, spaceMissing = null }) {
     // Keyed on the piece by the caller remounting this component (see `key`
     // would be needed if DirectorPanelWindow itself didn't already gate on
     // `piece.id` above) so switching to another one starts a fresh undo stack
@@ -104,7 +133,9 @@ function DirectorPanelWindowEditor({ piece, initialSequences, onSaveTiming }) {
     // mounting it before the space's saved timing arrives would start every
     // session from the raw file and silently drop whatever was last saved to
     // this space.
-    const history = useEditHistory(initialSequences, { enabled: true })
+    // Undo/redo acts only while focus is inside this window; see useEditHistory.
+    const windowRef = useRef(null)
+    const history = useEditHistory(initialSequences, { enabled: true, scopeRef: windowRef })
     const editList = history.present
     const durationSec = useMemo(() => totalDurationSec(editList), [editList])
     const clock = useSceneClock({ durationSec, loop: true })
@@ -116,10 +147,12 @@ function DirectorPanelWindowEditor({ piece, initialSequences, onSaveTiming }) {
     )
 
     return (
-        <div className="raw-director-window">
+        <div className="raw-director-window" ref={windowRef} tabIndex={-1}>
             <div className="raw-director-note">
-                editing <strong>{piece.label}</strong>
-                {PIECE_IDS.length === 1 ? ' · the only piece registered so far' : null}
+                editing the built-in piece <strong>{piece.label}</strong>
+                {spaceMissing
+                    ? ` · this server has no space called “${spaceMissing}”, so timing cannot be saved to a space here; edits stay in this window (Copy keeps them)`
+                    : null}
                 {' · '}placement handles need the piece canvas and are not wired yet
             </div>
             <DirectorPanel

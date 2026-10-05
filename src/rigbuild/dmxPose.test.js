@@ -190,3 +190,19 @@ describe('a look written as DMX draws the look (deskLookValues ↔ dmxPose)', ()
         }
     })
 })
+
+describe('zoom keeps the flux, not the candela (render audit C)', () => {
+    it('a UP-250BSW zoomed 10° → 30° is dimmer on axis by the ratio of the cone solid angles', () => {
+        const entities = dealt()
+        const spot = entities.find((e) => e.components?.fixture?.type === 'up-250bsw')
+        const at = (zoom) => dmxEntities({ shown: entities, document: entities, fixtures: deskOf(entities, { [spot.id]: { zoom } }), library: TYPE_LIBRARY })
+            .entities.find((e) => e.id === spot.id).components.light
+        const narrow = at(0)
+        const wide = at(255)
+        // the desk really zoomed it: otherwise the ratio is 1 and proves nothing
+        expect(wide.angle).toBeGreaterThan(narrow.angle * 2.5)
+        const ratio = (1 - Math.cos(narrow.angle)) / (1 - Math.cos(wide.angle))
+        expect(wide.intensity / narrow.intensity).toBeCloseTo(ratio, 2)
+        expect(wide.intensity).toBeLessThan(narrow.intensity / 5)
+    })
+})

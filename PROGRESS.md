@@ -5,6 +5,574 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-10-05 — /tools versions come from the lock files; Dependabot bumps can pass again
+
+- Eight Dependabot PRs (#687–#693, #695) failed CI on one assertion only, each naming its own package:
+  `kitCatalogue.test.js` › "prints the version and licence of the package that is installed"
+  (e.g. #691: "dotenv: installed 18.0.4, table says 18.0.3"; 7761 other tests passed).
+  `src/kit/kitStack.js` typed every npm version by hand, so a bump failed by design.
+- Now `virtual:kit-versions` (`kitVersionsPlugin` in `vite.config.js`, the same shape as
+  `virtual:node-anatomy`) reads the table's `npm:` names with acorn and resolves each from
+  `package-lock.json` / `serverXR/package-lock.json`, the top-level entry `import 'x'` gets.
+  Lock files, not node_modules: the Docker build, CI and a fresh clone all have them, and a
+  bump rewrites them in the same change. Only the 37 listed packages ship (all ~750 would be ~25 KB).
+- Guard: a new test fails on any hand-typed npm version (seen failing on dev's table, 37 lines)
+  and on any listed package missing from its lock file (it caught `zod`, which is transitive).
+- Proved on the real case: #691's lock change on top of this branch → kit tests 32/32 pass.
+  Looked at /tools on the dev server (`di-dev up kit-versions`): 57 rows, 38 with a version
+  (37 npm + Node.js), "—" only on standards and services; phone 390 px, no sideways scroll.
+
+## 2026-10-01 — the desk's Touch page plays looks and the cue list
+
+Found for the MOXIR show: 0 desk scenes, a set of looks and a cue list. The Touch page rendered only
+`visibleScenes()`, so a performer on a tablet saw "Save some scenes on the Control page." and could pick
+nothing.
+
+**What changed** (`serverXR/src/lighting/ui/`): a cue bar (`#tCueBar`: "Cue 2/5 · name", "next 3 name · waits
+for GO", GO / back / stop / loop, 44px high) and a Looks grid (`#touchLooks`, same `.tbtn` tiles). A tap posts
+`api/looks/fire` (cue layer, same as a cue) and the tile shows `on now`. The scene grid, its filter and
+long-press bindings are untouched. Each section shows only with content; the hint appears only with no scenes,
+looks or cues; the scene filter hides on a looks-and-cues show.
+
+**Traps met**
+- `pullState()` keeps its own `S.layers` for 700 ms after any POST (fader guard), so "re-pull after GO" left
+  the previous look marked. The tile is now marked from the fire reply, and for a cue from `CUES.list[index]`,
+  then a poll confirms 750 ms later.
+- `CUES` was a `let` at the foot of app.js; `showPage()` runs before it, so a `#touch` first load would hit the
+  TDZ. Declared beside `buildTouch`; the wiring test asserts the order.
+- `.search { display: flex }` beats `[hidden]`; `.touchsearch[hidden]` added.
+
+**Verified** against a throwaway desk (port 8765, scratch DATA_DIR, ARTNET_OFFLINE=1): desktop, iPad Pro 11,
+iPhone 13: tap a look, GO twice, screenshots opened. Guard: `tests/test-wiring.js`.
+
+**Open**: on a phone the cue bar is sticky only inside the Touch body, which is not its own scroller below
+1100px, so it scrolls with the page; the phone viewport also leaves little room above the live strip.
+
+## 2026-10-01 — a followed space stays one space: no lost edits, copies agree, restarts resume
+
+Owner: "we have di.iiii and we can't sync the works so lets fix that gap" → "ok it works, now fix the gaps".
+First real two-machine run (aylmo follows ponyo, `sync-test-1001`, before these fixes): aylmo→ponyo 202/877/109 ms,
+ponyo→aylmo 135/128/119 ms, both at v8 with the same 8 entities. Then the gaps found by reading `serverXR/src/follow/`:
+
+- **Lost edit on a 409** — `carry()` marked the target's own new ops (the refusal's `pendingOps`) as seen; the next
+  tick skipped them and moved the cursor past them. Fixed; guard `follower.test.js` (fails on the old code).
+- **Copies that disagree for good** — concurrent edits to the same field land in different orders on each side.
+  New `followConverge.js`: the host's order is the order (Figma's server-ordered rule); once a stream is quiet after
+  both sides moved, and once at start, the follower writes the host's copy over its own as one
+  `replaceDocument`/`replaceScene` through its own route. Never overwrites a full copy with an empty host. Guard:
+  `followIntegration.test.js` "agrees on the host's value…" — fails without it (the rooms never agree).
+- **Old edit applied twice after a restart** — cursors + carried opIds were in memory only and the receiver dedupes
+  only inside its retained 500 ops. Now saved to `DATA_ROOT/follow-state/<space>.json` (temp + rename), resumed on
+  start, reset when a log restarted. Guard: "resumes from where it was…" — fails without the saved state (the old op
+  is in the follower's log again).
+- Docs: new `docs/architecture/SPEC_follow.md` (the follow was in no spec); pointers from `THREE_DISTANCES.md` and
+  `SPEC_di_sync.md`; three known-fixes rows; wiki line "WHEN BOTH CHANGE THE SAME THING".
+
+Tests: `serverXR/src/follow/` 8 files, 65 tests pass (2 new files, 2 new integration cases).
+Not done: a run of THESE fixes between two real machines (needs ponyo's di to host again, Emily's yes); intent-
+preserving merge (CRDT); one remote per space; deletes/renames/visibility not carried; no sync UI or discovery.
+
+## 2026-10-02 — Studio stands inside a Geo
+
+The owner's decision of 2026-10-02 ("edit inside the Geo", chosen from a sketch): a Geo made in
+Nodes can be opened in Studio, and Studio then works inside it — Create puts things into it,
+Objects lists what stands in it, the gizmo and the inspector edit them, and Nodes sees the same
+nodes live. This overrides one rule of `di-atlas/decisions/2026-09-23-layers-what-inside-what.md`
+(unit 5, "node-made things are read-only in Studio") for the inside of a Geo. Everything else in
+units 5–8 holds: no new field, no new op, no migration, no restyle, addresses unchanged.
+
+**What changed**
+- `src/project/graph/geoScope.js` (pure, tested): the project's Geos, what stands in a Geo, the
+  add-into-Geo op (ONE `createNode` with `parentId` = the Geo — the op Nodes' palette writes), "+ Geo",
+  the gizmo's `updateNode` values patch, Studio-shaped inspector sections for a node.
+- One renderer: `RawViewport.jsx` exports `NodeVisual`, `buildSpatialChildMap` (extracted from
+  `SceneContent`, which now uses it), `resolveSpatialValues`, `pickAuthoredCameraNode`.
+  `src/raw/components/GraphRoomNodes.jsx` draws a scope's nodes inside any Canvas with them;
+  `src/studio/components/StudioGraphNodes.jsx` adds Studio's outline, pill and TransformControls.
+- `StudioViewport` takes `graphRoom` (null for every caller but the editor, so the published
+  viewer and the rig plot are untouched). Whole room: Nodes' things drawn read-only. Inside a Geo:
+  the Geo's inside (as Nodes after "›"), Studio's own objects not drawn, nodes editable.
+- Address: `?geo=<nodeId>` on the project's Studio address (`src/studio/utils/geoScopeAddress.js`).
+  The router reads the path only, so every existing address is unchanged (tested).
+- `StudioEditor`: Geo state from the address, switcher in the Create window (`GeoSwitcher`, existing
+  `.scc-section`/`.insp-select`/`.scc-btn--xs`), panels fed node rows; group/duplicate/clipboard/
+  visibility/lock off inside a Geo; Delete = `deleteNode`. Off on the open jam.
+- Nodes: a Geo card's header has ↗ "Open … in Studio"; inside a Geo the ⋯ menu has the same.
+- `GIZMO_SNAP`/`useSnapModifier` moved to `src/studio/utils/gizmoSnap.js` (one copy, two gizmos).
+
+**Verified** on a throwaway stack (serverXR :4381 with a scratch DATA_ROOT, vite :5381, plus an
+`origin/dev` copy of the client on :5382 for "before"), headless Chromium: two Geos made with Nodes'
+palette, a cube in one, a sphere in the other; Studio whole room draws both; switcher → Geo 1
+(address gets `?geo=`); Add box → document has a `geom.cube` with `parentId` = Geo 1; Edit mode,
+drag of the gizmo's X arrow → x 0.375 → 1.329, nothing else changed; Nodes inside Geo 1 shows both
+cubes at those places; switcher → Geo 2 lists the sphere; ↗ on a card lands on Studio with that
+Geo. An objects-only project: pixel-identical to `origin/dev` at 1440×900 (0 differing pixels).
+Phone 412×915 @2.6: room, Create sheet with the switcher, Objects sheet. Tests: geoScope 24,
+geoScopeAddress 7, RawGraphSurface +2; each seen failing with the change undone.
+
+**Open / limits**
+- Studio's own objects (text, group, portal, image, spot/directional/ambient lights) cannot stand in
+  a Geo; inside a Geo Create offers only node kinds and says so for the rest. Unit 8's
+  object-inside-a-Geo is still unbuilt.
+- The whole room keeps Studio's sky and lights; node Environment/Scene sky is not applied in Studio.
+- The ↗ on a card is the header's 16px glyph button — small on a phone; the ⋯ menu entry is the
+  phone path. A proper tap target would be a design decision.
+- The name pill (`zIndexRange [900,0]`, same as an object's) can draw over a floating window.
+- `world.light` was named in the brief; Nodes' palette retired it, so the lamp is `light.point`.
+
+## 2026-10-02 — MOXIR: the area stage, the corrected hall, the realism renderer, and the audit fixes
+
+One branch for everything MOXIR built on PONYO since #704–#712 landed (Emily: "push what we did … push to dev"). It merges the local integration branch `moxir-local-2026-10-01` onto dev. The fork's dev merged it without a conflict.
+
+- **The stage (Known · full, "the area").** 50 UP-PL5403 + 18 UP-B380F on their tested charts.
+  - Blade curtain under the cut, vista PARs behind the press, a lighthouse B380F, neighbour-span red, the press sculpted.
+  - A 10-cue loop. Nothing moves on a truss (owner's rule); the movers stand on the ground.
+  - Data lives in `scripts/place/rigs/moxir-2026-10-17-known-full.json` and its show/rental files.
+- **The hall, 2026-10-02 corrections** (`moxir-hall-dims-2026-10-02.json`, `hall.py`, `swap-hall.mjs`).
+  - Two closed bays on the left, an open right row, cab at +x, roof 10.8, lantern 3.2.
+  - The permanent objects near the stage, the far crane at 76.2, one floor track.
+- **SmartView.** The Inside toggle, landing and preset views composed (no fade), and a clean cut-out instead of a Bayer stipple.
+- **Desk and rig pages.** The audit passes: output badge, Touch strip, 44 px phone targets, Blackout says ON, the steps row folding under 1680 px, Touch forwarding.
+- **The realism renderer: #716 merged in**, with #719–#723.
+  - Haze worked out from the hazers, real bloom, beam optics, the floor's worn concrete and the beams' reflections in it.
+  - The rooms' `renderSettings` turn it on; on PONYO, Known · full has `atmosphere.haze {}`, `bloom {enabled}` and `surfaces.floor` (reflect 0.5). That is data, not git.
+- **2026-10-02 audit fixes.** Each has a known-fixes row and a guard.
+  - The occlusion cut-out never cuts above the roof's underside. It had opened a black disc of sky over the stage.
+  - A depth-only roof cap: beams end at the cut roof in the Side view.
+  - PCFShadowMap everywhere, so there is no deprecation warning.
+  - No bloom and no haze veil on surfaces while the camera is outside the hall: Top had a white blob, Side a white slab.
+  - Phone interior presets stop at the room's box and widen the lens instead of leaving the hall.
+  - `rigSteps.css` uses rhythm tokens.
+  - `knownFullObjects.test.js` now selects the spot lights it meant to check; it had matched 0 lamps.
+
+**How it was checked.** In headless Chrome on PONYO's RTX 5060 (Playwright `channel: 'chrome'`): every view twice through the cue loop, desktop 1710×1630 and phone 390×844, console clean, 70–120 fps. The full suite was compared with clean dev: the four new failures are fixed here; the rest is dev's Windows baseline.
+
+**Owed**
+- Four lamps stand inside permanent objects (`KNOWN_INSIDE` in `knownFullObjects.test.js`): `par-press-cut-03`, `par-press-sides-01/02`, `beam380-columns-02`. The owner chooses between moving the lamps and correcting the boxes.
+- Haze σ 0.02, bloom 0.03 and floor reflect 0.5 are not yet compared with the RIG_BUILD §20 photographs. The joint call with Gevorg is owed.
+- Panorama 037 and full-resolution photos are owed: the walled bays and the shed.
+- A Top view with lamp markers was proposed, not built.
+
+## 2026-10-01 — MOXIR previs: the haze worked out from the hazers, real beam fall-off, real bloom
+
+- Owner's ask (Emily, 2026-10-01): "we will smoke there right haze … simulate elite level close to real one … look the known device tech specs … so we can see the show in virtual than move it to the real."
+- **Haze as a field** (`src/objectComponents/hazeField.js`): `renderSettings.atmosphere.haze` works σs out from the room's own hazers and fog machines (the rig's `fixture.dmx:false` effect entities, typed by the library) — fluid ml/min × level × density × the part that stays a droplet, mixed through the hall (V, air changes/hour; fog also dries), extinction σ = 3QC/(2ρD) with Q = 2; each running machine's turbulent jet near its nozzle (centreline ∝ 5d/u, 1/e width 0.11u); a drifting 3-octave noise for unevenness. Six HZ-1000s at full in an assumed 12 000 m³ at 6 ACH give σ ≈ 0.033 /m — the same order as the 0.05 /m §20 set by eye. ASSUMED (no maker states them): droplet sizes, fan flows, dry time, reach, the hall's volume and ventilation. A room without `haze` draws exactly as before.
+- Shader: `hazeSigma()` per sample in world space, shared haze uniforms per renderer (`hazeUniforms.js`), no recompile when the rig changes (12 machines max). The room's fog follows the field (base 0 … 1.6/σ); SmartView adds its outside-the-building offset on top of that base (`atmosphereStore.js hazeFogBase`).
+- Types: `fluid_ml_per_min` and `nozzle_d_mm` now reach `src/rigbuild/types/moxir.json` (generator change in `fixtureTypes.js`).
+- Schema (cjs + esm): `renderSettings.atmosphere.haze`, validated and clamped.
+- **Beam cross-section** (`beamAir.js beamProfile`): 50 % at the beam angle, exp(−ln2·ρ^p), p 8 (hard, a beam fixture) … 2 (soft, a wash's Gaussian); the hull reaches the 2 % point. The flat-top-plus-smoothstep profile clipped every beam to a solid white bar. The glare veil no longer counts throw below the floor.
+- **Real bloom** (`src/project/viewport/HdrBloom.jsx`, `bloom.js`): `renderSettings.bloom { enabled }`, off unless a room asks; half-float 4× MSAA target → UnrealBloomPass → OutputPass (three's own, no new dependency); plain rendering in XR, where the glare veil comes back. Default strength 0.03 with threshold 1 — the physical point-spread; three's 0.6 washed the hall white, and a high threshold with 0.3 went milky (both seen). Composer capped at DPR 1.5.
+- Measured on PONYO's **NVIDIA RTX 5060 Laptop** (headless Chrome, ANGLE D3D11, `--force_high_performance_gpu`; without it Chrome takes the AMD 860M iGPU and reads ~12 fps), MOXIR Known · full, shadows on (#711 merged in): floor view 61.4 fps → 58.8 with bloom; DJ view 65.2 → 67.7; phone 390×844 DPR 3: 82 fps with bloom. The haze field alone cost ~8 fps on the floor view.
+- Still owed: comparing beam peaks and the hall against the §20 photographs and luma numbers before any room turns `haze` or `bloom` on; entering/leaving VR with bloom on; PortalObject's fake bloom doubles in a bloom room (skip it when bloom is on); EntryGlide's captured still has no bloom (a pop at the end of the glide); per-look haze levels; the hall's real volume.
+- Stacked on #712 (feat/moxir-known-full) and #711 (feat/room-shadow-cap): lands after them.
+
+## 2026-10-01 — prism, honeycomb, frost and gobos in the beams, from the desk
+
+- `components.beam.optics` (`src/objectComponents/beamOptics.js`): a radial prism (N beams of 1/N each, fanned PRISM_SPREAD_DEG out), the honeycomb (centre + 6), frost (angle × (1 + 2f), candela ÷ that², edge Gaussian), a gobo (17 procedural stencils). Drawn inside the beam's own hull: a flat loop over the nearest 8 parts, the gobo cut once on the nearest; where the parts still overlap near the lens they are one wider beam with the same light. Tests hold the flux within 10 % with any optic in.
+- ASSUMED and labelled: the prism spreads (5°, 3.5°) and the gobo SHAPES — no image of the B380F's wheel was found; replace with the real images when the rental house sends them.
+- From the desk: the UP-B380F 16ch list (fixtureTypes.js) gained caps — roles, labels, defaults, order and basis unchanged (emily-9f's conditions): goboSlots 5–89 / goboShake 171+ and prismIn 128+ are the chart's; the even gobo slots are DERIVED; prism 2's threshold, the rotation channels (read as an index) and frost's curve are ASSUMED and say so; 90–170 on the gobo channel is left unmapped. `dmxDecode` → `optics`; `dmxPose` → `beam.optics`. Lasers untouched.
+- Schema (cjs + esm): `beam.optics`, clamped, stored only when given.
+- ANGLE trap found and fixed: on Windows (Direct3D 11) the beam shader with nested constant-bound loops (12 samples × 12 jets × prism × honeycomb) failed to link with an EMPTY log and then lost the context. Loops are now bounded by uniforms (uSamples, uHazeCount) so ANGLE keeps them loops, and the split-beam loop is flat.
+- Seen on the RTX 5060, Known · full, DJ view, haze + bloom, shadows on: prism 62.6 fps, honeycomb 61.9, gobo 62.0, frost 64.2, no errors. The gobo is faint from the audience (a 1.8° beam) — it shows looking up the beam.
+
+## 2026-10-02 — the beams reflected in the floor
+
+- Owner's ask (Emily, 2026-10-01): "ok go on with the floor reflections" (after the research pass: in a club photo the reflections are the beams and lenses mirrored in the concrete).
+- `src/project/viewport/BeamMirrors.jsx`: each beam core drawn a second time, mirrored through y = FLOOR_Y, only where the floor is the visible surface — the floor's override marks stencil 1 and is drawn last of the opaque room (`surfaces.js`, `SurfaceOverrides.jsx`); its neighbours in the same mesh clear the mark. One extra draw per beam, no second render of the room. The composer target carries the stencil (`HdrBloom.jsx`).
+- Weighted by Schlick's Fresnel (F0 0.04) × `surfaces.floor.reflect`, and blurred by the floor's roughness where each ray lands (the same wear pattern as the lit floor): a sample h metres up keeps R / (R + 1.3·α·h) of its peak (`mirrorBlur`). Crisp where a beam meets the floor, gone high up, patchy with the wear.
+- The mirror program never discards (a discard turned off early stencil: 27 fps against ~100 on the RTX 5060) and runs 6 samples.
+- Not in a headset yet (the XR layer has no stencil; the mirrors hide while presenting). Only in a room with bloom on (the half-float path).
+- Seen in headless Chrome on PONYO's RTX 5060 (the owner's own visualiser tab held the GPU at 89–96 %, so the 24–26 fps read then is contention, not this — reflections on and off read the same): Known · full, the-x / tunnel / white-cathedral, Floor and DJ views.
+
+## 2026-10-02 — the black square at the end of the DJ view
+
+- Owner: "fix the black square in dj view". It was the hall's 6 × 6 m entry gate (DJ camera at z 6.6, gate at z 54: 47 m, 74 px, matching the projection) showing the scene background, which three.js never fogs.
+- `src/project/viewport/NightOutside.jsx`: a dark box just around the building, found from the floor mesh, fog on, no bottom face, visible only while the camera is inside it. Mounted by RenderSettingsEffect in rooms with `atmosphere.haze` (opt-in like the rest). Seen on the RTX 5060: DJ view veiled, Top and Side views as before.
+
+## 2026-10-02 — the human audit: walk mode, white specks, console, fps reading
+
+- Owner: "check all for bugs, make the human audit", then "walk as a real human … you are the event organiser". Three auditors (room/renderer, tool pages read-only on :5184, operator test of desk + visualiser on the :5310 preview) plus my own walk at eye height (8 stops × 4 looks).
+- Fixed here: the decorative motes in hazy rooms (white snow); walk mode Esc / fly floor / header under the steps row / touch controls; the visualiser fps reading; the PCFSoftShadowMap and X4000 warnings. known-fixes rows added.
+- Not a bug: standing in a column-base beam whites out the view (you are inside a 380 W beam 1 m from its lens).
+- Open: the speckled beams and the dotted dome on the crane are the IGN sample jitter at the governor's lowest notch (5 samples, DPR 0.75). The room sat at notch 5 at ~23 fps because several Chrome windows were rendering the 70-light room at once (GPU 97 %). Clean fps owed with one window. Also open: the milky grey wash from the crowd in bright looks; the hard horizon line in the Floor view; walk collision with objects (no infrastructure; walkableAreas only).
+- Tool-page and desk bugs went to emily-d6 (moxir-local commits 8b2a4749, d5f90815, 0f79e27f); the hall corrections from the photo + standards audit went to emily-d6 too.
+
+## 2026-10-02 — the frame rate: MSAA on the HDR target was the cost
+
+- Same measure (Playwright rAF count over 3 s, 1440×900, RTX 5060, GPU otherwise idle): emily-d6's :5184 (plain path) 120 fps with all 70 lights; mine 39–45 at notch 5. Off one at a time: reflections ±0, beams ±0, shadows +10 %, real lights off → 62 at notch 0, MSAA off → 109–120 at notch 0.
+- HdrBloom: samples 4 → 0, SMAAPass after OutputPass. Every view now 120 fps (the cap) at FULL quality: bloom on, 12 samples. A light pool was proposed to emily-d6 and then dropped: every lamp stays a real light.
+- Still open: a dotted dome on the crane girder over the press and a dotted strip on the press at full quality (not shadows, not sample count; the next isolation).
+
+## 2026-10-02 — the dotted dome on the crane
+
+- Owner: "fix the dome". The dotted half-disc on the crane bridge (Crane view) and the dotted strip on the press are SmartView's occlusion fade (a Bayer-4 screen-door discard where the building stands between the camera and its target), not the renderer. Ruled out one by one: shadows (renderer shadow map off), the 4 bridge PARs and all spot lights, beams and reflections (material.visible off: their own frame code re-shows meshes), post (glow, auto exposure, SMAA), dithering flags, z-fighting (polygon offset), textures (none), half-float overflow (FloatType target). It vanished only under a scene override material; the hall materials carry userData.svPatched.
+- Handed to emily-d6 (SmartView is its area): no fade at authored presets, and a clean cut-out instead of a stipple when it does run.
+- A dev-only harness hook stays in HdrBloom (window.__diRoom).
+
+## 2026-10-01 — MOXIR "Known · full": every known fixture at stock on the cut, and new light forms for a real night
+
+- Owner and Gevorg on PONYO: "now lets use all knowns and make all possible stage design best light forms". Crane height approximate and strobe rates assumed for now ("we will correct in future"); charts for the rest come later.
+- New candidate `known-full` (candidateOf full) on the crane cut. Nothing that moves is hung:
+  - The cut carries statics only: 6 UP-PL5403 in the X, 4 on the bridge, and 2 fixed UP-LA40WF, held dark until the laser sign-off.
+  - The floor carries 17 UP-B380F: 7 behind the press and 10 at the nave column bases, plus 1 spare (18 of the 18 in stock).
+  - 32 UP-PL5403 go up the nave columns and 3 at the press, so 45 of the 50 PARs are used.
+  - 6 hazers and 4 smoke are kept off DMX (policy.dmx.offDmx).
+- Tried and dropped: 4 booth-flank beams (beam380-flank). The crane is parked over the booth at z 4.8 m, so a vertical beam there fires into it; the versions safety test caught it in every look.
+- 15 looks:
+  - From full-ground's ground scenes, re-mapped: par-columns-8 → par-columns (32), beam380-columns-6 → beam380-columns (10); the removed types drop out.
+  - New:
+    - **Doors**: dim amber column feet.
+    - **The X**: the X of PARs on the DJ, the column beams crossing high in an X. Steepened until no beam crosses the aisle below 2.5 m.
+    - **Tunnel**: column beams leaning 34° in, meeting in an arch high over the floor.
+    - **Green core**: MOXIR green up the columns and the press, a narrow white fan.
+    - **Amber dust**: amber columns and bridge, no beams.
+    - **Lights up**: warm white at full, the clean-out light.
+- The palette gains MOXIR green `#3c8244` (sampled from the announcement video), as one accent. This is why every generated rig file changes: they carry the palette.
+- ground-movers.test: known-full is a GROUND_SUBSETS entry and passes the ground-only policy in every look.
+- Validation: versions.test and ground-movers.test for known-full, 81 passed: hangs every fixture, nothing into the crane or through the DJ, every head within its travel, lasers ≥ 3 m and rising, ≤ 8 real lamps, mirror-symmetric, no mover beam in the eye zone.
+
+## 2026-10-01 (later) — every lamp a real light; rebased on dev for the push
+
+- Emily, looking at the room: "i want real simulation of the light", then "no i want to 100% ident what we will have, you can optimize". Known · full (64 lamps) and Known (36) now carry `realLights` for every group: no picked few, no baked per-look stand-ins. Shadows ride on feat/room-shadow-cap-2026-10-01 (the twelve brightest lamps throw). Measured on PONYO, shadows on: Known · full 61–65 fps on the RTX 5060 (emily-41); 36–49 fps (Known · full) and 58–75 fps (Known) in Playwright Chrome, most likely on the AMD 860M iGPU.
+- The patch step counts devices run by hand apart ("36 of 36 addressed · 10 by hand"), carried here from the off-DMX work.
+- Room setup used on PONYO (data, not in git): both known rooms take their hall from `moxir-hall-minimal` (`load-version --hall-from moxir-hall-minimal`), whose glb has the nave crane parked over the DJ where the cut hangs. `moxir-hall`'s glb has it at the far end. They rest on a look with no solo (k-tunnel, gs-cross-beams), have work light 0.35, and carry authored Floor/DJ views looking down the hall.
+- This branch now stacks the whole MOXIR line: tested charts, Known, off-DMX, Known · full. Rebased on dev e244f802 without conflicts; `versions.mjs --check` is current after the rebase.
+
+## 2026-10-01 (later) — one name per look on the desk; a swap clears the other room's looks
+
+- Found when emily-41 fired `rig-white-cathedral` (the set's hung-rig look) for the ground look of the same name. Emily chose: rename, keep both, and clear on swap.
+- Known and Known · full retitle the set's five looks "… · hung rig" (candidate `looks.<id>.title`; `looksWhy` says why). Gevorg's own rooms keep their titles.
+- show-loop.mjs: after adding this room's looks, it removes the desk's `rig-` looks this room does not have (`staleDeskLooks` in src/rigbuild/looks.js). Operator looks have no prefix and are kept. A layer left on a removed look is emptied by the desk, not deleted.
+- Tests: looks.test +1 (red on the old code); versions, ground-movers and bridle tests 459 passed.
+
+## 2026-10-01 — MOXIR "Known · movers on the ground": only the fixtures whose DMX is known, plus haze and smoke
+
+- Owner, on PONYO with Gevorg present: "lets work only with the known ones and with hazer and smoke but keep them out of dmx".
+- New candidate `known-ground` in scripts/place/rigs/moxir-versions-2026-10-17.json, built from `full-ground`. It keeps the same truss (the cut), room and ground-only mover policy, and has 46 units:
+  - 13 UP-B380F and 21 UP-PL5403 (channel maps TESTED on the rental units, branch feat/moxir-tested-charts-2026-10-01, which this is stacked on).
+  - The 2 UP-LA40WF (held dark by the laser gate).
+  - 6 hazers and 4 smoke machines, recorded in `policy.dmx.offDmx` as kept off DMX.
+  - Out until the charts arrive: COB200 curtain, UP-250BSW, UP-HK1915, CO2, sparks.
+  - 13 looks: full-ground's with the dropped groups stripped. gs-spark-hit, strobe-hit and gs-blinder-hit are dropped because their only fixtures (sparks, strobes, blinders, COB) are not in this version; in review they came out as blackouts.
+- The generated files are scripts/place/rigs/moxir-2026-10-17-known-ground.json and scripts/rigbuild/rentals/moxir-2026-10-17-known-ground.json. Every other generated file came out byte-identical apart from line endings, which are left untouched.
+- Fixed `scripts/rigbuild/versions.mjs`'s main guard. `new URL(import.meta.url).pathname` is /C:/… on Windows and never equals the argv path, so the script silently did nothing there, and its `--check` passed without checking. It now uses fileURLToPath. The same guard is in 24 more scripts (grep `=== new URL(import.meta.url).pathname`); they were not changed here.
+- ground-movers.test.js: known-ground is a policy-checked SUBSET (`GROUND_SUBSETS`). It must keep the ground-only rule (passes: no violations) but is not held to the two full versions' type list.
+- NOT done yet: the "off DMX" rule is recorded in the version but not yet enforced by the patch. That comes after the load-time-write fix (fix/rig-pages-no-write-on-load-2026-10-01), which touches the same patch path. Loading the version into a project (load-version.mjs) is a data step on the local install.
+- Validation (Windows): ground-movers 20/21 (the remaining failure is the analysis file's CRLF, baseline); versions.test fails only on CRLF (baseline); src/rigbuild has no new failures.
+
+## 2026-10-01 — Devices kept off DMX: hazers and smoke run by hand, never patched
+
+- Owner on PONYO, with Gevorg present: "work only with the known ones and with hazer and smoke but keep them out of dmx". The known-ground version recorded this as `policy.dmx.offDmx` (EXT-HAZER, UP-YZ31P), but nothing read it, so a patch still gave them channels (audit: U1@441–456).
+- New fixture field `dmx: false` ("kept off DMX"):
+  - `src/shared/projectSchema.js` normalizeFixture keeps it, and its manual CJS mirror `shared/projectSchema.cjs` does the same. Before this, the schema silently dropped it.
+  - `src/rigbuild/autoPatch.js` `isOffDmx`: `patchRequest` never sends such a device, so it takes no address, and a prune takes it off the desk if it was there.
+  - `src/rigbuild/sheet.js`: the row says `by-hand` ("off DMX — run by hand"), never "not patched" or "mode unknown". It is listed under Housekeeping, not counted as unaddressed.
+  - `scripts/rigbuild/moxir.mjs` `moxirDocument` sets `dmx: false` on every device whose type code the version lists in `policy.dmx.offDmx`. This covers both the group lamps and buildRig's own effect entities, which pass through.
+- Tests:
+  - autoPatch.test "never sends a device kept off DMX" and the sheet.test "by hand" block both failed on the old code, shown red, then passed.
+  - schemaSync.test: `dmx:false` survives through both schema copies; `dmx:'no'` is dropped.
+  - New scripts/rigbuild/offDmx.test.js builds known-ground and patches it on a throwaway desk: 10 hazers and smoke carry dmx:false with no address, and 36 lights are patched.
+- Validation (Windows, Node 24.18):
+  - src/rigbuild, scripts/rigbuild, scripts/place, serverXR/src/lighting, src/shared and schemaSync: 1371 passed. The 22 failures are the known Windows baseline (CRLF/hash, Git Bash tar, C:\C:\ paths, controlsAreRectangles separators, wash-plan's pathname guard, which aylmo's PR #685 fixes).
+  - eslint clean.
+- Stacked on feat/moxir-known-ground-2026-10-01.
+
+## 2026-10-01 — MOXIR fixtures: real channel maps from the tested rental units (B380F, PL5403, laser)
+
+- Why: UPlight publishes no DMX chart for any MOXIR code (RIG_BUILD §13.8/§18.1), so every desk profile was generic or ASSUMED from another fixture's manual. The owner confirmed on PONYO that the same UPlight rental gear ran live at the Sevan festival (Dilijan camp) on the studio's own Art-Net desk. That desk's profiles are the real maps: "Beam 16ch" (from its manual), "Wash 8ch" and "Laser 32ch".
+- `src/rigbuild/fixtureTypes.js`: `TESTED_CHANNEL_LISTS` (basis `TESTED`, url null) fills the real modes UP-B380F 16ch, UP-PL5403 8ch and UP-LA40WF 32ch, taking precedence over OFL. The assumed modes stay after them. Meanings nobody wrote down stay plain channels (`aux`, `c<n>`); the laser's per-colour levels (0 = brightest) are deliberately not the r/g/b roles.
+- `scripts/place/fixtures/fixtures.json`: source `SEVAN`; the laser gets `dmx_channels` [32] (TESTED). `howToRead` defines TESTED. `src/rigbuild/types/moxir.json` was regenerated (`types.mjs --check` passes).
+- Effect: B380F, PL5403 and LA40WF are no longer "channels owed". The desk runs the real 16ch/8ch/32ch, and the laser is patchable for the first time. It is still held dark by the laser gate (every channel 0) until the IEC 60825-1 sign-off.
+- Tests updated to the new facts, never loosened: dmxDecode, dmxPose, equipment, fixtureTypes, patchPlan, sheet. Each now also pins a type that is STILL owed (UP-250BSW 24ch, UP-HK1915 21ch-assumed, UP-Q108S). The manifest check allows a url-less source only when it names the rental unit.
+- Validation (Windows, Node 24.18): the rigbuild, scripts/rigbuild, scripts/place, lighting and map suites have no failures of this change's own. The remaining failures are the known Windows baseline: fixtures.test "built models" ×12 (hash/CRLF), sheet CSV CRLF, wash-plan, ground-movers, versions, preview-scripts, items/media, and controlsAreRectangles (its path fix is PR #681).
+- Not done here: re-patching the live desk / rooms to the real modes (a data step, after the owner looks); still owed from the rental house: UP-250BSW, UP-HK1915, UP-COB200, effects.
+
+## 2026-10-02 — Nodes keyboard and mouse system: inventory and spec (phase 1 build next)
+
+- The owner asked for full hotkeys, right-click and middle-click and the other mouse buttons, reusing the Desk's
+  right-click functions. A Sonnet agent inventoried read-only: 69 bindings today and one context menu (ports). The
+  Desk's menus and gestures are in `docs/raw/2026-10-02-keys-mouse-inventory.md`.
+- The spec is `docs/raw/2026-10-02-keys-and-mouse.md`. TouchDesigner comes first and Houdini fills the gaps; both
+  were read from their official docs on 2026-10-02, and Blender is marked unverified. There is one keymap table,
+  one dispatcher, one Escape ladder, focus-scoped window keys, and five right-click menus. Three phases.
+
+## 2026-10-02 — Pure ports: Text and List get an OUT; a Scene takes Objects in and gives its Picture out
+
+- The owner, after the Nodes audit (`docs/raw/2026-10-02-nodes-audit.md`): "keep things pure, a Text has an OUT;
+  a Scene is a scene". Then "yes, we need to fix those things" to both proposals: a Scene you can enter AND wire into,
+  and a Scene that gives a picture.
+- **Text** has an OUT: `text` (string), read through its input, so a wired Text passes on what it shows.
+  **List** has two: `text` (its rows, one per line, group by group as the window draws them, empty rows left out) and
+  `count`. Both are colocated runtimes (`src/project/nodes/view.text`, `view.list`).
+- **Scene (`universe.world`)** gets an `objects` input (geometry). What is wired there stands on the stage of the
+  scope's live Scene (`readSceneObjects` in `viewportWorldState.js`). Every surface that draws the scope draws it, because
+  they all resolve the same live Scene. One wire per input in this graph: many objects come through Merge (`shape.merge`,
+  chained). Info arrives through Title, which a Text or List OUT now feeds.
+- **Scene Picture** (`picture`, texture). The live Scene's own window captures its canvas with the W3C
+  `canvas.captureStream` and wraps it in a `<video>` VideoTexture (`canvasPicture.js`, `ScenePictureFeed.jsx`). That is the
+  same object a webcam's Frame carries, so Image, Monitor, the picture operators and the network stream take it unchanged.
+  It reads null where no window draws the Scene (the media.video honesty rule).
+- Limits, plainly: the Picture exists only while the live Scene's window is open in the editor. `/out` and Studio don't
+  publish it yet. One Objects wire (fan-in is a graph-model change, not done here). The window's size sets the picture's
+  size.
+- A shape wired into the Scene's Objects is drawn once, by the Scene. It isn't also drawn standing in the room
+  (`sceneObjectSourceIds`: the wired node and every shape feeding it through Merge, Transform or Array). This is the rule
+  of Houdini's display flag, Blender's Group Output and the Constructor.
+- Seen on the RTX 3080 (ANGLE Vulkan, renderer string checked), on a throwaway local stack with a private test project.
+  At 2560×1340 DPR 1: the Scene titled by a Text, a cube and a sphere through Merge on its stage, each drawn once, an
+  unwired cube still in the room, and an Image showing the Scene's Picture live. At 390×844 DPR 3: the same. Tests: raw
+  scope 2269/2269 before the draw-once rule, and the touched files after it.
+
+## 2026-10-02 — Nodes UI plan and Nodes audit (docs only; the build waits for the owner's Scene decision)
+
+- The owner asked to optimise Raw (Nodes) UI/UX: wasted space, hard to work with. Sketches A–E (fit on open,
+  content on cards, docked list, row menu, no code names) and F (joints) were drawn on the lab page
+  `lab/p/nodes-ui-sketch-2026-10-02` (source in di-atlas). The owner asked for A–E mixed with F.
+- `docs/raw/2026-10-02-nodes-ui-plan.md` records the plan and how F changed across the owner's four answers.
+- The owner then asked to keep nodes pure: Text has an OUT, and a Scene is a scene. `docs/raw/2026-10-02-nodes-audit.md`
+  measures the registry. 23 of 123 node types have no output; Text and List are dead ends; Scene takes no content
+  by wire, only by nesting. The pattern it points to is TouchDesigner's Render TOP (objects, lights and a camera in,
+  a picture out).
+- Not done: no code has changed. The build waits for the owner's answer: is Scene a container with inputs, or
+  purely wired, and does it output a picture? After that, A–E are re-checked against the answer.
+- The first push on 10-02 failed. The branch tracked `origin/dev`, so the pre-push guard refused it, and the worktree
+  had no `node_modules`, so lint couldn't run. Fixed by `npm ci` and pushing to the branch's own name.
+
+## 2026-10-03 — rows wrap instead of vanishing; a short graph is centred on a phone
+
+- Owner on the NOPA To do card: "text in a row is invisible, it goes out of the window". Rows now wrap up to 6 lines, counted with the browser's text metrics before drawing (`textWrap.js`), so the card reserves exactly the lines it draws. Measured on NOPA: 0 of 51 lines clipped at 1440×900 (DPR 1 and 2) and 390×844 (DPR 3); before, 24 of 51 were cut.
+- Phone: the canvas opened with a blank band on top. The fit's clamp now centres any axis whose content fits the free band beside docked windows; the F7 docked-List test still holds.
+- The work was started by a session cut off by the aylmo reboot; finished and checked in session dob-96.
+- Window resize: the canvas kept the fit of the size it opened at (a new window opened at 800×600, then tiled: 49 % instead of 82 %). An untouched view now re-fits when the surface changes size; a view the person has zoomed or panned is left alone (measured in a real browser: 49 % → 80 %, then 97 % kept).
+
+## 2026-10-02 — Nodes right-click menu component
+
+- Added `src/raw/components/ContextMenu.jsx`: one portal menu (`{ open, x, y, items, onClose, title?, fromKeyboard? }`), items as rows, `{ sep }`, `{ heading }` or one-level submenus; every row can show its key (`kb`). Modelled on di.desk's `buildCtx`/`openCtx`; styled from `.raw-ctx*` at the end of `raw.css`.
+- Added `src/raw/utils/useLongPress.js`: touch/pen long press (550 ms, 10 px tolerance, click after the lift swallowed for 700 ms) as the finger's right-click, from the Art-Net desk's bank-list press.
+- Not wired into `RawEditor.jsx` / `RawGraphSurface.jsx` yet — another session integrates the five menus from `docs/raw/2026-10-02-keys-and-mouse.md`. Seen in a real browser: owed.
+
+## 2026-10-01 — A room of many lamps keeps its shadows: the brightest twelve throw
+
+- Asked on MOXIR (PONYO): every lamp a real light, "100% ident what we will have, you can optimize". Known · full has 64 real lamps. Shadows were all-or-nothing: every spot light became a caster, and past ~12 the texture units run out and every lit material fails to compile, so rooms with more real lamps had shadows switched off entirely.
+- `src/project/viewport/shadowCasting.js`: `dressForShadows(root, mapSize, { maxLights })`. Past the cap, exactly `maxLights` lamps throw: the ones putting the most light into the room now (`shadowScore` = intensity × the cone's solid angle, as lightPool.js scores), with a 15 % hold for a lamp that already throws so near-equal lamps do not trade shadows back and forth. Exactly that many, lit or not, so the shader's count of shadowed lamps never changes when a look does (no recompile hitch). `shadowLampCap(maxTextures)` = min(12, units − 4).
+- `ShadowCasting.jsx` passes the GPU's cap (`gl.capabilities.maxTextures`). It already re-dresses every 30 frames, so shadows follow the look.
+- Measured on PONYO, 1440×900, Playwright Chrome (most likely on the AMD 860M iGPU, not confirmed): Known · full, 64 real lamps, shadows on: 36–49 fps; Known, 36 lamps: 58–75 fps; 12 casters, all lit, in every look tried. On the RTX 5060 (emily-41, Chrome): Known · full, shadows on: 61 fps floor view, 65 fps DJ view.
+- Not changed: rig-lib `nightOps` / rig.mjs still write shadows OFF past 12 real lamps, because an older viewer without this cap would go black. Lift it once this has shipped.
+- Tests: shadowCasting.test +3 (2 red on the old code; the undress one is a guard). Wiki: the shadows paragraph says how a room of many lamps casts.
+
+## 2026-10-01 (later) — the cap counts the units the materials use
+
+- emily-41 (haze work) saw MOXIR Known · full draw black on Chrome/ANGLE D3D11 (16 units): "FRAGMENT shader texture image units count exceeds MAX_TEXTURE_IMAGE_UNITS(16)". On their stack the cause was dev WITHOUT this branch: all 64 lamps cast. With this branch, PONYO under the same D3D11 limit measured 12 casters, no shader error. But the fixed 4-unit reserve was a guess: a lit material with more than 4 maps would still overflow at 12.
+- `dressForShadows(…, { maxTextures })` now counts each lit material's own samplers (`materialSamplers`: its maps, plus the scene environment on a standard material without its own), the other lights' shadows and the spot-light maps, and keeps one unit spare. The cap is min(12, what the busiest material leaves). `shadowLampCap` is gone; ShadowCasting.jsx passes `gl.capabilities.maxTextures`.
+- Tests: shadowCasting.test +3 (2 red on the old code; the third holds the 12 ceiling on a 32-unit GPU).
+
+## 2026-10-01 (later) — a strobe does not flip the shadows
+
+- Render audit K: a strobing lamp's light is flashed per frame (StrobeDriver). Scored on its instantaneous intensity, it won and lost a shadow on alternate re-dresses, every 30 frames.
+- `shadowScore` uses `light.userData.nominalIntensity` when present. SpotLightObject writes it from its `intensity` prop, which a flash does not move.
+- Tests: shadowCasting.test +1 (red on the old code); 291 passed in src/project/viewport + src/objectComponents.
+
+## 2026-10-01 — the desk in the visualiser shows its looks; look tiles say when a look lights nothing
+
+- From emily-41's UI/UX audit of the MOXIR visualiser and desk (P0). Stacked on feat/desk-touch-looks-cues-2026-10-01 (#706).
+- Framed (the visualiser's desk half; app.js marks `<html>` `is-framed` before the first render):
+  - the ways out (di.iiii, ← project, Studio / Nodes / Projection), the page tabs, the tempo, snap, Save scene and the scene Go, and the performance strip all step aside;
+  - Blackout stays, one tap, as a normal-width button, not the full-width phone bar;
+  - a "Full desk ↗" link opens the same desk on Setup in a window of its own.
+  Measured in a 390×240 framed pane on an iPhone-13 viewport: the first look tile moved from below the pane (377 px) to 208 px.
+- The standalone phone desk keeps its full-width Blackout. An earlier comment calls it the panic button kept on purpose; changing it (audit #9) is Emily's call.
+- Look tiles: `lookHealth(l)` judges a rig look (`rig-…`) against what is patched now. "nothing patched" when none of its fixtures is on the desk; "lights nothing here" when no patched fixture's dimmer (or, without one, colour emitter) is up. The tile is dashed and dimmed and keeps its reason under it. Looks made on the desk are never judged.
+- Looks titled "… · hung rig" (the ground versions' copies of the set's looks, #712) sit under their own heading, "made for the hung rig", without the suffix.
+- Tests: test-wiring.js +2 (both red on the old code). Checked in Chrome: desktop 1440×900 standalone, iPhone 13 framed. No page errors.
+
+## 2026-10-01 — desk UI audit, part 1: Go, tap tempo, loop toggle, empty Scenes/Chase, one NOW
+
+- From the MOXIR UI audit. Branch fix/desk-ui-audit-p1-2026-10-01, on fix/desk-ui-audit-2026-10-01. Every guard was seen failing on the old code first.
+- Top-bar Go: labelled "Next scene" (title "Step to the next desk scene") and hidden when the show has no scenes (renderAll). Guard: test-wiring.js.
+- Tap tempo: `tapTempo(timesMs)` in app.js. Needs 3 taps; an interval under 250 ms restarts the run; a pause over 3 s restarts it; 20 or 300 BPM is not saved, `say(..., true)` tells the person. Guard: tests/test-tap.js (6 cases: [0,200] reject, [0,500,1000] 120, [0,100,600,1100] 120, [0,190,380] reject, a pause, the floor). Not yet in `npm test`'s file list (package.json was out of scope).
+- Touch loop: `.sq.toggle` with aria-pressed and `.toggle.on` (accent outline, accent text, no fill); label "Loop", the on/off word lives in the title. The Control page's own `#cueLoop` still uses the old fill (not in the brief).
+- Control page with looks or cues but no scenes: Scenes and Chase panes hide, one muted line says where things are. A desk with nothing at all keeps them, since that is where the first scene is saved.
+- One NOW: `GET /api/state` has `now`. `fireLook` records who fired (`by: 'cue'` from the cue runner, otherwise manual) in memory on the layer; `nowOnDesk()` reads it, falling back to the cue list's own place after a restart. `cue` is filled whenever a list is loaded (also for a hand-fired look, so the bar can say where GO resumes). Touch headline: "Red room · cue 3 of 8 · running" / "Green core · fired by hand · GO resumes at cue 4" / "Nothing on · N cues".
+- Tests: test-wiring.js +4, test-tap.js (new), test-http.js +1 (hand fire -> manual and name; cues load + go -> cue with index; taking the layer back by hand -> manual). test-wiring, test-http, test-cues, test.js all pass; `node --check ui/app.js` clean. Not looked at in a browser.
+
+## 2026-10-01 (later, emily-9f review) — the Control page reads the same NOW
+
+- Seen in Chrome at 1440×900 on PONYO: the Touch page was right, but the Control page's cue strip still said "nothing fired · 8 cues" beside White cathedral fired by hand, and its "loop on" still had GO's fill.
+- Fixed: `paintCues` writes `touchHeadline()` (the desk's `state.now`), plus the clock only while the list runs. `#cueLoop` is the same `.toggle` as the Touch Loop.
+- Tried and reverted: hiding the empty scene-detail pane. The Control top row is a fixed grid with its splitters as items, so hiding one pane moved Layers and Master into the wrong columns and they drew blank. The guard now fails if that pane is ever hidden.
+- test-wiring +1 (red on the old code). All five desk suites pass: test-wiring, test-http, test-cues, test, test-tap.
+
+## 2026-10-02 — Director keys act only with focus inside the panel
+
+- Space, Left/Right (+Shift), Home and B in the Director panel were handled on `window` whenever the panel was mounted, stealing them from the node canvas. They now act only while keyboard focus is inside the panel (the panel section takes focus on click, `tabIndex={-1}`); text-field guards are unchanged.
+- Ctrl/Cmd+Z/Y: `useEditHistory` takes an optional `scopeRef` and, when given, acts only with focus inside that element, in the capture phase, calling `preventDefault`. The Director window passes its own element; AlgoVrithm keeps the unscoped behaviour.
+- RawEditor's undo/redo branch skips events that are already `defaultPrevented`, so one Ctrl+Z undoes either the Director or the graph, never both.
+- Tests: `src/raw/director/DirectorPanel.keys.test.jsx` and one case in `src/raw/components/RawEditor.test.jsx`. Owed: a look in a real browser (not run on this machine).
+
+## 2026-10-02 — Nodes "look broken": measured audit and eight fixes (stacked on #730)
+
+- The owner: "fix all bugs, deep audit, no wires, nodes look so broken". Measured on the RTX 3080 at 2560×1340
+  DPR 1 and 390×844 DPR 3. The full report is `docs/raw/2026-10-02-nodes-broken-audit.md`.
+- Fixed: cards hiding under the next card (`settleCardStacks`, 53 → 0 overlaps); Number → Vector at the link; a
+  wire is marked first and removed on purpose; empty preview boxes say what they wait for; on a phone only the
+  front window mounts and the door shows only on the selected card; Image says when its wired source is empty.
+- Left as they are, with reasons in the report: backward wire S-loops, 10 px port labels (contrast passes,
+  the zoom is #729), window placement on create (already avoids cards).
+- Split with dob-39 (#729, plan A–E): fit on open, card content, docked List/Text, row menu, no ids on screen.
+
+## 2026-10-02 — Nodes: Director and DMX Out say what is not available on this server
+
+- Source: nodecheck report 2026-10-02 (breakages 3 and 4); owner, ledger row 131: "yes we need full check and fix gaps".
+- Director (view.director): the window used the piece's own space (algovrithm) without asking whether the server has it, so a fresh server answered 404 (console error) and the note read "the only piece registered so far". It now reads /api/spaces first, makes no settings request for a missing space, and says the server has no such space.
+- DMX Out (device.dmx.out): an unreachable /light/api/summary now reads "The lighting desk is not running on this machine - start di.iiii (di up) ..." (start method from docs/architecture/LIGHTING_DESK.md); a JSON answer without a numeric `fixtures` no longer reads as a running desk with 0 fixtures. Window default height 260 -> 330 so the sentence and link are not clipped.
+- Owed: the browser itself logs "Failed to load resource" when /light/api/summary is truly unreachable; only a server-side fix would silence that. On a phone the opened window's title sits under the top bar (existing cosmetic item 7 in the report).
+
+## 2026-10-03 — Nodes: an operator card wears both names, headers keep the name whole, neighbours name each other
+
+- Tests and docs were written first (nodecheck 2026-10-02, ranked item 5); the source followed on 2026-10-03.
+- `getNodeCardTitle()` in `src/project/nodeRegistry.js`: Math and Route cards read "Math · Add", "Route · Gate" while the name is the automatic one; a typed name reads alone. Drawn in `RawGraphSurface.jsx`; nothing stored changes.
+- `raw.css`: the card's name sizes from its content (`flex: 1 1 auto; min-width: 0`); the family tag shrinks first with an ellipsis. Rectangles only.
+- `NodePalette.jsx`: Webcam / Camera In and Video / Clip In carry a one-line note naming each other; Webcam gained keywords so "camera" finds it.
+- `sceneExample.js` builds `world.environment` instead of the retired `world.light`.
+- Measured: `npx vitest run src/raw src/project` 162 files, 2002 tests, all green. Not seen in a browser yet: the header widths (jsdom cannot lay a card out) need a look on the real surface.
+- Owed, for the owner: the family tag "the scene" on Kiosk, Studio, In and Out is unchanged (an open question in `docs/ai/vocabulary.md`).
+
+## 2026-10-02 — the push gate looks at its own checkout only
+
+- Found while chasing heat on aylmo during the local-hosting fix (di-atlas `decisions/2026-10-02-local-hosting.md`): every `git push` ran `start-check --code-only`, whose `checkCode` called `repo-state`'s `getState()`, which enriches all 204 worktrees and lists every unmerged branch. The CPU sat at 95-100 °C for minutes per push; two sessions pushing at once doubled it.
+- `getState({ currentOnly: true })` describes only the current checkout (promotion plan and unmerged branches come back null); `checkCode` uses it. `npm run state` is unchanged.
+- Measured after: the gate takes 0.9 s including the fetch. Guard test in `scripts/start-check.test.js` fails without the fix; start-check + repo-state tests pass. known-fixes row added.
+
+## 2026-10-02 — Nodes keeps its cards on screen; selecting a card no longer writes to the project
+
+Fixes from the NOPA bug hunt (di-atlas-nopa `audits/2026-10-02-raw-nodes-nopa-bugs.md`), measured
+before/after with Playwright on a scratch copy of the NOPA project (8 cards), 0 page errors.
+
+- **F4 selection is per viewer** (`utils/localSelection.js`, `RawEditor.jsx`): the selection half of
+  every op batch is held in editor state and only the rest reaches `useProjectDocumentSync`. A card
+  click sent 1 `POST /ops` (`setWorkspaceState {selectedNodeId}`) before, 0 after; a whole run of
+  select + four List opens + Escapes sent 5 before, 0 after. A `selectedNodeId` an older client left
+  in the document is ignored. Studio's graph already kept selection in component state.
+- **F1 resize** (`RawGraphSurface.jsx`): a view untouched since its last fit fits again; a view moved
+  by hand keeps zoom and the graph point in the middle, and fits only if no card is left on screen.
+  2560→1200: 2/8 cards on screen before, 8/8 after (76%). Pan then resize: 2/8 → 5/8 inside, 7/8 touching.
+- **F2 load** : a first fit that never ran (canvas had no size) runs on the first resize; cards that
+  arrive after the fit, all off screen, are fitted while the view is untouched. Far pan then resize: 0/8 → 8/8.
+- **F3 Fit button fits everything** (Figma Shift+1 / TouchDesigner Home): phone 390×844 6/8 inside
+  at 34% before, 8/8 at 22% after. Automatic fits keep the 34% floor and the "showing N of M" notice.
+- **F5** `.raw-window-stack` is `box-sizing: border-box`: pane ran 24–32px past the body; now 0, last row reachable.
+- **F8** coincident windows cascade 32px in document order (`utils/windowCascade.js`); Escape (capture
+  phase, yields to `defaultPrevented`) closes the front window the person opened or raised.
+- **F9** the toolbar names the project when the bar above names the space.
+- **F11** the teal stripe was the selection sheet collapsed to its 2px border: a List has no inspector
+  sections and the empty message used the canvas's absolutely placed `.raw-empty-state`. The sheet now
+  keeps its header and an in-flow note.
+
+Not changed: F6 (List covering zoom/Fit) and F7 are PR #729's; F12 is #729 behaviour. F10 (Delete
+FAB beside the corner) has no single cause; on a phone it overlaps an open window's bottom-right — owed.
+Guards: `localSelection.test.js`, `windowCascade.test.js`, `RawGraphSurface.viewFit.test.jsx`,
+`styles/windowPaneFits.test.js`, new cases in `RawEditor.test.jsx` and `PropertyInspector.test.jsx`.
+
+## 2026-10-01 — A lamp no derived slot holds is placed by the position its fixture names
+
+- Found on MOXIR (PONYO): every beam look stayed dark on the desk and in the room. Floor movers standing near, not on, a column base or behind the press sat on no derived slot (positionsOf), so lookPoses never posed them and deskLooksWithValues wrote them dark (Known · full: 0 of 17 UP-B380F in any look; Known: 7 of 13).
+- `src/rigbuild/looks.js` lookPoses: a lamp no slot holds is placed by the mount its `fixture.position` words name. The table is `src/rigbuild/mountPosition.js`, shared with the generator (scripts/rigbuild/looks.mjs re-exports it), so the two cannot drift. "booth back" (stage-back or stage-flanks) is never guessed.
+- Guard: looks.test "places a lamp no derived slot holds…" (red on the old code).
+
+## 2026-10-01 — rig pages no longer patch the desk or write the show on load
+
+- Seen on MOXIR: opening /equipment, /build, /plot, /cards or the Studio project page POSTed `/light/api/rig/patch {prune:true, …every lamp}` 400 ms after mount and wrote the desk's answer (index/universe/address/mode) into the document. `moxir-hall-minimal-ground` went v1073 → v1134 (61 ops) from visits alone. /scenes never did (it does not mount the hook).
+- Cause: `useRigAutoPatch` treated the first lamp signature it saw (the loaded document) as a change. A collaborator's change patched from every open page too.
+- Fix: the hook patches only after `edits` moves. `edits` is a new count from `useOpHistory` of this page's own edits, undos and redos, and the hook also checks that the lamps changed. A load or a remote change becomes the baseline. New `patchNow()` for the explicit whole-room patch: **patch the room on the desk** in the plot's title block (shown only with a local desk and not read only). On the cards, **send looks to the desk** patches first, and so does GO when looks are missing, because a desk look is made over the patched fixtures.
+- Checked in Chrome on a scratch stack (:4100/:5183, MOXIR bundle imported into a scratch data root, ARTNET_OFFLINE=1). I opened and reloaded 6 pages: 0 `rig/patch` POSTs, document v1073 unchanged, 0 fixtures on the desk. The button then patched 46 (9 flagged) and moved the document to v1119. A second round of visits changed nothing.
+- Guards: `src/rigbuild/noWriteOnLoad.test.jsx` and `src/studio/hooks/useRigAutoPatch.test.jsx`, 9 red on the old hook.
+- Still open: until someone patches, the pages show no desk flags (`desk-differs` and the others), because those come only from a POST answer. A read-only `GET /light/api/rig?project=` status is still owed. Phone layout of the new title-block button was not looked at.
+
+## 2026-10-01 — The desk upgrades a placeholder profile when the room brings the known channel list
+
+- Found in the MOXIR human test on PONYO: with the Known rig patched (36 fixtures), every look fired and every DMX channel stayed at 0, so the room and the rig stayed dark. Gevorg's show file carried "UP-PL5403 8ch" and "UP-B380F 16ch" as owed placeholders (roles ch1..chN, labels "Ch N (list owed)"). rigpatch reused any existing profile with the same name and width, so the tested lists (dimmer, r, g, b … / pan, tilt …) never reached the desk.
+- `serverXR/src/lighting/rigpatch.js`:
+  - A same-name, same-width profile whose roles are exactly ch1..chN is replaced (`addProfile … replace: true`) by the room's known list. Fixtures already on it keep their address and gain the new roles at their resting value.
+  - Two different known lists produce a `profile-clash` flag, and the desk keeps its own.
+- Tests: tests/test-rigpatch.js +2 (12/14 on the old code, 14/14 after); test-http, test-cues, test-wiring and test.js pass; vitest serverXR/src/lighting 15/15; eslint clean.
+- Data on PONYO (serverXR/data-known): the two profiles were replaced by hand through `POST /api/profiles/add {replace:true}` before this fix. Looks now drive 112–123 channels.
+
+## 2026-10-01 — the rig's return off the hall uses the hall's envelope
+
+- Render audit E (emily-41's audit; this half is mine). The bounce (rigBounce.js, the integrating-sphere relation E = Φρ / (A(1−ρ))) took A from realism.mjs `enclosureOf`, which summed every triangle of the hall model: 82,640 m² for MOXIR's hall, against an envelope of 28,605 m². The return came out ~2.9× too dark.
+- `enclosureOf` now returns `area_m2` = the envelope of the model's world bounding box, 2(LW + LH + WH), and `surface_m2` = the old triangle sum, kept for the record. The reflectance is unchanged (area-weighted over every triangle, 0.163 for MOXIR). realism.mjs writes both, and its `method` says which.
+- Found on the way: the MOXIR Known and Known · full rooms had NO `rigBounce`. load-version builds a fresh show entity, so a rebuilt room loses it. On PONYO I re-ran realism.mjs on both, with Minimal's settings (σ 0.05, g 0.7, ACES × 3.5), then work-light.mjs at level 0.35. Gevorg's rooms are untouched: Minimal still carries the old 82,640 m².
+- Seen in Chrome on the RTX 5060, Known from the floor: White cathedral now lifts the whole hall (roof frame, columns, crane, press), while Blackout + one shaft stays nearly black. The bounce follows the look. The floor still reads near-black; that is the hall model's floor albedo (audit item I, a hall.py change for Emily to approve).
+- Not done (audit E, second half): a hemisphere or down-light in place of the ambient work light. worldState has no hemisphere light yet, so it is a schema change.
+- Tests: scripts/rigbuild/realism.test.js (new; red on the old code: 704 against 700 m²).
+- Later: `enclosureOf` also returns `volume_m3` (L·W·H of the same box), written to rigBounce, for the room's once-scattered haze glow (τ = σ·4V/A, emily-41's HazeGlow term). realism.test checks it (red on the old code).
+
+## 2026-10-01 — A hall's self-lit zone tape is not drawn in the 3D room
+
+- Found on MOXIR (PONYO), the owner's words: "still not visible ... i think it from the red green blue lines". The hall glb carries the planning zones as emissive tape meshes (`hall-zone-*`); in a dark show room they outshone the rig.
+- `src/objectComponents/ModelObject.jsx`: `isPlanningMarker(name)`; such meshes are hidden when the model is cloned for the room. The plot and plan views still draw zones from `venuePlan`.
+- Guard: ModelObject.test (red on the old code). known-fixes row added.
+
+## 2026-10-01 — a rig lamp's real light is fitted to its beam angle
+
+- From emily-41's render audit, finding A (first half). A rig lamp's `light.angle` is half its datasheet BEAM angle, the 50 % point (rig-lib.mjs `half`). three.js reads a SpotLight's angle as the 0 % cutoff, so pools were narrower than the beams landing on them and washes lit surfaces ~2.4× too little.
+- `spotBeam.js spotLightCone({ angle, penumbra })` solves the cutoff and penumbra so three's falloff (a smoothstep in cos θ) crosses 50 % exactly at the beam half-angle. On-axis candela is unchanged.
+  - The profile is ASSUMED from the lamp's own penumbra. ≥ 0.3 is a wash: penumbra 1, the softest three has, with the 10 % edge ≈1.27× the 50 % point (a real wash is nearer 1.8; three cannot go softer). Below that is a beam: penumbra 0.3, ≈1.1×.
+  - No rig datasheet gives a field angle; when one does, fit to it.
+- SpotLightObject takes `fitted`, which both renderers set for entities with `components.fixture`. Only the `<spotLight>` uses the fitted cone; the beam in the air (BeamInAir / the flat cone) keeps the datasheet angle. An authored spot is untouched.
+- The pools pass for beam-only lamps (the finding's second half) is parked as a joint call. The MOXIR known rooms have every lamp real.
+- Tests: spotBeam.test +2, SpotLightObject.cone.test +2 (the fitted case red on the old code); spotLightAim.test's renderer-parity list gains `fitted`. 291 passed in src/objectComponents + src/project/viewport.
+- Seen on PONYO (Chrome on the RTX 5060), Known, Red room from the floor: the roof pools and the column spill are wider and softer. Frame rate unchanged (~120 fps).
+
+## 2026-10-01 — scene deck scrolls on phones; Studio view bar and split buttons are reachable
+
+Found by a human test of the MOXIR show. Two bugs, both "the control exists and nobody can touch it".
+
+**Scene deck** (`src/rigbuild/scenes.css`): the page was `min-height: 100vh` under a fixed body, so it never
+scrolled. Now it is its own scroller; the sticky foot rests after the last tile. 14 of 14 tiles reachable at
+1440x900, iPad Pro 11 and iPhone 13; last tile tapped and selected at each.
+
+**Studio views** (`SmartViewBar.jsx`, `StudioViewportLayout.jsx`, `studio.css`): the bar sat under the nav; the
+split buttons were hover-only. The bar now offsets by `--svl-top-clear`; on phone/tablet a small hook measures the
+fixed `.smb-topbar` and stacks split row then view bar beneath it. Clicking Rig changes the camera at all three sizes.
+
+Guards: `scenesPageScroll.test.js`, new cases in `SmartViewBar.test.jsx` and `StudioViewportLayout.test.jsx`
+(7 failed on the old code). Windows baseline failures in `src/rigbuild` (hash/CRLF, bash scripts) are unchanged.
+Owed: on a very narrow phone the seven-button bar scrolls sideways (X-ray touches the edge).
+
+## 2026-10-01 — The smart view's rig core is the densest lamp cluster
+
+- Found on MOXIR Known · full (PONYO): the Crane and Rig cameras stood inside the hall's steel and no view framed the rig. 42 lamps on the nave columns outnumbered the 22 at the stage, the component-wise median of all lamps fell on the empty dance floor, the core came out empty (a ±Infinity box) and every preset aimed at the outline's centre.
+- `smartViewGeometry.rigCore`: the centre is the lamp with most others within the radius, then that cluster's median.
+- Guard: smartViewGeometry.test "is the stage cluster when the lamps down the hall outnumber it" (red on the old code). An empty box passes `< 8` / `> -8` checks, so the test asserts finite.
+- `src/rigbuild/DmxProbe.jsx`: the `?probe=1` hooks also carry `camera` and `controls`, for view harnesses.
+
+## 2026-10-01 — land batch: the follow sync gaps (#700) + PONYO's MOXIR line (#704–#712)
+
+Owner: "merge 700 703 704 to 712". #703 merged on its own (clean). The other ten were all BEHIND dev, so they land as
+one batch (memory feedback_batch_land_behind_prs): `land/batch-ponyo-sync-2026-10-01` from dev, `--no-ff` merge of
+#700, #704, #705, #706, #707, #708, #709, #710, #711, #712 in that order (#711 before #712, as PONYO asked). The only
+conflicts were new rows at the same spot in `docs/ai/known-fixes.md`; every row from both sides is kept. No code file
+conflicted. Each PR's own session note stays in place for the fold on dev.
+
+## 2026-10-03 — land PONYO's MOXIR line #739 (holds #716) so dev runs the newest MOXIR
+
+Owner: "ok so now we the last one" after "I want the latest in dev". #739 (`emilyanikoghosyan:feat/moxir-area-realism-2026-10-02`,
+afe7e5ce, 105 commits not on dev, 138 files) already contains #716 (haze field), so both land here in one `--no-ff` merge onto
+`land/ponyo-739-2026-10-03` from dev 1541c38d. No conflicts. Each PR's own session note stays in place for the fold on dev.
+
+**One fix on the land branch:** #739's CI failed only `raw/rawTestScope.test.js` — the new
+`src/objectComponents/beamMirror.test.js` reaches into the node graph but `test:raw` did not run it. Added
+`objectComponents/beamMirror` to `test:raw` in `package.json`.
+
+**Verified on aylmo** (own `npm ci` in the worktree; the branch adds `three-mesh-bvh`): `npm run test` under the heat guard
+(SIGSTOP ≥ 97 °C / SIGCONT ≤ 85 °C) — 726 files passed, 2 failed (`perform/useShowClock`, `wiki/WikiPage`); both pass run alone
+with the guard test (3 files, 13 tests), and both passed on #739's own CI — timing under the pauses, not the code.
+
+**Data, same day (not in git):** dev's `moxir` space got the 13 local-only versions by `tier-sync --changed` and a
+hand merge of `moxir-hall-minimal` (local DMX patch + dev's show clock; backup + undo in
+`~/di-backups/moxir-minimal-merge-2026-10-03/`). Still only on PONYO: the Known Full / Known Ground rooms (Emily's yes).
+
 ## 2026-10-01 — a canvas that asks for 'high-performance' must not go black when the browser refuses it
 
 Found in the dev.diiii.xyz black-room audit (owner: "do the deep audit fix everything"). In the owner's Flatpak
