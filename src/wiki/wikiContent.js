@@ -1469,6 +1469,7 @@ export const WIKI_ARTICLES = [
                 'di update --from FILE — updates from a file on this machine, for a venue with no network',
                 'di restore --snapshot — the copies di.iiii takes of your work by itself, before an update that changes how it is stored',
                 'di status — what is running, on which address, whether the room can reach it, and how much space your work takes',
+                'di service install — on Linux, hands the server to systemd: it starts at login and is started again within seconds if it ever stops without being asked (a crash, a stray kill). di down still stops it for good; di service remove undoes it',
                 'di up --lan — answers on this wifi too, so a phone in the room can open it (the lighting desk’s Touch page, for one). Auth is off on a local di.iiii, so this means anyone on that network can edit — di up says so every time, and it lasts for that start only: the next di up is back to this machine alone',
                 'di doctor — what this machine can and cannot do, and what to install if something is missing',
                 'di mcp — hands this di.iiii to Claude, or any other agent that speaks MCP'
@@ -1480,7 +1481,7 @@ export const WIKI_ARTICLES = [
             'If you own a domain, an install can answer on a name of your own with a real certificate: put the certificate at ~/.di/tls/cert.pem and its key beside it, and di up serves https on the name written in the certificate. That padlock is what a browser wants before it will give a page the camera, the microphone, Web MIDI or XR — none of which a phone gets over plain http, however local the machine is.'
         ],
         tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup', 'https', 'certificate'],
-        updated: '2026-09-23'
+        updated: '2026-10-02'
     },
     {
         id: 'tools-room',
