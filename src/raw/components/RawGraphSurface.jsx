@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
 import { dragClamp, edgePanVelocity } from '../utils/dragClamp.js'
-import { CARD_CONTENT_LINE_HEIGHT, CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, TOP_PICTURE_HEIGHT, TOP_PICTURE_WIDTH, cardContentHeight, cardContentLayout, cardHeight, cardPortRows, hasCardPicture } from '../utils/cardGeometry.js'
+import { CARD_CONTENT_LINE_HEIGHT, CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, TOP_PICTURE_HEIGHT, TOP_PICTURE_WIDTH, cardContentHeight, cardContentLayout, cardHeight, cardMinHeight, cardPortRows, cardSizeOf, cardWidth, hasCardPicture, MIN_CARD_WIDTH } from '../utils/cardGeometry.js'
 import { isPictureType, pictureIdOf } from '../../project/tops/vjDeck.js'
 import TopThumbnail from './TopThumbnail.jsx'
 import CardPreview from './cardPreview/CardPreview.jsx'
@@ -160,9 +160,9 @@ const inputPortCenter = (node, portId, scopeNodes = null) => {
 const outputPortCenter = (node, portId, scopeNodes = null) => {
     const outputs = getNodeOutputs(node, scopeNodes)
     const idx = outputs.findIndex((p) => p.id === portId)
-    if (idx < 0) return { x: node.graphX + CARD_WIDTH, y: node.graphY + HEADER_HEIGHT }
+    if (idx < 0) return { x: node.graphX + cardWidth(node), y: node.graphY + HEADER_HEIGHT }
     return {
-        x: node.graphX + CARD_WIDTH,
+        x: node.graphX + cardWidth(node),
         y: node.graphY + HEADER_HEIGHT + idx * PORT_ROW_HEIGHT + PORT_ROW_HEIGHT / 2
     }
 }
@@ -252,6 +252,7 @@ export default function RawGraphSurface({
     onDeleteEdge,
     onDeleteNode,
     onMoveNode,
+    onResizeNode,
     onDoubleClick,
     // Edits a card's one main field in place (a Text's content). Optional: the
     // read-only wrappers pass none and the card behaves exactly as before.
@@ -306,6 +307,11 @@ export default function RawGraphSurface({
     // nodes with this one position laid over the top.
     const [dragPos, setDragPos] = useState(null)
     const dragPosRef = useRef(null)
+    // A card being resized: its size NOW, local until release, exactly like a
+    // held card's position — one `updateNode` on release.
+    const [resizing, setResizing] = useState(null)
+    const [resizePos, setResizePos] = useState(null)
+    const resizeStartRef = useRef(null)
     // The insets as the drag effect must read them: current at every frame.
     const contentInsetsRef = useRef(contentInsets)
     contentInsetsRef.current = contentInsets
@@ -361,10 +367,14 @@ export default function RawGraphSurface({
     // Everything the view has to hold, both kinds. Only the FIT and the
     // is-this-canvas-empty question use it — wires and ports stay on `nodes`
     // alone, because only nodes have any.
-    const nodes = useMemo(
-        () => (dragPos ? nodesProp.map((node) => (node.id === dragPos.id ? { ...node, graphX: dragPos.x, graphY: dragPos.y } : node)) : nodesProp),
-        [nodesProp, dragPos]
-    )
+    const nodes = useMemo(() => {
+        if (!dragPos && !resizePos) return nodesProp
+        return nodesProp.map((node) => {
+            if (dragPos && node.id === dragPos.id) return { ...node, graphX: dragPos.x, graphY: dragPos.y }
+            if (resizePos && node.id === resizePos.id) return { ...node, values: { ...node.values, cardSize: { w: resizePos.w, h: resizePos.h } } }
+            return node
+        })
+    }, [nodesProp, dragPos, resizePos])
     // The document's own nodes: what a drag starts from and what its effect
     // follows, so a held card moving does not restart the effect every frame.
     const nodePropById = useMemo(() => new Map(nodesProp.map((node) => [node.id, node])), [nodesProp])
@@ -429,7 +439,7 @@ export default function RawGraphSurface({
         if (!subset.length) return null
         const minX = Math.min(...subset.map((n) => (n.graphX ?? 0)))
         const minY = Math.min(...subset.map((n) => n.graphY ?? 0))
-        const maxX = Math.max(...subset.map((n) => (n.graphX ?? 0) + CARD_WIDTH))
+        const maxX = Math.max(...subset.map((n) => (n.graphX ?? 0) + cardWidth(n)))
         const maxY = Math.max(...subset.map((n) => (n.graphY ?? 0) + cardHeight(n, portScopeNodes)))
         return { minX, minY, maxX, maxY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) }
     }
@@ -514,7 +524,7 @@ export default function RawGraphSurface({
         return cardsInView.filter((node) => {
             const x = (node.graphX ?? 0) * vp.zoom + vp.panX
             const y = (node.graphY ?? 0) * vp.zoom + vp.panY
-            const w = CARD_WIDTH * vp.zoom
+            const w = cardWidth(node) * vp.zoom
             const h = cardHeight(node, portScopeNodes) * vp.zoom
             // Only the free band counts: a card under a docked window is not
             // "shown" (it said 8 of 8 with two behind the List).
@@ -1403,6 +1413,53 @@ export default function RawGraphSurface({
         }
     }, [isDraggingNode, draggingNodeId, nodePropById, onMoveNode])
 
+    // Resizing from the square handle in a card's bottom-right corner. The
+    // pointer's travel is measured on screen and divided by the zoom, so the
+    // corner stays under the pointer at every zoom. The card changes in local
+    // state while held; the document hears once, on release.
+    useEffect(() => {
+        if (!resizing) return undefined
+        let rafId = null
+        let pending = null
+        const flush = () => {
+            rafId = null
+            if (pending) { setResizePos(pending); pending = null }
+        }
+        const move = (event) => {
+            const start = resizeStartRef.current
+            if (!start) return
+            const node = nodePropById.get(resizing)
+            if (!node) return
+            const zoomNow = viewportRef.current.zoom
+            pending = {
+                id: resizing,
+                w: Math.round(Math.max(MIN_CARD_WIDTH, start.w + (event.clientX - start.x) / zoomNow)),
+                h: Math.round(Math.max(cardMinHeight(node, portScopeNodes), start.h + (event.clientY - start.y) / zoomNow))
+            }
+            resizeStartRef.current.last = pending
+            if (rafId === null) rafId = requestAnimationFrame(flush)
+        }
+        const up = () => {
+            if (rafId !== null) cancelAnimationFrame(rafId)
+            const start = resizeStartRef.current
+            const final = start?.last
+            resizeStartRef.current = null
+            if (final && (final.w !== start.w || final.h !== start.h)) onResizeNode?.(resizing, { w: final.w, h: final.h })
+            setResizePos(null)
+            setResizing(null)
+        }
+        window.addEventListener('pointermove', move)
+        window.addEventListener('pointerup', up)
+        window.addEventListener('pointercancel', up)
+        return () => {
+            if (rafId !== null) cancelAnimationFrame(rafId)
+            window.removeEventListener('pointermove', move)
+            window.removeEventListener('pointerup', up)
+            window.removeEventListener('pointercancel', up)
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [resizing, nodePropById, onResizeNode])
+
     useEffect(() => {
         if (!isPanning) return undefined
         const move = (event) => {
@@ -1854,7 +1911,7 @@ export default function RawGraphSurface({
                             const bottom = (node.graphY ?? 0) + baseH
                             const below = nodes
                                 .filter((other) => other.id !== node.id
-                                    && Math.abs((other.graphX ?? 0) - (node.graphX ?? 0)) < CARD_WIDTH
+                                    && Math.abs((other.graphX ?? 0) - (node.graphX ?? 0)) < cardWidth(node)
                                     && (other.graphY ?? 0) >= bottom - 1)
                                 .reduce((min, other) => Math.min(min, other.graphY ?? Infinity), Infinity)
                             const room = Number.isFinite(below) ? Math.max(0, below - bottom - 8) : Infinity
@@ -1875,7 +1932,7 @@ export default function RawGraphSurface({
                                     position: 'absolute',
                                     left: node.graphX,
                                     top: node.graphY,
-                                    width: CARD_WIDTH,
+                                    width: cardWidth(node),
                                     height: h,
                                     cursor: draggingNodeId === node.id ? 'grabbing' : 'grab',
                                     // One hue per card, handed to the stylesheet, which
@@ -1928,6 +1985,25 @@ export default function RawGraphSurface({
                                     onEnterNode?.(node.id)
                                 }}
                             >
+                                {onResizeNode ? (
+                                    <span
+                                        className="raw-graph-node-resize"
+                                        aria-hidden="true"
+                                        title="Drag to resize. Double-click for the automatic size."
+                                        onPointerDown={(event) => {
+                                            if (event.button !== 0) return
+                                            event.stopPropagation()
+                                            event.preventDefault()
+                                            resizeStartRef.current = { x: event.clientX, y: event.clientY, w: cardWidth(node), h: h, last: null }
+                                            onSelectNode?.(node.id)
+                                            setResizing(node.id)
+                                        }}
+                                        onDoubleClick={(event) => {
+                                            event.stopPropagation()
+                                            if (cardSizeOf(node)) onResizeNode(node.id, null)
+                                        }}
+                                    />
+                                ) : null}
                                 <header className="raw-graph-node-header">
                                     {activeMarkerTypeIds.includes(node.typeId) && (
                                         <button
