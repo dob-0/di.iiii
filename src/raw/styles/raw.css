@@ -5991,5 +5991,5 @@
     border-bottom: 1px solid var(--di-cyan-border);
     border-radius: 0;
     overflow: hidden;
-    background: #0a0f16;
+    background: var(--di-surface);
 }
