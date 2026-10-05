@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
+import { dragClamp, edgePanVelocity } from '../utils/dragClamp.js'
 import { CARD_CONTENT_LINE_HEIGHT, CARD_WIDTH, HEADER_HEIGHT, PORT_ROW_HEIGHT, TOP_PICTURE_HEIGHT, TOP_PICTURE_WIDTH, cardContentLayout, cardHeight, cardPortRows, hasCardPicture } from '../utils/cardGeometry.js'
 import { isPictureType, pictureIdOf } from '../../project/tops/vjDeck.js'
 import TopThumbnail from './TopThumbnail.jsx'
@@ -11,7 +12,6 @@ import { isTypingTarget, keyHint, matchesKeyId } from '../input/keymap.js'
 import ContextMenu from './ContextMenu.jsx'
 import { useLongPress } from '../utils/useLongPress.js'
 import {
-    CONTAINER_TYPE_IDS,
     arePortsCompatible,
     getNodeCardLines,
     getNodeCardSummary,
@@ -98,16 +98,6 @@ export const lodTierForZoom = (zoom, previous = null) => {
     if (zoom < bump(LOD_LABELS)) return 'compact'
     return 'full'
 }
-// The door's touch halo only ever extends LEFT, into the gutter between
-// columns. That gutter is 100 graph units (COL 300 minus CARD_WIDTH 200), and a
-// 44-screen-pixel halo is 44/zoom graph units — below this zoom it would reach
-// across into the previous column's output-port strip, and because the door
-// stops propagation the press would enter the wrong node. Below it the door is
-// still there and still clickable; it just has no halo.
-const DOOR_HALO_MIN_ZOOM = 0.44
-// Screen width the door occupies to the left of its card, reserved by the fit
-// so the leftmost card's door is not clipped by the surface's overflow.
-const DOOR_WIDTH_PX = 34
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
@@ -294,6 +284,9 @@ export default function RawGraphSurface({
     // the right-click on touch.
     const [contextMenu, setContextMenu] = useState(null)
     const dragOffsetRef = useRef({ x: 0, y: 0 })
+    // Last pointer position of a card drag (client px), whether a move has
+    // arrived yet (`live`), and the auto-pan clock (`last`).
+    const dragPanRef = useRef({ x: 0, y: 0, live: false, last: 0 })
     // pendingWire mirrored into a ref: the window-level pointerup handler is
     // registered once per drag and would otherwise close over a stale value.
     const pendingWireRef = useRef(null)
@@ -379,16 +372,9 @@ export default function RawGraphSurface({
     }
 
     // Bounding box of a set of nodes, in graph coordinates.
-    //
-    // The left edge includes the door, which hangs OUTSIDE the card. Without
-    // this the leftmost card's door is half off-screen after a fit-all, because
-    // .raw-graph-surface clips overflow and the bounds knew nothing about it.
-    // The door is counter-scaled, so its width in graph units grows as the view
-    // shrinks — hence the division rather than a constant.
-    const doorGutter = () => DOOR_WIDTH_PX / Math.max(viewportRef.current.zoom, FIT_MIN_USEFUL_ZOOM)
     const boundsOf = (subset) => {
         if (!subset.length) return null
-        const minX = Math.min(...subset.map((n) => (n.graphX ?? 0) - doorGutter()))
+        const minX = Math.min(...subset.map((n) => (n.graphX ?? 0)))
         const minY = Math.min(...subset.map((n) => n.graphY ?? 0))
         const maxX = Math.max(...subset.map((n) => (n.graphX ?? 0) + CARD_WIDTH))
         const maxY = Math.max(...subset.map((n) => (n.graphY ?? 0) + cardHeight(n, portScopeNodes)))
@@ -1241,40 +1227,69 @@ export default function RawGraphSurface({
             pendingPos = null
             onMoveNode?.(draggingNodeId, nextX, nextY)
         }
+        // The pointer and the pan clock live in refs: every committed move
+        // changes `nodes`, which re-runs this effect, and a pointer held still
+        // at the edge must keep panning across that.
+        const drag = dragPanRef
+        let panRaf = null
+        // Where the card wants to be for the pointer as it is NOW and the
+        // viewport as it is NOW, kept GRAB_PX inside the canvas (utils/dragClamp.js).
+        const commitWanted = () => {
+            const point = clientPointToGraphPoint(drag.current.x, drag.current.y)
+            const rect = containerRef.current?.getBoundingClientRect?.()
+            const vp = viewportRef.current
+            const wanted = dragClamp(
+                { x: point.x - dragOffsetRef.current.x, y: point.y - dragOffsetRef.current.y },
+                { rect, panX: vp.panX, panY: vp.panY, zoom: vp.zoom }
+            )
+            pendingPos = { nextX: wanted.x, nextY: wanted.y }
+        }
+        // Edge auto-pan: while the pointer rests in the band at an edge (or
+        // past it, off the canvas) the canvas pans under it and the card follows.
+        const panTick = (now) => {
+            panRaf = null
+            if (!drag.current.live) return
+            const velocity = edgePanVelocity(drag.current, containerRef.current?.getBoundingClientRect?.())
+            if (!velocity) { drag.current.last = 0; return }
+            const dt = drag.current.last ? Math.min(now - drag.current.last, 50) : 16
+            drag.current.last = now
+            const vp = viewportRef.current
+            applyViewport(vp.panX + velocity.vx * dt / 1000, vp.panY + velocity.vy * dt / 1000, vp.zoom)
+            commitWanted()
+            flush()
+            panRaf = requestAnimationFrame(panTick)
+        }
+        const armPan = () => {
+            if (panRaf === null && edgePanVelocity(drag.current, containerRef.current?.getBoundingClientRect?.())) {
+                panRaf = requestAnimationFrame(panTick)
+            }
+        }
         const move = (event) => {
             if (pinchRef.current) return
             const node = nodeById.get(draggingNodeId)
             if (!node) return
-            const point = clientPointToGraphPoint(event.clientX, event.clientY)
-            let nextX = point.x - dragOffsetRef.current.x
-            let nextY = point.y - dragOffsetRef.current.y
-            // Same law as placement: the card and the door hanging off its
-            // left edge stay reachable. A card dragged past the edge used to
-            // leave the canvas entirely, door and all, with no way back
-            // (audit 08-21: card at x:-108, door fully off-screen).
-            const rect = containerRef.current?.getBoundingClientRect?.()
-            if (rect?.width && rect?.height) {
-                const halfCard = CARD_WIDTH / 2
-                const topLeft = clientPointToGraphPoint(rect.left + GRAPH_FIT_PADDING_PX, rect.top + GRAPH_FIT_PADDING_PX)
-                const bottomRight = clientPointToGraphPoint(rect.right - GRAPH_FIT_PADDING_PX, rect.bottom - GRAPH_FIT_PADDING_PX)
-                const minX = topLeft.x + halfCard + (DOOR_WIDTH_PX / viewportRef.current.zoom)
-                const maxX = bottomRight.x - halfCard
-                const minY = topLeft.y + HEADER_HEIGHT
-                const maxY = bottomRight.y - HEADER_HEIGHT
-                if (maxX > minX) nextX = clamp(nextX, minX, maxX)
-                if (maxY > minY) nextY = clamp(nextY, minY, maxY)
-            }
-            pendingPos = { nextX, nextY }
+            drag.current.x = event.clientX
+            drag.current.y = event.clientY
+            drag.current.live = true
+            commitWanted()
             if (rafId === null) rafId = requestAnimationFrame(flush)
+            armPan()
         }
+        if (drag.current.live) armPan()
         const up = () => {
+            if (panRaf !== null) { cancelAnimationFrame(panRaf); panRaf = null }
             if (rafId !== null) { cancelAnimationFrame(rafId); flush() }
+            drag.current.live = false
+            drag.current.last = 0
             setDraggingNodeId(null)
         }
         window.addEventListener('pointermove', move)
         window.addEventListener('pointerup', up)
+        window.addEventListener('pointercancel', up)
         return () => {
             if (rafId !== null) cancelAnimationFrame(rafId)
+            if (panRaf !== null) cancelAnimationFrame(panRaf)
+            window.removeEventListener('pointercancel', up)
             window.removeEventListener('pointermove', move)
             window.removeEventListener('pointerup', up)
         }
@@ -1340,16 +1355,14 @@ export default function RawGraphSurface({
         // request to place a node on top of it.
         if (event.target?.closest?.('.raw-graph-object-card')) return
         const graphPoint = clientPointToGraphPoint(event.clientX, event.clientY)
-        // Keep the whole card — and the door hanging off its left edge — inside
-        // the part of the canvas you can SEE. Double-tapping near an edge used
-        // to put the new card half off-screen, so the thing you just made was
-        // partly unreachable and its door was clipped away entirely.
+        // Keep the whole card inside the part of the canvas you can SEE.
+        // Double-tapping near an edge used to put the new card half off-screen,
+        // so the thing you just made was partly unreachable.
         const rect = containerRef.current?.getBoundingClientRect?.()
         const clamped = { x: graphPoint.x, y: graphPoint.y }
         if (rect?.width && rect?.height) {
-            // The card is placed CENTRED on this point by the caller, and its
-            // door hangs off the left edge — so the usable band is inset by half
-            // a card plus the door on the left, and half a card on the right.
+            // The card is placed CENTRED on this point by the caller, so the
+            // usable band is inset by half a card on each side.
             const halfCard = CARD_WIDTH / 2
             const topLeft = clientPointToGraphPoint(rect.left + GRAPH_FIT_PADDING_PX, rect.top + GRAPH_FIT_PADDING_PX)
             // On a coarse pointer the docked inspector is ABOUT to appear
@@ -1363,7 +1376,7 @@ export default function RawGraphSurface({
                 rect.right - GRAPH_FIT_PADDING_PX,
                 rect.bottom - GRAPH_FIT_PADDING_PX - reservedBottom
             )
-            const minX = topLeft.x + halfCard + (DOOR_WIDTH_PX / viewportRef.current.zoom)
+            const minX = topLeft.x + halfCard
             const maxX = bottomRight.x - halfCard
             const minY = topLeft.y + HEADER_HEIGHT
             const maxY = bottomRight.y - HEADER_HEIGHT
@@ -1413,13 +1426,9 @@ export default function RawGraphSurface({
     ].filter(Boolean)
 
     const cardMenuItems = (node) => {
-        const type = getNodeType(node.typeId)
-        // A place you can be inside (Scene, Geo, Constructor…) is entered; a
-        // window-only node (Text, List…) opens its window. Scene draws as a
-        // window too, so the render kind alone said "Open its window" (seen).
-        const isWindow = type?.render === 'panel-2d' && !CONTAINER_TYPE_IDS.has(node.typeId)
         return [
-            onEnterNode ? { id: 'enter', label: isWindow ? 'Open its window' : 'Go inside', kb: keyHint('enter'), run: () => onEnterNode(node.id) } : null,
+            // One word, one meaning for every kind (audit 2026-10-05 B2).
+            onEnterNode ? { id: 'enter', label: 'Open', kb: keyHint('enter'), run: () => onEnterNode(node.id) } : null,
             onShowReading ? { id: 'reading', label: 'What it reads and gives', hint: 'middle-click', run: () => onShowReading(node.id) } : null,
             activeMarkerTypeIds.includes(node.typeId) && onSetActive ? { id: 'live', label: isNodeActive(node) ? 'Active here' : 'Make this the active one', disabled: isNodeActive(node), run: () => onSetActive(node) } : null,
             { sep: true },
@@ -1505,6 +1514,12 @@ export default function RawGraphSurface({
     const handleNodeKeyDown = (event, nodeId) => {
         if (event.key !== 'Enter' && event.key !== ' ') return
         event.preventDefault()
+        // Enter opens, the same as a double-click (audit 2026-10-05 B2);
+        // Space selects.
+        if (event.key === 'Enter' && onEnterNode) {
+            onEnterNode(nodeId)
+            return
+        }
         onSelectNode?.(nodeId)
     }
 
@@ -1762,6 +1777,7 @@ export default function RawGraphSurface({
                                         x: point.x - node.graphX,
                                         y: point.y - node.graphY
                                     }
+                                    dragPanRef.current = { x: event.clientX, y: event.clientY, live: false, last: 0 }
                                     onSelectNode?.(node.id)
                                     setIsPanning(false)
                                     setDraggingNodeId(node.id)
@@ -1770,49 +1786,6 @@ export default function RawGraphSurface({
                                 onKeyDown={(event) => handleNodeKeyDown(event, node.id)}
                                 onDoubleClick={(event) => { event.stopPropagation(); onEnterNode?.(node.id) }}
                             >
-                                {/* The door. Hangs off the card's LEFT edge, counter-scaled so
-                                    it is the same size on screen at every zoom — a control that
-                                    shrinks with the graph is the bug this replaces. Left, not
-                                    in the header, because nearestOutputPort's grab radius is 28
-                                    SCREEN pixels and covers the card's right-hand end once the
-                                    graph is zoomed out, so a door there competes with starting
-                                    a wire. Never gated on having contents: RawEditor routes this
-                                    same control to reopen a closed panel window, and an
-                                    un-enterable empty container is a box that can never be
-                                    filled. */}
-                                {onEnterNode && tier !== 'block' ? (
-                                    <div
-                                        // Tucked: zoomed out, a finger's 44px door is wider
-                                        // than the column gutter and covered the previous
-                                        // column's output ports (audit 2026-10-02, 390×844
-                                        // at 34%). On a touch screen it then shows only on
-                                        // the selected card — tap the card, then its door.
-                                        className={`raw-graph-node-door-anchor${zoom < DOOR_HALO_MIN_ZOOM && !isSelected ? ' is-tucked' : ''}`}
-                                        style={{ transform: `scale(${1 / Math.max(zoom, FIT_MIN_USEFUL_ZOOM)})` }}
-                                    >
-                                        <button
-                                            type="button"
-                                            className={`raw-graph-node-door${childCount > 0 ? ' has-contents' : ''}${zoom >= DOOR_HALO_MIN_ZOOM ? ' has-halo' : ''}`}
-                                            title={childCount > 0
-                                                ? `Enter ${node.label} — holds ${childCount} node${childCount === 1 ? '' : 's'}`
-                                                : `Enter ${node.label}`}
-                                            aria-label={childCount > 0
-                                                ? `Enter ${node.label}, holds ${childCount} node${childCount === 1 ? '' : 's'}`
-                                                : `Enter ${node.label}`}
-                                            onPointerDown={(event) => event.stopPropagation()}
-                                            // The card's own dblclick also enters; without this
-                                            // a double-tap on the door pushes the same scope
-                                            // twice and takes two presses to leave.
-                                            onDoubleClick={(event) => event.stopPropagation()}
-                                            onClick={(event) => { event.stopPropagation(); onEnterNode?.(node.id) }}
-                                        >
-                                            {childCount > 0 ? (
-                                                <span className="raw-graph-node-child-count">{childCount}</span>
-                                            ) : null}
-                                            <span aria-hidden="true">›</span>
-                                        </button>
-                                    </div>
-                                ) : null}
                                 <header className="raw-graph-node-header">
                                     {activeMarkerTypeIds.includes(node.typeId) && (
                                         <button
@@ -1855,21 +1828,18 @@ export default function RawGraphSurface({
                                             {getNodeFamily(node.typeId)?.label || typeDef?.category || ''}
                                         </span>
                                     ) : null}
-                                    {/* Entering a node used to be double-click only, cued by a
-                                        hover-revealed chevron — so on a phone there was no
-                                        affordance at all and no gesture that reliably worked.
-                                        Containers make that fatal rather than annoying: a
-                                        `studio` node you cannot enter is an empty box. This is
-                                        a real button now, always visible on coarse pointers —
-                                        but not when the card is too small to aim at. */}
-                                    {/* The way in is NOT here any more — see the door on the
-                                        card's left edge below. In the header it lived inside
-                                        the graph's own transform, so at the zoom the auto-fit
-                                        lands an oversized graph on it measured 7x7 screen
-                                        pixels: present in the DOM, unusable in the browser, and
-                                        a DOM-presence test passes anyway. It also sat inside
-                                        nearestOutputPort's 28-screen-pixel grab radius, which
-                                        covers the card's right-hand end at low zoom. */}
+                                    {/* One way in: double-click, Enter, or Open in the
+                                        settings. There is no control on the card for it, so
+                                        a container's card only says how much is inside, as
+                                        plain meta text (audit 2026-10-05 section 3.4). */}
+                                    {childCount > 0 && tier !== 'block' ? (
+                                        <span
+                                            className="raw-graph-node-child-count"
+                                            title={`Holds ${childCount} node${childCount === 1 ? '' : 's'}`}
+                                        >
+                                            {`▸ ${childCount}`}
+                                        </span>
+                                    ) : null}
                                 </header>
                                 {/* This box keeps its exact height at every tier — it is
                                     part of the geometry the wires are drawn from. Only its

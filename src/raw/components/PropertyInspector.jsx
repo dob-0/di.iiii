@@ -271,7 +271,11 @@ export default function PropertyInspector({
     // fields. `.raw-empty-state` is the canvas's centred, absolutely placed
     // hint — inside the sheet it left no in-flow content and the sheet
     // collapsed to a 2px teal stripe under the toolbar (NOPA audit F11).
-    showHeaderWhenEmpty = false
+    showHeaderWhenEmpty = false,
+    // Opens the selected node's inside view. The same thing double-click and
+    // Enter do (audit 2026-10-05 B2); on a phone it is the way in.
+    onOpen = null,
+    openKeyHint = '↵'
 }) {
     // A selected node with nothing to set (List, Timeline, Webcam…) used to show
     // the canvas's own empty message — "double-click the world…" — and no way
@@ -288,10 +292,16 @@ export default function PropertyInspector({
                     read as two things (owner, 2026-10-02). */}
                 {subtitle && subtitle !== title ? <p>{subtitle}</p> : null}
             </header>
+            {onOpen ? (
+                <button type="button" className="raw-property-open" onClick={onOpen}>
+                    <span>Open</span>
+                    <kbd aria-hidden="true">{openKeyHint}</kbd>
+                </button>
+            ) : null}
             {!sections.length && showHeaderWhenEmpty ? <p className="raw-property-empty">{emptyMessage}</p> : null}
             <div className="raw-property-sections-scroll">
                 {!sections.length && !showHeaderWhenEmpty ? (
-                    <p className="raw-property-note raw-full-width-field">Its window holds everything it does — › on its card opens it.</p>
+                    <p className="raw-property-note raw-full-width-field">Open it to see everything it holds.</p>
                 ) : null}
                 {sections.map((section) => {
                     const sectionValue = values[section.id] || values[section.component] || {}
