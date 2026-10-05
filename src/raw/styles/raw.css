@@ -2710,7 +2710,7 @@
     cursor: nwse-resize;
     z-index: 3;
     touch-action: none;
-    background: linear-gradient(135deg, transparent 0 55%, var(--card-family, var(--di-cyan)) 55% 70%, transparent 70% 80%, var(--card-family, var(--di-cyan)) 80% 95%, transparent 95%);
+    background: linear-gradient(135deg, transparent 0 55%, var(--card-family) 55% 70%, transparent 70% 80%, var(--card-family) 80% 95%, transparent 95%);
     opacity: 0.55;
 }
 
