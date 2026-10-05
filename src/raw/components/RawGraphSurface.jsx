@@ -655,7 +655,10 @@ export default function RawGraphSurface({
     // in here made every create/delete miss the guard and re-fit, which is
     // exactly the yank the comment above forbids.
     const scopeKey = cardsInView.length ? `scope:${nodes[0]?.parentId || 'root'}` : ''
-    const insetKey = `${contentInsets?.left || 0}:${contentInsets?.right || 0}:${contentInsets?.top || 0}:${contentInsets?.bottom || 0}`
+    // The bottom sheet (phone) is part of the key: opening it takes a band off the
+    // canvas, and an untouched view re-fits into what is left, the same rule as
+    // the desktop column giving its width up.
+    const insetKey = `${contentInsets?.left || 0}:${contentInsets?.right || 0}:${contentInsets?.top || 0}:${contentInsets?.bottom || 0}:${Math.round(bottomInset || 0)}`
     useEffect(() => {
         if (initialZoom !== null) return
         if (hasFitRef.current === scopeKey || !containerRef.current || cardsInView.length === 0) return
@@ -679,9 +682,39 @@ export default function RawGraphSurface({
         if (lastFitInsetsRef.current === insetKey) return
         const untouched = isViewAtLastFit()
         lastFitInsetsRef.current = insetKey
-        if (untouched) fitGraph({ minZoom: DOCK_REFIT_MIN_ZOOM })
+        // With the phone sheet open the whole graph is fitted into the band above
+        // it (an overview), not a legible window onto part of it: a card the
+        // sheet took the room of is never "somewhere else on the canvas".
+        if (untouched) fitGraph(bottomInset > 0 ? { force: true } : { minZoom: DOCK_REFIT_MIN_ZOOM })
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [insetKey])
+
+    // The selected card is never left under the bottom sheet: once the sheet
+    // has taken its band, a selected card outside the free band is panned in,
+    // the least that shows it whole (a hand-moved view keeps its zoom).
+    useEffect(() => {
+        if (!selectedNodeId || !(bottomInset > 0)) return undefined
+        const frame = requestAnimationFrame(() => {
+            const box = visibleBox()
+            const root = containerRef.current
+            const el = root?.querySelector?.('.raw-graph-node-card.is-selected')
+            if (!box || !el) return
+            const surface = root.getBoundingClientRect()
+            const r = el.getBoundingClientRect()
+            const top = r.top - surface.top
+            const bottom = r.bottom - surface.top
+            const pad = GRAPH_FIT_PADDING_PX
+            let dy = 0
+            if (bottom > box.freeBottom - pad) dy = box.freeBottom - pad - bottom
+            if (top + dy < box.freeTop + pad) dy = box.freeTop + pad - top
+            if (dy) {
+                const vp = viewportRef.current
+                applyViewport(vp.panX, vp.panY + dy, vp.zoom)
+            }
+        })
+        return () => cancelAnimationFrame(frame)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedNodeId, bottomInset])
 
     // The browser window changes size under an untouched view — a new window
     // opened small and then tiled to half the screen kept the 49 % fit it got

@@ -2376,7 +2376,7 @@ export default function RawEditor({
             observer?.disconnect()
             window.removeEventListener('resize', measure)
         }
-    }, [visibleSelection])
+    }, [visibleSelection, regionOccupant])
 
 
     // Keyboard delete for OBJECTS only — node deletion is RawGraphSurface's
