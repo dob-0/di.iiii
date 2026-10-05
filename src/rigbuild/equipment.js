@@ -426,5 +426,5 @@ export const FLAG_WORDS = {
     'mode-owed': 'DMX mode owed',
     'channels-owed': 'channel list owed',
     'type-unknown': 'no fixture type',
-    'rate-unknown': 'day rate unknown'
+    'rate-unknown': 'price private (not in the public repo)'
 }
