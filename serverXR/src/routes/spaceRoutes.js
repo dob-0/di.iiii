@@ -98,6 +98,14 @@ function registerSpaceRoutes(router, {
   // apply immediately — gating is for what a visitor sees or who can reach a
   // space, not routine editing.
 
+  // A follower of this space compares its settings (label, visibility, front
+  // door) and holds its read open on the space's change mark: end that wait, and
+  // wake a follow running here. Called on every path that lands a PATCH.
+  const announceSpaceSettingsChange = (spaceId) => {
+    try { require('../follow').nudgeFollow(spaceId) } catch { /* no follows here */ }
+    try { require('../follow/waiters').noteChange(spaceId) } catch { /* nobody waiting */ }
+  }
+
   if (approvalGate) {
     approvalGate.registerExecutor('spaces.patch', async ({ spaceId, patch, nextOwnerUserId }) => {
       // Re-checked at execution: an approval can wait an hour, and the project
@@ -109,6 +117,7 @@ function registerSpaceRoutes(router, {
         }
       }
       const meta = await upsertSpaceMeta(spaceId, patch)
+      announceSpaceSettingsChange(spaceId)
       if (nextOwnerUserId && findUserById && setUserSpaces) {
         try {
           const user = findUserById(nextOwnerUserId)
@@ -488,6 +497,7 @@ function registerSpaceRoutes(router, {
       const touchesSensitive = SENSITIVE_SPACE_PATCH_FIELDS.some((f) => Object.prototype.hasOwnProperty.call(req.body || {}, f))
       if (!touchesSensitive || !approvalGate) {
         const meta = await upsertSpaceMeta(spaceId, patch)
+        announceSpaceSettingsChange(spaceId)
         // A person who cannot reach the space cannot be its owner or be trusted
         // with it: ownership and trust carry scope with them.
         if (findUserById && setUserSpaces) {

@@ -150,6 +150,49 @@ describe('the chase', () => {
         expect(await readdir(tmpDir)).toEqual([])
     })
 
+    // Gap 3 (2026-10-05, di.laser): the documents were compared with what each
+    // machine holds once per run. A file lost from one disk, or a transfer that
+    // was cut and forgotten, stayed owed in silence for as long as the follow ran.
+    it('compares the documents with what each machine holds again after a while, and carries what has gone missing', async () => {
+        const world = twoMachines()
+        const bytes = Buffer.from('listed in the document, lost from the host\'s disk')
+        world.here.files.set(sha(bytes), bytes)
+        world.here.docs.set('show', { assets: [{ id: sha(bytes), name: 'clip.mp4', size: bytes.length }] })
+        world.there.docs.set('show', { assets: [{ id: sha(bytes), name: 'clip.mp4', size: bytes.length }] })
+        let clock = 0
+        await make(world, { now: () => clock, reconcileEveryMs: 60_000 })
+
+        chase.noteProjects(['show'])
+        await drain()
+        expect(world.there.files.has(sha(bytes))).toBe(true)
+        expect(chase.files).toMatchObject({ listed: 1, missing: 0, pending: 0 })
+
+        // the file goes from the host's disk; a quiet minute later nothing has noticed
+        world.there.files.delete(sha(bytes))
+        clock = 30_000
+        chase.noteProjects(['show'])
+        await drain()
+        expect(world.there.files.has(sha(bytes))).toBe(false)
+
+        // after the interval it is compared again, found and carried
+        clock = 61_000
+        chase.noteProjects(['show'])
+        await drain()
+        expect(world.there.files.get(sha(bytes)).equals(bytes)).toBe(true)
+    })
+
+    it('says how many files are listed and how many a machine still lacks', async () => {
+        const world = twoMachines()
+        const [a, b, c] = ['one', 'two', 'three'].map(text => Buffer.from(text))
+        for (const bytes of [a, b, c]) world.here.files.set(sha(bytes), bytes)
+        world.there.files.set(sha(a), a)
+        await make(world)
+        chase.noteOps('show', [a, b, c].map(bytes => upsert(sha(bytes))))
+        expect(chase.files).toMatchObject({ listed: 3, missing: 3, pending: 3 })
+        await drain()
+        expect(chase.files).toMatchObject({ listed: 3, missing: 0, carried: 2 })
+    })
+
     it('takes a file added HERE to the other machine, with the sync key', async () => {
         const world = twoMachines()
         const bytes = Buffer.from('made on the following side')

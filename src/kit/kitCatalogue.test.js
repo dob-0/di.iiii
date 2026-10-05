@@ -198,6 +198,18 @@ describe('what we use', () => {
         }
     })
 
+    // known-fixes 2026-10-05: versions typed into kitStack.js failed every
+    // Dependabot bump (eight PRs stuck). They come from the lock files now.
+    it('takes every npm version from the lock files, none typed into the table', () => {
+        const source = readFileSync(join(srcDir, 'kitStack.js'), 'utf8')
+        const typed = source.split('\n').filter((line) => /npm: '/.test(line) && /\bversion: '/.test(line))
+        expect(typed, 'an npm entry with a hand-written version').toEqual([])
+        for (const entry of KIT_STACK) {
+            if (!entry.npm) continue
+            expect(entry.version, `${entry.name}: not in ${entry.server ? 'serverXR/' : ''}package-lock.json`).toMatch(/^\d+\.\d+\.\d+/)
+        }
+    })
+
     it('carries measured weights, not placeholders', () => {
         expect(kitWeights.measured).toMatch(/^\d{4}-\d{2}-\d{2}$/)
         for (const key of ['kitPageKB', 'coreKB', 'threeKB', 'firstLoadKB', 'firstLoadPhoneKB']) {
