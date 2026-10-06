@@ -206,13 +206,39 @@ starts, during its first pass), rename this install to host 12–38 ms, trash 8�
 over the internet (the 2026-10-04 dev.diiii.xyz run measured ~21 s per edit before the latches; re-measure owed).
 Each integration test fails with the carry switched off (8 of them, checked 2026-10-07).
 
+## With a `manage` key: this install's trash, privacy and move reach the host (2026-10-07)
+
+DRAFT — for security-auditor review (the key's side is SPEC_space_sync_keys.md §13). Above, a trash, a hiding or a
+move made on this install is said and not carried, because the host's gates for them are owner-or-admin and a sync
+key is an editor. A key minted with the **`manage`** scope (opt-in, by the space's owner, per key) passes those
+gates for its one space, so the follow carries them too. With an ordinary key nothing changes: the notes stay.
+
+**How the follow knows.** At its start, and again every 10 minutes, the follow asks the host what its key is
+(`GET /api/sync-keys/self`: id, space, scope — never the secret). A host older than this answers 404, which reads as
+`edit`. `di follows` shows the scope on each follow ("key: manage" or "key: edit").
+
+| change made on this install | with an `edit` key (today) | with a `manage` key |
+|---|---|---|
+| moved to the trash | said: "a follow cannot trash on the host" | moved to the host's trash (`DELETE`, the soft delete, 30 days). Same guards as the other way: only a project both sides held (in the base) and that is in THIS install's trash; never more than 5 in one pass, never every project the host holds (when it holds more than one) — over that, none, and said. The host adds its own per-key limit (10 an hour, 30 a day). |
+| restored from the trash | said | restored on the host, when this follow saw it in both trashes |
+| made private | said | made private on the host, when the base says the host's copy was public and the host has not changed it since (so a project the owner made public on the host is never hidden again by a stale private copy here). The base now keeps `visibility` beside title and slug; a base from before keeps none, and a difference with no base is said, not carried. |
+| made public | not carried | **not carried** — never more public, either way |
+| moved to another space | said | moved on the host the same way, when this install follows BOTH spaces from the same host and both keys are `manage`: the follow of the space it arrived in finds it here, not on the host's copy of that space, and on the host in the space it left; it asks the host to move it, with the old space's key as the bearer and its own in `X-Di-Sync-Key-Also`. Its log then starts from now (both copies already hold its ops). With either key `edit`, or the other space not followed here: said, not moved. |
+
+The host's refusals (its limit, the front door, a key that is not `manage` after all) are said once in the log and
+stay in `di follows` until they clear; the base is kept, so the next pass tries again and nothing is lost.
+
+Guards: `followProjects.test.js` (the rules for both scopes, no I/O), `followIntegration.test.js` "with a manage
+key, a project's life made here reaches the host" (two servers, the host with auth on, a manage key minted from a
+signed-in session) and the same changes with an `edit` key not reaching it.
+
 ## Not yet (owed)
 
 - **Keeping both people's intent** on a same-field conflict (an op-based CRDT with per-field Lamport stamps,
   Kleppmann et al., "Local-first software", 2019). Today the host's value wins.
 - **One remote per space, star only.** A third install follows the host; two followers do not talk to each other.
-- **Not carried:** a trash, move or visibility change made on the FOLLOWER (the host's gates are owner-or-admin; a sync
-  key is an editor), a project made public again, a space trashed, shelf/collection membership, space meta other than label / isPublic / front door (host to follower only: slug, kind, preview image,
+- **Not carried:** a trash, move or visibility change made on the FOLLOWER with an ordinary `edit` key (the host's
+  gates are owner-or-admin; see the `manage` section above for the opt-in), a project made public again, a space trashed, shelf/collection membership, space meta other than label / isPublic / front door (host to follower only: slug, kind, preview image,
   owner and trusted users are not), follower to host settings, files placed in the room itself (not in a project).
 - **No sync UI and no discovery:** peers are typed URLs (`--at <ip>` for Tailscale); `rig/discovery.js` is not
   wired to follows.
