@@ -67,15 +67,20 @@ export const TESTED_CHANNEL_LISTS = {
                 { role: 'panFine', label: 'Pan fine', default: 0 },
                 { role: 'tiltFine', label: 'Tilt fine', default: 0 },
                 { role: 'speed', label: 'Pan/tilt speed' },
-                { role: 'frost', label: 'Frost' },
+                // frost's curve is not on the chart: read as linear (beamOptics.js)
+                { role: 'frost', label: 'Frost', cap: { frost: { basis: 'ASSUMED — linear, 0 clear … 255 full; the chart states no curve' } } },
                 { role: 'strobe', label: 'Shutter / strobe (255 open, 0-3 dark)', default: 255, cap: { shutter: [{ from: 0, to: 3, open: false }, { from: 255, to: 255, open: true }] } },
                 { role: 'dimmer', label: 'Dimmer' },
                 { role: 'color', label: 'Colour wheel (0 white, 12 colour 1…)', default: 0 },
-                { role: 'gobo', label: 'Gobo (5-89 gobo 1-17, 171+ shake)', cap: { gobo: true } },
-                { role: 'prism', label: 'Prism 1 insert (128+ in)', cap: { prism: true } },
-                { role: 'rotation', label: 'Prism 1 rotation' },
-                { role: 'aux1', label: 'Prism 2' },
-                { role: 'aux2', label: 'Prism 2 rotation' },
+                // gobo 5-89 = gobos 1-17 and 171+ = shake are the chart's (TESTED); the
+                // even five-value slots inside 5-89 (5-9 gobo 1, 10-14 gobo 2 …) are DERIVED,
+                // not stated; 90-170 is left unmapped rather than guessed
+                { role: 'gobo', label: 'Gobo (5-89 gobo 1-17, 171+ shake)', cap: { gobo: true, goboSlots: { from: 5, to: 89, count: 17, basis: 'TESTED range; slots DERIVED' }, goboShake: { from: 171, basis: 'TESTED' } } },
+                // 128+ in is the chart's (TESTED); 16 facets from the spec (fixtures.json)
+                { role: 'prism', label: 'Prism 1 insert (128+ in)', cap: { prism: true, prismIn: { from: 128, facets: 16, basis: 'TESTED threshold' } } },
+                { role: 'rotation', label: 'Prism 1 rotation', cap: { prismRotation: { prism: 1, basis: 'ASSUMED — index or spin not stated; read as an index, 0…255 → 0…360°' } } },
+                { role: 'aux1', label: 'Prism 2', cap: { prism2: { kind: 'honeycomb', in: { from: 128 }, basis: "ASSUMED — prism 1's threshold" } } },
+                { role: 'aux2', label: 'Prism 2 rotation', cap: { prismRotation: { prism: 2, basis: 'ASSUMED — index or spin not stated; read as an index, 0…255 → 0…360°' } } },
                 { role: 'focus', label: 'Focus' },
                 { role: 'control', label: 'Reset (always 0)', default: 0 }
             ]
@@ -155,7 +160,7 @@ const modeName = (footprint) => `${footprint}ch`
 const modesOf = (kind) => {
     const spec = kind.specs?.dmx_channels
     const list = Array.isArray(spec?.value) ? spec.value.filter((n) => Number.isInteger(n) && n > 0) : []
-    const sources = [TESTED_CHANNEL_LISTS[kind.code], OFL_CHANNEL_LISTS[kind.code]].filter(Boolean)
+    const sources = [TESTED_CHANNEL_LISTS[kind.code], MAKER_CHANNEL_LISTS[kind.code], OFL_CHANNEL_LISTS[kind.code]].filter(Boolean)
     const real = list.map((footprint) => {
         const entry = sources.find((s) => s.modes?.[footprint]) || null
         const listed = entry ? entry.modes[footprint] : null
@@ -177,6 +182,44 @@ const modesOf = (kind) => {
 const realModes = (modes) => modes.filter((m) => !isAssumedMode(m))
 
 const MAKER_UPLIGHT = 'UPlight Stage Equipment (Guangzhou) Co., Ltd.'
+
+// Channel lists from the MAKER's own manual for this very model (basis EXACT). The
+// LaserCube Ultra MK2 (ULTRA MK2 Guide v1.2, pp. 57-59): the default 16-channel profile
+// selects cues of an SD-card playlist (page × cue) and scales, moves, rotates and
+// recolours them. Ch 5 (Fader) is named dimmer so master and blackout reach it; ch 1 at
+// 0-31 is the cube's own blackout, its default. At MOXIR the cubes run OFF DMX (streamed
+// from di Raw over the network, owner 2026-10-04): this is the reference, not the patch.
+const LASERCUBE_MK2_MANUAL = {
+    fixture: 'Wicked Lasers LaserCube Ultra MK2 (ULTRA MK2 Guide v1.2, DMX/Art-Net channel layout)',
+    basis: 'EXACT',
+    url: 'https://www.laseros.com/manual-mk2.pdf',
+    licence: null
+}
+export const MAKER_CHANNEL_LISTS = {
+    'EXT-LC-ULTRA-MK2': {
+        ...LASERCUBE_MK2_MANUAL,
+        modes: {
+            16: [
+                laserChannel(1, 'Access mode (0-31 blackout, 33-95 basic 4 ch, 97-159 standard 8, 161-223 extended 12, 225-255 full 16)'),
+                laserChannel(2, 'Page (9 pages of 48 cues)'),
+                laserChannel(3, 'Cue select (0-31 blackout, then cues 1-48)'),
+                laserChannel(4, 'Speed (0-15 100 %, 17-31 pause, 33… 25 % … 128 100 % … 255 200 %)'),
+                { role: 'dimmer', label: 'Fader (named dimmer so master/blackout reach it)' },
+                laserChannel(6, 'Scale (zero … full size)'),
+                laserChannel(7, 'X size (0 −full, 128 zero, 255 +full)'),
+                laserChannel(8, 'Y size (0 −full, 128 zero, 255 +full)'),
+                laserChannel(9, 'Rotation (0 … 360°)'),
+                { ...laserChannel(10, 'X position (128 centre)'), default: 128 },
+                { ...laserChannel(11, 'Y position (128 centre)'), default: 128 },
+                laserChannel(12, 'Reserved'),
+                laserChannel(13, 'Scan rate (0-31 default 35K pps, 33-223 6K-29K, 225+ 30K)'),
+                laserChannel(14, 'Reserved'),
+                laserChannel(15, 'Recolour (0-31 off, 33-223 hue sweep, 225+ white)'),
+                laserChannel(16, 'Reserved')
+            ]
+        }
+    }
+}
 
 // The manifest's own words decide identity: an EXACT kind is the maker's model; a
 // NOT FOUND kind is a rental label modelled on a named equivalent, and its maker is
@@ -252,6 +295,10 @@ export const typesFromManifest = (manifest, { manifestFile = 'scripts/place/fixt
             pan_tilt_deg: sourced(kind.specs?.pan_tilt_deg),
             ip: sourced(kind.specs?.ip),
             optics: opticsOf(kind),
+            // A hazer's or fog machine's output, what the room's haze is worked out from
+            // (src/objectComponents/hazeField.js). Null on every lamp.
+            fluid_ml_per_min: sourced(kind.specs?.fluid_ml_per_min),
+            nozzle_d_mm: Number(kind.model?.params?.nozzle_d_mm) > 0 ? Number(kind.model.params.nozzle_d_mm) : null,
             model3d: {
                 glb: `${glbDir}/${kindKey}.glb`,
                 sidecar: `${glbDir}/${kindKey}.json`,

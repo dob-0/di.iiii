@@ -134,12 +134,28 @@ export const resolveBase = async (input, { address = null } = {}) => {
         : [`${trimmed}/serverXR`, trimmed]
     let reason = 'unreachable'
     for (const base of candidates) {
-        const health = await request(`${base}/api/health`, { address })
-        if (health.ok) return { base, reason: null }
-        if (health.certMismatch) reason = 'cert-mismatch'
+        // Asked twice: one dropped answer from the real mount must not send the
+        // follow to the next candidate (2026-10-05, see isHealth).
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+            const health = await request(`${base}/api/health`, { address })
+            if (isHealth(health)) return { base, reason: null }
+            if (health.certMismatch) reason = 'cert-mismatch'
+            if (health.status !== 0 && !health.ok) break // an answer that is a no: asking again will not change it
+        }
     }
     return { base: null, reason }
 }
+
+/**
+ * A di.iiii's health answer, not just any 200. A host that serves its web page
+ * for every unknown path (dev.diiii.xyz does: `/api/health` there is the HTML
+ * shell, status 200) used to pass for a di.iiii at the bare address, so when the
+ * real `/serverXR/api/health` dropped one answer the follow was stored with the
+ * bare address as its remote — and then could not read a single stream
+ * ("could not read both copies", 2026-10-05). A remote is only stored once it
+ * has answered as a di.iiii does: JSON, `ok: true`.
+ */
+const isHealth = (answer) => Boolean(answer?.ok && answer.payload && answer.payload.ok === true)
 
 /** Mint a key for one space on THIS install, for someone else to follow with. */
 export const mintInvite = async ({ base, spaceId, token, label = 'follow' }) => {
@@ -162,12 +178,15 @@ export const mintInvite = async ({ base, spaceId, token, label = 'follow' }) => 
  */
 export const checkFollowable = async ({ base, spaceId, key, address = null }) => {
     const health = await request(`${base}/api/health`, { address })
-    if (!health.ok) return { ok: false, reason: health.certMismatch ? 'cert-mismatch' : 'unreachable' }
+    if (!isHealth(health)) return { ok: false, reason: health.certMismatch ? 'cert-mismatch' : 'unreachable' }
 
     const ops = await request(`${base}/api/spaces/${encodeURIComponent(spaceId)}/ops?since=0`, { token: key, address })
     if (ops.status === 404) return { ok: false, reason: 'missing' }
     if (ops.status === 401 || ops.status === 403) return { ok: false, reason: 'denied' }
     if (!ops.ok) return { ok: false, reason: ops.certMismatch ? 'cert-mismatch' : 'unreachable' }
+    // A 200 that is not an op log (a web page answering for a path it does not
+    // know) is not a space that can be followed.
+    if (!ops.payload || (!Array.isArray(ops.payload.ops) && !Number.isFinite(ops.payload.latestVersion))) return { ok: false, reason: 'unreachable' }
     return { ok: true, latestVersion: ops.payload?.latestVersion ?? null }
 }
 

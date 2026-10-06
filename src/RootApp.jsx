@@ -31,6 +31,8 @@ import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
 import { getPerformLocationState, isPerformLocation } from './perform/performRouting.js'
 import { getPatchSheetLocationState, isPatchSheetLocation } from './rigbuild/patchRouting.js'
 import { getVisualiseLocationState, isVisualiseLocation } from './rigbuild/visualiseRouting.js'
+import { getTouchLocationState, isTouchLocation, touchDeskPath } from './rigbuild/touchRouting.js'
+import TouchForward from './rigbuild/TouchForward.jsx'
 import { getPlotLocationState, isPlotLocation } from './rigbuild/plotRouting.js'
 import { getCardsLocationState, isCardsLocation } from './rigbuild/cardsRouting.js'
 import { getScenesLocationState, isScenesLocation } from './rigbuild/scenesRouting.js'
@@ -401,6 +403,7 @@ function AppRouter() {
     const performState = getPerformLocationState(location)
     const patchSheetState = getPatchSheetLocationState(location)
     const visualiseState = getVisualiseLocationState(location)
+    const touchState = getTouchLocationState(location)
     const plotState = getPlotLocationState(location)
     const cardsState = getCardsLocationState(location)
     const scenesState = getScenesLocationState(location)
@@ -605,6 +608,12 @@ function AppRouter() {
                 <PatchSheetSurface spaceId={patchSheetState.spaceId} projectId={patchSheetState.projectId} />
             </Suspense>
         )
+    }
+
+    // `/{space}/touch/{projectId}` is the desk's Touch tab, not a page here: forward to it
+    // (src/rigbuild/touchRouting.js) instead of letting the generic rules draw the plain room.
+    if (isTouchLocation(touchState)) {
+        return <TouchForward to={touchDeskPath(touchState.spaceId, touchState.projectId)} />
     }
 
     // `/{space}/visualise/{projectId}` — the visualiser (src/rigbuild/, RIG_BUILD.md §18):

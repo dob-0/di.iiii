@@ -385,6 +385,18 @@ somebody measures a wall. That is not new wording; it is the guess/measured rule
 `docs/architecture/PLACE.md` reaching the one screen where the person who could fix it is
 standing in the room.
 
+## Amended 2026-10-02 — an operator card wears both names
+
+The nodecheck found the palette's **Math** placing a card that read only **Add**, and **Route**
+one that read only **Gate**: a person could not find the card they had just picked. The card now
+reads **Math · Add**, **Route · Gate** — the palette's name, then the operation — for as long as
+the name is the automatic one. A name a person typed reads alone, as before. No word was added;
+the two existing ones are both on the card. Code: `getNodeCardTitle` (`src/project/nodeRegistry.js`).
+
+Still open for the owner (no word is settled here, so nothing changed): the family tag **the scene**
+sits on Kiosk, Studio, In and Out as well as on the scene's own cards; and **kiosk** names both the
+node and the projector appliance in the wiki. The questions are in PR "Nodes: names".
+
 ## The rule for anything new
 
 Before adding a word to the product, check it here. If it is not in the dictionary and not

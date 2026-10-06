@@ -248,6 +248,14 @@ writes a `project_moves` row, and the server's resolver
 (`GET /api/resolve/:spaceSegment/:projectSegment`) answers a project that left with a
 pointer to its new address instead of a 404.
 
+**From the product (2026-10-05):** the same move is `POST /api/projects/:id/move`
+(`{ "toSpace": "...", "unpublish": false, "dryRun": false }`; an admin, or the owner of both
+spaces) and `di move PROJECT --to SPACE [--from URL] [--dry-run] [--unpublish]` (a token for
+`--from` comes from `DI_TOKEN` or `--token -` on stdin). Both call `serverXR/src/projectMove.js`,
+which the script also uses. Unlike the script, the route refuses a slug already used in the
+target (409) instead of dropping it. A follow does not carry a move: run it on each install
+that follows either space.
+
 ## Golden rule
 
 See `docs/ai/golden_rules.md` for the one-line version of this file's rule, kept

@@ -28,7 +28,7 @@ import { countWords, libraryWithShow } from './rental.js'
 import { rigProgress } from './rigProgress.js'
 import RigBar from './RigSteps.jsx'
 import useLocalInstall from '../hooks/useLocalInstall.js'
-import PlotDrawing, { SCREEN_SIZES } from './PlotDrawing.jsx'
+import PlotDrawing, { FREE_END_WORDS, SCREEN_SIZES } from './PlotDrawing.jsx'
 import { usePieceAssets } from './usePieceAssets.js'
 import './plot.css'
 
@@ -130,6 +130,7 @@ function KeyBlock({ model }) {
                     <li key={k.type}><Symbol shape={k.shape} letter={k.letter} /><span className="rigplot-mono">{k.code} ×{k.n} · {k.mode}{k.rental ? ` · ${countWords(k.rental)}` : ''}</span></li>
                 ))}
                 <li><svg width="16" height="16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" fill="none" stroke="#111" strokeDasharray="3 2" /></svg><span className="rigplot-mono">! conflict — see the inspector</span></li>
+                {model.freeEnds?.length ? <li><svg width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="5" fill="#fff" stroke="#111" strokeDasharray="3 2" /></svg><span className="rigplot-mono">{FREE_END_WORDS}</span></li> : null}
             </ul>
         </section>
     )

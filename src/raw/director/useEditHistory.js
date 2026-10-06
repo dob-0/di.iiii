@@ -64,8 +64,11 @@ const EMPTY = Object.freeze([])
 /**
  * @param initial   first present value
  * @param enabled   false for the audience build — no listener, no stack
+ * @param scopeRef  optional ref to an element; when given, Ctrl/Cmd+Z/Y act
+ *                  only while keyboard focus is inside it, so a host with its
+ *                  own undo (the node graph) is not double-fired
  */
-export const useEditHistory = (initial, { enabled = true } = {}) => {
+export const useEditHistory = (initial, { enabled = true, scopeRef = null } = {}) => {
     const [state, setState] = useState(() => ({
         past: EMPTY,
         present: initial,
@@ -131,14 +134,17 @@ export const useEditHistory = (initial, { enabled = true } = {}) => {
         const onKey = (event) => {
             const intent = readHistoryIntent(event)
             if (!intent) return
+            if (scopeRef && !scopeRef.current?.contains(document.activeElement)) return
             event.preventDefault()
             if (intent === 'undo') undo()
             else redo()
         }
 
-        window.addEventListener('keydown', onKey)
-        return () => window.removeEventListener('keydown', onKey)
-    }, [enabled, undo, redo])
+        // Capture phase so a scoped Director handles (and preventDefaults) the
+        // key before the host's bubble-phase undo sees it and can skip it.
+        window.addEventListener('keydown', onKey, true)
+        return () => window.removeEventListener('keydown', onKey, true)
+    }, [enabled, scopeRef, undo, redo])
 
     return useMemo(() => ({
         present: state.present,

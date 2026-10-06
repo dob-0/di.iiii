@@ -252,6 +252,8 @@ export const columnsFor = (hall, stage, spec = {}) => {
         for (const ax of [...axes].sort((a, b) => a - b)) {
             const side = Math.sign(ax)
             for (const face of faces) {
+                // `omit` [{ z, face }]: those lamps left out on BOTH sides (the budget's pair, not a one-sided gap)
+                if ((spec.omit || []).some((o) => o.face === face && Math.abs(o.z - z) < 1e-6)) continue
                 // the inner face looks toward x = 0; the back face away from it
                 const faceX = face === 'back' ? ax + side * depth / 2 : ax - side * depth / 2
                 out.push({ side, z, faceX, face, toColumn: face === 'back' ? -side : side })

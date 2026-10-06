@@ -151,6 +151,25 @@ module.exports = [
     note: "404 if the trash sweep already passed the TTL — nothing left to restore."
   },
   {
+    route: "POST /api/projects/:projectId/move",
+    summary: "move a project into another space of this install (same id, its files and assets travel with it)",
+    reach: "private",
+    role: "editor",
+    agent: false,
+    input: {
+      body: {
+        type: "object",
+        properties: {
+          toSpace: { type: "string", description: "the space to move the project into" },
+          unpublish: { type: "boolean", description: "required when the source space's front door is this project; clears that front door as part of the move" },
+          dryRun: { type: "boolean", description: "report what would move; change nothing" }
+        },
+        required: ["toSpace"]
+      }
+    },
+    note: "admin, or the owner of BOTH spaces (403 otherwise). 409 on a slug already used in the target, on a front-door project without unpublish, or a directory already there. All-or-nothing: files, rewritten links and the database row are put back if any step fails. Writes a project_moves line, so the old bare link answers with where the project went. A follow does not carry a move yet: each install that follows either space runs the same move."
+  },
+  {
     route: "PATCH /api/projects/:projectId/shelf",
     summary: "move a project onto a shelf, or change its draft/live/archived state",
     reach: "public",

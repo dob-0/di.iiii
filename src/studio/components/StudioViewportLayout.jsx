@@ -182,6 +182,7 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
                     onShowHelp={shared.onShowHelp}
                     onCloseHelp={shared.onCloseHelp}
                     rigMirror={shared.rigMirror}
+                    graphRoom={shared.graphRoom}
                 />
             </div>
         </div>

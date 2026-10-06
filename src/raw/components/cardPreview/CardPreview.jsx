@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { TOP_PICTURE_HEIGHT, TOP_PICTURE_WIDTH } from '../../utils/cardGeometry.js'
 import { canPreview, registerCardPreview } from './cardPreviewHub.js'
 import { resolveCardPreview } from './resolvePreview.js'
+import { cardEmptyHint } from '../../utils/cardEmptyHint.js'
 import './cardPreview.css'
 
 // The live picture on the card of a node that makes something visible — the
@@ -32,15 +33,21 @@ export default function CardPreview({ node, nodes, edges, top }) {
         handleRef.current?.update(resolved)
     }, [resolved])
 
+    // An empty shape box says what it is waiting for (cardEmptyHint.js).
+    const hint = cardEmptyHint(node, { edges, hasShape: Boolean(resolved?.payload?.descriptor), scopeNodes: nodes })
+
     return (
-        <canvas
-            ref={canvasRef}
-            className="raw-card-preview"
-            width={TOP_PICTURE_WIDTH}
-            height={TOP_PICTURE_HEIGHT}
-            style={{ top }}
-            data-preview-kind={resolved?.payload?.kind || undefined}
-            aria-hidden="true"
-        />
+        <>
+            <canvas
+                ref={canvasRef}
+                className="raw-card-preview"
+                width={TOP_PICTURE_WIDTH}
+                height={TOP_PICTURE_HEIGHT}
+                style={{ top }}
+                data-preview-kind={resolved?.payload?.kind || undefined}
+                aria-hidden="true"
+            />
+            {hint ? <span className="raw-card-empty-hint" style={{ top, width: TOP_PICTURE_WIDTH, height: TOP_PICTURE_HEIGHT }}>{hint}</span> : null}
+        </>
     )
 }
