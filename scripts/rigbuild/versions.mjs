@@ -247,7 +247,7 @@ export const craneCut = ({ spec, base, groups, classes }) => {
         trim_m: trim,
         trim_why: `derived (versions.mjs craneCut): the high pick's bridle at its ${r.bridle.max_included_deg}° limit puts its apex at ${r2(apexMax)} m; the hoist's shortest drop under it (${r2(drop)} m) and the chords at that pick leave ${trim} m for the bottom chord over the axis`,
         ends: uEnds.map((u) => ({ u_m: u, x_m: r2(u * Math.cos(th) + stage0.axis), bottom_chord_m: r2(bottomAt(u)) })),
-        rise_m: r2(cut.truss.width_m * Math.sin(th)),
+        rise_m: r2(cut.truss.width_m * Math.abs(Math.sin(th))),
         rigging: { ...clone(r), hoists: r.picks_u_m.length, drop_m: r2(drop), bridle: { ...clone(r.bridle), leg_spread_m: r2(legSpread) }, source: spec.craneCut }
     }
     const rig = { stage: base.stage, truss }
@@ -471,7 +471,8 @@ export const versionRig = ({ spec, base, id }) => {
     const truss = v.truss === 'none'
         ? { kind: 'none', note: 'this version hangs nothing overhead: no goalpost, the floor line is the rig' }
         : v.truss === 'crane' ? craneTruss(spec, groups, classes)
-            : v.truss === 'crane-cut' ? craneCut({ spec, base, groups, classes })
+            // a version may name its own cut overlay (known-full-flipped, 2026-10-07: the same line mirrored)
+            : v.truss === 'crane-cut' ? craneCut({ spec: v.craneCut ? { ...spec, craneCut: v.craneCut } : spec, base, groups, classes })
             : v.truss === 'halo' ? haloTruss(v, groups, classes)
             : v.truss === 'crane-x' ? craneTruss(spec, groups, classes, 'craneX')
                 : clone(base.truss)

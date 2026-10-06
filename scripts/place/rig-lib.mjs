@@ -967,7 +967,7 @@ export const slopedLineRigging = (rig, stage, hall) => {
     const mid = linePoint(stage, stage.trussX, 'bottom')
     const line = box({
         id: `${RIG_PREFIX}truss-header`,
-        name: `Truss line ${stage.trussW} m (${(rig.truss.pieces_m || []).join(' + ')} m, 290 mm box), sloped ${rig.truss.slope_deg}° up to house right, hung from the crane bridge on ${r.picks_u_m.length} bridled picks — rigging sign-off owed`,
+        name: `Truss line ${stage.trussW} m (${(rig.truss.pieces_m || []).join(' + ')} m, 290 mm box), sloped ${Math.abs(rig.truss.slope_deg)}° up to house ${rig.truss.slope_deg < 0 ? 'left' : 'right'}, hung from the crane bridge on ${r.picks_u_m.length} bridled picks — rigging sign-off owed`,
         pos: mid, size: [stage.trussW, t, t], colour: '#9aa0a6', metalness: STEEL_METALNESS, roughness: STEEL_ROUGHNESS
     })
     line.components.transform.rotation = [0, 0, round(stage.trussSlope, 9)]
