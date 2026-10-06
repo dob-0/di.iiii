@@ -580,3 +580,83 @@ export const removeNdi = async (home) => {
     // reads as "a runtime is configured" to anything checking only presence.
     if (env.DI_NDI_LIB === n.library) await writeEnv(home, { DI_NDI_LIB: null })
 }
+
+/*
+ * `di ndi scan` — what the running di.iiii's autoscan sees on the network.
+ *
+ * The CLI never loads the runtime itself: the server already holds one
+ * long-lived NDI finder (serverXR/src/ndi/scanner.js), and a second finder in
+ * this process would be a second answer to the same question. So this is a
+ * reader of /ndi/api/scan and, with --watch, of /ndi/api/scan/events.
+ */
+
+/** GET the snapshot. → { ok:true, scan } | { ok:false, why } */
+export const readNdiScan = async (base, { waitMs = 2500, fetchImpl = fetch } = {}) => {
+    let response
+    try {
+        response = await fetchImpl(`${base}/ndi/api/scan?wait=${Math.max(0, Math.min(5000, waitMs))}`)
+    } catch (error) {
+        return { ok: false, why: `could not reach ${base} — ${error?.cause?.code || error?.message || error}` }
+    }
+    if (response.status === 404) return { ok: false, why: `${base} has no NDI lane (a hosted server, or a di.iiii older than the autoscan)` }
+    if (response.status === 403) return { ok: false, why: `${base} answers NDI to its own machine only — run this there, or set DI_ALLOW_LAN_DEVICES=1 on it` }
+    if (!response.ok) return { ok: false, why: `${base} answered ${response.status}` }
+    try {
+        const scan = await response.json()
+        if (!scan || typeof scan.state !== 'string') return { ok: false, why: `${base} answered something that is not a scan` }
+        return { ok: true, scan }
+    } catch {
+        return { ok: false, why: `${base} answered something that is not JSON` }
+    }
+}
+
+/**
+ * Split an SSE byte stream into its `scan` events. Pure, so it can be tested
+ * without a server: feed text in, get back the parsed events and the rest.
+ * → { events: [scan], rest: string }
+ */
+export const parseScanEvents = (text) => {
+    const events = []
+    let rest = text.replace(/\r\n/g, '\n')
+    let cut
+    while ((cut = rest.indexOf('\n\n')) >= 0) {
+        const block = rest.slice(0, cut)
+        rest = rest.slice(cut + 2)
+        const lines = block.split('\n')
+        if (!lines.includes('event: scan')) continue
+        const data = lines.filter((line) => line.startsWith('data: ')).map((line) => line.slice(6)).join('\n')
+        try { events.push(JSON.parse(data)) } catch { /* a torn or foreign event is skipped */ }
+    }
+    return { events, rest }
+}
+
+/**
+ * Follow the change feed until `signal` aborts or the server closes it.
+ * onScan(scan) gets every event: the snapshot first, then one per change.
+ * → { ok:true } when it ended, { ok:false, why } when it could not start.
+ */
+export const watchNdiScanFeed = async (base, onScan, { signal, fetchImpl = fetch } = {}) => {
+    let response
+    try {
+        response = await fetchImpl(`${base}/ndi/api/scan/events`, { signal, headers: { accept: 'text/event-stream' } })
+    } catch (error) {
+        if (signal?.aborted) return { ok: true }
+        return { ok: false, why: `could not reach ${base} — ${error?.cause?.code || error?.message || error}` }
+    }
+    if (!response.ok || !/^text\/event-stream/.test(response.headers.get('content-type') || '')) {
+        return { ok: false, why: `${base} did not open a scan feed (${response.status})` }
+    }
+    const decoder = new TextDecoder()
+    let buffer = ''
+    try {
+        for await (const chunk of response.body) {
+            buffer += decoder.decode(chunk, { stream: true })
+            const { events, rest } = parseScanEvents(buffer)
+            buffer = rest
+            for (const scan of events) onScan(scan)
+        }
+    } catch (error) {
+        if (!signal?.aborted) return { ok: false, why: `the feed from ${base} broke — ${error?.message || error}` }
+    }
+    return { ok: true }
+}

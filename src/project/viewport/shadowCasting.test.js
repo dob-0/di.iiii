@@ -167,3 +167,89 @@ describe('undressing', () => {
         expect(mesh.castShadow).toBe(false)
     })
 })
+
+// MOXIR Known · full, 2026-10-01: every lamp a real light (64). A browser has 16–32 texture
+// units and every shadow-casting lamp takes one in every lit material, so past ~12 the room
+// fails to compile and goes black — the shadows were switched off for the whole room.
+// Now a fixed number of lamps throw: the ones putting the most light into the room.
+describe('shadows for a room of many lamps', () => {
+    const lamp = (name, intensity, angle = 0.3) => ({ ...spotLight(), name, intensity, angle, uuid: name })
+    it('gives a shadow to exactly the cap, the lamps throwing the most light, and the count never changes', () => {
+        const lamps = Array.from({ length: 20 }, (_, i) => lamp(`l${String(i).padStart(2, '0')}`, i < 5 ? 0 : i * 10))
+        const root = { children: [mesh(), ...lamps] }
+        const out = dressForShadows(root, 1024, { maxLights: 12 })
+        expect(out.lights).toBe(12)
+        expect(lamps.filter((l) => l.castShadow).length).toBe(12)
+        expect(lamps.slice(8).every((l) => l.castShadow)).toBe(true) // l08…l19, the brightest
+        expect(lamps.slice(0, 5).some((l) => l.castShadow)).toBe(false) // dark lamps never take one while lit ones wait
+        lamps[19].intensity = 0 // a fade takes the brightest down: the next one up takes its shadow
+        dressForShadows(root, 1024, { maxLights: 12 })
+        expect(lamps.filter((l) => l.castShadow).length).toBe(12)
+        expect(lamps[19].castShadow).toBe(false)
+        expect(lamps[7].castShadow).toBe(true)
+    })
+    it('keeps a shadow on its lamp against a challenger that is only a little brighter', () => {
+        const a = lamp('a', 100)
+        const b = lamp('b', 50)
+        const root = { children: [a, b] }
+        dressForShadows(root, 1024, { maxLights: 1 })
+        expect(a.castShadow).toBe(true)
+        b.intensity = 110 // 10 % over: not enough to take it
+        dressForShadows(root, 1024, { maxLights: 1 })
+        expect(a.castShadow).toBe(true)
+        expect(b.castShadow).toBe(false)
+        b.intensity = 130
+        dressForShadows(root, 1024, { maxLights: 1 })
+        expect(b.castShadow).toBe(true)
+        expect(a.castShadow).toBe(false)
+    })
+    it('puts every lamp back on undress, the uncapped ones too', () => {
+        const lamps = Array.from({ length: 4 }, (_, i) => lamp(`u${i}`, 10 + i))
+        const root = { children: lamps }
+        dressForShadows(root, 1024, { maxLights: 2 })
+        undressShadows(root)
+        expect(lamps.every((l) => l.castShadow === false)).toBe(true)
+    })
+})
+
+// Seen 2026-10-01 (Chrome, ANGLE D3D11: 16 units): the cap must leave room for what each
+// lit material samples itself. A fixed reserve guessed how many maps a material carries;
+// a textured model with more would push the shader past the GPU's units and the room
+// goes black. The units are counted from the scene instead.
+describe('the shadow cap counts the units the materials use', () => {
+    const lamp = (name, intensity) => ({ ...spotLight(), name, intensity, angle: 0.3, uuid: name })
+    const tex = { isTexture: true }
+    it('gives the lamps only the units the busiest lit material leaves, one spare', () => {
+        const lamps = Array.from({ length: 20 }, (_, i) => lamp(`m${String(i).padStart(2, '0')}`, 10 + i))
+        const busy = mesh({ material: { map: tex, normalMap: tex, roughnessMap: tex, metalnessMap: tex, aoMap: tex, emissiveMap: tex } })
+        const root = { children: [busy, mesh(), ...lamps] }
+        dressForShadows(root, 1024, { maxLights: 12, maxTextures: 16 })
+        expect(lamps.filter((l) => l.castShadow).length).toBe(16 - 6 - 1)
+    })
+    it('counts the scene environment on a standard material, and another light\'s shadow', () => {
+        const lamps = Array.from({ length: 20 }, (_, i) => lamp(`e${String(i).padStart(2, '0')}`, 10 + i))
+        const sun = { isDirectionalLight: true, isLight: true, castShadow: true, children: [] }
+        const root = { environment: tex, children: [mesh({ material: { isMeshStandardMaterial: true, map: tex } }), sun, ...lamps] }
+        dressForShadows(root, 1024, { maxLights: 12, maxTextures: 14 })
+        expect(lamps.filter((l) => l.castShadow).length).toBe(14 - 2 - 1 - 1) // map + environment, the sun, one spare
+    })
+    it('still never gives more than the cap on a GPU with room to spare', () => {
+        const lamps = Array.from({ length: 20 }, (_, i) => lamp(`p${String(i).padStart(2, '0')}`, 10 + i))
+        dressForShadows({ children: [mesh(), ...lamps] }, 1024, { maxLights: 12, maxTextures: 32 })
+        expect(lamps.filter((l) => l.castShadow).length).toBe(12)
+    })
+})
+
+// MOXIR render audit K (2026-10-01): a strobing lamp's light is flashed per frame
+// (StrobeDriver), so scored on its instantaneous intensity it won and lost a shadow on
+// alternate re-dresses. Lamps are scored on their NOMINAL intensity (SpotLightObject puts
+// it on light.userData.nominalIntensity); the flash does not move a shadow.
+describe('a strobe does not flip the shadows', () => {
+    it('scores a lamp on its nominal intensity when it carries one', async () => {
+        const { shadowScore } = await import('./shadowCasting.js')
+        const flashing = { intensity: 0, angle: 0.3, userData: { nominalIntensity: 500 } }
+        const steady = { intensity: 500, angle: 0.3, userData: {} }
+        expect(shadowScore(flashing)).toBeCloseTo(shadowScore(steady), 9)
+        expect(shadowScore({ intensity: 7, angle: 0.3 })).toBeGreaterThan(0) // no userData: as before
+    })
+})

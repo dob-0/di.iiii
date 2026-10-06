@@ -44,6 +44,33 @@ describe('the lighting desk at /light', () => {
     expect(lane.getDesk().state.output.enabled).toBe(false)
   })
 
+  // The Perform page asks for the show clock every second (src/perform/useShowClock.js).
+  // Asking must never build the desk — a VJ opening a deck on an install with no
+  // lights must not start the 40 Hz loop — and once a desk is up, the clock is
+  // its tempo and the phase anchor it keeps (fx.bpm / fx.epoch), with its own time.
+  it('answers the show clock without building the desk, then from the desk once it is up', async () => {
+    delete process.env.NODE_ENV
+    const { base, lane } = await boot()
+    const cold = await fetch(`${base}/light/api/clock`)
+    expect(cold.status).toBe(200)
+    const coldBody = await cold.json()
+    expect(coldBody.up).toBe(false)
+    expect(Number.isFinite(coldBody.now)).toBe(true)
+    expect(lane.hasDesk()).toBe(false)
+
+    await fetch(`${base}/light/api/summary`)
+    expect(lane.hasDesk()).toBe(true)
+    const tap = await fetch(`${base}/light/api/fx`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bpm: 128, epoch: 1234567 })
+    })
+    expect(tap.status).toBe(200)
+    const warm = await (await fetch(`${base}/light/api/clock`)).json()
+    expect(warm).toMatchObject({ up: true, bpm: 128, epoch: 1234567, beatsPerBar: 4, blackout: false })
+    expect(Math.abs(warm.now - Date.now())).toBeLessThan(1000)
+  })
+
   it('serves its interface under the mount with relative addresses, and /light redirects to /light/', async () => {
     delete process.env.NODE_ENV
     const { base } = await boot()

@@ -7,6 +7,7 @@ import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
+import { isPreviewRequest } from '../../utils/previewMode.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { DEFAULT_PROJECT_SPACE_ID, buildProjectAssetUrl, deleteProjectAsset, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { mountRelativeApiUrl } from '../../services/assetSources.js'
@@ -21,7 +22,8 @@ import { buildSpaceProjectsPath, navigateToStudioPath } from '../utils/studioRou
 import { buildRawProjectPath } from '../../raw/utils/rawRouting.js'
 import { buildMapPath } from '../../map/mapRouting.js'
 import { useStudioCues } from '../hooks/useStudioCues.js'
-import { getPointsBoundingSphere } from '../../utils/cameraFraming.js'
+import { frameEntities, runViewCommand } from '../utils/viewCommands.js'
+import { resolveViewKey } from '../../utils/viewAxisPose.js'
 import StudioShell from './StudioShell.jsx'
 import AssetOptimizationDialog from './AssetOptimizationDialog.jsx'
 import { formatAssetSize, optimizeGlbAsset, shouldSuggestGlbOptimization } from '../utils/assetOptimization.js'
@@ -30,6 +32,31 @@ import { getSelectionCentroid } from '../utils/multiTransform.js'
 import { buildReparentPatch, cloneSubtree, collectSubtree, topLevelTargets } from '../utils/entityClipboard.js'
 import { isTimelinePreviewPosed, setTimelinePreview } from '../utils/timelinePreview.js'
 import { useProjectLayers } from '../../project/useProjectLayers.js'
+import { useRigAutoPatch } from '../hooks/useRigAutoPatch.js'
+import { appNavigate } from '../../utils/appNavigate.js'
+import { readGeoIdFromSearch, withGeoQuery } from '../utils/geoScopeAddress.js'
+import { isJamProject } from '../utils/jamMode.js'
+import { LIGHTS, PRIMITIVES } from '../../project/entityPalette.js'
+import {
+    GEO_ADD_TYPES,
+    buildAddIntoGeoOps,
+    buildNewGeoOps,
+    findGeoNode,
+    geoChildRow,
+    geoNodeInspectorSections,
+    geoNodeInspectorValues,
+    listGeoChildren,
+    listGeoChoices,
+    nodeTransformPatch,
+    nodeValuesPatch
+} from '../../project/graph/geoScope.js'
+
+// Inside a Geo, Create offers what exists as a node — the Create window's own
+// entries, filtered (src/project/graph/geoScope.js GEO_ADD_TYPES).
+const GEO_CREATE_PALETTE = {
+    primitives: PRIMITIVES.filter(({ key }) => GEO_ADD_TYPES[key]),
+    lights: LIGHTS.filter(({ key }) => GEO_ADD_TYPES[key])
+}
 
 const DISPLAY_NAME_KEY = 'dii.studio.displayName'
 
@@ -110,13 +137,17 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         opIdPrefix: 'studio-op'
     })
     const clipboardRef = useRef(null)
-    const { applyLocalOps, undo, redo, history, jumpTo } = useOpHistory({
+    const { applyLocalOps, undo, redo, history, jumpTo, edits } = useOpHistory({
         projectId,
         document: state.document,
         applyLocalOps: _applyLocalOps
     })
+    // ?preview=1 — a PICTURE of Studio on another page (a Kit card on /tools).
+    // It draws the project and follows its edits, but announces nobody: a
+    // presence joined from a thumbnail is a stranger who is not there.
+    const [isPreview] = useState(() => isPreviewRequest())
     const presence = useProjectPresence({
-        projectId,
+        projectId: isPreview ? '' : projectId,
         displayName,
         displayNameStorageKey: DISPLAY_NAME_KEY,
         userIdStorageKey: 'dii.studio.userId',
@@ -140,6 +171,11 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         document,
         applyLocalOps
     })
+    // Lamps with a fixture type are patched on this machine's desk when THIS person places,
+    // duplicates or deletes them (docs/architecture/RIG_BUILD.md §4) — never on opening the
+    // project or on a collaborator's change (a reader never writes); a room without them,
+    // or a machine without a desk, is untouched.
+    useRigAutoPatch({ projectId, entities: document.entities, applyOps: _applyLocalOps, edits })
     const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
     const { assets: spaceAssets, refresh: refreshSpaceAssets } = useSpaceAssets(resolvedSpaceId)
     // useDriveImport counts result.entries, the routes answer with .assets
@@ -166,6 +202,51 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const entities = document.entities || []
     const selectedEntity = entities.find((entity) => entity.id === state.selectedEntityId) || null
     const selectedEntityIds = state.selectedEntityIds || []
+
+    // STANDING INSIDE A GEO (owner's decision 2026-10-02). `?geo=<nodeId>` on
+    // the project's address opens Studio inside that Geo: Create puts nodes
+    // into it, Objects lists what stands in it, the gizmo and the inspector
+    // write the node's own values — the ops Nodes writes, so Nodes sees it all
+    // live. With no Geo (or on the open jam) everything below is inert and
+    // Studio is exactly the object editor it was.
+    const geoAllowed = !isJamProject(projectId)
+    const [geoId, setGeoId] = useState(() => (
+        typeof window !== 'undefined' && geoAllowed ? readGeoIdFromSearch(window.location.search) : null
+    ))
+    useEffect(() => {
+        if (!geoAllowed) return undefined
+        const onPop = () => setGeoId(readGeoIdFromSearch(window.location.search))
+        window.addEventListener('popstate', onPop)
+        return () => window.removeEventListener('popstate', onPop)
+    }, [geoAllowed])
+    const geoNode = geoAllowed ? findGeoNode(document, geoId) : null
+    const insideGeo = Boolean(geoNode)
+    const [geoSelectedId, setGeoSelectedId] = useState(null)
+    const geoChildren = useMemo(
+        () => (insideGeo ? listGeoChildren(document, geoNode.id) : []),
+        [insideGeo, document, geoNode?.id]
+    )
+    const geoRows = useMemo(() => geoChildren.map(geoChildRow), [geoChildren])
+    const geoSelectedNode = insideGeo ? (geoChildren.find((node) => node.id === geoSelectedId) || null) : null
+    const geoSelectedRow = geoSelectedNode ? geoChildRow(geoSelectedNode) : null
+    const openGeo = useCallback((nextGeoId) => {
+        setGeoId(nextGeoId || null)
+        setGeoSelectedId(null)
+        dispatch({ type: 'select-entity', entityId: null })
+        if (typeof window !== 'undefined') {
+            appNavigate(withGeoQuery(window.location.pathname, window.location.search, nextGeoId || null))
+        }
+    }, [dispatch])
+    // A Geo named in the address that this project does not hold (deleted in
+    // Nodes, or a stale link): say so once and stand in the whole room.
+    const missingGeoReported = useRef(null)
+    useEffect(() => {
+        if (!geoAllowed || !geoId || !state.hasLoaded || geoNode) return
+        if (missingGeoReported.current === geoId) return
+        missingGeoReported.current = geoId
+        dispatch({ type: 'append-activity', level: 'warning', message: 'That Geo is not in this project any more — showing the whole room.' })
+        openGeo(null)
+    }, [geoAllowed, geoId, geoNode, state.hasLoaded, dispatch, openGeo])
 
     // One library view over both stores. Asset ids are content-hashed, so a
     // file adopted from the space shares its id with the project copy —
@@ -295,6 +376,28 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     })
 
     const handleCreateEntity = (type, asset = null, position = null) => {
+        if (insideGeo) {
+            // A point on the floor of the Geo's inside: the node stands on it
+            // with its own lift, as when Nodes' room is double-clicked.
+            const point = position || getViewPlacement(controlsRef, geoChildren.length)
+            const result = buildAddIntoGeoOps(document, geoNode.id, type, {
+                position: [point[0], 0, point[2]],
+                src: asset?.id || null,
+                label: asset?.name ? asset.name.replace(/\.[^.]+$/, '') : null,
+                createdBy: currentAuthor(displayName)
+            })
+            if (!result) {
+                dispatch({
+                    type: 'append-activity',
+                    level: 'warning',
+                    message: `A ${type} cannot stand inside a Geo yet — open the whole room to place one.`
+                })
+                return
+            }
+            applyLocalOps(result.ops, { activityMessage: `Put ${result.node.label} into ${geoNode.label}.` })
+            setGeoSelectedId(result.node.id)
+            return
+        }
         const entity = createEntityOfType(type, {
             name: asset?.name ? asset.name.replace(/\.[^.]+$/, '') : undefined,
             createdBy: currentAuthor(displayName),
@@ -488,6 +591,23 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     }
 
     const handleDeleteSelected = () => {
+        if (insideGeo) {
+            if (!geoSelectedNode) return
+            const node = geoSelectedNode
+            requestDelete(
+                [{ id: node.id, name: node.label, author: node.createdBy }],
+                () => {
+                    // deleteNode takes what stands inside it too (projectSchema.js),
+                    // and its undo brings both back — the same op Nodes writes.
+                    applyLocalOps(
+                        { type: 'deleteNode', payload: { nodeId: node.id } },
+                        { activityMessage: `Deleted ${node.label}.`, activityLevel: 'warning' }
+                    )
+                    setGeoSelectedId(null)
+                }
+            )
+            return
+        }
         const targets = selectedEntities.length ? selectedEntities : (selectedEntity ? [selectedEntity] : [])
         if (!targets.length) return
         // Nothing is applied until the confirm comes back: a delete is the one
@@ -662,26 +782,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         dispatch({ type: 'select-entity', entityId })
     }
 
-    const handleFrameSelected = () => {
-        const cc = controlsRef.current
-        if (!cc) return
-        const visibleEntities = entities.filter((entity) => entity.components?.runtime?.visible !== false)
-        const targets = selectedEntities.length ? selectedEntities.filter((entity) => entity.components?.runtime?.visible !== false) : visibleEntities
-        const sphere = getPointsBoundingSphere(
-            targets.map((entity) => entity.components?.transform?.position || [0, 0, 0]),
-            { minRadius: targets.length === 1 ? 0.75 : 1 }
-        )
-        const camera = cc.camera || cc._camera
-        if (!sphere || !camera) return
-        const previousTarget = cc._target || new Vector3()
-        const direction = camera.position.clone().sub(previousTarget)
-        if (direction.lengthSq() <= 1e-8) direction.set(0.8, 0.45, 1)
-        direction.normalize()
-        const halfFov = Math.max(0.01, (camera.fov || 50) * Math.PI / 360)
-        const distance = (sphere.radius * (targets.length === 1 ? 1.35 : 1.45)) / Math.sin(halfFov)
-        const position = sphere.center.clone().add(direction.multiplyScalar(distance))
-        cc.setLookAt(position.x, position.y, position.z, sphere.center.x, sphere.center.y, sphere.center.z, true)
-    }
+    // Real extents (object bounding boxes), not origin points: src/utils/entityBounds.js.
+    const handleFrameSelected = () => frameEntities(controlsRef.current, entities, selectedEntities)
 
     useEffect(() => {
         const handler = (event) => {
@@ -694,6 +796,31 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
 
             const meta = event.ctrlKey || event.metaKey
             const key = event.key
+
+            // Blender view keys by event.code (numpad, Home, and the no-numpad
+            // Shift+1/3/7, Shift+Arrows) -- see resolveViewKey. Skipped while focus is
+            // on a widget that owns these keys.
+            const viewCommand = resolveViewKey(event)
+            if (viewCommand && !event.target?.closest?.('select,[role="slider"],[role="listbox"],[role="tree"],[role="menu"]')) {
+                event.preventDefault()
+                runViewCommand(controlsRef.current, viewCommand, insideGeo
+                    ? { entities: geoRows, selectedEntities: geoSelectedRow ? [geoSelectedRow] : [] }
+                    : { entities, selectedEntities })
+                return
+            }
+
+            // Inside a Geo the keys that act on a selection act on the node:
+            // Delete and Escape. Select-all, the clipboard, grouping and
+            // duplicating are the object editor's, and stay with it.
+            if (insideGeo) {
+                if (!meta && (key === 'Delete' || key === 'Backspace') && geoSelectedNode) {
+                    event.preventDefault()
+                    handleDeleteSelected()
+                } else if (key === 'Escape' && geoSelectedNode) {
+                    setGeoSelectedId(null)
+                }
+                return
+            }
 
             // Select all (A) / deselect all (Alt+A) — Blender style
             if (!meta && (key === 'a' || key === 'A')) {
@@ -778,7 +905,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedEntity, selectedEntities, entities, dispatch])
+    }, [selectedEntity, selectedEntities, entities, dispatch, insideGeo, geoRows, geoSelectedRow, geoSelectedNode])
 
     const handleWorldPatch = (patch) => {
         applyLocalOps({
@@ -816,6 +943,14 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     }
 
     const handleInspectorChange = (component, nextValue) => {
+        if (insideGeo) {
+            if (!geoSelectedNode || component !== 'values') return
+            const patch = nodeValuesPatch(geoSelectedNode, nextValue)
+            if (Object.keys(patch).length) {
+                applyLocalOps({ type: 'updateNode', payload: { nodeId: geoSelectedNode.id, patch: { values: patch } } })
+            }
+            return
+        }
         if (selectedEntity) {
             // Editing the transform while a timeline preview holds the pose would be
             // invisible — release the hold so the edit shows, same as grabbing the gizmo.
@@ -844,6 +979,50 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             payload: { entityId, component: 'transform', patch: transform }
         })
     }, [applyLocalOps])
+
+    // The gizmo let go of a thing inside the Geo: the node's own position,
+    // rotation and scale — the values Nodes' room reads. One edit per drag.
+    const geoChildrenRef = useRef(geoChildren)
+    useEffect(() => { geoChildrenRef.current = geoChildren }, [geoChildren])
+    const handleNodeTransformCommit = useCallback((nodeId, transform) => {
+        const node = geoChildrenRef.current.find((candidate) => candidate.id === nodeId)
+        if (!node) return
+        const patch = nodeTransformPatch(node, transform)
+        if (!Object.keys(patch).length) return
+        applyLocalOps({ type: 'updateNode', payload: { nodeId, patch: { values: patch } } })
+    }, [applyLocalOps])
+
+    const handleRenameGeoChild = (nodeId, name) => {
+        const label = String(name || '').trim()
+        if (!label) return
+        applyLocalOps({ type: 'updateNode', payload: { nodeId, patch: { label } } })
+    }
+
+    // "+ Geo": an empty Geo in the top room, and Studio stands inside it.
+    const handleNewGeo = () => {
+        const { node, ops } = buildNewGeoOps(document, { createdBy: currentAuthor(displayName) })
+        applyLocalOps(ops, { activityMessage: `Made ${node.label}.` })
+        openGeo(node.id)
+    }
+
+    const graphRoom = useMemo(() => {
+        if (!geoAllowed) return null
+        if (insideGeo) {
+            return {
+                scopeId: geoNode.id,
+                editable: true,
+                selectedNodeId: geoSelectedId,
+                onSelectNode: (nodeId) => setGeoSelectedId(nodeId || null),
+                onCommitTransform: handleNodeTransformCommit
+            }
+        }
+        return { scopeId: null, editable: false }
+    }, [geoAllowed, insideGeo, geoNode?.id, geoSelectedId, handleNodeTransformCommit])
+
+    const geoList = useMemo(
+        () => (geoAllowed ? listGeoChoices(document) : []),
+        [geoAllowed, document]
+    )
 
     // Commit several entity transforms at once as a single undo step.
     // Does NOT clear transformOp -- the V1 model calls onCommit multiple times
@@ -1073,7 +1252,9 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         [document.mappingState?.surfaces]
     )
 
-    const inspectorSections = selectedEntity
+    const inspectorSections = insideGeo
+        ? (geoSelectedNode ? geoNodeInspectorSections(geoSelectedNode) : [])
+        : selectedEntity
         ? getInspectorSections(selectedEntity)
         : [
             {
@@ -1091,7 +1272,9 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             }
         ]
 
-    const inspectorValues = selectedEntity ? selectedEntity.components : { worldState: document.worldState }
+    const inspectorValues = insideGeo
+        ? geoNodeInspectorValues(geoSelectedNode)
+        : selectedEntity ? selectedEntity.components : { worldState: document.worldState }
     const syncState = {
         activity: state.activity,
         sceneStreamState: state.sceneStreamState,
@@ -1110,10 +1293,18 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onHistoryJump={jumpTo}
             displayName={displayName}
             onDisplayNameChange={setDisplayName}
-            selectedEntity={selectedEntity}
-            selectedEntityId={state.selectedEntityId}
-            selectedEntityIds={selectedEntityIds}
-            entities={entities}
+            selectedEntity={insideGeo ? geoSelectedRow : selectedEntity}
+            selectedEntityId={insideGeo ? (geoSelectedRow?.id || null) : state.selectedEntityId}
+            selectedEntityIds={insideGeo ? (geoSelectedRow ? [geoSelectedRow.id] : []) : selectedEntityIds}
+            entities={insideGeo ? geoRows : entities}
+            graphRoom={graphRoom}
+            geoSwitcher={geoAllowed ? {
+                geos: geoList,
+                currentGeoId: insideGeo ? geoNode.id : null,
+                onOpenGeo: openGeo,
+                onNewGeo: handleNewGeo
+            } : null}
+            createPalette={insideGeo ? GEO_CREATE_PALETTE : null}
             inspectorSections={inspectorSections}
             inspectorValues={inspectorValues}
             assetOptions={document.assets || []}
@@ -1137,16 +1328,20 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onToggleAssetShared={handleToggleAssetShared}
             onCommonsImport={handleCommonsImport}
             onDeleteSelected={handleDeleteSelected}
-            onGroupSelected={handleGroupSelected}
-            onUngroup={handleUngroup}
-            onRenameEntity={handleRenameEntity}
-            onToggleEntityVisible={handleToggleEntityVisible}
-            onToggleEntityLocked={handleToggleEntityLocked}
-            onReparentEntity={handleReparentEntity}
+            onGroupSelected={insideGeo ? undefined : handleGroupSelected}
+            onUngroup={insideGeo ? undefined : handleUngroup}
+            onRenameEntity={insideGeo ? handleRenameGeoChild : handleRenameEntity}
+            onToggleEntityVisible={insideGeo ? undefined : handleToggleEntityVisible}
+            onToggleEntityLocked={insideGeo ? undefined : handleToggleEntityLocked}
+            onReparentEntity={insideGeo ? undefined : handleReparentEntity}
             onViewportDropFiles={importAssetFiles}
-            onDuplicateSelected={handleDuplicateSelected}
-            onSelectEntity={(entityId) => dispatch({ type: 'select-entity', entityId })}
-            onToggleSelectEntity={(entityId) => dispatch({ type: 'toggle-entity-selection', entityId })}
+            onDuplicateSelected={insideGeo ? undefined : handleDuplicateSelected}
+            onSelectEntity={insideGeo
+                ? (nodeId) => setGeoSelectedId(nodeId || null)
+                : (entityId) => dispatch({ type: 'select-entity', entityId })}
+            onToggleSelectEntity={insideGeo
+                ? (nodeId) => setGeoSelectedId(nodeId || null)
+                : (entityId) => dispatch({ type: 'toggle-entity-selection', entityId })}
             onInspectorChange={handleInspectorChange}
             onWorldPatch={handleWorldPatch}
             onRenderSettingsPatch={handleRenderSettingsPatch}

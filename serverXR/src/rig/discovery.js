@@ -69,6 +69,13 @@ const createDiscovery = ({
     udpPort = 47600,
     members,
     sayHello,
+    // 'open' (the LAN is allowed): announce, listen, say hello — §6 as written.
+    // 'private' (bound to the network, device routes closed): listen, and send
+    // only the private beacon below. Never says hello and never files a
+    // member, because a private copy's own /api/rig refuses the answer.
+    mode = 'open',
+    // Where a sighting that can never be a member goes (visibility.js).
+    nearby = null,
     interfaces = () => require('node:os').networkInterfaces(),
     dgram = require('node:dgram'),
     logger,
@@ -89,7 +96,11 @@ const createDiscovery = ({
         badSig: 0,
         bindError: 0,
         socketErrors: 0,
-        sayHelloErrors: 0
+        sayHelloErrors: 0,
+        unknownKind: 0,
+        heardPrivate: 0,
+        heardWhilePrivate: 0,
+        listening: false
     }
 
     const buildPacket = () => ({
@@ -106,7 +117,26 @@ const createDiscovery = ({
         sentAt: now()
     })
 
+    // The private beacon (PROTOCOL-1.md amendment 2026-09-24): "a di.iiii is
+    // here, and it is private". No top-level `id`, deliberately — a 0.4.x
+    // reader never looked at `t` and would have filed any packet with an id as
+    // a member it then tried to dial; without one it counts the packet as
+    // malformed and moves on (§4 rule 6), which is the tolerant answer. No port
+    // and no base either: there is nothing to dial. Unsigned, because it asks
+    // nothing of the receiver and a private copy need not hold the room key.
+    const buildPrivatePacket = () => ({
+        rig: 1,
+        t: 'private',
+        machine: { id: identity.id, name: identity.name },
+        release,
+        sentAt: now()
+    })
+
     const sendPacket = () => {
+        if (mode === 'private') {
+            broadcast(Buffer.from(JSON.stringify(buildPrivatePacket()), 'utf8'))
+            return
+        }
         const packet = buildPacket()
         if (key) {
             // Sign the packet exactly as it stands before `sig` is attached —
@@ -120,6 +150,11 @@ const createDiscovery = ({
             logger?.warn?.('rig discovery: outbound packet over 1 KB, dropping send')
             return
         }
+        broadcast(buf)
+    }
+
+    const broadcast = (buf) => {
+        if (buf.length > MAX_PACKET_BYTES) return
         for (const target of listBroadcastTargets(interfaces)) {
             socket.send(buf, 0, buf.length, udpPort, target, (err) => {
                 if (err) {
@@ -164,11 +199,51 @@ const createDiscovery = ({
             stats.malformed++
             return
         }
-        if (!packet || typeof packet !== 'object' || typeof packet.id !== 'string' || !packet.id) {
+        if (!packet || typeof packet !== 'object' || Array.isArray(packet)) {
+            stats.malformed++
+            return
+        }
+
+        // §6 names one kind, `here`, and every packet before 2026-09-24 carried
+        // it. A kind this reader does not know is ignored and counted (§4),
+        // never read as `here` — that is how the private beacon stays out of
+        // the member list.
+        const kind = packet.t === undefined ? 'here' : packet.t
+        if (kind === 'private') {
+            const machine = packet.machine
+            const id = machine && typeof machine.id === 'string' && machine.id.length <= 128 ? machine.id : null
+            if (!id) { stats.malformed++; return }
+            if (id === identity.id) return
+            stats.heardPrivate++
+            nearby?.note({ id, name: machine.name, address: rinfo.address, release: packet.release, open: false, via: 'beacon' })
+            return
+        }
+        if (kind !== 'here') {
+            stats.unknownKind++
+            return
+        }
+
+        if (typeof packet.id !== 'string' || !packet.id) {
             stats.malformed++
             return
         }
         if (packet.id === identity.id) return // our own broadcast, looped back
+
+        if (mode === 'private') {
+            // We can hear them; they could not answer our hello's reply, and we
+            // must not dial an address a packet chose. Noted, never paired.
+            stats.heardWhilePrivate++
+            nearby?.note({
+                id: packet.id,
+                name: packet.name,
+                address: rinfo.address,
+                release: packet.release,
+                room: packet.room === undefined ? null : packet.room,
+                open: true,
+                via: 'here'
+            })
+            return
+        }
 
         const packetRoom = packet.room !== undefined ? packet.room : null
         const packetScheme = packet.scheme === 'https' ? 'https' : 'http'
@@ -199,6 +274,8 @@ const createDiscovery = ({
         // Either a brand new id, or one we've only ever heard secondhand from
         // discovery — keep introducing ourselves (debounced) until a real
         // hello lands and confirms the pairing both ways.
+        // A private copy that opened up is a member now, not a stranger.
+        nearby?.forget(packet.id)
         members.upsert({
             machine: { id: packet.id, name: packet.name },
             release: packet.release,
@@ -206,12 +283,13 @@ const createDiscovery = ({
             http: { port: packet.port, base: packet.base, scheme: packetScheme, tls: packetTls }
         }, { address: rinfo.address, via: 'discovery' })
 
-        maybeSayHello(packet.id, rinfo.address, packet.port, packet.base, { scheme: packetScheme, tls: packetTls })
+        maybeSayHello(packet.id, rinfo.address, packet.port, packet.base, { scheme: packetScheme, tls: packetTls, id: packet.id, name: packet.name })
     }
 
     const tick = () => {
         sendPacket()
-        members.expire()
+        members?.expire?.()
+        nearby?.expire?.()
     }
 
     const start = () => {
@@ -246,6 +324,7 @@ const createDiscovery = ({
         })
 
         socket.on('listening', () => {
+            stats.listening = true
             try {
                 socket.setBroadcast(true)
             } catch (err) {
@@ -272,10 +351,11 @@ const createDiscovery = ({
             }
             socket = null
         }
+        stats.listening = false
         bindErrorLogged = false // a future start() after the real fix should log again
     }
 
-    return { start, stop, stats: () => ({ ...stats }) }
+    return { start, stop, mode, stats: () => ({ ...stats }) }
 }
 
 module.exports = { createDiscovery, broadcastAddress, sign, verify }

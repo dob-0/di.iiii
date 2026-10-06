@@ -21,11 +21,16 @@ function GuideDiagram() {
 
 export default function RawHelpDialog({
     open,
-    onClose
+    onClose,
+    // '?' on the canvas opens straight onto the keys list.
+    initialSection = 'start',
+    // In the right region (audit 2026-10-05 §3.5): no backdrop, no scrim, a
+    // panel in the layout that replaces whatever stood there.
+    inline = false
 }) {
-    const [activeSectionId, setActiveSectionId] = useState('start')
+    const [activeSectionId, setActiveSectionId] = useState(initialSection)
     const [activeMode, setActiveMode] = useState('basics')
-    const suggestedSection = useMemo(() => getGuideSection('start'), [])
+    const suggestedSection = useMemo(() => getGuideSection(initialSection), [initialSection])
 
     useEffect(() => {
         if (!open) return
@@ -35,12 +40,16 @@ export default function RawHelpDialog({
 
     useEffect(() => {
         if (!open) return undefined
+        // Capture phase + preventDefault: closing help is the WHOLE meaning of
+        // this Escape — the editor's ladder sees it handled and does not also
+        // leave a level (it did, inventory 2026-10-02 §1f.1).
         const handleKeyDown = (event) => {
-            if (event.key !== 'Escape') return
+            if (event.key !== 'Escape' || event.defaultPrevented) return
+            event.preventDefault()
             onClose?.()
         }
-        window.addEventListener('keydown', handleKeyDown)
-        return () => window.removeEventListener('keydown', handleKeyDown)
+        window.addEventListener('keydown', handleKeyDown, true)
+        return () => window.removeEventListener('keydown', handleKeyDown, true)
     }, [open, onClose])
 
     if (!open) return null
@@ -48,14 +57,21 @@ export default function RawHelpDialog({
     const activeSection = GUIDE_SECTIONS.find((section) => section.id === activeSectionId) || suggestedSection
 
     return (
-        <div className="raw-help-backdrop">
-            <button
-                type="button"
-                className="raw-help-scrim"
-                aria-label="Close help"
-                onClick={onClose}
-            />
-            <section className="raw-help-dialog" role="dialog" aria-modal="true" aria-label="Help">
+        <div className={inline ? 'raw-help-inline' : 'raw-help-backdrop'}>
+            {inline ? null : (
+                <button
+                    type="button"
+                    className="raw-help-scrim"
+                    aria-label="Close help"
+                    onClick={onClose}
+                />
+            )}
+            <section
+                className="raw-help-dialog"
+                role={inline ? 'region' : 'dialog'}
+                aria-modal={inline ? undefined : 'true'}
+                aria-label="Help"
+            >
                 <header className="raw-help-header">
                     <div className="raw-help-header-mark" aria-hidden="true">
                         <span>{activeSection.icon}</span>
@@ -142,7 +158,6 @@ export default function RawHelpDialog({
                     )}
                 </div>
 
-                <footer className="raw-help-footer" />
             </section>
         </div>
     )

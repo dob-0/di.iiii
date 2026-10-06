@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import MapStage from './MapStage.jsx'
-import MapEditorOverlay from './MapEditorOverlay.jsx'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import MapInspector from './MapInspector.jsx'
+import { MapMachinesList, MapSurfaceList, MapWallView, nextCorners } from './MapDeskParts.jsx'
 import MapCueList from './MapCueList.jsx'
 import { cueForKey, isCueKey } from './cueFiring.js'
 import { useMapDocument } from './useMapDocument.js'
@@ -12,12 +11,14 @@ import { listProjects } from '../project/services/projectsApi.js'
 import { transportWarning } from './transportCeiling.js'
 import { lightingDeskPath, probeLightingDesk } from './lightingLink.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
-import { describeMachine, showFromValue, showOptions, showValue, unresolvedInputs } from './mapMachines.js'
+import { showFromValue, showOptions, showValue } from './mapMachines.js'
 import { buildStudioProjectPath, navigateToStudioPath } from '../studio/utils/studioRouting.js'
 import SurfaceBar from '../components/SurfaceBar.jsx'
+import DeskPerformSwitch from '../perform/DeskPerformSwitch.jsx'
 import useLocalInstall from '../hooks/useLocalInstall.js'
 import useSpaceName from '../hooks/useSpaceName.js'
-import { isEmbedRequest } from '../utils/previewMode.js'
+import { isEmbedRequest, isPreviewRequest, signalPreviewReady } from '../utils/previewMode.js'
+import { useLocalFileUrl } from './useLocalFileUrl.js'
 import './mapSurface.css'
 
 // THE MAPPER'S DESK.
@@ -38,16 +39,6 @@ import './mapSurface.css'
 // compositor cannot sample a cross-origin page, and half the sources we must
 // show are cross-origin pages.
 
-// Sized so five of them tile a 16:9 output without overlapping — a new surface
-// lands somewhere visible rather than exactly on top of the last one.
-const nextCorners = (index) => {
-    const column = index % 3
-    const row = Math.floor(index / 3) % 2
-    const x = 0.06 + (column * 0.31)
-    const y = 0.08 + (row * 0.45)
-    return [[x, y], [x + 0.26, y], [x + 0.26, y + 0.38], [x, y + 0.38]]
-}
-
 const GRID_CHOICES = [
     { value: 0, label: 'off' },
     { value: 12, label: '12' },
@@ -56,46 +47,31 @@ const GRID_CHOICES = [
     { value: 96, label: '96' }
 ]
 
-const useMeasuredStage = (aspect) => {
-    const frameRef = useRef(null)
-    const [box, setBox] = useState({ width: 0, height: 0 })
-
-    useEffect(() => {
-        const frame = frameRef.current
-        if (!frame || typeof ResizeObserver === 'undefined') return undefined
-        const observer = new ResizeObserver(([entry]) => {
-            const { width, height } = entry.contentRect
-            setBox({ width, height })
-        })
-        observer.observe(frame)
-        return () => observer.disconnect()
-    }, [])
-
-    // Letterbox to the output's aspect. The preview must be the same SHAPE as
-    // the signal or a corner aligned here would not be the corner projected.
-    return {
-        frameRef,
-        stage: useMemo(() => {
-            if (!(box.width > 0) || !(box.height > 0) || !(aspect > 0)) return { width: 0, height: 0 }
-            const width = Math.min(box.width, box.height * aspect)
-            return { width: Math.round(width), height: Math.round(width / aspect) }
-        }, [box, aspect])
-    }
-}
-
 export default function MapSurface({ projectId, spaceId }) {
     const {
         store, document: doc, mapping, surfaces, syncState, applyOps,
         addSurface, updateSurface, deleteSurface, reorderSurfaces, setOutput, upsertAsset,
-        addCue, updateCue, deleteCue, reorderCues, fireCue
+        addCue, updateCue, deleteCue, reorderCues, fireCue,
+        undo, redo, canUndo, canRedo
     } = useMapDocument(projectId, { role: 'desk' })
     // Every machine showing this space, and what each one has: the wall is usually another computer.
-    const { machines } = useMachinePresence(spaceId)
+    // ?preview=1 — a PICTURE of this desk on another page (a Kit card on
+    // /tools). It shows the mapping and follows it, but joins no machine
+    // link: a thumbnail is not a machine on the desk, and it must not appear
+    // in the Machines list of whoever is really working here.
+    const [isPreview] = useState(() => isPreviewRequest())
+    const { machines, ndiScan } = useMachinePresence(isPreview ? null : spaceId)
     // The one bar, above the desk's own. Never on /out — that is MapOutput,
     // the wall's picture, and a bar there would be projected with the work.
     const localInstall = useLocalInstall()
     const spaceName = useSpaceName(spaceId)
-    const [isEmbed] = useState(() => isEmbedRequest())
+    const [isEmbed] = useState(() => isEmbedRequest() || isPreviewRequest())
+    // Nothing here draws to a WebGL canvas, so the app-wide paint watcher has
+    // nothing to see; the picture says itself once the mapping has loaded.
+    const hasLoaded = Boolean(store?.state?.hasLoaded)
+    useEffect(() => {
+        if (isPreview && hasLoaded) signalPreviewReady(spaceId)
+    }, [isPreview, hasLoaded, spaceId])
     // The bar grows with the project (src/project/layers.js); Projection itself
     // is never taken off the bar while you stand on it.
     const barLayers = useProjectLayers(doc, projectId, store?.state?.hasLoaded).open
@@ -115,14 +91,13 @@ export default function MapSurface({ projectId, spaceId }) {
         () => (doc?.nodes || []).filter((node) => node.typeId === 'top.out').map((node) => ({ id: node.id, label: node.label || 'Picture Out' })),
         [doc]
     )
-    const [localReference, setLocalReference] = useState('')
+    const [localReference, setLocalReferenceFile] = useLocalFileUrl()
     const [transferText, setTransferText] = useState(null)
     const [lightingHere, setLightingHere] = useState(false)
 
     const output = useMemo(() => mapping?.output || { width: 1920, height: 1080 }, [mapping])
     const cues = useMemo(() => mapping?.cues || [], [mapping])
     const reference = mapping?.reference || { url: '', opacity: 0.5, visible: false }
-    const { frameRef, stage } = useMeasuredStage(output.width / output.height)
     const selected = surfaces.find((surface) => surface.id === selectedId) || null
 
     const syncLabel = useMemo(() => {
@@ -244,7 +219,14 @@ export default function MapSurface({ projectId, spaceId }) {
         const onKeyDown = (event) => {
             const target = event.target
             if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return
-            if (event.metaKey || event.ctrlKey) return
+            // Undo / redo, the keys every editor here answers to: Ctrl/Cmd+Z,
+            // Shift+Ctrl/Cmd+Z and Ctrl+Y. Any other chord stays the browser's.
+            if (event.metaKey || event.ctrlKey) {
+                const key = event.key.toLowerCase()
+                if (key === 'z' && !event.shiftKey) { undo(); event.preventDefault() }
+                else if ((key === 'z' && event.shiftKey) || key === 'y') { redo(); event.preventDefault() }
+                return
+            }
 
             // The binding itself is in src/map/cueFiring.js, because the 3D
             // scene listens for the same keys on the same cues. A cue key with
@@ -270,7 +252,7 @@ export default function MapSurface({ projectId, spaceId }) {
         }
         window.addEventListener('keydown', onKeyDown)
         return () => window.removeEventListener('keydown', onKeyDown)
-    }, [nudge, cues, onFireCue])
+    }, [nudge, cues, onFireCue, undo, redo])
 
     // --- carrying a mapping between machines ----------------------------
 
@@ -339,7 +321,9 @@ export default function MapSurface({ projectId, spaceId }) {
                 isLocalInstall={localInstall.isLocal}
                 hidden={isEmbed}
                 layers={barLayers}
-            />
+            >
+                <DeskPerformSwitch current="desk" space={spaceId} project={projectId} from="map" />
+            </SurfaceBar>
             <header className="map-bar">
                 <div className="map-bar-title">
                     <span className="map-bar-lane">Projection</span>
@@ -352,6 +336,12 @@ export default function MapSurface({ projectId, spaceId }) {
                         onClick={() => navigateToStudioPath(buildStudioProjectPath(projectId, spaceId))}
                         title="Back to the room for this project"
                     >← Studio</button>
+                    {/* The same undo as the keys, for a finger on a tablet at the desk.
+                        Firing a cue is not undone: it is a performance, not an edit. */}
+                    <button type="button" className="map-action" onClick={undo} disabled={!canUndo()}
+                        title="Undo the last change to the mapping (Ctrl/Cmd+Z)">Undo</button>
+                    <button type="button" className="map-action" onClick={redo} disabled={!canRedo()}
+                        title="Redo (Shift+Ctrl/Cmd+Z)">Redo</button>
                     <label className="map-field map-field-inline">
                         <span>Output</span>
                         <input type="number" min="1" value={output.width}
@@ -398,38 +388,19 @@ export default function MapSurface({ projectId, spaceId }) {
 
             <div className="map-body">
                 <aside className="map-panel map-panel-left">
-                    <div className="map-panel-head">
-                        <h2>Surfaces</h2>
-                        <button type="button" className="map-action" onClick={() => {
+                    <MapSurfaceList
+                        surfaces={surfaces}
+                        selectedId={selectedId}
+                        soloId={soloId}
+                        onSelect={setSelectedId}
+                        onAdd={() => {
                             const id = addSurface({ name: `Surface ${surfaces.length + 1}`, corners: nextCorners(surfaces.length) })
                             setSelectedId(id)
-                        }}>Add</button>
-                    </div>
-                    <ul className="map-surface-list">
-                        {surfaces.map((surface, index) => (
-                            <li key={surface.id} className={`map-surface-row${surface.id === selectedId ? ' is-selected' : ''}`}>
-                                <button type="button" className="map-surface-name" onClick={() => setSelectedId(surface.id)}>
-                                    {surface.name || surface.id}
-                                    <span className="map-surface-kind">{surface.source.kind}</span>
-                                </button>
-                                <div className="map-surface-row-actions">
-                                    <button type="button" className={`map-mini${surface.enabled ? '' : ' is-off'}`}
-                                        title="Show or hide on the wall"
-                                        onClick={() => updateSurface(surface.id, { enabled: !surface.enabled })}>
-                                        {surface.enabled ? 'On' : 'Off'}
-                                    </button>
-                                    <button type="button" className={`map-mini${soloId === surface.id ? ' is-on' : ''}`}
-                                        title="Show this one alone on this screen. The projector still shows every surface."
-                                        onClick={() => setSoloId(soloId === surface.id ? null : surface.id)}>Solo · screen</button>
-                                    <button type="button" className="map-mini" title="Later in the paint order"
-                                        onClick={() => moveSurface(surface.id, 1)} disabled={index === surfaces.length - 1}>Front</button>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                    {!surfaces.length ? (
-                        <p className="map-empty">No surfaces yet. Add one for each shape on the wall, then drag its corners onto that shape.</p>
-                    ) : null}
+                        }}
+                        onToggle={(surface) => updateSurface(surface.id, { enabled: !surface.enabled })}
+                        onSolo={setSoloId}
+                        onFront={(surfaceId) => moveSurface(surfaceId, 1)}
+                    />
 
                     <MapCueList
                         cues={cues}
@@ -443,37 +414,7 @@ export default function MapSurface({ projectId, spaceId }) {
                         onReorder={reorderCues}
                     />
 
-                    <div className="map-section">
-                        <div className="map-panel-head"><h2>Machines</h2></div>
-                        {machines.length ? machines.map(describeMachine).map((entry) => (
-                            <p key={entry.id} className="map-machine">
-                                <strong>{entry.name}</strong>
-                                <span>{[
-                                    entry.screens.length ? entry.screens.join(' + ') : null,
-                                    entry.inputs.length ? `inputs: ${entry.inputs.join(', ')}` : 'no inputs named yet',
-                                    // Only when there are some: most machines
-                                    // have no NDI runtime, and a permanent
-                                    // "no NDI" on every line would teach
-                                    // nobody anything.
-                                    entry.ndi.length ? `NDI: ${entry.ndi.join(', ')}` : null
-                                ].filter(Boolean).join(' · ')}</span>
-                            </p>
-                        )) : <p className="map-empty">Finding the machines showing this space…</p>}
-                        {machines.length === 1 ? (
-                            <p className="map-empty">Only this machine so far. Another appears while its output page is open.</p>
-                        ) : null}
-                        {unresolvedInputs(surfaces, machines).map((entry) => (
-                            <p key={entry.id} className="map-machine is-warning" role="status">
-                                {entry.kind === 'ndi'
-                                    ? (entry.input
-                                        ? `“${entry.name}” wants an NDI source called “${entry.input}” — no machine here can see one.`
-                                        : `“${entry.name}” is an NDI source with no name given.`)
-                                    : (entry.input
-                                        ? `“${entry.name}” wants an input called “${entry.input}” — no machine here has one.`
-                                        : `“${entry.name}” is a stream with no input named.`)}
-                            </p>
-                        ))}
-                    </div>
+                    <MapMachinesList machines={machines} ndiScan={ndiScan} surfaces={surfaces} />
 
                     <div className="map-section">
                         <div className="map-panel-head"><h2>Wall photo</h2></div>
@@ -487,7 +428,7 @@ export default function MapSurface({ projectId, spaceId }) {
                                     // Held in this browser only: a blob URL means nothing to
                                     // another machine, and a wall photo baked into the
                                     // document as base64 would follow every edit forever.
-                                    setLocalReference(URL.createObjectURL(file))
+                                    setLocalReferenceFile(file)
                                     setOutput({ reference: { ...reference, visible: true } })
                                 }} />
                             </label>
@@ -507,41 +448,23 @@ export default function MapSurface({ projectId, spaceId }) {
                     </div>
                 </aside>
 
-                <main className="map-frame" ref={frameRef}>
-                    {stage.width > 0 ? (
-                        <div className="map-stage-holder" style={{ width: stage.width, height: stage.height }}>
-                            <MapStage
-                                mapping={mapping}
-                                spaceId={spaceId}
-                                width={stage.width}
-                                height={stage.height}
-                                live={live}
-                                soloSurfaceId={soloId}
-                                network={network}
-                            />
-                            {reference.visible && referenceUrl ? (
-                                <img className="map-reference" src={referenceUrl} alt="" style={{ opacity: reference.opacity }} />
-                            ) : null}
-                            <MapEditorOverlay
-                                mapping={mapping}
-                                width={stage.width}
-                                height={stage.height}
-                                selectedSurfaceId={selectedId}
-                                maskMode={maskMode}
-                                grid={mapping?.grid || 0}
-                                snap={snap}
-                                onSelectSurface={setSelectedId}
-                                onCornersChange={onCornersChange}
-                                onMaskChange={onMaskChange}
-                            />
-                        </div>
-                    ) : null}
-                    <p className="map-hint">
-                        {maskMode
-                            ? 'Mask: click inside the selected surface to add a point, drag to move it, shift-click to remove. Alt while dragging ignores snapping.'
-                            : 'Drag a corner to pin it. Arrow keys nudge, shift for ten. Alt while dragging ignores the grid and the guides. M masks, S snaps, 1-9 fire cues.'}
-                    </p>
-                </main>
+                <MapWallView
+                    mapping={mapping}
+                    spaceId={spaceId}
+                    network={network}
+                    assets={doc?.assets || null}
+                    projectId={projectId}
+                    live={live}
+                    soloSurfaceId={soloId}
+                    selectedId={selectedId}
+                    maskMode={maskMode}
+                    snap={snap}
+                    referenceUrl={referenceUrl}
+                    reference={reference}
+                    onSelectSurface={setSelectedId}
+                    onCornersChange={onCornersChange}
+                    onMaskChange={onMaskChange}
+                />
 
                 <aside className="map-panel map-panel-right">
                     <MapInspector

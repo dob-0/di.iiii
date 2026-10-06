@@ -3,6 +3,7 @@ import {
     DESK_ABSENT_TEXT,
     DESK_COMMANDS,
     DESK_FORBIDDEN_TEXT,
+    DESK_NOT_RUNNING_TEXT,
     DESK_STATUS,
     RIG_KINDS,
     RIG_STATUS,
@@ -134,7 +135,7 @@ export default function DmxOutPanelWindow({
             if (desk.status === DESK_STATUS.FORBIDDEN) return DESK_FORBIDDEN_TEXT
             if (desk.status === DESK_STATUS.ANSWERING) return deskStatusText(desk.summary)
             if (desk.status === DESK_STATUS.CHECKING) return 'Looking for the lighting desk…'
-            return 'The lighting desk is not answering'
+            return DESK_NOT_RUNNING_TEXT
         }
         if (rig.status === RIG_STATUS.UNSET) return 'No rig named'
         if (rig.status === RIG_STATUS.BLOCKED) return 'A https page cannot reach a http rig — open the local editor'
@@ -159,8 +160,6 @@ export default function DmxOutPanelWindow({
     const send = useRef(null)
     const lane = deskMode ? `desk:${deskBase}` : `vizzz:${base}`
     if (send.current === null || send.current.lane !== lane) {
-        send.current?.master.cancel()
-        send.current?.level.cancel()
         const out = deskMode
             ? (command) => { sendDeskCommand(deskBase, command, { fetchImpl: fetchRef.current }) }
             : (path) => sendRigCommand(base, path, { fetchImpl: fetchRef.current })
@@ -173,10 +172,16 @@ export default function DmxOutPanelWindow({
             level: createThrottledSender(out, 100),
         }
     }
-    useEffect(() => () => {
-        send.current?.master.cancel()
-        send.current?.level.cancel()
-    }, [])
+    // Cancel in the cleanup, never in render: a render React throws away must
+    // not drop the pending send of a lane that is still the committed one. The
+    // cleanup runs when the lane changes (for the lane being left) and on unmount.
+    useEffect(() => {
+        const mine = send.current
+        return () => {
+            mine?.master.cancel()
+            mine?.level.cancel()
+        }
+    }, [lane])
 
     const master = values?.master
     const lastMaster = useRef(master)

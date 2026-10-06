@@ -1,5 +1,5 @@
 import React from 'react'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SpaceHub from './SpaceHub.jsx'
 import { WORKS } from '../../works/works.js'
@@ -49,8 +49,17 @@ vi.mock('../../services/serverSpaces.js', () => ({
     connectSpaceGithub: vi.fn(),
     disconnectSpaceGithub: vi.fn(),
     getGithubAppInfo: () => Promise.resolve({ configured: false }),
-    listGithubRepos: () => Promise.resolve({ repos: [] })
+    listGithubRepos: () => Promise.resolve({ repos: [] }),
+    listSpaceInvites: (...args) => listSpaceInvites(...args),
+    revokeSpaceInvite: (...args) => revokeSpaceInvite(...args),
+    listSpaceSnapshots: (...args) => listSpaceSnapshots(...args),
+    listSpaceChanges: (...args) => listSpaceChanges(...args),
+    restoreSpaceSnapshot: vi.fn()
 }))
+const listSpaceSnapshots = vi.fn()
+const listSpaceChanges = vi.fn()
+const listSpaceInvites = vi.fn()
+const revokeSpaceInvite = vi.fn()
 
 const probeLightingDesk = vi.fn()
 
@@ -206,6 +215,83 @@ describe('SpaceHub', () => {
         expect(screen.getByText('View live')).toBeTruthy()
     })
 
+    // 2026-09-28: the server could revoke an invite link; nothing in the app asked it
+    // to, so a link handed out by mistake worked for its whole week.
+    it('lists a space\'s invite links and revokes one', async () => {
+        const HOUR = 3600 * 1000
+        const now = Date.now()
+        const live = { id: 'inv-live', label: 'invite', createdAt: now - HOUR, expiresAt: now + 6 * 24 * HOUR, useCount: 2, lastUsedAt: now }
+        const old = { id: 'inv-old', label: 'invite', createdAt: now - 9 * 24 * HOUR, expiresAt: now - 2 * 24 * HOUR, useCount: 0, lastUsedAt: null }
+        listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+        listSpaceInvites.mockReset().mockResolvedValueOnce([live, old]).mockResolvedValueOnce([old])
+        revokeSpaceInvite.mockReset().mockResolvedValue({ ok: true })
+        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+        try {
+            render(<SpaceHub />)
+            await findCard('mine')
+            openManageFor('mine')
+            fireEvent.click(within(cardOf('mine')).getByRole('button', { name: 'Invite links' }))
+
+            const rows = async () => {
+                await waitFor(() => expect(cardOf('mine').querySelectorAll('.ssh-linker-item').length).toBeGreaterThan(0))
+                return [...cardOf('mine').querySelectorAll('.ssh-linker-item')]
+            }
+            const [first, second] = await rows()
+            expect(first.textContent).toContain('used 2 times')
+            expect(first.textContent).toContain('works until')
+            expect(second.textContent).toContain('expired')
+            // an expired link has nothing to stop
+            expect(within(second).queryByRole('button', { name: 'Revoke' })).toBeNull()
+
+            fireEvent.click(within(first).getByRole('button', { name: 'Revoke' }))
+            await waitFor(() => expect(revokeSpaceInvite).toHaveBeenCalledWith('mine', 'inv-live'))
+            expect(confirmSpy.mock.calls[0][0]).toContain('People who already joined through it keep their access')
+            await waitFor(() => expect(cardOf('mine').textContent).toContain('no longer works'))
+            await waitFor(() => expect(cardOf('mine').querySelectorAll('.ssh-linker-item').length).toBe(1))
+        } finally {
+            confirmSpy.mockRestore()
+        }
+    })
+
+    // 2026-09-28: the server kept who changed what in a space (GET /changes) and
+    // nothing in the app ever asked for it; an owner saw restore points, never
+    // what the change had been or whose it was.
+    it('History says who changed what, newest first, above the restore points', async () => {
+        const HOUR = 3600 * 1000
+        const t = Date.now() - 5 * HOUR
+        listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+        listSpaceSnapshots.mockReset().mockResolvedValue([{ id: 'p1', takenAt: new Date(t).toISOString(), reason: 'before-change', actor: { label: 'ann' } }])
+        listSpaceChanges.mockReset().mockResolvedValue([
+            { actor: { subject: 'u-ann', label: 'ann', type: 'session' }, from: t, to: t + 60000, scene: false, projects: [{ id: 'hall', title: 'Hall' }], text: 'ann · mine (Hall) · +3 images, 2 changed' },
+            { actor: { subject: 'u-bob', label: 'bob', type: 'session' }, from: t + HOUR, to: t + HOUR, scene: true, projects: [], text: 'bob · mine (scene) · 1 object removed' }
+        ])
+        render(<SpaceHub />)
+        await findCard('mine')
+        openManageFor('mine')
+        fireEvent.click(within(cardOf('mine')).getByRole('button', { name: 'History' }))
+
+        await waitFor(() => expect(cardOf('mine').querySelectorAll('.ssh-change-item').length).toBe(2))
+        const [newest, older] = [...cardOf('mine').querySelectorAll('.ssh-change-item')]
+        expect(newest.textContent).toContain('bob — the scene: 1 object removed')
+        expect(older.textContent).toContain('ann — Hall: +3 images, 2 changed')
+        expect(listSpaceChanges).toHaveBeenCalledWith('mine')
+        // the restore points are still there, under their own heading
+        expect(cardOf('mine').textContent).toContain('Restore points')
+        expect(cardOf('mine').textContent).toContain("before ann's change")
+    })
+
+    it('History still shows its restore points when the changes cannot load', async () => {
+        listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true }])
+        listSpaceSnapshots.mockReset().mockResolvedValue([{ id: 'p1', takenAt: new Date().toISOString(), reason: 'daily', actor: null }])
+        listSpaceChanges.mockReset().mockRejectedValue(new Error('403'))
+        render(<SpaceHub />)
+        await findCard('mine')
+        openManageFor('mine')
+        fireEvent.click(within(cardOf('mine')).getByRole('button', { name: 'History' }))
+        await waitFor(() => expect(cardOf('mine').textContent).toContain('daily'))
+        expect(cardOf('mine').querySelectorAll('.ssh-change-item').length).toBe(0)
+    })
+
     it('clicking a public space you cannot enter goes to its live view, scoped spaces open the editor', async () => {
         authState = { ...authState, type: 'guest', canCreateSpace: false, spaces: ['main'] }
         listServerSpaces.mockResolvedValue([
@@ -312,6 +398,14 @@ describe('SpaceHub', () => {
     const frameIn = (spaceId) => cardOf(spaceId)
         .querySelector('.ssh-card-preview iframe')
 
+    // A card listens for its frame's message in a passive effect, which React
+    // runs AFTER the iframe is already in the DOM. Seeing the frame is not
+    // proof the listener is there: on a loaded runner a message posted in that
+    // gap was lost, the slot never freed, and the wait timed out (CI, 3 times;
+    // 2 in 24 under local load). A real frame posts after booting a whole
+    // app, so only the test could hit the gap. Let the effects run first.
+    const settleEffects = () => act(async () => {})
+
     it('frees a card’s boot slot when the preview says it has PAINTED, not when its html loads', async () => {
         everyCardVisible()
         try {
@@ -333,6 +427,7 @@ describe('SpaceHub', () => {
             expect(frameIn('s12')).toBeNull()
 
             // the embedded app reports pixels; only then does the queue move on
+            await settleEffects()
             fireEvent(window, new MessageEvent('message', {
                 data: { type: 'dii:preview-ready', spaceId: 's0' },
                 origin: window.location.origin,
@@ -355,6 +450,8 @@ describe('SpaceHub', () => {
 
             await findCard('s0')
             await waitFor(() => expect(frameIn('s0')).not.toBeNull())
+            // without this the listener may not exist yet and "ignored" proves nothing
+            await settleEffects()
 
             fireEvent(window, new MessageEvent('message', {
                 data: { type: 'dii:preview-ready', spaceId: 's0' },
@@ -401,16 +498,21 @@ describe('SpaceHub', () => {
             render(<SpaceHub />)
 
             await findCard('s0')
-            // The default 1s waitFor is the machine's budget, not this
-            // behaviour's: twelve card frames mount before s0 reports, and on a
-            // loaded CI runner that crossed 1s and failed here while passing
-            // every time locally. The assertion is unchanged.
-            await waitFor(() => expect(frameIn('s0')).not.toBeNull(), { timeout: 8000 })
+            // Wait for the state the case is ABOUT, not for a duration: the
+            // queue is full (twelve card frames mounted) and s12 is the one
+            // card left waiting. Checking only s0 and then asserting s12 is
+            // absent was vacuous on a slow runner -- s12 is trivially absent
+            // while the others are still mounting.
+            await waitFor(() => {
+                expect(document.querySelectorAll('.ssh-card-preview iframe')).toHaveLength(12)
+            })
+            expect(frameIn('s0')).not.toBeNull()
             expect(frameIn('s12')).toBeNull()
 
             // Under DI_PROFILE=local a work's route (wcc, algovrithm) is a
             // page of text with no canvas, so it never says preview-ready. It
             // says preview-stub instead, from the card's own frame.
+            await settleEffects()
             fireEvent(window, new MessageEvent('message', {
                 data: { type: 'dii:preview-stub', spaceId: 's0' },
                 origin: window.location.origin,
@@ -418,12 +520,14 @@ describe('SpaceHub', () => {
             }))
 
             // the slot is freed like a paint would free it
-            await waitFor(() => expect(frameIn('s12')).not.toBeNull(), { timeout: 8000 })
+            await waitFor(() => expect(frameIn('s12')).not.toBeNull())
             // and the card draws its own line in place of the scaled-down frame
             const card = cardOf('s0')
             expect(card.querySelector('.ssh-card-preview iframe')).toBeNull()
             expect(card.querySelector('.ssh-card-preview-fill--stub')).not.toBeNull()
             expect(card.textContent).toContain('not in this copy')
+            // and says where it lives by today's address, not the retired one
+            expect(card.textContent).toContain('lives on diiii.xyz')
             // every other card paints exactly as before
             expect(frameIn('s1')).not.toBeNull()
             expect(cardOf('s1').textContent).not.toContain('not in this copy')

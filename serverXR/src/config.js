@@ -239,6 +239,29 @@ if (!requireAuth && !process.env.REQUIRE_AUTH) {
 }
 
 const oauthCallbackBase = (process.env.OAUTH_CALLBACK_BASE_URL || '').replace(/\/+$/, '')
+
+// The sign-in hub (authHub.js). A HUB holds AUTH_HUB_SIGNING_KEY and the
+// provider registrations; every other server names the hub (AUTH_HUB_URL, its
+// API base, e.g. https://diiii.xyz/serverXR) and pins its PUBLIC key
+// (AUTH_HUB_PUBLIC_KEY). Unset = no hub, exactly as before.
+//
+// Every server knows the OFFICIAL hub out of the box, so a new install, test
+// stack or laptop offers Google/GitHub with nothing to set. The key below is
+// PUBLIC (generated 2026-09-28; the private half lives only on the hub).
+// AUTH_HUB_URL=off opts out; setting both env vars points at another hub.
+const { readKey: readHubKey, DEFAULT_ALLOWED_RETURNS, OFFICIAL_HUB_URL, OFFICIAL_HUB_PUBLIC_KEY } = require('./authHub')
+const hubUrlEnv = (process.env.AUTH_HUB_URL || '').trim()
+const hubOff = /^(off|none|0|false)$/i.test(hubUrlEnv)
+const authHubConfig = {
+  url: hubOff ? '' : (hubUrlEnv || OFFICIAL_HUB_URL).replace(/\/+$/, ''),
+  publicKey: hubOff ? null : readHubKey(process.env.AUTH_HUB_PUBLIC_KEY || OFFICIAL_HUB_PUBLIC_KEY, 'public'),
+  signingKey: readHubKey(process.env.AUTH_HUB_SIGNING_KEY, 'private'),
+  allowedReturns: (process.env.AUTH_HUB_ALLOWED_RETURNS || '').trim()
+    ? process.env.AUTH_HUB_ALLOWED_RETURNS.split(',').map((v) => v.trim()).filter(Boolean)
+    : DEFAULT_ALLOWED_RETURNS
+}
+if (process.env.AUTH_HUB_PUBLIC_KEY && !authHubConfig.publicKey) console.warn('[config] AUTH_HUB_PUBLIC_KEY is set but is not a readable Ed25519 public key; hub sign-in stays off.')
+if (process.env.AUTH_HUB_SIGNING_KEY && !authHubConfig.signingKey) console.warn('[config] AUTH_HUB_SIGNING_KEY is set but is not a readable Ed25519 private key; this server will not act as a hub.')
 const oauthFrontendUrl = (process.env.OAUTH_FRONTEND_URL || '/').replace(/\/+$/, '') || '/'
 
 // `enabled` only checks *_CLIENT_ID (an ID with no matching secret still
@@ -340,6 +363,7 @@ const config = {
     // under the drive.file scope.
     appId: (process.env.GOOGLE_APP_ID || '').trim()
   },
+  authHub: authHubConfig,
   oauth: {
     callbackBase: oauthCallbackBase,
     frontendUrl: oauthFrontendUrl,
@@ -392,6 +416,31 @@ const config = {
     // or Reject — three days by default: someone has to open the file's
     // summary and think, which an hour does not allow.
     proposalTtlMs: Number(process.env.CONTENT_PROPOSAL_TTL_MS || 3 * 24 * 60 * 60 * 1000)
+  },
+  // A space on its own domain — docs/architecture/SPEC_space_own_domain.md.
+  // Without the three CLOUDFLARE_SAAS_* values a domain can still be saved, but
+  // nothing switches it on except an admin; the settings page says so.
+  customDomains: {
+    // Where editing lives. An editor path opened on a space's domain goes here.
+    platformOrigin: (process.env.PLATFORM_ORIGIN || '').trim().replace(/\/+$/, '') ||
+      (authHubConfig.url ? new URL(authHubConfig.url).origin : 'https://diiii.xyz'),
+    cloudflare: {
+      zoneId: (process.env.CLOUDFLARE_SAAS_ZONE_ID || '').trim(),
+      // SSL and Certificates: Edit on the platform zone, nothing else.
+      apiToken: (process.env.CLOUDFLARE_SAAS_API_TOKEN || '').trim(),
+      // The name a domain's CNAME points at (domains.diiii.xyz).
+      cnameTarget: (process.env.CLOUDFLARE_SAAS_CNAME_TARGET || '').trim().toLowerCase()
+    },
+    // Our own names; no space may claim one or anything under it.
+    platformSuffixes: [
+      'diiii.xyz', 'di-studio.xyz', 'thedi.studio', 'localhost',
+      ...String(process.env.PLATFORM_HOSTNAMES || '').split(',').map((h) => h.trim().toLowerCase()).filter(Boolean)
+    ],
+    // 100 hostnames are included in Cloudflare's Free plan; stay under it.
+    max: Number(process.env.DOMAINS_MAX) || 90,
+    maxPerSpace: Number(process.env.DOMAINS_PER_SPACE) || 3,
+    pendingTtlMs: Number(process.env.DOMAINS_PENDING_TTL_MS) || 7 * 24 * 60 * 60 * 1000,
+    sweepMs: Number(process.env.DOMAINS_SWEEP_MS) || 2 * 60 * 1000
   }
 }
 

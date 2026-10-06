@@ -1,0 +1,55 @@
+{
+  "project": "moxir-hall-minimal-ground",
+  "why": "The underground loop for minimal-ground (owner 2026-09-30: \"the underground rave thing, lights like that, not the commercial shit\"): darkness, haze, cold white and deep red only, the DJ a silhouette, the structure revealed in pieces, one blinder hit. Movers all on the ground, so it works the roof and the walls: beams up and across above head height, columns from below. The loop is the holds: 79 s; a cue's fade is inside its hold. No laser cue (a laser needs a certified laser safety officer). Designed and tested, NOT seen on a screen. Scenes: scripts/rigbuild/ground-scenes.mjs.",
+  "loop": true,
+  "cues": [
+    {
+      "look": "gs-one-shaft",
+      "name": "Blackout + one shaft",
+      "fade": 0,
+      "hold": 10
+    },
+    {
+      "look": "gs-columns-below",
+      "name": "Columns from below",
+      "fade": 4,
+      "hold": 10
+    },
+    {
+      "look": "gs-roof-reveal",
+      "name": "Roof reveal",
+      "fade": 5,
+      "hold": 12
+    },
+    {
+      "look": "gs-slow-fan",
+      "name": "Slow fan",
+      "fade": 6,
+      "hold": 14
+    },
+    {
+      "look": "gs-cross-beams",
+      "name": "Cross beams",
+      "fade": 4,
+      "hold": 10
+    },
+    {
+      "look": "gs-red-room",
+      "name": "Red room",
+      "fade": 5,
+      "hold": 12
+    },
+    {
+      "look": "gs-white-cathedral",
+      "name": "White cathedral",
+      "fade": 3,
+      "hold": 8
+    },
+    {
+      "look": "gs-blinder-hit",
+      "name": "Blinder hit",
+      "fade": 0,
+      "hold": 3
+    }
+  ]
+}

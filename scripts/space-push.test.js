@@ -14,14 +14,15 @@ const SCRIPT = path.join(ROOT_DIR, 'scripts', 'space-push.mjs')
 // mocks" the task's constraints ask for in place of ever writing to a real
 // dev/prod tier. `onScene` answers GET (?verbatim=1) with the current stored
 // version; `onPut` answers PUT and decides ok/409.
-const startFakeTier = ({ version, putStatus = 200, putBody = { ok: true } }) => {
+const startFakeTier = ({ version, putStatus = 200, putBody = { ok: true }, scene = { objects: [], assets: [] }, puts = [] }) => {
     const server = http.createServer((req, res) => {
         res.setHeader('Content-Type', 'application/json')
         if (req.method === 'GET') {
-            res.end(JSON.stringify({ scene: { objects: [], assets: [] }, version }))
+            res.end(JSON.stringify({ scene, version }))
             return
         }
         if (req.method === 'PUT') {
+            puts.push(req.url)
             req.resume()
             req.on('end', () => {
                 res.statusCode = putStatus
@@ -149,5 +150,54 @@ describe('space-push stale-destination guard', () => {
         const { stdout } = await run(['--from', local.url, '--to', destUrl, '--token', 'x'])
         local.close(); server.close()
         expect(stdout).toContain('ok — scene pushed to live')
+    })
+})
+
+// 2026-09-18: a whole replace carried to prod removed 76 authored slides and
+// said nothing. A scene push is a whole replace too: it now says what it
+// removes, and refuses media loss without the exact count.
+describe('space-push says what a replace removes, and refuses uncounted media loss', () => {
+    const run = (extraArgs) => execFileAsync(process.execPath,
+        [SCRIPT, 'definitely-not-a-real-space', ...extraArgs],
+        { cwd: ROOT_DIR, env: process.env })
+    const hex = (n) => n.toString(16).padStart(64, '0')
+    const image = (i) => ({ id: `slide-${i}`, type: 'image', name: `Slide ${i}`, assetRef: hex(i + 1) })
+    const nine = Array.from({ length: 9 }, (_, i) => ({ id: `box-${i}`, type: 'box' }))
+    const FULL = { objects: [...Array.from({ length: 76 }, (_, i) => image(i)), ...nine], assets: [] }
+    const THIN = { objects: nine, assets: [] }
+    const tiers = async () => {
+        const puts = []
+        const local = await startFakeTier({ version: 3, scene: THIN })
+        const dest = await startFakeTier({ version: 3, scene: FULL, puts })
+        return { local, dest, puts, close: () => { local.close(); dest.close() } }
+    }
+
+    it('refuses the incident shape without --accept-loss, and writes nothing', async () => {
+        const t = await tiers()
+        const err = await run(['--from', t.local.url, '--to', t.dest.url, '--token', 'x']).catch((e) => e)
+        t.close()
+        expect(err.code).toBe(1)
+        expect(err.stdout).toContain('this replace REMOVES 76 of 85 items — 76 image (media)')
+        expect(err.stderr).toContain('--accept-loss 76')
+        expect(t.puts).toEqual([])
+    })
+
+    it('refuses a wrong number, carries out the exact one', async () => {
+        const t = await tiers()
+        const err = await run(['--from', t.local.url, '--to', t.dest.url, '--token', 'x', '--accept-loss', '75']).catch((e) => e)
+        expect(err.stderr).toContain('does not match the 76')
+        expect(t.puts).toEqual([])
+        const { stdout } = await run(['--from', t.local.url, '--to', t.dest.url, '--token', 'x', '--accept-loss', '76'])
+        t.close()
+        expect(stdout).toContain('ok — scene pushed to live')
+        expect(t.puts).toHaveLength(1)
+    })
+
+    it('--dry-run prints the loss and writes nothing', async () => {
+        const t = await tiers()
+        const { stdout } = await run(['--from', t.local.url, '--to', t.dest.url, '--token', 'x', '--dry-run'])
+        t.close()
+        expect(stdout).toContain('REMOVES 76 of 85 items')
+        expect(t.puts).toEqual([])
     })
 })

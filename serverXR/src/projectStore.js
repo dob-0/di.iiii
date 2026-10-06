@@ -57,6 +57,8 @@ const rowToMeta = (row) => !row ? null : ({
   collectionId: row.collection_id || null,
   position: row.position ?? 0,
   state: row.state || 'live',
+  // Who may see it inside its space — see PROJECT_VISIBILITIES below.
+  visibility: normalizeProjectVisibility(row.visibility),
   deletedAt: row.deleted_at || null
 })
 
@@ -64,6 +66,20 @@ const rowToMeta = (row) => !row ? null : ({
 // became on migration; nothing is hidden by this landing.
 const PROJECT_STATES = ['draft', 'live', 'archived']
 const isProjectState = (value) => PROJECT_STATES.includes(value)
+
+// Who may see a project INSIDE its space. The space's own isPublic decides
+// whether a visitor reaches the space at all; this decides, per project,
+// whether a visitor who reached it sees this one. 'public' is the default and
+// means "as visible as its space" — every project that existed before this
+// column reads 'public', so nothing that was on show changes. 'private' means
+// only the space's members (anyone whose session may read the space when it
+// is NOT public — canAccessSpace) see it; to everyone else it does not exist
+// (404, never 401/403). A 'public' project in a private space is still
+// private: the space gate runs first. docs/architecture/SPEC_project_visibility.md.
+const PROJECT_VISIBILITIES = ['public', 'private']
+const isProjectVisibility = (value) => PROJECT_VISIBILITIES.includes(value)
+const normalizeProjectVisibility = (value) => (value === 'private' ? 'private' : 'public')
+const isPrivateProject = (meta) => normalizeProjectVisibility(meta?.visibility) === 'private'
 
 // How long deleted work waits before anything touches the bytes. Thirty days is
 // the same promise the sandbox sweep makes, and long enough that "I deleted the
@@ -89,6 +105,7 @@ const buildProjectMeta = (spaceId, projectId, overrides = {}) => {
     collectionId: overrides.collectionId || null,
     position: Number.isFinite(Number(overrides.position)) ? Number(overrides.position) : 0,
     state: isProjectState(overrides.state) ? overrides.state : 'live',
+    visibility: normalizeProjectVisibility(overrides.visibility),
     deletedAt: null
   }
 }
@@ -131,6 +148,7 @@ const s = () => {
     setShelf:         db.prepare('UPDATE projects SET collection_id = ?, updated_at = ? WHERE id = ?'),
     setPosition:      db.prepare('UPDATE projects SET position = ?, updated_at = ? WHERE id = ?'),
     setState:         db.prepare('UPDATE projects SET state = ?, updated_at = ? WHERE id = ?'),
+    setVisibility:    db.prepare('UPDATE projects SET visibility = ?, updated_at = ? WHERE id = ?'),
     selectBySlug:     db.prepare('SELECT * FROM projects WHERE space_id = ? AND slug = ?'),
     // scripts/project-move.mjs writes one row per move; the resolver below
     // reads the latest one for a given (old space, old id-or-slug).
@@ -143,8 +161,10 @@ const s = () => {
     // the /contents rule: state live, and not wearing the pre-2026-09-10
     // "[archived]" title. Trashed rows are not held by anything.
     countBySpace:     db.prepare("SELECT space_id, COUNT(*) AS n, SUM(CASE WHEN COALESCE(state, 'live') = 'live' AND ltrim(COALESCE(title, '')) NOT LIKE '[archived]%' THEN 1 ELSE 0 END) AS shown FROM projects WHERE deleted_at IS NULL GROUP BY space_id"),
-    insert:           db.prepare('INSERT INTO projects (id, space_id, slug, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
-    upsert:           db.prepare('INSERT OR REPLACE INTO projects (id, space_id, slug, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+    // visibility is written at creation, never after: a project asked for as
+    // private must not exist as public for even the moment between an INSERT
+    // and a follow-up UPDATE.
+    insert:           db.prepare('INSERT INTO projects (id, space_id, slug, title, document_version, source, created_at, updated_at, last_touched_at, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
     update:           db.prepare('UPDATE projects SET slug=?, title=?, document_version=?, source=?, updated_at=?, last_touched_at=? WHERE id=?'),
     deleteById:       db.prepare('DELETE FROM projects WHERE id = ?'),
     opsSelect:        db.prepare('SELECT data FROM project_ops WHERE project_id = ? ORDER BY version ASC, seq ASC'),
@@ -204,7 +224,7 @@ const upsertProjectMeta = async (spacesDir, spaceId, projectId, updates = {}) =>
     if (row?.deleted_at) restore.run(now, projectId)
     if (!row) {
       const meta = buildProjectMeta(spaceId, projectId, updates)
-      insert.run(projectId, spaceId, meta.slug ?? null, meta.title, meta.documentVersion, meta.source, meta.createdAt, meta.updatedAt, meta.lastTouchedAt)
+      insert.run(projectId, spaceId, meta.slug ?? null, meta.title, meta.documentVersion, meta.source, meta.createdAt, meta.updatedAt, meta.lastTouchedAt, meta.visibility)
       return meta
     }
     const nextSlug    = 'slug' in updates ? (updates.slug ?? null) : row.slug
@@ -423,6 +443,12 @@ const setProjectState = async (projectId, state) => {
   return rowToMeta(s().selectById.get(projectId))
 }
 
+const setProjectVisibility = async (projectId, visibility) => {
+  if (!isProjectVisibility(visibility)) throw Object.assign(new Error(`Unknown visibility "${visibility}". Use "public" or "private".`), { status: 400 })
+  s().setVisibility.run(visibility, Date.now(), projectId)
+  return rowToMeta(s().selectById.get(projectId))
+}
+
 // A drag is one intent: the whole order arrives at once. Applying it as a series
 // of pairwise swaps is how two people reordering at the same time end up with an
 // order neither of them asked for.
@@ -468,6 +494,11 @@ module.exports = {
   PROJECT_STATES,
   TRASH_TTL_MS,
   isProjectState,
+  PROJECT_VISIBILITIES,
+  isProjectVisibility,
+  isPrivateProject,
+  normalizeProjectVisibility,
+  setProjectVisibility,
   listProjectsInSpace,
   countProjectsBySpace,
   listTrashedProjects,

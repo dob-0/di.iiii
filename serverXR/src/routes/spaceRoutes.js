@@ -14,8 +14,11 @@ const logger = require('../logger')
 const { createKeyedLock } = require('../asyncLock')
 const { SENSITIVE_SPACE_PATCH_FIELDS } = require('../approvalGate')
 const { actorFromAuthState } = require('../opActor')
+const { isSpaceMember } = require('../projectVisibility')
 
 const defaultWithSpaceOpsLock = createKeyedLock()
+
+const PRIVATE_PUBLISH_ERROR = 'That project is private, so it cannot be the space\'s published front door. Make it public first (project settings), then publish it.'
 
 function registerSpaceRoutes(router, {
   appendOpsHistory,
@@ -95,9 +98,26 @@ function registerSpaceRoutes(router, {
   // apply immediately — gating is for what a visitor sees or who can reach a
   // space, not routine editing.
 
+  // A follower of this space compares its settings (label, visibility, front
+  // door) and holds its read open on the space's change mark: end that wait, and
+  // wake a follow running here. Called on every path that lands a PATCH.
+  const announceSpaceSettingsChange = (spaceId) => {
+    try { require('../follow').nudgeFollow(spaceId) } catch { /* no follows here */ }
+    try { require('../follow/waiters').noteChange(spaceId) } catch { /* nobody waiting */ }
+  }
+
   if (approvalGate) {
     approvalGate.registerExecutor('spaces.patch', async ({ spaceId, patch, nextOwnerUserId }) => {
+      // Re-checked at execution: an approval can wait an hour, and the project
+      // may have been made private in the meantime.
+      if (patch?.publishedProjectId) {
+        const project = await findProjectById(spacesDir, patch.publishedProjectId)
+        if (project?.meta?.visibility === 'private') {
+          throw Object.assign(new Error(PRIVATE_PUBLISH_ERROR), { status: 409 })
+        }
+      }
       const meta = await upsertSpaceMeta(spaceId, patch)
+      announceSpaceSettingsChange(spaceId)
       if (nextOwnerUserId && findUserById && setUserSpaces) {
         try {
           const user = findUserById(nextOwnerUserId)
@@ -427,6 +447,11 @@ function registerSpaceRoutes(router, {
           if (!project || project.spaceId !== spaceId) {
             return res.status(404).json({ error: 'Published project not found in this space.' })
           }
+          // The published project is the space's front door — what every
+          // visitor is sent to. A private one would be a door that 404s.
+          if (project.meta?.visibility === 'private') {
+            return res.status(409).json({ error: PRIVATE_PUBLISH_ERROR, code: 'published_project_private' })
+          }
         }
       }
       // Card-preview image override: must be an asset that exists in this
@@ -472,6 +497,7 @@ function registerSpaceRoutes(router, {
       const touchesSensitive = SENSITIVE_SPACE_PATCH_FIELDS.some((f) => Object.prototype.hasOwnProperty.call(req.body || {}, f))
       if (!touchesSensitive || !approvalGate) {
         const meta = await upsertSpaceMeta(spaceId, patch)
+        announceSpaceSettingsChange(spaceId)
         // A person who cannot reach the space cannot be its owner or be trusted
         // with it: ownership and trust carry scope with them.
         if (findUserById && setUserSpaces) {
@@ -552,7 +578,10 @@ function registerSpaceRoutes(router, {
 
       workDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'di-bundle-'))
       const file = path.join(workDir, `${spaceId}.diiii`)
-      const { code, output } = await runBundleTool(['export', spaceId, '--out', file])
+      // A visitor who reached a public space is not one of its members: their
+      // file leaves out every private project and the blobs only those name.
+      const member = isSpaceMember(req.authState || getPublicAuthState(req), spaceId, { requireAuth: Boolean(config.requireAuth) })
+      const { code, output } = await runBundleTool(['export', spaceId, '--out', file, ...(member ? [] : ['--public-only'])])
       if (code !== 0 || !fs.existsSync(file)) {
         logger.warn(`[bundle] export of ${spaceId} failed: ${output}`)
         return res.status(500).json({ error: 'Could not save this space to a file.' })
@@ -794,12 +823,19 @@ function registerSpaceRoutes(router, {
       // is neither, needs no socket (a per-space sync key cannot open one), and
       // costs one idle connection. Capped, and only ever entered when there is
       // nothing to send: a caller that is behind gets its ops immediately.
+      //
+      // `?mark=` is the `changeMark` an earlier answer carried (follow/
+      // waiters.js): if the space — its scene OR any project in it — has been
+      // written since, the wait ends at once. A follower reads the projects
+      // first and parks here last; a write that fell between the two used to
+      // find nobody parked and was held for the whole wait.
       const wait = Math.min(Number(req.query.wait) || 0, 30)
+      const { waitForChange, changeMark } = require('../follow/waiters')
       if (wait > 0 && !filtered.length) {
-        const { waitForChange } = require('../follow/waiters')
         const closed = new AbortController()
         req.on('close', () => closed.abort())
-        const changed = await waitForChange(spaceId, wait * 1000, { signal: closed.signal })
+        const mark = typeof req.query.mark === 'string' ? req.query.mark.slice(0, 64) : null
+        const changed = await waitForChange(spaceId, wait * 1000, { signal: closed.signal, mark })
         if (changed) {
           filtered = Number.isFinite(since)
             ? await readOpsHistorySince(spaceId, since)
@@ -811,7 +847,11 @@ function registerSpaceRoutes(router, {
       const latestVersion = meta?.sceneVersion || 0
       res.json({
         ops: filtered,
-        latestVersion
+        latestVersion,
+        // Taken after the log was read: a write that lands after this moment
+        // moves the mark, and anything before it is already readable. Only for
+        // a space that exists — see changeMark.
+        ...(meta ? { changeMark: changeMark(spaceId) } : {})
       })
     } catch (error) {
       next(error)
@@ -847,7 +887,11 @@ function registerSpaceRoutes(router, {
       // normalizeIncomingOps keeps only opId/clientId/type/payload.
       const actor = actorFromAuthState(req.authState)
       // The first change of a new burst takes a restore point first.
-      if (spaceHistory) await spaceHistory.beforeChange(spaceId, actor)
+      // A whole-work op (a follow's `take-host` / `take-mine`, a restore sent as
+      // ops) always gets its own restore point, burst or not — the same rule as
+      // every other whole replace (spaceHistory.beforeChange).
+      const wholeReplace = normalizedOps.some(op => op.type === 'replaceScene' || op.type === 'replaceDocument')
+      if (spaceHistory) await spaceHistory.beforeChange(spaceId, actor, wholeReplace ? { reason: 'before-whole-replace-op' } : {})
 
       // Serialized per space: the version check and the read-modify-write it
       // guards must be one atomic step, or two concurrent requests at the

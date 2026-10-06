@@ -1,5 +1,21 @@
 import { render, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+
+const cancels = []
+vi.mock('../utils/dmxRigClient.js', async (importOriginal) => {
+    const real = await importOriginal()
+    return {
+        ...real,
+        createThrottledSender: (out, ms) => {
+            const inner = real.createThrottledSender(out, ms)
+            const cancel = vi.fn(() => inner.cancel())
+            cancels.push(cancel)
+            const wrapped = (...args) => inner(...args)
+            Object.assign(wrapped, inner, { cancel })
+            return wrapped
+        }
+    }
+})
 import DmxOutPanelWindow from './DmxOutPanelWindow.jsx'
 
 const node = (values = {}) => ({ id: 'dmx-1', typeId: 'device.dmx.out', values })
@@ -196,6 +212,43 @@ describe('DmxOutPanelWindow — the lighting desk', () => {
         await waitFor(() => expect(onStatus).toHaveBeenCalledWith('dmx-1', expect.stringMatching(/DI_ALLOW_LAN_DEVICES=1/)))
     })
 
+    // Seen by the node check (2026-10-02): with no server behind /light the
+    // window read "Desk: 0 fixtures, 0 scenes - output OFF", the same words as a
+    // desk that is running with an empty rig.
+    it('says the desk is not running when /light/api/summary cannot be reached', async () => {
+        const onStatus = vi.fn()
+        const fetchImpl = vi.fn(async () => { throw new TypeError('Failed to fetch') })
+        render(desk({ node: node(), values: {}, onStatus, fetchImpl }))
+        await waitFor(() => expect(onStatus).toHaveBeenCalledWith(
+            'dmx-1', expect.stringMatching(/not running on this machine.*di up/)
+        ))
+        expect(onStatus).not.toHaveBeenCalledWith('dmx-1', expect.stringMatching(/Desk: 0 fixtures/))
+    })
+
+    it('does not read a JSON answer that is not a desk summary as an empty running desk', async () => {
+        const onStatus = vi.fn()
+        const fetchImpl = vi.fn(async () => ({
+            ok: true, status: 200,
+            headers: { get: () => 'application/json' },
+            json: async () => ({}),
+        }))
+        render(desk({ node: node(), values: {}, onStatus, fetchImpl }))
+        await waitFor(() => expect(onStatus).toHaveBeenCalledWith('dmx-1', expect.stringMatching(/not running on this machine/)))
+        expect(onStatus).not.toHaveBeenCalledWith('dmx-1', expect.stringMatching(/Desk: 0 fixtures/))
+    })
+
+    it('still says "0 fixtures" for a desk that really is running with an empty rig', async () => {
+        const onStatus = vi.fn()
+        const body = { ...SUMMARY, fixtures: 0, scenes: 0, activeScene: null, activeSceneName: null, fx: { enabled: false } }
+        const fetchImpl = vi.fn(async () => ({
+            ok: true, status: 200,
+            headers: { get: () => 'application/json' },
+            json: async () => body,
+        }))
+        render(desk({ node: node(), values: {}, onStatus, fetchImpl }))
+        await waitFor(() => expect(onStatus).toHaveBeenCalledWith('dmx-1', 'Desk: 0 fixtures, 0 scenes · output OFF'))
+    })
+
     it('offers the way in — a link to the desk itself', async () => {
         const { fetchImpl } = fakeDesk()
         const view = render(desk({ node: node(), values: {}, fetchImpl }))
@@ -277,5 +330,26 @@ describe('DmxOutPanelWindow — the lighting desk', () => {
         expect(view.container.querySelector('input[type="text"]')).not.toBeNull()
         const deskView = render(desk({ node: node({ rig: 'desk' }), values: {}, fetchImpl: fakeDesk().fetchImpl }))
         expect(deskView.container.querySelector('input[type="text"]')).toBeNull()
+    })
+})
+
+describe('DmxOutPanelWindow throttles', () => {
+    it('cancels the old lane\'s throttles when the lane changes and the rest on unmount', async () => {
+        cancels.length = 0
+        const { fetchImpl } = fakeRig()
+        const props = { values: {}, onStatus: vi.fn(), fetchImpl, pageProtocol: 'http:' }
+        const { rerender, unmount } = render(<DmxOutPanelWindow node={node({ rig: 'vizzz', host: 'a.local' })} {...props} />)
+        expect(cancels.length).toBe(2)
+        expect(cancels.every((c) => c.mock.calls.length === 0)).toBe(true)
+
+        rerender(<DmxOutPanelWindow node={node({ rig: 'vizzz', host: 'b.local' })} {...props} />)
+        expect(cancels.length).toBe(4)
+        expect(cancels[0]).toHaveBeenCalledTimes(1)
+        expect(cancels[1]).toHaveBeenCalledTimes(1)
+        expect(cancels[2]).not.toHaveBeenCalled()
+
+        unmount()
+        expect(cancels[2]).toHaveBeenCalledTimes(1)
+        expect(cancels[3]).toHaveBeenCalledTimes(1)
     })
 })

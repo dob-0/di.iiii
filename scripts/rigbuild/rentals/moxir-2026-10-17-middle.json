@@ -1,0 +1,301 @@
+{
+    "rentalList": {
+        "name": "MOXIR 17.10 — Middle — the line, the roof, one laser",
+        "source": "scripts/rigbuild/rentals/moxir-2026-10-17.json (the rental house's price list, imported by rental.mjs) · lines: scripts/place/rigs/moxir-versions-2026-10-17.json, version \"middle\"",
+        "writtenAt": "2026-09-28",
+        "currency": "AMD",
+        "items": [
+            {
+                "code": "UP-B380F",
+                "type": "up-b380f",
+                "ordered": 17,
+                "stock": 18,
+                "label": "380W beam moving head (outdoor)",
+                "source": "Price list!A6:E6 · version \"middle\" of scripts/place/rigs/moxir-versions-2026-10-17.json",
+                "note": "the quote calculator's hidden \"Price data\" sheet differs from the visible price list on this rate (both in the private repo)"
+            },
+            {
+                "code": "UP-250BSW",
+                "type": "up-250bsw",
+                "ordered": 12,
+                "stock": 12,
+                "label": "250W beam / spot / wash",
+                "source": "Price list!A7:E7 · version \"middle\" of scripts/place/rigs/moxir-versions-2026-10-17.json"
+            },
+            {
+                "code": "UP-LA40WF",
+                "type": "up-la40wf",
+                "ordered": 1,
+                "stock": 2,
+                "label": "40W full-colour laser",
+                "source": "Price list!A16:E16 · version \"middle\" of scripts/place/rigs/moxir-versions-2026-10-17.json"
+            },
+            {
+                "code": "UP-PL5403",
+                "type": "up-pl5403",
+                "ordered": 38,
+                "stock": 50,
+                "label": "54x3W LED PAR (outdoor)",
+                "source": "Price list!A13:E13 · version \"middle\" of scripts/place/rigs/moxir-versions-2026-10-17.json"
+            },
+            {
+                "code": "EXT-STROBE",
+                "type": "ext-strobe",
+                "ordered": 6,
+                "label": "LED strobe (other supplier)",
+                "source": "scripts/place/rigs/moxir-versions-2026-10-17.json otherSuppliers.EXT-STROBE",
+                "note": "options: Martin Atomic 3000 LED · GLP JDC2 IP · SGM PALCO Z-FX; rate owed",
+                "from": "other",
+                "supplier": "to choose — see the note"
+            },
+            {
+                "code": "EXT-HAZER",
+                "type": "ext-hazer",
+                "ordered": 4,
+                "label": "Hazer (other supplier)",
+                "source": "scripts/place/rigs/moxir-versions-2026-10-17.json otherSuppliers.EXT-HAZER",
+                "note": "options: Antari HZ-1000 · Look Solutions Unique 2.1 · Smoke Factory Tour-Hazer II; rate owed",
+                "from": "other",
+                "supplier": "to choose — see the note"
+            }
+        ],
+        "days": 1,
+        "dates": {
+            "from": "2026-10-17",
+            "to": "2026-10-17"
+        },
+        "rule": {
+            "extraDay": 0.5,
+            "source": "Price list!A2 \"Day 1 full rate; each additional day 50%.\" · \"Price data\"!H2 = 0.5"
+        },
+        "catalogue": [
+            {
+                "code": "UP-B380F",
+                "label": "380W beam moving head (outdoor)",
+                "details": "High-output beam, IP-rated",
+                "category": "Moving heads",
+                "cells": "Price list!A6:E6",
+                "stock": 18
+            },
+            {
+                "code": "UP-250BSW",
+                "label": "250W beam / spot / wash",
+                "details": "LED 3-in-1 pattern beam",
+                "category": "Moving heads",
+                "cells": "Price list!A7:E7",
+                "stock": 12
+            },
+            {
+                "code": "UP-HK1915",
+                "label": "19x15W bee-eye",
+                "details": "19-lens matrix with zoom",
+                "category": "Moving heads",
+                "cells": "Price list!A8:E8",
+                "stock": 14
+            },
+            {
+                "code": "UP-HK615",
+                "label": "6x15W bee-eye with laser",
+                "details": "6-lens with laser",
+                "category": "Moving heads",
+                "cells": "Price list!A9:E9",
+                "stock": 6
+            },
+            {
+                "code": "UP-MH100S",
+                "label": "100W moving head (pattern)",
+                "details": "Gobo / pattern, compact",
+                "category": "Moving heads",
+                "cells": "Price list!A10:E10",
+                "stock": 8
+            },
+            {
+                "code": "UP-MH8060S",
+                "label": "80W moving head (pattern)",
+                "details": "Gobo / pattern, compact",
+                "category": "Moving heads",
+                "cells": "Price list!A11:E11",
+                "stock": 6
+            },
+            {
+                "code": "UP-PL5403",
+                "label": "54x3W LED PAR (outdoor)",
+                "details": "RGBW wash, IP-rated cast aluminium",
+                "category": "PAR & wash",
+                "cells": "Price list!A13:E13",
+                "stock": 50
+            },
+            {
+                "code": "UP-COB200",
+                "label": "200W COB PAR (indoor)",
+                "details": "COB wash",
+                "category": "PAR & wash",
+                "cells": "Price list!A14:E14",
+                "stock": 8
+            },
+            {
+                "code": "UP-LA40WF",
+                "label": "40W full-colour laser",
+                "details": "Waterproof, high power",
+                "category": "Lasers",
+                "cells": "Price list!A16:E16",
+                "stock": 2
+            },
+            {
+                "code": "UP-BY06",
+                "label": "6-eye swing laser (red)",
+                "details": "Swing laser effect",
+                "category": "Lasers",
+                "cells": "Price list!A17:E17",
+                "stock": 4
+            },
+            {
+                "code": "UP-JG400",
+                "label": "400 mW full-colour laser",
+                "details": "Compact full-colour",
+                "category": "Lasers",
+                "cells": "Price list!A18:E18",
+                "stock": 2
+            },
+            {
+                "code": "UP-Q108S",
+                "label": "CO2 gas column gun",
+                "details": "8-10 m spray, DMX",
+                "category": "Atmosphere & FX",
+                "cells": "Price list!A20:E20",
+                "stock": 6
+            },
+            {
+                "code": "UP-YH600F",
+                "label": "Cold-spark firework machine",
+                "details": "Waterproof, DMX",
+                "category": "Atmosphere & FX",
+                "cells": "Price list!A21:E21",
+                "stock": 4
+            },
+            {
+                "code": "UP-YZ31P",
+                "label": "Smoke machine (multi-angle)",
+                "details": "Waterproof",
+                "category": "Atmosphere & FX",
+                "cells": "Price list!A22:E22",
+                "stock": 4
+            },
+            {
+                "code": "UP-SW3000B",
+                "label": "Low-fog machine 3000W",
+                "details": "Double-head ground fog",
+                "category": "Atmosphere & FX",
+                "cells": "Price list!A23:E23",
+                "stock": 1
+            },
+            {
+                "code": "UP-236",
+                "label": "Mist machine 800W",
+                "details": "Double-head",
+                "category": "Atmosphere & FX",
+                "cells": "Price list!A24:E24",
+                "stock": 2
+            },
+            {
+                "code": "UP-HD210",
+                "label": "3-in-1 butterfly effect",
+                "details": "Multi-effect",
+                "category": "Atmosphere & FX",
+                "cells": "Price list!A25:E25",
+                "stock": 2
+            },
+            {
+                "code": "UP-Q3L",
+                "label": "MA lighting console",
+                "details": "Linux OS, full-size control",
+                "category": "Control & power",
+                "cells": "Price list!A27:E27",
+                "stock": 1
+            },
+            {
+                "code": "UP-1024",
+                "label": "1024 DMX control desk",
+                "details": "1024-channel",
+                "category": "Control & power",
+                "cells": "Price list!A28:E28",
+                "stock": 1
+            },
+            {
+                "code": "UP-9800",
+                "label": "FRX-9800 central controller",
+                "details": "Central control",
+                "category": "Control & power",
+                "cells": "Price list!A29:E29",
+                "stock": 1
+            },
+            {
+                "code": "UP-B01",
+                "label": "Light control / broadcast unit",
+                "details": "Control unit",
+                "category": "Control & power",
+                "cells": "Price list!A30:E30",
+                "stock": 1
+            },
+            {
+                "code": "UP-PDU60B",
+                "label": "DMX signal amplifier (outdoor)",
+                "details": "IP-rated distribution",
+                "category": "Control & power",
+                "cells": "Price list!A31:E31",
+                "stock": 2
+            },
+            {
+                "code": "UP-PDU60A",
+                "label": "DMX signal amplifier",
+                "details": "1-way DMX512 distribution",
+                "category": "Control & power",
+                "cells": "Price list!A32:E32",
+                "stock": 1
+            },
+            {
+                "code": "UP-2303",
+                "label": "DMX decoder 2303",
+                "details": "Decoder",
+                "category": "Control & power",
+                "cells": "Price list!A33:E33",
+                "stock": 1
+            },
+            {
+                "code": "UP-POWER12",
+                "label": "12-way dimmer / power cabinet",
+                "details": "12-channel distro",
+                "category": "Control & power",
+                "cells": "Price list!A34:E34",
+                "stock": 1
+            }
+        ],
+        "terms": [
+            {
+                "text": "All rates AMD, per unit, per day, excluding VAT. Day 1 full rate; each additional day 50%.",
+                "cell": "Price list!A2"
+            },
+            {
+                "text": "Delivery, rigging & de-rig: Quoted by location — Yerevan, regions, or venue-specific access — On request",
+                "cell": "Price list!A36:E36"
+            },
+            {
+                "text": "Consumables (haze and low-fog fluid, CO2, cold-spark powder) are charged at cost.",
+                "cell": "Price list!A38"
+            },
+            {
+                "text": "Truss, clamps, safety chains and cabling are included with the fixtures they serve.",
+                "cell": "Price list!A39"
+            },
+            {
+                "text": "Prices exclude VAT. A refundable damage deposit is required.",
+                "cell": "Price list!A40"
+            },
+            {
+                "text": "the quote calculator's delivery, rigging & de-rig default: 150000 (Set by location. One-off, not multiplied by days.)",
+                "cell": "Quote 2!G38"
+            }
+        ]
+    },
+    "writtenBy": "scripts/rigbuild/versions.mjs"
+}

@@ -1,12 +1,11 @@
 // @vitest-environment node
 
-import { spawn } from 'node:child_process'
 import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
-import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { spawnServerUntilReady } from './testSupport/spawnServer.mjs'
 
 // Every test in this file boots a real serverXR process and talks to it over
 // the loopback. Vitest's default 5s per-test budget covers the *machine*, not
@@ -25,47 +24,14 @@ const activeServers = []
 
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
-const getFreePort = async () => {
-    return new Promise((resolve, reject) => {
-        const server = net.createServer()
-        server.on('error', reject)
-        server.listen(0, '127.0.0.1', () => {
-            const address = server.address()
-            const port = typeof address === 'object' && address ? address.port : 0
-            server.close((error) => {
-                if (error) reject(error)
-                else resolve(port)
-            })
-        })
-    })
-}
-
-const waitForHealth = async ({ url, child, getLogs }) => {
-    const deadline = Date.now() + 15000
-    while (Date.now() < deadline) {
-        if (child.exitCode !== null) {
-            throw new Error(`Server exited early.\n${getLogs()}`)
-        }
-        try {
-            const response = await fetch(url)
-            if (response.ok) return
-        } catch {
-            // retry
-        }
-        await wait(200)
-    }
-    throw new Error(`Server did not become healthy in time.\n${getLogs()}`)
-}
-
 const startServer = async ({ extraEnv = {} } = {}) => {
     const sandboxCwd = await mkdtemp(path.join(os.tmpdir(), 'dii-project-server-cwd-'))
     const sandboxDataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-project-server-data-'))
-    const port = await getFreePort()
-    const child = spawn(process.execPath, [SERVER_ENTRY], {
+    const { child, port, logs } = await spawnServerUntilReady({
+        entry: SERVER_ENTRY,
         cwd: sandboxCwd,
         env: {
             ...process.env,
-            PORT: String(port),
             NODE_ENV: 'test',
             APP_BASE_PATH: '/serverXR',
             DATA_ROOT: sandboxDataRoot,
@@ -73,14 +39,8 @@ const startServer = async ({ extraEnv = {} } = {}) => {
             REQUIRE_AUTH: '',
             CORS_ORIGINS: '*',
             ...extraEnv
-        },
-        stdio: ['ignore', 'pipe', 'pipe']
+        }
     })
-
-    let stdout = ''
-    let stderr = ''
-    child.stdout.on('data', (chunk) => { stdout += chunk.toString() })
-    child.stderr.on('data', (chunk) => { stderr += chunk.toString() })
 
     const baseUrl = `http://127.0.0.1:${port}/serverXR`
 
@@ -100,13 +60,7 @@ const startServer = async ({ extraEnv = {} } = {}) => {
         await rm(sandboxDataRoot, { recursive: true, force: true })
     }
 
-    await waitForHealth({
-        url: `${baseUrl}/api/health`,
-        child,
-        getLogs: () => `STDOUT:\n${stdout}\nSTDERR:\n${stderr}`
-    })
-
-    const handle = { baseUrl, dataRoot: sandboxDataRoot, stop }
+    const handle = { baseUrl, dataRoot: sandboxDataRoot, logs, stop }
     activeServers.push(handle)
     return handle
 }
@@ -809,7 +763,7 @@ describe('project contracts', () => {
     // that the field survives a real save and a real load, through the server's
     // own normalizer — not the ESM copy the browser runs — and comes back as a
     // number and nothing else.
-    it('keeps components.fixture = { index } through a real write and read', async () => {
+    it('keeps components.fixture = { index, universe, address } through a real write and read', async () => {
         const server = await startServer()
         const create = await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
             method: 'POST',
@@ -837,7 +791,9 @@ describe('project contracts', () => {
         expect(read.status).toBe(200)
         const { document } = await read.json()
         const byId = Object.fromEntries(document.entities.map((entity) => [entity.id, entity]))
-        expect(byId.spot.components.fixture).toEqual({ index: 3 })
+        // Since the rig base (RIG_BUILD.md §2), a lamp also carries the plot's patch — universe
+        // and address travel with the fixture component through a real write and read.
+        expect(byId.spot.components.fixture).toEqual({ index: 3, universe: 1, address: 17 })
         expect(byId.point.components.fixture).toEqual({ index: 5 })
 
         const clear = await fetch(`${server.baseUrl}/api/projects/fixture-join/ops`, {
@@ -852,7 +808,7 @@ describe('project contracts', () => {
         const again = await (await fetch(`${server.baseUrl}/api/projects/fixture-join/document`)).json()
         const cleared = again.document.entities.find((entity) => entity.id === 'point')
         expect(cleared.components.fixture).toBeUndefined()
-        expect(again.document.entities.find((entity) => entity.id === 'spot').components.fixture).toEqual({ index: 3 })
+        expect(again.document.entities.find((entity) => entity.id === 'spot').components.fixture).toEqual({ index: 3, universe: 1, address: 17 })
     })
 
     // The layers decision, 2026-09-23, unit 1: the space's project list says
@@ -1103,6 +1059,157 @@ describe('collections, state and the trash', () => {
         const projects = (await (await fetch(`${server.baseUrl}/api/spaces/main/projects`)).json()).projects
         const seen = projects.filter(p => [a.id, b.id, c.id].includes(p.id)).map(p => p.id)
         expect(seen).toEqual([c.id, a.id, b.id])
+    })
+})
+
+// The trash has no scope check of its own. GET /api/trash takes its space as
+// `?space=`, a query param no route-level gate ever looks at, and
+// POST /api/projects/:projectId/restore looks a project up in the trash
+// directly instead of through the live-project middleware that sets
+// req.requiredSpaceId — so neither ever asked canAccessSpace anything.
+// Reproduced against a real serverXR with REQUIRE_AUTH=true, 2026-09-24:
+// an anonymous GET /api/trash returned 200 with every trashed project in
+// every space. Regression for both routes, under real auth.
+describe('the trash has scope, same as everything else', () => {
+    const withAuth = (token) => ({ Authorization: `Bearer ${token}` })
+    const ADMIN_TOKEN = 'admin-token-for-trash-scope'
+    const EDITOR_TOKEN = 'editor-token-for-trash-scope'
+
+    const startScopedServer = async () => startServer({
+        extraEnv: {
+            REQUIRE_AUTH: 'true',
+            AUTH_SESSION_SECRET: 'trash-scope-session-secret',
+            API_TOKEN: ADMIN_TOKEN,
+            EDITOR_API_TOKEN: EDITOR_TOKEN,
+            EDITOR_ALLOWED_SPACES: 'editors-space'
+        }
+    })
+
+    const createSpace = async (server, id) => {
+        const res = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(ADMIN_TOKEN) },
+            body: JSON.stringify({ id, label: id })
+        })
+        expect(res.status).toBe(201)
+    }
+
+    const createAndTrash = async (server, spaceId, title) => {
+        const created = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(ADMIN_TOKEN) },
+            body: JSON.stringify({ title })
+        })
+        expect(created.status).toBe(201)
+        const project = (await created.json()).project
+        const deleted = await fetch(`${server.baseUrl}/api/projects/${project.id}`, {
+            method: 'DELETE',
+            headers: withAuth(ADMIN_TOKEN)
+        })
+        expect(deleted.status).toBe(200)
+        return project
+    }
+
+    it('never lists a private space trashed project to an anonymous caller', async () => {
+        const server = await startScopedServer()
+        await createSpace(server, 'secret-space')
+        const secret = await createAndTrash(server, 'secret-space', 'Nobody should see this')
+
+        // ?space= on a private space: same 401 GET /api/spaces/:spaceId/projects gives.
+        const scopedAnon = await fetch(`${server.baseUrl}/api/trash?space=secret-space`)
+        expect(scopedAnon.status).toBe(401)
+
+        // No ?space=: the list is narrowed instead of gated, so it comes back
+        // 200 — but empty, not the unfiltered trash across every space.
+        const unscopedAnon = await fetch(`${server.baseUrl}/api/trash`)
+        expect(unscopedAnon.status).toBe(200)
+        const anonBody = await unscopedAnon.json()
+        expect(anonBody.projects.map(p => p.id)).not.toContain(secret.id)
+    })
+
+    it('limits a scoped editor token to its own spaces, in both directions', async () => {
+        const server = await startScopedServer()
+        await createSpace(server, 'secret-space')
+        await createSpace(server, 'editors-space')
+        const secret = await createAndTrash(server, 'secret-space', 'Not the editor\'s space')
+        const own = await createAndTrash(server, 'editors-space', 'The editor\'s own')
+
+        const scopedRead = await fetch(`${server.baseUrl}/api/trash?space=secret-space`, {
+            headers: withAuth(EDITOR_TOKEN)
+        })
+        expect(scopedRead.status).toBe(403)
+        await expect(scopedRead.json()).resolves.toMatchObject({
+            error: 'Space access denied.',
+            requiredSpaceId: 'secret-space',
+            allowedSpaces: ['editors-space']
+        })
+
+        const unscopedRead = await (await fetch(`${server.baseUrl}/api/trash`, {
+            headers: withAuth(EDITOR_TOKEN)
+        })).json()
+        expect(unscopedRead.projects.map(p => p.id)).not.toContain(secret.id)
+        expect(unscopedRead.projects.map(p => p.id)).toContain(own.id)
+
+        // The restore route looks a trashed project up directly (not through
+        // the live-project middleware), so its own space scope has to be
+        // checked separately — an editor scoped to editors-space must not be
+        // able to restore a project trashed in secret-space.
+        const deniedRestore = await fetch(`${server.baseUrl}/api/projects/${secret.id}/restore`, {
+            method: 'POST',
+            headers: withAuth(EDITOR_TOKEN)
+        })
+        expect(deniedRestore.status).toBe(403)
+
+        const stillTrashed = await (await fetch(`${server.baseUrl}/api/trash?space=secret-space`, {
+            headers: withAuth(ADMIN_TOKEN)
+        })).json()
+        expect(stillTrashed.projects.map(p => p.id)).toContain(secret.id)
+
+        const allowedRestore = await fetch(`${server.baseUrl}/api/projects/${own.id}/restore`, {
+            method: 'POST',
+            headers: withAuth(EDITOR_TOKEN)
+        })
+        expect(allowedRestore.status).toBe(200)
+    })
+
+    // A follow reads the other machine's trash with its per-space sync key
+    // (follow/follower.js refreshStreams) — that key, and only for its own space.
+    it('lets a sync key read the trash of its own space only', async () => {
+        const server = await startScopedServer()
+        await createSpace(server, 'keyed-space')
+        await createSpace(server, 'other-space')
+        const own = await createAndTrash(server, 'keyed-space', 'Keyed')
+        const other = await createAndTrash(server, 'other-space', 'Other')
+        const minted = await fetch(`${server.baseUrl}/api/spaces/keyed-space/sync-keys`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(ADMIN_TOKEN) },
+            body: JSON.stringify({ label: 'follows keyed-space' })
+        })
+        expect(minted.status).toBe(201)
+        const key = withAuth((await minted.json()).token)
+
+        const read = await fetch(`${server.baseUrl}/api/trash?space=keyed-space`, { headers: key })
+        expect(read.status).toBe(200)
+        expect((await read.json()).projects.map(p => p.id)).toEqual([own.id])
+
+        expect((await fetch(`${server.baseUrl}/api/trash?space=other-space`, { headers: key })).status).toBe(403)
+        const unscoped = await (await fetch(`${server.baseUrl}/api/trash`, { headers: key })).json()
+        expect(unscoped.projects.map(p => p.id)).not.toContain(other.id)
+    })
+
+    it('shows an admin every space\'s trash', async () => {
+        const server = await startScopedServer()
+        await createSpace(server, 'secret-space')
+        await createSpace(server, 'editors-space')
+        const secret = await createAndTrash(server, 'secret-space', 'Admin sees this')
+        const own = await createAndTrash(server, 'editors-space', 'And this')
+
+        const asAdmin = await (await fetch(`${server.baseUrl}/api/trash`, {
+            headers: withAuth(ADMIN_TOKEN)
+        })).json()
+        const ids = asAdmin.projects.map(p => p.id)
+        expect(ids).toContain(secret.id)
+        expect(ids).toContain(own.id)
     })
 })
 

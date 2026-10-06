@@ -3,6 +3,7 @@ import MakeRoom from './MakeRoom.jsx'
 import { useProjectStore } from '../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../project/hooks/useProjectDocumentSync.js'
 import { useProjectPresence } from '../project/hooks/useProjectPresence.js'
+import { isPreviewRequest } from '../utils/previewMode.js'
 import { createEntityOfType } from '../project/entityRegistry.js'
 import { currentAuthor } from '../project/authorship.js'
 import { getProject, uploadProjectAsset } from '../project/services/projectsApi.js'
@@ -60,8 +61,11 @@ export default function MakeSurface({ projectId, spaceId }) {
     // Raw's own identity keys, deliberately — see makeIdentity.js. The presence
     // hook persists `displayName` back to that key itself, which is what makes
     // a child's name appear on a Raw chat bubble without Raw changing at all.
+    // ?preview=1 — a PICTURE of the toybox on another page (a Kit card on
+    // /tools): it draws the scene, but no child is announced in the room.
+    const [isPreview] = useState(() => isPreviewRequest())
     const presence = useProjectPresence({
-        projectId,
+        projectId: isPreview ? '' : projectId,
         // The space room. A child alone in their own room has nobody in the
         // project channel — the four people they mean by "talk" are each in a
         // room of their own, and this is the only channel that reaches them.

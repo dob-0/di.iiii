@@ -7,6 +7,7 @@ import { useMachinePresence } from '../project/tops/useMachinePresence.js'
 import RigBlackout from '../rig/RigBlackout.jsx'
 import useScreenWakeLock from '../hooks/useScreenWakeLock.js'
 import useDocumentTitle from '../hooks/useDocumentTitle.js'
+import { isPreviewRequest, signalPreviewReady } from '../utils/previewMode.js'
 import './mapSurface.css'
 
 // THE SIGNAL.
@@ -27,7 +28,16 @@ export default function MapOutput({ projectId, spaceId }) {
     const network = useMemo(() => toTopNetwork(doc), [doc])
     // This page is its machine on the desk: a kiosk with a camera and a
     // projector is exactly what the other machines need to see.
-    const { machine } = useMachinePresence(spaceId)
+    // 'poll': the wall's connections belong to its pictures — no held-open NDI feed here.
+    //
+    // ?preview=1 — a PICTURE of the wall on another page (a Kit card on
+    // /tools): it draws the surfaces and follows them, but is no machine on
+    // the desk, so it joins no machine link and shows no controls.
+    const [isPreview] = useState(() => isPreviewRequest())
+    const { machine } = useMachinePresence(isPreview ? null : spaceId, { ndi: 'poll' })
+    useEffect(() => {
+        if (isPreview && doc) signalPreviewReady(spaceId)
+    }, [isPreview, doc, spaceId])
     // Nothing mapped yet, but a Picture Out runs on this machine: the screen
     // shows it, whole. Mapping corners is a refinement, not a precondition.
     const ownOut = useMemo(() => {
@@ -42,7 +52,7 @@ export default function MapOutput({ projectId, spaceId }) {
     // projected at all. When a surface draws Pictures it runs them itself, so
     // this stands down — one engine, one camera open, per page.
     const drawsPictures = (fallbackMapping?.surfaces || []).some((surface) => surface.enabled !== false && surface.source?.kind === 'network' && surface.source?.ref)
-    useTopNetwork({ network: drawsPictures ? NO_NETWORK : network, spaceId })
+    useTopNetwork({ network: drawsPictures ? NO_NETWORK : network, spaceId, assets: doc?.assets || null, projectId })
     useMapChannelListener(projectId, store)
 
     // A projector output must survive unattended, the same as Raw's (see
@@ -99,9 +109,9 @@ export default function MapOutput({ projectId, spaceId }) {
     return (
         <div className={`map-output${idle ? ' is-idle' : ''}`}>
             {stage.width > 0 ? (
-                <MapStage mapping={fallbackMapping} spaceId={spaceId} width={stage.width} height={stage.height} network={network} live />
+                <MapStage mapping={fallbackMapping} spaceId={spaceId} width={stage.width} height={stage.height} network={network} assets={doc?.assets || null} projectId={projectId} live />
             ) : null}
-            <MapOutputControls />
+            {isPreview ? null : <MapOutputControls />}
             <RigBlackout />
         </div>
     )

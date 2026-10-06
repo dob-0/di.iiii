@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react'
+import { useOpHistory } from '../project/hooks/useOpHistory.js'
 import { useProjectStore } from '../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../project/hooks/useProjectDocumentSync.js'
 import { defaultMappingSurface, generateId } from '../shared/projectSchema.js'
@@ -28,7 +29,14 @@ export function useMapDocument(projectId, { role = 'desk' } = {}) {
     const document = state.document
     const mapping = document?.mappingState
 
-    const applyOps = useMapOpCourier(projectId, applyLocalOps)
+    // Undo, the same history Studio and Nodes keep (src/project/hooks/useOpHistory.js),
+    // laid OVER the courier so an undo reaches the output window exactly like an edit
+    // does. Firing a cue is a performance, not an edit: it goes to the courier
+    // directly and never onto the history (2026-09-28 — the desk had no undo at all;
+    // Ctrl/Cmd was ignored outright).
+    const courier = useMapOpCourier(projectId, applyLocalOps)
+    const { applyLocalOps: recorded, undo, redo, canUndo, canRedo } = useOpHistory({ projectId, document: state.document, applyLocalOps: courier })
+    const { applyOps, ...api } = useMapActions(recorded, courier)
 
     const surfaces = useMemo(() => mapping?.surfaces || [], [mapping])
     const surfaceById = useMemo(
@@ -36,6 +44,22 @@ export function useMapDocument(projectId, { role = 'desk' } = {}) {
         [surfaces]
     )
 
+    return { store, document, mapping, surfaces, surfaceById, syncState, applyOps, undo, redo, canUndo, canRedo, ...api }
+}
+
+// What the desk can DO to a mapping, over any document's op layer — the
+// map desk's own (useMapDocument above) or a surface that already holds the
+// project, like the Perform desk's windows (src/perform/), which must not
+// open a second sync of the same project in the same page. The courier comes
+// along, so the output window hears every edit at once whichever surface made it.
+export function useMapApi(projectId, applyLocalOps) {
+    const applyOps = useMapOpCourier(projectId, applyLocalOps)
+    return useMapActions(applyOps, applyOps)
+}
+
+// The desk's actions over two appliers: `applyOps` for edits (recorded for undo on
+// the desk), `perform` for firing a cue (never recorded).
+export function useMapActions(applyOps, perform = applyOps) {
     const api = useMemo(() => ({
         // The generated id goes LAST and always wins. Spreading the caller's
         // patch over it meant a duplicate — which passes the whole surface it
@@ -95,10 +119,10 @@ export function useMapDocument(projectId, { role = 'desk' } = {}) {
         // src/map/cueFiring.js — the same call the 3D scene's cue strip makes.
         // Nothing downstream of that function can tell which tool pressed the
         // key, which is the whole point of letting two tools press it.
-        fireCue: (cue) => fireCueShared(cue, applyOps)
-    }), [applyOps])
+        fireCue: (cue) => fireCueShared(cue, perform)
+    }), [applyOps, perform])
 
-    return { store, document, mapping, surfaces, surfaceById, syncState, applyOps, ...api }
+    return useMemo(() => ({ applyOps, ...api }), [applyOps, api])
 }
 
 // The output window's side of the courier: apply an edit the moment it is

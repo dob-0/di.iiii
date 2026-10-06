@@ -4,6 +4,7 @@ import {
     DEFAULT_HAZE,
     UNLIMITED_THROW,
     beamFadeAt,
+    beamCastsLight,
     beamFadeColors,
     beamIsVisible,
     spotBeamShape
@@ -107,5 +108,53 @@ describe('the beam in the air', () => {
     it('clamps a silly angle instead of drawing an infinite disc', () => {
         expect(spotBeamShape({ angle: 3, distance: 10 }).radius).toBeLessThan(10 * Math.tan(Math.PI / 2 - 0.009))
         expect(spotBeamShape({ angle: -1, distance: 10 }).radius).toBeGreaterThan(0)
+    })
+
+    it('casts real light unless the beam is drawn AND marked only', () => {
+        // Every lamp saved before `only` existed keeps its light.
+        expect(beamCastsLight(null)).toBe(true)
+        expect(beamCastsLight(undefined)).toBe(true)
+        expect(beamCastsLight({ visible: true, haze: 0.4 })).toBe(true)
+        // The cone with no light behind it — a rig bigger than a browser can light.
+        expect(beamCastsLight({ visible: true, only: true })).toBe(false)
+        // A lamp with no beam and no light would be nothing at all.
+        expect(beamCastsLight({ visible: false, only: true })).toBe(true)
+        expect(beamCastsLight({ visible: true, only: 'yes' })).toBe(true)
+    })
+})
+
+// MOXIR render audit (A), 2026-10-01: a rig lamp's `angle` is half its BEAM angle — the
+// 50 % point of the datasheet — but three.js reads a SpotLight's angle as the 0 % CUTOFF.
+// The pools on the floor were narrower than the beams that land on them, and the washes
+// put ~2.4× too little light on the surfaces. The real light's cone is fitted instead.
+describe('a rig lamp\'s real light, fitted to its beam angle', async () => {
+    const { spotLightCone } = await import('./spotBeam.js')
+    // three's spot falloff: smoothstep(cos(cutoff), cos(cutoff·(1−penumbra)), cos θ)
+    const falloff = (theta, { angle, penumbra }) => {
+        const lo = Math.cos(angle)
+        const hi = Math.cos(angle * (1 - penumbra))
+        const t = Math.min(1, Math.max(0, (Math.cos(theta) - lo) / (hi - lo)))
+        return t * t * (3 - 2 * t)
+    }
+    it('crosses 50 % at the beam half-angle, for a wash and for a narrow beam', () => {
+        for (const [half, penumbra] of [[0.1309, 0.5], [0.0157, 0.1], [0.218, 0.3]]) {
+            const cone = spotLightCone({ angle: half, penumbra })
+            expect(cone.angle).toBeGreaterThan(half)
+            expect(falloff(half, cone)).toBeCloseTo(0.5, 2)
+            expect(falloff(0, cone)).toBe(1)
+        }
+    })
+    it('gives a wash a soft, wide field and a beam a hard edge (field = the 10 % point)', () => {
+        const field = (cone) => { let t = 0; while (falloff(t, cone) > 0.1) t += cone.angle / 2000; return t }
+        const wash = spotLightCone({ angle: 0.1309, penumbra: 0.5 })
+        const beam = spotLightCone({ angle: 0.0157, penumbra: 0.1 })
+        // three's falloff is a smoothstep in cos θ (quadratic in θ): at its softest the 10 %
+        // edge is √(0.804/0.5) ≈ 1.27× the 50 % point — short of a real wash's ~1.8, the most
+        // three can give. A beam's edge is harder: ~1.1×.
+        expect(field(wash) / 0.1309).toBeGreaterThan(1.24)
+        expect(field(beam) / 0.0157).toBeGreaterThan(1.05)
+        expect(field(beam) / 0.0157).toBeLessThan(1.15)
+        expect(wash.penumbra).toBeLessThanOrEqual(1)
+        expect(beam.penumbra).toBeGreaterThan(0)
     })
 })

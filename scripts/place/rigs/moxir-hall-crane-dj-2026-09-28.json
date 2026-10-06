@@ -1,0 +1,6 @@
+{
+  "_what": "MOXIR, the crane over the DJ (owner, 2026-09-28 23:1x: \"the yellow thing its move able we will arrange the crane top to the dj … with the metal chain conected thr the yellow crane\"). Layered AFTER moxir-hall-dims-2026-09-28.json and moxir-hall-features-2026-09-28.json: the nave's entry-end crane rolls along its runway until its bridge's centre line is over the DJ (z 4.8 m in the hall frame: the performer's box on the 3 x 2 m riser, z 4.3-6.0, centred behind the table), and its trolley is parked at the right-hand end of the bridge, out of the beams of the rig hung below. The same crane, moved — not a second one. The far crane stays where it was seen.",
+  "_source": "the owner's direction (memory project_dii_moxir_place.md 2026-09-28 23:1x; ~/Downloads/moxir-crane-rig/sketch.html), approved as the minimal hang: 'ok take complimentary'. Positions are a PLAN, not a survey: the crane's travel, brakes and rated load are unchecked (rigging sign-off owed).",
+  "cranes_from_door_m": [49.2, 95.0],
+  "crane_trolley_x_m": [7.6, null]
+}

@@ -61,6 +61,28 @@ check('GET /api/state carries the whole desk', async () => {
   assert.ok(Array.isArray(body.status.interfaces), 'status carries the local interfaces');
 });
 
+check('DMX input: off by default, settings sanitised, status says so in words', async () => {
+  const off = await GET('/api/input');
+  assert.strictEqual(off.status, 200);
+  assert.strictEqual(off.body.config.enabled, false, 'input is OFF until switched on');
+  assert.deepStrictEqual(off.body.listening, [], 'nothing bound while off');
+  assert.strictEqual(off.body.summary.text, 'Input off');
+  const on = await POST('/api/input', { enabled: true, interfaces: ['127.0.0.1', 'bogus'], universes: [{ universe: 0, merge: 'ltp' }, { universe: -3 }], loss: 'hold' });
+  assert.strictEqual(on.status, 200);
+  assert.deepStrictEqual(on.body.config.interfaces, ['127.0.0.1']);
+  assert.deepStrictEqual(on.body.config.universes, [{ universe: 0, merge: 'ltp', desk: 'follow' }]);
+  assert.strictEqual(on.body.config.loss, 'hold');
+  assert.ok(on.body.summary.text.length > 0, 'never a blank status');
+  const sum = await GET('/api/summary');
+  assert.strictEqual(sum.body.input.enabled, true);
+  const st = await GET('/api/state');
+  assert.strictEqual(st.body.output.input.enabled, true, 'saved with the rig, under output');
+  assert.ok(st.body.status.input && st.body.status.input.summary, 'the page gets the input status');
+  const back = await POST('/api/input', { enabled: false, universes: [] });
+  assert.strictEqual(back.body.config.enabled, false);
+  assert.strictEqual((await POST('/api/input/release', {})).status, 200);
+});
+
 check('GET /api/dmx is {dmx, master, blackout} with 512 channels a universe', async () => {
   await patch('rgb', { universe: 0, address: 1 });
   await settle();
@@ -1371,6 +1393,44 @@ check('fan leaves alone a fixture that has no such attribute', async () => {
   await POST('/api/fixtures/remove', { ids: [wash.id, head.id] });
 });
 
+// One NOW for the desk (MOXIR UI audit, 2026-10-01): /api/state says what is on the cue layer
+// and who put it there, so no page has to guess from the cue list ("Nothing fired" while a
+// look was on).
+check('/api/state carries now: a hand-fired look is manual, a cue-fired one is cue with its index', async () => {
+  await POST('/api/looks', { looks: [
+    { id: 'now-a', name: 'Green core', kind: 'colour', steps: [{ values: {} }] },
+    { id: 'now-b', name: 'Red room', kind: 'colour', steps: [{ values: {} }] },
+  ] });
+  await POST('/api/layers', { layers: [] });
+  assert.strictEqual((await GET('/api/state')).body.now, null, 'nothing on is null');
+  await POST('/api/looks/fire', { id: 'now-a' });
+  let now = (await GET('/api/state')).body.now;
+  assert.ok(now, 'a look is on, so now is not null');
+  assert.strictEqual(now.source, 'manual');
+  assert.strictEqual(now.lookId, 'now-a');
+  assert.strictEqual(now.name, 'Green core');
+  assert.strictEqual(now.cue, null, 'no cue list loaded');
+  await POST('/api/cues/load', { project: 'now-test', list: [
+    { id: 'c1', name: 'One', lookId: 'now-a', hold: 0, fade: 0 },
+    { id: 'c2', name: 'Two', lookId: 'now-b', hold: 0, fade: 0 },
+  ], loop: false });
+  await POST('/api/cues/go', {});
+  await POST('/api/cues/go', {});
+  now = (await GET('/api/state')).body.now;
+  assert.strictEqual(now.source, 'cue');
+  assert.strictEqual(now.name, 'Red room');
+  assert.strictEqual(now.cue.index, 1);
+  assert.strictEqual(now.cue.n, 2);
+  // Taking the layer back by hand makes it manual again, and the cue list is still there to resume.
+  await POST('/api/looks/fire', { id: 'now-a' });
+  now = (await GET('/api/state')).body.now;
+  assert.strictEqual(now.source, 'manual');
+  assert.strictEqual(now.cue.index, 1, 'the cue list keeps its place');
+  await POST('/api/cues/load', { project: '', list: [], loop: false });
+  await POST('/api/layers', { layers: [] });
+  await POST('/api/looks', { looks: [] });
+});
+
 check('fan refuses without an attribute, and says the styles it knows', async () => {
   assert.strictEqual((await POST('/api/fan', { from: 0, to: 255 })).status, 400);
   const { body } = await GET('/api/state');
@@ -1397,6 +1457,10 @@ check('an outside caller can fire a look, and it lands on one visible layer', as
   assert.strictEqual(await wire(0, 483), 255, 'blue took its place');
   const { body: layers } = await GET('/api/layers');
   assert.strictEqual(layers.layers.filter((l) => l.id === 'cue').length, 1);
+  // The DMX frame says which look is on, so a room following the desk can pose by it
+  // (RIG_BUILD.md §11.4) at the rate it already reads the channels.
+  const { body: frame } = await GET('/api/dmx');
+  assert.deepStrictEqual(frame.looks.filter((l) => l.layer === 'cue').map((l) => l.lookId), ['cue-blue'], 'the fired look rides with the DMX');
   assert.strictEqual((await POST('/api/looks/fire', { id: 'nope' })).status, 404);
   await POST('/api/layers', { layers: [] });
   await POST('/api/looks', { looks: [] });

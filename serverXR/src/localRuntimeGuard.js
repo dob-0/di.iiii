@@ -41,7 +41,7 @@ const requireLocalRuntime = (req, res, next) => {
         // person on their own network who deserves to know which flag to set.
         res.status(403).json({
             error: 'local runtime is loopback-only',
-            detail: 'This di.iiii can reach devices, but only for a browser on the same machine. Set DI_ALLOW_LAN_DEVICES=1 to allow other machines on this network.'
+            detail: 'This di.iiii can reach devices, but only for a browser on the same machine. Set DI_ALLOW_LAN_DEVICES=1 to allow other machines on this network (di up --lan sets it).'
         })
         return
     }

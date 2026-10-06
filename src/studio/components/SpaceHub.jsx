@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import SpaceDomainPanel from './SpaceDomainPanel.jsx'
 import { Box, Container } from '@mui/material'
 import useAuthSession, { announceSessionChanged } from '../../hooks/useAuthSession.js'
 import useDocumentTitle from '../../hooks/useDocumentTitle.js'
@@ -14,8 +15,11 @@ import {
     uploadServerAsset,
     getServerSpaceAssetUrl,
     mintSpaceInvite,
+    listSpaceInvites,
+    revokeSpaceInvite,
     saveSpaceToFile,
     openSpaceFromFile,
+    listSpaceChanges,
     listSpaceSnapshots,
     restoreSpaceSnapshot
 } from '../../services/serverSpaces.js'
@@ -30,6 +34,7 @@ import { doorTitleForCard, spaceName } from '../utils/spaceNames.js'
 // addressed through its published project instead, so the picture, the frame
 // and the links all open the SPACE and not the code sharing its name.
 import { buildSpaceDoorPath, buildSpaceFacePath } from '../../works/segments.js'
+import { WORKS_HOST } from '../../works/works.js'
 import { getSpaceShareUrl } from '../../storage/spaceStore.js'
 import { createPreviewBootQueue } from '../../utils/previewBootQueue.js'
 import {
@@ -85,6 +90,18 @@ const describeRestorePoint = (point) => {
         case 'daily': return 'daily'
         default: return who ? `saved (${who})` : 'saved'
     }
+}
+
+// "What changed" rows. The server words each group "<who> · <space> (<where>)
+// · <what>"; a row on the space's own card needs no space id, so it says who,
+// where and what. The what is always the last part (its items join with commas).
+export const describeChangeGroup = (group) => {
+    const who = group?.actor?.type === 'server' ? 'The server' : (group?.actor?.label || 'Someone')
+    const text = String(group?.text || '')
+    const what = text.includes(' · ') ? text.slice(text.lastIndexOf(' · ') + 3) : text
+    const where = (group?.projects || []).map(p => p.title || p.id).filter(Boolean)
+    if (group?.scene) where.unshift('the scene')
+    return `${who}${where.length ? ` — ${where.join(', ')}` : ''}: ${what || 'no visible change'}`
 }
 
 // Preview iframes lay out at this virtual desktop viewport and are scaled
@@ -186,7 +203,7 @@ function SpaceCardPreview({ doorPath, label }) {
     return (
         <div ref={hostRef} className={`ssh-card-preview-fill${stub ? ' ssh-card-preview-fill--stub' : ''}`} aria-hidden="true">
             {stub ? (
-                <p className="ssh-card-preview-empty-line">not in this copy — this piece lives on di-studio.xyz</p>
+                <p className="ssh-card-preview-empty-line">not in this copy — this piece lives on {WORKS_HOST}</p>
             ) : visible && booted ? (
                 <iframe
                     ref={frameRef}
@@ -290,6 +307,9 @@ export default function SpaceHub() {
     const [github, setGithub] = useState(null)
     // card-preview manager panel state: { spaceId, busy, error }
     const [previewMgr, setPreviewMgr] = useState(null)
+    // The invite links a space has out: the only way to stop one before its
+    // week is up (2026-09-28 — the server could revoke, nothing here asked it to).
+    const [invites, setInvites] = useState(null)
     // History: the space's restore points, opened from Manage.
     const [history, setHistory] = useState(null)
     const [providers, setProviders] = useState(null) // null until sign-in requested
@@ -301,6 +321,8 @@ export default function SpaceHub() {
     // every card turned the grid into a wall of controls with the work squeezed
     // between them; they live behind "Manage" now, one card open at a time.
     const [manageId, setManageId] = useState(null)
+    // The space whose own-domain panel is open (SpaceDomainPanel), or null.
+    const [domainsSpaceId, setDomainsSpaceId] = useState(null)
     // 'grid' = the card shelves (default); 'list' = one dense row per space, which
     // is the only view that stays readable past ~20 spaces; 'map' = the spatial lens.
     const [viewMode, setViewMode] = useState(() => {
@@ -636,17 +658,52 @@ export default function SpaceHub() {
     const loadHistory = useCallback(async (spaceId) => {
         setHistory(prev => prev?.spaceId === spaceId ? { ...prev, loading: true, error: '' } : prev)
         try {
-            const items = await listSpaceSnapshots(spaceId)
-            setHistory(prev => prev?.spaceId === spaceId ? { ...prev, loading: false, items } : prev)
+            // The changes list is a reading aid next to the restore points: if it
+            // cannot load, the points still show and can still be used.
+            const [items, changes] = await Promise.all([
+                listSpaceSnapshots(spaceId),
+                listSpaceChanges(spaceId).catch(() => [])
+            ])
+            setHistory(prev => prev?.spaceId === spaceId ? { ...prev, loading: false, items, changes: [...changes].reverse() } : prev)
         } catch (err) {
             setHistory(prev => prev?.spaceId === spaceId ? { ...prev, loading: false, error: err.message || 'Could not load the history.' } : prev)
         }
     }, [])
 
+    const loadInvites = useCallback(async (spaceId) => {
+        setInvites(prev => prev?.spaceId === spaceId ? { ...prev, loading: true, error: '' } : prev)
+        try {
+            const items = await listSpaceInvites(spaceId)
+            setInvites(prev => prev?.spaceId === spaceId ? { ...prev, loading: false, items } : prev)
+        } catch (err) {
+            setInvites(prev => prev?.spaceId === spaceId ? { ...prev, loading: false, error: err.message || 'Could not load the invite links.' } : prev)
+        }
+    }, [])
+
+    const handleToggleInvites = useCallback((space, e) => {
+        e.stopPropagation()
+        if (invites?.spaceId === space.id) { setInvites(null); return }
+        setInvites({ spaceId: space.id, loading: true, error: '', items: [], busyId: null, notice: '' })
+        loadInvites(space.id)
+    }, [invites, loadInvites])
+
+    const handleRevokeInvite = useCallback(async (space, invite) => {
+        const made = formatRestorePointTime(invite.createdAt)
+        if (!window.confirm(`Stop the invite link made ${made}?\n\nNobody new can join "${space.label || space.id}" with it. People who already joined through it keep their access.`)) return
+        setInvites(prev => prev ? { ...prev, busyId: invite.id, error: '', notice: '' } : prev)
+        try {
+            await revokeSpaceInvite(space.id, invite.id)
+            setInvites(prev => prev ? { ...prev, busyId: null, notice: `The link made ${made} no longer works.` } : prev)
+            await loadInvites(space.id)
+        } catch (err) {
+            setInvites(prev => prev ? { ...prev, busyId: null, error: err.message || 'Could not revoke the link.' } : prev)
+        }
+    }, [loadInvites])
+
     const handleToggleHistory = useCallback((space, e) => {
         e.stopPropagation()
         if (history?.spaceId === space.id) { setHistory(null); return }
-        setHistory({ spaceId: space.id, loading: true, error: '', items: [], busyId: null, notice: '' })
+        setHistory({ spaceId: space.id, loading: true, error: '', items: [], changes: [], busyId: null, notice: '' })
         loadHistory(space.id)
     }, [history, loadHistory])
 
@@ -770,7 +827,7 @@ export default function SpaceHub() {
         ].filter(Boolean)
 
     return (
-        <Box className="studio-shell-root ssh-root">
+        <Box component="main" className="studio-shell-root ssh-root">
             <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 } }}>
                 <div className="ssh-top-row">
                     <div>
@@ -1234,6 +1291,20 @@ export default function SpaceHub() {
                                                 {copiedInviteId === space.id ? 'Invite copied' : 'Invite'}
                                             </button>
                                             <button
+                                                className={`ssh-card-btn${invites?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
+                                                onClick={e => handleToggleInvites(space, e)}
+                                                title="The invite links this space has handed out, and a way to stop one"
+                                            >
+                                                Invite links
+                                            </button>
+                                            <button
+                                                className={`ssh-card-btn${domainsSpaceId === space.id ? ' ssh-card-btn--active' : ''}`}
+                                                onClick={e => { e.stopPropagation(); setDomainsSpaceId(id => (id === space.id ? null : space.id)) }}
+                                                title="Show this space on a domain of your own"
+                                            >
+                                                Own domain
+                                            </button>
+                                            <button
                                                 className={`ssh-card-btn${isLinking ? ' ssh-card-btn--active' : ''}`}
                                                 onClick={e => handleOpenLinker(space, e)}
                                             >
@@ -1272,6 +1343,10 @@ export default function SpaceHub() {
                                                 Delete
                                             </button>
                                         </div>
+                                    )}
+
+                                    {canManage(space) && domainsSpaceId === space.id && (
+                                        <SpaceDomainPanel space={space} onClose={() => setDomainsSpaceId(null)} />
                                     )}
 
                                     {previewMgr?.spaceId === space.id && (
@@ -1315,11 +1390,73 @@ export default function SpaceHub() {
                                         </div>
                                     )}
 
+                                    {invites?.spaceId === space.id && (
+                                        <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                                            {invites.loading && <p className="ssh-linker-status">Loading invite links…</p>}
+                                            {invites.error && <p className="ssh-linker-status ssh-linker-error">{invites.error}</p>}
+                                            {invites.notice && <p className="ssh-linker-status">{invites.notice}</p>}
+                                            {!invites.loading && !invites.error && invites.items.length === 0 && (
+                                                <p className="ssh-linker-status">No invite links out. Invite makes one, good for 7 days.</p>
+                                            )}
+                                            {!invites.loading && invites.items.length > 0 && (
+                                                <div className="ssh-linker-list">
+                                                    {invites.items.map(invite => {
+                                                        const made = formatRestorePointTime(invite.createdAt)
+                                                        const expired = Boolean(invite.expiresAt) && invite.expiresAt < Date.now()
+                                                        const used = invite.useCount === 1 ? 'used once' : invite.useCount > 1 ? `used ${invite.useCount} times` : 'not used yet'
+                                                        const until = expired ? 'expired' : invite.expiresAt ? `works until ${formatRestorePointTime(invite.expiresAt)}` : 'no end date'
+                                                        return (
+                                                            <div key={invite.id} className="ssh-linker-item">
+                                                                <span className="ssh-linker-select" title={`made ${made} · ${used} · ${until}`}>
+                                                                    <span>made {made} · {used}<br />{until}</span>
+                                                                </span>
+                                                                {!expired && (
+                                                                    <button
+                                                                        className="ssh-linker-rename-btn"
+                                                                        disabled={Boolean(invites.busyId)}
+                                                                        onClick={() => handleRevokeInvite(space, invite)}
+                                                                        title="Stop this link working"
+                                                                    >
+                                                                        {invites.busyId === invite.id ? 'Revoking…' : 'Revoke'}
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
+                                            <div className="ssh-linker-footer">
+                                                <button className="ssh-card-btn" onClick={() => setInvites(null)}>
+                                                    Close
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {history?.spaceId === space.id && (
                                         <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
                                             {history.loading && <p className="ssh-linker-status">Loading history…</p>}
                                             {history.error && <p className="ssh-linker-status ssh-linker-error">{history.error}</p>}
                                             {history.notice && <p className="ssh-linker-status">{history.notice}</p>}
+                                            {!history.loading && history.changes?.length > 0 && (
+                                                <>
+                                                    <p className="ssh-linker-status">What changed · last 7 days</p>
+                                                    <div className="ssh-linker-list ssh-changes-list">
+                                                        {history.changes.map(group => {
+                                                            const when = formatRestorePointTime(new Date(group.to).toISOString())
+                                                            const what = describeChangeGroup(group)
+                                                            return (
+                                                                <div key={`${group.actor?.subject || 'unknown'}-${group.from}`} className="ssh-linker-item ssh-change-item">
+                                                                    <span className="ssh-linker-select" title={`${when} · ${what}`}>
+                                                                        <span>{when}<br />{what}</span>
+                                                                    </span>
+                                                                </div>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                    <p className="ssh-linker-status">Restore points</p>
+                                                </>
+                                            )}
                                             {!history.loading && !history.error && history.items.length === 0 && (
                                                 <p className="ssh-linker-status">No restore points yet — one is kept before every change someone makes here.</p>
                                             )}

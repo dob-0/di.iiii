@@ -365,6 +365,27 @@ const SCHEMA = `
     consumed_at INTEGER
   );
   CREATE INDEX IF NOT EXISTS idx_telegram_login_expiry ON telegram_login_tokens(expires_at);
+
+  -- A space on its own domain (docs/architecture/SPEC_space_own_domain.md).
+  -- One row per hostname: yokozo.xyz and www.yokozo.xyz are two rows for the
+  -- same space. The host -> space lookup only ever answers for state 'active',
+  -- so a row nobody has pointed DNS at yet changes nothing anyone sees.
+  -- cf_hostname_id is Cloudflare's id for the custom hostname; null when the
+  -- platform is not connected to Cloudflare (a local install, dev).
+  CREATE TABLE IF NOT EXISTS space_domains (
+    hostname TEXT PRIMARY KEY,
+    space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+    state TEXT NOT NULL DEFAULT 'pending',
+    cf_hostname_id TEXT,
+    records TEXT NOT NULL DEFAULT '[]',
+    last_error TEXT,
+    added_by TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    checked_at INTEGER,
+    active_since INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_space_domains_space ON space_domains(space_id);
 `
 
 // Patch a DatabaseSync instance to expose the better-sqlite3 surface used
@@ -534,6 +555,13 @@ function initDb(dbPath) {
   ensureColumn(db, 'projects', 'collection_id', 'TEXT')
   ensureColumn(db, 'projects', 'position', 'INTEGER NOT NULL DEFAULT 0')
   ensureColumn(db, 'projects', 'state', "TEXT NOT NULL DEFAULT 'live'")
+  // Per-project visibility inside its space ('public' | 'private') —
+  // projectStore.js PROJECT_VISIBILITIES. Defaults to 'public' so every
+  // existing project keeps exactly the visibility its space gave it. No
+  // SCHEMA_VERSION bump: an older build ignores the column (and so would
+  // show a private project to a visitor of a public space) — a rollback
+  // past this landing must re-check private work; the spec says so.
+  ensureColumn(db, 'projects', 'visibility', "TEXT NOT NULL DEFAULT 'public'")
   // The trash. Delete used to remove the row and rm -rf the directory in the
   // same breath, with no undo of any kind — the single most frightening thing
   // in the product. Deleted work now waits out TRASH_TTL_MS before anything

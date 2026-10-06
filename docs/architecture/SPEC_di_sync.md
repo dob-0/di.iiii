@@ -1,5 +1,7 @@
 # `di sync` — a directional mirror that refuses what it cannot prove
 
+> Two-way, live sync between installs is `di follow` (`SPEC_follow.md`); this file is the read-only audit.
+
 Status: v1 shipped = `di link` + ledger + the read-only audit (`di sync <space>`).
 `--push`/`--pull` over ops and `--replace-*` over bundles are later PRs.
 Design source: the phase-2 plan (2026-08-10); server-side prerequisites landed in

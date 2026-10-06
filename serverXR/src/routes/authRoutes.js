@@ -4,6 +4,9 @@ const { Strategy: GitHubStrategy } = require('passport-github2')
 const { Strategy: GoogleStrategy } = require('passport-google-oauth20')
 const { upsertUser, findUserByProvider } = require('../userStore')
 const { signLoginState, verifyLoginState, readLoginState, sanitizeReturnTo } = require('../loginState')
+const hubLib = require('../authHub')
+const { readCookie } = require('../authSession')
+const { httpRequest } = require('../httpClient')
 const logger = require('../logger')
 const mailer = require('../mailer')
 
@@ -40,7 +43,10 @@ const registerAuthRoutes = (router, {
   listSpaces = null,
   // Injected for the same reason the session helpers are: a route that reaches
   // into a module-level database cannot be exercised without one.
-  findUser = findUserByProvider
+  findUser = findUserByProvider,
+  // Injected so tests can stand a hub up without the network.
+  fetchImpl = (url, opts) => httpRequest(url, opts),
+  upsertUserImpl = upsertUser
 }) => {
   const frontendUrl = config.oauth.frontendUrl
   const { oauth } = config
@@ -52,6 +58,26 @@ const registerAuthRoutes = (router, {
     )
   }
   const stateSecret = config.auth.sessionSecret || deriveFallbackStateSecret(oauth)
+
+  // ---- The sign-in hub (authHub.js) ------------------------------------
+  // isHub:     this server holds the provider registrations AND the signing key,
+  //            and will vouch for people on behalf of other servers.
+  // hubClient: this server has no registration for a provider but knows a hub
+  //            (AUTH_HUB_URL + its pinned public key), so /api/auth/<provider>
+  //            goes via the hub and /api/auth/hub/callback turns a pass into a
+  //            session HERE. Offline, the hub is unreachable and /providers says
+  //            so; everything local (this machine, password, invites) still works.
+  const hubCfg = config.authHub || {}
+  const isHub = Boolean(hubCfg.signingKey)
+  const hubClient = Boolean(hubCfg.url && hubCfg.publicKey)
+  const hubPublicPem = hubCfg.publicKey ? hubCfg.publicKey.export({ type: 'spki', format: 'pem' }) : null
+  const seenPasses = hubLib.createSeenSet()
+  const HUB_COOKIE = 'di_hub'
+  // The address the browser used to reach THIS server, which is the only
+  // audience a pass for us may carry. req.protocol honours X-Forwarded-Proto
+  // only from a trusted proxy (proxyTrust.js).
+  const ownHubCallback = (req) => `${req.protocol}://${req.get('host')}${req.baseUrl || ''}${hubLib.CALLBACK_PATH}`
+  const hubFailed = (res) => res.redirect(`${frontendUrl || '/'}?auth=error&reason=hub`)
 
   const requireValidLoginState = (req, res, next) => {
     if (!verifyLoginState(stateSecret, req.query.state)) {
@@ -150,6 +176,26 @@ const registerAuthRoutes = (router, {
     res.redirect(`${destination}${separator}auth=ok${kept ? '&kept=1' : ''}`)
   }
 
+  // After Google/GitHub: a hub round trip mints a pass for the server that asked;
+  // anything else is an ordinary sign-in here.
+  const finishOAuth = async (req, res, user) => {
+    const h = readLoginState(stateSecret, req.query.state)?.h
+    if (!h?.ret) return issueSessionAndRedirect(req, res, user)
+    if (!isHub || !hubLib.isAllowedReturn(h.ret, hubCfg.allowedReturns) || !hubLib.isValidNonce(h.nonce)) return hubFailed(res)
+    const pass = hubLib.signPass(hubCfg.signingKey, {
+      iss: oauth.callbackBase || null,
+      aud: h.ret,
+      nonce: h.nonce,
+      provider: user.provider,
+      providerId: String(user.provider_id),
+      email: user.email || null,
+      name: user.display_name || null,
+      avatar: user.avatar_url || null
+    })
+    logger.info(`[auth-hub] pass for ${user.provider} → ${new URL(h.ret).host}`)
+    res.redirect(`${h.ret}?pass=${encodeURIComponent(pass)}`)
+  }
+
   if (oauth.github.enabled) {
     router.get('/api/auth/github',
       // `state` must be signed fresh on every request — passport.authenticate(name, opts)
@@ -163,7 +209,7 @@ const registerAuthRoutes = (router, {
     router.get('/api/auth/github/callback',
       requireValidLoginState,
       passport.authenticate('github', { failureRedirect: `${frontendUrl || '/'}?auth=error`, session: false }),
-      (req, res, next) => issueSessionAndRedirect(req, res, req.user).catch(next)
+      (req, res, next) => finishOAuth(req, res, req.user).catch(next)
     )
   }
 
@@ -175,8 +221,82 @@ const registerAuthRoutes = (router, {
     router.get('/api/auth/google/callback',
       requireValidLoginState,
       passport.authenticate('google', { failureRedirect: `${frontendUrl || '/'}?auth=error`, session: false }),
-      (req, res, next) => issueSessionAndRedirect(req, res, req.user).catch(next)
+      (req, res, next) => finishOAuth(req, res, req.user).catch(next)
     )
+  }
+
+  const HUB_SCOPES = { github: ['user:email'], google: ['profile', 'email'] }
+
+  if (isHub) {
+    // Another server sends a person here to be signed in with a provider this
+    // hub is registered for. Nothing is minted until the provider says who it is.
+    router.get('/api/auth/hub/start', (req, res, next) => {
+      const provider = String(req.query.provider || '')
+      const ret = String(req.query.return || '')
+      const nonce = String(req.query.nonce || '')
+      if (!hubLib.HUB_PROVIDERS.includes(provider) || !oauth[provider]?.enabled) return res.status(400).json({ error: 'That sign-in is not offered here.' })
+      if (!hubLib.isAllowedReturn(ret, hubCfg.allowedReturns)) return res.status(400).json({ error: 'That address is not allowed to sign in through this hub.' })
+      if (!hubLib.isValidNonce(nonce)) return res.status(400).json({ error: 'Bad request.' })
+      passport.authenticate(provider, { scope: HUB_SCOPES[provider], session: false, state: signLoginState(stateSecret, { hub: { ret, nonce } }) })(req, res, next)
+    })
+    // Public by design: the key other servers pin, and what this hub offers.
+    // A server compares this key with the one it pinned before trusting the hub.
+    router.get('/api/auth/hub/key', (_req, res) => {
+      res.set('Cache-Control', 'public, max-age=300')
+      res.json({
+        publicKey: require('node:crypto').createPublicKey(hubCfg.signingKey).export({ type: 'spki', format: 'pem' }),
+        providers: hubLib.HUB_PROVIDERS.filter((p) => oauth[p]?.enabled)
+      })
+    })
+  }
+
+  // Is the hub reachable, is it the hub we pinned, and what does it offer?
+  // Cached so /providers stays fast: 60 s when it answers, 20 s when it does not.
+  let hubStatus = { at: 0, ok: false, providers: [] }
+  const readHubStatus = async () => {
+    if (!hubClient) return { ok: false, providers: [] }
+    const age = Date.now() - hubStatus.at
+    if (age < (hubStatus.ok ? 60000 : 20000)) return hubStatus
+    try {
+      const r = await fetchImpl(`${hubCfg.url}/api/auth/hub/key`, { timeoutMs: 3000 })
+      const body = r.ok ? await r.json() : null
+      const sameKey = body?.publicKey && require('node:crypto').createPublicKey(body.publicKey)
+        .export({ type: 'spki', format: 'pem' }) === hubPublicPem
+      if (body && !sameKey) logger.warn(`[auth-hub] ${hubCfg.url} answers with a different key than AUTH_HUB_PUBLIC_KEY; hub sign-in stays off.`)
+      hubStatus = { at: Date.now(), ok: Boolean(sameKey), providers: sameKey && Array.isArray(body.providers) ? body.providers : [] }
+    } catch {
+      hubStatus = { at: Date.now(), ok: false, providers: [] }
+    }
+    return hubStatus
+  }
+
+  if (hubClient) {
+    // For every provider this server is NOT registered for: go via the hub. The
+    // nonce lives in a signed, HttpOnly, short cookie in this person's browser,
+    // so a pass minted for someone else cannot sign them in here.
+    for (const provider of hubLib.HUB_PROVIDERS.filter((p) => !oauth[p]?.enabled)) {
+      router.get(`/api/auth/${provider}`, (req, res) => {
+        const nonce = hubLib.newNonce()
+        const cookie = signLoginState(stateSecret, { returnTo: req.query.returnTo, hub: { nonce } })
+        res.append('Set-Cookie', `${HUB_COOKIE}=${cookie}; Path=/; Max-Age=600; HttpOnly; SameSite=Lax${config.authSession?.cookieSecure ? '; Secure' : ''}`)
+        const q = new URLSearchParams({ provider, return: ownHubCallback(req), nonce })
+        res.redirect(`${hubCfg.url}/api/auth/hub/start?${q}`)
+      })
+    }
+    router.get(hubLib.CALLBACK_PATH, async (req, res, next) => {
+      try {
+        const st = readLoginState(stateSecret, readCookie(req.get('cookie') || '', HUB_COOKIE))
+        const checked = hubLib.verifyPass(hubCfg.publicKey, req.query.pass, { aud: ownHubCallback(req), nonce: st?.h?.nonce, seen: seenPasses })
+        if (!checked.ok) {
+          logger.warn(`[auth-hub] pass refused: ${checked.reason}`)
+          return hubFailed(res)
+        }
+        const c = checked.claims
+        const user = upsertUserImpl({ provider: c.provider, providerId: c.providerId, email: c.email, displayName: c.name, avatarUrl: c.avatar })
+        req.query.state = signLoginState(stateSecret, { returnTo: st?.r })
+        await issueSessionAndRedirect(req, res, user)
+      } catch (error) { next(error) }
+    })
   }
 
   // ---- Sign in with Telegram -------------------------------------------
@@ -321,10 +441,15 @@ const registerAuthRoutes = (router, {
     })
   }
 
-  router.get('/api/auth/providers', (_req, res) => {
+  router.get('/api/auth/providers', async (_req, res) => {
+    const hubNow = await readHubStatus()
+    const viaHub = (p) => !oauth[p]?.enabled && hubNow.ok && hubNow.providers.includes(p)
     res.json({
-      github: oauth.github.enabled,
-      google: oauth.google.enabled,
+      github: oauth.github.enabled || viaHub('github'),
+      google: oauth.google.enabled || viaHub('google'),
+      // Which sign-ins go through the hub, and whether it answered just now
+      // (false offline: the page then offers only what works here).
+      ...(hubClient ? { hub: { reachable: hubNow.ok, via: hubLib.HUB_PROVIDERS.filter(viaHub) } } : {}),
       telegram: Boolean(telegram.enabled),
       // First-party accounts are always on: they are the door that needs no
       // other company's permission, and an install that offered no way in at

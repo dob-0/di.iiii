@@ -360,6 +360,9 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
             if (portId === 'title' || portId === 'bgColor') {
                 return evaluateNodeInput(node, portId, context, nextStack)
             }
+            // What the live Scene's window draws (ScenePictureFeed.jsx) — the
+            // webcam idiom: null where no window draws it.
+            if (portId === 'picture') return context?.liveOutputs?.get(`${node.id}:picture`) ?? null
             break
         case 'universe.desk.3d':
             if (portId === 'position' || portId === 'rotation' || portId === 'scale') {
@@ -395,6 +398,14 @@ export const evaluateNodeInput = (node, portId, context, stack = new Set()) => {
             const nextStack = new Set(stack)
             nextStack.add(key)
             const resolved = evaluateNodeOutput(source, edge.fromPort, context, nextStack)
+            // One number into a Vector socket fills x, y and z — converted at the
+            // link, as Blender converts a float wired into a vector socket, so
+            // every reader downstream sees a real vector (arePortsCompatible
+            // lets number → vec3 through for exactly this).
+            if (typeof resolved === 'number' && Number.isFinite(resolved)
+                && getNodeInputs(node).find((port) => port.id === portId)?.type === 'vec3') {
+                return [resolved, resolved, resolved]
+            }
             if (resolved !== undefined) return resolved
         }
     }

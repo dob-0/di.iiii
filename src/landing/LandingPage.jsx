@@ -398,7 +398,7 @@ function LandingPageInner() {
     const showBackground = entered || flightArmed || (heroInView && !isSmallScreen)
 
     return (
-        <Box className={`lp-root${entered ? ' lp-root--inside' : ''}`} data-page="landing" ref={rootRef}>
+        <Box component="main" className={`lp-root${entered ? ' lp-root--inside' : ''}`} data-page="landing" ref={rootRef}>
 
             {/* ── NAV ──────────────────────────────────────────── */}
             {!entered && (
@@ -415,6 +415,10 @@ function LandingPageInner() {
                         <a href={studioHref} className="lp-nav-link lp-nav-spaces">Spaces</a>
                         <a href={buildWikiPath()} className="lp-nav-link">Wiki</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-nav-link">GitHub</a>
+                        {/* The one place the platform asks. Front door only —
+                            never on a published work, whose page is the
+                            author's (owner, 2026-09-27: "spaces max minimalistic"). */}
+                        <a href="/support" className="lp-nav-link">Support</a>
                     </div>
                     <a href={studioHref} onClick={openDoor} className="lp-nav-cta">Step inside</a>
                 </nav>
@@ -791,6 +795,8 @@ function LandingPageInner() {
                         <a href="/privacy" className="lp-footer-link">Privacy</a>
                         <a href="/terms" className="lp-footer-link">Terms</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-footer-link">GitHub</a>
+                        {/* The nav row is hidden under 640px; this is the phone's way to it. */}
+                        <a href="/support" className="lp-footer-link">Support</a>
                         <a href="https://www.instagram.com/di.iiiiiiiiiiiiiiiiiiiii/" target="_blank" rel="noopener noreferrer" className="lp-footer-link">Instagram</a>
                         <a href="/serverXR/api/health" className="lp-footer-link">API</a>
                     </nav>

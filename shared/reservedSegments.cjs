@@ -32,7 +32,29 @@ const APP_SEGMENTS = [
     'spaces', 'projects', 'chat', 'login',
     // `/{space}/scan` — the phone collecting a place. Checked on all three
     // tiers before reserving (2026-09-22): nothing answers to the word.
-    'scan'
+    'scan',
+    // `/{space}/perform/{project}` — the Perform line. Checked on all three
+    // tiers before reserving (2026-09-24): nothing answers to the word.
+    'perform',
+    // `/{space}/patch/{project}` — the rig's patch sheet. Checked on all three
+    // tiers before reserving (2026-09-28): nothing answers to the word.
+    'patch',
+    // `/{space}/plot/{project}` — the rig's lighting plot (view B). Checked on all
+    // three tiers before reserving (2026-09-28): nothing answers to the word.
+    'plot',
+    // `/{space}/cards/{project}` — the rig's cards (view C). Checked on all three
+    // tiers before reserving (2026-09-28): nothing answers to the word.
+    'cards',
+    // `/{space}/build/{project}` — the rig built in first person (view A), and
+    // `/{space}/crew/{project}` — the same room, read-only, for the crew. Checked
+    // on all three tiers before reserving (2026-09-28): nothing answers to either.
+    'build',
+    'crew',
+    // `/{space}/equipment/{project}` — the show's equipment list: the inventory and the
+    // order (docs/architecture/RIG_BUILD.md §13). Checked on all three tiers before
+    // reserving (2026-09-28): /serverXR/api/spaces/equipment and /projects/equipment
+    // answer 404 on diiii.xyz, dev.diiii.xyz and the local install.
+    'equipment'
 ]
 
 // Real directories under public/, plus the build's own output prefixes, served
@@ -44,8 +66,12 @@ const APP_SEGMENTS = [
 // block (mirrored in public/.htaccess) to send the bare path to the app. That
 // exception is the cost of the collision — see src/works/works.js.
 const STATIC_SEGMENTS = [
-    'assets', 'basis', 'brand', 'draco', 'fonts', 'get', 'og',
+    'assets', 'basis', 'brand', 'draco', 'fonts', 'get', 'kit', 'og',
     'serverXR', 'suite', 'unicode-fonts', 'vendor',
+    // The rig builder's inventory pictures (public/rigbuild/items/: our own renders and
+    // licensed photos, docs/architecture/RIG_BUILD.md §13). Checked 2026-09-28: no space
+    // "rigbuild" on diiii.xyz, dev.diiii.xyz or the local install.
+    'rigbuild',
     // The studio chat's manifest and icons. Named `chat-app` and not `chat`
     // ON PURPOSE: a directory that matches the ROUTE shadows it — nginx serves
     // the directory before the SPA fallback and express.static redirects the

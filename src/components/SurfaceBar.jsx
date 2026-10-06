@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import './surfaceBar.css'
 import { appNavigate } from '../utils/appNavigate.js'
 import { buildStudioHubPath, buildStudioProjectPath } from '../studio/utils/studioRouting.js'
@@ -68,6 +69,12 @@ const lightHref = ({ isLocalInstall, space, project, projectLabel }) => {
 // list where strangers meet it, which is why Light stayed on the hosted bar.
 const LAYER_OF = { raw: 'connections', map: 'wall', light: 'lamps' }
 
+// Has the project reached the layer that brings this tool? The one rule, read by the
+// bar and by every other door to the same tools (Studio's jump buttons, desktop and
+// phone) so a tool is never offered in one place while the bar still holds it back.
+// `layers` null means "show everything": still loading, the open jam, "All tools".
+export const layerReached = (key, layers) => !layers || !LAYER_OF[key] || Boolean(layers[LAYER_OF[key]])
+
 export const surfaceDestinations = ({ isLocalInstall = false, space = null, project = null, projectLabel = null, layers = null, here = null } = {}) => {
     // A project only means something inside its space; without the space
     // there is no address to build.
@@ -77,7 +84,7 @@ export const surfaceDestinations = ({ isLocalInstall = false, space = null, proj
         // `layers` is null until the project has loaded (nothing hides before
         // that), and null under "All tools". The surface you stand on is never
         // taken off the bar, whatever the project holds.
-        .filter(d => !(inProject && layers && LAYER_OF[d.key] && d.key !== here && !layers[LAYER_OF[d.key]]))
+        .filter(d => !(inProject && d.key !== here && !layerReached(d.key, layers)))
         .map(d => {
             if (d.key === 'light') {
                 return { ...d, href: lightHref({ isLocalInstall, space, project, projectLabel }), clientSide: !isLocalInstall }
@@ -103,6 +110,29 @@ export const navigateInApp = (event, href) => {
     appNavigate(href)
 }
 
+// How many destinations fit, in order, before the rest go behind "More"
+// (Priority+ navigation: show what fits, never slice a word off the edge).
+// `widths` are each link's natural width, `gap` the space between two, `more`
+// the More button's width, `avail` what the links row has. All of them fit →
+// every one shows and no More. Otherwise as many as fit beside More, and at
+// least none — More alone always stays reachable. No width at all (0: nothing
+// laid out yet) shows everything; a NEGATIVE room is a real answer — the row is
+// already too full for More — and shows none (2026-09-27: it used to read as
+// "not measured", so the fullest bar drew every name over the place names).
+export const fitDestinations = ({ widths, gap, more, avail }) => {
+    if (!Number.isFinite(avail) || avail === 0 || !widths.length) return widths.length
+    const all = widths.reduce((sum, w) => sum + w, 0) + gap * (widths.length - 1)
+    if (all <= avail) return widths.length
+    let used = more
+    let count = 0
+    for (const w of widths) {
+        if (used + gap + w > avail) break
+        used += gap + w
+        count += 1
+    }
+    return count
+}
+
 export default function SurfaceBar({
     here = null,           // which destination is the current one
     space = null,          // space id, when the surface belongs to one
@@ -117,8 +147,101 @@ export default function SurfaceBar({
 }) {
     // "⚒ All tools", kept in this browser, brings every name back.
     const allTools = useAllTools()
-    if (hidden) return null
     const destinations = surfaceDestinations({ isLocalInstall, space, project, projectLabel, layers: allTools ? null : layers, here })
+
+    // Priority+ (2026-09-27): a phone at 390px could not hold the bar — WIKI
+    // was sliced off the right edge, and with every layer open seven names
+    // need twice the width. Whatever fits shows in its fixed place; the rest
+    // sits behind More. Measured off a hidden row, so a hidden name still has
+    // a width to be brought back with.
+    const linksRef = useRef(null)
+    const measureRef = useRef(null)
+    const childrenRef = useRef(null)
+    const moreRef = useRef(null)
+    const [shown, setShown] = useState(destinations.length)
+    // What the links row can never give up: More (when anything is behind it)
+    // and the surface's own control. Held as the row's min-width, so when the
+    // bar is full the place names on the left shrink to their ellipsis instead
+    // of the row spilling leftward over them.
+    const [floor, setFloor] = useState(0)
+    const [menuOpen, setMenuOpen] = useState(false)
+    const [menuTop, setMenuTop] = useState(0)
+    const keys = destinations.map(d => d.key).join(' ')
+
+    const measure = useCallback(() => {
+        const links = linksRef.current
+        const row = measureRef.current
+        if (!links || !row) return
+        const items = [...row.children]
+        const moreEl = items.pop()
+        const style = window.getComputedStyle(links)
+        const gap = parseFloat(style.columnGap) || 0
+        const padding = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0)
+        const extra = childrenRef.current ? childrenRef.current.offsetWidth + gap : 0
+        const widths = items.map(el => el.offsetWidth)
+        const more = moreEl ? moreEl.offsetWidth : 0
+        const count = fitDestinations({
+            widths,
+            gap,
+            more,
+            avail: links.clientWidth ? links.clientWidth - padding - extra : 0,
+        })
+        setShown(count)
+        setFloor(links.clientWidth ? padding + extra + (count < widths.length ? more : 0) : 0)
+    }, [])
+
+    useLayoutEffect(() => {
+        if (hidden) return undefined
+        measure()
+        if (typeof ResizeObserver !== 'function') return undefined
+        const observer = new ResizeObserver(measure)
+        if (linksRef.current) observer.observe(linksRef.current)
+        if (measureRef.current) observer.observe(measureRef.current)
+        return () => observer.disconnect()
+    }, [hidden, keys, measure])
+
+    // The menu closes on a choice, a tap anywhere else, Escape, or a resize.
+    useEffect(() => {
+        if (!menuOpen) return undefined
+        const close = (event) => {
+            if (event.type === 'keydown' && event.key !== 'Escape') return
+            if (event.type === 'pointerdown' && (moreRef.current?.contains(event.target) || event.target.closest?.('.sbar-menu'))) return
+            setMenuOpen(false)
+        }
+        window.addEventListener('pointerdown', close)
+        window.addEventListener('keydown', close)
+        window.addEventListener('resize', close)
+        return () => {
+            window.removeEventListener('pointerdown', close)
+            window.removeEventListener('keydown', close)
+            window.removeEventListener('resize', close)
+        }
+    }, [menuOpen])
+
+    if (hidden) return null
+
+    const visible = destinations.slice(0, shown)
+    const overflow = destinations.slice(shown)
+    const hereInMore = overflow.some(d => d.key === here)
+
+    const linkFor = (d, className = 'sbar-link') => (
+        <a
+            key={d.key}
+            className={`${className}${here === d.key ? ' is-here' : ''}`}
+            href={d.href}
+            aria-current={here === d.key ? 'page' : undefined}
+            onClick={(event) => {
+                setMenuOpen(false)
+                if (d.clientSide) navigateInApp(event, d.href)
+            }}
+        >{d.label}</a>
+    )
+
+    const toggleMenu = () => {
+        const rect = moreRef.current?.closest('.sbar')?.getBoundingClientRect()
+        setMenuTop(rect ? rect.bottom : 0)
+        setMenuOpen(open => !open)
+    }
 
     return (
         <nav className={`sbar${float ? ' sbar--float' : ''}`} aria-label="di.iiii">
@@ -135,18 +258,32 @@ export default function SurfaceBar({
                     <a className="sbar-where sbar-where--project" href={buildStudioProjectPath(project, space)}>{projectLabel || project}</a>
                 </>
             )}
-            <div className="sbar-links">
-                {destinations.map(d => (
-                    <a
-                        key={d.key}
-                        className={`sbar-link${here === d.key ? ' is-here' : ''}`}
-                        href={d.href}
-                        aria-current={here === d.key ? 'page' : undefined}
-                        onClick={d.clientSide ? (event) => navigateInApp(event, d.href) : undefined}
-                    >{d.label}</a>
-                ))}
-                {children}
+            <div className="sbar-links" ref={linksRef} style={floor ? { minWidth: floor } : undefined}>
+                {visible.map(d => linkFor(d))}
+                {overflow.length > 0 && (
+                    <button
+                        type="button"
+                        ref={moreRef}
+                        className={`sbar-link sbar-more${hereInMore ? ' is-here' : ''}`}
+                        aria-haspopup="true"
+                        aria-expanded={menuOpen}
+                        onClick={toggleMenu}
+                    >More</button>
+                )}
+                {children && <span className="sbar-extra" ref={childrenRef}>{children}</span>}
+                <span className="sbar-measure-box" aria-hidden="true">
+                    <span className="sbar-measure" ref={measureRef}>
+                        {destinations.map(d => <span key={d.key} className="sbar-measure-item">{d.label}</span>)}
+                        <span className="sbar-measure-item">More</span>
+                    </span>
+                </span>
             </div>
+            {menuOpen && overflow.length > 0 && typeof document !== 'undefined' && createPortal(
+                <div className="sbar-menu" style={{ top: menuTop }} role="menu" aria-label="More destinations">
+                    {overflow.map(d => linkFor(d, 'sbar-link sbar-menu-link'))}
+                </div>,
+                document.body
+            )}
         </nav>
     )
 }

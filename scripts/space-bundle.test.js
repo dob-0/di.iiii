@@ -403,6 +403,197 @@ describe('space-bundle carries the space\'s light show', () => {
     })
 })
 
+// 2026-09-18: a whole-document carry removed 76 authored slides from prod's
+// front room and nothing said so. `import --force` is the same kind of
+// replace, a whole space at a time: it now says what it removes before it
+// writes, and refuses media loss without the exact count.
+describe('space-bundle import --force says what it removes, and refuses uncounted media loss', () => {
+    const PID = 'main-dii-project'
+    const hex = (n) => n.toString(16).padStart(64, '0')
+    const image = (i) => ({ id: `slide-${i}`, type: 'image', name: `Slide ${i}`, components: { media: { assetId: hex(i + 1) } } })
+    const nine = Array.from({ length: 9 }, (_, i) => ({ id: `text-${i}`, type: 'text', name: `Text ${i}`, components: {} }))
+    const FULL = { projectMeta: { id: PID, spaceId: 'main' }, entities: [...Array.from({ length: 76 }, (_, i) => image(i)), ...nine] }
+    const THIN = { projectMeta: { id: PID, spaceId: 'main' }, entities: nine }
+
+    const seed = (root, document, updatedAt) => {
+        seedSpace(path.join(root, 'di.db'), { id: 'main', updatedAt })
+        const { initDb, closeDb } = require('../serverXR/src/db.js')
+        const db = initDb(path.join(root, 'di.db'))
+        db.prepare('INSERT INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+            .run(PID, 'main', 'Front room', 1, 'project', updatedAt, updatedAt, updatedAt)
+        db.prepare('INSERT INTO project_ops (project_id, version, data, created_at) VALUES (?, ?, ?, ?)').run(PID, 1, '{"opId":"seed"}', updatedAt)
+        closeDb()
+        const dir = path.join(root, 'spaces', 'main', 'projects', PID)
+        fs.mkdirSync(dir, { recursive: true })
+        fs.writeFileSync(path.join(dir, 'document.json'), JSON.stringify(document))
+    }
+    const setUp = async () => {
+        const past = Date.now() - 120_000
+        const theirs = mkTemp('loss-theirs-')
+        seed(theirs, THIN, past)
+        const file = path.join(mkTemp('loss-file-'), 'main.diiii')
+        await run(['export', 'main', '--data-root', theirs, '--out', file])
+        const tier = mkTemp('loss-tier-')
+        seed(tier, FULL, past)
+        return { file, tier, docPath: path.join(tier, 'spaces', 'main', 'projects', PID, 'document.json') }
+    }
+    const entitiesAt = (docPath) => JSON.parse(fs.readFileSync(docPath, 'utf8')).entities.length
+
+    it('the incident: 85 → 9 is REFUSED, and nothing is written', async () => {
+        const { file, tier, docPath } = await setUp()
+        const err = await run(['import', file, '--data-root', tier, '--force']).catch((e) => e)
+        expect(err.code).toBe(1)
+        expect(err.stdout).toContain(`main/${PID}: this replace REMOVES 76 of 85 items — 76 image (media)`)
+        expect(err.stderr).toContain('--accept-loss 76')
+        expect(entitiesAt(docPath)).toBe(85)
+        expect(fs.existsSync(path.join(tier, '_backups'))).toBe(false)
+    })
+
+    it('a wrong number is refused again', async () => {
+        const { file, tier, docPath } = await setUp()
+        const err = await run(['import', file, '--data-root', tier, '--force', '--accept-loss', '75']).catch((e) => e)
+        expect(err.code).toBe(1)
+        expect(err.stderr).toContain('does not match the 76')
+        expect(entitiesAt(docPath)).toBe(85)
+    })
+
+    it('the exact number carries it out', async () => {
+        const { file, tier, docPath } = await setUp()
+        const { stdout } = await run(['import', file, '--data-root', tier, '--force', '--accept-loss', '76'])
+        expect(stdout).toContain('REMOVES 76 of 85')
+        expect(entitiesAt(docPath)).toBe(9)
+        // …and the op rows it wrote have an author: the tool, not nobody.
+        const { initDb, closeDb } = require('../serverXR/src/db.js')
+        const db = initDb(path.join(tier, 'di.db'))
+        const actors = db.prepare('SELECT DISTINCT actor FROM project_ops WHERE project_id = ?').all(PID).map((r) => r.actor)
+        closeDb()
+        expect(actors).toEqual(['server:space-bundle-import'])
+    })
+
+    it('--dry-run prints the summary and writes nothing', async () => {
+        const { file, tier, docPath } = await setUp()
+        const { stdout } = await run(['import', file, '--data-root', tier, '--force', '--dry-run'])
+        expect(stdout).toContain('this replace REMOVES 76 of 85 items — 76 image (media)')
+        expect(stdout).toContain('needs --force --accept-loss 76')
+        expect(entitiesAt(docPath)).toBe(85)
+        expect(fs.existsSync(path.join(tier, '_backups'))).toBe(false)
+    })
+})
+
+// The show's Perform presets live in the project document (2026-09-24), so a
+// .diiii file carries them without the tool knowing they exist. This proves
+// it end to end: a preset given to the show on one install is a preset of
+// the show on the install that opens the file, read the way the server reads
+// a document (readProjectDocument → the schema mirror).
+describe('space-bundle carries the show\'s Perform presets', () => {
+    it('export → import: the presets arrive, in order, and read back through the server', async () => {
+        const schema = require('../shared/projectSchema.cjs')
+        const presets = [
+            { id: 'show:sunday', name: 'sunday caller', base: 'caller', windows: [{ id: 'cues', kind: 'cues' }, { id: 'wall', kind: 'wall' }], wide: { cues: [1, 2, 34, 95], wall: [36, 2, 63, 95] }, narrow: { cues: [0, 0, 100, 100] } },
+            { id: 'show:win', name: 'win projector', windows: [{ id: 'wallout', kind: 'wallout' }], wide: { wallout: [1, 2, 98, 95] }, narrow: {} }
+        ]
+        const source = mkTemp('bundle-perform-src-')
+        seedSpace(path.join(source, 'di.db'), { id: 'stage', updatedAt: Date.now() - 60_000 })
+        {
+            const { initDb, closeDb } = require('../serverXR/src/db.js')
+            const db = initDb(path.join(source, 'di.db'))
+            const now = Date.now() - 60_000
+            db.prepare('INSERT INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+                .run('show', 'stage', 'show', 1, 'project', now, now, now)
+            closeDb()
+        }
+        const dir = path.join(source, 'spaces', 'stage', 'projects', 'show')
+        fs.mkdirSync(dir, { recursive: true })
+        const document = schema.normalizeProjectDocument({ projectMeta: { id: 'show', spaceId: 'stage', title: 'show' }, performState: { presets } })
+        fs.writeFileSync(path.join(dir, 'document.json'), JSON.stringify(document))
+
+        const file = path.join(mkTemp('bundle-perform-file-'), 'stage.diiii')
+        await run(['export', 'stage', '--data-root', source, '--out', file])
+        const target = mkTemp('bundle-perform-dst-')
+        await run(['import', file, '--data-root', target])
+
+        const { initDb, closeDb } = require('../serverXR/src/db.js')
+        const { readProjectDocument } = require('../serverXR/src/projectStore.js')
+        initDb(path.join(target, 'di.db'))
+        try {
+            const arrived = await readProjectDocument(path.join(target, 'spaces'), 'stage', 'show')
+            expect(arrived.performState.presets.map((p) => [p.id, p.name, p.source])).toEqual([
+                ['show:sunday', 'sunday caller', 'show'],
+                ['show:win', 'win projector', 'show']
+            ])
+            expect(arrived.performState.presets[0].wide).toEqual(presets[0].wide)
+            expect(arrived.performState.presets[0].base).toBe('caller')
+        } finally {
+            closeDb()
+        }
+    })
+})
+
+// docs/architecture/SPEC_project_visibility.md — a private project must not
+// arrive on the next tier as a public one, and the file a visitor saves must
+// not carry it (or the bytes only it names) at all.
+describe('space-bundle carries project visibility', () => {
+    const PRIVATE_HASH = 'a'.repeat(64)
+    const SHARED_HASH = 'b'.repeat(64)
+    const seedShow = (root) => {
+        seedSpace(path.join(root, 'di.db'), { id: 'show', updatedAt: 1_000 })
+        const { initDb, closeDb } = require('../serverXR/src/db.js')
+        const db = initDb(path.join(root, 'di.db'))
+        const insert = db.prepare('INSERT INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at, visibility) VALUES (?, ?, ?, 0, ?, 1, 1, 1, ?)')
+        insert.run('door', 'show', 'The Door', 'project', 'public')
+        insert.run('sources', 'show', 'Venue Sources', 'project', 'private')
+        closeDb()
+        const spaceDir = path.join(root, 'spaces', 'show')
+        fs.mkdirSync(path.join(spaceDir, 'blobs'), { recursive: true })
+        fs.writeFileSync(path.join(spaceDir, 'blobs', PRIVATE_HASH), 'private photo')
+        fs.writeFileSync(path.join(spaceDir, 'blobs', SHARED_HASH), 'photo both use')
+        for (const [id, hashes] of [['door', [SHARED_HASH]], ['sources', [PRIVATE_HASH, SHARED_HASH]]]) {
+            const assets = path.join(spaceDir, 'projects', id, 'assets')
+            fs.mkdirSync(assets, { recursive: true })
+            fs.writeFileSync(path.join(spaceDir, 'projects', id, 'document.json'), JSON.stringify({ projectMeta: { id }, assets: hashes.map((h) => ({ id: h })) }))
+            for (const hash of hashes) fs.writeFileSync(path.join(assets, `${hash}.json`), JSON.stringify({ id: hash }))
+        }
+    }
+    const listTar = async (file) => (await execFileAsync('tar', ['-tzf', file])).stdout
+
+    it('export → import: a private project arrives private', async () => {
+        const sourceRoot = mkTemp('space-bundle-vis-src-')
+        const targetRoot = mkTemp('space-bundle-vis-dst-')
+        const bundlePath = path.join(mkTemp('space-bundle-vis-out-'), 'show.diiii')
+        seedShow(sourceRoot)
+        await run(['export', 'show', '--data-root', sourceRoot, '--out', bundlePath])
+        await run(['import', bundlePath, '--data-root', targetRoot])
+        const { initDb, closeDb } = require('../serverXR/src/db.js')
+        const db = initDb(path.join(targetRoot, 'di.db'))
+        const rows = db.prepare("SELECT id, visibility FROM projects WHERE space_id = 'show' ORDER BY id").all()
+        closeDb()
+        expect(rows.map((r) => ({ ...r }))).toEqual([{ id: 'door', visibility: 'public' }, { id: 'sources', visibility: 'private' }])
+    })
+
+    it('--public-only leaves the private project out, and every blob only it names — but keeps a blob a public project also uses', async () => {
+        const sourceRoot = mkTemp('space-bundle-vis-src-')
+        const bundlePath = path.join(mkTemp('space-bundle-vis-out-'), 'show.diiii')
+        seedShow(sourceRoot)
+        const { stdout } = await run(['export', 'show', '--data-root', sourceRoot, '--out', bundlePath, '--public-only'])
+        expect(stdout).toContain('1 private left out')
+        const entries = await listTar(bundlePath)
+        expect(entries).toContain('projects/door/')
+        expect(entries).not.toContain('projects/sources')
+        expect(entries).not.toContain(PRIVATE_HASH)
+        expect(entries).toContain(`blobs/${SHARED_HASH}`)
+    })
+
+    it('a plain export (a member\'s file) still carries everything', async () => {
+        const sourceRoot = mkTemp('space-bundle-vis-src-')
+        const bundlePath = path.join(mkTemp('space-bundle-vis-out-'), 'show.diiii')
+        seedShow(sourceRoot)
+        await run(['export', 'show', '--data-root', sourceRoot, '--out', bundlePath])
+        const entries = await listTar(bundlePath)
+        expect(entries).toContain('projects/sources/')
+        expect(entries).toContain(`blobs/${PRIVATE_HASH}`)
+    })
+})
+
 // Security audit 2026-09-29, C1: a bundle that carried `space/assets/<id>` as a
 // symlink to a file outside the data root was imported link and all, and the
 // asset route then served that file. A bundle holds regular files and

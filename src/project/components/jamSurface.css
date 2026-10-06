@@ -82,7 +82,7 @@
     color: rgba(255, 255, 255, 0.72);
     text-decoration: none;
     padding: var(--di-space-2) var(--di-space-3);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     border: 1px solid rgba(255, 255, 255, 0.18);
     background: var(--di-scrim);
     white-space: nowrap;
@@ -116,7 +116,7 @@
     align-items: center;
     height: 2.75rem;
     padding: 0 var(--di-space-4);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     border: 1px solid var(--di-cyan-line);
     background: var(--di-scrim-strong);
     color: var(--di-text);
@@ -133,7 +133,7 @@
 .jam-add {
     width: 4rem;
     height: 4rem;
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     border: 1px solid rgba(255, 255, 255, 0.28);
     background: var(--di-scrim-strong);
     color: var(--di-text);
@@ -154,7 +154,7 @@
     border: 1px solid rgba(255, 255, 255, 0.16);
     background: var(--di-scrim);
     color: rgba(255, 255, 255, 0.78);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     padding: var(--di-space-2) var(--di-space-3);
     font-size: var(--di-text-3);
     font-weight: 600;
@@ -190,7 +190,7 @@
 .jam-sheet-grip {
     width: 2.4rem;
     height: 0.25rem;
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     background: rgba(255, 255, 255, 0.24);
     margin: 0 auto var(--di-space-3);
 }
@@ -298,7 +298,7 @@
 .jam-colour {
     width: 2.6rem;
     height: 2.6rem;
-    border-radius: 50%;
+    border-radius: var(--di-radius);
     border: 2px solid transparent;
     cursor: pointer;
     padding: 0;
@@ -377,7 +377,7 @@
     transform: translateX(-50%);
     top: calc(env(safe-area-inset-top, 0px) + 3.2rem);
     padding: var(--di-space-2) var(--di-space-3);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     background: var(--di-scrim);
     border: 1px solid rgba(255, 255, 255, 0.16);
     font-size: var(--di-text-3);

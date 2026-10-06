@@ -7,13 +7,24 @@
 //     reload or a second still does not pay for a reconnect;
 //   · a child that dies is restarted with backoff (1 s → 30 s) and every receiver is
 //     re-opened: subscribers keep their subscription and simply see frames resume;
-//   · caps: 8 receivers, 16 subscribers.
+//   · caps: 8 receivers, 16 subscribers;
+//   · the AUTOSCAN (startScan): while it is on, the child is kept alive with nothing
+//     to receive, restarted after a crash like any receiver, and every list its one
+//     long-lived finder reports is folded into a registry (scanner.js) whose changes
+//     go to onScan() listeners — the change feed at /ndi/api/scan/events. With no
+//     runtime the scan says so ("no-runtime") and re-probes once a minute, which
+//     costs a stat, not a fork.
 //
 // `forkChild` is injectable so tests drive a fake child (an EventEmitter with
 // send/kill); the real one is child_process.fork with 'advanced' serialization so a
 // JPEG crosses the pipe as a Buffer, not as JSON.
 const path = require('path')
 const { probeNdi } = require('./library')
+const { createSourceRegistry, isEmptyChange } = require('./scanner')
+
+// What the autoscan is doing. `running` is the only state in which the list is a
+// reading of the network; in every other one it is history, and `count` is null.
+const SCAN_STATES = ['off', 'starting', 'running', 'restarting', 'no-runtime', 'error']
 
 const DEFAULTS = {
   lingerMs: 5000,
@@ -23,7 +34,10 @@ const DEFAULTS = {
   maxReceivers: 8,
   maxSubscribers: 16,
   unavailableTtlMs: 60000,
-  killGraceMs: 1500
+  killGraceMs: 1500,
+  // A fresh finder only ADDS names for this long: the SDK warns that its first lists
+  // are incomplete ("it commonly takes a few seconds to discover all sources").
+  scanSettleMs: 3000
 }
 
 const defaultFork = () => {
@@ -62,9 +76,90 @@ function createNdiManager({ forkChild = defaultFork, probe = probeNdi, log = () 
   const receivers = new Map() // key → receiver
   const waiters = new Set() // fns run on every child message / exit
 
+  // ── the autoscan's own state ──
+  const registry = createSourceRegistry()
+  const scanListeners = new Set()
+  let scanning = false
+  let scanSince = null
+  let finderStartedAt = 0 // when the current child said `ready` — its finder was made then
+  let lastHeardAt = null // the child's last word of any kind: the list is fresh as of this
+  let lastList = null
+  let settleTimer = null
+  let scanRetryTimer = null
+  let lastScanState = 'off'
+
   const keyOf = (name, maxWidth, bandwidth) => `${name.toLowerCase()}|${maxWidth}|${bandwidth}`
   const subscriberCount = () => { let n = 0; for (const r of receivers.values()) n += r.subs.size; return n }
-  const notify = () => { for (const fn of [...waiters]) fn() }
+  const notify = () => { for (const fn of [...waiters]) fn(); checkScanState() }
+
+  const scanState = () => {
+    if (!scanning) return 'off'
+    if (unavailable) return unavailable.reason === 'not-installed' || unavailable.reason === 'no-koffi' ? 'no-runtime' : 'error'
+    if (restartTimer) return 'restarting'
+    if (!child || !ready || !sourcesSeen) return 'starting'
+    return 'running'
+  }
+
+  const scanSnapshot = () => {
+    const state = scanState()
+    const looking = state === 'running'
+    return {
+      state,
+      reason: unavailable ? unavailable.reason : null,
+      how: unavailable ? unavailable.how : null,
+      detail: unavailable ? unavailable.detail || '' : '',
+      version: ready ? ready.version : null,
+      since: scanSince,
+      checkedAt: looking ? lastHeardAt : null,
+      // null, never 0, when nothing is looking: "we cannot see" is not "there is nothing".
+      count: looking ? registry.count() : null,
+      sources: registry.list()
+    }
+  }
+
+  const emitScan = (change) => {
+    if (!scanListeners.size) return
+    const event = { type: change ? 'change' : 'state', change: change || null, scan: scanSnapshot() }
+    for (const fn of [...scanListeners]) { try { fn(event) } catch {} }
+  }
+
+  function checkScanState() {
+    const state = scanState()
+    if (state === lastScanState) return
+    lastScanState = state
+    emitScan(null)
+  }
+
+  const scheduleScanRetry = () => {
+    if (!scanning || closed || scanRetryTimer) return
+    scanRetryTimer = setTimeout(() => {
+      scanRetryTimer = null
+      if (!scanning || closed) return
+      ensureChild()
+      checkScanState()
+    }, opt.unavailableTtlMs + 10)
+    scanRetryTimer.unref?.()
+  }
+
+  // A list from the finder → the registry → a change event, if anything changed.
+  const foldList = (list) => {
+    if (!scanning) return
+    const now = Date.now()
+    lastList = list
+    const settling = now - finderStartedAt < opt.scanSettleMs
+    const change = registry.apply(list, now, { settling })
+    if (settling && !settleTimer) {
+      settleTimer = setTimeout(() => {
+        settleTimer = null
+        // Only if a finder is still up: a list from a dead child is not a reading.
+        if (!scanning || !child || !ready || !lastList) return
+        const late = registry.apply(lastList, Date.now())
+        if (!isEmptyChange(late)) emitScan(late)
+      }, Math.max(0, finderStartedAt + opt.scanSettleMs - now) + 5)
+      settleTimer.unref?.()
+    }
+    if (!isEmptyChange(change)) emitScan(change)
+  }
 
   const sendToChild = (message) => {
     if (!child || !child.connected) return false
@@ -73,7 +168,7 @@ function createNdiManager({ forkChild = defaultFork, probe = probeNdi, log = () 
 
   const touchIdle = () => {
     if (idleTimer) { clearTimeout(idleTimer); idleTimer = null }
-    if (closed || !child || receivers.size) return
+    if (closed || !child || receivers.size || scanning) return
     idleTimer = setTimeout(() => { idleTimer = null; if (!receivers.size) stopChild() }, opt.idleExitMs)
     idleTimer.unref?.()
   }
@@ -83,7 +178,7 @@ function createNdiManager({ forkChild = defaultFork, probe = probeNdi, log = () 
   const stopChild = ({ now = false } = {}) => {
     const c = child
     if (!c) return
-    child = null; ready = null; sourcesSeen = false; sources = []
+    child = null; ready = null; sourcesSeen = false; sources = []; lastList = null
     c.removeAllListeners('exit'); c.removeAllListeners('message'); c.removeAllListeners('error')
     c.on('error', () => {})
     if (now) { try { c.kill() } catch {} return }
@@ -95,8 +190,10 @@ function createNdiManager({ forkChild = defaultFork, probe = probeNdi, log = () 
 
   const onMessage = (message) => {
     if (!message || typeof message !== 'object') return
+    lastHeardAt = Date.now()
     if (message.type === 'ready') {
       ready = { version: String(message.version || ''), path: String(message.path || '') }
+      finderStartedAt = Date.now()
       unavailable = null
     } else if (message.type === 'fatal') {
       unavailable = { reason: message.reason || 'load-failed', how: message.how || '', detail: message.detail || '', at: Date.now() }
@@ -104,6 +201,7 @@ function createNdiManager({ forkChild = defaultFork, probe = probeNdi, log = () 
     } else if (message.type === 'sources') {
       sources = Array.isArray(message.sources) ? message.sources : []
       sourcesSeen = true
+      foldList(sources)
     } else if (message.type === 'state') {
       const r = [...receivers.values()].find((x) => x.id === message.id)
       if (r) {
@@ -123,16 +221,20 @@ function createNdiManager({ forkChild = defaultFork, probe = probeNdi, log = () 
       }
     } else if (message.type === 'stats') {
       lastStats = { ...message, at: Date.now() }
+      // Every 2 s from a live child whose finder has not reported a change: every name
+      // present is still present as of now.
+      if (scanning && sourcesSeen) registry.touch(lastHeardAt)
     }
     notify()
   }
 
   const onExit = (code, signal) => {
     const fatal = Boolean(unavailable)
-    child = null; ready = null; sourcesSeen = false; sources = []
-    notify()
-    if (closed || fatal) return
-    if (!receivers.size) return // idle: the next request starts a fresh one
+    child = null; ready = null; sourcesSeen = false; sources = []; lastList = null
+    if (closed) { notify(); return }
+    if (fatal) { scheduleScanRetry(); notify(); return }
+    // idle and not scanning: the next request starts a fresh one
+    if (!receivers.size && !scanning) { notify(); return }
     log(`[ndi] child exited (${signal || code}); restarting in ${backoffMs} ms`)
     for (const r of receivers.values()) {
       r.state = 'restarting'; r.detail = 'the NDI process stopped and is being restarted'
@@ -142,6 +244,7 @@ function createNdiManager({ forkChild = defaultFork, probe = probeNdi, log = () 
     restartTimer = setTimeout(() => { restartTimer = null; restarts += 1; ensureChild() }, backoffMs)
     restartTimer.unref?.()
     backoffMs = Math.min(opt.backoffMaxMs, backoffMs * 2)
+    notify()
   }
 
   // → the child, or null with `unavailable` set.
@@ -153,6 +256,7 @@ function createNdiManager({ forkChild = defaultFork, probe = probeNdi, log = () 
     const probed = probe()
     if (!probed.ok) {
       unavailable = { reason: probed.reason, how: probed.how, detail: probed.detail || '', at: Date.now() }
+      scheduleScanRetry()
       return null
     }
     unavailable = null
@@ -284,21 +388,64 @@ function createNdiManager({ forkChild = defaultFork, probe = probeNdi, log = () 
       lingering: Boolean(r.lingerTimer), state: r.state, detail: r.detail, source: r.source, address: r.address || '',
       lastFrameAgeMs: r.lastFrame ? Date.now() - r.lastFrame.at : null
     })),
-    worker: lastStats
+    worker: lastStats,
+    scan: { state: scanState(), count: scanState() === 'running' ? registry.count() : null, listeners: scanListeners.size }
   })
+
+  // ── the autoscan ──────────────────────────────────────────────────────────
+  // Idempotent. Once on, it stays on until stopScan() or close(): continuous is
+  // the point. → the snapshot as it stands.
+  const startScan = () => {
+    if (closed) return scanSnapshot()
+    if (!scanning) { scanning = true; scanSince = Date.now() }
+    if (idleTimer) { clearTimeout(idleTimer); idleTimer = null }
+    ensureChild()
+    checkScanState()
+    return scanSnapshot()
+  }
+
+  const stopScan = () => {
+    if (!scanning) return
+    scanning = false
+    if (settleTimer) { clearTimeout(settleTimer); settleTimer = null }
+    if (scanRetryTimer) { clearTimeout(scanRetryTimer); scanRetryTimer = null }
+    touchIdle()
+    checkScanState()
+  }
+
+  // The snapshot once the scan has had `waitMs` to reach a reading — for a caller
+  // that has just switched it on and would otherwise print "starting".
+  const scan = async ({ waitMs = 0 } = {}) => {
+    startScan()
+    if (waitMs > 0) await waitFor(() => scanState() !== 'starting', waitMs)
+    return scanSnapshot()
+  }
+
+  // listener({ type:'change'|'state', change:{ appeared, gone, changed }|null, scan }) → off()
+  const onScan = (listener) => {
+    scanListeners.add(listener)
+    return () => { scanListeners.delete(listener) }
+  }
 
   const close = () => {
     if (closed) return
     closed = true
     if (restartTimer) { clearTimeout(restartTimer); restartTimer = null }
     if (idleTimer) { clearTimeout(idleTimer); idleTimer = null }
+    if (settleTimer) { clearTimeout(settleTimer); settleTimer = null }
+    if (scanRetryTimer) { clearTimeout(scanRetryTimer); scanRetryTimer = null }
+    scanning = false
+    scanListeners.clear()
     for (const r of receivers.values()) if (r.lingerTimer) clearTimeout(r.lingerTimer)
     receivers.clear()
     stopChild({ now: true })
     notify()
   }
 
-  return { subscribe, summary, getSources, still, stats, close, hasChild: () => child !== null }
+  return {
+    subscribe, summary, getSources, still, stats, close, hasChild: () => child !== null,
+    startScan, stopScan, scan, scanSnapshot, onScan, isScanning: () => scanning
+  }
 }
 
-module.exports = { createNdiManager, NdiCapError, DEFAULTS }
+module.exports = { createNdiManager, NdiCapError, DEFAULTS, SCAN_STATES }

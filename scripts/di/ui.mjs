@@ -37,6 +37,19 @@ export const CMD = (() => {
     return /^[A-Za-z0-9_.-]+$/.test(name) ? name : 'di'
 })()
 
+/**
+ * `di status | head -1` closes our stdout early; Node then raises EPIPE as an
+ * unhandled 'error' event and prints a stack trace. Closing a pipe is how the
+ * reader says "enough", so it ends quietly with success (the convention of
+ * every Unix tool that ignores SIGPIPE). Anything else is still fatal.
+ */
+for (const stream of [process.stdout, process.stderr]) {
+    stream.on('error', (error) => {
+        if (error && error.code === 'EPIPE') process.exit(0)
+        throw error
+    })
+}
+
 export const say = (message = '') => { process.stdout.write(`${message}\n`) }
 export const warn = (message = '') => { process.stderr.write(`${style.yellow(message)}\n`) }
 export const fail = (message = '') => { process.stderr.write(`${style.red(message)}\n`) }
@@ -52,7 +65,7 @@ export const followFileLines = (files) => {
     const count = (n, one, many) => `${n} ${n === 1 ? one : many}`
     if (files.pending > 0) {
         const mb = files.bytesPending > 0 ? ` (${Math.max(1, Math.round(files.bytesPending / 1024 / 1024))} MB)` : ''
-        lines.push(style.dim(`${count(files.pending, 'file', 'files')} still coming${mb}`))
+        lines.push(style.dim(`${count(files.pending, 'file', 'files')} still coming${mb}${files.listed > files.pending ? `, of ${files.listed} listed` : ''}`))
     }
     const failures = Array.isArray(files.failures) ? files.failures : []
     if (files.failed > 0 || failures.length) {
@@ -66,6 +79,14 @@ export const followFileLines = (files) => {
     }
     return lines
 }
+
+/**
+ * What a follow says about the space's own settings (label, visibility, front
+ * door — serverXR/src/follow/followSettings.js): only what it could not do, so
+ * a quiet line means the settings agree. An install too old to report sends none.
+ */
+export const followSettingsLines = (settings) => (Array.isArray(settings?.notes) ? settings.notes : [])
+    .map(note => style.dim(`settings: ${note}`))
 
 export const ui = {
     // What a start prints. It used to be three lines — the address, six space
@@ -174,7 +195,9 @@ export const ui = {
             missing: 'that di.iiii has no space by that name.',
             denied: 'that key was refused — ask for a fresh one: di invite <space> on their machine.',
             'local-space': 'this install could not make room for it — is di.iiii running here?',
-            itself: 'that address is this di.iiii — a space cannot follow itself.'
+            itself: 'that address is this di.iiii — a space cannot follow itself.',
+            cleartext: `that address is plain http on a network that is not yours — the key and every edit would travel in the clear. use https, or say so out loud: --insecure`,
+            corrupt: `follows.json in this install's data folder cannot be read, so nothing was written — writing over it would drop every other follow and its key. it was left as it is, with a .corrupt copy beside it. look at it, fix or move it, then follow again.`
         }[reason] || `could not follow ${where}.`
         // Only on a plain, un-pinned "unreachable": the address pin is the fix
         // for the one failure it fixes, and there is no point suggesting it to
@@ -183,6 +206,9 @@ export const ui = {
             ? `${message}\nif that name points somewhere this machine cannot reach, say where it is: --at <address>`
             : message
     },
+
+    followBothDirections: () => '--take-host and --take-mine answer opposite questions — say one of them.',
+    followBothStarts: () => '--from-now and --replay are opposite starts — say one of them.',
 
     badAddress: (value) => `${value} is not an address — --at wants an IPv4 or IPv6 literal, like --at 100.87.4.12`,
 
@@ -209,7 +235,7 @@ export const ui = {
             if (!state) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim('(not running)')}`
             const moving = `${state.status} · in ${state.carriedIn} · out ${state.carriedOut}${state.streams > 1 ? ` · ${state.streams} logs` : ''}`
             const line = `  ${style.cyan(id.padEnd(18))}${where}  ${state.lastError ? style.yellow(state.lastError) : style.dim(moving)}`
-            return [line, ...followFileLines(state.files).map(text => `  ${' '.repeat(18)}${text}`)].join('\n')
+            return [line, ...followSettingsLines(state.settings), ...followFileLines(state.files)].map((text, index) => (index === 0 ? text : `  ${' '.repeat(18)}${text}`)).join('\n')
         }).join('\n')
     },
 
@@ -230,6 +256,30 @@ export const ui = {
     reach: ({ lan, urls }) => lan
         ? `this network — ${urls.length ? urls.join(', ') : 'no address yet'}`
         : 'this machine only',
+
+    // What `status` says about the rig: can the other di.iiii on this network
+    // see this one. The one question nobody could answer on 2026-09-24, when
+    // three copies sat on one network and one of them was invisible by design
+    // and in silence. `v` is the server's answer (GET /api/rig/visibility).
+    rigVisibility: (v) => {
+        if (!v) return style.dim('rig: no answer — DI_RIG=0, or a server older than this di')
+        const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
+        const nearby = Array.isArray(v.nearby) ? v.nearby : []
+        const privateOnes = nearby.filter((entry) => entry && entry.open === false)
+        const openOnes = nearby.filter((entry) => entry && entry.open === true)
+        const who = (entry) => `${entry.address || 'an unknown address'}${entry.name ? ` (${entry.name})` : ''}`
+        if (v.visible) {
+            return [
+                `rig: visible on this network · discovery ${v.discovery || 'on'} · ${plural(v.members || 0, 'member', 'members')}${style.dim(`  (to make it private: ${CMD} down, then ${CMD} up)`)}`,
+                ...privateOnes.map((entry) => style.yellow(`  a di.iiii at ${who(entry)} is on this network but private — on that machine: ${CMD} down, then ${CMD} up --lan`))
+            ].join('\n')
+        }
+        return [
+            style.yellow(`rig: private — other di.iiii on this network cannot see this one`),
+            v.refused ? null : style.dim(`  discovery ${v.discovery || 'off'}${openOnes.length ? ` · heard ${openOnes.length} other di.iiii on this network: ${openOnes.map(who).join(', ')}` : ''}`),
+            `  to change: ${CMD} down, then ${CMD} up --lan`
+        ].filter(Boolean).join('\n')
+    },
 
     stopped: (dataDir) => `stopped. your work is safe in ${dataDir}`,
     notRunning: () => 'not running.',
@@ -304,7 +354,7 @@ export const ui = {
 
     notInstalled: () => [
         'di.iiii is not installed here.',
-        style.dim('install it with:  curl -fsSL https://di-studio.xyz/get | sh')
+        style.dim('install it with:  curl -fsSL https://diiii.xyz/get | sh')
     ].join('\n'),
 
     // The one screen an artist is asked to read when something is wrong. It
@@ -420,7 +470,9 @@ export const ui = {
     followUsage: () => [
         style.bold(`${CMD} follow SPACE --from URL --key KEY`) + style.dim(' — join a space that lives on another di.iiii'),
         '',
-        'both sides keep the whole work; edits travel both ways.',
+        'both sides keep the whole work; edits travel both ways. The host\'s label, front door',
+        'and visibility come too (never more public than either side has it).',
+        `a new key for a follow that exists: ${CMD} follow SPACE --from URL --key - --into SPACE (takes effect while di runs)`,
         '',
         '  --from URL      where the other di.iiii answers, e.g. https://local.thedi.studio',
         `  --key KEY       the per-space sync key, minted on their machine with: ${CMD} invite SPACE`,
@@ -429,6 +481,19 @@ export const ui = {
         '                  --from names a machine this one can only reach somewhere else —',
         '                  a Tailscale IP, say — and there is no hosts-file edit to make.',
         `  --into SPACE    merge into a space of that name that already exists here`,
+        '  --from-now      the start, and the default: nothing from either side\'s past is',
+        '                  replayed; the two copies are compared once and only what happens',
+        '                  after is carried',
+        '  --replay        the old start: read both logs from their beginning (for history',
+        '                  the other side has never seen). Not for a space both already hold.',
+        '  --take-host     when the two copies differ and this one holds work the host lacks,',
+        '                  the host wins. A restore point is taken first; used once, then cleared',
+        '  --take-mine     the same, the other way: this copy becomes the host\'s. Restore point',
+        '                  taken on the host first; used once, then cleared',
+        '                  (with neither, a difference where this copy is ahead is REFUSED and',
+        `                  shown in ${CMD} follows)`,
+        '  --insecure      allow a key to travel over plain http to a public address (http to',
+        '                  localhost, .local, LAN and Tailscale addresses needs no flag)',
         '',
         style.dim(`  ${CMD} follows          what this install is following`),
         style.dim(`  ${CMD} unfollow SPACE   stop carrying edits`)
@@ -510,6 +575,46 @@ export const ui = {
 
     ndiRemoved: () => 'the NDI runtime is gone. your work is untouched.',
 
+    // `di ndi scan` — the running di.iiii's autoscan. A count is printed only when
+    // the server is actually looking: "no runtime" is never "no sources".
+    ndiScan: (scan, { now = Date.now() } = {}) => {
+        const ago = (at) => (typeof at === 'number' ? `${Math.max(0, Math.round((now - at) / 1000))} s ago` : '')
+        if (scan.state === 'no-runtime') {
+            return [
+                'cannot look — this di.iiii has no NDI runtime.',
+                style.dim(`  ${scan.how || `${CMD} ndi get, then ${CMD} down && ${CMD} up`}`)
+            ].join('\n')
+        }
+        if (scan.state === 'error') return `cannot look — the NDI runtime would not start: ${scan.detail || scan.reason || 'no reason given'}`
+        if (scan.state === 'off') return 'the autoscan is off on this di.iiii.'
+        const present = (scan.sources || []).filter((source) => source.present)
+        const gone = (scan.sources || []).filter((source) => !source.present)
+        const head = scan.state === 'running'
+            ? `NDI on the network: ${scan.count}`
+            : `NDI on the network: unknown — the scan is ${scan.state}${present.length ? ' (the list below is the last reading)' : ''}`
+        const lines = [head]
+        for (const source of present) lines.push(`  ${source.name}${source.address ? style.dim(`  ${source.address}`) : ''}${style.dim(`  seen since ${ago(source.firstSeen)}`)}`)
+        // The most recent departures only: the server remembers ten minutes of them.
+        const recent = [...gone].sort((a, b) => (b.goneSince || 0) - (a.goneSince || 0))
+        for (const source of recent.slice(0, 5)) lines.push(style.dim(`  ${source.name}  gone ${ago(source.goneSince)}`))
+        if (recent.length > 5) lines.push(style.dim(`  … and ${recent.length - 5} more gone in the last ten minutes`))
+        return lines.join('\n')
+    },
+
+    ndiScanEvent: (scan, { now = Date.now() } = {}) => {
+        const at = new Date(now).toTimeString().slice(0, 8)
+        const change = scan.change
+        if (!change) return style.dim(`${at}  ${scan.state === 'running' ? `scanning — ${scan.count} on the network` : `scan ${scan.state}${scan.how ? ` — ${scan.how}` : ''}`}`)
+        const lines = []
+        for (const source of change.appeared || []) lines.push(`${at}  + ${source.name}${source.address ? style.dim(`  ${source.address}`) : ''}`)
+        for (const source of change.gone || []) lines.push(`${at}  - ${source.name}`)
+        for (const source of change.changed || []) lines.push(`${at}  ~ ${source.name}${style.dim(`  now ${source.address}`)}`)
+        lines.push(style.dim(`${at}  ${scan.count ?? '?'} on the network`))
+        return lines.join('\n')
+    },
+
+    ndiScanFailed: (why) => `could not read the NDI scan — ${why}`,
+
     ndiUnsupported: (platform) => [
         `NDI publishes no runtime for ${platform}.`,
         style.dim('linux, macOS and windows only.')
@@ -546,6 +651,7 @@ export const ui = {
         `  ${CMD} ndi get      fetch the runtime (9–225 MB once, depending on the machine)`,
         `  ${CMD} ndi status   whether it is here, and whether di.iiii can load it`,
         `  ${CMD} ndi remove   take it off this machine`,
+        `  ${CMD} ndi scan     every NDI source on the network right now (--watch: follow it live)`,
         '',
         style.dim('  --force           fetch it again even if it is already here'),
         style.dim('  --variant NAME    a different linux build (a raspberry pi is not x86_64)'),
@@ -691,7 +797,51 @@ export const ui = {
         'work, and until it lands a stage machine drives the screen it is given.'
     ].join('\n'),
 
-    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), ndi: () => ui.ndiUsage(), follow: () => ui.followUsage(), stage: () => ui.stageUsage() })[name]?.() || null,
+    serviceUsage: () => [
+        style.bold(`${CMD} service install`) + style.dim(' — systemd keeps the server up, and starts it again if it dies'),
+        '',
+        'without it, the server runs on its own after `up` and nothing notices if it stops.',
+        'with it, the server is a systemd user unit: started at login, restarted within',
+        'seconds whenever it exits unasked (a crash, a stray kill), logged to the journal.',
+        `${CMD} up, down, status, logs and update drive the unit from then on — nothing else changes.`,
+        'linux with systemd only; on other machines di starts the server itself, as before.',
+        '',
+        `  --name NAME     the unit's name (default ${'di-server'}), e.g. a second install on one machine`,
+        '',
+        style.dim(`  ${CMD} service status   the unit, its main pid, how often it was restarted`),
+        style.dim(`  ${CMD} service remove   undo exactly what install did — the server keeps running, unsupervised`)
+    ].join('\n'),
+
+    serviceNoSystemd: () => 'this machine has no systemd user manager, so there is nothing to hand the server to.\n'
+        + `${CMD} up keeps starting it itself, as before.`,
+    serviceNotInDocker: () => 'this supervises the node install only; a docker install is started by docker compose and is not covered yet.',
+    serviceBadName: (name) => `"${name}" is not a name di will give a unit — letters, digits, ".", "_" and "-", without ".service".`,
+    serviceOtherName: (name) => `this install is already supervised as ${name}.service — ${CMD} service remove first.`,
+    serviceInstalled: (svc, started) => [
+        `installed ${svc.unit} — systemd now keeps di.iiii up, and starts it at login.`,
+        style.dim(`  unit  ${svc.unitFile}`),
+        style.dim(`  log   journalctl --user -u ${svc.unit}   (or ${CMD} logs)`),
+        started ? null : style.dim(`  not started now — ${CMD} up starts it under systemd`),
+        style.dim(`  undo  ${CMD} service remove`)
+    ].filter(Boolean).join('\n'),
+    serviceRemoved: (svc) => `removed ${svc.unit}. ${CMD} up starts the server itself again, unsupervised.`,
+    serviceNone: () => `nothing supervises this install — ${CMD} service install hands it to systemd.`,
+    serviceStatus: (svc, unit) => [
+        `${svc.unit}  ${unit.state}${unit.sub ? ` (${unit.sub})` : ''}  ${unit.enabled || ''}`.trimEnd(),
+        style.dim(`  main pid ${unit.mainPid || '-'} · restarted ${unit.restarts} time${unit.restarts === 1 ? '' : 's'} since it was started`),
+        style.dim(`  unit ${svc.unitFile}`)
+    ].join('\n'),
+    // One line under `di status`. A unit systemd has given up on is the one
+    // thing here a person must hear: it will not come back by itself.
+    supervisorLine: (svc, unit) => {
+        if (unit.state === 'failed') return `systemd gave up on ${svc.unit} (${unit.result || 'failed'}) — ${CMD} logs says why; ${CMD} up tries again.`
+        if (unit.active) return style.dim(`kept up by systemd (${svc.unit}, pid ${unit.mainPid || '-'}, restarted ${unit.restarts}×)`)
+        if (unit.sub === 'auto-restart') return `systemd is restarting ${svc.unit} (restarted ${unit.restarts}× so far) — ${CMD} logs says why.`
+        return style.dim(`${svc.unit} is stopped — ${CMD} up starts it under systemd.`)
+    },
+    unsupervisedWhileInstalled: (svc) => `answering, but not under ${svc.unit} — a server started some other way. ${CMD} down && ${CMD} up puts it under systemd.`,
+
+    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), ndi: () => ui.ndiUsage(), follow: () => ui.followUsage(), stage: () => ui.stageUsage(), service: () => ui.serviceUsage() })[name]?.() || null,
 
     help: () => [
         style.bold(CMD) + style.dim(' — di.iiii on your own machine'),
@@ -705,6 +855,7 @@ export const ui = {
         `  ${CMD} save SPACE    save it as one file you can carry anywhere`,
         `  ${CMD} open FILE     open a file someone saved (or ${CMD} open, for di.iiii itself)`,
         `  ${CMD} spaces        what is in this di.iiii`,
+        `  ${CMD} move PROJECT --to SPACE   move a project into another space (--dry-run to look first)`,
         `  ${CMD} backup        every space and the light show, in one file`,
         `  ${CMD} restore FILE  read one back in`,
         `  ${CMD} restore --snapshot   the copies taken automatically before an update`,
@@ -719,8 +870,13 @@ export const ui = {
         `  ${CMD} link SPACE --remote URL   connect one space to an online di.iiii`,
         `  ${CMD} sync SPACE    compare it with its online copy — writes nothing`,
         '',
+        `  ${CMD} service install   systemd keeps it up and restarts it if it dies (linux)`,
+        '',
         `  ${CMD} update        get the newest version — never touches your work`,
         `  ${CMD} update --from FILE   update from an artifact on this machine (no network)`,
+        `  ${CMD} update --channel dev|stable   one run on a channel (dev = the build dev.diiii.xyz serves)`,
+        `  ${CMD} channel [dev|stable]   show or set which channel this install follows`,
+        `  ${CMD} autoupdate on|off|status   keep it on its channel by itself, every 15 minutes (Linux)`,
         `  ${CMD} logs [-f]     what the server is saying`,
         `  ${CMD} doctor        what this machine can and cannot do`,
         `  ${CMD} where         the three paths that matter`,

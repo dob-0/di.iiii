@@ -7,6 +7,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { afterEach, describe, expect, it } from 'vitest'
+import { fileURLToPath } from 'node:url'
 
 const require = createRequire(import.meta.url)
 const express = require('express')
@@ -14,7 +15,7 @@ const { registerRigRoutes, BODY_LIMIT } = require('./routes.js')
 const { sign } = require('./protocol.js')
 const { LOCAL_FEATURES } = require('./features.js')
 
-const FIXTURES = path.join(path.dirname(new URL(import.meta.url).pathname), 'fixtures', 'protocol-1')
+const FIXTURES = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'protocol-1')
 const fixtureText = (name) => fs.readFileSync(path.join(FIXTURES, name), 'utf8')
 
 const envBefore = { NODE_ENV: process.env.NODE_ENV, DI_LOCAL: process.env.DI_LOCAL, DI_ALLOW_LAN_DEVICES: process.env.DI_ALLOW_LAN_DEVICES }

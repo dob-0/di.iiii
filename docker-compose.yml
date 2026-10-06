@@ -55,6 +55,12 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       OAUTH_CALLBACK_BASE_URL: ${OAUTH_CALLBACK_BASE_URL:-}
+      # The sign-in hub (docs/architecture/AUTH_HUB.md): only THE hub sets the
+      # signing key; every other server needs nothing (the official hub is built in).
+      AUTH_HUB_SIGNING_KEY: ${AUTH_HUB_SIGNING_KEY:-}
+      AUTH_HUB_ALLOWED_RETURNS: ${AUTH_HUB_ALLOWED_RETURNS:-}
+      AUTH_HUB_URL: ${AUTH_HUB_URL:-}
+      AUTH_HUB_PUBLIC_KEY: ${AUTH_HUB_PUBLIC_KEY:-}
 
       # GitHub sign-in (optional): create an OAuth App at
       # https://github.com/settings/developers
@@ -120,6 +126,16 @@ services:
       # approvals to (contentProposals.js — a file for an existing space).
       CONTENT_CHANGE_NOTICES_ENABLED: ${CONTENT_CHANGE_NOTICES_ENABLED:-false}
       APPROVAL_CALLBACK_URL: ${APPROVAL_CALLBACK_URL:-}
+
+      # A space on its own domain (docs/architecture/SPEC_space_own_domain.md).
+      # Empty = domains can be saved but nothing switches them on by itself.
+      # The token needs SSL and Certificates: Edit on the platform zone only.
+      CLOUDFLARE_SAAS_ZONE_ID: ${CLOUDFLARE_SAAS_ZONE_ID:-}
+      CLOUDFLARE_SAAS_API_TOKEN: ${CLOUDFLARE_SAAS_API_TOKEN:-}
+      CLOUDFLARE_SAAS_CNAME_TARGET: ${CLOUDFLARE_SAAS_CNAME_TARGET:-}
+      PLATFORM_ORIGIN: ${PLATFORM_ORIGIN:-}
+      PLATFORM_HOSTNAMES: ${PLATFORM_HOSTNAMES:-}
+      DOMAINS_MAX: ${DOMAINS_MAX:-}
       CONTENT_PROPOSAL_TTL_MS: ${CONTENT_PROPOSAL_TTL_MS:-}
     restart: unless-stopped
     healthcheck:

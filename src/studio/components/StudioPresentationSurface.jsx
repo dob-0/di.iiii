@@ -29,6 +29,11 @@ const resolveStudioPreviewCamera = (document, cameraView) => {
     return cameraView || document.worldState?.savedView || null
 }
 
+// The smart view in the editor (docs/architecture/SMART_VIEW.md): the fade, the cutaway,
+// the presets and x-ray — but no floor or distance limits: an author may need to look up
+// from under a thing, and the pane's own Bottom view stands under the floor.
+const STUDIO_SMART_VIEW = { bar: 'studio', constraints: false, deepLink: false }
+
 export default function StudioPresentationSurface({
     document,
     selectedEntityId,
@@ -58,10 +63,18 @@ export default function StudioPresentationSurface({
     onCloseHelp,
     overlays,
     rigMirror = false,
+    // What Nodes made, for the room (StudioGraphNodes.jsx) — passed through.
+    graphRoom = null,
 }) {
     const presentationState = document.presentationState || {}
     const previewMode = presentationState.mode || 'scene'
     const isFixedCamera = previewMode === 'fixed-camera'
+    // The composed shot is where the camera STARTS; it holds the camera still only when
+    // the author locked it (`fixedCamera.locked === true`) — the published viewer's own
+    // rule (PublicProjectSceneSurface). It used to lock on the mode alone, so a room
+    // whose opening shot was set by a script (MOXIR, locked: false) opened a Studio in
+    // which nothing moved the camera: the owner's "when i enter studio can't move".
+    const isLockedCamera = isFixedCamera && presentationState.fixedCamera?.locked === true
     const showCodeView = previewMode === 'code'
     const resolvedCamera = isFixedCamera
         ? (presentationState.fixedCamera || resolveStudioPreviewCamera(document, cameraView))
@@ -70,7 +83,15 @@ export default function StudioPresentationSurface({
     const rawHtml = hasFiles
         ? bundleCodeFiles(presentationState.codeFiles)
         : (presentationState.codeHtml || '')
-    const previewDocument = buildPresentationPreviewDocument(rawHtml)
+    // The page's own host, as the public view passes it (PublicProjectViewer):
+    // a page that loads its assets from `${diiPageOrigin}/serverXR/...` got an
+    // empty origin here and hung on its loader in Studio (di.laser's chapter,
+    // owner's screenshot 2026-10-05). The sandbox's opaque origin cannot supply it.
+    const previewDocument = buildPresentationPreviewDocument(
+        rawHtml,
+        '',
+        typeof window !== 'undefined' ? window.location.origin : ''
+    )
 
     if (showCodeView) {
         const isUrlSource = presentationState.codeSourceType === 'url'
@@ -157,12 +178,14 @@ export default function StudioPresentationSurface({
             onTransformCommit={onTransformCommit}
             onTransformCommitMany={onTransformCommitMany}
             onTransformCancel={onTransformCancel}
-            enableNavigation={isFixedCamera ? false : undefined}
+            enableNavigation={isLockedCamera ? false : undefined}
             showHelp={showHelp}
             onShowHelp={onShowHelp}
             onCloseHelp={onCloseHelp}
             overlays={overlays}
             rigMirror={rigMirror}
+            smartView={STUDIO_SMART_VIEW}
+            graphRoom={graphRoom}
         />
     )
 }

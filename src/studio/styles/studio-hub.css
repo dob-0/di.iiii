@@ -9,6 +9,12 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
+    /* When the name form does not fit beside the title it takes a line of its
+       own under it. Without the wrap, a phone squeezed "SPACE: MAIN SPACE" from
+       127px to 83px — two lines — and pushed the form to the screen's edge
+       (measured 2026-09-27). A wide screen keeps one row, as before. */
+    flex-wrap: wrap;
+    row-gap: var(--di-space-2);
     padding-bottom: var(--di-space-3);
     border-bottom: 1px solid var(--di-cyan-border);
     margin-bottom: var(--di-space-3);
@@ -263,6 +269,17 @@
 }
 
 .sh-rename-save:hover { color: var(--di-text); border-color: rgba(var(--di-cyan-rgb), 0.4); }
+
+/* A finger's size for the ✕ and the save/cancel beside a name field: the ✕ on
+   the new-project form measured 24x21 on a phone (2026-09-28). */
+@media (pointer: coarse) {
+    .sh-btn-cancel,
+    .sh-rename-save,
+    .sh-rename-cancel {
+        min-width: var(--di-touch-target);
+        min-height: var(--di-touch-target);
+    }
+}
 .sh-rename-cancel:hover { color: var(--di-danger); border-color: rgba(var(--di-danger-rgb), 0.4); }
 
 .sh-btn-delete {
@@ -409,10 +426,30 @@
     background: rgba(255, 255, 255, 0.06);
 }
 
+/* Private: only the space's members see it. Said on the card because the
+   members are the only people who ever see the card. */
+.sh-state--private {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--di-space-1);
+    color: var(--di-dim);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.sh-lock {
+    width: 0.9em;
+    height: 0.9em;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.2;
+}
+
 /* Filing controls sit at the bottom of the card and stay quiet until hovered —
-   they are how you tidy, not what you came to look at. */
+   they are how you tidy, not what you came to look at. Up to three selects
+   (shelf, state, who sees it), so the row wraps rather than overflowing. */
 .sh-card-filing {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--di-space-2);
     margin-top: var(--di-space-3);
     opacity: 0.45;

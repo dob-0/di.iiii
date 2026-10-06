@@ -308,3 +308,62 @@ describe('a file for an existing space is a proposal', () => {
         expect(same.body.status).toBe('nothing_to_apply')
     })
 })
+
+// 2026-09-18: a whole-document carry removed 76 authored slides from prod's
+// front room and nothing said so. `npm run send` lands through this door: a
+// file that removes media now says so first in its summary, and is refused
+// unless the sender names the exact count (acceptLoss).
+describe('a file that removes media says so, and needs the exact count', () => {
+    it('the incident, 85 → 9: dry run names the loss; refused without, and with a wrong, count; applied with the exact one', async () => {
+        const hex = (n) => n.toString(16).padStart(64, '0')
+        const image = (i) => ({ id: `slide-${i}`, type: 'image', name: `Slide ${i}`, components: { media: { assetId: hex(i + 1) } } })
+        const nine = Array.from({ length: 9 }, (_, i) => entity(`t${i}`))
+        const put = async (server, projectId, entities) => {
+            const r = await fetch(`${server.baseUrl}/api/projects/${projectId}/document`, json('PUT', { projectMeta: { title: 'Page' }, entities }))
+            expect(r.status).toBe(200)
+        }
+
+        const srcRoot = await makeTempDir('dii-proposal-loss-src-')
+        let src = await startServer(srcRoot)
+        await fetch(`${src.baseUrl}/api/spaces`, json('POST', { slug: 'wcc', label: 'WCC' }))
+        const page = (await (await fetch(`${src.baseUrl}/api/spaces/wcc/projects`, json('POST', { title: 'Page', slug: 'page' }))).json()).project.id
+        await put(src, page, [...Array.from({ length: 76 }, (_, i) => image(i)), ...nine])
+        await src.stop()
+        const out = await makeTempDir('dii-proposal-loss-out-')
+        const fileA = path.join(out, 'a.diiii')
+        await runBundle(['export', 'wcc', '--out', fileA], srcRoot)
+        const tgtRoot = await makeTempDir('dii-proposal-loss-tgt-')
+        await runBundle(['import', fileA], tgtRoot)
+
+        src = await startServer(srcRoot)
+        await put(src, page, nine)
+        await src.stop()
+        await wait(20)
+        const fileB = path.join(out, 'b.diiii')
+        await runBundle(['export', 'wcc', '--out', fileB], srcRoot)
+
+        const tgt = await startServer(tgtRoot)
+        const dry = await propose(tgt, fileB, { dryRun: 'true' })
+        expect(dry.body.status).toBe('dry_run')
+        expect(dry.body.summary.mediaLost).toBe(76)
+        expect(dry.body.text).toContain('⚠ REMOVES 76 media items:')
+        expect(dry.body.text).toContain('this replace REMOVES 76 of 85 items — 76 image (media)')
+
+        const refused = await propose(tgt, fileB)
+        expect(refused.status).toBe(409)
+        expect(refused.body.code).toBe('media_loss')
+        expect(refused.body.error).toContain('--accept-loss 76')
+        expect((await documentOf(tgt, page)).entities).toHaveLength(85)
+
+        const wrong = await propose(tgt, fileB, { acceptLoss: '75' })
+        expect(wrong.status).toBe(409)
+        expect(wrong.body.code).toBe('media_loss')
+        expect(wrong.body.error).toContain('does not match the 76')
+        expect((await documentOf(tgt, page)).entities).toHaveLength(85)
+
+        const applied = await propose(tgt, fileB, { acceptLoss: '76' })
+        expect(applied.status).toBe(200)
+        expect(applied.body.status).toBe('applied')
+        expect((await documentOf(tgt, page)).entities).toHaveLength(9)
+    })
+})

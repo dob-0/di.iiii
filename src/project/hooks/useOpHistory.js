@@ -11,7 +11,10 @@ const COALESCE_WINDOW_MS = 800
 const COALESCIBLE_TYPES = new Set([
     'updateEntity', 'updateComponent', 'updateNode', 'updateEdge',
     'setWorldState', 'setRenderSettings', 'setXrState', 'setPresentationState',
-    'setPublishState', 'setShowState', 'setWindowState', 'setWorkspaceState', 'setProjectMeta'
+    'setPublishState', 'setShowState', 'setWindowState', 'setWorkspaceState', 'setProjectMeta',
+    // The projection desk (src/map): a corner-pin drag is one setMappingSurface per
+    // frame, and without coalescing it filled the 50-step history in one gesture.
+    'setMappingState', 'setMappingSurface', 'setMappingCue'
 ])
 
 const entrySignature = (ops) => {
@@ -19,7 +22,7 @@ const entrySignature = (ops) => {
     for (const op of ops) {
         if (!COALESCIBLE_TYPES.has(op?.type)) return null
         const payload = op.payload || {}
-        const target = payload.entityId || payload.nodeId || payload.edgeId || payload.windowId || ''
+        const target = payload.entityId || payload.nodeId || payload.edgeId || payload.windowId || payload.surfaceId || payload.cueId || ''
         let keys = Object.keys(payload.patch || {}).sort().join(',')
         // For node values the top-level patch key is ALWAYS just 'values', so
         // any two edits to one node coalesced — a window move and a chatId
@@ -75,6 +78,15 @@ const describeOp = (doc, op) => {
         case 'deleteEdge': return 'Disconnect nodes'
         case 'upsertAsset': return `Update asset ${payload.asset?.name || ''}`.trim()
         case 'deleteAsset': return 'Delete asset'
+        case 'createMappingSurface': return 'Add surface'
+        case 'setMappingSurface': return 'Edit surface'
+        case 'deleteMappingSurface': return 'Delete surface'
+        case 'reorderMappingSurfaces': return 'Reorder surfaces'
+        case 'setMappingState': return 'Projection settings'
+        case 'createMappingCue': return 'Add cue'
+        case 'setMappingCue': return 'Edit cue'
+        case 'deleteMappingCue': return 'Delete cue'
+        case 'reorderMappingCues': return 'Reorder cues'
         default: return SETTINGS_OP_LABELS[op?.type] || 'Edit'
     }
 }
@@ -105,6 +117,10 @@ export function useOpHistory({ projectId, document, applyLocalOps, ignoreTypes =
     // Stack mutations live in refs; this lets panels observe them (history()).
     const [, setHistoryVersion] = useState(0)
     const bumpHistory = useCallback(() => setHistoryVersion((v) => v + 1), [])
+    // How many batches THIS page's person has sent (an edit, an undo, a redo). A change
+    // that arrives from anywhere else — the load, a collaborator — never moves it, so a
+    // hook that must only answer a person (useRigAutoPatch) can tell the two apart.
+    const [edits, setEdits] = useState(0)
     // Tracks the document the *next* local batch will mutate. Re-synced from
     // the store on every render; advanced inline so that several ops applied
     // within one render tick invert against the right intermediate state.
@@ -124,6 +140,7 @@ export function useOpHistory({ projectId, document, applyLocalOps, ignoreTypes =
             const recordable = opsArray.some((op) => !ignoreTypesRef.current.has(op?.type))
             const undoOps = recordable ? invertProjectOps(base, opsArray) : []
             trackedDocRef.current = applyProjectOps(base, opsArray)
+            setEdits((n) => n + 1)
             if (undoOps.length) {
                 const sig = entrySignature(opsArray)
                 const now = Date.now()
@@ -148,6 +165,7 @@ export function useOpHistory({ projectId, document, applyLocalOps, ignoreTypes =
         trackedDocRef.current = applyProjectOps(trackedDocRef.current, ops)
         applyLocalOps(ops.map(stripOp), { activityMessage })
         bumpHistory()
+        setEdits((n) => n + 1)
     }, [applyLocalOps, bumpHistory])
 
     // Photoshop-style linear jump: make exactly the first `target` steps
@@ -194,5 +212,5 @@ export function useOpHistory({ projectId, document, applyLocalOps, ignoreTypes =
         cursor: undoStackRef.current.length
     }), [])
 
-    return { applyLocalOps: applyLocalOpsWithHistory, undo, redo, canUndo, canRedo, history, jumpTo }
+    return { applyLocalOps: applyLocalOpsWithHistory, undo, redo, canUndo, canRedo, history, jumpTo, edits }
 }

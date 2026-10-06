@@ -29,8 +29,15 @@ import {
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
 import { overlayButtonStyle, overlayCardStyle, quietPreviewFallbackStyle } from './publicViewerStyles.js'
 import { consumeArriveWalking } from '../../components/arriveWalking.js'
-import { buildSpaceContentsPath } from '../../utils/spaceRouting.js'
+import { buildAppSpacePath, buildSpaceContentsPath } from '../../utils/spaceRouting.js'
 import { isEmbedRequest } from '../../utils/previewMode.js'
+import { hasRig } from '../../rigbuild/hasRigLamps.js'
+import RigVersionSwitch from '../../rigbuild/RigVersionSwitch.jsx'
+import { rigVariantOf } from '../../rigbuild/rigVariant.js'
+import { rigChromeTops, rigRowMaxWidth, rigVersionPlacement } from '../../rigbuild/rigVersionLayout.js'
+import { useViewportMode } from '../../hooks/useViewportMode.js'
+import useOutputMode from '../viewport/useOutputMode.js'
+import { outputDocument } from '../viewport/outputMode.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -39,6 +46,12 @@ import { isEmbedRequest } from '../../utils/previewMode.js'
 // -- makes the code-mode page fetch and evaluate the whole three/fiber/drei/xr
 // chunk (~1.6MB raw, measured against first paint on /br_id_ge).
 const PublicProjectSceneSurface = lazyWithReload(() => import('./PublicProjectSceneSurface.jsx'), 'public-scene-surface')
+
+// The rig's steps row in the room (src/rigbuild/RoomRigSteps.jsx): loaded only when the
+// room holds a rig, so a space with none pays nothing for the rig code.
+const RoomRigSteps = lazyWithReload(() => import('../../rigbuild/RoomRigSteps.jsx'), 'room-rig-steps')
+// The room posed by the desk's live look (src/rigbuild/RoomLookFollower.jsx), same rule.
+const RoomLookFollower = lazyWithReload(() => import('../../rigbuild/RoomLookFollower.jsx'), 'room-look-follower')
 
 // di.iiii's one loading screen — black, one spinner, no drawn words
 // (LoadingScreen.jsx). The published face used to show its own lit text pill
@@ -65,6 +78,21 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // 'scene' entry view only -- fixed-camera and code/iframe presentations
     // are a deliberate per-project choice and stay exactly as authored.
     const [navMode, setNavMode] = useState('orbit')
+    // "Inside": keep the camera inside the building (SmartView). On by default where there is a building,
+    // remembered per browser; a preset whose camera stands outside the building (Top, Side) pauses it.
+    const [lockInside, setLockInside] = useState(() => {
+        try { return window.localStorage.getItem('di.view.lockInside') !== '0' } catch { return true }
+    })
+    const [hasBuilding, setHasBuilding] = useState(false)
+    const [lockPaused, setLockPaused] = useState(false)
+    const onBuilding = useCallback((on) => setHasBuilding(Boolean(on)), [])
+    const onLockPaused = useCallback((on) => setLockPaused(Boolean(on)), [])
+    const toggleLockInside = useCallback(() => {
+        setLockInside((on) => {
+            try { window.localStorage.setItem('di.view.lockInside', on ? '0' : '1') } catch { /* private window */ }
+            return !on
+        })
+    }, [])
     // ?preview=1 — embedded thumbnail mode (Studio space cards): static
     // authored camera, no navigation, no Walk/Fly or XR chrome. The document
     // still live-syncs, so the thumbnail follows what is actually published.
@@ -186,7 +214,10 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             setState({
                 status: 'error',
                 document: null,
-                error: error.message || 'Could not load the live project.'
+                error: error.message || 'Could not load the live project.',
+                // 404: the address names a project this space does not hold — the page
+                // says which, and offers the way back (MissingProjectCard below).
+                missing: error?.status === 404
             })
         }
     }, [applyIncomingDocument, projectId])
@@ -196,11 +227,34 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     }, [reloadDocument])
 
     const document = state.document
+    // A room with a rig carries the rig's steps under the bar (owner, 2026-09-28: "make
+    // buttons in space that we can easy move in the workflow"). Where the bar is — a
+    // di.iiii on your own machine, where the rig is made and the desk runs — never on a
+    // published page a stranger opens (the owner's 2026-08-07 call: tool chrome clashed
+    // with published designs), a thumbnail or somebody else's page.
+    const roomHasRig = useMemo(() => hasRig(document?.entities || []), [document?.entities])
+    const showRigSteps = state.status === 'ready' && roomHasRig && localInstall.isLocal && !isPreview && !isEmbed
+    // What the room's own corner controls clear at the top: the bar, and the steps row.
+    const topClear = `calc(1rem${localInstall.isLocal ? ' + var(--sbar-h, 36px)' : ''}${showRigSteps ? ' + var(--sbar-h, 36px)' : ''})`
+    // The same clearance without the 1rem gutter, for a header that pads itself.
+    const chromeClear = `calc(0px${localInstall.isLocal ? ' + var(--sbar-h, 36px)' : ''}${showRigSteps ? ' + var(--sbar-h, 36px)' : ''})`
 
+    // While the desk plays one of the room's looks, the scene draws the lamps as the look
+    // poses them (RoomLookFollower); the document itself is never written.
+    const [lookEntities, setLookEntities] = useState(null)
+    // The rig's version row (RigVersionSwitch) shows in orbit on a project that is one of
+    // a set; the show chip sits under it then, else where the row would be.
+    const rigVersionsShown = state.status === 'ready' && navMode === 'orbit' && !isPreview && !isEmbed && Boolean(rigVariantOf(document?.entities || []))
+    // Output mode (viewport/outputMode.js): everyone but the work machine sees a copy of the
+    // room drawn light enough for a phone; the document itself is never written.
+    const [outputMode, setOutputMode] = useOutputMode()
+    const viewDocument = useMemo(() => (outputMode ? outputDocument(document) : document), [outputMode, document])
+    const sceneDocument = useMemo(() => (viewDocument && lookEntities ? { ...viewDocument, entities: lookEntities } : viewDocument), [viewDocument, lookEntities])
     // A visitor is standing here, not authoring. Arming the gate is what makes
     // an `audio` entity silent until asked — see src/utils/roomSound.js. The
     // editor never arms it, so an author still hears what they place.
     useVisitorSoundGate()
+    const { isPhoneCompact } = useViewportMode()
     const { soundOn, locked: soundLocked, toggleSound } = useRoomSound()
     const hasSound = useMemo(() => roomHasSound(document?.entities), [document?.entities])
     const publishState = document?.publishState || {}
@@ -225,6 +279,26 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // The one gate walk mode has: shared by the Walk / Fly button and the
     // arrive-walking effect below.
     const walkGateOpen = isSpatialEntry && (!hasGraph || hasWalkableEntities) && !isPreview && !isEmbed
+    // The version row and the show chip: on a portrait phone the row gets its own line
+    // under Walk / Fly / Sound instead of running under them (rigbuild/rigVersionLayout.js).
+    const { rowTop: rigRowTop, chipTop: rigChipTop } = rigChromeTops(topClear, {
+        rowShown: rigVersionsShown,
+        compact: isPhoneCompact,
+        rightControls: (navMode === 'orbit' && walkGateOpen) || (state.status === 'ready' && hasSound && !soundLocked && !isPreview)
+    })
+    // In walk mode the row is one collapsed button under the room's header (rigVersionPlacement),
+    // so a visitor switches version without Esc; the show chip is an orbit thing and stays put.
+    const rigPlacement = rigVersionPlacement(topClear, {
+        isRigSet: state.status === 'ready' && !isPreview && !isEmbed && Boolean(rigVariantOf(document?.entities || [])),
+        navMode,
+        rowTop: rigRowTop
+    })
+    // The row stops before Walk / Fly and Sound instead of running under them.
+    const rigRowMaxW = rigRowMaxWidth({
+        compact: isPhoneCompact,
+        walk: navMode === 'orbit' && walkGateOpen,
+        sound: state.status === 'ready' && hasSound && !soundLocked && !isPreview
+    })
     const hasFiles = Array.isArray(presentationState.codeFiles) && presentationState.codeFiles.length > 0
     const rawHtml = hasFiles ? bundleCodeFiles(presentationState.codeFiles) : (presentationState.codeHtml || '')
     // the shell's query belongs to the page it is showing — a published page
@@ -464,14 +538,20 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     <PublicProjectSceneSurface
                         projectId={projectId}
                         spaceId={resolvedRouteSpaceId}
-                        document={document}
+                        document={sceneDocument}
+                        posedEntities={lookEntities}
+                        outputMode={outputMode}
                         title={viewerTitle}
                         entryView={entryView}
                         navMode={navMode}
                         onNavModeChange={setNavMode}
+                        topClear={chromeClear}
                         isPreview={isPreview}
                         initialCameraView={initialCameraView}
                         xrDefaultMode={xrDefaultMode}
+                        lockInside={lockInside}
+                        onBuilding={onBuilding}
+                        onLockPaused={onLockPaused}
                         canOfferXrEntry={
                             state.status === 'ready'
                             && navMode === 'orbit'
@@ -511,7 +591,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     style={{
                         ...overlayButtonStyle,
                         position: 'absolute',
-                        top: localInstall.isLocal ? 'calc(1rem + var(--sbar-h, 36px))' : '1rem',
+                        top: topClear,
                         right: navMode === 'orbit' && walkGateOpen ? '9.5rem' : '1rem',
                         zIndex: 20,
                         color: soundOn ? 'var(--di-cyan)' : undefined,
@@ -519,7 +599,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     }}
                     onClick={toggleSound}
                 >
-                    {soundOn ? 'Sound on' : 'Sound off'}
+                    Sound
                 </button>
             ) : null}
 
@@ -531,8 +611,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         position: 'absolute',
                         // Clears the surface bar when one is present — a control
                         // half under the platform's own chrome is worse than no
-                        // chrome at all.
-                        top: localInstall.isLocal ? 'calc(1rem + var(--sbar-h, 36px))' : '1rem',
+                        // chrome at all. The rig's steps row, when there is one, too.
+                        top: topClear,
                         right: '1rem',
                         zIndex: 20,
                     }}
@@ -540,6 +620,80 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 >
                     Walk / Fly
                 </button>
+            ) : null}
+
+            {/* Directly under Walk / Fly, same size and style: keep the camera inside the building. Orbit mode
+                only (walk is already confined), and only where the room has a building. Paused (shown as
+                Free) while a view whose camera stands outside the building, such as Top or Side, is on. */}
+            {state.status === 'ready' && navMode === 'orbit' && walkGateOpen && hasBuilding ? (
+                <button
+                    type="button"
+                    aria-pressed={lockInside && !lockPaused}
+                    title={lockPaused ? 'This view stands outside the building, so the camera is free here' : 'Keep the camera inside the building'}
+                    style={{
+                        ...overlayButtonStyle,
+                        position: 'absolute',
+                        top: `calc(${topClear} + 3.4rem)`,
+                        right: '1rem',
+                        zIndex: 20,
+                        minHeight: 44,
+                        minWidth: 104,
+                        background: lockInside && !lockPaused ? 'rgba(77, 249, 255, 0.22)' : overlayButtonStyle.background,
+                        border: `1px solid ${lockInside && !lockPaused ? 'var(--di-cyan, #4df9ff)' : 'rgba(255,255,255,0.14)'}`,
+                        color: lockInside && !lockPaused ? 'var(--di-cyan, #4df9ff)' : overlayButtonStyle.color
+                    }}
+                    onClick={toggleLockInside}
+                >
+                    {lockInside && !lockPaused ? 'Inside' : 'Free'}
+                </button>
+            ) : null}
+
+            {/* Under them, same size: the room's quality. Lite is the output (viewport/outputMode.js),
+                Full the work renderer; the choice is remembered per browser. */}
+            {state.status === 'ready' && navMode === 'orbit' && walkGateOpen ? (
+                <button
+                    type="button"
+                    aria-pressed={!outputMode}
+                    title={outputMode
+                        ? 'Lite: beams and haze, light enough for a phone. Tap for the full renderer (shadows, bloom, every lamp a real light)'
+                        : 'Full: the work renderer. Tap for Lite, light enough for a phone'}
+                    style={{
+                        ...overlayButtonStyle,
+                        position: 'absolute',
+                        top: `calc(${topClear} + ${hasBuilding ? '6.8rem' : '3.4rem'})`,
+                        right: '1rem',
+                        zIndex: 20,
+                        minHeight: 44,
+                        minWidth: 104
+                    }}
+                    onClick={() => setOutputMode(!outputMode)}
+                >
+                    {outputMode ? 'Lite' : 'Full'}
+                </button>
+            ) : null}
+
+            {roomHasRig && document && !showCodeView ? (
+                <Suspense fallback={null}>
+                    <RoomLookFollower
+                        document={viewDocument}
+                        onEntities={setLookEntities}
+                        showChip={!isPreview && !isEmbed}
+                        top={rigChipTop}
+                    />
+                </Suspense>
+            ) : null}
+
+            {/* A rig with versions (RIG_BUILD.md §15): a row of links to its siblings. Shown
+                only on a project that says it is one of a set — every other room is untouched. */}
+            {rigPlacement.mode ? (
+                <RigVersionSwitch
+                    spaceId={resolvedRouteSpaceId}
+                    projectId={projectId}
+                    entities={document?.entities || []}
+                    top={rigPlacement.top}
+                    mode={rigPlacement.mode}
+                    maxWidth={rigRowMaxW}
+                />
             ) : null}
 
             {/* no route passes showProjectSwitcher since 2026-08-07 (owner call:
@@ -591,6 +745,19 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 />
             ) : null}
 
+            {showRigSteps ? (
+                <Suspense fallback={null}>
+                    <RoomRigSteps
+                        document={document}
+                        spaceId={resolvedRouteSpaceId}
+                        projectId={projectId}
+                        projectLabel={document?.projectMeta?.title || null}
+                        isLocalInstall={localInstall.isLocal}
+                        underBar={localInstall.isLocal}
+                    />
+                </Suspense>
+            ) : null}
+
             {/* the loading screen is deliberately black and full-bleed, which is
                 the exact box embed mode exists to remove — inside a window it
                 would flash one on every open. The host's own page is what the
@@ -600,10 +767,31 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             {state.status === 'error' ? (
                 <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '2rem' }}>
                     <div style={overlayCardStyle}>
-                        <strong>{state.error}</strong>
+                        {state.missing ? (
+                            <MissingProjectCard spaceId={resolvedRouteSpaceId} projectId={projectId} />
+                        ) : (
+                            <strong>{state.error}</strong>
+                        )}
                     </div>
                 </div>
             ) : null}
         </main>
+    )
+}
+
+// A project the address names and the space does not hold (owner, rigbuilder.7: the version
+// switch's "Full" opened /moxir/p/moxir-hall-full → a bare "Project not found."). Which one,
+// where, and the way back: the space as it opens (its published project) and everything in it.
+export function MissingProjectCard({ spaceId, projectId }) {
+    const linkStyle = { color: 'inherit', textDecoration: 'underline', textUnderlineOffset: '3px', display: 'inline-flex', alignItems: 'center', minHeight: '44px', marginRight: '1.25rem' }
+    return (
+        <div role="alert">
+            <strong>There is no project “{projectId}” in {spaceId}.</strong>
+            <p style={{ margin: '0.6rem 0 0.2rem', opacity: 0.8 }}>It may not have been made yet, or it was moved or deleted.</p>
+            <nav aria-label="the way back">
+                <a href={buildAppSpacePath(spaceId)} style={linkStyle}>Open {spaceId}</a>
+                <a href={buildSpaceContentsPath(spaceId)} style={linkStyle}>Everything in {spaceId}</a>
+            </nav>
+        </div>
     )
 }

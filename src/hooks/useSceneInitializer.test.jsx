@@ -176,3 +176,33 @@ describe('useSceneInitializer', () => {
         )
     })
 })
+
+describe('useSceneInitializer survives blocked localStorage', () => {
+    const realDescriptor = Object.getOwnPropertyDescriptor(window, 'localStorage')
+    afterEach(() => {
+        Object.defineProperty(window, 'localStorage', realDescriptor)
+    })
+
+    it('initialises the blank scene when every Storage call throws', async () => {
+        const boom = () => { throw new DOMException('blocked', 'SecurityError') }
+        Object.defineProperty(window, 'localStorage', {
+            configurable: true,
+            value: { getItem: boom, setItem: boom, removeItem: boom, clear: boom }
+        })
+        const props = createProps()
+        const { result } = renderHook(() => useSceneInitializer(props))
+        await waitFor(() => expect(result.current.isLoading).toBe(false))
+        expect(props.persistSceneDataWithStatus).toHaveBeenCalledWith(expect.anything(), 'Initialized blank scene')
+    })
+
+    it('initialises the blank scene when reading window.localStorage itself throws', async () => {
+        Object.defineProperty(window, 'localStorage', {
+            configurable: true,
+            get() { throw new DOMException('blocked', 'SecurityError') }
+        })
+        const props = createProps()
+        const { result } = renderHook(() => useSceneInitializer(props))
+        await waitFor(() => expect(result.current.isLoading).toBe(false))
+        expect(props.persistSceneDataWithStatus).toHaveBeenCalledWith(expect.anything(), 'Initialized blank scene')
+    })
+})

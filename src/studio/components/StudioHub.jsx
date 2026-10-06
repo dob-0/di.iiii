@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Box, Container } from '@mui/material'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { buildAppSpacePath, buildPreferencesPath } from '../../utils/spaceRouting.js'
@@ -80,6 +80,9 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
     const [status, setStatus] = useState('loading...')
     const [isBusy, setIsBusy] = useState(false)
     const [spaceLabel, setSpaceLabel] = useState(spaceId)
+    // The space's steward (owner or admin) decides who sees each project —
+    // the same person who decides whether the space itself is public.
+    const [spaceMeta, setSpaceMeta] = useState(null)
     const [creatingTitle, setCreatingTitle] = useState(null)
     const [renamingId, setRenamingId] = useState(null)
     const [renameValue, setRenameValue] = useState('')
@@ -122,12 +125,23 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
 
     useEffect(() => {
         setSpaceLabel(spaceId)
+        setSpaceMeta(null)
+        // A slow answer for the previous space must not overwrite the new one.
+        let cancelled = false
         getServerSpace(spaceId).then((space) => {
+            if (cancelled) return
             if (space?.label) setSpaceLabel(space.label)
+            setSpaceMeta(space || null)
         }).catch(() => {})
+        return () => { cancelled = true }
     }, [spaceId])
 
+    // Latest-request-wins for the project list: every load (space change or a
+    // handler's reload) takes a number, and only the newest may apply its answer.
+    const loadRequestRef = useRef(0)
+
     const loadProjects = useCallback(async () => {
+        const requestId = ++loadRequestRef.current
         setStatus('loading...')
         try {
             const [next, shelves] = await Promise.all([
@@ -136,10 +150,12 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                 // them; that is a space with no shelves, not an error to show.
                 listCollections(spaceId).catch(() => [])
             ])
+            if (requestId !== loadRequestRef.current) return
             setProjects(next)
             setCollections(shelves)
             setStatus('')
         } catch (e) {
+            if (requestId !== loadRequestRef.current) return
             setStatus(e.message || 'error loading projects')
         }
     }, [spaceId])
@@ -182,6 +198,18 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
             await loadProjects()
         } catch (e) {
             setStatus(e.message || 'could not change that')
+        }
+    }, [loadProjects])
+
+    // Private: only the space's members see it; to a visitor of a public space
+    // it is not there at all (serverXR/src/projectVisibility.js).
+    const canSetVisibility = role === 'admin' || Boolean(spaceMeta?.isOwner)
+    const handleVisibility = useCallback(async (project, visibility) => {
+        try {
+            await updateProject(project.id, { visibility })
+            await loadProjects()
+        } catch (e) {
+            setStatus(e.message || 'could not change who sees that')
         }
     }, [loadProjects])
 
@@ -360,6 +388,15 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                     {projectState(project) !== 'live' && (
                         <span className={`sh-state sh-state--${projectState(project)}`}>{projectState(project)}</span>
                     )}
+                    {project.visibility === 'private' && (
+                        <span className="sh-state sh-state--private" title="Private — only members of this space see it">
+                            <svg className="sh-lock" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+                                <rect x="2" y="5.5" width="8" height="5.5" rx="1" />
+                                <path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" />
+                            </svg>
+                            private
+                        </span>
+                    )}
                 </div>
                 {!isRenaming && (
                     <>
@@ -399,6 +436,18 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                                 <option value="live">live</option>
                                 <option value="archived">archived</option>
                             </select>
+                            {canSetVisibility && (
+                                <select
+                                    className="sh-select"
+                                    aria-label="Who sees it"
+                                    title="Private — only members see it"
+                                    value={project.visibility === 'private' ? 'private' : 'public'}
+                                    onChange={e => handleVisibility(project, e.target.value)}
+                                >
+                                    <option value="public">public</option>
+                                    <option value="private">private</option>
+                                </select>
+                            )}
                         </div>
                     </>
                 )}
@@ -407,13 +456,16 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
     }
 
     return (
-        <Box className="studio-shell-root studio-hub-root">
+        <Box component="main" className="studio-shell-root studio-hub-root">
             <GridFloorBackground
                 opacity={0.25}
                 showNodes={false}
                 overlayGradient="radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(0,0,0,0.6) 100%), linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.4) 100%)"
             />
-            <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 }, position: 'relative', zIndex: 1 }}>
+            {/* The end of the list clears the floating account button, so the last
+                row (the live-sync row on /<space>/raw/projects) can scroll out
+                from under it. */}
+            <Container maxWidth="xl" sx={{ pt: { xs: 3, md: 4 }, pb: 'var(--di-account-btn-clear)', position: 'relative', zIndex: 1 }}>
 
                 {/* Top row */}
                 <div className="sh-top-row">

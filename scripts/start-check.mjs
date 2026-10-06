@@ -69,6 +69,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { getState } from './repo-state.mjs'
+import { formatRepo, isClean, scanRepo } from './unsaved-lib.mjs'
 import { TIERS, localBase, listSpaces, listProjectMetas, readBaseline, baselineShape, documentSignature, call } from './tier-sync.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -176,7 +177,8 @@ export const checkCode = () => {
   // repo-state.mjs deliberately never fetches on its own — see its header
   // comment — so calling getState() here, right after the fetches above, is
   // what makes its branch-position numbers fresh instead of stale-by-design.
-  const state = getState()
+  // Only this checkout: the check reads nothing about the others (see getState).
+  const state = getState({ currentOnly: true })
 
   const currentWorktree = (state.worktrees || []).find((wt) => wt.path === state.currentPath)
 
@@ -531,7 +533,7 @@ const summarizeSpaces = (spaces) => {
 // against ~30 spaces hit before this cap existed (see session notes).
 const DETAIL_LINE_CAP = 5
 
-export const formatReport = ({ code, spaces, strict, spacesDetail }) => {
+export const formatReport = ({ code, spaces, strict, spacesDetail, unsaved = null }) => {
   const lines = []
   const notLatest = code.notLatest || spaces.notLatest
 
@@ -560,7 +562,18 @@ export const formatReport = ({ code, spaces, strict, spacesDetail }) => {
       lines.push(`    ok — this fork's dev matches upstream/dev${code.forkDevAheadOfUpstream ? ` (${code.forkDevAheadOfUpstream} ahead, unpushed to upstream — normal)` : ''}`)
     }
   }
-  if (code.dirty) lines.push('    note: uncommitted changes in this checkout (not itself "behind")')
+  if (code.dirty && !unsaved) lines.push('    note: uncommitted changes in this checkout (not itself "behind")')
+
+  // Not part of the LATEST verdict — being current and being saved are two
+  // questions. This one: does anything here exist on no remote? (unsaved-lib.mjs)
+  if (unsaved) {
+    lines.push('')
+    if (isClean(unsaved)) lines.push('  only on this machine: nothing — every commit here is on a remote')
+    else {
+      lines.push('  only on this machine:')
+      lines.push(...formatRepo(unsaved))
+    }
+  }
 
   lines.push('')
   if (spaces.status === 'skipped') {
@@ -617,11 +630,13 @@ export const main = async () => {
   const code = checkCode()
   const spaces = args.codeOnly ? SKIPPED_SPACES : await checkSpaces({ spaceFilter: args.space })
   const notLatest = Boolean(code.notLatest || spaces.notLatest)
+  // This checkout only, not every worktree — `npm run unsaved` covers the rest.
+  const unsaved = scanRepo(ROOT_DIR, { allWorktrees: false })
 
   if (args.json) {
-    console.log(JSON.stringify({ notLatest, code, spaces }, null, 2))
+    console.log(JSON.stringify({ notLatest, code, spaces, unsaved }, null, 2))
   } else {
-    console.log(formatReport({ code, spaces, strict: args.strict, spacesDetail: args.spacesDetail }))
+    console.log(formatReport({ code, spaces, strict: args.strict, spacesDetail: args.spacesDetail, unsaved }))
   }
 
   if (notLatest && args.strict) process.exitCode = 1

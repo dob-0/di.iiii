@@ -4,7 +4,14 @@ const MIN_RADIUS = 0.75
 const DEFAULT_PADDING = 1.35
 const DEFAULT_FOV = 50
 const MIN_HALF_FOV = 0.01
-const DEFAULT_FALLBACK_DIRECTION = new THREE.Vector3(0.8, 0.45, 1)
+// The direction (from the framed centre out to the camera) used when nothing
+// says which way the visitor should be looking from: a three-quarter view from
+// the front-right, above the floor. It is a DIRECTION only; how far back the
+// camera stands is always fitted from the bounds and the viewport aspect
+// (computeFitDistance). Exported so the editor's "frame selected" uses this one
+// value instead of its own copy of the literal.
+export const DEFAULT_FRAMING_DIRECTION = [0.8, 0.45, 1]
+const DEFAULT_FALLBACK_DIRECTION = new THREE.Vector3(...DEFAULT_FRAMING_DIRECTION)
 
 const getSafeAspect = (aspect) => {
     const numericAspect = Number(aspect)
@@ -24,6 +31,14 @@ export const getLimitingHalfFov = (fov = DEFAULT_FOV, aspect = 1) => {
     return Math.max(MIN_HALF_FOV, Math.min(verticalHalfFov, horizontalHalfFov))
 }
 
+// Bounding-sphere fit: the camera must stand at
+//     distance = radius / sin(halfFov)
+// for a sphere of `radius` to fit a cone of half-angle `halfFov` (the standard
+// derivation used by three.js examples and every "zoom to fit" — the sphere is
+// tangent to the frustum's side planes). `halfFov` is the LIMITING half-angle:
+// the vertical one on a landscape viewport, the horizontal one
+// (atan(tan(vFov/2) * aspect)) on a portrait phone. See Box3.getBoundingSphere
+// and PerspectiveCamera.fov in three.js.
 export const computeFitDistance = (radius, { fov = DEFAULT_FOV, aspect = 1 } = {}) =>
     radius / Math.sin(getLimitingHalfFov(fov, aspect))
 
@@ -193,7 +208,93 @@ export const frameSphereInControls = (controls, sphere, options = {}) => {
 // looking at their own landscape screen gets their shot back untouched, and
 // this can only ever widen — it is the same "err wider, never crop" rule
 // getViewportAspect is written to.
-export const fitCameraToAspect = (camera, aspect = 1) => {
+//
+// The dolly is a spring arm (the third-person camera rig every engine ships,
+// e.g. Unreal's USpringArmComponent): the arm runs from the target out through
+// the authored camera, and it is only as long as the space behind the camera is
+// clear. Before this, it was always as long as the aspect asked — and an
+// interior shot has a floor and walls behind it. MOXIR's opening shot stands at
+// eye height (y 1.6) looking UP at the rig (target y 5.2); at 390x844 the arm
+// grew x1.97 and put the camera at y -1.91, under the hall floor, where the
+// whole room rendered black (measured 2026-09-29: mean luma 3.2 on dev).
+//
+// Whatever the arm cannot reach is made up with field of view instead — the
+// "Hor+" rule games use for narrow screens: widen the vertical fov until the
+// horizontal field covers what a square viewport would see from where the
+// camera actually stands. So the promise "a narrow viewport sees at least what
+// was composed" still holds; only how it is kept changes.
+//
+// What counts as "clear" is what the platform already declares, nothing
+// guessed from the geometry:
+//   - the floor, y = 0 (the grid, the walker and every placed room stand on it):
+//     a camera the author put above the floor stays above it;
+//   - `worldState.walkableAreas`, the room's declared floor plan (the same
+//     rectangles the walker is confined to): a camera the author put inside
+//     them stays inside them.
+// A camera authored outside either (an overhead shot from beyond the walls, a
+// camera under a glass floor) keeps the plain dolly — it was never inside.
+const FLOOR_Y = 0
+// How close the arm may bring the camera to the floor. The near plane of an
+// authored camera is centimetres; 0.12 m is the default probe radius of the
+// engine rig named above, a margin for the lens, not a composition choice.
+export const FLOOR_CLEARANCE = 0.12
+// Sampling step along the arm when testing it against the floor plan, in metres.
+const ARM_STEP = 0.05
+// Past this the picture is a fisheye, not a view. Reached only when there is
+// almost no room behind the camera at all.
+export const MAX_FITTED_FOV = 120
+
+const isInsideRects = (areas, x, z) => areas.some((a) => (
+    x >= a.minX && x <= a.maxX && z >= a.minZ && z <= a.maxZ
+))
+
+// How far (as a multiple of the authored arm) the arm can extend, up to `want`,
+// before the camera would leave the floor-or-plan it was authored inside.
+export const getClearArmScale = (position, target, want, { walkableAreas = null } = {}) => {
+    if (!(want > 1)) return 1
+    const offset = position.clone().sub(target)
+    const length = offset.length()
+    if (!(length > 0)) return 1
+    const areas = Array.isArray(walkableAreas) ? walkableAreas.filter((a) => (
+        a && [a.minX, a.maxX, a.minZ, a.maxZ].every(Number.isFinite)
+    )) : []
+    const keepAboveFloor = position.y >= FLOOR_Y + FLOOR_CLEARANCE
+    const keepInPlan = areas.length > 0 && isInsideRects(areas, position.x, position.z)
+    if (!keepAboveFloor && !keepInPlan) return want
+
+    let allowed = want
+    if (keepAboveFloor && offset.y < 0) {
+        allowed = Math.min(allowed, (target.y - FLOOR_Y - FLOOR_CLEARANCE) / -offset.y)
+    }
+    if (keepInPlan && allowed > 1) {
+        const step = ARM_STEP / length
+        const point = new THREE.Vector3()
+        for (let s = 1 + step; s <= allowed; s += step) {
+            point.copy(target).addScaledVector(offset, s)
+            if (!isInsideRects(areas, point.x, point.z)) {
+                allowed = s - step
+                break
+            }
+        }
+    }
+    return Math.max(1, allowed)
+}
+
+// The vertical fov at which a camera `armScale` times further back than the
+// authored one sees, on this aspect, what the authored fov saw on a square.
+export const getFovForArm = (fov = DEFAULT_FOV, aspect = 1, armScale = 1) => {
+    const squareHalf = getLimitingHalfFov(fov, 1)
+    const neededHalf = Math.asin(Math.min(1, Math.sin(squareHalf) / Math.max(1, armScale)))
+    const safeAspect = getSafeAspect(aspect)
+    // The narrow axis limits: horizontal on a portrait screen, vertical otherwise.
+    const verticalHalf = safeAspect < 1
+        ? Math.atan(Math.tan(neededHalf) / safeAspect)
+        : neededHalf
+    const degrees = THREE.MathUtils.radToDeg(verticalHalf * 2)
+    return Math.min(MAX_FITTED_FOV, Math.max(Number(fov) || DEFAULT_FOV, degrees))
+}
+
+export const fitCameraToAspect = (camera, aspect = 1, { walkableAreas = null } = {}) => {
     if (!camera) return camera
     const scale = getAspectFitScale(camera.fov, aspect)
     if (!Number.isFinite(scale) || scale <= 1) return camera
@@ -212,5 +313,10 @@ export const fitCameraToAspect = (camera, aspect = 1) => {
     // A camera sitting on its own target has no view axis to dolly along.
     if (offset.lengthSq() <= 1e-8) return camera
 
-    return { ...camera, position: target.clone().add(offset.multiplyScalar(scale)).toArray() }
+    const arm = getClearArmScale(position, target, scale, { walkableAreas })
+    const fitted = { ...camera, position: target.clone().add(offset.multiplyScalar(arm)).toArray() }
+    if (arm < scale - 1e-6) {
+        fitted.fov = getFovForArm(camera.fov ?? DEFAULT_FOV, aspect, arm)
+    }
+    return fitted
 }

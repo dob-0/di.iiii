@@ -127,11 +127,54 @@ export const mintSpaceInvite = async (spaceId, label = 'invite') => {
     return data
 }
 
+// The invite links a space has handed out and not revoked, newest first:
+// { id, label, createdAt, lastUsedAt, expiresAt, useCount } (ms). Owner-or-admin.
+export const listSpaceInvites = async (spaceId) => {
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/invites`)
+    return Array.isArray(data?.invites) ? data.invites : []
+}
+
+// Stops one link working. People who already joined through it keep their access.
+export const revokeSpaceInvite = async (spaceId, inviteId) =>
+    apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/invites/${encodeURIComponent(inviteId)}`, { method: 'DELETE' })
+
+// A space on its own domain (docs/architecture/SPEC_space_own_domain.md).
+// Owner-or-admin. Each domain: { hostname, state, live, records, lastError,
+// checkedAt, activeSince }; `connected` is false when the platform is not
+// connected to Cloudflare and nothing will switch a domain on by itself.
+export const listSpaceDomains = async (spaceId) => {
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/domains`)
+    return { domains: Array.isArray(data?.domains) ? data.domains : [], connected: Boolean(data?.connected) }
+}
+
+export const addSpaceDomain = async (spaceId, hostname) => {
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/domains`, { method: 'POST', body: { hostname } })
+    return data.domain
+}
+
+export const checkSpaceDomain = async (spaceId, hostname) => {
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/domains/${encodeURIComponent(hostname)}/check`, { method: 'POST', body: {} })
+    return data.domain
+}
+
+export const removeSpaceDomain = async (spaceId, hostname) =>
+    apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/domains/${encodeURIComponent(hostname)}`, { method: 'DELETE' })
+
 // A space's restore points, newest first: { id, takenAt, reason, actor, objects,
 // projects }. Owner-or-admin. See serverXR/src/spaceStore.js.
 export const listSpaceSnapshots = async (spaceId) => {
     const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/snapshots`)
     return Array.isArray(data?.snapshots) ? data.snapshots : []
+}
+
+// Who changed what in a space: the op log grouped by person and working
+// session, oldest first — { actor: { label, type }, from, to, projects, text }.
+// `since` in ms (default on the server: the last 7 days). Owner-or-admin.
+// See serverXR/src/spaceHistory.js summarizeChanges.
+export const listSpaceChanges = async (spaceId, { since } = {}) => {
+    const query = Number.isFinite(since) ? `?since=${since}` : ''
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/changes${query}`)
+    return Array.isArray(data?.changes) ? data.changes : []
 }
 
 // Put one back. The server takes a restore point of what is there now first,

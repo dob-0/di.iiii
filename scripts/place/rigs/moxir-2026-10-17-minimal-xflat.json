@@ -1,0 +1,675 @@
+{
+    "rig": "MOXIR 17.10 — Minimal · X lying down",
+    "version": 4,
+    "writtenAt": "2026-09-28",
+    "generated": "scripts/rigbuild/versions.mjs from scripts/place/rigs/moxir-versions-2026-10-17.json (version \"minimal-xflat\") and scripts/place/rigs/moxir-2026-10-17.json — never edit by hand",
+    "venue": "MOXIR, Charentsavan factory hall (owner's pin 40.406524, 44.636560)",
+    "space": "moxir",
+    "status": "PROPOSAL for the owner's look. Same hall, same DJ booth, same zones as the base rig; what changes is how much is hung and how it is used. Nothing here is checked against the venue, a load calculation or the rental house.",
+    "variant": {
+        "set": "moxir-2026-10-17",
+        "id": "minimal-xflat",
+        "title": "Minimal · X lying down",
+        "summary": "The simple version: fixed lights only, the rental house's own (no moving heads, no strobes). Two 5 m arms of truss cross FLAT at 6.15 m under the crane bridge over the DJ, one arm out over the crowd, on 4 bridled hoists; 12 LED PARs hang under the arms focused down, so in haze the X is four blades of light; 4 COBs at the arm ends for the hits; the 4 red PARs grazing the bridge kept; the columns and the press in red as in Minimal.",
+        "order": 7,
+        "candidateOf": "minimal"
+    },
+    "provenance": {
+        "fixtureList": "The rental house's list as passed to Claude by the owner on 2026-09-27 (18x UP-B380F, 12x UP-250BSW, 8x UP-HK1915, 50x UP-PL5403, 2x UP-LA40WF, CO2 x6, cold spark x4, smoke x4). The codes are the rental house's internal names, not maker models.",
+        "optics": "From the fixtures manifest (scripts/place/fixtures/fixtures.json): each class names a fixture kind whose beam angle and output come from the maker's published page or, where the maker publishes none, a named equivalent — every number carries its source there. The rental house's own datasheets are still OWED to confirm.",
+        "positions": "Placed by rule against the hall's structural grid (scripts/place/hall.py -> hall.json), so they move when the hall is rebuilt with measured dimensions.",
+        "hall": "scripts/place/rigs/moxir-hall-dims-2026-09-28.json (flat space-frame roof, 4 spans x 24 m, 18 bays; photos + 2020 satellite) + moxir-hall-features-2026-09-28.json (the owner's zones marked 2026-09-28, the press massing, gates, cranes; sizes estimated).",
+        "models": "Fixture bodies are the models in scripts/place/fixtures/glb, built to the datasheet dimensions by scripts/place/fixtures/build_fixtures.py (see the manifest for provenance and licence).",
+        "stage": "The owner, 2026-09-28, on the first rebuild: \"i mention the dj place i think it will not big how you created you made it so big, so stage is the near the metal thing like dj near a bit top and centre of the metal things\". So the 'stage' is a DJ place: a small riser, a bit raised, centred on the forging press ('the metal things'), close in front of it; the machinery is the picture behind the DJ. Positions from the photographs (photo 032's fitted camera, cross-checked from photo 004 with EXIF intrinsics; scripts/place/photo_meta.py).",
+        "versions": "scripts/place/rigs/moxir-versions-2026-10-17.json: 2026-09-28, on /moxir: \"make 3 version with the full, midle, and simple minimalistic and also look to moxir mood, set, vibe and its the undegroudn rave thing lights like that not the commercial shit\""
+    },
+    "assumptions": [
+        "The DJ place (the owner's green, 2026-09-28) is a riser of stage decks 3 m wide x 2 m deep x 1.2 m high ON THE NAVE CENTRE LINE (x 0; the owner, 04:13: 'make the scene in center'), its back edge 1.0 m in front of the press's face (z 3.2 m, +-1.5 m), facing the entry and the crowd. The press stays where it stands, 1.65 m right of the axis (range 0.5-3.5), behind the right half of the riser. Three 2 x 1 m decks on 1.2 m legs; 'a bit top' read as 1.0-1.4 m. Options considered: stage.options (D chosen).",
+        "The DJ stands behind a 1.8 x 0.8 m DJ table, 0.95 m high, at the riser's front edge; treads up the left side (toward the backstage); a crowd barrier 1.3 m in front of the riser, 9 m long. The crowd (blue) fills the floor from the barrier to under the crane.",
+        "The machinery stays the backdrop: the press (to 5.3 m) stands behind the right half of the riser and the machine line beside it further right, so from the floor the DJ is seen against the press; the goalpost header at 7 m is above the press's crown.",
+        "No stage deck, no towers: the DJ stand alone. Two 5 m arms of 290 mm square box truss (Global Truss F34 — src/rigbuild/pieces.js; Prolyte H30V is the same class but does not couple to F34: one system for the whole X) cross FLAT at a 4-way junction (Global Truss F34 SQ-4133 '4-way cross junction') under the bridge of the overhead crane parked over the DJ, one arm along the bridge, one across it pointing out over the crowd; bottom chord 6.15 m, on 4 climbing chain hoists, each on a two-leg bridle from the girders, a safety steel each, and two restraint steels at every arm end; load on the X ≈ 227 kg, on the crane ≈ 355 kg. rigging sign-off owed (crane rated load, lock-out, hoists + safety steels).",
+        "Strobes, blinders and hazers are other-supplier lines (the rental house lists none): each is a planning type modelled on a named product (scripts/place/fixtures/fixtures.json, EXT- codes). No CO2 jet, cold spark or confetti — the underground brief (versions file, method).",
+        "Each LOOK is one static state for previsualisation (a focus palette), not a show: positions are the rig's, aims and colours the look's. Every lamp but the press's own six mirrors about the nave centre line (x 0), the booth's axis too. Brightness between fixtures follows the datasheets (photometry below); the overall exposure is one chosen number (photometry.sceneScale)."
+    ],
+    "stage": {
+        "kind": "booth",
+        "label": "DJ place (the owner's green, 2026-09-28)",
+        "intent": "owner's words 2026-09-28: 'dj place ... not big ... near the metal thing ... a bit top and centre of the metal things'",
+        "faces": "entry",
+        "width_m": 3,
+        "depth_m": 2,
+        "deck_h_m": 1.2,
+        "gap_m": 1,
+        "decks": "3 x stage deck 2 x 1 m (e.g. Bütec / Nivtec / Litedeck class) on 1.2 m legs",
+        "backdrop": [
+            "press",
+            "press-crown",
+            "machine-line",
+            "machine-pipe"
+        ],
+        "table": {
+            "w_m": 1.8,
+            "d_m": 0.8,
+            "h_m": 0.95,
+            "from_front_m": 0.2
+        },
+        "stairs": {
+            "side": "left",
+            "w_m": 1,
+            "rise_m": 0.2,
+            "going_m": 0.25
+        },
+        "barrier": {
+            "pit_m": 1.3,
+            "half_width_m": 4.5,
+            "h_m": 1.1
+        },
+        "estimated": {
+            "centre_x_m": {
+                "value": 0,
+                "how": "the nave axis, by the owner's choice; the press behind it is at x 1.65 (range 0.5-3.5), so the riser (x -1.5..1.5) overlaps the press's face from x 0.25 to 1.5"
+            },
+            "press_face_z_m": {
+                "value": 3.2,
+                "range": [
+                    2,
+                    4.5
+                ],
+                "how": "photo 032: D 47 m from the crane camera; photo 004: base at D 43 m from a camera at z 47 -> z 3.7"
+            },
+            "riser_front_z_m": {
+                "value": 6.2,
+                "range": [
+                    5,
+                    7.5
+                ]
+            },
+            "deck_h_m": {
+                "value": 1.2,
+                "range": [
+                    1,
+                    1.4
+                ],
+                "how": "'a bit top'"
+            }
+        },
+        "options": [
+            {
+                "id": "A-press-centred",
+                "chosen": false,
+                "size_m": [
+                    3,
+                    2
+                ],
+                "deck_h_m": 1.2,
+                "centre_x_m": 1.65,
+                "why": "centred on the press, the tallest of the metal things and the one he drew along (1c3956d1); the machine line reads beside it to the right — chosen first (01:00-04:00), the owner found the scene off-centre"
+            },
+            {
+                "id": "B-small",
+                "size_m": [
+                    2,
+                    2
+                ],
+                "deck_h_m": 1,
+                "centre_x_m": 1.65,
+                "why": "the smallest booth: 2 decks, room for a DJ and a table only; no space for a second DJ or the booth-top beams",
+                "chosen": false
+            },
+            {
+                "id": "C-machine-centred",
+                "size_m": [
+                    3,
+                    2
+                ],
+                "deck_h_m": 1.2,
+                "centre_x_m": 4.5,
+                "why": "centred on the press AND the rusty machine line beside it (x 0.25..8): the visual middle of 'the metal things' seen from the floor, but the riser would stand in the machinery on the SW half",
+                "chosen": false
+            },
+            {
+                "id": "D-nave-centred",
+                "size_m": [
+                    3,
+                    2
+                ],
+                "deck_h_m": 1.2,
+                "centre_x_m": 0,
+                "why": "on the hall's axis, so the whole rig and the room's first screen mirror about one line (the owner's call, 04:13: 'make the scene in center'); the press stands 1.65 m right of centre behind the DJ, still overlapping the riser",
+                "chosen": true
+            }
+        ],
+        "x_m": 0,
+        "centred": "on the NAVE centre line (x 0), owner 2026-09-28 04:13: 'make the scene in center it not the center right?' — option D. The press stays where it stands (x 0.25..3.05, centre 1.65), 1.65 m right of the booth's axis behind it."
+    },
+    "truss": {
+        "kind": "crane-x",
+        "why": "Owner's sketch 'ten truss versions' (~/Downloads/moxir-crane-rig/ten-truss.html), option 2 'the X lying down', built 2026-09-29 as a candidate beside Minimal: two 5 m arms crossing FLAT under the crane bridge over the DJ, one arm pointing out over the crowd; beams on all 4 ends fire 4 ways, so in haze it reads as 4 rays and the X itself only from above.",
+        "arm_m": 5,
+        "pieces_m": [
+            2,
+            1,
+            2
+        ],
+        "pieces_why": "each arm = a 2 m straight + the junction's 1 m + a 2 m straight: 4 straights and one 4-way flat cross junction for the whole X",
+        "junction": {
+            "code": "Global Truss F34 SQ-4133 '4-way cross junction'",
+            "across_m": 1,
+            "across_basis": "legs 0.5 m from the centre — ESTIMATE: the maker's page gives the weight, not the leg length; the rental house's own junction may differ (then the straights change, not the X)",
+            "source": "https://www.globaltruss.com/sq-4133 (fetched 2026-09-29: 10.44 kg)"
+        },
+        "section_m": 0.29,
+        "section_class": "290 mm square box truss (Global Truss F34 — src/rigbuild/pieces.js; Prolyte H30V is the same class but does not couple to F34: one system for the whole X)",
+        "truss_pieces": [
+            {
+                "code": "F34 SQ-4112 2.0 m",
+                "n": 4,
+                "each_kg": 13.17,
+                "source": "https://www.globaltruss.com/trussing/f34-square-truss/straight-segments-2 (fetched 2026-09-29)"
+            },
+            {
+                "code": "F34 SQ-4133 4-way cross junction",
+                "n": 1,
+                "each_kg": 10.44,
+                "source": "https://www.globaltruss.com/sq-4133 (fetched 2026-09-29)"
+            }
+        ],
+        "trim_m": 6.15,
+        "trim_why": "the shortest drop the rigging allows at the girder bottom the hall model carries (8.15 m, rail 7.6 m): a 90° bridle's apex hangs half its span under the flange — 1.1 m for the bridge-arm picks whose legs reach both girders (2.2 m apart) — then the climbing hoist's hook-to-suspension-plate minimum (≈0.50 m, read from the Chainmaster D8Plus 500 kg dimension sheet, p. 6) and ≈0.10 m of shackles: top chord 8.15 − 1.1 − 0.5 − 0.1 = 6.45 m, bottom chord 6.16 → 6.15 m. The crane rail is DISPUTED (6.6–8.4 m): at the low end every height here drops by 1.0 m (bottom chord ≈5.15 m, under the press crown 5.6 m, 0.1 m clear of it in plan) — measure the girder bottom on site before the trim is set.",
+        "motion": {
+            "pendulum_L_m": [
+                1.5,
+                1.9
+            ],
+            "pendulum_L_basis": "from the bridle anchors on the girder flange (8.15 m) to the hung mass's centre (the truss, 6.15–6.44 m, plus lamps standing 0.2–0.6 m above the top chord): 1.5–1.9 m. T = 2π√(L/g), g 9.81 m/s².",
+            "pendulum_T_s": [
+                2.46,
+                2.77
+            ],
+            "restraint": "each pick is a two-leg V bridle (the bridge-arm picks' V spans across the bridge, z; the crowd-arm picks' V spans along it, x), so the rigid X cannot translate either way without stretching a leg; two restraint steels at every arm end, up to the girders and spread in plan, stop it turning. What is left is the give of wire and slings: small, not zero.",
+            "rules": [
+                "no pan or tilt move over the full range faster than 4 s (the heads' reaction torque is what pushes a hung truss)",
+                "no periodic movement (a chase, a sweep back and forth) with a period between 1.7 and 4 s — 0.7× to 1.5× the pendulum's 2.5–2.8 s — the band where a small push each cycle builds up",
+                "cue fades that move heads on the X are at least 4 s in the show's cue list",
+                "the crane locked out and isolated for the whole event (it is the rig's structure)"
+            ]
+        },
+        "rigging": {
+            "hoists": 4,
+            "picks": [
+                {
+                    "arm": "x",
+                    "d_m": 1.5,
+                    "bridle": "two legs, one to a beam clamp on each girder's bottom flange (2.2 m apart), 90° between the legs, apex 1.1 m under the flange"
+                },
+                {
+                    "arm": "z",
+                    "d_m": 1.1,
+                    "legs_dx_m": 0.75,
+                    "bridle": "right under a girder: two legs to beam clamps on that girder's flange 1.5 m apart along it, 90° between the legs, apex 0.75 m under the flange"
+                }
+            ],
+            "tieoffs": {
+                "dx_m": 1.5,
+                "what": "at every arm end, two restraint steels up to beam clamps on the girders, spread in plan: the bridge arm's ends to both girders (a V across the bridge), the crowd and back ends to their own girder 1.5 m either side (a V along it). To the crane, not the floor: the crowd end hangs over people, where a floor anchor is a trip and crush point; the nave columns (≈11 m off) are the fallback for the bridge arm's ends."
+            },
+            "hoist": "climbing chain hoist 500 kg, D8Plus (e.g. Chainmaster D8Plus 500 kg 4 m/min, SK030/76U)",
+            "hoist_kg": 20,
+            "hoist_kg_source": "Chainmaster D8Plus 500 kg datasheet DS_CH_D8PLUS_SK_030-76U (rev. 1.1, 2024-10-18): approx. 20 kg without chain incl. suspension plate and hook tackle; chain 0.59 kg/m — https://chainmaster.de/wp-content/uploads/2024/10/DS_CH_D8PLUS_SK_030-76U_500kg_4m_1f-400V-50Hz_DC.pdf",
+            "chain_kg_per_m": 0.59,
+            "chain_m": 10,
+            "hardware_kg_per_point": 6,
+            "per_point": "a two-leg bridle (steel wire rope legs, beam clamps on the girders' bottom flanges), a climbing chain hoist whose body rides on the top chord, a secondary safety steel from the truss to the girder",
+            "crane": "the nave's entry-end bridge crane, rolled along its runway to park over the DJ; rail height 7.6 m (disputed 6.6–8.4), girder bottom 8.15 m",
+            "signoff": "rigging sign-off owed (crane rated load, lock-out, hoists + safety steels): the crane's rated load and a check of the old runway, rails and brakes; the crane locked in place and its power isolated for the whole event; the bridles' leg angles and the cantilevers (1.0 m on the bridge arm, 1.4 m on the crowd arm, beyond what the maker's span tables cover) calculated; a rigger's plan with point loads, signed by a structural or rigging engineer. This file draws it; they approve it.",
+            "load": {
+                "lamps": [
+                    {
+                        "group": "par-x-blades",
+                        "code": "UP-PL5403",
+                        "n": 12,
+                        "each_kg": 8,
+                        "kg": 96
+                    },
+                    {
+                        "group": "cob-x-ends",
+                        "code": "UP-COB200",
+                        "n": 4,
+                        "each_kg": 5.1,
+                        "kg": 20.4
+                    },
+                    {
+                        "group": "par-x-bridge",
+                        "code": "UP-PL5403",
+                        "n": 4,
+                        "each_kg": 8,
+                        "kg": 32
+                    }
+                ],
+                "lamps_kg": 148.4,
+                "truss_kg": [
+                    63.1,
+                    63.1
+                ],
+                "truss_basis": "4 × F34 SQ-4112 2.0 m 13.17 kg (https://www.globaltruss.com/trussing/f34-square-truss/straight-segments-2 (fetched 2026-09-29)) + 1 × F34 SQ-4133 4-way cross junction 10.44 kg (https://www.globaltruss.com/sq-4133 (fetched 2026-09-29))",
+                "extras_kg": 15,
+                "extras_basis": "clamps, safety bonds and the cable loom: +10 % of the lamps — ESTIMATE",
+                "total_kg": [
+                    227,
+                    227
+                ],
+                "points": 4,
+                "per_point_kg": [
+                    57,
+                    57
+                ],
+                "note": "static loads before any dynamic factor. 4 points: even share 89–89 kg; design each point for 178–178 kg (a 4-point hang on a stiff X is statically indeterminate until load cells level it), a bridle leg at 90° then 126–126 kg. rigging sign-off owed (crane rated load, lock-out, hoists + safety steels).",
+                "hoists_kg": 80,
+                "hoists_basis": "Chainmaster D8Plus 500 kg datasheet DS_CH_D8PLUS_SK_030-76U (rev. 1.1, 2024-10-18): approx. 20 kg without chain incl. suspension plate and hook tackle; chain 0.59 kg/m — https://chainmaster.de/wp-content/uploads/2024/10/DS_CH_D8PLUS_SK_030-76U_500kg_4m_1f-400V-50Hz_DC.pdf",
+                "chain_kg": 23.6,
+                "chain_basis": "0.59 kg/m × 10 m a hoist (chain length ESTIMATE) — Chainmaster D8Plus 500 kg datasheet DS_CH_D8PLUS_SK_030-76U (rev. 1.1, 2024-10-18): approx. 20 kg without chain incl. suspension plate and hook tackle; chain 0.59 kg/m — https://chainmaster.de/wp-content/uploads/2024/10/DS_CH_D8PLUS_SK_030-76U_500kg_4m_1f-400V-50Hz_DC.pdf",
+                "hardware_kg": 24,
+                "hardware_basis": "6 kg a point: 2 beam clamps, 2 bridle legs, shackles, a safety steel, 2 restraint steels — ESTIMATE",
+                "on_crane_kg": [
+                    355,
+                    355
+                ],
+                "per_point_even_kg": [
+                    89,
+                    89
+                ],
+                "per_point_design_kg": [
+                    178,
+                    178
+                ],
+                "per_bridle_leg_kg": [
+                    126,
+                    126
+                ]
+            }
+        }
+    },
+    "classes": {
+        "par": {
+            "code": "UP-PL5403",
+            "fixture": "par",
+            "class": "54 x 3 W RGBW LED PAR",
+            "reach_m": 12,
+            "penumbra": 0.5,
+            "colour": "#ff8a2a",
+            "angleDeg": 15,
+            "angleNote": "the UP-PL5403's standard 15 deg lens (source D); candela scaled from the equivalent's 25 deg figure"
+        },
+        "cob": {
+            "code": "UP-COB200",
+            "fixture": "cob200",
+            "class": "200 W COB PAR, warm + cool white (the rental house's own, stock 8)",
+            "reach_m": 20,
+            "penumbra": 0.5,
+            "colour": "#eef3ff",
+            "angleDeg": 45,
+            "angleNote": "the 45 deg lens of the two the maker offers (60/45); photometry ASSUMED — fixtures.json",
+            "fixtureNote": "one manifest kind for UP-COB200 (cob200) since the preview integration of 2026-09-30: the cut, the halo and the X each modelled it; the cut's body and ASSUMED photometry are kept"
+        }
+    },
+    "groups": [
+        {
+            "class": "par",
+            "count": 12,
+            "mount": "x-under",
+            "at_m": [
+                [
+                    0.75,
+                    0
+                ],
+                [
+                    1.25,
+                    0
+                ],
+                [
+                    1.75,
+                    0
+                ],
+                [
+                    0,
+                    -1.75
+                ],
+                [
+                    0,
+                    -1.25
+                ],
+                [
+                    0,
+                    -0.75
+                ],
+                [
+                    0,
+                    0.75
+                ],
+                [
+                    0,
+                    1.25
+                ],
+                [
+                    0,
+                    1.75
+                ]
+            ],
+            "aim": "blade-down",
+            "note": "12 LED PARs hung under the X's arms, 3 on each half-arm (0.75, 1.25, 1.75 m from the crossing), focused down and splayed 20° outward along their arm — FIXED at the get-in, never moved: in haze each arm hangs a blade (a curtain) of light, the X drawn in the air from the floor up. Ranks (x, then z): 0–2 left, 3–5 back, 6–8 crowd, 9–11 right.",
+            "id": "par-x-blades"
+        },
+        {
+            "class": "cob",
+            "count": 4,
+            "mount": "x-under",
+            "at_m": [
+                [
+                    2.25,
+                    0
+                ],
+                [
+                    0,
+                    -2.25
+                ],
+                [
+                    0,
+                    2.25
+                ]
+            ],
+            "aim": "cob-out",
+            "note": "the 4 COBs hung under the arm ends, focused out along their arm 35° under the horizon: the hits — the crowd arm's lands on the front of the floor, the side arms' on the floor either side, the back arm's on the press. Fixed focus.",
+            "id": "cob-x-ends"
+        },
+        {
+            "class": "par",
+            "count": 4,
+            "mount": "truss-top",
+            "dx_m": [
+                0.75,
+                1.75
+            ],
+            "aim": "bridge-underside",
+            "note": "the 4 red PARs of Minimal's line kept: standing on the bridge arm (x ±0.75, ±1.75), grazing the underside of the audience-side girder outward along it in deep red",
+            "id": "par-x-bridge"
+        },
+        {
+            "class": "par",
+            "count": 8,
+            "mount": "column-uplight",
+            "columns": {
+                "z_at": [
+                    6,
+                    18,
+                    30,
+                    42
+                ],
+                "rows": "nave",
+                "faces": [
+                    "inner"
+                ]
+            },
+            "aim": "up-the-column",
+            "bake": true,
+            "note": "8 PARs up the inner faces of the OTHER column pairs (z 6, 18, 30, 42): beam, red column, beam, red column down the nave — the structure revealed in pieces",
+            "id": "par-columns-8"
+        },
+        {
+            "class": "par",
+            "count": 3,
+            "mount": "backdrop-floor",
+            "backdrop_gap_m": 0.35,
+            "aim": "backdrop",
+            "bake": true,
+            "symmetric": false,
+            "x_m": [
+                0.55,
+                1.65,
+                2.75
+            ],
+            "note": "3 on the floor at the press's foot, evenly across its face (off the axis by nature)",
+            "id": "par-press-3"
+        }
+    ],
+    "effects": [
+        {
+            "id": "hazer-back",
+            "label": "hazer",
+            "count": 2,
+            "mount": "booth-back",
+            "dx_m": [
+                4.5
+            ],
+            "back_inset_m": -0.25,
+            "on_floor": true,
+            "colour": "#8a9096",
+            "fixture": "hazer",
+            "note": "2 hazers on the floor behind the line, either side of the booth: the haze rolls from behind the DJ over the floor"
+        }
+    ],
+    "budget": {
+        "why": "A browser cannot run ~90 real three.js spot lights: each is a term in the shader of every lit pixel and, with shadows on, a shadow render and a texture unit each (WebGL gives 16-32; past that every lit material fails to compile). Every fixture draws its beam cone; only these 8 lamps also light the room (the rest of the PARs' light on the columns and the press is baked, wash-glb.mjs), and shadows are OFF by default (the owner found the first version too laggy, 2026-09-27). Measured — see scripts/place/README.md, 'The rig'.",
+        "realLights": {
+            "par-columns-8": {
+                "count": 4,
+                "pick": "nearest-stage"
+            },
+            "par-x-bridge": 2,
+            "cob-x-ends": 2
+        },
+        "shadowCasting": false,
+        "shadowMapSize": 1024,
+        "realNote": "2026-09-28 (DJ place): the press's own uplights stand 0.35 m from it, where a real lamp in the renderer blows the face out white; they are baked like the other PARs, and the 4 header spots (6.3 m up, over the DJ and the press) are the real lamps that light the backdrop."
+    },
+    "night": {
+        "backgroundColor": "#030304",
+        "ambient": {
+            "color": "#8ea2c8",
+            "intensity": 0.5
+        },
+        "directional": {
+            "color": "#8fa6d8",
+            "intensity": 0.22
+        },
+        "fog": {
+            "near": 60,
+            "far": 250
+        },
+        "note": "Darker than the base's readable night (ambient 0.8 -> 0.5, directional 0.35 -> 0.22): darkness is part of the design here (rule 1); the hall must still read in a render. Tuned by eye on the RTX 3080, 2026-09-28."
+    },
+    "photometry": {
+        "method": "scripts/place/rig-lib.mjs, 'PHOTOMETRY': candela from the manifest (I = E*d^2 from a measured illuminance, else I = flux / beam solid angle); zoom keeps flux; three.js SpotLight intensity is candela x sceneScale; beam-in-air brightness ~ I*tan(theta/2), scaled to the brightest class, Stevens exponent 1/3, times `air`.",
+        "sceneScale": 0.02,
+        "sceneScaleNote": "ONE exposure number for the whole rig, chosen so the room reads in a browser's tone mapping (ACES, exposure 1). The ratios between fixtures are the datasheets'.",
+        "air": 1.5,
+        "airNote": "how much haze is in the air: the brightest class's beam gets this `haze` (0..1, src/objectComponents/spotBeam.js).",
+        "airWhy": "Heavy haze (rule 4; 2-6 hazers in every version where the base had 4 smoke machines): every cone's air brightness at 1.5 where the base rig draws 0.9. A drawing choice, not photometry — the ratios between the fixtures stay the datasheets'."
+    },
+    "defaultLook": "white-cathedral",
+    "looks": {
+        "white-cathedral": {
+            "title": "Four blades",
+            "intent": "The X alone: the 12 PARs under the arms at full cold white — in haze four blades of light hang from the truss to the floor, the DJ standing in the one along the bridge. Everything else dark.",
+            "aims": {
+                "par-x-blades": {
+                    "rule": "along-arm",
+                    "rise_deg": 70
+                },
+                "cob-x-ends": {
+                    "rule": "along-arm",
+                    "rise_deg": 35
+                },
+                "par-x-bridge": {
+                    "rule": "bridge-underside",
+                    "out": 6
+                },
+                "par-columns-8": {
+                    "rule": "up-the-column"
+                },
+                "par-press-3": {
+                    "rule": "backdrop",
+                    "h": 0.6
+                }
+            },
+            "colours": {
+                "par-x-blades": "#eef3ff"
+            },
+            "levels": {
+                "par-columns-8": 0,
+                "par-press-3": 0,
+                "par-x-bridge": 0,
+                "cob-x-ends": 0
+            }
+        },
+        "red-room": {
+            "title": "Red room",
+            "intent": "Deep red and low: the columns and the press glow from their feet, the bridge a red frame, the blades a dim red veil.",
+            "aims": {
+                "par-columns-8": {
+                    "rule": "up-the-column"
+                },
+                "par-press-3": {
+                    "rule": "backdrop",
+                    "h": 0.6
+                },
+                "par-x-blades": {
+                    "rule": "along-arm",
+                    "rise_deg": 70
+                },
+                "cob-x-ends": {
+                    "rule": "along-arm",
+                    "rise_deg": 35
+                },
+                "par-x-bridge": {
+                    "rule": "bridge-underside",
+                    "out": 6
+                }
+            },
+            "colours": {
+                "par-columns-8": "#ff1408",
+                "par-press-3": "#ff1408",
+                "par-x-blades": "#ff1408",
+                "par-x-bridge": "#ff1408"
+            },
+            "levels": {
+                "par-x-blades": 0.35,
+                "cob-x-ends": 0
+            }
+        },
+        "strobe-hit": {
+            "title": "Hit",
+            "intent": "The peak: the 4 COBs at full, out along their arms onto the floor, the crowd and the press (their own 1–25 Hz strobe channel on the desk); every PAR out, so the hit lands on black.",
+            "aims": {
+                "par-x-blades": {
+                    "rule": "along-arm",
+                    "rise_deg": 70
+                },
+                "cob-x-ends": {
+                    "rule": "along-arm",
+                    "rise_deg": 35
+                },
+                "par-x-bridge": {
+                    "rule": "bridge-underside",
+                    "out": 6
+                },
+                "par-columns-8": {
+                    "rule": "up-the-column"
+                },
+                "par-press-3": {
+                    "rule": "backdrop",
+                    "h": 0.6
+                }
+            },
+            "colours": {
+                "cob-x-ends": "#eef3ff"
+            },
+            "levels": {
+                "par-columns-8": 0,
+                "par-press-3": 0,
+                "par-x-blades": 0,
+                "par-x-bridge": 0
+            }
+        },
+        "one-beam": {
+            "title": "One blade",
+            "intent": "Blackout, and only the crowd arm's blade: a single curtain of cold white reaching out from the DJ over the front of the floor.",
+            "aims": {
+                "par-x-blades": {
+                    "rule": "along-arm",
+                    "rise_deg": 70,
+                    "solo_mask": 448
+                },
+                "cob-x-ends": {
+                    "rule": "along-arm",
+                    "rise_deg": 35
+                },
+                "par-x-bridge": {
+                    "rule": "bridge-underside",
+                    "out": 6
+                },
+                "par-columns-8": {
+                    "rule": "up-the-column"
+                },
+                "par-press-3": {
+                    "rule": "backdrop",
+                    "h": 0.6
+                }
+            },
+            "colours": {
+                "par-x-blades": "#eef3ff"
+            },
+            "levels": {
+                "par-columns-8": 0,
+                "par-press-3": 0,
+                "par-x-bridge": 0,
+                "cob-x-ends": 0
+            }
+        },
+        "slow-sweep": {
+            "title": "The sign",
+            "intent": "The X inside its frame: the four blades in cold white at 60 %, the bridge a dim red frame over them, the columns and the press a low red.",
+            "aims": {
+                "par-columns-8": {
+                    "rule": "up-the-column"
+                },
+                "par-x-blades": {
+                    "rule": "along-arm",
+                    "rise_deg": 70
+                },
+                "cob-x-ends": {
+                    "rule": "along-arm",
+                    "rise_deg": 35
+                },
+                "par-x-bridge": {
+                    "rule": "bridge-underside",
+                    "out": 6
+                },
+                "par-press-3": {
+                    "rule": "backdrop",
+                    "h": 0.6
+                }
+            },
+            "colours": {
+                "par-columns-8": "#ff1408",
+                "par-x-blades": "#eef3ff",
+                "par-x-bridge": "#ff1408",
+                "par-press-3": "#ff1408"
+            },
+            "levels": {
+                "par-columns-8": 0.3,
+                "par-press-3": 0.4,
+                "par-x-blades": 0.6,
+                "par-x-bridge": 0.5,
+                "cob-x-ends": 0
+            }
+        }
+    },
+    "opening": {
+        "a": 14,
+        "h": 1.6,
+        "target_h": 5.2,
+        "fov": 55,
+        "note": "the first screen of the crane rig: 14 m out on the dance floor, on the centre line, eye height, looking up to 5.2 m so the crane bridge and the line hung under it frame the DJ, the press glowing behind (tuned by looking, 2026-09-28 night: at 20 m / 4.6 m the bridge read small over an empty floor)"
+    },
+    "hall": "scripts/place/rigs/moxir-hall-2026-10-02-crane-dj.hall.json"
+}

@@ -14,6 +14,9 @@
 # Usage:
 #   ./sync-space-to-dev.sh wcc br-id-ge beyond-form
 #   ./sync-space-to-dev.sh --force wcc      # overwrite if already on the dev tier
+#   ./sync-space-to-dev.sh --force --accept-loss 76 main
+#       # the overwrite removes 76 media items and that is meant (one space
+#       # only: the number is the count space-bundle.mjs printed for it)
 #
 # Space ids use hyphens, not underscores (br-id-ge, not br_id_ge — that's
 # the display name, not the space id — see GET /api/spaces to confirm).
@@ -24,12 +27,23 @@ PROD_CONTAINER=dii-server-1
 DEV_CONTAINER=dii-dev-server-1
 SCRIPT_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/space-bundle.mjs"
 FORCE=""
+ACCEPT_LOSS=()
 
 args=()
-for a in "$@"; do
-  if [ "$a" = "--force" ]; then FORCE="--force"; else args+=("$a"); fi
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --force) FORCE="--force" ;;
+    --accept-loss) ACCEPT_LOSS=(--accept-loss "${2:-}"); shift ;;
+    *) args+=("$1") ;;
+  esac
+  shift
 done
 set -- "${args[@]}"
+
+if [ "${#ACCEPT_LOSS[@]}" -gt 0 ] && [ "$#" -ne 1 ]; then
+  echo "error: --accept-loss names the media count for ONE space; run one space at a time" >&2
+  exit 1
+fi
 
 if [ "$#" -eq 0 ]; then
   echo "usage: $0 [--force] <space-id> [space-id...]" >&2
@@ -63,7 +77,7 @@ for id in "$@"; do
   docker cp "$TMP/$id.space-bundle.tar.gz" "$DEV_CONTAINER":"/tmp/$id.space-bundle.tar.gz"
 
   echo "== importing '$id' into the dev tier =="
-  docker exec -u root "$DEV_CONTAINER" node /app/scripts/space-bundle.mjs import "/tmp/$id.space-bundle.tar.gz" --data-root /data $FORCE
+  docker exec -u root "$DEV_CONTAINER" node /app/scripts/space-bundle.mjs import "/tmp/$id.space-bundle.tar.gz" --data-root /data $FORCE "${ACCEPT_LOSS[@]}"
 
   # The import runs as root (it needs to write into /app), so everything it
   # created under /data is root-owned -- and the server runs as `app`. Left

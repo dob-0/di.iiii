@@ -199,6 +199,10 @@ function makeFixture(f = {}) {
     y: f.y != null ? f.y : 0.5,
     values: { ...values, ...(f.values || {}) },
     limits: { ...DEFAULT_LIMITS, ...(f.limits || {}) },
+    // Set only on a fixture auto-patched from a room ("<project>:<entity>",
+    // rigpatch.js); absent on every fixture patched by hand, so a show saved before it
+    // existed reads back byte for byte.
+    ...(typeof f.rigKey === 'string' && f.rigKey && f.rigKey.length <= 300 ? { rigKey: f.rigKey } : {}),
   };
 }
 
@@ -506,7 +510,32 @@ class Engine {
       for (let i = 0; i < 512; i++) b[i] = clamp8(f[i]);
       out.set(u, b);
     }
+    this.applyInput(out);
     return out;
+  }
+
+  // DMX INPUT (dmxin.js): a console's universe laid over the desk's own frame, AFTER the
+  // desk's fades, master and FX — the console has its own. Per universe, 'follow' means
+  // the console's frame replaces the desk's while there is signal, and 'htp' takes the
+  // higher of the two slot by slot. With no signal (and loss = release) the input says
+  // nothing and the desk's own frame stands: the desk is the fallback. The desk's
+  // BLACKOUT still wins over input — while it is on, input is not applied at all, and the
+  // desk's blacked-out frame (moving heads holding position) is what goes out.
+  // `this.input` is set by desk.js: { universes(): number[], frame(u): {data, desk}|null }.
+  applyInput(out) {
+    const input = this.input;
+    if (!input || this.state.blackout) return;
+    for (const u of input.universes()) {
+      const fr = input.frame(u);
+      if (!fr) continue;
+      let b = out.get(u);
+      if (!b) { b = Buffer.alloc(512); out.set(u, b); }
+      if (fr.desk === 'htp') {
+        for (let i = 0; i < 512; i++) if (fr.data[i] > b[i]) b[i] = fr.data[i];
+      } else {
+        b.set(fr.data);
+      }
+    }
   }
 
   // ---- patching -----------------------------------------------------------

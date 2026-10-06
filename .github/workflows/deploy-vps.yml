@@ -55,7 +55,7 @@ jobs:
         run: echo "name=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Log in to GHCR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
@@ -69,7 +69,7 @@ jobs:
         run: echo "utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Build and push ${{ matrix.image }}
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: ${{ matrix.dockerfile }}
@@ -92,6 +92,12 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     env:
+      # Where this tier runs: `vps` (the Docker Compose host over SSH, the default, so this
+      # variable unset changes nothing) or `mac` (a host that PULLS its deploys). With `mac` this
+      # job still runs under its environment (production — the owner's approval) and its rules, so the gate is unchanged;
+      # it skips SSH and ends green, and that green run IS the go: the host's pull-deployer builds
+      # and runs a commit only once this job has succeeded for it, and only one on origin/main.
+      DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET || 'vps' }}
       VPS_HOST: ${{ secrets.VPS_HOST }}
       VPS_SSH_USER: ${{ secrets.VPS_SSH_USER }}
       VPS_SSH_PORT: ${{ secrets.VPS_SSH_PORT }}
@@ -100,10 +106,21 @@ jobs:
       VPS_DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH }}
       REGISTRY_USER: ${{ vars.REGISTRY_USER }}
     steps:
+      - name: Deploy target
+        run: |
+          set -euo pipefail
+          case "${DEPLOY_TARGET}" in
+            vps) echo "deploy target: vps (SSH to the Compose host)" ;;
+            mac) echo "::notice::deploy target: mac -- no SSH. This run's success releases ${GITHUB_SHA} to the host's pull-deployer, which builds it, switches, health-checks and rolls back by itself." ;;
+            *) echo "::error::repository variable DEPLOY_TARGET is '${DEPLOY_TARGET}'; it must be vps or mac"; exit 1 ;;
+          esac
+
       - name: Checkout
+        if: env.DEPLOY_TARGET == 'vps'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check SSH deploy configuration
+        if: env.DEPLOY_TARGET == 'vps'
         run: |
           set -euo pipefail
           missing=0
@@ -120,6 +137,7 @@ jobs:
           exit "${missing}"
 
       - name: Configure SSH
+        if: env.DEPLOY_TARGET == 'vps'
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
@@ -141,6 +159,7 @@ jobs:
           fi
 
       - name: Pull and restart the stack on the VPS
+        if: env.DEPLOY_TARGET == 'vps'
         run: |
           set -euo pipefail
           SSH_PORT="${VPS_SSH_PORT:-22}"
@@ -189,6 +208,7 @@ jobs:
           REMOTE_SCRIPT
 
       - name: Smoke check
+        if: env.DEPLOY_TARGET == 'vps'
         env:
           SMOKE_BASE_URL: ${{ vars.VPS_BASE_URL }}
         run: |

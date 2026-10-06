@@ -27,6 +27,19 @@
   const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
   const KEY = 'di.light.from';
   const LABEL_MAX = 60;
+  // The rig's steps (src/rigbuild/rigTools.js RIG_STEPS: key = the address segment, and
+  // its words). Opened from one of them the desk says &from=<key>, and its way back
+  // leads to THAT page — the patch sheet, the cards — not to the Studio. A closed list:
+  // anything else is ignored and the way back is the Studio's, as before.
+  const RIG_STEPS = {
+    equipment: 'equipment',
+    build: 'build',
+    plot: 'plot',
+    cards: 'cards & looks',
+    patch: 'patch sheet',
+    crew: 'crew link',
+    visualise: 'visualiser',
+  };
 
   function clean(from) {
     if (!from || typeof from !== 'object') return null;
@@ -34,15 +47,18 @@
     const project = String(from.project == null ? '' : from.project);
     if (!SAFE_ID.test(space) || !SAFE_ID.test(project)) return null;
     const label = String(from.label == null ? '' : from.label).replace(/\s+/g, ' ').trim().slice(0, LABEL_MAX);
-    return { space, project, label: label || project };
+    const step = Object.prototype.hasOwnProperty.call(RIG_STEPS, from.from) ? from.from : null;
+    const out = { space, project, label: label || project };
+    if (step) out.from = step;
+    return out;
   }
 
   // undefined: the address says nothing about a project. null: it tried, and the ids
-  // are not ids. Otherwise the cleaned { space, project, label }.
+  // are not ids. Otherwise the cleaned { space, project, label[, from] }.
   function fromQuery(search) {
     const q = new URLSearchParams(search || '');
     if (!q.has('space') && !q.has('project')) return undefined;
-    return clean({ space: q.get('space'), project: q.get('project'), label: q.get('label') });
+    return clean({ space: q.get('space'), project: q.get('project'), label: q.get('label'), from: q.get('from') });
   }
 
   // The address wins and is kept. No address → what this tab kept. An address that
@@ -63,14 +79,22 @@
   function projectLinks(from) {
     const f = clean(from);
     if (!f) return null;
-    return {
+    const links = {
       studio: '/' + f.space + '/studio/projects/' + f.project,
       nodes: '/' + f.space + '/raw/projects/' + f.project,
       projection: '/' + f.space + '/map/' + f.project,
+      // The desk beside the room it drives (src/rigbuild/visualiseRouting.js).
+      visualise: '/' + f.space + '/visualise/' + f.project,
     };
+    // Came from a rig page: the way back is that page (mirrors the rig's path builders).
+    if (f.from) {
+      links.rig = '/' + f.space + '/' + f.from + '/' + f.project;
+      links.rigLabel = RIG_STEPS[f.from];
+    }
+    return links;
   }
 
-  const api = { KEY, clean, fromQuery, readFrom, projectLinks };
+  const api = { KEY, RIG_STEPS, clean, fromQuery, readFrom, projectLinks };
   if (typeof module === 'object' && module && module.exports) module.exports = api;
   else root.deskFrom = api;
 })(typeof window !== 'undefined' ? window : this);

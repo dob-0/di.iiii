@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const express = require('express')
-const { registerNdiRoutes } = require('./ndiRoutes.js')
+const { registerNdiRoutes, scanAtBootFrom } = require('./ndiRoutes.js')
 const { createNdiManager } = require('../ndi/manager.js')
 const { createNdiSendManager } = require('../ndi/sendManager.js')
 
@@ -394,5 +394,102 @@ describe('/ndi/out.jpg — a page sending a picture out', () => {
     expect(body.reason).toBe('not-installed')
     expect(body.how).toMatch(/libndi/)
     expect(ctx.senders).toHaveLength(0)
+  })
+})
+
+// The autoscan over HTTP: the snapshot route and the change feed.
+describe('/ndi/api/scan — which sources are on the network now', () => {
+  // Reads an SSE response until `until(events)` is true; → the parsed `scan` events.
+  const readEvents = async (res, until, ms = 1500) => {
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    const events = []
+    let buffer = ''
+    const deadline = Date.now() + ms
+    while (Date.now() < deadline && !until(events)) {
+      const { value, done } = await Promise.race([
+        reader.read(),
+        new Promise((resolve) => setTimeout(() => resolve({ value: null, done: false }), 50))
+      ])
+      if (done) break
+      if (value) buffer += decoder.decode(value, { stream: true })
+      let cut
+      while ((cut = buffer.indexOf('\n\n')) >= 0) {
+        const block = buffer.slice(0, cut)
+        buffer = buffer.slice(cut + 2)
+        const data = block.split('\n').find((line) => line.startsWith('data: '))
+        if (block.includes('event: scan') && data) events.push(JSON.parse(data.slice(6)))
+      }
+    }
+    await reader.cancel().catch(() => {})
+    return events
+  }
+
+  it('says no-runtime with the how, count null — never "no sources" — and forks nothing', async () => {
+    delete process.env.NODE_ENV
+    const ctx = await boot({ probe: () => ({ ok: false, reason: 'not-installed', how: 'install libndi, then restart di' }) })
+    const res = await fetch(`${ctx.base}/ndi/api/scan`)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body).toMatchObject({ state: 'no-runtime', reason: 'not-installed', count: null, sources: [] })
+    expect(body.how).toMatch(/libndi/)
+    expect(ctx.children).toHaveLength(0)
+  })
+
+  it('answers the list with first/last seen once the finder reports, waiting up to ?wait', async () => {
+    delete process.env.NODE_ENV
+    const ctx = await boot()
+    const pending = fetch(`${ctx.base}/ndi/api/scan?wait=1000`)
+    await readyWhenForked(ctx, { sources: [{ name: 'AYLMO (td_out)', address: '10.0.0.2:5961' }] })
+    const body = await (await pending).json()
+    expect(body).toMatchObject({ state: 'running', count: 1 })
+    expect(body.sources[0]).toMatchObject({ name: 'AYLMO (td_out)', address: '10.0.0.2:5961', present: true, goneSince: null })
+    expect(typeof body.sources[0].firstSeen).toBe('number')
+  })
+
+  it('refuses a malformed wait', async () => {
+    delete process.env.NODE_ENV
+    const ctx = await boot()
+    for (const wait of ['-1', 'abc', '99999']) {
+      const res = await fetch(`${ctx.base}/ndi/api/scan?wait=${wait}`)
+      expect(res.status, wait).toBe(400)
+    }
+  })
+
+  it('streams the snapshot at once, then appeared and gone as they happen', async () => {
+    delete process.env.NODE_ENV
+    const ctx = await boot()
+    const res = await fetch(`${ctx.base}/ndi/api/scan/events`)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toMatch(/^text\/event-stream/)
+    const child = await readyWhenForked(ctx, { sources: [] })
+    // A settle window is 3 s by default; this manager keeps it, so only arrivals are
+    // pushed within the test. Departures after settling are the manager test's job.
+    setTimeout(() => child.emit('message', { type: 'sources', sources: [{ name: 'WIN (OBS)', address: '10.0.0.3:5962' }] }), 30)
+    const events = await readEvents(res, (list) => list.some((e) => e.change && e.change.appeared.length))
+    expect(events[0].state).toBe('starting')
+    expect(events[0].change).toBe(null)
+    const arrival = events.find((e) => e.change && e.change.appeared.length)
+    expect(arrival.change.appeared[0]).toMatchObject({ name: 'WIN (OBS)', address: '10.0.0.3:5962' })
+    expect(arrival.count).toBe(1)
+    expect(arrival.state).toBe('running')
+  })
+
+  it('is not there at all on a hosted server', async () => {
+    process.env.NODE_ENV = 'production'
+    delete process.env.DI_LOCAL
+    const { base } = await boot()
+    for (const path of ['/ndi/api/scan', '/ndi/api/scan/events']) {
+      expect((await fetch(`${base}${path}`)).status, path).toBe(404)
+    }
+  })
+})
+
+describe('scanAtBootFrom — when the autoscan starts by itself', () => {
+  it('starts on a real install, not on a dev box, and the flag wins both ways', () => {
+    expect(scanAtBootFrom({ DI_LOCAL: '1' })).toBe(true)
+    expect(scanAtBootFrom({})).toBe(false)
+    expect(scanAtBootFrom({ DI_LOCAL: '1', DI_NDI_SCAN: '0' })).toBe(false)
+    expect(scanAtBootFrom({ DI_NDI_SCAN: '1' })).toBe(true)
   })
 })

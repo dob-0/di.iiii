@@ -1,3 +1,5 @@
+import { getHostSpace } from './hostSpace.js'
+
 const APP_BASE_PATH = ((import.meta.env.BASE_URL) || '/').replace(/\/+$/, '') || '/'
 export const APP_PAGE_EDITOR = 'editor'
 export const APP_PAGE_PREFERENCES = 'preferences'
@@ -77,6 +79,41 @@ export const RESERVED_APP_SEGMENTS = [
     // /serverXR/api/projects/scan both answer 404 on prod (diiii.xyz), on the
     // dev tier and on the local install — nothing holds the word anywhere.
     SCAN_SEGMENT,
+    // `/{space}/perform/{projectId}` — the Perform line (src/perform/). Reserved
+    // for the same reason 'make' and 'scan' are. Checked before reserving,
+    // 2026-09-24: /serverXR/api/spaces/perform and /serverXR/api/projects/perform
+    // answer 404 on prod (diiii.xyz), on the dev tier and on the local install.
+    'perform',
+    // `/{space}/patch/{projectId}` — the rig's patch sheet and power sheet
+    // (src/rigbuild/PatchSheetSurface.jsx, docs/architecture/RIG_BUILD.md §3).
+    // Checked before reserving, 2026-09-28: /serverXR/api/spaces/patch and
+    // /serverXR/api/projects/patch answer 404 on prod (diiii.xyz), on the dev
+    // tier and on the local install.
+    'patch',
+    // `/{space}/plot/{projectId}` — the lighting plot, view B (src/rigbuild/PlotSurface.jsx,
+    // docs/architecture/RIG_BUILD.md §10). Checked before reserving, 2026-09-28:
+    // /serverXR/api/spaces/plot and /serverXR/api/projects/plot answer 404 on prod
+    // (diiii.xyz), on the dev tier and on the local install.
+    'plot',
+    // `/{space}/cards/{projectId}` — the cards, view C (src/rigbuild/CardsSurface.jsx,
+    // docs/architecture/RIG_BUILD.md §11). Checked before reserving, 2026-09-28:
+    // /serverXR/api/spaces/cards and /serverXR/api/projects/cards answer 404 on prod
+    // (diiii.xyz), on the dev tier and on the local install.
+    'cards',
+    // `/{space}/build/{projectId}` — view A, the rig built in the room in first
+    // person, and `/{space}/crew/{projectId}` — the same room read-only for the
+    // light engineers (src/rigbuild/BuildSurface.jsx, docs/architecture/RIG_BUILD.md
+    // §12). Checked before reserving, 2026-09-28: /serverXR/api/spaces/{build,crew}
+    // and /serverXR/api/projects/{build,crew} answer 404 on prod (diiii.xyz), on the
+    // dev tier and on the local install.
+    'build',
+    'crew',
+    // `/{space}/equipment/{projectId}` — the show's equipment list, the inventory and the
+    // order (src/rigbuild/EquipmentSurface.jsx, docs/architecture/RIG_BUILD.md §13).
+    // Checked before reserving, 2026-09-28: /serverXR/api/spaces/equipment and
+    // /serverXR/api/projects/equipment answer 404 on prod (diiii.xyz), on the dev tier
+    // and on the local install.
+    'equipment',
     // The sign-in page — /login (SignInSurface in AuthGate.jsx). It was not a
     // route at all: the address a teammate is sent to fell through to the space
     // lookup and answered "Nothing lives at “login”" above a working form.
@@ -106,17 +143,73 @@ export const stripAppBasePath = (pathname = '/') => {
     return pathname
 }
 
+// ── A space on its own domain (docs/architecture/SPEC_space_own_domain.md) ──
+// On yokozo.xyz the host IS the space, so the space segment is implied:
+// `/instruments` there is `/taronx/instruments` here. Reading adds the segment
+// back (getAppLocationState); building leaves it out (hostRelative), so a link
+// made on the domain stays on the domain. A path that already names the space
+// is read as it is, so a link built the long way still works.
+const isHostSpaceSegment = (segment = '') => {
+    const space = getHostSpace()
+    if (!space) return false
+    const word = String(segment || '').trim().toLowerCase()
+    return word === space.id || (Boolean(space.slug) && word === space.slug)
+}
+
+const withHostSpace = (relative = '') => {
+    const space = getHostSpace()
+    if (!space) return relative
+    const [first] = relative.split('/')
+    if (!relative) return space.id
+    return isHostSpaceSegment(first) ? relative : `${space.id}/${relative}`
+}
+
+// `${prefix}/taronx/x` -> `${prefix}/x` on taronx's own domain; anything else as it was.
+const hostRelative = (path) => {
+    const space = getHostSpace()
+    if (!space) return path
+    const prefix = getAppBasePrefix()
+    const rest = path.slice(prefix.length).replace(/^\/+/, '')
+    const [first, ...tail] = rest.split('/')
+    if (!isHostSpaceSegment(first)) return path
+    return `${prefix}/${tail.join('/')}`.replace(/\/{2,}/g, '/')
+}
+
+// Editing never happens on a space's own domain: the session cookie belongs to
+// the platform's host, and sign-in returns only there. A path that is an editor
+// or a platform page is answered by sending it to the same place on the
+// platform. Returns that absolute address, or null when the domain serves it.
+export const getPlatformRedirect = (locationLike = null) => {
+    const space = getHostSpace()
+    const resolvedLocation = locationLike || (typeof window !== 'undefined' ? window.location : null)
+    if (!space?.platformOrigin || !resolvedLocation) return null
+    let segments = stripAppBasePath(resolvedLocation.pathname || '/')
+        .replace(/^\/+/g, '').replace(/\/+$/g, '').split('/').filter(Boolean)
+    if (segments.length && isHostSpaceSegment(segments[0])) segments = segments.slice(1)
+    if (!segments.length) return null
+    const origin = space.platformOrigin.replace(/\/+$/, '')
+    const search = resolvedLocation.search || ''
+    const spacePath = (rest) => `${origin}/${space.slug || space.id}/${rest.join('/')}${search}`
+    const first = segments[0].toLowerCase()
+    // The space's own list of projects is a visitor's page: served here.
+    if (first === SPACE_CONTENTS_SEGMENT) return null
+    if (isPreferencesPageSegment(first) || first === SCAN_SEGMENT) return spacePath(segments)
+    if (isReservedAppSegment(first)) return `${origin}/${segments.join('/')}${search}`
+    if (segments.length >= 2 && isProjectToolSegment(segments[segments.length - 1])) return spacePath(segments)
+    return null
+}
+
 export const buildAppSpacePath = (spaceId) => {
     const prefix = getAppBasePrefix()
     if (!spaceId) {
         return prefix ? `${prefix}/` : '/'
     }
-    return `${prefix}/${spaceId}`.replace(/\/{2,}/g, '/')
+    return hostRelative(`${prefix}/${spaceId}`.replace(/\/{2,}/g, '/'))
 }
 
 export const buildPublicProjectPath = (spaceId, projectId) => {
     const prefix = getAppBasePrefix()
-    return `${prefix}/${spaceId}/p/${projectId}`.replace(/\/{2,}/g, '/')
+    return hostRelative(`${prefix}/${spaceId}/p/${projectId}`.replace(/\/{2,}/g, '/'))
 }
 
 // Clean public link shape — /{spaceSlugOrId}/{projectSlugOrId}, resolved
@@ -125,7 +218,7 @@ export const buildPublicProjectPath = (spaceId, projectId) => {
 // fallback: use it whenever only raw ids are in hand, or a slug isn't set.
 export const buildVanityProjectPath = (spaceSlugOrId, projectSlugOrId) => {
     const prefix = getAppBasePrefix()
-    return `${prefix}/${spaceSlugOrId}/${projectSlugOrId}`.replace(/\/{2,}/g, '/')
+    return hostRelative(`${prefix}/${spaceSlugOrId}/${projectSlugOrId}`.replace(/\/{2,}/g, '/'))
 }
 
 // The tool doorway: append one word to a project's link and it opens in that tool.
@@ -195,7 +288,7 @@ export const isScanSegment = (value = '') => (value || '').trim().toLowerCase() 
 export const buildSpaceContentsPath = (spaceId) => {
     const prefix = getAppBasePrefix()
     if (!spaceId) return prefix ? `${prefix}/` : '/'
-    return `${prefix}/${spaceId}/${SPACE_CONTENTS_SEGMENT}`.replace(/\/{2,}/g, '/')
+    return hostRelative(`${prefix}/${spaceId}/${SPACE_CONTENTS_SEGMENT}`.replace(/\/{2,}/g, '/'))
 }
 
 // `/{space}/scan` — one shape and no default space. A scan is always of ONE
@@ -223,7 +316,7 @@ export const getAppLocationState = (locationLike = null) => {
     }
 
     let relative = stripAppBasePath(resolvedLocation.pathname || '/')
-    relative = relative.replace(/^\/+/g, '').replace(/\/+$/g, '')
+    relative = withHostSpace(relative.replace(/^\/+/g, '').replace(/\/+$/g, ''))
     const params = new URLSearchParams(resolvedLocation.search || '')
 
     if (relative) {

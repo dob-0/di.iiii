@@ -23,6 +23,11 @@
  *
  * Export options:
  *   --out <file>        Output path (default: <spaceId>.space-bundle.tar.gz)
+ *   --public-only       Leave out every PRIVATE project (visibility 'private'),
+ *                       its op log, its asset refs, and every blob no kept
+ *                       project or the scene mentions. What the server's
+ *                       "save to file" route hands a visitor who is not a
+ *                       member of the space — docs/architecture/SPEC_project_visibility.md.
  *
  * Import options:
  *   --as <newId>        Import under a different space id (slug, 3-48 chars)
@@ -38,6 +43,14 @@
  *   --force-stale       Also overwrite when the TARGET changed after this
  *                       bundle was exported (--force alone still refuses
  *                       that — see the staleness check in importSpace)
+ *   --accept-loss <N>   With --force: carry out a replace that removes N media
+ *                       items (images, videos, models, audio, anything pointing
+ *                       at a file) across the projects and scene it replaces
+ *                       (and, with --prune, deletes). Without it, or with any
+ *                       other number, such a replace is REFUSED before anything
+ *                       is written. See shared/documentLoss.cjs.
+ *   --dry-run           Print what the import would replace and remove; write
+ *                       nothing
  */
 
 import { execFileSync } from 'node:child_process'
@@ -115,7 +128,7 @@ const die = (msg) => { console.error(`[space-bundle] ERROR: ${msg}`); process.ex
 const log = (msg) => console.log(`[space-bundle] ${msg}`)
 
 const parseArgs = (argv) => {
-    const args = { command: null, target: null, dataRoot: null, out: null, as: null, owner: null, force: false, forceStale: false, prune: false, noBackup: false, tier: null }
+    const args = { command: null, target: null, dataRoot: null, out: null, as: null, owner: null, force: false, forceStale: false, prune: false, noBackup: false, tier: null, dryRun: false, acceptLoss: null, publicOnly: false }
     const positional = []
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i]
@@ -131,6 +144,12 @@ const parseArgs = (argv) => {
         // bundle was exported (see importSpace) — this is the second,
         // explicit word needed to overwrite that too.
         else if (a === '--force-stale') args.forceStale = true
+        else if (a === '--dry-run') args.dryRun = true
+        else if (a === '--public-only') args.publicOnly = true
+        else if (a === '--accept-loss' || a.startsWith('--accept-loss=')) {
+            args.acceptLoss = loadDocumentLoss().parseAcceptLoss(a === '--accept-loss' ? [a, argv[i + 1]] : [a])
+            if (a === '--accept-loss') i++
+        }
         else if (a.startsWith('--')) die(`unknown option ${a}`)
         else positional.push(a)
     }
@@ -152,6 +171,39 @@ const copyDirIfExists = async (from, to) => {
     if (!fs.existsSync(from)) return false
     await fsp.cp(from, to, { recursive: true })
     return true
+}
+
+// Every sha256-shaped id a file mentions — an asset ref's name, an id inside a
+// document or a scene. Over-inclusive on purpose: a hex string that merely
+// looks like a hash keeps a blob that was not needed, never drops one that was.
+const HASH_PATTERN = /[a-f0-9]{64}/g
+const hashesInFile = async (file, into) => {
+    try {
+        for (const match of (await fsp.readFile(file, 'utf8')).match(HASH_PATTERN) || []) into.add(match)
+    } catch { /* absent — mentions nothing */ }
+}
+
+const copyReferencedBlobs = async (spaceDir, projectIds, dest) => {
+    const blobsDir = path.join(spaceDir, 'blobs')
+    if (!fs.existsSync(blobsDir)) return 0
+    const wanted = new Set()
+    await hashesInFile(path.join(spaceDir, 'scene.json'), wanted)
+    for (const id of projectIds) {
+        const projectDir = path.join(spaceDir, 'projects', id)
+        await hashesInFile(path.join(projectDir, 'document.json'), wanted)
+        const assetsDir = path.join(projectDir, 'assets')
+        for (const name of fs.existsSync(assetsDir) ? await fsp.readdir(assetsDir) : []) {
+            for (const match of name.match(HASH_PATTERN) || []) wanted.add(match)
+        }
+    }
+    let copied = 0
+    await fsp.mkdir(dest, { recursive: true })
+    for (const name of await fsp.readdir(blobsDir)) {
+        if (!wanted.has(name)) continue
+        await fsp.copyFile(path.join(blobsDir, name), path.join(dest, name))
+        copied++
+    }
+    return copied
 }
 
 const writeJsonl = async (file, rows) => {
@@ -250,7 +302,11 @@ async function exportSpace(args) {
     if (!space) die(`space "${spaceId}" not found in ${dbPath}`)
 
     const spaceOps = db.prepare('SELECT version, data, created_at FROM space_ops WHERE space_id = ? ORDER BY version ASC').all(spaceId)
-    const projects = db.prepare('SELECT * FROM projects WHERE space_id = ? ORDER BY created_at ASC').all(spaceId)
+    const allProjects = db.prepare('SELECT * FROM projects WHERE space_id = ? ORDER BY created_at ASC').all(spaceId)
+    // A private project is for the space's members only; --public-only is the
+    // file a visitor gets, so it is not in it at all.
+    const projects = args.publicOnly ? allProjects.filter((p) => p.visibility !== 'private') : allProjects
+    const leftOut = allProjects.length - projects.length
     const selectProjectOps = db.prepare('SELECT version, data, created_at FROM project_ops WHERE project_id = ? ORDER BY version ASC')
     const projectOpsById = new Map(projects.map((p) => [p.id, selectProjectOps.all(p.id)]))
     const commons = db.prepare('SELECT * FROM public_assets WHERE space_id = ?').all(spaceId)
@@ -267,7 +323,15 @@ async function exportSpace(args) {
             await fsp.copyFile(path.join(spaceDir, 'scene.json'), path.join(staging, 'space', 'scene.json'))
         }
         await copyDirIfExists(path.join(spaceDir, 'assets'), path.join(staging, 'space', 'assets'))
-        await copyDirIfExists(path.join(spaceDir, 'blobs'), path.join(staging, 'blobs'))
+        if (args.publicOnly && leftOut) {
+            // Blobs are per SPACE (serverXR/src/blobStore.js), shared by every
+            // project in it — copying the whole store would carry a private
+            // project's photographs out inside a public file. Only blobs a
+            // kept project or the scene names travel.
+            await copyReferencedBlobs(spaceDir, projects.map((p) => p.id), path.join(staging, 'blobs'))
+        } else {
+            await copyDirIfExists(path.join(spaceDir, 'blobs'), path.join(staging, 'blobs'))
+        }
         const lightShow = readLightShow(spaceDir)
         if (lightShow) {
             await fsp.mkdir(path.join(staging, 'space', 'lighting'), { recursive: true })
@@ -320,7 +384,7 @@ async function exportSpace(args) {
         const outTar = tarArchiveArgs(out)
         execFileSync('tar', ['-czf', outTar.name, '-C', staging, '.'], { cwd: outTar.cwd })
         const size = (fs.statSync(out).size / 1024 / 1024).toFixed(2)
-        log(`exported space "${spaceId}" → ${out} (${size} MB, ${projects.length} projects, ${spaceOps.length} space ops${lightShow ? `, ${describeLightShow(lightShow)}` : ''})`)
+        log(`exported space "${spaceId}" → ${out} (${size} MB, ${projects.length} projects${leftOut ? `, ${leftOut} private left out` : ''}, ${spaceOps.length} space ops${lightShow ? `, ${describeLightShow(lightShow)}` : ''})`)
         return out
     } finally {
         await fsp.rm(staging, { recursive: true, force: true })
@@ -342,6 +406,68 @@ const remapSpaceUrls = (text, oldId, newId) =>
 // /opt/di.iiii-dev quietly addressed the prod containers — and nothing in this
 // tool knew, or said, where it was. Now a forced replace on a hosted tier must
 // name the tier, and the name must be true.
+// shared/documentLoss.cjs, found the way the server finds shared/: beside it in
+// a checkout or an install (<root>/shared), at /shared in the server image
+// (serverXR/src/sharedRuntime.js — SERVER_SRC/../../shared covers all three).
+// Loaded only when a replace is on the table, so a plain import from the image
+// layout needs nothing more than it did.
+// realpath first: sync-space-to-dev.sh reaches the image's /app/src through a
+// /app/serverXR symlink, and a lexical ../.. from the link lands in /app, not /.
+const loadDocumentLoss = () => {
+    let serverSrc = SERVER_SRC
+    try { serverSrc = fs.realpathSync(SERVER_SRC) } catch { /* not there — the other candidates decide */ }
+    const candidates = [
+        process.env.SHARED_ROOT ? path.resolve(process.env.SHARED_ROOT, 'documentLoss.cjs') : null,
+        path.join(serverSrc, '..', '..', 'shared', 'documentLoss.cjs'),
+        path.join(ROOT_DIR, 'shared', 'documentLoss.cjs')
+    ].filter(Boolean)
+    const found = candidates.find((file) => fs.existsSync(file))
+    if (!found) die(`shared/documentLoss.cjs not found (looked in ${candidates.join(', ')}) — cannot say what this replace removes, so nothing was written`)
+    return require(found)
+}
+
+const readJsonIfPresent = async (file) => {
+    try { return JSON.parse(await fsp.readFile(file, 'utf8')) } catch { return null }
+}
+
+// What a forced import removes from the space it replaces: each project the
+// file carries, against the document here; with --prune, every project the file
+// does not carry (deleted whole); and the scene, when the file carries one.
+// 2026-09-18: a whole-document carry removed 76 slides from prod's front room
+// and said nothing — this tool's --force is the same kind of replace.
+const importLoss = async ({ spaceDir, staging, projectDirs, extraProjects, prune, sourceId, targetId }) => {
+    const { diffDocumentLoss, combineLoss, describeLoss } = loadDocumentLoss()
+    const entries = []
+    for (const pid of projectDirs) {
+        const current = await readJsonIfPresent(path.join(spaceDir, 'projects', pid, 'document.json'))
+        if (!current) continue
+        const file = path.join(staging, 'projects', pid, 'document.json')
+        let incoming = null
+        try { incoming = JSON.parse(remapSpaceUrls(await fsp.readFile(file, 'utf8'), sourceId, targetId)) } catch { /* no document in the file */ }
+        entries.push({ label: `${targetId}/${pid}`, loss: diffDocumentLoss(current, incoming) })
+    }
+    if (prune) {
+        for (const p of extraProjects) {
+            const current = await readJsonIfPresent(path.join(spaceDir, 'projects', p.id, 'document.json'))
+            entries.push({ label: `${targetId}/${p.id} (deleted by --prune)`, loss: diffDocumentLoss(current, null) })
+        }
+    }
+    const sceneFile = path.join(staging, 'space', 'scene.json')
+    if (fs.existsSync(sceneFile)) {
+        const current = await readJsonIfPresent(path.join(spaceDir, 'scene.json'))
+        if (current) {
+            let incoming = null
+            try { incoming = JSON.parse(remapSpaceUrls(await fsp.readFile(sceneFile, 'utf8'), sourceId, targetId)) } catch { /* unreadable scene */ }
+            entries.push({ label: `${targetId} scene`, loss: diffDocumentLoss(current, incoming) })
+        }
+    }
+    const combined = combineLoss(entries)
+    const text = entries.length
+        ? entries.map((e) => describeLoss(e.loss, e.label)).join('\n')
+        : `${targetId}: nothing here is replaced`
+    return { ...combined, text }
+}
+
 const tierOfThisInstall = () => {
     for (const file of [path.join(ROOT_DIR, 'release.json'), path.join(ROOT_DIR, 'serverXR', 'release.json')]) {
         try {
@@ -408,6 +534,12 @@ async function importSpace(args) {
         const commons = fs.existsSync(path.join(staging, 'commons.json'))
             ? await readJson(path.join(staging, 'commons.json')) : []
 
+        // A dry run never creates a database to look into.
+        if (args.dryRun && !fs.existsSync(dbPath)) {
+            log(`dry-run: ${dataRoot} holds nothing yet — "${targetId}" would be created, nothing removed. Nothing was written.`)
+            return targetId
+        }
+
         // initDb creates the full schema on a fresh data root and is a no-op
         // on an existing one — the import works against both.
         await fsp.mkdir(dataRoot, { recursive: true })
@@ -463,6 +595,30 @@ async function importSpace(args) {
             }
             if (here) log(`replacing "${targetId}" on the ${here.toUpperCase()} tier`)
         }
+        if (existing && (args.force || args.dryRun)) {
+            // Said before anything is written, and — from the CLI door — refused
+            // when it removes media nobody counted. install-bundle.mjs's estate
+            // restore calls importSpace without `lossGate`: it prints, and the
+            // restore it is part of was already confirmed with --yes.
+            const loss = await importLoss({ spaceDir: path.join(spacesDir, targetId), staging, projectDirs, extraProjects, prune: args.prune, sourceId, targetId })
+            for (const line of loss.text.split('\n')) log(line)
+            if (args.dryRun) {
+                if (extraProjects.length) log(`"${targetId}" holds ${extraProjects.length} project(s) this file does not carry: ${extraProjects.map((p) => p.id).join(', ')} — ${args.prune ? 'DELETED with --prune' : 'kept'}`)
+                if (loss.mediaLost) log(`a real run removes ${loss.mediaLost} media item(s) and needs --force --accept-loss ${loss.mediaLost}`)
+                log('dry-run: nothing was written')
+                closeDb()
+                return targetId
+            }
+            if (args.lossGate) {
+                const gate = loadDocumentLoss().lossGate({ mediaLost: loss.mediaLost, acceptLoss: args.acceptLoss })
+                if (!gate.ok) { closeDb(); die(gate.message) }
+                if (gate.message) log(gate.message)
+            }
+        } else if (args.dryRun) {
+            log(`dry-run: "${targetId}" ${existing ? 'exists — an import needs --force, which replaces it' : 'is not here — it would be created, nothing removed'}. Nothing was written.`)
+            closeDb()
+            return targetId
+        }
         if (existing && args.force) {
             if (extraProjects.length) {
                 log(`"${targetId}" holds ${extraProjects.length} project(s) this file does not carry: ${extraProjects.map((p) => p.id).join(', ')}`)
@@ -497,8 +653,12 @@ async function importSpace(args) {
         // trashed draft or an archived snapshot arrived on the next tier as a
         // LIVE project with a working public address (2026-09-18, WCC).
         // collection_id does not travel: shelves are not part of the file.
-        const insertProject = db.prepare(`INSERT INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at, slug, position, state, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET space_id = excluded.space_id, title = excluded.title, document_version = excluded.document_version, source = excluded.source, updated_at = excluded.updated_at, last_touched_at = excluded.last_touched_at, slug = excluded.slug, position = excluded.position, state = excluded.state, deleted_at = excluded.deleted_at`)
+        // visibility travels the same way: a private project must not arrive
+        // on the next tier as a public one. A file written before the column
+        // existed carries none, and reads as 'public' — which is what every
+        // project was then.
+        const insertProject = db.prepare(`INSERT INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at, slug, position, state, deleted_at, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET space_id = excluded.space_id, title = excluded.title, document_version = excluded.document_version, source = excluded.source, updated_at = excluded.updated_at, last_touched_at = excluded.last_touched_at, slug = excluded.slug, position = excluded.position, state = excluded.state, deleted_at = excluded.deleted_at, visibility = excluded.visibility`)
         const deleteProject = db.prepare('DELETE FROM projects WHERE id = ?')
         const deleteProjectOps = db.prepare('DELETE FROM project_ops WHERE project_id = ?')
         const insertProjectOp = db.prepare('INSERT INTO project_ops (project_id, version, data, created_at) VALUES (?, ?, ?, ?)')
@@ -530,7 +690,8 @@ async function importSpace(args) {
                 insertProject.run(p.id, targetId, p.title ?? 'Untitled Project', p.document_version ?? 0,
                     p.source ?? 'project', p.created_at ?? now, now, now,
                     p.slug ?? null, p.position ?? 0,
-                    ['draft', 'live', 'archived'].includes(p.state) ? p.state : 'live', p.deleted_at ?? null)
+                    ['draft', 'live', 'archived'].includes(p.state) ? p.state : 'live', p.deleted_at ?? null,
+                    p.visibility === 'private' ? 'private' : 'public')
                 deleteProjectOps.run(p.id)
             }
             if (args.force && args.prune) {
@@ -548,6 +709,21 @@ async function importSpace(args) {
             db.transaction(() => {
                 for (const op of ops) insertProjectOp.run(pid, op.version, op.data, op.created_at ?? Date.now())
             })()
+        }
+        // Every change has an author (db.js, 2026-09-16). The HTTP route that
+        // spawns this tool stamps the person who opened the file; a forced
+        // replace run by hand (or by `di open --force`, which stops the server
+        // first) has no route behind it, so it stamps itself — honestly, as the
+        // tool and the machine account, never as a person it cannot verify.
+        if (args.stampActor) {
+            const { serverActor } = require(path.join(SERVER_SRC, 'opActor.js'))
+            let who = 'unknown user'
+            try { who = `${os.userInfo().username}@${os.hostname()}` } catch { /* no passwd entry in a container */ }
+            const actor = serverActor('space-bundle-import', `space-bundle import --force (${who})`)
+            db.prepare('UPDATE space_ops SET actor = ?, actor_type = ?, actor_label = ? WHERE space_id = ? AND actor IS NULL')
+                .run(actor.actor, actor.type, actor.label, targetId)
+            const stampProject = db.prepare('UPDATE project_ops SET actor = ?, actor_type = ?, actor_label = ? WHERE project_id = ? AND actor IS NULL')
+            for (const pid of projectDirs) stampProject.run(actor.actor, actor.type, actor.label, pid)
         }
         closeDb()
 
@@ -637,10 +813,14 @@ if (invokedDirectly && process.argv[2] === 'propose') {
     // checkStale: true only from this direct-CLI door — see the comment on
     // the check itself in importSpace for why install-bundle.mjs's internal
     // calls must NOT opt into it.
-    else if (args.command === 'import') await importSpace({ ...args, checkStale: true })
+    // lossGate: the same door — a forced replace from here that removes media
+    // needs --accept-loss <N>. The HTTP routes spawn this without --force.
+    // stampActor: only a FORCED import from here — the unforced one is what the
+    // HTTP route spawns, and the route stamps the person who opened the file.
+    else if (args.command === 'import') await importSpace({ ...args, checkStale: true, lossGate: true, stampActor: args.force })
     else {
         console.log('Usage: node scripts/space-bundle.mjs export <spaceId> [--data-root <dir>] [--out <file>]')
-        console.log('       node scripts/space-bundle.mjs import <bundle.tar.gz> [--data-root <dir>] [--as <id>] [--owner <userId>] [--force] [--force-stale] [--tier dev|prod] [--prune] [--no-backup]')
+        console.log('       node scripts/space-bundle.mjs import <bundle.tar.gz> [--data-root <dir>] [--as <id>] [--owner <userId>] [--force] [--force-stale] [--tier dev|prod] [--prune] [--no-backup] [--accept-loss <N>] [--dry-run]')
         console.log('       node scripts/space-bundle.mjs propose <file.diiii> --tier <local|dev|prod> [--space <id>] [--from <name>] [--dry-run] [--direct] [--overwrite-newer]')
         process.exit(args.command ? 1 : 0)
     }

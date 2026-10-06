@@ -4,12 +4,13 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
+import { fileURLToPath } from 'node:url'
 
 const require = createRequire(import.meta.url)
 const { PROTOCOL, readHello, buildHello, readCue, readBlackout, kindMismatch, sign, verify } = require('./protocol.js')
 const { LOCAL_FEATURES } = require('./features.js')
 
-const FIXTURES = path.join(path.dirname(new URL(import.meta.url).pathname), 'fixtures', 'protocol-1')
+const FIXTURES = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'protocol-1')
 const fixture = (name) => JSON.parse(fs.readFileSync(path.join(FIXTURES, name), 'utf8'))
 
 describe('rig protocol 1 readers', () => {

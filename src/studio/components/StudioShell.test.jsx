@@ -159,7 +159,9 @@ describe('StudioShell — a new project opens bare', () => {
         onOpenProjection: () => {},
     }
     const panels = () => [...document.querySelectorAll('[data-panel]')].map((el) => el.dataset.panel)
-    const barLinks = () => [...document.querySelectorAll('.sbar-link')].map((a) => a.textContent)
+    // The bar's destinations — not the Desk | Perform switch in its slot, which is asserted on its own.
+    const barLinks = () => [...document.querySelectorAll('.sbar-links > .sbar-link')].map((a) => a.textContent)
+    const hasPerformSwitch = () => Boolean(document.querySelector('.sbar-switch'))
     const assets = () => JSON.parse(screen.getByTestId('assets').textContent)
 
     afterEach(() => {
@@ -175,6 +177,8 @@ describe('StudioShell — a new project opens bare', () => {
         expect(assets()).toEqual({ drive: false, commons: false, wait: true })
         // Unit 3: the bar grows with the project.
         expect(barLinks()).toEqual(['Spaces', 'Studio', 'Tools', 'Wiki'])
+        // Nothing to perform yet, so no Desk | Perform either.
+        expect(hasPerformSwitch()).toBe(false)
     })
 
     it('decides nothing before the project has loaded — the screen is today\'s', () => {
@@ -205,6 +209,9 @@ describe('StudioShell — a new project opens bare', () => {
         expect(screen.getByTestId('gizmo-mode')).toBeInTheDocument()
         expect(panels()).toEqual(['Create', 'Objects'])
         expect(barLinks()).toEqual(['Spaces', 'Studio', 'Nodes', 'Tools', 'Wiki'])
+        // A connection is something to perform: the switch is in the bar's slot.
+        expect(hasPerformSwitch()).toBe(true)
+        expect([...document.querySelectorAll('.sbar-switch .sbar-link')].map((a) => a.textContent)).toEqual(['Desk', 'Perform'])
     })
 
     it('"All tools" gives a new project everything, bar included', () => {
@@ -245,5 +252,30 @@ describe('StudioShell — a new project opens bare', () => {
         )
         expect(nav()).toEqual(['Create', 'Objects', 'Scene', 'Share', 'Code'])
         expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+    })
+
+    // 2026-09-27: the phone header offered Projection from the first thing on, while
+    // the bar held it back until the first wire. Studio's jump buttons ask the bar's
+    // own rule (SurfaceBar layerReached) now.
+    it('on a phone, offers Nodes and Projection only where the bar does', () => {
+        const ONE_THING = { loaded: true, empty: false, held: true, open: { ...OPEN_NEW, connections: true, handover: true } }
+        const WALL = { ...ONE_THING, open: { ...ONE_THING.open, wall: true } }
+        const rest = { selectedEntity: null, selectedEntityIds: [], entities: [], inspectorSections: [], inspectorValues: {}, assetOptions: [] }
+        const nodes = () => screen.queryByLabelText('Open this project in the node editor')
+        const wall = () => screen.queryByLabelText('Put this project on a wall')
+
+        const { rerender } = renderShell({ ...inProject, layers: ONE_THING, isMobile: true })
+        expect(nodes()).not.toBeNull()
+        expect(wall()).toBeNull()
+        expect(barLinks()).not.toContain('Projection')
+
+        rerender(<StudioShell {...inProject} {...rest} isMobile layers={WALL} />)
+        expect(wall()).not.toBeNull()
+        expect(barLinks()).toContain('Projection')
+
+        rerender(<StudioShell {...inProject} {...rest} isMobile layers={ONE_THING} />)
+        expect(wall()).toBeNull()
+        act(() => saveAllTools(true))
+        expect(wall()).not.toBeNull()
     })
 })

@@ -1,6 +1,11 @@
 require('dotenv').config({ path: require('node:path').resolve(__dirname, '../.env.local') })
 require('dotenv').config({ path: require('node:path').resolve(__dirname, '../.env') })
 const express = require('express')
+// Before any router exists: the catalogue walks the live routes, and Express 5
+// only keeps a sub-router's mount path if it is recorded as it is mounted.
+const { installMountRecorder, listRoutes } = require('./catalogue/routeWalk')
+installMountRecorder()
+const catalogue = require('./catalogue')
 const http = require('http')
 const https = require('https')
 const cors = require('cors')
@@ -26,6 +31,7 @@ const {
   normalizeAuthScopeSpaces,
   setCommunalSpaceId
 } = require('./authAccess')
+const { PROJECT_NOT_FOUND, canSeeProject } = require('./projectVisibility')
 const {
   createAuthSessionValue,
   readCookie,
@@ -38,6 +44,7 @@ const { createDiskWriteGuard } = require('./diskGuard')
 const { ensureDir, readJson, writeJson } = require('./jsonStore')
 const { initializeSocket } = require('./socketHandlers')
 const { initializeMesh } = require('./meshHub')
+const { attachLiveAiRelay } = require('./liveAi/relay')
 const { loadReleaseInfo } = require('./releaseInfo')
 const {
   listCollections,
@@ -49,6 +56,7 @@ const {
   countProjectsIn,
 } = require('./collectionStore')
 const { registerProjectRoutes } = require('./routes/projectRoutes')
+const { moveProjectBetweenSpaces } = require('./projectMove')
 const { registerSpaceRoutes } = require('./routes/spaceRoutes')
 const { createSpaceIdParam } = require('./routes/spaceIdParam')
 const { createKeyedLock } = require('./asyncLock')
@@ -56,6 +64,7 @@ const { createSessionDbSync } = require('./sessionDbSync')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
 const { registerOgRoutes } = require('./routes/ogRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
+const { TRUST_PROXY } = require('./proxyTrust')
 const { registerWorkStatusRoutes } = require('./routes/workStatusRoutes')
 const { registerAgentRunRoutes } = require('./routes/agentRunRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
@@ -93,10 +102,15 @@ const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { registerPasswordAuthRoutes } = require('./routes/passwordAuthRoutes')
 const { registerDmRoutes } = require('./routes/dmRoutes')
+const { registerDomainRoutes } = require('./routes/domainRoutes')
+const domainStore = require('./domainStore')
+const { createCloudflareSaas } = require('./cloudflareSaas')
+const { createDomainService } = require('./domainService')
 const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
-const { registerNdiRoutes } = require('./routes/ndiRoutes')
+const { registerNdiRoutes, scanAtBootFrom } = require('./routes/ndiRoutes')
+const { hasLocalRuntime } = require('./localRuntimeGuard')
 const { registerPlaceRoutes } = require('./routes/placeRoutes')
 // The per-space content-addressed blob store: where a sha256 asset's bytes
 // actually are, which is what the place lane has to copy footage out of.
@@ -129,6 +143,7 @@ const {
   reorderProjects,
   setProjectShelf,
   setProjectState,
+  setProjectVisibility,
   TRASH_TTL_MS,
   ensureProject,
   findProjectById, findProjectByIdAny,
@@ -317,6 +332,8 @@ async function initStorage() {
 }
 
 const app = express()
+// req.ip is the real client behind a proxy on this machine — see proxyTrust.js.
+app.set('trust proxy', TRUST_PROXY)
 const startedAt = Date.now()
 const recentEvents = []
 const liveClients = new Map()
@@ -395,7 +412,16 @@ const broadcastProjectLiveEvent = async (projectId, eventName, payload, excludeI
   const entry = await getProjectLiveBucket(projectId)
   if (!entry) return
   const data = `event: ${eventName}\ndata: ${JSON.stringify(payload)}\n\n`
+  // A project made private while a visitor's stream was open: that visitor
+  // is no longer someone it exists for. Their stream ends here, before this
+  // event (or any later one) is written to it.
+  const privateNow = entry.project?.meta?.visibility === 'private'
   entry.bucket.forEach((client, clientId) => {
+    if (privateNow && !canSeeProject(client.authState, entry.project.meta, { requireAuth: config.requireAuth })) {
+      try { client.res.end() } catch { /* already gone */ }
+      entry.bucket.delete(clientId)
+      return
+    }
     if (excludeId && clientId === excludeId) return
     try {
       client.res.write(data)
@@ -495,6 +521,12 @@ const ndi = registerNdiRoutes(app, {
 // on one: it exits by itself when its IPC channel closes — a kill -9 of the server
 // included. This hook only makes an orderly process.exit() prompt about it.
 process.once('exit', () => { try { ndi.close() } catch { /* going down anyway */ } })
+// The NDI autoscan: which sources are on the network right now, known before anyone
+// asks. On a real install only (scanAtBootFrom: DI_LOCAL=1, or DI_NDI_SCAN=1), never on
+// a hosted tier. With no runtime it forks nothing — it records "no-runtime" and says so.
+if (hasLocalRuntime() && scanAtBootFrom()) {
+  try { ndi.startScan() } catch (error) { logger.warn(`[ndi] autoscan did not start: ${error?.message || error}`) }
+}
 
 app.use(express.json({ limit: '10mb', verify: (req, _res, buf) => { req.rawBody = buf } }))
 app.use(morgan('tiny'))
@@ -512,6 +544,7 @@ try {
     app,
     dataRoot: config.directories.dataDir,
     port: config.port,
+    host: config.host,
     base: '/serverXR',
     mountPaths: [...new Set([config.mountPath, '/serverXR'])],
     logger,
@@ -1732,9 +1765,45 @@ router.use('/api/sync/spaces/:spaceId', (req, res, next) => {
   next()
 })
 
+// GET /api/trash takes its space as `?space=`, not a `:spaceId` route param,
+// so it never set req.requiredSpaceId and slipped past every gate below —
+// an anonymous request under REQUIRE_AUTH could list every trashed project
+// in every space (found 2026-09-24, on origin/main since 053c19dc). Setting
+// it here puts a scoped trash request through the exact same
+// requireReadRole/requireWriteRole gate as GET /api/spaces/:spaceId/projects:
+// same 404 for a space that doesn't exist, same 401/403 for one the caller
+// can't see, same isPublic bypass. A request with no `?space=` is narrowed
+// inside the route handler instead (routes/projectRoutes.js), since there is
+// no single space here for this gate to check.
+router.use('/api/trash', (req, res, next) => {
+  req.requiredSpaceId = req.query.space ? (normalizeSpaceId(req.query.space) || null) : null
+  next()
+})
+
+// A shelf id names a shelf, not a space, so /api/collections/:collectionId has
+// no :spaceId for the gate to read: requiredSpaceId stayed null and
+// requireWriteRole let an editor scoped to ONE space rename or delete shelves
+// in any other (audit F8, 2026-10-04). Resolve the shelf's space here, ahead
+// of the role gate. An unknown id leaves it null; the handler answers 404.
+router.use('/api/collections/:collectionId', (req, res, next) => {
+  req.requiredSpaceId = getCollection(req.params.collectionId)?.spaceId || null
+  next()
+})
+
 router.use('/api/projects/:projectId', async (req, res, next) => {
   try {
     const project = await resolveProjectContext(req.params.projectId)
+    // A private project is not there for anyone outside its space: every
+    // route under /api/projects/:projectId (meta, document, ops, assets, asset
+    // meta, events, shelf, …) answers exactly what it answers for an id that
+    // was never created. One gate here, ahead of every route and every write
+    // gate, so a route added later cannot forget it — and 404, not 401/403,
+    // so the answer does not confirm the project exists.
+    // docs/architecture/SPEC_project_visibility.md.
+    if (project && !canSeeProject(req.authState, project.meta, { requireAuth: config.requireAuth })) {
+      return res.status(404).json(PROJECT_NOT_FOUND)
+    }
+    req.projectContext = project || null
     req.requiredSpaceId = project?.spaceId || null
     if (req.method === 'DELETE' && (req.path === '/' || req.path === '')) {
       // Deleting a project is owner-or-admin, like managing its space: keep
@@ -1824,9 +1893,15 @@ registerOgRoutes(router, {
     const project = (await findProjectBySlug(spaceId, projectSegment)) ||
       (await loadProjectMeta(SPACES_DIR, spaceId, normalizeProjectId(projectSegment) || projectSegment))
     if (!project || project.spaceId !== spaceId || project.state !== 'live' || project.deletedAt) return null
+    // A crawler is never a member: a private project previews as nothing,
+    // and the card falls back to the space's own.
+    if (project.visibility === 'private') return null
     return project
   },
   siteOrigin: process.env.SITE_ORIGIN || '',
+  // A space on its own domain: the crawler card for yokozo.xyz/ is the card of
+  // the space that domain shows, not the platform's.
+  spaceIdForHost: domainStore.findActiveSpaceIdForHost,
 })
 
 registerInscriptionRoutes(router, {
@@ -1865,6 +1940,24 @@ router.use('/api', requireWriteRole('editor'))
 // mount target (/, /serverXR). Regression: approvalGate.test.js.
 router.use(createGatedRequestNet(GATED_ROUTES))
 
+// ── the catalogue: what this server can do, for an agent ──
+// docs/architecture/SPEC_agent_door.md. The MCP reads this at start, so it
+// always describes the server it is talking to. A caller sees the entries its
+// role can reach and the agent door is open for; an admin can ask for all of
+// them, with how the catalogue compares to the live router.
+router.get('/api/catalogue', (req, res) => {
+  const state = req.authState || {}
+  const all = req.query.all === '1'
+  if (all && !hasRequiredAuthRole(state.role, 'admin') && config.requireAuth) {
+    return sendRoleError(res, 403, 'admin', state.role)
+  }
+  const role = config.requireAuth ? state.role : 'admin'
+  const keep = (entry) => all || (entry.agent && hasRequiredAuthRole(role, entry.role))
+  const body = { ...catalogue.openapi({ keep, version: releaseInfo?.version || '0.0.0' }) }
+  if (all) body['x-di-coverage'] = catalogue.compare(listRoutes(app))
+  res.set('Cache-Control', 'no-store').json(body)
+})
+
 const resolveProjectContext = async (projectId) => {
   const normalized = normalizeProjectId(projectId)
   if (!normalized) {
@@ -1896,7 +1989,17 @@ router.get('/api/resolve/:spaceSegment/:projectSegment', async (req, res, next) 
       // used to just 404 once a project left. One extra lookup turns that
       // into a pointer instead of a dead link — see CONTRIBUTING.md, "Moving one project".
       const moved = findProjectMove(space.id, projectSegment)
-      if (moved) return res.json({ movedTo: { spaceId: moved.toSpace, projectId: moved.projectId } })
+      if (moved) {
+        // A pointer names the project's id and new space — for a private
+        // project that is exactly what a visitor must not learn.
+        const target = await findProjectById(SPACES_DIR, moved.projectId)
+        if (!target || canSeeProject(req.authState, target.meta, { requireAuth: config.requireAuth })) {
+          return res.json({ movedTo: { spaceId: moved.toSpace, projectId: moved.projectId } })
+        }
+      }
+      return res.status(404).json({ error: 'Not found.' })
+    }
+    if (!canSeeProject(req.authState, project, { requireAuth: config.requireAuth })) {
       return res.status(404).json({ error: 'Not found.' })
     }
     res.json({ space, project })
@@ -1953,6 +2056,27 @@ registerUserRoutes(router, {
 // Throttle asset uploads only (POST); asset reads on the same path stay free.
 router.use('/api/spaces/:spaceId/assets', (req, res, next) =>
   req.method === 'POST' ? uploadLimiter(req, res, next) : next())
+
+// A space on its own domain — docs/architecture/SPEC_space_own_domain.md.
+// The service is built once and shared with the sweep at startup.
+const customDomains = createDomainService({
+  cloudflare: createCloudflareSaas(config.customDomains.cloudflare),
+  // The CNAME target is ours too: a space must not claim domains.diiii.xyz.
+  platformSuffixes: [...config.customDomains.platformSuffixes, config.customDomains.cloudflare.cnameTarget].filter(Boolean),
+  maxDomains: config.customDomains.max,
+  maxPerSpace: config.customDomains.maxPerSpace,
+  pendingTtlMs: config.customDomains.pendingTtlMs,
+  logger
+})
+registerDomainRoutes(router, {
+  domains: customDomains,
+  findActiveSpaceIdForHost: domainStore.findActiveSpaceIdForHost,
+  loadSpaceMeta,
+  normalizeSpaceId,
+  requireSpaceOwnerOrAdminWrite,
+  platformOrigin: config.customDomains.platformOrigin,
+  config
+})
 
 const { replaceSceneAndBroadcast, restoreSnapshotAndBroadcast } = registerSpaceRoutes(router, {
   appendOpsHistory,
@@ -2309,6 +2433,7 @@ const mayStoreVerbatim = (req) => {
 }
 
 registerProjectRoutes(router, {
+  config,
   uploadsDir: UPLOADS_DIR,
   maxUploadBytes: config.maxUploadBytes,
   isAllowedUpload,
@@ -2332,6 +2457,10 @@ registerProjectRoutes(router, {
   reorderProjects,
   setProjectShelf,
   setProjectState,
+  setProjectVisibility,
+  loadSpaceMeta,
+  isSpaceOwnerOrAdminState,
+  moveProject: (args) => moveProjectBetweenSpaces({ db: getDb(), spacesDir: SPACES_DIR, ...args }),
   TRASH_TTL_MS,
   listCollections,
   getCollection,
@@ -2448,6 +2577,9 @@ router.post('/api/spaces/:spaceId/proposals', (req, res, next) => bundleUpload.s
       from: req.body?.from || null,
       overwriteNewer: flag(req.body?.overwriteNewer),
       dryRun: flag(req.body?.dryRun),
+      // The exact count of media items the file removes (absent = none
+      // acknowledged; anything but a whole number never matches).
+      acceptLoss: req.body?.acceptLoss === undefined || req.body?.acceptLoss === '' ? null : (/^\d+$/.test(String(req.body.acceptLoss)) ? Number(req.body.acceptLoss) : NaN),
       req
     })
     const status = outcome.status === 'pending_approval' ? 202 : 200
@@ -2651,10 +2783,24 @@ initStorage()
         .catch((error) => logger.warn('Failed to purge the trash', error))
     }
     setInterval(sweep, 1000 * 60 * 30)
+    // Domains waiting on DNS or a certificate switch on by themselves, and a
+    // domain nobody pointed at us is dropped after a week. Nothing to do when
+    // the platform is not connected to Cloudflare.
+    if (customDomains.connected) {
+      const sweepDomains = () => customDomains.sweep()
+        .then((done) => { if (done.activated || done.dropped) logger.info(`[domains] sweep: ${JSON.stringify(done)}`) })
+        .catch((error) => logger.warn('Failed to check custom domains', error))
+      sweepDomains()
+      setInterval(sweepDomains, config.customDomains.sweepMs).unref()
+    }
     // Daily snapshot of the open space — its scene and its project documents,
     // which is where the jam's contributions actually live. Vandalism
     // insurance (admin restores via POST /api/spaces/:id/restore-snapshot).
-    snapshotOpenSpace().catch((error) => logger.warn('Failed to snapshot open space', error))
+    // Taken BEFORE the server listens: as a fire-and-forget it raced the first
+    // writes, so the "boot" snapshot could hold a write made after boot (or not
+    // exist yet when a restore asked for it -- the 404 the contract test used to
+    // poll around). Failure is logged and never blocks the boot.
+    await snapshotOpenSpace().catch((error) => logger.warn('Failed to snapshot open space', error))
     setInterval(() => {
       snapshotOpenSpace().catch((error) => logger.warn('Failed to snapshot open space', error))
       // Long-idle account sandboxes fold down to a snapshot (revived on
@@ -2697,6 +2843,12 @@ initStorage()
     logger.info('[Socket.IO] Initialized for real-time collaboration')
 
     initializeMesh(httpServer, config)
+    // Live AI: camera frames to the image model on this machine and back
+    // (serverXR/src/liveAi/relay.js). Local installs only, like /ndi.
+    attachLiveAiRelay(httpServer, {
+      paths: [...new Set(['/liveai', `${config.mountPath || ''}/liveai`.replace(/\/+/g, '/')])],
+      log: (line) => logger.info(line)
+    })
 
     // Spaces this install follows on another di.iiii (serverXR/src/follow).
     // Started after listen, never before: a follower reaches this server over

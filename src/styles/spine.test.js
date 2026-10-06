@@ -25,8 +25,10 @@ const SRC = path.resolve(HERE, '..')
 const SPINE_FILES = [
     'studio/styles/studio-space-hub.css',
     'studio/styles/space-constellation.css',
-    'tools/toolsRoom.css',
+    'kit/kit.css',
     'components/surfaceBar.css',
+    // The rig's steps row: a second row of the bar, written in the spine from its first line.
+    'rigbuild/rigSteps.css',
     'wiki/wiki.css',
     'studio/styles/studio-hub.css',
     'landing/landing.css',
@@ -75,6 +77,9 @@ const SPINE_FILES = [
     'pages/spaceContents.css',
     // Born on the spine, 2026-09-22 — the scanning page never carried a literal.
     'scan/scanSurface.css',
+    'raw/components/vjDeck/vjDeck.css',
+    // Born on the spine, 2026-09-24 — the Perform desk.
+    'perform/perform.css',
 ]
 
 // Not yet converted, and honest about it. Each line is a debt, not an
@@ -178,7 +183,7 @@ const SPACE_EXCEPTIONS = {
     'project/components/jamSurface.css': ['0.6rem'],
     'project/components/roomTextLayer.css': ['-1px'],
     'raw/director/director.css': ['-4px', '-2px'],
-    'raw/styles/raw.css': ['-4px', '-1px', '5px', '16px', '14px', '6px', '12px'],
+    'raw/styles/raw.css': ['-4px', '-1px', '1px', '5px', '16px', '14px', '6px', '12px'],
     'studio/components/studioCodeSpaceDirector.css': ['1rem', '2rem', '1.4rem', '3rem'],
     'studio/styles/studio-hub.css': ['56px'],
     'styles/inspector-controls.css': ['1px'],

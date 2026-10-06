@@ -776,9 +776,11 @@ describe('showState — the one show clock', () => {
 describe('components.fixture — the join to the lighting desk', () => {
     const spot = (fixture) => ({ id: 'spot', type: 'spotLight', components: { light: { color: '#ffffff', intensity: 2 }, ...(fixture === undefined ? {} : { fixture }) } })
 
-    it('survives normalization as { index } and nothing else', () => {
-        const doc = normalizeProjectDocument({ entities: [spot({ index: 3, universe: 1, address: 17 })] })
-        expect(doc.entities[0].components.fixture).toEqual({ index: 3 })
+    // Since 2026-09-28 the plot's patch travels beside the index (RIG_BUILD.md §2.2);
+    // before, universe/address were dropped here. Unknown fields still are.
+    it('survives normalization as the index plus the plot patch, and nothing else', () => {
+        const doc = normalizeProjectDocument({ entities: [spot({ index: 3, universe: 1, address: 17, colour: 'red' })] })
+        expect(doc.entities[0].components.fixture).toEqual({ index: 3, universe: 1, address: 17 })
     })
 
     it('is a positive whole number or it is gone', () => {
@@ -829,5 +831,75 @@ describe('components.surface (a plane that is a screen)', () => {
     it('a plane without a surface has no surface component at all', () => {
         const doc = normalizeProjectDocument({ entities: [{ id: 'p', type: 'plane', components: {} }] })
         expect('surface' in doc.entities[0].components).toBe(false)
+    })
+})
+
+describe('mappingState.lightPool survives normalization (review A5-1)', () => {
+    it('keeps the switch and the knobs, clamped as lightPoolOptions clamps them', async () => {
+        const { lightPoolOptions, lightPoolWanted } = await import('../rigbuild/lightPool.js')
+        const raw = { lightPool: { enabled: true, slots: '40', minHoldMs: -5, handoverMs: 250, margin: 0.3, bounds: { min: [-10, 0, -10], max: [10, 8, 10] }, junk: 1 } }
+        const doc = normalizeProjectDocument({ mappingState: raw })
+        expect(doc.mappingState.lightPool).toEqual({ enabled: true, slots: 12, minHoldMs: 0, handoverMs: 250, margin: 0.3, bounds: { min: [-10, 0, -10], max: [10, 8, 10] } })
+        expect(lightPoolWanted({ mappingState: doc.mappingState })).toBe(true)
+        expect(lightPoolOptions(doc.mappingState)).toEqual(lightPoolOptions(raw))
+        expect(lightPoolOptions(doc.mappingState).slots).toBe(12)
+    })
+    it('absent means absent', () => {
+        expect(normalizeProjectDocument({ mappingState: {} }).mappingState).not.toHaveProperty('lightPool')
+        expect(normalizeProjectDocument({ mappingState: { lightPool: {} } }).mappingState).not.toHaveProperty('lightPool')
+    })
+})
+
+describe('renderSettings.atmosphere.haze — the haze worked out from the machines', () => {
+    it('keeps the hall, the levels and the drift, clamped; drops the rest', () => {
+        const doc = normalizeProjectDocument({
+            renderSettings: {
+                atmosphere: {
+                    scattering: 0.05,
+                    anisotropy: 0.7,
+                    haze: {
+                        volume_m3: 12000,
+                        airChangesPerHour: 6,
+                        levels: { 'rig-hazer-back-01': 1.5, 'rig-smoke-01': 0.5, bad: 'x' },
+                        kindLevels: { hazer: 0.6, 'smoke-machine': -1, laser: 1 },
+                        patchiness: 0.35,
+                        drift: [0.15, 9, 0.05],
+                        junk: 1
+                    }
+                }
+            }
+        })
+        expect(doc.renderSettings.atmosphere).toEqual({
+            scattering: 0.05,
+            anisotropy: 0.7,
+            haze: {
+                volume_m3: 12000,
+                airChangesPerHour: 6,
+                levels: { 'rig-hazer-back-01': 1, 'rig-smoke-01': 0.5 },
+                kindLevels: { hazer: 0.6, 'smoke-machine': 0 },
+                patchiness: 0.35,
+                drift: [0.15, 5, 0.05]
+            }
+        })
+    })
+    it('a haze with no hand-set scattering is still a haze', () => {
+        const doc = normalizeProjectDocument({ renderSettings: { atmosphere: { haze: {} } } })
+        expect(doc.renderSettings.atmosphere).toEqual({ scattering: 0.03, anisotropy: 0.7, haze: {} })
+    })
+    it('a room without one reads back as before', () => {
+        expect(normalizeProjectDocument({ renderSettings: { atmosphere: { scattering: 0.05 } } }).renderSettings.atmosphere).toEqual({ scattering: 0.05, anisotropy: 0.7 })
+        expect(normalizeProjectDocument({ renderSettings: {} }).renderSettings).not.toHaveProperty('atmosphere')
+    })
+})
+
+describe('components.beam.optics — prism, honeycomb, frost, gobo', () => {
+    const lamp = (beam) => normalizeProjectDocument({ entities: [{ id: 'l', type: 'spotLight', components: { beam } }] }).entities[0].components.beam
+    it('keeps what is in the beam\'s path, clamped', () => {
+        expect(lamp({ visible: true, optics: { prism: { facets: 40, rotation: 1 }, honeycomb: {}, frost: 3, gobo: { pattern: 4, rotation: 0.5 }, junk: 1 } }).optics)
+            .toEqual({ prism: { facets: 32, rotation: 1 }, honeycomb: { rotation: 0 }, frost: 1, gobo: { pattern: 4, rotation: 0.5 } })
+    })
+    it('drops a gobo the wheel does not have, and stores nothing when nothing is in', () => {
+        expect(lamp({ visible: true, optics: { gobo: { pattern: 40 } } })).not.toHaveProperty('optics')
+        expect(lamp({ visible: true })).not.toHaveProperty('optics')
     })
 })

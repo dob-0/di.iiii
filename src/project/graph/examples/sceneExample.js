@@ -77,10 +77,11 @@ export function buildSceneExample({ parentId = null, workspaceTop = 160 } = {}) 
         }
     })
 
-    // A light, so the room is lit rather than flat. Its own defaults are fine;
-    // it exists here so that "type light, pick it" has something to point at.
-    add('light', 'world.light', {
-        label: 'Light',
+    // The scene's lighting, so the room is lit rather than flat. Its own
+    // defaults are fine; it exists here so that "type environment, pick it"
+    // has something to point at. (The retired Light card stood here before.)
+    add('light', 'world.environment', {
+        label: 'Environment',
         col: 0,
         row: 2,
         values: {

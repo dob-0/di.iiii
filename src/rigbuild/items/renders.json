@@ -1,0 +1,99 @@
+{
+  "howToRead": "docs/architecture/RIG_BUILD.md \u00a713. Written by scripts/rigbuild/item-renders.py \u2014 never by hand.",
+  "blender": "5.2.1 LTS",
+  "engine": "BLENDER_WORKBENCH",
+  "size": 512,
+  "renders": {
+    "deck-2x1": {
+      "file": "rigbuild/items/render/deck-2x1.png",
+      "model": "scripts/rigbuild/pieces/deck-2x1.glb",
+      "modelSha256": "3c369f6f51af126a0ce75f7032cf5c630473855ec3b21442a77353238586b948",
+      "sha256": "67637de2de5e7a8533cec1bf3432a6d3c02571a436f38b54c04bfe674beeb532",
+      "licence": "AGPL-3.0-only (this repository's model, rendered here)"
+    },
+    "tower": {
+      "file": "rigbuild/items/render/tower.png",
+      "model": "scripts/rigbuild/pieces/tower.glb",
+      "modelSha256": "359213154d18e17e992f899db1bd70494de91edafb469e371228ea06f7b7955a",
+      "sha256": "f075ecdac41433138e548a0448d3bbefeb7f6ee231595e7b8340719a8bd582eb",
+      "licence": "AGPL-3.0-only (this repository's model, rendered here)"
+    },
+    "truss-1m": {
+      "file": "rigbuild/items/render/truss-1m.png",
+      "model": "scripts/rigbuild/pieces/truss-1m.glb",
+      "modelSha256": "be16b10a8c2b15f4ba872bd4b0341e8962846a7b6222e287a4f8d90f6ac8ef81",
+      "sha256": "458cc32a928a7d8224a7674c5625212d9b3be699570d3d83b9a19152f84a37fb",
+      "licence": "AGPL-3.0-only (this repository's model, rendered here)"
+    },
+    "truss-2m": {
+      "file": "rigbuild/items/render/truss-2m.png",
+      "model": "scripts/rigbuild/pieces/truss-2m.glb",
+      "modelSha256": "c1d06915a9c78d711d58899c03e9b1e5690b8ee06117cc8b98cb35ff5d1447dd",
+      "sha256": "de2326fcf59ad40dcbd7a0b474e999250660fc252b485b02656e6de89500d534",
+      "licence": "AGPL-3.0-only (this repository's model, rendered here)"
+    },
+    "truss-3m": {
+      "file": "rigbuild/items/render/truss-3m.png",
+      "model": "scripts/rigbuild/pieces/truss-3m.glb",
+      "modelSha256": "8e7bc6605635895ee808369a42b44ee0f33c82bf1d66812d55712ed3f9ff40e7",
+      "sha256": "b5d9fb768316147d76201edbbfb472f9fc7c9618b385041e233e0b684d3f8c2e",
+      "licence": "AGPL-3.0-only (this repository's model, rendered here)"
+    },
+    "up-250bsw": {
+      "file": "rigbuild/items/render/up-250bsw.png",
+      "model": "scripts/place/fixtures/glb/bsw250.glb",
+      "modelSha256": "6649b1922d2668e7ba54f92927f651a9447f7401fa7a07c40d6eb0ccd616af9b",
+      "sha256": "f509d58e8149ac0a483280a84cdab6f1707af8b98c6f9de7c7778748eca80a30",
+      "licence": "AGPL-3.0-only (this repository's model, rendered here)"
+    },
+    "up-b380f": {
+      "file": "rigbuild/items/render/up-b380f.png",
+      "model": "scripts/place/fixtures/glb/beam380.glb",
+      "modelSha256": "739a99af3da6cdf6510c7b8e7a33c31ad5a9d4bf29a349649286367b70d16585",
+      "sha256": "89ea5fc5d135336bb0bd994a3b894bbd6b8ef6246f68b2a97108d041c11ba232",
+      "licence": "AGPL-3.0-only (this repository's model, rendered here)"
+    },
+    "up-hk1915": {
+      "file": "rigbuild/items/render/up-hk1915.png",
+      "model": "scripts/place/fixtures/glb/beeEye.glb",
+      "modelSha256": "61d3d1dff8fbf594d30c34fc8c20543967a9401dc319f87ec4bc00749e69f552",
+      "sha256": "76930e01825131d1efd5ba50aaa0ae915a2b608aa7778450a73a019931d45a54",
+      "licence": "AGPL-3.0-only (this repository's model, rendered here)"
+    },
+    "up-la40wf": {
+      "file": "rigbuild/items/render/up-la40wf.png",
+      "model": "scripts/place/fixtures/glb/laser.glb",
+      "modelSha256": "3f28cfe56d3ee2de7f3408bd1e4d0a65514e0389104b302630446844ecbc05c8",
+      "sha256": "b22ae5c616f1065b068ce9633428db5a4466f2780678d9ce5462782d0fd2fd75",
+      "licence": "AGPL-3.0-only (this repository's model, rendered here)"
+    },
+    "up-pl5403": {
+      "file": "rigbuild/items/render/up-pl5403.png",
+      "model": "scripts/place/fixtures/glb/par.glb",
+      "modelSha256": "eb16215ce4a4fb799ade8525e52fd9cff63c4e94fd2d839fb86b2c02f8130a4c",
+      "sha256": "fbb7a8636760df56e48fef69df9d240611f85e5e77ef75376374d63d2ed479dc",
+      "licence": "AGPL-3.0-only (this repository's model, rendered here)"
+    },
+    "up-q108s": {
+      "file": "rigbuild/items/render/up-q108s.png",
+      "model": "scripts/place/fixtures/glb/co2.glb",
+      "modelSha256": "adc9a857c74835d9b648d8f77c4dcf179c92cda71bfe153c5e3fadae13ace181",
+      "sha256": "9cb7dac54e849ab2a09945c1501fe41e4bd94a6844c8426863ce273d15376b16",
+      "licence": "AGPL-3.0-only (this repository's model, rendered here)"
+    },
+    "up-yh600f": {
+      "file": "rigbuild/items/render/up-yh600f.png",
+      "model": "scripts/place/fixtures/glb/spark.glb",
+      "modelSha256": "1a1151075b44100a8d1db053509accbd2033c78494f41dd713a957c23d91c6ce",
+      "sha256": "7f1498fd8433e06479872f69ed47ec6d01701d9728339e627a155221c3e75269",
+      "licence": "AGPL-3.0-only (this repository's model, rendered here)"
+    },
+    "up-yz31p": {
+      "file": "rigbuild/items/render/up-yz31p.png",
+      "model": "scripts/place/fixtures/glb/smoke.glb",
+      "modelSha256": "cb2ed32bed10042b967a96aa9c628607e5c3c9dac45af2efb0dff0f5c7c62698",
+      "sha256": "f74342fa5b098de3d52bbc1b64232842f4f2158cb80a3be8c35867bad89d6a84",
+      "licence": "AGPL-3.0-only (this repository's model, rendered here)"
+    }
+  }
+}

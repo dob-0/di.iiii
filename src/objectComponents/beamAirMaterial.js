@@ -1,0 +1,541 @@
+// The shader for beamAir.js: a spot's beam in haze, drawn on a closed truncated
+// cone that bounds the beam. Each fragment finds where its view ray is inside the
+// beam (the same quadratic as beamChord) and sums the single-scattering integral
+// along that chord (beamAirRadiance). The result goes through the renderer's own
+// tone mapping and exposure (toneMapped), exactly like a lit surface, and is ADDED
+// to what is behind it.
+//
+// The haze's scattering is not one number any more: hazeSigma() asks the room's haze
+// field (hazeField.js — the hall's well-mixed haze, each hazer's and fog machine's
+// jet, and the drifting unevenness) at every sample. A room with no haze settings
+// hands every beam a field that IS one number (uFill = atmosphere.scattering, no
+// jets, no noise), and draws exactly as before.
+//
+// Faces: the front faces while the camera is outside the beam — the depth test
+// then hides the part of a beam behind a wall, the floor or the roof, which is how
+// a beam ends on what it hits — and the back faces while the camera stands inside
+// it (a front face is not there to draw from inside). Chosen per frame in
+// onBeforeRender, before three.js sets the draw's state.
+import { AdditiveBlending, BackSide, Color, CylinderGeometry, EqualStencilFunc, FrontSide, KeepStencilOp, Matrix4, ShaderMaterial, Vector3 } from 'three'
+import { BEAM_AIR_SAMPLES, DEFAULT_APERTURE, HULL_BASE, HULL_SLOPE, beamExtentOf, beamProfileExponent } from './beamAir.js'
+
+// the profile's exponent under frost: the shader's mix(p, 2, uFrost)
+const mixedExponent = (edge, frost) => {
+    const p = beamProfileExponent(edge)
+    const f = Math.min(1, Math.max(0, Number(frost) || 0))
+    return p + (2 - p) * f
+}
+import { JET_K, MAX_HAZE_SOURCES, NOISE_TILE_M } from './hazeField.js'
+import { hazeUniformsFor } from './hazeUniforms.js'
+import { BEAM_SHAPE_GLSL, FROST_WIDEN, beamOpticsOf, frostWiden, opticsSpreadTan } from './beamOptics.js'
+
+// The floor the hall stands on (world y). The rig's rooms are built on y = 0.
+export const FLOOR_Y = 0
+
+// A rough floor spreads a reflected ray over ~MIRROR_SPREAD·α radians either side (α =
+// roughness², the GGX lobe's half-width, Walter et al. 2007, roughly): the reflection's blur.
+export const MIRROR_SPREAD = 1.3
+
+const vertexShader = /* glsl */`
+varying vec3 vLocal;
+varying vec3 vWorld;
+void main() {
+    vLocal = position;
+    vec4 world = modelMatrix * vec4(position, 1.0);
+    vWorld = world.xyz;
+    gl_Position = projectionMatrix * viewMatrix * world;
+}
+`
+
+const fragmentShader = /* glsl */`
+#define BEAM_SAMPLES ${BEAM_AIR_SAMPLES}
+uniform vec3 uColor;
+uniform float uIntensity;
+uniform float uTan;
+uniform float uAperture;
+uniform float uLength;
+uniform float uEdge;
+uniform float uG;
+uniform vec3 uCamLocal;
+uniform float uHullBase;
+uniform float uHullSlope;
+uniform float uGlare;
+uniform int uSamples; // BEAM_SAMPLES, as a uniform so the sample loop is not unrolled
+uniform float uLit; // how much of the throw is above the floor (beamAirBeforeRender)
+uniform float uFloorY; // the floor's world height (FLOOR_Y)
+// THE BEAM REFLECTED IN THE FLOOR (BeamMirrors.jsx): the same beam drawn mirrored under the
+// floor plane, seen only where the floor is the visible surface (stencil), weighted by the
+// floor's reflectance for the angle the eye meets it at (Schlick's Fresnel, F0 of a
+// dielectric 0.04) and by how glossy it is.
+uniform float uMirror;  // 1 = this draw is the reflection
+uniform float uReflect; // the floor's gloss × the room's strength
+#ifdef BEAM_MIRROR
+// the floor's finish where the eye's ray meets it (surfaces.js: the same wear pattern,
+// injected by createBeamMirrorMaterial)
+uniform float uSurfRough;
+uniform float uSurfVar;
+uniform float uSurfScale;
+// SURFACE_WEAR
+#endif
+varying vec3 vLocal;
+varying vec3 vWorld;
+#include <common>
+#include <dithering_pars_fragment>
+
+// THE HAZE FIELD (hazeField.js has the formulas and where they come from; this is
+// hazeScatteringAt, line for line). Shared by every beam of the renderer
+// (hazeUniforms.js).
+#define HAZE_MAX ${MAX_HAZE_SOURCES}
+uniform float uFill;
+uniform int uHazeCount;
+uniform vec3 uHazePos[HAZE_MAX];
+uniform vec3 uHazeDir[HAZE_MAX];
+uniform vec4 uHazeJet[HAZE_MAX]; // σ0 at the nozzle, nozzle diameter, spread, reach
+uniform highp sampler3D uHazeNoise;
+uniform float uPatch;
+uniform vec3 uDrift;
+uniform float uHazeTime;
+
+float hazeSigma(vec3 p) {
+    if (uHazeCount == 0 && uPatch <= 0.0) return uFill;
+    float n = 0.5;
+    if (uPatch > 0.0) n = texture(uHazeNoise, (p - uDrift * uHazeTime) / ${NOISE_TILE_M.toFixed(1)}).r;
+    float swing = 2.0 * (n - 0.5);
+    float sigma = uFill * (1.0 + uPatch * swing);
+    float eddy = clamp(1.0 + 1.6 * uPatch * swing, 0.0, 3.0);
+    // a loop bounded by a uniform: ANGLE's Direct3D back end keeps it a loop (a constant
+    // bound is unrolled — 12 jets × 12 samples became a program too large to build)
+    for (int j = 0; j < uHazeCount; j++) {
+        vec4 jet = uHazeJet[j];
+        vec3 v = p - uHazePos[j];
+        float u = dot(v, uHazeDir[j]);
+        float along = max(u, 0.0);
+        // far behind the nozzle, past five reaches, or three widths off the axis:
+        // under e^-5 of the jet, skipped (most samples, most jets)
+        if (u < -jet.y || along > jet.w * 5.0) continue;
+        float r2 = max(dot(v, v) - u * u, 0.0);
+        float w = jet.y * 0.5 + jet.z * along;
+        if (r2 > 9.0 * w * w) continue;
+        float decay = min(1.0, ${JET_K.toFixed(1)} * jet.y / max(along, 1e-6));
+        float ramp = clamp((u + jet.y * 0.5) / jet.y, 0.0, 1.0);
+        sigma += jet.x * decay * exp(-r2 / (w * w)) * exp(-along / jet.w) * ramp * eddy;
+    }
+    return sigma;
+}
+
+// WHAT IS IN THE BEAM'S PATH (beamOptics.js): prism, honeycomb, gobo; frost below.
+uniform float uFrost;
+${BEAM_SHAPE_GLSL}
+
+float hgPhase(float c, float g) {
+    float g2 = g * g;
+    return (1.0 - g2) / (12.566370614 * pow(max(1.0 + g2 - 2.0 * g * c, 1e-4), 1.5));
+}
+
+uniform float uGlareOn;
+
+void main() {
+#if BEAM_PART == 1
+    // the room is drawn with real bloom (HdrBloom.jsx): the veil steps aside
+    if (uGlareOn < 0.5) discard;
+#endif
+    vec3 ro = uCamLocal;
+    vec3 rd = normalize(vLocal - ro);
+    float t = max(uTan, 1e-4);
+    float a = uAperture;
+    // The cross-section (beamAir.js beamProfile): 50 % at the beam angle, falling as
+    // exp(−ln2·ρ^p); the chord is taken through where it has fallen to PROFILE_FLOOR.
+    float pExp = 2.0 + 6.0 * (1.0 - clamp(uEdge, 0.0, 1.0));
+    // frost: the beam angle widened, the candela ÷ the widening² (flux kept), the edge
+    // gone Gaussian (beamOptics.js)
+    float fw = 1.0 + ${FROST_WIDEN.toFixed(1)} * uFrost;
+    pExp = mix(pExp, 2.0, uFrost);
+    t = t * fw;
+    float kExt = pow(log(1.0 / 0.02) / 0.693147, 1.0 / pExp);
+    // the hull reaches the 2 % point of the widest part of a split beam
+    float tw = t * kExt + (uPrismN > 0.5 ? uPrismTan : 0.0) + uHoney * uHoneyTan;
+    float aw = a * kExt;
+    float c0 = aw - ro.y * tw;
+    float c1 = -rd.y * tw;
+    float A = rd.x * rd.x + rd.z * rd.z - c1 * c1;
+    float B = 2.0 * (ro.x * rd.x + ro.z * rd.z - c0 * c1);
+    float C = ro.x * ro.x + ro.z * ro.z - c0 * c0;
+    float s0 = -1e9;
+    float s1 = 1e9;
+    bool hit = true;
+    if (abs(rd.y) < 1e-6) {
+        if (ro.y > 0.0 || ro.y < -uLength) hit = false;
+    } else {
+        float ta = -ro.y / rd.y;
+        float tb = (-uLength - ro.y) / rd.y;
+        s0 = min(ta, tb);
+        s1 = max(ta, tb);
+    }
+    float e0 = -1e9;
+    float e1 = 1e9;
+    float disc = B * B - 4.0 * A * C;
+    if (abs(A) < 1e-9) {
+        if (abs(B) < 1e-9) {
+            if (C >= 0.0) hit = false;
+        } else if (B > 0.0) {
+            e1 = -C / B;
+        } else {
+            e0 = -C / B;
+        }
+    } else if (disc < 0.0) {
+        if (A > 0.0) hit = false;
+    } else {
+        float sq = sqrt(disc);
+        float r0 = (-B - sq) / (2.0 * A);
+        float r1 = (-B + sq) / (2.0 * A);
+        float lo = min(r0, r1);
+        float hi = max(r0, r1);
+        if (A > 0.0) {
+            e0 = lo;
+            e1 = hi;
+        } else if (min(s1, lo) - s0 >= s1 - max(s0, hi)) {
+            e1 = lo;
+        } else {
+            e0 = hi;
+        }
+    }
+    float la = max(max(s0, e0), 0.0);
+    float lb = min(s1, e1);
+    if (!hit || lb <= la) lb = la;
+
+    // The same ray in the world, where the haze field and the floor live: from the camera
+    // through this fragment, the beam frame's metres converted (an entity may be scaled).
+    vec3 wd = vWorld - cameraPosition;
+    float worldPerLocal = length(wd) / max(length(vLocal - ro), 1e-6);
+    vec3 wrd = normalize(wd);
+    // THE FLOOR ENDS THE AIR: a fragment's ray, from a camera above the floor, is not summed
+    // past where it meets the floor plane. The hull's depth test only hides the part of the
+    // HULL behind a surface; the integral ran on beneath it, so beams thickened and
+    // brightened toward their footprint and then cut hard (render audit 6, 2026-10-01).
+    float mirrorWeight = 1.0;
+    float mirrorSpread = 0.0;
+    if (cameraPosition.y > uFloorY && wrd.y < -1e-5) {
+        float floorLam = (uFloorY - cameraPosition.y) / wrd.y / worldPerLocal;
+        if (uMirror > 0.5) {
+            // the reflection: only the mirrored beam BEYOND the floor plane is seen in it
+            la = max(la, floorLam);
+            float c = clamp(-wrd.y, 0.0, 1.0);
+            mirrorWeight = uReflect * (0.04 + 0.96 * pow(1.0 - c, 5.0));
+#ifdef BEAM_MIRROR
+            // how far the floor's microfacets spread a reflected ray, where this one lands:
+            // the GGX lobe's width, ~1.3·α (α = roughness²) radians either side
+            vec3 hit = cameraPosition + wrd * (floorLam * worldPerLocal);
+            float rough = clamp(uSurfRough + uSurfVar * (surfWear(hit.xz, uSurfScale) - 0.5) * 2.0, 0.04, 1.0);
+            mirrorSpread = ${MIRROR_SPREAD.toFixed(2)} * rough * rough;
+#endif
+        } else {
+            lb = min(lb, max(floorLam, la));
+        }
+    } else if (uMirror > 0.5) {
+        mirrorWeight = 0.0;
+    }
+    if (lb < la) lb = la;
+
+    // the step follows the samples actually run (uSamples — the frame-rate governor lowers
+    // it); dividing by the full count cut every beam short at the lower notches
+    float dl = (lb - la) / float(uSamples);
+    // Interleaved gradient noise (Jimenez, "Next Generation Post Processing in
+    // Call of Duty: Advanced Warfare", SIGGRAPH 2014): a per-pixel offset of the
+    // samples, so the sum's error is grain, not bands.
+    float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+    vec3 apex = vec3(0.0, a / t, 0.0);
+    float sum = 0.0;
+#if BEAM_PART == 1
+    lb = la;
+#endif
+    if (lb > la) for (int i = 0; i < uSamples; i++) {
+        float lam = la + (float(i) + jitter) * dl;
+        vec3 p = ro + rd * lam;
+        float s = max(-p.y, 0.0);
+        float R = a + s * t;
+        float profile = beamShape(p.xz, R, pExp, s);
+        float E = uIntensity / (fw * fw) * t * t / max(R * R, 1e-8);
+        vec3 wi = p - apex;
+        float cosT = -dot(wi, rd) / max(length(wi), 1e-5);
+        // toward the eye and from the lens, the well-mixed haze dims the light
+        // (a plume between is not counted — hazeField.js, limits)
+        float T = exp(-uFill * (s + lam));
+        vec3 hazeAt = cameraPosition + wrd * (lam * worldPerLocal);
+        float blur = 1.0;
+        if (uMirror > 0.5) {
+            // A ROUGH FLOOR BLURS THE REFLECTION, the more the farther the reflected point
+            // stands from it (the blur's width ≈ that height × the lobe's spread): a beam's
+            // thin line of light, spread that wide, keeps its flux and loses its peak by
+            // R / (R + width). Crisp where the beam meets the floor, gone high up, and
+            // patchy with the wear — the polished lanes carry it, the dusty concrete not.
+            float height = max(uFloorY - hazeAt.y, 0.0);
+            float Rw = R * worldPerLocal;
+            blur = Rw / max(Rw + height * mirrorSpread, 1e-6);
+            // a reflected sample lies under the floor: the haze it stands for is above it
+            hazeAt.y = 2.0 * uFloorY - hazeAt.y;
+        }
+        float sigma = hazeSigma(hazeAt);
+        sum += sigma * E * profile * hgPhase(cosT, uG) * T * blur;
+    }
+    float inBeam = sum * dl;
+#if BEAM_PART == 1
+    inBeam = 0.0;
+#endif
+
+    // GLARE — how an eye (and a camera) shows a light far brighter than a screen can:
+    // a veil of light around it. The CIE disability-glare formula (CIE 146:2002, the
+    // Stiles–Holladay form): a source giving illuminance E at the eye, θ degrees off the
+    // line of sight, adds a veiling luminance L_v = 10·E/θ² (valid 1°–30°). The beam's
+    // core is a line on the picture, of radiance L and angular width w; integrated
+    // along it, L_v = 10·π²/180 · L·w / θ(deg) — a 1/θ fall-off. Drawn on the wider
+    // hull around the beam and faded out before the hull's edge (so it stops, softly,
+    // a few degrees out — the formula's tail beyond is not drawn). The core's radiance
+    // here uses the hall's well-mixed haze (a veil is too soft to show a plume).
+    vec3 axis = vec3(0.0, -1.0, 0.0);
+    float bb = dot(rd, axis);
+    float dd = dot(rd, ro);
+    float ee = dot(axis, ro);
+    float den = max(1.0 - bb * bb, 1e-5);
+    // only the part of the beam above the floor shines: a veil worked out from the
+    // throw beneath it laid a flat grey sheath over the floor where each beam lands
+    float tq = clamp((ee - bb * dd) / den, 0.0, uLit);
+    vec3 q = axis * tq;
+    vec3 v = q - ro;
+    float dq = max(length(v), 1e-3);
+    float Rq = a + tq * t;
+    float cosV = clamp(dot(rd, v) / dq, -1.0, 1.0);
+    float theta = max(acos(cosV) - Rq / dq, 0.0);
+    float sinPhi = sqrt(den);
+    float chordQ = min(2.0 * Rq / max(sinPhi, 1e-3), uLit);
+    vec3 wq = q - apex;
+    float cosQ = -dot(wq, normalize(v)) / max(length(wq), 1e-5);
+    float Eq = uIntensity / (fw * fw) * t * t / max(Rq * Rq, 1e-8);
+    float Lcore = uFill * hgPhase(cosQ, uG) * Eq * chordQ * exp(-uFill * (tq + dq));
+    float width = 2.0 * Rq / dq;
+    float thetaDeg = max(theta * 57.29578, 1.0);
+    float lsf = 0.54831 / thetaDeg;
+    // fade by the ray's closest distance to the axis against the hull there
+    vec3 closest = ro + rd * max(dot(v, rd), 0.0);
+    float perp = length(closest.xz) ;
+    float hull = Rq + uHullBase + uHullSlope * tq;
+    float fade = 1.0 - smoothstep(0.55, 1.0, perp / hull);
+    float glare = uGlare * Lcore * width * lsf * fade;
+
+#if BEAM_PART == 0
+    float total = inBeam * mirrorWeight;
+#else
+    float total = glare;
+#endif
+#ifndef BEAM_MIRROR
+    if (total <= 0.0) discard;
+#endif
+    vec3 radiance = uColor * total;
+    gl_FragColor = vec4(radiance, 1.0);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    #include <dithering_fragment>
+}
+`
+
+/** The closed cone that bounds a beam: lens at the origin, the throw down −Y. */
+export const beamAirGeometry = ({ aperture, tanHalf: plainTan, length, edge = 0.2, optics = null }, part = 'core') => {
+    // frost widens the beam; a prism or a honeycomb fans it out (beamOptics.js)
+    const o = optics || beamOpticsOf(null)
+    const tanHalf = plainTan * frostWiden(o.frost)
+    const spread = opticsSpreadTan(o)
+    // The core: the cone the beam's light reaches (beamExtent — past the beam angle, to
+    // where its profile has fallen to 2 %), 2 % over, so the depth test ends it on the
+    // girder, the roof or the floor it meets. The glare: the beam plus the margin its
+    // veil is drawn in (HULL_BASE + HULL_SLOPE·s) — a veil lies over what stands in front
+    // of the beam too, as it does in an eye.
+    // the reach of the profile actually drawn: frost turns it Gaussian (beamOptics.js), and a
+    // hull sized for the unfrosted edge cut the frosted tail at ~30 % (a hard silhouette)
+    const k = part === 'glare' ? 1 : beamExtentOf(mixedExponent(edge, o.frost))
+    const [base, slope] = part === 'glare' ? [HULL_BASE, HULL_SLOPE] : [0.02 * aperture * k, 0.02 * tanHalf * k]
+    const top = Math.max(aperture * k, 1e-3) + base
+    const bottom = (aperture + length * tanHalf) * k + length * spread + base + slope * length
+    const geometry = new CylinderGeometry(top, bottom, length, 24, 1, false)
+    geometry.translate(0, -length / 2, 0)
+    return geometry
+}
+
+const inverse = new Matrix4()
+const camera = new Vector3()
+const lens = new Vector3()
+const axis = new Vector3()
+
+
+/**
+ * A material for one beam's core ('core') or its glare ('glare'); update it with
+ * setBeamAirUniforms. `shared` = the renderer's haze uniforms (hazeUniforms.js): the
+ * same objects in every beam, so the haze changes for all of them without a React
+ * render or a recompile.
+ */
+export const createBeamAirMaterial = (part = 'core', shared = hazeUniformsFor(null)) => {
+    const glare = part === 'glare'
+    const material = new ShaderMaterial({
+        defines: { BEAM_PART: glare ? 1 : 0 },
+        uniforms: {
+            uColor: { value: new Color('#ffffff') },
+            uIntensity: { value: 0 },
+            uTan: { value: 0.1 },
+            uAperture: { value: DEFAULT_APERTURE },
+            uLength: { value: 10 },
+            uEdge: { value: 0.2 },
+            uG: { value: 0.7 },
+            uCamLocal: { value: new Vector3() },
+            uHullBase: { value: glare ? HULL_BASE : 0 },
+            uHullSlope: { value: glare ? HULL_SLOPE : 0 },
+            uGlare: { value: 1 },
+            uLit: { value: 10 },
+            uFloorY: { value: FLOOR_Y },
+            uMirror: { value: 0 },
+            uReflect: { value: 1 },
+            uFrost: { value: 0 },
+            uPrismN: { value: 0 },
+            uPrismTan: { value: 0 },
+            uPrismRot: { value: 0 },
+            uHoney: { value: 0 },
+            uHoneyTan: { value: 0 },
+            uHoneyRot: { value: 0 },
+            uGobo: { value: 0 },
+            uGoboRot: { value: 0 },
+            ...shared
+        },
+        vertexShader,
+        fragmentShader,
+        transparent: true,
+        depthWrite: false,
+        blending: AdditiveBlending,
+        side: FrontSide,
+        fog: false,
+        toneMapped: true,
+        // no dither here: in the half-float buffer (HdrBloom.jsx) the ±½-code noise is never
+        // rounded away, and the exposure (×~6) turned it into green-and-magenta grain over every
+        // dark area; in the plain path it summed, positive only, over ~20 overlapping hulls
+        dithering: false
+    })
+    return material
+}
+
+export const setBeamAirUniforms = (material, { color, intensity, tanHalf, aperture, length, edge, atmosphere, optics = null }) => {
+    const u = material.uniforms
+    u.uColor.value.set(color || '#ffffff')
+    u.uIntensity.value = Math.max(0, Number(intensity) || 0)
+    u.uTan.value = tanHalf
+    u.uAperture.value = aperture
+    u.uLength.value = length
+    u.uLit.value = length
+    u.uEdge.value = edge
+    u.uG.value = atmosphere.anisotropy
+    const o = optics || beamOpticsOf(null)
+    u.uFrost.value = o.frost
+    u.uPrismN.value = o.prism ? o.prism.facets : 0
+    u.uPrismTan.value = o.prism ? opticsSpreadTan({ prism: o.prism }) : 0
+    u.uPrismRot.value = o.prism ? o.prism.rotation : 0
+    u.uHoney.value = o.honeycomb ? 1 : 0
+    u.uHoneyTan.value = o.honeycomb ? opticsSpreadTan({ honeycomb: o.honeycomb }) : 0
+    u.uHoneyRot.value = o.honeycomb ? o.honeycomb.rotation : 0
+    u.uGobo.value = o.gobo ? o.gobo.pattern : 0
+    u.uGoboRot.value = o.gobo ? o.gobo.rotation : 0
+}
+
+/**
+ * The per-frame half, for the mesh's onBeforeRender: the camera in the beam's own
+ * frame, and which faces to draw from where it stands.
+ */
+export const beamAirBeforeRender = (mesh, cam) => {
+    const material = mesh.material
+    const u = material.uniforms
+    inverse.copy(mesh.matrixWorld).invert()
+    camera.setFromMatrixPosition(cam.matrixWorld).applyMatrix4(inverse)
+    u.uCamLocal.value.copy(camera)
+    // How far down its throw the beam is still above the floor, in the beam's own units:
+    // the lens and the beam's axis (−Y) in the world, and where that line meets y = FLOOR_Y.
+    lens.setFromMatrixPosition(mesh.matrixWorld)
+    const perMetre = axis.set(0, -1, 0).applyMatrix4(mesh.matrixWorld).sub(lens).length() || 1
+    axis.divideScalar(perMetre)
+    let lit = u.uLength.value
+    if (axis.y < -1e-4 && lens.y > FLOOR_Y) lit = Math.min(lit, (lens.y - FLOOR_Y) / -axis.y / perMetre)
+    u.uLit.value = Math.max(lit, 0)
+    const s = -camera.y
+    const k = Math.max(beamExtentOf(mixedExponent(u.uEdge.value, u.uFrost.value)), 1)
+    const tanEff = u.uTan.value * frostWiden(u.uFrost.value)
+    const spread = (u.uPrismN.value > 0 ? u.uPrismTan.value : 0) + u.uHoney.value * u.uHoneyTan.value
+    const radius = (u.uAperture.value + Math.max(s, 0) * tanEff) * k + Math.max(s, 0) * (spread + u.uHullSlope.value) + u.uHullBase.value
+    // A margin of the near plane's reach: a camera a hair outside the surface
+    // still has the front face clipped away by the near plane.
+    const margin = (cam.near || 0.05) * 2
+    const inside = s > -margin && s < u.uLength.value + margin && Math.hypot(camera.x, camera.z) < radius + margin
+    const side = inside ? BackSide : FrontSide
+    if (material.side !== side) material.side = side
+}
+
+const MIRROR = new Matrix4().makeScale(1, -1, 1)
+/**
+ * A beam's reflection in the floor (BeamMirrors.jsx): the beam's own material, its uniforms
+ * SHARED (colour, level, optics, haze follow the beam with no copying), except the
+ * camera-in-the-beam's-frame (each draw has its own) and the mirror switches. Drawn only on
+ * pixels the floor marked (stencil ref 1), additive, after the opaque room.
+ */
+// The floor's finish, when a room gives none (a smooth floor: a sharp reflection).
+const NO_WEAR_GLSL = 'float surfWear(vec2 p, float s) { return 0.5; }'
+
+/**
+ * `floor` = the floor's override (surfaces.js surfacesOf: reflect, roughness, variation,
+ * scale) and `wearGlsl` its wear pattern (surfaces.js WEAR_GLSL, defining surfWear): the
+ * reflection is blurred by the floor's roughness where each ray meets it.
+ */
+export const createBeamMirrorMaterial = (beamMaterial, floor = {}, wearGlsl = NO_WEAR_GLSL) => {
+    const m = beamMaterial.clone()
+    // BEAM_MIRROR: no `discard` in this program — a shader that may discard turns off the
+    // GPU's early stencil test, and every mirrored pixel then paid the whole haze integral
+    // before the floor's mask threw it away (27 fps against ~100, PONYO's RTX 5060). Writing
+    // zero, additively, costs nothing. And half the samples: a reflection is a blur.
+    m.defines = { ...m.defines, BEAM_MIRROR: 1 }
+    m.fragmentShader = m.fragmentShader.replace('// SURFACE_WEAR', wearGlsl)
+    m.uniforms = {
+        ...beamMaterial.uniforms,
+        uCamLocal: { value: new Vector3() },
+        uMirror: { value: 1 },
+        uReflect: { value: 0.5 },
+        uSamples: { value: 6 },
+        uSurfRough: { value: 0.04 },
+        uSurfVar: { value: 0 },
+        uSurfScale: { value: 1 }
+    }
+    setBeamMirrorFloor(m, floor)
+    m.depthTest = false
+    m.stencilWrite = true
+    m.stencilWriteMask = 0
+    m.stencilRef = 1
+    m.stencilFunc = EqualStencilFunc
+    m.stencilFail = KeepStencilOp
+    m.stencilZFail = KeepStencilOp
+    m.stencilZPass = KeepStencilOp
+    return m
+}
+
+/** The floor a reflection is seen in: its strength and finish (no recompile). */
+export const setBeamMirrorFloor = (material, { reflect = 0.5, roughness = 0.04, variation = 0, scale = 1 } = {}) => {
+    const u = material.uniforms
+    u.uReflect.value = reflect
+    u.uSurfRough.value = roughness
+    u.uSurfVar.value = variation
+    u.uSurfScale.value = scale
+}
+
+/**
+ * The share of a reflected beam's peak a rough floor leaves (the shader's `blur`, for
+ * tests): a line of light `radius` wide, reflected from `height` above the floor, by a
+ * floor of this roughness.
+ */
+export const mirrorBlur = (radius, height, roughness) => radius / Math.max(radius + Math.max(height, 0) * MIRROR_SPREAD * roughness * roughness, 1e-6)
+
+/** The world matrix of a beam's reflection: mirrored through the floor plane y = FLOOR_Y. */
+export const mirrorMatrix = (out, matrixWorld) => {
+    out.copy(matrixWorld)
+    out.premultiply(MIRROR)
+    if (FLOOR_Y !== 0) out.elements[13] += 2 * FLOOR_Y
+    return out
+}

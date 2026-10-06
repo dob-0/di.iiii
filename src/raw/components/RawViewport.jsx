@@ -14,7 +14,7 @@ import { detectModelFormatFromMeta } from '../../utils/modelFormats.js'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { getNodeType } from '../../project/nodeRegistry.js'
-import { resolveSceneLighting, getRawWorldBackgroundColor, pickActiveTypeNode } from '../utils/viewportWorldState.js'
+import { resolveSceneLighting, getRawWorldBackgroundColor, pickActiveTypeNode, readSceneObjects, sceneObjectSourceIds } from '../utils/viewportWorldState.js'
 import { createFrameMemory, createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { wearConstructorGeometry } from '../../project/graph/constructorGeometry.js'
 import { pruneGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
@@ -23,9 +23,11 @@ import { useDocumentClock } from '../../project/graph/useDocumentClock.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import { asColor } from '../../utils/colorValue.js'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
+import ScenePictureFeed from './ScenePictureFeed.jsx'
 import { buildEntityTree } from '../../project/entityTree.js'
+import { rendererWithFallback } from '../../project/viewport/rendererFallback.js'
 
-const isSpatialNode = (node) => getNodeType(node?.typeId)?.render === 'spatial-3d'
+export const isSpatialNode = (node) => getNodeType(node?.typeId)?.render === 'spatial-3d'
 
 // The authored eye is EXPLICIT-ONLY: unlike Light/Background/Grid (additive,
 // safe to default to first-created), an active camera hijacks the view — so
@@ -33,7 +35,7 @@ const isSpatialNode = (node) => getNodeType(node?.typeId)?.render === 'spatial-3
 // drops spatial nodes at the click point, and the first-created fallback cut
 // the room to an accidental floor-level close-up the moment the card landed.
 // Only the ● toggle makes a camera the eye.
-const pickAuthoredCameraNode = (nodes, scopeId, activeMap) => {
+export const pickAuthoredCameraNode = (nodes, scopeId, activeMap) => {
     const markedId = (activeMap || {})[`world.camera::${scopeId || ''}`]
     if (!markedId) return null
     return (nodes || []).find((node) =>
@@ -292,7 +294,7 @@ function GeometryPieces({ descriptor, pruned = false }) {
 // document and the running context both exist, because renderNodeBody gets
 // only (node, values, assetMap) and threading a context through every call
 // site for one type's sake would put the plumbing in eleven files.
-const resolveSpatialValues = (node, graphContext, allNodes) => {
+export const resolveSpatialValues = (node, graphContext, allNodes) => {
     const values = evaluateNodeInputs(node, graphContext)
     if (node.typeId === 'geom.constructor') {
         values.wornGeometry = wearConstructorGeometry(node, allNodes, graphContext)
@@ -632,6 +634,41 @@ export function renderNodeBody(node, values, assetMap = null) {
     }
 }
 
+// Everything standing inside a container, keyed by the container it stands
+// in. Descent stops at a nested universe.world: a World is its own stage,
+// and seeing through one into another would be a different feature.
+//
+// Values are resolved for the WHOLE subtree here, not only the top row —
+// NodeVisual reads node.values directly, so a nested node whose position is
+// wired to a Time node would otherwise freeze the moment it went inside
+// something. That would be the "can't connect" complaint, newly caused by
+// the fix for the other one.
+//
+// One function for every room that draws nodes — Nodes' own (SceneContent
+// below) and Studio's (GraphRoomNodes.jsx) — so the two can never disagree
+// about what a container shows.
+export const buildSpatialChildMap = (allNodes, graphContext) => {
+    const spatial = (allNodes || []).filter(isSpatialNode)
+    const byParent = new Map()
+    for (const node of spatial) {
+        const parentId = node.parentId || null
+        if (!parentId) continue
+        if (!byParent.has(parentId)) byParent.set(parentId, [])
+        byParent.get(parentId).push({ ...node, values: resolveSpatialValues(node, graphContext, allNodes) })
+    }
+    for (const [parentId, kids] of byParent) {
+        const parent = spatial.find((node) => node.id === parentId)
+        // A World is its own stage. A Constructor's inside is a WORKSHOP:
+        // the parts standing in it are its definition, and only what
+        // reaches a door is its result — drawing both would show a snowman
+        // AND its three loose spheres. Same split TouchDesigner draws
+        // between a COMP's network and its output.
+        if (parent?.typeId === 'universe.world' || parent?.typeId === 'geom.constructor') byParent.set(parentId, [])
+        else byParent.set(parentId, kids)
+    }
+    return byParent
+}
+
 // A node and everything standing on it. A container's children render INSIDE
 // its own <group>, so moving, turning or scaling the container carries its
 // contents with it — the geo-COMP behaviour, and the reason a table can have
@@ -640,7 +677,7 @@ export function renderNodeBody(node, values, assetMap = null) {
 // nodeScale is the workspace's own zoom and belongs to the whole scene, not to
 // each object: applied per level it would compound with depth, so it is folded
 // in at the roots only and passed down as 1.
-function NodeVisual({
+export function NodeVisual({
     node,
     selected,
     onSelect,
@@ -653,7 +690,11 @@ function NodeVisual({
     selectedNodeId = null,
     onSelectNode = null,
     depth = 0,
-    showSelectionPills = true
+    showSelectionPills = true,
+    // The outer group, for a host that attaches its own gizmo to this node
+    // (Studio inside a Geo, src/raw/components/GraphRoomNodes.jsx). Optional:
+    // every Raw caller passes none.
+    groupRef = null
 }) {
     const values = node.values || {}
     const scale = asPositiveVec3(values.scale, [1, 1, 1], 0.001, 20)
@@ -672,6 +713,7 @@ function NodeVisual({
 
     return (
         <group
+            ref={groupRef || undefined}
             position={asVec3(values.position, [0, 0, 0])}
             rotation={asVec3(values.rotation, [0, 0, 0])}
             scale={nodeScaleFactor}
@@ -789,42 +831,23 @@ function SceneContent({
     // and a `world.light` as a marker; both are controls, and both were sitting
     // in the middle of a child's room looking like something they had made by
     // accident. Raw keeps them — that is where they are controls.
+    // What feeds the live Scene's Objects is drawn ONCE, by the Scene — not
+    // also standing in the room (sceneObjectSourceIds, viewportWorldState.js).
+    const sceneObjectSources = useMemo(
+        () => sceneObjectSourceIds(document, worldNode),
+        [document, worldNode]
+    )
     const renderableNodes = useMemo(
         () => (document.nodes || []).filter((node) => isSpatialNode(node) && inScope(node)
+            && !sceneObjectSources.has(node.id)
             && !(ambience && String(node.typeId || '').startsWith('world.'))),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [document.nodes, scopeId, ambience]
+        [document.nodes, scopeId, ambience, sceneObjectSources]
     )
-    // Everything standing inside a container, keyed by the container it stands
-    // in. Descent stops at a nested universe.world: a World is its own stage,
-    // and seeing through one into another would be a different feature.
-    //
-    // Values are resolved for the WHOLE subtree here, not only the top row —
-    // NodeVisual reads node.values directly, so a nested node whose position is
-    // wired to a Time node would otherwise freeze the moment it went inside
-    // something. That would be the "can't connect" complaint, newly caused by
-    // the fix for the other one.
-    const childMap = useMemo(() => {
-        const spatial = (document.nodes || []).filter(isSpatialNode)
-        const byParent = new Map()
-        for (const node of spatial) {
-            const parentId = node.parentId || null
-            if (!parentId) continue
-            if (!byParent.has(parentId)) byParent.set(parentId, [])
-            byParent.get(parentId).push({ ...node, values: resolveSpatialValues(node, graphContext, document.nodes) })
-        }
-        for (const [parentId, kids] of byParent) {
-            const parent = spatial.find((node) => node.id === parentId)
-            // A World is its own stage. A Constructor's inside is a WORKSHOP:
-            // the parts standing in it are its definition, and only what
-            // reaches a door is its result — drawing both would show a snowman
-            // AND its three loose spheres. Same split TouchDesigner draws
-            // between a COMP's network and its output.
-            if (parent?.typeId === 'universe.world' || parent?.typeId === 'geom.constructor') byParent.set(parentId, [])
-            else byParent.set(parentId, kids)
-        }
-        return byParent
-    }, [document.nodes, graphContext])
+    // Everything standing inside a container — see buildSpatialChildMap above.
+    const childMap = useMemo(() => buildSpatialChildMap(document.nodes, graphContext), [document.nodes, graphContext])
+    // What is wired into the live Scene's Objects input — viewportWorldState.js.
+    const sceneObjects = useMemo(() => readSceneObjects(worldNode, graphContext), [worldNode, graphContext])
     const resolvedLight = useMemo(
         () => resolveSceneLighting(document, graphContext, { scopeId }),
         [document, graphContext, scopeId]
@@ -1151,6 +1174,13 @@ function SceneContent({
                         </SceneEntityErrorBoundary>
                     )
                 })}
+                {sceneObjects ? (
+                    <SceneEntityErrorBoundary key="scene-objects" resetKey={worldNode?.id}>
+                        <group name="scene-objects">
+                            <GeometryPieces descriptor={sceneObjects} />
+                        </group>
+                    </SceneEntityErrorBoundary>
+                ) : null}
                 {/* Boundaried like entities are: a node can now load an
                     arbitrary file off someone's disk, and a corrupt mesh must
                     cost that one node, not the whole scene. */}
@@ -1290,6 +1320,11 @@ export default function RawViewport({
     scopeId,
     worldNode,
     liveOutputs = null,
+    // The Scene whose Picture this canvas gives, and where to report it
+    // (ScenePictureFeed.jsx). Both null for every surface but the live
+    // Scene's own window.
+    pictureNodeId = null,
+    onPictureChange = null,
     // In the backdrop the graph card IS the selection feedback; a floating
     // name pill duplicated it in the room's sky, detached from its object
     // (the "GEO" chip the audit photographed). Fullscreen keeps pills — the
@@ -1408,7 +1443,8 @@ export default function RawViewport({
             ) : null}
             <Canvas
                 key={canvasKey}
-                shadows
+                shadows="percentage"
+                gl={rendererWithFallback()}
                 // offsetSize: measure the layout box, not the painted one. A
                 // Scene window is placed through the graph's viewport
                 // transform (translate + scale), and getBoundingClientRect
@@ -1451,6 +1487,9 @@ export default function RawViewport({
                     worldNode={worldNode}
                     liveOutputs={liveOutputs}
                 />
+                {pictureNodeId && onPictureChange
+                    ? <ScenePictureFeed nodeId={pictureNodeId} onPictureChange={onPictureChange} />
+                    : null}
             </Canvas>
             {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}
             <div className="raw-cursor-layer">

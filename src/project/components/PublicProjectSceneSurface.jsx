@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import useXrAr from '../../hooks/useXrAr.js'
 import { computeFramingCamera, fitCameraToAspect, getPointsBoundingSphere, getViewportAspect } from '../../utils/cameraFraming.js'
 import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
 import { XR_READY, xrAvailability } from '../../xr/xrAvailability.js'
+import { doorsOf, fitArrivalToDoors } from '../../components/arrivalFraming.js'
+import { isPlatformOwnSpace } from '../../components/MadeWithBadge.jsx'
 import lazyWithReload from '../../utils/lazyWithReload.js'
+import { isEmbedRequest } from '../../utils/previewMode.js'
 
 // Everything in this module -- the XR store, the camera framing math, the two
 // renderers -- reaches three.js. It is loaded only from PublicProjectViewer's
@@ -68,18 +71,44 @@ export const isCameraCaged = (entryView, fixedCamera) => (
     entryView === 'fixed-camera' && fixedCamera?.locked === true
 )
 
-export const resolveViewerCamera = (document, aspect = getViewportAspect()) => {
+// The front room's doors ARE its navigation, and its arc (x +-12.8) is wider
+// than the square-viewport view fitCameraToAspect gives a phone, so the outer
+// two were cut. The walker already answers this (arrivalFraming.js): step back
+// along the facing direction until every door ring is inside the horizontal
+// field. Applied to the composed camera the same way, and only when asked
+// (`fitDoors`) and only on a portrait viewport, so no other room and no
+// landscape view changes.
+export const fitCameraToDoors = (camera, entities, aspect) => {
+    if (!camera || camera.projection === 'orthographic' || !(aspect > 0 && aspect < 1)) return camera
+    const [px, py, pz] = camera.position || []
+    const [tx, , tz] = camera.target || []
+    if (![px, py, pz, tx, tz].every(Number.isFinite)) return camera
+    const yaw = Math.atan2(tx - px, tz - pz)
+    const moved = fitArrivalToDoors({ x: px, z: pz, yaw }, doorsOf(entities), aspect, { fov: camera.fov })
+    if (moved.x === px && moved.z === pz) return camera
+    return { ...camera, position: [moved.x, py, moved.z] }
+}
+
+export const resolveViewerCamera = (document, aspect = getViewportAspect(), { fitDoors = false } = {}) => {
+    const view = resolveComposedCamera(document, aspect)
+    const fixed = document.presentationState?.entryView === 'fixed-camera'
+    return fitDoors && fixed ? fitCameraToDoors(view, document.entities || [], aspect) : view
+}
+
+const resolveComposedCamera = (document, aspect) => {
     const entryView = document.presentationState?.entryView || 'scene'
     const fixedCamera = document.presentationState?.fixedCamera
+    // The room's declared floor plan bounds how far back the fit may step.
+    const fitOptions = { walkableAreas: document.worldState?.walkableAreas || null }
     // An authored shot gets the same aspect correction a fitted one does. It
     // was composed on somebody's landscape screen; applied verbatim it is the
     // portrait visitor who pays, and a locked camera pays hardest because
     // they cannot move to see what was cut.
     if (entryView === 'fixed-camera' && fixedCamera?.locked) {
-        return fitCameraToAspect(fixedCamera, aspect)
+        return fitCameraToAspect(fixedCamera, aspect, fitOptions)
     }
     if (entryView === 'fixed-camera') {
-        return fitCameraToAspect(fixedCamera || document.worldState?.savedView || null, aspect)
+        return fitCameraToAspect(fixedCamera || document.worldState?.savedView || null, aspect, fitOptions)
     }
     return computeAutoFrameCamera(document, aspect) || document.worldState?.savedView || null
 }
@@ -92,17 +121,25 @@ export default function PublicProjectSceneSurface({
     entryView,
     navMode,
     onNavModeChange,
+    topClear = null,
     isPreview,
     initialCameraView = null,
     xrDefaultMode = 'none',
-    canOfferXrEntry = false
+    canOfferXrEntry = false,
+    // the lamps as the desk's live look poses them (RoomLookFollower), or null
+    posedEntities = null,
+    // output mode (viewport/outputMode.js): the room drawn light enough for a phone
+    outputMode = false,
+    lockInside = false,
+    onBuilding,
+    onLockPaused
 }) {
     // The seed can frame a custom entry view on first paint, but fixed-camera
     // and code presentations are authored choices and always win over it.
     const [cameraView, setCameraView] = useState(() => {
         const documentEntryView = document.presentationState?.entryView || 'scene'
         if (!initialCameraView || documentEntryView === 'fixed-camera' || documentEntryView === 'code') {
-            return resolveViewerCamera(document)
+            return resolveViewerCamera(document, undefined, { fitDoors: isPlatformOwnSpace(spaceId) })
         }
         return initialCameraView
     })
@@ -123,12 +160,12 @@ export default function PublicProjectSceneSurface({
             ) {
                 return current
             }
-            return resolveViewerCamera(document)
+            return resolveViewerCamera(document, undefined, { fitDoors: isPlatformOwnSpace(spaceId) })
         })
-    }, [document])
+    }, [document, spaceId])
 
     const xr = useXrAr({
-        default3DView: cameraView || resolveViewerCamera(document),
+        default3DView: cameraView || resolveViewerCamera(document, undefined, { fitDoors: isPlatformOwnSpace(spaceId) }),
         controlsRef,
         setCameraPosition: (position) => setCameraView((current) => ({ ...(current || {}), position })),
         setCameraTarget: (target) => setCameraView((current) => ({ ...(current || {}), target }))
@@ -145,17 +182,43 @@ export default function PublicProjectSceneSurface({
     // everything this document holds — and only RawViewport shows both.
     const hasGraph = (document.nodes || []).length > 0
 
+    // The smart view (docs/architecture/SMART_VIEW.md) for a visitor: the camera kept out
+    // of the floor and near the building, the cutaway from outside, the occlusion fade,
+    // the view row and #view-… links. Not on a caged (locked) composition, and not on a
+    // thumbnail. Inside somebody else's page (?embed=1) the row stays off — embed is
+    // glass — unless the host asks for it with &views=1 (the visualiser's split).
+    const [smartView] = useState(() => {
+        const embed = isEmbedRequest()
+        const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+        return {
+            bar: embed && params?.get('views') !== '1' ? false : 'visitor',
+            constraints: true,
+            deepLink: !embed
+        }
+    })
+
+    // The "Inside" toggle (PublicProjectViewer) and its two reports travel with the smart view's settings.
+    const smartViewLive = useMemo(() => ({ ...smartView, lockInside, onBuilding, onLockPaused }), [smartView, lockInside, onBuilding, onLockPaused])
+
     return (
         <>
             {navMode === 'walk' ? (
                 <LiveProjectScene
+                    // a new renderer on a quality switch: antialias is fixed when the context is made
+                    key={outputMode ? 'lite' : 'full'}
+                    outputMode={outputMode}
                     projectId={projectId}
                     spaceId={spaceId}
+                    // Walk/Fly keeps the look the desk is playing: the walk scene loads its own
+                    // copy of the document, and drew the room as saved (a green look walked
+                    // into amber) until it was handed the posed lamps
+                    entitiesOverride={posedEntities}
                     interactive
                     showChrome
                     title={title}
                     onExit={() => onNavModeChange('orbit')}
                     exitLabel="← View mode"
+                    topClear={topClear}
                 />
             ) : hasGraph ? (
                 <PublicGraphSurface
@@ -164,13 +227,14 @@ export default function PublicProjectSceneSurface({
                 />
             ) : (
                 <StudioViewport
+                    key={outputMode ? 'lite' : 'full'}
                     document={document}
                     selectedEntityId={null}
                     onSelectEntity={null}
                     cursors={{}}
                     onCursorMove={null}
                     onCursorLeave={null}
-                    cameraView={cameraView || resolveViewerCamera(document)}
+                    cameraView={cameraView || resolveViewerCamera(document, undefined, { fitDoors: isPlatformOwnSpace(spaceId) })}
                     controlsRef={controlsRef}
                     xrStore={xr.xrStore}
                     onCameraChange={(nextView) => {
@@ -192,6 +256,10 @@ export default function PublicProjectSceneSurface({
                     // avoid. Only the one card a visitor clicked into "live"
                     // (SpaceCardLive, no ?preview=1) gets timelines playing.
                     playTimelines={!isPreview}
+                    // A visitor's click on an object with a link follows it.
+                    // Not on a space-card picture (?preview=1).
+                    followLinks={!isPreview}
+                    smartView={!caged && !isPreview ? smartViewLive : null}
                 />
             )}
 

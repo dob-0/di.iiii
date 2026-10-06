@@ -26,7 +26,13 @@
  *                     (what makes the landing background and space viewer render it)
  *   --no-assets       Skip asset binaries — document only
  *   --force           Overwrite the document if the project already exists locally
- *   --dry-run         Print what would happen without making changes
+ *   --accept-loss <N> With --force: carry out a replace that removes N media
+ *                     items (images, videos, models, audio, anything pointing
+ *                     at a file). N must be the exact number the summary
+ *                     printed; without it, or with any other number, a replace
+ *                     that removes media is REFUSED. See shared/documentLoss.cjs.
+ *   --dry-run         Print what would happen — including what the replace
+ *                     would remove — without making changes
  *
  * Example — restore the landing page's 3D background on a fresh clone:
  *   node scripts/project-pull.mjs main-dii-project --publish
@@ -34,11 +40,14 @@
 
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { remapAssetIds, remapFromUpload } from './asset-remap-lib.mjs'
 import { collectProjectAssetRefs } from './document-asset-refs.mjs'
+import { ensureDestinationVisibility, visibilityCreateFields } from './project-visibility-lib.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const { diffDocumentLoss, describeLoss, parseAcceptLoss, lossGate } = createRequire(import.meta.url)('../shared/documentLoss.cjs')
 const DEFAULT_LIVE_URL = 'https://di-studio.xyz/serverXR'
 const DEFAULT_LOCAL_URL = 'http://localhost:4000/serverXR'
 
@@ -54,6 +63,7 @@ const parseArgs = (argv) => {
         assets: true,
         force: false,
         dryRun: false,
+        acceptLoss: parseAcceptLoss(argv),
     }
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
@@ -70,6 +80,7 @@ const parseArgs = (argv) => {
         if (arg === '--no-assets') { args.assets = false; continue }
         if (arg === '--force') { args.force = true; continue }
         if (arg === '--dry-run') { args.dryRun = true; continue }
+        if (arg === '--accept-loss') { i++; continue }
     }
     return args
 }
@@ -171,7 +182,7 @@ const main = async () => {
     const args = parseArgs(process.argv.slice(2))
 
     if (!args.projectId) {
-        console.error('Usage: node scripts/project-pull.mjs <projectId> [--space <id>] [--from <url>] [--to <url>] [--token <token>] [--to-token <token>] [--publish] [--no-assets] [--force] [--dry-run]')
+        console.error('Usage: node scripts/project-pull.mjs <projectId> [--space <id>] [--from <url>] [--to <url>] [--token <token>] [--to-token <token>] [--publish] [--no-assets] [--force] [--accept-loss <N>] [--dry-run]')
         process.exitCode = 1
         return
     }
@@ -213,10 +224,27 @@ const main = async () => {
     console.log(`  "${title}"`)
     console.log(`  space: ${spaceId} · ${entityCount} objects · ${assetList.length} assets`)
 
+    // 1b. What the target holds now, and what this replace would take from it.
+    //     2026-09-18: this exact call, with --force, removed 76 authored slides
+    //     from prod's front room and printed "ok". A replace now says what it
+    //     removes before it runs, and refuses to remove media nobody counted.
+    const targetNow = await apiFetchOptional(`${toBase}/api/projects/${projectId}/document`, { headers: localHeaders() })
+    const targetDocument = targetNow?.document || null
+    const loss = diffDocumentLoss(targetDocument, document)
+    console.log(`\n${describeLoss(loss, `${toBase} ${projectId}`)}`)
+
     if (dryRun) {
+        if (targetDocument && loss.mediaLost) console.log(`dry-run: a real run needs --force --accept-loss ${loss.mediaLost}`)
         console.log('dry-run: skipping write')
         return
     }
+
+    if (targetDocument && !force) {
+        throw new Error(`Project "${projectId}" already exists locally. Re-run with --force to overwrite its document.`)
+    }
+    const gate = lossGate({ mediaLost: targetDocument ? loss.mediaLost : 0, acceptLoss: args.acceptLoss })
+    if (!gate.ok) throw new Error(gate.message)
+    if (gate.message) console.log(gate.message)
 
     // 2. The space has to exist locally before a project can live in it. A
     //    fresh clone bootstraps only "open" and "main", so anything else
@@ -238,13 +266,20 @@ const main = async () => {
     // 3. Create the project shell. `slug` is what the server normalizes into
     //    the project id, so passing the source id keeps every asset URL inside
     //    the document (/api/projects/<id>/assets/<assetId>) valid as-is.
+    //    A private project is created private, and the target has to say so
+    //    before anything is written into it (project-visibility-lib.mjs).
+    //    The source's meta rides on the document response; a source too old
+    //    to have the field has no private projects.
+    const sourceMeta = remote?.project || null
     console.log(`\nCreating project "${projectId}" in space "${spaceId}"`)
+    let created = null
     try {
-        await apiFetch(`${toBase}/api/spaces/${spaceId}/projects`, {
+        const made = await apiFetch(`${toBase}/api/spaces/${spaceId}/projects`, {
             method: 'POST',
             headers: localHeaders(),
-            body: JSON.stringify({ slug: projectId, title }),
+            body: JSON.stringify({ slug: projectId, title, ...visibilityCreateFields(sourceMeta) }),
         })
+        created = made?.project || null
         console.log('  created')
     } catch (error) {
         if (error.status !== 409) throw error
@@ -253,6 +288,17 @@ const main = async () => {
         }
         console.log('  already exists — overwriting (--force)')
     }
+    const kept = await ensureDestinationVisibility({
+        projectId,
+        sourceMeta,
+        destMeta: created,
+        request: async (method, pathname, body) => {
+            const res = await fetchWithRetry(`${toBase}${pathname}`, { method, headers: localHeaders(), ...(body ? { body: JSON.stringify(body) } : {}) })
+            return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
+        }
+    })
+    if (!kept.ok) throw new Error(kept.error)
+    if (kept.note) console.log(`  visibility: ${kept.note}`)
 
     // 4. Load the document.
     console.log(`Writing document (${entityCount} objects)`)

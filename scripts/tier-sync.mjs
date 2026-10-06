@@ -34,9 +34,19 @@
  *                       the only way to push an EDIT was --force, which overwrites
  *                       every shared project at once.
  *   --space <id>        Only this space (default: every space the source has)
+ *   --skip <s[/p],...>  Never copy these: `space/project`, or a whole `space`.
+ *                       Repeatable, comma-separated. For work that must not
+ *                       land where the destination makes it public.
  *   --no-assets         Documents only — faster, and leaves images unresolvable
  *   --force             Overwrite documents that already exist at the destination
- *   --dry-run           Print the plan and write nothing
+ *   --accept-loss <N>   Carry out a run whose overwrites remove N media items in
+ *                       total (images, videos, models, audio, anything pointing
+ *                       at a file). Every overwrite is compared with what the
+ *                       destination holds BEFORE anything is written; a run
+ *                       that removes media is refused unless N is exactly the
+ *                       number printed. See shared/documentLoss.cjs.
+ *   --dry-run           Print the plan — and what each overwrite would
+ *                       remove — and write nothing
  *   --rebuild-baseline  Re-record the baseline from what the two tiers agree on
  *                       TODAY: every project whose normalized content (asset
  *                       addresses by name) is identical on both, with both
@@ -55,8 +65,13 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { remapAssetIds, remapFromUpload } from './asset-remap-lib.mjs'
+import { ensureDestinationVisibility, visibilityCreateFields } from './project-visibility-lib.mjs'
+import { isMainModule } from './lib/isMainModule.mjs'
+
+const { diffDocumentLoss, combineLoss, describeLoss, parseAcceptLoss, lossGate } = createRequire(import.meta.url)('../shared/documentLoss.cjs')
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const TIMEOUT_MS = 30000
@@ -127,6 +142,24 @@ export const isProductionTarget = (url) => {
  * the write; only fetched by the caller when there IS a baseline to compare
  * it against.
  */
+/**
+ * What a whole run of overwrites removes, and whether it may go ahead.
+ *
+ * `entries` — one per project the run would write: { label, current, incoming }
+ * where `current` is the destination's document now (null when it has none —
+ * a pure create loses nothing). The acknowledgement is for the RUN: N must be
+ * the total media lost across every overwrite, so a plan that grew since the
+ * number was read is refused again. (2026-09-18: a tier carry removed 76
+ * slides from prod's front room and said nothing.)
+ */
+export const planLoss = (entries, acceptLoss = null) => {
+    const combined = combineLoss(entries.map((e) => ({ label: e.label, loss: diffDocumentLoss(e.current, e.incoming) })))
+    const lines = combined.entries
+        .filter((e) => e.loss.removed.length || e.loss.assetChanged.length)
+        .map((e) => describeLoss(e.loss, e.label))
+    return { ...combined, text: lines.join('\n'), gate: lossGate({ mediaLost: combined.mediaLost, acceptLoss }) }
+}
+
 export const shouldRefuseOverwrite = ({ isOverwrite, forceStale = false, knownShape, destinationShape }) => {
     if (!isOverwrite || forceStale || !knownShape) return false
     return Boolean(destinationShape) && destinationShape !== knownShape
@@ -220,16 +253,21 @@ const writeBaseline = (baseline) => {
 // first Time node to exist in a window, so two tiers holding the identical
 // page disagree on both.
 //
+// `mappingState.showEpoch` is the hosted show's start on the wall clock
+// (rigbuild/show-clock.mjs): each tier starts its own, so the same show
+// reads as "changed on both sides" the moment it plays anywhere.
+//
 // Reporting any of them would teach someone to ignore the audit, which costs
 // more than not having written it.
 export const VOLATILE_PATHS = [
     'projectMeta.createdAt',
     'projectMeta.updatedAt',
     'publishState.lastExportAt',
-    'showState.clockEpoch'
+    'showState.clockEpoch',
+    'mappingState.showEpoch'
 ]
 
-const stripVolatile = (document) => {
+export const stripVolatile = (document) => {
     const copy = JSON.parse(JSON.stringify(document ?? {}))
     for (const dotted of VOLATILE_PATHS) {
         const parts = dotted.split('.')
@@ -300,7 +338,7 @@ const sha1 = (text) => crypto.createHash('sha1').update(text).digest('hex').slic
  * actually swapped for another changes its filename, and `hash` catches
  * anything that `shape` does not.
  */
-const byName = (document) => {
+export const byName = (document) => {
     const assets = Array.isArray(document.assets) ? document.assets : []
     const names = assets.filter((a) => a?.id).map((a) => [a.id, a.name || a.id])
     const reduced = {
@@ -366,6 +404,21 @@ export const planSync = ({ source, destination, force = false }) => {
     return plan
 }
 
+// `--skip`: what a person has decided must NOT move, by `space/project` or a
+// whole `space`. Applied to the finished plan, so every mode honours it the
+// same way, and a space left with nothing to copy is not created either.
+// Written for 2026-09-28: local held ops notes, a funder marked private and the
+// owner's email in projects bound for spaces that are PUBLIC on dev.
+export const applySkip = (plan, skip = []) => {
+    if (!skip.length) return plan
+    const whole = new Set(skip.filter((s) => !s.includes('/')))
+    const one = new Set(skip.filter((s) => s.includes('/')))
+    return plan
+        .filter((item) => !whole.has(item.spaceId))
+        .map((item) => ({ ...item, projects: item.projects.filter((id) => !one.has(`${item.spaceId}/${id}`)) }))
+        .filter((item) => item.projects.length)
+}
+
 // A worktree without its own serverXR/.env.local used to get an empty object here, no
 // token on any request, and one unexplained "fetch failed". The environment is the
 // fallback, and wins where it is set.
@@ -387,12 +440,13 @@ const readEnv = () => {
 }
 
 const parseArgs = (argv) => {
-    const args = { from: null, to: null, space: null, assets: true, force: false, forceStale: false, dryRun: false, allowProduction: false, audit: false, changed: false, rebuildBaseline: false }
+    const args = { from: null, to: null, space: null, skip: [], assets: true, force: false, forceStale: false, dryRun: false, allowProduction: false, audit: false, changed: false, rebuildBaseline: false, acceptLoss: parseAcceptLoss(argv) }
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
         if (arg === '--from') args.from = resolveTier(argv[++i])
         else if (arg === '--to') args.to = resolveTier(argv[++i])
         else if (arg === '--space') args.space = argv[++i]
+        else if (arg === '--skip') args.skip.push(...String(argv[++i] ?? '').split(',').map((v) => v.trim()).filter(Boolean))
         else if (arg === '--no-assets') args.assets = false
         else if (arg === '--force') args.force = true
         // --force alone still refuses a project the baseline shows the
@@ -404,6 +458,7 @@ const parseArgs = (argv) => {
         else if (arg === '--changed') args.changed = true
         else if (arg === '--rebuild-baseline') args.rebuildBaseline = true
         else if (arg === '--allow-production') args.allowProduction = true
+        else if (arg === '--accept-loss') i++
     }
     return args
 }
@@ -423,6 +478,22 @@ export const call = async (tier, pathname, options = {}, timeout = TIMEOUT_MS) =
     },
     signal: AbortSignal.timeout(timeout)
 })
+
+// The shape the destination KEPT after a write. Falls back to the shape sent
+// only when the read fails, and says so, so the next run can still decide.
+export const readBackShape = async ({ call, tier, projectId, sent }) => {
+    try {
+        const res = await call(tier, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
+        if (res.ok) {
+            const body = await res.json()
+            return documentSignature(body.document ?? body).shape
+        }
+        console.log(`    (read-back of ${projectId} answered HTTP ${res.status}; recorded the shape sent)`)
+    } catch (error) {
+        console.log(`    (read-back of ${projectId} failed: ${error.message}; recorded the shape sent)`)
+    }
+    return documentSignature(sent).shape
+}
 
 export const listSpaces = async (tier) => {
     const res = await call(tier, '/api/spaces')
@@ -616,6 +687,13 @@ export const main = async () => {
         plan = planSync({ source, destination, force: args.force })
     }
 
+    if (args.skip.length) {
+        const before = plan.reduce((n, item) => n + item.projects.length, 0)
+        plan = applySkip(plan, args.skip)
+        const after = plan.reduce((n, item) => n + item.projects.length, 0)
+        console.log(`--skip: ${before - after} project(s) held back (${args.skip.length} rule(s))`)
+    }
+
     if (!plan.length) {
         // Deliberately not "in sync". This compared ids; two tiers can hold
         // every slug in common and different work inside every one of them.
@@ -632,10 +710,51 @@ export const main = async () => {
         item.projects.forEach((id) => console.log(`   · ${id}`))
     }
     console.log(`\n${plan.length} space(s), ${projectCount} project(s) to copy`)
+
+    // What the overwrites remove, read BEFORE anything is written — dry run
+    // included, since the dry run is where a person decides. The source
+    // documents read here are the ones written below, so what was counted is
+    // what arrives.
+    const sourceDocs = new Map()
+    // The source's project meta rides on the same document response
+    // (GET …/document answers { document, version, project }) — it is what
+    // says whether the project is private (project-visibility-lib.mjs).
+    const sourceMetas = new Map()
+    const lossEntries = []
+    for (const item of plan) {
+        for (const projectId of item.projects) {
+            const docRes = await call(from, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
+            if (!docRes.ok) continue // reported by the write loop, as before
+            const body = await docRes.json()
+            const incoming = body.document || body
+            sourceDocs.set(projectId, incoming)
+            if (body.project) sourceMetas.set(projectId, body.project)
+            const destRes = await call(to, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
+            if (destRes.status === 404) continue
+            if (!destRes.ok) {
+                console.log(`\ncannot read ${args.to}'s copy of ${item.spaceId}/${projectId} (HTTP ${destRes.status}), so cannot say what overwriting it removes. Nothing was written.`)
+                process.exitCode = 1
+                return
+            }
+            const destBody = await destRes.json()
+            lossEntries.push({ label: `${args.to} ${item.spaceId}/${projectId}`, current: destBody.document || destBody, incoming })
+        }
+    }
+    const loss = planLoss(lossEntries, args.acceptLoss)
+    if (loss.text) console.log(`\n${loss.text}`)
+    else if (lossEntries.length) console.log(`\n${lossEntries.length} overwrite(s), nothing removed.`)
+
     if (args.dryRun) {
+        if (loss.mediaLost) console.log(`\na real run removes ${loss.mediaLost} media item(s) and needs --accept-loss ${loss.mediaLost}`)
         console.log('\ndry-run: nothing was written')
         return
     }
+    if (!loss.gate.ok) {
+        console.log(`\n${loss.gate.message}`)
+        process.exitCode = 1
+        return
+    }
+    if (loss.gate.message) console.log(`\n${loss.gate.message}`)
 
     let copied = 0
     let failed = 0
@@ -671,17 +790,38 @@ export const main = async () => {
                     continue
                 }
 
-                const docRes = await call(from, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
-                if (!docRes.ok) throw new Error(`source document HTTP ${docRes.status}`)
-                const body = await docRes.json()
-                const document = body.document || body
+                let document = sourceDocs.get(projectId)
+                if (!document) {
+                    const docRes = await call(from, `/api/projects/${projectId}/document`, {}, TRANSFER_TIMEOUT_MS)
+                    if (!docRes.ok) throw new Error(`source document HTTP ${docRes.status}`)
+                    const body = await docRes.json()
+                    document = body.document || body
+                    if (body.project) sourceMetas.set(projectId, body.project)
+                }
                 const title = document?.projectMeta?.title || projectId
+
+                // Who may see it travels too — a private project must not land
+                // public (scripts/project-visibility-lib.mjs). A source whose
+                // document response carries no project meta predates the field,
+                // and so holds no private projects.
+                const sourceMeta = sourceMetas.get(projectId) || null
 
                 const create = await call(to, `/api/spaces/${item.spaceId}/projects`, {
                     method: 'POST',
-                    body: JSON.stringify({ slug: projectId, title })
+                    body: JSON.stringify({ slug: projectId, title, ...visibilityCreateFields(sourceMeta) })
                 })
                 if (!create.ok && create.status !== 409) throw new Error(`create HTTP ${create.status}`)
+                const created = create.ok ? ((await create.json().catch(() => null))?.project || null) : null
+                const kept = await ensureDestinationVisibility({
+                    projectId,
+                    sourceMeta,
+                    destMeta: created,
+                    request: async (method, pathname, body) => {
+                        const res = await call(to, pathname, { method, ...(body ? { body: JSON.stringify(body) } : {}) })
+                        return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
+                    }
+                })
+                if (!kept.ok) throw new Error(kept.error)
 
                 const put = await call(to, `/api/projects/${projectId}/document`, {
                     method: 'PUT',
@@ -705,10 +845,15 @@ export const main = async () => {
                     }
                 }
                 copied++
-                console.log(`  ✓ ${item.spaceId}/${projectId}${assetNote}`)
+                console.log(`  ✓ ${item.spaceId}/${projectId}${assetNote}${kept.note ? ` (${kept.note})` : ''}`)
                 // What the destination now holds, by shape, so the next
                 // --changed can tell "only I edited this" from "we both did".
-                ;((baseline[args.to] ||= {})[`${item.spaceId}/${projectId}`] = documentSignature(document).shape)
+                // Read BACK, never taken from what was sent: a newer server fills
+                // defaults in on write (2026-09-29, dev added an AI effect's
+                // `prompt: ""` and `strength: 0.5` to every mapping surface), and a
+                // baseline of the sent shape then reads as "dev changed it too",
+                // so every later --changed refused the project.
+                ;((baseline[args.to] ||= {})[`${item.spaceId}/${projectId}`] = await readBackShape({ call, tier: to, projectId, sent: document }))
             } catch (error) {
                 failed++
                 console.log(`  ✗ ${item.spaceId}/${projectId} — ${error.message}`)
@@ -755,7 +900,7 @@ const copyAssets = async ({ call, from, to, projectId, document }) => {
     return { moved, remap }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainModule(import.meta.url)) {
     main().catch((error) => {
         console.error(process.env.TIER_SYNC_DEBUG ? error.stack : error.message)
         process.exit(1)

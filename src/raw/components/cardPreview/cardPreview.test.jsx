@@ -3,11 +3,13 @@ import { render } from '@testing-library/react'
 import RawGraphSurface from '../RawGraphSurface.jsx'
 import { createEdge, createNode, NODE_TYPES } from '../../../project/nodeRegistry.js'
 import { TOP_TYPE_IDS } from '../../../project/tops/topOperators.js'
+import { isPictureType } from '../../../project/tops/vjDeck.js'
 import {
     CARD_WIDTH,
     HEADER_HEIGHT,
     PORT_ROW_HEIGHT,
     TOP_PICTURE_HEIGHT,
+    cardContentHeight,
     cardHeight
 } from '../../utils/cardGeometry.js'
 import { cardPreviewKind, hasCardPreview } from './previewTypes.js'
@@ -21,10 +23,11 @@ const makeNode = (typeId, overrides = {}) => ({
 
 // What the card height was before previews existed: header, the port rows, a
 // picture only for picture operators, the foot.
+// A picture card (an operator, or a VJ deck showing its master) carries its picture.
 const legacyHeight = (node) => {
     const type = NODE_TYPES[node.typeId]
     const rows = Math.max(type.inputs.length, type.outputs.length, 1)
-    return HEADER_HEIGHT + rows * PORT_ROW_HEIGHT + (TOP_TYPE_IDS.includes(node.typeId) ? TOP_PICTURE_HEIGHT + 4 : 0) + 8
+    return HEADER_HEIGHT + rows * PORT_ROW_HEIGHT + (isPictureType(node.typeId) ? TOP_PICTURE_HEIGHT + 4 : 0) + 8
 }
 
 describe('which cards carry a preview', () => {
@@ -57,7 +60,9 @@ describe('card geometry with previews', () => {
         for (const typeId of Object.keys(NODE_TYPES)) {
             const node = makeNode(typeId, { id: `n-${typeId}` })
             const grown = hasCardPreview(typeId) ? TOP_PICTURE_HEIGHT + 4 : 0
-            expect(cardHeight(node), typeId).toBe(legacyHeight(node) + grown)
+            // A List/Text card also grows by its content lines (2026-10-02),
+            // below the ports as the picture is — counted separately here.
+            expect(cardHeight(node), typeId).toBe(legacyHeight(node) + grown + cardContentHeight(node))
         }
     })
 

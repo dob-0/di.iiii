@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
     clampWindowFrame,
+    getDockedPanelFrame,
+    DOCKED_PANEL_BOTTOM_CLEARANCE,
     getGraphEdgeInsets,
     getWorkspaceTopInset,
     selectMountedPanelNodes,
@@ -15,6 +17,25 @@ import {
     RAW_WINDOW_MIN_WIDTH,
     RAW_WINDOW_PADDING
 } from './windowLayout.js'
+
+describe('selectMountedPanelNodes — a phone shows the front window only', () => {
+    const isPanel = () => true
+    const win = (id, zIndex, extra = {}) => ({ id, parentId: null, values: { frame: { visible: true, zIndex, ...extra } } })
+
+    it('frontOnly keeps the highest window; the rest stay open in the document', () => {
+        const nodes = [win('a', 6), win('b', 9), win('c', 7)]
+        expect(selectMountedPanelNodes({ nodes, isPanel, frontOnly: true }).map((n) => n.id)).toEqual(['b'])
+        expect(nodes.every((n) => n.values.frame.visible)).toBe(true)
+    })
+
+    it('a tie goes to the one that painted last', () => {
+        expect(selectMountedPanelNodes({ nodes: [win('a', 6), win('b', 6)], isPanel, frontOnly: true }).map((n) => n.id)).toEqual(['b'])
+    })
+
+    it('without frontOnly (a computer) every open window mounts', () => {
+        expect(selectMountedPanelNodes({ nodes: [win('a', 6), win('b', 9)], isPanel }).map((n) => n.id)).toEqual(['a', 'b'])
+    })
+})
 
 describe('selectMountedPanelNodes', () => {
     const isPanel = (node) => node.panel === true
@@ -569,5 +590,59 @@ describe('placeNewWindowFrame', () => {
         expectInside(onScreen(frame, viewport, 'screen'), desktop)
         expect(frame.zIndex).toBe(7)
         expect(frame.visible).toBe(true)
+    })
+
+    // The owner's screen, 2026-09-24: the VJ deck window (760x520) opened
+    // below its own card — straight over the Clip In and Picture Out cards
+    // wired to it. A window now dodges every card in the scope, not only its own.
+    it('does not open over the other cards in the scope (the deck over its Clip In)', () => {
+        const deckFrame = { x: 0, y: 0, width: 760, height: 520, zIndex: 7, visible: true }
+        const deckCard = agentCard(400, 100)
+        const clipCard = agentCard(400, 200)
+        const outCard = agentCard(400, 300)
+        const before = placeNewWindowFrame({ frame: deckFrame, card: deckCard, space: 'world', viewport, ...desktop })
+        const beforeRect = onScreen(before, viewport)
+        expect(overlaps(beforeRect, onScreen(clipCard, viewport))).toBe(true) // what he saw, without the obstacles
+
+        const frame = placeNewWindowFrame({ frame: deckFrame, card: deckCard, obstacles: [clipCard, outCard], space: 'world', viewport, ...desktop })
+        const rect = onScreen(frame, viewport)
+        expectInside(rect, desktop)
+        for (const card of [deckCard, clipCard, outCard]) expect(overlaps(rect, onScreen(card, viewport))).toBe(false)
+    })
+
+    it('when every spot covers some card, it takes the one that covers the least', () => {
+        const deckCard = agentCard(600, 250)
+        // A wall of cards around it on a small screen: nothing is fully clear.
+        const others = [agentCard(100, 60), agentCard(100, 400), agentCard(900, 60), agentCard(900, 400)]
+        const frame = placeNewWindowFrame({ frame: agentFrame, card: deckCard, obstacles: others, space: 'world', viewport, ...desktop })
+        const rect = onScreen(frame, viewport)
+        expectInside(rect, desktop)
+        expect(overlaps(rect, onScreen(deckCard, viewport))).toBe(false)
+    })
+})
+
+describe('getDockedPanelFrame', () => {
+    // Owner 2026-10-02: an opened List floated at 662 × 563 over the cards
+    // with its last group cut off. It now docks right, full height, pinned.
+    it('docks right at full height on the owner\'s 2560 × 1340 screen', () => {
+        const f = getDockedPanelFrame({ viewportWidth: 2560, viewportHeight: 1340, top: 100 })
+        expect(f.width).toBe(520)
+        expect(f.x + f.width).toBe(2560 - RAW_WINDOW_PADDING)
+        expect(f.y).toBe(100)
+        // Clears the Delete button bottom-right (24px up, ~41px tall).
+        expect(f.y + f.height).toBe(1340 - DOCKED_PANEL_BOTTOM_CLEARANCE)
+        expect(1340 - (f.y + f.height)).toBeGreaterThan(24 + 41)
+        expect(f.pinned).toBe(true)
+    })
+
+    it('is charged to the right edge, so the graph fit dodges it', () => {
+        const f = getDockedPanelFrame({ viewportWidth: 1440, viewportHeight: 900, top: 100 })
+        const insets = getGraphEdgeInsets({ frames: [f], surfaceRect: { left: 0, top: 0, width: 1440, height: 900 } })
+        expect(insets.right).toBe(f.width + RAW_WINDOW_PADDING)
+        expect(insets.left).toBe(0)
+    })
+
+    it('leaves the phone to its own layout', () => {
+        expect(getDockedPanelFrame({ viewportWidth: 390, viewportHeight: 844 })).toBeNull()
     })
 })

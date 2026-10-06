@@ -1,0 +1,35 @@
+{
+  "kind": "smoke",
+  "code": "UP-YZ31P",
+  "glb": "smoke.glb",
+  "builtBy": "scripts/place/fixtures/build_fixtures.py",
+  "scriptSha256": "cc332ec481c5bb2777541e37bf8025360366aa9b98720490aab93b6de4596b44",
+  "blender": "5.2.1 LTS",
+  "archetype": "smoke-machine",
+  "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+  "lensY": 0.1,
+  "motion": "none",
+  "parts": [
+    "Body"
+  ],
+  "sizeAtHome_mm": {
+    "width_x": 239,
+    "depth_z": 684,
+    "height_y": 281
+  },
+  "triangles": {
+    "Body": 264,
+    "total": 264
+  },
+  "datasheetSize_mm": [
+    674,
+    235,
+    278
+  ],
+  "deviationFromDatasheet_pct": [
+    1.7,
+    1.1,
+    1.5
+  ],
+  "comparedParts": "all"
+}

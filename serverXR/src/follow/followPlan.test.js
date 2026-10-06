@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
-const { unseen, moreToCarry, refusedWholeWork, planDirection, planAfterConflict, nextInterval, BATCH } = require('./followPlan')
+const { accountedThrough, unseen, moreToCarry, refusedWholeWork, planDirection, planAfterConflict, nextInterval, BATCH } = require('./followPlan')
 
 const op = (id) => ({ opId: id, type: 'updateEntity', payload: {}, version: 1 })
 
@@ -90,5 +90,17 @@ describe('what a follow refuses to carry', () => {
         expect(moreToCarry(many.slice(0, BATCH), new Set())).toBe(false)
         // and what is already carried does not count towards the next batch
         expect(moreToCarry(many, new Set(many.map(o => o.opId)))).toBe(false)
+    })
+
+    it('steps a cursor past a whole-work op, even one an older log left with no opId', () => {
+        const ops = [
+            { opId: 'a', type: 'createEntity', version: 1 },
+            { type: 'replaceDocument', version: 2 },
+            { opId: 'b', type: 'createEntity', version: 3 }
+        ]
+        expect(accountedThrough(ops, new Set(['a', 'b']), 3)).toBe(3)
+        // …but never past an ordinary op it has not accounted for.
+        expect(accountedThrough(ops, new Set(['a']), 3)).toBe(2)
+        expect(accountedThrough([{ type: 'replaceDocument', version: 1 }, { opId: 'c', type: 'createEntity', version: 2 }], new Set(), 2)).toBe(1)
     })
 })

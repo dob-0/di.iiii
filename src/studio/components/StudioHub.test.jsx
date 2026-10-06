@@ -20,6 +20,7 @@ const createCollection = vi.fn()
 const setProjectShelf = vi.fn()
 const listTrash = vi.fn(async () => ({ projects: [], ttlMs: 0 }))
 const restoreProject = vi.fn()
+const updateProject = vi.fn()
 const updateProjectDocument = vi.fn()
 const uploadProjectAsset = vi.fn()
 const getServerSpace = vi.fn()
@@ -40,6 +41,7 @@ vi.mock('../../project/services/projectsApi.js', () => ({
     setProjectShelf: (...args) => setProjectShelf(...args),
     listTrash: (...args) => listTrash(...args),
     restoreProject: (...args) => restoreProject(...args),
+    updateProject: (...args) => updateProject(...args),
     updateProjectDocument: (...args) => updateProjectDocument(...args),
     uploadProjectAsset: (...args) => uploadProjectAsset(...args),
     // GridFloorBackground (rendered by StudioHub) fetches its own live
@@ -241,6 +243,12 @@ describe('StudioHub', () => {
             expect(await screen.findByText('No projects yet')).toBeTruthy()
             expect(screen.queryByText('built from code')).toBeNull()
         })
+    })
+
+    it('is the page main landmark (F4)', async () => {
+        listProjects.mockResolvedValue([])
+        render(<StudioHub spaceId="gallery" />)
+        expect(await screen.findByRole('main')).toBeTruthy()
     })
 
     it('shows a create-first-project empty state when the space has no projects', async () => {
@@ -490,5 +498,100 @@ describe('the Nodes copy of the list', () => {
         render(<StudioHub spaceId="lab" openIn="nodes"><p>live sync row</p></StudioHub>)
 
         expect(await screen.findByText('live sync row')).toBeTruthy()
+    })
+})
+
+// ── Private projects (docs/architecture/SPEC_project_visibility.md) ─────────
+// A public space can hold work only its members see. The members are the only
+// people who are ever sent a private card, so the lock is for them; the
+// control is for whoever decides the space's own visibility.
+describe('private projects', () => {
+    beforeEach(() => {
+        updateProject.mockReset()
+        updateProject.mockResolvedValue({ project: {} })
+        getServerSpace.mockReset()
+        listCollections.mockResolvedValue([])
+    })
+
+    it('marks a private card with a lock, and a public one with nothing', async () => {
+        authState = { role: 'editor', openSpaceId: null }
+        getServerSpace.mockResolvedValue({ id: 'moxir', label: 'MOXIR', isOwner: false })
+        listProjects.mockResolvedValue([
+            { id: 'hall', title: 'Hall', visibility: 'public', updatedAt: Date.now(), source: 'project' },
+            { id: 'sources', title: 'Sources', visibility: 'private', updatedAt: Date.now(), source: 'project' }
+        ])
+
+        render(<StudioHub spaceId="moxir" />)
+
+        await screen.findByText('Sources')
+        const marks = [...document.querySelectorAll('.sh-state--private')]
+        expect(marks).toHaveLength(1)
+        expect(marks[0].closest('.sh-project-card').textContent).toContain('Sources')
+        // Not the owner, not an admin: no control to change it.
+        expect(screen.queryAllByLabelText('Who sees it')).toHaveLength(0)
+    })
+
+    it('gives the space owner the control, and asks the server to make it private', async () => {
+        authState = { role: 'editor', openSpaceId: null }
+        getServerSpace.mockResolvedValue({ id: 'moxir', label: 'MOXIR', isOwner: true })
+        listProjects.mockResolvedValue([
+            { id: 'sources', title: 'Sources', visibility: 'public', updatedAt: Date.now(), source: 'project' }
+        ])
+
+        render(<StudioHub spaceId="moxir" />)
+
+        const control = await screen.findByLabelText('Who sees it')
+        expect(control.value).toBe('public')
+        fireEvent.change(control, { target: { value: 'private' } })
+        await waitFor(() => expect(updateProject).toHaveBeenCalledWith('sources', { visibility: 'private' }))
+    })
+
+    it('says why, when the server refuses (the published project cannot be private)', async () => {
+        authState = { role: 'admin', openSpaceId: null }
+        getServerSpace.mockResolvedValue({ id: 'moxir', label: 'MOXIR', isOwner: false })
+        listProjects.mockResolvedValue([
+            { id: 'hall', title: 'Hall', visibility: 'public', updatedAt: Date.now(), source: 'project' }
+        ])
+        updateProject.mockRejectedValue(new Error('This project is the space\'s published front door, so it cannot be private.'))
+
+        render(<StudioHub spaceId="moxir" />)
+
+        fireEvent.change(await screen.findByLabelText('Who sees it'), { target: { value: 'private' } })
+        expect(await screen.findByText(/published front door/)).toBeTruthy()
+    })
+})
+
+describe('StudioHub stale responses on space change', () => {
+    beforeEach(() => {
+        listProjects.mockReset()
+        getServerSpace.mockReset()
+        listCollections.mockReset()
+        listCollections.mockResolvedValue([])
+        listTrash.mockResolvedValue({ projects: [], ttlMs: 0 })
+        authState = { role: null, openSpaceId: null }
+    })
+
+    it('ignores an old space answer that lands after the new space answer', async () => {
+        const defer = () => { let resolve; const promise = new Promise(r => { resolve = r }); return { promise, resolve } }
+        const listA = defer(); const listB = defer()
+        const spaceA = defer(); const spaceB = defer()
+        listProjects.mockImplementation((id) => (id === 'space-a' ? listA.promise : listB.promise))
+        getServerSpace.mockImplementation((id) => (id === 'space-a' ? spaceA.promise : spaceB.promise))
+
+        const { rerender } = render(<StudioHub spaceId="space-a" />)
+        rerender(<StudioHub spaceId="space-b" />)
+
+        listB.resolve([{ id: 'b-proj', title: 'Project from B', updatedAt: Date.now(), source: 'studio-v3' }])
+        spaceB.resolve({ id: 'space-b', label: 'Label B' })
+        expect(await screen.findByText(/Project from B/)).toBeInTheDocument()
+        await waitFor(() => expect(screen.getByText(/Space: Label B/)).toBeInTheDocument())
+
+        listA.resolve([{ id: 'a-proj', title: 'Project from A', updatedAt: Date.now(), source: 'studio-v3' }])
+        spaceA.resolve({ id: 'space-a', label: 'Label A' })
+        await new Promise(r => setTimeout(r, 20))
+
+        expect(screen.queryByText(/Project from A/)).not.toBeInTheDocument()
+        expect(screen.getByText(/Project from B/)).toBeInTheDocument()
+        expect(screen.getByText(/Space: Label B/)).toBeInTheDocument()
     })
 })

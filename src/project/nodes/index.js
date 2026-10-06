@@ -1,5 +1,6 @@
 import { TOP_TYPE_IDS } from '../tops/topOperators.js'
 import { computeTopOutput } from '../tops/topRuntime.js'
+import { VJ_DECK_TYPE } from '../tops/vjDeck.js'
 import { computeOutput as colourCombine } from './colour.combine/runtime.js'
 import { computeOutput as colourRamp } from './colour.ramp/runtime.js'
 import { computeOutput as colourSplit } from './colour.split/runtime.js'
@@ -34,6 +35,8 @@ import { computeOutput as signalSpeed } from './signal.speed/runtime.js'
 import { computeOutput as signalTimer } from './signal.timer/runtime.js'
 import { computeOutput as signalTrigger } from './signal.trigger/runtime.js'
 import { computeOutput as viewButton } from './view.button/runtime.js'
+import { computeOutput as viewList } from './view.list/runtime.js'
+import { computeOutput as viewText } from './view.text/runtime.js'
 import { computeOutput as viewTimeline } from './view.timeline/runtime.js'
 import { computeOutput as geomCircle } from './geom.circle/runtime.js'
 import { computeOutput as geomLine } from './geom.line/runtime.js'
@@ -58,6 +61,8 @@ import { computeOutput as vectorSplit } from './vector.split/runtime.js'
 export const NODE_RUNTIMES = new Map([
     // Every picture operator shares one runtime: its picture stays on the GPU.
     ...TOP_TYPE_IDS.map((typeId) => [typeId, computeTopOutput]),
+    // The deck's picture is its expanded operators' — the same null on `out`.
+    [VJ_DECK_TYPE, computeTopOutput],
     ['colour.combine', colourCombine],
     ['colour.ramp', colourRamp],
     ['colour.split', colourSplit],
@@ -104,5 +109,7 @@ export const NODE_RUNTIMES = new Map([
     ['vector.rotation', vectorRotation],
     ['vector.split', vectorSplit],
     ['view.button', viewButton],
+    ['view.list', viewList],
+    ['view.text', viewText],
     ['view.timeline', viewTimeline],
 ])

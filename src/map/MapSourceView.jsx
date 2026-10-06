@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import MapTestPattern, { DEFAULT_TEST_PATTERN } from './mapTestPattern.jsx'
 import { startMotionGlow } from './motionGlow.js'
+import { startLiveAiRestyle } from './liveAiRestyle.js'
 import { useTopNetwork } from '../project/tops/useTopNetwork.js'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
 import { createPreviewBootQueue } from '../utils/previewBootQueue.js'
@@ -51,7 +52,7 @@ const requestSurfaceBoot = createPreviewBootQueue()
 // way; a slow page keeps loading, it just stops blocking its neighbours.
 const BOOT_SLOT_TIMEOUT_MS = 15000
 
-export default function MapSourceView({ surface, spaceId = '', live = true, network = null, label = '' }) {
+export default function MapSourceView({ surface, spaceId = '', live = true, network = null, assets = null, projectId = null, label = '' }) {
     const [width, height] = surface.resolution
     const kind = surface.source?.kind || 'test'
     const ref = surface.source?.ref || ''
@@ -65,7 +66,7 @@ export default function MapSourceView({ surface, spaceId = '', live = true, netw
         // Off the output, a network runs only when Live is on — the desk and
         // the wall would otherwise each open the camera and run every operator.
         if (!live) return <MapSourcePlaceholder label={label} detail="pictures — turn Live on to run them here" width={width} height={height} />
-        return <MapNetworkSource network={network} spaceId={spaceId} outNodeId={ref} label={label} width={width} height={height} />
+        return <MapNetworkSource network={network} spaceId={spaceId} assets={assets} projectId={projectId} outNodeId={ref} label={label} width={width} height={height} />
     }
 
     if (kind === 'camera') {
@@ -345,8 +346,14 @@ function MapCameraSource({ deviceId, effect = null, label, width, height }) {
     const videoRef = useRef(null)
     const canvasRef = useRef(null)
     const glowRef = useRef(null)
+    const restyleRef = useRef(null)
     const [problem, setProblem] = useState('')
     const motion = effect?.kind === 'motion'
+    const ai = effect?.kind === 'ai'
+    // The AI picture replaces the placeholder only once a frame has actually
+    // been drawn — until then the surface says what the engine is doing.
+    const [aiPainted, setAiPainted] = useState(false)
+    const [aiStatus, setAiStatus] = useState('reaching the live-AI engine…')
 
     useEffect(() => {
         let stream = null
@@ -399,6 +406,37 @@ function MapCameraSource({ deviceId, effect = null, label, width, height }) {
         glowRef.current?.setParams({ threshold: effect?.threshold, trail: effect?.trail, gain: effect?.gain })
     }, [effect?.threshold, effect?.trail, effect?.gain])
 
+    // Live AI: frames to the image model on this machine and back. Like the
+    // glow, the prompt and strength change in place without a reconnect.
+    useEffect(() => {
+        if (!ai || !canvasRef.current || !videoRef.current) return undefined
+        setAiPainted(false)
+        try {
+            restyleRef.current = startLiveAiRestyle({
+                canvas: canvasRef.current,
+                video: videoRef.current,
+                params: { prompt: effect?.prompt, strength: effect?.strength },
+                onStatus: ({ state, detail }) => {
+                    if (state !== 'live') setAiPainted(false)
+                    if (detail) setAiStatus(detail)
+                },
+                onFrame: () => setAiPainted(true)
+            })
+        } catch (error) {
+            setProblem(String(error?.message || error))
+            return undefined
+        }
+        return () => {
+            restyleRef.current?.stop()
+            restyleRef.current = null
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ai, width, height])
+
+    useEffect(() => {
+        restyleRef.current?.setParams({ prompt: effect?.prompt, strength: effect?.strength })
+    }, [effect?.prompt, effect?.strength])
+
     if (problem) return <MapSourcePlaceholder label={label} detail={problem} width={width} height={height} />
     // One <video> in the same place either way: switching the effect on must
     // not remount it, or it loses the stream the effect above attached. With
@@ -406,17 +444,22 @@ function MapCameraSource({ deviceId, effect = null, label, width, height }) {
     // just not what the wall sees. Processed at up to 640 wide; the corner-pin
     // scales the result, and an old laptop keeps its frame rate.
     const scale = Math.min(1, 640 / width)
+    const processed = motion || ai
     return (
         <>
-            <video className={motion ? 'map-source-hidden-video' : 'map-source-media'} ref={videoRef} autoPlay muted playsInline />
-            {motion ? (
+            <video className={processed ? 'map-source-hidden-video' : 'map-source-media'} ref={videoRef} autoPlay muted playsInline />
+            {processed ? (
                 <canvas
-                    className="map-source-media"
+                    // Keyed by effect: the glow takes a WebGL context and the AI
+                    // picture a 2D one, and a canvas can only ever give one kind.
+                    key={ai ? 'ai' : 'motion'}
+                    className={ai && !aiPainted ? 'map-source-hidden-video' : 'map-source-media'}
                     ref={canvasRef}
                     width={Math.max(1, Math.round(width * scale))}
                     height={Math.max(1, Math.round(height * scale))}
                 />
             ) : null}
+            {ai && !aiPainted ? <MapSourcePlaceholder label={label} detail={aiStatus} width={width} height={height} /> : null}
         </>
     )
 }
@@ -426,14 +469,14 @@ function MapCameraSource({ deviceId, effect = null, label, width, height }) {
 // the result onto the wall.
 const NO_NETWORK = { nodes: [], wires: [] }
 
-function MapNetworkSource({ network, spaceId, outNodeId, label, width, height }) {
+function MapNetworkSource({ network, spaceId, assets, projectId, outNodeId, label, width, height }) {
     const [canvas, setCanvas] = useState(null)
     const scale = Math.min(1, 640 / width)
     const w = Math.max(1, Math.round(width * scale))
     const h = Math.max(1, Math.round(height * scale))
     const present = Boolean(network?.nodes?.some((node) => node.id === outNodeId))
     // Nothing to show → nothing to run; an empty network starts no engine.
-    const { error } = useTopNetwork({ network: present ? network : NO_NETWORK, spaceId, canvas, show: outNodeId, width: w, height: h })
+    const { error } = useTopNetwork({ network: present ? network : NO_NETWORK, spaceId, assets, projectId, canvas, show: outNodeId, width: w, height: h })
     if (!present) return <MapSourcePlaceholder label={label} detail="that Picture Out is gone" width={width} height={height} />
     if (error) return <MapSourcePlaceholder label={label} detail={error} width={width} height={height} />
     return <canvas className="map-source-media" ref={setCanvas} width={w} height={h} />

@@ -258,15 +258,31 @@ describe('creating a surface from another one', () => {
 describe('motion glow on a surface', () => {
     it('is off on a surface that never asked for it, and survives an edit to one knob', () => {
         let document = withSurfaces(['cam'])
-        expect(document.mappingState.surfaces[0].effect).toEqual({ kind: 'none', threshold: 0.08, trail: 0.88, gain: 4 })
+        expect(document.mappingState.surfaces[0].effect).toEqual({ kind: 'none', threshold: 0.08, trail: 0.88, gain: 4, prompt: '', strength: 0.5 })
         document = applyProjectOps(document, [{ type: 'setMappingSurface', payload: { surfaceId: 'cam', patch: { effect: { kind: 'motion' } } } }])
         document = applyProjectOps(document, [{ type: 'setMappingSurface', payload: { surfaceId: 'cam', patch: { effect: { trail: 0.5 } } } }])
-        expect(document.mappingState.surfaces[0].effect).toEqual({ kind: 'motion', threshold: 0.08, trail: 0.5, gain: 4 })
+        expect(document.mappingState.surfaces[0].effect).toEqual({ kind: 'motion', threshold: 0.08, trail: 0.5, gain: 4, prompt: '', strength: 0.5 })
     })
 
     it('refuses a trail that never fades and an effect it does not know', () => {
         const state = normalizeMappingState({ surfaces: [{ id: 'cam', effect: { kind: 'sparkles', trail: 1, gain: 99, threshold: -1 } }] })
-        expect(state.surfaces[0].effect).toEqual({ kind: 'none', threshold: 0, trail: 0.99, gain: 20 })
+        expect(state.surfaces[0].effect).toEqual({ kind: 'none', threshold: 0, trail: 0.99, gain: 20, prompt: '', strength: 0.5 })
+    })
+})
+
+describe('AI restyle on a surface', () => {
+    it('keeps its prompt and strength through an edit to one knob', () => {
+        let document = withSurfaces(['cam'])
+        document = applyProjectOps(document, [{ type: 'setMappingSurface', payload: { surfaceId: 'cam', patch: { effect: { kind: 'ai', prompt: 'oil painting, deep blue' } } } }])
+        document = applyProjectOps(document, [{ type: 'setMappingSurface', payload: { surfaceId: 'cam', patch: { effect: { strength: 0.8 } } } }])
+        expect(document.mappingState.surfaces[0].effect).toMatchObject({ kind: 'ai', prompt: 'oil painting, deep blue', strength: 0.8 })
+    })
+
+    it('bounds the prompt and the strength', () => {
+        const state = normalizeMappingState({ surfaces: [{ id: 'cam', effect: { kind: 'ai', prompt: 'x'.repeat(5000), strength: 7 } }] })
+        expect(state.surfaces[0].effect.prompt).toHaveLength(300)
+        expect(state.surfaces[0].effect.strength).toBe(1)
+        expect(normalizeMappingState({ surfaces: [{ id: 'cam', effect: { kind: 'ai', strength: 0 } }] }).surfaces[0].effect.strength).toBe(0.05)
     })
 })
 
@@ -362,5 +378,36 @@ describe('which display shows this mapping — output.show', () => {
         // A screen object with nothing usable in it is every screen, not a
         // screen called "".
         expect(normalizeMappingState({ output: { show: { machine: 'm1', screen: { size: [0, 1] } } } }).output.show.screen).toBe('all')
+    })
+})
+
+describe('the cue list\'s loop — mappingState.loop', () => {
+    it('round-trips on the ESM twin, and writes nothing when off — older documents stay byte-identical', () => {
+        const written = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'setMappingState', payload: { patch: { loop: true } } }
+        ])
+        expect(normalizeProjectDocument(JSON.parse(JSON.stringify(written))).mappingState.loop).toBe(true)
+        expect('loop' in normalizeMappingState({})).toBe(false)
+        expect('loop' in normalizeMappingState({ loop: 1 })).toBe(false)
+    })
+})
+
+describe('the show\'s clock — mappingState.showEpoch', () => {
+    it('round-trips on the ESM twin, and writes nothing when unset — older documents stay byte-identical', () => {
+        const epoch = Date.UTC(2026, 8, 28, 20, 0, 0)
+        const written = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'setMappingState', payload: { patch: { showEpoch: epoch } } }
+        ])
+        expect(normalizeProjectDocument(JSON.parse(JSON.stringify(written))).mappingState.showEpoch).toBe(epoch)
+        expect('showEpoch' in normalizeMappingState({})).toBe(false)
+        expect('showEpoch' in normalizeMappingState({ showEpoch: -5 })).toBe(false)
+    })
+    it('keeps showSource "clock" on the ESM twin (RIG_BUILD.md §15.8); anything else and unset write nothing', () => {
+        const written = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'setMappingState', payload: { patch: { showSource: 'clock' } } }
+        ])
+        expect(normalizeProjectDocument(JSON.parse(JSON.stringify(written))).mappingState.showSource).toBe('clock')
+        expect('showSource' in normalizeMappingState({ showSource: 'desk' })).toBe(false)
+        expect('showSource' in normalizeMappingState({})).toBe(false)
     })
 })

@@ -142,6 +142,13 @@
 
 .ssh-btn-cancel:hover { opacity: 1; }
 
+@media (pointer: coarse) {
+    .ssh-btn-cancel {
+        min-width: var(--di-touch-target);
+        min-height: var(--di-touch-target);
+    }
+}
+
 /* ─── STATUS ────────────────────────────────────────────────── */
 .ssh-status {
     font-size: 0.82rem;
@@ -704,6 +711,16 @@
     color: var(--di-text);
 }
 
+/* A "What changed" row is read, not pressed: no pointer, no hover. */
+.ssh-change-item .ssh-linker-select {
+    cursor: default;
+}
+
+.ssh-change-item .ssh-linker-select:hover {
+    background: transparent;
+    color: var(--di-text-muted);
+}
+
 .is-linked .ssh-linker-select {
     color: var(--di-success);
 }
@@ -769,6 +786,48 @@
     display: flex;
     gap: 4px;
     margin-top: 6px;
+}
+
+/* A space on its own domain (SpaceDomainPanel.jsx). Rectangles, the house rule. */
+.ssh-domain-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+.ssh-domain-records {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.72rem;
+    table-layout: fixed;
+}
+
+.ssh-domain-records td {
+    padding: 3px 4px;
+    border: 1px solid color-mix(in srgb, var(--di-ink) 10%, transparent);
+    overflow-wrap: anywhere;
+    vertical-align: top;
+}
+
+.ssh-domain-records td:first-child { width: 4.5em; color: var(--di-text-muted); }
+
+/* The input takes its own full row: a card is ~190 px wide on desktop, and
+   beside two buttons it was squeezed to nothing. */
+.ssh-domain-form { flex-wrap: wrap; }
+
+.ssh-domain-link { color: var(--di-cyan); }
+
+.ssh-domain-input {
+    flex: 1 1 100%;
+    min-width: 0;
+    padding: 4px 6px;
+    font: inherit;
+    font-size: 0.8rem;
+    color: var(--di-text);
+    background: var(--di-bg);
+    border: 1px solid color-mix(in srgb, var(--di-ink) 20%, transparent);
+    border-radius: var(--di-radius);
 }
 
 .ssh-space-project {

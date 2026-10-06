@@ -246,6 +246,33 @@ when `slug !== undefined` — keep it that way), `serverXR/src/routes/projectRou
 `docs/architecture/SPEC_space_urls_and_portability.md`, `docs/ai/vocabulary.md`
 (the same scope rule: the contract governs sentences, never identifiers).
 
+### Authored media is never judged debris from a sample — and a carry that removes content says so first
+
+**Rule:** Authored media is never judged debris from a sample: list every file, show
+the owner a contact sheet, the owner decides. A tier carry that removes content says
+what it removes before it runs.
+
+**Why:** 2026-09-16 → 09-18. The front room (`main-dii-project`) held 76 `image`
+entities — the studio's portfolio deck. An audit agent opened ONE of them, called all
+76 "debris" and deleted them on local and dev. Two days later a "pick the good
+version" pass carried dev's copy to prod with `project-pull.mjs --force`, one
+whole-document replace: 76 slides gone from the live site, and the tool printed "ok".
+The owner had approved "carry main front room" — nobody told him it deleted 76 slides.
+
+**How:**
+1. Before calling any authored file unwanted: list EVERY one (not a sample), put them
+   in front of the owner as a contact sheet (thumbnails + names + where each is used),
+   and let him decide. "Looks unused" is a hypothesis, not a finding.
+2. Before any replace between tiers, run it with `--dry-run` and read the loss summary
+   (`shared/documentLoss.cjs` prints it: "REMOVES 76 of 85 items — 76 image (media)").
+   Put that line, word for word, in the question you ask the owner.
+3. `--accept-loss <N>` is the owner's answer to that question, never yours. A refusal
+   is the tool doing its job; do not reach for the number to get past it.
+
+**Files:** `shared/documentLoss.cjs`; the tools that call it — `scripts/project-pull.mjs`,
+`scripts/tier-sync.mjs`, `scripts/space-push.mjs`, `scripts/space-bundle.mjs`,
+`scripts/send.mjs` → `serverXR/src/contentProposals.js`. Row in `known-fixes.md`.
+
 ### Never discard another agent's uncommitted changes
 If `git status` shows unstaged edits you didn't make, assume another agent is mid-task in the same working tree. `git stash push -- <file>` to set them aside if you need a clean tree for an unrelated operation (e.g. a branch merge), then `git stash pop` immediately after to restore them exactly as found. Never `git checkout --` or discard them. See [parallel-agents.md](parallel-agents.md) for the full multi-agent setup (prefer `git worktree` over sharing one tree).
 
@@ -868,6 +895,14 @@ const stop = async () => {
 
 **Files:** `scripts/space-sync.mjs` (push-only, no pull), `br_id_ge-ops/scripts/sync-ops.sh`, `br_id_ge-ops/AGENTS.md` (per-project authority list).
 
+### WebGL shaders on Windows: bound big loops with a uniform, never a constant
+
+**Rule:** In a GLSL shader, any loop that runs more than a handful of times — or sits inside another loop — takes its bound from a uniform (`for (int i = 0; i < uSamples; i++)`), not a `#define` or a literal.
+
+**Why:** Chrome on Windows runs WebGL through ANGLE on Direct3D 11, which UNROLLS constant-bound loops. Nested, they multiply into an HLSL program too large to build: the link fails with an EMPTY info log and the stall loses the WebGL context (beamAirMaterial.js, 2026-10-01 — 12 samples × 12 haze jets × prism × honeycomb). Nothing in a unit test or on a Mac/Linux GPU shows it.
+
+**How to verify:** open the room in Chrome on Windows on the real GPU (Playwright `channel: 'chrome'`, `--use-angle=d3d11 --force_high_performance_gpu`) and read the console for `VALIDATE_STATUS false`. Guard for the beams: beamAir.test.js "no large constant-bound loop in the beam shader".
+
 ### 3D/spatial labels need a backdrop plate, and fixed UI chrome needs its neighbor's footprint reserved — neither gets overlap avoidance for free
 
 **Rule:** Any billboarded in-scene text (portal node names, constellation node names) must render on top of an opaque or near-opaque plate, never bare text over the scene. Any fixed-position DOM chrome (corner badges, floating panels) that can grow — a dropdown, an expanding list — must have its max size capped to leave room for whatever else is pinned to the same or an adjacent corner, computed explicitly, not left to "they're in different corners so it's fine."
@@ -1147,3 +1182,11 @@ The same trap has a sibling already in this file: a published page's DOM lives i
 **How:** Copy the shape `src/pages/legal.css` already uses. Two follow-ons: a `position: sticky` bar inside that container needs the container to carry **no top padding**, or content scrolls past visibly in the strip above it; and a modal that locks scrolling must toggle the class on the page root, since `body { overflow: hidden }` locks an element that was never scrolling.
 
 **Files:** `src/styles/base.css`, `src/pages/legal.css`
+
+### Controls are rectangles — no pills, no circles, no rounded chrome
+
+**Rule:** In this product's UI, buttons, switches, tabs, chips, segmented bars and their containers are rectangles with a corner radius of 0–2 px. No pill (`border-radius: 999px`, `var(--di-radius-pill)`) and no circle (`50%`) on a control or on the bar that holds controls. The current state of a control is shown by fill and contrast, never by shape. Status dots that are not controls (a recording light) are the only round marks allowed.
+
+**Why:** The owner, 2026-09-30, pointing at the MOXIR room's version switch and its Floor/DJ/Top view bar: "in design we not use the round things". The house look is flat, mono and rectangular (the rig pages, the desk and the visualiser already use 2 px); pills were the one place it broke.
+
+**How:** New UI: write `borderRadius: '2px'` (or the existing 2 px token), never a pill token. Changed 2026-09-30: `RigVersionSwitch.jsx`, `SmartViewBar.jsx`, `overlayButtonStyle` in `publicViewerStyles.js`, and the idle/active button in `ProjectSwitcher.jsx`. **Swept 2026-09-30 (rig line):** all of `src/rigbuild/**` (`build.css`: the mode button, thumbs, place button, hotbar, slots, totals, status/aimed chips; `RoomLookFollower.jsx`'s show chip), the panels in `ProjectSwitcher.jsx` and `overlayCardStyle` are now 2 px; the one round mark kept is the show chip's recording light (a status dot). `src/rigbuild/controlsAreRectangles.test.js` fails on any pill, circle or radius above 2 px in those files unless it is in its allow-list with a reason. **Wave 2 (2026-09-30):** `jamSurface.css` (7 rules; `.jam-count-dot` status dot and `.jam-mine-swatch` colour mark stay round) and `kit.css` (4 rules) are now 2 px, guarded by `src/project/components/squareControls.test.js`; `--di-radius-pill` still has 34 users in 17 files as counted on the wave-2 branch (list in the session note `fix-square-controls-wave-2.md`; delete the token when that reaches 0). **Owed, not yet changed (outside the rig line):** the `--di-radius-pill` token itself and every user of it, and the `50%` controls — `inspector-controls.css` and `styles/inspector/*`, `authReturnNotice.css`, `liveProjectScene.css`, `controls.css`, `workspace.css`, `mobile-shell.css`, `panels/*`, `studio/styles/*`, `raw/styles/raw.css`, `raw/director/director.css`, `make/makeSurface.css`, `scan/scanSurface.css`, `perform.css`, `chat/*`, `pages/spaceContents.css`; the works (`algoVrithm`, `wccSite`) are artworks and not swept. Change them one surface at a time and look at each on the real screen.

@@ -52,19 +52,33 @@ export function getWorkspaceTopInset({ topbarRect = null, padding = 8 } = {}) {
 // their own arrangement over the document's seed (utils/workspaceLayout.js).
 // Without it a window closed on this device would stay mounted, because the
 // document still says it is open.
+//
+// frontOnly (a phone): only the FRONT window mounts. Every window on a phone is
+// full width, so two open windows covered the whole canvas and no card could
+// be seen or tapped (audit 2026-10-02, 390×844: a tap on a card timed out
+// against two windows). The others stay open in the document — nothing is
+// written, a computer showing the same project keeps its layout — and the
+// Windows menu brings any of them to the front.
 export function selectMountedPanelNodes({
     nodes = [],
     isPanel = () => false,
     currentScopeId = null,
     isWorldFullscreen = false,
-    frameOf = (node) => node?.values?.frame
+    frameOf = (node) => node?.values?.frame,
+    frontOnly = false
 } = {}) {
     if (isWorldFullscreen) return []
-    return nodes.filter((node) => (
+    const open = nodes.filter((node) => (
         isPanel(node)
         && (node.parentId || null) === (currentScopeId || null)
         && frameOf(node)?.visible !== false
     ))
+    if (!frontOnly || open.length < 2) return open
+    // The front one: highest zIndex; on a tie, the later one (it painted last).
+    const front = open.reduce((best, node) => (
+        (frameOf(node)?.zIndex || 0) >= (frameOf(best)?.zIndex || 0) ? node : best
+    ))
+    return [front]
 }
 
 export function clampWindowFrame(frame = {}, bounds = {}) {
@@ -365,9 +379,20 @@ const rectsOverlap = (a, b) => (
     && a.y < b.y + b.height && a.y + a.height > b.y
 )
 
+// The other cards standing in the scope, in graph units. A window that
+// dodged only its OWN card still opened over the cards wired to it — the VJ
+// deck window landed on its Clip In and Picture Out cards on the owner's
+// screen (2026-09-24). Every candidate is now scored against all of them.
+const overlapArea = (a, b) => {
+    const w = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)
+    const h = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y)
+    return w > 0 && h > 0 ? w * h : 0
+}
+
 export function placeNewWindowFrame({
     frame = {},
     card = null,
+    obstacles = [],
     anchor = null,
     space = 'screen',
     viewport = null,
@@ -429,18 +454,42 @@ export function placeNewWindowFrame({
         // zoom is 320 graph units, and the window ended up a screen away from
         // its card once the zoom came back.
         const gap = RAW_NEW_WINDOW_GAP * scale
+        // The other cards, on screen, when the viewport can place them.
+        const others = (vp ? obstacles : [])
+            .filter((box) => box && Number.isFinite(box.x) && Number.isFinite(box.y))
+            .map((box) => ({
+                x: originX + box.x * vp.zoom,
+                y: originY + box.y * vp.zoom,
+                width: (Number(box.width) || 0) * vp.zoom,
+                height: (Number(box.height) || 0) * vp.zoom
+            }))
+        // The whole group, for the two extra spots beyond it.
+        const group = [reference, ...others].reduce((box, item) => ({
+            x: Math.min(box.x, item.x),
+            y: Math.min(box.y, item.y),
+            right: Math.max(box.right, item.x + item.width),
+            bottom: Math.max(box.bottom, item.y + item.height)
+        }), { x: reference.x, y: reference.y, right: reference.x + reference.width, bottom: reference.y + reference.height })
         const candidates = [
             { x: reference.x, y: reference.y + reference.height + gap },
             { x: reference.x, y: reference.y - gap - height },
             { x: reference.x + reference.width + gap, y: reference.y },
-            { x: reference.x - gap - width, y: reference.y }
+            { x: reference.x - gap - width, y: reference.y },
+            { x: group.right + gap, y: group.y },
+            { x: group.x, y: group.bottom + gap },
+            { x: group.x - gap - width, y: group.y }
         ].map((spot) => clampWindowFrame({ ...spot, width, height }, bounds))
         // Clamping can drag a spot back over the card (no room below → the
-        // window slides up onto it); the first spot still clear of the card
-        // wins. When none is — a phone, where a window is wider than the room
-        // beside a card — below-and-clamped is the honest fallback: whole on
-        // screen, and the graph fit already dodges windows.
-        placed = candidates.find((spot) => !rectsOverlap(spot, reference)) || candidates[0]
+        // window slides up onto it). The first spot clear of its own card AND
+        // every other card wins; else the first clear of its own card that
+        // covers the least of the others; else below-and-clamped, the honest
+        // fallback on a phone, where a window is wider than the room beside a
+        // card: whole on screen, and the graph fit already dodges windows.
+        const covered = (spot) => others.reduce((sum, box) => sum + overlapArea(spot, box), 0)
+        const clearOfOwn = candidates.filter((spot) => !rectsOverlap(spot, reference))
+        placed = clearOfOwn.find((spot) => covered(spot) === 0)
+            || clearOfOwn.slice().sort((a, b) => covered(a) - covered(b))[0]
+            || candidates[0]
     }
 
     return {
@@ -450,4 +499,27 @@ export function placeNewWindowFrame({
         width: inWorld ? Math.round(placed.width / scale) : placed.width,
         height: inWorld ? Math.round(placed.height / scale) : placed.height
     }
+}
+
+// Where a List or Text window opens on a desktop: docked on the right, full
+// height, pinned to the screen. Owner 2026-10-02: an opened List was a
+// 662 × 563 window floating over the cards with its last group cut off.
+// Pinned windows are what getGraphEdgeInsets dodges, so the cards re-fit into
+// the band left of it and stay visible. Null on a narrow viewport — there the
+// existing full-screen clamp IS the layout.
+export const DOCKED_PANEL_TYPES = ['view.list', 'view.text']
+export const DOCKED_PANEL_MIN_WIDTH = 380
+export const DOCKED_PANEL_MAX_WIDTH = 520
+// The red Delete button (.raw-delete-fab, z-index 1300) sits bottom-right,
+// 24px up and ~41px tall, whenever a node is selected — and opening a List
+// selects it. MEASURED at 1440 × 900: a window ending at the wide 40px reserve
+// ran 15px under it. Clear it, with a gap.
+export const DOCKED_PANEL_BOTTOM_CLEARANCE = 76
+export function getDockedPanelFrame({ viewportWidth, viewportHeight, top = DEFAULT_RAW_WORKSPACE_TOP } = {}) {
+    if (!Number.isFinite(viewportWidth) || !Number.isFinite(viewportHeight)) return null
+    if (viewportWidth < RAW_NARROW_VIEWPORT) return null
+    const width = clamp(Math.round(viewportWidth * 0.3), DOCKED_PANEL_MIN_WIDTH, DOCKED_PANEL_MAX_WIDTH)
+    const y = Math.max(0, top)
+    const height = Math.max(RAW_WINDOW_MIN_HEIGHT, viewportHeight - y - Math.max(DOCKED_PANEL_BOTTOM_CLEARANCE, getBottomReserve(viewportWidth)))
+    return { x: viewportWidth - width - RAW_WINDOW_PADDING, y, width, height, pinned: true, minimized: false, visible: true }
 }

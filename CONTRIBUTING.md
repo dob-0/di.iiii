@@ -15,6 +15,42 @@ the old name `staging.di-studio.xyz` was switched off on 2026-09-16, and the scr
 `dev` (`--tier dev`). `diiii.xyz` is the only host for anything you write down as a new link;
 `di-studio.xyz` is the old production name and still answers the same way.
 
+## Every hand, one flow
+
+Code comes from people typing git, from Claude, from other assistants, from an editor's
+buttons. The rules below don't depend on any of them reading this file — git and GitHub
+enforce them — so they hold for all of them the same way.
+
+| Rule | What enforces it | Who it catches |
+|---|---|---|
+| No commit straight on `dev` or `main` — every change starts on its own branch | `scripts/git-hooks/pre-commit` | anyone committing in a checkout |
+| No push to `dev` or `main` — dev moves by merged PR, main by promotion | `scripts/git-hooks/pre-push`, and branch protection on GitHub (required checks; the repo admin is exempt) | any push, including one from the GitHub web editor |
+| Lint, schema-sync, wiki and AI-docs checks before a push | `scripts/push-checks.sh` (run by the pre-push hook) | any push |
+| Two required checks green before a merge | branch protection on `dev` | every PR |
+| A fork's `dev` stays a byte copy of upstream `dev` | the fork's hourly `sync-upstream.yml` (refuses when it has drifted) | a fork |
+| Nothing lives only on one machine | `npm run start-check` (this checkout) and `npm run unsaved -- <folders>` (every repo under them) | a laptop's unpushed branches, uncommitted files, stashes |
+
+**The hooks switch on by themselves.** `npm install` runs `scripts/install-git-hooks.mjs`,
+which copies `scripts/git-hooks/` into the repo's own git dir (`.git/di-hooks`) and points
+`core.hooksPath` there, so every worktree gets them, whatever branch it is on (skipped in
+CI and outside a git checkout; left alone if you already point hooks elsewhere). Undo with
+`git config --unset core.hooksPath`. Escapes exist for a deliberate exception, never
+as a habit: `DI_ALLOW_FLOW_COMMIT=1`, `DI_ALLOW_FLOW_PUSH=1`, `DI_SKIP_PUSH_GATE=1`.
+
+**Only on this machine.** A branch that was never pushed, a file never committed, a
+stash — each exists on one disk and is gone with it. `npm run unsaved -- ~/dev ~/Desktop`
+lists every such thing in every git repo under those folders (di.iiii or not) with the
+command that saves it, and exits 1 when there is any — so a scheduled task can raise it.
+**The daily watch** does that for you, once installed on a machine: every day at 18:00 (or at
+the next boot or logon if it was off) it lists what has sat only there for more than 24 hours,
+raises a desktop notification, and appends the full list to one log.
+`scripts/unsaved-watch/install.sh [folders]` on Linux (systemd user timer; log
+`~/.local/state/di/unsaved.log`), `scripts\unsaved-watch\install.ps1 [-Folders …]` on Windows
+(Task Scheduler; log `%LOCALAPPDATA%\di\unsaved.log`). `--uninstall` / `-Uninstall` removes it.
+Push your branch the day you make it, even unfinished; a draft PR is fine. On a fork,
+every pushed branch opens an upstream PR (`auto-pr.yml`) — except `backup/…` and `wip/…`,
+which are for keeping work safe, not for review.
+
 ## The start check
 
 Before you start any task, and before you push:
@@ -57,6 +93,17 @@ refusal prints the exact command to pull the newer copy down, or the explicit fl
 (`--force`, and where that still isn't enough, `--force-stale`) to override it on
 purpose. If you hit a refusal, read it before reaching for the override — it exists
 because something real changed.
+
+A replace also says what it **removes**, before it writes anything. `project-pull.mjs`,
+`tier-sync.mjs`, `space-push.mjs`, `space-bundle.mjs import --force` and `npm run send`
+(the server's proposal door) compare the target with what is about to replace it and
+print it plainly — `prod main-dii-project: this replace REMOVES 76 of 85 items — 76 image
+(media)`, then each media item by name. When media would go (images, videos, models,
+audio, anything pointing at a file) they refuse unless you pass `--accept-loss <N>` with
+the exact number printed; a stale or guessed number refuses again. Other removals are
+printed, not blocked. `--dry-run` prints the summary and writes nothing. The count is
+not permission — look at every one of those items first, and let the owner decide
+(2026-09-18: a carry removed 76 slides from the front room on prod and printed "ok").
 
 This is the first piece of the safety net: it stops a routine sync from being the
 thing that erases someone's afternoon. The rest is in `serverXR/src/spaceHistory.js`
@@ -196,6 +243,14 @@ resolve by the project's id alone, unaffected by a move. The short vanity form
 writes a `project_moves` row, and the server's resolver
 (`GET /api/resolve/:spaceSegment/:projectSegment`) answers a project that left with a
 pointer to its new address instead of a 404.
+
+**From the product (2026-10-05):** the same move is `POST /api/projects/:id/move`
+(`{ "toSpace": "...", "unpublish": false, "dryRun": false }`; an admin, or the owner of both
+spaces) and `di move PROJECT --to SPACE [--from URL] [--dry-run] [--unpublish]` (a token for
+`--from` comes from `DI_TOKEN` or `--token -` on stdin). Both call `serverXR/src/projectMove.js`,
+which the script also uses. Unlike the script, the route refuses a slug already used in the
+target (409) instead of dropping it. A follow does not carry a move: run it on each install
+that follows either space.
 
 ## Golden rule
 

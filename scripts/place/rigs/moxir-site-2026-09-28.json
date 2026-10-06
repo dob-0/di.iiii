@@ -1,0 +1,27 @@
+{
+  "site": "MOXIR hall, Charentsavan",
+  "date": "2026-09-28",
+  "what": "How a GPS fix becomes a point in the hall frame. Read by photo_meta.py.",
+  "origin_lat_lon": [40.406564, 44.636287],
+  "origin_what": "roof centre measured on Esri Wayback 37890 (Maxar WV-3, 2020-10-30); building frame u (bearing 54, NE) / v (bearing 144, SE)",
+  "u_bearing_deg": 54.0,
+  "v_bearing_deg": 144.0,
+  "axis_bearing_range_deg": [141, 148],
+  "hall_from_building": {
+    "x": "x = nave_u_m - u (hall +x = SW)",
+    "z": "z = -(v - joint_v_m) (hall +z = NW, the entry end)",
+    "nave_u_m": 10.0,
+    "joint_v_m": -2.0,
+    "uncertainty_m": 1.5,
+    "why": "the nave (span 3) is centred at u = 10 on the satellite; the expansion joint (hall z = 0) at v = -2 (roof seam and the lantern gap). The roof edge and the 108 m grid disagree by 1.5 m."
+  },
+  "owner_pin": [40.406524, 44.63656],
+  "utc_offset_h": 4,
+  "utc_offset_note": "Armenia, AMT, UTC+4, no daylight saving; the photos' OffsetTimeOriginal says +04:00 too",
+  "satellite": {
+    "image": "hall-arch/sat_wb37890_z18_stitch.png (session scratchpad, not in the repo: Esri imagery is not ours to redistribute)",
+    "m_per_px": 0.4547,
+    "origin_px": [551, 673],
+    "note": "z18 web-mercator stitch, north up; origin_px is the roof centre"
+  }
+}

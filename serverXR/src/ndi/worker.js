@@ -70,8 +70,20 @@ function main() {
   // DI_NDI_EXTRA_IPS: comma-separated addresses to ask directly, for a network (or a
   // Windows firewall) where mDNS does not arrive. An operator's env var — never a
   // value from a request.
+  // DI_NDI_GROUPS: comma-separated NDI groups to look in ("Public" is the SDK's default
+  // when this is NULL). Both are passed straight to NDIlib_find_create_v2 — see
+  // docs/architecture/NDI.md → "Autoscan" for what the SDK documents about each.
+  // This ONE finder lives as long as this process: the autoscan (manager.startScan)
+  // keeps the process up, so discovery is continuous, never a finder per question.
   const extraIps = String(process.env.DI_NDI_EXTRA_IPS || '').trim() || null
-  const finder = fn.findCreate({ show_local_sources: true, p_groups: null, p_extra_ips: extraIps })
+  const groups = String(process.env.DI_NDI_GROUPS || '').trim() || null
+  const finder = fn.findCreate({ show_local_sources: true, p_groups: groups, p_extra_ips: extraIps })
+  if (!finder) {
+    // Without a finder nothing can be named, so nothing can be received either. Said
+    // once, as a fatal, rather than left as a scan that says "starting" for ever.
+    send({ type: 'fatal', reason: 'load-failed', how: require('./library').howFor(), detail: 'NDIlib_find_create_v2 returned NULL — the runtime refused to make a finder (check DI_NDI_GROUPS / DI_NDI_EXTRA_IPS)' }, () => process.exit(0))
+    return
+  }
 
   const publishSources = () => {
     const next = ndi.readSources(finder)
@@ -90,7 +102,15 @@ function main() {
     const startedAt = Date.now()
     while (!stopping) {
       let changed = false
-      try { changed = await call(fn.findWait, finder, FIND_WAIT_MS) } catch { break }
+      try {
+        changed = await call(fn.findWait, finder, FIND_WAIT_MS)
+      } catch (error) {
+        // A finder that errors is a finder that has stopped seeing the network. Leave
+        // loudly: the manager restarts a dead child with backoff, and the autoscan
+        // reports "restarting" meanwhile — never a list that silently froze.
+        console.error(`[ndi] the finder failed: ${error?.message || error}`)
+        process.exit(1)
+      }
       if (stopping) break
       if (changed || publishSources.sent || Date.now() - startedAt >= FIRST_LIST_MS) publishSources()
     }

@@ -18,6 +18,8 @@
         "docs:ai:sync": "node scripts/sync-agent-docs.mjs",
         "docs:ai:check": "node scripts/check-agent-docs.mjs && node scripts/check-doc-paths.mjs",
         "docs:paths": "node scripts/check-doc-paths.mjs",
+        "prepare": "node scripts/install-git-hooks.mjs",
+        "unsaved": "node scripts/unsaved.mjs",
         "state": "node scripts/repo-state.mjs",
         "state:brief": "node scripts/repo-state.mjs --brief",
         "send": "node scripts/send.mjs",
@@ -47,6 +49,7 @@
         "project:pull": "node scripts/project-pull.mjs",
         "local:mirror": "node scripts/local-mirror.mjs",
         "tier:sync": "node scripts/tier-sync.mjs",
+        "space:publish": "node scripts/space-publish.mjs",
         "local:mirror:check": "node scripts/local-mirror.mjs --dry-run",
         "space:push": "node scripts/space-push.mjs",
         "space:code-push": "node scripts/space-code-push.mjs",
@@ -66,11 +69,11 @@
         "preview": "vite preview",
         "lint": "eslint src serverXR scripts sdk shared vite.config.js eslint.config.js",
         "test": "vitest run",
-        "test:raw": "vitest run raw/ project/ studio/ components/surfaceBar.embed algoVrithm/editListSourceOnThisPiece nodeLabelVocabulary copyVocabulary map/MapInspector map/lightingLink ../scripts/nodeAnatomy.test.js",
+        "test:raw": "vitest run raw/ project/ studio/ components/surfaceBar.embed algoVrithm/editListSourceOnThisPiece nodeLabelVocabulary copyVocabulary map/MapInspector map/lightingLink rigbuild/lookRules rigbuild/looks.test rigbuild/dmxPose rigbuild/readOnlySurfaces rigbuild/noWriteOnLoad objectComponents/beamMirror ../scripts/nodeAnatomy.test.js",
         "di": "node scripts/di/cli.mjs",
         "di:pack": "node scripts/pack-runtime.mjs",
         "check:works": "node scripts/works-boundary.mjs",
-        "test:server-contracts": "vitest run serverXR/src/httpContracts.test.js serverXR/src/projectContracts.test.js serverXR/src/bundleContracts.test.js serverXR/src/installBundleContracts.test.js serverXR/src/fallbackContracts.test.js serverXR/src/spaHostingContracts.test.js serverXR/src/syncContracts.test.js serverXR/src/ndiContracts.test.js serverXR/src/placeContracts.test.js",
+        "test:server-contracts": "vitest run serverXR/src/httpContracts.test.js serverXR/src/projectContracts.test.js serverXR/src/bundleContracts.test.js serverXR/src/installBundleContracts.test.js serverXR/src/fallbackContracts.test.js serverXR/src/spaHostingContracts.test.js serverXR/src/syncContracts.test.js serverXR/src/ndiContracts.test.js serverXR/src/placeContracts.test.js serverXR/src/projectVisibilityContracts.test.js serverXR/src/shelfScopeContracts.test.js",
         "verify:surfaces": "node scripts/verify-surfaces.mjs",
         "verify:capture": "node scripts/verify-capture.mjs",
         "verify:surfaces:mobile": "node scripts/verify-surfaces.mjs --mobile-only",
@@ -102,7 +105,7 @@
         "playwright": "^1.62.1",
         "prettier": "^3.9.6",
         "vite": "^8.2.1",
-        "vitest": "^4.1.9"
+        "vitest": "^5.0.2"
     },
     "dependencies": {
         "@emotion/react": "^11.14.0",
@@ -111,6 +114,7 @@
         "@gltf-transform/core": "^4.4.0",
         "@gltf-transform/extensions": "^4.4.2",
         "@gltf-transform/functions": "^4.4.0",
+        "@modelcontextprotocol/server": "2.1.0",
         "@mui/icons-material": "^7.3.9",
         "@mui/material": "^7.3.9",
         "@react-three/drei": "^9.108.1",
@@ -127,10 +131,11 @@
         "react-router-dom": "^7.18.3",
         "socket.io-client": "^4.7.0",
         "three": "^0.185.1",
+        "three-mesh-bvh": "^0.7.8",
         "troika-three-text": "^0.52.4"
     },
     "overrides": {
         "postcss": "^8.5.10",
-        "sharp": "^0.35.3"
+        "sharp": "^0.35.5"
     }
 }

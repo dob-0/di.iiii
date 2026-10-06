@@ -1,0 +1,42 @@
+{
+  "site": "MOXIR hall, Charentsavan (40.406160, 44.637675)",
+  "date": "2026-09-27",
+  "frame": "x along hall, y across, z up from floor; metres",
+  "span_m": 24.0,
+  "pitch_m": 6.0,
+  "bays": 15,
+  "length_m": 90.0,
+  "crane_rail_h_m": 7.6,
+  "truss_bottom_h_m": 11.0,
+  "ridge_h_m": 15.5,
+  "lantern_w_m": 12.0,
+  "column_w_m": 0.5,
+  "ranges": {
+    "span_m": [22.0, 25.0], "pitch_m": [5.5, 6.3], "bays": [15, 16], "length_m": [87, 99],
+    "crane_rail_h_m": [6.6, 8.4], "truss_bottom_h_m": [10.2, 11.8], "ridge_h_m": [14.0, 17.0],
+    "truss_top_h_m": [13.3, 13.9], "lantern_w_m": [10.0, 12.5], "column_w_m": [0.4, 0.6],
+    "column_lower_depth_m_GUESS": [0.8, 1.0], "upper_column_len_m": [2.7, 2.9]
+  },
+  "confidence": {
+    "span_m": "medium-high", "pitch_m": "medium-high", "bays": "low-medium", "length_m": "low-medium",
+    "crane_rail_h_m": "low-medium", "truss_bottom_h_m": "medium", "ridge_h_m": "low-medium",
+    "lantern_w_m": "low (snapped to standard 12 m)", "column_w_m": "low (GUESS)"
+  },
+  "notes": [
+    "Span/pitch ratio = 3.96 (bootstrap 90% 3.92-4.00, rms 1.8 px) from a perspective fit of 13+7 equally spaced columns in photo 004 (1/(u-u_vp) linear in column index; f=2800 px from EXIF 6.86 mm / 24 mm-eq). Only 24/6 of the GOST 23838-89 spans (18/24/30) and pitches (6/12) gives 4.",
+    "Scale 30.8 m per VGGT unit = 24 m / 0.78 u (span between column rows in the cloud). Cross-checks at that scale: ground eye heights median 1.7 m (expected ~1.5-1.65), FIBC bulk bag 1.05 m wide x 1.2-1.4 m tall (expected ~0.9-1.0 x 1.0-1.2). The anchors agree within ~10%, and the anchors alone would give a span of 22-25 m.",
+    "Heights: the truss bottom is 11.1-11.4 m in the cloud and 11.0 m from perspective (column top 3.9 m above the crane camera, camera at 7.1 m). Crane beam in the cloud 6.6-7.4 m; beam top from perspective 8.2 m. These disagree, so the value is a midpoint. The unified-scheme pair rail 8.15 / truss bottom 10.8 m is a GUESS candidate.",
+    "Length: far (+x) end wall 87-90 m from the crane camera by perspective (~15 pitches); the near (-x) end wall is 1-4 m behind the crane camera in the cloud. VGGT compresses far depth (cloud puts the far end at about 55-70 m), so use the perspective figure. Bays 15 is grid-snapped (GUESS between 15 and 16).",
+    "Lantern: the upper roof band at z>14.5 m spans ~10 m across in the cloud. It is snapped to the standard 12 m lantern for a 24 m span (GUESS). It is a raised light/aeration lantern with glazed sides, running along the hall centre.",
+    "Columns: reinforced-concrete stepped columns with a crane console. The upper column appears ~0.75 m wide at 19-23 deg oblique, which suggests about 0.5 x 0.6 m (GUESS). Upper column 2.7-2.9 m from beam top to truss bearing (perspective, 3 columns).",
+    "Side zones: there is structure outside both column rows (outer walls with 3 window bands behind columns, annex rooms in photos 000-002 and 014). The cloud shows ~6-9 m beyond the -y row and up to ~18 m beyond the +y row at heights up to 9 m. The widths are NOT measured reliably (GUESS: an aisle or adjacent lower span on each side).",
+    "Doors: the far +x end wall has a central dark gate ~4.7-5 m wide (photo 004, 155 px at ~88 m; GUESS it is the standard 4.8 x 5.4 m gate). The near -x end wall has a large gate with a platform and stairs (video 026, frames 9-12).",
+    "Two yellow overhead cranes: one parked at the -x end (the crane photos 004/008/012/027-032 were taken from it, camera ~7.1 m), one ~70 m down the hall near the far end (bridge ~920 px wide at f=2800 is about 23 m).",
+    "Floor: rail tracks run along the nave floor. Debris, big white FIBC bags and pipe stacks mid-hall."
+  ],
+  "sources": {
+    "grid": "GOST 23838-89 'Zdaniya predpriyatiy. Parametry' (spans 18/24/30 m, pitch 6/12 m): https://www.vashdom.ru/gost/23838-89/",
+    "unified_schemes": "https://verrsus.wordpress.com/2019/01/01/ (unified gabarit schemes; the 8.15/10.8 pair is not verified line by line)",
+    "model": "VGGT (Wang et al., CVPR 2025), github facebookresearch/vggt @ a288dd0f, weights facebook/VGGT-1B @ 860abec7 (CC BY-NC 4.0, non-commercial)"
+  }
+}

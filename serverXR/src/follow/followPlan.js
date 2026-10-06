@@ -26,6 +26,8 @@
  *      again.
  */
 
+const { CONVERGE_CLIENT } = require('./followConverge')
+
 /** How many ops we will carry in one direction per tick. */
 const BATCH = 200
 
@@ -54,8 +56,12 @@ const moreToCarry = (ops = [], seen = new Set()) => ops
     .filter(op => op && op.opId && !seen.has(op.opId) && !WHOLE_WORK_OPS.has(op.type))
     .length > BATCH
 
-/** Whether a batch contained a whole-work op we refused to carry. */
-const refusedWholeWork = (ops = []) => ops.some(op => WHOLE_WORK_OPS.has(op?.type))
+/**
+ * Whether a batch contained a whole-work op we refused to carry. The follower's
+ * own convergence write (followConverge.js) is a whole-work op too, but it is
+ * not someone replacing the room: it is this follower agreeing with the host.
+ */
+const refusedWholeWork = (ops = []) => ops.some(op => WHOLE_WORK_OPS.has(op?.type) && op?.clientId !== CONVERGE_CLIENT)
 
 /**
  * The next move for one direction.
@@ -109,7 +115,14 @@ const nextInterval = ({ moved, current, floor = 700, ceiling = 30000 }) => {
 const accountedThrough = (ops = [], accounted = new Set(), fallback = null) => {
     let through = null
     for (const op of ops) {
-        if (!op?.opId || !accounted.has(op.opId)) return through
+        // A whole-work op is never carried, so it has nothing to be accounted
+        // by — and an older log can hold one with no opId at all. Stopping at
+        // it pinned the cursor there for good: every tick re-read the log from
+        // the same place and reported the refusal again, however long ago both
+        // copies had come to agree. Whether they agree is the follower's
+        // question (follower.js `disagree`), not the cursor's.
+        const passed = WHOLE_WORK_OPS.has(op?.type) || (op?.opId && accounted.has(op.opId))
+        if (!passed) return through
         if (Number.isFinite(op.version)) through = op.version
     }
     return ops.length ? (through ?? fallback) : fallback

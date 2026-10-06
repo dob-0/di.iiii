@@ -1,0 +1,35 @@
+{
+  "kind": "hazer",
+  "code": "EXT-HAZER",
+  "glb": "hazer.glb",
+  "builtBy": "scripts/place/fixtures/build_fixtures.py",
+  "scriptSha256": "cc332ec481c5bb2777541e37bf8025360366aa9b98720490aab93b6de4596b44",
+  "blender": "5.2.1 LTS",
+  "archetype": "hazer",
+  "frame": "glTF: metres, Y up, base on y=0, front +Z; beam +Y at pan 0 / tilt 0",
+  "lensY": 0.235,
+  "motion": "none",
+  "parts": [
+    "Body"
+  ],
+  "sizeAtHome_mm": {
+    "width_x": 514,
+    "depth_z": 700,
+    "height_y": 614
+  },
+  "triangles": {
+    "Body": 264,
+    "total": 264
+  },
+  "datasheetSize_mm": [
+    690,
+    510,
+    610
+  ],
+  "deviationFromDatasheet_pct": [
+    0.8,
+    0.7,
+    1.4
+  ],
+  "comparedParts": "all"
+}

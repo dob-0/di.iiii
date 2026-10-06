@@ -57,7 +57,9 @@ export default function DesktopWindow({
     onToggleMinimize,
     onToggleMaximize,
     onTogglePin,
-    onEnter,
+    // A desk with no canvas (Perform) has nothing to pin a window against:
+    // every window is on the screen, and a pin that does nothing is a lie.
+    pinnable = true,
     minTop = undefined,
     allowOverflowLeft = false,
     allowOverflowTop = false,
@@ -303,30 +305,23 @@ export default function DesktopWindow({
                     <h3>{title}</h3>
                 </div>
                 <div className="raw-window-actions">
-                    {onEnter && (
-                        <button
-                            type="button"
-                            title="Go inside this node to put things in it"
-                            onClick={(event) => { event.stopPropagation(); onEnter() }}
-                        >
-                            Enter ›
-                        </button>
-                    )}
                     {/* Glyphs, not words. Four words per title bar — and a
                         full extra 390px row per window on a phone — for three
                         actions every windowing system on earth spells with
-                        symbols. Enter › above keeps its word: it is the one
-                        action a first-timer must find. Accessible names carry
-                        the words the glyphs dropped. */}
-                    <button
-                        type="button"
-                        className={windowState.pinned ? 'is-active' : ''}
-                        aria-label={windowState.pinned ? 'Unpin' : 'Pin'}
-                        title={windowState.pinned ? 'Unpin: let it travel with the canvas' : 'Pin to the screen'}
-                        onClick={(event) => { event.stopPropagation(); onTogglePin?.() }}
-                    >
-                        ⌖
-                    </button>
+                        symbols. Accessible names carry the words the glyphs dropped.
+                        There is no Enter here: going inside a node is Open,
+                        one meaning on the card, the keyboard and the settings. */}
+                    {pinnable ? (
+                        <button
+                            type="button"
+                            className={windowState.pinned ? 'is-active' : ''}
+                            aria-label={windowState.pinned ? 'Unpin' : 'Pin'}
+                            title={windowState.pinned ? 'Unpin: let it travel with the canvas' : 'Pin to the screen'}
+                            onClick={(event) => { event.stopPropagation(); onTogglePin?.() }}
+                        >
+                            ⌖
+                        </button>
+                    ) : null}
                     {/* Maximise sits next to Pin because it IS a pin: a
                         window filling the workspace is measured in screen
                         pixels, or a pan would slide "full screen" off the

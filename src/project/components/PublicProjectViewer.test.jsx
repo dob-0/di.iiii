@@ -632,6 +632,27 @@ describe('PublicProjectViewer', () => {
         expect(await screen.findByRole('button', { name: 'Walk / Fly' })).toBeInTheDocument()
     })
 
+    // Owner, 2026-09-30: in walk mode the only way to another version was Esc. Now one
+    // collapsed control stays, and switching does not need the orbit view.
+    it('keeps a version control in walk mode on a rig set (no Esc needed)', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                ...sceneDocumentResponse.document,
+                entities: [{ id: 'show', components: { rigVariant: { set: 's', id: 'a', title: 'A', siblings: [{ id: 'a', projectId: 'live-project', title: 'A' }, { id: 'b', projectId: 'p2', title: 'B' }] } } }]
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+        listSpaceContentsMock.mockResolvedValue([{ id: 'live-project' }, { id: 'p2' }])
+        render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+        fireEvent.click(await screen.findByRole('button', { name: 'Walk / Fly' }))
+        await screen.findByRole('button', { name: '← View mode' })
+        const versions = await screen.findByRole('button', { name: 'Versions · A' })
+        fireEvent.click(versions)
+        expect(screen.getByRole('link', { name: 'B' })).toBeInTheDocument()
+        listSpaceContentsMock.mockResolvedValue([{ id: 'p', slug: null, title: 'p', mode: 'scene', updatedAt: 0 }])
+    })
+
     // Regression guard: the public viewer is the platform's widest audience and
     // used to offer no path from viewing into creating (UX audit 2026-07-10).
     it('offers the Made with di.iiii affordance to public visitors', async () => {
@@ -848,6 +869,27 @@ describe('PublicProjectViewer', () => {
 
         expect(listProjectOpsMock).toHaveBeenCalledTimes(1)
         expect(listProjectOpsMock).toHaveBeenCalledWith('the-yard', 7)
+    })
+
+    // Owner, rigbuilder.7: the version switch's "Full" opened a project the space did not
+    // hold and the page said only "Project not found." — no which, no where, no way back.
+    it('says which project is missing from which space, with the way back, on a 404', async () => {
+        const missing = Object.assign(new Error('Project not found.'), { status: 404 })
+        getProjectDocumentMock.mockRejectedValue(missing)
+
+        render(<PublicProjectViewer spaceId="moxir" projectId="moxir-hall-full" spaceLabel="moxir" />)
+
+        expect(await screen.findByText(/There is no project “moxir-hall-full” in moxir\./)).toBeTruthy()
+        expect(screen.getByRole('link', { name: 'Open moxir' }).getAttribute('href')).toBe('/moxir')
+        expect(screen.getByRole('link', { name: 'Everything in moxir' }).getAttribute('href')).toMatch(/^\/moxir\/projects$/)
+        expect(screen.queryByText('Project not found.')).toBe(null)
+    })
+
+    it('keeps the plain message for any other failure', async () => {
+        getProjectDocumentMock.mockRejectedValue(new Error('offline'))
+        render(<PublicProjectViewer spaceId="moxir" projectId="moxir-hall" spaceLabel="moxir" />)
+        expect(await screen.findByText('offline')).toBeTruthy()
+        expect(screen.queryByRole('link', { name: 'Open moxir' })).toBe(null)
     })
 
     it('retries the snapshot instead of replaying the whole log when the document load failed', async () => {

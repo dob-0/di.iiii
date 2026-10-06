@@ -56,7 +56,10 @@ const BEAM_SECTION = {
     label: 'Beam',
     fields: [
         { label: 'Beam visible', component: 'beam', path: ['visible'], type: 'checkbox' },
-        { label: 'Haze', component: 'beam', path: ['haze'], type: 'number', min: 0, max: 1, step: 0.05, fallback: 0.4 }
+        { label: 'Haze', component: 'beam', path: ['haze'], type: 'number', min: 0, max: 1, step: 0.05, fallback: 0.4 },
+        // The cone without the light: for a rig bigger than a browser can light
+        // (src/objectComponents/spotBeam.js, beamCastsLight).
+        { label: 'Beam only (no light)', component: 'beam', path: ['only'], type: 'checkbox' }
     ]
 }
 
@@ -449,6 +452,28 @@ const DEFINITIONS = {
 
 const getEntityDefinition = (type = 'box') => DEFINITIONS[type] || DEFINITIONS.box
 
+// LINK. Click the object in the live viewer to go somewhere: a path in this
+// platform (/space/project) or another site (https://…, opens in a new tab).
+// What a click does, and which addresses are refused, is decided in
+// src/project/viewport/entityLink.js; the schema drops unsafe schemes on
+// write. Last in the list: it is about where the object leads, not what it is.
+const LINK_SECTION = {
+    id: 'link',
+    label: 'Link',
+    fields: [
+        { label: 'Open on click', component: 'link', path: ['enabled'], type: 'checkbox' },
+        { label: 'Address', component: 'link', path: ['href'], type: 'text', placeholder: '/space/project or https://…' },
+        { label: 'Label', component: 'link', path: ['label'], type: 'text', placeholder: 'shown on hover' }
+    ]
+}
+
+// Every drawn object can carry a link. Not a door (it already has its own
+// click), a light or a group (nothing to point at).
+const LINKABLE_TYPES = new Set([
+    'box', 'sphere', 'cone', 'cylinder', 'plane', 'torus', 'capsule', 'ring',
+    'text', 'image', 'video', 'audio', 'model'
+])
+
 export const createEntityOfType = (type = 'box', overrides = {}) => {
     const definition = getEntityDefinition(type)
     return normalizeEntity({
@@ -472,4 +497,7 @@ export const createEntityOfType = (type = 'box', overrides = {}) => {
     })
 }
 
-export const getInspectorSections = (entity) => getEntityDefinition(entity?.type).sections || BASE_SECTIONS
+export const getInspectorSections = (entity) => {
+    const sections = getEntityDefinition(entity?.type).sections || BASE_SECTIONS
+    return LINKABLE_TYPES.has(entity?.type) ? [...sections, LINK_SECTION] : sections
+}

@@ -4,9 +4,11 @@ import {
     computeFramingCamera,
     computeFitDistance,
     fitCameraToAspect,
+    FLOOR_CLEARANCE,
     getAspectFitScale,
     getLimitingHalfFov,
     getViewportAspect,
+    DEFAULT_FRAMING_DIRECTION,
     frameSphereInControls
 } from './cameraFraming.js'
 
@@ -200,5 +202,98 @@ describe('fitCameraToAspect', () => {
         const degenerate = { ...authored, position: [1, 2, 3], target: [1, 2, 3] }
         expect(fitCameraToAspect(degenerate, PORTRAIT_ASPECT)).toBe(degenerate)
         expect(fitCameraToAspect(null, PORTRAIT_ASPECT)).toBe(null)
+    })
+})
+
+describe('fitCameraToAspect inside a room', () => {
+    // MOXIR's composed entry, as published on dev (2026-09-29): standing at eye
+    // height near the back of the hall, looking UP at the rig. The plain dolly
+    // put a 390x844 phone at y -1.91 -- under the floor -- and the room drew
+    // black. The hall's declared floor plan is its worldState.walkableAreas.
+    const moxir = {
+        projection: 'perspective',
+        position: [0, 1.6, 20.2],
+        target: [0, 5.2, 3.2],
+        fov: 55,
+        zoom: 1,
+        near: 0.05,
+        far: 400,
+        locked: false
+    }
+    const hall = [{ minX: -36, maxX: 60, minZ: -54.1, maxZ: 55.5 }]
+    // What a square viewport sees horizontally, as a half-angle.
+    const squareHalf = getLimitingHalfFov(moxir.fov, 1)
+    const coveredHalf = (view, aspect) => {
+        const distance = distanceOf(view)
+        const authored = distanceOf(moxir)
+        // Field needed at the authored distance, seen from where the camera is.
+        return Math.asin(Math.min(1, Math.sin(getLimitingHalfFov(view.fov, aspect)) * distance / authored))
+    }
+
+    it('never takes a camera the author put above the floor below it', () => {
+        const fitted = fitCameraToAspect(moxir, PORTRAIT_ASPECT, { walkableAreas: hall })
+        expect(fitted.position[1]).toBeGreaterThanOrEqual(FLOOR_CLEARANCE - 1e-9)
+        // Same axis: the composition is not re-aimed.
+        const axis = (view) => new THREE.Vector3(...view.position).sub(new THREE.Vector3(...view.target)).normalize()
+        expect(axis(fitted).angleTo(axis(moxir))).toBeCloseTo(0, 6)
+    })
+
+    it('makes up what the arm could not reach with field of view', () => {
+        const fitted = fitCameraToAspect(moxir, PORTRAIT_ASPECT, { walkableAreas: hall })
+        expect(fitted.fov).toBeGreaterThan(moxir.fov)
+        expect(coveredHalf(fitted, PORTRAIT_ASPECT)).toBeGreaterThanOrEqual(squareHalf - 1e-6)
+    })
+
+    it('stops at the declared floor plan', () => {
+        // A wall 2 m behind the camera.
+        const tight = [{ minX: -10, maxX: 10, minZ: -10, maxZ: 22.2 }]
+        const fitted = fitCameraToAspect({ ...moxir, position: [0, 6, 20.2], target: [0, 1, 3.2] }, PORTRAIT_ASPECT, { walkableAreas: tight })
+        expect(fitted.position[2]).toBeLessThanOrEqual(22.2)
+        expect(fitted.fov).toBeGreaterThan(moxir.fov)
+    })
+
+    it('still hands a landscape viewport the authored shot untouched', () => {
+        expect(fitCameraToAspect(moxir, LANDSCAPE_ASPECT, { walkableAreas: hall })).toBe(moxir)
+    })
+
+    it('keeps the plain dolly for a shot with room behind it', () => {
+        // The front room case: the camera is above its target, so the arm rises.
+        const open = { ...moxir, position: [0, 3, 14.5], target: [0, 1.2, -14], fov: 50 }
+        const fitted = fitCameraToAspect(open, PORTRAIT_ASPECT)
+        expect(distanceOf(fitted)).toBeCloseTo(distanceOf(open) * getAspectFitScale(50, PORTRAIT_ASPECT), 6)
+        expect(fitted.fov).toBe(50)
+    })
+})
+
+describe('bounding-sphere fit: distance = radius / sin(limiting half fov)', () => {
+    const FOV = 50
+    const R = 10
+
+    it('landscape is limited by the vertical fov: R / sin(25 deg)', () => {
+        expect(computeFitDistance(R, { fov: FOV, aspect: LANDSCAPE_ASPECT }))
+            .toBeCloseTo(R / Math.sin(THREE.MathUtils.degToRad(FOV / 2)), 9)
+    })
+
+    it('portrait 390x844 is limited by the horizontal fov: R / sin(atan(tan(25 deg) * aspect))', () => {
+        const half = Math.atan(Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * PORTRAIT_ASPECT)
+        expect(computeFitDistance(R, { fov: FOV, aspect: PORTRAIT_ASPECT })).toBeCloseTo(R / Math.sin(half), 9)
+    })
+
+    it('portrait stands 1.9-2.2x further back than landscape for the same sphere', () => {
+        const ratio = computeFitDistance(R, { fov: FOV, aspect: PORTRAIT_ASPECT })
+            / computeFitDistance(R, { fov: FOV, aspect: LANDSCAPE_ASPECT })
+        expect(ratio).toBeGreaterThan(1.9)
+        expect(ratio).toBeLessThan(2.2)
+    })
+
+    it('the fitted sphere is tangent to the narrow side of the frustum', () => {
+        const d = computeFitDistance(R, { fov: FOV, aspect: PORTRAIT_ASPECT })
+        const horizontalHalfWidthAtCentre = d * Math.tan(Math.atan(Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * PORTRAIT_ASPECT))
+        // sphere silhouette sits on the frustum plane: R = d * sin(half)
+        expect(d * Math.sin(Math.atan(horizontalHalfWidthAtCentre / d))).toBeCloseTo(R, 9)
+    })
+
+    it('exports the fallback direction the editor shares', () => {
+        expect(DEFAULT_FRAMING_DIRECTION).toEqual([0.8, 0.45, 1])
     })
 })

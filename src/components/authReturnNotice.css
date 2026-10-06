@@ -8,7 +8,7 @@
     align-items: center;
     gap: var(--di-space-2);
     padding: var(--di-space-2) var(--di-space-3);
-    border-radius: var(--di-radius-pill);
+    border-radius: var(--di-radius);
     border: 1px solid var(--di-cyan-border);
     background: var(--di-scrim-strong);
     color: var(--di-text);
@@ -33,7 +33,7 @@
 .auth-return-notice button {
     background: none;
     border: none;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--di-text-muted);
     cursor: pointer;
     font-size: var(--di-text-4);
     line-height: 1;

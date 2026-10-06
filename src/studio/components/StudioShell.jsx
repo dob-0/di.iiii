@@ -11,9 +11,12 @@ import { useStudioPanelState } from '../hooks/useStudioPanelState.js'
 import useAuthSession from '../../hooks/useAuthSession.js'
 import StudioCoachMarks from './StudioCoachMarks.jsx'
 import RigMirrorHint from './RigMirrorHint.jsx'
-import SurfaceBar from '../../components/SurfaceBar.jsx'
+import SurfaceBar, { layerReached } from '../../components/SurfaceBar.jsx'
+import DeskPerformSwitch from '../../perform/DeskPerformSwitch.jsx'
+import { hasRig } from '../../rigbuild/hasRigLamps.js'
+import { rigEntryPath } from '../../rigbuild/rigTools.js'
 import useLocalInstall from '../../hooks/useLocalInstall.js'
-import { isEmbedRequest } from '../../utils/previewMode.js'
+import { isEmbedRequest, isPreviewRequest } from '../../utils/previewMode.js'
 import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspaceStorage.js'
 import '../styles/studio-mobile.css'
 import { canPlaceInScene } from '../utils/assetFormats.js'
@@ -25,6 +28,7 @@ import { JAM_PRIMITIVES } from '../../project/entityPalette.js'
 import {
     AssetsPanel,
     FilesPanel,
+    GeoSwitcher,
     HistoryPanel,
     JamEditPanel,
     LibraryPanel,
@@ -169,7 +173,15 @@ export default function StudioShell({
     cues = [],
     liveCueId = null,
     onFireCue = null,
+    // Nodes' things in the room, and which room Studio stands in — the whole
+    // room, or the inside of a Geo (StudioEditor; null on the open jam).
+    // geoSwitcher: { geos, currentGeoId, onOpenGeo, onNewGeo }
+    graphRoom = null,
+    geoSwitcher = null,
+    // Inside a Geo, Create offers only what exists as a node.
+    createPalette = null,
 }) {
+    const insideGeo = Boolean(geoSwitcher?.currentGeoId)
     const persistedWorkspace = useMemo(() => loadStudioWorkspace(), [])
     const { open, toggle, isOpen } = useStudioPanelState(migratePanelIds(persistedWorkspace?.open))
     const { layout: vpLayout, split: vpSplit, close: vpClose, setRatio: vpSetRatio } = useViewportLayout()
@@ -264,6 +276,11 @@ export default function StudioShell({
     // project, strip the editor down to the common tools — unless this device
     // opted back into the full editor via the "All tools" toggle.
     const isJam = isJamProject(document?.projectMeta?.id)
+    // The door to the rig's steps from this project (RIG_BUILD.md §14): its plot.
+    const rigSpaceId = liveProjectState?.spaceId
+    const rigProjectId = document?.projectMeta?.id
+    const projectHasRig = useMemo(() => hasRig(document?.entities || []), [document?.entities])
+    const rigHref = projectHasRig && rigSpaceId && rigProjectId ? rigEntryPath(rigSpaceId, rigProjectId, 'plot') : null
     const [jamAllTools, setJamAllTools] = useState(loadJamAllTools)
     const jamMinimal = isJam && !jamAllTools
     const handleToggleJamTools = useCallback(() => {
@@ -286,6 +303,12 @@ export default function StudioShell({
     const allTools = useAllTools()
     const handleToggleAllTools = useCallback(() => saveAllTools(!allTools), [allTools])
     const bare = !isJam && !allTools && Boolean(layers?.loaded) && !layers.held
+    // Studio's own jump buttons to Nodes and Projection (the control cluster, the phone
+    // header) follow the bar: offered once the project has reached that tool's layer,
+    // never before (2026-09-27 — the phone offered Projection before the first wire).
+    const toolLayers = isJam || allTools ? null : layers?.open
+    const offerNodes = layerReached('raw', toolLayers)
+    const offerProjection = layerReached('map', toolLayers)
 
     // Jam phones get Create plus a tiny Edit tab (text/color/remove) — the
     // full Scene sheet stays hidden. A bare project's phone gets Create alone.
@@ -299,7 +322,9 @@ export default function StudioShell({
     // Not in a window (?embed=1), a headset, Hide UI, or the jam's simple mode —
     // there the tools' own jumps are hidden too, and the bar is only more of them.
     const localInstall = useLocalInstall()
-    const [isEmbed] = useState(() => isEmbedRequest())
+    // A preview (?preview=1, a Kit card's picture of Studio) hides the same
+    // navigation an embedded window does.
+    const [isEmbed] = useState(() => isEmbedRequest() || isPreviewRequest())
     const showBar = !uiHidden && !isEmbed && !xrState?.isXrPresenting && !jamMinimal
 
     // Guest first-run guidance is the action-completed coach pill
@@ -508,6 +533,7 @@ export default function StudioShell({
         onShowHelp: () => setShowHelp(true),
         onCloseHelp: () => setShowHelp(false),
         rigMirror: rigMirror.on,
+        graphRoom,
     }
 
     // One source of truth for each window's content, shared by the desktop
@@ -522,7 +548,8 @@ export default function StudioShell({
             </>
         ) : (
             <>
-                            <LibraryPanel onCreateEntity={onCreateEntity} />
+                            {geoSwitcher ? <GeoSwitcher {...geoSwitcher} /> : null}
+                            <LibraryPanel onCreateEntity={onCreateEntity} {...(createPalette || {})} />
                             {/* Bare: the 15 things and Import files. Drive and Commons
                                 are not handed until the first thing is placed, and the
                                 Files list waits for its first file. */}
@@ -567,7 +594,7 @@ export default function StudioShell({
                             ) : (
                                 <p className="sfp-empty">Select an object above or in the viewport to edit it.</p>
                             )}
-                            {selectedEntity && selectedEntityIds.length <= 1 && (
+                            {selectedEntity && selectedEntityIds.length <= 1 && !insideGeo && (
                                 <TimelinePanel
                                     entity={selectedEntity}
                                     onTimelineChange={(next) => onInspectorChange?.('timeline', next)}
@@ -624,7 +651,21 @@ export default function StudioShell({
                 isLocalInstall={localInstall.isLocal}
                 hidden={!showBar}
                 layers={isJam ? null : layers?.open}
-            />
+            >
+                {/* Desk | Perform, once the project has something to perform:
+                    a connection (a deck, a picture) or a wall. A bare project
+                    opens bare (the layers decision, 2026-09-23); "All tools"
+                    and a project still loading show it, as they show every name. */}
+                {!isJam && (allTools || !layers?.open || layers.open.connections || layers.open.wall) ? (
+                    <DeskPerformSwitch current="desk" space={liveProjectState?.spaceId} project={document?.projectMeta?.id} from="studio" />
+                ) : null}
+                {/* Rig, when the project holds one (a typed lamp or a rental list): the
+                    plot of this project, and from there every step of the rig
+                    (src/rigbuild/RigSteps.jsx). One of the bar's own words. */}
+                {!isJam && rigHref ? (
+                    <a className="sbar-link studio-rig-link" href={rigHref} title="The rig of this project: equipment, build, plot, cards, patch sheet, crew link">Rig</a>
+                ) : null}
+            </SurfaceBar>
 
             {!uiHidden && !isMobile && (
                 <>
@@ -683,8 +724,8 @@ export default function StudioShell({
                         onFullscreen={handleFullscreen}
                         onHideUI={() => setUiHidden(true)}
                         onBackToHub={onBackToHub}
-                        onOpenNodeEditor={onOpenNodeEditor}
-                        onOpenProjection={onOpenProjection}
+                        onOpenNodeEditor={offerNodes ? onOpenNodeEditor : undefined}
+                        onOpenProjection={offerProjection ? onOpenProjection : undefined}
                         xrState={xrState}
                         syncState={syncState}
                         presence={presence}
@@ -733,7 +774,7 @@ export default function StudioShell({
                             "Open in Studio" since the doors audit, but only the desktop
                             control cluster had the return trip — so on a phone the two
                             building tools were connected in one direction only. */}
-                        {!jamMinimal && !bare && onOpenNodeEditor && (
+                        {!jamMinimal && !bare && offerNodes && onOpenNodeEditor && (
                             <button
                                 type="button"
                                 className="smb-top-btn"
@@ -744,7 +785,7 @@ export default function StudioShell({
                                 Nodes
                             </button>
                         )}
-                        {!jamMinimal && !bare && onOpenProjection && (
+                        {!jamMinimal && !bare && offerProjection && onOpenProjection && (
                             <button
                                 type="button"
                                 className="smb-top-btn"

@@ -14,7 +14,7 @@
  *   --space   <id>     Space ID (REQUIRED — there is no default; the
  *                      destination defaults to PRODUCTION)
  *   --project <id>     Only promote this one project
- *   --from    <url>    Source API base (default: $LIVE_API_URL — the dev tier)
+ *   --from    <url>    Source API base (default: $DEV_API_URL, legacy alias $LIVE_API_URL — the dev tier)
  *   --to      <url>    Destination API base (default: $PROD_API_URL)
  *   --from-token <tok> Bearer token for --from (default: $LIVE_API_TOKEN)
  *   --to-token   <tok> Bearer token for --to (default: $PROD_API_TOKEN)
@@ -26,6 +26,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { ensureDestinationVisibility } from './project-visibility-lib.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -61,9 +62,9 @@ const localEnv = {
 }
 const getEnv = (k) => process.env[k] || localEnv[k] || ''
 
-const FROM_URL = (opt('from') || getEnv('LIVE_API_URL') || '').replace(/\/+$/, '')
+const FROM_URL = (opt('from') || getEnv('DEV_API_URL') || getEnv('LIVE_API_URL') || '').replace(/\/+$/, '')
 const TO_URL = (opt('to') || getEnv('PROD_API_URL') || '').replace(/\/+$/, '')
-const FROM_TOKEN = opt('from-token') || getEnv('LIVE_API_TOKEN') || ''
+const FROM_TOKEN = opt('from-token') || getEnv('DEV_API_TOKEN') || getEnv('LIVE_API_TOKEN') || ''
 const TO_TOKEN = opt('to-token') || getEnv('PROD_API_TOKEN') || ''
 
 function authHeaders(token, extra = {}) {
@@ -118,7 +119,7 @@ async function copyAsset(projectId, asset) {
 
 async function main() {
     if (!FROM_URL || !TO_URL) {
-        console.error('Error: --from/--to (or LIVE_API_URL/PROD_API_URL) required.')
+        console.error('Error: --from/--to (or DEV_API_URL/PROD_API_URL) required.')
         process.exitCode = 1; return
     }
     if (!FROM_TOKEN || !TO_TOKEN) {
@@ -136,9 +137,31 @@ async function main() {
         return
     }
 
-    for (const { id: projectId } of targets) {
+    for (const sourceMeta of targets) {
+        const projectId = sourceMeta.id
         console.log(`\n── ${projectId} ──`)
         const { document: doc } = await apiFetch(`${FROM_URL}/api/projects/${projectId}/document`, { headers: authHeaders(FROM_TOKEN) })
+
+        // Private at the source → private at the destination BEFORE any of its
+        // content lands there (scripts/project-visibility-lib.mjs).
+        if (!DRY_RUN) {
+            const kept = await ensureDestinationVisibility({
+                projectId,
+                sourceMeta,
+                request: async (method, pathname, body) => {
+                    const res = await fetch(`${TO_URL}${pathname}`, {
+                        method,
+                        headers: authHeaders(TO_TOKEN, body ? { 'Content-Type': 'application/json' } : {}),
+                        ...(body ? { body: JSON.stringify(body) } : {})
+                    })
+                    return { ok: res.ok, status: res.status, body: await res.json().catch(() => null) }
+                }
+            })
+            if (!kept.ok) { console.log(`  SKIPPED: ${kept.error}`); process.exitCode = 1; continue }
+            if (kept.note) console.log(`  [visibility] ${kept.note}`)
+        } else if (sourceMeta.visibility === 'private') {
+            console.log('  [visibility] private at the source — would make sure it is private at the destination first')
+        }
 
         if (!DOCS_ONLY) {
             for (const asset of doc.assets || []) {

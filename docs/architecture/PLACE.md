@@ -233,6 +233,17 @@ already speaks, and **implies `--no-sources`** — the phone hung those pictures
 that wall as it walked, and carrying them in again would leave two of every
 photograph in one room.
 
+## Seeing the place — the smart view
+
+A place is a building, and an orbit camera that leaves a building sees its outside
+walls, then black. Every room with a place in it gets the smart view
+([SMART_VIEW.md](SMART_VIEW.md)): what stands in the way fades, from outside the roof
+and the near walls are cut away, six named views (floor, DJ, top, side, rig, crane),
+and x-ray. It finds the building through what this pipeline already writes — the
+`place-hall` entity, its `venuePlan` outline, and `hall.py`'s per-material mesh names
+(`hall-frame`, `hall-deck`, `hall-skylight` are the roof; `hall-floor` and
+`hall-zone-*` the floor) — and falls back to bounds for any other model.
+
 ## Next
 
 - More than one rectangle of walkable floor, for a hall with side rooms.

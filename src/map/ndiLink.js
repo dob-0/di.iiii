@@ -91,6 +91,139 @@ export async function fetchNdiSources({ fetchImpl, signal } = {}) {
     }
 }
 
+// ── the autoscan ────────────────────────────────────────────────────────────
+// serverXR keeps ONE long-lived NDI finder running and knows, all the time, which
+// sources are on the network (serverXR/src/ndi/scanner.js). A page reads that
+// knowledge; it never asks the server to go and look.
+//
+// `scan` below is the server's snapshot: { state, reason, how, count, sources }.
+// state is running · starting · restarting · no-runtime · error · off, and `count`
+// is null whenever the server cannot look — a page must never turn that into "0".
+
+/** The scan as it stands, or null when this page's server has no /ndi (hosted). Never throws. */
+export async function fetchNdiScan({ fetchImpl, signal, waitMs = 0 } = {}) {
+    const call = resolveFetch(fetchImpl)
+    if (!call) return null
+    try {
+        const wait = Math.max(0, Math.min(5000, Math.round(Number(waitMs) || 0)))
+        const response = await call(ndiApiUrl(`api/scan${wait ? `?wait=${wait}` : ''}`), { signal })
+        if (!response?.ok || !answeredJson(response)) return null
+        const body = await response.json()
+        return body && typeof body.state === 'string' ? body : null
+    } catch {
+        return null
+    }
+}
+
+// Only what is on the network NOW, as the rest of the page speaks it: [{ name, address }].
+export const presentNdiSources = (scan) => (Array.isArray(scan?.sources) ? scan.sources : [])
+    .filter((source) => source && source.present !== false && source.name)
+    .map((source) => ({ name: source.name, address: source.address || '' }))
+
+const POLL_MS = 5000
+const REPROBE_MS = 30000
+
+// One feed per page, however many components listen: an open EventSource is one of
+// the six connections HTTP/1.1 allows a page per origin, and a wall that shows
+// several NDI pictures (one MJPEG connection each) cannot spare two.
+const feeds = { stream: null, poll: null }
+
+const openFeed = (mode) => {
+    const listeners = new Set()
+    let last = null
+    let seen = false // this page's server has answered /ndi at least once
+    let stopped = false
+    let source = null
+    let timer = null
+
+    const emit = (scan) => {
+        last = scan
+        for (const listener of [...listeners]) { try { listener(scan) } catch { /* a listener's own fault */ } }
+    }
+
+    // Every start goes through a plain GET first: on a hosted tier /ndi is a 404 (or
+    // the app's own index.html), and an EventSource pointed at that would retry for
+    // ever. A page whose server has no /ndi gets one `null` and nothing after it.
+    const start = async () => {
+        if (stopped) return
+        const scan = await fetchNdiScan()
+        if (stopped) return
+        if (!scan) {
+            if (last !== null) emit(null)
+            // A server that answered before and does not now is restarting — keep
+            // asking, slowly. One that never answered is a hosted tier: stop.
+            if (seen) timer = setTimeout(start, REPROBE_MS)
+            return
+        }
+        seen = true
+        emit(scan)
+        if (mode === 'poll' || typeof EventSource !== 'function') {
+            timer = setTimeout(start, POLL_MS)
+            return
+        }
+        source = new EventSource(ndiApiUrl('api/scan/events'))
+        source.addEventListener('scan', (event) => {
+            try { emit(JSON.parse(event.data)) } catch { /* a malformed event is skipped, not fatal */ }
+        })
+        source.onerror = () => {
+            // CONNECTING: the browser is already retrying (the server said retry: 3000).
+            // CLOSED: it gave up — the server went away or answered something else.
+            // Ask again later with a plain GET, which also notices a server that is gone.
+            if (source && source.readyState === 2) {
+                source.close(); source = null
+                timer = setTimeout(start, REPROBE_MS)
+            }
+        }
+    }
+
+    return {
+        listeners,
+        last: () => last,
+        start,
+        stop: () => {
+            stopped = true
+            if (timer) clearTimeout(timer)
+            if (source) { source.close(); source = null }
+        }
+    }
+}
+
+/**
+ * The one line a desk shows about the scan — '' where there is nothing to say
+ * (a hosted tier, a scan that is off). The number is only ever a reading: every
+ * state in which the server cannot look says so instead of counting.
+ */
+export function ndiScanLine(scan) {
+    if (!scan || scan.state === 'off') return ''
+    if (scan.state === 'running') return `NDI on the network: ${Number(scan.count) || 0}`
+    if (scan.state === 'starting' || scan.state === 'restarting') return 'NDI on the network: looking…'
+    if (scan.state === 'no-runtime') {
+        return `NDI on the network: unknown — this machine has no NDI runtime${scan.how ? ` (${scan.how})` : ''}`
+    }
+    return `NDI on the network: unknown — ${scan.detail || scan.reason || 'the NDI runtime would not start'}`
+}
+
+/**
+ * Hear the scan: the listener gets the server's snapshot at once and again on
+ * every change (a source appeared, left, or the scan's own state moved).
+ *   mode 'stream' — the SSE feed, a change arrives as it happens (the desk);
+ *   mode 'poll'   — a GET every 5 s, no connection held open (the wall, whose
+ *                   connections belong to its pictures).
+ * The listener gets null when this page's server cannot receive NDI at all.
+ * @returns {() => void} stop listening
+ */
+export function watchNdiScan(listener, { mode = 'stream' } = {}) {
+    const key = mode === 'poll' ? 'poll' : 'stream'
+    if (!feeds[key]) { feeds[key] = openFeed(key); feeds[key].start() }
+    const feed = feeds[key]
+    feed.listeners.add(listener)
+    if (feed.last()) listener(feed.last())
+    return () => {
+        feed.listeners.delete(listener)
+        if (!feed.listeners.size && feeds[key] === feed) { feed.stop(); feeds[key] = null }
+    }
+}
+
 /** This machine's receiver for one name, as the server describes it — or null. */
 export async function fetchNdiReceiver({ name, fetchImpl, signal } = {}) {
     const call = resolveFetch(fetchImpl)

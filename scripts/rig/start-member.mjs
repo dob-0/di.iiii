@@ -33,6 +33,7 @@ import path from 'node:path'
 import { parseArgs } from 'node:util'
 
 import { freePort, waitForHealth } from './lib.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -158,7 +159,7 @@ export const stopByPid = async (pid) => {
 
 const isMain = () => {
     try {
-        return import.meta.url === `file://${process.argv[1]}`
+        return isMainModule(import.meta.url)
     } catch {
         return false
     }

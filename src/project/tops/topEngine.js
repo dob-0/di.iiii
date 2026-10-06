@@ -380,7 +380,8 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
                 continue
             }
 
-            if (operator.source === 'camera') {
+            // Camera In and Clip In alike: whatever <video> setVideo gave this node.
+            if (operator.source) {
                 const video = videos.get(node.id)
                 if (video && video.readyState >= 2 && video.currentTime !== slot.lastVideoTime) {
                     slot.lastVideoTime = video.currentTime

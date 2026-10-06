@@ -11,10 +11,13 @@ const { findIdlessCreateOp } = require('../opValidation')
 const { placeOps } = require('../../../shared/placement.cjs')
 const { actorFromAuthState } = require('../opActor')
 const { countProjectLayers } = require('../../../shared/layers.cjs')
+const { canAccessSpace, formatAuthScopeLabel } = require('../authAccess')
+const { assetCacheControl, filterVisibleProjects } = require('../projectVisibility')
 
 const withProjectLock = createKeyedLock()
 
 function registerProjectRoutes(router, {
+  config = {},
   appendProjectOps,
   applyProjectOps,
   broadcastProjectLiveEvent,
@@ -47,6 +50,14 @@ function registerProjectRoutes(router, {
   reorderProjects,
   setProjectShelf,
   setProjectState,
+  // Per-project visibility (projectVisibility.js). Absent on a router built
+  // without them: the field is then refused rather than silently ignored.
+  setProjectVisibility = null,
+  loadSpaceMeta = null,
+  isSpaceOwnerOrAdminState = null,
+  // projectMove.js bound to the live database and spaces dir. Absent on a
+  // router built without it: the route then answers 501.
+  moveProject = null,
   TRASH_TTL_MS,
   listCollections,
   getCollection,
@@ -69,6 +80,9 @@ function registerProjectRoutes(router, {
   // spaceHistory.js — restore points before changes. Absent means none.
   spaceHistory = null
 }) {
+  const visibilityOptions = { requireAuth: Boolean(config.requireAuth) }
+  const visibleTo = (req, spaceId, projects) =>
+    filterVisibleProjects(req.authState, spaceId, projects, visibilityOptions)
   router.get('/api/spaces/:spaceId/projects', async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)
@@ -76,7 +90,9 @@ function registerProjectRoutes(router, {
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      const rows = await listProjectsInSpace(spacesDir, spaceId)
+      // A private project is listed to the space's members only — to anyone
+      // else it is not in this space at all (projectVisibility.js).
+      const rows = visibleTo(req, spaceId, await listProjectsInSpace(spacesDir, spaceId))
       const projects = []
       for (const meta of rows) {
         const layers = await readLayerCounts(spaceId, meta)
@@ -163,25 +179,47 @@ function registerProjectRoutes(router, {
   // Cached on (project, document version, updatedAt) so a space of sixty
   // projects parses its documents once and then answers out of memory; any
   // write moves one of those two numbers, so a stale label is not reachable.
+  //
+  // The same read also lifts a rig version's mark (components.rigVariant on the show
+  // entity, RIG_BUILD.md §15) so the space view's version switch can list the space's
+  // LIVE versions from this one visitor-safe list instead of from a sibling list frozen
+  // into each document at build time (2026-09-30: Minimal listed 2 of 8 live versions).
   const presentationModeCache = new Map()
   const PRESENTATION_MODE_CACHE_MAX = 4000
-  const readPresentationMode = async (spaceId, meta) => {
+  const str = (v) => (typeof v === 'string' ? v : '')
+  const rigVariantSummary = (document) => {
+    const v = (Array.isArray(document?.entities) ? document.entities : [])
+      .map((e) => e?.components?.rigVariant)
+      .find((m) => m && typeof m === 'object' && str(m.id))
+    if (!v) return null
+    const copyLabel = str(v.copyOf?.label)
+    return {
+      set: str(v.set),
+      id: str(v.id),
+      title: str(v.title),
+      summary: str(v.summary),
+      ...(v.copyOf && typeof v.copyOf === 'object' ? { copyOf: { projectId: str(v.copyOf.projectId), ...(copyLabel ? { label: copyLabel } : {}) } } : {})
+    }
+  }
+  const readRowFacts = async (spaceId, meta) => {
     const key = `${meta.id}:${meta.documentVersion ?? 0}:${meta.updatedAt ?? 0}`
     if (presentationModeCache.has(key)) return presentationModeCache.get(key)
-    let mode = 'scene'
+    let facts = { mode: 'scene', rigVariant: null }
     try {
       const document = await readProjectDocument(spacesDir, spaceId, meta.id)
       const raw = document?.presentationState?.mode
-      if (raw === 'scene' || raw === 'fixed-camera' || raw === 'code') mode = raw
+      facts = {
+        mode: raw === 'scene' || raw === 'fixed-camera' || raw === 'code' ? raw : 'scene',
+        rigVariant: rigVariantSummary(document)
+      }
     } catch {
       // A document that cannot be read is still a project that exists; call it
       // a scene (the schema default) rather than dropping the row and hiding
       // the very thing this route was built to make findable.
-      mode = 'scene'
     }
     if (presentationModeCache.size >= PRESENTATION_MODE_CACHE_MAX) presentationModeCache.clear()
-    presentationModeCache.set(key, mode)
-    return mode
+    presentationModeCache.set(key, facts)
+    return facts
   }
 
   router.get('/api/spaces/:spaceId/contents', async (req, res, next) => {
@@ -191,16 +229,20 @@ function registerProjectRoutes(router, {
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      const onShow = (await listProjectsInSpace(spacesDir, spaceId))
+      const onShow = visibleTo(req, spaceId, await listProjectsInSpace(spacesDir, spaceId))
         .filter((meta) => (meta.state || 'live') === 'live' && !isLegacyArchivedTitle(meta.title))
       const projects = []
       for (const meta of onShow) {
+        const facts = await readRowFacts(spaceId, meta)
         projects.push({
           id: meta.id,
           slug: meta.slug || null,
           title: meta.title,
-          mode: await readPresentationMode(spaceId, meta),
-          updatedAt: meta.updatedAt
+          mode: facts.mode,
+          updatedAt: meta.updatedAt,
+          ...(facts.rigVariant ? { rigVariant: facts.rigVariant } : {}),
+          // Said only on a private row — which only a member is ever sent.
+          ...(meta.visibility === 'private' ? { visibility: 'private' } : {})
         })
       }
       res.json({ spaceId, projects })
@@ -219,6 +261,14 @@ function registerProjectRoutes(router, {
       await ensureSpaceWritable(spaceId)
       const title = typeof req.body?.title === 'string' ? req.body.title.trim() : ''
       const source = typeof req.body?.source === 'string' ? req.body.source.trim() : ''
+      // A project can be BORN private, so a copy of private work (tier-sync,
+      // project-pull) never exists as public for the moment between a create
+      // and a follow-up PATCH. Hiding is always allowed to whoever may create;
+      // only making something public again is kept to the owner (PATCH below).
+      const visibility = req.body?.visibility
+      if (visibility !== undefined && visibility !== 'public' && visibility !== 'private') {
+        return res.status(400).json({ error: 'visibility must be "public" or "private".' })
+      }
       const slugSource = req.body?.slug || title || `project-${Date.now()}`
       const projectId = normalizeProjectId(slugSource)
       if (!projectId) {
@@ -237,8 +287,14 @@ function registerProjectRoutes(router, {
       }
       const meta = await ensureProject(spacesDir, spaceId, projectId, {
         title: title || 'Untitled Project',
-        ...(source ? { source } : {})
+        ...(source ? { source } : {}),
+        ...(visibility ? { visibility } : {})
       })
+      // A followed space carries a project made with nothing in it (it has no
+      // ops to wake anyone): wake this install's follower, and release any
+      // di.iiii parked on the room's log. Never fatal.
+      try { require('../follow').nudgeFollow(spaceId) } catch { /* no follows here */ }
+      try { require('../follow/waiters').noteChange(spaceId) } catch { /* nobody waiting */ }
       res.status(201).json({
         project: meta,
         document: await readProjectDocument(spacesDir, spaceId, projectId)
@@ -267,6 +323,32 @@ function registerProjectRoutes(router, {
         return res.status(404).json({ error: 'Project not found.' })
       }
       await ensureSpaceWritable(project.spaceId)
+      // Visibility: who inside the space may see this project. The space's
+      // steward decides it, like the space's own isPublic — owner or admin.
+      // A private project cannot be the space's front door (the door is what
+      // every visitor is sent to), so hiding the published one is refused
+      // with the way out named; spaceRoutes.js refuses the other direction.
+      let nextVisibility
+      if (req.body?.visibility !== undefined) {
+        nextVisibility = req.body.visibility
+        if (nextVisibility !== 'public' && nextVisibility !== 'private') {
+          return res.status(400).json({ error: 'visibility must be "public" or "private".' })
+        }
+        if (typeof setProjectVisibility !== 'function') {
+          return res.status(501).json({ error: 'This server cannot change a project\'s visibility.' })
+        }
+        const spaceMeta = typeof loadSpaceMeta === 'function' ? await loadSpaceMeta(project.spaceId) : null
+        if (config.requireAuth && typeof isSpaceOwnerOrAdminState === 'function' &&
+          !isSpaceOwnerOrAdminState(req.authState || {}, spaceMeta)) {
+          return res.status(403).json({ error: 'Only the space owner or an admin can change who sees a project.' })
+        }
+        if (nextVisibility === 'private' && spaceMeta?.publishedProjectId === project.projectId) {
+          return res.status(409).json({
+            error: 'This project is the space\'s published front door, so it cannot be private. Publish a different project (or none) first, then make this one private.',
+            code: 'published_project_private'
+          })
+        }
+      }
       // Public handle, independently renameable from id, unique within the
       // owning space only — docs/architecture/SPEC_space_urls_and_portability.md.
       let nextSlug
@@ -288,10 +370,18 @@ function registerProjectRoutes(router, {
         }
         nextSlug = normalized
       }
-      const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
+      let nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
         ...(req.body?.title !== undefined ? { title: req.body.title } : {}),
         ...(req.body?.slug !== undefined ? { slug: nextSlug } : {})
       })
+      if (nextVisibility !== undefined) {
+        nextMeta = await setProjectVisibility(project.projectId, nextVisibility)
+        // Any open stream a visitor holds on this project is closed by the
+        // broadcast itself (index.js drops listeners who may no longer see it).
+        if (typeof broadcastProjectLiveEvent === 'function') {
+          await broadcastProjectLiveEvent(project.projectId, 'project-visibility', { visibility: nextMeta.visibility })
+        }
+      }
       const document = await readProjectDocument(spacesDir, project.spaceId, project.projectId)
       document.projectMeta = {
         ...document.projectMeta,
@@ -326,13 +416,81 @@ function registerProjectRoutes(router, {
     }
   })
 
+  // Move a project into another space of this install. Admin, or the owner of
+  // BOTH spaces: the move takes the work out of one space and puts it into
+  // another, so it needs the standing to change each. The body names the
+  // target; the project id never changes (it is global), so /api/projects/:id
+  // and /{space}/p/{id} keep working, and the old bare link answers through
+  // the project_moves line this writes (see projectMove.js).
+  router.post('/api/projects/:projectId/move', async (req, res, next) => {
+    try {
+      if (typeof moveProject !== 'function') {
+        return res.status(501).json({ error: 'Moving a project is not available on this server.' })
+      }
+      const project = await resolveProjectContext(req.params.projectId)
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found.' })
+      }
+      const toSpaceId = normalizeSpaceId(req.body?.toSpace)
+      if (!toSpaceId) {
+        return res.status(400).json({ error: 'toSpace must name the space to move the project into.' })
+      }
+      if (config.requireAuth) {
+        const state = req.authState || {}
+        const [fromMeta, toMeta] = await Promise.all([loadSpaceMeta(project.spaceId), loadSpaceMeta(toSpaceId)])
+        if (!toMeta) return res.status(404).json({ error: `target space "${toSpaceId}" not found` })
+        if (!canAccessSpace(state, toSpaceId) ||
+          !isSpaceOwnerOrAdminState(state, fromMeta) || !isSpaceOwnerOrAdminState(state, toMeta)) {
+          return res.status(403).json({ error: 'Only an admin, or the owner of both spaces, can move a project between them.' })
+        }
+      }
+      const report = await withProjectLock(project.projectId, () => moveProject({
+        projectId: project.projectId,
+        toSpaceId,
+        unpublish: req.body?.unpublish === true,
+        dryRun: req.body?.dryRun === true
+      }))
+      res.json({
+        ok: true,
+        ...report,
+        stableLink: `/${toSpaceId}/p/${project.projectId}`
+      })
+    } catch (error) {
+      if (error?.name === 'MoveRefused') {
+        return res.status(error.status || 400).json({ error: error.message, code: error.code })
+      }
+      next(error)
+    }
+  })
+
   // ── The trash ────────────────────────────────────────────────────────────
   // Delete used to remove the row and rm -rf the directory in one call, with no
   // undo anywhere in the product.
   router.get('/api/trash', async (req, res, next) => {
     try {
       const spaceId = req.query.space ? normalizeSpaceId(req.query.space) : null
-      const projects = await listTrashedProjects(spaceId)
+      // A `?space=` scope is already enforced upstream: index.js sets
+      // req.requiredSpaceId for this route from the same query param and runs
+      // it through the same requireReadRole/requireWriteRole gate as GET
+      // /api/spaces/:spaceId/projects, so an inaccessible or nonexistent
+      // space never reaches here.
+      //
+      // With no `?space=`, nothing upstream narrows the list — narrow it
+      // here instead, to trashed projects in spaces this caller can access.
+      // canAccessSpace alone is not a safe filter for an anonymous caller: an
+      // identity with no `spaces` restriction reads as "every space" by
+      // design (authAccess.js normalizeAuthScopeSpaces), which is what an
+      // unauthenticated request's default state looks like too — so
+      // `state.authenticated` is checked first, or an anonymous caller would
+      // see every space's trash again.
+      let projects = await listTrashedProjects(spaceId)
+      if (!spaceId && config.requireAuth) {
+        const state = req.authState || {}
+        projects = projects.filter((project) => state.authenticated && canAccessSpace(state, project.spaceId))
+      }
+      // A public space's trash is readable by its visitors; a private
+      // project's row must not be, trashed or not.
+      if (spaceId) projects = visibleTo(req, spaceId, projects)
       res.json({ projects, ttlMs: TRASH_TTL_MS })
     } catch (error) {
       next(error)
@@ -344,6 +502,24 @@ function registerProjectRoutes(router, {
       const projectId = normalizeProjectId(req.params.projectId)
       const trashed = (await listTrashedProjects()).find(p => p.id === projectId)
       if (!trashed) return res.status(404).json({ error: 'Nothing by that name is in the trash.' })
+      // A trashed project no longer resolves through the /api/projects/:projectId
+      // middleware in index.js (it looks up live projects only), so
+      // req.requiredSpaceId stayed null here and requireWriteRole's per-space
+      // scope check never ran — an editor token scoped to one space could
+      // restore a project trashed in another. Checked explicitly instead,
+      // same rule (and same response shape) as everywhere else a write is
+      // scoped to a space.
+      if (config.requireAuth) {
+        const state = req.authState || {}
+        if (!(state.authenticated && canAccessSpace(state, trashed.spaceId))) {
+          return res.status(403).json({
+            error: 'Space access denied.',
+            requiredSpaceId: trashed.spaceId,
+            allowedSpaces: state.spaces,
+            allowedSpaceLabel: formatAuthScopeLabel(state.spaces)
+          })
+        }
+      }
       await ensureSpaceWritable(trashed.spaceId)
       const project = await restoreProject(projectId)
       res.json({ project })
@@ -620,7 +796,8 @@ function registerProjectRoutes(router, {
       // The author, from the session — never from the ops — and, at the first
       // change of a new burst in this space, a restore point before it lands.
       const actor = actorFromAuthState(req.authState)
-      if (spaceHistory) await spaceHistory.beforeChange(project.spaceId, actor)
+      const wholeReplace = normalizedOps.some(op => op.type === 'replaceScene' || op.type === 'replaceDocument')
+      if (spaceHistory) await spaceHistory.beforeChange(project.spaceId, actor, wholeReplace ? { reason: 'before-whole-replace-op' } : {})
 
       // Serialized per project: the version check and the read-modify-write
       // it guards must be one atomic step, or two concurrent requests at the
@@ -1014,7 +1191,8 @@ function registerProjectRoutes(router, {
       if (!served.isFile()) throw Object.assign(new Error('not a regular file'), { code: 'ENOENT' })
       res.setHeader('Content-Type', meta?.mimeType || 'application/octet-stream')
       applyAssetSafetyHeaders(res, meta?.mimeType)
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+      // A private project's bytes are never stored by a shared cache.
+      res.setHeader('Cache-Control', assetCacheControl(project.meta))
       // `root` + a name, never sendFile(absolutePath). `send` applies
       // dotfiles: 'ignore' to EVERY segment of an absolute path, and the
       // default install lives in ~/.di — so on any `di` install this 404'd
@@ -1077,7 +1255,9 @@ function registerProjectRoutes(router, {
       res.setHeader('Connection', 'keep-alive')
       res.flushHeaders?.()
       const clientId = crypto.randomUUID()
-      entry.bucket.set(clientId, { res })
+      // Who is listening, kept so a project made private while this stream
+      // is open stops reaching a visitor (broadcastProjectLiveEvent).
+      entry.bucket.set(clientId, { res, authState: req.authState || null })
       res.write(`event: ready\ndata: ${JSON.stringify({ clientId, projectId: entry.normalized })}\n\n`)
       const keepAlive = setInterval(() => {
         try {

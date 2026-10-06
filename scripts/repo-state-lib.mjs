@@ -26,6 +26,25 @@ export const NOISE_BRANCH_PATTERNS = [/^dependabot\//, /^cpanel-/, /^emily/]
 
 export const isNoiseBranch = (name) => NOISE_BRANCH_PATTERNS.some((re) => re.test(name))
 
+// The fold branch is the ONE kind of branch that legitimately writes CURRENT.md: CI's
+// `land` job cannot push to protected `dev` (GH006, since 2026-09-29), so the hand fold
+// through a PR is the writer of record for CURRENT.md. check-agent-docs.mjs exempts
+// these names from its "CURRENT.md differs from origin/dev" rule. A detached HEAD (what
+// CI checks) has no name, so it stays under the rule.
+export const FOLD_BRANCH_PATTERN = /^(chore\/fold-notes-|land\/)/
+
+export const isFoldBranch = (name) => typeof name === 'string' && FOLD_BRANCH_PATTERN.test(name)
+
+// A hand-fold branch (chore/fold-notes-*) IS the thing that empties docs/ai/sessions/, so
+// it must not have to leave a note of its own: that note would sit on dev, and the
+// pre-push gate refuses every push from a dev checkout while the directory is not empty
+// -- and CI's land job cannot push to protected dev, so nothing folds it until the next
+// hand fold (2026-10-01: PONYO's tag push refused by chore-fold-notes-after-686.md).
+// land/* branches carry real notes and keep needing one.
+export const FOLD_NOTES_BRANCH_PATTERN = /^chore\/fold-notes-/
+
+export const isFoldNotesBranch = (name) => typeof name === 'string' && FOLD_NOTES_BRANCH_PATTERN.test(name)
+
 // `vitest run` (one-shot, exits when done) must NOT count as "live" -- caught during
 // development of this module: it briefly still exists during its own exit/report
 // phase, long enough for a concurrent repo-state call to misidentify a one-off test

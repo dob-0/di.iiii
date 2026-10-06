@@ -18,6 +18,11 @@
  *   --title <text>      what the hall is called in the room
  *   --sources <dir>     the footage folder (default: the one frames.json names)
  *   --no-sources        skip the second project
+ *   --replace           the hall project already holds a room: swap the model (its other
+ *                       components, the night, fog, spawn and opening shot are KEPT —
+ *                       they belong to the rig; add --reset-view to write the defaults)
+ *                       and drop the old file's asset from the document (the
+ *                       entity keeps its id, so lamps hung beside it stay)
  *   --max-sources <n>   how many source files to carry (default 60)
  *   --dry-run           say what would happen, change nothing
  *
@@ -44,14 +49,14 @@ const args = parseArgs()
 // module already published it.
 export { readToken } from './api.mjs'
 
-const must = (result, what) => {
+export const must = (result, what) => {
     if (!result.ok) {
         die(`${what} failed — HTTP ${result.status}`, result.text.slice(0, 300))
     }
     return result.body
 }
 
-const uploadAsset = async (client, projectId, file, options = {}) => {
+export const uploadAsset = async (client, projectId, file, options = {}) => {
     const form = new FormData()
     const bytes = fs.readFileSync(file)
     form.append('asset', new Blob([bytes], { type: mimeFor(file) }), path.basename(file))
@@ -62,6 +67,8 @@ const uploadAsset = async (client, projectId, file, options = {}) => {
     // footage passes `skippable`.
     if (options.skippable && !result.ok) {
         warn(`    left out, the server refused it (${result.status}): ${path.basename(file)}`)
+        // add-sources.mjs reports every refusal by name, size and reason at the end.
+        options.onRefused?.({ name: path.basename(file), size: bytes.length, status: result.status, reason: result.text.slice(0, 160) })
         return null
     }
     const asset = must(result, `uploading ${path.basename(file)}`).asset
@@ -96,7 +103,7 @@ const ensureProject = async (client, spaceId, projectId, title) => {
     return { created: true }
 }
 
-const sendOps = async (client, projectId, ops) => {
+export const sendOps = async (client, projectId, ops) => {
     const current = must(await client.get(`/api/projects/${projectId}/document`), 'reading the document')
     const result = await client.post(`/api/projects/${projectId}/ops`, {
         baseVersion: Number(current.version) || 0,
@@ -106,6 +113,38 @@ const sendOps = async (client, projectId, ops) => {
 }
 
 // ── the hall ──────────────────────────────────────────────────────────────────
+/**
+ * `--replace` swaps the room by re-creating `place-hall`, which would drop every
+ * component other scripts wrote on it — the rig builder's `venuePlan` went
+ * (seen 2026-09-28: the plot lost its venue until load-plot --plan-only ran).
+ * Carry the old entity's components the new one does not write; the new ones
+ * (transform, media, …) win. Mutates the createEntity op; returns what it kept.
+ */
+export const carryComponents = (ops, old) => {
+    const op = ops.find((o) => o.type === 'createEntity' && o.payload?.entity?.id === 'place-hall')
+    if (!op || !old?.components) return []
+    const fresh = op.payload.entity.components || {}
+    const kept = Object.keys(old.components).filter((key) => !(key in fresh))
+    op.payload.entity.components = { ...Object.fromEntries(kept.map((key) => [key, old.components[key]])), ...fresh }
+    return kept
+}
+
+/**
+ * `--replace` on a rigged hall: the lights, fog, spawn and opening shot were
+ * written by rig.mjs (the night, `rig.opening`), not by the room. Re-importing
+ * the model must not reset them to the arrival daylight (seen 2026-09-28: the
+ * hall fix's re-import lit the rig's night room white until --night-only ran).
+ * Keeps only the walkable floor, which IS the room's; drops the presentation op.
+ */
+export const keepRoomState = (ops) => {
+    for (let i = ops.length - 1; i >= 0; i -= 1) {
+        const op = ops[i]
+        if (op.type === 'setPresentationState') ops.splice(i, 1)
+        else if (op.type === 'setWorldState') op.payload.patch = { walkableAreas: op.payload.patch.walkableAreas }
+    }
+    return ops
+}
+
 export const hallOps = ({ asset, place, title }) => {
     // With the fit baked into the file, the entity is exactly where the room
     // is: at the origin, unturned, unscaled. di.iiii frames a room's arrival
@@ -274,7 +313,27 @@ const main = async () => {
     say(hall.created ? `  created project ${hallProject}` : `  project ${hallProject} was already there`)
     say('  sending the model up …')
     const asset = await uploadAsset(client, hallProject, glb)
-    const written = await sendOps(client, hallProject, hallOps({ asset, place, title }))
+    const ops = hallOps({ asset, place, title })
+    if (args.replace) {
+        // `createEntity` on an id that exists replaces it (applyProjectOps), so
+        // the room swaps in place. The old file would otherwise stay listed in
+        // the document's assets for ever; the bytes stay on the server (and in
+        // whatever backup was taken first), only the reference goes.
+        const before = must(await client.get(`/api/projects/${hallProject}/document`), 'reading the old hall')
+        const old = (before.document?.entities || []).find((entity) => entity.id === 'place-hall')
+        const oldAsset = old?.components?.media?.assetId
+        if (oldAsset && oldAsset !== asset.id) {
+            ops.push({ type: 'deleteAsset', payload: { assetId: oldAsset } })
+            say(`  replacing the old model (asset ${oldAsset.slice(0, 12)}…)`)
+        }
+        const kept = carryComponents(ops, old)
+        if (kept.length) say(`  kept on the hall: ${kept.join(', ')}`)
+        if (!args['reset-view']) {
+            keepRoomState(ops)
+            say('  kept the room\'s night, fog, spawn and opening shot (--reset-view to write the arrival defaults)')
+        }
+    }
+    const written = await sendOps(client, hallProject, ops)
     say(`  the hall stands (document version ${written.version ?? '?'})`)
 
     // ── sources ──

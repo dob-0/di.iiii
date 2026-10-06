@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createTopEngine } from './topEngine.js'
-import { TOP_OPERATORS, isTopType, resolveTopParams, runsHere, sendsOut } from './topOperators.js'
-import { topThumbnailTargets } from './topThumbnails.js'
+import { TOP_OPERATORS, resolveTopParams, runsHere, sendsOut } from './topOperators.js'
+import { topThumbnailGroups, topThumbnailsFor } from './topThumbnails.js'
+import { DECK_INPUTS, VJ_DECK_TYPE, expandDecks, isPictureType } from './vjDeck.js'
+import { useClipVideos } from './useClipVideos.js'
 import { acquireMachineLink, machinesIn, runnerOn } from './machineLink.js'
 import { createPicturePeers } from './picturePeers.js'
 import { createPictureOut } from './pictureOut.js'
@@ -20,15 +22,23 @@ const plainSettings = (track) => {
 // The picture operators of a project document, as the engine reads them.
 // Only wires from a Picture output into a picture input count; a number wired
 // into an operator is the rest of the graph's business.
+//
+// A VJ deck (vj.deck) is a macro: it is expanded here into the Clip In, Blend
+// and Level operators that make its picture (tops/vjDeck.js), and every wire
+// out of it is rewritten to read its master. `alias` says which engine
+// operator has a deck's picture (deck id → its master's id).
 export const toTopNetwork = (document) => {
     const nodes = (document?.nodes || [])
-        .filter((node) => isTopType(node.typeId))
+        .filter((node) => isPictureType(node.typeId))
         .map((node) => ({ id: node.id, type: node.typeId, values: node.values || {} }))
     const ids = new Set(nodes.map((node) => node.id))
+    const decks = new Set(nodes.filter((node) => node.type === VJ_DECK_TYPE).map((node) => node.id))
     const wires = (document?.edges || [])
-        .filter((edge) => ids.has(edge.fromNodeId) && ids.has(edge.toNodeId) && edge.fromPort === 'out' && ['a', 'b'].includes(edge.toPort))
+        .filter((edge) => ids.has(edge.fromNodeId) && ids.has(edge.toNodeId) && edge.fromPort === 'out'
+            && (decks.has(edge.toNodeId) ? DECK_INPUTS : ['a', 'b']).includes(edge.toPort))
         .map((edge) => ({ from: edge.fromNodeId, to: edge.toNodeId, port: edge.toPort }))
-    return { nodes, wires }
+    // Every deck expands first, then the wires alias — deck into deck works.
+    return expandDecks({ nodes, wires })
 }
 
 /**
@@ -87,8 +97,13 @@ const EMPTY = { nodes: [], wires: [] }
  * @param {string|null} [options.show]        node id whose picture the canvas shows (a Picture Out)
  * @param {boolean} [options.thumbnails]      feed the cards' pictures
  * @param {(nodeId, numbers) => void} [options.onMeasure]  Analyze readings, local and remote
+ * @param {Array|Map} [options.assets]        the project's files, so a Clip In's asset id finds its video
+ * @param {string} [options.projectId]        the project those files belong to
  */
-export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, show = null, thumbnails = false, onMeasure = null, width = 640, height = 360 }) {
+export function useTopNetwork({
+    network = EMPTY, spaceId = '', canvas = null, show = null, thumbnails = false, onMeasure = null,
+    assets = null, projectId = null, width = 640, height = 360
+}) {
     const [error, setError] = useState('')
     const [link, setLink] = useState(null)
     const [linkView, setLinkView] = useState({ machine: null, peers: [] })
@@ -183,8 +198,9 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
             engine.frame(now)
             count += 1
             if (thumbnails && count % THUMBNAIL_EVERY === 0) {
-                const targets = topThumbnailTargets()
-                if (targets.size) {
+                // One map per layer of registrations: a deck's master is on
+                // its card AND in its window at once.
+                for (const targets of topThumbnailGroups()) {
                     const mine = new Map([...targets].filter(([nodeId]) => engine.has(nodeId)))
                     if (mine.size) engine.thumbnails(mine)
                 }
@@ -222,10 +238,10 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
             },
             onVideo: (nodeId, video) => engineRef.current?.setRemoteVideo(nodeId, video),
             onPreview: (nodeId, blob) => {
-                const context = topThumbnailTargets().get(nodeId)
-                if (!context || !globalThis.createImageBitmap) return
+                const contexts = topThumbnailsFor(nodeId)
+                if (!contexts.length || !globalThis.createImageBitmap) return
                 createImageBitmap(blob).then((bitmap) => {
-                    context.drawImage(bitmap, 0, 0, context.canvas.width, context.canvas.height)
+                    for (const context of contexts) context.drawImage(bitmap, 0, 0, context.canvas.width, context.canvas.height)
                     bitmap.close?.()
                 }).catch(() => {})
             },
@@ -312,6 +328,10 @@ export function useTopNetwork({ network = EMPTY, spaceId = '', canvas = null, sh
         }, 2000)
         return () => clearInterval(timer)
     }, [split, hasNodes])
+
+    // --- every Clip In that runs here (a deck's too) gets its footage playing.
+    // After the engine effect, so the ref is filled when these effects run.
+    useClipVideos(split.local, { spaceId, engine: engineRef, assets, projectId })
 
     // --- a parameter drag or a new wire changes the network, not the engine
     // An operator someone is looking inside, running elsewhere, arrives as video

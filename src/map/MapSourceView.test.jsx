@@ -1,7 +1,10 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 
-vi.mock('../services/apiClient.js', () => ({
+// Partial: the Pictures source reaches the project asset URLs (Clip In), which
+// read the rest of apiClient at import time.
+vi.mock('../services/apiClient.js', async (importOriginal) => ({
+    ...(await importOriginal()),
     apiBaseUrl: 'https://di-studio.xyz/serverXR'
 }))
 

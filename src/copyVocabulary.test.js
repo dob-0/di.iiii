@@ -173,10 +173,14 @@ const COPY_FILES = [
     'src/studio/utils/assetFormats.js',
     'src/studio/utils/codeSpaces.js',
     'src/studio/utils/studioGuide.js',
-    // The tools room lists every tool by name. It said "Raw" for the node
-    // canvas until 2026-09-23, beside a surface bar that said Nodes, and was
-    // not on this list, so nothing noticed. Same for LocalHome above.
-    'src/tools/ToolsRoom.jsx',
+    // The Kit at /tools names every tool and says what each is made of. Its
+    // forerunner said "Raw" for the node canvas until 2026-09-23, beside a
+    // surface bar that said Nodes, and was not on this list, so nothing
+    // noticed. Same for LocalHome above.
+    'src/kit/KitPage.jsx',
+    'src/kit/KitPreview.jsx',
+    'src/kit/kitCatalogue.js',
+    'src/kit/kitStack.js',
     'src/utils/presentationTemplates.js'
 ]
 

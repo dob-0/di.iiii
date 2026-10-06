@@ -243,6 +243,82 @@ const localProfilePlugin = () => ({
     }
 })
 
+// `virtual:kit-versions` — the version of every npm package, as the lock files
+// resolve it, for the "What we use" table on /tools (src/kit/kitStack.js).
+//
+// The table used to carry each version by hand, and kitCatalogue.test.js failed
+// any change that moved one — so every Dependabot bump failed CI by design until
+// someone edited the table (2026-10-05: eight bumps stuck, e.g. "dotenv: installed
+// 18.0.4, table says 18.0.3"). Reading the lock files during the build makes the
+// printed version the one this revision installs, by construction. The lock
+// files, not node_modules: they are committed, so a Docker build, CI and a fresh
+// clone all have them, and a bump rewrites them in the same change.
+const kitVersionsPlugin = () => {
+    const VIRTUAL_ID = 'virtual:kit-versions'
+    const RESOLVED_ID = `\0${VIRTUAL_ID}`
+    // Exactly the packages the table names (`npm:` / `server: true` in kitStack.js,
+    // read with acorn, as node-anatomy reads its sources — never regexed), each as
+    // its lock file resolves it at the top level: what `import 'x'` gets. Some are
+    // not direct dependencies (zod comes with the MCP SDK). All ~750 installed
+    // packages would put ~25 KB on /tools for 37 rows.
+    const tablePackages = async (root) => {
+        const { Parser } = await import('acorn')
+        const source = fs.readFileSync(path.join(root, 'src', 'kit', 'kitStack.js'), 'utf8')
+        const ast = Parser.parse(source, { ecmaVersion: 'latest', sourceType: 'module' })
+        const found = []
+        const visit = (node) => {
+            if (!node || typeof node.type !== 'string') return
+            if (node.type === 'ObjectExpression') {
+                const prop = (key) => node.properties.find((p) => p.type === 'Property' && (p.key.name ?? p.key.value) === key)?.value
+                const npm = prop('npm')
+                if (npm?.type === 'Literal' && typeof npm.value === 'string') {
+                    found.push({ name: npm.value, server: prop('server')?.value === true })
+                }
+            }
+            for (const value of Object.values(node)) {
+                if (Array.isArray(value)) value.forEach(visit)
+                else if (value && typeof value === 'object') visit(value)
+            }
+        }
+        visit(ast)
+        return found
+    }
+    const lockPackages = (dir) => {
+        const lockFile = path.join(dir, 'package-lock.json')
+        return fs.existsSync(lockFile) ? JSON.parse(fs.readFileSync(lockFile, 'utf8')).packages || {} : {}
+    }
+    return {
+        name: 'kit-versions',
+        resolveId(id) {
+            return id === VIRTUAL_ID ? RESOLVED_ID : null
+        },
+        async load(id) {
+            if (id !== RESOLVED_ID) return null
+            const root = path.dirname(fileURLToPath(import.meta.url))
+            const locks = { client: lockPackages(root), server: lockPackages(path.join(root, 'serverXR')) }
+            const versions = { client: {}, server: {} }
+            for (const { name, server } of await tablePackages(root)) {
+                const side = server ? 'server' : 'client'
+                const version = locks[side][`node_modules/${name}`]?.version
+                if (version) versions[side][name] = version
+            }
+            return `export default ${JSON.stringify(versions)}`
+        },
+        configureServer(server) {
+            // A row added to the table, or a lock file rewritten by an install,
+            // shows its version without restarting the dev server.
+            const sources = ['src/kit/kitStack.js', 'package-lock.json', 'serverXR/package-lock.json']
+                .map((file) => path.join(server.config.root, file))
+            server.watcher.add(sources)
+            server.watcher.on('change', (file) => {
+                if (!sources.includes(file)) return
+                const module = server.moduleGraph.getModuleById(RESOLVED_ID)
+                if (module) server.moduleGraph.invalidateModule(module)
+            })
+        }
+    }
+}
+
 // `virtual:node-anatomy` — where every node type's code lives, as line ranges
 // the "what is it made of" sheet slices real source by.
 //
@@ -461,6 +537,9 @@ export default {
         // virtual:node-anatomy — measured from the sources, never committed
         nodeAnatomyPlugin(),
 
+        // virtual:kit-versions — the /tools stack table's versions, from the lock files
+        kitVersionsPlugin(),
+
         // Publish install.sh / install.ps1 as /get.sh and /get.ps1
         emitInstallScriptsPlugin(),
 
@@ -521,10 +600,16 @@ export default {
         // direct fallback still targets the configured port, which otherwise
         // leaves the browser loading over 5174 while reconnecting to 5173.
         strictPort: true,
+        // xfwd on every entry: this proxy re-originates each request from
+        // loopback, and host: true puts it on the wifi. Without X-Forwarded-For
+        // the backend's "this machine only" guards (agent runs, work status,
+        // device routes) saw every phone as 127.0.0.1. The backend trusts the
+        // header only from loopback (serverXR/src/proxyTrust.js).
         proxy: {
             '/serverXR': {
                 target: DEV_PROXY_API_TARGET,
                 changeOrigin: true,
+                xfwd: true,
                 ws: true
             },
             // The lighting desk lives on the backend at /light (app-level, no /serverXR
@@ -540,13 +625,23 @@ export default {
             // on the first space made to test the NDI® source kind.
             '^/light(/|$)': {
                 target: DEV_PROXY_API_TARGET,
-                changeOrigin: true
+                changeOrigin: true,
+                xfwd: true
             },
             // NDI® in — the same shape: serverXR answers /ndi itself on a local install
             // (serverXR/src/routes/ndiRoutes.js).
             '^/ndi(/|$)': {
                 target: DEV_PROXY_API_TARGET,
-                changeOrigin: true
+                changeOrigin: true,
+                xfwd: true
+            },
+            // Live AI — a WebSocket to the image model on this machine, relayed by
+            // serverXR (serverXR/src/liveAi/relay.js). Anchored like /ndi above.
+            '^/liveai(/|$)': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true,
+                xfwd: true,
+                ws: true
             },
             // Project documents store asset/API URLs as bare `/api/...` (no
             // `/serverXR` prefix) because in production Express serves both
@@ -560,6 +655,7 @@ export default {
             '/api': {
                 target: DEV_PROXY_API_TARGET,
                 changeOrigin: true,
+                xfwd: true,
                 ws: true,
                 rewrite: (path) => `/serverXR${path}`
             }
@@ -664,6 +760,17 @@ export default {
                     // route actually mounts (2026-07-17 perf audit).
                     if (pkg === 'gsap') return 'gsap-vendor'
 
+                    // One helper file, @babel/runtime/helpers/esm/extends.js, is
+                    // shared by drei (three-vendor) and MUI (vendor). Left to the
+                    // catch-all, rolldown seated it inside three-vendor, so the
+                    // generic vendor chunk imported three-vendor and EVERY route
+                    // — /tools, /wiki, /login, /terms — fetched three.js (452 KB
+                    // gzip) to render a page with no 3D on it. Measured on
+                    // 2026-09-28 with scripts/kit-first-load.mjs: /tools 872 KB
+                    // on the wire with three.js, 420 KB without. Its own chunk
+                    // is a few hundred bytes and belongs to neither side.
+                    if (pkg === '@babel/runtime') return 'babel-runtime'
+
                     return 'vendor'
                 }
             }
@@ -679,11 +786,17 @@ export default {
             // test file under scripts/ is silently never collected, which is
             // worse than having no test at all: it looks covered and is not.
             '../scripts/**/*.{test,spec}.{js,mjs}',
+            '../shared/**/*.{test,spec}.{js,mjs}',
             '../sdk/**/*.{test,spec}.{js,mjs}',
             '../spaces/**/*.{test,spec}.{js,mjs}'
         ],
         environment: 'jsdom',
         setupFiles: './setupTests.js',
-        globals: true
+        globals: true,
+        // Half the cores, not vitest's run-mode default of all-but-one: on the
+        // 16-thread dev laptop two sessions' runs at once put 33 processes on
+        // the CPU (measured 2026-09-28, PR notes). `--maxWorkers` or
+        // VITEST_MAX_WORKERS still override; CI keeps vitest's default.
+        maxWorkers: process.env.CI ? undefined : '50%'
     }
 }

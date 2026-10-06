@@ -1,5 +1,6 @@
 import { generateId } from '../shared/projectSchema.js'
 import { TOP_TYPE_IDS, buildTopNodeTypes } from './tops/topOperators.js'
+import { VJ_DECK_TYPE, buildVjDeckNodeTypes } from './tops/vjDeck.js'
 
 // --- Port Types ---
 // Every connection wire carries one of these types.
@@ -187,6 +188,7 @@ export const FAMILY_BY_TYPE = {
     'work.status': 'agents',
     // pictures — image operators on the GPU (src/project/tops), TouchDesigner's TOPs
     ...Object.fromEntries(TOP_TYPE_IDS.map((typeId) => [typeId, 'picture'])),
+    [VJ_DECK_TYPE]: 'picture',
 }
 
 // What a card says about itself when it has no ports to draw.
@@ -207,6 +209,63 @@ export const getNodeCardSummary = (node) => {
         const groups = Array.isArray(node.values?.groups) ? node.values.groups.length : 0
         if (!rows) return 'empty'
         return `${rows} row${rows === 1 ? '' : 's'} · ${groups} group${groups === 1 ? '' : 's'}`
+    }
+    return null
+}
+
+// What a card shows of its CONTENT, below its port rows (owner 2026-10-02:
+// a List card read "7 rows · 3 groups" and a Text card read "Content" —
+// you had to open every card to know what was in it). The lines sit under
+// the ports, like a picture operator's picture, so no port moves and no wire
+// lands anywhere new; cardGeometry.js adds their height to the card.
+//
+// One line per entry, each clipped to the card width, so the height is a
+// pure function of the node and never of the font.
+export const CARD_CONTENT_MAX_LINES = { 'view.list': 12, 'view.text': 6 }
+
+// The one field a card shows and lets you edit in place (Enter or a
+// double-click on its text). The side column keeps everything else. Both write
+// node.values[key] — one value, no second copy (owner, 2026-10-05).
+export const CARD_MAIN_FIELD = { 'view.text': { key: 'content', label: 'Content' } }
+export const getCardMainField = (typeId) => CARD_MAIN_FIELD[typeId] || null
+
+export const getNodeCardLines = (node, { unlimited = false } = {}) => {
+    if (!node) return null
+    if (node.typeId === 'view.list') {
+        const max = unlimited ? Infinity : CARD_CONTENT_MAX_LINES['view.list']
+        const items = (Array.isArray(node.values?.items) ? node.values.items : [])
+            .filter((it) => String(it?.text || '').trim())
+        if (!items.length) return null
+        const declared = Array.isArray(node.values?.groups) && node.values.groups.length ? node.values.groups : ['List']
+        // A row whose group was renamed away still exists — show it at the end
+        // rather than lose it from the card.
+        const orphans = items.filter((it) => !declared.includes(it.group))
+        const sections = declared.map((group) => ({ group, rows: items.filter((it) => it.group === group) }))
+        if (orphans.length) sections.push({ group: null, rows: orphans })
+        const lines = []
+        let shown = 0
+        for (const { group, rows } of sections) {
+            if (!rows.length) continue
+            // A heading with no row under it reads as an empty group — only
+            // start a section when at least one of its rows fits too.
+            if (group !== null) {
+                if (lines.length + 2 > max) break
+                lines.push({ kind: 'group', text: group })
+            }
+            for (const row of rows) {
+                if (lines.length >= max) break
+                lines.push({ kind: 'row', text: String(row.text).trim() })
+                shown += 1
+            }
+        }
+        return { lines, more: items.length - shown }
+    }
+    if (node.typeId === 'view.text') {
+        const max = unlimited ? Infinity : CARD_CONTENT_MAX_LINES['view.text']
+        const text = String(node.values?.content ?? node.values?.text ?? '')
+        const all = text.split('\n').map((line) => line.trim()).filter(Boolean)
+        if (!all.length) return null
+        return { lines: all.slice(0, max).map((line) => ({ kind: 'line', text: line })), more: Math.max(0, all.length - max) }
     }
     return null
 }
@@ -300,6 +359,20 @@ export const isAutoOperationLabel = (node, label) => {
     return label === type?.label || menu.some((operation) => operation.label === label)
 }
 
+// The title a card WEARS. Picked as "Math" in the palette, an operator card
+// is stored (and was drawn) as "Add"; nothing said it was a Math. While the
+// name is the automatic one the card reads "<palette name> · <Operation>"; a
+// name a person typed reads alone. Nothing stored changes — this is only what
+// is drawn. The operation shown is the menu's, not the stored label, so an old
+// document whose label lags its operation still says what the card does.
+export const getNodeCardTitle = (node) => {
+    const type = getNodeType(node?.typeId)
+    const operation = getNodeOperationLabel(node)
+    if (!operation) return node?.label || type?.label || ''
+    if (!isAutoOperationLabel(node, node?.label)) return node.label
+    return `${type?.label || node.typeId} · ${operation}`
+}
+
 export const getNodeFamily = (typeId) => {
     const familyId = FAMILY_BY_TYPE[typeId]
     return NODE_FAMILIES.find((f) => f.id === familyId) || null
@@ -332,6 +405,8 @@ export const getFamilyColorForType = (typeId) => getNodeFamily(typeId)?.color ||
 export const NODE_TYPES = {
     // Image operators, built from their own table — see src/project/tops.
     ...buildTopNodeTypes(),
+    // The VJ deck: clip layers that expand into picture operators — tops/vjDeck.js.
+    ...buildVjDeckNodeTypes(),
 
 
     // -----------------------------------------------------------------------
@@ -447,6 +522,7 @@ export const NODE_TYPES = {
         label: 'Webcam',
         category: 'source',
         runtime: 'web',
+        keywords: ['camera', 'cam', 'video', 'browser', 'getusermedia'],
         singleton: false,
         inputs: [],
         outputs: [
@@ -749,7 +825,7 @@ export const NODE_TYPES = {
         // isn't answering" and "the desk's output is off" are all normal states
         // of this node, and each needs somewhere to be said.
         render: 'panel-2d',
-        defaultFrame: { width: 340, height: 260 },
+        defaultFrame: { width: 340, height: 330 },
     },
 
     'device.midi.out': {
@@ -984,6 +1060,12 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'title',    type: 'string',  label: 'Title',    default: 'Scene'    },
             { id: 'bgColor',  type: 'color',   label: 'Sky',      default: '#0a0e16'  },
+            // Owner 2026-10-02: "a scene can have inputs — objects, other
+            // info". What is wired here stands on the Scene's stage
+            // (RawViewport's sceneObjects); info arrives through Title, which
+            // a Text or List OUT now feeds. One wire: many objects come
+            // through Merge. docs/raw/2026-10-02-nodes-audit.md.
+            { id: 'objects',  type: 'geometry', label: 'Objects' },
         ],
         // A CONTAINER OUTPUTS ITS OWN SETTINGS, NEVER ITS CONTENTS.
         //
@@ -1004,9 +1086,15 @@ export const NODE_TYPES = {
         // separate keyspaces in the runtime and edgesByTarget only ever keys
         // inputs, and a self-wire is impossible because resolveWireDrop skips
         // the source node.
+        //
+        // Picture is not a child leaking out: it is the Scene itself, seen —
+        // TouchDesigner's Render TOP, objects in, an image out (owner
+        // 2026-10-02, docs/raw/2026-10-02-nodes-audit.md). It is live only
+        // while the live Scene's window draws it (ScenePictureFeed.jsx).
         outputs: [
-            { id: 'title',   type: 'string', label: 'Title' },
-            { id: 'bgColor', type: 'color',  label: 'Sky'   },
+            { id: 'title',   type: 'string',  label: 'Title'   },
+            { id: 'bgColor', type: 'color',   label: 'Sky'     },
+            { id: 'picture', type: 'texture', label: 'Picture' },
         ],
         defaultValues: {
             title: 'Scene',
@@ -1514,7 +1602,14 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'content', type: 'string', label: 'Content', default: 'Hello' },
         ],
-        outputs: [],
+        // What it says, so a note can feed a Scene's title, a Plane, another
+        // Text. Owner 2026-10-02: "a Text has an OUT we can connect to
+        // something" (docs/raw/2026-10-02-nodes-audit.md).
+        // Labelled like the input it passes on, so the card reads one row,
+        // "Content", with a joint on each side — not two parameters.
+        outputs: [
+            { id: 'text', type: 'string', label: 'Content' },
+        ],
         defaultValues: {},
         render: 'panel-2d',
     },
@@ -1590,11 +1685,16 @@ export const NODE_TYPES = {
         category: 'view',
         runtime: 'any',
         singleton: false,
-        // No ports. A list is read by people, and the dead-port rule says a
-        // socket nothing consumes should not exist — see view.timeline, which
-        // only grew outputs once the transport actually read them.
+        // No inputs: the rows are typed by people. Two outputs since
+        // 2026-10-02 (docs/raw/2026-10-02-nodes-audit.md: a List was a dead
+        // end). Both have consumers, so the dead-port rule holds: every string
+        // input (Text, Plane, a Scene's title) reads `text`, every number
+        // input reads `count`. view.list/runtime.js says what they carry.
         inputs: [],
-        outputs: [],
+        outputs: [
+            { id: 'text',  type: 'string', label: 'Rows'  },
+            { id: 'count', type: 'number', label: 'Count' },
+        ],
         // `groups` are plain strings and the rows carry their group by name,
         // so the headings are editable without a migration. The defaults are
         // deliberately generic: the grouping is the thinking, and fixing the
@@ -2831,7 +2931,11 @@ export const arePortsCompatible = (fromType, toType) => {
     if (fromType === 'any' || toType === 'any') return true
     if (fromType === toType) return true
     const colorVec = (fromType === 'color' && toType === 'vec3') || (fromType === 'vec3' && toType === 'color')
-    return colorVec
+    // One number fills all three (evaluateNodeInput converts at the link, as
+    // Blender does): a Number into a Cube's Size makes it uniformly that big.
+    // The audit's first wire a person tries; it was refused (2026-10-02).
+    const numberToVec = fromType === 'number' && toType === 'vec3'
+    return colorVec || numberToVec
 }
 
 // Create a node instance from a type ID.

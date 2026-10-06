@@ -18,6 +18,7 @@ import {
     deleteProject
 } from '../../project/services/projectsApi.js'
 import { listUsers, updateUser } from '../../services/usersApi.js'
+import { getSiteStats } from '../../services/statsApi.js'
 import useAuthSession from '../../hooks/useAuthSession.js'
 import {
     buildStudioHubPath,
@@ -356,6 +357,54 @@ export default function AdminManageSection({ onStats }) {
     )
 }
 
+// The site's own traffic, counted first-party (one event per page load, no cookie, no
+// third party — see the privacy page). The server has kept these since the counter was
+// built; until 2026-09-28 nothing showed them (GET /api/stats had no caller).
+export function TrafficSection() {
+    const [state, setState] = useState({ loading: true, error: '', stats: null })
+    useEffect(() => {
+        let alive = true
+        getSiteStats()
+            .then((stats) => { if (alive) setState({ loading: false, error: '', stats }) })
+            .catch((err) => { if (alive) setState({ loading: false, error: err.message || 'Could not load the counts.', stats: null }) })
+        return () => { alive = false }
+    }, [])
+    const { loading, error, stats } = state
+    const views = stats?.totals?.view || 0
+    const signups = stats?.totals?.signup || 0
+    const busiest = (stats?.byDay || [])
+        .filter((row) => row.event_type === 'view')
+        .reduce((best, row) => (!best || row.count > best.count ? row : best), null)
+    return (
+        <ModuleSection title="Traffic" subtitle={`Last ${stats?.windowDays || 30} days · counted here, first-party, one per page load`}>
+            {loading && <div className="preferences-empty">Loading the counts…</div>}
+            {error && <div className="preferences-empty">{error}</div>}
+            {stats && (
+                <>
+                    <div className="preferences-status-grid">
+                        <MetricCard label="Page views" value={views} />
+                        <MetricCard label="Sign-ups" value={signups} />
+                        <MetricCard label="Busiest day (UTC)" value={busiest ? `${busiest.day} · ${busiest.count}` : '—'} />
+                    </div>
+                    {views === 0 && <div className="preferences-empty">No page views counted in this window yet.</div>}
+                    {stats.topPaths?.length > 0 && (
+                        <>
+                            <div className="preferences-info-label">Most viewed pages</div>
+                            {stats.topPaths.map((row) => <InfoPair key={row.path} label={row.path} value={row.count} mono />)}
+                        </>
+                    )}
+                    {stats.topReferrers?.length > 0 && (
+                        <>
+                            <div className="preferences-info-label">Where visitors came from</div>
+                            {stats.topReferrers.map((row) => <InfoPair key={row.referrer_host} label={row.referrer_host} value={row.count} mono />)}
+                        </>
+                    )}
+                </>
+            )}
+        </ModuleSection>
+    )
+}
+
 function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, onCreateSpace, onPatchUser, spaceLimit }) {
     return (
         <>
@@ -371,6 +420,8 @@ function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, o
                     <MetricCard label="Guest space" value={globalSpaceId || '—'} />
                 </div>
             </ModuleSection>
+
+            <TrafficSection />
 
             <ModuleSection
                 title="New space"

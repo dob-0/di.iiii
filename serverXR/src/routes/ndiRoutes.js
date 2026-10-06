@@ -17,6 +17,22 @@ const { requireLocalRuntime } = require('../localRuntimeGuard')
 //   GET /ndi/in.mjpg?name=&w=&fps=  multipart/x-mixed-replace — point an <img> at it
 //   GET /ndi/api/stats              receivers, subscribers, the child's timings
 //
+// The AUTOSCAN — which NDI sources are on the network right now, without anyone
+// pressing "find". One long-lived finder in the child (the SDK's own continuous
+// discovery), a registry of first-seen / last-seen / gone-since (ndi/scanner.js):
+//
+//   GET /ndi/api/scan?wait=ms       { state, reason, how, version, since, checkedAt,
+//                                     count, sources:[{ name, address, present,
+//                                     firstSeen, lastSeen, goneSince }] }
+//   GET /ndi/api/scan/events        text/event-stream: `event: scan` with that same
+//                                   snapshot at once, then on every change with
+//                                   `change: { appeared, gone, changed }` beside it
+//
+//   state: off · starting · running · restarting · no-runtime · error. `count` is
+//   null in every state but running: a machine that cannot look never says "0".
+//   Either route switches the scan on; a real install (DI_LOCAL=1) switches it on at
+//   boot — scanAtBootFrom() below — unless DI_NDI_SCAN=0.
+//
 // NDI out — serverXR/src/ndi/sendManager.js — is the same lane pointed the other way.
 // di.iiii draws its pictures in a browser, so the frames come UP from a page as ordinary
 // JPEGs and this server broadcasts them; nothing here generates a picture.
@@ -40,6 +56,23 @@ const STILL_WAIT_MS = 3000
 // A 4K JPEG at a generous quality is comfortably under this; anything larger is a mistake
 // upstream, and refusing it is cheaper than decoding it.
 const FRAME_LIMIT = '8mb'
+// The change feed: an SSE comment this often keeps proxies and the browser from
+// calling a quiet network a dead connection; the cap bounds what a page left open
+// in many tabs can hold.
+const SCAN_PING_MS = 20000
+const SCAN_WAIT_MAX_MS = 5000
+const MAX_SCAN_STREAMS = 32
+
+// Should the autoscan start when the server boots? Yes on a real install (`di up`
+// sets DI_LOCAL=1), no on a developer's box or in tests unless asked for —
+// DI_NDI_SCAN=1 forces it on, DI_NDI_SCAN=0 off. A hosted server never scans:
+// hasLocalRuntime() is false there and the lane is never built.
+const scanAtBootFrom = (env = process.env) => {
+  const flag = String(env.DI_NDI_SCAN || '').trim()
+  if (flag === '0') return false
+  if (flag === '1') return true
+  return env.DI_LOCAL === '1'
+}
 
 const bad = (res, detail) => res.status(400).json({ error: 'bad request', detail })
 
@@ -115,6 +148,47 @@ function registerNdiRoutes(app, { mountPaths = ['/ndi'], log = () => {}, createM
 
   router.get('/api/sources', async (_req, res) => {
     noStore(res).json(await getManager().getSources())
+  })
+
+  router.get('/api/scan', async (req, res) => {
+    const raw = req.query.wait
+    let waitMs = 0
+    if (raw !== undefined && raw !== '') {
+      if (typeof raw !== 'string' || !/^\d{1,5}$/.test(raw) || Number(raw) > SCAN_WAIT_MAX_MS) {
+        bad(res, `wait must be a whole number of milliseconds up to ${SCAN_WAIT_MAX_MS}`); return
+      }
+      waitMs = Number(raw)
+    }
+    noStore(res).json(await getManager().scan({ waitMs }))
+  })
+
+  let scanStreams = 0
+  router.get('/api/scan/events', (req, res) => {
+    if (scanStreams >= MAX_SCAN_STREAMS) { noStore(res).status(429).json({ error: 'busy', detail: `this di.iiii already holds ${MAX_SCAN_STREAMS} NDI scan feeds` }); return }
+    const m = getManager()
+    scanStreams += 1
+    res.status(200).set({
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-store',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no'
+    })
+    res.flushHeaders()
+    const write = (event) => {
+      if (res.destroyed || res.writableEnded) return
+      res.write(`event: scan\ndata: ${JSON.stringify({ ...event.scan, change: event.change || null })}\n\n`)
+    }
+    // Subscribed before the scan is switched on, so the first state change is not missed.
+    const off = m.onScan(write)
+    res.write('retry: 3000\n\n')
+    write({ scan: m.startScan(), change: null })
+    const ping = setInterval(() => { if (!res.destroyed) res.write(': ping\n\n') }, SCAN_PING_MS)
+    ping.unref?.()
+    let left = false
+    const leave = () => { if (left) return; left = true; scanStreams -= 1; clearInterval(ping); off() }
+    req.on('close', leave)
+    res.on('close', leave)
+    res.on('error', leave)
   })
 
   router.get('/api/stats', (_req, res) => {
@@ -242,6 +316,9 @@ function registerNdiRoutes(app, { mountPaths = ['/ndi'], log = () => {}, createM
     getSendManager,
     hasManager: () => manager !== null,
     hasSendManager: () => sendManager !== null,
+    // The autoscan, switched on from index.js at boot (scanAtBootFrom). Builds the
+    // manager — but the manager only forks when probeNdi() finds a runtime.
+    startScan: () => getManager().startScan(),
     // Only a manager that was actually built is closed; asking never builds one.
     close: () => {
       if (manager) { manager.close(); manager = null }
@@ -250,4 +327,4 @@ function registerNdiRoutes(app, { mountPaths = ['/ndi'], log = () => {}, createM
   }
 }
 
-module.exports = { registerNdiRoutes, BOUNDARY }
+module.exports = { registerNdiRoutes, scanAtBootFrom, BOUNDARY }
