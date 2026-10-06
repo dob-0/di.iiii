@@ -113,7 +113,9 @@ export const updateServerSpace = async (spaceId, updates = {}) => {
             // absent) still means "don't touch" — JSON.stringify drops it.
             ...(updates.slug !== undefined ? { slug: updates.slug } : {}),
             ...(updates.ownerUserId !== undefined ? { ownerUserId: updates.ownerUserId } : {}),
-            ...(updates.openInscriptions !== undefined ? { openInscriptions: updates.openInscriptions } : {})
+            ...(updates.openInscriptions !== undefined ? { openInscriptions: updates.openInscriptions } : {}),
+            // Archive: kept whole, out of the default list (spaces.archived_at).
+            ...(updates.archived !== undefined ? { archived: Boolean(updates.archived) } : {})
         }
     })
     return data.space
