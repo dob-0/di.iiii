@@ -410,6 +410,14 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 // Made EMPTY on the host from this side's listing: its content has to
                 // follow by comparison, whatever ops there are or are not.
                 if (made.ok && toSide === remote) seeded.add(`project:${projectId}`)
+                // Live on both now: in the base at once, so a trash or rename made
+                // straight after (within one park) is understood as one.
+                // The made copy's own title and slug: where the source's differ
+                // (a slug is not set by a create), the next pass carries them.
+                if (made.ok && projectBase) {
+                    const madeRow = made.payload?.project || {}
+                    projectBase[projectId] = { title: typeof madeRow.title === 'string' ? madeRow.title : title, slug: madeRow.slug || null }
+                }
                 // Taken here: ids are global on an install, so the project is here
                 // already, in another space. The host moved it into this one.
                 if (made.status === 409 && toSide === local) {
@@ -452,7 +460,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
      */
     const carryProjectLife = async ({ here, hereTrash, there, thereTrash }) => {
         const lists = { hereLive: listOf(here), hereTrash: listOf(hereTrash), thereLive: listOf(there), thereTrash: listOf(thereTrash) }
-        if (Object.values(lists).some(list => list === null)) return false
+        // A stopped follow changes nothing more, even in the middle of a pass.
+        if (stopped || Object.values(lists).some(list => list === null)) return false
         // A follow with no base yet (new, or older than this) starts from what is
         // live on both sides now: nothing in the past is read as a change.
         const first = projectBase === null
@@ -474,11 +483,13 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         const failed = (answer) => `${answer.status || 'no answer'}: ${answer.payload?.error || answer.error || 'refused'}`
 
         for (const id of plan.restoreHere) {
+            if (stopped) return changedHere
             const answer = await send(local, local.url(`/api/projects/${encodeURIComponent(id)}/restore`), 'POST')
             if (answer.ok) { changedHere = true; projectsCarried += 1; log.info?.(`[follow] ${local.spaceId}: ${id} was taken out of the host's trash — restored here`) }
             else sayProjectOnce(`${id}|restore|${answer.status}`, `could not restore ${id} here (${failed(answer)})`)
         }
         for (const id of plan.trashHere) {
+            if (stopped) return changedHere
             // The soft delete: the project goes to this install's trash, with its
             // files and its log, for 30 days. Never a purge.
             const answer = await send(local, local.url(`/api/projects/${encodeURIComponent(id)}`), 'DELETE')
@@ -490,6 +501,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         }
         for (const [to, list] of [[local, plan.patchHere], [remote, plan.patchThere]]) {
             for (const { id, patch } of list) {
+                if (stopped) return changedHere
                 const answer = await send(to, to.url(`/api/projects/${encodeURIComponent(id)}`), 'PATCH', patch)
                 if (answer.ok) {
                     if (to === local) changedHere = true
@@ -503,7 +515,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         }
         if (plan.refused) sayProjectOnce(`refused|${plan.refused}`, plan.refused)
         else projectSaid.forEach(key => { if (key.startsWith('refused|')) projectSaid.delete(key) })
-        for (const note of plan.notes) sayProjectOnce(`note|${note}`, note)
+        for (const note of plan.notes) if (note !== plan.refused) sayProjectOnce(`note|${note}`, note)
         projectNotes = plan.notes
         projectBase = nextBase
         trashedBoth = plan.trashedBoth
@@ -538,6 +550,10 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             return
         }
         projectsCarried += 1
+        if (projectBase) {
+            const movedRow = moved.payload || {}
+            projectBase[projectId] = { title: typeof found.payload?.project?.title === 'string' ? found.payload.project.title : projectId, slug: movedRow.slug || null }
+        }
         // Both copies already hold its ops (carried under the other space's
         // follow): start its log from now, never replay it (the receivers'
         // dedupe window is 500 ops).
@@ -842,7 +858,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 lastConvergeAt: converged ? Date.now() : started.lastConvergeAt,
                 resumed: started.resumed,
                 settings: { carried: settingsCarried, notes: settingsNotes },
-                projects: { carried: projectsCarried, notes: projectNotes }
+                projects: { carried: projectsCarried, notes: projectNotes, paired: Object.keys(projectBase || {}).sort() }
             }
         }
 
@@ -858,7 +874,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             // projects, which never park, are already carried when we settle
             // into the wait.
             const willPark = index === ordered.length - 1
-            if (willPark) report()
+            // Said, and saved, before the park: it can hold this tick for 20 s.
+            if (willPark) { report(); save() }
             const result = await runStream(stream, { wait: willPark })
             if (willPark) parked = true
             if (result.skipped) continue

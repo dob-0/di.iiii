@@ -141,6 +141,9 @@ Implementation of a File Synchronizer", U. Penn MS-CIS-03-36, 2004): a replica t
 one that equals it did not. The base is saved with the follow's state (`follow-state/<space>.json`, `base`): for each
 project both sides held live in this space, its `title`, `slug` and `visibility` as last agreed. A follow that starts
 with no base takes the projects live on both sides as its base, with the host's values (host wins, as everywhere).
+A project the follow itself makes on one side (or moves here) enters the base at once, so a trash or rename made
+straight after it — within one park — is understood as one (before that, a project made and trashed on the host
+within 20 s was never trashed here).
 
 **What travels, and which side wins**
 
