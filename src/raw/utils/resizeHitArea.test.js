@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
-const css = readFileSync(new URL('../styles/raw.css', import.meta.url), 'utf8')
+import { existsSync } from 'node:fs'
+const cssPath = ['src/raw/styles/raw.css', 'raw/styles/raw.css'].find((p) => existsSync(p))
+const css = readFileSync(cssPath, 'utf8')
 const rule = (selector) => css.slice(css.indexOf(`${selector} {`), css.indexOf('}', css.indexOf(`${selector} {`)) + 1)
 
 describe('card resize handle hit area (P2)', () => {
