@@ -83,6 +83,44 @@
     height: var(--raw-cell);
 }
 
+/* Inside a node the bar's place line continues: "… MOCT club night › To do",
+   then ← Back (audit §3.3, §3.6). The current node is the only place its
+   name is written. */
+.raw-bar-trail {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--raw-s-2);
+    min-width: 0;
+    margin-left: var(--raw-s-2);
+}
+
+.raw-bar-trail .raw-topbar-crumb-group {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--raw-s-2);
+    min-width: 0;
+}
+
+.raw-editor-shell button.raw-bar-crumb {
+    -webkit-appearance: none;
+    appearance: none;
+    max-width: 24vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0;
+    border: 0;
+    border-radius: var(--raw-radius);
+    background: transparent;
+    color: var(--di-success);
+    font: inherit;
+    cursor: pointer;
+}
+
+.raw-editor-shell button.raw-bar-crumb.is-current { color: var(--di-ink); font-weight: 600; cursor: default; }
+.raw-editor-shell button.raw-bar-crumb:hover:not(.is-current),
+.raw-editor-shell button.raw-bar-crumb:focus-visible { text-decoration: underline; }
+
 .raw-bar-tools .raw-topbar-breadcrumb {
     display: inline-flex;
     align-items: center;

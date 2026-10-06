@@ -2975,9 +2975,40 @@ export default function RawEditor({
             </nav>
         </>
     ) : null
+    // In the one bar the place continues where the project's name ends
+    // (audit §3.3): "Hayfilm · MOCT club night › To do", then ← Back.
+    const insideTrail = navStack.length > 1 ? (
+        <span className="raw-bar-trail">
+            {navStack.slice(1).map((scopeId, i) => {
+                const crumbNode = authoredNodes.find((n) => n.id === scopeId)
+                const stackIndex = i + 1
+                const isLast = stackIndex === navStack.length - 1
+                return (
+                    <span key={scopeId} className="raw-topbar-crumb-group">
+                        <span className="sbar-sep" aria-hidden="true">›</span>
+                        <button
+                            type="button"
+                            className={`raw-bar-crumb${isLast ? ' is-current' : ''}`}
+                            aria-current={isLast ? 'location' : undefined}
+                            onClick={() => handleNavigateToScope(stackIndex)}
+                        >
+                            {crumbNode?.label || 'Node'}
+                        </button>
+                    </span>
+                )
+            })}
+            <button
+                type="button"
+                className="raw-cell raw-bar-back"
+                title="Back (Esc)"
+                onClick={() => handleNavigateToScope(navStack.length - 2)}
+            >
+                ← Back<kbd aria-hidden="true">Esc</kbd>
+            </button>
+        </span>
+    ) : null
     const barTools = (
         <span className="raw-bar-tools">
-            {insideCells}
             {sceneCell}
             {countCell}
             {chatCell}
@@ -3047,6 +3078,7 @@ export default function RawEditor({
                 isLocalInstall={localInstall.isLocal}
                 hidden={!showBar}
                 layers={barLayers}
+                trail={insideTrail}
             >
                 {barTools}
                 <DeskPerformSwitch current="desk" space={resolvedSpaceId} project={projectId} from="raw" />

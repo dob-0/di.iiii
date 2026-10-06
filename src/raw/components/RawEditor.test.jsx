@@ -1968,6 +1968,24 @@ describe('RawEditor: one bar (audit row 5)', () => {
         expect(document.querySelector('.raw-help-backdrop')).toBeNull()
     })
 
+    it('inside a node the bar place line continues "› The night" with ← Back; the name is written once', async () => {
+        const { container } = await open()
+        fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
+        const bar = container.querySelector('.sbar')
+        const trail = bar.querySelector('.raw-bar-trail')
+        expect(trail).toBeTruthy()
+        // Left, right after the project's name — not among the tools on the right.
+        expect(trail.previousElementSibling?.className).toMatch(/sbar-where--project/)
+        expect(within(trail).getByRole('button', { name: 'The night' }).getAttribute('aria-current')).toBe('location')
+        expect(within(trail).getByRole('button', { name: '← Back' })).toBeTruthy()
+        expect(bar.querySelector('.raw-bar-tools .raw-bar-back')).toBeNull()
+        // The strip under the bar carries only the meta line: no second name.
+        expect(container.querySelector('.raw-inside-crumb')).toBeNull()
+        expect(container.querySelector('.raw-inside-meta')).toBeTruthy()
+        fireEvent.click(within(trail).getByRole('button', { name: '← Back' }))
+        expect(bar.querySelector('.raw-bar-trail')).toBeNull()
+    })
+
     it('opens Help on the ? key', async () => {
         await open()
         expect(screen.queryByRole('region', { name: 'Help' })).toBeNull()
