@@ -13,12 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Nodes: one right region (row 3) and inside a node opens its substance (row 4)
-- apply-picture: the code's picture into every MOXIR version
-- systemd supervises the installed di (`di service install`), so it is restarted if it dies
-- What was built
-- MOXIR's lasers become 6 LaserCube Ultra MK2, off DMX; a room can be copied from another install
-- …and 31 more notes, each in full in PROGRESS.md
+- a space on its own domain (yokozo.xyz shows taronx), set up by the server
 
 Full detail: `PROGRESS.md`.
 
