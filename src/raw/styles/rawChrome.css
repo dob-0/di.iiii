@@ -111,7 +111,9 @@
     bottom: calc(var(--raw-s-3) + var(--raw-bottom-chrome) + env(safe-area-inset-bottom));
     left: calc(var(--raw-s-3) + env(safe-area-inset-left));
     transition: bottom 0.18s ease;
-    z-index: 2;
+    /* Behind the cards (.raw-graph-stage is z 1): a card dragged to the corner
+       covers the strip instead of the strip covering the card. */
+    z-index: 0;
     width: fit-content;
     display: flex;
     align-items: center;
