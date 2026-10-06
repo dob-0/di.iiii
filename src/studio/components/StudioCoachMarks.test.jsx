@@ -24,7 +24,8 @@ describe('StudioCoachMarks', () => {
 
             // Selecting completes step 1 and baselines the entity count.
             rerender(<StudioCoachMarks {...baseProps} hasSelection />)
-            expect(screen.getByText('Open Create and add something')).toBeTruthy()
+            // "Add something" is true only of an empty scene: with objects in it the pill waits.
+            expect(screen.queryByText('Open Create and add something')).toBeNull()
 
             // Adding an entity (count above the baseline) completes step 2.
             rerender(<StudioCoachMarks {...baseProps} hasSelection entityCount={4} />)
@@ -69,7 +70,7 @@ describe('StudioCoachMarks', () => {
         expect(screen.getByText('Open Share to keep what you made')).toBeTruthy()
     })
 
-    it('shows a hint only while it is true (P7): not "Tap an object" with one selected, not "Open Create" with Create open', () => {
+    it('shows a hint only while it is true (P7): not "Tap an object" with one selected, not "Add something" while the scene holds objects', () => {
         // a selection that was already there when the coach armed: the tap hint would be untrue
         const first = render(<StudioCoachMarks {...baseProps} entityCount={2} hasSelection />)
         expect(screen.queryByText('Tap an object to select it')).toBeNull()
@@ -77,11 +78,10 @@ describe('StudioCoachMarks', () => {
 
         const { rerender } = render(<StudioCoachMarks {...baseProps} entityCount={2} />)
         rerender(<StudioCoachMarks {...baseProps} entityCount={2} hasSelection />)
-        expect(screen.getByText('Open Create and add something')).toBeTruthy()
-        rerender(<StudioCoachMarks {...baseProps} entityCount={2} hasSelection createOpen />)
         expect(screen.queryByText('Open Create and add something')).toBeNull()
-        rerender(<StudioCoachMarks {...baseProps} entityCount={2} hasSelection />)
-        expect(screen.getByText('Open Create and add something')).toBeTruthy()
+        expect(screen.queryByRole('status')).toBeNull()
+        rerender(<StudioCoachMarks {...baseProps} entityCount={3} hasSelection />)
+        expect(screen.getByText('Open Share to keep what you made')).toBeTruthy()
     })
 
     it('waits behind a phone sheet without losing its place', () => {

@@ -153,7 +153,7 @@ function GuestCoach({ authType, entityCount, hasSelection, selectTicks = 0, shar
     // A hint is shown only while it is true (owner walk 2026-10-07, P7): "Open Create" with Create
     // open, or "Tap an object" with one already selected, would be a lie. The step keeps its place
     // and counting; only the pill waits.
-    if (stepId === 'add' && createOpen) return null
+    if (stepId === 'add' && (createOpen || entityCount > 0)) return null
     if (stepId === 'touch' && order === 'filled' && hasSelection) return null
 
     const dismiss = () => {
