@@ -17,7 +17,7 @@ import { defaultWorldState, normalizeProjectDocument } from '../../shared/projec
 import useXrAr from '../../hooks/useXrAr.js'
 import useSpaceAssets from '../../hooks/useSpaceAssets.js'
 import { deleteServerAsset, getServerSpace, importCommonsAssets, importDriveAssets, importDriveSelection, listServerSpaces, setAssetShared, updateServerSpace } from '../../services/serverSpaces.js'
-import { buildAppSpacePath, buildPublicProjectPath } from '../../utils/spaceRouting.js'
+import { buildAppSpacePath, buildPublicProjectPath, buildShareUrl } from '../../utils/spaceRouting.js'
 import { buildSpaceProjectsPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { buildRawProjectPath } from '../../raw/utils/rawRouting.js'
 import { buildMapPath } from '../../map/mapRouting.js'
@@ -1090,7 +1090,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         const sharePath = isLiveProject
             ? buildAppSpacePath(resolvedSpaceId)
             : buildPublicProjectPath(resolvedSpaceId, projectId)
-        const url = `${window.location.origin}${sharePath}`
+        const url = buildShareUrl({ spaceId: resolvedSpaceId, spaceSlug: spaceMeta?.slug, domain: spaceMeta?.domain, path: sharePath })
         try {
             if (navigator.clipboard?.writeText) {
                 await navigator.clipboard.writeText(url)
