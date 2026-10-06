@@ -1,6 +1,8 @@
-// The view a canvas opens in (audit 2026-10-05 §3.7, row 7): every card in
-// view, top-left aligned with a 24px pad, never magnified past 100%. The slack
-// goes at the bottom and the right — never above the first card. One pure
+// The view a canvas opens in (audit 2026-10-05 §3.7, row 7): FIT-TO-WIDTH,
+// top-left aligned with a 24px pad, never magnified past 100%. The slack goes
+// at the bottom — never above the first card; a project taller than the window
+// continues below it (pan or scroll), its cards at a size that can be read.
+// Fit (H, `everything`) is the overview: every card in view, width and height. One pure
 // function, so the same cards in the same box give the same view on every
 // load, and a test can say so.
 //
@@ -28,10 +30,11 @@ export const openingView = ({ bounds, box, everything = false, minZoom = 0.1, ma
     const bandHeight = Math.max(1, (box.freeBottom - box.freeTop) - OPENING_PAD * 2)
     const widthFit = bandWidth / Math.max(1, bounds.width)
     const heightFit = bandHeight / Math.max(1, bounds.height)
-    const narrow = !everything && (box.freeRight - box.freeLeft) < OPENING_NARROW_WIDTH
-    const wanted = narrow
-        ? Math.max(Math.min(widthFit, OPENING_MAX_ZOOM), OPENING_SUMMARY_FLOOR)
-        : Math.min(widthFit, heightFit, OPENING_MAX_ZOOM)
+    const narrow = (box.freeRight - box.freeLeft) < OPENING_NARROW_WIDTH
+    const widthView = Math.min(widthFit, OPENING_MAX_ZOOM)
+    const wanted = everything
+        ? Math.min(widthFit, heightFit, OPENING_MAX_ZOOM)
+        : narrow ? Math.max(widthView, OPENING_SUMMARY_FLOOR) : widthView
     const zoom = Math.min(Math.max(wanted, minZoom), maxZoom)
     return {
         zoom,

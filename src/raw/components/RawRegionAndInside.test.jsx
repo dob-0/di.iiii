@@ -150,6 +150,33 @@ afterEach(() => {
     mockApplyLocalOps.mockClear()
 })
 
+// PR #778 as built opened the To do and Contacts Lists as windows stacked
+// over the canvas on first load (seen 2026-10-05, ledger N140). The opening
+// view is the canvas and its cards: nothing covers the work, even when the
+// document (or this device) remembers those windows as open.
+describe('opening view: nothing covers the canvas on first load', () => {
+    const remembered = { visible: true, x: 120, y: 164, width: 660, height: 560, zIndex: 7 }
+    const MOCT = [
+        { id: 'night', typeId: 'view.text', label: 'The night', values: { content: 'Doors at ten.', frame: remembered } },
+        { id: 'todo', typeId: 'view.list', label: 'To do', values: { title: 'To do', groups: ['This night'], items: [{ id: 't1', text: 'Sound check', group: 'This night' }], frame: remembered } },
+        { id: 'contacts', typeId: 'view.list', label: 'Contacts', values: { title: 'Contacts', groups: ['People'], items: [{ id: 'c1', text: 'Venue', group: 'People' }], frame: remembered } },
+        { id: 'bar', typeId: 'view.list', label: 'Bar', values: { title: 'Bar', groups: ['Drinks'], items: [] } }
+    ]
+    it('first load: no window, no column, no Help sheet over the canvas — at 1440 and 390', () => {
+        for (const width of [1440, 390]) {
+            setWidth(width)
+            seed(MOCT)
+            render(<RawEditor localStorageKey={KEY} />)
+            expect(screen.getByTestId('mock-graph'), `${width}`).toBeTruthy()
+            expect(graphMountProps.at(-1).nodes.map((n) => n.id).sort(), `${width}`).toEqual(['bar', 'contacts', 'night', 'todo'])
+            expect(document.querySelectorAll('.raw-window'), `${width}`).toHaveLength(0)
+            expect(column(), `${width}`).toBeNull()
+            expect(document.querySelector('.raw-help-backdrop, .raw-help-dialog'), `${width}`).toBeNull()
+            cleanup()
+        }
+    })
+})
+
 describe('row 3: one right region', () => {
     it('across 8 scripted sequences, at most one occupant is ever mounted', () => {
         setWidth(1440)

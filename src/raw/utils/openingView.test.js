@@ -18,9 +18,16 @@ describe('openingView (audit row 7)', () => {
         expect(openingView({ bounds: { minX: 0, minY: 0, width: 300, height: 100 }, box: box(2560, 1250) }).zoom).toBe(1)
     })
 
-    it('shows everything: the zoom is the smaller of the width and height fits', () => {
+    it('opens fit-to-width (§3.7): a tall project keeps a readable zoom and continues below', () => {
+        const tall = { minX: 0, minY: 0, width: 1600, height: 4000 }
+        const { zoom, panY } = openingView({ bounds: tall, box: box(1440, 805) })
+        expect(zoom).toBeCloseTo((1440 - 48) / 1600, 6)
+        expect(panY).toBeCloseTo(OPENING_PAD, 6)
+    })
+
+    it('Fit (everything) shows it all: the smaller of the width and height fits', () => {
         const tall = { minX: 0, minY: 0, width: 400, height: 4000 }
-        const { zoom } = openingView({ bounds: tall, box: box(1440, 805) })
+        const { zoom } = openingView({ bounds: tall, box: box(1440, 805), everything: true })
         expect(zoom).toBeCloseTo((805 - 48) / 4000, 6)
     })
 
