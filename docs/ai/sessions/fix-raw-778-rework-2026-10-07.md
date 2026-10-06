@@ -3,7 +3,13 @@
 Branch `fix/raw-778-rework-2026-10-07`, from `cloud/raw-bar-tokens-2026-10-05` (PR #778) merged with `origin/dev` (which holds #777, the side column and the inside view). Supersedes #778.
 
 - Merge: Help is #778's one sheet, shown inside #777's right region (no modal). Inside a node the bar holds `← Back` and the crumb; the strip under it keeps the meta line only, and the whole strip only where there is no bar (zen). Summary tier and in-card edit both kept. Bar cells say scene / object.
-- (work in progress — the rest of this note is appended as the rework lands)
+- First load (finding seen 10-05: To do + Contacts windows stacked over the canvas): List/Text have no windows since #777, so nothing covers the canvas; guarded by `RawRegionAndInside.test.jsx` "first load", red with List/Text windows allowed, green now. Tool windows (Monitor, Webcam…) a project remembers as open still open on load — 21 tests encode that as the project's arrangement; left as a question for the owner, not changed.
+- Opening view is fit-to-width (§3.7 says so; #778 fitted width and height, which opened MOCT at 66 % in the summary tier at 1920x1080). Seen: 100 %, full tier, first card 24 px under the bar. Fit (H) is still the overview.
+- The right region started at y 0 under the bar (z 1350 over z 60) and covered the bar's Chat, ?, ⋯ and account; it now starts below the bar.
+- Inside a node: the bar's place line continues `› To do` then `← Back Esc` (SurfaceBar `trail` slot); the strip keeps the meta line. On a phone the trail does not fit, so Back and the name stand in the strip.
+- Phone bar (390x844 measured, scrollWidth 529 in 390): bar is cell+1 px on a finger; only `?` and `⋯` on the right, Scene / outliner count / Chat / Perform / account are rows of ⋯.
+- One size per datum: inside-view List rows and Text body are 13 px (were 17 / 20). Help counts "objects".
+- Not done: the summary tier keeps a card's full box, so a phone opening (50 %) shows tall, mostly empty cards — spec-conformant, owner to judge. The family word ("make") still sits on every card (audit D5) — not one of #778's rows, left. The rest of `raw.css` is still off the token scale (census covers `rawChrome.css` only).
 
 ### Carried from #778 (2026-10-05) — Nodes: one bar, tokens, opening view, one Help sheet
 
