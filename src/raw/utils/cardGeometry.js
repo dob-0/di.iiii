@@ -61,6 +61,8 @@ export const cardMinHeight = (node, scopeNodes = null) => {
 }
 
 export const cardHeight = (node, scopeNodes = null) => {
+    // A thing's card (objectCards.js) carries its own height: with a picture or without.
+    if (node?.entityId && node.height) return node.height
     const size = cardSizeOf(node)
     if (size) return Math.max(cardMinHeight(node, scopeNodes), size.h)
     return cardMinHeight(node, scopeNodes) + cardContentHeight(node)

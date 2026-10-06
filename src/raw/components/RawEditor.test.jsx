@@ -179,7 +179,7 @@ describe('RawEditor outliner toggle', () => {
             ]
         }))
         render(<RawEditor localStorageKey={OUTLINER_STORAGE_KEY} />)
-        expect(screen.getByRole('button', { name: '2 things' })).toBeTruthy()
+        expect(screen.getByRole('button', { name: '2 objects' })).toBeTruthy()
     })
 
     it('names both kinds when a project has each: "1 node · 1 thing"', () => {
@@ -188,8 +188,8 @@ describe('RawEditor outliner toggle', () => {
             entities: [{ id: 'e1', type: 'box', name: 'Plinth', components: {} }]
         }))
         render(<RawEditor localStorageKey={OUTLINER_STORAGE_KEY} />)
-        const count = screen.getByRole('button', { name: '1 node, 1 thing' })
-        expect(count.querySelector('.raw-topbar-count-full').textContent).toBe('1 node · 1 thing')
+        const count = screen.getByRole('button', { name: '1 node, 1 object' })
+        expect(count.querySelector('.raw-topbar-count-full').textContent).toBe('1 node · 1 object')
         // the phone's one number, hidden on a desktop by raw.css
         expect(count.querySelector('.raw-topbar-count-compact').textContent).toBe('2')
     })
@@ -866,7 +866,7 @@ describe('things are cards in Nodes (layers unit 6)', () => {
         render(<RawEditor localStorageKey={KEY} />)
         fireEvent.click(screen.getByText('card:Box one'))
         expect(graphMountProps.at(-1).selectedObjectId).toBe('b1')
-        fireEvent.click(screen.getByRole('button', { name: '4 things' }))
+        fireEvent.click(screen.getByRole('button', { name: '4 objects' }))
         const dialog = screen.getByRole('complementary', { name: /outliner/i })
         const rows = within(dialog).getAllByRole('button').filter((b) => b.closest('.raw-outliner'))
         expect(rows.map((row) => row.textContent)).toEqual(['groupGroup', 'boxBox one', 'boxBox two', 'boxBox three'])
@@ -878,7 +878,7 @@ describe('things are cards in Nodes (layers unit 6)', () => {
         window.localStorage.setItem(KEY, JSON.stringify({ nodes: [], edges: [], workspaceState: {}, entities: [boxes[2]] }))
         render(<RawEditor localStorageKey={KEY} />)
         expect(window.localStorage.getItem(`dii.raw.zen.${KEY}`)).toBe('off')
-        expect(screen.getByRole('button', { name: '1 thing' })).toBeTruthy()
+        expect(screen.getByRole('button', { name: '1 object' })).toBeTruthy()
     })
 
     // Before its document arrives, a server project is an empty stand-in, and
@@ -888,7 +888,7 @@ describe('things are cards in Nodes (layers unit 6)', () => {
         render(<RawEditor projectId="p-things" spaceId="lab" />)
         expect(window.localStorage.getItem('dii.raw.zen.p-things')).toBeNull()
         await waitFor(() => expect(window.localStorage.getItem('dii.raw.zen.p-things')).toBe('off'))
-        expect(screen.getByRole('button', { name: '1 thing' })).toBeTruthy()
+        expect(screen.getByRole('button', { name: '1 object' })).toBeTruthy()
     })
 
     // React batches a load-start and a load-success that land together, so
@@ -1438,7 +1438,7 @@ describe('RawEditor — a thing from the palette (layers unit 7)', () => {
         expect(made[0].op.payload.entity.type).toBe('pointLight')
         // no parent: a thing cannot stand inside a Geo (question 2 is open)
         expect(made[0].op.payload.entity.parentId ?? null).toBeNull()
-        expect(made[0].options.activityMessage).toMatch(/added to the top room — a thing cannot stand inside Geo yet\./)
+        expect(made[0].options.activityMessage).toMatch(/added to the top scene — an object cannot stand inside Geo yet\./)
     })
 })
 
@@ -1788,12 +1788,12 @@ describe('RawEditor — the Scene button counts what stands in the room', () => 
     it('says how many in the title, singular and plural', () => {
         window.localStorage.setItem(ROOM_KEY, makeWorkspaceDoc([makeCube('c1')]))
         const { unmount } = render(<RawEditor localStorageKey={ROOM_KEY} />)
-        expect(sceneButton().getAttribute('title')).toMatch(/1 thing standing in it/)
+        expect(sceneButton().getAttribute('title')).toMatch(/1 object standing in it/)
         unmount()
 
         window.localStorage.setItem(ROOM_KEY, makeWorkspaceDoc([makeCube('c1'), makeCube('c2')]))
         render(<RawEditor localStorageKey={ROOM_KEY} />)
-        expect(sceneButton().getAttribute('title')).toMatch(/2 things standing in it/)
+        expect(sceneButton().getAttribute('title')).toMatch(/2 objects standing in it/)
     })
 })
 

@@ -172,6 +172,8 @@ const buildWirePath = (from, to) => {
     return `M ${from.x} ${from.y} C ${from.x + dx} ${from.y}, ${to.x - dx} ${to.y}, ${to.x} ${to.y}`
 }
 
+const EMPTY_PREVIEW_EDGES = []
+const EMPTY_PREVIEW_NODES = []
 export default function RawGraphSurface({
     // Zen: the zoom controls stop being resident. They are NOT removed — on a
     // touch screen there is no wheel, so they are the only way to zoom, and the
@@ -284,6 +286,20 @@ export default function RawGraphSurface({
     // side column shows.
     const [editingId, setEditingId] = useState(null)
     const pressedSelectedRef = useRef(null)
+    // Whether the press landed on the card's text. Two things made the
+    // target useless: the text list is `pointer-events: none` (the press hits
+    // the card body under it), and the card takes pointer capture on press, so
+    // the click is dispatched at the card anyway. Seen with real pointer input
+    // 2026-10-05: no click ever opened the box. jsdom's fireEvent.click targets
+    // the list directly, which hid it. So it is the press POINT against the
+    // list's rectangle.
+    const pressedContentRef = useRef(false)
+    const pressIsOnContent = (event) => {
+        const list = event.currentTarget.querySelector('.raw-graph-node-content')
+        if (!list) return false
+        const r = list.getBoundingClientRect()
+        return event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom
+    }
     const startEditing = (nodeId) => {
         const node = nodes.find((n) => n.id === nodeId)
         if (!onEditMainValue || !node || !getCardMainField(node.typeId)) return false
@@ -1949,13 +1965,16 @@ export default function RawGraphSurface({
                                     // A click on the text of a card that was already
                                     // selected types into it, in the card (#769).
                                     const wasSelected = pressedSelectedRef.current === node.id
+                                    const onContent = pressedContentRef.current || Boolean(event.target?.closest?.('.raw-graph-node-content'))
                                     pressedSelectedRef.current = null
-                                    if (wasSelected && event.target?.closest?.('.raw-graph-node-content') && startEditing(node.id)) return
+                                    pressedContentRef.current = false
+                                    if (wasSelected && onContent && startEditing(node.id)) return
                                     onSelectNode?.(node.id)
                                 }}
                                 onPointerDown={(event) => {
                                     if (event.button !== 0) return
                                     pressedSelectedRef.current = isSelected ? node.id : null
+                                    pressedContentRef.current = pressIsOnContent(event)
                                     // Grabbing a wire is now as forgiving as dropping one.
                                     // A press anywhere on the card that is near an output
                                     // port starts a wire; only the 10px dot did before, so
@@ -2233,14 +2252,14 @@ export default function RawGraphSurface({
                                 left: card.graphX,
                                 top: card.graphY,
                                 width: CARD_WIDTH,
-                                height: cardHeight(card, null),
+                                height: card.height || cardHeight(card, null),
                                 cursor: onSelectObject ? 'pointer' : 'default',
                                 ...(card.familyColor ? { '--card-family': card.familyColor } : {})
                             }}
                             role="button"
                             tabIndex={0}
-                            aria-label={`${card.label}, a ${card.typeLabel} in the room${card.holds ? `, holds ${card.holds}` : ''}`}
-                            title={`${card.label} — a thing in the room`}
+                            aria-label={`${card.label}, a ${card.typeLabel} in the scene${card.holds ? `, holds ${card.holds}` : ''}`}
+                            title={`${card.label} — an object in the scene`}
                             onClick={() => onSelectObject?.(card.entityId)}
                             onDoubleClick={(event) => event.stopPropagation()}
                             onKeyDown={(event) => {
@@ -2255,14 +2274,19 @@ export default function RawGraphSurface({
                                     <span className="raw-graph-node-label">{card.label}</span>
                                 ) : null}
                                 {tier === 'full' ? (
-                                    <span className="raw-graph-node-category" style={{ color: card.familyColor }}>thing</span>
+                                    <span className="raw-graph-node-category" style={{ color: card.familyColor }}>object</span>
                                 ) : null}
                             </header>
-                            <div style={{ position: 'relative', height: cardHeight(card, null) - HEADER_HEIGHT }}>
+                            <div style={{ position: 'relative', height: (card.height || cardHeight(card, null)) - HEADER_HEIGHT }}>
                                 {tier === 'full' || tier === 'compact' ? (
                                     <span className="raw-graph-node-summary">
                                         {card.holds ? `${card.typeLabel} · holds ${card.holds}` : card.typeLabel}
                                     </span>
+                                ) : null}
+                                {/* What the thing looks like, in the node card's own
+                                    picture slot, below its one line of words. */}
+                                {card.previewNode && (tier === 'full' || tier === 'compact') ? (
+                                    <CardPreview node={card.previewNode} nodes={EMPTY_PREVIEW_NODES} edges={EMPTY_PREVIEW_EDGES} top={26} />
                                 ) : null}
                             </div>
                         </div>

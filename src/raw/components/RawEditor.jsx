@@ -927,7 +927,7 @@ export default function RawEditor({
             ? (authoredNodes.find((node) => node.id === currentScopeId)?.label || 'this node')
             : null
         const landed = insideLabel
-            ? `${kind} added to the top room — a thing cannot stand inside ${insideLabel} yet.`
+            ? `${kind} added to the top scene — an object cannot stand inside ${insideLabel} yet.`
             : `${kind} added to the room.`
         applyLocalOps({
             type: 'createEntity',
@@ -1630,6 +1630,31 @@ export default function RawEditor({
                     }}
                 />
             ) : null}
+            {/* The scene beside what you are editing. Selecting a thing, or a
+                spatial node, used to show its numbers and no picture of it: the
+                room was one button away, fullscreen, and covered the graph
+                (owner, 2026-10-05: "where is the preview"). Beside the
+                settings, the same RawViewport, the selection drawn as selected. */}
+            {regionOccupant === 'settings' && !columnPhone && (scopedSelectedEntity || (scopedSelectedNode && getNodeRender(scopedSelectedNode) === 'spatial-3d')) ? (
+                <div className="raw-column-scene" data-testid="raw-column-scene" aria-label="Scene preview">
+                    <RawViewport
+                        topInset={0}
+                        document={document}
+                        selectedEntityId={scopedSelectedEntity?.id || null}
+                        selectedNodeId={scopedSelectedNode?.id || null}
+                        onSelectEntity={selectEntity}
+                        onSelectNode={selectNode}
+                        onClearSelection={clearSelection}
+                        onMoveNode={handleMoveWorldNode}
+                        onMoveEntity={handleMoveWorldEntity}
+                        nodeScale={nodeScale}
+                        showEmptyHint={false}
+                        scopeId={currentScopeId}
+                        worldNode={worldNode}
+                        liveOutputs={liveOutputs}
+                    />
+                </div>
+            ) : null}
             {regionOccupant === 'settings' ? <PropertyInspector
                 title={inspectorTitle}
                 onRename={scopedSelectedNode ? handleRenameSelected : null}
@@ -2297,6 +2322,16 @@ export default function RawEditor({
     }, [visibleSelection, columnArmed, columnOpenDelayMs])
     const settingsShown = visibleSelection && (columnArmed || columnOpenDelayMs <= 0)
     const regionOccupant = regionPanel || (settingsShown ? 'settings' : null)
+    // Fixed things that live outside the workbench (the account button, the
+    // wordmark) read how much of the right edge the column holds, so none of
+    // them is drawn over its fields (owner 2026-10-05: the "D" sat on Emissive).
+    useEffect(() => {
+        const root = typeof document !== 'undefined' ? window.document.documentElement : null
+        if (!root) return undefined
+        if (regionOccupant && !columnPhone) root.style.setProperty('--di-column-clear', `${columnPx}px`)
+        else root.style.removeProperty('--di-column-clear')
+        return () => root.style.removeProperty('--di-column-clear')
+    }, [regionOccupant, columnPhone, columnPx])
 
     // Inside a node that is not a container (§3.6): the List's table, the
     // Text's editor, a tool's own body, a picture operator's TopInsidePanel,
@@ -2845,8 +2880,8 @@ export default function RawEditor({
                                     title={isWorldFullscreen
                                         ? 'Back to the graph'
                                         : roomCount > 0
-                                            ? `Open the room — ${roomCount} thing${roomCount === 1 ? '' : 's'} standing in it`
-                                            : 'Open the room — nothing standing in it yet'}
+                                            ? `Open the scene — ${roomCount} object${roomCount === 1 ? '' : 's'} standing in it`
+                                            : 'Open the scene — nothing standing in it yet'}
                                 >
                                     {isWorldFullscreen
                                         ? '← Graph'
@@ -2878,7 +2913,7 @@ export default function RawEditor({
                                     title="Toggle outliner"
                                     aria-label={[
                                         nodeCount > 0 ? `${nodeCount} ${nodeCount === 1 ? 'node' : 'nodes'}` : '',
-                                        thingCount > 0 ? `${thingCount} ${thingCount === 1 ? 'thing' : 'things'}` : ''
+                                        thingCount > 0 ? `${thingCount} ${thingCount === 1 ? 'object' : 'objects'}` : ''
                                     ].filter(Boolean).join(', ')}
                                 >
                                     <span className="raw-topbar-count-full">
@@ -2887,7 +2922,7 @@ export default function RawEditor({
                                         ) : null}
                                         {nodeCount > 0 && thingCount > 0 ? <span aria-hidden="true"> · </span> : null}
                                         {thingCount > 0 ? (
-                                            <>{thingCount}<span className="raw-topbar-word"> {thingCount === 1 ? 'thing' : 'things'}</span></>
+                                            <>{thingCount}<span className="raw-topbar-word"> {thingCount === 1 ? 'object' : 'objects'}</span></>
                                         ) : null}
                                     </span>
                                     <span className="raw-topbar-count-compact" aria-hidden="true">
@@ -3031,6 +3066,18 @@ export default function RawEditor({
                 onDragLeave={handleSurfaceDragLeave}
                 onDrop={handleSurfaceDrop}
             >
+                {/* Zen's three residents are surface, nodes, wordmark — this is
+                    the wordmark. Ambient, kept when the toolbar is summoned too.
+                    It became the way home in the 2026-08-21 doors audit: the
+                    canvas was a sealed room (no nav, no path back to
+                    di.iiii), and a wordmark that links home is the one exit
+                    that adds no furniture. Same resting look, quiet hover. */}
+                <a
+                    className={`raw-surface-wordmark${showBar ? ' is-under-sbar' : ''}`}
+                    href="/"
+                    aria-label="di.iiii — home"
+                    onClick={(e) => { e.preventDefault(); navigateToRawPath('/') }}
+                >di<span>.</span>iiii</a>
             {/* THE DESK IS CLEAR — always. The backdrop room lived here from
                 2026-08-19 to 2026-08-20: first always-on, then only when
                 something stood in it, and the owner's verdict stayed the
@@ -3116,18 +3163,6 @@ export default function RawEditor({
                 {insideKind === 'spatial' ? renderInsideView() : null}
                 </GraphWrap>
                 ) : renderInsideView()}
-                {/* Zen's three residents are surface, nodes, wordmark — this is
-                    the wordmark. Ambient, kept when the toolbar is summoned too.
-                    It became the way home in the 2026-08-21 doors audit: the
-                    canvas was a sealed room (no nav, no path back to
-                    di.iiii), and a wordmark that links home is the one exit
-                    that adds no furniture. Same resting look, quiet hover. */}
-                <a
-                    className={`raw-surface-wordmark${showBar ? ' is-under-sbar' : ''}`}
-                    href="/"
-                    aria-label="di.iiii — home"
-                    onClick={(e) => { e.preventDefault(); navigateToRawPath('/') }}
-                >di<span>.</span>iiii</a>
                 {dropState.over && (
                     <div className="raw-drop-veil" aria-hidden="true">
                         <span>drop to bring it in</span>
