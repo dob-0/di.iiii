@@ -2668,6 +2668,14 @@ if (CLIENT_DIR) {
     })
   })
 
+  // A hashed asset that is not on disk is a real 404 that nothing may cache: the
+  // file usually exists a moment later (a deploy in flight), and a cached miss
+  // would outlive it. Never the SPA, never a long-lived cache header.
+  app.use('/assets', (req, res) => {
+    res.set('Cache-Control', 'no-store')
+    res.status(404).type('text/plain').send('Not found')
+  })
+
   app.get(/.*/, (req, res, next) => {
     // Anything the API owns is not ours, even unmatched — a wrong URL under the
     // API must 404 as an API, not hand back an HTML page a fetch() can't parse.
