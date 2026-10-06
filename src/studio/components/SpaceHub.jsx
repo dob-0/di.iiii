@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { Box, Container } from '@mui/material'
 import useAuthSession, { announceSessionChanged } from '../../hooks/useAuthSession.js'
 import useDocumentTitle from '../../hooks/useDocumentTitle.js'
@@ -38,7 +38,7 @@ import { WORKS_HOST } from '../../works/works.js'
 import { getSpaceShareUrl } from '../../storage/spaceStore.js'
 import { createPreviewBootQueue } from '../../utils/previewBootQueue.js'
 import {
-    ARRANGE_MODES, FILTER_MODES, applyView, countStates, normalizeArrange, normalizeFilter, spaceState,
+    ARRANGE_MODES, FILTER_MODES, applyView, countStates, filterSpaces, isArchived, normalizeArrange, normalizeFilter, spaceState,
 } from '../utils/spaceArrange.js'
 import { lightingDeskPath, probeLightingDesk } from '../../map/lightingLink.js'
 import { PREVIEW_READY_MESSAGE, PREVIEW_STUB_MESSAGE } from '../../utils/previewMode.js'
@@ -594,6 +594,20 @@ export default function SpaceHub() {
         }
     }, [loadSpaces])
 
+    // Archive keeps the space whole (nothing is removed, the address still
+    // answers) and takes it out of the default list; Unarchive is the same
+    // one action back. Deleting is a different act (the Trash).
+    const handleToggleArchive = useCallback(async (space, e) => {
+        e?.stopPropagation?.()
+        try {
+            await updateServerSpace(space.id, { archived: !isArchived(space) })
+            setManageId(null)
+            await loadSpaces()
+        } catch (err) {
+            alert(err.message || 'Could not update space.')
+        }
+    }, [loadSpaces])
+
     const handleOpenLinker = useCallback(async (space, e) => {
         e.stopPropagation()
         if (linker?.spaceId === space.id) {
@@ -787,7 +801,8 @@ export default function SpaceHub() {
     // becomes a quiet line underneath it.
     // Everything the controls act on. A visitor never sees the private sandbox,
     // so it is not one of the spaces being counted or filtered for them.
-    const arrangeable = isVisitor ? spaces.filter(s => s !== sandboxCard) : spaces
+    // An archived space is out of a visitor's page altogether; an account finds it under "Archived".
+    const arrangeable = isVisitor ? spaces.filter(s => s !== sandboxCard && !isArchived(s)) : spaces
     // The chips count the whole set, not the filtered one — a count that changed
     // when you clicked it could never tell you what is behind the other chips.
     const stateCounts = countStates(arrangeable)
@@ -800,9 +815,9 @@ export default function SpaceHub() {
     // a session where they were signed in, treat it as "all" rather than
     // silently filtering their whole page down to a filter that no longer
     // exists on screen.
-    const visibleFilterModes = isVisitor ? FILTER_MODES.filter(mode => mode.key !== 'private') : FILTER_MODES
-    const activeFilterMode = isVisitor && filterMode === 'private' ? 'all' : filterMode
-    const passesFilter = (space) => activeFilterMode === 'all' || spaceState(space) === activeFilterMode
+    const visibleFilterModes = isVisitor ? FILTER_MODES.filter(mode => mode.key !== 'private' && mode.key !== 'archived') : FILTER_MODES
+    const activeFilterMode = isVisitor && (filterMode === 'private' || filterMode === 'archived') ? 'all' : filterMode
+    const passesFilter = (space) => filterSpaces([space], activeFilterMode).length > 0
 
     const visitorSpaces = applyView(arrangeable, { arrange, filter: activeFilterMode })
     const arrangedRest = applyView(restSpaces, { arrange, filter: activeFilterMode })
@@ -812,6 +827,310 @@ export default function SpaceHub() {
     const sandboxShelfCard = sandboxCard && passesFilter(sandboxCard) ? sandboxCard : null
     // The list is one flat run of rows, in the arranged order, pinned shelves included.
     const listSpaces = applyView(arrangeable, { arrange, filter: activeFilterMode })
+
+    // The Manage panel and the panels it opens (rename… delete, preview, invites,
+    // history, GitHub sync, project linker). One body for the card AND the list row,
+    // so the two views can never offer different things.
+    const renderManage = (space) => {
+        const isLinking = linker?.spaceId === space.id
+        return (
+            <>
+            {canManage(space) && manageId === space.id && (
+                <div className="ssh-card-actions" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                    <button className="ssh-card-btn" onClick={e => handleRename(space, e)}>
+                        Rename
+                    </button>
+                    <button
+                        className={`ssh-card-btn${space.isPublic ? ' ssh-card-btn--active' : ''}`}
+                        onClick={e => handleTogglePublic(space, e)}
+                    >
+                        {space.isPublic ? 'Public' : 'Private'}
+                    </button>
+                    <button className="ssh-card-btn" onClick={e => handleCopyInvite(space, e)}>
+                        {copiedInviteId === space.id ? 'Invite copied' : 'Invite'}
+                    </button>
+                    <button
+                        className={`ssh-card-btn${invites?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
+                        onClick={e => handleToggleInvites(space, e)}
+                        title="The invite links this space has handed out, and a way to stop one"
+                    >
+                        Invite links
+                    </button>
+                    <button
+                        className={`ssh-card-btn${isLinking ? ' ssh-card-btn--active' : ''}`}
+                        onClick={e => handleOpenLinker(space, e)}
+                    >
+                        {space.publishedProjectId ? 'Change project' : 'Link project'}
+                    </button>
+                    <button
+                        className={`ssh-card-btn${previewMgr?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
+                        onClick={e => handleTogglePreviewMgr(space, e)}
+                    >
+                        Preview
+                    </button>
+                    <button
+                        className={`ssh-card-btn${github?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
+                        onClick={e => handleOpenGithub(space, e)}
+                    >
+                        GitHub sync
+                    </button>
+                    <button
+                        className={`ssh-card-btn${history?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
+                        onClick={e => handleToggleHistory(space, e)}
+                        title="Restore points: who changed this space, and a way back to before"
+                    >
+                        History
+                    </button>
+                    <button
+                        className="ssh-card-btn"
+                        onClick={e => handleSaveToFile(space, e)}
+                        title="One file holding this space, its history and its assets — open it on any di.iiii"
+                    >
+                        Save to file
+                    </button>
+                    {space.id !== defaultSpaceId && space.kind !== 'sandbox' && (
+                        <button
+                            className="ssh-card-btn"
+                            data-act="archive"
+                            onClick={e => handleToggleArchive(space, e)}
+                            title={isArchived(space)
+                                ? 'Bring this space back into the list'
+                                : 'Keep this space whole and take it out of the list. It stays under Archived.'}
+                        >
+                            {isArchived(space) ? 'Unarchive' : 'Archive'}
+                        </button>
+                    )}
+                    <button
+                        className="ssh-card-btn ssh-card-btn--danger"
+                        onClick={e => handleDelete(space, e)}
+                    >
+                        Delete
+                    </button>
+                </div>
+            )}
+
+            {previewMgr?.spaceId === space.id && (
+                <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                    <p className="ssh-linker-status">
+                        {space.previewImageAssetId
+                            ? 'Card shows a custom image.'
+                            : space.isPublic && space.publishedProjectId
+                                ? 'Card shows a live miniature of the published project.'
+                                : 'No live preview yet (needs a public space with a linked project) — you can set an image.'}
+                    </p>
+                    {previewMgr.error && <p className="ssh-linker-status ssh-linker-error">{previewMgr.error}</p>}
+                    <div className="ssh-linker-footer">
+                        <label className="ssh-card-btn">
+                            {previewMgr.busy ? 'Working…' : space.previewImageAssetId ? 'Replace image' : 'Upload image'}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                style={{ display: 'none' }}
+                                disabled={previewMgr.busy}
+                                onChange={e => {
+                                    const file = e.target.files?.[0]
+                                    e.target.value = ''
+                                    handlePreviewImageFile(space, file)
+                                }}
+                            />
+                        </label>
+                        {space.previewImageAssetId && (
+                            <button
+                                className="ssh-card-btn"
+                                disabled={previewMgr.busy}
+                                onClick={() => handleUseLivePreview(space)}
+                            >
+                                Use live preview
+                            </button>
+                        )}
+                        <button className="ssh-card-btn" onClick={() => setPreviewMgr(null)}>
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {invites?.spaceId === space.id && (
+                <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                    {invites.loading && <p className="ssh-linker-status">Loading invite links…</p>}
+                    {invites.error && <p className="ssh-linker-status ssh-linker-error">{invites.error}</p>}
+                    {invites.notice && <p className="ssh-linker-status">{invites.notice}</p>}
+                    {!invites.loading && !invites.error && invites.items.length === 0 && (
+                        <p className="ssh-linker-status">No invite links out. Invite makes one, good for 7 days.</p>
+                    )}
+                    {!invites.loading && invites.items.length > 0 && (
+                        <div className="ssh-linker-list">
+                            {invites.items.map(invite => {
+                                const made = formatRestorePointTime(invite.createdAt)
+                                const expired = Boolean(invite.expiresAt) && invite.expiresAt < Date.now()
+                                const used = invite.useCount === 1 ? 'used once' : invite.useCount > 1 ? `used ${invite.useCount} times` : 'not used yet'
+                                const until = expired ? 'expired' : invite.expiresAt ? `works until ${formatRestorePointTime(invite.expiresAt)}` : 'no end date'
+                                return (
+                                    <div key={invite.id} className="ssh-linker-item">
+                                        <span className="ssh-linker-select" title={`made ${made} · ${used} · ${until}`}>
+                                            <span>made {made} · {used}<br />{until}</span>
+                                        </span>
+                                        {!expired && (
+                                            <button
+                                                className="ssh-linker-rename-btn"
+                                                disabled={Boolean(invites.busyId)}
+                                                onClick={() => handleRevokeInvite(space, invite)}
+                                                title="Stop this link working"
+                                            >
+                                                {invites.busyId === invite.id ? 'Revoking…' : 'Revoke'}
+                                            </button>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+                    <div className="ssh-linker-footer">
+                        <button className="ssh-card-btn" onClick={() => setInvites(null)}>
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {history?.spaceId === space.id && (
+                <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                    {history.loading && <p className="ssh-linker-status">Loading history…</p>}
+                    {history.error && <p className="ssh-linker-status ssh-linker-error">{history.error}</p>}
+                    {history.notice && <p className="ssh-linker-status">{history.notice}</p>}
+                    {!history.loading && history.changes?.length > 0 && (
+                        <>
+                            <p className="ssh-linker-status">What changed · last 7 days</p>
+                            <div className="ssh-linker-list ssh-changes-list">
+                                {history.changes.map(group => {
+                                    const when = formatRestorePointTime(new Date(group.to).toISOString())
+                                    const what = describeChangeGroup(group)
+                                    return (
+                                        <div key={`${group.actor?.subject || 'unknown'}-${group.from}`} className="ssh-linker-item ssh-change-item">
+                                            <span className="ssh-linker-select" title={`${when} · ${what}`}>
+                                                <span>{when}<br />{what}</span>
+                                            </span>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                            <p className="ssh-linker-status">Restore points</p>
+                        </>
+                    )}
+                    {!history.loading && !history.error && history.items.length === 0 && (
+                        <p className="ssh-linker-status">No restore points yet — one is kept before every change someone makes here.</p>
+                    )}
+                    {!history.loading && history.items.length > 0 && (
+                        <div className="ssh-linker-list">
+                            {history.items.map(point => {
+                                const when = formatRestorePointTime(point.takenAt)
+                                const what = describeRestorePoint(point)
+                                // Two lines, not one ellipsis: on a card this narrow a
+                                // single line cut off the one thing a row is for — whose.
+                                return (
+                                    <div key={point.id} className="ssh-linker-item">
+                                        <span className="ssh-linker-select" title={`${when} · ${what}`}>
+                                            <span>{when}<br />{what}</span>
+                                        </span>
+                                        <button
+                                            className="ssh-linker-rename-btn"
+                                            disabled={Boolean(history.busyId)}
+                                            onClick={() => handleRestoreSnapshot(space, point)}
+                                            title="Put the space back to this point"
+                                        >
+                                            {history.busyId === point.id ? 'Restoring…' : 'Restore'}
+                                        </button>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+                    <div className="ssh-linker-footer">
+                        <button className="ssh-card-btn" onClick={() => setHistory(null)}>
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {github?.spaceId === space.id && (
+                <div className="ssh-github-panel" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                    {github.loading
+                        ? <p className="ssh-linker-status">Loading…</p>
+                        : <GithubSyncSection space={space} projects={github.projects} />}
+                </div>
+            )}
+
+            {isLinking && (
+                <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                    {linker.loading && <p className="ssh-linker-status">Loading projects…</p>}
+                    {linker.error && <p className="ssh-linker-status ssh-linker-error">{linker.error}</p>}
+                    {!linker.loading && !linker.error && linker.projects.length === 0 && (
+                        <p className="ssh-linker-status">No projects yet — open this space to make one.</p>
+                    )}
+                    {!linker.loading && linker.projects.length > 0 && (
+                        <div className="ssh-linker-list">
+                            {linker.projects.map(p => (
+                                <div key={p.id} className={`ssh-linker-item${space.publishedProjectId === p.id ? ' is-linked' : ''}`}>
+                                    {linker.renamingId === p.id ? (
+                                        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+                                        <form
+                                            className="ssh-linker-rename-form"
+                                            onSubmit={e => { e.preventDefault(); handleSubmitRenameProject(p.id) }}
+                                            onClick={e => e.stopPropagation()}
+                                            onKeyDown={e => e.stopPropagation()}
+                                        >
+                                            <input
+                                                className="ssh-linker-rename-input"
+                                                ref={el => el?.focus()}
+                                                value={linker.renameValue}
+                                                onChange={e => setLinker(prev => prev ? { ...prev, renameValue: e.target.value } : prev)}
+                                                onKeyDown={e => e.key === 'Escape' && setLinker(prev => prev ? { ...prev, renamingId: null } : prev)}
+                                            />
+                                            <button className="ssh-card-btn" type="submit">Save</button>
+                                            <button className="ssh-card-btn" type="button" onClick={() => setLinker(prev => prev ? { ...prev, renamingId: null } : prev)}>✕</button>
+                                        </form>
+                                    ) : (
+                                        <>
+                                            <button
+                                                className="ssh-linker-select"
+                                                onClick={() => handleLinkProject(space.id, p.id)}
+                                                title="Use as published project"
+                                            >
+                                                <span className="ssh-linker-label">{p.title || 'Untitled'}</span>
+                                                {space.publishedProjectId === p.id && <span className="ssh-linker-check">linked</span>}
+                                            </button>
+                                            <button
+                                                className="ssh-linker-rename-btn"
+                                                onClick={e => handleStartRenameProject(p, e)}
+                                                title="Rename project"
+                                            >
+                                                Rename
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <div className="ssh-linker-footer">
+                        {!linker.loading && space.publishedProjectId && (
+                            <button
+                                className="ssh-card-btn ssh-card-btn--danger"
+                                onClick={() => handleLinkProject(space.id, null)}
+                            >
+                                Unlink
+                            </button>
+                        )}
+                        <button className="ssh-card-btn" onClick={() => setLinker(null)}>
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
+            </>
+        )
+    }
 
     // The two featured shelves are a PAIR — the room everyone shares beside the one
     // that is yours — and only earn their own row when both are there. Alone, a
@@ -982,7 +1301,7 @@ export default function SpaceHub() {
                 {/* Arrange and filter. Hidden on the map (which has its own spatial
                     ordering) and while there are few enough spaces that the
                     controls would be more work than the looking. */}
-                {viewMode !== 'map' && arrangeable.length > 3 && (
+                {viewMode !== 'map' && (arrangeable.length > 3 || stateCounts.archived > 0) && (
                     <div className="ssh-arrange-bar">
                         <div className="ssh-arrange" role="group" aria-label="Arrange spaces">
                             <span className="ssh-arrange-label">Arrange</span>
@@ -1026,7 +1345,7 @@ export default function SpaceHub() {
                     reporting two different totals for what should be one set. */}
                 {viewMode === 'map' && arrangeable.length > 0 && (
                     <SpaceConstellation
-                        spaces={arrangeable}
+                        spaces={arrangeable.filter(s => !isArchived(s))}
                         defaultSpaceId={defaultSpaceId}
                         openSpaceId={openSpaceId}
                         canManage={canManage}
@@ -1073,11 +1392,12 @@ export default function SpaceHub() {
                             const doorTitle = buildSpaceFacePath(space) !== buildSpaceDoorPath(space)
                                 ? null
                                 : doorTitleForCard({ space, projectTitle: projectTitles[space.publishedProjectId], isVisitor })
-                            const stateWord = state === 'open' ? 'open to anyone'
+                            const stateWord = isArchived(space) ? 'archived'
+                                : state === 'open' ? 'open to anyone'
                                 : state === 'nodoor' ? 'no door' : 'only you'
                             return (
+                                <Fragment key={space.id}>
                                 <div
-                                    key={space.id}
                                     data-space-id={space.id}
                                     className="ssh-list-row"
                                     role="button"
@@ -1104,11 +1424,24 @@ export default function SpaceHub() {
                                     <span className={`ssh-list-state ssh-list-state--${state}`}>{stateWord}</span>
                                     <span className="ssh-list-acts" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
                                         <button type="button" className="ssh-card-btn" onClick={() => openCard(space)}>Open</button>
+                                        {canManage(space) && (
+                                            <button
+                                                type="button"
+                                                className={`ssh-card-btn${manageId === space.id ? ' ssh-card-btn--active' : ''}`}
+                                                data-act="manage"
+                                                aria-expanded={manageId === space.id}
+                                                onClick={() => setManageId(id => (id === space.id ? null : space.id))}
+                                            >{manageId === space.id ? 'Done' : 'Manage'}</button>
+                                        )}
                                         {space.isPublic && (
                                             <a className="ssh-card-btn" href={buildSpaceDoorPath(space)} onClick={e => e.stopPropagation()}>Live</a>
                                         )}
                                     </span>
                                 </div>
+                                {canManage(space) && manageId === space.id && (
+                                    <div className="ssh-list-manage" data-space-id={space.id}>{renderManage(space)}</div>
+                                )}
+                                </Fragment>
                             )
                         })}
                     </div>
@@ -1130,7 +1463,6 @@ export default function SpaceHub() {
                         <div className={`ssh-spaces-grid${featured ? ' ssh-featured-grid' : ''}${isVisitor ? ' ssh-spaces-grid--visitor' : ''}`}>
                         {items.map((space) => {
                             const isMain = space.id === defaultSpaceId
-                            const isLinking = linker?.spaceId === space.id
                             // A card whose face is a coded work shows that work's front page, so
                             // naming the published project under it would caption the wrong thing.
                             const doorTitle = buildSpaceFacePath(space) !== buildSpaceDoorPath(space)
@@ -1313,287 +1645,7 @@ export default function SpaceHub() {
                                             </button>
                                         </div>
                                     )}
-                                    {canManage(space) && manageId === space.id && (
-                                        <div className="ssh-card-actions" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                                            <button className="ssh-card-btn" onClick={e => handleRename(space, e)}>
-                                                Rename
-                                            </button>
-                                            <button
-                                                className={`ssh-card-btn${space.isPublic ? ' ssh-card-btn--active' : ''}`}
-                                                onClick={e => handleTogglePublic(space, e)}
-                                            >
-                                                {space.isPublic ? 'Public' : 'Private'}
-                                            </button>
-                                            <button className="ssh-card-btn" onClick={e => handleCopyInvite(space, e)}>
-                                                {copiedInviteId === space.id ? 'Invite copied' : 'Invite'}
-                                            </button>
-                                            <button
-                                                className={`ssh-card-btn${invites?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
-                                                onClick={e => handleToggleInvites(space, e)}
-                                                title="The invite links this space has handed out, and a way to stop one"
-                                            >
-                                                Invite links
-                                            </button>
-                                            <button
-                                                className={`ssh-card-btn${isLinking ? ' ssh-card-btn--active' : ''}`}
-                                                onClick={e => handleOpenLinker(space, e)}
-                                            >
-                                                {space.publishedProjectId ? 'Change project' : 'Link project'}
-                                            </button>
-                                            <button
-                                                className={`ssh-card-btn${previewMgr?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
-                                                onClick={e => handleTogglePreviewMgr(space, e)}
-                                            >
-                                                Preview
-                                            </button>
-                                            <button
-                                                className={`ssh-card-btn${github?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
-                                                onClick={e => handleOpenGithub(space, e)}
-                                            >
-                                                GitHub sync
-                                            </button>
-                                            <button
-                                                className={`ssh-card-btn${history?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
-                                                onClick={e => handleToggleHistory(space, e)}
-                                                title="Restore points: who changed this space, and a way back to before"
-                                            >
-                                                History
-                                            </button>
-                                            <button
-                                                className="ssh-card-btn"
-                                                onClick={e => handleSaveToFile(space, e)}
-                                                title="One file holding this space, its history and its assets — open it on any di.iiii"
-                                            >
-                                                Save to file
-                                            </button>
-                                            <button
-                                                className="ssh-card-btn ssh-card-btn--danger"
-                                                onClick={e => handleDelete(space, e)}
-                                            >
-                                                Delete
-                                            </button>
-                                        </div>
-                                    )}
-
-                                    {previewMgr?.spaceId === space.id && (
-                                        <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                                            <p className="ssh-linker-status">
-                                                {space.previewImageAssetId
-                                                    ? 'Card shows a custom image.'
-                                                    : space.isPublic && space.publishedProjectId
-                                                        ? 'Card shows a live miniature of the published project.'
-                                                        : 'No live preview yet (needs a public space with a linked project) — you can set an image.'}
-                                            </p>
-                                            {previewMgr.error && <p className="ssh-linker-status ssh-linker-error">{previewMgr.error}</p>}
-                                            <div className="ssh-linker-footer">
-                                                <label className="ssh-card-btn">
-                                                    {previewMgr.busy ? 'Working…' : space.previewImageAssetId ? 'Replace image' : 'Upload image'}
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        style={{ display: 'none' }}
-                                                        disabled={previewMgr.busy}
-                                                        onChange={e => {
-                                                            const file = e.target.files?.[0]
-                                                            e.target.value = ''
-                                                            handlePreviewImageFile(space, file)
-                                                        }}
-                                                    />
-                                                </label>
-                                                {space.previewImageAssetId && (
-                                                    <button
-                                                        className="ssh-card-btn"
-                                                        disabled={previewMgr.busy}
-                                                        onClick={() => handleUseLivePreview(space)}
-                                                    >
-                                                        Use live preview
-                                                    </button>
-                                                )}
-                                                <button className="ssh-card-btn" onClick={() => setPreviewMgr(null)}>
-                                                    Close
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {invites?.spaceId === space.id && (
-                                        <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                                            {invites.loading && <p className="ssh-linker-status">Loading invite links…</p>}
-                                            {invites.error && <p className="ssh-linker-status ssh-linker-error">{invites.error}</p>}
-                                            {invites.notice && <p className="ssh-linker-status">{invites.notice}</p>}
-                                            {!invites.loading && !invites.error && invites.items.length === 0 && (
-                                                <p className="ssh-linker-status">No invite links out. Invite makes one, good for 7 days.</p>
-                                            )}
-                                            {!invites.loading && invites.items.length > 0 && (
-                                                <div className="ssh-linker-list">
-                                                    {invites.items.map(invite => {
-                                                        const made = formatRestorePointTime(invite.createdAt)
-                                                        const expired = Boolean(invite.expiresAt) && invite.expiresAt < Date.now()
-                                                        const used = invite.useCount === 1 ? 'used once' : invite.useCount > 1 ? `used ${invite.useCount} times` : 'not used yet'
-                                                        const until = expired ? 'expired' : invite.expiresAt ? `works until ${formatRestorePointTime(invite.expiresAt)}` : 'no end date'
-                                                        return (
-                                                            <div key={invite.id} className="ssh-linker-item">
-                                                                <span className="ssh-linker-select" title={`made ${made} · ${used} · ${until}`}>
-                                                                    <span>made {made} · {used}<br />{until}</span>
-                                                                </span>
-                                                                {!expired && (
-                                                                    <button
-                                                                        className="ssh-linker-rename-btn"
-                                                                        disabled={Boolean(invites.busyId)}
-                                                                        onClick={() => handleRevokeInvite(space, invite)}
-                                                                        title="Stop this link working"
-                                                                    >
-                                                                        {invites.busyId === invite.id ? 'Revoking…' : 'Revoke'}
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        )
-                                                    })}
-                                                </div>
-                                            )}
-                                            <div className="ssh-linker-footer">
-                                                <button className="ssh-card-btn" onClick={() => setInvites(null)}>
-                                                    Close
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {history?.spaceId === space.id && (
-                                        <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                                            {history.loading && <p className="ssh-linker-status">Loading history…</p>}
-                                            {history.error && <p className="ssh-linker-status ssh-linker-error">{history.error}</p>}
-                                            {history.notice && <p className="ssh-linker-status">{history.notice}</p>}
-                                            {!history.loading && history.changes?.length > 0 && (
-                                                <>
-                                                    <p className="ssh-linker-status">What changed · last 7 days</p>
-                                                    <div className="ssh-linker-list ssh-changes-list">
-                                                        {history.changes.map(group => {
-                                                            const when = formatRestorePointTime(new Date(group.to).toISOString())
-                                                            const what = describeChangeGroup(group)
-                                                            return (
-                                                                <div key={`${group.actor?.subject || 'unknown'}-${group.from}`} className="ssh-linker-item ssh-change-item">
-                                                                    <span className="ssh-linker-select" title={`${when} · ${what}`}>
-                                                                        <span>{when}<br />{what}</span>
-                                                                    </span>
-                                                                </div>
-                                                            )
-                                                        })}
-                                                    </div>
-                                                    <p className="ssh-linker-status">Restore points</p>
-                                                </>
-                                            )}
-                                            {!history.loading && !history.error && history.items.length === 0 && (
-                                                <p className="ssh-linker-status">No restore points yet — one is kept before every change someone makes here.</p>
-                                            )}
-                                            {!history.loading && history.items.length > 0 && (
-                                                <div className="ssh-linker-list">
-                                                    {history.items.map(point => {
-                                                        const when = formatRestorePointTime(point.takenAt)
-                                                        const what = describeRestorePoint(point)
-                                                        // Two lines, not one ellipsis: on a card this narrow a
-                                                        // single line cut off the one thing a row is for — whose.
-                                                        return (
-                                                            <div key={point.id} className="ssh-linker-item">
-                                                                <span className="ssh-linker-select" title={`${when} · ${what}`}>
-                                                                    <span>{when}<br />{what}</span>
-                                                                </span>
-                                                                <button
-                                                                    className="ssh-linker-rename-btn"
-                                                                    disabled={Boolean(history.busyId)}
-                                                                    onClick={() => handleRestoreSnapshot(space, point)}
-                                                                    title="Put the space back to this point"
-                                                                >
-                                                                    {history.busyId === point.id ? 'Restoring…' : 'Restore'}
-                                                                </button>
-                                                            </div>
-                                                        )
-                                                    })}
-                                                </div>
-                                            )}
-                                            <div className="ssh-linker-footer">
-                                                <button className="ssh-card-btn" onClick={() => setHistory(null)}>
-                                                    Close
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {github?.spaceId === space.id && (
-                                        <div className="ssh-github-panel" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                                            {github.loading
-                                                ? <p className="ssh-linker-status">Loading…</p>
-                                                : <GithubSyncSection space={space} projects={github.projects} />}
-                                        </div>
-                                    )}
-
-                                    {isLinking && (
-                                        <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                                            {linker.loading && <p className="ssh-linker-status">Loading projects…</p>}
-                                            {linker.error && <p className="ssh-linker-status ssh-linker-error">{linker.error}</p>}
-                                            {!linker.loading && !linker.error && linker.projects.length === 0 && (
-                                                <p className="ssh-linker-status">No projects yet — open this space to make one.</p>
-                                            )}
-                                            {!linker.loading && linker.projects.length > 0 && (
-                                                <div className="ssh-linker-list">
-                                                    {linker.projects.map(p => (
-                                                        <div key={p.id} className={`ssh-linker-item${space.publishedProjectId === p.id ? ' is-linked' : ''}`}>
-                                                            {linker.renamingId === p.id ? (
-                                                                // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
-                                                                <form
-                                                                    className="ssh-linker-rename-form"
-                                                                    onSubmit={e => { e.preventDefault(); handleSubmitRenameProject(p.id) }}
-                                                                    onClick={e => e.stopPropagation()}
-                                                                    onKeyDown={e => e.stopPropagation()}
-                                                                >
-                                                                    <input
-                                                                        className="ssh-linker-rename-input"
-                                                                        ref={el => el?.focus()}
-                                                                        value={linker.renameValue}
-                                                                        onChange={e => setLinker(prev => prev ? { ...prev, renameValue: e.target.value } : prev)}
-                                                                        onKeyDown={e => e.key === 'Escape' && setLinker(prev => prev ? { ...prev, renamingId: null } : prev)}
-                                                                    />
-                                                                    <button className="ssh-card-btn" type="submit">Save</button>
-                                                                    <button className="ssh-card-btn" type="button" onClick={() => setLinker(prev => prev ? { ...prev, renamingId: null } : prev)}>✕</button>
-                                                                </form>
-                                                            ) : (
-                                                                <>
-                                                                    <button
-                                                                        className="ssh-linker-select"
-                                                                        onClick={() => handleLinkProject(space.id, p.id)}
-                                                                        title="Use as published project"
-                                                                    >
-                                                                        <span className="ssh-linker-label">{p.title || 'Untitled'}</span>
-                                                                        {space.publishedProjectId === p.id && <span className="ssh-linker-check">linked</span>}
-                                                                    </button>
-                                                                    <button
-                                                                        className="ssh-linker-rename-btn"
-                                                                        onClick={e => handleStartRenameProject(p, e)}
-                                                                        title="Rename project"
-                                                                    >
-                                                                        Rename
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            <div className="ssh-linker-footer">
-                                                {!linker.loading && space.publishedProjectId && (
-                                                    <button
-                                                        className="ssh-card-btn ssh-card-btn--danger"
-                                                        onClick={() => handleLinkProject(space.id, null)}
-                                                    >
-                                                        Unlink
-                                                    </button>
-                                                )}
-                                                <button className="ssh-card-btn" onClick={() => setLinker(null)}>
-                                                    Close
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
+                                {renderManage(space)}
                                 </div>
                             )
                         })}

@@ -547,6 +547,9 @@ function initDb(dbPath) {
   // touches the bytes.
   ensureColumn(db, 'projects', 'deleted_at', 'INTEGER')
   ensureColumn(db, 'spaces', 'deleted_at', 'INTEGER')
+  // Archive: the space is kept whole and only leaves the default list. Nullable,
+  // invisible to an older build (no SCHEMA_VERSION bump). Not the trash: no TTL.
+  ensureColumn(db, 'spaces', 'archived_at', 'INTEGER')
   ensureColumn(db, 'spaces', 'position', 'INTEGER NOT NULL DEFAULT 0')
   db.exec('CREATE INDEX IF NOT EXISTS idx_projects_collection ON projects(collection_id, position)')
   ensureColumn(db, 'users', 'spaces', 'TEXT')

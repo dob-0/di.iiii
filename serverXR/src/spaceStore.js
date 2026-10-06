@@ -190,6 +190,8 @@ function createSpaceStore({
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     lastTouchedAt: row.last_touched_at,
+    // Only an archived space carries this: kept whole, hidden from the default list.
+    ...(row.archived_at ? { archivedAt: row.archived_at } : {}),
     // Only a trashed space carries these (the trash reads, nothing else does).
     ...(row.deleted_at ? { deletedAt: row.deleted_at, restorableUntil: row.deleted_at + SPACE_TRASH_TTL_MS } : {})
   })
@@ -322,9 +324,11 @@ function createSpaceStore({
       const nextTouched   = updates.touch !== false ? now : row.last_touched_at
       const nextOwner     = 'ownerUserId'      in updates ? (updates.ownerUserId ?? null)                                                            : row.owner_user_id
       const nextInscribe  = 'openInscriptions' in updates ? (updates.openInscriptions ? 1 : 0)                                                       : row.open_inscriptions
+      const nextArchived  = 'archived'         in updates ? (updates.archived ? (row.archived_at || now) : null)                                       : (row.archived_at ?? null)
       const nextTrusted   = 'trustedUserIds'   in updates ? serializeTrusted(updates.trustedUserIds)                                                       : (row.trusted_user_ids ?? null)
+      db.prepare('UPDATE spaces SET archived_at=? WHERE id=?').run(nextArchived, spaceId)
       update.run(nextSlug, nextLabel, nextPermanent, nextEdits, nextPublic, nextKind, nextPublished, nextPreview, nextVersion, now, nextTouched, nextOwner, nextInscribe, nextTrusted, spaceId)
-      return rowToMeta({ ...row, slug: nextSlug, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner, open_inscriptions: nextInscribe, trusted_user_ids: nextTrusted })
+      return rowToMeta({ ...row, slug: nextSlug, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner, open_inscriptions: nextInscribe, trusted_user_ids: nextTrusted, archived_at: nextArchived })
     })()
   }
 
