@@ -126,6 +126,16 @@ services:
       # approvals to (contentProposals.js — a file for an existing space).
       CONTENT_CHANGE_NOTICES_ENABLED: ${CONTENT_CHANGE_NOTICES_ENABLED:-false}
       APPROVAL_CALLBACK_URL: ${APPROVAL_CALLBACK_URL:-}
+
+      # A space on its own domain (docs/architecture/SPEC_space_own_domain.md).
+      # Empty = domains can be saved but nothing switches them on by itself.
+      # The token needs SSL and Certificates: Edit on the platform zone only.
+      CLOUDFLARE_SAAS_ZONE_ID: ${CLOUDFLARE_SAAS_ZONE_ID:-}
+      CLOUDFLARE_SAAS_API_TOKEN: ${CLOUDFLARE_SAAS_API_TOKEN:-}
+      CLOUDFLARE_SAAS_CNAME_TARGET: ${CLOUDFLARE_SAAS_CNAME_TARGET:-}
+      PLATFORM_ORIGIN: ${PLATFORM_ORIGIN:-}
+      PLATFORM_HOSTNAMES: ${PLATFORM_HOSTNAMES:-}
+      DOMAINS_MAX: ${DOMAINS_MAX:-}
       CONTENT_PROPOSAL_TTL_MS: ${CONTENT_PROPOSAL_TTL_MS:-}
       # A space on its own domain (docs/architecture/SPEC_space_own_domain.md).
       # caddy = this host has its own public IP and Caddy's on-demand TLS
