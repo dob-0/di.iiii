@@ -42,6 +42,26 @@
 
 .homelink:hover { border-color: var(--accent); color: var(--accent); }
 .homelink:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Framed as the visualiser's desk half (app.js marks <html>): the ways out are the
+   visualiser's, and on a phone they took the whole pane. The page tabs stay. */
+.is-framed .topbar .homelink, .is-framed #fromTools { display: none !important; }
+/* …and in that pane the desk is a preview — fire a look, watch the room — so the
+   live-booth controls step aside: tempo, snap, Save scene and the scene Go (the full
+   desk is one link away). Blackout stays, one tap, but a button in the row, not the
+   full-width phone panic bar; the safety pills stay too. */
+.is-framed .topright .bpm, .is-framed #bpm, .is-framed #tapBtn, .is-framed #snap,
+.is-framed #saveNow, .is-framed #goBtn { display: none !important; }
+.is-framed .topbo { width: auto; }
+/* The page tabs step aside too (the pane is Touch); "Full desk ↗" is the door to the rest.
+   One row: ••• · Blackout · Full desk — the looks start under the cue bar. */
+.is-framed .topbar > nav.pages:not(#fromTools) { display: none !important; }
+.is-framed .topbar { flex-wrap: nowrap; }
+.is-framed .topright { flex-wrap: nowrap; padding: 4px 8px 4px 0; }
+.fulldesk { white-space: nowrap; }
+.is-framed .topbar .homelink.fulldesk { display: inline-flex !important; order: 9; margin-left: auto; }
+/* The performance strip (FX / Audio / Set / Master) is the full desk's: pinned to the
+   pane's bottom it covered the first row of looks. */
+.is-framed #liveStrip { display: none !important; }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }   /* beats the display rules below */
@@ -123,6 +143,10 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .sq:hover { border-color: var(--muted); }
 .sq.accent { background: var(--accent); color: #041012; border-color: var(--accent); font-weight: 600; }
 .sq.danger { color: var(--danger); }
+/* A switch, not an action: on reads as an accent outline with accent text, never the GO fill.
+   (MOXIR UI audit, 2026-10-01: "loop on" was filled like GO and read as a button to press.) */
+.toggle.on { background: transparent; border-color: var(--accent); color: var(--accent); }
+.noscenes { padding: 8px 12px; margin: 0; font-size: 12px; }
 
 /* ---------------- setup: top split ---------------- */
 /* minmax(0, 1fr): a bare 1fr keeps its content's min-width, which let the patch grid
@@ -487,9 +511,14 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 /* minmax(0,1fr) on the one column: without it the implicit column sized to the pad grid's
    max-content, the page went 1334px wide on a 390px phone with overflow-x hidden, and
    Master and Blackout in the strip sat 600px off-screen with no way to scroll to them. */
-.touchwrap { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; gap: 10px; padding: 12px; min-height: 0; }
+/* A column, not a 3-row grid: the scene filter is often hidden, and a hidden item leaves the
+   grid, so the looks took the first (auto) row and the live strip the 1fr one — squeezed to
+   141px, TAP / FX off / BPM clipped at 1440x900 (MOXIR UI audit, 2026-10-02). */
+.touchwrap { flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 12px; min-height: 0; }
+.touchwrap > .touchbody { flex: 1 1 auto; min-width: 0; }
 /* the shared scene filter, dressed as a pane row rather than a bare strip */
 .touchsearch { border: 1px solid var(--line); background: var(--pane); }
+.touchsearch[hidden] { display: none; }
 /* group headers span the whole grid and stick while their section scrolls */
 .touchgrid .bankhead { grid-column: 1 / -1; }
 .touchgrid > .muted { grid-column: 1 / -1; }
@@ -504,6 +533,37 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
   font-size: 15px; padding: 10px;
 }
 .tbtn.active { border-color: var(--accent); }
+/* One scroll for the cue bar, the looks and the scenes; the bar stays pinned on top */
+.touchbody { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: auto; }
+.touchbody > .touchgrid { overflow: visible; flex: none; }
+.touchbody [hidden] { display: none; }
+@media (max-width: 1100px) { .touchbody { overflow: visible; } }
+.tcuebar {
+  position: sticky; top: 0; z-index: 2; flex: none;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  background: var(--pane); border: 1px solid var(--line); border-radius: 0; padding: 8px;
+}
+/* Where the body scrolls instead (≤1100px), the cue bar pins under the top bar, not at 0. */
+@media (max-width: 1100px) { .tcuebar { top: var(--topbar-h, 46px); } }
+.tcuewhere { flex: 1 1 180px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tcuewhere b { font-size: 16px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tcuewhere .muted { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tcuebtns { flex: 1 1 260px; display: flex; gap: 4px; }
+.tcuebtns .sq { flex: 1 1 0; min-width: 44px; min-height: 44px; }
+.tcuebtns #tCueGo { flex-grow: 2; font-size: 16px; }
+@media (max-width: 700px) {
+  /* the strip and the top bar already take most of a phone: keep the pinned bar slim */
+  .tcuebar { padding: 6px; gap: 4px 8px; }
+  .tcuewhere { flex-basis: 100%; }
+  .tcuewhere b { font-size: 14px; }
+}
+.tlooks { flex: none; }
+.tlooks .bankhead { position: static; }
+.tlooks .touchgrid { margin-top: 10px; overflow: visible; }
+.tbtn.lookbtn { gap: 4px; }
+.tbtn.lookbtn .tnote { color: var(--muted); }
+.tbtn.lookbtn.active { background: #ffffff10; border-width: 2px; padding: 9px; }
+.tbtn.lookbtn.active .tnote { color: var(--accent); }
 .tbtn .strip { display: flex; height: 6px; width: 100%; border-radius: 0; overflow: hidden; border: 1px solid var(--line); }
 .tbtn .strip i { flex: 1; }
 
@@ -763,7 +823,23 @@ input.pinned { border-color: var(--accent); }
   border-radius: 0; padding: 2px 8px; font-size: 11px; white-space: nowrap; cursor: pointer;
 }
 .fxpill:hover, .wirepill:hover { background: var(--accent); color: #041012; }
-.wirepill.stale { border-color: var(--danger); color: var(--danger); }
+/* The output badge is a FILLED chip so the state reads across a dark booth (MOXIR UI audit,
+   2026-10-02: a small red outline hugging the bar's edge was missed). Three states, three
+   fills: live = accent, off = the light neutral (a deliberate, calm "nothing leaves this
+   machine"), stalled/error = danger. */
+.wirepill { padding: 4px 12px; font-weight: 700; letter-spacing: .04em; background: var(--accent); color: #041012; }
+.wirepill.off { background: var(--text); border-color: var(--text); color: var(--bg); }
+.wirepill.stale:not(.off) { background: var(--danger); border-color: var(--danger); color: #fff; }
+.wirepill:hover { filter: brightness(1.12); }
+.pills:has(.wirepill:not([hidden])) { padding-right: 12px; }
+/* Room for it: from 1101px the title and the badge compete for one row, so the badge drops
+   to the second row beside Blackout instead of clipping the show line. */
+@media (min-width: 1101px) {
+  .pills { order: 9; margin-left: auto; }
+  .topright { order: 8; }
+}
+/* Framed (the visualiser pane is ~600px): the badge keeps clear of Blackout. */
+.is-framed .pills { order: 0; margin-left: 4px; margin-right: 12px; padding-right: 0; }
 /* The wire switch. ON is stated in the affirmative and coloured like the accent, because
    "the rig is live" is a fact worth being able to read across a dark booth. */
 .outswitch #outEnable { border-color: var(--muted); color: var(--muted); }
@@ -1002,7 +1078,13 @@ body.space .stage { cursor: grab; }
   .page-tab { padding: 0 14px; min-height: 44px; }
   .dots { min-width: 44px; }
   .go, .tap, .savenow, .topbo { padding-top: 9px; padding-bottom: 9px; }
-  .heldpill, .fxpill, .wirepill { padding-top: 6px; padding-bottom: 6px; }
+  .heldpill, .fxpill { padding-top: 6px; padding-bottom: 6px; }
+  /* 44px hit areas on a phone (MOXIR UI audit): Tap, the output badge, and every checkbox
+     (its label is the target, so the whole row toggles it). */
+  .tap { min-height: 44px; min-width: 44px; }
+  .wirepill, .fxpill, .heldpill { min-height: 44px; }
+  label:has(> input[type=checkbox]) { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; }
+  input[type=checkbox] { width: 22px; height: 22px; margin: 0; flex: none; }
   /* 16px is the iOS threshold: anything smaller makes the browser zoom the whole page
      the moment a field is focused, and the desk comes back mis-framed mid-show. */
   input[type=text], input[type=number], select { padding: 8px 10px; font-size: 16px; }
@@ -1116,6 +1198,7 @@ body.space .stage { cursor: grab; }
    row alone. position:sticky pins it to the viewport bottom when the phone layout lets
    the body scroll, so it is always under the thumb mid-set. */
 .livestrip {
+  flex: none;   /* never squeezed: at 1440x900 it shrank to 141px and clipped TAP, FX off and the BPM */
   position: sticky; bottom: 0; z-index: 10;
   background: var(--pane); border: 1px solid var(--line);
   display: flex; flex-direction: column; min-height: 0;
@@ -1128,7 +1211,7 @@ body.space .stage { cursor: grab; }
 }
 .ls-tab.is-active { color: var(--text); border-top-color: var(--accent); background: var(--pane2); }
 .ls-fold { width: 48px; flex: none; background: none; border: 0; color: var(--muted); font-size: 14px; }
-.ls-body { height: 212px; overflow: hidden; padding: 10px 12px; }
+.ls-body { height: 212px; flex: none; overflow: hidden; padding: 10px 12px; }
 @media (orientation: landscape) and (max-height: 520px) { .ls-body { height: 148px; } }
 .livestrip.folded .ls-body { display: none; }
 .livestrip.folded .ls-tabs { border-bottom: 0; }

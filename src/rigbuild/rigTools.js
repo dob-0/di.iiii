@@ -98,6 +98,10 @@ export const rigRow = ({ spaceId, projectId, projectLabel = null, here = null, i
  * the step the show is waiting on (`suggested`, from rigProgress), else the first.
  */
 export const rigNeighbours = (here, suggested = null) => {
+    // The two pages at the end of the row (not numbered steps) lead on from the desk: the
+    // visualiser after it, the scenes after the visualiser, and the row ends there.
+    if (here === RIG_VISUALISE.key) return { back: RIG_LIGHT, next: RIG_SCENES }
+    if (here === RIG_SCENES.key) return { back: RIG_VISUALISE, next: null }
     const i = RIG_STEP_KEYS.indexOf(here)
     if (i < 0) {
         const next = RIG_STEPS.find((s) => s.key === suggested) || RIG_STEPS[0]

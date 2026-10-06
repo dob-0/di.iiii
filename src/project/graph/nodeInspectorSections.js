@@ -172,11 +172,13 @@ export const deriveNodeInspectorSections = (node, { wiredPortIds = [] } = {}) =>
         fields.push({ label: type.label || 'Value', path: ['value'], type: fieldType, portType: outType || 'any' })
     }
 
-    // An operator family's sheet does not hold ports alone — the operation is
-    // the first thing in it and is not a port, and `port` has exactly one
-    // meaning here (docs/ai/vocabulary.md): where a wire attaches.
+    // The column's Settings: the operation (an operator family's first
+    // thing, not a port) and the values typed into its inputs. "Ports" is the
+    // section below it in the column, which says where each wire attaches and
+    // what is in it now (audit 2026-10-05 §3.5; docs/ai/vocabulary.md: `port`
+    // means where a wire attaches).
     const sections = fields.length
-        ? [{ id: 'values', label: operations ? 'Operation and ports' : 'Ports', fields: markWiredFields(fields, wiredPortIds) }]
+        ? [{ id: 'values', label: operations ? 'Operation and settings' : 'Settings', fields: markWiredFields(fields, wiredPortIds) }]
         : []
     // Only when there IS stored code. The section used to ship on every node —
     // a dead "Code — stored, not run" textarea under every Cube and Sphere,

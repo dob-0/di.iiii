@@ -16,11 +16,19 @@ describe('the MOXIR type library', () => {
         expect(serialise(buildLibrary())).toBe(text)
     })
 
-    it('holds the nine rental codes (UP-COB200 since the cut and the halo, 2026-09-29), and the three other-supplier planning types', () => {
+    it('holds the nine rental codes (UP-COB200 since the cut and the halo, 2026-09-29), the three other-supplier planning types, and the owner’s LaserCube', () => {
         expect(committed.types.map((t) => t.code).filter((c) => c.startsWith('UP-')).sort()).toEqual(
             ['UP-250BSW', 'UP-B380F', 'UP-COB200', 'UP-HK1915', 'UP-LA40WF', 'UP-PL5403', 'UP-Q108S', 'UP-YH600F', 'UP-YZ31P'])
-        expect(committed.types.map((t) => t.code).filter((c) => !c.startsWith('UP-')).sort()).toEqual(['EXT-BLINDER', 'EXT-HAZER', 'EXT-STROBE'])
-        for (const t of committed.types.filter((x) => x.code.startsWith('EXT-'))) expect(t.identified).toBe('EQUIVALENT')
+        expect(committed.types.map((t) => t.code).filter((c) => !c.startsWith('UP-')).sort()).toEqual(['EXT-BLINDER', 'EXT-HAZER', 'EXT-LC-ULTRA-MK2', 'EXT-STROBE'])
+        // The planning types are modelled on an equivalent; the LaserCube (2026-10-04) is the
+        // owner's own unit, identified EXACTLY from its maker's page and manual.
+        for (const t of committed.types.filter((x) => x.code.startsWith('EXT-'))) {
+            expect(t.identified).toBe(t.code === 'EXT-LC-ULTRA-MK2' ? 'EXACT' : 'EQUIVALENT')
+        }
+        const cube = typeById(committed, 'EXT-LC-ULTRA-MK2')
+        expect(cube.modes.map((m) => m.footprint)).toEqual([16])
+        expect(cube.modes[0].channels.map((c) => c.role)).toContain('dimmer')
+        expect(cube.modes[0].channelsSource.basis).toBe('EXACT')
     })
 
     it('carries the published footprints and invents none', () => {
@@ -30,15 +38,17 @@ describe('the MOXIR type library', () => {
         const real = (t) => t.modes.filter((m) => !isAssumedMode(m))
         expect(real(typeById(committed, 'up-250bsw')).map((m) => m.footprint)).toEqual([24, 30])
         expect(real(typeById(committed, 'up-hk1915')).map((m) => m.footprint)).toEqual([21, 35, 78, 92, 97])
-        // UP-PL5403 has ONE published mode, 8ch (uplight.com.cn, 2026-09-29); its list is owed.
-        expect(real(typeById(committed, 'up-pl5403')).map((m) => [m.name, m.channels])).toEqual([['8ch', null]])
-        for (const code of ['UP-LA40WF', 'UP-Q108S']) {
-            const type = typeById(committed, code)
-            expect(type.modesOwed).toBe(true)
-            expect(real(type)).toEqual([])
-            expect(type.modes.every((m) => m.basis === 'ASSUMED' && /-assumed$/.test(m.name))).toBe(true)
-            expect(type.defaultMode).toBe(null)
-        }
+        // UP-PL5403 has ONE published mode, 8ch (uplight.com.cn, 2026-09-29); its list comes from the tested unit.
+        expect(real(typeById(committed, 'up-pl5403')).map((m) => [m.name, m.channels.length, m.channelsSource.basis])).toEqual([['8ch', 8, 'TESTED']])
+        // UP-LA40WF: the maker publishes no mode; the one it ran in on the tested unit is the only real one.
+        const laser = typeById(committed, 'UP-LA40WF')
+        expect(real(laser).map((m) => [m.name, m.basis])).toEqual([['32ch', 'TESTED']])
+        expect(laser.defaultMode).toBe('32ch')
+        const co2 = typeById(committed, 'UP-Q108S')
+        expect(co2.modesOwed).toBe(true)
+        expect(real(co2)).toEqual([])
+        expect(co2.modes.every((m) => m.basis === 'ASSUMED' && /-assumed$/.test(m.name))).toBe(true)
+        expect(co2.defaultMode).toBe(null)
     })
 
     it('attaches a channel list only where a source gives one, and says where from', () => {
@@ -46,7 +56,12 @@ describe('the MOXIR type library', () => {
         expect(spark.modes[0].channels.map((c) => c.role)).toEqual(['Fountain', 'Control'])
         expect(spark.modes[0].channelsSource.basis).toBe('EQUIVALENT')
         expect(spark.modes[0].channelsSource.url).toMatch(/open-fixture-library\/[0-9a-f]{40}\//)
-        expect(modeOf(typeById(committed, 'UP-B380F')).channels).toBe(null)
+        // A tested unit's list says so, with no url to invent; a mode nobody charted stays null.
+        const beam = modeOf(typeById(committed, 'UP-B380F'))
+        expect(beam.channels).toHaveLength(16)
+        expect(beam.channelsSource).toMatchObject({ basis: 'TESTED', url: null })
+        expect(new Set(beam.channels.map((c) => c.role)).size).toBe(16)
+        expect(modeOf(typeById(committed, 'UP-250BSW')).channels).toBe(null)
     })
 
     it('keeps the source and basis of every number, and an unidentified maker stays unknown', () => {
@@ -67,7 +82,8 @@ describe('the MOXIR type library', () => {
 describe('typeFlags', () => {
     it('names what is wrong in words, and nothing when nothing is', () => {
         expect(typeFlags({ type: 'up-yh600f', mode: '2ch' }, committed)).toEqual([])
-        expect(typeFlags({ type: 'up-b380f' }, committed).map((f) => f.code)).toEqual(['channels-owed'])
+        expect(typeFlags({ type: 'up-b380f' }, committed)).toEqual([])
+        expect(typeFlags({ type: 'up-250bsw' }, committed).map((f) => f.code)).toEqual(['channels-owed'])
         expect(typeFlags({ type: 'up-q108s' }, committed).map((f) => f.code)).toEqual(['mode-unknown'])
         expect(typeFlags({ type: 'up-b380f', mode: '12ch' }, committed).map((f) => f.code)).toEqual(['mode-unknown'])
         expect(typeFlags({ type: 'nope' }, committed).map((f) => f.code)).toEqual(['unknown-type'])

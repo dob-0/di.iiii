@@ -778,6 +778,51 @@ const normalizeRigVariant = (value) => {
   return { set, id, title: planText(value.title, 60) || id, summary: planText(value.summary, 160), source: planText(value.source, 480), siblings, ...(copyOf ? { copyOf } : {}) }
 }
 
+// A PRODUCTION'S VERSION LIST — mirror of src/shared/productionVersions.js (the normalisers only;
+// docs/architecture/decisions/2026-10-04-production-versions.md). One entity `production`
+// (productionMeta) and one entity per version (productionVersion) in the list's own project.
+const PRODUCTION_VERSION_STATUSES = ['for-the-show', 'candidate', 'kept-copy', 'concept', 'archived']
+const productionText = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '')
+const productionTextOrNull = (value, max) => productionText(value, max) || null
+const productionWho = (value) => {
+  const v = value && typeof value === 'object' ? value : {}
+  return {
+    machine: productionTextOrNull(v.machine, 120),
+    install: productionTextOrNull(v.install, 160),
+    tool: productionTextOrNull(v.tool, 160),
+    commit: productionTextOrNull(v.commit, 64)
+  }
+}
+const normalizeProductionVersion = (value) => {
+  if (!value || typeof value !== 'object') return null
+  const id = variantId(value.id)
+  const projectId = variantId(value.projectId)
+  const status = PRODUCTION_VERSION_STATUSES.includes(value.status) ? value.status : ''
+  if (!id || !projectId || !status) return null
+  const fingerprint = typeof value.fingerprint === 'string' && /^sha256:[0-9a-f]{64}$/.test(value.fingerprint) ? value.fingerprint : null
+  const out = {
+    id,
+    projectId,
+    title: productionText(value.title, 120) || id,
+    status,
+    madeFrom: variantId(value.madeFrom) || null,
+    madeBy: productionWho(value.madeBy),
+    madeAt: productionTextOrNull(value.madeAt, 40),
+    fingerprint,
+    listed: { at: productionTextOrNull(value.listed && value.listed.at, 40), by: productionWho(value.listed && value.listed.by) },
+    note: productionText(value.note, 480)
+  }
+  const file = productionText(value.rig && value.rig.file, 240)
+  if (file) out.rig = { file, blob: typeof value.rig.blob === 'string' && /^[0-9a-f]{40}([0-9a-f]{24})?$/.test(value.rig.blob) ? value.rig.blob : null }
+  return out
+}
+const normalizeProductionMeta = (value) => {
+  if (!value || typeof value !== 'object') return null
+  const id = variantId(value.id)
+  if (!id) return null
+  return { id, title: productionText(value.title, 160) || id, space: productionText(value.space, 64), codeList: productionText(value.codeList, 240) }
+}
+
 // THE RIG'S DESIGNED LOOKS (RIG_BUILD.md §11.4, view C): per look, a rule and its
 // numbers per group of lamps (a group is `${position}/${type}`), and a colour per
 // group. Written by scripts/rigbuild/looks.mjs from the rig file; the cards put them on
@@ -857,6 +902,8 @@ const normalizeFixture = (fixture) => {
   const position = fixtureText(fixture.position, 64)
   if (position) out.position = position
   if (fixture.hung === true) out.hung = true
+  // Kept off DMX by the owner (run by hand: hazers, smoke): never patched (rigbuild/autoPatch.js).
+  if (fixture.dmx === false) out.dmx = false
   return out
 }
 
@@ -991,7 +1038,9 @@ const normalizeEntity = (entity = {}) => {
       ...(sourceComponents.beam.only === true ? { only: true } : {}),
       // `aperture` (2026-09-29): the lens's radius in metres — a beam leaves the
       // lamp already that wide (beamAir.js). Stored only when given.
-      ...(ensureNumber(sourceComponents.beam.aperture, 0) > 0 ? { aperture: Math.min(2, ensureNumber(sourceComponents.beam.aperture, 0)) } : {})
+      ...(ensureNumber(sourceComponents.beam.aperture, 0) > 0 ? { aperture: Math.min(2, ensureNumber(sourceComponents.beam.aperture, 0)) } : {}),
+      // `optics` (2026-10-01): prism, honeycomb, frost, gobo (beamOptics.js). Stored only when given.
+      ...(normalizeBeamOptics(sourceComponents.beam.optics) ? { optics: normalizeBeamOptics(sourceComponents.beam.optics) } : {})
     }
   }
   // THE JOIN to the lighting desk (`index`) plus the plot's patch beside it —
@@ -1028,6 +1077,17 @@ const normalizeEntity = (entity = {}) => {
     const variant = normalizeRigVariant(sourceComponents.rigVariant)
     if (variant) nextComponents.rigVariant = variant
     else delete nextComponents.rigVariant
+  }
+  // A production's version list — mirror of src/shared/projectSchema.js.
+  if (sourceComponents.productionMeta) {
+    const meta = normalizeProductionMeta(sourceComponents.productionMeta)
+    if (meta) nextComponents.productionMeta = meta
+    else delete nextComponents.productionMeta
+  }
+  if (sourceComponents.productionVersion) {
+    const version = normalizeProductionVersion(sourceComponents.productionVersion)
+    if (version) nextComponents.productionVersion = version
+    else delete nextComponents.productionVersion
   }
   // A screen: a plane that shows one of the project's own mapping surfaces
   // (document.mappingState.surfaces) as its picture. The join is the surface's
@@ -1137,6 +1197,25 @@ const normalizeWorldState = (world = {}) => {
   }
 }
 
+// `components.beam.optics` (2026-10-01, src/objectComponents/beamOptics.js): what is in
+// the beam's path — a radial prism, a honeycomb prism, frost, a gobo — set by the desk's
+// DMX or a look. Plain numbers, clamped; absent parts left out; null when nothing is in.
+const normalizeBeamOptics = (optics) => {
+  if (!optics || typeof optics !== 'object' || Array.isArray(optics)) return null
+  const out = {}
+  const angle = (v) => (Number.isFinite(Number(v)) ? Number(v) % (Math.PI * 2) : 0)
+  if (optics.prism && typeof optics.prism === 'object') {
+    const facets = Math.round(Number(optics.prism.facets))
+    out.prism = { facets: Number.isFinite(facets) ? Math.min(32, Math.max(2, facets)) : 16, rotation: angle(optics.prism.rotation) }
+  }
+  if (optics.honeycomb && typeof optics.honeycomb === 'object') out.honeycomb = { rotation: angle(optics.honeycomb.rotation) }
+  const frost = Number(optics.frost)
+  if (Number.isFinite(frost) && frost > 0) out.frost = Math.min(1, frost)
+  const pattern = Math.round(Number(optics.gobo?.pattern))
+  if (pattern >= 1 && pattern <= 17) out.gobo = { pattern, rotation: angle(optics.gobo.rotation) }
+  return Object.keys(out).length ? out : null
+}
+
 const RENDER_TONE_MAPPINGS = new Set(['ACESFilmic', 'AgX', 'Neutral', 'none'])
 
 // THE ROOM'S AIR (2026-09-29, docs/architecture/RIG_BUILD.md §20): a uniform haze the
@@ -1144,14 +1223,62 @@ const RENDER_TONE_MAPPINGS = new Set(['ACESFilmic', 'AgX', 'Neutral', 'none'])
 // Present, the renderer draws every visible beam physically (src/objectComponents/
 // beamAir.js); absent — every room made before it — the old flat cones. Stored only
 // when it holds a haze, so a document without one reads back byte for byte.
+// THE HAZE WORKED OUT FROM THE ROOM'S MACHINES (2026-10-01, src/objectComponents/
+// hazeField.js): the hall (volume, air changes an hour), each hazer's or fog machine's
+// level as it is run by hand (by entity id, or per kind), minutes since they were
+// switched on (absent: steady state), and how uneven and how drifting the haze is.
+// Plain numbers, clamped; anything else is dropped.
+const HAZE_LEVEL_KINDS = new Set(['hazer', 'smoke-machine'])
+const unitLevel = (value) => {
+  const n = Number(value)
+  return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : null
+}
+const normalizeHaze = (haze) => {
+  if (!haze || typeof haze !== 'object' || Array.isArray(haze)) return null
+  const out = {}
+  const volume = Number(haze.volume_m3)
+  if (volume > 0) out.volume_m3 = Math.min(volume, 1e7)
+  const ach = Number(haze.airChangesPerHour)
+  if (ach > 0) out.airChangesPerHour = Math.min(ach, 120)
+  if (haze.levels && typeof haze.levels === 'object' && !Array.isArray(haze.levels)) {
+    const levels = {}
+    for (const [id, value] of Object.entries(haze.levels)) {
+      const level = unitLevel(value)
+      if (level != null && typeof id === 'string' && id.length <= 200) levels[id] = level
+    }
+    out.levels = levels
+  }
+  if (haze.kindLevels && typeof haze.kindLevels === 'object' && !Array.isArray(haze.kindLevels)) {
+    const kindLevels = {}
+    for (const [kind, value] of Object.entries(haze.kindLevels)) {
+      const level = unitLevel(value)
+      if (level != null && HAZE_LEVEL_KINDS.has(kind)) kindLevels[kind] = level
+    }
+    out.kindLevels = kindLevels
+  }
+  const minutes = Number(haze.minutes)
+  if (haze.minutes != null && Number.isFinite(minutes) && minutes >= 0) out.minutes = minutes
+  if (haze.calibrate === false) out.calibrate = false
+  const patchiness = unitLevel(haze.patchiness)
+  if (patchiness != null) out.patchiness = patchiness
+  if (Array.isArray(haze.drift) && haze.drift.length === 3 && haze.drift.every((v) => Number.isFinite(Number(v)))) {
+    out.drift = haze.drift.map((v) => Math.min(5, Math.max(-5, Number(v))))
+  }
+  return out
+}
+
 const normalizeAtmosphere = (atmosphere) => {
   if (!atmosphere || typeof atmosphere !== 'object') return null
   const scattering = Number(atmosphere.scattering)
-  if (!(scattering > 0)) return null
+  const haze = normalizeHaze(atmosphere.haze)
+  if (!(scattering > 0) && !haze) return null
   const anisotropy = Number(atmosphere.anisotropy)
   return {
-    scattering: Math.min(1, scattering),
-    anisotropy: Number.isFinite(anisotropy) ? Math.min(0.95, Math.max(-0.95, anisotropy)) : 0.7
+    // a room whose haze comes from its machines may leave scattering out: 0.03 is only
+    // what a beam draws with before the machines have arrived (beamAir.js atmosphereOf)
+    scattering: scattering > 0 ? Math.min(1, scattering) : 0.03,
+    anisotropy: Number.isFinite(anisotropy) ? Math.min(0.95, Math.max(-0.95, anisotropy)) : 0.7,
+    ...(haze ? { haze } : {})
   }
 }
 
@@ -2535,6 +2662,8 @@ const invertProjectOps = (document, ops = []) => {
 
 module.exports = {
   PROJECT_DOCUMENT_VERSION,
+  normalizeProductionVersion,
+  normalizeProductionMeta,
   ENTITY_TYPES: Array.from(ENTITY_TYPES),
   WINDOW_IDS,
   defaultProjectDocument,

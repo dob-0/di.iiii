@@ -98,6 +98,29 @@ node scripts/place/import.mjs --work <work> --name moxir
 node scripts/place/import.mjs --work <work> --name moxir --no-sources  # footage already there
 ```
 
+### More footage onto a sources project that already hangs (`add-sources.mjs`, 2026-10-04)
+
+`import.mjs` hangs a folder once. For files that turn up later (a second card of photographs, files the first
+server refused), use `add-sources.mjs`: it reads the project's document, leaves out every file whose name is
+already on it (the asset name, also with a leading number cut off either side: `037-file_81.jpg` = `file_81.jpg`),
+uploads only the new ones the way `import.mjs` does, and hangs each in NEW rows above the top row, same tile, gap
+and distance, each row centred on a full row of eight. Nothing already hung moves: the ops are `upsertAsset` and
+`createEntity`, nothing else. New ids continue `source-N`.
+
+```
+node scripts/place/add-sources.mjs --add-sources <dir> --name moxir --dry-run   # first: prints upload / skip / hang, changes nothing
+node scripts/place/add-sources.mjs --add-sources <dir> --name moxir             # then for real
+```
+
+Options: `--sources-project <id>` (default `<space>-sources`), `--api <base>`, `--allow-skips`. A file the server
+refuses (413 too large, 415) is printed by name, size and reason, the rest is hung, and the run exits 2 unless
+`--allow-skips`. The dry run still reads the document, so it needs the token. `--originals` also swaps reduced copies for the originals: for an already-hung name whose file here is LARGER than
+the hung asset, it uploads the original and points the same entity at it (one `updateComponent` on `media.assetId`,
+position, rotation and scale untouched), then drops the old asset only after the document reads back with the new
+one. `--dry-run` lists each swap with both sizes. A file over the server's `MAX_UPLOAD_MB` (default 100) is refused
+and reported, never transcoded. Limit: the new rows sit above the
+existing top row, so on a 37-picture wall they hang about 8.6 m up; move them in Studio if that is too high.
+
 What ends up in the working folder:
 
 | file | what it is |
@@ -242,6 +265,20 @@ blender -b -P scripts/place/hall.py -- --out /mnt/data/footage/place-moxir-hall-
 cp /mnt/data/footage/place-moxir-hall-v4-0929/hall.json $R/moxir-hall-2026-09-29.hall.json
 cp /mnt/data/footage/place-moxir-hall-v4-0929-crane-dj/hall.json $R/moxir-hall-2026-09-29-crane-dj.hall.json
 ```
+
+### Putting a corrected hall into the rooms (2026-10-02)
+
+`load-version.mjs --hall-from <project>` copies the hall's MODEL from that project, so a new `hall.py` build reaches a room only when the source project holds it. After a hall correction (`moxir-hall-dims-2026-10-02.json` and the `moxir-hall-2026-10-02-crane-dj.hall.json` record it writes):
+
+```bash
+R=scripts/place/rigs
+blender -b -P scripts/place/hall.py -- --out <dir> --dims $R/moxir-hall-dims-2026-09-28.json   --dims $R/moxir-hall-features-2026-09-28.json --dims $R/moxir-hall-crane-dj-2026-09-28.json --dims $R/moxir-hall-dims-2026-10-02.json
+cp <dir>/hall.json $R/moxir-hall-2026-10-02-crane-dj.hall.json
+node scripts/rigbuild/swap-hall.mjs --api <local api> --project moxir-hall-minimal --glb <dir>/hall.glb --token-file <env>   # the --hall-from source
+# a room already built: swap-hall.mjs on it too, then realism.mjs (the night copy is made from the model) and work-light.mjs
+```
+
+On PONYO `moxir-hall-minimal` (archived) holds the corrected model since 2026-10-02, so `--hall-from moxir-hall-minimal` gives the corrected hall. `moxir-hall` and Gevorg's other projects still hold the old one.
 
 ### The zones the owner marked (2026-09-28)
 

@@ -90,7 +90,8 @@ describe('the room drawn from DMX', () => {
     it('finds the mode the DESK runs by its profile name', () => {
         const type = typeById(TYPE_LIBRARY, 'up-b380f')
         expect(runningMode(type, '16ch', 'UP-B380F 16ch-assumed').name).toBe('16ch-assumed')
-        expect(runningMode(type, '16ch', 'UP-B380F 16ch')).toBe(null) // the real list is owed: nothing to decode
+        expect(runningMode(type, '16ch', 'UP-B380F 16ch').name).toBe('16ch') // the tested unit's list
+        expect(runningMode(typeById(TYPE_LIBRARY, 'up-250bsw'), '24ch', 'UP-250BSW 24ch')).toBe(null) // the real list is owed: nothing to decode
     })
 
     it('turns a head: DMX pan/tilt → the entity\'s aim, its lens on the arc, and the BODY follows', () => {
@@ -187,5 +188,21 @@ describe('a look written as DMX draws the look (deskLookValues ↔ dmxPose)', ()
                 near(drawn.components.transform.position, pose.position, 2)
             }
         }
+    })
+})
+
+describe('zoom keeps the flux, not the candela (render audit C)', () => {
+    it('a UP-250BSW zoomed 10° → 30° is dimmer on axis by the ratio of the cone solid angles', () => {
+        const entities = dealt()
+        const spot = entities.find((e) => e.components?.fixture?.type === 'up-250bsw')
+        const at = (zoom) => dmxEntities({ shown: entities, document: entities, fixtures: deskOf(entities, { [spot.id]: { zoom } }), library: TYPE_LIBRARY })
+            .entities.find((e) => e.id === spot.id).components.light
+        const narrow = at(0)
+        const wide = at(255)
+        // the desk really zoomed it: otherwise the ratio is 1 and proves nothing
+        expect(wide.angle).toBeGreaterThan(narrow.angle * 2.5)
+        const ratio = (1 - Math.cos(narrow.angle)) / (1 - Math.cos(wide.angle))
+        expect(wide.intensity / narrow.intensity).toBeCloseTo(ratio, 2)
+        expect(wide.intensity).toBeLessThan(narrow.intensity / 5)
     })
 })

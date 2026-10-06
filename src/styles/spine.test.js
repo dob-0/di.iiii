@@ -183,7 +183,7 @@ const SPACE_EXCEPTIONS = {
     'project/components/jamSurface.css': ['0.6rem'],
     'project/components/roomTextLayer.css': ['-1px'],
     'raw/director/director.css': ['-4px', '-2px'],
-    'raw/styles/raw.css': ['-4px', '-1px', '5px', '16px', '14px', '6px', '12px'],
+    'raw/styles/raw.css': ['-4px', '-1px', '1px', '5px', '16px', '14px', '6px', '12px'],
     'studio/components/studioCodeSpaceDirector.css': ['1rem', '2rem', '1.4rem', '3rem'],
     'studio/styles/studio-hub.css': ['56px'],
     'styles/inspector-controls.css': ['1px'],

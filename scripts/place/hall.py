@@ -109,7 +109,9 @@ PLACEHOLDER = {
     # the rail head, the girders 0.8 m deep, the cab ~2.1 m under them.
     'crane_bridge_bottom_h_m': None,  # floor to the bridge girders' underside at mid-span
     'crane_bridge_depth_m': 1.5,      # the bridge girders' depth at mid-span
-    'crane_cab_h_m': 2.2,             # the operator's cab, hung under the left end
+    'crane_cab_h_m': 2.2,             # the operator's cab, hung under one end
+    'crane_cab_side': 'left',         # which end of the bridge the cab hangs at: 'left' (-x) or 'right' (+x) (MOXIR: right, photos 002-005, 009, 013)
+    'runway_handrail_rows': ['left', 'right'],  # which inner rows' nave-side runway girder carries the walkway handrail (MOXIR: left only, photos 004, 009)
     'roof_type': 'space_frame_flat',
     'space_frame_module_m': 3.0,
     'space_frame_depth_m': 2.5,
@@ -131,6 +133,8 @@ PLACEHOLDER = {
     'aisle_w_m': 0.0,         # v1 key; v2 models full neighbour spans instead
     'track_x_m': [-4.0, 4.0], # centres of the rail tracks in the nave floor
     'track_gauge_m': 1.52,    # Russian broad gauge, 1520 mm — a standard
+    'track_z_range_m': None,  # [z0, z1] hall-frame metres the longitudinal tracks cover (None = the whole hall)
+    'track_cross_z_m': [],    # hall-frame z of transverse rail pairs across the nave (centre line of each pair)
     'cranes_from_door_m': [4.0],
     'neighbour_cranes_from_door_m': {},
     'low_walls': [],
@@ -144,12 +148,12 @@ KEYS_FROM_DIMS = [
     'span_m', 'pitch_m', 'bays', 'length_m', 'crane_rail_h_m', 'truss_bottom_h_m',
     'ridge_h_m', 'lantern_w_m', 'column_w_m', 'column_d_m', 'upper_column_d_m', 'truss_top_h_m',
     'lantern_h_m', 'column_head', 'column_head_width_m', 'crane_girders_each_row', 'crane_girder_depth_m',
-    'crane_bridge_bottom_h_m', 'crane_bridge_depth_m', 'crane_cab_h_m',
+    'crane_bridge_bottom_h_m', 'crane_bridge_depth_m', 'crane_cab_h_m', 'crane_cab_side', 'runway_handrail_rows',
     'roof_type', 'space_frame_module_m', 'space_frame_depth_m', 'space_frame_member_m', 'space_frame_node_m',
     'lantern_module_m', 'lantern_segments_m', 'lantern_spans',
     'neighbour_spans', 'expansion_joint_m', 'paired_columns_at_joint',
     'door_w_m', 'door_h_m', 'entry_platform', 'far_gate_w_m', 'far_gate_h_m', 'aisle_w_m',
-    'track_x_m', 'cranes_from_door_m', 'crane_trolley_x_m', 'neighbour_cranes_from_door_m', 'low_walls',
+    'track_x_m', 'track_z_range_m', 'track_cross_z_m', 'cranes_from_door_m', 'crane_trolley_x_m', 'neighbour_cranes_from_door_m', 'low_walls',
     'bracing_bays_from_door_m', 'massing', 'zones', 'cameras',
 ]
 # The grid and heights: a placeholder among these makes the whole room a GUESS.
@@ -244,6 +248,10 @@ def resolve_dims(opts):
         dims_notes.append({'file': os.path.basename(dims_path), 'notes': given.get('notes')})
         confidence = given.get('confidence') or {}
         base_tag = 'measured' if this_source.lower() in ('tape', 'measured', 'laser') else 'estimate'
+        # `massing_add`: more massing items on top of what earlier files named (a plain `massing` replaces the list)
+        if given.get('massing_add'):
+            dims['massing'] = list(dims['massing']) + list(given['massing_add'])
+            origin['massing'] = f"{origin.get('massing', 'placeholder')} + {len(given['massing_add'])} from {os.path.basename(dims_path)}"
         for key in KEYS_FROM_DIMS:
             if key not in given or given[key] is None:
                 continue
@@ -558,10 +566,16 @@ def build(dims):
 
     # Floor: the slab under every span, rail tracks in the nave.
     b.box('floor', (wall_out[0], -end_out, -0.3), (wall_out[1], end_out, 0.0))
+    track_y = (-dims['track_z_range_m'][1], -dims['track_z_range_m'][0]) if dims['track_z_range_m'] else (-end_out, end_out)
     for centre in dims['track_x_m']:
         for side in (-1, 1):
             x = centre + side * dims['track_gauge_m'] / 2
-            b.box('rust', (x - 0.035, -end_out, 0.0), (x + 0.035, end_out, 0.025))
+            b.box('rust', (x - 0.035, track_y[0], 0.0), (x + 0.035, track_y[1], 0.025))
+    # transverse rail pairs across the nave (`track_cross_z_m`)
+    for zc in dims['track_cross_z_m']:
+        for side in (-1, 1):
+            z = zc + side * dims['track_gauge_m'] / 2
+            b.box('rust', (-S / 2, -(z + 0.035), 0.0), (S / 2, -(z - 0.035), 0.025))
 
     # Columns. Inner rows: the Y head, a girder each side, the centred upper
     # column. Outer rows: in the wall, a one-sided console toward the span.
@@ -599,13 +613,15 @@ def build(dims):
             b.box('rust', (gx - 0.04, y_lo, head_top + girder_depth), (gx + 0.04, y_hi, rail_h))
             rails.append((gx, ax))
             if nave_face:
-                # Web stiffeners every 1.5 m, and the walkway handrail (photo 004).
+                # Web stiffeners every 1.5 m, and (on the rows `runway_handrail_rows` names) the walkway handrail (photo 004).
                 face = gx + (0.02 if ax < 0 else -0.02)
                 n_st = int(L / 1.5)
                 for k in range(n_st + 1):
                     sy = -L / 2 + k * 1.5
                     x0, x1 = sorted((face, face + (0.1 if ax < 0 else -0.1)))
                     b.box('girder', (x0, sy - 0.02, head_top + 0.04), (x1, sy + 0.02, head_top + girder_depth - 0.04))
+                if ('left' if ax < 0 else 'right') not in dims['runway_handrail_rows']:
+                    continue
                 hx = gx + (0.3 if ax < 0 else -0.3)
                 for h in (0.5, 1.0):
                     b.box('steel', (hx - 0.025, y_lo, head_top + girder_depth + h), (hx + 0.025, y_hi, head_top + girder_depth + h + 0.05))
@@ -651,13 +667,15 @@ def build(dims):
             b.box('crane', (x - 0.4, cy - 2.6, rail_h), (x + 0.4, cy + 2.6, max(rail_h + 0.8, girder_bottom + 0.4)))
         tx0 = cx + trolley_x
         b.box('crane', (tx0, cy - 1.6, girder_bottom + crane_depth), (tx0 + 2.6, cy + 1.6, girder_bottom + crane_depth + 1.0))
-        cab_x = xa + 1.0
+        cab_right = dims['crane_cab_side'] == 'right'
+        cab_x = (xb - 3.0) if cab_right else (xa + 1.0)
         b.box('crane', (cab_x, cy - 1.0, girder_bottom - cab_h), (cab_x + 2.0, cy + 1.0, girder_bottom))
-        b.box('glass', (cab_x + 1.95, cy - 0.8, girder_bottom - cab_h + 0.3), (cab_x + 2.02, cy + 0.8, girder_bottom - 0.9))
+        gx0 = cab_x - 0.02 if cab_right else cab_x + 1.95  # the cab's window faces along the bridge, toward the middle
+        b.box('glass', (gx0, cy - 0.8, girder_bottom - cab_h + 0.3), (gx0 + 0.07, cy + 0.8, girder_bottom - 0.9))
         if record:
             # The shape the rig checks beams against (rig-lib.mjs beamHitsCrane): the two
             # box girders (0.7 m wide, 1.1 m either side of the bridge's centre line, a
-            # 1.5 m gap between them) and the trolley on top; the cab hangs at the left end.
+            # 1.5 m gap between them) and the trolley on top; the cab hangs at the end `crane_cab_side` names.
             cranes.append({'z_m': round(-cy, 3), 'from_entry_m': round(from_door, 3),
                            'girder_bottom_m': round(girder_bottom, 3), 'girder_top_m': round(girder_bottom + crane_depth, 3),
                            'girders_dz_m': [-1.1, 1.1], 'girder_w_m': 0.7,

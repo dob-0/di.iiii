@@ -13,6 +13,12 @@ import rental from '../../scripts/rigbuild/rentals/moxir-2026-10-17.json'
 const lamp = (id, type, extra = {}) => ({ id, type: 'spotLight', name: id, components: { transform: { position: [0, 5, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }, fixture: { type, ...extra } } })
 const show = (list) => ({ id: RIG_SHOW_ID, type: 'group', components: { rentalList: list } })
 const LIST = rental.rentalList
+// The rental house's rates are private (not in the public repo). These are INVENTED numbers, only
+// so the cost arithmetic has something to multiply: 100/day for the beam, 50 for the bee-eye, 70
+// for the mist machine, 10 for the rest.
+const FAKE = { 'UP-B380F': 100, 'UP-HK1915': 50, 'UP-236': 70 }
+const priced = (l) => ({ ...l, items: l.items.map((i) => (i.from ? i : { ...i, rate: FAKE[i.code] ?? 10 })), catalogue: l.catalogue.map((c) => ({ ...c, rate: FAKE[c.code] ?? 10 })) })
+const PRICED = priced(LIST)
 
 // The MDG ATMe hazer as the desk's describe() gives it (serverXR/src/lighting/library.js).
 const ATME = {
@@ -23,13 +29,12 @@ const ATME = {
 
 describe('the quote\'s day rule', () => {
     it('is the spreadsheet\'s own: its 2-day, 3-day and 1-week columns are rate × billedDays', () => {
-        // "Price list" row 6, UP-B380F: E 20000 · F (2 days) 30000 · G (3 days) 40000 · H (1 week) 80000.
-        expect(20000 * billedDays(1)).toBe(20000)
-        expect(20000 * billedDays(2)).toBe(30000)
-        expect(20000 * billedDays(3)).toBe(40000)
-        expect(20000 * billedDays(7)).toBe(80000)
-        // row 8, UP-HK1915 13500: 20250 · 27000 · 54000
-        expect([2, 3, 7].map((d) => 13500 * billedDays(d))).toEqual([20250, 27000, 54000])
+        // the house's sheet prints 2 days = 1.5×, 3 days = 2×, 1 week = 4× the day rate (invented rate 100)
+        expect(100 * billedDays(1)).toBe(100)
+        expect(100 * billedDays(2)).toBe(150)
+        expect(100 * billedDays(3)).toBe(200)
+        expect(100 * billedDays(7)).toBe(400)
+        expect([2, 3, 7].map((d) => 54 * billedDays(d))).toEqual([81, 108, 216])
         expect(billedDays(0)).toBeNull()
         expect(billedDays(1.5)).toBeNull()
     })
@@ -50,23 +55,41 @@ describe('universes', () => {
     })
 })
 
+describe('without the supplier\'s prices (the public repo ships none)', () => {
+    it('shows no price, totals none, and still counts: units, stock, placed, watts', () => {
+        expect(LIST.items.every((i) => i.rate == null) && LIST.catalogue.every((c) => c.rate == null)).toBe(true)
+        const m = equipmentModel({ entities: [show({ ...LIST, days: 1 }), lamp('b0', 'up-b380f')], library: TYPE_LIBRARY })
+        const beam = m.lines.find((l) => l.code === 'UP-B380F')
+        expect(beam).toMatchObject({ ordered: 18, stock: 18, rate: null, cost: null, perDay: null, placed: 1 })
+        expect(beam.flags).toContain('rate-unknown')
+        expect(m.totals.units).toBe(104)
+        expect(m.totals.unpriced).toContain('UP-B380F')
+        expect(m.totals.perDay).toBe(0)
+    })
+    it('the csv leaves the rate and line total empty', () => {
+        const m = equipmentModel({ entities: [show({ ...LIST, days: 1 })], library: TYPE_LIBRARY })
+        expect(equipmentCsv(m).trim().split('\r\n')[1]).toMatch(/^UP-B380F,380W beam moving head \(outdoor\),fixture,rental house,18,18,0,16ch \(16 ch\),500,,,/)
+    })
+})
+
 describe('the equipment model', () => {
     const entities = [
-        show({ ...LIST, days: 2 }),
+        show({ ...PRICED, days: 2 }),
         ...Array.from({ length: 3 }, (_, i) => lamp(`b${i}`, 'up-b380f'))
     ]
     it('costs every line by the day rule and totals it', () => {
         const m = equipmentModel({ entities, library: TYPE_LIBRARY })
         const beam = m.lines.find((l) => l.code === 'UP-B380F')
-        expect(beam).toMatchObject({ ordered: 18, stock: 18, rate: 20000, placed: 3, left: 15, footprint: 16, watts: 500, cost: 18 * 20000 * 1.5 })
+        expect(beam).toMatchObject({ ordered: 18, stock: 18, rate: 100, placed: 3, left: 15, footprint: 16, watts: 500, cost: 18 * 100 * 1.5 })
         expect(m.totals.billed).toBe(1.5)
         expect(m.totals.cost).toBe(m.lines.reduce((s, l) => s + (l.cost || 0), 0))
         expect(m.totals.units).toBe(104)
-        // two types' modes are owed: said, never assumed (UP-PL5403's one mode, 8ch, is published)
-        expect(m.totals.modesOwed).toEqual(['UP-LA40WF ×2', 'UP-Q108S ×6'])
+        // one type's modes are owed: said, never assumed (UP-LA40WF's 32ch is the tested unit's)
+        expect(m.totals.modesOwed).toEqual(['UP-Q108S ×6'])
         expect(m.owed).toContain('UP-Q108S: DMX mode')
-        expect(m.owed).toContain('UP-PL5403 8ch: channel list')
-        expect(m.owed).toContain('UP-B380F 16ch: channel list')
+        expect(m.owed).not.toContain('UP-PL5403 8ch: channel list') // the tested unit's list
+        expect(m.owed).not.toContain('UP-B380F 16ch: channel list')
+        expect(m.owed).toContain('UP-250BSW 24ch: channel list')
     })
     it('flags an order above the house\'s stock', () => {
         const list = withQuantity(LIST, 'up-hk1915', 20)
@@ -75,12 +98,12 @@ describe('the equipment model', () => {
         expect(m.owed).toContain('UP-HK1915: 20 ordered, the house lists 14')
     })
     it('counts and costs a non-DMX item, with no card, no slot and no patch', () => {
-        const node = { code: 'Art-Net node', type: 'artnet-node', kind: 'item', ordered: 1, from: 'other', category: 'node', note: '4 universes', rate: 10000 }
+        const node = { code: 'Art-Net node', type: 'artnet-node', kind: 'item', ordered: 1, from: 'other', category: 'node', note: '4 universes', rate: 100 }
         const list = withLine({ ...LIST, days: 1 }, node)
         const entities2 = [show(list)]
         const m = equipmentModel({ entities: entities2, library: TYPE_LIBRARY })
         const line = m.lines.find((l) => l.key === 'item:Art-Net node')
-        expect(line).toMatchObject({ kind: 'item', from: 'other', ordered: 1, placed: null, cost: 10000, modeOwed: null })
+        expect(line).toMatchObject({ kind: 'item', from: 'other', ordered: 1, placed: null, cost: 100, modeOwed: null })
         expect(m.totals.items).toBe(1)
         expect(m.totals.fixtures).toBe(104)
         const counts = rentalCounts({ entities: entities2, library: TYPE_LIBRARY, list })
@@ -113,9 +136,9 @@ describe('editing the list', () => {
         expect(withDays(l, { days: 3 }).days).toBe(3)
     })
     it('adds a code from the rental house\'s price list with its cells', () => {
-        const entry = LIST.catalogue.find((c) => c.code === 'UP-236')
+        const entry = PRICED.catalogue.find((c) => c.code === 'UP-236')
         const line = catalogueLine(entry, { ordered: 2 })
-        expect(line).toMatchObject({ code: 'UP-236', type: 'up-236', ordered: 2, stock: 2, rate: 14000 })
+        expect(line).toMatchObject({ code: 'UP-236', type: 'up-236', ordered: 2, stock: 2, rate: 70 })
         expect(line.source).toMatch(/Price list!A24:E24/)
         expect(lineKey(catalogueLine(LIST.catalogue.find((c) => c.code === 'UP-PDU60B'), { kind: 'item' }))).toBe('item:UP-PDU60B')
     })
@@ -176,11 +199,11 @@ describe('what an edit does to the lamps placed', () => {
 
 describe('export', () => {
     it('writes RFC 4180 CSV with a header and one row per line', () => {
-        const m = equipmentModel({ entities: [show({ ...LIST, days: 1 })], library: TYPE_LIBRARY })
+        const m = equipmentModel({ entities: [show({ ...PRICED, days: 1 })], library: TYPE_LIBRARY })
         const csv = equipmentCsv(m)
         const rows = csv.trim().split('\r\n')
         expect(rows).toHaveLength(1 + 8)
         expect(rows[0]).toBe('code,item,kind,from,qty,stock,placed,mode,W each,rate/day,line total,source,note,flags')
-        expect(rows[1]).toMatch(/^UP-B380F,380W beam moving head \(outdoor\),fixture,rental house,18,18,0,16ch \(16 ch\),500,20000,360000,"Price list!A6:E6 · ordered as ""18x UP-B380F"""/)
+        expect(rows[1]).toMatch(/^UP-B380F,380W beam moving head \(outdoor\),fixture,rental house,18,18,0,16ch \(16 ch\),500,100,1800,"Price list!A6:E6 · ordered as ""18x UP-B380F"""/)
     })
 })

@@ -111,8 +111,11 @@ describe('encode is decode\'s inverse where it speaks', () => {
             expect(back.pan).toBeCloseTo(100, 1)
             expect(back.tilt).toBeCloseTo(-40, 1)
             expect(back.level).toBeCloseTo(0.5, 1)
-            // drawn at full: the colour's hue, its brightness is the level
-            expect(back.colour.toLowerCase()).toBe('#ff2422')
+            // drawn at full: the colour's hue, its brightness is the level. Normalised in LINEAR
+            // light (emitters are driven linearly — render audit B, 2026-10-01), so #c41c1a at
+            // full is #ff2626, not the sRGB-scaled #ff2422
+            const emitters = m.channels.some((c) => c.role === 'r')
+            expect(back.colour.toLowerCase()).toBe(emitters ? '#ff2626' : '#ff2422') // a wheel's filter is a colour code
         }
     })
     it('a lamp OUT on a colour-only mode (RGBW, no dimmer) is sent all zeros, not nothing', () => {
@@ -124,6 +127,20 @@ describe('encode is decode\'s inverse where it speaks', () => {
         expect(encodeDmx(m.channels, { level: 0, colour: '#ff1408' }, type('UP-PL5403'))).toEqual({ r: 0, g: 0, b: 0, w: 0 })
         const eight = mode('UP-PL5403', '8ch-assumed')
         expect(encodeDmx(eight.channels, { level: 0 }, type('UP-PL5403')).dimmer).toBe(0)
+    })
+    it('a neutral white on an RGBW lamp is the white emitter alone; a coloured light keeps W at 0', () => {
+        // 2026-10-02 (the blade, emily-41 spec): the tested UP-PL5403 has a W LED. A white
+        // look used to be R=G=B=255 with W 0; the lamp's own white is cleaner and cooler on the
+        // truss. Only an exactly neutral colour changes — the cold-white palette tint and every
+        // red stay as they were.
+        const tested = mode('UP-PL5403', '8ch')
+        expect(encodeDmx(tested.channels, { level: 1, colour: '#ffffff' }, type('UP-PL5403'))).toMatchObject({ dimmer: 255, r: 0, g: 0, b: 0, w: 255 })
+        expect(encodeDmx(tested.channels, { level: 1, colour: '#ff0000' }, type('UP-PL5403'))).toMatchObject({ r: 255, g: 0, b: 0, w: 0 })
+        expect(encodeDmx(tested.channels, { level: 1, colour: '#eef3ff' }, type('UP-PL5403'))).toMatchObject({ w: 0 })
+        const four = mode('UP-PL5403', '4ch-assumed')
+        expect(encodeDmx(four.channels, { level: 0.5, colour: '#ffffff' }, type('UP-PL5403'))).toEqual({ r: 0, g: 0, b: 0, w: 128 })
+        const back = decodeDmx(tested.channels, valuesOf(tested, encodeDmx(tested.channels, { level: 1, colour: '#ffffff' }, type('UP-PL5403'))), type('UP-PL5403'))
+        expect(back.colour.toLowerCase()).toBe('#ffffff')
     })
     it('a strobe asked at 10 Hz encodes as the capped 3 Hz the decode reads back', () => {
         const m = mode('EXT-STROBE', '4ch-assumed')
@@ -155,17 +172,21 @@ describe('the assumed profiles', () => {
         }
         expect(ASSUMED_PROFILES['UP-HK1915'].grade).toBe('EQUIVALENT')
     })
-    it('the real mode stays owed beside it (the rental chart replaces the assumed one cleanly)', () => {
+    it('the real mode sits beside it, filled only from the tested unit (the assumed one stays a separate mode)', () => {
+        // UP-B380F / UP-PL5403: the channel maps run on the rental units at the Sevan
+        // festival (TESTED, 2026-10-01) fill the real mode; the assumed ones stay after it.
         const b = type('UP-B380F')
-        expect(b.modes.find((m) => m.name === '16ch').channels).toBeNull()
+        const real16 = b.modes.find((m) => m.name === '16ch')
+        expect(real16.channelsSource.basis).toBe('TESTED')
+        expect(real16.channels.map((c) => c.role).slice(0, 4)).toEqual(['pan', 'tilt', 'panFine', 'tiltFine'])
         expect(b.defaultMode).toBe('16ch')
         expect(b.assumedMode).toBe('16ch-assumed')
-        // UP-PL5403: the maker lists one mode, 8ch (uplight.com.cn, 2026-09-29) — its list is owed
         const par = type('UP-PL5403')
         expect(par.modesOwed).toBe(false)
         expect(par.defaultMode).toBe('8ch')
-        expect(par.modes.find((m) => m.name === '8ch').channels).toBeNull()
+        expect(par.modes.find((m) => m.name === '8ch').channelsSource.basis).toBe('TESTED')
         expect(par.assumedMode).toBe('8ch-assumed')
+        // no tested unit, no chart: still owed
         expect(type('UP-Q108S').modesOwed).toBe(true)
     })
 })
@@ -186,5 +207,21 @@ describe('tunable white (UP-COB200, the cut 2026-09-29)', () => {
         const w = decodeDmx(cob, [128, 255, 0, 0])
         expect(w.colour).toBe('#ffb46b')
         expect(w.level).toBeCloseTo(128 / 255, 3)
+    })
+})
+
+describe('emitters are driven linearly (render audit B)', () => {
+    it('R 255 + G 128 is half the green LIGHT: the colour code is sRGB-encoded from linear', () => {
+        const channels = [{ role: 'dimmer' }, { role: 'r' }, { role: 'g' }, { role: 'b' }]
+        const d = decodeDmx(channels, [255, 255, 128, 0], {})
+        // linear (1, 0.502, 0) → sRGB code (255, 188, 0)
+        expect(d.colour).toBe('#ffbc00')
+    })
+    it('encode inverts it: the code #ffbc00 drives green at half', () => {
+        const channels = [{ role: 'dimmer' }, { role: 'r' }, { role: 'g' }, { role: 'b' }]
+        const cell = encodeDmx(channels, { level: 1, colour: '#ffbc00' })
+        expect(cell.r).toBe(255)
+        expect(cell.g).toBeGreaterThanOrEqual(127)
+        expect(cell.g).toBeLessThanOrEqual(129)
     })
 })

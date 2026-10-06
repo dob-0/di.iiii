@@ -28,7 +28,7 @@ import { countWords, libraryWithShow } from './rental.js'
 import { rigProgress } from './rigProgress.js'
 import RigBar from './RigSteps.jsx'
 import useLocalInstall from '../hooks/useLocalInstall.js'
-import PlotDrawing, { SCREEN_SIZES } from './PlotDrawing.jsx'
+import PlotDrawing, { FREE_END_WORDS, SCREEN_SIZES } from './PlotDrawing.jsx'
 import { usePieceAssets } from './usePieceAssets.js'
 import './plot.css'
 
@@ -130,12 +130,13 @@ function KeyBlock({ model }) {
                     <li key={k.type}><Symbol shape={k.shape} letter={k.letter} /><span className="rigplot-mono">{k.code} ×{k.n} · {k.mode}{k.rental ? ` · ${countWords(k.rental)}` : ''}</span></li>
                 ))}
                 <li><svg width="16" height="16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" fill="none" stroke="#111" strokeDasharray="3 2" /></svg><span className="rigplot-mono">! conflict — see the inspector</span></li>
+                {model.freeEnds?.length ? <li><svg width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="5" fill="#fff" stroke="#111" strokeDasharray="3 2" /></svg><span className="rigplot-mono">{FREE_END_WORDS}</span></li> : null}
             </ul>
         </section>
     )
 }
 
-function TitleBlock({ title, model, desk, scale, spaceId, projectId, onPrint }) {
+function TitleBlock({ title, model, desk, scale, spaceId, projectId, onPrint, onPatch = null }) {
     const t = titleTotals(model.sheet)
     const patch = buildPatchSheetPath(spaceId, projectId)
     return (
@@ -157,6 +158,8 @@ function TitleBlock({ title, model, desk, scale, spaceId, projectId, onPrint }) 
                 <a href={patch}>sheet 2 · patch</a>
                 <a href={`${patch}#power`}>sheet 3 · power</a>
                 <button type="button" onClick={onPrint}>print sheet 1</button>
+                {/* The only whole-room patch on this page: asked for, never on opening it (a reader never writes). */}
+                {onPatch && desk.here ? <button type="button" onClick={onPatch}>patch the room on the desk</button> : null}
             </div>
         </section>
     )
@@ -320,12 +323,12 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
     // Read only (a visitor on a public space): every write in this file goes through here,
     // so none of them reaches the document.
     const syncOps = readOnly ? NO_WRITE : sentOps
-    const { applyLocalOps, undo, redo } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
+    const { applyLocalOps, undo, redo, edits } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
     const document_ = state.document
     const entities = useMemo(() => document_.entities || [], [document_.entities])
     // The library with the show's own types (RIG_BUILD.md §13), one object per list.
     const library = useMemo(() => libraryWithShow(baseLibrary, entities), [baseLibrary, entities])
-    const patch = useRigAutoPatch({ projectId: readOnly ? null : projectId, entities: readOnly ? [] : entities, applyOps: syncOps, library })
+    const patch = useRigAutoPatch({ projectId: readOnly ? null : projectId, entities: readOnly ? [] : entities, applyOps: syncOps, edits, library })
     const desk = useDeskState()
     const phone = useIsPhone()
 
@@ -752,6 +755,10 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
         </nav>
     )
 
+    const patchRoom = () => {
+        setStatus('patching the room…')
+        patch.patchNow().then((out) => { if (!out?.ok) setStatus(desk.here === false ? NO_DESK_SENTENCE : `auto-patch · ${out?.message || 'the desk did not answer'}`) })
+    }
     const patchGroup = (ids) => {
         setStatus(`patching ${ids.length} as a group…`)
         patch.patchGroup(ids).then((out) => { if (!out?.ok) setStatus(desk.here === false ? NO_DESK_SENTENCE : `auto-patch · ${out?.message || 'the desk did not answer'}`) })
@@ -763,7 +770,7 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
                 <Inspector model={model} selectedIds={selectedIds} entities={entities} library={library} edit={edit} patchGroup={patchGroup} runOf={runOf} deskHere={desk.here} />
             </fieldset>
             <KeyBlock model={model} />
-            <TitleBlock title={title} model={model} desk={desk} scale={printScale} spaceId={spaceId} projectId={projectId} onPrint={() => setPrinting(true)} />
+            <TitleBlock title={title} model={model} desk={desk} scale={printScale} spaceId={spaceId} projectId={projectId} onPrint={() => setPrinting(true)} onPatch={readOnly ? null : patchRoom} />
         </>
     )
 

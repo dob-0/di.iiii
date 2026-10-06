@@ -114,3 +114,36 @@ export const beamIsVisible = (beam) => beam?.visible === true
  * the beam, and a lamp with no beam and no light would be nothing at all.
  */
 export const beamCastsLight = (beam) => !(beamIsVisible(beam) && beam?.only === true)
+
+/**
+ * The real light of a RIG lamp, fitted to its datasheet beam (MOXIR render audit A,
+ * 2026-10-01). A rig lamp's `angle` is half its BEAM angle — the 50 % point — but three.js
+ * reads a SpotLight's `angle` as the 0 % cutoff, so the pool on the floor was narrower than
+ * the beam that lands on it and a wash put ~2.4× too little light on the surfaces. Here the
+ * cutoff and penumbra are solved so three's falloff crosses 50 % exactly at the beam
+ * half-angle; the on-axis candela (the light's intensity) is unchanged.
+ *
+ * three's falloff is smoothstep(cos cutoff, cos(cutoff·(1 − penumbra)), cos θ). The shape is
+ * ASSUMED from the lamp's own penumbra (the rig writes 0.5 for a PAR, 0.1 for a beam):
+ *   a wash (penumbra ≥ 0.3): the softest three has, penumbra 1 — its 10 % edge sits ≈1.27×
+ *     the 50 % point (a real wash is nearer 1.8; three cannot go softer);
+ *   a beam: penumbra 0.3 — a hard edge, the 10 % point ≈1.1× the 50 %.
+ * No datasheet in the rig gives a field angle; when one does, fit to it instead.
+ * Only for lamps that carry `components.fixture`: an authored spot's angle IS its cutoff.
+ */
+export const WASH_PENUMBRA_FROM = 0.3
+export const spotLightCone = ({ angle, penumbra } = {}) => {
+    const half = Math.min(Math.PI / 2 - 1e-3, Math.max(1e-4, Number(angle) || 0.52))
+    const p = (Number(penumbra) || 0) >= WASH_PENUMBRA_FROM ? 1 : 0.3
+    const target = Math.cos(half)
+    // the falloff's 50 % point, in cos space, is the midpoint of its two edges
+    const mid = (a) => (Math.cos(a) + Math.cos(a * (1 - p))) / 2
+    let lo = half
+    let hi = Math.PI / 2
+    for (let i = 0; i < 60; i += 1) {
+        const a = (lo + hi) / 2
+        if (mid(a) > target) lo = a
+        else hi = a
+    }
+    return { angle: (lo + hi) / 2, penumbra: p }
+}

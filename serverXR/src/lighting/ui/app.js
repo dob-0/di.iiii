@@ -7,6 +7,33 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // "Back <left>" simply loses its label everywhere, silently.
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+// Framed — the visualiser's desk half (RIG_BUILD.md §18): the ways out (di.iiii, ← project,
+// Studio / Nodes / Projection) are the visualiser's own, not this pane's. Marked before the
+// first render so style.css never paints them: on a phone the pane is ~240 px and those
+// rows took all of it (MOXIR UI audit, 2026-10-01). A cross-origin parent throws: framed.
+(() => {
+  let framed = false;
+  try { framed = window.self !== window.top; } catch (e) { framed = true; }
+  if (framed) document.documentElement.classList.add('is-framed');
+})();
+// The top bar wraps to a different height on every width (a phone's is ~260px), and the Touch
+// cue bar pins just under it: the bar's real height, kept in --topbar-h for style.css.
+addEventListener('DOMContentLoaded', () => {
+  const tb = document.querySelector('.topbar');
+  if (!tb) return;
+  const set = () => document.documentElement.style.setProperty('--topbar-h', Math.round(tb.getBoundingClientRect().height) + 'px');
+  set();
+  if (window.ResizeObserver) new ResizeObserver(set).observe(tb);
+  else addEventListener('resize', set);
+});
+// Its one door out: the same desk in a window of its own, on Setup.
+if (document.documentElement.classList.contains('is-framed')) {
+  addEventListener('DOMContentLoaded', () => {
+    const a = document.getElementById('fullDesk');
+    if (a) { a.href = location.pathname + location.search + '#setup'; a.hidden = false; }
+  });
+}
+
 let S = null;                  // last full state from the server
 let DMX = {};                  // live buffers, polled fast
 // The fan styles, in the order ../fan.js defines them (tests/test-wiring.js keeps the two equal).
@@ -1745,7 +1772,7 @@ function syncFaders() {
     : 'nothing held — every fader is following the fixtures';
   if (document.activeElement !== $('#fMaster')) $('#fMaster').value = S.master;
   $('#fMasterOut').textContent = Math.round(S.master / 255 * 100) + '%';
-  $('#fBlackout').classList.toggle('on', S.blackout);
+  paintBlackout(S.blackout, ['#fBlackout']);
 }
 
 /* =============== limits panel (SETUP) =============== */
@@ -2051,7 +2078,11 @@ function buildTouch() {
   // Structure only, like the bank: the active tile is a class toggle below, so a recall
   // never rebuilds a few hundred tiles of innerHTML — which also ate the tap that was
   // mid-flight when the poll landed.
-  const sig = scenes.map((sc) => sc.id + sc.name + sceneHealth(sc).dead + sceneHealth(sc).missing).join('|') + '#' + q;
+  // The "save some scenes" hint is only true when the desk has nothing else to play: a show
+  // that is all looks and cues (MOXIR) has no scenes and does not need telling to save any.
+  const hasLooks = looksOf().length > 0;
+  const hasCues = !!(CUES && CUES.n);
+  const sig = scenes.map((sc) => sc.id + sc.name + sceneHealth(sc).dead + sceneHealth(sc).missing).join('|') + '#' + q + '#' + (hasLooks || hasCues ? 1 : 0);
   if (wrap.dataset.sig !== sig) {
   wrap.dataset.sig = sig;
   // Same group headers as the bank. Headers are not .tbtn, so the delegated click and
@@ -2068,7 +2099,7 @@ function buildTouch() {
   }
   wrap.innerHTML = html || (q
     ? `<p class="muted">no scene matches "${esc(q)}"</p>`
-    : '<p class="muted">Save some scenes on the Control page.</p>');
+    : hasLooks || hasCues ? '' : '<p class="muted">Save some scenes on the Control page.</p>');
   delete wrap.dataset.active;   // force the class pass below
   }
   const act = String(S.activeScene ?? '');
@@ -2076,13 +2107,157 @@ function buildTouch() {
     wrap.dataset.active = act;
     for (const b of $$('.tbtn', wrap)) b.classList.toggle('active', b.dataset.id === act);
   }
+  // The scene filter is for scenes: with none saved (a looks-and-cues show) it is a dead box.
+  $('.touchsearch').hidden = !S.scenes.length && (hasLooks || hasCues);
   const tf = $('#tSceneFilter');
   if (tf && document.activeElement !== tf && tf.value !== sceneFilter) tf.value = sceneFilter;
   if (document.activeElement !== $('#tMaster')) $('#tMaster').value = S.master;
   $('#tMasterOut').textContent = Math.round(S.master / 255 * 100) + '%';
-  $('#tBlackout').classList.toggle('on', S.blackout);
+  paintBlackout(S.blackout, ['#tBlackout']);
+  buildTouchLooks();
+  paintTouchCues();
   buildTouchStrip();
 }
+
+// The cue list as the Touch page shows it. CUES is declared up here, not beside the cue
+// poller at the foot of the file: showPage() runs before that line and a let is not
+// readable until its declaration has run.
+let CUES = null;
+
+// LOOKS: tap one and it goes on the cue layer — the same layer the cue list fires on, so a
+// tapped look and a GO are never two things playing at once. The tile that is on is the
+// cue layer's look; structure is rebuilt only when the looks change, like the scene grid.
+const TOUCH_LOOK_LAYER = 'cue';
+function activeLookId() {
+  const l = layersOf().find((x) => x.id === TOUCH_LOOK_LAYER);
+  return l && l.on && l.level > 0 && l.lookId ? l.lookId : '';
+}
+// Does a look light anything on what is patched NOW? Only a room's rig looks (`rig-…`,
+// show-loop.mjs) are judged: they carry their DMX values per fixture. A look made on the
+// desk may be an effect with no stored values, so it is never called dark. A fixture lights
+// when its dimmer is up, or — without a dimmer — any colour emitter is. (MOXIR UI audit,
+// 2026-10-01: a look whose lamps were not on the desk fired into a black room, no word.)
+const EMITTER_ROLE = /^(r|g|b|w|red|green|blue|white|amber|uv|cw|ww)$/;
+function lookHealth(l) {
+  if (!l || !String(l.id).startsWith('rig-')) return { dead: false };
+  const patched = new Set(((S && S.fixtures) || []).map((f) => f.id));
+  const vals = (l.steps && l.steps[0] && l.steps[0].values) || {};
+  const ids = Object.keys(vals).filter((id) => patched.has(id));
+  if (!ids.length) return { dead: true, why: 'nothing patched' };
+  const lit = ids.filter((id) => {
+    const v = vals[id] || {};
+    if (v.dimmer != null) return Number(v.dimmer) > 0;
+    return Object.keys(v).some((k) => EMITTER_ROLE.test(k) && Number(v[k]) > 0);
+  }).length;
+  return lit ? { dead: false, lit } : { dead: true, why: 'lights nothing here' };
+}
+// The set's own looks kept on a ground version are titled "… · hung rig" (versions file):
+// they were made for the hung movers, so they sit in a group of their own, after this
+// version's looks — never mixed in beside a ground look of the same name.
+const HUNG_RIG = /·\s*hung rig$/;
+function buildTouchLooks() {
+  const sec = $('#tLooks');
+  const wrap = $('#touchLooks');
+  const looks = looksOf();
+  sec.hidden = !looks.length;
+  if (!looks.length) { delete wrap.dataset.sig; return; }
+  const sig = looks.map((l) => l.id + '\u0001' + l.name + '\u0001' + (lookHealth(l).dead ? 1 : 0)).join('|');
+  if (wrap.dataset.sig !== sig) {
+    wrap.dataset.sig = sig;
+    const tile = (l) => {
+      const h = lookHealth(l);
+      const name = l.name.replace(HUNG_RIG, '').trim();
+      return `<button class="tbtn lookbtn${h.dead ? ' dead' : ''}" data-look="${esc(l.id)}"${h.dead ? ` data-why="${esc(h.why)}" title="${esc(l.name)} — ${esc(h.why)}"` : ''}>`
+        + `<span>${esc(name)}</span><i class="tnote">${h.dead ? esc(h.why) : ''}</i></button>`;
+    };
+    const own = looks.filter((l) => !HUNG_RIG.test(l.name));
+    const hung = looks.filter((l) => HUNG_RIG.test(l.name));
+    wrap.innerHTML = own.map(tile).join('')
+      + (hung.length ? `<div class="bankhead">made for the hung rig</div>` + hung.map(tile).join('') : '');
+    delete wrap.dataset.active;
+  }
+  const act = activeLookId();
+  if (wrap.dataset.active !== act) {
+    wrap.dataset.active = act;
+    for (const b of $$('.lookbtn', wrap)) {
+      const on = !!act && b.dataset.look === act;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      // a dark look keeps its reason when it is not the one on (lookHealth)
+      b.querySelector('.tnote').textContent = on ? 'on now' : (b.dataset.why || '');
+    }
+  }
+}
+$('#touchLooks').addEventListener('click', async (e) => {
+  const b = e.target.closest('.lookbtn');
+  if (!b || !b.dataset.look) return;
+  const look = looksOf().find((l) => l.id === b.dataset.look);
+  const r = await post('api/looks/fire', { id: b.dataset.look });
+  if (!r || r.error) { say(`look did not fire — ${(r && r.error) || 'no answer'}`, true); return; }
+  // Mark it now from the answer, not from the next poll: the tile has to be seen to take.
+  if (r.layer && S) {
+    const ls = layersOf();
+    const at = ls.findIndex((x) => x.id === r.layer.id);
+    const mine = { id: r.layer.id, name: r.layer.name, on: r.layer.on, level: r.layer.level, lookId: r.layer.lookId };
+    if (at >= 0) ls[at] = Object.assign({}, ls[at], mine); else if (S.layers) S.layers.push(mine);
+    buildTouchLooks();
+  }
+  say(`look: ${look ? look.name : r.look.name}`);
+  pullState();
+});
+
+// The cue bar's headline, from the desk's one NOW (state.now) rather than the cue list alone:
+// a look fired by hand is on whatever the list says, and "Nothing fired" beside a lit look
+// was the lie. (MOXIR UI audit, 2026-10-01)
+function touchHeadline() {
+  const n = S && S.now;
+  if (!n) return S && 'now' in S ? `Nothing on · ${CUES.n} cues` : (CUES.index >= 0 ? `Cue ${CUES.index + 1}/${CUES.n} · ${CUES.name || ''}` : `${CUES.n} cues`);
+  const c = n.cue;
+  if (n.source === 'cue' && c) return `${n.name} · cue ${c.index + 1} of ${c.n} · ${c.running ? 'running' : 'stopped'}`;
+  if (!c) return `${n.name} · fired by hand`;
+  const at = c.index + 1 < c.n ? c.index + 2 : (c.loop ? 1 : 0);
+  return `${n.name} · fired by hand · ${at ? `GO resumes at cue ${at}` : 'end of the cue list'}`;
+}
+function paintTouchCues() {
+  const bar = $('#tCueBar');
+  bar.hidden = !CUES || !CUES.n;
+  if (bar.hidden) return;
+  const list = Array.isArray(CUES.list) ? CUES.list : [];
+  $('#tCueNow').textContent = touchHeadline();
+  const ni = CUES.index + 1 < CUES.n ? CUES.index + 1 : (CUES.loop ? 0 : -1);
+  const next = ni >= 0 && list[ni] ? `next ${ni + 1} ${list[ni].name}` : 'last cue';
+  const clock = CUES.running ? (CUES.nextInMs != null ? 'auto in ' + Math.ceil(CUES.nextInMs / 1000) + ' s' : 'waits for GO') : 'stopped';
+  const missing = CUES.missing && CUES.missing.length ? ' · ' + CUES.missing.length + ' not on the desk' : '';
+  $('#tCueNext').textContent = `${next} · ${clock}${missing}`;
+  $('#tCueLoop').setAttribute('aria-pressed', CUES.loop ? 'true' : 'false');
+  // A switch, not an action: the state is the outline (.toggle.on), the title keeps the word.
+  $('#tCueLoop').title = (CUES.loop ? 'Loop on' : 'Loop off') + ' — after the last cue, cue 1 again';
+  $('#tCueLoop').classList.toggle('on', !!CUES.loop);
+  $('#tCueStop').disabled = !CUES.running;
+  $('#tCueBack').disabled = CUES.index <= 0;
+}
+async function touchCue(route, body, what) {
+  const r = await cueAct(route, body);
+  // A cue moves the cue layer's look, so the Looks tile that is on has to follow at once. The
+  // poll cannot do it: pullState keeps its own layers for 700 ms after any press (the fader
+  // guard), so mark it from the cue we know went out, then let the poll confirm.
+  const cur = CUES && Array.isArray(CUES.list) ? CUES.list[CUES.index] : null;
+  if (cur && what !== 'stop' && !(r && (r.error || r.ended)) && S && Array.isArray(S.layers)) {
+    const at = S.layers.findIndex((x) => x.id === TOUCH_LOOK_LAYER);
+    if (at >= 0) S.layers[at] = Object.assign({}, S.layers[at], { on: true, level: 1, lookId: cur.lookId });
+    else S.layers.push({ id: TOUCH_LOOK_LAYER, name: 'Cues', on: true, level: 1, lookId: cur.lookId });
+    buildTouchLooks();
+  }
+  setTimeout(pullState, 750);
+  if (r && r.error) { say(`${what}: ${r.error}`, true); return; }
+  if (r && r.ended) { say('end of the cue list'); return; }
+  if (what === 'stop') say('cue list stopped — the look stays');
+  else if (CUES && CUES.index >= 0) say(`cue ${CUES.index + 1}/${CUES.n} · ${CUES.name || ''}`);
+}
+$('#tCueGo').addEventListener('click', () => touchCue('api/cues/go', {}, 'GO'));
+$('#tCueBack').addEventListener('click', () => touchCue('api/cues/back', {}, 'back'));
+$('#tCueStop').addEventListener('click', () => touchCue('api/cues/stop', {}, 'stop'));
+$('#tCueLoop').addEventListener('click', () => cueAct('api/cues/loop', { loop: !(CUES && CUES.loop) }));
 
 // One delegated recall for the whole grid, mirroring #bankList — the capture-phase
 // long-press suppressor (further down) still eats the lift after a long-press.
@@ -3962,6 +4137,10 @@ function renderAll(busy) {
   const whose = S.show && S.show.space && window.deskShow ? window.deskShow.whose(S.show) + ' · ' : '';
   $('#showName').textContent = `— ${whose}${S.fixtures.length} fixtures · ${st.universes.length} universe${st.universes.length === 1 ? '' : 's'} · ${wire}`;
   paintShow(S.show);
+  // Go steps the desk's SCENES, so with none it would press and do nothing: hide it then.
+  // (MOXIR UI audit, 2026-10-01)
+  $('#goBtn').hidden = !S.scenes.length;
+  paintControlScenes();
 
   // A channel held on the Fader page overrides the fixtures everywhere, so a scene or a
   // colour fader can appear to do nothing. Say so on every page, not just the one that
@@ -3996,7 +4175,7 @@ function renderAll(busy) {
 
   // Blackout is now in the top bar too, so it is reachable and visible from every page —
   // including Setup, which had no blackout control and no way to tell the rig was in one.
-  $('#topBlackout').classList.toggle('on', S.blackout);
+  paintBlackout(S.blackout, ['#topBlackout']);
 
   // Output liveness, always on screen. A rig whose frames have stopped arriving falls back
   // to its built-in auto programs and runs a show nobody asked for, and until now the only
@@ -4014,12 +4193,13 @@ function renderAll(busy) {
   }
   if (page === 'setup' && !IN && st.input) { IN = st.input; paintInput(); }
   const wp = $('#wirePill');
+  wp.classList.toggle('off', !S.output.enabled);
   if (!S.output.enabled) {
     // The loudest thing this pill can say. A desk that is patched, cued and running
     // while the wire switch is off looks completely healthy from every other reading on
     // the page — and inside di.iiii that is the state it starts in.
     wp.hidden = false;
-    wp.classList.add('stale');
+    wp.classList.add('stale', 'off');
     wp.textContent = 'output off';
     wp.title = 'Nothing is leaving this machine. Open Output and switch it on.';
   } else if (S.output.driver === 'enttec' && st.serial) {
@@ -4067,7 +4247,7 @@ function renderAll(busy) {
     safeBuild('buildAttr', buildAttr);
     if (document.activeElement !== $('#master')) $('#master').value = S.master;
     $('#masterOut').textContent = Math.round(S.master / 255 * 100) + '%';
-    $('#blackout').classList.toggle('on', S.blackout);
+    paintBlackout(S.blackout, ['#blackout']);
     if (document.activeElement !== $('#chaseHold')) $('#chaseHold').value = (S.chase.holdMs / 1000).toFixed(1);
     if (document.activeElement !== $('#chaseFade')) $('#chaseFade').value = (S.chase.fadeMs / 1000).toFixed(1);
     $('#chaseToggle').textContent = S.chase.enabled ? 'Stop' : 'Start';
@@ -4921,24 +5101,39 @@ $('#tMaster').addEventListener('input', (e) => {
 // second later — but a Blackout that goes red on a request that never arrived is the desk
 // telling her the rig is dark while it is at full. So this one waits for the answer and
 // puts itself back if it did not get one.
+// One place that paints the blackout buttons, so the label and the fill never disagree and
+// every copy (header, Touch strip, Fader, Control, the framed visualiser) says the same
+// thing: ON reads as a state to release, not just a different fill (MOXIR UI audit).
+const BLACKOUT_ALL = ['#blackout', '#tBlackout', '#fBlackout', '#topBlackout'];
+const BLACKOUT_LABEL = { on: 'Blackout ON · tap to release', off: 'Blackout' };
+function paintBlackout(on, sels = BLACKOUT_ALL) {
+  sels.forEach((s) => {
+    const el = $(s);
+    if (!el) return;
+    el.classList.toggle('on', !!on);
+    el.textContent = on ? BLACKOUT_LABEL.on : BLACKOUT_LABEL.off;
+    el.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
 let blackoutPending = false;
 const toggleBlackout = async () => {
   if (blackoutPending) return;   // two fast presses computed the same `want` and sent it twice
   blackoutPending = true;
   const want = !S.blackout;
-  const pills = ['#blackout', '#tBlackout', '#fBlackout', '#topBlackout'];
-  pills.forEach((s) => { const el = $(s); if (el) { el.classList.toggle('on', want); el.classList.add('pending'); } });
+  const pills = BLACKOUT_ALL;
+  paintBlackout(want);
+  pills.forEach((s) => { const el = $(s); if (el) el.classList.add('pending'); });
   const r = await post('api/master', { blackout: want });
   blackoutPending = false;
   pills.forEach((s) => { const el = $(s); if (el) el.classList.remove('pending'); });
   if (r && r.error) {
     // Put the button back where it was and say so where she is looking, on any page.
-    pills.forEach((s) => { const el = $(s); if (el) el.classList.toggle('on', S.blackout); });
+    paintBlackout(S.blackout);
     say(`blackout did not reach the desk — ${r.error}`, true);
     return;
   }
   S.blackout = want;
-  pills.forEach((s) => { const el = $(s); if (el) el.classList.toggle('on', S.blackout); });
+  paintBlackout(S.blackout);
 };
 $('#blackout').addEventListener('click', toggleBlackout);
 $('#topBlackout').addEventListener('click', toggleBlackout);
@@ -5215,20 +5410,39 @@ $('#snap').addEventListener('change', (e) => {
   say(snapTo === 'off' ? 'presses land immediately' : `presses land on the next ${snapTo}`);
 });
 
-// tap tempo
+// Tap tempo maths, pure so test-tap.js can run it. A tempo needs at least 3 taps (2
+// intervals); a gap under 250 ms is a double tap and restarts the run, one over 3 s is a
+// pause and does too; a result at the input's ends (20 / 300) is a mistake to say, not a
+// tempo to save. (MOXIR UI audit, 2026-10-01: two taps 200 ms apart saved 300 BPM.)
+function tapTempo(timesMs) {
+  let run = [];
+  let tooFast = false;
+  for (const t of timesMs) {
+    const gap = run.length ? t - run[run.length - 1] : Infinity;
+    if (gap < 250) { tooFast = true; run = [t]; }
+    else if (gap > 3000) run = [t];
+    else run.push(t);
+  }
+  if (run.length < 3) {
+    return tooFast ? { reject: 'taps too close together — tap the beat again' } : { reject: 'keep tapping — a tempo needs 3 taps', quiet: true };
+  }
+  const bpm = Math.round(60000 / ((run[run.length - 1] - run[0]) / (run.length - 1)));
+  if (bpm >= 300 || bpm <= 20) return { reject: `${bpm} BPM is off the scale — not saved` };
+  return { bpm };
+}
 let taps = [];
 $('#tapBtn').addEventListener('click', () => {
   const now = Date.now();
-  taps = taps.filter((t) => now - t < 3000); taps.push(now);
+  taps.push(now); taps = taps.slice(-8);
   // A tap says two things and the desk only ever heard one of them: how fast, and WHERE.
   // The anchor goes with every tap, so the beat grid starts under the finger — that is
   // what makes a wave begin on the downbeat and a quantised press land in the track
   // rather than at the right speed in the wrong place.
   post('api/fx', { epoch: now });
-  if (taps.length > 1) {
-    $('#bpm').value = Math.round(60000 / ((taps[taps.length - 1] - taps[0]) / (taps.length - 1)));
-    $('#bpm').dispatchEvent(new Event('change'));
-  }
+  const t = tapTempo(taps);
+  if (t.reject) { if (!t.quiet) say(t.reject, true); return; }
+  $('#bpm').value = t.bpm;
+  $('#bpm').dispatchEvent(new Event('change'));
 });
 // One tempo for the desk. The chase and the effects both run off this field, so tapping a
 // tempo moves everything that is beat-driven rather than leaving the two silently at
@@ -5504,7 +5718,10 @@ $$('.railpane > .pane-head').forEach((head) => {
 // browser preferences (localStorage), like the hotkeys and the pane splits.
 
 let lsTab = 'fx';
-let lsFolded = false;
+// On a phone the open strip takes about half the screen and the looks and cue bar get
+// what is left (MOXIR, 2026-10-01): folded by default there, one tap on a tab opens it.
+// A saved preference still wins.
+let lsFolded = typeof matchMedia === 'function' && matchMedia('(max-width: 600px)').matches;
 try {
   const raw = JSON.parse(localStorage.getItem('touchStrip'));
   if (raw && typeof raw === 'object') { lsTab = raw.tab || 'fx'; lsFolded = !!raw.fold; }
@@ -5959,18 +6176,34 @@ setInterval(pullDmx, 100);
 /* =============== the cue list the desk plays (cuerun.js) =============== */
 // Any page may drive it; the desk alone keeps the time. This strip is one more driver:
 // GO, back, stop and the loop switch go to the same routes the cards page uses.
-let CUES = null;
+// No desk scenes (a show of looks and cues): the Scenes and Chase panes are empty with three
+// primary buttons, so they give way to one muted line. A bare desk with nothing at all keeps
+// them: that is where the first scene is saved. (MOXIR UI audit, 2026-10-01)
+function paintControlScenes() {
+  if (!S || !Array.isArray(S.scenes)) return;
+  const none = !S.scenes.length && (looksOf().length > 0 || !!(CUES && CUES.n));
+  $('#ctlScenes').hidden = none;
+  $('#ctlChase').hidden = none;
+  // The scene detail beside them stays: the top row is a fixed grid with its splitters as
+  // items, and hiding one pane shifted every later pane into the wrong column (Layers and
+  // Master drew blank — seen 2026-10-01).
+  $('#ctlNoScenes').hidden = !none;
+}
 function paintCues() {
+  paintControlScenes();
+  paintTouchCues();
   const strip = $('#cueStrip');
   strip.hidden = !CUES || !CUES.n;
   if (strip.hidden) return;
-  const cue = CUES.index >= 0 ? (CUES.index + 1) + '/' + CUES.n + ' ' + (CUES.name || '') : 'nothing fired · ' + CUES.n + ' cues';
-  const clock = CUES.running ? (CUES.nextInMs != null ? 'next in ' + Math.ceil(CUES.nextInMs / 1000) + ' s' : 'waits for GO') : 'stopped';
+  // The same NOW the Touch bar reads (touchHeadline, from the desk's state.now): this strip
+  // said "nothing fired" beside a look lit by hand. The clock only while the list runs.
+  const clock = CUES.running ? ' · ' + (CUES.nextInMs != null ? 'next in ' + Math.ceil(CUES.nextInMs / 1000) + ' s' : 'waits for GO') : '';
   const missing = CUES.missing && CUES.missing.length ? ' · ' + CUES.missing.length + ' not on the desk' : '';
-  $('#cueWhere').textContent = cue + ' · ' + clock + missing;
+  $('#cueWhere').textContent = touchHeadline() + clock + missing;
+  // A switch, not an action: styled as the Touch bar's Loop (.toggle), never GO's fill.
   $('#cueLoop').setAttribute('aria-pressed', CUES.loop ? 'true' : 'false');
-  $('#cueLoop').textContent = CUES.loop ? 'loop on' : 'loop off';
-  $('#cueLoop').classList.toggle('accent', !!CUES.loop);
+  $('#cueLoop').classList.toggle('on', !!CUES.loop);
+  $('#cueLoop').title = 'Loop ' + (CUES.loop ? 'on' : 'off') + ' — after the last cue, cue 1 again';
   $('#cueStop').disabled = !CUES.running;
   $('#cueBack').disabled = CUES.index <= 0;
 }
@@ -5981,6 +6214,7 @@ async function pullCues() {
 async function cueAct(route, body) {
   const r = await post(route, body);
   if (r && r.cues) { CUES = r.cues; paintCues(); }
+  return r;
 }
 $('#cueGo').addEventListener('click', () => cueAct('api/cues/go', {}));
 $('#cueBack').addEventListener('click', () => cueAct('api/cues/back', {}));

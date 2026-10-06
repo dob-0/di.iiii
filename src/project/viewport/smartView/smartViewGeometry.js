@@ -321,6 +321,24 @@ export const orbitMaxDistance = (frame, presetDistance = 0) => (
     frame ? Math.max(20, frame.radius * 1.6, (Number(presetDistance) || 0) * 1.1) : 500
 )
 
+/**
+ * The interior a visitor's camera may be locked inside ("Inside" toggle, 2026-10-02): the building's
+ * footprint `wall` m off the walls, `floor` m above the floor, `ceiling` m under the roof underside
+ * (roofCut). Null without a building.
+ */
+// floor 0.8: the frame's floorY is the model's lowest point, which in MOXIR is the floor slab 0.3 m under the
+// floor (the camera then stands 0.5 m above the floor itself).
+export const insideBox = (frame, wall = 0.5, floor = 0.8, ceiling = 0.3) => (frame ? {
+    min: [frame.bounds.min[0] + wall, frame.floorY + floor, frame.bounds.min[2] + wall],
+    max: [frame.bounds.max[0] - wall, frame.roofCut - ceiling, frame.bounds.max[2] - wall]
+} : null)
+
+/** Is the point in the box (to `tolerance` m)? */
+export const boxHolds = (p, box, tolerance = 0.01) => Boolean(box) && [0, 1, 2].every((i) => p[i] >= box.min[i] - tolerance && p[i] <= box.max[i] + tolerance)
+
+/** The point pulled into the box, axis by axis. */
+export const clampToBox = (p, box) => [0, 1, 2].map((i) => Math.min(box.max[i], Math.max(box.min[i], p[i])))
+
 /** Where the orbit target may go (camera-controls' setBoundary): the room, never under it. */
 export const targetBoundary = (frame, margin = 2) => (frame ? {
     min: [frame.bounds.min[0] - margin, frame.floorY, frame.bounds.min[2] - margin],
@@ -338,10 +356,14 @@ const median = (values) => {
 
 /**
  * Where the rig IS, robustly: lamps spread through a room (MOXIR's column uplights run the
- * hall's length to z = 42) must not drag the views away from the stage. The centre is the
- * component-wise median of the lamp positions (robust to up to half being elsewhere); the
- * core is every lamp within `radius` metres of it on the floor plan; rig pieces (truss,
- * riser) join when their centre is within 1.5 × radius. Returns { lampBox, rigBox } or nulls.
+ * hall's length to z = 48) must not drag the views away from the stage. The centre is the
+ * densest cluster: the lamp with the most others within `radius` metres on the floor plan
+ * (ties to the one nearest the component-wise median), then the median of that cluster.
+ * The median alone is not enough: when the lamps down the hall outnumber the stage's, it
+ * falls on the empty floor between the column lines (MOXIR known-full, 2026-10-01: x 0,
+ * z 18, 11 m from any lamp) and the core comes out empty. The core is every lamp within
+ * `radius` of the centre; rig pieces (truss, riser) join when their centre is within
+ * 1.5 × radius. Returns { lampBox, rigBox } or nulls.
  */
 export const rigCore = (lampPoints = [], pieceBoxes = [], radius = 8) => {
     const points = (lampPoints || []).map(vec3).filter(Boolean)
@@ -349,8 +371,18 @@ export const rigCore = (lampPoints = [], pieceBoxes = [], radius = 8) => {
         const boxes = (pieceBoxes || []).filter((b) => !isBoxEmpty(b))
         return { lampBox: null, rigBox: boxes.length ? boxes.reduce(unionBox, emptyBox()) : null }
     }
-    const cx = median(points.map((p) => p[0]))
-    const cz = median(points.map((p) => p[2]))
+    const near = (a, b) => Math.hypot(a[0] - b[0], a[2] - b[2]) <= radius
+    const mx = median(points.map((p) => p[0]))
+    const mz = median(points.map((p) => p[2]))
+    let peak = null
+    for (const p of points) {
+        const n = points.filter((q) => near(p, q)).length
+        const d = Math.hypot(p[0] - mx, p[2] - mz)
+        if (!peak || n > peak.n || (n === peak.n && d < peak.d)) peak = { p, n, d }
+    }
+    const cluster = points.filter((q) => near(peak.p, q))
+    const cx = median(cluster.map((p) => p[0]))
+    const cz = median(cluster.map((p) => p[2]))
     const lampBox = emptyBox()
     for (const p of points) if (Math.hypot(p[0] - cx, p[2] - cz) <= radius) expandBox(lampBox, p)
     let rigBox = { min: [...lampBox.min], max: [...lampBox.max] }
@@ -573,4 +605,61 @@ export const viewHash = (id) => (VIEW_PRESET_IDS.includes(id) ? `#view-${id}` : 
 export const presetForKey = (key) => {
     const i = Number(key)
     return Number.isInteger(i) && i >= 1 && i <= VIEW_PRESET_IDS.length && String(key) === String(i) ? VIEW_PRESET_IDS[i - 1] : null
+}
+
+/**
+ * The roof cap: where the cutaway took the roof off, a depth-only sheet at the cut ends the beams the roof
+ * would have ended (2026-10-02, /moxir Side view: a beam aimed up ran on into the sky). Null when there is
+ * no cut or the camera is not below it (from above, the sheet would hide the hall the cut opened). The
+ * rectangle is the footprint grown to take in the camera: a sight line to anything above the cut crosses
+ * the cut's height between the camera and it, and from beyond a wall that crossing lies outside the footprint.
+ * @returns {{ y: number, x0: number, x1: number, z0: number, z1: number } | null}
+ */
+export const roofCapRect = (cutY, bounds, camera, margin = 1) => {
+    const c = vec3(camera)
+    if (cutY === null || cutY === undefined || !Number.isFinite(cutY) || !bounds || !c) return null
+    if (!(c[1] < cutY - 0.05)) return null
+    return {
+        y: cutY,
+        x0: Math.min(bounds.min[0], c[0]) - margin,
+        x1: Math.max(bounds.max[0], c[0]) + margin,
+        z0: Math.min(bounds.min[2], c[2]) - margin,
+        z1: Math.max(bounds.max[2], c[2]) + margin
+    }
+}
+
+/**
+ * How far the camera is from the building's farthest corner. A room whose haze is worked out from its
+ * machines veils every surface with the haze's glow; from outside (a cutaway: Top, Side) the sight
+ * line crosses the whole hall, so its far wall came out a flat white slab (2026-10-02, /moxir Side).
+ * Standing the fog back this far leaves the surfaces unveiled from outside; the beams keep their haze.
+ */
+export const farthestCornerDistance = (position, bounds) => {
+    const p = vec3(position)
+    if (!p || !bounds) return 0
+    let best = 0
+    for (const x of [bounds.min[0], bounds.max[0]]) for (const y of [bounds.min[1], bounds.max[1]]) for (const z of [bounds.min[2], bounds.max[2]]) {
+        best = Math.max(best, Math.hypot(x - p[0], y - p[1], z - p[2]))
+    }
+    return best
+}
+
+/**
+ * How far along from → to (0…1) a point stays in the box; `from` is inside it (the slab method).
+ * The phone's interior presets: fitting a portrait screen pulls the camera back along its arm, and
+ * on MOXIR the Floor view left through the end wall (z 55.5 against 54.5) and the Rig view through
+ * the roof, so the cutaway cut the hall open and half the screen went black (2026-10-02, /moxir on
+ * a 390×844 phone). The arm stops at the box; the lens widens for the rest (cameraFraming getFovForArm).
+ */
+export const reachInBox = (from, to, box) => {
+    const a = vec3(from)
+    const b = vec3(to)
+    if (!a || !b || !box) return 1
+    let k = 1
+    for (let i = 0; i < 3; i += 1) {
+        const d = b[i] - a[i]
+        if (d > 1e-9 && b[i] > box.max[i]) k = Math.min(k, (box.max[i] - a[i]) / d)
+        if (d < -1e-9 && b[i] < box.min[i]) k = Math.min(k, (box.min[i] - a[i]) / d)
+    }
+    return Math.max(0, Math.min(1, k))
 }

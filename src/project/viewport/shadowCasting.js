@@ -123,19 +123,71 @@ export const dressLightForShadows = (light, mapSize) => {
     return true
 }
 
+// How many lamps may throw a shadow at once. Each takes a texture unit in every lit
+// material's fragment shader (WebGL gives 16 — ANGLE on Windows sits there — desktop GPUs
+// 32) and a depth pass of the scene each frame. 12 is what MOXIR's rooms were measured at
+// (scripts/place/rig-lib.mjs SHADOW_SAFE_REAL_LIGHTS); on a GPU with fewer units the cap
+// is what the busiest lit material leaves (dressForShadows `maxTextures`).
+export const SHADOW_LAMP_CAP = 12
+
+// The texture slots a material samples in its fragment shader, besides the lamps' shadows.
+const SAMPLER_KEYS = ['map', 'normalMap', 'bumpMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap', 'lightMap',
+    'envMap', 'alphaMap', 'specularMap', 'clearcoatMap', 'clearcoatNormalMap', 'clearcoatRoughnessMap', 'sheenColorMap',
+    'sheenRoughnessMap', 'transmissionMap', 'thicknessMap', 'iridescenceMap', 'iridescenceThicknessMap', 'anisotropyMap',
+    'specularIntensityMap', 'specularColorMap', 'gradientMap', 'matcap']
+/** A material's own fragment samplers; a standard material without its own envMap samples the scene's. */
+export const materialSamplers = (material, environment = null) => {
+    if (!material) return 0
+    const own = SAMPLER_KEYS.filter((k) => material[k]?.isTexture).length
+    const sceneEnv = environment && !material.envMap && (material.isMeshStandardMaterial || material.isMeshPhysicalMaterial) ? 1 : 0
+    return own + sceneEnv
+}
+// One unit kept back for what the count cannot see (a transmission target, a driver's own).
+const SPARE_UNITS = 1
+
+// A lamp holding a shadow keeps it against a challenger less than this much brighter,
+// so two lamps of near-equal light do not trade it back and forth on every re-dress.
+const HOLD_MARGIN = 0.15
+const HELD = '__diShadowHeld'
+
+/**
+ * What a lamp puts into the room: intensity × its cone's solid angle (lightPool.js's score).
+ * The NOMINAL intensity when the lamp carries one (SpotLightObject): a strobe's flash moves
+ * light.intensity every frame, and scored on that it won and lost a shadow on alternate
+ * re-dresses (render audit K, 2026-10-01).
+ */
+export const shadowScore = (light) => {
+    const nominal = light?.userData?.nominalIntensity
+    const intensity = Math.max(0, Number(nominal ?? light?.intensity) || 0)
+    const angle = Math.min(Math.PI / 2, Math.max(0, Number(light?.angle) || 0))
+    return intensity * 2 * Math.PI * (1 - Math.cos(angle))
+}
+
 /**
  * Turn the scene's lamps into shadow casters and its solid meshes into casters
  * and catchers.
  *
- * Only ever switches flags ON. With the room's shadows off this is never
+ * Only ever switches mesh flags ON. With the room's shadows off this is never
  * called, and nothing in an existing room is touched — no lamp casts, so there
  * is nothing to catch either way.
  *
+ * `maxLights`: past this many spot lights, only that many throw — the ones putting
+ * the most light into the room now (shadowScore, a holder kept within HOLD_MARGIN).
+ * Exactly that many, lit or not, so the shader's count of shadowed lamps never
+ * changes when a look does (a change would recompile every lit material: a hitch).
+ * `maxTextures` (the GPU's MAX_TEXTURE_IMAGE_UNITS): the cap comes down to what the
+ * busiest lit material leaves — its own maps, the scene's environment, the other
+ * lights' shadows and spot-light maps, one spare. Past the units the material fails to
+ * link and the room draws black (seen 2026-10-01 on ANGLE D3D11, 16 units).
+ *
  * @returns {{ meshes: number, lights: number }} for tests
  */
-export const dressForShadows = (root, mapSize = defaultShadowCasting.mapSize) => {
+export const dressForShadows = (root, mapSize = defaultShadowCasting.mapSize, { maxLights = Infinity, maxTextures = Infinity } = {}) => {
     let meshes = 0
-    let lights = 0
+    let busiest = 0
+    let otherShadows = 0
+    const spots = []
+    const environment = root?.environment || null
     const walk = (object) => {
         const role = shadowRoleOf(object)
         if (role === 'skip-subtree') return
@@ -144,12 +196,38 @@ export const dressForShadows = (root, mapSize = defaultShadowCasting.mapSize) =>
             object.castShadow = true
             object.receiveShadow = true
             meshes += 1
+            for (const material of [].concat(object.material || [])) busiest = Math.max(busiest, materialSamplers(material, environment))
         }
-        if (dressLightForShadows(object, mapSize)) lights += 1
+        if (object?.isSpotLight) spots.push(object)
+        else if (object?.isLight && object.castShadow) otherShadows += 1
         const children = object?.children
         if (Array.isArray(children)) children.forEach(walk)
     }
     walk(root)
+    const units = Number(maxTextures)
+    if (Number.isFinite(units) && units > 0) {
+        const spotMaps = spots.filter((light) => light.map?.isTexture).length
+        maxLights = Math.max(0, Math.min(maxLights, units - busiest - otherShadows - spotMaps - SPARE_UNITS))
+    }
+    let chosen = spots
+    if (spots.length > maxLights) {
+        const key = (light) => String(light.name || light.uuid || '')
+        const ranked = spots
+            .map((light) => ({ light, score: shadowScore(light) * (light.userData?.[HELD] ? 1 + HOLD_MARGIN : 1) }))
+            .sort((a, b) => b.score - a.score || (key(a.light) < key(b.light) ? -1 : key(a.light) > key(b.light) ? 1 : 0))
+        chosen = ranked.slice(0, Math.max(0, maxLights)).map((r) => r.light)
+        const keep = new Set(chosen)
+        for (const light of spots) {
+            if (!light.userData) light.userData = {}
+            light.userData[HELD] = keep.has(light)
+            if (!keep.has(light)) {
+                rememberShadowFlags(light)
+                light.castShadow = false
+            }
+        }
+    }
+    let lights = 0
+    for (const light of chosen) if (dressLightForShadows(light, mapSize)) lights += 1
     return { meshes, lights }
 }
 
@@ -175,6 +253,7 @@ export const undressShadows = (root) => {
             object.castShadow = before.cast
             object.receiveShadow = before.receive
             delete object.userData[SHADOW_MEMORY]
+            delete object.userData[HELD]
             if (object.isLight) lights += 1
             else meshes += 1
         }

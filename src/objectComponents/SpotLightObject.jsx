@@ -2,11 +2,13 @@ import { useContext, useEffect, useMemo, useRef } from 'react'
 import { context as fiberContext, useFrame } from '@react-three/fiber'
 import { AdditiveBlending, BufferAttribute, ConeGeometry, DoubleSide } from 'three'
 import { spotTargetOffset } from '../project/viewport/spotLightAim.js'
-import { beamCastsLight, beamFadeColors, beamIsVisible, spotBeamShape } from './spotBeam.js'
+import { beamCastsLight, beamFadeColors, beamIsVisible, spotBeamShape, spotLightCone } from './spotBeam.js'
 import { strobeEnvelope } from '../rigbuild/rigFlash.js'
 import { DEFAULT_APERTURE } from './beamAir.js'
 import { beamAirBeforeRender, beamAirGeometry, createBeamAirMaterial, setBeamAirUniforms } from './beamAirMaterial.js'
-import { useAtmosphere } from './atmosphereStore.js'
+import { registerBeamMesh, registerGlareMesh, useAtmosphere } from './atmosphereStore.js'
+import { hazeUniformsFor } from './hazeUniforms.js'
+import { beamOpticsOf } from './beamOptics.js'
 
 // A spot light that actually points where the entity is turned.
 //
@@ -45,7 +47,11 @@ export default function SpotLightObject({
     angle = 0.52,
     penumbra = 0.2,
     decay = 2,
-    beam = null
+    beam = null,
+    // A rig fixture (the entity carries components.fixture): its `angle` is half its BEAM
+    // angle, the datasheet's 50 % point, so its real light is fitted to it (spotBeam.js
+    // spotLightCone). An authored spot's angle is its cutoff, as three reads it.
+    fitted = false
 }) {
     const lightRef = useRef(null)
     const targetRef = useRef(null)
@@ -65,6 +71,7 @@ export default function SpotLightObject({
     // light is not mounted at all rather than mounted at zero — three.js pays
     // for a light in every shader whatever its intensity.
     const castsLight = beamCastsLight(beam)
+    const cone = fitted ? spotLightCone({ angle, penumbra }) : { angle, penumbra }
     const throwShape = spotBeamShape({ distance, angle, intensity, haze: beam?.haze })
     // A cone that would draw at opacity 0 (haze 0, or a lamp held at 0) is not
     // mounted at all: an additive mesh at 0 adds nothing to the picture and
@@ -84,6 +91,12 @@ export default function SpotLightObject({
         return geometry
     }, [showBeam, physical, throwShape.radius, throwShape.length])
     useEffect(() => () => beamGeometry?.dispose(), [beamGeometry])
+
+    // The lamp's steady intensity, for whoever ranks lamps by their light (shadowCasting.js
+    // shadowScore): a strobe flashes light.intensity per frame, this does not move.
+    useEffect(() => {
+        if (lightRef.current) lightRef.current.userData.nominalIntensity = intensity
+    }, [intensity, castsLight])
 
     useEffect(() => {
         const light = lightRef.current
@@ -122,8 +135,8 @@ export default function SpotLightObject({
                         color={color}
                         intensity={intensity}
                         distance={distance}
-                        angle={angle}
-                        penumbra={penumbra}
+                        angle={cone.angle}
+                        penumbra={cone.penumbra}
                         decay={decay}
                     />
                     <object3D ref={targetRef} position={spotTargetOffset()} />
@@ -131,12 +144,14 @@ export default function SpotLightObject({
             ) : null}
             {physical ? (
                 <BeamInAir
+                    gl={gl}
                     color={color}
                     intensity={intensity}
                     angle={angle}
                     penumbra={penumbra}
                     length={throwShape.length}
                     aperture={beam?.aperture}
+                    opticsKey={JSON.stringify(beam?.optics ?? null)}
                     atmosphere={atmosphere}
                     strobeHz={strobeHz}
                 />
@@ -189,17 +204,21 @@ function StrobeDriver({ hz, lightRef, coneRef, intensity, opacity }) {
 // so the beam and the wall it lands on answer to the same exposure. `haze` on the
 // lamp is not a brightness here (the lamp's level already scales its intensity);
 // 0 still means "no beam" (a strobe draws a flash instead, looks.js flashEntities).
-function BeamInAir({ color, intensity, angle, penumbra, length, aperture, atmosphere, strobeHz = 0 }) {
+function BeamInAir({ gl, color, intensity, angle, penumbra, length, aperture, opticsKey = 'null', atmosphere, strobeHz = 0 }) {
     const tanHalf = Math.tan(Math.min(Math.max(Number(angle) || 0.52, 0.001), Math.PI / 2 - 0.01))
     const a = Number(aperture) > 0 ? Number(aperture) : DEFAULT_APERTURE
-    // A beam's soft edge: the lamp's penumbra, never harder than a fifth of its radius
-    // (a real beam's edge is soft even through a sharp gobo, in haze).
+    // A beam's edge: the lamp's penumbra picks its cross-section (beamAir.js beamProfile:
+    // hard → a beam fixture's steep-shouldered rod, soft → a wash's Gaussian). Never
+    // harder than 0.2 (a real beam's edge is soft even through a sharp gobo, in haze).
     const edge = Math.min(1, Math.max(0.2, Number(penumbra) || 0))
-    const values = { color, intensity, tanHalf, aperture: a, length, edge, atmosphere, strobeHz }
+    // prism, honeycomb, frost, gobo (beamOptics.js) — keyed by value, so a re-render with
+    // the same optics keeps the same hull
+    const optics = useMemo(() => beamOpticsOf({ optics: JSON.parse(opticsKey) }), [opticsKey])
+    const values = { color, intensity, tanHalf, aperture: a, length, edge, atmosphere, strobeHz, optics }
     return (
         <>
-            <BeamPart part="core" values={values} />
-            <BeamPart part="glare" values={values} />
+            <BeamPart gl={gl} part="core" values={values} />
+            <BeamPart gl={gl} part="glare" values={values} />
         </>
     )
 }
@@ -209,16 +228,21 @@ function beforeBeamRender(renderer, scene, camera) {
     beamAirBeforeRender(this, camera)
 }
 
-function BeamPart({ part, values }) {
-    const { aperture, tanHalf, length } = values
-    const geometry = useMemo(() => beamAirGeometry({ aperture, tanHalf, length }, part), [aperture, tanHalf, length, part])
-    const material = useMemo(() => createBeamAirMaterial(part), [part])
+function BeamPart({ gl, part, values }) {
+    const { aperture, tanHalf, length, edge, optics } = values
+    const geometry = useMemo(() => beamAirGeometry({ aperture, tanHalf, length, edge, optics }, part), [aperture, tanHalf, length, edge, optics, part])
+    // the room's haze field: this renderer's shared uniforms (hazeUniforms.js)
+    const material = useMemo(() => createBeamAirMaterial(part, hazeUniformsFor(gl)), [part, gl])
     useEffect(() => () => geometry.dispose(), [geometry])
     useEffect(() => () => material.dispose(), [material])
+    // the glare hull steps aside, undrawn, while the room has real bloom (atmosphereStore.js)
+    const meshRef = useRef(null)
+    // the glare hull steps aside under bloom; the core is known to the floor's reflection (beamMirror.js)
+    useEffect(() => (part === 'glare' ? registerGlareMesh(gl, meshRef.current) : registerBeamMesh(gl, meshRef.current)), [gl, part])
     setBeamAirUniforms(material, values)
     return (
         <>
-            <mesh geometry={geometry} material={material} raycast={() => null} onBeforeRender={beforeBeamRender} />
+            <mesh ref={meshRef} geometry={geometry} material={material} raycast={() => null} onBeforeRender={beforeBeamRender} />
             {values.strobeHz > 0 ? <BeamAirStrobe material={material} values={values} /> : null}
         </>
     )

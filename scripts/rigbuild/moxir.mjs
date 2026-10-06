@@ -51,11 +51,20 @@ export const moxirDocument = ({ rig, hall, library }) => {
     const geometry = Object.fromEntries([...kinds].map((k) => [k, readGeometry(k, path.join(FIXTURE_DIR, 'glb'))]))
     const built = buildRig(rig, hall, { geometry, manifest })
     const codeOfKind = Object.fromEntries(Object.entries(manifest.kinds).map(([k, v]) => [k, v.code]))
+    // Types this version keeps off DMX (policy.dmx.offDmx: hazers and smoke run by hand).
+    const offDmx = new Set(rig.policy?.dmx?.offDmx || [])
     const entities = []
     for (const entity of built.entities) {
         const m = /^rig-(.+)-(\d+)$/.exec(entity.id)
         const group = m && rig.groups.find((g) => g.id === m[1])
-        if (!group || entity.type !== 'spotLight') { entities.push(entity); continue }
+        if (!group || entity.type !== 'spotLight') {
+            // buildRig's own device entities (the effects: hazers, smoke …) pass through; a type
+            // the version keeps off DMX is marked so here too.
+            const fixture = entity.components?.fixture
+            const code = fixture?.type ? typeById(library, fixture.type)?.code : null
+            entities.push(code && offDmx.has(code) ? { ...entity, components: { ...entity.components, fixture: { ...fixture, dmx: false } } } : entity)
+            continue
+        }
         const cls = rig.classes[group.class]
         const type = typeById(library, typeIdOf(cls.code))
         if (!type) throw new Error(`group ${group.id}: no type for ${cls.code}`)
@@ -64,7 +73,7 @@ export const moxirDocument = ({ rig, hall, library }) => {
             components: {
                 ...entity.components,
                 // the halo names its own position per group (src/rigbuild/looks.js namedPositionKey)
-                fixture: { type: type.id, position: group.mount === 'halo' ? words(`halo-${group.id}`) : words(group.mount), unit: Number(m[2]), ...(group.orient === 'hung' ? { hung: true } : {}) }
+                fixture: { type: type.id, position: group.mount === 'halo' ? words(`halo-${group.id}`) : group.named ? words(`named-${group.id}`) : words(group.mount), unit: Number(m[2]), ...(group.orient === 'hung' ? { hung: true } : {}), ...(offDmx.has(type.code) ? { dmx: false } : {}) }
             }
         })
     }
@@ -85,7 +94,12 @@ export const moxirDocument = ({ rig, hall, library }) => {
                 name: `${type.code} ${fx.label} ${i + 1}`,
                 components: {
                     transform: { position: lens.map((v) => Math.round(v * 1000) / 1000), rotation: [0, 0, 0], scale: [1, 1, 1] },
-                    fixture: { type: type.id, position: words(fx.mount), unit: i + 1, ...(hung ? { hung: true } : {}) }
+                    fixture: {
+                        type: type.id, position: words(fx.mount), unit: i + 1, ...(hung ? { hung: true } : {}),
+                        // The version keeps this type off DMX (policy.dmx.offDmx, e.g. hazers and smoke
+                        // run by hand): it never takes an address (autoPatch.js isOffDmx).
+                        ...(offDmx.has(type.code) ? { dmx: false } : {})
+                    }
                 }
             })
         })

@@ -10,6 +10,7 @@ import { LASER_MIN_HEIGHT_M, RIG_PREFIX, buildRig, groupAxis, performerBox, stag
 import { readGeometry } from '../place/fixtures-glb.mjs'
 import { spotAimDirection } from '../../src/project/viewport/spotLightAim.js'
 import { allVersions, costing, generated, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
+import { parsePrices, specWithPrivatePrices, withPrivatePrices } from './privatePrices.mjs'
 import { rigLooksFrom } from './looks.mjs'
 import { loadLibrary } from './library.mjs'
 import { typeById, typeIdOf } from '../../src/rigbuild/fixtureTypes.js'
@@ -130,9 +131,17 @@ for (const v of allVersions(spec)) {
                 }
             })
 
-            it(`${look}: lights the room with 8 real lamps at most`, () => {
-                expect(built.summary.real).toBeLessThanOrEqual(8)
-            })
+            // the browser budget (rig-lib budget.realLights) — unless the version states that every
+            // lamp is real (`realLightsAll`, MOXIR Known and Known · full, 2026-10-01), and then it is
+            if (rig.budget?.realLightsAll) {
+                it(`${look}: lights the room with every lamp real, as its version states`, () => {
+                    expect(built.summary.real).toBe(lamps.length)
+                })
+            } else {
+                it(`${look}: lights the room with 8 real lamps at most`, () => {
+                    expect(built.summary.real).toBeLessThanOrEqual(8)
+                })
+            }
 
             it(`${look}: is mirror-symmetric about the nave centre line (the press's own lamps and a solo aside)`, () => {
                 const near = (a, b) => a.every((x, i) => Math.abs(x - b[i]) < 0.02)
@@ -156,23 +165,39 @@ for (const v of allVersions(spec)) {
 }
 
 describe('the cost, by the quote\'s own rule', () => {
-    it('says where the rental house\'s complete systems are cheaper than à la carte, even with parts unused', () => {
+    // The rental house's rates are private (not in the public repo). These are INVENTED: 10/day per
+    // code and a package at 100/day, read through the same csv loader the owner's machine uses.
+    const fakeCsv = (extra) => ['model,amd_1_night', ...Object.values(lists)[0].catalogue.map((c) => `${c.code},10`), ...extra].join('\n')
+    const prices = parsePrices(fakeCsv(spec.packages.items.map((p) => `${p.id},100`)))
+
+    it('says nothing, and sums nothing, without the private prices — never a partial sum', () => {
         for (const v of spec.versions) {
             const c = costing({ spec, list: lists[v.id] })
+            expect(c.priced).toBe(false)
+            expect(c.best).toBeNull()
+            expect(c.options.every((o) => o.perDay === null && Object.values(o.byDays).every((d) => d === null))).toBe(true)
+            expect(c.cheaperThanALaCarte).toEqual([])
+            // what the cost does NOT need still comes out: what a package would leave unused
+            expect(c.options.find((o) => o.id === 'outdoor-full').unused).toBeInstanceOf(Array)
+        }
+    })
+
+    it('with the private prices, sums à la carte and by package, with the day rule and what is unused', () => {
+        for (const v of spec.versions) {
+            const c = costing({ spec: specWithPrivatePrices(spec, prices), list: withPrivatePrices(lists[v.id], prices) })
             const alc = c.options.find((o) => o.id === 'a-la-carte')
             const outdoor = c.options.find((o) => o.id === 'outdoor-full')
-            // à la carte is Σ rate × quantity for the rental lines
-            expect(alc.perDay).toBe(lists[v.id].items.filter((i) => !i.from).reduce((s, i) => s + i.rate * i.ordered, 0))
-            // the 205,000 outdoor package undercuts à la carte for every version with moving heads
-            // (18 beams alone are 360,000); the cut's simple version (PARs and COBs only) is
-            // cheaper à la carte — the package would be paying for heads it does not hang
-            if (v.id === 'minimal') expect(alc.perDay).toBeLessThan(outdoor.perDay)
-            else expect(outdoor.perDay).toBeLessThan(alc.perDay)
+            expect(c.priced).toBe(true)
+            // à la carte is Σ rate × quantity for the rental lines (10 each here)
+            expect(alc.perDay).toBe(10 * lists[v.id].items.filter((i) => !i.from).reduce((s, i) => s + i.ordered, 0))
+            // a package covers up to its count of a code; the package price is added, the rest à la carte
+            const covered = Object.entries(spec.packages.items[0].covers).reduce((s, [code, n]) => s + Math.min(n, lists[v.id].items.find((i) => i.code === code)?.ordered || 0), 0)
+            expect(outdoor.perDay).toBe(100 + alc.perDay - 10 * covered)
             expect(outdoor.unused.length).toBeGreaterThan(0)
             // two days = 1.5 day-rates
             expect(alc.byDays[2]).toBe(alc.perDay * 1.5)
         }
-        expect(costing({ spec, list: lists.minimal }).options.find((o) => o.id === 'outdoor-full').unused).toEqual(expect.arrayContaining([{ code: 'UP-Q108S', n: 6 }]))
+        expect(costing({ spec: specWithPrivatePrices(spec, prices), list: withPrivatePrices(lists.minimal, prices) }).options.find((o) => o.id === 'outdoor-full').unused).toEqual(expect.arrayContaining([{ code: 'UP-Q108S', n: 6 }]))
     })
 
     it('lists strobes, blinders and hazers as other-supplier lines, each with 2-3 named products and a source', () => {

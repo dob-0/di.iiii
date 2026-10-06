@@ -125,6 +125,90 @@ jobs:
     permissions:
       contents: read
 
+  # The dev channel (docs/architecture/decisions/2026-10-05-release-channels.md):
+  # one GitHub PRERELEASE per green dev commit, tagged dev-<sha8>, carrying the
+  # runtime tarball and its sha256. Installs on the dev channel take the one the
+  # hub is serving (`di update --channel dev`). Needs only `test`, not the
+  # deploy: the artifact is a property of the commit, and an install gates on the
+  # hub's own health anyway. Never "latest", never touches stable releases;
+  # keeps the newest 20 dev-* prereleases and deletes the rest.
+  publish-dev-channel:
+    needs: test
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      KEEP_DEV_RELEASES: '20'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          npm ci
+          npm --prefix serverXR ci
+
+      - name: Pack the runtime for this commit
+        id: pack
+        run: |
+          set -euo pipefail
+          SHA8="${GITHUB_SHA:0:8}"
+          # Next patch after the newest stable tag, plus -dev.<sha8>: sorts above
+          # the stable it follows and below the one it becomes.
+          LAST=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
+          if [ -n "$LAST" ]; then
+            IFS=. read -r MA MI PA <<<"${LAST#v}"
+            BASE="${MA}.${MI}.$((PA + 1))"
+          else
+            BASE=$(node -p "require('./package.json').version")
+          fi
+          VERSION="${BASE}-dev.${SHA8}"
+          echo "sha8=${SHA8}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          npm run di:pack -- --version="${VERSION}"
+          # The channel refuses an artifact it cannot verify; verify it here too.
+          (cd dist-runtime && sha256sum -c checksums.txt)
+
+      - name: Publish the dev prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA8: ${{ steps.pack.outputs.sha8 }}
+          VERSION: ${{ steps.pack.outputs.version }}
+        run: |
+          set -euo pipefail
+          TAG="dev-${SHA8}"
+          # A re-run of the same commit replaces its own release, nothing else.
+          gh release delete "$TAG" --cleanup-tag --yes 2>/dev/null || true
+          gh release create "$TAG" \
+            --target "$GITHUB_SHA" \
+            --prerelease --latest=false \
+            --title "dev ${SHA8} (${VERSION})" \
+            --notes "Dev-channel build of ${GITHUB_SHA}. Installed by \`di update --channel dev\` only when dev.diiii.xyz serves this commit. Not a stable release." \
+            "dist-runtime/di-runtime-${VERSION}.tar.gz" dist-runtime/checksums.txt
+
+      - name: Keep the newest dev prereleases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Newest first by creation time; only dev-<8 hex> tags are ever deleted.
+          gh release list --limit 200 --json tagName,createdAt,isPrerelease \
+            --jq '[.[] | select(.isPrerelease and (.tagName | test("^dev-[0-9a-f]{8}$")))] | sort_by(.createdAt) | reverse | .['"${KEEP_DEV_RELEASES}"':] | .[].tagName' \
+            | while read -r tag; do
+                echo "deleting old dev release ${tag}"
+                gh release delete "$tag" --cleanup-tag --yes
+              done
+
   build-and-push:
     needs: test
     runs-on: ubuntu-latest

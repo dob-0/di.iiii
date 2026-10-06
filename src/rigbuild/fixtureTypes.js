@@ -40,6 +40,100 @@ export const OFL_CHANNEL_LISTS = {
     }
 }
 
+// Channel lists TESTED on the rental units themselves (manifest source SEVAN): the
+// same UPlight rental gear ran live at the Sevan festival (Dilijan camp) on the
+// studio's Art-Net desk, and the owner confirmed it as MOXIR's units on 2026-10-01.
+// These are the maker's modes, not stand-ins: they win over OFL and fill the real
+// mode (the ASSUMED ones stay after it, RIG_BUILD.md §18.1). Order and meanings are
+// the desk's profiles as patched and run there; a meaning nobody wrote down stays a
+// plain `c<n>`/aux channel, never guessed. Roles are unique within a mode.
+const SEVAN = {
+    fixture: 'the rental unit itself (Sevan festival rig, Dilijan camp, 2026)',
+    basis: 'TESTED',
+    url: null,
+    licence: null
+}
+const laserChannel = (n, label) => ({ role: `c${n}`, label })
+export const TESTED_CHANNEL_LISTS = {
+    'UP-B380F': {
+        ...SEVAN,
+        modes: {
+            // Desk profile "Beam 16ch", the map from its manual: strobe 255 = open,
+            // 0-3 = dark; colour 0 = white, 12 = colour 1…; gobo 5-89 = gobo 1-17,
+            // 171+ = shake; prism 1 in at 128+; RESET must stay 0.
+            16: [
+                { role: 'pan', label: 'Pan', default: 128 },
+                { role: 'tilt', label: 'Tilt', default: 128 },
+                { role: 'panFine', label: 'Pan fine', default: 0 },
+                { role: 'tiltFine', label: 'Tilt fine', default: 0 },
+                { role: 'speed', label: 'Pan/tilt speed' },
+                // frost's curve is not on the chart: read as linear (beamOptics.js)
+                { role: 'frost', label: 'Frost', cap: { frost: { basis: 'ASSUMED — linear, 0 clear … 255 full; the chart states no curve' } } },
+                { role: 'strobe', label: 'Shutter / strobe (255 open, 0-3 dark)', default: 255, cap: { shutter: [{ from: 0, to: 3, open: false }, { from: 255, to: 255, open: true }] } },
+                { role: 'dimmer', label: 'Dimmer' },
+                { role: 'color', label: 'Colour wheel (0 white, 12 colour 1…)', default: 0 },
+                // gobo 5-89 = gobos 1-17 and 171+ = shake are the chart's (TESTED); the
+                // even five-value slots inside 5-89 (5-9 gobo 1, 10-14 gobo 2 …) are DERIVED,
+                // not stated; 90-170 is left unmapped rather than guessed
+                { role: 'gobo', label: 'Gobo (5-89 gobo 1-17, 171+ shake)', cap: { gobo: true, goboSlots: { from: 5, to: 89, count: 17, basis: 'TESTED range; slots DERIVED' }, goboShake: { from: 171, basis: 'TESTED' } } },
+                // 128+ in is the chart's (TESTED); 16 facets from the spec (fixtures.json)
+                { role: 'prism', label: 'Prism 1 insert (128+ in)', cap: { prism: true, prismIn: { from: 128, facets: 16, basis: 'TESTED threshold' } } },
+                { role: 'rotation', label: 'Prism 1 rotation', cap: { prismRotation: { prism: 1, basis: 'ASSUMED — index or spin not stated; read as an index, 0…255 → 0…360°' } } },
+                { role: 'aux1', label: 'Prism 2', cap: { prism2: { kind: 'honeycomb', in: { from: 128 }, basis: "ASSUMED — prism 1's threshold" } } },
+                { role: 'aux2', label: 'Prism 2 rotation', cap: { prismRotation: { prism: 2, basis: 'ASSUMED — index or spin not stated; read as an index, 0…255 → 0…360°' } } },
+                { role: 'focus', label: 'Focus' },
+                { role: 'control', label: 'Reset (always 0)', default: 0 }
+            ]
+        }
+    },
+    'UP-PL5403': {
+        ...SEVAN,
+        modes: {
+            // Desk profile "Wash 8ch". Channels 7-8 were never used there and their
+            // meaning was not written down: aux, not guessed.
+            8: [
+                { role: 'dimmer', label: 'Dimmer' },
+                { role: 'r', label: 'Red' },
+                { role: 'g', label: 'Green' },
+                { role: 'b', label: 'Blue' },
+                { role: 'w', label: 'White' },
+                { role: 'strobe', label: 'Strobe' },
+                { role: 'aux1', label: 'Ch 7 (unused in the tested map)' },
+                { role: 'aux2', label: 'Ch 8 (unused in the tested map)' }
+            ]
+        }
+    },
+    'UP-LA40WF': {
+        ...SEVAN,
+        modes: {
+            // Desk profile "Laser 32ch". Ch 1 is named dimmer (as on that desk) so master
+            // and blackout reach it. The per-colour dimmers run 0 = BRIGHTEST, so they are
+            // plain channels, never the r/g/b roles. A laser is held dark by
+            // deskLookValues.js (every channel 0) until the IEC 60825-1 sign-off.
+            32: [
+                { role: 'dimmer', label: 'Ch 1 output (named dimmer so master/blackout reach it)' },
+                laserChannel(2, 'Mode (25 auto, 75 voice, 250 manual graphics)'),
+                laserChannel(3, 'Graphic select'),
+                laserChannel(4, 'Display mode'),
+                laserChannel(5, 'Colour (8 white, 25 red, 76 yellow, 93 purple, 110 cyan)'),
+                laserChannel(6, 'X position (64 centre)'),
+                laserChannel(7, 'Y position (64 centre)'),
+                ...[8, 9, 10].map((n) => laserChannel(n, `Ch ${n}`)),
+                laserChannel(11, 'Centre rotation (150 slow clockwise)'),
+                laserChannel(12, 'Ch 12'),
+                laserChannel(13, 'Wave 1'),
+                laserChannel(14, 'Wave 2'),
+                laserChannel(15, 'Strobe'),
+                laserChannel(16, 'Red level (0 brightest)'),
+                laserChannel(17, 'Green level (0 brightest)'),
+                laserChannel(18, 'Blue level (0 brightest)'),
+                laserChannel(19, 'Ch 19'),
+                ...Array.from({ length: 13 }, (_, i) => laserChannel(20 + i, i === 2 ? 'Graphic 2 colour (mirror ch 5)' : `Graphic 2, ch ${20 + i}`))
+            ]
+        }
+    }
+}
+
 const CODE_RE = /^[A-Za-z0-9][A-Za-z0-9 ._-]{0,31}$/
 
 // The id every lamp uses: the rental/crew code, lowercased. A code, not a
@@ -61,19 +155,20 @@ const sourced = (spec) => {
 const modeName = (footprint) => `${footprint}ch`
 
 // Modes from the manifest's `dmx_channels` (a list of footprints). A channel list
-// is attached where OFL has the fixture (or its named equivalent) with a mode of
-// that footprint.
+// is attached where the unit was tested (TESTED_CHANNEL_LISTS, first) or OFL has
+// the fixture (or its named equivalent) with a mode of that footprint.
 const modesOf = (kind) => {
     const spec = kind.specs?.dmx_channels
     const list = Array.isArray(spec?.value) ? spec.value.filter((n) => Number.isInteger(n) && n > 0) : []
-    const entry = OFL_CHANNEL_LISTS[kind.code] || null
+    const sources = [TESTED_CHANNEL_LISTS[kind.code], MAKER_CHANNEL_LISTS[kind.code], OFL_CHANNEL_LISTS[kind.code]].filter(Boolean)
     const real = list.map((footprint) => {
-        const ofl = entry?.modes?.[footprint] || null
+        const entry = sources.find((s) => s.modes?.[footprint]) || null
+        const listed = entry ? entry.modes[footprint] : null
         return {
             name: modeName(footprint),
             footprint,
-            channels: ofl ? ofl.map((c) => ({ ...c })) : null,
-            channelsSource: ofl ? { fixture: entry.fixture, url: entry.url, licence: entry.licence, basis: entry.basis } : null,
+            channels: listed ? listed.map((c) => ({ ...c })) : null,
+            channelsSource: listed ? { fixture: entry.fixture, url: entry.url, licence: entry.licence, basis: entry.basis } : null,
             src: spec?.src ?? null,
             basis: spec?.basis ?? null
         }
@@ -87,6 +182,44 @@ const modesOf = (kind) => {
 const realModes = (modes) => modes.filter((m) => !isAssumedMode(m))
 
 const MAKER_UPLIGHT = 'UPlight Stage Equipment (Guangzhou) Co., Ltd.'
+
+// Channel lists from the MAKER's own manual for this very model (basis EXACT). The
+// LaserCube Ultra MK2 (ULTRA MK2 Guide v1.2, pp. 57-59): the default 16-channel profile
+// selects cues of an SD-card playlist (page × cue) and scales, moves, rotates and
+// recolours them. Ch 5 (Fader) is named dimmer so master and blackout reach it; ch 1 at
+// 0-31 is the cube's own blackout, its default. At MOXIR the cubes run OFF DMX (streamed
+// from di Raw over the network, owner 2026-10-04): this is the reference, not the patch.
+const LASERCUBE_MK2_MANUAL = {
+    fixture: 'Wicked Lasers LaserCube Ultra MK2 (ULTRA MK2 Guide v1.2, DMX/Art-Net channel layout)',
+    basis: 'EXACT',
+    url: 'https://www.laseros.com/manual-mk2.pdf',
+    licence: null
+}
+export const MAKER_CHANNEL_LISTS = {
+    'EXT-LC-ULTRA-MK2': {
+        ...LASERCUBE_MK2_MANUAL,
+        modes: {
+            16: [
+                laserChannel(1, 'Access mode (0-31 blackout, 33-95 basic 4 ch, 97-159 standard 8, 161-223 extended 12, 225-255 full 16)'),
+                laserChannel(2, 'Page (9 pages of 48 cues)'),
+                laserChannel(3, 'Cue select (0-31 blackout, then cues 1-48)'),
+                laserChannel(4, 'Speed (0-15 100 %, 17-31 pause, 33… 25 % … 128 100 % … 255 200 %)'),
+                { role: 'dimmer', label: 'Fader (named dimmer so master/blackout reach it)' },
+                laserChannel(6, 'Scale (zero … full size)'),
+                laserChannel(7, 'X size (0 −full, 128 zero, 255 +full)'),
+                laserChannel(8, 'Y size (0 −full, 128 zero, 255 +full)'),
+                laserChannel(9, 'Rotation (0 … 360°)'),
+                { ...laserChannel(10, 'X position (128 centre)'), default: 128 },
+                { ...laserChannel(11, 'Y position (128 centre)'), default: 128 },
+                laserChannel(12, 'Reserved'),
+                laserChannel(13, 'Scan rate (0-31 default 35K pps, 33-223 6K-29K, 225+ 30K)'),
+                laserChannel(14, 'Reserved'),
+                laserChannel(15, 'Recolour (0-31 off, 33-223 hue sweep, 225+ white)'),
+                laserChannel(16, 'Reserved')
+            ]
+        }
+    }
+}
 
 // The manifest's own words decide identity: an EXACT kind is the maker's model; a
 // NOT FOUND kind is a rental label modelled on a named equivalent, and its maker is
@@ -162,6 +295,10 @@ export const typesFromManifest = (manifest, { manifestFile = 'scripts/place/fixt
             pan_tilt_deg: sourced(kind.specs?.pan_tilt_deg),
             ip: sourced(kind.specs?.ip),
             optics: opticsOf(kind),
+            // A hazer's or fog machine's output, what the room's haze is worked out from
+            // (src/objectComponents/hazeField.js). Null on every lamp.
+            fluid_ml_per_min: sourced(kind.specs?.fluid_ml_per_min),
+            nozzle_d_mm: Number(kind.model?.params?.nozzle_d_mm) > 0 ? Number(kind.model.params.nozzle_d_mm) : null,
             model3d: {
                 glb: `${glbDir}/${kindKey}.glb`,
                 sidecar: `${glbDir}/${kindKey}.json`,

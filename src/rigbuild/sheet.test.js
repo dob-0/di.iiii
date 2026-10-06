@@ -24,7 +24,8 @@ describe('the sheet model', () => {
     })
 
     it('flags, in words, what a crew must know — and invents nothing', () => {
-        expect(row('a').flags).toEqual(['channels-owed', 'overlap'])
+        expect(row('a').flags).toEqual(['overlap']) // UP-B380F 16ch: the tested unit's list, nothing owed
+        expect(row('c').flags).toContain('channels-owed') // UP-250BSW 24ch: no chart yet
         expect(row('a').notes[0]).toMatch(/overlaps #2 UP-B380F at U1\.010/)
         expect(row('c').flags).toEqual(expect.arrayContaining(['off-the-end', 'no-circuit']))
         expect(row('d').flags).toEqual(['mode-unknown'])
@@ -85,7 +86,8 @@ describe('CSV and HTML', () => {
     it('writes RFC 4180 CSV: quotes doubled, CRLF', () => {
         expect(toCsv([{ a: 'x,"y"', b: 2 }], [{ label: 'A', value: (r) => r.a }, { label: 'B', value: (r) => r.b }])).toBe('A,B\r\n"x,""y""",2\r\n')
         const model = sheetModel({ entities: [lamp('a', { index: 1, type: 'up-b380f', universe: 1, address: 1, circuit: 'C1' })], library })
-        expect(patchCsv(model).split('\r\n')[1]).toBe('1,UP-B380F,"UPlight Stage Equipment (Guangzhou) Co., Ltd.",16ch,,,1,1,16,C1,500,EXACT,channel list owed,a')
+        // the 16ch list is TESTED on the rental units (fixtureTypes.js, MOXIR 2026-10-01): no list owed
+        expect(patchCsv(model).split('\r\n')[1]).toBe('1,UP-B380F,"UPlight Stage Equipment (Guangzhou) Co., Ltd.",16ch,,,1,1,16,C1,500,EXACT,,a')
         expect(powerCsv(model).split('\r\n')[1]).toBe('C1,1,500,2944,17,,0')
     })
 
@@ -116,8 +118,22 @@ describe('plot data', () => {
     })
 })
 
+describe('a device kept off DMX (run by hand)', () => {
+    it('says "by hand", never "not patched" or "mode unknown", and is not counted as unaddressed', () => {
+        const entities = [
+            lamp('haze', { type: 'ext-hazer', dmx: false, position: 'booth', unit: 1, circuit: 'C1' }),
+            lamp('smoke', { type: 'up-yz31p', dmx: false, position: 'floor', unit: 1, circuit: 'C1' })
+        ]
+        const model = sheetModel({ entities, library })
+        for (const r of model.rows) expect(r.flags, r.id).toEqual(['by-hand'])
+        const groups = groupFlags(model.flagCounts)
+        expect(groups.find((g) => g.id === 'unaddressed')).toBeUndefined()
+        expect(groups.flatMap((g) => g.items.map((i) => i.code))).toContain('by-hand')
+    })
+})
+
 describe('the sheet says what each warning is, by cause', () => {
-    const at = (id, extra) => lamp(id, { type: 'up-b380f', mode: '16ch', position: 'booth', ...extra })
+    const at = (id, extra) => lamp(id, { type: 'up-250bsw', mode: '24ch', position: 'booth', ...extra })
     const model = sheetModel({ entities: [at('a', { index: 1, universe: 1, address: 1 }), at('b', { index: 2, universe: 1, address: 10 }), at('c', { index: 3 })], library })
 
     it('groups the flags: to decide, not addressed, owed — each with one line of what to do', () => {
