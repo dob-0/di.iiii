@@ -69,6 +69,21 @@ describe('StudioCoachMarks', () => {
         expect(screen.getByText('Open Share to keep what you made')).toBeTruthy()
     })
 
+    it('shows a hint only while it is true (P7): not "Tap an object" with one selected, not "Open Create" with Create open', () => {
+        // a selection that was already there when the coach armed: the tap hint would be untrue
+        const first = render(<StudioCoachMarks {...baseProps} entityCount={2} hasSelection />)
+        expect(screen.queryByText('Tap an object to select it')).toBeNull()
+        first.unmount()
+
+        const { rerender } = render(<StudioCoachMarks {...baseProps} entityCount={2} />)
+        rerender(<StudioCoachMarks {...baseProps} entityCount={2} hasSelection />)
+        expect(screen.getByText('Open Create and add something')).toBeTruthy()
+        rerender(<StudioCoachMarks {...baseProps} entityCount={2} hasSelection createOpen />)
+        expect(screen.queryByText('Open Create and add something')).toBeNull()
+        rerender(<StudioCoachMarks {...baseProps} entityCount={2} hasSelection />)
+        expect(screen.getByText('Open Create and add something')).toBeTruthy()
+    })
+
     it('waits behind a phone sheet without losing its place', () => {
         const { rerender } = render(<StudioCoachMarks {...baseProps} entityCount={0} covered />)
         expect(screen.queryByRole('status')).toBeNull()
