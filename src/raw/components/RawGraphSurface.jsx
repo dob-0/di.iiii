@@ -1779,7 +1779,7 @@ export default function RawGraphSurface({
             ) : null}
             <div
                 className="raw-graph-stage"
-                style={{ transform: `translate(${panX}px,${panY}px) scale(${zoom})`, transformOrigin: '0 0' }}
+                style={{ '--raw-zoom': zoom, transform: `translate(${panX}px,${panY}px) scale(${zoom})`, transformOrigin: '0 0' }}
             >
                     <svg
                         // 1×1, not 100%: the stage collapses to zero height (all

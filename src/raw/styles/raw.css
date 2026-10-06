@@ -2686,23 +2686,42 @@
 }
 
 .raw-graph-node-resize {
-    /* A square in the bottom-right corner: rectangles only. The hit area is
-       bigger than the mark so a fingertip finds it. */
+    /* The hit area is a rectangle of at least 24 screen px (44 on touch),
+       whatever the zoom: the canvas is scaled by --raw-zoom, so the size is
+       divided by it. Capped at 45 % of the card so it never swallows the
+       card's own drag. The visible mark is the small ::after. */
+    --resize-hit: 24px;
     position: absolute;
     right: -1px;
     bottom: -1px;
-    width: 14px;
-    height: 14px;
+    width: min(calc(var(--resize-hit) / var(--raw-zoom, 1)), 45%);
+    height: min(calc(var(--resize-hit) / var(--raw-zoom, 1)), 45%);
     border-radius: 0;
     cursor: nwse-resize;
     z-index: 3;
     touch-action: none;
+}
+
+@media (pointer: coarse) {
+    .raw-graph-node-resize { --resize-hit: 44px; }
+}
+
+.raw-graph-node-resize::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 14px;
+    height: 14px;
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 0;
     background: linear-gradient(135deg, transparent 0 55%, var(--card-family) 55% 70%, transparent 70% 80%, var(--card-family) 80% 95%, transparent 95%);
     opacity: 0.55;
 }
 
-.raw-graph-node-card:hover .raw-graph-node-resize,
-.raw-graph-node-resize:hover {
+.raw-graph-node-card:hover .raw-graph-node-resize::after,
+.raw-graph-node-resize:hover::after {
     opacity: 1;
 }
 
