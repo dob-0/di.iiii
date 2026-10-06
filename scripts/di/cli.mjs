@@ -58,7 +58,7 @@ import { readLink, writeLink } from './credentialsStore.mjs'
 import { createLedger, ensureInstallId, readLedger, writeLedger } from './ledger.mjs'
 import { buildSyncAudit } from './sync-plan.mjs'
 import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
-import { listInvites, listKeyActions, mintInvite, revokeInvite } from './share.mjs'
+import { listInvites, listKeyActions, mintInvite, revokeInvite, undoKey } from './share.mjs'
 import { readFollows, removeFollow } from './follows.mjs'
 import { followSpace } from './follow.mjs'
 import {
@@ -1054,6 +1054,14 @@ const cmdInvite = async (args) => {
         const answer = await listKeyActions({ base, spaceId, token })
         if (!answer.ok) { fail(ui.inviteRefused(spaceId, answer.reason)); process.exitCode = 1; return }
         say(ui.inviteActions(spaceId, answer.actions))
+        return
+    }
+
+    // `--undo KEYID` — take that key back and undo what it did (the key log names the id).
+    if (args.flags.undo) {
+        const answer = await undoKey({ base, spaceId, keyId: String(args.flags.undo), token })
+        if (!answer.ok) { fail(ui.inviteRefused(spaceId, answer.reason)); process.exitCode = 1; return }
+        say(ui.keyUndone(spaceId, answer))
         return
     }
 

@@ -172,12 +172,18 @@ export const ui = {
         style.dim(`  ${CMD} invite ${spaceId} --revoke`)
     ].filter(line => line !== null).join('\n'),
 
+    keyUndone: (spaceId, report) => [
+        `took back key ${report.key?.id || ''} for ${style.cyan(spaceId)}${report.revoked ? '' : ' (it was already taken back)'}.`,
+        `restored ${report.restored.length}, made public again ${report.madePublic.length}, moved back ${report.movedBack.length}.`,
+        ...report.notUndone.map(row => style.yellow(`not undone: ${row.action} ${row.projectId} — ${row.why}`))
+    ].join('\n'),
+
     /** The space's key log (GET …/sync-keys/actions), newest first. */
     inviteActions: (spaceId, actions) => (actions.length
         ? [`what the keys of ${style.cyan(spaceId)} did:`, ...actions.map(row => {
             const when = new Date(row.at).toISOString().replace('T', ' ').slice(0, 16)
             const what = `${row.action}${row.projectId ? ` ${row.projectId}` : ''}${row.toSpaceId ? ` → ${row.toSpaceId}` : ''}`
-            const line = `  ${when}  ${String(row.keyLabel || row.keyId).slice(0, 28).padEnd(28)}  ${what}`
+            const line = `  ${when}  ${row.keyId}  ${String(row.keyLabel || '').slice(0, 28).padEnd(28)}  ${what}`
             return row.outcome === 'done' ? line : style.yellow(`${line}  refused: ${row.reason || ''}`)
         })].join('\n')
         : `no key has trashed, hidden, moved or restored anything in ${spaceId}.`),
@@ -502,7 +508,8 @@ export const ui = {
         `  --key KEY       the per-space sync key, minted on their machine with: ${CMD} invite SPACE`,
         `                  (${CMD} invite SPACE --manage: a key whose trash, hiding and moves of projects`,
         '                  made here reach the host too — the host\'s owner gives it on purpose;',
-        `                  ${CMD} invite SPACE --actions on the host lists what keys did)`,
+        `                  ${CMD} invite SPACE --actions on the host lists what keys did;`,
+        `                  ${CMD} invite SPACE --undo KEYID takes one back and undoes what it did)`,
         '  --at ADDRESS    the ADDRESS PIN — the name in --from stays, but the socket goes',
         '                  to this address instead of whatever it resolves to. For when',
         '                  --from names a machine this one can only reach somewhere else —',

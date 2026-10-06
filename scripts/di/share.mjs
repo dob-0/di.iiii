@@ -206,6 +206,12 @@ export const listKeyActions = async ({ base, spaceId, token }) => {
     return answer.ok ? { ok: true, actions: answer.payload?.actions || [] } : { ok: false, status: answer.status, reason: answer.payload?.error || answer.error || null }
 }
 
+/** Take a key back and undo what it did (SPEC_space_sync_keys.md §13.7). */
+export const undoKey = async ({ base, spaceId, keyId, token }) => {
+    const answer = await request(`${base}/api/spaces/${encodeURIComponent(spaceId)}/sync-keys/${encodeURIComponent(keyId)}/undo`, { method: 'POST', token })
+    return answer.ok ? { ok: true, ...answer.payload } : { ok: false, status: answer.status, reason: answer.payload?.error || answer.error || null }
+}
+
 /** Revoke a key minted by `di invite`. */
 export const listInvites = async ({ base, spaceId, token }) => {
     const answer = await request(`${base}/api/spaces/${encodeURIComponent(spaceId)}/sync-keys`, { token })

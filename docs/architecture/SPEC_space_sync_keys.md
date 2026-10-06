@@ -180,9 +180,12 @@ The four actions a `manage` key adds, each through the route a person uses (no n
    and leak nothing; one that can publish can expose work that was private on purpose. The space's front door cannot
    be made private (the route's own 409, unchanged).
 4. **Move a project between two spaces** — `POST /api/projects/:id/move`, only when the request proves `manage` on
-   **both** spaces: the bearer key is a `manage` key of one of them and the `X-Di-Sync-Key-Also` header carries a
-   `manage` key of the other. A key is scoped to one space by design (T2), so a move needs two keys, the same way it
-   needs the owner of both spaces from a person.
+   **both** spaces: the bearer key is a `manage` key of the space the project is in (the route's scope gate checks it
+   reaches that space) and the `X-Di-Sync-Key-Also` header carries a `manage` key of the space it goes to. A key is
+   scoped to one space by design (T2), so a move needs two keys, the same way it needs the owner of both spaces from a
+   person. Two more refusals keep a move from publishing anything: a key never passes `unpublish` (that changes the
+   space's front door), and never moves a project that is not private out of a space closed to visitors into one open
+   to every visitor (make it private first; the owner can do either).
 
 What a `manage` key can **never** do, on any space: purge or empty the trash; trash, rename, publish or change the
 settings of the space itself (label, isPublic, front door); mint, list or revoke keys or invites; add members or
@@ -255,12 +258,17 @@ each step is written to the action log. A purged project (after 30 days) cannot 
 |---|---|---|
 | T7 | A `manage` key leaks | Worst case on its one space: projects moved to the trash (≤ 10 an hour, ≤ 30 a day), or made private (≤ 30 an hour). Nothing is destroyed: the trash keeps everything 30 days. The owner sees it in the key's log and undoes it all with one action (§13.7), which also revokes the key. No reading of anything the `edit` key could not already read. |
 | T8 | Two `manage` keys of the same owner leak together (a follower's follows.json holds one per space) | Projects moved between those two spaces (≤ 10 an hour). Both spaces are the owner's; nothing leaves them, nothing becomes public, and §13.7 moves them back. |
-| T9 | A `manage` key used to publish or expose | Not possible: making a project public, the space's own isPublic and front door all stay owner-or-admin (`isSpaceOwnerOrAdminState`, unchanged). |
+| T9 | A `manage` key used to publish or expose | Making a project public, the space's own isPublic and front door all stay owner-or-admin (`isSpaceOwnerOrAdminState`, unchanged). A move into a space open to every visitor is refused unless the project is private; `unpublish` on a move is refused. **Limit:** a move between two closed spaces of the owner can show a project to the second space's members (shared-with accounts); both spaces are the owner's and both keys his, but that is wider than "never more public" in the strict sense — question for the auditor. |
 | T10 | A key (or a bearer token) mints a `manage` key, or upgrades itself | Mint with `manage` needs a signed-in session (§13.4); the scope is fixed at mint, there is no route that changes it. |
 | T11 | A second key smuggled in to widen a request | `X-Di-Sync-Key-Also` is read only when the bearer is a sync key, must itself be a valid `manage` key, is not added to the editor scope, and only the move route reads it. A bad one fails the request closed. |
 | T12 | Mass trash through many requests | Host-side counts per key (§13.5), from the persistent log; the follower's own 5-per-pass and never-empty guards on top. |
 
 ### 13.9 Open questions for the auditor and the owner
+
+- A move between two closed spaces with different members (T9 limit): refuse unless the project is private, or
+  accept because both spaces are the owner's? Accepted in this draft.
+- The per-key limits are counted under a per-key lock in one server process; two serverXR processes on one database
+  (never supported, PR #728) could each pass the last unit once.
 
 - The limits in §13.5 are a first guess sized to "a person tidying a space"; the owner may want them lower.
 - Restore was already open to every editor key before this (§13.2 item 2). Keep (it is the undo), or make it

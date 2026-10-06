@@ -1561,3 +1561,130 @@ describe('a follow never empties this copy, and keeps a project moved to a space
         expect(await live(hosting, 'leaves')).toBe(null)
     })
 })
+
+// SPEC_follow.md "With a manage key" / SPEC_space_sync_keys.md §13: a key the
+// host's owner minted as `manage` (from a signed-in session) carries a trash,
+// restore, making private and a move made on THIS install to the host. The
+// same changes with an ordinary key stay notes, as before.
+describe('with a manage key, a project\'s life made here reaches the host', () => {
+    const OTHER = 'second-room'
+    const EDIT_ROOM = 'edit-key-room'
+    let hosting = null
+    let following = null
+    const followers = {}
+    const warned = []
+    const { createAuthSessionValue } = require('../authSession.js')
+    // The host's owner, signed in: the only one who may mint a manage key.
+    const ownerCookie = `dii_serverxr_session=${createAuthSessionValue({ secret: 'test-session-secret', session: { subject: 'host-owner', label: 'Owner', role: 'admin', spaces: [], tokenVersion: 0 } }).value}`
+
+    const api = async (server, route, { method = 'GET', body = null } = {}) => {
+        const response = await fetch(`${server.baseUrl}${route}`, { method, headers: authHeaders, ...(body ? { body: JSON.stringify(body) } : {}) })
+        return { status: response.status, payload: await response.json().catch(() => null) }
+    }
+    const live = async (server, spaceId, id) => ((await api(server, `/api/spaces/${spaceId}/projects`)).payload?.projects || []).find(row => row.id === id) || null
+    const inTrash = async (server, spaceId, id) => ((await api(server, `/api/trash?space=${spaceId}`)).payload?.projects || []).some(row => row.id === id)
+    const mint = async (spaceId, manage) => {
+        const response = await fetch(`${hosting.baseUrl}/api/spaces/${spaceId}/sync-keys`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: ownerCookie },
+            body: JSON.stringify({ label: `follows ${spaceId}`, ...(manage ? { manage: true } : {}) })
+        })
+        expect(response.status).toBe(201)
+        return (await response.json()).token
+    }
+    const keys = {}
+    const startFollow = (spaceId) => {
+        followers[spaceId] = startFollowing({
+            local: side({ base: following.baseUrl, spaceId, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId, token: keys[spaceId] }),
+            log: { warn: message => warned.push(message), info: () => {} },
+            // As index.js answers them from follows.json: the two manage spaces follow the same host.
+            sameHostFollows: (other) => [SPACE, OTHER].includes(other) && other !== spaceId,
+            sameHostSides: () => [SPACE, OTHER].filter(other => other !== spaceId).map(other => ({ spaceId: other, token: keys[other] }))
+        })
+    }
+    // The follow runs in this test, not inside the following server, so the
+    // wake its own routes give it in an install (tellFollows -> nudgeFollow)
+    // is given here by hand, as in the block above.
+    const wakeAll = () => Object.values(followers).forEach(follower => follower.wake())
+
+    beforeAll(async () => {
+        hosting = await startServer({ requireAuth: true })
+        following = await startServer()
+        for (const spaceId of [SPACE, OTHER, EDIT_ROOM]) {
+            await createSpace(hosting, spaceId)
+            await createSpace(following, spaceId)
+        }
+        for (const server of [hosting, following]) {
+            for (const [spaceId, slug] of [[SPACE, 'keep-a'], [SPACE, 'keep-b'], [SPACE, 'trash-me'], [SPACE, 'hide-me'], [SPACE, 'move-me'], [OTHER, 'other-keep'], [EDIT_ROOM, 'edit-keep'], [EDIT_ROOM, 'edit-trash']]) {
+                expect((await api(server, `/api/spaces/${spaceId}/projects`, { method: 'POST', body: { slug, title: slug } })).status).toBe(201)
+            }
+        }
+        keys[SPACE] = await mint(SPACE, true)
+        keys[OTHER] = await mint(OTHER, true)
+        keys[EDIT_ROOM] = await mint(EDIT_ROOM, false)
+        for (const spaceId of [SPACE, OTHER, EDIT_ROOM]) startFollow(spaceId)
+        // Every follow has read its four lists once, and knows its key's scope.
+        await settle('all three follows running, with their key\'s scope', () => Object.values(followers).every(f => f.state.status === 'following' && f.state.key?.scope), { timeout: 20_000 })
+    })
+
+    afterAll(async () => {
+        for (const follower of Object.values(followers)) follower.stop()
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('each follow knows its key\'s scope, for di follows', () => {
+        expect(followers[SPACE].state.key.scope).toBe('manage')
+        expect(followers[EDIT_ROOM].state.key.scope).toBe('edit')
+    })
+
+    it('a project moved to the trash here goes to the host\'s trash — restorable there', async () => {
+        expect((await api(following, '/api/projects/trash-me', { method: 'DELETE' })).status).toBe(200)
+        wakeAll()
+        await settle('trashed on the host', async () => (await inTrash(hosting, SPACE, 'trash-me')) && !(await live(hosting, SPACE, 'trash-me')), { timeout: 15_000 })
+    })
+
+    it('taken out of the trash here, it comes back on the host', async () => {
+        expect((await api(following, '/api/projects/trash-me/restore', { method: 'POST' })).status).toBe(200)
+        wakeAll()
+        await settle('restored on the host', async () => Boolean(await live(hosting, SPACE, 'trash-me')), { timeout: 15_000 })
+        expect(await inTrash(hosting, SPACE, 'trash-me')).toBe(false)
+    })
+
+    it('made private here, it is private on the host', async () => {
+        // Settled first: the base must hold its visibility (the pass after it was paired).
+        await settle('the base knows hide-me\'s visibility', () => followers[SPACE].state.projects?.paired?.includes('hide-me'), { timeout: 15_000 })
+        expect((await api(following, '/api/projects/hide-me', { method: 'PATCH', body: { visibility: 'private' } })).status).toBe(200)
+        wakeAll()
+        await settle('private on the host', async () => (await live(hosting, SPACE, 'hide-me'))?.visibility === 'private', { timeout: 15_000 })
+    })
+
+    it('moved here between two spaces both followed with manage keys, it moves on the host too, and its log is not replayed', async () => {
+        const before = (await api(hosting, '/api/projects/move-me/ops')).payload.ops.length
+        expect((await api(following, '/api/projects/move-me/move', { method: 'POST', body: { toSpace: OTHER } })).status).toBe(200)
+        wakeAll()
+        await settle('moved on the host', async () => Boolean(await live(hosting, OTHER, 'move-me')) && !(await live(hosting, SPACE, 'move-me')), { timeout: 15_000 })
+        // An edit made here after the move crosses, in the new space's follow.
+        const version = (await api(following, '/api/projects/move-me/ops')).payload.latestVersion
+        const write = await api(following, '/api/projects/move-me/ops', { method: 'POST', body: { baseVersion: version, ops: [{ opId: 'after-move-here-1', type: 'addEntity', payload: { entity: { id: 'after-move-here', type: 'box' } } }] } })
+        expect(write.status).toBe(200)
+        wakeAll()
+        await settle('the edit after the move on the host', async () => ((await api(hosting, '/api/projects/move-me/ops')).payload.ops || []).some(op => op.opId === 'after-move-here-1'), { timeout: 15_000 })
+        expect((await api(hosting, '/api/projects/move-me/ops')).payload.ops.length).toBe(before + 1)
+    })
+
+    it('every one of them is in the host\'s key log', async () => {
+        const response = await fetch(`${hosting.baseUrl}/api/spaces/${SPACE}/sync-keys/actions`, { headers: { Cookie: ownerCookie } })
+        const actions = (await response.json()).actions.filter(row => row.outcome === 'done').map(row => `${row.action}:${row.projectId}`)
+        expect(actions).toEqual(expect.arrayContaining(['trash:trash-me', 'restore:trash-me', 'private:hide-me', 'move:move-me']))
+    })
+
+    it('with an edit key the same trash stays a note: the host keeps the project', async () => {
+        expect((await api(following, '/api/projects/edit-trash', { method: 'DELETE' })).status).toBe(200)
+        wakeAll()
+        await settle('the follow saying it', () => (followers[EDIT_ROOM].state.projects?.notes || []).some(note => note.includes('edit-trash') && /cannot trash on the host/.test(note)), { timeout: 15_000 })
+        expect(await live(hosting, EDIT_ROOM, 'edit-trash')).toBeTruthy()
+        expect(await inTrash(hosting, EDIT_ROOM, 'edit-trash')).toBe(false)
+        expect(Object.values(followers).every(f => !f.state.lastError)).toBe(true)
+    })
+})
