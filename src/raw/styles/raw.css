@@ -2620,6 +2620,9 @@
 
 .raw-graph-stage {
     position: relative;
+    /* The cards are the core: they paint over the wordmark and the zoom strip
+       (both z 0), never under them. */
+    z-index: 1;
     transform-origin: 0 0;
 }
 
@@ -4217,7 +4220,10 @@
     letter-spacing: -0.02em;
     color: rgba(255, 255, 255, 0.28);
     user-select: none;
-    z-index: 1200;
+    /* Chrome sits BEHIND the cards (the owner's screenshot, hayfilm MOCT: the
+       mark drew over a card). 0 = above the canvas ground, below .raw-graph-stage
+       (z 1). The windows and bars keep their own, higher layers. */
+    z-index: 0;
     text-decoration: none;
 }
 
