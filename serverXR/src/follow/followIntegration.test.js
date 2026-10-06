@@ -1343,3 +1343,199 @@ describe('an interrupted file transfer is resumed after a restart, and says what
         }
     })
 })
+
+// Item 6a (2026-10-07, SPEC_follow.md "A project trashed, restored, renamed or
+// moved"): what happens TO a project is not an op, and before this none of it
+// crossed. The host is a real one — auth on, the follower holding a per-space
+// sync key — because the host's own gates (trash, move and visibility are
+// owner-or-admin) are what decide which way each change may travel. Every wait
+// is a poll on the result, never a sleep; the times are printed at the end.
+describe('a project\'s life crosses a follow: trash, restore, rename, private, move', () => {
+    const OTHER = 'second-room'
+    let hosting = null
+    let following = null
+    const followers = []
+    const warned = []
+    const measured = []
+
+    const api = async (server, route, { method = 'GET', body = null } = {}) => {
+        const response = await fetch(`${server.baseUrl}${route}`, { method, headers: authHeaders, ...(body ? { body: JSON.stringify(body) } : {}) })
+        return { status: response.status, payload: await response.json().catch(() => null) }
+    }
+    const make = async (server, spaceId, slug, title) => {
+        expect((await api(server, `/api/spaces/${spaceId}/projects`, { method: 'POST', body: { slug, title } })).status).toBe(201)
+    }
+    const live = async (server, spaceId, id) => ((await api(server, `/api/spaces/${spaceId}/projects`)).payload?.projects || []).find(row => row.id === id) || null
+    const inTrash = async (server, spaceId, id) => ((await api(server, `/api/trash?space=${spaceId}`)).payload?.projects || []).some(row => row.id === id)
+    /** Time from the change on one side to it showing on the other, polled every 25 ms. */
+    const timed = async (kind, change, probe, { timeout = 15_000 } = {}) => {
+        const at = Date.now()
+        await change()
+        const result = await settle(kind, probe, { timeout, every: 25 })
+        measured.push({ kind, ms: Date.now() - at })
+        return result
+    }
+    const startFollow = async (spaceId) => {
+        const minted = await api(hosting, `/api/spaces/${spaceId}/sync-keys`, { method: 'POST', body: { label: `follows ${spaceId}` } })
+        expect(minted.status).toBe(201)
+        const follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId, token: minted.payload.token }),
+            log: { warn: message => warned.push(message), info: () => {} },
+            // Both spaces are followed here from this host (index.js answers this from follows.json).
+            sameHostFollows: (other) => [SPACE, OTHER].includes(other) && other !== spaceId
+        })
+        followers.push(follower)
+        return follower
+    }
+
+    beforeAll(async () => {
+        hosting = await startServer({ requireAuth: true })
+        following = await startServer()
+        for (const spaceId of [SPACE, OTHER]) {
+            await createSpace(hosting, spaceId)
+            await createSpace(following, spaceId)
+        }
+        // On both sides before the follows start: the base is what is live on both.
+        for (const server of [hosting, following]) {
+            await make(server, SPACE, 'keep-me', 'Keep me')
+            await make(server, SPACE, 'to-rename', 'Old title')
+            await make(server, SPACE, 'to-trash', 'To trash')
+            await make(server, SPACE, 'trash-here', 'Trash here')
+            await make(server, SPACE, 'to-hide', 'To hide')
+            await make(server, SPACE, 'to-move', 'To move')
+            await make(server, OTHER, 'other-keep', 'Other keep')
+        }
+        await startFollow(SPACE)
+        await startFollow(OTHER)
+        // Both follows have read the four lists once (their base is set).
+        await settle('both follows running', () => followers.every(f => f.state.status === 'following'), { timeout: 15_000 })
+    })
+
+    afterAll(async () => {
+        for (const follower of followers) follower.stop()
+        await Promise.all([hosting?.stop(), following?.stop()])
+        // The measured times, for SPEC_follow.md and the report.
+        console.log(`[follow-carry measured] ${JSON.stringify(measured)}`)
+    })
+
+    it('a rename on the host reaches this install', async () => {
+        const row = await timed('rename host->follower', () => api(hosting, '/api/projects/to-rename', { method: 'PATCH', body: { title: 'New title' } }),
+            async () => { const r = await live(following, SPACE, 'to-rename'); return r?.title === 'New title' ? r : false })
+        expect(row.title).toBe('New title')
+    })
+
+    it('a rename made here reaches the host', async () => {
+        const row = await timed('rename follower->host', () => api(following, '/api/projects/to-rename', { method: 'PATCH', body: { title: 'Mine now' } }),
+            async () => { const r = await live(hosting, SPACE, 'to-rename'); return r?.title === 'Mine now' ? r : false })
+        expect(row.title).toBe('Mine now')
+    })
+
+    it('a project trashed on the host goes to the trash here — restorable, never purged', async () => {
+        await timed('trash host->follower', () => api(hosting, '/api/projects/to-trash', { method: 'DELETE' }),
+            async () => (await inTrash(following, SPACE, 'to-trash')) && !(await live(following, SPACE, 'to-trash')))
+        // Still restorable here, with its row.
+        expect(await inTrash(following, SPACE, 'to-trash')).toBe(true)
+    })
+
+    it('taken out of the host\'s trash, it comes back here', async () => {
+        await timed('restore host->follower', () => api(hosting, '/api/projects/to-trash/restore', { method: 'POST' }),
+            async () => Boolean(await live(following, SPACE, 'to-trash')))
+        expect(await inTrash(following, SPACE, 'to-trash')).toBe(false)
+    })
+
+    it('a project trashed here stays on the host, and the follow says why', async () => {
+        expect((await api(following, '/api/projects/trash-here', { method: 'DELETE' })).status).toBe(200)
+        followers[0].wake()
+        await settle('the follow saying it', () => (followers[0].state.projects?.notes || []).some(note => note.includes('trash-here') && /cannot trash on the host/.test(note)), { timeout: 15_000 })
+        expect(await live(hosting, SPACE, 'trash-here')).toBeTruthy()
+        expect(await inTrash(following, SPACE, 'trash-here')).toBe(true)
+    })
+
+    it('a project made private on the host is private here', async () => {
+        const row = await timed('private host->follower', () => api(hosting, '/api/projects/to-hide', { method: 'PATCH', body: { visibility: 'private' } }),
+            async () => { const r = await live(following, SPACE, 'to-hide'); return r?.visibility === 'private' ? r : false })
+        expect(row.visibility).toBe('private')
+    })
+
+    it('a project the host moves between two spaces both followed here moves here too, and its log is not replayed', async () => {
+        const before = (await api(following, '/api/projects/to-move/ops')).payload.ops.length
+        await timed('move host->follower (both spaces followed)', () => api(hosting, '/api/projects/to-move/move', { method: 'POST', body: { toSpace: OTHER } }),
+            async () => Boolean(await live(following, OTHER, 'to-move')) && !(await live(following, SPACE, 'to-move')))
+        // An edit after the move crosses, in the new space's follow.
+        const version = (await api(hosting, '/api/projects/to-move/ops')).payload.latestVersion
+        const write = await api(hosting, '/api/projects/to-move/ops', { method: 'POST', body: { baseVersion: version, ops: [{ opId: 'after-move-1', type: 'addEntity', payload: { entity: { id: 'after-move', type: 'box' } } }] } })
+        expect(write.status).toBe(200)
+        await settle('an edit after the move', async () => ((await api(following, '/api/projects/to-move/ops')).payload.ops || []).some(op => op.opId === 'after-move-1'), { timeout: 15_000 })
+        const after = (await api(following, '/api/projects/to-move/ops')).payload.ops
+        // Exactly one op more: nothing from before the move was applied twice.
+        expect(after.length).toBe(before + 1)
+        expect(followers.every(f => !f.state.lastError)).toBe(true)
+    })
+
+    it('the host\'s space label still reaches this install (space settings, measured)', async () => {
+        await timed('space label host->follower', () => api(hosting, `/api/spaces/${SPACE}`, { method: 'PATCH', body: { label: 'Renamed room' } }),
+            async () => (await api(following, `/api/spaces/${SPACE}`)).payload?.space?.label === 'Renamed room')
+    })
+})
+
+describe('a follow never empties this copy, and keeps a project moved to a space it does not follow', () => {
+    const AWAY = 'not-followed-here'
+    let hosting = null
+    let following = null
+    let follower = null
+    const warned = []
+    const api = async (server, route, { method = 'GET', body = null } = {}) => {
+        const response = await fetch(`${server.baseUrl}${route}`, { method, headers: authHeaders, ...(body ? { body: JSON.stringify(body) } : {}) })
+        return { status: response.status, payload: await response.json().catch(() => null) }
+    }
+    const live = async (server, id) => ((await api(server, `/api/spaces/${SPACE}/projects`)).payload?.projects || []).find(row => row.id === id) || null
+
+    beforeAll(async () => {
+        hosting = await startServer({ requireAuth: true })
+        following = await startServer()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        await createSpace(hosting, AWAY)
+        for (const server of [hosting, following]) {
+            for (const slug of ['one', 'two', 'leaves']) {
+                expect((await api(server, `/api/spaces/${SPACE}/projects`, { method: 'POST', body: { slug, title: slug } })).status).toBe(201)
+            }
+        }
+        const minted = await api(hosting, `/api/spaces/${SPACE}/sync-keys`, { method: 'POST', body: { label: 'follows' } })
+        follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: hosting.baseUrl, spaceId: SPACE, token: minted.payload.token }),
+            log: { warn: message => warned.push(message), info: () => {} }
+        })
+        await settle('the follow running', () => follower.state.status === 'following', { timeout: 15_000 })
+    })
+
+    afterAll(async () => {
+        follower?.stop()
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('the host trashing every project this copy holds is not carried, and is said', async () => {
+        for (const id of ['one', 'two', 'leaves']) expect((await api(hosting, `/api/projects/${id}`, { method: 'DELETE' })).status).toBe(200)
+        await settle('the refusal said', () => (follower.state.projects?.notes || []).some(note => /not carried/.test(note)), { timeout: 15_000 })
+        for (const id of ['one', 'two', 'leaves']) expect(await live(following, id)).toBeTruthy()
+        expect(warned.filter(message => /would empty this copy/.test(message))).toHaveLength(1)
+    })
+
+    it('moved on the host to a space not followed here: kept here, said, and the follow does not fail on it', async () => {
+        expect((await api(hosting, '/api/projects/leaves/restore', { method: 'POST' })).status).toBe(200)
+        expect((await api(hosting, '/api/projects/leaves/move', { method: 'POST', body: { toSpace: AWAY } })).status).toBe(200)
+        await settle('the follow saying it left', () => (follower.state.projects?.notes || []).some(note => note.includes('leaves') && /left this space on the host/.test(note)), { timeout: 15_000 })
+        expect(await live(following, 'leaves')).toBeTruthy()
+        follower.wake()
+        await settle('a pass after', () => follower.state.status === 'following', { timeout: 15_000 })
+        expect(follower.state.lastError).toBe(null)
+        // Never made again on the host's space.
+        expect(await live(hosting, 'leaves')).toBe(null)
+    })
+})
+        expect(await live(following, 'one')).toBeTruthy()
+        expect(await live(following, 'two')).toBeTruthy()
+    })
+})

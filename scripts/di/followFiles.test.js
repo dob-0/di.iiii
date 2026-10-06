@@ -47,3 +47,15 @@ describe('di follows — files', () => {
         expect(text).toContain('files placed straight in the room itself are not carried yet')
     })
 })
+
+describe('di follows — a project\'s life', () => {
+    it('says what a follow did not carry about its projects, under the follow', () => {
+        const text = ui.followList(
+            { room: { remote: 'http://host:4000/serverXR' } },
+            [{ spaceId: 'room', status: 'following', carriedIn: 0, carriedOut: 0, streams: 1, lastError: null, projects: { carried: 1, notes: ['a left this space on the host (moved to another space, or purged from its trash) — kept here'] } }]
+        )
+        const lines = text.split('\n')
+        expect(lines).toHaveLength(2)
+        expect(lines[1].trim()).toBe('projects: a left this space on the host (moved to another space, or purged from its trash) — kept here')
+    })
+})

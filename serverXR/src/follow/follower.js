@@ -24,6 +24,7 @@ const { projectIdsFrom, sceneStream, streamsFor } = require('./streams')
 const { createAssetChase } = require('./assets')
 const { CONVERGE_CLIENT, DIRECTIONS, describeCounts, planConverge, readDocument } = require('./followConverge')
 const { planSettings, readSettings } = require('./followSettings')
+const { planProjects } = require('./followProjects')
 
 const FLOOR_MS = 700
 // Five seconds, not thirty. A followed space is a room with someone else in
@@ -209,7 +210,10 @@ const startCursorAt = async (side, stream, at) => {
     return { reachable: true, latestVersion: firstAfter ? Math.min(firstAfter.version - 1, now.latestVersion) : now.latestVersion }
 }
 
-const startFollowing = ({ local, remote, log = console, onState = () => {}, files = {}, saved = null, onSave = null, start = 'now', direction = null, onDirectionDone = null }) => {
+// `sameHostFollows(spaceId)`: does this install follow that (local) space from
+// the same host as this follow? Only then is a project the host moved between
+// the two moved here too (followProjects.js; index.js answers it).
+const startFollowing = ({ local, remote, log = console, onState = () => {}, files = {}, saved = null, onSave = null, start = 'now', direction = null, onDirectionDone = null, sameHostFollows = () => false }) => {
     // Where this follower had got to, kept on disk between runs (index.js,
     // followStore.js). Without it a restart forgot both cursors and every opId
     // it had carried, re-read both retained windows and re-sent whatever it no
@@ -223,6 +227,20 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     // one instead of refusing because the host's copy is empty (gap 5, 2026-10-05).
     // Saved, so a restart between the making and the filling does not forget.
     const seeded = new Set(Array.isArray(resume?.seeded) ? resume.seeded : [])
+    // A project's life (followProjects.js): the last state both sides agreed on
+    // per project (the base), the ids seen in both trashes, and the ids that
+    // left one side's space with no trash row. Saved, so a restart still knows
+    // which side changed.
+    let projectBase = resume?.projectBase && typeof resume.projectBase === 'object' ? resume.projectBase : null
+    let trashedBoth = Array.isArray(resume?.trashedBoth) ? resume.trashedBoth : []
+    let departed = resume?.departed && typeof resume.departed === 'object' ? resume.departed : {}
+    let projectNotes = []
+    let projectsCarried = 0
+    const projectSaid = new Set()
+    // A stream that starts from now part-way through a follow (a project the
+    // host moved into this space and this install moved after it): both copies
+    // already hold the same ops, carried under the other space's follow.
+    const fromNowAt = new Map()
     // START FROM NOW (audit F4, owner 2026-10-04). A follow with nothing saved
     // used to start both cursors at null, which reads each side's WHOLE log:
     // this install's years of history were replayed onto the host, and the
@@ -283,11 +301,12 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     // Saved only when it changed — a follow that cannot reach the other side
     // writes nothing — and never after stop(), so a stopped follow leaves its
     // directory alone.
-    let lastSaved = JSON.stringify(Object.fromEntries(cursors)) + seen.size + [...seeded].join()
+    const lifeKey = () => JSON.stringify([projectBase, trashedBoth, departed])
+    let lastSaved = JSON.stringify(Object.fromEntries(cursors)) + seen.size + [...seeded].join() + lifeKey()
     const save = () => {
         if (!onSave || stopped) return
-        const snapshot = { remote: remote.base, spaceId: local.spaceId, cursors: Object.fromEntries(cursors), seen: [...seen], seeded: [...seeded] }
-        const key = JSON.stringify(snapshot.cursors) + seen.size + snapshot.seeded.join()
+        const snapshot = { remote: remote.base, spaceId: local.spaceId, cursors: Object.fromEntries(cursors), seen: [...seen], seeded: [...seeded], projectBase, trashedBoth, departed }
+        const key = JSON.stringify(snapshot.cursors) + seen.size + snapshot.seeded.join() + lifeKey()
         if (key === lastSaved) return
         lastSaved = key
         Promise.resolve(onSave(snapshot)).catch((error) => log.warn?.(`[follow] ${local.spaceId}: could not save where it got to (${error?.message || error})`))
@@ -326,12 +345,20 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     const refreshStreams = async () => {
         const path = `/api/spaces/${encodeURIComponent(local.spaceId)}/projects`
         const trashPath = `/api/trash?space=${encodeURIComponent(local.spaceId)}`
-        const [here, there, hereTrash, thereTrash] = await Promise.all([
+        const readHere = () => Promise.all([
             request(local.url(path), { token: local.token, servername: local.servername, address: local.address }),
-            request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address }),
-            request(local.url(trashPath), { token: local.token, servername: local.servername, address: local.address }),
-            request(remote.url(trashPath), { token: remote.token, servername: remote.servername, address: remote.address })
+            request(local.url(trashPath), { token: local.token, servername: local.servername, address: local.address })
         ])
+        let [[here, hereTrash], [there, thereTrash]] = await Promise.all([readHere(), Promise.all([
+            request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address }),
+            request(remote.url(trashPath), { token: remote.token, servername: remote.servername, address: remote.address })
+        ])])
+        // A project's trash, restore, rename and visibility (followProjects.js).
+        // Guard 2: only when all four lists answered as lists — a list that could
+        // not be read is never taken for an empty one.
+        if (await carryProjectLife({ here, hereTrash, there, thereTrash })) {
+            [here, hereTrash] = await readHere()
+        }
         const localProjects = projectIdsFrom(here.payload)
         const remoteProjects = projectIdsFrom(there.payload)
         if (fromNow && fromNowPending === null && here.ok && there.ok) {
@@ -364,6 +391,9 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             const rows = Array.isArray(from.payload?.projects) ? from.payload.projects : []
             for (const projectId of projectIdsFrom(from.payload)) {
                 if (toProjects.includes(projectId)) continue
+                // Left one side's space with no trash row (moved, or purged):
+                // never made again on the other side (guard 4).
+                if (departed[projectId]) continue
                 if (trashed.has(projectId)) {
                     if (!refusedMake.has(`${toSide.base}|${projectId}|trash`)) {
                         refusedMake.add(`${toSide.base}|${projectId}|trash`)
@@ -380,6 +410,16 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 // Made EMPTY on the host from this side's listing: its content has to
                 // follow by comparison, whatever ops there are or are not.
                 if (made.ok && toSide === remote) seeded.add(`project:${projectId}`)
+                // Taken here: ids are global on an install, so the project is here
+                // already, in another space. The host moved it into this one.
+                if (made.status === 409 && toSide === local) {
+                    await moveHere(projectId)
+                    continue
+                }
+                if (made.status === 409 && toSide === remote) {
+                    sayProjectOnce(`${projectId}|taken-there`, `${projectId} is here and the host has that id in another space — not made there (a follow cannot move a project on the host)`)
+                    continue
+                }
                 if (!made.ok && made.status !== 409 && !refusedMake.has(`${toSide.base}|${projectId}`)) {
                     // Once, not every tick: a refusal repeats until someone fixes it.
                     refusedMake.add(`${toSide.base}|${projectId}`)
@@ -389,7 +429,124 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         }
         await makeMissing(there, localProjects, local, hereTrash)
         await makeMissing(here, remoteProjects, remote, thereTrash)
-        streams = streamsFor({ spaceId: local.spaceId, localProjects, remoteProjects })
+        // A departed project's log is not read: the host answers 403 for a
+        // project moved to a space the key cannot see, which used to fail the
+        // follow on every pass.
+        const kept = (id) => !departed[id]
+        streams = streamsFor({ spaceId: local.spaceId, localProjects: localProjects.filter(kept), remoteProjects: remoteProjects.filter(kept) })
+    }
+
+    /** Said once per distinct thing, in the log; `di follows` carries the current notes. */
+    const sayProjectOnce = (key, message) => {
+        if (projectSaid.has(key)) return
+        projectSaid.add(key)
+        log.warn?.(`[follow] ${local.spaceId}: ${message}`)
+    }
+
+    const listOf = (answer) => (answer.ok && Array.isArray(answer.payload?.projects) ? answer.payload.projects : null)
+
+    /**
+     * Carry what happened TO projects since the base (followProjects.js), each
+     * through the receiving install's own route. Returns true when this install
+     * changed, so the caller reads its lists again.
+     */
+    const carryProjectLife = async ({ here, hereTrash, there, thereTrash }) => {
+        const lists = { hereLive: listOf(here), hereTrash: listOf(hereTrash), thereLive: listOf(there), thereTrash: listOf(thereTrash) }
+        if (Object.values(lists).some(list => list === null)) return false
+        // A follow with no base yet (new, or older than this) starts from what is
+        // live on both sides now: nothing in the past is read as a change.
+        const first = projectBase === null
+        const plan = planProjects({
+            spaceId: local.spaceId,
+            base: projectBase || {},
+            trashedBoth,
+            departed,
+            here: { live: lists.hereLive, trash: lists.hereTrash },
+            there: { live: lists.thereLive, trash: lists.thereTrash }
+        })
+        const nextBase = plan.base
+        let changedHere = false
+        const keepOld = (id) => {
+            if (projectBase?.[id]) nextBase[id] = projectBase[id]
+            else delete nextBase[id]
+        }
+        const send = (to, url, method, body = null) => request(url, { method, token: to.token, servername: to.servername, address: to.address, ...(body ? { body } : {}) })
+        const failed = (answer) => `${answer.status || 'no answer'}: ${answer.payload?.error || answer.error || 'refused'}`
+
+        for (const id of plan.restoreHere) {
+            const answer = await send(local, local.url(`/api/projects/${encodeURIComponent(id)}/restore`), 'POST')
+            if (answer.ok) { changedHere = true; projectsCarried += 1; log.info?.(`[follow] ${local.spaceId}: ${id} was taken out of the host's trash — restored here`) }
+            else sayProjectOnce(`${id}|restore|${answer.status}`, `could not restore ${id} here (${failed(answer)})`)
+        }
+        for (const id of plan.trashHere) {
+            // The soft delete: the project goes to this install's trash, with its
+            // files and its log, for 30 days. Never a purge.
+            const answer = await send(local, local.url(`/api/projects/${encodeURIComponent(id)}`), 'DELETE')
+            if (answer.ok) { changedHere = true; projectsCarried += 1; log.info?.(`[follow] ${local.spaceId}: ${id} was trashed on the host — moved to the trash here (restorable)`) }
+            else {
+                keepOld(id)
+                sayProjectOnce(`${id}|trash|${answer.status}`, `could not move ${id} to the trash here (${failed(answer)})`)
+            }
+        }
+        for (const [to, list] of [[local, plan.patchHere], [remote, plan.patchThere]]) {
+            for (const { id, patch } of list) {
+                const answer = await send(to, to.url(`/api/projects/${encodeURIComponent(id)}`), 'PATCH', patch)
+                if (answer.ok) {
+                    if (to === local) changedHere = true
+                    projectsCarried += 1
+                    log.info?.(`[follow] ${local.spaceId}: ${id} — took ${to === local ? "the host's" : "this install's"} ${Object.keys(patch).join(', ')} ${to === local ? 'here' : 'to the host'}`)
+                } else {
+                    keepOld(id)
+                    sayProjectOnce(`${id}|patch|${to.base}|${JSON.stringify(patch)}`, `could not set ${id}'s ${Object.keys(patch).join(', ')} ${to === local ? 'here' : 'on the host'} (${failed(answer)})`)
+                }
+            }
+        }
+        if (plan.refused) sayProjectOnce(`refused|${plan.refused}`, plan.refused)
+        else projectSaid.forEach(key => { if (key.startsWith('refused|')) projectSaid.delete(key) })
+        for (const note of plan.notes) sayProjectOnce(`note|${note}`, note)
+        projectNotes = plan.notes
+        projectBase = nextBase
+        trashedBoth = plan.trashedBoth
+        departed = plan.departed
+        if (first) log.info?.(`[follow] ${local.spaceId}: ${Object.keys(nextBase).length} projects on both sides — their trash, renames and moves are carried from now`)
+        return changedHere
+    }
+
+    /**
+     * The host has this project in this space; here it is in another. If that
+     * other space is followed from the same host, the host moved it (it left
+     * there and arrived here), so it moves here the same way, through this
+     * install's own move route. Otherwise it is left where it is, and said.
+     */
+    const moveHere = async (projectId) => {
+        const found = await request(local.url(`/api/projects/${encodeURIComponent(projectId)}`), { token: local.token, servername: local.servername, address: local.address })
+        const from = found.ok ? found.payload?.project?.spaceId : null
+        if (!from || from === local.spaceId) {
+            sayProjectOnce(`${projectId}|taken-here`, `could not make room for ${projectId} here (that id is taken on this install)`)
+            return
+        }
+        if (!sameHostFollows(from)) {
+            sayProjectOnce(`${projectId}|unfollowed|${from}`, `${projectId} is in this space on the host, and here it is in ${from}, which is not followed from the same host — not moved`)
+            return
+        }
+        const moved = await request(local.url(`/api/projects/${encodeURIComponent(projectId)}/move`), {
+            method: 'POST', token: local.token, servername: local.servername, address: local.address, body: { toSpace: local.spaceId }
+        })
+        if (!moved.ok) {
+            // A front door here waits for the host's front door to reach that space.
+            sayProjectOnce(`${projectId}|move|${moved.status}|${moved.payload?.code || ''}`, `could not move ${projectId} here from ${from} (${moved.status || 'no answer'}: ${moved.payload?.error || moved.error || 'refused'})`)
+            return
+        }
+        projectsCarried += 1
+        // Both copies already hold its ops (carried under the other space's
+        // follow): start its log from now, never replay it (the receivers'
+        // dedupe window is 500 ops).
+        const key = `project:${projectId}`
+        cursors.delete(key)
+        fromNowAt.set(key, Date.now())
+        if (!fromNowPending) fromNowPending = new Set()
+        fromNowPending.add(key)
+        log.info?.(`[follow] ${local.spaceId}: ${projectId} was moved here from ${from} on the host — moved here the same way`)
     }
 
     // The space's own settings, host to this install (followSettings.js). Never
@@ -515,9 +672,10 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     const runStream = async (stream, { wait = false } = {}) => {
         // First start: begin at the latest version on both sides, replay nothing.
         if (fromNowPending?.has(stream.key) && !cursors.has(stream.key)) {
+            const at = fromNowAt.get(stream.key) ?? startedAt
             const [mine, theirsNow] = await Promise.all([
-                startCursorAt(local, stream, startedAt),
-                startCursorAt(remote, stream, startedAt)
+                startCursorAt(local, stream, at),
+                startCursorAt(remote, stream, at)
             ])
             if (!mine.reachable || !theirsNow.reachable) {
                 const status = !mine.reachable ? mine.status : theirsNow.status
@@ -527,6 +685,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 cursors.set(stream.key, { localVersion: mine.latestVersion, remoteVersion: theirsNow.latestVersion })
             }
             fromNowPending.delete(stream.key)
+            fromNowAt.delete(stream.key)
         }
         const cursor = cursorFor(stream)
 
@@ -682,7 +841,8 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
                 converged: started.converged + converged,
                 lastConvergeAt: converged ? Date.now() : started.lastConvergeAt,
                 resumed: started.resumed,
-                settings: { carried: settingsCarried, notes: settingsNotes }
+                settings: { carried: settingsCarried, notes: settingsNotes },
+                projects: { carried: projectsCarried, notes: projectNotes }
             }
         }
 

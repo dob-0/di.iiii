@@ -16,6 +16,18 @@ const { assetCacheControl, filterVisibleProjects } = require('../projectVisibili
 
 const withProjectLock = createKeyedLock()
 
+// A change to a project's row (title, slug, visibility, trash, its space) is
+// not an op, so nothing else tells a follow about it: wake this install's
+// follower for the space, and release any di.iiii parked on its log, so the
+// change crosses in about a second instead of after a 20 s park
+// (SPEC_follow.md "A project trashed, restored, renamed or moved"). Never fatal.
+const tellFollows = (...spaceIds) => {
+  for (const spaceId of new Set(spaceIds.filter(Boolean))) {
+    try { require('../follow').nudgeFollow(spaceId) } catch { /* no follows here */ }
+    try { require('../follow/waiters').noteChange(spaceId) } catch { /* nobody waiting */ }
+  }
+}
+
 function registerProjectRoutes(router, {
   config = {},
   appendProjectOps,
@@ -393,6 +405,7 @@ function registerProjectRoutes(router, {
         source: nextMeta.source
       }
       await writeProjectDocument(spacesDir, project.spaceId, project.projectId, document)
+      tellFollows(project.spaceId)
       res.json({ project: nextMeta })
     } catch (error) {
       next(error)
@@ -410,6 +423,7 @@ function registerProjectRoutes(router, {
       // sweep passes TRASH_TTL_MS. The response says when it stops being
       // recoverable, so a client can offer the undo rather than inventing one.
       const receipt = await deleteProjectWithIndex(project.spaceId, project.projectId)
+      tellFollows(project.spaceId)
       res.json({ ok: true, trashed: true, ...(receipt || {}) })
     } catch (error) {
       next(error)
@@ -450,6 +464,7 @@ function registerProjectRoutes(router, {
         unpublish: req.body?.unpublish === true,
         dryRun: req.body?.dryRun === true
       }))
+      if (!report?.dryRun) tellFollows(project.spaceId, toSpaceId)
       res.json({
         ok: true,
         ...report,
@@ -522,6 +537,7 @@ function registerProjectRoutes(router, {
       }
       await ensureSpaceWritable(trashed.spaceId)
       const project = await restoreProject(projectId)
+      tellFollows(trashed.spaceId)
       res.json({ project })
     } catch (error) {
       next(error)
