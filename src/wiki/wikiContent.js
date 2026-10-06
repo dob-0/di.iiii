@@ -751,6 +751,22 @@ export const WIKI_ARTICLES = [
         updated: '2026-09-28'
     },
     {
+        id: 'space-own-domain',
+        category: 'Spaces & access',
+        title: 'Your space on your own domain',
+        summary: 'Type a domain you own into the space, add one DNS record, and that domain shows your space. You keep editing on di.iiii.',
+        body: [
+            'Open Manage on your space card on the Spaces page (/studio) and choose Own domain. Type the domain, for example yokozo.xyz, and press Add domain. Only the space\'s owner (or an admin) can do this, and only for a public space.',
+            'The panel then shows the record to add at the company that runs your domain\'s DNS: a CNAME pointing your domain at domains.diiii.xyz, and sometimes a TXT record that proves the domain is yours. A bare domain (yokozo.xyz rather than www.yokozo.xyz) needs a DNS provider that can flatten a CNAME at the root, such as Cloudflare.',
+            'Nothing else is needed. di.iiii checks every two minutes and switches the domain on by itself once the record is in place and the certificate is issued; Check now asks straight away. A domain that never gets its record is let go after 7 days, so nobody can hold someone else\'s name.',
+            'Once it is live, yourdomain.com shows the space and yourdomain.com/<project> shows that project, exactly as on di.iiii, with your domain staying in the address bar. It is the same space, not a copy: what you change on di.iiii shows on your domain at once.',
+            'Editing stays on di.iiii. Opening the editor, the admin page or sign-in on your domain takes you to the same place on di.iiii, where your session lives.',
+            'Add www.yourdomain.com as a second domain if you want both. Remove takes a domain off the space at once. A space can have up to 3 domains.'
+        ],
+        tags: ['domain', 'custom domain', 'own domain', 'dns', 'publishing', 'owner', 'spaces'],
+        updated: '2026-10-07'
+    },
+    {
         id: 'space-ownership',
         category: 'Spaces & access',
         title: 'Who owns a space, and how to hand one over',

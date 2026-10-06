@@ -13,12 +13,12 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the desk's Touch page plays looks and the cue list
-- a followed space stays one space: no lost edits, copies agree, restarts resume
-- Studio stands inside a Geo
-- MOXIR: the area stage, the corrected hall, the realism renderer, and the audit fixes
-- MOXIR previs: the haze worked out from the hazers, real beam fall-off, real bloom
-- …and 27 more notes, each in full in PROGRESS.md
+- Nodes: one right region (row 3) and inside a node opens its substance (row 4)
+- apply-picture: the code's picture into every MOXIR version
+- systemd supervises the installed di (`di service install`), so it is restarted if it dies
+- What was built
+- MOXIR's lasers become 6 LaserCube Ultra MK2, off DMX; a room can be copied from another install
+- …and 31 more notes, each in full in PROGRESS.md
 
 Full detail: `PROGRESS.md`.
 

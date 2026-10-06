@@ -517,4 +517,53 @@ module.exports = [
     agent: false,
     note: "multipart upload (field \"bundle\"), not a plain JSON call. Needs a real signed-in account (or admin/unrestricted). Refuses to overwrite a space id that already exists here."
   },
+  {
+    route: "GET /api/spaces/:spaceId/domains",
+    summary: "list the space's own domains, whether each is live, and the DNS records still owed",
+    reach: "read",
+    role: "admin",
+    agent: true,
+    note: "owner-or-admin, even on a public space: the records owed are setup detail for the owner. `connected: false` means the platform is not connected to Cloudflare and nothing switches a domain on by itself."
+  },
+  {
+    route: "POST /api/spaces/:spaceId/domains",
+    summary: "give the space its own domain — registers it with Cloudflare; it goes live once its DNS points at di.iiii",
+    reach: "public",
+    role: "admin",
+    agent: false,
+    input: {
+      body: {
+        type: "object",
+        required: ["hostname"],
+        properties: {
+          hostname: { type: "string", description: "the domain, e.g. yokozo.xyz (an address is accepted and its host taken)" }
+        }
+      }
+    },
+    note: "owner-or-admin. Only a public space; at most 3 domains per space; di.iiii's own names are refused. Answers 201 with the records to add. Not on the agent door: it publishes a space on a new address."
+  },
+  {
+    route: "POST /api/spaces/:spaceId/domains/:hostname/check",
+    summary: "ask Cloudflare now whether the domain's DNS and certificate are in place",
+    reach: "private",
+    role: "admin",
+    agent: true,
+    input: {
+      body: {
+        type: "object",
+        properties: {
+          state: { type: "string", enum: ["active", "unmanaged"], description: "admin-only, and only when the platform is not connected to Cloudflare: mark the domain live by hand" }
+        }
+      }
+    },
+    note: "owner-or-admin. The server also checks every pending domain on its own every two minutes."
+  },
+  {
+    route: "DELETE /api/spaces/:spaceId/domains/:hostname",
+    summary: "take a domain off the space — it stops showing the space at once",
+    reach: "private",
+    role: "admin",
+    agent: false,
+    note: "owner-or-admin. Also removes the hostname at Cloudflare."
+  },
 ]

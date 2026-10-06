@@ -102,6 +102,10 @@ const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { registerPasswordAuthRoutes } = require('./routes/passwordAuthRoutes')
 const { registerDmRoutes } = require('./routes/dmRoutes')
+const { registerDomainRoutes } = require('./routes/domainRoutes')
+const domainStore = require('./domainStore')
+const { createCloudflareSaas } = require('./cloudflareSaas')
+const { createDomainService } = require('./domainService')
 const { registerChatRoutes } = require('./routes/chatRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
 const { registerLightingRoutes } = require('./routes/lightingRoutes')
@@ -1929,6 +1933,9 @@ registerOgRoutes(router, {
     return project
   },
   siteOrigin: process.env.SITE_ORIGIN || '',
+  // A space on its own domain: the crawler card for yokozo.xyz/ is the card of
+  // the space that domain shows, not the platform's.
+  spaceIdForHost: domainStore.findActiveSpaceIdForHost,
 })
 
 registerInscriptionRoutes(router, {
@@ -2083,6 +2090,27 @@ registerUserRoutes(router, {
 // Throttle asset uploads only (POST); asset reads on the same path stay free.
 router.use('/api/spaces/:spaceId/assets', (req, res, next) =>
   req.method === 'POST' ? uploadLimiter(req, res, next) : next())
+
+// A space on its own domain — docs/architecture/SPEC_space_own_domain.md.
+// The service is built once and shared with the sweep at startup.
+const customDomains = createDomainService({
+  cloudflare: createCloudflareSaas(config.customDomains.cloudflare),
+  // The CNAME target is ours too: a space must not claim domains.diiii.xyz.
+  platformSuffixes: [...config.customDomains.platformSuffixes, config.customDomains.cloudflare.cnameTarget].filter(Boolean),
+  maxDomains: config.customDomains.max,
+  maxPerSpace: config.customDomains.maxPerSpace,
+  pendingTtlMs: config.customDomains.pendingTtlMs,
+  logger
+})
+registerDomainRoutes(router, {
+  domains: customDomains,
+  findActiveSpaceIdForHost: domainStore.findActiveSpaceIdForHost,
+  loadSpaceMeta,
+  normalizeSpaceId,
+  requireSpaceOwnerOrAdminWrite,
+  platformOrigin: config.customDomains.platformOrigin,
+  config
+})
 
 const { replaceSceneAndBroadcast, restoreSnapshotAndBroadcast } = registerSpaceRoutes(router, {
   appendOpsHistory,
@@ -2802,6 +2830,16 @@ initStorage()
         .catch((error) => logger.warn('Failed to purge the trash', error))
     }
     setInterval(sweep, 1000 * 60 * 30)
+    // Domains waiting on DNS or a certificate switch on by themselves, and a
+    // domain nobody pointed at us is dropped after a week. Nothing to do when
+    // the platform is not connected to Cloudflare.
+    if (customDomains.connected) {
+      const sweepDomains = () => customDomains.sweep()
+        .then((done) => { if (done.activated || done.dropped) logger.info(`[domains] sweep: ${JSON.stringify(done)}`) })
+        .catch((error) => logger.warn('Failed to check custom domains', error))
+      sweepDomains()
+      setInterval(sweepDomains, config.customDomains.sweepMs).unref()
+    }
     // Daily snapshot of the open space — its scene and its project documents,
     // which is where the jam's contributions actually live. Vandalism
     // insurance (admin restores via POST /api/spaces/:id/restore-snapshot).

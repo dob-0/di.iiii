@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import SpaceDomainPanel from './SpaceDomainPanel.jsx'
 import { Box, Container } from '@mui/material'
 import useAuthSession, { announceSessionChanged } from '../../hooks/useAuthSession.js'
 import useDocumentTitle from '../../hooks/useDocumentTitle.js'
@@ -326,6 +327,8 @@ export default function SpaceHub() {
     const [deleting, setDeleting] = useState(null)
     const [trash, setTrash] = useState({ spaces: [], ttlMs: 0 })
     const [showTrash, setShowTrash] = useState(false)
+    // The space whose own-domain panel is open (SpaceDomainPanel), or null.
+    const [domainsSpaceId, setDomainsSpaceId] = useState(null)
     // 'grid' = the card shelves (default); 'list' = one dense row per space, which
     // is the only view that stays readable past ~20 spaces; 'map' = the spatial lens.
     const [viewMode, setViewMode] = useState(() => {
@@ -857,6 +860,13 @@ export default function SpaceHub() {
                         Invite links
                     </button>
                     <button
+                        className={`ssh-card-btn${domainsSpaceId === space.id ? ' ssh-card-btn--active' : ''}`}
+                        onClick={e => { e.stopPropagation(); setDomainsSpaceId(id => (id === space.id ? null : space.id)) }}
+                        title="Show this space on a domain of your own"
+                    >
+                        Own domain
+                    </button>
+                    <button
                         className={`ssh-card-btn${isLinking ? ' ssh-card-btn--active' : ''}`}
                         onClick={e => handleOpenLinker(space, e)}
                     >
@@ -1128,6 +1138,9 @@ export default function SpaceHub() {
                     </div>
                 </div>
             )}
+                {canManage(space) && domainsSpaceId === space.id && (
+                    <SpaceDomainPanel space={space} onClose={() => setDomainsSpaceId(null)} />
+                )}
             </>
         )
     }

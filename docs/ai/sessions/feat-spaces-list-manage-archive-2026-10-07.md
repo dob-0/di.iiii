@@ -1,0 +1,8 @@
+## 2026-10-07 — Manage in the spaces list view; archive a space
+
+Owed item 6b (OPEN_THREADS 10-06): "list view Manage; archive a space". Built on #789's branch, because Manage and the Delete/Trash UI live there.
+
+- **Data.** A space had no archive field: the 10-05 "archiving" (cascade, kids, place-test, what-we-have) archived the *projects* inside those spaces (`projects.state = 'archived'`), and #789's note says "Archive a space has no API". So the one new field is `spaces.archived_at INTEGER NULL` (`ensureColumn`, no SCHEMA_VERSION bump: an older build ignores it), exposed as `archivedAt` on the space and set by `PATCH /api/spaces/:id {archived: true|false}` (same owner/admin check as every other setting). Archiving keeps the first stamp; nothing is removed, the address still answers, projects are untouched. It is not the Trash (no 30 days).
+- **UI.** `SpaceHub.jsx`: Manage on every list row (opens the same panel the card shows — one `renderManage`, so the views cannot differ); Archive/Unarchive in that panel (not for the front room or a sandbox); an "Archived" chip next to the state chips (the arrange bar shows when something is archived). An archived space is in no default view, not in "All", not on the map, and not on a visitor's page. `spaceArrange.js`: `isArchived`, `filterSpaces`/`countStates` know it.
+- **Tests.** `serverXR/src/spaceArchiveContracts.test.js` (4: set, clear, keeps stamp, editor/anonymous refused); `SpaceHub.test.jsx` (5: list Manage, hidden by default, Archive, Archived filter + Unarchive, non-manager); `spaceArrange.test.js`.
+- **Owed.** Follow does not carry the flag yet (space settings are one of the 5 known follow gaps); a project's own archive is unchanged.

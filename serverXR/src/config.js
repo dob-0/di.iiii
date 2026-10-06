@@ -416,6 +416,31 @@ const config = {
     // or Reject — three days by default: someone has to open the file's
     // summary and think, which an hour does not allow.
     proposalTtlMs: Number(process.env.CONTENT_PROPOSAL_TTL_MS || 3 * 24 * 60 * 60 * 1000)
+  },
+  // A space on its own domain — docs/architecture/SPEC_space_own_domain.md.
+  // Without the three CLOUDFLARE_SAAS_* values a domain can still be saved, but
+  // nothing switches it on except an admin; the settings page says so.
+  customDomains: {
+    // Where editing lives. An editor path opened on a space's domain goes here.
+    platformOrigin: (process.env.PLATFORM_ORIGIN || '').trim().replace(/\/+$/, '') ||
+      (authHubConfig.url ? new URL(authHubConfig.url).origin : 'https://diiii.xyz'),
+    cloudflare: {
+      zoneId: (process.env.CLOUDFLARE_SAAS_ZONE_ID || '').trim(),
+      // SSL and Certificates: Edit on the platform zone, nothing else.
+      apiToken: (process.env.CLOUDFLARE_SAAS_API_TOKEN || '').trim(),
+      // The name a domain's CNAME points at (domains.diiii.xyz).
+      cnameTarget: (process.env.CLOUDFLARE_SAAS_CNAME_TARGET || '').trim().toLowerCase()
+    },
+    // Our own names; no space may claim one or anything under it.
+    platformSuffixes: [
+      'diiii.xyz', 'di-studio.xyz', 'thedi.studio', 'localhost',
+      ...String(process.env.PLATFORM_HOSTNAMES || '').split(',').map((h) => h.trim().toLowerCase()).filter(Boolean)
+    ],
+    // 100 hostnames are included in Cloudflare's Free plan; stay under it.
+    max: Number(process.env.DOMAINS_MAX) || 90,
+    maxPerSpace: Number(process.env.DOMAINS_PER_SPACE) || 3,
+    pendingTtlMs: Number(process.env.DOMAINS_PENDING_TTL_MS) || 7 * 24 * 60 * 60 * 1000,
+    sweepMs: Number(process.env.DOMAINS_SWEEP_MS) || 2 * 60 * 1000
   }
 }
 

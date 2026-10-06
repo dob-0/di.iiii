@@ -324,3 +324,54 @@ describe('a project the URL itself names', () => {
     expect(r.body).toContain('<meta property="og:title" content="WCC Exhibition">')
   })
 })
+
+// ── a space on its own domain (SPEC_space_own_domain.md) ──────────────────
+// yokozo.xyz/ is diiii.xyz/taronx. A link shared on the domain must preview as
+// the space, and advertise the domain, not the platform, even though
+// SITE_ORIGIN names the platform.
+describe('a card for a space on its own domain', () => {
+  const express = createRequire(import.meta.url)('express')
+  const { registerOgRoutes } = createRequire(import.meta.url)('./ogRoutes')
+
+  const app = (() => {
+    const a = express()
+    const router = express.Router()
+    registerOgRoutes(router, {
+      loadSpaceMeta: async (h) => (h === 'taronx' ? { id: 'taronx', label: 'Taron', isPublic: true } : null),
+      resolveProject: async (spaceId, slug) => (spaceId === 'taronx' && slug === 'instruments' ? { title: 'Instruments' } : null),
+      siteOrigin: 'https://diiii.xyz',
+      spaceIdForHost: (host) => (host === 'yokozo.xyz' ? 'taronx' : null),
+    })
+    a.use('/serverXR', router)
+    return a
+  })()
+
+  const hit = (path, host) => new Promise((resolve) => {
+    const server = app.listen(0, async () => {
+      const r = await fetch(`http://127.0.0.1:${server.address().port}${path}`, {
+        headers: { 'x-forwarded-host': host, 'x-forwarded-proto': 'https' },
+      })
+      const body = await r.text()
+      server.close(() => resolve({ status: r.status, body }))
+    })
+  })
+
+  it('previews the bare domain as the space, at the domain', async () => {
+    const r = await hit('/serverXR/og/', 'yokozo.xyz')
+    expect(r.body).toContain('<meta property="og:title" content="Taron">')
+    expect(r.body).toContain('rel="canonical" href="https://yokozo.xyz/"')
+    expect(r.body).not.toContain('diiii.xyz')
+  })
+
+  it('previews a project on the domain as that project', async () => {
+    const r = await hit('/serverXR/og/instruments', 'yokozo.xyz')
+    expect(r.body).toContain('<meta property="og:title" content="Instruments — Taron">')
+    expect(r.body).toContain('rel="canonical" href="https://yokozo.xyz/instruments"')
+  })
+
+  it('leaves the platform host as it was', async () => {
+    const r = await hit('/serverXR/og/', 'diiii.xyz')
+    expect(r.body).toContain('/suite/og-image.png')
+    expect(r.body).toContain('rel="canonical" href="https://diiii.xyz"')
+  })
+})
