@@ -1979,8 +1979,9 @@ describe('RawEditor: one bar (audit row 5)', () => {
         expect(within(trail).getByRole('button', { name: 'The night' }).getAttribute('aria-current')).toBe('location')
         expect(within(trail).getByRole('button', { name: '← Back' })).toBeTruthy()
         expect(bar.querySelector('.raw-bar-tools .raw-bar-back')).toBeNull()
-        // The strip under the bar carries only the meta line: no second name.
-        expect(container.querySelector('.raw-inside-crumb')).toBeNull()
+        // The strip under the bar carries only the meta line: its Back and
+        // name are the phone's copy (display: none above 700px, rawChrome.css).
+        expect(container.querySelector('.raw-inside-crumb').closest('.raw-inside-way--phone')).toBeTruthy()
         expect(container.querySelector('.raw-inside-meta')).toBeTruthy()
         fireEvent.click(within(trail).getByRole('button', { name: '← Back' }))
         expect(bar.querySelector('.raw-bar-trail')).toBeNull()

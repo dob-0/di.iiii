@@ -3431,12 +3431,14 @@ export default function RawEditor({
                     aria-label="Inside"
                     style={{ top: `${getScopeMarkerTop({ chromeVisible, workspaceTop })}px` }}
                 >
-                    {/* The bar already holds ← Back and the crumb (insideCells);
-                        the strip then carries only the meta line, so the name
-                        is written once (audit §3.6). With no bar and no header
-                        (zen) the way out lives here: it is never hidden. */}
-                    {!(showBar || chromeVisible) ? (
-                        <>
+                    {/* With the bar up, the bar holds ← Back and the crumb
+                        (insideTrail) and this strip only the meta line, so the
+                        name is written once (audit §3.6). A phone's bar has no
+                        room for them (390px: they ran into More), so there, and
+                        with no bar at all (zen), the way out lives here: it is
+                        never hidden. */}
+                    {showBar || !chromeVisible ? (
+                        <span className={showBar ? 'raw-inside-way raw-inside-way--phone' : 'raw-inside-way'}>
                             <button
                                 type="button"
                                 className="raw-inside-back"
@@ -3449,7 +3451,7 @@ export default function RawEditor({
                                 <button type="button" className="raw-inside-root" onClick={() => handleNavigateToScope(0)} title="All the way out">…</button>
                             )}
                             <span className="raw-inside-crumb">› <strong>{scopeNode?.label || 'a node'}</strong></span>
-                        </>
+                        </span>
                     ) : null}
                     <span className="raw-inside-meta" role="status" aria-live="polite">
                         {insideMetaLine({ node: scopeNode, reading: insideReading, childCount: childCounts.get(scopeNode?.id) || 0, kind: insideKind })}

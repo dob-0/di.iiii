@@ -34,7 +34,7 @@ describe('one bar (row 5)', () => {
 
     it('a phone keeps only ? and ⋯ on the right; the rest are rows of ⋯ (390px measured)', () => {
         const phone = css.slice(css.indexOf('@media (max-width: 699px)'))
-        expect(phone).toMatch(/button\.raw-cell\.raw-cell--wide-only,[^{]*\.raw-bar-account-slot,[^{]*\.sbar-switch \{ display: none; \}/)
+        expect(phone).toMatch(/button\.raw-cell\.raw-cell--wide-only,[^{]*\.raw-bar-account-slot,[^{]*\.sbar-switch,[^{]*\.raw-bar-trail \{ display: none; \}/)
         expect(phone).toMatch(/\.raw-overflow-narrow-only \{ display: block; \}/)
     })
 

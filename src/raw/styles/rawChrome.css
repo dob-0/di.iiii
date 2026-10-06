@@ -152,10 +152,18 @@
    off the edge) are rows of ⋯ there. */
 .raw-bar-account-slot { display: inline-flex; }
 
+/* Inside a node: on a computer ← Back and the crumb are in the bar (the trail)
+   and the strip under it keeps the meta line; on a phone the bar has no room
+   (the trail ran into More at 390px), so they stand in the strip instead. */
+.raw-inside-way { display: contents; }
+.raw-inside-way--phone { display: none; }
+
 @media (max-width: 699px) {
     .raw-editor-shell button.raw-cell.raw-cell--wide-only,
     .raw-editor-shell .raw-bar-account-slot,
-    .raw-editor-shell .sbar-switch { display: none; }
+    .raw-editor-shell .sbar-switch,
+    .raw-editor-shell .raw-bar-trail { display: none; }
+    .raw-inside-way--phone { display: contents; }
     .raw-topbar-overflow-menu .raw-overflow-narrow-only { display: block; }
     .raw-topbar-overflow-menu .raw-overflow-account { padding: var(--raw-s-2) var(--raw-s-3); }
 }
