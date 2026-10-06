@@ -1,4 +1,11 @@
-## 2026-10-05 — Nodes: one bar, tokens, opening view, one Help sheet
+## 2026-10-07 — Nodes: #778 reworked onto dev (one bar, tokens, opening view, Help) with #777's right region kept
+
+Branch `fix/raw-778-rework-2026-10-07`, from `cloud/raw-bar-tokens-2026-10-05` (PR #778) merged with `origin/dev` (which holds #777, the side column and the inside view). Supersedes #778.
+
+- Merge: Help is #778's one sheet, shown inside #777's right region (no modal). Inside a node the bar holds `← Back` and the crumb; the strip under it keeps the meta line only, and the whole strip only where there is no bar (zen). Summary tier and in-card edit both kept. Bar cells say scene / object.
+- (work in progress — the rest of this note is appended as the rework lands)
+
+### Carried from #778 (2026-10-05) — Nodes: one bar, tokens, opening view, one Help sheet
 
 Branch `cloud/raw-bar-tokens-2026-10-05`, built on `fix/raw-one-open-2026-10-05` (PR #773), from the approved audit (`docs/ai/audits/raw-ui-2026-10-05/audit.md`, build-plan rows 5–8). One commit per row.
 
