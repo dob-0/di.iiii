@@ -5,6 +5,7 @@ import { atmosphereOf } from '../../objectComponents/beamAir.js'
 import { getHazeField, hazeFogBase, setAtmosphere, subscribeHazeField } from '../../objectComponents/atmosphereStore.js'
 import { hazeUniformsFor } from '../../objectComponents/hazeUniforms.js'
 import { bloomOf } from './bloom.js'
+import { useHoldFrames } from '../../studio/utils/renderDemand.jsx'
 import { surfacesOf } from './surfaces.js'
 import SurfaceOverrides from './SurfaceOverrides.jsx'
 import BeamMirrors from './BeamMirrors.jsx'
@@ -85,7 +86,12 @@ export default function RenderSettingsEffect({ renderSettings }) {
     const surfaces = surfacesOf(renderSettings)
     // a room with a physical haze: what its openings show takes the haze's veil (NightOutside.jsx)
     const hazy = Boolean(renderSettings?.atmosphere?.haze)
-    if (!bloomOf(renderSettings) && !governed && !surfaces && !hazy) return null
+    const heavyRoom = Boolean(bloomOf(renderSettings) || governed || surfaces || hazy)
+    // Bloom, the haze's drifting eddies, the frame-rate governor and the scene walks draw and
+    // poll every frame: such a room keeps an on-demand loop running (owed: make each one declare
+    // itself, so only a really moving haze does).
+    useHoldFrames(heavyRoom, 'atmosphere')
+    if (!heavyRoom) return null
     return (
         <Suspense fallback={null}>
             {bloomOf(renderSettings) ? <HdrBloom renderSettings={renderSettings} /> : null}

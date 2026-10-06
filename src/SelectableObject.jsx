@@ -233,6 +233,7 @@ export default function SelectableObject({ obj, isSelected, isPrimarySelected = 
         const needsRotation = hasVectorExpressions(currentObj.rotationExpressions)
         const needsScale = hasVectorExpressions(currentObj.scaleExpressions)
         if (!needsPosition && !needsRotation && !needsScale) return
+        state.invalidate() // expressions are clocked: continuous under an on-demand loop
         const context = getExpressionContext(state.clock.getElapsedTime())
         if (needsPosition) {
             applyVectorExpressions(
