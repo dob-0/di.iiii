@@ -490,11 +490,11 @@ module.exports = [
     reach: "read",
     role: "admin",
     agent: true,
-    note: "owner-or-admin, even on a public space: the records owed are setup detail for the owner. `connected: false` means the platform is not connected to Cloudflare and nothing switches a domain on by itself."
+    note: "owner-or-admin, even on a public space: the records owed are setup detail for the owner. `provider` is `cloudflare`, `caddy` or null; `connected: false` means no provider is configured and nothing switches a domain on by itself."
   },
   {
     route: "POST /api/spaces/:spaceId/domains",
-    summary: "give the space its own domain — registers it with Cloudflare; it goes live once its DNS points at di.iiii",
+    summary: "give the space its own domain — registers it with the provider (Cloudflare, or Caddy by DNS); it goes live once its DNS points at di.iiii",
     reach: "public",
     role: "admin",
     agent: false,
@@ -511,7 +511,7 @@ module.exports = [
   },
   {
     route: "POST /api/spaces/:spaceId/domains/:hostname/check",
-    summary: "ask Cloudflare now whether the domain's DNS and certificate are in place",
+    summary: "check now whether the domain's DNS (and, with Cloudflare, its certificate) is in place",
     reach: "private",
     role: "admin",
     agent: true,
@@ -519,7 +519,7 @@ module.exports = [
       body: {
         type: "object",
         properties: {
-          state: { type: "string", enum: ["active", "unmanaged"], description: "admin-only, and only when the platform is not connected to Cloudflare: mark the domain live by hand" }
+          state: { type: "string", enum: ["active", "unmanaged"], description: "admin-only, and only when no provider (Cloudflare or Caddy) is configured: mark the domain live by hand" }
         }
       }
     },
@@ -531,6 +531,6 @@ module.exports = [
     reach: "private",
     role: "admin",
     agent: false,
-    note: "owner-or-admin. Also removes the hostname at Cloudflare."
+    note: "owner-or-admin. With Cloudflare, also removes the hostname there."
   },
 ]
