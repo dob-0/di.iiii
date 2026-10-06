@@ -3390,6 +3390,184 @@ describe('sign in with Telegram', () => {
     })
 })
 
+// di.bo acting AS a team member: POST /api/auth/telegram/act-token and what
+// the token it returns can and cannot do. Owner's decision 2026-10-07. Every
+// check runs against a real spawned server with auth ON, because the claim
+// being tested ("the person's own access, never more") is about requests.
+describe('di.bo acting as a person (act-token)', () => {
+    const SECRET = 'test-bot-secret'
+    const withTelegram = { TELEGRAM_LOGIN_SECRET: SECRET, OAUTH_CALLBACK_BASE_URL: 'https://example.test' }
+    const PERSON = 'tg-emilya'
+    const TG_ID = '207260649'
+
+    const readRows = (server, sql, ...params) => {
+        const db = new DatabaseSync(path.join(server.dataRoot, 'di.db'), { readOnly: true })
+        try { return db.prepare(sql).all(...params) } finally { db.close() }
+    }
+    const writeDb = (server, sql, ...params) => {
+        const db = new DatabaseSync(path.join(server.dataRoot, 'di.db'))
+        try { return db.prepare(sql).run(...params) } finally { db.close() }
+    }
+    // A person who signed in with Telegram once, reaching one space.
+    const setup = async () => {
+        const server = await startServer({ requireAuth: true, extraEnv: withTelegram })
+        await createSpaceWithScene(server, { spaceId: 'tg-mine', scene: { objects: [{ id: 'floor' }], assets: [] } })
+        await createSpaceWithScene(server, { spaceId: 'tg-other', scene: { objects: [{ id: 'floor' }], assets: [] } })
+        const now = Date.now()
+        writeDb(server, `
+            INSERT INTO users (id, provider, provider_id, email, display_name, role, spaces, created_at, updated_at)
+            VALUES (?, 'telegram', ?, NULL, 'Emilya', 'editor', ?, ?, ?)
+        `, PERSON, TG_ID, JSON.stringify(['tg-mine']), now, now)
+        return server
+    }
+    const mint = (server, telegramId = TG_ID, headers = { 'x-telegram-login-secret': SECRET }) => fetch(`${server.baseUrl}/api/auth/telegram/act-token`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...headers },
+        body: JSON.stringify({ telegramId })
+    })
+    const as = (token, extra = {}) => ({ Authorization: `Bearer ${token}`, ...extra })
+    const json = { 'Content-Type': 'application/json' }
+
+    it('refuses anyone who cannot present the bot secret', async () => {
+        const server = await setup()
+        for (const headers of [{}, { 'x-telegram-login-secret': 'wrong' }, { 'x-telegram-login-secret': '' }]) {
+            const res = await mint(server, TG_ID, headers)
+            expect(res.status).toBe(401)
+            expect(await res.text()).not.toContain('dii_tgact_')
+        }
+        expect((await mint(server, '12a')).status).toBe(400)
+    })
+
+    it('answers 404 for a Telegram id with no account, and never creates one', async () => {
+        const server = await setup()
+        const before = readRows(server, 'SELECT COUNT(*) AS n FROM users')[0].n
+        const res = await mint(server, '555000111')
+        expect(res.status).toBe(404)
+        expect(await res.json()).toEqual({ bound: false })
+        expect(readRows(server, 'SELECT COUNT(*) AS n FROM users')[0].n).toBe(before)
+        expect(readRows(server, "SELECT COUNT(*) AS n FROM users WHERE provider = 'telegram' AND provider_id = '555000111'")[0].n).toBe(0)
+        expect(readRows(server, 'SELECT COUNT(*) AS n FROM telegram_act_tokens')[0].n).toBe(0)
+    })
+
+    it('acts as the bound person, inside their spaces only, and every write says di.bo', async () => {
+        const server = await setup()
+        const res = await mint(server)
+        expect(res.status).toBe(201)
+        const body = await res.json()
+        expect(body.token.startsWith('dii_tgact_')).toBe(true)
+        expect(body).toMatchObject({ userId: PERSON, role: 'editor' })
+        // 15 minutes, give or take the request.
+        expect(Math.abs(body.expiresAt - (Date.now() + 15 * 60 * 1000))).toBeLessThan(10_000)
+        // Only the hash is kept.
+        const secret = body.token.split('.').slice(1).join('.')
+        expect(JSON.stringify(readRows(server, 'SELECT * FROM telegram_act_tokens'))).not.toContain(secret)
+
+        // A read in their space works; the same read outside it does not.
+        const mine = await fetch(`${server.baseUrl}/api/spaces/tg-mine/projects`, { headers: as(body.token) })
+        expect(mine.status).toBe(200)
+        expect(mine.headers.get('set-cookie')).toBeFalsy()
+        const theirs = await fetch(`${server.baseUrl}/api/spaces/tg-other/projects`, { headers: as(body.token) })
+        expect(theirs.status).toBe(403)
+        const writeOutside = await fetch(`${server.baseUrl}/api/spaces/tg-other/projects`, {
+            method: 'POST', headers: as(body.token, json), body: JSON.stringify({ title: 'Not mine', slug: 'not-mine' })
+        })
+        expect(writeOutside.status).toBe(403)
+
+        // A write inside it is stamped as theirs, through di.bo.
+        const scene = await (await fetch(`${server.baseUrl}/api/spaces/tg-mine/scene`, { headers: as(body.token) })).json()
+        const ops = await fetch(`${server.baseUrl}/api/spaces/tg-mine/ops`, {
+            method: 'POST',
+            headers: as(body.token, json),
+            body: JSON.stringify({ baseVersion: scene.version, ops: [{ opId: 'via-dibo-1', type: 'addObject', payload: { object: { id: 'dibo-cube' } } }] })
+        })
+        expect(ops.status).toBe(200)
+        const rows = readRows(server, "SELECT actor, actor_type, actor_label FROM space_ops WHERE space_id = 'tg-mine' AND data LIKE '%via-dibo-1%'")
+        expect(rows).toEqual([{ actor: PERSON, actor_type: 'di.bo', actor_label: 'Emilya via di.bo' }])
+
+        // And the server's log has one line per write: who, through what, where,
+        // how it ended. Written on the response's finish, so it can land a beat
+        // after the client has the answer: wait for both lines, briefly.
+        const writeLines = () => server.logs().split('\n').filter((l) => l.includes('[act-token] write'))
+        for (let i = 0; i < 40 && writeLines().length < 2; i += 1) await wait(50)
+        const logged = writeLines().map((l) => JSON.parse(l.slice(l.indexOf('{'))))
+        expect(logged).toContainEqual(expect.objectContaining({ subject: PERSON, actor: 'di.bo', method: 'POST', path: '/api/spaces/tg-mine/ops', status: 200 }))
+        expect(logged).toContainEqual(expect.objectContaining({ subject: PERSON, method: 'POST', path: '/api/spaces/tg-other/projects', status: 403 }))
+    })
+
+    it('never turns into a browser session, even on a route that re-issues one', async () => {
+        const server = await setup()
+        const { token } = await (await mint(server)).json()
+        // Creating a space grants it to the creator and, for a browser, re-mints
+        // the cookie. For di.bo's errand the grant lands and the cookie does not.
+        const created = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST', headers: as(token, json), body: JSON.stringify({ label: 'Made via di.bo', slug: 'tg-made' })
+        })
+        expect(created.status).toBe(201)
+        expect(created.headers.get('set-cookie')).toBeFalsy()
+        expect(JSON.parse(readRows(server, 'SELECT spaces FROM users WHERE id = ?', PERSON)[0].spaces)).toContain('tg-made')
+    })
+
+    it('refuses the routes a borrowed key must never reach, whatever the person\'s role', async () => {
+        const server = await setup()
+        // Even an admin's token is refused here: the list is about the key, not the role.
+        writeDb(server, "UPDATE users SET role = 'admin' WHERE id = ?", PERSON)
+        const { token } = await (await mint(server)).json()
+        const refused = [
+            ['POST', '/api/auth/telegram/act-token', { telegramId: TG_ID }, { 'x-telegram-login-secret': SECRET }],
+            ['POST', '/api/auth/telegram/login-link', { telegramId: TG_ID }, { 'x-telegram-login-secret': SECRET }],
+            ['GET', '/api/auth/session'],
+            ['DELETE', '/api/auth/session'],
+            ['GET', '/api/users'],
+            ['PATCH', `/api/users/${PERSON}`, { role: 'admin' }],
+            ['POST', '/api/spaces/tg-mine/sync-keys', { label: 'x' }],
+            ['GET', '/api/spaces/tg-mine/sync-keys'],
+            ['POST', '/api/integrations/ai/connect', { apiKey: 'sk-x' }],
+            ['GET', '/api/dm/devices'],
+            ['POST', '/api/approvals/decision', {}],
+            ['POST', '/api/invites/redeem', { token: 'dii_invite_x.y' }],
+            ['PATCH', '/api/spaces/tg-mine', { ownerUserId: PERSON }],
+            ['PATCH', '/api/spaces/tg-mine', { trustedUserIds: [] }]
+        ]
+        for (const [method, route, payload, extra = {}] of refused) {
+            const res = await fetch(`${server.baseUrl}${route}`, {
+                method,
+                headers: as(token, { ...json, ...extra }),
+                ...(payload ? { body: JSON.stringify(payload) } : {})
+            })
+            expect(res.status, `${method} ${route}`).toBe(403)
+            expect((await res.json()).error, `${method} ${route}`).toBe('not_through_di_bo')
+        }
+        expect(readRows(server, 'SELECT COUNT(*) AS n FROM telegram_act_tokens')[0].n, 'no second token was minted').toBe(1)
+        expect(readRows(server, 'SELECT COUNT(*) AS n FROM space_sync_keys')[0].n).toBe(0)
+        // A plain rename is the person's own business and still goes through.
+        const renamed = await fetch(`${server.baseUrl}/api/spaces/tg-mine`, {
+            method: 'PATCH', headers: as(token, json), body: JSON.stringify({ label: 'Renamed via di.bo' })
+        })
+        expect(renamed.status).toBe(200)
+    })
+
+    it('answers 401 to a forged, expired or signed-out token — never a guest', async () => {
+        const server = await setup()
+        const forged = await fetch(`${server.baseUrl}/api/spaces/tg-mine/projects`, { headers: as('dii_tgact_deadbeefdeadbeef.forged') })
+        expect(forged.status).toBe(401)
+        expect((await forged.json()).error).toBe('act_token_invalid')
+
+        const expiring = await (await mint(server)).json()
+        writeDb(server, 'UPDATE telegram_act_tokens SET expires_at = ? WHERE user_id = ?', Date.now() - 1000, PERSON)
+        const expired = await fetch(`${server.baseUrl}/api/spaces/tg-mine/projects`, { headers: as(expiring.token) })
+        expect(expired.status).toBe(401)
+        expect(expired.headers.get('set-cookie'), 'a dead token must not be handed a guest session').toBeFalsy()
+
+        // Signing out everywhere (the person's own logout bumps token_version)
+        // ends di.bo's token the same moment it ends their cookies.
+        const live = await (await mint(server)).json()
+        expect((await fetch(`${server.baseUrl}/api/spaces/tg-mine/projects`, { headers: as(live.token) })).status).toBe(200)
+        const logout = await fetch(`${server.baseUrl}/api/auth/session`, { method: 'DELETE', headers: { Cookie: mintSessionCookie(PERSON) } })
+        expect(logout.status).toBe(204)
+        expect((await fetch(`${server.baseUrl}/api/spaces/tg-mine/projects`, { headers: as(live.token) })).status).toBe(401)
+    })
+})
+
 // The contents of a space, for whoever is allowed to look.
 //
 // Measured on the owner's own tier on 2026-09-10: 22 spaces, 201 projects, and

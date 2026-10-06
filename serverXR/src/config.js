@@ -381,14 +381,20 @@ const config = {
     // di.bo proves who someone is (Telegram delivered a message to them) and
     // asks us for a one-time link. `loginSecret` is what lets it ask — it is a
     // shared secret with the bot and NOTHING else, deliberately not the admin
-    // API token, so a compromised bot cannot also write spaces.
+    // API token, so a compromised bot cannot act as the platform. It can act as
+    // any Telegram-bound PERSON, within their own access (sign-in links, and
+    // the act tokens of docs/architecture/TELEGRAM_ACT_TOKEN.md).
     //
     // botUsername is advertised so a client can offer "open di.bo" without
     // hardcoding the bot's name; empty just means the button names no bot.
     telegram: {
       loginSecret: (process.env.TELEGRAM_LOGIN_SECRET || '').trim(),
       botUsername: (process.env.TELEGRAM_BOT_USERNAME || '').trim().replace(/^@/, ''),
-      enabled: Boolean((process.env.TELEGRAM_LOGIN_SECRET || '').trim())
+      enabled: Boolean((process.env.TELEGRAM_LOGIN_SECRET || '').trim()),
+      // How long a di.bo act token lives (POST /api/auth/telegram/act-token).
+      // Minutes, 15 by default; telegramActTokenStore clamps it to 1..60 so a
+      // typo in an env file can never mint a day-long key.
+      actTokenTtlMs: (Number(process.env.TELEGRAM_ACT_TOKEN_TTL_MINUTES) || 15) * 60 * 1000
     }
   },
   // Human-approval gate for admin-level writes (see approvalGate.js). Unset

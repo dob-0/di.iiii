@@ -310,7 +310,7 @@ const registerAuthRoutes = (router, {
   // Why it exists: the people who need it most cannot hold a Google account.
   // A workshop that shares one login on six laptops has no way to say who
   // made what, which is exactly what happened at the Dilijan camp.
-  const telegram = oauth.telegram || { enabled: false, loginSecret: '', botUsername: '' }
+  const telegram = oauth.telegram || { enabled: false, loginSecret: '', botUsername: '', actTokenTtlMs: 0 }
 
   // Constant-time, and length-safe: timingSafeEqual throws on a length
   // mismatch, which would itself be a timing signal.
@@ -412,6 +412,51 @@ const registerAuthRoutes = (router, {
           role: user.role,
           everything,
           spaces
+        })
+      } catch (error) { next(error) }
+    })
+
+    // di.bo acting AS a team member — bot-only, and the one place a chat can
+    // become a write. Owner's decision 2026-10-07 ("go build all"), which is
+    // the decision the whoami note above was waiting for.
+    //
+    // It differs from login-link in the two ways that matter:
+    //   - it answers ONLY for a Telegram id already bound to an account, and
+    //     never creates one (login-link's callback does: upsertUser);
+    //   - what it returns is a short bearer marked as di.bo's, not a browser
+    //     session, so every write it makes says it came through di.bo and
+    //     actTokenGate.js keeps it away from accounts, keys and approvals.
+    // The scope is the person's own, read fresh on every request — never more.
+    router.post('/api/auth/telegram/act-token', async (req, res, next) => {
+      try {
+        if (!secretMatches(req.get('x-telegram-login-secret'))) {
+          return res.status(401).json({ error: 'auth_required' })
+        }
+        const telegramId = String(req.body?.telegramId || '').trim()
+        if (!/^\d{1,20}$/.test(telegramId)) {
+          return res.status(400).json({ error: 'A numeric Telegram id is required.' })
+        }
+        const user = findUser('telegram', telegramId)
+        // A 404 here, unlike whoami's 200: whoami answers a question, this is a
+        // request for a key, and there is nothing to issue it for. The bot's
+        // answer to the person is /login.
+        if (!user) return res.status(404).json({ bound: false })
+
+        const { mintActToken } = require('../telegramActTokenStore')
+        const { token, id, expiresAt } = mintActToken({
+          userId: user.id,
+          telegramId,
+          label: user.display_name || user.email || user.id,
+          tokenVersion: user.tokenVersion,
+          ttlMs: telegram.actTokenTtlMs
+        })
+        logger.info(`[act-token] minted ${JSON.stringify({ tokenId: id, subject: user.id, actor: 'di.bo', expiresAt })}`)
+        res.status(201).json({
+          token,
+          expiresAt,
+          userId: user.id,
+          role: user.role,
+          note: 'Send as Authorization: Bearer <token>. It acts as this person, with their own access; account, key and approval routes refuse it.'
         })
       } catch (error) { next(error) }
     })

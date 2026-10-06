@@ -113,6 +113,45 @@ module.exports = [
     agent: false
   },
   {
+    route: "POST /api/auth/telegram/login-link",
+    summary: "di.bo only: mint a one-time, 10-minute sign-in link for a Telegram id (the callback creates the account if it is new)",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: "guarded by the x-telegram-login-secret header, not by a role; registered only when TELEGRAM_LOGIN_SECRET is set."
+  },
+  {
+    route: "POST /api/auth/telegram/whoami",
+    summary: "di.bo only: whether a Telegram id is bound to an account, and the spaces that account reaches — a lookup, never a login",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: "guarded by the x-telegram-login-secret header; registered only when TELEGRAM_LOGIN_SECRET is set."
+  },
+  {
+    route: "GET /api/auth/telegram/callback",
+    summary: "a person opens their Telegram sign-in link here; the single-use token becomes a session",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "a browser redirect, not an API. Every failure (unknown, expired, spent, forged) lands on the same ?auth=error."
+  },
+  {
+    route: "POST /api/auth/telegram/act-token",
+    summary: "di.bo only: a 15-minute bearer (dii_tgact_) that acts as the account already bound to a Telegram id — that person's own role and spaces, marked actor di.bo",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    input: {
+      body: {
+        type: "object",
+        required: ["telegramId"],
+        properties: { telegramId: { type: "string", pattern: "^[0-9]{1,20}$" } }
+      }
+    },
+    note: "guarded by the x-telegram-login-secret header. 404 {bound:false} for an id with no account — it never creates one. The token is refused on /api/auth/*, /api/users*, sync keys, integrations, DMs, approvals, invite redeem and space ownership (serverXR/src/actTokenGate.js); every write it makes is logged and stamped 'via di.bo'."
+  },
+  {
     route: "POST /api/invites/redeem",
     summary: "redeem an invite token, adding the invited space to the caller's own session scope",
     reach: "private",
