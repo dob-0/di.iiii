@@ -106,6 +106,25 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_sync_keys_space ON space_sync_keys(space_id);
 
+  -- What a sync key did to projects (SPEC_space_sync_keys.md §13.6): every
+  -- manage action it attempted, done or refused, and every restore. The host's
+  -- per-key limits are counted from here, so a restart does not reset them.
+  -- No foreign key: the log outlives a revoked key, and is kept for the owner.
+  CREATE TABLE IF NOT EXISTS sync_key_actions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key_id TEXT NOT NULL,
+    key_label TEXT NOT NULL DEFAULT '',
+    space_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    project_id TEXT,
+    to_space_id TEXT,
+    outcome TEXT NOT NULL,
+    reason TEXT,
+    at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_sync_key_actions_key ON sync_key_actions(key_id, action, at);
+  CREATE INDEX IF NOT EXISTS idx_sync_key_actions_space ON sync_key_actions(space_id, at);
+
   CREATE TABLE IF NOT EXISTS space_invites (
     id TEXT PRIMARY KEY,
     space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
@@ -540,6 +559,8 @@ function initDb(dbPath) {
 
   db.exec(SCHEMA)
   ensureColumn(db, 'ai_chats', 'claude_session_id', 'TEXT')
+  // A sync key's scope: 'edit' (every key before 2026-10-07) or 'manage' (SPEC_space_sync_keys.md §13).
+  ensureColumn(db, 'space_sync_keys', 'scope', "TEXT NOT NULL DEFAULT 'edit'")
   ensureColumn(db, 'spaces', 'is_public', 'INTEGER NOT NULL DEFAULT 0')
   ensureColumn(db, 'spaces', 'kind', "TEXT NOT NULL DEFAULT 'normal'")
   ensureColumn(db, 'spaces', 'owner_user_id', 'TEXT')

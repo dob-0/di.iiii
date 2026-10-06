@@ -20,9 +20,13 @@
  * What may travel which way is set by the host's own gates, not by this file:
  * a sync key is an editor (SPEC_space_sync_keys.md T2), and on the host
  * trashing a project, moving it and changing who sees it are owner-or-admin
- * (index.js, projectRoutes.js). So those cross host -> this install only; a
- * rename crosses both ways. Everything this install does to itself goes
- * through its own routes: a trash is the soft delete, never a purge.
+ * (index.js, projectRoutes.js). So with an ordinary (`edit`) key those cross
+ * host -> this install only; a rename crosses both ways. A key the space's
+ * owner minted as `manage` (§13) passes the host's gate for a trash, a
+ * restore and making private, so with `manageThere` those cross this install
+ * -> host too, under the same guards mirrored; making public never does.
+ * Everything is done through each side's own routes: a trash is the soft
+ * delete, never a purge.
  *
  * The guards (SPEC_follow.md "A project trashed, restored, renamed or moved"):
  *  1. a project is trashed here only on the host's trash ROW for it, and only
@@ -39,9 +43,10 @@
 const MAX_TRASH_PER_PASS = 5
 
 const text = (value) => (typeof value === 'string' ? value : '')
-/** The part of a project row a base remembers. */
+/** The part of a project row a base remembers (visibility is decided on its own, below). */
 const agreedOf = (row) => ({ title: text(row?.title), slug: row?.slug || null })
 const isPrivate = (row) => row?.visibility === 'private'
+const visibilityOf = (row) => (isPrivate(row) ? 'private' : 'public')
 
 const byId = (rows = [], spaceId = null) => {
     const map = new Map()
@@ -57,14 +62,17 @@ const byId = (rows = [], spaceId = null) => {
 /**
  * @param {object} o
  * @param {string} o.spaceId
- * @param {object} o.base          { [projectId]: { title, slug } } — last agreed, both live in this space
+ * @param {object} o.base          { [projectId]: { title, slug, visibility } } — last agreed, both live in this space
+ *                                 (visibility null or absent: never agreed — a difference is said, not carried)
  * @param {string[]} o.trashedBoth ids this follow saw in BOTH trashes (a restore of one is carried)
  * @param {object} o.departed      { [projectId]: 'there' | 'here' } — left one side's space with no trash row
  * @param {{live: object[], trash: object[]}} o.here   this install
  * @param {{live: object[], trash: object[]}} o.there  the host
- * @returns {{ trashHere: string[], restoreHere: string[], patchHere: {id: string, patch: object}[], patchThere: {id: string, patch: object}[], notes: string[], refused: string|null, base: object, trashedBoth: string[], departed: object }}
+ * @param {boolean} o.manageThere  the follow's key is a `manage` key: a trash, restore or
+ *                                 making private made here may be carried to the host
+ * @returns {{ trashHere: string[], restoreHere: string[], trashThere: string[], restoreThere: string[], patchHere: {id: string, patch: object}[], patchThere: {id: string, patch: object}[], notes: string[], refused: string|null, refusedThere: string|null, base: object, trashedBoth: string[], departed: object }}
  */
-const planProjects = ({ spaceId = null, base = {}, trashedBoth = [], departed = {}, here, there, maxTrash = MAX_TRASH_PER_PASS }) => {
+const planProjects = ({ spaceId = null, base = {}, trashedBoth = [], departed = {}, here, there, maxTrash = MAX_TRASH_PER_PASS, manageThere = false }) => {
     const hereLive = byId(here?.live, spaceId)
     const thereLive = byId(there?.live, spaceId)
     const hereTrash = byId(here?.trash, spaceId)
@@ -75,6 +83,8 @@ const planProjects = ({ spaceId = null, base = {}, trashedBoth = [], departed = 
     const nextDeparted = {}
     const trashHere = []
     const restoreHere = []
+    const trashThere = []
+    const restoreThere = []
     const patchHere = []
     const patchThere = []
     const notes = []
@@ -105,9 +115,25 @@ const planProjects = ({ spaceId = null, base = {}, trashedBoth = [], departed = 
                 if (!known || t !== known[field]) { toHere[field] = t; agreed[field] = t } else { toThere[field] = h; agreed[field] = h }
             }
             // Never more public: a private host makes this copy private; a public
-            // host does not make a copy kept private here public.
-            if (isPrivate(theirs) && !isPrivate(mine)) toHere.visibility = 'private'
-            else if (!isPrivate(theirs) && isPrivate(mine)) notes.push(`${name(id)} is private here and not on the host — left private`)
+            // host does not make a copy kept private here public. Made private
+            // HERE (the host still as the base had it) reaches the host only with
+            // a manage key; a host that was made public since is never hidden
+            // again by this copy, and with no agreed visibility nothing is carried.
+            const knownVisibility = known?.visibility === 'private' || known?.visibility === 'public' ? known.visibility : null
+            if (isPrivate(theirs) && !isPrivate(mine)) {
+                toHere.visibility = 'private'
+                agreed.visibility = 'private'
+            } else if (!isPrivate(theirs) && isPrivate(mine)) {
+                if (manageThere && knownVisibility === 'public') {
+                    toThere.visibility = 'private'
+                    agreed.visibility = 'private'
+                } else {
+                    notes.push(`${name(id)} is private here and not on the host — left private${manageThere ? (knownVisibility === 'private' ? ' (the host made it public; a follow never hides it again there)' : ' (no agreed visibility yet; not carried)') : ''}`)
+                    agreed.visibility = knownVisibility
+                }
+            } else {
+                agreed.visibility = visibilityOf(mine)
+            }
             if (Object.keys(toHere).length) patchHere.push({ id, patch: toHere })
             if (Object.keys(toThere).length) patchThere.push({ id, patch: toThere })
             nextBase[id] = agreed
@@ -124,7 +150,9 @@ const planProjects = ({ spaceId = null, base = {}, trashedBoth = [], departed = 
                 notes.push(`${name(id)} left this space on the host (moved to another space, or purged from its trash) — kept here`)
             } else if (bothTrashed.has(id) && thereTrash.has(id)) {
                 bothTrashed.add(id)
-                notes.push(`${name(id)} was restored here and is still in the host's trash — a follow cannot restore on the host`)
+                // Seen in both trashes, and taken out of this one: restored here.
+                if (manageThere) restoreThere.push(id)
+                else notes.push(`${name(id)} was restored here and is still in the host's trash — a follow cannot restore on the host`)
             }
             // Otherwise it was made here: follower.js makes it on the host.
             continue
@@ -132,11 +160,15 @@ const planProjects = ({ spaceId = null, base = {}, trashedBoth = [], departed = 
 
         if (!mine && theirs) {
             if (known && hereTrash.has(id)) {
-                nextBase[id] = known
-                notes.push(`${name(id)} is in the trash here and live on the host — a follow cannot trash on the host (its owner or an admin can); restore it here, or trash it there`)
+                nextBase[id] = known // kept until the trash there is done (or refused)
+                // Both held it, and this install's trash lists it: trashed here.
+                if (manageThere) trashThere.push(id)
+                else notes.push(`${name(id)} is in the trash here and live on the host — a follow cannot trash on the host (its owner or an admin can); restore it here, or trash it there`)
             } else if (known || departed?.[id] === 'here') {
                 nextDeparted[id] = 'here'
-                notes.push(`${name(id)} left this space here (moved to another space, or purged) — the host still has it here; a follow cannot move it there`)
+                notes.push(manageThere
+                    ? `${name(id)} left this space here (moved to another space, or purged) — the host still has it here; it moves there too when the space it went to is followed from the same host with a manage key`
+                    : `${name(id)} left this space here (moved to another space, or purged) — the host still has it here; a follow cannot move it there`)
             } else if (bothTrashed.has(id) && hereTrash.has(id)) {
                 // Seen in both trashes, and the host took it out of its trash.
                 restoreHere.push(id)
@@ -164,9 +196,27 @@ const planProjects = ({ spaceId = null, base = {}, trashedBoth = [], departed = 
         }
     }
 
+    // The same guard the other way: a pass never empties the HOST because this
+    // copy looks empty (the host counts per key as well, SPEC_space_sync_keys.md §13.5).
+    let refusedThere = null
+    const wouldEmptyThere = trashThere.length > 0 && trashThere.length >= thereLive.size && thereLive.size > 1
+    if (trashThere.length > maxTrash || wouldEmptyThere) {
+        refusedThere = `${trashThere.length} of the ${thereLive.size} projects the host holds were trashed here at once — not carried to the host (${wouldEmptyThere ? 'it would empty the host' : `more than ${maxTrash} in one pass`}); trash them there yourself if that was meant`
+        notes.push(refusedThere)
+        trashThere.length = 0
+    } else {
+        for (const id of trashThere) {
+            delete nextBase[id]
+            bothTrashed.add(id)
+        }
+    }
+
     return {
         trashHere,
         restoreHere,
+        trashThere,
+        restoreThere,
+        refusedThere,
         patchHere,
         patchThere,
         notes,

@@ -16,7 +16,7 @@ describe('a project trashed on the host', () => {
             there: { live: [row('b')], trash: [row('a')] }
         })
         expect(out.trashHere).toEqual(['a'])
-        expect(out.base).toEqual({ b: { title: 'B', slug: null } })
+        expect(out.base).toEqual({ b: { title: 'B', slug: null, visibility: 'public' } })
         expect(out.trashedBoth).toEqual(['a'])
         expect(out.refused).toBe(null)
     })
@@ -102,7 +102,7 @@ describe('a project renamed', () => {
         const out = plan({ base, here: { live: [row('a', { title: 'Old', slug: 'old' })], trash: [] }, there: { live: [row('a', { title: 'New', slug: 'old' })], trash: [] } })
         expect(out.patchHere).toEqual([{ id: 'a', patch: { title: 'New' } }])
         expect(out.patchThere).toEqual([])
-        expect(out.base.a).toEqual({ title: 'New', slug: 'old' })
+        expect(out.base.a).toEqual({ title: 'New', slug: 'old', visibility: 'public' })
     })
 
     it('carries a rename made here to the host', () => {
@@ -146,5 +146,86 @@ describe('a project that left the space', () => {
         const back = plan({ departed: { a: 'there' }, here: { live: [row('a')], trash: [] }, there: { live: [row('a')], trash: [] } })
         expect(back.departed).toEqual({})
         expect(back.base).toHaveProperty('a')
+    })
+})
+
+// With a key the host's owner minted as `manage` (SPEC_space_sync_keys.md §13):
+// a trash, restore or making private made HERE reaches the host, under the same
+// guards mirrored. With an ordinary key, every one of them stays a note.
+describe('with a manage key, a change made here reaches the host', () => {
+    const base = { a: { title: 'A', slug: null, visibility: 'public' }, b: { title: 'B', slug: null, visibility: 'public' }, c: { title: 'C', slug: null, visibility: 'public' } }
+
+    it('a project trashed here is trashed on the host — and not with an edit key', () => {
+        const input = { base, here: { live: [row('b'), row('c')], trash: [row('a')] }, there: { live: [row('a'), row('b'), row('c')], trash: [] } }
+        const managed = plan({ ...input, manageThere: true })
+        expect(managed.trashThere).toEqual(['a'])
+        expect(managed.base.a).toBeUndefined()
+        expect(managed.trashedBoth).toEqual(['a'])
+        const edit = plan(input)
+        expect(edit.trashThere).toEqual([])
+        expect(edit.base.a).toEqual(base.a)
+        expect(edit.notes.join()).toMatch(/cannot trash on the host/)
+    })
+
+    it('never from an absence: a project gone here with no trash row is departed, not trashed there', () => {
+        const out = plan({ base, manageThere: true, here: { live: [row('b'), row('c')], trash: [] }, there: { live: [row('a'), row('b'), row('c')], trash: [] } })
+        expect(out.trashThere).toEqual([])
+        expect(out.departed).toEqual({ a: 'here' })
+    })
+
+    it('never empties the host: trashing every project it holds here carries none, and says so', () => {
+        const out = plan({ base, manageThere: true, here: { live: [], trash: [row('a'), row('b'), row('c')] }, there: { live: [row('a'), row('b'), row('c')], trash: [] } })
+        expect(out.trashThere).toEqual([])
+        expect(out.refusedThere).toMatch(/would empty the host/)
+        expect(Object.keys(out.base).sort()).toEqual(['a', 'b', 'c'])
+    })
+
+    it('never more than MAX_TRASH_PER_PASS at once', () => {
+        const ids = Array.from({ length: MAX_TRASH_PER_PASS + 2 }, (_, i) => `p${i}`)
+        const many = Object.fromEntries(ids.map(id => [id, { title: id.toUpperCase(), slug: null, visibility: 'public' }]))
+        const keep = ['k1', 'k2']
+        for (const id of keep) many[id] = { title: id.toUpperCase(), slug: null, visibility: 'public' }
+        const out = plan({ base: many, manageThere: true, here: { live: keep.map(id => row(id)), trash: ids.map(id => row(id)) }, there: { live: [...ids, ...keep].map(id => row(id)), trash: [] } })
+        expect(out.trashThere).toEqual([])
+        expect(out.refusedThere).toMatch(new RegExp(`more than ${MAX_TRASH_PER_PASS}`))
+    })
+
+    it('a project taken out of the trash here is restored on the host when both trashes held it', () => {
+        const out = plan({ base: { b: base.b, c: base.c }, trashedBoth: ['a'], manageThere: true, here: { live: [row('a'), row('b'), row('c')], trash: [] }, there: { live: [row('b'), row('c')], trash: [row('a')] } })
+        expect(out.restoreThere).toEqual(['a'])
+        const edit = plan({ base: { b: base.b, c: base.c }, trashedBoth: ['a'], here: { live: [row('a'), row('b'), row('c')], trash: [] }, there: { live: [row('b'), row('c')], trash: [row('a')] } })
+        expect(edit.restoreThere).toEqual([])
+        expect(edit.notes.join()).toMatch(/cannot restore on the host/)
+    })
+
+    it('made private here is made private on the host when the host is as the base had it', () => {
+        const out = plan({ base, manageThere: true, here: { live: [row('a', { visibility: 'private' }), row('b'), row('c')], trash: [] }, there: { live: [row('a'), row('b'), row('c')], trash: [] } })
+        expect(out.patchThere).toEqual([{ id: 'a', patch: { visibility: 'private' } }])
+        expect(out.base.a.visibility).toBe('private')
+        const edit = plan({ base, here: { live: [row('a', { visibility: 'private' }), row('b'), row('c')], trash: [] }, there: { live: [row('a'), row('b'), row('c')], trash: [] } })
+        expect(edit.patchThere).toEqual([])
+        expect(edit.base.a.visibility).toBe('public')
+    })
+
+    it('never hides again a project the owner made public on the host', () => {
+        const wasPrivate = { ...base, a: { title: 'A', slug: null, visibility: 'private' } }
+        const out = plan({ base: wasPrivate, manageThere: true, here: { live: [row('a', { visibility: 'private' }), row('b'), row('c')], trash: [] }, there: { live: [row('a'), row('b'), row('c')], trash: [] } })
+        expect(out.patchThere).toEqual([])
+        expect(out.patchHere).toEqual([])
+        expect(out.base.a.visibility).toBe('private')
+        expect(out.notes.join()).toMatch(/host made it public/)
+    })
+
+    it('carries no visibility with no agreed one (a base from before, or a first pass)', () => {
+        const old = { ...base, a: { title: 'A', slug: null } }
+        const out = plan({ base: old, manageThere: true, here: { live: [row('a', { visibility: 'private' }), row('b'), row('c')], trash: [] }, there: { live: [row('a'), row('b'), row('c')], trash: [] } })
+        expect(out.patchThere).toEqual([])
+        expect(out.base.a.visibility).toBe(null)
+    })
+
+    it('never makes the host public: public here and private there makes this copy private', () => {
+        const out = plan({ base, manageThere: true, here: { live: [row('a'), row('b'), row('c')], trash: [] }, there: { live: [row('a', { visibility: 'private' }), row('b'), row('c')], trash: [] } })
+        expect(out.patchThere).toEqual([])
+        expect(out.patchHere).toEqual([{ id: 'a', patch: { visibility: 'private' } }])
     })
 })

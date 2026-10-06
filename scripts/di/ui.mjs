@@ -156,8 +156,11 @@ export const ui = {
     // ── one space, two installs ───────────────────────────────────────────
     // The words a person reads off one laptop and types into another. The key
     // is shown once and belongs to that space alone.
-    invited: (spaceId, url, key) => [
+    invited: (spaceId, url, key, { manage = false } = {}) => [
         `${style.cyan(spaceId)} is open to one other di.iiii.`,
+        // A manage key is said out loud, every time it is made: it can move this
+        // space's projects to the trash (SPEC_space_sync_keys.md §13).
+        manage ? style.yellow('this is a MANAGE key: their trash, hiding and moves of projects in this space reach here too (never purge, never public; limited per hour). undo all it did: the key log and undo on the host.') : null,
         '',
         'on their machine:',
         `  ${style.cyan(`${CMD} follow ${spaceId} --from ${url} --key ${key}`)}`,
@@ -167,7 +170,17 @@ export const ui = {
         '',
         style.dim('that key opens this space and nothing else, and you can take it back:'),
         style.dim(`  ${CMD} invite ${spaceId} --revoke`)
-    ].join('\n'),
+    ].filter(line => line !== null).join('\n'),
+
+    /** The space's key log (GET …/sync-keys/actions), newest first. */
+    inviteActions: (spaceId, actions) => (actions.length
+        ? [`what the keys of ${style.cyan(spaceId)} did:`, ...actions.map(row => {
+            const when = new Date(row.at).toISOString().replace('T', ' ').slice(0, 16)
+            const what = `${row.action}${row.projectId ? ` ${row.projectId}` : ''}${row.toSpaceId ? ` → ${row.toSpaceId}` : ''}`
+            const line = `  ${when}  ${String(row.keyLabel || row.keyId).slice(0, 28).padEnd(28)}  ${what}`
+            return row.outcome === 'done' ? line : style.yellow(`${line}  refused: ${row.reason || ''}`)
+        })].join('\n')
+        : `no key has trashed, hidden, moved or restored anything in ${spaceId}.`),
 
     inviteRefused: (spaceId, reason) => [
         `could not open ${spaceId} to anyone.`,
@@ -241,7 +254,10 @@ export const ui = {
             const state = byId.get(id)
             const where = String(entry.remote || '').replace(/\/serverXR$/, '')
             if (!state) return `  ${style.cyan(id.padEnd(18))}${where}  ${style.dim('(not running)')}`
-            const moving = `${state.status} · in ${state.carriedIn} · out ${state.carriedOut}${state.streams > 1 ? ` · ${state.streams} logs` : ''}`
+            // The key's scope (SPEC_space_sync_keys.md §13): manage carries this
+            // install's trash, hiding and moves to the host; edit does not.
+            const scope = state.key?.scope ? ` · key: ${state.key.scope}` : ''
+            const moving = `${state.status} · in ${state.carriedIn} · out ${state.carriedOut}${state.streams > 1 ? ` · ${state.streams} logs` : ''}${scope}`
             const line = `  ${style.cyan(id.padEnd(18))}${where}  ${state.lastError ? style.yellow(state.lastError) : style.dim(moving)}`
             return [line, ...followSettingsLines(state.settings), ...followProjectLines(state.projects), ...followFileLines(state.files)].map((text, index) => (index === 0 ? text : `  ${' '.repeat(18)}${text}`)).join('\n')
         }).join('\n')
@@ -484,6 +500,9 @@ export const ui = {
         '',
         '  --from URL      where the other di.iiii answers, e.g. https://local.thedi.studio',
         `  --key KEY       the per-space sync key, minted on their machine with: ${CMD} invite SPACE`,
+        `                  (${CMD} invite SPACE --manage: a key whose trash, hiding and moves of projects`,
+        '                  made here reach the host too — the host\'s owner gives it on purpose;',
+        `                  ${CMD} invite SPACE --actions on the host lists what keys did)`,
         '  --at ADDRESS    the ADDRESS PIN — the name in --from stays, but the socket goes',
         '                  to this address instead of whatever it resolves to. For when',
         '                  --from names a machine this one can only reach somewhere else —',
