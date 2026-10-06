@@ -136,7 +136,7 @@ describe('RigVersionSwitch in the room', () => {
         const mock = (name, fn) => { orig[name] = Object.getOwnPropertyDescriptor(HTMLElement.prototype, name); Object.defineProperty(HTMLElement.prototype, name, { configurable: true, get: fn }) }
         afterEach(() => { for (const [k, d] of Object.entries(orig)) { if (d) Object.defineProperty(HTMLElement.prototype, k, d); else delete HTMLElement.prototype[k] } })
 
-        it('aligns a title wider than the strip to its left edge, and the cue carries a chevron', async () => {
+        it('starts a title wider than the strip just right of the left fade, and the cue carries a chevron', async () => {
             mock('clientWidth', () => 300)
             mock('scrollWidth', () => 1200)
             mock('offsetLeft', function () { return this.getAttribute('aria-current') ? 600 : 0 })
@@ -144,7 +144,7 @@ describe('RigVersionSwitch in the room', () => {
             listSpaceContents.mockResolvedValue(many)
             const { container } = render(<RigVersionSwitch spaceId="moxir" projectId="p-d" entities={entitiesFor('d')} />)
             await screen.findByRole('button', { name: 'Old versions (3)' })
-            await waitFor(() => expect(container.querySelector('nav > div').scrollLeft).toBe(600))
+            await waitFor(() => expect(container.querySelector('nav > div').scrollLeft).toBe(548))
             expect(container.querySelector('[data-cue="right"]').textContent).toBe('›')
         })
     })

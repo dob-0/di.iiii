@@ -150,9 +150,9 @@ export default function RigVersionSwitch({ spaceId, projectId, entities, top = '
         const el = scrollerRef.current
         const cur = curRef.current
         if (el && cur && !walk) {
-            // Centred; but a title wider than the strip is aligned to its left edge, so its start is never cut.
+            // Centred; but a title wider than the strip starts just right of the left edge fade (48 px + 4), so its first letter is never under it.
             const centred = cur.offsetLeft - (el.clientWidth - cur.offsetWidth) / 2
-            el.scrollLeft = Math.max(0, cur.offsetWidth > el.clientWidth ? cur.offsetLeft : centred)
+            el.scrollLeft = Math.max(0, cur.offsetWidth > el.clientWidth ? cur.offsetLeft - 52 : centred)
         }
         measure()
     }, [links, foldOpen, conceptsOpen, walk])
