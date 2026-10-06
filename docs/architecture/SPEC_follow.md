@@ -198,6 +198,14 @@ waiting out a park (20 s).
 Guards: `followProjects.test.js` (the rules, no I/O), `followIntegration.test.js` "a project's life crosses a follow"
 (two servers, the host with auth on and a real sync key).
 
+**Measured (2026-10-07, loopback, two real serverXR, the host with auth on and a sync key, the follow running in the
+test process; 8 runs; time from the change's request on one side to it showing on the other, polled every 25 ms):**
+rename host to this install 33–34 ms once the follow is settled (1133–1148 ms for the first change after a follow
+starts, during its first pass), rename this install to host 12–38 ms, trash 8–34 ms, restore 31–34 ms, made private
+33–36 ms, move between two followed spaces 35–38 ms, space label 31–34 ms. Not yet measured between two machines or
+over the internet (the 2026-10-04 dev.diiii.xyz run measured ~21 s per edit before the latches; re-measure owed).
+Each integration test fails with the carry switched off (8 of them, checked 2026-10-07).
+
 ## Not yet (owed)
 
 - **Keeping both people's intent** on a same-field conflict (an op-based CRDT with per-field Lamport stamps,

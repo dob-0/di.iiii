@@ -1421,7 +1421,8 @@ describe('a project\'s life crosses a follow: trash, restore, rename, private, m
         for (const follower of followers) follower.stop()
         await Promise.all([hosting?.stop(), following?.stop()])
         // The measured times, for SPEC_follow.md and the report.
-        console.log(`[follow-carry measured] ${JSON.stringify(measured)}`)
+        // FOLLOW_MEASURE_FILE=<path> keeps them (one JSON line per run).
+        if (process.env.FOLLOW_MEASURE_FILE) await writeFile(process.env.FOLLOW_MEASURE_FILE, `${JSON.stringify(measured)}\n`, { flag: 'a' })
     })
 
     it('a rename on the host reaches this install', async () => {
@@ -1479,6 +1480,11 @@ describe('a project\'s life crosses a follow: trash, restore, rename, private, m
         // Exactly one op more: nothing from before the move was applied twice.
         expect(after.length).toBe(before + 1)
         expect(followers.every(f => !f.state.lastError)).toBe(true)
+    })
+
+    it('a second rename on the host, once the follow is settled, reaches this install too', async () => {
+        await timed('rename host->follower (settled)', () => api(hosting, '/api/projects/to-rename', { method: 'PATCH', body: { title: 'Third title' } }),
+            async () => (await live(following, SPACE, 'to-rename'))?.title === 'Third title')
     })
 
     it('the host\'s space label still reaches this install (space settings, measured)', async () => {
