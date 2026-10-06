@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { StructurePanel, formatNumberDisplay } from './StudioShellPanels.jsx'
+import { StructurePanel } from './StudioShellPanels.jsx'
+import { formatNumberDisplay } from '../utils/formatNumberDisplay.js'
 
 const entities = [
     { id: 'visible', type: 'box', name: 'Visible', components: { runtime: { visible: true, locked: false } } },

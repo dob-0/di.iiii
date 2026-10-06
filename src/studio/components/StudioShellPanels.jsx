@@ -1,3 +1,4 @@
+import { formatNumberDisplay } from '../utils/formatNumberDisplay.js'
 import { forwardRef, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import JSZip from 'jszip'
 
@@ -753,14 +754,6 @@ const clampNumber = (value, min, max) => {
     if (Number.isFinite(min)) next = Math.max(min, next)
     if (Number.isFinite(max)) next = Math.min(max, next)
     return next
-}
-
-// What the field shows: a stored 0.5844327… reads 0.5844 (4 decimals, trailing zeros dropped).
-// The stored value is never rounded here — only an edit changes it.
-export const formatNumberDisplay = (value) => {
-    const n = Number(value)
-    if (value === '' || value == null || !Number.isFinite(n)) return value ?? ''
-    return String(Math.round(n * 10000) / 10000)
 }
 
 function NumberBox({ value, onChange, min, max, step = 1 }) {
