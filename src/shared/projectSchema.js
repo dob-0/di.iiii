@@ -1871,6 +1871,9 @@ export const normalizeProjectNode = (node = {}) => {
         values,
         graphX,
         graphY,
+        // Paint order among siblings: a card that was moved is raised above
+        // the highest graphZ in its space. Absent (0) means "document order".
+        ...(Number.isFinite(Number(source.graphZ)) && Number(source.graphZ) !== 0 ? { graphZ: Number(source.graphZ) } : {}),
         runtimeId: source.runtimeId ?? null,
         assetRef,
         parentId: ensureString(source.parentId, '') || null,
@@ -2066,6 +2069,7 @@ export const applyProjectOps = (document, ops = []) => {
                     ...(patch.label !== undefined ? { label: ensureString(patch.label, existing.label) } : {}),
                     ...(patch.graphX !== undefined ? { graphX: ensureNumber(patch.graphX, existing.graphX) } : {}),
                     ...(patch.graphY !== undefined ? { graphY: ensureNumber(patch.graphY, existing.graphY) } : {}),
+                    ...(patch.graphZ !== undefined ? { graphZ: ensureNumber(patch.graphZ, existing.graphZ ?? 0) } : {}),
                     ...(patch.runtimeId !== undefined ? { runtimeId: patch.runtimeId } : {}),
                     ...(patch.assetRef !== undefined ? { assetRef: patch.assetRef || null } : {}),
                     values: nextValues
@@ -2518,6 +2522,7 @@ const invertSingleOp = (document, op) => {
                 ...(patch.label !== undefined ? { label: existing.label } : {}),
                 ...(patch.graphX !== undefined ? { graphX: existing.graphX } : {}),
                 ...(patch.graphY !== undefined ? { graphY: existing.graphY } : {}),
+                ...(patch.graphZ !== undefined ? { graphZ: existing.graphZ ?? 0 } : {}),
                 ...(patch.runtimeId !== undefined ? { runtimeId: existing.runtimeId ?? null } : {}),
                 ...(patch.assetRef !== undefined ? { assetRef: existing.assetRef ?? null } : {}),
                 ...(isPlainObject(patch.values) ? {

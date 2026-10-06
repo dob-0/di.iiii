@@ -1,3 +1,4 @@
+import { paintOrder } from '../utils/cardOrder.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
@@ -1831,7 +1832,7 @@ export default function RawGraphSurface({
                             />
                         ) : null}
                     </svg>
-                    {nodes.map((node) => {
+                    {paintOrder(nodes).map((node) => {
                         const inputs = getNodeInputs(node, portScopeNodes)
                         const outputs = getNodeOutputs(node, portScopeNodes)
                         const childCount = childCounts?.get(node.id) || 0
