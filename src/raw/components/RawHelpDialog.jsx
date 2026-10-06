@@ -9,7 +9,10 @@ export default function RawHelpDialog({
     onClose,
     nodeCount = 0,
     wireCount = 0,
-    thingCount = 0
+    thingCount = 0,
+    // In the right region (audit 2026-10-05 §3.5, #777): no backdrop, no
+    // scrim, a panel in the layout that replaces whatever stood there.
+    inline = false
 }) {
     useEffect(() => {
         if (!open) return undefined
@@ -28,14 +31,21 @@ export default function RawHelpDialog({
     if (!open) return null
 
     return (
-        <div className="raw-help-backdrop">
-            <button
-                type="button"
-                className="raw-help-scrim"
-                aria-label="Close help"
-                onClick={onClose}
-            />
-            <section className="raw-help-dialog" role="dialog" aria-modal="true" aria-label="Help">
+        <div className={inline ? 'raw-help-inline' : 'raw-help-backdrop'}>
+            {inline ? null : (
+                <button
+                    type="button"
+                    className="raw-help-scrim"
+                    aria-label="Close help"
+                    onClick={onClose}
+                />
+            )}
+            <section
+                className="raw-help-dialog"
+                role={inline ? 'region' : 'dialog'}
+                aria-modal={inline ? undefined : 'true'}
+                aria-label="Help"
+            >
                 <header className="raw-help-header">
                     <div>
                         <span className="raw-window-kicker">Help</span>

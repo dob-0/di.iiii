@@ -38,10 +38,34 @@ export const cardPortRows = (node, scopeNodes = null) => {
     return getNodeCardLines(node) ? 0 : 1
 }
 
-export const cardHeight = (node, scopeNodes = null) => {
+// A card the person has resized keeps its size in the node's own values:
+// `values.cardSize = { w, h }`, in graph units. Absent (or null) means the
+// card sizes itself, as it always did. The minimum keeps the title and every
+// port row readable: a card is never made smaller than its header and ports.
+export const MIN_CARD_WIDTH = 140
+export const cardSizeOf = (node) => {
+    const size = node?.values?.cardSize
+    const w = Number(size?.w)
+    const h = Number(size?.h)
+    return Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0 ? { w, h } : null
+}
+export const cardWidth = (node) => {
+    const size = cardSizeOf(node)
+    return size ? Math.max(MIN_CARD_WIDTH, size.w) : CARD_WIDTH
+}
+// Header, ports, picture and foot: what a card can never be shorter than.
+export const cardMinHeight = (node, scopeNodes = null) => {
     const rows = cardPortRows(node, scopeNodes)
     const picture = hasCardPicture(node?.typeId) ? TOP_PICTURE_HEIGHT + TOP_PICTURE_GAP : 0
-    return HEADER_HEIGHT + rows * PORT_ROW_HEIGHT + picture + cardContentHeight(node) + CARD_FOOT
+    return HEADER_HEIGHT + rows * PORT_ROW_HEIGHT + picture + CARD_FOOT
+}
+
+export const cardHeight = (node, scopeNodes = null) => {
+    // A thing's card (objectCards.js) carries its own height: with a picture or without.
+    if (node?.entityId && node.height) return node.height
+    const size = cardSizeOf(node)
+    if (size) return Math.max(cardMinHeight(node, scopeNodes), size.h)
+    return cardMinHeight(node, scopeNodes) + cardContentHeight(node)
 }
 
 // The content lines a List or Text card shows (getNodeCardLines), BELOW the
@@ -71,9 +95,9 @@ export const LEGIBLE_SCREEN_PX = 11
 const CONTENT_FONT_SIZE = CARD_BODY_FONT_PX
 const CONTENT_FONT = `${CONTENT_FONT_SIZE}px Inter, "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
 
-const lineBox = (line) => {
+const lineBox = (line, contentWidth = CONTENT_WIDTH) => {
     if (line.kind === 'group') return { ...line, wraps: 1, height: CARD_CONTENT_GROUP_HEIGHT }
-    const width = CONTENT_WIDTH - (line.kind === 'row' ? ROW_INDENT : 0) - 2
+    const width = contentWidth - (line.kind === 'row' ? ROW_INDENT : 0) - 2
     const wraps = Math.min(CARD_CONTENT_MAX_WRAP, countWrappedLines(line.text, { width, font: CONTENT_FONT, fontSize: CONTENT_FONT_SIZE }))
     return { ...line, wraps, height: wraps * CARD_CONTENT_LINE_HEIGHT + CARD_CONTENT_ROW_GAP }
 }
@@ -81,9 +105,11 @@ const lineBox = (line) => {
 // The lines with their wrapped heights — one function for the geometry and
 // the drawing, so they cannot disagree.
 export const cardContentLayout = (node) => {
+    const size = cardSizeOf(node)
+    if (size) return sizedContentLayout(node, size)
     const content = getNodeCardLines(node)
     if (!content) return null
-    const lines = content.lines.map(lineBox)
+    const lines = content.lines.map((line) => lineBox(line))
     const moreHeight = content.more > 0 ? CARD_CONTENT_GROUP_HEIGHT : 0
     const height = lines.reduce((sum, line) => sum + line.height, 0) + moreHeight + CARD_CONTENT_PAD
     return { lines, more: content.more, moreHeight, height }
@@ -110,11 +136,34 @@ export const summarizeCardContent = (lines = [], more = 0) => {
     return summary
 }
 
+// A resized card draws as many of its lines as the room it was given holds,
+// at the width it was given, and says "+ N more" only for the rest.
+const sizedContentLayout = (node, size) => {
+    const content = getNodeCardLines(node, { unlimited: true })
+    if (!content) return null
+    const width = cardWidth(node) - 20
+    const room = Math.max(0, cardHeight(node) - cardMinHeight(node) - CARD_CONTENT_PAD)
+    const all = content.lines.map((line) => lineBox(line, width))
+    const lines = []
+    let used = 0
+    for (let i = 0; i < all.length; i += 1) {
+        const left = all.length - i
+        // keep room for the "+ N more" marker unless everything fits
+        const reserve = left > 1 ? CARD_CONTENT_GROUP_HEIGHT : 0
+        if (used + all[i].height + reserve > room && !(left === 1 && used + all[i].height <= room)) break
+        lines.push(all[i])
+        used += all[i].height
+    }
+    const more = content.more + (all.length - lines.length)
+    const moreHeight = all.length - lines.length > 0 || content.more > 0 ? CARD_CONTENT_GROUP_HEIGHT : 0
+    return { lines, more, moreHeight, height: used + moreHeight + CARD_CONTENT_PAD }
+}
+
 export const cardContentHeight = (node) => cardContentLayout(node)?.height ?? 0
 
 export const getCardBox = (node, scopeNodes = null) => ({
     x: node?.graphX ?? 0,
     y: node?.graphY ?? 0,
-    width: CARD_WIDTH,
+    width: cardWidth(node),
     height: cardHeight(node, scopeNodes)
 })

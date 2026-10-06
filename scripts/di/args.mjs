@@ -20,6 +20,9 @@ export const parseArgs = (argv) => {
         if (name === 'as') { args.flags.as = argv[++i]; continue }
         if (name === 'remote') { args.flags.remote = argv[++i]; continue }
         if (name === 'key') { args.flags.key = argv[++i]; continue }
+        // `di move PROJECT --to SPACE [--token -]`
+        if (name === 'to') { args.flags.to = argv[++i]; continue }
+        if (name === 'token') { args.flags.token = argv[++i]; continue }
         if (name === 'at') { args.flags.at = argv[++i]; continue }
         if (name === 'build') { args.flags.build = argv[++i]; continue }
         // `di stage join` — which mapping, which Chromium, what this machine

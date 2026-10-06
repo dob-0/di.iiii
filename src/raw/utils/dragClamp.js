@@ -24,12 +24,15 @@ const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
  * @param {{rect:{left:number,top:number,right:number,bottom:number}, panX:number, panY:number, zoom:number}} view
  *        rect is the canvas on screen; panX/panY/zoom the viewport.
  */
-export const dragClamp = (topLeft, { rect, panX, panY, zoom, grab = GRAB_PX }) => {
+export const dragClamp = (topLeft, { rect, panX, panY, zoom, grab = GRAB_PX, inset = null }) => {
     if (!rect || !(rect.right - rect.left > 0) || !(rect.bottom - rect.top > 0) || !(zoom > 0)) return { x: topLeft.x, y: topLeft.y }
-    const minX = grab / zoom - panX / zoom
-    const maxX = (rect.right - rect.left - grab) / zoom - panX / zoom
-    const minY = grab / zoom - panY / zoom
-    const maxY = (rect.bottom - rect.top - grab) / zoom - panY / zoom
+    // `inset` is what a docked window or panel covers at each edge of the
+    // canvas, in screen px: the card stays in the VISIBLE band, not under it.
+    const cover = { left: inset?.left || 0, right: inset?.right || 0, top: inset?.top || 0, bottom: inset?.bottom || 0 }
+    const minX = (cover.left + grab) / zoom - panX / zoom
+    const maxX = (rect.right - rect.left - cover.right - grab) / zoom - panX / zoom
+    const minY = (cover.top + grab) / zoom - panY / zoom
+    const maxY = (rect.bottom - rect.top - cover.bottom - grab) / zoom - panY / zoom
     return {
         x: maxX > minX ? clamp(topLeft.x, minX, maxX) : topLeft.x,
         y: maxY > minY ? clamp(topLeft.y, minY, maxY) : topLeft.y

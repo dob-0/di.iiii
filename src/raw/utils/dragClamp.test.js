@@ -21,6 +21,12 @@ describe('dragClamp: a card keeps its top-left GRAB_PX inside the canvas, at any
         expect(dragClamp({ x: 300, y: 200 }, { rect, panX: 0, panY: 0, zoom: 1 })).toEqual({ x: 300, y: 200 })
     })
 
+    it('keeps the card out from under a panel docked on the right (visible band, not window edge)', () => {
+        const view = { rect, panX: 0, panY: 0, zoom: 0.82, inset: { right: 380, left: 0, top: 0, bottom: 0 } }
+        const far = dragClamp({ x: 100000, y: 0 }, view)
+        expect(far.x * 0.82).toBeCloseTo(rect.right - rect.left - 380 - GRAB_PX, 6)
+    })
+
     it('does nothing on a canvas with no size (jsdom, or not laid out yet)', () => {
         const none = { left: 0, top: 0, right: 0, bottom: 0 }
         expect(dragClamp({ x: -50, y: -50 }, { rect: none, panX: 0, panY: 0, zoom: 1 })).toEqual({ x: -50, y: -50 })

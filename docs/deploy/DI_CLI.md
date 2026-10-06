@@ -348,6 +348,40 @@ What it does and does not change:
   over plain http is not one; `--lan` opens the page to a headset's browser but
   not the XR session. That gap is separate and unsolved.
 
+### `di service install` — systemd keeps it up (Linux)
+
+Without it, `di up` starts the server detached and walks away: if the process
+dies — a crash, an out-of-memory kill, a `pkill -f` aimed at some other dev
+server (that killed the installed di on aylmo three times in September 2026) —
+nothing notices and nothing starts it again. `di service install` hands the
+server to systemd:
+
+```
+di service install            # writes ~/.config/systemd/user/di-server.service, enables it
+di service                    # the unit, its main pid, how often it was restarted
+di service remove             # undo exactly that; a running server comes back unsupervised
+```
+
+- **The server IS the unit's main process** (`Type=exec`), so systemd sees it
+  die. `Restart=always`, not `on-failure`: SIGTERM — what `kill` and `pkill`
+  send — is a clean exit to `on-failure`, which would not restart the very
+  kill this exists for. `systemctl stop` (what `di down` does) is never
+  restarted by systemd under either. `RestartSec=2`, backing off to 60 s
+  (`RestartSteps`/`RestartMaxDelaySec`, systemd ≥ 254); ten starts in five
+  minutes and systemd gives up and `di status` says so — `di up` tries again.
+- **The unit names `~/.di/current`, never a version.** `di update` stops the
+  unit, flips `current`, starts it: the same unit runs the new build.
+- **`di up / down / status / logs / update` drive the unit** once it is
+  installed. `di logs` reads the journal (`journalctl --user -u di-server`).
+- **The environment is the same one the detached start uses** (one
+  `serverEnv()`), written to `~/.di/run/server.env` (0600). `--lan` and
+  `--guests` go to `$XDG_RUNTIME_DIR/di-server.start.env`: a crash-restart keeps
+  them, a reboot forgets them — `--lan` is still per start.
+- **A user unit runs while you are logged in**, like any login item. To have it
+  from boot without a login: `loginctl enable-linger $USER`.
+- **Not covered:** macOS (launchd `KeepAlive`) and Windows are unchanged — the
+  detached start, as before; a docker install is not covered either.
+
 `npm run selfhost` still exists and is unchanged — that is the developer path,
 for someone who wants the source and the dev stack.
 

@@ -9,12 +9,17 @@ import {
     CARD_WIDTH,
     HEADER_HEIGHT,
     LEGIBLE_SCREEN_PX,
+    MIN_CARD_WIDTH,
     PORT_ROW_HEIGHT,
     TOP_PICTURE_HEIGHT,
     TOP_PICTURE_WIDTH,
+    cardContentHeight,
     cardContentLayout,
     cardHeight,
+    cardMinHeight,
     cardPortRows,
+    cardSizeOf,
+    cardWidth,
     hasCardPicture,
     summarizeCardContent
 } from '../utils/cardGeometry.js'
@@ -30,6 +35,7 @@ import { openingView } from '../utils/openingView.js'
 import {
     arePortsCompatible,
     getNodeCardLines,
+    getCardMainField,
     getNodeCardSummary,
     getNodeFamily,
     getNodeInputs,
@@ -153,6 +159,14 @@ function CardSummaryLines({ content, top }) {
     )
 }
 
+// In-card editing: how tall the box is for what is typed, 3 to 12 lines.
+const EDIT_LINE_CHARS = 30
+const editRowsFor = (text) => clamp(
+    String(text || '').split('\n').reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / EDIT_LINE_CHARS)), 0) + 1,
+    3,
+    12
+)
+
 // The card box itself (CARD_WIDTH, cardHeight) lives in cardGeometry.js: the
 // editor places a panel node's window against it and must not guess.
 const inputPortCenter = (node, portId, scopeNodes = null) => {
@@ -168,9 +182,9 @@ const inputPortCenter = (node, portId, scopeNodes = null) => {
 const outputPortCenter = (node, portId, scopeNodes = null) => {
     const outputs = getNodeOutputs(node, scopeNodes)
     const idx = outputs.findIndex((p) => p.id === portId)
-    if (idx < 0) return { x: node.graphX + CARD_WIDTH, y: node.graphY + HEADER_HEIGHT }
+    if (idx < 0) return { x: node.graphX + cardWidth(node), y: node.graphY + HEADER_HEIGHT }
     return {
-        x: node.graphX + CARD_WIDTH,
+        x: node.graphX + cardWidth(node),
         y: node.graphY + HEADER_HEIGHT + idx * PORT_ROW_HEIGHT + PORT_ROW_HEIGHT / 2
     }
 }
@@ -180,6 +194,8 @@ const buildWirePath = (from, to) => {
     return `M ${from.x} ${from.y} C ${from.x + dx} ${from.y}, ${to.x - dx} ${to.y}, ${to.x} ${to.y}`
 }
 
+const EMPTY_PREVIEW_EDGES = []
+const EMPTY_PREVIEW_NODES = []
 export default function RawGraphSurface({
     // Zen: the zoom controls stop being resident. They are NOT removed — on a
     // touch screen there is no wheel, so they are the only way to zoom, and the
@@ -202,7 +218,7 @@ export default function RawGraphSurface({
     // Skips the auto-fit and starts at a fixed zoom. Only for tests and for
     // callers that restore a saved viewport; normal use fits on mount.
     initialZoom = null,
-    nodes = [],
+    nodes: nodesProp = [],
     edges = [],
     // THE THINGS IN THE ROOM, as cards (src/raw/utils/objectCards.js). A
     // project holds things (Studio's objects) beside its nodes, and this
@@ -260,7 +276,11 @@ export default function RawGraphSurface({
     onDeleteEdge,
     onDeleteNode,
     onMoveNode,
+    onResizeNode,
     onDoubleClick,
+    // Edits a card's one main field in place (a Text's content). Optional: the
+    // read-only wrappers pass none and the card behaves exactly as before.
+    onEditMainValue = null,
     // Kantan Mapper-style active marker: for scope-repeatable types where
     // exactly one "active" result is wanted (world.light/background/grid),
     // isNodeActive(node) says whether this card is the active one and
@@ -283,6 +303,58 @@ export default function RawGraphSurface({
     const containerRef = useRef(null)
     const [pendingWire, setPendingWire] = useState(null)
     const [draggingNodeId, setDraggingNodeId] = useState(null)
+    // The card whose main field is open for typing. The text itself is never
+    // copied here: the box reads and writes node.values, the same value the
+    // side column shows.
+    const [editingId, setEditingId] = useState(null)
+    const pressedSelectedRef = useRef(null)
+    // Whether the press landed on the card's text. Two things made the
+    // target useless: the text list is `pointer-events: none` (the press hits
+    // the card body under it), and the card takes pointer capture on press, so
+    // the click is dispatched at the card anyway. Seen with real pointer input
+    // 2026-10-05: no click ever opened the box. jsdom's fireEvent.click targets
+    // the list directly, which hid it. So it is the press POINT against the
+    // list's rectangle.
+    const pressedContentRef = useRef(false)
+    const pressIsOnContent = (event) => {
+        const list = event.currentTarget.querySelector('.raw-graph-node-content')
+        if (!list) return false
+        const r = list.getBoundingClientRect()
+        return event.clientX >= r.left && event.clientX <= r.right && event.clientY >= r.top && event.clientY <= r.bottom
+    }
+    const startEditing = (nodeId) => {
+        const node = nodes.find((n) => n.id === nodeId)
+        if (!onEditMainValue || !node || !getCardMainField(node.typeId)) return false
+        onSelectNode?.(nodeId)
+        setEditingId(nodeId)
+        return true
+    }
+    const stopEditing = (nodeId) => {
+        setEditingId(null)
+        requestAnimationFrame(() => {
+            containerRef.current?.querySelector(`[data-card-id="${nodeId}"]`)?.focus?.({ preventScroll: true })
+        })
+    }
+    useEffect(() => {
+        if (editingId && editingId !== selectedNodeId) setEditingId(null)
+    }, [editingId, selectedNodeId])
+    // Where the held card is NOW, kept here and nowhere else until the pointer
+    // is released: one `updateNode` op per drag, never one per move (measured
+    // 2026-10-05: ~70 mouse moves wrote 255 ops, and each echo of an older op
+    // pulled the card back under the pointer). `nodes` is the document's
+    // nodes with this one position laid over the top.
+    const [dragPos, setDragPos] = useState(null)
+    const dragPosRef = useRef(null)
+    // A card being resized: its size NOW, local until release, exactly like a
+    // held card's position — one `updateNode` on release.
+    const [resizing, setResizing] = useState(null)
+    const [resizePos, setResizePos] = useState(null)
+    const resizeStartRef = useRef(null)
+    // The insets as the drag effect must read them: current at every frame.
+    const contentInsetsRef = useRef(contentInsets)
+    contentInsetsRef.current = contentInsets
+    const bottomInsetRef = useRef(bottomInset)
+    bottomInsetRef.current = bottomInset
     const [isPanning, setIsPanning] = useState(false)
     const [isPanMoving, setIsPanMoving] = useState(false)
     const [hoveredWireId, setHoveredWireId] = useState(null)
@@ -332,6 +404,18 @@ export default function RawGraphSurface({
     // Everything the view has to hold, both kinds. Only the FIT and the
     // is-this-canvas-empty question use it — wires and ports stay on `nodes`
     // alone, because only nodes have any.
+    const nodes = useMemo(() => {
+        if (!dragPos && !resizePos) return nodesProp
+        return nodesProp.map((node) => {
+            if (dragPos && node.id === dragPos.id) return { ...node, graphX: dragPos.x, graphY: dragPos.y }
+            if (resizePos && node.id === resizePos.id) return { ...node, values: { ...node.values, cardSize: { w: resizePos.w, h: resizePos.h } } }
+            return node
+        })
+    }, [nodesProp, dragPos, resizePos])
+    // The document's own nodes: what a drag starts from and what its effect
+    // follows, so a held card moving does not restart the effect every frame.
+    const nodePropById = useMemo(() => new Map(nodesProp.map((node) => [node.id, node])), [nodesProp])
+
     const cardsInView = useMemo(
         () => (objectCards.length ? [...nodes, ...objectCards] : nodes),
         [nodes, objectCards]
@@ -392,7 +476,7 @@ export default function RawGraphSurface({
         if (!subset.length) return null
         const minX = Math.min(...subset.map((n) => (n.graphX ?? 0)))
         const minY = Math.min(...subset.map((n) => n.graphY ?? 0))
-        const maxX = Math.max(...subset.map((n) => (n.graphX ?? 0) + CARD_WIDTH))
+        const maxX = Math.max(...subset.map((n) => (n.graphX ?? 0) + cardWidth(n)))
         const maxY = Math.max(...subset.map((n) => (n.graphY ?? 0) + cardHeight(n, portScopeNodes)))
         return { minX, minY, maxX, maxY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) }
     }
@@ -477,7 +561,7 @@ export default function RawGraphSurface({
         return cardsInView.filter((node) => {
             const x = (node.graphX ?? 0) * vp.zoom + vp.panX
             const y = (node.graphY ?? 0) * vp.zoom + vp.panY
-            const w = CARD_WIDTH * vp.zoom
+            const w = cardWidth(node) * vp.zoom
             const h = cardHeight(node, portScopeNodes) * vp.zoom
             // Only the free band counts: a card under a docked window is not
             // "shown" (it said 8 of 8 with two behind the List).
@@ -535,7 +619,10 @@ export default function RawGraphSurface({
     // in here made every create/delete miss the guard and re-fit, which is
     // exactly the yank the comment above forbids.
     const scopeKey = cardsInView.length ? `scope:${nodes[0]?.parentId || 'root'}` : ''
-    const insetKey = `${contentInsets?.left || 0}:${contentInsets?.right || 0}:${contentInsets?.top || 0}:${contentInsets?.bottom || 0}`
+    // The bottom sheet (phone) is part of the key: opening it takes a band off the
+    // canvas, and an untouched view re-fits into what is left, the same rule as
+    // the desktop column giving its width up.
+    const insetKey = `${contentInsets?.left || 0}:${contentInsets?.right || 0}:${contentInsets?.top || 0}:${contentInsets?.bottom || 0}:${Math.round(bottomInset || 0)}`
     useEffect(() => {
         if (initialZoom !== null) return
         if (hasFitRef.current === scopeKey || !containerRef.current || cardsInView.length === 0) return
@@ -587,9 +674,39 @@ export default function RawGraphSurface({
         if (lastFitInsetsRef.current === insetKey) return
         const untouched = isViewAtLastFit()
         lastFitInsetsRef.current = insetKey
-        if (untouched) fitGraph()
+        // With the phone sheet open the whole graph is fitted into the band above
+        // it (an overview), not a legible window onto part of it: a card the
+        // sheet took the room of is never "somewhere else on the canvas".
+        if (untouched) fitGraph(bottomInset > 0 ? { everything: true } : {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [insetKey])
+
+    // The selected card is never left under the bottom sheet: once the sheet
+    // has taken its band, a selected card outside the free band is panned in,
+    // the least that shows it whole (a hand-moved view keeps its zoom).
+    useEffect(() => {
+        if (!selectedNodeId || !(bottomInset > 0)) return undefined
+        const frame = requestAnimationFrame(() => {
+            const box = visibleBox()
+            const root = containerRef.current
+            const el = root?.querySelector?.('.raw-graph-node-card.is-selected')
+            if (!box || !el) return
+            const surface = root.getBoundingClientRect()
+            const r = el.getBoundingClientRect()
+            const top = r.top - surface.top
+            const bottom = r.bottom - surface.top
+            const pad = GRAPH_FIT_PADDING_PX
+            let dy = 0
+            if (bottom > box.freeBottom - pad) dy = box.freeBottom - pad - bottom
+            if (top + dy < box.freeTop + pad) dy = box.freeTop + pad - top
+            if (dy) {
+                const vp = viewportRef.current
+                applyViewport(vp.panX, vp.panY + dy, vp.zoom)
+            }
+        })
+        return () => cancelAnimationFrame(frame)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedNodeId, bottomInset])
 
     // The browser window changes size under an untouched view — a new window
     // opened small and then tiled to half the screen kept the 49 % fit it got
@@ -1150,42 +1267,56 @@ export default function RawGraphSurface({
     useEffect(() => {
         if (!isDraggingNode) return undefined
         // rAF-gated: raw pointermove can fire far more often than the display
-        // refresh rate (high-poll-rate mice/trackpads), and each call was
-        // committing a document op + re-evaluating the whole node graph --
-        // capping to one commit per animation frame is a real, safe win with
-        // no change in drag responsiveness (2026-07-17 perf audit).
+        // refresh rate, so the held card is redrawn at most once per frame.
+        // The card moves in LOCAL state only (`dragPos`); the document hears
+        // about it once, on release (see `up`).
         let rafId = null
         let pendingPos = null
         const flush = () => {
             rafId = null
             if (!pendingPos) return
-            const { nextX, nextY } = pendingPos
+            dragPosRef.current = { id: draggingNodeId, x: pendingPos.nextX, y: pendingPos.nextY }
             pendingPos = null
-            onMoveNode?.(draggingNodeId, nextX, nextY)
+            setDragPos(dragPosRef.current)
         }
-        // The pointer and the pan clock live in refs: every committed move
-        // changes `nodes`, which re-runs this effect, and a pointer held still
-        // at the edge must keep panning across that.
+        // The pointer and the pan clock live in refs: a pointer held still
+        // at the edge must keep panning without any new pointer event.
         const drag = dragPanRef
         let panRaf = null
+        // The part of the canvas a person can see: the element minus any docked
+        // window or panel (contentInsets) and the selection sheet. The card is
+        // kept inside it and the edge pan starts at ITS edge, never at the
+        // window's, so a drag stops before it goes under a panel.
+        const visibleInsets = () => ({
+            left: Math.max(0, contentInsetsRef.current?.left || 0),
+            right: Math.max(0, contentInsetsRef.current?.right || 0),
+            top: Math.max(0, contentInsetsRef.current?.top || 0),
+            bottom: Math.max(0, contentInsetsRef.current?.bottom || 0) + Math.max(0, bottomInsetRef.current || 0)
+        })
+        const visibleRect = () => {
+            const rect = containerRef.current?.getBoundingClientRect?.()
+            if (!rect) return rect
+            const inset = visibleInsets()
+            return { left: rect.left + inset.left, right: rect.right - inset.right, top: rect.top + inset.top, bottom: rect.bottom - inset.bottom }
+        }
         // Where the card wants to be for the pointer as it is NOW and the
-        // viewport as it is NOW, kept GRAB_PX inside the canvas (utils/dragClamp.js).
+        // viewport as it is NOW, kept GRAB_PX inside the visible band.
         const commitWanted = () => {
             const point = clientPointToGraphPoint(drag.current.x, drag.current.y)
             const rect = containerRef.current?.getBoundingClientRect?.()
             const vp = viewportRef.current
             const wanted = dragClamp(
                 { x: point.x - dragOffsetRef.current.x, y: point.y - dragOffsetRef.current.y },
-                { rect, panX: vp.panX, panY: vp.panY, zoom: vp.zoom }
+                { rect, panX: vp.panX, panY: vp.panY, zoom: vp.zoom, inset: visibleInsets() }
             )
             pendingPos = { nextX: wanted.x, nextY: wanted.y }
         }
-        // Edge auto-pan: while the pointer rests in the band at an edge (or
-        // past it, off the canvas) the canvas pans under it and the card follows.
+        // Edge auto-pan: while the pointer rests in the band at an edge of the
+        // visible canvas (or past it) the canvas pans and the card follows.
         const panTick = (now) => {
             panRaf = null
             if (!drag.current.live) return
-            const velocity = edgePanVelocity(drag.current, containerRef.current?.getBoundingClientRect?.())
+            const velocity = edgePanVelocity(drag.current, visibleRect())
             if (!velocity) { drag.current.last = 0; return }
             const dt = drag.current.last ? Math.min(now - drag.current.last, 50) : 16
             drag.current.last = now
@@ -1196,14 +1327,13 @@ export default function RawGraphSurface({
             panRaf = requestAnimationFrame(panTick)
         }
         const armPan = () => {
-            if (panRaf === null && edgePanVelocity(drag.current, containerRef.current?.getBoundingClientRect?.())) {
+            if (panRaf === null && edgePanVelocity(drag.current, visibleRect())) {
                 panRaf = requestAnimationFrame(panTick)
             }
         }
         const move = (event) => {
             if (pinchRef.current) return
-            const node = nodeById.get(draggingNodeId)
-            if (!node) return
+            if (!nodePropById.has(draggingNodeId)) return
             drag.current.x = event.clientX
             drag.current.y = event.clientY
             drag.current.live = true
@@ -1217,6 +1347,15 @@ export default function RawGraphSurface({
             if (rafId !== null) { cancelAnimationFrame(rafId); flush() }
             drag.current.live = false
             drag.current.last = 0
+            // The one op of the drag: only when the card really moved, and
+            // never one identical to where it already is.
+            const final = dragPosRef.current
+            const start = nodePropById.get(draggingNodeId)
+            dragPosRef.current = null
+            if (final && start && (final.x !== start.graphX || final.y !== start.graphY)) {
+                onMoveNode?.(draggingNodeId, final.x, final.y)
+            }
+            setDragPos(null)
             setDraggingNodeId(null)
         }
         window.addEventListener('pointermove', move)
@@ -1229,7 +1368,54 @@ export default function RawGraphSurface({
             window.removeEventListener('pointermove', move)
             window.removeEventListener('pointerup', up)
         }
-    }, [isDraggingNode, draggingNodeId, nodeById, onMoveNode])
+    }, [isDraggingNode, draggingNodeId, nodePropById, onMoveNode])
+
+    // Resizing from the square handle in a card's bottom-right corner. The
+    // pointer's travel is measured on screen and divided by the zoom, so the
+    // corner stays under the pointer at every zoom. The card changes in local
+    // state while held; the document hears once, on release.
+    useEffect(() => {
+        if (!resizing) return undefined
+        let rafId = null
+        let pending = null
+        const flush = () => {
+            rafId = null
+            if (pending) { setResizePos(pending); pending = null }
+        }
+        const move = (event) => {
+            const start = resizeStartRef.current
+            if (!start) return
+            const node = nodePropById.get(resizing)
+            if (!node) return
+            const zoomNow = viewportRef.current.zoom
+            pending = {
+                id: resizing,
+                w: Math.round(Math.max(MIN_CARD_WIDTH, start.w + (event.clientX - start.x) / zoomNow)),
+                h: Math.round(Math.max(cardMinHeight(node, portScopeNodes), start.h + (event.clientY - start.y) / zoomNow))
+            }
+            resizeStartRef.current.last = pending
+            if (rafId === null) rafId = requestAnimationFrame(flush)
+        }
+        const up = () => {
+            if (rafId !== null) cancelAnimationFrame(rafId)
+            const start = resizeStartRef.current
+            const final = start?.last
+            resizeStartRef.current = null
+            if (final && (final.w !== start.w || final.h !== start.h)) onResizeNode?.(resizing, { w: final.w, h: final.h })
+            setResizePos(null)
+            setResizing(null)
+        }
+        window.addEventListener('pointermove', move)
+        window.addEventListener('pointerup', up)
+        window.addEventListener('pointercancel', up)
+        return () => {
+            if (rafId !== null) cancelAnimationFrame(rafId)
+            window.removeEventListener('pointermove', move)
+            window.removeEventListener('pointerup', up)
+            window.removeEventListener('pointercancel', up)
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [resizing, nodePropById, onResizeNode])
 
     useEffect(() => {
         if (!isPanning) return undefined
@@ -1451,7 +1637,9 @@ export default function RawGraphSurface({
         if (event.key !== 'Enter' && event.key !== ' ') return
         event.preventDefault()
         // Enter opens, the same as a double-click (audit 2026-10-05 B2);
-        // Space selects.
+        // Space selects. A card's main field is typed into by a click on
+        // its text once the card is selected — never by Enter, which has
+        // one meaning.
         if (event.key === 'Enter' && onEnterNode) {
             onEnterNode(nodeId)
             return
@@ -1650,7 +1838,28 @@ export default function RawGraphSurface({
                         // `h` and the card's left/top/width come from the same
                         // geometry the wires use, at EVERY tier. The tier below
                         // only decides what is drawn inside this box.
-                        const h = cardHeight(node, portScopeNodes)
+                        const isEditing = editingId === node.id && Boolean(getCardMainField(node.typeId))
+                        const mainField = isEditing ? getCardMainField(node.typeId) : null
+                        const mainText = mainField ? String(node.values?.[mainField.key] ?? '') : ''
+                        const baseH = cardHeight(node, portScopeNodes)
+                        // The card grows to fit what is typed, but only into free
+                        // space: never past the next card below it in its column.
+                        let editBoxHeight = 0
+                        let editGrow = 0
+                        if (isEditing) {
+                            editBoxHeight = editRowsFor(mainText) * CARD_CONTENT_LINE_HEIGHT + 12
+                            const have = cardContentHeight(node)
+                            const bottom = (node.graphY ?? 0) + baseH
+                            const below = nodes
+                                .filter((other) => other.id !== node.id
+                                    && Math.abs((other.graphX ?? 0) - (node.graphX ?? 0)) < cardWidth(node)
+                                    && (other.graphY ?? 0) >= bottom - 1)
+                                .reduce((min, other) => Math.min(min, other.graphY ?? Infinity), Infinity)
+                            const room = Number.isFinite(below) ? Math.max(0, below - bottom - 8) : Infinity
+                            editGrow = Math.min(Math.max(0, editBoxHeight - have), room)
+                            editBoxHeight = have + editGrow
+                        }
+                        const h = baseH + editGrow
                         const isSelected = node.id === selectedNodeId
                         const typeDef = getNodeType(node.typeId)
                         const showPorts = tier === 'full' || tier === 'summary'
@@ -1658,13 +1867,13 @@ export default function RawGraphSurface({
                         return (
                             <div
                                 key={node.id}
-                                className={`raw-graph-node-card is-lod-${tier}${isSelected ? ' is-selected' : ''}`}
+                                className={`raw-graph-node-card is-lod-${tier}${isSelected ? ' is-selected' : ''}${draggingNodeId === node.id ? ' is-held' : ''}`}
                                 data-card-id={node.id}
                                 style={{
                                     position: 'absolute',
                                     left: node.graphX,
                                     top: node.graphY,
-                                    width: CARD_WIDTH,
+                                    width: cardWidth(node),
                                     height: h,
                                     cursor: draggingNodeId === node.id ? 'grabbing' : 'grab',
                                     // One hue per card, handed to the stylesheet, which
@@ -1677,9 +1886,20 @@ export default function RawGraphSurface({
                                 }}
                                 role="button"
                                 tabIndex={0}
-                                onClick={() => onSelectNode?.(node.id)}
+                                onClick={(event) => {
+                                    // A click on the text of a card that was already
+                                    // selected types into it, in the card (#769).
+                                    const wasSelected = pressedSelectedRef.current === node.id
+                                    const onContent = pressedContentRef.current || Boolean(event.target?.closest?.('.raw-graph-node-content'))
+                                    pressedSelectedRef.current = null
+                                    pressedContentRef.current = false
+                                    if (wasSelected && onContent && startEditing(node.id)) return
+                                    onSelectNode?.(node.id)
+                                }}
                                 onPointerDown={(event) => {
                                     if (event.button !== 0) return
+                                    pressedSelectedRef.current = isSelected ? node.id : null
+                                    pressedContentRef.current = pressIsOnContent(event)
                                     // Grabbing a wire is now as forgiving as dropping one.
                                     // A press anywhere on the card that is near an output
                                     // port starts a wire; only the 10px dot did before, so
@@ -1704,8 +1924,30 @@ export default function RawGraphSurface({
                                     event.currentTarget.setPointerCapture(event.pointerId)
                                 }}
                                 onKeyDown={(event) => handleNodeKeyDown(event, node.id)}
-                                onDoubleClick={(event) => { event.stopPropagation(); onEnterNode?.(node.id) }}
+                                onDoubleClick={(event) => {
+                                    event.stopPropagation()
+                                    onEnterNode?.(node.id)
+                                }}
                             >
+                                {onResizeNode ? (
+                                    <span
+                                        className="raw-graph-node-resize"
+                                        aria-hidden="true"
+                                        title="Drag to resize. Double-click for the automatic size."
+                                        onPointerDown={(event) => {
+                                            if (event.button !== 0) return
+                                            event.stopPropagation()
+                                            event.preventDefault()
+                                            resizeStartRef.current = { x: event.clientX, y: event.clientY, w: cardWidth(node), h: h, last: null }
+                                            onSelectNode?.(node.id)
+                                            setResizing(node.id)
+                                        }}
+                                        onDoubleClick={(event) => {
+                                            event.stopPropagation()
+                                            if (cardSizeOf(node)) onResizeNode(node.id, null)
+                                        }}
+                                    />
+                                ) : null}
                                 <header className="raw-graph-node-header">
                                     {activeMarkerTypeIds.includes(node.typeId) && (
                                         <button
@@ -1780,14 +2022,44 @@ export default function RawGraphSurface({
                                     {/* What the card holds — a List's rows under their
                                         groups, a Text's first lines. Below the ports and any
                                         picture, inside the height cardHeight already gave it. */}
-                                    {tier === 'summary' && getNodeCardLines(node) ? (
+                                    {tier === 'summary' && !isEditing && getNodeCardLines(node) ? (
                                         <CardSummaryLines
                                             content={cardContentLayout(node)}
                                             top={cardPortRows(node, portScopeNodes) * PORT_ROW_HEIGHT
                                                 + (hasCardPicture(node.typeId) ? TOP_PICTURE_HEIGHT + 4 : 0)}
                                         />
                                     ) : null}
-                                    {tier === 'full' && getNodeCardLines(node) ? (
+                                    {showPorts && isEditing ? (
+                                        <textarea
+                                            className="raw-graph-node-edit"
+                                            aria-label={`${mainField.label} of ${node.label}`}
+                                            data-main-field={mainField.key}
+                                            style={{
+                                                top: cardPortRows(node, portScopeNodes) * PORT_ROW_HEIGHT
+                                                    + (hasCardPicture(node.typeId) ? TOP_PICTURE_HEIGHT + 4 : 0),
+                                                height: editBoxHeight || undefined
+                                            }}
+                                            value={mainText}
+                                            ref={(el) => { if (el && window.document.activeElement !== el) el.focus({ preventScroll: true }) }}
+                                            onFocus={(event) => {
+                                                const end = event.target.value.length
+                                                event.target.setSelectionRange(end, end)
+                                            }}
+                                            onChange={(event) => onEditMainValue(node.id, mainField.key, event.target.value)}
+                                            onPointerDown={(event) => event.stopPropagation()}
+                                            onDoubleClick={(event) => event.stopPropagation()}
+                                            onClick={(event) => event.stopPropagation()}
+                                            onBlur={() => setEditingId((current) => (current === node.id ? null : current))}
+                                            onKeyDown={(event) => {
+                                                event.stopPropagation()
+                                                if (event.key === 'Escape') {
+                                                    event.preventDefault()
+                                                    stopEditing(node.id)
+                                                }
+                                            }}
+                                        />
+                                    ) : null}
+                                    {tier === 'full' && !isEditing && getNodeCardLines(node) ? (
                                         <CardContentLines
                                             content={cardContentLayout(node)}
                                             top={cardPortRows(node, portScopeNodes) * PORT_ROW_HEIGHT
@@ -1917,14 +2189,14 @@ export default function RawGraphSurface({
                                 left: card.graphX,
                                 top: card.graphY,
                                 width: CARD_WIDTH,
-                                height: cardHeight(card, null),
+                                height: card.height || cardHeight(card, null),
                                 cursor: onSelectObject ? 'pointer' : 'default',
                                 ...(card.familyColor ? { '--card-family': card.familyColor } : {})
                             }}
                             role="button"
                             tabIndex={0}
-                            aria-label={`${card.label}, a ${card.typeLabel} in the room${card.holds ? `, holds ${card.holds}` : ''}`}
-                            title={`${card.label} — a thing in the room`}
+                            aria-label={`${card.label}, a ${card.typeLabel} in the scene${card.holds ? `, holds ${card.holds}` : ''}`}
+                            title={`${card.label} — an object in the scene`}
                             onClick={() => onSelectObject?.(card.entityId)}
                             onDoubleClick={(event) => event.stopPropagation()}
                             onKeyDown={(event) => {
@@ -1939,14 +2211,19 @@ export default function RawGraphSurface({
                                     <span className="raw-graph-node-label">{card.label}</span>
                                 ) : null}
                                 {tier === 'full' ? (
-                                    <span className="raw-graph-node-category" style={{ color: card.familyColor }}>thing</span>
+                                    <span className="raw-graph-node-category" style={{ color: card.familyColor }}>object</span>
                                 ) : null}
                             </header>
-                            <div style={{ position: 'relative', height: cardHeight(card, null) - HEADER_HEIGHT }}>
+                            <div style={{ position: 'relative', height: (card.height || cardHeight(card, null)) - HEADER_HEIGHT }}>
                                 {tier === 'full' || tier === 'summary' ? (
                                     <span className="raw-graph-node-summary">
                                         {card.holds ? `${card.typeLabel} · holds ${card.holds}` : card.typeLabel}
                                     </span>
+                                ) : null}
+                                {/* What the thing looks like, in the node card's own
+                                    picture slot, below its one line of words. */}
+                                {card.previewNode && (tier === 'full' || tier === 'summary') ? (
+                                    <CardPreview node={card.previewNode} nodes={EMPTY_PREVIEW_NODES} edges={EMPTY_PREVIEW_EDGES} top={26} />
                                 ) : null}
                             </div>
                         </div>

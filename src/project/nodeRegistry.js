@@ -223,10 +223,16 @@ export const getNodeCardSummary = (node) => {
 // pure function of the node and never of the font.
 export const CARD_CONTENT_MAX_LINES = { 'view.list': 12, 'view.text': 6 }
 
-export const getNodeCardLines = (node) => {
+// The one field a card shows and lets you edit in place (Enter or a
+// double-click on its text). The side column keeps everything else. Both write
+// node.values[key] — one value, no second copy (owner, 2026-10-05).
+export const CARD_MAIN_FIELD = { 'view.text': { key: 'content', label: 'Content' } }
+export const getCardMainField = (typeId) => CARD_MAIN_FIELD[typeId] || null
+
+export const getNodeCardLines = (node, { unlimited = false } = {}) => {
     if (!node) return null
     if (node.typeId === 'view.list') {
-        const max = CARD_CONTENT_MAX_LINES['view.list']
+        const max = unlimited ? Infinity : CARD_CONTENT_MAX_LINES['view.list']
         const items = (Array.isArray(node.values?.items) ? node.values.items : [])
             .filter((it) => String(it?.text || '').trim())
         if (!items.length) return null
@@ -255,7 +261,7 @@ export const getNodeCardLines = (node) => {
         return { lines, more: items.length - shown }
     }
     if (node.typeId === 'view.text') {
-        const max = CARD_CONTENT_MAX_LINES['view.text']
+        const max = unlimited ? Infinity : CARD_CONTENT_MAX_LINES['view.text']
         const text = String(node.values?.content ?? node.values?.text ?? '')
         const all = text.split('\n').map((line) => line.trim()).filter(Boolean)
         if (!all.length) return null

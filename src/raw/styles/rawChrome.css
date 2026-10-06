@@ -49,10 +49,10 @@
     min-width: var(--raw-cell);
     height: var(--raw-cell);
     padding: 0 var(--raw-s-2);
-    border: 1px solid var(--di-line, rgba(255, 255, 255, 0.14));
+    border: 1px solid var(--di-line);
     border-radius: var(--raw-radius);
     background: transparent;
-    color: var(--di-dim, rgba(255, 255, 255, 0.62));
+    color: var(--di-dim);
     font-family: var(--di-mono);
     font-size: var(--raw-text-meta);
     letter-spacing: 0;
@@ -127,10 +127,10 @@
     min-width: var(--raw-cell);
     margin: 0;
     padding: 0 var(--raw-s-2);
-    border: 1px solid var(--di-line, rgba(255, 255, 255, 0.14));
+    border: 1px solid var(--di-line);
     border-radius: var(--raw-radius);
     background: transparent;
-    color: var(--di-dim, rgba(255, 255, 255, 0.62));
+    color: var(--di-dim);
     font-family: var(--di-mono);
     font-size: var(--raw-text-meta);
     cursor: pointer;
@@ -174,7 +174,7 @@
     justify-content: space-between;
     gap: var(--raw-s-3);
     padding: 0 0 var(--raw-s-3);
-    border-bottom: 1px solid var(--di-line, rgba(255, 255, 255, 0.14));
+    border-bottom: 1px solid var(--di-line);
 }
 
 .raw-help-header .raw-window-kicker { font-size: var(--raw-text-meta); }
@@ -202,18 +202,18 @@
     line-height: 18px;
 }
 
-.raw-help-line b { font-weight: 600; color: var(--di-ink, #fff); }
+.raw-help-line b { font-weight: 600; color: var(--di-ink); }
 
 .raw-help-line kbd {
     font-family: var(--di-mono);
     font-size: var(--raw-text-meta);
-    color: var(--di-dim, rgba(255, 255, 255, 0.62));
+    color: var(--di-dim);
 }
 
 .raw-help-keys {
     margin-top: var(--raw-s-3);
     font-size: var(--raw-text-meta);
-    color: var(--di-dim, rgba(255, 255, 255, 0.62));
+    color: var(--di-dim);
 }
 
 .raw-help-keys summary { cursor: pointer; }

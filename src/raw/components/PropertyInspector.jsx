@@ -240,8 +240,15 @@ function TitleField({ title, onRename, renameRequest = 0 }) {
             className="raw-property-title-input"
             type="text"
             value={draft}
-            ref={(element) => element?.focus()}
-            onFocus={(event) => event.target.select()}
+            ref={(element) => {
+                // Caret at the end, not select-all: N then a key must add to the name,
+                // not replace it (Bar -> "o"). Ctrl+A still selects everything.
+                if (element && document.activeElement !== element) {
+                    element.focus()
+                    const end = element.value.length
+                    element.setSelectionRange(end, end)
+                }
+            }}
             onChange={(event) => setDraft(event.target.value)}
             onBlur={() => {
                 const next = draft.trim()
@@ -250,7 +257,7 @@ function TitleField({ title, onRename, renameRequest = 0 }) {
             }}
             onKeyDown={(event) => {
                 if (event.key === 'Enter') event.currentTarget.blur()
-                if (event.key === 'Escape') setDraft(null)
+                if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); setDraft(null) }
             }}
         />
     )
@@ -267,6 +274,10 @@ export default function PropertyInspector({
     onSectionChange,
     onPickAssetFile = null,
     emptyMessage = 'Nothing selected yet.',
+    // The settings column passes a close (button + Escape) and the field that
+    // is edited in the card instead, so it is not shown twice.
+    onClose = null,
+    skipField = null,
     // The selection sheet passes this: something IS selected, it just has no
     // fields. `.raw-empty-state` is the canvas's centred, absolutely placed
     // hint — inside the sheet it left no in-flow content and the sheet
@@ -275,7 +286,13 @@ export default function PropertyInspector({
     // Opens the selected node's inside view. The same thing double-click and
     // Enter do (audit 2026-10-05 B2); on a phone it is the way in.
     onOpen = null,
-    openKeyHint = '↵'
+    openKeyHint = '↵',
+    // The column's own sections below the settings (the ports, §3.5), and its
+    // footer, pinned to the bottom (Delete). Both optional.
+    children = null,
+    footer = null,
+    openLabel = 'Open',
+    hideHeader = false
 }) {
     // A selected node with nothing to set (List, Timeline, Webcam…) used to show
     // the canvas's own empty message — "double-click the world…" — and no way
@@ -286,30 +303,27 @@ export default function PropertyInspector({
 
     return (
         <div className="raw-property-sheet">
-            <header className="raw-property-sheet-header">
+            {hideHeader ? null : <header className="raw-property-sheet-header">
+                {onClose ? (
+                    <button type="button" className="raw-property-close" aria-label="Close settings" title="Close (Esc)" onClick={onClose}>×</button>
+                ) : null}
                 <TitleField title={title} onRename={onRename} renameRequest={renameRequest} />
                 {/* The type's name under a node's own name — once. "Scene / Scene"
                     read as two things (owner, 2026-10-02). */}
                 {subtitle && subtitle !== title ? <p>{subtitle}</p> : null}
-            </header>
-            {onOpen ? (
-                <button type="button" className="raw-property-open" onClick={onOpen}>
-                    <span>Open</span>
-                    <kbd aria-hidden="true">{openKeyHint}</kbd>
-                </button>
-            ) : null}
-            {!sections.length && showHeaderWhenEmpty ? <p className="raw-property-empty">{emptyMessage}</p> : null}
+            </header>}
+            {!sections.length && showHeaderWhenEmpty && !children ? <p className="raw-property-empty">{emptyMessage}</p> : null}
             <div className="raw-property-sections-scroll">
                 {!sections.length && !showHeaderWhenEmpty ? (
                     <p className="raw-property-note raw-full-width-field">Open it to see everything it holds.</p>
                 ) : null}
-                {sections.map((section) => {
+                {sections.filter((section) => !skipField || section.fields.some((field) => !skipField(field))).map((section) => {
                     const sectionValue = values[section.id] || values[section.component] || {}
                     return (
                         <section key={section.id} className="raw-property-section">
                             <h5>{section.label}</h5>
                             <div className="raw-property-grid">
-                                {section.fields.map((field) => {
+                                {section.fields.filter((field) => !(skipField && skipField(field))).map((field) => {
                                     const value = readNestedValue(sectionValue, field.path)
                                     const isFullWidth = field.type === 'textarea' || field.type === 'select' || field.type === 'asset'
                                     const wired = field.wired === true
@@ -343,7 +357,15 @@ export default function PropertyInspector({
                         </section>
                     )
                 })}
+                {children}
+                {onOpen ? (
+                    <button type="button" className="raw-property-open" onClick={onOpen}>
+                        <span>{openLabel}</span>
+                        <kbd aria-hidden="true">{openKeyHint}</kbd>
+                    </button>
+                ) : null}
             </div>
+            {footer ? <footer className="raw-property-footer">{footer}</footer> : null}
         </div>
     )
 }

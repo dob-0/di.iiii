@@ -90,8 +90,10 @@ describe('raw colour roles', () => {
     // "what is it made of" sits in the marker strip, which is the one thing a
     // lost person on a phone reaches for; and the sheet's only control is a
     // link-looking button that is still a finger's target.
-    it('holds the anatomy sheet\'s two controls to the same floor', () => {
-        for (const selector of ['.raw-scope-marker-what', '.raw-anatomy-goto']) {
+    // The marker's "?" went with the round pill (audit 2026-10-05 §3.6: the
+    // inside view is the reading); the sheet's own control keeps the floor.
+    it('holds the anatomy sheet\'s control to the finger floor', () => {
+        for (const selector of ['.raw-anatomy-goto']) {
             const rule = block(selector)
             expect(rule, `${selector} rule not found — did the selector change?`).toBeTruthy()
             expect(rule, selector).toMatch(/min-height:\s*44px/)
