@@ -1,7 +1,7 @@
 import React from 'react'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import SpaceHub from './SpaceHub.jsx'
+import SpaceHub, { resetSpaceCardPosters } from './SpaceHub.jsx'
 import { WORKS } from '../../works/works.js'
 
 // Several tests here render the thirteen-card hub, which mounts thirteen preview
@@ -378,7 +378,7 @@ describe('SpaceHub', () => {
         }
     })
 
-    // 13 public spaces: one more than the card grid's boot ceiling, so exactly
+    // 13 public spaces: more than the card grid's boot ceiling (4), so the
     // one card is left waiting and it is unambiguous what freed its slot.
     const thirteenPublicSpaces = Array.from({ length: 13 }, (_, index) => ({
         id: `s${index}`,
@@ -415,8 +415,8 @@ describe('SpaceHub', () => {
 
             await findCard('s0')
             await waitFor(() => expect(frameIn('s0')).not.toBeNull())
-            expect(frameIn('s11')).not.toBeNull()
-            expect(frameIn('s12')).toBeNull()
+            expect(frameIn('s3')).not.toBeNull()
+            expect(frameIn('s4')).toBeNull()
 
             // `load` fires when the iframe's HTML document arrives, which for
             // this app is ~100ms in -- before its chunks, its scene document or
@@ -424,7 +424,7 @@ describe('SpaceHub', () => {
             // at once and starve each other on a black loading screen.
             fireEvent.load(frameIn('s0'))
             await Promise.resolve()
-            expect(frameIn('s12')).toBeNull()
+            expect(frameIn('s4')).toBeNull()
 
             // the embedded app reports pixels; only then does the queue move on
             await settleEffects()
@@ -433,10 +433,38 @@ describe('SpaceHub', () => {
                 origin: window.location.origin,
                 source: frameIn('s0').contentWindow
             }))
-            await waitFor(() => expect(frameIn('s12')).not.toBeNull())
+            await waitFor(() => expect(frameIn('s4')).not.toBeNull())
             // the reporting iframe stays mounted — only its boot slot was freed
             expect(frameIn('s0')).not.toBeNull()
         } finally {
+            vi.unstubAllGlobals()
+        }
+    })
+
+    it('swaps a painted card for its still, drops the frame and frees the slot', async () => {
+        everyCardVisible()
+        try {
+            resetSpaceCardPosters()
+            listServerSpaces.mockResolvedValue(thirteenPublicSpaces)
+            render(<SpaceHub />)
+            await findCard('s0')
+            await waitFor(() => expect(frameIn('s0')).not.toBeNull())
+            expect(frameIn('s4')).toBeNull()
+            await settleEffects()
+            fireEvent(window, new MessageEvent('message', {
+                data: { type: 'dii:preview-poster', spaceId: 's0', poster: 'data:image/jpeg;base64,AAAA' },
+                origin: window.location.origin,
+                source: frameIn('s0').contentWindow
+            }))
+            // the card now holds a picture and no WebGL context
+            await waitFor(() => expect(frameIn('s0')).toBeNull())
+            expect(cardOf('s0').querySelector('.ssh-card-poster').getAttribute('src')).toBe('data:image/jpeg;base64,AAAA')
+            // and its slot went to the next card
+            await waitFor(() => expect(frameIn('s4')).not.toBeNull())
+            // never more than the ceiling of live frames at once
+            expect(document.querySelectorAll('.ssh-card-preview iframe').length).toBeLessThanOrEqual(4)
+        } finally {
+            resetSpaceCardPosters()
             vi.unstubAllGlobals()
         }
     })
@@ -464,7 +492,7 @@ describe('SpaceHub', () => {
                 source: window
             }))
             await Promise.resolve()
-            expect(frameIn('s12')).toBeNull()
+            expect(frameIn('s4')).toBeNull()
         } finally {
             vi.unstubAllGlobals()
         }
@@ -480,10 +508,10 @@ describe('SpaceHub', () => {
 
             await findCard('s0')
             await waitFor(() => expect(frameIn('s0')).not.toBeNull())
-            expect(frameIn('s12')).toBeNull()
+            expect(frameIn('s4')).toBeNull()
 
             await act(async () => { await vi.advanceTimersByTimeAsync(12000) })
-            expect(frameIn('s12')).not.toBeNull()
+            expect(frameIn('s4')).not.toBeNull()
         } finally {
             vi.useRealTimers()
             vi.unstubAllGlobals()
@@ -499,15 +527,15 @@ describe('SpaceHub', () => {
 
             await findCard('s0')
             // Wait for the state the case is ABOUT, not for a duration: the
-            // queue is full (twelve card frames mounted) and s12 is the one
-            // card left waiting. Checking only s0 and then asserting s12 is
-            // absent was vacuous on a slow runner -- s12 is trivially absent
+            // queue is full (four card frames mounted) and s4 is the one
+            // card left waiting. Checking only s0 and then asserting s4 is
+            // absent was vacuous on a slow runner -- s4 is trivially absent
             // while the others are still mounting.
             await waitFor(() => {
-                expect(document.querySelectorAll('.ssh-card-preview iframe')).toHaveLength(12)
+                expect(document.querySelectorAll('.ssh-card-preview iframe')).toHaveLength(4)
             })
             expect(frameIn('s0')).not.toBeNull()
-            expect(frameIn('s12')).toBeNull()
+            expect(frameIn('s4')).toBeNull()
 
             // Under DI_PROFILE=local a work's route (wcc, algovrithm) is a
             // page of text with no canvas, so it never says preview-ready. It
@@ -520,7 +548,7 @@ describe('SpaceHub', () => {
             }))
 
             // the slot is freed like a paint would free it
-            await waitFor(() => expect(frameIn('s12')).not.toBeNull())
+            await waitFor(() => expect(frameIn('s4')).not.toBeNull())
             // and the card draws its own line in place of the scaled-down frame
             const card = cardOf('s0')
             expect(card.querySelector('.ssh-card-preview iframe')).toBeNull()
