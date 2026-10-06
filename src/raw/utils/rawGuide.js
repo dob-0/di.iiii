@@ -16,7 +16,7 @@ export const describeCanvas = ({ nodeCount = 0, wireCount = 0, thingCount = 0 } 
     if (nodeCount === 0 && thingCount === 0) return 'Empty canvas · double-click it and type'
     const parts = []
     if (nodeCount > 0) parts.push(plural(nodeCount, 'node', 'nodes'))
-    if (thingCount > 0) parts.push(plural(thingCount, 'thing', 'things'))
+    if (thingCount > 0) parts.push(plural(thingCount, 'object', 'objects'))
     parts.push(wireCount > 0 ? plural(wireCount, 'wire', 'wires') : 'nothing wired yet')
     return parts.join(' · ')
 }

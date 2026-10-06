@@ -2035,8 +2035,8 @@
 
 .raw-text-panel-content {
     margin: 0;
-    font-size: var(--di-text-6);
-    line-height: 1.5;
+    font-size: var(--raw-text-body);
+    line-height: 20px;
     color: var(--di-text);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
@@ -2060,8 +2060,8 @@
     background: transparent;
     resize: none;
     font: inherit;
-    font-size: var(--di-text-6);
-    line-height: 1.5;
+    font-size: var(--raw-text-body);
+    line-height: 20px;
     color: var(--di-text);
     overflow-wrap: anywhere;
 }
@@ -2079,17 +2079,6 @@
     margin: var(--di-space-3) 0 0;
     font-size: var(--di-text-3);
     color: rgba(255, 255, 255, 0.55);
-}
-
-/* 20px is a presentation size on a desk; on a 390px phone it turns three
-   sentences into a scrolling column, which is how the starter desk's last
-   line — the one naming the way into Studio — ended up below the fold. */
-@media (max-width: 640px) {
-    .raw-text-panel-content,
-    .raw-text-panel-input {
-        font-size: var(--di-text-5);
-        line-height: 1.45;
-    }
 }
 
 .raw-chat-panel {
@@ -2556,11 +2545,14 @@
     flex: 0 0 var(--raw-column-w);
     width: var(--raw-column-w);
     box-sizing: border-box;
-    /* Starts below the toolbar, which RawEditor measures and publishes as a
-       custom property (an inline `top` would beat the phone rule below). */
-    height: 100vh;
-    height: 100dvh;
-    padding-top: var(--raw-scaffold-top);
+    /* Starts BELOW the bar, which RawEditor measures and publishes as a
+       custom property (an inline `top` would beat the phone rule below). It
+       used to start at 0 with the bar's height as padding: z 1350 over the
+       bar (z 60), so with the one bar (#778) it covered Chat, ?, ⋯ and the
+       account cell (measured 2026-10-07, 1920x1080, Help open). */
+    margin-top: var(--raw-scaffold-top);
+    height: calc(100vh - var(--raw-scaffold-top));
+    height: calc(100dvh - var(--raw-scaffold-top));
     z-index: 1350;
     border-radius: 0;
     background: var(--di-surface);
@@ -5077,7 +5069,10 @@
     border-radius: 0;
     background: rgba(255, 255, 255, 0.04);
     font: inherit;
-    font-size: var(--di-text-5);
+    /* One piece of data, one size (audit §3.2): a row is 13px on the card at
+       100 %, in the inside view's table and in the column — it was 17. */
+    font-size: var(--raw-text-body);
+    line-height: 18px;
     color: var(--di-text);
 }
 
@@ -5317,6 +5312,7 @@
        (studio-mobile.css), so this is the existing pattern, not new chrome. */
     .raw-selection-scaffold {
         position: fixed;
+        margin-top: 0;
         padding-top: 0;
         height: auto;
         top: auto;

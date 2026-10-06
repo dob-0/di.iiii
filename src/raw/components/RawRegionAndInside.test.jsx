@@ -283,7 +283,13 @@ describe('row 3: one right region', () => {
         expect(workbench.className).toContain('has-column')
         const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../styles/raw.css'), 'utf8')
         const desktop = css.slice(0, css.indexOf('@media (max-width: 699px)'))
-        expect(/\n\.raw-selection-scaffold \{([^}]*)\}/.exec(desktop)?.[1] || '').toMatch(/position:\s*sticky/)
+        const rule = /\n\.raw-selection-scaffold \{([^}]*)\}/.exec(desktop)?.[1] || ''
+        expect(rule).toMatch(/position:\s*sticky/)
+        // It starts BELOW the one bar (margin), never under it with the bar's
+        // height as padding: at z 1350 over the bar's z 60 that covered the
+        // bar's Chat, ?, ⋯ and account cells (seen 2026-10-07, 1920x1080).
+        expect(rule).toMatch(/margin-top:\s*var\(--raw-scaffold-top\)/)
+        expect(rule).not.toMatch(/padding-top:\s*var\(--raw-scaffold-top\)/)
     })
 
     it('is never empty: every kind shows its name, ports, Open and Delete; settings only where there are any', () => {
