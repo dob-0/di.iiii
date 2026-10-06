@@ -53,7 +53,8 @@ Code: `serverXR/src/follow/` — `follower.js` (the loop), `followPlan.js` (what
    lists and makes a missing project on the side that lacks it, through that side's own `POST /spaces/:id/projects`
    with the same id, the title as made, and private when private at the source. An empty project (version 0, no ops)
    has no ops to carry it, so before 2026-10-04 it never left the machine it was made on. Making a project also
-   wakes the follower and the space's waiters, so it crosses in about a second. Deletion is still not carried.
+   wakes the follower and the space's waiters, so it crosses in about a second. Trash, restore, rename and move: see
+   "A project trashed, restored, renamed or moved" below.
 3. **A restart resumes where it was.** Cursors and the carried opIds are saved to
    `DATA_ROOT/follow-state/<space>.json` (temp file + rename) and reloaded; an old edit is never re-sent past the
    receiver's 500-op dedupe window and applied twice. A saved cursor past the end of a log (a rebuilt install)
@@ -126,13 +127,81 @@ converge rule above is unchanged. Measured: `followIntegration.test.js` (two ser
 in under 5 s past a whole-work op and the error clears. Not covered: the `PUT /api/projects/:id/document` route does
 not wake a follow, so a replacement made there is noticed at the next park end (up to 20 s).
 
+## A project trashed, restored, renamed or moved (2026-10-07, `followProjects.js`)
+
+Before this a follow carried what is IN a project (its ops) and a project's birth, nothing about its life after:
+a project trashed on the host stayed live here, a renamed one kept its old title here, a project moved to another
+space on the host made the follow fail on it (the space's key cannot read the project in its new space: 403 every
+tick). The rule the owner set on 2026-10-04 — every install follows dev, dev and local stay one — needs all four.
+
+**Method: a base (the last agreed state), as a file synchroniser keeps one.** A follow cannot tell "trashed there"
+from "made here" or "renamed there" from "renamed here" by looking at the two sides now; it needs the state they last
+agreed on. This is Unison's archive (B. Pierce, J. Vouillon, "What's in Unison? A Formal Specification and Reference
+Implementation of a File Synchronizer", U. Penn MS-CIS-03-36, 2004): a replica that differs from the archive changed;
+one that equals it did not. The base is saved with the follow's state (`follow-state/<space>.json`, `base`): for each
+project both sides held live in this space, its `title`, `slug` and `visibility` as last agreed. A follow that starts
+with no base takes the projects live on both sides as its base, with the host's values (host wins, as everywhere).
+
+**What travels, and which side wins**
+
+| change | host to this install | this install to host | when both changed |
+|---|---|---|---|
+| title, slug (rename) | yes, PATCH here | yes, PATCH there (an editor may; the sync key is one) | host wins |
+| project made private | yes | no — making a project private or public is the space owner's (host gate); said | private wins |
+| project made public | no — never more public; said | no; said | — |
+| trashed | yes, as a MOVE TO TRASH here (`DELETE /api/projects/:id`, the soft delete; 30 days to restore) | no — deleting is owner-or-admin on the host; the sync key is an editor. Said: "trashed here; the host still has it" | — |
+| restored from the trash | yes, when this follow saw it trashed on both sides | no; said | — |
+| moved to another space | see below | no — a move needs the owner of both spaces; said | — |
+
+Never a hard delete: the follow only ever uses this install's own trash route, and a trashed project keeps its files
+and its op log until the trash sweep (30 days). Restore it the usual way (`POST /api/projects/:id/restore`).
+
+**The guards**
+
+1. **A trash row, never an absence.** A project is trashed here only if the host's trash lists THAT id in THIS space
+   and the project was in the base (both held it live). A project merely missing from the host's list (an empty or
+   unread list, a host that lost its disk, a key that cannot see it) trashes nothing.
+2. **All four lists or nothing.** Both project lists and both trashes must answer 200 with a list, or the pass carries
+   no trash, no restore, no rename and no move.
+3. **Never empties this copy (the "empty host" rule, extended).** A pass that would trash every live project this
+   copy holds (when it holds more than one), or more than 5 at once (`MAX_TRASH_PER_PASS`, the same idea as rsync's
+   `--max-delete`), trashes none. `di follows` says so ("the host trashed N projects at once — not carried; trash them
+   here yourself if that was meant"), and the log says it once.
+4. **Departed is never re-made.** A project in the base that is gone from one side's space without a trash row (moved
+   to another space, or purged after 30 days) is marked departed: it is never made again on the other side and its op
+   stream is no longer read (that read answered 403 for a moved project). Said in `di follows`, named. Live on both
+   sides again, or on neither, clears it.
+5. **A trash or rename that fails** keeps the old base for that project, so the next pass tries again; the refusal is
+   said once.
+
+**A project moved to another space.** The project id is global, so the host's move (`POST /api/projects/:id/move`)
+keeps the id and the op log; on the host it leaves space A and appears in space B.
+- **This install follows both A and B from the same host:** the follow of A marks it departed and waits; the follow of
+  B finds it live on the host's B, not in this B and never paired in B, and here in A, which this install follows from
+  the same host — it moves it here the same way (`POST /api/projects/:id/move`, this install's own route and its own rules: a
+  project that is still A's front door here waits until the host's front door reaches A). Its stream in B then starts from now: both copies already
+  hold the same ops (they were carried under A), and re-sending them past the 500-op dedupe window would apply them twice.
+- **Only A is followed here:** the project is kept in A here (safe: nothing leaves the person's machine). `di follows`
+  says "left this space on the host (moved, or purged from its trash) — kept here". Follow its new space, or trash it
+  here, to make them one.
+- **Only B is followed here, and the project is here in an unfollowed space:** not moved (that space may be a different
+  space by the same name); said. Not here at all: made in B as any project only the host holds.
+- **Moved on this install:** the host keeps it where it was (a sync key cannot move); both follows say so.
+
+**Waking.** A project PATCH, trash, restore and move now wake this install's follower and release a held read on the
+space (`nudgeFollow`, `noteChange`), like a project made empty does, so a change crosses in about a second instead of
+waiting out a park (20 s).
+
+Guards: `followProjects.test.js` (the rules, no I/O), `followIntegration.test.js` "a project's life crosses a follow"
+(two servers, the host with auth on and a real sync key).
+
 ## Not yet (owed)
 
 - **Keeping both people's intent** on a same-field conflict (an op-based CRDT with per-field Lamport stamps,
   Kleppmann et al., "Local-first software", 2019). Today the host's value wins.
 - **One remote per space, star only.** A third install follows the host; two followers do not talk to each other.
-- **Not carried:** project deletion, slug renames, later visibility changes of a project, shelf/collection
-  membership, space meta other than label / isPublic / front door (host to follower only: slug, kind, preview image,
+- **Not carried:** a trash, move or visibility change made on the FOLLOWER (the host's gates are owner-or-admin; a sync
+  key is an editor), a project made public again, a space trashed, shelf/collection membership, space meta other than label / isPublic / front door (host to follower only: slug, kind, preview image,
   owner and trusted users are not), follower to host settings, files placed in the room itself (not in a project).
 - **No sync UI and no discovery:** peers are typed URLs (`--at <ip>` for Tailscale); `rig/discovery.js` is not
   wired to follows.
