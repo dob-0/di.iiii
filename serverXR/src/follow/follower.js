@@ -22,7 +22,8 @@ const { httpRequest } = require('../httpClient')
 const { accountedThrough, moreToCarry, unseen, planDirection, planAfterConflict, nextInterval, refusedWholeWork, WHOLE_WORK_OPS, failureDelay, isStuckRefusal, describeWriteFailure } = require('./followPlan')
 const { projectIdsFrom, sceneStream, streamsFor } = require('./streams')
 const { createAssetChase } = require('./assets')
-const { CONVERGE_CLIENT, planConverge, readDocument } = require('./followConverge')
+const { CONVERGE_CLIENT, DIRECTIONS, describeCounts, planConverge, readDocument } = require('./followConverge')
+const { planSettings, readSettings } = require('./followSettings')
 
 const FLOOR_MS = 700
 // Five seconds, not thirty. A followed space is a room with someone else in
@@ -36,6 +37,8 @@ const TIMEOUT_MS = 8000
 // costs almost nothing, short enough that a dropped wifi is noticed and said
 // out loud rather than hanging forever.
 const WAIT_SECONDS = 20
+// How often the space's own settings (label, visibility, front door) are compared.
+const SETTINGS_EVERY_MS = 5000
 // Enough opIds to cover any batch several times over. Bounded because a room
 // runs for days: the set is a courtesy to keep the wire quiet, and the servers'
 // own dedupe is the correctness.
@@ -110,10 +113,13 @@ const side = ({ base, spaceId, token = null, servername = null, address = null }
  * parameter simply answers straight away, and the loop falls back to its own
  * timing — so this is an improvement, never a requirement.
  */
-const readOps = async (from, stream, since, { waitSeconds = 0, signal = null } = {}) => {
+const readOps = async (from, stream, since, { waitSeconds = 0, signal = null, mark = null } = {}) => {
     const plain = from.opsUrl(stream, since)
+    // `mark`: the space's change mark from the last answer (follow/waiters.js) —
+    // the other server ends the wait at once if anything in the space was
+    // written since. A server that does not know it ignores it.
     const url = waitSeconds > 0
-        ? `${plain}${plain.includes('?') ? '&' : '?'}wait=${waitSeconds}`
+        ? `${plain}${plain.includes('?') ? '&' : '?'}wait=${waitSeconds}${mark ? `&mark=${encodeURIComponent(mark)}` : ''}`
         : plain
     const answer = await request(url, {
         token: from.token,
@@ -126,7 +132,8 @@ const readOps = async (from, stream, since, { waitSeconds = 0, signal = null } =
     return {
         reachable: true,
         ops: Array.isArray(answer.payload?.ops) ? answer.payload.ops : [],
-        latestVersion: Number.isFinite(answer.payload?.latestVersion) ? answer.payload.latestVersion : null
+        latestVersion: Number.isFinite(answer.payload?.latestVersion) ? answer.payload.latestVersion : null,
+        changeMark: typeof answer.payload?.changeMark === 'string' ? answer.payload.changeMark : null
     }
 }
 
@@ -196,7 +203,24 @@ const carry = async ({ to, stream, ops, seen, targetVersion, send = request, dir
  * `onState` is called after every tick with a plain object a person could read:
  * this is what `di follows` prints and what the interface will show.
  */
-const startFollowing = ({ local, remote, log = console, onState = () => {}, files = {}, saved = null, onSave = null }) => {
+// How far back the first pass looks for ops made after the follow started.
+const START_LOOKBACK = 200
+
+/**
+ * Where a from-now cursor starts on one side: just before the first op stamped
+ * at or after `at`, else the latest version. Reads the latest version, then the
+ * last START_LOOKBACK ops — never the whole log.
+ */
+const startCursorAt = async (side, stream, at) => {
+    const now = await readOps(side, stream, Number.MAX_SAFE_INTEGER)
+    if (!now.reachable || !Number.isFinite(now.latestVersion)) return now
+    const recent = await readOps(side, stream, Math.max(0, now.latestVersion - START_LOOKBACK))
+    if (!recent.reachable) return recent
+    const firstAfter = recent.ops.find(op => Number(op?.timestamp) >= at && Number.isFinite(op?.version))
+    return { reachable: true, latestVersion: firstAfter ? Math.min(firstAfter.version - 1, now.latestVersion) : now.latestVersion }
+}
+
+const startFollowing = ({ local, remote, log = console, onState = () => {}, files = {}, saved = null, onSave = null, start = 'now', direction = null, onDirectionDone = null }) => {
     // Where this follower had got to, kept on disk between runs (index.js,
     // followStore.js). Without it a restart forgot both cursors and every opId
     // it had carried, re-read both retained windows and re-sent whatever it no
@@ -205,6 +229,39 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     // newer ones. Ignored when it belongs to another remote or another space.
     const resume = saved && saved.remote === remote.base && saved.spaceId === local.spaceId ? saved : null
     const seen = new Set(Array.isArray(resume?.seen) ? resume.seen : [])
+    // Streams whose copy on the HOST this follow made empty itself (a project
+    // that existed only here). Its first comparison fills that copy from this
+    // one instead of refusing because the host's copy is empty (gap 5, 2026-10-05).
+    // Saved, so a restart between the making and the filling does not forget.
+    const seeded = new Set(Array.isArray(resume?.seeded) ? resume.seeded : [])
+    // START FROM NOW (audit F4, owner 2026-10-04). A follow with nothing saved
+    // used to start both cursors at null, which reads each side's WHOLE log:
+    // this install's years of history were replayed onto the host, and the
+    // host's onto this one. Now each stream starts at the latest version on both
+    // sides and only what happens after is carried; the documents are compared
+    // once instead (converge). `start: 'replay'` is the old behaviour, kept only
+    // for a follow that is meant to carry a history the other side never saw.
+    // Decided once, at the first tick of a follow with nothing saved, and only
+    // for a stream that exists on BOTH sides then: a project that is on one
+    // side only has history the other side has never seen.
+    const fromNow = start !== 'replay' && !resume
+    // "Now" is the moment the follow was started, not the moment its first pass
+    // reaches a stream: that pass can come seconds later, and an edit made in
+    // between used to be folded into the history and never carried (CI,
+    // 2026-10-04/05: three PRs, three different integration tests). Both
+    // sides are compared with no margin: a margin would replay ops made just
+    // BEFORE the start, which is the history a from-now follow must not carry.
+    // Installs keep NTP time; an edit made within the two clocks' skew of the
+    // start is the one window left (an op carried twice is dropped by its opId).
+    const startedAt = Date.now()
+    let fromNowPending = null
+    // `take-host` / `take-mine`: the person's answer to a refusal, applied to
+    // each stream's first comparison and then dropped (onDirectionDone clears it
+    // from follows.json). Anything else is no direction.
+    let activeDirection = DIRECTIONS.includes(direction) ? direction : null
+    const directionDone = new Set()
+    // A refusal stays said until that stream is compared again and agrees (F7).
+    const refusals = new Map()
     // The files the projects name (follow/assets.js). Its own task, beside the
     // op loop and never inside it: the loop hands it what it read and walks on,
     // so ops keep crossing while a two-gigabyte video is still on its way.
@@ -222,6 +279,14 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     // a stream is compared once it is quiet again after both moved — and once
     // at the start, so a follow resumed after a gap checks it agrees.
     const moves = new Map()
+    // Streams where a whole-work op sat in a log and the two copies were found
+    // to DIFFER — stream key -> why. A whole-work op is never carried
+    // (followPlan.js), and the cursor steps past it like any op it has
+    // accounted for, so the log stops saying anything about it. What stays is
+    // this: the copies are compared again every tick until they agree, and the
+    // follow says so out loud for as long as they do not. Nothing is ever
+    // overwritten here — that is `di sync`'s job, with a restore point.
+    const disagree = new Map()
     const movesFor = (stream) => {
         if (!moves.has(stream.key)) moves.set(stream.key, { in: true, out: true })
         return moves.get(stream.key)
@@ -229,11 +294,11 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     // Saved only when it changed — a follow that cannot reach the other side
     // writes nothing — and never after stop(), so a stopped follow leaves its
     // directory alone.
-    let lastSaved = JSON.stringify(Object.fromEntries(cursors)) + seen.size
+    let lastSaved = JSON.stringify(Object.fromEntries(cursors)) + seen.size + [...seeded].join()
     const save = () => {
         if (!onSave || stopped) return
-        const snapshot = { remote: remote.base, spaceId: local.spaceId, cursors: Object.fromEntries(cursors), seen: [...seen] }
-        const key = JSON.stringify(snapshot.cursors) + seen.size
+        const snapshot = { remote: remote.base, spaceId: local.spaceId, cursors: Object.fromEntries(cursors), seen: [...seen], seeded: [...seeded] }
+        const key = JSON.stringify(snapshot.cursors) + seen.size + snapshot.seeded.join()
         if (key === lastSaved) return
         lastSaved = key
         Promise.resolve(onSave(snapshot)).catch((error) => log.warn?.(`[follow] ${local.spaceId}: could not save where it got to (${error?.message || error})`))
@@ -245,6 +310,20 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     // The request currently parked on the other machine, if any — abandoned the
     // moment this install writes something of its own.
     let parking = null
+    // A wake is LATCHED, not just fired. Between reading a project's log and
+    // parking on the scene's, the loop is neither asleep nor parked — and a
+    // wake that arrived then (an edit made here right after something was
+    // carried, which is exactly when a person edits) found nothing to end, was
+    // dropped, and the edit sat out the whole park behind it. Measured
+    // 2026-10-04: 21s. Cleared when a tick starts, because that tick reads
+    // every log afresh; set at any point after, it keeps the tick from parking
+    // and sends the loop straight round again.
+    let woken = false
+    // The same latch on the other machine's side: the space's change mark from
+    // its last answer (follow/waiters.js). Parking with it means an edit made
+    // there after we read the projects ends the park at once, instead of being
+    // missed because it landed before we were parked.
+    let spaceMark = null
     const sleep = (ms) => new Promise((resolve) => {
         const timer = setTimeout(resolve, ms)
         wakeNow = () => { clearTimeout(timer); wakeNow = null; resolve() }
@@ -254,46 +333,151 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
 
     // Streams whose last write was refused with a server error, and when they
     // may be tried again (followPlan.js failureDelay). Not saved: a restart is
-    // a fair moment to try once more.
-    const refusals = new Map()
+    // a fair moment to try once more. Not `refusals` above — that map is the
+    // copies that DISAGREE (a person's choice to make); this one is a server's
+    // 5xx (a wait to ride out). Two meanings, two maps.
+    const writeBackoff = new Map()
     const noteRefusal = (stream, result) => {
-        const count = (refusals.get(stream.key)?.count || 0) + 1
+        const count = (writeBackoff.get(stream.key)?.count || 0) + 1
         const delay = failureDelay(count)
         const message = describeWriteFailure({ ...result, stream, retryInMs: delay })
-        refusals.set(stream.key, { count, until: Date.now() + delay, message })
+        writeBackoff.set(stream.key, { count, until: Date.now() + delay, message })
         // Said once per doubling, not once per tick.
         if ((count & (count - 1)) === 0) log.warn?.(`[follow] ${local.spaceId}: ${message}`)
         return message
     }
 
+    const refusedMake = new Set()
+
     /** The projects on both sides, so a project made on either appears on both. */
     const refreshStreams = async () => {
         const path = `/api/spaces/${encodeURIComponent(local.spaceId)}/projects`
-        const [here, there] = await Promise.all([
+        const trashPath = `/api/trash?space=${encodeURIComponent(local.spaceId)}`
+        const [here, there, hereTrash, thereTrash] = await Promise.all([
             request(local.url(path), { token: local.token, servername: local.servername, address: local.address }),
-            request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address })
+            request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address }),
+            request(local.url(trashPath), { token: local.token, servername: local.servername, address: local.address }),
+            request(remote.url(trashPath), { token: remote.token, servername: remote.servername, address: remote.address })
         ])
         const localProjects = projectIdsFrom(here.payload)
         const remoteProjects = projectIdsFrom(there.payload)
+        if (fromNow && fromNowPending === null && here.ok && there.ok) {
+            fromNowPending = new Set([sceneStream(local.spaceId).key, ...localProjects.filter(id => remoteProjects.includes(id)).map(id => `project:${id}`)])
+        }
 
-        // A project that exists only there has to exist here before its ops can
-        // land. Made through this server's own route, with the same id: ids are
-        // global in di.iiii, so the same project is the same project on both
-        // machines.
-        const remoteRows = Array.isArray(there.payload?.projects) ? there.payload.projects : []
-        for (const projectId of remoteProjects) {
-            if (localProjects.includes(projectId)) continue
-            // Born private when it is private there — never public for a moment.
-            const privateThere = remoteRows.some((row) => row?.id === projectId && row.visibility === 'private')
-            const made = await request(local.url(path), {
-                method: 'POST', token: local.token, servername: local.servername, address: local.address,
-                body: { slug: projectId, title: projectId, ...(privateThere ? { visibility: 'private' } : {}) }
-            })
-            if (!made.ok && made.status !== 409) {
-                log.warn?.(`[follow] ${local.spaceId}: could not make room for ${projectId} (${made.status})`)
+        // A project that exists on only one side has to exist on the other
+        // before its ops can land — and an EMPTY one has no ops to make it
+        // exist, so it is made from the listing, in both directions (seen
+        // 2026-10-04: six projects made empty on the follower never reached
+        // the host). Made through the receiving server's own route, with the
+        // same id: ids are global in di.iiii, so the same project is the same
+        // project on both machines. Title as made; born private when private
+        // at the source — never public for a moment. Deletions are not carried.
+        const makeMissing = async (from, toProjects, toSide, toTrash) => {
+            // A project deleted on a side is still in that side's trash, and a
+            // create there would take it out again (ensureProject restores a
+            // trashed id). Deletion is not carried, so it must not be undone
+            // either. A trash that cannot be read makes nothing this tick.
+            if (!toTrash.ok) {
+                // Said once, never silently: nothing is made there until the trash can be read.
+                const unread = `${toSide.base}|trash-unread`
+                if (!refusedMake.has(unread)) {
+                    refusedMake.add(unread)
+                    log.warn?.(`[follow] ${local.spaceId}: cannot read the trash on ${toSide === local ? 'this install' : 'the other di.iiii'} (${toTrash.status || toTrash.error || 'no answer'}) — projects missing there are not made`)
+                }
+                return
+            }
+            const trashed = new Set(projectIdsFrom(toTrash.payload))
+            const rows = Array.isArray(from.payload?.projects) ? from.payload.projects : []
+            for (const projectId of projectIdsFrom(from.payload)) {
+                if (toProjects.includes(projectId)) continue
+                if (trashed.has(projectId)) {
+                    if (!refusedMake.has(`${toSide.base}|${projectId}|trash`)) {
+                        refusedMake.add(`${toSide.base}|${projectId}|trash`)
+                        log.warn?.(`[follow] ${local.spaceId}: ${projectId} is in the trash on ${toSide === local ? 'this install' : 'the other di.iiii'} — not re-made`)
+                    }
+                    continue
+                }
+                const row = rows.find(candidate => candidate?.id === projectId)
+                const title = typeof row?.title === 'string' && row.title.trim() ? row.title.trim() : projectId
+                const made = await request(toSide.url(path), {
+                    method: 'POST', token: toSide.token, servername: toSide.servername, address: toSide.address,
+                    body: { slug: projectId, title, ...(row?.visibility === 'private' ? { visibility: 'private' } : {}) }
+                })
+                // Made EMPTY on the host from this side's listing: its content has to
+                // follow by comparison, whatever ops there are or are not.
+                if (made.ok && toSide === remote) seeded.add(`project:${projectId}`)
+                if (!made.ok && made.status !== 409 && !refusedMake.has(`${toSide.base}|${projectId}`)) {
+                    // Once, not every tick: a refusal repeats until someone fixes it.
+                    refusedMake.add(`${toSide.base}|${projectId}`)
+                    log.warn?.(`[follow] ${local.spaceId}: could not make room for ${projectId} (${made.status})`)
+                }
             }
         }
+        await makeMissing(there, localProjects, local, hereTrash)
+        await makeMissing(here, remoteProjects, remote, thereTrash)
         streams = streamsFor({ spaceId: local.spaceId, localProjects, remoteProjects })
+    }
+
+    // The space's own settings, host to this install (followSettings.js). Never
+    // fails the follow: a refusal is said once, in the log and in `di follows`.
+    let settingsAt = 0
+    // Set when the other side said its space changed, or a local write woke the
+    // loop: look at the settings on the very next pass, whatever the interval.
+    let settingsForce = false
+    let settingsNotes = []
+    let settingsCarried = 0
+    const settingsAttempted = new Set()
+    const syncSettings = async () => {
+        if (!settingsForce && Date.now() - settingsAt < SETTINGS_EVERY_MS) return
+        settingsForce = false
+        settingsAt = Date.now()
+        const path = `/api/spaces/${encodeURIComponent(local.spaceId)}`
+        const [there, here, mine] = await Promise.all([
+            request(remote.url(path), { token: remote.token, servername: remote.servername, address: remote.address }),
+            request(local.url(path), { token: local.token, servername: local.servername, address: local.address }),
+            request(local.url(`${path}/projects`), { token: local.token, servername: local.servername, address: local.address })
+        ])
+        if (!there.ok || !here.ok) return
+        const { patch, notes } = planSettings({
+            host: readSettings(there.payload),
+            local: readSettings(here.payload),
+            localProjects: Array.isArray(mine.payload?.projects) ? mine.payload.projects : []
+        })
+        settingsNotes = notes
+        if (!Object.keys(patch).length) return
+        // The same change asked twice in a row and refused is said once.
+        const attempt = JSON.stringify(patch)
+        const answer = await request(local.url(path), { method: 'PATCH', token: local.token, servername: local.servername, address: local.address, body: patch })
+        if (answer.ok && answer.status === 200) {
+            settingsAttempted.delete(attempt)
+            settingsCarried += 1
+            log.info?.(`[follow] ${local.spaceId}: took the host's space settings (${Object.keys(patch).join(', ')})`)
+            return
+        }
+        if (!settingsAttempted.has(attempt)) {
+            settingsAttempted.add(attempt)
+            const why = answer.status === 202 ? 'it waits for approval here' : `${answer.status || 'no answer'}: ${answer.payload?.error || answer.error || 'refused'}`
+            log.warn?.(`[follow] ${local.spaceId}: could not take the host's space settings (${Object.keys(patch).join(', ')}) — ${why}`)
+        }
+        settingsNotes = [...notes, `the host's ${Object.keys(patch).join(', ')} could not be set here`]
+    }
+
+    // Both copies of one stream, read and compared (followConverge.js).
+    const compare = async (stream, direction = null, { seedHost = false } = {}) => {
+        const [here, there] = await Promise.all([
+            request(local.url(stream.documentPath), { token: local.token, servername: local.servername, address: local.address }),
+            request(remote.url(stream.documentPath), { token: remote.token, servername: remote.servername, address: remote.address })
+        ])
+        if (!here.ok || !there.ok) return null
+        return planConverge({
+            kind: stream.kind,
+            projectId: stream.projectId || null,
+            local: readDocument(stream.kind, here.payload),
+            remote: readDocument(stream.kind, there.payload),
+            direction,
+            seedHost
+        })
     }
 
     /**
@@ -303,38 +487,79 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
      * A 409 means someone here just edited: leave it for the next quiet pass.
      */
     const converge = async (stream) => {
-        const [here, there] = await Promise.all([
-            request(local.url(stream.documentPath), { token: local.token, servername: local.servername, address: local.address }),
-            request(remote.url(stream.documentPath), { token: remote.token, servername: remote.servername, address: remote.address })
-        ])
-        if (!here.ok || !there.ok) return { done: false }
-        const plan = planConverge({
-            kind: stream.kind,
-            projectId: stream.projectId || null,
-            local: readDocument(stream.kind, here.payload),
-            remote: readDocument(stream.kind, there.payload)
-        })
-        if (plan.same) return { done: true }
-        if (plan.refused) return { done: true, refused: plan.refused }
+        const plan = await compare(stream, activeDirection, { seedHost: seeded.has(stream.key) })
+        if (!plan) return { done: false }
+        // Once the host's copy is no longer the empty one this follow made, the
+        // ordinary rules apply to it.
+        if (!plan.seeded && !plan.refused?.includes('no version')) seeded.delete(stream.key)
+        if (plan.same) { refusals.delete(stream.key); return { done: true } }
+        if (plan.refused) {
+            // Said out loud, once per refusal, naming the work: a refusal that
+            // only lived in the next status line is one nobody saw (audit F4/F7).
+            const message = `${stream.key}: ${plan.refused}`
+            if (refusals.get(stream.key) !== message) {
+                log.warn?.(`[follow] ${local.spaceId}: ${message}${plan.localOnly ? ` (${describeCounts(plan.localOnly)} only here)` : ''}. Choose: di follow ${local.spaceId} --take-host (host wins) or --take-mine (this copy wins)`)
+            }
+            refusals.set(stream.key, message)
+            return { done: true, refused: message }
+        }
+        refusals.delete(stream.key)
         const opId = `${CONVERGE_CLIENT}-${stream.key}-${Date.now().toString(36)}`
-        const answer = await request(local.writeUrl(stream), {
-            method: 'POST', token: local.token, servername: local.servername, address: local.address,
+        // take-mine writes THIS copy to the host; everything else writes the
+        // host's copy here. Either way the receiving server's own write route
+        // takes the restore point (spaceHistory.beforeChange) before it changes.
+        const target = plan.target === 'remote' ? remote : local
+        const answer = await request(target.writeUrl(stream), {
+            method: 'POST', token: target.token, servername: target.servername, address: target.address,
             body: { baseVersion: plan.baseVersion, ops: [{ ...plan.op, opId }] }
         })
         if (!answer.ok) return { done: false }
         // Ours, and already the host's state: never carried back.
         rememberSeen(seen, [{ opId }])
-        log.info?.(`[follow] ${local.spaceId}: ${stream.key} disagreed with the host — took the host's copy`)
+        // Come back at once and look again: whatever was said about this stream
+        // before the write (a whole-work op, a difference) is true or untrue now.
+        woken = true
+        if (plan.seeded) {
+            seeded.delete(stream.key)
+            log.info?.(`[follow] ${local.spaceId}: ${stream.key} existed only here — filled the host's new copy with it`)
+        } else if (plan.direction) {
+            const restore = await latestRestorePoint(target)
+            log.warn?.(`[follow] ${local.spaceId}: ${stream.key} --${plan.direction}: ${plan.target === 'remote' ? 'wrote this copy over the host' : "took the host's copy over this one"}${plan.localOnly ? ` (${describeCounts(plan.localOnly) || 'nothing'} only on this side)` : ''}; restore point on ${plan.target === 'remote' ? 'the host' : 'this install'}: ${restore || 'taken by the write route (id not readable with this key)'}`)
+        } else {
+            log.info?.(`[follow] ${local.spaceId}: ${stream.key} disagreed with the host — took the host's copy`)
+        }
         return { done: true, converged: true }
+    }
+
+    /** The newest restore point of the space on one side, for the log — null when this key cannot read them. */
+    const latestRestorePoint = async (target) => {
+        const answer = await request(target.url(`/api/spaces/${encodeURIComponent(local.spaceId)}/snapshots`), { token: target.token, servername: target.servername, address: target.address })
+        const first = Array.isArray(answer.payload?.snapshots) ? answer.payload.snapshots[0] : null
+        return answer.ok && first?.id ? String(first.id) : null
     }
 
     /** Carry one stream, both ways. */
     const runStream = async (stream, { wait = false } = {}) => {
+        // First start: begin at the latest version on both sides, replay nothing.
+        if (fromNowPending?.has(stream.key) && !cursors.has(stream.key)) {
+            const [mine, theirsNow] = await Promise.all([
+                startCursorAt(local, stream, startedAt),
+                startCursorAt(remote, stream, startedAt)
+            ])
+            if (!mine.reachable || !theirsNow.reachable) {
+                const status = !mine.reachable ? mine.status : theirsNow.status
+                return status === 404 ? { moved: false, skipped: true } : { moved: false, failed: `could not read where the logs are now (${status || 'no route'})` }
+            }
+            if (Number.isFinite(mine.latestVersion) && Number.isFinite(theirsNow.latestVersion)) {
+                cursors.set(stream.key, { localVersion: mine.latestVersion, remoteVersion: theirsNow.latestVersion })
+            }
+            fromNowPending.delete(stream.key)
+        }
         const cursor = cursorFor(stream)
         // Refused with a server error a moment ago: leave it alone until its
         // time is up, and keep saying why. The room's stream is never skipped —
         // it is the one that parks, and a park is what paces the whole loop.
-        const refused = refusals.get(stream.key)
+        const refused = writeBackoff.get(stream.key)
         if (refused && stream.kind === 'project' && Date.now() < refused.until) {
             return { moved: false, failed: refused.message, backingOff: true }
         }
@@ -345,13 +570,22 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // design is against. Read ours, then park, and let a local write abort
         // the park (see wake()).
         const ours = await readOps(local, stream, cursor.localVersion)
-        const parkable = wait && ours.reachable && !unseen(ours.ops, seen).length
+        const parkable = wait && !woken && ours.reachable && !unseen(ours.ops, seen).length
         parking = parkable ? new AbortController() : null
         const theirs = await readOps(remote, stream, cursor.remoteVersion, {
             waitSeconds: parkable ? WAIT_SECONDS : 0,
-            signal: parking?.signal || null
+            signal: parking?.signal || null,
+            mark: parkable ? spaceMark : null
         })
+        const abandoned = Boolean(parking?.signal.aborted)
         parking = null
+        // Only the stream that parks reads the mark: it is the whole space's.
+        // An answer without one (an older server) leaves the last one standing.
+        const markBefore = spaceMark
+        if (wait && theirs.changeMark) spaceMark = theirs.changeMark
+        // A park this install abandoned for its own edit is not the other side
+        // failing — say nothing, and let the next tick read everything.
+        if (abandoned) return { moved: false, skipped: true }
 
         // A project one side does not have yet is a 404 on that stream, not a
         // failure of the follow: it will exist on the next pass.
@@ -383,7 +617,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         const outbound = await carry({ to: remote, stream, ops: ours.ops, seen, targetVersion: theirs.latestVersion, direction: 'out' })
         const stuck = [inbound, outbound].find(result => result.stuck)
         if (stuck) stuck.failed = noteRefusal(stream, { direction: stuck === inbound ? 'in' : 'out', status: stuck.status, error: stuck.refusal })
-        else if (inbound.wrote > 0 || outbound.wrote > 0 || (!inbound.failed && !outbound.failed)) refusals.delete(stream.key)
+        else if (inbound.wrote > 0 || outbound.wrote > 0 || (!inbound.failed && !outbound.failed)) writeBackoff.delete(stream.key)
         // Anything a whole-work op blocked is still accounted for: it was seen,
         // considered, and deliberately left where it is.
         rememberSeen(seen, [...theirs.ops, ...ours.ops].filter(op => WHOLE_WORK_OPS.has(op?.type)))
@@ -400,6 +634,17 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             remoteVersion: accountedThrough(theirs.ops, seen, theirs.latestVersion) ?? cursor.remoteVersion
         })
 
+        // A whole-work op was left where it is. If the copies already agree
+        // (both sides were given the same replacement, or the follower
+        // converged on the host's) there is nothing to report and nothing owed;
+        // if they differ, say which work, and keep saying it.
+        if (stream.documentPath && (refusedWholeWork(theirs.ops) || refusedWholeWork(ours.ops) || disagree.has(stream.key))) {
+            const verdict = await compare(stream)
+            if (verdict?.same) disagree.delete(stream.key)
+            else if (verdict) disagree.set(stream.key, verdict.refused || 'the two copies differ')
+            else if (!disagree.has(stream.key)) disagree.set(stream.key, 'could not read both copies to compare them')
+        }
+
         // Did the copies get a chance to disagree, and are they quiet now?
         const flags = movesFor(stream)
         if (inbound.wrote > 0 || inbound.caughtUp?.length) flags.in = true
@@ -409,10 +654,13 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         let agreed = null
         if (quiet && flags.in && flags.out && stream.documentPath) {
             agreed = await converge(stream)
-            if (agreed.done) { flags.in = false; flags.out = false }
+            if (agreed.done) { flags.in = false; flags.out = false; directionDone.add(stream.key) }
         }
 
         return {
+            // The other side said its space changed since we last looked —
+            // something there may still be unread in a project's log.
+            changedThere: Boolean(wait && markBefore && theirs.changeMark && theirs.changeMark !== markBefore),
             converged: Boolean(agreed?.converged),
             convergeRefused: agreed?.refused || null,
             moved: inbound.moved || outbound.moved || Boolean(agreed?.converged),
@@ -421,23 +669,59 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             carriedOut: outbound.wrote,
             // A whole-work op sat in the log and was left there deliberately.
             // Said out loud, because silence would look like everything crossed.
-            refused: refusedWholeWork(theirs.ops) || refusedWholeWork(ours.ops),
+            refused: disagree.has(stream.key) ? stream.key : null,
             failed: inbound.failed || outbound.failed || null
         }
     }
 
     const tick = async () => {
+        // Everything from here on is read afresh, so a wake from before now has
+        // been answered; one from after this line keeps the tick from parking.
+        woken = false
         await refreshStreams()
+        await syncSettings().catch(() => {})
+
+        // The files the documents list are looked at NOW, before this tick reads
+        // the room's log and parks on the other machine for up to 20 s. They used to
+        // be looked at after the park, so a restarted follow on a quiet space
+        // owed every unfinished file for 20 s more — and a di restarted twice in
+        // that time never got to them (gap 3, di.laser, 2026-10-05).
+        chase.noteProjects(streams.filter(stream => stream.kind === 'project').map(stream => stream.projectId))
+        chase.run()
 
         let parked = false
+        let changedThere = false
         let moved = false
         let more = false
-        let refused = false
+        let refused = []
         let carriedIn = 0
         let carriedOut = 0
         let failed = null
         let converged = 0
         let convergeRefused = null
+
+        // What `di follows` shows. Built before the room's read parks as well as
+        // after it: that read can hold the tick for twenty seconds, and a
+        // disagreement found in a project a moment ago must not wait that long
+        // to be said — or, once the copies agree, to be unsaid.
+        const started = state
+        const report = () => {
+            state = {
+                status: failed ? 'waiting' : (more ? 'catching up' : 'following'),
+                carriedIn: started.carriedIn + carriedIn,
+                carriedOut: started.carriedOut + carriedOut,
+                streams: streams.length,
+                lastError: failed
+                    || (refusals.size ? `${[...refusals.values()].join('; ')}. Choose: di follow ${local.spaceId} --take-host or --take-mine` : null)
+                    || convergeRefused
+                    || (refused.length ? `${refused.join(', ')}: one side replaced the whole work and the two copies differ — a follow does not carry that; use di sync` : null),
+                lastMoveAt: moved ? Date.now() : started.lastMoveAt,
+                converged: started.converged + converged,
+                lastConvergeAt: converged ? Date.now() : started.lastConvergeAt,
+                resumed: started.resumed,
+                settings: { carried: settingsCarried, notes: settingsNotes }
+            }
+        }
 
         // The room's own log parks on the other side (that is what makes a
         // followed room feel like one room); the project logs are asked
@@ -451,12 +735,14 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             // projects, which never park, are already carried when we settle
             // into the wait.
             const willPark = index === ordered.length - 1
+            if (willPark) report()
             const result = await runStream(stream, { wait: willPark })
             if (willPark) parked = true
             if (result.skipped) continue
+            changedThere = changedThere || result.changedThere
             moved = moved || result.moved
             more = more || result.more
-            refused = refused || result.refused
+            if (result.refused) refused.push(result.refused)
             carriedIn += result.carriedIn || 0
             carriedOut += result.carriedOut || 0
             failed = failed || result.failed
@@ -470,32 +756,32 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         chase.noteProjects(streams.filter(stream => stream.kind === 'project').map(stream => stream.projectId))
         chase.run()
 
-        state = {
-            status: failed ? 'waiting' : (more ? 'catching up' : 'following'),
-            carriedIn: state.carriedIn + carriedIn,
-            carriedOut: state.carriedOut + carriedOut,
-            streams: streams.length,
-            lastError: failed
-                || convergeRefused
-                || (refused ? 'one side replaced a whole scene — that is not carried by a follow; use di sync' : null),
-            lastMoveAt: moved ? Date.now() : state.lastMoveAt,
-            converged: state.converged + converged,
-            lastConvergeAt: converged ? Date.now() : state.lastConvergeAt,
-            resumed: state.resumed
-        }
+        report()
         save()
+        // The direction was the answer to the FIRST comparison of each stream;
+        // once every stream has had one, it is spent (follows.json is cleared,
+        // so the next edits sync the ordinary way).
+        if (activeDirection && streams.length && streams.every(stream => directionDone.has(stream.key) || !stream.documentPath)) {
+            const spent = activeDirection
+            activeDirection = null
+            Promise.resolve(onDirectionDone?.(spent)).catch((error) => log.warn?.(`[follow] ${local.spaceId}: could not clear --${spent} from follows.json (${error?.message || error})`))
+        }
         // Still behind: go round again at once. A capped batch that slept would
         // trickle a long history across at one batch per tick.
-        return { moved, parked: parked && !more, more }
+        // Woken while this tick ran, or told the other side changed after its
+        // projects were read: go round again at once, never into a sleep.
+        if (woken || changedThere) settingsForce = true
+        return { moved, parked: parked && !more, more, again: woken || changedThere }
     }
 
     const loop = async () => {
         while (!stopped) {
             let moved = false
             let parked = false
+            let again = false
             const startedAt = Date.now()
             try {
-                ({ moved, parked } = await tick())
+                ({ moved, parked, again } = await tick())
             } catch (error) {
                 // A follower must never take the server down with it.
                 state = { ...state, status: 'waiting', lastError: String(error?.message || error) }
@@ -508,7 +794,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
             // woken for. The elapsed check keeps a server that answers a park
             // instantly (an old one that ignores `wait`) from becoming a spin.
             const elapsed = Date.now() - startedAt
-            interval = parked && elapsed > 200
+            interval = again || (parked && elapsed > 200)
                 ? 0
                 : nextInterval({ moved, current: interval, floor: FLOOR_MS, ceiling: CEILING_MS })
             if (interval > 0) await sleep(interval)
@@ -520,6 +806,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         stop() { stopped = true; chase.stop() },
         wake() {
             interval = FLOOR_MS
+            woken = true
             // Both: end the sleep between ticks, AND abandon a read parked on
             // the other machine. Without the second, `di follow`'s own promise —
             // that an edit leaves at once — was true only when the loop happened
@@ -531,4 +818,4 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     }
 }
 
-module.exports = { side, readOps, carry, startFollowing, FLOOR_MS, CEILING_MS }
+module.exports = { side, readOps, carry, startFollowing, startCursorAt, FLOOR_MS, CEILING_MS }

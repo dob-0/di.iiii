@@ -34,3 +34,22 @@ describe('bounceOf — the integrating-sphere return', () => {
         expect(bounceSpecOf([{ id: 'show', components: { rigBounce: { area_m2: 25000, reflectance: 1 } } }])).toBeNull()
     })
 })
+
+describe('the haze glow factor — the haze’s own scatter beside the walls’ return', () => {
+    it('no volume or no haze: the walls’ return alone (factor 1)', async () => {
+        const { hazeGlowFactor } = await import('./rigBounce.js')
+        expect(hazeGlowFactor({ area: 28605, reflectance: 0.163 }, 0.05)).toBe(1)
+        expect(hazeGlowFactor({ area: 28605, reflectance: 0.163, volume: 186890 }, 0)).toBe(1)
+    })
+    it('MOXIR at σ 0.05: τ = σ·4V/A ≈ 1.31, factor (ρ + 1 − e^−τ)/ρ ≈ 5.5', async () => {
+        const { hazeGlowFactor } = await import('./rigBounce.js')
+        const spec = { area: 28605, reflectance: 0.163, volume: 186890 }
+        const tau = (0.05 * 4 * 186890) / 28605
+        expect(tau).toBeCloseTo(1.31, 2)
+        expect(hazeGlowFactor(spec, 0.05)).toBeCloseTo((0.163 + 1 - Math.exp(-tau)) / 0.163, 9)
+        expect(hazeGlowFactor(spec, 0.05)).toBeGreaterThan(5)
+        // thinner haze, less glow — and never more than all the flux scattered
+        expect(hazeGlowFactor(spec, 0.015)).toBeLessThan(hazeGlowFactor(spec, 0.05))
+        expect(hazeGlowFactor(spec, 10)).toBeLessThanOrEqual((0.163 + 1) / 0.163)
+    })
+})

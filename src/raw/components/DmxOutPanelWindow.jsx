@@ -3,6 +3,7 @@ import {
     DESK_ABSENT_TEXT,
     DESK_COMMANDS,
     DESK_FORBIDDEN_TEXT,
+    DESK_NOT_RUNNING_TEXT,
     DESK_STATUS,
     RIG_KINDS,
     RIG_STATUS,
@@ -134,7 +135,7 @@ export default function DmxOutPanelWindow({
             if (desk.status === DESK_STATUS.FORBIDDEN) return DESK_FORBIDDEN_TEXT
             if (desk.status === DESK_STATUS.ANSWERING) return deskStatusText(desk.summary)
             if (desk.status === DESK_STATUS.CHECKING) return 'Looking for the lighting desk…'
-            return 'The lighting desk is not answering'
+            return DESK_NOT_RUNNING_TEXT
         }
         if (rig.status === RIG_STATUS.UNSET) return 'No rig named'
         if (rig.status === RIG_STATUS.BLOCKED) return 'A https page cannot reach a http rig — open the local editor'

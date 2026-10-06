@@ -137,6 +137,12 @@ export const DESK_STATUS = {
 // The two refusals worth a sentence rather than a shrug. 404 is not a fault:
 // it is the deployed server correctly declining to admit the route exists.
 export const DESK_ABSENT_TEXT = 'The lighting desk lives on a local di.iiii — run di up or npm run dev'
+// The desk is a part of a local di.iiii (serverXR mounts /light), so a request
+// that cannot connect means no di.iiii server is running on this machine, or it
+// has no desk. How it is started: docs/architecture/LIGHTING_DESK.md ("a `di up`
+// install or `npm run dev`"; `di up --lan` for a console on another machine).
+// Kept apart from "running, 0 fixtures", which is a real desk with an empty rig.
+export const DESK_NOT_RUNNING_TEXT = 'The lighting desk is not running on this machine — start di.iiii (di up) and it opens at /light/'
 export const DESK_FORBIDDEN_TEXT = 'The desk answers a browser on its own machine only — set DI_ALLOW_LAN_DEVICES=1 to open it to this network'
 
 // App-level, not lane-level: the desk is mounted at /light beside the app, and
@@ -204,7 +210,13 @@ export async function readDeskSummary(base, { fetchImpl = fetch, signal } = {}) 
         if (res?.status === 403) return { ok: false, status: DESK_STATUS.FORBIDDEN }
         if (!res?.ok) return { ok: false, status: DESK_STATUS.UNREACHABLE }
         if (!answeredJson(res)) return { ok: false, status: DESK_STATUS.ABSENT }
-        return { ok: true, status: DESK_STATUS.ANSWERING, summary: await res.json() }
+        const summary = await res.json()
+        // JSON that is not a desk summary (a proxy's empty answer, an error
+        // body) must not read as a running desk with 0 fixtures.
+        if (!summary || typeof summary.fixtures !== 'number') {
+            return { ok: false, status: DESK_STATUS.UNREACHABLE }
+        }
+        return { ok: true, status: DESK_STATUS.ANSWERING, summary }
     } catch {
         return { ok: false, status: DESK_STATUS.UNREACHABLE }
     }

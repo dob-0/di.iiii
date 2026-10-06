@@ -88,4 +88,24 @@ describe('follows.json', () => {
             expect(readByCli(dir2).jam).not.toHaveProperty('address')
         })
     })
+
+    it('keeps a direction and an explicit replay start, and writes neither when unset', async () => {
+        const dir = await tmpDir()
+        await addFollow(dir, 'plain', { remote: 'https://x/serverXR', token: 't' })
+        await addFollow(dir, 'asked', { remote: 'https://x/serverXR', token: 't', direction: 'take-host', start: 'replay' })
+        const byServer = readByServer(dir)
+        expect(byServer.plain).not.toHaveProperty('direction')
+        expect(byServer.plain).not.toHaveProperty('start')
+        expect(byServer.asked).toMatchObject({ direction: 'take-host', start: 'replay' })
+    })
+
+    it('spends a direction without touching the rest of the follow', async () => {
+        const dir = await tmpDir()
+        await addFollow(dir, 'asked', { remote: 'https://x/serverXR', token: 't', direction: 'take-mine' })
+        const { clearDirection } = require('../../serverXR/src/follow/followStore.js')
+        expect(await clearDirection(dir, 'asked')).toBe(true)
+        expect(await clearDirection(dir, 'asked')).toBe(false)
+        expect(readByCli(dir).asked).toMatchObject({ remote: 'https://x/serverXR', token: 't' })
+        expect(readByCli(dir).asked).not.toHaveProperty('direction')
+    })
 })

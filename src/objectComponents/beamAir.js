@@ -56,17 +56,45 @@ export const BEAM_AIR_SAMPLES = 12
 export const HULL_BASE = 1.2
 export const HULL_SLOPE = 0.12
 
-/** The haze's optics from `renderSettings.atmosphere`, or null (the old cone). */
+/**
+ * The haze's optics from `renderSettings.atmosphere`, or null (the old cone). `haze`
+ * (hazeField.js hazeSettingsOf) is passed through: a room that works its haze out from
+ * its machines. Such a room needs no hand-set scattering — the 0.03 kept here is only
+ * what a beam draws with before the machines have arrived.
+ */
 export const atmosphereOf = (renderSettings) => {
     const a = renderSettings?.atmosphere
     if (!a || typeof a !== 'object') return null
+    const haze = a.haze && typeof a.haze === 'object' ? a.haze : null
     const scattering = Number(a.scattering)
-    if (!(scattering > 0)) return null
+    if (!(scattering > 0) && !haze) return null
     return {
-        scattering: clamp(scattering, 0, 1),
-        anisotropy: clamp(finite(a.anisotropy, 0.7), -0.95, 0.95)
+        scattering: scattering > 0 ? clamp(scattering, 0, 1) : 0.03,
+        anisotropy: clamp(finite(a.anisotropy, 0.7), -0.95, 0.95),
+        haze
     }
 }
+
+// THE BEAM'S CROSS-SECTION — how a real fixture's intensity falls off across its beam.
+// A photometric beam angle is where the intensity is 50 % of the centre's, the field
+// angle where it is 10 % (ANSI/IES; every maker's "beam / field" pair). The lamp's
+// three.js `angle` is the BEAM half-angle; the light goes on past it, softly. The shape:
+//
+//     I(ρ) / I(0) = exp(−ln2 · ρ^p)       ρ = r / (beam radius at that distance)
+//
+// p = 2 is a Gaussian (a wash: field ≈ 1.8 × beam); a larger p is a beam fixture's
+// steep-shouldered rod (p = 8: field ≈ 1.2 × beam). `edge` (the lamp's penumbra, 0..1)
+// picks it: hard edge → p 8, soft → p 2. Until 2026-10-01 the profile was a flat top
+// with a short smoothstep edge — every beam read as a solid bar that the exposure
+// clipped to flat white; a real beam's core clips but its shoulders keep the colour
+// and show the haze's grain.
+export const PROFILE_FLOOR = 0.02 // the hull ends where the beam has fallen to 2 %
+export const beamProfileExponent = (edge) => 2 + 6 * (1 - clamp(finite(edge, 0.2), 0, 1))
+export const beamProfileAt = (rho, p) => Math.exp(-Math.LN2 * Math.abs(rho) ** p)
+export const beamProfile = (rho, edge) => beamProfileAt(rho, beamProfileExponent(edge))
+/** How far out (in beam radii) the light is drawn: where the profile reaches PROFILE_FLOOR. */
+export const beamExtentOf = (p) => (Math.log(1 / PROFILE_FLOOR) / Math.LN2) ** (1 / p)
+export const beamExtent = (edge) => beamExtentOf(beamProfileExponent(edge))
 
 /** Henyey–Greenstein phase function, 1/sr; integrates to 1 over the sphere. */
 export const hgPhase = (cosTheta, g) => {
@@ -153,9 +181,14 @@ export const beamChord = (ro, rd, { aperture: a, tanHalf: t, length: L }) => {
  * The radiance the beam adds along one view ray — the shader's sum, in JS.
  * Returns cd/m² in the scene's units (the lamp's `intensity` × the same factors),
  * before the lamp's colour and the camera's exposure.
+ * `sigmaAt(p)` — the haze's scattering at a point of the beam's frame (a haze field,
+ * hazeField.js); absent, the haze is `scattering` everywhere. The transmittance uses
+ * `scattering` (the hall's well-mixed haze) either way, as the shader does.
  */
-export const beamAirRadiance = (ro, rd, { candela, aperture = DEFAULT_APERTURE, tanHalf, length, edge = 0.2, scattering, anisotropy, samples = BEAM_AIR_SAMPLES }) => {
-    const chord = beamChord(ro, rd, { aperture, tanHalf, length })
+export const beamAirRadiance = (ro, rd, { candela, aperture = DEFAULT_APERTURE, tanHalf, length, edge = 0.2, scattering, anisotropy, samples = BEAM_AIR_SAMPLES, sigmaAt = null }) => {
+    // the light reaches past the beam angle (beamProfile): the chord through its extent
+    const k = beamExtent(edge)
+    const chord = beamChord(ro, rd, { aperture: aperture * k, tanHalf: tanHalf * k, length })
     if (!chord) return 0
     const [la, lb] = chord
     const dl = (lb - la) / samples
@@ -167,13 +200,13 @@ export const beamAirRadiance = (ro, rd, { candela, aperture = DEFAULT_APERTURE, 
         const s = Math.max(-p[1], 0)
         const R = aperture + s * tanHalf
         const rho = Math.hypot(p[0], p[2]) / Math.max(R, 1e-6)
-        const x = clamp((rho - (1 - edge)) / Math.max(edge, 1e-6), 0, 1)
-        const profile = 1 - x * x * (3 - 2 * x)
+        const profile = beamProfile(rho, edge)
         const wi = [p[0], p[1] - apexY, p[2]]
         const wl = Math.hypot(...wi) || 1
         const cosTheta = -(wi[0] * rd[0] + wi[1] * rd[1] + wi[2] * rd[2]) / wl
         const T = Math.exp(-scattering * (s + lam))
-        sum += beamIlluminance(candela, s, aperture, tanHalf) * profile * hgPhase(cosTheta, anisotropy) * T
+        const sigma = sigmaAt ? sigmaAt(p) : scattering
+        sum += sigma * beamIlluminance(candela, s, aperture, tanHalf) * profile * hgPhase(cosTheta, anisotropy) * T
     }
-    return scattering * sum * dl
+    return sum * dl
 }

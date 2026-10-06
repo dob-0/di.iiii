@@ -115,7 +115,14 @@ const nextInterval = ({ moved, current, floor = 700, ceiling = 30000 }) => {
 const accountedThrough = (ops = [], accounted = new Set(), fallback = null) => {
     let through = null
     for (const op of ops) {
-        if (!op?.opId || !accounted.has(op.opId)) return through
+        // A whole-work op is never carried, so it has nothing to be accounted
+        // by — and an older log can hold one with no opId at all. Stopping at
+        // it pinned the cursor there for good: every tick re-read the log from
+        // the same place and reported the refusal again, however long ago both
+        // copies had come to agree. Whether they agree is the follower's
+        // question (follower.js `disagree`), not the cursor's.
+        const passed = WHOLE_WORK_OPS.has(op?.type) || (op?.opId && accounted.has(op.opId))
+        if (!passed) return through
         if (Number.isFinite(op.version)) through = op.version
     }
     return ops.length ? (through ?? fallback) : fallback

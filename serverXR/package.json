@@ -21,7 +21,7 @@
     "passport-github2": "^0.1.12",
     "passport-google-oauth20": "^2.0.0",
     "proper-lockfile": "4.1.2",
-    "sharp": "^0.35.4",
+    "sharp": "^0.35.5",
     "socket.io": "^4.7.0"
   },
   "optionalDependencies": {

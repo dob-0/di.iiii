@@ -75,7 +75,9 @@ export const inventoryOf = (workbook) => {
 }
 
 /**
- * The rental list for an order. Pure.
+ * The rental list for an order. Pure. The house's rates are read (the hidden-sheet check
+ * needs them) but never written: the list is committed to a public repo; the prices live in
+ * the private repo and are added at script time by privatePrices.mjs.
  * @param {{ workbook, order, file: string, sha256: string }} args
  */
 export const rentalListFrom = ({ workbook, order, file, sha256 }) => {
@@ -84,7 +86,7 @@ export const rentalListFrom = ({ workbook, order, file, sha256 }) => {
     if (missing.length) throw new Error(`not in the spreadsheet's "${PRICE_LIST}": ${missing.map((l) => l.code).join(', ')}`)
     const list = {
         name: `${order.show} — rental order`,
-        source: `${path.basename(file)} (sha256 ${sha256.slice(0, 12)}…, sheet "${PRICE_LIST}": stock and rate/day) · order: ${order.source}`.slice(0, 480),
+        source: `${path.basename(file)} (sha256 ${sha256.slice(0, 12)}…, sheet "${PRICE_LIST}": stock; rates stay private) · order: ${order.source}`.slice(0, 480),
         writtenAt: order.writtenAt,
         currency: 'AMD',
         items: order.items.map((line) => {
@@ -92,14 +94,13 @@ export const rentalListFrom = ({ workbook, order, file, sha256 }) => {
             const notes = []
             if (inv.stock != null && line.ordered > inv.stock) notes.push(`order ${line.ordered} is above the ${inv.stock} the house lists`)
             const hidden = lookup.get(line.code)
-            if (hidden && Number.isFinite(hidden.rate) && inv.rate != null && hidden.rate !== inv.rate) notes.push(`the quote calculator's hidden "${PRICE_DATA}" sheet says ${hidden.rate}/day`)
+            if (hidden && Number.isFinite(hidden.rate) && inv.rate != null && hidden.rate !== inv.rate) notes.push(`the quote calculator's hidden "${PRICE_DATA}" sheet differs from the visible price list on this rate (both in the private repo)`)
             if (hidden && Number.isFinite(hidden.stock) && inv.stock != null && hidden.stock !== inv.stock) notes.push(`"${PRICE_DATA}" says ${hidden.stock} available`)
             return {
                 code: line.code,
                 type: typeIdOf(line.code),
                 ordered: line.ordered,
                 ...(inv.stock != null ? { stock: inv.stock } : {}),
-                ...(inv.rate != null ? { rate: inv.rate } : {}),
                 label: inv.label,
                 source: `${PRICE_LIST}!A${inv.row}:E${inv.row} · ordered as "${line.said}"`,
                 ...(notes.length ? { note: notes.join('; ') } : {})
@@ -111,7 +112,7 @@ export const rentalListFrom = ({ workbook, order, file, sha256 }) => {
         rule: { extraDay: extraDay ?? 0.5, source: `${PRICE_LIST}!A2 "Day 1 full rate; each additional day 50%." · "${PRICE_DATA}"!H2 = ${extraDay ?? '?'}` },
         catalogue: [...items.values()].map((inv) => ({
             code: inv.code, label: inv.label, details: inv.details, category: inv.category,
-            ...(inv.stock != null ? { stock: inv.stock } : {}), ...(inv.rate != null ? { rate: inv.rate } : {}),
+            ...(inv.stock != null ? { stock: inv.stock } : {}),
             cells: `${PRICE_LIST}!A${inv.row}:E${inv.row}`
         })),
         terms
@@ -143,7 +144,7 @@ const main = async () => {
     const buffer = fs.readFileSync(xlsxFile)
     const sha256 = crypto.createHash('sha256').update(buffer).digest('hex')
     const list = rentalListFrom({ workbook: await readXlsx(buffer), order, file: xlsxFile, sha256 })
-    for (const i of list.items) say(`  ${i.code.padEnd(10)} ordered ${String(i.ordered).padStart(3)} · stock ${String(i.stock ?? '?').padStart(3)} · ${String(i.rate ?? '?').padStart(6)} AMD/day${i.note ? `  — ${i.note}` : ''}`)
+    for (const i of list.items) say(`  ${i.code.padEnd(10)} ordered ${String(i.ordered).padStart(3)} · stock ${String(i.stock ?? '?').padStart(3)} · price: private${i.note ? `  — ${i.note}` : ''}`)
     if (args.out) {
         const out = path.resolve(String(args.out))
         fs.writeFileSync(out, `${JSON.stringify({ rentalList: list, xlsx: { file: path.basename(xlsxFile), sha256 }, writtenBy: 'scripts/rigbuild/rental.mjs' }, null, 2)}\n`)

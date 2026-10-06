@@ -354,6 +354,34 @@ export const layoutLabels = (items = [], gap = 0) => {
     return out
 }
 
+/**
+ * Where each NOTE goes (a zone's name, a machine's height, a dimension): for each note, in
+ * priority order, the first of its candidate boxes that overlaps nothing already there (the
+ * blockers: symbols, the lamp labels shown, the pieces) and no note placed before it. A note
+ * with no clear box is left out (index -1) — unless it is `keep` (a dimension is data), which
+ * takes its least-overlapping box. Boxes are [x0, y0, x1, y1] in drawing units.
+ * @param {{id: string, keep?: boolean, boxes: number[][]}[]} notes
+ * @param {number[][]} blockers
+ * @returns {Map<string, number>} the index of the chosen box, or -1
+ */
+export const placeNotes = (notes = [], blockers = []) => {
+    const taken = [...blockers]
+    const overlap = (a, b) => Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]))
+    const out = new Map()
+    for (const note of notes) {
+        let best = null
+        for (let i = 0; i < note.boxes.length; i++) {
+            const cost = taken.reduce((sum, t) => sum + overlap(note.boxes[i], t), 0)
+            if (!best || cost < best.cost - 1e-12) best = { i, cost }
+            if (cost === 0) break
+        }
+        if (!best || (best.cost > 0 && !note.keep)) { out.set(note.id, -1); continue }
+        out.set(note.id, best.i)
+        taken.push(note.boxes[best.i])
+    }
+    return out
+}
+
 // ---- dimensions ------------------------------------------------------------------
 
 /**
