@@ -812,8 +812,14 @@
 
 .ssh-domain-records td:first-child { width: 4.5em; color: var(--di-text-muted); }
 
+/* The input takes its own full row: a card is ~190 px wide on desktop, and
+   beside two buttons it was squeezed to nothing. */
+.ssh-domain-form { flex-wrap: wrap; }
+
+.ssh-domain-link { color: var(--di-cyan); }
+
 .ssh-domain-input {
-    flex: 1 1 auto;
+    flex: 1 1 100%;
     min-width: 0;
     padding: 4px 6px;
     font: inherit;

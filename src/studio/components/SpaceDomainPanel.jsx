@@ -127,7 +127,7 @@ export default function SpaceDomainPanel({ space, onClose }) {
                             </div>
                             {domain.live && (
                                 <p className="ssh-linker-status">
-                                    <a href={`https://${domain.hostname}/`} target="_blank" rel="noreferrer">https://{domain.hostname}</a> shows this space.
+                                    <a className="ssh-domain-link" href={`https://${domain.hostname}/`} target="_blank" rel="noreferrer">https://{domain.hostname}</a> shows this space.
                                 </p>
                             )}
                             {!domain.live && domain.records?.length > 0 && (
@@ -158,7 +158,7 @@ export default function SpaceDomainPanel({ space, onClose }) {
             )}
 
             {space.isPublic && (
-                <form className="ssh-linker-footer" onSubmit={handleAdd}>
+                <form className="ssh-linker-footer ssh-domain-form" onSubmit={handleAdd}>
                     <input
                         className="ssh-domain-input"
                         value={draft}
