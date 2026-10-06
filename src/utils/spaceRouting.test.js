@@ -4,6 +4,7 @@ import {
     APP_PAGE_SCAN,
     APP_PAGE_SPACE_CONTENTS,
     buildScanPath,
+    buildShareUrl,
     buildSpaceContentsPath,
     buildPreferencesPath,
     buildPublicProjectPath,
@@ -302,5 +303,31 @@ describe('the scan address', () => {
     it('claims the two-segment shape only', () => {
         expect(getAppLocationState(at('/moxir/scan/extra')).page).not.toBe(APP_PAGE_SCAN)
         expect(getAppLocationState(at('/scan')).page).not.toBe(APP_PAGE_SCAN)
+    })
+
+    describe('buildShareUrl', () => {
+        const here = window.location.origin
+
+        it('is the platform address when the space has no domain', () => {
+            expect(buildShareUrl({ spaceId: 'taronx', path: '/taronx/taronx-instruments' })).toBe(`${here}/taronx/taronx-instruments`)
+            expect(buildShareUrl({ spaceId: 'taronx', domain: null, path: '/taronx' })).toBe(`${here}/taronx`)
+        })
+
+        it('is the space\'s own domain, without the space segment, when it has one', () => {
+            expect(buildShareUrl({ spaceId: 'taronx', domain: 'yokozo.xyz', path: '/taronx/taronx-instruments' }))
+                .toBe('https://yokozo.xyz/taronx-instruments')
+            expect(buildShareUrl({ spaceId: 'taronx', domain: 'yokozo.xyz', path: buildPublicProjectPath('taronx', 'p1') }))
+                .toBe('https://yokozo.xyz/p/p1')
+            expect(buildShareUrl({ spaceId: 'taronx', domain: 'yokozo.xyz', path: '/taronx' })).toBe('https://yokozo.xyz/')
+        })
+
+        it('drops the space segment when it is the slug rather than the id', () => {
+            expect(buildShareUrl({ spaceId: 'taronx', spaceSlug: 'taron', domain: 'yokozo.xyz', path: '/taron/x' }))
+                .toBe('https://yokozo.xyz/x')
+        })
+
+        it('leaves a path alone whose first segment is not the space', () => {
+            expect(buildShareUrl({ spaceId: 'taronx', domain: 'yokozo.xyz', path: '/elsewhere/x' })).toBe('https://yokozo.xyz/elsewhere/x')
+        })
     })
 })
