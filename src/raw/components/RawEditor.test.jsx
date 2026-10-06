@@ -1952,7 +1952,7 @@ describe('RawEditor: one bar (audit row 5)', () => {
             return el
         })
         const tools = container.querySelector('.raw-bar-tools')
-        expect(tools.lastElementChild).toBe(account)
+        expect(tools.lastElementChild.contains(account)).toBe(true)
         expect(document.querySelector('.account-btn-wrapper')?.style.position || 'static').not.toBe('fixed')
     })
 

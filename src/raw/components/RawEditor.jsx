@@ -89,6 +89,7 @@ const isNarrowViewport = () => typeof window !== 'undefined' && window.innerWidt
 const panelWindowSpace = (frame, viewport) => (frame?.pinned || isNarrowViewport() || !viewport) ? 'screen' : 'world'
 
 import { buildRawOutPath, buildRawProjectPath, buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
+import { buildPerformPath } from '../../perform/performRouting.js'
 import { buildObjectCards, buildScopeItems, thingBandBounds } from '../utils/objectCards.js'
 import { DEFAULT_PROJECT_SPACE_ID, createProject, updateProjectDocument, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
@@ -2759,7 +2760,10 @@ export default function RawEditor({
     const sceneCell = (
     <button
         type="button"
-        className={`raw-cell${isWorldFullscreen ? ' is-active' : ''}`}
+        // On a phone the bar cannot hold every cell (measured 390x844: Chat,
+        // ?, ⋯ and the account ran off the right edge), so Scene and Chat
+        // move into ⋯ there (raw-cell--wide-only, rawChrome.css).
+        className={`raw-cell raw-cell--wide-only${isWorldFullscreen ? ' is-active' : ''}`}
         // The room of the CURRENT scope, fullscreen —
         // any scope, not only where a World card
         // stands. The old behaviour toggled the root
@@ -2795,7 +2799,7 @@ export default function RawEditor({
     {(nodeCount > 0 || thingCount > 0) && (
         <button
             type="button"
-            className={`raw-cell raw-topbar-node-count${outlinerOpen ? ' is-active' : ''}`}
+            className={`raw-cell raw-cell--wide-only raw-topbar-node-count${outlinerOpen ? ' is-active' : ''}`}
             onClick={() => setOutlinerOpen((v) => !v)}
             title="Toggle outliner"
             aria-label={[
@@ -2824,7 +2828,8 @@ export default function RawEditor({
     {(!isLocalWorkspace || presence.users.length > 0 || unreadChatCount > 0) && (
         <button
             type="button"
-            className={`raw-cell raw-topbar-node-count${chatOpen ? ' is-active' : ''}`}
+            // Kept on a phone only while it has something unread to say.
+            className={`raw-cell raw-topbar-node-count${unreadChatCount > 0 ? '' : ' raw-cell--wide-only'}${chatOpen ? ' is-active' : ''}`}
             onClick={() => setChatOpen((v) => !v)}
             title="Toggle chat"
             aria-label="Toggle chat"
@@ -2840,6 +2845,32 @@ export default function RawEditor({
         {overflowOpen && (
             <div className="raw-topbar-overflow-menu">
                 <button type="button" onClick={() => { scopeReset(); setOverflowOpen(false) }}>Home</button>
+                {/* The phone's copies of the two cells the bar has no room for. */}
+                <button type="button" className="raw-overflow-narrow-only" onClick={() => { setOverflowOpen(false); setIsWorldFullscreen((current) => !current) }}>
+                    {isWorldFullscreen ? '← Graph' : roomCount > 0 ? `Scene · ${roomCount}` : 'Scene'}
+                </button>
+                <button type="button" className="raw-overflow-narrow-only" onClick={() => { setOverflowOpen(false); setChatOpen((v) => !v) }}>
+                    Chat{unreadChatCount > 0 ? ` (${unreadChatCount})` : ''}
+                </button>
+                {nodeCount + thingCount > 0 ? (
+                    <button type="button" className="raw-overflow-narrow-only" onClick={() => { setOverflowOpen(false); setOutlinerOpen((v) => !v) }}>
+                        Outliner · {nodeCount + thingCount}
+                    </button>
+                ) : null}
+                {!isLocalWorkspace && projectId ? (
+                    <button
+                        type="button"
+                        className="raw-overflow-narrow-only"
+                        onClick={() => { setOverflowOpen(false); navigateToRawPath(buildPerformPath(resolvedSpaceId, projectId, { from: 'raw' })) }}
+                    >
+                        Perform
+                    </button>
+                ) : null}
+                {overflowOpen ? (
+                    <span className="raw-overflow-narrow-only raw-overflow-account">
+                        <Suspense fallback={null}><BarAccount /></Suspense>
+                    </span>
+                ) : null}
                     {/* The bar has no "← Projects" cell: the way back to the space's
                         working list is here (it was the second bar's first button). */}
                     {!isLocalWorkspace && (
@@ -3014,7 +3045,8 @@ export default function RawEditor({
             {chatCell}
             {helpCell}
             {overflowCell}
-            <Suspense fallback={null}><BarAccount /></Suspense>
+            {/* On a phone the account is the last row of ⋯ (rawChrome.css). */}
+            <span className="raw-bar-account-slot"><Suspense fallback={null}><BarAccount /></Suspense></span>
         </span>
     )
     if (perform && projectId) {

@@ -22,7 +22,9 @@
 }
 
 @media (pointer: coarse) {
-    :root { --raw-cell: 44px; }
+    /* A finger's cell, and a bar 1px taller than it (the surface bar's own
+       coarse rule): 44px cells in a 40px bar spilled out of it. */
+    :root { --raw-cell: 44px; --raw-bar-h: calc(var(--raw-cell) + 1px); }
 }
 
 /* The Nodes shell lends the bar its 40px to everything that reads --sbar-h. */
@@ -139,6 +141,23 @@
 
 @media (max-width: 900px) {
     .raw-bar-tools .raw-topbar-word { display: none; }
+}
+
+/* A phone: Scene and Chat live in ⋯ (their copies there are narrow-only). */
+.raw-topbar-overflow-menu .raw-overflow-narrow-only { display: none; }
+
+/* A phone holds `?` and `⋯` and nothing else on the right: measured at
+   390x844, the place names at their 44px floor leave 183px for More and the
+   tools, so Scene, the count, Chat, Desk | Perform and the account (which ran
+   off the edge) are rows of ⋯ there. */
+.raw-bar-account-slot { display: inline-flex; }
+
+@media (max-width: 699px) {
+    .raw-editor-shell button.raw-cell.raw-cell--wide-only,
+    .raw-editor-shell .raw-bar-account-slot,
+    .raw-editor-shell .sbar-switch { display: none; }
+    .raw-topbar-overflow-menu .raw-overflow-narrow-only { display: block; }
+    .raw-topbar-overflow-menu .raw-overflow-account { padding: var(--raw-s-2) var(--raw-s-3); }
 }
 
 /* The zoom strip, §3.8: [−] [100%] [+] [Fit] = 28 + 44 + 28 + 36 = 136×28,

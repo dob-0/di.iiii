@@ -23,10 +23,19 @@ describe('one bar (row 5)', () => {
 
     it('has one cell height: 28 on a mouse, 44 on a finger, and no cell sets its own', () => {
         expect(token('--raw-cell')).toBe('28px')
-        expect(css).toMatch(/@media \(pointer: coarse\) \{\s*:root \{ --raw-cell: 44px; \}/)
+        const coarse = css.match(/@media \(pointer: coarse\) \{([^}]*\})/)[1]
+        expect(coarse).toMatch(/:root \{[^}]*--raw-cell: 44px;/)
+        // …and the bar is a pixel taller than its cells, on a finger too.
+        expect(coarse).toMatch(/--raw-bar-h: calc\(var\(--raw-cell\) \+ 1px\)/)
         const rule = css.match(/\.raw-editor-shell button\.raw-cell \{([^}]*)\}/)[1]
         expect(rule).toMatch(/height: var\(--raw-cell\)/)
         expect(rule).not.toMatch(/min-height/)
+    })
+
+    it('a phone keeps only ? and ⋯ on the right; the rest are rows of ⋯ (390px measured)', () => {
+        const phone = css.slice(css.indexOf('@media (max-width: 699px)'))
+        expect(phone).toMatch(/button\.raw-cell\.raw-cell--wide-only,[^{]*\.raw-bar-account-slot,[^{]*\.sbar-switch \{ display: none; \}/)
+        expect(phone).toMatch(/\.raw-overflow-narrow-only \{ display: block; \}/)
     })
 
     it('squares the account cell: radius 0, the same cell size', () => {
