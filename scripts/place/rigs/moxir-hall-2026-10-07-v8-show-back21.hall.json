@@ -1,7 +1,7 @@
 {
   "tool": "scripts/place/hall.py",
   "version": 2,
-  "createdAt": "2026-10-07T14:56:29.998807+00:00",
+  "createdAt": "2026-10-07T15:08:12.085122+00:00",
   "what": "A clean parametric model of a Soviet multi-span crane hall with a flat space-frame roof (MOXIR, Charentsavan). Not a scan. Frame: Y up, metres, the entry end at +Z, the far end at -Z, the nave centred on x = 0, +x to the right looking from the entry.",
   "dims": {
     "span_m": 24.0,
@@ -727,14 +727,14 @@
     "track_gauge_m": "placeholder",
     "track_z_range_m": "estimate (moxir-hall-dims-2026-10-02.json)",
     "track_cross_z_m": "estimate (moxir-hall-dims-2026-10-02.json; confidence LOW: transverse lines somewhere between z 38 and 46 (027-031); two drawn)",
-    "cranes_from_door_m": "estimate (moxir-hall-back-flip-2026-10-07.json)",
+    "cranes_from_door_m": "estimate (moxir-hall-crane-behind-dj-2026-10-07.json)",
     "neighbour_cranes_from_door_m": "estimate (moxir-hall-features-2026-09-28.json; confidence seen (photos 036, 017), positions GUESS)",
     "low_walls": "estimate (moxir-hall-dims-2026-10-02.json; confidence medium: the left row from the render match to photos 004/009 (2 bays); the right row is open everywhere (003, 005, 006, 009, 027) and has no wall)",
     "bracing_bays_from_door_m": "estimate (moxir-hall-features-2026-09-28.json; confidence GUESS (bracing seen in 017, 036; the bays are not identified))",
     "massing": "estimate (moxir-hall-features-2026-09-28.json; confidence seen; envelopes from photo 032 at ~50 m (+-20 %); the press and machine line MODELLED from 1c3956d1/018/29b70cf5 by proportion inside those envelopes (ESTIMATED); the press type not identified) + 11 from moxir-hall-dims-2026-10-02.json + 5 from moxir-hall-dims-2026-10-07.json; 1 moved by moxir-hall-dims-2026-10-07.json; 1 cleared by moxir-hall-show-cleared-2026-10-17.json",
     "zones": "estimate (moxir-hall-stage-line-2026-10-07.json)",
     "cameras": "estimate (moxir-hall-features-2026-09-28.json)",
-    "crane_trolley_x_m": "estimate (moxir-hall-back-flip-2026-10-07.json)"
+    "crane_trolley_x_m": "estimate (moxir-hall-crane-behind-dj-2026-10-07.json)"
   },
   "dimsFiles": [
     "scripts/place/rigs/moxir-hall-dims-2026-09-28.json",
@@ -744,9 +744,9 @@
     "scripts/place/rigs/moxir-hall-dims-2026-10-07.json",
     "scripts/place/rigs/moxir-hall-show-cleared-2026-10-17.json",
     "scripts/place/rigs/moxir-hall-stage-line-2026-10-07.json",
-    "scripts/place/rigs/moxir-hall-back-flip-2026-10-07.json"
+    "scripts/place/rigs/moxir-hall-crane-behind-dj-2026-10-07.json"
   ],
-  "dimsSource": "photographs: VGGT (Wang et al., CVPR 2025), weights facebook/VGGT-1B @ 860abec7 (CC BY-NC 4.0); photographs (perspective fit on photo 032) and the owner's marks; unstated; photographs: see file; aerial survey (two Esri/Maxar captures 2020 and 2024, OSM, Microsoft ML footprints) and photo 007 crane metrology; read off pictures, not taped; owner's decision; plan (the owner's stage line, 2026-10-07); plan (backdrop park, 2026-10-07)",
+  "dimsSource": "photographs: VGGT (Wang et al., CVPR 2025), weights facebook/VGGT-1B @ 860abec7 (CC BY-NC 4.0); photographs (perspective fit on photo 032) and the owner's marks; unstated; photographs: see file; aerial survey (two Esri/Maxar captures 2020 and 2024, OSM, Microsoft ML footprints) and photo 007 crane metrology; read off pictures, not taped; owner's decision; plan (the owner's stage line, 2026-10-07); plan (the owner's choice (b), 2026-10-07)",
   "dimsNotes": [
     {
       "file": "moxir-hall-dims-2026-09-28.json",
@@ -793,7 +793,7 @@
       "notes": null
     },
     {
-      "file": "moxir-hall-back-flip-2026-10-07.json",
+      "file": "moxir-hall-crane-behind-dj-2026-10-07.json",
       "notes": null
     }
   ],

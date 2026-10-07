@@ -1,13 +1,15 @@
 // @vitest-environment node
 //
-// The owner's stage line (2026-10-07): the crane parked at z 24, the cut re-derived there, the scratch copy moved as
-// ops. These hold the numbers the scratch report states: the decided shape unchanged, the tie-offs clear of the cab
-// and the pipe racks, the raised-hands margin, the park table's pick, and that the ops move only what they say.
+// The owner's stage line (2026-10-07): the stage on his line, the cut hung BEHIND the DJ (his choice (b): "ok today
+// version is better … but behind the dj") at crane z 21, slid 1.0 m house left ("we can a bit go left with truss"),
+// the scratch copy moved as ops. These hold the numbers the report states: the decided shape unchanged, the tie-offs
+// clear of the cab and the pipe racks, the raised-hands margin, the backdrop park, the shift table, and that the ops
+// move only what they say.
 import { describe, expect, it } from 'vitest'
 
 import { slopedLineRigging, stageFrame } from '../place/rig-lib.mjs'
 import { tieoffCabClashes } from './safety.mjs'
-import { crowdSightline, djEyeLine, hallWithCraneAt, theirsFromOps, loadInputs, nearestMassing, ownerMoves, paEntities, parkOptions, pickPark, riserClearance, stageLineOps, stageLineRig } from './stage-line.mjs'
+import { behindOptions, crowdSightline, djEyeLine, hallWithCraneAt, theirsFromOps, loadInputs, nearestMassing, ownerMoves, paEntities, parkOptions, pickPark, riserClearance, shiftOptions, stageLineOps, stageLineRig } from './stage-line.mjs'
 
 const inputs = loadInputs()
 const { design, hall, oldHall, oldRig } = inputs
@@ -30,13 +32,13 @@ describe('the stage line: the design file and the hall record agree', () => {
 
 describe('stageFrame: a booth with its front stated (front_z_m)', () => {
     const s = stageFrame(rig, hall)
-    it('puts the one-step riser behind the line on the nave axis, under the cut\'s axis (owner: "keep max dj center")', () => {
+    it('puts the one-step riser behind the line on the nave axis, the cut 1.0 m house left of it, behind it at z 21', () => {
         expect(s.front).toBe(24.5)
         expect(s.back).toBe(22.5)
         expect(s.axis).toBe(0)
-        expect(s.trussAxis).toBe(0)
+        expect(s.trussAxis).toBe(-1)
         expect(s.deck).toBe(0.4)
-        expect(s.trussZ).toBe(24)
+        expect(s.trussZ).toBe(21)
     })
     it('changes nothing for a rig that does not state it (the trussAxis is the booth axis)', () => {
         const old = stageFrame(oldRig, oldHall)
@@ -46,14 +48,15 @@ describe('stageFrame: a booth with its front stated (front_z_m)', () => {
     })
 })
 
-describe('the cut at z 24: the shape the owner decided, unchanged', () => {
+describe('the cut behind the DJ at z 21, slid 1.0 m house left: the shape the owner decided, unchanged', () => {
     const was = oldRig.truss
-    it('has the same ends, trim, picks and bridles as Known · full today', () => {
-        expect(t.ends).toEqual(was.ends)
+    it('has the same heights, trim, picks and bridles as Known · full, every x 1.0 m to house left', () => {
+        expect(t.ends.map((e) => [e.u_m, e.bottom_chord_m])).toEqual(was.ends.map((e) => [e.u_m, e.bottom_chord_m]))
+        expect(t.ends.map((e) => e.x_m)).toEqual(was.ends.map((e) => Math.round((e.x_m - 1) * 100) / 100))
         expect(t.trim_m).toBe(was.trim_m)
-        expect(t.ends[0]).toMatchObject({ x_m: -6.04, bottom_chord_m: 3.24 })
-        expect(t.ends[1]).toMatchObject({ x_m: 5.55, bottom_chord_m: 6.35 })
-        const keys = ['u_m', 'x_m', 'top_chord_m', 'bottom_chord_m', 'apex_m', 'bridle_included_deg', 'line_kg', 'on_bridge_kg', 'leg_kg']
+        expect(t.ends[0]).toMatchObject({ x_m: -7.04, bottom_chord_m: 3.24 })
+        expect(t.ends[1]).toMatchObject({ x_m: 4.55, bottom_chord_m: 6.35 })
+        const keys = ['u_m', 'top_chord_m', 'bottom_chord_m', 'apex_m', 'bridle_included_deg', 'line_kg', 'on_bridge_kg', 'leg_kg']
         const pick = (p) => Object.fromEntries(keys.map((k) => [k, p[k]]))
         expect(t.rigging.picks.map(pick)).toEqual(was.rigging.picks.map(pick))
         expect(t.rigging.picks.map((p) => p.bridle_included_deg)).toEqual([26, 42, 119])
@@ -62,28 +65,56 @@ describe('the cut at z 24: the shape the owner decided, unchanged', () => {
         expect(t.clearance.low_end.side).toBe('house-left')
         expect(t.clearance.low_end.over_raised_hands_m).toBeGreaterThanOrEqual(0.5)
     })
-    it('ties off straight across to the z 24 columns, under the cab and over the pipe racks', () => {
-        for (const tie of t.rigging.tieoffs) expect(tie.to_m[2], tie.id).toBe(24)
+    it('ties off to the z 18 columns (3 m back, pulling the line away from the DJ), clear of the cab, over the pipe racks', () => {
+        for (const tie of t.rigging.tieoffs) expect(tie.to_m[2], tie.id).toBe(18)
         expect(tieoffCabClashes(rig, hall)).toEqual([])
+        const hl = t.rigging.tieoffs.find((x) => x.id === 'hl')
         const hr = t.rigging.tieoffs.find((x) => x.id === 'hr')
-        expect(hr.under_cab_m).toBeCloseTo(0.19, 2)
+        expect(hl.to_m[1]).toBe(hl.from_m[1])
+        expect(hr.to_m[1]).toBe(4.7)
         const nearest = nearestMassing(hr.from_m, hr.to_m, hall)
         expect(nearest.id).toBe('pipe-rack-3')
         expect(nearest.gap_m).toBeGreaterThanOrEqual(0.1)
     })
-    it('holds the hr anchor window the cut file states (4.60 … ≈4.8 m)', () => {
-        const hr = t.rigging.tieoffs.find((x) => x.id === 'hr')
-        const at = (y) => ({ clash: tieoffCabClashes({ truss: { rigging: { tieoffs: [{ id: 'hr', from_m: hr.from_m, to_m: [11.6, y, 24] }] } } }, hall).length > 0, gap: nearestMassing(hr.from_m, [11.6, y, 24], hall).gap_m })
-        expect(at(4.6)).toEqual({ clash: false, gap: 0.1 })
-        expect(at(4.8).clash).toBe(false)
-        expect(at(4.86).clash).toBe(true)
-        expect(at(4.58).gap).toBeLessThan(0.1)
-    })
-    it('still refuses a line slid along the bridge toward the cab (+2 m: its hr tie-off crosses the cab)', () => {
-        expect(() => stageLineRig({ ...inputs, design: { ...design, truss: { ...design.truss, axis_x_m: 2 } } })).toThrow(/passes through a crane cab/)
-    })
     it('gives the DJ on the 0.4 m step 1.96 m over raised hands to the line\'s centre (bottom chord 4.86 − 0.4 − 2.5)', () => {
         expect(t.clearance.over_dj_raised_hands_m).toBe(1.96)
+    })
+})
+
+describe('the backdrop park (owner\'s choice (b)): nothing hung over the riser', () => {
+    const opts = behindOptions({ rigs: { design: rig }, hall, design, zs: design.crane.candidates_m, gapMin: design.truss.clear_gap_m })
+    const at = (z) => opts.find((o) => o.z_m === z)
+    it('passes z 21 (clamps 0.68 m behind the step) and 21.18 (exactly 0.5); fails 21.5 (0.18) and 22 (over the step)', () => {
+        expect(at(21)).toMatchObject({ gap_m: 0.68, hard: [], soft: [] })
+        expect(at(21.18).gap_m).toBe(0.5)
+        expect(at(21.5).hard.join()).toMatch(/0.18 m behind/)
+        expect(at(22).gap_m).toBe(-0.32)
+    })
+    it('does not depend on the step\'s height', () => {
+        const high = stageLineRig({ ...inputs, design: { ...design, booth: { ...design.booth, deck_h_m: 1.2 } } })
+        const b = behindOptions({ rigs: { design: high }, hall, design, zs: design.crane.candidates_m, gapMin: design.truss.clear_gap_m })
+        expect(b.map((o) => [o.z_m, o.gap_m, o.hard.length])).toEqual(opts.map((o) => [o.z_m, o.gap_m, o.hard.length]))
+    })
+    it('refuses the stage-line hall of z 24 (its bridge is over the DJ)', () => {
+        const z24 = 'scripts/place/rigs/moxir-hall-2026-10-07-v8-show-stage24.hall.json'
+        expect(() => stageLineRig({ ...inputs, design: { ...design, crane: { ...design.crane, hall_record: z24 } } })).toThrow(/not 1.32 m behind/)
+    })
+})
+
+describe('the shift toward house left (owner: "we can a bit go left with truss")', () => {
+    const table = shiftOptions({ inputs, shifts: [0, 0.5, 1, 1.5, 2] })
+    const at = (s) => table.find((o) => o.shift_m === s)
+    it('passes every check at every shift 0–2 m', () => {
+        for (const o of table) expect(o.fails, `shift ${o.shift_m}`).toEqual([])
+    })
+    it('turns the house-left strap further off the bridge\'s plane as it slides (28° → 40°) and the house-right one less (26° → 20°)', () => {
+        expect(table.map((o) => o.ties.find((x) => x.id === 'hl').angle_off_plane_deg)).toEqual([28, 31, 33, 36, 40])
+        expect(table.map((o) => o.ties.find((x) => x.id === 'hr').angle_off_plane_deg)).toEqual([26, 25, 23, 22, 20])
+    })
+    it('at the chosen 1.0 m: low end x −7.04 (1.69 m outside the dance floor), high end 4.55 m right of the DJ, line 5.13 m behind him', () => {
+        expect(design.truss.shift.chosen_m).toBe(1)
+        expect(at(1)).toMatchObject({ axis_x_m: -1, low_end: { x_m: -7.04, outside_dance_floor_m: 1.69, over_raised_hands_m: 0.74 }, high_end: { right_of_dj_m: 4.55 }, behind_dj: { bottom_chord_m: 5.13 } })
+        expect(at(1).over_pa_l).toMatchObject({ z_apart_m: 2.78, above_top_m: 1.38 })
     })
 })
 
@@ -105,13 +136,11 @@ describe('the roller conveyor (hall v8, owner 2026-10-07): the centred booth and
     })
 })
 
-const SIGHT_24 = parkOptions({ rig, hall, design }).find((o) => o.z_m === 24).sightline_to_dj_m
 describe('can the crowd see a DJ on one step? (owner: "just one step thing", then "two decks low")', () => {
     it('the copy\'s step is the owner\'s 0.4 m: front row 80 mm, 2 rows over 60 mm, the DJ\'s eye 0.25 m over the front heads', () => {
         const s0 = stageFrame(rig, hall)
         const c = crowdSightline({ deckH: s0.deck, djZ: s0.back + s0.into * (s0.depth / 2 - 0.2), barrierZ: design.barrier.z_m })
         expect(c).toMatchObject({ deck_h_m: 0.4, c_front_row_mm: 80, rows_c60: 2, rows_c90: 0 })
-        expect(SIGHT_24).toBeGreaterThan(1.5)
     })
     const s = stageFrame(rig, hall)
     const djZ = s.back + s.into * (s.depth / 2 - 0.2)
@@ -126,37 +155,27 @@ describe('can the crowd see a DJ on one step? (owner: "just one step thing", the
         expect(djEyeLine({ deckH: 0.2, djZ, barrierZ: design.barrier.z_m, backZ: back }).over_front_row_heads_m).toBe(0.07)
         expect(djEyeLine({ deckH: 1.2, djZ, barrierZ: design.barrier.z_m, backZ: back }).over_front_row_heads_m).toBe(0.96)
     })
-    it('does not change the crane park: the 1 m rule reads the riser\'s depth, not its height', () => {
-        const low = parkOptions({ rig, hall, design })
-        const high = parkOptions({ rig: stageLineRig({ ...inputs, design: { ...design, booth: { ...design.booth, deck_h_m: 1.2 } } }), hall, design })
-        expect(low.map((o) => [o.z_m, o.dj_offset_m, o.fails.length])).toEqual(high.map((o) => [o.z_m, o.dj_offset_m, o.fails.length]))
-        expect(pickPark(low).z_m).toBe(24)
-        expect(low.find((o) => o.z_m === 24).sightline_to_dj_m).toBe(SIGHT_24)
-    })
 })
 
-describe('parkOptions: where the crane parks', () => {
-    const options = parkOptions({ rig, hall, design })
+describe('parkOptions: the earlier rule (the cut over the DJ, the stage24 copy at z 24)', () => {
+    const z24 = loadInputs()
+    z24.design.crane.hall_record = 'scripts/place/rigs/moxir-hall-2026-10-07-v8-show-stage24.hall.json'
+    z24.design.crane.candidates_m = [22, 24, 26]
+    delete z24.design.truss.behind_m
+    z24.design.truss.axis_x_m = 0
+    z24.hall = hallWithCraneAt(hall, 24)
+    const rig24 = stageLineRig(z24)
+    const options = parkOptions({ rig: rig24, hall: z24.hall, design: z24.design })
     const at = (z) => options.find((o) => o.z_m === z)
-    it('picks z 24 and says why the others fail', () => {
+    it('picked z 24 then and said why 22 and 26 failed the 1 m rule', () => {
         expect(pickPark(options).z_m).toBe(24)
-        expect(at(24).fails).toEqual([])
         expect(at(24).dj_offset_m).toBe(0.7)
-        expect(at(24).tieoffs.map((x) => x.along_z_m)).toEqual([0, 0])
         expect(at(22).fails.join(' ')).toMatch(/DJ is 1\.3 m/)
         expect(at(26).fails.join(' ')).toMatch(/over the dance floor/)
-        expect(at(26).fails.join(' ')).toMatch(/DJ is 2\.7 m/)
-    })
-    it('leaves the front row a clear line to the DJ under the cut', () => {
-        expect(at(24).sightline_to_dj_m).toBeGreaterThan(1)
-        expect(at(22).sightline_to_dj_m).toBe(null) // the line hangs behind the DJ
-    })
-    it('keeps the cab clear of the fixed massing under it', () => {
-        for (const o of options) for (const m of o.cab_over_massing) expect(m.gap_m, `${o.z_m} ${m.id}`).toBeGreaterThan(1)
     })
     it('moves only the near crane', () => {
         const h = hallWithCraneAt(hall, 22)
-        expect(h.geometry.cranes[0]).toMatchObject({ z_m: 22, from_entry_m: 32 })
+        expect(h.geometry.cranes[0]).toMatchObject({ z_m: 22, from_entry_m: 33 - 1 })
         expect(h.geometry.cranes[1]).toEqual(hall.geometry.cranes[1])
     })
 })
@@ -203,20 +222,20 @@ describe('stageLineOps: the copy moved, and nothing else', () => {
         expect(pos(next, 'rig-dj-table')).toEqual([0, 0.4, 23.9])
         expect(next.entities.some((e) => e.id === 'rig-dj-stair-1')).toBe(false)
     })
-    it('translates the cut 19.2 m along z: its rigging re-derived equals the old rigging moved, the tie-offs excepted', () => {
-        for (const e of doc.entities.filter((x) => /^rig-hoist-/.test(x.id))) {
+    it('moves the cut 16.2 m along z and 1.0 m house left: its rigging re-derived equals the old rigging moved, the tie-offs excepted', () => {
+        for (const e of doc.entities.filter((x) => /^rig-hoist-/.test(x.id) && !/-steel/.test(x.id))) {
             const p = e.components.transform.position
-            expect(pos(next, e.id), e.id).toEqual([p[0], p[1], Math.round((p[2] + 19.2) * 1000) / 1000].map((v, i) => expect.closeTo(v, i === 2 ? 2 : 3)))
+            expect(pos(next, e.id), e.id).toEqual([p[0] - 1, p[1], p[2] + 16.2].map((v) => expect.closeTo(v, 2)))
         }
-        expect(pos(next, 'rig-line-1')).toEqual([-4.588, 3.98, 24])
-        expect(pos(next, 'rig-par-cut-x-01')).toEqual([-4.69, 3.58, 24])
-        expect(next.entities.find((e) => e.id === 'rig-tieoff-hr').name).toMatch(/grid line z 24/)
+        expect(pos(next, 'rig-line-1')).toEqual([-5.588, 3.98, 21])
+        expect(pos(next, 'rig-par-cut-x-01')).toEqual([-5.69, 3.58, 21])
+        expect(next.entities.find((e) => e.id === 'rig-tieoff-hr').name).toMatch(/grid line z 18/)
     })
     it('leaves the floor lamps where they are, adds the PA, re-derives the plan', () => {
         expect(pos(next, 'rig-par-columns-07')).toEqual([-11.16, 0.31, 24])
         expect(next.entities.filter((e) => /^rig-pa-/.test(e.id)).map((e) => e.id)).toEqual(['rig-pa-l-subs', 'rig-pa-l-tops', 'rig-pa-r-subs', 'rig-pa-r-tops'])
         const plan = next.entities.find((e) => e.id === 'place-hall').components.venuePlan
-        expect(plan.overhead.find((o) => o.id === 'crane-1').line[0][1]).toBe(24)
+        expect(plan.overhead.find((o) => o.id === 'crane-1').line[0][1]).toBe(21)
         expect(plan.zones.find((z) => z.id === 'dance').rects[0]).toEqual([-5.35, 25.8, 5.35, 48])
     })
     it('stands every PA stack on the line, facing the audience, at the design\'s x', () => {
@@ -234,8 +253,8 @@ describe('stageLineOps: the copy moved, and nothing else', () => {
         const high = oldDoc()
         for (const e of high.entities) if (/^rig-(hoist|tieoff|line|par-cut)/.test(e.id)) e.components.transform.position[1] += 0.2
         const r = stageLineOps({ doc: high, rig, hall, oldRig, oldHall, design })
-        expect(r.dCut).toEqual([0, -0.2, 19.2])
-        expect(pos(apply(high, r.ops), 'rig-line-1')).toEqual([-4.588, 3.98, 24])
+        expect(r.dCut).toEqual([-1, -0.2, 16.2])
+        expect(pos(apply(high, r.ops), 'rig-line-1')).toEqual([-5.588, 3.98, 21])
         const bent = oldDoc()
         bent.entities.find((e) => e.id === 'rig-hoist-1').components.transform.position[1] += 0.3
         expect(() => stageLineOps({ doc: bent, rig, hall, oldRig, oldHall, design })).toThrow(/rigidly/)

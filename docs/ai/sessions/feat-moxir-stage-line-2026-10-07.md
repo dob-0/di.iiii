@@ -164,3 +164,37 @@ unchanged.
   `b`. A `--id` option is owed.
 - **Pictures:** `back-flip-compare.png` (three sections), `back-flip-plan.png`, `back-flip-on-frame-954.png` and
   `back-flip-side.png`.
+
+## The owner's choice (b), the working version (later on 10-07)
+
+He chose (b): "ok today version is better" … "but behind the dj". Then he added: "we can a bit go left with truss, I
+mean from the perspective of the audience". Then: "let's take the one and work on it".
+
+- **The design file is now (b):**
+  - crane z 21, the backdrop park rule (`truss.behind_m` 1.32, clear gap 0.5 m);
+  - the cut NOT flipped (LOW 3.24 house left, HIGH 6.35 house right, bridles 26/42/119°), slid **1.0 m to house left**
+    (`truss.axis_x_m` −1.0, `truss.shift`);
+  - tie-offs to the z 18 columns: HL level at 3.39 m, 33° off the plane; HR at 4.70 m, 23°, 0.20 m over pipe-rack-3;
+  - `crane.decision` (the coordinator's record of his choice) is marked built.
+- **The shift table** (`stage-line.mjs --shifts`, `shiftOptions`): every shift from 0 to 2.0 m passes. The HL strap
+  turns from 28° to 40° off the plane as the line slides. At 1.0 m the low end is x −7.04 (1.69 m outside the dance
+  floor), the line behind the DJ is at 5.13 m, and the high end is 4.55 m right of the DJ.
+- **Hall:** the crane layer is renamed to `moxir-hall-crane-behind-dj-2026-10-07.json` (it was `…-back-flip-…`) and
+  the record to `moxir-hall-2026-10-07-v8-show-back21.hall.json`. The geometry is identical, hall.glb `18a1774e…`
+  (same hash). The flipped reference design points to the same record, so (c) stays reproducible. The
+  `…-backflip21` record is removed because it duplicated this one under the old layer name.
+- **Copy `moxir-known-full-stage-back`**, titled **"MOXIR beta v0.9"** (the owner: "rename it to MOXIR beta", then a version number):
+  - copied from stage24 v176 with version id `known-full-show-2026-10-07` (copy-version's new `--id`);
+  - hall swapped ("listed");
+  - re-cut with `stage-line.mjs --from-hall <stage24 record> --from-axis 0`: 53 entities moved (−1, 0, −3), rigid;
+  - views aimed (the entry targets z 21);
+  - made the scratch space's front door: http://moxir-flip.dii.localhost/moxir. Read back with
+    `/api/resolve/moxir/moxir-known-full-stage-back` → the project "MOXIR beta v0.9";
+  - **the slug `beta` was refused** (400): `beta` is a reserved route word (the old Beta lane,
+    `src/utils/spaceRouting.js` RESERVED_APP_SEGMENTS). It was not retried and not worked around; the owner picks
+    another word;
+  - stage24 archived and made private at the owner's word (`scripts/production/archive-versions.mjs --keep
+    moxir-known-full-stage-back,moxir-2026-10-17-versions`). The undo file is
+    `~/di-backups/moxir-beta-2026-10-07/undo-moxir-127.0.0.1_4323.json`.
+- The `anchorWindows` scan is now coarse-to-fine: a 5 cm scan, then each edge found to 1 cm. The suite was hitting
+  the 5 s test timeout.

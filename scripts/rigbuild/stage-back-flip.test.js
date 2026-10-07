@@ -14,7 +14,8 @@ const BACK = 'scripts/place/rigs/moxir-stage-back-flip-2026-10-07.json'
 const back = loadInputs(BACK)
 const line = loadInputs()
 const flipped = stageLineRig(back)
-const today = stageLineRig(line)
+// the stage-line cut as the owner kept it (not flipped), at the same park, on the nave axis — what (c) mirrors
+const today = stageLineRig({ ...line, design: { ...line.design, truss: { ...line.design.truss, axis_x_m: 0 } } })
 const t = flipped.truss
 
 describe('the backdrop park rule (rig-lib stageFrame truss_behind_m)', () => {
@@ -27,7 +28,7 @@ describe('the backdrop park rule (rig-lib stageFrame truss_behind_m)', () => {
         expect(s.back - reach.front).toBeCloseTo(0.68, 6)
     })
     it('refuses a bridge that would hang anything within the gap (the 24 m park of the stage-line hall)', () => {
-        expect(() => stageLineRig({ ...back, hall: line.hall, design: { ...back.design, crane: { ...back.design.crane, hall_record: line.design.crane.hall_record } } })).toThrow(/not 1.32 m behind/)
+        expect(() => stageLineRig({ ...back, design: { ...back.design, crane: { ...back.design.crane, hall_record: 'scripts/place/rigs/moxir-hall-2026-10-07-v8-show-stage24.hall.json' } } })).toThrow(/not 1.32 m behind/)
     })
 })
 
@@ -92,19 +93,20 @@ describe('behindOptions: z 21.0 / 21.18 / 21.5 / 22.0, flipped and not', () => {
     })
 })
 
-describe('recutOps: the stage-line copy re-hung as the flipped backdrop', () => {
+describe('recutOps: the cut behind the DJ re-hung flipped (the picture-gate copy (c))', () => {
     const was = stageFrame(today, line.hall)
     const ent = (id, name, position, rotation = [0, 0, 0.261799388]) => ({ id, type: 'box', name, components: { transform: { position, rotation, scale: [1, 1, 1] } } })
     const doc = {
         entities: [
             { id: 'place-hall', components: { transform: { position: [0, 0, 0] }, venuePlan: {} } },
             ...slopedLineRigging(today, was, line.hall).filter((e) => e.id !== 'rig-truss-header'),
-            ent('rig-line-1', 'truss line (hung from the crane bridge, sloped)', [-4.588, 3.78, 24]),
-            ent('rig-par-cut-x-01', 'UP-PL5403 par-cut-x 1', [-4.69, 3.38, 24], [0, 0.3, 0.2]),
+            ent('rig-line-1', 'truss line (hung from the crane bridge, sloped)', [-4.588, 3.78, 21]),
+            ent('rig-par-cut-x-01', 'UP-PL5403 par-cut-x 1', [-4.69, 3.38, 21], [0, 0.3, 0.2]),
             ent('rig-par-columns-07', 'UP-PL5403 par-columns 7', [-11.16, 0.31, 24])
         ]
     }
     const r = recutOps({ doc, rigFrom: today, hallFrom: line.hall, rigTo: flipped, hallTo: back.hall, mirror: true, design: back.design })
+    // (the stage-line design and the back-flip design share the z 21 hall record)
     const next = JSON.parse(JSON.stringify(doc))
     for (const op of r.ops) {
         const e = next.entities.find((x) => x.id === op.payload.entityId)
@@ -112,8 +114,8 @@ describe('recutOps: the stage-line copy re-hung as the flipped backdrop', () => 
         if (op.type === 'updateEntity') Object.assign(e, op.payload.patch)
     }
     const tr = (id) => next.entities.find((e) => e.id === id).components.transform
-    it('moves the cut rigidly: mirrored, then 3 m back', () => {
-        expect(r.d).toEqual([0, 0, -3])
+    it('moves the cut rigidly: mirrored in its own plane (the same park)', () => {
+        expect(r.d).toEqual([0, 0, 0])
     })
     it('mirrors the line\'s pieces and lamps (place and turn), leaves the floor alone', () => {
         expect(tr('rig-line-1').position).toEqual([4.588, 3.78, 21])

@@ -29,6 +29,7 @@ ap.add_argument('--out', required=True)
 ap.add_argument('--design', default='scripts/place/rigs/moxir-stage-line-2026-10-07.json')
 ap.add_argument('--prefix', default='stage24')
 ap.add_argument('--title', default=None)
+ap.add_argument('--shifts', default=None, help='stage-line.mjs --shifts output: the shift table, drawn under the section')
 a = ap.parse_args()
 J = lambda p: json.load(open(p))
 R = lambda p: J(os.path.join(a.repo, p))
@@ -70,7 +71,7 @@ for m in g['massing']:
     ax.add_patch(Rectangle((max(z0, -4), x0), min(z1, 55) - max(z0, -4), x1 - x0, color='#5b5148', alpha=.75, lw=0, zorder=1))
     if m['id'] == 'roller-conveyor':  # the owner's 10-07 mark: fixed, and it decides the booth's x
         ax.add_patch(Rectangle((z0, x0), z1 - z0, x1 - x0, fill=False, ec='#e0c9a8', lw=1.2, zorder=4))
-for lab, z, x in [('press', 1.7, 1.6), ('machines', 1, 7.5), ('blower + ducts', 18.5, 6.4), ('roller conveyor (fixed)', 19.6, 4.1), ('canopy', 18, 10.6), ('drum tank', 27.2, 8.6), ('pipe racks (x 10–12, y 3–4.5)', 40, 11.0)]:
+for lab, z, x in [('press', 1.7, 1.6), ('machines', 1, 7.5), ('blower + ducts', 18.5, 6.4), ('roller conveyor (fixed)', 14.6, 4.1), ('canopy', 18, 10.6), ('drum tank', 27.2, 8.6), ('pipe racks (x 10–12, y 3–4.5)', 40, 11.0)]:
     ax.text(z, x, lab, color=DIM, fontsize=8, ha='center', va='center', zorder=3)
 cab0 = [m for m in v6['massing'] if m['id'] == 'prefab-cabin'][0]
 (x0, x1), (z0, z1) = cab0['x_m'], cab0['z_m']
@@ -123,7 +124,7 @@ for tie in truss['tieoffs']:
 # stage line, booth, PA, barrier (positions read back from the copy)
 L = design['stage_line']['z_m']
 ax.plot([L, L], [-11.6, 11.6], color=GREEN, lw=3, zorder=6)
-ax.text(L - .6, -6.9, 'STAGE LINE z %.1f' % L, color=GREEN, fontsize=10, fontweight='bold', zorder=7, ha='right')
+ax.text(L - .6, -9.3, 'STAGE LINE z %.1f' % L, color=GREEN, fontsize=10, fontweight='bold', zorder=7, ha='right')
 xs = [pos(doc, i)[0] for i in doc if i.startswith('rig-deck-')]
 zs = [pos(doc, i)[2] for i in doc if i.startswith('rig-deck-')]
 ax.add_patch(Rectangle((min(zs) - 1, min(xs) - .5), 2, max(xs) - min(xs) + 1, color=TEAL, alpha=.9, zorder=6))
@@ -249,12 +250,16 @@ ax.annotate('low end %.2f m bottom chord\n%.2f over raised hands (%s)' % (ly_, l
             color=FG, fontsize=8, arrowprops=dict(arrowstyle='->', color=DIM))
 ax.annotate('high end %.2f m' % hy_, xy=(hx_, hy_), xytext=(hx_ + (-3.4 if hx_ > 0 else -3.6), hy_ + (1.0 if hx_ > 0 else 0.55)), color=FG, fontsize=8, arrowprops=dict(arrowstyle='->', color=DIM))
 hr = [x for x in truss['tieoffs'] if x['id'] == 'hr'][0]
-pick = next((t['pick'] for o in ev.get('behind', []) if o['rig'] == 'flipped' and o['z_m'] == CZ for t in o['ties'] if t['id'] == 'hr'), None)
+pick = next((t['pick'] for o in ev.get('behind', []) if o['rig'] == 'design' and o['z_m'] == CZ for t in o['ties'] if t['id'] == 'hr'), None)
 if hr.get('under_cab_m') is not None:
     txt = 'tie-off hr to the column at %.2f m:\n%.2f under the cab · 0.20 over pipe-rack-3\n(window 4.60–4.8 m — TAPE cab + pipes 10-08)' % (hr['to_m'][1], hr['under_cab_m'])
 else:
-    txt = ('tie-off hr (the LOW end) UP to the column on z %g at %.2f m, %d° off the bridge plane:\nat its own height (%.2f m) it runs into the pipe racks — least change +%.2f m;\nnow %.2f m over %s (TAPE the racks 10-08)'
-           % (hr['to_m'][2], hr['to_m'][1], pick['angle_off_plane_deg'] if pick else 0, hr['from_m'][1], hr['to_m'][1] - hr['from_m'][1], pick['nearest']['gap_m'] if pick else 0, pick['nearest']['id'] if pick else ''))
+    up = hr['to_m'][1] > hr['from_m'][1]
+    end = 'LOW' if hr['from_m'][1] < max(x['from_m'][1] for x in truss['tieoffs']) else 'HIGH'
+    txt = ('tie-off hr (the %s end) %s to the column on z %g at %.2f m, %d° off the bridge plane%s;\nnow %.2f m over %s (TAPE the racks 10-08)'
+           % (end, 'UP' if up else 'down', hr['to_m'][2], hr['to_m'][1], pick['angle_off_plane_deg'] if pick else 0,
+              (':\nat its own height (%.2f m) it runs into the pipe racks — least change +%.2f m' % (hr['from_m'][1], hr['to_m'][1] - hr['from_m'][1])) if up else '',
+              pick['nearest']['gap_m'] if pick else 0, pick['nearest']['id'] if pick else ''))
 ax.annotate(txt, xy=((hr['from_m'][0] + hr['to_m'][0]) / 2, (hr['from_m'][1] + hr['to_m'][1]) / 2), xytext=((-10.9, 6.55) if max(x['to_m'][1] for x in truss['tieoffs'] if x['id'] == 'hl') < 5.5 else (-10.9, 4.75)) if hr['to_m'][0] > 0 else (2, 6.55),
             color=YELLOW, fontsize=7.5, arrowprops=dict(arrowstyle='->', color=YELLOW, alpha=.6))
 ax.text(-11.3, 9.9, 'Section at z %g (the crane\'s bridge plane), seen FROM THE AUDIENCE: house left ←  → house right. The cut: ends %.2f / %.2f m, bridles %s°, trim %.2f.'
@@ -268,9 +273,20 @@ if cr:
         lines.append('  %.1f m step: front row %d mm · %d rows ≥ 60 mm · %d rows ≥ 90 mm · DJ\'s eye %.2f over front-row heads%s'
                      % (h, c['c_front_row_mm'], c['rows_c60'], c['rows_c90'], c['dj']['over_front_row_heads_m'], '   ← THIS COPY' if abs(h - DECK) < 1e-6 else ''))
     fig.text(.13, .035, '\n'.join(lines), color=FG, fontsize=7.6, va='bottom', family='monospace')
+if a.shifts:
+    sh = J(a.shifts)
+    chosen = (design['truss'].get('shift') or {}).get('chosen_m')
+    rows = ['The cut slid toward HOUSE LEFT along the bridge (your "a bit go left"):',
+            '  shift  low end x  HL strap  len / off-plane  HR strap  len / off-plane  line behind DJ  high end right of DJ  checks']
+    for o in sh:
+        hl = next(t for t in o['ties'] if t['id'] == 'hl'); hr = next(t for t in o['ties'] if t['id'] == 'hr')
+        rows.append('  %.1f m  %8.2f   %14s   %15s     %5.2f m          %5.2f m            %s%s' % (
+            o['shift_m'], o['low_end']['x_m'], '%.2f m / %d°' % (hl['length_m'], hl['angle_off_plane_deg']), '%.2f m / %d°' % (hr['length_m'], hr['angle_off_plane_deg']),
+            o['behind_dj']['bottom_chord_m'], o['high_end']['right_of_dj_m'], 'pass' if not o['fails'] else 'FAIL: ' + '; '.join(o['fails']), '   ← THIS COPY' if chosen is not None and abs(o['shift_m'] - chosen) < 1e-6 else ''))
+    fig.text(.13, .025, '\n'.join(rows), color=FG, fontsize=7.6, va='top', family='monospace')
 ax.set_xlim(-12.6, 12.6); ax.set_ylim(-.3, 10.4); ax.set_aspect('equal')
 ax.set_ylabel('height (m) · x (m) along the axis below', color=DIM)
-fig.text(.01, .012, FOOT, color=DIM, fontsize=7)
+fig.text(.01, -.17 if a.shifts else .012, FOOT, color=DIM, fontsize=7)
 fig.savefig(os.path.join(a.out, '%s-side.png' % a.prefix), facecolor=BG, bbox_inches='tight')
 plt.close(fig)
 

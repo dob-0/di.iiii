@@ -2,7 +2,7 @@
   "stage": "moxir-stage-back-flip-2026-10-07",
   "title": "MOXIR — the stage on the owner's line, the cut FLIPPED as a backdrop behind the DJ (picture gate, scratch only)",
   "writtenAt": "2026-10-07",
-  "status": "PICTURE GATE for the owner's look (2026-10-07): built on the scratch stack only, as a separate project beside moxir-known-full-stage24 (which is unchanged). Not a decision.",
+  "status": "PICTURE GATE for the owner's look (2026-10-07): built on the scratch stack only, as a separate project beside moxir-known-full-stage24 (which is unchanged). Not a decision. Not chosen: the owner chose (b), the cut as today behind the DJ (moxir-stage-line-2026-10-07.json crane.decision); kept as the reference for picture (c).",
   "owner": "2026-10-07, his own marks on video frame 954 @ 3.6 s (~/Downloads/moxir/,dob fixed last places bags-from-video-954.jpg): a green STAGE LINE across the floor at the front of the white bags, the DJ (teal) behind it, speakers (blue) L and R on it, the audience (orange) everything in front, toward the entry. Earlier the same day: \"we can move the crane\". His order: stage → crane place → truss → lights. Later the same day: \"keep max dj center and we dont need to 2n floor stage for dj just one step thing\" — the booth on the nave axis, one low step instead of the 1.2 m riser. Picture gate, later 2026-10-07: \"maybe we will flip the truss? … the truss at the back of the DJ — where the DJ stage line finishes, the crane line there — with the truss flipped. I want to see that.\"",
   "source": {
     "marks": "scripts/place/picks/marks-954-stage-2026-10-07.json — the painted pixels' floor contacts (the lowest painted pixel in each 16-px column band) projected onto the floor y = 0 by scripts/place/project_floor_marks.py",
@@ -202,8 +202,8 @@
   },
   "crane": {
     "z_m": 21.0,
-    "hall_overlay": "scripts/place/rigs/moxir-hall-back-flip-2026-10-07.json",
-    "hall_record": "scripts/place/rigs/moxir-hall-2026-10-07-v8-show-backflip21.hall.json",
+    "hall_overlay": "scripts/place/rigs/moxir-hall-crane-behind-dj-2026-10-07.json",
+    "hall_record": "scripts/place/rigs/moxir-hall-2026-10-07-v8-show-back21.hall.json",
     "candidates_m": [
       21.0,
       21.18,

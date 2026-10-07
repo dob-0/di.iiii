@@ -18,8 +18,8 @@ describe('viewsFor', () => {
         expect(position).toEqual([0, 1.65, 41])
         expect(position[2]).toBeGreaterThan(inputs.design.barrier.z_m)
         expect(target[2]).toBeLessThan(position[2])
-        // between the DJ's head (0.4 + 1.75) and the girder (7.95), over the bridge's line
-        expect(target).toEqual([0, 5.05, 24])
+        // between the DJ's head (0.4 + 1.75) and the girder (7.95), over the bridge's line — behind the DJ (z 21)
+        expect(target).toEqual([0, 5.05, 21])
     })
     it('keeps the DJ and the bridge both in the entry frame (vertical fov 55)', () => {
         const { position: p, target: t, fov } = views.fixedCamera
@@ -27,7 +27,7 @@ describe('viewsFor', () => {
         const angle = (y, z) => Math.atan2(y - p[1], p[2] - z) - pitch
         const half = (fov / 2) * Math.PI / 180
         expect(Math.abs(angle(0.4 + 1.75, 23.3))).toBeLessThan(half)
-        expect(Math.abs(angle(8.75, 24))).toBeLessThan(half)
+        expect(Math.abs(angle(8.75, 21))).toBeLessThan(half)
     })
     it('aims Floor at the DJ\'s head and DJ out from the step to the floor\'s middle', () => {
         const [floor, dj] = views.presets

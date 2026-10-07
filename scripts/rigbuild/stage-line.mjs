@@ -235,21 +235,33 @@ export const nearestFixed = (a, b, hall) => fixedBoxes(hall)
  * margin) and every fixed box by `margin`, and never dips under raised hands (`minY`). Scanned every 1 cm up to the
  * runway's underside. Returns the windows [[lo, hi], …]. Pure.
  */
-export const anchorWindows = ({ from, colX, gridZ, hall, margin = 0.1, minY = 2.5, step = 0.01 }) => {
-    const top = hall.geometry.runway_bottom_m - margin
+export const anchorWindows = ({ from, colX, gridZ, hall, margin = 0.1, minY = 2.5, step = 0.01, coarse = 0.05 }) => {
+    const top = Math.round((hall.geometry.runway_bottom_m - margin) * 100) / 100
+    const boxes = fixedBoxes(hall)
     const ok = (y) => {
         const to = [colX, y, gridZ]
         if (tieoffCabClashes({ truss: { rigging: { tieoffs: [{ id: 't', from_m: from, to_m: to }] } } }, hall).length) return false
         if (Math.min(from[1], y) < minY) return false
-        return fixedBoxes(hall).every((x) => segmentBoxGap(from, to, x) >= margin - 1e-9)
+        return boxes.every((x) => segmentBoxGap(from, to, x) >= margin - 1e-9)
+    }
+    const c2 = (v) => Math.round(v * 100) / 100
+    // a coarse scan, then each edge found to `step` (a window narrower than `coarse` — 5 cm — can be missed: below any
+    // rigging tolerance)
+    const ys = []
+    for (let y = 0.5; y <= top + 1e-9; y += coarse) ys.push(c2(y))
+    if (ys[ys.length - 1] !== top) ys.push(top)
+    const flags = ys.map(ok)
+    const edge = (a, b, rising) => {
+        for (let y = c2(a + step); y < b - 1e-9; y = c2(y + step)) if (ok(y) === rising) return y
+        return b
     }
     const wins = []
-    let lo = null
-    for (let y = 0.5; y <= top + 1e-9; y += step) {
-        const yy = Math.round(y * 100) / 100
-        if (ok(yy)) { if (lo === null) lo = yy } else if (lo !== null) { wins.push([lo, Math.round((yy - step) * 100) / 100]); lo = null }
+    let lo = flags[0] ? ys[0] : null
+    for (let k = 1; k < ys.length; k += 1) {
+        if (!flags[k - 1] && flags[k]) lo = edge(ys[k - 1], ys[k], true)
+        if (flags[k - 1] && !flags[k]) { wins.push([lo, c2(edge(ys[k - 1], ys[k], false) - step)]); lo = null }
     }
-    if (lo !== null) wins.push([lo, Math.round(top * 100) / 100])
+    if (lo !== null) wins.push([lo, ys[ys.length - 1]])
     return wins
 }
 
@@ -326,6 +338,51 @@ export const behindOptions = ({ rigs, hall, design, zs, gapMin }) => {
     }
     return out
 }
+
+/**
+ * The cut slid along the bridge toward house left (owner, 2026-10-07: "we can a bit go left with truss … from the
+ * perspective of the audience"): for each shift (m, toward −x), the same line re-derived (craneCut) with its axis at
+ * −shift, and what it changes — the tie-offs (length, angle off the bridge's plane, anchor kept or the least change,
+ * nearest fixed thing, the cab), the clamps' gap behind the riser, the low end against raised hands, the dance floor's
+ * left edge and PA L, and where the line stands over the DJ. Pure (reads the committed files).
+ */
+export const shiftOptions = ({ inputs, shifts, djX = inputs.design.booth.centre_x_m }) => shifts.map((sh) => {
+    const design = clone(inputs.design)
+    design.truss.axis_x_m = r2(-sh)
+    let rig
+    try { rig = stageLineRig({ ...inputs, design }) } catch (e) { return { shift_m: sh, refused: e.message } }
+    const t = rig.truss
+    const z = inputs.design.crane.z_m
+    const o = behindOptions({ rigs: { design: rig }, hall: inputs.hall, design, zs: [z], gapMin: design.truss.clear_gap_m })[0]
+    const st = stageFrame(rig, inputs.hall)
+    const low = [...t.ends].sort((p, q) => p.bottom_chord_m - q.bottom_chord_m)[0]
+    const high = [...t.ends].sort((p, q) => q.bottom_chord_m - p.bottom_chord_m)[0]
+    const pa = paEntities(design).find((e) => e.id === 'rig-pa-l-subs').components.transform
+    const paTop = design.pa.stack.reduce((sum, k) => sum + k.n_high * k.h_m, 0)
+    const dance = inputs.hall.geometry.zones.dance.used.x_m
+    const uDj = (djX - (st.trussAxis ?? st.axis)) / Math.cos(st.trussSlope)
+    const ties = t.rigging.tieoffs.map((tie) => {
+        const opt = o.ties.find((x) => x.id === tie.id)
+        const run = Math.abs(tie.to_m[0] - tie.from_m[0])
+        return {
+            id: tie.id, anchor_m: tie.to_m, length_m: tie.length_m, under_cab_m: tie.under_cab_m,
+            angle_off_plane_deg: Math.round((Math.atan2(Math.abs(tie.to_m[2] - tie.from_m[2]), run) * 180) / Math.PI),
+            nearest: nearestFixed(tie.from_m, tie.to_m, inputs.hall),
+            window_on_its_column: opt?.options.find((x) => x.grid_z_m === tie.to_m[2])?.windows ?? null
+        }
+    })
+    const fails = [...o.hard]
+    for (const tie of ties) if (tie.nearest.gap_m < 0.1) fails.push(`tie-off ${tie.id} ${tie.nearest.gap_m} m from ${tie.nearest.id}`)
+    if (tieoffCabClashes(rig, inputs.hall).length) fails.push('a tie-off crosses the cab')
+    return {
+        shift_m: sh, axis_x_m: r2(-sh),
+        low_end: { x_m: low.x_m, bottom_chord_m: low.bottom_chord_m, over_raised_hands_m: t.clearance.low_end.over_raised_hands_m, outside_dance_floor_m: r2(dance[0] - low.x_m) },
+        high_end: { x_m: high.x_m, bottom_chord_m: high.bottom_chord_m, right_of_dj_m: r2(high.x_m - djX) },
+        over_pa_l: { x_overlap_m: r2(Math.max(0, Math.min(pa.position[0] + pa.scale[0] / 2, Math.max(...t.ends.map((e) => e.x_m))) - Math.max(pa.position[0] - pa.scale[0] / 2, Math.min(...t.ends.map((e) => e.x_m))))), z_apart_m: r2(pa.position[2] - pa.scale[2] / 2 - z), above_top_m: r2(low.bottom_chord_m - paTop) },
+        behind_dj: { bottom_chord_m: r2(st.trussH - st.trussSection / 2 + uDj * Math.sin(st.trussSlope)) },
+        gap_m: o.gap_m, line_nearest_fixed: o.line_nearest_fixed, ties, fails
+    }
+})
 
 /** The park the table picks: no fails, the straightest tie-offs, then the nearest the DJ. */
 export const pickPark = (options) => [...options]
@@ -594,25 +651,33 @@ const main = async () => {
     const opt = args()
     const inputs = loadInputs(opt.design ? String(opt.design) : STAGE_LINE_FILE)
     const rig = stageLineRig(inputs)
+    if (opt.shifts) {
+        console.log(JSON.stringify(shiftOptions({ inputs, shifts: String(opt.shifts).split(',').map(Number) }), null, 1))
+        return
+    }
     if (opt.evaluate && inputs.design.truss.behind_m !== undefined) {
-        // the BACKDROP design: its own cut, and for comparison the stage-line cut (not flipped) hung in the same plane
+        // a BACKDROP design: its own cut ('design'); a FLIPPED one is compared with the stage-line cut (not flipped) in the same plane
         const line = loadInputs()
-        const unflipped = stageLineRig({ ...inputs, design: { ...inputs.design, truss: { ...inputs.design.truss, cut: line.design.truss.cut } } })
+        const flipped = (rig.truss.slope_deg ?? 0) < 0
+        const unflipped = flipped ? stageLineRig({ ...inputs, design: { ...inputs.design, truss: { ...inputs.design.truss, cut: line.design.truss.cut } } }) : null
         const zs = inputs.design.crane.candidates_m
-        const options = behindOptions({ rigs: { flipped: rig, unflipped }, hall: inputs.hall, design: inputs.design, zs, gapMin: inputs.design.truss.clear_gap_m })
+        const options = behindOptions({ rigs: { design: rig, ...(unflipped ? { unflipped } : {}) }, hall: inputs.hall, design: inputs.design, zs, gapMin: inputs.design.truss.clear_gap_m })
         const st = stageFrame(rig, inputs.hall)
         const djZ = st.back + st.into * (st.depth / 2 - 0.2)
         const dz = inputs.hall.geometry.zones.dance.used.z_m
         const crowd = [0.2, 0.4, 0.6, 0.8, 1.2].map((h) => ({ ...crowdSightline({ deckH: h, djZ, barrierZ: inputs.design.barrier.z_m }), dj: djEyeLine({ deckH: h, djZ, barrierZ: inputs.design.barrier.z_m, backZ: dz[1] }) }))
         const trussOf = (r) => ({ ends: r.truss.ends, trim_m: r.truss.trim_m, picks: r.truss.rigging.picks, tieoffs: r.truss.rigging.tieoffs, clearance: r.truss.clearance })
         const z = inputs.design.crane.z_m
-        const un = options.find((o) => o.rig === 'unflipped' && o.z_m === z)
-        const unTruss = trussOf(unflipped)
-        unTruss.tieoffs = un.ties.map((t) => ({ id: t.id, from_m: t.from_m, to_m: t.pick ? [t.side * inputs.hall.geometry.column_inner_face_x_m, t.pick.y_m, t.pick.grid_z_m] : null, under_cab_m: null }))
+        let unTruss = null
+        if (unflipped) {
+            const un = options.find((o) => o.rig === 'unflipped' && o.z_m === z)
+            unTruss = trussOf(unflipped)
+            unTruss.tieoffs = un.ties.map((t) => ({ id: t.id, from_m: t.from_m, to_m: t.pick ? [t.side * inputs.hall.geometry.column_inner_face_x_m, t.pick.y_m, t.pick.grid_z_m] : null, under_cab_m: null }))
+        }
         console.log(JSON.stringify({
             crowd,
-            options: options.filter((o) => o.rig === 'flipped').map((o) => ({ ...o, fails: o.hard })),
-            behind: options, picked: z, truss: trussOf(rig), unflipped_truss: unTruss
+            options: options.filter((o) => o.rig === 'design').map((o) => ({ ...o, fails: o.hard })),
+            behind: options, picked: z, truss: trussOf(rig), ...(unTruss ? { unflipped_truss: unTruss } : {})
         }, null, 1))
         return
     }
@@ -654,11 +719,22 @@ const main = async () => {
     for (let i = theirs.length - 1; i >= 0; i -= 1) if (take.has(theirs[i].id)) { console.log(`  TAKEN by the owner's decision: ${theirs[i].id}`); theirs.splice(i, 1) }
     for (const m of theirs) console.log(`  KEPT (${m.what}): ${m.id}${m.from || m.to ? ` ${JSON.stringify(m.from?.position ?? m.from)} → ${JSON.stringify(m.to?.position ?? m.to)}` : ''}`)
     // `--recut-from <design>`: the copy hangs the cut as that design derives it; re-hang it as this one does (`--mirror`)
-    const recutFrom = opt['recut-from'] ? loadInputs(String(opt['recut-from'])) : null
+    // `--from-hall <record>`: the copy hangs THIS design's cut as it did at that hall, over the DJ (the 1 m rule) —
+    // stage24's z 24 — before the cut moved behind him
+    const fromHall = opt['from-hall'] ? String(opt['from-hall']) : null
+    const recutFrom = opt['recut-from'] ? loadInputs(String(opt['recut-from']))
+        : fromHall ? (() => {
+            const d = clone(inputs.design)
+            d.crane.hall_record = fromHall
+            delete d.truss.behind_m
+            // `--from-axis <x>`: where the copy's cut sat along the bridge then (stage24: on the nave axis, 0)
+            if (opt['from-axis'] !== undefined) d.truss.axis_x_m = Number(opt['from-axis'])
+            return { ...inputs, design: d, hall: read(fromHall) }
+        })() : null
     const { ops, moved, kept, summary } = recutFrom
         ? (() => {
             const r = recutOps({ doc: got.body.document, rigFrom: stageLineRig(recutFrom), hallFrom: recutFrom.hall, rigTo: rig, hallTo: inputs.hall, mirror: Boolean(opt.mirror), keep: new Set(theirs.map((m) => m.id)), design: inputs.design })
-            return { ...r, summary: `re-cut ${opt.mirror ? 'MIRRORED ' : ''}from ${opt['recut-from']}: ${r.moved.length} cut entities, offset (${r.d.join(', ')})` }
+            return { ...r, summary: `re-cut ${opt.mirror ? 'MIRRORED ' : ''}from ${opt['recut-from'] || fromHall}: ${r.moved.length} cut entities, offset (${r.d.join(', ')})` }
         })()
         : stageLineOps({ doc: got.body.document, rig, ...inputs, keep: new Set(theirs.map((m) => m.id)) })
     console.log(`${project} @ v${got.body.version}: ${summary}; ${ops.length} ops`)

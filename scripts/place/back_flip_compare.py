@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # back_flip_compare.py — three sections at the same scale, seen FROM THE AUDIENCE (house left on the left), for the
 # owner's picture gate of 2026-10-07 ("the truss at the back of the DJ … with the truss flipped"):
-#   (a) today's stage-line copy: crane z 24, the cut over the DJ, low house left
+#   (a) today's stage-line copy: crane z 24, the cut over the DJ, low house left — `--line-eval` must be the
+#       stage-line evaluation of THAT state (stage-line.mjs --evaluate at commit 15e5804a; since the owner chose (b),
+#       the stage-line design itself hangs behind the DJ)
 #   (b) the cut behind the DJ (crane z 21), NOT flipped — numbers only, no scratch copy
 #   (c) the cut behind the DJ (crane z 21), FLIPPED — the scratch copy moxir-known-full-stage-back-flip
 # Each panel: the DJ on his step, the PA, the line and its picks, the tie-offs (projected; they run to the z 18 / 24
@@ -35,7 +37,7 @@ docs = {'line': {e['id']: e for e in J(a.doc_line)['document']['entities']}, 'ba
 
 zb = back_design['crane']['z_m']
 behind = {(o['rig'], o['z_m']): o for o in be['behind']}
-un, fl = behind[('unflipped', zb)], behind[('flipped', zb)]
+un, fl = behind[('unflipped', zb)], behind[('design', zb)]
 ln = next(o for o in le['options'] if o['z_m'] == line_design['crane']['z_m'])
 hr_line = next(t for t in le['truss']['tieoffs'] if t['id'] == 'hr')
 

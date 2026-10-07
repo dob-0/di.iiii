@@ -201,21 +201,64 @@
     "why": "the base rig's pit (1.3 m in front of the riser, moxir-2026-10-17.json stage.barrier) kept; widened from 9 m to run 1 m past each PA stack so no one stands at a cabinet's face (design choice; the event's crowd-safety plan sets the final line — owed)"
   },
   "crane": {
-    "z_m": 24.0,
-    "hall_overlay": "scripts/place/rigs/moxir-hall-stage-line-2026-10-07.json",
-    "hall_record": "scripts/place/rigs/moxir-hall-2026-10-07-v8-show-stage24.hall.json",
+    "z_m": 21.0,
+    "decision": {
+      "date": "2026-10-07",
+      "by": "owner",
+      "said": [
+        "ok today version is better",
+        "but behind the dj"
+      ],
+      "chose": "(b) the cut as today (NOT flipped: LOW end house left, HIGH house right, same heights and bridles) moved to hang BEHIND the DJ: crane z 21 (bridle clamps 0.68 m behind the step; tie-offs diagonal to the z 18 columns, hl 3.39 m 28 deg, hr 4.70 m 26 deg, 0.20 m over pipe-rack-3). Passed with no change.",
+      "rejected": [
+        "(a) crane z 24, the cut over the DJ",
+        "(c) behind the DJ FLIPPED, LOW end house right (needed the hr tie-off raised to 5.10 m, 0.11 m over pipe-rack-3)"
+      ],
+      "compared_in": "~/Downloads/moxir/stage/back-flip-compare.png",
+      "built": "scratch project moxir-known-full-stage-back (2026-10-07)"
+    },
+    "hall_overlay": "scripts/place/rigs/moxir-hall-crane-behind-dj-2026-10-07.json",
+    "hall_record": "scripts/place/rigs/moxir-hall-2026-10-07-v8-show-back21.hall.json",
     "candidates_m": [
-      22,
-      24,
-      26
+      21.0,
+      21.18,
+      21.5,
+      22.0
     ],
-    "chosen_by": "scripts/rigbuild/stage-line.mjs parkOptions (the numbers are in stage-line.test.js and the scratch report)",
-    "dj_rule_note": "the rig-lib rule (a crane-hung line within 1 m of the performer) reads the DJ's z from the riser's DEPTH (back + depth/2 − 0.2 = z 23.3), not its height: the one-step booth leaves the park table as it was (z 24 picked; stage-line.test.js)."
+    "chosen_by": "scripts/rigbuild/stage-line.mjs behindOptions — the park rule for a BACKDROP: every hung part a clear gap behind the riser's back edge (no load over the DJ); z 21.0 gives 0.68 m (21.18 exactly 0.5, 21.5 0.18, 22.0 hangs the front clamps over the step)",
+    "history": [
+      {
+        "z_m": 24.0,
+        "rule": "the DJ within 1 m of the bridge (the cut over the DJ)",
+        "hall_record": "scripts/place/rigs/moxir-hall-2026-10-07-v8-show-stage24.hall.json",
+        "copy": "moxir-known-full-stage24"
+      }
+    ]
   },
   "truss": {
     "cut": "scripts/place/rigs/moxir-crane-cut-stage-line-2026-10-07.json",
-    "axis_x_m": 0,
-    "why_axis": "the cut keeps the nave axis (u = 0 at x 0, the same line as today, x −6.04 … 5.55). Sliding it along the bridge to sit over the DJ (+2.0 m) puts its high end at x 7.55, 0.8 m from the crane cab (x 8.35 … 10.35, bottom 5.85), and the house-right tie-off then crosses the cab: craneCut refuses it (stage-line.test.js)."
+    "axis_x_m": -1.0,
+    "why_axis": "the cut's u = 0 sits at x −1.0 — 1.0 m house left of the nave axis (the owner's shift, truss.shift). The clamp grid moves with the line, so every lamp still stands on a clamp point. (Before, at z 24, sliding it toward the DJ at +x was refused: its house-right tie-off crossed the cab.)",
+    "clear_gap_m": 0.5,
+    "clear_gap_why": "design choice, the same 0.5 m the cut keeps over raised hands: plan distance from the riser's back edge to the front-most hung part (the bridle clamps on the front girder's inner flange)",
+    "behind_m": 1.32,
+    "behind_why": "the bridge's plane at least 0.5 m clear + 0.82 m reach of the bridle clamps (leg spread 1.5 / 2 + the clamp's half depth) behind the riser's back edge (rig-lib stageFrame truss_behind_m)",
+    "shift": {
+      "date": "2026-10-07",
+      "by": "owner",
+      "said": "we can a bit go left with truss, I mean from the perspective of the audience",
+      "chosen_m": 1.0,
+      "toward": "house left (−x), along the crane bridge: the beam clamps slide along the girders; same heights, same slope, not flipped, crane still z 21",
+      "compared_m": [
+        0,
+        0.5,
+        1.0,
+        1.5,
+        2.0
+      ],
+      "by_tool": "scripts/rigbuild/stage-line.mjs --shifts (shiftOptions); the table is in ~/Downloads/moxir/stage/back-side.png",
+      "why": "every shift 0.5–2.0 m passes every check (cab, pipe racks 0.20 m, runway, raised hands 0.74 m, clamps 0.68 m behind the step); 1.0 m as asked: the house-left tie-off shortens 6.32 → 5.46 m and turns 28° → 33° off the bridge's plane, the house-right one lengthens 6.98 → 7.87 m at 23°; at 2.0 m the house-left strap would sit 40° off the plane (≈ 23 % less hold along the line). The line behind the DJ rises 4.86 → 5.13 m; its high end stands 4.55 m right of the DJ (was 5.55)."
+    }
   },
   "lights": {
     "move_with_truss": "everything on the cut (mirror-cut.mjs CUT_PREFIXES): the 4 truss pieces, the 17 UP-PL5403 (par-cut-x 6, -bridge 4, -curtain 7), the 6 LaserCubes, the picks, bridles, hoists, chains, safety steels and the two tie-offs — translated Δz +19.2 m, the rigging re-derived (craneCut) for the new place",
