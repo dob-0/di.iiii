@@ -18,3 +18,8 @@
 - Owed: an interface panel for sync keys (mint with the manage checkbox, key log, undo) — on a hosted di.iiii a
   manage key can be minted today only from a signed-in session calling the API; security-auditor review; a real
   two-machine run.
+- Round 2 (independent security review, verdict "do not merge"; PR back to draft): C1, H1, M1, M2 and L1–L4 fixed,
+  manage keys 90 days with a 14-day warning, spec §13 rewritten to what the code holds (resolution table §13.9).
+  The reviewer's six tests are in the suite (`syncKeyManage.review.test.js`). Results: 23/23 key suites,
+  contracts 199/199, follow integration 54/54 on one run and 53/54 on the other; the one failure is the
+  pre-existing "start from now" flake, which also fails on #800's branch (2 of 5 runs there, 1 of 5 here).
