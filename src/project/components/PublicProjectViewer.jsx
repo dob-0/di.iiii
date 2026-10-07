@@ -38,7 +38,7 @@ import { rigChromeTops, rigRowMaxWidth, rigVersionPlacement } from '../../rigbui
 import { useViewportMode } from '../../hooks/useViewportMode.js'
 import useOutputMode from '../viewport/useOutputMode.js'
 import { outputDocument } from '../viewport/outputMode.js'
-import { FORM_LIGHT_MAX, setFormLight, setViewLook, useViewLook } from '../viewport/viewLook.js'
+import LookControl from '../viewport/LookControl.jsx'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -79,8 +79,6 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // 'scene' entry view only -- fixed-camera and code/iframe presentations
     // are a deliberate per-project choice and stay exactly as authored.
     const [navMode, setNavMode] = useState('orbit')
-    // The Look (viewport/viewLook.js): Current (as it was) or Form (a dim environment fill), per browser
-    const viewLook = useViewLook()
     // "Inside": keep the camera inside the building (SmartView). On by default where there is a building,
     // remembered per browser; a preset whose camera stands outside the building (Top, Side) pauses it.
     const [lockInside, setLockInside] = useState(() => {
@@ -690,31 +688,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         alignItems: 'stretch'
                     }}
                 >
-                    <button
-                        type="button"
-                        aria-pressed={viewLook.look === 'form'}
-                        title={viewLook.look === 'form'
-                            ? 'Form: a dim environment light so steel, rust and floor keep their form. Tap for Current, the room as it was'
-                            : 'Current: the room as it was drawn. Tap for Form, with a dim environment light'}
-                        style={{ ...overlayButtonStyle, minHeight: 44, minWidth: 104 }}
-                        onClick={() => setViewLook(viewLook.look === 'form' ? 'current' : 'form')}
-                    >
-                        {viewLook.look === 'form' ? 'Form' : 'Current'}
-                    </button>
-                    {viewLook.look === 'form' ? (
-                        <label style={{ ...overlayButtonStyle, display: 'flex', flexDirection: 'column', gap: 2, padding: '0.35rem 0.5rem', fontSize: '0.75rem' }}>
-                            Light {viewLook.light.toFixed(2)}
-                            <input
-                                type="range"
-                                min={0}
-                                max={FORM_LIGHT_MAX}
-                                step={0.01}
-                                value={viewLook.light}
-                                aria-label="Form light"
-                                onChange={(event) => setFormLight(event.target.value)}
-                            />
-                        </label>
-                    ) : null}
+                    <LookControl />
                 </div>
             ) : null}
 

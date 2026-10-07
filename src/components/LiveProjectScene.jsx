@@ -41,6 +41,8 @@ import PortalObject, { portalHref } from '../project/viewport/PortalObject.jsx'
 import EntityLink from '../project/viewport/EntityLink.jsx'
 import WorldEnvironment from '../project/viewport/WorldEnvironment.jsx'
 import RenderSettingsEffect from '../project/viewport/RenderSettingsEffect.jsx'
+import FormLight from '../project/viewport/FormLight.jsx'
+import LookControl from '../project/viewport/LookControl.jsx'
 import ShadowCasting from '../project/viewport/ShadowCasting.jsx'
 import { resolveShadowCasting } from '../project/viewport/shadowCasting.js'
 import { animationSeed, resolveAnimation, applyAnimation } from '../project/viewport/entityAnimation.js'
@@ -1914,6 +1916,9 @@ export default function LiveProjectScene({
                 ) : null}
                 <ambientLight color={ambient.color} intensity={ambient.intensity} />
                 <directionalLight color={directional.color} intensity={directional.intensity} position={directional.position} />
+                {/* the viewer's own Look (viewLook.js): the Form look's dim environment fill; nothing in Current.
+                    A scene with its own authored environment keeps it. */}
+                <FormLight skip={Boolean(worldState.environmentAssetId)} />
                 {worldState.environmentAssetId && (
                     <WorldEnvironment
                         environmentAsset={assetMap.get(worldState.environmentAssetId) || null}
@@ -2018,6 +2023,9 @@ export default function LiveProjectScene({
                         )}
                         {walking && isMobile && flyMode && showModeControls && (
                             <VerticalTouchControls vertTouchRef={vertTouchRef} />
+                        )}
+                        {walking && showModeControls && (
+                            <LookControl style={{ position: 'absolute', top: `calc(${topClear || '0px'} + 4.5rem)`, right: '1rem', zIndex: 11 }} />
                         )}
                         {walking && showModeControls && (
                             <button
