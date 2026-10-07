@@ -29,6 +29,8 @@ function registerSpaceRoutes(router, {
   buildMeta,
   collectSceneAssetRefs = null,
   config = {},
+  findPrimaryHostForSpace = null,
+  mapPrimaryHosts = null,
   countSpacesOwnedBy = null,
   spaceLimit = 3,
   grantSpaceToSessionUser = null,
@@ -193,6 +195,19 @@ function registerSpaceRoutes(router, {
     return { ...rest, ...(mayManage ? { trustedUserIds: trustedUserIds || [] } : {}), isOwner }
   }
 
+  // The address a public space's share links should use: its live own domain
+  // (docs/architecture/SPEC_space_own_domain.md), else null. Private spaces never
+  // advertise one. Optional dependency: without it the field is simply null.
+  const withDomain = (space, hostOf) => {
+    let domain = null
+    if (space?.isPublic && space.kind !== 'sandbox') {
+      try { domain = hostOf(space.id) || null } catch { domain = null }
+    }
+    return { ...space, domain }
+  }
+
+  const hostOfSpace = (id) => (typeof findPrimaryHostForSpace === 'function' ? findPrimaryHostForSpace(id) : null)
+
   router.get('/api/spaces', async (req, res, next) => {
     try {
       const spaces = await listSpaces()
@@ -242,8 +257,12 @@ function registerSpaceRoutes(router, {
           projectCounts = null
         }
       }
+      let hosts = null
+      if (typeof mapPrimaryHosts === 'function') {
+        try { hosts = mapPrimaryHosts() } catch { hosts = null }
+      }
       const mapped = visible.map((space) => {
-        const meta = withIsOwner(state, space)
+        const meta = withDomain(withIsOwner(state, space), (id) => hosts?.get(id))
         if (!projectCounts || !(state.authenticated && canAccessSpace(state, space.id))) return meta
         const held = projectCounts[space.id] || { projects: 0, published: 0 }
         return { ...meta, projectCount: held.projects, publishedCount: held.published }
@@ -333,7 +352,10 @@ function registerSpaceRoutes(router, {
       if (!meta) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      res.json({ space: withIsOwner(req.authState || getPublicAuthState(req), meta) })
+      res.json({
+        space: withDomain(withIsOwner(req.authState || getPublicAuthState(req), meta),
+          hostOfSpace)
+      })
     } catch (error) {
       next(error)
     }
@@ -510,7 +532,7 @@ function registerSpaceRoutes(router, {
             } catch { /* scope is a convenience grant here; the row already landed */ }
           }
         }
-        return res.json({ space: withIsOwner(req.authState, meta) })
+        return res.json({ space: withDomain(withIsOwner(req.authState, meta), hostOfSpace) })
       }
       const changeDesc = Object.keys(patch).map((k) => `${k}→${JSON.stringify(patch[k])}`).join(', ')
       const outcome = await approvalGate.gateOrApply({
