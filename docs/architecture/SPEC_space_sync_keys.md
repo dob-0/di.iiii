@@ -187,11 +187,14 @@ The four actions a `manage` key adds, each through the route a person uses (no n
    - the two spaces have the **same, non-empty owner** (`ownerUserId`), and both keys belong to that owner (a manage
      key stores the space's owner as its `owner_user_id` at mint, whoever minted it). A space with no owner (made by
      the admin token, a sandbox) never takes a key's move — fail closed;
-   - **nobody new gains access**: the space it goes to is a `normal` space; if the project is not private, it is not
-     open to visitors unless the source is too; every account the destination is shared with (its owner, its trusted
-     list, every account whose scope lists it) is also one of the source's; and the destination has no live or used
-     invite link and no live sync key other than the move's own second key — the holders of those cannot be counted,
-     so they are treated as newcomers;
+   - **nobody new gains access**: the space it goes to is a `normal` space and is **not the communal open space**
+     (whatever its kind: an admin can point the open space at an existing space, and every guest reaches it; nor any
+     `GUEST_SPACES` entry); if the project is not private, the destination is not open to visitors unless the source
+     is too; every account and every static API-token identity the destination is shared with (its owner, its
+     trusted list, every account whose scope lists it, every `*_ALLOWED_SPACES` / `AUTH_IDENTITIES` token scoped to
+     it) is also one of the source's; and the destination has no live or used invite link and no live sync key other
+     than the move's own second key — the holders of those cannot be counted, so they are treated as newcomers. Any
+     audience the check cannot count, or any error while counting, refuses the move (fail closed; review R2-A);
    - the body does not ask to `unpublish` (that changes a space's front door).
 
 What a `manage` key can **never** do, on any space: purge or empty the trash; change the space itself (label,
@@ -217,14 +220,28 @@ space is this one)`, and the move adds the checks in item 4 (`keyMoveWidensAcces
 
 ### 13.4 Who can mint one (T3 holds)
 
-`manage: true` (and the undo, §13.7) is honoured only for a **person who signed in**: a session (type `session`,
-not a guest) whose subject is a real account row (OAuth or password) and that was not made from a token, or the
-owner at the machine (`local-owner`, `localOwner.js`), or a server with auth switched off (where every request is
-already admin). Refused with `403 manage_needs_session`:
+`manage: true` (and the undo, §13.7) is honoured only for a **person who signed in**, or the owner at the machine
+(`local-owner`, `localOwner.js`, no cookie at all), or a server with auth switched off (where every request is
+already admin). "Signed in" is a positive stamp (review R2-B): the sign-in doors — OAuth, the hub and Telegram
+(`authRoutes.js issueSessionAndRedirect`) and the first-party password door (`index.js issueSessionForUser`) — put
+`via: 'signin'` in the signed cookie, and the subject must be a real account row. Every cookie the server re-issues
+from an existing one (the stale-cookie refresh, the `GET /api/auth/session` re-sync, a space grant, an invite
+redemption) goes through one helper, `reissueSessionValue`, which carries `via` by construction. Refused with
+`403 manage_needs_session`:
 - every bearer token, the static `ADMIN_API_TOKEN` included, and every sync key;
-- a session made from a token (`POST /api/auth/session {token}`): it is stamped `via: 'token'` in the signed cookie,
-  kept through every refresh (review H1). One made before the stamp existed has no account row (its subject is
-  the token's configured subject), so it is refused by the account check.
+- a session made from a token (`POST /api/auth/session {token}`, stamped `via: 'token'`), through any re-issue;
+- any session without the sign-in stamp — including one signed before stamps existed: that person signs in again.
+
+**This holds only when `AUTH_SESSION_SECRET` is its own secret** (review R2-C). `config.js` falls back to an API
+token as the cookie signing key when it is unset; then whoever holds that token can forge any cookie, stamp
+included. So when the cookie key is a token (`config.auth.sessionSecretSeparate` false), manage keys are not minted
+from a session at all (`403 manage_needs_session_secret`; only the owner at the machine can), and the server says so
+once at startup. What the repo's deploy config sets (checked 2026-10-07, live servers not read):
+`docker-compose.dev.yml` requires `DEV_AUTH_SESSION_SECRET` (the dev tier will not start without it);
+`docker-compose.yml`, which `docker-compose.prod.yml` extends, passes `AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:-}` —
+it may be empty, in which case cookies are signed with `ADMIN_API_TOKEN` and manage keys stay off on that server
+until it is set; `di up` installs generate one (`scripts/di/state.mjs`). The Mac `standby-deploy.sh` path is not in
+this repo and was not checked.
 
 **When the admin token is rotated:** keys already minted are not touched — an `edit` key minted with the old token
 stays valid until it expires or is revoked (the key list and `di invite SPACE --revoke` take them back); no manage
@@ -286,11 +303,11 @@ It answers with what it did and what it did not, and why; each step is written t
 |---|---|---|
 | T7 | A `manage` key leaks | Worst case on its one space: projects moved to the trash (≤ 10 an hour, ≤ 30 a day) or made private (≤ 30 an hour). Nothing is destroyed: the trash keeps everything 30 days. It reads nothing the `edit` key could not. It cannot move a project out on its own (a move needs a second manage key of the same owner). The owner sees it in the key's log and undoes it in one action, which revokes the key. The key dies by itself after 90 days. |
 | T8 | Two `manage` keys of the same owner leak together (a follower's follows.json holds one per followed space) | Projects moved between those two spaces (≤ 10 an hour), only where nobody new gains access (§13.2 item 4). The undo of either key moves them back. A key of **another** owner never pairs with it (review C1: an account anyone can register cannot be the second key). |
-| T9 | A `manage` key used to publish or expose | Making a project public, the space's own settings and `unpublish` stay owner-or-admin. A key's move is refused into a space open to visitors (unless the project is private or the source is open too), into a space shared with an account the source is not shared with, or into one with invite links or other keys out. |
-| T10 | A key or a token mints a `manage` key, or upgrades itself | Mint needs a person who signed in (§13.4): bearer tokens, sync keys and sessions made from a token are refused. The scope is fixed at mint; no route changes it. |
+| T9 | A `manage` key used to publish or expose | Making a project public, the space's own settings and `unpublish` stay owner-or-admin. A key's move is refused into the communal open space (whatever its kind) or any `GUEST_SPACES` entry; into a space open to visitors (unless the project is private or the source is open too); into a space shared with an account or a static token the source is not shared with; into one with invite links or other keys out; and whenever the audience cannot be counted (fail closed). |
+| T10 | A key or a token mints a `manage` key, or upgrades itself | Mint needs a session stamped `via:'signin'` by a sign-in door, carried through every re-issue, with a real account — or the owner at the machine (§13.4). Bearer tokens, sync keys and sessions made from a token are refused. **Requires `AUTH_SESSION_SECRET` set apart from the API tokens**; otherwise session mints are switched off and the server warns at startup. The scope is fixed at mint; no route changes it. |
 | T11 | A second key smuggled in to widen a request | `alsoSyncKey` is read only on the move route, only behind a sync key, must itself be a valid `manage` key of the same owner, and is not added to the editor scope. A bad one fails the request closed. It travels in the body, not a header a proxy might log. |
 | T12 | Mass trash or log flooding through many requests | Host-side counts per key under a per-key lock (§13.5), from the persistent log; refusals capped so they cannot hide done actions or grow the table (§13.6); the follower's own 5-per-pass and never-empty guards on top. |
-| T13 | A manage key sent over plain http and sniffed | Refused by the client before it is sent, on any network (§13.4). |
+| T13 | A manage key sent over plain http and sniffed | Refused by the client before it is sent, on any network (§13.4); the follower checks the address pin, not only the URL's name (review R2-D). |
 | T14 | A lying (or intercepted) host makes the follower take back its own trash | The follower believes a trash made on the host only once the host's trash lists it (SPEC_follow.md). |
 
 ### 13.9 Review resolution (independent security review of #811, 2026-10-07)
@@ -303,10 +320,14 @@ It answers with what it did and what it did not, and why; each step is written t
 | M2: refusals buried the done actions and grew without end | refusal caps; done rows listed apart | review M5 test; "caps a key's refusals" |
 | L1: make-private budget outside the lock | under `withKeyLock` | review M3 race test (80 parallel → ≤ 30) |
 | L2: manage key over cleartext LAN | refused by `di follow` and the follower, any network but loopback | `follower.test.js`, `followFiles.test.js` |
-| L3: lying host undoes the follower's trash | trash-there confirmed against the host's trash | code path in `follower.js`; no dedicated test yet (owed: a fake-host harness) |
+| L3: lying host undoes the follower's trash | trash-there confirmed against the host's trash | `followIntegration.test.js` "a host that only says it trashed…" (a proxy that answers DELETE with 200; fails with the confirmation switched off) |
 | L4: second key in a custom header | moved into the move's JSON body, deleted on read | "the old header is not read at all" |
 | L5: one owner sees another's key activity | moot after C1 (both spaces share an owner) | — |
 | I5: lifetime | manage keys 90 days (owner, 2026-10-07); `di follows` warns 14 days before | `followFiles.test.js` |
+| R2-A high: a key move into a repointed communal space; static token scopes uncounted | communal/guest spaces refused by id; token scopes counted; fail closed | `syncKeyManage.review2.test.js` R2-A (move 403, guest read 404) |
+| R2-B medium: the token mark lost on re-issue | positive `via:'signin'` stamp; one re-issue helper | review2 R2-B (two tests); "keeps the stamp when the server re-issues the cookie" |
+| R2-C: H1 needs a separate cookie secret | session mints off when the cookie key is a token; startup warning; deploy config reported (§13.4) | config path; `manage_needs_session_secret` |
+| R2-D low: cleartext check read the URL, not the pin | the follower reads `remote.address` | `follower.test.js` "reads the address pin" |
 
 ### 13.10 Open questions
 
