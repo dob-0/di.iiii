@@ -1,4 +1,5 @@
 import { slugifySpaceName, isValidSpaceSlug } from '../utils/spaceNames.js'
+import { buildShareUrl } from '../utils/spaceRouting.js'
 
 const STORAGE_KEY = 'editor-shared-spaces'
 export const TEMP_SPACE_TTL_MS = 1000 * 60 * 60 * 24 * 7 // 7 days
@@ -200,8 +201,11 @@ export const cleanupSpaces = (currentSpaceId, ttl = TEMP_SPACE_TTL_MS) => {
     }
 }
 
-export const getSpaceShareUrl = (spaceId) => {
+// `domain` is the space's live own domain, when it has one (its metadata's
+// `domain`): the link is then that domain, not the platform's address.
+export const getSpaceShareUrl = (spaceId, domain = '') => {
     if (!isBrowser) return ''
+    if (domain) return buildShareUrl({ spaceId, domain, path: buildSpacePathname(spaceId) })
     const url = new URL(window.location.href)
     url.search = ''
     url.hash = ''
