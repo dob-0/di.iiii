@@ -26,3 +26,37 @@ describe('hall texture manifest (provenance and pins)', () => {
         expect(new Set(used).size).toBe(used.length)
     })
 })
+
+describe('hall texture bake: one copy of each map per set', () => {
+    const bake = fs.readFileSync(path.join(here, 'hall-textures.py'), 'utf8')
+    it('writes maps by set id, never by material', () => {
+        expect(bake).toMatch(/\{sid\}_color\.jpg/)
+        expect(bake).toMatch(/\{sid\}_normal\.jpg/)
+        expect(bake).toMatch(/\{sid\}_rough\.jpg/)
+        expect(bake).not.toMatch(/\{mat\}_(color|normal)/)
+    })
+    it('hall.py loads each set image once and exports tint and roughness as glTF factors', () => {
+        expect(hallPy).toContain('check_existing=True')
+        expect(hallPy).toContain("'RGBA', 'MULTIPLY'")
+        expect(hallPy).toContain("spec['roughness_factor']")
+        expect(hallPy).toContain("export_image_format='JPEG'")
+    })
+    const cache = path.join(process.env.HOME || '', '.cache/di-hall-textures')
+    const cached = Object.keys(manifest.sets).every((id) => fs.existsSync(path.join(cache, `${id}.zip`)))
+    it.skipIf(!cached)('bakes factors <= 1 whose product reproduces each table colour and roughness', async () => {
+        const { execFileSync } = await import('node:child_process')
+        const out = fs.mkdtempSync(path.join(process.env.TMPDIR || '/tmp', 'hall-bake-'))
+        execFileSync('python3', [path.join(here, 'hall-textures.py'), '--out', out], { stdio: 'pipe' })
+        const t = JSON.parse(fs.readFileSync(path.join(out, 'textures.json'), 'utf8'))
+        for (const [id, set] of Object.entries(manifest.sets)) {
+            for (const f of ['color', 'normal', 'rough']) expect(fs.existsSync(path.join(out, `${id}_${f}.jpg`)), `${id} ${f}`).toBe(true)
+            for (const m of set.for) {
+                expect(t.materials[m].set).toBe(id)
+                expect(Math.max(...t.materials[m].tint)).toBeLessThanOrEqual(1)
+                expect(t.materials[m].roughness_factor).toBeLessThanOrEqual(1)
+            }
+        }
+        expect(fs.readdirSync(out).filter((f) => f.endsWith('.jpg')).length).toBe(3 * Object.keys(manifest.sets).length)
+        fs.rmSync(out, { recursive: true })
+    })
+})

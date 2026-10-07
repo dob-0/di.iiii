@@ -482,8 +482,8 @@ class Builder:
                 bpy.ops.mesh.normals_make_consistent(inside=False)
                 bpy.ops.object.mode_set(mode='OBJECT')
                 obj.select_set(False)
-            if TEXTURES and name in TEXTURES['tile_m']:
-                box_project_uvs(mesh, TEXTURES['tile_m'][name])
+            if TEXTURES and name in TEXTURES['materials']:
+                box_project_uvs(mesh, TEXTURES['materials'][name]['tile_m'])
             obj.data.materials.append(material(name))
             objects.append(obj)
         return objects
@@ -517,21 +517,40 @@ def material(name):
         bsdf.inputs['Emission Color'].default_value = (*emissive, 1.0)
         bsdf.inputs['Emission Strength'].default_value = EMISSION_STRENGTH.get(name, 0.6)
     mat.use_backface_culling = name not in DOUBLE_SIDED
-    if TEXTURES and name in TEXTURES['tile_m']:
+    if TEXTURES and name in TEXTURES['materials']:
+        spec = TEXTURES['materials'][name]
         nodes, links = mat.node_tree.nodes, mat.node_tree.links
-        colour_tex = nodes.new('ShaderNodeTexImage')
-        colour_tex.image = bpy.data.images.load(os.path.join(TEXTURES['dir'], f'{name}_color.jpg'))
-        links.new(colour_tex.outputs['Color'], bsdf.inputs['Base Color'])
-        normal_tex = nodes.new('ShaderNodeTexImage')
-        normal_tex.image = bpy.data.images.load(os.path.join(TEXTURES['dir'], f'{name}_normal.jpg'))
-        normal_tex.image.colorspace_settings.name = 'Non-Color'
+
+        def image(suffix, colour):
+            # check_existing: materials of one set share ONE image, so the exporter embeds one copy
+            img = bpy.data.images.load(os.path.join(TEXTURES['dir'], f"{spec['set']}_{suffix}.jpg"), check_existing=True)
+            if not colour:
+                img.colorspace_settings.name = 'Non-Color'
+            node = nodes.new('ShaderNodeTexImage')
+            node.image = img
+            return node
+        # colour = shared map x per-material linear tint (exports as the glTF baseColorFactor)
+        tint = nodes.new('ShaderNodeMix')
+        tint.data_type, tint.blend_type = 'RGBA', 'MULTIPLY'
+        tint.inputs['Factor'].default_value = 1.0
+        tint.inputs['B'].default_value = (*spec['tint'], 1.0)
+        links.new(image('color', True).outputs['Color'], tint.inputs['A'])
+        links.new(tint.outputs['Result'], bsdf.inputs['Base Color'])
+        # roughness: the set's map (G), times the material's factor (exports as roughnessFactor)
+        split = nodes.new('ShaderNodeSeparateColor')
+        links.new(image('rough', False).outputs['Color'], split.inputs['Color'])
+        rough = nodes.new('ShaderNodeMath')
+        rough.operation = 'MULTIPLY'
+        rough.inputs[1].default_value = spec['roughness_factor']
+        links.new(split.outputs['Green'], rough.inputs[0])
+        links.new(rough.outputs['Value'], bsdf.inputs['Roughness'])
         normal_map = nodes.new('ShaderNodeNormalMap')  # the maps are OpenGL-style (+Y up), as glTF wants
-        links.new(normal_tex.outputs['Color'], normal_map.inputs['Color'])
+        links.new(image('normal', False).outputs['Color'], normal_map.inputs['Color'])
         links.new(normal_map.outputs['Normal'], bsdf.inputs['Normal'])
     return mat
 
 
-# Texture sets baked by hall-textures.py (--textures <dir>): {'dir', 'tile_m': {material: metres per repeat}}.
+# Texture sets baked by hall-textures.py (--textures <dir>): {'dir', 'materials': {material: {set, tile_m, tint, roughness_factor}}}.
 # None = the flat table colours, exactly as before.
 TEXTURES = None
 
@@ -1141,7 +1160,8 @@ def export(objects, glb_path):
     bpy.ops.export_scene.gltf(
         filepath=glb_path, export_format='GLB', use_selection=True,
         export_yup=True, export_apply=True, export_normals=True,
-        export_texcoords=bool(TEXTURES), export_materials='EXPORT')
+        export_texcoords=bool(TEXTURES), export_materials='EXPORT',
+        export_image_format='JPEG', export_jpeg_quality=85)  # the recomposed roughness map would otherwise be a 0.9 MB PNG
 
 
 def preview(path, dims, camera=None):

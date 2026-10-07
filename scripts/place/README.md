@@ -686,7 +686,17 @@ blender -b -P scripts/place/hall.py -- --out <dir> --textures /tmp/hall-tex <the
 ```
 
 Source, licence, date and sha256 per set: `hall-textures.json` (ambientCG, CC0 1.0, retrieved 2026-10-07; guard
-`hall-textures.test.js`). The colour map is tinted so its linear-light mean equals the photo-sampled colour in
-`MATERIALS`; roughness stays the table's scalar. These are stand-ins picked by eye against the owner's photographs
-— replace with photographs of the hall's own surfaces when they exist. The GLB grows (3.2 → 6.1 MB measured, one copy
-of each map per material; deduping is owed). Not yet re-imported into any project.
+`hall-textures.test.js`). Each set's maps are written and embedded **once** (`<set>_color/_normal/_rough.jpg`), shared
+by every material that uses the set. Colour: the set's map is gained (linear light, per channel, bisected so the clipped
+mean hits the brightest table colour in the set) and each material multiplies it by a glTF `baseColorFactor`
+(= table colour / brightest, always <= 1; glTF multiplies factor and texture in linear light, so this is the same
+product the old per-material tint made). Measured on the baked files: every material's linear mean is within 0.003 of
+its `MATERIALS` colour (the old per-material bake: within 0.002). Roughness: the set's own Roughness map
+(G channel, B = 0 so metalness 0) scaled so its mean is the set's largest table roughness, times a per-material
+`roughnessFactor`; measured means are within 0.001 of the table values. Limit: the metal set's raw map is smooth
+(mean about 0.2 against a 0.9 table value), so scaling it clips and flattens its variation at the rough end. These are
+stand-ins picked by eye against the owner's photographs — replace with photographs of the hall's own surfaces when they
+exist. GLB size (this scene, Blender 5.2.2): plain 3.20 MB; textured with a copy per material 6.06 MB; deduped, with
+roughness maps, 5.59 MB (12 images, 1.53 MB; the rest is the UV set the textured GLB needs). Seen in a standalone
+three.js viewer, two cameras: same geometry, mean pixel difference to the previous textured render 0.3-0.5 of 255. Not
+yet re-imported into any project, not seen on the owner's screen.
