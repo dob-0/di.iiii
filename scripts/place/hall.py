@@ -110,6 +110,16 @@ PLACEHOLDER = {
     'crane_bridge_bottom_h_m': None,  # floor to the bridge girders' underside at mid-span
     'crane_bridge_depth_m': 1.5,      # the bridge girders' depth at mid-span
     'crane_cab_h_m': 2.2,             # the operator's cab, hung under one end
+    # The bridge's two box girders and the cab's place (2026-10-07: were hard-coded in crane(); the defaults are
+    # those old values, NOT measured — the 10-08 survey template, moxir-hall-measured-2026-10-08.json, sets them).
+    # The bridle legs' spread is the inner gap (rig-lib.mjs / versions.mjs craneCut): −0.29 m of trim per +1 m.
+    # Per nave crane (the order of cranes_from_door_m): what each crane's girder underside rests on, as text —
+    # "measured", or "ASSUMED same type as ..." with its range. None = not stated (hall.json says so).
+    'crane_bridge_bottom_basis': None,
+    'crane_girder_inner_gap_m': 1.5,  # clear gap between the two bridge girders (inner edge to inner edge)
+    'crane_girder_w_m': 0.7,          # each bridge girder's width (its bottom flange)
+    'crane_cab_inset_m': 1.0,         # the cab's outer face, in from the bridge girders' end (x)
+    'crane_cab_w_m': 2.0,             # the cab's width along the bridge (x)
     'crane_cab_side': 'left',         # which end of the bridge the cab hangs at: 'left' (-x) or 'right' (+x) (MOXIR: right, photos 002-005, 009, 013)
     'runway_handrail_rows': ['left', 'right'],  # which inner rows' nave-side runway girder carries the walkway handrail (MOXIR: left only, photos 004, 009)
     'roof_type': 'space_frame_flat',
@@ -149,6 +159,7 @@ KEYS_FROM_DIMS = [
     'ridge_h_m', 'lantern_w_m', 'column_w_m', 'column_d_m', 'upper_column_d_m', 'truss_top_h_m',
     'lantern_h_m', 'column_head', 'column_head_width_m', 'crane_girders_each_row', 'crane_girder_depth_m',
     'crane_bridge_bottom_h_m', 'crane_bridge_depth_m', 'crane_cab_h_m', 'crane_cab_side', 'runway_handrail_rows',
+    'crane_girder_inner_gap_m', 'crane_girder_w_m', 'crane_cab_inset_m', 'crane_cab_w_m', 'crane_bridge_bottom_basis',
     'roof_type', 'space_frame_module_m', 'space_frame_depth_m', 'space_frame_member_m', 'space_frame_node_m',
     'lantern_module_m', 'lantern_segments_m', 'lantern_spans',
     'neighbour_spans', 'expansion_joint_m', 'paired_columns_at_joint',
@@ -284,7 +295,8 @@ def resolve_dims(opts):
         origin['length_m'] = f"bays x pitch ({origin['bays']}, {origin['pitch_m']})"
     for key in ('span_m', 'pitch_m', 'crane_rail_h_m', 'truss_bottom_h_m', 'truss_top_h_m', 'ridge_h_m',
                 'lantern_w_m', 'lantern_h_m', 'column_w_m', 'column_d_m', 'upper_column_d_m', 'column_head_width_m',
-                'crane_girder_depth_m', 'crane_bridge_depth_m', 'crane_cab_h_m', 'space_frame_module_m', 'space_frame_node_m', 'lantern_module_m', 'door_w_m', 'door_h_m', 'far_gate_w_m', 'far_gate_h_m'):
+                'crane_girder_depth_m', 'crane_bridge_depth_m', 'crane_cab_h_m', 'crane_girder_inner_gap_m', 'crane_girder_w_m',
+                'crane_cab_inset_m', 'crane_cab_w_m', 'space_frame_module_m', 'space_frame_node_m', 'lantern_module_m', 'door_w_m', 'door_h_m', 'far_gate_w_m', 'far_gate_h_m'):
         dims[key] = float(dims[key])
     L = dims['length_m']
     dims['cranes_from_door_m'] = [min(L - 3, max(3.0, float(v))) for v in dims['cranes_from_door_m']]
@@ -651,42 +663,50 @@ def build(dims):
     girder_bottom = dims['crane_bridge_bottom_h_m']
     crane_depth = dims['crane_bridge_depth_m']
     cab_h = dims['crane_cab_h_m']
+    girder_w = dims['crane_girder_w_m']
+    girder_dz = round((dims['crane_girder_inner_gap_m'] + girder_w) / 2, 4)   # each girder's centre off the bridge's line
+    cab_w = dims['crane_cab_w_m']
+    cab_inset = dims['crane_cab_inset_m']
     cranes = []
 
-    def crane(span_index, from_door, record, trolley_x=2.0):
+    def crane(span_index, from_door, record, trolley_x=2.0, girder_basis=None):
         # `trolley_x`: where the trolley is parked along the bridge (its near edge, x from
         # the span's centre; "crane_trolley_x_m", one per nave crane). A real trolley
         # travels the bridge: parked at an end it is out of the beams of a rig hung below.
         cx = S * span_index
         xa, xb = cx - S / 2 + girder_off, cx + S / 2 - girder_off
         cy = -L / 2 + from_door
-        for offset in (-1.1, 1.1):
-            b.box('crane', (xa, cy + offset - 0.35, girder_bottom), (xb, cy + offset + 0.35, girder_bottom + crane_depth))
+        for offset in (-girder_dz, girder_dz):
+            b.box('crane', (xa, cy + offset - girder_w / 2, girder_bottom), (xb, cy + offset + girder_w / 2, girder_bottom + crane_depth))
         for x in (xa, xb):
             # the end trucks: wheels on the rail, the girders' ends framed into them
             b.box('crane', (x - 0.4, cy - 2.6, rail_h), (x + 0.4, cy + 2.6, max(rail_h + 0.8, girder_bottom + 0.4)))
         tx0 = cx + trolley_x
         b.box('crane', (tx0, cy - 1.6, girder_bottom + crane_depth), (tx0 + 2.6, cy + 1.6, girder_bottom + crane_depth + 1.0))
         cab_right = dims['crane_cab_side'] == 'right'
-        cab_x = (xb - 3.0) if cab_right else (xa + 1.0)
-        b.box('crane', (cab_x, cy - 1.0, girder_bottom - cab_h), (cab_x + 2.0, cy + 1.0, girder_bottom))
-        gx0 = cab_x - 0.02 if cab_right else cab_x + 1.95  # the cab's window faces along the bridge, toward the middle
+        cab_x = (xb - cab_inset - cab_w) if cab_right else (xa + cab_inset)
+        b.box('crane', (cab_x, cy - 1.0, girder_bottom - cab_h), (cab_x + cab_w, cy + 1.0, girder_bottom))
+        gx0 = cab_x - 0.02 if cab_right else cab_x + cab_w - 0.05  # the cab's window faces along the bridge, toward the middle
         b.box('glass', (gx0, cy - 0.8, girder_bottom - cab_h + 0.3), (gx0 + 0.07, cy + 0.8, girder_bottom - 0.9))
         if record:
             # The shape the rig checks beams against (rig-lib.mjs beamHitsCrane): the two
-            # box girders (0.7 m wide, 1.1 m either side of the bridge's centre line, a
-            # 1.5 m gap between them) and the trolley on top; the cab hangs at the end `crane_cab_side` names.
+            # box girders (crane_girder_w_m wide, crane_girder_inner_gap_m apart; defaults 0.7 and 1.5,
+            # so 1.1 m either side of the bridge's centre line) and the trolley on top; the cab hangs at
+            # the end `crane_cab_side` names. `girder_bottom_basis` carries where the underside came from.
             cranes.append({'z_m': round(-cy, 3), 'from_entry_m': round(from_door, 3),
                            'girder_bottom_m': round(girder_bottom, 3), 'girder_top_m': round(girder_bottom + crane_depth, 3),
-                           'girders_dz_m': [-1.1, 1.1], 'girder_w_m': 0.7,
+                           'girder_bottom_basis': girder_basis,
+                           'girders_dz_m': [-girder_dz, girder_dz], 'girder_w_m': girder_w,
                            'trolley': {'x_m': [round(tx0 - cx, 3), round(tx0 - cx + 2.6, 3)], 'dz_m': [-1.6, 1.6],
                                        'y_m': [round(girder_bottom + crane_depth, 3), round(girder_bottom + crane_depth + 1.0, 3)]},
-                           'cab': {'x_m': [round(cab_x - cx, 3), round(cab_x - cx + 2.0, 3)], 'dz_m': [-1.0, 1.0],
+                           'cab': {'x_m': [round(cab_x - cx, 3), round(cab_x - cx + cab_w, 3)], 'dz_m': [-1.0, 1.0],
                                    'y_m': [round(girder_bottom - cab_h, 3), round(girder_bottom, 3)]}})
 
     trolleys = list(dims.get('crane_trolley_x_m') or [])
+    bases = list(dims.get('crane_bridge_bottom_basis') or [])
     for i, from_door in enumerate(dims['cranes_from_door_m']):
-        crane(0, from_door, True, float(trolleys[i]) if i < len(trolleys) and trolleys[i] is not None else 2.0)
+        crane(0, from_door, True, float(trolleys[i]) if i < len(trolleys) and trolleys[i] is not None else 2.0,
+              bases[i] if i < len(bases) and bases[i] else 'not stated per crane (see dimsOrigin.crane_bridge_bottom_h_m)')
     for side, from_door in (dims['neighbour_cranes_from_door_m'] or {}).items():
         k = -1 if side == 'left' else 1
         if (k < 0 and left) or (k > 0 and right):

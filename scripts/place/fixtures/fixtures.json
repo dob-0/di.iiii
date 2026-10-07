@@ -516,6 +516,12 @@
                     "basis": "EXACT",
                     "note": "rated 162 W; supply power 200 W; switch-mode supply with PFC, PF > 0.99"
                 },
+                "supply_w": {
+                    "value": 200,
+                    "src": "D-CN",
+                    "basis": "EXACT",
+                    "note": "the mains draw the maker states beside the 162 W rating (switch-mode supply with PFC): circuits and power totals are planned on it (audit A-05, 2026-10-05: 16 PARs on C6 = 3200 W at supply, over the 2944 W planning limit, though 2592 W at the rating)"
+                },
                 "dmx_channels": {
                     "value": [
                         8

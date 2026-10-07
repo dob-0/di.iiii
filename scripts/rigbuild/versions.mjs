@@ -27,7 +27,8 @@ import { parseArgs, die, say, readJson, REPO_ROOT } from '../place/common.mjs'
 import { normalizeRentalList } from '../../src/shared/projectSchema.js'
 import { billedDays } from '../../src/rigbuild/equipment.js'
 import { powerOf, typeById, typeIdOf } from '../../src/rigbuild/fixtureTypes.js'
-import { linePoint, pickGeometry, stageFrame } from '../place/rig-lib.mjs'
+import { LASER_FIXTURES, linePoint, pickGeometry, stageFrame } from '../place/rig-lib.mjs'
+import { clearUnderCab, tieoffCabClashes } from './safety.mjs'
 
 const DEG = Math.PI / 180
 
@@ -260,8 +261,12 @@ export const craneCut = ({ spec, base, groups, classes }) => {
     truss.rigging.tieoffs = r.tieoffs.map((tie) => {
         const end = linePoint(stage, tie.u_m, 'axis')
         const to = [tie.side * g.column_inner_face_x_m, tie.y_m === 'end' ? r2(end[1]) : tie.y_m, gridZ]
-        return { ...clone(tie), from_m: end.map(r2), to_m: to, length_m: r2(Math.hypot(to[0] - end[0], to[1] - end[1], to[2] - end[2])) }
+        const under = clearUnderCab(end, to, hall)
+        return { ...clone(tie), from_m: end.map(r2), to_m: to, length_m: r2(Math.hypot(to[0] - end[0], to[1] - end[1], to[2] - end[2])), under_cab_m: under == null ? null : r2(under) }
     })
+    // audit A-02 (2026-10-05): a tie-off through a crane cab is refused at the build, not only in a test
+    const clash = tieoffCabClashes({ truss }, hall)
+    if (clash.length) throw new Error(`craneCut: tie-off ${clash.join(', ')} passes through a crane cab of ${spec.hall} — move its anchor`)
 
     // what hangs on the line, where, and its weight (the type library's, the makers' figures)
     const kgOf = (code) => types.find((x) => x.code === code)?.weight_kg?.value ?? null
@@ -319,13 +324,19 @@ export const craneCut = ({ spec, base, groups, classes }) => {
     }
     // clearances: the lowest thing on the line (a hung body, else the bottom chord) against raised hands
     const heightOf = (code) => (types.find((y) => y.code === code)?.model3d?.sizeAtHome_mm?.height_y ?? 0) / 1000
-    const low = Math.min(bottomAt(uEnds[0]), ...lamps.filter((l) => l.hung).map((l) => bottomAt(l.u) - heightOf(l.code)))
+    // BOTH ends, the low one first: since the flip (2026-10-07) the -x end is the HIGH end, so reading only
+    // uEnds[0] measured the wrong end (it was right only because a hung lamp sat on the low end).
+    const endsLowFirst = [...uEnds].sort((p, q) => bottomAt(p) - bottomAt(q))
+    const lowEnd = endsLowFirst[0]
+    const low = Math.min(...endsLowFirst.map(bottomAt), ...lamps.filter((l) => l.hung).map((l) => bottomAt(l.u) - heightOf(l.code)))
+    const lowSide = x(lowEnd) < 0 ? 'house-left' : 'house-right'
     truss.clearance = {
         lowest_m: r2(low),
+        low_end: { u_m: lowEnd, side: lowSide, bottom_chord_m: r2(bottomAt(lowEnd)), over_raised_hands_m: r2(bottomAt(lowEnd) - cut.clearance.raised_hands_m) },
         over_raised_hands_m: r2(low - cut.clearance.raised_hands_m),
         over_dj_raised_hands_m: r2(bottomAt(0) - (cut.clearance.dj_deck_m + cut.clearance.raised_hands_m)),
         raised_hands_m: cut.clearance.raised_hands_m,
-        note: 'the line hangs in the bridge\'s plane (z 4.8), behind the crowd barrier: no audience stands under it; the low end is over the back of house-left'
+        note: `the line hangs in the bridge's plane (z ${r2(crane.z_m)}), behind the crowd barrier: no audience stands under it; the low end is over the back of ${lowSide}`
     }
     // sway: the natural periods and the limits the looks keep (versions.test.js holds them)
     const periods = truss.rigging.picks.flatMap((p) => [p.period_x_s, p.period_z_s])
@@ -476,7 +487,7 @@ export const versionRig = ({ spec, base, id }) => {
             : v.truss === 'halo' ? haloTruss(v, groups, classes)
             : v.truss === 'crane-x' ? craneTruss(spec, groups, classes, 'craneX')
                 : clone(base.truss)
-    const hasLaser = groups.some((g) => classes[g.class]?.fixture === 'laser')
+    const hasLaser = groups.some((g) => LASER_FIXTURES.has(classes[g.class]?.fixture))
     return {
         rig: `${base.rig.replace(/ — .*$/, '')} — ${v.title}`,
         version: base.version,
