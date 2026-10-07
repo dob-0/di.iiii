@@ -341,9 +341,9 @@ describe('RawGraphSurface', () => {
         })
     })
 
-    // A phone opens at the larger of fit-to-width and the summary tier (0.5),
+    // A phone opens at the larger of fit-to-width and the 11 px-legible zoom (11/13),
     // first card top-left.
-    it('opens on a phone at the larger of fit-to-width and 50 %, first card top-left', () => {
+    it('opens on a phone at the larger of fit-to-width and the 11 px-legible zoom, first card top-left', () => {
         withRect(390, 760, () => {
             const row = [0, 600, 1200, 1800].flatMap((x) => [
                 makeNode('value.number', { id: `t${x}`, graphX: x, graphY: 0 }),
@@ -352,7 +352,7 @@ describe('RawGraphSurface', () => {
             const { container } = render(<RawGraphSurface nodes={row} edges={[]} />)
             const { panX, panY, zoom } = transformOf(container)
             expect(container.textContent).not.toMatch(/showing \d+ of 8/)
-            expect(zoom).toBe(0.5)
+            expect(zoom).toBeCloseTo(11 / 13, 6)
             expect(panX).toBeCloseTo(24, 5)
             expect(panY).toBeCloseTo(24, 5)
         })

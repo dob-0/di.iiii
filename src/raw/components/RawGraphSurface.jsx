@@ -1,3 +1,4 @@
+import { paintOrder } from '../utils/cardOrder.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { createTapTracker } from '../utils/useDoubleTap.js'
@@ -277,6 +278,7 @@ export default function RawGraphSurface({
     onDeleteNode,
     onMoveNode,
     onResizeNode,
+    followViewportLive = true,
     onDoubleClick,
     // Edits a card's one main field in place (a Text's content). Optional: the
     // read-only wrappers pass none and the card behaves exactly as before.
@@ -392,6 +394,7 @@ export default function RawGraphSurface({
     const [panY, setPanY] = useState(60)
     const [zoom, setZoom] = useState(initialZoom ?? 1)
     // viewportRef mirrors pan+zoom synchronously so event handlers always read current values
+    const stageRef = useRef(null)
     const viewportRef = useRef({ panX: 60, panY: 60, zoom: initialZoom ?? 1 })
     // How much of the graph the last fit could show, and why — drives the
     // transient "showing 5 of 33" line rather than silently lying about it.
@@ -412,6 +415,27 @@ export default function RawGraphSurface({
             return node
         })
     }, [nodesProp, dragPos, resizePos])
+    // While a card is held, only that card changes. The other cards' elements
+    // are built once when the drag starts and handed back as the SAME element
+    // objects every frame, so React skips their whole subtrees instead of
+    // re-rendering all of them per pointer move (P6: at 150 cards the card drag
+    // p95 was 100+ ms in Firefox). Rebuilt if the selection changes mid-drag, and
+    // dropped the moment the card is let go.
+    const frozenCardsRef = useRef(null)
+    if (!draggingNodeId) frozenCardsRef.current = null
+    const frozenCardOr = (node, build) => {
+        if (!draggingNodeId || node.id === draggingNodeId) return build()
+        let frozen = frozenCardsRef.current
+        if (!frozen || frozen.sig !== selectedNodeId || frozen.tier !== tier) {
+            frozen = { sig: selectedNodeId, tier, map: new Map() }
+            frozenCardsRef.current = frozen
+        }
+        const hit = frozen.map.get(node.id)
+        if (hit && hit.node === node) return hit.element
+        const element = build()
+        frozen.map.set(node.id, { node, element })
+        return element
+    }
     // The document's own nodes: what a drag starts from and what its effect
     // follows, so a held card moving does not restart the effect every frame.
     const nodePropById = useMemo(() => new Map(nodesProp.map((node) => [node.id, node])), [nodesProp])
@@ -590,7 +614,7 @@ export default function RawGraphSurface({
         const box = visibleBox()
         if (!box) return
         const all = withExtraBounds(boundsOf(cardsInView))
-        const view = openingView({ bounds: all, box, everything, minZoom: GRAPH_MIN_ZOOM, maxZoom: GRAPH_MAX_ZOOM })
+        const view = openingView({ bounds: all, box, everything, surfaceWidth: containerRef.current?.getBoundingClientRect?.().width, minZoom: GRAPH_MIN_ZOOM, maxZoom: GRAPH_MAX_ZOOM })
         applyViewport(view.panX, view.panY, view.zoom)
         lastFitViewportRef.current = { ...viewportRef.current }
         lastBoxRef.current = box
@@ -1429,10 +1453,21 @@ export default function RawGraphSurface({
             const ny = panStartRef.current.panY + dy
             viewportRef.current.panX = nx
             viewportRef.current.panY = ny
-            setPanX(nx)
-            setPanY(ny)
+            if (followViewportLive) {
+                setPanX(nx)
+                setPanY(ny)
+            } else {
+                // Nothing outside the canvas follows the pan, so the move goes
+                // straight to the stage's transform: no React render of every
+                // card (and of the whole editor, through onViewportChange) per
+                // pointer move. The state catches up once, on release.
+                const stage = stageRef.current
+                if (stage) stage.style.transform = `translate(${nx}px,${ny}px) scale(${viewportRef.current.zoom})`
+            }
         }
         const up = () => {
+            setPanX(viewportRef.current.panX)
+            setPanY(viewportRef.current.panY)
             setIsPanning(false)
             setIsPanMoving(false)
         }
@@ -1778,7 +1813,8 @@ export default function RawGraphSurface({
             ) : null}
             <div
                 className="raw-graph-stage"
-                style={{ transform: `translate(${panX}px,${panY}px) scale(${zoom})`, transformOrigin: '0 0' }}
+                ref={stageRef}
+                style={{ '--raw-zoom': zoom, transform: `translate(${viewportRef.current.panX}px,${viewportRef.current.panY}px) scale(${zoom})`, transformOrigin: '0 0' }}
             >
                     <svg
                         // 1×1, not 100%: the stage collapses to zero height (all
@@ -1831,7 +1867,7 @@ export default function RawGraphSurface({
                             />
                         ) : null}
                     </svg>
-                    {nodes.map((node) => {
+                    {paintOrder(nodes).map((node) => frozenCardOr(node, () => {
                         const inputs = getNodeInputs(node, portScopeNodes)
                         const outputs = getNodeOutputs(node, portScopeNodes)
                         const childCount = childCounts?.get(node.id) || 0
@@ -2173,7 +2209,7 @@ export default function RawGraphSurface({
                                 </div>
                             </div>
                         )
-                    })}
+                    }))}
                     {/* The things. Same stage, so they pan and zoom with the
                         nodes and read as being in the same place — they ARE
                         in the same project. The node card's own classes, so a

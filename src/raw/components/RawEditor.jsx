@@ -1,3 +1,4 @@
+import { nextRaiseOf } from '../utils/cardOrder.js'
 import { Fragment, Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import PropertyInspector from './PropertyInspector.jsx'
 import { COLUMN_OPEN_DELAY_MS, clampColumnWidth, isPhoneWidth, readColumnWidth, writeColumnWidth } from '../utils/settingsColumn.js'
@@ -1897,10 +1898,12 @@ export default function RawEditor({
         if (!projectId) return
         navigateToRawPath(buildStudioGeoPath(projectId, resolvedSpaceId, nodeId))
     }, [projectId, resolvedSpaceId])
+    // One op per drag: the new place AND the raise (graphZ one above the
+    // highest in the project), so a moved card stays on top after a reload.
     const handleMoveNode = useCallback((nodeId, nextX, nextY) => applyLocalOps({
         type: 'updateNode',
-        payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
-    }), [applyLocalOps])
+        payload: { nodeId, patch: { graphX: nextX, graphY: nextY, graphZ: nextRaiseOf(nodes, nodeId) } }
+    }), [applyLocalOps, nodes])
 
     // The card's own size (values.cardSize, graph units) — one op per resize,
     // and null gives the automatic size back.
@@ -3264,6 +3267,7 @@ export default function RawEditor({
                     onSetActive={(node) => setActiveNodeId(node.typeId, node.parentId || null, node.id)}
                     activeMarkerTypeIds={activeMarkerTypeIds}
                     onViewportChange={handleViewportChange}
+                    followViewportLive={visibleViewNodes.some((node) => windowSpaceFor(frameOf(node)) === 'world')}
                     extraBounds={worldWindowBounds}
                 />
                 </GraphWrap>
