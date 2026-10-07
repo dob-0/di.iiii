@@ -106,14 +106,27 @@ def target_point(f):
     return None
 
 
+def unit_(v):
+    return np.asarray(v, float) / (np.linalg.norm(v) or 1.0)
+
+
 def shell_t(o, d, sub):
     t, what, cls, _ = OB.cast(o, d, 0.35, 1e9, sub, skip_cls=NON_SHELL)
     return (t, what, cls) if t is not None else (None, 'open air', 'air')
 
 
 # ------------------------------------------------------------------ a PAR's or a beam's blocking
+def half_of(f):
+    """Half the beam angle: the fixture's own (a zoom set in the plot) or its type's datasheet value."""
+    return f.get('beam_deg', L.BEAM_DEG.get(f['kind'], 0.0)) / 2
+
+
+def reach_of(f):
+    return f.get('reach', L.REACH.get(f['kind'], 30.0))
+
+
 def beam_rays(f, rings):
-    return O.cone_rays(f['d'], HALF[f['kind']], rings)[0]
+    return O.cone_rays(f['d'], half_of(f), rings)[0]
 
 
 # What a beam is FOR, where the plot names no target point: the vista PARs uplight their own column (10-07 report).
@@ -147,9 +160,15 @@ def trace_beam(f, dirs, sub):
     p = f['p']
     T = target_point(f)
     fam = family(f, T)
-    reach = L.REACH[f['kind']]
+    reach = reach_of(f)
     mount = mount_of(f)
     t_fam = None
+    fam_cls = set()
+    if T is not None:
+        # a target ON the building's skin (a wall, the deck): any hit on that same skin is the beam arriving
+        ta = OB.cast(p, unit_(T - p), 0.35, 1e9, sub, skip_cls=NON_SHELL)
+        if ta[0] is not None and abs(ta[0] - float(np.linalg.norm(T - p))) < 0.6:
+            fam_cls.add(ta[2])
     if fam and T is None:
         h = OB.cast(p, f['d'], 0.35, reach, sub, mount=mount)
         t_fam = h[0] if in_family(h[1], fam) else None
@@ -171,21 +190,21 @@ def trace_beam(f, dirs, sub):
         land = p + d * (ts if ts is not None else reach)
         rec = {'t_target': round(tt, 2), 'skin': swhat, 'skin_cls': scls, 'land': land, 'd': d,
                'first': None if hit[0] is None else {'what': hit[1], 'cls': hit[2], 't': round(hit[0], 2)}}
-        blocked = hit[0] is not None and hit[0] < tt - tol and not in_family(hit[1], fam)
+        blocked = hit[0] is not None and hit[0] < tt - tol and not in_family(hit[1], fam) and hit[2] not in fam_cls
         if blocked and T is None and t_fam is None and hit[2] in O.SHELL:
             blocked = False
         rec['blocked'] = {'what': hit[1], 'cls': hit[2], 't': round(hit[0], 2), 'at': p + d * hit[0]} if blocked else None
         # the shadow: the whole path to the skin, past the target too (a permanent thing in the way anywhere)
-        sh = hit[0] is not None and hit[2] not in O.SHELL and not in_family(hit[1], fam)
+        sh = hit[0] is not None and hit[2] not in O.SHELL and not in_family(hit[1], fam) and hit[2] not in fam_cls
         rec['shadow'] = {'what': hit[1], 'cls': hit[2], 't': round(hit[0], 2), 'at': p + d * hit[0]} if sh else None
         out.append(rec)
     return out
 
 
 def analyse_beam(f):
-    half = math.radians(HALF[f['kind']])
+    half = math.radians(half_of(f))
     T = target_point(f)
-    reach = L.REACH[f['kind']]
+    reach = reach_of(f)
     sub = OB.subset(f['p'], f['d'], half * 1.05, reach + 1.0)
     spec = trace_beam(f, beam_rays(f, O.SPEC_RINGS), sub)
     area = trace_beam(f, beam_rays(f, O.AREA_RINGS), sub)
@@ -200,8 +219,8 @@ def analyse_beam(f):
             e['t_min'] = min(e['t_min'], b['t'])
             e['t_max'] = max(e['t_max'], b['t'])
     ax = OB.cast(f['p'], f['d'], 0.35, reach, sub, mount=mount_of(f))
-    bt, bwhat, _ = L.beam_end(f['p'], f['d'], reach, skip=('truss',) if f['p'][1] > 3 else ())
-    return {'id': f['id'], 'group': f['groupName'], 'kind': f['kind'], 'beam_deg': L.BEAM_DEG[f['kind']],
+    bt, bwhat, _ = L.beam_end(f['p'], f['d'], reach, skip=('truss',) if f['p'][1] > 3 else ()) if f['kind'] in L.BEAM_DEG else (reach, 'n/a (type not in the box model)', None)
+    return {'id': f['id'], 'group': f['groupName'], 'kind': f['kind'], 'beam_deg': 2 * half_of(f),
             'at': [round(v, 2) for v in f['p']], 'aim': f['aim']['rule'],
             'target': ([round(v, 2) for v in T] if T is not None else ('its own column' if INTENT.get(f['groupName']) else 'the building skin (%s)' % spec[0]['skin'])),
             'target_is': sorted(family(f, T)),

@@ -185,6 +185,8 @@ class Obstacles:
             return 'concrete (%s)' % mname, 'column'
         if mname == 'hall-press':
             return 'press (detail)', 'machine'      # hall.py's crank press body outside the press envelope boxes
+        if mname == 'hall-rust' and abs(z) > G['end_wall_inner_y_m'] - 0.8:
+            return 'end wall z %+.0f (gate frame)' % (G['end_wall_inner_y_m'] * np.sign(z)), 'end wall'
         if mname == 'hall-rust':
             rx = min(G['rows_x_m'], key=lambda r: abs(r - x))
             if abs(x - rx) < 0.4 and y < G['column_head']['flare_start_m']:
