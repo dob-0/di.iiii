@@ -72,3 +72,19 @@ describe('StudioInspector surface picker', () => {
         expect(onSectionChange).toHaveBeenCalledWith('surface', { surfaceId: null })
     })
 })
+
+describe('StudioInspector number display (P10)', () => {
+    const numSections = [{ id: 'transform', label: 'Transform', fields: [{ label: 'Position', component: 'transform', path: ['position', 0], type: 'number', step: 0.1 }] }]
+    it('shows a long stored value rounded and does not write it back unless edited', () => {
+        const onSectionChange = vi.fn()
+        const { container } = render(<StudioInspector title="Box" sections={numSections} values={{ transform: { position: [0.5844327123, 0, 0] } }} onSectionChange={onSectionChange} />)
+        const input = container.querySelector('input[type="number"]')
+        expect(input.value).toBe('0.5844')
+        fireEvent.focus(input)
+        fireEvent.blur(input)
+        expect(onSectionChange).not.toHaveBeenCalled()
+        fireEvent.focus(input)
+        fireEvent.change(input, { target: { value: '0.75' } })
+        expect(onSectionChange).toHaveBeenCalledTimes(1)
+    })
+})
