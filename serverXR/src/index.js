@@ -1,5 +1,7 @@
 require('dotenv').config({ path: require('node:path').resolve(__dirname, '../.env.local') })
 require('dotenv').config({ path: require('node:path').resolve(__dirname, '../.env') })
+// After dotenv, so a DATA_ROOT in .env counts; before config.js reads it.
+require('./dataRootGuard').enforceDataRoot()
 const express = require('express')
 // Before any router exists: the catalogue walks the live routes, and Express 5
 // only keeps a sub-router's mount path if it is recorded as it is mounted.

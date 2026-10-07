@@ -51,6 +51,10 @@ Push your branch the day you make it, even unfinished; a draft PR is fine. On a 
 every pushed branch opens an upstream PR (`auto-pr.yml`) — except `backup/…` and `wip/…`,
 which are for keeping work safe, not for review.
 
+## Starting a dev server
+
+**On aylmo: `di-dev up <tree>` (di-atlas tools/di-dev); never a relative `DATA_ROOT`.** serverXR refuses to start in a git checkout with an unset or relative `DATA_ROOT` (absolute path, or `DI_SCRATCH=1` for a throwaway) — `serverXR/src/dataRootGuard.js`.
+
 ## The start check
 
 Before you start any task, and before you push:
