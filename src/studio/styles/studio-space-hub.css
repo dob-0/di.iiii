@@ -873,3 +873,14 @@
 }
 
 .ssh-space-inside a:hover { opacity: 1; text-decoration: underline; }
+
+/* The still taken from the card's own frame (PREVIEW_POSTER_MESSAGE). The live
+   frame, when the pointer is on the card, is drawn over it. */
+.ssh-card-poster {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+}

@@ -41,7 +41,7 @@ import {
     ARRANGE_MODES, FILTER_MODES, applyView, countStates, normalizeArrange, normalizeFilter, spaceState,
 } from '../utils/spaceArrange.js'
 import { lightingDeskPath, probeLightingDesk } from '../../map/lightingLink.js'
-import { PREVIEW_READY_MESSAGE, PREVIEW_STUB_MESSAGE } from '../../utils/previewMode.js'
+import { PREVIEW_POSTER_MESSAGE, PREVIEW_READY_MESSAGE, PREVIEW_STUB_MESSAGE } from '../../utils/previewMode.js'
 import '../styles/studio-space-hub.css'
 
 // Every space card embeds the SAME app at a different route, and browsers
@@ -56,7 +56,7 @@ import '../styles/studio-space-hub.css'
 // grid from mounting an unbounded burst on a phone. The mapper keeps the
 // tighter default (PREVIEW_BOOT_SLOTS) — its surfaces are DIFFERENT pages at
 // full output resolution, with nothing to share.
-const SPACE_CARD_BOOT_SLOTS = 12
+const SPACE_CARD_BOOT_SLOTS = 4
 const requestPreviewBoot = createPreviewBootQueue(SPACE_CARD_BOOT_SLOTS)
 
 // The slot used to be freed by the iframe's `load` event. For an SPA that
@@ -69,6 +69,32 @@ const requestPreviewBoot = createPreviewBootQueue(SPACE_CARD_BOOT_SLOTS)
 // The backstop is what `load` should have been: a card that never reports is
 // eventually let go so a broken page cannot starve everyone behind it.
 const PREVIEW_PAINT_BACKSTOP_MS = 12000
+
+// Stills of the cards, for the grid's lifetime (and this tab's, via
+// sessionStorage, so coming back to /spaces draws pictures at once). A card
+// boots its frame ONCE to take the still, then drops the frame; the live frame
+// comes back only under the pointer. See PREVIEW_POSTER_MESSAGE.
+const posterMemory = new Map()
+const posterKey = (doorPath) => `dii:space-poster:${doorPath}`
+const readPoster = (doorPath) => {
+    if (posterMemory.has(doorPath)) return posterMemory.get(doorPath)
+    try {
+        const stored = window.sessionStorage.getItem(posterKey(doorPath))
+        if (stored) { posterMemory.set(doorPath, stored); return stored }
+    } catch { /* storage may be blocked; the memory copy still works */ }
+    return null
+}
+const writePoster = (doorPath, poster) => {
+    posterMemory.set(doorPath, poster)
+    try { window.sessionStorage.setItem(posterKey(doorPath), poster) } catch { /* quota or blocked */ }
+}
+export const resetSpaceCardPosters = () => {
+    posterMemory.clear()
+    try { window.sessionStorage.clear() } catch { /* blocked */ }
+}
+// Pointer-hover going live only where there is a hovering pointer; a phone
+// has none, and the card's tap already makes it live (SpaceCardLive).
+const HOVER_LIVE_DELAY_MS = 350
 
 // History rows. A restore point is taken BEFORE somebody's change, so the name
 // on it is whose change it guards against: "before Emilya's change".
@@ -128,6 +154,9 @@ function SpaceCardPreview({ doorPath, label }) {
     // grid is open, so scrolling the card away and back must not boot the
     // frame again to hear it a second time.
     const [stub, setStub] = useState(false)
+    const [poster, setPoster] = useState(() => readPoster(doorPath))
+    const [hovered, setHovered] = useState(false)
+    const [hoverPainted, setHoverPainted] = useState(false)
     const releaseRef = useRef(null)
 
     useEffect(() => {
@@ -157,7 +186,7 @@ function SpaceCardPreview({ doorPath, label }) {
     }, [])
 
     useEffect(() => {
-        if (!visible || stub) {
+        if (!visible || stub || poster) {
             setBooted(false)
             return undefined
         }
@@ -167,7 +196,7 @@ function SpaceCardPreview({ doorPath, label }) {
             releaseRef.current = null
             release()
         }
-    }, [visible, stub])
+    }, [visible, stub, poster])
 
     // The embedded app posts dii:preview-ready once it has painted, or
     // dii:preview-stub when there is nothing to paint (a work left out of a
@@ -175,18 +204,45 @@ function SpaceCardPreview({ doorPath, label }) {
     // this card's slot, so the message is matched on the iframe's
     // contentWindow, not on the space id in the payload.
     useEffect(() => {
-        if (!booted) return undefined
+        if (!booted && !hovered) return undefined
         const onMessage = (event) => {
             if (event.origin !== window.location.origin) return
             const type = event.data?.type
-            if (type !== PREVIEW_READY_MESSAGE && type !== PREVIEW_STUB_MESSAGE) return
+            if (type !== PREVIEW_READY_MESSAGE && type !== PREVIEW_STUB_MESSAGE && type !== PREVIEW_POSTER_MESSAGE) return
             if (event.source !== frameRef.current?.contentWindow) return
             if (type === PREVIEW_STUB_MESSAGE) setStub(true)
+            if (type === PREVIEW_READY_MESSAGE) setHoverPainted(true)
+            if (type === PREVIEW_POSTER_MESSAGE) {
+                const still = event.data?.poster
+                if (typeof still === 'string' && still.startsWith('data:image/jpeg')) {
+                    writePoster(doorPath, still)
+                    setPoster(still)
+                }
+            }
             releaseRef.current?.()
         }
         window.addEventListener('message', onMessage)
         return () => window.removeEventListener('message', onMessage)
-    }, [booted])
+    }, [booted, hovered, doorPath])
+
+    // Under the pointer the card goes live again (after a short dwell, so a
+    // wheel scroll that sweeps across cards starts nothing). Only one pointer,
+    // so at most one hover-live frame beside the queue's few boots.
+    useEffect(() => {
+        const node = hostRef.current?.parentElement
+        if (!node || !poster) return undefined
+        if (typeof window.matchMedia === 'function' && !window.matchMedia('(hover: hover)').matches) return undefined
+        let timer = null
+        const enter = () => { clearTimeout(timer); timer = setTimeout(() => setHovered(true), HOVER_LIVE_DELAY_MS) }
+        const leave = () => { clearTimeout(timer); setHovered(false); setHoverPainted(false) }
+        node.addEventListener('pointerenter', enter)
+        node.addEventListener('pointerleave', leave)
+        return () => {
+            clearTimeout(timer)
+            node.removeEventListener('pointerenter', enter)
+            node.removeEventListener('pointerleave', leave)
+        }
+    }, [poster])
 
     // Backstop: a page that never reports (network error, blocked, an old
     // build in the frame) must not hold the slot shut behind it.
@@ -204,7 +260,9 @@ function SpaceCardPreview({ doorPath, label }) {
         <div ref={hostRef} className={`ssh-card-preview-fill${stub ? ' ssh-card-preview-fill--stub' : ''}`} aria-hidden="true">
             {stub ? (
                 <p className="ssh-card-preview-empty-line">not in this copy — this piece lives on {WORKS_HOST}</p>
-            ) : visible && booted ? (
+            ) : null}
+            {!stub && poster ? <img className="ssh-card-poster" src={poster} alt="" draggable={false} /> : null}
+            {stub ? null : visible && (poster ? hovered : booted) ? (
                 <iframe
                     ref={frameRef}
                     src={`${doorPath}?preview=1`}
@@ -214,7 +272,9 @@ function SpaceCardPreview({ doorPath, label }) {
                     style={{
                         width: `${PREVIEW_VIEWPORT_WIDTH}px`,
                         height: `${PREVIEW_VIEWPORT_HEIGHT}px`,
-                        transform: `scale(${scale})`
+                        transform: `scale(${scale})`,
+                        // over a still, stay invisible until painted: no black flash
+                        opacity: poster && !hoverPainted ? 0 : 1
                     }}
                 />
             ) : null}
