@@ -261,3 +261,28 @@ The delay time is owed to the system designer.
 - **Net:** the right row now has a second view (953), and it agrees with 032: a regular 6 m-type sequence and **no extra column**. Still owed:
   - a gate in mrad for the X-T5 frames (owner's call)
   - a feet-and-heads refit of 953 to pin its camera height
+
+### 7b. Photo 024 "analysed bad": what went wrong, and what is fixed
+
+The owner said of `024-masks.png`: *"this one analysed bad"*. He is right, for two reasons.
+1. **No undistortion.** 024 is the Galaxy S24 ultra-wide (13 mm-eq). It was fitted raw with a pinhole model, which gave 37 px, and the model columns did not sit on the real ones.
+2. **The wrong class.** Columns were taken from ADE20K's semantic classes. There the precast columns, the machines and the walls all fall into one "wall/mass" blob, so nothing was split.
+
+**Fixed in the method**
+- **Undistortion first** (`scripts/place/undistort_plumb.py`).
+  - Method: plumb-line, with Fitzgibbon's one-parameter division model (CVPR 2001). k is found as in Alemán-Flores et al. (IPOL 2014): Canny edge points are undistorted for each candidate k, and the Hough votes on the 40 strongest lines are scored.
+  - 024 result: **k = −0.053**. The corners move about 5.6 % in radius, about 120 px.
+  - Straightness on the 40 strongest lines: **1.29 px rms before, 1.22 px after**; points on those lines: 48 097 before, 48 465 after.
+  - The gain is modest and the score curve is flat (k −0.025…−0.075 all score within 2 %). So the JPEG is probably already partly corrected in the camera, and k is good to about ±0.03.
+  - No lensfun profile exists here for the S24 ultra-wide. lensfunpy is not installed and the system has no database.
+  - Output: `/mnt/data/footage/place-moxir-photo-analysis-2026-10-07/undistort/024-file_69-undist.png` and `.json`.
+  - A first attempt on traced edge chains found only 7 long chains in this cluttered roof and is superseded.
+- **Guard.** `multiview_columns.py fit` and `fit2` now **refuse** any photo whose EXIF says ≤ 20 mm-eq, unless the photo is the `-undist` file. Tested: 024 raw is refused.
+- **Columns as their own instances** (`scripts/place/photo_columns_seg.py`).
+  - Grounding DINO tiny runs one query per class: column, machine, wall, person. It runs on the full frame plus a 3×3 grid of tiles (SAHI-style slicing). Column boxes are kept only if tall and thin (h ≥ 2.5 w, h ≥ 6 % of the frame). SAM 2.1 then makes one mask per box.
+  - **Result on 024: FAILED, and labelled as failed on the picture.** `024-masks-v2.png` shows the "column" boxes landing on roof members (2, 5, 8) and gas cylinders (3, 4, 6). Only boxes 1 and 7 touch real shafts, and "machine" swallows the roof. So it is **not used for a count**. The old `024-masks.png` is kept as it was, so the two can be compared.
+- **Not done (owed)**
+  - `columns-024-count.png`
+  - the refit of 024 on the undistorted frame
+  - The route is hand-seeded SAM 2 boxes or points on each real shaft (promptable segmentation, the documented use of SAM 2), or a stronger open detector, then the column-edge refit (`fit2`) on `024-file_69-undist.png` with f 1502 px.
+  - 024 also sees the right row's joint pair as two shafts (raw frame, by eye, about u 2450–2650, v 1300–1600): **SUSPECTED**.

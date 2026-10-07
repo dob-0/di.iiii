@@ -189,7 +189,7 @@ def draw_model(img, cam, g, scale, label=True, rows=None):
 def read_img(name):
     from PIL import Image, ImageOps
     for root in ('/mnt/data/footage/moxir-2026-10-17', '/mnt/data/footage/inbox/2026-09-29', '/mnt/data/footage/inbox/2026-10-07',
-                 os.path.join(DATA, 'video-954')):
+                 os.path.join(DATA, 'video-954'), os.path.join(DATA, 'undistort')):
         p = os.path.join(root, name)
         if os.path.exists(p):
             return cv2.cvtColor(np.array(ImageOps.exif_transpose(Image.open(p)).convert('RGB')), cv2.COLOR_RGB2BGR)
@@ -285,11 +285,28 @@ def cmd_crops(a):
     print(out)
 
 
+def guard_ultrawide(name):
+    """Refuse a pinhole fit on a raw ultra-wide frame. 024 (Galaxy S24 ultra-wide, 13 mm-eq) was fitted raw on
+    2026-09-28 and came out at 37 px: its lines curve. Undistort first (undistort_plumb.py -> <stem>-undist.png)."""
+    if '-undist' in name:
+        return
+    from PIL import Image
+    for root in ('/mnt/data/footage/moxir-2026-10-17', '/mnt/data/footage/inbox/2026-09-29', '/mnt/data/footage/inbox/2026-10-07'):
+        p = os.path.join(root, name)
+        if os.path.exists(p):
+            ex = Image.open(p).getexif().get_ifd(0x8769)
+            feq = ex.get(41989)
+            if feq is not None and feq < 20:
+                raise SystemExit(f'REFUSED: {name} is ultra-wide (EXIF {feq} mm-eq). Undistort it first with scripts/place/undistort_plumb.py '
+                                 f'and fit <stem>-undist.png.')
+
+
 def cmd_fit(a):
     g = load_hall()
     P = model_points(g)
     pk = json.load(open(a.picks))
     name = pk['photo']
+    guard_ultrawide(name)
     init = cam_for(name, prefer_fit=False)
     W, H = init.size
     f = pk['f_px']
@@ -348,6 +365,7 @@ def cmd_fit2(a):
     from scipy.optimize import least_squares
     pk = json.load(open(a.picks))
     name = pk['photo']
+    guard_ultrawide(name)
     img = read_img(name)
     gray = cv2.GaussianBlur(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.float32), (0, 0), 1.2)
     gx = np.abs(cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)) / 4
