@@ -4,7 +4,7 @@
 //   current  the room exactly as it was drawn before: its lamps, its ambient, no environment light.
 //   form     the same room with a dim image-based fill (a neutral studio environment, three.js RoomEnvironment through
 //            PMREMGenerator, set as scene.environment) so unlit surfaces — steel, rust, the floor — keep their form.
-//            The fill's level is the viewer's to move: 0 (no fill) … FORM_LIGHT_MAX (daylight-like), default 0.15.
+//            The fill's level is the viewer's to move: 0 (no fill) … FORM_LIGHT_MAX (daylight-like), default 0.03 (the owner chose it by eye on his screen, 2026-10-08).
 //
 // Why a fill and not more lamps: with only a flat ambient, a surface that no lamp reaches is one flat colour, and a
 // metal with little diffuse goes near black (measured 2026-10-08: the trial 2×2, ~/Downloads/moxir-look/
@@ -15,7 +15,7 @@
 import { useSyncExternalStore } from 'react'
 
 export const LOOKS = ['current', 'form']
-export const FORM_LIGHT_DEFAULT = 0.15
+export const FORM_LIGHT_DEFAULT = 0.03
 export const FORM_LIGHT_MAX = 0.5
 export const LOOK_KEY = 'di.view.look'
 export const FORM_LIGHT_KEY = 'di.view.formLight'

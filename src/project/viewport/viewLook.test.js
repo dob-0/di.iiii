@@ -7,9 +7,9 @@ import {
 beforeEach(() => { window.localStorage.clear(); resetViewLookForTests() })
 
 describe('the look (current / form)', () => {
-    it('starts as the current look, with the form fill at the owner\'s 0.15', () => {
+    it('starts as the current look, with the form fill at the owner\'s 0.03', () => {
         expect(getViewLook()).toEqual({ look: 'current', light: FORM_LIGHT_DEFAULT })
-        expect(FORM_LIGHT_DEFAULT).toBe(0.15)
+        expect(FORM_LIGHT_DEFAULT).toBe(0.03)
     })
     it('the current look asks for NO environment light, whatever the level', () => {
         expect(environmentIntensityFor('current', 0.5)).toBe(0)
