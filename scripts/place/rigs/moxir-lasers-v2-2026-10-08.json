@@ -1,0 +1,380 @@
+{
+ "set": "moxir-lasers-v2-2026-10-08",
+ "title": "MOXIR beta v0.9: the lasers as the owner repainted them (v2)",
+ "writtenAt": "2026-10-08",
+ "status": "PROPOSAL, pictures and numbers only, nothing built. Drawn and checked by scripts/place/lasers_v2.py on top of rigs/moxir-design-paint-2026-10-08.json (washes, core kept).",
+ "owner": [
+  "2026-10-08: repainted the laser places on paint-lasers-v2.png ('dob edit paint-lasers-v2.png')",
+  "2026-10-08 (via the main session, on the numbered reading your-lasers-my-reading.png): 'yes right, but like this with your advice will be cool'",
+  "2026-10-08, for 1-3: 'move the crane, or better a truss, or if the laser power is ok, keep them far, far away'",
+  "2026-10-08: MOXIR = Armenian moxir, ash, the remains of a fire (Wiktionary): the vibe key"
+ ],
+ "paint": {
+  "file": "~/Downloads/moxir/stage/dob edit paint-lasers-v2.png",
+  "clean": "~/Downloads/moxir/stage/occlusion/paint-lasers-v2-clean-baseline.png (identical to paint-plan-full-place.png)",
+  "read_by": "scripts/place/paint_zones.py -> occlusion/paint-zones-lasers-v2.json (no layer offset this time)",
+  "loops_m": {
+   "1": [
+    -5.63,
+    -41.49
+   ],
+   "2": [
+    3.63,
+    -41.11
+   ],
+   "3": [
+    9.78,
+    -41.7
+   ],
+   "4": [
+    -13.09,
+    -25.81
+   ],
+   "5": [
+    13.31,
+    -23.81
+   ],
+   "6": [
+    0.26,
+    -9.23
+   ]
+  }
+ },
+ "rules": {
+  "behind_z": 21.0,
+  "steel_clear_m": 0.3,
+  "min_over_floor_m": 3.0,
+  "tolerance_deg": "each beam is a static point of its cube's scan; the controller zone (and the test) holds it to the stated +- az/el"
+ },
+ "options_far": [
+  {
+   "id": "a",
+   "name": "the far crane rolled to z -41 (cubes on its front girder)",
+   "z": -41.0,
+   "mount": "crane",
+   "y": 7.45,
+   "needs": "the venue's OK and its operator to roll the far crane from z -22.2 to about z -41 on its runway (no file says how far it can travel; the owner thought a crane parks near there)"
+  },
+  {
+   "id": "b",
+   "name": "a ground-support goal-post truss at z -41.5",
+   "z": -41.5,
+   "mount": "truss",
+   "y": 6.6,
+   "span_m": 12.0,
+   "height_m": 7.0,
+   "hardware": "Prolyte H30V, 4 x H30V-L300 = 12 m span (18.9 kg per 3 m: 75.6 kg), on two H30V towers on base plates with outriggers, top corner blocks; cubes on half-couplers + safety under the bottom chords at 6.6 m",
+   "load_check": "3 cubes x 3.7 kg (LASEROS-MK2) + 3 x 1.0 kg clamps and safeties + 6 kg cable = 20.1 kg as 3 point loads near the third points. Prolyte H30V loading table, 12 m single span: 448.7 kg centre point load, 340.6 kg per point at third points (DIN basis; x 0.85 for BS 7905-2 / ANSI E1.2: 289.5 kg). 20.1 kg is 7 % of it. Towers, base plates and outriggers: the rental house's tower data and a stability check (ANSI E1.21 / EN 13814 class) are owed.",
+   "sources": "Prolyte H30V standard lengths (repo: moxir-2026-10-17-minimal-cut-movers.json); H30V loading table (paperclip.rcs.ac.uk HV30_Loading.pdf and H30v-loadingtable.pdf, read 2026-10-08; to be checked against the current Prolyte data sheet)",
+   "moves": {
+    "3": {
+     "x": 7.3,
+     "why": "SAFETY FORCES A MOVE: with the far crane where it stays (z -22.2), its cab hangs at the house-right end of the bridge (x 8.35-10.35, 5.85-7.95 m). From his x 9.78 both of cube 3's beams run into the cab (or within 0.3 m of it). At x 7.3 (2.5 m house left of his loop) they pass 0.8 m clear."
+    }
+   },
+   "targets": {
+    "3b": [
+     8.0,
+     8.35,
+     19.55
+    ]
+   }
+  },
+  {
+   "id": "c",
+   "name": "'far, far away': towers at the far end, z -51.5",
+   "z": -51.5,
+   "mount": "truss",
+   "y": 6.6,
+   "span_m": 12.0,
+   "height_m": 7.0,
+   "hardware": "the same goal post 2.3 m in front of the far end wall (the wall's block band 6.6-8.4 m could take wall brackets instead; its windows at 4.8-6.6 and 8.4-10.6 m cannot)",
+   "moves": {
+    "3": {
+     "x": 7.3,
+     "why": "SAFETY FORCES A MOVE: with the far crane where it stays (z -22.2), its cab hangs at the house-right end of the bridge (x 8.35-10.35, 5.85-7.95 m). From his x 9.78 both of cube 3's beams run into the cab (or within 0.3 m of it). At x 7.3 (2.5 m house left of his loop) they pass 0.8 m clear."
+    }
+   },
+   "targets": {
+    "3b": [
+     8.0,
+     8.35,
+     19.55
+    ]
+   }
+  }
+ ],
+ "chosen_far": "b",
+ "cubes": [
+  {
+   "n": 1,
+   "id": "rig-lasercube-cut-01",
+   "far": true,
+   "x": -5.63,
+   "colour": "ash white",
+   "beams": [
+    {
+     "to": [
+      -9.0,
+      8.35,
+      19.55
+     ],
+     "stop": "crane girder z 19.90"
+    },
+    {
+     "to": [
+      -4.0,
+      8.35,
+      19.55
+     ],
+     "stop": "crane girder z 19.90"
+    }
+   ],
+   "fan_deg": [
+    0.3,
+    0.3
+   ]
+  },
+  {
+   "n": 2,
+   "id": "rig-lasercube-cut-02",
+   "far": true,
+   "x": 3.63,
+   "colour": "ember red",
+   "beams": [
+    {
+     "to": [
+      -1.6,
+      8.35,
+      19.55
+     ],
+     "stop": "crane girder z 19.90"
+    },
+    {
+     "to": [
+      1.9,
+      8.35,
+      19.55
+     ],
+     "stop": "crane girder z 19.90"
+    }
+   ],
+   "fan_deg": [
+    0.3,
+    0.3
+   ]
+  },
+  {
+   "n": 3,
+   "id": "rig-lasercube-cut-03",
+   "far": true,
+   "x": 9.78,
+   "colour": "ash white",
+   "beams": [
+    {
+     "to": [
+      4.26,
+      8.35,
+      19.55
+     ],
+     "stop": "crane girder z 19.90"
+    },
+    {
+     "to": [
+      8.6,
+      8.35,
+      19.55
+     ],
+     "stop": "crane girder z 19.90"
+    }
+   ],
+   "fan_deg": [
+    0.3,
+    0.3
+   ]
+  },
+  {
+   "n": 4,
+   "id": "rig-lasercube-cut-04",
+   "p": [
+    -11.25,
+    5.0,
+    -24.6
+   ],
+   "colour": "ember red",
+   "mount": "nave column x -12, z -24: clamp on its inner (+x) and far (-z) corner at 5.0 m. His loop is 1.8 m further out (x -13.1, z -25.8): from there the stage-ward beam would run into the next columns of the row, so the cube sits on the column's nave corner.",
+   "beams": [
+    {
+     "to": [
+      -35.05,
+      7.5,
+      -25.4
+     ],
+     "stop": "runway girder x -35.35",
+     "what": "out into the left span, onto the far runway girder (a steel beam stop the building already has)"
+    },
+    {
+     "to": [
+      -9.0,
+      8.35,
+      19.55
+     ],
+     "stop": "crane girder z 19.90",
+     "what": "down the nave's left edge to the near crane's back girder"
+    }
+   ],
+   "fan_deg": [
+    0.3,
+    0.3
+   ]
+  },
+  {
+   "n": 5,
+   "id": "rig-lasercube-cut-05",
+   "p": [
+    11.25,
+    5.0,
+    -24.6
+   ],
+   "colour": "ember red",
+   "mount": "nave column x +12, z -24: the mirror of 4 (his loop x 13.3, z -23.8)",
+   "beams": [
+    {
+     "to": [
+      35.05,
+      7.5,
+      -25.4
+     ],
+     "stop": "runway girder x +35.35",
+     "what": "across into the right span, onto its far runway girder"
+    },
+    {
+     "to": [
+      9.26,
+      8.35,
+      19.55
+     ],
+     "stop": "crane girder z 19.90",
+     "what": "down the nave's right edge to the near crane's back girder"
+    }
+   ],
+   "fan_deg": [
+    0.3,
+    0.3
+   ]
+  },
+  {
+   "n": 6,
+   "id": "rig-lasercube-cut-06",
+   "p": [
+    0.26,
+    6.5,
+    -9.23
+   ],
+   "colour": "ash white",
+   "mount": "a 6.5 m ground-support tower in the nave behind the press (H30V tower on a base plate with outriggers, or a wind-up stand rated for it): his loop exactly. Stability check owed.",
+   "beams": [
+    {
+     "to": [
+      -2.6,
+      8.35,
+      19.55
+     ],
+     "stop": "crane girder z 19.90",
+     "what": "the left line of the frame behind the DJ"
+    },
+    {
+     "to": [
+      2.9,
+      8.35,
+      19.55
+     ],
+     "stop": "crane girder z 19.90",
+     "what": "the right line"
+    }
+   ],
+   "fan_deg": [
+    0.3,
+    0.3
+   ]
+  }
+ ],
+ "colours": {
+  "ash white": "#e8e4dc",
+  "ember red": "#ff3a12"
+ },
+ "colour_note": "LaserCube Ultra MK2: three diodes 455 / 525 / 638 nm, 10 W optical together (LASEROS-MK2). 'Ash white' = all three at once (a grey-white whose tint depends on the mix; the three beams overlap only as well as the cube's convergence, which the datasheet does not give: fringes possible). 'Ember red' = the 638 nm diode alone (deep red); an orange ember needs red + a little 525 nm green (a mix, not a wavelength). No per-colour power is in the datasheet the repo holds: the visibility numbers below take an equal third per colour (ASSUMED).",
+ "haze": {
+  "sigma_per_m": 0.02,
+  "source": "moxir-versions-2026-10-17.json looksWhy: 'the room is written at sigma 0.02/m (realism.mjs --scattering 0.02, fog far ~80 m) ... from the club-haze research (0.004-0.02)'; the joint sigma call is still owed",
+  "g": 0.7,
+  "g_basis": "ASSUMED: Henyey-Greenstein asymmetry for a glycol/oil haze of ~1 um droplets (strongly forward scattering); not measured"
+ },
+ "advice": [
+  "Mirror pairs (his video 3: mirrored, one colour per part): 1 and 3 mirror each other about the DJ's axis (ash white); 4 and 5 mirror each other (ember red); 2 sits in the middle in ember red; 6 frames the DJ in ash white.",
+  "Every beam toward the stage ends on the near crane's BACK girder (z 19.55-20.25, 7.95-8.75 m): a steel beam stop the hall already has, right behind the DJ. Its face looks away from the crowd, so a mirror-like bounce goes back into the dark far half, not over the dance floor.",
+  "Heights: the beams run at 6.5-8.35 m, under the far crane where it stays, over the press, and rise only 1-2 m over 60 m: from the floor they read as near-level lines converging on the stage.",
+  "Chase (far to near, a fire burning toward the stage): 2 alone -> 1 + 3 -> 4 + 5 into the side spans -> 6 last, framing the DJ -> all, then black. One colour per part.",
+  "4 and 5 show the building: one beam of each crosses its side span and lands on that span's far runway girder, so the span's own columns stand in the line, lit edge-on through the smoke."
+ ],
+ "looks": [
+  {
+   "id": "embers",
+   "title": "Embers (the silhouette)",
+   "ash": "the DJ black against a low ember-red glow and ash-white backlight in the smoke: what glows after the fire",
+   "layers": [
+    "A",
+    "B"
+   ]
+  },
+  {
+   "id": "burnt_hall",
+   "title": "The burnt-out hall (the washes)",
+   "ash": "the roof and the columns lit cold ash-white from below, the far end and the spans' columns in ember red: the factory as what is left standing after the fire",
+   "layers": [
+    "hall",
+    "A"
+   ]
+  },
+  {
+   "id": "sparks",
+   "title": "Sparks through the smoke (the lasers v2)",
+   "ash": "thin ash-white and ember-red lines rising out of the dark far half toward the DJ, seen only where the smoke carries them",
+   "layers": [
+    "laser",
+    "A",
+    "hall"
+   ]
+  },
+  {
+   "id": "arches",
+   "title": "The arches (kept)",
+   "ash": "cold ash-white arches overhead: the bones of the roof",
+   "layers": [
+    "C",
+    "B"
+   ]
+  }
+ ],
+ "open": [
+  {
+   "what": "Which door does the audience come in through?",
+   "why": "the event's public pin (40.406160, 44.637675, Instagram bio) is about 103 m from the hall centre at bearing 113 deg: about 88 m along the hall axis toward the SE, about 34 m beyond the SE end wall. The model calls that end the far gate, behind the stage, and has the entry door at the NW end (z +53.8). If the crowd enters behind the stage, the whole orientation changes.",
+   "status": "OPEN: a photo of the public entrance and the route to the dance floor today (2026-10-08). The design is not changed for it now."
+  }
+ ],
+ "palette": {
+  "key": "MOXIR = moxir, ash: the remains of a fire. Ash grey-white light, an ember red-orange glow, smoke, and light rising out of a burnt-out factory: the hall read as what is left after the fire.",
+  "lasers": "ash white (1, 3, 6) and ember red (2, 4, 5): what the cubes can honestly make (see colour_note)",
+  "washes": {
+   "wash: left span roof (HK1915, up)": "#e8e4dc",
+   "wash: right span roof (HK1915, up)": "#e8e4dc",
+   "wash: left span wall columns (PAR uplights)": "#ff4a12",
+   "wash: right span wall columns (PAR uplights)": "#ff4a12",
+   "wash: the far end wall (BSW250)": "#ff5a1f",
+   "wash: the side spans' far ends (BSW250)": "#ff5a1f",
+   "wash: beside the audience (BSW250, up)": "#e8e4dc"
+  },
+  "washes_why": "roof pools ash white (the cold underside of a burnt roof), the columns and the far walls ember red-orange (what still glows at the base): RGBW PARs and the HK1915 mix both; the UP-250BSW reaches orange only through its colour wheel (its slots are not in the repo: ASSUMED one is orange/red)."
+ }
+}

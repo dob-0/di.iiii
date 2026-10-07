@@ -219,6 +219,13 @@ def read_zones(painted_path, clean_path, threshold=60, min_px=200, cell=4, min_z
                 marks[name] = marks.get(name, 0) + 1
                 continue
             er, ec = enclosed(rr, cc)
+            loops = []                                   # each small closed loop he drew (e.g. "a laser here")
+            if len(er):
+                eg = np.zeros((H, W), bool)
+                eg[er, ec] = True
+                for lr, lc in components(eg):
+                    loops.append({'centroid_m': list(hall(lc.mean() * cell + cell / 2, lr.mean() * cell + cell / 2)),
+                                  'area_m2': round(len(lr) * cell * cell / ppm ** 2, 2)})
             us = np.concatenate([cc, ec]) * cell + cell / 2
             vs = np.concatenate([rr, er]) * cell + cell / 2
             hpts = [hall(u, v) for u, v in hull(list(zip(us.round(1), vs.round(1))))]
@@ -227,7 +234,7 @@ def read_zones(painted_path, clean_path, threshold=60, min_px=200, cell=4, min_z
                           'painted_m2': round(px / ppm ** 2, 1), 'encloses_m2': round(len(er) * cell * cell / ppm ** 2, 1),
                           'bbox_x_m': [hall(uu.min(), 0)[0], hall(uu.max(), 0)[0]], 'bbox_z_m': [hall(0, vv.min())[1], hall(0, vv.max())[1]],
                           'centroid_m': list(hall(uu.mean(), vv.mean())),
-                          'hull_m': hpts, 'kind': 'loop (encloses an area)' if len(er) * cell * cell > px else ('stroke' if px < 0.35 * max(1, (np.ptp(uu) + 1) * (np.ptp(vv) + 1)) else 'filled area')})
+                          'loops': loops, 'hull_m': hpts, 'kind': 'loop (encloses an area)' if len(er) * cell * cell > px else ('stroke' if px < 0.35 * max(1, (np.ptp(uu) + 1) * (np.ptp(vv) + 1)) else 'filled area')})
     zones.sort(key=lambda z: (z['colour'], -z['px']))
     # per colour, all its zones together: a loop his notes cut into pieces still reads as one outline
     for name in sorted({z['colour'] for z in zones}):

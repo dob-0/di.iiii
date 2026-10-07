@@ -46,17 +46,25 @@ def tilt(p):
 def main():
     a = argparse.ArgumentParser()
     a.add_argument('--survey', required=True)
-    a.add_argument('--shots', required=True)
+    a.add_argument('--shots', required=True, nargs='+', help='one or more shot-list.json files, in order')
+    a.add_argument('--first', help='JSON file of OPEN questions [{what, why, status}] to put at the very top of the page')
     a.add_argument('--out', required=True)
     o = a.parse_args()
     src = open(os.path.expanduser(o.survey)).read()
     if MARK not in src:
         raise SystemExit('the survey page has no "%s" heading to insert before' % MARK)
-    shots = json.load(open(os.path.expanduser(o.shots)))
+    shots = [s_ for f in o.shots for s_ in json.load(open(os.path.expanduser(f)))]
     out = os.path.expanduser(o.out)
     if os.path.abspath(out) == os.path.abspath(os.path.expanduser(o.survey)):
         raise SystemExit('refusing to overwrite the source page: write a copy')
-    open(out, 'w').write(src.replace(MARK, section(shots) + MARK, 1))
+    page = src.replace(MARK, section(shots) + MARK, 1)
+    if o.first:
+        first = json.load(open(os.path.expanduser(o.first)))
+        top = ''.join('<div class="item top"><div class="row"><span class="n">!</span><span class="what">%s</span></div><div class="meta">%s <b>%s</b></div></div>\n'
+                      % (html.escape(q['what']), html.escape(q['why']), html.escape(q['status'])) for q in first)
+        h2 = page.index('<h2>')
+        page = page[:h2] + '<h2>first: OPEN</h2>\n' + top + page[h2:]
+    open(out, 'w').write(page)
     print('%s: %d shots added before "the list"' % (out, len(shots)))
 
 

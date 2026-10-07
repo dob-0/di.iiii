@@ -612,7 +612,7 @@ def fixture_items(items, cam, f, lit):
         for k, ray in enumerate(a['_rays']):
             if k % 5 != 2:            # the field's middle row of rays (9 of 45): the web as it reads
                 continue
-            cone_items(items, cam, f['p'], np.array(ray['dir']), ray['t'], 0.06, '#3cff3c', 0.75, fall=200, ap0=0.006, step=2.0)
+            cone_items(items, cam, f['p'], np.array(ray['dir']), ray['t'], 0.06, f.get('colour') or '#3cff3c', 0.75, fall=200, ap0=0.006, step=2.0)
         return
     t = (a['axis_first_hit']['t'] or OC.reach_of(f)) if a else OC.reach_of(f)
     half = OC.half_of(f)
@@ -787,7 +787,7 @@ def section_ax(ax, fx, lasers_only=False):
         a = RES.get(f['id'])
         if k == 'laser' and a:
             for ray in a['_rays']:
-                ax.plot([f['p'][2], ray['end'][2]], [f['p'][1], ray['end'][1]], color='#3cff3c', lw=0.5, alpha=0.6, zorder=6)
+                ax.plot([f['p'][2], ray['end'][2]], [f['p'][1], ray['end'][1]], color=f.get('colour') or '#3cff3c', lw=0.5, alpha=0.6, zorder=6)
         elif a and f['d'] is not None and k in ('par', 'beam', 'wash', 'spot'):
             t = a['axis_first_hit']['t'] or OC.reach_of(f)
             q = f['p'] + f['d'] * t
