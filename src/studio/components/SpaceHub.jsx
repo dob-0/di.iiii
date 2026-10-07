@@ -314,6 +314,7 @@ export default function SpaceHub() {
     const [history, setHistory] = useState(null)
     const [providers, setProviders] = useState(null) // null until sign-in requested
     const [copiedLiveId, setCopiedLiveId] = useState(null)
+    const [copiedDomainId, setCopiedDomainId] = useState(null)
     // Spaces whose cover image failed to load — see the card preview below.
     const [brokenCovers, setBrokenCovers] = useState(() => new Set())
     const [copiedInviteId, setCopiedInviteId] = useState(null)
@@ -548,13 +549,17 @@ export default function SpaceHub() {
         }
     }, [loadSpaces])
 
-    const handleCopyLiveLink = useCallback(async (space, e) => {
+    // `which`: 'share' (default, the constellation's one Copy link) hands out the
+    // space's own domain when it has one; 'platform' / 'domain' are the card's
+    // two explicit lines.
+    const handleCopyLiveLink = useCallback(async (space, e, which = 'share') => {
         e.stopPropagation()
-        const url = getSpaceShareUrl(space.id)
+        const url = getSpaceShareUrl(space.id, which === 'platform' ? '' : (space.domain || ''))
         try {
             await navigator.clipboard.writeText(url)
-            setCopiedLiveId(space.id)
-            setTimeout(() => setCopiedLiveId(null), 2000)
+            const [setCopied, mark] = which === 'domain' ? [setCopiedDomainId, space.id] : [setCopiedLiveId, space.id]
+            setCopied(mark)
+            setTimeout(() => setCopied(null), 2000)
         } catch {
             window.prompt('Copy live link', url)
         }
@@ -1259,8 +1264,23 @@ export default function SpaceHub() {
                                             >
                                                 {getSpaceShareUrl(space.id)}
                                             </a>
-                                            <button className="ssh-card-btn" onClick={e => handleCopyLiveLink(space, e)}>
+                                            <button className="ssh-card-btn" onClick={e => handleCopyLiveLink(space, e, 'platform')}>
                                                 {copiedLiveId === space.id ? 'Copied' : 'Copy'}
+                                            </button>
+                                        </div>
+                                    )}
+                                    {space.isPublic && space.domain && (
+                                        <div className="ssh-live-link ssh-live-link--domain" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                                            <a
+                                                className="ssh-live-url"
+                                                href={getSpaceShareUrl(space.id, space.domain)}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                            >
+                                                {getSpaceShareUrl(space.id, space.domain)}
+                                            </a>
+                                            <button className="ssh-card-btn" onClick={e => handleCopyLiveLink(space, e, 'domain')}>
+                                                {copiedDomainId === space.id ? 'Copied' : 'Copy'}
                                             </button>
                                         </div>
                                     )}

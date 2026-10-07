@@ -195,6 +195,30 @@ describe('SpaceHub', () => {
         expect(screen.queryByText('On this machine')).toBeNull()
     })
 
+    // SPEC_space_own_domain.md: a second link line, under the platform one, for a space with a live own domain.
+    it('shows the own-domain link under the platform link, each with its own Copy', async () => {
+        listServerSpaces.mockResolvedValue([
+            { id: 'taronx', label: 'Taron', isOwner: false, isPublic: true, domain: 'yokozo.xyz' },
+            { id: 'plain', label: 'Plain', isOwner: false, isPublic: true, domain: null }
+        ])
+        const writeText = vi.fn().mockResolvedValue(undefined)
+        Object.assign(navigator, { clipboard: { writeText } })
+
+        render(<SpaceHub />)
+        await findCard('taronx')
+
+        const lines = [...cardOf('taronx').querySelectorAll('.ssh-live-link')]
+        expect(lines).toHaveLength(2)
+        expect(lines[0].querySelector('.ssh-live-url').textContent).toBe(`${window.location.origin}/taronx`)
+        expect(lines[1].querySelector('.ssh-live-url').textContent).toBe('https://yokozo.xyz/')
+        expect(cardOf('plain').querySelectorAll('.ssh-live-link')).toHaveLength(1)
+
+        fireEvent.click(lines[0].querySelector('.ssh-card-btn'))
+        await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(`${window.location.origin}/taronx`))
+        fireEvent.click(lines[1].querySelector('.ssh-card-btn'))
+        await waitFor(() => expect(writeText).toHaveBeenLastCalledWith('https://yokozo.xyz/'))
+    })
+
     it('shows management actions only on spaces the account owns', async () => {
         listServerSpaces.mockResolvedValue([
             { id: 'mine', label: 'Mine', isOwner: true },

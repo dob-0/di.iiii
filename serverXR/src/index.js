@@ -2081,6 +2081,8 @@ registerDomainRoutes(router, {
 })
 
 const { replaceSceneAndBroadcast, restoreSnapshotAndBroadcast } = registerSpaceRoutes(router, {
+  findPrimaryHostForSpace: domainStore.findPrimaryActiveHostForSpace,
+  mapPrimaryHosts: domainStore.mapPrimaryActiveHosts,
   appendOpsHistory,
   applySceneOps,
   blankScene: BLANK_SCENE,
