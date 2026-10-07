@@ -162,6 +162,26 @@
       "photos": "954 t3.6, 023",
       "confidence": "low-medium: x +-0.8, z +-2.5",
       "how": "954 u 1075-1150, v 560-655; 023 u 800-980, v 2340-2620. Cone bottom DLT (4.6, 0.5, 21.2), depth (4.5, 18.4) and (2.6, 16.9)."
+    },
+    {
+      "id": "roller-conveyor",
+      "label": "roller conveyor (a line of steel rollers on a frame, about 0.85 m high) from the duct elbow/hopper toward the entry, ending just past the front white bag",
+      "x_m": [
+        3.6,
+        4.6
+      ],
+      "z_m": [
+        16.5,
+        24.0
+      ],
+      "y_m": [
+        0.0,
+        0.85
+      ],
+      "material": "machine",
+      "photos": "954 t3.6 (owner's mark 2026-10-07: 'metal thing .png', the end rollers seen end-on beside bag 7), 004, 009 (the whole line from above, from z 45), 005 (its end beside bag 7 from the floor at z 48)",
+      "confidence": "low: x +-1, z +-2.5 (ends), top +-0.2. The two-view DLT of its near end did not close (954 vs 004 rays miss by 184/75 px: the VGGT cameras are not good enough at this range), so it is placed RELATIVE to objects already fixed from two sides: it starts at the duct elbow/hopper (x 4.0-5.3, z 16-18.5) and ends beside bag 7 (front foot (4.1, 24.3) from the fitted 954 camera); 004 alone, on a 0.8 m plane, gives x 3.2-3.3, z 16.4-26.3.",
+      "how": "Owner marked it 2026-10-07 on frame 954 @3.6 s ('METAL', box beside bag 7). Seen in 004/009 as a continuous roller line beside the bags (the bags stand in a row there, clustered in 954/005: the bags moved, the conveyor did not -> fixed). Tape on 10-08: both ends from the column line z 24 and from the nave axis."
     }
   ],
   "movable_note": {
