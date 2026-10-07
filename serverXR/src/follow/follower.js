@@ -231,12 +231,14 @@ const KEY_EXPIRY_WARN_MS = 14 * 24 * 60 * 60 * 1000
  */
 const MANAGE_TOKEN = /^dii_sync_m/
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
-const cleartextManageRefusal = (base, token) => {
+const cleartextManageRefusal = (base, token, address = null) => {
     if (!MANAGE_TOKEN.test(String(token || '').trim())) return null
     let url
     try { url = new URL(base) } catch { return 'a manage key needs an https address' }
     if (url.protocol === 'https:') return null
-    const host = url.hostname.toLowerCase()
+    // The socket goes to the ADDRESS PIN when there is one, not to the name in
+    // the URL (review R2-D): that is the address that must be this machine.
+    const host = String(address || url.hostname).replace(/^\[|\]$/g, '').toLowerCase()
     if (LOOPBACK_HOSTS.has(host) || /^127\./.test(host)) return null
     return `a manage key is sent only over https (or to this machine) — ${url.host} is plain http; follow it at an https address, or with an ordinary key`
 }
@@ -1082,7 +1084,7 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
     }
 
     // Refused before a single request carries the key (review L2).
-    const refusal = cleartextManageRefusal(remote.base, remote.token)
+    const refusal = cleartextManageRefusal(remote.base, remote.token, remote.address)
     if (refusal) {
         state = { ...state, status: 'refused', lastError: refusal }
         log.warn?.(`[follow] ${local.spaceId}: ${refusal}`)

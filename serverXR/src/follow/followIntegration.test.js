@@ -1576,7 +1576,7 @@ describe('with a manage key, a project\'s life made here reaches the host', () =
     const warned = []
     const { createAuthSessionValue } = require('../authSession.js')
     // The host's owner, signed in: the only one who may mint a manage key.
-    const ownerCookie = `dii_serverxr_session=${createAuthSessionValue({ secret: 'test-session-secret', session: { subject: 'host-owner', label: 'Owner', role: 'admin', spaces: [], tokenVersion: 0 } }).value}`
+    const ownerCookie = `dii_serverxr_session=${createAuthSessionValue({ secret: 'test-session-secret', session: { subject: 'host-owner', label: 'Owner', role: 'admin', spaces: [], tokenVersion: 0, via: 'signin' } }).value}`
 
     const api = async (server, route, { method = 'GET', body = null } = {}) => {
         const response = await fetch(`${server.baseUrl}${route}`, { method, headers: authHeaders, ...(body ? { body: JSON.stringify(body) } : {}) })
@@ -1713,7 +1713,7 @@ describe('a host that only says it trashed a project never undoes this install\'
     let passes = 0
     const warned = []
     const { createAuthSessionValue } = require('../authSession.js')
-    const ownerCookie = `dii_serverxr_session=${createAuthSessionValue({ secret: 'test-session-secret', session: { subject: 'host-owner', label: 'Owner', role: 'admin', spaces: [], tokenVersion: 0 } }).value}`
+    const ownerCookie = `dii_serverxr_session=${createAuthSessionValue({ secret: 'test-session-secret', session: { subject: 'host-owner', label: 'Owner', role: 'admin', spaces: [], tokenVersion: 0, via: 'signin' } }).value}`
     const api = async (server, route, { method = 'GET', body = null } = {}) => {
         const response = await fetch(`${server.baseUrl}${route}`, { method, headers: authHeaders, ...(body ? { body: JSON.stringify(body) } : {}) })
         return { status: response.status, payload: await response.json().catch(() => null) }

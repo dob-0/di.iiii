@@ -35,7 +35,7 @@ let sandbox = null
 const OWNER_ID = 'owner-under-test'
 const ownerCookie = `dii_serverxr_session=${createAuthSessionValue({
     secret: SESSION_SECRET,
-    session: { subject: 'owner-under-test', label: 'Owner', role: 'admin', spaces: [], tokenVersion: 0 }
+    session: { subject: 'owner-under-test', label: 'Owner', role: 'admin', spaces: [], tokenVersion: 0, via: 'signin' }
 }).value}`
 
 const call = async (route, { method = 'GET', body = null, token = null, cookie = null, also = null } = {}) => {
@@ -158,6 +158,23 @@ describe('who can mint a manage key', () => {
         const edit = (await mint('space-a')).payload.key
         expect(Math.round((manage.expiresAt - manage.createdAt) / day)).toBe(90)
         expect(Math.round((edit.expiresAt - edit.createdAt) / day)).toBe(365)
+    })
+
+    it('a person who signed in keeps the stamp when the server re-issues the cookie, and can still mint', async () => {
+        // Password sign-up is a sign-in door; creating a space re-issues the cookie (the space grant).
+        const signed = await call('/api/auth/password/register', { method: 'POST', body: { username: 'keeps-stamp', password: 'keeps-stamp-long-password' } })
+        expect(signed.status, JSON.stringify(signed.payload)).toBe(201)
+        let cookie = /dii_serverxr_session=[^;]+/.exec(signed.setCookie || '')?.[0]
+        const made = await call('/api/spaces', { method: 'POST', cookie, body: { slug: 'stamp-space', label: 'stamp' } })
+        expect(made.status, JSON.stringify(made.payload)).toBe(201)
+        cookie = /dii_serverxr_session=[^;]+/.exec(made.setCookie || '')?.[0] || cookie
+        const resync = await call('/api/auth/session', { cookie })
+        cookie = /dii_serverxr_session=[^;]+/.exec(resync.setCookie || '')?.[0] || cookie
+        expect((await call('/api/spaces/stamp-space/sync-keys', { method: 'POST', cookie, body: { label: 'mine', manage: true } })).status).toBe(201)
+        // A cookie with no stamp at all (signed before stamps existed) is refused: sign in again.
+        const unstamped = `dii_serverxr_session=${createAuthSessionValue({ secret: SESSION_SECRET, session: { subject: OWNER_ID, label: 'Owner', role: 'admin', spaces: [], tokenVersion: 0 } }).value}`
+        const refused = await call('/api/spaces/space-a/sync-keys', { method: 'POST', cookie: unstamped, body: { label: 'old cookie', manage: true } })
+        expect(refused.status).toBe(403)
     })
 
     it('a sync key never can, not even a manage key of the same space', async () => {

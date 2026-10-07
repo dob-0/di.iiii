@@ -194,6 +194,14 @@ const authIdentityLookup = new Map(authIdentities.map(identity => [identity.toke
 // one isn't a new escalation the way falling back to a lower-role one would be.
 const adminFallbackToken = authIdentities.find(identity => identity.role === 'admin')?.token
 const authSessionSecret = (process.env.AUTH_SESSION_SECRET || apiToken || adminFallbackToken || '').trim()
+// Is the cookie key its OWN secret, not one of the API tokens? When it falls
+// back to a token, whoever holds that token can forge a session for any
+// account, so a "person signed in" stamp proves nothing: manage sync keys are
+// then not minted from a session at all (SPEC_space_sync_keys.md §13.4, review
+// R2-C). index.js says so once at startup.
+const authSessionSecretSeparate = Boolean(authSessionSecret) &&
+  Boolean((process.env.AUTH_SESSION_SECRET || '').trim()) &&
+  !authIdentities.some(identity => identity.token === authSessionSecret)
 // The token the server uses to call ITSELF (GitHub space-sync pulls a repo and
 // then writes it back through its own HTTP routes). Docker passes only
 // ADMIN_API_TOKEN, never API_TOKEN, so without this fallback every webhook and
@@ -307,7 +315,8 @@ const config = {
   auth: {
     identities: authIdentities.map(({ token, ...identity }) => ({ ...identity })),
     resolveIdentity: (token = '') => authIdentityLookup.get(String(token || '').trim()) || null,
-    sessionSecret: authSessionSecret
+    sessionSecret: authSessionSecret,
+    sessionSecretSeparate: authSessionSecretSeparate
   },
   directories: {
     root: ROOT_DIR,

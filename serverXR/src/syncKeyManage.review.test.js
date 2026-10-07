@@ -7,6 +7,8 @@
 // account row (a manage key is minted only by a person who signed in — the H1
 // fix), and the second key of a move rides in the body, where the server reads
 // it (the L4 fix), so C1 reaches the owner check instead of stopping earlier.
+// Round 2 adds a third: the crafted admin cookie carries `via: 'signin'`, the
+// stamp a sign-in door puts on a session (the R2-B fix).
 
 import { mkdtemp, rm } from 'node:fs/promises'
 import { createRequire } from 'node:module'
@@ -32,7 +34,7 @@ let sandbox = null
 
 const ownerCookie = `${COOKIE}=${createAuthSessionValue({
     secret: SESSION_SECRET,
-    session: { subject: 'owner-under-test', label: 'Owner', role: 'admin', spaces: [], tokenVersion: 0 }
+    session: { subject: 'owner-under-test', label: 'Owner', role: 'admin', spaces: [], tokenVersion: 0, via: 'signin' }
 }).value}`
 
 const call = async (route, { method = 'GET', body = null, token = null, cookie = null, also = null } = {}) => {

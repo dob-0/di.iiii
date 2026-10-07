@@ -90,6 +90,10 @@ const {
 } = require('./userStore')
 const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, getSyncKey, otherLiveKeys, TTL_MS: SYNC_KEY_TTL_MS, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
 const syncKeyActions = require('./syncKeyActions')
+// Said once, where the operator reads the log (review R2-C).
+if (config.requireAuth && !config.auth.sessionSecretSeparate) {
+  logger.warn('[auth] AUTH_SESSION_SECRET is not set apart from the API tokens: session cookies are signed with a token, so manage sync keys cannot be minted from a session (only by the owner at the machine). Set AUTH_SESSION_SECRET to its own random value.')
+}
 const { mintInvite, resolveInvite, markInviteUsed, listInvites, revokeInvite } = require('./inviteStore')
 const githubApp = require('./githubApp')
 const spaceSyncPlan = require('./spaceSyncPlan')
@@ -720,6 +724,16 @@ const readAuthSession = (req) => {
 // Only past halfway, so an ordinary page load does not re-sign a cookie on
 // every request; and only for real session cookies, never for the API-token or
 // sync-key identities, which have no cookie to refresh.
+// Every cookie re-issued from an existing session goes through here, so how the
+// session began — `via: 'signin'` (a person signed in) or `via: 'token'` (made
+// from an API token) — is carried by construction and can never be dropped
+// (review R2-B). Only the sign-in doors set `via` in the first place.
+const reissueSessionValue = (previous, { ttlMs = config.authSession.ttlMs, session }) => createAuthSessionValue({
+  secret: config.auth.sessionSecret,
+  ttlMs,
+  session: { ...session, ...(previous?.via ? { via: previous.via } : {}) }
+})
+
 const refreshSessionCookieIfStale = (req, res, state) => {
   if (!state?.authenticated || state.type !== 'session') return
   const session = state.session
@@ -732,8 +746,7 @@ const refreshSessionCookieIfStale = (req, res, state) => {
   // has begun streaming.
   if (res.headersSent) return
   try {
-    const next = createAuthSessionValue({
-      secret: config.auth.sessionSecret,
+    const next = reissueSessionValue(session, {
       ttlMs: ttl,
       session: {
         subject: session.subject,
@@ -741,9 +754,7 @@ const refreshSessionCookieIfStale = (req, res, state) => {
         role: state.role,
         spaces: state.spaces,
         ...(state.isUnrestricted ? { isUnrestricted: true } : {}),
-        tokenVersion: session.tokenVersion,
-        // A token-made session stays marked through every refresh (§13.4).
-        ...(session.via ? { via: session.via } : {})
+        tokenVersion: session.tokenVersion
       }
     })
     setAuthSessionCookie(res, next.value)
@@ -895,9 +906,7 @@ const grantSpaceToSessionUser = (req, res, userId, spaceId) => {
   try { setUserSpacesNow(userId, nextSpaces) } catch { return }
   if (req.authState?.type === 'session' && config.auth.sessionSecret) {
     try {
-      const session = createAuthSessionValue({
-        secret: config.auth.sessionSecret,
-        ttlMs: config.authSession.ttlMs,
+      const session = reissueSessionValue(req.authState.session, {
         session: {
           subject: userId,
           label: req.authState.label,
@@ -1143,7 +1152,9 @@ const issueSessionForUser = async (req, res, user) => {
       role: user.role,
       spaces: Array.isArray(user.spaces) ? user.spaces : [],
       ...(user.isUnrestricted ? { isUnrestricted: true } : {}),
-      tokenVersion: user.tokenVersion
+      tokenVersion: user.tokenVersion,
+      // A person signed in: the one stamp that may mint a manage key (§13.4).
+      via: 'signin'
     }
   })
   setAuthSessionCookie(res, session.value)
@@ -1199,9 +1210,7 @@ router.get('/api/auth/session', async (req, res, next) => {
           const sortedDb = [...dbSpaces].sort().join(',')
           const sortedCookie = [...(state.spaces || [])].sort().join(',')
           if (dbRole !== state.role || sortedDb !== sortedCookie || dbUnrestricted !== Boolean(state.isUnrestricted)) {
-            const fresh = createAuthSessionValue({
-              secret: config.auth.sessionSecret,
-              ttlMs: config.authSession.ttlMs,
+            const fresh = reissueSessionValue(state.session, {
               session: { subject: state.subject, label: state.label, role: dbRole, spaces: dbSpaces, isUnrestricted: dbUnrestricted, tokenVersion: dbUser.tokenVersion }
             })
             setAuthSessionCookie(res, fresh.value)
@@ -1466,28 +1475,49 @@ const canManageProjectsState = (state, meta) => {
 // it may have no live or used invite and no live key but the move's own. A
 // project that is not private may not go into a space open to visitors unless
 // it came from one. Returns the reason to refuse, or null.
-const keyMoveWidensAccess = ({ fromMeta, toMeta, project, alsoKeyId }) => {
-  if (!fromMeta || !toMeta) return 'one of the two spaces is not there'
-  if (toMeta.kind && toMeta.kind !== 'normal') return `"${toMeta.id}" is a ${toMeta.kind} space, open to more people`
-  if (project?.meta?.visibility !== 'private' && toMeta.isPublic && !fromMeta.isPublic) {
-    return `"${toMeta.id}" is open to every visitor and "${fromMeta.id}" is not`
-  }
-  const membersOf = (meta) => {
-    const ids = new Set([meta.ownerUserId, ...(meta.trustedUserIds || [])].filter(Boolean))
-    const rows = getDb().prepare('SELECT id, spaces FROM users WHERE spaces LIKE ?').all(`%${JSON.stringify(meta.id)}%`)
-    for (const row of rows) {
-      try { if (JSON.parse(row.spaces || '[]').includes(meta.id)) ids.add(row.id) } catch { /* unreadable row: not counted */ }
+const keyMoveWidensAccess = async ({ fromMeta, toMeta, project, alsoKeyId }) => {
+  // Fail closed (review R2-A): any audience this cannot count is a refusal,
+  // and so is any error while counting.
+  try {
+    if (!fromMeta || !toMeta) return 'one of the two spaces is not there'
+    if (toMeta.kind && toMeta.kind !== 'normal') return `"${toMeta.id}" is a ${toMeta.kind} space, open to more people`
+    // The communal open space: every signed-in identity, every guest cookie
+    // included, reaches it (authAccess.js canAccessSpace) — whatever its kind
+    // says, since an admin can point the open space at an existing normal one.
+    const guestSpaces = new Set([getCommunalSpaceId(), await resolveOpenSpaceId(), ...(Array.isArray(GUEST_SPACES) ? GUEST_SPACES : [])]
+      .map(id => (id ? normalizeSpaceId(String(id)) || String(id) : null)).filter(Boolean))
+    if (guestSpaces.has(toMeta.id) || guestSpaces.has('*')) return `"${toMeta.id}" is the open space every guest reaches`
+    if (project?.meta?.visibility !== 'private' && toMeta.isPublic && !fromMeta.isPublic) {
+      return `"${toMeta.id}" is open to every visitor and "${fromMeta.id}" is not`
     }
-    return ids
+    const membersOf = (meta) => {
+      const ids = new Set([meta.ownerUserId, ...(meta.trustedUserIds || [])].filter(Boolean).map(id => `account:${id}`))
+      const rows = getDb().prepare('SELECT id, spaces FROM users WHERE spaces LIKE ?').all(`%${JSON.stringify(meta.id)}%`)
+      for (const row of rows) {
+        // An unreadable row is not "nobody": it is an audience that cannot be counted.
+        const spaces = JSON.parse(row.spaces || '[]')
+        if (spaces.includes(meta.id)) ids.add(`account:${row.id}`)
+      }
+      // Static API-token identities with a space list (AUTH_IDENTITIES,
+      // *_ALLOWED_SPACES): a token scoped to the destination gains access too.
+      // An admin or unrestricted token reaches both spaces alike.
+      for (const identity of config.auth.identities || []) {
+        const spaces = Array.isArray(identity?.spaces) ? identity.spaces.map(id => normalizeSpaceId(String(id)) || String(id)) : null
+        if (spaces && spaces.includes(meta.id)) ids.add(`token:${identity.subject}`)
+      }
+      return ids
+    }
+    const source = membersOf(fromMeta)
+    const newcomers = [...membersOf(toMeta)].filter(id => !source.has(id))
+    if (newcomers.length) return `"${toMeta.id}" is shared with ${newcomers.length} ${newcomers.length === 1 ? 'account or token' : 'accounts or tokens'} "${fromMeta.id}" is not`
+    const now = Date.now()
+    const invites = getDb().prepare('SELECT COUNT(*) AS n FROM space_invites WHERE space_id = ? AND (use_count > 0 OR (revoked = 0 AND (expires_at IS NULL OR expires_at > ?)))').get(toMeta.id, now).n
+    if (invites > 0) return `"${toMeta.id}" has invite links out, and who holds them cannot be counted`
+    if (otherLiveKeys(toMeta.id, alsoKeyId, now).length) return `"${toMeta.id}" has other sync keys out, and who holds them cannot be counted`
+    return null
+  } catch (error) {
+    return `who could see it in "${toMeta?.id || 'the other space'}" could not be counted (${error?.message || error})`
   }
-  const source = membersOf(fromMeta)
-  const newcomers = [...membersOf(toMeta)].filter(id => !source.has(id))
-  if (newcomers.length) return `"${toMeta.id}" is shared with ${newcomers.length} ${newcomers.length === 1 ? 'account' : 'accounts'} "${fromMeta.id}" is not`
-  const now = Date.now()
-  const invites = getDb().prepare('SELECT COUNT(*) AS n FROM space_invites WHERE space_id = ? AND (use_count > 0 OR (revoked = 0 AND (expires_at IS NULL OR expires_at > ?)))').get(toMeta.id, now).n
-  if (invites > 0) return `"${toMeta.id}" has invite links out, and who holds them cannot be counted`
-  if (otherLiveKeys(toMeta.id, alsoKeyId, now).length) return `"${toMeta.id}" has other sync keys out, and who holds them cannot be counted`
-  return null
 }
 
 // Route-level gate for space management writes. Sits on top of
@@ -2286,8 +2316,13 @@ const mayMintManageKey = (state) => {
   if (!state?.authenticated) return false
   if (state.type === 'disabled') return true
   if (state.type !== 'session' || isGuestSubject(state.subject)) return false
-  if (state.session?.via === 'token') return false
+  // The owner at the machine (localOwner.js): no cookie at all, so nothing to forge or carry.
   if (state.subject === 'local-owner' && !state.session) return true
+  // A cookie must say a person signed in (review R2-B: a positive stamp, not
+  // the absence of a token mark), the cookie key must be its own secret
+  // (R2-C), and the account must exist.
+  if (state.session?.via !== 'signin') return false
+  if (!config.auth.sessionSecretSeparate) return false
   try { return Boolean(findUserById(state.subject)) } catch { return false }
 }
 
@@ -2306,6 +2341,12 @@ router.post('/api/spaces/:spaceId/sync-keys', syncKeyMintLimiter, async (req, re
     const ownerUserId = manage
       ? (ctx.meta.ownerUserId || null)
       : (ctx.state.type === 'session' ? ctx.state.subject : (ctx.meta.ownerUserId || null))
+    if (manage && !mayMintManageKey(ctx.state) && config.requireAuth && !config.auth.sessionSecretSeparate && ctx.state.subject !== 'local-owner') {
+      return res.status(403).json({
+        error: 'This server signs its session cookies with an API token (AUTH_SESSION_SECRET is not set apart), so a session cannot prove a person signed in. Set AUTH_SESSION_SECRET, or mint the manage key at the machine.',
+        code: 'manage_needs_session_secret'
+      })
+    }
     if (manage && !mayMintManageKey(ctx.state)) {
       return res.status(403).json({
         error: "A manage key is minted from a signed-in session of the space's owner (or an admin), never with a token.",
@@ -2517,8 +2558,7 @@ router.post('/api/invites/redeem', inviteRedeemLimiter, async (req, res, next) =
         return res.status(503).json({ error: 'Sessions are unavailable.' })
       }
       const nextSpaces = [...(state.spaces || []), spaceId]
-      const session = createAuthSessionValue({
-        secret: config.auth.sessionSecret,
+      const session = reissueSessionValue(state.session, {
         ttlMs: GUEST_SESSION_TTL_MS,
         session: {
           subject: state.subject,

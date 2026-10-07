@@ -45,6 +45,13 @@ describe('a manage key is sent only over https, or to this machine', () => {
         expect(cleartextManageRefusal('http://192.168.1.20:4000/serverXR', edit)).toBe(null)
     })
 
+    it('reads the address pin, not only the name in the URL (review R2-D)', () => {
+        expect(cleartextManageRefusal('http://127.0.0.1:4000/serverXR', manage, '192.168.1.20')).toMatch(/only over https/)
+        expect(cleartextManageRefusal('http://localhost:4000/serverXR', manage, '100.87.4.12')).toMatch(/only over https/)
+        expect(cleartextManageRefusal('http://studio.example:4000/serverXR', manage, '127.0.0.1')).toBe(null)
+        expect(cleartextManageRefusal('https://studio.example/serverXR', manage, '192.168.1.20')).toBe(null)
+    })
+
     it('a follow given one over http does not start, sends nothing, and says why', async () => {
         const sent = []
         const follower = startFollowing({

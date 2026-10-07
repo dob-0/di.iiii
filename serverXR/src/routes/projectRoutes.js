@@ -565,7 +565,7 @@ function registerProjectRoutes(router, {
           let why = null
           if (req.body?.unpublish === true) why = "A sync key does not unpublish a space's front door — the space's owner does."
           else {
-            const widens = typeof keyMoveWidensAccess === 'function' ? keyMoveWidensAccess({ fromMeta, toMeta, project, alsoKeyId: also.keyId }) : 'this server cannot check who would gain access'
+            const widens = typeof keyMoveWidensAccess === 'function' ? await keyMoveWidensAccess({ fromMeta, toMeta, project, alsoKeyId: also.keyId }) : 'this server cannot check who would gain access'
             if (widens) why = `${widens}; a sync key does not move a project where somebody new could see it — do this signed in.`
           }
           if (why) {
