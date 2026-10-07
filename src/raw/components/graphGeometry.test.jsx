@@ -109,7 +109,9 @@ const LOD_LABELS_BOUNDARY = 0.62
 // glitch rather than as a bug, and would be found late.
 describe('containers did not change shape when they gained outputs', () => {
     it.each([
-        ['universe.world', 2, 2],
+        // 3 / 3 since 2026-10-02: Objects in, Picture out (owner, nodes audit).
+        // Both APPENDED, so Title and Sky keep their rows and their wires.
+        ['universe.world', 3, 3],
         ['universe.desk.3d', 5, 3],
         ['universe.space', 1, 0],
         ['studio', 1, 1]
@@ -125,8 +127,17 @@ describe('containers did not change shape when they gained outputs', () => {
         const { container } = render(
             <RawGraphSurface nodes={[world]} edges={[]} initialZoom={1} />
         )
-        // 44 header + 2 rows of 22 + 8 — the same arithmetic as before, because
-        // two outputs cannot exceed two inputs.
-        expect(container.querySelector('.raw-graph-node-card').style.height).toBe('96px')
+        // 44 header + 3 rows of 22 + 8. The third row is the Objects INPUT
+        // (2026-10-02); Picture shares it, because three outputs cannot exceed
+        // three inputs — outputs still never grow the card.
+        expect(container.querySelector('.raw-graph-node-card').style.height).toBe('118px')
+    })
+})
+
+describe('a Scene gaining Objects and Picture moved no existing joint', () => {
+    it('Title and Sky keep rows 0 and 1 on both sides', () => {
+        const type = getNodeType('universe.world')
+        expect(type.inputs.slice(0, 2).map((port) => port.id)).toEqual(['title', 'bgColor'])
+        expect(type.outputs.slice(0, 2).map((port) => port.id)).toEqual(['title', 'bgColor'])
     })
 })

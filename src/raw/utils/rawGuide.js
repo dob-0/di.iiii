@@ -1,3 +1,5 @@
+import { KEYMAP } from '../input/keymap.js'
+
 const MANUAL_PATH = 'docs/raw/USER_MANUAL.md'
 
 // The in-product help's DATA, rewritten 2026-08-20 for the product as it
@@ -19,13 +21,13 @@ export const GUIDE_SECTIONS = [
         callouts: [
             { icon: '◎', title: 'Make', detail: 'Double-click, type a name' },
             { icon: '→', title: 'Wire', detail: 'Drag port to port' },
-            { icon: '›', title: 'Enter', detail: 'Step inside a card' }
+            { icon: '›', title: 'Open', detail: 'Double-click a card' }
         ],
         controls: [
             ['Add', 'Double-click or double-tap the canvas'],
             ['Search', 'Cmd/Ctrl+K, or just type /'],
             ['Delete', 'Select, then Delete or Backspace'],
-            ['Rename', 'Select, then click its name in the inspector'],
+            ['Rename', 'Select, then N or F2 — or click its name in the panel'],
             ['Duplicate', 'Cmd/Ctrl+D'],
             ['Undo · Redo', 'Cmd/Ctrl+Z · Cmd/Ctrl+Y'],
             ['Close', 'Esc closes help']
@@ -76,19 +78,19 @@ export const GUIDE_SECTIONS = [
         title: 'A thing is a place',
         description: 'Enter a card, build inside it, come back out.',
         callouts: [
-            { icon: '›', title: 'Enter', detail: 'The › on a card' },
+            { icon: '›', title: 'Open', detail: 'Double-click a card' },
             { icon: '‹', title: 'Leave', detail: 'Escape, or ‹ at the top' },
             { icon: '◈', title: 'All the way out', detail: 'The ◈ in the trail' }
         ],
         controls: [
-            ['Enter', 'Press › on a card, or double-click it'],
+            ['Open', 'Double-click a card, press Enter, or Open in its settings'],
             ['Leave', 'Escape, the ‹ button, or hardware Back on a phone'],
             ['Where am I', 'The trail at the top names every level'],
             ['Doorways', 'An In or Out node inside makes a port on the wall']
         ],
         steps: [
             'Make a Geo — the plain container.',
-            'Press › and build inside it: cubes, a Light, anything.',
+            'Open it and build inside: cubes, a Light, anything.',
             'Leave — the Geo carries its contents as one thing.',
             'A Geo inside a Geo works too.'
         ],
@@ -124,6 +126,26 @@ export const GUIDE_SECTIONS = [
             'The audience cannot move an /out view. That is the point.',
             'Escape closes the full screen scene when you are at the top.'
         ]
+    },
+    // Every key and mouse action, written from the ONE table (input/keymap.js),
+    // so this list cannot drift from what the canvas does. `?` opens it.
+    {
+        id: 'keys',
+        label: 'Keys',
+        icon: '⌨',
+        title: 'Keys and mouse',
+        description: 'Letter keys work while the canvas has focus — click it first. Right-click anything for what you can do there.',
+        callouts: [
+            { icon: '⌨', title: 'Keys', detail: 'Click the canvas, then press' },
+            { icon: '☰', title: 'Right-click', detail: 'Or long-press on a phone' },
+            { icon: '?', title: 'This list', detail: 'Press ? any time' }
+        ],
+        controls: KEYMAP.map((row) => [
+            row.does,
+            [row.keys.map((combo) => combo.replace('Ctrl+', 'Cmd/Ctrl+')).join(' · '), row.mouse].filter(Boolean).join(' — ')
+        ]),
+        steps: [],
+        tips: ['Tab is left for moving between buttons, so the keyboard can always get out of the canvas.']
     }
 ]
 

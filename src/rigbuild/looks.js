@@ -96,7 +96,7 @@ const nearestFace = (slot) => {
 // words>"; looks.mjs keys the same group "halo-<group id>").
 export const namedPositionKey = (fixture) => {
     const p = typeof fixture?.position === 'string' ? fixture.position.trim() : ''
-    return /^halo /.test(p) ? p.replace(/\s+/g, '-') : null
+    return /^(halo|named) /.test(p) ? p.replace(/\s+/g, '-') : null
 }
 
 export const lookPoses = ({ entities = [], library, lookId, rigLooks = null }) => {

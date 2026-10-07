@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { generateId } from '../../shared/projectSchema.js'
 
 // A list somebody manages: add, edit, delete, reorder, and move a row from
@@ -17,6 +17,54 @@ import { generateId } from '../../shared/projectSchema.js'
 
 const reindex = (items) => items.map((item, i) => ({ ...item, order: i }))
 
+// A row's text wraps and grows instead of being clipped to whatever width the
+// controls left over (owner 2026-10-02: the ↑ ↓ group × controls took ~230 px
+// and the text got ~280 px of a 660 px window). A textarea grown to its own
+// content — `field-sizing: content` is not in Firefox, the owner's browser.
+function RowText({ value, label, onChange, onNudge }) {
+    const ref = useRef(null)
+    useLayoutEffect(() => {
+        const el = ref.current
+        if (!el) return
+        const fit = () => {
+            el.style.height = 'auto'
+            el.style.height = `${el.scrollHeight}px`
+        }
+        fit()
+        // The window settles its width after the row mounts (on a phone the
+        // clamp narrows it), and a narrower box wraps to more lines: measured
+        // at 390 px, a two-line row kept its one-line height and was cut off.
+        if (typeof ResizeObserver === 'undefined') return
+        let lastWidth = el.clientWidth
+        const observer = new ResizeObserver(() => {
+            if (el.clientWidth === lastWidth) return
+            lastWidth = el.clientWidth
+            fit()
+        })
+        observer.observe(el)
+        return () => observer.disconnect()
+    }, [value])
+    return (
+        <textarea
+            ref={ref}
+            className="raw-list-text"
+            rows={1}
+            value={value}
+            placeholder="What is it?"
+            aria-label={label}
+            onChange={(e) => onChange(e.target.value.replace(/\n/g, ' '))}
+            onKeyDown={(e) => {
+                // A row is one entry: Enter must not hide a second line in it.
+                if (e.key === 'Enter') e.preventDefault()
+                if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+                    e.preventDefault()
+                    onNudge(e.key === 'ArrowUp' ? -1 : 1)
+                }
+            }}
+        />
+    )
+}
+
 export default function ListPanelWindow({ node, values = null, onChange = null }) {
     const source = values ? { ...node, values } : node
     const items = Array.isArray(source.values?.items) ? source.values.items : []
@@ -26,6 +74,8 @@ export default function ListPanelWindow({ node, values = null, onChange = null }
     const readOnly = !onChange
 
     const patch = useCallback((next) => onChange?.(next), [onChange])
+    // The row whose ⋯ menu is open — one at a time.
+    const [menuFor, setMenuFor] = useState(null)
 
     const setItems = useCallback((next) => patch({ items: reindex(next) }), [patch])
 
@@ -113,34 +163,44 @@ export default function ListPanelWindow({ node, values = null, onChange = null }
 
                         <ul className="raw-list-rows">
                             {rows.map((item, ri) => (
-                                <li className="raw-list-row" key={item.id}>
+                                <li className={`raw-list-row${menuFor === item.id ? ' is-menu-open' : ''}`} key={item.id}>
                                     {readOnly ? (
                                         <span className="raw-list-text">{item.text}</span>
                                     ) : (
-                                        <input
-                                            className="raw-list-text"
+                                        <RowText
                                             value={item.text}
-                                            placeholder="What is it?"
-                                            aria-label={`Item ${ri + 1} in ${group}`}
-                                            onChange={(e) => editItem(item.id, e.target.value)}
+                                            label={`Item ${ri + 1} in ${group}`}
+                                            onChange={(text) => editItem(item.id, text)}
+                                            onNudge={(direction) => nudge(item.id, direction)}
                                         />
                                     )}
                                     {!readOnly && (
-                                        <div className="raw-list-row-controls">
+                                        <button
+                                            type="button"
+                                            className="raw-list-btn raw-list-more"
+                                            aria-label={`More for ${item.text || 'this item'}`}
+                                            aria-expanded={menuFor === item.id}
+                                            onClick={() => setMenuFor(menuFor === item.id ? null : item.id)}
+                                        >⋯</button>
+                                    )}
+                                    {!readOnly && menuFor === item.id && (
+                                        <div className="raw-list-row-controls" role="group" aria-label={`Actions for ${item.text || 'this item'}`}>
                                             <button type="button" className="raw-list-btn" aria-label="Move up"
+                                                title="Move up (Alt+↑)"
                                                 disabled={ri === 0} onClick={() => nudge(item.id, -1)}>↑</button>
                                             <button type="button" className="raw-list-btn" aria-label="Move down"
+                                                title="Move down (Alt+↓)"
                                                 disabled={ri === rows.length - 1} onClick={() => nudge(item.id, 1)}>↓</button>
                                             <select
                                                 className="raw-list-move"
                                                 value={group}
                                                 aria-label={`Group of ${item.text || 'this item'}`}
-                                                onChange={(e) => moveToGroup(item.id, e.target.value)}
+                                                onChange={(e) => { moveToGroup(item.id, e.target.value); setMenuFor(null) }}
                                             >
                                                 {groups.map((g) => <option key={g} value={g}>{g}</option>)}
                                             </select>
                                             <button type="button" className="raw-list-btn is-danger" aria-label="Delete"
-                                                onClick={() => deleteItem(item.id)}>×</button>
+                                                onClick={() => { deleteItem(item.id); setMenuFor(null) }}>×</button>
                                         </div>
                                     )}
                                 </li>
