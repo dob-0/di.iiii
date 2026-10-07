@@ -1128,7 +1128,7 @@ export const WIKI_ARTICLES = [
         title: 'When the server does not answer',
         summary: 'Your changes wait in this browser, the page says how many, and they are sent when the server is back.',
         body: [
-            'Every change you make to a project in Studio or Raw is sent to the server that holds it. If that server does not answer — a local install that was stopped, a laptop that lost its network — a bar across the top of the page says so: “Not saved — server unreachable · 3 changes waiting”. Keep working if you like; the count follows.',
+            'Every change you make to a project in Studio or Nodes is sent to the server that holds it. If that server does not answer — a local install that was stopped, a laptop that lost its network — a bar across the top of the page says so: “Not saved — server unreachable · 3 changes waiting”. Keep working if you like; the count follows.',
             { list: [
                 'The waiting changes are kept in this browser, so a reload or a closed tab does not lose them. When the project is opened again and the server answers, they are sent, and the bar goes away.',
                 'Changes the server already has are not sent twice.',
@@ -1138,7 +1138,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['save', 'saving', 'not saved', 'offline', 'server', 'reload', 'sync', 'local'],
-        updated: '2026-10-02'
+        updated: '2026-10-07'
     },
     {
         id: 'google-drive-import',

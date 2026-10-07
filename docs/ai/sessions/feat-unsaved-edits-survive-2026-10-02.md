@@ -18,3 +18,18 @@ gone lived only in tab memory (`pendingQueueRef`) and vanished on reload, tab cl
   the server gone) shows no count and does not retry by itself; replay after pressing Retry was not yet seen in a
   browser. Per origin only — another address is another browser store. Space chat clears a draft sent while
   disconnected; V1 space scene prefers the server copy over unsent local edits on reload.
+
+## 2026-10-07 — brought current with dev; the one guard that failed CI fixed (bug sweep, lane M2)
+
+- The branch was 296 commits behind `dev` and GitHub showed it conflicting (it is a draft and stays one). `git merge
+  origin/dev` into the branch gave one conflict, `docs/ai/known-fixes.md`: dev and this branch each added rows at the
+  top of the same table. Both kept, dev's rows first and this branch's row after them. `src/wiki/wikiContent.js`
+  merged on its own (the `unsaved-changes` article is a new entry here and dev has no article with that id). No source
+  file conflicted: `useProjectDocumentSync.js`, `pendingOpsStore.js`, `projectStore.js` and the tests are this branch's
+  change on top of dev, unchanged. Dev has changed several consumers of the hook since this branch was cut (the Raw
+  and Studio editors, the rig-builder surfaces), so the test files that import the hook were run on the merge.
+- The branch's last CI run (2026-10-02) failed `build-and-test` on one guard, caused by its own wiki article: "in
+  Studio or Raw" where the vocabulary says "Nodes" (`src/copyVocabulary.test.js`, which existed at the branch's
+  base). Now "Studio or Nodes", and the article's `updated` is 2026-10-07.
+- Still undone, as in the pull request: the Raw banner has not been seen in a browser, the app-level "can't reach the
+  server" page still shows no count and does not retry by itself, and edits wait per browser address.
