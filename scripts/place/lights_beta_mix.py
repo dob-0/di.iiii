@@ -40,7 +40,10 @@ ap.add_argument('--plot', default='scripts/place/rigs/moxir-lights-beta-mix-2026
 ap.add_argument('--out', default=None)
 ap.add_argument('--refs', default=None, help='folder of the private reference stills (linked, never embedded)')
 ap.add_argument('--check', action='store_true')
-a = ap.parse_args()
+ap.add_argument('--occlusion', default=None, help='folder of occlusion.py\'s output: adds the "blocked -> fixed" section')
+ap.add_argument('--refs-href', default='refs/', help='where the page finds the private reference stills, relative to it')
+# Imported by occlusion.py as a library: then parse_known_args ignores the importer's flags and nothing below draws.
+a = ap.parse_args() if __name__ == '__main__' else ap.parse_known_args()[0]
 PLOT = json.load(open(os.path.join(a.repo, a.plot)))
 G = L.G
 
@@ -309,7 +312,11 @@ LOOKS = [
 
 
 def look_fx(lk):
-    fx = build(lk.get('over'))
+    # a plot record may re-aim a group for one cue (look_overrides: {look id: {group: {aim, colour}}}): places never change
+    over = dict(lk.get('over') or {})
+    for g, v in (PLOT.get('look_overrides') or {}).get(lk['id'], {}).items():
+        over[g] = dict(over.get(g, {}), **v)
+    fx = build(over)
     if lk['lit'] == 'all':
         lit = {f['id'] for f in fx if not f['spare']}
     else:
@@ -692,9 +699,29 @@ def page(pngs, out):
     data = {'png': {k: b64(v) for k, v in pngs.items()}, 'pngName': {k: os.path.basename(v) for k, v in pngs.items()},
             'checks': CHECKS_PAGE, 'lasers': CHK['lasers'], 'groups': groups, 'moves': moves, 'refs': REF_FINDINGS,
             'looks': [{'id': lk['id'], 'title': lk['title'], 'note': lk['note'], 'layers': lk.get('layers', [])} for lk in LOOKS],
-            'nohd': round(L.NOHD_M), 'mpe': round(L.MPE_E, 1), 'frontLux': CHK['front_row_max_lux'], 'summary': SUMMARY}
+            'nohd': round(L.NOHD_M), 'mpe': round(L.MPE_E, 1), 'frontLux': CHK['front_row_max_lux'], 'summary': SUMMARY,
+            'refsHref': a.refs_href, 'plotFile': a.plot, 'occ': occlusion_data(b64)}
     with open(out, 'w') as fh:
         fh.write(PAGE.replace('__DATA__', json.dumps(data, default=float)))
+
+
+def occlusion_data(b64):
+    """The blocking pass (scripts/place/occlusion.py), when its folder is given: numbers + pictures for section 9."""
+    if not a.occlusion:
+        return None
+    import csv
+    d = os.path.expanduser(a.occlusion)
+    J = json.load(open(os.path.join(d, 'blocking.json')))
+    fixes = list(csv.DictReader(open(os.path.join(d, 'fixes.csv'))))
+    pick = lambda r: {k: r[k] for k in ('n_beams', 'beams_blocked', 'n_lasers', 'lasers_pass', 'laser_rays', 'laser_rays_in_glass', 'laser_rays_on_steel_not_roof',
+                                         'laser_rays_within_0_3m', 'laser_min_over_audience_m', 'laser_mirror_worst_case_under_3m_over_audience', 'box_model_agree', 'looks')}
+    blocked = [{'id': b['id'], 'group': b['group'], 'pct': b['blocked_pct'], 'area': b['blocked_area_pct'],
+                'what': '; '.join('%s at %.1f-%.1f m' % (x['what'], x['t_min'], x['t_max']) for x in b['blockers'])} for b in J['before']['beams'] if b['blocked_pct'] > 0]
+    lasers = [{'id': l['id'], 'ends': l['ends'], 'term': l['termination_m'], 'steel': l['nearest_steel_hit_m'], 'mirror': l['mirror_worst_case_under_3m_over_audience'],
+               'pass': l['pass']} for l in J['after']['lasers']]
+    png = {k: b64(os.path.join(d, k + '.png')) for k in ('blocked', 'blocked-fixed', 'blocked-details', 'shadows-plan', 'shadows-backdrop')}
+    return {'before': pick(J['before']), 'after': pick(J['after']), 'fixes': fixes, 'blocked': blocked, 'lasers': lasers, 'png': png,
+            'tris': J['triangles'], 'sha': J['glb_sha256'][:12], 'boxDisagree': len(J['before']['box_model']['disagree'])}
 
 
 PAGE = r"""<!doctype html>
@@ -771,7 +798,7 @@ for(const r of D.refs){const s=el("section",{background:C.panel,border:"1px soli
   s.appendChild(el("div",{font:"13px/1.5 "+F,color:C.fg,margin:"0 0 10px"},"we took: "+esc(r.took)));
   const row=el("div",{display:"flex",flexWrap:"wrap",gap:"10px",alignItems:"flex-start"});
   const his=el("div",{flex:"1 1 300px",display:"flex",gap:"6px",flexWrap:"wrap"});
-  for(const f of r.stills){const i=img("refs/"+f,"reference still (private)",{width:"auto",maxWidth:"100%",maxHeight:"200px",flex:"0 1 auto"});i.onerror=()=>{i.replaceWith(el("div",{color:C.dim,font:"12px "+F,padding:"8px",border:"1px dashed "+C.line},"refs/"+esc(f)+" (private still, not on this machine)"));};his.appendChild(i);}
+  for(const f of r.stills){const i=img(D.refsHref+f,"reference still (private)",{width:"auto",maxWidth:"100%",maxHeight:"200px",flex:"0 1 auto"});i.onerror=()=>{i.replaceWith(el("div",{color:C.dim,font:"12px "+F,padding:"8px",border:"1px dashed "+C.line},D.refsHref+esc(f)+" (private still, not on this machine)"));};his.appendChild(i);}
   const ours=el("div",{flex:"1 1 420px"});ours.appendChild(img(D.png["look_"+r.look],"our view"));
   const lk=D.looks.find(x=>x.id===r.look);ours.appendChild(el("div",{font:"12px/1.5 "+F,color:C.dim,marginTop:"4px"},esc(lk.title+": "+lk.note)));
   row.appendChild(his);row.appendChild(ours);s.appendChild(row);root.appendChild(s);}
@@ -785,7 +812,31 @@ root.appendChild(det);
 // 8 checks
 h2("8","The checks");
 root.appendChild(table(["check","result","how"],D.checks.map(c=>[c.what,{html:esc(c.result),style:{color:c.ok?C.ok:C.bad}},c.how]),"12.5px/1.45 "));
-root.appendChild(el("div",{color:C.dim,font:"12px/1.55 "+F,marginTop:"26px",borderTop:"1px solid "+C.line,paddingTop:"12px"},"Generated by scripts/place/lights_beta_mix.py (branch feat/moxir-stage-line-2026-10-07, PR #823) from rigs/moxir-lights-beta-mix-2026-10-07.json, the beta's fixtures (rigs/moxir-beta-v0.9-lights-2026-10-07.json, scratch document v61) and hall v8-show-back21. Crane heights are ASSUMED (the far crane's photo value) and the pipe racks are LOW confidence: the 10-08 tape changes numbers, not the plot. PAR and beam intensities are borrowed equivalents (types/moxir.json, basis EQUIVALENT). Not a render, not a lux plot, not a laser safety assessment, not a rigging sign-off."));
+if(D.occ){const O=D.occ;
+h2("9","Blocked &rarr; fixed: the permanent things taken into account");
+p("The owner, 2026-10-08: <i>the place has permanent things and blocking areas, take them into account.</i> Every beam of every fixture was cast against the hall's own model, "+O.tris+" triangles (hall.py's GLB, sha256 "+O.sha+"&hellip;: the space frame member by member, the columns with their heads and upper columns, both runway girders per row, the crane's girders, trolley and cab, the end walls, the machines as drawn) plus the rig's own solids (truss, hoists, chains, bridles, tie-offs, PA, DJ deck and table, barrier). Per beam: the axis and a ring of 8 rays at half the beam angle (the 50 % edge; UP-PL5403 15&deg;, UP-B380F 1.8&deg;: the borrowed datasheets in types/moxir.json). A ray stopped before the beam's target is BLOCKED.");
+const sumrow=(k,v)=>[k,String(O.before[v]),String(O.after[v])];
+root.appendChild(table(["","before (c33b3d4b)","after"],[sumrow("beams (PAR + B380F), home aims","n_beams"),sumrow("beams blocked before their target","beams_blocked"),
+ sumrow("lasers whose whole field passes","lasers_pass"),sumrow("laser rays traced (9 x 5 per field)","laser_rays"),sumrow("laser rays ending in glass","laser_rays_in_glass"),
+ sumrow("laser rays stopped by steel that is not the roof","laser_rays_on_steel_not_roof"),sumrow("laser rays within 0.3 m of steel (tube test)","laser_rays_within_0_3m"),
+ sumrow("lowest laser over the audience, m","laser_min_over_audience_m"),sumrow("mirror worst case: bounces under 3 m over the audience","laser_mirror_worst_case_under_3m_over_audience"),
+ sumrow("the plot's box model agrees with the triangles (beam axis, within 0.5 m)","box_model_agree")],"12.5px/1.45 "));
+note("The box model disagrees on "+O.boxDisagree+" beam axes: it has no space frame under the lantern, so it sent most up-beams into the lantern glass at 16-20 m; on the triangles they land on the space frame at 10-13.5 m (the roof structure: lit steel, which is the look).");
+root.appendChild(img(O.png.blocked,"blocked beams, before",{marginTop:"10px"}));note("blocked.png: the mix as committed, from the back of the floor. Red = blocked.");
+root.appendChild(table(["fixture","group","% blocked (9 rays)","% of beam area (61 rays)","what blocks it, at what distance from the lens"],O.blocked.map(b=>[b.id.replace("rig-",""),b.group,b.pct,b.area,b.what]),"12px/1.45 "));
+root.appendChild(img(O.png["blocked-details"],"the blocks close up",{marginTop:"12px"}));note("blocked-details.png");
+root.appendChild(el("h3",{font:"600 15px/1.3 "+F,margin:"18px 0 8px"},"The fixes (every change against c33b3d4b)"));
+root.appendChild(table(["fixture","group","change","why","before","after"],O.fixes.map(r=>[r.fixture.replace("rig-",""),r.group,{html:esc(r.change),style:{color:r.change.startsWith("NOT")?C.warn:C.ok}},r.why,r.before,r.after]),"12px/1.45 "));
+root.appendChild(img(O.png["blocked-fixed"],"after the fixes",{marginTop:"12px"}));note("blocked-fixed.png: the same view and test after the fixes.");
+root.appendChild(el("h3",{font:"600 15px/1.3 "+F,margin:"18px 0 8px"},"Lasers against the triangles"));
+root.appendChild(table(["cube","rays end on","termination, m from the cube","first steel that is not the roof","mirror worst case under 3 m over the audience","verdict"],O.lasers.map(l=>[l.id.replace("rig-lasercube-cut-","cube "),Object.entries(l.ends).map(e=>e[0]+" "+e[1]).join("; "),l.term.join("-"),l.steel==null?"none":l.steel+" m",String(l.mirror),{html:l.pass?"PASS":"FAIL",style:{color:l.pass?C.ok:C.bad}}]),"12px/1.45 "));
+note("Every ray of the 4 hung fields ends on the roof structure: about 4 in 10 on the corrugated deck, 6 in 10 on a space-frame chord or diagonal first (10.7-31 m from the cube): steel, so the LSO checks the finish there. The mirror line is a bound (painted, dusty steel is mostly diffuse): if a termination were a mirror, that many rays of the bridge pair could come back under 3 m over the audience. Planning, not a safety sign-off.");
+root.appendChild(el("h3",{font:"600 15px/1.3 "+F,margin:"18px 0 8px"},"Shadows of the permanent things, for the key looks"));
+root.appendChild(img(O.png["shadows-plan"],"shadows from above"));note("shadows-plan.png: where each beam's 61 rays land; red x = stopped by a permanent thing.");
+root.appendChild(img(O.png["shadows-backdrop"],"shadows on the backdrop",{marginTop:"10px"}));note("shadows-backdrop.png: the stage end seen from the floor.");
+p("The silhouette backlight and the crowd arches cast no shadow of a permanent thing on their whole path. The truss wall's 3 low X PARs carry on past their crossing (2.6 m) and land on the blower, the drum tank and the conveyor on house right: those machines are lit by the X's spill, the floor behind them is in their shadow. Kept: it is past the target, in the truss plane (no eye), and it reveals the machines. Every cue state on this page was re-run: "+Object.entries(O.after.looks).map(([k,v])=>k+" "+v.blocked+" of "+v.lit_beams+" lit beams blocked").join("; ")+".");
+}
+root.appendChild(el("div",{color:C.dim,font:"12px/1.55 "+F,marginTop:"26px",borderTop:"1px solid "+C.line,paddingTop:"12px"},"Generated by scripts/place/lights_beta_mix.py (branch feat/moxir-stage-line-2026-10-07, PR #823) from "+esc(D.plotFile.replace("scripts/place/",""))+", the beta's fixtures (rigs/moxir-beta-v0.9-lights-2026-10-07.json, scratch document v61) and hall v8-show-back21. Crane heights are ASSUMED (the far crane's photo value) and the pipe racks are LOW confidence: the 10-08 tape changes numbers, not the plot. PAR and beam intensities are borrowed equivalents (types/moxir.json, basis EQUIVALENT). Not a render, not a lux plot, not a laser safety assessment, not a rigging sign-off."));
 </script></body></html>
 """
 
@@ -869,30 +920,31 @@ def _checks_page():
 
 CHECKS_PAGE = _checks_page()
 
-if a.check:
+if __name__ == '__main__' and a.check:
     print(json.dumps({'summary': SUMMARY, 'lasers': CHK['lasers'], 'checks': CHECKS_PAGE, 'front_row': CHK['front_row'], 'glare': CHK['glare']}, indent=1, default=float))
     sys.exit(0)
 
-out = os.path.expanduser(a.out or '~/Downloads/moxir/stage')
-os.makedirs(out, exist_ok=True)
-P = lambda n: os.path.join(out, 'lights-beta-mix-%s.png' % n)
-pngs = {}
-allfx, alllit = look_fx(LOOKS[0])
-pngs['view'] = fig_view(allfx, alllit, P('view'), 'MOXIR beta v0.9 - the plot from the dance floor (every fixture at its home aim)',
-                        'centre of the floor, eye 1.6 m, z 38 (pinhole, 62 deg vertical). A checking picture: in the show no more than 3 layers burn at once.')
-for lk in LOOKS[1:]:
-    fx_l, lit_l = look_fx(lk)
-    if lk['id'] == 'silhouette':
-        pngs['silhouette'] = fig_view(fx_l, lit_l, P('silhouette'), 'Home look: the silhouette', lk['note'])
-    else:
-        pngs['look_' + lk['id']] = fig_small_view(fx_l, lit_l, P('look-' + lk['id']), '%s  (%s)' % (lk['title'], ' + '.join(lk['layers'])))
-pngs['look_silhouette'] = pngs['silhouette']
-pngs['plan'] = fig_plan(FX, P('plan'), title='MOXIR beta v0.9 - the mixed plot, top plan')
-pngs['section'] = fig_section(FX, P('section'), title='MOXIR beta v0.9 - the mixed plot, side section')
-pngs['lasers'] = fig_lasers(FX, P('lasers'))
-for k, v in sorted(pngs.items()):
-    print('wrote', v)
-with open(os.path.join(out, 'lights-beta-mix-checks.json'), 'w') as fh:
-    json.dump({'summary': SUMMARY, 'lasers': CHK['lasers'], 'checks': CHECKS_PAGE, 'front_row': CHK['front_row'], 'glare': CHK['glare'], 'ends': CHK['ends']}, fh, indent=1, default=float)
-page(pngs, os.path.join(out, 'lights-beta-mix.html'))
-print('wrote', os.path.join(out, 'lights-beta-mix.html'))
+if __name__ == '__main__':
+    out = os.path.expanduser(a.out or '~/Downloads/moxir/stage')
+    os.makedirs(out, exist_ok=True)
+    P = lambda n: os.path.join(out, 'lights-beta-mix-%s.png' % n)
+    pngs = {}
+    allfx, alllit = look_fx(LOOKS[0])
+    pngs['view'] = fig_view(allfx, alllit, P('view'), 'MOXIR beta v0.9 - the plot from the dance floor (every fixture at its home aim)',
+                            'centre of the floor, eye 1.6 m, z 38 (pinhole, 62 deg vertical). A checking picture: in the show no more than 3 layers burn at once.')
+    for lk in LOOKS[1:]:
+        fx_l, lit_l = look_fx(lk)
+        if lk['id'] == 'silhouette':
+            pngs['silhouette'] = fig_view(fx_l, lit_l, P('silhouette'), 'Home look: the silhouette', lk['note'])
+        else:
+            pngs['look_' + lk['id']] = fig_small_view(fx_l, lit_l, P('look-' + lk['id']), '%s  (%s)' % (lk['title'], ' + '.join(lk['layers'])))
+    pngs['look_silhouette'] = pngs['silhouette']
+    pngs['plan'] = fig_plan(FX, P('plan'), title='MOXIR beta v0.9 - the mixed plot, top plan')
+    pngs['section'] = fig_section(FX, P('section'), title='MOXIR beta v0.9 - the mixed plot, side section')
+    pngs['lasers'] = fig_lasers(FX, P('lasers'))
+    for k, v in sorted(pngs.items()):
+        print('wrote', v)
+    with open(os.path.join(out, 'lights-beta-mix-checks.json'), 'w') as fh:
+        json.dump({'summary': SUMMARY, 'lasers': CHK['lasers'], 'checks': CHECKS_PAGE, 'front_row': CHK['front_row'], 'glare': CHK['glare'], 'ends': CHK['ends']}, fh, indent=1, default=float)
+    page(pngs, os.path.join(out, 'lights-beta-mix.html'))
+    print('wrote', os.path.join(out, 'lights-beta-mix.html'))
