@@ -11,8 +11,7 @@ wrong, fix this file in the same branch as the work that proved it wrong.
 
 Background, in order of depth: `docs/architecture/EVENT_LAYERS.md` (the layers L0–L10 and the agents),
 `docs/architecture/RIG_BUILD.md` (method and data model), `scripts/rigbuild/README.md` and
-`scripts/place/README.md` (every command), `docs/moxir/TOOLS_MAP_2026-10-05.md` (MOXIR's map and diagnosis;
-on branch `aylmo-unpushed/docs/moxir-tools-map-2026-10-05-2026-10-06` until it lands).
+`scripts/place/README.md` (every command), `docs/moxir/TOOLS_MAP_2026-10-05.md` (MOXIR's map and diagnosis).
 
 ## 1. The three rules
 
