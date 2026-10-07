@@ -54,3 +54,5 @@ He then said *"there are more columns than you count"* and *"analyse more photos
   - Box 39 is likely a steel stair post (SUSPECTED).
   - No grid correction was made. The layer key is `column_check_multiview`.
 - Pictures: `~/Downloads/moxir/photo-analysis/columns-014-count.png`. Data: `/mnt/data/footage/place-moxir-photo-analysis-2026-10-07/multiview/`.
+
+- 10-07 addendum: 953 (right row) was fitted at 23 px (3.0 mrad) and not accepted. By eye, 8 shafts at uniform spacing (1-D homography residuals <= 10 px) and no extra column. Video 954: two lanterns with a gap; 4 x 3 m lantern panes. Evidence: columns-953-count.png.

@@ -245,3 +245,19 @@ The delay time is owed to the system designer.
 - An automatic edge refinement (RAPiD-style) would replace the hand snapping.
 - The X-T5 frames need a gate in mrad, or a view that is not blocked. That gate is the owner's call.
 - The 10-08 site shots (§2 gaps 3 and 5) close the joint-pair gap and box 39.
+
+### 7a. New media of 2026-10-07: 953 (right row) and the video 954
+
+- **953** (X-T5, 7728×5152, EXIF f 7565 px) looks along the **right row** from about (3.6, 1.3, 15) (VGGT: 44 views, rerun with 953 and the video frames; aligned at 0.68 m rms).
+  - The edge refit (`picks/953.json`) reaches **23 px = 3.0 mrad**, so it is **not accepted**. The camera height is not fixed (sd 7 m), and the pitch disagrees with VGGT.
+  - Count by eye (`columns-953-count.png`, `multiview/count-953.json`): **8 Y-headed shafts** from the nearest one (z 12 by order) to z −30, with **no column-size upright between them**.
+  - A 1-D homography test (cross-ratio invariance, Hartley & Zisserman §2.5) on 6 column centres leaves residuals ≤ 10 px against a 12 px read error. **The spacing is uniform: no column missing, none extra.**
+  - At the joint place, one shaft appears about 0.9 m wide. A pair seen from here would be about 1.4 m wide, so it may be a single shaft or the pair overlapping. Held out of the fit, its edges land at z −1.7…+0.8. This is not settled.
+  - **SUSPECTED** (identities by order).
+- **954** (X-T5 video, 2048×1080, f ≈ 2004 px from 23 mm on the full width; VGGT 1939–2222). Frames t1.8, t2.6, t3.2 and t4.6 were the sharpest per tilt segment.
+  - Both rows recede as regular rows of Y heads.
+  - The roof shows **two lanterns with a solid strip between them** (the model's gap at z ±7.25), lantern end glazing in **4 panes across 12 m** (3 m module), and space-frame node stars in line with the column heads.
+  - By eye, SUSPECTED. Nodes per bay were **not counted**: that needs a fitted roof camera.
+- **Net:** the right row now has a second view (953), and it agrees with 032: a regular 6 m-type sequence and **no extra column**. Still owed:
+  - a gate in mrad for the X-T5 frames (owner's call)
+  - a feet-and-heads refit of 953 to pin its camera height

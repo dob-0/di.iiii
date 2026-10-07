@@ -10,7 +10,7 @@ white padding). The mapping back to original pixels is stored per image, so pose
 the image's own resolution. Output: <out>/predictions.npz (extrinsic [S,3,4] OpenCV world->cam,
 intrinsic [S,3,3] at 518 px, depth [S,518,518], depth_conf, names, orig_wh, pad_map) — kept beside the footage.
 
-Run (GPU, under the browser lock):
+Run (GPU, under the browser lock; MOXIR_VGGT=vggt-2026-10-07b selects the 44-view run in multiview_columns.py):
   flock ~/.local/state/di/locks/browser.lock ~/tools/vggt/.venv/bin/python scripts/place/vggt_poses.py \
      --list views.txt --out /mnt/data/footage/place-moxir-photo-analysis-2026-10-07/vggt-2026-10-07
 """

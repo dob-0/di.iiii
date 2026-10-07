@@ -867,6 +867,18 @@
     "accepted": false,
     "rms_px": 11.5,
     "why": "picks on the right row snap onto pipes and the stair; best of three pick sets 11.5 px; left-row-only fit is degenerate (pitch 16 deg)"
+   },
+   "953-FXT51095.JPG": {
+    "accepted": false,
+    "rms_px": 23.05,
+    "mrad": 3.05,
+    "image_px": [
+     7728,
+     5152
+    ],
+    "f_px": 7565,
+    "f_source": "EXIF 23 mm x 3289 px/cm",
+    "why": "8 px gate = 1.06 mrad at f 7565; camera height unconstrained (sd 7 m); pitch 12 deg against VGGT 4.8"
    }
   },
   "joint_pair": {
@@ -910,6 +922,20 @@
      "014 (fit 7.4 px, wall at 40-50 m)"
     ],
     "tag": "SUSPECTED (by eye; the automatic sweep also fires on window mullions)"
+   },
+   {
+    "row_x": 12,
+    "z_m": [
+     -30,
+     12
+    ],
+    "real_count": "8 shafts in a regular perspective sequence (the joint shows as one shaft wide, about 0.9 m)",
+    "model_count": "8 positions (12, 6, joint pair, -6 ... -30)",
+    "views": [
+     "953 (eye; fit not accepted)"
+    ],
+    "test": "1-D homography (cross-ratio) on 6 column centres: residuals <= 10 px against a 12 px read error, so the spacing is uniform with no missing or extra column",
+    "tag": "SUSPECTED (identities by order, no accepted camera)"
    }
   ],
   "box_39": {
@@ -920,6 +946,12 @@
     "032 box 39"
    ],
    "tag": "SUSPECTED: not a column; a site look on 10-08 closes it"
+  },
+  "roof_954": {
+   "frames": "954-FXT51128 t1.8, t2.6, t3.2, t4.6 (sharpest per tilt segment, Laplacian variance)",
+   "video_f_px": "about 2004 (23 mm on the full 23.5 mm width; VGGT 1939-2222)",
+   "seen": "two lanterns with a solid roof strip between them, as the model has them (z -7.25 to 7.25); lantern end glazing in 4 panes across 12 m (3 m module); space-frame node stars in line with the column heads",
+   "tag": "SUSPECTED (by eye, no fitted roof camera); nodes per bay not counted"
   }
  }
 }

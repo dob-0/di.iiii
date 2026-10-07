@@ -106,7 +106,7 @@ def umeyama(A, B):
 
 def cmd_align(a):
     g = load_hall()
-    p = np.load(os.path.join(DATA, 'vggt-2026-10-07/predictions.npz'))
+    p = np.load(os.path.join(DATA, os.environ.get('MOXIR_VGGT', 'vggt-2026-10-07'), 'predictions.npz'))
     names = [str(n) for n in p['names']]
     i32 = [i for i, n in enumerate(names) if n.startswith('032-')][0]
     E, Kv, D, Dc, pad, wh = p['extrinsic'], p['intrinsic'], p['depth'], p['depth_conf'], p['pad_map'], p['orig_wh']
@@ -188,7 +188,8 @@ def draw_model(img, cam, g, scale, label=True, rows=None):
 
 def read_img(name):
     from PIL import Image, ImageOps
-    for root in ('/mnt/data/footage/moxir-2026-10-17', '/mnt/data/footage/inbox/2026-09-29'):
+    for root in ('/mnt/data/footage/moxir-2026-10-17', '/mnt/data/footage/inbox/2026-09-29', '/mnt/data/footage/inbox/2026-10-07',
+                 os.path.join(DATA, 'video-954')):
         p = os.path.join(root, name)
         if os.path.exists(p):
             return cv2.cvtColor(np.array(ImageOps.exif_transpose(Image.open(p)).convert('RGB')), cv2.COLOR_RGB2BGR)
