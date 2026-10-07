@@ -1138,6 +1138,24 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-19'
     },
     {
+        id: 'unsaved-changes',
+        category: 'Editing',
+        title: 'When the server does not answer',
+        summary: 'Your changes wait in this browser, the page says how many, and they are sent when the server is back.',
+        body: [
+            'Every change you make to a project in Studio or Nodes is sent to the server that holds it. If that server does not answer — a local install that was stopped, a laptop that lost its network — a bar across the top of the page says so: “Not saved — server unreachable · 3 changes waiting”. Keep working if you like; the count follows.',
+            { list: [
+                'The waiting changes are kept in this browser, so a reload or a closed tab does not lose them. When the project is opened again and the server answers, they are sent, and the bar goes away.',
+                'Changes the server already has are not sent twice.',
+                'While changes are waiting, leaving the page asks first.',
+                'They are kept at this address only. The same project opened at another address (127.0.0.1 instead of local.thedi.studio, say) is another browser store and does not see them — come back to the address you worked at.',
+                'If the server at this address turns out to hold another copy of the project (an older or different database), the changes are not sent to it. They stay in this browser and the project’s activity list says so.'
+            ] }
+        ],
+        tags: ['save', 'saving', 'not saved', 'offline', 'server', 'reload', 'sync', 'local'],
+        updated: '2026-10-07'
+    },
+    {
         id: 'google-drive-import',
         category: 'Editing',
         title: 'Import from Google Drive',
