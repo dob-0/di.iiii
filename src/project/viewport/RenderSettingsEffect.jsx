@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { atmosphereOf } from '../../objectComponents/beamAir.js'
@@ -87,10 +87,18 @@ export default function RenderSettingsEffect({ renderSettings }) {
     // a room with a physical haze: what its openings show takes the haze's veil (NightOutside.jsx)
     const hazy = Boolean(renderSettings?.atmosphere?.haze)
     const heavyRoom = Boolean(bloomOf(renderSettings) || governed || surfaces || hazy)
-    // Bloom, the haze's drifting eddies, the frame-rate governor and the scene walks draw and
-    // poll every frame: such a room keeps an on-demand loop running (owed: make each one declare
-    // itself, so only a really moving haze does).
-    useHoldFrames(heavyRoom, 'atmosphere')
+    // Under Studio's on-demand loop a bloom or haze scene is still when its haze is even:
+    // HdrBloom draws its own frame each time one is asked for, the governor only rates the
+    // continuous bursts (it ignores an on-demand loop), and the scene walks poll during the
+    // burst after a load. Only the drifting eddies (uHazeTime, patchiness > 0) move by
+    // themselves, so only an uneven haze holds the loop.
+    const [patchy, setPatchy] = useState(() => (getHazeField(gl)?.patchiness || 0) > 0)
+    useEffect(() => {
+        const read = () => setPatchy((getHazeField(gl)?.patchiness || 0) > 0)
+        read()
+        return subscribeHazeField(gl, read)
+    }, [gl])
+    useHoldFrames(heavyRoom && patchy, 'haze-eddies')
     if (!heavyRoom) return null
     return (
         <Suspense fallback={null}>
