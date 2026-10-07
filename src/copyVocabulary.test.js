@@ -106,6 +106,7 @@ const COPY_FILES = [
     'src/index.html',
     'src/Menu.jsx',
     'src/RootApp.jsx',
+    'src/shoot/ShootPage.jsx',
     'src/SpaceSurfaceApp.jsx',
     'src/SpacesPanel.jsx',
     'src/ViewPanel.jsx',

@@ -34,6 +34,10 @@ export const APP_PAGE_TOOLS = 'tools'
 // app, a script or an AI should identify itself, and the limits it meets. The
 // server's 429 and 403 answers point here, so no space may take the word.
 export const APP_PAGE_FOR_APPS = 'for-apps'
+// The shoot sheet — /shoot/{key} (src/shoot/ShootPage.jsx): a film crew's shared
+// plan for one shoot day, opened by its link. The key is the second segment and
+// the only credential (serverXR/src/routes/shootRoutes.js).
+export const APP_PAGE_SHOOT = 'shoot'
 export const RESERVED_APP_SEGMENTS = [
     ...APP_PAGE_PREFERENCES_ALIASES,
     APP_PAGE_WIKI,
@@ -43,6 +47,9 @@ export const RESERVED_APP_SEGMENTS = [
     // Checked before reserving: /serverXR/api/spaces/for-apps 404s on prod and
     // on staging (2026-09-13), so nothing holds the word.
     APP_PAGE_FOR_APPS,
+    // Checked before reserving (2026-10-07): /serverXR/api/spaces/shoot and
+    // /serverXR/api/resolve/shoot 404 on diiii.xyz and dev.diiii.xyz.
+    APP_PAGE_SHOOT,
     'beta',
     'raw',
     'seed',
@@ -304,6 +311,7 @@ export const isPrivacyPageSegment = (value = '') => (value || '').trim().toLower
 export const isTermsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_TERMS
 export const isToolsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_TOOLS
 export const isForAppsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_FOR_APPS
+export const isShootPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_SHOOT
 export const isSpaceContentsSegment = (value = '') => (value || '').trim().toLowerCase() === SPACE_CONTENTS_SEGMENT
 export const isScanSegment = (value = '') => (value || '').trim().toLowerCase() === SCAN_SEGMENT
 
@@ -380,6 +388,16 @@ export const getAppLocationState = (locationLike = null) => {
             return {
                 page: APP_PAGE_FOR_APPS,
                 spaceId: null
+            }
+        }
+        // `/shoot/{key}` — the key is case-sensitive, so it is read from the
+        // original path, never lowercased. A bare `/shoot` has no sheet to show
+        // and gets the page's own "this link is incomplete" answer.
+        if (isShootPageSegment(segment)) {
+            return {
+                page: APP_PAGE_SHOOT,
+                spaceId: null,
+                shootKey: relative.split('/')[1] || ''
             }
         }
         if (segment) {
