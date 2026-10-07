@@ -1645,6 +1645,8 @@ describe('with a manage key, a project\'s life made here reaches the host', () =
     })
 
     it('taken out of the trash here, it comes back on the host', async () => {
+        // In both trashes first, so the restore below is the one carried.
+        expect(await inTrash(hosting, SPACE, 'trash-me')).toBe(true)
         expect((await api(following, '/api/projects/trash-me/restore', { method: 'POST' })).status).toBe(200)
         wakeAll()
         await settle('restored on the host', async () => Boolean(await live(hosting, SPACE, 'trash-me')), { timeout: 15_000 })
