@@ -192,9 +192,17 @@ export const stageFrame = (rig, hall) => {
     // the bridge's centre line; a crane more than 1 m from the performer is refused (move it).
     let crane = null
     if (isCraneHung(rig)) {
-        crane = craneNearestStage(hall, { front: s.kind === 'booth' ? back + into * (s.depth_m / 2) : front })
+        // `truss_behind_m`: the line is a BACKDROP (owner 2026-10-07: "the truss at the back of the DJ — where the DJ
+        // stage line finishes, the crane line there"): the bridge nearest a point that far behind the riser's back edge,
+        // and refused unless the line's plane stands at least that far behind it — nothing hung over the performer
+        const behind = s.truss_behind_m
+        crane = behind !== undefined
+            ? craneNearestStage(hall, { front: back - into * behind })
+            : craneNearestStage(hall, { front: s.kind === 'booth' ? back + into * (s.depth_m / 2) : front })
         const dj = s.kind === 'booth' ? back + into * (s.depth_m / 2 - 0.2) : (back + front) / 2
-        if (!crane || Math.abs(crane.z_m - dj) > 1) throw new Error(`truss "crane-hung": no crane bridge within 1 m of the DJ (z ${dj.toFixed(2)}); the nearest is at z ${crane?.z_m} — park it over the DJ in the hall's dims (cranes_from_door_m)`)
+        if (behind !== undefined) {
+            if (!crane || into * (back - crane.z_m) < behind - 1e-6) throw new Error(`truss "crane-hung" behind the DJ: the nearest bridge (z ${crane?.z_m}) is not ${behind} m behind the riser's back edge (z ${back.toFixed(2)}) — park it further back`)
+        } else if (!crane || Math.abs(crane.z_m - dj) > 1) throw new Error(`truss "crane-hung": no crane bridge within 1 m of the DJ (z ${dj.toFixed(2)}); the nearest is at z ${crane?.z_m} — park it over the DJ in the hall's dims (cranes_from_door_m)`)
         trussZ = crane.z_m
     }
     const halo = isHalo(rig)

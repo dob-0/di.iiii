@@ -260,7 +260,8 @@ export const craneCut = ({ spec, base, groups, classes }) => {
     const gridZ = [...g.column_grid_z_m].sort((p, q) => Math.abs(p - crane.z_m) - Math.abs(q - crane.z_m))[0]
     truss.rigging.tieoffs = r.tieoffs.map((tie) => {
         const end = linePoint(stage, tie.u_m, 'axis')
-        const to = [tie.side * g.column_inner_face_x_m, tie.y_m === 'end' ? r2(end[1]) : tie.y_m, gridZ]
+        // `grid_z_m`: a tie-off to a stated column grid line (the bridge parked between two: 2026-10-07, behind the DJ)
+        const to = [tie.side * g.column_inner_face_x_m, tie.y_m === 'end' ? r2(end[1]) : tie.y_m, tie.grid_z_m ?? gridZ]
         const under = clearUnderCab(end, to, hall)
         return { ...clone(tie), from_m: end.map(r2), to_m: to, length_m: r2(Math.hypot(to[0] - end[0], to[1] - end[1], to[2] - end[2])), under_cab_m: under == null ? null : r2(under) }
     })

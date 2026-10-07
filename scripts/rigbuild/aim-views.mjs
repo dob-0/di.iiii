@@ -15,7 +15,7 @@
  *
  *   node scripts/rigbuild/aim-views.mjs                                   # print the views, no server
  *   node scripts/rigbuild/aim-views.mjs --api http://127.0.0.1:4323/serverXR --project <copy> \
- *       [--token-file <dummy env>] [--last <document this script or stage-line.mjs last wrote>] [--apply]
+ *       [--design <stage design file>] [--token-file <dummy env>] [--last <document this script or stage-line.mjs last wrote>] [--apply]
  *
  * One `setPresentationState` op (shared/projectSchema.cjs: the patch is merged; an array is replaced) against the
  * version it read, then read back. Scratch hosts only (localhost / 127.0.0.1). CONFLICT GUARD: with --last, a view
@@ -68,7 +68,7 @@ const args = () => {
 
 const main = async () => {
     const opt = args()
-    const inputs = loadInputs()
+    const inputs = loadInputs(opt.design ? String(opt.design) : undefined)
     const rig = stageLineRig(inputs)
     const views = viewsFor({ design: inputs.design, stage: stageFrame(rig, inputs.hall), hall: inputs.hall })
     if (!opt.api) { console.log(JSON.stringify(views, null, 1)); return }

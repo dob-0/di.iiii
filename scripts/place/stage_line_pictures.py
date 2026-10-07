@@ -26,10 +26,13 @@ ap.add_argument('--ref', required=True)
 ap.add_argument('--evaluate', required=True)
 ap.add_argument('--frame', required=True)
 ap.add_argument('--out', required=True)
+ap.add_argument('--design', default='scripts/place/rigs/moxir-stage-line-2026-10-07.json')
+ap.add_argument('--prefix', default='stage24')
+ap.add_argument('--title', default=None)
 a = ap.parse_args()
 J = lambda p: json.load(open(p))
 R = lambda p: J(os.path.join(a.repo, p))
-design = R('scripts/place/rigs/moxir-stage-line-2026-10-07.json')
+design = R(a.design)
 hall = R(design['crane']['hall_record'])
 g = hall['geometry']
 v6 = R('scripts/place/rigs/moxir-hall-2026-10-07-v6.hall.json')['geometry']
@@ -42,9 +45,9 @@ CZ = crane['z_m']
 pos = lambda d, i: d[i]['components']['transform']['position']
 os.makedirs(a.out, exist_ok=True)
 DECK = design['booth'].get('deck_h_m', 1.2)
-FOOT = ('Sources: hall record %s (hall.py, show hall: cabin out); design scripts/place/rigs/moxir-stage-line-2026-10-07.json; '
+FOOT = ('Sources: hall record %s (hall.py, show hall: cabin out); design %s; '
         'cut derived by scripts/rigbuild/stage-line.mjs (versions.mjs craneCut); positions read back from the scratch copy. '
-        'Crane heights ASSUMED from the far crane (photo 007) — tape on 2026-10-08.' % os.path.basename(design['crane']['hall_record']))
+        'Crane heights ASSUMED from the far crane (photo 007) — tape on 2026-10-08.' % (os.path.basename(design['crane']['hall_record']), a.design))
 
 
 def style(ax):
@@ -85,12 +88,15 @@ ax.plot([oz, oz], [-6.04, 5.55], color=GHOST, lw=3, alpha=.6)
 ax.add_patch(Rectangle((4.2, -1.5), 2.0, 3.0, fill=False, ec=GHOST, ls='--', lw=1))
 ax.plot([7.5, 7.5], [-4.5, 4.5], color=GHOST, lw=1.5, ls='--')
 ax.text(oz, -13.4, 'OLD (ghost): crane + cut z 4.8, booth z 4.2–6.2,\nbarrier z 7.5, floor from 7.5', color=GHOST, fontsize=8, ha='center')
-# candidates
+# candidates: one line each, as a list (they sit too close to label in place)
+cand = []
 for o in ev['options']:
-    if o['z_m'] == CZ: continue
-    ax.plot([o['z_m'], o['z_m']], [-11.35, 11.35], color=RED, lw=.8, ls=(0, (2, 3)), alpha=.7)
-    left = o['z_m'] < CZ
-    ax.text(o['z_m'] + (-.3 if left else .3), 12.9 if left else 13.5, 'z %g ✗ %s' % (o['z_m'], '; '.join(f.split(' (')[0] for f in o['fails'])), color=RED, fontsize=7.5, ha='right' if left else 'left')
+    tag = '✓ PICKED' if o['z_m'] == CZ else ('✗ ' + '; '.join(f.split(' (')[0] for f in o['fails']) if o['fails'] else '✓ passes')
+    extra = ' · clamps %.2f m behind the step' % o['gap_m'] if 'gap_m' in o else ''
+    cand.append('crane z %g%s  %s' % (o['z_m'], extra, tag))
+    if o['z_m'] != CZ:
+        ax.plot([o['z_m'], o['z_m']], [-11.35, 11.35], color=RED if o['fails'] else DIM, lw=.8, ls=(0, (2, 3)), alpha=.7)
+fig.text(.115, .035, '\n'.join(cand), color=FG, fontsize=7.6, va='bottom', family='monospace')
 # crane bridge at CZ
 for s in (-1, 1):
     zc = CZ + s * abs(crane['girders_dz_m'][1])
@@ -103,10 +109,17 @@ ends = truss['ends']
 ax.plot([CZ, CZ], [ends[0]['x_m'], ends[1]['x_m']], color=STEEL, lw=4.5, zorder=5, solid_capstyle='butt')
 for p in truss['picks']:
     ax.plot(CZ, p['x_m'], 's', color=FG, ms=5, zorder=6)
+for e in ends:
+    lo = e['bottom_chord_m'] == min(x['bottom_chord_m'] for x in ends)
+    ax.text(CZ - 0.5, e['x_m'], '%s %.2f m' % ('LOW' if lo else 'HIGH', e['bottom_chord_m']), color=STEEL, fontsize=8, fontweight='bold', ha='right', va='center', zorder=7,
+            bbox=dict(fc=BG, ec='none', alpha=.7))
 for tie in truss['tieoffs']:
     ax.plot([tie['from_m'][2], tie['to_m'][2]], [tie['from_m'][0], tie['to_m'][0]], color=YELLOW, lw=1.8, ls='--', zorder=5)
-ax.text(CZ - 0.6, -9.0, 'tie-off hl → column x −11.6\n@ %.2f m, straight' % truss['tieoffs'][0]['to_m'][1], color=YELLOW, fontsize=7.5, ha='right', va='center')
-ax.text(CZ - 0.6, 7.6, 'tie-off hr → x +11.6\n@ %.2f m: %.2f under cab' % (truss['tieoffs'][1]['to_m'][1], truss['tieoffs'][1]['under_cab_m']), color=YELLOW, fontsize=7.5, ha='right', va='center')
+for tie in truss['tieoffs']:
+    fx, fy, fz = tie['from_m']; tx, ty, tz = tie['to_m']
+    note = '%.2f under cab' % tie['under_cab_m'] if tie.get('under_cab_m') is not None else ('to z %g' % tz)
+    ax.text(tz - 0.6 if tz <= CZ else tz + 0.6, tx * 0.78, 'tie-off %s → column x %+.1f\n@ %.2f m, %s' % (tie['id'], tx, ty, note),
+            color=YELLOW, fontsize=7.5, ha='right' if tz <= CZ else 'left', va='center')
 # stage line, booth, PA, barrier (positions read back from the copy)
 L = design['stage_line']['z_m']
 ax.plot([L, L], [-11.6, 11.6], color=GREEN, lw=3, zorder=6)
@@ -158,10 +171,10 @@ ax.set_xlim(-4, 55); ax.set_ylim(-14.5, 13.8)
 ax.set_aspect('equal')
 ax.set_xlabel('z, metres from the press end (joint) → entry', color=DIM)
 ax.set_ylabel('x  (house left ↓ · house right ↑)', color=DIM)
-ax.set_title('STAGE ON YOUR LINE — top view · crane parked at z %g (picked of 22 / 24 / 26), the cut unchanged in shape, tie-offs straight to the z 24 columns' % CZ,
+ax.set_title(a.title or ('STAGE ON YOUR LINE — top view · crane parked at z %g (picked of 22 / 24 / 26), the cut unchanged in shape, tie-offs straight to the z 24 columns' % CZ),
              color=FG, fontsize=11.5, loc='left')
 fig.text(.01, .012, FOOT, color=DIM, fontsize=7)
-fig.savefig(os.path.join(a.out, 'stage24-plan.png'), facecolor=BG, bbox_inches='tight')
+fig.savefig(os.path.join(a.out, '%s-plan.png' % a.prefix), facecolor=BG, bbox_inches='tight')
 plt.close(fig)
 
 # ---------------------------------------------------------------- (b) section at the crane's z, seen from the audience
@@ -231,13 +244,20 @@ for i, e in doc.items():
 for tie in truss['tieoffs']:
     ax.plot([tie['from_m'][0], tie['to_m'][0]], [tie['from_m'][1], tie['to_m'][1]], color=YELLOW, lw=2, zorder=6)
 lo = truss['clearance']['low_end']
-ax.annotate('low end %.2f m bottom chord\n%.2f over raised hands (house left)' % (e0['bottom_chord_m'], lo['over_raised_hands_m']), xy=(xa, ya), xytext=(xa - 4.5, ya - 1.6),
+(lx_, ly_), (hx_, hy_) = sorted([(xa, ya), (xb, yb)], key=lambda q: q[1])
+ax.annotate('low end %.2f m bottom chord\n%.2f over raised hands (%s)' % (ly_, lo['over_raised_hands_m'], lo['side']), xy=(lx_, ly_), xytext=(lx_ + (-4.5 if lx_ < 0 else 1.2), ly_ - 1.6),
             color=FG, fontsize=8, arrowprops=dict(arrowstyle='->', color=DIM))
-ax.annotate('high end %.2f m' % e1['bottom_chord_m'], xy=(xb, yb), xytext=(xb - 3.4, yb + 1.0), color=FG, fontsize=8, arrowprops=dict(arrowstyle='->', color=DIM))
-hr = truss['tieoffs'][1]
-ax.annotate('tie-off hr to the column at %.2f m:\n%.2f under the cab · 0.20 over pipe-rack-3\n(window 4.60–4.8 m — TAPE cab + pipes 10-08)' % (hr['to_m'][1], hr['under_cab_m']),
-            xy=(9.2, 5.25), xytext=(-10.9, 6.55), color=YELLOW, fontsize=7.5, arrowprops=dict(arrowstyle='->', color=YELLOW, alpha=.6))
-ax.text(-11.3, 9.9, 'Section at z %g (the crane\'s bridge plane), seen FROM THE AUDIENCE: house left ←  → house right. Same cut as today: ends %.2f / %.2f m, bridles %s°, trim %.2f.'
+ax.annotate('high end %.2f m' % hy_, xy=(hx_, hy_), xytext=(hx_ + (-3.4 if hx_ > 0 else -3.6), hy_ + (1.0 if hx_ > 0 else 0.55)), color=FG, fontsize=8, arrowprops=dict(arrowstyle='->', color=DIM))
+hr = [x for x in truss['tieoffs'] if x['id'] == 'hr'][0]
+pick = next((t['pick'] for o in ev.get('behind', []) if o['rig'] == 'flipped' and o['z_m'] == CZ for t in o['ties'] if t['id'] == 'hr'), None)
+if hr.get('under_cab_m') is not None:
+    txt = 'tie-off hr to the column at %.2f m:\n%.2f under the cab · 0.20 over pipe-rack-3\n(window 4.60–4.8 m — TAPE cab + pipes 10-08)' % (hr['to_m'][1], hr['under_cab_m'])
+else:
+    txt = ('tie-off hr (the LOW end) UP to the column on z %g at %.2f m, %d° off the bridge plane:\nat its own height (%.2f m) it runs into the pipe racks — least change +%.2f m;\nnow %.2f m over %s (TAPE the racks 10-08)'
+           % (hr['to_m'][2], hr['to_m'][1], pick['angle_off_plane_deg'] if pick else 0, hr['from_m'][1], hr['to_m'][1] - hr['from_m'][1], pick['nearest']['gap_m'] if pick else 0, pick['nearest']['id'] if pick else ''))
+ax.annotate(txt, xy=((hr['from_m'][0] + hr['to_m'][0]) / 2, (hr['from_m'][1] + hr['to_m'][1]) / 2), xytext=((-10.9, 6.55) if max(x['to_m'][1] for x in truss['tieoffs'] if x['id'] == 'hl') < 5.5 else (-10.9, 4.75)) if hr['to_m'][0] > 0 else (2, 6.55),
+            color=YELLOW, fontsize=7.5, arrowprops=dict(arrowstyle='->', color=YELLOW, alpha=.6))
+ax.text(-11.3, 9.9, 'Section at z %g (the crane\'s bridge plane), seen FROM THE AUDIENCE: house left ←  → house right. The cut: ends %.2f / %.2f m, bridles %s°, trim %.2f.'
         % (CZ, ya, yb, '/'.join(str(p['bridle_included_deg']) for p in truss['picks']), truss['trim_m']), color=FG, fontsize=10)
 cr = {c['deck_h_m']: c for c in ev.get('crowd', [])}
 if cr:
@@ -251,7 +271,7 @@ if cr:
 ax.set_xlim(-12.6, 12.6); ax.set_ylim(-.3, 10.4); ax.set_aspect('equal')
 ax.set_ylabel('height (m) · x (m) along the axis below', color=DIM)
 fig.text(.01, .012, FOOT, color=DIM, fontsize=7)
-fig.savefig(os.path.join(a.out, 'stage24-side.png'), facecolor=BG, bbox_inches='tight')
+fig.savefig(os.path.join(a.out, '%s-side.png' % a.prefix), facecolor=BG, bbox_inches='tight')
 plt.close(fig)
 
 # ---------------------------------------------------------------- (c) on frame 954
@@ -320,11 +340,11 @@ for k in np.linspace(0, 1, 60):  # the first point of the cut inside the frame c
     P = (xa + (xb - xa) * k, ya + (yb - ya) * k + .15, CZ)
     q = proj(P)
     if q and 40 < q[0] < W - 40 and 90 < q[1] < H - 40:
-        ax.text(q[0] + 10, q[1] + 30, 'the cut (z 24), rising to house right', color=STEEL, fontsize=13, fontweight='bold', bbox=dict(fc='black', ec='none', alpha=.55))
+        ax.text(q[0] + 10, q[1] + 30, 'the cut (z %g), rising to house %s' % (CZ, 'right' if yb > ya else 'left'), color=STEEL, fontsize=13, fontweight='bold', bbox=dict(fc='black', ec='none', alpha=.55))
         break
 ax.text(20, 40, 'Projected with cam-954-3.6.json (rotation from the vanishing point; position VGGT ±0.7 m). The crane bridge (7.95 m) and the cut\'s high end are above this frame '
         '(it sees up to ≈ %.1f m at the crane\'s z). Old crane z 4.8 dotted grey.' % (cam['C'][1] + (cam['C'][2] - CZ) * np.tan(np.arctan(cy / f) + np.radians(cam['yaw_pitch_roll_deg'][1]))),
         color='white', fontsize=11, bbox=dict(fc='black', ec='none', alpha=.6))
-fig.savefig(os.path.join(a.out, 'stage24-on-frame-954.png'), dpi=100)
+fig.savefig(os.path.join(a.out, '%s-on-frame-954.png' % a.prefix), dpi=100)
 plt.close(fig)
 print('wrote', a.out)

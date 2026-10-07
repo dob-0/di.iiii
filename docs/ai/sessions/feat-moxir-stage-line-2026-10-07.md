@@ -137,3 +137,30 @@ the views if someone else set them.
 
 **Views re-aimed:** the DJ eye is 2.05, the Floor target is the DJ's head at 2.15, and the entry target is at 5.05.
 The copy is at version 176. Ops 165–176 all came from the scripts; no owner edit happened in that window.
+
+## Picture gate, later on 10-07: "the truss at the back of the DJ … with the truss flipped"
+
+This is a scratch copy only: `moxir-known-full-stage-back-flip`, copied from stage24 at v176. stage24 itself is
+unchanged.
+
+- **New park rule for a backdrop** (`truss_behind_m` in rig-lib `stageFrame`): every hung part stands a clear gap
+  (0.5 m, a design choice) behind the riser's back edge. The front-most hung parts are the bridle clamps on the front
+  girder, 0.82 m from the bridge's plane.
+  - `behindOptions` compares the park: z 21.0 gives 0.68 m, so it passes and is picked. z 21.18 gives exactly 0.50.
+    z 21.5 gives 0.18, which fails. At z 22.0 the clamps hang 0.32 m over the step.
+- **Flipped cut:** `moxir-crane-cut-back-flip-2026-10-07.json` is the stage-line cut mirrored, re-derived by craneCut.
+  - The ends are LOW 3.24 house right and HIGH 6.35 house left. Bridles are 119/42/26°, mirrored. Trim and loads are
+    mirrored too, and a test holds it.
+- **Tie-offs:** both go to the z 18 columns, 26–28° off the plane, so they draw the line back, away from the DJ.
+  - HL ties level at 6.50 m, 0.56 m under the runway.
+  - HR, the LOW end, cannot tie at its own 3.39 m: it runs into the pipe racks, and below them into the drum tank or
+    the canopy. The least change is +1.71 m to **5.10 m**, rising 15°, 0.11 m over pipe-rack-3.
+  - The low end is 0.74 m over raised hands, and 0.70 m from the blower cyclone.
+- **For comparison, the un-flipped cut at z 21** passes with no change. HL ties at 3.39 m and HR at 4.70 m (0.20 m over
+  pipe-rack-3).
+- **Copy:** `recutOps` moves the 53 cut entities mirrored, then 3 m back. That is rigid, refused otherwise, and the
+  safety steels are re-derived. The views are re-aimed (`aim-views --design`); the entry camera now targets z 21.
+- **copy-version trap:** the version id is capped at 48 characters, so `stage24-backflip` was refused. The suffix is
+  `b`. A `--id` option is owed.
+- **Pictures:** `back-flip-compare.png` (three sections), `back-flip-plan.png`, `back-flip-on-frame-954.png` and
+  `back-flip-side.png`.

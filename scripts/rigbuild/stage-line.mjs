@@ -34,7 +34,7 @@ import { REPO_ROOT } from '../place/common.mjs'
 import { makeClient, readToken } from '../place/api.mjs'
 import { linePoint, slopedLineRigging, stageFrame } from '../place/rig-lib.mjs'
 import { venuePlanFromHall } from '../../src/rigbuild/venuePlan.js'
-import { isCut } from './mirror-cut.mjs'
+import { isCut, mirrorEntity } from './mirror-cut.mjs'
 import { clearUnderCab, segmentHitsBox, tieoffCabClashes, TIEOFF_CAB_MARGIN_M } from './safety.mjs'
 import { RIGS_DIR, VERSIONS_FILE, rigFileOf, versionRig } from './versions.mjs'
 
@@ -52,10 +52,10 @@ const r3 = (v) => Math.round(v * 1000) / 1000
 const r2 = (v) => Math.round(v * 100) / 100
 
 /** The committed inputs: the versions spec, its base rig, the stage-line design, its hall record, the old rig file. */
-export const loadInputs = () => {
+export const loadInputs = (designFile = STAGE_LINE_FILE) => {
     const spec = read(VERSIONS_FILE)
     const base = read(path.join(RIGS_DIR, spec.base))
-    const design = read(STAGE_LINE_FILE)
+    const design = read(designFile)
     return {
         spec, base, design,
         hall: read(design.crane.hall_record),
@@ -70,6 +70,7 @@ export const stageAtLine = (base, design) => ({
     x_m: design.booth.centre_x_m,
     front_z_m: design.booth.front_z_m,
     truss_axis_x_m: design.truss.axis_x_m,
+    ...(design.truss.behind_m !== undefined ? { truss_behind_m: design.truss.behind_m } : {}),
     deck_h_m: design.booth.deck_h_m ?? base.stage.deck_h_m,
     ...(design.booth.stairs === false ? { stairs: null } : {}),
     label: `DJ place on the owner's stage line (z ${design.stage_line.z_m}), 2026-10-07`
@@ -205,6 +206,125 @@ export const djEyeLine = ({ deckH, djZ, barrierZ, backZ, eye = EYE_M, head = 1.7
     const front = barrierZ + 0.3
     const at = E + (eye - E) * ((front - djZ) / (backZ - djZ))
     return { dj_eye_m: r2(E), over_front_row_heads_m: r2(at - head), basis: `head tops ${head} m (ESTIMATE), the back of the floor z ${backZ} at eye ${eye} m` }
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// THE CUT AS A BACKDROP (owner, 2026-10-07: "the truss at the back of the DJ — where the DJ stage line finishes, the
+// crane line there — with the truss flipped"). The park rule changes: not "the DJ within 1 m of the bridge" but
+// "nothing hung over the riser": every hung part stands a clear gap behind the riser's back edge.
+// ---------------------------------------------------------------------------------------------------------------
+
+/** The hall's fixed things a strap must miss: the massing, and the crane runway beams on the column lines (ESTIMATE 0.8 m wide). */
+export const fixedBoxes = (hall) => {
+    const g = hall.geometry
+    const rail = g.crane_rail_x_m ?? 11.35
+    const L = g.end_wall_inner_y_m ?? 54
+    return [
+        ...(g.massing || []).map((m) => ({ id: m.id, ...boxOf(m) })),
+        ...[-1, 1].map((k) => ({ id: k < 0 ? 'runway-l' : 'runway-r', min: [k * rail - 0.4, g.runway_bottom_m, -L], max: [k * rail + 0.4, g.runway_top_m, L] }))
+    ]
+}
+
+/** The smallest gap from a→b to any fixed box, and to which. */
+export const nearestFixed = (a, b, hall) => fixedBoxes(hall)
+    .map((x) => ({ id: x.id, gap_m: r2(segmentBoxGap(a, b, x)) }))
+    .sort((p, q) => p.gap_m - q.gap_m)[0]
+
+/**
+ * The anchor heights on a column that a tie-off from `from` can use: it misses every crane cab (safety.mjs, its 0.1 m
+ * margin) and every fixed box by `margin`, and never dips under raised hands (`minY`). Scanned every 1 cm up to the
+ * runway's underside. Returns the windows [[lo, hi], …]. Pure.
+ */
+export const anchorWindows = ({ from, colX, gridZ, hall, margin = 0.1, minY = 2.5, step = 0.01 }) => {
+    const top = hall.geometry.runway_bottom_m - margin
+    const ok = (y) => {
+        const to = [colX, y, gridZ]
+        if (tieoffCabClashes({ truss: { rigging: { tieoffs: [{ id: 't', from_m: from, to_m: to }] } } }, hall).length) return false
+        if (Math.min(from[1], y) < minY) return false
+        return fixedBoxes(hall).every((x) => segmentBoxGap(from, to, x) >= margin - 1e-9)
+    }
+    const wins = []
+    let lo = null
+    for (let y = 0.5; y <= top + 1e-9; y += step) {
+        const yy = Math.round(y * 100) / 100
+        if (ok(yy)) { if (lo === null) lo = yy } else if (lo !== null) { wins.push([lo, Math.round((yy - step) * 100) / 100]); lo = null }
+    }
+    if (lo !== null) wins.push([lo, Math.round(top * 100) / 100])
+    return wins
+}
+
+/** The anchor height nearest the preferred one inside the windows (null if there is none). */
+export const nearestInWindows = (wins, pref) => {
+    let best = null
+    for (const [lo, hi] of wins) {
+        const y = Math.min(hi, Math.max(lo, pref))
+        if (best === null || Math.abs(y - pref) < Math.abs(best - pref)) best = y
+    }
+    return best === null ? null : r2(best)
+}
+
+/** Where the hung parts of a line in the plane z reach along z: the bridle clamps on the girders' inner flanges are outermost. */
+export const hungReach = (rig, z) => {
+    const b = rig.truss.rigging.bridle
+    const half = Math.max(b.leg_spread_m / 2 + 0.07, (rig.truss.section_m ?? 0.29) / 2)
+    return { front: r3(z + half), back: r3(z - half), half_m: r3(half) }
+}
+
+/**
+ * The backdrop park compared: for each bridge z and each rig (`rigs`: { name: rig derived for the line }), the gap from
+ * the riser's back edge to the front-most hung part, the tie-offs to the two nearest column grid lines (the anchor
+ * windows, the height kept or the least change, the angle off the bridge's plane), the raised-hands margin and what
+ * fixed thing the line passes nearest. Pure.
+ */
+export const behindOptions = ({ rigs, hall, design, zs, gapMin }) => {
+    const g = hall.geometry
+    const out = []
+    for (const [name, rig] of Object.entries(rigs)) {
+        const cut = read(rig.truss.rigging.source)
+        const s0 = stageFrame(rig, hall)
+        const back = s0.back
+        const uEnds = rig.truss.ends.map((e) => e.u_m)
+        for (const z of zs) {
+            const hz = hallWithCraneAt(hall, z)
+            const stage = { ...s0, trussZ: z, crane: hz.geometry.cranes[0] }
+            const reach = hungReach(rig, z)
+            const gap = r2(s0.into > 0 ? back - reach.front : reach.back - back)
+            const grids = [...g.column_grid_z_m].sort((p, q) => Math.abs(p - z) - Math.abs(q - z) || q - p).slice(0, 2)
+            const ties = cut.rigging.tieoffs.map((tie) => {
+                const from = linePoint(stage, tie.u_m, 'axis').map(r3)
+                const pref = tie.y_m === 'end' ? r2(from[1]) : tie.y_m
+                const options = grids.map((gz) => {
+                    const wins = anchorWindows({ from, colX: tie.side * g.column_inner_face_x_m, gridZ: gz, hall: hz })
+                    const y = nearestInWindows(wins, pref)
+                    const to = [tie.side * g.column_inner_face_x_m, y, gz]
+                    const horiz = Math.hypot(to[0] - from[0], to[2] - from[2])
+                    return {
+                        grid_z_m: gz, windows: wins, y_m: y, change_m: y === null ? null : r2(y - pref),
+                        angle_off_plane_deg: Math.round((Math.atan2(Math.abs(gz - z), Math.abs(to[0] - from[0])) * 180) / Math.PI),
+                        slope_deg: y === null ? null : Math.round((Math.atan2(y - from[1], horiz) * 180) / Math.PI),
+                        nearest: y === null ? null : nearestFixed(from, to, hz)
+                    }
+                })
+                // the least change, then the straightest, then the column further from the DJ (its pull draws the line back)
+                const usable = options.filter((o) => o.y_m !== null).sort((p, q) => Math.abs(p.change_m) - Math.abs(q.change_m) || p.angle_off_plane_deg - q.angle_off_plane_deg || s0.into * (p.grid_z_m - q.grid_z_m))
+                return { id: tie.id, side: tie.side, from_m: from, preferred_y_m: pref, options, pick: usable[0] || null }
+            })
+            const line = [linePoint(stage, uEnds[0], 'bottom'), linePoint(stage, uEnds[1], 'bottom')]
+            const fails = []
+            if (gap < gapMin) fails.push(`the front-most hung part (bridle clamps, z ${reach.front}) is ${gap} m behind the riser's back edge (< ${gapMin} m)`)
+            for (const t of ties) {
+                if (!t.pick) fails.push(`tie-off ${t.id}: no anchor height on either column (z ${grids.join(' / ')}) misses the cab, the fixed metal and raised hands`)
+                else if (Math.abs(t.pick.change_m) > 0.005) fails.push(`tie-off ${t.id}: its own height (${t.preferred_y_m} m) is blocked — least change ${t.pick.change_m > 0 ? '+' : ''}${t.pick.change_m} m to ${t.pick.y_m} m on z ${t.pick.grid_z_m} (soft)`)
+            }
+            out.push({
+                rig: name, z_m: z, riser_back_z_m: r2(back), hung_front_z_m: reach.front, gap_m: gap,
+                low_end_over_raised_hands_m: rig.truss.clearance.low_end.over_raised_hands_m, low_end_side: rig.truss.clearance.low_end.side,
+                line_nearest_fixed: nearestFixed(line[0], line[1], hz), ties,
+                hard: fails.filter((f) => !f.endsWith('(soft)')), soft: fails.filter((f) => f.endsWith('(soft)'))
+            })
+        }
+    }
+    return out
 }
 
 /** The park the table picks: no fails, the straightest tie-offs, then the nearest the DJ. */
@@ -407,6 +527,56 @@ export const stageLineOps = ({ doc, rig, hall, oldRig, oldHall, design, keep = n
     }
 }
 
+/**
+ * The ops that RE-CUT a copy already on the line: its cut (hung as `rigFrom` derives it at `hallFrom`) re-hung as
+ * `rigTo` derives it at `hallTo` — a new bridge z and, with `mirror`, the line mirrored about the nave axis (the owner's
+ * "flipped" backdrop, 2026-10-07). The rigging is replaced by the derived one; the line's pieces and its lamps move
+ * rigidly (mirrored first: mirror-cut.mjs mirrorEntity, names' sides swapped), by the offset the derived rigging shows —
+ * refused unless the rigging moves rigidly. The venue plan follows `hallTo`. Pure. Returns { ops, moved, kept, d }.
+ */
+export const recutOps = ({ doc, rigFrom, hallFrom, rigTo, hallTo, mirror = false, keep = new Set(), design }) => {
+    const entities = Array.isArray(doc.entities) ? doc.entities : Object.values(doc.entities || {})
+    const from = new Map(slopedLineRigging(rigFrom, stageFrame(rigFrom, hallFrom), hallFrom).map((e) => [e.id, e]))
+    const to = new Map(slopedLineRigging(rigTo, stageFrame(rigTo, hallTo), hallTo).map((e) => [e.id, e]))
+    const flip = (p) => (mirror ? [-p[0], p[1], p[2]] : p)
+    // the document must hang the cut as rigFrom says (else the rigid move below would carry an error along)
+    const here = entities.filter((e) => isCut(e) && from.has(e.id) && !/tieoff/.test(e.id))
+    if (!here.length) throw new Error('no rigging of the cut (rig-hoist-*) in the document')
+    const off = Math.max(...here.flatMap((e) => e.components.transform.position.map((v, k) => Math.abs(v - from.get(e.id).components.transform.position[k]))))
+    if (off > 0.005) throw new Error(`the document's cut is not where ${rigFrom.truss.rigging.source} derives it (off by ${r3(off)} m) — refusing`)
+    // the rigid offset: derived-to minus (mirrored) derived-from, over the rigging that keeps its shape
+    // mirrored, pick i of n becomes pick n+1−i (rig-lib numbers the picks from −x)
+    const n = rigFrom.truss.rigging.picks_u_m.length
+    const twin = (id) => (mirror ? id.replace(/^rig-hoist-(\d+)/, (_, i) => `rig-hoist-${n + 1 - Number(i)}`) : id)
+    // (the safety steels are left out: rig-lib sets each 0.12 m to +x of its pick, mirrored or not — they are re-derived anyway)
+    const offsets = [...from.values()].filter((e) => to.has(twin(e.id)) && !/tieoff|-steel/.test(e.id) && e.id !== 'rig-truss-header')
+        .map((e) => to.get(twin(e.id)).components.transform.position.map((v, k) => v - flip(e.components.transform.position)[k]))
+    const d = [0, 1, 2].map((k) => offsets.reduce((sum, o) => sum + o[k], 0) / offsets.length)
+    const spread = Math.max(...offsets.flatMap((o) => o.map((v, k) => Math.abs(v - d[k]))))
+    if (spread > 0.005) throw new Error(`the re-cut would not move rigidly (spread ${r3(spread)} m) — refusing`)
+    const ops = []
+    const moved = []
+    const kept = []
+    for (const e of entities) {
+        const t = e.components?.transform
+        if (!t?.position || !isCut(e)) continue
+        if (keep.has(e.id)) { kept.push(e.id); continue }
+        const derived = to.get(e.id)
+        const next = derived ? { transform: clone(derived.components.transform), name: derived.name } : (() => {
+            const m = mirror ? mirrorEntity(e) : clone(e)
+            const mt = m.components.transform
+            return { transform: { ...mt, position: mt.position.map((v, k) => r3(v + d[k])) }, name: m.name }
+        })()
+        ops.push({ type: 'updateComponent', payload: { entityId: e.id, component: 'transform', patch: next.transform } })
+        if (next.name && next.name !== e.name) ops.push({ type: 'updateEntity', payload: { entityId: e.id, patch: { name: next.name } } })
+        moved.push({ id: e.id, from: t.position, to: next.transform.position })
+    }
+    const plan = venuePlanFromHall(hallTo, { name: 'MOXIR · Charentsavan factory hall', source: `${design.crane.hall_record} (hall.py v${hallTo.version}, ${String(hallTo.createdAt || '').slice(0, 16)})` })
+    const venue = entities.find((e) => e.id === 'place-hall')
+    if (planKey(venue?.components?.venuePlan) !== planKey(plan)) ops.push({ type: 'updateComponent', payload: { entityId: 'place-hall', component: 'venuePlan', patch: plan } })
+    return { ops, moved, kept, d: d.map(r3) }
+}
+
 // --- CLI ---------------------------------------------------------------------------------------------------------
 
 const args = (() => {
@@ -422,8 +592,30 @@ const args = (() => {
 
 const main = async () => {
     const opt = args()
-    const inputs = loadInputs()
+    const inputs = loadInputs(opt.design ? String(opt.design) : STAGE_LINE_FILE)
     const rig = stageLineRig(inputs)
+    if (opt.evaluate && inputs.design.truss.behind_m !== undefined) {
+        // the BACKDROP design: its own cut, and for comparison the stage-line cut (not flipped) hung in the same plane
+        const line = loadInputs()
+        const unflipped = stageLineRig({ ...inputs, design: { ...inputs.design, truss: { ...inputs.design.truss, cut: line.design.truss.cut } } })
+        const zs = inputs.design.crane.candidates_m
+        const options = behindOptions({ rigs: { flipped: rig, unflipped }, hall: inputs.hall, design: inputs.design, zs, gapMin: inputs.design.truss.clear_gap_m })
+        const st = stageFrame(rig, inputs.hall)
+        const djZ = st.back + st.into * (st.depth / 2 - 0.2)
+        const dz = inputs.hall.geometry.zones.dance.used.z_m
+        const crowd = [0.2, 0.4, 0.6, 0.8, 1.2].map((h) => ({ ...crowdSightline({ deckH: h, djZ, barrierZ: inputs.design.barrier.z_m }), dj: djEyeLine({ deckH: h, djZ, barrierZ: inputs.design.barrier.z_m, backZ: dz[1] }) }))
+        const trussOf = (r) => ({ ends: r.truss.ends, trim_m: r.truss.trim_m, picks: r.truss.rigging.picks, tieoffs: r.truss.rigging.tieoffs, clearance: r.truss.clearance })
+        const z = inputs.design.crane.z_m
+        const un = options.find((o) => o.rig === 'unflipped' && o.z_m === z)
+        const unTruss = trussOf(unflipped)
+        unTruss.tieoffs = un.ties.map((t) => ({ id: t.id, from_m: t.from_m, to_m: t.pick ? [t.side * inputs.hall.geometry.column_inner_face_x_m, t.pick.y_m, t.pick.grid_z_m] : null, under_cab_m: null }))
+        console.log(JSON.stringify({
+            crowd,
+            options: options.filter((o) => o.rig === 'flipped').map((o) => ({ ...o, fails: o.hard })),
+            behind: options, picked: z, truss: trussOf(rig), unflipped_truss: unTruss
+        }, null, 1))
+        return
+    }
     if (opt.evaluate) {
         const options = parkOptions({ rig, hall: inputs.hall, design: inputs.design })
         const st = stageFrame(rig, inputs.hall)
@@ -461,7 +653,14 @@ const main = async () => {
     const take = new Set(String(opt.take || '').split(',').filter(Boolean))
     for (let i = theirs.length - 1; i >= 0; i -= 1) if (take.has(theirs[i].id)) { console.log(`  TAKEN by the owner's decision: ${theirs[i].id}`); theirs.splice(i, 1) }
     for (const m of theirs) console.log(`  KEPT (${m.what}): ${m.id}${m.from || m.to ? ` ${JSON.stringify(m.from?.position ?? m.from)} → ${JSON.stringify(m.to?.position ?? m.to)}` : ''}`)
-    const { ops, moved, kept, summary } = stageLineOps({ doc: got.body.document, rig, ...inputs, keep: new Set(theirs.map((m) => m.id)) })
+    // `--recut-from <design>`: the copy hangs the cut as that design derives it; re-hang it as this one does (`--mirror`)
+    const recutFrom = opt['recut-from'] ? loadInputs(String(opt['recut-from'])) : null
+    const { ops, moved, kept, summary } = recutFrom
+        ? (() => {
+            const r = recutOps({ doc: got.body.document, rigFrom: stageLineRig(recutFrom), hallFrom: recutFrom.hall, rigTo: rig, hallTo: inputs.hall, mirror: Boolean(opt.mirror), keep: new Set(theirs.map((m) => m.id)), design: inputs.design })
+            return { ...r, summary: `re-cut ${opt.mirror ? 'MIRRORED ' : ''}from ${opt['recut-from']}: ${r.moved.length} cut entities, offset (${r.d.join(', ')})` }
+        })()
+        : stageLineOps({ doc: got.body.document, rig, ...inputs, keep: new Set(theirs.map((m) => m.id)) })
     console.log(`${project} @ v${got.body.version}: ${summary}; ${ops.length} ops`)
     if (opt.out) fs.writeFileSync(path.join(String(opt.out), `stage-line-${project}-theirs.json`), JSON.stringify({ theirs, kept }, null, 1))
     if (keptFile) fs.writeFileSync(keptFile, JSON.stringify([...new Set([...keptBefore.filter((id) => !take.has(id)), ...theirs.filter((m) => m.what !== 'removed').map((m) => m.id)])], null, 1))
