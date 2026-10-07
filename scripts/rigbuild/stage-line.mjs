@@ -329,8 +329,8 @@ export const stageLineOps = ({ doc, rig, hall, oldRig, oldHall, design, keep = n
     const ops = []
     const moved = []
     const kept = []
-    const write = (e, transform, name) => {
-        if (keep.has(e.id)) { kept.push(e.id); return }
+    const write = (e, transform, name, { heightOnly = false } = {}) => {
+        if (keep.has(e.id) && !heightOnly) { kept.push(e.id); return }
         if (sameT(e.components.transform, transform) && (!name || name === e.name)) return
         ops.push({ type: 'updateComponent', payload: { entityId: e.id, component: 'transform', patch: transform } })
         if (name && name !== e.name) ops.push({ type: 'updateEntity', payload: { entityId: e.id, patch: { name } } })
@@ -350,8 +350,15 @@ export const stageLineOps = ({ doc, rig, hall, oldRig, oldHall, design, keep = n
         if (!t?.position) continue
         const rel = [t.position[0] - curAxis, 0, t.position[2] - curMid]
         const at = (y) => [r3(now.axis + rel[0]), r3(y), r3(nowMid + rel[2])]
-        if (DECK.test(e.id)) write(e, { ...t, position: at(0), scale: [t.scale[0], deckH, t.scale[2]] }, `DJ riser — ${design.booth.deck.what}`)
-        else if (e.id === 'rig-dj-table') write(e, { ...t, position: at(deckH) })
+        // someone else's booth keeps its place; only the step's HEIGHT follows the design (the owner set it)
+        const theirs = keep.has(e.id)
+        if (DECK.test(e.id)) {
+            if (theirs) { kept.push(e.id); write(e, { ...t, scale: [t.scale[0], deckH, t.scale[2]] }, `DJ riser — ${design.booth.deck.what}`, { heightOnly: true }) }
+            else write(e, { ...t, position: at(0), scale: [t.scale[0], deckH, t.scale[2]] }, `DJ riser — ${design.booth.deck.what}`)
+        } else if (e.id === 'rig-dj-table') {
+            if (theirs) { kept.push(e.id); write(e, { ...t, position: [t.position[0], r3(deckH), t.position[2]] }, null, { heightOnly: true }) }
+            else write(e, { ...t, position: at(deckH) })
+        }
         else if (STAIR.test(e.id)) {
             if (steps) write(e, { ...t, position: at(t.position[1]) })
             else if (keep.has(e.id)) kept.push(e.id)
@@ -450,11 +457,14 @@ const main = async () => {
     if (!fromLog.complete) throw new Error('the op log does not reach back to version 1 (the server keeps a window) — pass --last and --kept, or check by hand; refusing')
     for (const t of fromLog.ids) if (!theirs.some((m) => m.id === t.id)) theirs.push({ id: t.id, what: `${t.what} by ${t.client} (v${t.version})`, from: null, to: null })
     if (!last) console.log('no --last: the op log (and --kept) is the guard')
+    // `--take a,b`: ids the owner has since decided by the design (2026-10-07: "±5.4 over his hand placement") — the guard lets go
+    const take = new Set(String(opt.take || '').split(',').filter(Boolean))
+    for (let i = theirs.length - 1; i >= 0; i -= 1) if (take.has(theirs[i].id)) { console.log(`  TAKEN by the owner's decision: ${theirs[i].id}`); theirs.splice(i, 1) }
     for (const m of theirs) console.log(`  KEPT (${m.what}): ${m.id}${m.from || m.to ? ` ${JSON.stringify(m.from?.position ?? m.from)} → ${JSON.stringify(m.to?.position ?? m.to)}` : ''}`)
     const { ops, moved, kept, summary } = stageLineOps({ doc: got.body.document, rig, ...inputs, keep: new Set(theirs.map((m) => m.id)) })
     console.log(`${project} @ v${got.body.version}: ${summary}; ${ops.length} ops`)
     if (opt.out) fs.writeFileSync(path.join(String(opt.out), `stage-line-${project}-theirs.json`), JSON.stringify({ theirs, kept }, null, 1))
-    if (keptFile) fs.writeFileSync(keptFile, JSON.stringify([...new Set([...keptBefore, ...theirs.filter((m) => m.what !== 'removed').map((m) => m.id)])], null, 1))
+    if (keptFile) fs.writeFileSync(keptFile, JSON.stringify([...new Set([...keptBefore.filter((id) => !take.has(id)), ...theirs.filter((m) => m.what !== 'removed').map((m) => m.id)])], null, 1))
     if (opt.out) {
         fs.writeFileSync(path.join(String(opt.out), `stage-line-${project}-before.json`), JSON.stringify(got.body))
         fs.writeFileSync(path.join(String(opt.out), `stage-line-${project}-ops.json`), JSON.stringify(ops, null, 1))

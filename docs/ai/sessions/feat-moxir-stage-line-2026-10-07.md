@@ -119,3 +119,21 @@ those five entities back (v154–158). I restored his exact transforms (v160–1
 The guard now reads the **op log** (`theirsFromOps`): any entity a non-script client ever touched is kept. It refuses
 to write when the log does not reach version 1, and the server keeps a 500-op window. `aim-views.mjs` refuses to write
 the views if someone else set them.
+
+### The owner's answers (later on 10-07), applied to scratch by ops
+
+1. **DJ step = 0.4 m ("two decks low"), still one step up.**
+   - Hardware: StageDex SM-L-40A legs, a 37.5 cm leg (bax-shop listing). With the 175 mm SM-L-20A, the codes name the
+     stage height and the leg is 25 mm shorter. The maker's height table is still not opened.
+   - His booth place is kept (centre x 0.128). Only the step's height and the table's height changed: `stageLineOps`
+     height-only for a booth someone else placed.
+   - Crowd at 0.4 m: front row C 80 mm, 2 rows over 60 mm, 0 over 90 mm. The DJ's eye passes 0.25 m over the front
+     row's heads.
+   - At z 24 the cut leaves the front row 2.14 m of clear view to the DJ, and 1.96 m over the DJ's raised hands. The
+     crane stays at z 24; the park table is unchanged.
+2. **PA = symmetric ±5.4 m**, the owner's choice over his hand placement.
+   - Recorded as `pa.decision` in the design file.
+   - Written with `stage-line.mjs --take <ids>`: the guard lets go of exactly those ids.
+
+**Views re-aimed:** the DJ eye is 2.05, the Floor target is the DJ's head at 2.15, and the entry target is at 5.05.
+The copy is at version 176. Ops 165–176 all came from the scripts; no owner edit happened in that window.

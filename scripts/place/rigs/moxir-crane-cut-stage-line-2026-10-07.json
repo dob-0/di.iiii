@@ -101,8 +101,8 @@
   "clearance": {
     "raised_hands_m": 2.5,
     "raised_hands_basis": "the brief's figure: a tall adult's raised hands (~2.2–2.3 m) plus a jump",
-    "dj_deck_m": 0.2,
-    "dj_deck_why": "the one-step booth (owner 2026-10-07: 'just one step thing'), moxir-stage-line-2026-10-07.json booth.deck_h_m"
+    "dj_deck_m": 0.4,
+    "dj_deck_why": "the one-step booth, 0.4 m (owner 2026-10-07: 'two decks low'), moxir-stage-line-2026-10-07.json booth.deck_h_m"
   },
   "motion": {
     "min_move_s": 4,

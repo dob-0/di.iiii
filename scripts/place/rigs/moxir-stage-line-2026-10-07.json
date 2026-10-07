@@ -24,17 +24,17 @@
     "front_z_m": 24.5,
     "depth_m": 2.0,
     "width_m": 3.0,
-    "deck_h_m": 0.2,
+    "deck_h_m": 0.4,
     "stairs": false,
     "clear_of_fixed_m": 0.1,
-    "why": "the owner, 2026-10-07 (later): \"keep max dj center\" — the booth on the nave axis (x 0), front on the stage line, the riser behind it; \"we dont need to 2n floor stage for dj just one step thing\" — ONE low step, 0.2 m, so no stair. It stands 2.1 m clear of the roller conveyor (x ≥ 3.6).",
+    "why": "the owner, 2026-10-07 (later): \"keep max dj center\" — the booth on the nave axis (x 0), front on the stage line, the riser behind it; \"we dont need to 2n floor stage for dj just one step thing\" — one low step. The owner then chose 0.4 m (\"two decks low\", 2026-10-07, after the crowd-sightline table): still one step up, no stair. It stands 2.1 m clear of the roller conveyor (x ≥ 3.6).",
     "deck": {
-      "what": "one step: 3 × StageDex Topline deck 2 × 1 m on 20 cm standard legs, as one 3 × 2 m level",
+      "what": "one step: 3 × StageDex Topline deck 2 × 1 m on 40 cm standard legs, as one 3 × 2 m level, 0.4 m high",
       "deck_code": "Prolyte StageDex Topline deck SM-D-T-200100, 2 × 1 m, 35.6 kg self weight, 750 kg/m² UDL",
       "deck_source": "https://www.prolyte.com/products/portable-stages/stagedex/topline-deck/sm-d-t-200100-topline-deck-200x100cm (read 2026-10-07)",
-      "leg_code": "StageDex standard leg SM-L-20A (the 20 cm stage-height leg; the leg itself 175 mm)",
-      "leg_source": "https://prolyte.com/products/portable-stages/stagedex/stagedex-legs (\"lengths ranging from 20-100cm\", read 2026-10-07); https://cuesale.com/product/prolyte-stagedex-standard-leg/ (\"The SM-L-20A … only 175mm in height\", read 2026-10-07)",
-      "height_basis": "0.20 m finished height ASSUMED from the leg's code (175 mm leg + the deck frame): the maker's data sheet that states the code → height relation was not opened. The rental house's own decks are owed.",
+      "leg_code": "StageDex standard leg SM-L-40A (round aluminium 48.3 × 3 mm; the leg itself 37.5 cm)",
+      "leg_source": "https://www.bax-shop.co.uk/stage-components-accessories/stagedex-sm-l-40a-stage-leg-37-5-cm-high (\"stage leg 37.5 cm high\", 48.3 × 3 mm, read 2026-10-07); https://prolyte.com/products/portable-stages/stagedex/stagedex-legs (\"lengths ranging from 20-100cm\", read 2026-10-07)",
+      "height_basis": "0.40 m finished height: the leg codes name the stage height and the leg is 25 mm shorter (SM-L-20A 175 mm → 20 cm, SM-L-40A 375 mm → 40 cm: two listings agree; the deck frame carries the rest). The maker's own height table not opened — the rental house's decks owed.",
       "why_three": "\"one step\" read as one LEVEL, not one 2 × 1 m deck: a single deck leaves 0.2 m behind the 0.8 m deep DJ table for the DJ to stand — the 3 × 2 m base footprint is kept (owner to confirm)"
     },
     "table_note": "the DJ table stays 0.95 m high on the step (top 1.15 m from the floor) — moxir-2026-10-17.json stage.table",
@@ -86,7 +86,21 @@
         ]
       },
       "reads_as": "the booth centred at x 0.13 (0.13 m house right of the axis), decks 1 and 3 0.01 m forward of deck 2 — read as hand placement, not a new design; carry it or keep x 0? (owner)"
-    }
+    },
+    "history": [
+      {
+        "deck_h_m": 1.2,
+        "by": "base rig"
+      },
+      {
+        "deck_h_m": 0.2,
+        "by": "owner 2026-10-07 'just one step thing'"
+      },
+      {
+        "deck_h_m": 0.4,
+        "by": "owner 2026-10-07 'two decks low', after the sightline table (0.2 m: 0 rows ≥ 60 mm; 0.4 m: 2)"
+      }
+    ]
   },
   "pa": {
     "placeholder": true,
@@ -137,8 +151,7 @@
     "spacing": {
       "centre_x_m": 5.4,
       "why": "a stereo pair symmetric about the DJ (now x 0). His drawing put the stacks 3.6–4.2 m either side of the DJ; at +3.9 m the R stack (1.34 m wide, z 23.78–24.5) would stand on the roller conveyor (x 3.6–4.6, z 16.5–24.0). The smallest symmetric spacing OUTSIDE the conveyor with the booth's 0.1 m clearance: 4.6 + 0.1 + 0.67 = 5.37 → ±5.4 m (0.13 m clear). The narrower symmetric option INSIDE it, ±2.8 m (0.13 m clear of x 3.6, 0.63 m from the riser), puts the mains 1.3 m from the DJ's ears — not taken.",
-      "uncertainty": "the conveyor's x is ±1 m (one direction only); 0.13 m is NOT enough against that — tape its edge on 2026-10-08 before the stacks are set",
-      "question_for_owner": "Your speakers were ~4 m either side of the DJ; with the DJ centred, the right one would stand on the roller conveyor. I put both at 5.4 m (symmetric, at the dance floor's edges). OK, or closer in (±2.8 m, right beside the booth)?"
+      "uncertainty": "the conveyor's x is ±1 m (one direction only); 0.13 m is NOT enough against that — tape its edge on 2026-10-08 before the stacks are set"
     },
     "owner_hand_moves": {
       "seen": "scratch project moxir-known-full-stage24, op log (clients 21ae90bd v111–v120 and b9fff4ed v131–v149 — the owner's editor on scratch), read 2026-10-07; KEPT in the copy, never written over",
@@ -168,7 +181,13 @@
         }
       ],
       "reads_as": "L ≈ −5.2, R ≈ +5.5 about the DJ near x 0.13: close to the symmetric ±5.4 this file proposes (L 0.2 m in, R 0.1 m out; the tops 0.03–0.05 m off their subs). R subs x 4.82–6.16 stand 0.22 m clear of the conveyor.",
-      "open": "which he wants: his hand placement (L −3.1 / R +5.5), or the symmetric pair this file proposes (±5.4)? The copy keeps his; this file's `sides` stay the proposal until he says."
+      "open": "answered: the owner chose ±5.4 (pa.decision)"
+    },
+    "decision": {
+      "by": "owner",
+      "said": "2026-10-07, chose ±5.4 over his hand placement",
+      "replaces": "his hand placement L −5.18 / R +5.49 (tops −5.22 / +5.44) in the scratch copy",
+      "centre_x_m": 5.4
     }
   },
   "barrier": {

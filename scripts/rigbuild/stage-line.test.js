@@ -35,7 +35,7 @@ describe('stageFrame: a booth with its front stated (front_z_m)', () => {
         expect(s.back).toBe(22.5)
         expect(s.axis).toBe(0)
         expect(s.trussAxis).toBe(0)
-        expect(s.deck).toBe(0.2)
+        expect(s.deck).toBe(0.4)
         expect(s.trussZ).toBe(24)
     })
     it('changes nothing for a rig that does not state it (the trussAxis is the booth axis)', () => {
@@ -82,8 +82,8 @@ describe('the cut at z 24: the shape the owner decided, unchanged', () => {
     it('still refuses a line slid along the bridge toward the cab (+2 m: its hr tie-off crosses the cab)', () => {
         expect(() => stageLineRig({ ...inputs, design: { ...design, truss: { ...design.truss, axis_x_m: 2 } } })).toThrow(/passes through a crane cab/)
     })
-    it('gives the DJ on the step 2.16 m over raised hands to the line\'s centre (bottom chord 4.86 − 0.2 − 2.5)', () => {
-        expect(t.clearance.over_dj_raised_hands_m).toBe(2.16)
+    it('gives the DJ on the 0.4 m step 1.96 m over raised hands to the line\'s centre (bottom chord 4.86 − 0.4 − 2.5)', () => {
+        expect(t.clearance.over_dj_raised_hands_m).toBe(1.96)
     })
 })
 
@@ -105,7 +105,14 @@ describe('the roller conveyor (hall v8, owner 2026-10-07): the centred booth and
     })
 })
 
-describe('can the crowd see a DJ on one step? (owner: "just one step thing")', () => {
+const SIGHT_24 = parkOptions({ rig, hall, design }).find((o) => o.z_m === 24).sightline_to_dj_m
+describe('can the crowd see a DJ on one step? (owner: "just one step thing", then "two decks low")', () => {
+    it('the copy\'s step is the owner\'s 0.4 m: front row 80 mm, 2 rows over 60 mm, the DJ\'s eye 0.25 m over the front heads', () => {
+        const s0 = stageFrame(rig, hall)
+        const c = crowdSightline({ deckH: s0.deck, djZ: s0.back + s0.into * (s0.depth / 2 - 0.2), barrierZ: design.barrier.z_m })
+        expect(c).toMatchObject({ deck_h_m: 0.4, c_front_row_mm: 80, rows_c60: 2, rows_c90: 0 })
+        expect(SIGHT_24).toBeGreaterThan(1.5)
+    })
     const s = stageFrame(rig, hall)
     const djZ = s.back + s.into * (s.depth / 2 - 0.2)
     const at = (h) => crowdSightline({ deckH: h, djZ, barrierZ: design.barrier.z_m })
@@ -124,7 +131,7 @@ describe('can the crowd see a DJ on one step? (owner: "just one step thing")', (
         const high = parkOptions({ rig: stageLineRig({ ...inputs, design: { ...design, booth: { ...design.booth, deck_h_m: 1.2 } } }), hall, design })
         expect(low.map((o) => [o.z_m, o.dj_offset_m, o.fails.length])).toEqual(high.map((o) => [o.z_m, o.dj_offset_m, o.fails.length]))
         expect(pickPark(low).z_m).toBe(24)
-        expect(low.find((o) => o.z_m === 24).sightline_to_dj_m).toBe(2.29)
+        expect(low.find((o) => o.z_m === 24).sightline_to_dj_m).toBe(SIGHT_24)
     })
 })
 
@@ -190,10 +197,10 @@ describe('stageLineOps: the copy moved, and nothing else', () => {
     const { ops } = stageLineOps({ doc, rig, hall, oldRig, oldHall, design })
     const next = apply(doc, ops)
     const pos = (d, id) => d.entities.find((e) => e.id === id).components.transform.position
-    it('moves the booth to the line on the nave axis as one 0.2 m step, the table on it, the stair gone', () => {
+    it('moves the booth to the line on the nave axis as one 0.4 m step, the table on it, the stair gone', () => {
         expect(pos(next, 'rig-deck-2')).toEqual([0, 0, 23.5])
-        expect(next.entities.find((e) => e.id === 'rig-deck-2').components.transform.scale).toEqual([1, 0.2, 1])
-        expect(pos(next, 'rig-dj-table')).toEqual([0, 0.2, 23.9])
+        expect(next.entities.find((e) => e.id === 'rig-deck-2').components.transform.scale).toEqual([1, 0.4, 1])
+        expect(pos(next, 'rig-dj-table')).toEqual([0, 0.4, 23.9])
         expect(next.entities.some((e) => e.id === 'rig-dj-stair-1')).toBe(false)
     })
     it('translates the cut 19.2 m along z: its rigging re-derived equals the old rigging moved, the tie-offs excepted', () => {
@@ -263,8 +270,20 @@ describe('the conflict guard: what someone else moved is kept', () => {
         const r = stageLineOps({ doc: his, rig, hall, oldRig, oldHall, design, keep: new Set(keep) })
         expect(r.ops.some((o) => keep.has(o.payload.entityId))).toBe(false)
         // the booth is one unit: a hand-moved deck keeps the table where he left it too
-        expect(r.kept.sort()).toEqual(['rig-deck-2', 'rig-dj-table', 'rig-pa-l-subs'])
+        expect([...new Set(r.kept)].sort()).toEqual(['rig-deck-2', 'rig-dj-table', 'rig-pa-l-subs'])
         expect(r.moved).toEqual([])
+    })
+    it('changes only the step\'s HEIGHT of a booth he placed, never its place', () => {
+        const his = JSON.parse(JSON.stringify(next))
+        for (const e of his.entities) if (/^rig-(deck|dj-)/.test(e.id)) e.components.transform.position[0] += 0.128
+        his.entities.find((e) => e.id === 'rig-deck-2').components.transform.scale[1] = 0.2
+        his.entities.find((e) => e.id === 'rig-dj-table').components.transform.position[1] = 0.2
+        const r = stageLineOps({ doc: his, rig, hall, oldRig, oldHall, design, keep: new Set(['rig-deck-2']) })
+        const after = apply(his, r.ops)
+        const pos = (d, id) => d.entities.find((e) => e.id === id).components.transform.position
+        expect(pos(after, 'rig-deck-2')).toEqual([0.128, 0, 23.5])
+        expect(after.entities.find((e) => e.id === 'rig-deck-2').components.transform.scale[1]).toBe(0.4)
+        expect(pos(after, 'rig-dj-table')).toEqual([0.128, 0.4, 23.9])
     })
 })
 

@@ -117,7 +117,10 @@ ax.add_patch(Rectangle((min(zs) - 1, min(xs) - .5), 2, max(xs) - min(xs) + 1, co
 sp = design['pa'].get('spacing')
 if sp:
     lx, rx = doc['rig-pa-l-subs']['components']['transform']['position'][0], doc['rig-pa-r-subs']['components']['transform']['position'][0]
-    ax.annotate('PA in the copy: L %.2f / R +%.2f (as you placed them by hand)\nproposal: symmetric ±%.1f, the least that clears the conveyor\n(as first drawn, ~±3.9 m, R would stand on it) — QUESTION for you' % (lx, rx, sp['centre_x_m']),
+    dec = design['pa'].get('decision')
+    txt = ('PA L %.2f / R +%.2f: symmetric ±%.1f — YOUR CHOICE (%s),\nover your hand placement −5.18 / +5.49; the least spacing that clears\nthe roller conveyor (as first drawn, ~±3.9 m, R would stand on it)' % (lx, rx, sp['centre_x_m'], dec['said'].split(', ')[0])) if dec else \
+        ('PA in the copy: L %.2f / R +%.2f (as you placed them by hand)\nproposal: symmetric ±%.1f, the least that clears the conveyor\n(as first drawn, ~±3.9 m, R would stand on it) — QUESTION for you' % (lx, rx, sp['centre_x_m']))
+    ax.annotate(txt,
                 xy=(L - 0.2, lx), xytext=(26.3, -8.3), color=BLUE, fontsize=8, arrowprops=dict(arrowstyle='->', color=BLUE), zorder=8,
                 bbox=dict(fc=BG, ec='none', alpha=.85))
     dc = design['booth']['drawn_centre_x_m']
