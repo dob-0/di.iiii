@@ -279,6 +279,15 @@ def resolve_dims(opts):
             dims['massing'] = [dict(it, **{k: v for k, v in moves[it['id']].items() if k != 'id'}) if it.get('id') in moves else it
                                for it in dims['massing']]
             origin['massing'] = f"{origin.get('massing', 'placeholder')}; {len(moves)} moved by {os.path.basename(dims_path)}"
+        # `massing_remove`: items cleared out of the hall for a show (owner's word, kept on the entry). The as-found
+        # layers still describe them; only a build that names this layer leaves them out.
+        if given.get('massing_remove'):
+            drop = {m['id']: m for m in given['massing_remove']}
+            missing = [k for k in drop if k not in {it.get('id') for it in dims['massing']}]
+            if missing:
+                raise SystemExit(f'hall.py: massing_remove names unknown ids {missing} ({os.path.basename(dims_path)})')
+            dims['massing'] = [it for it in dims['massing'] if it.get('id') not in drop]
+            origin['massing'] = f"{origin.get('massing', 'placeholder')}; {len(drop)} cleared by {os.path.basename(dims_path)}"
         for key in KEYS_FROM_DIMS:
             if key not in given or given[key] is None:
                 continue
