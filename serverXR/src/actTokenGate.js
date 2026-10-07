@@ -199,4 +199,4 @@ const createActTokenGate = ({ prefix, readToken, resolveState, cookieName, logge
   next()
 }
 
-module.exports = { REFUSED_THROUGH_DI_BO, REFUSED_BELOW_ROOT, refusalFor, tierRefusalFor, createActTokenGate, WRITE_METHODS }
+module.exports = { REFUSED_THROUGH_DI_BO, REFUSED_BELOW_ROOT, refusalFor, tierRefusalFor, createActTokenGate, holdBackSessionCookie, WRITE_METHODS }

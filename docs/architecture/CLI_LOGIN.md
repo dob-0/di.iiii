@@ -49,7 +49,7 @@ account; "terminal token" = `Authorization: Bearer dii_cli_…`.
 
 | Route | Who | Request | Answer |
 |---|---|---|---|
-| `POST /api/auth/device/start` | anyone | `{ label? }` (text, cut to 80) | `201 { deviceCode, userCode: "BDFG-HJKL", verificationPath: "/device", expiresIn: 600, interval: 5 }` · `404 { error: "login_not_available" }` when this server has no accounts (a `di up` install) · `429` |
+| `POST /api/auth/device/start` | anyone | `{ label? }` (text, cut to 80) | `201 { deviceCode, userCode: "BDFG-HJKL", verificationPath: "/device", expiresIn: 600, interval: 5 }` · `404 { error: "login_not_available" }` when this server has no accounts (a `di up` install) · `429` · `503 { error: "busy" }` when too many codes are waiting |
 | `POST /api/auth/device/token` | anyone | `{ deviceCode }` | `200 { token, expiresAt, user: { id, name } }` once · else `400 { error }` with `authorization_pending`, `slow_down` (+ `interval`), `access_denied` or `expired_token` (an unknown or spent code is `expired_token`) |
 | `POST /api/auth/device/lookup` | session | `{ userCode }` (any case, dash optional) | `200 { label, requestedAt, expiresAt, from }` (`from` = the address, shortened: `203.0.x.x`) · `401 { error: "auth_required" }` · `403 { error: "account_required" }` (a guest) · `404 { error: "unknown_code" }` (wrong, expired or already decided) · `429` |
 | `POST /api/auth/device/decision` | session | `{ userCode, approve: true \| false }` | `200 { approved }` · the same refusals as `lookup` |
@@ -67,8 +67,9 @@ route, never a fall-back to a guest. A route the gate refuses gets `403 { error:
   compared in constant time. Shown to the terminal once, at the poll that consumes the device code.
 - **Life:** 90 days since it was last used (sliding; the expiry is moved forward at most once in 10 minutes), and never past 365
   days since it was made. An active person is not asked again; an unused laptop's key dies by itself.
-- **Ends when:** the person revokes it (the list on `/device`, or `di logout`), it expires, or the account is blocked or loses its
-  role (the account is read fresh on every request, so this is immediate).
+- **Ends when:** the person revokes it (the list on `/device`, or `di logout`), it expires, or the account is removed or loses its
+  role (the account is re-read at most once a minute — the window a browser cookie gets — so that lands within a minute; a revoke is
+  immediate).
 - **Browser sign-out does not end it.** In this server a sign-out bumps the account's `token_version` and ends every cookie. A
   terminal login that died with every browser sign-out would bring back the trip this removes. The list on `/device` is the way
   to end one. (Revoking terminals on a password reset is owed, below.)
@@ -79,7 +80,7 @@ route, never a fall-back to a guest. A route the gate refuses gets `403 { error:
 ## What a request with it is
 
 `Authorization: Bearer dii_cli_…` resolves, in `getAuthState` (`serverXR/src/index.js`), to the person's own session-equivalent
-state — role, spaces and unrestricted read fresh from the account row — marked `actor: 'di CLI'`. Ops it writes belong to the
+state — role, spaces and unrestricted read fresh from the account row — marked `actor: 'di.cli'`. Ops it writes belong to the
 person and read "`<name> via di CLI`" in history (`opActor.js`). It is **capped like a di.bo member** (role no higher than
 editor, no unrestricted reach: the person's own and scoped spaces) and the terminal-login gate (`cliTokenGate.js`, in the server's source folder) runs before every route:
 

@@ -91,6 +91,9 @@ const {
 const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
 const { resolveActToken, PREFIX: actTokenPrefix } = require('./telegramActTokenStore')
 const { createActTokenGate } = require('./actTokenGate')
+const { resolveCliToken, pruneCliLogin, TOKEN_PREFIX: cliTokenPrefix } = require('./cliLoginStore')
+const { createCliTokenGate } = require('./cliTokenGate')
+const { registerCliLoginRoutes } = require('./routes/cliLoginRoutes')
 const { tierFor, capForTier } = require('./actTokenTier')
 const { mintInvite, resolveInvite, markInviteUsed, listInvites, revokeInvite } = require('./inviteStore')
 const githubApp = require('./githubApp')
@@ -616,6 +619,16 @@ router.use(createActTokenGate({
   logger
 }))
 
+// A terminal's own login (`di login`, docs/architecture/CLI_LOGIN.md) is judged the
+// same way, by its own gate (cliTokenGate.js): the di.bo refusals, nothing the
+// catalogue marks public, a dead token 401, no cookie out, every write logged.
+router.use(createCliTokenGate({
+  readToken: (req) => normalizeAuthToken(readAuthToken(req)),
+  resolveState: (req, token) => resolveCliTokenState(req, token),
+  cookieName: config.authSession.cookieName,
+  logger
+}))
+
 // `di up` sets DI_LOCAL=1. Read at request time rather than at boot so tests
 // can toggle it, which is why it is a function and not a constant.
 const isLocalInstall = () => process.env.DI_LOCAL === '1'
@@ -807,9 +820,50 @@ const resolveActTokenState = (req, token) => {
   return state
 }
 
+// A terminal's own login (cliLoginStore.js): the person's state, built from
+// their account row exactly as a session's is — role, spaces and unrestricted
+// read fresh — and capped like a di.bo member. It is NOT checked against the
+// account's token_version: a browser sign-out must not end a terminal login
+// (docs/architecture/CLI_LOGIN.md). It ends by revoke, by disuse, or when the
+// account is gone. Memoised per request, as the act token's state is.
+const cliTokenStates = new WeakMap()
+const resolveCliTokenState = (req, token) => {
+  if (cliTokenStates.has(req)) return cliTokenStates.get(req)
+  let state = null
+  const claim = resolveCliToken(token)
+  if (claim) {
+    const fresh = getFreshDbIdentity(claim.userId)
+    if (fresh && fresh.dbRole) {
+      const reach = capForTier('member', { role: fresh.dbRole, isUnrestricted: fresh.dbUnrestricted })
+      let person = null
+      try { person = findUserById(claim.userId) } catch { /* the name is a label, not the grant */ }
+      state = {
+        ...buildAuthState({
+          authenticated: true,
+          type: 'session',
+          role: reach.role,
+          subject: claim.userId,
+          label: String(person?.display_name || person?.email || claim.userId).trim().slice(0, 120),
+          spaces: fresh.dbSpaces,
+          isUnrestricted: reach.isUnrestricted,
+          session: { subject: claim.userId, expiresAt: claim.expiresAt }
+        }),
+        actor: 'di.cli',
+        cliTokenId: claim.tokenId,
+        cliTokenLabel: claim.label,
+        cliTokenExpiresAt: claim.expiresAt
+      }
+    }
+  }
+  cliTokenStates.set(req, state)
+  return state
+}
+
+// A request that carries someone else's errand token — di.bo's or a terminal's:
+// on a `di up` install loopback must not turn it into the owner.
 const carriesActToken = (req) => {
   const token = normalizeAuthToken(readAuthToken(req))
-  return Boolean(token) && token.startsWith(actTokenPrefix)
+  return Boolean(token) && (token.startsWith(actTokenPrefix) || token.startsWith(cliTokenPrefix))
 }
 
 const getAuthState = (req, res = null) => {
@@ -819,6 +873,11 @@ const getAuthState = (req, res = null) => {
   if (bearer && bearer.startsWith(actTokenPrefix)) {
     return resolveActTokenState(req, bearer)
       || buildAuthState({ authenticated: false, type: 'act-token', reason: 'act-token' })
+  }
+  // A terminal's login wins over the cookie beside it for the same reason.
+  if (bearer && bearer.startsWith(cliTokenPrefix)) {
+    return resolveCliTokenState(req, bearer)
+      || buildAuthState({ authenticated: false, type: 'cli-token', reason: 'cli-token' })
   }
   const sessionState = readAuthSession(req)
   if (sessionState.authenticated) {
@@ -1217,6 +1276,32 @@ registerAuthRoutes(router, {
   onSessionUpgrade: (req, user) => promoteGuestSandbox(readAuthSession(req), user.id),
   // Read-only, for the Telegram bot's "what can I open" answer.
   listSpaces
+})
+
+// Signing in from a terminal (docs/architecture/CLI_LOGIN.md): a terminal asks for a
+// code, a person in a browser answers it, the terminal is handed a login.
+// Answers are limited per address AND per account, so neither many accounts
+// from one place nor one account from many places can sweep the code space.
+// Where there are no accounts (a `di up` install, or auth off) it is not offered.
+const cliStartLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 10, name: 'terminal sign-in codes' })
+const cliPollLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 1200, name: 'terminal sign-in polls' })
+const cliAnswerByAddress = createRateLimiter({ windowMs: 60_000, max: 10, name: 'terminal sign-in answers' })
+const cliAnswerByAccount = createRateLimiter({
+  windowMs: 60_000,
+  max: 10,
+  name: 'terminal sign-in answers',
+  keyFn: (req) => `account:${getPublicAuthState(req)?.subject || 'anon'}`,
+  scope: 'for this account'
+})
+registerCliLoginRoutes(router, {
+  logger,
+  getAuthState: (req) => req.authState || getPublicAuthState(req),
+  findUserById,
+  clientKey,
+  isAvailable: () => Boolean(config.requireAuth) && !isLocalInstall(),
+  startLimiter: cliStartLimiter,
+  pollLimiter: cliPollLimiter,
+  answerLimiters: [cliAnswerByAddress, cliAnswerByAccount]
 })
 
 router.get('/api/auth/session', async (req, res, next) => {
@@ -2852,6 +2937,8 @@ initStorage()
       try { pruneLoginTokens() } catch (error) { logger.warn('Failed to prune login tokens', error) }
       // di.bo's act tokens, expired or revoked: same reasoning, same sweep.
       try { pruneActTokens() } catch (error) { logger.warn('Failed to prune act tokens', error) }
+      // Terminal sign-in codes and ended terminal logins: same sweep.
+      try { pruneCliLogin() } catch (error) { logger.warn('Failed to prune terminal logins', error) }
       // The trash. Deleting marks the row and leaves the bytes; this is the
       // only path that removes them, and only after TRASH_TTL_MS. Rides the
       // same half-hour sweep — a deletion is not urgent, and its whole value
