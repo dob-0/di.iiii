@@ -155,6 +155,10 @@ const createDomainService = ({
       return { domain: out(store.insertDomain({ hostname, spaceId: spaceMeta.id, state: 'unmanaged', addedBy })) }
     }
 
+    // Reserve the name BEFORE the first await: the table's primary key is the lock. Checking, awaiting Cloudflare and
+    // only then inserting let a second add() for the same name (a double click, a retry after a slow answer, two spaces
+    // typing one name) pass the same check and throw a constraint error — a 500 for a domain that was in fact registered.
+    store.insertDomain({ hostname, spaceId: spaceMeta.id, state: 'pending', addedBy })
     let result
     try {
       result = await cloudflare.create(hostname)
@@ -164,11 +168,11 @@ const createDomainService = ({
       const duplicate = error instanceof CloudflareError && (error.status === 409 || error.codes.includes(1406))
       result = duplicate ? await cloudflare.findByHostname(hostname).catch(() => null) : null
       if (!result) {
+        store.deleteDomain(hostname) // give the reserved name back
         logger.warn?.(`[domains] Cloudflare refused ${hostname}: ${error.message}`)
         return refuse(502, 'cloudflare_refused', error.message)
       }
     }
-    store.insertDomain({ hostname, spaceId: spaceMeta.id, state: 'pending', addedBy })
     const domain = store.updateDomain(hostname, {
       cloudflareId: result.id,
       state: stateOf(result),

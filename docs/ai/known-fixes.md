@@ -59,6 +59,12 @@ resolves the server's source as `./src` when there is no `serverXR/` above it.
 ls /app/scripts/space-bundle.mjs`. A tool that is present but crashes prints its own
 sentence in the same log line.
 
+## Adding the same domain twice at once threw a constraint error — check, await, insert on a unique key
+
+`domainService.add` looked for an existing row, awaited Cloudflare, and only then inserted. `space_domains.hostname` is the primary key and `insertDomain` is a plain `INSERT`, so a second `add()` for the same name that started inside the Cloudflare round trip (a double click, a retry after a slow answer, two spaces typing one name) passed the same check and threw — the route answered 500 for a domain that was in fact registered. Reproduced on dev with two concurrent adds: `['fulfilled', 'rejected']`.
+
+**Fix:** reserve the name before the first await (the primary key is the lock), and give it back if Cloudflare refuses it. The second request now gets the existing domain (same space) or `hostname_taken` (another space). Guard: `serverXR/src/domainAddRace.test.js`. **Same class to look for elsewhere:** any `get → await → insert` on a unique key in an async handler.
+
 ## A follow's gaps: new key ignored, remote stored without its mount, files owed in silence, settings not carried, follower-only project refused
 
 Found on the owner's install 2026-10-04/05 (di.laser, moxir, space `open`). Five faults in `serverXR/src/follow/` and
