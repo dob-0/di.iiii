@@ -75,6 +75,7 @@ const { registerUserRoutes } = require('./routes/userRoutes')
 const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
 const { registerEstateRoutes } = require('./routes/estateRoutes')
 const { registerTrackRoutes } = require('./routes/trackRoutes')
+const { registerShootRoutes } = require('./routes/shootRoutes')
 const { registerAppVisitorRoutes } = require('./routes/appVisitorRoutes')
 const { createVisitorRecorder, createVisitorBouncer } = require('./appVisitors')
 const { createGuestBook } = require('./appVisitorStore')
@@ -1932,6 +1933,19 @@ router.post('/api/open-calls/:callId/applications', openCallSubmitLimiter, (req,
 registerTrackRoutes(router, {
   trackLimiter: trackEventLimiter,
   requireAdminAlways
+})
+
+// The shoot sheet (/shoot/{key}): a crew's shared plan, opened by a link and
+// never by a login, so it must sit ahead of the /api auth gates below. The key
+// in the path is the credential — see shootRoutes.js for why, and why only
+// listed keys answer. A phone polls every few seconds, hence the roomy read cap.
+registerShootRoutes(router, {
+  dataDir: config.directories.dataDir,
+  readJson,
+  writeJson,
+  readLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 1500, name: 'shoot sheet reads' }),
+  writeLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 600, name: 'shoot sheet edits' }),
+  fileLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 120, name: 'shoot sheet photos' })
 })
 
 // Shared with registerSpaceRoutes below (same instance, not just the same
