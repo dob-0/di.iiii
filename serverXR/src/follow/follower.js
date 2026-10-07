@@ -711,7 +711,14 @@ const startFollowing = ({ local, remote, log = console, onState = () => {}, file
         // design is against. Read ours, then park, and let a local write abort
         // the park (see wake()).
         const ours = await readOps(local, stream, cursor.localVersion)
-        const parkable = wait && !woken && ours.reachable && !unseen(ours.ops, seen).length
+        // A stream that still owes its comparison (both sides moved, or the
+        // follow just started) does not park: the comparison comes after the
+        // read, and a park first held it — and so the first agreement of every
+        // follow — for a whole 20 s (2026-10-07: the "start from now" test
+        // waited out one park, and missed its 30 s deadline when a second one
+        // followed). It is compared on this pass and parks on the next.
+        const owed = stream.documentPath && movesFor(stream).in && movesFor(stream).out
+        const parkable = wait && !woken && !owed && ours.reachable && !unseen(ours.ops, seen).length
         parking = parkable ? new AbortController() : null
         const theirs = await readOps(remote, stream, cursor.remoteVersion, {
             waitSeconds: parkable ? WAIT_SECONDS : 0,

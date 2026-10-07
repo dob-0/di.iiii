@@ -1075,8 +1075,13 @@ describe('a follow starts from now and never silently erases work only the follo
         expect((await writeOp(hosting, addObject('h1', 'op-h1-then'), { spaceId: space })).status).toBe(200)
         const follower = open(space)
         try {
-            await settle('the first comparison', async () => follower.state.converged > 0)
-            expect(objectIds(await readScene(following, space))).toEqual(['h1'])
+            // The event that matters: this copy shows the host's. Which path got it
+            // there is not fixed: the first comparison writes the host's copy, but
+            // an op stamped in the same millisecond as the start is carried as an
+            // op instead (startCursorAt's `>=`, by design: dropping it would lose an
+            // edit made at the start; carrying it twice is dropped by its opId).
+            // Waiting on `converged > 0` failed whenever the op path won (#800).
+            await settle('this copy showing the host\'s', async () => objectIds(await readScene(following, space)).join() === 'h1')
             expect((await writeOp(following, addObject('late', 'op-late'), { spaceId: space })).status).toBe(200)
             follower.wake()
             await settle('the later edit reaching the host', hasOp(hosting, 'op-late', space))

@@ -127,6 +127,17 @@ converge rule above is unchanged. Measured: `followIntegration.test.js` (two ser
 in under 5 s past a whole-work op and the error clears. Not covered: the `PUT /api/projects/:id/document` route does
 not wake a follow, so a replacement made there is noticed at the next park end (up to 20 s).
 
+## A stream that owes its comparison does not park (2026-10-07)
+
+The comparison of a stream (host wins) runs after that pass's read, and the room's read parks for up to 20 s. So the
+first agreement of every follow, and every agreement after both sides moved, waited out a whole park. The
+`followIntegration.test.js` "start from now" case waited for that comparison under a 30 s deadline, and failed 2 of 5
+runs (measured by the #811 author). Now a stream that owes its comparison is read without a park, compared on that pass,
+and parks on the next. If a comparison cannot be done (both copies unreadable), the stream is asked at the loop's own
+interval, at most every 5 s, instead of being parked. The test now also waits for the event that matters (this copy
+shows the host's), not for `converged > 0`. An op stamped in the same millisecond as the start is carried as an op
+(`startCursorAt`'s `>=`, by design), and then no comparison write is needed at all.
+
 ## A project trashed, restored, renamed or moved (2026-10-07, `followProjects.js`)
 
 Before this a follow carried what is IN a project (its ops) and a project's birth, nothing about its life after:
