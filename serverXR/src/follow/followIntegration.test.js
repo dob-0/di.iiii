@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { spawn } from 'node:child_process'
+import http from 'node:http'
 import { createHash } from 'node:crypto'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import net from 'node:net'
@@ -1697,5 +1698,93 @@ describe('with a manage key, a project\'s life made here reaches the host', () =
         expect(await live(hosting, EDIT_ROOM, 'edit-trash')).toBeTruthy()
         expect(await inTrash(hosting, EDIT_ROOM, 'edit-trash')).toBe(false)
         expect(Object.values(followers).every(f => !f.state.lastError)).toBe(true)
+    })
+})
+
+// Review L3: a host that answers "trashed" and keeps the project live (lying,
+// or a man in the middle) must not get this install to take its own trash
+// back on the next pass. Here a small proxy in front of a real host answers
+// every project DELETE with 200 and forwards nothing; everything else passes.
+describe('a host that only says it trashed a project never undoes this install\'s trash', () => {
+    let hosting = null
+    let following = null
+    let proxy = null
+    let follower = null
+    let passes = 0
+    const warned = []
+    const { createAuthSessionValue } = require('../authSession.js')
+    const ownerCookie = `dii_serverxr_session=${createAuthSessionValue({ secret: 'test-session-secret', session: { subject: 'host-owner', label: 'Owner', role: 'admin', spaces: [], tokenVersion: 0 } }).value}`
+    const api = async (server, route, { method = 'GET', body = null } = {}) => {
+        const response = await fetch(`${server.baseUrl}${route}`, { method, headers: authHeaders, ...(body ? { body: JSON.stringify(body) } : {}) })
+        return { status: response.status, payload: await response.json().catch(() => null) }
+    }
+    const live = async (server, id) => ((await api(server, `/api/spaces/${SPACE}/projects`)).payload?.projects || []).find(row => row.id === id) || null
+    const inTrash = async (server, id) => ((await api(server, `/api/trash?space=${SPACE}`)).payload?.projects || []).some(row => row.id === id)
+    /** Wake the follow and wait until it has finished `n` more whole passes. */
+    const passesMore = async (n) => {
+        const target = passes + n
+        while (passes < target) {
+            const next = passes + 1
+            follower.wake()
+            await settle(`pass ${next} of ${target}`, () => passes >= next, { timeout: 15_000, every: 50 })
+        }
+    }
+
+    beforeAll(async () => {
+        hosting = await startServer({ requireAuth: true })
+        following = await startServer()
+        const db = new DatabaseSync(path.join(hosting.dataRoot, 'di.db'))
+        const now = Date.now()
+        db.prepare('INSERT INTO users (id, provider, provider_id, email, display_name, role, spaces, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+            .run('host-owner', 'github', 'host-owner', 'host-owner@example.com', 'Owner', 'admin', '[]', now, now)
+        db.close()
+        await createSpace(hosting, SPACE)
+        await createSpace(following, SPACE)
+        for (const server of [hosting, following]) {
+            for (const slug of ['lie-a', 'lie-b', 'lie-c']) expect((await api(server, `/api/spaces/${SPACE}/projects`, { method: 'POST', body: { slug, title: slug } })).status).toBe(201)
+        }
+        const minted = await fetch(`${hosting.baseUrl}/api/spaces/${SPACE}/sync-keys`, { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: ownerCookie }, body: JSON.stringify({ label: 'lying host', manage: true }) })
+        expect(minted.status).toBe(201)
+        const key = (await minted.json()).token
+        const target = new URL(hosting.baseUrl)
+        proxy = http.createServer((req, res) => {
+            if (req.method === 'DELETE' && /^\/serverXR\/api\/projects\/[^/]+$/.test(req.url)) {
+                req.resume()
+                res.writeHead(200, { 'Content-Type': 'application/json' })
+                res.end(JSON.stringify({ ok: true, trashed: true }))
+                return
+            }
+            const upstream = http.request({ host: target.hostname, port: target.port, path: req.url, method: req.method, headers: req.headers }, (answer) => {
+                res.writeHead(answer.statusCode, answer.headers)
+                answer.pipe(res)
+            })
+            upstream.on('error', () => { res.writeHead(502); res.end() })
+            req.pipe(upstream)
+        })
+        await new Promise(resolve => proxy.listen(0, '127.0.0.1', resolve))
+        follower = startFollowing({
+            local: side({ base: following.baseUrl, spaceId: SPACE, token: API_TOKEN }),
+            remote: side({ base: `http://127.0.0.1:${proxy.address().port}/serverXR`, spaceId: SPACE, token: key }),
+            log: { warn: message => warned.push(message), info: () => {} },
+            onState: () => { passes += 1 }
+        })
+        await settle('the follow running with its manage key', () => follower.state.status === 'following' && follower.state.key?.scope === 'manage', { timeout: 20_000 })
+    })
+
+    afterAll(async () => {
+        follower?.stop()
+        await new Promise(resolve => (proxy ? proxy.close(resolve) : resolve()))
+        await Promise.all([hosting?.stop(), following?.stop()])
+    })
+
+    it('says the trash was not confirmed, and keeps the project in this install\'s trash', async () => {
+        expect((await api(following, '/api/projects/lie-a', { method: 'DELETE' })).status).toBe(200)
+        follower.wake()
+        await settle('the follow saying the host did not confirm it', () => warned.some(message => /trash does not list it/.test(message)), { timeout: 15_000 })
+        // Two more whole passes: still in the trash here, never restored from a host that "took it out".
+        await passesMore(2)
+        expect(await inTrash(following, 'lie-a')).toBe(true)
+        expect(await live(following, 'lie-a')).toBe(null)
+        expect(await live(hosting, 'lie-a')).toBeTruthy()
     })
 })
