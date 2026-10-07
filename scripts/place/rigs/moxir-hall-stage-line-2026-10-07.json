@@ -1,5 +1,5 @@
 {
-  "_what": "MOXIR, the stage on the owner's stage line (2026-10-07): the nave's entry-end crane rolls from z 4.8 to z 24.0 (its bridge's centre line on the column grid line z 24, 0.5 m behind the stage line z 24.5), trolley still parked at the right-hand end; the dance and stage zones follow the line. Layered LAST, after moxir-hall-show-cleared-2026-10-17.json (the show hall: the prefab cabin out, owner 2026-10-07). The same crane, moved — not a second one. The far crane stays where it was seen.",
+  "_what": "MOXIR, the stage on the owner's stage line (2026-10-07): the nave's entry-end crane rolls from z 4.8 to z 24.0 (its bridge's centre line on the column grid line z 24, 0.5 m behind the stage line z 24.5), trolley still parked at the right-hand end; the dance and stage zones follow the line. Layered LAST, after moxir-hall-show-cleared-2026-10-17.json (the v8-show chain) (the show hall: the prefab cabin out, owner 2026-10-07). The same crane, moved — not a second one. The far crane stays where it was seen.",
   "_source": "the owner's marks on video frame 954 @ 3.6 s (2026-10-07; projected with scripts/place/picks/cam-954-3.6.json, the points in scripts/place/picks/marks-954-stage-2026-10-07.json); the park z is chosen in scripts/rigbuild/stage-line.mjs (parkOptions: z 22 / 24 / 26 compared) and recorded in scripts/place/rigs/moxir-stage-line-2026-10-07.json. A PLAN, not a survey: the crane's travel from z 4.8 to 24 along the runway, its brakes, lock-out and rated load are unchecked (rigging sign-off owed).",
   "source": "plan (the owner's stage line, 2026-10-07)",
   "cranes_from_door_m": [
@@ -113,7 +113,7 @@
           7.5
         ]
       },
-      "why_used_differs_2026_10_07": "The owner's stage line, 2026-10-07: the booth (3 x 2 m riser, x 0.945..3.945, front on the line z 24.5) and the two main PA stacks (placeholders, x -2.47..-1.13 and 5.38..6.72, front on the line) — the stage zone is their envelope. Source: scripts/place/rigs/moxir-stage-line-2026-10-07.json."
+      "why_used_differs_2026_10_07": "The owner's stage line, 2026-10-07: the booth (3 x 2 m riser, x 0.5..3.5 — moved 0.445 m to house left, clear of the roller conveyor, front on the line z 24.5) and the two main PA stacks (placeholders, x -2.47..-1.13 and 5.38..6.72, front on the line) — the stage zone is their envelope. Source: scripts/place/rigs/moxir-stage-line-2026-10-07.json."
     },
     "backstage": {
       "colour": "red",

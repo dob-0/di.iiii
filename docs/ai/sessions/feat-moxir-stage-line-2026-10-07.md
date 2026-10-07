@@ -4,7 +4,7 @@ The owner's order: stage → crane place → truss → lights. This branch does 
 (stack `moxir-flip`, serverXR 127.0.0.1:4323). Nothing was written to dev.diiii.xyz or the installed di. Lights are
 not redesigned: what hangs on the truss moves with it, and every floor fixture stays where it was.
 
-Built on `feat/moxir-space-fix-2026-10-07` at 6ba77270 (hall v7-show: the prefab cabin moved out, owner 2026-10-07).
+Built on `feat/moxir-space-fix-2026-10-07` at bea825f8 (hall v8-show: the prefab cabin moved out, and the roller conveyor the owner marked beside the bags).
 
 ## What the owner decided (2026-10-07)
 
@@ -15,7 +15,7 @@ speakers L and R on it, and the audience everything in front. The marks were pro
 in `scripts/place/rigs/moxir-stage-line-2026-10-07.json`:
 
 - the stage line is drawn square at z 24.5 (±2.5 m from the camera height);
-- the booth is centred at x 2.445, as drawn;
+- the booth: drawn at x 0.84–4.05 (centre 2.445). It is placed at centre **x 2.0**, moved 0.445 m toward house left so it clears the fixed roller conveyor (x 3.6–4.6, z 16.5–24.0, hall v8) by 0.1 m. As drawn, it overlapped the conveyor by 0.345 m. **This is a question for the owner**; the design file's `booth.moved` records it. PA R stands 0.78 m clear of the conveyor and did not move;
 - PA L is centred at x −1.8 and PA R at x 6.05;
 - the barrier is at z 25.8;
 - the crane is parked at z 24.
@@ -25,15 +25,15 @@ in `scripts/place/rigs/moxir-stage-line-2026-10-07.json`:
 | file | what |
 |---|---|
 | `scripts/place/rigs/moxir-hall-stage-line-2026-10-07.json` | dims layer, last in the chain: near crane `cranes_from_door_m` 30.0 (z 24), dance zone z 25.8–48, stage zone |
-| `scripts/place/rigs/moxir-hall-2026-10-07-v7-show-stage24.hall.json` | build record. Its geometry is identical to v7-show except `cranes` and `zones` |
+| `scripts/place/rigs/moxir-hall-2026-10-07-v8-show-stage24.hall.json` | build record. Its geometry is identical to v8-show except `cranes` and `zones` |
 | `scripts/place/rigs/moxir-crane-cut-stage-line-2026-10-07.json` | the 09-29 cut, unchanged, except the tie-off texts and the house-right anchor at 4.7 m |
-| `scripts/rigbuild/stage-line.mjs` (+ test, 19 tests) | `parkOptions`, `stageLineRig` (craneCut at the line), `stageLineOps` (the copy moved as ops) |
+| `scripts/rigbuild/stage-line.mjs` (+ test, 22 tests) | `parkOptions`, `stageLineRig` (craneCut at the line), `stageLineOps` (the copy moved as ops), `riserClearance` |
 | `scripts/place/rig-lib.mjs` | `stageFrame`: booth `front_z_m` and `truss_axis_x_m` (both are no-ops when absent; `versions.mjs --check` is unchanged) |
 | `scripts/place/stage_line_pictures.py` | plan, section and frame-954 pictures, drawn from the records and the copy's document |
 
-Hall build: `blender -b -P scripts/place/hall.py -- --out /mnt/data/footage/place-moxir-hall-v7-show-stage24-2026-10-07`
-with the v7-show chain plus `--dims scripts/place/rigs/moxir-hall-stage-line-2026-10-07.json` last. It ran under the
-browser lock with no preview, at 56–61 °C. hall.glb sha256 `35eb68c0…`.
+Hall build: `blender -b -P scripts/place/hall.py -- --out /mnt/data/footage/place-moxir-hall-v8-show-stage24-2026-10-07`
+with the v8-show chain plus `--dims scripts/place/rigs/moxir-hall-stage-line-2026-10-07.json` last. It ran under the
+browser lock with no preview, at 55–61 °C. hall.glb sha256 `c1de61ce…`.
 
 ## Scratch build (in order)
 
@@ -41,8 +41,9 @@ browser lock with no preview, at 56–61 °C. hall.glb sha256 `35eb68c0…`.
    This gave 127 entities, and the source was only read.
 2. `swap-hall.mjs --project moxir-known-full-stage24 --glb <v7-show-stage24 hall.glb>` reported "listed".
 3. `stage-line.mjs --project moxir-known-full-stage24 --apply`: 88 ops, read back clean, 131 entities.
-4. After the stage-zone fix and the hall rebuild: `swap-hall.mjs` again ("listed"), then `stage-line.mjs --apply` again,
-   which re-derived the venue plan only.
+4. After the stage-zone fix (v7-show build), and again for hall v8-show with the conveyor: `swap-hall.mjs`
+   ("listed"), then `stage-line.mjs --apply`. That re-run moved only the booth (Δx −0.445) and re-derived the venue plan.
+   The copy ended at version 110, on hall `c1de61ce`.
 
 The reference `moxir-known-full-flip` is untouched: version 9, hall v6 `4e3420f4`.
 

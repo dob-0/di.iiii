@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest'
 
 import { slopedLineRigging, stageFrame } from '../place/rig-lib.mjs'
 import { tieoffCabClashes } from './safety.mjs'
-import { hallWithCraneAt, loadInputs, nearestMassing, paEntities, parkOptions, pickPark, stageLineOps, stageLineRig } from './stage-line.mjs'
+import { hallWithCraneAt, loadInputs, nearestMassing, paEntities, parkOptions, pickPark, riserClearance, stageLineOps, stageLineRig } from './stage-line.mjs'
 
 const inputs = loadInputs()
 const { design, hall, oldHall, oldRig } = inputs
@@ -33,7 +33,7 @@ describe('stageFrame: a booth with its front stated (front_z_m)', () => {
     it('puts the riser behind the line at the x he drew, the cut on the nave axis', () => {
         expect(s.front).toBe(24.5)
         expect(s.back).toBe(22.5)
-        expect(s.axis).toBe(2.445)
+        expect(s.axis).toBe(2)
         expect(s.trussAxis).toBe(0)
         expect(s.trussZ).toBe(24)
     })
@@ -78,10 +78,29 @@ describe('the cut at z 24: the shape the owner decided, unchanged', () => {
         expect(at(4.86).clash).toBe(true)
         expect(at(4.58).gap).toBeLessThan(0.1)
     })
-    it('could not slide over the DJ: the high end would stand 0.36 m from the cab and craneCut refuses its tie-off', () => {
+    it('could not slide over the DJ: the high end would stand 0.8 m from the cab and craneCut refuses its tie-off', () => {
         const slidEnd = t.ends[1].x_m + design.booth.centre_x_m
-        expect(hall.geometry.cranes[0].cab.x_m[0] - slidEnd).toBeCloseTo(0.36, 2)
+        expect(hall.geometry.cranes[0].cab.x_m[0] - slidEnd).toBeCloseTo(0.8, 2)
         expect(() => stageLineRig({ ...inputs, design: { ...design, truss: { ...design.truss, axis_x_m: design.booth.centre_x_m } } })).toThrow(/passes through a crane cab/)
+    })
+})
+
+describe('the roller conveyor (hall v8, owner 2026-10-07): the booth moved the least that clears it', () => {
+    const s = stageFrame(rig, hall)
+    it('clears every fixed thing by the stated 0.1 m, the conveyor nearest', () => {
+        const near = riserClearance(s, hall)
+        expect(near.id).toBe('roller-conveyor')
+        expect(near.gap_m).toBeCloseTo(design.booth.clear_of_fixed_m, 3)
+    })
+    it('would overlap it where he drew it, and the move is no more than that needs', () => {
+        expect(riserClearance({ ...s, axis: design.booth.drawn_centre_x_m }, hall)).toEqual({ id: 'roller-conveyor', gap_m: 0 })
+        expect(riserClearance({ ...s, axis: design.booth.centre_x_m + 0.01 }, hall).gap_m).toBeLessThan(design.booth.clear_of_fixed_m)
+        expect(design.booth.moved.by_m[0]).toBeCloseTo(design.booth.centre_x_m - design.booth.drawn_centre_x_m, 6)
+    })
+    it('leaves PA R clear of it (0.78 m) without a move', () => {
+        const r = paEntities(design).find((e) => e.id === 'rig-pa-r-subs').components.transform
+        const conveyor = hall.geometry.massing.find((m) => m.id === 'roller-conveyor')
+        expect(r.position[0] - r.scale[0] / 2 - conveyor.x_m[1]).toBeCloseTo(0.78, 2)
     })
 })
 
@@ -146,8 +165,8 @@ describe('stageLineOps: the copy moved, and nothing else', () => {
     const next = apply(doc, ops)
     const pos = (d, id) => d.entities.find((e) => e.id === id).components.transform.position
     it('moves the booth to the line at the x he drew', () => {
-        expect(pos(next, 'rig-deck-2')).toEqual([2.445, 0, 23.5])
-        expect(pos(next, 'rig-dj-table')).toEqual([2.445, 1.2, 23.9])
+        expect(pos(next, 'rig-deck-2')).toEqual([2, 0, 23.5])
+        expect(pos(next, 'rig-dj-table')).toEqual([2, 1.2, 23.9])
     })
     it('translates the cut 19.2 m along z: its rigging re-derived equals the old rigging moved, the tie-offs excepted', () => {
         for (const e of doc.entities.filter((x) => /^rig-hoist-/.test(x.id))) {
@@ -186,8 +205,13 @@ describe('stageLineOps: the copy moved, and nothing else', () => {
         bent.entities.find((e) => e.id === 'rig-hoist-1').components.transform.position[1] += 0.3
         expect(() => stageLineOps({ doc: bent, rig, hall, oldRig, oldHall, design })).toThrow(/rigidly/)
     })
-    it('is a no-op the second time, and refuses a riser in neither place', () => {
+    it('is a no-op the second time, moves only the booth when its x changed, and refuses a riser in neither place', () => {
         expect(stageLineOps({ doc: next, rig, hall, oldRig, oldHall, design }).ops).toEqual([])
+        const shifted = JSON.parse(JSON.stringify(next))
+        for (const e of shifted.entities) if (/^rig-(deck|dj-)/.test(e.id)) e.components.transform.position[0] += 0.445
+        const again = stageLineOps({ doc: shifted, rig, hall, oldRig, oldHall, design })
+        expect(again.moved.map((m) => m.id).sort()).toEqual(['rig-deck-2', 'rig-dj-table'])
+        expect(pos(apply(shifted, again.ops), 'rig-deck-2')).toEqual([2, 0, 23.5])
         const odd = oldDoc()
         odd.entities.find((e) => e.id === 'rig-deck-2').components.transform.position = [0, 0, 12]
         expect(() => stageLineOps({ doc: odd, rig, hall, oldRig, oldHall, design })).toThrow(/refusing/)

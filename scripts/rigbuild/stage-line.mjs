@@ -181,6 +181,17 @@ export const pickPark = (options) => [...options]
     .filter((o) => !o.fails.length)
     .sort((a, b) => Math.max(...a.tieoffs.map((t) => t.along_z_m)) - Math.max(...b.tieoffs.map((t) => t.along_z_m)) || Math.abs(a.dj_offset_m) - Math.abs(b.dj_offset_m))[0] || null
 
+/** The riser's plan footprint against the hall's fixed massing: the smallest gap in plan (0 = overlapping), and with what. */
+export const riserClearance = (stage, hall) => {
+    const half = stage.width / 2
+    const [x0, x1, z0, z1] = [stage.axis - half, stage.axis + half, Math.min(stage.back, stage.front), Math.max(stage.back, stage.front)]
+    return (hall.geometry.massing || []).map((m) => {
+        const dx = Math.max(m.x_m[0] - x1, 0, x0 - m.x_m[1])
+        const dz = Math.max(m.z_m[0] - z1, 0, z0 - m.z_m[1])
+        return { id: m.id, gap_m: r3(Math.hypot(dx, dz)) }
+    }).sort((p, q) => p.gap_m - q.gap_m)[0]
+}
+
 // --- the ops on an existing copy ---------------------------------------------------------------------------------
 
 const BOOTH = /^rig-(deck-\d+|dj-table|dj-stair-\d+)$/
@@ -235,9 +246,23 @@ export const stageLineOps = ({ doc, rig, hall, oldRig, oldHall, design }) => {
     const plan = venuePlanFromHall(hall, { name: 'MOXIR · Charentsavan factory hall', source: `${design.crane.hall_record} (hall.py v${hall.version}, ${String(hall.createdAt || '').slice(0, 16)})` })
     const planOp = { type: 'updateComponent', payload: { entityId: 'place-hall', component: 'venuePlan', patch: plan } }
     if (Math.abs(nowDeck) < 0.01 && Math.abs(wasDeck) > 0.01) {
-        // already moved: only the venue plan follows a rebuilt hall record
+        // already on the line: the booth follows a changed x (2026-10-07: moved clear of the roller conveyor) and the
+        // venue plan follows a rebuilt hall record; nothing else moves again
+        const decks = entities.filter((e) => /^rig-deck-\d+$/.test(e.id)).map((e) => e.components.transform.position[0])
+        const dx = r3(now.axis - (Math.min(...decks) + Math.max(...decks)) / 2)
+        const ops = []
+        const moved = []
+        if (Math.abs(dx) > 0.005) {
+            for (const e of entities.filter((x) => BOOTH.test(x.id))) {
+                const t = e.components.transform
+                const to = add(t.position, [dx, 0, 0])
+                ops.push({ type: 'updateComponent', payload: { entityId: e.id, component: 'transform', patch: { ...t, position: to } } })
+                moved.push({ id: e.id, from: t.position, to })
+            }
+        }
         const same = JSON.stringify(byId.get('place-hall')?.components?.venuePlan) === JSON.stringify(plan)
-        return { ops: same ? [] : [planOp], moved: [], dCut: null, summary: `already on the stage line${same ? ': nothing to do' : ': the venue plan re-derived from the hall record'}` }
+        if (!same) ops.push(planOp)
+        return { ops, moved, dCut: null, summary: `already on the stage line: booth Δx ${dx}${same ? '' : ', the venue plan re-derived from the hall record'}` }
     }
     if (Math.abs(wasDeck) > 0.01) throw new Error(`the riser stands at z ${deckPos[2]}, neither the old stage (${(was.back + was.front) / 2}) nor the line — refusing`)
     const derived = new Map(slopedLineRigging(rig, now, hall).map((e) => [e.id, e]))

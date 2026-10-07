@@ -64,7 +64,9 @@ for m in g['massing']:
     (x0, x1), (z0, z1) = m['x_m'], m['z_m']
     if z1 < -4 or z0 > 55: continue
     ax.add_patch(Rectangle((max(z0, -4), x0), min(z1, 55) - max(z0, -4), x1 - x0, color='#5b5148', alpha=.75, lw=0, zorder=1))
-for lab, z, x in [('press', 1.7, 1.6), ('machines', 1, 7.5), ('blower + ducts', 18.5, 6.4), ('canopy', 18, 10.6), ('drum tank', 27.2, 8.6), ('pipe racks (x 10–12, y 3–4.5)', 40, 11.0)]:
+    if m['id'] == 'roller-conveyor':  # the owner's 10-07 mark: fixed, and it decides the booth's x
+        ax.add_patch(Rectangle((z0, x0), z1 - z0, x1 - x0, fill=False, ec='#e0c9a8', lw=1.2, zorder=4))
+for lab, z, x in [('press', 1.7, 1.6), ('machines', 1, 7.5), ('blower + ducts', 18.5, 6.4), ('roller conveyor (fixed)', 19.6, 4.1), ('canopy', 18, 10.6), ('drum tank', 27.2, 8.6), ('pipe racks (x 10–12, y 3–4.5)', 40, 11.0)]:
     ax.text(z, x, lab, color=DIM, fontsize=8, ha='center', va='center', zorder=3)
 cab0 = [m for m in v6['massing'] if m['id'] == 'prefab-cabin'][0]
 (x0, x1), (z0, z1) = cab0['x_m'], cab0['z_m']
@@ -111,6 +113,13 @@ ax.text(L + .25, -7.6, 'STAGE LINE z %.1f' % L, color=GREEN, fontsize=10, fontwe
 xs = [pos(doc, i)[0] for i in doc if i.startswith('rig-deck-')]
 zs = [pos(doc, i)[2] for i in doc if i.startswith('rig-deck-')]
 ax.add_patch(Rectangle((min(zs) - 1, min(xs) - .5), 2, max(xs) - min(xs) + 1, color=TEAL, alpha=.9, zorder=6))
+mv = design['booth'].get('moved')
+if mv:
+    dc = design['booth']['drawn_centre_x_m']
+    ax.add_patch(Rectangle((min(zs) - 1, dc - 1.5), 2, 3, fill=False, ec=TEAL, ls='--', lw=1.2, zorder=7))
+    ax.annotate('booth moved %.2f m to house left:\nclear of the roller conveyor by %.1f m\n(dashed = as you drew it) — QUESTION for you' % (-mv['by_m'][0], design['booth']['clear_of_fixed_m']),
+                xy=(min(zs) - 1, dc - 1.5), xytext=(8.0, -6.6), color=TEAL, fontsize=8, arrowprops=dict(arrowstyle='->', color=TEAL), zorder=8,
+                bbox=dict(fc=BG, ec='none', alpha=.85))
 ax.text(min(zs), (min(xs) + max(xs)) / 2, 'DJ\n3×2 m\n1.2 m', color='#04130f', fontsize=8, ha='center', va='center', fontweight='bold', zorder=7)
 for side in ('l', 'r'):
     e = doc['rig-pa-%s-subs' % side]['components']['transform']

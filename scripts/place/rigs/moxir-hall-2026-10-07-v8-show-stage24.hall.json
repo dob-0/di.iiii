@@ -1,7 +1,7 @@
 {
   "tool": "scripts/place/hall.py",
   "version": 2,
-  "createdAt": "2026-10-07T13:56:41.883016+00:00",
+  "createdAt": "2026-10-07T14:03:01.073450+00:00",
   "what": "A clean parametric model of a Soviet multi-span crane hall with a flat space-frame roof (MOXIR, Charentsavan). Not a scan. Frame: Y up, metres, the entry end at +Z, the far end at -Z, the nave centred on x = 0, +x to the right looking from the entry.",
   "dims": {
     "span_m": 24.0,
@@ -473,6 +473,26 @@
         "photos": "954 t3.6, 023",
         "confidence": "low-medium: x +-0.8, z +-2.5",
         "how": "954 u 1075-1150, v 560-655; 023 u 800-980, v 2340-2620. Cone bottom DLT (4.6, 0.5, 21.2), depth (4.5, 18.4) and (2.6, 16.9)."
+      },
+      {
+        "id": "roller-conveyor",
+        "label": "roller conveyor (a line of steel rollers on a frame, about 0.85 m high) from the duct elbow/hopper toward the entry, ending just past the front white bag",
+        "x_m": [
+          3.6,
+          4.6
+        ],
+        "z_m": [
+          16.5,
+          24.0
+        ],
+        "y_m": [
+          0.0,
+          0.85
+        ],
+        "material": "machine",
+        "photos": "954 t3.6 (owner's mark 2026-10-07: 'metal thing .png', the end rollers seen end-on beside bag 7), 004, 009 (the whole line from above, from z 45), 005 (its end beside bag 7 from the floor at z 48)",
+        "confidence": "low: x +-1, z +-2.5 (ends), top +-0.2. The two-view DLT of its near end did not close (954 vs 004 rays miss by 184/75 px: the VGGT cameras are not good enough at this range), so it is placed RELATIVE to objects already fixed from two sides: it starts at the duct elbow/hopper (x 4.0-5.3, z 16-18.5) and ends beside bag 7 (front foot (4.1, 24.3) from the fitted 954 camera); 004 alone, on a 0.8 m plane, gives x 3.2-3.3, z 16.4-26.3.",
+        "how": "Owner marked it 2026-10-07 on frame 954 @3.6 s ('METAL', box beside bag 7). Seen in 004/009 as a continuous roller line beside the bags (the bags stand in a row there, clustered in 954/005: the bags moved, the conveyor did not -> fixed). Tape on 10-08: both ends from the column line z 24 and from the nave axis."
       }
     ],
     "zones": {
@@ -578,7 +598,7 @@
             7.5
           ]
         },
-        "why_used_differs_2026_10_07": "The owner's stage line, 2026-10-07: the booth (3 x 2 m riser, x 0.945..3.945, front on the line z 24.5) and the two main PA stacks (placeholders, x -2.47..-1.13 and 5.38..6.72, front on the line) \u2014 the stage zone is their envelope. Source: scripts/place/rigs/moxir-stage-line-2026-10-07.json."
+        "why_used_differs_2026_10_07": "The owner's stage line, 2026-10-07: the booth (3 x 2 m riser, x 0.5..3.5 \u2014 moved 0.445 m to house left, clear of the roller conveyor, front on the line z 24.5) and the two main PA stacks (placeholders, x -2.47..-1.13 and 5.38..6.72, front on the line) \u2014 the stage zone is their envelope. Source: scripts/place/rigs/moxir-stage-line-2026-10-07.json."
       },
       "backstage": {
         "colour": "red",
@@ -711,7 +731,7 @@
     "neighbour_cranes_from_door_m": "estimate (moxir-hall-features-2026-09-28.json; confidence seen (photos 036, 017), positions GUESS)",
     "low_walls": "estimate (moxir-hall-dims-2026-10-02.json; confidence medium: the left row from the render match to photos 004/009 (2 bays); the right row is open everywhere (003, 005, 006, 009, 027) and has no wall)",
     "bracing_bays_from_door_m": "estimate (moxir-hall-features-2026-09-28.json; confidence GUESS (bracing seen in 017, 036; the bays are not identified))",
-    "massing": "estimate (moxir-hall-features-2026-09-28.json; confidence seen; envelopes from photo 032 at ~50 m (+-20 %); the press and machine line MODELLED from 1c3956d1/018/29b70cf5 by proportion inside those envelopes (ESTIMATED); the press type not identified) + 11 from moxir-hall-dims-2026-10-02.json + 4 from moxir-hall-dims-2026-10-07.json; 1 moved by moxir-hall-dims-2026-10-07.json; 1 cleared by moxir-hall-show-cleared-2026-10-17.json",
+    "massing": "estimate (moxir-hall-features-2026-09-28.json; confidence seen; envelopes from photo 032 at ~50 m (+-20 %); the press and machine line MODELLED from 1c3956d1/018/29b70cf5 by proportion inside those envelopes (ESTIMATED); the press type not identified) + 11 from moxir-hall-dims-2026-10-02.json + 5 from moxir-hall-dims-2026-10-07.json; 1 moved by moxir-hall-dims-2026-10-07.json; 1 cleared by moxir-hall-show-cleared-2026-10-17.json",
     "zones": "estimate (moxir-hall-stage-line-2026-10-07.json)",
     "cameras": "estimate (moxir-hall-features-2026-09-28.json)",
     "crane_trolley_x_m": "estimate (moxir-hall-stage-line-2026-10-07.json)"
@@ -1662,6 +1682,40 @@
             "albedo": 0.1583
           }
         ]
+      },
+      {
+        "id": "roller-conveyor",
+        "label": "roller conveyor (a line of steel rollers on a frame, about 0.85 m high) from the duct elbow/hopper toward the entry, ending just past the front white bag",
+        "x_m": [
+          3.6,
+          4.6
+        ],
+        "z_m": [
+          16.5,
+          24.0
+        ],
+        "y_m": [
+          0.0,
+          0.85
+        ],
+        "material": "machine",
+        "photos": "954 t3.6 (owner's mark 2026-10-07: 'metal thing .png', the end rollers seen end-on beside bag 7), 004, 009 (the whole line from above, from z 45), 005 (its end beside bag 7 from the floor at z 48)",
+        "confidence": "low: x +-1, z +-2.5 (ends), top +-0.2. The two-view DLT of its near end did not close (954 vs 004 rays miss by 184/75 px: the VGGT cameras are not good enough at this range), so it is placed RELATIVE to objects already fixed from two sides: it starts at the duct elbow/hopper (x 4.0-5.3, z 16-18.5) and ends beside bag 7 (front foot (4.1, 24.3) from the fitted 954 camera); 004 alone, on a 0.8 m plane, gives x 3.2-3.3, z 16.4-26.3.",
+        "how": "Owner marked it 2026-10-07 on frame 954 @3.6 s ('METAL', box beside bag 7). Seen in 004/009 as a continuous roller line beside the bags (the bags stand in a row there, clustered in 954/005: the bags moved, the conveyor did not -> fixed). Tape on 10-08: both ends from the column line z 24 and from the nave axis.",
+        "faces": [
+          {
+            "x_m": [
+              3.6,
+              4.6
+            ],
+            "y_m": [
+              0.0,
+              0.85
+            ],
+            "z_m": 24.0,
+            "albedo": 0.1583
+          }
+        ]
       }
     ],
     "zones": {
@@ -1767,7 +1821,7 @@
             7.5
           ]
         },
-        "why_used_differs_2026_10_07": "The owner's stage line, 2026-10-07: the booth (3 x 2 m riser, x 0.945..3.945, front on the line z 24.5) and the two main PA stacks (placeholders, x -2.47..-1.13 and 5.38..6.72, front on the line) \u2014 the stage zone is their envelope. Source: scripts/place/rigs/moxir-stage-line-2026-10-07.json."
+        "why_used_differs_2026_10_07": "The owner's stage line, 2026-10-07: the booth (3 x 2 m riser, x 0.5..3.5 \u2014 moved 0.445 m to house left, clear of the roller conveyor, front on the line z 24.5) and the two main PA stacks (placeholders, x -2.47..-1.13 and 5.38..6.72, front on the line) \u2014 the stage zone is their envelope. Source: scripts/place/rigs/moxir-stage-line-2026-10-07.json."
       },
       "backstage": {
         "colour": "red",
@@ -1842,7 +1896,7 @@
       }
     }
   },
-  "triangles": 55524,
+  "triangles": 55536,
   "meshes": {
     "hall-concrete": 4248,
     "hall-floor": 12,
@@ -1854,7 +1908,7 @@
     "hall-rust": 1124,
     "hall-crane": 288,
     "hall-deck": 360,
-    "hall-machine": 156,
+    "hall-machine": 168,
     "hall-press": 468,
     "hall-brick": 12,
     "hall-skylight": 192,
