@@ -836,5 +836,90 @@
    }
   ],
   "basis": "docs/moxir/PHOTO_ANALYSIS_2026-10-07.md"
+ },
+ "column_check_multiview": {
+  "date": "2026-10-07",
+  "status": "CHECK ONLY: no grid correction. The evidence does not show a different grid.",
+  "method": "VGGT-1B poses (38 views) aligned to the hall frame by Umeyama similarity + RANSAC on photo 032 floor pixels (17 608 inliers, 0.70 m rms); per view an LM refit on hand-picked, gradient-snapped column-edge lines and points with EXIF intrinsics (scripts/place/multiview_columns.py fit2; picks in scripts/place/picks/). Gate: rms <= 8 px at the image's own resolution.",
+  "fits": {
+   "014-file_66.JPG": {
+    "accepted": true,
+    "rms_px": 7.39,
+    "image_px": [
+     4032,
+     2688
+    ],
+    "f_px": 2795.6,
+    "f_source": "EXIF 24 mm-eq (iPhone 14 Pro Max main)",
+    "camera_m": [
+     4.19,
+     6.18,
+     6.98
+    ],
+    "camera_sd_m": [
+     0.16,
+     0.18,
+     0.63
+    ],
+    "fit_on": "left row columns z 12 and z 6 (4 edges, 3 points); joint pair held out"
+   },
+   "003-file_86.JPG": {
+    "accepted": false,
+    "rms_px": 11.5,
+    "why": "picks on the right row snap onto pipes and the stair; best of three pick sets 11.5 px; left-row-only fit is degenerate (pitch 16 deg)"
+   }
+  },
+  "joint_pair": {
+   "status": "CONFIRMED present (left row x -12): two separate shafts, each with its own head and its own upper column to the roof",
+   "source": "photo 014 (crops-014.jpg tiles 2-3; columns-014-count.png boxes 3-4)",
+   "measured_centres_z_m": [
+    0.08,
+    -1.12
+   ],
+   "model_z_m": [
+    0.5,
+    -0.5
+   ],
+   "measured_gap_m": 1.2,
+   "confidence": "centres +-0.6 m (camera z sd 0.63 m); gap +-0.2 m",
+   "tag": "centres SUSPECTED offset, within the fit uncertainty; no change"
+  },
+  "segments": [
+   {
+    "row_x": -12,
+    "z_m": [
+     -1.2,
+     12.0
+    ],
+    "real_count": 4,
+    "model_count": 4,
+    "views": [
+     "014 (fit 7.4 px)"
+    ],
+    "note": "A z 12, B z 6, joint pair; nothing of column size between"
+   },
+   {
+    "row_x": -36.4,
+    "z_m": [
+     -24,
+     31
+    ],
+    "real_count": "one wall post per 6 m bay plus a pair at the joint",
+    "model_count": "row x -36 at the 6 m grid",
+    "views": [
+     "014 (fit 7.4 px, wall at 40-50 m)"
+    ],
+    "tag": "SUSPECTED (by eye; the automatic sweep also fires on window mullions)"
+   }
+  ],
+  "box_39": {
+   "what": "a slender steel post beside the stair to the runway, about 0.25 m wide; not a precast column (0.8 x 0.5 m would be 70-110 px at this range, the post is about 30-35 px)",
+   "views": [
+    "012-file_64.JPG",
+    "009-file_92.JPG (box39-crops.jpg, VGGT-init cameras: identity only, NOT accepted fits)",
+    "032 box 39"
+   ],
+   "tag": "SUSPECTED: not a column; a site look on 10-08 closes it"
+  }
  }
 }

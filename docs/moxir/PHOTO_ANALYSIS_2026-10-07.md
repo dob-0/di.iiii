@@ -193,3 +193,55 @@ The delay time is owed to the system designer.
 - Teach hall.py the keys in the new layer, or fold the agreed values into the 10-08 measured layer.
 - Separate lying stock from the floor. One way is a ground-plane height test on a stereo pair or VGGT points; that needs the VGGT run kept this time.
 - The VGGT outputs of 09-27/09-30 were not kept. Next time, keep `predictions.npz` beside the footage.
+
+## 7. Multi-view column count (second pass, 2026-10-07)
+
+**Asked.** Fit at least 5 more views from the 66 distinct ones, then count the real columns per row segment against the model, and settle box 39.
+
+**Result in one line.** One more view passed the 8 px gate (014). That makes two fitted views in total (032 and 014), not the 6 asked for. Neither view shows a column that the model lacks. The joint pair is now **seen**.
+
+**Method** (`scripts/place/vggt_poses.py`, `scripts/place/multiview_columns.py`, picks in `scripts/place/picks/`):
+1. **VGGT poses.** VGGT-1B (Wang et al., CVPR 2025; repo a288dd0f, weights 860abec7, CC BY-NC 4.0, research use) ran on 38 distinct views: 17.5 s, peak 5.0 GB, under the browser lock, CPU 56–66 °C.
+   - The predictions are **kept** this time, in `/mnt/data/footage/place-moxir-photo-analysis-2026-10-07/vggt-2026-10-07/predictions.npz`.
+2. **Hall frame.** A similarity transform (Umeyama, PAMI 1991) with RANSAC, fitted on 032's floor pixels. The 3-D point for each pixel comes from 032's fitted camera on y = 0. Result: 17 608 / 25 364 inliers, 0.70 m rms.
+   - Check: VGGT's own focal length agrees with EXIF for every iPhone main-camera frame (2749–2886 px against 2795.6). For the X-T5 (6714–7829 against 7565) and the iPhone tele (4037–5868 against 8969) it does not, so those poses are rough.
+   - `multiview/init_cams.json` holds a position and heading for all 38 views.
+3. **Refit per view.** Hand-picked column edges, snapped to the strongest |∂I/∂x| within ±12 px with a parabolic sub-pixel peak, are fitted as 3-D vertical lines at the shaft corners (x ± 0.4, z ± 0.25), together with the points. EXIF intrinsics, principal point at the centre, no distortion term.
+   - Solver: LM from the VGGT pose, a model-based line fit (Lowe 1991; Kumar & Hanson 1994).
+   - The runway underside height is a free shared unknown when a floor point fixes the gauge.
+   - Rule: an edge whose rms is above max(15 px, 2.5 × median) is dropped once.
+   - This **departs from plain solvePnP**: the column feet are mostly hidden, so edges carry the fit. SQPnP is used only where there are enough 3-D points.
+
+**Fits**
+
+| View | Camera, EXIF f | Where from (fitted) | rms (own resolution) | Accepted |
+|---|---|---|---|---|
+| 014 (iPhone 14 Pro Max, 4032×2688) | main, 24 mm-eq → **2795.6 px** | (4.19, 6.18, 6.98) ±(0.16, 0.18, 0.63) m, yaw −86.5°, looking −x across the nave at the left row | **7.4 px** (122 edge samples, 4 edges + 3 points; height fitted 7.16 m) | **yes** |
+| 003 (iPhone, 2688×4032) | main → 2795.6 px | (5.0, 1.5, 48.7), entry-end floor, looking −z | best 11.5 px over three pick sets | **no** (right-row edges snap onto the pipes and the stair; a fit on the left row alone is degenerate, pitch 16°) |
+| 856, 857, 858, 860, 862, 863, 867 (X-T5, 7728×5152) | 23 mm × 3289 px/cm → 7565 px | far half, floor level (VGGT: z −10…−34) | not fitted | **no**: the main rows are hidden behind the machines (863 is pipework close up), and the gate is very strict here. 8 px at f 7565 is 1.06 mrad, 2 cm at 20 m, which is tighter than the grid is known. |
+| 004, 009, 012 (crane) | main | near 032's spot | not fitted | used only for a look at box 39, through the VGGT-initial camera |
+
+**Segment count** (real against model; only views with an accepted fit count):
+
+| Row segment | Real count | Model count | Views that agree | Tag |
+|---|---|---|---|---|
+| Left row x −12, z −1.2…12 | **4**: z 12, z 6 and the joint pair | 4 (12, 6, +0.5, −0.5) | 014 | CONFIRMED |
+| Left row x −12, z 4…36 | 5 pair centres on the 6 m grid | 6 | 032 (first pass) | CONFIRMED ±0.9 m |
+| Right row x +12, z 7…36 | 6 peaks, pitch noisy | 6 | 032 (first pass); 003 rejected | SUSPECTED |
+| Outer wall x −36.4, z −24…31 (seen through the left row) | one post per 6 m bay, and a pair at the joint | row x −36 on the 6 m grid | 014 | SUSPECTED (by eye; the automatic sweep also fires on window mullions) |
+
+- **The joint pair is CONFIRMED.** Photo 014 shows two separate shafts at the joint, each with its own head and its own upper column to the roof (`crops-014.jpg` tiles 2–3).
+  - Held out of the fit, their edges put the centres at **z +0.08 and −1.12**, a gap of **1.2 m**, where the model has +0.5 / −0.5 and 1.0 m. The offset is within the camera's ±0.63 m along z, so the model is not changed. The gap is ±0.2 m.
+- **Box 39 (right row, z ≈ 32).** In 012 and 009 (`multiview/box39-crops.jpg`) the vertical by the stair to the runway is a slender steel post, about 30–35 px wide at about 20 m, so about 0.25 m.
+  - A precast shaft (0.8 × 0.5 m) would be 70–110 px there.
+  - **SUSPECTED: not a column.** These cameras are VGGT-initial, not accepted fits. The 10-08 shot list §2 gap 5 closes it.
+- **Why the owner may count more columns.** From the floor you see the main rows, the outer-wall posts at the same 6 m pitch, the paired shafts at the joint, the upper columns above the runway and the steel stair posts, all at once. From the photos fitted so far, none of these is a missing precast column on the main rows. The right row and both ends still rest on 032 alone.
+- **Automatic sweep.** The template sweep in `count` (Sobel-x on the projected shaft silhouette) fires on wall posts, window mullions and pipes. So its peaks are kept in `multiview/count-014.json` as candidates only, and the boxes in `columns-014-count.png` are the columns checked by eye.
+
+**Layer.** The key `column_check_multiview` was added to `scripts/place/rigs/moxir-hall-features-2026-10-07-photos.json`. It applies **no correction**.
+
+**Owed**
+- Fit 4 or more further views. The best candidates are 012 and 013 (crane, both rows, 4032 px) and 005/006 (entry-end floor). Pick feet and heads on native-resolution crops.
+- An automatic edge refinement (RAPiD-style) would replace the hand snapping.
+- The X-T5 frames need a gate in mrad, or a view that is not blocked. That gate is the owner's call.
+- The 10-08 site shots (§2 gaps 3 and 5) close the joint-pair gap and box 39.

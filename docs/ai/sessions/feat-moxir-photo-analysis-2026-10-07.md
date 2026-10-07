@@ -41,3 +41,16 @@ He then said *"there are more columns than you count"* and *"analyse more photos
 - A fitted camera at the DJ end.
 - hall.py support for the new keys.
 - Keep the VGGT predictions next time.
+
+## Second pass: multi-view column count (2026-10-07)
+
+- VGGT (38 views) was aligned to the hall frame on 032's floor (0.70 m rms). The predictions are kept beside the footage this time.
+- New scripts: `scripts/place/vggt_poses.py` and `scripts/place/multiview_columns.py` (align / sheet / strips / crops / fit2 / count). The picks are in `scripts/place/picks/`.
+- **Accepted fit: 014 only, 7.4 px.** 003 reached 11.5 px and was rejected. The X-T5 frames were not fitted: the rows are hidden, and the 8 px gate is 1.06 mrad on them. So the target of 5 views was **not met**; 4 or more fits are owed.
+- Findings:
+  - The joint pair is confirmed: two shafts, gap 1.2 m.
+  - The left row from z −1.2 to 12 matches the model.
+  - The outer-wall posts are on the 6 m pitch.
+  - Box 39 is likely a steel stair post (SUSPECTED).
+  - No grid correction was made. The layer key is `column_check_multiview`.
+- Pictures: `~/Downloads/moxir/photo-analysis/columns-014-count.png`. Data: `/mnt/data/footage/place-moxir-photo-analysis-2026-10-07/multiview/`.

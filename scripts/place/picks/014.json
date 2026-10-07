@@ -1,0 +1,181 @@
+{
+ "photo": "014-file_66.JPG",
+ "f_px": 2795.6,
+ "f_source": "EXIF FocalLengthIn35mmFormat 24 (iPhone 14 Pro Max main) -> 24 x 5040 / 43.267 px; VGGT's own estimate 2886 px",
+ "snap": 12,
+ "note": "Looking -x across the nave at the left row (x -12). +x face of each shaft (x -11.6) is lit; image left = +z. Columns A z 12, B z 6, C z +0.5, D z -0.5 (the joint pair). Picks read on crops-014.jpg (native px).",
+ "edges": [
+  {
+   "col": "A z12 +z edge",
+   "x": -11.6,
+   "z": 12.25,
+   "p0": [
+    891,
+    1110
+   ],
+   "p1": [
+    927,
+    2250
+   ]
+  },
+  {
+   "col": "A z12 -z edge",
+   "x": -11.6,
+   "z": 11.75,
+   "p0": [
+    966,
+    1110
+   ],
+   "p1": [
+    1002,
+    2250
+   ]
+  },
+  {
+   "col": "B z6 +z edge",
+   "x": -11.6,
+   "z": 6.25,
+   "p0": [
+    1975,
+    1100
+   ],
+   "p1": [
+    1999,
+    2250
+   ]
+  },
+  {
+   "col": "B z6 -z edge",
+   "x": -11.6,
+   "z": 5.75,
+   "p0": [
+    2053,
+    1100
+   ],
+   "p1": [
+    2074,
+    2250
+   ]
+  },
+  {
+   "col": "C z+0.5 +z edge",
+   "x": -11.6,
+   "z": 0.75,
+   "p0": [
+    2998,
+    1090
+   ],
+   "p1": [
+    3013,
+    1800
+   ],
+   "check": true
+  },
+  {
+   "col": "C z+0.5 -z edge",
+   "x": -11.6,
+   "z": 0.25,
+   "p0": [
+    3072,
+    1090
+   ],
+   "p1": [
+    3087,
+    1800
+   ],
+   "check": true
+  },
+  {
+   "col": "D z-0.5 +z edge",
+   "x": -11.6,
+   "z": -0.25,
+   "p0": [
+    3197,
+    1090
+   ],
+   "p1": [
+    3212,
+    1800
+   ],
+   "check": true
+  },
+  {
+   "col": "D z-0.5 -z edge",
+   "x": -11.6,
+   "z": -0.75,
+   "p0": [
+    3274,
+    1090
+   ],
+   "p1": [
+    3289,
+    1800
+   ],
+   "check": true
+  }
+ ],
+ "points": [
+  {
+   "what": "B foot, +x face centre",
+   "X": [
+    -11.6,
+    0.0,
+    6.0
+   ],
+   "uv": [
+    2037,
+    2294
+   ]
+  },
+  {
+   "what": "A head top (runway underside), face centre",
+   "X": [
+    -11.6,
+    "h",
+    12.0
+   ],
+   "uv": [
+    928,
+    1060.5
+   ]
+  },
+  {
+   "what": "B head top",
+   "X": [
+    -11.6,
+    "h",
+    6.0
+   ],
+   "uv": [
+    2014,
+    1047
+   ]
+  },
+  {
+   "what": "C head top",
+   "X": [
+    -11.6,
+    "h",
+    0.5
+   ],
+   "uv": [
+    3035,
+    1027
+   ],
+   "check": true
+  },
+  {
+   "what": "D head top",
+   "X": [
+    -11.6,
+    "h",
+    -0.5
+   ],
+   "uv": [
+    3236,
+    1027
+   ],
+   "check": true
+  }
+ ]
+}
