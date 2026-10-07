@@ -199,6 +199,28 @@ export const getPlatformRedirect = (locationLike = null) => {
     return null
 }
 
+// The address to hand to someone else. When the space has a LIVE own domain
+// (`domain`, from the space's metadata) it is that domain with the space
+// segment dropped — https://yokozo.xyz/taronx-instruments, not
+// https://diiii.xyz/taronx/taronx-instruments. Otherwise it is the platform
+// origin plus `path`, as before. `path` is the ordinary path from
+// buildAppSpacePath / buildPublicProjectPath / buildVanityProjectPath. Only for
+// public viewer links: editor and admin links stay on the platform's origin.
+export const buildShareUrl = ({ spaceId = '', spaceSlug = '', domain = '', path = '/' } = {}) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const host = String(domain || '').trim().toLowerCase()
+    // Already on that domain: the path is domain-relative (hostRelative), keep it.
+    if (!host || (typeof window !== 'undefined' && window.location.hostname.toLowerCase() === host)) {
+        return `${origin}${path}`
+    }
+    const prefix = getAppBasePrefix()
+    const rest = String(path).slice(String(path).startsWith(prefix) ? prefix.length : 0).replace(/^\/+/, '')
+    const [first, ...tail] = rest.split('/')
+    const names = [spaceId, spaceSlug].filter(Boolean).map((name) => String(name).toLowerCase())
+    const inDomain = names.includes(String(first || '').toLowerCase()) ? tail.join('/') : rest
+    return `https://${host}${prefix}/${inDomain}`.replace(/(?<!:)\/{2,}/g, '/')
+}
+
 export const buildAppSpacePath = (spaceId) => {
     const prefix = getAppBasePrefix()
     if (!spaceId) {

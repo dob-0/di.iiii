@@ -86,3 +86,37 @@ describe('the host lookup', () => {
         expect(store.listDomainsInState('pending')).toHaveLength(1)
     })
 })
+
+describe('the primary live hostname of a space', () => {
+    const live = (hostname, spaceId = 'taronx') => {
+        store.insertDomain({ hostname, spaceId })
+        store.updateDomain(hostname, { state: 'active' })
+    }
+
+    it('is null with no domain, or none live', () => {
+        expect(store.findPrimaryActiveHostForSpace('taronx')).toBe(null)
+        store.insertDomain({ hostname: 'yokozo.xyz', spaceId: 'taronx' })
+        expect(store.findPrimaryActiveHostForSpace('taronx')).toBe(null)
+        expect(store.mapPrimaryActiveHosts().size).toBe(0)
+    })
+
+    it('is the live one, never a pending one', () => {
+        store.insertDomain({ hostname: 'a.example.com', spaceId: 'taronx' })
+        live('yokozo.xyz')
+        expect(store.findPrimaryActiveHostForSpace('taronx')).toBe('yokozo.xyz')
+    })
+
+    it('prefers a name that does not start with www., even when it is newer', () => {
+        live('www.yokozo.xyz')
+        live('yokozo.xyz')
+        expect(store.findPrimaryActiveHostForSpace('taronx')).toBe('yokozo.xyz')
+        expect(store.mapPrimaryActiveHosts().get('taronx')).toBe('yokozo.xyz')
+    })
+
+    it('falls back to www. when it is all there is, and keeps spaces apart', () => {
+        live('www.yokozo.xyz')
+        live('other.example.com', 'other')
+        expect(store.findPrimaryActiveHostForSpace('taronx')).toBe('www.yokozo.xyz')
+        expect(store.findPrimaryActiveHostForSpace('other')).toBe('other.example.com')
+    })
+})

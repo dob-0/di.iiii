@@ -366,6 +366,24 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_telegram_login_expiry ON telegram_login_tokens(expires_at);
 
+  -- di.bo acting as a team member (telegramActTokenStore.js). A short-lived
+  -- bearer bound to one account; only the SHA-256 of its secret is kept.
+  -- token_version is the account's at mint time, so signing out everywhere
+  -- kills these too, exactly as it kills the person's own cookies.
+  -- No SCHEMA_VERSION bump: a new table is invisible to an older build.
+  CREATE TABLE IF NOT EXISTS telegram_act_tokens (
+    id TEXT PRIMARY KEY,
+    secret_hash TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    telegram_id TEXT NOT NULL,
+    label TEXT,
+    token_version INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    revoked_at INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_telegram_act_expiry ON telegram_act_tokens(expires_at);
+
   -- A space on its own domain (docs/architecture/SPEC_space_own_domain.md).
   -- One row per hostname: yokozo.xyz and www.yokozo.xyz are two rows for the
   -- same space. The host -> space lookup only ever answers for state 'active',

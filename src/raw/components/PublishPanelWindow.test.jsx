@@ -1,8 +1,9 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
+const getServerSpace = vi.fn(() => new Promise(() => {}))
 vi.mock('../../services/serverSpaces.js', () => ({
-    getServerSpace: vi.fn(() => new Promise(() => {}))
+    getServerSpace: (...args) => getServerSpace(...args)
 }))
 
 import PublishPanelWindow, { resolvePanelXrMode } from './PublishPanelWindow.jsx'
@@ -48,5 +49,21 @@ describe('PublishPanelWindow headset entry', () => {
         expect(resolvePanelXrMode('ar')).toBe('ar')
         expect(resolvePanelXrMode('off')).toBe('off')
         expect(resolvePanelXrMode('vr')).toBe('vr')
+    })
+})
+
+// A space with a live own domain is shared on that domain (SPEC_space_own_domain.md).
+describe('PublishPanelWindow share address', () => {
+    it('copies the address on the space\'s own domain', async () => {
+        getServerSpace.mockResolvedValueOnce({ id: 'taronx', publishedProjectId: 'other', domain: 'yokozo.xyz' })
+        const writeText = vi.fn().mockResolvedValue(undefined)
+        Object.assign(navigator, { clipboard: { writeText } })
+        render(<PublishPanelWindow projectId="p1" spaceId="taronx" publishState={{}} />)
+        await waitFor(() => expect(getServerSpace).toHaveBeenCalled())
+        const button = await screen.findByRole('button', { name: 'Copy link' })
+        await waitFor(() => {
+            fireEvent.click(button)
+            expect(writeText).toHaveBeenCalledWith('https://yokozo.xyz/p/p1')
+        })
     })
 })
