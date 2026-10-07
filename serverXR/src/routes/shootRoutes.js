@@ -28,7 +28,7 @@ const express = require('express')
 const { createKeyedLock } = require('../asyncLock')
 
 const SHOOT_KEY_HASHES = [
-  // REVO / Choir — Hayfilm, 2026-10-09.
+  // The first sheet, listed 2026-10-07.
   '96035fa75af61f7515926fa67551c6756088a93ea7df7e37908b522458cd9001'
 ]
 

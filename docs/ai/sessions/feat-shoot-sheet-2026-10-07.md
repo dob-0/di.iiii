@@ -1,7 +1,8 @@
 ## 2026-10-07 — the shoot sheet: /shoot/{key}, a film crew's shared plan through one link
 
-- Asked by Emily for the REVO shoot at Hayfilm (2026-10-09): put the planner she had as a single HTML file online in
-  di.iiii so the crew can tick props, write under them ("it's in Moct") and add things, from a shared link.
+- Asked by Emily for a film shoot two days out: put the planner she had as a single HTML file online in di.iiii so the
+  crew can tick props, write under them ("it's in the van") and add things, from a shared link. The shoot itself (its
+  client, people, date and photos) is deliberately not named anywhere in this repo.
 - **Route** `/shoot/{key}` (`APP_PAGE_SHOOT`, reserved in `spaceRouting.js` and `shared/reservedSegments.cjs`; checked
   first that `/serverXR/api/spaces/shoot` and `/resolve/shoot` 404 on diiii.xyz and dev.diiii.xyz). Lazy page
   `src/pages/shoot/ShootPage.jsx` (a plain page like /for-apps, so it lives under src/pages), its own scroll container (base.css pins the body).

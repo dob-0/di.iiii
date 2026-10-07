@@ -151,7 +151,7 @@ export const WIKI_ARTICLES = [
         title: 'The shoot sheet: one link for a film crew',
         summary: 'A shoot day on one page — call times, outfits and a tick per prop — that the whole crew edits through a single link, no accounts.',
         body: [
-            'A shoot sheet lives at /shoot/ followed by a long code. The code is the key: whoever has the link can tick a prop as ready, write a note under it ("take from Adam", "it is in the van"), add a link to where it can be bought or printed, and add a prop that was missing. Nobody signs in, so share the link only with the crew.',
+            'A shoot sheet lives at /shoot/ followed by a long code. The code is the key: whoever has the link can tick a prop as ready, write a note under it ("Ani brings it", "it is in the van"), add a link to where it can be bought or printed, and add a prop that was missing. Nobody signs in, so share the link only with the crew.',
             'Actors are listed in the order they arrive. Each one has a call time, a costume photo, the outfit and the sounds they make, and their props as pictures you tap to tick. "Actor has everything" ticks all of an actor\'s props at once.',
             'Every phone with the sheet open checks for changes every few seconds, so a tick made on one phone shows on the others without reloading. The top corner says Saved or, if the connection drops, that the last change was not saved.',
             'The plan and its photos are written onto the server by whoever runs the shoot (scripts/shoot-sheet-push.mjs), never into this public repository. A sheet only exists for a key the server has been told about; any other code answers "No shoot sheet here."'

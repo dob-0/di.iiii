@@ -25,10 +25,10 @@ describe('crew edits to a shoot sheet', () => {
     const p = plan()
     applyShootOps(p, [
       { op: 'item.set', list: 'cast:police', item: 'r', done: true },
-      { op: 'item.set', list: 'cast:police', item: 'w', note: 'it is in Moct' }
+      { op: 'item.set', list: 'cast:police', item: 'w', note: 'it is in the van' }
     ])
     expect(p.cast[0].items[0].done).toBe(true)
-    expect(p.cast[0].items[1]).toMatchObject({ done: false, note: 'it is in Moct' })
+    expect(p.cast[0].items[1]).toMatchObject({ done: false, note: 'it is in the van' })
     expect(p.cast[1].items[0].done).toBe(false)
   })
 
@@ -125,11 +125,11 @@ describe('the shoot routes, mounted the way index.js mounts them', () => {
 
   it('lands two edits sent at the same moment', async () => {
     await Promise.all([
-      json('POST', `${base}/${key}/ops`, { ops: [{ op: 'item.set', list: 'cast:police', item: 'w', note: 'Gev' }] }),
+      json('POST', `${base}/${key}/ops`, { ops: [{ op: 'item.set', list: 'cast:police', item: 'w', note: 'Ani brings it' }] }),
       json('POST', `${base}/${key}/ops`, { ops: [{ op: 'item.set', list: 'cast:barber', item: 's', done: true }] })
     ])
     const sheet = await (await fetch(`${base}/${key}`)).json()
-    expect(sheet.plan.cast[0].items[1].note).toBe('Gev')
+    expect(sheet.plan.cast[0].items[1].note).toBe('Ani brings it')
     expect(sheet.plan.cast[1].items[0].done).toBe(true)
   })
 

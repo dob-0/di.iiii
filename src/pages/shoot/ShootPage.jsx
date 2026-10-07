@@ -6,7 +6,7 @@ import './shoot.css'
 // what each actor wears and brings, and a tick per prop that everyone shares.
 // Anyone holding the link can tick, write a note under a prop ("it's in the
 // van") and add one; the page checks the server every few seconds, so the
-// whole crew sees the same sheet. Nothing here is REVO-specific: the plan,
+// whole crew sees the same sheet. Nothing here belongs to one shoot: the plan,
 // names and photos all come from the server (the repo is public).
 
 const POLL_MS = 4000
@@ -387,7 +387,7 @@ function ItemDialog({ plan, list, item: id, send, close }) {
         <Dialog title={item.text} close={close}>
             <form className="shoot-form" onSubmit={save}>
                 <label>Note
-                    <input value={note} maxLength={300} placeholder="e.g. Take from Adam · It's in the van" onChange={(e) => setNote(e.target.value)} />
+                    <input value={note} maxLength={300} placeholder="e.g. Ani brings it · It's in the van" onChange={(e) => setNote(e.target.value)} />
                 </label>
                 <label>Link (shop, listing or 3D print)
                     <input value={link} type="url" inputMode="url" placeholder="Paste a link" onChange={(e) => setLink(e.target.value)} />
